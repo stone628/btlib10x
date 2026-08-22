@@ -226,3 +226,25 @@ Rules encoded by the state machine:
 - `GameEvent` union (`turn`, `phase`, `initiative`, `moveDeclared`, `moved`,
   `attacksDeclared`, `attackResolved`, `unitDestroyed`, `unitRemoved`) makes
   battles fully replayable from the event log.
+
+## Console rendering (`render.ts`)
+
+### `renderBattle(state, width?, height?): string`
+
+ASCII map for consoles/logs. Each hex draws as
+
+```
+  ---
+ /wvr\
+< 1,3 >
+ \   /
+  ---
+```
+
+with the occupant's id clipped/padded to 3 chars and space-aligned `col,row`
+displayed 1-based (col right-aligned, row left-aligned; internal coordinates
+remain 0-based). Borders default to `---` but render `===` where two hexes
+share a horizontal edge.
+Odd columns sit half a hex lower (matching the odd-q grid); removed units are
+omitted; board bounds default to the units + terrain extent. Log with
+`console.log(renderBattle(state))`.
