@@ -1,0 +1,26 @@
+{
+  "model": "ENF-4R",
+  "name": "Enforcer",
+  "tonnage": 50,
+  "weightClass": "Medium",
+  "techBase": "Inner Sphere",
+  "walking": 4,
+  "running": 6,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 23,
+    "rightTorso": 17,
+    "leftTorso": 17,
+    "rightArm": 14,
+    "leftArm": 14,
+    "rightLeg": 20,
+    "leftLeg": 20
+  },
+  "weapons": [
+    { "weapon": "Autocannon/10", "location": "rightArm", "ammoShots": 10 },
+    { "weapon": "Large Laser", "location": "leftArm" },
+    { "weapon": "Small Laser", "location": "leftTorso" }
+  ],
+  "source": "CBT Quick-Start Rules record sheet"
+}

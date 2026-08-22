@@ -1,0 +1,38 @@
+# btlib10x
+
+TypeScript library encapsulating Classic BattleTech board game logic.
+
+## Status
+
+- Implements the **quick-start rules** (`pdf/CBT-Quick-Start-Rules.pdf`, `pdf/Beginner-Box-Quick-Start-Rules.pdf`) — those PDFs are the source of truth; consult before changing mechanics.
+- Bipedal 'Mechs only. No heat, physical attacks, piloting rolls, or elevation (not covered by quick-start rules).
+- Damage model: each location holds a flat armor HP number; overflow transfers inward **only after** a location's armor is fully depleted (no per-dot tracking).
+
+## Commands
+
+- `npm test` — run test suite once (vitest)
+- `npm run test:watch` — watch mode
+- `npm run typecheck` — `tsc --noEmit`
+- `npm run build` — emit ESM + declarations to `dist/`
+
+Run typecheck + tests together before considering work done: `npm run typecheck && npm test`.
+
+## Layout
+
+- `src/core/` — hex geometry (odd-q column-offset coords, flat-top hexes, cube-math line tracing), dice (injectable RNG), terrain, shared types
+- `src/data/` — weapon catalog, `MechDef` schema + hand-rolled validator, `mechs/*.json`
+- `src/rules/` — pure rule functions: movement, LOS, GATOR to-hit, hit location, cluster hits, damage, attack orchestration, battle state machine
+- `tests/` — vitest suites; several assert against worked examples printed in the PDFs
+
+## Conventions & constraints
+
+- Browser-first: **no Node-only APIs in `src/`** (dev scripts exempt).
+- **Zero runtime dependencies**; dev deps are typescript + vitest only.
+- Strictest sensible tsc settings (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`).
+- All randomness flows through an injected `Rng`; rules functions are deterministic given inputs — required for reproducible battles and future sim work.
+- Game state is plain serializable data; mutations happen through `src/rules/game.ts` APIs only.
+- Mech data lives in `data/mechs/*.json` (copied into published package); new 'Mechs must pass `validateMechDef`.
+
+## Roadmap
+
+See `TODO.md`. Later: sarna.net scraping (dev-only), full-intro rules expansion, 10x-granular continuous-time mode.

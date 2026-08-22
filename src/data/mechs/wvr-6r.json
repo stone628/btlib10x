@@ -1,0 +1,26 @@
+{
+  "model": "WVR-6R",
+  "name": "Wolverine",
+  "tonnage": 55,
+  "weightClass": "Medium",
+  "techBase": "Inner Sphere",
+  "walking": 5,
+  "running": 8,
+  "jumping": 5,
+  "armor": {
+    "head": 9,
+    "centerTorso": 22,
+    "rightTorso": 16,
+    "leftTorso": 16,
+    "rightArm": 16,
+    "leftArm": 16,
+    "rightLeg": 18,
+    "leftLeg": 18
+  },
+  "weapons": [
+    { "weapon": "Medium Laser", "location": "head" },
+    { "weapon": "SRM 6", "location": "leftTorso", "ammoShots": 15 },
+    { "weapon": "Autocannon/5", "location": "rightArm", "ammoShots": 20 }
+  ],
+  "source": "Beginner Box Quick-Start Rules record sheet (armor circles transcribed from TRO 3025 allocation; see TODO.md)"
+}

@@ -1,0 +1,27 @@
+{
+  "model": "HBK-4G",
+  "name": "Hunchback",
+  "tonnage": 50,
+  "weightClass": "Medium",
+  "techBase": "Inner Sphere",
+  "walking": 4,
+  "running": 6,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 26,
+    "rightTorso": 20,
+    "leftTorso": 20,
+    "rightArm": 16,
+    "leftArm": 16,
+    "rightLeg": 20,
+    "leftLeg": 20
+  },
+  "weapons": [
+    { "weapon": "Autocannon/20", "location": "rightTorso", "ammoShots": 10 },
+    { "weapon": "Medium Laser", "location": "leftArm" },
+    { "weapon": "Medium Laser", "location": "rightArm" },
+    { "weapon": "Small Laser", "location": "head" }
+  ],
+  "source": "CBT Quick-Start Rules record sheet"
+}
