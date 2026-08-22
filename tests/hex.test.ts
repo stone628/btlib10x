@@ -12,18 +12,18 @@ describe("hex geometry", () => {
     const evenCol = { col: 2, row: 3 };
     expect(sameHex(neighbor(evenCol, "n"), { col: 2, row: 2 })).toBe(true);
     expect(sameHex(neighbor(evenCol, "s"), { col: 2, row: 4 })).toBe(true);
-    expect(sameHex(neighbor(evenCol, "ne"), { col: 3, row: 2 })).toBe(true);
-    expect(sameHex(neighbor(evenCol, "se"), { col: 3, row: 3 })).toBe(true);
-    expect(sameHex(neighbor(evenCol, "nw"), { col: 1, row: 2 })).toBe(true);
-    expect(sameHex(neighbor(evenCol, "sw"), { col: 1, row: 3 })).toBe(true);
+    expect(sameHex(neighbor(evenCol, "ne"), { col: 3, row: 3 })).toBe(true);
+    expect(sameHex(neighbor(evenCol, "se"), { col: 3, row: 4 })).toBe(true);
+    expect(sameHex(neighbor(evenCol, "nw"), { col: 1, row: 3 })).toBe(true);
+    expect(sameHex(neighbor(evenCol, "sw"), { col: 1, row: 4 })).toBe(true);
 
     const oddCol = { col: 3, row: 3 };
     expect(sameHex(neighbor(oddCol, "n"), { col: 3, row: 2 })).toBe(true);
     expect(sameHex(neighbor(oddCol, "s"), { col: 3, row: 4 })).toBe(true);
-    expect(sameHex(neighbor(oddCol, "ne"), { col: 4, row: 3 })).toBe(true);
-    expect(sameHex(neighbor(oddCol, "se"), { col: 4, row: 4 })).toBe(true);
-    expect(sameHex(neighbor(oddCol, "nw"), { col: 2, row: 3 })).toBe(true);
-    expect(sameHex(neighbor(oddCol, "sw"), { col: 2, row: 4 })).toBe(true);
+    expect(sameHex(neighbor(oddCol, "ne"), { col: 4, row: 2 })).toBe(true);
+    expect(sameHex(neighbor(oddCol, "se"), { col: 4, row: 3 })).toBe(true);
+    expect(sameHex(neighbor(oddCol, "nw"), { col: 2, row: 2 })).toBe(true);
+    expect(sameHex(neighbor(oddCol, "sw"), { col: 2, row: 3 })).toBe(true);
   });
 
   it("measures distance in hexes", () => {

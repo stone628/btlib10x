@@ -242,10 +242,10 @@ export function executeMove(
     if (step.kind === "turn") {
       if (jumping) throw new Error("Jumping 'Mechs choose facing freely on landing; no turn steps");
       if (unit.moveMode === "standStill") throw new Error("Standing still forbids facing changes");
-      if (!Number.isInteger(step.facings) || step.facings < 1 || step.facings > 5) {
-        throw new Error("Facing change must be 1..5 hexsides");
+      if (!Number.isInteger(step.facings) || step.facings === 0 || Math.abs(step.facings) > 5) {
+        throw new Error("Facing change must be 1..5 hexsides in either direction");
       }
-      spent += mv.facingChangeCost(step.facings);
+      spent += mv.facingChangeCost(Math.abs(step.facings));
       facing = rotateFacing(facing, step.facings);
       continue;
     }

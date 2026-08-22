@@ -82,30 +82,103 @@ describe("movement phase", () => {
         position: { col: 9, row: 9 },
         facing: "nw",
       },
-    ], { terrain: { "1,2": "lightWoods" } });
+    ], { terrain: { "1,3": "lightWoods" } });
     let state = startMovementTurn(setup);
     state = declareMove(state, "hbk", "walk");
     state = executeMove(state, "hbk", [
-      { kind: "enter", to: { col: 1, row: 2 } },
+      { kind: "enter", to: { col: 1, row: 3 } },
       { kind: "turn", facings: 1 },
     ]);
     const hbk = getUnit(state, "hbk");
     expect(hbk.mpSpent).toBe(3); // 1 turn + 2 light woods
-    expect(hbk.position).toEqual({ col: 1, row: 2 });
+    expect(hbk.position).toEqual({ col: 1, row: 3 });
   });
 
   it("rejects running backward", () => {
     let state = startMovementTurn(hbkVsEnf());
     state = declareMove(state, "hbk", "run");
-    expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: -1, row: 1 } }])).toThrow(
+    expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: -1, row: 2 } }])).toThrow(
       /backward/,
     );
   });
 
-  it("rejects ending in an occupied hex but allows friendly pass-through", () => {
+  it("rejects ground steps that are neither straight ahead nor straight back", () => {
     let state = startMovementTurn(hbkVsEnf());
     state = declareMove(state, "hbk", "walk");
-    expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: 1, row: 2 } }])).toThrow(
+    // Facing "se" from (0,2): south (0,3) is adjacent but not the forward or
+    // backward hexside -> illegal without turning first.
+    expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: 0, row: 3 } }])).toThrow(
+      /straight ahead or straight back/,
+    );
+  });
+
+  it("allows walking straight backward", () => {
+    let state = startMovementTurn(hbkVsEnf());
+    state = declareMove(state, "hbk", "walk");
+    state = executeMove(state, "hbk", [{ kind: "enter", to: { col: -1, row: 2 } }]);
+    const hbk = getUnit(state, "hbk");
+    expect(hbk.position).toEqual({ col: -1, row: 2 });
+    expect(hbk.mpSpent).toBe(1);
+  });
+
+  it("counts turning MP against the mode budget", () => {
+    let state = startMovementTurn(hbkVsEnf());
+    state = declareMove(state, "hbk", "walk"); // walking 4
+    expect(() => executeMove(state, "hbk", [{ kind: "turn", facings: 5 }])).toThrow(/budget/);
+
+    state = declareMove(startMovementTurn(hbkVsEnf()), "hbk", "walk");
+    state = executeMove(state, "hbk", [{ kind: "turn", facings: 2 }]);
+    const hbk = getUnit(state, "hbk");
+    expect(hbk.mpSpent).toBe(2); // 2 hexsides x 1 MP
+    expect(hbk.facing).toBe("sw"); // se rotated two hexsides clockwise
+    expect(hbk.position).toEqual({ col: 0, row: 2 });
+  });
+
+  it("charges counterclockwise turns one MP per hexside", () => {
+    let state = declareMove(startMovementTurn(hbkVsEnf()), "hbk", "walk");
+    state = executeMove(state, "hbk", [{ kind: "turn", facings: -1 }]);
+    let hbk = getUnit(state, "hbk");
+    expect(hbk.facing).toBe("ne"); // se rotated one hexside counterclockwise
+    expect(hbk.mpSpent).toBe(1);
+
+    // Pricing is by absolute hexside count: -5 blows the walking budget too.
+    state = declareMove(startMovementTurn(hbkVsEnf()), "hbk", "walk");
+    expect(() => executeMove(state, "hbk", [{ kind: "turn", facings: -5 }])).toThrow(/budget/);
+  });
+
+  it("re-evaluates forward/backward relative to facing after each turn", () => {
+    const setup = createBattle([
+      { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 0, row: 2 }, facing: "se" },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 9, row: 9 },
+        facing: "nw",
+      },
+    ]);
+    let state = startMovementTurn(setup);
+    state = declareMove(state, "hbk", "walk");
+    state = executeMove(state, "hbk", [
+      { kind: "enter", to: { col: 1, row: 3 } }, // forward (se)
+      { kind: "turn", facings: 2 }, // now facing sw
+      { kind: "enter", to: { col: 0, row: 3 } }, // new forward (sw)
+    ]);
+    const hbk = getUnit(state, "hbk");
+    expect(hbk.position).toEqual({ col: 0, row: 3 });
+    expect(hbk.facing).toBe("sw");
+    expect(hbk.mpSpent).toBe(4); // 2 enters + 2-hexside turn
+  });
+
+  it("rejects ending in an occupied hex but allows friendly pass-through", () => {
+    const setup = createBattle([
+      { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 0, row: 2 }, facing: "se" },
+      { id: "enf", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 1, row: 3 }, facing: "nw" },
+    ]);
+    let state = startMovementTurn(setup);
+    state = declareMove(state, "hbk", "walk");
+    expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: 1, row: 3 } }])).toThrow(
       /occupied/,
     );
   });
@@ -126,11 +199,11 @@ describe("movement phase", () => {
     state = declareMove(state, "hbk", "walk"); // walking 4
     // Straight southeast line (odd-q: the column parity alternates the row drift).
     const steps = [
-      { col: 1, row: 2 },
+      { col: 1, row: 3 },
       { col: 2, row: 3 },
-      { col: 3, row: 3 },
+      { col: 3, row: 4 },
       { col: 4, row: 4 },
-      { col: 5, row: 4 },
+      { col: 5, row: 5 },
     ].map((to) => ({ kind: "enter" as const, to }));
     expect(() => executeMove(state, "hbk", steps)).toThrow(/budget/);
   });
@@ -158,7 +231,7 @@ describe("movement phase", () => {
     const setup = createBattle(
       [
         { id: "grf", model: "GRF-1N", team: 0, gunnery: 4, position: { col: 0, row: 2 }, facing: "se" },
-        { id: "wvr", model: "WVR-6R", team: 1, gunnery: 4, position: { col: 1, row: 2 }, facing: "nw" },
+        { id: "wvr", model: "WVR-6R", team: 1, gunnery: 4, position: { col: 1, row: 3 }, facing: "nw" },
       ],
       {},
     );
@@ -166,11 +239,11 @@ describe("movement phase", () => {
     state = declareMove(state, "grf", "jump");
     // Hop through the enemy-occupied hex (allowed while jumping) and land beyond it.
     state = executeMove(state, "grf", [
-      { kind: "enter", to: { col: 1, row: 2 } },
-      { kind: "enter", to: { col: 2, row: 2 } },
+      { kind: "enter", to: { col: 1, row: 3 } },
+      { kind: "enter", to: { col: 2, row: 3 } },
     ]);
     const grf = getUnit(state, "grf");
-    expect(grf.position).toEqual({ col: 2, row: 2 });
+    expect(grf.position).toEqual({ col: 2, row: 3 });
     expect(grf.mpSpent).toBe(2);
     expect(grf.jumpedThisTurn).toBe(true);
   });

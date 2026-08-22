@@ -2,26 +2,27 @@ import type { Hex, Facing } from "./types.js";
 import { FACINGS } from "./types.js";
 
 /**
- * Flat-top hexes in column-offset ("odd-q") storage: odd columns are pushed
- * down half a step, so every hex's six sides face n / ne / se / s / sw / nw
- * per the rulebook diagrams (there is no east/west hexside).
+ * Flat-top hexes in column-offset storage with odd columns raised half a hex:
+ * every hex's six sides face n / ne / se / s / sw / nw per the rulebook
+ * diagrams (there is no east/west hexside). Diagonal deltas shift by column
+ * parity as specified below.
  */
 const EVEN_COL_DELTAS: Record<Facing, readonly [number, number]> = {
-  n: [0, -1],
-  s: [0, +1],
-  ne: [+1, -1],
-  se: [+1, 0],
-  nw: [-1, -1],
-  sw: [-1, 0],
-};
-
-const ODD_COL_DELTAS: Record<Facing, readonly [number, number]> = {
   n: [0, -1],
   s: [0, +1],
   ne: [+1, 0],
   se: [+1, +1],
   nw: [-1, 0],
   sw: [-1, +1],
+};
+
+const ODD_COL_DELTAS: Record<Facing, readonly [number, number]> = {
+  n: [0, -1],
+  s: [0, +1],
+  ne: [+1, -1],
+  se: [+1, 0],
+  nw: [-1, -1],
+  sw: [-1, 0],
 };
 
 export function neighbor(hex: Hex, facing: Facing): Hex {
@@ -36,14 +37,14 @@ export function neighbors(hex: Hex): Hex[] {
 
 function offsetToCube(hex: Hex): { x: number; y: number; z: number } {
   const x = hex.col;
-  const z = hex.row - ((hex.col - (hex.col & 1)) / 2);
+  const z = hex.row - ((hex.col + (hex.col & 1)) / 2);
   const y = -x - z;
   return { x, y, z };
 }
 
 function cubeToOffset(x: number, y: number, z: number): Hex {
   const col = x;
-  const row = z + ((col - (col & 1)) / 2);
+  const row = z + ((col + (col & 1)) / 2);
   return { col, row };
 }
 
