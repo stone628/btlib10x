@@ -23,6 +23,19 @@ export function oppositeFacing(facing: Facing): Facing {
 
 export type TerrainType = "clear" | "lightWoods" | "heavyWoods";
 
+export const TERRAIN_TYPES: readonly TerrainType[] = ["clear", "lightWoods", "heavyWoods"];
+
+export function isTerrainType(value: unknown): value is TerrainType {
+  return typeof value === "string" && (TERRAIN_TYPES as readonly string[]).includes(value);
+}
+
+/** A single non-clear terrain hex on the board (map data and battle setup). */
+export interface TerrainHexDef {
+  readonly col: number;
+  readonly row: number;
+  readonly type: TerrainType;
+}
+
 export interface Hex {
   col: number;
   row: number;

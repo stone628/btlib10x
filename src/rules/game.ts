@@ -1,4 +1,4 @@
-import { FACINGS, isFacing, rotateFacing, type Facing, type Hex, type MoveMode, type Rng, type TerrainType } from "../core/types.js";
+import { FACINGS, isFacing, rotateFacing, type Facing, type Hex, type MoveMode, type Rng, type TerrainHexDef, type TerrainType } from "../core/types.js";
 import { bearing, hexDistance, neighbor, sameHex } from "../core/hex.js";
 import { costToEnter } from "../core/terrain.js";
 import { MECH_DEFS } from "../data/index.js";
@@ -96,9 +96,11 @@ export interface BattleState {
   events: GameEvent[];
 }
 
+export type { TerrainHexDef };
+
 export interface CreateBattleOptions {
-  /** Keyed by "col,row"; missing entries are clear terrain. */
-  readonly terrain?: Record<string, TerrainType>;
+  /** Non-clear hexes; anything not listed is clear terrain. */
+  readonly terrain?: readonly TerrainHexDef[];
 }
 
 function clone(state: BattleState): BattleState {
@@ -172,13 +174,22 @@ export function createBattle(
     };
   }
 
+  const terrain: Record<string, TerrainType> = {};
+  if (options.terrain) {
+    for (const { col, row, type } of options.terrain) {
+      const key = `${col},${row}`;
+      if (key in terrain) throw new Error(`Duplicate terrain definition for hex ${key}`);
+      terrain[key] = type;
+    }
+  }
+
   return {
     turn: 1,
     phase: "initiative",
     initiativeWinnerTeam: null,
     units: unitStates,
     defs: { ...MECH_DEFS },
-    terrain: { ...options.terrain },
+    terrain,
     actedThisPhase: [],
     events: [{ kind: "turn", turn: 1 }],
   };

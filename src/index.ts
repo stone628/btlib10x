@@ -18,6 +18,8 @@ export {
 
 export { getMechDef, MECH_DEFS, validateMechDef } from "./data/index.js";
 export type { MechDef, WeaponMount } from "./data/schema.js";
+export { getMapDef, MAP_DEFS, toEngineTerrain, validateMapDef } from "./data/index.js";
+export type { MapDef } from "./data/index.js";
 export { getWeapon, WEAPONS } from "./data/weapons.js";
 export type { WeaponDef } from "./data/weapons.js";
 

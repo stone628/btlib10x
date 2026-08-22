@@ -84,7 +84,7 @@ describe("console renderer", () => {
         { id: "enf", model: "ENF-4R", team: 0, gunnery: 4, position: { col: 1, row: 1 }, facing: "n" },
         { id: "wvr", model: "WVR-6R", team: 1, gunnery: 4, position: { col: 1, row: 2 }, facing: "s" },
       ],
-      { terrain: { "9,7": "lightWoods" } },
+      { terrain: [{ col: 9, row: 7, type: "lightWoods" }] },
     );
     const out = renderBattle(state);
     expect(out.split("\n").length).toBe(8 * 4 + 2 + 1); // rows*stride + stagger + closing border
