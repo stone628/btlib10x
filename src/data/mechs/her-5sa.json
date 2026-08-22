@@ -1,0 +1,26 @@
+{
+  "model": "HER-5SA",
+  "name": "Hermes II",
+  "tonnage": 40,
+  "weightClass": "Medium",
+  "techBase": "Inner Sphere",
+  "walking": 6,
+  "running": 9,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 16,
+    "rightTorso": 14,
+    "leftTorso": 14,
+    "rightArm": 11,
+    "leftArm": 11,
+    "rightLeg": 19,
+    "leftLeg": 19
+  },
+  "weapons": [
+    { "weapon": "Large Pulse Laser", "location": "rightArm" },
+    { "weapon": "Flamer", "location": "leftArm" },
+    { "weapon": "Ultra AC/5", "location": "rightTorso", "ammoShots": 20 }
+  ],
+  "source": "CBT Quick-Start Rules record sheet"
+}

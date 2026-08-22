@@ -1,0 +1,27 @@
+{
+  "model": "CDA-3MA",
+  "name": "Cicada",
+  "tonnage": 40,
+  "weightClass": "Medium",
+  "techBase": "Inner Sphere",
+  "walking": 8,
+  "running": 12,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 17,
+    "rightTorso": 15,
+    "leftTorso": 15,
+    "rightArm": 12,
+    "leftArm": 12,
+    "rightLeg": 20,
+    "leftLeg": 20
+  },
+  "weapons": [
+    { "weapon": "Medium Laser", "location": "rightArm" },
+    { "weapon": "Medium Laser", "location": "leftArm" },
+    { "weapon": "Snub-Nose PPC", "location": "rightTorso" },
+    { "weapon": "Small Pulse Laser", "location": "centerTorso" }
+  ],
+  "source": "CBT Quick-Start Rules record sheet"
+}

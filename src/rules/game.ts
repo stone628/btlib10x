@@ -1,0 +1,571 @@
+import { FACINGS, isFacing, rotateFacing, type Facing, type Hex, type MoveMode, type Rng, type TerrainType } from "../core/types.js";
+import { bearing, hexDistance, neighbor, sameHex } from "../core/hex.js";
+import { costToEnter } from "../core/terrain.js";
+import { MECH_DEFS } from "../data/index.js";
+import type { MechDef } from "../data/schema.js";
+import { getWeapon } from "../data/weapons.js";
+import * as mv from "./movement.js";
+import { interveningHexes, losBlocked } from "./los.js";
+import { isInFrontArc } from "./arcs.js";
+import { rollInitiative } from "./initiative.js";
+import { computeToHit } from "./tohit.js";
+import {
+  resolveWeaponAttack,
+  type AttackResolution,
+} from "./attack.js";
+import {
+  canFireFromLocation,
+  isImmobile,
+  isKilled,
+  type ArmorState,
+} from "./damage.js";
+
+export interface UnitInit {
+  readonly id: string;
+  readonly model: string;
+  readonly team: number;
+  readonly gunnery: number;
+  readonly position: Hex;
+  readonly facing: Facing;
+}
+
+export interface AttackDecl {
+  readonly weaponIndex: number;
+  readonly targetId: string;
+  /** Shots for rapid-fire weapons; default 1. */
+  readonly shots?: number;
+}
+
+export type MoveStep =
+  | { readonly kind: "enter"; readonly to: Hex }
+  | { readonly kind: "turn"; readonly facings: number };
+
+export type Phase = "initiative" | "movement" | "weaponAttack" | "end";
+
+export interface UnitState {
+  readonly id: string;
+  readonly model: string;
+  readonly team: number;
+  gunnery: number;
+  position: Hex;
+  facing: Facing;
+  armor: ArmorState;
+  phaseStartArmor: ArmorState;
+  ammoLeft: Record<number, number>;
+  jammedWeapons: number[];
+  moveMode: MoveMode | null;
+  movesThisTurn: ("forward" | "backward")[];
+  jumpedThisTurn: boolean;
+  mpSpent: number;
+  declaredAttacks: AttackDecl[];
+  firedTargetId: string | null;
+  destroyed: boolean;
+  removed: boolean;
+}
+
+export type GameEvent =
+  | { readonly kind: "turn"; readonly turn: number }
+  | { readonly kind: "phase"; readonly phase: Phase }
+  | {
+      readonly kind: "initiative";
+      readonly rolls: Readonly<Record<number, number>>;
+      readonly winnerTeam: number;
+    }
+  | { readonly kind: "moveDeclared"; readonly unitId: string; readonly mode: MoveMode }
+  | {
+      readonly kind: "moved";
+      readonly unitId: string;
+      readonly mode: MoveMode;
+      readonly position: Hex;
+      readonly facing: Facing;
+      readonly mpSpent: number;
+    }
+  | { readonly kind: "attacksDeclared"; readonly unitId: string; readonly targetId: string; readonly count: number }
+  | { readonly kind: "attackResolved"; readonly unitId: string; readonly targetId: string; readonly resolution: AttackResolution }
+  | { readonly kind: "unitDestroyed"; readonly unitId: string }
+  | { readonly kind: "unitRemoved"; readonly unitId: string };
+
+export interface BattleState {
+  turn: number;
+  phase: Phase;
+  initiativeWinnerTeam: number | null;
+  units: Record<string, UnitState>;
+  defs: Record<string, MechDef>;
+  terrain: Record<string, TerrainType>;
+  actedThisPhase: string[];
+  events: GameEvent[];
+}
+
+export interface CreateBattleOptions {
+  /** Keyed by "col,row"; missing entries are clear terrain. */
+  readonly terrain?: Record<string, TerrainType>;
+}
+
+function clone(state: BattleState): BattleState {
+  const units: Record<string, UnitState> = {};
+  for (const [id, u] of Object.entries(state.units)) units[id] = { ...u };
+  return { ...state, units };
+}
+
+function getUnitOrThrow(state: BattleState, unitId: string): UnitState {
+  const unit = state.units[unitId];
+  if (!unit) throw new Error(`Unknown unit id: ${unitId}`);
+  return unit;
+}
+
+function requirePhase(state: BattleState, phase: Phase): void {
+  if (state.phase !== phase) {
+    throw new Error(`Expected phase ${phase}, but battle is in ${state.phase}`);
+  }
+}
+
+function occupantAt(state: BattleState, hex: Hex, excludeId?: string): UnitState | undefined {
+  for (const unit of Object.values(state.units)) {
+    if (unit.removed || unit.id === excludeId) continue;
+    if (sameHex(unit.position, hex)) return unit;
+  }
+  return undefined;
+}
+
+export function createBattle(
+  units: readonly UnitInit[],
+  options: CreateBattleOptions = {},
+): BattleState {
+  if (units.length < 2) throw new Error("A battle needs at least two units");
+  const seen = new Set<string>();
+  for (const init of units) {
+    if (seen.has(init.id)) throw new Error(`Duplicate unit id: ${init.id}`);
+    seen.add(init.id);
+    if (!MECH_DEFS[init.model]) throw new Error(`Unknown 'Mech model: ${init.model}`);
+    if (!isFacing(init.facing)) throw new Error(`Invalid facing for ${init.id}: ${String(init.facing)}`);
+    if (!Number.isInteger(init.gunnery) || init.gunnery < 0 || init.gunnery > 7) {
+      throw new Error(`Gunnery for ${init.id} must be an integer 0..7`);
+    }
+  }
+
+  const unitStates: Record<string, UnitState> = {};
+  for (const init of units) {
+    const def: MechDef = MECH_DEFS[init.model]!;
+    const ammoLeft: Record<number, number> = {};
+    def.weapons.forEach((mount, index) => {
+      if (mount.ammoShots !== undefined) ammoLeft[index] = mount.ammoShots;
+    });
+    unitStates[init.id] = {
+      id: init.id,
+      model: init.model,
+      team: init.team,
+      gunnery: init.gunnery,
+      position: { ...init.position },
+      facing: init.facing,
+      armor: { ...def.armor },
+      phaseStartArmor: { ...def.armor },
+      ammoLeft,
+      jammedWeapons: [],
+      moveMode: null,
+      movesThisTurn: [],
+      jumpedThisTurn: false,
+      mpSpent: 0,
+      declaredAttacks: [],
+      firedTargetId: null,
+      destroyed: false,
+      removed: false,
+    };
+  }
+
+  return {
+    turn: 1,
+    phase: "initiative",
+    initiativeWinnerTeam: null,
+    units: unitStates,
+    defs: { ...MECH_DEFS },
+    terrain: { ...options.terrain },
+    actedThisPhase: [],
+    events: [{ kind: "turn", turn: 1 }],
+  };
+}
+
+export function rollInitiativePhase(state: BattleState, rng: Rng): BattleState {
+  requirePhase(state, "initiative");
+  const next = clone(state);
+  const teams = [...new Set(Object.values(next.units).map((u) => u.team))];
+  const result = rollInitiative(teams, rng);
+  next.initiativeWinnerTeam = result.winnerTeam;
+  next.phase = "movement";
+  next.events = [
+    ...next.events,
+    { kind: "initiative", rolls: result.rolls, winnerTeam: result.winnerTeam },
+    { kind: "phase", phase: "movement" },
+  ];
+  return next;
+}
+
+export function declareMove(state: BattleState, unitId: string, mode: MoveMode): BattleState {
+  requirePhase(state, "movement");
+  const next = clone(state);
+  const unit = getUnitOrThrow(next, unitId);
+  if (unit.removed) throw new Error(`${unitId} is removed from play`);
+  if (mode !== "standStill" && isImmobile(unit.armor)) {
+    throw new Error(`${unitId} has a destroyed leg and can only stand still`);
+  }
+  unit.moveMode = mode;
+  unit.movesThisTurn = [];
+  unit.mpSpent = 0;
+  next.events = [...next.events, { kind: "moveDeclared", unitId, mode }];
+  return next;
+}
+
+export function executeMove(
+  state: BattleState,
+  unitId: string,
+  steps: readonly MoveStep[],
+  options: { readonly finalFacing?: Facing } = {},
+): BattleState {
+  requirePhase(state, "movement");
+  const next = clone(state);
+  const unit = getUnitOrThrow(next, unitId);
+  if (unit.moveMode === null) throw new Error(`Declare a movement mode for ${unitId} first`);
+  if (unit.removed) throw new Error(`${unitId} is removed from play`);
+
+  const def = next.defs[unit.model]!;
+  const budget = mv.maxMovePoints(unit.moveMode, def.walking, def.running, def.jumping);
+  const jumping = unit.moveMode === "jump";
+
+  let cursor: Hex = { ...unit.position };
+  let facing: Facing = unit.facing;
+  let spent = 0;
+  const directions: ("forward" | "backward")[] = [];
+
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i]!;
+    const isFinalStep = i === steps.length - 1;
+
+    if (step.kind === "turn") {
+      if (jumping) throw new Error("Jumping 'Mechs choose facing freely on landing; no turn steps");
+      if (unit.moveMode === "standStill") throw new Error("Standing still forbids facing changes");
+      if (!Number.isInteger(step.facings) || step.facings < 1 || step.facings > 5) {
+        throw new Error("Facing change must be 1..5 hexsides");
+      }
+      spent += mv.facingChangeCost(step.facings);
+      facing = rotateFacing(facing, step.facings);
+      continue;
+    }
+
+    const to = step.to;
+    if (jumping) {
+      let isAdjacent = false;
+      for (const f of FACINGS) {
+        if (sameHex(neighbor(cursor, f), to)) {
+          isAdjacent = true;
+          break;
+        }
+      }
+      const jumpInPlace = sameHex(cursor, to);
+      if (!isAdjacent && !(jumpInPlace && spent === 0 && directions.length === 0)) {
+        throw new Error("Jump steps must enter an adjacent hex (or jump in place once)");
+      }
+      spent += 1;
+      directions.push("forward");
+    } else {
+      if (unit.moveMode === "standStill") throw new Error("Standing still forbids entering hexes");
+      const forward = mv.isForwardStep(cursor, to, facing);
+      const backward = !forward && mv.isBackwardStep(cursor, to, facing);
+      if (!forward && !backward) {
+        throw new Error("Ground moves must go straight ahead or straight back relative to facing");
+      }
+      if (backward && unit.moveMode === "run") {
+        throw new Error("Running 'Mechs cannot move backward");
+      }
+      spent += costToEnter(mv.terrainAt(next.terrain, to));
+      directions.push(forward ? "forward" : "backward");
+    }
+
+    const occupant = occupantAt(next, to, unitId);
+    if (occupant !== undefined) {
+      if (isFinalStep) {
+        throw new Error(`Cannot end movement in ${to.col},${to.row}: occupied by ${occupant.id}`);
+      }
+      if (!jumping && occupant.team !== unit.team) {
+        throw new Error(`Cannot move through enemy ${occupant.id} at ${to.col},${to.row}`);
+      }
+    }
+
+    cursor = { ...to };
+  }
+
+  if (spent > budget) {
+    throw new Error(`Move costs ${spent} MP but ${unit.moveMode} budget is ${budget}`);
+  }
+  if (steps.length > 0 && !jumping && unit.moveMode !== "standStill" && isImmobile(unit.armor)) {
+    throw new Error(`${unitId} has a destroyed leg and cannot move`);
+  }
+
+  unit.position = cursor;
+  unit.facing = options.finalFacing ?? facing;
+  unit.jumpedThisTurn = jumping && steps.length > 0;
+  unit.movesThisTurn = directions;
+  unit.mpSpent = spent;
+  next.actedThisPhase = [...next.actedThisPhase, unitId];
+  next.events = [
+    ...next.events,
+    {
+      kind: "moved",
+      unitId,
+      mode: unit.moveMode,
+      position: { ...cursor },
+      facing: unit.facing,
+      mpSpent: spent,
+    },
+  ];
+  return next;
+}
+
+export function declareAttacks(
+  state: BattleState,
+  unitId: string,
+  decls: readonly AttackDecl[],
+): BattleState {
+  requirePhase(state, "weaponAttack");
+  const next = clone(state);
+  const unit = getUnitOrThrow(next, unitId);
+  if (unit.destroyed || unit.removed) throw new Error(`${unitId} is destroyed`);
+  if (unit.declaredAttacks.length > 0) throw new Error(`${unitId} already declared attacks this turn`);
+
+  const def = next.defs[unit.model]!;
+  let targetId: string | null = null;
+
+  for (const decl of decls) {
+    const mount = def.weapons[decl.weaponIndex];
+    if (!mount) throw new Error(`weaponIndex ${decl.weaponIndex} out of range for ${unitId}`);
+    const weapon = getWeapon(mount.weapon);
+
+    if (unit.jammedWeapons.includes(decl.weaponIndex)) {
+      throw new Error(`${mount.weapon} on ${unitId} is jammed`);
+    }
+    if (!canFireFromLocation(unit.phaseStartArmor, mount.location)) {
+      throw new Error(`${mount.weapon} location (${mount.location}) is destroyed or its support torso is gone`);
+    }
+
+    const shots = decl.shots ?? 1;
+    if (!Number.isInteger(shots) || shots < 1) throw new Error("shots must be >= 1");
+    if (weapon.rapidFireShots !== undefined && shots > weapon.rapidFireShots) {
+      throw new Error(`${mount.weapon} can fire at most ${weapon.rapidFireShots} shots`);
+    }
+    if (weapon.rapidFireShots === undefined && shots > 1) {
+      throw new Error(`${mount.weapon} is not rapid-fire`);
+    }
+
+    if (targetId === null) targetId = decl.targetId;
+    else if (targetId !== decl.targetId) {
+      throw new Error("A unit may only declare attacks against one target per turn");
+    }
+
+    const target = getUnitOrThrow(next, decl.targetId);
+    if (target.removed) throw new Error(`Target ${target.id} is removed from play`);
+    if (target.team === unit.team) throw new Error("Target must belong to another team");
+
+    const dist = hexDistance(unit.position, target.position);
+    const b = bearing(unit.position, target.position);
+    if (b === null) throw new Error("Attacker and target share a hex");
+    if (!isInFrontArc(unit.facing, b)) {
+      throw new Error(`${mount.weapon}: target not in front firing arc`);
+    }
+
+    const intervening = interveningHexes(unit.position, target.position).map((h) =>
+      mv.terrainAt(next.terrain, h),
+    );
+    const woodsPoints = intervening.reduce(
+      (sum, t) => sum + (t === "lightWoods" ? 1 : t === "heavyWoods" ? 2 : 0),
+      0,
+    );
+    if (losBlocked(woodsPoints)) {
+      throw new Error("Line of sight is blocked by intervening woods");
+    }
+
+    if (dist > weapon.long) {
+      throw new Error(`${mount.weapon}: target at range ${dist} exceeds long range ${weapon.long}`);
+    }
+
+    const breakdown = computeToHit({
+      gunnery: unit.gunnery,
+      attackerMovement: unit.moveMode ?? "standStill",
+      targetHexesMoved: mv.hexesSinceLastReversal(target.movesThisTurn),
+      targetJumped: target.jumpedThisTurn,
+      targetTerrain: mv.terrainAt(next.terrain, target.position),
+      interveningWoods: woodsPoints,
+      distance: dist,
+      weapon,
+    });
+    if (breakdown.automatic === "miss") {
+      throw new Error(
+        `${mount.weapon}: modified TN ${breakdown.total} auto-misses; abort the declaration instead`,
+      );
+    }
+
+    const needed = weapon.missiles !== undefined ? 1 : shots;
+    if (mount.ammoShots !== undefined) {
+      const left = unit.ammoLeft[decl.weaponIndex] ?? 0;
+      if (left < needed) {
+        throw new Error(`${mount.weapon}: needs ${needed} shot(s) but only ${left} remain`);
+      }
+      unit.ammoLeft[decl.weaponIndex] = left - needed;
+    }
+  }
+
+  if (targetId === null) throw new Error("declareAttacks requires at least one declaration");
+
+  unit.declaredAttacks = [...decls];
+  unit.firedTargetId = targetId;
+  next.actedThisPhase = [...next.actedThisPhase, unitId];
+  next.events = [
+    ...next.events,
+    { kind: "attacksDeclared", unitId, targetId, count: decls.length },
+  ];
+  return next;
+}
+
+export function resolveDeclaredAttacks(state: BattleState, unitId: string, rng: Rng): BattleState {
+  requirePhase(state, "weaponAttack");
+  const next = clone(state);
+  const unit = getUnitOrThrow(next, unitId);
+  if (unit.declaredAttacks.length === 0) throw new Error(`${unitId} has no declared attacks`);
+  const def = next.defs[unit.model]!;
+
+  for (const decl of unit.declaredAttacks) {
+    const mount = def.weapons[decl.weaponIndex]!;
+    const weapon = getWeapon(mount.weapon);
+    const target = getUnitOrThrow(next, decl.targetId);
+    const shots = decl.shots ?? 1;
+
+    const resolution = resolveWeaponAttack({
+      rng,
+      gunnery: unit.gunnery,
+      attackerMoved: unit.moveMode ?? "standStill",
+      targetHexesMoved: mv.hexesSinceLastReversal(target.movesThisTurn),
+      targetJumped: target.jumpedThisTurn,
+      targetTerrain: mv.terrainAt(next.terrain, target.position),
+      interveningTerrains: interveningHexes(unit.position, target.position).map((h) =>
+        mv.terrainAt(next.terrain, h),
+      ),
+      distance: hexDistance(unit.position, target.position),
+      weaponName: weapon.name,
+      shots,
+      targetArmor: target.armor,
+    });
+
+    if (resolution.application !== null) target.armor = resolution.application.armor;
+    if (resolution.jammed && !unit.jammedWeapons.includes(decl.weaponIndex)) {
+      unit.jammedWeapons = [...unit.jammedWeapons, decl.weaponIndex];
+    }
+
+    next.events = [
+      ...next.events,
+      { kind: "attackResolved", unitId, targetId: target.id, resolution },
+    ];
+  }
+
+  unit.declaredAttacks = [];
+  return next;
+}
+
+export function advancePhase(state: BattleState): BattleState {
+  const next = clone(state);
+  let events = [...next.events];
+
+  switch (next.phase) {
+    case "initiative": {
+      if (next.initiativeWinnerTeam === null) {
+        throw new Error("Roll initiative before leaving the initiative phase");
+      }
+      next.phase = "movement";
+      break;
+    }
+    case "movement": {
+      next.phase = "weaponAttack";
+      for (const unit of Object.values(next.units)) {
+        unit.phaseStartArmor = { ...unit.armor };
+      }
+      next.actedThisPhase = [];
+      break;
+    }
+    case "weaponAttack": {
+      for (const unit of Object.values(next.units)) {
+        if (!unit.destroyed && isKilled(unit.armor)) {
+          unit.destroyed = true;
+          unit.removed = true;
+          events = [
+            ...events,
+            { kind: "unitDestroyed", unitId: unit.id },
+            { kind: "unitRemoved", unitId: unit.id },
+          ];
+        }
+      }
+      next.phase = "end";
+      break;
+    }
+    case "end": {
+      next.turn += 1;
+      next.initiativeWinnerTeam = null;
+      next.phase = "initiative";
+      next.actedThisPhase = [];
+      for (const unit of Object.values(next.units)) {
+        unit.moveMode = null;
+        unit.movesThisTurn = [];
+        unit.jumpedThisTurn = false;
+        unit.mpSpent = 0;
+        unit.declaredAttacks = [];
+        unit.firedTargetId = null;
+      }
+      events = [...events, { kind: "turn", turn: next.turn }];
+      break;
+    }
+  }
+
+  events = [...events, { kind: "phase", phase: next.phase }];
+  next.events = events;
+  return next;
+}
+
+/** Suggest which unit must act next (initiative loser alternates first). */
+export function nextActor(state: BattleState): string | null {
+  if (state.phase !== "movement" && state.phase !== "weaponAttack") return null;
+  if (state.initiativeWinnerTeam === null) return null;
+  const alive = Object.values(state.units).filter((u) => !u.removed);
+  const teams = [...new Set(alive.map((u) => u.team))];
+  if (teams.length === 0) return null;
+  const winner = state.initiativeWinnerTeam;
+  const loser = teams.find((t) => t !== winner) ?? winner;
+  const order = loser === winner ? teams : [loser, ...teams.filter((t) => t !== loser)];
+
+  const actedCount = (team: number): number =>
+    alive.filter((u) => u.team === team && state.actedThisPhase.includes(u.id)).length;
+
+  const sorted = [...order].sort((a, b) => actedCount(a) - actedCount(b));
+  for (const team of sorted) {
+    const candidate = alive.find(
+      (u) => u.team === team && !state.actedThisPhase.includes(u.id),
+    );
+    if (candidate) return candidate.id;
+  }
+  return null;
+}
+
+export interface VictoryResult {
+  readonly winnerTeam: number | null;
+  readonly draw: boolean;
+}
+
+export function checkVictory(state: BattleState): VictoryResult {
+  const aliveTeams = new Set(
+    Object.values(state.units)
+      .filter((u) => !u.removed)
+      .map((u) => u.team),
+  );
+  if (aliveTeams.size <= 1) {
+    return { winnerTeam: aliveTeams.values().next().value ?? null, draw: aliveTeams.size === 0 };
+  }
+  return { winnerTeam: null, draw: false };
+}
+
+export function getUnit(state: BattleState, unitId: string): UnitState {
+  return getUnitOrThrow(state, unitId);
+}

@@ -1,0 +1,25 @@
+{
+  "model": "GRF-1N",
+  "name": "Griffin",
+  "tonnage": 55,
+  "weightClass": "Medium",
+  "techBase": "Inner Sphere",
+  "walking": 5,
+  "running": 8,
+  "jumping": 5,
+  "armor": {
+    "head": 9,
+    "centerTorso": 24,
+    "rightTorso": 18,
+    "leftTorso": 18,
+    "rightArm": 18,
+    "leftArm": 18,
+    "rightLeg": 20,
+    "leftLeg": 20
+  },
+  "weapons": [
+    { "weapon": "LRM 10", "location": "rightTorso", "ammoShots": 12 },
+    { "weapon": "PPC", "location": "rightArm" }
+  ],
+  "source": "Beginner Box Quick-Start Rules record sheet (armor circles transcribed from TRO 3025 allocation; see TODO.md)"
+}

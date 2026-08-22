@@ -1,0 +1,54 @@
+import { describe, expect, it } from "vitest";
+import { hitLocation } from "../src/rules/hitlocation.js";
+import {
+  clusterHitsForMissiles,
+  clusterHitsForShots,
+  groupMissiles,
+} from "../src/rules/cluster.js";
+
+describe("hit location table", () => {
+  it("maps every 2D6 result per the record sheets", () => {
+    expect(hitLocation(2)).toBe("centerTorso");
+    expect(hitLocation(3)).toBe("rightArm");
+    expect(hitLocation(4)).toBe("rightArm");
+    expect(hitLocation(5)).toBe("rightLeg");
+    expect(hitLocation(6)).toBe("rightTorso");
+    expect(hitLocation(7)).toBe("centerTorso");
+    expect(hitLocation(8)).toBe("leftTorso");
+    expect(hitLocation(9)).toBe("leftLeg");
+    expect(hitLocation(10)).toBe("leftArm");
+    expect(hitLocation(11)).toBe("leftArm");
+    expect(hitLocation(12)).toBe("head");
+  });
+
+  it("rejects impossible rolls", () => {
+    expect(() => hitLocation(1)).toThrow();
+    expect(() => hitLocation(13)).toThrow();
+  });
+});
+
+describe("cluster hits tables", () => {
+  it("matches the missile table (columns 2/5/6/10/15)", () => {
+    expect(clusterHitsForMissiles(2, 2)).toBe(1);
+    expect(clusterHitsForMissiles(2, 12)).toBe(2);
+    expect(clusterHitsForMissiles(5, 4)).toBe(2);
+    expect(clusterHitsForMissiles(6, 8)).toBe(4);
+    expect(clusterHitsForMissiles(10, 9)).toBe(8);
+    expect(clusterHitsForMissiles(10, 12)).toBe(10);
+    expect(clusterHitsForMissiles(15, 11)).toBe(15);
+    expect(() => clusterHitsForMissiles(20, 7)).toThrow();
+  });
+
+  it("matches the rapid-fire shot table (columns 2/3/4)", () => {
+    expect(clusterHitsForShots(2, 2)).toBe(1);
+    expect(clusterHitsForShots(2, 12)).toBe(2);
+    expect(clusterHitsForShots(3, 7)).toBe(2);
+    expect(clusterHitsForShots(4, 11)).toBe(4);
+  });
+
+  it("groups LRM missiles into lots of five", () => {
+    expect(groupMissiles(10, 5)).toEqual([5, 5]);
+    expect(groupMissiles(8, 5)).toEqual([5, 3]);
+    expect(groupMissiles(3, 5)).toEqual([3]);
+  });
+});
