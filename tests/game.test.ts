@@ -11,11 +11,11 @@ import {
   resolveDeclaredAttacks,
   rollInitiativePhase,
 } from "../src/rules/game.js";
-import type { BattleState } from "../src/rules/game.js";
+import type { BattleState, TerrainHexDef } from "../src/rules/game.js";
 import { getWeapon } from "../src/data/weapons.js";
 import { scriptedRng } from "./helpers.js";
 
-function hbkVsEnf(terrain: Record<string, "clear" | "lightWoods" | "heavyWoods"> = {}): BattleState {
+function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
   return createBattle(
     [
       { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 0, row: 2 }, facing: "se" },
@@ -45,6 +45,22 @@ describe("createBattle", () => {
     expect(() =>
       createBattle([base, { ...base, id: "b", gunnery: 8 }]),
     ).toThrow(/Gunnery/);
+  });
+
+  it("rejects duplicate terrain hex definitions", () => {
+    const base = { model: "HBK-4G", gunnery: 4, position: { col: 0, row: 2 }, facing: "se" as const };
+    const units = [
+      { ...base, id: "a", team: 0 },
+      { ...base, id: "b", team: 1 },
+    ];
+    expect(() =>
+      createBattle(units, {
+        terrain: [
+          { col: 1, row: 2, type: "lightWoods" },
+          { col: 1, row: 2, type: "heavyWoods" },
+        ],
+      }),
+    ).toThrow(/Duplicate terrain/);
   });
 
   it("initializes armor and ammo from the definition", () => {
@@ -82,7 +98,7 @@ describe("movement phase", () => {
         position: { col: 9, row: 9 },
         facing: "nw",
       },
-    ], { terrain: { "1,3": "lightWoods" } });
+    ], { terrain: [{ col: 1, row: 3, type: "lightWoods" }] });
     let state = startMovementTurn(setup);
     state = declareMove(state, "hbk", "walk");
     state = executeMove(state, "hbk", [
@@ -261,17 +277,20 @@ describe("weapon attack phase", () => {
     );
 
     // Two heavy woods between -> blocked LOS.
-    state = startAttackTurn(hbkVsEnf({
-      "-1,2": "heavyWoods",
-      "0,2": "clear",
-      "1,2": "clear",
-      "2,2": "heavyWoods",
-    }));
+    state = startAttackTurn(hbkVsEnf([
+      { col: -1, row: 2, type: "heavyWoods" },
+      { col: 2, row: 2, type: "heavyWoods" },
+    ]));
     // Move units apart so intervening hexes exist.
     state = createBattle([
       { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 0, row: 2 }, facing: "se" },
       { id: "enf", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 3, row: 2 }, facing: "nw" },
-    ], { terrain: { "1,2": "heavyWoods", "2,2": "heavyWoods" } });
+    ], {
+      terrain: [
+        { col: 1, row: 2, type: "heavyWoods" },
+        { col: 2, row: 2, type: "heavyWoods" },
+      ],
+    });
     state = startAttackTurn(state);
     expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 0, targetId: "enf" }])).toThrow(
       /blocked/,
@@ -299,7 +318,13 @@ describe("weapon attack phase", () => {
     state = createBattle([
       { id: "enf", model: "ENF-4R", team: 0, gunnery: 7, position: { col: 0, row: 2 }, facing: "se" },
       { id: "hbk", model: "HBK-4G", team: 1, gunnery: 4, position: { col: 9, row: 2 }, facing: "nw" },
-    ], { terrain: { "3,2": "lightWoods", "5,2": "lightWoods", "9,2": "heavyWoods" } });
+    ], {
+      terrain: [
+        { col: 3, row: 2, type: "lightWoods" },
+        { col: 5, row: 2, type: "lightWoods" },
+        { col: 9, row: 2, type: "heavyWoods" },
+      ],
+    });
     state = startAttackTurn(state);
     // Large laser (index 1), distance 9, +2 woods intervening, +2 heavy target.
     expect(() => declareAttacks(state, "enf", [{ weaponIndex: 1, targetId: "hbk" }])).toThrow(

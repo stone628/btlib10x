@@ -38,12 +38,13 @@ For tests you can also script exact die results (see `tests/helpers.ts`).
 
 ## 2. Load the map and create the 'Mechs
 
-Terrain is plain data: a record keyed `"col,row"` whose missing entries are
-clear ground. 'Mech models reference the bundled record sheets (`MECH_DEFS`:
+Terrain is plain data: a list of hex definitions `{ col, row, type }` whose
+missing hexes are clear ground. 'Mech models reference the bundled record
+sheets (`MECH_DEFS`:
 ENF-4R, HBK-4G, CDA-3MA, HER-5SA, GRF-1N, WVR-6R).
 
 ```ts
-const terrain = { "2,3": "lightWoods" } as const;
+const terrain = [{ col: 2, row: 3, type: "lightWoods" }] as const;
 
 let state: BattleState = createBattle(
   [

@@ -82,6 +82,25 @@ interface MechDef {
 - `validateMechDef(data: unknown): MechDef` — hand-rolled validator; throws
   with all problems listed.
 
+### Battle maps (`data/mapschema.ts`, `data/maps/*.json`)
+
+```ts
+interface MapDef {
+  width: number;    // cols are 1-based: 1..width (rulebook mapsheet labels)
+  height: number;   // rows are 1-based: 1..height
+  terrain: TerrainHexDef[];  // non-clear hexes only
+}
+```
+
+- `MAP_DEFS` — bundled rulebook maps keyed by name (`beginner`,
+  `quickstart`), validated at load.
+- `getMapDef(name): MapDef | undefined`
+- `validateMapDef(data): MapDef` — checks shape, integer coords, terrain type,
+  1-based bounds, and duplicate hexes; throws with all problems listed.
+- `toEngineTerrain(map): TerrainHexDef[]` — shifts map hexes to the engine's
+  0-based grid for `createBattle({ terrain })`; round-trips with the renderer's
+  +1 display labels.
+
 ## Rules
 
 ### Initiative (`rules/initiative.ts`)
@@ -181,6 +200,8 @@ Key types:
 ```ts
 interface UnitInit { id; model; team; gunnery; position: Hex; facing: Facing }
 
+interface TerrainHexDef { col; row; type: TerrainType }   // options.terrain input
+
 type MoveStep =
   | { kind: "enter"; to: Hex }      // forward/backward (ground) or adjacent hop (jump)
   | { kind: "turn"; facings: number };
@@ -193,7 +214,7 @@ interface BattleState {
   turn; phase; initiativeWinnerTeam;
   units: Record<string, UnitState>;
   defs: Record<string, MechDef>;
-  terrain: Record<string, TerrainType>;  // keyed "col,row"
+  terrain: Record<string, TerrainType>;  // keyed "col,row"; built from the TerrainHexDef[] option
   actedThisPhase: string[];
   events: GameEvent[];                   // serializable audit log
 }

@@ -29,7 +29,7 @@ function setup(): BattleState {
       { id: "wvr", model: "WVR-6R", team: 0, gunnery: 4, position: { col: 1, row: 2 }, facing: "se" },
       { id: "grf", model: "GRF-1N", team: 1, gunnery: 3, position: { col: 9, row: 6 }, facing: "nw" },
     ],
-    { terrain: { "5,5": "lightWoods" } },
+    { terrain: [{ col: 5, row: 5, type: "lightWoods" }] },
   );
 }
 
