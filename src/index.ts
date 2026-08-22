@@ -32,3 +32,4 @@ export * from "./rules/damage.js";
 export type { AttackResolution, HitGroup, WeaponAttackInput } from "./rules/attack.js";
 export { resolveWeaponAttack } from "./rules/attack.js";
 export * from "./rules/game.js";
+export { renderBattle } from "./render.js";
