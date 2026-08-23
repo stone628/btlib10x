@@ -7,7 +7,7 @@ import type { MechDef } from "../src/data/schema.js";
 import { getWeapon } from "../src/data/weapons.js";
 import type { Location, MoveMode } from "../src/core/types.js";
 import { LOCATIONS } from "../src/core/types.js";
-import { renderBattle, renderMap } from "../src/render.js";
+import { TERRAIN_GLYPHS, renderBattle, renderMap } from "../src/render.js";
 import type { Session, SetupUnit } from "./session.js";
 import { moveStepsInfo } from "./session.js";
 
@@ -22,17 +22,30 @@ function mapDims(s: Session): [number, number] | undefined {
   return map ? [map.width, map.height] : undefined;
 }
 
+/** Bottom-center glyph map for a `"col,row" -> terrain type` record. */
+function terrainMarks(terrain: Readonly<Record<string, string>>): Record<string, string> {
+  const marks: Record<string, string> = {};
+  for (const [key, type] of Object.entries(terrain)) {
+    const glyph = TERRAIN_GLYPHS[type];
+    if (glyph !== undefined) marks[key] = glyph;
+  }
+  return marks;
+}
+
 export function boardLines(s: Session): string[] {
   const dims = mapDims(s);
   if (!s.battle) {
+    if (!s.mapName && s.roster.length === 0) {
+      return ["no battlefield yet - load one via 'map'; 'info map' lists the choices."];
+    }
     const units = Object.fromEntries(
-      s.roster.map((u) => [u.id, { position: u.position, removed: false }]),
+      s.roster.map((u) => [u.id, { id: u.id, position: u.position, removed: false }]),
     ) as BattleState["units"];
     const terrain: Record<string, string> = {};
     for (const t of s.terrainDefs) terrain[`${t.col},${t.row}`] = t.type;
-    return renderBattle({ units, terrain } as BattleState, dims?.[0], dims?.[1]).split("\n");
+    return renderBattle({ units, terrain } as BattleState, dims?.[0], dims?.[1], undefined, terrainMarks(terrain)).split("\n");
   }
-  return renderBattle(s.battle, dims?.[0], dims?.[1]).split("\n");
+  return renderBattle(s.battle, dims?.[0], dims?.[1], undefined, terrainMarks(s.battle.terrain)).split("\n");
 }
 
 // ---------------------------------------------------------------- info ----

@@ -108,7 +108,7 @@ describe("console renderer", () => {
 });
 
 describe("map renderer", () => {
-  it("draws terrain glyphs at the given size, ignoring clear ground", () => {
+  it("draws terrain glyphs at the hex bottom center, ignoring clear ground", () => {
     const out = renderMap(
       [
         { col: 0, row: 0, type: "lightWoods" },
@@ -118,29 +118,32 @@ describe("map renderer", () => {
       3,
       2,
     );
-    expect(out).toContain("/ w \\");
-    expect(out).toContain("/ W \\");
+    expect(out).toMatch(/[/\\]+ w [/\\]+/);
+    expect(out).toMatch(/[/\\]+ W [/\\]+/);
     expect(out).not.toContain("???");
     expect(out.split("\n").length).toBe(2 * 4 + 2 + 1); // rows*stride + stagger + closing border
   });
 
-  it("matches renderBattle output for the same terrain overlay", () => {
-    const terrain = [
-      { col: 0, row: 0, type: "lightWoods" },
-      { col: 3, row: 2, type: "heavyWoods" },
-    ] as const;
-    const battle = createBattle(
+  it("keeps unit ids in the top cell while terrain marks sit at the bottom", () => {
+    const state = createBattle([
+      { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 1, row: 2 }, facing: "n" },
+      { id: "far", model: "GRF-1N", team: 1, gunnery: 4, position: { col: 9, row: 9 }, facing: "s" },
+    ]);
+    const out = renderBattle(state, undefined, undefined, { "3,0": "W" });
+    expect(out).toContain("/hbk\\");
+    expect(out).toMatch(/[/\\]+ W [/\\]+/);
+  });
+
+  it("draws battle terrain via the marks layer", () => {
+    const state = createBattle(
       [
-        { id: "a", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 9, row: 9 }, facing: "n" },
-        { id: "b", model: "GRF-1N", team: 1, gunnery: 4, position: { col: 9, row: 9 }, facing: "s" },
+        { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 1, row: 1 }, facing: "n" },
+        { id: "far", model: "GRF-1N", team: 1, gunnery: 4, position: { col: 9, row: 9 }, facing: "s" },
       ],
-      { terrain: [...terrain] },
+      { terrain: [{ col: 0, row: 0, type: "lightWoods" }] },
     );
-    expect(renderMap([...terrain], 5, 4)).toBe(
-      renderBattle(battle, 5, 4, {
-        "0,0": "w",
-        "3,2": "W",
-      }),
-    );
+    const out = renderBattle(state, undefined, undefined, undefined, { "0,0": "w" });
+    expect(out).toContain("/hbk\\");
+    expect(out).toMatch(/[/\\]+ w [/\\]+/);
   });
 });
