@@ -250,7 +250,7 @@ Rules encoded by the state machine:
 
 ## Console rendering (`render.ts`)
 
-### `renderBattle(state, width?, height?, overlay?): string`
+### `renderBattle(state, width?, height?, overlay?, marks?): string`
 ASCII map for consoles/logs. Each hex draws as
 
 ```
@@ -273,10 +273,13 @@ omitted; board bounds default to the units + terrain extent. Log with
 chars drawn inside empty hexes — e.g. terrain markers like `{ "3,4": "W" }`.
 Occupying units always take precedence over overlay glyphs.
 
+`marks` maps `"col,row"` keys to glyphs drawn at the bottom center of the hex
+(same slot `renderMap` uses for terrain); it composes freely with occupants
+and overlay.
+
 ### `renderMap(terrain, width, height): string`
 
 Render a static map sheet (no units) from non-clear terrain hex definitions at
 the given size. Terrain hexes draw their glyph from the exported
-`TERRAIN_GLYPHS` table (`lightWoods: "w"`, `heavyWoods: "W"`); all other hexes
-are blank. Shares the same canvas machinery as `renderBattle`, so output is
-identical to rendering an empty battle with a matching overlay.
+`TERRAIN_GLYPHS` table (`lightWoods: "w"`, `heavyWoods: "W"`) at the bottom
+center of the hex (`\ w /`); all other hexes are blank.

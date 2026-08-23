@@ -48,9 +48,11 @@ interface BoardInput {
   readonly rows: number;
   /** `"col,row"` (engine coords) -> cell text; later keys win via caller merge. */
   readonly cells: Readonly<Record<string, string>>;
+  /** `"col,row"` -> glyph drawn at the hex's bottom center (e.g. terrain). */
+  readonly marks?: Readonly<Record<string, string>>;
 }
 
-function drawBoard({ cols, rows, cells }: BoardInput): string {
+function drawBoard({ cols, rows, cells, marks }: BoardInput): string {
   const canvasRows = rows * ROW_STRIDE + (cols >= 2 ? STAGGER : 0) + 1;
   const canvasCols = (cols - 1) * COL_STRIDE + HEX_WIDTH;
   const canvas: string[][] = Array.from({ length: canvasRows }, () =>
@@ -82,11 +84,18 @@ function drawBoard({ cols, rows, cells }: BoardInput): string {
     const baseY = col % 2 === 1 ? STAGGER : 0;
     for (let row = 0; row < rows; row++) {
       const y = baseY + row * ROW_STRIDE;
-      const cell = cells[`${col},${row}`];
+      const key = `${col},${row}`;
+      const cell = cells[key];
       stampBorder(col * COL_STRIDE, y);
       stamp(col * COL_STRIDE, y + 1, ` /${cell === undefined ? "   " : fitCell(cell)}\\ `);
       stamp(col * COL_STRIDE, y + 2, `<${pad2(col + 1)},${String(row + 1).padEnd(2)}>`);
       stamp(col * COL_STRIDE, y + 3, " \\   / ");
+      const mark = marks?.[key];
+      if (mark !== undefined && mark.length > 0) {
+        // Only the centered glyph: the surrounding "\   /" edges belong to
+        // this hex already, and restamping them would overwrite neighbors.
+        stamp(col * COL_STRIDE + 2, y + 3, fitCell(mark));
+      }
       stampBorder(col * COL_STRIDE, y + ROW_STRIDE);
     }
   }
@@ -97,22 +106,24 @@ function drawBoard({ cols, rows, cells }: BoardInput): string {
 /**
  * Render a static map sheet from non-clear terrain hex definitions
  * (engine coordinates) at the given size. Terrain hexes draw their
- * {@link TERRAIN_GLYPHS} marker; everything else is clear ground.
+ * {@link TERRAIN_GLYPHS} marker at the bottom center of the hex
+ * (`\ w /`); everything else is clear ground.
  */
 export function renderMap(
   terrain: readonly TerrainHexDef[],
   width: number,
   height: number,
 ): string {
-  const cells: Record<string, string> = {};
+  const marks: Record<string, string> = {};
   for (const { col, row, type } of terrain) {
     const glyph = TERRAIN_GLYPHS[type];
-    if (glyph !== undefined) cells[`${col},${row}`] = glyph;
+    if (glyph !== undefined) marks[`${col},${row}`] = glyph;
   }
   return drawBoard({
     cols: Math.max(1, width),
     rows: Math.max(1, height),
-    cells,
+    cells: {},
+    marks,
   });
 }
 
@@ -120,13 +131,15 @@ export function renderMap(
  * Render a battle: unit ids take precedence over hex contents. Removed units
  * are omitted; board bounds default to the units + terrain extent. The
  * optional `overlay` maps `"col,row"` keys to short glyphs (up to 3 chars)
- * drawn inside empty hexes — e.g. terrain markers.
+ * drawn inside empty hexes — e.g. terrain markers. The optional `marks` maps
+ * `"col,row"` keys to glyphs drawn at the hex bottom center (see renderMap).
  */
 export function renderBattle(
   state: BattleState,
   width?: number,
   height?: number,
   overlay?: Readonly<Record<string, string>>,
+  marks?: Readonly<Record<string, string>>,
 ): string {
   let maxCol = 0;
   let maxRow = 0;
@@ -153,5 +166,6 @@ export function renderBattle(
     cols: Math.max(1, width ?? maxCol + 1),
     rows: Math.max(1, height ?? maxRow + 1),
     cells,
+    ...(marks === undefined ? {} : { marks }),
   });
 }

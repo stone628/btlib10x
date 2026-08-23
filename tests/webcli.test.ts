@@ -153,6 +153,23 @@ describe("help <command>", () => {
   });
 });
 
+describe("board", () => {
+  it("explains instead of drawing a 1x1 grid when nothing is loaded", () => {
+    const s = S.newSession();
+    const out = run(s, "board").join("\n");
+    expect(out).toContain("no battlefield yet");
+    expect(out).toContain("'map'");
+    expect(out).not.toContain("---");
+
+    run(s, "map beginner");
+    run(s, "add hbk HBK-4G 0 4 3 3");
+    const board = run(s, "board").join("\n");
+    expect(board).toContain("/hbk\\"); // placed unit id drawn
+    expect(board).toContain("< 1,1 >"); // map renders even with no units
+    expect(board).toMatch(/[/\\]+ W [/\\]+/); // terrain glyphs drawn
+  });
+});
+
 describe("clear", () => {
   it("signals a screen wipe via form feed", () => {
     const s = S.newSession();
@@ -181,10 +198,10 @@ describe("info", () => {
     expect(text).toMatch(/lightWoods \d+/);
     expect(text).toMatch(/heavyWoods \d+/);
     expect(text).toContain("legend: w lightWoods");
-    expect(text).toContain("/ w \\");
-    expect(text).toContain("/ W \\");
+    expect(text).toMatch(/[/\\]+ w [/\\]+/);
+    expect(text).toMatch(/[/\\]+ W [/\\]+/);
     const beginner = run(s, "info map beginner").join("\n");
-    expect(beginner).toContain("/ W \\");
+    expect(beginner).toMatch(/[/\\]+ W [/\\]+/);
   });
 });
 

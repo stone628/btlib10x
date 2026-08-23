@@ -41,7 +41,7 @@ Examples:
 | command | effect |
 |---|---|
 | `help` / `?` | state hint line, then commands available now; `help <command>` shows usage plus per-argument explanations |
-| `board` | ASCII grid (`renderBattle`), sized from loaded map's width×height (unit/terrain extent before a map is loaded) |
+| `board` | ASCII grid (`renderBattle`), sized from loaded map's width×height (unit/terrain extent before a map is loaded); with no map and empty roster, explains how to load one |
 | `clear` | clear the scrollback screen |
 | `log [n]` | last n events (default 10) |
 | `info mech` | list available 'Mechs |
