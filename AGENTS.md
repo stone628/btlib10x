@@ -33,6 +33,7 @@ Run typecheck + tests together before considering work done: `npm run typecheck 
 - Strictest sensible tsc settings (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`).
 - All randomness flows through an injected `Rng`; rules functions are deterministic given inputs — required for reproducible battles and future sim work.
 - Game state is plain serializable data; mutations happen through `src/rules/game.ts` APIs only.
+- Web-layer user-facing strings go through the i18n catalogs (`web/i18n/*.ts`, locales `en` + `kr`); `en` is canonical — other locales are compile-checked against it, and new strings default to English until translated. Engine output in `src/` stays English.
 - Mech data lives in `data/mechs/*.json` (copied into published package); new 'Mechs must pass `validateMechDef`.
 
 ## Roadmap

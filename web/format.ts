@@ -5,11 +5,13 @@ import { canFireFromLocation } from "../src/rules/damage.js";
 import { getMapDef, MAP_DEFS, MECH_DEFS, toEngineTerrain } from "../src/data/index.js";
 import type { MechDef } from "../src/data/schema.js";
 import { getWeapon } from "../src/data/weapons.js";
-import type { Location, MoveMode } from "../src/core/types.js";
+import type { Location } from "../src/core/types.js";
 import { LOCATIONS } from "../src/core/types.js";
 import { TERRAIN_GLYPHS, renderBattle, renderMap } from "../src/render.js";
 import type { Session, SetupUnit } from "./session.js";
 import { moveStepsInfo } from "./session.js";
+import { t } from "./i18n/index.js";
+import type { LocaleId } from "./i18n/index.js";
 
 /** Display coordinates are 1-based (printed mapsheet labels). */
 function disp(hex: { col: number; row: number }): string {
@@ -36,13 +38,13 @@ export function boardLines(s: Session): string[] {
   const dims = mapDims(s);
   if (!s.battle) {
     if (!s.mapName && s.roster.length === 0) {
-      return ["no battlefield yet - load one via 'map'; 'info map' lists the choices."];
+      return [t(s.locale, "board.noMap")];
     }
     const units = Object.fromEntries(
       s.roster.map((u) => [u.id, { id: u.id, position: u.position, removed: false }]),
     ) as BattleState["units"];
     const terrain: Record<string, string> = {};
-    for (const t of s.terrainDefs) terrain[`${t.col},${t.row}`] = t.type;
+    for (const t2 of s.terrainDefs) terrain[`${t2.col},${t2.row}`] = t2.type;
     return renderBattle({ units, terrain } as BattleState, dims?.[0], dims?.[1], undefined, terrainMarks(terrain)).split("\n");
   }
   return renderBattle(s.battle, dims?.[0], dims?.[1], undefined, terrainMarks(s.battle.terrain)).split("\n");
@@ -50,50 +52,61 @@ export function boardLines(s: Session): string[] {
 
 // ---------------------------------------------------------------- info ----
 
-export function infoMechList(): string[] {
-  return Object.values(MECH_DEFS).map(
-    (d) => `${d.model.padEnd(8)} ${d.name} (${d.weightClass}) walk/run/jump ${d.walking}/${d.running}/${d.jumping}`,
+export function infoMechList(locale: LocaleId): string[] {
+  return Object.values(MECH_DEFS).map((d) =>
+    t(locale, "info.mechListLine", {
+      model: d.model,
+      name: d.name,
+      weightClass: d.weightClass,
+      walk: d.walking,
+      run: d.running,
+      jump: d.jumping,
+    }),
   );
 }
 
-export function infoMech(model: string): string[] {
-  const d = requireMechDef(model);
+export function infoMech(locale: LocaleId, model: string): string[] {
+  const d = requireMechDef(model, locale);
   return [
-    `${d.model} ${d.name} — ${d.weightClass} ${d.tonnage}t (${d.techBase})`,
-    `movement: walk ${d.walking} / run ${d.running} / jump ${d.jumping}`,
-    `weapons (${d.weapons.length}):`,
+    t(locale, "info.head", {
+      model: d.model,
+      name: d.name,
+      weightClass: d.weightClass,
+      tonnage: d.tonnage,
+      techBase: d.techBase,
+    }),
+    t(locale, "info.movement", { walk: d.walking, run: d.running, jump: d.jumping }),
+    t(locale, "sheet.weaponsHeader", { n: d.weapons.length }),
     ...weaponSummary(d),
   ];
 }
-
-const TERRAIN_LEGEND = "legend: w lightWoods  W heavyWoods  (blank = clear)";
 
 export function infoMapList(): string[] {
   return Object.entries(MAP_DEFS).map(([name, m]) => `${name}: ${m.width}x${m.height}, ${m.terrain.length} terrain hexes`);
 }
 
-export function infoMap(name: string): string[] {
+export function infoMap(locale: LocaleId, name: string): string[] {
   const map = MAP_DEFS[name];
-  if (!map) throw new Error(`Unknown map ${name}; available: ${Object.keys(MAP_DEFS).join(", ")}`);
+  if (!map) throw new Error(t(locale, "err.unknownMap", { name, list: Object.keys(MAP_DEFS).join(", ") }));
   const counts = new Map<string, number>();
-  for (const t of map.terrain) counts.set(t.type, (counts.get(t.type) ?? 0) + 1);
+  for (const t2 of map.terrain) counts.set(t2.type, (counts.get(t2.type) ?? 0) + 1);
   const breakdown = [...counts.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([type, n]) => `${type} ${n}`)
     .join(", ");
   const grid = renderMap(toEngineTerrain(map), map.width, map.height);
   return [
-    `${name}: ${map.width}x${map.height}`,
-    `terrain: ${breakdown || "none"}`,
-    TERRAIN_LEGEND,
+    t(locale, "info.mapHead", { name, w: map.width, h: map.height }),
+    t(locale, "info.terrainLine", { breakdown: breakdown || t(locale, "info.terrainNone") }),
+    t(locale, "info.legend"),
     "",
     ...grid.split("\n"),
   ];
 }
 
-function requireMechDef(model: string): MechDef {
+function requireMechDef(model: string, locale: LocaleId): MechDef {
   const def = MECH_DEFS[model];
-  if (!def) throw new Error(`Unknown 'Mech model: ${model} (try 'info mech')`);
+  if (!def) throw new Error(t(locale, "err.unknownModel", { model }));
   return def;
 }
 
@@ -116,7 +129,7 @@ interface SheetView {
   }[];
 }
 
-function battleSheet(battle: BattleState, unit: UnitState): SheetView {
+function battleSheet(battle: BattleState, unit: UnitState, locale: LocaleId): SheetView {
   const def = battle.defs[unit.model]!;
   return {
     model: def.model,
@@ -124,9 +137,10 @@ function battleSheet(battle: BattleState, unit: UnitState): SheetView {
     weightClass: def.weightClass,
     tonnage: def.tonnage,
     gunnery: unit.gunnery,
-    facingLine: `at ${disp(unit.position)} facing ${unit.facing}` +
-      (unit.moveMode !== null ? `, ${unit.moveMode} [mp ${unit.mpSpent}]` : "") +
-      (unit.removed ? " — REMOVED FROM PLAY" : ""),
+    facingLine:
+      t(locale, "sheet.at", { pos: disp(unit.position), facing: unit.facing }) +
+      (unit.moveMode !== null ? t(locale, "sheet.modeSuffix", { mode: unit.moveMode, mp: unit.mpSpent }) : "") +
+      (unit.removed ? t(locale, "sheet.removedSuffix") : ""),
     armor: unit.armor,
     mounts: def.weapons.map((mount, i) => ({
       weapon: mount.weapon,
@@ -138,15 +152,15 @@ function battleSheet(battle: BattleState, unit: UnitState): SheetView {
   };
 }
 
-function setupSheet(unit: SetupUnit): SheetView {
-  const def = requireMechDef(unit.model);
+function setupSheet(unit: SetupUnit, locale: LocaleId): SheetView {
+  const def = requireMechDef(unit.model, locale);
   return {
     model: def.model,
     name: def.name,
     weightClass: def.weightClass,
     tonnage: def.tonnage,
     gunnery: unit.gunnery,
-    facingLine: `at ${disp(unit.position)} facing ${unit.facing}`,
+    facingLine: t(locale, "sheet.at", { pos: disp(unit.position), facing: unit.facing }),
     armor: { ...def.armor } as ArmorState,
     mounts: def.weapons.map((mount) => ({
       weapon: mount.weapon,
@@ -170,24 +184,31 @@ const SHORT_LOC: Readonly<Record<Location, string>> = {
 };
 
 /** Record sheet with armor status per location (no body diagram). */
-export function sheetLines(view: SheetView): string[] {
-  const head = `${view.model} ${view.name} — ${view.weightClass} ${view.tonnage}t` +
-    (view.gunnery !== null ? ` gunnery ${view.gunnery}` : "");
+export function sheetLines(view: SheetView, locale: LocaleId): string[] {
+  const head = t(locale, "sheet.head", {
+    model: view.model,
+    name: view.name,
+    weightClass: view.weightClass,
+    tonnage: view.tonnage,
+    gunnery: view.gunnery !== null ? t(locale, "sheet.gunnerySuffix", { gunnery: view.gunnery }) : "",
+  });
   const lines = [head];
   if (view.facingLine) lines.push(view.facingLine);
   lines.push(
-    `armor: ${LOCATIONS.map((loc) => {
-      const v = view.armor[loc];
-      return `${SHORT_LOC[loc]} ${v}${v <= 0 ? "!" : ""}`;
-    }).join(" | ")}`,
+    t(locale, "sheet.armorLine", {
+      list: LOCATIONS.map((loc) => {
+        const v = view.armor[loc];
+        return `${SHORT_LOC[loc]} ${v}${v <= 0 ? "!" : ""}`;
+      }).join(" | "),
+    }),
   );
-  lines.push(`weapons (${view.mounts.length}):`);
+  lines.push(t(locale, "sheet.weaponsHeader", { n: view.mounts.length }));
   for (const [i, m] of view.mounts.entries()) {
     const w = getWeapon(m.weapon);
     const flags = [
-      m.ammoLeft !== null ? `ammo ${m.ammoLeft}` : null,
-      m.jammed ? "[JAMMED]" : null,
-      m.destroyed ? "[DESTROYED]" : null,
+      m.ammoLeft !== null ? t(locale, "sheet.ammoFlag", { n: m.ammoLeft }) : null,
+      m.jammed ? t(locale, "sheet.jammed") : null,
+      m.destroyed ? t(locale, "sheet.destroyed") : null,
     ].filter((x) => x !== null);
     lines.push(`  #${i} ${m.weapon} (${SHORT_LOC[m.location]}) S${w.short}/M${w.medium}/L${w.long}${flags.length ? " " + flags.join(" ") : ""}`);
   }
@@ -197,39 +218,54 @@ export function sheetLines(view: SheetView): string[] {
 export function sheetForUnit(s: Session, id: string): string[] {
   if (s.battle) {
     const unit = s.battle.units[id];
-    if (!unit) throw new Error(`Unknown unit id: ${id}`);
-    return sheetLines(battleSheet(s.battle, unit));
+    if (!unit) throw new Error(t(s.locale, "err.unknownUnitId", { id }));
+    return sheetLines(battleSheet(s.battle, unit, s.locale), s.locale);
   }
   const placed = s.roster.find((u) => u.id === id);
-  if (!placed) throw new Error(`No such unit: ${id}`);
-  return sheetLines(setupSheet(placed));
+  if (!placed) throw new Error(t(s.locale, "err.noSuchUnit", { id }));
+  return sheetLines(setupSheet(placed, s.locale), s.locale);
 }
 
 // -------------------------------------------------------------- status ----
 
 export function fmtSetupStatus(s: Session): string[] {
-  const lines: string[] = [`map: ${s.mapName ?? "(none)"}`, `terrain hexes: ${s.terrainDefs.length}`];
+  const lines: string[] = [
+    t(s.locale, "setup.mapLabel", { name: s.mapName ?? t(s.locale, "setup.mapNone") }),
+    t(s.locale, "setup.terrainCount", { n: s.terrainDefs.length }),
+  ];
   const teams = [...new Set(s.roster.map((u) => u.team))].sort((a, b) => a - b);
   for (const team of teams) {
-    lines.push(`team ${team}:`);
+    lines.push(t(s.locale, "setup.teamHeader", { team }));
     for (const u of s.roster.filter((x) => x.team === team)) {
       const def = MECH_DEFS[u.model]!;
-      lines.push(`  ${u.id}  ${u.model} (${def.name}) gunnery ${u.gunnery} @ ${disp(u.position)} facing ${u.facing}`);
+      lines.push(
+        t(s.locale, "setup.unitLine", {
+          id: u.id,
+          model: u.model,
+          name: def.name,
+          gunnery: u.gunnery,
+          pos: disp(u.position),
+          facing: u.facing,
+        }),
+      );
     }
   }
-  if (teams.length === 0) lines.push("(no units placed)");
+  if (teams.length === 0) lines.push(t(s.locale, "setup.noUnits"));
   return lines;
 }
 
 export function moveStatusLines(s: Session): string[] {
   const info = moveStepsInfo(s);
-  const modeText = info.mode === null ? "(mode not declared)" : `mode: ${info.mode}`;
-  const lines = [modeText, `budget: ${info.budget} MP`];
+  const modeText =
+    info.mode === null ? t(s.locale, "moveStatus.noMode") : t(s.locale, "moveStatus.mode", { mode: info.mode });
+  const lines = [modeText, t(s.locale, "moveStatus.budget", { budget: info.budget })];
   if (info.steps.length === 0) {
-    lines.push("(no steps queued)");
+    lines.push(t(s.locale, "moveStatus.none"));
   } else {
     for (const step of info.steps) {
-      lines.push(`${step.label} +${step.mpCost} MP (total ${step.mpAfter})`);
+      lines.push(
+        t(s.locale, "moveStatus.stepLine", { label: step.label, cost: step.mpCost, total: step.mpAfter }),
+      );
     }
   }
   return lines;
@@ -237,8 +273,8 @@ export function moveStatusLines(s: Session): string[] {
 
 export function attackStatusLines(s: Session): string[] {
   const actor = s.battle?.units[s.actorId ?? ""];
-  if (!actor || !s.battle) throw new Error("Command requires the weaponAttack phase");
-  if (s.fireDecls.length === 0) return ["(no attacks queued)"];
+  if (!actor || !s.battle) throw new Error(t(s.locale, "err.wrongPhase", { phase: "weaponAttack" }));
+  if (s.fireDecls.length === 0) return [t(s.locale, "attackStatus.none")];
   const def = s.battle.defs[actor.model]!;
   return s.fireDecls.map((decl) => {
     const mount = def.weapons[decl.weaponIndex];
@@ -250,7 +286,9 @@ export function attackStatusLines(s: Session): string[] {
 export function weaponsLines(s: Session, unitId?: string): string[] {
   const id = unitId ?? s.actorId;
   const unit = id !== undefined && id !== null && id !== "" ? s.battle?.units[id] : undefined;
-  if (!unit || !s.battle) throw new Error(`Unknown unit id: ${unitId ?? "(no active unit)"}`);
+  if (!unit || !s.battle) {
+    throw new Error(t(s.locale, "err.unknownUnitId", { id: unitId ?? t(s.locale, "weapons.noActorId") }));
+  }
   const def = s.battle.defs[unit.model]!;
   return def.weapons.map((mount, i) => {
     const w = getWeapon(mount.weapon);
@@ -259,9 +297,9 @@ export function weaponsLines(s: Session, unitId?: string): string[] {
       mount.weapon,
       mount.location,
       `S${w.short}/M${w.medium}/L${w.long}`,
-      mount.ammoShots !== undefined ? `ammo ${unit.ammoLeft[i] ?? 0}` : null,
-      unit.jammedWeapons.includes(i) ? "[JAMMED]" : null,
-      canFireFromLocation(unit.phaseStartArmor, mount.location) ? null : "[DESTROYED]",
+      mount.ammoShots !== undefined ? t(s.locale, "sheet.ammoFlag", { n: unit.ammoLeft[i] ?? 0 }) : null,
+      unit.jammedWeapons.includes(i) ? t(s.locale, "sheet.jammed") : null,
+      canFireFromLocation(unit.phaseStartArmor, mount.location) ? null : t(s.locale, "sheet.destroyed"),
     ].filter((b) => b !== null);
     return bits.join("  ");
   });
@@ -269,32 +307,46 @@ export function weaponsLines(s: Session, unitId?: string): string[] {
 
 // ------------------------------------------------------------------ log ----
 
-export function fmtLog(events: readonly GameEvent[], n: number = events.length): string[] {
+export function fmtLog(locale: LocaleId, events: readonly GameEvent[], n: number = events.length): string[] {
   return events.slice(-n).flatMap((e) => {
     switch (e.kind) {
       case "turn":
-        return [`-- turn ${e.turn} --`];
+        return [t(locale, "log.turn", { turn: e.turn })];
       case "phase":
-        return [`phase: ${e.phase}`];
+        return [t(locale, "log.phase", { phase: e.phase })];
       case "initiative": {
         const rolls = Object.entries(e.rolls)
           .sort((a, b) => Number(a[0]) - Number(b[0]))
           .map(([team, roll]) => `t${team}=${roll}`)
           .join(" ");
-        return [`initiative: team ${e.winnerTeam} wins (${rolls})`];
+        return [t(locale, "log.initiative", { team: e.winnerTeam, rolls })];
       }
       case "moveDeclared":
-        return [`${e.unitId} declares ${e.mode}`];
+        return [t(locale, "log.moveDeclared", { id: e.unitId, mode: e.mode })];
       case "moved":
-        return [`${e.unitId} ${e.mode} -> ${disp(e.position)} facing ${e.facing} [mp ${e.mpSpent}]`];
+        return [
+          t(locale, "log.moved", {
+            id: e.unitId,
+            mode: e.mode,
+            pos: disp(e.position),
+            facing: e.facing,
+            mp: e.mpSpent,
+          }),
+        ];
       case "attacksDeclared":
-        return [`${e.unitId} fires at ${e.targetId} (${e.count} weapon${e.count === 1 ? "" : "s"})`];
+        return [
+          t(
+            locale,
+            e.count === 1 ? "log.attacksDeclaredOne" : "log.attacksDeclaredOther",
+            { id: e.unitId, target: e.targetId, count: e.count },
+          ),
+        ];
       case "attackResolved":
-        return resolutionLines(e.resolution);
+        return resolutionLines(locale, e.resolution);
       case "unitDestroyed":
-        return [`*** ${e.unitId} DESTROYED ***`];
+        return [t(locale, "log.destroyed", { id: e.unitId })];
       case "unitRemoved":
-        return [`${e.unitId} removed from play`];
+        return [t(locale, "log.removedEvent", { id: e.unitId })];
     }
   });
 }
@@ -303,8 +355,8 @@ function signedMod(n: number): string {
   return n >= 0 ? `+${n}` : String(n);
 }
 
-function gatorText(r: AttackResolution): string {
-  if (r.breakdown.outOfRange) return "out of range";
+function gatorText(locale: LocaleId, r: AttackResolution): string {
+  if (r.breakdown.outOfRange) return t(locale, "res.outOfRange");
   const b = r.breakdown;
   const parts = [`G${b.gunnery}`];
   if (b.attackerMod) parts.push(`A${signedMod(b.attackerMod)}`);
@@ -312,17 +364,38 @@ function gatorText(r: AttackResolution): string {
   if (b.terrainMod) parts.push(`T${signedMod(b.terrainMod)}`);
   if (b.rangeMod) parts.push(`R${signedMod(b.rangeMod)}`);
   if (b.pulseMod) parts.push(`P${signedMod(b.pulseMod)}`);
-  return `TN ${b.automatic === "hit" ? "auto" : b.total} (${parts.join(" ")})`;
+  const total = b.automatic === "hit" ? t(locale, "res.tnAuto") : String(b.total);
+  return `TN ${total} (${parts.join(" ")})`;
 }
 
-export function resolutionLines(r: AttackResolution): string[] {
-  if (r.breakdown.outOfRange) return [`${r.weapon} @ ${r.distance}: out of range`];
-  const verdict = r.breakdown.automatic === "hit" ? "auto-hit" : r.hit ? "HIT" : "MISS";
-  const lines = [`${r.weapon} @ ${r.distance}: ${gatorText(r)}, roll ${r.toHitRoll} -> ${verdict}${r.jammed ? " JAMMED" : ""}`];
-  if (r.clusterRoll !== null) lines.push(`  cluster roll ${r.clusterRoll}`);
+export function resolutionLines(locale: LocaleId, r: AttackResolution): string[] {
+  if (r.breakdown.outOfRange) {
+    return [t(locale, "res.outOfRangeLine", { weapon: r.weapon, distance: r.distance })];
+  }
+  const verdict =
+    r.breakdown.automatic === "hit"
+      ? t(locale, "res.autoHit")
+      : r.hit
+        ? t(locale, "res.hit")
+        : t(locale, "res.miss");
+  const lines = [
+    t(locale, "res.line", {
+      weapon: r.weapon,
+      distance: r.distance,
+      gator: gatorText(locale, r),
+      roll: String(r.toHitRoll),
+      verdict,
+      jam: r.jammed ? t(locale, "res.jamSuffix") : "",
+    }),
+  ];
+  if (r.clusterRoll !== null) lines.push(t(locale, "res.clusterRoll", { roll: r.clusterRoll }));
   if (r.hit && r.groups.length > 0) {
-    lines.push(`  hits: ${r.groups.map((g) => `${SHORT_LOC[g.location]}(${g.damage})`).join(" ")}`);
-    const detail = transferDetail(r);
+    lines.push(
+      t(locale, "res.hits", {
+        groups: r.groups.map((g) => `${SHORT_LOC[g.location]}(${g.damage})`).join(" "),
+      }),
+    );
+    const detail = transferDetail(locale, r);
     if (detail) lines.push(`  ${detail}`);
   }
   return lines;
@@ -332,7 +405,7 @@ export function resolutionLines(r: AttackResolution): string[] {
  * Reconstruct before->after armor numbers per transfer step by working back
  * from the final armor state (resolutions carry no pre-damage snapshot).
  */
-function transferDetail(r: AttackResolution): string | null {
+function transferDetail(locale: LocaleId, r: AttackResolution): string | null {
   const app = r.application;
   if (!app || app.steps.length === 0) return null;
   const totals = {} as ArmorState;
@@ -351,8 +424,8 @@ function transferDetail(r: AttackResolution): string | null {
     bits.push(`${SHORT_LOC[step.location]} ${before}->${after}${step.depleted ? "*" : ""}`);
   }
   let text = bits.join(", ");
-  if (app.blownOffArms.length > 0) text += `; ${app.blownOffArms.map(shortLoc).join(" + ")} blown off`;
-  if (app.newlyDestroyed.length > 0) text += `; destroyed ${app.newlyDestroyed.map(shortLoc).join(", ")}`;
+  if (app.blownOffArms.length > 0) text += t(locale, "res.blownOff", { locs: app.blownOffArms.map(shortLoc).join(" + ") });
+  if (app.newlyDestroyed.length > 0) text += t(locale, "res.destroyedTail", { locs: app.newlyDestroyed.map(shortLoc).join(", ") });
   return text;
 }
 

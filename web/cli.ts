@@ -2,6 +2,8 @@ import type { AttackDecl } from "../src/rules/game.js";
 import { FACINGS } from "../src/core/types.js";
 import { MAP_DEFS } from "../src/data/index.js";
 import * as S from "./session.js";
+import { isLocale, localeList, t } from "./i18n/index.js";
+import type { LocaleId, MessageKey } from "./i18n/index.js";
 import {
   attackStatusLines,
   boardLines,
@@ -17,94 +19,110 @@ import {
 } from "./format.js";
 
 export interface CmdDef {
-  readonly help: string;
-  /** Full invocation form including arguments; omit for argument-less commands. */
+  /** Catalog key of the one-line description. */
+  readonly helpKey: MessageKey;
+  /** Full invocation form including arguments (locale-neutral syntax). */
   readonly usage?: string;
-  /** Per-argument documentation shown by `help <command>` ([pattern, description]). */
-  readonly argsDoc?: ReadonlyArray<readonly [string, string]>;
+  /** Per-argument documentation shown by `help <command>` ([pattern, catalog key]). */
+  readonly argsDoc?: ReadonlyArray<readonly [string, MessageKey]>;
   run: (session: S.Session, args: string[]) => string[];
 }
 
 // ------------------------------------------------------------- parsing ----
 
-function int(value: string, label: string): number {
+function int(locale: LocaleId, value: string, label: string): number {
   const n = Number(value);
-  if (!Number.isInteger(n)) throw new Error(`${label} must be an integer`);
+  if (!Number.isInteger(n)) throw new Error(t(locale, "err.notInteger", { label }));
   return n;
 }
 
 /** User-facing 1-based coordinate -> engine coordinate. */
-function coord(value: string, label: string): number {
-  const n = int(value, label);
-  if (n < 1) throw new Error(`${label} is 1-based and must be >= 1`);
+function coord(locale: LocaleId, value: string, label: string): number {
+  const n = int(locale, value, label);
+  if (n < 1) throw new Error(t(locale, "err.oneBased", { label }));
   return n - 1;
 }
 
-function expectArgs(args: readonly string[], count: number, usage: string): void {
-  if (args.length < count) throw new Error(`usage: ${usage}`);
+function expectArgs(locale: LocaleId, args: readonly string[], count: number, usage: string): void {
+  if (args.length < count) throw new Error(t(locale, "err.expectedArgs", { usage }));
 }
+
+const L = (s: S.Session): LocaleId => s.locale;
 
 // ------------------------------------------------------------- globals ----
 
 const GLOBAL_CMDS: Record<string, CmdDef> = {
   help: {
-    help: "list commands for the current state, or detail one command",
+    helpKey: "cmd.help.help",
     run: (s, a) => (a[0] !== undefined ? commandHelp(s, a[0]) : helpText(s)),
   },
   "?": {
-    help: "alias for help",
+    helpKey: "cmd.q.help",
     run: (s, a) => (a[0] !== undefined ? commandHelp(s, a[0]) : helpText(s)),
   },
-  board: { help: "draw the ASCII battle grid", run: (s) => boardLines(s) },
-  clear: { help: "clear the scrollback screen", run: () => ["\f"] },
-  log: {
-    help: "show last N events (default 10)",
-    usage: "log [n]",
-    argsDoc: [["n", "how many recent events to show (default 10)"]],
+  lang: {
+    helpKey: "cmd.lang.help",
+    usage: "lang [<locale>]",
+    argsDoc: [["locale", "cmd.lang.arg.locale"]],
     run: (s, a) => {
-      const n = a[0] !== undefined ? int(a[0], "n") : 10;
-      return fmtLog(s.battle?.events ?? [], n);
+      if (a[0] === undefined) {
+        return [t(L(s), "lang.current", { locale: s.locale }), t(L(s), "lang.available", { list: localeList() })];
+      }
+      if (!isLocale(a[0])) throw new Error(t(L(s), "err.unknownLocale", { name: a[0], list: localeList() }));
+      s.locale = a[0];
+      return [t(s.locale, "lang.set", { locale: s.locale })];
+    },
+  },
+  board: { helpKey: "cmd.board.help", run: (s) => boardLines(s) },
+  clear: { helpKey: "cmd.clear.help", run: () => ["\f"] },
+  log: {
+    helpKey: "cmd.log.help",
+    usage: "log [n]",
+    argsDoc: [["n", "cmd.log.arg.n"]],
+    run: (s, a) => {
+      const n = a[0] !== undefined ? int(L(s), a[0], "n") : 10;
+      return fmtLog(L(s), s.battle?.events ?? [], n);
     },
   },
   info: {
-    help: "look up 'Mech models or bundled maps",
+    helpKey: "cmd.info.help",
     usage: "info mech [model] | info map [name]",
     argsDoc: [
-      ["mech [model]", "model key like HBK-4G; omit to list all models"],
-      ["map [name]", "bundled map name; omit to list maps"],
+      ["mech [model]", "cmd.info.arg.mech"],
+      ["map [name]", "cmd.info.arg.map"],
     ],
-    run: (_s, a) => {
-      expectArgs(a, 1, "info mech [model] | info map [name]");
+    run: (s, a) => {
+      expectArgs(L(s), a, 1, "info mech [model] | info map [name]");
       const what = a[0]!.toLowerCase();
-      if (what === "mech") return a[1] !== undefined ? infoMech(a[1]) : infoMechList();
-      if (what === "map") return a[1] !== undefined ? infoMap(a[1]) : infoMapList();
-      throw new Error("usage: info mech [model] | info map [name]");
+      if (what === "mech") return a[1] !== undefined ? infoMech(L(s), a[1]) : infoMechList(L(s));
+      if (what === "map") return a[1] !== undefined ? infoMap(L(s), a[1]) : infoMapList();
+      throw new Error(t(L(s), "err.expectedArgs", { usage: "info mech [model] | info map [name]" }));
     },
   },
   sheet: {
-    help: "record sheet for a unit",
+    helpKey: "cmd.sheet.help",
     usage: "sheet <id>",
-    argsDoc: [["id", "unit id (placed unit in setup, any unit in battle)"]],
+    argsDoc: [["id", "cmd.sheet.arg.id"]],
     run: (s, a) => {
-      expectArgs(a, 1, "sheet <id>");
+      expectArgs(L(s), a, 1, "sheet <id>");
       return sheetForUnit(s, a[0]!);
     },
   },
   seed: {
-    help: "set the dice seed",
+    helpKey: "cmd.seed.help",
     usage: "seed <n>",
-    argsDoc: [["n", "integer seed; the same seed reproduces the same rolls"]],
+    argsDoc: [["n", "cmd.seed.arg.n"]],
     run: (s, a) => {
-      expectArgs(a, 1, "seed <n>");
-      S.setSeed(s, int(a[0]!, "seed"));
-      return [`seed set to ${s.seed}`];
+      expectArgs(L(s), a, 1, "seed <n>");
+      S.setSeed(s, int(L(s), a[0]!, "seed"));
+      return [t(L(s), "ok.seedSet", { seed: s.seed })];
     },
   },
   reset: {
-    help: "wipe everything back to empty setup",
+    helpKey: "cmd.reset.help",
     run: (s) => {
       S.resetSession(s);
-      return ["reset."];
+      return [t(s.locale, "ok.resetDone")];
     },
   },
 };
@@ -113,115 +131,111 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
 
 const SETUP_CMDS: Record<string, CmdDef> = {
   map: {
-    help: "load a bundled rulebook map (beginner|quickstart)",
+    helpKey: "cmd.map.help",
     usage: "map <name>",
-    argsDoc: [["name", "bundled map name: beginner | quickstart"]],
+    argsDoc: [["name", "cmd.map.arg.name"]],
     run: (s, a) => {
-      expectArgs(a, 1, "map <name>");
+      expectArgs(L(s), a, 1, "map <name>");
       S.setMap(s, a[0]!);
       const map = MAP_DEFS[a[0]!]!;
-      return [`map ${a[0]}: ${map.width}x${map.height}, ${s.terrainDefs.length} terrain hexes`];
+      return [t(L(s), "ok.mapLoaded", { name: a[0]!, w: map.width, h: map.height, n: s.terrainDefs.length })];
     },
   },
   add: {
-    help: "place a 'Mech on the map",
+    helpKey: "cmd.add.help",
     usage: "add <id> <model> <team> <gunnery> <col> <row> [facing]",
     argsDoc: [
-      ["id", "unique unit id used by later commands"],
-      ["model", "'Mech model key, see 'info mech'"],
-      ["team", "team number (0 or 1)"],
-      ["gunnery", "pilot gunnery skill; lower is better"],
-      ["col row", "target hex, 1-based, must be inside the map"],
-      ["facing", "optional facing n|ne|se|s|sw|nw (default n)"],
+      ["id", "cmd.add.arg.id"],
+      ["model", "cmd.add.arg.model"],
+      ["team", "cmd.add.arg.team"],
+      ["gunnery", "cmd.add.arg.gunnery"],
+      ["col row", "cmd.add.arg.colrow"],
+      ["facing", "cmd.add.arg.facing"],
     ],
     run: (s, a) => {
-      expectArgs(a, 6, "add <id> <model> <team> <gunnery> <col> <row> [facing]");
+      expectArgs(L(s), a, 6, "add <id> <model> <team> <gunnery> <col> <row> [facing]");
       const facingWord = (a[6] ?? "n").toLowerCase();
       const facing = FACINGS.find((f) => f === facingWord);
-      if (!facing) throw new Error(`facing must be one of ${FACINGS.join("/")}`);
+      if (!facing) throw new Error(t(L(s), "err.faceArg", { facings: FACINGS.join("/") }));
       S.addUnit(
         s,
         a[0]!,
         a[1]!,
-        int(a[2]!, "team"),
-        int(a[3]!, "gunnery"),
-        { col: coord(a[4]!, "col"), row: coord(a[5]!, "row") },
+        int(L(s), a[2]!, "team"),
+        int(L(s), a[3]!, "gunnery"),
+        { col: coord(L(s), a[4]!, "col"), row: coord(L(s), a[5]!, "row") },
         facing,
       );
-      return [`${a[0]} (${a[1]}) placed at (${a[4]},${a[5]}) facing ${facing}`];
+      return [t(L(s), "ok.added", { id: a[0]!, model: a[1]!, col: a[4]!, row: a[5]!, facing })];
     },
   },
   rm: {
-    help: "remove a placed unit",
+    helpKey: "cmd.rm.help",
     usage: "rm <id>",
-    argsDoc: [["id", "id of a previously added unit"]],
+    argsDoc: [["id", "cmd.rm.arg.id"]],
     run: (s, a) => {
-      expectArgs(a, 1, "rm <id>");
+      expectArgs(L(s), a, 1, "rm <id>");
       S.removeUnit(s, a[0]!);
-      return [`removed ${a[0]}`];
+      return [t(L(s), "ok.removed", { id: a[0]! })];
     },
   },
-  status: { help: "setup summary: units grouped by team, selected map", run: (s) => fmtSetupStatus(s) },
+  status: { helpKey: "cmd.statusSetup.help", run: (s) => fmtSetupStatus(s) },
   start: {
-    help: "start the battle (needs >=2 units on >=2 teams)",
+    helpKey: "cmd.start.help",
     run: (s) => {
       S.startBattle(s);
-      return ["battle started", ...initiativeLine(s)];
+      return [t(s.locale, "ok.started"), ...initiativeLine(s)];
     },
   },
 };
 
 function initiativeLine(s: S.Session): string[] {
   const tail = (s.battle?.events ?? []).slice(-2);
-  return fmtLog(tail.filter((e) => e.kind === "initiative" || e.kind === "phase"));
+  return fmtLog(s.locale, tail.filter((e) => e.kind === "initiative" || e.kind === "phase"));
 }
 
 // ---------------------------------------------------------- turn:move ----
 
 const MOVE_CMDS: Record<string, CmdDef> = {
   mode: {
-    help: "declare movement mode",
+    helpKey: "cmd.mode.help",
     usage: "mode <standstill|walk|run|jump>",
-    argsDoc: [["mode", "standstill | walk | run | jump; each has its own MP pool"]],
+    argsDoc: [["mode", "cmd.mode.arg.mode"]],
     run: (s, a) => {
-      expectArgs(a, 1, "mode standstill|walk|run|jump");
+      expectArgs(L(s), a, 1, "mode standstill|walk|run|jump");
+      const mode = S.parseMoveMode(L(s), a[0]!);
       S.declareMode(s, a[0]!);
-      return [`${s.actorId} declares ${S.parseMoveMode(a[0]!)}`];
+      return [t(L(s), "ok.modeDeclared", { id: s.actorId ?? "", mode })];
     },
   },
   move: {
-    help: "queue a step into an adjacent hex",
+    helpKey: "cmd.move.help",
     usage: "move <col> <row>",
-    argsDoc: [["col row", "adjacent destination hex, 1-based"]],
+    argsDoc: [["col row", "cmd.move.arg.colrow"]],
     run: (s, a) => {
-      expectArgs(a, 2, "move <col> <row>");
-      S.queueEnter(s, { col: coord(a[0]!, "col"), row: coord(a[1]!, "row") });
-      return [`queued step to (${a[0]},${a[1]})`];
+      expectArgs(L(s), a, 2, "move <col> <row>");
+      S.queueEnter(s, { col: coord(L(s), a[0]!, "col"), row: coord(L(s), a[1]!, "row") });
+      return [t(L(s), "ok.stepQueued", { col: a[0]!, row: a[1]! })];
     },
   },
   face: {
-    help: "queue a facing change",
+    helpKey: "cmd.face.help",
     usage: "face <n|ne|se|s|sw|nw|-5..5>",
-    argsDoc: [
-      [
-        "facing|steps",
-        "absolute facing word, or relative turn of -5..5 hex sides; each side costs 1 MP",
-      ],
-    ],
+    argsDoc: [["facing|steps", "cmd.face.arg.facingsteps"]],
     run: (s, a) => {
-      expectArgs(a, 1, "face <facing|steps>");
+      expectArgs(L(s), a, 1, "face <facing|steps>");
       const unit = S.currentActor(s)!;
-      const steps = S.faceSteps(unit.facing, a[0]!);
+      const steps = S.faceSteps(L(s), unit.facing, a[0]!);
       S.queueTurn(s, steps);
-      return [`queued facing change ${steps > 0 ? "+" : ""}${steps}`];
+      return [t(L(s), "ok.turnQueued", { steps: steps > 0 ? `+${steps}` : String(steps) })];
     },
   },
-  sheet: { help: "record sheet of the acting 'Mech", run: (s) => sheetForUnit(s, s.actorId ?? "") },
-  status: { help: "queued move steps with running MP cost per step", run: (s) => moveStatusLines(s) },
-  cancel: { help: "clear mode and queued steps", run: (s) => (S.cancelMove(s), ["cancelled"]) },
+  sheet: { helpKey: "cmd.sheetActing.help", run: (s) => sheetForUnit(s, s.actorId ?? "") },
+  status: { helpKey: "cmd.statusMove.help", run: (s) => moveStatusLines(s) },
+  cancel: { helpKey: "cmd.cancelMove.help", run: (s) => { S.cancelMove(s); return [t(s.locale, "ok.cancelled")]; } },
   done: {
-    help: "commit the declared move",
-    run: (s) => fmtLog(S.commitMove(s).newEvents),
+    helpKey: "cmd.doneMove.help",
+    run: (s) => fmtLog(s.locale, S.commitMove(s).newEvents),
   },
 };
 
@@ -229,37 +243,41 @@ const MOVE_CMDS: Record<string, CmdDef> = {
 
 const ATTACK_CMDS: Record<string, CmdDef> = {
   weapons: {
-    help: "list a unit's weapons (default: acting unit)",
+    helpKey: "cmd.weapons.help",
     usage: "weapons [id]",
-    argsDoc: [["id", "unit to inspect; defaults to the acting unit"]],
+    argsDoc: [["id", "cmd.weapons.arg.id"]],
     run: (s, a) => weaponsLines(s, a[0]),
   },
   fire: {
-    help: "queue a weapon attack",
+    helpKey: "cmd.fire.help",
     usage: "fire <weaponIndex> <targetId> [shots]",
     argsDoc: [
-      ["weaponIndex", "index from the 'weapons' listing"],
-      ["targetId", "enemy unit id; all shots must share one target"],
-      ["shots", "optional shot count for multi-shot weapons (SRM/LRM)"],
+      ["weaponIndex", "cmd.fire.arg.weaponIndex"],
+      ["targetId", "cmd.fire.arg.targetId"],
+      ["shots", "cmd.fire.arg.shots"],
     ],
     run: (s, a) => {
-      expectArgs(a, 2, "fire <weaponIndex> <targetId> [shots]");
+      expectArgs(L(s), a, 2, "fire <weaponIndex> <targetId> [shots]");
       const decl: AttackDecl =
         a[2] !== undefined
-          ? { weaponIndex: int(a[0]!, "weaponIndex"), targetId: a[1]!, shots: int(a[2], "shots") }
-          : { weaponIndex: int(a[0]!, "weaponIndex"), targetId: a[1]! };
+          ? { weaponIndex: int(L(s), a[0]!, "weaponIndex"), targetId: a[1]!, shots: int(L(s), a[2], "shots") }
+          : { weaponIndex: int(L(s), a[0]!, "weaponIndex"), targetId: a[1]! };
       S.queueFire(s, decl);
       return [
-        `queued #${decl.weaponIndex} -> ${decl.targetId}${decl.shots !== undefined ? ` x${decl.shots}` : ""}`,
+        t(L(s), "ok.fireQueued", {
+          index: decl.weaponIndex,
+          target: decl.targetId,
+          suffix: decl.shots !== undefined ? ` x${decl.shots}` : "",
+        }),
       ];
     },
   },
-  sheet: { help: "record sheet of the acting 'Mech", run: (s) => sheetForUnit(s, s.actorId ?? "") },
-  status: { help: "queued attack declarations", run: (s) => attackStatusLines(s) },
-  cancel: { help: "clear queued shots", run: (s) => (S.cancelFire(s), ["cancelled"]) },
+  sheet: { helpKey: "cmd.sheetActing.help", run: (s) => sheetForUnit(s, s.actorId ?? "") },
+  status: { helpKey: "cmd.statusAttack.help", run: (s) => attackStatusLines(s) },
+  cancel: { helpKey: "cmd.cancelFire.help", run: (s) => { S.cancelFire(s); return [t(s.locale, "ok.cancelled")]; } },
   done: {
-    help: "declare attacks and resolve them",
-    run: (s) => fmtLog(S.commitFire(s).newEvents),
+    helpKey: "cmd.doneFire.help",
+    run: (s) => fmtLog(s.locale, S.commitFire(s).newEvents),
   },
 };
 
@@ -267,10 +285,10 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
 
 const OVER_CMDS: Record<string, CmdDef> = {
   rematch: {
-    help: "new battle with the same roster, terrain and seed",
+    helpKey: "cmd.rematch.help",
     run: (s) => {
       S.rematch(s);
-      return ["rematch!", ...initiativeLine(s)];
+      return [t(s.locale, "ok.rematchDone"), ...initiativeLine(s)];
     },
   },
 };
@@ -292,28 +310,31 @@ function availableCmds(session: S.Session): Record<string, CmdDef> {
 
 /** Detailed single-command help: usage + argument explanations, no state hint. */
 function commandHelp(session: S.Session, name: string): string[] {
+  const locale = session.locale;
   const def = availableCmds(session)[name.toLowerCase()];
-  if (!def) throw new Error(`unknown command '${name}' (try 'help')`);
-  const lines = [def.usage !== undefined ? `usage: ${def.usage}` : name.toLowerCase()];
-  lines.push(def.help);
+  if (!def) throw new Error(t(locale, "err.unknownCommand", { name }));
+  const lines = [def.usage !== undefined ? `${t(locale, "help.usagePrefix")}${def.usage}` : name.toLowerCase()];
+  lines.push(t(locale, def.helpKey));
   if (def.argsDoc !== undefined && def.argsDoc.length > 0) {
-    lines.push("arguments:");
-    for (const [arg, desc] of def.argsDoc) lines.push(`  ${arg.padEnd(12)} ${desc}`);
+    lines.push(t(locale, "help.argumentsHeader"));
+    for (const [arg, desc] of def.argsDoc) lines.push(`  ${arg.padEnd(12)} ${t(locale, desc)}`);
   }
   return lines;
 }
 
 function commandList(session: S.Session): string[] {
   const merged = availableCmds(session);
+  const locale = session.locale;
   const lines: string[] = [];
   for (const name of Object.keys(merged).sort()) {
     const def = merged[name]!;
+    const help = t(locale, def.helpKey);
     if (def.usage === undefined) {
-      lines.push(`${name.padEnd(9)} ${def.help}`);
+      lines.push(`${name.padEnd(9)} ${help}`);
     } else {
       // Commands with arguments get their usage and explanation on separate lines.
       lines.push(`${name.padEnd(9)} ${def.usage}`);
-      lines.push(`          ${def.help}`);
+      lines.push(`          ${help}`);
     }
   }
   return lines;
@@ -322,39 +343,23 @@ function commandList(session: S.Session): string[] {
 // ---------------------------------------------------------------- hints ----
 
 /** Per-state guidance shown at the top of `help`, focused on legal commands. */
-const HINT_SETUP: readonly string[] = [
-  "you are in 'setup' phase.",
-  "load a battlefield via 'map' and place mechs via 'add'.",
-  "review the roster via 'status', remove mistakes via 'rm', then begin with 'start'.",
-];
-
-const HINT_MOVE: readonly string[] = [
-  "you are in the movement phase - the prompt shows whose turn it is.",
-  "declare a speed via 'mode', then queue steps via 'move' or 'face'; check MP costs with 'status'.",
-  "commit the move with 'done', or discard it with 'cancel'.",
-];
-
-const HINT_ATTACK: readonly string[] = [
-  "you are in the weapon attack phase - the prompt shows who is firing.",
-  "browse the acting unit's guns via 'weapons', then declare shots against one target via 'fire'.",
-  "review the declaration with 'status', resolve with 'done', or discard it with 'cancel'.",
-];
-
-const HINT_OVER: readonly string[] = [
-  "the battle is over.",
-  "replay the same roster and seed with 'rematch', or return to an empty setup with 'reset'.",
-];
+/** Per-state guidance shown at the top of `help`, focused on legal commands. */
+const HINT_SETUP: MessageKey = "hint.setup";
+const HINT_MOVE: MessageKey = "hint.move";
+const HINT_ATTACK: MessageKey = "hint.attack";
+const HINT_OVER: MessageKey = "hint.over";
 
 /** Per-state guidance, focused on the commands legal right now. */
 function stateHint(s: S.Session): string[] {
-  switch (s.app) {
-    case "setup":
-      return [...HINT_SETUP];
-    case "battle":
-      return s.battle?.phase === "weaponAttack" ? [...HINT_ATTACK] : [...HINT_MOVE];
-    case "over":
-      return [...HINT_OVER];
-  }
+  const key =
+    s.app === "battle"
+      ? s.battle?.phase === "weaponAttack"
+        ? HINT_ATTACK
+        : HINT_MOVE
+      : s.app === "over"
+        ? HINT_OVER
+        : HINT_SETUP;
+  return t(s.locale, key).split("\n");
 }
 function helpText(session: S.Session): string[] {
   return [...stateHint(session), "", ...commandList(session)];
@@ -363,8 +368,8 @@ function helpText(session: S.Session): string[] {
 function victoryBanner(s: S.Session): string[] {
   if (s.victory === null) return [];
   return s.victory.draw
-    ? ["=== DRAW - NO UNITS REMAIN ==="]
-    : [`=== TEAM ${s.victory.winnerTeam} WINS ===`];
+    ? [t(s.locale, "banner.draw")]
+    : [t(s.locale, "banner.win", { team: String(s.victory.winnerTeam) })];
 }
 
 /** Run one input line against the session; returns output lines. */
@@ -372,13 +377,13 @@ export function execute(session: S.Session, raw: string): string[] {
   const wasOver = session.app === "over";
   let out: string[];
   try {
-    const tokens = raw.trim().split(/\s+/).filter((t) => t.length > 0);
+    const tokens = raw.trim().split(/\s+/).filter((x) => x.length > 0);
     if (tokens.length === 0) return [];
     const def = availableCmds(session)[tokens[0]!.toLowerCase()];
-    if (!def) throw new Error(`unknown command '${tokens[0]}' (try 'help')`);
+    if (!def) throw new Error(t(session.locale, "err.unknownCommand", { name: tokens[0]! }));
     out = def.run(session, tokens.slice(1));
   } catch (e) {
-    return [`error: ${e instanceof Error ? e.message : String(e)}`];
+    return [`${t(session.locale, "err.prefix")} ${e instanceof Error ? e.message : String(e)}`];
   }
   if (!wasOver && session.app === "over") out = [...out, ...victoryBanner(session)];
   return out;
