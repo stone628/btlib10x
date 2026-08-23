@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createBattle } from "../src/rules/game.js";
-import { renderBattle } from "../src/render.js";
+import { renderBattle, renderMap } from "../src/render.js";
 
 declare const console: { log: (message: string) => void };
 
@@ -91,5 +91,56 @@ describe("console renderer", () => {
     expect(out).toContain("< 2,2 >");
     expect(out).toContain("<10,8 >");
     console.log(out);
+  });
+
+  it("stamps overlay glyphs into empty hexes but units win", () => {
+    const state = battleWith({ id: "hbk", model: "HBK-4G", position: { col: 1, row: 2 } });
+    const out = renderBattle(state, undefined, undefined, {
+      "1,2": "u",
+      "3,0": "W",
+      "0,0": "w",
+    });
+    expect(out).toContain("/hbk\\"); // occupant beats overlay
+    expect(out).toContain("/ W \\");
+    expect(out).toContain("/ w \\");
+    expect(out).not.toContain("/ u \\");
+  });
+});
+
+describe("map renderer", () => {
+  it("draws terrain glyphs at the given size, ignoring clear ground", () => {
+    const out = renderMap(
+      [
+        { col: 0, row: 0, type: "lightWoods" },
+        { col: 2, row: 1, type: "heavyWoods" },
+        { col: 1, row: 0, type: "clear" },
+      ],
+      3,
+      2,
+    );
+    expect(out).toContain("/ w \\");
+    expect(out).toContain("/ W \\");
+    expect(out).not.toContain("???");
+    expect(out.split("\n").length).toBe(2 * 4 + 2 + 1); // rows*stride + stagger + closing border
+  });
+
+  it("matches renderBattle output for the same terrain overlay", () => {
+    const terrain = [
+      { col: 0, row: 0, type: "lightWoods" },
+      { col: 3, row: 2, type: "heavyWoods" },
+    ] as const;
+    const battle = createBattle(
+      [
+        { id: "a", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 9, row: 9 }, facing: "n" },
+        { id: "b", model: "GRF-1N", team: 1, gunnery: 4, position: { col: 9, row: 9 }, facing: "s" },
+      ],
+      { terrain: [...terrain] },
+    );
+    expect(renderMap([...terrain], 5, 4)).toBe(
+      renderBattle(battle, 5, 4, {
+        "0,0": "w",
+        "3,2": "W",
+      }),
+    );
   });
 });
