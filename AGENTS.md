@@ -14,6 +14,7 @@ TypeScript library encapsulating Classic BattleTech board game logic.
 - `npm run test:watch` — watch mode
 - `npm run typecheck` — `tsc --noEmit`
 - `npm run build` — emit ESM + declarations to `dist/`
+- `npm run build:web` — bundle the `web/` terminal app with esbuild → `web/app.js`
 
 Run typecheck + tests together before considering work done: `npm run typecheck && npm test`.
 
@@ -23,11 +24,12 @@ Run typecheck + tests together before considering work done: `npm run typecheck 
 - `src/data/` — weapon catalog, `MechDef` schema + hand-rolled validator, `mechs/*.json`
 - `src/rules/` — pure rule functions: movement, LOS, GATOR to-hit, hit location, cluster hits, damage, attack orchestration, battle state machine
 - `tests/` — vitest suites; several assert against worked examples printed in the PDFs
+- `web/` — single-page terminal emulator app over the core (see `CLI.md`)
 
 ## Conventions & constraints
 
 - Browser-first: **no Node-only APIs in `src/`** (dev scripts exempt).
-- **Zero runtime dependencies**; dev deps are typescript + vitest only.
+- **Zero runtime dependencies**; dev deps are typescript + vitest + esbuild (esbuild is dev-only, used to bundle the `web/` app).
 - Strictest sensible tsc settings (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`).
 - All randomness flows through an injected `Rng`; rules functions are deterministic given inputs — required for reproducible battles and future sim work.
 - Game state is plain serializable data; mutations happen through `src/rules/game.ts` APIs only.
