@@ -1,5 +1,6 @@
 import * as S from "./session.js";
 import { execute } from "./cli.js";
+import { t } from "./i18n/index.js";
 
 const out = document.getElementById("out") as HTMLDivElement;
 const promptEl = document.getElementById("prompt") as HTMLSpanElement;
@@ -77,10 +78,7 @@ input.addEventListener("keydown", (e) => {
 document.getElementById("term")?.addEventListener("click", () => input.focus());
 
 appendLines(
-  [
-    "btlib10x terminal - Classic BattleTech quick-start rules",
-    "type 'help' for commands.",
-  ],
+  [t(session.locale, "app.banner.title"), t(session.locale, "app.banner.help")],
   "banner",
 );
 refreshPrompt();
