@@ -40,13 +40,14 @@ Examples:
 
 | command | effect |
 |---|---|
-| `help` / `?` | list commands available now |
+| `help` / `?` | state hint line, then commands available now; `help <command>` shows usage plus per-argument explanations |
 | `board` | ASCII grid (`renderBattle`), sized from loaded map's width×height (unit/terrain extent before a map is loaded) |
+| `clear` | clear the scrollback screen |
 | `log [n]` | last n events (default 10) |
 | `info mech` | list available 'Mechs |
 | `info mech <model>` | sheet summary: walk/run/jump ratings and weapons |
 | `info map` | list available maps |
-| `info map <name>` | map info: width×height, terrain types and counts |
+| `info map <name>` | map info: width×height, terrain types and counts, ASCII map with terrain glyphs |
 | `sheet <id>` | record sheet for unit `<id>`: armor per location, weapons with ammo/jam status |
 | `seed <n>` | set RNG seed |
 | `reset` | wipe everything back to empty setup |
@@ -119,15 +120,15 @@ Library sources stay untouched.
 
 ## Todo
 
-1. [ ] Write CLI.md (this doc)
-2. [ ] Add esbuild devDep, `build:web` script, AGENTS.md dev-deps note
-3. [ ] `web/index.html` terminal shell (inline CSS)
-4. [ ] `web/rng.ts` seeded PRNG
-5. [ ] `web/session.ts` session state machine
-6. [ ] `web/format.ts` board/log/info/status/sheet/resolution formatters
-7. [ ] `web/cli.ts` parser + per-state registries + help
-8. [ ] Setup commands (`map/add/rm/status/start`) + `info`/`sheet` commands
-9. [ ] Movement commands (`mode/move/face/sheet/status/cancel/done`)
-10. [ ] Attack commands (`weapons/fire/sheet/status/cancel/done` + resolution printing)
-11. [ ] Turn auto-advance, victory → `over`, `rematch`
-12. [ ] Verify typecheck + tests green; smoke test via static server
+1. [x] Write CLI.md (this doc)
+2. [x] Add esbuild devDep, `build:web` script, AGENTS.md dev-deps note
+3. [x] `web/index.html` terminal shell (inline CSS)
+4. [x] `web/rng.ts` seeded PRNG
+5. [x] `web/session.ts` session state machine
+6. [x] `web/format.ts` board/log/info/status/sheet/resolution formatters
+7. [x] `web/cli.ts` parser + per-state registries + help
+8. [x] Setup commands (`map/add/rm/status/start`) + `info`/`sheet` commands
+9. [x] Movement commands (`mode/move/face/sheet/status/cancel/done`)
+10. [x] Attack commands (`weapons/fire/sheet/status/cancel/done` + resolution printing)
+11. [x] Turn auto-advance, victory → `over`, `rematch`
+12. [x] Verify typecheck + tests green; smoke test via static server

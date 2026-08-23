@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>btlib10x terminal</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #0c0f0c;
+        color: #b8c9b8;
+        font-family: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+        font-size: 13px;
+        line-height: 1.35;
+      }
+      #term {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        padding: 8px 12px;
+      }
+      #out {
+        flex: 1;
+        overflow-y: auto;
+        white-space: pre;
+      }
+      #out .cmd {
+        color: #d7e4d7;
+        border-top: 1px solid #233023;
+        padding-top: 6px;
+        margin-top: 6px;
+        font-weight: bold;
+      }
+      #out .err {
+        color: #e07a6a;
+      }
+      #out .banner {
+        color: #8fd08f;
+        font-weight: bold;
+      }
+      #inrow {
+        display: flex;
+        border-top: 1px solid #233023;
+        padding-top: 6px;
+        margin-top: 6px;
+      }
+      #prompt {
+        white-space: pre;
+        color: #8fd08f;
+      }
+      #cmd {
+        flex: 1;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: inherit;
+        font: inherit;
+        caret-shape: bar;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="term">
+      <div id="out"></div>
+      <div id="inrow">
+        <span id="prompt"></span>
+        <input id="cmd" autocomplete="off" spellcheck="false" autofocus />
+      </div>
+    </div>
+    <script src="./app.js" defer></script>
+  </body>
+</html>

@@ -18,6 +18,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "build:web": "node scripts/build-web.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -33,6 +34,7 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "esbuild": "^0.28.2",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
   }

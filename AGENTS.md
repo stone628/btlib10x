@@ -24,7 +24,7 @@ Run typecheck + tests together before considering work done: `npm run typecheck 
 - `src/data/` — weapon catalog, `MechDef` schema + hand-rolled validator, `mechs/*.json`
 - `src/rules/` — pure rule functions: movement, LOS, GATOR to-hit, hit location, cluster hits, damage, attack orchestration, battle state machine
 - `tests/` — vitest suites; several assert against worked examples printed in the PDFs
-- `web/` — single-page terminal emulator app over the core (see `CLI.md`)
+- `web/` — single-page terminal emulator app over the core (see `docs/CLI.md`)
 
 ## Conventions & constraints
 
