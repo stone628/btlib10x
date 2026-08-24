@@ -7,11 +7,29 @@ import type { MechDef } from "../src/data/schema.js";
 import { getWeapon } from "../src/data/weapons.js";
 import type { Location } from "../src/core/types.js";
 import { LOCATIONS } from "../src/core/types.js";
-import { TERRAIN_GLYPHS, renderBattle, renderMap } from "../src/render.js";
+import {
+  battleModel,
+  boardToSpans,
+  mapModel,
+  TERRAIN_GLYPHS,
+} from "../src/render.js";
+import type { Span } from "../src/render.js";
 import type { Session, SetupUnit } from "./session.js";
 import { moveStepsInfo } from "./session.js";
 import { t } from "./i18n/index.js";
 import type { LocaleId } from "./i18n/index.js";
+
+/** One presentation chunk of command output. */
+export type Chunk = { lines: readonly string[]; cls?: string } | { board: readonly Span[][] };
+
+/** Tagged wrapper letting a command emit structured chunks. */
+export interface RichOutput {
+  readonly rich: readonly Chunk[];
+}
+
+export function rich(...chunks: readonly Chunk[]): RichOutput {
+  return { rich: chunks };
+}
 
 /** Display coordinates are 1-based (printed mapsheet labels). */
 function disp(hex: { col: number; row: number }): string {
@@ -34,20 +52,28 @@ function terrainMarks(terrain: Readonly<Record<string, string>>): Record<string,
   return marks;
 }
 
-export function boardLines(s: Session): string[] {
+/** `board` output: styled grid chunks, or a plain hint when nothing exists. */
+export function boardChunk(s: Session): Chunk {
   const dims = mapDims(s);
   if (!s.battle) {
     if (!s.mapName && s.roster.length === 0) {
-      return [t(s.locale, "board.noMap")];
+      return { lines: [t(s.locale, "board.noMap")] };
     }
     const units = Object.fromEntries(
       s.roster.map((u) => [u.id, { id: u.id, position: u.position, removed: false }]),
     ) as BattleState["units"];
     const terrain: Record<string, string> = {};
     for (const t2 of s.terrainDefs) terrain[`${t2.col},${t2.row}`] = t2.type;
-    return renderBattle({ units, terrain } as BattleState, dims?.[0], dims?.[1], undefined, terrainMarks(terrain)).split("\n");
+    const model = battleModel(
+      { units, terrain } as BattleState,
+      dims?.[0],
+      dims?.[1],
+      undefined,
+      terrainMarks(terrain),
+    );
+    return { board: boardToSpans(model) };
   }
-  return renderBattle(s.battle, dims?.[0], dims?.[1], undefined, terrainMarks(s.battle.terrain)).split("\n");
+  return { board: boardToSpans(battleModel(s.battle, dims?.[0], dims?.[1], undefined, terrainMarks(s.battle.terrain))) };
 }
 
 // ---------------------------------------------------------------- info ----
@@ -85,7 +111,8 @@ export function infoMapList(): string[] {
   return Object.entries(MAP_DEFS).map(([name, m]) => `${name}: ${m.width}x${m.height}, ${m.terrain.length} terrain hexes`);
 }
 
-export function infoMap(locale: LocaleId, name: string): string[] {
+/** `info map <name>` output: header/legend lines followed by the styled grid. */
+export function infoMapChunks(locale: LocaleId, name: string): Chunk[] {
   const map = MAP_DEFS[name];
   if (!map) throw new Error(t(locale, "err.unknownMap", { name, list: Object.keys(MAP_DEFS).join(", ") }));
   const counts = new Map<string, number>();
@@ -94,13 +121,16 @@ export function infoMap(locale: LocaleId, name: string): string[] {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([type, n]) => `${type} ${n}`)
     .join(", ");
-  const grid = renderMap(toEngineTerrain(map), map.width, map.height);
   return [
-    t(locale, "info.mapHead", { name, w: map.width, h: map.height }),
-    t(locale, "info.terrainLine", { breakdown: breakdown || t(locale, "info.terrainNone") }),
-    t(locale, "info.legend"),
-    "",
-    ...grid.split("\n"),
+    {
+      lines: [
+        t(locale, "info.mapHead", { name, w: map.width, h: map.height }),
+        t(locale, "info.terrainLine", { breakdown: breakdown || t(locale, "info.terrainNone") }),
+        t(locale, "info.legend"),
+        "",
+      ],
+    },
+    { board: boardToSpans(mapModel(toEngineTerrain(map), map.width, map.height)) },
   ];
 }
 
