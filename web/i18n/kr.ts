@@ -166,7 +166,7 @@ export const kr: Catalog = {
   "info.mapHead": "{name}: {w}x{h}",
   "info.terrainLine": "지형: {breakdown}",
   "info.terrainNone": "없음",
-  "info.legend": "범례: w 얕은숲  W 깊은숲  (빈칸 = 평지)",
+  "info.legend": "범례: w0 얕은숲  W0 깊은숲  (빈칸 = 평지; 끝 숫자 = 고도)",
   "sheet.head": "{model} {name} — {weightClass} {tonnage}t{gunnery}",
   "sheet.gunnerySuffix": " gunnery {gunnery}",
   "sheet.at": "위치 {pos} 방향 {facing}",

@@ -5,7 +5,6 @@ import {
   boardToSpans,
   boardToText,
   mapModel,
-  renderBattle,
   renderMap,
   TEAM_STYLES,
 } from "../src/render.js";
@@ -35,7 +34,7 @@ describe("styled board model", () => {
       { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 1, row: 2 }, facing: "n" },
       { id: "grf", model: "GRF-1N", team: 1, gunnery: 4, position: { col: 3, row: 1 }, facing: "s" },
     ], { terrain: [{ col: 0, row: 0, type: "heavyWoods" }] });
-    const flat = renderBattle(state);
+    const flat = boardToText(battleModel(state));
     expect(boardToText(battleModel(state))).toBe(flat);
     expect(boardToSpans(battleModel(state)).map(spansText).join("\n")).toBe(flat);
   });
@@ -66,7 +65,7 @@ describe("styled board model", () => {
     ], { terrain: [{ col: 2, row: 1, type: "lightWoods" }] });
     const model = battleModel(state);
     const woods = model.styles?.["2,1"];
-    expect(woods).toEqual({ fg: "green" });
+    expect(woods).toEqual({ cls: "t-lightWoods" });
     expect(model.styles?.["0,0"]).toEqual(TEAM_STYLES[0]);
 
     const lines = boardToSpans(model);
@@ -80,7 +79,7 @@ describe("styled board model", () => {
     );
     const glyph = mapSpans.flat().filter((sp) => sp.style !== undefined && sp.text.includes("W"));
     expect(glyph.length).toBeGreaterThan(0);
-    expect(glyph.every((sp) => sp.style?.fg === "green" && sp.style.bold === true)).toBe(true);
+    expect(glyph.every((sp) => sp.style?.cls === "t-heavyWoods")).toBe(true);
   });
 
   it("explicit styles replace automatic ones entirely", () => {
@@ -89,7 +88,7 @@ describe("styled board model", () => {
       { id: "far", model: "GRF-1N", team: 1, gunnery: 4, position: { col: 9, row: 9 }, facing: "s" },
     ], { terrain: [{ col: 1, row: 0, type: "lightWoods" }] });
     const override: Record<string, CharStyle> = { "0,0": { fg: "red", bold: true, italic: true, bg: "blue" } };
-    const model = battleModel(state, undefined, undefined, undefined, undefined, override);
+    const model = battleModel(state, undefined, undefined, override);
     expect(model.styles?.["0,0"]).toEqual(override["0,0"]);
     expect(model.styles?.["1,0"]).toBeUndefined();
     expect(model.styles && Object.keys(model.styles)).toEqual(["0,0"]);

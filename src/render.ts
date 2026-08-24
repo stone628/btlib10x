@@ -6,20 +6,25 @@ import type { BattleState } from "./rules/game.js";
  *
  * Every hex is drawn as
  *
- *     ---
- *    /???\
- *   <XX,YY>
- *    \   /
- *     ---
+ *       ____
+ *      /0101\
+ *     ( wvr  )
+ *      \ w0 /
+ *       ====
+ *      /0102\
+ *     (      )
+ *      \    /
+ *       ‾‾‾‾
  *
- * where `???` is the occupying unit's id clipped/padded to 3 characters and
- * `XX,YY` is the space-aligned 1-based column,row (col right-aligned, row
- * left-aligned). Horizontal borders default to `---`; where two hexes share
- * an edge (the border is stamped twice) they render as `===`, suggesting
- * tightly packed hexes. Odd columns sit half a hex lower, mirroring the
- * odd-q flat-top grid.
+ * where `/0101\` carries the 1-based column,row as fixed two-digit pairs,
+ * `( wvr  )` is the occupying unit's id centered in the 6-char belly
+ * (clipped when longer), and `\ w0 /` is the terrain glyph plus elevation
+ * centered at the bottom (quick-start rules have no elevation: always 0).
+ * Outer top edges render as `____`, edges shared with the hex below as
+ * `====`, and the map's bottom edge as `‾‾‾‾`. Odd columns sit half a hex
+ * lower, mirroring the odd-q flat-top grid.
  *
- * Besides the classic flat-text form ({@link renderMap}, {@link renderBattle})
+ * Besides the classic flat-text form ({@link renderMap}, {@link boardToText})
  * the renderer can emit a {@link BoardModel} plus styled spans
  * ({@link boardToSpans}) carrying per-character color/weight hints. Styling
  * travels beside the text — never inline — so geometry math always sees the
@@ -49,6 +54,8 @@ export interface CharStyle {
   readonly bg?: ColorName | undefined;
   readonly bold?: boolean | undefined;
   readonly italic?: boolean | undefined;
+  /** Web-only hook: raw CSS class (e.g. per-terrain scheme `t-lightWoods`). */
+  readonly cls?: string | undefined;
 }
 
 /** A run of characters sharing one {@link CharStyle} within a board line. */
@@ -68,34 +75,41 @@ export interface BoardModel {
   readonly cells: Readonly<Record<string, string>>;
   /** Glyphs drawn at the hex bottom center (e.g. terrain markers). */
   readonly marks?: Readonly<Record<string, string>> | undefined;
-  /** Style applied to a hex's content characters (cell text and mark). */
+  /** Style applied to a hex's characters: grid rows plus cell text and mark. */
   readonly styles?: Readonly<Record<string, CharStyle>> | undefined;
 }
 
-/** Semantic terrain tinting used unless a caller overrides styles. */
+/** Per-terrain scheme hooks: the web layer maps each class to CSS vars
+ * (`--t-<type>` palette entries in web/index.html) unless a caller overrides
+ * styles. */
 export const TERRAIN_STYLES: Readonly<Record<string, CharStyle>> = {
-  lightWoods: { fg: "green" },
-  heavyWoods: { fg: "green", bg: "dim", bold: true },
+  lightWoods: { cls: "t-lightWoods" },
+  heavyWoods: { cls: "t-heavyWoods" },
 };
 
 /** Team-tinted unit ids: team 0 cyan, team 1 magenta, others unstyled. */
 export const TEAM_STYLES: readonly CharStyle[] = [{ fg: "cyan" }, { fg: "magenta" }];
 
-const HEX_WIDTH = 7;
-/** Horizontal distance between column origins; lets diagonal edges interlock. */
-const COL_STRIDE = 5;
+/** Belly width holding unit ids / overlay glyphs. */
+const BELLY_WIDTH = 6;
+const HEX_WIDTH = 8;
+/** Horizontal distance between column origins; columns sit flush. */
+const COL_STRIDE = 6;
 const ROW_STRIDE = 4;
 const STAGGER = 2;
+/** Quick-start rules have no elevation; every hex renders at level 0. */
+const ELEVATION_DIGIT = "0";
 
-function pad2(n: number): string {
-  return String(n).padStart(2);
+/** Fit text into a fixed-width cell; overflow clips, shorter text centers. */
+function fitCell(text: string, width: number): string {
+  if (text.length >= width) return text.slice(0, width);
+  const left = Math.floor((width - text.length) / 2);
+  return text.padStart(text.length + left).padEnd(width);
 }
 
-/** Fit text into the 3-char hex cell; ids clip right-aligned, glyphs center. */
-function fitCell(text: string): string {
-  if (text.length >= 3) return text.slice(0, 3);
-  const left = Math.floor((3 - text.length) / 2);
-  return text.padStart(text.length + left).padEnd(3);
+/** 1-based `XXYY` coordinate label (two fixed digit pairs). */
+function coordLabel(col: number, row: number): string {
+  return `${String(col + 1).padStart(2, "0")}${String(row + 1).padStart(2, "0")}`;
 }
 
 interface Canvas {
@@ -139,13 +153,14 @@ function drawCanvas(model: BoardModel): Canvas {
   const stamp = (x: number, y: number, text: string, style: CharStyle | null = null): void =>
     stampInto(canvas, x, y, text, style);
 
-  // Borders are `---` unless another border already occupies the cell, in
-  // which case the shared edge becomes `===`.
-  const stampBorder = (x: number, y: number): void => {
+  // Edges fill only blank cells: a hex's bottom edge runs first and writes
+  // `====` when another hex sits below, so the next top-edge stamp (`____`)
+  // leaves it untouched.
+  const stampEdge = (x: number, y: number, ch: "_" | "=" | "‾"): void => {
     const line = canvas.rows[y];
     if (!line) return;
-    for (let i = x + 2; i <= x + 4 && i < line.length; i++) {
-      line[i] = line[i] === " " ? "-" : "=";
+    for (let i = x + 2; i <= x + 5 && i < line.length; i++) {
+      if (line[i] === " ") line[i] = ch;
     }
   };
 
@@ -156,17 +171,18 @@ function drawCanvas(model: BoardModel): Canvas {
       const key = `${col},${row}`;
       const cell = cells[key];
       const style = styles?.[key] ?? null;
-      stampBorder(col * COL_STRIDE, y);
-      stamp(col * COL_STRIDE, y + 1, ` /${cell === undefined ? "   " : fitCell(cell)}\\ `, style);
-      stamp(col * COL_STRIDE, y + 2, `<${pad2(col + 1)},${String(row + 1).padEnd(2)}>`);
-      stamp(col * COL_STRIDE, y + 3, " \\   / ");
+      const x = col * COL_STRIDE;
+      stampEdge(x, y, "_");
+      stamp(x + 1, y + 1, `/${coordLabel(col, row)}\\`, style);
+      stamp(x, y + 2, `(${cell === undefined ? "      " : fitCell(cell, BELLY_WIDTH)})`, style);
+      stamp(x + 1, y + 3, "\\    /", style);
       const mark = marks?.[key];
       if (mark !== undefined && mark.length > 0) {
-        // Only the centered glyph: the surrounding "\   /" edges belong to
-        // this hex already, and restamping them would overwrite neighbors.
-        stamp(col * COL_STRIDE + 2, y + 3, fitCell(mark), style);
+        // Only the centered glyph+elevation: the surrounding "\    /" edges
+        // belong to this hex already, and restamping them would overwrite.
+        stamp(x + 2, y + 3, fitCell(`${mark}${ELEVATION_DIGIT}`, 4), style);
       }
-      stampBorder(col * COL_STRIDE, y + ROW_STRIDE);
+      stampEdge(x, y + ROW_STRIDE, row + 1 < rows ? "=" : "‾");
     }
   }
 
@@ -176,7 +192,9 @@ function drawCanvas(model: BoardModel): Canvas {
 function styleEquals(a: CharStyle | null, b: CharStyle | null): boolean {
   if (a === b) return true;
   if (a === null || b === null) return false;
-  return a.fg === b.fg && a.bg === b.bg && a.bold === b.bold && a.italic === b.italic;
+  return (
+    a.fg === b.fg && a.bg === b.bg && a.bold === b.bold && a.italic === b.italic && a.cls === b.cls
+  );
 }
 
 /** Flat text form of a model — identical to the historic renderer output. */
@@ -281,7 +299,8 @@ export function renderMap(
 
 /**
  * Structured battle board: unit ids take precedence over hex contents.
- * Removed units are omitted; bounds default to the units + terrain extent.
+ * Removed units are omitted; bounds come from `state.width`/`state.height`
+ * when set, else the units + terrain extent.
  * The optional `overlay` maps `"col,row"` keys to short glyphs (up to 3
  * chars) drawn inside empty hexes. The optional `marks` maps keys to glyphs
  * at the hex bottom center (see renderMap). Styles default to terrain
@@ -290,8 +309,6 @@ export function renderMap(
  */
 export function battleModel(
   state: BattleState,
-  width?: number,
-  height?: number,
   overlay?: Readonly<Record<string, string>>,
   marks?: Readonly<Record<string, string>>,
   styles?: Readonly<Record<string, CharStyle>>,
@@ -327,27 +344,11 @@ export function battleModel(
   }
 
   return {
-    cols: Math.max(1, width ?? maxCol + 1),
-    rows: Math.max(1, height ?? maxRow + 1),
+    cols: Math.max(1, state.width ?? maxCol + 1),
+    rows: Math.max(1, state.height ?? maxRow + 1),
     cells,
     ...(marks === undefined ? {} : { marks }),
     ...(styles !== undefined ? { styles } : Object.keys(auto).length > 0 ? { styles: auto } : {}),
   };
 }
 
-/**
- * Render a battle: unit ids take precedence over hex contents. Removed units
- * are omitted; board bounds default to the units + terrain extent. The
- * optional `overlay` maps `"col,row"` keys to short glyphs (up to 3 chars)
- * drawn inside empty hexes — e.g. terrain markers. The optional `marks` maps
- * `"col,row"` keys to glyphs drawn at the hex bottom center (see renderMap).
- */
-export function renderBattle(
-  state: BattleState,
-  width?: number,
-  height?: number,
-  overlay?: Readonly<Record<string, string>>,
-  marks?: Readonly<Record<string, string>>,
-): string {
-  return boardToText(battleModel(state, width, height, overlay, marks));
-}

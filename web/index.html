@@ -8,8 +8,13 @@
       :root {
         color-scheme: dark;
         /* Board rendering knobs (edit to restyle game boards only). */
-        --font-board: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+        --board-ff: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
         --board-lh: 1;
+        --board-fs: 0.8em;
+        /* Per-terrain color scheme (one var per TerrainType). */
+        --t-lightWoods: var(--c-green);
+        --t-heavyWoods: var(--c-green);
+        --tb-heavyWoods: var(--cb-dim);
         --c-red: #e07a6a;
         --c-green: #8fd08f;
         --c-yellow: #d8c26a;
@@ -65,8 +70,15 @@
       }
       /* Game board output: dedicated font + line spacing, styled spans. */
       #out .board {
-        font-family: var(--font-board);
+        font-family: var(--board-ff);
+        font-size: var(--board-fs);
         line-height: var(--board-lh);
+      }
+      .t-lightWoods { color: var(--t-lightWoods); }
+      .t-heavyWoods {
+        color: var(--t-heavyWoods);
+        background-color: var(--tb-heavyWoods);
+        font-weight: bold;
       }
       .f-red { color: var(--c-red); }
       .f-green { color: var(--c-green); }

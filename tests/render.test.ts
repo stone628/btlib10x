@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { createBattle } from "../src/rules/game.js";
-import { renderBattle, renderMap } from "../src/render.js";
+import { battleModel, boardToText, renderMap } from "../src/render.js";
+import type { BattleState } from "../src/rules/game.js";
+
+/** Flat battle text via the structured model (historic renderer shape). */
+const renderBattle = (
+  state: BattleState,
+  overlay?: Readonly<Record<string, string>>,
+  marks?: Readonly<Record<string, string>>,
+): string => boardToText(battleModel(state, overlay, marks));
 
 declare const console: { log: (message: string) => void };
 
@@ -19,63 +27,63 @@ describe("console renderer", () => {
   it("draws hexes with unit ids and coordinates", () => {
     const state = battleWith({ id: "hbk", model: "HBK-4G", position: { col: 1, row: 2 } });
     const out = renderBattle(state);
-    expect(out).toContain("/hbk\\");
-    expect(out).toContain("< 2,3 >");
+    expect(out).toContain("( hbk  )"); // id centered in the 6-char belly
+    expect(out).toContain("/0203\\"); // coord row /XXYY
   });
 
   it("staggers odd columns down half a hex", () => {
     const state = createBattle([
       { id: "wvr", model: "WVR-6R", team: 0, gunnery: 4, position: { col: 1, row: 1 }, facing: "n" },
       { id: "grf", model: "GRF-1N", team: 1, gunnery: 3, position: { col: 2, row: 1 }, facing: "s" },
-    ]);
-    const lines = renderBattle(state, 3, 2).split("\n");
+    ], { width: 3, height: 2 });
+    const lines = renderBattle(state).split("\n");
     // Column 1 (odd) starts two lines lower than column 2 (even): its
     // coordinate label lands exactly two rows beneath the neighbor's.
-    const wvrAt = lines.findIndex((l) => l.includes("< 2,2 >"));
-    const grfAt = lines.findIndex((l) => l.includes("< 3,2 >"));
+    const wvrAt = lines.findIndex((l) => l.includes("/0202\\"));
+    const grfAt = lines.findIndex((l) => l.includes("/0302\\"));
     expect(wvrAt).toBeGreaterThan(-1);
     expect(grfAt).toBe(wvrAt - 2);
-    // Column 1's shared edge nests flush against column 2's coordinate row
-    // on the same canvas line.
-    expect(lines[wvrAt - 2]!.slice(7, 10)).toBe("===");
-    expect(lines[wvrAt - 2]!.slice(10)).toBe("< 3,2 >");
+    // Column 1's shared edge sits flush against column 2's terrain row on
+    // the same canvas line.
+    expect(lines[grfAt]!.slice(13, 19)).toBe("/0302\\");
+    expect(lines[wvrAt - 1]!.slice(8, 12)).toBe("====");
   });
 
-  it("clips long ids and pads short ones to 3 characters", () => {
+  it("clips long ids and centers short ones in the 6-char belly", () => {
     const state = createBattle([
       { id: "wolverine", model: "WVR-6R", team: 0, gunnery: 4, position: { col: 1, row: 1 }, facing: "n" },
       { id: "ab", model: "GRF-1N", team: 1, gunnery: 4, position: { col: 2, row: 1 }, facing: "s" },
     ]);
     const out = renderBattle(state);
-    expect(out).toContain("/wol\\");
-    expect(out).toContain("/ab \\");
+    expect(out).toContain("(wolver)"); // clipped to 6 chars
+    expect(out).toContain("(  ab  )"); // centered
     expect(out).not.toContain("wolverine");
   });
 
-  it("turns shared horizontal edges into double rules", () => {
+  it("caps outer edges with _ and overline, sharing ==== below", () => {
     const state = createBattle([
       { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 2, row: 1 }, facing: "n" },
       { id: "enf", model: "ENF-4R", team: 0, gunnery: 4, position: { col: 2, row: 2 }, facing: "s" },
     ]);
     const lines = renderBattle(state).split("\n");
-    const dashAt = (y: number): string => lines[y]!.slice(12, 15); // column 2's border cells
-    expect(dashAt(0)).toBe("---"); // outer edge
-    expect(dashAt(4)).toBe("==="); // shared by rows 1 and 2
-    expect(dashAt(8)).toBe("==="); // shared by rows 2 and 3
-    expect(dashAt(12)).toBe("---"); // outer edge
+    const edgeAt = (y: number): string => lines[y]!.slice(14, 18); // column 2's edge cells
+    expect(edgeAt(0)).toBe("____"); // outer top edge
+    expect(edgeAt(4)).toBe("===="); // shared by rows 1 and 2
+    expect(edgeAt(8)).toBe("===="); // shared by rows 2 and 3
+    expect(edgeAt(12)).toBe("‾‾‾‾"); // outer bottom edge
   });
 
-  it("space-aligns coordinates (col right, row left)", () => {
+  it("zero-pads coordinates as fixed XXYY pairs", () => {
     const state = battleWith({ id: "cda", model: "CDA-3MA", position: { col: 5, row: 12 } });
-    expect(renderBattle(state)).toContain("< 6,13>");
+    expect(renderBattle(state)).toContain("/0613\\");
   });
 
   it("omits removed units from the map", () => {
     const state = battleWith({ id: "hbk", model: "HBK-4G", position: { col: 1, row: 1 } });
     state.units["hbk"]!.removed = true;
     const out = renderBattle(state);
-    expect(out).not.toContain("/hbk");
-    expect(out).toContain("< 2,2 >"); // hex still drawn, empty
+    expect(out).not.toContain("( hbk");
+    expect(out).toContain("/0202\\"); // hex still drawn, empty
   });
 
   it("derives board size from units and terrain when not given", () => {
@@ -88,22 +96,22 @@ describe("console renderer", () => {
     );
     const out = renderBattle(state);
     expect(out.split("\n").length).toBe(8 * 4 + 2 + 1); // rows*stride + stagger + closing border
-    expect(out).toContain("< 2,2 >");
-    expect(out).toContain("<10,8 >");
+    expect(out).toContain("/0202\\");
+    expect(out).toContain("/1008\\");
     console.log(out);
   });
 
   it("stamps overlay glyphs into empty hexes but units win", () => {
     const state = battleWith({ id: "hbk", model: "HBK-4G", position: { col: 1, row: 2 } });
-    const out = renderBattle(state, undefined, undefined, {
+    const out = renderBattle(state, {
       "1,2": "u",
       "3,0": "W",
       "0,0": "w",
     });
-    expect(out).toContain("/hbk\\"); // occupant beats overlay
-    expect(out).toContain("/ W \\");
-    expect(out).toContain("/ w \\");
-    expect(out).not.toContain("/ u \\");
+    expect(out).toContain("( hbk  )"); // occupant beats overlay
+    expect(out).toContain("(  W   )");
+    expect(out).toContain("(  w   )");
+    expect(out).not.toContain("(  u   )");
   });
 });
 
@@ -118,20 +126,20 @@ describe("map renderer", () => {
       3,
       2,
     );
-    expect(out).toMatch(/[/\\]+ w [/\\]+/);
-    expect(out).toMatch(/[/\\]+ W [/\\]+/);
+    expect(out).toMatch(/[/\\]+ w0 [/\\]+/);
+    expect(out).toMatch(/[/\\]+ W0 [/\\]+/);
     expect(out).not.toContain("???");
     expect(out.split("\n").length).toBe(2 * 4 + 2 + 1); // rows*stride + stagger + closing border
   });
 
-  it("keeps unit ids in the top cell while terrain marks sit at the bottom", () => {
+  it("keeps unit ids in the center cell while terrain marks sit at the bottom", () => {
     const state = createBattle([
       { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 1, row: 2 }, facing: "n" },
       { id: "far", model: "GRF-1N", team: 1, gunnery: 4, position: { col: 9, row: 9 }, facing: "s" },
     ]);
-    const out = renderBattle(state, undefined, undefined, { "3,0": "W" });
-    expect(out).toContain("/hbk\\");
-    expect(out).toMatch(/[/\\]+ W [/\\]+/);
+    const out = renderBattle(state, undefined, { "3,0": "W" });
+    expect(out).toContain("( hbk  )");
+    expect(out).toMatch(/\\ W0 /);
   });
 
   it("draws battle terrain via the marks layer", () => {
@@ -142,8 +150,8 @@ describe("map renderer", () => {
       ],
       { terrain: [{ col: 0, row: 0, type: "lightWoods" }] },
     );
-    const out = renderBattle(state, undefined, undefined, undefined, { "0,0": "w" });
-    expect(out).toContain("/hbk\\");
-    expect(out).toMatch(/[/\\]+ w [/\\]+/);
+    const out = renderBattle(state, undefined, { "0,0": "w" });
+    expect(out).toContain("( hbk  )");
+    expect(out).toMatch(/[/\\]+ w0 [/\\]+/);
   });
 });
