@@ -105,6 +105,29 @@ const STAGGER = 2;
 /** Quick-start rules have no elevation; every hex renders at level 0. */
 const ELEVATION_DIGIT = "0";
 
+/**
+ * Structural characters of the hex grid itself: the three horizontal edge
+ * glyphs, the four diagonal wall segments (named by the direction they face
+ * from the hex center) and the west/east belly walls. Content glyphs live in
+ * {@link TERRAIN_GLYPHS} / {@link FACING_GLYPH}.
+ */
+export const GRID_GLYPHS = {
+  edgeTop: "_",
+  edgeShared: "=",
+  edgeBottom: "\u203e",
+  edgeNW: "/",
+  edgeNE: "\\",
+  edgeSE: "/",
+  edgeSW: "\\",
+  vertW: "(",
+  vertE: ")",
+} as const;
+/** Characters allowed on an edge line. */
+type EdgeGlyph =
+  | typeof GRID_GLYPHS.edgeTop
+  | typeof GRID_GLYPHS.edgeShared
+  | typeof GRID_GLYPHS.edgeBottom;
+
 /** Arrow drawn for each {@link Facing}, replacing the matching wall/edge char. */
 const FACING_GLYPH: Readonly<Record<Facing, string>> = {
   n: "\u2191",
@@ -178,7 +201,7 @@ function drawCanvas(model: BoardModel): Canvas {
   // Edges fill only blank cells: a hex's bottom edge runs first and writes
   // `====` when another hex sits below, so the next top-edge stamp (`____`)
   // leaves it untouched.
-  const stampEdge = (x: number, y: number, ch: "_" | "=" | "‾"): void => {
+  const stampEdge = (x: number, y: number, ch: EdgeGlyph): void => {
     const line = canvas.rows[y];
     if (!line) return;
     for (let i = x + 2; i <= x + 5 && i < line.length; i++) {
@@ -194,17 +217,31 @@ function drawCanvas(model: BoardModel): Canvas {
       const cell = cells[key];
       const style = styles?.[key] ?? null;
       const x = col * COL_STRIDE;
-      stampEdge(x, y, "_");
-      stamp(x + 1, y + 1, `/${coordLabel(col, row)}\\`, style);
-      stamp(x, y + 2, `(${cell === undefined ? "      " : fitCell(cell, BELLY_WIDTH)})`, style);
-      stamp(x + 1, y + 3, "\\    /", style);
+      stampEdge(x, y, GRID_GLYPHS.edgeTop);
+      stamp(
+        x + 1,
+        y + 1,
+        `${GRID_GLYPHS.edgeNW}${coordLabel(col, row)}${GRID_GLYPHS.edgeNE}`,
+        style,
+      );
+      stamp(
+        x,
+        y + 2,
+        `${GRID_GLYPHS.vertW}${cell === undefined ? "      " : fitCell(cell, BELLY_WIDTH)}${GRID_GLYPHS.vertE}`,
+        style,
+      );
+      stamp(x + 1, y + 3, `${GRID_GLYPHS.edgeSW}    ${GRID_GLYPHS.edgeSE}`, style);
       const mark = marks?.[key];
       if (mark !== undefined && mark.length > 0) {
         // Only the centered glyph+elevation: the surrounding "\    /" edges
         // belong to this hex already, and restamping them would overwrite.
         stamp(x + 2, y + 3, fitCell(`${mark}${ELEVATION_DIGIT}`, 4), style);
       }
-      stampEdge(x, y + ROW_STRIDE, row + 1 < rows ? "=" : "‾");
+      stampEdge(
+        x,
+        y + ROW_STRIDE,
+        row + 1 < rows ? GRID_GLYPHS.edgeShared : GRID_GLYPHS.edgeBottom,
+      );
       const f = facings?.[key];
       const glyph = f === undefined ? undefined : FACING_GLYPH[f];
       if (glyph !== undefined) {
