@@ -46,7 +46,7 @@ describe("console renderer", () => {
     // Column 1's shared edge sits flush against column 2's terrain row on
     // the same canvas line.
     expect(lines[grfAt]!.slice(13, 19)).toBe("/0302\\");
-    expect(lines[wvrAt - 1]!.slice(8, 12)).toBe("====");
+    expect(lines[wvrAt - 1]!.slice(8, 12)).toBe("=\u2191==");
   });
 
   it("clips long ids and centers short ones in the 6-char belly", () => {
@@ -68,9 +68,9 @@ describe("console renderer", () => {
     const lines = renderBattle(state).split("\n");
     const edgeAt = (y: number): string => lines[y]!.slice(14, 18); // column 2's edge cells
     expect(edgeAt(0)).toBe("____"); // outer top edge
-    expect(edgeAt(4)).toBe("===="); // shared by rows 1 and 2
+    expect(edgeAt(4)).toBe("=" + "\u2191" + "=="); // hbk faces n
     expect(edgeAt(8)).toBe("===="); // shared by rows 2 and 3
-    expect(edgeAt(12)).toBe("‾‾‾‾"); // outer bottom edge
+    expect(edgeAt(12)).toBe("‾‾↓‾"); // enf faces s
   });
 
   it("zero-pads coordinates as fixed XXYY pairs", () => {
@@ -112,6 +112,24 @@ describe("console renderer", () => {
     expect(out).toContain("(  W   )");
     expect(out).toContain("(  w   )");
     expect(out).not.toContain("(  u   )");
+  });
+
+  it("marks mech facing at the matching hexside vertex", () => {
+    const state = createBattle([
+      { id: "a", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 0, row: 0 }, facing: "n" },
+      { id: "b", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 0, row: 1 }, facing: "s" },
+      { id: "c", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 1, row: 0 }, facing: "ne" },
+      { id: "d", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 1, row: 1 }, facing: "sw" },
+      { id: "e", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 2, row: 0 }, facing: "nw" },
+      { id: "f", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 2, row: 1 }, facing: "se" },
+    ]);
+    const lines = renderBattle(state).split("\n");
+    expect(lines[0]![3]).toBe("\u2191"); // n: top edge's 2nd char
+    expect(lines[8]![4]).toBe("\u2193"); // s: bottom edge's 3rd char
+    expect(lines[3]![12]).toBe("\u2197"); // ne: upper-right wall
+    expect(lines[9]![7]).toBe("\u2199"); // sw: lower-left wall
+    expect(lines[1]![13]).toBe("\u2196"); // nw: upper-left wall
+    expect(lines[7]![18]).toBe("\u2198"); // se: lower-right wall
   });
 });
 

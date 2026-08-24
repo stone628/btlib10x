@@ -165,6 +165,7 @@ describe("board", () => {
     run(s, "add hbk HBK-4G 0 4 3 3");
     const board = run(s, "board").join("\n");
     expect(board).toContain("( hbk  )"); // placed unit id drawn
+    expect(board).toContain("\u2191"); // facing glyph drawn in setup
     expect(board).toContain("/0101\\"); // map renders even with no units
     expect(board).toMatch(/[/\\]+ W0 [/\\]+/); // terrain glyphs + elevation
   });

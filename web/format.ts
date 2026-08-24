@@ -60,7 +60,7 @@ export function boardChunk(s: Session): Chunk {
       return { lines: [t(s.locale, "board.noMap")] };
     }
     const units = Object.fromEntries(
-      s.roster.map((u) => [u.id, { id: u.id, position: u.position, removed: false }]),
+      s.roster.map((u) => [u.id, { id: u.id, position: u.position, facing: u.facing, removed: false }]),
     ) as BattleState["units"];
     const terrain: Record<string, string> = {};
     for (const t2 of s.terrainDefs) terrain[`${t2.col},${t2.row}`] = t2.type;
