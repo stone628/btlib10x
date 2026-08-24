@@ -25,10 +25,10 @@ describe("autoplay", () => {
     execute(s, "reset");
     expect(nextAutoPlayCommand(s)).toBe("map quickstart");
     execute(s, "map quickstart");
-    expect(nextAutoPlayCommand(s)).toBe("add hunchy HBK-4G 0 4 9 9 n");
-    execute(s, "add hunchy HBK-4G 0 4 9 9 n");
-    expect(nextAutoPlayCommand(s)).toBe("add cicada CDA-3MA 1 4 9 8 s");
-    execute(s, "add cicada CDA-3MA 1 4 9 8 s");
+    expect(nextAutoPlayCommand(s)).toBe("add hunchy HBK-4G 0 4 11 9 n");
+    execute(s, "add hunchy HBK-4G 0 4 11 9 n");
+    expect(nextAutoPlayCommand(s)).toBe("add cicada CDA-3MA 1 4 11 8 s");
+    execute(s, "add cicada CDA-3MA 1 4 11 8 s");
     expect(nextAutoPlayCommand(s)).toBe("start");
     execute(s, "start");
     expect(s.app).toBe("battle");

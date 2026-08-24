@@ -165,7 +165,7 @@ describe("board", () => {
     run(s, "map beginner");
     run(s, "add hbk HBK-4G 0 4 3 3");
     const board = run(s, "board").join("\n");
-    expect(board).toContain(`${GRID_GLYPHS.vertW} hbk  ${GRID_GLYPHS.vertE}`); // placed unit id drawn
+    expect(board).toContain(`${GRID_GLYPHS.vertW}  hbk ${GRID_GLYPHS.vertE}`); // placed unit id drawn
     expect(board).toContain("\u2191"); // facing glyph drawn in setup
     expect(board).toContain(`${GRID_GLYPHS.edgeNW}0101${GRID_GLYPHS.edgeNE}`); // map renders even with no units
     expect(board).toContain(`${GRID_GLYPHS.edgeSW} W0 ${GRID_GLYPHS.edgeSE}`); // terrain glyphs + elevation

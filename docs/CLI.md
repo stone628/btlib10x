@@ -42,7 +42,7 @@ Examples:
 |---|---|
 | `help` / `?` | state hint line, then commands available now; `help <command>` shows usage plus per-argument explanations |
 | `lang [<locale>]` | show or switch output language (`en`, `kr`); session-scoped, survives reset/rematch, defaults to `en` |
-| `board` | ASCII grid (styled spans from `battleModel`), sized from loaded map's width×height (unit/terrain extent before a map is loaded); with no map and empty roster, explains how to load one. Rendered as styled spans in a `.board` block: terrain glyphs and team-colored unit ids; font family, size and line spacing come from the `--font-board` / `--board-fs` / `--board-lh` CSS variables and each terrain's scheme from the `--t-*` variables in `web/index.html` |
+| `board` | ASCII grid (styled spans from `battleModel`), sized from loaded map's width×height (unit/terrain extent before a map is loaded); with no map and empty roster, explains how to load one. Rendered as styled spans in a `.board` block: terrain glyphs on the grid rows and team-colored unit ids (id characters only, via `cellStyles`); font family, size and line spacing come from the `--font-board` / `--board-fs` / `--board-lh` CSS variables and each terrain's scheme from the `--t-*` variables in `web/index.html` |
 | `clear` | clear the scrollback screen |
 | `log [n]` | last n events (default 10) |
 | `info mech` | list available 'Mechs |

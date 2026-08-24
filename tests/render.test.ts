@@ -27,7 +27,7 @@ describe("console renderer", () => {
   it("draws hexes with unit ids and coordinates", () => {
     const state = battleWith({ id: "hbk", model: "HBK-4G", position: { col: 1, row: 2 } });
     const out = renderBattle(state);
-    expect(out).toContain(`${GRID_GLYPHS.vertW} hbk  ${GRID_GLYPHS.vertE}`); // id centered in the 6-char belly
+    expect(out).toContain(`${GRID_GLYPHS.vertW}  hbk ${GRID_GLYPHS.vertE}`); // id centered in the 6-char belly
     expect(out).toContain(`${GRID_GLYPHS.edgeNW}0203${GRID_GLYPHS.edgeNE}`); // coord row /XXYY
   });
 
@@ -55,7 +55,7 @@ describe("console renderer", () => {
       { id: "ab", model: "GRF-1N", team: 1, gunnery: 4, position: { col: 2, row: 1 }, facing: "s" },
     ]);
     const out = renderBattle(state);
-    expect(out).toContain(`${GRID_GLYPHS.vertW}wolver${GRID_GLYPHS.vertE}`); // clipped to 6 chars
+    expect(out).toContain(`${GRID_GLYPHS.vertW} wolv ${GRID_GLYPHS.vertE}`); // clipped to 4 chars
     expect(out).toContain(`${GRID_GLYPHS.vertW}  ab  ${GRID_GLYPHS.vertE}`); // centered
     expect(out).not.toContain("wolverine");
   });
@@ -108,10 +108,10 @@ describe("console renderer", () => {
       "3,0": "W",
       "0,0": "w",
     });
-    expect(out).toContain(`${GRID_GLYPHS.vertW} hbk  ${GRID_GLYPHS.vertE}`); // occupant beats overlay
-    expect(out).toContain(`${GRID_GLYPHS.vertW}  W   ${GRID_GLYPHS.vertE}`);
-    expect(out).toContain(`${GRID_GLYPHS.vertW}  w   ${GRID_GLYPHS.vertE}`);
-    expect(out).not.toContain(`${GRID_GLYPHS.vertW}  u   ${GRID_GLYPHS.vertE}`);
+    expect(out).toContain(`${GRID_GLYPHS.vertW}  hbk ${GRID_GLYPHS.vertE}`); // occupant beats overlay
+    expect(out).toContain(`${GRID_GLYPHS.vertW}   W  ${GRID_GLYPHS.vertE}`);
+    expect(out).toContain(`${GRID_GLYPHS.vertW}   w  ${GRID_GLYPHS.vertE}`);
+    expect(out).not.toContain(`${GRID_GLYPHS.vertW}   u  ${GRID_GLYPHS.vertE}`);
   });
 
   it("marks mech facing at the matching hexside vertex", () => {
@@ -156,7 +156,7 @@ describe("map renderer", () => {
       { id: "far", model: "GRF-1N", team: 1, gunnery: 4, position: { col: 9, row: 9 }, facing: "s" },
     ]);
     const out = renderBattle(state, undefined, { "3,0": "W" });
-    expect(out).toContain(`${GRID_GLYPHS.vertW} hbk  ${GRID_GLYPHS.vertE}`);
+    expect(out).toContain(`${GRID_GLYPHS.vertW}  hbk ${GRID_GLYPHS.vertE}`);
     expect(out).toContain(`${GRID_GLYPHS.edgeSW} W0 ${GRID_GLYPHS.edgeSE}`);
   });
 
@@ -169,7 +169,7 @@ describe("map renderer", () => {
       { terrain: [{ col: 0, row: 0, type: "lightWoods" }] },
     );
     const out = renderBattle(state, undefined, { "0,0": "w" });
-    expect(out).toContain(`${GRID_GLYPHS.vertW} hbk  ${GRID_GLYPHS.vertE}`);
+    expect(out).toContain(`${GRID_GLYPHS.vertW}  hbk ${GRID_GLYPHS.vertE}`);
     expect(out).toContain(`${GRID_GLYPHS.edgeSW} w0 ${GRID_GLYPHS.edgeSE}`);
   });
 });
