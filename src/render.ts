@@ -1,4 +1,4 @@
-import type { TerrainHexDef } from "./core/types.js";
+import type { Facing, TerrainHexDef } from "./core/types.js";
 import type { BattleState } from "./rules/game.js";
 
 /**
@@ -20,6 +20,9 @@ import type { BattleState } from "./rules/game.js";
  * `( wvr  )` is the occupying unit's id centered in the 6-char belly
  * (clipped when longer), and `\ w0 /` is the terrain glyph plus elevation
  * centered at the bottom (quick-start rules have no elevation: always 0).
+ * A unit's facing replaces the grid character at its hexside vertex:
+ * n `↑` on the top edge's 2nd char, s `↓` on the bottom edge's 3rd char,
+ * nw/ne `↖`/`↗` on the upper walls, sw/se `↙`/`↘` on the lower walls.
  * Outer top edges render as `____`, edges shared with the hex below as
  * `====`, and the map's bottom edge as `‾‾‾‾`. Odd columns sit half a hex
  * lower, mirroring the odd-q flat-top grid.
@@ -75,6 +78,8 @@ export interface BoardModel {
   readonly cells: Readonly<Record<string, string>>;
   /** Glyphs drawn at the hex bottom center (e.g. terrain markers). */
   readonly marks?: Readonly<Record<string, string>> | undefined;
+  /** Per-hex mech facing (`"col,row"` → {@link Facing}); drawn on the grid. */
+  readonly facings?: Readonly<Record<string, Facing>> | undefined;
   /** Style applied to a hex's characters: grid rows plus cell text and mark. */
   readonly styles?: Readonly<Record<string, CharStyle>> | undefined;
 }
@@ -99,6 +104,16 @@ const ROW_STRIDE = 4;
 const STAGGER = 2;
 /** Quick-start rules have no elevation; every hex renders at level 0. */
 const ELEVATION_DIGIT = "0";
+
+/** Arrow drawn for each {@link Facing}, replacing the matching wall/edge char. */
+const FACING_GLYPH: Readonly<Record<Facing, string>> = {
+  n: "\u2191",
+  ne: "\u2197",
+  se: "\u2198",
+  s: "\u2193",
+  sw: "\u2199",
+  nw: "\u2196",
+};
 
 /** Fit text into a fixed-width cell; overflow clips, shorter text centers. */
 function fitCell(text: string, width: number): string {
@@ -146,7 +161,14 @@ function stampInto(canvas: Canvas, x: number, y: number, text: string, style: Ch
 /** Assemble a {@link BoardModel} into the char/style canvases. */
 function drawCanvas(model: BoardModel): Canvas {
   const canvas = makeCanvas(model);
-  const { cols, rows, cells, marks, styles } = model;
+  const { cols, rows, cells, marks, styles, facings } = model;
+
+  // Overwrite one canvas cell (styles stay whatever the grid put there).
+  const setChar = (x: number, y: number, ch: string): void => {
+    const line = canvas.rows[y];
+    if (!line || x < 0 || x >= line.length) return;
+    line[x] = ch;
+  };
 
   // Overlay stamping: spaces never erase glyphs already on the canvas, so
   // neighboring hexes' edges nest tightly.
@@ -183,6 +205,18 @@ function drawCanvas(model: BoardModel): Canvas {
         stamp(x + 2, y + 3, fitCell(`${mark}${ELEVATION_DIGIT}`, 4), style);
       }
       stampEdge(x, y + ROW_STRIDE, row + 1 < rows ? "=" : "‾");
+      const f = facings?.[key];
+      const glyph = f === undefined ? undefined : FACING_GLYPH[f];
+      if (glyph !== undefined) {
+        if (glyph === FACING_GLYPH.n) setChar(x + 3, y, glyph);
+        // Top edge's 2nd char / bottom edge's 3rd char keep both arrows of a
+        // vertically shared edge visible.
+        else if (glyph === FACING_GLYPH.s) setChar(x + 4, y + ROW_STRIDE, glyph);
+        else if (glyph === FACING_GLYPH.nw) setChar(x + 1, y + 1, glyph);
+        else if (glyph === FACING_GLYPH.ne) setChar(x + 6, y + 1, glyph);
+        else if (glyph === FACING_GLYPH.sw) setChar(x + 1, y + 3, glyph);
+        else setChar(x + 6, y + 3, glyph);
+      }
     }
   }
 
@@ -303,7 +337,9 @@ export function renderMap(
  * when set, else the units + terrain extent.
  * The optional `overlay` maps `"col,row"` keys to short glyphs (up to 3
  * chars) drawn inside empty hexes. The optional `marks` maps keys to glyphs
- * at the hex bottom center (see renderMap). Styles default to terrain
+ * at the hex bottom center (see renderMap). Unit facings are derived
+ * automatically and replace their hexside vertex characters. Styles default
+ * to terrain
  * tints plus {@link TEAM_STYLES} for unit ids; an explicit `styles` record
  * replaces them entirely.
  */
@@ -329,6 +365,7 @@ export function battleModel(
   }
 
   const cells: Record<string, string> = {};
+  const facings: Record<string, Facing> = {};
   if (overlay !== undefined) Object.assign(cells, overlay);
   const auto: Record<string, CharStyle> = {};
   for (const [tKey, tType] of Object.entries(state.terrain)) {
@@ -339,6 +376,7 @@ export function battleModel(
     if (unit.removed) continue;
     const key = `${unit.position.col},${unit.position.row}`;
     cells[key] = unit.id;
+    facings[key] = unit.facing;
     const team = TEAM_STYLES[unit.team];
     if (team !== undefined) auto[key] = team;
   }
@@ -347,6 +385,7 @@ export function battleModel(
     cols: Math.max(1, state.width ?? maxCol + 1),
     rows: Math.max(1, state.height ?? maxRow + 1),
     cells,
+    ...(Object.keys(facings).length > 0 ? { facings } : {}),
     ...(marks === undefined ? {} : { marks }),
     ...(styles !== undefined ? { styles } : Object.keys(auto).length > 0 ? { styles: auto } : {}),
   };
