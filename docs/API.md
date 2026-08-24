@@ -258,7 +258,7 @@ Each hex draws as
 ```
   ____
  /0101\
-( wvr  )
+(  wvr )
  \ w0 /
   ====
  /0102\
@@ -269,8 +269,10 @@ Each hex draws as
 
 with `/0101\` carrying the 1-based column,row as fixed two-digit pairs
 (`/0204\` for engine hex `{ col: 1, row: 3 }`; internal coordinates remain
-0-based), the occupant's id centered in the 6-char belly (clipped when
-longer), and the terrain glyph plus elevation centered at the bottom —
+0-based), the occupant's id centered in the 6-char belly — round half up, so
+3-char ids start at the belly's 4th character (`(  wvr )`; ids clip to 4
+characters, so `hunchy` draws as `( hunc )`), and the terrain glyph plus
+elevation centered at the bottom —
 quick-start rules have no elevation, so it is always `0`. Outer top edges
 render as `____`, edges shared with the hex below as `====`, and the map's
 bottom edge as `‾‾‾‾`. A unit's facing replaces the grid character at its
@@ -315,10 +317,14 @@ also carry per-character presentation hints:
   styling travels beside the text, never inline, so geometry math only ever
   sees plain characters.
 
-Semantic defaults: terrain hexes carry `TERRAIN_STYLES` (one CSS class per
-`TerrainType`: `t-lightWoods`, `t-heavyWoods`), unit ids tint via
-`TEAM_STYLES` (team 0 cyan, team 1 magenta); an explicit `styles` record
-replaces them entirely. The web terminal renders spans inside a `.board`
+Semantic defaults: terrain hexes tint their grid rows via `TERRAIN_STYLES`
+(one CSS class per `TerrainType`: `t-lightWoods`, `t-heavyWoods`); unit ids
+are team-colored through a separate `cellStyles` record so `TEAM_STYLES`
+(team 0 cyan, team 1 magenta) touches only the id characters and the unit's
+facing arrow, never the
+parens or grid rows — and terrain tint survives underneath an occupying
+unit. An explicit `styles` record replaces all automatic styling entirely
+(including `cellStyles`). The web terminal renders spans inside a `.board`
 container whose font family, size and line spacing come from the CSS
 variables `--font-board` / `--board-fs` / `--board-lh`; each terrain's color
 scheme is its own set of variables (`--t-lightWoods`, `--t-heavyWoods`,

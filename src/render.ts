@@ -17,9 +17,10 @@ import type { BattleState } from "./rules/game.js";
  *       ‾‾‾‾
  *
  * where `/0101\` carries the 1-based column,row as fixed two-digit pairs,
- * `( wvr  )` is the occupying unit's id centered in the 6-char belly
- * (clipped when longer), and `\ w0 /` is the terrain glyph plus elevation
- * centered at the bottom (quick-start rules have no elevation: always 0).
+ * `( wvr  )` is the occupying unit's id (max 4 chars, clipped when longer)
+ * centered in the 6-char belly, and `\ w0 /` is the terrain glyph plus
+ * elevation centered at the bottom (quick-start rules have no elevation:
+ * always 0).
  * A unit's facing replaces the grid character at its hexside vertex:
  * n `↑` on the top edge's 2nd char, s `↓` on the bottom edge's 3rd char,
  * nw/ne `↖`/`↗` on the upper walls, sw/se `↙`/`↘` on the lower walls.
@@ -80,8 +81,13 @@ export interface BoardModel {
   readonly marks?: Readonly<Record<string, string>> | undefined;
   /** Per-hex mech facing (`"col,row"` → {@link Facing}); drawn on the grid. */
   readonly facings?: Readonly<Record<string, Facing>> | undefined;
-  /** Style applied to a hex's characters: grid rows plus cell text and mark. */
+  /** Style applied to a hex's characters: grid rows, belly parens and mark. */
   readonly styles?: Readonly<Record<string, CharStyle>> | undefined;
+  /**
+   * Style for just the occupant id inside `( )` (e.g. {@link TEAM_STYLES});
+   * falls back to the hex-wide {@link styles} entry when absent.
+   */
+  readonly cellStyles?: Readonly<Record<string, CharStyle>> | undefined;
 }
 
 /** Per-terrain scheme hooks: the web layer maps each class to CSS vars
@@ -97,6 +103,8 @@ export const TEAM_STYLES: readonly CharStyle[] = [{ fg: "cyan" }, { fg: "magenta
 
 /** Belly width holding unit ids / overlay glyphs. */
 const BELLY_WIDTH = 6;
+/** Unit ids clip to this many characters inside the belly. */
+const ID_MAX_LEN = 4;
 const HEX_WIDTH = 8;
 /** Horizontal distance between column origins; columns sit flush. */
 const COL_STRIDE = 6;
@@ -184,13 +192,15 @@ function stampInto(canvas: Canvas, x: number, y: number, text: string, style: Ch
 /** Assemble a {@link BoardModel} into the char/style canvases. */
 function drawCanvas(model: BoardModel): Canvas {
   const canvas = makeCanvas(model);
-  const { cols, rows, cells, marks, styles, facings } = model;
+  const { cols, rows, cells, marks, styles, cellStyles, facings } = model;
 
-  // Overwrite one canvas cell (styles stay whatever the grid put there).
-  const setChar = (x: number, y: number, ch: string): void => {
+  // Overwrite one canvas cell; an explicit style re-tints it (facing arrows
+  // carry the team color even though they sit on unstyled edges).
+  const setChar = (x: number, y: number, ch: string, st: CharStyle | null): void => {
     const line = canvas.rows[y];
     if (!line || x < 0 || x >= line.length) return;
     line[x] = ch;
+    canvas.styles[y]![x] = st;
   };
 
   // Overlay stamping: spaces never erase glyphs already on the canvas, so
@@ -224,12 +234,17 @@ function drawCanvas(model: BoardModel): Canvas {
         `${GRID_GLYPHS.edgeNW}${coordLabel(col, row)}${GRID_GLYPHS.edgeNE}`,
         style,
       );
-      stamp(
-        x,
-        y + 2,
-        `${GRID_GLYPHS.vertW}${cell === undefined ? "      " : fitCell(cell, BELLY_WIDTH)}${GRID_GLYPHS.vertE}`,
-        style,
-      );
+      // The occupant id carries its own style (cellStyles); parens and grid
+      // rows keep the hex-wide style so e.g. team colors touch only the id.
+      // Ids clip to ID_MAX_LEN and sit round half up, so 3-char ids start at
+      // the belly's 4th character: "(  hbk )". (fitCell's floor-left padding
+      // would bias ids toward the west wall.)
+      const shown = cell === undefined ? "" : cell.slice(0, ID_MAX_LEN);
+      stamp(x, y + 2, `${GRID_GLYPHS.vertW}${" ".repeat(BELLY_WIDTH)}${GRID_GLYPHS.vertE}`, style);
+      if (shown.length > 0) {
+        const left = Math.ceil((BELLY_WIDTH - shown.length) / 2);
+        stamp(x + 1 + left, y + 2, shown, cellStyles?.[key] ?? style);
+      }
       stamp(x + 1, y + 3, `${GRID_GLYPHS.edgeSW}    ${GRID_GLYPHS.edgeSE}`, style);
       const mark = marks?.[key];
       if (mark !== undefined && mark.length > 0) {
@@ -245,14 +260,17 @@ function drawCanvas(model: BoardModel): Canvas {
       const f = facings?.[key];
       const glyph = f === undefined ? undefined : FACING_GLYPH[f];
       if (glyph !== undefined) {
-        if (glyph === FACING_GLYPH.n) setChar(x + 3, y, glyph);
+        // The arrow wears the occupant's style (team color), falling back to
+        // the hex-wide style for models without cellStyles.
+        const arrowStyle = cellStyles?.[key] ?? style;
+        if (glyph === FACING_GLYPH.n) setChar(x + 3, y, glyph, arrowStyle);
         // Top edge's 2nd char / bottom edge's 3rd char keep both arrows of a
         // vertically shared edge visible.
-        else if (glyph === FACING_GLYPH.s) setChar(x + 4, y + ROW_STRIDE, glyph);
-        else if (glyph === FACING_GLYPH.nw) setChar(x + 1, y + 1, glyph);
-        else if (glyph === FACING_GLYPH.ne) setChar(x + 6, y + 1, glyph);
-        else if (glyph === FACING_GLYPH.sw) setChar(x + 1, y + 3, glyph);
-        else setChar(x + 6, y + 3, glyph);
+        else if (glyph === FACING_GLYPH.s) setChar(x + 4, y + ROW_STRIDE, glyph, arrowStyle);
+        else if (glyph === FACING_GLYPH.nw) setChar(x + 1, y + 1, glyph, arrowStyle);
+        else if (glyph === FACING_GLYPH.ne) setChar(x + 6, y + 1, glyph, arrowStyle);
+        else if (glyph === FACING_GLYPH.sw) setChar(x + 1, y + 3, glyph, arrowStyle);
+        else setChar(x + 6, y + 3, glyph, arrowStyle);
       }
     }
   }
@@ -376,9 +394,9 @@ export function renderMap(
  * chars) drawn inside empty hexes. The optional `marks` maps keys to glyphs
  * at the hex bottom center (see renderMap). Unit facings are derived
  * automatically and replace their hexside vertex characters. Styles default
- * to terrain
- * tints plus {@link TEAM_STYLES} for unit ids; an explicit `styles` record
- * replaces them entirely.
+ * to terrain tints on the grid rows plus {@link TEAM_STYLES} on just the unit
+ * ids (via `cellStyles`); an explicit `styles` record replaces all automatic
+ * styling entirely.
  */
 export function battleModel(
   state: BattleState,
@@ -409,13 +427,15 @@ export function battleModel(
     const st = TERRAIN_STYLES[tType];
     if (st !== undefined) auto[tKey] = st;
   }
+  // Team colors tint only the id characters; hex-wide styles stay terrain.
+  const autoCells: Record<string, CharStyle> = {};
   for (const unit of Object.values(state.units)) {
     if (unit.removed) continue;
     const key = `${unit.position.col},${unit.position.row}`;
     cells[key] = unit.id;
     facings[key] = unit.facing;
     const team = TEAM_STYLES[unit.team];
-    if (team !== undefined) auto[key] = team;
+    if (team !== undefined) autoCells[key] = team;
   }
 
   return {
@@ -425,6 +445,9 @@ export function battleModel(
     ...(Object.keys(facings).length > 0 ? { facings } : {}),
     ...(marks === undefined ? {} : { marks }),
     ...(styles !== undefined ? { styles } : Object.keys(auto).length > 0 ? { styles: auto } : {}),
+    ...(styles === undefined && Object.keys(autoCells).length > 0
+      ? { cellStyles: autoCells }
+      : {}),
   };
 }
 

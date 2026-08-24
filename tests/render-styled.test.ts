@@ -66,11 +66,16 @@ describe("styled board model", () => {
     const model = battleModel(state);
     const woods = model.styles?.["2,1"];
     expect(woods).toEqual({ cls: "t-lightWoods" });
-    expect(model.styles?.["0,0"]).toEqual(TEAM_STYLES[0]);
+    expect(model.cellStyles?.["0,0"]).toEqual(TEAM_STYLES[0]);
 
     const lines = boardToSpans(model);
     const team0 = lines.flat().find((sp) => sp.text.includes("hbk"));
     expect(team0?.style?.fg).toBe("cyan");
+
+    // Team color touches only the id characters and the facing arrow: exactly
+    // one cyan span each per board — parens, coords and walls stay unstyled.
+    const cyan = lines.flat().filter((sp) => sp.style?.fg === "cyan");
+    expect(cyan.map((sp) => sp.text)).toEqual(["\u2191", "hbk"]); // top edge renders first
 
     // Terrain tinting shows up in spans wherever the glyph is drawn;
     // mapModel derives its own marks, so use it for the glyph check.
@@ -80,6 +85,28 @@ describe("styled board model", () => {
     const glyph = mapSpans.flat().filter((sp) => sp.style !== undefined && sp.text.includes("W"));
     expect(glyph.length).toBeGreaterThan(0);
     expect(glyph.every((sp) => sp.style?.cls === "t-heavyWoods")).toBe(true);
+  });
+
+  it("keeps terrain tint on grid rows under an occupying unit", () => {
+    const state = createBattle([
+      { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 1, row: 0 }, facing: "ne" },
+      { id: "far", model: "GRF-1N", team: 1, gunnery: 4, position: { col: 9, row: 9 }, facing: "s" },
+    ], { terrain: [{ col: 1, row: 0, type: "lightWoods" }] });
+    const model = battleModel(state);
+    expect(model.styles?.["1,0"]).toEqual({ cls: "t-lightWoods" });
+    expect(model.cellStyles?.["1,0"]).toEqual(TEAM_STYLES[0]);
+
+    // Column 1 is odd: staggered two canvas lines down.
+    const spans = boardToSpans(model);
+    const coordSpan = spans[3]!.find((sp) => sp.text.includes("0201"));
+    expect(coordSpan?.style?.cls).toBe("t-lightWoods");
+    const idLine = spans[4]!; // belly row of column 1
+    const idSpan = idLine.find((sp) => sp.text === "hbk");
+    expect(idSpan?.style?.fg).toBe("cyan");
+    // The ne arrow sits on the terrain-tinted coord-row wall yet wears the
+    // team color instead.
+    const neArrow = spans.flat().find((sp) => sp.text === "\u2197");
+    expect(neArrow?.style?.fg).toBe("cyan");
   });
 
   it("explicit styles replace automatic ones entirely", () => {
@@ -92,6 +119,8 @@ describe("styled board model", () => {
     expect(model.styles?.["0,0"]).toEqual(override["0,0"]);
     expect(model.styles?.["1,0"]).toBeUndefined();
     expect(model.styles && Object.keys(model.styles)).toEqual(["0,0"]);
+    // Explicit styles suppress automatic styling entirely — including team ids.
+    expect(model.cellStyles).toBeUndefined();
   });
 
   it("trims trailing whitespace exactly like the flat renderer", () => {
