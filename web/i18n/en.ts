@@ -169,7 +169,7 @@ export const en = {
   "info.mapHead": "{name}: {w}x{h}",
   "info.terrainLine": "terrain: {breakdown}",
   "info.terrainNone": "none",
-  "info.legend": "legend: w lightWoods  W heavyWoods  (blank = clear)",
+  "info.legend": "legend: w0 lightWoods  W0 heavyWoods  (blank = clear; trailing digit = elevation)",
   "sheet.head": "{model} {name} — {weightClass} {tonnage}t{gunnery}",
   "sheet.gunnerySuffix": " gunnery {gunnery}",
   "sheet.at": "at {pos} facing {facing}",

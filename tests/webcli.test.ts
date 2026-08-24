@@ -164,9 +164,9 @@ describe("board", () => {
     run(s, "map beginner");
     run(s, "add hbk HBK-4G 0 4 3 3");
     const board = run(s, "board").join("\n");
-    expect(board).toContain("/hbk\\"); // placed unit id drawn
-    expect(board).toContain("< 1,1 >"); // map renders even with no units
-    expect(board).toMatch(/[/\\]+ W [/\\]+/); // terrain glyphs drawn
+    expect(board).toContain("( hbk  )"); // placed unit id drawn
+    expect(board).toContain("/0101\\"); // map renders even with no units
+    expect(board).toMatch(/[/\\]+ W0 [/\\]+/); // terrain glyphs + elevation
   });
 });
 
@@ -197,11 +197,11 @@ describe("info", () => {
     expect(text).toContain(`${qs.width}x${qs.height}`);
     expect(text).toMatch(/lightWoods \d+/);
     expect(text).toMatch(/heavyWoods \d+/);
-    expect(text).toContain("legend: w lightWoods");
-    expect(text).toMatch(/[/\\]+ w [/\\]+/);
-    expect(text).toMatch(/[/\\]+ W [/\\]+/);
+    expect(text).toContain("legend: w0 lightWoods");
+    expect(text).toMatch(/[/\\]+ w0 [/\\]+/);
+    expect(text).toMatch(/[/\\]+ W0 [/\\]+/);
     const beginner = run(s, "info map beginner").join("\n");
-    expect(beginner).toMatch(/[/\\]+ W [/\\]+/);
+    expect(beginner).toMatch(/[/\\]+ W0 [/\\]+/);
   });
 });
 

@@ -250,27 +250,38 @@ Rules encoded by the state machine:
 
 ## Console rendering (`render.ts`)
 
-### `renderBattle(state, width?, height?, overlay?, marks?): string`
-ASCII map for consoles/logs. Each hex draws as
+### Battle boards (`battleModel` + `boardToText`)
+
+Flat battle text comes from `boardToText(battleModel(state, overlay?, marks?))`.
+Each hex draws as
 
 ```
-  ---
- /wvr\
-< 1,3 >
- \   /
-  ---
+  ____
+ /0101\
+( wvr  )
+ \ w0 /
+  ====
+ /0102\
+(      )
+ \    /
+  ‾‾‾‾
 ```
 
-with the occupant's id clipped/padded to 3 chars and space-aligned `col,row`
-displayed 1-based (col right-aligned, row left-aligned; internal coordinates
-remain 0-based). Borders default to `---` but render `===` where two hexes
-share a horizontal edge.
+with `/0101\` carrying the 1-based column,row as fixed two-digit pairs
+(`/0204\` for engine hex `{ col: 1, row: 3 }`; internal coordinates remain
+0-based), the occupant's id centered in the 6-char belly (clipped when
+longer), and the terrain glyph plus elevation centered at the bottom —
+quick-start rules have no elevation, so it is always `0`. Outer top edges
+render as `____`, edges shared with the hex below as `====`, and the map's
+bottom edge as `‾‾‾‾`.
 Odd columns sit half a hex lower (matching the odd-q grid); removed units are
-omitted; board bounds default to the units + terrain extent. Log with
-`console.log(renderBattle(state))`.
+omitted; board bounds come from `state.width`/`state.height` when set (via
+`createBattle`'s `width`/`height` options, which are stored on the battle
+state), else they default to the units + terrain extent. Log with
+`console.log(boardToText(battleModel(state)))`.
 
-`overlay` maps `"col,row"` keys (engine coordinates) to glyphs of up to 3
-chars drawn inside empty hexes — e.g. terrain markers like `{ "3,4": "W" }`.
+`overlay` maps `"col,row"` keys (engine coordinates) to glyphs drawn inside
+empty hexes — e.g. terrain markers like `{ "3,4": "W" }`.
 Occupying units always take precedence over overlay glyphs.
 
 `marks` maps `"col,row"` keys to glyphs drawn at the bottom center of the hex
@@ -289,18 +300,24 @@ center of the hex (`\ w /`); all other hexes are blank.
 The flat functions above are thin wrappers over structured equivalents that
 also carry per-character presentation hints:
 
-- `battleModel(state, width?, height?, overlay?, marks?, styles?): BoardModel`
+- `battleModel(state, overlay?, marks?, styles?): BoardModel`
   and `mapModel(terrain, width, height, styles?): BoardModel` build the board
-  data (cells / marks / style hints keyed by `"col,row"`).
+  data (cells / marks / style hints keyed by `"col,row"`). Battle bounds read
+  `state.width`/`state.height`, falling back to content extent.
 - `boardToText(model): string` — the historic flat rendering.
 - `boardToSpans(model): Span[][]` — runs of characters sharing a
   `CharStyle` (`fg`/`bg` from the named palette: `red green yellow blue
-  magenta cyan white dim`, plus `bold`/`italic`). Concatenating span texts
-  reproduces `boardToText` exactly; styling travels beside the text, never
-  inline, so geometry math only ever sees plain characters.
+  magenta cyan white dim`, plus `bold`/`italic`, or a raw web-only CSS
+  `cls`). Concatenating span texts reproduces `boardToText` exactly;
+  styling travels beside the text, never inline, so geometry math only ever
+  sees plain characters.
 
-Semantic defaults: terrain glyphs tint via `TERRAIN_STYLES`, unit ids via
+Semantic defaults: terrain hexes carry `TERRAIN_STYLES` (one CSS class per
+`TerrainType`: `t-lightWoods`, `t-heavyWoods`), unit ids tint via
 `TEAM_STYLES` (team 0 cyan, team 1 magenta); an explicit `styles` record
 replaces them entirely. The web terminal renders spans inside a `.board`
-container whose font family and line spacing come from the CSS variables
-`--font-board` and `--board-lh`.
+container whose font family, size and line spacing come from the CSS
+variables `--font-board` / `--board-fs` / `--board-lh`; each terrain's color
+scheme is its own set of variables (`--t-lightWoods`, `--t-heavyWoods`,
+`--tb-heavyWoods`) in `web/index.html`, so per-terrain restyling needs no
+code changes.

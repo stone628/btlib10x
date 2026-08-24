@@ -24,6 +24,7 @@ function styleClasses(style: CharStyle | undefined): string {
   if (style.bg !== undefined) parts.push(`bg-${style.bg}`);
   if (style.bold === true) parts.push("b");
   if (style.italic === true) parts.push("i");
+  if (style.cls !== undefined) parts.push(style.cls);
   return parts.join(" ");
 }
 

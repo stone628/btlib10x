@@ -65,15 +65,13 @@ export function boardChunk(s: Session): Chunk {
     const terrain: Record<string, string> = {};
     for (const t2 of s.terrainDefs) terrain[`${t2.col},${t2.row}`] = t2.type;
     const model = battleModel(
-      { units, terrain } as BattleState,
-      dims?.[0],
-      dims?.[1],
+      { units, terrain, width: dims?.[0], height: dims?.[1] } as BattleState,
       undefined,
       terrainMarks(terrain),
     );
     return { board: boardToSpans(model) };
   }
-  return { board: boardToSpans(battleModel(s.battle, dims?.[0], dims?.[1], undefined, terrainMarks(s.battle.terrain))) };
+  return { board: boardToSpans(battleModel(s.battle, undefined, terrainMarks(s.battle.terrain))) };
 }
 
 // ---------------------------------------------------------------- info ----

@@ -92,6 +92,9 @@ export interface BattleState {
   units: Record<string, UnitState>;
   defs: Record<string, MechDef>;
   terrain: Record<string, TerrainType>;
+  /** Board size hint for rendering (engine coords); renderers fall back to content extent when absent. */
+  width?: number | undefined;
+  height?: number | undefined;
   actedThisPhase: string[];
   events: GameEvent[];
 }
@@ -101,6 +104,9 @@ export type { TerrainHexDef };
 export interface CreateBattleOptions {
   /** Non-clear hexes; anything not listed is clear terrain. */
   readonly terrain?: readonly TerrainHexDef[];
+  /** Board size hint for rendering, in engine coordinates (columns/rows). */
+  readonly width?: number | undefined;
+  readonly height?: number | undefined;
 }
 
 function clone(state: BattleState): BattleState {
@@ -182,6 +188,11 @@ export function createBattle(
       terrain[key] = type;
     }
   }
+  for (const [label, n] of [["width", options.width], ["height", options.height]] as const) {
+    if (n !== undefined && (!Number.isInteger(n) || n < 1)) {
+      throw new Error(`Board ${label} must be an integer >= 1`);
+    }
+  }
 
   return {
     turn: 1,
@@ -190,6 +201,8 @@ export function createBattle(
     units: unitStates,
     defs: { ...MECH_DEFS },
     terrain,
+    width: options.width,
+    height: options.height,
     actedThisPhase: [],
     events: [{ kind: "turn", turn: 1 }],
   };

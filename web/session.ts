@@ -2,8 +2,8 @@ import type { Facing, Hex, MoveMode, Rng, TerrainHexDef } from "../src/core/type
 import { FACINGS, rotateFacing } from "../src/core/types.js";
 import { neighbor, sameHex } from "../src/core/hex.js";
 import { costToEnter } from "../src/core/terrain.js";
-import { MAP_DEFS, MECH_DEFS, toEngineTerrain } from "../src/data/index.js";
-import type { AttackDecl, BattleState, MoveStep, UnitInit, UnitState, VictoryResult } from "../src/rules/game.js";
+import { MAP_DEFS, MECH_DEFS, getMapDef, toEngineTerrain } from "../src/data/index.js";
+import type { AttackDecl, BattleState, CreateBattleOptions, MoveStep, UnitInit, UnitState, VictoryResult } from "../src/rules/game.js";
 import {
   advancePhase,
   checkVictory,
@@ -171,13 +171,22 @@ export function removeUnit(s: Session, id: string): void {
   s.roster = s.roster.filter((u) => u.id !== id);
 }
 
+/** Shared createBattle options: setup terrain plus the loaded map's size. */
+function battleOptions(s: Session): CreateBattleOptions {
+  const map = s.mapName ? getMapDef(s.mapName) : undefined;
+  return {
+    terrain: s.terrainDefs,
+    ...(map !== undefined ? { width: map.width, height: map.height } : {}),
+  };
+}
+
 export function startBattle(s: Session): void {
   if (s.app !== "setup") throw new Error(t(s.locale, "err.alreadyStarted"));
   if (s.roster.length < 2) throw new Error(t(s.locale, "err.needTwoUnits"));
   const teams = new Set(s.roster.map((u) => u.team));
   if (teams.size < 2) throw new Error(t(s.locale, "err.needTwoTeams"));
   const inits: UnitInit[] = s.roster.map((u) => ({ ...u }));
-  s.battle = createBattle(inits, { terrain: s.terrainDefs });
+  s.battle = createBattle(inits, battleOptions(s));
   s.victory = null;
   s.actorId = null;
   clearBuffers(s);
@@ -423,7 +432,7 @@ export function rematch(s: Session): void {
   s.rng = createRng(s.seed);
   s.battle = createBattle(
     s.roster.map((u) => ({ ...u })),
-    { terrain: s.terrainDefs },
+    battleOptions(s),
   );
   s.victory = null;
   s.actorId = null;
