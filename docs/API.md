@@ -283,3 +283,24 @@ Render a static map sheet (no units) from non-clear terrain hex definitions at
 the given size. Terrain hexes draw their glyph from the exported
 `TERRAIN_GLYPHS` table (`lightWoods: "w"`, `heavyWoods: "W"`) at the bottom
 center of the hex (`\ w /`); all other hexes are blank.
+
+### Structured models & styled output
+
+The flat functions above are thin wrappers over structured equivalents that
+also carry per-character presentation hints:
+
+- `battleModel(state, width?, height?, overlay?, marks?, styles?): BoardModel`
+  and `mapModel(terrain, width, height, styles?): BoardModel` build the board
+  data (cells / marks / style hints keyed by `"col,row"`).
+- `boardToText(model): string` — the historic flat rendering.
+- `boardToSpans(model): Span[][]` — runs of characters sharing a
+  `CharStyle` (`fg`/`bg` from the named palette: `red green yellow blue
+  magenta cyan white dim`, plus `bold`/`italic`). Concatenating span texts
+  reproduces `boardToText` exactly; styling travels beside the text, never
+  inline, so geometry math only ever sees plain characters.
+
+Semantic defaults: terrain glyphs tint via `TERRAIN_STYLES`, unit ids via
+`TEAM_STYLES` (team 0 cyan, team 1 magenta); an explicit `styles` record
+replaces them entirely. The web terminal renders spans inside a `.board`
+container whose font family and line spacing come from the CSS variables
+`--font-board` and `--board-lh`.

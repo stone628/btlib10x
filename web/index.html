@@ -7,6 +7,25 @@
     <style>
       :root {
         color-scheme: dark;
+        /* Board rendering knobs (edit to restyle game boards only). */
+        --font-board: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+        --board-lh: 1;
+        --c-red: #e07a6a;
+        --c-green: #8fd08f;
+        --c-yellow: #d8c26a;
+        --c-blue: #7aa7d8;
+        --c-magenta: #c88fd0;
+        --c-cyan: #6ac9c0;
+        --c-white: #d7e4d7;
+        --c-dim: #5a6a5a;
+        --cb-red: #3a1712;
+        --cb-green: #16301b;
+        --cb-yellow: #383012;
+        --cb-blue: #152838;
+        --cb-magenta: #2e1a33;
+        --cb-cyan: #12302e;
+        --cb-white: #243024;
+        --cb-dim: #161d16;
       }
       * {
         box-sizing: border-box;
@@ -44,6 +63,29 @@
         color: #8fd08f;
         font-weight: bold;
       }
+      /* Game board output: dedicated font + line spacing, styled spans. */
+      #out .board {
+        font-family: var(--font-board);
+        line-height: var(--board-lh);
+      }
+      .f-red { color: var(--c-red); }
+      .f-green { color: var(--c-green); }
+      .f-yellow { color: var(--c-yellow); }
+      .f-blue { color: var(--c-blue); }
+      .f-magenta { color: var(--c-magenta); }
+      .f-cyan { color: var(--c-cyan); }
+      .f-white { color: var(--c-white); }
+      .f-dim { color: var(--c-dim); }
+      .bg-red { background-color: var(--cb-red); }
+      .bg-green { background-color: var(--cb-green); }
+      .bg-yellow { background-color: var(--cb-yellow); }
+      .bg-blue { background-color: var(--cb-blue); }
+      .bg-magenta { background-color: var(--cb-magenta); }
+      .bg-cyan { background-color: var(--cb-cyan); }
+      .bg-white { background-color: var(--cb-white); }
+      .bg-dim { background-color: var(--cb-dim); }
+      .b { font-weight: bold; }
+      .i { font-style: italic; }
       #inrow {
         display: flex;
         border-top: 1px solid #233023;

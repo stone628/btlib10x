@@ -4,12 +4,14 @@ import { MAP_DEFS } from "../src/data/index.js";
 import * as S from "./session.js";
 import { isLocale, localeList, t } from "./i18n/index.js";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
+import type { Chunk, RichOutput } from "./format.js";
 import {
   attackStatusLines,
-  boardLines,
+  boardChunk,
   fmtLog,
+  rich,
   fmtSetupStatus,
-  infoMap,
+  infoMapChunks,
   infoMapList,
   infoMech,
   infoMechList,
@@ -25,7 +27,8 @@ export interface CmdDef {
   readonly usage?: string;
   /** Per-argument documentation shown by `help <command>` ([pattern, catalog key]). */
   readonly argsDoc?: ReadonlyArray<readonly [string, MessageKey]>;
-  run: (session: S.Session, args: string[]) => string[];
+  /** Plain lines, or `{ rich }` for structured chunks (styled boards). */
+  run: (session: S.Session, args: string[]) => string[] | RichOutput;
 }
 
 // ------------------------------------------------------------- parsing ----
@@ -73,7 +76,7 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
       return [t(s.locale, "lang.set", { locale: s.locale })];
     },
   },
-  board: { helpKey: "cmd.board.help", run: (s) => boardLines(s) },
+  board: { helpKey: "cmd.board.help", run: (s) => rich(boardChunk(s)) },
   clear: { helpKey: "cmd.clear.help", run: () => ["\f"] },
   log: {
     helpKey: "cmd.log.help",
@@ -95,7 +98,9 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
       expectArgs(L(s), a, 1, "info mech [model] | info map [name]");
       const what = a[0]!.toLowerCase();
       if (what === "mech") return a[1] !== undefined ? infoMech(L(s), a[1]) : infoMechList(L(s));
-      if (what === "map") return a[1] !== undefined ? infoMap(L(s), a[1]) : infoMapList();
+      if (what === "map") {
+        return a[1] !== undefined ? { rich: infoMapChunks(L(s), a[1]) } : infoMapList();
+      }
       throw new Error(t(L(s), "err.expectedArgs", { usage: "info mech [model] | info map [name]" }));
     },
   },
@@ -372,19 +377,46 @@ function victoryBanner(s: S.Session): string[] {
     : [t(s.locale, "banner.win", { team: String(s.victory.winnerTeam) })];
 }
 
-/** Run one input line against the session; returns output lines. */
-export function execute(session: S.Session, raw: string): string[] {
+function normalize(out: string[] | RichOutput): Chunk[] {
+  return typeof out === "object" && out !== null && "rich" in out ? [...out.rich] : [{ lines: out }];
+}
+
+/**
+ * Run one input line against the session; returns presentation chunks
+ * (plain text with a class hint, or styled board spans).
+ */
+export function runChunks(session: S.Session, raw: string): Chunk[] {
   const wasOver = session.app === "over";
-  let out: string[];
+  let chunks: Chunk[];
   try {
     const tokens = raw.trim().split(/\s+/).filter((x) => x.length > 0);
     if (tokens.length === 0) return [];
     const def = availableCmds(session)[tokens[0]!.toLowerCase()];
     if (!def) throw new Error(t(session.locale, "err.unknownCommand", { name: tokens[0]! }));
-    out = def.run(session, tokens.slice(1));
+    chunks = normalize(def.run(session, tokens.slice(1)));
   } catch (e) {
-    return [`${t(session.locale, "err.prefix")} ${e instanceof Error ? e.message : String(e)}`];
+    return [
+      {
+        lines: [`${t(session.locale, "err.prefix")} ${e instanceof Error ? e.message : String(e)}`],
+        cls: "err",
+      },
+    ];
   }
-  if (!wasOver && session.app === "over") out = [...out, ...victoryBanner(session)];
-  return out;
+  if (!wasOver && session.app === "over") {
+    chunks = [...chunks, { lines: victoryBanner(session), cls: "banner" }];
+  }
+  return chunks;
+}
+
+/** Flat text of one chunk (boards contribute their visible characters). */
+export function chunkText(chunk: Chunk): string[] {
+  if ("board" in chunk) {
+    return chunk.board.map((line) => line.map((sp) => sp.text).join(""));
+  }
+  return [...chunk.lines];
+}
+
+/** Run one input line against the session; returns plain output lines. */
+export function execute(session: S.Session, raw: string): string[] {
+  return runChunks(session, raw).flatMap(chunkText);
 }

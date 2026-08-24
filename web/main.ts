@@ -1,6 +1,8 @@
 import * as S from "./session.js";
-import { execute } from "./cli.js";
+import { runChunks } from "./cli.js";
+import type { Chunk } from "./format.js";
 import { t } from "./i18n/index.js";
+import type { CharStyle } from "../src/render.js";
 
 const out = document.getElementById("out") as HTMLDivElement;
 const inrow = document.getElementById("inrow") as HTMLDivElement;
@@ -15,17 +17,48 @@ function scrollToBottom(): void {
   out.scrollTop = out.scrollHeight;
 }
 
-function appendLines(lines: readonly string[], cls?: string): void {
-  if (lines.length === 0) return;
-  if (lines.length === 1 && lines[0] === "\f") {
+function styleClasses(style: CharStyle | undefined): string {
+  if (style === undefined) return "";
+  const parts: string[] = [];
+  if (style.fg !== undefined) parts.push(`f-${style.fg}`);
+  if (style.bg !== undefined) parts.push(`bg-${style.bg}`);
+  if (style.bold === true) parts.push("b");
+  if (style.italic === true) parts.push("i");
+  return parts.join(" ");
+}
+
+function appendBoard(div: HTMLDivElement, board: Chunk & { board: readonly unknown[] }): void {
+  const lines = board.board as ReadonlyArray<ReadonlyArray<{ text: string; style?: CharStyle }>>;
+  lines.forEach((line, i) => {
+    if (i > 0) div.append("\n");
+    for (const sp of line) {
+      const el = document.createElement("span");
+      el.className = styleClasses(sp.style);
+      el.textContent = sp.text;
+      div.appendChild(el);
+    }
+  });
+}
+
+function appendChunk(chunk: Chunk): void {
+  if ("board" in chunk) {
+    const div = document.createElement("div");
+    div.className = "board";
+    appendBoard(div, chunk);
+    out.insertBefore(div, inrow);
+    scrollToBottom();
+    return;
+  }
+  if (chunk.lines.length === 0) return;
+  if (chunk.lines.length === 1 && chunk.lines[0] === "\f") {
     out.replaceChildren(inrow);
     // Re-parenting the input blurs it; restore focus so the caret stays live.
     input.focus();
     return;
   }
   const div = document.createElement("div");
-  div.className = cls ?? "";
-  div.textContent = lines.join("\n");
+  div.className = chunk.cls ?? "";
+  div.textContent = chunk.lines.join("\n");
   out.insertBefore(div, inrow);
   scrollToBottom();
 }
@@ -45,24 +78,12 @@ function submit(raw: string): void {
     history.push(line);
     historyIdx = history.length;
   }
-  const isErr = (l: string): boolean => l.startsWith("error:");
-  for (const chunk of classify(execute(session, line))) {
-    appendLines(chunk.lines, chunk.cls);
+  for (const chunk of runChunks(session, line)) {
+    appendChunk(chunk);
   }
   input.value = "";
   refreshPrompt();
   scrollToBottom();
-
-  function classify(lines: readonly string[]): { lines: string[]; cls: string }[] {
-    return [
-      {
-        lines: lines.filter((l) => !isErr(l) && !l.startsWith("===")),
-        cls: "",
-      },
-      { lines: lines.filter(isErr), cls: "err" },
-      { lines: lines.filter((l) => l.startsWith("===")), cls: "banner" },
-    ];
-  }
 }
 
 input.addEventListener("keydown", (e) => {
@@ -106,8 +127,5 @@ document.getElementById("term")?.addEventListener("click", (e) => {
   input.focus();
 });
 
-appendLines(
-  [t(session.locale, "app.banner.title"), t(session.locale, "app.banner.help")],
-  "banner",
-);
+appendChunk({ lines: [t(session.locale, "app.banner.title"), t(session.locale, "app.banner.help")], cls: "banner" });
 refreshPrompt();

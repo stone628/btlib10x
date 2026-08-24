@@ -34,6 +34,7 @@ Run typecheck + tests together before considering work done: `npm run typecheck 
 - All randomness flows through an injected `Rng`; rules functions are deterministic given inputs — required for reproducible battles and future sim work.
 - Game state is plain serializable data; mutations happen through `src/rules/game.ts` APIs only.
 - Web-layer user-facing strings go through the i18n catalogs (`web/i18n/*.ts`, locales `en` + `kr`); `en` is canonical — other locales are compile-checked against it, and new strings default to English until translated. Engine output in `src/` stays English.
+- Board styling travels as structured spans beside the text (`render.ts` models + `boardToSpans`), never inline escape codes; the web layer maps styles to CSS classes (palette vars in `web/index.html`). Flat-text renderers stay byte-identical to their historic output.
 - Mech data lives in `data/mechs/*.json` (copied into published package); new 'Mechs must pass `validateMechDef`.
 
 ## Roadmap
