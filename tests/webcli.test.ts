@@ -170,6 +170,12 @@ describe("board", () => {
     expect(board).toContain(`${GRID_GLYPHS.edgeNW}0101${GRID_GLYPHS.edgeNE}`); // map renders even with no units
     expect(board).toContain(`${GRID_GLYPHS.edgeSW} W0 ${GRID_GLYPHS.edgeSE}`); // terrain glyphs + elevation
   });
+
+  it("reports occupied hexes with 1-based coordinates", () => {
+    const s = S.newSession();
+    run(s, "add hbk HBK-4G 0 4 3 3");
+    expect(run(s, "add grf GRF-1N 1 4 3 3")[0]).toBe("error: Hex 3,3 already occupied");
+  });
 });
 
 describe("clear", () => {

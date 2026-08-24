@@ -161,7 +161,8 @@ export function addUnit(
     throw new Error(t(s.locale, "err.badGunnery"));
   }
   if (s.roster.some((u) => sameHex(u.position, position))) {
-    throw new Error(t(s.locale, "err.hexOccupied", { col: position.col, row: position.row }));
+    // Display coordinates are 1-based; the session stores engine (0-based) hexes.
+    throw new Error(t(s.locale, "err.hexOccupied", { col: position.col + 1, row: position.row + 1 }));
   }
   s.roster = [...s.roster, { id, model, team, gunnery, position, facing }];
 }

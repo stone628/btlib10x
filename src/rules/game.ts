@@ -121,6 +121,11 @@ function getUnitOrThrow(state: BattleState, unitId: string): UnitState {
   return unit;
 }
 
+/** Error messages show 1-based coordinates; positions are stored 0-based. */
+function fmtHex(hex: { col: number; row: number }): string {
+  return `${hex.col + 1},${hex.row + 1}`;
+}
+
 function requirePhase(state: BattleState, phase: Phase): void {
   if (state.phase !== phase) {
     throw new Error(`Expected phase ${phase}, but battle is in ${state.phase}`);
@@ -184,7 +189,7 @@ export function createBattle(
   if (options.terrain) {
     for (const { col, row, type } of options.terrain) {
       const key = `${col},${row}`;
-      if (key in terrain) throw new Error(`Duplicate terrain definition for hex ${key}`);
+      if (key in terrain) throw new Error(`Duplicate terrain definition for hex ${fmtHex({ col, row })}`);
       terrain[key] = type;
     }
   }
@@ -306,10 +311,10 @@ export function executeMove(
     const occupant = occupantAt(next, to, unitId);
     if (occupant !== undefined) {
       if (isFinalStep) {
-        throw new Error(`Cannot end movement in ${to.col},${to.row}: occupied by ${occupant.id}`);
+        throw new Error(`Cannot end movement in ${fmtHex(to)}: occupied by ${occupant.id}`);
       }
       if (!jumping && occupant.team !== unit.team) {
-        throw new Error(`Cannot move through enemy ${occupant.id} at ${to.col},${to.row}`);
+        throw new Error(`Cannot move through enemy ${occupant.id} at ${fmtHex(to)}`);
       }
     }
 
