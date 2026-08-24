@@ -60,7 +60,7 @@ describe("createBattle", () => {
           { col: 1, row: 2, type: "heavyWoods" },
         ],
       }),
-    ).toThrow(/Duplicate terrain/);
+    ).toThrow(/Duplicate terrain definition for hex 2,3/); // 1-based display coords
   });
 
   it("initializes armor and ammo from the definition", () => {
@@ -195,7 +195,7 @@ describe("movement phase", () => {
     let state = startMovementTurn(setup);
     state = declareMove(state, "hbk", "walk");
     expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: 1, row: 3 } }])).toThrow(
-      /occupied/,
+      /end movement in 2,4: occupied by enf/, // 1-based display coords
     );
   });
 
