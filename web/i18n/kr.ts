@@ -87,6 +87,11 @@ export const kr: Catalog = {
   "cmd.doneFire.help": "공격 선언 및 해결",
   "cmd.rematch.help": "같은 편성, 지형, 시드로 새 전투",
 
+  // autoplay demo driver (hidden command, not listed in help)
+  "autoPlay.started":
+    "autoplay: 데모 전투를 만들어 양측을 자동 진행합니다. 아무 명령이나 입력하면 조종권을 돌려받습니다.",
+  "autoPlay.done": "autoplay 종료.",
+
   // command acknowledgements
   "ok.mapLoaded": "맵 {name}: {w}x{h}, 지형 육각 {n}개",
   "ok.added": "{id} ({model}) 위치 ({col},{row}), 방향 {facing} 배치됨",

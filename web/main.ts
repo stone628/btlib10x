@@ -1,5 +1,6 @@
 import * as S from "./session.js";
 import { runChunks } from "./cli.js";
+import { AUTOPLAY_INTERVAL_MS, nextAutoPlayCommand } from "./autoplay.js";
 import type { Chunk } from "./format.js";
 import { t } from "./i18n/index.js";
 import type { CharStyle } from "../src/render.js";
@@ -68,7 +69,8 @@ function refreshPrompt(): void {
   promptEl.textContent = `${S.promptBody(session)} > `;
 }
 
-function submit(raw: string): void {
+function submit(raw: string, fromAutoPlay = false): void {
+  if (!fromAutoPlay) stopAutoPlay(false);
   const line = raw.trim();
   const echoed = `${S.promptBody(session)} > ${raw}`;
   const echo = document.createElement("div");
@@ -87,9 +89,39 @@ function submit(raw: string): void {
   scrollToBottom();
 }
 
+// --- autoplay demo driver (hidden 'autoplay' command) ---
+
+let autoPlayTimer: number | null = null;
+
+function stopAutoPlay(finished: boolean): void {
+  if (autoPlayTimer === null) return;
+  clearInterval(autoPlayTimer);
+  autoPlayTimer = null;
+  if (finished) {
+    appendChunk({ lines: [t(session.locale, "autoPlay.done")] });
+    refreshPrompt();
+  }
+}
+
+function startAutoPlay(): void {
+  stopAutoPlay(false);
+  appendChunk({ lines: [t(session.locale, "autoPlay.started")], cls: "banner" });
+  scrollToBottom();
+  autoPlayTimer = setInterval(() => {
+    if (autoPlayTimer === null) return;
+    const command = nextAutoPlayCommand(session);
+    if (command === null) {
+      stopAutoPlay(true);
+      return;
+    }
+    submit(command, true);
+  }, AUTOPLAY_INTERVAL_MS);
+}
+
 input.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
-    submit(input.value);
+    if (input.value.trim() === "autoplay") startAutoPlay();
+    else submit(input.value);
   } else if (e.key === "ArrowUp") {
     if (history.length > 0 && historyIdx > 0) {
       historyIdx -= 1;
