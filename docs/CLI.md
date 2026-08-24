@@ -52,6 +52,7 @@ Examples:
 | `sheet <id>` | record sheet for unit `<id>`: armor per location, weapons with ammo/jam status |
 | `seed <n>` | set RNG seed |
 | `reset` | wipe everything back to empty setup |
+| `autoplay` | hidden demo driver (not listed by `help`): resets nothing itself but expects a blank slate — run `reset` first. Prints a notice, then every 2s (`AUTOPLAY_INTERVAL_MS` in `web/autoplay.ts`) types the next command a demonstrator would: loads `quickstart`, places HBK-4G vs CDA-3MA adjacent, starts, then walks in place and fires every working weapon each turn until victory. Any manually typed command cancels it; it prints `autoplay finished.` when the battle ends |
 
 ### setup
 

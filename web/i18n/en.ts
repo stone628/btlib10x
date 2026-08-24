@@ -90,6 +90,11 @@ export const en = {
   "cmd.doneFire.help": "declare attacks and resolve them",
   "cmd.rematch.help": "new battle with the same roster, terrain and seed",
 
+  // autoplay demo driver (hidden command, not listed in help)
+  "autoPlay.started":
+    "autoplay: building a demo battle and playing both sides; type any command to take over.",
+  "autoPlay.done": "autoplay finished.",
+
   // command acknowledgements
   "ok.mapLoaded": "map {name}: {w}x{h}, {n} terrain hexes",
   "ok.added": "{id} ({model}) placed at ({col},{row}) facing {facing}",
