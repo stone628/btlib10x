@@ -3,6 +3,7 @@ import * as S from "../web/session.js";
 import { execute } from "../web/cli.js";
 import { getMapDef } from "../src/data/index.js";
 import { canFireFromLocation } from "../src/rules/damage.js";
+import { GRID_GLYPHS } from "../src/render.js";
 
 function run(s: S.Session, cmd: string): string[] {
   return execute(s, cmd);
@@ -164,10 +165,10 @@ describe("board", () => {
     run(s, "map beginner");
     run(s, "add hbk HBK-4G 0 4 3 3");
     const board = run(s, "board").join("\n");
-    expect(board).toContain("( hbk  )"); // placed unit id drawn
+    expect(board).toContain(`${GRID_GLYPHS.vertW} hbk  ${GRID_GLYPHS.vertE}`); // placed unit id drawn
     expect(board).toContain("\u2191"); // facing glyph drawn in setup
-    expect(board).toContain("/0101\\"); // map renders even with no units
-    expect(board).toMatch(/[/\\]+ W0 [/\\]+/); // terrain glyphs + elevation
+    expect(board).toContain(`${GRID_GLYPHS.edgeNW}0101${GRID_GLYPHS.edgeNE}`); // map renders even with no units
+    expect(board).toContain(`${GRID_GLYPHS.edgeSW} W0 ${GRID_GLYPHS.edgeSE}`); // terrain glyphs + elevation
   });
 });
 
@@ -199,10 +200,10 @@ describe("info", () => {
     expect(text).toMatch(/lightWoods \d+/);
     expect(text).toMatch(/heavyWoods \d+/);
     expect(text).toContain("legend: w0 lightWoods");
-    expect(text).toMatch(/[/\\]+ w0 [/\\]+/);
-    expect(text).toMatch(/[/\\]+ W0 [/\\]+/);
+    expect(text).toContain(`${GRID_GLYPHS.edgeSW} w0 ${GRID_GLYPHS.edgeSE}`);
+    expect(text).toContain(`${GRID_GLYPHS.edgeSW} W0 ${GRID_GLYPHS.edgeSE}`);
     const beginner = run(s, "info map beginner").join("\n");
-    expect(beginner).toMatch(/[/\\]+ W0 [/\\]+/);
+    expect(beginner).toContain(`${GRID_GLYPHS.edgeSW} W0 ${GRID_GLYPHS.edgeSE}`);
   });
 });
 
