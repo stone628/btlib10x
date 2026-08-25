@@ -277,26 +277,24 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
   },
   fire: {
     helpKey: "cmd.fire.help",
-    usage: "fire <weaponIndex> <targetId> [shots]",
+    usage: "fire <weapon> <targetId> [shots]",
     argsDoc: [
-      ["weaponIndex", "cmd.fire.arg.weaponIndex"],
+      ["weapon", "cmd.fire.arg.weaponIndex"],
       ["targetId", "cmd.fire.arg.targetId"],
       ["shots", "cmd.fire.arg.shots"],
     ],
     run: (s, a) => {
-      expectArgs(L(s), a, 2, "fire <weaponIndex> <targetId> [shots]");
+      expectArgs(L(s), a, 2, "fire <weapon> <targetId> [shots]");
+      const weapon = int(L(s), a[0]!, "weapon");
+      const weaponIndex = weapon - 1;
       const decl: AttackDecl =
         a[2] !== undefined
-          ? {
-              weaponIndex: int(L(s), a[0]!, "weaponIndex"),
-              targetId: a[1]!,
-              shots: int(L(s), a[2], "shots"),
-            }
-          : { weaponIndex: int(L(s), a[0]!, "weaponIndex"), targetId: a[1]! };
+          ? { weaponIndex, targetId: a[1]!, shots: int(L(s), a[2], "shots") }
+          : { weaponIndex, targetId: a[1]! };
       S.queueFire(s, decl);
       return [
         t(L(s), "ok.fireQueued", {
-          index: decl.weaponIndex,
+          index: weapon,
           target: decl.targetId,
           suffix: decl.shots !== undefined ? ` x${decl.shots}` : "",
         }),

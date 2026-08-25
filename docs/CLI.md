@@ -82,8 +82,8 @@ The prompt names the acting unit; commands act on that 'Mech.
 
 | command | effect |
 |---|---|
-| `weapons [id]` | list weapon mounts: index, name, location, S/M/L, ammo, jammed/destroyed |
-| `fire <weaponIndex> <targetId> [shots]` | queue declaration (one shared target per turn; rapid-fire may pass shots) |
+| `weapons [id]` | list weapon mounts: 1-based number, name, location, S/M/L, ammo, jammed/destroyed |
+| `fire <weapon> <targetId> [shots]` | queue declaration using 1-based weapon number (one shared target per turn; rapid-fire may pass shots) |
 | `sheet` | record sheet of the acting 'Mech |
 | `status` | queued attack declarations |
 | `cancel` | clear declarations |

@@ -80,7 +80,7 @@ export const kr: Catalog = {
   "cmd.weapons.help": "유닛 무기 목록 (기본: 행동 유닛)",
   "cmd.weapons.arg.id": "조회할 유닛; 생략하면 행동 유닛",
   "cmd.fire.help": "무기 공격 예약",
-  "cmd.fire.arg.weaponIndex": "'weapons' 목록의 인덱스",
+  "cmd.fire.arg.weaponIndex": "'weapons' 목록의 1부터 시작하는 무기 번호",
   "cmd.fire.arg.targetId": "적 유닛 id; 모든 사격은 하나의 목표를 공유해야 함",
   "cmd.fire.arg.shots": "연사 무기(SRM/LRM)의 선택적 발수",
   "cmd.statusAttack.help": "예약된 공격 선언",

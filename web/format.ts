@@ -269,7 +269,7 @@ export function sheetLines(view: SheetView, locale: LocaleId): string[] {
       m.destroyed ? t(locale, "sheet.destroyed") : null,
     ].filter((x) => x !== null);
     lines.push(
-      `  #${i} ${m.weapon} (${SHORT_LOC[m.location]}) S${w.short}/M${w.medium}/L${w.long}${flags.length ? ` ${flags.join(" ")}` : ""}`,
+        `  #${i + 1} ${m.weapon} (${SHORT_LOC[m.location]}) S${w.short}/M${w.medium}/L${w.long}${flags.length ? ` ${flags.join(" ")}` : ""}`,
     );
   }
   return lines;
@@ -345,8 +345,8 @@ export function attackStatusLines(s: Session): string[] {
   const def = s.battle.defs[actor.model]!;
   return s.fireDecls.map((decl) => {
     const mount = def.weapons[decl.weaponIndex];
-    const name = mount ? mount.weapon : `#${decl.weaponIndex}`;
-    return `#${decl.weaponIndex} ${name} -> ${decl.targetId}${decl.shots !== undefined ? ` x${decl.shots}` : ""}`;
+    const name = mount ? mount.weapon : `#${decl.weaponIndex + 1}`;
+    return `#${decl.weaponIndex + 1} ${name} -> ${decl.targetId}${decl.shots !== undefined ? ` x${decl.shots}` : ""}`;
   });
 }
 
@@ -362,7 +362,7 @@ export function weaponsLines(s: Session, unitId?: string): string[] {
   return def.weapons.map((mount, i) => {
     const w = getWeapon(mount.weapon);
     const bits = [
-      `#${i}`,
+      `#${i + 1}`,
       mount.weapon,
       mount.location,
       `S${w.short}/M${w.medium}/L${w.long}`,
@@ -521,6 +521,6 @@ function weaponSummary(def: MechDef): string[] {
   return def.weapons.map((mount, i) => {
     const w = getWeapon(mount.weapon);
     const ammo = mount.ammoShots !== undefined ? ` ammo ${mount.ammoShots}` : "";
-    return `  #${i} ${mount.weapon} (${SHORT_LOC[mount.location]}) S${w.short}/M${w.medium}/L${w.long}${ammo}`;
+    return `  #${i + 1} ${mount.weapon} (${SHORT_LOC[mount.location]}) S${w.short}/M${w.medium}/L${w.long}${ammo}`;
   });
 }

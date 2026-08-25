@@ -32,6 +32,7 @@ Run lint + typecheck + tests together before considering work done: `npm run lin
 
 - Browser-first: **no Node-only APIs in `src/`** (dev scripts exempt).
 - **Zero runtime dependencies**; dev deps are typescript + vitest + esbuild + biome (esbuild bundles the `web/` app, Biome lints/formats).
+- Scratch/debug scripts and other temporary files live in `./tmp/` (gitignored), never the OS `/tmp`.
 - Strictest sensible tsc settings (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`).
 - All randomness flows through an injected `Rng`; rules functions are deterministic given inputs — required for reproducible battles and future sim work.
 - Game state is plain serializable data; mutations happen through `src/rules/game.ts` APIs only.

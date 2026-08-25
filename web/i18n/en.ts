@@ -82,7 +82,7 @@ export const en = {
   "cmd.weapons.help": "list a unit's weapons (default: acting unit)",
   "cmd.weapons.arg.id": "unit to inspect; defaults to the acting unit",
   "cmd.fire.help": "queue a weapon attack",
-  "cmd.fire.arg.weaponIndex": "index from the 'weapons' listing",
+  "cmd.fire.arg.weaponIndex": "1-based weapon number from the 'weapons' listing",
   "cmd.fire.arg.targetId": "enemy unit id; all shots must share one target",
   "cmd.fire.arg.shots": "optional shot count for multi-shot weapons (SRM/LRM)",
   "cmd.statusAttack.help": "queued attack declarations",
