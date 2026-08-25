@@ -28,7 +28,23 @@ export function rich(...chunks: readonly Chunk[]): RichOutput {
 
 /** Display coordinates are 1-based (printed mapsheet labels). */
 function disp(hex: { col: number; row: number }): string {
-  return `(${hex.col + 1},${hex.row + 1})`;
+  return `${hex.col + 1},${hex.row + 1}`;
+}
+
+/**
+ * Pilot rating for gunnery 0..7, rendered as `{name}({gunnery})` using the
+ * standard experience bands: 0-1 elite, 2-3 veteran, 4-5 regular, 6-7 green.
+ */
+function gunneryLabel(locale: LocaleId, gunnery: number): string {
+  const band =
+    gunnery <= 1
+      ? "skill.elite"
+      : gunnery <= 3
+        ? "skill.veteran"
+        : gunnery <= 5
+          ? "skill.regular"
+          : "skill.green";
+  return `${t(locale, band)}(${gunnery})`;
 }
 
 function mapDims(s: Session): [number, number] | undefined {
@@ -222,7 +238,9 @@ export function sheetLines(view: SheetView, locale: LocaleId): string[] {
     weightClass: view.weightClass,
     tonnage: view.tonnage,
     gunnery:
-      view.gunnery !== null ? t(locale, "sheet.gunnerySuffix", { gunnery: view.gunnery }) : "",
+      view.gunnery !== null
+        ? t(locale, "sheet.gunnerySuffix", { gunnery: gunneryLabel(locale, view.gunnery) })
+        : "",
   });
   const lines = [head];
   if (view.facingLine) lines.push(view.facingLine);
@@ -277,7 +295,7 @@ export function fmtSetupStatus(s: Session): string[] {
           id: u.id,
           model: u.model,
           name: def.name,
-          gunnery: u.gunnery,
+          gunnery: gunneryLabel(s.locale, u.gunnery),
           pos: disp(u.position),
           facing: u.facing,
         }),

@@ -220,6 +220,7 @@ describe("sheet", () => {
     const s = freshSetup();
     const lines = run(s, "sheet hunchy").join("\n");
     expect(lines).toContain("HBK-4G Hunchback");
+    expect(lines).toContain("gunnery Regular(4)");
     expect(lines).toContain("HD 9");
     expect(lines).toContain("CT 26");
     expect(lines).toContain("#0 Autocannon/20 (RT)");
@@ -229,7 +230,7 @@ describe("sheet", () => {
     const s = freshSetup();
     run(s, "start");
     const before = run(s, "sheet hunchy").join("\n");
-    expect(before).toContain("(9,9)");
+    expect(before).toContain("at 9,9 facing n");
     autoPlay(s);
     const after = run(s, `sheet ${s.actorId ?? "hunchy"}`).join("\n");
     expect(after).toContain("armor:");
@@ -244,6 +245,7 @@ describe("setup flow", () => {
     expect(out).toContain("team 0:");
     expect(out).toContain("team 1:");
     expect(out).toContain("hunchy  HBK-4G");
+    expect(out).toMatch(/hunchy\s+HBK-4G \(Hunchback\) gunnery Regular\(4\)/);
   });
 
   it("starts the battle and lands on a turn(N):move prompt", () => {
