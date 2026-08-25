@@ -1,7 +1,7 @@
+import { neighbor } from "../core/hex.js";
+import { MP_PER_FACING_CHANGE } from "../core/terrain.js";
 import type { Facing, Hex, MoveMode, TerrainType } from "../core/types.js";
 import { oppositeFacing } from "../core/types.js";
-import { neighbor } from "../core/hex.js";
-import { costToEnter, MP_PER_FACING_CHANGE } from "../core/terrain.js";
 
 export function maxMovePoints(
   mode: MoveMode,
@@ -72,7 +72,7 @@ export function canPassThroughHex(occupantTeam: number | undefined, moverTeam: n
 }
 
 /** Stacking: movement may never END in a hex held by any other 'Mech. */
-export function canEndMoveInHex(occupantTeam: number | undefined, moverTeam: number): boolean {
+export function canEndMoveInHex(occupantTeam: number | undefined, _moverTeam: number): boolean {
   return occupantTeam === undefined;
 }
 
@@ -88,10 +88,7 @@ export function isForwardStep(from: Hex, to: Hex, facing: Facing): boolean {
   return ahead.col === to.col && ahead.row === to.row;
 }
 
-export function terrainAt(
-  terrain: Readonly<Record<string, TerrainType>>,
-  hex: Hex,
-): TerrainType {
+export function terrainAt(terrain: Readonly<Record<string, TerrainType>>, hex: Hex): TerrainType {
   return terrain[`${hex.col},${hex.row}`] ?? "clear";
 }
 

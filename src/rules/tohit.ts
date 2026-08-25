@@ -65,13 +65,13 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
   const targetMod = targetMovementModifier(mods.targetHexesMoved, mods.targetJumped);
 
   let terrainMod = mods.interveningWoods;
-  terrainMod += mods.targetTerrain === "lightWoods" ? 1 : mods.targetTerrain === "heavyWoods" ? 2 : 0;
+  terrainMod +=
+    mods.targetTerrain === "lightWoods" ? 1 : mods.targetTerrain === "heavyWoods" ? 2 : 0;
 
   const rangeMod = RANGE_MOD[bracket];
   const pulseMod = mods.weapon.pulse === true ? -2 : 0;
 
-  const total =
-    mods.gunnery + attackerMod + targetMod + terrainMod + rangeMod + pulseMod;
+  const total = mods.gunnery + attackerMod + targetMod + terrainMod + rangeMod + pulseMod;
 
   return {
     gunnery: mods.gunnery,

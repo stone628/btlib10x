@@ -1,23 +1,18 @@
-import type { BattleState, GameEvent, UnitState } from "../src/rules/game.js";
-import type { AttackResolution } from "../src/rules/attack.js";
-import type { ArmorState } from "../src/rules/damage.js";
-import { canFireFromLocation } from "../src/rules/damage.js";
+import type { Location } from "../src/core/types.js";
+import { LOCATIONS } from "../src/core/types.js";
 import { getMapDef, MAP_DEFS, MECH_DEFS, toEngineTerrain } from "../src/data/index.js";
 import type { MechDef } from "../src/data/schema.js";
 import { getWeapon } from "../src/data/weapons.js";
-import type { Location } from "../src/core/types.js";
-import { LOCATIONS } from "../src/core/types.js";
-import {
-  battleModel,
-  boardToSpans,
-  mapModel,
-  TERRAIN_GLYPHS,
-} from "../src/render.js";
 import type { Span } from "../src/render.js";
+import { battleModel, boardToSpans, mapModel, TERRAIN_GLYPHS } from "../src/render.js";
+import type { AttackResolution } from "../src/rules/attack.js";
+import type { ArmorState } from "../src/rules/damage.js";
+import { canFireFromLocation } from "../src/rules/damage.js";
+import type { BattleState, GameEvent, UnitState } from "../src/rules/game.js";
+import type { LocaleId } from "./i18n/index.js";
+import { t } from "./i18n/index.js";
 import type { Session, SetupUnit } from "./session.js";
 import { moveStepsInfo } from "./session.js";
-import { t } from "./i18n/index.js";
-import type { LocaleId } from "./i18n/index.js";
 
 /** One presentation chunk of command output. */
 export type Chunk = { lines: readonly string[]; cls?: string } | { board: readonly Span[][] };
@@ -60,7 +55,10 @@ export function boardChunk(s: Session): Chunk {
       return { lines: [t(s.locale, "board.noMap")] };
     }
     const units = Object.fromEntries(
-      s.roster.map((u) => [u.id, { id: u.id, position: u.position, facing: u.facing, removed: false }]),
+      s.roster.map((u) => [
+        u.id,
+        { id: u.id, position: u.position, facing: u.facing, removed: false },
+      ]),
     ) as BattleState["units"];
     const terrain: Record<string, string> = {};
     for (const t2 of s.terrainDefs) terrain[`${t2.col},${t2.row}`] = t2.type;
@@ -106,13 +104,16 @@ export function infoMech(locale: LocaleId, model: string): string[] {
 }
 
 export function infoMapList(): string[] {
-  return Object.entries(MAP_DEFS).map(([name, m]) => `${name}: ${m.width}x${m.height}, ${m.terrain.length} terrain hexes`);
+  return Object.entries(MAP_DEFS).map(
+    ([name, m]) => `${name}: ${m.width}x${m.height}, ${m.terrain.length} terrain hexes`,
+  );
 }
 
 /** `info map <name>` output: header/legend lines followed by the styled grid. */
 export function infoMapChunks(locale: LocaleId, name: string): Chunk[] {
   const map = MAP_DEFS[name];
-  if (!map) throw new Error(t(locale, "err.unknownMap", { name, list: Object.keys(MAP_DEFS).join(", ") }));
+  if (!map)
+    throw new Error(t(locale, "err.unknownMap", { name, list: Object.keys(MAP_DEFS).join(", ") }));
   const counts = new Map<string, number>();
   for (const t2 of map.terrain) counts.set(t2.type, (counts.get(t2.type) ?? 0) + 1);
   const breakdown = [...counts.entries()]
@@ -167,7 +168,9 @@ function battleSheet(battle: BattleState, unit: UnitState, locale: LocaleId): Sh
     gunnery: unit.gunnery,
     facingLine:
       t(locale, "sheet.at", { pos: disp(unit.position), facing: unit.facing }) +
-      (unit.moveMode !== null ? t(locale, "sheet.modeSuffix", { mode: unit.moveMode, mp: unit.mpSpent }) : "") +
+      (unit.moveMode !== null
+        ? t(locale, "sheet.modeSuffix", { mode: unit.moveMode, mp: unit.mpSpent })
+        : "") +
       (unit.removed ? t(locale, "sheet.removedSuffix") : ""),
     armor: unit.armor,
     mounts: def.weapons.map((mount, i) => ({
@@ -218,7 +221,8 @@ export function sheetLines(view: SheetView, locale: LocaleId): string[] {
     name: view.name,
     weightClass: view.weightClass,
     tonnage: view.tonnage,
-    gunnery: view.gunnery !== null ? t(locale, "sheet.gunnerySuffix", { gunnery: view.gunnery }) : "",
+    gunnery:
+      view.gunnery !== null ? t(locale, "sheet.gunnerySuffix", { gunnery: view.gunnery }) : "",
   });
   const lines = [head];
   if (view.facingLine) lines.push(view.facingLine);
@@ -238,7 +242,9 @@ export function sheetLines(view: SheetView, locale: LocaleId): string[] {
       m.jammed ? t(locale, "sheet.jammed") : null,
       m.destroyed ? t(locale, "sheet.destroyed") : null,
     ].filter((x) => x !== null);
-    lines.push(`  #${i} ${m.weapon} (${SHORT_LOC[m.location]}) S${w.short}/M${w.medium}/L${w.long}${flags.length ? " " + flags.join(" ") : ""}`);
+    lines.push(
+      `  #${i} ${m.weapon} (${SHORT_LOC[m.location]}) S${w.short}/M${w.medium}/L${w.long}${flags.length ? ` ${flags.join(" ")}` : ""}`,
+    );
   }
   return lines;
 }
@@ -285,14 +291,20 @@ export function fmtSetupStatus(s: Session): string[] {
 export function moveStatusLines(s: Session): string[] {
   const info = moveStepsInfo(s);
   const modeText =
-    info.mode === null ? t(s.locale, "moveStatus.noMode") : t(s.locale, "moveStatus.mode", { mode: info.mode });
+    info.mode === null
+      ? t(s.locale, "moveStatus.noMode")
+      : t(s.locale, "moveStatus.mode", { mode: info.mode });
   const lines = [modeText, t(s.locale, "moveStatus.budget", { budget: info.budget })];
   if (info.steps.length === 0) {
     lines.push(t(s.locale, "moveStatus.none"));
   } else {
     for (const step of info.steps) {
       lines.push(
-        t(s.locale, "moveStatus.stepLine", { label: step.label, cost: step.mpCost, total: step.mpAfter }),
+        t(s.locale, "moveStatus.stepLine", {
+          label: step.label,
+          cost: step.mpCost,
+          total: step.mpAfter,
+        }),
       );
     }
   }
@@ -301,7 +313,8 @@ export function moveStatusLines(s: Session): string[] {
 
 export function attackStatusLines(s: Session): string[] {
   const actor = s.battle?.units[s.actorId ?? ""];
-  if (!actor || !s.battle) throw new Error(t(s.locale, "err.wrongPhase", { phase: "weaponAttack" }));
+  if (!actor || !s.battle)
+    throw new Error(t(s.locale, "err.wrongPhase", { phase: "weaponAttack" }));
   if (s.fireDecls.length === 0) return [t(s.locale, "attackStatus.none")];
   const def = s.battle.defs[actor.model]!;
   return s.fireDecls.map((decl) => {
@@ -315,7 +328,9 @@ export function weaponsLines(s: Session, unitId?: string): string[] {
   const id = unitId ?? s.actorId;
   const unit = id !== undefined && id !== null && id !== "" ? s.battle?.units[id] : undefined;
   if (!unit || !s.battle) {
-    throw new Error(t(s.locale, "err.unknownUnitId", { id: unitId ?? t(s.locale, "weapons.noActorId") }));
+    throw new Error(
+      t(s.locale, "err.unknownUnitId", { id: unitId ?? t(s.locale, "weapons.noActorId") }),
+    );
   }
   const def = s.battle.defs[unit.model]!;
   return def.weapons.map((mount, i) => {
@@ -325,9 +340,13 @@ export function weaponsLines(s: Session, unitId?: string): string[] {
       mount.weapon,
       mount.location,
       `S${w.short}/M${w.medium}/L${w.long}`,
-      mount.ammoShots !== undefined ? t(s.locale, "sheet.ammoFlag", { n: unit.ammoLeft[i] ?? 0 }) : null,
+      mount.ammoShots !== undefined
+        ? t(s.locale, "sheet.ammoFlag", { n: unit.ammoLeft[i] ?? 0 })
+        : null,
       unit.jammedWeapons.includes(i) ? t(s.locale, "sheet.jammed") : null,
-      canFireFromLocation(unit.phaseStartArmor, mount.location) ? null : t(s.locale, "sheet.destroyed"),
+      canFireFromLocation(unit.phaseStartArmor, mount.location)
+        ? null
+        : t(s.locale, "sheet.destroyed"),
     ].filter((b) => b !== null);
     return bits.join("  ");
   });
@@ -335,7 +354,11 @@ export function weaponsLines(s: Session, unitId?: string): string[] {
 
 // ------------------------------------------------------------------ log ----
 
-export function fmtLog(locale: LocaleId, events: readonly GameEvent[], n: number = events.length): string[] {
+export function fmtLog(
+  locale: LocaleId,
+  events: readonly GameEvent[],
+  n: number = events.length,
+): string[] {
   return events.slice(-n).flatMap((e) => {
     switch (e.kind) {
       case "turn":
@@ -363,11 +386,11 @@ export function fmtLog(locale: LocaleId, events: readonly GameEvent[], n: number
         ];
       case "attacksDeclared":
         return [
-          t(
-            locale,
-            e.count === 1 ? "log.attacksDeclaredOne" : "log.attacksDeclaredOther",
-            { id: e.unitId, target: e.targetId, count: e.count },
-          ),
+          t(locale, e.count === 1 ? "log.attacksDeclaredOne" : "log.attacksDeclaredOther", {
+            id: e.unitId,
+            target: e.targetId,
+            count: e.count,
+          }),
         ];
       case "attackResolved":
         return resolutionLines(locale, e.resolution);
@@ -375,6 +398,11 @@ export function fmtLog(locale: LocaleId, events: readonly GameEvent[], n: number
         return [t(locale, "log.destroyed", { id: e.unitId })];
       case "unitRemoved":
         return [t(locale, "log.removedEvent", { id: e.unitId })];
+      default: {
+        // Exhaustiveness guard: adding a GameEvent kind must add a case above.
+        const unreachable: never = e;
+        return unreachable;
+      }
     }
   });
 }
@@ -452,8 +480,10 @@ function transferDetail(locale: LocaleId, r: AttackResolution): string | null {
     bits.push(`${SHORT_LOC[step.location]} ${before}->${after}${step.depleted ? "*" : ""}`);
   }
   let text = bits.join(", ");
-  if (app.blownOffArms.length > 0) text += t(locale, "res.blownOff", { locs: app.blownOffArms.map(shortLoc).join(" + ") });
-  if (app.newlyDestroyed.length > 0) text += t(locale, "res.destroyedTail", { locs: app.newlyDestroyed.map(shortLoc).join(", ") });
+  if (app.blownOffArms.length > 0)
+    text += t(locale, "res.blownOff", { locs: app.blownOffArms.map(shortLoc).join(" + ") });
+  if (app.newlyDestroyed.length > 0)
+    text += t(locale, "res.destroyedTail", { locs: app.newlyDestroyed.map(shortLoc).join(", ") });
   return text;
 }
 

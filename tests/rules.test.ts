@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { isInFrontArc } from "../src/rules/arcs.js";
+import { losBlocked, losWoodsPoints } from "../src/rules/los.js";
 import {
   attackerMovementModifier,
   canEndMoveInHex,
@@ -6,10 +8,7 @@ import {
   facingChangeCost,
   hexesSinceLastReversal,
   maxMovePoints,
-  targetMovementModifier,
 } from "../src/rules/movement.js";
-import { losBlocked, losWoodsPoints } from "../src/rules/los.js";
-import { isInFrontArc } from "../src/rules/arcs.js";
 
 describe("movement rules", () => {
   it("computes MP budgets per movement mode", () => {

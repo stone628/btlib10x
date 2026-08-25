@@ -42,15 +42,7 @@ export const TERRAIN_GLYPHS: Readonly<Record<string, string>> = {
 };
 
 /** Named palette slots; the web layer maps these to CSS variables. */
-export type ColorName =
-  | "red"
-  | "green"
-  | "yellow"
-  | "blue"
-  | "magenta"
-  | "cyan"
-  | "white"
-  | "dim";
+export type ColorName = "red" | "green" | "yellow" | "blue" | "magenta" | "cyan" | "white" | "dim";
 
 /** Per-character presentation hints for styled board output. */
 export interface CharStyle {
@@ -168,16 +160,20 @@ function makeCanvas(model: BoardModel): Canvas {
   const canvasRows = rows * ROW_STRIDE + (cols >= 2 ? STAGGER : 0) + 1;
   const canvasCols = (cols - 1) * COL_STRIDE + HEX_WIDTH;
   return {
-    rows: Array.from({ length: canvasRows }, () =>
-      Array.from({ length: canvasCols }, () => " "),
-    ),
+    rows: Array.from({ length: canvasRows }, () => Array.from({ length: canvasCols }, () => " ")),
     styles: Array.from({ length: canvasRows }, () =>
       Array.from({ length: canvasCols }, () => null),
     ),
   };
 }
 
-function stampInto(canvas: Canvas, x: number, y: number, text: string, style: CharStyle | null): void {
+function stampInto(
+  canvas: Canvas,
+  x: number,
+  y: number,
+  text: string,
+  style: CharStyle | null,
+): void {
   const line = canvas.rows[y];
   if (!line) return;
   for (let i = 0; i < text.length && x + i < line.length; i++) {
@@ -445,9 +441,6 @@ export function battleModel(
     ...(Object.keys(facings).length > 0 ? { facings } : {}),
     ...(marks === undefined ? {} : { marks }),
     ...(styles !== undefined ? { styles } : Object.keys(auto).length > 0 ? { styles: auto } : {}),
-    ...(styles === undefined && Object.keys(autoCells).length > 0
-      ? { cellStyles: autoCells }
-      : {}),
+    ...(styles === undefined && Object.keys(autoCells).length > 0 ? { cellStyles: autoCells } : {}),
   };
 }
-

@@ -32,17 +32,17 @@ export function validateMapDef(data: unknown): MapDef {
     throw new Error("MapDef must be a JSON object");
   }
 
-  const width = data["width"];
+  const width = data.width;
   if (typeof width !== "number" || !Number.isInteger(width) || width <= 0) {
     errors.push("width must be a positive integer");
   }
-  const height = data["height"];
+  const height = data.height;
   if (typeof height !== "number" || !Number.isInteger(height) || height <= 0) {
     errors.push("height must be a positive integer");
   }
 
   const seen = new Set<string>();
-  const raw = data["terrain"];
+  const raw = data.terrain;
   if (!Array.isArray(raw)) {
     errors.push("terrain must be an array");
   } else {
@@ -52,9 +52,9 @@ export function validateMapDef(data: unknown): MapDef {
         errors.push(`${label} must be an object`);
         continue;
       }
-      const col = entry["col"];
-      const row = entry["row"];
-      const type = entry["type"];
+      const col = entry.col;
+      const row = entry.row;
+      const type = entry.type;
       if (typeof col !== "number" || !Number.isInteger(col)) {
         errors.push(`${label}.col must be an integer`);
       }

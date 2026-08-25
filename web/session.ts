@@ -1,9 +1,17 @@
-import type { Facing, Hex, MoveMode, Rng, TerrainHexDef } from "../src/core/types.js";
-import { FACINGS, rotateFacing } from "../src/core/types.js";
 import { neighbor, sameHex } from "../src/core/hex.js";
 import { costToEnter } from "../src/core/terrain.js";
-import { MAP_DEFS, MECH_DEFS, getMapDef, toEngineTerrain } from "../src/data/index.js";
-import type { AttackDecl, BattleState, CreateBattleOptions, MoveStep, UnitInit, UnitState, VictoryResult } from "../src/rules/game.js";
+import type { Facing, Hex, MoveMode, Rng, TerrainHexDef } from "../src/core/types.js";
+import { FACINGS, rotateFacing } from "../src/core/types.js";
+import { getMapDef, MAP_DEFS, MECH_DEFS, toEngineTerrain } from "../src/data/index.js";
+import type {
+  AttackDecl,
+  BattleState,
+  CreateBattleOptions,
+  MoveStep,
+  UnitInit,
+  UnitState,
+  VictoryResult,
+} from "../src/rules/game.js";
 import {
   advancePhase,
   checkVictory,
@@ -17,9 +25,9 @@ import {
   rollInitiativePhase,
 } from "../src/rules/game.js";
 import * as mv from "../src/rules/movement.js";
-import { createRng } from "./rng.js";
-import { t } from "./i18n/index.js";
 import type { LocaleId } from "./i18n/index.js";
+import { t } from "./i18n/index.js";
+import { createRng } from "./rng.js";
 
 export type AppState = "setup" | "battle" | "over";
 
@@ -140,7 +148,8 @@ export function listMapNames(): string[] {
 
 export function setMap(s: Session, name: string): void {
   const map = MAP_DEFS[name];
-  if (!map) throw new Error(t(s.locale, "err.unknownMap", { name, list: listMapNames().join(", ") }));
+  if (!map)
+    throw new Error(t(s.locale, "err.unknownMap", { name, list: listMapNames().join(", ") }));
   s.mapName = name;
   s.terrainDefs = toEngineTerrain(map);
 }
@@ -162,7 +171,9 @@ export function addUnit(
   }
   if (s.roster.some((u) => sameHex(u.position, position))) {
     // Display coordinates are 1-based; the session stores engine (0-based) hexes.
-    throw new Error(t(s.locale, "err.hexOccupied", { col: position.col + 1, row: position.row + 1 }));
+    throw new Error(
+      t(s.locale, "err.hexOccupied", { col: position.col + 1, row: position.row + 1 }),
+    );
   }
   s.roster = [...s.roster, { id, model, team, gunnery, position, facing }];
 }
@@ -245,7 +256,8 @@ function replaySteps(s: Session): MoveCursor {
       cur.spent += mv.facingChangeCost(Math.abs(step.facings));
     } else {
       cur.hex = { ...step.to };
-      cur.spent += s.moveMode === "jump" ? 1 : costToEnter(mv.terrainAt(requireBattle(s).terrain, step.to));
+      cur.spent +=
+        s.moveMode === "jump" ? 1 : costToEnter(mv.terrainAt(requireBattle(s).terrain, step.to));
     }
   }
   return cur;
@@ -317,7 +329,7 @@ export function faceSteps(locale: LocaleId, current: Facing, arg: string): numbe
   const target = FACINGS.find((f) => f === arg.toLowerCase());
   if (!target) throw new Error(t(locale, "err.faceArg", { facings: FACINGS.join("/") }));
   const delta0 = FACINGS.indexOf(target) - FACINGS.indexOf(current);
-  let delta = delta0 > 3 ? delta0 - 6 : delta0 < -3 ? delta0 + 6 : delta0;
+  const delta = delta0 > 3 ? delta0 - 6 : delta0 < -3 ? delta0 + 6 : delta0;
   if (delta === 0) throw new Error(t(locale, "err.faceCurrent", { facing: current }));
   return delta;
 }
@@ -352,12 +364,16 @@ export interface MoveStepInfo {
 }
 
 /** Queued movement steps with running MP totals, for `status`. */
-export function moveStepsInfo(s: Session): { mode: MoveMode | null; steps: MoveStepInfo[]; budget: number } {
+export function moveStepsInfo(s: Session): {
+  mode: MoveMode | null;
+  steps: MoveStepInfo[];
+  budget: number;
+} {
   const unit = currentActor(s);
   if (!unit || !s.battle) throw new Error(t(s.locale, "err.needsActor"));
   const terrain = s.battle.terrain;
   const steps: MoveStepInfo[] = [];
-  let hex: Hex = { ...unit.position };
+  let _hex: Hex = { ...unit.position };
   let facing: Facing = unit.facing;
   let spent = 0;
   s.moveSteps.forEach((step, i) => {
@@ -379,7 +395,7 @@ export function moveStepsInfo(s: Session): { mode: MoveMode | null; steps: MoveS
         col: step.to.col + 1,
         row: step.to.row + 1,
       });
-      hex = { ...step.to };
+      _hex = { ...step.to };
       cost = s.moveMode === "jump" ? 1 : costToEnter(mv.terrainAt(terrain, step.to));
     }
     spent += cost;

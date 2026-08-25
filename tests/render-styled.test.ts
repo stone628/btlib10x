@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createBattle } from "../src/rules/game.js";
+import { getMapDef, toEngineTerrain } from "../src/data/index.js";
+import type { CharStyle, Span } from "../src/render.js";
 import {
   battleModel,
   boardToSpans,
@@ -8,9 +9,7 @@ import {
   renderMap,
   TEAM_STYLES,
 } from "../src/render.js";
-import type { CharStyle, Span } from "../src/render.js";
-import { getMapDef } from "../src/data/index.js";
-import { toEngineTerrain } from "../src/data/index.js";
+import { createBattle } from "../src/rules/game.js";
 
 function spansText(spans: readonly Span[]): string {
   return spans.map((sp) => sp.text).join("");
@@ -30,10 +29,27 @@ describe("styled board model", () => {
   });
 
   it("span text reproduces the flat rendering exactly (battles)", () => {
-    const state = createBattle([
-      { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 1, row: 2 }, facing: "n" },
-      { id: "grf", model: "GRF-1N", team: 1, gunnery: 4, position: { col: 3, row: 1 }, facing: "s" },
-    ], { terrain: [{ col: 0, row: 0, type: "heavyWoods" }] });
+    const state = createBattle(
+      [
+        {
+          id: "hbk",
+          model: "HBK-4G",
+          team: 0,
+          gunnery: 4,
+          position: { col: 1, row: 2 },
+          facing: "n",
+        },
+        {
+          id: "grf",
+          model: "GRF-1N",
+          team: 1,
+          gunnery: 4,
+          position: { col: 3, row: 1 },
+          facing: "s",
+        },
+      ],
+      { terrain: [{ col: 0, row: 0, type: "heavyWoods" }] },
+    );
     const flat = boardToText(battleModel(state));
     expect(boardToText(battleModel(state))).toBe(flat);
     expect(boardToSpans(battleModel(state)).map(spansText).join("\n")).toBe(flat);
@@ -59,10 +75,27 @@ describe("styled board model", () => {
   });
 
   it("tints terrain glyphs and unit ids per semantic defaults", () => {
-    const state = createBattle([
-      { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 0, row: 0 }, facing: "n" },
-      { id: "far", model: "GRF-1N", team: 1, gunnery: 4, position: { col: 9, row: 9 }, facing: "s" },
-    ], { terrain: [{ col: 2, row: 1, type: "lightWoods" }] });
+    const state = createBattle(
+      [
+        {
+          id: "hbk",
+          model: "HBK-4G",
+          team: 0,
+          gunnery: 4,
+          position: { col: 0, row: 0 },
+          facing: "n",
+        },
+        {
+          id: "far",
+          model: "GRF-1N",
+          team: 1,
+          gunnery: 4,
+          position: { col: 9, row: 9 },
+          facing: "s",
+        },
+      ],
+      { terrain: [{ col: 2, row: 1, type: "lightWoods" }] },
+    );
     const model = battleModel(state);
     const woods = model.styles?.["2,1"];
     expect(woods).toEqual({ cls: "t-lightWoods" });
@@ -79,19 +112,34 @@ describe("styled board model", () => {
 
     // Terrain tinting shows up in spans wherever the glyph is drawn;
     // mapModel derives its own marks, so use it for the glyph check.
-    const mapSpans = boardToSpans(
-      mapModel([{ col: 0, row: 0, type: "heavyWoods" }], 2, 2),
-    );
+    const mapSpans = boardToSpans(mapModel([{ col: 0, row: 0, type: "heavyWoods" }], 2, 2));
     const glyph = mapSpans.flat().filter((sp) => sp.style !== undefined && sp.text.includes("W"));
     expect(glyph.length).toBeGreaterThan(0);
     expect(glyph.every((sp) => sp.style?.cls === "t-heavyWoods")).toBe(true);
   });
 
   it("keeps terrain tint on grid rows under an occupying unit", () => {
-    const state = createBattle([
-      { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 1, row: 0 }, facing: "ne" },
-      { id: "far", model: "GRF-1N", team: 1, gunnery: 4, position: { col: 9, row: 9 }, facing: "s" },
-    ], { terrain: [{ col: 1, row: 0, type: "lightWoods" }] });
+    const state = createBattle(
+      [
+        {
+          id: "hbk",
+          model: "HBK-4G",
+          team: 0,
+          gunnery: 4,
+          position: { col: 1, row: 0 },
+          facing: "ne",
+        },
+        {
+          id: "far",
+          model: "GRF-1N",
+          team: 1,
+          gunnery: 4,
+          position: { col: 9, row: 9 },
+          facing: "s",
+        },
+      ],
+      { terrain: [{ col: 1, row: 0, type: "lightWoods" }] },
+    );
     const model = battleModel(state);
     expect(model.styles?.["1,0"]).toEqual({ cls: "t-lightWoods" });
     expect(model.cellStyles?.["1,0"]).toEqual(TEAM_STYLES[0]);
@@ -110,11 +158,30 @@ describe("styled board model", () => {
   });
 
   it("explicit styles replace automatic ones entirely", () => {
-    const state = createBattle([
-      { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 0, row: 0 }, facing: "n" },
-      { id: "far", model: "GRF-1N", team: 1, gunnery: 4, position: { col: 9, row: 9 }, facing: "s" },
-    ], { terrain: [{ col: 1, row: 0, type: "lightWoods" }] });
-    const override: Record<string, CharStyle> = { "0,0": { fg: "red", bold: true, italic: true, bg: "blue" } };
+    const state = createBattle(
+      [
+        {
+          id: "hbk",
+          model: "HBK-4G",
+          team: 0,
+          gunnery: 4,
+          position: { col: 0, row: 0 },
+          facing: "n",
+        },
+        {
+          id: "far",
+          model: "GRF-1N",
+          team: 1,
+          gunnery: 4,
+          position: { col: 9, row: 9 },
+          facing: "s",
+        },
+      ],
+      { terrain: [{ col: 1, row: 0, type: "lightWoods" }] },
+    );
+    const override: Record<string, CharStyle> = {
+      "0,0": { fg: "red", bold: true, italic: true, bg: "blue" },
+    };
     const model = battleModel(state, undefined, undefined, override);
     expect(model.styles?.["0,0"]).toEqual(override["0,0"]);
     expect(model.styles?.["1,0"]).toBeUndefined();

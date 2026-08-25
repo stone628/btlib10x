@@ -1,6 +1,6 @@
-import type { Hex, TerrainType } from "../core/types.js";
 import { lineHexes } from "../core/hex.js";
 import { woodsPoints } from "../core/terrain.js";
+import type { Hex, TerrainType } from "../core/types.js";
 
 /**
  * Hexes along the center-to-center LOS, excluding the attacker's and target's

@@ -18,7 +18,8 @@ export const kr: Catalog = {
     "전투가 종료되었습니다.\n'rematch'로 같은 편성과 시드로 재대국하거나, 'reset'으로 빈 설정 화면으로 돌아갑니다.",
 
   // board
-  "board.noMap": "아직 전장이 없습니다 - 'map'으로 불러오세요. 'info map'에서 목록을 볼 수 있습니다.",
+  "board.noMap":
+    "아직 전장이 없습니다 - 'map'으로 불러오세요. 'info map'에서 목록을 볼 수 있습니다.",
 
   // lang command
   "lang.current": "언어: {locale}",

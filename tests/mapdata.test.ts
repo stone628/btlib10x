@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { toEngineTerrain, validateMapDef, type MapDef } from "../src/data/mapschema.js";
 import { getMapDef, MAP_DEFS } from "../src/data/index.js";
+import { type MapDef, toEngineTerrain, validateMapDef } from "../src/data/mapschema.js";
 import { createBattle } from "../src/rules/game.js";
 
 const valid: MapDef = {
@@ -24,14 +24,18 @@ describe("validateMapDef", () => {
   });
 
   it("rejects bad dimensions", () => {
-    expect(() => validateMapDef({ ...valid, width: 0 })).toThrow(/width must be a positive integer/);
+    expect(() => validateMapDef({ ...valid, width: 0 })).toThrow(
+      /width must be a positive integer/,
+    );
     expect(() => validateMapDef({ ...valid, height: 2.5 })).toThrow(
       /height must be a positive integer/,
     );
   });
 
   it("rejects malformed terrain entries and unknown types", () => {
-    expect(() => validateMapDef({ ...valid, terrain: "woods" })).toThrow(/terrain must be an array/);
+    expect(() => validateMapDef({ ...valid, terrain: "woods" })).toThrow(
+      /terrain must be an array/,
+    );
     expect(() =>
       validateMapDef({ ...valid, terrain: [{ col: 1.5, row: 1, type: "lightWoods" }] }),
     ).toThrow(/terrain\[0\].col must be an integer/);
@@ -53,9 +57,15 @@ describe("validateMapDef", () => {
           return (e as Error).message;
         }
       })();
-    expect(errors([{ col: 0, row: 1, type: "clear" }])).toMatch(/col 0 outside board bounds 1\.\.3/);
-    expect(errors([{ col: 4, row: 1, type: "clear" }])).toMatch(/col 4 outside board bounds 1\.\.3/);
-    expect(errors([{ col: 1, row: 3, type: "clear" }])).toMatch(/row 3 outside board bounds 1\.\.2/);
+    expect(errors([{ col: 0, row: 1, type: "clear" }])).toMatch(
+      /col 0 outside board bounds 1\.\.3/,
+    );
+    expect(errors([{ col: 4, row: 1, type: "clear" }])).toMatch(
+      /col 4 outside board bounds 1\.\.3/,
+    );
+    expect(errors([{ col: 1, row: 3, type: "clear" }])).toMatch(
+      /row 3 outside board bounds 1\.\.2/,
+    );
     // Boundary hexes are legal.
     expect(errors([{ col: 3, row: 2, type: "heavyWoods" }])).toBe("");
   });
@@ -88,21 +98,35 @@ describe("bundled maps", () => {
         expect(h.row).toBeLessThanOrEqual(map.height);
       }
     }
-    expect(MAP_DEFS["beginner"]!.terrain).toHaveLength(20);
-    expect(MAP_DEFS["quickstart"]!.terrain).toHaveLength(31);
-    expect(MAP_DEFS["beginner"]!.terrain[0]).toEqual({ col: 2, row: 5, type: "heavyWoods" });
+    expect(MAP_DEFS.beginner!.terrain).toHaveLength(20);
+    expect(MAP_DEFS.quickstart!.terrain).toHaveLength(31);
+    expect(MAP_DEFS.beginner!.terrain[0]).toEqual({ col: 2, row: 5, type: "heavyWoods" });
   });
 
   it("converts to engine coordinates usable by createBattle", () => {
-    const engine = toEngineTerrain(MAP_DEFS["beginner"]!);
+    const engine = toEngineTerrain(MAP_DEFS.beginner!);
     expect(engine[0]).toEqual({ col: 1, row: 4, type: "heavyWoods" }); // 1-based (2,5) -> 0-based (1,4)
     expect(() =>
       createBattle(
         [
-          { id: "a", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 0, row: 2 }, facing: "se" },
-          { id: "b", model: "GRF-1N", team: 1, gunnery: 3, position: { col: 8, row: 6 }, facing: "nw" },
+          {
+            id: "a",
+            model: "HBK-4G",
+            team: 0,
+            gunnery: 4,
+            position: { col: 0, row: 2 },
+            facing: "se",
+          },
+          {
+            id: "b",
+            model: "GRF-1N",
+            team: 1,
+            gunnery: 3,
+            position: { col: 8, row: 6 },
+            facing: "nw",
+          },
         ],
-        { terrain: toEngineTerrain(MAP_DEFS["quickstart"]!) },
+        { terrain: toEngineTerrain(MAP_DEFS.quickstart!) },
       ),
     ).not.toThrow();
   });

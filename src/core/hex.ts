@@ -1,4 +1,4 @@
-import type { Hex, Facing } from "./types.js";
+import type { Facing, Hex } from "./types.js";
 import { FACINGS } from "./types.js";
 
 /**
@@ -37,25 +37,21 @@ export function neighbors(hex: Hex): Hex[] {
 
 function offsetToCube(hex: Hex): { x: number; y: number; z: number } {
   const x = hex.col;
-  const z = hex.row - ((hex.col + (hex.col & 1)) / 2);
+  const z = hex.row - (hex.col + (hex.col & 1)) / 2;
   const y = -x - z;
   return { x, y, z };
 }
 
-function cubeToOffset(x: number, y: number, z: number): Hex {
+function cubeToOffset(x: number, _y: number, z: number): Hex {
   const col = x;
-  const row = z + ((col + (col & 1)) / 2);
+  const row = z + (col + (col & 1)) / 2;
   return { col, row };
 }
 
 export function hexDistance(a: Hex, b: Hex): number {
   const ca = offsetToCube(a);
   const cb = offsetToCube(b);
-  return Math.max(
-    Math.abs(ca.x - cb.x),
-    Math.abs(ca.y - cb.y),
-    Math.abs(ca.z - cb.z),
-  );
+  return Math.max(Math.abs(ca.x - cb.x), Math.abs(ca.y - cb.y), Math.abs(ca.z - cb.z));
 }
 
 export function sameHex(a: Hex, b: Hex): boolean {
@@ -74,11 +70,7 @@ export function lineHexes(from: Hex, to: Hex): Hex[] {
   if (sameHex(from, to)) return [];
   const a = offsetToCube(from);
   const b = offsetToCube(to);
-  const n = Math.max(
-    Math.abs(a.x - b.x),
-    Math.abs(a.y - b.y),
-    Math.abs(a.z - b.z),
-  );
+  const n = Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y), Math.abs(a.z - b.z));
   const result: Hex[] = [];
   for (let i = 1; i < n; i++) {
     const t = i / n;

@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  bearing,
-  hexDistance,
-  lineHexes,
-  neighbor,
-  sameHex,
-} from "../src/core/hex.js";
+import { bearing, hexDistance, lineHexes, neighbor, sameHex } from "../src/core/hex.js";
 
 describe("hex geometry", () => {
   it("computes odd-q neighbors on flat-top hexes", () => {

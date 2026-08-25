@@ -1,9 +1,9 @@
-import * as S from "./session.js";
-import { runChunks } from "./cli.js";
+import type { CharStyle } from "../src/render.js";
 import { AUTOPLAY_INTERVAL_MS, nextAutoPlayCommand } from "./autoplay.js";
+import { runChunks } from "./cli.js";
 import type { Chunk } from "./format.js";
 import { t } from "./i18n/index.js";
-import type { CharStyle } from "../src/render.js";
+import * as S from "./session.js";
 
 const out = document.getElementById("out") as HTMLDivElement;
 const inrow = document.getElementById("inrow") as HTMLDivElement;
@@ -160,5 +160,8 @@ document.getElementById("term")?.addEventListener("click", (e) => {
   input.focus();
 });
 
-appendChunk({ lines: [t(session.locale, "app.banner.title"), t(session.locale, "app.banner.help")], cls: "banner" });
+appendChunk({
+  lines: [t(session.locale, "app.banner.title"), t(session.locale, "app.banner.help")],
+  cls: "banner",
+});
 refreshPrompt();
