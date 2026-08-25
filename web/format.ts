@@ -424,6 +424,7 @@ export function fmtLog(
             id: e.unitId,
             target: e.targetId,
             count: e.count,
+            rangeCtx: `range ${e.distance} (${e.rangeBracket}, ${signedMod(e.rangeMod)})`,
           }),
         ];
       case "attackResolved":
@@ -445,17 +446,18 @@ function signedMod(n: number): string {
   return n >= 0 ? `+${n}` : String(n);
 }
 
+/** Labeled GATOR breakdown: "gunnery 4 + move 1 + terrain 1 + range 2". */
 function gatorText(locale: LocaleId, r: AttackResolution): string {
   if (r.breakdown.outOfRange) return t(locale, "res.outOfRange");
   const b = r.breakdown;
-  const parts = [`G${b.gunnery}`];
-  if (b.attackerMod) parts.push(`A${signedMod(b.attackerMod)}`);
-  if (b.targetMod) parts.push(`M${signedMod(b.targetMod)}`);
-  if (b.terrainMod) parts.push(`T${signedMod(b.terrainMod)}`);
-  if (b.rangeMod) parts.push(`R${signedMod(b.rangeMod)}`);
-  if (b.pulseMod) parts.push(`P${signedMod(b.pulseMod)}`);
-  const total = b.automatic === "hit" ? t(locale, "res.tnAuto") : String(b.total);
-  return `TN ${total} (${parts.join(" ")})`;
+  const parts = [`gunnery ${b.gunnery}`];
+  if (b.attackerMod) parts.push(`move ${b.attackerMod}`);
+  if (b.targetMod) parts.push(`target ${b.targetMod}`);
+  if (b.terrainMod) parts.push(`terrain ${b.terrainMod}`);
+  if (b.rangeMod) parts.push(`range ${b.rangeMod}`);
+  if (b.pulseMod) parts.push(`pulse ${b.pulseMod}`);
+  const total = b.automatic === "hit" ? t(locale, "res.needAuto") : String(b.total);
+  return `Need ${total} (${parts.join(" + ")})`;
 }
 
 export function resolutionLines(locale: LocaleId, r: AttackResolution): string[] {
@@ -468,10 +470,10 @@ export function resolutionLines(locale: LocaleId, r: AttackResolution): string[]
       : r.hit
         ? t(locale, "res.hit")
         : t(locale, "res.miss");
+  const b = r.breakdown;
   const lines = [
     t(locale, "res.line", {
       weapon: r.weapon,
-      distance: r.distance,
       gator: gatorText(locale, r),
       roll: String(r.toHitRoll),
       verdict,

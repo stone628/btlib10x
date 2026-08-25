@@ -87,6 +87,9 @@ export type GameEvent =
       readonly unitId: string;
       readonly targetId: string;
       readonly count: number;
+      readonly distance: number;
+      readonly rangeBracket: string;
+      readonly rangeMod: number;
     }
   | {
       readonly kind: "attackResolved";
@@ -379,6 +382,9 @@ export function declareAttacks(
 
   const def = next.defs[unit.model]!;
   let targetId: string | null = null;
+  let attackDistance = 0;
+  let attackRangeBracket: string = "short";
+  let attackRangeMod = 0;
 
   for (const decl of decls) {
     const mount = def.weapons[decl.weaponIndex];
@@ -444,6 +450,11 @@ export function declareAttacks(
       distance: dist,
       weapon,
     });
+    if (decls.indexOf(decl) === 0) {
+      attackDistance = dist;
+      attackRangeBracket = breakdown.rangeBracket;
+      attackRangeMod = breakdown.rangeMod;
+    }
     if (breakdown.automatic === "miss") {
       throw new Error(
         `${mount.weapon}: modified TN ${breakdown.total} auto-misses; abort the declaration instead`,
@@ -467,7 +478,7 @@ export function declareAttacks(
   next.actedThisPhase = [...next.actedThisPhase, unitId];
   next.events = [
     ...next.events,
-    { kind: "attacksDeclared", unitId, targetId, count: decls.length },
+    { kind: "attacksDeclared", unitId, targetId, count: decls.length, distance: attackDistance, rangeBracket: attackRangeBracket, rangeMod: attackRangeMod },
   ];
   return next;
 }
