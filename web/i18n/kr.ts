@@ -115,6 +115,12 @@ export const kr: Catalog = {
   "err.duplicateId": "유닛 id 중복: {id}",
   "err.badTeam": "team은 음수가 아닌 정수여야 합니다",
   "err.badGunnery": "gunnery는 0..7 범위의 정수여야 합니다",
+
+  // pilot experience bands (gunnery 0..7, lower is better)
+  "skill.elite": "엘리트",
+  "skill.veteran": "베테랑",
+  "skill.regular": "정규",
+  "skill.green": "신병",
   "err.hexOccupied": "육각 {col},{row} 은 이미 점유됨",
   "err.noSuchUnit": "그런 유닛이 없습니다: {id}",
   "err.alreadyStarted": "전투가 이미 시작되었습니다",

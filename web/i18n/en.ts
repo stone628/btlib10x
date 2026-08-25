@@ -117,6 +117,13 @@ export const en = {
   "err.duplicateId": "Duplicate unit id: {id}",
   "err.badTeam": "team must be a non-negative integer",
   "err.badGunnery": "gunnery must be an integer 0..7",
+
+  // pilot experience bands (gunnery 0..7, lower is better)
+  "skill.elite": "Elite",
+  "skill.veteran": "Veteran",
+  "skill.regular": "Regular",
+  "skill.green": "Green",
+
   "err.hexOccupied": "Hex {col},{row} already occupied",
   "err.noSuchUnit": "No such unit: {id}",
   "err.alreadyStarted": "Battle already started",
@@ -179,8 +186,7 @@ export const en = {
   "info.legend":
     "legend: w0 lightWoods  W0 heavyWoods  (blank = clear; trailing digit = elevation)",
   "sheet.head": "{model} {name} — {weightClass} {tonnage}t{gunnery}",
-  "sheet.gunnerySuffix": " gunnery {gunnery}",
-  "sheet.at": "at {pos} facing {facing}",
+  "sheet.gunnerySuffix": " gunnery {gunnery}",  "sheet.at": "at {pos} facing {facing}",
   "sheet.modeSuffix": ", {mode} [mp {mp}]",
   "sheet.removedSuffix": " — REMOVED FROM PLAY",
   "sheet.armorLine": "armor: {list}",
