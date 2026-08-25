@@ -364,13 +364,15 @@ function commandHelp(session: S.Session, name: string): string[] {
   const locale = session.locale;
   const def = availableCmds(session)[name.toLowerCase()];
   if (!def) throw new Error(t(locale, "err.unknownCommand", { name }));
+  const names = Object.keys(MAP_DEFS).join("|");
   const lines = [
     def.usage !== undefined ? `${t(locale, "help.usagePrefix")}${def.usage}` : name.toLowerCase(),
   ];
-  lines.push(t(locale, def.helpKey));
+  lines.push(t(locale, def.helpKey).replace(/\{names\}/g, names));
   if (def.argsDoc !== undefined && def.argsDoc.length > 0) {
     lines.push(t(locale, "help.argumentsHeader"));
-    for (const [arg, desc] of def.argsDoc) lines.push(`  ${arg.padEnd(12)} ${t(locale, desc)}`);
+    for (const [arg, desc] of def.argsDoc)
+      lines.push(`  ${arg.padEnd(12)} ${t(locale, desc).replace(/\{names\}/g, names)}`);
   }
   return lines;
 }
@@ -378,10 +380,11 @@ function commandHelp(session: S.Session, name: string): string[] {
 function commandList(session: S.Session): string[] {
   const merged = availableCmds(session);
   const locale = session.locale;
+  const names = Object.keys(MAP_DEFS).join("|");
   const lines: string[] = [];
   for (const name of Object.keys(merged).sort()) {
     const def = merged[name]!;
-    const help = t(locale, def.helpKey);
+    const help = t(locale, def.helpKey).replace(/\{names\}/g, names);
     if (def.usage === undefined) {
       lines.push(`${name.padEnd(9)} ${help}`);
     } else {

@@ -56,6 +56,8 @@ export interface Session {
   moveMode: MoveMode | null;
   moveSteps: MoveStep[];
   fireDecls: AttackDecl[];
+  /** Last command returned by nextAutoPlayCommand; used to inject follow-ups. */
+  lastAutoPlayCmd: string | null;
 }
 
 export function newSession(seed = 42): Session {
@@ -73,6 +75,7 @@ export function newSession(seed = 42): Session {
     moveMode: null,
     moveSteps: [],
     fireDecls: [],
+    lastAutoPlayCmd: null,
   };
 }
 

@@ -9,6 +9,7 @@ function playThrough(s: S.Session, maxCommands = 500): void {
     const command = nextAutoPlayCommand(s);
     if (command === null) return;
     execute(s, command);
+    s.lastAutoPlayCmd = command;
   }
   throw new Error("autoplay did not settle within budget");
 }
@@ -23,14 +24,19 @@ describe("autoplay", () => {
     // The driver assumes a blank slate; 'reset' (typed by the user first)
     // guarantees one regardless of prior state.
     execute(s, "reset");
-    expect(nextAutoPlayCommand(s)).toBe("map quickstart");
-    execute(s, "map quickstart");
-    expect(nextAutoPlayCommand(s)).toBe("add hunchy HBK-4G 0 4 11 9 n");
-    execute(s, "add hunchy HBK-4G 0 4 11 9 n");
-    expect(nextAutoPlayCommand(s)).toBe("add cicada CDA-3MA 1 4 11 8 s");
-    execute(s, "add cicada CDA-3MA 1 4 11 8 s");
+    expect(nextAutoPlayCommand(s)).toBe("map test");
+    execute(s, "map test");
+    s.lastAutoPlayCmd = "map test";
+    expect(nextAutoPlayCommand(s)).toBe("add hunchy HBK-4G 0 4 4 3 ne");
+    execute(s, "add hunchy HBK-4G 0 4 4 3 ne");
+    s.lastAutoPlayCmd = "add hunchy HBK-4G 0 4 4 3 ne";
+    expect(nextAutoPlayCommand(s)).toBe("add cicada CDA-3MA 1 4 5 3 sw");
+    execute(s, "add cicada CDA-3MA 1 4 5 3 sw");
+    s.lastAutoPlayCmd = "add cicada CDA-3MA 1 4 5 3 sw";
     expect(nextAutoPlayCommand(s)).toBe("start");
     execute(s, "start");
+    s.lastAutoPlayCmd = "start";
+    expect(nextAutoPlayCommand(s)).toBe("board");
     expect(s.app).toBe("battle");
   });
 

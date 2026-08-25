@@ -84,6 +84,7 @@ function submit(raw: string, fromAutoPlay = false): void {
   for (const chunk of runChunks(session, line)) {
     appendChunk(chunk);
   }
+  session.lastAutoPlayCmd = line;
   input.value = "";
   refreshPrompt();
   scrollToBottom();
@@ -120,8 +121,19 @@ function startAutoPlay(): void {
 
 input.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
-    if (input.value.trim() === "autoplay") startAutoPlay();
-    else submit(input.value);
+    if (input.value.trim() === "autoplay") {
+      const echoed = `${S.promptBody(session)} > autoplay`;
+      const echo = document.createElement("div");
+      echo.className = "cmd";
+      echo.textContent = echoed;
+      out.insertBefore(echo, inrow);
+      input.value = "";
+      refreshPrompt();
+      scrollToBottom();
+      startAutoPlay();
+    } else {
+      submit(input.value);
+    }
   } else if (e.key === "ArrowUp") {
     if (history.length > 0 && historyIdx > 0) {
       historyIdx -= 1;

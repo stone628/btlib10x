@@ -259,7 +259,7 @@ describe("setup flow", () => {
     const s = freshSetup();
     const out = run(s, "start");
     expect(out[0]).toBe("battle started");
-    expect(out.join("\n")).toMatch(/initiative: team \d wins/);
+    expect(out.join("\n")).toMatch(/initiative:.*team \d move first/);
     expect(S.promptBody(s)).toMatch(/^turn\(1\):move\(team \d, mech \w+\)$/);
   });
 

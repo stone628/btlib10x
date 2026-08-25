@@ -449,9 +449,9 @@ export function fmtLog(
       case "initiative": {
         const rolls = Object.entries(e.rolls)
           .sort((a, b) => Number(a[0]) - Number(b[0]))
-          .map(([team, roll]) => `t${team}=${roll}`)
-          .join(" ");
-        return [t(locale, "log.initiative", { team: e.winnerTeam, rolls })];
+          .map(([team, roll]) => `team ${team} (2d6: ${roll})`)
+          .join(", ");
+        return [t(locale, "log.initiative", { rolls, winner: e.winnerTeam })];
       }
       case "moveDeclared":
         return [t(locale, "log.moveDeclared", { id: e.unitId, mode: e.mode })];
