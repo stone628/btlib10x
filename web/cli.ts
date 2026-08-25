@@ -5,6 +5,7 @@ import type { Chunk, RichOutput } from "./format.js";
 import {
   attackStatusLines,
   boardChunk,
+  boardLegend,
   fmtLog,
   fmtSetupStatus,
   infoMapChunks,
@@ -80,7 +81,13 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
       return [t(s.locale, "lang.set", { locale: s.locale })];
     },
   },
-  board: { helpKey: "cmd.board.help", run: (s) => rich(boardChunk(s)) },
+  board: {
+    helpKey: "cmd.board.help",
+    run: (s) =>
+      s.mapName
+        ? rich(boardChunk(s), { lines: [boardLegend(s.locale)] })
+        : rich(boardChunk(s)),
+  },
   clear: { helpKey: "cmd.clear.help", run: () => ["\f"] },
   log: {
     helpKey: "cmd.log.help",

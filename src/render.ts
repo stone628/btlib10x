@@ -247,6 +247,9 @@ function drawCanvas(model: BoardModel): Canvas {
         // Only the centered glyph+elevation: the surrounding "\    /" edges
         // belong to this hex already, and restamping them would overwrite.
         stamp(x + 2, y + 3, fitCell(`${mark}${ELEVATION_DIGIT}`, 4), style);
+      } else {
+        // Clear hex: show just the elevation digit centered.
+        stamp(x + 4, y + 3, ELEVATION_DIGIT, style);
       }
       stampEdge(
         x,

@@ -21,6 +21,7 @@ export const en = {
 
   // board
   "board.noMap": "no battlefield yet - load one via 'map'; 'info map' lists the choices.",
+  "board.legend": "legend: {list}",
 
   // lang command
   "lang.current": "language: {locale}",
@@ -184,7 +185,7 @@ export const en = {
   "info.terrainLine": "terrain: {breakdown}",
   "info.terrainNone": "none",
   "info.legend":
-    "legend: w0 lightWoods  W0 heavyWoods  (blank = clear; trailing digit = elevation)",
+    "legend: w(lightWoods)  W(heavyWoods)",
   "sheet.head": "{model} {name} — {weightClass} {tonnage}t{gunnery}",
   "sheet.gunnerySuffix": " gunnery {gunnery}",  "sheet.at": "at {pos} facing {facing}",
   "sheet.modeSuffix": ", {mode} [mp {mp}]",
