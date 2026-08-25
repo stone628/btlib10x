@@ -114,6 +114,9 @@ export function infoMech(locale: LocaleId, model: string): string[] {
       techBase: d.techBase,
     }),
     t(locale, "info.movement", { walk: d.walking, run: d.running, jump: d.jumping }),
+    t(locale, "sheet.armorLine", {
+      list: LOCATIONS.map((loc) => `${SHORT_LOC[loc]} ${d.armor[loc]}`).join(" | "),
+    }),
     t(locale, "sheet.weaponsHeader", { n: d.weapons.length }),
     ...weaponSummary(d),
   ];
@@ -164,7 +167,10 @@ interface SheetView {
   readonly tonnage: number;
   readonly gunnery: number | null;
   readonly facingLine: string | null;
+  /** Current armor per location. */
   readonly armor: ArmorState;
+  /** Designed armor per location (from the MechDef). */
+  readonly originalArmor: Readonly<Record<Location, number>>;
   readonly mounts: readonly {
     readonly weapon: string;
     readonly location: Location;
@@ -189,6 +195,7 @@ function battleSheet(battle: BattleState, unit: UnitState, locale: LocaleId): Sh
         : "") +
       (unit.removed ? t(locale, "sheet.removedSuffix") : ""),
     armor: unit.armor,
+    originalArmor: def.armor,
     mounts: def.weapons.map((mount, i) => ({
       weapon: mount.weapon,
       location: mount.location,
@@ -209,6 +216,7 @@ function setupSheet(unit: SetupUnit, locale: LocaleId): SheetView {
     gunnery: unit.gunnery,
     facingLine: t(locale, "sheet.at", { pos: disp(unit.position), facing: unit.facing }),
     armor: { ...def.armor } as ArmorState,
+    originalArmor: def.armor,
     mounts: def.weapons.map((mount) => ({
       weapon: mount.weapon,
       location: mount.location,
@@ -248,7 +256,7 @@ export function sheetLines(view: SheetView, locale: LocaleId): string[] {
     t(locale, "sheet.armorLine", {
       list: LOCATIONS.map((loc) => {
         const v = view.armor[loc];
-        return `${SHORT_LOC[loc]} ${v}${v <= 0 ? "!" : ""}`;
+        return `${SHORT_LOC[loc]} ${v}/${view.originalArmor[loc]}${v <= 0 ? "!" : ""}`;
       }).join(" | "),
     }),
   );
