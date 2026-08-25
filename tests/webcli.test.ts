@@ -194,6 +194,7 @@ describe("info", () => {
     expect(list.some((l) => l.startsWith("HBK-4G"))).toBe(true);
     const detail = run(s, "info mech HBK-4G").join("\n");
     expect(detail).toContain("walk 4 / run 6 / jump 0");
+    expect(detail).toContain("armor: HD 9 | CT 26 | RT 20 | LT 20 | RA 16 | LA 16 | RL 20 | LL 20");
     expect(detail).toContain("Autocannon/20");
     expect(run(s, "info mech NOPE")[0]).toMatch(/^error: Unknown 'Mech model/);
   });
@@ -221,8 +222,8 @@ describe("sheet", () => {
     const lines = run(s, "sheet hunchy").join("\n");
     expect(lines).toContain("HBK-4G Hunchback");
     expect(lines).toContain("gunnery Regular(4)");
-    expect(lines).toContain("HD 9");
-    expect(lines).toContain("CT 26");
+    expect(lines).toContain("HD 9/9");
+    expect(lines).toContain("CT 26/26");
     expect(lines).toContain("#0 Autocannon/20 (RT)");
   });
 
@@ -231,9 +232,12 @@ describe("sheet", () => {
     run(s, "start");
     const before = run(s, "sheet hunchy").join("\n");
     expect(before).toContain("at 9,9 facing n");
+    expect(before).toContain("armor: HD 9/9 | CT 26/26");
     autoPlay(s);
     const after = run(s, `sheet ${s.actorId ?? "hunchy"}`).join("\n");
-    expect(after).toContain("armor:");
+    expect(after).toContain(
+      "armor: HD 4/9 | CT 18/26 | RT 7/20 | LT 20/20 | RA 16/16 | LA 16/16 | RL 20/20 | LL 5/20",
+    );
   });
 });
 
