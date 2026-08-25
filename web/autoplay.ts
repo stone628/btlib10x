@@ -46,7 +46,7 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
       if (actor.jammedWeapons.includes(w)) continue;
       if (!canFireFromLocation(actor.phaseStartArmor, mount.location)) continue;
       if (actor.ammoLeft[w] !== undefined && (actor.ammoLeft[w] ?? 0) < 1) continue;
-      return `fire ${w} ${enemy.id}`;
+      return `fire ${w + 1} ${enemy.id}`;
     }
     return "done";
   }

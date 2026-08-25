@@ -150,7 +150,7 @@ describe("help <command>", () => {
       run(battle, "mode walk");
       run(battle, "done");
     }
-    expect(run(battle, "help fire")[0]).toBe("usage: fire <weaponIndex> <targetId> [shots]");
+    expect(run(battle, "help fire")[0]).toBe("usage: fire <weapon> <targetId> [shots]");
     expect(run(battle, "help add")[0]).toMatch(/^error: unknown command 'add'/);
     expect(run(battle, "help fire").join("\n")).toContain("multi-shot");
   });
@@ -196,6 +196,7 @@ describe("info", () => {
     expect(detail).toContain("walk 4 / run 6 / jump 0");
     expect(detail).toContain("armor: HD 9 | CT 26 | RT 20 | LT 20 | RA 16 | LA 16 | RL 20 | LL 20");
     expect(detail).toContain("Autocannon/20");
+    expect(detail).toContain("#1 Autocannon/20 (RT)");
     expect(run(s, "info mech NOPE")[0]).toMatch(/^error: Unknown 'Mech model/);
   });
 
@@ -224,7 +225,7 @@ describe("sheet", () => {
     expect(lines).toContain("gunnery Regular(4)");
     expect(lines).toContain("HD 9/9");
     expect(lines).toContain("CT 26/26");
-    expect(lines).toContain("#0 Autocannon/20 (RT)");
+    expect(lines).toContain("#1 Autocannon/20 (RT)");
   });
 
   it("tracks armor damage during battle", () => {
@@ -315,11 +316,11 @@ describe("attack", () => {
 
     const actor = S.currentActor(s)!.id;
     const enemy = actor === "hunchy" ? "cicada" : "hunchy";
-    expect(run(s, "weapons").join("\n")).toMatch(/#0 .+S\d+\/M\d+\/L\d+/);
+    expect(run(s, "weapons").join("\n")).toMatch(/#1 .+S\d+\/M\d+\/L\d+/);
 
     const ammoBefore = actor === "hunchy" ? (s.battle!.units.hunchy!.ammoLeft[0] ?? 0) : null;
-    expect(run(s, `fire 0 ${enemy}`).join("\n")).toContain("queued #0");
-    expect(run(s, `fire 1 ${actor}`)[0]).toMatch(/^error: Target must belong to another team/);
+    expect(run(s, `fire 1 ${enemy}`).join("\n")).toContain("queued #1");
+    expect(run(s, `fire 2 ${actor}`)[0]).toMatch(/^error: Target must belong to another team/);
     expect(run(s, "status").join("\n")).toContain(`-> ${enemy}`);
     const out = run(s, "done").join("\n");
     expect(out).toMatch(new RegExp(`${actor} fires at ${enemy}`));
@@ -353,7 +354,7 @@ describe("full game", () => {
           if (unit.jammedWeapons.includes(w)) return;
           if (!canFireFromLocation(unit.phaseStartArmor, mount.location)) return;
           if (unit.ammoLeft[w] !== undefined && (unit.ammoLeft[w] ?? 0) < 1) return;
-          run(s, `fire ${w} ${enemy}`);
+          run(s, `fire ${w + 1} ${enemy}`);
         });
         out = run(s, "done");
       }
@@ -365,7 +366,7 @@ describe("full game", () => {
     expect(s.app).toBe("over");
     expect(sawBanner).toBe(true);
     expect(S.promptBody(s)).toBe("over");
-    expect(run(s, "fire 0 x")[0]).toMatch(/error: unknown command 'fire'/);
+    expect(run(s, "fire 1 x")[0]).toMatch(/error: unknown command 'fire'/);
 
     run(s, "rematch");
     expect(s.app).toBe("battle");
