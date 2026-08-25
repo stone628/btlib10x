@@ -12,6 +12,8 @@ import {
   infoMapList,
   infoMech,
   infoMechList,
+  infoWeapon,
+  infoWeaponList,
   moveStatusLines,
   rich,
   sheetForUnit,
@@ -84,9 +86,7 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
   board: {
     helpKey: "cmd.board.help",
     run: (s) =>
-      s.mapName
-        ? rich(boardChunk(s), { lines: [boardLegend(s.locale)] })
-        : rich(boardChunk(s)),
+      s.mapName ? rich({ lines: [boardLegend(s.locale)] }, boardChunk(s)) : rich(boardChunk(s)),
   },
   clear: { helpKey: "cmd.clear.help", run: () => ["\f"] },
   log: {
@@ -100,20 +100,27 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
   },
   info: {
     helpKey: "cmd.info.help",
-    usage: "info mech [model] | info map [name]",
+    usage: "info mech [model] | info map [name] | info weapon [name]",
     argsDoc: [
       ["mech [model]", "cmd.info.arg.mech"],
       ["map [name]", "cmd.info.arg.map"],
+      ["weapon [name]", "cmd.info.arg.weapon"],
     ],
     run: (s, a) => {
-      expectArgs(L(s), a, 1, "info mech [model] | info map [name]");
+      expectArgs(L(s), a, 1, "info mech [model] | info map [name] | info weapon [name]");
       const what = a[0]!.toLowerCase();
       if (what === "mech") return a[1] !== undefined ? infoMech(L(s), a[1]) : infoMechList(L(s));
       if (what === "map") {
         return a[1] !== undefined ? { rich: infoMapChunks(L(s), a[1]) } : infoMapList();
       }
+      if (what === "weapon") {
+        const name = a.slice(1).join(" ");
+        return name ? infoWeapon(L(s), name) : infoWeaponList(L(s));
+      }
       throw new Error(
-        t(L(s), "err.expectedArgs", { usage: "info mech [model] | info map [name]" }),
+        t(L(s), "err.expectedArgs", {
+          usage: "info mech [model] | info map [name] | info weapon [name]",
+        }),
       );
     },
   },

@@ -2,7 +2,7 @@ import type { Location } from "../src/core/types.js";
 import { LOCATIONS } from "../src/core/types.js";
 import { getMapDef, MAP_DEFS, MECH_DEFS, toEngineTerrain } from "../src/data/index.js";
 import type { MechDef } from "../src/data/schema.js";
-import { getWeapon } from "../src/data/weapons.js";
+import { getWeapon, WEAPONS } from "../src/data/weapons.js";
 import type { Span } from "../src/render.js";
 import { battleModel, boardToSpans, mapModel, TERRAIN_GLYPHS } from "../src/render.js";
 import type { AttackResolution } from "../src/rules/attack.js";
@@ -134,6 +134,53 @@ export function infoMapList(): string[] {
   return Object.entries(MAP_DEFS).map(
     ([name, m]) => `${name}: ${m.width}x${m.height}, ${m.terrain.length} terrain hexes`,
   );
+}
+
+export function infoWeaponList(locale: LocaleId): string[] {
+  const grouped = new Map<string, ReturnType<typeof Object.values>[0][]>();
+  for (const w of Object.values(WEAPONS)) {
+    const cat = weaponCategory(w.name);
+    const list = grouped.get(cat) ?? [];
+    list.push(w);
+    grouped.set(cat, list);
+  }
+  const lines: string[] = [];
+  for (const [cat, weapons] of grouped) {
+    lines.push(t(locale, "info.weaponCategory", { category: cat }));
+    for (const w of weapons) {
+      lines.push(
+        `  ${w.name.padEnd(20)} short ${String(w.short).padStart(2)}` +
+          ` / medium ${String(w.medium).padStart(2)}` +
+          ` / long ${String(w.long).padStart(2)}` +
+          `   ${weaponDamageSummary(w)}`,
+      );
+    }
+  }
+  return lines;
+}
+
+export function infoWeapon(locale: LocaleId, name: string): string[] {
+  const w = (() => {
+    try {
+      return getWeapon(name);
+    } catch {
+      throw new Error(
+        t(locale, "err.unknownWeapon", { name, list: Object.keys(WEAPONS).join(", ") }),
+      );
+    }
+  })();
+  const cat = weaponCategory(w.name);
+  const lines = [
+    t(locale, "info.weaponHead", { name: w.name, category: cat }),
+    t(locale, "info.weaponRange", { short: w.short, medium: w.medium, long: w.long }),
+    t(locale, "info.weaponDamage", { damage: weaponDamageDetail(w) }),
+  ];
+  if (w.missiles !== undefined) lines.push(t(locale, "info.weaponMissiles", { count: w.missiles }));
+  if (w.pulse) lines.push(t(locale, "info.weaponPulse"));
+  if (w.rapidFireShots !== undefined)
+    lines.push(t(locale, "info.weaponRapidFire", { shots: w.rapidFireShots }));
+  if (w.antiInfantry) lines.push(t(locale, "info.weaponAntiInfantry"));
+  return lines;
 }
 
 /** `info map <name>` output: header/legend lines followed by the styled grid. */
@@ -277,7 +324,7 @@ export function sheetLines(view: SheetView, locale: LocaleId): string[] {
       m.destroyed ? t(locale, "sheet.destroyed") : null,
     ].filter((x) => x !== null);
     lines.push(
-        `  #${i + 1} ${m.weapon} (${SHORT_LOC[m.location]}) S${w.short}/M${w.medium}/L${w.long}${flags.length ? ` ${flags.join(" ")}` : ""}`,
+      `  #${i + 1} ${m.weapon} (${SHORT_LOC[m.location]}) S${w.short}/M${w.medium}/L${w.long}${flags.length ? ` ${flags.join(" ")}` : ""}`,
     );
   }
   return lines;
@@ -470,7 +517,6 @@ export function resolutionLines(locale: LocaleId, r: AttackResolution): string[]
       : r.hit
         ? t(locale, "res.hit")
         : t(locale, "res.miss");
-  const b = r.breakdown;
   const lines = [
     t(locale, "res.line", {
       weapon: r.weapon,
@@ -525,6 +571,39 @@ function transferDetail(locale: LocaleId, r: AttackResolution): string | null {
 
 function shortLoc(loc: Location): string {
   return SHORT_LOC[loc];
+}
+
+function weaponDamageSummary(w: {
+  damage?: number;
+  missileDamage?: 1 | 2;
+  missiles?: number;
+  variableDamage?: readonly [number, number, number];
+}): string {
+  if (w.variableDamage)
+    return `${w.variableDamage[0]} / ${w.variableDamage[1]} / ${w.variableDamage[2]}`;
+  if (w.missileDamage !== undefined && w.missiles !== undefined)
+    return `${w.missileDamage} per missile × ${w.missiles}`;
+  return String(w.damage ?? 0);
+}
+
+function weaponDamageDetail(w: {
+  damage?: number;
+  missileDamage?: 1 | 2;
+  missiles?: number;
+  variableDamage?: readonly [number, number, number];
+}): string {
+  if (w.variableDamage)
+    return `${w.variableDamage[0]} (short) / ${w.variableDamage[1]} (medium) / ${w.variableDamage[2]} (long)`;
+  if (w.missileDamage !== undefined && w.missiles !== undefined)
+    return `${w.missileDamage} per missile`;
+  return `${w.damage ?? 0} (direct fire)`;
+}
+
+function weaponCategory(name: string): string {
+  if (name.includes("LRM") || name.includes("SRM")) return "Missile";
+  if (name.includes("Autocannon") || name.includes("AC/") || name.includes("Machine Gun"))
+    return "Ballistic";
+  return "Energy";
 }
 
 function weaponSummary(def: MechDef): string[] {

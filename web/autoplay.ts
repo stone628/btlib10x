@@ -9,8 +9,8 @@ export const AUTOPLAY_INTERVAL_MS = 2000;
  * tests/webcli.test.ts): adjacent foes facing each other along the n/s axis.
  */
 const SCRIPT_SETUP: ReadonlyArray<{ id: string; command: string }> = [
-  { id: "hunchy", command: "add hunchy HBK-4G 0 4 11 9 n" },
-  { id: "cicada", command: "add cicada CDA-3MA 1 4 11 8 s" },
+  { id: "hunchy", command: "add hunchy HBK-4G 0 4 4 3 ne" },
+  { id: "cicada", command: "add cicada CDA-3MA 1 4 5 3 sw" },
 ];
 
 /**
@@ -21,7 +21,7 @@ const SCRIPT_SETUP: ReadonlyArray<{ id: string; command: string }> = [
  */
 export function nextAutoPlayCommand(s: S.Session): string | null {
   if (s.app === "setup") {
-    if (s.mapName === null) return "map quickstart";
+    if (s.mapName === null) return "map test";
     const missing = SCRIPT_SETUP.find((u) => !s.roster.some((r) => r.id === u.id));
     if (missing !== undefined) return missing.command;
     return "start";
