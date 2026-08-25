@@ -13,10 +13,12 @@ TypeScript library encapsulating Classic BattleTech board game logic.
 - `npm test` — run test suite once (vitest)
 - `npm run test:watch` — watch mode
 - `npm run typecheck` — `tsc --noEmit`
+- `npm run lint` — Biome check (lint + format + import order) over `src/`, `tests/`, `scripts/`, `web/` (generated `web/app.js` excluded)
+- `npm run lint:fix` — same, applying safe+unsafe fixes (formatting, unused imports/params, literal keys)
 - `npm run build` — emit ESM + declarations to `dist/`
 - `npm run build:web` — bundle the `web/` terminal app with esbuild → `web/app.js`
 
-Run typecheck + tests together before considering work done: `npm run typecheck && npm test`.
+Run lint + typecheck + tests together before considering work done: `npm run lint && npm run typecheck && npm test`.
 
 ## Layout
 
@@ -29,7 +31,7 @@ Run typecheck + tests together before considering work done: `npm run typecheck 
 ## Conventions & constraints
 
 - Browser-first: **no Node-only APIs in `src/`** (dev scripts exempt).
-- **Zero runtime dependencies**; dev deps are typescript + vitest + esbuild (esbuild is dev-only, used to bundle the `web/` app).
+- **Zero runtime dependencies**; dev deps are typescript + vitest + esbuild + biome (esbuild bundles the `web/` app, Biome lints/formats).
 - Strictest sensible tsc settings (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`).
 - All randomness flows through an injected `Rng`; rules functions are deterministic given inputs — required for reproducible battles and future sim work.
 - Game state is plain serializable data; mutations happen through `src/rules/game.ts` APIs only.

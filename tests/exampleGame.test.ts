@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { BattleState } from "../src/rules/game.js";
 import {
   advancePhase,
   checkVictory,
@@ -11,7 +12,6 @@ import {
   resolveDeclaredAttacks,
   rollInitiativePhase,
 } from "../src/rules/game.js";
-import type { BattleState } from "../src/rules/game.js";
 import { scriptedRng } from "./helpers.js";
 
 /**
@@ -26,8 +26,22 @@ import { scriptedRng } from "./helpers.js";
 function setup(): BattleState {
   return createBattle(
     [
-      { id: "wvr", model: "WVR-6R", team: 0, gunnery: 4, position: { col: 1, row: 2 }, facing: "se" },
-      { id: "grf", model: "GRF-1N", team: 1, gunnery: 3, position: { col: 9, row: 6 }, facing: "nw" },
+      {
+        id: "wvr",
+        model: "WVR-6R",
+        team: 0,
+        gunnery: 4,
+        position: { col: 1, row: 2 },
+        facing: "se",
+      },
+      {
+        id: "grf",
+        model: "GRF-1N",
+        team: 1,
+        gunnery: 3,
+        position: { col: 9, row: 6 },
+        facing: "nw",
+      },
     ],
     { terrain: [{ col: 5, row: 5, type: "lightWoods" }] },
   );
@@ -64,9 +78,7 @@ describe("example battle: Wolverine vs Griffin", () => {
     state = declareAttacks(state, "wvr", [{ weaponIndex: 0, targetId: "grf" }]);
     // To-hit 11 >= TN 11; location roll 8 -> left torso; ML damage 5. LT 18 -> 13.
     state = resolveDeclaredAttacks(state, "wvr", scriptedRng(6, 5, 3, 5));
-    expect(getUnit(state, "grf").armor["leftTorso"]).toBe(
-      state.defs["GRF-1N"]!.armor["leftTorso"]! - 5,
-    );
+    expect(getUnit(state, "grf").armor.leftTorso).toBe(state.defs["GRF-1N"]!.armor.leftTorso! - 5);
 
     // Griffin answers with its PPC: TN 9, rolls 4 -> miss, no damage.
     state = declareAttacks(state, "grf", [{ weaponIndex: 0, targetId: "wvr" }]);
@@ -76,7 +88,7 @@ describe("example battle: Wolverine vs Griffin", () => {
 
   it("fights through turn 6 until the Griffin loses its center torso", () => {
     let state = setup();
-    const grfCt = (): number => getUnit(state, "grf").armor["centerTorso"] ?? -1;
+    const grfCt = (): number => getUnit(state, "grf").armor.centerTorso ?? -1;
 
     // ---- Turn 1 ----
     state = rollInitiativePhase(state, scriptedRng(3, 4, 2, 3));
@@ -98,7 +110,7 @@ describe("example battle: Wolverine vs Griffin", () => {
     // ---- Turns 2..6: both stand still, Wolverine plinks the CT for 5 each.
     // Griffin starts at CT 24 -> five hits (19/14/9/4/dead).
     const ctStart = grfCt();
-    expect(ctStart).toBe(state.defs["GRF-1N"]!.armor["centerTorso"]);
+    expect(ctStart).toBe(state.defs["GRF-1N"]!.armor.centerTorso);
     for (let t = 2; t <= 6; t++) {
       state = advancePhase(state); // weaponAttack -> end
       state = advancePhase(state); // end -> initiative

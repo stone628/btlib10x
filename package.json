@@ -21,7 +21,9 @@
     "build:web": "node scripts/build-web.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write ."
   },
   "keywords": [
     "battletech",
@@ -34,6 +36,7 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.10",
     "esbuild": "^0.28.2",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"

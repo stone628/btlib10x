@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import * as S from "../web/session.js";
-import { execute } from "../web/cli.js";
 import { getMapDef } from "../src/data/index.js";
-import { canFireFromLocation } from "../src/rules/damage.js";
 import { GRID_GLYPHS } from "../src/render.js";
+import { canFireFromLocation } from "../src/rules/damage.js";
+import { execute } from "../web/cli.js";
+import * as S from "../web/session.js";
 
 function run(s: S.Session, cmd: string): string[] {
   return execute(s, cmd);
@@ -36,7 +36,9 @@ function autoPlay(s: S.Session): void {
   for (let i = 0; i < 500 && s.app === "battle"; i++) {
     const st = s.battle!;
     const actorId = S.currentActor(s)!.id;
-    const ids = Object.values(st.units).filter((u) => !u.removed).map((u) => u.id);
+    const ids = Object.values(st.units)
+      .filter((u) => !u.removed)
+      .map((u) => u.id);
     const enemy = ids.find((id) => id !== actorId)!;
     if (st.phase === "movement") {
       S.declareMode(s, "walk");
@@ -309,7 +311,7 @@ describe("attack", () => {
     const enemy = actor === "hunchy" ? "cicada" : "hunchy";
     expect(run(s, "weapons").join("\n")).toMatch(/#0 .+S\d+\/M\d+\/L\d+/);
 
-    const ammoBefore = actor === "hunchy" ? (s.battle!.units["hunchy"]!.ammoLeft[0] ?? 0) : null;
+    const ammoBefore = actor === "hunchy" ? (s.battle!.units.hunchy!.ammoLeft[0] ?? 0) : null;
     expect(run(s, `fire 0 ${enemy}`).join("\n")).toContain("queued #0");
     expect(run(s, `fire 1 ${actor}`)[0]).toMatch(/^error: Target must belong to another team/);
     expect(run(s, "status").join("\n")).toContain(`-> ${enemy}`);
@@ -317,7 +319,7 @@ describe("attack", () => {
     expect(out).toMatch(new RegExp(`${actor} fires at ${enemy}`));
     expect(out).toMatch(/-> (HIT|MISS|auto-hit)/);
     if (ammoBefore !== null) {
-      expect(s.battle!.units["hunchy"]!.ammoLeft[0]).toBe(ammoBefore - 1);
+      expect(s.battle!.units.hunchy!.ammoLeft[0]).toBe(ammoBefore - 1);
     }
   });
 });
@@ -330,7 +332,9 @@ describe("full game", () => {
     for (let i = 0; i < 500 && s.app === "battle"; i++) {
       const st = s.battle!;
       const actorId = S.currentActor(s)!.id;
-      const ids = Object.values(st.units).filter((u) => !u.removed).map((u) => u.id);
+      const ids = Object.values(st.units)
+        .filter((u) => !u.removed)
+        .map((u) => u.id);
       const enemy = ids.find((id) => id !== actorId)!;
       let out: string[];
       if (st.phase === "movement") {

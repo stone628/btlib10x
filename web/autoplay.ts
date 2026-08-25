@@ -1,5 +1,5 @@
-import * as S from "./session.js";
 import { canFireFromLocation } from "../src/rules/damage.js";
+import type * as S from "./session.js";
 
 /** Delay between generated commands, in milliseconds. */
 export const AUTOPLAY_INTERVAL_MS = 2000;

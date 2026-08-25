@@ -1,18 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { execute } from "../web/cli.js";
-import { newSession } from "../web/session.js";
-import { LOCALES, t } from "../web/i18n/index.js";
-import type { LocaleId, MessageKey } from "../web/i18n/index.js";
-import { en } from "../web/i18n/en.js";
-import * as S from "../web/session.js";
 import { canFireFromLocation } from "../src/rules/damage.js";
+import { execute } from "../web/cli.js";
+import { en } from "../web/i18n/en.js";
+import type { LocaleId, MessageKey } from "../web/i18n/index.js";
+import { LOCALES, t } from "../web/i18n/index.js";
+import * as S from "../web/session.js";
+import { newSession } from "../web/session.js";
 
 /** Drive a started battle until it is over using minimal legal actions. */
 function autoPlay(s: ReturnType<typeof newSession>): void {
   for (let i = 0; i < 500 && s.app === "battle"; i++) {
     const st = s.battle!;
     const actorId = S.currentActor(s)!.id;
-    const ids = Object.values(st.units).filter((u) => !u.removed).map((u) => u.id);
+    const ids = Object.values(st.units)
+      .filter((u) => !u.removed)
+      .map((u) => u.id);
     const enemy = ids.find((id) => id !== actorId)!;
     if (st.phase === "movement") {
       try {
@@ -77,7 +79,7 @@ describe("lang command", () => {
     expect(execute(s, "lang kr")).toEqual(["언어가 kr(으)로 설정되었습니다"]);
     expect(s.locale).toBe("kr");
     expect(execute(s, "status")[0]).toBe("맵: (없음)");
-    expect(execute(s, 'help')[0]).toBe(t("kr", "hint.setup").split("\n")[0]);
+    expect(execute(s, "help")[0]).toBe(t("kr", "hint.setup").split("\n")[0]);
   });
 
   it("rejects unknown locale codes with a localized error", () => {

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { hitLocation } from "../src/rules/hitlocation.js";
 import {
   clusterHitsForMissiles,
   clusterHitsForShots,
   groupMissiles,
 } from "../src/rules/cluster.js";
+import { hitLocation } from "../src/rules/hitlocation.js";
 
 describe("hit location table", () => {
   it("maps every 2D6 result per the record sheets", () => {

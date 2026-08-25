@@ -1,24 +1,24 @@
-import type { AttackDecl } from "../src/rules/game.js";
 import { FACINGS } from "../src/core/types.js";
 import { MAP_DEFS } from "../src/data/index.js";
-import * as S from "./session.js";
-import { isLocale, localeList, t } from "./i18n/index.js";
-import type { LocaleId, MessageKey } from "./i18n/index.js";
+import type { AttackDecl } from "../src/rules/game.js";
 import type { Chunk, RichOutput } from "./format.js";
 import {
   attackStatusLines,
   boardChunk,
   fmtLog,
-  rich,
   fmtSetupStatus,
   infoMapChunks,
   infoMapList,
   infoMech,
   infoMechList,
   moveStatusLines,
+  rich,
   sheetForUnit,
   weaponsLines,
 } from "./format.js";
+import type { LocaleId, MessageKey } from "./i18n/index.js";
+import { isLocale, localeList, t } from "./i18n/index.js";
+import * as S from "./session.js";
 
 export interface CmdDef {
   /** Catalog key of the one-line description. */
@@ -69,9 +69,13 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
     argsDoc: [["locale", "cmd.lang.arg.locale"]],
     run: (s, a) => {
       if (a[0] === undefined) {
-        return [t(L(s), "lang.current", { locale: s.locale }), t(L(s), "lang.available", { list: localeList() })];
+        return [
+          t(L(s), "lang.current", { locale: s.locale }),
+          t(L(s), "lang.available", { list: localeList() }),
+        ];
       }
-      if (!isLocale(a[0])) throw new Error(t(L(s), "err.unknownLocale", { name: a[0], list: localeList() }));
+      if (!isLocale(a[0]))
+        throw new Error(t(L(s), "err.unknownLocale", { name: a[0], list: localeList() }));
       s.locale = a[0];
       return [t(s.locale, "lang.set", { locale: s.locale })];
     },
@@ -101,7 +105,9 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
       if (what === "map") {
         return a[1] !== undefined ? { rich: infoMapChunks(L(s), a[1]) } : infoMapList();
       }
-      throw new Error(t(L(s), "err.expectedArgs", { usage: "info mech [model] | info map [name]" }));
+      throw new Error(
+        t(L(s), "err.expectedArgs", { usage: "info mech [model] | info map [name]" }),
+      );
     },
   },
   sheet: {
@@ -143,7 +149,14 @@ const SETUP_CMDS: Record<string, CmdDef> = {
       expectArgs(L(s), a, 1, "map <name>");
       S.setMap(s, a[0]!);
       const map = MAP_DEFS[a[0]!]!;
-      return [t(L(s), "ok.mapLoaded", { name: a[0]!, w: map.width, h: map.height, n: s.terrainDefs.length })];
+      return [
+        t(L(s), "ok.mapLoaded", {
+          name: a[0]!,
+          w: map.width,
+          h: map.height,
+          n: s.terrainDefs.length,
+        }),
+      ];
     },
   },
   add: {
@@ -196,7 +209,10 @@ const SETUP_CMDS: Record<string, CmdDef> = {
 
 function initiativeLine(s: S.Session): string[] {
   const tail = (s.battle?.events ?? []).slice(-2);
-  return fmtLog(s.locale, tail.filter((e) => e.kind === "initiative" || e.kind === "phase"));
+  return fmtLog(
+    s.locale,
+    tail.filter((e) => e.kind === "initiative" || e.kind === "phase"),
+  );
 }
 
 // ---------------------------------------------------------- turn:move ----
@@ -237,7 +253,13 @@ const MOVE_CMDS: Record<string, CmdDef> = {
   },
   sheet: { helpKey: "cmd.sheetActing.help", run: (s) => sheetForUnit(s, s.actorId ?? "") },
   status: { helpKey: "cmd.statusMove.help", run: (s) => moveStatusLines(s) },
-  cancel: { helpKey: "cmd.cancelMove.help", run: (s) => { S.cancelMove(s); return [t(s.locale, "ok.cancelled")]; } },
+  cancel: {
+    helpKey: "cmd.cancelMove.help",
+    run: (s) => {
+      S.cancelMove(s);
+      return [t(s.locale, "ok.cancelled")];
+    },
+  },
   done: {
     helpKey: "cmd.doneMove.help",
     run: (s) => fmtLog(s.locale, S.commitMove(s).newEvents),
@@ -265,7 +287,11 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
       expectArgs(L(s), a, 2, "fire <weaponIndex> <targetId> [shots]");
       const decl: AttackDecl =
         a[2] !== undefined
-          ? { weaponIndex: int(L(s), a[0]!, "weaponIndex"), targetId: a[1]!, shots: int(L(s), a[2], "shots") }
+          ? {
+              weaponIndex: int(L(s), a[0]!, "weaponIndex"),
+              targetId: a[1]!,
+              shots: int(L(s), a[2], "shots"),
+            }
           : { weaponIndex: int(L(s), a[0]!, "weaponIndex"), targetId: a[1]! };
       S.queueFire(s, decl);
       return [
@@ -279,7 +305,13 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
   },
   sheet: { helpKey: "cmd.sheetActing.help", run: (s) => sheetForUnit(s, s.actorId ?? "") },
   status: { helpKey: "cmd.statusAttack.help", run: (s) => attackStatusLines(s) },
-  cancel: { helpKey: "cmd.cancelFire.help", run: (s) => { S.cancelFire(s); return [t(s.locale, "ok.cancelled")]; } },
+  cancel: {
+    helpKey: "cmd.cancelFire.help",
+    run: (s) => {
+      S.cancelFire(s);
+      return [t(s.locale, "ok.cancelled")];
+    },
+  },
   done: {
     helpKey: "cmd.doneFire.help",
     run: (s) => fmtLog(s.locale, S.commitFire(s).newEvents),
@@ -306,7 +338,9 @@ function availableCmds(session: S.Session): Record<string, CmdDef> {
       return { ...GLOBAL_CMDS, ...SETUP_CMDS };
     case "battle": {
       const phase = session.battle?.phase;
-      return phase === "weaponAttack" ? { ...GLOBAL_CMDS, ...ATTACK_CMDS } : { ...GLOBAL_CMDS, ...MOVE_CMDS };
+      return phase === "weaponAttack"
+        ? { ...GLOBAL_CMDS, ...ATTACK_CMDS }
+        : { ...GLOBAL_CMDS, ...MOVE_CMDS };
     }
     case "over":
       return { ...GLOBAL_CMDS, ...OVER_CMDS };
@@ -318,7 +352,9 @@ function commandHelp(session: S.Session, name: string): string[] {
   const locale = session.locale;
   const def = availableCmds(session)[name.toLowerCase()];
   if (!def) throw new Error(t(locale, "err.unknownCommand", { name }));
-  const lines = [def.usage !== undefined ? `${t(locale, "help.usagePrefix")}${def.usage}` : name.toLowerCase()];
+  const lines = [
+    def.usage !== undefined ? `${t(locale, "help.usagePrefix")}${def.usage}` : name.toLowerCase(),
+  ];
   lines.push(t(locale, def.helpKey));
   if (def.argsDoc !== undefined && def.argsDoc.length > 0) {
     lines.push(t(locale, "help.argumentsHeader"));
@@ -378,7 +414,9 @@ function victoryBanner(s: S.Session): string[] {
 }
 
 function normalize(out: string[] | RichOutput): Chunk[] {
-  return typeof out === "object" && out !== null && "rich" in out ? [...out.rich] : [{ lines: out }];
+  return typeof out === "object" && out !== null && "rich" in out
+    ? [...out.rich]
+    : [{ lines: out }];
 }
 
 /**
@@ -389,7 +427,10 @@ export function runChunks(session: S.Session, raw: string): Chunk[] {
   const wasOver = session.app === "over";
   let chunks: Chunk[];
   try {
-    const tokens = raw.trim().split(/\s+/).filter((x) => x.length > 0);
+    const tokens = raw
+      .trim()
+      .split(/\s+/)
+      .filter((x) => x.length > 0);
     if (tokens.length === 0) return [];
     const def = availableCmds(session)[tokens[0]!.toLowerCase()];
     if (!def) throw new Error(t(session.locale, "err.unknownCommand", { name: tokens[0]! }));

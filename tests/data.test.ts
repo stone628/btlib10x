@@ -27,15 +27,15 @@ describe("'Mech definitions", () => {
     expect(hbk.walking).toBe(4);
     expect(hbk.running).toBe(6);
     expect(hbk.jumping).toBe(0);
-    expect(hbk.armor["centerTorso"]).toBe(26);
-    expect(hbk.armor["head"]).toBe(9);
+    expect(hbk.armor.centerTorso).toBe(26);
+    expect(hbk.armor.head).toBe(9);
     expect(hbk.weapons.map((w) => w.weapon)).toContain("Autocannon/20");
   });
 
   it("spot-checks remaining sheets", () => {
-    expect(MECH_DEFS["ENF-4R"]!.armor["centerTorso"]).toBe(23);
+    expect(MECH_DEFS["ENF-4R"]!.armor.centerTorso).toBe(23);
     expect(MECH_DEFS["GRF-1N"]!.jumping).toBe(5);
-    expect(MECH_DEFS["GRF-1N"]!.armor["centerTorso"]).toBe(24);
+    expect(MECH_DEFS["GRF-1N"]!.armor.centerTorso).toBe(24);
     expect(MECH_DEFS["CDA-3MA"]!.walking).toBe(8);
     expect(MECH_DEFS["HER-5SA"]!.running).toBe(9);
     const wvr = MECH_DEFS["WVR-6R"]!;
@@ -44,12 +44,10 @@ describe("'Mech definitions", () => {
 
   it("rejects invalid definitions", () => {
     const base = MECH_DEFS["HBK-4G"]!;
-    expect(() =>
-      validateMechDef({ ...base, running: 7 }),
-    ).toThrow(/running/);
-    expect(() =>
-      validateMechDef({ ...base, armor: { ...base.armor, head: -1 } }),
-    ).toThrow(/armor\.head/);
+    expect(() => validateMechDef({ ...base, running: 7 })).toThrow(/running/);
+    expect(() => validateMechDef({ ...base, armor: { ...base.armor, head: -1 } })).toThrow(
+      /armor\.head/,
+    );
     expect(() =>
       validateMechDef({
         ...base,

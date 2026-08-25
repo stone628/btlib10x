@@ -130,7 +130,8 @@ export const en = {
   "err.alreadyThere": "Already at that hex",
   "err.standStillNoEnter": "Standing still forbids entering hexes",
   "err.jumpNotAdjacent": "Jump steps must enter an adjacent hex",
-  "err.groundStraightOnly": "Ground moves must go straight ahead or straight back relative to facing",
+  "err.groundStraightOnly":
+    "Ground moves must go straight ahead or straight back relative to facing",
   "err.standStillNoFace": "Standing still forbids facing changes",
   "err.jumpFreeFacing": "Jumping 'Mechs choose facing freely on landing; no turn steps",
   "err.badFacings": "Facing change must be 1..5 hexsides in either direction",
@@ -141,7 +142,8 @@ export const en = {
   "err.unknownUnitId": "Unknown unit id: {id}",
   "err.selfTarget": "Target must belong to another team",
   "err.targetRemoved": "Target {id} is removed from play",
-  "err.oneTarget": "A unit may only declare attacks against one target per turn (already targeting {target})",
+  "err.oneTarget":
+    "A unit may only declare attacks against one target per turn (already targeting {target})",
   "err.rematchOnlyOver": "Only available when the battle is over",
   "err.seedInteger": "seed must be an integer",
   "err.phaseDriver": "phase driver failed to settle",
@@ -174,7 +176,8 @@ export const en = {
   "info.mapHead": "{name}: {w}x{h}",
   "info.terrainLine": "terrain: {breakdown}",
   "info.terrainNone": "none",
-  "info.legend": "legend: w0 lightWoods  W0 heavyWoods  (blank = clear; trailing digit = elevation)",
+  "info.legend":
+    "legend: w0 lightWoods  W0 heavyWoods  (blank = clear; trailing digit = elevation)",
   "sheet.head": "{model} {name} — {weightClass} {tonnage}t{gunnery}",
   "sheet.gunnerySuffix": " gunnery {gunnery}",
   "sheet.at": "at {pos} facing {facing}",

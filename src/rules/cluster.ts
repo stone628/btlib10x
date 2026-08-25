@@ -1,6 +1,3 @@
-import { roll2D6 } from "../core/dice.js";
-import type { Rng } from "../core/types.js";
-
 /**
  * Beginner Box / CBT quick-start Cluster Hits Table. Columns are missile
  * counts (SRM-2, SRM-5, SRM-6, LRM-10/15, LRM-20); rows are the 2D6 roll.

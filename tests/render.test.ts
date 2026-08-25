@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { createBattle } from "../src/rules/game.js";
 import { battleModel, boardToText, GRID_GLYPHS, renderMap } from "../src/render.js";
 import type { BattleState } from "../src/rules/game.js";
+import { createBattle } from "../src/rules/game.js";
 
 /** Flat battle text via the structured model (historic renderer shape). */
 const renderBattle = (
@@ -15,9 +15,11 @@ declare const console: { log: (message: string) => void };
 describe("console renderer", () => {
   const farAway = { col: 9, row: 9 };
 
-  function battleWith(
-    primary: { id: string; model: string; position: { col: number; row: number } },
-  ): ReturnType<typeof createBattle> {
+  function battleWith(primary: {
+    id: string;
+    model: string;
+    position: { col: number; row: number };
+  }): ReturnType<typeof createBattle> {
     return createBattle([
       { ...primary, team: 0, gunnery: 4, facing: "n" },
       { id: "far", model: "GRF-1N", team: 1, gunnery: 4, position: farAway, facing: "s" },
@@ -32,26 +34,56 @@ describe("console renderer", () => {
   });
 
   it("staggers odd columns down half a hex", () => {
-    const state = createBattle([
-      { id: "wvr", model: "WVR-6R", team: 0, gunnery: 4, position: { col: 1, row: 1 }, facing: "n" },
-      { id: "grf", model: "GRF-1N", team: 1, gunnery: 3, position: { col: 2, row: 1 }, facing: "s" },
-    ], { width: 3, height: 2 });
+    const state = createBattle(
+      [
+        {
+          id: "wvr",
+          model: "WVR-6R",
+          team: 0,
+          gunnery: 4,
+          position: { col: 1, row: 1 },
+          facing: "n",
+        },
+        {
+          id: "grf",
+          model: "GRF-1N",
+          team: 1,
+          gunnery: 3,
+          position: { col: 2, row: 1 },
+          facing: "s",
+        },
+      ],
+      { width: 3, height: 2 },
+    );
     const lines = renderBattle(state).split("\n");
     // Column 1 (odd) starts two lines lower than column 2 (even): its
     // coordinate label lands exactly two rows beneath the neighbor's.
-    const wvrAt = lines.findIndex((l) => l.includes(`${GRID_GLYPHS.edgeNW}0202${GRID_GLYPHS.edgeNE}`));
-    const grfAt = lines.findIndex((l) => l.includes(`${GRID_GLYPHS.edgeNW}0302${GRID_GLYPHS.edgeNE}`));
+    const wvrAt = lines.findIndex((l) =>
+      l.includes(`${GRID_GLYPHS.edgeNW}0202${GRID_GLYPHS.edgeNE}`),
+    );
+    const grfAt = lines.findIndex((l) =>
+      l.includes(`${GRID_GLYPHS.edgeNW}0302${GRID_GLYPHS.edgeNE}`),
+    );
     expect(wvrAt).toBeGreaterThan(-1);
     expect(grfAt).toBe(wvrAt - 2);
     // Column 1's shared edge sits flush against column 2's terrain row on
     // the same canvas line.
     expect(lines[grfAt]!.slice(13, 19)).toBe(`${GRID_GLYPHS.edgeNW}0302${GRID_GLYPHS.edgeNE}`);
-    expect(lines[wvrAt - 1]!.slice(8, 12)).toBe(GRID_GLYPHS.edgeShared + "\u2191" + GRID_GLYPHS.edgeShared.repeat(2));
+    expect(lines[wvrAt - 1]!.slice(8, 12)).toBe(
+      `${GRID_GLYPHS.edgeShared}\u2191${GRID_GLYPHS.edgeShared.repeat(2)}`,
+    );
   });
 
   it("clips long ids and centers short ones in the 6-char belly", () => {
     const state = createBattle([
-      { id: "wolverine", model: "WVR-6R", team: 0, gunnery: 4, position: { col: 1, row: 1 }, facing: "n" },
+      {
+        id: "wolverine",
+        model: "WVR-6R",
+        team: 0,
+        gunnery: 4,
+        position: { col: 1, row: 1 },
+        facing: "n",
+      },
       { id: "ab", model: "GRF-1N", team: 1, gunnery: 4, position: { col: 2, row: 1 }, facing: "s" },
     ]);
     const out = renderBattle(state);
@@ -62,15 +94,29 @@ describe("console renderer", () => {
 
   it("caps outer edges with _ and overline, sharing ==== below", () => {
     const state = createBattle([
-      { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 2, row: 1 }, facing: "n" },
-      { id: "enf", model: "ENF-4R", team: 0, gunnery: 4, position: { col: 2, row: 2 }, facing: "s" },
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 1 },
+        facing: "n",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 2 },
+        facing: "s",
+      },
     ]);
     const lines = renderBattle(state).split("\n");
     const edgeAt = (y: number): string => lines[y]!.slice(14, 18); // column 2's edge cells
     expect(edgeAt(0)).toBe(GRID_GLYPHS.edgeTop.repeat(4)); // outer top edge
-    expect(edgeAt(4)).toBe(GRID_GLYPHS.edgeShared + "\u2191" + GRID_GLYPHS.edgeShared.repeat(2)); // hbk faces n
+    expect(edgeAt(4)).toBe(`${GRID_GLYPHS.edgeShared}\u2191${GRID_GLYPHS.edgeShared.repeat(2)}`); // hbk faces n
     expect(edgeAt(8)).toBe(GRID_GLYPHS.edgeShared.repeat(4)); // shared by rows 2 and 3
-    expect(edgeAt(12)).toBe(GRID_GLYPHS.edgeBottom.repeat(2) + "\u2193" + GRID_GLYPHS.edgeBottom); // enf faces s
+    expect(edgeAt(12)).toBe(`${GRID_GLYPHS.edgeBottom.repeat(2)}\u2193${GRID_GLYPHS.edgeBottom}`); // enf faces s
   });
 
   it("zero-pads coordinates as fixed XXYY pairs", () => {
@@ -80,17 +126,31 @@ describe("console renderer", () => {
 
   it("omits removed units from the map", () => {
     const state = battleWith({ id: "hbk", model: "HBK-4G", position: { col: 1, row: 1 } });
-    state.units["hbk"]!.removed = true;
+    state.units.hbk!.removed = true;
     const out = renderBattle(state);
-    expect(out).not.toContain("(" + GRID_GLYPHS.vertW + " hbk");
+    expect(out).not.toContain(`(${GRID_GLYPHS.vertW} hbk`);
     expect(out).toContain(`${GRID_GLYPHS.edgeNW}0202${GRID_GLYPHS.edgeNE}`); // hex still drawn, empty
   });
 
   it("derives board size from units and terrain when not given", () => {
     const state = createBattle(
       [
-        { id: "enf", model: "ENF-4R", team: 0, gunnery: 4, position: { col: 1, row: 1 }, facing: "n" },
-        { id: "wvr", model: "WVR-6R", team: 1, gunnery: 4, position: { col: 1, row: 2 }, facing: "s" },
+        {
+          id: "enf",
+          model: "ENF-4R",
+          team: 0,
+          gunnery: 4,
+          position: { col: 1, row: 1 },
+          facing: "n",
+        },
+        {
+          id: "wvr",
+          model: "WVR-6R",
+          team: 1,
+          gunnery: 4,
+          position: { col: 1, row: 2 },
+          facing: "s",
+        },
       ],
       { terrain: [{ col: 9, row: 7, type: "lightWoods" }] },
     );
@@ -152,8 +212,22 @@ describe("map renderer", () => {
 
   it("keeps unit ids in the center cell while terrain marks sit at the bottom", () => {
     const state = createBattle([
-      { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 1, row: 2 }, facing: "n" },
-      { id: "far", model: "GRF-1N", team: 1, gunnery: 4, position: { col: 9, row: 9 }, facing: "s" },
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 1, row: 2 },
+        facing: "n",
+      },
+      {
+        id: "far",
+        model: "GRF-1N",
+        team: 1,
+        gunnery: 4,
+        position: { col: 9, row: 9 },
+        facing: "s",
+      },
     ]);
     const out = renderBattle(state, undefined, { "3,0": "W" });
     expect(out).toContain(`${GRID_GLYPHS.vertW}  hbk ${GRID_GLYPHS.vertE}`);
@@ -163,8 +237,22 @@ describe("map renderer", () => {
   it("draws battle terrain via the marks layer", () => {
     const state = createBattle(
       [
-        { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 1, row: 1 }, facing: "n" },
-        { id: "far", model: "GRF-1N", team: 1, gunnery: 4, position: { col: 9, row: 9 }, facing: "s" },
+        {
+          id: "hbk",
+          model: "HBK-4G",
+          team: 0,
+          gunnery: 4,
+          position: { col: 1, row: 1 },
+          facing: "n",
+        },
+        {
+          id: "far",
+          model: "GRF-1N",
+          team: 1,
+          gunnery: 4,
+          position: { col: 9, row: 9 },
+          facing: "s",
+        },
       ],
       { terrain: [{ col: 0, row: 0, type: "lightWoods" }] },
     );

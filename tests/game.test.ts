@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { getWeapon } from "../src/data/weapons.js";
+import type { BattleState, TerrainHexDef } from "../src/rules/game.js";
 import {
   advancePhase,
   checkVictory,
@@ -11,15 +13,27 @@ import {
   resolveDeclaredAttacks,
   rollInitiativePhase,
 } from "../src/rules/game.js";
-import type { BattleState, TerrainHexDef } from "../src/rules/game.js";
-import { getWeapon } from "../src/data/weapons.js";
 import { scriptedRng } from "./helpers.js";
 
 function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
   return createBattle(
     [
-      { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 0, row: 2 }, facing: "se" },
-      { id: "enf", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 1, row: 2 }, facing: "nw" },
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 0, row: 2 },
+        facing: "se",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 1, row: 2 },
+        facing: "nw",
+      },
     ],
     { terrain },
   );
@@ -37,18 +51,28 @@ function startAttackTurn(state: BattleState, rng?: ReturnType<typeof scriptedRng
 
 describe("createBattle", () => {
   it("rejects duplicate ids, unknown models, and bad gunnery", () => {
-    const base = { id: "a", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 0, row: 0 }, facing: "n" as const };
+    const base = {
+      id: "a",
+      model: "HBK-4G",
+      team: 0,
+      gunnery: 4,
+      position: { col: 0, row: 0 },
+      facing: "n" as const,
+    };
     expect(() => createBattle([base, base])).toThrow(/Duplicate unit id/);
-    expect(() =>
-      createBattle([base, { ...base, id: "b", model: "MAD-3R" }]),
-    ).toThrow(/Unknown 'Mech model/);
-    expect(() =>
-      createBattle([base, { ...base, id: "b", gunnery: 8 }]),
-    ).toThrow(/Gunnery/);
+    expect(() => createBattle([base, { ...base, id: "b", model: "MAD-3R" }])).toThrow(
+      /Unknown 'Mech model/,
+    );
+    expect(() => createBattle([base, { ...base, id: "b", gunnery: 8 }])).toThrow(/Gunnery/);
   });
 
   it("rejects duplicate terrain hex definitions", () => {
-    const base = { model: "HBK-4G", gunnery: 4, position: { col: 0, row: 2 }, facing: "se" as const };
+    const base = {
+      model: "HBK-4G",
+      gunnery: 4,
+      position: { col: 0, row: 2 },
+      facing: "se" as const,
+    };
     const units = [
       { ...base, id: "a", team: 0 },
       { ...base, id: "b", team: 1 },
@@ -88,17 +112,27 @@ describe("movement phase", () => {
   });
 
   it("charges MP for terrain and facing changes within budget", () => {
-    const setup = createBattle([
-      { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 0, row: 2 }, facing: "se" },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        position: { col: 9, row: 9 },
-        facing: "nw",
-      },
-    ], { terrain: [{ col: 1, row: 3, type: "lightWoods" }] });
+    const setup = createBattle(
+      [
+        {
+          id: "hbk",
+          model: "HBK-4G",
+          team: 0,
+          gunnery: 4,
+          position: { col: 0, row: 2 },
+          facing: "se",
+        },
+        {
+          id: "enf",
+          model: "ENF-4R",
+          team: 1,
+          gunnery: 4,
+          position: { col: 9, row: 9 },
+          facing: "nw",
+        },
+      ],
+      { terrain: [{ col: 1, row: 3, type: "lightWoods" }] },
+    );
     let state = startMovementTurn(setup);
     state = declareMove(state, "hbk", "walk");
     state = executeMove(state, "hbk", [
@@ -153,7 +187,7 @@ describe("movement phase", () => {
   it("charges counterclockwise turns one MP per hexside", () => {
     let state = declareMove(startMovementTurn(hbkVsEnf()), "hbk", "walk");
     state = executeMove(state, "hbk", [{ kind: "turn", facings: -1 }]);
-    let hbk = getUnit(state, "hbk");
+    const hbk = getUnit(state, "hbk");
     expect(hbk.facing).toBe("ne"); // se rotated one hexside counterclockwise
     expect(hbk.mpSpent).toBe(1);
 
@@ -164,7 +198,14 @@ describe("movement phase", () => {
 
   it("re-evaluates forward/backward relative to facing after each turn", () => {
     const setup = createBattle([
-      { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 0, row: 2 }, facing: "se" },
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 0, row: 2 },
+        facing: "se",
+      },
       {
         id: "enf",
         model: "ENF-4R",
@@ -189,8 +230,22 @@ describe("movement phase", () => {
 
   it("rejects ending in an occupied hex but allows friendly pass-through", () => {
     const setup = createBattle([
-      { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 0, row: 2 }, facing: "se" },
-      { id: "enf", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 1, row: 3 }, facing: "nw" },
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 0, row: 2 },
+        facing: "se",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 1, row: 3 },
+        facing: "nw",
+      },
     ]);
     let state = startMovementTurn(setup);
     state = declareMove(state, "hbk", "walk");
@@ -201,7 +256,14 @@ describe("movement phase", () => {
 
   it("rejects moves exceeding the mode budget", () => {
     const setup = createBattle([
-      { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 0, row: 2 }, facing: "se" },
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 0, row: 2 },
+        facing: "se",
+      },
       {
         id: "enf",
         model: "ENF-4R",
@@ -246,8 +308,22 @@ describe("movement phase", () => {
   it("jumping pays 1 MP per hex entered and may pass over enemies", () => {
     const setup = createBattle(
       [
-        { id: "grf", model: "GRF-1N", team: 0, gunnery: 4, position: { col: 0, row: 2 }, facing: "se" },
-        { id: "wvr", model: "WVR-6R", team: 1, gunnery: 4, position: { col: 1, row: 3 }, facing: "nw" },
+        {
+          id: "grf",
+          model: "GRF-1N",
+          team: 0,
+          gunnery: 4,
+          position: { col: 0, row: 2 },
+          facing: "se",
+        },
+        {
+          id: "wvr",
+          model: "WVR-6R",
+          team: 1,
+          gunnery: 4,
+          position: { col: 1, row: 3 },
+          facing: "nw",
+        },
       ],
       {},
     );
@@ -268,29 +344,64 @@ describe("movement phase", () => {
 describe("weapon attack phase", () => {
   it("validates arc, LOS, range, target count, and auto-miss aborts", () => {
     // Facing northwest, target to the southeast -> outside front arc.
-    let state = startAttackTurn(createBattle([
-      { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 0, row: 2 }, facing: "nw" },
-      { id: "enf", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 1, row: 2 }, facing: "nw" },
-    ]));
+    let state = startAttackTurn(
+      createBattle([
+        {
+          id: "hbk",
+          model: "HBK-4G",
+          team: 0,
+          gunnery: 4,
+          position: { col: 0, row: 2 },
+          facing: "nw",
+        },
+        {
+          id: "enf",
+          model: "ENF-4R",
+          team: 1,
+          gunnery: 4,
+          position: { col: 1, row: 2 },
+          facing: "nw",
+        },
+      ]),
+    );
     expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 0, targetId: "enf" }])).toThrow(
       /front firing arc/,
     );
 
     // Two heavy woods between -> blocked LOS.
-    state = startAttackTurn(hbkVsEnf([
-      { col: -1, row: 2, type: "heavyWoods" },
-      { col: 2, row: 2, type: "heavyWoods" },
-    ]));
-    // Move units apart so intervening hexes exist.
-    state = createBattle([
-      { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 0, row: 2 }, facing: "se" },
-      { id: "enf", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 3, row: 2 }, facing: "nw" },
-    ], {
-      terrain: [
-        { col: 1, row: 2, type: "heavyWoods" },
+    state = startAttackTurn(
+      hbkVsEnf([
+        { col: -1, row: 2, type: "heavyWoods" },
         { col: 2, row: 2, type: "heavyWoods" },
+      ]),
+    );
+    // Move units apart so intervening hexes exist.
+    state = createBattle(
+      [
+        {
+          id: "hbk",
+          model: "HBK-4G",
+          team: 0,
+          gunnery: 4,
+          position: { col: 0, row: 2 },
+          facing: "se",
+        },
+        {
+          id: "enf",
+          model: "ENF-4R",
+          team: 1,
+          gunnery: 4,
+          position: { col: 3, row: 2 },
+          facing: "nw",
+        },
       ],
-    });
+      {
+        terrain: [
+          { col: 1, row: 2, type: "heavyWoods" },
+          { col: 2, row: 2, type: "heavyWoods" },
+        ],
+      },
+    );
     state = startAttackTurn(state);
     expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 0, targetId: "enf" }])).toThrow(
       /blocked/,
@@ -299,7 +410,14 @@ describe("weapon attack phase", () => {
     // Out of range.
     const ac20 = getWeapon("Autocannon/20");
     state = createBattle([
-      { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 0, row: 2 }, facing: "se" },
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 0, row: 2 },
+        facing: "se",
+      },
       {
         id: "enf",
         model: "ENF-4R",
@@ -315,16 +433,33 @@ describe("weapon attack phase", () => {
     );
 
     // Modified TN > 12 must be aborted at declaration.
-    state = createBattle([
-      { id: "enf", model: "ENF-4R", team: 0, gunnery: 7, position: { col: 0, row: 2 }, facing: "se" },
-      { id: "hbk", model: "HBK-4G", team: 1, gunnery: 4, position: { col: 9, row: 2 }, facing: "nw" },
-    ], {
-      terrain: [
-        { col: 3, row: 2, type: "lightWoods" },
-        { col: 5, row: 2, type: "lightWoods" },
-        { col: 9, row: 2, type: "heavyWoods" },
+    state = createBattle(
+      [
+        {
+          id: "enf",
+          model: "ENF-4R",
+          team: 0,
+          gunnery: 7,
+          position: { col: 0, row: 2 },
+          facing: "se",
+        },
+        {
+          id: "hbk",
+          model: "HBK-4G",
+          team: 1,
+          gunnery: 4,
+          position: { col: 9, row: 2 },
+          facing: "nw",
+        },
       ],
-    });
+      {
+        terrain: [
+          { col: 3, row: 2, type: "lightWoods" },
+          { col: 5, row: 2, type: "lightWoods" },
+          { col: 9, row: 2, type: "heavyWoods" },
+        ],
+      },
+    );
     state = startAttackTurn(state);
     // Large laser (index 1), distance 9, +2 woods intervening, +2 heavy target.
     expect(() => declareAttacks(state, "enf", [{ weaponIndex: 1, targetId: "hbk" }])).toThrow(
@@ -349,7 +484,7 @@ describe("weapon attack phase", () => {
     state = declareAttacks(state, "hbk", [{ weaponIndex: 0, targetId: "enf" }]);
     // Turn 1: AC/20 (20 dmg) hits CT (roll 5) -> 23 - 20 = 3 left.
     state = resolveDeclaredAttacks(state, "hbk", scriptedRng(2, 3, 3, 4));
-    expect(getUnit(state, "enf").armor["centerTorso"]).toBe(3);
+    expect(getUnit(state, "enf").armor.centerTorso).toBe(3);
     expect(getUnit(state, "enf").destroyed).toBe(false);
 
     state = advancePhase(state); // weaponAttack -> end
@@ -364,7 +499,7 @@ describe("weapon attack phase", () => {
     state = advancePhase(state);
     state = declareAttacks(state, "hbk", [{ weaponIndex: 0, targetId: "enf" }]);
     state = resolveDeclaredAttacks(state, "hbk", scriptedRng(6, 6, 3, 4)); // hit CT again
-    expect(getUnit(state, "enf").armor["centerTorso"]).toBe(0);
+    expect(getUnit(state, "enf").armor.centerTorso).toBe(0);
     expect(getUnit(state, "enf").destroyed).toBe(false); // not yet committed
 
     state = advancePhase(state); // weaponAttack -> end commits the kill
@@ -377,19 +512,29 @@ describe("weapon attack phase", () => {
 
   it("jams Ultra AC/5 double taps on a natural 2 and tracks the jam", () => {
     const setup = createBattle([
-      { id: "her", model: "HER-5SA", team: 0, gunnery: 4, position: { col: 0, row: 2 }, facing: "se" },
-      { id: "cda", model: "CDA-3MA", team: 1, gunnery: 4, position: { col: 1, row: 2 }, facing: "nw" },
+      {
+        id: "her",
+        model: "HER-5SA",
+        team: 0,
+        gunnery: 4,
+        position: { col: 0, row: 2 },
+        facing: "se",
+      },
+      {
+        id: "cda",
+        model: "CDA-3MA",
+        team: 1,
+        gunnery: 4,
+        position: { col: 1, row: 2 },
+        facing: "nw",
+      },
     ]);
     let state = startAttackTurn(setup);
-    state = declareAttacks(state, "her", [
-      { weaponIndex: 2, targetId: "cda", shots: 2 },
-    ]);
+    state = declareAttacks(state, "her", [{ weaponIndex: 2, targetId: "cda", shots: 2 }]);
     expect(getUnit(state, "her").ammoLeft["2"]).toBe(18); // 2 shots spent up front
     state = resolveDeclaredAttacks(state, "her", scriptedRng(1, 1)); // natural 2 -> jam
     const her = getUnit(state, "her");
     expect(her.jammedWeapons).toEqual([2]);
-    expect(getUnit(state, "cda").armor["centerTorso"]).toBe(
-      state.defs["CDA-3MA"]!.armor["centerTorso"],
-    );
+    expect(getUnit(state, "cda").armor.centerTorso).toBe(state.defs["CDA-3MA"]!.armor.centerTorso);
   });
 });

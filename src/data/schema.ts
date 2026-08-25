@@ -50,16 +50,18 @@ export function validateMechDef(data: unknown): MechDef {
     throw new Error("MechDef must be a JSON object");
   }
 
-  const model = data["model"];
-  if (typeof model !== "string" || model.length === 0) errors.push("model must be a non-empty string");
+  const model = data.model;
+  if (typeof model !== "string" || model.length === 0)
+    errors.push("model must be a non-empty string");
 
-  const name = data["name"];
+  const name = data.name;
   if (typeof name !== "string" || name.length === 0) errors.push("name must be a non-empty string");
 
   const tonnage = requireNumber(data, "tonnage", errors);
-  if (Number.isFinite(tonnage) && (tonnage < 10 || tonnage > 100)) errors.push("tonnage must be 10..100");
+  if (Number.isFinite(tonnage) && (tonnage < 10 || tonnage > 100))
+    errors.push("tonnage must be 10..100");
 
-  const weightClass = data["weightClass"];
+  const weightClass = data.weightClass;
   if (
     weightClass !== "Light" &&
     weightClass !== "Medium" &&
@@ -69,25 +71,25 @@ export function validateMechDef(data: unknown): MechDef {
     errors.push("weightClass must be Light|Medium|Heavy|Assault");
   }
 
-  if (typeof data["techBase"] !== "string") errors.push("techBase must be a string");
+  if (typeof data.techBase !== "string") errors.push("techBase must be a string");
 
   const walking = requireNumber(data, "walking", errors);
   const running = requireNumber(data, "running", errors);
   const jumping = requireNumber(data, "jumping", errors);
-  if (
-    Number.isFinite(walking) &&
-    Number.isFinite(running) &&
-    Number.isFinite(jumping)
-  ) {
-    if (!Number.isInteger(walking) || walking <= 0) errors.push("walking must be a positive integer");
+  if (Number.isFinite(walking) && Number.isFinite(running) && Number.isFinite(jumping)) {
+    if (!Number.isInteger(walking) || walking <= 0)
+      errors.push("walking must be a positive integer");
     // Quick-start running rating is walking x1.5 rounded up.
     if (running !== Math.ceil(walking * 1.5)) {
-      errors.push(`running must equal ceil(walking*1.5) = ${Math.ceil(walking * 1.5)} (quick-start convention)`);
+      errors.push(
+        `running must equal ceil(walking*1.5) = ${Math.ceil(walking * 1.5)} (quick-start convention)`,
+      );
     }
-    if (!Number.isInteger(jumping) || jumping < 0) errors.push("jumping must be a non-negative integer");
+    if (!Number.isInteger(jumping) || jumping < 0)
+      errors.push("jumping must be a non-negative integer");
   }
 
-  const armorRaw = data["armor"];
+  const armorRaw = data.armor;
   if (!isRecord(armorRaw)) {
     errors.push("armor must be an object keyed by location");
   } else {
@@ -111,7 +113,7 @@ export function validateMechDef(data: unknown): MechDef {
     }
   }
 
-  const weapons = data["weapons"];
+  const weapons = data.weapons;
   if (!Array.isArray(weapons)) {
     errors.push("weapons must be an array");
   } else {
@@ -120,11 +122,11 @@ export function validateMechDef(data: unknown): MechDef {
         errors.push("each weapon mount must be an object");
         continue;
       }
-      if (typeof w["weapon"] !== "string") errors.push("weapon.weapon must be a string");
-      if (typeof w["location"] !== "string" || !isLocation(w["location"])) {
-        errors.push(`weapon.location ${JSON.stringify(w["location"])} is not a valid location`);
+      if (typeof w.weapon !== "string") errors.push("weapon.weapon must be a string");
+      if (typeof w.location !== "string" || !isLocation(w.location)) {
+        errors.push(`weapon.location ${JSON.stringify(w.location)} is not a valid location`);
       }
-      const shots = w["ammoShots"];
+      const shots = w.ammoShots;
       if (shots !== undefined && shots !== null) {
         if (typeof shots !== "number" || !Number.isInteger(shots) || shots <= 0) {
           errors.push("weapon.ammoShots must be a positive integer");

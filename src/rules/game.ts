@@ -1,24 +1,26 @@
-import { FACINGS, isFacing, rotateFacing, type Facing, type Hex, type MoveMode, type Rng, type TerrainHexDef, type TerrainType } from "../core/types.js";
 import { bearing, hexDistance, neighbor, sameHex } from "../core/hex.js";
 import { costToEnter } from "../core/terrain.js";
+import {
+  FACINGS,
+  type Facing,
+  type Hex,
+  isFacing,
+  type MoveMode,
+  type Rng,
+  rotateFacing,
+  type TerrainHexDef,
+  type TerrainType,
+} from "../core/types.js";
 import { MECH_DEFS } from "../data/index.js";
 import type { MechDef } from "../data/schema.js";
 import { getWeapon } from "../data/weapons.js";
-import * as mv from "./movement.js";
-import { interveningHexes, losBlocked } from "./los.js";
 import { isInFrontArc } from "./arcs.js";
+import { type AttackResolution, resolveWeaponAttack } from "./attack.js";
+import { type ArmorState, canFireFromLocation, isImmobile, isKilled } from "./damage.js";
 import { rollInitiative } from "./initiative.js";
+import { interveningHexes, losBlocked } from "./los.js";
+import * as mv from "./movement.js";
 import { computeToHit } from "./tohit.js";
-import {
-  resolveWeaponAttack,
-  type AttackResolution,
-} from "./attack.js";
-import {
-  canFireFromLocation,
-  isImmobile,
-  isKilled,
-  type ArmorState,
-} from "./damage.js";
 
 export interface UnitInit {
   readonly id: string;
@@ -80,8 +82,18 @@ export type GameEvent =
       readonly facing: Facing;
       readonly mpSpent: number;
     }
-  | { readonly kind: "attacksDeclared"; readonly unitId: string; readonly targetId: string; readonly count: number }
-  | { readonly kind: "attackResolved"; readonly unitId: string; readonly targetId: string; readonly resolution: AttackResolution }
+  | {
+      readonly kind: "attacksDeclared";
+      readonly unitId: string;
+      readonly targetId: string;
+      readonly count: number;
+    }
+  | {
+      readonly kind: "attackResolved";
+      readonly unitId: string;
+      readonly targetId: string;
+      readonly resolution: AttackResolution;
+    }
   | { readonly kind: "unitDestroyed"; readonly unitId: string }
   | { readonly kind: "unitRemoved"; readonly unitId: string };
 
@@ -150,7 +162,8 @@ export function createBattle(
     if (seen.has(init.id)) throw new Error(`Duplicate unit id: ${init.id}`);
     seen.add(init.id);
     if (!MECH_DEFS[init.model]) throw new Error(`Unknown 'Mech model: ${init.model}`);
-    if (!isFacing(init.facing)) throw new Error(`Invalid facing for ${init.id}: ${String(init.facing)}`);
+    if (!isFacing(init.facing))
+      throw new Error(`Invalid facing for ${init.id}: ${String(init.facing)}`);
     if (!Number.isInteger(init.gunnery) || init.gunnery < 0 || init.gunnery > 7) {
       throw new Error(`Gunnery for ${init.id} must be an integer 0..7`);
     }
@@ -189,11 +202,15 @@ export function createBattle(
   if (options.terrain) {
     for (const { col, row, type } of options.terrain) {
       const key = `${col},${row}`;
-      if (key in terrain) throw new Error(`Duplicate terrain definition for hex ${fmtHex({ col, row })}`);
+      if (key in terrain)
+        throw new Error(`Duplicate terrain definition for hex ${fmtHex({ col, row })}`);
       terrain[key] = type;
     }
   }
-  for (const [label, n] of [["width", options.width], ["height", options.height]] as const) {
+  for (const [label, n] of [
+    ["width", options.width],
+    ["height", options.height],
+  ] as const) {
     if (n !== undefined && (!Number.isInteger(n) || n < 1)) {
       throw new Error(`Board ${label} must be an integer >= 1`);
     }
@@ -357,7 +374,8 @@ export function declareAttacks(
   const next = clone(state);
   const unit = getUnitOrThrow(next, unitId);
   if (unit.destroyed || unit.removed) throw new Error(`${unitId} is destroyed`);
-  if (unit.declaredAttacks.length > 0) throw new Error(`${unitId} already declared attacks this turn`);
+  if (unit.declaredAttacks.length > 0)
+    throw new Error(`${unitId} already declared attacks this turn`);
 
   const def = next.defs[unit.model]!;
   let targetId: string | null = null;
@@ -371,7 +389,9 @@ export function declareAttacks(
       throw new Error(`${mount.weapon} on ${unitId} is jammed`);
     }
     if (!canFireFromLocation(unit.phaseStartArmor, mount.location)) {
-      throw new Error(`${mount.weapon} location (${mount.location}) is destroyed or its support torso is gone`);
+      throw new Error(
+        `${mount.weapon} location (${mount.location}) is destroyed or its support torso is gone`,
+      );
     }
 
     const shots = decl.shots ?? 1;
@@ -570,9 +590,7 @@ export function nextActor(state: BattleState): string | null {
 
   const sorted = [...order].sort((a, b) => actedCount(a) - actedCount(b));
   for (const team of sorted) {
-    const candidate = alive.find(
-      (u) => u.team === team && !state.actedThisPhase.includes(u.id),
-    );
+    const candidate = alive.find((u) => u.team === team && !state.actedThisPhase.includes(u.id));
     if (candidate) return candidate.id;
   }
   return null;

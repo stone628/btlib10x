@@ -2,19 +2,11 @@ import { roll2D6 } from "../core/dice.js";
 import type { Location, MoveMode, Rng, TerrainType } from "../core/types.js";
 import type { WeaponDef } from "../data/weapons.js";
 import { getWeapon } from "../data/weapons.js";
-import { losWoodsPoints } from "./los.js";
+import { clusterHitsForMissiles, clusterHitsForShots, groupMissiles } from "./cluster.js";
+import { type ArmorState, applyDamage, type DamageApplication } from "./damage.js";
 import { hitLocation } from "./hitlocation.js";
-import {
-  clusterHitsForMissiles,
-  clusterHitsForShots,
-  groupMissiles,
-} from "./cluster.js";
+import { losWoodsPoints } from "./los.js";
 import { computeToHit, damageForBracket } from "./tohit.js";
-import {
-  applyDamage,
-  type ArmorState,
-  type DamageApplication,
-} from "./damage.js";
 
 export interface HitGroup {
   readonly location: Location;
@@ -84,8 +76,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
   const rapidFire = weapon.rapidFireShots !== undefined && weapon.rapidFireShots > 0;
   if (rapidFire && shots > 1 && roll === 2) base.jammed = true;
 
-  base.hit =
-    breakdown.automatic !== null ? breakdown.automatic === "hit" : roll >= breakdown.total;
+  base.hit = breakdown.automatic !== null ? breakdown.automatic === "hit" : roll >= breakdown.total;
   if (!base.hit) return base;
 
   if (weapon.missiles !== undefined && weapon.missileDamage !== undefined) {
@@ -94,11 +85,17 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     const hits = clusterHitsForMissiles(weapon.missiles, clusterRoll);
     if (weapon.missileDamage === 2) {
       for (let i = 0; i < hits; i++) {
-        base.groups.push({ location: hitLocation(roll2D6(input.rng)), damage: weapon.missileDamage });
+        base.groups.push({
+          location: hitLocation(roll2D6(input.rng)),
+          damage: weapon.missileDamage,
+        });
       }
     } else {
       for (const lot of groupMissiles(hits, 5)) {
-        base.groups.push({ location: hitLocation(roll2D6(input.rng)), damage: lot * weapon.missileDamage });
+        base.groups.push({
+          location: hitLocation(roll2D6(input.rng)),
+          damage: lot * weapon.missileDamage,
+        });
       }
     }
   } else if (rapidFire && shots > 1) {

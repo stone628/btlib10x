@@ -79,13 +79,13 @@ export function applyDamage(
         killed = true;
         break;
       }
-      if (cur === "rightTorso" && next["rightArm"] > 0) {
-        next["rightArm"] = 0;
+      if (cur === "rightTorso" && next.rightArm > 0) {
+        next.rightArm = 0;
         newlyDestroyed.push("rightArm");
         blownOffArms = [...blownOffArms, "rightArm"];
       }
-      if (cur === "leftTorso" && next["leftArm"] > 0) {
-        next["leftArm"] = 0;
+      if (cur === "leftTorso" && next.leftArm > 0) {
+        next.leftArm = 0;
         newlyDestroyed.push("leftArm");
         blownOffArms = [...blownOffArms, "leftArm"];
       }
@@ -106,18 +106,18 @@ export function isLocationDestroyed(armor: ArmorState, location: Location): bool
 
 /** Quick-start destruction: head or center torso gone ends the 'Mech. */
 export function isKilled(armor: ArmorState): boolean {
-  return armor["head"] <= 0 || armor["centerTorso"] <= 0;
+  return armor.head <= 0 || armor.centerTorso <= 0;
 }
 
 /** One or both legs destroyed: cannot move or change facing, may still fire. */
 export function isImmobile(armor: ArmorState): boolean {
-  return armor["rightLeg"] <= 0 || armor["leftLeg"] <= 0;
+  return armor.rightLeg <= 0 || armor.leftLeg <= 0;
 }
 
 /** A weapon in `location` can fire only if that location (and its shoulder for arms) is intact. */
 export function canFireFromLocation(armor: ArmorState, location: Location): boolean {
   if (armor[location] <= 0) return false;
-  if (location === "rightArm" || location === "rightLeg") return armor["rightTorso"] > 0;
-  if (location === "leftArm" || location === "leftLeg") return armor["leftTorso"] > 0;
+  if (location === "rightArm" || location === "rightLeg") return armor.rightTorso > 0;
+  if (location === "leftArm" || location === "leftLeg") return armor.leftTorso > 0;
   return true;
 }
