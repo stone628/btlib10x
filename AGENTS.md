@@ -17,6 +17,7 @@ TypeScript library encapsulating Classic BattleTech board game logic.
 - `npm run lint:fix` — same, applying safe+unsafe fixes (formatting, unused imports/params, literal keys)
 - `npm run build` — emit ESM + declarations to `dist/`
 - `npm run build:web` — bundle the `web/` terminal app with esbuild → `web/app.js`
+- `npm run dev:web` — same but watch mode (rebuilds `web/app.js` on every source change)
 
 Run lint + typecheck + tests together before considering work done: `npm run lint && npm run typecheck && npm test`.
 

@@ -116,9 +116,10 @@ Library sources stay untouched.
 ## Build & run
 
     npm install            # picks up esbuild devDependency
-    npm run build:web      # node scripts/build-web.mjs → web/app.js
-    # serve statically, e.g.:  python3 -m http.server -d web 8080
-    # open http://localhost:8080
+    npm run build:web      # single-shot: node scripts/build-web.mjs → web/app.js
+    npm run dev:web        # watch + serve: rebuilds on change, serves at http://127.0.0.1:8000/web/index.html
+    # custom port:  node scripts/build-web.mjs --watch --serve --port=3000
+    # open http://localhost:8000
 
 ## Todo
 

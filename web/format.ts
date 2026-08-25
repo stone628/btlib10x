@@ -63,6 +63,14 @@ function terrainMarks(terrain: Readonly<Record<string, string>>): Record<string,
   return marks;
 }
 
+/** Terrain legend for the board command: `"w(lightWoods)  W(heavyWoods)"` etc. */
+export function boardLegend(locale: LocaleId): string {
+  const list = Object.entries(TERRAIN_GLYPHS)
+    .map(([type, glyph]) => `${glyph}(${type})`)
+    .join("  ");
+  return t(locale, "board.legend", { list });
+}
+
 /** `board` output: styled grid chunks, or a plain hint when nothing exists. */
 export function boardChunk(s: Session): Chunk {
   const dims = mapDims(s);

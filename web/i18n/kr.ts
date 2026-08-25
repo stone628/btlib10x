@@ -20,6 +20,7 @@ export const kr: Catalog = {
   // board
   "board.noMap":
     "아직 전장이 없습니다 - 'map'으로 불러오세요. 'info map'에서 목록을 볼 수 있습니다.",
+  "board.legend": "범례: {list}",
 
   // lang command
   "lang.current": "언어: {locale}",
@@ -178,7 +179,7 @@ export const kr: Catalog = {
   "info.mapHead": "{name}: {w}x{h}",
   "info.terrainLine": "지형: {breakdown}",
   "info.terrainNone": "없음",
-  "info.legend": "범례: w0 얕은숲  W0 깊은숲  (빈칸 = 평지; 끝 숫자 = 고도)",
+  "info.legend": "범례: w(lightWoods)  W(heavyWoods)",
   "sheet.head": "{model} {name} — {weightClass} {tonnage}t{gunnery}",
   "sheet.gunnerySuffix": " gunnery {gunnery}",
   "sheet.at": "위치 {pos} 방향 {facing}",
