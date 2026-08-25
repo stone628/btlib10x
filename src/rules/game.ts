@@ -478,7 +478,15 @@ export function declareAttacks(
   next.actedThisPhase = [...next.actedThisPhase, unitId];
   next.events = [
     ...next.events,
-    { kind: "attacksDeclared", unitId, targetId, count: decls.length, distance: attackDistance, rangeBracket: attackRangeBracket, rangeMod: attackRangeMod },
+    {
+      kind: "attacksDeclared",
+      unitId,
+      targetId,
+      count: decls.length,
+      distance: attackDistance,
+      rangeBracket: attackRangeBracket,
+      rangeMod: attackRangeMod,
+    },
   ];
   return next;
 }
