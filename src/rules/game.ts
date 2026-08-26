@@ -525,6 +525,16 @@ export function resolveDeclaredAttacks(state: BattleState, unitId: string, rng: 
       unit.jammedWeapons = [...unit.jammedWeapons, decl.weaponIndex];
     }
 
+    if (!target.destroyed && isKilled(target.armor)) {
+      target.destroyed = true;
+      target.removed = true;
+      next.events = [
+        ...next.events,
+        { kind: "unitDestroyed", unitId: target.id },
+        { kind: "unitRemoved", unitId: target.id },
+      ];
+    }
+
     next.events = [
       ...next.events,
       { kind: "attackResolved", unitId, targetId: target.id, resolution },

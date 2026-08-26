@@ -500,9 +500,10 @@ describe("weapon attack phase", () => {
     state = declareAttacks(state, "hbk", [{ weaponIndex: 0, targetId: "enf" }]);
     state = resolveDeclaredAttacks(state, "hbk", scriptedRng(6, 6, 3, 4)); // hit CT again
     expect(getUnit(state, "enf").armor.centerTorso).toBe(0);
-    expect(getUnit(state, "enf").destroyed).toBe(false); // not yet committed
+    expect(getUnit(state, "enf").destroyed).toBe(true); // killed immediately
+    expect(getUnit(state, "enf").removed).toBe(true);
 
-    state = advancePhase(state); // weaponAttack -> end commits the kill
+    state = advancePhase(state); // weaponAttack -> end (kill already committed)
     const enf = getUnit(state, "enf");
     expect(enf.destroyed).toBe(true);
     expect(enf.removed).toBe(true);
