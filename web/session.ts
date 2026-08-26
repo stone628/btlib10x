@@ -132,8 +132,10 @@ export function promptBody(s: Session): string {
   switch (s.app) {
     case "setup":
       return "setup";
-    case "over":
-      return "over";
+    case "over": {
+      const winner = s.victory?.draw ? "draw" : `team ${s.victory?.winnerTeam ?? "?"} won`;
+      return `over(${winner}, total turn ${s.battle?.turn ?? "?"})`;
+    }
     case "battle": {
       const st = s.battle!;
       const sub = st.phase === "movement" ? "move" : "attack";

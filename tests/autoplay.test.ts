@@ -27,9 +27,9 @@ describe("autoplay", () => {
     expect(nextAutoPlayCommand(s)).toBe("map test");
     execute(s, "map test");
     s.lastAutoPlayCmd = "map test";
-    expect(nextAutoPlayCommand(s)).toBe("add hunchy HBK-4G 0 4 4 3 ne");
-    execute(s, "add hunchy HBK-4G 0 4 4 3 ne");
-    s.lastAutoPlayCmd = "add hunchy HBK-4G 0 4 4 3 ne";
+    expect(nextAutoPlayCommand(s)).toBe("add hunchy HBK-4G 0 4 3 4 ne");
+    execute(s, "add hunchy HBK-4G 0 4 3 4 ne");
+    s.lastAutoPlayCmd = "add hunchy HBK-4G 0 4 3 4 ne";
     expect(nextAutoPlayCommand(s)).toBe("add cicada CDA-3MA 1 4 5 3 sw");
     execute(s, "add cicada CDA-3MA 1 4 5 3 sw");
     s.lastAutoPlayCmd = "add cicada CDA-3MA 1 4 5 3 sw";

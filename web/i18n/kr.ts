@@ -86,6 +86,7 @@ export const kr: Catalog = {
   "cmd.fire.arg.targetId": "적 유닛 id; 모든 사격은 하나의 목표를 공유해야 함",
   "cmd.fire.arg.shots": "연사 무기(SRM/LRM)의 선택적 발수",
   "cmd.statusAttack.help": "예약된 공격 선언",
+  "cmd.statusOver.help": "승리 결과와 최종 로스터 표시",
   "cmd.cancelFire.help": "예약된 사격 지우기",
   "cmd.doneFire.help": "공격 선언 및 해결",
   "cmd.rematch.help": "같은 편성, 지형, 시드로 새 전투",

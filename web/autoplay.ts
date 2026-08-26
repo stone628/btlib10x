@@ -1,4 +1,4 @@
-import { canFireFromLocation } from "../src/rules/damage.js";
+import { canFireFromLocation, isImmobile } from "../src/rules/damage.js";
 import type * as S from "./session.js";
 
 /** Delay between generated commands, in milliseconds. */
@@ -9,7 +9,7 @@ export const AUTOPLAY_INTERVAL_MS = 2000;
  * tests/webcli.test.ts): adjacent foes facing each other along the n/s axis.
  */
 const SCRIPT_SETUP: ReadonlyArray<{ id: string; command: string }> = [
-  { id: "hunchy", command: "add hunchy HBK-4G 0 4 4 3 ne" },
+  { id: "hunchy", command: "add hunchy HBK-4G 0 4 3 4 ne" },
   { id: "cicada", command: "add cicada CDA-3MA 1 4 5 3 sw" },
 ];
 
@@ -33,7 +33,7 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
   if (s.app === "over") {
     if (endgameQueue === null) {
       if (s.battle !== null) {
-        endgameQueue = ["board", ...Object.keys(s.battle.units).map((id) => `sheet ${id}`)];
+        endgameQueue = ["board", "status"];
       } else {
         endgameQueue = [];
       }
@@ -51,7 +51,7 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
   if (enemy === undefined) return null;
   if (st.phase === "movement") {
     if (s.lastAutoPlayCmd === "done") return "board";
-    return actor.moveMode === null ? "mode walk" : "done";
+    return actor.moveMode === null ? (isImmobile(actor.armor) ? "mode standstill" : "mode walk") : "done";
   }
   if (st.phase === "weaponAttack") {
     const def = st.defs[actor.model];

@@ -369,7 +369,7 @@ describe("full game", () => {
     }
     expect(s.app).toBe("over");
     expect(sawBanner).toBe(true);
-    expect(S.promptBody(s)).toBe("over");
+    expect(S.promptBody(s)).toMatch(/^over\(.*won, total turn \d+\)$/);
     expect(run(s, "fire 1 x")[0]).toMatch(/error: unknown command 'fire'/);
 
     run(s, "rematch");
