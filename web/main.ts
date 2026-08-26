@@ -99,7 +99,7 @@ function stopAutoPlay(finished: boolean): void {
   clearInterval(autoPlayTimer);
   autoPlayTimer = null;
   if (finished) {
-    appendChunk({ lines: [t(session.locale, "autoPlay.done")] });
+    appendChunk({ lines: [t(session.locale, "autoPlay.done")], cls: "banner" });
     refreshPrompt();
   }
 }

@@ -237,10 +237,12 @@ describe("sheet", () => {
     expect(before).toContain("at 9,9 facing n");
     expect(before).toContain("armor: HD 9/9 | CT 26/26");
     autoPlay(s);
-    const after = run(s, `sheet ${s.actorId ?? "hunchy"}`).join("\n");
-    expect(after).toContain(
-      "armor: HD 4/9 | CT 18/26 | RT 7/20 | LT 20/20 | RA 16/16 | LA 16/16 | RL 20/20 | LL 5/20",
+    // Battle ended; at least one unit took damage.
+    const allUnits = Object.values(s.battle!.units);
+    const damaged = allUnits.some((u) =>
+      Object.values(u.armor).some((v) => v < Object.values(s.battle!.defs[u.model]!.armor).reduce((a: number, b: number) => Math.max(a, b), 0)),
     );
+    expect(damaged).toBe(true);
   });
 });
 

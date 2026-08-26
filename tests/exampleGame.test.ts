@@ -129,7 +129,8 @@ describe("example battle: Wolverine vs Griffin", () => {
         state = declareAttacks(state, "wvr", [{ weaponIndex: 0, targetId: "grf" }]);
         state = resolveDeclaredAttacks(state, "wvr", scriptedRng(6, 6, 3, 4));
         expect(grfCt()).toBe(0);
-        expect(getUnit(state, "grf").destroyed).toBe(false); // committed at end of phase
+        expect(getUnit(state, "grf").destroyed).toBe(true); // killed immediately
+        expect(getUnit(state, "grf").removed).toBe(true);
       }
     }
 
