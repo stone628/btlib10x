@@ -15,6 +15,7 @@ import {
   infoWeapon,
   infoWeaponList,
   moveStatusLines,
+  overStatusLines,
   rich,
   sheetForUnit,
   weaponsLines,
@@ -333,6 +334,7 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
 // ----------------------------------------------------------------- over ----
 
 const OVER_CMDS: Record<string, CmdDef> = {
+  status: { helpKey: "cmd.statusOver.help", run: (s) => overStatusLines(s) },
   rematch: {
     helpKey: "cmd.rematch.help",
     run: (s) => {

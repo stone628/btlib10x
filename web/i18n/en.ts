@@ -88,6 +88,7 @@ export const en = {
   "cmd.fire.arg.targetId": "enemy unit id; all shots must share one target",
   "cmd.fire.arg.shots": "optional shot count for multi-shot weapons (SRM/LRM)",
   "cmd.statusAttack.help": "queued attack declarations",
+  "cmd.statusOver.help": "show victory result and final roster",
   "cmd.cancelFire.help": "clear queued shots",
   "cmd.doneFire.help": "declare attacks and resolve them",
   "cmd.rematch.help": "new battle with the same roster, terrain and seed",

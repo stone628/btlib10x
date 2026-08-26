@@ -369,6 +369,46 @@ export function fmtSetupStatus(s: Session): string[] {
   return lines;
 }
 
+export function sheetLinesShort(view: SheetView, locale: LocaleId): string[] {
+  const head = t(locale, "sheet.head", {
+    model: view.model,
+    name: view.name,
+    weightClass: view.weightClass,
+    tonnage: view.tonnage,
+    gunnery:
+      view.gunnery !== null
+        ? t(locale, "sheet.gunnerySuffix", { gunnery: gunneryLabel(locale, view.gunnery) })
+        : "",
+  });
+  const lines = [head];
+  if (view.facingLine) lines.push(view.facingLine);
+  lines.push(
+    t(locale, "sheet.armorLine", {
+      list: LOCATIONS.map((loc) => {
+        const v = view.armor[loc];
+        return `${SHORT_LOC[loc]} ${v}/${view.originalArmor[loc]}${v <= 0 ? "!" : ""}`;
+      }).join(" | "),
+    }),
+  );
+  return lines;
+}
+
+export function overStatusLines(s: Session): string[] {
+  if (!s.battle || !s.victory) return [];
+  const lines: string[] = [];
+  const teams = [...new Set(Object.values(s.battle.units).map((u) => u.team))].sort(
+    (a, b) => a - b,
+  );
+  for (const team of teams) {
+    lines.push(t(s.locale, "setup.teamHeader", { team }));
+    for (const unit of Object.values(s.battle.units).filter((u) => u.team === team)) {
+      const view = battleSheet(s.battle, unit, s.locale);
+      for (const line of sheetLinesShort(view, s.locale)) lines.push(`  ${line}`);
+    }
+  }
+  return lines;
+}
+
 export function moveStatusLines(s: Session): string[] {
   const info = moveStepsInfo(s);
   const modeText =
