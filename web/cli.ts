@@ -380,21 +380,49 @@ function commandHelp(session: S.Session, name: string): string[] {
 }
 
 function commandList(session: S.Session): string[] {
-  const merged = availableCmds(session);
   const locale = session.locale;
   const names = Object.keys(MAP_DEFS).join("|");
-  const lines: string[] = [];
-  for (const name of Object.keys(merged).sort()) {
-    const def = merged[name]!;
-    const help = t(locale, def.helpKey).replace(/\{names\}/g, names);
-    if (def.usage === undefined) {
-      lines.push(`${name.padEnd(9)} ${help}`);
-    } else {
-      // Commands with arguments get their usage and explanation on separate lines.
-      lines.push(`${name.padEnd(9)} ${def.usage}`);
-      lines.push(`          ${help}`);
+
+  const globalEntries = Object.keys(GLOBAL_CMDS)
+    .sort()
+    .map((name) => ({ name, def: GLOBAL_CMDS[name]! }));
+
+  const phaseCmds = (() => {
+    switch (session.app) {
+      case "setup":
+        return { cmds: SETUP_CMDS, phase: "setup" as const };
+      case "battle": {
+        const phase = session.battle?.phase === "weaponAttack" ? "weaponAttack" : "movement";
+        return { cmds: phase === "weaponAttack" ? ATTACK_CMDS : MOVE_CMDS, phase };
+      }
+      case "over":
+        return { cmds: OVER_CMDS, phase: "over" as const };
     }
-  }
+  })();
+  const phaseEntries = Object.keys(phaseCmds.cmds)
+    .sort()
+    .map((name) => ({ name, def: phaseCmds.cmds[name]! }));
+
+  const lines: string[] = [];
+
+  const renderEntries = (entries: { name: string; def: CmdDef }[]) => {
+    for (const { name, def } of entries) {
+      const help = t(locale, def.helpKey).replace(/\{names\}/g, names);
+      if (def.usage === undefined) {
+        lines.push(`${name.padEnd(9)} ${help}`);
+      } else {
+        lines.push(`${name.padEnd(9)} ${def.usage}`);
+        lines.push(`          ${help}`);
+      }
+    }
+  };
+
+  lines.push(t(locale, "help.sectionGeneral"));
+  renderEntries(globalEntries);
+  lines.push("");
+  lines.push(t(locale, "help.sectionPhase", { phase: phaseCmds.phase }));
+  renderEntries(phaseEntries);
+
   return lines;
 }
 
