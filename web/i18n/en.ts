@@ -32,6 +32,8 @@ export const en = {
   // help machinery
   "help.usagePrefix": "usage: ",
   "help.argumentsHeader": "arguments:",
+  "help.sectionGeneral": "--- general ---",
+  "help.sectionPhase": "--- phase({phase}) ---",
   "err.unknownCommand": "unknown command '{name}' (try 'help')",
 
   // generic argument parsing
