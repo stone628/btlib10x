@@ -19,6 +19,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "build:web": "node scripts/build-web.mjs",
+    "dist:web": "node scripts/build-web.mjs && node scripts/dist-web.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
