@@ -3,8 +3,8 @@ import { LOCATIONS } from "../src/core/types.js";
 import { getMapDef, MAP_DEFS, MECH_DEFS, toEngineTerrain } from "../src/data/index.js";
 import type { MechDef } from "../src/data/schema.js";
 import { getWeapon, WEAPONS } from "../src/data/weapons.js";
-import type { Span } from "../src/render.js";
-import { battleModel, boardToSpans, mapModel, TERRAIN_GLYPHS } from "../src/render.js";
+import type { BoardModel, BoardRenderer } from "../src/render.js";
+import { battleModel, boardToText, getBoardRenderer, mapModel, TERRAIN_GLYPHS } from "../src/render.js";
 import type { AttackResolution } from "../src/rules/attack.js";
 import type { ArmorState } from "../src/rules/damage.js";
 import { canFireFromLocation } from "../src/rules/damage.js";
@@ -14,12 +14,26 @@ import { t } from "./i18n/index.js";
 import type { Session, SetupUnit } from "./session.js";
 import { moveStepsInfo } from "./session.js";
 
+/** Board renderer type (re-exported from the render layer). */
+export type { BoardRenderer } from "../src/render.js";
+
 /** One presentation chunk of command output. */
-export type Chunk = { lines: readonly string[]; cls?: string } | { board: readonly Span[][] };
+export type Chunk =
+  | { lines: readonly string[]; cls?: string }
+  | { board: { readonly model: BoardModel; readonly renderer?: BoardRenderer } };
 
 /** Tagged wrapper letting a command emit structured chunks. */
 export interface RichOutput {
   readonly rich: readonly Chunk[];
+}
+
+interface BoardChunk {
+  readonly board: { readonly model: BoardModel; readonly renderer?: BoardRenderer };
+}
+
+function boardChunkOf(model: BoardModel): BoardChunk["board"] {
+  const r = getBoardRenderer("css-grid");
+  return r !== undefined ? { model, renderer: r } : { model };
 }
 
 export function rich(...chunks: readonly Chunk[]): RichOutput {
@@ -91,9 +105,9 @@ export function boardChunk(s: Session): Chunk {
       undefined,
       terrainMarks(terrain),
     );
-    return { board: boardToSpans(model) };
+    return { board: boardChunkOf(model) };
   }
-  return { board: boardToSpans(battleModel(s.battle, undefined, terrainMarks(s.battle.terrain))) };
+  return { board: boardChunkOf(battleModel(s.battle, undefined, terrainMarks(s.battle.terrain))) };
 }
 
 // ---------------------------------------------------------------- info ----
@@ -203,7 +217,7 @@ export function infoMapChunks(locale: LocaleId, name: string): Chunk[] {
         "",
       ],
     },
-    { board: boardToSpans(mapModel(toEngineTerrain(map), map.width, map.height)) },
+    { board: boardChunkOf(mapModel(toEngineTerrain(map), map.width, map.height)) },
   ];
 }
 

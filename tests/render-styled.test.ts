@@ -3,6 +3,7 @@ import { getMapDef, toEngineTerrain } from "../src/data/index.js";
 import type { CharStyle, Span } from "../src/render.js";
 import {
   battleModel,
+  boardToChars,
   boardToSpans,
   boardToText,
   mapModel,
@@ -202,5 +203,52 @@ describe("styled board model", () => {
         expect(last.text.endsWith("  ") && last.style === undefined).toBe(false);
       }
     });
+  });
+
+  it("boardToChars reproduces flat rendering character by character", () => {
+    const terrain = toEngineTerrain(beginner);
+    const flat = renderMap(terrain, beginner.width, beginner.height);
+    const chars = boardToChars(mapModel(terrain, beginner.width, beginner.height));
+    const reconstructed = chars.map((line) => line.map((c) => c.text).join("")).join("\n");
+    expect(reconstructed).toBe(flat);
+  });
+
+  it("boardToChars preserves styles from boardToSpans", () => {
+    const state = createBattle(
+      [
+        { id: "a", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 0, row: 0 }, facing: "n" },
+        { id: "b", model: "CDA-3MA", team: 1, gunnery: 4, position: { col: 2, row: 0 }, facing: "s" },
+      ],
+      { terrain: [{ col: 0, row: 0, type: "heavyWoods" }] },
+    );
+    const spans = boardToSpans(battleModel(state));
+    const chars = boardToChars(battleModel(state));
+    // Same line count.
+    expect(chars.length).toBe(spans.length);
+    // Reconstructed text matches.
+    const spanText = spans.map((line) => spansText(line)).join("\n");
+    const charText = chars.map((line) => line.map((c) => c.text).join("")).join("\n");
+    expect(charText).toBe(spanText);
+    // Styled chars carry the same style as their parent span.
+    for (let y = 0; y < spans.length; y++) {
+      const spanLine = spans[y]!;
+      const charLine = chars[y]!;
+      let si = 0;
+      let ci = 0;
+      while (si < spanLine.length && ci < charLine.length) {
+        const sp = spanLine[si]!;
+        const ch = charLine[ci]!;
+        // Every char in this span run should share the span's style.
+        expect(ch.style).toEqual(sp.style);
+        ci++;
+        if (ci >= charLine.length || (sp.text.length > 0 && ci > 0)) {
+          // Advance span after consuming its chars.
+          const spanConsumed = spanLine
+            .slice(0, si + 1)
+            .reduce((n, s) => n + s.text.length, 0);
+          if (ci >= spanConsumed) si++;
+        }
+      }
+    }
   });
 });

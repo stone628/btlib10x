@@ -29,24 +29,10 @@ function styleClasses(style: CharStyle | undefined): string {
   return parts.join(" ");
 }
 
-function appendBoard(div: HTMLDivElement, board: Chunk & { board: readonly unknown[] }): void {
-  const lines = board.board as ReadonlyArray<ReadonlyArray<{ text: string; style?: CharStyle }>>;
-  lines.forEach((line, i) => {
-    if (i > 0) div.append("\n");
-    for (const sp of line) {
-      const el = document.createElement("span");
-      el.className = styleClasses(sp.style);
-      el.textContent = sp.text;
-      div.appendChild(el);
-    }
-  });
-}
-
 function appendChunk(chunk: Chunk): void {
   if ("board" in chunk) {
     const div = document.createElement("div");
-    div.className = "board";
-    appendBoard(div, chunk);
+    if (chunk.board.renderer) chunk.board.renderer(chunk.board.model, div);
     out.insertBefore(div, inrow);
     scrollToBottom();
     return;

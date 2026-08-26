@@ -1,5 +1,6 @@
 import { FACINGS } from "../src/core/types.js";
 import { MAP_DEFS } from "../src/data/index.js";
+import { boardToText } from "../src/render.js";
 import type { AttackDecl } from "../src/rules/game.js";
 import type { Chunk, RichOutput } from "./format.js";
 import {
@@ -496,9 +497,7 @@ export function runChunks(session: S.Session, raw: string): Chunk[] {
 
 /** Flat text of one chunk (boards contribute their visible characters). */
 export function chunkText(chunk: Chunk): string[] {
-  if ("board" in chunk) {
-    return chunk.board.map((line) => line.map((sp) => sp.text).join(""));
-  }
+  if ("board" in chunk) return boardToText(chunk.board.model).split("\n");
   return [...chunk.lines];
 }
 

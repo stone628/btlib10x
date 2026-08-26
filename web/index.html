@@ -74,6 +74,18 @@
         font-size: var(--board-fs);
         line-height: var(--board-lh);
       }
+      /* Per-character CSS Grid: isolates bold to single cells. */
+      #out .board-grid {
+        display: inline-grid;
+        grid-auto-flow: row dense;
+        line-height: 1;
+        font-family: var(--board-ff);
+        font-size: var(--board-fs);
+      }
+      #out .board-grid > span {
+        display: block;
+        width: 1ch;
+      }
       .t-lightWoods { color: var(--t-lightWoods); }
       .t-heavyWoods {
         color: var(--t-heavyWoods);
