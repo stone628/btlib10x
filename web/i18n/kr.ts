@@ -32,7 +32,7 @@ export const kr: Catalog = {
   "help.usagePrefix": "용법: ",
   "help.argumentsHeader": "인자:",
   "help.sectionGeneral": "--- 일반 명령 ---",
-  "help.sectionPhase": "--- 단계({phase}) ---",
+  "help.sectionPhase": "--- 단계 명령({phase}) ---",
   "err.unknownCommand": "알 수 없는 명령 '{name}' ('help'를 입력해 보세요)",
 
   // generic argument parsing
