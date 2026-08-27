@@ -122,7 +122,7 @@ export function infoMechList(locale: LocaleId): string[] {
 
 export function infoMech(locale: LocaleId, model: string): string[] {
   const d = requireMechDef(model, locale);
-  return [
+  const topLines = [
     t(locale, "info.head", {
       model: d.model,
       name: d.name,
@@ -131,12 +131,16 @@ export function infoMech(locale: LocaleId, model: string): string[] {
       techBase: d.techBase,
     }),
     t(locale, "info.movement", { walk: d.walking, run: d.running, jump: d.jumping }),
-    t(locale, "sheet.armorLine", {
-      list: LOCATIONS.map((loc) => `${SHORT_LOC[loc]} ${d.armor[loc]}`).join(" | "),
-    }),
+  ];
+  const weaponLines = [
     t(locale, "sheet.weaponsHeader", { n: d.weapons.length }),
     ...weaponSummary(d),
   ];
+  return mergeDiagram(
+    topLines,
+    weaponLines,
+    armorDiagram({ armor: d.armor, originalArmor: d.armor }),
+  );
 }
 
 export function infoMapList(): string[] {
@@ -314,13 +318,47 @@ const SHORT_LOC: Readonly<Record<Location, string>> = {
   leftLeg: "LL",
 };
 
-/** Record sheet with armor status per location (no body diagram). */
+interface ArmorInfo {
+  readonly armor: ArmorState;
+  readonly originalArmor: Readonly<Record<Location, number>>;
+}
+
+/** ASCII humanoid armor diagram placed to the right of the sheet. */
+function armorDiagram(info: ArmorInfo): string[] {
+  const cell = (val: number, max: number, label: string) =>
+    `${String(val).padStart(2)}/${String(max).padStart(2)}${label}`;
+  const p = (n: number) => " ".repeat(n);
+  const CT = 14,
+    RT = 7,
+    LT = 21;
+  const { armor: a, originalArmor: o } = info;
+  return [
+    `${p(CT)}[ HD ]`,
+    `${p(CT)}${cell(0, 0, "S")}`,
+    `${p(CT)}${cell(a.head, o.head, "A")}`,
+    `[ RA ] [ RT ] [ CT ] [ LT ] [ LA ]`,
+    [cell(0, 0, "S"), cell(0, 0, "S"), cell(0, 0, "S"), cell(0, 0, "S"), cell(0, 0, "S")].join(" "),
+    [
+      cell(a.rightArm, o.rightArm, "A"),
+      cell(a.rightTorso, o.rightTorso, "F"),
+      cell(a.centerTorso, o.centerTorso, "F"),
+      cell(a.leftTorso, o.leftTorso, "F"),
+      cell(a.leftArm, o.leftArm, "A"),
+    ].join(" "),
+    `${p(RT)}${[cell(0, 0, "R"), cell(0, 0, "R"), cell(0, 0, "R")].join(" ")}`,
+    `${p(RT)}[ RL ]${p(LT - RT - 6)}[ LL ]`,
+    `${p(RT)}${[cell(0, 0, "S"), cell(0, 0, "S")].join(p(LT - RT - 6))}`,
+    `${p(RT)}${[cell(a.rightLeg, o.rightLeg, "A"), cell(a.leftLeg, o.leftLeg, "A")].join(p(LT - RT - 6))}`,
+  ];
+}
+
+/** Record sheet with armor status per location, side-by-side with ASCII diagram. */
 export function sheetLines(view: SheetView, locale: LocaleId): string[] {
   const idLine = view.removed
     ? `${t(locale, "sheet.idLine", { id: view.id })}${t(locale, "sheet.removedId")}`
     : t(locale, "sheet.idLine", { id: view.id });
-  const lines = [idLine];
-  lines.push(
+  const topLines = [idLine];
+  topLines.push(
     t(locale, "sheet.modelLine", {
       model: view.model,
       name: view.name,
@@ -329,18 +367,11 @@ export function sheetLines(view: SheetView, locale: LocaleId): string[] {
     }),
   );
   if (view.gunnery !== null) {
-    lines.push(t(locale, "sheet.gunneryLine", { gunnery: gunneryLabel(locale, view.gunnery) }));
+    topLines.push(t(locale, "sheet.gunneryLine", { gunnery: gunneryLabel(locale, view.gunnery) }));
   }
-  lines.push(view.positionLine);
-  lines.push(
-    t(locale, "sheet.armorLine", {
-      list: LOCATIONS.map((loc) => {
-        const v = view.armor[loc];
-        return `${SHORT_LOC[loc]} ${v}/${view.originalArmor[loc]}${v <= 0 ? "!" : ""}`;
-      }).join(" | "),
-    }),
-  );
-  lines.push(t(locale, "sheet.weaponsHeader", { n: view.mounts.length }));
+  topLines.push(view.positionLine);
+  const weaponLines: string[] = [];
+  weaponLines.push(t(locale, "sheet.weaponsHeader", { n: view.mounts.length }));
   for (const [i, m] of view.mounts.entries()) {
     const w = getWeapon(m.weapon);
     const flags = [
@@ -348,11 +379,25 @@ export function sheetLines(view: SheetView, locale: LocaleId): string[] {
       m.jammed ? t(locale, "sheet.jammed") : null,
       m.destroyed ? t(locale, "sheet.destroyed") : null,
     ].filter((x) => x !== null);
-    lines.push(
+    weaponLines.push(
       `  #${i + 1} ${m.weapon} (${SHORT_LOC[m.location]}) S${w.short}/M${w.medium}/L${w.long}${flags.length ? ` ${flags.join(" ")}` : ""}`,
     );
   }
-  return lines;
+  return mergeDiagram(topLines, weaponLines, armorDiagram(view));
+}
+
+function mergeDiagram(topLines: string[], weaponLines: string[], diagram: string[]): string[] {
+  const dc = diagram.length;
+  const leftMax = Math.max(...topLines.map((l) => l.length), ...weaponLines.map((l) => l.length));
+  const blank = "".padEnd(leftMax);
+  const leftRows = Array.from({ length: dc }, () => blank);
+  for (let i = 0; i < topLines.length && i < dc; i++) leftRows[i] = topLines[i]!;
+  const wStart = dc - weaponLines.length;
+  for (let i = 0; i < weaponLines.length; i++) {
+    const r = wStart + i;
+    if (r >= 0 && r < dc) leftRows[r] = weaponLines[i]!;
+  }
+  return leftRows.map((l, i) => `${l.padEnd(leftMax)}  ${diagram[i]}`);
 }
 
 export function sheetForUnit(s: Session, id: string): string[] {

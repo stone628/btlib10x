@@ -196,7 +196,8 @@ describe("info", () => {
     expect(list.some((l) => l.startsWith("HBK-4G"))).toBe(true);
     const detail = run(s, "info mech HBK-4G").join("\n");
     expect(detail).toContain("walk 4 / run 6 / jump 0");
-    expect(detail).toContain("armor: HD 9 | CT 26 | RT 20 | LT 20 | RA 16 | LA 16 | RL 20 | LL 20");
+    expect(detail).toContain("9/ 9A");
+    expect(detail).toContain("26/26F");
     expect(detail).toContain("Autocannon/20");
     expect(detail).toContain("#1 Autocannon/20 (RT)");
     expect(run(s, "info mech NOPE")[0]).toMatch(/^error: Unknown 'Mech model/);
@@ -225,8 +226,8 @@ describe("sheet", () => {
     const lines = run(s, "sheet hunchy").join("\n");
     expect(lines).toContain("Hunchback HBK-4G");
     expect(lines).toContain("gunnery: Regular(4)");
-    expect(lines).toContain("HD 9/9");
-    expect(lines).toContain("CT 26/26");
+    expect(lines).toContain("9/ 9A");
+    expect(lines).toContain("26/26F");
     expect(lines).toContain("#1 Autocannon/20 (RT)");
   });
 
@@ -235,7 +236,7 @@ describe("sheet", () => {
     run(s, "start");
     const before = run(s, "sheet hunchy").join("\n");
     expect(before).toContain("position: 9,9 facing n");
-    expect(before).toContain("armor: HD 9/9 | CT 26/26");
+    expect(before).toContain("26/26F");
     autoPlay(s);
     // Battle ended; at least one unit took damage.
     const allUnits = Object.values(s.battle!.units);
