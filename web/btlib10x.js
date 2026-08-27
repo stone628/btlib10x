@@ -1591,11 +1591,8 @@ function declareAttacks(state, unitId, decls) {
   ];
   return next;
 }
-function resolveDeclaredAttacks(state, unitId, rng) {
-  requirePhase(state, "weaponAttack");
-  const next = clone(state);
-  const unit = getUnitOrThrow(next, unitId);
-  if (unit.declaredAttacks.length === 0) throw new Error(`${unitId} has no declared attacks`);
+function resolveUnitAttacks(state, unit, rng) {
+  const next = state;
   const def = next.defs[unit.model];
   for (const decl of unit.declaredAttacks) {
     const mount = def.weapons[decl.weaponIndex];
@@ -1632,10 +1629,27 @@ function resolveDeclaredAttacks(state, unitId, rng) {
     }
     next.events = [
       ...next.events,
-      { kind: "attackResolved", unitId, targetId: target.id, resolution }
+      { kind: "attackResolved", unitId: unit.id, targetId: target.id, resolution }
     ];
   }
   unit.declaredAttacks = [];
+}
+function resolveDeclaredAttacks(state, unitId, rng) {
+  requirePhase(state, "weaponAttack");
+  const next = clone(state);
+  const unit = getUnitOrThrow(next, unitId);
+  if (unit.declaredAttacks.length === 0) throw new Error(`${unitId} has no declared attacks`);
+  resolveUnitAttacks(next, unit, rng);
+  return next;
+}
+function resolveAllAttacks(state, rng) {
+  requirePhase(state, "weaponAttack");
+  const next = clone(state);
+  for (const unit of Object.values(next.units)) {
+    if (unit.removed) continue;
+    if (unit.declaredAttacks.length === 0) continue;
+    resolveUnitAttacks(next, unit, rng);
+  }
   return next;
 }
 function advancePhase(state) {
@@ -1780,6 +1794,7 @@ export {
   neighbors,
   nextActor,
   oppositeFacing,
+  resolveAllAttacks,
   resolveDeclaredAttacks,
   resolveWeaponAttack,
   roll2D6,
