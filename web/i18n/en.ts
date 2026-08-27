@@ -232,7 +232,9 @@ export const en = {
   "res.miss": "MISS",
   "res.clusterRoll": "cluster roll {roll}",
   "res.hits": "hits: {groups}",
-  "res.blownOff": "; {locs} blown off",
+  "res.armBlownOff": "; {cause} destroyed → {arm} blown off",
+  "res.immobilized": "; immobilized",
+  "res.killed": "; killed",
   "res.destroyedTail": "; destroyed {locs}",
 } as const;
 
