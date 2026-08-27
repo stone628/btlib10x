@@ -1,4 +1,4 @@
-import { AUTOPLAY_INTERVAL_MS, nextAutoPlayCommand } from "./autoplay.js";
+import { AUTOPLAY_INTERVAL_MS, nextAutoPlayCommand, resetAutoplayState } from "./autoplay.js";
 import { runChunks } from "./cli.js";
 import type { Chunk } from "./format.js";
 import { t } from "./i18n/index.js";
@@ -58,7 +58,6 @@ function submit(raw: string, fromAutoPlay = false): void {
   for (const chunk of runChunks(session, line)) {
     appendChunk(chunk);
   }
-  session.lastAutoPlayCmd = line;
   input.value = "";
   refreshPrompt();
   scrollToBottom();
@@ -82,6 +81,7 @@ function startAutoPlay(): void {
   stopAutoPlay(false);
   appendChunk({ lines: [t(session.locale, "autoPlay.started")], cls: "banner" });
   scrollToBottom();
+  resetAutoplayState(session);
   autoPlayTimer = setInterval(() => {
     if (autoPlayTimer === null) return;
     const command = nextAutoPlayCommand(session);

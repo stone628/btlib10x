@@ -345,8 +345,14 @@ describe("attack", () => {
     expect(run(s, `fire 1 ${enemy}`).join("\n")).toContain("queued #1");
     expect(run(s, `fire 2 ${actor}`)[0]).toMatch(/^error: Target must belong to another team/);
     expect(run(s, "status").join("\n")).toContain(`-> ${enemy}`);
+    // First unit declares; no resolution yet (sweep at phase end).
+    run(s, "done");
+    // Second unit declares and triggers resolution sweep at phase end.
+    const actor2 = S.currentActor(s)!.id;
+    expect(run(s, "weapons").join("\n")).toMatch(/#1 .+S\d+\/M\d+\/L\d+/);
+    expect(run(s, `fire 1 ${actor}`).join("\n")).toContain("queued #1");
     const out = run(s, "done").join("\n");
-    expect(out).toMatch(new RegExp(`${actor} fires at ${enemy}`));
+    expect(out).toMatch(new RegExp(`${actor2} fires at ${actor}`));
     expect(out).toMatch(/-> (HIT|MISS|auto-hit)/);
     if (ammoBefore !== null) {
       expect(s.battle!.units.hunchy!.ammoLeft[0]).toBe(ammoBefore - 1);

@@ -13,8 +13,37 @@ const SCRIPT_SETUP: ReadonlyArray<{ id: string; command: string }> = [
   { id: "cicada", command: "add cicada CDA-3MA 1 4 5 3 sw" },
 ];
 
-/** Commands queued for the endgame display (board + sheets). */
-let endgameQueue: string[] | null = null;
+/** Queued commands to issue before falling back to state-based logic. */
+let nextCommandQueue: string[] = [];
+let currApp: string | null = null;
+let currBattlePhase: string | null = null;
+
+// /** Push the rest onto the queue, return the first command. */
+// function queueAndReturn(first: string, ...rest: string[]): string {
+//   if (rest.length > 0) nextCommandQueue.push(...rest);
+//   lastReturned = first;
+//   return first;
+// }
+
+function queueNextCommand(cmd: string): void {
+  nextCommandQueue.push(cmd);
+}
+
+function returnFirstQueuedCommand(): string {
+  return nextCommandQueue.shift()!;
+}
+
+/** Reset transient autoplay memory; called when the user re-enters setup. */
+export function resetAutoplayState(s: S.Session): void {
+  nextCommandQueue = [];
+  currApp = s.app;
+  const st = s.battle;
+  if (currApp !== "battle" || st === null) {
+    currBattlePhase = null;
+  } else {
+    currBattlePhase = st.phase;
+  }
+}
 
 /**
  * Next command a demonstrator would type for this session, derived purely
@@ -23,55 +52,83 @@ let endgameQueue: string[] | null = null;
  * one AUTOPLAY_INTERVAL_MS at a time.
  */
 export function nextAutoPlayCommand(s: S.Session): string | null {
-  if (s.app === "setup") {
-    endgameQueue = null;
-    if (s.mapName === null) return "map test";
-    const missing = SCRIPT_SETUP.find((u) => !s.roster.some((r) => r.id === u.id));
-    if (missing !== undefined) return missing.command;
-    return "start";
+  if (nextCommandQueue.length > 0) {
+    return nextCommandQueue.shift()!;
   }
-  if (s.app === "over") {
-    if (endgameQueue === null) {
-      if (s.battle !== null) {
-        endgameQueue = ["board", "status"];
-      } else {
-        endgameQueue = [];
+  const prevApp = currApp;
+  currApp = s.app;
+
+  if (currApp === "setup") {
+    if (s.mapName === null) queueNextCommand("map test");
+    for (const u of SCRIPT_SETUP) {
+      if (!s.roster.some((r) => r.id == u.id)) {
+        queueNextCommand(u.command)
       }
     }
-    if (endgameQueue.length > 0) return endgameQueue.shift()!;
+    queueNextCommand("start");
+    return returnFirstQueuedCommand();
+  }
+
+  if (currApp === "over") {
+    const st = s.battle;
+    if (st !== null && prevApp === "battle") {
+      queueNextCommand("status");
+      queueNextCommand("board");
+      Object.values(st.units).forEach((u) => queueNextCommand(`sheet ${u.id}`));
+      return returnFirstQueuedCommand();
+    }
     return null;
   }
-  if (s.app !== "battle" || s.battle === null || s.actorId === null) return null;
-  endgameQueue = null;
-  if (s.lastAutoPlayCmd === "start") return "board";
-  const st = s.battle;
-  const actor = st.units[s.actorId];
-  if (actor === undefined || actor.removed) return null;
-  const enemy = Object.values(st.units).find((u) => !u.removed && u.id !== actor.id);
-  if (enemy === undefined) return null;
-  if (st.phase === "movement") {
-    if (s.lastAutoPlayCmd === "done") return "board";
-    return actor.moveMode === null
-      ? isImmobile(actor.armor)
-        ? "mode standstill"
-        : "mode walk"
-      : "done";
-  }
-  if (st.phase === "weaponAttack") {
-    const def = st.defs[actor.model];
-    if (def === undefined) return null;
-    if (s.lastAutoPlayCmd === "done") return `sheet ${enemy.id}`;
-    // Queued shots live in the session's fireDecls buffer until 'done' commits.
-    const declared = new Set(s.fireDecls.map((d) => d.weaponIndex));
-    for (let w = 0; w < def.weapons.length; w++) {
-      if (declared.has(w)) continue;
-      const mount = def.weapons[w]!;
-      if (actor.jammedWeapons.includes(w)) continue;
-      if (!canFireFromLocation(actor.phaseStartArmor, mount.location)) continue;
-      if (actor.ammoLeft[w] !== undefined && (actor.ammoLeft[w] ?? 0) < 1) continue;
-      return `fire ${w + 1} ${enemy.id}`;
+
+  if (currApp === "battle") {
+    const st = s.battle;
+
+    if (st === null || s.actorId === null) return null;
+
+    const actor = st.units[s.actorId];
+    if (actor === undefined || actor.removed) return null;
+    const enemy = Object.values(st.units).find((u) => !u.removed && u.id !== actor.id);
+    if (enemy === undefined) return null;
+
+    if (prevApp === "setup") {
+      queueNextCommand("board");
+      return returnFirstQueuedCommand();
     }
-    return "done";
+
+    const lastBattlePhase = currBattlePhase;
+    currBattlePhase = st.phase
+
+    if (currBattlePhase === "movement") {
+      if (lastBattlePhase !== "movement") {
+        const sheetCmds = Object.values(st.units)
+          .filter((u) => !u.removed)
+          .forEach((u) => queueNextCommand(`sheet ${u.id}`));
+      }
+      if (actor.moveMode === null) {
+        queueNextCommand(isImmobile(actor.armor) ? "mode standstill" : "mode walk");
+      }
+      queueNextCommand("done");
+      return returnFirstQueuedCommand();
+    }
+
+    if (st.phase === "weaponAttack") {
+      const def = st.defs[actor.model];
+      if (def === undefined) return null;
+      const declared = new Set(s.fireDecls.map((d) => d.weaponIndex));
+      for (let w = 0; w < def.weapons.length; w++) {
+        if (declared.has(w)) continue;
+        const mount = def.weapons[w]!;
+        if (actor.jammedWeapons.includes(w)) continue;
+        if (!canFireFromLocation(actor.phaseStartArmor, mount.location)) continue;
+        if (actor.ammoLeft[w] !== undefined && (actor.ammoLeft[w] ?? 0) < 1) continue;
+        queueNextCommand(`fire ${w + 1} ${enemy.id}`);
+      }
+      queueNextCommand("done");
+      return returnFirstQueuedCommand();
+    }
+
+    return null;
   }
+
   return null;
 }

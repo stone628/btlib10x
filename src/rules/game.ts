@@ -493,11 +493,8 @@ export function declareAttacks(
   return next;
 }
 
-export function resolveDeclaredAttacks(state: BattleState, unitId: string, rng: Rng): BattleState {
-  requirePhase(state, "weaponAttack");
-  const next = clone(state);
-  const unit = getUnitOrThrow(next, unitId);
-  if (unit.declaredAttacks.length === 0) throw new Error(`${unitId} has no declared attacks`);
+function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void {
+  const next = state;
   const def = next.defs[unit.model]!;
 
   for (const decl of unit.declaredAttacks) {
@@ -539,11 +536,36 @@ export function resolveDeclaredAttacks(state: BattleState, unitId: string, rng: 
 
     next.events = [
       ...next.events,
-      { kind: "attackResolved", unitId, targetId: target.id, resolution },
+      { kind: "attackResolved", unitId: unit.id, targetId: target.id, resolution },
     ];
   }
 
   unit.declaredAttacks = [];
+}
+
+/** Resolve one unit's declared attacks against the current phase snapshot. */
+export function resolveDeclaredAttacks(state: BattleState, unitId: string, rng: Rng): BattleState {
+  requirePhase(state, "weaponAttack");
+  const next = clone(state);
+  const unit = getUnitOrThrow(next, unitId);
+  if (unit.declaredAttacks.length === 0) throw new Error(`${unitId} has no declared attacks`);
+  resolveUnitAttacks(next, unit, rng);
+  return next;
+}
+
+/**
+ * Phase-end sweep: resolve every unit's declared attacks together, then remove
+ * the destroyed. All declarations are collected first (during the weapon attack
+ * phase), so damage is applied only after every unit has declared.
+ */
+export function resolveAllAttacks(state: BattleState, rng: Rng): BattleState {
+  requirePhase(state, "weaponAttack");
+  const next = clone(state);
+  for (const unit of Object.values(next.units)) {
+    if (unit.removed) continue;
+    if (unit.declaredAttacks.length === 0) continue;
+    resolveUnitAttacks(next, unit, rng);
+  }
   return next;
 }
 
