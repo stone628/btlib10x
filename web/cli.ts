@@ -1,6 +1,5 @@
-import { FACINGS } from "../src/core/types.js";
-import { MAP_DEFS } from "../src/data/index.js";
-import type { AttackDecl } from "../src/rules/game.js";
+import type { AttackDecl } from "btlib10x";
+import { FACINGS, MAP_DEFS } from "btlib10x";
 import type { Chunk, RichOutput } from "./format.js";
 import {
   attackStatusLines,

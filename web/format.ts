@@ -1,12 +1,22 @@
-import type { Location } from "../src/core/types.js";
-import { LOCATIONS } from "../src/core/types.js";
-import { getMapDef, MAP_DEFS, MECH_DEFS, toEngineTerrain } from "../src/data/index.js";
-import type { MechDef } from "../src/data/schema.js";
-import { getWeapon, WEAPONS } from "../src/data/weapons.js";
-import type { AttackResolution } from "../src/rules/attack.js";
-import type { ArmorState } from "../src/rules/damage.js";
-import { canFireFromLocation } from "../src/rules/damage.js";
-import type { BattleState, GameEvent, UnitState } from "../src/rules/game.js";
+import type {
+  ArmorState,
+  AttackResolution,
+  BattleState,
+  GameEvent,
+  Location,
+  MechDef,
+  UnitState,
+} from "btlib10x";
+import {
+  canFireFromLocation,
+  getMapDef,
+  getWeapon,
+  LOCATIONS,
+  MAP_DEFS,
+  MECH_DEFS,
+  toEngineTerrain,
+  WEAPONS,
+} from "btlib10x";
 import type { LocaleId } from "./i18n/index.js";
 import { t } from "./i18n/index.js";
 import type { BoardModel, BoardRenderer } from "./render.js";

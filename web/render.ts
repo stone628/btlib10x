@@ -1,5 +1,5 @@
 // ---- Re-export from renderer.text.ts so callers only need `render.ts`. ----
-import type { Facing } from "../src/core/types.js";
+import type { Facing } from "btlib10x";
 
 export type { BoardRenderer } from "./renderer.text.js";
 export {

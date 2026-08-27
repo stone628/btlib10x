@@ -1,30 +1,43 @@
-import { neighbor, sameHex } from "../src/core/hex.js";
-import { costToEnter } from "../src/core/terrain.js";
-import type { Facing, Hex, MoveMode, Rng, TerrainHexDef } from "../src/core/types.js";
-import { FACINGS, rotateFacing } from "../src/core/types.js";
-import { getMapDef, MAP_DEFS, MECH_DEFS, toEngineTerrain } from "../src/data/index.js";
 import type {
   AttackDecl,
   BattleState,
   CreateBattleOptions,
+  Facing,
+  Hex,
+  MoveMode,
   MoveStep,
+  Rng,
+  TerrainHexDef,
   UnitInit,
   UnitState,
   VictoryResult,
-} from "../src/rules/game.js";
+} from "btlib10x";
 import {
   advancePhase,
   checkVictory,
+  costToEnter,
   createBattle,
   declareAttacks,
   declareMove,
   executeMove,
+  FACINGS,
+  facingChangeCost,
+  getMapDef,
   getUnit,
+  isBackwardStep,
+  isForwardStep,
+  MAP_DEFS,
+  MECH_DEFS,
+  maxMovePoints,
+  neighbor,
   nextActor,
   resolveDeclaredAttacks,
   rollInitiativePhase,
-} from "../src/rules/game.js";
-import * as mv from "../src/rules/movement.js";
+  rotateFacing,
+  sameHex,
+  terrainAt,
+  toEngineTerrain,
+} from "btlib10x";
 import type { LocaleId } from "./i18n/index.js";
 import { t } from "./i18n/index.js";
 import { createRng } from "./rng.js";
@@ -258,11 +271,11 @@ function replaySteps(s: Session): MoveCursor {
   for (const step of s.moveSteps) {
     if (step.kind === "turn") {
       cur.facing = rotateFacing(cur.facing, step.facings);
-      cur.spent += mv.facingChangeCost(Math.abs(step.facings));
+      cur.spent += facingChangeCost(Math.abs(step.facings));
     } else {
       cur.hex = { ...step.to };
       cur.spent +=
-        s.moveMode === "jump" ? 1 : costToEnter(mv.terrainAt(requireBattle(s).terrain, step.to));
+        s.moveMode === "jump" ? 1 : costToEnter(terrainAt(requireBattle(s).terrain, step.to));
     }
   }
   return cur;
@@ -271,7 +284,7 @@ function replaySteps(s: Session): MoveCursor {
 function budgetFor(s: Session): number {
   const unit = currentActor(s)!;
   const def = requireBattle(s).defs[unit.model]!;
-  return mv.maxMovePoints(s.moveMode ?? "standStill", def.walking, def.running, def.jumping);
+  return maxMovePoints(s.moveMode ?? "standStill", def.walking, def.running, def.jumping);
 }
 
 export interface StepResult {
@@ -308,12 +321,12 @@ export function queueEnter(s: Session, to: Hex): void {
     if (!isAdjacent(to, cur.hex)) throw new Error(t(s.locale, "err.jumpNotAdjacent"));
     cost = 1;
   } else {
-    const forward = mv.isForwardStep(cur.hex, to, cur.facing);
-    const backward = !forward && mv.isBackwardStep(cur.hex, to, cur.facing);
+    const forward = isForwardStep(cur.hex, to, cur.facing);
+    const backward = !forward && isBackwardStep(cur.hex, to, cur.facing);
     if (!forward && !backward) {
       throw new Error(t(s.locale, "err.groundStraightOnly"));
     }
-    cost = costToEnter(mv.terrainAt(requireBattle(s).terrain, to));
+    cost = costToEnter(terrainAt(requireBattle(s).terrain, to));
   }
   const spent = cur.spent + cost;
   const budget = budgetFor(s);
@@ -332,7 +345,7 @@ export function queueTurn(s: Session, facings: number): void {
     throw new Error(t(s.locale, "err.badFacings"));
   }
   const cur = replaySteps(s);
-  const spent = cur.spent + mv.facingChangeCost(Math.abs(facings));
+  const spent = cur.spent + facingChangeCost(Math.abs(facings));
   const budget = budgetFor(s);
   if (spent > budget) {
     throw new Error(t(s.locale, "err.mpExceeded", { spent, mode: s.moveMode, budget }));
@@ -411,7 +424,7 @@ export function moveStepsInfo(s: Session): {
         to: nextFacing,
       });
       facing = nextFacing;
-      cost = mv.facingChangeCost(Math.abs(step.facings));
+      cost = facingChangeCost(Math.abs(step.facings));
     } else {
       label = t(s.locale, "moveStatus.stepEnter", {
         i: i + 1,
@@ -419,7 +432,7 @@ export function moveStepsInfo(s: Session): {
         row: step.to.row + 1,
       });
       _hex = { ...step.to };
-      cost = s.moveMode === "jump" ? 1 : costToEnter(mv.terrainAt(terrain, step.to));
+      cost = s.moveMode === "jump" ? 1 : costToEnter(terrainAt(terrain, step.to));
     }
     spent += cost;
     steps.push({ label, mpCost: cost, mpAfter: spent });
