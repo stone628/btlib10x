@@ -15,8 +15,8 @@ function playThrough(s: S.Session, maxCommands = 500): void {
 }
 
 describe("autoplay", () => {
-  it("defaults to a 2s cadence", () => {
-    expect(AUTOPLAY_INTERVAL_MS).toBe(2000);
+  it("defaults to a 0.5s cadence", () => {
+    expect(AUTOPLAY_INTERVAL_MS).toBe(500);
   });
 
   it("scripts setup from scratch, starting with reset semantics", () => {

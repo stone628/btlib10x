@@ -426,6 +426,10 @@ export function overStatusLines(s: Session): string[] {
     lines.push(t(s.locale, "setup.teamHeader", { team }));
     for (const [uid, unit] of Object.entries(s.battle.units).filter(([, u]) => u.team === team)) {
       const view = battleSheet(s.battle, unit, uid, s.locale);
+      const idLine = view.removed
+        ? `${t(s.locale, "sheet.idLine", { id: view.id })}${t(s.locale, "sheet.removedId")}`
+        : t(s.locale, "sheet.idLine", { id: view.id });
+      lines.push(`  ${idLine}`);
       for (const line of sheetLinesShort(view, s.locale, false)) lines.push(`  ${line}`);
     }
   }
