@@ -223,8 +223,8 @@ describe("sheet", () => {
   it("shows a setup record sheet from the roster", () => {
     const s = freshSetup();
     const lines = run(s, "sheet hunchy").join("\n");
-    expect(lines).toContain("HBK-4G Hunchback");
-    expect(lines).toContain("gunnery Regular(4)");
+    expect(lines).toContain("Hunchback HBK-4G");
+    expect(lines).toContain("gunnery: Regular(4)");
     expect(lines).toContain("HD 9/9");
     expect(lines).toContain("CT 26/26");
     expect(lines).toContain("#1 Autocannon/20 (RT)");
@@ -234,7 +234,7 @@ describe("sheet", () => {
     const s = freshSetup();
     run(s, "start");
     const before = run(s, "sheet hunchy").join("\n");
-    expect(before).toContain("at 9,9 facing n");
+    expect(before).toContain("position: 9,9 facing n");
     expect(before).toContain("armor: HD 9/9 | CT 26/26");
     autoPlay(s);
     // Battle ended; at least one unit took damage.
@@ -292,7 +292,7 @@ describe("movement", () => {
     expect(status0).toContain("budget: 4 MP");
 
     const queued = run(s, "face ne");
-    expect(queued.join("\n")).toMatch(/queued facing change/);
+    expect(queued.join("\n")).toMatch(/facing ne \[MP 1\/4\]/);
     const status1 = run(s, "status").join("\n");
     expect(status1).toMatch(/1\. face \+\d+ .*total 1/);
 

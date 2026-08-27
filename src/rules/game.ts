@@ -81,6 +81,7 @@ export type GameEvent =
       readonly position: Hex;
       readonly facing: Facing;
       readonly mpSpent: number;
+      readonly mpBudget: number;
     }
   | {
       readonly kind: "attacksDeclared";
@@ -363,6 +364,7 @@ export function executeMove(
       position: { ...cursor },
       facing: unit.facing,
       mpSpent: spent,
+      mpBudget: budget,
     },
   ];
   return next;

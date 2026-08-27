@@ -239,7 +239,8 @@ const MOVE_CMDS: Record<string, CmdDef> = {
       expectArgs(L(s), a, 1, "mode standstill|walk|run|jump");
       const mode = S.parseMoveMode(L(s), a[0]!);
       S.declareMode(s, a[0]!);
-      return [t(L(s), "ok.modeDeclared", { id: s.actorId ?? "", mode })];
+      const r = S.stepResult(s);
+      return [t(L(s), "ok.modeDeclared", { id: s.actorId ?? "", mode, budget: r.mpBudget })];
     },
   },
   move: {
@@ -249,7 +250,20 @@ const MOVE_CMDS: Record<string, CmdDef> = {
     run: (s, a) => {
       expectArgs(L(s), a, 2, "move <col> <row>");
       S.queueEnter(s, { col: coord(L(s), a[0]!, "col"), row: coord(L(s), a[1]!, "row") });
-      return [t(L(s), "ok.stepQueued", { col: a[0]!, row: a[1]! })];
+      const r = S.stepResult(s);
+      const col = r.position.col + 1;
+      const row = r.position.row + 1;
+      return [
+        t(L(s), "ok.stepResult", {
+          id: s.actorId ?? "",
+          mode: s.moveMode ?? "",
+          col,
+          row,
+          facing: r.facing,
+          spent: r.mpSpent,
+          budget: r.mpBudget,
+        }),
+      ];
     },
   },
   face: {
@@ -261,7 +275,20 @@ const MOVE_CMDS: Record<string, CmdDef> = {
       const unit = S.currentActor(s)!;
       const steps = S.faceSteps(L(s), unit.facing, a[0]!);
       S.queueTurn(s, steps);
-      return [t(L(s), "ok.turnQueued", { steps: steps > 0 ? `+${steps}` : String(steps) })];
+      const r = S.stepResult(s);
+      const col = r.position.col + 1;
+      const row = r.position.row + 1;
+      return [
+        t(L(s), "ok.stepResult", {
+          id: s.actorId ?? "",
+          mode: s.moveMode ?? "",
+          col,
+          row,
+          facing: r.facing,
+          spent: r.mpSpent,
+          budget: r.mpBudget,
+        }),
+      ];
     },
   },
   sheet: { helpKey: "cmd.sheetActing.help", run: (s) => sheetForUnit(s, s.actorId ?? "") },
