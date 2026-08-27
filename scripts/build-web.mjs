@@ -5,24 +5,37 @@ const serve = process.argv.includes("--serve");
 const portArg = process.argv.find((a) => a.startsWith("--port="));
 const port = portArg ? Number(portArg.split("=")[1]) : 8012;
 
-const ctx = await esbuild.context({
-  entryPoints: ["web/main.ts"],
-  outfile: "web/app.js",
+const coreCtx = await esbuild.context({
+  entryPoints: ["src/index.ts"],
+  outfile: "web/btlib10x.js",
   bundle: true,
-  format: "iife",
+  format: "esm",
   target: "es2022",
   logLevel: "info",
 });
 
+const appCtx = await esbuild.context({
+  entryPoints: ["web/main.ts"],
+  outfile: "web/app.js",
+  bundle: true,
+  format: "esm",
+  target: "es2022",
+  external: ["btlib10x"],
+  logLevel: "info",
+});
+
 if (serve) {
-  const { hosts, port: actualPort } = await ctx.serve({ servedir: "web", port });
+  const { hosts, port: actualPort } = await appCtx.serve({ servedir: "web", port });
   console.log(`serving at http://${hosts[0]}:${actualPort}/index.html`);
 }
 if (watch) {
-  await ctx.watch();
+  await coreCtx.watch();
+  await appCtx.watch();
   console.log("watching for changes…");
 }
 if (!watch && !serve) {
-  await ctx.rebuild();
-  await ctx.dispose();
+  await coreCtx.rebuild();
+  await appCtx.rebuild();
+  await coreCtx.dispose();
+  await appCtx.dispose();
 }

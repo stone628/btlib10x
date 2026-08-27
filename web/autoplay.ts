@@ -1,4 +1,4 @@
-import { canFireFromLocation, isImmobile } from "../src/rules/damage.js";
+import { canFireFromLocation, isImmobile } from "btlib10x";
 import type * as S from "./session.js";
 
 /** Delay between generated commands, in milliseconds. */

@@ -1,5 +1,4 @@
-import type { Facing, TerrainHexDef } from "../src/core/types.js";
-import type { BattleState } from "../src/rules/game.js";
+import type { BattleState, Facing, TerrainHexDef } from "btlib10x";
 import { type LocaleId, t } from "./i18n/index.js";
 import type { BoardModel, CharStyle, Span } from "./render.js";
 

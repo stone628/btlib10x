@@ -76,7 +76,7 @@ The prompt names the acting unit; commands act on that 'Mech.
 | `sheet` | record sheet of the acting 'Mech |
 | `status` | queued move steps with running MP cost per step |
 | `cancel` | clear mode + steps |
-| `done` | commit via `executeMove`; prints path + MP spent |
+| `done` | commit via `executeMove`; prints path + MP spent and total budget |
 
 ### turn(N):attack(team T, mech <id>)
 

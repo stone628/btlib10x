@@ -21,7 +21,7 @@
 - [x] Single-weapon attack orchestrator: to-hit roll, jam on natural 2 for multi-shot rapid fire, variable damage per bracket
 - [x] Battle state machine (`src/rules/game.ts`): phases, alternating activation via `nextActor`, move execution, attack declaration/resolution, end-phase kill commitment, victory check, serializable event log
 - [x] Public entrypoint `src/index.ts`
-- [x] Test suites: 61 tests across 9 files, including rulebook worked examples (Rolling To-Hit p6 TN 9/TN 8, Target Movement p16 trio, Hunchback damage transfer p17, Wolverine damage transfer BB p8) and a full scripted Wolverine-vs-Griffin battle to victory on turn 6
+- [x] Test suites: 135 tests across 16 files, including rulebook worked examples (Rolling To-Hit p6 TN 9/TN 8, Target Movement p16 trio, Hunchback damage transfer p17, Wolverine damage transfer BB p8) and a full scripted Wolverine-vs-Griffin battle to victory on turn 6
 - [x] `npm run typecheck && npm test` green; `npm run build` emits ESM + declarations with mechs JSON copied to `dist/`
 - [x] docs/API.md (reference)
 - [x] docs/USAGE.md (usage guide walking one battle turn through the engine)

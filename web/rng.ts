@@ -1,4 +1,4 @@
-import type { Rng } from "../src/core/types.js";
+import type { Rng } from "btlib10x";
 
 /** mulberry32 PRNG reduced to the engine's `Rng` interface (d6 = 1..6). */
 export function createRng(seed: number): Rng {
