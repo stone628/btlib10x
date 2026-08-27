@@ -274,6 +274,24 @@ function budgetFor(s: Session): number {
   return mv.maxMovePoints(s.moveMode ?? "standStill", def.walking, def.running, def.jumping);
 }
 
+export interface StepResult {
+  readonly position: Hex;
+  facing: Facing;
+  readonly mpSpent: number;
+  readonly mpBudget: number;
+}
+
+/** Cursor state after replaying all queued movement steps. */
+export function stepResult(s: Session): StepResult {
+  const cur = replaySteps(s);
+  return {
+    position: cur.hex,
+    facing: cur.facing,
+    mpSpent: cur.spent,
+    mpBudget: budgetFor(s),
+  };
+}
+
 function isAdjacent(to: Hex, hex: Hex): boolean {
   return FACINGS.some((f) => sameHex(neighbor(hex, f), to));
 }

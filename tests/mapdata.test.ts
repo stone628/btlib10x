@@ -85,7 +85,7 @@ describe("validateMapDef", () => {
 
 describe("bundled maps", () => {
   it("loads both rulebook maps with expected dimensions and hex counts", () => {
-    expect(Object.keys(MAP_DEFS).sort()).toEqual(["beginner", "quickstart"]);
+    expect(Object.keys(MAP_DEFS).sort()).toEqual(["beginner", "quickstart", "test"]);
     for (const name of ["beginner", "quickstart"]) {
       const map = getMapDef(name)!;
       expect(map.width).toBe(15);

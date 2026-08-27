@@ -213,12 +213,15 @@ function requireMechDef(model: string, locale: LocaleId): MechDef {
 // --------------------------------------------------------------- sheet ----
 
 interface SheetView {
+  readonly id: string;
   readonly model: string;
   readonly name: string;
   readonly weightClass: string;
   readonly tonnage: number;
   readonly gunnery: number | null;
-  readonly facingLine: string | null;
+  readonly removed: boolean;
+  readonly positionLine: string;
+  readonly modeLine: string | null;
   /** Current armor per location. */
   readonly armor: ArmorState;
   /** Designed armor per location (from the MechDef). */
@@ -232,20 +235,26 @@ interface SheetView {
   }[];
 }
 
-function battleSheet(battle: BattleState, unit: UnitState, locale: LocaleId): SheetView {
+function battleSheet(
+  battle: BattleState,
+  unit: UnitState,
+  id: string,
+  locale: LocaleId,
+): SheetView {
   const def = battle.defs[unit.model]!;
   return {
+    id,
     model: def.model,
     name: def.name,
     weightClass: def.weightClass,
     tonnage: def.tonnage,
     gunnery: unit.gunnery,
-    facingLine:
-      t(locale, "sheet.at", { pos: disp(unit.position), facing: unit.facing }) +
-      (unit.moveMode !== null
+    removed: unit.removed,
+    positionLine: t(locale, "sheet.at", { pos: disp(unit.position), facing: unit.facing }),
+    modeLine:
+      unit.moveMode !== null
         ? t(locale, "sheet.modeSuffix", { mode: unit.moveMode, mp: unit.mpSpent })
-        : "") +
-      (unit.removed ? t(locale, "sheet.removedSuffix") : ""),
+        : null,
     armor: unit.armor,
     originalArmor: def.armor,
     mounts: def.weapons.map((mount, i) => ({
@@ -258,15 +267,18 @@ function battleSheet(battle: BattleState, unit: UnitState, locale: LocaleId): Sh
   };
 }
 
-function setupSheet(unit: SetupUnit, locale: LocaleId): SheetView {
+function setupSheet(unit: SetupUnit, id: string, locale: LocaleId): SheetView {
   const def = requireMechDef(unit.model, locale);
   return {
+    id,
     model: def.model,
     name: def.name,
     weightClass: def.weightClass,
     tonnage: def.tonnage,
     gunnery: unit.gunnery,
-    facingLine: t(locale, "sheet.at", { pos: disp(unit.position), facing: unit.facing }),
+    removed: false,
+    positionLine: t(locale, "sheet.at", { pos: disp(unit.position), facing: unit.facing }),
+    modeLine: null,
     armor: { ...def.armor } as ArmorState,
     originalArmor: def.armor,
     mounts: def.weapons.map((mount) => ({
@@ -292,18 +304,22 @@ const SHORT_LOC: Readonly<Record<Location, string>> = {
 
 /** Record sheet with armor status per location (no body diagram). */
 export function sheetLines(view: SheetView, locale: LocaleId): string[] {
-  const head = t(locale, "sheet.head", {
-    model: view.model,
-    name: view.name,
-    weightClass: view.weightClass,
-    tonnage: view.tonnage,
-    gunnery:
-      view.gunnery !== null
-        ? t(locale, "sheet.gunnerySuffix", { gunnery: gunneryLabel(locale, view.gunnery) })
-        : "",
-  });
-  const lines = [head];
-  if (view.facingLine) lines.push(view.facingLine);
+  const idLine = view.removed
+    ? `${t(locale, "sheet.idLine", { id: view.id })}${t(locale, "sheet.removedId")}`
+    : t(locale, "sheet.idLine", { id: view.id });
+  const lines = [idLine];
+  lines.push(
+    t(locale, "sheet.modelLine", {
+      model: view.model,
+      name: view.name,
+      weightClass: view.weightClass,
+      tonnage: view.tonnage,
+    }),
+  );
+  if (view.gunnery !== null) {
+    lines.push(t(locale, "sheet.gunneryLine", { gunnery: gunneryLabel(locale, view.gunnery) }));
+  }
+  lines.push(view.positionLine);
   lines.push(
     t(locale, "sheet.armorLine", {
       list: LOCATIONS.map((loc) => {
@@ -331,11 +347,11 @@ export function sheetForUnit(s: Session, id: string): string[] {
   if (s.battle) {
     const unit = s.battle.units[id];
     if (!unit) throw new Error(t(s.locale, "err.unknownUnitId", { id }));
-    return sheetLines(battleSheet(s.battle, unit, s.locale), s.locale);
+    return sheetLines(battleSheet(s.battle, unit, id, s.locale), s.locale);
   }
   const placed = s.roster.find((u) => u.id === id);
   if (!placed) throw new Error(t(s.locale, "err.noSuchUnit", { id }));
-  return sheetLines(setupSheet(placed, s.locale), s.locale);
+  return sheetLines(setupSheet(placed, id, s.locale), s.locale);
 }
 
 // -------------------------------------------------------------- status ----
@@ -366,19 +382,19 @@ export function fmtSetupStatus(s: Session): string[] {
   return lines;
 }
 
-export function sheetLinesShort(view: SheetView, locale: LocaleId): string[] {
-  const head = t(locale, "sheet.head", {
+export function sheetLinesShort(view: SheetView, locale: LocaleId, showMode = true): string[] {
+  const head = t(locale, "sheet.modelLine", {
     model: view.model,
     name: view.name,
     weightClass: view.weightClass,
     tonnage: view.tonnage,
-    gunnery:
-      view.gunnery !== null
-        ? t(locale, "sheet.gunnerySuffix", { gunnery: gunneryLabel(locale, view.gunnery) })
-        : "",
   });
   const lines = [head];
-  if (view.facingLine) lines.push(view.facingLine);
+  if (view.gunnery !== null) {
+    lines.push(t(locale, "sheet.gunneryLine", { gunnery: gunneryLabel(locale, view.gunnery) }));
+  }
+  lines.push(view.positionLine);
+  if (showMode && view.modeLine) lines.push(view.modeLine);
   lines.push(
     t(locale, "sheet.armorLine", {
       list: LOCATIONS.map((loc) => {
@@ -398,9 +414,9 @@ export function overStatusLines(s: Session): string[] {
   );
   for (const team of teams) {
     lines.push(t(s.locale, "setup.teamHeader", { team }));
-    for (const unit of Object.values(s.battle.units).filter((u) => u.team === team)) {
-      const view = battleSheet(s.battle, unit, s.locale);
-      for (const line of sheetLinesShort(view, s.locale)) lines.push(`  ${line}`);
+    for (const [uid, unit] of Object.entries(s.battle.units).filter(([, u]) => u.team === team)) {
+      const view = battleSheet(s.battle, unit, uid, s.locale);
+      for (const line of sheetLinesShort(view, s.locale, false)) lines.push(`  ${line}`);
     }
   }
   return lines;
@@ -486,7 +502,7 @@ export function fmtLog(
       case "initiative": {
         const rolls = Object.entries(e.rolls)
           .sort((a, b) => Number(a[0]) - Number(b[0]))
-          .map(([team, roll]) => `team ${team} (2d6: ${roll})`)
+          .map(([team, roll]) => `team ${team} (2D6: ${roll})`)
           .join(", ");
         return [t(locale, "log.initiative", { rolls, winner: e.winnerTeam })];
       }
@@ -500,6 +516,7 @@ export function fmtLog(
             pos: disp(e.position),
             facing: e.facing,
             mp: e.mpSpent,
+            budget: e.mpBudget,
           }),
         ];
       case "attacksDeclared":
@@ -541,7 +558,7 @@ function gatorText(locale: LocaleId, r: AttackResolution): string {
   if (b.rangeMod) parts.push(`range ${b.rangeMod}`);
   if (b.pulseMod) parts.push(`pulse ${b.pulseMod}`);
   const total = b.automatic === "hit" ? t(locale, "res.needAuto") : String(b.total);
-  return `Need ${total} (${parts.join(" + ")})`;
+  return `${t(locale, "res.need", { total })} (${parts.join(" + ")})`;
 }
 
 export function resolutionLines(locale: LocaleId, r: AttackResolution): string[] {
