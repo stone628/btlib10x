@@ -1,4 +1,8 @@
 import type { Rng } from "../src/core/types.js";
+import { runChunks } from "../web/cli.js";
+import type { Chunk } from "../web/format.js";
+import { boardLegendText, boardToText } from "../web/render.js";
+import type { Session } from "../web/session.js";
 
 /** Deterministic RNG fed an explicit queue of D6 results (asserts exact consumption). */
 export function scriptedRng(...rolls: number[]): Rng & { remaining(): number } {
@@ -31,4 +35,19 @@ export function seededRng(seed: number): Rng {
       return Math.floor(u * 6) + 1;
     },
   };
+}
+
+/** Flat text of one chunk (boards contribute legend + visible characters). */
+export function chunkText(chunk: Chunk): string[] {
+  if ("board" in chunk) {
+    const lines: string[] = [boardLegendText("en")];
+    lines.push(...boardToText(chunk.board.model).split("\n"));
+    return lines;
+  }
+  return [...chunk.lines];
+}
+
+/** Run one input line against the session; returns plain output lines. */
+export function execute(session: Session, raw: string): string[] {
+  return runChunks(session, raw).flatMap(chunkText);
 }

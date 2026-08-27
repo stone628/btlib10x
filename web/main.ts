@@ -1,4 +1,3 @@
-import type { CharStyle } from "../src/render.js";
 import { AUTOPLAY_INTERVAL_MS, nextAutoPlayCommand } from "./autoplay.js";
 import { runChunks } from "./cli.js";
 import type { Chunk } from "./format.js";
@@ -16,17 +15,6 @@ let historyIdx = -1;
 
 function scrollToBottom(): void {
   out.scrollTop = out.scrollHeight;
-}
-
-function styleClasses(style: CharStyle | undefined): string {
-  if (style === undefined) return "";
-  const parts: string[] = [];
-  if (style.fg !== undefined) parts.push(`f-${style.fg}`);
-  if (style.bg !== undefined) parts.push(`bg-${style.bg}`);
-  if (style.bold === true) parts.push("b");
-  if (style.italic === true) parts.push("i");
-  if (style.cls !== undefined) parts.push(style.cls);
-  return parts.join(" ");
 }
 
 function appendChunk(chunk: Chunk): void {

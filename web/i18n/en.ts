@@ -189,7 +189,6 @@ export const en = {
   "info.mapHead": "{name}: {w}x{h}",
   "info.terrainLine": "terrain: {breakdown}",
   "info.terrainNone": "none",
-  "info.legend": "legend: w(lightWoods)  W(heavyWoods)",
   "info.weaponListLine": "{name} {range} dmg {damage}",
   "info.weaponCategory": "[{category}]",
   "info.weaponHead": "{name} [{category}]",

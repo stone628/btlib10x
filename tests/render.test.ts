@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { battleModel, boardToText, GRID_GLYPHS, renderMap } from "../src/render.js";
 import type { BattleState } from "../src/rules/game.js";
 import { createBattle } from "../src/rules/game.js";
+import { battleModel, boardToText, GRID_GLYPHS, renderMap } from "../web/render.js";
 
 /** Flat battle text via the structured model (historic renderer shape). */
 const renderBattle = (

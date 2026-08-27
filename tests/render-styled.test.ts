@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getMapDef, toEngineTerrain } from "../src/data/index.js";
-import type { CharStyle, Span } from "../src/render.js";
+import { createBattle } from "../src/rules/game.js";
+import type { CharStyle, Span } from "../web/render.js";
 import {
   battleModel,
   boardToChars,
@@ -9,8 +10,7 @@ import {
   mapModel,
   renderMap,
   TEAM_STYLES,
-} from "../src/render.js";
-import { createBattle } from "../src/rules/game.js";
+} from "../web/render.js";
 
 function spansText(spans: readonly Span[]): string {
   return spans.map((sp) => sp.text).join("");
@@ -216,8 +216,22 @@ describe("styled board model", () => {
   it("boardToChars preserves styles from boardToSpans", () => {
     const state = createBattle(
       [
-        { id: "a", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 0, row: 0 }, facing: "n" },
-        { id: "b", model: "CDA-3MA", team: 1, gunnery: 4, position: { col: 2, row: 0 }, facing: "s" },
+        {
+          id: "a",
+          model: "HBK-4G",
+          team: 0,
+          gunnery: 4,
+          position: { col: 0, row: 0 },
+          facing: "n",
+        },
+        {
+          id: "b",
+          model: "CDA-3MA",
+          team: 1,
+          gunnery: 4,
+          position: { col: 2, row: 0 },
+          facing: "s",
+        },
       ],
       { terrain: [{ col: 0, row: 0, type: "heavyWoods" }] },
     );
@@ -243,9 +257,7 @@ describe("styled board model", () => {
         ci++;
         if (ci >= charLine.length || (sp.text.length > 0 && ci > 0)) {
           // Advance span after consuming its chars.
-          const spanConsumed = spanLine
-            .slice(0, si + 1)
-            .reduce((n, s) => n + s.text.length, 0);
+          const spanConsumed = spanLine.slice(0, si + 1).reduce((n, s) => n + s.text.length, 0);
           if (ci >= spanConsumed) si++;
         }
       }
