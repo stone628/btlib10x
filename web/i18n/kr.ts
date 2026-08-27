@@ -227,6 +227,8 @@ export const kr: Catalog = {
   "res.miss": "빗나감",
   "res.clusterRoll": "클러스터 굴림 {roll}",
   "res.hits": "명중: {groups}",
-  "res.blownOff": "; {locs} 파손됨",
+  "res.armBlownOff": "; {cause} 파괴 → {arm} 절단",
+  "res.immobilized": "; 이동 불능",
+  "res.killed": "; 격파",
   "res.destroyedTail": "; 파괴됨 {locs}",
 };

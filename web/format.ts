@@ -11,6 +11,8 @@ import {
   canFireFromLocation,
   getMapDef,
   getWeapon,
+  isImmobile,
+  isKilled,
   LOCATIONS,
   MAP_DEFS,
   MECH_DEFS,
@@ -622,6 +624,8 @@ function transferDetail(locale: LocaleId, r: AttackResolution): string | null {
   for (const loc of LOCATIONS) {
     running[loc] = app.armor[loc] + (totals[loc] ?? 0);
   }
+  const wasImmobile = isImmobile(running);
+  const wasKilled = isKilled(running);
   const bits: string[] = [];
   for (const step of app.steps) {
     const before = running[step.location];
@@ -630,10 +634,16 @@ function transferDetail(locale: LocaleId, r: AttackResolution): string | null {
     bits.push(`${SHORT_LOC[step.location]} ${before}->${after}${step.depleted ? "*" : ""}`);
   }
   let text = bits.join(", ");
-  if (app.blownOffArms.length > 0)
-    text += t(locale, "res.blownOff", { locs: app.blownOffArms.map(shortLoc).join(" + ") });
-  if (app.newlyDestroyed.length > 0)
-    text += t(locale, "res.destroyedTail", { locs: app.newlyDestroyed.map(shortLoc).join(", ") });
+  for (const arm of app.blownOffArms) {
+    const cause = arm === "rightArm" ? "rightTorso" : "leftTorso";
+    text += t(locale, "res.armBlownOff", { cause: shortLoc(cause), arm: shortLoc(arm) });
+  }
+  const otherDestroyed = app.newlyDestroyed.filter((loc) => !app.blownOffArms.includes(loc));
+  if (otherDestroyed.length > 0) {
+    text += t(locale, "res.destroyedTail", { locs: otherDestroyed.map(shortLoc).join(", ") });
+  }
+  if (isImmobile(app.armor) && !wasImmobile) text += t(locale, "res.immobilized");
+  if (app.killed && !wasKilled) text += t(locale, "res.killed");
   return text;
 }
 
