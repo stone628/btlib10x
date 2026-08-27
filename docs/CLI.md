@@ -49,7 +49,6 @@ Examples:
 | `info mech <model>` | sheet summary: walk/run/jump ratings and weapons |
 | `info map` | list available maps |
 | `info map <name>` | map info: width×height, terrain types and counts, ASCII map with terrain glyphs |
-| `sheet <id>` | record sheet for unit `<id>`: armor per location as `current/designed`, weapons with ammo/jam status |
 | `seed <n>` | set RNG seed |
 | `reset` | wipe everything back to empty setup |
 | `autoplay` | hidden demo driver (not listed by `help`): resets nothing itself but expects a blank slate — run `reset` first. Prints a notice, then every 2s (`AUTOPLAY_INTERVAL_MS` in `web/autoplay.ts`) types the next command a demonstrator would: loads `quickstart`, places HBK-4G vs CDA-3MA adjacent, starts, then walks in place and fires every working weapon each turn until victory. Any manually typed command cancels it; it prints `autoplay finished.` when the battle ends |
@@ -73,7 +72,7 @@ The prompt names the acting unit; commands act on that 'Mech.
 | `mode standstill\|walk\|run\|jump` | declare movement mode (required first) |
 | `move <col> <row>` | queue step into adjacent hex (forward/backward vs facing; jump = any adjacent) |
 | `face <facing>` or `face <±1..5>` | queue facing change (`face ne`, `face -2`) |
-| `sheet` | record sheet of the acting 'Mech |
+| `sheet [id]` | with id: armor diagram + weapons for a unit; without id: brief unit list (id, model, position+facing) grouped by team |
 | `status` | queued move steps with running MP cost per step |
 | `cancel` | clear mode + steps |
 | `done` | commit via `executeMove`; prints path + MP spent and total budget |
@@ -84,7 +83,7 @@ The prompt names the acting unit; commands act on that 'Mech.
 |---|---|
 | `weapons [id]` | list weapon mounts: 1-based number, name, location, S/M/L, ammo, jammed/destroyed |
 | `fire <weapon> <targetId> [shots]` | queue declaration using 1-based weapon number (one shared target per turn; rapid-fire may pass shots) |
-| `sheet` | record sheet of the acting 'Mech |
+| `sheet [id]` | with id: armor diagram + weapons for a unit; without id: brief unit list (id, model, position+facing) grouped by team |
 | `status` | queued attack declarations |
 | `cancel` | clear declarations |
 | `done` | `declareAttacks` + `resolveDeclaredAttacks`; prints per-weapon GATOR to-hit line, dice, cluster hits, damage by location |
@@ -93,6 +92,7 @@ The prompt names the acting unit; commands act on that 'Mech.
 
 | command | effect |
 |---|---|
+| `sheet [id]` | with id: armor diagram + weapons for a unit; without id: brief unit list (id, model, position+facing) grouped by team |
 | `rematch` | new battle, same roster + terrain + seed |
 | globals | `board`, `log` remain available; `reset` returns to empty setup |
 

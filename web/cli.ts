@@ -16,6 +16,7 @@ import {
   overStatusLines,
   rich,
   sheetForUnit,
+  unitBriefList,
   weaponsLines,
 } from "./format.js";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
@@ -120,15 +121,6 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
           usage: "info mech [model] | info map [name] | info weapon [name]",
         }),
       );
-    },
-  },
-  sheet: {
-    helpKey: "cmd.sheet.help",
-    usage: "sheet <id>",
-    argsDoc: [["id", "cmd.sheet.arg.id"]],
-    run: (s, a) => {
-      expectArgs(L(s), a, 1, "sheet <id>");
-      return sheetForUnit(s, a[0]!);
     },
   },
   seed: {
@@ -290,7 +282,12 @@ const MOVE_CMDS: Record<string, CmdDef> = {
       ];
     },
   },
-  sheet: { helpKey: "cmd.sheetActing.help", run: (s) => sheetForUnit(s, s.actorId ?? "") },
+  sheet: {
+    helpKey: "cmd.sheetActing.help",
+    usage: "sheet [id]",
+    argsDoc: [["id", "cmd.sheetActing.arg.id"]],
+    run: (s, a) => (a[0] !== undefined ? sheetForUnit(s, a[0]) : unitBriefList(s)),
+  },
   status: { helpKey: "cmd.statusMove.help", run: (s) => moveStatusLines(s) },
   cancel: {
     helpKey: "cmd.cancelMove.help",
@@ -340,7 +337,12 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
       ];
     },
   },
-  sheet: { helpKey: "cmd.sheetActing.help", run: (s) => sheetForUnit(s, s.actorId ?? "") },
+  sheet: {
+    helpKey: "cmd.sheetActing.help",
+    usage: "sheet [id]",
+    argsDoc: [["id", "cmd.sheetActing.arg.id"]],
+    run: (s, a) => (a[0] !== undefined ? sheetForUnit(s, a[0]) : unitBriefList(s)),
+  },
   status: { helpKey: "cmd.statusAttack.help", run: (s) => attackStatusLines(s) },
   cancel: {
     helpKey: "cmd.cancelFire.help",
@@ -358,6 +360,12 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
 // ----------------------------------------------------------------- over ----
 
 const OVER_CMDS: Record<string, CmdDef> = {
+  sheet: {
+    helpKey: "cmd.sheetActing.help",
+    usage: "sheet [id]",
+    argsDoc: [["id", "cmd.sheetActing.arg.id"]],
+    run: (s, a) => (a[0] !== undefined ? sheetForUnit(s, a[0]) : unitBriefList(s)),
+  },
   status: { helpKey: "cmd.statusOver.help", run: (s) => overStatusLines(s) },
   rematch: {
     helpKey: "cmd.rematch.help",
