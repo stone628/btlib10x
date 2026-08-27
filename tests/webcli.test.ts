@@ -221,14 +221,25 @@ describe("info", () => {
 });
 
 describe("sheet", () => {
-  it("shows a setup record sheet from the roster", () => {
+  it("shows a record sheet during a move phase", () => {
     const s = freshSetup();
+    run(s, "start");
     const lines = run(s, "sheet hunchy").join("\n");
     expect(lines).toContain("Hunchback HBK-4G");
     expect(lines).toContain("gunnery: Regular(4)");
     expect(lines).toContain("9/ 9A");
     expect(lines).toContain("26/26F");
     expect(lines).toContain("#1 Autocannon/20 (RT)");
+  });
+
+  it("lists units grouped by team when no id is given", () => {
+    const s = freshSetup();
+    run(s, "start");
+    const out = run(s, "sheet").join("\n");
+    expect(out).toContain("team 0:");
+    expect(out).toContain("hunchy  HBK-4G  9,9 facing n");
+    expect(out).toContain("team 1:");
+    expect(out).toContain("cicada  CDA-3MA  9,8 facing s");
   });
 
   it("tracks armor damage during battle", () => {

@@ -411,6 +411,22 @@ export function sheetForUnit(s: Session, id: string): string[] {
   return sheetLines(setupSheet(placed, id, s.locale), s.locale);
 }
 
+/** Brief unit list grouped by team: id, model, position with facing. */
+export function unitBriefList(s: Session): string[] {
+  const battle = s.battle;
+  if (!battle) return [];
+  const lines: string[] = [];
+  const teams = [...new Set(Object.values(battle.units).map((u) => u.team))].sort((a, b) => a - b);
+  for (const team of teams) {
+    lines.push(t(s.locale, "setup.teamHeader", { team }));
+    for (const [uid, unit] of Object.entries(battle.units).filter(([, u]) => u.team === team)) {
+      const def = battle.defs[unit.model]!;
+      lines.push(`  ${uid}  ${def.model}  ${disp(unit.position)} facing ${unit.facing}`);
+    }
+  }
+  return lines;
+}
+
 // -------------------------------------------------------------- status ----
 
 export function fmtSetupStatus(s: Session): string[] {
