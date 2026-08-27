@@ -2,7 +2,7 @@ import { canFireFromLocation, isImmobile } from "btlib10x";
 import type * as S from "./session.js";
 
 /** Delay between generated commands, in milliseconds. */
-export const AUTOPLAY_INTERVAL_MS = 2000;
+export const AUTOPLAY_INTERVAL_MS = 500;
 
 /**
  * Roster the demo builds after 'reset' (mirrors freshSetup() in
