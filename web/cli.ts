@@ -1,12 +1,10 @@
 import { FACINGS } from "../src/core/types.js";
 import { MAP_DEFS } from "../src/data/index.js";
-import { boardToText } from "../src/render.js";
 import type { AttackDecl } from "../src/rules/game.js";
 import type { Chunk, RichOutput } from "./format.js";
 import {
   attackStatusLines,
   boardChunk,
-  boardLegend,
   fmtLog,
   fmtSetupStatus,
   infoMapChunks,
@@ -87,8 +85,7 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
   },
   board: {
     helpKey: "cmd.board.help",
-    run: (s) =>
-      s.mapName ? rich({ lines: [boardLegend(s.locale)] }, boardChunk(s)) : rich(boardChunk(s)),
+    run: (s) => rich(boardChunk(s)),
   },
   clear: { helpKey: "cmd.clear.help", run: () => ["\f"] },
   log: {
@@ -493,15 +490,4 @@ export function runChunks(session: S.Session, raw: string): Chunk[] {
     chunks = [...chunks, { lines: victoryBanner(session), cls: "banner" }];
   }
   return chunks;
-}
-
-/** Flat text of one chunk (boards contribute their visible characters). */
-export function chunkText(chunk: Chunk): string[] {
-  if ("board" in chunk) return boardToText(chunk.board.model).split("\n");
-  return [...chunk.lines];
-}
-
-/** Run one input line against the session; returns plain output lines. */
-export function execute(session: S.Session, raw: string): string[] {
-  return runChunks(session, raw).flatMap(chunkText);
 }

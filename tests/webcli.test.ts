@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { getMapDef } from "../src/data/index.js";
-import { GRID_GLYPHS } from "../src/render.js";
 import { canFireFromLocation } from "../src/rules/damage.js";
-import { execute } from "../web/cli.js";
+import { GRID_GLYPHS } from "../web/render.js";
 import * as S from "../web/session.js";
+import { execute } from "./helpers.js";
 
 function run(s: S.Session, cmd: string): string[] {
   return execute(s, cmd);
@@ -240,7 +240,14 @@ describe("sheet", () => {
     // Battle ended; at least one unit took damage.
     const allUnits = Object.values(s.battle!.units);
     const damaged = allUnits.some((u) =>
-      Object.values(u.armor).some((v) => v < Object.values(s.battle!.defs[u.model]!.armor).reduce((a: number, b: number) => Math.max(a, b), 0)),
+      Object.values(u.armor).some(
+        (v) =>
+          v <
+          Object.values(s.battle!.defs[u.model]!.armor).reduce(
+            (a: number, b: number) => Math.max(a, b),
+            0,
+          ),
+      ),
     );
     expect(damaged).toBe(true);
   });

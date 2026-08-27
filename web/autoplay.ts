@@ -51,7 +51,11 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
   if (enemy === undefined) return null;
   if (st.phase === "movement") {
     if (s.lastAutoPlayCmd === "done") return "board";
-    return actor.moveMode === null ? (isImmobile(actor.armor) ? "mode standstill" : "mode walk") : "done";
+    return actor.moveMode === null
+      ? isImmobile(actor.armor)
+        ? "mode standstill"
+        : "mode walk"
+      : "done";
   }
   if (st.phase === "weaponAttack") {
     const def = st.defs[actor.model];

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { AUTOPLAY_INTERVAL_MS, nextAutoPlayCommand } from "../web/autoplay.js";
-import { execute } from "../web/cli.js";
 import * as S from "../web/session.js";
+import { execute } from "./helpers.js";
 
 /** Feed generated commands through the CLI until the script runs dry. */
 function playThrough(s: S.Session, maxCommands = 500): void {

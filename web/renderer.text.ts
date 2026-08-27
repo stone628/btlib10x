@@ -1,10 +1,14 @@
-import type { Facing, TerrainHexDef } from "./core/types.js";
+import type { Facing, TerrainHexDef } from "../src/core/types.js";
+import type { BattleState } from "../src/rules/game.js";
+import { type LocaleId, t } from "./i18n/index.js";
 import type { BoardModel, CharStyle, Span } from "./render.js";
-import type { BattleState } from "./rules/game.js";
 
 // ---- BoardRenderer type ----
 
-/** Board renderer: takes a model and populates a container element. */
+/**
+ * Board renderer: populates a parent container. The renderer owns its DOM —
+ * creates a legend div and its own board element.
+ */
 export type BoardRenderer = (model: BoardModel, el: Element) => void;
 
 // ---- CSS class helper (web-layer) ----
@@ -37,6 +41,18 @@ export const TERRAIN_STYLES: Readonly<Record<string, CharStyle>> = {
 
 /** Team-tinted unit ids: team 0 cyan, team 1 magenta, others unstyled. */
 export const TEAM_STYLES: readonly CharStyle[] = [{ fg: "cyan" }, { fg: "magenta" }];
+
+/** Terrain legend list: `"w(lightWoods)  W(heavyWoods)"`. */
+function terrainLegendList(): string {
+  return Object.entries(TERRAIN_GLYPHS)
+    .map(([type, glyph]) => `${glyph}(${type})`)
+    .join("  ");
+}
+
+/** Localised board legend text (e.g. `"legend: w(lightWoods)  W(heavyWoods)"`). */
+export function boardLegendText(locale: LocaleId): string {
+  return t(locale, "board.legend", { list: terrainLegendList() });
+}
 
 // ---- canvas constants ----
 
@@ -341,7 +357,8 @@ export function renderMap(
 /**
  * Structured battle board: unit ids take precedence over hex contents.
  * Removed units are omitted; bounds come from `state.width`/`state.height`
- * when set, else the units + terrain extent.
+ * when set, else the units + terrain extent. When `marks` is omitted,
+ * terrain glyphs are derived automatically from `state.terrain`.
  */
 export function battleModel(
   state: BattleState,
@@ -382,12 +399,23 @@ export function battleModel(
     if (team !== undefined) autoCells[key] = team;
   }
 
+  const resolvedMarks =
+    marks ??
+    (() => {
+      const m: Record<string, string> = {};
+      for (const [key, type] of Object.entries(state.terrain)) {
+        const g = TERRAIN_GLYPHS[type];
+        if (g !== undefined) m[key] = g;
+      }
+      return Object.keys(m).length > 0 ? m : undefined;
+    })();
+
   return {
     cols: Math.max(1, state.width ?? maxCol + 1),
     rows: Math.max(1, state.height ?? maxRow + 1),
     cells,
     ...(Object.keys(facings).length > 0 ? { facings } : {}),
-    ...(marks === undefined ? {} : { marks }),
+    ...(resolvedMarks === undefined ? {} : { marks: resolvedMarks }),
     ...(styles !== undefined ? { styles } : Object.keys(auto).length > 0 ? { styles: auto } : {}),
     ...(styles === undefined && Object.keys(autoCells).length > 0 ? { cellStyles: autoCells } : {}),
   };
@@ -395,35 +423,48 @@ export function battleModel(
 
 // ---- board renderers (DOM) ----
 
+function renderLegend(el: Element, locale: LocaleId): void {
+  const legendDiv = document.createElement("div");
+  legendDiv.className = "board-legend";
+  legendDiv.textContent = boardLegendText(locale);
+  el.appendChild(legendDiv);
+}
+
 /** CSS Grid renderer: one `<span>` per character, bold isolated to single cells. */
 export const cssGridRenderer: BoardRenderer = (model, el) => {
+  renderLegend(el, "en");
+  const grid = document.createElement("div");
+  grid.className = "board-grid";
   const lines = boardToChars(model);
   const maxCols = Math.max(...lines.map((l) => l.length), 1);
-  el.className = "board-grid";
-  (el as HTMLElement).style.gridTemplateColumns = `repeat(${maxCols}, 1ch)`;
+  (grid as HTMLElement).style.gridTemplateColumns = `repeat(${maxCols}, 1ch)`;
   for (const line of lines) {
     for (const sp of line) {
       const span = document.createElement("span");
       span.className = styleClasses(sp.style);
       span.textContent = sp.text;
-      el.appendChild(span);
+      grid.appendChild(span);
     }
     for (let p = line.length; p < maxCols; p++) {
       const span = document.createElement("span");
       span.textContent = "\u00a0";
-      el.appendChild(span);
+      grid.appendChild(span);
     }
   }
+  el.appendChild(grid);
 };
 
 /** Text renderer: flat text inside a `<div>`. */
 export const textRenderer: BoardRenderer = (model, el) => {
-  el.className = "board";
+  renderLegend(el, "en");
+  const board = document.createElement("div");
+  board.className = "board";
   const lines = boardToText(model).split("\n");
   lines.forEach((line, i) => {
-    if (i > 0) el.append("\n");
+    if (i > 0) board.append("\n");
     const span = document.createElement("span");
     span.textContent = line;
-    el.appendChild(span);
+    board.appendChild(span);
   });
+  el.appendChild(board);
 };

@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { canFireFromLocation } from "../src/rules/damage.js";
-import { execute } from "../web/cli.js";
 import { en } from "../web/i18n/en.js";
 import type { LocaleId, MessageKey } from "../web/i18n/index.js";
 import { LOCALES, t } from "../web/i18n/index.js";
 import * as S from "../web/session.js";
 import { newSession } from "../web/session.js";
+import { execute } from "./helpers.js";
 
 /** Drive a started battle until it is over using minimal legal actions. */
 function autoPlay(s: ReturnType<typeof newSession>): void {

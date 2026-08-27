@@ -1,28 +1,21 @@
 // ---- Re-export from renderer.text.ts so callers only need `render.ts`. ----
-import type { Facing } from "./core/types.js";
+import type { Facing } from "../src/core/types.js";
 
 export type { BoardRenderer } from "./renderer.text.js";
 export {
+  boardLegendText,
   boardToChars,
   boardToSpans,
   boardToText,
   cssGridRenderer,
   GRID_GLYPHS,
   styleClasses,
-  TERRAIN_GLYPHS,
-  TERRAIN_STYLES,
   TEAM_STYLES,
   textRenderer,
 } from "./renderer.text.js";
 
 import type { BoardRenderer } from "./renderer.text.js";
-import {
-  cssGridRenderer,
-  textRenderer,
-  TERRAIN_GLYPHS,
-  TERRAIN_STYLES,
-  TEAM_STYLES,
-} from "./renderer.text.js";
+import { cssGridRenderer, textRenderer } from "./renderer.text.js";
 
 // ---- common types ----
 

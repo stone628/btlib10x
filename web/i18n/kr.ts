@@ -184,7 +184,6 @@ export const kr: Catalog = {
   "info.mapHead": "{name}: {w}x{h}",
   "info.terrainLine": "지형: {breakdown}",
   "info.terrainNone": "없음",
-  "info.legend": "범례: w(lightWoods)  W(heavyWoods)",
   "info.weaponListLine": "{name} {range} 데미지 {damage}",
   "info.weaponCategory": "[{category}]",
   "info.weaponHead": "{name} [{category}]",

@@ -3,19 +3,19 @@ import { LOCATIONS } from "../src/core/types.js";
 import { getMapDef, MAP_DEFS, MECH_DEFS, toEngineTerrain } from "../src/data/index.js";
 import type { MechDef } from "../src/data/schema.js";
 import { getWeapon, WEAPONS } from "../src/data/weapons.js";
-import type { BoardModel, BoardRenderer } from "../src/render.js";
-import { battleModel, boardToText, getBoardRenderer, mapModel, TERRAIN_GLYPHS } from "../src/render.js";
 import type { AttackResolution } from "../src/rules/attack.js";
 import type { ArmorState } from "../src/rules/damage.js";
 import { canFireFromLocation } from "../src/rules/damage.js";
 import type { BattleState, GameEvent, UnitState } from "../src/rules/game.js";
 import type { LocaleId } from "./i18n/index.js";
 import { t } from "./i18n/index.js";
+import type { BoardModel, BoardRenderer } from "./render.js";
+import { battleModel, getBoardRenderer, mapModel } from "./render.js";
 import type { Session, SetupUnit } from "./session.js";
 import { moveStepsInfo } from "./session.js";
 
 /** Board renderer type (re-exported from the render layer). */
-export type { BoardRenderer } from "../src/render.js";
+export type { BoardRenderer } from "./render.js";
 
 /** One presentation chunk of command output. */
 export type Chunk =
@@ -67,24 +67,6 @@ function mapDims(s: Session): [number, number] | undefined {
   return map ? [map.width, map.height] : undefined;
 }
 
-/** Bottom-center glyph map for a `"col,row" -> terrain type` record. */
-function terrainMarks(terrain: Readonly<Record<string, string>>): Record<string, string> {
-  const marks: Record<string, string> = {};
-  for (const [key, type] of Object.entries(terrain)) {
-    const glyph = TERRAIN_GLYPHS[type];
-    if (glyph !== undefined) marks[key] = glyph;
-  }
-  return marks;
-}
-
-/** Terrain legend for the board command: `"w(lightWoods)  W(heavyWoods)"` etc. */
-export function boardLegend(locale: LocaleId): string {
-  const list = Object.entries(TERRAIN_GLYPHS)
-    .map(([type, glyph]) => `${glyph}(${type})`)
-    .join("  ");
-  return t(locale, "board.legend", { list });
-}
-
 /** `board` output: styled grid chunks, or a plain hint when nothing exists. */
 export function boardChunk(s: Session): Chunk {
   const dims = mapDims(s);
@@ -100,14 +82,15 @@ export function boardChunk(s: Session): Chunk {
     ) as BattleState["units"];
     const terrain: Record<string, string> = {};
     for (const t2 of s.terrainDefs) terrain[`${t2.col},${t2.row}`] = t2.type;
-    const model = battleModel(
-      { units, terrain, width: dims?.[0], height: dims?.[1] } as BattleState,
-      undefined,
-      terrainMarks(terrain),
-    );
+    const model = battleModel({
+      units,
+      terrain,
+      width: dims?.[0],
+      height: dims?.[1],
+    } as BattleState);
     return { board: boardChunkOf(model) };
   }
-  return { board: boardChunkOf(battleModel(s.battle, undefined, terrainMarks(s.battle.terrain))) };
+  return { board: boardChunkOf(battleModel(s.battle)) };
 }
 
 // ---------------------------------------------------------------- info ----
@@ -213,11 +196,11 @@ export function infoMapChunks(locale: LocaleId, name: string): Chunk[] {
       lines: [
         t(locale, "info.mapHead", { name, w: map.width, h: map.height }),
         t(locale, "info.terrainLine", { breakdown: breakdown || t(locale, "info.terrainNone") }),
-        t(locale, "info.legend"),
-        "",
       ],
     },
-    { board: boardChunkOf(mapModel(toEngineTerrain(map), map.width, map.height)) },
+    {
+      board: boardChunkOf(mapModel(toEngineTerrain(map), map.width, map.height)),
+    },
   ];
 }
 
