@@ -570,54 +570,100 @@ export function fmtLog(
   events: readonly GameEvent[],
   n: number = events.length,
 ): string[] {
-  return events.slice(-n).flatMap((e) => {
-    switch (e.kind) {
-      case "turn":
-        return [t(locale, "log.turn", { turn: e.turn })];
-      case "phase":
-        return [t(locale, "log.phase", { phase: e.phase })];
-      case "initiative": {
-        const rolls = Object.entries(e.rolls)
-          .sort((a, b) => Number(a[0]) - Number(b[0]))
-          .map(([team, roll]) => `team ${team} (2D6: ${roll})`)
-          .join(", ");
-        return [t(locale, "log.initiative", { rolls, winner: e.winnerTeam })];
+  const slice = events.slice(-n);
+  const lines: string[] = [];
+  let prevKind: GameEvent["kind"] | null = null;
+  let removedLines: string[] = [];
+  for (let i = 0; i < slice.length; i++) {
+    const e = slice[i]!;
+    const currKind = e.kind;
+    if (isAttacResolutionKind(e.kind)) {
+      if (!isAttacResolutionKind(prevKind)) {
+        lines.push(t(locale, "res.attackResolutionStart"));
       }
-      case "moveDeclared":
-        return [t(locale, "log.moveDeclared", { id: e.unitId, mode: e.mode })];
-      case "moved":
-        return [
-          t(locale, "log.moved", {
-            id: e.unitId,
-            mode: e.mode,
-            pos: disp(e.position),
-            facing: e.facing,
-            mp: e.mpSpent,
-            budget: e.mpBudget,
-          }),
-        ];
-      case "attacksDeclared":
-        return [
-          t(locale, e.count === 1 ? "log.attacksDeclaredOne" : "log.attacksDeclaredOther", {
-            id: e.unitId,
-            target: e.targetId,
-            count: e.count,
-            rangeCtx: `range ${e.distance} (${e.rangeBracket}, ${signedMod(e.rangeMod)})`,
-          }),
-        ];
-      case "attackResolved":
-        return resolutionLines(locale, e.resolution);
-      case "unitDestroyed":
-        return [t(locale, "log.destroyed", { id: e.unitId })];
-      case "unitRemoved":
-        return [t(locale, "log.removedEvent", { id: e.unitId })];
-      default: {
-        // Exhaustiveness guard: adding a GameEvent kind must add a case above.
-        const unreachable: never = e;
-        return unreachable;
+      if (currKind == "unitRemoved") {
+        removedLines.push(...eventLines(locale, e));
+      } else if (currKind == "attackResolved") {
+        const resolvedLines = eventLines(locale, e);
+        const unitPrefix = `[${e.unitId} -> ${e.targetId}] `;
+        lines.push(unitPrefix + resolvedLines.shift())
+        if (removedLines.length > 0) {
+          const indent = ' '.repeat(unitPrefix.length);
+          lines.push(...resolvedLines.map(l => indent + l))
+        }
+      } else {
+        lines.push(...eventLines(locale, e));
       }
+      if (!isAttacResolutionKind(getKindInBatch(i + 1, slice))) {
+        lines.push(t(locale, "res.attackResolutionEnd"));
+        if (removedLines.length > 0) {
+          lines.push(...removedLines);
+          removedLines = [];
+        }
+      }
+    } else {
+      lines.push(...eventLines(locale, e));
     }
-  });
+    prevKind = currKind;
+  }
+  return lines;
+}
+
+function isAttacResolutionKind(kind: GameEvent["kind"] | null): boolean {
+  return kind === "attackResolved" || kind === "unitDestroyed" || kind === "unitRemoved";
+}
+
+function getKindInBatch(i: number, slice: readonly GameEvent[]): GameEvent["kind"] | null {
+  return i >= 0 && i < slice.length ? slice[i]!.kind : null;
+}
+
+function eventLines(locale: LocaleId, e: GameEvent): string[] {
+  switch (e.kind) {
+    case "turn":
+      return [t(locale, "log.turn", { turn: e.turn })];
+    case "phase":
+      return [t(locale, "log.phase", { phase: e.phase })];
+    case "initiative": {
+      const rolls = Object.entries(e.rolls)
+        .sort((a, b) => Number(a[0]) - Number(b[0]))
+        .map(([team, roll]) => `team ${team} (2D6: ${roll})`)
+        .join(", ");
+      return [t(locale, "log.initiative", { rolls, winner: e.winnerTeam })];
+    }
+    case "moveDeclared":
+      return [t(locale, "log.moveDeclared", { id: e.unitId, mode: e.mode })];
+    case "moved":
+      return [
+        t(locale, "log.moved", {
+          id: e.unitId,
+          mode: e.mode,
+          pos: disp(e.position),
+          facing: e.facing,
+          mp: e.mpSpent,
+          budget: e.mpBudget,
+        }),
+      ];
+    case "attacksDeclared":
+      return [
+        t(locale, e.count === 1 ? "log.attacksDeclaredOne" : "log.attacksDeclaredOther", {
+          id: e.unitId,
+          target: e.targetId,
+          count: e.count,
+          rangeCtx: `range ${e.distance} (${e.rangeBracket}, ${signedMod(e.rangeMod)})`,
+        }),
+      ];
+    case "attackResolved":
+      return resolutionLines(locale, e.resolution);
+    case "unitDestroyed":
+      return [t(locale, "log.destroyed", { id: e.unitId })];
+    case "unitRemoved":
+      return [t(locale, "log.removedEvent", { id: e.unitId })];
+    default: {
+      // Exhaustiveness guard: adding a GameEvent kind must add a case above.
+      const unreachable: never = e;
+      return unreachable;
+    }
+  }
 }
 
 function signedMod(n: number): string {
@@ -642,30 +688,30 @@ export function resolutionLines(locale: LocaleId, r: AttackResolution): string[]
   if (r.breakdown.outOfRange) {
     return [t(locale, "res.outOfRangeLine", { weapon: r.weapon, distance: r.distance })];
   }
-  const verdict =
-    r.breakdown.automatic === "hit"
-      ? t(locale, "res.autoHit")
-      : r.hit
-        ? t(locale, "res.hit")
-        : t(locale, "res.miss");
+    const verdict =
+      r.breakdown.automatic === "hit"
+        ? t(locale, "res.autoHit")
+        : r.hit
+          ? t(locale, "res.hit")
+          : t(locale, "res.miss");
   const lines = [
-    t(locale, "res.line", {
-      weapon: r.weapon,
-      gator: gatorText(locale, r),
-      roll: String(r.toHitRoll),
-      verdict,
-      jam: r.jammed ? t(locale, "res.jamSuffix") : "",
-    }),
-  ];
-  if (r.clusterRoll !== null) lines.push(t(locale, "res.clusterRoll", { roll: r.clusterRoll }));
-  if (r.hit && r.groups.length > 0) {
-    lines.push(
-      t(locale, "res.hits", {
-        groups: r.groups.map((g) => `${SHORT_LOC[g.location]}(${g.damage})`).join(" "),
+      t(locale, "res.line", {
+        weapon: r.weapon,
+        gator: gatorText(locale, r),
+        roll: String(r.toHitRoll),
+        verdict,
+        jam: r.jammed ? t(locale, "res.jamSuffix") : "",
       }),
-    );
-    const detail = transferDetail(locale, r);
-    if (detail) lines.push(`  ${detail}`);
+  ];
+    if (r.clusterRoll !== null) lines.push(t(locale, "res.clusterRoll", { roll: r.clusterRoll }));
+    if (r.hit && r.groups.length > 0) {
+      lines.push(
+        t(locale, "res.hits", {
+          groups: r.groups.map((g) => `${SHORT_LOC[g.location]}(${g.damage})`).join(" "),
+        }),
+      );
+      const detail = transferDetail(locale, r);
+      if (detail) lines.push(`  ${detail}`);
   }
   return lines;
 }

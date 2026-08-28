@@ -220,6 +220,8 @@ export const en = {
   "log.removedEvent": "{id} removed from play",
 
   // attack resolution
+  "res.attackResolutionStart": "=== resolving declared attacks ===",
+  "res.attackResolutionEnd": "=== attack damage resolved ===",
   "res.outOfRange": "out of range",
   "res.outOfRangeLine": "{weapon} (range {distance}): out of range",
   "res.needAuto": "auto",

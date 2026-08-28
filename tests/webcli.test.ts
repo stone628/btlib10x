@@ -354,6 +354,8 @@ describe("attack", () => {
     const out = run(s, "done").join("\n");
     expect(out).toMatch(new RegExp(`${actor2} fires at ${actor}`));
     expect(out).toMatch(/-> (HIT|MISS|auto-hit)/);
+    expect(out).toMatch(/=== resolving declared attacks ===/);
+    expect(out).toMatch(/=== attack damage resolved ===/);
     if (ammoBefore !== null) {
       expect(s.battle!.units.hunchy!.ammoLeft[0]).toBe(ammoBefore - 1);
     }
