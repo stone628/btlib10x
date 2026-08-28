@@ -409,18 +409,29 @@ export function sheetLines(view: SheetView, locale: LocaleId): string[] {
   return mergeDiagram(topLines, weaponLines, armorDiagram(view));
 }
 
-function mergeDiagram(topLines: string[], weaponLines: string[], diagram: string[]): string[] {
+export function mergeDiagram(
+  topLines: string[],
+  weaponLines: string[],
+  diagram: string[],
+): string[] {
   const dc = diagram.length;
+  const topH = topLines.length;
+  const wepH = weaponLines.length;
+  const H = Math.max(dc, topH + wepH);
   const leftMax = Math.max(...topLines.map((l) => l.length), ...weaponLines.map((l) => l.length));
-  const blank = "".padEnd(leftMax);
-  const leftRows = Array.from({ length: dc }, () => blank);
-  for (let i = 0; i < topLines.length && i < dc; i++) leftRows[i] = topLines[i]!;
-  const wStart = dc - weaponLines.length;
-  for (let i = 0; i < weaponLines.length; i++) {
-    const r = wStart + i;
-    if (r >= 0 && r < dc) leftRows[r] = weaponLines[i]!;
-  }
-  return leftRows.map((l, i) => `${l.padEnd(leftMax)}  ${diagram[i]}`);
+  const diagramMax = Math.max(0, ...diagram.map((l) => l.length));
+  const blankL = "".padEnd(leftMax);
+  const blankR = "".padEnd(diagramMax);
+
+  const leftRows = Array.from({ length: H }, () => blankL);
+  for (let i = 0; i < topH; i++) leftRows[i] = topLines[i]!;
+  for (let i = 0; i < wepH; i++) leftRows[H - wepH + i] = weaponLines[i]!;
+
+  const diagramRows = Array.from({ length: H }, () => blankR);
+  const padTop = Math.floor((H - dc) / 2);
+  for (let i = 0; i < dc; i++) diagramRows[padTop + i] = diagram[i]!;
+
+  return leftRows.map((l, i) => `${l.padEnd(leftMax)}  ${diagramRows[i]}`);
 }
 
 export function sheetForUnit(s: Session, id: string): string[] {

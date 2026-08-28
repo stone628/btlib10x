@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getMapDef } from "../src/data/index.js";
 import { canFireFromLocation } from "../src/rules/damage.js";
+import { mergeDiagram } from "../web/format.js";
 import { GRID_GLYPHS } from "../web/render.js";
 import * as S from "../web/session.js";
 import { execute } from "./helpers.js";
@@ -217,6 +218,88 @@ describe("info", () => {
     expect(text).toContain(`${GRID_GLYPHS.edgeSW} W0 ${GRID_GLYPHS.edgeSE}`);
     const beginner = run(s, "info map beginner").join("\n");
     expect(beginner).toContain(`${GRID_GLYPHS.edgeSW} W0 ${GRID_GLYPHS.edgeSE}`);
+  });
+});
+
+describe("mergeDiagram", () => {
+  // Each output row is `${left.padEnd(leftMax)}  ${right}`. Extract both sides.
+  function splitRow(row: string, leftMax: number): { left: string; right: string } {
+    return { left: row.slice(0, leftMax).trimEnd(), right: row.slice(leftMax + 2) };
+  }
+
+  it("places top at top and weapons at the bottom when they fit (with a blank gap)", () => {
+    const top = ["ID-line", "model"];
+    const weapons = ["weaponsHeader", "#1 Laser (RA) S3/M5/L0"];
+    const diagram = ["H1", "H2", "H3", "T1", "T2", "L1", "L2", "L3"];
+    const leftMax = Math.max(...top.map((l) => l.length), ...weapons.map((l) => l.length));
+    const diagramMax = Math.max(...diagram.map((l) => l.length));
+    const out = mergeDiagram(top, weapons, diagram);
+    expect(out).toHaveLength(diagram.length);
+    // Layout: top[0..2) | blank gap (4 rows) | weapons[6..8).
+    const { left: l0, right: r0 } = splitRow(out[0]!, leftMax);
+    const { left: l1, right: r1 } = splitRow(out[1]!, leftMax);
+    expect(l0).toBe("ID-line");
+    expect(r0).toBe("H1");
+    expect(l1).toBe("model");
+    expect(r1).toBe("H2");
+    // Gap rows: blank left, diagram continues.
+    for (let i = 2; i <= 5; i++) {
+      const { left, right } = splitRow(out[i]!, leftMax);
+      expect(left).toBe("");
+      expect(right).toBe(diagram[i]);
+    }
+    // Weapons anchored to the bottom: row 6 = weapons[0] + diagram[6], row 7 = weapons[1] + diagram[7].
+    const { left: l6, right: r6 } = splitRow(out[6]!, leftMax);
+    const { left: l7, right: r7 } = splitRow(out[7]!, leftMax);
+    expect(l6).toBe("weaponsHeader");
+    expect(r6).toBe("L2");
+    expect(l7).toBe("#1 Laser (RA) S3/M5/L0");
+    expect(r7).toBe("L3");
+    // Row width consistency: every row is leftMax + 2 + diagramMax (blankR pads).
+    for (const row of out) {
+      expect(row.length).toBe(leftMax + 2 + diagramMax);
+    }
+  });
+
+  it("grows output height and preserves all lines when top+weapons exceed the diagram", () => {
+    // dc=3 (tiny diagram), 2 top + 5 weapons = 7 > 3 → overflow.
+    const top = ["A", "BB"];
+    const weapons = ["W1", "W22", "W333", "W4444", "W55555"];
+    const diagram = ["d1", "d2", "d3"];
+    const leftMax = Math.max(...top.map((l) => l.length), ...weapons.map((l) => l.length));
+    const out = mergeDiagram(top, weapons, diagram);
+    // Output height grows to topH + wepH (the only size that holds both fully).
+    expect(out.length).toBe(top.length + weapons.length);
+    // Every top and weapon line must appear (left side, in order: top then weapons).
+    const lefts = out.map((l) => splitRow(l, leftMax).left);
+    expect(lefts[0]).toBe("A");
+    expect(lefts[1]).toBe("BB");
+    for (let i = 0; i < weapons.length; i++) {
+      expect(lefts[top.length + i]).toBe(weapons[i]);
+    }
+    // Diagram (dc=3) must be fully present on the right side of some rows.
+    const rights = out.map((l) => splitRow(l, leftMax).right);
+    for (const d of diagram) {
+      expect(rights).toContain(d);
+    }
+  });
+
+  it("handles a real Atlas sheet: 4 top + 8 weapon lines vs 11-row diagram (no content lost)", () => {
+    const s = S.newSession(42);
+    expect(run(s, "map quickstart")[0]).toContain("15x16");
+    expect(run(s, "add atlas AS7-D 0 4 9 9 n")).toHaveLength(1);
+    expect(run(s, "add cicada CDA-3MA 1 4 9 8 s")).toHaveLength(1);
+    run(s, "start");
+    const text = run(s, "sheet atlas").join("\n");
+    expect(text).toContain("atlas");
+    expect(text).toContain("Atlas AS7-D");
+    expect(text).toContain("gunnery:");
+    expect(text).toContain("weapons (7)");
+    for (const w of ["Medium Laser", "Autocannon/20", "LRM 20", "SRM 6"]) {
+      expect(text).toContain(w);
+    }
+    expect(text).toContain("[ HD ]");
+    expect(text).toMatch(/\d+\/\s*\d+A/);
   });
 });
 
