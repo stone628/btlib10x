@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AUTOPLAY_INTERVAL_MS, resetAutoplayState, nextAutoPlayCommand } from "../web/autoplay.js";
+import { AUTOPLAY_INTERVAL_MS, nextAutoPlayCommand, resetAutoplayState } from "../web/autoplay.js";
 import * as S from "../web/session.js";
 import { execute } from "./helpers.js";
 
@@ -15,8 +15,8 @@ function playThrough(s: S.Session, maxCommands = 500): void {
 }
 
 describe("autoplay", () => {
-  it("defaults to a 0.5s cadence", () => {
-    expect(AUTOPLAY_INTERVAL_MS).toBe(500);
+  it("defaults to a 0.2s cadence", () => {
+    expect(AUTOPLAY_INTERVAL_MS).toBe(200);
   });
 
   it("scripts setup from scratch, starting with reset semantics", () => {

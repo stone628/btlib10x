@@ -215,6 +215,8 @@ export const kr: Catalog = {
   "log.removedEvent": "{id} 게임 제외",
 
   // attack resolution
+  "res.attackResolutionStart": "=== 선언된 공격 피해 판정 시작 ===",
+  "res.attackResolutionEnd": "=== 공격 피해 판정 완료 ===",
   "res.outOfRange": "사거리 밖",
   "res.outOfRangeLine": "{weapon} (사거리 {distance}): 사거리 밖",
   "res.needAuto": "자동",

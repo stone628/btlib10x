@@ -2,7 +2,7 @@ import { canFireFromLocation, isImmobile } from "btlib10x";
 import type * as S from "./session.js";
 
 /** Delay between generated commands, in milliseconds. */
-export const AUTOPLAY_INTERVAL_MS = 500;
+export const AUTOPLAY_INTERVAL_MS = 200;
 
 /**
  * Roster the demo builds after 'reset' (mirrors freshSetup() in
@@ -61,8 +61,8 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
   if (currApp === "setup") {
     if (s.mapName === null) queueNextCommand("map test");
     for (const u of SCRIPT_SETUP) {
-      if (!s.roster.some((r) => r.id == u.id)) {
-        queueNextCommand(u.command)
+      if (!s.roster.some((r) => r.id === u.id)) {
+        queueNextCommand(u.command);
       }
     }
     queueNextCommand("start");
@@ -74,7 +74,7 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
     if (st !== null && prevApp === "battle") {
       queueNextCommand("status");
       queueNextCommand("board");
-      Object.values(st.units).forEach((u) => queueNextCommand(`sheet ${u.id}`));
+      for (const u of Object.values(st.units)) queueNextCommand(`sheet ${u.id}`);
       return returnFirstQueuedCommand();
     }
     return null;
@@ -96,13 +96,13 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
     }
 
     const lastBattlePhase = currBattlePhase;
-    currBattlePhase = st.phase
+    currBattlePhase = st.phase;
 
     if (currBattlePhase === "movement") {
       if (lastBattlePhase !== "movement") {
-        const sheetCmds = Object.values(st.units)
-          .filter((u) => !u.removed)
-          .forEach((u) => queueNextCommand(`sheet ${u.id}`));
+        for (const u of Object.values(st.units)) {
+          if (!u.removed) queueNextCommand(`sheet ${u.id}`);
+        }
       }
       if (actor.moveMode === null) {
         queueNextCommand(isImmobile(actor.armor) ? "mode standstill" : "mode walk");

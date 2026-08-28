@@ -524,6 +524,11 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
       unit.jammedWeapons = [...unit.jammedWeapons, decl.weaponIndex];
     }
 
+    next.events = [
+      ...next.events,
+      { kind: "attackResolved", unitId: unit.id, targetId: target.id, resolution },
+    ];
+
     if (!target.destroyed && isKilled(target.armor)) {
       target.destroyed = true;
       target.removed = true;
@@ -533,11 +538,6 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
         { kind: "unitRemoved", unitId: target.id },
       ];
     }
-
-    next.events = [
-      ...next.events,
-      { kind: "attackResolved", unitId: unit.id, targetId: target.id, resolution },
-    ];
   }
 
   unit.declaredAttacks = [];
