@@ -31,7 +31,8 @@ Examples:
 - Dice flow through a mulberry32-backed `{ d6() }` Rng, default seed 42;
   `seed <n>` changes it at any time. Same seed ⇒ identical battle replay.
 - Errors print as `error: <engine message>`. Failed commits leave state
-  unchanged (engine returns immutable clones; buffers stay editable).
+  unchanged (the session rolls back via a serializable snapshot; buffers stay
+  editable).
 - `help` / `?` lists only commands legal in the current state.
 
 ## Commands
@@ -101,7 +102,7 @@ The prompt names the acting unit; commands act on that 'Mech.
     web/index.html      terminal chrome: scrollback <pre>, prompt line, key capture, inline CSS
     web/main.ts         bootstrap; wires DOM ↔ session/cli; reprints prompt after each command
     web/cli.ts          tokenizer + per-state command registry + help generator
-    web/session.ts      app-level state machine around immutable BattleState:
+    web/session.ts      app-level state machine over the in-place BattleState:
                         setup roster, move-step & attack-decl buffers,
                         derived {setup|turn|over} + sub-state,
                         auto advancePhase / initiative roll / victory check

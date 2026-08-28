@@ -49,17 +49,17 @@ function setup(): BattleState {
 
 describe("example battle: Wolverine vs Griffin", () => {
   it("plays turn 1 exactly as the rulebook diagram describes", () => {
-    let state = setup();
+    const state = setup();
 
     // Initiative: WVR rolls 7 (3+4), GRF rolls 5 (2+3) -> team 0 wins.
-    state = rollInitiativePhase(state, scriptedRng(3, 4, 2, 3));
+    rollInitiativePhase(state, scriptedRng(3, 4, 2, 3));
     expect(state.initiativeWinnerTeam).toBe(0);
 
     // Movement phase: Wolverine runs into (2,2), turns south (1 MP), steps
     // into (2,3), and squares up southeast (1 MP) - 4 of the 8-MP run budget.
     expect(nextActor(state)).toBe("grf");
-    state = declareMove(state, "wvr", "run"); // running budget 8
-    state = executeMove(state, "wvr", [
+    declareMove(state, "wvr", "run"); // running budget 8
+    executeMove(state, "wvr", [
       { kind: "enter", to: { col: 2, row: 2 } }, // forward (se)
       { kind: "turn", facings: 1 }, // se -> s
       { kind: "enter", to: { col: 2, row: 3 } }, // forward (s)
@@ -69,72 +69,72 @@ describe("example battle: Wolverine vs Griffin", () => {
     expect(wvr.position).toEqual({ col: 2, row: 3 });
     expect(wvr.mpSpent).toBe(4);
     // Griffin walks in place (keeps the walked attacker modifier).
-    state = declareMove(state, "grf", "walk");
-    state = executeMove(state, "grf", []);
+    declareMove(state, "grf", "walk");
+    executeMove(state, "grf", []);
 
     // Weapon phase: Wolverine medium laser at range 7 (long bracket); the
     // light woods between at (5,5) add +1 -> TN 11.
-    state = advancePhase(state); // movement -> weaponAttack
-    state = declareAttacks(state, "wvr", [{ weaponIndex: 0, targetId: "grf" }]);
+    advancePhase(state); // movement -> weaponAttack
+    declareAttacks(state, "wvr", [{ weaponIndex: 0, targetId: "grf" }]);
     // To-hit 11 >= TN 11; location roll 8 -> left torso; ML damage 5. LT 18 -> 13.
-    state = resolveDeclaredAttacks(state, "wvr", scriptedRng(6, 5, 3, 5));
+    resolveDeclaredAttacks(state, "wvr", scriptedRng(6, 5, 3, 5));
     expect(getUnit(state, "grf").armor.leftTorso).toBe(state.defs["GRF-1N"]!.armor.leftTorso! - 5);
 
     // Griffin answers with its PPC: TN 9, rolls 4 -> miss, no damage.
-    state = declareAttacks(state, "grf", [{ weaponIndex: 0, targetId: "wvr" }]);
-    state = resolveDeclaredAttacks(state, "grf", scriptedRng(1, 3)); // miss
+    declareAttacks(state, "grf", [{ weaponIndex: 0, targetId: "wvr" }]);
+    resolveDeclaredAttacks(state, "grf", scriptedRng(1, 3)); // miss
     expect(getUnit(state, "wvr").armor).toEqual(state.defs["WVR-6R"]!.armor);
   });
 
   it("fights through turn 6 until the Griffin loses its center torso", () => {
-    let state = setup();
+    const state = setup();
     const grfCt = (): number => getUnit(state, "grf").armor.centerTorso ?? -1;
 
     // ---- Turn 1 ----
-    state = rollInitiativePhase(state, scriptedRng(3, 4, 2, 3));
-    state = declareMove(state, "wvr", "run");
-    state = executeMove(state, "wvr", [
+    rollInitiativePhase(state, scriptedRng(3, 4, 2, 3));
+    declareMove(state, "wvr", "run");
+    executeMove(state, "wvr", [
       { kind: "enter", to: { col: 2, row: 2 } },
       { kind: "turn", facings: 1 },
       { kind: "enter", to: { col: 2, row: 3 } },
       { kind: "turn", facings: -1 },
     ]);
-    state = declareMove(state, "grf", "walk");
-    state = executeMove(state, "grf", []);
-    state = advancePhase(state);
-    state = declareAttacks(state, "wvr", [{ weaponIndex: 0, targetId: "grf" }]);
-    state = resolveDeclaredAttacks(state, "wvr", scriptedRng(6, 5, 3, 5)); // LT hit
-    state = declareAttacks(state, "grf", [{ weaponIndex: 0, targetId: "wvr" }]);
-    state = resolveDeclaredAttacks(state, "grf", scriptedRng(1, 3)); // miss
+    declareMove(state, "grf", "walk");
+    executeMove(state, "grf", []);
+    advancePhase(state);
+    declareAttacks(state, "wvr", [{ weaponIndex: 0, targetId: "grf" }]);
+    resolveDeclaredAttacks(state, "wvr", scriptedRng(6, 5, 3, 5)); // LT hit
+    declareAttacks(state, "grf", [{ weaponIndex: 0, targetId: "wvr" }]);
+    resolveDeclaredAttacks(state, "grf", scriptedRng(1, 3)); // miss
 
     // ---- Turns 2..6: both stand still, Wolverine plinks the CT for 5 each.
     // Griffin starts at CT 24 -> five hits (19/14/9/4/dead).
     const ctStart = grfCt();
     expect(ctStart).toBe(state.defs["GRF-1N"]!.armor.centerTorso);
     for (let t = 2; t <= 6; t++) {
-      state = advancePhase(state); // weaponAttack -> end
-      state = advancePhase(state); // end -> initiative
+      advancePhase(state); // weaponAttack -> end
+      advancePhase(state); // end -> initiative
       expect(state.turn).toBe(t);
 
-      state = rollInitiativePhase(state, scriptedRng(3, 3, 3, 1)); // team 0 wins
-      state = advancePhase(state); // -> weaponAttack (both skip moving)
+      rollInitiativePhase(state, scriptedRng(3, 3, 3, 1)); // team 0 wins
+      advancePhase(state); // -> weaponAttack (both skip moving)
       if (t < 6) {
-        state = declareAttacks(state, "wvr", [{ weaponIndex: 0, targetId: "grf" }]);
+        declareAttacks(state, "wvr", [{ weaponIndex: 0, targetId: "grf" }]);
         // 12 hits TN 9; location 7 -> center torso.
-        state = resolveDeclaredAttacks(state, "wvr", scriptedRng(6, 6, 3, 4));
+        resolveDeclaredAttacks(state, "wvr", scriptedRng(6, 6, 3, 4));
         expect(grfCt()).toBe(Math.max(ctStart - 5 * (t - 1), 0));
         expect(getUnit(state, "grf").destroyed).toBe(false);
       } else {
         // Final blow: CT armor 4, damage 5 -> destroyed.
-        state = declareAttacks(state, "wvr", [{ weaponIndex: 0, targetId: "grf" }]);
-        state = resolveDeclaredAttacks(state, "wvr", scriptedRng(6, 6, 3, 4));
+        declareAttacks(state, "wvr", [{ weaponIndex: 0, targetId: "grf" }]);
+        resolveDeclaredAttacks(state, "wvr", scriptedRng(6, 6, 3, 4));
         expect(grfCt()).toBe(0);
         expect(getUnit(state, "grf").destroyed).toBe(true); // killed immediately
         expect(getUnit(state, "grf").removed).toBe(true);
       }
     }
 
-    state = advancePhase(state); // weaponAttack -> end: kill committed
+    advancePhase(state); // weaponAttack -> end: kill committed
     expect(getUnit(state, "grf").destroyed).toBe(true);
     expect(getUnit(state, "grf").removed).toBe(true);
     expect(checkVictory(state)).toEqual({ winnerTeam: 0, draw: false });

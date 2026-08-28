@@ -101,41 +101,41 @@ function clearBuffers(s: Session): void {
  * (initiative rolls, the end-of-phase attack sweep, turn/phase markers).
  */
 function drive(s: Session): BattleState["events"] {
-  if (!s.battle) return [];
-  let st: BattleState = s.battle;
-  const before = s.battle.events.length;
+  const battle = s.battle;
+  if (!battle) return [];
+  const before = battle.events.length;
   for (let i = 0; i < 200; i++) {
-    const v = checkVictory(st);
+    const v = checkVictory(battle);
     if (v.winnerTeam !== null || v.draw) {
-      s.battle = st;
+      s.battle = battle;
       s.app = "over";
       s.victory = v;
       s.actorId = null;
       clearBuffers(s);
-      return st.events.slice(before);
+      return battle.events.slice(before);
     }
-    if (st.phase === "initiative") {
-      st = rollInitiativePhase(st, s.rng);
+    if (battle.phase === "initiative") {
+      rollInitiativePhase(battle, s.rng);
       continue;
     }
-    if (st.phase === "end") {
-      st = advancePhase(st);
+    if (battle.phase === "end") {
+      advancePhase(battle);
       continue;
     }
-    const id = nextActor(st);
+    const id = nextActor(battle);
     if (id !== null) {
-      s.battle = st;
+      s.battle = battle;
       s.app = "battle";
       if (s.actorId !== id) {
         s.actorId = id;
         clearBuffers(s);
       }
-      return st.events.slice(before);
+      return battle.events.slice(before);
     }
-    if (st.phase === "weaponAttack") {
-      st = resolveAllAttacks(st, s.rng);
+    if (battle.phase === "weaponAttack") {
+      resolveAllAttacks(battle, s.rng);
     }
-    st = advancePhase(st);
+    advancePhase(battle);
   }
   throw new Error(t(s.locale, "err.phaseDriver"));
 }
@@ -259,7 +259,7 @@ function requireActor(s: Session, phase: "movement" | "weaponAttack"): UnitState
 export function declareMode(s: Session, word: string): void {
   const unit = requireActor(s, "movement");
   const mode = parseMoveMode(s.locale, word);
-  s.battle = declareMove(requireBattle(s), unit.id, mode);
+  declareMove(requireBattle(s), unit.id, mode);
   s.moveMode = mode;
   s.moveSteps = [];
 }
@@ -386,16 +386,35 @@ export interface CommitResult {
   newEvents: BattleState["events"];
 }
 
+/**
+ * Apply a commit atomically: on any thrown error the held `s.battle` is rolled
+ * back to a snapshot taken before the commit, so a failed validation can never
+ * leave live game state partially mutated.
+ */
+function commitAtomic(s: Session, fn: () => void): void {
+  const battle = s.battle;
+  if (!battle) return;
+  const snapshot = structuredClone(battle);
+  try {
+    fn();
+  } catch (e) {
+    s.battle = snapshot;
+    throw e;
+  }
+}
+
 export function commitMove(s: Session): CommitResult {
   const unit = requireActor(s, "movement");
-  const before = requireBattle(s);
-  const next = executeMove(before, unit.id, s.moveSteps);
-  const newEvents = next.events.slice(before.events.length);
-  s.battle = next;
-  s.actorId = null;
-  clearBuffers(s);
-  drive(s);
-  return { state: next, newEvents };
+  const battle = requireBattle(s);
+  const beforeCount = battle.events.length;
+  commitAtomic(s, () => {
+    executeMove(battle, unit.id, s.moveSteps);
+    s.actorId = null;
+    clearBuffers(s);
+    drive(s);
+  });
+  const newEvents = battle.events.slice(beforeCount);
+  return { state: battle, newEvents };
 }
 
 export interface MoveStepInfo {
@@ -472,14 +491,18 @@ export function queueFire(s: Session, decl: AttackDecl): void {
 
 export function commitFire(s: Session): CommitResult {
   const unit = requireActor(s, "weaponAttack");
-  const before = requireBattle(s);
-  const declared = declareAttacks(before, unit.id, s.fireDecls);
-  const declEvents = declared.events.slice(before.events.length);
-  s.battle = declared;
-  s.actorId = null;
-  clearBuffers(s);
-  const driveEvents = drive(s);
-  return { state: s.battle, newEvents: [...declEvents, ...driveEvents] };
+  const battle = requireBattle(s);
+  const beforeCount = battle.events.length;
+  let declEvents: BattleState["events"] = [];
+  let driveEvents: BattleState["events"] = [];
+  commitAtomic(s, () => {
+    declareAttacks(battle, unit.id, s.fireDecls);
+    declEvents = battle.events.slice(beforeCount);
+    s.actorId = null;
+    clearBuffers(s);
+    driveEvents = drive(s);
+  });
+  return { state: battle, newEvents: [...declEvents, ...driveEvents] };
 }
 
 // ------------------------------------------------------------ lifecycle ----

@@ -125,12 +125,6 @@ export interface CreateBattleOptions {
   readonly height?: number | undefined;
 }
 
-function clone(state: BattleState): BattleState {
-  const units: Record<string, UnitState> = {};
-  for (const [id, u] of Object.entries(state.units)) units[id] = { ...u };
-  return { ...state, units };
-}
-
 function getUnitOrThrow(state: BattleState, unitId: string): UnitState {
   const unit = state.units[unitId];
   if (!unit) throw new Error(`Unknown unit id: ${unitId}`);
@@ -234,25 +228,21 @@ export function createBattle(
   };
 }
 
-export function rollInitiativePhase(state: BattleState, rng: Rng): BattleState {
+export function rollInitiativePhase(state: BattleState, rng: Rng): void {
   requirePhase(state, "initiative");
-  const next = clone(state);
-  const teams = [...new Set(Object.values(next.units).map((u) => u.team))];
+  const teams = [...new Set(Object.values(state.units).map((u) => u.team))];
   const result = rollInitiative(teams, rng);
-  next.initiativeWinnerTeam = result.winnerTeam;
-  next.phase = "movement";
-  next.events = [
-    ...next.events,
+  state.initiativeWinnerTeam = result.winnerTeam;
+  state.phase = "movement";
+  state.events.push(
     { kind: "initiative", rolls: result.rolls, winnerTeam: result.winnerTeam },
     { kind: "phase", phase: "movement" },
-  ];
-  return next;
+  );
 }
 
-export function declareMove(state: BattleState, unitId: string, mode: MoveMode): BattleState {
+export function declareMove(state: BattleState, unitId: string, mode: MoveMode): void {
   requirePhase(state, "movement");
-  const next = clone(state);
-  const unit = getUnitOrThrow(next, unitId);
+  const unit = getUnitOrThrow(state, unitId);
   if (unit.removed) throw new Error(`${unitId} is removed from play`);
   if (mode !== "standStill" && isImmobile(unit.armor)) {
     throw new Error(`${unitId} has a destroyed leg and can only stand still`);
@@ -260,8 +250,7 @@ export function declareMove(state: BattleState, unitId: string, mode: MoveMode):
   unit.moveMode = mode;
   unit.movesThisTurn = [];
   unit.mpSpent = 0;
-  next.events = [...next.events, { kind: "moveDeclared", unitId, mode }];
-  return next;
+  state.events.push({ kind: "moveDeclared", unitId, mode });
 }
 
 export function executeMove(
@@ -269,14 +258,13 @@ export function executeMove(
   unitId: string,
   steps: readonly MoveStep[],
   options: { readonly finalFacing?: Facing } = {},
-): BattleState {
+): void {
   requirePhase(state, "movement");
-  const next = clone(state);
-  const unit = getUnitOrThrow(next, unitId);
+  const unit = getUnitOrThrow(state, unitId);
   if (unit.moveMode === null) throw new Error(`Declare a movement mode for ${unitId} first`);
   if (unit.removed) throw new Error(`${unitId} is removed from play`);
 
-  const def = next.defs[unit.model]!;
+  const def = state.defs[unit.model]!;
   const budget = mv.maxMovePoints(unit.moveMode, def.walking, def.running, def.jumping);
   const jumping = unit.moveMode === "jump";
 
@@ -325,11 +313,11 @@ export function executeMove(
       if (backward && unit.moveMode === "run") {
         throw new Error("Running 'Mechs cannot move backward");
       }
-      spent += costToEnter(mv.terrainAt(next.terrain, to));
+      spent += costToEnter(mv.terrainAt(state.terrain, to));
       directions.push(forward ? "forward" : "backward");
     }
 
-    const occupant = occupantAt(next, to, unitId);
+    const occupant = occupantAt(state, to, unitId);
     if (occupant !== undefined) {
       if (isFinalStep) {
         throw new Error(`Cannot end movement in ${fmtHex(to)}: occupied by ${occupant.id}`);
@@ -354,35 +342,30 @@ export function executeMove(
   unit.jumpedThisTurn = jumping && steps.length > 0;
   unit.movesThisTurn = directions;
   unit.mpSpent = spent;
-  next.actedThisPhase = [...next.actedThisPhase, unitId];
-  next.events = [
-    ...next.events,
-    {
-      kind: "moved",
-      unitId,
-      mode: unit.moveMode,
-      position: { ...cursor },
-      facing: unit.facing,
-      mpSpent: spent,
-      mpBudget: budget,
-    },
-  ];
-  return next;
+  state.actedThisPhase.push(unitId);
+  state.events.push({
+    kind: "moved",
+    unitId,
+    mode: unit.moveMode,
+    position: { ...cursor },
+    facing: unit.facing,
+    mpSpent: spent,
+    mpBudget: budget,
+  });
 }
 
 export function declareAttacks(
   state: BattleState,
   unitId: string,
   decls: readonly AttackDecl[],
-): BattleState {
+): void {
   requirePhase(state, "weaponAttack");
-  const next = clone(state);
-  const unit = getUnitOrThrow(next, unitId);
+  const unit = getUnitOrThrow(state, unitId);
   if (unit.destroyed || unit.removed) throw new Error(`${unitId} is destroyed`);
   if (unit.declaredAttacks.length > 0)
     throw new Error(`${unitId} already declared attacks this turn`);
 
-  const def = next.defs[unit.model]!;
+  const def = state.defs[unit.model]!;
   let targetId: string | null = null;
   let attackDistance = 0;
   let attackRangeBracket: string = "short";
@@ -416,7 +399,7 @@ export function declareAttacks(
       throw new Error("A unit may only declare attacks against one target per turn");
     }
 
-    const target = getUnitOrThrow(next, decl.targetId);
+    const target = getUnitOrThrow(state, decl.targetId);
     if (target.removed) throw new Error(`Target ${target.id} is removed from play`);
     if (target.team === unit.team) throw new Error("Target must belong to another team");
 
@@ -428,7 +411,7 @@ export function declareAttacks(
     }
 
     const intervening = interveningHexes(unit.position, target.position).map((h) =>
-      mv.terrainAt(next.terrain, h),
+      mv.terrainAt(state.terrain, h),
     );
     const woodsPoints = intervening.reduce(
       (sum, t) => sum + (t === "lightWoods" ? 1 : t === "heavyWoods" ? 2 : 0),
@@ -447,7 +430,7 @@ export function declareAttacks(
       attackerMovement: unit.moveMode ?? "standStill",
       targetHexesMoved: mv.hexesSinceLastReversal(target.movesThisTurn),
       targetJumped: target.jumpedThisTurn,
-      targetTerrain: mv.terrainAt(next.terrain, target.position),
+      targetTerrain: mv.terrainAt(state.terrain, target.position),
       interveningWoods: woodsPoints,
       distance: dist,
       weapon,
@@ -477,30 +460,25 @@ export function declareAttacks(
 
   unit.declaredAttacks = [...decls];
   unit.firedTargetId = targetId;
-  next.actedThisPhase = [...next.actedThisPhase, unitId];
-  next.events = [
-    ...next.events,
-    {
-      kind: "attacksDeclared",
-      unitId,
-      targetId,
-      count: decls.length,
-      distance: attackDistance,
-      rangeBracket: attackRangeBracket,
-      rangeMod: attackRangeMod,
-    },
-  ];
-  return next;
+  state.actedThisPhase.push(unitId);
+  state.events.push({
+    kind: "attacksDeclared",
+    unitId,
+    targetId,
+    count: decls.length,
+    distance: attackDistance,
+    rangeBracket: attackRangeBracket,
+    rangeMod: attackRangeMod,
+  });
 }
 
 function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void {
-  const next = state;
-  const def = next.defs[unit.model]!;
+  const def = state.defs[unit.model]!;
 
   for (const decl of unit.declaredAttacks) {
     const mount = def.weapons[decl.weaponIndex]!;
     const weapon = getWeapon(mount.weapon);
-    const target = getUnitOrThrow(next, decl.targetId);
+    const target = getUnitOrThrow(state, decl.targetId);
     const shots = decl.shots ?? 1;
 
     const resolution = resolveWeaponAttack({
@@ -509,9 +487,9 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
       attackerMoved: unit.moveMode ?? "standStill",
       targetHexesMoved: mv.hexesSinceLastReversal(target.movesThisTurn),
       targetJumped: target.jumpedThisTurn,
-      targetTerrain: mv.terrainAt(next.terrain, target.position),
+      targetTerrain: mv.terrainAt(state.terrain, target.position),
       interveningTerrains: interveningHexes(unit.position, target.position).map((h) =>
-        mv.terrainAt(next.terrain, h),
+        mv.terrainAt(state.terrain, h),
       ),
       distance: hexDistance(unit.position, target.position),
       weaponName: weapon.name,
@@ -521,22 +499,23 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
 
     if (resolution.application !== null) target.armor = resolution.application.armor;
     if (resolution.jammed && !unit.jammedWeapons.includes(decl.weaponIndex)) {
-      unit.jammedWeapons = [...unit.jammedWeapons, decl.weaponIndex];
+      unit.jammedWeapons.push(decl.weaponIndex);
     }
 
-    next.events = [
-      ...next.events,
-      { kind: "attackResolved", unitId: unit.id, targetId: target.id, resolution },
-    ];
+    state.events.push({
+      kind: "attackResolved",
+      unitId: unit.id,
+      targetId: target.id,
+      resolution,
+    });
 
     if (!target.destroyed && isKilled(target.armor)) {
       target.destroyed = true;
       target.removed = true;
-      next.events = [
-        ...next.events,
+      state.events.push(
         { kind: "unitDestroyed", unitId: target.id },
         { kind: "unitRemoved", unitId: target.id },
-      ];
+      );
     }
   }
 
@@ -544,13 +523,11 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
 }
 
 /** Resolve one unit's declared attacks against the current phase snapshot. */
-export function resolveDeclaredAttacks(state: BattleState, unitId: string, rng: Rng): BattleState {
+export function resolveDeclaredAttacks(state: BattleState, unitId: string, rng: Rng): void {
   requirePhase(state, "weaponAttack");
-  const next = clone(state);
-  const unit = getUnitOrThrow(next, unitId);
+  const unit = getUnitOrThrow(state, unitId);
   if (unit.declaredAttacks.length === 0) throw new Error(`${unitId} has no declared attacks`);
-  resolveUnitAttacks(next, unit, rng);
-  return next;
+  resolveUnitAttacks(state, unit, rng);
 }
 
 /**
@@ -558,58 +535,52 @@ export function resolveDeclaredAttacks(state: BattleState, unitId: string, rng: 
  * the destroyed. All declarations are collected first (during the weapon attack
  * phase), so damage is applied only after every unit has declared.
  */
-export function resolveAllAttacks(state: BattleState, rng: Rng): BattleState {
+export function resolveAllAttacks(state: BattleState, rng: Rng): void {
   requirePhase(state, "weaponAttack");
-  const next = clone(state);
-  for (const unit of Object.values(next.units)) {
+  for (const unit of Object.values(state.units)) {
     if (unit.removed) continue;
     if (unit.declaredAttacks.length === 0) continue;
-    resolveUnitAttacks(next, unit, rng);
+    resolveUnitAttacks(state, unit, rng);
   }
-  return next;
 }
 
-export function advancePhase(state: BattleState): BattleState {
-  const next = clone(state);
-  let events = [...next.events];
-
-  switch (next.phase) {
+export function advancePhase(state: BattleState): void {
+  switch (state.phase) {
     case "initiative": {
-      if (next.initiativeWinnerTeam === null) {
+      if (state.initiativeWinnerTeam === null) {
         throw new Error("Roll initiative before leaving the initiative phase");
       }
-      next.phase = "movement";
+      state.phase = "movement";
       break;
     }
     case "movement": {
-      next.phase = "weaponAttack";
-      for (const unit of Object.values(next.units)) {
+      state.phase = "weaponAttack";
+      for (const unit of Object.values(state.units)) {
         unit.phaseStartArmor = { ...unit.armor };
       }
-      next.actedThisPhase = [];
+      state.actedThisPhase = [];
       break;
     }
     case "weaponAttack": {
-      for (const unit of Object.values(next.units)) {
+      for (const unit of Object.values(state.units)) {
         if (!unit.destroyed && isKilled(unit.armor)) {
           unit.destroyed = true;
           unit.removed = true;
-          events = [
-            ...events,
+          state.events.push(
             { kind: "unitDestroyed", unitId: unit.id },
             { kind: "unitRemoved", unitId: unit.id },
-          ];
+          );
         }
       }
-      next.phase = "end";
+      state.phase = "end";
       break;
     }
     case "end": {
-      next.turn += 1;
-      next.initiativeWinnerTeam = null;
-      next.phase = "initiative";
-      next.actedThisPhase = [];
-      for (const unit of Object.values(next.units)) {
+      state.turn += 1;
+      state.initiativeWinnerTeam = null;
+      state.phase = "initiative";
+      state.actedThisPhase = [];
+      for (const unit of Object.values(state.units)) {
         unit.moveMode = null;
         unit.movesThisTurn = [];
         unit.jumpedThisTurn = false;
@@ -617,14 +588,12 @@ export function advancePhase(state: BattleState): BattleState {
         unit.declaredAttacks = [];
         unit.firedTargetId = null;
       }
-      events = [...events, { kind: "turn", turn: next.turn }];
+      state.events.push({ kind: "turn", turn: state.turn });
       break;
     }
   }
 
-  events = [...events, { kind: "phase", phase: next.phase }];
-  next.events = events;
-  return next;
+  state.events.push({ kind: "phase", phase: state.phase });
 }
 
 /** Suggest which unit must act next (initiative loser alternates first). */

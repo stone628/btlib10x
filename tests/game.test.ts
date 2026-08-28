@@ -41,12 +41,14 @@ function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
 
 /** Initiative always 6 vs 4 -> team 0 wins; both sides skip movement. */
 function startMovementTurn(state: BattleState, rng = scriptedRng(3, 3, 3, 1)): BattleState {
-  return rollInitiativePhase(state, rng);
+  rollInitiativePhase(state, rng);
+  return state;
 }
 
 /** Movement phase resolved with nobody moving -> ready for weapon attacks. */
 function startAttackTurn(state: BattleState, rng?: ReturnType<typeof scriptedRng>): BattleState {
-  return advancePhase(startMovementTurn(state, rng));
+  advancePhase(startMovementTurn(state, rng));
+  return state;
 }
 
 describe("createBattle", () => {
@@ -133,9 +135,9 @@ describe("movement phase", () => {
       ],
       { terrain: [{ col: 1, row: 3, type: "lightWoods" }] },
     );
-    let state = startMovementTurn(setup);
-    state = declareMove(state, "hbk", "walk");
-    state = executeMove(state, "hbk", [
+    const state = startMovementTurn(setup);
+    declareMove(state, "hbk", "walk");
+    executeMove(state, "hbk", [
       { kind: "enter", to: { col: 1, row: 3 } },
       { kind: "turn", facings: 1 },
     ]);
@@ -145,16 +147,16 @@ describe("movement phase", () => {
   });
 
   it("rejects running backward", () => {
-    let state = startMovementTurn(hbkVsEnf());
-    state = declareMove(state, "hbk", "run");
+    const state = startMovementTurn(hbkVsEnf());
+    declareMove(state, "hbk", "run");
     expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: -1, row: 2 } }])).toThrow(
       /backward/,
     );
   });
 
   it("rejects ground steps that are neither straight ahead nor straight back", () => {
-    let state = startMovementTurn(hbkVsEnf());
-    state = declareMove(state, "hbk", "walk");
+    const state = startMovementTurn(hbkVsEnf());
+    declareMove(state, "hbk", "walk");
     // Facing "se" from (0,2): south (0,3) is adjacent but not the forward or
     // backward hexside -> illegal without turning first.
     expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: 0, row: 3 } }])).toThrow(
@@ -163,9 +165,9 @@ describe("movement phase", () => {
   });
 
   it("allows walking straight backward", () => {
-    let state = startMovementTurn(hbkVsEnf());
-    state = declareMove(state, "hbk", "walk");
-    state = executeMove(state, "hbk", [{ kind: "enter", to: { col: -1, row: 2 } }]);
+    const state = startMovementTurn(hbkVsEnf());
+    declareMove(state, "hbk", "walk");
+    executeMove(state, "hbk", [{ kind: "enter", to: { col: -1, row: 2 } }]);
     const hbk = getUnit(state, "hbk");
     expect(hbk.position).toEqual({ col: -1, row: 2 });
     expect(hbk.mpSpent).toBe(1);
@@ -173,11 +175,12 @@ describe("movement phase", () => {
 
   it("counts turning MP against the mode budget", () => {
     let state = startMovementTurn(hbkVsEnf());
-    state = declareMove(state, "hbk", "walk"); // walking 4
+    declareMove(state, "hbk", "walk"); // walking 4
     expect(() => executeMove(state, "hbk", [{ kind: "turn", facings: 5 }])).toThrow(/budget/);
 
-    state = declareMove(startMovementTurn(hbkVsEnf()), "hbk", "walk");
-    state = executeMove(state, "hbk", [{ kind: "turn", facings: 2 }]);
+    state = startMovementTurn(hbkVsEnf());
+    declareMove(state, "hbk", "walk");
+    executeMove(state, "hbk", [{ kind: "turn", facings: 2 }]);
     const hbk = getUnit(state, "hbk");
     expect(hbk.mpSpent).toBe(2); // 2 hexsides x 1 MP
     expect(hbk.facing).toBe("sw"); // se rotated two hexsides clockwise
@@ -185,14 +188,16 @@ describe("movement phase", () => {
   });
 
   it("charges counterclockwise turns one MP per hexside", () => {
-    let state = declareMove(startMovementTurn(hbkVsEnf()), "hbk", "walk");
-    state = executeMove(state, "hbk", [{ kind: "turn", facings: -1 }]);
+    let state = startMovementTurn(hbkVsEnf());
+    declareMove(state, "hbk", "walk");
+    executeMove(state, "hbk", [{ kind: "turn", facings: -1 }]);
     const hbk = getUnit(state, "hbk");
     expect(hbk.facing).toBe("ne"); // se rotated one hexside counterclockwise
     expect(hbk.mpSpent).toBe(1);
 
     // Pricing is by absolute hexside count: -5 blows the walking budget too.
-    state = declareMove(startMovementTurn(hbkVsEnf()), "hbk", "walk");
+    state = startMovementTurn(hbkVsEnf());
+    declareMove(state, "hbk", "walk");
     expect(() => executeMove(state, "hbk", [{ kind: "turn", facings: -5 }])).toThrow(/budget/);
   });
 
@@ -215,9 +220,9 @@ describe("movement phase", () => {
         facing: "nw",
       },
     ]);
-    let state = startMovementTurn(setup);
-    state = declareMove(state, "hbk", "walk");
-    state = executeMove(state, "hbk", [
+    const state = startMovementTurn(setup);
+    declareMove(state, "hbk", "walk");
+    executeMove(state, "hbk", [
       { kind: "enter", to: { col: 1, row: 3 } }, // forward (se)
       { kind: "turn", facings: 2 }, // now facing sw
       { kind: "enter", to: { col: 0, row: 3 } }, // new forward (sw)
@@ -247,8 +252,8 @@ describe("movement phase", () => {
         facing: "nw",
       },
     ]);
-    let state = startMovementTurn(setup);
-    state = declareMove(state, "hbk", "walk");
+    const state = startMovementTurn(setup);
+    declareMove(state, "hbk", "walk");
     expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: 1, row: 3 } }])).toThrow(
       /end movement in 2,4: occupied by enf/, // 1-based display coords
     );
@@ -273,8 +278,8 @@ describe("movement phase", () => {
         facing: "nw",
       },
     ]);
-    let state = startMovementTurn(setup);
-    state = declareMove(state, "hbk", "walk"); // walking 4
+    const state = startMovementTurn(setup);
+    declareMove(state, "hbk", "walk"); // walking 4
     // Straight southeast line (odd-q: the column parity alternates the row drift).
     const steps = [
       { col: 1, row: 3 },
@@ -287,8 +292,8 @@ describe("movement phase", () => {
   });
 
   it("stand-still forbids steps and turns", () => {
-    let state = startMovementTurn(hbkVsEnf());
-    state = declareMove(state, "hbk", "standStill");
+    const state = startMovementTurn(hbkVsEnf());
+    declareMove(state, "hbk", "standStill");
     expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: -1, row: 2 } }])).toThrow(
       /Standing still forbids entering/,
     );
@@ -298,10 +303,10 @@ describe("movement phase", () => {
   });
 
   it("alternates activation via nextActor", () => {
-    let state = startMovementTurn(hbkVsEnf()); // team 0 wins initiative
+    const state = startMovementTurn(hbkVsEnf()); // team 0 wins initiative
     expect(nextActor(state)).toBe("enf");
-    state = declareMove(state, "hbk", "walk");
-    state = executeMove(state, "hbk", []);
+    declareMove(state, "hbk", "walk");
+    executeMove(state, "hbk", []);
     expect(nextActor(state)).toBe("enf");
   });
 
@@ -327,10 +332,10 @@ describe("movement phase", () => {
       ],
       {},
     );
-    let state = startMovementTurn(setup);
-    state = declareMove(state, "grf", "jump");
+    const state = startMovementTurn(setup);
+    declareMove(state, "grf", "jump");
     // Hop through the enemy-occupied hex (allowed while jumping) and land beyond it.
-    state = executeMove(state, "grf", [
+    executeMove(state, "grf", [
       { kind: "enter", to: { col: 1, row: 3 } },
       { kind: "enter", to: { col: 2, row: 3 } },
     ]);
@@ -468,8 +473,8 @@ describe("weapon attack phase", () => {
   });
 
   it("deducts ammo at declaration and allows one target per turn", () => {
-    let state = startAttackTurn(hbkVsEnf());
-    state = declareAttacks(state, "hbk", [
+    const state = startAttackTurn(hbkVsEnf());
+    declareAttacks(state, "hbk", [
       { weaponIndex: 0, targetId: "enf" },
       { weaponIndex: 1, targetId: "enf" },
     ]);
@@ -480,30 +485,30 @@ describe("weapon attack phase", () => {
   });
 
   it("resolves scripted attacks immediately and commits kills only at end of phase", () => {
-    let state = startAttackTurn(hbkVsEnf());
-    state = declareAttacks(state, "hbk", [{ weaponIndex: 0, targetId: "enf" }]);
+    const state = startAttackTurn(hbkVsEnf());
+    declareAttacks(state, "hbk", [{ weaponIndex: 0, targetId: "enf" }]);
     // Turn 1: AC/20 (20 dmg) hits CT (roll 5) -> 23 - 20 = 3 left.
-    state = resolveDeclaredAttacks(state, "hbk", scriptedRng(2, 3, 3, 4));
+    resolveDeclaredAttacks(state, "hbk", scriptedRng(2, 3, 3, 4));
     expect(getUnit(state, "enf").armor.centerTorso).toBe(3);
     expect(getUnit(state, "enf").destroyed).toBe(false);
 
-    state = advancePhase(state); // weaponAttack -> end
+    advancePhase(state); // weaponAttack -> end
     expect(getUnit(state, "enf").destroyed).toBe(false); // survived with 3 CT
 
-    state = advancePhase(state); // end -> initiative, turn 2
+    advancePhase(state); // end -> initiative, turn 2
     expect(state.turn).toBe(2);
     expect(getUnit(state, "hbk").moveMode).toBeNull();
     expect(getUnit(state, "hbk").declaredAttacks).toHaveLength(0);
 
-    state = rollInitiativePhase(state, scriptedRng(3, 3, 3, 1));
-    state = advancePhase(state);
-    state = declareAttacks(state, "hbk", [{ weaponIndex: 0, targetId: "enf" }]);
-    state = resolveDeclaredAttacks(state, "hbk", scriptedRng(6, 6, 3, 4)); // hit CT again
+    rollInitiativePhase(state, scriptedRng(3, 3, 3, 1));
+    advancePhase(state);
+    declareAttacks(state, "hbk", [{ weaponIndex: 0, targetId: "enf" }]);
+    resolveDeclaredAttacks(state, "hbk", scriptedRng(6, 6, 3, 4)); // hit CT again
     expect(getUnit(state, "enf").armor.centerTorso).toBe(0);
     expect(getUnit(state, "enf").destroyed).toBe(true); // killed immediately
     expect(getUnit(state, "enf").removed).toBe(true);
 
-    state = advancePhase(state); // weaponAttack -> end (kill already committed)
+    advancePhase(state); // weaponAttack -> end (kill already committed)
     const enf = getUnit(state, "enf");
     expect(enf.destroyed).toBe(true);
     expect(enf.removed).toBe(true);
@@ -530,10 +535,10 @@ describe("weapon attack phase", () => {
         facing: "nw",
       },
     ]);
-    let state = startAttackTurn(setup);
-    state = declareAttacks(state, "her", [{ weaponIndex: 2, targetId: "cda", shots: 2 }]);
+    const state = startAttackTurn(setup);
+    declareAttacks(state, "her", [{ weaponIndex: 2, targetId: "cda", shots: 2 }]);
     expect(getUnit(state, "her").ammoLeft["2"]).toBe(18); // 2 shots spent up front
-    state = resolveDeclaredAttacks(state, "her", scriptedRng(1, 1)); // natural 2 -> jam
+    resolveDeclaredAttacks(state, "her", scriptedRng(1, 1)); // natural 2 -> jam
     const her = getUnit(state, "her");
     expect(her.jammedWeapons).toEqual([2]);
     expect(getUnit(state, "cda").armor.centerTorso).toBe(state.defs["CDA-3MA"]!.armor.centerTorso);

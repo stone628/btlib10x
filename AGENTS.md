@@ -35,12 +35,12 @@ Run lint + typecheck + tests together before considering work done: `npm run lin
 - **Zero runtime dependencies**; dev deps are typescript + vitest + esbuild + biome (esbuild bundles the `web/` app, Biome lints/formats).
 - Scratch/debug scripts and other temporary files live in `./tmp/` (gitignored), never the OS `/tmp`.
 - Strictest sensible tsc settings (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`).
-- All randomness flows through an injected `Rng`; rules functions are deterministic given inputs — required for reproducible battles and future sim work.
-- Game state is plain serializable data; mutations happen through `src/rules/game.ts` APIs only.
+- All randomness flows through an injected `Rng`; rules functions are deterministic given inputs — guaranteed by in-place mutation of a single serializable battle state (see `src/rules/game.ts`).
+- Game state is plain serializable data; it is mutated **in place** through `src/rules/game.ts` APIs only. The engine is single-threaded and non-concurrent: rule functions mutate the passed `BattleState` directly and return `void`. Atomicity is guaranteed at the caller's commit boundary (the `web/session.ts` `commitAtomic` rollback), not per rule call.
 - Web-layer user-facing strings go through the i18n catalogs (`web/i18n/*.ts`, locales `en` + `kr`); `en` is canonical — other locales are compile-checked against it, and new strings default to English until translated. Engine output in `src/` stays English.
 - Board styling travels as structured spans beside the text (`render.ts` models + `boardToSpans`), never inline escape codes; the web layer maps styles to CSS classes (palette vars in `web/index.html`). Flat-text renderers stay byte-identical to their historic output.
 - Mech data lives in `data/mechs/*.json` (copied into published package); new 'Mechs must pass `validateMechDef`.
 
 ## Roadmap
 
-See `TODO.md`. Later: sarna.net scraping (dev-only), full-intro rules expansion, 10x-granular continuous-time mode.
+See `TODO.md`. Later: sarna.net scraping (dev-only), full-intro rules expansion.
