@@ -758,6 +758,7 @@ function gatorText(locale: LocaleId, r: AttackResolution): string {
   if (b.targetMod) parts.push(`target ${b.targetMod}`);
   if (b.terrainMod) parts.push(`terrain ${b.terrainMod}`);
   if (b.rangeMod) parts.push(`range ${b.rangeMod}`);
+  if (b.minRangeMod) parts.push(`min ${b.minRangeMod}`);
   if (b.pulseMod) parts.push(`pulse ${b.pulseMod}`);
   const total = b.automatic === "hit" ? t(locale, "res.needAuto") : String(b.total);
   return `${t(locale, "res.need", { total })} (${parts.join(" + ")})`;

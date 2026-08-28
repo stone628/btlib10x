@@ -156,6 +156,30 @@ describe("GATOR to-hit calculation", () => {
     expect(bd.automatic).toBe("miss");
   });
 
+  it("applies the closer-than-minimum-range penalty", () => {
+    const gauss = getWeapon("CL Gauss Rifle");
+    expect(gauss.minRange).toBe(2);
+
+    const at = (distance: number) =>
+      computeToHit({
+        gunnery: 4,
+        attackerMovement: "standStill",
+        targetHexesMoved: 0,
+        targetJumped: false,
+        targetTerrain: "clear",
+        interveningWoods: 0,
+        distance,
+        weapon: gauss,
+      });
+
+    expect(at(1).minRangeMod).toBe(2);
+    expect(at(1).total).toBe(6); // gunnery 4 + min (2-1+1) 2
+    expect(at(2).minRangeMod).toBe(1);
+    expect(at(2).total).toBe(5); // gunnery 4 + min (2-2+1) 1
+    expect(at(3).minRangeMod).toBe(0);
+    expect(at(3).total).toBe(4); // within short range, no penalty
+  });
+
   it("resolves variable damage per bracket (Snub-Nose PPC V10/8/5)", () => {
     const snub = getWeapon("Snub-Nose PPC");
     const short = computeToHit({

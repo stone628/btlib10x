@@ -18,6 +18,8 @@ export interface WeaponDef {
   readonly missileDamage?: 1 | 2;
   /** Number of missiles/tubes, used to pick the Cluster Hits Table column. */
   readonly missiles?: number;
+  /** Closest range in hexes; closer targets take a (min - distance + 1) penalty. */
+  readonly minRange?: number;
   /** V-code damage values per bracket [short, medium, long]. */
   readonly variableDamage?: readonly [number, number, number];
   readonly pulse?: boolean;
@@ -54,6 +56,11 @@ function parseWeapon(raw: unknown, label: string, errors: string[]): WeaponDef |
       valid = false;
     }
   }
+  const minRange = raw.minRange;
+  if (minRange !== undefined && !isBoundedInt(minRange)) {
+    errors.push(`${label}.minRange must be a positive integer`);
+    valid = false;
+  }
   const out: Record<string, unknown> = {};
   for (const key of [
     "name",
@@ -67,6 +74,7 @@ function parseWeapon(raw: unknown, label: string, errors: string[]): WeaponDef |
     "pulse",
     "antiInfantry",
     "rapidFireShots",
+    "minRange",
   ] as const) {
     const v = raw[key];
     if (v !== undefined) out[key] = v;
