@@ -581,15 +581,15 @@ export function fmtLog(
       if (!isAttacResolutionKind(prevKind)) {
         lines.push(t(locale, "res.attackResolutionStart"));
       }
-      if (currKind == "unitRemoved") {
+      if (currKind === "unitRemoved") {
         removedLines.push(...eventLines(locale, e));
-      } else if (currKind == "attackResolved") {
+      } else if (currKind === "attackResolved") {
         const resolvedLines = eventLines(locale, e);
         const unitPrefix = `[${e.unitId} -> ${e.targetId}] `;
-        lines.push(unitPrefix + resolvedLines.shift())
+        lines.push(unitPrefix + resolvedLines.shift());
         if (removedLines.length > 0) {
-          const indent = ' '.repeat(unitPrefix.length);
-          lines.push(...resolvedLines.map(l => indent + l))
+          const indent = " ".repeat(unitPrefix.length);
+          lines.push(...resolvedLines.map((l) => indent + l));
         }
       } else {
         lines.push(...eventLines(locale, e));
@@ -688,30 +688,30 @@ export function resolutionLines(locale: LocaleId, r: AttackResolution): string[]
   if (r.breakdown.outOfRange) {
     return [t(locale, "res.outOfRangeLine", { weapon: r.weapon, distance: r.distance })];
   }
-    const verdict =
-      r.breakdown.automatic === "hit"
-        ? t(locale, "res.autoHit")
-        : r.hit
-          ? t(locale, "res.hit")
-          : t(locale, "res.miss");
+  const verdict =
+    r.breakdown.automatic === "hit"
+      ? t(locale, "res.autoHit")
+      : r.hit
+        ? t(locale, "res.hit")
+        : t(locale, "res.miss");
   const lines = [
-      t(locale, "res.line", {
-        weapon: r.weapon,
-        gator: gatorText(locale, r),
-        roll: String(r.toHitRoll),
-        verdict,
-        jam: r.jammed ? t(locale, "res.jamSuffix") : "",
-      }),
+    t(locale, "res.line", {
+      weapon: r.weapon,
+      gator: gatorText(locale, r),
+      roll: String(r.toHitRoll),
+      verdict,
+      jam: r.jammed ? t(locale, "res.jamSuffix") : "",
+    }),
   ];
-    if (r.clusterRoll !== null) lines.push(t(locale, "res.clusterRoll", { roll: r.clusterRoll }));
-    if (r.hit && r.groups.length > 0) {
-      lines.push(
-        t(locale, "res.hits", {
-          groups: r.groups.map((g) => `${SHORT_LOC[g.location]}(${g.damage})`).join(" "),
-        }),
-      );
-      const detail = transferDetail(locale, r);
-      if (detail) lines.push(`  ${detail}`);
+  if (r.clusterRoll !== null) lines.push(t(locale, "res.clusterRoll", { roll: r.clusterRoll }));
+  if (r.hit && r.groups.length > 0) {
+    lines.push(
+      t(locale, "res.hits", {
+        groups: r.groups.map((g) => `${SHORT_LOC[g.location]}(${g.damage})`).join(" "),
+      }),
+    );
+    const detail = transferDetail(locale, r);
+    if (detail) lines.push(`  ${detail}`);
   }
   return lines;
 }

@@ -55,7 +55,7 @@ export function applyDamage(
   const next = cloneArmor(armor);
   const steps: DamageTransferStep[] = [];
   const newlyDestroyed: Location[] = [];
-  let blownOffArms: Location[] = [];
+  const blownOffArms: Location[] = [];
   let killed = false;
 
   let remaining = damage;
@@ -82,12 +82,12 @@ export function applyDamage(
       if (cur === "rightTorso" && next.rightArm > 0) {
         next.rightArm = 0;
         newlyDestroyed.push("rightArm");
-        blownOffArms = [...blownOffArms, "rightArm"];
+        blownOffArms.push("rightArm");
       }
       if (cur === "leftTorso" && next.leftArm > 0) {
         next.leftArm = 0;
         newlyDestroyed.push("leftArm");
-        blownOffArms = [...blownOffArms, "leftArm"];
+        blownOffArms.push("leftArm");
       }
     }
     if (remaining > 0) {
