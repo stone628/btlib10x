@@ -252,7 +252,7 @@ export const en = {
   "res.autoHit": "auto-hit",
   "res.hit": "HIT",
   "res.miss": "MISS",
-  "res.clusterRoll": "cluster roll {roll}",
+  "res.clusterRoll": "cluster roll 2D6 = {roll}",
   "res.hits": "hits: {groups}",
   "res.armBlownOff": "; {cause} destroyed → {arm} blown off",
   "res.immobilized": "; immobilized",

@@ -247,7 +247,7 @@ export const kr: Catalog = {
   "res.autoHit": "자동명중",
   "res.hit": "명중",
   "res.miss": "빗나감",
-  "res.clusterRoll": "클러스터 굴림 {roll}",
+  "res.clusterRoll": "클러스터 굴림 2D6 = {roll}",
   "res.hits": "명중: {groups}",
   "res.armBlownOff": "; {cause} 파괴 → {arm} 절단",
   "res.immobilized": "; 이동 불능",
