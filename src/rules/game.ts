@@ -641,7 +641,7 @@ export function nextActor(state: BattleState): string | null {
   const actedCount = (team: number): number =>
     alive.filter((u) => u.team === team && state.actedThisPhase.includes(u.id)).length;
 
-  const sorted = [...order].sort((a, b) => actedCount(a) - actedCount(b));
+  const sorted = order.sort((a, b) => actedCount(a) - actedCount(b));
   for (const team of sorted) {
     const candidate = alive.find((u) => u.team === team && !state.actedThisPhase.includes(u.id));
     if (candidate) return candidate.id;

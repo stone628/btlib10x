@@ -198,7 +198,7 @@ export function addUnit(
       t(s.locale, "err.hexOccupied", { col: position.col + 1, row: position.row + 1 }),
     );
   }
-  s.roster = [...s.roster, { id, model, team, gunnery, position, facing }];
+  s.roster.push({ id, model, team, gunnery, position, facing });
 }
 
 export function removeUnit(s: Session, id: string): void {
@@ -338,7 +338,7 @@ export function queueEnter(s: Session, to: Hex): void {
   if (spent > budget) {
     throw new Error(t(s.locale, "err.mpExceeded", { spent, mode: s.moveMode, budget }));
   }
-  s.moveSteps = [...s.moveSteps, { kind: "enter", to }];
+  s.moveSteps.push({ kind: "enter", to });
 }
 
 export function queueTurn(s: Session, facings: number): void {
@@ -355,7 +355,7 @@ export function queueTurn(s: Session, facings: number): void {
   if (spent > budget) {
     throw new Error(t(s.locale, "err.mpExceeded", { spent, mode: s.moveMode, budget }));
   }
-  s.moveSteps = [...s.moveSteps, { kind: "turn", facings }];
+  s.moveSteps.push({ kind: "turn", facings });
 }
 
 /** Resolve a `face` argument: absolute facing name or signed step count. */
@@ -467,7 +467,7 @@ export function queueFire(s: Session, decl: AttackDecl): void {
   if (pending !== undefined && pending !== decl.targetId) {
     throw new Error(t(s.locale, "err.oneTarget", { target: pending }));
   }
-  s.fireDecls = [...s.fireDecls, decl];
+  s.fireDecls.push(decl);
 }
 
 export function commitFire(s: Session): CommitResult {
