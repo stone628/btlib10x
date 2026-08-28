@@ -24,6 +24,8 @@ export interface ToHitBreakdown {
   readonly rangeMod: number;
   /** Pulse weapons: -2. */
   readonly pulseMod: number;
+  /** Closer-than-minimum-range penalty: (minRange - distance) + 1, else 0. */
+  readonly minRangeMod: number;
   readonly total: number;
   readonly rangeBracket: RangeBracket;
   /** Modified TN <= 2 auto-hits; > 12 auto-misses (attack may be aborted). */
@@ -54,6 +56,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
       terrainMod: 0,
       rangeMod: 0,
       pulseMod: 0,
+      minRangeMod: 0,
       total: Number.POSITIVE_INFINITY,
       rangeBracket: "long",
       automatic: "miss",
@@ -70,8 +73,12 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
 
   const rangeMod = RANGE_MOD[bracket];
   const pulseMod = mods.weapon.pulse === true ? -2 : 0;
+  const min =
+    mods.weapon.minRange !== undefined && mods.distance <= mods.weapon.minRange
+      ? mods.weapon.minRange - mods.distance + 1
+      : 0;
 
-  const total = mods.gunnery + attackerMod + targetMod + terrainMod + rangeMod + pulseMod;
+  const total = mods.gunnery + attackerMod + targetMod + terrainMod + rangeMod + pulseMod + min;
 
   return {
     gunnery: mods.gunnery,
@@ -80,6 +87,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     terrainMod,
     rangeMod,
     pulseMod,
+    minRangeMod: min,
     total,
     rangeBracket: bracket,
     automatic: total <= 2 ? "hit" : total > 12 ? "miss" : null,

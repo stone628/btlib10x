@@ -65,6 +65,6 @@
     "missileDamage": 2,
     "missiles": 4
   },
-  { "name": "CL Gauss Rifle", "short": 7, "medium": 15, "long": 22, "damage": 15 },
+  { "name": "CL Gauss Rifle", "short": 7, "medium": 15, "long": 22, "damage": 15, "minRange": 2 },
   { "name": "CL LB 20-X AC", "short": 4, "medium": 8, "long": 12, "damage": 20 }
 ]
