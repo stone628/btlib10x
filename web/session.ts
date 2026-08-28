@@ -69,6 +69,8 @@ export interface Session {
   moveMode: MoveMode | null;
   moveSteps: MoveStep[];
   fireDecls: AttackDecl[];
+  /** Actor (turn-qualified) whose fire suggestion was last auto-shown. */
+  fireHintShownFor: string | null;
 }
 
 export function newSession(seed = 42): Session {
@@ -86,6 +88,7 @@ export function newSession(seed = 42): Session {
     moveMode: null,
     moveSteps: [],
     fireDecls: [],
+    fireHintShownFor: null,
   };
 }
 
@@ -224,6 +227,7 @@ export function startBattle(s: Session): void {
   s.battle = createBattle(inits, battleOptions(s));
   s.victory = null;
   s.actorId = null;
+  s.fireHintShownFor = null;
   clearBuffers(s);
   drive(s);
 }
@@ -516,6 +520,7 @@ export function rematch(s: Session): void {
   );
   s.victory = null;
   s.actorId = null;
+  s.fireHintShownFor = null;
   clearBuffers(s);
   drive(s);
 }
@@ -528,6 +533,7 @@ export function resetSession(s: Session): void {
   s.battle = null;
   s.victory = null;
   s.actorId = null;
+  s.fireHintShownFor = null;
   clearBuffers(s);
 }
 

@@ -180,6 +180,23 @@ export const en = {
   "attackStatus.none": "(no attacks queued)",
   "weapons.noActorId": "(no active unit)",
 
+  // fire suggestion
+  "fireSuggestion.header": "possible targets for {id}:",
+  "fireSuggestion.noTargets": "(no target in range, arc, or line of sight)",
+  "fireSuggestion.target": "{id} at {distance} hexes:",
+  "fireSuggestion.tn": "TN",
+  "fireSuggestion.damage": "dmg",
+  "fireSuggestion.ammo": "ammo",
+  "fireSuggestion.cluster": "{shots} missiles {per} dmg",
+  "fireSuggestion.blocked": "blocked",
+  "fireSuggestion.reason.jammed": "jammed",
+  "fireSuggestion.reason.destroyed": "destroyed",
+  "fireSuggestion.reason.outOfRange": "out of range",
+  "fireSuggestion.reason.outOfArc": "out of arc",
+  "fireSuggestion.reason.noLos": "no line of sight",
+  "fireSuggestion.reason.outOfAmmo": "out of ammo",
+  "fireSuggestion.reason.autoMiss": "auto-miss",
+
   // record sheet / info
   "info.mechListLine": "{model} {name} ({weightClass}) walk/run/jump {walk}/{run}/{jump}",
   "info.head": "{model} {name} — {weightClass} {tonnage}t ({techBase})",

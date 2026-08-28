@@ -4,6 +4,7 @@ import type { Chunk, RichOutput } from "./format.js";
 import {
   attackStatusLines,
   boardChunk,
+  fireSuggestionLines,
   fmtLog,
   fmtSetupStatus,
   infoMapChunks,
@@ -496,6 +497,14 @@ function normalize(out: string[] | RichOutput): Chunk[] {
     : [{ lines: out }];
 }
 
+/** Turn-qualified key identifying the acting unit's fire turn, or null when none. */
+function fireHintKey(s: S.Session): string | null {
+  if (s.app !== "battle" || s.battle === null || s.battle.phase !== "weaponAttack") return null;
+  const actor = S.currentActor(s);
+  if (actor === null) return null;
+  return `${s.battle.turn}:${actor.id}`;
+}
+
 /**
  * Run one input line against the session; returns presentation chunks
  * (plain text with a class hint, or styled board spans).
@@ -522,6 +531,11 @@ export function runChunks(session: S.Session, raw: string): Chunk[] {
   }
   if (!wasOver && session.app === "over") {
     chunks = [...chunks, { lines: victoryBanner(session), cls: "banner" }];
+  }
+  const hintKey = fireHintKey(session);
+  if (hintKey !== null && hintKey !== session.fireHintShownFor) {
+    chunks = [...chunks, { lines: fireSuggestionLines(session), cls: "hint" }];
+    session.fireHintShownFor = hintKey;
   }
   return chunks;
 }

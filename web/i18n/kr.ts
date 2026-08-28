@@ -175,6 +175,23 @@ export const kr: Catalog = {
   "attackStatus.none": "(예약된 공격 없음)",
   "weapons.noActorId": "(행동 중 유닛 없음)",
 
+  // fire suggestion
+  "fireSuggestion.header": "{id}의 공격 가능 목표:",
+  "fireSuggestion.noTargets": "(사거리·조준각·시야 내 목표 없음)",
+  "fireSuggestion.target": "{id}, 거리 {distance}:",
+  "fireSuggestion.tn": "TN",
+  "fireSuggestion.damage": "대미지",
+  "fireSuggestion.ammo": "탄약",
+  "fireSuggestion.cluster": "{shots}발 미사일 {per} 대미지",
+  "fireSuggestion.blocked": "차단됨",
+  "fireSuggestion.reason.jammed": "고장",
+  "fireSuggestion.reason.destroyed": "파괴됨",
+  "fireSuggestion.reason.outOfRange": "사거리 밖",
+  "fireSuggestion.reason.outOfArc": "조준각 밖",
+  "fireSuggestion.reason.noLos": "시야 차단",
+  "fireSuggestion.reason.outOfAmmo": "탄약 없음",
+  "fireSuggestion.reason.autoMiss": "자동 빗나감",
+
   // record sheet / info
   "info.mechListLine": "{model} {name} ({weightClass}) 걷기/달리기/도약 {walk}/{run}/{jump}",
   "info.head": "{model} {name} — {weightClass} {tonnage}t ({techBase})",

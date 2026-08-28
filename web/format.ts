@@ -2,9 +2,12 @@ import type {
   ArmorState,
   AttackResolution,
   BattleState,
+  FireBlockerReason,
+  FireWeapon,
   GameEvent,
   Location,
   MechDef,
+  RangeBracket,
   UnitState,
 } from "btlib10x";
 import {
@@ -16,10 +19,11 @@ import {
   LOCATIONS,
   MAP_DEFS,
   MECH_DEFS,
+  suggestFireTargets,
   toEngineTerrain,
   WEAPONS,
 } from "btlib10x";
-import type { LocaleId } from "./i18n/index.js";
+import type { LocaleId, MessageKey } from "./i18n/index.js";
 import { t } from "./i18n/index.js";
 import type { BoardModel, BoardRenderer } from "./render.js";
 import { battleModel, getBoardRenderer, mapModel } from "./render.js";
@@ -533,6 +537,81 @@ export function attackStatusLines(s: Session): string[] {
     const name = mount ? mount.weapon : `#${decl.weaponIndex + 1}`;
     return `#${decl.weaponIndex + 1} ${name} -> ${decl.targetId}${decl.shots !== undefined ? ` x${decl.shots}` : ""}`;
   });
+}
+
+const BRACKET_LABEL: Readonly<Record<RangeBracket, string>> = {
+  short: "S",
+  medium: "M",
+  long: "L",
+};
+
+const BLOCKER_LABEL: Readonly<Record<FireBlockerReason, MessageKey>> = {
+  jammed: "fireSuggestion.reason.jammed",
+  destroyed: "fireSuggestion.reason.destroyed",
+  outOfRange: "fireSuggestion.reason.outOfRange",
+  outOfArc: "fireSuggestion.reason.outOfArc",
+  noLos: "fireSuggestion.reason.noLos",
+  outOfAmmo: "fireSuggestion.reason.outOfAmmo",
+  autoMiss: "fireSuggestion.reason.autoMiss",
+};
+
+function fireWeaponLine(locale: LocaleId, w: FireWeapon): string {
+  const bits = [
+    `#${w.weaponIndex + 1} ${w.weapon} (${SHORT_LOC[w.location]}) [${BRACKET_LABEL[w.rangeBracket]}]`,
+    `${t(locale, "fireSuggestion.tn")} ${w.tn}`,
+    `${t(locale, "fireSuggestion.damage")} ${w.expectedDamage}`,
+  ];
+  if (w.cluster !== undefined) {
+    bits.push(
+      t(locale, "fireSuggestion.cluster", {
+        shots: String(w.cluster.shots),
+        per: String(w.cluster.perMissile),
+      }),
+    );
+  }
+  if (w.ammoShots !== null) {
+    bits.push(`${t(locale, "fireSuggestion.ammo")} ${w.ammoShots}`);
+  }
+  return bits.join("  ");
+}
+
+/** Automatic hint shown at the start of a unit's fire turn. */
+export function fireSuggestionLines(s: Session): string[] {
+  const battle = s.battle;
+  if (!battle || s.actorId === null) {
+    throw new Error(t(s.locale, "err.wrongPhase", { phase: "weaponAttack" }));
+  }
+  const sugg = suggestFireTargets(battle, s.actorId);
+  const lines = [t(s.locale, "fireSuggestion.header", { id: sugg.targetId })];
+  if (sugg.targets.length === 0) {
+    lines.push(t(s.locale, "fireSuggestion.noTargets"));
+    return lines;
+  }
+  for (const target of sugg.targets) {
+    lines.push(
+      t(s.locale, "fireSuggestion.target", {
+        id: target.targetId,
+        distance: String(target.distance),
+      }),
+    );
+    if (target.weapons.length === 0) {
+      for (const b of target.blocked) {
+        lines.push(
+          `${t(s.locale, "fireSuggestion.blocked")}: #${b.weaponIndex + 1} ${b.weapon} — ${t(s.locale, BLOCKER_LABEL[b.reason])}`,
+        );
+      }
+      continue;
+    }
+    for (const w of target.weapons) lines.push(fireWeaponLine(s.locale, w));
+    if (target.blocked.length > 0) {
+      for (const b of target.blocked) {
+        lines.push(
+          `${t(s.locale, "fireSuggestion.blocked")}: #${b.weaponIndex + 1} ${b.weapon} — ${t(s.locale, BLOCKER_LABEL[b.reason])}`,
+        );
+      }
+    }
+  }
+  return lines;
 }
 
 export function weaponsLines(s: Session, unitId?: string): string[] {
