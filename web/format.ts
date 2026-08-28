@@ -112,16 +112,35 @@ export function boardChunk(s: Session): Chunk {
 // ---------------------------------------------------------------- info ----
 
 export function infoMechList(locale: LocaleId): string[] {
-  return Object.values(MECH_DEFS).map((d) =>
-    t(locale, "info.mechListLine", {
-      model: d.model,
-      name: d.name,
-      weightClass: d.weightClass,
-      walk: d.walking,
-      run: d.running,
-      jump: d.jumping,
-    }),
+  const list = Object.values(MECH_DEFS).sort((a, b) => a.model.localeCompare(b.model));
+  const modelW = Math.max(
+    ...list.map((d) => d.model.length),
+    t(locale, "info.mechColModel").length,
   );
+  const nameW = Math.max(...list.map((d) => d.name.length), t(locale, "info.mechColName").length);
+  const classW = Math.max(
+    ...list.map((d) => d.weightClass.length),
+    t(locale, "info.mechColClass").length,
+  );
+  const tonW = Math.max(
+    ...list.map((d) => String(d.tonnage).length),
+    t(locale, "info.mechColTon").length,
+  );
+  const head =
+    `${t(locale, "info.mechColModel").padEnd(modelW)}  ` +
+    `${t(locale, "info.mechColName").padEnd(nameW)}  ` +
+    `${t(locale, "info.mechColClass").padEnd(classW)}  ` +
+    `${t(locale, "info.mechColTon").padStart(tonW)}  ` +
+    t(locale, "info.mechColMove");
+  const rows = list.map((d) => {
+    const model = d.model.padEnd(modelW);
+    const name = d.name.padEnd(nameW);
+    const cls = d.weightClass.padEnd(classW);
+    const ton = String(d.tonnage).padStart(tonW);
+    const move = `${d.walking}/${d.running}/${d.jumping}`;
+    return `${model}  ${name}  ${cls}  ${ton}  ${move}`;
+  });
+  return [head, ...rows];
 }
 
 export function infoMech(locale: LocaleId, model: string): string[] {
