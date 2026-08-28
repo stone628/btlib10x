@@ -33,6 +33,7 @@ export type { AttackResolution, HitGroup, WeaponAttackInput } from "./rules/atta
 export { resolveWeaponAttack } from "./rules/attack.js";
 export * from "./rules/cluster.js";
 export * from "./rules/damage.js";
+export * from "./rules/fireability.js";
 export * from "./rules/game.js";
 export * from "./rules/hitlocation.js";
 export * from "./rules/initiative.js";
