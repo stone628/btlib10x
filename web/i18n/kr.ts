@@ -193,7 +193,11 @@ export const kr: Catalog = {
   "fireSuggestion.reason.autoMiss": "자동 빗나감",
 
   // record sheet / info
-  "info.mechListLine": "{model} {name} ({weightClass}) 걷기/달리기/도약 {walk}/{run}/{jump}",
+  "info.mechColModel": "모델",
+  "info.mechColName": "이름",
+  "info.mechColClass": "등급",
+  "info.mechColTon": "톤수",
+  "info.mechColMove": "이동(걷기/뛰기/점프)",
   "info.head": "{model} {name} — {weightClass} {tonnage}t ({techBase})",
   "info.movement": "이동: 걷기 {walk} / 달리기 {run} / 점프 {jump}",
   "info.mapHead": "{name}: {w}x{h}",
