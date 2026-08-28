@@ -46,7 +46,7 @@ ENF-4R, HBK-4G, CDA-3MA, HER-5SA, GRF-1N, WVR-6R).
 ```ts
 const terrain = [{ col: 2, row: 3, type: "lightWoods" }] as const;
 
-let state: BattleState = createBattle(
+const state: BattleState = createBattle(
   [
     { id: "wvr", model: "WVR-6R", team: 0, gunnery: 4,
       position: { col: 0, row: 2 }, facing: "se" },       // facing southeast
@@ -67,7 +67,7 @@ record-sheet JSON — anything invalid throws with every problem listed.
 ## 3. Initiative phase
 
 ```ts
-state = rollInitiativePhase(state, rng);   // 2D6 per team, ties reroll
+rollInitiativePhase(state, rng);   // 2D6 per team, ties reroll
 // state.initiativeWinnerTeam === 0 -> team 0 moves/fires first this round
 ```
 
@@ -81,8 +81,8 @@ turns 1–5 hexsides. Costs: 1 MP per hex entered (+1 light / +2 heavy woods),
 1 MP per hexside turned.
 
 ```ts
-state = declareMove(state, "wvr", "run");            // running budget: 8 MP
-state = executeMove(state, "wvr", [
+declareMove(state, "wvr", "run");                  // running budget: 8 MP
+executeMove(state, "wvr", [
   { kind: "enter", to: { col: 1, row: 2 } },
   { kind: "enter", to: { col: 2, row: 2 } },
   { kind: "enter", to: { col: 3, row: 2 } },
@@ -96,14 +96,14 @@ rules (`GRF-1N` may hop over anyone but land only on empty hexes). Invalid
 plans throw with a reason instead of corrupting state.
 
 ```ts
-state = declareMove(state, "grf", "walk");
-state = executeMove(state, "grf", []);               // walk in place
+declareMove(state, "grf", "walk");
+executeMove(state, "grf", []);               // walk in place
 ```
 
 Advance to shooting:
 
 ```ts
-state = advancePhase(state);                         // movement -> weaponAttack
+advancePhase(state);                         // movement -> weaponAttack
 ```
 
 ## 5. Weapon attack phase
@@ -113,13 +113,13 @@ Weapon indexes match the model's mount order, e.g. WVR-6R:
 `[0] Medium Laser (head), [1] SRM 6 (LT), [2] AC/5 (RA)`.
 
 ```ts
-state = declareAttacks(state, "wvr", [
+declareAttacks(state, "wvr", [
   { weaponIndex: 0, targetId: "grf" },
 ]);
 // Wolverine ML: gunnery 4 + ran +2 + target moved 4 hexes +1
 //              + medium range +2                              => TN 9
 
-state = declareAttacks(state, "grf", [
+declareAttacks(state, "grf", [
   { weaponIndex: 0, targetId: "wvr" },
 ]);
 // Griffin PPC:  gunnery 3 + walked +1 + wvr moved +1
@@ -133,8 +133,8 @@ Resolve in activation order — damage lands immediately on the target's armor,
 but destroyed 'Mechs keep firing until the phase ends:
 
 ```ts
-state = resolveDeclaredAttacks(state, "wvr", rng);   // rolls to-hit + location(s)
-state = resolveDeclaredAttacks(state, "grf", rng);
+resolveDeclaredAttacks(state, "wvr", rng);   // rolls to-hit + location(s)
+resolveDeclaredAttacks(state, "grf", rng);
 
 const grf = getUnit(state, "grf");
 grf.armor.leftTorso;   // e.g. 18 - 5 = 13 after a medium laser hit there
@@ -147,9 +147,9 @@ application) — enough to replay the entire battle.
 Commit deaths and close the turn:
 
 ```ts
-state = advancePhase(state);                         // weaponAttack -> end (kills committed)
+advancePhase(state);                         // weaponAttack -> end (kills committed)
 if (!checkVictory(state).winnerTeam && !checkVictory(state).draw) {
-  state = advancePhase(state);                       // end -> initiative, next turn
+  advancePhase(state);                       // end -> initiative, next turn
 }
 ```
 

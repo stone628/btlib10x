@@ -179,18 +179,23 @@ from `resolution.application.armor`.
 
 ## Battle state machine (`rules/game.ts`)
 
-All functions return **new state objects** (shallow-copied units); nothing is
-mutated in place except documented unit fields on the fresh copy.
+The engine is **in-place and `void`-returning**: rule functions mutate the
+`BattleState` you pass directly and return `void` (read-only queries like
+`nextActor` / `checkVictory` / `getUnit` return values but never mutate).
+The engine is single-threaded and non-concurrent; atomicity is **not**
+guaranteed per rule call — callers that need all-or-nothing behavior (e.g. the
+web session) hold a serializable snapshot and roll back on failure (see
+`web/session.ts` `commitAtomic`).
 
 ```ts
 createBattle(units: UnitInit[], { terrain }?): BattleState
-rollInitiativePhase(state, rng): BattleState        // initiative -> movement
-declareMove(state, unitId, mode): BattleState       // movement phase only
-executeMove(state, unitId, steps, { finalFacing }?): BattleState
-declareAttacks(state, unitId, decls): BattleState   // weaponAttack phase only
-resolveDeclaredAttacks(state, unitId, rng): BattleState
-advancePhase(state): BattleState                     // drives the phase cycle
-nextActor(state): string | null                     // alternating activation hint
+rollInitiativePhase(state, rng): void                  // initiative -> movement
+declareMove(state, unitId, mode): void                 // movement phase only
+executeMove(state, unitId, steps, { finalFacing }?): void
+declareAttacks(state, unitId, decls): void             // weaponAttack phase only
+resolveDeclaredAttacks(state, unitId, rng): void
+advancePhase(state): void                              // drives the phase cycle
+nextActor(state): string | null                        // alternating activation hint
 checkVictory(state): { winnerTeam; draw }
 getUnit(state, unitId): UnitState
 ```

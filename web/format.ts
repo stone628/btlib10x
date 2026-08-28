@@ -587,7 +587,7 @@ export function fmtLog(
         const resolvedLines = eventLines(locale, e);
         const unitPrefix = `[${e.unitId} -> ${e.targetId}] `;
         lines.push(unitPrefix + resolvedLines.shift());
-        if (removedLines.length > 0) {
+        if (resolvedLines.length > 0) {
           const indent = " ".repeat(unitPrefix.length);
           lines.push(...resolvedLines.map((l) => indent + l));
         }

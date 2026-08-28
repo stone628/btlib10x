@@ -36,4 +36,3 @@
 
 - [ ] Dev-only sarna.net scraper starting at https://www.sarna.net/wiki/BattleMech normalizing into MechDef JSON (Node OK here; library stays browser-first)
 - [ ] Full intro-rules expansion: heat, physicals, piloting/falling, elevation, rear hits, multi-target arcs, vehicles/infantry
-- [ ] 10x granular dimension + continuous-time sim replacing turn loop (keep space/time abstractions decoupled; see AGENTS.md constraints)

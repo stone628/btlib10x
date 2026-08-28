@@ -323,6 +323,21 @@ describe("movement", () => {
     expect(err.startsWith("error:")).toBe(true);
     expect(S.currentActor(s)!.position).toEqual(posBefore);
   });
+
+  it("rolls back the battle when a commit fails", () => {
+    const s = freshSetup();
+    run(s, "start");
+    run(s, "mode walk");
+    // Tamper directly with the internal step buffer to force executeMove to
+    // throw at commit time (illegal sideways step) rather than at queue time.
+    const actor = S.currentActor(s)!;
+    const beforeLen = s.battle!.events.length;
+    const beforePos = { ...actor.position };
+    s.moveSteps.push({ kind: "enter", to: { col: 0, row: 0 } }); // not straight ahead/back
+    expect(run(s, "done")[0]).toMatch(/^error:/);
+    expect(s.battle!.events).toHaveLength(beforeLen);
+    expect(s.battle!.units[actor.id]!.position).toEqual(beforePos);
+  });
 });
 
 describe("attack", () => {
