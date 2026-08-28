@@ -1,0 +1,30 @@
+{
+  "model": "AS7-D",
+  "name": "Atlas",
+  "tonnage": 100,
+  "weightClass": "Assault",
+  "techBase": "Inner Sphere",
+  "walking": 3,
+  "running": 5,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 61,
+    "rightTorso": 42,
+    "leftTorso": 42,
+    "rightArm": 34,
+    "leftArm": 34,
+    "rightLeg": 41,
+    "leftLeg": 41
+  },
+  "weapons": [
+    { "weapon": "Medium Laser", "location": "centerTorso" },
+    { "weapon": "Medium Laser", "location": "centerTorso" },
+    { "weapon": "Autocannon/20", "location": "rightTorso", "ammoShots": 10 },
+    { "weapon": "LRM 20", "location": "leftTorso", "ammoShots": 12 },
+    { "weapon": "SRM 6", "location": "leftTorso", "ammoShots": 15 },
+    { "weapon": "Medium Laser", "location": "rightArm" },
+    { "weapon": "Medium Laser", "location": "leftArm" }
+  ],
+  "source": "docs/mtf/Atlas AS7-D.mtf (TRO 3039 - Star League). Torso armor sums MTF front+rear into the flat per-location model; ammo = MTF crit tons (AC/20 2t=10, LRM 20 2t=12, SRM 6 1t=15)."
+}

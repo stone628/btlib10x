@@ -17,12 +17,14 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "gen:mechs": "node scripts/gen-mech-catalog.mjs && biome check --write src/data/mechCatalog.generated.ts",
+    "mtf": "node scripts/mtf.mjs && npm run gen:mechs",
+    "build": "npm run gen:mechs && tsc -p tsconfig.build.json",
     "build:web": "node scripts/build-web.mjs",
     "dist:web": "node scripts/build-web.mjs && node scripts/dist-web.mjs",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "typecheck": "npm run gen:mechs && tsc --noEmit",
+    "test": "npm run gen:mechs && vitest run",
+    "test:watch": "npm run gen:mechs && vitest",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "dev:web": "node scripts/build-web.mjs --watch --serve"

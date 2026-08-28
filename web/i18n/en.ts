@@ -198,7 +198,7 @@ export const en = {
   "fireSuggestion.reason.autoMiss": "auto-miss",
 
   // record sheet / info
-  "info.mechListLine": "{model} {name} ({weightClass}) walk/run/jump {walk}/{run}/{jump}",
+  "info.mechListLine": "{model} {name} ({weightClass}) walk {walk}/run {run}/jump {jump}",
   "info.head": "{model} {name} — {weightClass} {tonnage}t ({techBase})",
   "info.movement": "movement: walk {walk} / run {run} / jump {jump}",
   "info.mapHead": "{name}: {w}x{h}",

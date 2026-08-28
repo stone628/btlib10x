@@ -37,6 +37,11 @@ describe("'Mech definitions", () => {
     expect(MECH_DEFS["HER-5SA"]!.running).toBe(9);
     const wvr = MECH_DEFS["WVR-6R"]!;
     expect(wvr.weapons.find((w) => w.weapon === "SRM 6")?.ammoShots).toBe(15);
+    const atlas = MECH_DEFS["AS7-D"]!;
+    expect(atlas.tonnage).toBe(100);
+    expect(atlas.weightClass).toBe("Assault");
+    expect(atlas.running).toBe(5);
+    expect(atlas.weapons.find((w) => w.weapon === "LRM 20")?.ammoShots).toBe(12);
   });
 
   it("rejects invalid definitions", () => {

@@ -49,6 +49,7 @@
   },
   { "name": "LRM 5", "short": 7, "medium": 14, "long": 21, "missileDamage": 1, "missiles": 5 },
   { "name": "LRM 10", "short": 7, "medium": 14, "long": 21, "missileDamage": 1, "missiles": 10 },
+  { "name": "LRM 20", "short": 7, "medium": 14, "long": 21, "missileDamage": 1, "missiles": 20 },
   { "name": "SRM 6", "short": 3, "medium": 6, "long": 9, "missileDamage": 2, "missiles": 6 },
   {
     "name": "CL ER Medium Laser",
