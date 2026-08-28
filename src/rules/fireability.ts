@@ -45,7 +45,11 @@ export interface FireSuggestion {
   readonly targets: FireTarget[];
 }
 
-function woodsPoints(state: BattleState, from: { col: number; row: number }, to: { col: number; row: number }): number {
+function woodsPoints(
+  state: BattleState,
+  from: { col: number; row: number },
+  to: { col: number; row: number },
+): number {
   return interveningHexes(from, to).reduce((sum, h) => {
     const t = mv.terrainAt(state.terrain, h);
     return sum + (t === "lightWoods" ? 1 : t === "heavyWoods" ? 2 : 0);
@@ -88,7 +92,7 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "destroyed" });
           return;
         }
-        const ammoShots = mount.ammoShots !== undefined ? unit.ammoLeft[weaponIndex] ?? 0 : null;
+        const ammoShots = mount.ammoShots !== undefined ? (unit.ammoLeft[weaponIndex] ?? 0) : null;
         if (mount.ammoShots !== undefined && ammoShots! < 1) {
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "outOfAmmo" });
           return;
