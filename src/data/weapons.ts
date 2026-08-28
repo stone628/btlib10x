@@ -1,10 +1,12 @@
 /**
- * Weapon catalog for the quick-start rules. Ranges are the maximum hex count
- * for each bracket (short/medium/long); a target beyond longRange is out of
- * range. Effects mirror the letter codes printed on record sheets:
+ * Weapon catalog. Ranges are the maximum hex count for each bracket
+ * (short/medium/long); a target beyond longRange is out of range. Effects
+ * mirror the letter codes printed on record sheets:
  *   P = Pulse (-2 to-hit), V = Variable damage by bracket,
  *   C = Cluster (rolls Cluster Hits Table), R = Rapid-fire multi-shot.
  */
+import weaponsJson from "./weapons.json";
+
 export interface WeaponDef {
   readonly name: string;
   readonly short: number;
@@ -23,82 +25,94 @@ export interface WeaponDef {
   readonly rapidFireShots?: number;
 }
 
-export const WEAPONS: Readonly<Record<string, WeaponDef>> = {
-  "Small Laser": { name: "Small Laser", short: 1, medium: 2, long: 3, damage: 3 },
-  "Medium Laser": { name: "Medium Laser", short: 3, medium: 6, long: 9, damage: 5 },
-  "Large Laser": { name: "Large Laser", short: 5, medium: 10, long: 15, damage: 8 },
-  PPC: { name: "PPC", short: 6, medium: 12, long: 18, damage: 10 },
-  "Snub-Nose PPC": {
-    name: "Snub-Nose PPC",
-    short: 9,
-    medium: 13,
-    long: 15,
-    variableDamage: [10, 8, 5],
-  },
-  Flamer: { name: "Flamer", short: 1, medium: 2, long: 3, damage: 2, antiInfantry: true },
-  "Machine Gun": {
-    name: "Machine Gun",
-    short: 1,
-    medium: 2,
-    long: 3,
-    damage: 2,
-    antiInfantry: true,
-  },
-  "Autocannon/5": { name: "Autocannon/5", short: 6, medium: 12, long: 18, damage: 5 },
-  "Autocannon/10": { name: "Autocannon/10", short: 5, medium: 10, long: 15, damage: 10 },
-  "Autocannon/20": { name: "Autocannon/20", short: 3, medium: 6, long: 9, damage: 20 },
-  "Ultra AC/5": {
-    name: "Ultra AC/5",
-    short: 6,
-    medium: 13,
-    long: 20,
-    damage: 5,
-    rapidFireShots: 2,
-  },
-  "Large Pulse Laser": {
-    name: "Large Pulse Laser",
-    short: 3,
-    medium: 7,
-    long: 10,
-    damage: 9,
-    pulse: true,
-  },
-  "Small Pulse Laser": {
-    name: "Small Pulse Laser",
-    short: 1,
-    medium: 2,
-    long: 3,
-    damage: 3,
-    pulse: true,
-    antiInfantry: true,
-  },
-  "LRM 5": { name: "LRM 5", short: 7, medium: 14, long: 21, missileDamage: 1, missiles: 5 },
-  "LRM 10": { name: "LRM 10", short: 7, medium: 14, long: 21, missileDamage: 1, missiles: 10 },
-  "SRM 6": { name: "SRM 6", short: 3, medium: 6, long: 9, missileDamage: 2, missiles: 6 },
+export interface WeaponsFile {
+  readonly weapons: readonly WeaponDef[];
+}
 
-  // Clan weapons (full-intro tech; ranges/damage from TRO:3067 / Total Warfare).
-  // "CL " prefix distinguishes Clan-built variants from Inner Sphere models of
-  // the same name, matching MTF weapon codes (e.g. CLERMediumLaser).
-  "CL ER Medium Laser": {
-    name: "CL ER Medium Laser",
-    short: 5,
-    medium: 10,
-    long: 15,
-    damage: 7,
-  },
-  "CL Streak SRM 4": {
-    name: "CL Streak SRM 4",
-    short: 4,
-    medium: 8,
-    long: 12,
-    missileDamage: 2,
-    missiles: 4,
-  },
-  "CL Gauss Rifle": { name: "CL Gauss Rifle", short: 7, medium: 15, long: 22, damage: 15 },
-  // LB 20-X modelled in its slug mode (20 damage to one location); the cluster
-  // load (20 × 1-point pellets) is a full-rules option not represented here.
-  "CL LB 20-X AC": { name: "CL LB 20-X AC", short: 4, medium: 8, long: 12, damage: 20 },
-} as const;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isBoundedInt(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value > 0;
+}
+
+/** Validate a raw weapon entry against {@link WeaponDef}; pushes a problem string or returns a clean def. */
+function parseWeapon(raw: unknown, label: string, errors: string[]): WeaponDef | null {
+  if (!isRecord(raw)) {
+    errors.push(`${label} must be an object`);
+    return null;
+  }
+  const name = raw.name;
+  if (typeof name !== "string" || name.length === 0) {
+    errors.push(`${label}.name must be a non-empty string`);
+  }
+  let valid = true;
+  for (const field of ["short", "medium", "long"]) {
+    if (!isBoundedInt(raw[field])) {
+      errors.push(`${label}.${field} must be a positive integer`);
+      valid = false;
+    }
+  }
+  const out: Record<string, unknown> = {};
+  for (const key of [
+    "name",
+    "short",
+    "medium",
+    "long",
+    "damage",
+    "missileDamage",
+    "missiles",
+    "variableDamage",
+    "pulse",
+    "antiInfantry",
+    "rapidFireShots",
+  ] as const) {
+    const v = raw[key];
+    if (v !== undefined) out[key] = v;
+  }
+  if (!valid || typeof name !== "string") return null;
+  return out as unknown as WeaponDef;
+}
+
+/**
+ * Hand-rolled structural validator (zero-dependency policy), mirroring the
+ * method used for mech/map definitions. Throws with all accumulated problems.
+ */
+export function parseWeaponsData(data: unknown): readonly WeaponDef[] {
+  const weapons = Array.isArray(data)
+    ? data
+    : data && typeof data === "object" && "weapons" in data
+      ? (data as { weapons: unknown }).weapons
+      : undefined;
+  if (!Array.isArray(weapons)) {
+    throw new Error("Invalid WeaponsFile: expected an array of weapon definitions");
+  }
+  const errors: string[] = [];
+  const seen = new Set<string>();
+  const parsed: WeaponDef[] = [];
+  for (const [i, entry] of weapons.entries()) {
+    const def = parseWeapon(entry, `weapons[${i}]`, errors);
+    if (def === null) continue;
+    if (seen.has(def.name)) {
+      errors.push(`weapons[${i}] duplicates name ${JSON.stringify(def.name)}`);
+    } else {
+      seen.add(def.name);
+      parsed.push(def);
+    }
+  }
+  if (errors.length > 0) {
+    throw new Error(`Invalid WeaponDef:\n  - ${errors.join("\n  - ")}`);
+  }
+  return parsed;
+}
+
+/** Load and validate the shipped catalog; fails fast at import on bad data. */
+const weaponList = parseWeaponsData(weaponsJson);
+
+export const WEAPONS: Readonly<Record<string, WeaponDef>> = Object.fromEntries(
+  weaponList.map((def) => [def.name, def]),
+);
 
 export function getWeapon(name: string): WeaponDef {
   const def = WEAPONS[name];

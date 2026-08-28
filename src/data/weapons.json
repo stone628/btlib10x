@@ -1,0 +1,70 @@
+[
+  { "name": "Small Laser", "short": 1, "medium": 2, "long": 3, "damage": 3 },
+  { "name": "Medium Laser", "short": 3, "medium": 6, "long": 9, "damage": 5 },
+  { "name": "Large Laser", "short": 5, "medium": 10, "long": 15, "damage": 8 },
+  { "name": "PPC", "short": 6, "medium": 12, "long": 18, "damage": 10 },
+  {
+    "name": "Snub-Nose PPC",
+    "short": 9,
+    "medium": 13,
+    "long": 15,
+    "variableDamage": [10, 8, 5]
+  },
+  { "name": "Flamer", "short": 1, "medium": 2, "long": 3, "damage": 2, "antiInfantry": true },
+  {
+    "name": "Machine Gun",
+    "short": 1,
+    "medium": 2,
+    "long": 3,
+    "damage": 2,
+    "antiInfantry": true
+  },
+  { "name": "Autocannon/5", "short": 6, "medium": 12, "long": 18, "damage": 5 },
+  { "name": "Autocannon/10", "short": 5, "medium": 10, "long": 15, "damage": 10 },
+  { "name": "Autocannon/20", "short": 3, "medium": 6, "long": 9, "damage": 20 },
+  {
+    "name": "Ultra AC/5",
+    "short": 6,
+    "medium": 13,
+    "long": 20,
+    "damage": 5,
+    "rapidFireShots": 2
+  },
+  {
+    "name": "Large Pulse Laser",
+    "short": 3,
+    "medium": 7,
+    "long": 10,
+    "damage": 9,
+    "pulse": true
+  },
+  {
+    "name": "Small Pulse Laser",
+    "short": 1,
+    "medium": 2,
+    "long": 3,
+    "damage": 3,
+    "pulse": true,
+    "antiInfantry": true
+  },
+  { "name": "LRM 5", "short": 7, "medium": 14, "long": 21, "missileDamage": 1, "missiles": 5 },
+  { "name": "LRM 10", "short": 7, "medium": 14, "long": 21, "missileDamage": 1, "missiles": 10 },
+  { "name": "SRM 6", "short": 3, "medium": 6, "long": 9, "missileDamage": 2, "missiles": 6 },
+  {
+    "name": "CL ER Medium Laser",
+    "short": 5,
+    "medium": 10,
+    "long": 15,
+    "damage": 7
+  },
+  {
+    "name": "CL Streak SRM 4",
+    "short": 4,
+    "medium": 8,
+    "long": 12,
+    "missileDamage": 2,
+    "missiles": 4
+  },
+  { "name": "CL Gauss Rifle", "short": 7, "medium": 15, "long": 22, "damage": 15 },
+  { "name": "CL LB 20-X AC", "short": 4, "medium": 8, "long": 12, "damage": 20 }
+]
