@@ -7,6 +7,7 @@ import enforcerJson from "./mechs/enf-4r.json";
 import griffinJson from "./mechs/grf-1n.json";
 import hunchbackJson from "./mechs/hbk-4g.json";
 import hermesJson from "./mechs/her-5sa.json";
+import madCatMkIIJson from "./mechs/mad-cat-mkii.json";
 import wolverineJson from "./mechs/wvr-6r.json";
 import { type MechDef, validateMechDef } from "./schema.js";
 
@@ -16,7 +17,15 @@ function load(data: unknown): MechDef {
 
 /** All 'Mech definitions shipped with the library, keyed by model. */
 export const MECH_DEFS: Readonly<Record<string, MechDef>> = Object.fromEntries(
-  [enforcerJson, hunchbackJson, cicadaJson, hermesJson, griffinJson, wolverineJson].map((data) => {
+  [
+    enforcerJson,
+    hunchbackJson,
+    cicadaJson,
+    hermesJson,
+    griffinJson,
+    wolverineJson,
+    madCatMkIIJson,
+  ].map((data) => {
     const def = load(data);
     return [def.model, def];
   }),

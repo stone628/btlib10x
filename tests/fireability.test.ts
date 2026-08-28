@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { suggestFireTargets } from "../src/rules/fireability.js";
 import type { BattleState, TerrainHexDef } from "../src/rules/game.js";
 import { advancePhase, createBattle, rollInitiativePhase } from "../src/rules/game.js";
-import { suggestFireTargets } from "../src/rules/fireability.js";
 import { scriptedRng } from "./helpers.js";
 
 function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
@@ -35,11 +35,7 @@ function startAttackTurn(state: BattleState): BattleState {
   return state;
 }
 
-function blockedReasons(
-  state: BattleState,
-  actor: string,
-  target: string,
-): string[] {
+function blockedReasons(state: BattleState, actor: string, target: string): string[] {
   const sugg = suggestFireTargets(state, actor);
   const t = sugg.targets.find((x) => x.targetId === target);
   return t?.blocked.map((b) => b.reason) ?? [];
@@ -142,7 +138,12 @@ describe("suggestFireTargets", () => {
             facing: "s",
           },
         ],
-        { terrain: [{ col: 0, row: -3, type: "heavyWoods" }, { col: 0, row: -6, type: "heavyWoods" }] },
+        {
+          terrain: [
+            { col: 0, row: -3, type: "heavyWoods" },
+            { col: 0, row: -6, type: "heavyWoods" },
+          ],
+        },
       ),
     );
     const reasons = blockedReasons(state, "hbk", "enf");

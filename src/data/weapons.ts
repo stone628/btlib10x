@@ -75,6 +75,29 @@ export const WEAPONS: Readonly<Record<string, WeaponDef>> = {
   "LRM 5": { name: "LRM 5", short: 7, medium: 14, long: 21, missileDamage: 1, missiles: 5 },
   "LRM 10": { name: "LRM 10", short: 7, medium: 14, long: 21, missileDamage: 1, missiles: 10 },
   "SRM 6": { name: "SRM 6", short: 3, medium: 6, long: 9, missileDamage: 2, missiles: 6 },
+
+  // Clan weapons (full-intro tech; ranges/damage from TRO:3067 / Total Warfare).
+  // "CL " prefix distinguishes Clan-built variants from Inner Sphere models of
+  // the same name, matching MTF weapon codes (e.g. CLERMediumLaser).
+  "CL ER Medium Laser": {
+    name: "CL ER Medium Laser",
+    short: 5,
+    medium: 10,
+    long: 15,
+    damage: 7,
+  },
+  "CL Streak SRM 4": {
+    name: "CL Streak SRM 4",
+    short: 4,
+    medium: 8,
+    long: 12,
+    missileDamage: 2,
+    missiles: 4,
+  },
+  "CL Gauss Rifle": { name: "CL Gauss Rifle", short: 7, medium: 15, long: 22, damage: 15 },
+  // LB 20-X modelled in its slug mode (20 damage to one location); the cluster
+  // load (20 × 1-point pellets) is a full-rules option not represented here.
+  "CL LB 20-X AC": { name: "CL LB 20-X AC", short: 4, medium: 8, long: 12, damage: 20 },
 } as const;
 
 export function getWeapon(name: string): WeaponDef {
