@@ -9,8 +9,8 @@ export const AUTOPLAY_INTERVAL_MS = 200;
  * tests/webcli.test.ts): adjacent foes facing each other along the n/s axis.
  */
 const SCRIPT_SETUP: ReadonlyArray<{ id: string; command: string }> = [
-  { id: "hunchy", command: "add hunchy HBK-4G 0 4 3 4 ne" },
-  { id: "cicada", command: "add cicada CDA-3MA 1 4 5 3 sw" },
+  { id: "AT", command: "add AT AS7-D 0 4 3 4 ne" },
+  { id: "MD", command: "add MD MC-MKII-2 1 4 5 3 sw" },
 ];
 
 /** Queued commands to issue before falling back to state-based logic. */
