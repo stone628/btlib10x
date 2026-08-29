@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bearing, hexDistance, lineHexes, neighbor, sameHex } from "../src/core/hex.js";
+import { bearing, hexDistance, isAdjacent, lineHexes, neighbor, sameHex } from "../src/core/hex.js";
 
 describe("hex geometry", () => {
   it("computes odd-q neighbors on flat-top hexes", () => {
@@ -44,5 +44,15 @@ describe("hex geometry", () => {
     expect(bearing({ col: 0, row: 0 }, { col: 0, row: -4 })).toBe("n");
     expect(bearing({ col: 0, row: 0 }, { col: 0, row: 4 })).toBe("s");
     expect(bearing({ col: 0, row: 0 }, { col: 0, row: 0 })).toBeNull();
+  });
+
+  it("reports adjacency symmetrically and excludes far hexes", () => {
+    const a = { col: 3, row: 3 };
+    expect(isAdjacent(a, a)).toBe(true);
+    for (const f of ["n", "s", "ne", "se", "nw", "sw"] as const) {
+      expect(isAdjacent(a, neighbor(a, f))).toBe(true);
+    }
+    expect(isAdjacent(a, { col: 4, row: 5 })).toBe(false);
+    expect(isAdjacent(a, { col: 0, row: 0 })).toBe(false);
   });
 });

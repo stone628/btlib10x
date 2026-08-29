@@ -4,7 +4,7 @@ import { getWeapon } from "../data/weapons.js";
 import { isInFrontArc } from "./arcs.js";
 import { canFireFromLocation } from "./damage.js";
 import type { BattleState } from "./game.js";
-import { interveningHexes, losBlocked } from "./los.js";
+import { losBlocked, losWoodsPointsBetween } from "./los.js";
 import * as mv from "./movement.js";
 import type { RangeBracket } from "./tohit.js";
 import { computeToHit, damageForBracket } from "./tohit.js";
@@ -45,17 +45,6 @@ export interface FireSuggestion {
   readonly targets: FireTarget[];
 }
 
-function woodsPoints(
-  state: BattleState,
-  from: { col: number; row: number },
-  to: { col: number; row: number },
-): number {
-  return interveningHexes(from, to).reduce((sum, h) => {
-    const t = mv.terrainAt(state.terrain, h);
-    return sum + (t === "lightWoods" ? 1 : t === "heavyWoods" ? 2 : 0);
-  }, 0);
-}
-
 /**
  * For the acting unit, enumerate every enemy 'Mech and, per target, list the
  * weapons that could reach it (within arc, LOS, range, ammo, not jammed or
@@ -76,7 +65,7 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
       const distance = hexDistance(unit.position, enemy.position);
       const bearingToTarget = bearing(unit.position, enemy.position);
       const inArc = bearingToTarget !== null && isInFrontArc(unit.facing, bearingToTarget);
-      const interveningWoods = woodsPoints(state, unit.position, enemy.position);
+      const interveningWoods = losWoodsPointsBetween(state.terrain, unit.position, enemy.position);
       const los = losBlocked(interveningWoods);
 
       const weapons: FireWeapon[] = [];

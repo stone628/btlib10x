@@ -2,7 +2,7 @@
  * GENERATED FILE - do not edit by hand. Regenerate with `npm run gen:mechs`
  * (build/typecheck run it automatically). Indexes every src/data/mechs/*.json,
  * validating each against the raw JSON schema and resolving it into the
- * engine-facing flat-armor definition (torso = front + rear summed).
+ * engine-facing definition that keeps front and rear armor as separate pools.
  */
 import type { ResolvedMechDef } from "./schema.js";
 import { resolveMechDef, validateMechDef } from "./schema.js";

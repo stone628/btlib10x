@@ -1,7 +1,6 @@
-import { bearing, hexDistance, neighbor, sameHex } from "../core/hex.js";
+import { bearing, hexDistance, isAdjacent, sameHex } from "../core/hex.js";
 import { costToEnter } from "../core/terrain.js";
 import {
-  FACINGS,
   type Facing,
   type Hex,
   isFacing,
@@ -18,7 +17,7 @@ import { isInFrontArc } from "./arcs.js";
 import { type AttackResolution, resolveWeaponAttack } from "./attack.js";
 import { canFireFromLocation, isImmobile, isKilled, type UnitDamageState } from "./damage.js";
 import { rollInitiative } from "./initiative.js";
-import { interveningHexes, losBlocked } from "./los.js";
+import { interveningTerrains, losBlocked, losWoodsPointsBetween } from "./los.js";
 import * as mv from "./movement.js";
 import { computeToHit } from "./tohit.js";
 
@@ -148,6 +147,16 @@ function occupantAt(state: BattleState, hex: Hex, excludeId?: string): UnitState
     if (sameHex(unit.position, hex)) return unit;
   }
   return undefined;
+}
+
+/** Mark a unit as killed and removed, emitting the paired events. */
+function markUnitDestroyed(state: BattleState, unit: UnitState): void {
+  unit.destroyed = true;
+  unit.removed = true;
+  state.events.push(
+    { kind: "unitDestroyed", unitId: unit.id },
+    { kind: "unitRemoved", unitId: unit.id },
+  );
 }
 
 export function createBattle(
@@ -299,15 +308,8 @@ export function executeMove(
 
     const to = step.to;
     if (jumping) {
-      let isAdjacent = false;
-      for (const f of FACINGS) {
-        if (sameHex(neighbor(cursor, f), to)) {
-          isAdjacent = true;
-          break;
-        }
-      }
       const jumpInPlace = sameHex(cursor, to);
-      if (!isAdjacent && !(jumpInPlace && spent === 0 && directions.length === 0)) {
+      if (!isAdjacent(cursor, to) && !(jumpInPlace && spent === 0 && directions.length === 0)) {
         throw new Error("Jump steps must enter an adjacent hex (or jump in place once)");
       }
       spent += 1;
@@ -380,7 +382,7 @@ export function declareAttacks(
   let attackRangeBracket: string = "short";
   let attackRangeMod = 0;
 
-  for (const decl of decls) {
+  decls.forEach((decl, index) => {
     const mount = def.weapons[decl.weaponIndex];
     if (!mount) throw new Error(`weaponIndex ${decl.weaponIndex} out of range for ${unitId}`);
     const weapon = getWeapon(mount.weapon);
@@ -419,13 +421,7 @@ export function declareAttacks(
       throw new Error(`${mount.weapon}: target not in front firing arc`);
     }
 
-    const intervening = interveningHexes(unit.position, target.position).map((h) =>
-      mv.terrainAt(state.terrain, h),
-    );
-    const woodsPoints = intervening.reduce(
-      (sum, t) => sum + (t === "lightWoods" ? 1 : t === "heavyWoods" ? 2 : 0),
-      0,
-    );
+    const woodsPoints = losWoodsPointsBetween(state.terrain, unit.position, target.position);
     if (losBlocked(woodsPoints)) {
       throw new Error("Line of sight is blocked by intervening woods");
     }
@@ -444,7 +440,7 @@ export function declareAttacks(
       distance: dist,
       weapon,
     });
-    if (decls.indexOf(decl) === 0) {
+    if (index === 0) {
       attackDistance = dist;
       attackRangeBracket = breakdown.rangeBracket;
       attackRangeMod = breakdown.rangeMod;
@@ -463,7 +459,7 @@ export function declareAttacks(
       }
       unit.ammoLeft[decl.weaponIndex] = left - needed;
     }
-  }
+  });
 
   if (targetId === null) throw new Error("declareAttacks requires at least one declaration");
 
@@ -497,9 +493,7 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
       targetHexesMoved: mv.hexesSinceLastReversal(target.movesThisTurn),
       targetJumped: target.jumpedThisTurn,
       targetTerrain: mv.terrainAt(state.terrain, target.position),
-      interveningTerrains: interveningHexes(unit.position, target.position).map((h) =>
-        mv.terrainAt(state.terrain, h),
-      ),
+      interveningTerrains: interveningTerrains(state.terrain, unit.position, target.position),
       distance: hexDistance(unit.position, target.position),
       weaponName: weapon.name,
       shots,
@@ -519,12 +513,7 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
     });
 
     if (!target.destroyed && isKilled(target.damage)) {
-      target.destroyed = true;
-      target.removed = true;
-      state.events.push(
-        { kind: "unitDestroyed", unitId: target.id },
-        { kind: "unitRemoved", unitId: target.id },
-      );
+      markUnitDestroyed(state, target);
     }
   }
 
@@ -577,12 +566,7 @@ export function advancePhase(state: BattleState): void {
     case "weaponAttack": {
       for (const unit of Object.values(state.units)) {
         if (!unit.destroyed && isKilled(unit.damage)) {
-          unit.destroyed = true;
-          unit.removed = true;
-          state.events.push(
-            { kind: "unitDestroyed", unitId: unit.id },
-            { kind: "unitRemoved", unitId: unit.id },
-          );
+          markUnitDestroyed(state, unit);
         }
       }
       state.phase = "end";
