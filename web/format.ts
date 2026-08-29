@@ -432,10 +432,12 @@ export function mergeDiagram(
   const leftLineCount = topLines.length + weaponLines.length;
   const rightLineCount = diagram.length;
   if (leftLineCount > rightLineCount) {
-    return [buildSheetChunk(
-      [...topLines, ...weaponLines],
-      [...new Array(leftLineCount - rightLineCount).fill(""), ...diagram]
-    )];
+    return [
+      buildSheetChunk(
+        [...topLines, ...weaponLines],
+        [...new Array(leftLineCount - rightLineCount).fill(""), ...diagram],
+      ),
+    ];
   }
   if (leftLineCount < rightLineCount) {
     return [
