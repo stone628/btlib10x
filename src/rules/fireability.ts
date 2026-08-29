@@ -1,10 +1,11 @@
 import { bearing, hexDistance } from "../core/hex.js";
+import { levelAt } from "../core/terrain.js";
 import type { Location } from "../core/types.js";
 import { getWeapon } from "../data/weapons.js";
 import { isInFrontArc } from "./arcs.js";
 import { canFireFromLocation } from "./damage.js";
 import type { BattleState } from "./game.js";
-import { losBlocked, losWoodsPointsBetween } from "./los.js";
+import { losBlockedByElevation, losWoodsPointsBetween } from "./los.js";
 import * as mv from "./movement.js";
 import type { RangeBracket } from "./tohit.js";
 import { computeToHit, damageForBracket } from "./tohit.js";
@@ -66,7 +67,7 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
       const bearingToTarget = bearing(unit.position, enemy.position);
       const inArc = bearingToTarget !== null && isInFrontArc(unit.facing, bearingToTarget);
       const interveningWoods = losWoodsPointsBetween(state.terrain, unit.position, enemy.position);
-      const los = losBlocked(interveningWoods);
+      const los = losBlockedByElevation(state.elevation, unit.position, enemy.position);
 
       const weapons: FireWeapon[] = [];
       const blocked: FireTarget["blocked"] = [];
@@ -90,7 +91,7 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "outOfArc" });
           return;
         }
-        if (los) {
+        if (los || interveningWoods >= 3) {
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "noLos" });
           return;
         }
@@ -103,6 +104,8 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
           interveningWoods,
           distance,
           weapon,
+          attackerLevel: levelAt(state.elevation, unit.position),
+          targetLevel: levelAt(state.elevation, enemy.position),
         });
         if (breakdown.outOfRange) {
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "outOfRange" });

@@ -109,14 +109,21 @@ simulate. See `TODO.md` for the roadmap toward a fuller ruleset.
   Front and rear armor are separate pools; internal structure is derived from
   tonnage on the standard TW table.
 - **Movement** — walk, run, jump, standstill. MP costs include the base 1 MP
-  to enter a hex plus a terrain surcharge (lightWoods +1, heavyWoods +2) and
-  1 MP per hexside of facing change. Ground moves step straight ahead or
-  back; run cannot move backward. Jump steps into any adjacent hex at 1 MP
-  per step, with the landing facing chosen freely.
+  to enter a hex plus a terrain surcharge (lightWoods +1, heavyWoods +2),
+  +1 MP per level of elevation climbed (descent is free), and 1 MP per
+  hexside of facing change. Ground moves step straight ahead or back; run
+  cannot move backward; ground moves cannot climb more than one level per
+  step. Jump steps into any adjacent hex at 1 MP per step, with the
+  landing facing chosen freely; jump ignores elevation.
 - **Line of sight** — intervening-hex line trace; light/heavy woods points
-  (1/2) accumulate along the line and ≥ 3 points block.
+  (1/2) accumulate along the line and ≥ 3 points block. A real-valued
+  "ray height" is drawn between attacker and target LOS levels (hex
+  level + 1 for a bipedal 'Mech); an intervening hex blocks when its own
+  LOS level meets or exceeds the ray's height at the hex's center.
 - **To-hit (GATOR)** — gunnery + attacker movement + target movement + range
-  bracket + intervening terrain + pulse; auto-hit ≤ 2, auto-miss > 12.
+  bracket + intervening terrain + pulse + height difference; auto-hit ≤
+  2, auto-miss > 12. Height difference: `−(attackerLevel − targetLevel)`
+  (attacker higher = easier, lower = harder).
 - **Hit location** — bipedal front / left side / right side / rear tables.
 - **Cluster hits** — missile 2/5/6/10/15 + shot columns 2/3/4.
 - **Damage** — front/rear armor transfer inward on depletion; side-torso

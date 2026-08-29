@@ -1,4 +1,15 @@
-import type { TerrainType } from "./types.js";
+import type { Hex, TerrainType } from "./types.js";
+
+/** Default ground elevation when no level is recorded. */
+export const DEFAULT_LEVEL = 0;
+
+/** Default per-level MP cost to climb to a higher ground elevation. */
+export const MP_PER_LEVEL_CLIMB = 1;
+
+/** Ground level of `hex` from a per-hex elevation map; missing entries are level 0. */
+export function levelAt(elevation: Readonly<Record<string, number>>, hex: Hex): number {
+  return elevation[`${hex.col},${hex.row}`] ?? DEFAULT_LEVEL;
+}
 
 export const MP_TO_ENTER_HEX = 1;
 
@@ -16,6 +27,11 @@ export function terrainMoveCost(terrain: TerrainType): number {
 /** Total MP to enter a hex of the given terrain (base entry + terrain surcharge). */
 export function costToEnter(terrain: TerrainType): number {
   return MP_TO_ENTER_HEX + terrainMoveCost(terrain);
+}
+
+/** Extra MP to climb from `fromLevel` to `toLevel`; negative deltas are free. */
+export function costToClimb(fromLevel: number, toLevel: number): number {
+  return Math.max(0, toLevel - fromLevel) * MP_PER_LEVEL_CLIMB;
 }
 
 export const MP_PER_FACING_CHANGE = 1;

@@ -195,3 +195,39 @@ describe("GATOR to-hit calculation", () => {
     expect(short.rangeBracket).toBe("short");
   });
 });
+
+describe("height-difference modifier", () => {
+  // Reference scenario: same baseline, no elevation, identical to the
+  // Wolverine TN 9 example above (gunnery 4 + run 2 + target 2 + woods 1).
+  // The new heightDiff field should be 0 and total unchanged.
+  const base = {
+    gunnery: 4,
+    attackerMovement: "run" as const,
+    targetHexesMoved: 2,
+    targetJumped: false,
+    targetTerrain: "clear" as const,
+    interveningWoods: 1,
+    weapon: getWeapon("Medium Laser"),
+  };
+
+  it("same level = 0 heightDiff, no TN change", () => {
+    const bd = computeToHit({ ...base, distance: 4 });
+    expect(bd.heightDiff).toBe(0);
+    expect(bd.heightMod).toBe(0);
+    expect(bd.total).toBe(9);
+  });
+
+  it("attacker +1 level = -1 to TN", () => {
+    const bd = computeToHit({ ...base, distance: 4, attackerLevel: 1 });
+    expect(bd.heightDiff).toBe(1);
+    expect(bd.heightMod).toBe(-1);
+    expect(bd.total).toBe(8);
+  });
+
+  it("attacker -2 levels = +2 to TN", () => {
+    const bd = computeToHit({ ...base, distance: 4, attackerLevel: 0, targetLevel: 2 });
+    expect(bd.heightDiff).toBe(-2);
+    expect(bd.heightMod).toBe(2);
+    expect(bd.total).toBe(11);
+  });
+});

@@ -2,7 +2,7 @@
 
 ## In progress
 
-- Classic rules expansion (this phase): internal structure, rear armor, firing-arc damage
+- Classic rules expansion (this phase): internal structure, rear armor, firing-arc damage, elevation
   - [x] Decisions: IS derived from tonnage (TW standard table); rear armor is a separate pool (fat split); full front/leftSide/rightSide/rear hit-location tables; refactor core rather than additive mode; side torso hits use front armor pool; firing stays front-arc-only this milestone
   - [x] Internal structure derivation helper + tests (`src/rules/internalStructure.ts`, TW standard table: 20–100 in 5t rows, head=3)
   - [x] `resolveMechDef`/`ResolvedMechDef` carry front + rear separately (stop summing): `armor` (front), `armorRear` (3 torso), `internalStructure` (derived)
@@ -13,7 +13,14 @@
   - [x] Web layer: armor diagram + mech info show internal structure (I) / front (F/A) / rear (R)
   - [x] Public API exports (incl. `Arc`, `UnitDamageState`, `hitLocationForArc`, side tables, `internalStructureForTonnage`)
   - [x] Update downstream tests; lint + typecheck + test + build green (155 tests / 17 files)
-- Later in classic expansion: heat, physicals, piloting/falling, elevation, torso twist / side+rear firing arcs, vehicles/infantry
+  - [x] Elevation: per-hex `level` on `TerrainHexDef` / `Hex` (default 0); map JSON validator accepts optional non-negative integer `level`; `BattleState.elevation` populated by `createBattle`; `costToClimb`/`levelAt` helpers
+  - [x] Movement: `reachableLandings` charges +1 MP per level climbed, max +1 per step, jump ignores elevation
+  - [x] LOS: `losBlockedByElevation` + `losClear` (real-valued ray from attacker LOS level to target LOS level; intervening hex blocks iff its LOS level exceeds the ray); wired into `declareAttacks`/`suggestFireTargets`
+  - [x] To-hit: `attackerLevel`/`targetLevel` on `AttackModifiers`; `heightDiff`/`heightMod` in `ToHitBreakdown`; plumbed through `WeaponAttackInput`/`resolveWeaponAttack`
+  - [x] Renderer: `BoardModel.elevations`; per-hex level replaces the old `ELEVATION_DIGIT` constant; `info map` reports elevation counts
+  - [x] Web i18n: `err.climbTooSteep`, `info.elevationLine` in `en.ts` + `kr.ts`
+  - [x] Tests: `tests/elevation.test.ts` worked ridge-duel example; additions to `tests/hex.test.ts`, `tests/los.test.ts`, `tests/reach.test.ts`, `tests/tohit.test.ts`, `tests/mapdata.test.ts` (191 tests / 20 files)
+- Later in classic expansion: heat, physicals, piloting/falling, side+rear firing arcs, vehicles/infantry, buildings, basements, water depth, hull-down
 
 ## Done
 
@@ -45,8 +52,9 @@
 
 - [ ] GRF-1N / WVR-6R armor circle counts (encoded from TRO 3025 allocation; the Beginner Box rulebook prints circles only, no numbers)
 - [ ] LOS edge-graze defender tie-break (v1 uses deterministic cube rounding)
+- [ ] Elevation "thrown from height" / falling damage rules (v1 implements LOS + movement + to-hit only)
 
 ## Later phases
 
 - [ ] Dev-only sarna.net scraper starting at https://www.sarna.net/wiki/BattleMech normalizing into MechDef JSON (Node OK here; library stays browser-first)
-- [ ] Full intro-rules expansion: heat, physicals, piloting/falling, elevation, rear hits, multi-target arcs, vehicles/infantry
+- [ ] Full intro-rules expansion: heat, physicals, piloting/falling, rear hits, multi-target arcs, vehicles/infantry, buildings, basements, water depth, hull-down

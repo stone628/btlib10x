@@ -143,6 +143,7 @@ export const en = {
   "err.jumpNotAdjacent": "Jump steps must enter an adjacent hex",
   "err.groundStraightOnly":
     "Ground moves must go straight ahead or straight back relative to facing",
+  "err.climbTooSteep": "Hex {col},{row} is more than one level higher than the current hex",
   "err.standStillNoFace": "Standing still forbids facing changes",
   "err.jumpFreeFacing": "Jumping 'Mechs choose facing freely on landing; no turn steps",
   "err.badFacings": "Facing change must be 1..5 hexsides in either direction",
@@ -212,6 +213,7 @@ export const en = {
   "info.mapHead": "{name}: {w}x{h}",
   "info.terrainLine": "terrain: {breakdown}",
   "info.terrainNone": "none",
+  "info.elevationLine": "elevation: {breakdown}",
   "info.weaponListLine": "{name} {range} dmg {damage}",
   "info.weaponCategory": "[{category}]",
   "info.weaponHead": "{name} [{category}]",

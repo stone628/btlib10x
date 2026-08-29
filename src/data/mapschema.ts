@@ -19,7 +19,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /** Convert 1-based map hexes to the engine's 0-based TerrainHexDef list. */
 export function toEngineTerrain(map: MapDef): TerrainHexDef[] {
-  return map.terrain.map(({ col, row, type }) => ({ col: col - 1, row: row - 1, type }));
+  return map.terrain.map(({ col, row, type, level }) => ({
+    col: col - 1,
+    row: row - 1,
+    type,
+    ...(level !== undefined ? { level } : {}),
+  }));
 }
 
 /**
@@ -63,6 +68,13 @@ export function validateMapDef(data: unknown): MapDef {
       }
       if (!isTerrainType(type)) {
         errors.push(`${label}.type ${JSON.stringify(type)} is not clear|lightWoods|heavyWoods`);
+      }
+      const level = entry.level;
+      if (
+        level !== undefined &&
+        (typeof level !== "number" || !Number.isInteger(level) || level < 0)
+      ) {
+        errors.push(`${label}.level must be a non-negative integer when present`);
       }
       if (
         typeof col === "number" &&

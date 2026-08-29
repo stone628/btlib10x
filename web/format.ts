@@ -272,12 +272,36 @@ export function infoMapChunks(locale: LocaleId, name: string): Chunk[] {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([type, n]) => `${type} ${n}`)
     .join(", ");
+  const elevationCounts = new Map<number, number>();
+  const elevationMap: Record<string, number> = {};
+  for (const t2 of map.terrain) {
+    if (t2.level !== undefined && t2.level !== 0) {
+      elevationMap[`${t2.col - 1},${t2.row - 1}`] = t2.level;
+      elevationCounts.set(t2.level, (elevationCounts.get(t2.level) ?? 0) + 1);
+    }
+  }
+  const elevationBreakdown =
+    [...elevationCounts.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([level, n]) => `L${level} ${n}`)
+      .join(", ") || t(locale, "info.terrainNone");
   return [
     buildLinesChunk([
       t(locale, "info.mapHead", { name, w: map.width, h: map.height }),
       t(locale, "info.terrainLine", { breakdown: breakdown || t(locale, "info.terrainNone") }),
+      t(locale, "info.elevationLine", { breakdown: elevationBreakdown }),
     ]),
-    buildBoardChunk(boardChunkOf(mapModel(toEngineTerrain(map), map.width, map.height))),
+    buildBoardChunk(
+      boardChunkOf(
+        mapModel(
+          toEngineTerrain(map),
+          map.width,
+          map.height,
+          undefined,
+          Object.keys(elevationMap).length > 0 ? elevationMap : undefined,
+        ),
+      ),
+    ),
   ];
 }
 
@@ -661,6 +685,7 @@ export function reachLines(s: Session): string[] {
     running: def.running,
     jumping: def.jumping,
     terrain: s.battle.terrain,
+    elevation: s.battle.elevation,
     team: actor.team,
     width: s.battle.width,
     height: s.battle.height,

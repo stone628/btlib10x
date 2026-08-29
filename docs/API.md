@@ -277,13 +277,14 @@ with `/0101\` carrying the 1-based column,row as fixed two-digit pairs
 0-based), the occupant's id centered in the 6-char belly — round half up, so
 3-char ids start at the belly's 4th character (`(  wvr )`; ids clip to 4
 characters, so `hunchy` draws as `( hunc )`), and the terrain glyph plus
-elevation centered at the bottom —
-elevation is not yet implemented, so it is always `0`. Outer top edges
-render as `____`, edges shared with the hex below as `====`, and the map's
-bottom edge as `‾‾‾‾`. A unit's facing replaces the grid character at its
-hexside vertex — n `↑` (top edge's 2nd char), s `↓` (bottom edge's 3rd char),
-nw/ne/sw/se `↖ ↗ ↙ ↘` on the upper / lower walls — so both arrows stay
-visible on a shared edge.
+elevation centered at the bottom — non-zero levels are read from
+`state.elevation` (or a per-hex elevations map passed to `mapModel`);
+clear hexes at level 0 still draw as `0` to match historic output. Outer
+top edges render as `____`, edges shared with the hex below as `====`, and
+the map's bottom edge as `‾‾‾‾`. A unit's facing replaces the grid
+character at its hexside vertex — n `↑` (top edge's 2nd char), s `↓`
+(bottom edge's 3rd char), nw/ne/sw/se `↖ ↗ ↙ ↘` on the upper / lower walls
+— so both arrows stay visible on a shared edge.
 Odd columns sit half a hex lower (matching the odd-q grid); removed units are
 omitted; board bounds come from `state.width`/`state.height` when set (via
 `createBattle`'s `width`/`height` options, which are stored on the battle
