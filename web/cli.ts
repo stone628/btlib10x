@@ -4,12 +4,13 @@ import type { Chunk, RichOutput } from "./format.js";
 import {
   attackStatusLines,
   boardChunk,
+  buildLinesChunk,
   fireSuggestionLines,
   fmtLog,
   fmtSetupStatus,
   infoMapChunks,
   infoMapList,
-  infoMech,
+  infoMechChunk,
   infoMechList,
   infoWeapon,
   infoWeaponList,
@@ -109,7 +110,8 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
     run: (s, a) => {
       expectArgs(L(s), a, 1, "info mech [model] | info map [name] | info weapon [name]");
       const what = a[0]!.toLowerCase();
-      if (what === "mech") return a[1] !== undefined ? infoMech(L(s), a[1]) : infoMechList(L(s));
+      if (what === "mech")
+        return a[1] !== undefined ? { rich: infoMechChunk(L(s), a[1]) } : infoMechList(L(s));
       if (what === "map") {
         return a[1] !== undefined ? { rich: infoMapChunks(L(s), a[1]) } : infoMapList();
       }
@@ -287,7 +289,7 @@ const MOVE_CMDS: Record<string, CmdDef> = {
     helpKey: "cmd.sheetActing.help",
     usage: "sheet [id]",
     argsDoc: [["id", "cmd.sheetActing.arg.id"]],
-    run: (s, a) => (a[0] !== undefined ? sheetForUnit(s, a[0]) : unitBriefList(s)),
+    run: (s, a) => (a[0] !== undefined ? { rich: sheetForUnit(s, a[0]) } : unitBriefList(s)),
   },
   status: { helpKey: "cmd.statusMove.help", run: (s) => moveStatusLines(s) },
   cancel: {
@@ -342,7 +344,7 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
     helpKey: "cmd.sheetActing.help",
     usage: "sheet [id]",
     argsDoc: [["id", "cmd.sheetActing.arg.id"]],
-    run: (s, a) => (a[0] !== undefined ? sheetForUnit(s, a[0]) : unitBriefList(s)),
+    run: (s, a) => (a[0] !== undefined ? { rich: sheetForUnit(s, a[0]) } : unitBriefList(s)),
   },
   status: { helpKey: "cmd.statusAttack.help", run: (s) => attackStatusLines(s) },
   cancel: {
@@ -365,7 +367,7 @@ const OVER_CMDS: Record<string, CmdDef> = {
     helpKey: "cmd.sheetActing.help",
     usage: "sheet [id]",
     argsDoc: [["id", "cmd.sheetActing.arg.id"]],
-    run: (s, a) => (a[0] !== undefined ? sheetForUnit(s, a[0]) : unitBriefList(s)),
+    run: (s, a) => (a[0] !== undefined ? { rich: sheetForUnit(s, a[0]) } : unitBriefList(s)),
   },
   status: { helpKey: "cmd.statusOver.help", run: (s) => overStatusLines(s) },
   rematch: {
@@ -494,7 +496,7 @@ function victoryBanner(s: S.Session): string[] {
 function normalize(out: string[] | RichOutput): Chunk[] {
   return typeof out === "object" && out !== null && "rich" in out
     ? [...out.rich]
-    : [{ lines: out }];
+    : [buildLinesChunk(out)];
 }
 
 /** Turn-qualified key identifying the acting unit's fire turn, or null when none. */
@@ -523,18 +525,18 @@ export function runChunks(session: S.Session, raw: string): Chunk[] {
     chunks = normalize(def.run(session, tokens.slice(1)));
   } catch (e) {
     return [
-      {
-        lines: [`${t(session.locale, "err.prefix")} ${e instanceof Error ? e.message : String(e)}`],
-        cls: "err",
-      },
+      buildLinesChunk(
+        [`${t(session.locale, "err.prefix")} ${e instanceof Error ? e.message : String(e)}`],
+        "err",
+      ),
     ];
   }
   if (!wasOver && session.app === "over") {
-    chunks = [...chunks, { lines: victoryBanner(session), cls: "banner" }];
+    chunks = [...chunks, buildLinesChunk(victoryBanner(session), "banner")];
   }
   const hintKey = fireHintKey(session);
   if (hintKey !== null && hintKey !== session.fireHintShownFor) {
-    chunks = [...chunks, { lines: fireSuggestionLines(session), cls: "hint" }];
+    chunks = [...chunks, buildLinesChunk(fireSuggestionLines(session), "hint")];
     session.fireHintShownFor = hintKey;
   }
   return chunks;

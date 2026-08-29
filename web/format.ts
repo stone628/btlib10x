@@ -35,8 +35,12 @@ export type { BoardRenderer } from "./render.js";
 
 /** One presentation chunk of command output. */
 export type Chunk =
-  | { lines: readonly string[]; cls?: string }
-  | { board: { readonly model: BoardModel; readonly renderer?: BoardRenderer } };
+  | { readonly kind: "lines"; lines: readonly string[]; cls?: string }
+  | {
+      readonly kind: "board";
+      board: { readonly model: BoardModel; readonly renderer?: BoardRenderer };
+    }
+  | { readonly kind: "sheet"; left: readonly string[]; right: readonly string[] };
 
 /** Tagged wrapper letting a command emit structured chunks. */
 export interface RichOutput {
@@ -50,6 +54,21 @@ interface BoardChunk {
 function boardChunkOf(model: BoardModel): BoardChunk["board"] {
   const r = getBoardRenderer("css-grid");
   return r !== undefined ? { model, renderer: r } : { model };
+}
+
+export function buildLinesChunk(lines: readonly string[], cls?: string): Chunk {
+  return cls ? { kind: "lines", lines: lines, cls: cls } : { kind: "lines", lines: lines };
+}
+
+export function buildBoardChunk(board: {
+  readonly model: BoardModel;
+  readonly renderer?: BoardRenderer;
+}): Chunk {
+  return { kind: "board", board: board };
+}
+
+export function buildSheetChunk(left: readonly string[], right: readonly string[]): Chunk {
+  return { kind: "sheet", left: left, right: right };
 }
 
 export function rich(...chunks: readonly Chunk[]): RichOutput {
@@ -88,7 +107,7 @@ export function boardChunk(s: Session): Chunk {
   const dims = mapDims(s);
   if (!s.battle) {
     if (!s.mapName && s.roster.length === 0) {
-      return { lines: [t(s.locale, "board.noMap")] };
+      return buildLinesChunk([t(s.locale, "board.noMap")]);
     }
     const units = Object.fromEntries(
       s.roster.map((u) => [
@@ -104,9 +123,9 @@ export function boardChunk(s: Session): Chunk {
       width: dims?.[0],
       height: dims?.[1],
     } as BattleState);
-    return { board: boardChunkOf(model) };
+    return buildBoardChunk(boardChunkOf(model));
   }
-  return { board: boardChunkOf(battleModel(s.battle)) };
+  return buildBoardChunk(boardChunkOf(battleModel(s.battle)));
 }
 
 // ---------------------------------------------------------------- info ----
@@ -143,7 +162,7 @@ export function infoMechList(locale: LocaleId): string[] {
   return [head, ...rows];
 }
 
-export function infoMech(locale: LocaleId, model: string): string[] {
+export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
   const d = requireMechDef(model, locale);
   const topLines = [
     t(locale, "info.head", {
@@ -231,15 +250,11 @@ export function infoMapChunks(locale: LocaleId, name: string): Chunk[] {
     .map(([type, n]) => `${type} ${n}`)
     .join(", ");
   return [
-    {
-      lines: [
-        t(locale, "info.mapHead", { name, w: map.width, h: map.height }),
-        t(locale, "info.terrainLine", { breakdown: breakdown || t(locale, "info.terrainNone") }),
-      ],
-    },
-    {
-      board: boardChunkOf(mapModel(toEngineTerrain(map), map.width, map.height)),
-    },
+    buildLinesChunk([
+      t(locale, "info.mapHead", { name, w: map.width, h: map.height }),
+      t(locale, "info.terrainLine", { breakdown: breakdown || t(locale, "info.terrainNone") }),
+    ]),
+    buildBoardChunk(boardChunkOf(mapModel(toEngineTerrain(map), map.width, map.height))),
   ];
 }
 
@@ -376,7 +391,7 @@ function armorDiagram(info: ArmorInfo): string[] {
 }
 
 /** Record sheet with armor status per location, side-by-side with ASCII diagram. */
-export function sheetLines(view: SheetView, locale: LocaleId): string[] {
+export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
   const idLine = view.removed
     ? `${t(locale, "sheet.idLine", { id: view.id })}${t(locale, "sheet.removedId")}`
     : t(locale, "sheet.idLine", { id: view.id });
@@ -413,28 +428,27 @@ export function mergeDiagram(
   topLines: string[],
   weaponLines: string[],
   diagram: string[],
-): string[] {
-  const dc = diagram.length;
-  const topH = topLines.length;
-  const wepH = weaponLines.length;
-  const H = Math.max(dc, topH + wepH);
-  const leftMax = Math.max(...topLines.map((l) => l.length), ...weaponLines.map((l) => l.length));
-  const diagramMax = Math.max(0, ...diagram.map((l) => l.length));
-  const blankL = "".padEnd(leftMax);
-  const blankR = "".padEnd(diagramMax);
-
-  const leftRows = Array.from({ length: H }, () => blankL);
-  for (let i = 0; i < topH; i++) leftRows[i] = topLines[i]!;
-  for (let i = 0; i < wepH; i++) leftRows[H - wepH + i] = weaponLines[i]!;
-
-  const diagramRows = Array.from({ length: H }, () => blankR);
-  const padTop = Math.floor((H - dc) / 2);
-  for (let i = 0; i < dc; i++) diagramRows[padTop + i] = diagram[i]!;
-
-  return leftRows.map((l, i) => `${l.padEnd(leftMax)}  ${diagramRows[i]}`);
+): Chunk[] {
+  const leftLineCount = topLines.length + weaponLines.length;
+  const rightLineCount = diagram.length;
+  if (leftLineCount > rightLineCount) {
+    return [buildSheetChunk(
+      [...topLines, ...weaponLines],
+      [...new Array(leftLineCount - rightLineCount).fill(""), ...diagram]
+    )];
+  }
+  if (leftLineCount < rightLineCount) {
+    return [
+      buildSheetChunk(
+        [...topLines, ...new Array(rightLineCount - leftLineCount).fill(""), ...weaponLines],
+        diagram,
+      ),
+    ];
+  }
+  return [buildSheetChunk([...topLines, ...weaponLines], diagram)];
 }
 
-export function sheetForUnit(s: Session, id: string): string[] {
+export function sheetForUnit(s: Session, id: string): Chunk[] {
   if (s.battle) {
     const unit = s.battle.units[id];
     if (!unit) throw new Error(t(s.locale, "err.unknownUnitId", { id }));
