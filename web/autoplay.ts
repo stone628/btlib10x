@@ -105,7 +105,7 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
         }
       }
       if (actor.moveMode === null) {
-        queueNextCommand(isImmobile(actor.armor) ? "mode standstill" : "mode walk");
+        queueNextCommand(isImmobile(actor.damage) ? "mode standstill" : "mode walk");
       }
       queueNextCommand("done");
       return returnFirstQueuedCommand();
@@ -119,7 +119,7 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
         if (declared.has(w)) continue;
         const mount = def.weapons[w]!;
         if (actor.jammedWeapons.includes(w)) continue;
-        if (!canFireFromLocation(actor.phaseStartArmor, mount.location)) continue;
+        if (!canFireFromLocation(actor.phaseStartDamage, mount.location)) continue;
         if (actor.ammoLeft[w] !== undefined && (actor.ammoLeft[w] ?? 0) < 1) continue;
         queueNextCommand(`fire ${w + 1} ${enemy.id}`);
       }

@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { LOCATIONS } from "../src/core/types.js";
 import { resolveWeaponAttack } from "../src/rules/attack.js";
-import type { ArmorState } from "../src/rules/damage.js";
+import type { ArmorState, UnitDamageState } from "../src/rules/damage.js";
 import { scriptedRng } from "./helpers.js";
 
-function freshArmor(hp = 10): ArmorState {
+function freshState(hp = 10): UnitDamageState {
   const armor = {} as ArmorState;
-  for (const loc of LOCATIONS) armor[loc] = hp;
-  return armor;
+  const is = {} as ArmorState;
+  for (const loc of LOCATIONS) {
+    armor[loc] = hp;
+    is[loc] = hp;
+  }
+  return { armor, armorRear: {}, internalStructure: is };
 }
 
 /** Stationary gunnery-4 shooter at range 1 vs stationary target in the clear: TN 4. */
@@ -28,14 +32,14 @@ describe("resolveWeaponAttack", () => {
       ...BASE,
       rng,
       weaponName: "Small Laser",
-      targetArmor: freshArmor(),
+      targetDamage: freshState(),
     });
     expect(res.hit).toBe(true);
     expect(res.jammed).toBe(false);
     expect(res.toHitRoll).toBe(5);
     expect(res.clusterRoll).toBeNull();
     expect(res.groups).toEqual([{ location: "centerTorso", damage: 3 }]);
-    expect(res.application?.armor.centerTorso).toBe(7);
+    expect(res.application?.damage.armor.centerTorso).toBe(7);
     expect(rng.remaining()).toBe(0);
   });
 
@@ -45,7 +49,7 @@ describe("resolveWeaponAttack", () => {
       ...BASE,
       rng,
       weaponName: "Small Laser",
-      targetArmor: freshArmor(),
+      targetDamage: freshState(),
     });
     expect(res.hit).toBe(false);
     expect(res.groups).toHaveLength(0);
@@ -60,7 +64,7 @@ describe("resolveWeaponAttack", () => {
       rng,
       weaponName: "Ultra AC/5",
       shots: 2,
-      targetArmor: freshArmor(),
+      targetDamage: freshState(),
     });
     expect(res.jammed).toBe(true);
     expect(res.hit).toBe(false);
@@ -84,7 +88,7 @@ describe("resolveWeaponAttack", () => {
       rng,
       weaponName: "Ultra AC/5",
       shots: 2,
-      targetArmor: freshArmor(),
+      targetDamage: freshState(),
     });
     expect(res.hit).toBe(true);
     expect(res.clusterRoll).toBe(9);
@@ -92,7 +96,7 @@ describe("resolveWeaponAttack", () => {
       { location: "rightLeg", damage: 5 },
       { location: "centerTorso", damage: 5 },
     ]);
-    expect(res.application?.armor.rightLeg).toBe(5);
+    expect(res.application?.damage.armor.rightLeg).toBe(5);
   });
 
   it("rolls LRM missiles in lots of five", () => {
@@ -110,15 +114,15 @@ describe("resolveWeaponAttack", () => {
       ...BASE,
       rng,
       weaponName: "LRM 10",
-      targetArmor: freshArmor(),
+      targetDamage: freshState(),
     });
     expect(res.clusterRoll).toBe(9);
     expect(res.groups).toEqual([
       { location: "centerTorso", damage: 5 },
       { location: "rightArm", damage: 3 },
     ]);
-    expect(res.application?.armor.centerTorso).toBe(5);
-    expect(res.application?.armor.rightArm).toBe(7);
+    expect(res.application?.damage.armor.centerTorso).toBe(5);
+    expect(res.application?.damage.armor.rightArm).toBe(7);
   });
 
   it("locates every SRM missile individually", () => {
@@ -133,7 +137,7 @@ describe("resolveWeaponAttack", () => {
       ...BASE,
       rng,
       weaponName: "SRM 6",
-      targetArmor: freshArmor(),
+      targetDamage: freshState(),
     });
     expect(res.groups).toHaveLength(5);
     for (const group of res.groups) expect(group.damage).toBe(2);
@@ -146,7 +150,7 @@ describe("resolveWeaponAttack", () => {
       rng,
       distance: 999,
       weaponName: "Medium Laser",
-      targetArmor: freshArmor(),
+      targetDamage: freshState(),
     });
     expect(res.breakdown.outOfRange).toBe(true);
     expect(res.toHitRoll).toBeNull();

@@ -1,5 +1,9 @@
 import type { Location } from "../core/types.js";
 import { isLocation, LOCATIONS } from "../core/types.js";
+import { type InternalStructure, internalStructureForTonnage } from "../rules/internalStructure.js";
+
+/** Torso locations that have a separate rear armor pool. */
+export type TorsoLocation = "centerTorso" | "rightTorso" | "leftTorso";
 
 /** Rear torso armor keys carried inside `armor` as informational metadata. */
 export type RearArmorKey = "centerTorsoRear" | "leftTorsoRear" | "rightTorsoRear";
@@ -29,7 +33,8 @@ export interface MechDef {
    * Armor per location (torso = front only) plus optional rear torso values.
    * Convert to engine-facing flat armor with `resolveMechDef`.
    */
-  readonly armor: Readonly<Record<Location, number>> & Readonly<Partial<Record<RearArmorKey, number>>>;
+  readonly armor: Readonly<Record<Location, number>> &
+    Readonly<Partial<Record<RearArmorKey, number>>>;
   readonly weapons: readonly WeaponMount[];
   readonly source: string;
 }
@@ -42,11 +47,14 @@ export interface WeaponMount {
 }
 
 export type ResolvedArmor = Readonly<Record<Location, number>>;
+export type ResolvedRearArmor = Readonly<Partial<Record<TorsoLocation, number>>>;
 
 /**
- * Engine-facing 'Mech definition produced by `resolveMechDef`. Armor is a flat
- * hit-point value per location: torso armor sums front + rear, overflow damage
- * transfers inward only once a location's armor reaches 0. No rear keys survive.
+ * Engine-facing 'Mech definition produced by `resolveMechDef`. Armor keeps the
+ * MTF-faithful split: `armor` holds each location's FRONT hit-point value and
+ * `armorRear` holds the three torso rear values. `internalStructure` is derived
+ * from tonnage (standard TW table). Depleting a location's armor pool exposes
+ * its internal structure before damage transfers inward.
  */
 export interface ResolvedMechDef {
   readonly model: string;
@@ -57,23 +65,34 @@ export interface ResolvedMechDef {
   readonly walking: number;
   readonly running: number;
   readonly jumping: number;
+  /** Front armor per location (torso = front only). */
   readonly armor: ResolvedArmor;
+  /** Rear torso armor; only the three torso locations carry values. */
+  readonly armorRear: ResolvedRearArmor;
+  /** Internal structure per location, derived from tonnage. */
+  readonly internalStructure: InternalStructure;
   readonly weapons: readonly WeaponMount[];
   readonly source: string;
 }
 
 /**
- * Convert a raw `MechDef` into the engine-facing `ResolvedMechDef`, summing the
- * rear torso values into their front locations and dropping the rear keys.
+ * Convert a raw `MechDef` into the engine-facing `ResolvedMechDef`, keeping the
+ * front/rear armor split intact (no summing) and deriving internal structure.
  */
 export function resolveMechDef(def: MechDef): ResolvedMechDef {
   const armor: Record<Location, number> = {} as Record<Location, number>;
   for (const loc of LOCATIONS) {
     armor[loc] = def.armor[loc];
   }
-  armor.centerTorso += def.armor.centerTorsoRear ?? 0;
-  armor.rightTorso += def.armor.rightTorsoRear ?? 0;
-  armor.leftTorso += def.armor.leftTorsoRear ?? 0;
+  const armorRear: Partial<Record<TorsoLocation, number>> = {};
+  for (const [loc, key] of [
+    ["centerTorso", "centerTorsoRear"],
+    ["rightTorso", "rightTorsoRear"],
+    ["leftTorso", "leftTorsoRear"],
+  ] as const) {
+    const v = def.armor[key];
+    if (v !== undefined) armorRear[loc] = v;
+  }
   return {
     model: def.model,
     name: def.name,
@@ -84,6 +103,8 @@ export function resolveMechDef(def: MechDef): ResolvedMechDef {
     running: def.running,
     jumping: def.jumping,
     armor,
+    armorRear,
+    internalStructure: internalStructureForTonnage(def.tonnage),
     weapons: def.weapons,
     source: def.source,
   };

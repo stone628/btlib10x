@@ -8,12 +8,14 @@ import type {
   Location,
   MechDef,
   RangeBracket,
+  UnitDamageState,
   UnitState,
 } from "btlib10x";
 import {
   canFireFromLocation,
   getMapDef,
   getWeapon,
+  internalStructureForTonnage,
   isImmobile,
   isKilled,
   LOCATIONS,
@@ -164,6 +166,16 @@ export function infoMechList(locale: LocaleId): string[] {
 
 export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
   const d = requireMechDef(model, locale);
+  const armorRear: Partial<Record<Location, number>> = {};
+  for (const [loc, key] of [
+    ["centerTorso", "centerTorsoRear"],
+    ["rightTorso", "rightTorsoRear"],
+    ["leftTorso", "leftTorsoRear"],
+  ] as const) {
+    const v = d.armor[key];
+    if (v !== undefined) armorRear[loc] = v;
+  }
+  const is = internalStructureForTonnage(d.tonnage);
   const topLines = [
     t(locale, "info.head", {
       model: d.model,
@@ -181,7 +193,14 @@ export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
   return mergeDiagram(
     topLines,
     weaponLines,
-    armorDiagram({ armor: d.armor, originalArmor: d.armor }),
+    armorDiagram({
+      armor: d.armor,
+      armorRear,
+      internalStructure: is,
+      originalArmor: d.armor,
+      originalArmorRear: armorRear,
+      originalStructure: is,
+    }),
   );
 }
 
@@ -276,10 +295,16 @@ interface SheetView {
   readonly removed: boolean;
   readonly positionLine: string;
   readonly modeLine: string | null;
-  /** Current armor per location. */
+  /** Current front armor per location. */
   readonly armor: ArmorState;
-  /** Designed armor per location (from the MechDef). */
+  /** Current layered damage (front armor, rear armor, internal structure). */
+  readonly damage: UnitDamageState;
+  /** Designed (start-of-game) front armor per location. */
   readonly originalArmor: Readonly<Record<Location, number>>;
+  /** Designed (start-of-game) rear torso armor. */
+  readonly originalArmorRear: Partial<Record<Location, number>>;
+  /** Designed (start-of-game) internal structure per location. */
+  readonly originalArmorStructure: ArmorState;
   readonly mounts: readonly {
     readonly weapon: string;
     readonly location: Location;
@@ -309,20 +334,37 @@ function battleSheet(
       unit.moveMode !== null
         ? t(locale, "sheet.modeSuffix", { mode: unit.moveMode, mp: unit.mpSpent })
         : null,
-    armor: unit.armor,
+    armor: unit.damage.armor,
+    damage: unit.damage,
     originalArmor: def.armor,
+    originalArmorRear: def.armorRear,
+    originalArmorStructure: def.internalStructure,
     mounts: def.weapons.map((mount, i) => ({
       weapon: mount.weapon,
       location: mount.location,
       ammoLeft: mount.ammoShots !== undefined ? (unit.ammoLeft[i] ?? 0) : null,
       jammed: unit.jammedWeapons.includes(i),
-      destroyed: !canFireFromLocation(unit.phaseStartArmor, mount.location),
+      destroyed: !canFireFromLocation(unit.phaseStartDamage, mount.location),
     })),
   };
 }
 
 function setupSheet(unit: SetupUnit, id: string, locale: LocaleId): SheetView {
   const def = requireMechDef(unit.model, locale);
+  const armorRear: Partial<Record<Location, number>> = {};
+  for (const [loc, key] of [
+    ["centerTorso", "centerTorsoRear"],
+    ["rightTorso", "rightTorsoRear"],
+    ["leftTorso", "leftTorsoRear"],
+  ] as const) {
+    const v = def.armor[key];
+    if (v !== undefined) armorRear[loc] = v;
+  }
+  const damage: UnitDamageState = {
+    armor: { ...def.armor },
+    armorRear,
+    internalStructure: internalStructureForTonnage(def.tonnage),
+  };
   return {
     id,
     model: def.model,
@@ -333,8 +375,11 @@ function setupSheet(unit: SetupUnit, id: string, locale: LocaleId): SheetView {
     removed: false,
     positionLine: t(locale, "sheet.at", { pos: disp(unit.position), facing: unit.facing }),
     modeLine: null,
-    armor: { ...def.armor } as ArmorState,
+    armor: damage.armor,
+    damage,
     originalArmor: def.armor,
+    originalArmorRear: armorRear,
+    originalArmorStructure: damage.internalStructure,
     mounts: def.weapons.map((mount) => ({
       weapon: mount.weapon,
       location: mount.location,
@@ -358,10 +403,14 @@ const SHORT_LOC: Readonly<Record<Location, string>> = {
 
 interface ArmorInfo {
   readonly armor: ArmorState;
+  readonly armorRear: Partial<Record<Location, number>>;
+  readonly internalStructure: ArmorState;
   readonly originalArmor: Readonly<Record<Location, number>>;
+  readonly originalArmorRear: Partial<Record<Location, number>>;
+  readonly originalStructure: ArmorState;
 }
 
-/** ASCII humanoid armor diagram placed to the right of the sheet. */
+/** ASCII humanoid armor diagram: internal structure (I), front armor (F/A), rear (R). */
 function armorDiagram(info: ArmorInfo): string[] {
   const cell = (val: number, max: number, label: string) =>
     `${String(val).padStart(2)}/${String(max).padStart(2)}${label}`;
@@ -370,12 +419,23 @@ function armorDiagram(info: ArmorInfo): string[] {
     RT = 7,
     LT = 21;
   const { armor: a, originalArmor: o } = info;
+  const s = info.internalStructure;
+  const os = info.originalStructure;
+  const ar = info.armorRear;
+  const or = info.originalArmorRear;
+  const rear = (loc: Location) => cell(ar[loc] ?? 0, or[loc] ?? 0, "R");
   return [
     `${p(CT)}[ HD ]`,
-    `${p(CT)}${cell(0, 0, "S")}`,
+    `${p(CT)}${cell(s.head, os.head, "I")}`,
     `${p(CT)}${cell(a.head, o.head, "A")}`,
     `[ RA ] [ RT ] [ CT ] [ LT ] [ LA ]`,
-    [cell(0, 0, "S"), cell(0, 0, "S"), cell(0, 0, "S"), cell(0, 0, "S"), cell(0, 0, "S")].join(" "),
+    [
+      cell(s.rightArm, os.rightArm, "I"),
+      cell(s.rightTorso, os.rightTorso, "I"),
+      cell(s.centerTorso, os.centerTorso, "I"),
+      cell(s.leftTorso, os.leftTorso, "I"),
+      cell(s.leftArm, os.leftArm, "I"),
+    ].join(" "),
     [
       cell(a.rightArm, o.rightArm, "A"),
       cell(a.rightTorso, o.rightTorso, "F"),
@@ -383,9 +443,9 @@ function armorDiagram(info: ArmorInfo): string[] {
       cell(a.leftTorso, o.leftTorso, "F"),
       cell(a.leftArm, o.leftArm, "A"),
     ].join(" "),
-    `${p(RT)}${[cell(0, 0, "R"), cell(0, 0, "R"), cell(0, 0, "R")].join(" ")}`,
+    `${p(RT)}${[rear("rightTorso"), rear("centerTorso"), rear("leftTorso")].join(" ")}`,
     `${p(RT)}[ RL ]${p(LT - RT - 6)}[ LL ]`,
-    `${p(RT)}${[cell(0, 0, "S"), cell(0, 0, "S")].join(p(LT - RT - 6))}`,
+    `${p(RT)}${[cell(s.rightLeg, os.rightLeg, "I"), cell(s.leftLeg, os.leftLeg, "I")].join(p(LT - RT - 6))}`,
     `${p(RT)}${[cell(a.rightLeg, o.rightLeg, "A"), cell(a.leftLeg, o.leftLeg, "A")].join(p(LT - RT - 6))}`,
   ];
 }
@@ -421,7 +481,18 @@ export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
       `  #${i + 1} ${m.weapon} (${SHORT_LOC[m.location]}) S${w.short}/M${w.medium}/L${w.long}${flags.length ? ` ${flags.join(" ")}` : ""}`,
     );
   }
-  return mergeDiagram(topLines, weaponLines, armorDiagram(view));
+  return mergeDiagram(
+    topLines,
+    weaponLines,
+    armorDiagram({
+      armor: view.armor,
+      armorRear: view.damage.armorRear,
+      internalStructure: view.damage.internalStructure,
+      originalArmor: view.originalArmor,
+      originalArmorRear: view.originalArmorRear,
+      originalStructure: view.originalArmorStructure,
+    }),
+  );
 }
 
 export function mergeDiagram(
@@ -680,7 +751,7 @@ export function weaponsLines(s: Session, unitId?: string): string[] {
         ? t(s.locale, "sheet.ammoFlag", { n: unit.ammoLeft[i] ?? 0 })
         : null,
       unit.jammedWeapons.includes(i) ? t(s.locale, "sheet.jammed") : null,
-      canFireFromLocation(unit.phaseStartArmor, mount.location)
+      canFireFromLocation(unit.phaseStartDamage, mount.location)
         ? null
         : t(s.locale, "sheet.destroyed"),
     ].filter((b) => b !== null);
@@ -849,22 +920,38 @@ export function resolutionLines(locale: LocaleId, r: AttackResolution): string[]
 function transferDetail(locale: LocaleId, r: AttackResolution): string | null {
   const app = r.application;
   if (!app || app.steps.length === 0) return null;
-  const totals = {} as ArmorState;
+  const armorTotals = {} as ArmorState;
+  const rearTotals: Partial<Record<Location, number>> = {};
+  const strucTotals = {} as ArmorState;
   for (const step of app.steps) {
-    totals[step.location] = (totals[step.location] ?? 0) + step.damageApplied;
+    const map =
+      step.pool === "armor" ? armorTotals : step.pool === "armorRear" ? rearTotals : strucTotals;
+    map[step.location] = (map[step.location] ?? 0) + step.damageApplied;
   }
-  const running = {} as ArmorState;
+  const post = app.damage;
+  const pre: UnitDamageState = {
+    armor: {} as ArmorState,
+    armorRear: { ...post.armorRear },
+    internalStructure: {} as ArmorState,
+  };
   for (const loc of LOCATIONS) {
-    running[loc] = app.armor[loc] + (totals[loc] ?? 0);
+    pre.armor[loc] = post.armor[loc] + (armorTotals[loc] ?? 0);
+    pre.internalStructure[loc] = post.internalStructure[loc] + (strucTotals[loc] ?? 0);
+    if (rearTotals[loc]) pre.armorRear[loc] = (post.armorRear[loc] ?? 0) + rearTotals[loc]!;
   }
-  const wasImmobile = isImmobile(running);
-  const wasKilled = isKilled(running);
+  const wasImmobile = isImmobile(pre);
+  const wasKilled = isKilled(pre);
+  const runArmor = { ...pre.armor };
+  const runRear = { ...pre.armorRear };
+  const runStruc = { ...pre.internalStructure };
   const bits: string[] = [];
   for (const step of app.steps) {
-    const before = running[step.location];
+    const map = step.pool === "armor" ? runArmor : step.pool === "armorRear" ? runRear : runStruc;
+    const before = map[step.location]!;
     const after = before - step.damageApplied;
-    running[step.location] = after;
-    bits.push(`${SHORT_LOC[step.location]} ${before}->${after}${step.depleted ? "*" : ""}`);
+    map[step.location] = after;
+    const label = step.pool === "armor" ? "A" : step.pool === "armorRear" ? "R" : "I";
+    bits.push(`${SHORT_LOC[step.location]}${label} ${before}->${after}${step.depleted ? "*" : ""}`);
   }
   let text = bits.join(", ");
   for (const arm of app.blownOffArms) {
@@ -875,7 +962,7 @@ function transferDetail(locale: LocaleId, r: AttackResolution): string | null {
   if (otherDestroyed.length > 0) {
     text += t(locale, "res.destroyedTail", { locs: otherDestroyed.map(shortLoc).join(", ") });
   }
-  if (isImmobile(app.armor) && !wasImmobile) text += t(locale, "res.immobilized");
+  if (isImmobile(app.damage) && !wasImmobile) text += t(locale, "res.immobilized");
   if (app.killed && !wasKilled) text += t(locale, "res.killed");
   return text;
 }

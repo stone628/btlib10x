@@ -3,9 +3,10 @@
 BattleTech numeric lookups used when designing or analyzing 'Mechs. Values are
 Inner Sphere tabletop rules (Total Warfare / BattleMech Manual construction),
 **not** the MechWarrior Online video-game adaptation, which scales numbers up
-(among other changes). Note: the current engine (quick-start rules) tracks only
-armor, so this internal-structure table is reference data, not yet modelled in
-`src/`.
+(among other changes). The internal-structure table below mirrors
+`STANDARD_INTERNAL_STRUCTURE` / `internalStructureForTonnage` in
+`src/rules/internalStructure.ts`, from which `ResolvedMechDef.internalStructure`
+is derived at resolve time.
 
 ## Internal Structure
 
@@ -21,18 +22,18 @@ combined (armor alone splits front/rear).
 | --- | --- | --- | --- | --- | --- |
 | 20 | 3 | 6 | 5 | 3 | 4 |
 | 25 | 3 | 8 | 6 | 4 | 6 |
-| 30 | 3 | 10 | 7 | 5 | 7 |
+| 30 | 3 | 9 | 7 | 5 | 7 |
 | 35 | 3 | 11 | 8 | 6 | 8 |
 | 40 | 3 | 12 | 10 | 6 | 10 |
 | 45 | 3 | 14 | 11 | 7 | 11 |
 | 50 | 3 | 16 | 12 | 8 | 12 |
 | 55 | 3 | 18 | 13 | 9 | 13 |
 | 60 | 3 | 20 | 14 | 10 | 14 |
-| 65 | 3 | 21 | 15 | 10 | 15 |
+| 65 | 3 | 21 | 15 | 11 | 15 |
 | 70 | 3 | 22 | 15 | 11 | 15 |
 | 75 | 3 | 23 | 16 | 12 | 16 |
 | 80 | 3 | 25 | 17 | 13 | 17 |
-| 85 | 3 | 27 | 18 | 14 | 18 |
+| 85 | 3 | 26 | 18 | 14 | 18 |
 | 90 | 3 | 29 | 19 | 15 | 19 |
 | 95 | 3 | 30 | 20 | 16 | 20 |
 | 100 | 3 | 31 | 21 | 17 | 21 |
@@ -58,15 +59,83 @@ Sphere). The 1.5×-points bonus belongs to advanced **reinforced** structure
   arm with 8 IS points may carry up to 16 armor points).
 - The **head** maxes out at **9** armor points regardless of tonnage.
 
-## Repo 'Mechs by tonnage
+## Hit Location
 
-| Model | Name | Tonnage | CT | Side Torso | Arm | Leg |
-| --- | --- | --- | --- | --- | --- | --- |
-| CDA-3MA | Cicada | 40 | 12 | 10 | 6 | 10 |
-| HER-5SA | Hermes II | 40 | 12 | 10 | 6 | 10 |
-| ENF-4R | Enforcer | 50 | 16 | 12 | 8 | 12 |
-| HBK-4G | Hunchback | 50 | 16 | 12 | 8 | 12 |
-| GRF-1N | Griffin | 55 | 18 | 13 | 9 | 13 |
-| WVR-6R | Wolverine | 55 | 18 | 13 | 9 | 13 |
+Bipedal 'Mech hit-location tables (`src/rules/hitlocation.ts`). Front and rear
+share the **same** column (rear only changes which armor pool is drained, via the
+firing arc); left/right side arcs use their own mirrored tables. "H" = head.
 
-(Each also carries 3 head points.)
+Front / Rear (`HIT_LOCATION_TABLE`):
+
+| Roll | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Hit | CT | RA | RA | RL | RT | CT | LT | LL | LA | LA | H |
+
+Left side (`LEFT_SIDE_TABLE`):
+
+| Roll | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Hit | LT | LL | LA | LA | LL | LT | CT | RT | RA | RL | H |
+
+Right side (`RIGHT_SIDE_TABLE`):
+
+| Roll | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Hit | RT | RL | RA | RA | RL | RT | CT | LT | LA | LL | H |
+
+## Firing Arc
+
+Classic Total Warfare arc classification (`src/rules/arcs.ts`, `classifyArc`),
+measured as a **clockwise offset** from a unit's facing hexside. Front (0) and
+rear (3) are one hexside wide; each side arc spans two hexsides. The engine
+currently only fires into the **front** arc (quick-start), but all arcs drive
+hit-location selection and the rear armor pool.
+
+| Offset from facing | Arc | Hit-location table | Armor pool |
+| --- | --- | --- | --- |
+| 0 | front | Front / Rear | front |
+| 1–2 | rightSide | Right side | front |
+| 3 | rear | Front / Rear | rear (torso) |
+| 4–5 | leftSide | Left side | front |
+
+## Cluster Hits
+
+Cluster Hits Tables (`src/rules/cluster.ts`). Each row is the 2D6 roll; entries
+are the number of missiles (or rapid-fire shots) that hit. Missile columns are
+the weapon's missile count; the shot columns are shots fired.
+
+Missiles (columns: 2, 4, 5, 6, 10, 15, 20 missiles):
+
+| Roll | 2 | 4 | 5 | 6 | 10 | 15 | 20 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 2 | 1 | 1 | 1 | 2 | 3 | 5 | 6 |
+| 3 | 1 | 2 | 2 | 2 | 3 | 5 | 6 |
+| 4 | 1 | 2 | 2 | 3 | 4 | 6 | 9 |
+| 5 | 1 | 2 | 3 | 3 | 6 | 9 | 12 |
+| 6 | 1 | 2 | 3 | 4 | 6 | 9 | 12 |
+| 7 | 1 | 3 | 3 | 4 | 6 | 9 | 12 |
+| 8 | 2 | 3 | 3 | 4 | 6 | 9 | 12 |
+| 9 | 2 | 3 | 4 | 5 | 8 | 12 | 16 |
+| 10 | 2 | 3 | 4 | 5 | 8 | 12 | 16 |
+| 11 | 2 | 4 | 5 | 6 | 10 | 15 | 20 |
+| 12 | 2 | 4 | 5 | 6 | 10 | 15 | 20 |
+
+Rapid-fire / multi-shot (columns: 2, 3, 4 shots), for Ultra autocannons:
+
+| Roll | 2 | 3 | 4 |
+| --- | --- | --- | --- |
+| 2 | 1 | 1 | 2 |
+| 3 | 1 | 1 | 2 |
+| 4 | 1 | 1 | 2 |
+| 5 | 1 | 2 | 2 |
+| 6 | 1 | 2 | 2 |
+| 7 | 1 | 2 | 3 |
+| 8 | 2 | 2 | 3 |
+| 9 | 2 | 2 | 3 |
+| 10 | 2 | 3 | 3 |
+| 11 | 2 | 3 | 4 |
+| 12 | 2 | 3 | 4 |
+
+LRM missiles are applied in lots of **five**: a hit lot lands on one location
+(e.g. an LRM-10 firing 8 hits produces lots of 5 and 3, each on its own
+location).
