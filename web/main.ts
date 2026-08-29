@@ -1,6 +1,6 @@
 import { AUTOPLAY_INTERVAL_MS, nextAutoPlayCommand, resetAutoplayState } from "./autoplay.js";
 import { runChunks } from "./cli.js";
-import type { Chunk } from "./format.js";
+import { buildLinesChunk, type Chunk } from "./format.js";
 import { t } from "./i18n/index.js";
 import * as S from "./session.js";
 
@@ -18,25 +18,46 @@ function scrollToBottom(): void {
 }
 
 function appendChunk(chunk: Chunk): void {
-  if ("board" in chunk) {
+  const kind = chunk.kind;
+
+  if (kind === "board") {
     const div = document.createElement("div");
     if (chunk.board.renderer) chunk.board.renderer(chunk.board.model, div);
     out.insertBefore(div, inrow);
     scrollToBottom();
     return;
   }
-  if (chunk.lines.length === 0) return;
-  if (chunk.lines.length === 1 && chunk.lines[0] === "\f") {
-    out.replaceChildren(inrow);
-    // Re-parenting the input blurs it; restore focus so the caret stays live.
-    input.focus();
+
+  if (kind === "sheet") {
+    const div = document.createElement("div");
+    div.className = "sheet";
+    const left = document.createElement("div");
+    left.className = "sheet-left";
+    left.textContent = chunk.left.join("\n");
+    const right = document.createElement("div");
+    right.className = "sheet-right";
+    right.textContent = chunk.right.join("\n");
+    div.append(left, right);
+    out.insertBefore(div, inrow);
+    scrollToBottom();
     return;
   }
-  const div = document.createElement("div");
-  div.className = chunk.cls ?? "";
-  div.textContent = chunk.lines.join("\n");
-  out.insertBefore(div, inrow);
-  scrollToBottom();
+
+  if (kind === "lines") {
+    if (chunk.lines.length === 0) return;
+    if (chunk.lines.length === 1 && chunk.lines[0] === "\f") {
+      out.replaceChildren(inrow);
+      // Re-parenting the input blurs it; restore focus so the caret stays live.
+      input.focus();
+      return;
+    }
+    const div = document.createElement("div");
+    div.className = chunk.cls ?? "";
+    div.textContent = chunk.lines.join("\n");
+    out.insertBefore(div, inrow);
+    scrollToBottom();
+    return;
+  }
 }
 
 function refreshPrompt(): void {
@@ -72,14 +93,14 @@ function stopAutoPlay(finished: boolean): void {
   clearInterval(autoPlayTimer);
   autoPlayTimer = null;
   if (finished) {
-    appendChunk({ lines: [t(session.locale, "autoPlay.done")], cls: "banner" });
+    appendChunk(buildLinesChunk([t(session.locale, "autoPlay.done")], "banner"));
     refreshPrompt();
   }
 }
 
 function startAutoPlay(): void {
   stopAutoPlay(false);
-  appendChunk({ lines: [t(session.locale, "autoPlay.started")], cls: "banner" });
+  appendChunk(buildLinesChunk([t(session.locale, "autoPlay.started")], "banner"));
   scrollToBottom();
   resetAutoplayState(session);
   autoPlayTimer = setInterval(() => {
@@ -146,8 +167,10 @@ document.getElementById("term")?.addEventListener("click", (e) => {
   input.focus();
 });
 
-appendChunk({
-  lines: [t(session.locale, "app.banner.title"), t(session.locale, "app.banner.help")],
-  cls: "banner",
-});
+appendChunk(
+  buildLinesChunk(
+    [t(session.locale, "app.banner.title"), t(session.locale, "app.banner.help")],
+    "banner",
+  ),
+);
 refreshPrompt();

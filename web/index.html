@@ -72,6 +72,16 @@
         color: #b9c9b0;
         font-style: italic;
       }
+      /* Record sheet: left text block beside right armor diagram, no wrap. */
+      #out .sheet {
+        display: flex;
+        gap: 2em;
+      }
+      #out .sheet-left,
+      #out .sheet-right {
+        white-space: pre;
+        flex-shrink: 0;
+      }
       /* Game board output: dedicated font + line spacing, styled spans. */
       #out .board-legend {
         font-family: var(--board-ff);

@@ -39,12 +39,30 @@ export function seededRng(seed: number): Rng {
 
 /** Flat text of one chunk (boards contribute legend + visible characters). */
 export function chunkText(chunk: Chunk): string[] {
-  if ("board" in chunk) {
+  if (chunk.kind === "board") {
     const lines: string[] = [boardLegendText("en")];
     lines.push(...boardToText(chunk.board.model).split("\n"));
     return lines;
   }
+  if (chunk.kind === "sheet") {
+    return sheetText(chunk.left, chunk.right);
+  }
   return [...chunk.lines];
+}
+
+/** Flat rendering of a sheet: left column padded, right column beside it. */
+function sheetText(left: readonly string[], right: readonly string[]): string[] {
+  const leftMax = Math.max(0, ...left.map((l) => l.length));
+  const rightMax = Math.max(0, ...right.map((l) => l.length));
+  const height = Math.max(left.length, right.length);
+  const lines: string[] = [];
+  for (let i = 0; i < height; i++) {
+    const l = (left[i] ?? "").padEnd(leftMax);
+    const r = (right[i] ?? "").padEnd(rightMax);
+    if (l.trim() === "" && r.trim() === "") continue;
+    lines.push(r.length > 0 ? `${l}  ${r}` : l);
+  }
+  return lines;
 }
 
 /** Run one input line against the session; returns plain output lines. */
