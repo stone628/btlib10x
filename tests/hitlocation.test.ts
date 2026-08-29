@@ -28,15 +28,17 @@ describe("hit location table", () => {
 });
 
 describe("cluster hits tables", () => {
-  it("matches the missile table (columns 2/5/6/10/15)", () => {
+  it("matches the missile table (columns 2/4/5/6/10/15/20)", () => {
     expect(clusterHitsForMissiles(2, 2)).toBe(1);
     expect(clusterHitsForMissiles(2, 12)).toBe(2);
+    expect(clusterHitsForMissiles(4, 11)).toBe(4);
     expect(clusterHitsForMissiles(5, 4)).toBe(2);
     expect(clusterHitsForMissiles(6, 8)).toBe(4);
     expect(clusterHitsForMissiles(10, 9)).toBe(8);
     expect(clusterHitsForMissiles(10, 12)).toBe(10);
     expect(clusterHitsForMissiles(15, 11)).toBe(15);
-    expect(() => clusterHitsForMissiles(20, 7)).toThrow();
+    expect(clusterHitsForMissiles(20, 7)).toBe(12);
+    expect(clusterHitsForMissiles(20, 12)).toBe(20);
   });
 
   it("matches the rapid-fire shot table (columns 2/3/4)", () => {

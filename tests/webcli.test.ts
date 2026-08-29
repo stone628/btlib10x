@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getMapDef } from "../src/data/index.js";
 import { canFireFromLocation } from "../src/rules/damage.js";
-import { mergeDiagram } from "../web/format.js";
 import { GRID_GLYPHS } from "../web/render.js";
 import * as S from "../web/session.js";
 import { execute } from "./helpers.js";
