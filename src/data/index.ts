@@ -3,11 +3,11 @@ import quickstartMapJson from "./maps/quickstart.json";
 import testMapJson from "./maps/test.json";
 import { type MapDef, validateMapDef } from "./mapschema.js";
 import { MECH_DEFS } from "./mechCatalog.generated.js";
-import type { MechDef } from "./schema.js";
+import type { ResolvedMechDef } from "./schema.js";
 
 export { MECH_DEFS };
 
-export function getMechDef(model: string): MechDef | undefined {
+export function getMechDef(model: string): ResolvedMechDef | undefined {
   return MECH_DEFS[model];
 }
 
@@ -24,7 +24,13 @@ export function getMapDef(name: string): MapDef | undefined {
 
 export type { MapDef } from "./mapschema.js";
 export { toEngineTerrain, validateMapDef } from "./mapschema.js";
-export type { MechDef, WeaponMount } from "./schema.js";
-export { validateMechDef } from "./schema.js";
+export type {
+  MechDef,
+  RearArmorKey,
+  ResolvedArmor,
+  ResolvedMechDef,
+  WeaponMount,
+} from "./schema.js";
+export { resolveMechDef, validateMechDef } from "./schema.js";
 export type { WeaponDef } from "./weapons.js";
 export { getWeapon, WEAPONS } from "./weapons.js";

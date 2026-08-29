@@ -1,11 +1,13 @@
 /**
  * GENERATED FILE - do not edit by hand. Regenerate with `npm run gen:mechs`
- * (build/typecheck run it automatically). Indexes every src/data/mechs/*.json.
+ * (build/typecheck run it automatically). Indexes every src/data/mechs/*.json,
+ * validating each against the raw JSON schema and resolving it into the
+ * engine-facing flat-armor definition (torso = front + rear summed).
  */
-import type { MechDef } from "./schema.js";
-import { validateMechDef } from "./schema.js";
+import type { ResolvedMechDef } from "./schema.js";
+import { resolveMechDef, validateMechDef } from "./schema.js";
 
-const load = (data: unknown): MechDef => validateMechDef(data);
+const load = (data: unknown): ResolvedMechDef => resolveMechDef(validateMechDef(data));
 
 import as7dJson from "./mechs/as7-d.json";
 import cda3maJson from "./mechs/cda-3ma.json";
@@ -17,7 +19,7 @@ import mcmkii2Json from "./mechs/mc-mkii-2.json";
 import wvr6rJson from "./mechs/wvr-6r.json";
 
 /** All 'Mech definitions shipped with the library, keyed by model. */
-export const MECH_DEFS: Readonly<Record<string, MechDef>> = Object.fromEntries(
+export const MECH_DEFS: Readonly<Record<string, ResolvedMechDef>> = Object.fromEntries(
   [as7dJson, cda3maJson, enf4rJson, grf1nJson, hbk4gJson, her5saJson, mcmkii2Json, wvr6rJson].map(
     (data) => {
       const def = load(data);

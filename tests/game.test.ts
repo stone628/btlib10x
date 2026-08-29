@@ -487,13 +487,13 @@ describe("weapon attack phase", () => {
   it("resolves scripted attacks immediately and commits kills only at end of phase", () => {
     const state = startAttackTurn(hbkVsEnf());
     declareAttacks(state, "hbk", [{ weaponIndex: 0, targetId: "enf" }]);
-    // Turn 1: AC/20 (20 dmg) hits CT (roll 5) -> 23 - 20 = 3 left.
+    // Turn 1: AC/20 (20 dmg) hits CT (roll 5) -> 27 - 20 = 7 left.
     resolveDeclaredAttacks(state, "hbk", scriptedRng(2, 3, 3, 4));
-    expect(getUnit(state, "enf").armor.centerTorso).toBe(3);
+    expect(getUnit(state, "enf").armor.centerTorso).toBe(7);
     expect(getUnit(state, "enf").destroyed).toBe(false);
 
     advancePhase(state); // weaponAttack -> end
-    expect(getUnit(state, "enf").destroyed).toBe(false); // survived with 3 CT
+    expect(getUnit(state, "enf").destroyed).toBe(false); // survived with 7 CT
 
     advancePhase(state); // end -> initiative, turn 2
     expect(state.turn).toBe(2);

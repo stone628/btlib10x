@@ -12,7 +12,7 @@ import {
   type TerrainType,
 } from "../core/types.js";
 import { MECH_DEFS } from "../data/index.js";
-import type { MechDef } from "../data/schema.js";
+import type { ResolvedMechDef } from "../data/schema.js";
 import { getWeapon } from "../data/weapons.js";
 import { isInFrontArc } from "./arcs.js";
 import { type AttackResolution, resolveWeaponAttack } from "./attack.js";
@@ -106,7 +106,7 @@ export interface BattleState {
   phase: Phase;
   initiativeWinnerTeam: number | null;
   units: Record<string, UnitState>;
-  defs: Record<string, MechDef>;
+  defs: Record<string, ResolvedMechDef>;
   terrain: Record<string, TerrainType>;
   /** Board size hint for rendering (engine coords); renderers fall back to content extent when absent. */
   width?: number | undefined;
@@ -169,7 +169,7 @@ export function createBattle(
 
   const unitStates: Record<string, UnitState> = {};
   for (const init of units) {
-    const def: MechDef = MECH_DEFS[init.model]!;
+    const def: ResolvedMechDef = MECH_DEFS[init.model]!;
     const ammoLeft: Record<number, number> = {};
     def.weapons.forEach((mount, index) => {
       if (mount.ammoShots !== undefined) ammoLeft[index] = mount.ammoShots;

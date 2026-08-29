@@ -9,13 +9,16 @@
   "jumping": 0,
   "armor": {
     "head": 9,
-    "centerTorso": 16,
+    "centerTorso": 18,
     "rightTorso": 14,
     "leftTorso": 14,
     "rightArm": 11,
     "leftArm": 11,
-    "rightLeg": 19,
-    "leftLeg": 19
+    "rightLeg": 18,
+    "leftLeg": 18,
+    "centerTorsoRear": 5,
+    "leftTorsoRear": 5,
+    "rightTorsoRear": 5
   },
   "weapons": [
     { "weapon": "Large Pulse Laser", "location": "rightArm" },

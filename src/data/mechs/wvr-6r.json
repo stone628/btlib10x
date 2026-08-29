@@ -9,13 +9,16 @@
   "jumping": 5,
   "armor": {
     "head": 9,
-    "centerTorso": 22,
-    "rightTorso": 16,
-    "leftTorso": 16,
+    "centerTorso": 20,
+    "rightTorso": 20,
+    "leftTorso": 20,
     "rightArm": 16,
     "leftArm": 16,
-    "rightLeg": 18,
-    "leftLeg": 18
+    "rightLeg": 16,
+    "leftLeg": 16,
+    "centerTorsoRear": 8,
+    "leftTorsoRear": 6,
+    "rightTorsoRear": 6
   },
   "weapons": [
     { "weapon": "Medium Laser", "location": "head" },
