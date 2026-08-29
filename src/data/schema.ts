@@ -1,10 +1,20 @@
 import type { Location } from "../core/types.js";
-import { isLocation } from "../core/types.js";
+import { isLocation, LOCATIONS } from "../core/types.js";
+
+/** Rear torso armor keys carried inside `armor` as informational metadata. */
+export type RearArmorKey = "centerTorsoRear" | "leftTorsoRear" | "rightTorsoRear";
+
+const REAR_ARMOR_KEYS: readonly RearArmorKey[] = [
+  "centerTorsoRear",
+  "leftTorsoRear",
+  "rightTorsoRear",
+];
 
 /**
- * Static definition of a bipedal BattleMech, transcribed from quick-start
- * record sheets. Armor is a flat hit-point value per location: overflow damage
- * transfers inward only once a location's armor reaches 0.
+ * Static definition of a bipedal BattleMech as written in `src/data/mechs/*.json`,
+ * faithful to the source record sheet / MTF: torso locations hold FRONT armor,
+ * and rear torso armor is stored alongside under `centerTorsoRear` /
+ * `leftTorsoRear` / `rightTorsoRear`. This is the on-disk (JSON) schema.
  */
 export interface MechDef {
   readonly model: string;
@@ -15,7 +25,11 @@ export interface MechDef {
   readonly walking: number;
   readonly running: number;
   readonly jumping: number;
-  readonly armor: Readonly<Record<Location, number>>;
+  /**
+   * Armor per location (torso = front only) plus optional rear torso values.
+   * Convert to engine-facing flat armor with `resolveMechDef`.
+   */
+  readonly armor: Readonly<Record<Location, number>> & Readonly<Partial<Record<RearArmorKey, number>>>;
   readonly weapons: readonly WeaponMount[];
   readonly source: string;
 }
@@ -25,6 +39,54 @@ export interface WeaponMount {
   readonly location: Location;
   /** Shots available; omit for weapons without ammunition. */
   readonly ammoShots?: number;
+}
+
+export type ResolvedArmor = Readonly<Record<Location, number>>;
+
+/**
+ * Engine-facing 'Mech definition produced by `resolveMechDef`. Armor is a flat
+ * hit-point value per location: torso armor sums front + rear, overflow damage
+ * transfers inward only once a location's armor reaches 0. No rear keys survive.
+ */
+export interface ResolvedMechDef {
+  readonly model: string;
+  readonly name: string;
+  readonly tonnage: number;
+  readonly weightClass: "Light" | "Medium" | "Heavy" | "Assault";
+  readonly techBase: string;
+  readonly walking: number;
+  readonly running: number;
+  readonly jumping: number;
+  readonly armor: ResolvedArmor;
+  readonly weapons: readonly WeaponMount[];
+  readonly source: string;
+}
+
+/**
+ * Convert a raw `MechDef` into the engine-facing `ResolvedMechDef`, summing the
+ * rear torso values into their front locations and dropping the rear keys.
+ */
+export function resolveMechDef(def: MechDef): ResolvedMechDef {
+  const armor: Record<Location, number> = {} as Record<Location, number>;
+  for (const loc of LOCATIONS) {
+    armor[loc] = def.armor[loc];
+  }
+  armor.centerTorso += def.armor.centerTorsoRear ?? 0;
+  armor.rightTorso += def.armor.rightTorsoRear ?? 0;
+  armor.leftTorso += def.armor.leftTorsoRear ?? 0;
+  return {
+    model: def.model,
+    name: def.name,
+    tonnage: def.tonnage,
+    weightClass: def.weightClass,
+    techBase: def.techBase,
+    walking: def.walking,
+    running: def.running,
+    jumping: def.jumping,
+    armor,
+    weapons: def.weapons,
+    source: def.source,
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -109,7 +171,14 @@ export function validateMechDef(data: unknown): MechDef {
       }
     }
     for (const key of Object.keys(armorRaw)) {
-      if (!isLocation(key)) errors.push(`armor.${key} is not a valid location`);
+      if (REAR_ARMOR_KEYS.includes(key as RearArmorKey)) {
+        const v = armorRaw[key];
+        if (typeof v !== "number" || !Number.isInteger(v) || v < 0) {
+          errors.push(`armor.${key} must be a non-negative integer`);
+        }
+      } else if (!isLocation(key)) {
+        errors.push(`armor.${key} is not a valid location`);
+      }
     }
   }
 

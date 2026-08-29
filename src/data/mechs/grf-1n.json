@@ -9,13 +9,16 @@
   "jumping": 5,
   "armor": {
     "head": 9,
-    "centerTorso": 24,
-    "rightTorso": 18,
-    "leftTorso": 18,
-    "rightArm": 18,
-    "leftArm": 18,
-    "rightLeg": 20,
-    "leftLeg": 20
+    "centerTorso": 20,
+    "rightTorso": 20,
+    "leftTorso": 20,
+    "rightArm": 14,
+    "leftArm": 14,
+    "rightLeg": 18,
+    "leftLeg": 18,
+    "centerTorsoRear": 7,
+    "leftTorsoRear": 6,
+    "rightTorsoRear": 6
   },
   "weapons": [
     { "weapon": "LRM 10", "location": "rightTorso", "ammoShots": 12 },

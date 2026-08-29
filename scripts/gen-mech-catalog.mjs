@@ -28,17 +28,19 @@ const values = files.map((f) => `    ${ident(f)},`).join("\n");
 
 const content = `/**
  * GENERATED FILE - do not edit by hand. Regenerate with \`npm run gen:mechs\`
- * (build/typecheck run it automatically). Indexes every src/data/mechs/*.json.
+ * (build/typecheck run it automatically). Indexes every src/data/mechs/*.json,
+ * validating each against the raw JSON schema and resolving it into the
+ * engine-facing flat-armor definition (torso = front + rear summed).
  */
-import type { MechDef } from "./schema.js";
-import { validateMechDef } from "./schema.js";
+import type { ResolvedMechDef } from "./schema.js";
+import { resolveMechDef, validateMechDef } from "./schema.js";
 
-const load = (data: unknown): MechDef => validateMechDef(data);
+const load = (data: unknown): ResolvedMechDef => resolveMechDef(validateMechDef(data));
 
 ${imports.join("\n")}
 
 /** All 'Mech definitions shipped with the library, keyed by model. */
-export const MECH_DEFS: Readonly<Record<string, MechDef>> = Object.fromEntries(
+export const MECH_DEFS: Readonly<Record<string, ResolvedMechDef>> = Object.fromEntries(
   [
 ${values}
   ].map((data) => {

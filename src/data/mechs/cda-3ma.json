@@ -15,7 +15,10 @@
     "rightArm": 12,
     "leftArm": 12,
     "rightLeg": 20,
-    "leftLeg": 20
+    "leftLeg": 20,
+    "centerTorsoRear": 6,
+    "leftTorsoRear": 5,
+    "rightTorsoRear": 5
   },
   "weapons": [
     { "weapon": "Medium Laser", "location": "rightArm" },

@@ -21,11 +21,18 @@ export {
   getMechDef,
   MAP_DEFS,
   MECH_DEFS,
+  resolveMechDef,
   toEngineTerrain,
   validateMapDef,
   validateMechDef,
 } from "./data/index.js";
-export type { MechDef, WeaponMount } from "./data/schema.js";
+export type {
+  MechDef,
+  RearArmorKey,
+  ResolvedArmor,
+  ResolvedMechDef,
+  WeaponMount,
+} from "./data/index.js";
 export type { WeaponDef } from "./data/weapons.js";
 export { getWeapon, WEAPONS } from "./data/weapons.js";
 export * from "./rules/arcs.js";

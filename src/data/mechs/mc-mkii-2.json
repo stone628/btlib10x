@@ -9,13 +9,16 @@
   "jumping": 3,
   "armor": {
     "head": 9,
-    "centerTorso": 50,
-    "rightTorso": 34,
-    "leftTorso": 34,
+    "centerTorso": 38,
+    "rightTorso": 26,
+    "leftTorso": 26,
     "rightArm": 27,
     "leftArm": 27,
     "rightLeg": 34,
-    "leftLeg": 34
+    "leftLeg": 34,
+    "centerTorsoRear": 12,
+    "leftTorsoRear": 8,
+    "rightTorsoRear": 8
   },
   "weapons": [
     { "weapon": "CL ER Medium Laser", "location": "rightTorso" },

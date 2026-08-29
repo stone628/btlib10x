@@ -15,7 +15,10 @@
     "rightArm": 16,
     "leftArm": 16,
     "rightLeg": 20,
-    "leftLeg": 20
+    "leftLeg": 20,
+    "centerTorsoRear": 5,
+    "leftTorsoRear": 4,
+    "rightTorsoRear": 4
   },
   "weapons": [
     { "weapon": "Autocannon/20", "location": "rightTorso", "ammoShots": 10 },

@@ -8,7 +8,10 @@ import { fileURLToPath } from "node:url";
  * is emitted to src/data/mechs/ and auto-registered by the catalog generator.
  *
  * Conventions (must match src/data/mechs/*.json):
- *   - Flat armor per location; torso values SUM the MTF front + rear boxes.
+ *   - Flat armor per location; torso values SUM the MTF front + rear boxes. The
+ *     rear torso values are also stored inside `armor` as `centerTorsoRear` /
+ *     `leftTorsoRear` / `rightTorsoRear` (metadata only; the flat damage model
+ *     reads the eight front locations).
  *   - Clan weapons use the catalog's "CL " prefix (e.g. CL Gauss Rifle).
  *   - Ammo is per-mount in the schema: a shared bin of N shots is written onto
  *     the single mount that carries an explicit `, Ammo:N`, else the first
@@ -227,7 +230,9 @@ function parseMtf(text, file) {
   const walking = numberRegex(text, "Walk MP");
   const jumping = numberRegex(text, "Jump MP") ?? 0;
 
-  // Flat armor; torso = front + rear summed.
+  // Flat armor; torso = front + rear summed. Rear torso values are also stored
+  // alongside, keyed as `centerTorsoRear`/`leftTorsoRear`/`rightTorsoRear`
+  // metadata (not used by the flat damage model).
   const armorTags = {
     "HD Armor": "head",
     "CT Armor": "centerTorso",
@@ -240,6 +245,11 @@ function parseMtf(text, file) {
     "RTC Armor": "centerTorso",
     "RTR Armor": "rightTorso",
     "RTL Armor": "leftTorso",
+  };
+  const rearKeys = {
+    "RTC Armor": "centerTorsoRear",
+    "RTR Armor": "rightTorsoRear",
+    "RTL Armor": "leftTorsoRear",
   };
   const armor = {
     head: 0,
@@ -254,6 +264,10 @@ function parseMtf(text, file) {
   for (const [tag, key] of Object.entries(armorTags)) {
     const raw = fields[tag];
     if (raw !== undefined) armor[key] += Number(raw);
+  }
+  for (const [tag, key] of Object.entries(rearKeys)) {
+    const raw = fields[tag];
+    if (raw !== undefined) armor[key] = Number(raw);
   }
 
   // Weapons block: text after "Weapons:N", up to the first body-part header.
@@ -310,24 +324,23 @@ function parseMtf(text, file) {
     ammo !== null ? { weapon, location, ammoShots: ammo } : { weapon, location },
   );
 
-  const source = `docs/mtf/${file}${fields.Source ? ` (${fields.Source})` : ""}. Torso armor sums MTF front+rear into the flat model; shared ammo written on one mount.`;
+  const source = `docs/mtf/${file}${fields.Source ? ` (${fields.Source})` : ""}. Torso armor sums MTF front+rear into the flat model; rear torso armor kept in `armor`; shared ammo written on one mount.`;
 
-  return {
-    def: {
-      model,
-      name,
-      tonnage,
-      weightClass: tonnage ? weightClass(tonnage) : "Assault",
-      techBase: fields.TechBase ?? "Inner Sphere",
-      walking,
-      running: walking ? Math.ceil(walking * 1.5) : null,
-      jumping,
-      armor,
-      weapons,
-      source,
-    },
-    errors,
+  const def = {
+    model,
+    name,
+    tonnage,
+    weightClass: tonnage ? weightClass(tonnage) : "Assault",
+    techBase: fields.TechBase ?? "Inner Sphere",
+    walking,
+    running: walking ? Math.ceil(walking * 1.5) : null,
+    jumping,
+    armor,
+    weapons,
+    source,
   };
+
+  return { def, errors };
 }
 
 const files = readdirSync(mtfDir)
