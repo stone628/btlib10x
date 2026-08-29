@@ -35,6 +35,15 @@ export function neighbors(hex: Hex): Hex[] {
   return FACINGS.map((facing) => neighbor(hex, facing));
 }
 
+/** True when `a` and `b` are the same or one of the six adjacent hexes. */
+export function isAdjacent(a: Hex, b: Hex): boolean {
+  if (sameHex(a, b)) return true;
+  for (const f of FACINGS) {
+    if (sameHex(neighbor(a, f), b)) return true;
+  }
+  return false;
+}
+
 function offsetToCube(hex: Hex): { x: number; y: number; z: number } {
   const x = hex.col;
   const z = hex.row - (hex.col + (hex.col & 1)) / 2;

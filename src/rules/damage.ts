@@ -23,6 +23,12 @@ export type ArmorState = Record<Location, number>;
 
 const TORSO_LOCATIONS: readonly Location[] = ["centerTorso", "rightTorso", "leftTorso"];
 
+/** When a side torso's structure is destroyed, its arm is blown off too. */
+const TORSO_TO_ARM: Readonly<Partial<Record<Location, Location>>> = {
+  rightTorso: "rightArm",
+  leftTorso: "leftArm",
+};
+
 /**
  * Layered damage state for one unit: front armor plus rear torso armor plus
  * internal structure per location. Rear armor only exists on the three torso
@@ -134,17 +140,12 @@ export function applyDamage(
           killed = true;
           break;
         }
-        if (cur === "rightTorso" && next.internalStructure.rightArm > 0) {
-          next.internalStructure.rightArm = 0;
-          next.armor.rightArm = 0;
-          newlyDestroyed.push("rightArm");
-          blownOffArms.push("rightArm");
-        }
-        if (cur === "leftTorso" && next.internalStructure.leftArm > 0) {
-          next.internalStructure.leftArm = 0;
-          next.armor.leftArm = 0;
-          newlyDestroyed.push("leftArm");
-          blownOffArms.push("leftArm");
+        const arm = TORSO_TO_ARM[cur];
+        if (arm !== undefined && next.internalStructure[arm] > 0) {
+          next.internalStructure[arm] = 0;
+          next.armor[arm] = 0;
+          newlyDestroyed.push(arm);
+          blownOffArms.push(arm);
         }
       }
       if (remaining > 0 && !killed) current = TRANSFER_INWARD[cur];

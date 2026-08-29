@@ -2,6 +2,7 @@ export { roll2D6, rollD6 } from "./core/dice.js";
 export {
   bearing,
   hexDistance,
+  isAdjacent,
   lineHexes,
   neighbor,
   neighbors,

@@ -24,12 +24,12 @@ import {
   facingChangeCost,
   getMapDef,
   getUnit,
+  isAdjacent,
   isBackwardStep,
   isForwardStep,
   MAP_DEFS,
   MECH_DEFS,
   maxMovePoints,
-  neighbor,
   nextActor,
   resolveAllAttacks,
   rollInitiativePhase,
@@ -314,10 +314,6 @@ export function stepResult(s: Session): StepResult {
   };
 }
 
-function isAdjacent(to: Hex, hex: Hex): boolean {
-  return FACINGS.some((f) => sameHex(neighbor(hex, f), to));
-}
-
 export function queueEnter(s: Session, to: Hex): void {
   const unit = requireActor(s, "movement");
   if (!s.moveMode) throw new Error(t(s.locale, "err.declareModeFirst", { id: unit.id }));
@@ -327,7 +323,7 @@ export function queueEnter(s: Session, to: Hex): void {
   if (s.moveMode === "standStill") throw new Error(t(s.locale, "err.standStillNoEnter"));
   let cost: number;
   if (s.moveMode === "jump") {
-    if (!isAdjacent(to, cur.hex)) throw new Error(t(s.locale, "err.jumpNotAdjacent"));
+    if (!isAdjacent(cur.hex, to)) throw new Error(t(s.locale, "err.jumpNotAdjacent"));
     cost = 1;
   } else {
     const forward = isForwardStep(cur.hex, to, cur.facing);

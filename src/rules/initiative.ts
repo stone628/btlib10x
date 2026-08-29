@@ -1,3 +1,4 @@
+import { roll2D6 } from "../core/dice.js";
 import type { Rng } from "../core/types.js";
 
 export interface InitiativeResult {
@@ -15,7 +16,7 @@ export function rollInitiative(teams: readonly number[], rng: Rng): InitiativeRe
     best = [];
     bestValue = -1;
     for (const team of teams) {
-      const value = rng.d6() + rng.d6();
+      const value = roll2D6(rng);
       rolls[team] = value;
       if (value > bestValue) {
         bestValue = value;
