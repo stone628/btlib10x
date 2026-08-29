@@ -51,7 +51,7 @@ and **critical slots** only:
 Endo-steel gives **no extra internal structure points** in the core rules — it
 is simply a lighter chassis that costs critical slots (7 slots Clan / 14 Inner
 Sphere). The 1.5×-points bonus belongs to advanced **reinforced** structure
-(outside quick-start scope).
+(outside the current subset).
 
 ### Armor limits
 
@@ -88,8 +88,9 @@ Right side (`RIGHT_SIDE_TABLE`):
 Classic Total Warfare arc classification (`src/rules/arcs.ts`, `classifyArc`),
 measured as a **clockwise offset** from a unit's facing hexside. Front (0) and
 rear (3) are one hexside wide; each side arc spans two hexsides. The engine
-currently only fires into the **front** arc (quick-start), but all arcs drive
-hit-location selection and the rear armor pool.
+currently only fires into the **front** arc (side/rear firing is not yet
+implemented), but all arcs drive hit-location selection and the rear armor
+pool.
 
 | Offset from facing | Arc | Hit-location table | Armor pool |
 | --- | --- | --- | --- |

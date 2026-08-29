@@ -4,8 +4,11 @@ TypeScript library encapsulating Classic BattleTech board game logic.
 
 ## Status
 
-- Implements the **quick-start rules** (`pdf/CBT-Quick-Start-Rules.pdf`, `pdf/Beginner-Box-Quick-Start-Rules.pdf`) — those PDFs are the source of truth; consult before changing mechanics.
-- Bipedal 'Mechs only. No heat, physical attacks, piloting rolls, or elevation (not covered by quick-start rules).
+- Implements a **subset of classic BattleTech game rules**. The currently
+  implemented subset is documented under "Status — Classic BattleTech rule
+  coverage" in `docs/CLI.md`.
+- Bipedal 'Mechs only. Heat, physical attacks, piloting rolls, elevation, and
+  side/rear firing arcs are outside the current subset.
 - Damage model: each location holds a flat armor HP number; overflow transfers inward **only after** a location's armor is fully depleted (no per-dot tracking).
 
 ## Commands

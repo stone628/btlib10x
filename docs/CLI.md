@@ -70,7 +70,7 @@ The prompt names the acting unit; commands act on that 'Mech.
 
 | command | effect |
 |---|---|
-| `mode standstill\|walk\|run\|jump` | declare movement mode (required first) |
+| `mode standstill\|walk\|run\|jump` | declare movement mode (required first); for walk/run/jump, also prints a list of reachable `(XX,YY:facing)=path` entries — the path is a sequence of `F` (forward), `B` (backward), `R`/`L` (1-hexside turn) fragments that lands the 'Mech on that hex facing that direction |
 | `move <col> <row>` | queue step into adjacent hex (forward/backward vs facing; jump = any adjacent) |
 | `face <facing>` or `face <±1..5>` | queue facing change (`face ne`, `face -2`) |
 | `sheet [id]` | with id: armor diagram + weapons for a unit; without id: brief unit list (id, model, position+facing) grouped by team |
@@ -96,6 +96,58 @@ The prompt names the acting unit; commands act on that 'Mech.
 | `sheet [id]` | with id: armor diagram + weapons for a unit; without id: brief unit list (id, model, position+facing) grouped by team |
 | `rematch` | new battle, same roster + terrain + seed |
 | globals | `board`, `log` remain available; `reset` returns to empty setup |
+
+## Status — Classic BattleTech rule coverage
+
+The engine implements a **subset of classic BattleTech game rules** for
+**bipedal 'Mechs only**. The terminal app exposes everything the engine can
+simulate. See `TODO.md` for the roadmap toward a fuller ruleset.
+
+### Implemented
+
+- **Units** — bipedal 'Mechs only (six record-sheet 'Mechs in `data/mechs/`).
+  Front and rear armor are separate pools; internal structure is derived from
+  tonnage on the standard TW table.
+- **Movement** — walk, run, jump, standstill. MP costs include the base 1 MP
+  to enter a hex plus a terrain surcharge (lightWoods +1, heavyWoods +2) and
+  1 MP per hexside of facing change. Ground moves step straight ahead or
+  back; run cannot move backward. Jump steps into any adjacent hex at 1 MP
+  per step, with the landing facing chosen freely.
+- **Line of sight** — intervening-hex line trace; light/heavy woods points
+  (1/2) accumulate along the line and ≥ 3 points block.
+- **To-hit (GATOR)** — gunnery + attacker movement + target movement + range
+  bracket + intervening terrain + pulse; auto-hit ≤ 2, auto-miss > 12.
+- **Hit location** — bipedal front / left side / right side / rear tables.
+- **Cluster hits** — missile 2/5/6/10/15 + shot columns 2/3/4.
+- **Damage** — front/rear armor transfer inward on depletion; side-torso
+  internal-structure loss blows off the arm; head/CT IS death kills; leg IS
+  death immobilizes. Hits on already-destroyed locations transfer.
+- **Firing arc** — front arc only. (Side / rear arc classification is
+  implemented in `arcs.ts` but is not yet wired into targeting.)
+- **Weapons** — ballistic / energy / missile with short/medium/long range
+  brackets, rapid-fire, pulse (−2 to-hit), ammo tracking, jam on natural 2
+  (multi-shot), LRM lots-of-5 grouping.
+- **Battle flow** — initiative roll, sequential movement phase, weapon
+  attack phase, end-phase kill sweep, victory check, rematch.
+
+### Not yet implemented
+
+- **Heat** — heat scale, overheat effects, shutdown, ammo explosion.
+- **Physical attacks** — punch, kick, charge, DFA.
+- **Piloting rolls** — falling, standing up, leg/gyro damage effects.
+- **Elevation** — hex height differences, height-based modifiers.
+- **Side / rear firing arcs and torso twist** — classification code exists
+  but is dormant.
+- **Quadripedal 'Mechs**, vehicles, infantry, battle armor.
+- **Critical hits** beyond the location-destroyed model (engine, gyro,
+  sensor destruction).
+- **Called shots**, aimed shots, spotter / indirect fire, ECM.
+- **Pilot abilities** (edge, etc.), quirks, experience beyond the gunnery
+  skill band.
+
+### Verify-later
+
+- LOS edge-graze tie-break uses deterministic cube rounding.
 
 ## Architecture
 
