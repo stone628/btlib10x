@@ -28,7 +28,7 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
       const def = st.defs[unit.model]!;
       def.weapons.forEach((_mount, w) => {
         if (unit.jammedWeapons.includes(w)) return;
-        if (!canFireFromLocation(unit.phaseStartArmor, def.weapons[w]!.location)) return;
+        if (!canFireFromLocation(unit.phaseStartDamage, def.weapons[w]!.location)) return;
         if (unit.ammoLeft[w] !== undefined && (unit.ammoLeft[w] ?? 0) < 1) return;
         S.queueFire(s, { weaponIndex: w, targetId: enemy });
       });

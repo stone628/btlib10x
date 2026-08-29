@@ -1,8 +1,11 @@
 import type { Location } from "../core/types.js";
+import type { Arc } from "./arcs.js";
 
 /**
  * Damage transfer graph (bipedal, quick-start damage-transfer diagram).
- * null = no further location; destroying head/centerTorso kills the 'Mech.
+ * Once a location's armor and internal structure are both depleted, overflow
+ * transfers inward. null = no further location; destroying head/centerTorso
+ * internal structure kills the 'Mech.
  */
 export const TRANSFER_INWARD: Readonly<Record<Location, Location | null>> = {
   rightArm: "rightTorso",
@@ -15,109 +18,168 @@ export const TRANSFER_INWARD: Readonly<Record<Location, Location | null>> = {
   head: null,
 };
 
-/** Flat armor hit points per location; a location is destroyed when its value reaches 0. */
+/** Flat hit-point counter per location (front armor, or re-used for IS). */
 export type ArmorState = Record<Location, number>;
+
+const TORSO_LOCATIONS: readonly Location[] = ["centerTorso", "rightTorso", "leftTorso"];
+
+/**
+ * Layered damage state for one unit: front armor plus rear torso armor plus
+ * internal structure per location. Rear armor only exists on the three torso
+ * locations. Damage drains the active armor pool (front or rear, by arc), then
+ * that location's internal structure, then transfers inward.
+ */
+export interface UnitDamageState {
+  /** Front armor per location; torso values are the front pool only. */
+  readonly armor: ArmorState;
+  /** Rear armor on the torso locations (other locations lack one). */
+  readonly armorRear: Partial<Record<Location, number>>;
+  /** Internal structure per location. */
+  readonly internalStructure: ArmorState;
+}
 
 export interface DamageTransferStep {
   readonly location: Location;
+  readonly pool: "armor" | "armorRear" | "structure";
   readonly damageApplied: number;
   readonly depleted: boolean;
 }
 
 export interface DamageApplication {
-  readonly armor: ArmorState;
+  /** Layered damage state after the application. */
+  readonly damage: UnitDamageState;
   readonly steps: readonly DamageTransferStep[];
-  /** Locations whose armor reached 0 during this application. */
+  /** Locations whose internal structure reached 0 during this application. */
   readonly newlyDestroyed: readonly Location[];
-  /** Arms blown off because their shoulder torso was destroyed. */
+  /** Arms blown off because their shoulder torso's structure was destroyed. */
   readonly blownOffArms: readonly Location[];
   readonly killed: boolean;
 }
 
-function cloneArmor(armor: ArmorState): ArmorState {
-  return { ...armor };
+function clone(state: UnitDamageState): UnitDamageState {
+  return {
+    armor: { ...state.armor },
+    armorRear: { ...state.armorRear },
+    internalStructure: { ...state.internalStructure },
+  };
+}
+
+/** Which armor pool a hit to `location` drains for the given `arc`. */
+function poolOf(
+  state: UnitDamageState,
+  location: Location,
+  arc: Arc,
+): { kind: "armor" | "armorRear"; value: number } {
+  if (arc === "rear" && TORSO_LOCATIONS.includes(location)) {
+    return { kind: "armorRear", value: state.armorRear[location] ?? 0 };
+  }
+  return { kind: "armor", value: state.armor[location] };
 }
 
 /**
- * Apply one damage grouping against `armor` starting at `location`, following
- * the transfer graph. Overflow transfers inward only after the current
- * location's armor is fully depleted; hits on already-destroyed locations
- * transfer inward immediately. Pure: returns the updated armor state.
+ * Apply one damage grouping against `damage` starting at `location` for the
+ * given firing `arc` (defaults to front). Damage first drains the active armor
+ * pool (front, or rear for rear-arc torso hits), then that location's internal
+ * structure; once both are gone it transfers inward per the graph. Pure:
+ * returns the updated layered damage state.
  */
 export function applyDamage(
-  armor: ArmorState,
+  damage: UnitDamageState,
   location: Location,
-  damage: number,
+  amount: number,
+  arc: Arc = "front",
 ): DamageApplication {
-  if (!Number.isInteger(damage) || damage <= 0) {
-    throw new Error(`damage must be a positive integer, got ${damage}`);
+  if (!Number.isInteger(amount) || amount <= 0) {
+    throw new Error(`damage must be a positive integer, got ${amount}`);
   }
-  const next = cloneArmor(armor);
+  const next = clone(damage);
   const steps: DamageTransferStep[] = [];
   const newlyDestroyed: Location[] = [];
   const blownOffArms: Location[] = [];
   let killed = false;
 
-  let remaining = damage;
+  let remaining = amount;
   let current: Location | null = location;
-  while (current !== null && remaining > 0) {
+  while (current !== null && remaining > 0 && !killed) {
     const cur: Location = current;
-    const before = next[cur];
-    if (before <= 0) {
-      current = TRANSFER_INWARD[cur];
-      continue;
+
+    const pool = poolOf(next, cur, arc);
+    if (pool.value > 0) {
+      const applied = Math.min(remaining, pool.value);
+      const after = pool.value - applied;
+      if (pool.kind === "armorRear") next.armorRear[cur] = after;
+      else next.armor[cur] = after;
+      remaining -= applied;
+      steps.push({
+        location: cur,
+        pool: pool.kind,
+        damageApplied: applied,
+        depleted: after === 0,
+      });
+      // If armor absorbed everything, we're done; otherwise continue to IS.
+      if (remaining === 0 || after > 0) break;
     }
-    const applied = Math.min(remaining, before);
-    const after = before - applied;
-    next[cur] = after;
-    remaining -= applied;
-    const depleted = after === 0;
-    steps.push({ location: cur, damageApplied: applied, depleted });
-    if (depleted) {
-      newlyDestroyed.push(cur);
-      if (cur === "head" || cur === "centerTorso") {
-        killed = true;
-        break;
+
+    const isBefore = next.internalStructure[cur];
+    if (isBefore > 0) {
+      const applied = Math.min(remaining, isBefore);
+      const after = isBefore - applied;
+      next.internalStructure[cur] = after;
+      remaining -= applied;
+      const depleted = after === 0;
+      steps.push({ location: cur, pool: "structure", damageApplied: applied, depleted });
+      if (depleted) {
+        newlyDestroyed.push(cur);
+        if (cur === "head" || cur === "centerTorso") {
+          killed = true;
+          break;
+        }
+        if (cur === "rightTorso" && next.internalStructure.rightArm > 0) {
+          next.internalStructure.rightArm = 0;
+          next.armor.rightArm = 0;
+          newlyDestroyed.push("rightArm");
+          blownOffArms.push("rightArm");
+        }
+        if (cur === "leftTorso" && next.internalStructure.leftArm > 0) {
+          next.internalStructure.leftArm = 0;
+          next.armor.leftArm = 0;
+          newlyDestroyed.push("leftArm");
+          blownOffArms.push("leftArm");
+        }
       }
-      if (cur === "rightTorso" && next.rightArm > 0) {
-        next.rightArm = 0;
-        newlyDestroyed.push("rightArm");
-        blownOffArms.push("rightArm");
-      }
-      if (cur === "leftTorso" && next.leftArm > 0) {
-        next.leftArm = 0;
-        newlyDestroyed.push("leftArm");
-        blownOffArms.push("leftArm");
-      }
-    }
-    if (remaining > 0) {
-      current = TRANSFER_INWARD[cur];
+      if (remaining > 0 && !killed) current = TRANSFER_INWARD[cur];
+      else break;
     } else {
-      break;
+      current = TRANSFER_INWARD[cur];
     }
   }
 
-  return { armor: next, steps, newlyDestroyed, blownOffArms, killed };
+  return { damage: next, steps, newlyDestroyed, blownOffArms, killed };
 }
 
-export function isLocationDestroyed(armor: ArmorState, location: Location): boolean {
-  return armor[location] <= 0;
+/** A location is destroyed when its internal structure is depleted. */
+export function isLocationDestroyed(damage: UnitDamageState, location: Location): boolean {
+  return damage.internalStructure[location] <= 0;
 }
 
-/** Quick-start destruction: head or center torso gone ends the 'Mech. */
-export function isKilled(armor: ArmorState): boolean {
-  return armor.head <= 0 || armor.centerTorso <= 0;
+/** Classic destruction: head or center torso internal structure gone ends the 'Mech. */
+export function isKilled(damage: UnitDamageState): boolean {
+  return damage.internalStructure.head <= 0 || damage.internalStructure.centerTorso <= 0;
 }
 
-/** One or both legs destroyed: cannot move or change facing, may still fire. */
-export function isImmobile(armor: ArmorState): boolean {
-  return armor.rightLeg <= 0 || armor.leftLeg <= 0;
+/** One or both legs' internal structure destroyed: cannot move or change facing. */
+export function isImmobile(damage: UnitDamageState): boolean {
+  return damage.internalStructure.rightLeg <= 0 || damage.internalStructure.leftLeg <= 0;
 }
 
 /** A weapon in `location` can fire only if that location (and its shoulder for arms) is intact. */
-export function canFireFromLocation(armor: ArmorState, location: Location): boolean {
-  if (armor[location] <= 0) return false;
-  if (location === "rightArm" || location === "rightLeg") return armor.rightTorso > 0;
-  if (location === "leftArm" || location === "leftLeg") return armor.leftTorso > 0;
+export function canFireFromLocation(damage: UnitDamageState, location: Location): boolean {
+  if (damage.internalStructure[location] <= 0) return false;
+  if (location === "rightArm" || location === "rightLeg") {
+    return damage.internalStructure.rightTorso > 0;
+  }
+  if (location === "leftArm" || location === "leftLeg") {
+    return damage.internalStructure.leftTorso > 0;
+  }
   return true;
 }

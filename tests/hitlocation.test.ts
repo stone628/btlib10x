@@ -4,7 +4,13 @@ import {
   clusterHitsForShots,
   groupMissiles,
 } from "../src/rules/cluster.js";
-import { hitLocation } from "../src/rules/hitlocation.js";
+import {
+  HIT_LOCATION_TABLE,
+  hitLocation,
+  hitLocationForArc,
+  LEFT_SIDE_TABLE,
+  RIGHT_SIDE_TABLE,
+} from "../src/rules/hitlocation.js";
 
 describe("hit location table", () => {
   it("maps every 2D6 result per the record sheets", () => {
@@ -24,6 +30,36 @@ describe("hit location table", () => {
   it("rejects impossible rolls", () => {
     expect(() => hitLocation(1)).toThrow();
     expect(() => hitLocation(13)).toThrow();
+  });
+
+  it("front and rear arcs share the front/rear column", () => {
+    for (const roll of [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]) {
+      expect(hitLocationForArc("front", roll)).toBe(HIT_LOCATION_TABLE[roll]);
+      expect(hitLocationForArc("rear", roll)).toBe(HIT_LOCATION_TABLE[roll]);
+    }
+  });
+
+  it("uses the left-side table for the left side arc", () => {
+    for (const roll of [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]) {
+      expect(hitLocationForArc("leftSide", roll)).toBe(LEFT_SIDE_TABLE[roll]);
+    }
+    expect(hitLocationForArc("leftSide", 2)).toBe("leftTorso");
+    expect(hitLocationForArc("leftSide", 8)).toBe("centerTorso");
+  });
+
+  it("uses the right-side table for the right side arc", () => {
+    for (const roll of [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]) {
+      expect(hitLocationForArc("rightSide", roll)).toBe(RIGHT_SIDE_TABLE[roll]);
+    }
+    expect(hitLocationForArc("rightSide", 2)).toBe("rightTorso");
+    expect(hitLocationForArc("rightSide", 8)).toBe("centerTorso");
+  });
+
+  it("rejects impossible rolls for every arc", () => {
+    for (const arc of ["front", "rear", "leftSide", "rightSide"] as const) {
+      expect(() => hitLocationForArc(arc, 1)).toThrow();
+      expect(() => hitLocationForArc(arc, 13)).toThrow();
+    }
   });
 });
 

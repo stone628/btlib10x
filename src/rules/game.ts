@@ -16,7 +16,7 @@ import type { ResolvedMechDef } from "../data/schema.js";
 import { getWeapon } from "../data/weapons.js";
 import { isInFrontArc } from "./arcs.js";
 import { type AttackResolution, resolveWeaponAttack } from "./attack.js";
-import { type ArmorState, canFireFromLocation, isImmobile, isKilled } from "./damage.js";
+import { canFireFromLocation, isImmobile, isKilled, type UnitDamageState } from "./damage.js";
 import { rollInitiative } from "./initiative.js";
 import { interveningHexes, losBlocked } from "./los.js";
 import * as mv from "./movement.js";
@@ -51,8 +51,8 @@ export interface UnitState {
   gunnery: number;
   position: Hex;
   facing: Facing;
-  armor: ArmorState;
-  phaseStartArmor: ArmorState;
+  damage: UnitDamageState;
+  phaseStartDamage: UnitDamageState;
   ammoLeft: Record<number, number>;
   jammedWeapons: number[];
   moveMode: MoveMode | null;
@@ -174,6 +174,11 @@ export function createBattle(
     def.weapons.forEach((mount, index) => {
       if (mount.ammoShots !== undefined) ammoLeft[index] = mount.ammoShots;
     });
+    const damage: UnitDamageState = {
+      armor: { ...def.armor },
+      armorRear: { ...def.armorRear },
+      internalStructure: { ...def.internalStructure },
+    };
     unitStates[init.id] = {
       id: init.id,
       model: init.model,
@@ -181,8 +186,12 @@ export function createBattle(
       gunnery: init.gunnery,
       position: { ...init.position },
       facing: init.facing,
-      armor: { ...def.armor },
-      phaseStartArmor: { ...def.armor },
+      damage,
+      phaseStartDamage: {
+        armor: { ...damage.armor },
+        armorRear: { ...damage.armorRear },
+        internalStructure: { ...damage.internalStructure },
+      },
       ammoLeft,
       jammedWeapons: [],
       moveMode: null,
@@ -244,7 +253,7 @@ export function declareMove(state: BattleState, unitId: string, mode: MoveMode):
   requirePhase(state, "movement");
   const unit = getUnitOrThrow(state, unitId);
   if (unit.removed) throw new Error(`${unitId} is removed from play`);
-  if (mode !== "standStill" && isImmobile(unit.armor)) {
+  if (mode !== "standStill" && isImmobile(unit.damage)) {
     throw new Error(`${unitId} has a destroyed leg and can only stand still`);
   }
   unit.moveMode = mode;
@@ -333,7 +342,7 @@ export function executeMove(
   if (spent > budget) {
     throw new Error(`Move costs ${spent} MP but ${unit.moveMode} budget is ${budget}`);
   }
-  if (steps.length > 0 && !jumping && unit.moveMode !== "standStill" && isImmobile(unit.armor)) {
+  if (steps.length > 0 && !jumping && unit.moveMode !== "standStill" && isImmobile(unit.damage)) {
     throw new Error(`${unitId} has a destroyed leg and cannot move`);
   }
 
@@ -379,7 +388,7 @@ export function declareAttacks(
     if (unit.jammedWeapons.includes(decl.weaponIndex)) {
       throw new Error(`${mount.weapon} on ${unitId} is jammed`);
     }
-    if (!canFireFromLocation(unit.phaseStartArmor, mount.location)) {
+    if (!canFireFromLocation(unit.phaseStartDamage, mount.location)) {
       throw new Error(
         `${mount.weapon} location (${mount.location}) is destroyed or its support torso is gone`,
       );
@@ -494,10 +503,10 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
       distance: hexDistance(unit.position, target.position),
       weaponName: weapon.name,
       shots,
-      targetArmor: target.armor,
+      targetDamage: target.damage,
     });
 
-    if (resolution.application !== null) target.armor = resolution.application.armor;
+    if (resolution.application !== null) target.damage = resolution.application.damage;
     if (resolution.jammed && !unit.jammedWeapons.includes(decl.weaponIndex)) {
       unit.jammedWeapons.push(decl.weaponIndex);
     }
@@ -509,7 +518,7 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
       resolution,
     });
 
-    if (!target.destroyed && isKilled(target.armor)) {
+    if (!target.destroyed && isKilled(target.damage)) {
       target.destroyed = true;
       target.removed = true;
       state.events.push(
@@ -556,14 +565,18 @@ export function advancePhase(state: BattleState): void {
     case "movement": {
       state.phase = "weaponAttack";
       for (const unit of Object.values(state.units)) {
-        unit.phaseStartArmor = { ...unit.armor };
+        unit.phaseStartDamage = {
+          armor: { ...unit.damage.armor },
+          armorRear: { ...unit.damage.armorRear },
+          internalStructure: { ...unit.damage.internalStructure },
+        };
       }
       state.actedThisPhase = [];
       break;
     }
     case "weaponAttack": {
       for (const unit of Object.values(state.units)) {
-        if (!unit.destroyed && isKilled(unit.armor)) {
+        if (!unit.destroyed && isKilled(unit.damage)) {
           unit.destroyed = true;
           unit.removed = true;
           state.events.push(

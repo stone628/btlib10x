@@ -2,8 +2,9 @@ import { roll2D6 } from "../core/dice.js";
 import type { Location, MoveMode, Rng, TerrainType } from "../core/types.js";
 import type { WeaponDef } from "../data/weapons.js";
 import { getWeapon } from "../data/weapons.js";
+import type { Arc } from "./arcs.js";
 import { clusterHitsForMissiles, clusterHitsForShots, groupMissiles } from "./cluster.js";
-import { type ArmorState, applyDamage, type DamageApplication } from "./damage.js";
+import { applyDamage, type DamageApplication, type UnitDamageState } from "./damage.js";
 import { hitLocation } from "./hitlocation.js";
 import { losWoodsPoints } from "./los.js";
 import { computeToHit, damageForBracket } from "./tohit.js";
@@ -25,7 +26,10 @@ export interface WeaponAttackInput {
   readonly weaponName: string;
   /** Shots fired this attack; >1 only valid for rapid-fire (R) weapons. */
   readonly shots?: number;
-  readonly targetArmor: ArmorState;
+  /** Layered damage state of the target. */
+  readonly targetDamage: UnitDamageState;
+  /** Firing arc; default front. */
+  readonly arc?: Arc;
 }
 
 export interface AttackResolution {
@@ -115,16 +119,17 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     });
   }
 
-  let armor = input.targetArmor;
+  let damage = input.targetDamage;
   let application: DamageApplication | null = null;
+  const arc = input.arc ?? "front";
   for (const group of base.groups) {
-    const app = applyDamage(armor, group.location, group.damage);
-    armor = app.armor;
+    const app = applyDamage(damage, group.location, group.damage, arc);
+    damage = app.damage;
     application =
       application === null
         ? app
         : {
-            armor: app.armor,
+            damage: app.damage,
             steps: [...application.steps, ...app.steps],
             newlyDestroyed: [...application.newlyDestroyed, ...app.newlyDestroyed],
             blownOffArms: [...application.blownOffArms, ...app.blownOffArms],

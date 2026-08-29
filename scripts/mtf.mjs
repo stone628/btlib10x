@@ -324,7 +324,7 @@ function parseMtf(text, file) {
     ammo !== null ? { weapon, location, ammoShots: ammo } : { weapon, location },
   );
 
-  const source = `docs/mtf/${file}${fields.Source ? ` (${fields.Source})` : ""}. Torso armor sums MTF front+rear into the flat model; rear torso armor kept in `armor`; shared ammo written on one mount.`;
+  const source = `docs/mtf/${file}${fields.Source ? ` (${fields.Source})` : ""}. Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount.`;
 
   const def = {
     model,

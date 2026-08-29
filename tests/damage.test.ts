@@ -1,97 +1,122 @@
 import { describe, expect, it } from "vitest";
-import { LOCATIONS } from "../src/core/types.js";
-import type { ArmorState } from "../src/rules/damage.js";
+import { LOCATIONS, type Location } from "../src/core/types.js";
+import type { ArmorState, UnitDamageState } from "../src/rules/damage.js";
 import { applyDamage, canFireFromLocation, isImmobile, isKilled } from "../src/rules/damage.js";
 
-function fullArmor(hp: number): ArmorState {
+/** Build a layered damage state; every location defaults to 10 armor / 10 IS. */
+function mk(
+  over: {
+    armor?: Partial<Record<Location, number>>;
+    armorRear?: Partial<Record<Location, number>>;
+    is?: Partial<Record<Location, number>>;
+  } = {},
+): UnitDamageState {
   const armor = {} as ArmorState;
-  for (const loc of LOCATIONS) armor[loc] = hp;
-  return armor;
+  const is = {} as ArmorState;
+  for (const loc of LOCATIONS) {
+    armor[loc] = over.armor?.[loc] ?? 10;
+    is[loc] = over.is?.[loc] ?? 10;
+  }
+  return { armor, armorRear: { ...over.armorRear }, internalStructure: is };
 }
 
-describe("damage resolution", () => {
-  // CBT-QS p.17 example: Hunchback left arm (16 armor) takes AC/10,
-  // large laser (8), small laser (3). Arm destroyed by laser; 2 points
-  // transfer to left torso; small laser then reduces LT 20 -> 15.
-  it("reproduces the Hunchback damage-transfer example", () => {
-    let armor: ArmorState = fullArmor(10);
-    armor.leftArm = 16;
-    armor.leftTorso = 20;
-
-    let app = applyDamage(armor, "leftArm", 10);
-    armor = app.armor;
-    expect(armor.leftArm).toBe(6);
-
-    app = applyDamage(armor, "leftArm", 8);
-    armor = app.armor;
-    expect(app.newlyDestroyed).toContain("leftArm");
-    expect(armor.leftArm).toBe(0);
-    expect(armor.leftTorso).toBe(18);
-
-    app = applyDamage(armor, "leftArm", 3);
-    armor = app.armor;
-    expect(app.steps[0]).toMatchObject({ location: "leftTorso", damageApplied: 3 });
-    expect(armor.leftTorso).toBe(15);
-    expect(isKilled(armor)).toBe(false);
+describe("layered damage resolution", () => {
+  it("drains front armor first, then the same location's internal structure", () => {
+    const s = mk({ armor: { centerTorso: 26 }, is: { centerTorso: 16 } });
+    const app = applyDamage(s, "centerTorso", 30);
+    expect(app.damage.armor.centerTorso).toBe(0);
+    expect(app.damage.internalStructure.centerTorso).toBe(12);
+    expect(app.killed).toBe(false);
+    expect(app.steps).toEqual([
+      { location: "centerTorso", pool: "armor", damageApplied: 26, depleted: true },
+      { location: "centerTorso", pool: "structure", damageApplied: 4, depleted: false },
+    ]);
   });
 
-  // Beginner Box p.8 example: Wolverine LA with 11 remaining takes PPC (10),
-  // then LRM lots of 5 and 3 -> arm destroyed, 4 overflow to LT, +3 more.
-  it("reproduces the Wolverine damage-transfer example", () => {
-    let armor: ArmorState = fullArmor(30);
-    armor.leftArm = 11;
-    armor.leftTorso = 20;
-
-    let app = applyDamage(armor, "leftArm", 10);
-    armor = app.armor;
-    expect(armor.leftArm).toBe(1);
-
-    app = applyDamage(armor, "leftArm", 5);
-    armor = app.armor;
-    expect(app.newlyDestroyed).toContain("leftArm");
-    expect(armor.leftTorso).toBe(16);
-
-    app = applyDamage(armor, "leftArm", 3);
-    armor = app.armor;
-    expect(armor.leftTorso).toBe(13);
+  it("non-penetrating hits leave internal structure untouched", () => {
+    const s = mk({ armor: { rightTorso: 12 }, is: { rightTorso: 7 } });
+    const app = applyDamage(s, "rightTorso", 10);
+    expect(app.damage.armor.rightTorso).toBe(2);
+    expect(app.damage.internalStructure.rightTorso).toBe(7);
+    expect(app.steps).toHaveLength(1);
   });
 
-  it("transfers fully when hitting an already-destroyed location", () => {
-    const armor = fullArmor(10);
-    armor.rightArm = 0;
-    const app = applyDamage(armor, "rightArm", 4);
+  it("rear-arc torso hits drain the rear pool, then that IS; front pool is untouched", () => {
+    const s = mk({
+      armor: { centerTorso: 10, rightTorso: 10 },
+      armorRear: { centerTorso: 5, rightTorso: 5 },
+      is: { centerTorso: 10, rightTorso: 7 },
+    });
+    const rear = applyDamage(s, "centerTorso", 8, "rear");
+    expect(rear.damage.armorRear.centerTorso).toBe(0);
+    expect(rear.damage.internalStructure.centerTorso).toBe(7);
+    expect(rear.damage.armor.centerTorso).toBe(10);
+
+    const front = applyDamage(s, "rightTorso", 12, "front");
+    expect(front.damage.armor.rightTorso).toBe(0);
+    expect(front.damage.internalStructure.rightTorso).toBe(5);
+    expect(front.damage.armorRear.rightTorso).toBe(5);
+  });
+
+  it("rear overflow through the rear pool can kill the 'Mech", () => {
+    const s = mk({
+      armor: { centerTorso: 0 },
+      armorRear: { centerTorso: 5 },
+      is: { centerTorso: 4 },
+    });
+    const app = applyDamage(s, "centerTorso", 9, "rear");
+    expect(app.killed).toBe(true);
+    expect(app.damage.armorRear.centerTorso).toBe(0);
+    expect(app.damage.internalStructure.centerTorso).toBe(0);
+  });
+
+  it("blows the arm off when its side torso structure is destroyed", () => {
+    const s = mk({ armor: { leftTorso: 0, leftArm: 10 }, is: { leftTorso: 8, leftArm: 9 } });
+    const app = applyDamage(s, "leftTorso", 8);
+    expect(app.newlyDestroyed).toContain("leftTorso");
+    expect(app.blownOffArms).toEqual(["leftArm"]);
+    expect(app.damage.internalStructure.leftArm).toBe(0);
+    expect(app.damage.armor.leftArm).toBe(0);
+    expect(canFireFromLocation(app.damage, "leftArm")).toBe(false);
+    expect(canFireFromLocation(app.damage, "leftTorso")).toBe(false);
+  });
+
+  it("arm IS destruction transfers overflow inward to the side torso", () => {
+    const s = mk({ armor: { leftArm: 0 }, is: { leftArm: 4, leftTorso: 10 } });
+    const app = applyDamage(s, "leftArm", 4);
+    expect(app.newlyDestroyed).toContain("leftArm");
+    expect(app.damage.internalStructure.leftArm).toBe(0);
+    expect(app.damage.internalStructure.leftTorso).toBe(10);
+
+    const app2 = applyDamage(app.damage, "leftArm", 7);
+    expect(app2.damage.armor.leftTorso).toBe(3);
+    expect(app2.damage.internalStructure.leftTorso).toBe(10);
+    expect(app2.newlyDestroyed).not.toContain("leftArm");
+  });
+
+  it("transfers immediately through a location drained to zero", () => {
+    const s = mk({ armor: { rightArm: 0 }, is: { rightArm: 0, rightTorso: 10 } });
+    const app = applyDamage(s, "rightArm", 4);
     expect(app.steps[0]?.location).toBe("rightTorso");
-    expect(app.armor.rightTorso).toBe(6);
+    expect(app.steps[0]?.pool).toBe("armor");
+    expect(app.damage.armor.rightTorso).toBe(6);
   });
 
-  it("blows off the arm when its side torso is destroyed", () => {
-    const armor = fullArmor(10);
-    armor.rightTorso = 5;
-    const app = applyDamage(armor, "rightTorso", 8);
-    expect(app.blownOffArms).toEqual(["rightArm"]);
-    expect(app.armor.rightArm).toBe(0);
-    expect(canFireFromLocation(app.armor, "rightArm")).toBe(false);
-    expect(canFireFromLocation(app.armor, "rightTorso")).toBe(false);
+  it("destroys the 'Mech when center torso or head structure is depleted", () => {
+    const ct = mk({ armor: { centerTorso: 0 }, is: { centerTorso: 4 } });
+    expect(applyDamage(ct, "centerTorso", 4).killed).toBe(true);
+
+    const head = mk({ armor: { head: 0 }, is: { head: 2 } });
+    const headApp = applyDamage(head, "head", 2);
+    expect(headApp.killed).toBe(true);
+    expect(isKilled(headApp.damage)).toBe(true);
   });
 
-  it("kills via center torso or head and stops transferring there", () => {
-    const a = fullArmor(10);
-    const ctHit = applyDamage(a, "centerTorso", 25);
-    expect(ctHit.killed).toBe(true);
-
-    const b = fullArmor(10);
-    b.head = 3;
-    const headHit = applyDamage(b, "head", 3);
-    expect(headHit.killed).toBe(true);
-    expect(isKilled(headHit.armor)).toBe(true);
-  });
-
-  it("immobilizes when either leg is destroyed but the 'Mech survives", () => {
-    const armor = fullArmor(10);
-    armor.leftLeg = 2;
-    const app = applyDamage(armor, "leftLeg", 5);
-    expect(app.armor.leftLeg).toBe(0);
-    expect(isImmobile(app.armor)).toBe(true);
-    expect(isKilled(app.armor)).toBe(false);
+  it("immobilizes when a leg structure is destroyed but the 'Mech survives", () => {
+    const s = mk({ armor: { leftLeg: 2 }, is: { leftLeg: 5 } });
+    const app = applyDamage(s, "leftLeg", 7);
+    expect(app.damage.armor.leftLeg).toBe(0);
+    expect(isImmobile(app.damage)).toBe(true);
+    expect(isKilled(app.damage)).toBe(false);
   });
 });

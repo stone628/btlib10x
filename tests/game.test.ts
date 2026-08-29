@@ -92,9 +92,9 @@ describe("createBattle", () => {
   it("initializes armor and ammo from the definition", () => {
     const state = hbkVsEnf();
     const hbk = getUnit(state, "hbk");
-    expect(hbk.armor).toEqual(state.defs["HBK-4G"]!.armor);
+    expect(hbk.damage.armor).toEqual(state.defs["HBK-4G"]!.armor);
     expect(hbk.ammoLeft["0"]).toBe(10);
-    expect(hbk.phaseStartArmor).toEqual(hbk.armor);
+    expect(hbk.phaseStartDamage).toEqual(hbk.damage);
     expect(state.phase).toBe("initiative");
     expect(state.turn).toBe(1);
   });
@@ -487,13 +487,13 @@ describe("weapon attack phase", () => {
   it("resolves scripted attacks immediately and commits kills only at end of phase", () => {
     const state = startAttackTurn(hbkVsEnf());
     declareAttacks(state, "hbk", [{ weaponIndex: 0, targetId: "enf" }]);
-    // Turn 1: AC/20 (20 dmg) hits CT (roll 5) -> 27 - 20 = 7 left.
+    // Turn 1: AC/20 (20 dmg) hits CT (roll 5) -> front 23 - 20 = 3 left.
     resolveDeclaredAttacks(state, "hbk", scriptedRng(2, 3, 3, 4));
-    expect(getUnit(state, "enf").armor.centerTorso).toBe(7);
+    expect(getUnit(state, "enf").damage.armor.centerTorso).toBe(3);
     expect(getUnit(state, "enf").destroyed).toBe(false);
 
     advancePhase(state); // weaponAttack -> end
-    expect(getUnit(state, "enf").destroyed).toBe(false); // survived with 7 CT
+    expect(getUnit(state, "enf").destroyed).toBe(false); // survived with 3 CT
 
     advancePhase(state); // end -> initiative, turn 2
     expect(state.turn).toBe(2);
@@ -504,7 +504,7 @@ describe("weapon attack phase", () => {
     advancePhase(state);
     declareAttacks(state, "hbk", [{ weaponIndex: 0, targetId: "enf" }]);
     resolveDeclaredAttacks(state, "hbk", scriptedRng(6, 6, 3, 4)); // hit CT again
-    expect(getUnit(state, "enf").armor.centerTorso).toBe(0);
+    expect(getUnit(state, "enf").damage.armor.centerTorso).toBe(0);
     expect(getUnit(state, "enf").destroyed).toBe(true); // killed immediately
     expect(getUnit(state, "enf").removed).toBe(true);
 
@@ -541,6 +541,8 @@ describe("weapon attack phase", () => {
     resolveDeclaredAttacks(state, "her", scriptedRng(1, 1)); // natural 2 -> jam
     const her = getUnit(state, "her");
     expect(her.jammedWeapons).toEqual([2]);
-    expect(getUnit(state, "cda").armor.centerTorso).toBe(state.defs["CDA-3MA"]!.armor.centerTorso);
+    expect(getUnit(state, "cda").damage.armor.centerTorso).toBe(
+      state.defs["CDA-3MA"]!.armor.centerTorso,
+    );
   });
 });

@@ -25,7 +25,7 @@ function fireEverything(s: S.Session, enemy: string): void {
   const def = st.defs[unit.model]!;
   def.weapons.forEach((_mount, w) => {
     if (unit.jammedWeapons.includes(w)) return;
-    if (!canFireFromLocation(unit.phaseStartArmor, def.weapons[w]!.location)) return;
+    if (!canFireFromLocation(unit.phaseStartDamage, def.weapons[w]!.location)) return;
     if (unit.ammoLeft[w] !== undefined && (unit.ammoLeft[w] ?? 0) < 1) return;
     S.queueFire(s, { weaponIndex: w, targetId: enemy });
   });
@@ -252,7 +252,7 @@ describe("sheet", () => {
     // Battle ended; at least one unit took damage.
     const allUnits = Object.values(s.battle!.units);
     const damaged = allUnits.some((u) =>
-      Object.values(u.armor).some(
+      Object.values(u.damage.armor).some(
         (v) =>
           v <
           Object.values(s.battle!.defs[u.model]!.armor).reduce(
@@ -398,7 +398,7 @@ describe("full game", () => {
         const def = st.defs[unit.model]!;
         def.weapons.forEach((mount, w) => {
           if (unit.jammedWeapons.includes(w)) return;
-          if (!canFireFromLocation(unit.phaseStartArmor, mount.location)) return;
+          if (!canFireFromLocation(unit.phaseStartDamage, mount.location)) return;
           if (unit.ammoLeft[w] !== undefined && (unit.ammoLeft[w] ?? 0) < 1) return;
           run(s, `fire ${w + 1} ${enemy}`);
         });

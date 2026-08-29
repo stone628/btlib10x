@@ -2,7 +2,22 @@
 
 ## In progress
 
-(none)
+- Classic rules expansion (this phase): internal structure, rear armor, firing-arc damage
+  - [x] Decisions: IS derived from tonnage (TW standard table); rear armor is a separate pool (fat split); full front/leftSide/rightSide/rear hit-location tables; refactor core rather than additive mode; side torso hits use front armor pool; firing stays front-arc-only this milestone
+  - [x] Internal structure derivation helper + tests (`src/rules/internalStructure.ts`, TW standard table: 20–100 in 5t rows, head=3)
+  - [x] `resolveMechDef`/`ResolvedMechDef` carry front + rear separately (stop summing): `armor` (front), `armorRear` (3 torso), `internalStructure` (derived)
+  - [x] Layered damage model (`damage.ts`): front/rear armor + internal structure, arc-aware transfer; side-torso IS death blows off arm; head/CT IS death kills; leg IS death immobilizes; quick-start transfer graph preserved through the IS layer
+  - [x] Arc classification (`arcs.ts`): front / leftSide / rightSide / rear (`classifyArc`). Firing still front-arc-only (dormant infra)
+  - [x] Arc hit-location tables (`hitlocation.ts`): `LEFT_SIDE_TABLE`/`RIGHT_SIDE_TABLE` + `hitLocationForArc`
+  - [x] Wire arc + layered damage through `attack.ts` / `game.ts`/`fireability.ts` (`UnitDamageState` on `UnitState`)
+  - [x] Web layer: armor diagram + mech info show internal structure (I) / front (F/A) / rear (R)
+  - [x] Public API exports (incl. `Arc`, `UnitDamageState`, `hitLocationForArc`, side tables, `internalStructureForTonnage`)
+  - [x] Update downstream tests; lint + typecheck + test + build green (155 tests / 17 files)
+- Later in classic expansion: heat, physicals, piloting/falling, elevation, torso twist / side+rear firing arcs, vehicles/infantry
+
+## Done
+
+- [x] Rear torso armor added to JSON schema + `MechDef` front/rear split, summed into flat armor for the quick-start engine (`ResolvedMechDef`, `resolveMechDef`); 8 mech JSONs carry front + `centerTorsoRear`/`leftTorsoRear`/`rightTorsoRear`
 
 ## Done
 

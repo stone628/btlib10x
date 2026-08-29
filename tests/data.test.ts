@@ -24,15 +24,15 @@ describe("'Mech definitions", () => {
     expect(hbk.walking).toBe(4);
     expect(hbk.running).toBe(6);
     expect(hbk.jumping).toBe(0);
-    expect(hbk.armor.centerTorso).toBe(31);
+    expect(hbk.armor.centerTorso).toBe(26);
     expect(hbk.armor.head).toBe(9);
     expect(hbk.weapons.map((w) => w.weapon)).toContain("Autocannon/20");
   });
 
   it("spot-checks remaining sheets", () => {
-    expect(MECH_DEFS["ENF-4R"]!.armor.centerTorso).toBe(27);
+    expect(MECH_DEFS["ENF-4R"]!.armor.centerTorso).toBe(23);
     expect(MECH_DEFS["GRF-1N"]!.jumping).toBe(5);
-    expect(MECH_DEFS["GRF-1N"]!.armor.centerTorso).toBe(27);
+    expect(MECH_DEFS["GRF-1N"]!.armor.centerTorso).toBe(20);
     expect(MECH_DEFS["CDA-3MA"]!.walking).toBe(8);
     expect(MECH_DEFS["HER-5SA"]!.running).toBe(9);
     const wvr = MECH_DEFS["WVR-6R"]!;
@@ -44,7 +44,7 @@ describe("'Mech definitions", () => {
     expect(atlas.weapons.find((w) => w.weapon === "LRM 20")?.ammoShots).toBe(12);
   });
 
-  it("keeps MTF armor fidelity in the JSON schema (front + rear) and sums on resolve", () => {
+  it("keeps MTF armor fidelity (front + rear) in JSON and splits it on resolve", () => {
     const json = {
       model: "TEST",
       name: "Test",
@@ -76,10 +76,21 @@ describe("'Mech definitions", () => {
     expect(raw.armor.rightTorsoRear).toBe(4);
     expect(raw.armor.leftTorsoRear).toBe(4);
     const resolved = resolveMechDef(raw);
-    expect(resolved.armor.centerTorso).toBe(31);
-    expect(resolved.armor.rightTorso).toBe(24);
-    expect(resolved.armor.leftTorso).toBe(24);
+    expect(resolved.armor.centerTorso).toBe(26);
+    expect(resolved.armor.rightTorso).toBe(20);
     expect("centerTorsoRear" in resolved.armor).toBe(false);
+    expect(resolved.armorRear.centerTorso).toBe(5);
+    expect(resolved.armorRear.rightTorso).toBe(4);
+    expect(resolved.armorRear.leftTorso).toBe(4);
+    expect(resolved.internalStructure.centerTorso).toBe(16);
+    expect(resolved.internalStructure.rightTorso).toBe(12);
+    expect(resolved.internalStructure.rightArm).toBe(8);
+  });
+
+  it("derives internal structure from the tonnage table on resolve", () => {
+    expect(resolveMechDef(MECH_DEFS["WVR-6R"]!).internalStructure.centerTorso).toBe(18);
+    expect(resolveMechDef(MECH_DEFS["AS7-D"]!).internalStructure.centerTorso).toBe(31);
+    expect(resolveMechDef(MECH_DEFS["AS7-D"]!).internalStructure.rightArm).toBe(17);
   });
 
   it("rejects invalid rear armor entries in the JSON schema", () => {

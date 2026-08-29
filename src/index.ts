@@ -15,7 +15,14 @@ export {
   woodsPoints,
 } from "./core/terrain.js";
 export * from "./core/types.js";
-export type { MapDef } from "./data/index.js";
+export type {
+  MapDef,
+  MechDef,
+  RearArmorKey,
+  ResolvedArmor,
+  ResolvedMechDef,
+  WeaponMount,
+} from "./data/index.js";
 export {
   getMapDef,
   getMechDef,
@@ -25,13 +32,6 @@ export {
   toEngineTerrain,
   validateMapDef,
   validateMechDef,
-} from "./data/index.js";
-export type {
-  MechDef,
-  RearArmorKey,
-  ResolvedArmor,
-  ResolvedMechDef,
-  WeaponMount,
 } from "./data/index.js";
 export type { WeaponDef } from "./data/weapons.js";
 export { getWeapon, WEAPONS } from "./data/weapons.js";
@@ -44,6 +44,7 @@ export * from "./rules/fireability.js";
 export * from "./rules/game.js";
 export * from "./rules/hitlocation.js";
 export * from "./rules/initiative.js";
+export * from "./rules/internalStructure.js";
 export * from "./rules/los.js";
 export * from "./rules/movement.js";
 export * from "./rules/tohit.js";
