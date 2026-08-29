@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bearing, hexDistance, isAdjacent, lineHexes, neighbor, sameHex } from "../src/core/hex.js";
+import { DEFAULT_LEVEL, levelAt } from "../src/core/terrain.js";
 
 describe("hex geometry", () => {
   it("computes odd-q neighbors on flat-top hexes", () => {
@@ -54,5 +55,11 @@ describe("hex geometry", () => {
     }
     expect(isAdjacent(a, { col: 4, row: 5 })).toBe(false);
     expect(isAdjacent(a, { col: 0, row: 0 })).toBe(false);
+  });
+
+  it("reads elevation off a per-hex map and defaults to 0", () => {
+    const hex = { col: 2, row: 3 };
+    expect(levelAt({}, hex)).toBe(DEFAULT_LEVEL);
+    expect(levelAt({ "2,3": 2 }, hex)).toBe(2);
   });
 });

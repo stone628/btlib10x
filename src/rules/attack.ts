@@ -30,6 +30,10 @@ export interface WeaponAttackInput {
   readonly targetDamage: UnitDamageState;
   /** Firing arc; default front. */
   readonly arc?: Arc;
+  /** Attacker's ground elevation in levels (default 0). */
+  readonly attackerLevel?: number;
+  /** Target's ground elevation in levels (default 0). */
+  readonly targetLevel?: number;
 }
 
 export interface AttackResolution {
@@ -58,6 +62,8 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     interveningWoods: losWoodsPoints(input.interveningTerrains),
     distance: input.distance,
     weapon,
+    ...(input.attackerLevel !== undefined ? { attackerLevel: input.attackerLevel } : {}),
+    ...(input.targetLevel !== undefined ? { targetLevel: input.targetLevel } : {}),
   });
 
   const base = {

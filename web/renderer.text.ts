@@ -64,8 +64,6 @@ const HEX_WIDTH = 8;
 const COL_STRIDE = 6;
 const ROW_STRIDE = 4;
 const STAGGER = 2;
-/** Quick-start rules have no elevation; every hex renders at level 0. */
-const ELEVATION_DIGIT = "0";
 
 /**
  * Structural characters of the hex grid itself: the three horizontal edge
@@ -152,7 +150,7 @@ function stampInto(
 /** Assemble a {@link BoardModel} into the char/style canvases. */
 function drawCanvas(model: BoardModel): Canvas {
   const canvas = makeCanvas(model);
-  const { cols, rows, cells, marks, styles, cellStyles, facings } = model;
+  const { cols, rows, cells, marks, elevations, styles, cellStyles, facings } = model;
 
   const setChar = (x: number, y: number, ch: string, st: CharStyle | null): void => {
     const line = canvas.rows[y];
@@ -195,10 +193,11 @@ function drawCanvas(model: BoardModel): Canvas {
       }
       stamp(x + 1, y + 3, `${GRID_GLYPHS.edgeSW}    ${GRID_GLYPHS.edgeSE}`, style);
       const mark = marks?.[key];
+      const level = elevations?.[key] ?? 0;
       if (mark !== undefined && mark.length > 0) {
-        stamp(x + 2, y + 3, fitCell(`${mark}${ELEVATION_DIGIT}`, 4), style);
+        stamp(x + 2, y + 3, fitCell(`${mark}${level}`, 4), style);
       } else {
-        stamp(x + 4, y + 3, ELEVATION_DIGIT, style);
+        stamp(x + 4, y + 3, String(level), style);
       }
       stampEdge(
         x,
@@ -313,12 +312,14 @@ export function boardToChars(model: BoardModel): Span[][] {
  * Structured static map sheet: terrain hexes draw their
  * {@link TERRAIN_GLYPHS} marker at the bottom center of the hex (`\ w /`),
  * tinted via {@link TERRAIN_STYLES}. Pass `styles` to override tinting.
+ * Pass `elevations` to render non-zero ground levels on the map.
  */
 export function mapModel(
   terrain: readonly TerrainHexDef[],
   width: number,
   height: number,
   styles?: Readonly<Record<string, CharStyle>>,
+  elevations?: Readonly<Record<string, number>>,
 ): BoardModel {
   const marks: Record<string, string> = {};
   const auto: Record<string, CharStyle> = {};
@@ -330,11 +331,18 @@ export function mapModel(
       if (st !== undefined) auto[`${col},${row}`] = st;
     }
   }
+  const filteredElevations =
+    elevations !== undefined
+      ? Object.fromEntries(Object.entries(elevations).filter(([, v]) => v !== 0))
+      : undefined;
   return {
     cols: Math.max(1, width),
     rows: Math.max(1, height),
     cells: {},
     ...(Object.keys(marks).length > 0 ? { marks } : {}),
+    ...(filteredElevations !== undefined && Object.keys(filteredElevations).length > 0
+      ? { elevations: filteredElevations }
+      : {}),
     ...(styles !== undefined ? { styles } : Object.keys(auto).length > 0 ? { styles: auto } : {}),
   };
 }
@@ -409,10 +417,18 @@ export function battleModel(
       return Object.keys(m).length > 0 ? m : undefined;
     })();
 
+  const filteredElevations =
+    state.elevation && Object.keys(state.elevation).length > 0
+      ? Object.fromEntries(Object.entries(state.elevation).filter(([, v]) => v !== 0))
+      : undefined;
+
   return {
     cols: Math.max(1, state.width ?? maxCol + 1),
     rows: Math.max(1, state.height ?? maxRow + 1),
     cells,
+    ...(filteredElevations !== undefined && Object.keys(filteredElevations).length > 0
+      ? { elevations: filteredElevations }
+      : {}),
     ...(Object.keys(facings).length > 0 ? { facings } : {}),
     ...(resolvedMarks === undefined ? {} : { marks: resolvedMarks }),
     ...(styles !== undefined ? { styles } : Object.keys(auto).length > 0 ? { styles: auto } : {}),

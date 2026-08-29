@@ -81,6 +81,33 @@ describe("validateMapDef", () => {
       }),
     ).toThrow(/duplicates hex 1,1/);
   });
+
+  it("accepts an optional non-negative integer `level` per hex", () => {
+    const withLevel: MapDef = {
+      width: 2,
+      height: 1,
+      terrain: [
+        { col: 1, row: 1, type: "clear", level: 2 },
+        { col: 2, row: 1, type: "clear" },
+      ],
+    };
+    expect(validateMapDef(withLevel)).toEqual(withLevel);
+  });
+
+  it("rejects malformed `level`", () => {
+    expect(() =>
+      validateMapDef({
+        ...valid,
+        terrain: [{ col: 1, row: 1, type: "clear", level: -1 }],
+      }),
+    ).toThrow(/level must be a non-negative integer/);
+    expect(() =>
+      validateMapDef({
+        ...valid,
+        terrain: [{ col: 1, row: 1, type: "clear", level: 1.5 }],
+      }),
+    ).toThrow(/level must be a non-negative integer/);
+  });
 });
 
 describe("bundled maps", () => {

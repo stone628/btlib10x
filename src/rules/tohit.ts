@@ -14,6 +14,10 @@ export interface AttackModifiers {
   readonly interveningWoods: number;
   readonly distance: number;
   readonly weapon: WeaponDef;
+  /** Attacker's ground elevation in levels (default 0). */
+  readonly attackerLevel?: number;
+  /** Target's ground elevation in levels (default 0). */
+  readonly targetLevel?: number;
 }
 
 export interface ToHitBreakdown {
@@ -26,6 +30,13 @@ export interface ToHitBreakdown {
   readonly pulseMod: number;
   /** Closer-than-minimum-range penalty: (minRange - distance) + 1, else 0. */
   readonly minRangeMod: number;
+  /**
+   * Height difference (attackerLevel - targetLevel). Positive = attacker
+   * higher; the same sign is subtracted from TN via {@link heightMod}.
+   */
+  readonly heightDiff: number;
+  /** -heightDiff: positive heightDiff reduces TN. */
+  readonly heightMod: number;
   readonly total: number;
   readonly rangeBracket: RangeBracket;
   /** Modified TN <= 2 auto-hits; > 12 auto-misses (attack may be aborted). */
@@ -57,6 +68,8 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
       rangeMod: 0,
       pulseMod: 0,
       minRangeMod: 0,
+      heightDiff: 0,
+      heightMod: 0,
       total: Number.POSITIVE_INFINITY,
       rangeBracket: "long",
       automatic: "miss",
@@ -77,8 +90,11 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     mods.weapon.minRange !== undefined && mods.distance <= mods.weapon.minRange
       ? mods.weapon.minRange - mods.distance + 1
       : 0;
+  const heightDiff = (mods.attackerLevel ?? 0) - (mods.targetLevel ?? 0);
+  const heightMod = heightDiff === 0 ? 0 : -heightDiff;
 
-  const total = mods.gunnery + attackerMod + targetMod + terrainMod + rangeMod + pulseMod + min;
+  const total =
+    mods.gunnery + attackerMod + targetMod + terrainMod + rangeMod + pulseMod + min + heightMod;
 
   return {
     gunnery: mods.gunnery,
@@ -88,6 +104,8 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     rangeMod,
     pulseMod,
     minRangeMod: min,
+    heightDiff,
+    heightMod,
     total,
     rangeBracket: bracket,
     automatic: total <= 2 ? "hit" : total > 12 ? "miss" : null,

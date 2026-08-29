@@ -49,6 +49,8 @@ export interface BoardModel {
   readonly cells: Readonly<Record<string, string>>;
   /** Glyphs drawn at the hex bottom center (e.g. terrain markers). */
   readonly marks?: Readonly<Record<string, string>> | undefined;
+  /** Per-hex ground elevation; missing entries are level 0. */
+  readonly elevations?: Readonly<Record<string, number>> | undefined;
   /** Per-hex mech facing (`"col,row"` → {@link Facing}); drawn on the grid. */
   readonly facings?: Readonly<Record<string, Facing>> | undefined;
   /** Style applied to a hex's characters: grid rows, belly parens and mark. */

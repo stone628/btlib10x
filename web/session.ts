@@ -15,6 +15,7 @@ import type {
 import {
   advancePhase,
   checkVictory,
+  costToClimb,
   costToEnter,
   createBattle,
   declareAttacks,
@@ -27,6 +28,7 @@ import {
   isAdjacent,
   isBackwardStep,
   isForwardStep,
+  levelAt,
   MAP_DEFS,
   MECH_DEFS,
   maxMovePoints,
@@ -282,9 +284,16 @@ function replaySteps(s: Session): MoveCursor {
       cur.facing = rotateFacing(cur.facing, step.facings);
       cur.spent += facingChangeCost(Math.abs(step.facings));
     } else {
+      const battle = requireBattle(s);
+      const fromLevel = levelAt(battle.elevation, cur.hex);
+      const toLevel = levelAt(battle.elevation, step.to);
       cur.hex = { ...step.to };
-      cur.spent +=
-        s.moveMode === "jump" ? 1 : costToEnter(terrainAt(requireBattle(s).terrain, step.to));
+      if (s.moveMode === "jump") {
+        cur.spent += 1;
+      } else {
+        cur.spent +=
+          costToEnter(terrainAt(battle.terrain, step.to)) + costToClimb(fromLevel, toLevel);
+      }
     }
   }
   return cur;
@@ -321,6 +330,7 @@ export function queueEnter(s: Session, to: Hex): void {
   const cur = replaySteps(s);
   if (sameHex(cur.hex, to)) throw new Error(t(s.locale, "err.alreadyThere"));
   if (s.moveMode === "standStill") throw new Error(t(s.locale, "err.standStillNoEnter"));
+  const battle = requireBattle(s);
   let cost: number;
   if (s.moveMode === "jump") {
     if (!isAdjacent(cur.hex, to)) throw new Error(t(s.locale, "err.jumpNotAdjacent"));
@@ -331,7 +341,12 @@ export function queueEnter(s: Session, to: Hex): void {
     if (!forward && !backward) {
       throw new Error(t(s.locale, "err.groundStraightOnly"));
     }
-    cost = costToEnter(terrainAt(requireBattle(s).terrain, to));
+    const fromLevel = levelAt(battle.elevation, cur.hex);
+    const toLevel = levelAt(battle.elevation, to);
+    if (toLevel - fromLevel > 1) {
+      throw new Error(t(s.locale, "err.climbTooSteep", { col: to.col + 1, row: to.row + 1 }));
+    }
+    cost = costToEnter(terrainAt(battle.terrain, to)) + costToClimb(fromLevel, toLevel);
   }
   const spent = cur.spent + cost;
   const budget = budgetFor(s);
@@ -431,7 +446,7 @@ export function moveStepsInfo(s: Session): {
 } {
   const unit = currentActor(s);
   if (!unit || !s.battle) throw new Error(t(s.locale, "err.needsActor"));
-  const terrain = s.battle.terrain;
+  const { terrain, elevation } = s.battle;
   const steps: MoveStepInfo[] = [];
   let _hex: Hex = { ...unit.position };
   let facing: Facing = unit.facing;
@@ -455,8 +470,14 @@ export function moveStepsInfo(s: Session): {
         col: step.to.col + 1,
         row: step.to.row + 1,
       });
+      const fromLevel = levelAt(elevation, _hex);
+      const toLevel = levelAt(elevation, step.to);
       _hex = { ...step.to };
-      cost = s.moveMode === "jump" ? 1 : costToEnter(terrainAt(terrain, step.to));
+      if (s.moveMode === "jump") {
+        cost = 1;
+      } else {
+        cost = costToEnter(terrainAt(terrain, step.to)) + costToClimb(fromLevel, toLevel);
+      }
     }
     spent += cost;
     steps.push({ label, mpCost: cost, mpAfter: spent });

@@ -34,11 +34,15 @@ export interface TerrainHexDef {
   readonly col: number;
   readonly row: number;
   readonly type: TerrainType;
+  /** Ground elevation in levels. Default 0. */
+  readonly level?: number;
 }
 
+/** A coordinate on the hex grid plus its ground elevation (default 0). */
 export interface Hex {
   col: number;
   row: number;
+  level?: number;
 }
 
 export type MoveMode = "standStill" | "walk" | "run" | "jump";

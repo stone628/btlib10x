@@ -23,6 +23,7 @@ function reach(
   width: number = boardWidth,
   height: number = boardHeight,
   at: { col: number; row: number } = start,
+  elevation: Record<string, number> = {},
 ) {
   return reachableLandings(at, facing, {
     mode,
@@ -30,6 +31,7 @@ function reach(
     running,
     jumping,
     terrain,
+    elevation,
     team,
     occupantTeam,
     width,
@@ -130,6 +132,7 @@ describe("reachableLandings", () => {
       running: 6,
       jumping: 0,
       terrain: clear,
+      elevation: {},
       team: 0,
       occupantTeam: noOccupants,
       width: 13,
@@ -141,5 +144,34 @@ describe("reachableLandings", () => {
       expect(l.hex.col).toBeLessThan(13);
       expect(l.hex.row).toBeLessThan(13);
     }
+  });
+
+  it("charges +1 MP per level climbed for ground moves", () => {
+    // A two-MP walk onto a level-1 hex costs 2 (base 1 + climb 1).
+    const elevation = { "10,9": 1 };
+    const rs = reach("walk", 2, 3, 0, "n", clear, noOccupants, 21, 21, start, elevation);
+    expect(lookup(rs, { col: 10, row: 9 }, "n")).toEqual(["F"]);
+  });
+
+  it("rejects a +2 level ground step", () => {
+    // Climbing onto a level-2 hex in one step is not legal.
+    const elevation = { "10,9": 2 };
+    const rs = reach("walk", 4, 6, 0, "n", clear, noOccupants, 21, 21, start, elevation);
+    expect(lookup(rs, { col: 10, row: 9 }, "n")).toBeUndefined();
+  });
+
+  it("descent is free", () => {
+    // Starting from a level-1 hex, walking onto a level-0 hex costs just 1 MP.
+    const elevation = { "10,10": 1 };
+    const rs = reach("walk", 1, 1, 0, "n", clear, noOccupants, 21, 21, start, elevation);
+    expect(lookup(rs, { col: 10, row: 9 }, "n")).toEqual(["F"]);
+  });
+
+  it("jump ignores elevation and can change level freely", () => {
+    // A single jump to a level-3 hex is reachable in 1 MP, even though no
+    // ground step of 3 levels would be allowed.
+    const elevation = { "10,9": 3 };
+    const rs = reach("jump", 6, 8, 1, "n", clear, noOccupants, 21, 21, start, elevation);
+    expect(lookup(rs, { col: 10, row: 9 }, "n")).toEqual(["F"]);
   });
 });

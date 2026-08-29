@@ -1,5 +1,5 @@
 import { neighbor } from "../core/hex.js";
-import { costToEnter, MP_PER_FACING_CHANGE } from "../core/terrain.js";
+import { costToClimb, costToEnter, levelAt, MP_PER_FACING_CHANGE } from "../core/terrain.js";
 import type { Facing, Hex, MoveMode, TerrainType } from "../core/types.js";
 import { FACINGS, oppositeFacing, rotateFacing } from "../core/types.js";
 
@@ -113,6 +113,8 @@ export interface ReachabilityOptions {
   readonly running: number;
   readonly jumping: number;
   readonly terrain: Readonly<Record<string, TerrainType>>;
+  /** Per-hex ground elevation; missing entries are level 0. */
+  readonly elevation: Readonly<Record<string, number>>;
   /** The mover's team. */
   readonly team: number;
   /** Team of the unit occupying a hex, or undefined when empty. */
@@ -151,8 +153,10 @@ export function reachableLandings(
   // Ground: R/L cost 1 MP. Jump: R/L are free reorientations before/after the
   // 1-MP jump step (landing facing is chosen freely on jump).
   const turnCost = jumping ? 0 : 1;
-  const stepCost = (hex: Hex): number =>
-    jumping ? 1 : costToEnter(terrainAt(options.terrain, hex));
+  const stepCost = (hex: Hex): number => {
+    if (jumping) return 1;
+    return costToEnter(terrainAt(options.terrain, hex));
+  };
   const backwardAllowed = jumping || options.mode === "walk";
 
   interface State {
@@ -182,11 +186,14 @@ export function reachableLandings(
   const point = (a: Hex, b: Hex): boolean => a.col === b.col && a.row === b.row;
   const inBounds = (hex: Hex): boolean =>
     hex.col >= 0 && hex.col < options.width && hex.row >= 0 && hex.row < options.height;
-  // Ground pass-through: friendly-occupied hexes are passable but never landable.
+  // Ground pass-through: friendly-occupied hexes are passable but never landable,
+  // and a 'Mech cannot step more than one level up in a single hex (jump ignores
+  // the climb cap and may change level freely).
   // Jump pass-through: any in-bounds hex; landing is restricted separately.
-  const canEnter = (hex: Hex): boolean => {
+  const canEnter = (from: Hex, hex: Hex): boolean => {
     if (!inBounds(hex)) return false;
     if (jumping) return true;
+    if (levelAt(options.elevation, hex) - levelAt(options.elevation, from) > 1) return false;
     const occ = options.occupantTeam(hex);
     return occ === undefined || occ === options.team;
   };
@@ -211,16 +218,23 @@ export function reachableLandings(
     }
 
     // Step transitions: F (forward) and, when allowed, B (backward). The
-    // 'Mech keeps its facing after entering the hex.
+    // 'Mech keeps its facing after entering the hex. Ground moves also pay
+    // +1 MP per level climbed (descent is free); jumps ignore elevation.
     const forward = neighbor(cur.hex, cur.facing);
-    if (canEnter(forward)) {
-      const c = cur.cost + stepCost(forward);
+    if (canEnter(cur.hex, forward)) {
+      const climb = jumping
+        ? 0
+        : costToClimb(levelAt(options.elevation, cur.hex), levelAt(options.elevation, forward));
+      const c = cur.cost + stepCost(forward) + climb;
       if (c <= budget) enqueue(forward, cur.facing, c, [...cur.path, "F"]);
     }
     if (backwardAllowed) {
       const backward = neighbor(cur.hex, oppositeFacing(cur.facing));
-      if (canEnter(backward)) {
-        const c = cur.cost + stepCost(backward);
+      if (canEnter(cur.hex, backward)) {
+        const climb = jumping
+          ? 0
+          : costToClimb(levelAt(options.elevation, cur.hex), levelAt(options.elevation, backward));
+        const c = cur.cost + stepCost(backward) + climb;
         if (c <= budget) enqueue(backward, cur.facing, c, [...cur.path, "B"]);
       }
     }

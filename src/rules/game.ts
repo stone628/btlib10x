@@ -1,5 +1,5 @@
 import { bearing, hexDistance, isAdjacent, sameHex } from "../core/hex.js";
-import { costToEnter } from "../core/terrain.js";
+import { costToClimb, costToEnter, levelAt } from "../core/terrain.js";
 import {
   type Facing,
   type Hex,
@@ -17,7 +17,12 @@ import { isInFrontArc } from "./arcs.js";
 import { type AttackResolution, resolveWeaponAttack } from "./attack.js";
 import { canFireFromLocation, isImmobile, isKilled, type UnitDamageState } from "./damage.js";
 import { rollInitiative } from "./initiative.js";
-import { interveningTerrains, losBlocked, losWoodsPointsBetween } from "./los.js";
+import {
+  interveningTerrains,
+  losBlockedByElevation,
+  losClear,
+  losWoodsPointsBetween,
+} from "./los.js";
 import * as mv from "./movement.js";
 import { computeToHit } from "./tohit.js";
 
@@ -107,6 +112,8 @@ export interface BattleState {
   units: Record<string, UnitState>;
   defs: Record<string, ResolvedMechDef>;
   terrain: Record<string, TerrainType>;
+  /** Per-hex ground elevation; missing entries are level 0. */
+  elevation: Record<string, number>;
   /** Board size hint for rendering (engine coords); renderers fall back to content extent when absent. */
   width?: number | undefined;
   height?: number | undefined;
@@ -215,12 +222,14 @@ export function createBattle(
   }
 
   const terrain: Record<string, TerrainType> = {};
+  const elevation: Record<string, number> = {};
   if (options.terrain) {
-    for (const { col, row, type } of options.terrain) {
+    for (const { col, row, type, level } of options.terrain) {
       const key = `${col},${row}`;
       if (key in terrain)
         throw new Error(`Duplicate terrain definition for hex ${fmtHex({ col, row })}`);
       terrain[key] = type;
+      if (level !== undefined) elevation[key] = level;
     }
   }
   for (const [label, n] of [
@@ -239,6 +248,7 @@ export function createBattle(
     units: unitStates,
     defs: { ...MECH_DEFS },
     terrain,
+    elevation,
     width: options.width,
     height: options.height,
     actedThisPhase: [],
@@ -324,7 +334,14 @@ export function executeMove(
       if (backward && unit.moveMode === "run") {
         throw new Error("Running 'Mechs cannot move backward");
       }
-      spent += costToEnter(mv.terrainAt(state.terrain, to));
+      const fromLevel = levelAt(state.elevation, cursor);
+      const toLevel = levelAt(state.elevation, to);
+      if (toLevel - fromLevel > 1) {
+        throw new Error(
+          `Ground moves can climb at most 1 level per hex (${fmtHex(to)} is ${toLevel - fromLevel} levels higher)`,
+        );
+      }
+      spent += costToEnter(mv.terrainAt(state.terrain, to)) + costToClimb(fromLevel, toLevel);
       directions.push(forward ? "forward" : "backward");
     }
 
@@ -422,7 +439,10 @@ export function declareAttacks(
     }
 
     const woodsPoints = losWoodsPointsBetween(state.terrain, unit.position, target.position);
-    if (losBlocked(woodsPoints)) {
+    if (!losClear(state.elevation, state.terrain, unit.position, target.position)) {
+      if (losBlockedByElevation(state.elevation, unit.position, target.position)) {
+        throw new Error("Line of sight is blocked by intervening elevation");
+      }
       throw new Error("Line of sight is blocked by intervening woods");
     }
 
@@ -439,6 +459,8 @@ export function declareAttacks(
       interveningWoods: woodsPoints,
       distance: dist,
       weapon,
+      attackerLevel: levelAt(state.elevation, unit.position),
+      targetLevel: levelAt(state.elevation, target.position),
     });
     if (index === 0) {
       attackDistance = dist;
@@ -498,6 +520,8 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
       weaponName: weapon.name,
       shots,
       targetDamage: target.damage,
+      attackerLevel: levelAt(state.elevation, unit.position),
+      targetLevel: levelAt(state.elevation, target.position),
     });
 
     if (resolution.application !== null) target.damage = resolution.application.damage;
