@@ -296,8 +296,11 @@ describe("movement", () => {
   it("queues steps with running MP totals and commits", () => {
     const s = freshSetup();
     run(s, "start");
-    const firstActor = S.currentActor(s)!.id;
-    expect(run(s, `mode ${firstActor === "hunchy" ? "walk" : "walk"}`)).toHaveLength(1);
+    const firstActor = S.currentActor(s)!;
+    const declared = run(s, "mode walk");
+    // 'mode walk' acknowledges the declaration and then lists reachable hexes.
+    expect(declared[0]).toMatch(/declares walk, can use 4 movement point\.$/);
+    expect(declared.join("\n")).toContain("reachable hexes:");
     // Walk straight back relative to facing is illegal; sideways too. Forward
     // depends on facing, so use standstill-safe single forward step toward foe.
     const status0 = run(s, "status").join("\n");
@@ -309,7 +312,7 @@ describe("movement", () => {
     expect(status1).toMatch(/1\. face \+\d+ .*total 1/);
 
     expect(run(s, "done").length).toBeGreaterThan(0);
-    expect(s.battle!.units[firstActor]!.facing).toBe("ne");
+    expect(s.battle!.units[firstActor.id]!.facing).toBe("ne");
   });
 
   it("rejects illegal steps without corrupting state", () => {
@@ -337,6 +340,43 @@ describe("movement", () => {
     expect(run(s, "done")[0]).toMatch(/^error:/);
     expect(s.battle!.events).toHaveLength(beforeLen);
     expect(s.battle!.units[actor.id]!.position).toEqual(beforePos);
+  });
+
+  it("lists reachable hexes on 'mode' except for standstill", () => {
+    const s = freshSetup();
+    run(s, "start");
+    const actor = S.currentActor(s)!;
+    const own = `${String(actor.position.col + 1).padStart(2, "0")},${String(actor.position.row + 1).padStart(2, "0")}`;
+
+    // standstill: only the acknowledgement, no reachable list.
+    const still = run(s, "mode standstill");
+    expect(still).toHaveLength(1);
+    expect(still.join("\n")).not.toContain("reachable hexes:");
+
+    // walk/run always have MP; they show the header and at least one entry
+    // in the '(XX,YY:facing)=path' form.
+    for (const word of ["walk", "run"]) {
+      const out = run(s, `mode ${word}`).join("\n");
+      expect(out).toContain("reachable hexes:");
+      expect(out).toMatch(/\(\d{2},\d{2}:n=\)|\(\d{2},\d{2}:[a-z]+\)=[FRBL+]/);
+      // The current hex is listed too (with the current facing and an empty
+      // path, plus any facings reachable by pure turns).
+      expect(out).toContain(`(${own}:${actor.facing})=`);
+    }
+  });
+
+  it("jump entries follow the '(XX,YY:facing)=path' form", () => {
+    const s = S.newSession(42);
+    // Load a map so the board bounds exist; place two jump-capable 'Mechs
+    // far apart on a clear region of the board; either may act first.
+    run(s, "map quickstart");
+    expect(run(s, "add grf GRF-1N 0 4 5 5 n")).toHaveLength(1);
+    expect(run(s, "add wvr WVR-6R 1 4 12 12 s")).toHaveLength(1);
+    run(s, "start");
+    const out = run(s, "mode jump").join("\n");
+    expect(out).toContain("reachable hexes:");
+    // Every line follows the (XX,YY:facing)=path layout.
+    expect(out).toMatch(/\(\d{2},\d{2}:[a-z]+\)=[FRBL+]/);
   });
 });
 

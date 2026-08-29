@@ -176,6 +176,10 @@ export const en = {
   "moveStatus.stepEnter": "{i}. enter ({col},{row})",
   "moveStatus.stepLine": "{label} +{cost} MP (total {total})",
 
+  // reachable hexes (shown by 'mode')
+  "reach.header": "reachable hexes:",
+  "reach.entry": "({col},{row}:{facing})={path}",
+
   // attack status
   "attackStatus.none": "(no attacks queued)",
   "weapons.noActorId": "(no active unit)",
