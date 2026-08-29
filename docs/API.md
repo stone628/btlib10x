@@ -1,9 +1,9 @@
 # btlib10x API Reference
 
-Zero-dependency TypeScript library for Classic BattleTech quick-start rules
-(bipedal 'Mechs only). All rule functions are pure and deterministic given an
-injected RNG (`interface Rng { d6(): number }`). Everything below is exported
-from the package root (`btlib10x`).
+Zero-dependency TypeScript library implementing a **subset of classic
+BattleTech game rules** (bipedal 'Mechs only). All rule functions are pure and
+deterministic given an injected RNG (`interface Rng { d6(): number }`).
+Everything below is exported from the package root (`btlib10x`).
 
 ## Core
 
@@ -129,7 +129,7 @@ interface MapDef {
 ### Arcs (`rules/arcs.ts`)
 
 `isInFrontArc(facing, bearingToTarget)` — front three hexsides only
-(quick-start rules have no rear firing).
+(rear firing is not yet implemented).
 
 ### To-hit (`rules/tohit.ts`)
 
@@ -278,7 +278,7 @@ with `/0101\` carrying the 1-based column,row as fixed two-digit pairs
 3-char ids start at the belly's 4th character (`(  wvr )`; ids clip to 4
 characters, so `hunchy` draws as `( hunc )`), and the terrain glyph plus
 elevation centered at the bottom —
-quick-start rules have no elevation, so it is always `0`. Outer top edges
+elevation is not yet implemented, so it is always `0`. Outer top edges
 render as `____`, edges shared with the hex below as `====`, and the map's
 bottom edge as `‾‾‾‾`. A unit's facing replaces the grid character at its
 hexside vertex — n `↑` (top edge's 2nd char), s `↓` (bottom edge's 3rd char),
