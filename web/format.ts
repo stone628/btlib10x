@@ -5,6 +5,7 @@ import type {
   FireBlockerReason,
   FireWeapon,
   GameEvent,
+  Hex,
   Location,
   MechDef,
   RangeBracket,
@@ -21,6 +22,7 @@ import {
   LOCATIONS,
   MAP_DEFS,
   MECH_DEFS,
+  reachableLandings,
   suggestFireTargets,
   toEngineTerrain,
   WEAPONS,
@@ -31,6 +33,8 @@ import type { BoardModel, BoardRenderer } from "./render.js";
 import { battleModel, getBoardRenderer, mapModel } from "./render.js";
 import type { Session, SetupUnit } from "./session.js";
 import { moveStepsInfo } from "./session.js";
+
+const FORMAT_MAX_COLUMNS = 80;
 
 /** Board renderer type (re-exported from the render layer). */
 export type { BoardRenderer } from "./render.js";
@@ -637,6 +641,64 @@ export function moveStatusLines(s: Session): string[] {
           cost: step.mpCost,
           total: step.mpAfter,
         }),
+      );
+    }
+  }
+  return lines;
+}
+
+const pad2 = (n: number): string => String(n).padStart(2, "0");
+
+/** Reachable hexes (+ arrival facings) for the declared mode, as lines. */
+export function reachLines(s: Session): string[] {
+  const actor = s.battle?.units[s.actorId ?? ""];
+  if (!actor || !s.battle || s.moveMode === null) return [];
+  if (s.battle.width === undefined || s.battle.height === undefined) return [];
+  const def = s.battle.defs[actor.model]!;
+  const landings = reachableLandings({ ...actor.position }, actor.facing, {
+    mode: s.moveMode,
+    walking: def.walking,
+    running: def.running,
+    jumping: def.jumping,
+    terrain: s.battle.terrain,
+    team: actor.team,
+    width: s.battle.width,
+    height: s.battle.height,
+    occupantTeam: (hex: Hex): number | undefined => {
+      for (const u of Object.values(s.battle!.units)) {
+        if (u.removed) continue;
+        if (u.position.col === hex.col && u.position.row === hex.row) return u.team;
+      }
+      return undefined;
+    },
+  });
+  const fmtHex = (hex: Hex): { col: string; row: string } => ({
+    col: pad2(hex.col + 1),
+    row: pad2(hex.row + 1),
+  });
+  const lines = [t(s.locale, "reach.header")];
+  const reachables = landings.map((l) => {
+    const c = fmtHex(l.hex);
+    return t(s.locale, "reach.entry", {
+      col: c.col,
+      row: c.row,
+      facing: l.facing,
+      path: l.path.join(""),
+    });
+  });
+  if (reachables.length > 0) {
+    const reachableMaxLen = reachables.reduce((acc, r) => Math.max(acc, r.length), 0);
+    // Each entry occupies `reachableMaxLen` chars; entries are separated by
+    // two spaces. Guard against a single entry wider than the line (otherwise
+    // the per-line count drops to 0 and the chunking loop never advances).
+    const reachablesPerLine = Math.max(1, Math.floor(FORMAT_MAX_COLUMNS / (reachableMaxLen + 2)));
+
+    for (let i = 0; i < reachables.length; i += reachablesPerLine) {
+      lines.push(
+        reachables
+          .slice(i, i + reachablesPerLine)
+          .map((l) => l.padEnd(reachableMaxLen, " "))
+          .join("  "),
       );
     }
   }

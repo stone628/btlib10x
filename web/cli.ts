@@ -16,6 +16,7 @@ import {
   infoWeaponList,
   moveStatusLines,
   overStatusLines,
+  reachLines,
   rich,
   sheetForUnit,
   unitBriefList,
@@ -234,7 +235,9 @@ const MOVE_CMDS: Record<string, CmdDef> = {
       const mode = S.parseMoveMode(L(s), a[0]!);
       S.declareMode(s, a[0]!);
       const r = S.stepResult(s);
-      return [t(L(s), "ok.modeDeclared", { id: s.actorId ?? "", mode, budget: r.mpBudget })];
+      const lines = [t(L(s), "ok.modeDeclared", { id: s.actorId ?? "", mode, budget: r.mpBudget })];
+      if (mode !== "standStill") lines.push(...reachLines(s));
+      return lines;
     },
   },
   move: {
