@@ -516,6 +516,9 @@ export function queueFire(s: Session, decl: AttackDecl): void {
   if (pending !== undefined && pending !== decl.targetId) {
     throw new Error(t(s.locale, "err.oneTarget", { target: pending }));
   }
+  if (s.fireDecls.some((d) => d.weaponIndex === decl.weaponIndex)) {
+    throw new Error(t(s.locale, "err.weaponRepeated", { weapon: decl.weaponIndex }));
+  }
   s.fireDecls.push(decl);
 }
 

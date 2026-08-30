@@ -399,6 +399,9 @@ describe("attack", () => {
 
     const ammoBefore = actor === "hunchy" ? (s.battle!.units.hunchy!.ammoLeft[1] ?? 0) : null;
     expect(run(s, `fire 1 ${enemy}`).join("\n")).toContain("queued #1");
+    expect(run(s, `fire 1 ${enemy}`)[0]).toMatch(
+      /error: Weapon #1 may only be declared once per turn/,
+    );
     expect(run(s, `fire 2 ${actor}`)[0]).toMatch(/^error: Target must belong to another team/);
     expect(run(s, "status").join("\n")).toContain(`-> ${enemy}`);
     // First unit declares; no resolution yet (sweep at phase end).

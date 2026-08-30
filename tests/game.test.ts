@@ -485,6 +485,16 @@ describe("weapon attack phase", () => {
     );
   });
 
+  it("rejects declaring the same weapon more than once per turn", () => {
+    const state = startAttackTurn(hbkVsEnf());
+    expect(() =>
+      declareAttacks(state, "hbk", [
+        { weaponIndex: 1, targetId: "enf" },
+        { weaponIndex: 1, targetId: "enf" },
+      ]),
+    ).toThrow(/may only be declared once/);
+  });
+
   it("resolves scripted attacks immediately and commits kills only at end of phase", () => {
     const state = startAttackTurn(hbkVsEnf());
     declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
