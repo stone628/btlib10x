@@ -358,7 +358,16 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
   },
   done: {
     helpKey: "cmd.doneFire.help",
-    run: (s) => fmtLog(s.locale, S.commitFire(s).newEvents),
+    run: (s) => {
+      if (s.fireDecls.length === 0) {
+        const unit = S.currentActor(s);
+        const result = S.passFire(s);
+        const passLine = unit ? t(s.locale, "log.attacksPassed", { id: unit.id }) : "";
+        const rest = fmtLog(s.locale, result.newEvents);
+        return passLine ? [passLine, ...rest] : rest;
+      }
+      return fmtLog(s.locale, S.commitFire(s).newEvents);
+    },
   },
 };
 

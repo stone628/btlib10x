@@ -238,6 +238,7 @@ export const kr: Catalog = {
   "log.moved": "{id} {mode} -> {pos} 방향 {facing}, MP {mp}/{budget} 사용",
   "log.attacksDeclaredOne": "{id}, {target} 에게 사격 ({count}문, {rangeCtx})",
   "log.attacksDeclaredOther": "{id}, {target} 에게 사격 ({count}문, {rangeCtx})",
+  "log.attacksPassed": "{id}는 이번 턴 공격하지 않습니다.",
   "log.destroyed": "*** {id} 파괴됨 ***",
   "log.removedEvent": "{id} 게임 제외",
 
