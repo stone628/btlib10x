@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { getMapDef } from "../src/data/index.js";
 import { canFireFromLocation } from "../src/rules/damage.js";
-import { GRID_GLYPHS } from "../web/render.js";
+import { REACHABLE_MARKER, reachableModel } from "../web/format.js";
+import { GRID_GLYPHS, TEAM_STYLES } from "../web/render.js";
 import * as S from "../web/session.js";
 import { execute } from "./helpers.js";
 
@@ -299,9 +300,10 @@ describe("movement", () => {
     run(s, "start");
     const firstActor = S.currentActor(s)!;
     const declared = run(s, "mode walk");
-    // 'mode walk' acknowledges the declaration and then lists reachable hexes.
+    // 'mode walk' acknowledges the declaration and prints a clipped hex map
+    // (board legend + grid) instead of a textual reachable list.
     expect(declared[0]).toMatch(/declares walk, can use 4 movement point\.$/);
-    expect(declared.join("\n")).toContain("reachable hexes:");
+    expect(declared.join("\n")).toContain("legend:");
     // Walk straight back relative to facing is illegal; sideways too. Forward
     // depends on facing, so use standstill-safe single forward step toward foe.
     const status0 = run(s, "status").join("\n");
@@ -343,30 +345,40 @@ describe("movement", () => {
     expect(s.battle!.units[actor.id]!.position).toEqual(beforePos);
   });
 
-  it("lists reachable hexes on 'mode' except for standstill", () => {
+  it("shows a clipped reachable hex map on 'mode' except for standstill", () => {
     const s = freshSetup();
     run(s, "start");
     const actor = S.currentActor(s)!;
-    const own = `${String(actor.position.col).padStart(2, "0")},${String(actor.position.row).padStart(2, "0")}`;
+    const ownCoord = `${String(actor.position.col).padStart(2, "0")}${String(
+      actor.position.row,
+    ).padStart(2, "0")}`;
 
-    // standstill: only the acknowledgement, no reachable list.
+    // standstill: only the acknowledgement, no board chunk.
     const still = run(s, "mode standstill");
     expect(still).toHaveLength(1);
-    expect(still.join("\n")).not.toContain("reachable hexes:");
+    expect(still.join("\n")).not.toContain("legend:");
 
-    // walk/run always have MP; they show the header and at least one entry
-    // in the '(XX,YY:facing)=path' form.
+    // walk/run always have MP; they render a clipped hex map of reachable
+    // hexes (board legend + grid) with reachable markers.
     for (const word of ["walk", "run"]) {
       const out = run(s, `mode ${word}`).join("\n");
-      expect(out).toContain("reachable hexes:");
-      expect(out).toMatch(/\(\d{2},\d{2}:n=\)|\(\d{2},\d{2}:[a-z]+\)=[FRBL+]/);
-      // The current hex is listed too (with the current facing and an empty
-      // path, plus any facings reachable by pure turns).
-      expect(out).toContain(`(${own}:${actor.facing})=`);
+      expect(out).toContain("legend:");
+      expect(out).toContain(`/${ownCoord}\\`);
+      expect(out).toContain(REACHABLE_MARKER);
+      // Clipped exactly to the reachable bbox (no padding): far fewer hex
+      // coordinate labels than the full 15x16 board's 240.
+      const labels = (out.match(/\/\d{4}\\/g) ?? []).length;
+      expect(labels).toBeLessThan(200);
+      // No facing arrows are drawn (edges carry the team color instead).
+      expect(out).not.toContain("\u2191");
+      expect(out).not.toContain("\u2197");
+      expect(out).not.toContain("\u2198");
+      expect(out).not.toContain("\u2199");
+      expect(out).not.toContain("\u2192");
     }
   });
 
-  it("jump entries follow the '(XX,YY:facing)=path' form", () => {
+  it("shows a clipped reachable hex map for jump", () => {
     const s = S.newSession(42);
     // Load a map so the board bounds exist; place two jump-capable 'Mechs
     // far apart on a clear region of the board; either may act first.
@@ -375,9 +387,38 @@ describe("movement", () => {
     expect(run(s, "add wvr WVR-6R 1 4 12 12 s")).toHaveLength(1);
     run(s, "start");
     const out = run(s, "mode jump").join("\n");
-    expect(out).toContain("reachable hexes:");
-    // Every line follows the (XX,YY:facing)=path layout.
-    expect(out).toMatch(/\(\d{2},\d{2}:[a-z]+\)=[FRBL+]/);
+    expect(out).toContain("legend:");
+    expect(out).toContain(REACHABLE_MARKER);
+    // Clipped exactly to the reachable bbox (no padding): far fewer hex
+    // coordinate labels than the full 15x16 board's 240.
+    const labels = (out.match(/\/\d{4}\\/g) ?? []).length;
+    expect(labels).toBeLessThan(200);
+    expect(out).not.toContain("\u2191");
+  });
+
+  it("reachableModel crops to the reachable bbox and tints edges with the actor team", () => {
+    const s = freshSetup();
+    run(s, "start");
+    run(s, "mode walk");
+    const actor = S.currentActor(s)!;
+    const model = reachableModel(s);
+    expect(model).not.toBeNull();
+    const m = model!;
+    // Exact reachable bbox, clamped to the board: larger than one hex and
+    // smaller than the full 15x16 board.
+    expect(m.col0).toBeGreaterThanOrEqual(1);
+    expect(m.row0).toBeGreaterThanOrEqual(1);
+    expect(m.cols * m.rows).toBeLessThan(15 * 16);
+    // The acting unit's hex is inside the crop; no per-hex facing arrows.
+    expect(m.facings).toBeUndefined();
+    // Reachable (hex, facing) edges are tinted with the actor's team color.
+    const team = TEAM_STYLES[actor.team];
+    expect(Object.values(m.edgeStyles ?? {})).toContainEqual(team);
+    // Reachable hexes show a team-tinted `<>` belly marker.
+    const markerKey = Object.keys(m.cells ?? {}).find((k) => m.cells![k] === REACHABLE_MARKER);
+    expect(markerKey).toBeDefined();
+    expect(markerKey).not.toBe(`${actor.position.col},${actor.position.row}`);
+    expect(m.cellStyles?.[markerKey ?? ""]).toEqual(team);
   });
 });
 

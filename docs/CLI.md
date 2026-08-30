@@ -70,7 +70,7 @@ The prompt names the acting unit; commands act on that 'Mech.
 
 | command | effect |
 |---|---|
-| `mode standstill\|walk\|run\|jump` | declare movement mode (required first); for walk/run/jump, also prints a list of reachable `(XX,YY:facing)=path` entries — the path is a sequence of `F` (forward), `B` (backward), `R`/`L` (1-hexside turn) fragments that lands the 'Mech on that hex facing that direction |
+| `mode standstill\|walk\|run\|jump` | declare movement mode (required first); for walk/run/jump, renders a clipped ASCII hex map of the reachable hexes — exactly the smallest bounding box around every reachable hex, clamped to the board (no padding). Reachable hexes draw a team-colored `<>` in the belly; every reachable (hex, facing) edge is tinted with the acting unit's team color, and no facing arrows are drawn. Other units inside the crop keep their ids (team-colored) but no facing arrow. Movement paths (the `F`/`B`/`R`/`L` fragment sequence per landing) remain available programmatically via `reachableLandings`/`RevealedLanding.path` for later use, but are not rendered on the map |
 | `move <col> <row>` | queue step into adjacent hex (forward/backward vs facing; jump = any adjacent) |
 | `face <facing>` or `face <±1..5>` | queue facing change (`face ne`, `face -2`) |
 | `sheet [id]` | with id: armor diagram + weapons for a unit; without id: brief unit list (id, model, position+facing) grouped by team |

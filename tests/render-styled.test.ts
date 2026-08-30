@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getMapDef } from "../src/data/index.js";
 import { createBattle } from "../src/rules/game.js";
-import type { CharStyle, Span } from "../web/render.js";
+import type { BoardModel, CharStyle, Span } from "../web/render.js";
 import {
   battleModel,
   boardToChars,
@@ -158,6 +158,30 @@ describe("styled board model", () => {
     // team color instead.
     const neArrow = spans.flat().find((sp) => sp.text === "\u2197");
     expect(neArrow?.style?.fg).toBe("cyan");
+  });
+
+  it("tints reachable edges via edgeStyles (glyph where a facing sits, raw wall otherwise)", () => {
+    const model: BoardModel = {
+      cols: 2,
+      rows: 2,
+      cells: {
+        "1,1": "ab",
+        "2,2": "cd",
+      },
+      facings: { "1,1": "n" },
+      edgeStyles: {
+        "1,1:n": { fg: "cyan" },
+        "2,2:se": { fg: "magenta" },
+      },
+    };
+    const spans = boardToSpans(model).flat();
+    // The n edge of 1,1 is tinted, riding on the actor's facing glyph.
+    const nEdge = spans.find((sp) => sp.text === "\u2191");
+    expect(nEdge?.style?.fg).toBe("cyan");
+    // The se edge of 2,2 is tinted even though no facing glyph is drawn there.
+    const seEdge = spans.find((sp) => sp.style?.fg === "magenta");
+    expect(seEdge).toBeDefined();
+    expect(seEdge?.text).toBe("/");
   });
 
   it("explicit styles replace automatic ones entirely", () => {

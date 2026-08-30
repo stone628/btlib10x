@@ -1,4 +1,4 @@
-import type { BattleState, Facing, TerrainHexDef } from "btlib10x";
+import { type BattleState, FACINGS, type Facing, type TerrainHexDef } from "btlib10x";
 import { type LocaleId, t } from "./i18n/index.js";
 import type { BoardModel, CharStyle, Span } from "./render.js";
 
@@ -98,6 +98,28 @@ const FACING_GLYPH: Readonly<Record<Facing, string>> = {
   nw: "\u2196",
 };
 
+/** Canvas cell (x offset from the hex origin, absolute y) a facing edge sits on. */
+function facingEdgePos(
+  facing: Facing,
+  x: number,
+  y: number,
+): { readonly x: number; readonly y: number } {
+  switch (facing) {
+    case "n":
+      return { x: x + 3, y };
+    case "s":
+      return { x: x + 4, y: y + ROW_STRIDE };
+    case "nw":
+      return { x: x + 1, y: y + 1 };
+    case "ne":
+      return { x: x + 6, y: y + 1 };
+    case "sw":
+      return { x: x + 1, y: y + 3 };
+    case "se":
+      return { x: x + 6, y: y + 3 };
+  }
+}
+
 // ---- canvas internals ----
 
 /** Fit text into a fixed-width cell; overflow clips, shorter text centers. */
@@ -150,7 +172,11 @@ function stampInto(
 /** Assemble a {@link BoardModel} into the char/style canvases. */
 function drawCanvas(model: BoardModel): Canvas {
   const canvas = makeCanvas(model);
-  const { cols, rows, cells, marks, elevations, styles, cellStyles, facings } = model;
+  const { rows, cells, marks, elevations, styles, cellStyles, facings, edgeStyles } = model;
+  const col0 = model.col0 ?? 1;
+  const row0 = model.row0 ?? 1;
+  const cols = model.cols + (col0 - 1);
+  const rowsFull = rows + (row0 - 1);
 
   const setChar = (x: number, y: number, ch: string, st: CharStyle | null): void => {
     const line = canvas.rows[y];
@@ -170,14 +196,15 @@ function drawCanvas(model: BoardModel): Canvas {
     }
   };
 
-  for (let col = 1; col <= cols; col++) {
+  for (let col = col0; col <= cols; col++) {
     const baseY = col % 2 === 1 ? 0 : STAGGER;
-    for (let row = 1; row <= rows; row++) {
-      const y = baseY + (row - 1) * ROW_STRIDE;
+    for (let row = row0; row <= rowsFull; row++) {
+      const lx = (col - col0) * COL_STRIDE;
+      const y = baseY + (row - row0) * ROW_STRIDE;
       const key = `${col},${row}`;
       const cell = cells[key];
       const style = styles?.[key] ?? null;
-      const x = (col - 1) * COL_STRIDE;
+      const x = lx;
       stampEdge(x, y, GRID_GLYPHS.edgeTop);
       stamp(
         x + 1,
@@ -199,7 +226,11 @@ function drawCanvas(model: BoardModel): Canvas {
       } else {
         stamp(x + 4, y + 3, String(level), style);
       }
-      stampEdge(x, y + ROW_STRIDE, row < rows ? GRID_GLYPHS.edgeShared : GRID_GLYPHS.edgeBottom);
+      stampEdge(
+        x,
+        y + ROW_STRIDE,
+        row < rowsFull ? GRID_GLYPHS.edgeShared : GRID_GLYPHS.edgeBottom,
+      );
       const f = facings?.[key];
       const glyph = f === undefined ? undefined : FACING_GLYPH[f];
       if (glyph !== undefined) {
@@ -210,6 +241,18 @@ function drawCanvas(model: BoardModel): Canvas {
         else if (glyph === FACING_GLYPH.ne) setChar(x + 6, y + 1, glyph, arrowStyle);
         else if (glyph === FACING_GLYPH.sw) setChar(x + 1, y + 3, glyph, arrowStyle);
         else setChar(x + 6, y + 3, glyph, arrowStyle);
+      }
+      if (edgeStyles !== undefined) {
+        for (const facing of FACINGS) {
+          const es = edgeStyles[`${col},${row}:${facing}`];
+          if (es !== undefined) {
+            const p = facingEdgePos(facing, x, y);
+            const line = canvas.rows[p.y];
+            if (line && p.x >= 0 && p.x < line.length) {
+              canvas.styles[p.y]![p.x] = es;
+            }
+          }
+        }
       }
     }
   }
