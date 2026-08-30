@@ -49,7 +49,7 @@ function int(locale: LocaleId, value: string, label: string): number {
 function coord(locale: LocaleId, value: string, label: string): number {
   const n = int(locale, value, label);
   if (n < 1) throw new Error(t(locale, "err.oneBased", { label }));
-  return n - 1;
+  return n;
 }
 
 function expectArgs(locale: LocaleId, args: readonly string[], count: number, usage: string): void {
@@ -248,8 +248,8 @@ const MOVE_CMDS: Record<string, CmdDef> = {
       expectArgs(L(s), a, 2, "move <col> <row>");
       S.queueEnter(s, { col: coord(L(s), a[0]!, "col"), row: coord(L(s), a[1]!, "row") });
       const r = S.stepResult(s);
-      const col = r.position.col + 1;
-      const row = r.position.row + 1;
+      const col = r.position.col;
+      const row = r.position.row;
       return [
         t(L(s), "ok.stepResult", {
           id: s.actorId ?? "",
@@ -273,8 +273,8 @@ const MOVE_CMDS: Record<string, CmdDef> = {
       const steps = S.faceSteps(L(s), unit.facing, a[0]!);
       S.queueTurn(s, steps);
       const r = S.stepResult(s);
-      const col = r.position.col + 1;
-      const row = r.position.row + 1;
+      const col = r.position.col;
+      const row = r.position.row;
       return [
         t(L(s), "ok.stepResult", {
           id: s.actorId ?? "",

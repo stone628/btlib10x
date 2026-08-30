@@ -109,7 +109,7 @@ function fitCell(text: string, width: number): string {
 
 /** 1-based `XXYY` coordinate label (two fixed digit pairs). */
 function coordLabel(col: number, row: number): string {
-  return `${String(col + 1).padStart(2, "0")}${String(row + 1).padStart(2, "0")}`;
+  return `${String(col).padStart(2, "0")}${String(row).padStart(2, "0")}`;
 }
 
 interface Canvas {
@@ -170,14 +170,14 @@ function drawCanvas(model: BoardModel): Canvas {
     }
   };
 
-  for (let col = 0; col < cols; col++) {
+  for (let col = 1; col <= cols; col++) {
     const baseY = col % 2 === 1 ? STAGGER : 0;
-    for (let row = 0; row < rows; row++) {
-      const y = baseY + row * ROW_STRIDE;
+    for (let row = 1; row <= rows; row++) {
+      const y = baseY + (row - 1) * ROW_STRIDE;
       const key = `${col},${row}`;
       const cell = cells[key];
       const style = styles?.[key] ?? null;
-      const x = col * COL_STRIDE;
+      const x = (col - 1) * COL_STRIDE;
       stampEdge(x, y, GRID_GLYPHS.edgeTop);
       stamp(
         x + 1,
@@ -199,11 +199,7 @@ function drawCanvas(model: BoardModel): Canvas {
       } else {
         stamp(x + 4, y + 3, String(level), style);
       }
-      stampEdge(
-        x,
-        y + ROW_STRIDE,
-        row + 1 < rows ? GRID_GLYPHS.edgeShared : GRID_GLYPHS.edgeBottom,
-      );
+      stampEdge(x, y + ROW_STRIDE, row < rows ? GRID_GLYPHS.edgeShared : GRID_GLYPHS.edgeBottom);
       const f = facings?.[key];
       const glyph = f === undefined ? undefined : FACING_GLYPH[f];
       if (glyph !== undefined) {

@@ -38,7 +38,6 @@ import {
   rotateFacing,
   sameHex,
   terrainAt,
-  toEngineTerrain,
 } from "btlib10x";
 import type { LocaleId } from "./i18n/index.js";
 import { t } from "./i18n/index.js";
@@ -51,7 +50,7 @@ export interface SetupUnit {
   readonly model: string;
   readonly team: number;
   readonly gunnery: number;
-  /** Engine coordinates (0-based). */
+  /** 1-based coordinates. */
   readonly position: Hex;
   readonly facing: Facing;
 }
@@ -179,7 +178,7 @@ export function setMap(s: Session, name: string): void {
   if (!map)
     throw new Error(t(s.locale, "err.unknownMap", { name, list: listMapNames().join(", ") }));
   s.mapName = name;
-  s.terrainDefs = toEngineTerrain(map);
+  s.terrainDefs = [...map.terrain];
 }
 
 export function addUnit(
@@ -198,10 +197,7 @@ export function addUnit(
     throw new Error(t(s.locale, "err.badGunnery"));
   }
   if (s.roster.some((u) => sameHex(u.position, position))) {
-    // Display coordinates are 1-based; the session stores engine (0-based) hexes.
-    throw new Error(
-      t(s.locale, "err.hexOccupied", { col: position.col + 1, row: position.row + 1 }),
-    );
+    throw new Error(t(s.locale, "err.hexOccupied", { col: position.col, row: position.row }));
   }
   s.roster.push({ id, model, team, gunnery, position, facing });
 }
@@ -344,7 +340,7 @@ export function queueEnter(s: Session, to: Hex): void {
     const fromLevel = levelAt(battle.elevation, cur.hex);
     const toLevel = levelAt(battle.elevation, to);
     if (toLevel - fromLevel > 1) {
-      throw new Error(t(s.locale, "err.climbTooSteep", { col: to.col + 1, row: to.row + 1 }));
+      throw new Error(t(s.locale, "err.climbTooSteep", { col: to.col, row: to.row }));
     }
     cost = costToEnter(terrainAt(battle.terrain, to)) + costToClimb(fromLevel, toLevel);
   }
@@ -467,8 +463,8 @@ export function moveStepsInfo(s: Session): {
     } else {
       label = t(s.locale, "moveStatus.stepEnter", {
         i: i + 1,
-        col: step.to.col + 1,
-        row: step.to.row + 1,
+        col: step.to.col,
+        row: step.to.row,
       });
       const fromLevel = levelAt(elevation, _hex);
       const toLevel = levelAt(elevation, step.to);

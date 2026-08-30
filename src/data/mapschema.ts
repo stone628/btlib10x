@@ -3,9 +3,10 @@ import { isTerrainType } from "../core/types.js";
 
 /**
  * Static definition of a battle map: board dimensions plus every non-clear
- * terrain hex. Map coordinates are 1-based as printed on the rulebook mapsheets
- * (cols 1..width, rows 1..height); hexes not listed are clear ground. Convert
- * to engine coordinates with {@link toEngineTerrain}.
+ * terrain hex. Map coordinates are 1-based, matching the printed mapsheet
+ * labels (cols 1..width, rows 1..height) and the engine's internal hex
+ * coordinates. Hexes not listed are clear ground. The engine accepts the
+ * map definition directly (no conversion layer).
  */
 export interface MapDef {
   readonly width: number;
@@ -15,16 +16,6 @@ export interface MapDef {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-/** Convert 1-based map hexes to the engine's 0-based TerrainHexDef list. */
-export function toEngineTerrain(map: MapDef): TerrainHexDef[] {
-  return map.terrain.map(({ col, row, type, level }) => ({
-    col: col - 1,
-    row: row - 1,
-    type,
-    ...(level !== undefined ? { level } : {}),
-  }));
 }
 
 /**

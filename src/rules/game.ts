@@ -137,9 +137,9 @@ function getUnitOrThrow(state: BattleState, unitId: string): UnitState {
   return unit;
 }
 
-/** Error messages show 1-based coordinates; positions are stored 0-based. */
+/** Error messages show 1-based coordinates; positions are stored 1-based. */
 function fmtHex(hex: { col: number; row: number }): string {
-  return `${hex.col + 1},${hex.row + 1}`;
+  return `${hex.col},${hex.row}`;
 }
 
 function requirePhase(state: BattleState, phase: Phase): void {

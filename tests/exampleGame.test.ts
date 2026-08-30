@@ -31,7 +31,7 @@ function setup(): BattleState {
         model: "WVR-6R",
         team: 0,
         gunnery: 4,
-        position: { col: 1, row: 2 },
+        position: { col: 3, row: 4 },
         facing: "se",
       },
       {
@@ -39,11 +39,11 @@ function setup(): BattleState {
         model: "GRF-1N",
         team: 1,
         gunnery: 3,
-        position: { col: 9, row: 6 },
+        position: { col: 11, row: 8 },
         facing: "nw",
       },
     ],
-    { terrain: [{ col: 5, row: 5, type: "lightWoods" }] },
+    { terrain: [{ col: 7, row: 7, type: "lightWoods" }] },
   );
 }
 
@@ -55,25 +55,26 @@ describe("example battle: Wolverine vs Griffin", () => {
     rollInitiativePhase(state, scriptedRng(3, 4, 2, 3));
     expect(state.initiativeWinnerTeam).toBe(0);
 
-    // Movement phase: Wolverine runs into (2,2), turns south (1 MP), steps
-    // into (2,3), and squares up southeast (1 MP) - 4 of the 8-MP run budget.
+    // Movement phase: Wolverine runs southeast into (4,5), turns south
+    // (1 MP), steps south into (4,6), and squares up southeast (1 MP) -
+    // 4 of the 8-MP run budget.
     expect(nextActor(state)).toBe("grf");
     declareMove(state, "wvr", "run"); // running budget 8
     executeMove(state, "wvr", [
-      { kind: "enter", to: { col: 2, row: 2 } }, // forward (se)
+      { kind: "enter", to: { col: 4, row: 5 } }, // forward (se)
       { kind: "turn", facings: 1 }, // se -> s
-      { kind: "enter", to: { col: 2, row: 3 } }, // forward (s)
+      { kind: "enter", to: { col: 4, row: 6 } }, // forward (s)
       { kind: "turn", facings: -1 }, // s -> se (counterclockwise; target in front arc)
     ]);
     const wvr = getUnit(state, "wvr");
-    expect(wvr.position).toEqual({ col: 2, row: 3 });
+    expect(wvr.position).toEqual({ col: 4, row: 6 });
     expect(wvr.mpSpent).toBe(4);
     // Griffin walks in place (keeps the walked attacker modifier).
     declareMove(state, "grf", "walk");
     executeMove(state, "grf", []);
 
     // Weapon phase: Wolverine medium laser at range 7 (long bracket); the
-    // light woods between at (5,5) add +1 -> TN 11.
+    // light woods between at (7,7) add +1 -> TN 11.
     advancePhase(state); // movement -> weaponAttack
     declareAttacks(state, "wvr", [{ weaponIndex: 0, targetId: "grf" }]);
     // To-hit 11 >= TN 11; location roll 8 -> left torso; ML damage 5. LT 18 -> 13.
@@ -96,9 +97,9 @@ describe("example battle: Wolverine vs Griffin", () => {
     rollInitiativePhase(state, scriptedRng(3, 4, 2, 3));
     declareMove(state, "wvr", "run");
     executeMove(state, "wvr", [
-      { kind: "enter", to: { col: 2, row: 2 } },
+      { kind: "enter", to: { col: 4, row: 5 } },
       { kind: "turn", facings: 1 },
-      { kind: "enter", to: { col: 2, row: 3 } },
+      { kind: "enter", to: { col: 4, row: 6 } },
       { kind: "turn", facings: -1 },
     ]);
     declareMove(state, "grf", "walk");

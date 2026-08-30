@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getMapDef, toEngineTerrain } from "../src/data/index.js";
+import { getMapDef } from "../src/data/index.js";
 import { createBattle } from "../src/rules/game.js";
 import type { CharStyle, Span } from "../web/render.js";
 import {
@@ -21,7 +21,7 @@ describe("styled board model", () => {
   if (!beginner) throw new Error("missing beginner map");
 
   it("span text reproduces the flat rendering exactly (maps)", () => {
-    const terrain = toEngineTerrain(beginner);
+    const terrain = beginner.terrain;
     const flat = renderMap(terrain, beginner.width, beginner.height);
     const spans = boardToSpans(mapModel(terrain, beginner.width, beginner.height));
     expect(spans.map(spansText).join("\n")).toBe(flat);
@@ -37,7 +37,7 @@ describe("styled board model", () => {
           model: "HBK-4G",
           team: 0,
           gunnery: 4,
-          position: { col: 1, row: 2 },
+          position: { col: 3, row: 4 },
           facing: "n",
         },
         {
@@ -45,11 +45,11 @@ describe("styled board model", () => {
           model: "GRF-1N",
           team: 1,
           gunnery: 4,
-          position: { col: 3, row: 1 },
+          position: { col: 5, row: 3 },
           facing: "s",
         },
       ],
-      { terrain: [{ col: 0, row: 0, type: "heavyWoods" }] },
+      { terrain: [{ col: 2, row: 2, type: "heavyWoods" }] },
     );
     const flat = boardToText(battleModel(state));
     expect(boardToText(battleModel(state))).toBe(flat);
@@ -58,8 +58,8 @@ describe("styled board model", () => {
 
   it("merges adjacent same-style runs and splits at style boundaries", () => {
     const state = createBattle([
-      { id: "ab", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 0, row: 0 }, facing: "n" },
-      { id: "cd", model: "GRF-1N", team: 1, gunnery: 4, position: { col: 1, row: 0 }, facing: "s" },
+      { id: "ab", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 2, row: 2 }, facing: "n" },
+      { id: "cd", model: "GRF-1N", team: 1, gunnery: 4, position: { col: 3, row: 2 }, facing: "s" },
     ]);
     const lines = boardToSpans(battleModel(state));
     const idLine = lines.find((l) => l.some((sp) => sp.text.includes("ab")));
@@ -83,7 +83,7 @@ describe("styled board model", () => {
           model: "HBK-4G",
           team: 0,
           gunnery: 4,
-          position: { col: 0, row: 0 },
+          position: { col: 2, row: 2 },
           facing: "n",
         },
         {
@@ -91,16 +91,16 @@ describe("styled board model", () => {
           model: "GRF-1N",
           team: 1,
           gunnery: 4,
-          position: { col: 9, row: 9 },
+          position: { col: 11, row: 11 },
           facing: "s",
         },
       ],
-      { terrain: [{ col: 2, row: 1, type: "lightWoods" }] },
+      { terrain: [{ col: 3, row: 3, type: "lightWoods" }] },
     );
     const model = battleModel(state);
-    const woods = model.styles?.["2,1"];
+    const woods = model.styles?.["3,3"];
     expect(woods).toEqual({ cls: "t-lightWoods" });
-    expect(model.cellStyles?.["0,0"]).toEqual(TEAM_STYLES[0]);
+    expect(model.cellStyles?.["2,2"]).toEqual(TEAM_STYLES[0]);
 
     const lines = boardToSpans(model);
     const team0 = lines.flat().find((sp) => sp.text.includes("hbk"));
@@ -113,7 +113,7 @@ describe("styled board model", () => {
 
     // Terrain tinting shows up in spans wherever the glyph is drawn;
     // mapModel derives its own marks, so use it for the glyph check.
-    const mapSpans = boardToSpans(mapModel([{ col: 0, row: 0, type: "heavyWoods" }], 2, 2));
+    const mapSpans = boardToSpans(mapModel([{ col: 2, row: 2, type: "heavyWoods" }], 2, 2));
     const glyph = mapSpans.flat().filter((sp) => sp.style !== undefined && sp.text.includes("W"));
     expect(glyph.length).toBeGreaterThan(0);
     expect(glyph.every((sp) => sp.style?.cls === "t-heavyWoods")).toBe(true);
@@ -127,7 +127,7 @@ describe("styled board model", () => {
           model: "HBK-4G",
           team: 0,
           gunnery: 4,
-          position: { col: 1, row: 0 },
+          position: { col: 3, row: 2 },
           facing: "ne",
         },
         {
@@ -135,21 +135,23 @@ describe("styled board model", () => {
           model: "GRF-1N",
           team: 1,
           gunnery: 4,
-          position: { col: 9, row: 9 },
+          position: { col: 11, row: 11 },
           facing: "s",
         },
       ],
-      { terrain: [{ col: 1, row: 0, type: "lightWoods" }] },
+      { terrain: [{ col: 3, row: 2, type: "lightWoods" }] },
     );
     const model = battleModel(state);
-    expect(model.styles?.["1,0"]).toEqual({ cls: "t-lightWoods" });
-    expect(model.cellStyles?.["1,0"]).toEqual(TEAM_STYLES[0]);
+    expect(model.styles?.["3,2"]).toEqual({ cls: "t-lightWoods" });
+    expect(model.cellStyles?.["3,2"]).toEqual(TEAM_STYLES[0]);
 
-    // Column 1 is odd: staggered two canvas lines down.
+    // Column 3 is odd: staggered two canvas lines down. In 1-based
+    // coords, col 3 row 2 has its top label at canvas y = 2 + 1*4 = 6,
+    // so the top label sits on line 7 of the spans.
     const spans = boardToSpans(model);
-    const coordSpan = spans[3]!.find((sp) => sp.text.includes("0201"));
+    const coordSpan = spans[7]!.find((sp) => sp.text.includes("0302"));
     expect(coordSpan?.style?.cls).toBe("t-lightWoods");
-    const idLine = spans[4]!; // belly row of column 1
+    const idLine = spans[8]!; // belly row of col 3 row 2
     const idSpan = idLine.find((sp) => sp.text === "hbk");
     expect(idSpan?.style?.fg).toBe("cyan");
     // The ne arrow sits on the terrain-tinted coord-row wall yet wears the
@@ -166,7 +168,7 @@ describe("styled board model", () => {
           model: "HBK-4G",
           team: 0,
           gunnery: 4,
-          position: { col: 0, row: 0 },
+          position: { col: 2, row: 2 },
           facing: "n",
         },
         {
@@ -174,11 +176,11 @@ describe("styled board model", () => {
           model: "GRF-1N",
           team: 1,
           gunnery: 4,
-          position: { col: 9, row: 9 },
+          position: { col: 11, row: 11 },
           facing: "s",
         },
       ],
-      { terrain: [{ col: 1, row: 0, type: "lightWoods" }] },
+      { terrain: [{ col: 3, row: 2, type: "lightWoods" }] },
     );
     const override: Record<string, CharStyle> = {
       "0,0": { fg: "red", bold: true, italic: true, bg: "blue" },
@@ -192,7 +194,7 @@ describe("styled board model", () => {
   });
 
   it("trims trailing whitespace exactly like the flat renderer", () => {
-    const terrain = toEngineTerrain(beginner);
+    const terrain = beginner.terrain;
     const flatLines = renderMap(terrain, beginner.width, beginner.height).split("\n");
     const spanLines = boardToSpans(mapModel(terrain, beginner.width, beginner.height));
     spanLines.forEach((line, i) => {
@@ -206,7 +208,7 @@ describe("styled board model", () => {
   });
 
   it("boardToChars reproduces flat rendering character by character", () => {
-    const terrain = toEngineTerrain(beginner);
+    const terrain = beginner.terrain;
     const flat = renderMap(terrain, beginner.width, beginner.height);
     const chars = boardToChars(mapModel(terrain, beginner.width, beginner.height));
     const reconstructed = chars.map((line) => line.map((c) => c.text).join("")).join("\n");
@@ -221,7 +223,7 @@ describe("styled board model", () => {
           model: "HBK-4G",
           team: 0,
           gunnery: 4,
-          position: { col: 0, row: 0 },
+          position: { col: 2, row: 2 },
           facing: "n",
         },
         {
@@ -229,11 +231,11 @@ describe("styled board model", () => {
           model: "CDA-3MA",
           team: 1,
           gunnery: 4,
-          position: { col: 2, row: 0 },
+          position: { col: 4, row: 2 },
           facing: "s",
         },
       ],
-      { terrain: [{ col: 0, row: 0, type: "heavyWoods" }] },
+      { terrain: [{ col: 2, row: 2, type: "heavyWoods" }] },
     );
     const spans = boardToSpans(battleModel(state));
     const chars = boardToChars(battleModel(state));

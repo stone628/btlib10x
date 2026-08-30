@@ -34,7 +34,6 @@ export {
   MAP_DEFS,
   MECH_DEFS,
   resolveMechDef,
-  toEngineTerrain,
   validateMapDef,
   validateMechDef,
 } from "./data/index.js";
