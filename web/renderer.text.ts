@@ -171,7 +171,7 @@ function drawCanvas(model: BoardModel): Canvas {
   };
 
   for (let col = 1; col <= cols; col++) {
-    const baseY = col % 2 === 1 ? STAGGER : 0;
+    const baseY = col % 2 === 1 ? 0 : STAGGER;
     for (let row = 1; row <= rows; row++) {
       const y = baseY + (row - 1) * ROW_STRIDE;
       const key = `${col},${row}`;

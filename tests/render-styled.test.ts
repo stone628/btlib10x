@@ -145,13 +145,13 @@ describe("styled board model", () => {
     expect(model.styles?.["3,2"]).toEqual({ cls: "t-lightWoods" });
     expect(model.cellStyles?.["3,2"]).toEqual(TEAM_STYLES[0]);
 
-    // Column 3 is odd: staggered two canvas lines down. In 1-based
-    // coords, col 3 row 2 has its top label at canvas y = 2 + 1*4 = 6,
-    // so the top label sits on line 7 of the spans.
+    // Column 3 is odd: not staggered (even columns are staggered down). In
+    // 1-based coords, col 3 row 2 has its top label at canvas y = 0 + 1*4 = 4,
+    // so the top label sits on line 5 of the spans.
     const spans = boardToSpans(model);
-    const coordSpan = spans[7]!.find((sp) => sp.text.includes("0302"));
+    const coordSpan = spans[5]!.find((sp) => sp.text.includes("0302"));
     expect(coordSpan?.style?.cls).toBe("t-lightWoods");
-    const idLine = spans[8]!; // belly row of col 3 row 2
+    const idLine = spans[6]!; // belly row of col 3 row 2
     const idSpan = idLine.find((sp) => sp.text === "hbk");
     expect(idSpan?.style?.fg).toBe("cyan");
     // The ne arrow sits on the terrain-tinted coord-row wall yet wears the

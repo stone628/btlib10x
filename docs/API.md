@@ -286,7 +286,7 @@ the map's bottom edge as `‾‾‾‾`. A unit's facing replaces the grid
 character at its hexside vertex — n `↑` (top edge's 2nd char), s `↓`
 (bottom edge's 3rd char), nw/ne/sw/se `↖ ↗ ↙ ↘` on the upper / lower walls
 — so both arrows stay visible on a shared edge.
-Odd columns sit half a hex lower (matching the odd-q grid); removed units are
+Odd columns sit half a hex higher (even columns staggered down, matching the odd-q grid); removed units are
 omitted; board bounds come from `state.width`/`state.height` when set (via
 `createBattle`'s `width`/`height` options, which are stored on the battle
 state), else they default to the units + terrain extent. Log with
