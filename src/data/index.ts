@@ -23,7 +23,7 @@ export function getMapDef(name: string): MapDef | undefined {
 }
 
 export type { MapDef } from "./mapschema.js";
-export { toEngineTerrain, validateMapDef } from "./mapschema.js";
+export { validateMapDef } from "./mapschema.js";
 export type {
   MechDef,
   RearArmorKey,

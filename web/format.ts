@@ -24,7 +24,6 @@ import {
   MECH_DEFS,
   reachableLandings,
   suggestFireTargets,
-  toEngineTerrain,
   WEAPONS,
 } from "btlib10x";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
@@ -81,9 +80,9 @@ export function rich(...chunks: readonly Chunk[]): RichOutput {
   return { rich: chunks };
 }
 
-/** Display coordinates are 1-based (printed mapsheet labels). */
+/** Display coordinates are 1-based (the internal value itself). */
 function disp(hex: { col: number; row: number }): string {
-  return `${hex.col + 1},${hex.row + 1}`;
+  return `${hex.col},${hex.row}`;
 }
 
 /**
@@ -276,7 +275,7 @@ export function infoMapChunks(locale: LocaleId, name: string): Chunk[] {
   const elevationMap: Record<string, number> = {};
   for (const t2 of map.terrain) {
     if (t2.level !== undefined && t2.level !== 0) {
-      elevationMap[`${t2.col - 1},${t2.row - 1}`] = t2.level;
+      elevationMap[`${t2.col},${t2.row}`] = t2.level;
       elevationCounts.set(t2.level, (elevationCounts.get(t2.level) ?? 0) + 1);
     }
   }
@@ -294,7 +293,7 @@ export function infoMapChunks(locale: LocaleId, name: string): Chunk[] {
     buildBoardChunk(
       boardChunkOf(
         mapModel(
-          toEngineTerrain(map),
+          map.terrain,
           map.width,
           map.height,
           undefined,
@@ -698,8 +697,8 @@ export function reachLines(s: Session): string[] {
     },
   });
   const fmtHex = (hex: Hex): { col: string; row: string } => ({
-    col: pad2(hex.col + 1),
-    row: pad2(hex.row + 1),
+    col: pad2(hex.col),
+    row: pad2(hex.row),
   });
   const lines = [t(s.locale, "reach.header")];
   const reachables = landings.map((l) => {

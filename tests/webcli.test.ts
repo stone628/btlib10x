@@ -336,7 +336,7 @@ describe("movement", () => {
     const actor = S.currentActor(s)!;
     const beforeLen = s.battle!.events.length;
     const beforePos = { ...actor.position };
-    s.moveSteps.push({ kind: "enter", to: { col: 0, row: 0 } }); // not straight ahead/back
+    s.moveSteps.push({ kind: "enter", to: { col: 2, row: 2 } }); // not straight ahead/back
     expect(run(s, "done")[0]).toMatch(/^error:/);
     expect(s.battle!.events).toHaveLength(beforeLen);
     expect(s.battle!.units[actor.id]!.position).toEqual(beforePos);
@@ -346,7 +346,7 @@ describe("movement", () => {
     const s = freshSetup();
     run(s, "start");
     const actor = S.currentActor(s)!;
-    const own = `${String(actor.position.col + 1).padStart(2, "0")},${String(actor.position.row + 1).padStart(2, "0")}`;
+    const own = `${String(actor.position.col).padStart(2, "0")},${String(actor.position.row).padStart(2, "0")}`;
 
     // standstill: only the acknowledgement, no reachable list.
     const still = run(s, "mode standstill");

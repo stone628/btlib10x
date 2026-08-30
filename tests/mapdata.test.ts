@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { getMapDef, MAP_DEFS } from "../src/data/index.js";
-import { type MapDef, toEngineTerrain, validateMapDef } from "../src/data/mapschema.js";
+import { type MapDef, validateMapDef } from "../src/data/mapschema.js";
 import { createBattle } from "../src/rules/game.js";
 
 const valid: MapDef = {
-  width: 3,
-  height: 2,
+  width: 5,
+  height: 4,
   terrain: [
-    { col: 1, row: 1, type: "lightWoods" },
-    { col: 3, row: 2, type: "heavyWoods" },
+    { col: 3, row: 3, type: "lightWoods" },
+    { col: 5, row: 4, type: "heavyWoods" },
   ],
 };
 
@@ -18,7 +18,7 @@ describe("validateMapDef", () => {
   });
 
   it("rejects non-object payloads", () => {
-    for (const bad of [null, "map", 42, [{ col: 1, row: 1, type: "clear" }]]) {
+    for (const bad of [null, "map", 42, [{ col: 3, row: 3, type: "clear" }]]) {
       expect(() => validateMapDef(bad)).toThrow(/must be a JSON object/);
     }
   });
@@ -40,7 +40,7 @@ describe("validateMapDef", () => {
       validateMapDef({ ...valid, terrain: [{ col: 1.5, row: 1, type: "lightWoods" }] }),
     ).toThrow(/terrain\[0\].col must be an integer/);
     expect(() =>
-      validateMapDef({ ...valid, terrain: [{ col: 1, row: 1, type: "water" }] }),
+      validateMapDef({ ...valid, terrain: [{ col: 3, row: 3, type: "water" }] }),
     ).toThrow(/is not clear\|lightWoods\|heavyWoods/);
     expect(() => validateMapDef({ ...valid, terrain: [42] })).toThrow(
       /terrain\[0\] must be an object/,
@@ -57,17 +57,17 @@ describe("validateMapDef", () => {
           return (e as Error).message;
         }
       })();
-    expect(errors([{ col: 0, row: 1, type: "clear" }])).toMatch(
-      /col 0 outside board bounds 1\.\.3/,
+    expect(errors([{ col: 0, row: 3, type: "clear" }])).toMatch(
+      /col 0 outside board bounds 1\.\.5/,
     );
-    expect(errors([{ col: 4, row: 1, type: "clear" }])).toMatch(
-      /col 4 outside board bounds 1\.\.3/,
+    expect(errors([{ col: 6, row: 3, type: "clear" }])).toMatch(
+      /col 6 outside board bounds 1\.\.5/,
     );
-    expect(errors([{ col: 1, row: 3, type: "clear" }])).toMatch(
-      /row 3 outside board bounds 1\.\.2/,
+    expect(errors([{ col: 3, row: 5, type: "clear" }])).toMatch(
+      /row 5 outside board bounds 1\.\.4/,
     );
     // Boundary hexes are legal.
-    expect(errors([{ col: 3, row: 2, type: "heavyWoods" }])).toBe("");
+    expect(errors([{ col: 5, row: 4, type: "heavyWoods" }])).toBe("");
   });
 
   it("rejects duplicate hexes", () => {
@@ -84,11 +84,11 @@ describe("validateMapDef", () => {
 
   it("accepts an optional non-negative integer `level` per hex", () => {
     const withLevel: MapDef = {
-      width: 2,
-      height: 1,
+      width: 5,
+      height: 4,
       terrain: [
-        { col: 1, row: 1, type: "clear", level: 2 },
-        { col: 2, row: 1, type: "clear" },
+        { col: 3, row: 3, type: "clear", level: 2 },
+        { col: 4, row: 3, type: "clear" },
       ],
     };
     expect(validateMapDef(withLevel)).toEqual(withLevel);
@@ -98,13 +98,13 @@ describe("validateMapDef", () => {
     expect(() =>
       validateMapDef({
         ...valid,
-        terrain: [{ col: 1, row: 1, type: "clear", level: -1 }],
+        terrain: [{ col: 3, row: 3, type: "clear", level: -1 }],
       }),
     ).toThrow(/level must be a non-negative integer/);
     expect(() =>
       validateMapDef({
         ...valid,
-        terrain: [{ col: 1, row: 1, type: "clear", level: 1.5 }],
+        terrain: [{ col: 3, row: 3, type: "clear", level: 1.5 }],
       }),
     ).toThrow(/level must be a non-negative integer/);
   });
@@ -130,9 +130,8 @@ describe("bundled maps", () => {
     expect(MAP_DEFS.beginner!.terrain[0]).toEqual({ col: 2, row: 5, type: "heavyWoods" });
   });
 
-  it("converts to engine coordinates usable by createBattle", () => {
-    const engine = toEngineTerrain(MAP_DEFS.beginner!);
-    expect(engine[0]).toEqual({ col: 1, row: 4, type: "heavyWoods" }); // 1-based (2,5) -> 0-based (1,4)
+  it("is directly usable by createBattle (no conversion layer)", () => {
+    expect(MAP_DEFS.beginner!.terrain[0]).toEqual({ col: 2, row: 5, type: "heavyWoods" });
     expect(() =>
       createBattle(
         [
@@ -141,7 +140,7 @@ describe("bundled maps", () => {
             model: "HBK-4G",
             team: 0,
             gunnery: 4,
-            position: { col: 0, row: 2 },
+            position: { col: 2, row: 4 },
             facing: "se",
           },
           {
@@ -149,11 +148,11 @@ describe("bundled maps", () => {
             model: "GRF-1N",
             team: 1,
             gunnery: 3,
-            position: { col: 8, row: 6 },
+            position: { col: 10, row: 8 },
             facing: "nw",
           },
         ],
-        { terrain: toEngineTerrain(MAP_DEFS.quickstart!) },
+        { terrain: MAP_DEFS.quickstart!.terrain },
       ),
     ).not.toThrow();
   });

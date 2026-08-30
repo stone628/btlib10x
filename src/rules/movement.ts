@@ -119,9 +119,9 @@ export interface ReachabilityOptions {
   readonly team: number;
   /** Team of the unit occupying a hex, or undefined when empty. */
   readonly occupantTeam: (hex: Hex) => number | undefined;
-  /** Board width in engine columns (exclusive upper bound). */
+  /** Board width in 1-based columns (inclusive upper bound). */
   readonly width: number;
-  /** Board height in engine rows (exclusive upper bound). */
+  /** Board height in 1-based rows (inclusive upper bound). */
   readonly height: number;
 }
 
@@ -185,7 +185,7 @@ export function reachableLandings(
 
   const point = (a: Hex, b: Hex): boolean => a.col === b.col && a.row === b.row;
   const inBounds = (hex: Hex): boolean =>
-    hex.col >= 0 && hex.col < options.width && hex.row >= 0 && hex.row < options.height;
+    hex.col >= 1 && hex.col <= options.width && hex.row >= 1 && hex.row <= options.height;
   // Ground pass-through: friendly-occupied hexes are passable but never landable,
   // and a 'Mech cannot step more than one level up in a single hex (jump ignores
   // the climb cap and may change level freely).

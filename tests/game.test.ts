@@ -23,7 +23,7 @@ function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
         model: "HBK-4G",
         team: 0,
         gunnery: 4,
-        position: { col: 0, row: 2 },
+        position: { col: 2, row: 4 },
         facing: "se",
       },
       {
@@ -31,7 +31,7 @@ function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
         model: "ENF-4R",
         team: 1,
         gunnery: 4,
-        position: { col: 1, row: 2 },
+        position: { col: 3, row: 4 },
         facing: "nw",
       },
     ],
@@ -58,7 +58,7 @@ describe("createBattle", () => {
       model: "HBK-4G",
       team: 0,
       gunnery: 4,
-      position: { col: 0, row: 0 },
+      position: { col: 2, row: 2 },
       facing: "n" as const,
     };
     expect(() => createBattle([base, base])).toThrow(/Duplicate unit id/);
@@ -72,7 +72,7 @@ describe("createBattle", () => {
     const base = {
       model: "HBK-4G",
       gunnery: 4,
-      position: { col: 0, row: 2 },
+      position: { col: 2, row: 4 },
       facing: "se" as const,
     };
     const units = [
@@ -82,11 +82,11 @@ describe("createBattle", () => {
     expect(() =>
       createBattle(units, {
         terrain: [
-          { col: 1, row: 2, type: "lightWoods" },
-          { col: 1, row: 2, type: "heavyWoods" },
+          { col: 3, row: 4, type: "lightWoods" },
+          { col: 3, row: 4, type: "heavyWoods" },
         ],
       }),
-    ).toThrow(/Duplicate terrain definition for hex 2,3/); // 1-based display coords
+    ).toThrow(/Duplicate terrain definition for hex 3,4/);
   });
 
   it("initializes armor and ammo from the definition", () => {
@@ -108,7 +108,7 @@ describe("movement phase", () => {
   it("requires a declared movement mode before executing", () => {
     let state = startMovementTurn(hbkVsEnf());
     state = { ...state, phase: "movement" as const };
-    expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: -1, row: 2 } }])).toThrow(
+    expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: 1, row: 4 } }])).toThrow(
       /Declare a movement mode/,
     );
   });
@@ -121,7 +121,7 @@ describe("movement phase", () => {
           model: "HBK-4G",
           team: 0,
           gunnery: 4,
-          position: { col: 0, row: 2 },
+          position: { col: 2, row: 4 },
           facing: "se",
         },
         {
@@ -129,27 +129,27 @@ describe("movement phase", () => {
           model: "ENF-4R",
           team: 1,
           gunnery: 4,
-          position: { col: 9, row: 9 },
+          position: { col: 11, row: 11 },
           facing: "nw",
         },
       ],
-      { terrain: [{ col: 1, row: 3, type: "lightWoods" }] },
+      { terrain: [{ col: 3, row: 4, type: "lightWoods" }] },
     );
     const state = startMovementTurn(setup);
     declareMove(state, "hbk", "walk");
     executeMove(state, "hbk", [
-      { kind: "enter", to: { col: 1, row: 3 } },
+      { kind: "enter", to: { col: 3, row: 4 } },
       { kind: "turn", facings: 1 },
     ]);
     const hbk = getUnit(state, "hbk");
     expect(hbk.mpSpent).toBe(3); // 1 turn + 2 light woods
-    expect(hbk.position).toEqual({ col: 1, row: 3 });
+    expect(hbk.position).toEqual({ col: 3, row: 4 });
   });
 
   it("rejects running backward", () => {
     const state = startMovementTurn(hbkVsEnf());
     declareMove(state, "hbk", "run");
-    expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: -1, row: 2 } }])).toThrow(
+    expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: 1, row: 3 } }])).toThrow(
       /backward/,
     );
   });
@@ -159,7 +159,7 @@ describe("movement phase", () => {
     declareMove(state, "hbk", "walk");
     // Facing "se" from (0,2): south (0,3) is adjacent but not the forward or
     // backward hexside -> illegal without turning first.
-    expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: 0, row: 3 } }])).toThrow(
+    expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: 2, row: 5 } }])).toThrow(
       /straight ahead or straight back/,
     );
   });
@@ -167,9 +167,9 @@ describe("movement phase", () => {
   it("allows walking straight backward", () => {
     const state = startMovementTurn(hbkVsEnf());
     declareMove(state, "hbk", "walk");
-    executeMove(state, "hbk", [{ kind: "enter", to: { col: -1, row: 2 } }]);
+    executeMove(state, "hbk", [{ kind: "enter", to: { col: 1, row: 3 } }]);
     const hbk = getUnit(state, "hbk");
-    expect(hbk.position).toEqual({ col: -1, row: 2 });
+    expect(hbk.position).toEqual({ col: 1, row: 3 });
     expect(hbk.mpSpent).toBe(1);
   });
 
@@ -184,7 +184,7 @@ describe("movement phase", () => {
     const hbk = getUnit(state, "hbk");
     expect(hbk.mpSpent).toBe(2); // 2 hexsides x 1 MP
     expect(hbk.facing).toBe("sw"); // se rotated two hexsides clockwise
-    expect(hbk.position).toEqual({ col: 0, row: 2 });
+    expect(hbk.position).toEqual({ col: 2, row: 4 });
   });
 
   it("charges counterclockwise turns one MP per hexside", () => {
@@ -208,7 +208,7 @@ describe("movement phase", () => {
         model: "HBK-4G",
         team: 0,
         gunnery: 4,
-        position: { col: 0, row: 2 },
+        position: { col: 2, row: 4 },
         facing: "se",
       },
       {
@@ -216,19 +216,19 @@ describe("movement phase", () => {
         model: "ENF-4R",
         team: 1,
         gunnery: 4,
-        position: { col: 9, row: 9 },
+        position: { col: 11, row: 11 },
         facing: "nw",
       },
     ]);
     const state = startMovementTurn(setup);
     declareMove(state, "hbk", "walk");
     executeMove(state, "hbk", [
-      { kind: "enter", to: { col: 1, row: 3 } }, // forward (se)
+      { kind: "enter", to: { col: 3, row: 4 } }, // forward (se)
       { kind: "turn", facings: 2 }, // now facing sw
-      { kind: "enter", to: { col: 0, row: 3 } }, // new forward (sw)
+      { kind: "enter", to: { col: 2, row: 5 } }, // new forward (sw)
     ]);
     const hbk = getUnit(state, "hbk");
-    expect(hbk.position).toEqual({ col: 0, row: 3 });
+    expect(hbk.position).toEqual({ col: 2, row: 5 });
     expect(hbk.facing).toBe("sw");
     expect(hbk.mpSpent).toBe(4); // 2 enters + 2-hexside turn
   });
@@ -240,7 +240,7 @@ describe("movement phase", () => {
         model: "HBK-4G",
         team: 0,
         gunnery: 4,
-        position: { col: 0, row: 2 },
+        position: { col: 2, row: 4 },
         facing: "se",
       },
       {
@@ -248,14 +248,14 @@ describe("movement phase", () => {
         model: "ENF-4R",
         team: 1,
         gunnery: 4,
-        position: { col: 1, row: 3 },
+        position: { col: 3, row: 4 },
         facing: "nw",
       },
     ]);
     const state = startMovementTurn(setup);
     declareMove(state, "hbk", "walk");
-    expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: 1, row: 3 } }])).toThrow(
-      /end movement in 2,4: occupied by enf/, // 1-based display coords
+    expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: 3, row: 4 } }])).toThrow(
+      /end movement in 3,4: occupied by enf/,
     );
   });
 
@@ -266,7 +266,7 @@ describe("movement phase", () => {
         model: "HBK-4G",
         team: 0,
         gunnery: 4,
-        position: { col: 0, row: 2 },
+        position: { col: 2, row: 4 },
         facing: "se",
       },
       {
@@ -274,19 +274,20 @@ describe("movement phase", () => {
         model: "ENF-4R",
         team: 1,
         gunnery: 4,
-        position: { col: 9, row: 9 },
+        position: { col: 11, row: 11 },
         facing: "nw",
       },
     ]);
     const state = startMovementTurn(setup);
     declareMove(state, "hbk", "walk"); // walking 4
-    // Straight southeast line (odd-q: the column parity alternates the row drift).
+    // Straight southeast line: even columns step se across at the same row,
+    // odd columns step one row down, always one col over.
     const steps = [
-      { col: 1, row: 3 },
-      { col: 2, row: 3 },
       { col: 3, row: 4 },
-      { col: 4, row: 4 },
+      { col: 4, row: 5 },
       { col: 5, row: 5 },
+      { col: 6, row: 6 },
+      { col: 7, row: 6 },
     ].map((to) => ({ kind: "enter" as const, to }));
     expect(() => executeMove(state, "hbk", steps)).toThrow(/budget/);
   });
@@ -294,7 +295,7 @@ describe("movement phase", () => {
   it("stand-still forbids steps and turns", () => {
     const state = startMovementTurn(hbkVsEnf());
     declareMove(state, "hbk", "standStill");
-    expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: -1, row: 2 } }])).toThrow(
+    expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: 1, row: 4 } }])).toThrow(
       /Standing still forbids entering/,
     );
     expect(() => executeMove(state, "hbk", [{ kind: "turn", facings: 1 }])).toThrow(
@@ -318,7 +319,7 @@ describe("movement phase", () => {
           model: "GRF-1N",
           team: 0,
           gunnery: 4,
-          position: { col: 0, row: 2 },
+          position: { col: 2, row: 4 },
           facing: "se",
         },
         {
@@ -326,7 +327,7 @@ describe("movement phase", () => {
           model: "WVR-6R",
           team: 1,
           gunnery: 4,
-          position: { col: 1, row: 3 },
+          position: { col: 3, row: 4 },
           facing: "nw",
         },
       ],
@@ -336,11 +337,11 @@ describe("movement phase", () => {
     declareMove(state, "grf", "jump");
     // Hop through the enemy-occupied hex (allowed while jumping) and land beyond it.
     executeMove(state, "grf", [
-      { kind: "enter", to: { col: 1, row: 3 } },
-      { kind: "enter", to: { col: 2, row: 3 } },
+      { kind: "enter", to: { col: 3, row: 4 } },
+      { kind: "enter", to: { col: 4, row: 5 } },
     ]);
     const grf = getUnit(state, "grf");
-    expect(grf.position).toEqual({ col: 2, row: 3 });
+    expect(grf.position).toEqual({ col: 4, row: 5 });
     expect(grf.mpSpent).toBe(2);
     expect(grf.jumpedThisTurn).toBe(true);
   });
@@ -356,7 +357,7 @@ describe("weapon attack phase", () => {
           model: "HBK-4G",
           team: 0,
           gunnery: 4,
-          position: { col: 0, row: 2 },
+          position: { col: 2, row: 4 },
           facing: "nw",
         },
         {
@@ -364,7 +365,7 @@ describe("weapon attack phase", () => {
           model: "ENF-4R",
           team: 1,
           gunnery: 4,
-          position: { col: 1, row: 2 },
+          position: { col: 3, row: 4 },
           facing: "nw",
         },
       ]),
@@ -376,8 +377,8 @@ describe("weapon attack phase", () => {
     // Two heavy woods between -> blocked LOS.
     state = startAttackTurn(
       hbkVsEnf([
-        { col: -1, row: 2, type: "heavyWoods" },
-        { col: 2, row: 2, type: "heavyWoods" },
+        { col: 1, row: 4, type: "heavyWoods" },
+        { col: 4, row: 4, type: "heavyWoods" },
       ]),
     );
     // Move units apart so intervening hexes exist.
@@ -388,7 +389,7 @@ describe("weapon attack phase", () => {
           model: "HBK-4G",
           team: 0,
           gunnery: 4,
-          position: { col: 0, row: 2 },
+          position: { col: 2, row: 4 },
           facing: "se",
         },
         {
@@ -396,14 +397,14 @@ describe("weapon attack phase", () => {
           model: "ENF-4R",
           team: 1,
           gunnery: 4,
-          position: { col: 3, row: 2 },
+          position: { col: 5, row: 4 },
           facing: "nw",
         },
       ],
       {
         terrain: [
-          { col: 1, row: 2, type: "heavyWoods" },
-          { col: 2, row: 2, type: "heavyWoods" },
+          { col: 3, row: 4, type: "heavyWoods" },
+          { col: 4, row: 4, type: "heavyWoods" },
         ],
       },
     );
@@ -420,7 +421,7 @@ describe("weapon attack phase", () => {
         model: "HBK-4G",
         team: 0,
         gunnery: 4,
-        position: { col: 0, row: 2 },
+        position: { col: 2, row: 4 },
         facing: "se",
       },
       {
@@ -428,7 +429,7 @@ describe("weapon attack phase", () => {
         model: "ENF-4R",
         team: 1,
         gunnery: 4,
-        position: { col: ac20.long + 1, row: 2 },
+        position: { col: ac20.long + 3, row: 2 },
         facing: "nw",
       },
     ]);
@@ -445,7 +446,7 @@ describe("weapon attack phase", () => {
           model: "ENF-4R",
           team: 0,
           gunnery: 7,
-          position: { col: 0, row: 2 },
+          position: { col: 2, row: 4 },
           facing: "se",
         },
         {
@@ -453,15 +454,15 @@ describe("weapon attack phase", () => {
           model: "HBK-4G",
           team: 1,
           gunnery: 4,
-          position: { col: 9, row: 2 },
+          position: { col: 11, row: 4 },
           facing: "nw",
         },
       ],
       {
         terrain: [
-          { col: 3, row: 2, type: "lightWoods" },
-          { col: 5, row: 2, type: "lightWoods" },
-          { col: 9, row: 2, type: "heavyWoods" },
+          { col: 5, row: 4, type: "lightWoods" },
+          { col: 7, row: 4, type: "lightWoods" },
+          { col: 11, row: 4, type: "heavyWoods" },
         ],
       },
     );
@@ -523,7 +524,7 @@ describe("weapon attack phase", () => {
         model: "HER-5SA",
         team: 0,
         gunnery: 4,
-        position: { col: 0, row: 2 },
+        position: { col: 2, row: 4 },
         facing: "se",
       },
       {
@@ -531,7 +532,7 @@ describe("weapon attack phase", () => {
         model: "CDA-3MA",
         team: 1,
         gunnery: 4,
-        position: { col: 1, row: 2 },
+        position: { col: 3, row: 4 },
         facing: "nw",
       },
     ]);

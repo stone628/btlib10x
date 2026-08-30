@@ -2,27 +2,28 @@ import type { Facing, Hex } from "./types.js";
 import { FACINGS } from "./types.js";
 
 /**
- * Flat-top hexes in column-offset storage with odd columns raised half a hex:
- * every hex's six sides face n / ne / se / s / sw / nw per the rulebook
- * diagrams (there is no east/west hexside). Diagonal deltas shift by column
- * parity as specified below.
+ * Flat-top hexes in column-offset storage. The layout matches the renderer:
+ * even columns sit half a hex higher than odd columns (odd columns are
+ * lowered). Every hex's six sides face n / ne / se / s / sw / nw per the
+ * rulebook diagrams (there is no east/west hexside). Diagonal deltas shift by
+ * column parity as specified below.
  */
 const EVEN_COL_DELTAS: Record<Facing, readonly [number, number]> = {
-  n: [0, -1],
-  s: [0, +1],
-  ne: [+1, 0],
-  se: [+1, +1],
-  nw: [-1, 0],
-  sw: [-1, +1],
-};
-
-const ODD_COL_DELTAS: Record<Facing, readonly [number, number]> = {
   n: [0, -1],
   s: [0, +1],
   ne: [+1, -1],
   se: [+1, 0],
   nw: [-1, -1],
   sw: [-1, 0],
+};
+
+const ODD_COL_DELTAS: Record<Facing, readonly [number, number]> = {
+  n: [0, -1],
+  s: [0, +1],
+  ne: [+1, 0],
+  se: [+1, +1],
+  nw: [-1, 0],
+  sw: [-1, +1],
 };
 
 export function neighbor(hex: Hex, facing: Facing): Hex {
