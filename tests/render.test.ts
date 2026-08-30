@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { BattleState } from "../src/rules/game.js";
 import { createBattle } from "../src/rules/game.js";
+import type { BoardModel } from "../web/render.js";
 import { battleModel, boardToText, GRID_GLYPHS, renderMap } from "../web/render.js";
 
 /** Flat battle text via the structured model (historic renderer shape). */
@@ -267,5 +268,28 @@ describe("map renderer", () => {
     const out = renderBattle(state, undefined, { "1,1": "w" });
     expect(out).toContain(`${GRID_GLYPHS.vertW}  hbk ${GRID_GLYPHS.vertE}`);
     expect(out).toContain(`${GRID_GLYPHS.edgeSW} w0 ${GRID_GLYPHS.edgeSE}`);
+  });
+
+  it("renders a cropped sub-region via col0/row0 and omits out-of-crop hexes", () => {
+    const model: BoardModel = {
+      cols: 3,
+      rows: 2,
+      col0: 3,
+      row0: 4,
+      cells: {
+        "3,4": "aa",
+        "5,5": "bb",
+        "9,9": "zz", // outside the crop
+      },
+      facings: { "3,4": "n" },
+    };
+    const out = boardToText(model);
+    // In-crop hexes are drawn.
+    expect(out).toContain(`${GRID_GLYPHS.edgeNW}0304${GRID_GLYPHS.edgeNE}`);
+    expect(out).toContain(`${GRID_GLYPHS.edgeNW}0505${GRID_GLYPHS.edgeNE}`);
+    // The out-of-crop hex (9,9) is never drawn.
+    expect(out).not.toContain("0909");
+    // Full-coordinate labels outside the crop are absent too.
+    expect(out).not.toContain("0101");
   });
 });

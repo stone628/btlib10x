@@ -316,6 +316,22 @@ also carry per-character presentation hints:
   and `mapModel(terrain, width, height, styles?): BoardModel` build the board
   data (cells / marks / style hints keyed by `"col,row"`). Battle bounds read
   `state.width`/`state.height`, falling back to content extent.
+- `BoardModel` accepts an optional crop origin `col0`/`row0` (1-based, default
+  1/1): the hex at `(col,row)` renders at canvas offset `(col-col0, row-row0)`,
+  so `cols`/`rows` express the cropped extent and out-of-crop hexes are skipped.
+- `BoardModel.edgeStyles` keys `"col,row:facing"` → `CharStyle` to tint the
+  specific grid edge where that facing's arrow would sit (e.g. team color on
+  reachable hexes) without drawing the arrow.
+- `reachableModel(session): BoardModel` (web layer, `web/format.ts`) renders a
+  clipped hex map of the reachable hexes for the declared movement mode:
+  exactly the smallest bounding box around every reachable hex, clamped to the
+  board (no padding). Reachable hexes draw a team-colored `<>` in the belly;
+  every reachable (hex, facing) edge is tinted with the actor's team color,
+  and no facing arrows are drawn. Other units keep their ids but no facing
+  arrow.
+  `RevealedLanding.path` (the `F`/`B`/`R`/`L` fragment sequence per landing)
+  is retained on the model input and available to callers, but not rendered on
+  the map.
 - `boardToText(model): string` — the historic flat rendering.
 - `boardToSpans(model): Span[][]` — runs of characters sharing a
   `CharStyle` (`fg`/`bg` from the named palette: `red green yellow blue

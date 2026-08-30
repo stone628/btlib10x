@@ -174,10 +174,6 @@ export const kr: Catalog = {
   "moveStatus.stepEnter": "{i}. 진입 ({col},{row})",
   "moveStatus.stepLine": "{label} +{cost} MP (누계 {total})",
 
-  // reachable hexes (shown by 'mode')
-  "reach.header": "도달 가능한 육각:",
-  "reach.entry": "({col},{row}:{facing})={path}",
-
   // attack status
   "attackStatus.none": "(예약된 공격 없음)",
   "weapons.noActorId": "(행동 중 유닛 없음)",

@@ -28,12 +28,10 @@ import {
 } from "btlib10x";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
 import { t } from "./i18n/index.js";
-import type { BoardModel, BoardRenderer } from "./render.js";
-import { battleModel, getBoardRenderer, mapModel } from "./render.js";
+import type { BoardModel, BoardRenderer, CharStyle } from "./render.js";
+import { battleModel, getBoardRenderer, mapModel, TEAM_STYLES } from "./render.js";
 import type { Session, SetupUnit } from "./session.js";
 import { moveStepsInfo } from "./session.js";
-
-const FORMAT_MAX_COLUMNS = 80;
 
 /** Board renderer type (re-exported from the render layer). */
 export type { BoardRenderer } from "./render.js";
@@ -662,13 +660,26 @@ export function moveStatusLines(s: Session): string[] {
   return lines;
 }
 
-const pad2 = (n: number): string => String(n).padStart(2, "0");
+/** Belly marker drawn in a reachable hex on the reachable map. */
+export const REACHABLE_MARKER = "<>";
 
-/** Reachable hexes (+ arrival facings) for the declared mode, as lines. */
-export function reachLines(s: Session): string[] {
+/**
+ * Clipped ASCII-hex map of the reachable hexes for the declared mode.
+ *
+ * The model crops exactly to the smallest axis-aligned bounding box that holds
+ * every reachable hex and is clamped to the board bounds (no padding). All
+ * units inside the crop keep their ids (team-tinted); no facing arrows are
+ * drawn, reachable hexes show a team-tinted `<>` in the belly, and every
+ * reachable (hex, facing) landing tints its grid edge with the actor's team
+ * color. Raw `RevealedLanding.path` data is retained on the landing but not
+ * rendered here (kept for later use).
+ */
+export function reachableModel(s: Session): BoardModel | null {
   const actor = s.battle?.units[s.actorId ?? ""];
-  if (!actor || !s.battle || s.moveMode === null) return [];
-  if (s.battle.width === undefined || s.battle.height === undefined) return [];
+  if (!actor || !s.battle || s.moveMode === null) return null;
+  const w = s.battle.width;
+  const h = s.battle.height;
+  if (w === undefined || h === undefined) return null;
   const def = s.battle.defs[actor.model]!;
   const landings = reachableLandings({ ...actor.position }, actor.facing, {
     mode: s.moveMode,
@@ -678,8 +689,8 @@ export function reachLines(s: Session): string[] {
     terrain: s.battle.terrain,
     elevation: s.battle.elevation,
     team: actor.team,
-    width: s.battle.width,
-    height: s.battle.height,
+    width: w,
+    height: h,
     occupantTeam: (hex: Hex): number | undefined => {
       for (const u of Object.values(s.battle!.units)) {
         if (u.removed) continue;
@@ -688,37 +699,57 @@ export function reachLines(s: Session): string[] {
       return undefined;
     },
   });
-  const fmtHex = (hex: Hex): { col: string; row: string } => ({
-    col: pad2(hex.col),
-    row: pad2(hex.row),
-  });
-  const lines = [t(s.locale, "reach.header")];
-  const reachables = landings.map((l) => {
-    const c = fmtHex(l.hex);
-    return t(s.locale, "reach.entry", {
-      col: c.col,
-      row: c.row,
-      facing: l.facing,
-      path: l.path.join(""),
-    });
-  });
-  if (reachables.length > 0) {
-    const reachableMaxLen = reachables.reduce((acc, r) => Math.max(acc, r.length), 0);
-    // Each entry occupies `reachableMaxLen` chars; entries are separated by
-    // two spaces. Guard against a single entry wider than the line (otherwise
-    // the per-line count drops to 0 and the chunking loop never advances).
-    const reachablesPerLine = Math.max(1, Math.floor(FORMAT_MAX_COLUMNS / (reachableMaxLen + 2)));
+  if (landings.length === 0) return null;
 
-    for (let i = 0; i < reachables.length; i += reachablesPerLine) {
-      lines.push(
-        reachables
-          .slice(i, i + reachablesPerLine)
-          .map((l) => l.padEnd(reachableMaxLen, " "))
-          .join("  "),
-      );
-    }
+  let minC = Infinity;
+  let minR = Infinity;
+  let maxC = -Infinity;
+  let maxR = -Infinity;
+  for (const l of landings) {
+    if (l.hex.col < minC) minC = l.hex.col;
+    if (l.hex.col > maxC) maxC = l.hex.col;
+    if (l.hex.row < minR) minR = l.hex.row;
+    if (l.hex.row > maxR) maxR = l.hex.row;
   }
-  return lines;
+  const col0 = Math.max(1, minC);
+  const row0 = Math.max(1, minR);
+  const col1 = Math.min(w, maxC);
+  const row1 = Math.min(h, maxR);
+
+  const base = battleModel(s.battle);
+  const cells = { ...(base.cells ?? {}) };
+  const cellStyles = { ...(base.cellStyles ?? {}) };
+  const edgeStyles: Record<string, CharStyle> = {};
+  const team = TEAM_STYLES[actor.team];
+  const actorKey = `${actor.position.col},${actor.position.row}`;
+  for (const l of landings) {
+    const key = `${l.hex.col},${l.hex.row}`;
+    if (key !== actorKey && cells[key] === undefined) {
+      cells[key] = REACHABLE_MARKER;
+      if (team !== undefined) cellStyles[key] = team;
+    }
+    if (team !== undefined) edgeStyles[`${l.hex.col},${l.hex.row}:${l.facing}`] = team;
+  }
+
+  return {
+    cols: col1 - col0 + 1,
+    rows: row1 - row0 + 1,
+    col0,
+    row0,
+    cells,
+    ...(Object.keys(edgeStyles).length > 0 ? { edgeStyles } : {}),
+    ...(base.styles !== undefined ? { styles: base.styles } : {}),
+    ...(Object.keys(cellStyles).length > 0 ? { cellStyles } : {}),
+    ...(base.marks !== undefined ? { marks: base.marks } : {}),
+    ...(base.elevations !== undefined ? { elevations: base.elevations } : {}),
+  };
+}
+
+/** Board chunk of the reachable hex map, or null when none can be drawn. */
+export function reachChunk(s: Session): Chunk | null {
+  const model = reachableModel(s);
+  if (model === null) return null;
+  return buildBoardChunk(boardChunkOf(model));
 }
 
 export function attackStatusLines(s: Session): string[] {
