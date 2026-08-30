@@ -547,7 +547,7 @@ describe("weapon attack phase", () => {
       },
     ]);
     const state = startAttackTurn(setup);
-    declareAttacks(state, "her", [{ weaponIndex: 3, targetId: "cda", shots: 2 }]);
+    declareAttacks(state, "her", [{ weaponIndex: 3, targetId: "cda", rapidFire: true }]);
     expect(getUnit(state, "her").ammoLeft["3"]).toBe(18); // 2 shots spent up front
     resolveDeclaredAttacks(state, "her", scriptedRng(1, 1)); // natural 2 -> jam
     const her = getUnit(state, "her");
@@ -557,35 +557,52 @@ describe("weapon attack phase", () => {
     );
   });
 
-  it("fires a full rapid-fire volley when shots are omitted on an Ultra AC/5", () => {
-    const setup = createBattle([
-      {
-        id: "her",
-        model: "HER-5SA",
-        team: 0,
-        gunnery: 4,
-        position: { col: 2, row: 4 },
-        facing: "se",
-      },
-      {
-        id: "cda",
-        model: "CDA-3MA",
-        team: 1,
-        gunnery: 4,
-        position: { col: 3, row: 4 },
-        facing: "nw",
-      },
-    ]);
-    const state = startAttackTurn(setup);
-    declareAttacks(state, "her", [{ weaponIndex: 3, targetId: "cda" }]); // no shots
-    // Full double-tap (2 shots) is deducted up front, same as explicit shots: 2.
-    expect(getUnit(state, "her").ammoLeft["3"]).toBe(18);
+  it("fires a single shot by default and a double-tap only when rapidFire is set on an Ultra AC/5", () => {
+    const setup = () =>
+      createBattle([
+        {
+          id: "her",
+          model: "HER-5SA",
+          team: 0,
+          gunnery: 4,
+          position: { col: 2, row: 4 },
+          facing: "se",
+        },
+        {
+          id: "cda",
+          model: "CDA-3MA",
+          team: 1,
+          gunnery: 4,
+          position: { col: 3, row: 4 },
+          facing: "nw",
+        },
+      ]);
+
+    // Omitted rapidFire -> single shot (1 UAC/5 hit = 5 dmg, 1 ammo spent).
+    const single = startAttackTurn(setup());
+    declareAttacks(single, "her", [{ weaponIndex: 3, targetId: "cda" }]);
+    expect(getUnit(single, "her").ammoLeft["3"]).toBe(19); // 1 shot spent up front
+    const singleBefore = getUnit(single, "cda").damage.armor.centerTorso;
+    // to-hit 4 (2,2), single location rolls 7 -> CT (no cluster roll for 1 shot).
+    resolveDeclaredAttacks(single, "her", scriptedRng(2, 2, 3, 4));
+    expect(singleBefore - getUnit(single, "cda").damage.armor.centerTorso).toBe(5);
+
+    // rapidFire: true -> double-tap (2 x UAC/5 = 10 dmg, 2 ammo spent).
+    const state = startAttackTurn(setup());
+    declareAttacks(state, "her", [{ weaponIndex: 3, targetId: "cda", rapidFire: true }]);
+    expect(getUnit(state, "her").ammoLeft["3"]).toBe(18); // 2 shots spent up front
     const before = getUnit(state, "cda").damage.armor.centerTorso;
     // to-hit 4 (2,2), cluster 8 (4,4) -> both shots hit; both hit CT (roll 7).
     resolveDeclaredAttacks(state, "her", scriptedRng(2, 2, 4, 4, 3, 4, 3, 4));
-    const armor = getUnit(state, "cda").damage.armor.centerTorso;
-    // 2 x UAC/5 (5 dmg) reduce CT armor by 10.
-    expect(before - armor).toBe(10);
+    expect(before - getUnit(state, "cda").damage.armor.centerTorso).toBe(10);
+  });
+
+  it("rejects rapidFire on a weapon that is not rapid-fire", () => {
+    const state = startAttackTurn(hbkVsEnf());
+    // HBK weapon 4 is a Small Laser (no rapidFireShots).
+    expect(() =>
+      declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf", rapidFire: true }]),
+    ).toThrow(/is not rapid-fire/);
   });
 });
 

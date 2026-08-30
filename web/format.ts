@@ -800,9 +800,11 @@ export function attackStatusLines(s: Session): string[] {
   if (s.fireDecls.length === 0) return [t(s.locale, "attackStatus.none")];
   const def = s.battle.defs[actor.model]!;
   return s.fireDecls.map((decl) => {
-    const mount = def.weapons[decl.weaponIndex - 1];
+    const mount = def.weapons[decl.weaponIndex];
     const name = mount ? mount.weapon : `#${decl.weaponIndex}`;
-    return `#${decl.weaponIndex} ${name} -> ${decl.targetId}${decl.shots !== undefined ? ` x${decl.shots}` : ""}`;
+    const rapid = mount ? getWeapon(mount.weapon).rapidFireShots : undefined;
+    const suffix = decl.rapidFire && rapid !== undefined ? ` (rapid-fire x${rapid})` : "";
+    return `#${decl.weaponIndex} ${name} -> ${decl.targetId}${suffix}`;
   });
 }
 
