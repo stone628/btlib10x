@@ -83,7 +83,7 @@ The prompt names the acting unit; commands act on that 'Mech.
 | command | effect |
 |---|---|
 | `weapons [id]` | list weapon mounts: 1-based number, name, location, S/M/L, ammo, jammed/destroyed |
-| `fire <weapon> <targetId> [shots]` | queue declaration using 1-based weapon number (one shared target per turn; rapid-fire may pass shots) |
+| `fire <targetId> <weapon> [<weapon> ...]` | queue weapon declarations using 1-based weapon numbers (target first; declare several weapons at once, all against the one shared target; rapid-fire SRM/LRM fire a full volley — no `shots` argument) |
 | `sheet [id]` | with id: armor diagram + weapons for a unit; without id: brief unit list (id, model, position+facing) grouped by team |
 | `status` | queued attack declarations |
 | `cancel` | clear declarations |

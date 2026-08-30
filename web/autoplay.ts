@@ -118,16 +118,19 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
     if (st.phase === "weaponAttack") {
       const def = st.defs[actor.model];
       if (def === undefined) return null;
-      const declared = new Set(s.fireDecls.map((d) => d.weaponIndex));
+      const available: string[] = [];
       for (const key of Object.keys(def.weapons)) {
         const weaponIndex = Number(key);
         const mount = def.weapons[weaponIndex]!;
-        if (declared.has(weaponIndex)) continue;
+        if (s.fireDecls.some((d) => d.weaponIndex === weaponIndex)) continue;
         if (actor.jammedWeapons.includes(weaponIndex)) continue;
         if (!canFireFromLocation(actor.phaseStartDamage, mount.location)) continue;
         if (actor.ammoLeft[weaponIndex] !== undefined && (actor.ammoLeft[weaponIndex] ?? 0) < 1)
           continue;
-        queueNextCommand(`fire ${weaponIndex} ${enemy.id}`);
+        available.push(String(weaponIndex));
+      }
+      if (available.length > 0) {
+        queueNextCommand(`fire ${enemy.id} ${available.join(" ")}`);
       }
       queueNextCommand("done");
       return returnFirstQueuedCommand();
