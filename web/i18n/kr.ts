@@ -182,6 +182,13 @@ export const kr: Catalog = {
   "fireSuggestion.header": "{id}의 공격 가능 목표:",
   "fireSuggestion.noTargets": "(사거리·조준각·시야 내 목표 없음)",
   "fireSuggestion.target": "{id}, 거리 {distance}:",
+  "fireSuggestion.colIndex": "#",
+  "fireSuggestion.colWeapon": "무기",
+  "fireSuggestion.colLoc": "부위",
+  "fireSuggestion.colBracket": "범위",
+  "fireSuggestion.colTn": "TN",
+  "fireSuggestion.colDmg": "대미지",
+  "fireSuggestion.colAmmo": "탄약",
   "fireSuggestion.tn": "TN",
   "fireSuggestion.damage": "대미지",
   "fireSuggestion.ammo": "탄약",
@@ -195,13 +202,16 @@ export const kr: Catalog = {
   "fireSuggestion.reason.outOfAmmo": "탄약 없음",
   "fireSuggestion.reason.autoMiss": "자동 빗나감",
 
+  // over status
+  "over.idLine": "식별자: {id}",
+
   // record sheet / info
   "info.mechColModel": "모델",
   "info.mechColName": "이름",
   "info.mechColClass": "등급",
   "info.mechColTon": "톤수",
   "info.mechColMove": "이동(걷기/뛰기/점프)",
-  "info.head": "{model} {name} — {weightClass} {tonnage}t ({techBase})",
+  "info.head": "{name} {model} — {weightClass} {tonnage}t ({techBase})",
   "info.movement": "이동: 걷기 {walk} / 달리기 {run} / 점프 {jump}",
   "info.mapHead": "{name}: {w}x{h}",
   "info.terrainLine": "지형: {breakdown}",

@@ -190,16 +190,14 @@ export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
   return mergeDiagram(
     topLines,
     weaponLines,
-    armorDiagramInfo(
-      {
-        armor: d.armor,
-        armorRear,
-        internalStructure: is,
-        originalArmor: d.armor,
-        originalArmorRear: armorRear,
-        originalStructure: is,
-      }
-    ),
+    armorDiagramInfo({
+      armor: d.armor,
+      armorRear,
+      internalStructure: is,
+      originalArmor: d.armor,
+      originalArmorRear: armorRear,
+      originalStructure: is,
+    }),
   );
 }
 
@@ -310,11 +308,15 @@ function requireMechDef(model: string, locale: LocaleId): ResolvedMechDef {
 
 interface SheetView {
   readonly id: string;
+  readonly team: number;
   readonly model: string;
   readonly name: string;
   readonly weightClass: string;
   readonly tonnage: number;
   readonly gunnery: number | null;
+  readonly walking: number;
+  readonly running: number;
+  readonly jumping: number;
   readonly removed: boolean;
   readonly positionLine: string;
   readonly modeLine: string | null;
@@ -345,12 +347,16 @@ function battleSheet(
 ): SheetView {
   const def = battle.defs[unit.model]!;
   return {
-    id,
+    id: id,
+    team: unit.team,
     model: def.model,
     name: def.name,
     weightClass: def.weightClass,
     tonnage: def.tonnage,
     gunnery: unit.gunnery,
+    walking: def.walking,
+    running: def.running,
+    jumping: def.jumping,
     removed: unit.removed,
     positionLine: t(locale, "sheet.at", { pos: disp(unit.position), facing: unit.facing }),
     modeLine:
@@ -385,12 +391,16 @@ function setupSheet(unit: SetupUnit, id: string, locale: LocaleId): SheetView {
     internalStructure: internalStructureForTonnage(def.tonnage),
   };
   return {
-    id,
+    id: id,
+    team: unit.team,
     model: def.model,
     name: def.name,
     weightClass: def.weightClass,
     tonnage: def.tonnage,
     gunnery: unit.gunnery,
+    walking: def.walking,
+    running: def.running,
+    jumping: def.jumping,
     removed: false,
     positionLine: t(locale, "sheet.at", { pos: disp(unit.position), facing: unit.facing }),
     modeLine: null,
@@ -434,7 +444,7 @@ interface ArmorInfo {
 function armorDiagramInfo(info: ArmorInfo): string[] {
   const cell = (max: number, label: string) => ` ${String(max).padStart(2)}${label}`;
   const p = (n: number) => " ".repeat(n);
-  const CT = 11,
+  const CT = 10,
     RT = 5,
     LT = 17;
   const o = info.originalArmor;
@@ -471,7 +481,7 @@ function armorDiagramInfo(info: ArmorInfo): string[] {
 /** for 'sheet <id>' command */
 function armorDiagramSheet(info: ArmorInfo): string[] {
   const cell = (val: number, max: number, label: string) =>
-        `${String(val).padStart(2)}/${String(max).padStart(2)}${label}`;
+    `${String(val).padStart(2)}/${String(max).padStart(2)}${label}`;
   const p = (n: number) => " ".repeat(n);
   const CT = 14,
     RT = 7,
@@ -511,8 +521,8 @@ function armorDiagramSheet(info: ArmorInfo): string[] {
 /** Record sheet with armor status per location, side-by-side with ASCII diagram. */
 export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
   const idLine = view.removed
-    ? `${t(locale, "sheet.idLine", { id: view.id })}${t(locale, "sheet.removedId")}`
-    : t(locale, "sheet.idLine", { id: view.id });
+    ? `${t(locale, "sheet.idLine", { id: view.id, team: view.team })}${t(locale, "sheet.removedId")}`
+    : t(locale, "sheet.idLine", { id: view.id, team: view.team });
   const topLines = [idLine];
   topLines.push(
     t(locale, "sheet.modelLine", {
@@ -525,6 +535,7 @@ export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
   if (view.gunnery !== null) {
     topLines.push(t(locale, "sheet.gunneryLine", { gunnery: gunneryLabel(locale, view.gunnery) }));
   }
+  topLines.push(t(locale, "info.movement", { walk: view.walking, run: view.running, jump: view.jumping }));
   topLines.push(view.positionLine);
   const weaponLines: string[] = [];
   weaponLines.push(t(locale, "sheet.weaponsHeader", { n: view.mounts.length }));
@@ -669,8 +680,8 @@ export function overStatusLines(s: Session): string[] {
     for (const [uid, unit] of Object.entries(s.battle.units).filter(([, u]) => u.team === team)) {
       const view = battleSheet(s.battle, unit, uid, s.locale);
       const idLine = view.removed
-        ? `${t(s.locale, "sheet.idLine", { id: view.id })}${t(s.locale, "sheet.removedId")}`
-        : t(s.locale, "sheet.idLine", { id: view.id });
+        ? `${t(s.locale, "over.idLine", { id: view.id })}${t(s.locale, "sheet.removedId")}`
+        : t(s.locale, "over.idLine", { id: view.id });
       lines.push(`  ${idLine}`);
       for (const line of sheetLinesShort(view, s.locale, false)) lines.push(`  ${line}`);
     }
@@ -824,24 +835,79 @@ const BLOCKER_LABEL: Readonly<Record<FireBlockerReason, MessageKey>> = {
   autoMiss: "fireSuggestion.reason.autoMiss",
 };
 
-function fireWeaponLine(locale: LocaleId, w: FireWeapon): string {
-  const bits = [
-    `#${w.weaponIndex} ${w.weapon} (${SHORT_LOC[w.location]}) [${BRACKET_LABEL[w.rangeBracket]}]`,
-    `${t(locale, "fireSuggestion.tn")} ${w.tn}`,
-    `${t(locale, "fireSuggestion.damage")} ${w.expectedDamage}`,
-  ];
-  if (w.cluster !== undefined) {
-    bits.push(
-      t(locale, "fireSuggestion.cluster", {
-        shots: String(w.cluster.shots),
-        per: String(w.cluster.perMissile),
-      }),
-    );
-  }
-  if (w.ammoShots !== null) {
-    bits.push(`${t(locale, "fireSuggestion.ammo")} ${w.ammoShots}`);
-  }
-  return bits.join("  ");
+interface FireWeaponTableRow {
+  readonly indexCell: string;
+  readonly nameCell: string;
+  readonly locCell: string;
+  readonly bracketCell: string;
+  readonly tnCell: string;
+  readonly dmgCell: string;
+}
+
+function fireWeaponTable(locale: LocaleId, weapons: readonly FireWeapon[]): string[] {
+  const rows: FireWeaponTableRow[] = weapons.map((w) => ({
+    indexCell: `#${w.weaponIndex}`,
+    nameCell: w.weapon,
+    locCell: SHORT_LOC[w.location],
+    bracketCell: `[${BRACKET_LABEL[w.rangeBracket]}]`,
+    tnCell: String(w.tn),
+    dmgCell:
+      w.cluster !== undefined
+        ? `${w.expectedDamage} (${t(locale, "fireSuggestion.cluster", {
+            shots: String(w.cluster.shots),
+            per: String(w.cluster.perMissile),
+          })})`
+        : String(w.expectedDamage),
+  }));
+  const ammoCell = (w: FireWeapon): string =>
+    w.ammoShots !== null ? `${t(locale, "fireSuggestion.ammo")} ${w.ammoShots}` : "";
+
+  const indexW = Math.max(
+    t(locale, "fireSuggestion.colIndex").length,
+    ...rows.map((r) => r.indexCell.length),
+  );
+  const nameW = Math.max(
+    t(locale, "fireSuggestion.colWeapon").length,
+    ...rows.map((r) => r.nameCell.length),
+  );
+  const locW = Math.max(
+    t(locale, "fireSuggestion.colLoc").length,
+    ...rows.map((r) => r.locCell.length),
+  );
+  const bracketW = Math.max(
+    t(locale, "fireSuggestion.colBracket").length,
+    ...rows.map((r) => r.bracketCell.length),
+  );
+  const tnW = Math.max(
+    t(locale, "fireSuggestion.colTn").length,
+    ...rows.map((r) => r.tnCell.length),
+  );
+  const dmgW = Math.max(
+    t(locale, "fireSuggestion.colDmg").length,
+    ...rows.map((r) => r.dmgCell.length),
+  );
+
+  const head =
+    `${t(locale, "fireSuggestion.colIndex").padEnd(indexW)}  ` +
+    `${t(locale, "fireSuggestion.colWeapon").padEnd(nameW)}  ` +
+    `${t(locale, "fireSuggestion.colLoc").padEnd(locW)}  ` +
+    `${t(locale, "fireSuggestion.colBracket").padEnd(bracketW)}  ` +
+    `${t(locale, "fireSuggestion.colTn").padEnd(tnW)}  ` +
+    `${t(locale, "fireSuggestion.colDmg").padEnd(dmgW)}  ` +
+    t(locale, "fireSuggestion.colAmmo");
+
+  const body = rows.map(
+    (r, i) =>
+      `${r.indexCell.padEnd(indexW)}  ` +
+      `${r.nameCell.padEnd(nameW)}  ` +
+      `${r.locCell.padEnd(locW)}  ` +
+      `${r.bracketCell.padEnd(bracketW)}  ` +
+      `${r.tnCell.padEnd(tnW)}  ` +
+      `${r.dmgCell.padEnd(dmgW)}  ` +
+      ammoCell(weapons[i]!),
+  );
+
+  return [head, ...body];
 }
 
 /** Automatic hint shown at the start of a unit's fire turn. */
@@ -863,21 +929,13 @@ export function fireSuggestionLines(s: Session): string[] {
         distance: String(target.distance),
       }),
     );
-    if (target.weapons.length === 0) {
-      for (const b of target.blocked) {
-        lines.push(
-          `${t(s.locale, "fireSuggestion.blocked")}: #${b.weaponIndex} ${b.weapon} — ${t(s.locale, BLOCKER_LABEL[b.reason])}`,
-        );
-      }
-      continue;
+    if (target.weapons.length > 0) {
+      lines.push(...fireWeaponTable(s.locale, target.weapons));
     }
-    for (const w of target.weapons) lines.push(fireWeaponLine(s.locale, w));
-    if (target.blocked.length > 0) {
-      for (const b of target.blocked) {
-        lines.push(
-          `${t(s.locale, "fireSuggestion.blocked")}: #${b.weaponIndex} ${b.weapon} — ${t(s.locale, BLOCKER_LABEL[b.reason])}`,
-        );
-      }
+    for (const b of target.blocked) {
+      lines.push(
+        `${t(s.locale, "fireSuggestion.blocked")}: #${b.weaponIndex} ${b.weapon} — ${t(s.locale, BLOCKER_LABEL[b.reason])}`,
+      );
     }
   }
   return lines;
