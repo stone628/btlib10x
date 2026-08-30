@@ -48,14 +48,14 @@ describe("suggestFireTargets", () => {
     const enf = sugg.targets.find((t) => t.targetId === "enf");
     expect(enf).toBeDefined();
     expect(enf!.distance).toBe(1);
-    expect(enf!.weapons.map((w) => w.weaponIndex).sort()).toEqual([0, 1, 2, 3]);
-    const ac20 = enf!.weapons.find((w) => w.weaponIndex === 0)!;
+    expect(enf!.weapons.map((w) => w.weaponIndex).sort()).toEqual([1, 2, 3, 4]);
+    const ac20 = enf!.weapons.find((w) => w.weaponIndex === 1)!;
     expect(ac20.weapon).toBe("Autocannon/20");
     expect(ac20.rangeBracket).toBe("short");
     expect(ac20.tn).toBe(4); // gunnery 4 + short 0
     expect(ac20.expectedDamage).toBe(20);
     expect(ac20.ammoShots).toBe(10);
-    const ml = enf!.weapons.find((w) => w.weaponIndex === 1)!;
+    const ml = enf!.weapons.find((w) => w.weaponIndex === 2)!;
     expect(ml.expectedDamage).toBe(5);
     expect(ml.ammoShots).toBeNull();
   });
@@ -63,17 +63,17 @@ describe("suggestFireTargets", () => {
   it("marks a weapon jammed", () => {
     const orig = hbkVsEnf();
     const state = startAttackTurn(orig);
-    state.units.hbk!.jammedWeapons = [0];
+    state.units.hbk!.jammedWeapons = [1];
     const reasons = blockedReasons(state, "hbk", "enf");
     expect(reasons.filter((r) => r === "jammed")).toHaveLength(1);
     const sugg = suggestFireTargets(state, "hbk");
     const enf = sugg.targets.find((t) => t.targetId === "enf")!;
-    expect(enf.weapons.map((w) => w.weaponIndex)).toEqual([1, 2, 3]);
+    expect(enf.weapons.map((w) => w.weaponIndex)).toEqual([2, 3, 4]);
   });
 
   it("marks an empty ammo bin", () => {
     const state = startAttackTurn(hbkVsEnf());
-    state.units.hbk!.ammoLeft = { ...state.units.hbk!.ammoLeft, 0: 0 };
+    state.units.hbk!.ammoLeft = { ...state.units.hbk!.ammoLeft, 1: 0 };
     const reasons = blockedReasons(state, "hbk", "enf");
     expect(reasons.filter((r) => r === "outOfAmmo")).toHaveLength(1);
   });

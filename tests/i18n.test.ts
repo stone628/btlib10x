@@ -26,11 +26,13 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
     } else {
       const unit = st.units[actorId]!;
       const def = st.defs[unit.model]!;
-      def.weapons.forEach((_mount, w) => {
-        if (unit.jammedWeapons.includes(w)) return;
-        if (!canFireFromLocation(unit.phaseStartDamage, def.weapons[w]!.location)) return;
-        if (unit.ammoLeft[w] !== undefined && (unit.ammoLeft[w] ?? 0) < 1) return;
-        S.queueFire(s, { weaponIndex: w, targetId: enemy });
+      Object.entries(def.weapons).forEach(([key, mount]) => {
+        const weaponIndex = Number(key);
+        if (unit.jammedWeapons.includes(weaponIndex)) return;
+        if (!canFireFromLocation(unit.phaseStartDamage, mount.location)) return;
+        if (unit.ammoLeft[weaponIndex] !== undefined && (unit.ammoLeft[weaponIndex] ?? 0) < 1)
+          return;
+        S.queueFire(s, { weaponIndex, targetId: enemy });
       });
       S.commitFire(s);
     }

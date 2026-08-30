@@ -71,7 +71,13 @@ export interface ResolvedMechDef {
   readonly armorRear: ResolvedRearArmor;
   /** Internal structure per location, derived from tonnage. */
   readonly internalStructure: InternalStructure;
-  readonly weapons: readonly WeaponMount[];
+  /**
+   * Weapons keyed by their 1-based index (dense 1..N). Distinct from
+   * `MechDef.weapons`, which is the JSON-array form; `resolveMechDef` re-keys.
+   * Iteration via `Object.values` / `Object.keys` yields ascending order per
+   * ES2020+ integer-keyed property semantics — matches the on-disk array order.
+   */
+  readonly weapons: Record<number, WeaponMount>;
   readonly source: string;
 }
 
@@ -93,6 +99,10 @@ export function resolveMechDef(def: MechDef): ResolvedMechDef {
     const v = def.armor[key];
     if (v !== undefined) armorRear[loc] = v;
   }
+  const weapons: Record<number, WeaponMount> = {};
+  def.weapons.forEach((mount, i) => {
+    weapons[i + 1] = mount;
+  });
   return {
     model: def.model,
     name: def.name,
@@ -105,7 +115,7 @@ export function resolveMechDef(def: MechDef): ResolvedMechDef {
     armor,
     armorRear,
     internalStructure: internalStructureForTonnage(def.tonnage),
-    weapons: def.weapons,
+    weapons,
     source: def.source,
   };
 }

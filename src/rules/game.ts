@@ -187,8 +187,9 @@ export function createBattle(
   for (const init of units) {
     const def: ResolvedMechDef = MECH_DEFS[init.model]!;
     const ammoLeft: Record<number, number> = {};
-    def.weapons.forEach((mount, index) => {
-      if (mount.ammoShots !== undefined) ammoLeft[index] = mount.ammoShots;
+    Object.entries(def.weapons).forEach(([key, mount]) => {
+      const weaponIndex = Number(key);
+      if (mount.ammoShots !== undefined) ammoLeft[weaponIndex] = mount.ammoShots;
     });
     const damage: UnitDamageState = {
       armor: { ...def.armor },

@@ -7,8 +7,8 @@ import type {
   GameEvent,
   Hex,
   Location,
-  MechDef,
   RangeBracket,
+  ResolvedMechDef,
   UnitDamageState,
   UnitState,
 } from "btlib10x";
@@ -170,12 +170,8 @@ export function infoMechList(locale: LocaleId): string[] {
 export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
   const d = requireMechDef(model, locale);
   const armorRear: Partial<Record<Location, number>> = {};
-  for (const [loc, key] of [
-    ["centerTorso", "centerTorsoRear"],
-    ["rightTorso", "rightTorsoRear"],
-    ["leftTorso", "leftTorsoRear"],
-  ] as const) {
-    const v = d.armor[key];
+  for (const loc of ["centerTorso", "rightTorso", "leftTorso"] as const) {
+    const v = d.armorRear[loc];
     if (v !== undefined) armorRear[loc] = v;
   }
   const is = internalStructureForTonnage(d.tonnage);
@@ -190,7 +186,7 @@ export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
     t(locale, "info.movement", { walk: d.walking, run: d.running, jump: d.jumping }),
   ];
   const weaponLines = [
-    t(locale, "sheet.weaponsHeader", { n: d.weapons.length }),
+    t(locale, "sheet.weaponsHeader", { n: Object.keys(d.weapons).length }),
     ...weaponSummary(d),
   ];
   return mergeDiagram(
@@ -304,7 +300,7 @@ export function infoMapChunks(locale: LocaleId, name: string): Chunk[] {
   ];
 }
 
-function requireMechDef(model: string, locale: LocaleId): MechDef {
+function requireMechDef(model: string, locale: LocaleId): ResolvedMechDef {
   const def = MECH_DEFS[model];
   if (!def) throw new Error(t(locale, "err.unknownModel", { model }));
   return def;
@@ -366,11 +362,11 @@ function battleSheet(
     originalArmor: def.armor,
     originalArmorRear: def.armorRear,
     originalArmorStructure: def.internalStructure,
-    mounts: def.weapons.map((mount, i) => ({
+    mounts: Object.entries(def.weapons).map(([key, mount]) => ({
       weapon: mount.weapon,
       location: mount.location,
-      ammoLeft: mount.ammoShots !== undefined ? (unit.ammoLeft[i] ?? 0) : null,
-      jammed: unit.jammedWeapons.includes(i),
+      ammoLeft: mount.ammoShots !== undefined ? (unit.ammoLeft[Number(key)] ?? 0) : null,
+      jammed: unit.jammedWeapons.includes(Number(key)),
       destroyed: !canFireFromLocation(unit.phaseStartDamage, mount.location),
     })),
   };
@@ -379,12 +375,8 @@ function battleSheet(
 function setupSheet(unit: SetupUnit, id: string, locale: LocaleId): SheetView {
   const def = requireMechDef(unit.model, locale);
   const armorRear: Partial<Record<Location, number>> = {};
-  for (const [loc, key] of [
-    ["centerTorso", "centerTorsoRear"],
-    ["rightTorso", "rightTorsoRear"],
-    ["leftTorso", "leftTorsoRear"],
-  ] as const) {
-    const v = def.armor[key];
+  for (const loc of ["centerTorso", "rightTorso", "leftTorso"] as const) {
+    const v = def.armorRear[loc];
     if (v !== undefined) armorRear[loc] = v;
   }
   const damage: UnitDamageState = {
@@ -407,7 +399,7 @@ function setupSheet(unit: SetupUnit, id: string, locale: LocaleId): SheetView {
     originalArmor: def.armor,
     originalArmorRear: armorRear,
     originalArmorStructure: damage.internalStructure,
-    mounts: def.weapons.map((mount) => ({
+    mounts: Object.values(def.weapons).map((mount) => ({
       weapon: mount.weapon,
       location: mount.location,
       ammoLeft: mount.ammoShots ?? null,
@@ -736,9 +728,9 @@ export function attackStatusLines(s: Session): string[] {
   if (s.fireDecls.length === 0) return [t(s.locale, "attackStatus.none")];
   const def = s.battle.defs[actor.model]!;
   return s.fireDecls.map((decl) => {
-    const mount = def.weapons[decl.weaponIndex];
-    const name = mount ? mount.weapon : `#${decl.weaponIndex + 1}`;
-    return `#${decl.weaponIndex + 1} ${name} -> ${decl.targetId}${decl.shots !== undefined ? ` x${decl.shots}` : ""}`;
+    const mount = def.weapons[decl.weaponIndex - 1];
+    const name = mount ? mount.weapon : `#${decl.weaponIndex}`;
+    return `#${decl.weaponIndex} ${name} -> ${decl.targetId}${decl.shots !== undefined ? ` x${decl.shots}` : ""}`;
   });
 }
 
@@ -760,7 +752,7 @@ const BLOCKER_LABEL: Readonly<Record<FireBlockerReason, MessageKey>> = {
 
 function fireWeaponLine(locale: LocaleId, w: FireWeapon): string {
   const bits = [
-    `#${w.weaponIndex + 1} ${w.weapon} (${SHORT_LOC[w.location]}) [${BRACKET_LABEL[w.rangeBracket]}]`,
+    `#${w.weaponIndex} ${w.weapon} (${SHORT_LOC[w.location]}) [${BRACKET_LABEL[w.rangeBracket]}]`,
     `${t(locale, "fireSuggestion.tn")} ${w.tn}`,
     `${t(locale, "fireSuggestion.damage")} ${w.expectedDamage}`,
   ];
@@ -800,7 +792,7 @@ export function fireSuggestionLines(s: Session): string[] {
     if (target.weapons.length === 0) {
       for (const b of target.blocked) {
         lines.push(
-          `${t(s.locale, "fireSuggestion.blocked")}: #${b.weaponIndex + 1} ${b.weapon} — ${t(s.locale, BLOCKER_LABEL[b.reason])}`,
+          `${t(s.locale, "fireSuggestion.blocked")}: #${b.weaponIndex} ${b.weapon} — ${t(s.locale, BLOCKER_LABEL[b.reason])}`,
         );
       }
       continue;
@@ -809,7 +801,7 @@ export function fireSuggestionLines(s: Session): string[] {
     if (target.blocked.length > 0) {
       for (const b of target.blocked) {
         lines.push(
-          `${t(s.locale, "fireSuggestion.blocked")}: #${b.weaponIndex + 1} ${b.weapon} — ${t(s.locale, BLOCKER_LABEL[b.reason])}`,
+          `${t(s.locale, "fireSuggestion.blocked")}: #${b.weaponIndex} ${b.weapon} — ${t(s.locale, BLOCKER_LABEL[b.reason])}`,
         );
       }
     }
@@ -826,17 +818,18 @@ export function weaponsLines(s: Session, unitId?: string): string[] {
     );
   }
   const def = s.battle.defs[unit.model]!;
-  return def.weapons.map((mount, i) => {
+  return Object.entries(def.weapons).map(([key, mount]) => {
     const w = getWeapon(mount.weapon);
+    const index = Number(key);
     const bits = [
-      `#${i + 1}`,
+      `#${index}`,
       mount.weapon,
       mount.location,
       `S${w.short}/M${w.medium}/L${w.long}`,
       mount.ammoShots !== undefined
-        ? t(s.locale, "sheet.ammoFlag", { n: unit.ammoLeft[i] ?? 0 })
+        ? t(s.locale, "sheet.ammoFlag", { n: unit.ammoLeft[index] ?? 0 })
         : null,
-      unit.jammedWeapons.includes(i) ? t(s.locale, "sheet.jammed") : null,
+      unit.jammedWeapons.includes(index) ? t(s.locale, "sheet.jammed") : null,
       canFireFromLocation(unit.phaseStartDamage, mount.location)
         ? null
         : t(s.locale, "sheet.destroyed"),
@@ -1090,10 +1083,10 @@ function weaponCategory(name: string): string {
   return "Energy";
 }
 
-function weaponSummary(def: MechDef): string[] {
-  return def.weapons.map((mount, i) => {
+function weaponSummary(def: ResolvedMechDef): string[] {
+  return Object.entries(def.weapons).map(([key, mount]) => {
     const w = getWeapon(mount.weapon);
     const ammo = mount.ammoShots !== undefined ? ` ammo ${mount.ammoShots}` : "";
-    return `  #${i + 1} ${mount.weapon} (${SHORT_LOC[mount.location]}) S${w.short}/M${w.medium}/L${w.long}${ammo}`;
+    return `  #${key} ${mount.weapon} (${SHORT_LOC[mount.location]}) S${w.short}/M${w.medium}/L${w.long}${ammo}`;
   });
 }
