@@ -1,4 +1,3 @@
-import type { AttackDecl } from "btlib10x";
 import { FACINGS, MAP_DEFS } from "btlib10x";
 import type { Chunk, RichOutput } from "./format.js";
 import {
@@ -321,25 +320,22 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
   },
   fire: {
     helpKey: "cmd.fire.help",
-    usage: "fire <weapon> <targetId> [shots]",
+    usage: "fire <targetId> <weapon> [<weapon> ...]",
     argsDoc: [
-      ["weapon", "cmd.fire.arg.weaponIndex"],
       ["targetId", "cmd.fire.arg.targetId"],
-      ["shots", "cmd.fire.arg.shots"],
+      ["weapon", "cmd.fire.arg.weaponIndex"],
     ],
     run: (s, a) => {
-      expectArgs(L(s), a, 2, "fire <weapon> <targetId> [shots]");
-      const weaponIndex = int(L(s), a[0]!, "weapon");
-      const decl: AttackDecl =
-        a[2] !== undefined
-          ? { weaponIndex, targetId: a[1]!, shots: int(L(s), a[2], "shots") }
-          : { weaponIndex, targetId: a[1]! };
-      S.queueFire(s, decl);
+      expectArgs(L(s), a, 2, "fire <targetId> <weapon> [<weapon> ...]");
+      const targetId = a[0]!;
+      const weapons = a.slice(1).map((w) => int(L(s), w, "weapon"));
+      for (const weaponIndex of weapons) {
+        S.queueFire(s, { weaponIndex, targetId });
+      }
       return [
-        t(L(s), "ok.fireQueued", {
-          index: weaponIndex,
-          target: decl.targetId,
-          suffix: decl.shots !== undefined ? ` x${decl.shots}` : "",
+        t(L(s), "ok.fireQueuedBatch", {
+          target: targetId,
+          weapons: weapons.join(", "),
         }),
       ];
     },

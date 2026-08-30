@@ -556,6 +556,37 @@ describe("weapon attack phase", () => {
       state.defs["CDA-3MA"]!.armor.centerTorso,
     );
   });
+
+  it("fires a full rapid-fire volley when shots are omitted on an Ultra AC/5", () => {
+    const setup = createBattle([
+      {
+        id: "her",
+        model: "HER-5SA",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 4 },
+        facing: "se",
+      },
+      {
+        id: "cda",
+        model: "CDA-3MA",
+        team: 1,
+        gunnery: 4,
+        position: { col: 3, row: 4 },
+        facing: "nw",
+      },
+    ]);
+    const state = startAttackTurn(setup);
+    declareAttacks(state, "her", [{ weaponIndex: 3, targetId: "cda" }]); // no shots
+    // Full double-tap (2 shots) is deducted up front, same as explicit shots: 2.
+    expect(getUnit(state, "her").ammoLeft["3"]).toBe(18);
+    const before = getUnit(state, "cda").damage.armor.centerTorso;
+    // to-hit 4 (2,2), cluster 8 (4,4) -> both shots hit; both hit CT (roll 7).
+    resolveDeclaredAttacks(state, "her", scriptedRng(2, 2, 4, 4, 3, 4, 3, 4));
+    const armor = getUnit(state, "cda").damage.armor.centerTorso;
+    // 2 x UAC/5 (5 dmg) reduce CT armor by 10.
+    expect(before - armor).toBe(10);
+  });
 });
 
 describe("passedAttacks", () => {

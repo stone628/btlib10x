@@ -152,9 +152,9 @@ describe("help <command>", () => {
       run(battle, "mode walk");
       run(battle, "done");
     }
-    expect(run(battle, "help fire")[0]).toBe("usage: fire <weapon> <targetId> [shots]");
+    expect(run(battle, "help fire")[0]).toBe("usage: fire <targetId> <weapon> [<weapon> ...]");
     expect(run(battle, "help add")[0]).toMatch(/^error: unknown command 'add'/);
-    expect(run(battle, "help fire").join("\n")).toContain("multi-shot");
+    expect(run(battle, "help fire").join("\n")).toContain("declare several weapons");
   });
 });
 
@@ -439,18 +439,18 @@ describe("attack", () => {
     expect(run(s, "weapons").join("\n")).toMatch(/#1 .+S\d+\/M\d+\/L\d+/);
 
     const ammoBefore = actor === "hunchy" ? (s.battle!.units.hunchy!.ammoLeft[1] ?? 0) : null;
-    expect(run(s, `fire 1 ${enemy}`).join("\n")).toContain("queued #1");
-    expect(run(s, `fire 1 ${enemy}`)[0]).toMatch(
+    expect(run(s, `fire ${enemy} 1`).join("\n")).toContain("queued");
+    expect(run(s, `fire ${enemy} 1`)[0]).toMatch(
       /error: Weapon #1 may only be declared once per turn/,
     );
-    expect(run(s, `fire 2 ${actor}`)[0]).toMatch(/^error: Target must belong to another team/);
+    expect(run(s, `fire ${actor} 2`)[0]).toMatch(/^error: Target must belong to another team/);
     expect(run(s, "status").join("\n")).toContain(`-> ${enemy}`);
     // First unit declares; no resolution yet (sweep at phase end).
     run(s, "done");
     // Second unit declares and triggers resolution sweep at phase end.
     const actor2 = S.currentActor(s)!.id;
     expect(run(s, "weapons").join("\n")).toMatch(/#1 .+S\d+\/M\d+\/L\d+/);
-    expect(run(s, `fire 1 ${actor}`).join("\n")).toContain("queued #1");
+    expect(run(s, `fire ${actor} 1`).join("\n")).toContain("queued");
     const out = run(s, "done").join("\n");
     expect(out).toMatch(new RegExp(`${actor2} fires at ${actor}`));
     expect(out).toMatch(/-> (HIT|MISS|auto-hit)/);
@@ -487,7 +487,7 @@ describe("full game", () => {
           if (!canFireFromLocation(unit.phaseStartDamage, mount.location)) return;
           if (unit.ammoLeft[weaponIndex] !== undefined && (unit.ammoLeft[weaponIndex] ?? 0) < 1)
             return;
-          run(s, `fire ${weaponIndex} ${enemy}`);
+          run(s, `fire ${enemy} ${weaponIndex}`);
         });
         out = run(s, "done");
       }

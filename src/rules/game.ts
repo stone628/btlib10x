@@ -38,7 +38,7 @@ export interface UnitInit {
 export interface AttackDecl {
   readonly weaponIndex: number;
   readonly targetId: string;
-  /** Shots for rapid-fire weapons; default 1. */
+  /** Shots for rapid-fire weapons; omitted means full rapid-fire volley (or 1 for direct fire). */
   readonly shots?: number;
 }
 
@@ -423,7 +423,7 @@ export function declareAttacks(
       );
     }
 
-    const shots = decl.shots ?? 1;
+    const shots = decl.shots ?? weapon.rapidFireShots ?? 1;
     if (!Number.isInteger(shots) || shots < 1) throw new Error("shots must be >= 1");
     if (weapon.rapidFireShots !== undefined && shots > weapon.rapidFireShots) {
       throw new Error(`${mount.weapon} can fire at most ${weapon.rapidFireShots} shots`);
@@ -516,7 +516,7 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
     const mount = def.weapons[decl.weaponIndex]!;
     const weapon = getWeapon(mount.weapon);
     const target = getUnitOrThrow(state, decl.targetId);
-    const shots = decl.shots ?? 1;
+    const shots = decl.shots ?? weapon.rapidFireShots ?? 1;
 
     const resolution = resolveWeaponAttack({
       rng,
