@@ -190,14 +190,16 @@ export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
   return mergeDiagram(
     topLines,
     weaponLines,
-    armorDiagram({
-      armor: d.armor,
-      armorRear,
-      internalStructure: is,
-      originalArmor: d.armor,
-      originalArmorRear: armorRear,
-      originalStructure: is,
-    }),
+    armorDiagramInfo(
+      {
+        armor: d.armor,
+        armorRear,
+        internalStructure: is,
+        originalArmor: d.armor,
+        originalArmorRear: armorRear,
+        originalStructure: is,
+      }
+    ),
   );
 }
 
@@ -428,9 +430,48 @@ interface ArmorInfo {
 }
 
 /** ASCII humanoid armor diagram: internal structure (I), front armor (F/A), rear (R). */
-function armorDiagram(info: ArmorInfo): string[] {
+/** for 'info mech <model>' command */
+function armorDiagramInfo(info: ArmorInfo): string[] {
+  const cell = (max: number, label: string) => ` ${String(max).padStart(2)}${label}`;
+  const p = (n: number) => " ".repeat(n);
+  const CT = 11,
+    RT = 5,
+    LT = 17;
+  const o = info.originalArmor;
+  const os = info.originalStructure;
+  const or = info.originalArmorRear;
+  const rear = (loc: Location) => cell(or[loc] ?? 0, "R");
+  return [
+    `${p(CT)}[HD]`,
+    `${p(CT)}${cell(os.head, "I")}`,
+    `${p(CT)}${cell(o.head, "A")}`,
+    `[RA] [RT] [CT] [LT] [LA]`,
+    [
+      cell(os.rightArm, "I"),
+      cell(os.rightTorso, "I"),
+      cell(os.centerTorso, "I"),
+      cell(os.leftTorso, "I"),
+      cell(os.leftArm, "I"),
+    ].join(" "),
+    [
+      cell(o.rightArm, "A"),
+      cell(o.rightTorso, "F"),
+      cell(o.centerTorso, "F"),
+      cell(o.leftTorso, "F"),
+      cell(o.leftArm, "A"),
+    ].join(" "),
+    `${p(RT)}${[rear("rightTorso"), rear("centerTorso"), rear("leftTorso")].join(" ")}`,
+    `${p(RT)}[RL]${p(LT - RT - 6)}[LL]`,
+    `${p(RT)}${[cell(os.rightLeg, "I"), cell(os.leftLeg, "I")].join(p(LT - RT - 6))}`,
+    `${p(RT)}${[cell(o.rightLeg, "A"), cell(o.leftLeg, "A")].join(p(LT - RT - 6))}`,
+  ];
+}
+
+/** ASCII humanoid armor diagram: internal structure (I), front armor (F/A), rear (R). */
+/** for 'sheet <id>' command */
+function armorDiagramSheet(info: ArmorInfo): string[] {
   const cell = (val: number, max: number, label: string) =>
-    `${String(val).padStart(2)}/${String(max).padStart(2)}${label}`;
+        `${String(val).padStart(2)}/${String(max).padStart(2)}${label}`;
   const p = (n: number) => " ".repeat(n);
   const CT = 14,
     RT = 7,
@@ -501,7 +542,7 @@ export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
   return mergeDiagram(
     topLines,
     weaponLines,
-    armorDiagram({
+    armorDiagramSheet({
       armor: view.armor,
       armorRear: view.damage.armorRear,
       internalStructure: view.damage.internalStructure,
