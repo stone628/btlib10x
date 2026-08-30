@@ -156,6 +156,8 @@ export const en = {
   "err.targetRemoved": "Target {id} is removed from play",
   "err.oneTarget":
     "A unit may only declare attacks against one target per turn (already targeting {target})",
+  "err.weaponRepeated":
+    "Weapon #{weapon} may only be declared once per turn (use 'shots' for rapid-fire)",
   "err.rematchOnlyOver": "Only available when the battle is over",
   "err.seedInteger": "seed must be an integer",
   "err.phaseDriver": "phase driver failed to settle",

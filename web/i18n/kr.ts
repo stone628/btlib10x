@@ -151,6 +151,8 @@ export const kr: Catalog = {
   "err.selfTarget": "목표는 다른 팀이어야 합니다",
   "err.targetRemoved": "목표 {id} 은(는) 게임에서 제외되었습니다",
   "err.oneTarget": "한 유닛은 턴당 하나의 목표에만 공격을 선언할 수 있습니다 (현재 목표: {target})",
+  "err.weaponRepeated":
+    "Weapon #{weapon} may only be declared once per turn (use 'shots' for rapid-fire)",
   "err.rematchOnlyOver": "전투가 끝난 후에만 사용할 수 있습니다",
   "err.seedInteger": "seed는 정수여야 합니다",
   "err.phaseDriver": "단계 드라이버가 수렴하지 않았습니다",

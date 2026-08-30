@@ -244,7 +244,8 @@ Rules encoded by the state machine:
 - **Weapon usability** is judged against `phaseStartArmor`.
 - **Ammo** is deducted at declaration time; jams persist for the rest of the game.
 - **Declaration validation**: one target per turn, front arc, unblocked LOS,
-  range check, TN > 12 must be aborted (throws), rapid-fire shot limits.
+  range check, TN > 12 must be aborted (throws), rapid-fire shot limits, one
+  declaration per weapon per turn.
 - **Movement validation**: MP budget per mode, terrain costs, backward steps
   banned while running, turn costs 1 MP/hexside, stacking (pass-through
   friendly-only, never end on another 'Mech); jumping may pass over any unit,

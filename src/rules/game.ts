@@ -403,10 +403,16 @@ export function declareAttacks(
   let attackRangeBracket: string = "short";
   let attackRangeMod = 0;
 
+  const seenWeapons = new Set<number>();
   decls.forEach((decl, index) => {
     const mount = def.weapons[decl.weaponIndex];
     if (!mount) throw new Error(`weaponIndex ${decl.weaponIndex} out of range for ${unitId}`);
     const weapon = getWeapon(mount.weapon);
+
+    if (seenWeapons.has(decl.weaponIndex)) {
+      throw new Error(`${mount.weapon} on ${unitId} may only be declared once per turn`);
+    }
+    seenWeapons.add(decl.weaponIndex);
 
     if (unit.jammedWeapons.includes(decl.weaponIndex)) {
       throw new Error(`${mount.weapon} on ${unitId} is jammed`);
