@@ -33,7 +33,7 @@ describe("console renderer", () => {
     expect(out).toContain(`${GRID_GLYPHS.edgeNW}0203${GRID_GLYPHS.edgeNE}`); // coord row /XXYY
   });
 
-  it("staggers odd columns down half a hex", () => {
+  it("staggers even columns down half a hex", () => {
     const state = createBattle(
       [
         {
@@ -49,25 +49,25 @@ describe("console renderer", () => {
           model: "GRF-1N",
           team: 1,
           gunnery: 3,
-          position: { col: 4, row: 2 },
+          position: { col: 4, row: 1 },
           facing: "s",
         },
       ],
       { width: 4, height: 2 },
     );
     const lines = renderBattle(state).split("\n");
-    // Even-col labels sit at canvas y=0, odd-col labels at canvas y=2.
+    // Odd-col labels sit at the top (canvas y=0), even-col labels at
+    // canvas y=2 — so a same-row even column renders 2 canvas lines lower.
     const wvrAt = lines.findIndex((l) =>
       l.includes(`${GRID_GLYPHS.edgeNW}0301${GRID_GLYPHS.edgeNE}`),
     );
     const grfAt = lines.findIndex((l) =>
-      l.includes(`${GRID_GLYPHS.edgeNW}0402${GRID_GLYPHS.edgeNE}`),
+      l.includes(`${GRID_GLYPHS.edgeNW}0401${GRID_GLYPHS.edgeNE}`),
     );
     expect(wvrAt).toBeGreaterThan(-1);
     expect(grfAt).toBe(wvrAt + 2);
-    // grf sits at col 4 (even) row 2, label at canvas y = 0 + 1*4 = 4.
     // col 4 label lives at canvas x = (4-1)*6 + 1 = 19; slice(19, 25).
-    expect(lines[grfAt]!.slice(19, 25)).toBe(`${GRID_GLYPHS.edgeNW}0402${GRID_GLYPHS.edgeNE}`);
+    expect(lines[grfAt]!.slice(19, 25)).toBe(`${GRID_GLYPHS.edgeNW}0401${GRID_GLYPHS.edgeNE}`);
     // wvr sits at col 3 (odd) row 1; its '↑' lives at the top edge of
     // the cell. The '↑' overwrites the top label's `0` digit at
     // canvas x = 15.
@@ -115,14 +115,14 @@ describe("console renderer", () => {
       { width: 4, height: 4 },
     );
     const lines = renderBattle(state).split("\n");
-    // hbk at col 4 (baseY=0). The '↑' sits at the shared edge between
-    // row 2 and row 3 (canvas y=8). enf at col 4 row 4 (last row): the
-    // '↓' sits at the bottom edge (canvas y=12). Slice positions
+    // hbk at col 4 (even, staggered down 2). The '↑' sits at the shared edge
+    // between row 2 and row 3 (canvas y=10). enf at col 4 row 4 (last row):
+    // the '↓' sits at the bottom edge (canvas y=18). Slice positions
     // 20..24 target the right wall and interior of col 4's body.
     const edgeAt = (y: number): string => lines[y]!.slice(20, 24);
-    expect(edgeAt(0)).toBe(GRID_GLYPHS.edgeTop.repeat(4));
-    expect(edgeAt(8)).toBe(`${GRID_GLYPHS.edgeShared}\u2191${GRID_GLYPHS.edgeShared.repeat(2)}`);
-    expect(edgeAt(16)).toBe(`${GRID_GLYPHS.edgeBottom.repeat(2)}\u2193${GRID_GLYPHS.edgeBottom}`);
+    expect(edgeAt(2)).toBe(GRID_GLYPHS.edgeTop.repeat(4));
+    expect(edgeAt(10)).toBe(`${GRID_GLYPHS.edgeShared}\u2191${GRID_GLYPHS.edgeShared.repeat(2)}`);
+    expect(edgeAt(18)).toBe(`${GRID_GLYPHS.edgeBottom.repeat(2)}\u2193${GRID_GLYPHS.edgeBottom}`);
   });
 
   it("zero-pads coordinates as fixed XXYY pairs", () => {
