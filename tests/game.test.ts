@@ -93,7 +93,7 @@ describe("createBattle", () => {
     const state = hbkVsEnf();
     const hbk = getUnit(state, "hbk");
     expect(hbk.damage.armor).toEqual(state.defs["HBK-4G"]!.armor);
-    expect(hbk.ammoLeft["0"]).toBe(10);
+    expect(hbk.ammoLeft["1"]).toBe(10);
     expect(hbk.phaseStartDamage).toEqual(hbk.damage);
     expect(state.phase).toBe("initiative");
     expect(state.turn).toBe(1);
@@ -370,7 +370,7 @@ describe("weapon attack phase", () => {
         },
       ]),
     );
-    expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 0, targetId: "enf" }])).toThrow(
+    expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }])).toThrow(
       /front firing arc/,
     );
 
@@ -409,7 +409,7 @@ describe("weapon attack phase", () => {
       },
     );
     state = startAttackTurn(state);
-    expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 0, targetId: "enf" }])).toThrow(
+    expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }])).toThrow(
       /blocked/,
     );
 
@@ -434,7 +434,7 @@ describe("weapon attack phase", () => {
       },
     ]);
     state = startAttackTurn(state);
-    expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 0, targetId: "enf" }])).toThrow(
+    expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }])).toThrow(
       /long range/,
     );
 
@@ -467,8 +467,8 @@ describe("weapon attack phase", () => {
       },
     );
     state = startAttackTurn(state);
-    // Large laser (index 1), distance 9, +2 woods intervening, +2 heavy target.
-    expect(() => declareAttacks(state, "enf", [{ weaponIndex: 1, targetId: "hbk" }])).toThrow(
+    // Large laser (array index 1 -> weaponIndex 2), distance 9, +2 woods intervening, +2 heavy target.
+    expect(() => declareAttacks(state, "enf", [{ weaponIndex: 2, targetId: "hbk" }])).toThrow(
       /auto-miss|abort/,
     );
   });
@@ -476,18 +476,18 @@ describe("weapon attack phase", () => {
   it("deducts ammo at declaration and allows one target per turn", () => {
     const state = startAttackTurn(hbkVsEnf());
     declareAttacks(state, "hbk", [
-      { weaponIndex: 0, targetId: "enf" },
       { weaponIndex: 1, targetId: "enf" },
+      { weaponIndex: 2, targetId: "enf" },
     ]);
-    expect(getUnit(state, "hbk").ammoLeft["0"]).toBe(9);
-    expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }])).toThrow(
+    expect(getUnit(state, "hbk").ammoLeft["1"]).toBe(9);
+    expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 3, targetId: "enf" }])).toThrow(
       /already declared/,
     );
   });
 
   it("resolves scripted attacks immediately and commits kills only at end of phase", () => {
     const state = startAttackTurn(hbkVsEnf());
-    declareAttacks(state, "hbk", [{ weaponIndex: 0, targetId: "enf" }]);
+    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
     // Turn 1: AC/20 (20 dmg) hits CT (roll 5) -> front 23 - 20 = 3 left.
     resolveDeclaredAttacks(state, "hbk", scriptedRng(2, 3, 3, 4));
     expect(getUnit(state, "enf").damage.armor.centerTorso).toBe(3);
@@ -503,7 +503,7 @@ describe("weapon attack phase", () => {
 
     rollInitiativePhase(state, scriptedRng(3, 3, 3, 1));
     advancePhase(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 0, targetId: "enf" }]);
+    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
     resolveDeclaredAttacks(state, "hbk", scriptedRng(6, 6, 3, 4)); // hit CT again
     expect(getUnit(state, "enf").damage.armor.centerTorso).toBe(0);
     expect(getUnit(state, "enf").destroyed).toBe(true); // killed immediately
@@ -537,11 +537,11 @@ describe("weapon attack phase", () => {
       },
     ]);
     const state = startAttackTurn(setup);
-    declareAttacks(state, "her", [{ weaponIndex: 2, targetId: "cda", shots: 2 }]);
-    expect(getUnit(state, "her").ammoLeft["2"]).toBe(18); // 2 shots spent up front
+    declareAttacks(state, "her", [{ weaponIndex: 3, targetId: "cda", shots: 2 }]);
+    expect(getUnit(state, "her").ammoLeft["3"]).toBe(18); // 2 shots spent up front
     resolveDeclaredAttacks(state, "her", scriptedRng(1, 1)); // natural 2 -> jam
     const her = getUnit(state, "her");
-    expect(her.jammedWeapons).toEqual([2]);
+    expect(her.jammedWeapons).toEqual([3]);
     expect(getUnit(state, "cda").damage.armor.centerTorso).toBe(
       state.defs["CDA-3MA"]!.armor.centerTorso,
     );

@@ -76,7 +76,7 @@ describe("example battle: Wolverine vs Griffin", () => {
     // Weapon phase: Wolverine medium laser at range 7 (long bracket); the
     // light woods between at (7,7) add +1 -> TN 11.
     advancePhase(state); // movement -> weaponAttack
-    declareAttacks(state, "wvr", [{ weaponIndex: 0, targetId: "grf" }]);
+    declareAttacks(state, "wvr", [{ weaponIndex: 1, targetId: "grf" }]);
     // To-hit 11 >= TN 11; location roll 8 -> left torso; ML damage 5. LT 18 -> 13.
     resolveDeclaredAttacks(state, "wvr", scriptedRng(6, 5, 3, 5));
     expect(getUnit(state, "grf").damage.armor.leftTorso).toBe(
@@ -84,7 +84,7 @@ describe("example battle: Wolverine vs Griffin", () => {
     );
 
     // Griffin answers with its PPC: TN 9, rolls 4 -> miss, no damage.
-    declareAttacks(state, "grf", [{ weaponIndex: 0, targetId: "wvr" }]);
+    declareAttacks(state, "grf", [{ weaponIndex: 2, targetId: "wvr" }]);
     resolveDeclaredAttacks(state, "grf", scriptedRng(1, 3)); // miss
     expect(getUnit(state, "wvr").damage.armor).toEqual(state.defs["WVR-6R"]!.armor);
   });
@@ -105,9 +105,9 @@ describe("example battle: Wolverine vs Griffin", () => {
     declareMove(state, "grf", "walk");
     executeMove(state, "grf", []);
     advancePhase(state);
-    declareAttacks(state, "wvr", [{ weaponIndex: 0, targetId: "grf" }]);
+    declareAttacks(state, "wvr", [{ weaponIndex: 1, targetId: "grf" }]);
     resolveDeclaredAttacks(state, "wvr", scriptedRng(6, 5, 3, 5)); // LT hit
-    declareAttacks(state, "grf", [{ weaponIndex: 0, targetId: "wvr" }]);
+    declareAttacks(state, "grf", [{ weaponIndex: 2, targetId: "wvr" }]);
     resolveDeclaredAttacks(state, "grf", scriptedRng(1, 3)); // miss
 
     // ---- Turns 2..9: both stand still, Wolverine plinks the CT for 5 each.
@@ -122,7 +122,7 @@ describe("example battle: Wolverine vs Griffin", () => {
       rollInitiativePhase(state, scriptedRng(3, 3, 3, 1)); // team 0 wins
       advancePhase(state); // -> weaponAttack (both skip moving)
       if (t < 9) {
-        declareAttacks(state, "wvr", [{ weaponIndex: 0, targetId: "grf" }]);
+        declareAttacks(state, "wvr", [{ weaponIndex: 1, targetId: "grf" }]);
         // 12 hits TN 9; location 7 -> center torso.
         resolveDeclaredAttacks(state, "wvr", scriptedRng(6, 6, 3, 4));
         const hitsDone = t - 1;
@@ -130,7 +130,7 @@ describe("example battle: Wolverine vs Griffin", () => {
         expect(getUnit(state, "grf").destroyed).toBe(false);
       } else {
         // Final blow: front armor gone, CT IS 3, damage 5 -> structure destroyed.
-        declareAttacks(state, "wvr", [{ weaponIndex: 0, targetId: "grf" }]);
+        declareAttacks(state, "wvr", [{ weaponIndex: 1, targetId: "grf" }]);
         resolveDeclaredAttacks(state, "wvr", scriptedRng(6, 6, 3, 4));
         expect(grfCt()).toBe(0);
         expect(getUnit(state, "grf").destroyed).toBe(true); // killed immediately

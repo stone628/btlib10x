@@ -72,7 +72,8 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
       const weapons: FireWeapon[] = [];
       const blocked: FireTarget["blocked"] = [];
 
-      def.weapons.forEach((mount, weaponIndex) => {
+      Object.entries(def.weapons).forEach(([key, mount]) => {
+        const weaponIndex = Number(key);
         const weapon = getWeapon(mount.weapon);
         if (unit.jammedWeapons.includes(weaponIndex)) {
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "jammed" });

@@ -13,7 +13,7 @@ describe("'Mech definitions", () => {
 
   it("re-validates every bundled definition", () => {
     for (const def of Object.values(MECH_DEFS)) {
-      expect(() => validateMechDef(def)).not.toThrow();
+      expect(() => validateMechDef({ ...def, weapons: Object.values(def.weapons) })).not.toThrow();
     }
   });
 
@@ -26,7 +26,7 @@ describe("'Mech definitions", () => {
     expect(hbk.jumping).toBe(0);
     expect(hbk.armor.centerTorso).toBe(26);
     expect(hbk.armor.head).toBe(9);
-    expect(hbk.weapons.map((w) => w.weapon)).toContain("Autocannon/20");
+    expect(Object.values(hbk.weapons).map((w) => w.weapon)).toContain("Autocannon/20");
   });
 
   it("spot-checks remaining sheets", () => {
@@ -36,12 +36,12 @@ describe("'Mech definitions", () => {
     expect(MECH_DEFS["CDA-3MA"]!.walking).toBe(8);
     expect(MECH_DEFS["HER-5SA"]!.running).toBe(9);
     const wvr = MECH_DEFS["WVR-6R"]!;
-    expect(wvr.weapons.find((w) => w.weapon === "SRM 6")?.ammoShots).toBe(15);
+    expect(Object.values(wvr.weapons).find((w) => w.weapon === "SRM 6")?.ammoShots).toBe(15);
     const atlas = MECH_DEFS["AS7-D"]!;
     expect(atlas.tonnage).toBe(100);
     expect(atlas.weightClass).toBe("Assault");
     expect(atlas.running).toBe(5);
-    expect(atlas.weapons.find((w) => w.weapon === "LRM 20")?.ammoShots).toBe(12);
+    expect(Object.values(atlas.weapons).find((w) => w.weapon === "LRM 20")?.ammoShots).toBe(12);
   });
 
   it("keeps MTF armor fidelity (front + rear) in JSON and splits it on resolve", () => {
@@ -88,22 +88,27 @@ describe("'Mech definitions", () => {
   });
 
   it("derives internal structure from the tonnage table on resolve", () => {
-    expect(resolveMechDef(MECH_DEFS["WVR-6R"]!).internalStructure.centerTorso).toBe(18);
-    expect(resolveMechDef(MECH_DEFS["AS7-D"]!).internalStructure.centerTorso).toBe(31);
-    expect(resolveMechDef(MECH_DEFS["AS7-D"]!).internalStructure.rightArm).toBe(17);
+    const toMechDef = (d: (typeof MECH_DEFS)[string]) => ({
+      ...d,
+      weapons: Object.values(d.weapons),
+    });
+    expect(resolveMechDef(toMechDef(MECH_DEFS["WVR-6R"]!)).internalStructure.centerTorso).toBe(18);
+    expect(resolveMechDef(toMechDef(MECH_DEFS["AS7-D"]!)).internalStructure.centerTorso).toBe(31);
+    expect(resolveMechDef(toMechDef(MECH_DEFS["AS7-D"]!)).internalStructure.rightArm).toBe(17);
   });
 
   it("rejects invalid rear armor entries in the JSON schema", () => {
     const base = MECH_DEFS["HBK-4G"]!;
+    const toMechDef = (d: typeof base) => ({ ...d, weapons: Object.values(d.weapons) });
     expect(() =>
       validateMechDef({
-        ...base,
+        ...toMechDef(base),
         armor: { ...base.armor, centerTorsoRear: -3 },
       }),
     ).toThrow(/armor\.centerTorsoRear must be a non-negative integer/);
     expect(() =>
       validateMechDef({
-        ...base,
+        ...toMechDef(base),
         armor: { ...base.armor, leftTorsoRear: 1.5 },
       }),
     ).toThrow(/armor\.leftTorsoRear must be a non-negative integer/);
@@ -111,13 +116,14 @@ describe("'Mech definitions", () => {
 
   it("rejects invalid definitions", () => {
     const base = MECH_DEFS["HBK-4G"]!;
-    expect(() => validateMechDef({ ...base, running: 7 })).toThrow(/running/);
-    expect(() => validateMechDef({ ...base, armor: { ...base.armor, head: -1 } })).toThrow(
-      /armor\.head/,
-    );
+    const toMechDef = (d: typeof base) => ({ ...d, weapons: Object.values(d.weapons) });
+    expect(() => validateMechDef({ ...toMechDef(base), running: 7 })).toThrow(/running/);
+    expect(() =>
+      validateMechDef({ ...toMechDef(base), armor: { ...base.armor, head: -1 } }),
+    ).toThrow(/armor\.head/);
     expect(() =>
       validateMechDef({
-        ...base,
+        ...toMechDef(base),
         armor: { ...base.armor, center: 10 },
       }),
     ).toThrow(/not a valid location/);
@@ -127,7 +133,7 @@ describe("'Mech definitions", () => {
 describe("weapon catalog", () => {
   it("resolves every weapon referenced by a bundled 'Mech", () => {
     for (const def of Object.values(MECH_DEFS)) {
-      for (const mount of def.weapons) {
+      for (const mount of Object.values(def.weapons)) {
         expect(getWeapon(mount.weapon).name, `${def.model}: ${mount.weapon}`).toBe(mount.weapon);
       }
     }

@@ -327,8 +327,7 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
     ],
     run: (s, a) => {
       expectArgs(L(s), a, 2, "fire <weapon> <targetId> [shots]");
-      const weapon = int(L(s), a[0]!, "weapon");
-      const weaponIndex = weapon - 1;
+      const weaponIndex = int(L(s), a[0]!, "weapon");
       const decl: AttackDecl =
         a[2] !== undefined
           ? { weaponIndex, targetId: a[1]!, shots: int(L(s), a[2], "shots") }
@@ -336,7 +335,7 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
       S.queueFire(s, decl);
       return [
         t(L(s), "ok.fireQueued", {
-          index: weapon,
+          index: weaponIndex,
           target: decl.targetId,
           suffix: decl.shots !== undefined ? ` x${decl.shots}` : "",
         }),
