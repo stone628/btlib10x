@@ -492,6 +492,19 @@ export function cancelFire(s: Session): void {
   s.fireDecls = [];
 }
 
+export function passFire(s: Session): CommitResult {
+  const unit = requireActor(s, "weaponAttack");
+  const battle = requireBattle(s);
+  const beforeCount = battle.events.length;
+  commitAtomic(s, () => {
+    unit.passedAttacks = true;
+    s.actorId = null;
+    clearBuffers(s);
+    drive(s);
+  });
+  return { state: battle, newEvents: battle.events.slice(beforeCount) };
+}
+
 export function queueFire(s: Session, decl: AttackDecl): void {
   const unit = requireActor(s, "weaponAttack");
   if (decl.targetId === unit.id) throw new Error(t(s.locale, "err.selfTarget"));

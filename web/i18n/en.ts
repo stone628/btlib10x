@@ -243,6 +243,7 @@ export const en = {
   "log.moved": "{id} {mode} -> {pos} facing {facing}, used {mp} of {budget} MP",
   "log.attacksDeclaredOne": "{id} fires at {target} ({count} weapon, {rangeCtx})",
   "log.attacksDeclaredOther": "{id} fires at {target} ({count} weapons, {rangeCtx})",
+  "log.attacksPassed": "{id} is not attacking this turn.",
   "log.destroyed": "*** {id} DESTROYED ***",
   "log.removedEvent": "{id} removed from play",
 

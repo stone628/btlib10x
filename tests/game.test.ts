@@ -547,3 +547,20 @@ describe("weapon attack phase", () => {
     );
   });
 });
+
+describe("passedAttacks", () => {
+  it("nextActor skips units that have passed this phase", () => {
+    const state = startAttackTurn(hbkVsEnf());
+    expect(nextActor(state)).toBe("enf");
+    getUnit(state, "enf").passedAttacks = true;
+    expect(nextActor(state)).toBe("hbk");
+  });
+
+  it("passedAttacks resets at the end of the turn", () => {
+    const state = startAttackTurn(hbkVsEnf());
+    getUnit(state, "enf").passedAttacks = true;
+    advancePhase(state); // weaponAttack -> end
+    advancePhase(state); // end -> initiative, turn 2
+    expect(getUnit(state, "enf").passedAttacks).toBe(false);
+  });
+});

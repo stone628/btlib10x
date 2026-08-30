@@ -65,6 +65,8 @@ export interface UnitState {
   mpSpent: number;
   declaredAttacks: AttackDecl[];
   firedTargetId: string | null;
+  /** True if the unit explicitly passed on declaring attacks this phase. */
+  passedAttacks: boolean;
   destroyed: boolean;
   removed: boolean;
 }
@@ -217,6 +219,7 @@ export function createBattle(
       mpSpent: 0,
       declaredAttacks: [],
       firedTargetId: null,
+      passedAttacks: false,
       destroyed: false,
       removed: false,
     };
@@ -609,6 +612,7 @@ export function advancePhase(state: BattleState): void {
         unit.mpSpent = 0;
         unit.declaredAttacks = [];
         unit.firedTargetId = null;
+        unit.passedAttacks = false;
       }
       state.events.push({ kind: "turn", turn: state.turn });
       break;
@@ -634,7 +638,9 @@ export function nextActor(state: BattleState): string | null {
 
   const sorted = order.sort((a, b) => actedCount(a) - actedCount(b));
   for (const team of sorted) {
-    const candidate = alive.find((u) => u.team === team && !state.actedThisPhase.includes(u.id));
+    const candidate = alive.find(
+      (u) => u.team === team && !state.actedThisPhase.includes(u.id) && !u.passedAttacks,
+    );
     if (candidate) return candidate.id;
   }
   return null;

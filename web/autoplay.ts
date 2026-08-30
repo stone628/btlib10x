@@ -11,6 +11,8 @@ export const AUTOPLAY_INTERVAL_MS = 200;
 const SCRIPT_SETUP: ReadonlyArray<{ id: string; command: string }> = [
   { id: "AT", command: "add AT AS7-D 0 4 3 4 ne" },
   { id: "MD", command: "add MD MC-MKII-2 1 4 5 3 sw" },
+  { id: "ENF", command: "add ENF ENF-4R 0 3 5 5 n" },
+  { id: "WVR", command: "add WVR WVR-6R 1 3 6 4 s" },
 ];
 
 /** Queued commands to issue before falling back to state-based logic. */
@@ -87,7 +89,9 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
 
     const actor = st.units[s.actorId];
     if (actor === undefined || actor.removed) return null;
-    const enemy = Object.values(st.units).find((u) => !u.removed && u.id !== actor.id);
+    const enemy = Object.values(st.units).find(
+      (u) => !u.removed && u.id !== actor.id && u.team !== actor.team,
+    );
     if (enemy === undefined) return null;
 
     if (prevApp === "setup") {
