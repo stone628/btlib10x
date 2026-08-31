@@ -124,6 +124,7 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
         const mount = def.weapons[weaponIndex]!;
         if (s.fireDecls.some((d) => d.weaponIndex === weaponIndex)) continue;
         if (actor.jammedWeapons.includes(weaponIndex)) continue;
+        if (actor.destroyedWeapons.includes(weaponIndex)) continue;
         if (!canFireFromLocation(actor.phaseStartDamage, mount.location)) continue;
         if (actor.ammoLeft[weaponIndex] !== undefined && (actor.ammoLeft[weaponIndex] ?? 0) < 1)
           continue;

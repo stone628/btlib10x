@@ -1,9 +1,11 @@
 import { roll2D6 } from "../core/dice.js";
 import type { Location, MoveMode, Rng, TerrainType } from "../core/types.js";
+import type { ResolvedMechDef } from "../data/schema.js";
 import type { WeaponDef } from "../data/weapons.js";
 import { getWeapon } from "../data/weapons.js";
 import type { Arc } from "./arcs.js";
 import { clusterHitsForMissiles, clusterHitsForShots, groupMissiles } from "./cluster.js";
+import { type CriticalResolution, resolveCriticalHits } from "./critical.js";
 import { applyDamage, type DamageApplication, type UnitDamageState } from "./damage.js";
 import { hitLocation } from "./hitlocation.js";
 import { losWoodsPoints } from "./los.js";
@@ -34,6 +36,19 @@ export interface WeaponAttackInput {
   readonly attackerLevel?: number;
   /** Target's ground elevation in levels (default 0). */
   readonly targetLevel?: number;
+  /**
+   * Target 'Mech definition; required for critical-hit resolution. Omit in
+   * tests that only care about raw damage. When provided, `targetDef` is
+   * used for crit-slot layout, weapon linkage, and the per-weapon ammo
+   * pool.
+   */
+  readonly targetDef?: ResolvedMechDef;
+  /** Pre-attack crit-slot destroyed flags (snapshot). */
+  readonly targetCritSlotsDestroyed?: Record<Location, boolean[]>;
+  /** Pre-attack destroyed weapon indices. */
+  readonly targetDestroyedWeapons?: readonly number[];
+  /** Pre-attack ammo remaining per weapon index. */
+  readonly targetAmmoLeft?: Readonly<Record<number, number>>;
 }
 
 export interface AttackResolution {
@@ -46,6 +61,12 @@ export interface AttackResolution {
   readonly clusterRoll: number | null;
   readonly groups: readonly HitGroup[];
   readonly application: DamageApplication | null;
+  /**
+   * Critical hit resolutions triggered by the attack, one per group that
+   * stripped at least 1 internal-structure point. Empty when no crits were
+   * rolled (e.g. `targetDef` was not supplied).
+   */
+  readonly crits: readonly CriticalResolution[];
 }
 
 /** Resolve one declared weapon attack end-to-end: to-hit, location(s), damage. */
@@ -76,6 +97,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     clusterRoll: null as number | null,
     groups: [] as HitGroup[],
     application: null as DamageApplication | null,
+    crits: [] as CriticalResolution[],
   };
 
   if (breakdown.outOfRange) return base;
@@ -128,6 +150,23 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
   let damage = input.targetDamage;
   let application: DamageApplication | null = null;
   const arc = input.arc ?? "front";
+  const critStateAvailable =
+    input.targetDef !== undefined &&
+    input.targetCritSlotsDestroyed !== undefined &&
+    input.targetDestroyedWeapons !== undefined &&
+    input.targetAmmoLeft !== undefined;
+  // Mutable crit tracking; each group that strips IS in the SAME location
+  // reuses the snapshot from the previous group's crit, mirroring the rules
+  // ("before resolving any further weapons fire" the determining roll is
+  // made and the crit slot state advances immediately).
+  let critSlotsDestroyed: Record<Location, boolean[]> | undefined = input.targetCritSlotsDestroyed
+    ? cloneDestroyed(input.targetCritSlotsDestroyed)
+    : undefined;
+  let destroyedWeapons: number[] = input.targetDestroyedWeapons
+    ? [...input.targetDestroyedWeapons]
+    : [];
+  let ammoLeft: Record<number, number> = input.targetAmmoLeft ? { ...input.targetAmmoLeft } : {};
+
   for (const group of base.groups) {
     const app = applyDamage(damage, group.location, group.damage, arc);
     damage = app.damage;
@@ -141,7 +180,54 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
             blownOffArms: [...application.blownOffArms, ...app.blownOffArms],
             killed: application.killed || app.killed,
           };
+
+    if (!critStateAvailable || !input.targetDef) continue;
+    // Did this group strip at least 1 IS point at the group's *original*
+    // location (not a transferred one)? The rules call for one determining
+    // roll per location that loses IS in a given group.
+    const stripped = app.steps.some(
+      (s) => s.location === group.location && s.pool === "structure" && s.damageApplied > 0,
+    );
+    if (!stripped) continue;
+    const res = resolveCriticalHits({
+      rng: input.rng,
+      def: input.targetDef,
+      source: { location: group.location, damage: group.damage },
+      critSlotsDestroyed: critSlotsDestroyed!,
+      destroyedWeapons,
+      damage,
+      ammoLeft,
+    });
+    critSlotsDestroyed = res.critSlotsDestroyed;
+    destroyedWeapons = res.destroyedWeapons;
+    ammoLeft = res.ammoLeft;
+    damage = res.damage;
+    // The crit may have blown off the arm or killed the unit; reflect that
+    // on the merged damage application.
+    if (application) {
+      application = {
+        ...application,
+        damage: res.damage,
+        blownOffArms: mergeUnique(application.blownOffArms, res.blownOffArms),
+        killed: application.killed || res.killed,
+      };
+    }
+    base.crits.push(res);
   }
   base.application = application;
   return base;
+}
+
+function cloneDestroyed(src: Record<Location, boolean[]>): Record<Location, boolean[]> {
+  const out: Record<Location, boolean[]> = {} as Record<Location, boolean[]>;
+  (Object.keys(src) as Location[]).forEach((loc) => {
+    out[loc] = src[loc].slice();
+  });
+  return out;
+}
+
+function mergeUnique(a: readonly Location[], b: readonly Location[]): Location[] {
+  const out: Location[] = [...a];
+  for (const x of b) if (!out.includes(x)) out.push(x);
+  return out;
 }

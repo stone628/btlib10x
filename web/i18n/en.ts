@@ -273,6 +273,23 @@ export const en = {
   "res.immobilized": "; immobilized",
   "res.killed": "; killed",
   "res.destroyedTail": "; destroyed {locs}",
+
+  // critical hit table
+  "res.critHeader": "crit roll 2D6 = {roll} ({count})",
+  "res.critNone": "no critical hit",
+  "res.critOne": "1 critical hit",
+  "res.critTwo": "2 critical hits",
+  "res.critThree": "3 critical hits",
+  "res.critHeadBlownOff": "; HEAD BLOWN OFF — 'Mech destroyed",
+  "res.critArmBlownOff": "; {arm} BLOWN OFF",
+  "res.critLegBlownOff": "; {leg} BLOWN OFF — pilot taking fall damage",
+  "res.critWeaponDestroyed": "{loc} #{slot} {weapon} destroyed",
+  "res.critAmmoExplosion": "{loc} #{slot} ammo {weapon} explodes for {damage} damage",
+  "res.critCockpitDestroyed": "{loc} #{slot} cockpit destroyed — pilot killed",
+  "res.critComponentDestroyed": "{loc} #{slot} {name} destroyed",
+  "res.critNoEffect": "{loc} reroll — no crit-hittable slot remaining",
+  "res.critTransferred": " (transferred from {from})",
+  "res.critCluster": "blast cascades a new determining roll on {loc}",
 } as const;
 
 export type Catalog = Record<keyof typeof en, string>;

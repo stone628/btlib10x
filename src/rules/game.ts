@@ -4,6 +4,7 @@ import {
   type Facing,
   type Hex,
   isFacing,
+  type Location,
   type MoveMode,
   type Rng,
   rotateFacing,
@@ -15,6 +16,7 @@ import type { ResolvedMechDef } from "../data/schema.js";
 import { getWeapon } from "../data/weapons.js";
 import { isInFrontArc } from "./arcs.js";
 import { type AttackResolution, resolveWeaponAttack } from "./attack.js";
+import { type CriticalResolution, effectiveMovement } from "./critical.js";
 import { canFireFromLocation, isImmobile, isKilled, type UnitDamageState } from "./damage.js";
 import { rollInitiative } from "./initiative.js";
 import {
@@ -59,6 +61,11 @@ export interface UnitState {
   phaseStartDamage: UnitDamageState;
   ammoLeft: Record<number, number>;
   jammedWeapons: number[];
+  /** Per-slot destroyed flag for each location's crit slot table. */
+  critSlotsDestroyed: Record<Location, boolean[]>;
+  /** Weapon indices destroyed by a critical hit (in addition to destroyed
+   *  locations, which the canFireFromLocation check already covers). */
+  destroyedWeapons: number[];
   moveMode: MoveMode | null;
   movesThisTurn: ("forward" | "backward")[];
   jumpedThisTurn: boolean;
@@ -104,6 +111,12 @@ export type GameEvent =
       readonly targetId: string;
       readonly resolution: AttackResolution;
     }
+  | {
+      readonly kind: "critsResolved";
+      readonly unitId: string;
+      readonly targetId: string;
+      readonly resolutions: readonly CriticalResolution[];
+    }
   | { readonly kind: "unitDestroyed"; readonly unitId: string }
   | { readonly kind: "unitRemoved"; readonly unitId: string };
 
@@ -119,6 +132,8 @@ export interface BattleState {
   /** Board size hint for rendering (engine coords); renderers fall back to content extent when absent. */
   width?: number | undefined;
   height?: number | undefined;
+  /** When true, critical hit resolution is suppressed at attack time. */
+  critsDisabled: boolean;
   actedThisPhase: string[];
   events: GameEvent[];
 }
@@ -131,6 +146,13 @@ export interface CreateBattleOptions {
   /** Board size hint for rendering, in engine coordinates (columns/rows). */
   readonly width?: number | undefined;
   readonly height?: number | undefined;
+  /**
+   * Disable critical hit resolution. Off by default. Tests that script
+   * dice for narrow damage scenarios (where any crit would alter the
+   * expected outcome) can set this to `false` so the engine follows the
+   * scripted RNG only for the attack and location rolls.
+   */
+  readonly critsDisabled?: boolean;
 }
 
 function getUnitOrThrow(state: BattleState, unitId: string): UnitState {
@@ -213,6 +235,8 @@ export function createBattle(
       },
       ammoLeft,
       jammedWeapons: [],
+      critSlotsDestroyed: initCritDestroyed(def),
+      destroyedWeapons: [],
       moveMode: null,
       movesThisTurn: [],
       jumpedThisTurn: false,
@@ -255,6 +279,7 @@ export function createBattle(
     elevation,
     width: options.width,
     height: options.height,
+    critsDisabled: options.critsDisabled ?? false,
     actedThisPhase: [],
     events: [{ kind: "turn", turn: 1 }],
   };
@@ -297,7 +322,13 @@ export function executeMove(
   if (unit.removed) throw new Error(`${unitId} is removed from play`);
 
   const def = state.defs[unit.model]!;
-  const budget = mv.maxMovePoints(unit.moveMode, def.walking, def.running, def.jumping);
+  const movement = effectiveMovement(def, unit.critSlotsDestroyed);
+  const budget = mv.maxMovePoints(
+    unit.moveMode,
+    movement.walking,
+    movement.running,
+    movement.jumping,
+  );
   const jumping = unit.moveMode === "jump";
 
   let cursor: Hex = { ...unit.position };
@@ -417,6 +448,9 @@ export function declareAttacks(
     if (unit.jammedWeapons.includes(decl.weaponIndex)) {
       throw new Error(`${mount.weapon} on ${unitId} is jammed`);
     }
+    if (unit.destroyedWeapons.includes(decl.weaponIndex)) {
+      throw new Error(`${mount.weapon} on ${unitId} is destroyed by a critical hit`);
+    }
     if (!canFireFromLocation(unit.phaseStartDamage, mount.location)) {
       throw new Error(
         `${mount.weapon} location (${mount.location}) is destroyed or its support torso is gone`,
@@ -530,11 +564,51 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
       targetDamage: target.damage,
       attackerLevel: levelAt(state.elevation, unit.position),
       targetLevel: levelAt(state.elevation, target.position),
+      ...(state.critsDisabled
+        ? {}
+        : {
+            targetDef: state.defs[target.model]!,
+            targetCritSlotsDestroyed: target.critSlotsDestroyed,
+            targetDestroyedWeapons: target.destroyedWeapons,
+            targetAmmoLeft: target.ammoLeft,
+          }),
     });
 
     if (resolution.application !== null) target.damage = resolution.application.damage;
     if (resolution.jammed && !unit.jammedWeapons.includes(decl.weaponIndex)) {
       unit.jammedWeapons.push(decl.weaponIndex);
+    }
+
+    // Commit crit results: each crit rolls for a location that lost IS, and
+    // its snapshot of destroyed slots, destroyed weapons, ammo, and damage
+    // state must be merged into the target's persistent state. Crits
+    // accumulate in the order they were resolved (each successive crit
+    // sees the post-state of the previous one because resolveWeaponAttack
+    // already threads the updated state through its per-group loop).
+    if (resolution.crits.length > 0) {
+      const last = resolution.crits[resolution.crits.length - 1]!;
+      target.critSlotsDestroyed = last.critSlotsDestroyed;
+      target.destroyedWeapons = last.destroyedWeapons;
+      target.ammoLeft = last.ammoLeft;
+      // Damage was already committed above (it includes the explosion
+      // cascades); the crit rows also include newlyDestroyed /
+      // blownOffArms contributions that the per-group application didn't
+      // account for, so merge them.
+      for (const crit of resolution.crits) {
+        for (const arm of crit.blownOffArms) {
+          if (!target.destroyed) {
+            // arms blown off by crit -> zero the arm
+            target.damage.armor[arm] = 0;
+            target.damage.internalStructure[arm] = 0;
+          }
+        }
+      }
+      state.events.push({
+        kind: "critsResolved",
+        unitId: unit.id,
+        targetId: target.id,
+        resolutions: resolution.crits,
+      });
     }
 
     state.events.push({
@@ -669,4 +743,13 @@ export function checkVictory(state: BattleState): VictoryResult {
 
 export function getUnit(state: BattleState, unitId: string): UnitState {
   return getUnitOrThrow(state, unitId);
+}
+
+/** Build the per-slot destroyed-flag table for a fresh unit, all false. */
+function initCritDestroyed(def: ResolvedMechDef): Record<Location, boolean[]> {
+  const out: Record<Location, boolean[]> = {} as Record<Location, boolean[]>;
+  for (const loc of Object.keys(def.critSlots) as Location[]) {
+    out[loc] = new Array(def.critSlots[loc].length).fill(false);
+  }
+  return out;
 }

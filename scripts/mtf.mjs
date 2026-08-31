@@ -1,6 +1,8 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseCritSlots } from "./mtf-crit.mjs";
+import { AMMO_TOKEN, CODE, LOCATION, MODEL_CODE, SHOTS_PER_TON } from "./mtf-tables.mjs";
 
 /**
  * Batch converts BattleTech .mtf (MechTech File) definitions into the library's
@@ -17,6 +19,8 @@ import { fileURLToPath } from "node:url";
  *     the single mount that carries an explicit `, Ammo:N`, else the first
  *     mount of that weapon; sibling launchers omit `ammoShots`.
  *   - running = ceil(walking * 1.5) (quick-start convention).
+ *   - Critical slot table per location is included (head/legs = 6 slots,
+ *     torso/arms = 12; see scripts/mtf-crit.mjs).
  *
  * Existing target files are left untouched unless `--force` is passed, so
  * already-transcribed 'Mechs (the quick-start six) are never clobbered.
@@ -28,110 +32,6 @@ const outDir = process.env.MTF_OUT_DIR
   ? process.env.MTF_OUT_DIR
   : join(root, "src", "data", "mechs");
 const force = process.argv.includes("--force");
-
-const LOCATION = {
-  Head: "head",
-  "Center Torso": "centerTorso",
-  "Right Torso": "rightTorso",
-  "Left Torso": "leftTorso",
-  "Right Arm": "rightArm",
-  "Left Arm": "leftArm",
-  "Right Leg": "rightLeg",
-  "Left Leg": "leftLeg",
-  CT: "centerTorso",
-  RT: "rightTorso",
-  LT: "leftTorso",
-  RA: "rightArm",
-  LA: "leftArm",
-  HD: "head",
-  LL: "rightLeg",
-  RL: "leftLeg",
-};
-
-// MTF weapon codes -> catalog weapon names. Covers the shipped MTFs plus common
-// full-intro codes. Plain catalog names route through the same table (identity).
-const CODE = {
-  "Small Laser": "Small Laser",
-  "Medium Laser": "Medium Laser",
-  "Large Laser": "Large Laser",
-  PPC: "PPC",
-  "Snub-Nose PPC": "Snub-Nose PPC",
-  Flamer: "Flamer",
-  "Machine Gun": "Machine Gun",
-  "Autocannon/2": "Autocannon/2",
-  "Autocannon/5": "Autocannon/5",
-  "Autocannon/10": "Autocannon/10",
-  "Autocannon/20": "Autocannon/20",
-  "Ultra AC/5": "Ultra AC/5",
-  "Large Pulse Laser": "Large Pulse Laser",
-  "Small Pulse Laser": "Small Pulse Laser",
-  "LRM 5": "LRM 5",
-  "LRM 10": "LRM 10",
-  "LRM 15": "LRM 15",
-  "LRM 20": "LRM 20",
-  "SRM 2": "SRM 2",
-  "SRM 4": "SRM 4",
-  "SRM 6": "SRM 6",
-  // IS compact codes.
-  ISMediumLaser: "Medium Laser",
-  ISLargeLaser: "Large Laser",
-  ISSmallLaser: "Small Laser",
-  ISPPC: "PPC",
-  ISSNPPC: "Snub-Nose PPC",
-  ISFlamer: "Flamer",
-  ISMachineGun: "Machine Gun",
-  ISAC2: "Autocannon/2",
-  ISAC5: "Autocannon/5",
-  ISAC10: "Autocannon/10",
-  ISAC20: "Autocannon/20",
-  ISUltraAC5: "Ultra AC/5",
-  ISLargePulseLaser: "Large Pulse Laser",
-  ISSmallPulseLaser: "Small Pulse Laser",
-  ISLRM5: "LRM 5",
-  ISLRM10: "LRM 10",
-  ISLRM15: "LRM 15",
-  ISLRM20: "LRM 20",
-  ISSRM2: "SRM 2",
-  ISSRM4: "SRM 4",
-  ISSRM6: "SRM 6",
-  // Clan compact codes.
-  CLERMediumLaser: "CL ER Medium Laser",
-  CLERLargeLaser: "CL ER Large Laser",
-  CLERPPC: "CL ER PPC",
-  CLStreakSRM2: "CL Streak SRM 2",
-  CLStreakSRM4: "CL Streak SRM 4",
-  CLStreakSRM6: "CL Streak SRM 6",
-  CLGaussRifle: "CL Gauss Rifle",
-  CLLBXAC10: "CL LB 10-X AC",
-  CLLBXAC20: "CL LB 20-X AC",
-};
-
-// Shots per ton of ammunition, keyed by catalog weapon name. Used only when an
-// MTF weapon line has no explicit `, Ammo:N` and ammo must come from the
-// crit-slot ammo bins (counted in the crit sections).
-const SHOTS_PER_TON = {
-  "Autocannon/2": 45,
-  "Autocannon/5": 20,
-  "Autocannon/10": 10,
-  "Autocannon/20": 5,
-  "Ultra AC/5": 20,
-  "LRM 5": 24,
-  "LRM 10": 12,
-  "LRM 15": 8,
-  "LRM 20": 6,
-  "SRM 2": 50,
-  "SRM 4": 25,
-  "SRM 6": 15,
-  "CL Streak SRM 2": 50,
-  "CL Streak SRM 4": 25,
-  "CL Streak SRM 6": 15,
-  "Gauss Rifle": 8,
-  "CL Gauss Rifle": 16,
-  "LB 10-X AC": 10,
-  "LB 20-X AC": 5,
-  "CL LB 10-X AC": 10,
-  "CL LB 20-X AC": 5,
-};
 
 function weightClass(tonnage) {
   if (tonnage <= 35) return "Light";
@@ -166,19 +66,6 @@ function mapWeapon(codeRaw) {
 }
 
 /** Crit-slot ammo tokens (MTF "IS Ammo <token>") -> catalog weapon name. */
-const AMMO_TOKEN = {
-  "AC/2": "Autocannon/2",
-  "AC/5": "Autocannon/5",
-  "AC/10": "Autocannon/10",
-  "AC/20": "Autocannon/20",
-  "LRM-5": "LRM 5",
-  "LRM-10": "LRM 10",
-  "LRM-15": "LRM 15",
-  "LRM-20": "LRM 20",
-  "SRM-2": "SRM 2",
-  "SRM-4": "SRM 4",
-  "SRM-6": "SRM 6",
-};
 
 /** Count ammo crit-bins per catalog weapon name from the crit sections. */
 function ammoBinsFromCrits(lines) {
@@ -208,16 +95,24 @@ function parseMtf(text, file) {
   const errors = [];
   const lines = text.split(/\r?\n/);
   const name = lines[1]?.trim() ?? "";
-  const model = lines[2]?.trim() ?? "";
+  let model = lines[2]?.trim() ?? "";
   if (!name) errors.push(`missing name in ${file}`);
   if (!model) errors.push(`missing model in ${file}`);
   // A bare numeric/non-alpha variant line (e.g. Mad Cat Mk II "2") is not a
-  // usable model code; such 'Mechs are handled manually and skipped here.
+  // usable model code. When the name has a MODEL_CODE entry, synthesise a
+  // full model code from the prefix plus the variant suffix (e.g.
+  // "Mad Cat Mk II" + "2" -> "MC-MKII-2"). Otherwise such 'Mechs are
+  // handled manually and skipped here.
   if (model && !/[A-Za-z]/.test(model)) {
-    return {
-      def: null,
-      errors: [`variant ${JSON.stringify(model)} is not a model code; import this one manually`],
-    };
+    const prefix = MODEL_CODE[name];
+    if (prefix) {
+      model = `${prefix}-${model}`;
+    } else {
+      return {
+        def: null,
+        errors: [`variant ${JSON.stringify(model)} is not a model code; import this one manually`],
+      };
+    }
   }
 
   const fields = {};
@@ -324,7 +219,9 @@ function parseMtf(text, file) {
     ammo !== null ? { weapon, location, ammoShots: ammo } : { weapon, location },
   );
 
-  const source = `docs/mtf/${file}${fields.Source ? ` (${fields.Source})` : ""}. Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount.`;
+  const critSlots = parseCritSlots(lines, errors, file);
+
+  const source = `docs/mtf/${file}${fields.Source ? ` (${fields.Source})` : ""}. Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount; crit slot table per location included.`;
 
   const def = {
     model,
@@ -337,6 +234,7 @@ function parseMtf(text, file) {
     jumping,
     armor,
     weapons,
+    critSlots,
     source,
   };
 

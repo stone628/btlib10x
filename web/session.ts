@@ -20,6 +20,7 @@ import {
   createBattle,
   declareAttacks,
   declareMove,
+  effectiveMovement,
   executeMove,
   FACINGS,
   facingChangeCost,
@@ -72,6 +73,8 @@ export interface Session {
   fireDecls: AttackDecl[];
   /** Actor (turn-qualified) whose fire suggestion was last auto-shown. */
   fireHintShownFor: string | null;
+  /** Suppress critical hit resolution (mostly for deterministic testing). */
+  critsDisabled: boolean;
 }
 
 export function newSession(seed = 42): Session {
@@ -90,6 +93,7 @@ export function newSession(seed = 42): Session {
     moveSteps: [],
     fireDecls: [],
     fireHintShownFor: null,
+    critsDisabled: false,
   };
 }
 
@@ -213,6 +217,7 @@ function battleOptions(s: Session): CreateBattleOptions {
   return {
     terrain: s.terrainDefs,
     ...(map !== undefined ? { width: map.width, height: map.height } : {}),
+    critsDisabled: s.critsDisabled,
   };
 }
 
@@ -298,7 +303,13 @@ function replaySteps(s: Session): MoveCursor {
 function budgetFor(s: Session): number {
   const unit = currentActor(s)!;
   const def = requireBattle(s).defs[unit.model]!;
-  return maxMovePoints(s.moveMode ?? "standStill", def.walking, def.running, def.jumping);
+  const movement = effectiveMovement(def, unit.critSlotsDestroyed);
+  return maxMovePoints(
+    s.moveMode ?? "standStill",
+    movement.walking,
+    movement.running,
+    movement.jumping,
+  );
 }
 
 export interface StepResult {

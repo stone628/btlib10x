@@ -2,6 +2,8 @@ import type {
   ArmorState,
   AttackResolution,
   BattleState,
+  CriticalEffect,
+  CriticalResolution,
   FireBlockerReason,
   FireWeapon,
   GameEvent,
@@ -535,7 +537,9 @@ export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
   if (view.gunnery !== null) {
     topLines.push(t(locale, "sheet.gunneryLine", { gunnery: gunneryLabel(locale, view.gunnery) }));
   }
-  topLines.push(t(locale, "info.movement", { walk: view.walking, run: view.running, jump: view.jumping }));
+  topLines.push(
+    t(locale, "info.movement", { walk: view.walking, run: view.running, jump: view.jumping }),
+  );
   topLines.push(view.positionLine);
   const weaponLines: string[] = [];
   weaponLines.push(t(locale, "sheet.weaponsHeader", { n: view.mounts.length }));
@@ -962,9 +966,11 @@ export function weaponsLines(s: Session, unitId?: string): string[] {
         ? t(s.locale, "sheet.ammoFlag", { n: unit.ammoLeft[index] ?? 0 })
         : null,
       unit.jammedWeapons.includes(index) ? t(s.locale, "sheet.jammed") : null,
-      canFireFromLocation(unit.phaseStartDamage, mount.location)
-        ? null
-        : t(s.locale, "sheet.destroyed"),
+      unit.destroyedWeapons.includes(index) ? t(s.locale, "sheet.destroyed") : null,
+      !unit.destroyedWeapons.includes(index) &&
+      !canFireFromLocation(unit.phaseStartDamage, mount.location)
+        ? t(s.locale, "sheet.destroyed")
+        : null,
     ].filter((b) => b !== null);
     return bits.join("  ");
   });
@@ -1061,6 +1067,13 @@ function eventLines(locale: LocaleId, e: GameEvent): string[] {
       ];
     case "attackResolved":
       return resolutionLines(locale, e.resolution);
+    case "critsResolved": {
+      const lines: string[] = [];
+      for (const crit of e.resolutions) {
+        lines.push(...critLines(locale, crit));
+      }
+      return lines;
+    }
     case "unitDestroyed":
       return [t(locale, "log.destroyed", { id: e.unitId })];
     case "unitRemoved":
@@ -1121,7 +1134,67 @@ export function resolutionLines(locale: LocaleId, r: AttackResolution): string[]
     const detail = transferDetail(locale, r);
     if (detail) lines.push(`  ${detail}`);
   }
+  for (const crit of r.crits) {
+    for (const line of critLines(locale, crit)) lines.push(`  ${line}`);
+  }
   return lines;
+}
+
+/** Pretty-print one CriticalResolution into one or more terminal lines. */
+export function critLines(locale: LocaleId, c: CriticalResolution): string[] {
+  const headerKey =
+    c.determiningRoll <= 7
+      ? "res.critNone"
+      : c.determiningRoll <= 9
+        ? "res.critOne"
+        : c.determiningRoll <= 11
+          ? "res.critTwo"
+          : "res.critThree";
+  const lines: string[] = [
+    t(locale, "res.critHeader", {
+      roll: String(c.determiningRoll),
+      count: t(locale, headerKey),
+    }),
+  ];
+  for (const eff of c.rows) lines.push(`  ${formatCritEffect(locale, eff)}`);
+  return lines;
+}
+
+function formatCritEffect(locale: LocaleId, eff: CriticalEffect): string {
+  switch (eff.kind) {
+    case "headBlownOff":
+      return t(locale, "res.critHeadBlownOff");
+    case "armBlownOff":
+      return t(locale, "res.critArmBlownOff", { arm: SHORT_LOC[eff.arm] });
+    case "legBlownOff":
+      return t(locale, "res.critLegBlownOff", { leg: SHORT_LOC[eff.leg] });
+    case "weaponDestroyed":
+      return t(locale, "res.critWeaponDestroyed", {
+        loc: SHORT_LOC[eff.location],
+        slot: String(eff.slotIndex),
+        weapon: eff.weaponName,
+      });
+    case "ammoExplosion":
+      return t(locale, "res.critAmmoExplosion", {
+        loc: SHORT_LOC[eff.location],
+        slot: String(eff.slotIndex),
+        weapon: eff.weaponName,
+        damage: String(eff.damage),
+      });
+    case "cockpitDestroyed":
+      return t(locale, "res.critCockpitDestroyed", {
+        loc: SHORT_LOC[eff.location],
+        slot: String(eff.slotIndex),
+      });
+    case "componentDestroyed":
+      return t(locale, "res.critComponentDestroyed", {
+        loc: SHORT_LOC[eff.location],
+        slot: String(eff.slotIndex),
+        name: eff.name,
+      });
+    case "noEffect":
+      return t(locale, "res.critNoEffect", { loc: "reroll" });
+  }
 }
 
 /**

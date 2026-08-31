@@ -136,18 +136,32 @@ simulate. See `TODO.md` for the roadmap toward a fuller ruleset.
   (multi-shot), LRM lots-of-5 grouping.
 - **Battle flow** — initiative roll, sequential movement phase, weapon
   attack phase, end-phase kill sweep, victory check, rematch.
+- **Critical hit table** — the official TW determining table
+  (2D6: 2-7 no crit, 8-9 one, 10-11 two, 12 blow-off or three on torso) plus
+  the 1D6 / 2D6 half+slot roll per location. Slot selection re-rolls on
+  empty / soak / already-destroyed slots and the whole determining roll
+  transfers inward when the source is exhausted (head and center torso
+  are terminal). Effects implemented: weapon destroyed, ammo explosion
+  (per-shot damage × remaining shots, applied directly to the bin
+  location's internal structure with cascading critical roll on the
+  drained IS), arm/leg/head blown off on a 12, cockpit crit kills the
+  pilot, leg actuator/hip/jump-jet destruction feeds the effective
+  movement helper (leg actuators −1 walk each, hip halves walking, jump
+  jets −1 jump each). Engine / gyro / sensor / life-support / heat-sink
+  slots still take and absorb crits in the slot table, but the
+  heat/piloting effects they would cause in the full rules are deferred
+  with the rest of the heat/piloting subset.
 
 ### Not yet implemented
 
-- **Heat** — heat scale, overheat effects, shutdown, ammo explosion.
+- **Heat** — heat scale, overheat effects, shutdown. (Crits against heat
+  sinks already mark the slot destroyed; the dissipation bookkeeping
+  lights up when heat is implemented.)
 - **Physical attacks** — punch, kick, charge, DFA.
 - **Piloting rolls** — falling, standing up, leg/gyro damage effects.
-- **Elevation** — hex height differences, height-based modifiers.
 - **Side / rear firing arcs and torso twist** — classification code exists
   but is dormant.
 - **Quadripedal 'Mechs**, vehicles, infantry, battle armor.
-- **Critical hits** beyond the location-destroyed model (engine, gyro,
-  sensor destruction).
 - **Called shots**, aimed shots, spotter / indirect fire, ECM.
 - **Pilot abilities** (edge, etc.), quirks, experience beyond the gunnery
   skill band.

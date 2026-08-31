@@ -68,6 +68,16 @@ describe("'Mech definitions", () => {
         leftTorsoRear: 4,
       },
       weapons: [{ weapon: "Medium Laser", location: "centerTorso" }],
+      critSlots: {
+        head: new Array(6).fill({ kind: "empty" }),
+        centerTorso: new Array(12).fill({ kind: "empty" }),
+        rightTorso: new Array(12).fill({ kind: "empty" }),
+        leftTorso: new Array(12).fill({ kind: "empty" }),
+        rightArm: new Array(12).fill({ kind: "empty" }),
+        leftArm: new Array(12).fill({ kind: "empty" }),
+        rightLeg: new Array(6).fill({ kind: "empty" }),
+        leftLeg: new Array(6).fill({ kind: "empty" }),
+      },
       source: "test",
     };
     const raw = validateMechDef(json);

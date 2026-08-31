@@ -21,14 +21,354 @@
     "rightTorsoRear": 8
   },
   "weapons": [
-    { "weapon": "CL ER Medium Laser", "location": "rightTorso" },
-    { "weapon": "CL ER Medium Laser", "location": "leftTorso" },
-    { "weapon": "CL Streak SRM 4", "location": "leftTorso", "ammoShots": 50 },
-    { "weapon": "CL Streak SRM 4", "location": "leftTorso" },
-    { "weapon": "CL Streak SRM 4", "location": "rightTorso" },
-    { "weapon": "CL Streak SRM 4", "location": "rightTorso" },
-    { "weapon": "CL Gauss Rifle", "location": "rightArm", "ammoShots": 16 },
-    { "weapon": "CL LB 20-X AC", "location": "leftArm", "ammoShots": 10 }
+    {
+      "weapon": "CL ER Medium Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL ER Medium Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL Streak SRM 4",
+      "location": "leftTorso",
+      "ammoShots": 50
+    },
+    {
+      "weapon": "CL Streak SRM 4",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL Streak SRM 4",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL Streak SRM 4",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL Gauss Rifle",
+      "location": "rightArm",
+      "ammoShots": 16
+    },
+    {
+      "weapon": "CL LB 20-X AC",
+      "location": "leftArm",
+      "ammoShots": 10
+    }
   ],
-  "source": "docs/mtf/Mad Cat Mk II 2.mtf (TRO 3067 Unabridged). Torso armor sums MTF front+rear into the flat per-location model; the four Streak SRM 4 launchers share one 50-round bin, modelled on a single mount because the per-mount ammo schema has no shared-pool concept."
+  "source": "docs/mtf/Mad Cat Mk II 2.mtf (TRO 3067 Unabridged). Torso armor sums MTF front+rear into the flat per-location model; the four Streak SRM 4 launchers share one 50-round bin, modelled on a single mount because the per-mount ammo schema has no shared-pool concept.",
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "soak"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Streak SRM 4"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Streak SRM 4"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Medium Laser"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Streak SRM 4"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "soak"
+      },
+      {
+        "kind": "soak"
+      },
+      {
+        "kind": "soak"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Streak SRM 4"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Streak SRM 4"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Medium Laser"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Streak SRM 4"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "soak"
+      },
+      {
+        "kind": "soak"
+      },
+      {
+        "kind": "soak"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "soak"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "soak"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak"
+      },
+      {
+        "kind": "soak"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak"
+      },
+      {
+        "kind": "soak"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "soak"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  }
 }
