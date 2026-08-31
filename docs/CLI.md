@@ -47,7 +47,7 @@ Examples:
 | `clear` | clear the scrollback screen |
 | `log [n]` | last n events (default 10) |
 | `info mech` | list available 'Mechs |
-| `info mech <model>` | sheet summary: walk/run/jump ratings, weapons, and the 3-row critical slot chart (left arm / head / right arm, left / center / right torso, left / right leg); web CLI renders the chart as a mouse-click-collapsible block |
+| `info mech <model>` | sheet summary: walk/run/jump ratings, weapons, and the 3-row critical slot chart (right arm / head / left arm, right / center / left torso, right / left leg); web CLI renders the chart as a mouse-click-collapsible block |
 | `info map` | list available maps |
 | `info map <name>` | map info: width×height, terrain types and counts, ASCII map with terrain glyphs |
 | `seed <n>` | set RNG seed |
@@ -73,7 +73,7 @@ The prompt names the acting unit; commands act on that 'Mech.
 | `mode standstill\|walk\|run\|jump` | declare movement mode (required first); for walk/run/jump, renders a clipped ASCII hex map of the reachable hexes — exactly the smallest bounding box around every reachable hex, clamped to the board (no padding). Reachable hexes draw a team-colored `<>` in the belly; every reachable (hex, facing) edge is tinted with the acting unit's team color, and no facing arrows are drawn. Other units inside the crop keep their ids (team-colored) but no facing arrow. Movement paths (the `F`/`B`/`R`/`L` fragment sequence per landing) remain available programmatically via `reachableLandings`/`RevealedLanding.path` for later use, but are not rendered on the map |
 | `move <col> <row>` | queue step into adjacent hex (forward/backward vs facing; jump = any adjacent) |
 | `face <facing>` or `face <±1..5>` | queue facing change (`face ne`, `face -2`) |
-| `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state: destroyed slots, destroyed weapons, ammo remaining); without id: brief unit list (id, model, position+facing) grouped by team |
+| `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [JAM] / [DST] / ammo {n} markers); without id: brief unit list (id, model, position+facing) grouped by team |
 | `status` | queued move steps with running MP cost per step |
 | `cancel` | clear mode + steps |
 | `done` | commit via `executeMove`; prints path + MP spent and total budget |
@@ -84,7 +84,7 @@ The prompt names the acting unit; commands act on that 'Mech.
 |---|---|
 | `weapons [id]` | list weapon mounts: 1-based number, name, location, S/M/L, ammo, jammed/destroyed |
 | `fire <targetId> <weapon> [<weapon> ...]` | queue weapon declarations using 1-based weapon numbers (target first; declare several weapons at once, all against the one shared target; rapid-fire SRM/LRM fire a full volley — no `shots` argument) |
-| `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state: destroyed slots, destroyed weapons, ammo remaining); without id: brief unit list (id, model, position+facing) grouped by team |
+| `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [JAM] / [DST] / ammo {n} markers); without id: brief unit list (id, model, position+facing) grouped by team |
 | `status` | queued attack declarations |
 | `cancel` | clear declarations |
 | `done` | `declareAttacks` + `resolveDeclaredAttacks`; prints per-weapon GATOR to-hit line, dice, cluster hits, damage by location |
@@ -93,7 +93,7 @@ The prompt names the acting unit; commands act on that 'Mech.
 
 | command | effect |
 |---|---|
-| `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state: destroyed slots, destroyed weapons, ammo remaining); without id: brief unit list (id, model, position+facing) grouped by team |
+| `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [JAM] / [DST] / ammo {n} markers); without id: brief unit list (id, model, position+facing) grouped by team |
 | `rematch` | new battle, same roster + terrain + seed |
 | globals | `board`, `log` remain available; `reset` returns to empty setup |
 
