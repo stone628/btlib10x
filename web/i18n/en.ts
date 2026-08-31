@@ -240,14 +240,15 @@ export const en = {
   "sheet.armorLine": "armor: {list}",
   "sheet.weaponsHeader": "weapons ({n}):",
   "sheet.ammoFlag": "ammo {n}",
-  "sheet.jammed": "[JAMMED]",
-  "sheet.destroyed": "[DESTROYED]",
+  "sheet.jammed": "[JAM]",
+  "sheet.destroyed": "[DST]",
 
   // critical slot chart
   "critChart.summary": "critical slots",
   "critChart.empty": "-",
   "critChart.soak": "(soak)",
-  "critChart.destroyedSuffix": " destroyed",
+  "critChart.destroyedSuffix": " [DST]",
+  "critChart.jammedSuffix": " [JAM]",
   "critChart.ammoSuffix": " ammo {n}",
   "critChart.component.cockpit": "Cockpit",
   "critChart.component.sensors": "Sensors",

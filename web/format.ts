@@ -197,7 +197,15 @@ export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
   ];
   const weaponLines = [
     t(locale, "sheet.weaponsHeader", { n: Object.keys(d.weapons).length }),
-    ...weaponSummary(d),
+    ...Object.entries(d.weapons).map(([key, mount]) =>
+      weaponMountLine(locale, Number(key), {
+        weapon: mount.weapon,
+        location: mount.location,
+        ammoLeft: mount.ammoShots ?? null,
+        jammed: false,
+        destroyed: false,
+      }),
+    ),
   ];
   return [
     ...mergeDiagram(
@@ -390,11 +398,14 @@ function battleSheet(
       location: mount.location,
       ammoLeft: mount.ammoShots !== undefined ? (unit.ammoLeft[Number(key)] ?? 0) : null,
       jammed: unit.jammedWeapons.includes(Number(key)),
-      destroyed: !canFireFromLocation(unit.phaseStartDamage, mount.location),
+      destroyed:
+        unit.destroyedWeapons.includes(Number(key)) ||
+        !canFireFromLocation(unit.phaseStartDamage, mount.location),
     })),
     critLive: {
       critSlotsDestroyed: unit.critSlotsDestroyed,
       destroyedWeapons: unit.destroyedWeapons,
+      jammedWeapons: unit.jammedWeapons,
       ammoLeft: unit.ammoLeft,
     },
   };
@@ -547,6 +558,7 @@ function armorDiagramSheet(info: ArmorInfo): string[] {
 interface CritChartLive {
   readonly critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>;
   readonly destroyedWeapons: readonly number[];
+  readonly jammedWeapons: readonly number[];
   readonly ammoLeft: Readonly<Record<number, number>>;
 }
 
@@ -592,22 +604,30 @@ function critSlotText(
     body = t(locale, "critChart.empty");
   } else if (slot.kind === "soak") {
     body = t(locale, "critChart.soak");
-  } else if (slot.kind === "weapon") {
+  } else if (slot.kind === "weapon" || slot.kind === "ammo") {
     body = slot.weapon;
-  } else if (slot.kind === "ammo") {
-    body = `${slot.weapon} ammo`;
   } else {
     const key = CRIT_COMPONENT_KEY[slot.name as CritStructureName];
     body = key !== undefined ? t(locale, key) : slot.name;
   }
   const line = ` ${dice} ${body}`;
-  if (live === null || live.critSlotsDestroyed[loc] === undefined) return line;
-  const slotHit = live.critSlotsDestroyed[loc]?.[slotIndex - 1] ?? false;
-  const mountDestroyed = slot.kind === "weapon" && live.destroyedWeapons.includes(slot.weaponIndex);
   const markers: string[] = [];
-  if (slotHit || mountDestroyed) markers.push(t(locale, "critChart.destroyedSuffix"));
   if (slot.kind === "ammo") {
-    markers.push(t(locale, "critChart.ammoSuffix", { n: live.ammoLeft[slot.weaponIndex] ?? 0 }));
+    const shots =
+      live !== null
+        ? (live.ammoLeft[slot.weaponIndex] ?? 0)
+        : def.weapons[slot.weaponIndex]?.ammoShots;
+    if (shots !== undefined) {
+      markers.push(t(locale, "critChart.ammoSuffix", { n: shots }));
+    }
+  }
+  if (live !== null && live.critSlotsDestroyed[loc] !== undefined) {
+    const slotHit = live.critSlotsDestroyed[loc]?.[slotIndex - 1] ?? false;
+    const mountDestroyed =
+      slot.kind === "weapon" && live.destroyedWeapons.includes(slot.weaponIndex);
+    const mountJammed = slot.kind === "weapon" && live.jammedWeapons.includes(slot.weaponIndex);
+    if (mountJammed) markers.push(t(locale, "critChart.jammedSuffix"));
+    if (slotHit || mountDestroyed) markers.push(t(locale, "critChart.destroyedSuffix"));
   }
   return markers.length > 0 ? `${line}${markers.join("")}` : line;
 }
@@ -619,7 +639,7 @@ function critCell(
   locale: LocaleId,
   live: CritChartLive | null,
 ): string[] {
-  const lines = [SHORT_LOC[loc]];
+  const lines = [`[ ${SHORT_LOC[loc]} ]`];
   for (let i = 0; i < def.critSlots[loc].length; i++) {
     lines.push(critSlotText(def, loc, i + 1, locale, live));
   }
@@ -660,15 +680,7 @@ export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
   const weaponLines: string[] = [];
   weaponLines.push(t(locale, "sheet.weaponsHeader", { n: view.mounts.length }));
   for (const [i, m] of view.mounts.entries()) {
-    const w = getWeapon(m.weapon);
-    const flags = [
-      m.ammoLeft !== null ? t(locale, "sheet.ammoFlag", { n: m.ammoLeft }) : null,
-      m.jammed ? t(locale, "sheet.jammed") : null,
-      m.destroyed ? t(locale, "sheet.destroyed") : null,
-    ].filter((x) => x !== null);
-    weaponLines.push(
-      `  #${i + 1} ${m.weapon} (${SHORT_LOC[m.location]}) S${w.short}/M${w.medium}/L${w.long}${flags.length ? ` ${flags.join(" ")}` : ""}`,
-    );
+    weaponLines.push(weaponMountLine(locale, i + 1, m));
   }
   return [
     ...mergeDiagram(
@@ -1407,10 +1419,22 @@ function weaponCategory(name: string): string {
   return "Energy";
 }
 
-function weaponSummary(def: ResolvedMechDef): string[] {
-  return Object.entries(def.weapons).map(([key, mount]) => {
-    const w = getWeapon(mount.weapon);
-    const ammo = mount.ammoShots !== undefined ? ` ammo ${mount.ammoShots}` : "";
-    return `  #${key} ${mount.weapon} (${SHORT_LOC[mount.location]}) S${w.short}/M${w.medium}/L${w.long}${ammo}`;
-  });
+function weaponMountLine(
+  locale: LocaleId,
+  n: number,
+  mount: {
+    readonly weapon: string;
+    readonly location: Location;
+    readonly ammoLeft: number | null;
+    readonly jammed: boolean;
+    readonly destroyed: boolean;
+  },
+): string {
+  const w = getWeapon(mount.weapon);
+  const flags = [
+    mount.ammoLeft !== null ? t(locale, "sheet.ammoFlag", { n: mount.ammoLeft }) : null,
+    mount.jammed ? t(locale, "sheet.jammed") : null,
+    mount.destroyed ? t(locale, "sheet.destroyed") : null,
+  ].filter((x) => x !== null);
+  return `  #${n} ${mount.weapon} (${SHORT_LOC[mount.location]}) S${w.short}/M${w.medium}/L${w.long}${flags.length ? ` ${flags.join(" ")}` : ""}`;
 }
