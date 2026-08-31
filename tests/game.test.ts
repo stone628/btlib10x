@@ -348,6 +348,91 @@ describe("movement phase", () => {
   });
 });
 
+describe("nextActor with unequal forces", () => {
+  function fourVsTwo(teamOfFour: 0 | 1): BattleState {
+    type Entry = {
+      id: string;
+      model: "HBK-4G" | "ENF-4R";
+      team: 0 | 1;
+      gunnery: number;
+      position: { col: number; row: number };
+      facing: "n" | "ne" | "se" | "s" | "sw" | "nw";
+    };
+    const units: Entry[] = [];
+    for (let i = 0; i < 4; i++) {
+      units.push({
+        id: `a${i}`,
+        model: "HBK-4G",
+        team: teamOfFour,
+        gunnery: 4,
+        position: { col: i, row: 0 },
+        facing: "ne",
+      });
+    }
+    for (let i = 0; i < 2; i++) {
+      units.push({
+        id: `b${i}`,
+        model: "ENF-4R",
+        team: (1 - teamOfFour) as 0 | 1,
+        gunnery: 4,
+        position: { col: 5 + i, row: 0 },
+        facing: "sw",
+      });
+    }
+    return createBattle(units, { critsDisabled: true });
+  }
+
+  /** Walk every alive unit through declareMove + executeMove with empty paths, recording turn order. */
+  function activationOrder(state: BattleState): string[] {
+    const order: string[] = [];
+    for (let step = 0; step < 6; step++) {
+      const id = nextActor(state);
+      if (id === null) break;
+      order.push(id);
+      declareMove(state, id, "standStill");
+      executeMove(state, id, []);
+    }
+    return order;
+  }
+
+  it("spec example: team of 4 loses initiative, winner (team of 2) moves last", () => {
+    // team0=4-Mech, team1=2-Mech. Roll initiative so team 1 wins.
+    const state = startMovementTurn(fourVsTwo(0), scriptedRng(1, 1, 3, 3));
+    expect(state.initiativeWinnerTeam).toBe(1);
+    // Per §3: loser moves ⌊4/2⌋=2 units, winner moves 1, alternating starting with loser.
+    expect(activationOrder(state)).toEqual(["a0", "a1", "b0", "a2", "a3", "b1"]);
+  });
+
+  it("team of 2 loses initiative: winner (team of 4) still moves last; loser (team of 2) goes first", () => {
+    // team0=4-Mech, team1=2-Mech. team 0 wins via higher roll.
+    const state = startMovementTurn(fourVsTwo(0), scriptedRng(3, 3, 1, 1));
+    expect(state.initiativeWinnerTeam).toBe(0);
+    const order = activationOrder(state);
+    expect(order[0]).toMatch(/^b/); // loser (team 1) moves first
+    expect(order.at(-1)).toMatch(/^a/); // winner (team 0) moves last
+    expect(order.filter((id) => id.startsWith("b"))).toEqual(["b0", "b1"]);
+    expect(order.filter((id) => id.startsWith("a"))).toEqual(["a0", "a1", "a2", "a3"]);
+  });
+
+  it("winner of initiative always moves last regardless of which side is larger", () => {
+    // 4-Mech on team 1 (iterates first, so team 1 rolls first). Larger side wins.
+    const largerWins = startMovementTurn(fourVsTwo(1), scriptedRng(3, 3, 1, 1));
+    expect(largerWins.initiativeWinnerTeam).toBe(1);
+    expect(activationOrder(largerWins).at(-1)).toBe("a3");
+
+    // 4-Mech on team 0 (iterates first, so team 0 rolls first). Larger side wins.
+    const largerWinsAlso = startMovementTurn(fourVsTwo(0), scriptedRng(3, 3, 1, 1));
+    expect(largerWinsAlso.initiativeWinnerTeam).toBe(0);
+    expect(activationOrder(largerWinsAlso).at(-1)).toBe("a3");
+  });
+
+  it("with equal force sizes, ordering falls back to simple loser-first alternation", () => {
+    const state = startMovementTurn(hbkVsEnf());
+    expect(state.initiativeWinnerTeam).toBe(0);
+    expect(activationOrder(state)).toEqual(["enf", "hbk"]);
+  });
+});
+
 describe("weapon attack phase", () => {
   it("validates arc, LOS, range, target count, and auto-miss aborts", () => {
     // Facing northwest, target to the southeast -> outside front arc.
