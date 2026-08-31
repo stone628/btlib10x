@@ -25,13 +25,13 @@ import {
   FACINGS,
   facingChangeCost,
   getMapDef,
+  getMechDef,
   getUnit,
   isAdjacent,
   isBackwardStep,
   isForwardStep,
   levelAt,
-  MAP_DEFS,
-  MECH_DEFS,
+  listMapNames,
   maxMovePoints,
   nextActor,
   resolveAllAttacks,
@@ -173,12 +173,8 @@ export function promptBody(s: Session): string {
 
 // ---------------------------------------------------------------- setup ----
 
-export function listMapNames(): string[] {
-  return Object.keys(MAP_DEFS);
-}
-
 export function setMap(s: Session, name: string): void {
-  const map = MAP_DEFS[name];
+  const map = getMapDef(name);
   if (!map)
     throw new Error(t(s.locale, "err.unknownMap", { name, list: listMapNames().join(", ") }));
   s.mapName = name;
@@ -194,7 +190,8 @@ export function addUnit(
   position: Hex,
   facing: Facing,
 ): void {
-  if (!MECH_DEFS[model]) throw new Error(t(s.locale, "err.unknownModel", { model }));
+  const m = getMechDef(model);
+  if (!m) throw new Error(t(s.locale, "err.unknownModel", { model }));
   if (s.roster.some((u) => u.id === id)) throw new Error(t(s.locale, "err.duplicateId", { id }));
   if (!Number.isInteger(team) || team < 0) throw new Error(t(s.locale, "err.badTeam"));
   if (!Number.isInteger(gunnery) || gunnery < 0 || gunnery > 7) {
@@ -203,7 +200,7 @@ export function addUnit(
   if (s.roster.some((u) => sameHex(u.position, position))) {
     throw new Error(t(s.locale, "err.hexOccupied", { col: position.col, row: position.row }));
   }
-  s.roster.push({ id, model, team, gunnery, position, facing });
+  s.roster.push({ id, model: m.model, team, gunnery, position, facing });
 }
 
 export function removeUnit(s: Session, id: string): void {
@@ -302,7 +299,7 @@ function replaySteps(s: Session): MoveCursor {
 
 function budgetFor(s: Session): number {
   const unit = currentActor(s)!;
-  const def = requireBattle(s).defs[unit.model]!;
+  const def = getMechDef(unit.model)!;
   const movement = effectiveMovement(def, unit.critSlotsDestroyed);
   return maxMovePoints(
     s.moveMode ?? "standStill",

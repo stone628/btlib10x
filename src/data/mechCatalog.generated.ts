@@ -21,7 +21,7 @@ import whkprimeJson from "./mechs/whk-prime.json";
 import wvr6rJson from "./mechs/wvr-6r.json";
 
 /** All 'Mech definitions shipped with the library, keyed by model. */
-export const MECH_DEFS: Readonly<Record<string, ResolvedMechDef>> = Object.fromEntries(
+export const MECH_DEFS: Readonly<Map<string, ResolvedMechDef>> = new Map<string, ResolvedMechDef>(
   [
     as7dJson,
     cda3maJson,
@@ -35,6 +35,6 @@ export const MECH_DEFS: Readonly<Record<string, ResolvedMechDef>> = Object.fromE
     wvr6rJson,
   ].map((data) => {
     const def = load(data);
-    return [def.model, def];
+    return [def.model.toUpperCase(), def];
   }),
 );

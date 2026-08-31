@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getWeapon } from "../src/data/weapons.js";
+import { getWeaponOrThrow } from "../src/data/weapons.js";
 import { computeToHit } from "../src/rules/tohit.js";
 
 describe("GATOR to-hit calculation", () => {
@@ -15,7 +15,7 @@ describe("GATOR to-hit calculation", () => {
       targetTerrain: "clear",
       interveningWoods: 1,
       distance: 4,
-      weapon: getWeapon("Medium Laser"),
+      weapon: getWeaponOrThrow("Medium Laser"),
     });
     expect(bd.total).toBe(9);
     expect(bd.rangeBracket).toBe("medium");
@@ -32,7 +32,7 @@ describe("GATOR to-hit calculation", () => {
       targetTerrain: "lightWoods",
       interveningWoods: 1,
       distance: 4,
-      weapon: getWeapon("PPC"),
+      weapon: getWeaponOrThrow("PPC"),
     });
     expect(bd.total).toBe(8);
     expect(bd.rangeBracket).toBe("short");
@@ -51,7 +51,7 @@ describe("GATOR to-hit calculation", () => {
       targetTerrain: "clear",
       interveningWoods: 0,
       distance: 4,
-      weapon: getWeapon("Medium Laser"),
+      weapon: getWeaponOrThrow("Medium Laser"),
     });
     expect(ml.total).toBe(7);
 
@@ -63,7 +63,7 @@ describe("GATOR to-hit calculation", () => {
       targetTerrain: "clear",
       interveningWoods: 0,
       distance: 2,
-      weapon: getWeapon("Autocannon/20"),
+      weapon: getWeaponOrThrow("Autocannon/20"),
     });
     expect(ac20.total).toBe(8);
 
@@ -75,7 +75,7 @@ describe("GATOR to-hit calculation", () => {
       targetTerrain: "clear",
       interveningWoods: 0,
       distance: 4,
-      weapon: getWeapon("Large Laser"),
+      weapon: getWeaponOrThrow("Large Laser"),
     });
     expect(ll.total).toBe(4);
   });
@@ -90,7 +90,7 @@ describe("GATOR to-hit calculation", () => {
         targetTerrain: "clear",
         interveningWoods: 0,
         distance: 1,
-        weapon: getWeapon("Small Laser"),
+        weapon: getWeaponOrThrow("Small Laser"),
       }).total;
     expect(mk(2)).toBe(4);
     expect(mk(3)).toBe(5);
@@ -111,7 +111,7 @@ describe("GATOR to-hit calculation", () => {
       targetTerrain: "clear",
       interveningWoods: 0,
       distance: 1,
-      weapon: getWeapon("Small Laser"),
+      weapon: getWeaponOrThrow("Small Laser"),
     });
     expect(easy.automatic).toBe("hit");
     expect(easy.pulseMod).toBe(0);
@@ -124,7 +124,7 @@ describe("GATOR to-hit calculation", () => {
       targetTerrain: "clear",
       interveningWoods: 0,
       distance: 1,
-      weapon: getWeapon("Small Pulse Laser"),
+      weapon: getWeaponOrThrow("Small Pulse Laser"),
     });
     expect(pulse.pulseMod).toBe(-2);
 
@@ -136,7 +136,7 @@ describe("GATOR to-hit calculation", () => {
       targetTerrain: "heavyWoods",
       interveningWoods: 2,
       distance: 15,
-      weapon: getWeapon("Large Laser"),
+      weapon: getWeaponOrThrow("Large Laser"),
     });
     expect(hard.automatic).toBe("miss");
   });
@@ -150,14 +150,14 @@ describe("GATOR to-hit calculation", () => {
       targetTerrain: "clear",
       interveningWoods: 0,
       distance: 10,
-      weapon: getWeapon("Medium Laser"),
+      weapon: getWeaponOrThrow("Medium Laser"),
     });
     expect(bd.outOfRange).toBe(true);
     expect(bd.automatic).toBe("miss");
   });
 
   it("applies the closer-than-minimum-range penalty", () => {
-    const gauss = getWeapon("CL Gauss Rifle");
+    const gauss = getWeaponOrThrow("CL Gauss Rifle");
     expect(gauss.minRange).toBe(2);
 
     const at = (distance: number) =>
@@ -181,7 +181,7 @@ describe("GATOR to-hit calculation", () => {
   });
 
   it("resolves variable damage per bracket (Snub-Nose PPC V10/8/5)", () => {
-    const snub = getWeapon("Snub-Nose PPC");
+    const snub = getWeaponOrThrow("Snub-Nose PPC");
     const short = computeToHit({
       gunnery: 4,
       attackerMovement: "standStill",
@@ -207,7 +207,7 @@ describe("height-difference modifier", () => {
     targetJumped: false,
     targetTerrain: "clear" as const,
     interveningWoods: 1,
-    weapon: getWeapon("Medium Laser"),
+    weapon: getWeaponOrThrow("Medium Laser"),
   };
 
   it("same level = 0 heightDiff, no TN change", () => {

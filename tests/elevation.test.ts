@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getWeapon } from "../src/data/weapons.js";
+import { getWeaponOrThrow } from "../src/data/weapons.js";
 import { losClear, losWoodsPointsBetween } from "../src/rules/los.js";
 import { reachableLandings } from "../src/rules/movement.js";
 import { computeToHit } from "../src/rules/tohit.js";
@@ -92,7 +92,7 @@ describe("elevation worked example: ridge duel", () => {
       targetTerrain: "clear",
       interveningWoods: 0,
       distance: 1,
-      weapon: getWeapon("Medium Laser"),
+      weapon: getWeaponOrThrow("Medium Laser"),
       attackerLevel: 1,
       targetLevel: 0,
     });
@@ -111,7 +111,7 @@ describe("elevation worked example: ridge duel", () => {
       targetTerrain: "clear",
       interveningWoods: 0,
       distance: 1,
-      weapon: getWeapon("Medium Laser"),
+      weapon: getWeaponOrThrow("Medium Laser"),
       attackerLevel: 0,
       targetLevel: 1,
     });

@@ -9,6 +9,7 @@ import { isTerrainType } from "../core/types.js";
  * map definition directly (no conversion layer).
  */
 export interface MapDef {
+  readonly name: string;
   readonly width: number;
   readonly height: number;
   readonly terrain: readonly TerrainHexDef[];

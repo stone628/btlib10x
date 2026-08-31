@@ -118,12 +118,20 @@ export function parseWeaponsData(data: unknown): readonly WeaponDef[] {
 /** Load and validate the shipped catalog; fails fast at import on bad data. */
 const weaponList = parseWeaponsData(weaponsJson);
 
-export const WEAPONS: Readonly<Record<string, WeaponDef>> = Object.fromEntries(
-  weaponList.map((def) => [def.name, def]),
+const WEAPONS: Readonly<Map<string, WeaponDef>> = new Map<string, WeaponDef>(
+  weaponList.map((def) => [def.name.toLowerCase(), def]),
 );
 
-export function getWeapon(name: string): WeaponDef {
-  const def = WEAPONS[name];
+export function getWeaponOrThrow(name: string): WeaponDef {
+  const def = WEAPONS.get(name.toLowerCase());
   if (!def) throw new Error(`Unknown weapon: ${name}`);
   return def;
+}
+
+export function getAllWeapons(): WeaponDef[] {
+  return Array.from(WEAPONS.values());
+}
+
+export function listWeaponNames(): string[] {
+  return Array.from(WEAPONS.keys());
 }

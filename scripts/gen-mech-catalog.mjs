@@ -40,12 +40,12 @@ const load = (data: unknown): ResolvedMechDef => resolveMechDef(validateMechDef(
 ${imports.join("\n")}
 
 /** All 'Mech definitions shipped with the library, keyed by model. */
-export const MECH_DEFS: Readonly<Record<string, ResolvedMechDef>> = Object.fromEntries(
+export const MECH_DEFS: Readonly<Map<string, ResolvedMechDef>> = new Map<string, ResolvedMechDef>(
   [
 ${values}
   ].map((data) => {
     const def = load(data);
-    return [def.model, def];
+    return [def.model.toUpperCase(), def];
   }),
 );
 `;

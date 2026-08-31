@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getMechDef } from "../src/data/index.js";
 import { canFireFromLocation } from "../src/rules/damage.js";
 import { en } from "../web/i18n/en.js";
 import type { LocaleId, MessageKey } from "../web/i18n/index.js";
@@ -25,7 +26,7 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
       S.commitMove(s);
     } else {
       const unit = st.units[actorId]!;
-      const def = st.defs[unit.model]!;
+      const def = getMechDef(unit.model)!;
       Object.entries(def.weapons).forEach(([key, mount]) => {
         const weaponIndex = Number(key);
         if (unit.jammedWeapons.includes(weaponIndex)) return;

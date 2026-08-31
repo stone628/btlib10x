@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { getMapDef, MAP_DEFS } from "../src/data/index.js";
+import { getMapDef, listMapNames } from "../src/data/index.js";
 import { type MapDef, validateMapDef } from "../src/data/mapschema.js";
 import { createBattle } from "../src/rules/game.js";
 
 const valid: MapDef = {
+  name: "test-map",
   width: 5,
   height: 4,
   terrain: [
@@ -84,6 +85,7 @@ describe("validateMapDef", () => {
 
   it("accepts an optional non-negative integer `level` per hex", () => {
     const withLevel: MapDef = {
+      name: "test-map",
       width: 5,
       height: 4,
       terrain: [
@@ -112,7 +114,7 @@ describe("validateMapDef", () => {
 
 describe("bundled maps", () => {
   it("loads both rulebook maps with expected dimensions and hex counts", () => {
-    expect(Object.keys(MAP_DEFS).sort()).toEqual(["beginner", "quickstart", "test"]);
+    expect(listMapNames().sort()).toEqual(["beginner", "quickstart", "test"]);
     for (const name of ["beginner", "quickstart"]) {
       const map = getMapDef(name)!;
       expect(map.width).toBe(15);
@@ -125,13 +127,13 @@ describe("bundled maps", () => {
         expect(h.row).toBeLessThanOrEqual(map.height);
       }
     }
-    expect(MAP_DEFS.beginner!.terrain).toHaveLength(20);
-    expect(MAP_DEFS.quickstart!.terrain).toHaveLength(31);
-    expect(MAP_DEFS.beginner!.terrain[0]).toEqual({ col: 2, row: 5, type: "heavyWoods" });
+    expect(getMapDef("beginner")!.terrain).toHaveLength(20);
+    expect(getMapDef("quickstart")!.terrain).toHaveLength(31);
+    expect(getMapDef("beginner")!.terrain[0]).toEqual({ col: 2, row: 5, type: "heavyWoods" });
   });
 
   it("is directly usable by createBattle (no conversion layer)", () => {
-    expect(MAP_DEFS.beginner!.terrain[0]).toEqual({ col: 2, row: 5, type: "heavyWoods" });
+    expect(getMapDef("beginner")!.terrain[0]).toEqual({ col: 2, row: 5, type: "heavyWoods" });
     expect(() =>
       createBattle(
         [
@@ -152,7 +154,7 @@ describe("bundled maps", () => {
             facing: "nw",
           },
         ],
-        { terrain: MAP_DEFS.quickstart!.terrain },
+        { terrain: getMapDef("quickstart")!.terrain },
       ),
     ).not.toThrow();
   });

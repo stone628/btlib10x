@@ -1,4 +1,4 @@
-import { FACINGS, MAP_DEFS } from "btlib10x";
+import { FACINGS, getMapDef, listMapNames } from "btlib10x";
 import type { Chunk, RichOutput } from "./format.js";
 import {
   attackStatusLines,
@@ -154,13 +154,17 @@ const SETUP_CMDS: Record<string, CmdDef> = {
     argsDoc: [["name", "cmd.map.arg.name"]],
     run: (s, a) => {
       expectArgs(L(s), a, 1, "map <name>");
-      S.setMap(s, a[0]!);
-      const map = MAP_DEFS[a[0]!]!;
+      const name = a[0]!;
+      const m = getMapDef(name);
+      if (!m) {
+        throw new Error(t(s.locale, "err.unknownMap", { name, list: listMapNames().join(", ") }));
+      }
+      S.setMap(s, m.name);
       return [
         t(L(s), "ok.mapLoaded", {
-          name: a[0]!,
-          w: map.width,
-          h: map.height,
+          name: m.name,
+          w: m.width,
+          h: m.height,
           n: s.terrainDefs.length,
         }),
       ];
@@ -182,16 +186,17 @@ const SETUP_CMDS: Record<string, CmdDef> = {
       const facingWord = (a[6] ?? "n").toLowerCase();
       const facing = FACINGS.find((f) => f === facingWord);
       if (!facing) throw new Error(t(L(s), "err.faceArg", { facings: FACINGS.join("/") }));
+      const wantModel = a[1]!.toUpperCase();
       S.addUnit(
         s,
         a[0]!,
-        a[1]!,
+        wantModel,
         int(L(s), a[2]!, "team"),
         int(L(s), a[3]!, "gunnery"),
         { col: coord(L(s), a[4]!, "col"), row: coord(L(s), a[5]!, "row") },
         facing,
       );
-      return [t(L(s), "ok.added", { id: a[0]!, model: a[1]!, col: a[4]!, row: a[5]!, facing })];
+      return [t(L(s), "ok.added", { id: a[0]!, model: wantModel, col: a[4]!, row: a[5]!, facing })];
     },
   },
   rm: {
@@ -410,7 +415,7 @@ function commandHelp(session: S.Session, name: string): string[] {
   const locale = session.locale;
   const def = availableCmds(session)[name.toLowerCase()];
   if (!def) throw new Error(t(locale, "err.unknownCommand", { name }));
-  const names = Object.keys(MAP_DEFS).join("|");
+  const names = listMapNames().join("|");
   const lines = [
     def.usage !== undefined ? `${t(locale, "help.usagePrefix")}${def.usage}` : name.toLowerCase(),
   ];
@@ -425,7 +430,7 @@ function commandHelp(session: S.Session, name: string): string[] {
 
 function commandList(session: S.Session): string[] {
   const locale = session.locale;
-  const names = Object.keys(MAP_DEFS).join("|");
+  const names = listMapNames().join("|");
 
   const globalEntries = Object.keys(GLOBAL_CMDS)
     .sort()

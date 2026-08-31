@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getMapDef } from "../src/data/index.js";
+import { getMapDef, getMechDef } from "../src/data/index.js";
 import { canFireFromLocation } from "../src/rules/damage.js";
 import { REACHABLE_MARKER, reachableModel } from "../web/format.js";
 import { GRID_GLYPHS, TEAM_STYLES } from "../web/render.js";
@@ -24,7 +24,7 @@ function freshSetup(): S.Session {
 function fireEverything(s: S.Session, enemy: string): void {
   const st = s.battle!;
   const unit = st.units[S.currentActor(s)!.id]!;
-  const def = st.defs[unit.model]!;
+  const def = getMechDef(unit.model)!;
   Object.entries(def.weapons).forEach(([key, mount]) => {
     const weaponIndex = Number(key);
     if (unit.jammedWeapons.includes(weaponIndex)) return;
@@ -216,6 +216,15 @@ describe("info", () => {
     expect(run(s, "info mech NOPE")[0]).toMatch(/^error: Unknown 'Mech model/);
   });
 
+  it("matches mech model case-insensitively", () => {
+    const s = S.newSession();
+    s.critsDisabled = true;
+    const upper = run(s, "info mech hbk-4g").join("\n");
+    const mixed = run(s, "info mech Hbk-4g").join("\n");
+    expect(upper).toContain("Autocannon/20");
+    expect(mixed).toContain("Autocannon/20");
+  });
+
   it("lists maps and renders the ASCII sheet", () => {
     const s = S.newSession();
     s.critsDisabled = true;
@@ -231,6 +240,24 @@ describe("info", () => {
     expect(text).toContain(`${GRID_GLYPHS.edgeSW} W0 ${GRID_GLYPHS.edgeSE}`);
     const beginner = run(s, "info map beginner").join("\n");
     expect(beginner).toContain(`${GRID_GLYPHS.edgeSW} W0 ${GRID_GLYPHS.edgeSE}`);
+  });
+
+  it("matches map name case-insensitively", () => {
+    const s = S.newSession();
+    s.critsDisabled = true;
+    const upper = run(s, "info map QUICKSTART").join("\n");
+    const mixed = run(s, "info map QuickStart").join("\n");
+    expect(upper).toMatch(/lightWoods \d+/);
+    expect(mixed).toMatch(/lightWoods \d+/);
+  });
+
+  it("matches weapon name case-insensitively", () => {
+    const s = S.newSession();
+    s.critsDisabled = true;
+    const upper = run(s, "info weapon MEDIUM LASER").join("\n");
+    const mixed = run(s, "info weapon medium laser").join("\n");
+    expect(upper).toMatch(/Medium Laser/);
+    expect(mixed).toMatch(/Medium Laser/);
   });
 });
 
@@ -271,7 +298,7 @@ describe("sheet", () => {
       Object.values(u.damage.armor).some(
         (v) =>
           v <
-          Object.values(s.battle!.defs[u.model]!.armor).reduce(
+          Object.values(getMechDef(u.model)!.armor).reduce(
             (a: number, b: number) => Math.max(a, b),
             0,
           ),
@@ -306,6 +333,15 @@ describe("setup flow", () => {
     run(s, "add a HBK-4G 0 4 2 2 n");
     run(s, "add b GRF-1N 0 4 3 3 n");
     expect(run(s, "start")[0]).toMatch(/^error: .*\bteam/);
+  });
+
+  it("accepts map and model arguments case-insensitively", () => {
+    const s = S.newSession();
+    s.critsDisabled = true;
+    expect(run(s, "map QUICKSTART")[0]).toMatch(/^map quickstart:/);
+    expect(s.mapName).toBe("quickstart");
+    expect(run(s, "add lower hbk-4g 0 4 2 2 n")[0]).toMatch(/lower \(HBK-4G\) placed at/);
+    expect(s.roster.find((u) => u.id === "lower")?.model).toBe("HBK-4G");
   });
 });
 
@@ -496,7 +532,7 @@ describe("full game", () => {
         out = run(s, "done");
       } else {
         const unit = st.units[actorId]!;
-        const def = st.defs[unit.model]!;
+        const def = getMechDef(unit.model)!;
         Object.entries(def.weapons).forEach(([key, mount]) => {
           const weaponIndex = Number(key);
           if (unit.jammedWeapons.includes(weaponIndex)) return;

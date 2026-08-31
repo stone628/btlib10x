@@ -2,7 +2,7 @@ import { roll2D6 } from "../core/dice.js";
 import type { Location, MoveMode, Rng, TerrainType } from "../core/types.js";
 import type { ResolvedMechDef } from "../data/schema.js";
 import type { WeaponDef } from "../data/weapons.js";
-import { getWeapon } from "../data/weapons.js";
+import { getWeaponOrThrow } from "../data/weapons.js";
 import type { Arc } from "./arcs.js";
 import { clusterHitsForMissiles, clusterHitsForShots, groupMissiles } from "./cluster.js";
 import { type CriticalResolution, resolveCriticalHits } from "./critical.js";
@@ -71,7 +71,7 @@ export interface AttackResolution {
 
 /** Resolve one declared weapon attack end-to-end: to-hit, location(s), damage. */
 export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution {
-  const weapon: WeaponDef = getWeapon(input.weaponName);
+  const weapon: WeaponDef = getWeaponOrThrow(input.weaponName);
   const shots = input.shots ?? 1;
 
   const breakdown = computeToHit({

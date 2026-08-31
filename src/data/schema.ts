@@ -1,7 +1,7 @@
 import type { Location } from "../core/types.js";
 import { isLocation, LOCATIONS } from "../core/types.js";
 import { type InternalStructure, internalStructureForTonnage } from "../rules/internalStructure.js";
-import { getWeapon } from "./weapons.js";
+import { getWeaponOrThrow } from "./weapons.js";
 
 /** Torso locations that have a separate rear armor pool. */
 export type TorsoLocation = "centerTorso" | "rightTorso" | "leftTorso";
@@ -513,7 +513,7 @@ export function validateMechDef(data: unknown): MechDef {
             continue;
           }
           try {
-            getWeapon(slot.weapon);
+            getWeaponOrThrow(slot.weapon);
           } catch {
             errors.push(
               `critSlots.${loc}[${i}].weapon ${JSON.stringify(slot.weapon)} is not a known weapon`,
@@ -525,7 +525,7 @@ export function validateMechDef(data: unknown): MechDef {
             continue;
           }
           try {
-            getWeapon(slot.weapon);
+            getWeaponOrThrow(slot.weapon);
           } catch {
             errors.push(
               `critSlots.${loc}[${i}].weapon ${JSON.stringify(slot.weapon)} is not a known weapon`,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { getWeapon } from "../src/data/weapons.js";
+import { getMechDef } from "../src/data/index.js";
+import { getWeaponOrThrow } from "../src/data/weapons.js";
 import type { BattleState, TerrainHexDef } from "../src/rules/game.js";
 import {
   advancePhase,
@@ -92,7 +93,7 @@ describe("createBattle", () => {
   it("initializes armor and ammo from the definition", () => {
     const state = hbkVsEnf();
     const hbk = getUnit(state, "hbk");
-    expect(hbk.damage.armor).toEqual(state.defs["HBK-4G"]!.armor);
+    expect(hbk.damage.armor).toEqual(getMechDef("HBK-4G")!.armor);
     expect(hbk.ammoLeft["1"]).toBe(10);
     expect(hbk.phaseStartDamage).toEqual(hbk.damage);
     expect(state.phase).toBe("initiative");
@@ -414,7 +415,7 @@ describe("weapon attack phase", () => {
     );
 
     // Out of range.
-    const ac20 = getWeapon("Autocannon/20");
+    const ac20 = getWeaponOrThrow("Autocannon/20");
     state = createBattle([
       {
         id: "hbk",
@@ -553,7 +554,7 @@ describe("weapon attack phase", () => {
     const her = getUnit(state, "her");
     expect(her.jammedWeapons).toEqual([3]);
     expect(getUnit(state, "cda").damage.armor.centerTorso).toBe(
-      state.defs["CDA-3MA"]!.armor.centerTorso,
+      getMechDef("CDA-3MA")!.armor.centerTorso,
     );
   });
 
