@@ -658,20 +658,19 @@ function critChartChunk(def: ResolvedMechDef, locale: LocaleId, live: CritChartL
   const ctLines = critCell(def, "centerTorso", locale, live);
   const ltLines = critCell(def, "leftTorso", locale, live);
   const rlLines = critCell(def, "rightLeg", locale, live);
-  const infoLines = [ " " ];
+  const infoLines = [" "];
   const llLines = critCell(def, "leftLeg", locale, live);
   const built = [raLines, hdLines, laLines, rtLines, ctLines, ltLines, rlLines, infoLines, llLines];
-  const maxLineLen = built.flatMap((lines) => lines).map((l) => l.length)
+  const maxLineLen = built
+    .flatMap((lines) => lines)
+    .map((l) => l.length)
     .reduce((prev, curr) => Math.max(prev, curr));
-  built.forEach((lines) => lines[0] = lines[0]!.padEnd(maxLineLen));
-  return buildCollapsibleChunk(
-    t(locale, "critChart.summary"),
-    [
-      buildColumnsChunk([raLines, hdLines, laLines]),
-      buildColumnsChunk([rtLines, ctLines, ltLines]),
-      buildColumnsChunk([rlLines, infoLines, llLines])
-    ]
-  );
+  built.forEach((lines) => (lines[0] = lines[0]!.padEnd(maxLineLen)));
+  return buildCollapsibleChunk(t(locale, "critChart.summary"), [
+    buildColumnsChunk([raLines, hdLines, laLines]),
+    buildColumnsChunk([rtLines, ctLines, ltLines]),
+    buildColumnsChunk([rlLines, infoLines, llLines]),
+  ]);
 }
 
 /** Record sheet with armor status per location, side-by-side with ASCII diagram. */

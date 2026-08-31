@@ -709,10 +709,32 @@ export function nextActor(state: BattleState): string | null {
   const loser = teams.find((t) => t !== winner) ?? winner;
   const order = loser === winner ? teams : [loser, ...teams.filter((t) => t !== loser)];
 
+  const sizeByTeam = new Map<number, number>();
+  for (const u of alive) sizeByTeam.set(u.team, (sizeByTeam.get(u.team) ?? 0) + 1);
+
+  const minSize = Math.min(...teams.map((t) => sizeByTeam.get(t) ?? 0));
+
   const actedCount = (team: number): number =>
     alive.filter((u) => u.team === team && state.actedThisPhase.includes(u.id)).length;
 
-  const sorted = order.sort((a, b) => actedCount(a) - actedCount(b));
+  const unitsPerStep = (team: number): number => {
+    const size = sizeByTeam.get(team) ?? 0;
+    if (size === 0 || minSize === 0) return 1;
+    return Math.max(1, Math.floor(size / minSize));
+  };
+
+  const stepNumber = (team: number): number => {
+    const ups = unitsPerStep(team);
+    return Math.floor(actedCount(team) / ups);
+  };
+
+  const sorted = order
+    .map((team) => ({ team, step: stepNumber(team) }))
+    .sort((a, b) => {
+      if (a.step !== b.step) return a.step - b.step;
+      return a.team === loser ? -1 : b.team === loser ? 1 : 0;
+    })
+    .map((entry) => entry.team);
   for (const team of sorted) {
     const candidate = alive.find(
       (u) => u.team === team && !state.actedThisPhase.includes(u.id) && !u.passedAttacks,
