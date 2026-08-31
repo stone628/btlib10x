@@ -79,6 +79,10 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "jammed" });
           return;
         }
+        if (unit.destroyedWeapons.includes(weaponIndex)) {
+          blocked.push({ weaponIndex, weapon: mount.weapon, reason: "destroyed" });
+          return;
+        }
         if (!canFireFromLocation(unit.phaseStartDamage, mount.location)) {
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "destroyed" });
           return;

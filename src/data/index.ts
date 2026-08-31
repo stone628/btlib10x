@@ -25,12 +25,22 @@ export function getMapDef(name: string): MapDef | undefined {
 export type { MapDef } from "./mapschema.js";
 export { validateMapDef } from "./mapschema.js";
 export type {
+  CritSlot,
+  CritSlots,
+  CritStructureName,
   MechDef,
   RearArmorKey,
   ResolvedArmor,
+  ResolvedCritSlot,
+  ResolvedCritSlots,
   ResolvedMechDef,
   WeaponMount,
 } from "./schema.js";
-export { resolveMechDef, validateMechDef } from "./schema.js";
+export {
+  CRIT_SLOT_COUNTS,
+  CRIT_STRUCTURE_NAMES,
+  resolveMechDef,
+  validateMechDef,
+} from "./schema.js";
 export type { WeaponDef } from "./weapons.js";
 export { getWeapon, WEAPONS } from "./weapons.js";

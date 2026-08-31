@@ -35,7 +35,7 @@ function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
         facing: "nw",
       },
     ],
-    { terrain },
+    { terrain, critsDisabled: true },
   );
 }
 

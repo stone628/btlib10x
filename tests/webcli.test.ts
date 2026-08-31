@@ -12,6 +12,7 @@ function run(s: S.Session, cmd: string): string[] {
 
 function freshSetup(): S.Session {
   const s = S.newSession(42);
+  s.critsDisabled = true;
   expect(run(s, "map quickstart")[0]).toContain("15x16");
   // Adjacent foes, facing each other along the n/s axis (1-based coords).
   expect(run(s, "add hunchy HBK-4G 0 4 9 9 n")).toHaveLength(1);
@@ -57,6 +58,7 @@ function autoPlay(s: S.Session): void {
 describe("help", () => {
   it("lists only commands legal in the current state", () => {
     const s = S.newSession();
+    s.critsDisabled = true;
     const setupHelp = run(s, "help").join("\n");
     expect(setupHelp).toContain("add");
     expect(setupHelp).toContain("info mech");
@@ -74,6 +76,7 @@ describe("help", () => {
 
   it("shows usage and explanation on separate lines for arg commands", () => {
     const s = S.newSession();
+    s.critsDisabled = true;
     const help = run(s, "help");
     const addIdx = help.findIndex((l) => l.startsWith("add"));
     expect(help[addIdx]).toMatch(/^add\s+add <id>/);
@@ -87,6 +90,7 @@ describe("help", () => {
 describe("hint", () => {
   it("heads the help message with per-state guidance", () => {
     const s = S.newSession();
+    s.critsDisabled = true;
     const setupHelp = run(s, "help");
     expect(setupHelp.slice(0, 3).join(" ")).toContain("'setup' phase");
     expect(setupHelp[1]).toContain("'add'");
@@ -130,6 +134,7 @@ describe("hint", () => {
 describe("help <command>", () => {
   it("details usage and arguments without the state hint", () => {
     const s = S.newSession();
+    s.critsDisabled = true;
     const out = run(s, "help add");
     expect(out[0]).toBe("usage: add <id> <model> <team> <gunnery> <col> <row> [facing]");
     expect(out.join("\n")).toContain("arguments:");
@@ -161,6 +166,7 @@ describe("help <command>", () => {
 describe("board", () => {
   it("explains instead of drawing a 1x1 grid when nothing is loaded", () => {
     const s = S.newSession();
+    s.critsDisabled = true;
     const out = run(s, "board").join("\n");
     expect(out).toContain("no battlefield yet");
     expect(out).toContain("'map'");
@@ -179,6 +185,7 @@ describe("board", () => {
 
   it("reports occupied hexes with 1-based coordinates", () => {
     const s = S.newSession();
+    s.critsDisabled = true;
     run(s, "add hbk HBK-4G 0 4 3 3");
     expect(run(s, "add grf GRF-1N 1 4 3 3")[0]).toBe("error: Hex 3,3 already occupied");
   });
@@ -187,6 +194,7 @@ describe("board", () => {
 describe("clear", () => {
   it("signals a screen wipe via form feed", () => {
     const s = S.newSession();
+    s.critsDisabled = true;
     expect(run(s, "clear")).toEqual(["\f"]);
   });
 });
@@ -194,6 +202,7 @@ describe("clear", () => {
 describe("info", () => {
   it("lists mechs and details one", () => {
     const s = S.newSession();
+    s.critsDisabled = true;
     const list = run(s, "info mech");
     expect(list.some((l) => l.startsWith("HBK-4G"))).toBe(true);
     const detail = run(s, "info mech HBK-4G").join("\n");
@@ -207,6 +216,7 @@ describe("info", () => {
 
   it("lists maps and renders the ASCII sheet", () => {
     const s = S.newSession();
+    s.critsDisabled = true;
     expect(run(s, "info map").join("\n")).toContain("quickstart");
     const qs = getMapDef("quickstart")!;
     const detail = run(s, "info map quickstart");
@@ -288,6 +298,7 @@ describe("setup flow", () => {
 
   it("rejects starting with one team", () => {
     const s = S.newSession();
+    s.critsDisabled = true;
     run(s, "add a HBK-4G 0 4 2 2 n");
     run(s, "add b GRF-1N 0 4 3 3 n");
     expect(run(s, "start")[0]).toMatch(/^error: .*\bteam/);
@@ -380,6 +391,7 @@ describe("movement", () => {
 
   it("shows a clipped reachable hex map for jump", () => {
     const s = S.newSession(42);
+    s.critsDisabled = true;
     // Load a map so the board bounds exist; place two jump-capable 'Mechs
     // far apart on a clear region of the board; either may act first.
     run(s, "map quickstart");
@@ -516,6 +528,7 @@ describe("seed", () => {
   it("replays identically for the same seed", () => {
     const transcript = (): string[] => {
       const s = S.newSession(7);
+      s.critsDisabled = true;
       run(s, "map beginner");
       run(s, "add hunchy HBK-4G 0 4 9 9 n");
       run(s, "add cicada CDA-3MA 1 4 9 8 s");

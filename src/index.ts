@@ -21,14 +21,21 @@ export {
 } from "./core/terrain.js";
 export * from "./core/types.js";
 export type {
+  CritSlot,
+  CritSlots,
+  CritStructureName,
   MapDef,
   MechDef,
   RearArmorKey,
   ResolvedArmor,
+  ResolvedCritSlot,
+  ResolvedCritSlots,
   ResolvedMechDef,
   WeaponMount,
 } from "./data/index.js";
 export {
+  CRIT_SLOT_COUNTS,
+  CRIT_STRUCTURE_NAMES,
   getMapDef,
   getMechDef,
   MAP_DEFS,
@@ -43,6 +50,13 @@ export * from "./rules/arcs.js";
 export type { AttackResolution, HitGroup, WeaponAttackInput } from "./rules/attack.js";
 export { resolveWeaponAttack } from "./rules/attack.js";
 export * from "./rules/cluster.js";
+export type {
+  CriticalEffect,
+  CriticalResolution,
+  CritSource,
+  EffectiveMovement,
+} from "./rules/critical.js";
+export { effectiveMovement, resolveCriticalHits } from "./rules/critical.js";
 export * from "./rules/damage.js";
 export * from "./rules/fireability.js";
 export * from "./rules/game.js";

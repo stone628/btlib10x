@@ -43,7 +43,10 @@ function setup(): BattleState {
         facing: "nw",
       },
     ],
-    { terrain: [{ col: 7, row: 7, type: "lightWoods" }] },
+    {
+      terrain: [{ col: 7, row: 7, type: "lightWoods" }],
+      critsDisabled: true,
+    },
   );
 }
 

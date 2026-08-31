@@ -140,3 +140,60 @@ Rapid-fire / multi-shot (columns: 2, 3, 4 shots), for Ultra autocannons:
 LRM missiles are applied in lots of **five**: a hit lot lands on one location
 (e.g. an LRM-10 firing 8 hits produces lots of 5 and 3, each on its own
 location).
+
+## Critical Hits
+
+Whenever a hit strips at least 1 point of internal structure from a
+location, the player rolls 2D6 on the Determining Critical Hits table
+(`src/rules/critical.ts`, `determiningResult`).
+
+| 2D6 | Result |
+| --- | --- |
+| 2-7 | No critical hit |
+| 8-9 | 1 critical hit |
+| 10-11 | 2 critical hits |
+| 12 | If the location is head / arm / leg, the limb is blown off; otherwise (torso) 3 critical hits |
+
+For each critical hit, the player rolls the slot number:
+
+| Location | Slot count | Procedure |
+| --- | --- | --- |
+| Head, legs | 6 | 1D6 → slot 1-6 |
+| Torso, arms | 12 | 2D6 — first die 1-3 selects the top half (slots 1-6), 4-6 the bottom half (slots 7-12); second die 1-6 selects the slot within the half |
+
+Empty slots, soak (endo steel / CASE / ferro-fibrous) and already-destroyed
+slots re-roll. If the source location is exhausted (every crit-hittable
+slot already destroyed) at the start of this determining, the whole roll
+transfers to the next inward location per the standard damage-transfer
+diagram; head and center torso are terminal. If the source still has
+hittable slots, overflow is lost (excess crits simply disappear).
+
+**Effects in this subset:**
+
+- Weapon slot hit → that weapon is destroyed; multi-slot weapons are
+  disabled by the first hit, additional slot hits only "soak".
+- Ammo slot hit → explosion of `per-shot damage value × remaining shots`
+  applied directly to the bin location's internal structure (the armor
+  pool is bypassed per the rules). The explosion drains IS, transfers
+  inward, and any location that newly lost IS triggers a fresh
+  determining roll recursively.
+- Limb blown off (determining 12 on arm/leg) → the location's armor
+  and IS are zeroed; the arm is removed from play, the leg renders the
+  unit immobile.
+- Head blown off (determining 12 on head) or cockpit slot hit → 'Mech
+  destroyed.
+- Leg actuators (upper/lower/foot) and hip → mark the slots destroyed
+  and reduce the unit's effective walking MP via `effectiveMovement`
+  (`src/rules/critical.ts`): each leg actuator −1 walk; a hip hit on a
+  leg halves walking on that leg (round up) and ignores the other
+  actuator penalties on that leg.
+- Jump-jet slot hit → −1 jump MP per destroyed slot.
+- Engine, gyro, sensor, life-support, single/double heat-sink slots →
+  mark destroyed; the side-effects (heat, piloting rolls) are deferred
+  with the rest of the heat / piloting subset.
+
+Double heat sinks (DHS) appear in several `IS` 'Mechs (e.g. Hermes II,
+Cicada, Mad Cat Mk II). Each DHS occupies a run of consecutive slots;
+destroying one slot destroys the whole DHS, and the sibling slots in the
+same run are marked destroyed by the resolver so subsequent re-rolls
+don't hit them.
