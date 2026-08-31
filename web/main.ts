@@ -49,6 +49,7 @@ function appendChunk(chunk: Chunk, parent: HTMLElement = out): void {
     const details = document.createElement("details");
     details.className = "collapsible";
     const summary = document.createElement("summary");
+    summary.className = "no-prompt-focus";
     summary.textContent = chunk.summary;
     const body = document.createElement("div");
     body.className = "collapsible-body";
@@ -177,6 +178,7 @@ document.getElementById("term")?.addEventListener("click", (e) => {
   const start = mouseDownAt;
   mouseDownAt = null;
   if (start && (Math.abs(e.clientX - start.x) > 3 || Math.abs(e.clientY - start.y) > 3)) return;
+  if ((e.target as Element | null)?.closest(".no-prompt-focus") != null) return;
   const rect = out.getBoundingClientRect();
   const scrollbar = out.offsetWidth - out.clientWidth;
   if (scrollbar > 0 && e.clientX >= rect.right - scrollbar) return;
