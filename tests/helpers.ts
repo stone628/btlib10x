@@ -44,23 +44,24 @@ export function chunkText(chunk: Chunk): string[] {
     lines.push(...boardToText(chunk.board.model).split("\n"));
     return lines;
   }
-  if (chunk.kind === "sheet") {
-    return sheetText(chunk.left, chunk.right);
+  if (chunk.kind === "columns") {
+    return columnsText(chunk.columns);
+  }
+  if (chunk.kind === "collapsible") {
+    return [chunk.summary, ...chunk.chunks.flatMap(chunkText)];
   }
   return [...chunk.lines];
 }
 
-/** Flat rendering of a sheet: left column padded, right column beside it. */
-function sheetText(left: readonly string[], right: readonly string[]): string[] {
-  const leftMax = Math.max(0, ...left.map((l) => l.length));
-  const rightMax = Math.max(0, ...right.map((l) => l.length));
-  const height = Math.max(left.length, right.length);
+/** Flat rendering of side-by-side columns: each padded to its own width. */
+function columnsText(columns: readonly (readonly string[])[]): string[] {
+  const widths = columns.map((c) => Math.max(0, ...c.map((l) => l.length)));
+  const height = Math.max(0, ...columns.map((c) => c.length));
   const lines: string[] = [];
   for (let i = 0; i < height; i++) {
-    const l = (left[i] ?? "").padEnd(leftMax);
-    const r = (right[i] ?? "").padEnd(rightMax);
-    if (l.trim() === "" && r.trim() === "") continue;
-    lines.push(r.length > 0 ? `${l}  ${r}` : l);
+    const row = columns.map((c, idx) => (c[i] ?? "").padEnd(widths[idx] ?? 0));
+    if (row.every((l) => l.trim() === "")) continue;
+    lines.push(row.join("  "));
   }
   return lines;
 }
