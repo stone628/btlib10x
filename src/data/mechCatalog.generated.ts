@@ -16,14 +16,25 @@ import grf1nJson from "./mechs/grf-1n.json";
 import hbk4gJson from "./mechs/hbk-4g.json";
 import her5saJson from "./mechs/her-5sa.json";
 import mcmkii2Json from "./mechs/mc-mkii-2.json";
+import twprimeJson from "./mechs/tw-prime.json";
+import whkprimeJson from "./mechs/whk-prime.json";
 import wvr6rJson from "./mechs/wvr-6r.json";
 
 /** All 'Mech definitions shipped with the library, keyed by model. */
 export const MECH_DEFS: Readonly<Record<string, ResolvedMechDef>> = Object.fromEntries(
-  [as7dJson, cda3maJson, enf4rJson, grf1nJson, hbk4gJson, her5saJson, mcmkii2Json, wvr6rJson].map(
-    (data) => {
-      const def = load(data);
-      return [def.model, def];
-    },
-  ),
+  [
+    as7dJson,
+    cda3maJson,
+    enf4rJson,
+    grf1nJson,
+    hbk4gJson,
+    her5saJson,
+    mcmkii2Json,
+    twprimeJson,
+    whkprimeJson,
+    wvr6rJson,
+  ].map((data) => {
+    const def = load(data);
+    return [def.model, def];
+  }),
 );

@@ -55,6 +55,7 @@ export const CRIT_STRUCTURE_NAMES = [
   "upperLegActuator",
   "lowerLegActuator",
   "footActuator",
+  "targetingComputer",
   "hip",
 ] as const;
 

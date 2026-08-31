@@ -47,8 +47,10 @@ function classifyCritLine(raw, errors, fileLabel) {
   if (t === "" || t === "-Empty-") return { ok: true, slot: { kind: "empty" } };
   // "IS Ammo <token>" / "CL Ammo <token>" (e.g. "IS Ammo AC/20"). Some MTFs
   // also write "CLGauss Ammo" etc.; the trailing-token lookup below covers
-  // both shapes after the IS/CL prefix is normalized off.
-  let m = /^(?:IS|CL)\s+Ammo\s+(.+?)\s*$/.exec(t);
+  // both shapes after the IS/CL prefix is normalized off. Trailing
+  // parenthesized text (e.g. "(200)" denoting the bin's shot count) is
+  // informational and dropped before lookup.
+  let m = /^(?:IS|CL)\s+Ammo\s+(.+?)(?:\s*\(.+?\))?\s*$/.exec(t);
   if (m) {
     const tok = m[1].trim();
     const stripped = normalizeCritWeaponToken(tok);
@@ -57,8 +59,9 @@ function classifyCritLine(raw, errors, fileLabel) {
     errors.push(`Unmapped ammo crit-slot token ${JSON.stringify(t)} in ${fileLabel}`);
     return { ok: false };
   }
-  // "<code> Ammo" (compact codes).
-  m = /^(.+?)\s+Ammo\s*$/.exec(t);
+  // "<code> Ammo" (compact codes). Same trailing-parenthesized tolerance as
+  // above (e.g. "CLMG Ammo (200)").
+  m = /^(.+?)\s+Ammo(?:\s*\(.+?\))?\s*$/.exec(t);
   if (m) {
     const stem = m[1];
     const stripped = normalizeCritWeaponToken(stem);

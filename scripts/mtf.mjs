@@ -98,21 +98,20 @@ function parseMtf(text, file) {
   let model = lines[2]?.trim() ?? "";
   if (!name) errors.push(`missing name in ${file}`);
   if (!model) errors.push(`missing model in ${file}`);
-  // A bare numeric/non-alpha variant line (e.g. Mad Cat Mk II "2") is not a
-  // usable model code. When the name has a MODEL_CODE entry, synthesise a
-  // full model code from the prefix plus the variant suffix (e.g.
-  // "Mad Cat Mk II" + "2" -> "MC-MKII-2"). Otherwise such 'Mechs are
-  // handled manually and skipped here.
-  if (model && !/[A-Za-z]/.test(model)) {
-    const prefix = MODEL_CODE[name];
-    if (prefix) {
-      model = `${prefix}-${model}`;
-    } else {
-      return {
-        def: null,
-        errors: [`variant ${JSON.stringify(model)} is not a model code; import this one manually`],
-      };
-    }
+  // The MTF `model` line is sometimes a short variant tag rather than a full
+  // model code: e.g. Mad Cat Mk II writes "2" or Timber Wolf Prime writes
+  // "Prime". When the name has a MODEL_CODE entry, synthesise a full model
+  // code from the prefix plus the variant suffix ("MC-MKII-2", "TWB-Prime").
+  // Skip only when the variant has no letters AND no MODEL_CODE entry — such
+  // identifiers can't be turned into a reasonable key on their own.
+  if (model && !/[A-Za-z]/.test(model) && !MODEL_CODE[name]) {
+    return {
+      def: null,
+      errors: [`variant ${JSON.stringify(model)} is not a model code; import this one manually`],
+    };
+  }
+  if (model && MODEL_CODE[name] && !model.includes("-")) {
+    model = `${MODEL_CODE[name]}-${model}`;
   }
 
   const fields = {};
