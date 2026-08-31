@@ -75,9 +75,13 @@ export const CODE = {
   CLERMediumLaser: "CL ER Medium Laser",
   CLERLargeLaser: "CL ER Large Laser",
   CLERPPC: "CL ER PPC",
+  CLMediumPulseLaser: "CL Medium Pulse Laser",
   CLStreakSRM2: "CL Streak SRM 2",
   CLStreakSRM4: "CL Streak SRM 4",
   CLStreakSRM6: "CL Streak SRM 6",
+  CLMG: "CL Machine Gun",
+  CLLRM10: "CL LRM 10",
+  CLLRM20: "CL LRM 20",
   CLGaussRifle: "CL Gauss Rifle",
   CLLBXAC10: "CL LB 10-X AC",
   CLLBXAC20: "CL LB 20-X AC",
@@ -93,6 +97,8 @@ export const CODE = {
   ERMediumLaser: "CL ER Medium Laser",
   ERLargeLaser: "CL ER Large Laser",
   ERPPC: "CL ER PPC",
+  MediumPulseLaser: "CL Medium Pulse Laser",
+  LRM20: "CL LRM 20",
   // IS ammo tokens ("IS Ammo AC/20" etc).
   "AC/2": "Autocannon/2",
   "AC/5": "Autocannon/5",
@@ -151,6 +157,8 @@ export const SHOTS_PER_TON = {
   "CL Streak SRM 2": 50,
   "CL Streak SRM 4": 25,
   "CL Streak SRM 6": 15,
+  "CL LRM 20": 12,
+  "CL Machine Gun": 200,
   "Gauss Rifle": 8,
   "CL Gauss Rifle": 16,
   "LB 10-X AC": 10,
@@ -231,6 +239,7 @@ export const STRUCTURE_TOKEN = {
   "Upper Leg Actuator": "upperLegActuator",
   "Lower Leg Actuator": "lowerLegActuator",
   "Foot Actuator": "footActuator",
+  "CLTargeting Computer": "targetingComputer",
 };
 
 export const SOAK_TOKEN = {
@@ -294,4 +303,6 @@ export const SOAK_CRIT_TOTALS = {
  */
 export const MODEL_CODE = {
   "Mad Cat Mk II": "MC-MKII",
+  "Mad Cat (Timber Wolf)": "TW",
+  "Masakari (Warhawk)": "WHK",
 };

@@ -10,6 +10,7 @@
     "long": 15,
     "variableDamage": [10, 8, 5]
   },
+  { "name": "CL ER PPC", "short": 7, "medium": 14, "long": 23, "damage": 15, "heat": 15 },
   { "name": "Flamer", "short": 1, "medium": 2, "long": 3, "damage": 2, "antiInfantry": true },
   {
     "name": "Machine Gun",
@@ -59,6 +60,13 @@
     "damage": 7
   },
   {
+    "name": "CL ER Large Laser",
+    "short": 8,
+    "medium": 15,
+    "long": 22,
+    "damage": 10
+  },
+  {
     "name": "CL Streak SRM 4",
     "short": 4,
     "medium": 8,
@@ -67,5 +75,23 @@
     "missiles": 4
   },
   { "name": "CL Gauss Rifle", "short": 7, "medium": 15, "long": 22, "damage": 15, "minRange": 2 },
-  { "name": "CL LB 20-X AC", "short": 4, "medium": 8, "long": 12, "damage": 20 }
+  { "name": "CL LB 20-X AC", "short": 4, "medium": 8, "long": 12, "damage": 20 },
+  {
+    "name": "CL Machine Gun",
+    "short": 1,
+    "medium": 2,
+    "long": 3,
+    "damage": 2,
+    "antiInfantry": true
+  },
+  {
+    "name": "CL Medium Pulse Laser",
+    "short": 2,
+    "medium": 5,
+    "long": 8,
+    "damage": 6,
+    "pulse": true
+  },
+  { "name": "CL LRM 10", "short": 7, "medium": 14, "long": 21, "missileDamage": 1, "missiles": 10 },
+  { "name": "CL LRM 20", "short": 7, "medium": 14, "long": 21, "missileDamage": 1, "missiles": 20 }
 ]
