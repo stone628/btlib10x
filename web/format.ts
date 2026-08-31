@@ -239,21 +239,23 @@ export function infoMapList(): string[] {
 
 export function infoWeaponList(locale: LocaleId): string[] {
   const grouped = new Map<string, ReturnType<typeof Object.values>[0][]>();
+  let maxNameLen = 0;
   for (const w of getAllWeapons()) {
     const cat = weaponCategory(w.name);
     const list = grouped.get(cat) ?? [];
     list.push(w);
     grouped.set(cat, list);
+    maxNameLen = Math.max(maxNameLen, w.name.length);
   }
   const lines: string[] = [];
   for (const [cat, weapons] of grouped) {
     lines.push(t(locale, "info.weaponCategory", { category: cat }));
     for (const w of weapons) {
       lines.push(
-        `  ${w.name.padEnd(20)} short ${String(w.short).padStart(2)}` +
+        `  ${w.name.padEnd(maxNameLen)}  short ${String(w.short).padStart(2)}` +
           ` / medium ${String(w.medium).padStart(2)}` +
           ` / long ${String(w.long).padStart(2)}` +
-          `   ${weaponDamageSummary(w)}`,
+          `  ${weaponDamageSummary(w)}`,
       );
     }
   }
@@ -589,13 +591,6 @@ const CRIT_SOAK_KEY: Readonly<Record<CritSoakName, MessageKey>> = {
   case: "critChart.soak.case",
 };
 
-/** Location rows of the crit chart: arms, then torsos, then legs. */
-const CRIT_CHART_ROWS: readonly (readonly Location[])[] = [
-  ["rightArm", "head", "leftArm"],
-  ["rightTorso", "centerTorso", "leftTorso"],
-  ["rightLeg", "leftLeg"],
-];
-
 /** One slot line: dice number + component label, plus live markers. */
 function critSlotText(
   def: ResolvedMechDef,
@@ -656,11 +651,26 @@ function critCell(
 
 /** Collapsible crit chart: one columns chunk per row (arena / torso / legs). */
 function critChartChunk(def: ResolvedMechDef, locale: LocaleId, live: CritChartLive | null): Chunk {
+  const raLines = critCell(def, "rightArm", locale, live);
+  const hdLines = critCell(def, "head", locale, live);
+  const laLines = critCell(def, "leftArm", locale, live);
+  const rtLines = critCell(def, "rightTorso", locale, live);
+  const ctLines = critCell(def, "centerTorso", locale, live);
+  const ltLines = critCell(def, "leftTorso", locale, live);
+  const rlLines = critCell(def, "rightLeg", locale, live);
+  const infoLines = [ " " ];
+  const llLines = critCell(def, "leftLeg", locale, live);
+  const built = [raLines, hdLines, laLines, rtLines, ctLines, ltLines, rlLines, infoLines, llLines];
+  const maxLineLen = built.flatMap((lines) => lines).map((l) => l.length)
+    .reduce((prev, curr) => Math.max(prev, curr));
+  built.forEach((lines) => lines[0] = lines[0]!.padEnd(maxLineLen));
   return buildCollapsibleChunk(
     t(locale, "critChart.summary"),
-    CRIT_CHART_ROWS.map((locs) =>
-      buildColumnsChunk(locs.map((loc) => critCell(def, loc, locale, live))),
-    ),
+    [
+      buildColumnsChunk([raLines, hdLines, laLines]),
+      buildColumnsChunk([rtLines, ctLines, ltLines]),
+      buildColumnsChunk([rlLines, infoLines, llLines])
+    ]
   );
 }
 
@@ -1403,7 +1413,7 @@ function weaponDamageSummary(w: {
   if (w.variableDamage)
     return `${w.variableDamage[0]} / ${w.variableDamage[1]} / ${w.variableDamage[2]}`;
   if (w.missileDamage !== undefined && w.missiles !== undefined)
-    return `${w.missileDamage} per missile × ${w.missiles}`;
+    return `${w.missileDamage * w.missiles} = ${w.missileDamage} per missile × ${w.missiles}`;
   return String(w.damage ?? 0);
 }
 
