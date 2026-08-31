@@ -11,9 +11,9 @@ import {
   type TerrainHexDef,
   type TerrainType,
 } from "../core/types.js";
-import { MECH_DEFS } from "../data/index.js";
+import { getMechDef } from "../data/index.js";
 import type { ResolvedMechDef } from "../data/schema.js";
-import { getWeapon } from "../data/weapons.js";
+import { getWeaponOrThrow } from "../data/weapons.js";
 import { isInFrontArc } from "./arcs.js";
 import { type AttackResolution, resolveWeaponAttack } from "./attack.js";
 import { type CriticalResolution, effectiveMovement } from "./critical.js";
@@ -125,7 +125,6 @@ export interface BattleState {
   phase: Phase;
   initiativeWinnerTeam: number | null;
   units: Record<string, UnitState>;
-  defs: Record<string, ResolvedMechDef>;
   terrain: Record<string, TerrainType>;
   /** Per-hex ground elevation; missing entries are level 0. */
   elevation: Record<string, number>;
@@ -199,7 +198,7 @@ export function createBattle(
   for (const init of units) {
     if (seen.has(init.id)) throw new Error(`Duplicate unit id: ${init.id}`);
     seen.add(init.id);
-    if (!MECH_DEFS[init.model]) throw new Error(`Unknown 'Mech model: ${init.model}`);
+    if (!getMechDef(init.model)) throw new Error(`Unknown 'Mech model: ${init.model}`);
     if (!isFacing(init.facing))
       throw new Error(`Invalid facing for ${init.id}: ${String(init.facing)}`);
     if (!Number.isInteger(init.gunnery) || init.gunnery < 0 || init.gunnery > 7) {
@@ -209,7 +208,7 @@ export function createBattle(
 
   const unitStates: Record<string, UnitState> = {};
   for (const init of units) {
-    const def: ResolvedMechDef = MECH_DEFS[init.model]!;
+    const def: ResolvedMechDef = getMechDef(init.model)!;
     const ammoLeft: Record<number, number> = {};
     Object.entries(def.weapons).forEach(([key, mount]) => {
       const weaponIndex = Number(key);
@@ -274,7 +273,6 @@ export function createBattle(
     phase: "initiative",
     initiativeWinnerTeam: null,
     units: unitStates,
-    defs: { ...MECH_DEFS },
     terrain,
     elevation,
     width: options.width,
@@ -321,7 +319,7 @@ export function executeMove(
   if (unit.moveMode === null) throw new Error(`Declare a movement mode for ${unitId} first`);
   if (unit.removed) throw new Error(`${unitId} is removed from play`);
 
-  const def = state.defs[unit.model]!;
+  const def = getMechDef(unit.model)!;
   const movement = effectiveMovement(def, unit.critSlotsDestroyed);
   const budget = mv.maxMovePoints(
     unit.moveMode,
@@ -428,7 +426,7 @@ export function declareAttacks(
   if (unit.declaredAttacks.length > 0)
     throw new Error(`${unitId} already declared attacks this turn`);
 
-  const def = state.defs[unit.model]!;
+  const def = getMechDef(unit.model)!;
   let targetId: string | null = null;
   let attackDistance = 0;
   let attackRangeBracket: string = "short";
@@ -438,7 +436,7 @@ export function declareAttacks(
   decls.forEach((decl, index) => {
     const mount = def.weapons[decl.weaponIndex];
     if (!mount) throw new Error(`weaponIndex ${decl.weaponIndex} out of range for ${unitId}`);
-    const weapon = getWeapon(mount.weapon);
+    const weapon = getWeaponOrThrow(mount.weapon);
 
     if (seenWeapons.has(decl.weaponIndex)) {
       throw new Error(`${mount.weapon} on ${unitId} may only be declared once per turn`);
@@ -541,11 +539,11 @@ export function declareAttacks(
 }
 
 function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void {
-  const def = state.defs[unit.model]!;
+  const def = getMechDef(unit.model)!;
 
   for (const decl of unit.declaredAttacks) {
     const mount = def.weapons[decl.weaponIndex]!;
-    const weapon = getWeapon(mount.weapon);
+    const weapon = getWeaponOrThrow(mount.weapon);
     const target = getUnitOrThrow(state, decl.targetId);
     const rapidFire = decl.rapidFire ?? false;
     const shots = rapidFire ? (weapon.rapidFireShots ?? 1) : 1;
@@ -567,7 +565,7 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
       ...(state.critsDisabled
         ? {}
         : {
-            targetDef: state.defs[target.model]!,
+            targetDef: getMechDef(target.model)!,
             targetCritSlotsDestroyed: target.critSlotsDestroyed,
             targetDestroyedWeapons: target.destroyedWeapons,
             targetAmmoLeft: target.ammoLeft,

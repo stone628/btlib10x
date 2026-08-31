@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getMechDef } from "../src/data/index.js";
 import type { BattleState } from "../src/rules/game.js";
 import {
   advancePhase,
@@ -83,13 +84,13 @@ describe("example battle: Wolverine vs Griffin", () => {
     // To-hit 11 >= TN 11; location roll 8 -> left torso; ML damage 5. LT 18 -> 13.
     resolveDeclaredAttacks(state, "wvr", scriptedRng(6, 5, 3, 5));
     expect(getUnit(state, "grf").damage.armor.leftTorso).toBe(
-      state.defs["GRF-1N"]!.armor.leftTorso! - 5,
+      getMechDef("GRF-1N")!.armor.leftTorso! - 5,
     );
 
     // Griffin answers with its PPC: TN 9, rolls 4 -> miss, no damage.
     declareAttacks(state, "grf", [{ weaponIndex: 2, targetId: "wvr" }]);
     resolveDeclaredAttacks(state, "grf", scriptedRng(1, 3)); // miss
-    expect(getUnit(state, "wvr").damage.armor).toEqual(state.defs["WVR-6R"]!.armor);
+    expect(getUnit(state, "wvr").damage.armor).toEqual(getMechDef("WVR-6R")!.armor);
   });
 
   it("fights through turn 6 until the Griffin loses its center torso", () => {
@@ -115,7 +116,7 @@ describe("example battle: Wolverine vs Griffin", () => {
 
     // ---- Turns 2..9: both stand still, Wolverine plinks the CT for 5 each.
     // Griffin front CT is 20 -> 4 hits reach 0 armor, then 18 IS -> 4 more hits.
-    const ctFront = state.defs["GRF-1N"]!.armor.centerTorso;
+    const ctFront = getMechDef("GRF-1N")!.armor.centerTorso;
     expect(grfCt()).toBe(ctFront);
     for (let t = 2; t <= 9; t++) {
       advancePhase(state); // weaponAttack -> end

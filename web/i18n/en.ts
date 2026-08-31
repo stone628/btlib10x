@@ -265,6 +265,7 @@ export const en = {
   "critChart.component.lowerLegActuator": "Lower Leg Actuator",
   "critChart.component.footActuator": "Foot Actuator",
   "critChart.component.hip": "Hip",
+  "critChart.component.targetingComputer": "Targeting Computer",
   "critChart.soak.endoSteel": "Endo Steel",
   "critChart.soak.ferroFibrous": "Ferro-Fibrous",
   "critChart.soak.case": "CASE",

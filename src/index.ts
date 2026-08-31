@@ -37,16 +37,17 @@ export type {
 export {
   CRIT_SLOT_COUNTS,
   CRIT_STRUCTURE_NAMES,
+  getAllMapDefs,
+  getAllMechDefs,
   getMapDef,
   getMechDef,
-  MAP_DEFS,
-  MECH_DEFS,
+  listMapNames,
   resolveMechDef,
   validateMapDef,
   validateMechDef,
 } from "./data/index.js";
 export type { WeaponDef } from "./data/weapons.js";
-export { getWeapon, WEAPONS } from "./data/weapons.js";
+export { getAllWeapons, getWeaponOrThrow as getWeapon, listWeaponNames } from "./data/weapons.js";
 export * from "./rules/arcs.js";
 export type { AttackResolution, HitGroup, WeaponAttackInput } from "./rules/attack.js";
 export { resolveWeaponAttack } from "./rules/attack.js";

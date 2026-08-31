@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Location } from "../src/core/types.js";
-import { MECH_DEFS } from "../src/data/index.js";
+import { getMechDef } from "../src/data/index.js";
 import { effectiveMovement, resolveCriticalHits } from "../src/rules/critical.js";
 import type { UnitDamageState } from "../src/rules/damage.js";
 import { scriptedRng } from "./helpers.js";
@@ -12,7 +12,7 @@ function detRoll(sum: number, ...tail: number[]): ReturnType<typeof scriptedRng>
   return scriptedRng(a, b, ...tail);
 }
 
-function freshFlags(def = MECH_DEFS["HBK-4G"]!) {
+function freshFlags(def = getMechDef("HBK-4G")!) {
   const out: Record<Location, boolean[]> = {} as Record<Location, boolean[]>;
   for (const loc of Object.keys(def.critSlots) as Location[]) {
     out[loc] = new Array(def.critSlots[loc].length).fill(false);
@@ -20,7 +20,7 @@ function freshFlags(def = MECH_DEFS["HBK-4G"]!) {
   return out;
 }
 
-function freshAmmo(def = MECH_DEFS["HBK-4G"]!) {
+function freshAmmo(def = getMechDef("HBK-4G")!) {
   const out: Record<number, number> = {};
   for (const [k, mount] of Object.entries(def.weapons)) {
     if (mount.ammoShots !== undefined) out[Number(k)] = mount.ammoShots;
@@ -29,7 +29,7 @@ function freshAmmo(def = MECH_DEFS["HBK-4G"]!) {
 }
 
 describe("determining critical hits table", () => {
-  const def = MECH_DEFS["HBK-4G"]!;
+  const def = getMechDef("HBK-4G")!;
   const damage: UnitDamageState = {
     armor: { ...def.armor },
     armorRear: { ...def.armorRear },
@@ -89,7 +89,7 @@ describe("determining critical hits table", () => {
 });
 
 describe("limb / head blow-off on 12", () => {
-  const def = MECH_DEFS["HBK-4G"]!;
+  const def = getMechDef("HBK-4G")!;
   const damage: UnitDamageState = {
     armor: { ...def.armor },
     armorRear: { ...def.armorRear },
@@ -159,7 +159,7 @@ describe("limb / head blow-off on 12", () => {
 });
 
 describe("slot selection", () => {
-  const def = MECH_DEFS["HBK-4G"]!;
+  const def = getMechDef("HBK-4G")!;
   const damage: UnitDamageState = {
     armor: { ...def.armor },
     armorRear: { ...def.armorRear },
@@ -230,7 +230,7 @@ describe("slot selection", () => {
 });
 
 describe("re-rolls", () => {
-  const def = MECH_DEFS["HBK-4G"]!;
+  const def = getMechDef("HBK-4G")!;
   const damage: UnitDamageState = {
     armor: { ...def.armor },
     armorRear: { ...def.armorRear },
@@ -266,7 +266,7 @@ describe("re-rolls", () => {
 
 describe("weapon and ammo crit effects", () => {
   it("destroying a weapon prevents it from firing", () => {
-    const def = MECH_DEFS["HBK-4G"]!;
+    const def = getMechDef("HBK-4G")!;
     // HBK rightTorso: slots 1-10 are AC/20 (weapon), 11-12 are AC/20 ammo.
     // Roll 8 -> one crit. Slot 1,1 (CT half=1, slot=1) lands on AC/20.
     const res = resolveCriticalHits({
@@ -293,7 +293,7 @@ describe("weapon and ammo crit effects", () => {
   });
 
   it("AC/20 ammo explosion = shots x 20 damage applied to the bin's IS", () => {
-    const def = MECH_DEFS["HBK-4G"]!;
+    const def = getMechDef("HBK-4G")!;
     // HBK ammo bins are in leftTorso (slots 1-2), not rightTorso. Roll 8
     // -> one crit. To land on slot 1 (the first ammo), need first half
     // (first die 1-3) and second die 1 -> slot 1.
@@ -330,7 +330,7 @@ describe("weapon and ammo crit effects", () => {
     // the AC/20 ammo bin has 5 shots. Crit on the ammo: 100 damage, drains
     // the IS, zeros the location — the cascade rules then trigger a fresh
     // determining roll.
-    const def = MECH_DEFS["HBK-4G"]!;
+    const def = getMechDef("HBK-4G")!;
     const damage: UnitDamageState = {
       armor: { ...def.armor, rightTorso: 0 },
       armorRear: { ...def.armorRear },
@@ -371,7 +371,7 @@ describe("weapon and ammo crit effects", () => {
   });
 
   it("cockpit crit kills the 'Mech", () => {
-    const def = MECH_DEFS["HBK-4G"]!;
+    const def = getMechDef("HBK-4G")!;
     // HBK head slot 3 = cockpit. Roll 8 -> one crit. Slot 3 (1D6 = 3).
     const res = resolveCriticalHits({
       rng: detRoll(8, 3),
@@ -397,7 +397,7 @@ describe("transfer rules", () => {
     // 2 Medium Laser (R) + 1 empty = 12. With 2 separate ML mounts and
     // 3 crits, we get 3 rows (no transfers because the source still has
     // hittable slots throughout the determining).
-    const def = MECH_DEFS["AS7-D"]!;
+    const def = getMechDef("AS7-D")!;
     const res = resolveCriticalHits({
       // Provide 12 dice. det 2 + 3 slot rolls (with possible re-rolls)
       // = up to 10 dice; extra margin.
@@ -420,7 +420,7 @@ describe("transfer rules", () => {
   });
 
   it("crits transfer inward when the source is exhausted from a prior phase", () => {
-    const def = MECH_DEFS["HBK-4G"]!;
+    const def = getMechDef("HBK-4G")!;
     // Simulate: every crit-hittable slot in leftTorso is already destroyed
     // from a previous turn. Roll 8 -> one crit -> source is exhausted,
     // transfer to centerTorso. Provide 6 dice: 2 for the top-level
@@ -455,7 +455,7 @@ describe("transfer rules", () => {
   });
 
   it("crits on a terminal source (head) with no eligible slot are lost", () => {
-    const def = MECH_DEFS["HBK-4G"]!;
+    const def = getMechDef("HBK-4G")!;
     // Mark every head slot destroyed.
     const destroyed = freshFlags(def);
     for (let i = 0; i < def.critSlots.head.length; i++) {
@@ -481,7 +481,7 @@ describe("transfer rules", () => {
 });
 
 describe("effectiveMovement", () => {
-  const def = MECH_DEFS["HBK-4G"]!;
+  const def = getMechDef("HBK-4G")!;
   const flags = (mods: Partial<Record<Location, number[]>>) => {
     const out = freshFlags(def);
     for (const [loc, idxs] of Object.entries(mods) as [Location, number[]][]) {
@@ -514,7 +514,7 @@ describe("effectiveMovement", () => {
   });
 
   it("destroyed jump jet slots reduce jumping by 1 each", () => {
-    const wvr = MECH_DEFS["WVR-6R"]!;
+    const wvr = getMechDef("WVR-6R")!;
     const layout = wvr.critSlots;
     // Find the index of any jump jet slot per location.
     const jetIndices: { loc: Location; idx: number }[] = [];
@@ -554,7 +554,7 @@ describe("DHS grouping", () => {
     // The Hermes II (HER-5SA) leftTorso has 3 consecutive ISDouble Heat Sink
     // entries. Destroying one crit slot destroys the whole DHS; the next
     // reroll sees all 3 slots marked destroyed and produces noEffect.
-    const her = MECH_DEFS["HER-5SA"]!;
+    const her = getMechDef("HER-5SA")!;
     const lt = her.critSlots.leftTorso;
     const dhsIndices: number[] = [];
     for (let i = 0; i < lt.length; i++) {

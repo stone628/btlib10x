@@ -18,17 +18,20 @@ import type {
 } from "btlib10x";
 import {
   canFireFromLocation,
+  getAllMapDefs,
+  getAllMechDefs,
+  getAllWeapons,
   getMapDef,
+  getMechDef,
   getWeapon,
   internalStructureForTonnage,
   isImmobile,
   isKilled,
   LOCATIONS,
-  MAP_DEFS,
-  MECH_DEFS,
+  listMapNames,
+  listWeaponNames,
   reachableLandings,
   suggestFireTargets,
-  WEAPONS,
 } from "btlib10x";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
 import { t } from "./i18n/index.js";
@@ -147,7 +150,10 @@ export function boardChunk(s: Session): Chunk {
 // ---------------------------------------------------------------- info ----
 
 export function infoMechList(locale: LocaleId): string[] {
-  const list = Object.values(MECH_DEFS).sort((a, b) => a.model.localeCompare(b.model));
+  const list = getAllMechDefs().sort((a, b) => {
+    if (a.tonnage !== b.tonnage) return a.tonnage - b.tonnage;
+    return a.name.localeCompare(b.name);
+  });
   const modelW = Math.max(
     ...list.map((d) => d.model.length),
     t(locale, "info.mechColModel").length,
@@ -226,14 +232,14 @@ export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
 }
 
 export function infoMapList(): string[] {
-  return Object.entries(MAP_DEFS).map(
-    ([name, m]) => `${name}: ${m.width}x${m.height}, ${m.terrain.length} terrain hexes`,
+  return getAllMapDefs().map(
+    (m) => `${m.name}: ${m.width}x${m.height}, ${m.terrain.length} terrain hexes`,
   );
 }
 
 export function infoWeaponList(locale: LocaleId): string[] {
   const grouped = new Map<string, ReturnType<typeof Object.values>[0][]>();
-  for (const w of Object.values(WEAPONS)) {
+  for (const w of getAllWeapons()) {
     const cat = weaponCategory(w.name);
     const list = grouped.get(cat) ?? [];
     list.push(w);
@@ -259,9 +265,7 @@ export function infoWeapon(locale: LocaleId, name: string): string[] {
     try {
       return getWeapon(name);
     } catch {
-      throw new Error(
-        t(locale, "err.unknownWeapon", { name, list: Object.keys(WEAPONS).join(", ") }),
-      );
+      throw new Error(t(locale, "err.unknownWeapon", { name, list: listWeaponNames().join(", ") }));
     }
   })();
   const cat = weaponCategory(w.name);
@@ -280,9 +284,8 @@ export function infoWeapon(locale: LocaleId, name: string): string[] {
 
 /** `info map <name>` output: header/legend lines followed by the styled grid. */
 export function infoMapChunks(locale: LocaleId, name: string): Chunk[] {
-  const map = MAP_DEFS[name];
-  if (!map)
-    throw new Error(t(locale, "err.unknownMap", { name, list: Object.keys(MAP_DEFS).join(", ") }));
+  const map = getMapDef(name);
+  if (!map) throw new Error(t(locale, "err.unknownMap", { name, list: listMapNames().join(", ") }));
   const counts = new Map<string, number>();
   for (const t2 of map.terrain) counts.set(t2.type, (counts.get(t2.type) ?? 0) + 1);
   const breakdown = [...counts.entries()]
@@ -323,7 +326,7 @@ export function infoMapChunks(locale: LocaleId, name: string): Chunk[] {
 }
 
 function requireMechDef(model: string, locale: LocaleId): ResolvedMechDef {
-  const def = MECH_DEFS[model];
+  const def = getMechDef(model);
   if (!def) throw new Error(t(locale, "err.unknownModel", { model }));
   return def;
 }
@@ -365,13 +368,8 @@ interface SheetView {
   readonly critLive: CritChartLive | null;
 }
 
-function battleSheet(
-  battle: BattleState,
-  unit: UnitState,
-  id: string,
-  locale: LocaleId,
-): SheetView {
-  const def = battle.defs[unit.model]!;
+function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
+  const def = getMechDef(unit.model)!;
   return {
     id: id,
     team: unit.team,
@@ -581,6 +579,7 @@ const CRIT_COMPONENT_KEY: Readonly<Record<CritStructureName, MessageKey>> = {
   lowerLegActuator: "critChart.component.lowerLegActuator",
   footActuator: "critChart.component.footActuator",
   hip: "critChart.component.hip",
+  targetingComputer: "critChart.component.targetingComputer",
 };
 
 /** Human-friendly i18n key for a soak (armor-tech) component name. */
@@ -738,7 +737,7 @@ export function sheetForUnit(s: Session, id: string): Chunk[] {
   if (s.battle) {
     const unit = s.battle.units[id];
     if (!unit) throw new Error(t(s.locale, "err.unknownUnitId", { id }));
-    return sheetLines(battleSheet(s.battle, unit, id, s.locale), s.locale);
+    return sheetLines(battleSheet(unit, id, s.locale), s.locale);
   }
   const placed = s.roster.find((u) => u.id === id);
   if (!placed) throw new Error(t(s.locale, "err.noSuchUnit", { id }));
@@ -754,7 +753,7 @@ export function unitBriefList(s: Session): string[] {
   for (const team of teams) {
     lines.push(t(s.locale, "setup.teamHeader", { team }));
     for (const [uid, unit] of Object.entries(battle.units).filter(([, u]) => u.team === team)) {
-      const def = battle.defs[unit.model]!;
+      const def = getMechDef(unit.model)!;
       lines.push(`  ${uid}  ${def.model}  ${disp(unit.position)} facing ${unit.facing}`);
     }
   }
@@ -772,7 +771,7 @@ export function fmtSetupStatus(s: Session): string[] {
   for (const team of teams) {
     lines.push(t(s.locale, "setup.teamHeader", { team }));
     for (const u of s.roster.filter((x) => x.team === team)) {
-      const def = MECH_DEFS[u.model]!;
+      const def = getMechDef(u.model)!;
       lines.push(
         t(s.locale, "setup.unitLine", {
           id: u.id,
@@ -822,7 +821,7 @@ export function overStatusLines(s: Session): string[] {
   for (const team of teams) {
     lines.push(t(s.locale, "setup.teamHeader", { team }));
     for (const [uid, unit] of Object.entries(s.battle.units).filter(([, u]) => u.team === team)) {
-      const view = battleSheet(s.battle, unit, uid, s.locale);
+      const view = battleSheet(unit, uid, s.locale);
       const idLine = view.removed
         ? `${t(s.locale, "over.idLine", { id: view.id })}${t(s.locale, "sheet.removedId")}`
         : t(s.locale, "over.idLine", { id: view.id });
@@ -876,7 +875,7 @@ export function reachableModel(s: Session): BoardModel | null {
   const w = s.battle.width;
   const h = s.battle.height;
   if (w === undefined || h === undefined) return null;
-  const def = s.battle.defs[actor.model]!;
+  const def = getMechDef(actor.model)!;
   const landings = reachableLandings({ ...actor.position }, actor.facing, {
     mode: s.moveMode,
     walking: def.walking,
@@ -953,7 +952,7 @@ export function attackStatusLines(s: Session): string[] {
   if (!actor || !s.battle)
     throw new Error(t(s.locale, "err.wrongPhase", { phase: "weaponAttack" }));
   if (s.fireDecls.length === 0) return [t(s.locale, "attackStatus.none")];
-  const def = s.battle.defs[actor.model]!;
+  const def = getMechDef(actor.model)!;
   return s.fireDecls.map((decl) => {
     const mount = def.weapons[decl.weaponIndex];
     const name = mount ? mount.weapon : `#${decl.weaponIndex}`;
@@ -1093,7 +1092,7 @@ export function weaponsLines(s: Session, unitId?: string): string[] {
       t(s.locale, "err.unknownUnitId", { id: unitId ?? t(s.locale, "weapons.noActorId") }),
     );
   }
-  const def = s.battle.defs[unit.model]!;
+  const def = getMechDef(unit.model)!;
   return Object.entries(def.weapons).map(([key, mount]) => {
     const w = getWeapon(mount.weapon);
     const index = Number(key);

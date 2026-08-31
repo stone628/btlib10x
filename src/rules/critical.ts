@@ -59,7 +59,7 @@ import { roll2D6, rollD6 } from "../core/dice.js";
 import type { Location, Rng } from "../core/types.js";
 import type { ResolvedCritSlot, ResolvedMechDef } from "../data/schema.js";
 import { CRIT_SLOT_COUNTS } from "../data/schema.js";
-import { getWeapon } from "../data/weapons.js";
+import { getWeaponOrThrow } from "../data/weapons.js";
 import { applyDamage, type DamageApplication, type UnitDamageState } from "./damage.js";
 
 export interface CritSource {
@@ -240,7 +240,7 @@ function rollSlotNumber(rng: Rng, loc: Location): { slot: number; rolls: readonl
  * variable-damage weapons don't carry ammo so this never fires for them.
  */
 function ammoDamagePerShot(weaponName: string): number {
-  const w = getWeapon(weaponName);
+  const w = getWeaponOrThrow(weaponName);
   if (w.missileDamage !== undefined && w.missiles !== undefined) {
     return w.missileDamage * w.missiles;
   }

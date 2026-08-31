@@ -5,21 +5,31 @@ import { type MapDef, validateMapDef } from "./mapschema.js";
 import { MECH_DEFS } from "./mechCatalog.generated.js";
 import type { ResolvedMechDef } from "./schema.js";
 
-export { MECH_DEFS };
-
 export function getMechDef(model: string): ResolvedMechDef | undefined {
-  return MECH_DEFS[model];
+  return MECH_DEFS.get(model.toUpperCase());
+}
+
+export function getAllMechDefs(): ResolvedMechDef[] {
+  return Array.from(MECH_DEFS.values());
 }
 
 /** All battle maps shipped with the library, keyed by name; validated at load. */
-export const MAP_DEFS: Readonly<Record<string, MapDef>> = {
-  beginner: validateMapDef(beginnerMapJson),
-  quickstart: validateMapDef(quickstartMapJson),
-  test: validateMapDef(testMapJson),
-};
+const MAP_DEFS: Readonly<Map<string, MapDef>> = new Map<string, MapDef>(
+  [beginnerMapJson, quickstartMapJson, testMapJson].map((m) => {
+    return [m.name.toLowerCase(), validateMapDef(m)];
+  }),
+);
 
 export function getMapDef(name: string): MapDef | undefined {
-  return MAP_DEFS[name];
+  return MAP_DEFS.get(name.toLowerCase());
+}
+
+export function getAllMapDefs(): MapDef[] {
+  return Array.from(MAP_DEFS.values());
+}
+
+export function listMapNames(): string[] {
+  return Array.from(MAP_DEFS.keys());
 }
 
 export type { MapDef } from "./mapschema.js";
@@ -45,4 +55,4 @@ export {
   validateMechDef,
 } from "./schema.js";
 export type { WeaponDef } from "./weapons.js";
-export { getWeapon, WEAPONS } from "./weapons.js";
+export { getAllWeapons, getWeaponOrThrow as getWeapon, listWeaponNames } from "./weapons.js";

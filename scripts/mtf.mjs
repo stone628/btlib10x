@@ -113,6 +113,9 @@ function parseMtf(text, file) {
   if (model && MODEL_CODE[name] && !model.includes("-")) {
     model = `${MODEL_CODE[name]}-${model}`;
   }
+  // MTF model codes are emitted all-caps in the catalog so the registry key
+  // and the on-disk filename (`<model>.json`) are case-stable.
+  model = model.toUpperCase();
 
   const fields = {};
   for (const line of lines) {
