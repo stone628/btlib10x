@@ -72,15 +72,35 @@
         color: #b9c9b0;
         font-style: italic;
       }
-      /* Record sheet: left text block beside right armor diagram, no wrap. */
-      #out .sheet {
+      /* Side-by-side column groups (record sheet, crit chart rows). */
+      #out .columns {
         display: flex;
         gap: 2em;
       }
-      #out .sheet-left,
-      #out .sheet-right {
+      #out .column {
         white-space: pre;
         flex-shrink: 0;
+      }
+      #out .columns + .columns {
+        margin-top: 0.6em;
+      }
+      /* Collapsible critical-slot chart (info mech / sheet). */
+      #out .collapsible {
+        margin-top: 0.4em;
+      }
+      #out .collapsible > summary {
+        cursor: pointer;
+        color: #8fd08f;
+        user-select: none;
+      }
+      #out .collapsible > summary:hover {
+        text-decoration: underline;
+      }
+      #out .collapsible-body {
+        white-space: pre;
+        margin-top: 0.2em;
+        padding-left: 0.5em;
+        color: #b8c9b8;
       }
       /* Game board output: dedicated font + line spacing, styled spans. */
       #out .board-legend {

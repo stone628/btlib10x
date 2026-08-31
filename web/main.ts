@@ -17,35 +17,52 @@ function scrollToBottom(): void {
   out.scrollTop = out.scrollHeight;
 }
 
-function appendChunk(chunk: Chunk): void {
+function appendChunk(chunk: Chunk, parent: HTMLElement = out): void {
   const kind = chunk.kind;
+  const insert = (el: Node): void => {
+    if (parent === out) out.insertBefore(el, inrow);
+    else parent.append(el);
+    scrollToBottom();
+  };
 
   if (kind === "board") {
     const div = document.createElement("div");
     if (chunk.board.renderer) chunk.board.renderer(chunk.board.model, div);
-    out.insertBefore(div, inrow);
-    scrollToBottom();
+    insert(div);
     return;
   }
 
-  if (kind === "sheet") {
+  if (kind === "columns") {
     const div = document.createElement("div");
-    div.className = "sheet";
-    const left = document.createElement("div");
-    left.className = "sheet-left";
-    left.textContent = chunk.left.join("\n");
-    const right = document.createElement("div");
-    right.className = "sheet-right";
-    right.textContent = chunk.right.join("\n");
-    div.append(left, right);
-    out.insertBefore(div, inrow);
-    scrollToBottom();
+    div.className = "columns";
+    for (const column of chunk.columns) {
+      const col = document.createElement("div");
+      col.className = "column";
+      col.textContent = column.join("\n");
+      div.append(col);
+    }
+    insert(div);
+    return;
+  }
+
+  if (kind === "collapsible") {
+    const details = document.createElement("details");
+    details.className = "collapsible";
+    const summary = document.createElement("summary");
+    summary.textContent = chunk.summary;
+    const body = document.createElement("div");
+    body.className = "collapsible-body";
+    for (const inner of chunk.chunks) {
+      appendChunk(inner, body);
+    }
+    details.append(summary, body);
+    insert(details);
     return;
   }
 
   if (kind === "lines") {
     if (chunk.lines.length === 0) return;
-    if (chunk.lines.length === 1 && chunk.lines[0] === "\f") {
+    if (parent === out && chunk.lines.length === 1 && chunk.lines[0] === "\f") {
       out.replaceChildren(inrow);
       // Re-parenting the input blurs it; restore focus so the caret stays live.
       input.focus();
@@ -54,8 +71,7 @@ function appendChunk(chunk: Chunk): void {
     const div = document.createElement("div");
     div.className = chunk.cls ?? "";
     div.textContent = chunk.lines.join("\n");
-    out.insertBefore(div, inrow);
-    scrollToBottom();
+    insert(div);
     return;
   }
 }

@@ -4,6 +4,7 @@ import type {
   BattleState,
   CriticalEffect,
   CriticalResolution,
+  CritStructureName,
   FireBlockerReason,
   FireWeapon,
   GameEvent,
@@ -45,7 +46,12 @@ export type Chunk =
       readonly kind: "board";
       board: { readonly model: BoardModel; readonly renderer?: BoardRenderer };
     }
-  | { readonly kind: "sheet"; left: readonly string[]; right: readonly string[] };
+  | { readonly kind: "columns"; columns: readonly (readonly string[])[] }
+  | {
+      readonly kind: "collapsible";
+      readonly summary: string;
+      readonly chunks: readonly Chunk[];
+    };
 
 /** Tagged wrapper letting a command emit structured chunks. */
 export interface RichOutput {
@@ -72,8 +78,12 @@ export function buildBoardChunk(board: {
   return { kind: "board", board: board };
 }
 
-export function buildSheetChunk(left: readonly string[], right: readonly string[]): Chunk {
-  return { kind: "sheet", left: left, right: right };
+export function buildColumnsChunk(columns: readonly (readonly string[])[]): Chunk {
+  return { kind: "columns", columns: columns };
+}
+
+export function buildCollapsibleChunk(summary: string, chunks: readonly Chunk[]): Chunk {
+  return { kind: "collapsible", summary: summary, chunks: chunks };
 }
 
 export function rich(...chunks: readonly Chunk[]): RichOutput {
@@ -189,18 +199,21 @@ export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
     t(locale, "sheet.weaponsHeader", { n: Object.keys(d.weapons).length }),
     ...weaponSummary(d),
   ];
-  return mergeDiagram(
-    topLines,
-    weaponLines,
-    armorDiagramInfo({
-      armor: d.armor,
-      armorRear,
-      internalStructure: is,
-      originalArmor: d.armor,
-      originalArmorRear: armorRear,
-      originalStructure: is,
-    }),
-  );
+  return [
+    ...mergeDiagram(
+      topLines,
+      weaponLines,
+      armorDiagramInfo({
+        armor: d.armor,
+        armorRear,
+        internalStructure: is,
+        originalArmor: d.armor,
+        originalArmorRear: armorRear,
+        originalStructure: is,
+      }),
+    ),
+    critChartChunk(d, locale, null),
+  ];
 }
 
 export function infoMapList(): string[] {
@@ -339,6 +352,8 @@ interface SheetView {
     readonly jammed: boolean;
     readonly destroyed: boolean;
   }[];
+  /** Per-unit live crit state for the crit chart; null when only design info exists. */
+  readonly critLive: CritChartLive | null;
 }
 
 function battleSheet(
@@ -377,6 +392,11 @@ function battleSheet(
       jammed: unit.jammedWeapons.includes(Number(key)),
       destroyed: !canFireFromLocation(unit.phaseStartDamage, mount.location),
     })),
+    critLive: {
+      critSlotsDestroyed: unit.critSlotsDestroyed,
+      destroyedWeapons: unit.destroyedWeapons,
+      ammoLeft: unit.ammoLeft,
+    },
   };
 }
 
@@ -418,6 +438,7 @@ function setupSheet(unit: SetupUnit, id: string, locale: LocaleId): SheetView {
       jammed: false,
       destroyed: false,
     })),
+    critLive: null,
   };
 }
 
@@ -520,6 +541,101 @@ function armorDiagramSheet(info: ArmorInfo): string[] {
   ];
 }
 
+// ------------------------------------------------------- crit slot chart ----
+
+/** Per-unit live crit state shown per slot on the `sheet <id>` chart. */
+interface CritChartLive {
+  readonly critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>;
+  readonly destroyedWeapons: readonly number[];
+  readonly ammoLeft: Readonly<Record<number, number>>;
+}
+
+/** Human-friendly i18n key for a structure component name. */
+const CRIT_COMPONENT_KEY: Readonly<Record<CritStructureName, MessageKey>> = {
+  cockpit: "critChart.component.cockpit",
+  sensors: "critChart.component.sensors",
+  lifeSupport: "critChart.component.lifeSupport",
+  engine: "critChart.component.engine",
+  gyro: "critChart.component.gyro",
+  heatSink: "critChart.component.heatSink",
+  doubleHeatSink: "critChart.component.doubleHeatSink",
+  jumpJet: "critChart.component.jumpJet",
+  shoulder: "critChart.component.shoulder",
+  upperArmActuator: "critChart.component.upperArmActuator",
+  lowerArmActuator: "critChart.component.lowerArmActuator",
+  handActuator: "critChart.component.handActuator",
+  upperLegActuator: "critChart.component.upperLegActuator",
+  lowerLegActuator: "critChart.component.lowerLegActuator",
+  footActuator: "critChart.component.footActuator",
+  hip: "critChart.component.hip",
+};
+
+/** Location rows of the crit chart: arms, then torsos, then legs. */
+const CRIT_CHART_ROWS: readonly (readonly Location[])[] = [
+  ["rightArm", "head", "leftArm"],
+  ["rightTorso", "centerTorso", "leftTorso"],
+  ["rightLeg", "leftLeg"],
+];
+
+/** One slot line: dice number + component label, plus live markers. */
+function critSlotText(
+  def: ResolvedMechDef,
+  loc: Location,
+  slotIndex: number,
+  locale: LocaleId,
+  live: CritChartLive | null,
+): string {
+  const slot = def.critSlots[loc][slotIndex - 1] ?? { kind: "empty" };
+  const dice = slotIndex.toString().padStart(2);
+  let body: string;
+  if (slot.kind === "empty") {
+    body = t(locale, "critChart.empty");
+  } else if (slot.kind === "soak") {
+    body = t(locale, "critChart.soak");
+  } else if (slot.kind === "weapon") {
+    body = slot.weapon;
+  } else if (slot.kind === "ammo") {
+    body = `${slot.weapon} ammo`;
+  } else {
+    const key = CRIT_COMPONENT_KEY[slot.name as CritStructureName];
+    body = key !== undefined ? t(locale, key) : slot.name;
+  }
+  const line = ` ${dice} ${body}`;
+  if (live === null || live.critSlotsDestroyed[loc] === undefined) return line;
+  const slotHit = live.critSlotsDestroyed[loc]?.[slotIndex - 1] ?? false;
+  const mountDestroyed = slot.kind === "weapon" && live.destroyedWeapons.includes(slot.weaponIndex);
+  const markers: string[] = [];
+  if (slotHit || mountDestroyed) markers.push(t(locale, "critChart.destroyedSuffix"));
+  if (slot.kind === "ammo") {
+    markers.push(t(locale, "critChart.ammoSuffix", { n: live.ammoLeft[slot.weaponIndex] ?? 0 }));
+  }
+  return markers.length > 0 ? `${line}${markers.join("")}` : line;
+}
+
+/** Render one location's crit slots as a vertical column (unpadded). */
+function critCell(
+  def: ResolvedMechDef,
+  loc: Location,
+  locale: LocaleId,
+  live: CritChartLive | null,
+): string[] {
+  const lines = [SHORT_LOC[loc]];
+  for (let i = 0; i < def.critSlots[loc].length; i++) {
+    lines.push(critSlotText(def, loc, i + 1, locale, live));
+  }
+  return lines;
+}
+
+/** Collapsible crit chart: one columns chunk per row (arena / torso / legs). */
+function critChartChunk(def: ResolvedMechDef, locale: LocaleId, live: CritChartLive | null): Chunk {
+  return buildCollapsibleChunk(
+    t(locale, "critChart.summary"),
+    CRIT_CHART_ROWS.map((locs) =>
+      buildColumnsChunk(locs.map((loc) => critCell(def, loc, locale, live))),
+    ),
+  );
+}
+
 /** Record sheet with armor status per location, side-by-side with ASCII diagram. */
 export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
   const idLine = view.removed
@@ -554,18 +670,21 @@ export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
       `  #${i + 1} ${m.weapon} (${SHORT_LOC[m.location]}) S${w.short}/M${w.medium}/L${w.long}${flags.length ? ` ${flags.join(" ")}` : ""}`,
     );
   }
-  return mergeDiagram(
-    topLines,
-    weaponLines,
-    armorDiagramSheet({
-      armor: view.armor,
-      armorRear: view.damage.armorRear,
-      internalStructure: view.damage.internalStructure,
-      originalArmor: view.originalArmor,
-      originalArmorRear: view.originalArmorRear,
-      originalStructure: view.originalArmorStructure,
-    }),
-  );
+  return [
+    ...mergeDiagram(
+      topLines,
+      weaponLines,
+      armorDiagramSheet({
+        armor: view.armor,
+        armorRear: view.damage.armorRear,
+        internalStructure: view.damage.internalStructure,
+        originalArmor: view.originalArmor,
+        originalArmorRear: view.originalArmorRear,
+        originalStructure: view.originalArmorStructure,
+      }),
+    ),
+    critChartChunk(requireMechDef(view.model, locale), locale, view.critLive),
+  ];
 }
 
 export function mergeDiagram(
@@ -577,21 +696,21 @@ export function mergeDiagram(
   const rightLineCount = diagram.length;
   if (leftLineCount > rightLineCount) {
     return [
-      buildSheetChunk(
+      buildColumnsChunk([
         [...topLines, ...weaponLines],
         [...new Array(leftLineCount - rightLineCount).fill(""), ...diagram],
-      ),
+      ]),
     ];
   }
   if (leftLineCount < rightLineCount) {
     return [
-      buildSheetChunk(
+      buildColumnsChunk([
         [...topLines, ...new Array(rightLineCount - leftLineCount).fill(""), ...weaponLines],
         diagram,
-      ),
+      ]),
     ];
   }
-  return [buildSheetChunk([...topLines, ...weaponLines], diagram)];
+  return [buildColumnsChunk([[...topLines, ...weaponLines], diagram])];
 }
 
 export function sheetForUnit(s: Session, id: string): Chunk[] {
