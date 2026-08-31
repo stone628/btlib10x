@@ -27,6 +27,7 @@ export { validateMapDef } from "./mapschema.js";
 export type {
   CritSlot,
   CritSlots,
+  CritSoakName,
   CritStructureName,
   MechDef,
   RearArmorKey,
@@ -38,6 +39,7 @@ export type {
 } from "./schema.js";
 export {
   CRIT_SLOT_COUNTS,
+  CRIT_SOAK_NAMES,
   CRIT_STRUCTURE_NAMES,
   resolveMechDef,
   validateMechDef,

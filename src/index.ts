@@ -23,6 +23,7 @@ export * from "./core/types.js";
 export type {
   CritSlot,
   CritSlots,
+  CritSoakName,
   CritStructureName,
   MapDef,
   MechDef,

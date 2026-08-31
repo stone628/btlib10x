@@ -105,7 +105,8 @@
         "name": "jumpJet"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "endoSteel"
       }
     ],
     "leftTorso": [
@@ -146,13 +147,16 @@
         "weapon": "CL LB 20-X AC"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "ferroFibrous"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "ferroFibrous"
       }
     ],
     "rightTorso": [
@@ -193,13 +197,16 @@
         "weapon": "CL Gauss Rifle"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "ferroFibrous"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "ferroFibrous"
       }
     ],
     "leftArm": [
@@ -248,7 +255,8 @@
         "weapon": "CL LB 20-X AC"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "ferroFibrous"
       }
     ],
     "rightArm": [
@@ -285,7 +293,8 @@
         "weapon": "CL Gauss Rifle"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "ferroFibrous"
       },
       {
         "kind": "empty"
@@ -315,10 +324,12 @@
         "name": "footActuator"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "endoSteel"
       }
     ],
     "rightLeg": [
@@ -339,10 +350,12 @@
         "name": "footActuator"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "endoSteel"
       }
     ],
     "head": [
@@ -359,7 +372,8 @@
         "name": "cockpit"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "ferroFibrous"
       },
       {
         "kind": "structure",

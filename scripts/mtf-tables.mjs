@@ -12,7 +12,9 @@
  *   - LOCATIONS — canonical location key order
  *   - CRIT_SLOT_COUNTS — official per-location crit slot counts
  *   - STRUCTURE_TOKEN — crit-slot structure token → internal name
- *   - SOAK_TOKEN — crit-slot soak/armor-tech token → true
+ *   - SOAK_TOKEN — crit-slot soak/armor-tech token → canonical soak name
+ *   - ENGINE_CRIT_SLOTS — expected engine crit-slot counts (CT/LT/RT/total) per engine type
+ *   - SOAK_CRIT_TOTALS — official soak-tech slot totals keyed by tech base
  *   - MODEL_CODE — mech name → model code prefix for non-trivial name generation
  */
 
@@ -232,19 +234,44 @@ export const STRUCTURE_TOKEN = {
 };
 
 export const SOAK_TOKEN = {
-  "Endo Steel": true,
-  "IS Endo Steel": true,
-  "CL Endo Steel": true,
-  "CL Endo Steel (IS)": true,
-  "IS Endo-Steel": true,
-  "Endo-Steel": true,
-  CASE: true,
-  "IS CASE": true,
-  "CL CASE": true,
-  "Ferro-Fibrous": true,
-  "IS Ferro-Fibrous": true,
-  "CL Ferro-Fibrous": true,
-  "Ferro-Fibrous (CL)": true,
+  "Endo Steel": "endoSteel",
+  "IS Endo Steel": "endoSteel",
+  "CL Endo Steel": "endoSteel",
+  "CL Endo Steel (IS)": "endoSteel",
+  "IS Endo-Steel": "endoSteel",
+  "Endo-Steel": "endoSteel",
+  CASE: "case",
+  "IS CASE": "case",
+  "CL CASE": "case",
+  "Ferro-Fibrous": "ferroFibrous",
+  "IS Ferro-Fibrous": "ferroFibrous",
+  "CL Ferro-Fibrous": "ferroFibrous",
+  "Ferro-Fibrous (CL)": "ferroFibrous",
+};
+
+// ---------------------------------------------------------------------------
+// Construction validation constraints
+// ---------------------------------------------------------------------------
+
+/**
+ * Expected critical-slot counts per engine type (TechManual "Mech Engine
+ * Critical Space Table"). Counts per location plus the total. Compact and XXL
+ * engines are intentionally omitted for now (deferred).
+ */
+export const ENGINE_CRIT_SLOTS = {
+  standard: { ct: 6, lt: 0, rt: 0, total: 6 },
+  isLight: { ct: 6, lt: 1, rt: 1, total: 8 },
+  clanXL: { ct: 6, lt: 2, rt: 2, total: 10 },
+  isXL: { ct: 6, lt: 3, rt: 3, total: 12 },
+};
+
+/**
+ * Official soak-tech critical-slot totals keyed by Internal Structure / armor
+ * tech, then by tech base. Inner Sphere tech occupies 14 slots, Clan 7.
+ */
+export const SOAK_CRIT_TOTALS = {
+  endoSteel: { "Inner Sphere": 14, Clan: 7 },
+  ferroFibrous: { "Inner Sphere": 14, Clan: 7 },
 };
 
 // ---------------------------------------------------------------------------

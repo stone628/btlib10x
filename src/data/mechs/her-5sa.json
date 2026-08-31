@@ -115,19 +115,24 @@
         "weapon": "Ultra AC/5"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "endoSteel"
       }
     ],
     "rightTorso": [
@@ -164,16 +169,20 @@
         "weapon": "Ultra AC/5"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "endoSteel"
       }
     ],
     "leftArm": [
@@ -280,10 +289,12 @@
         "name": "footActuator"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "endoSteel"
       }
     ],
     "rightLeg": [
@@ -304,10 +315,12 @@
         "name": "footActuator"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "endoSteel"
       }
     ],
     "head": [
@@ -324,7 +337,8 @@
         "name": "cockpit"
       },
       {
-        "kind": "soak"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
         "kind": "structure",

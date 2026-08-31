@@ -28,14 +28,15 @@ const REAR_ARMOR_KEYS: readonly RearArmorKey[] = [
  *     jumpJet, shoulder, upperArmActuator, lowerArmActuator, handActuator,
  *     upperLegActuator, lowerLegActuator, footActuator, hip).
  *   - soak: occupies a slot but cannot take a critical hit (endo steel, CASE,
- *     ferro-fibrous, etc.) — the slot re-rolls during selection.
+ *     ferro-fibrous, etc.) — the slot re-rolls during selection. `name` names
+ *     the specific armor-tech component occupying the slot.
  */
 export type CritSlot =
   | { readonly kind: "empty" }
   | { readonly kind: "weapon"; readonly weapon: string }
   | { readonly kind: "ammo"; readonly weapon: string }
   | { readonly kind: "structure"; readonly name: string }
-  | { readonly kind: "soak" };
+  | { readonly kind: "soak"; readonly name: CritSoakName };
 
 /** All structure component names recognized by the crit table. */
 export const CRIT_STRUCTURE_NAMES = [
@@ -58,6 +59,11 @@ export const CRIT_STRUCTURE_NAMES = [
 ] as const;
 
 export type CritStructureName = (typeof CRIT_STRUCTURE_NAMES)[number];
+
+/** All soak (armor-tech) component names recognized by the crit table. */
+export const CRIT_SOAK_NAMES = ["endoSteel", "ferroFibrous", "case"] as const;
+
+export type CritSoakName = (typeof CRIT_SOAK_NAMES)[number];
 
 export type CritSlots = Readonly<Record<Location, readonly CritSlot[]>>;
 
@@ -93,7 +99,7 @@ export type ResolvedCritSlot =
        *  the slot's own index. */
       readonly group: readonly number[];
     }
-  | { readonly kind: "soak" };
+  | { readonly kind: "soak"; readonly name: CritSoakName };
 
 export type ResolvedCritSlots = Readonly<Record<Location, readonly ResolvedCritSlot[]>>;
 
@@ -303,7 +309,7 @@ function resolveLocationCrits(
     | { readonly kind: "weapon"; readonly weapon: string; readonly weaponIndex: number }
     | { readonly kind: "ammo"; readonly weapon: string; readonly weaponIndex: number }
     | { readonly kind: "structure"; readonly name: string; readonly group?: readonly number[] }
-    | { readonly kind: "soak" };
+    | { readonly kind: "soak"; readonly name: CritSoakName };
   const out: Intermediate[] = [];
   for (const slot of rawSlots) {
     if (slot.kind === "empty") {
@@ -315,7 +321,7 @@ function resolveLocationCrits(
     } else if (slot.kind === "structure") {
       out.push({ kind: "structure", name: slot.name });
     } else {
-      out.push({ kind: "soak" });
+      out.push({ kind: "soak", name: slot.name });
     }
   }
 
@@ -534,7 +540,14 @@ export function validateMechDef(data: unknown): MechDef {
             );
           }
         } else if (kind === "soak") {
-          // ok
+          if (
+            typeof slot.name !== "string" ||
+            !(CRIT_SOAK_NAMES as readonly string[]).includes(slot.name)
+          ) {
+            errors.push(
+              `critSlots.${loc}[${i}].name ${JSON.stringify(slot.name)} is not a known soak component`,
+            );
+          }
         } else {
           errors.push(
             `critSlots.${loc}[${i}].kind ${JSON.stringify(kind)} must be empty|weapon|ammo|structure|soak`,

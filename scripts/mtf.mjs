@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseCritSlots } from "./mtf-crit.mjs";
+import { parseCritSlots, validateCritConstruction } from "./mtf-crit.mjs";
 import { AMMO_TOKEN, CODE, LOCATION, MODEL_CODE, SHOTS_PER_TON } from "./mtf-tables.mjs";
 
 /**
@@ -220,6 +220,16 @@ function parseMtf(text, file) {
   );
 
   const critSlots = parseCritSlots(lines, errors, file);
+  validateCritConstruction(
+    critSlots,
+    {
+      techBase: fields.TechBase,
+      engineField: fields.Engine,
+      structureField: fields.Structure,
+      armorField: fields.Armor,
+    },
+    errors,
+  );
 
   const source = `docs/mtf/${file}${fields.Source ? ` (${fields.Source})` : ""}. Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount; crit slot table per location included.`;
 

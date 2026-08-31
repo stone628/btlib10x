@@ -240,7 +240,6 @@ export const kr: Catalog = {
 
   "critChart.summary": "critical slots",
   "critChart.empty": "-",
-  "critChart.soak": "(soak)",
   "critChart.destroyedSuffix": " [DST]",
   "critChart.jammedSuffix": " [JAM]",
   "critChart.ammoSuffix": " ammo {n}",
@@ -260,6 +259,9 @@ export const kr: Catalog = {
   "critChart.component.lowerLegActuator": "Lower Leg Actuator",
   "critChart.component.footActuator": "Foot Actuator",
   "critChart.component.hip": "Hip",
+  "critChart.soak.endoSteel": "Endo Steel",
+  "critChart.soak.ferroFibrous": "Ferro-Fibrous",
+  "critChart.soak.case": "CASE",
 
   // event log
   "log.turn": "-- 턴 {turn} --",

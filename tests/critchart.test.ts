@@ -46,15 +46,15 @@ describe("critical slot chart (info mech)", () => {
     expect(text).toContain("Medium Laser");
   });
 
-  it("renders DHS groups and soak slots for HER-5SA", () => {
+  it("renders DHS groups and named soak slots for HER-5SA", () => {
     const s = S.newSession();
     s.critsDisabled = true;
     const text = run(s, "info mech HER-5SA").join("\n");
     expect(text).toContain("  4 DHS");
     expect(text).toContain("  5 DHS");
     expect(text).toContain("  6 DHS");
-    expect(text).toContain("  8 (soak)");
-    expect(text).toContain("  4 (soak)");
+    expect(text).toContain("  8 (Endo Steel)");
+    expect(text).toContain("  4 (Endo Steel)");
   });
 
   it("keeps 1-6 dice for legs and renders the leg row as two columns", () => {
