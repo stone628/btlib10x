@@ -28,7 +28,7 @@
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseCritSlots } from "./mtf-crit.mjs";
+import { parseCritSlots, validateCritConstruction } from "./mtf-crit.mjs";
 import { LOCATIONS } from "./mtf-tables.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -45,6 +45,21 @@ function locateMtfByName(jsonName) {
     if (first === jsonName) return { file: f, text };
   }
   return null;
+}
+
+/** Pull the header fields the crit validator needs out of MTF text. */
+function mtfHeaderFields(text) {
+  const fields = {};
+  for (const line of text.split(/\r?\n/)) {
+    const idx = line.indexOf(":");
+    if (idx > 0) fields[line.slice(0, idx)] = line.slice(idx + 1).trim();
+  }
+  return {
+    techBase: fields.TechBase,
+    engineField: fields.Engine,
+    structureField: fields.Structure,
+    armorField: fields.Armor,
+  };
 }
 
 /** Returns null if linkage is clean, or the first failure description. */
@@ -99,6 +114,7 @@ for (const jsonFile of readdirSync(mechsDir)
   }
   const errors = [];
   const critSlots = parseCritSlots(mtf.text.split(/\r?\n/), errors, mtf.file);
+  validateCritConstruction(critSlots, mtfHeaderFields(mtf.text), errors);
   if (errors.length > 0) {
     console.error(`FAIL ${jsonFile} (from ${mtf.file}):`);
     for (const e of errors) console.error(`  - ${e}`);

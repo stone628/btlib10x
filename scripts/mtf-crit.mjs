@@ -10,7 +10,15 @@
  *   - `CRIT_SLOT_COUNTS` — re-exported from ./mtf-tables.mjs
  */
 
-import { CODE, CRIT_SLOT_COUNTS, LOCATIONS, SOAK_TOKEN, STRUCTURE_TOKEN } from "./mtf-tables.mjs";
+import {
+  CODE,
+  CRIT_SLOT_COUNTS,
+  ENGINE_CRIT_SLOTS,
+  LOCATIONS,
+  SOAK_CRIT_TOTALS,
+  SOAK_TOKEN,
+  STRUCTURE_TOKEN,
+} from "./mtf-tables.mjs";
 
 export { CRIT_SLOT_COUNTS, LOCATIONS };
 
@@ -63,7 +71,7 @@ function classifyCritLine(raw, errors, fileLabel) {
     return { ok: true, slot: { kind: "structure", name: STRUCTURE_TOKEN[t] } };
   }
   if (SOAK_TOKEN[t]) {
-    return { ok: true, slot: { kind: "soak" } };
+    return { ok: true, slot: { kind: "soak", name: SOAK_TOKEN[t] } };
   }
   const stripped = normalizeCritWeaponToken(t);
   const name = CODE[t] ?? CODE[stripped] ?? null;
@@ -124,4 +132,111 @@ export function parseCritSlots(lines, errors, fileLabel) {
     if (out[loc].length > CRIT_SLOT_COUNTS[loc]) out[loc].length = CRIT_SLOT_COUNTS[loc];
   }
   return out;
+}
+
+/**
+ * Map an MTF `Engine:` header to a row of `ENGINE_CRIT_SLOTS`.
+ * Compact/XXL engines are not yet supported; they return `null` and push a
+ * deferral error so the 'Mech is surfaced rather than misvalidated.
+ */
+function engineRowFromField(engineField, techBase, errors) {
+  const e = (engineField ?? "").toLowerCase();
+  if (e === "") return ENGINE_CRIT_SLOTS.standard;
+  if (e.includes("compact")) {
+    errors.push("compact engines are not yet supported by construction validation");
+    return null;
+  }
+  if (e.includes("xxl")) {
+    errors.push("XXL engines are not yet supported by construction validation");
+    return null;
+  }
+  if (e.includes("xl")) {
+    return techBase === "Clan" ? ENGINE_CRIT_SLOTS.clanXL : ENGINE_CRIT_SLOTS.isXL;
+  }
+  if (e.includes("light")) return ENGINE_CRIT_SLOTS.isLight;
+  return ENGINE_CRIT_SLOTS.standard;
+}
+
+/**
+ * Validate the crit-slot construction constraints for a parsed layout:
+ * per-location + total engine crit-slot counts (from the `Engine:` header and
+ * tech base) and the Endo Steel / Ferro-Fibrous soak totals (from the
+ * `Structure:` / `Armor:` headers and tech base). Violations are pushed as
+ * hard errors into `errors`, matching the fatal-error convention of
+ * `parseCritSlots`.
+ *
+ * `meta`:
+ *   - techBase       — "Inner Sphere" | "Clan" (from `TechBase:`)
+ *   - engineField    — raw `Engine:` line, e.g. "360 XL Fusion Engine"
+ *   - structureField — raw `Structure:` line, e.g. "Endo Steel" | "Standard"
+ *   - armorField     — raw `Armor:` line, e.g. "Ferro-Fibrous" | "Standard"
+ */
+export function validateCritConstruction(slots, meta, errors) {
+  const techBase = meta?.techBase ?? "";
+  const structureField = meta?.structureField ?? "";
+  const armorField = meta?.armorField ?? "";
+
+  // Count engine structure slots per engine location (and total).
+  const engine = {
+    centerTorso: 0,
+    leftTorso: 0,
+    rightTorso: 0,
+  };
+  let engineTotal = 0;
+  // Soak totals across all locations.
+  const soak = { endoSteel: 0, ferroFibrous: 0 };
+
+  for (const loc of LOCATIONS) {
+    for (const slot of slots[loc] ?? []) {
+      if (slot.kind === "structure" && slot.name === "engine" && loc in engine) {
+        engine[loc] += 1;
+        engineTotal += 1;
+      } else if (slot.kind === "soak") {
+        if (slot.name === "endoSteel") soak.endoSteel += 1;
+        else if (slot.name === "ferroFibrous") soak.ferroFibrous += 1;
+      }
+    }
+  }
+
+  // Engine distribution (per location) against the header-declared type.
+  const row = engineRowFromField(meta?.engineField, techBase, errors);
+  if (row) {
+    if (engineTotal !== row.total) {
+      errors.push(`engine crit slots: ${engineTotal} counted, ${row.total} expected`);
+    }
+    for (const [loc, expected] of [
+      ["centerTorso", row.ct],
+      ["leftTorso", row.lt],
+      ["rightTorso", row.rt],
+    ]) {
+      if (engine[loc] !== expected) {
+        errors.push(`engine crit slots in ${loc}: ${engine[loc]} counted, ${expected} expected`);
+      }
+    }
+  }
+
+  // Endo Steel: expected only when the Structure: header declares it, and in
+  // the tech-base-determined total when it does.
+  if (structureField !== "") {
+    const endoExpected = /endo/i.test(structureField) ? SOAK_CRIT_TOTALS.endoSteel[techBase] : 0;
+    if (soak.endoSteel !== endoExpected) {
+      errors.push(
+        `Endo Steel crit slots: ${soak.endoSteel} counted, ${
+          endoExpected === undefined ? 0 : endoExpected
+        } expected`,
+      );
+    }
+  }
+
+  // Ferro-Fibrous: expected only when the Armor: header declares it.
+  if (armorField !== "") {
+    const ferroExpected = /ferro/i.test(armorField) ? SOAK_CRIT_TOTALS.ferroFibrous[techBase] : 0;
+    if (soak.ferroFibrous !== ferroExpected) {
+      errors.push(
+        `Ferro-Fibrous crit slots: ${soak.ferroFibrous} counted, ${
+          ferroExpected === undefined ? 0 : ferroExpected
+        } expected`,
+      );
+    }
+  }
 }

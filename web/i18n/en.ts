@@ -246,7 +246,6 @@ export const en = {
   // critical slot chart
   "critChart.summary": "critical slots",
   "critChart.empty": "-",
-  "critChart.soak": "(soak)",
   "critChart.destroyedSuffix": " [DST]",
   "critChart.jammedSuffix": " [JAM]",
   "critChart.ammoSuffix": " ammo {n}",
@@ -266,6 +265,9 @@ export const en = {
   "critChart.component.lowerLegActuator": "Lower Leg Actuator",
   "critChart.component.footActuator": "Foot Actuator",
   "critChart.component.hip": "Hip",
+  "critChart.soak.endoSteel": "Endo Steel",
+  "critChart.soak.ferroFibrous": "Ferro-Fibrous",
+  "critChart.soak.case": "CASE",
 
   // event log
   "log.turn": "-- turn {turn} --",

@@ -4,6 +4,7 @@ import type {
   BattleState,
   CriticalEffect,
   CriticalResolution,
+  CritSoakName,
   CritStructureName,
   FireBlockerReason,
   FireWeapon,
@@ -582,6 +583,13 @@ const CRIT_COMPONENT_KEY: Readonly<Record<CritStructureName, MessageKey>> = {
   hip: "critChart.component.hip",
 };
 
+/** Human-friendly i18n key for a soak (armor-tech) component name. */
+const CRIT_SOAK_KEY: Readonly<Record<CritSoakName, MessageKey>> = {
+  endoSteel: "critChart.soak.endoSteel",
+  ferroFibrous: "critChart.soak.ferroFibrous",
+  case: "critChart.soak.case",
+};
+
 /** Location rows of the crit chart: arms, then torsos, then legs. */
 const CRIT_CHART_ROWS: readonly (readonly Location[])[] = [
   ["rightArm", "head", "leftArm"],
@@ -603,7 +611,8 @@ function critSlotText(
   if (slot.kind === "empty") {
     body = t(locale, "critChart.empty");
   } else if (slot.kind === "soak") {
-    body = t(locale, "critChart.soak");
+    const key = CRIT_SOAK_KEY[slot.name as CritSoakName];
+    body = `(${key !== undefined ? t(locale, key) : slot.name})`;
   } else if (slot.kind === "weapon" || slot.kind === "ammo") {
     body = slot.weapon;
   } else {
