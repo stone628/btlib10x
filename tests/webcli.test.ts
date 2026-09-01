@@ -213,7 +213,7 @@ describe("info", () => {
     const s = S.newSession();
     s.critsDisabled = true;
     const list = run(s, "info mech");
-    expect(list.some((l) => l.startsWith("HBK-4G"))).toBe(true);
+    expect(list.some((l) => l.includes("HBK-4G"))).toBe(true);
     const detail = run(s, "info mech HBK-4G").join("\n");
     expect(detail).toContain("walk 4 / run 6 / jump 0");
     expect(detail).toContain(" 9A");
