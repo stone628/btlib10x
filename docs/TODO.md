@@ -9,12 +9,6 @@
 
 ## To Do
 
-- Fix `armorLineShort` to surface full health at a glance: per location, sum
-  the front pool, the rear pool (torsos only), and the internal-structure pool
-  into a single `cur/max`, and append `*` when the front pool is depleted
-  (structure intact) and `!` when internal structure is depleted. Keep the
-  existing `sheet.armorLine` i18n key (`"armor: {list}"` / `"장갑: {list}"`)
-  unchanged; layout is implementation detail.
 - Implement ammo depletion order and ammo explosions
 - Add a terrain type table
 

@@ -190,7 +190,10 @@ document.getElementById("term")?.addEventListener("click", (e) => {
 
 appendChunk(
   buildLinesChunk(
-    [t(session.locale, "app.banner.title", { version: VERSION }), t(session.locale, "app.banner.help")],
+    [
+      t(session.locale, "app.banner.title", { version: VERSION }),
+      t(session.locale, "app.banner.help"),
+    ],
     "banner",
   ),
 );

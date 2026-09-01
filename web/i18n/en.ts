@@ -240,7 +240,7 @@ export const en = {
   "sheet.modeSuffix": ", {mode} [MP {mp}]",
   "sheet.removedId": " - REMOVED FROM PLAY",
   "sheet.idLine": "id: {id}, team {team}",
-  "sheet.armorLine": "armor: {list}",
+  "sheet.durabilityLine": "durability: {list}",
   "sheet.weaponsHeader": "weapons ({n}):",
   "sheet.shotsFlag": "shots {n}",
   "sheet.jammed": "[JAM]",
