@@ -68,3 +68,4 @@ export * from "./rules/internalStructure.js";
 export * from "./rules/los.js";
 export * from "./rules/movement.js";
 export * from "./rules/tohit.js";
+export { VERSION } from "./version.js";

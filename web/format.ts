@@ -662,10 +662,12 @@ function critChartChunk(def: ResolvedMechDef, locale: LocaleId, live: CritChartL
   const llLines = critCell(def, "leftLeg", locale, live);
   const built = [raLines, hdLines, laLines, rtLines, ctLines, ltLines, rlLines, infoLines, llLines];
   const maxLineLen = built
-    .flatMap((lines) => lines)
+    .flat()
     .map((l) => l.length)
     .reduce((prev, curr) => Math.max(prev, curr));
-  built.forEach((lines) => (lines[0] = lines[0]!.padEnd(maxLineLen)));
+  built.forEach((lines) => {
+    lines[0] = lines[0]!.padEnd(maxLineLen);
+  });
   return buildCollapsibleChunk(t(locale, "critChart.summary"), [
     buildColumnsChunk([raLines, hdLines, laLines]),
     buildColumnsChunk([rtLines, ctLines, ltLines]),

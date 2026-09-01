@@ -1,9 +1,12 @@
 import * as esbuild from "esbuild";
+import { buildStamp } from "./build-stamp.mjs";
 
 const watch = process.argv.includes("--watch");
 const serve = process.argv.includes("--serve");
 const portArg = process.argv.find((a) => a.startsWith("--port="));
 const port = portArg ? Number(portArg.split("=")[1]) : 8012;
+
+const stamp = buildStamp();
 
 const coreCtx = await esbuild.context({
   entryPoints: ["src/index.ts"],
@@ -11,6 +14,7 @@ const coreCtx = await esbuild.context({
   bundle: true,
   format: "esm",
   target: "es2022",
+  define: { __BTLIB_VERSION__: JSON.stringify(stamp) },
   logLevel: "info",
 });
 

@@ -3,7 +3,7 @@ import type { Catalog } from "./en.js";
 /** Korean catalog. Keys are compile-checked against the English original. */
 export const kr: Catalog = {
   // app chrome
-  "app.banner.title": "btlib10x 터미널 - 클래식 배틀테크 퀵스타트 규칙",
+  "app.banner.title": "bt10x 터미널 - 클래식 배틀테크 퀵스타트 규칙",
   "app.banner.help": "명령어는 'help'를 입력하세요.",
   "err.prefix": "오류:",
 
@@ -58,6 +58,8 @@ export const kr: Catalog = {
   "cmd.seed.help": "주사위 시드 설정",
   "cmd.seed.arg.n": "정수 시드; 같은 시드는 같은 굴림을 재현합니다",
   "cmd.reset.help": "모두 지우고 빈 설정 단계로 초기화",
+  "cmd.ver.help": "빌드된 라이브러리 버전 표시",
+  "version.line": "bt10x {version}",
   "cmd.map.help": "내장 규칙book 맵 불러오기 ({names})",
   "cmd.map.arg.name": "내장 맵 이름: {names}",
   "cmd.add.help": "맵에 메크 배치",

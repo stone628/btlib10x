@@ -1,4 +1,4 @@
-import { FACINGS, getMapDef, listMapNames } from "btlib10x";
+import { FACINGS, getMapDef, listMapNames, VERSION } from "btlib10x";
 import type { Chunk, RichOutput } from "./format.js";
 import {
   attackStatusLines,
@@ -142,6 +142,10 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
       S.resetSession(s);
       return [t(s.locale, "ok.resetDone")];
     },
+  },
+  ver: {
+    helpKey: "cmd.ver.help",
+    run: (s) => [t(L(s), "version.line", { version: VERSION })],
   },
 };
 

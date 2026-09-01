@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import * as esbuild from "esbuild";
+import { buildStamp } from "./build-stamp.mjs";
 
 const html = readFileSync("web/index.html", "utf8");
 
@@ -10,6 +11,7 @@ const { outputFiles } = await esbuild.build({
   target: "es2022",
   minify: true,
   alias: { btlib10x: "./src/index.ts" },
+  define: { __BTLIB_VERSION__: JSON.stringify(buildStamp()) },
   write: false,
   logLevel: "info",
 });
