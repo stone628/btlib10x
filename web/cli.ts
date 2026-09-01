@@ -552,7 +552,7 @@ export function runChunks(session: S.Session, raw: string): Chunk[] {
   }
   const hintKey = fireHintKey(session);
   if (hintKey !== null && hintKey !== session.fireHintShownFor) {
-    chunks = [...chunks, buildLinesChunk(fireSuggestionLines(session), "hint")];
+    chunks = [...chunks, ...fireSuggestionLines(session)];
     session.fireHintShownFor = hintKey;
   }
   return chunks;

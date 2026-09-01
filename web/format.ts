@@ -103,6 +103,12 @@ export function buildColumnsChunk(columns: readonly (readonly string[])[]): Chun
  * Column widths come from `max(strlen)` per column. Box-drawing glyphs are
  * assumed to render at 1 ch in the terminal font.
  */
+const LIGHT_LINE_THEME: Record<string, string> = {
+  tnw: "┌", tn: "┬", tne: "┐", tnh: "─", tnv: "│",
+  tw: "├", tc: "┼", te: "┤",
+  tsw: "└", ts: "┴", tse: "┘", tsh: "─", tsv: "│",
+};
+
 export function buildBoxTableChunk(
   header: readonly string[],
   rows: readonly (readonly string[])[],
@@ -120,34 +126,34 @@ export function buildBoxTableChunk(
     widths.push(w);
   }
 
+  const {tnw, tn, tne, tnh, tnv, tw, tc, te, tsw, ts, tse, tsh, tsv} = LIGHT_LINE_THEME;
+
   const height = rows.length;
   const cols: string[][] = [];
   for (let i = 0; i < n; i++) {
     const w = widths[i] ?? 0;
-    const stroke = "─".repeat(w);
+    const stroke = tnh!.repeat(w);
     const isDataFirst = i === 0;
-    const headLeft = "│";
-    const bodyLeft = "│";
-    const topWall = isDataFirst ? "┌" : "┬";
-    const sepWall = isDataFirst ? "├" : "┼";
-    const botWall = isDataFirst ? "└" : "┴";
+    const topWall = isDataFirst ? tnw : tn;
+    const sepWall = isDataFirst ? tw : tc;
+    const botWall = isDataFirst ? tsw : ts;
     const col: string[] = new Array(height + 3);
     col[0] = `${topWall}${stroke}`;
-    col[1] = `${headLeft}${header[i]?.trimEnd() ?? ""}`;
+    col[1] = `${tnv}${header[i]?.trimEnd() ?? ""}`;
     col[2] = `${sepWall}${stroke}`;
     for (let r = 0; r < height; r++) {
-      col[3 + r] = `${bodyLeft}${rows[r]?.[i] ?? ""}`;
+      col[3 + r] = `${tsv!}${rows[r]?.[i]?.trimEnd() ?? ""}`;
     }
-    col[height + 2] = `${botWall}${stroke}`;
+    col[height + 2] = `${botWall}${tsh!.repeat(w)}`;
     cols.push(col);
   }
 
   const closing: string[] = new Array(height + 3);
-  closing[0] = "┐";
-  closing[1] = "│";
-  closing[2] = "┤";
-  for (let r = 0; r < height; r++) closing[3 + r] = "│";
-  closing[height + 2] = "┘";
+  closing[0] = tne!;
+  closing[1] = tnv!;
+  closing[2] = te!;
+  for (let r = 0; r < height; r++) closing[3 + r] = tsv!;
+  closing[height + 2] = tse!;
   cols.push(closing);
 
   return buildColumnsChunk(cols);
@@ -1061,107 +1067,74 @@ const BLOCKER_LABEL: Readonly<Record<FireBlockerReason, MessageKey>> = {
   autoMiss: "fireSuggestion.reason.autoMiss",
 };
 
-interface FireWeaponTableRow {
-  readonly indexCell: string;
-  readonly nameCell: string;
-  readonly locCell: string;
-  readonly bracketCell: string;
-  readonly tnCell: string;
-  readonly dmgCell: string;
-}
-
-function fireWeaponTable(locale: LocaleId, weapons: readonly FireWeapon[]): string[] {
-  const rows: FireWeaponTableRow[] = weapons.map((w) => ({
-    indexCell: `#${w.weaponIndex}`,
-    nameCell: w.weapon,
-    locCell: SHORT_LOC[w.location],
-    bracketCell: `[${BRACKET_LABEL[w.rangeBracket]}]`,
-    tnCell: String(w.tn),
-    dmgCell:
-      w.cluster !== undefined
-        ? `${w.expectedDamage} (${t(locale, "fireSuggestion.cluster", {
-            shots: String(w.cluster.shots),
-            per: String(w.cluster.perMissile),
-          })})`
-        : String(w.expectedDamage),
-  }));
-  const shotsCell = (w: FireWeapon): string => (w.shots !== null ? `${w.shots}` : "");
-  const indexW = Math.max(
-    t(locale, "fireSuggestion.colIndex").length,
-    ...rows.map((r) => r.indexCell.length),
-  );
-  const nameW = Math.max(
-    t(locale, "fireSuggestion.colWeapon").length,
-    ...rows.map((r) => r.nameCell.length),
-  );
-  const locW = Math.max(
-    t(locale, "fireSuggestion.colLoc").length,
-    ...rows.map((r) => r.locCell.length),
-  );
-  const bracketW = Math.max(
-    t(locale, "fireSuggestion.colBracket").length,
-    ...rows.map((r) => r.bracketCell.length),
-  );
-  const tnW = Math.max(
-    t(locale, "fireSuggestion.colTn").length,
-    ...rows.map((r) => r.tnCell.length),
-  );
-  const dmgW = Math.max(
-    t(locale, "fireSuggestion.colDmg").length,
-    ...rows.map((r) => r.dmgCell.length),
-  );
-  const head =
-    `${t(locale, "fireSuggestion.colIndex").padEnd(indexW)}  ` +
-    `${t(locale, "fireSuggestion.colWeapon").padEnd(nameW)}  ` +
-    `${t(locale, "fireSuggestion.colLoc").padEnd(locW)}  ` +
-    `${t(locale, "fireSuggestion.colBracket").padEnd(bracketW)}  ` +
-    `${t(locale, "fireSuggestion.colTn").padEnd(tnW)}  ` +
-    `${t(locale, "fireSuggestion.colDmg").padEnd(dmgW)}  ` +
-    t(locale, "fireSuggestion.colShots");
-  const body = rows.map(
-    (r, i) =>
-      `${r.indexCell.padEnd(indexW)}  ` +
-      `${r.nameCell.padEnd(nameW)}  ` +
-      `${r.locCell.padEnd(locW)}  ` +
-      `${r.bracketCell.padEnd(bracketW)}  ` +
-      `${r.tnCell.padEnd(tnW)}  ` +
-      `${r.dmgCell.padEnd(dmgW)}  ` +
-      shotsCell(weapons[i]!),
-  );
-  return [head, ...body];
+function fireWeaponTable(locale: LocaleId, weapons: readonly FireWeapon[]): Chunk {
+  const header = [
+    t(locale, "fireSuggestion.colIndex"),
+    t(locale, "fireSuggestion.colWeapon"),
+    t(locale, "fireSuggestion.colLoc"),
+    t(locale, "fireSuggestion.colBracket"),
+    t(locale, "fireSuggestion.colTn"),
+    t(locale, "fireSuggestion.colDmg"),
+    t(locale, "fireSuggestion.colShots"),
+  ];
+  const rows = weapons.map((w) => [
+    `#${w.weaponIndex}`,
+    w.weapon,
+    SHORT_LOC[w.location],
+    `[${BRACKET_LABEL[w.rangeBracket]}]`,
+    String(w.tn),
+    w.cluster !== undefined
+      ? `${w.expectedDamage} ${t(locale, "fireSuggestion.cluster", {
+          shots: String(w.cluster.shots),
+          per: String(w.cluster.perMissile),
+        })}`
+      : String(w.expectedDamage),
+    w.shots !== null ? `${w.shots}` : "",
+  ]);
+  return buildBoxTableChunk(header, rows);
 }
 
 /** Automatic hint shown at the start of a unit's fire turn. */
-export function fireSuggestionLines(s: Session): string[] {
+export function fireSuggestionLines(s: Session): Chunk[] {
   const battle = s.battle;
   if (!battle || s.actorId === null) {
     throw new Error(t(s.locale, "err.wrongPhase", { phase: "weaponAttack" }));
   }
   const sugg = suggestFireTargets(battle, s.actorId);
-  const lines = [t(s.locale, "fireSuggestion.header", { id: sugg.targetId })];
+  const chunks: Chunk[] = [
+    buildLinesChunk([t(s.locale, "fireSuggestion.header", { id: sugg.targetId })], "hint"),
+  ];
   if (sugg.targets.length === 0) {
-    lines.push(t(s.locale, "fireSuggestion.noTargets"));
-    return lines;
+    chunks.push(buildLinesChunk([t(s.locale, "fireSuggestion.noTargets")], "hint"));
+    return chunks;
   }
   for (const target of sugg.targets) {
-    lines.push(
-      t(s.locale, "fireSuggestion.target", {
-        id: target.targetId,
-        distance: String(target.distance),
-      }),
+    chunks.push(
+      buildLinesChunk(
+        [
+          t(s.locale, "fireSuggestion.target", {
+            id: target.targetId,
+            distance: String(target.distance),
+          }),
+        ],
+        "hint",
+      ),
     );
     if (target.weapons.length > 0) {
-      fireWeaponTable(s.locale, target.weapons).forEach((l) => {
-        lines.push(`  ${l}`);
-      });
+      chunks.push(fireWeaponTable(s.locale, target.weapons));
     }
     for (const b of target.blocked) {
-      lines.push(
-        `  ${t(s.locale, "fireSuggestion.blocked")}: #${b.weaponIndex} ${b.weapon} — ${t(s.locale, BLOCKER_LABEL[b.reason])}`,
+      chunks.push(
+        buildLinesChunk(
+          [
+            `${t(s.locale, "fireSuggestion.blocked")}: #${b.weaponIndex} ${b.weapon} — ${t(s.locale, BLOCKER_LABEL[b.reason])}`,
+          ],
+          "hint",
+        ),
       );
     }
   }
-  return lines;
+  return chunks;
 }
 
 export function weaponsLines(s: Session, unitId?: string): string[] {
