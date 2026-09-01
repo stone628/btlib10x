@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getWeaponOrThrow } from "../src/data/weapons.js";
+import { getWeaponOrThrow } from "../src/data/weapon.schema.js";
 import { computeToHit } from "../src/rules/tohit.js";
 
 describe("GATOR to-hit calculation", () => {

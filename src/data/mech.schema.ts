@@ -1,7 +1,7 @@
 import type { Location } from "../core/types.js";
 import { isLocation, LOCATIONS } from "../core/types.js";
 import { type InternalStructure, internalStructureForTonnage } from "../rules/internalStructure.js";
-import { getWeaponOrThrow } from "./weapons.js";
+import { getWeaponOrThrow } from "./weapon.schema.js";
 
 /** Torso locations that have a separate rear armor pool. */
 export type TorsoLocation = "centerTorso" | "rightTorso" | "leftTorso";

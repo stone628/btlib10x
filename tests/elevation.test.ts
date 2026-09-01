@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getWeaponOrThrow } from "../src/data/weapons.js";
+import { getWeaponOrThrow } from "../src/data/weapon.schema.js";
 import { losClear, losWoodsPointsBetween } from "../src/rules/los.js";
 import { reachableLandings } from "../src/rules/movement.js";
 import { computeToHit } from "../src/rules/tohit.js";

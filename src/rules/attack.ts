@@ -1,8 +1,8 @@
 import { roll2D6 } from "../core/dice.js";
 import type { Location, MoveMode, Rng, TerrainType } from "../core/types.js";
-import type { ResolvedMechDef } from "../data/schema.js";
-import type { WeaponDef } from "../data/weapons.js";
-import { getWeaponOrThrow } from "../data/weapons.js";
+import type { ResolvedMechDef } from "../data/mech.schema.js";
+import type { WeaponDef } from "../data/weapon.schema.js";
+import { getWeaponOrThrow } from "../data/weapon.schema.js";
 import type { Arc } from "./arcs.js";
 import { clusterHitsForMissiles, clusterHitsForShots, groupMissiles } from "./cluster.js";
 import { type CriticalResolution, resolveCriticalHits } from "./critical.js";

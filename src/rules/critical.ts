@@ -57,9 +57,9 @@
 
 import { roll2D6, rollD6 } from "../core/dice.js";
 import type { Location, Rng } from "../core/types.js";
-import type { ResolvedCritSlot, ResolvedMechDef } from "../data/schema.js";
-import { CRIT_SLOT_COUNTS } from "../data/schema.js";
-import { getWeaponOrThrow } from "../data/weapons.js";
+import type { ResolvedCritSlot, ResolvedMechDef } from "../data/mech.schema.js";
+import { CRIT_SLOT_COUNTS } from "../data/mech.schema.js";
+import { getWeaponOrThrow } from "../data/weapon.schema.js";
 import { applyDamage, type DamageApplication, type UnitDamageState } from "./damage.js";
 
 export interface CritSource {

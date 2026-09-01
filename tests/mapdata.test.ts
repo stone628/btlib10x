@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getMapDef, listMapNames } from "../src/data/index.js";
-import { type MapDef, validateMapDef } from "../src/data/mapschema.js";
+import { type MapDef, validateMapDef } from "../src/data/map.schema.js";
 import { createBattle } from "../src/rules/game.js";
 
 const valid: MapDef = {

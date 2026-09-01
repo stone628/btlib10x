@@ -1,7 +1,7 @@
 import type { AttackResolution, CriticalResolution } from "btlib10x";
 import { describe, expect, it } from "vitest";
 import { getMechDef } from "../src/data/index.js";
-import { getWeaponOrThrow } from "../src/data/weapons.js";
+import { getWeaponOrThrow } from "../src/data/weapon.schema.js";
 import { resolveCriticalHits } from "../src/rules/critical.js";
 import type { UnitDamageState } from "../src/rules/damage.js";
 import { computeToHit } from "../src/rules/tohit.js";

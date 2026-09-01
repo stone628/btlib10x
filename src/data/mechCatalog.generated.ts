@@ -4,8 +4,8 @@
  * validating each against the raw JSON schema and resolving it into the
  * engine-facing definition that keeps front and rear armor as separate pools.
  */
-import type { ResolvedMechDef } from "./schema.js";
-import { resolveMechDef, validateMechDef } from "./schema.js";
+import type { ResolvedMechDef } from "./mech.schema.js";
+import { resolveMechDef, validateMechDef } from "./mech.schema.js";
 
 const load = (data: unknown): ResolvedMechDef => resolveMechDef(validateMechDef(data));
 

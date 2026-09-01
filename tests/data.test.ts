@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ResolvedMechDef } from "../src/data/index.js";
 import { getAllMechDefs, getMechDef, resolveMechDef, validateMechDef } from "../src/data/index.js";
-import { getWeaponOrThrow } from "../src/data/weapons.js";
+import { getWeaponOrThrow } from "../src/data/weapon.schema.js";
 
 describe("'Mech definitions", () => {
   it("ships more than one 'Mech and every model is registered", () => {
