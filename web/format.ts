@@ -58,11 +58,6 @@ export type Chunk =
       readonly chunks: readonly Chunk[];
     };
 
-/** Tagged wrapper letting a command emit structured chunks. */
-export interface RichOutput {
-  readonly rich: readonly Chunk[];
-}
-
 interface BoardChunk {
   readonly board: { readonly model: BoardModel; readonly renderer?: BoardRenderer };
 }
@@ -87,12 +82,79 @@ export function buildColumnsChunk(columns: readonly (readonly string[])[]): Chun
   return { kind: "columns", columns: columns };
 }
 
-export function buildCollapsibleChunk(summary: string, chunks: readonly Chunk[]): Chunk {
-  return { kind: "collapsible", summary: summary, chunks: chunks };
+/**
+ * Render a header + body table as a `columns` Chunk using Unicode box-drawing
+ * glyphs. The returned `columns` array has `header.length + 1` entries:
+ *
+ *   - cols 0..n-1: data columns. Col 0 starts the box with `┌`/`├`/`└` corners;
+ *     cols 1..n-1 have `┬`/`┼`/`┴` connectors and a `│` prefix on each
+ *     non-stroke row. Cells are not padded; column width only drives the
+ *     horizontal stroke length.
+ *   - col n: a dedicated closing-wall column whose strings are the vertical
+ *     stroke: `["┐", "│", "┤", ..., "┘"]`.
+ *
+ * Glyphs (data column 0 / data columns 1..n-1 / closing column):
+ *   top:    ┌─── / ┬─── / ┐
+ *   header: HEAD  / │HEAD / │
+ *   sep:    ├─── / ┼─── / ┤
+ *   body:   C     / │C    / │
+ *   bot:    └─── / ┴─── / ┘
+ *
+ * Column widths come from `max(strlen)` per column. Box-drawing glyphs are
+ * assumed to render at 1 ch in the terminal font.
+ */
+export function buildBoxTableChunk(
+  header: readonly string[],
+  rows: readonly (readonly string[])[],
+): Chunk {
+  const n = header.length;
+  if (n === 0) return buildColumnsChunk([]);
+
+  const widths: number[] = [];
+  for (let i = 0; i < n; i++) {
+    let w = (header[i] ?? "").length;
+    for (const row of rows) {
+      const cell = row[i];
+      if (cell !== undefined && cell.length > w) w = cell.length;
+    }
+    widths.push(w);
+  }
+
+  const height = rows.length;
+  const cols: string[][] = [];
+  for (let i = 0; i < n; i++) {
+    const w = widths[i] ?? 0;
+    const stroke = "─".repeat(w);
+    const isDataFirst = i === 0;
+    const headLeft = "│";
+    const bodyLeft = "│";
+    const topWall = isDataFirst ? "┌" : "┬";
+    const sepWall = isDataFirst ? "├" : "┼";
+    const botWall = isDataFirst ? "└" : "┴";
+    const col: string[] = new Array(height + 3);
+    col[0] = `${topWall}${stroke}`;
+    col[1] = `${headLeft}${header[i]?.trimEnd() ?? ""}`;
+    col[2] = `${sepWall}${stroke}`;
+    for (let r = 0; r < height; r++) {
+      col[3 + r] = `${bodyLeft}${rows[r]?.[i] ?? ""}`;
+    }
+    col[height + 2] = `${botWall}${stroke}`;
+    cols.push(col);
+  }
+
+  const closing: string[] = new Array(height + 3);
+  closing[0] = "┐";
+  closing[1] = "│";
+  closing[2] = "┤";
+  for (let r = 0; r < height; r++) closing[3 + r] = "│";
+  closing[height + 2] = "┘";
+  cols.push(closing);
+
+  return buildColumnsChunk(cols);
 }
 
-export function rich(...chunks: readonly Chunk[]): RichOutput {
-  return { rich: chunks };
+export function buildCollapsibleChunk(summary: string, chunks: readonly Chunk[]): Chunk {
+  return { kind: "collapsible", summary: summary, chunks: chunks };
 }
 
 /** Display coordinates are 1-based (the internal value itself). */
@@ -150,39 +212,26 @@ export function boardChunk(s: Session): Chunk {
 
 // ---------------------------------------------------------------- info ----
 
-export function infoMechList(locale: LocaleId): string[] {
+export function infoMechList(locale: LocaleId): Chunk {
   const list = getAllMechDefs().sort((a, b) => {
     if (a.tonnage !== b.tonnage) return a.tonnage - b.tonnage;
     return a.name.localeCompare(b.name);
   });
-  const modelW = Math.max(
-    ...list.map((d) => d.model.length),
-    t(locale, "info.mechColModel").length,
-  );
-  const nameW = Math.max(...list.map((d) => d.name.length), t(locale, "info.mechColName").length);
-  const classW = Math.max(
-    ...list.map((d) => d.weightClass.length),
-    t(locale, "info.mechColClass").length,
-  );
-  const tonW = Math.max(
-    ...list.map((d) => String(d.tonnage).length),
-    t(locale, "info.mechColTon").length,
-  );
-  const head =
-    `${t(locale, "info.mechColModel").padEnd(modelW)}  ` +
-    `${t(locale, "info.mechColName").padEnd(nameW)}  ` +
-    `${t(locale, "info.mechColClass").padEnd(classW)}  ` +
-    `${t(locale, "info.mechColTon").padStart(tonW)}  ` +
-    t(locale, "info.mechColMove");
-  const rows = list.map((d) => {
-    const model = d.model.padEnd(modelW);
-    const name = d.name.padEnd(nameW);
-    const cls = d.weightClass.padEnd(classW);
-    const ton = String(d.tonnage).padStart(tonW);
-    const move = `${d.walking}/${d.running}/${d.jumping}`;
-    return `${model}  ${name}  ${cls}  ${ton}  ${move}`;
-  });
-  return [head, ...rows];
+  const header = [
+    t(locale, "info.mechColModel"),
+    t(locale, "info.mechColName"),
+    t(locale, "info.mechColClass"),
+    t(locale, "info.mechColTon"),
+    t(locale, "info.mechColMove"),
+  ];
+  const rows = list.map((d) => [
+    d.model,
+    d.name,
+    d.weightClass,
+    String(d.tonnage),
+    `${d.walking}/${d.running}/${d.jumping}`,
+  ]);
+  return buildBoxTableChunk(header, rows);
 }
 
 export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {

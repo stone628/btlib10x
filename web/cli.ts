@@ -1,5 +1,5 @@
 import { FACINGS, getMapDef, listMapNames, VERSION } from "btlib10x";
-import type { Chunk, RichOutput } from "./format.js";
+import type { Chunk } from "./format.js";
 import {
   attackStatusLines,
   boardChunk,
@@ -16,7 +16,6 @@ import {
   moveStatusLines,
   overStatusLines,
   reachChunk,
-  rich,
   sheetForUnit,
   unitBriefList,
   weaponsLines,
@@ -32,8 +31,8 @@ export interface CmdDef {
   readonly usage?: string;
   /** Per-argument documentation shown by `help <command>` ([pattern, catalog key]). */
   readonly argsDoc?: ReadonlyArray<readonly [string, MessageKey]>;
-  /** Plain lines, or `{ rich }` for structured chunks (styled boards). */
-  run: (session: S.Session, args: string[]) => string[] | RichOutput;
+  /** Plain lines, or an array of {@link Chunk}s for structured output. */
+  run: (session: S.Session, args: string[]) => string[] | Chunk[];
 }
 
 // ------------------------------------------------------------- parsing ----
@@ -87,7 +86,7 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
   },
   board: {
     helpKey: "cmd.board.help",
-    run: (s) => rich(boardChunk(s)),
+    run: (s) => [boardChunk(s)],
   },
   clear: { helpKey: "cmd.clear.help", run: () => ["\f"] },
   log: {
@@ -111,9 +110,9 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
       expectArgs(L(s), a, 1, "info mech [model] | info map [name] | info weapon [name]");
       const what = a[0]!.toLowerCase();
       if (what === "mech")
-        return a[1] !== undefined ? { rich: infoMechChunk(L(s), a[1]) } : infoMechList(L(s));
+        return a[1] !== undefined ? infoMechChunk(L(s), a[1]) : [infoMechList(L(s))];
       if (what === "map") {
-        return a[1] !== undefined ? { rich: infoMapChunks(L(s), a[1]) } : infoMapList();
+        return a[1] !== undefined ? infoMapChunks(L(s), a[1]) : infoMapList();
       }
       if (what === "weapon") {
         const name = a.slice(1).join(" ");
@@ -247,7 +246,7 @@ const MOVE_CMDS: Record<string, CmdDef> = {
       if (mode === "standStill") return lines;
       const chunk = reachChunk(s);
       if (chunk === null) return lines;
-      return rich(buildLinesChunk(lines), chunk);
+      return [buildLinesChunk(lines), chunk];
     },
   },
   move: {
@@ -302,7 +301,7 @@ const MOVE_CMDS: Record<string, CmdDef> = {
     helpKey: "cmd.sheetActing.help",
     usage: "sheet [id]",
     argsDoc: [["id", "cmd.sheetActing.arg.id"]],
-    run: (s, a) => (a[0] !== undefined ? { rich: sheetForUnit(s, a[0]) } : unitBriefList(s)),
+    run: (s, a) => (a[0] !== undefined ? sheetForUnit(s, a[0]) : unitBriefList(s)),
   },
   status: { helpKey: "cmd.statusMove.help", run: (s) => moveStatusLines(s) },
   cancel: {
@@ -353,7 +352,7 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
     helpKey: "cmd.sheetActing.help",
     usage: "sheet [id]",
     argsDoc: [["id", "cmd.sheetActing.arg.id"]],
-    run: (s, a) => (a[0] !== undefined ? { rich: sheetForUnit(s, a[0]) } : unitBriefList(s)),
+    run: (s, a) => (a[0] !== undefined ? sheetForUnit(s, a[0]) : unitBriefList(s)),
   },
   status: { helpKey: "cmd.statusAttack.help", run: (s) => attackStatusLines(s) },
   cancel: {
@@ -385,7 +384,7 @@ const OVER_CMDS: Record<string, CmdDef> = {
     helpKey: "cmd.sheetActing.help",
     usage: "sheet [id]",
     argsDoc: [["id", "cmd.sheetActing.arg.id"]],
-    run: (s, a) => (a[0] !== undefined ? { rich: sheetForUnit(s, a[0]) } : unitBriefList(s)),
+    run: (s, a) => (a[0] !== undefined ? sheetForUnit(s, a[0]) : unitBriefList(s)),
   },
   status: { helpKey: "cmd.statusOver.help", run: (s) => overStatusLines(s) },
   rematch: {
@@ -511,10 +510,9 @@ function victoryBanner(s: S.Session): string[] {
     : [t(s.locale, "banner.win", { team: String(s.victory.winnerTeam) })];
 }
 
-function normalize(out: string[] | RichOutput): Chunk[] {
-  return typeof out === "object" && out !== null && "rich" in out
-    ? [...out.rich]
-    : [buildLinesChunk(out)];
+function normalize(out: string[] | Chunk[]): Chunk[] {
+  if (out.length === 0) return out as Chunk[];
+  return typeof out[0] === "string" ? [buildLinesChunk(out as string[])] : (out as Chunk[]);
 }
 
 /** Turn-qualified key identifying the acting unit's fire turn, or null when none. */
