@@ -1032,9 +1032,7 @@ function fireWeaponTable(locale: LocaleId, weapons: readonly FireWeapon[]): stri
           })})`
         : String(w.expectedDamage),
   }));
-  const ammoCell = (w: FireWeapon): string =>
-    w.shots !== null ? `${t(locale, "fireSuggestion.shots")} ${w.shots}` : "";
-
+  const shotsCell = (w: FireWeapon): string => (w.shots !== null ? `${w.shots}` : "");
   const indexW = Math.max(
     t(locale, "fireSuggestion.colIndex").length,
     ...rows.map((r) => r.indexCell.length),
@@ -1059,7 +1057,6 @@ function fireWeaponTable(locale: LocaleId, weapons: readonly FireWeapon[]): stri
     t(locale, "fireSuggestion.colDmg").length,
     ...rows.map((r) => r.dmgCell.length),
   );
-
   const head =
     `${t(locale, "fireSuggestion.colIndex").padEnd(indexW)}  ` +
     `${t(locale, "fireSuggestion.colWeapon").padEnd(nameW)}  ` +
@@ -1068,7 +1065,6 @@ function fireWeaponTable(locale: LocaleId, weapons: readonly FireWeapon[]): stri
     `${t(locale, "fireSuggestion.colTn").padEnd(tnW)}  ` +
     `${t(locale, "fireSuggestion.colDmg").padEnd(dmgW)}  ` +
     t(locale, "fireSuggestion.colShots");
-
   const body = rows.map(
     (r, i) =>
       `${r.indexCell.padEnd(indexW)}  ` +
@@ -1077,9 +1073,8 @@ function fireWeaponTable(locale: LocaleId, weapons: readonly FireWeapon[]): stri
       `${r.bracketCell.padEnd(bracketW)}  ` +
       `${r.tnCell.padEnd(tnW)}  ` +
       `${r.dmgCell.padEnd(dmgW)}  ` +
-      ammoCell(weapons[i]!),
+      shotsCell(weapons[i]!),
   );
-
   return [head, ...body];
 }
 
@@ -1103,11 +1098,13 @@ export function fireSuggestionLines(s: Session): string[] {
       }),
     );
     if (target.weapons.length > 0) {
-      lines.push(...fireWeaponTable(s.locale, target.weapons));
+      fireWeaponTable(s.locale, target.weapons).forEach((l) => {
+        lines.push(`  ${l}`);
+      });
     }
     for (const b of target.blocked) {
       lines.push(
-        `${t(s.locale, "fireSuggestion.blocked")}: #${b.weaponIndex} ${b.weapon} — ${t(s.locale, BLOCKER_LABEL[b.reason])}`,
+        `  ${t(s.locale, "fireSuggestion.blocked")}: #${b.weaponIndex} ${b.weapon} — ${t(s.locale, BLOCKER_LABEL[b.reason])}`,
       );
     }
   }
