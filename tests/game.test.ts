@@ -94,7 +94,7 @@ describe("createBattle", () => {
     const state = hbkVsEnf();
     const hbk = getUnit(state, "hbk");
     expect(hbk.damage.armor).toEqual(getMechDef("HBK-4G")!.armor);
-    expect(hbk.ammoLeft["1"]).toBe(10);
+    expect(hbk.shotsLeft["1"]).toBe(10);
     expect(hbk.phaseStartDamage).toEqual(hbk.damage);
     expect(state.phase).toBe("initiative");
     expect(state.turn).toBe(1);
@@ -565,7 +565,7 @@ describe("weapon attack phase", () => {
       { weaponIndex: 1, targetId: "enf" },
       { weaponIndex: 2, targetId: "enf" },
     ]);
-    expect(getUnit(state, "hbk").ammoLeft["1"]).toBe(9);
+    expect(getUnit(state, "hbk").shotsLeft["1"]).toBe(9);
     expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 3, targetId: "enf" }])).toThrow(
       /already declared/,
     );
@@ -634,7 +634,7 @@ describe("weapon attack phase", () => {
     ]);
     const state = startAttackTurn(setup);
     declareAttacks(state, "her", [{ weaponIndex: 3, targetId: "cda", rapidFire: true }]);
-    expect(getUnit(state, "her").ammoLeft["3"]).toBe(18); // 2 shots spent up front
+    expect(getUnit(state, "her").shotsLeft["3"]).toBe(18); // 2 shots spent up front
     resolveDeclaredAttacks(state, "her", scriptedRng(1, 1)); // natural 2 -> jam
     const her = getUnit(state, "her");
     expect(her.jammedWeapons).toEqual([3]);
@@ -667,7 +667,7 @@ describe("weapon attack phase", () => {
     // Omitted rapidFire -> single shot (1 UAC/5 hit = 5 dmg, 1 ammo spent).
     const single = startAttackTurn(setup());
     declareAttacks(single, "her", [{ weaponIndex: 3, targetId: "cda" }]);
-    expect(getUnit(single, "her").ammoLeft["3"]).toBe(19); // 1 shot spent up front
+    expect(getUnit(single, "her").shotsLeft["3"]).toBe(19); // 1 shot spent up front
     const singleBefore = getUnit(single, "cda").damage.armor.centerTorso;
     // to-hit 4 (2,2), single location rolls 7 -> CT (no cluster roll for 1 shot).
     resolveDeclaredAttacks(single, "her", scriptedRng(2, 2, 3, 4));
@@ -676,7 +676,7 @@ describe("weapon attack phase", () => {
     // rapidFire: true -> double-tap (2 x UAC/5 = 10 dmg, 2 ammo spent).
     const state = startAttackTurn(setup());
     declareAttacks(state, "her", [{ weaponIndex: 3, targetId: "cda", rapidFire: true }]);
-    expect(getUnit(state, "her").ammoLeft["3"]).toBe(18); // 2 shots spent up front
+    expect(getUnit(state, "her").shotsLeft["3"]).toBe(18); // 2 shots spent up front
     const before = getUnit(state, "cda").damage.armor.centerTorso;
     // to-hit 4 (2,2), cluster 8 (4,4) -> both shots hit; both hit CT (roll 7).
     resolveDeclaredAttacks(state, "her", scriptedRng(2, 2, 4, 4, 3, 4, 3, 4));

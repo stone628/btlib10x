@@ -24,7 +24,7 @@ export interface FireWeapon {
   readonly weaponIndex: number;
   readonly weapon: string;
   readonly location: Location;
-  readonly ammoShots: number | null;
+  readonly shots: number | null;
   readonly rangeBracket: RangeBracket;
   readonly tn: number;
   readonly expectedDamage: number;
@@ -88,8 +88,8 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "destroyed" });
           return;
         }
-        const ammoShots = mount.ammoShots !== undefined ? (unit.ammoLeft[weaponIndex] ?? 0) : null;
-        if (mount.ammoShots !== undefined && ammoShots! < 1) {
+        const shots = mount.shots !== undefined ? (unit.shotsLeft[weaponIndex] ?? 0) : null;
+        if (mount.shots !== undefined && shots! < 1) {
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "outOfAmmo" });
           return;
         }
@@ -125,7 +125,7 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
           weaponIndex,
           weapon: mount.weapon,
           location: mount.location,
-          ammoShots,
+          shots,
           rangeBracket: breakdown.rangeBracket,
           tn: breakdown.total,
           expectedDamage:

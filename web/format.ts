@@ -208,7 +208,7 @@ export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
       weaponMountLine(locale, Number(key), {
         weapon: mount.weapon,
         location: mount.location,
-        ammoLeft: mount.ammoShots ?? null,
+        shotsLeft: mount.shots ?? null,
         jammed: false,
         destroyed: false,
       }),
@@ -362,7 +362,7 @@ interface SheetView {
   readonly mounts: readonly {
     readonly weapon: string;
     readonly location: Location;
-    readonly ammoLeft: number | null;
+    readonly shotsLeft: number | null;
     readonly jammed: boolean;
     readonly destroyed: boolean;
   }[];
@@ -397,7 +397,7 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
     mounts: Object.entries(def.weapons).map(([key, mount]) => ({
       weapon: mount.weapon,
       location: mount.location,
-      ammoLeft: mount.ammoShots !== undefined ? (unit.ammoLeft[Number(key)] ?? 0) : null,
+      shotsLeft: mount.shots !== undefined ? (unit.shotsLeft[Number(key)] ?? 0) : null,
       jammed: unit.jammedWeapons.includes(Number(key)),
       destroyed:
         unit.destroyedWeapons.includes(Number(key)) ||
@@ -407,7 +407,7 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
       critSlotsDestroyed: unit.critSlotsDestroyed,
       destroyedWeapons: unit.destroyedWeapons,
       jammedWeapons: unit.jammedWeapons,
-      ammoLeft: unit.ammoLeft,
+      shotsLeft: unit.shotsLeft,
     },
   };
 }
@@ -446,7 +446,7 @@ function setupSheet(unit: SetupUnit, id: string, locale: LocaleId): SheetView {
     mounts: Object.values(def.weapons).map((mount) => ({
       weapon: mount.weapon,
       location: mount.location,
-      ammoLeft: mount.ammoShots ?? null,
+      shotsLeft: mount.shots ?? null,
       jammed: false,
       destroyed: false,
     })),
@@ -560,7 +560,7 @@ interface CritChartLive {
   readonly critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>;
   readonly destroyedWeapons: readonly number[];
   readonly jammedWeapons: readonly number[];
-  readonly ammoLeft: Readonly<Record<number, number>>;
+  readonly shotsLeft: Readonly<Record<number, number>>;
 }
 
 /** Human-friendly i18n key for a structure component name. */
@@ -618,10 +618,10 @@ function critSlotText(
   if (slot.kind === "ammo") {
     const shots =
       live !== null
-        ? (live.ammoLeft[slot.weaponIndex] ?? 0)
-        : def.weapons[slot.weaponIndex]?.ammoShots;
+        ? (live.shotsLeft[slot.weaponIndex] ?? 0)
+        : def.weapons[slot.weaponIndex]?.shots;
     if (shots !== undefined) {
-      markers.push(t(locale, "critChart.ammoSuffix", { n: shots }));
+      markers.push(t(locale, "critChart.shotsSuffix", { n: shots }));
     }
   }
   if (live !== null && live.critSlotsDestroyed[loc] !== undefined) {
@@ -818,13 +818,25 @@ export function sheetLinesShort(view: SheetView, locale: LocaleId, showMode = tr
   return lines;
 }
 
-/** Compact armor summary: `HD 9/9 | CT 26/26 | ...` with `!` marking breached. */
+/** Compact armor summary per location: front + rear + internal-structure summed
+ * as `cur/max`, with `*` when the front pool is depleted (structure still
+ * intact) and `!` when internal structure is depleted. */
 function armorLineShort(view: SheetView, locale: LocaleId): string[] {
+  const isTorso = (loc: Location) =>
+    loc === "centerTorso" || loc === "rightTorso" || loc === "leftTorso";
   return [
     t(locale, "sheet.armorLine", {
       list: LOCATIONS.map((loc) => {
-        const v = view.armor[loc];
-        return `${SHORT_LOC[loc]} ${v}/${view.originalArmor[loc]}${v <= 0 ? "!" : ""}`;
+        const frontCur = view.armor[loc];
+        const frontMax = view.originalArmor[loc];
+        const structCur = view.damage.internalStructure[loc];
+        const structMax = view.originalArmorStructure[loc];
+        const rearCur = isTorso(loc) ? (view.damage.armorRear[loc] ?? 0) : 0;
+        const rearMax = isTorso(loc) ? (view.originalArmorRear[loc] ?? 0) : 0;
+        const cur = frontCur + rearCur + structCur;
+        const max = frontMax + rearMax + structMax;
+        const marker = structCur <= 0 ? "!" : frontCur <= 0 ? "*" : "";
+        return `${SHORT_LOC[loc]} ${cur}/${max}${marker}`;
       }).join(" | "),
     }),
   ];
@@ -1021,7 +1033,7 @@ function fireWeaponTable(locale: LocaleId, weapons: readonly FireWeapon[]): stri
         : String(w.expectedDamage),
   }));
   const ammoCell = (w: FireWeapon): string =>
-    w.ammoShots !== null ? `${t(locale, "fireSuggestion.ammo")} ${w.ammoShots}` : "";
+    w.shots !== null ? `${t(locale, "fireSuggestion.shots")} ${w.shots}` : "";
 
   const indexW = Math.max(
     t(locale, "fireSuggestion.colIndex").length,
@@ -1055,7 +1067,7 @@ function fireWeaponTable(locale: LocaleId, weapons: readonly FireWeapon[]): stri
     `${t(locale, "fireSuggestion.colBracket").padEnd(bracketW)}  ` +
     `${t(locale, "fireSuggestion.colTn").padEnd(tnW)}  ` +
     `${t(locale, "fireSuggestion.colDmg").padEnd(dmgW)}  ` +
-    t(locale, "fireSuggestion.colAmmo");
+    t(locale, "fireSuggestion.colShots");
 
   const body = rows.map(
     (r, i) =>
@@ -1119,8 +1131,8 @@ export function weaponsLines(s: Session, unitId?: string): string[] {
       mount.weapon,
       mount.location,
       `S${w.short}/M${w.medium}/L${w.long}`,
-      mount.ammoShots !== undefined
-        ? t(s.locale, "sheet.ammoFlag", { n: unit.ammoLeft[index] ?? 0 })
+      mount.shots !== undefined
+        ? t(s.locale, "sheet.shotsFlag", { n: unit.shotsLeft[index] ?? 0 })
         : null,
       unit.jammedWeapons.includes(index) ? t(s.locale, "sheet.jammed") : null,
       unit.destroyedWeapons.includes(index) ? t(s.locale, "sheet.destroyed") : null,
@@ -1444,14 +1456,14 @@ function weaponMountLine(
   mount: {
     readonly weapon: string;
     readonly location: Location;
-    readonly ammoLeft: number | null;
+    readonly shotsLeft: number | null;
     readonly jammed: boolean;
     readonly destroyed: boolean;
   },
 ): string {
   const w = getWeapon(mount.weapon);
   const flags = [
-    mount.ammoLeft !== null ? t(locale, "sheet.ammoFlag", { n: mount.ammoLeft }) : null,
+    mount.shotsLeft !== null ? t(locale, "sheet.shotsFlag", { n: mount.shotsLeft }) : null,
     mount.jammed ? t(locale, "sheet.jammed") : null,
     mount.destroyed ? t(locale, "sheet.destroyed") : null,
   ].filter((x) => x !== null);

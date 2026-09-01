@@ -47,8 +47,8 @@ export interface WeaponAttackInput {
   readonly targetCritSlotsDestroyed?: Record<Location, boolean[]>;
   /** Pre-attack destroyed weapon indices. */
   readonly targetDestroyedWeapons?: readonly number[];
-  /** Pre-attack ammo remaining per weapon index. */
-  readonly targetAmmoLeft?: Readonly<Record<number, number>>;
+  /** Pre-attack shots remaining per weapon index. */
+  readonly targetShotsLeft?: Readonly<Record<number, number>>;
 }
 
 export interface AttackResolution {
@@ -154,7 +154,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     input.targetDef !== undefined &&
     input.targetCritSlotsDestroyed !== undefined &&
     input.targetDestroyedWeapons !== undefined &&
-    input.targetAmmoLeft !== undefined;
+    input.targetShotsLeft !== undefined;
   // Mutable crit tracking; each group that strips IS in the SAME location
   // reuses the snapshot from the previous group's crit, mirroring the rules
   // ("before resolving any further weapons fire" the determining roll is
@@ -165,7 +165,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
   let destroyedWeapons: number[] = input.targetDestroyedWeapons
     ? [...input.targetDestroyedWeapons]
     : [];
-  let ammoLeft: Record<number, number> = input.targetAmmoLeft ? { ...input.targetAmmoLeft } : {};
+  let shotsLeft: Record<number, number> = input.targetShotsLeft ? { ...input.targetShotsLeft } : {};
 
   for (const group of base.groups) {
     const app = applyDamage(damage, group.location, group.damage, arc);
@@ -196,11 +196,11 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
       critSlotsDestroyed: critSlotsDestroyed!,
       destroyedWeapons,
       damage,
-      ammoLeft,
+      shotsLeft,
     });
     critSlotsDestroyed = res.critSlotsDestroyed;
     destroyedWeapons = res.destroyedWeapons;
-    ammoLeft = res.ammoLeft;
+    shotsLeft = res.shotsLeft;
     damage = res.damage;
     // The crit may have blown off the arm or killed the unit; reflect that
     // on the merged damage application.

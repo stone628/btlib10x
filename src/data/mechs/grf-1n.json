@@ -24,7 +24,7 @@
     {
       "weapon": "LRM 10",
       "location": "rightTorso",
-      "ammoShots": 12
+      "shots": 12
     },
     {
       "weapon": "PPC",

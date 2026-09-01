@@ -24,7 +24,7 @@
     {
       "weapon": "Autocannon/20",
       "location": "rightTorso",
-      "ammoShots": 10
+      "shots": 10
     },
     {
       "weapon": "Medium Laser",

@@ -17,7 +17,7 @@ import { AMMO_TOKEN, CODE, LOCATION, MODEL_CODE, SHOTS_PER_TON } from "./mtf-tab
  *   - Clan weapons use the catalog's "CL " prefix (e.g. CL Gauss Rifle).
  *   - Ammo is per-mount in the schema: a shared bin of N shots is written onto
  *     the single mount that carries an explicit `, Ammo:N`, else the first
- *     mount of that weapon; sibling launchers omit `ammoShots`.
+ *     mount of that weapon; sibling launchers omit `shots`.
  *   - running = ceil(walking * 1.5) (quick-start convention).
  *   - Critical slot table per location is included (head/legs = 6 slots,
  *     torso/arms = 12; see scripts/mtf-crit.mjs).
@@ -203,7 +203,7 @@ function parseMtf(text, file) {
     })
     .filter((m) => m !== null);
 
-  // Shared bins: keep one `ammoShots` per weapon (the explicit mount, else the
+  // Shared bins: keep one `shots` per weapon (the explicit mount, else the
   // first), null the rest. Omit ammo entirely when a weapon has no ammo data.
   const perWeapon = new Map();
   for (const m of parsed) {
@@ -218,7 +218,7 @@ function parseMtf(text, file) {
   }
 
   const weapons = parsed.map(({ weapon, location, ammo }) =>
-    ammo !== null ? { weapon, location, ammoShots: ammo } : { weapon, location },
+    ammo !== null ? { weapon, location, shots: ammo } : { weapon, location },
   );
 
   const critSlots = parseCritSlots(lines, errors, file);

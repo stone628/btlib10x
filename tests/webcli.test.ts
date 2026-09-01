@@ -29,7 +29,7 @@ function fireEverything(s: S.Session, enemy: string): void {
     const weaponIndex = Number(key);
     if (unit.jammedWeapons.includes(weaponIndex)) return;
     if (!canFireFromLocation(unit.phaseStartDamage, mount.location)) return;
-    if (unit.ammoLeft[weaponIndex] !== undefined && (unit.ammoLeft[weaponIndex] ?? 0) < 1) return;
+    if (unit.shotsLeft[weaponIndex] !== undefined && (unit.shotsLeft[weaponIndex] ?? 0) < 1) return;
     S.queueFire(s, { weaponIndex, targetId: enemy });
   });
 }
@@ -292,7 +292,25 @@ describe("sheet", () => {
     expect(out).toContain("hunchy  HBK-4G  9,9 facing n");
     expect(out).toContain("team 1:");
     expect(out).toContain("cicada  CDA-3MA  9,8 facing s");
-    expect(out).toMatch(/armor: HD 9\/9 \| CT 26\/26 \| RT 20\/20/);
+    // Hunchback (50t): HD=9+3=12, CT=26+5+16=47, RT=20+4+12=36, LT=20+4+12=36,
+    // RA=16+8=24, LA=16+8=24, RL=20+12=32, LL=20+12=32.
+    expect(out).toMatch(/armor: HD 12\/12 \| CT 47\/47 \| RT 36\/36 \| LT 36\/36/);
+    expect(out).toMatch(/\| RA 24\/24 \| LA 24\/24 \| RL 32\/32 \| LL 32\/32/);
+  });
+
+  it("marks front-armor depletion with * and IS destruction with !", () => {
+    const s = freshSetup();
+    run(s, "start");
+    const hunchy = s.battle!.units.hunchy!;
+    // Drain RT front to 0 (rear 4 + IS 12 = 16 still up).
+    hunchy.damage.armor.rightTorso = 0;
+    // Destroy CT internal structure → killed.
+    hunchy.damage.internalStructure.centerTorso = 0;
+    const out = run(s, "sheet").join("\n");
+    // RT: 0+4+12 = 16/36, front pool gone, IS intact → "*".
+    expect(out).toMatch(/RT 16\/36\*/);
+    // CT: 26+5+0 = 31/47, IS gone → "!".
+    expect(out).toMatch(/CT 31\/47!/);
   });
 
   it("tracks armor damage during battle", () => {
@@ -500,7 +518,7 @@ describe("attack", () => {
     const enemy = actor === "hunchy" ? "cicada" : "hunchy";
     expect(run(s, "weapons").join("\n")).toMatch(/#1 .+S\d+\/M\d+\/L\d+/);
 
-    const ammoBefore = actor === "hunchy" ? (s.battle!.units.hunchy!.ammoLeft[1] ?? 0) : null;
+    const shotsBefore = actor === "hunchy" ? (s.battle!.units.hunchy!.shotsLeft[1] ?? 0) : null;
     expect(run(s, `fire ${enemy} 1`).join("\n")).toContain("queued");
     expect(run(s, `fire ${enemy} 1`)[0]).toMatch(
       /error: Weapon #1 may only be declared once per turn/,
@@ -518,8 +536,8 @@ describe("attack", () => {
     expect(out).toMatch(/-> (HIT|MISS|auto-hit)/);
     expect(out).toMatch(/=== resolving declared attacks ===/);
     expect(out).toMatch(/=== attack damage resolved ===/);
-    if (ammoBefore !== null) {
-      expect(s.battle!.units.hunchy!.ammoLeft[1]).toBe(ammoBefore - 1);
+    if (shotsBefore !== null) {
+      expect(s.battle!.units.hunchy!.shotsLeft[1]).toBe(shotsBefore - 1);
     }
   });
 });
@@ -547,7 +565,7 @@ describe("full game", () => {
           const weaponIndex = Number(key);
           if (unit.jammedWeapons.includes(weaponIndex)) return;
           if (!canFireFromLocation(unit.phaseStartDamage, mount.location)) return;
-          if (unit.ammoLeft[weaponIndex] !== undefined && (unit.ammoLeft[weaponIndex] ?? 0) < 1)
+          if (unit.shotsLeft[weaponIndex] !== undefined && (unit.shotsLeft[weaponIndex] ?? 0) < 1)
             return;
           run(s, `fire ${enemy} ${weaponIndex}`);
         });

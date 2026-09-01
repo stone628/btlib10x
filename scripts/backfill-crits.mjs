@@ -70,7 +70,7 @@ function linkageCheck(critSlots, weapons) {
     const set = localNames.get(w.location) ?? new Set();
     set.add(w.weapon);
     localNames.set(w.location, set);
-    if (typeof w.ammoShots === "number") ammoBearing.add(w.weapon);
+    if (typeof w.shots === "number") ammoBearing.add(w.weapon);
   }
   for (const loc of LOCATIONS) {
     const slots = critSlots[loc];
