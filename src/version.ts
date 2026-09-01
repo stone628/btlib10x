@@ -1,7 +1,7 @@
 declare const __BTLIB_VERSION__: string;
 
 /**
- * Build stamp `YYMMDDhhmmss-<git hash>` identifying the bundled commit.
+ * Build stamp `YYMMDD-<git hash>` identifying the bundled commit.
  *
  * `scripts/build-web.mjs` and `scripts/standalone-web.mjs` replace the
  * `__BTLIB_VERSION__` placeholder with the literal stamp of HEAD via esbuild

@@ -53,7 +53,7 @@
 - Damage: flat armor HP/location, transfer-inward-on-depletion, hits on dead locations transfer, side-torso loss blows off arm, leg loss immobilizes, head/CT loss kills
 - Single-weapon attack orchestrator: to-hit roll, jam on natural 2 for multi-shot rapid fire, variable damage per bracket
 - Battle state machine (`src/rules/game.ts`): phases, alternating activation via `nextActor`, move execution, attack declaration/resolution, end-phase kill commitment, victory check, serializable event log
-- Public entrypoint `src/index.ts` exports `VERSION` (build stamp `YYMMDDhhmmss-<git hash>`,
+- Public entrypoint `src/index.ts` exports `VERSION` (build stamp `YYMMDD-<git hash>`,
   injected into the web bundles via esbuild `define`; npm/tsc build falls back to `"dev"`);
   CLI gains a `ver` command
 - Single-file HTML deploy (`npm run dist:standalone` → self-contained `dist/standalone/bt10x.html`)

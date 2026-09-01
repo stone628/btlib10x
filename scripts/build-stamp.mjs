@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 
 /**
- * Build stamp `YYMMDDhhmmss-<short-git-hash>` identifying the bundled commit.
+ * Build stamp `YYMMDD-<short-git-hash>` identifying the bundled commit.
  *
  * Derived from the HEAD commit itself: committer timestamp (rendered in UTC so
  * the same commit stamps identically on any machine) plus the abbreviated hash
@@ -33,8 +33,5 @@ export function buildStamp() {
   const yy = pad(d.getUTCFullYear() % 100);
   const mm = pad(d.getUTCMonth() + 1);
   const dd = pad(d.getUTCDate());
-  const hh = pad(d.getUTCHours());
-  const mi = pad(d.getUTCMinutes());
-  const ss = pad(d.getUTCSeconds());
-  return `${yy}${mm}${dd}${hh}${mi}${ss}-${hash}`;
+  return `${yy}${mm}${dd}-${hash}`;
 }
