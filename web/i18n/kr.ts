@@ -235,7 +235,7 @@ export const kr: Catalog = {
   "sheet.modeSuffix": ", {mode} [MP {mp}]",
   "sheet.removedId": " - 게임 제외됨",
   "sheet.idLine": "식별자: {id}",
-  "sheet.armorLine": "장갑: {list}",
+  "sheet.durabilityLine": "내구도: {list}",
   "sheet.weaponsHeader": "무기 ({n}):",
   "sheet.shotsFlag": "잔여 발사 {n}",
   "sheet.jammed": "[고장]",

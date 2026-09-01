@@ -294,7 +294,7 @@ describe("sheet", () => {
     expect(out).toContain("cicada  CDA-3MA  9,8 facing s");
     // Hunchback (50t): HD=9+3=12, CT=26+5+16=47, RT=20+4+12=36, LT=20+4+12=36,
     // RA=16+8=24, LA=16+8=24, RL=20+12=32, LL=20+12=32.
-    expect(out).toMatch(/armor: HD 12\/12 \| CT 47\/47 \| RT 36\/36 \| LT 36\/36/);
+    expect(out).toMatch(/durability: HD 12\/12 \| CT 47\/47 \| RT 36\/36 \| LT 36\/36/);
     expect(out).toMatch(/\| RA 24\/24 \| LA 24\/24 \| RL 32\/32 \| LL 32\/32/);
   });
 

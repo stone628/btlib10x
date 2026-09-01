@@ -767,7 +767,7 @@ export function unitBriefList(s: Session): string[] {
       const def = getMechDef(unit.model)!;
       lines.push(`  ${uid}  ${def.model}  ${disp(unit.position)} facing ${unit.facing}`);
       const view = battleSheet(unit, uid, s.locale);
-      for (const line of armorLineShort(view, s.locale)) lines.push(`    ${line}`);
+      lines.push(`    ${durabilityLine(view, s.locale)}`);
     }
   }
   return lines;
@@ -810,36 +810,36 @@ export function sheetLinesShort(view: SheetView, locale: LocaleId, showMode = tr
   });
   const lines = [head];
   if (view.gunnery !== null) {
-    lines.push(t(locale, "sheet.gunneryLine", { gunnery: gunneryLabel(locale, view.gunnery) }));
+    lines.push(
+      `  ${t(locale, "sheet.gunneryLine", { gunnery: gunneryLabel(locale, view.gunnery) })}`,
+    );
   }
   lines.push(view.positionLine);
   if (showMode && view.modeLine) lines.push(view.modeLine);
-  lines.push(...armorLineShort(view, locale));
+  lines.push(`  ${durabilityLine(view, locale)}`);
   return lines;
 }
 
 /** Compact armor summary per location: front + rear + internal-structure summed
  * as `cur/max`, with `*` when the front pool is depleted (structure still
  * intact) and `!` when internal structure is depleted. */
-function armorLineShort(view: SheetView, locale: LocaleId): string[] {
+function durabilityLine(view: SheetView, locale: LocaleId): string {
   const isTorso = (loc: Location) =>
     loc === "centerTorso" || loc === "rightTorso" || loc === "leftTorso";
-  return [
-    t(locale, "sheet.armorLine", {
-      list: LOCATIONS.map((loc) => {
-        const frontCur = view.armor[loc];
-        const frontMax = view.originalArmor[loc];
-        const structCur = view.damage.internalStructure[loc];
-        const structMax = view.originalArmorStructure[loc];
-        const rearCur = isTorso(loc) ? (view.damage.armorRear[loc] ?? 0) : 0;
-        const rearMax = isTorso(loc) ? (view.originalArmorRear[loc] ?? 0) : 0;
-        const cur = frontCur + rearCur + structCur;
-        const max = frontMax + rearMax + structMax;
-        const marker = structCur <= 0 ? "!" : frontCur <= 0 ? "*" : "";
-        return `${SHORT_LOC[loc]} ${cur}/${max}${marker}`;
-      }).join(" | "),
-    }),
-  ];
+  return t(locale, "sheet.durabilityLine", {
+    list: LOCATIONS.map((loc) => {
+      const frontCur = view.armor[loc];
+      const frontMax = view.originalArmor[loc];
+      const structCur = view.damage.internalStructure[loc];
+      const structMax = view.originalArmorStructure[loc];
+      const rearCur = isTorso(loc) ? (view.damage.armorRear[loc] ?? 0) : 0;
+      const rearMax = isTorso(loc) ? (view.originalArmorRear[loc] ?? 0) : 0;
+      const cur = frontCur + rearCur + structCur;
+      const max = frontMax + rearMax + structMax;
+      const marker = structCur <= 0 ? "!" : frontCur <= 0 ? "*" : "";
+      return `${SHORT_LOC[loc]} ${cur}/${max}${marker}`;
+    }).join(" | "),
+  });
 }
 
 export function overStatusLines(s: Session): string[] {

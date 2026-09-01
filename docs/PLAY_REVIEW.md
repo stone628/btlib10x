@@ -105,7 +105,7 @@ team 0:
   HBK  HBK-4G  4,12 facing n
 ```
 
-There is no at-a-glance health. You must run `sheet <id>` per unit to see whether anything is hurt. The end-of-battle `status` proves the compact form exists — it prints `armor: HD 9/9 | CT 26/26 | RT 20/20 | ...` with `!` marking breached locations. That line belongs in the in-battle list.
+There is no at-a-glance health. You must run `sheet <id>` per unit to see whether anything is hurt. The end-of-battle `status` proves the compact form exists — it prints `durability: HD 9/9 | CT 26/26 | RT 20/20 | ...` with `*`/`!` markers. That line belongs in the in-battle list.
 
 ### 6. Ammo display is inconsistent across shared bins
 
