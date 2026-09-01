@@ -173,3 +173,32 @@ describe("weapon catalog", () => {
     expect(getWeaponOrThrow("CL Streak SRM 4").missileDamage).toBe(2);
   });
 });
+
+describe("ammo validation in MechDef", () => {
+  it("rejects a mount.shots that is not a multiple of shotsPerBin", () => {
+    const base = getMechDef("HBK-4G")!;
+    expect(() =>
+      validateMechDef({
+        ...base,
+        weapons: Object.values(base.weapons).map((w) =>
+          w.weapon === "Autocannon/20" ? { ...w, shots: 7 } : w,
+        ),
+      }),
+    ).toThrow(/must be a multiple/);
+  });
+
+  it("rejects an ammo crit slot whose weapon has no ammo definition", () => {
+    const base = getMechDef("HBK-4G")!;
+    expect(() =>
+      validateMechDef({
+        ...base,
+        critSlots: {
+          ...base.critSlots,
+          head: base.critSlots.head.map((s, i) =>
+            i === 0 ? { kind: "ammo" as const, weapon: "Medium Laser" } : s,
+          ),
+        },
+      }),
+    ).toThrow(/has no ammo definition/);
+  });
+});

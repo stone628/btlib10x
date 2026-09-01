@@ -20,6 +20,13 @@ export {
   woodsPoints,
 } from "./core/terrain.js";
 export * from "./core/types.js";
+export type { AmmoDef } from "./data/ammo.schema.js";
+export {
+  getAllAmmo,
+  getAmmoOrThrow as getAmmo,
+  getShotsPerBin,
+  listAmmoWeapons,
+} from "./data/ammo.schema.js";
 export type {
   CritSlot,
   CritSlots,
@@ -47,7 +54,11 @@ export {
   validateMechDef,
 } from "./data/index.js";
 export type { WeaponDef } from "./data/weapon.schema.js";
-export { getAllWeapons, getWeaponOrThrow as getWeapon, listWeaponNames } from "./data/weapon.schema.js";
+export {
+  getAllWeapons,
+  getWeaponOrThrow as getWeapon,
+  listWeaponNames,
+} from "./data/weapon.schema.js";
 export * from "./rules/arcs.js";
 export type { AttackResolution, HitGroup, WeaponAttackInput } from "./rules/attack.js";
 export { resolveWeaponAttack } from "./rules/attack.js";

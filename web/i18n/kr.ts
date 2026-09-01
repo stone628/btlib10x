@@ -246,6 +246,7 @@ export const kr: Catalog = {
   "critChart.destroyedSuffix": " [DST]",
   "critChart.jammedSuffix": " [JAM]",
   "critChart.shotsSuffix": " 발사 {n}",
+  "critChart.ammoPoolSuffix": " (잔여 {n})",
   "critChart.component.cockpit": "Cockpit",
   "critChart.component.sensors": "Sensors",
   "critChart.component.lifeSupport": "Life Support",

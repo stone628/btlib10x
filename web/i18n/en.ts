@@ -252,6 +252,7 @@ export const en = {
   "critChart.destroyedSuffix": " [DST]",
   "critChart.jammedSuffix": " [JAM]",
   "critChart.shotsSuffix": " shots {n}",
+  "critChart.ammoPoolSuffix": " ({n} left)",
   "critChart.component.cockpit": "Cockpit",
   "critChart.component.sensors": "Sensors",
   "critChart.component.lifeSupport": "Life Support",

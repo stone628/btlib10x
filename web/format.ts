@@ -23,6 +23,7 @@ import {
   getAllWeapons,
   getMapDef,
   getMechDef,
+  getShotsPerBin,
   getWeapon,
   internalStructureForTonnage,
   isImmobile,
@@ -616,12 +617,15 @@ function critSlotText(
   const line = ` ${dice} ${body}`;
   const markers: string[] = [];
   if (slot.kind === "ammo") {
-    const shots =
-      live !== null
-        ? (live.shotsLeft[slot.weaponIndex] ?? 0)
-        : def.weapons[slot.weaponIndex]?.shots;
-    if (shots !== undefined) {
-      markers.push(t(locale, "critChart.shotsSuffix", { n: shots }));
+    const perBin = getShotsPerBin(slot.weapon);
+    if (perBin !== undefined) {
+      markers.push(t(locale, "critChart.shotsSuffix", { n: perBin }));
+      if (live !== null) {
+        const livePool = live.shotsLeft[slot.weaponIndex] ?? def.weapons[slot.weaponIndex]?.shots;
+        if (livePool !== undefined) {
+          markers.push(t(locale, "critChart.ammoPoolSuffix", { n: livePool }));
+        }
+      }
     }
   }
   if (live !== null && live.critSlotsDestroyed[loc] !== undefined) {
