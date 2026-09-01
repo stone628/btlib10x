@@ -856,7 +856,7 @@ export function overStatusLines(s: Session): string[] {
         ? `${t(s.locale, "over.idLine", { id: view.id })}${t(s.locale, "sheet.removedId")}`
         : t(s.locale, "over.idLine", { id: view.id });
       lines.push(`  ${idLine}`);
-      for (const line of sheetLinesShort(view, s.locale, false)) lines.push(`  ${line}`);
+      for (const line of sheetLinesShort(view, s.locale, false)) lines.push(`    ${line}`);
     }
   }
   return lines;
