@@ -50,4 +50,4 @@ Run lint + typecheck + tests together before considering work done: `npm run lin
 
 ## Roadmap
 
-See `TODO.md`. Later: sarna.net scraping (dev-only), full-intro rules expansion.
+See `docs/TODO.md`. Later: sarna.net scraping (dev-only), full-intro rules expansion.
