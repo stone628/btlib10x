@@ -49,16 +49,16 @@ Examples:
 | `info mech` | list available 'Mechs |
 | `info mech <model>` | sheet summary: walk/run/jump ratings, weapons, and the 3-row critical slot chart (right arm / head / left arm, right / center / left torso, right / left leg); web CLI renders the chart as a mouse-click-collapsible block |
 | `info map` | list available maps |
-| `info map <name>` | map info: width×height, terrain types and counts, ASCII map with terrain glyphs |
+| `info map <name>` | map info: width×height, terrain types and counts, elevation counts, ASCII map with terrain glyphs |
 | `seed <n>` | set RNG seed |
 | `reset` | wipe everything back to empty setup |
-| `autoplay` | hidden demo driver (not listed by `help`): resets nothing itself but expects a blank slate — run `reset` first. Prints a notice, then every 2s (`AUTOPLAY_INTERVAL_MS` in `web/autoplay.ts`) types the next command a demonstrator would: loads `quickstart`, places HBK-4G vs CDA-3MA adjacent, starts, then walks in place and fires every working weapon each turn until victory. Any manually typed command cancels it; it prints `autoplay finished.` when the battle ends |
+| `autoplay` | hidden demo driver (not listed by `help`): resets nothing itself but expects a blank slate — run `reset` first. Prints a notice, then on a short timer (`AUTOPLAY_INTERVAL_MS` in `web/autoplay.ts`) types the next command a demonstrator would: loads `quickstart`, places HBK-4G vs CDA-3MA adjacent, starts, then walks in place and fires every working weapon each turn until victory. Any manually typed command cancels it; it prints `autoplay finished.` when the battle ends |
 
 ### setup
 
 | command | effect |
 |---|---|
-| `map <name>` | load rulebook map (`beginner`, `quickstart`) as terrain |
+| `map <name>` | load a bundled map as terrain (`beginner`, `quickstart`, `test`) |
 | `add <id> <model> <team> <gunnery> <col> <row> [facing]` | place unit (facing default `n`) |
 | `rm <id>` | remove placed unit |
 | `status` | setup summary: 'Mechs grouped by team, selected map name |
@@ -101,11 +101,13 @@ The prompt names the acting unit; commands act on that 'Mech.
 
 The engine implements a **subset of classic BattleTech game rules** for
 **bipedal 'Mechs only**. The terminal app exposes everything the engine can
-simulate. See `TODO.md` for the roadmap toward a fuller ruleset.
+simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
 
 ### Implemented
 
-- **Units** — bipedal 'Mechs only (six record-sheet 'Mechs in `data/mechs/`).
+- **Units** — bipedal 'Mechs only (ten record-sheet 'Mechs in `data/mechs/`:
+  AS7-D, CDA-3MA, ENF-4R, GRF-1N, HBK-4G, HER-5SA, MC-MKII-2, TW-Prime,
+  WHK-Prime, WVR-6R; see `docs/MTF.md` to add more).
   Front and rear armor are separate pools; internal structure is derived from
   tonnage on the standard TW table.
 - **Movement** — walk, run, jump, standstill. MP costs include the base 1 MP
@@ -125,7 +127,7 @@ simulate. See `TODO.md` for the roadmap toward a fuller ruleset.
   2, auto-miss > 12. Height difference: `−(attackerLevel − targetLevel)`
   (attacker higher = easier, lower = harder).
 - **Hit location** — bipedal front / left side / right side / rear tables.
-- **Cluster hits** — missile 2/5/6/10/15 + shot columns 2/3/4.
+- **Cluster hits** — missile 2/4/5/6/10/15/20 + shot columns 2/3/4.
 - **Damage** — front/rear armor transfer inward on depletion; side-torso
   internal-structure loss blows off the arm; head/CT IS death kills; leg IS
   death immobilizes. Hits on already-destroyed locations transfer.
@@ -181,31 +183,22 @@ simulate. See `TODO.md` for the roadmap toward a fuller ruleset.
                         auto advancePhase / initiative roll / victory check
     web/rng.ts          mulberry32-seeded Rng
     web/format.ts       board, event-log, info/status, record-sheet/resolution formatters, crit slot chart
-    scripts/build-web.mjs  esbuild bundle: web/main.ts → web/app.js (inlines mech/map JSON)
+    web/render.ts       structured BoardModel / Span model + boardToText / boardToSpans
+    scripts/build-web.mjs  esbuild bundles: src/index.ts → web/btlib10x.js (core),
+                        web/main.ts → web/app.js (app; btlib10x.js kept external)
 
 Import wrinkle: tsc-emitted `.json` imports are not loadable by browsers, so the
 app ships as an esbuild single-file bundle instead of consuming `dist/` directly.
 Library sources stay untouched.
 
-## Build & run
+## Build, run, and ship
 
     npm install            # picks up esbuild devDependency
-    npm run build:web      # single-shot: node scripts/build-web.mjs → web/app.js
-    npm run dev:web        # watch + serve: rebuilds on change, serves at http://127.0.0.1:8000/web/index.html
+    npm run build:web      # one-shot esbuild bundle → web/btlib10x.js + web/app.js
+    npm run dev:web        # watch + serve: rebuilds on change, serves at http://127.0.0.1:8012/index.html
     # custom port:  node scripts/build-web.mjs --watch --serve --port=3000
-    # open http://localhost:8000
+    # open http://localhost:8012
 
-## Todo
+To publish the app's static output (not the npm package), run:
 
-1. [x] Write CLI.md (this doc)
-2. [x] Add esbuild devDep, `build:web` script, AGENTS.md dev-deps note
-3. [x] `web/index.html` terminal shell (inline CSS)
-4. [x] `web/rng.ts` seeded PRNG
-5. [x] `web/session.ts` session state machine
-6. [x] `web/format.ts` board/log/info/status/sheet/resolution formatters
-7. [x] `web/cli.ts` parser + per-state registries + help
-8. [x] Setup commands (`map/add/rm/status/start`) + `info`/`sheet` commands
-9. [x] Movement commands (`mode/move/face/sheet/status/cancel/done`)
-10. [x] Attack commands (`weapons/fire/sheet/status/cancel/done` + resolution printing)
-11. [x] Turn auto-advance, victory → `over`, `rematch`
-12. [x] Verify typecheck + tests green; smoke test via static server
+    npm run dist:web       # copies web/{index.html,btlib10x.js,app.js,favicon.ico} → dist/web/

@@ -7,11 +7,14 @@ the package root:
 ```ts
 import {
   createBattle, rollInitiativePhase, declareMove, executeMove,
-  declareAttacks, resolveDeclaredAttacks, advancePhase,
-  nextActor, checkVictory, getUnit,
+  advancePhase, declareAttacks, resolveDeclaredAttacks,
+  resolveAllAttacks, nextActor, checkVictory, getUnit,
   type BattleState, type Rng,
 } from "btlib10x";
 ```
+
+All coordinates are **1-based** — hex columns, rows, and positions match the
+printed mapsheet labels (`cols 1..`, `rows 1..`); there is no 0-based offset.
 
 ## 1. Provide an RNG
 
@@ -36,33 +39,36 @@ const rng = mulberry32(42);
 
 For tests you can also script exact die results (see `tests/helpers.ts`).
 
-## 2. Load the map and create the 'Mechs
+## 2. Load terrain and create the 'Mechs
 
-Terrain is plain data: a list of hex definitions `{ col, row, type }` whose
-missing hexes are clear ground. 'Mech models reference the bundled record
-sheets (`MECH_DEFS`:
-ENF-4R, HBK-4G, CDA-3MA, HER-5SA, GRF-1N, WVR-6R).
+Terrain is plain data: a list of hex definitions `{ col, row, type, level? }`
+whose missing hexes are clear ground at level 0. 'Mech models reference the
+bundled record sheets (`MECH_DEFS`: AS7-D, CDA-3MA, ENF-4R, GRF-1N, HBK-4G,
+HER-5SA, MC-MKII-2, TW-Prime, WHK-Prime, WVR-6R).
 
 ```ts
-const terrain = [{ col: 2, row: 3, type: "lightWoods" }] as const;
-
 const state: BattleState = createBattle(
   [
     { id: "wvr", model: "WVR-6R", team: 0, gunnery: 4,
-      position: { col: 0, row: 2 }, facing: "se" },       // facing southeast
+      position: { col: 3, row: 4 }, facing: "se" },       // facing southeast
     { id: "grf", model: "GRF-1N", team: 1, gunnery: 3,
-      position: { col: 8, row: 6 }, facing: "nw" },       // facing northwest
+      position: { col: 11, row: 8 }, facing: "nw" },      // facing northwest
   ],
-  { terrain },
+  {
+    terrain: [{ col: 7, row: 7, type: "lightWoods" }],
+  },
 );
 ```
 
-`createBattle` initializes armor and ammo from the `MechDef`, validates ids,
-models, and gunnery (0–7), and starts the battle in the initiative phase of
-turn 1.
+`createBattle` initializes layered armor (front + rear), internal structure,
+ammo, and crit-slot state from each `ResolvedMechDef`, validates ids, models,
+and gunnery (0–7), and starts the battle in the initiative phase of turn 1.
+Pass `critsDisabled: true` to suppress critical-hit resolution (useful when
+scripting dice for a narrow damage scenario).
 
 To load custom 'Mechs, hand `validateMechDef(JSON.parse(...))` your own
-record-sheet JSON — anything invalid throws with every problem listed.
+record-sheet JSON — anything invalid throws with every problem listed. New
+record sheets are usually authored from a `.mtf` file (see `docs/MTF.md`).
 
 ## 3. Initiative phase
 
@@ -77,23 +83,25 @@ The loser's team acts first each phase (classic BattleTech convention);
 ## 4. Movement phase
 
 Declare a movement mode, then execute steps. Each step either enters a hex or
-turns 1–5 hexsides. Costs: 1 MP per hex entered (+1 light / +2 heavy woods),
-1 MP per hexside turned.
+turns 1–5 hexsides. Costs: 1 MP per hex entered (+1 light / +2 heavy woods, +1
+per level climbed, descent free), 1 MP per hexside turned.
 
 ```ts
 declareMove(state, "wvr", "run");                  // running budget: 8 MP
 executeMove(state, "wvr", [
-  { kind: "enter", to: { col: 1, row: 2 } },
-  { kind: "enter", to: { col: 2, row: 2 } },
-  { kind: "enter", to: { col: 3, row: 2 } },
-  { kind: "enter", to: { col: 4, row: 2 } },         // light woods: 2 MP
-]);                                                  // 5 MP spent
+  { kind: "enter", to: { col: 4, row: 5 } },       // forward (se)
+  { kind: "turn", facings: 1 },                    // se -> s (1 MP)
+  { kind: "enter", to: { col: 4, row: 6 } },       // forward (s)
+  { kind: "turn", facings: -1 },                   // s -> se (1 MP)
+]);                                                // 4 MP spent
 ```
 
-The engine enforces budgets, backward-step rules (no running backward),
-stacking (never end on another 'Mech; pass through friends only), and jump
-rules (`GRF-1N` may hop over anyone but land only on empty hexes). Invalid
-plans throw with a reason instead of corrupting state.
+The engine enforces budgets, backward-step rules (no running backward), a 1-
+level-per-step ground climb cap, stacking (never end on another 'Mech; pass
+through friends only), and jump rules (`GRF-1N` may hop over anyone but land
+only on empty hexes; jump steps enter any adjacent hex at 1 MP and ignore
+elevation, with the landing facing chosen freely). Invalid plans throw with a
+reason instead of corrupting state.
 
 ```ts
 declareMove(state, "grf", "walk");
@@ -109,40 +117,45 @@ advancePhase(state);                         // movement -> weaponAttack
 ## 5. Weapon attack phase
 
 Declare attacks per unit (one target per turn; ammo is spent at declaration).
-Weapon indexes match the model's mount order, e.g. WVR-6R:
-`[0] Medium Laser (head), [1] SRM 6 (LT), [2] AC/5 (RA)`.
+Weapon indexes are **1-based** and match the model's mount order, e.g. WVR-6R:
+`[1] Medium Laser (head), [2] SRM 6 (LT), [3] AC/5 (RA)`.
 
 ```ts
 declareAttacks(state, "wvr", [
-  { weaponIndex: 0, targetId: "grf" },
+  { weaponIndex: 1, targetId: "grf" },
 ]);
-// Wolverine ML: gunnery 4 + ran +2 + target moved 4 hexes +1
-//              + medium range +2                              => TN 9
+// Wolverine ML: gunnery 4 + ran +2 + target moved ~ + light woods +1
+//              + long range +4                              => TN 11
 
 declareAttacks(state, "grf", [
-  { weaponIndex: 0, targetId: "wvr" },
+  { weaponIndex: 1, targetId: "wvr" },
 ]);
-// Griffin PPC:  gunnery 3 + walked +1 + wvr moved +1
-//              + short range 0 + wvr in light woods +1        => TN 6
+// Griffin PPC:  gunnery 3 + walked +1 + target moved ~
+//              + long range +4 + light woods +1             => TN 9
 ```
 
-Declaration validates arc, line of sight (≥3 woods points blocks), range,
-ammo, jams, and aborts declarations that would auto-miss (TN > 12).
+To fire a rapid-fire (R) weapon for its double tap, add `rapidFire: true` to
+the declaration. Declaration validates arc (front only), line of sight (woods
+points ≥3 or an intervening elevation ridge blocks), range, ammo, jams,
+destroyed weapons, and aborts declarations that would auto-miss (TN > 12).
 
-Resolve in activation order — damage lands immediately on the target's armor,
-but destroyed 'Mechs keep firing until the phase ends:
+Resolve in activation order — damage lands immediately on the target's layered
+damage state, but destroyed 'Mechs keep firing until the phase ends:
 
 ```ts
-resolveDeclaredAttacks(state, "wvr", rng);   // rolls to-hit + location(s)
+resolveDeclaredAttacks(state, "wvr", rng);   // rolls to-hit + location(s) + crits
 resolveDeclaredAttacks(state, "grf", rng);
 
 const grf = getUnit(state, "grf");
-grf.armor.leftTorso;   // e.g. 18 - 5 = 13 after a medium laser hit there
+grf.damage.armor.leftTorso;   // front armor, e.g. 18 - 5 = 13 after an ML hit
+grf.damage.internalStructure; // derived from tonnage
 ```
 
 Each resolution is appended to `state.events` as an `attackResolved` event
 carrying the full breakdown (to-hit roll, cluster roll, hit groups, damage
-application) — enough to replay the entire battle.
+application, critical hits) — enough to replay the entire battle. As an
+alternative to driving each unit yourself, `resolveAllAttacks(state, rng)`
+resolves every unit's declared attacks in one call.
 
 Commit deaths and close the turn:
 
@@ -160,25 +173,27 @@ const result = checkVictory(state);   // { winnerTeam: 0 | 1 | null, draw }
 if (result.winnerTeam !== null) console.log(`Team ${result.winnerTeam} wins`);
 ```
 
-A 'Mech dies when its head or center torso loses all armor; side-torso loss
-blows off its arm, leg loss immobilizes it. All of this is handled inside
-damage transfer — you never apply those effects manually.
+A 'Mech dies when its center torso (or head) internal structure is destroyed;
+side-torso internal-structure loss blows off its arm, leg IS loss immobilizes
+it. All of this is handled inside damage transfer — you never apply those
+effects manually. Landing damage on internal structure also triggers critical
+hit rolls (weapon/ammo destruction, limb blow-off, cockpit kill, movement
+penalties) unless `critsDisabled` was set.
 
 ## Worked example
 
 `tests/exampleGame.test.ts` plays exactly this scenario with fully scripted
-dice and asserts every rulebook number along the way (Wolverine TN 9 /
-Griffin TN 6 on turn 1, then five center-torso hits at TN 6 destroy the
-Griffin on turn 6). Use it as the canonical end-to-end reference.
+dice and asserts every rulebook number along the way (Wolverine TN 11 /
+Griffin TN 9 on turn 1). Use it as the canonical end-to-end reference.
 
 ## API cheat sheet
 
 | Step | Call |
 | --- | --- |
-| Build battle | `createBattle(units, { terrain })` |
+| Build battle | `createBattle(units, { terrain, width?, height?, critsDisabled? })` |
 | Roll initiative | `rollInitiativePhase(state, rng)` |
 | Move | `declareMove` → `executeMove` |
-| Shoot | `declareAttacks` → `resolveDeclaredAttacks` |
+| Shoot | `declareAttacks` → `resolveDeclaredAttacks` (or `resolveAllAttacks`) |
 | Advance | `advancePhase` |
 | Who acts? | `nextActor(state)` |
 | Done? | `checkVictory(state)` |
