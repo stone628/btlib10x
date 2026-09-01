@@ -59,7 +59,7 @@ export interface UnitState {
   facing: Facing;
   damage: UnitDamageState;
   phaseStartDamage: UnitDamageState;
-  ammoLeft: Record<number, number>;
+  shotsLeft: Record<number, number>;
   jammedWeapons: number[];
   /** Per-slot destroyed flag for each location's crit slot table. */
   critSlotsDestroyed: Record<Location, boolean[]>;
@@ -203,10 +203,10 @@ export function createBattle(
   const unitStates: Record<string, UnitState> = {};
   for (const init of units) {
     const def: ResolvedMechDef = getMechDef(init.model)!;
-    const ammoLeft: Record<number, number> = {};
+    const shotsLeft: Record<number, number> = {};
     Object.entries(def.weapons).forEach(([key, mount]) => {
       const weaponIndex = Number(key);
-      if (mount.ammoShots !== undefined) ammoLeft[weaponIndex] = mount.ammoShots;
+      if (mount.shots !== undefined) shotsLeft[weaponIndex] = mount.shots;
     });
     const damage: UnitDamageState = {
       armor: { ...def.armor },
@@ -226,7 +226,7 @@ export function createBattle(
         armorRear: { ...damage.armorRear },
         internalStructure: { ...damage.internalStructure },
       },
-      ammoLeft,
+      shotsLeft,
       jammedWeapons: [],
       critSlotsDestroyed: initCritDestroyed(def),
       destroyedWeapons: [],
@@ -507,12 +507,12 @@ export function declareAttacks(
     }
 
     const needed = weapon.missiles !== undefined ? 1 : shots;
-    if (mount.ammoShots !== undefined) {
-      const left = unit.ammoLeft[decl.weaponIndex] ?? 0;
+    if (mount.shots !== undefined) {
+      const left = unit.shotsLeft[decl.weaponIndex] ?? 0;
       if (left < needed) {
         throw new Error(`${mount.weapon}: needs ${needed} shot(s) but only ${left} remain`);
       }
-      unit.ammoLeft[decl.weaponIndex] = left - needed;
+      unit.shotsLeft[decl.weaponIndex] = left - needed;
     }
   });
 
@@ -562,7 +562,7 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
             targetDef: getMechDef(target.model)!,
             targetCritSlotsDestroyed: target.critSlotsDestroyed,
             targetDestroyedWeapons: target.destroyedWeapons,
-            targetAmmoLeft: target.ammoLeft,
+            targetShotsLeft: target.shotsLeft,
           }),
     });
 
@@ -581,7 +581,7 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
       const last = resolution.crits[resolution.crits.length - 1]!;
       target.critSlotsDestroyed = last.critSlotsDestroyed;
       target.destroyedWeapons = last.destroyedWeapons;
-      target.ammoLeft = last.ammoLeft;
+      target.shotsLeft = last.shotsLeft;
       // Damage was already committed above (it includes the explosion
       // cascades); the crit rows also include newlyDestroyed /
       // blownOffArms contributions that the per-group application didn't

@@ -37,12 +37,12 @@ describe("'Mech definitions", () => {
     expect(getMechDef("CDA-3MA")!.walking).toBe(8);
     expect(getMechDef("HER-5SA")!.running).toBe(9);
     const wvr = getMechDef("WVR-6R")!;
-    expect(Object.values(wvr.weapons).find((w) => w.weapon === "SRM 6")?.ammoShots).toBe(15);
+    expect(Object.values(wvr.weapons).find((w) => w.weapon === "SRM 6")?.shots).toBe(15);
     const atlas = getMechDef("AS7-D")!;
     expect(atlas.tonnage).toBe(100);
     expect(atlas.weightClass).toBe("Assault");
     expect(atlas.running).toBe(5);
-    expect(Object.values(atlas.weapons).find((w) => w.weapon === "LRM 20")?.ammoShots).toBe(12);
+    expect(Object.values(atlas.weapons).find((w) => w.weapon === "LRM 20")?.shots).toBe(12);
   });
 
   it("keeps MTF armor fidelity (front + rear) in JSON and splits it on resolve", () => {

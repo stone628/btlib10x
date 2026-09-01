@@ -52,7 +52,7 @@ Mad Cat Prime, Masakari Prime, Wolverine WVR-6R).
 - **Clan weapons** use the catalog's `CL ` prefix, e.g. `CL Gauss Rifle`.
 - **Ammo is per-mount in the schema.** A shared bin of N shots is written onto
   the single mount that carries an explicit `, Ammo:N`; sibling launchers omit
-  `ammoShots`.
+  `shots`.
 - **`running = ceil(walking * 1.5)`** (quick-start convention).
 - **Critical slot table per location** (head/legs = 6 slots, torso/arms = 12)
   is parsed and validated by `scripts/mtf-crit.mjs`.

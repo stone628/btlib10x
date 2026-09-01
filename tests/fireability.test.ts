@@ -54,10 +54,10 @@ describe("suggestFireTargets", () => {
     expect(ac20.rangeBracket).toBe("short");
     expect(ac20.tn).toBe(4); // gunnery 4 + short 0
     expect(ac20.expectedDamage).toBe(20);
-    expect(ac20.ammoShots).toBe(10);
+    expect(ac20.shots).toBe(10);
     const ml = enf!.weapons.find((w) => w.weaponIndex === 2)!;
     expect(ml.expectedDamage).toBe(5);
-    expect(ml.ammoShots).toBeNull();
+    expect(ml.shots).toBeNull();
   });
 
   it("marks a weapon jammed", () => {
@@ -73,7 +73,7 @@ describe("suggestFireTargets", () => {
 
   it("marks an empty ammo bin", () => {
     const state = startAttackTurn(hbkVsEnf());
-    state.units.hbk!.ammoLeft = { ...state.units.hbk!.ammoLeft, 1: 0 };
+    state.units.hbk!.shotsLeft = { ...state.units.hbk!.shotsLeft, 1: 0 };
     const reasons = blockedReasons(state, "hbk", "enf");
     expect(reasons.filter((r) => r === "outOfAmmo")).toHaveLength(1);
   });

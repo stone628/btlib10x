@@ -32,17 +32,17 @@
     {
       "weapon": "Autocannon/20",
       "location": "rightTorso",
-      "ammoShots": 10
+      "shots": 10
     },
     {
       "weapon": "LRM 20",
       "location": "leftTorso",
-      "ammoShots": 12
+      "shots": 12
     },
     {
       "weapon": "SRM 6",
       "location": "leftTorso",
-      "ammoShots": 15
+      "shots": 15
     },
     {
       "weapon": "Medium Laser",

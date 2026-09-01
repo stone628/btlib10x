@@ -28,12 +28,12 @@
     {
       "weapon": "SRM 6",
       "location": "leftTorso",
-      "ammoShots": 15
+      "shots": 15
     },
     {
       "weapon": "Autocannon/5",
       "location": "rightArm",
-      "ammoShots": 20
+      "shots": 20
     }
   ],
   "source": "Beginner Box Quick-Start Rules record sheet (armor circles transcribed from TRO 3025 allocation; see TODO.md)",

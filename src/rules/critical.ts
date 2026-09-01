@@ -145,10 +145,10 @@ export interface CriticalResolution {
   /** True if the unit is killed by these crits (head or CT IS to 0, or
    *  cockpit destroyed, or 12 on a head location). */
   readonly killed: boolean;
-  /** Per-weapon remaining ammo after this resolution. We index by the
+  /** Per-weapon remaining shots after this resolution. We index by the
    *  1-based weapon index from `def.weapons`; absent keys mean "unchanged
    *  from the input". */
-  readonly ammoLeft: Record<number, number>;
+  readonly shotsLeft: Record<number, number>;
 }
 
 const TRANSFER_INWARD: Readonly<Record<Location, Location | null>> = {
@@ -308,15 +308,15 @@ export interface ResolveCriticalsInput {
   readonly destroyedWeapons: readonly number[];
   /** Pre-damage damage state. */
   readonly damage: UnitDamageState;
-  /** Current per-weapon ammo remaining. */
-  readonly ammoLeft: Readonly<Record<number, number>>;
+  /** Current per-weapon shots remaining. */
+  readonly shotsLeft: Readonly<Record<number, number>>;
 }
 
 interface MutableCritState {
   destroyed: Record<Location, boolean[]>;
   destroyedWeapons: number[];
   damage: UnitDamageState;
-  ammoLeft: Record<number, number>;
+  shotsLeft: Record<number, number>;
   rows: CriticalEffect[];
   blownOffArms: Location[];
   killed: boolean;
@@ -335,7 +335,7 @@ export function resolveCriticalHits(input: ResolveCriticalsInput): CriticalResol
       armorRear: { ...input.damage.armorRear },
       internalStructure: { ...input.damage.internalStructure },
     },
-    ammoLeft: { ...input.ammoLeft },
+    shotsLeft: { ...input.shotsLeft },
     rows: [],
     blownOffArms: [],
     killed: false,
@@ -351,7 +351,7 @@ export function resolveCriticalHits(input: ResolveCriticalsInput): CriticalResol
     damage: state.damage,
     blownOffArms: state.blownOffArms,
     killed: state.killed,
-    ammoLeft: state.ammoLeft,
+    shotsLeft: state.shotsLeft,
   };
 }
 
@@ -479,7 +479,7 @@ function applySlotHit(
   if (slot.kind === "ammo") {
     const weaponName = slot.weapon;
     const weaponIndex = slot.weaponIndex;
-    const shotsRemaining = state.ammoLeft[weaponIndex] ?? 0;
+    const shotsRemaining = state.shotsLeft[weaponIndex] ?? 0;
     const damagePerShot = ammoDamagePerShot(weaponName);
     const amount = shotsRemaining * damagePerShot;
     if (amount > 0) {
@@ -515,7 +515,7 @@ function applySlotHit(
       state.rows.push({ kind: "noEffect", rolls: rolls.slice() });
     }
     // Zero the pool; the bin's contents exploded or the bin is empty.
-    state.ammoLeft[weaponIndex] = 0;
+    state.shotsLeft[weaponIndex] = 0;
     return;
   }
   // structure component

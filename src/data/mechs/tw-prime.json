@@ -24,7 +24,7 @@
     {
       "weapon": "CL Machine Gun",
       "location": "centerTorso",
-      "ammoShots": 200
+      "shots": 200
     },
     {
       "weapon": "CL ER Large Laser",
@@ -41,7 +41,7 @@
     {
       "weapon": "CL LRM 20",
       "location": "leftTorso",
-      "ammoShots": 12
+      "shots": 12
     },
     {
       "weapon": "CL ER Large Laser",

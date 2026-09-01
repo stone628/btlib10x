@@ -91,7 +91,7 @@ interface MechDef {
 ```
 
 ```ts
-interface WeaponMount { weapon: string; location: Location; ammoShots?: number }
+interface WeaponMount { weapon: string; location: Location; shots?: number }
 ```
 
 Critical slots are a per-location table faithful to the record sheet:
@@ -280,7 +280,7 @@ Side-torso IS death blows off the arm; `TRANSFER_INWARD` is exported.
 
 `resolveCriticalHits({
   rng; def; source: { location; damage };
-  critSlotsDestroyed; destroyedWeapons; damage; ammoLeft;
+  critSlotsDestroyed; destroyedWeapons; damage; shotsLeft;
 }): CriticalResolution`
 
 Runs the TW Determining Critical Hits table (2D6: 2-7 none, 8-9 one, 10-11 two,
@@ -293,7 +293,7 @@ leg-actuator/hip/jump-jet destruction tracked for movement.
 
 `CriticalResolution` exposes `rows` (the individual `CriticalEffect`s),
 `determiningRoll`, and the resulting `critSlotsDestroyed` / `destroyedWeapons` /
-`damage` / `blownOffArms` / `killed` / `ammoLeft`.
+`damage` / `blownOffArms` / `killed` / `shotsLeft`.
 
 `effectiveMovement(def, critSlotsDestroyed): EffectiveMovement` — computes
 walking/running/jumping after leg-actuator (−1 walk each), hip (halves walking),
@@ -397,7 +397,7 @@ interface UnitState {
   id; model; team; gunnery; position; facing;
   damage: UnitDamageState;            // updated as soon as damage lands
   phaseStartDamage: UnitDamageState;  // snapshot for weapon usability this phase
-  ammoLeft: Record<number, number>;   // per 1-based weapon index
+  shotsLeft: Record<number, number>;  // per 1-based weapon index
   jammedWeapons: number[];
   critSlotsDestroyed: Record<Location, boolean[]>;
   destroyedWeapons: number[];

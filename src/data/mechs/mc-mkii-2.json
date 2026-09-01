@@ -32,7 +32,7 @@
     {
       "weapon": "CL Streak SRM 4",
       "location": "leftTorso",
-      "ammoShots": 50
+      "shots": 50
     },
     {
       "weapon": "CL Streak SRM 4",
@@ -49,12 +49,12 @@
     {
       "weapon": "CL Gauss Rifle",
       "location": "rightArm",
-      "ammoShots": 16
+      "shots": 16
     },
     {
       "weapon": "CL LB 20-X AC",
       "location": "leftArm",
-      "ammoShots": 10
+      "shots": 10
     }
   ],
   "source": "docs/mtf/Mad Cat Mk II 2.mtf (TRO 3067 Unabridged). Torso armor sums MTF front+rear into the flat per-location model; the four Streak SRM 4 launchers share one 50-round bin, modelled on a single mount because the per-mount ammo schema has no shared-pool concept.",

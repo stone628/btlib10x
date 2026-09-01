@@ -32,7 +32,7 @@
     {
       "weapon": "Ultra AC/5",
       "location": "rightTorso",
-      "ammoShots": 20
+      "shots": 20
     }
   ],
   "source": "CBT Quick-Start Rules record sheet",

@@ -39,7 +39,7 @@ describe("nextAutoPlayCommand (autoplay demo driver)", () => {
     const def = getMechDef(actor.model)!;
     // Find a plain (non-ammo) weapon mount on the acting unit and mark it
     // destroyed, simulating a prior-turn critical-slot hit.
-    const target = Object.entries(def.weapons).find(([, m]) => m.ammoShots === undefined);
+    const target = Object.entries(def.weapons).find(([, m]) => m.shots === undefined);
     expect(target, "acting unit should have a non-ammo weapon").toBeDefined();
     const destroyedIndex = Number(target![0]);
     actor.destroyedWeapons.push(destroyedIndex);

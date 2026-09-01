@@ -29,7 +29,7 @@ function freshFlags(def = getMechDef("HBK-4G")!) {
 function freshAmmo(def = getMechDef("HBK-4G")!) {
   const out: Record<number, number> = {};
   for (const [k, mount] of Object.entries(def.weapons)) {
-    if (mount.ammoShots !== undefined) out[Number(k)] = mount.ammoShots;
+    if (mount.shots !== undefined) out[Number(k)] = mount.shots;
   }
   return out;
 }
@@ -52,7 +52,7 @@ describe("critical hit log formatting", () => {
       critSlotsDestroyed: freshFlags(def),
       destroyedWeapons: [],
       damage: freshDamage(def),
-      ammoLeft: freshAmmo(def),
+      shotsLeft: freshAmmo(def),
     });
     return {
       weapon: "Autocannon/20",

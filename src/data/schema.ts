@@ -140,7 +140,7 @@ export interface WeaponMount {
   readonly weapon: string;
   readonly location: Location;
   /** Shots available; omit for weapons without ammunition. */
-  readonly ammoShots?: number;
+  readonly shots?: number;
 }
 
 export type ResolvedArmor = Readonly<Record<Location, number>>;
@@ -268,7 +268,7 @@ function resolveLocationCrits(
   // Ammo-bearing mounts, by weapon name, in ascending index order.
   const ammoBearingByName: Map<string, number[]> = new Map();
   for (const [k, mount] of Object.entries(weapons)) {
-    if (mount.ammoShots === undefined) continue;
+    if (mount.shots === undefined) continue;
     const idx = Number(k);
     const arr = ammoBearingByName.get(mount.weapon) ?? [];
     arr.push(idx);
@@ -468,10 +468,10 @@ export function validateMechDef(data: unknown): MechDef {
       if (typeof w.location !== "string" || !isLocation(w.location)) {
         errors.push(`weapon.location ${JSON.stringify(w.location)} is not a valid location`);
       }
-      const shots = w.ammoShots;
+      const shots = w.shots;
       if (shots !== undefined && shots !== null) {
         if (typeof shots !== "number" || !Number.isInteger(shots) || shots <= 0) {
-          errors.push("weapon.ammoShots must be a positive integer");
+          errors.push("weapon.shots must be a positive integer");
         }
       }
     }
@@ -566,7 +566,7 @@ export function validateMechDef(data: unknown): MechDef {
         for (const w of weapons) {
           if (isRecord(w) && typeof w.weapon === "string") {
             mountNames.add(w.weapon);
-            if (typeof w.ammoShots === "number") ammoBearingNames.add(w.weapon);
+            if (typeof w.shots === "number") ammoBearingNames.add(w.weapon);
           }
         }
         for (let i = 0; i < arr.length; i++) {

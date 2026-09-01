@@ -28,7 +28,7 @@
     {
       "weapon": "CL LRM 10",
       "location": "leftArm",
-      "ammoShots": 12
+      "shots": 12
     },
     {
       "weapon": "CL ER PPC",
