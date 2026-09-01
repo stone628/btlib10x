@@ -22,6 +22,7 @@
     "build": "npm run gen:mechs && tsc -p tsconfig.build.json",
     "build:web": "node scripts/build-web.mjs",
     "dist:web": "node scripts/build-web.mjs && node scripts/dist-web.mjs",
+    "dist:standalone": "node scripts/standalone-web.mjs",
     "typecheck": "npm run gen:mechs && tsc --noEmit",
     "test": "npm run gen:mechs && vitest run",
     "test:watch": "npm run gen:mechs && vitest",
