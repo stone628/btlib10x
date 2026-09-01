@@ -1,9 +1,9 @@
+import { type MapDef, validateMapDef } from "./map.schema.js";
 import beginnerMapJson from "./maps/beginner.json";
 import quickstartMapJson from "./maps/quickstart.json";
 import testMapJson from "./maps/test.json";
-import { type MapDef, validateMapDef } from "./map.schema.js";
-import { MECH_DEFS } from "./mechCatalog.generated.js";
 import type { ResolvedMechDef } from "./mech.schema.js";
+import { MECH_DEFS } from "./mechCatalog.generated.js";
 
 export function getMechDef(model: string): ResolvedMechDef | undefined {
   return MECH_DEFS.get(model.toUpperCase());
@@ -32,6 +32,13 @@ export function listMapNames(): string[] {
   return Array.from(MAP_DEFS.keys());
 }
 
+export type { AmmoDef } from "./ammo.schema.js";
+export {
+  getAllAmmo,
+  getAmmoOrThrow as getAmmo,
+  getShotsPerBin,
+  listAmmoWeapons,
+} from "./ammo.schema.js";
 export type { MapDef } from "./map.schema.js";
 export { validateMapDef } from "./map.schema.js";
 export type {

@@ -1,0 +1,85 @@
+import ammoJson from "./ammo.json";
+
+export interface AmmoDef {
+  readonly weapon: string;
+  readonly shotsPerBin: number;
+}
+
+export interface AmmosFile {
+  readonly ammos: readonly AmmoDef[];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isBoundedInt(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value > 0;
+}
+
+function parseAmmo(raw: unknown, label: string, errors: string[]): AmmoDef | null {
+  if (!isRecord(raw)) {
+    errors.push(`${label} must be an object`);
+    return null;
+  }
+  const weapon = raw.weapon;
+  if (typeof weapon !== "string" || weapon.length === 0) {
+    errors.push(`${label}.weapon must be a non-empty string`);
+  }
+  if (!isBoundedInt(raw.shotsPerBin)) {
+    errors.push(`${label}.shotsPerBin must be a positive integer`);
+  }
+  if (typeof weapon !== "string" || weapon.length === 0) return null;
+  return { weapon, shotsPerBin: raw.shotsPerBin as number } as AmmoDef;
+}
+
+export function parseAmmoData(data: unknown): readonly AmmoDef[] {
+  const ammos = Array.isArray(data)
+    ? data
+    : data && typeof data === "object" && "ammos" in data
+      ? (data as { ammos: unknown }).ammos
+      : undefined;
+  if (!Array.isArray(ammos)) {
+    throw new Error("Invalid AmmosFile: expected an array of ammo definitions");
+  }
+  const errors: string[] = [];
+  const seen = new Set<string>();
+  const parsed: AmmoDef[] = [];
+  for (const [i, entry] of ammos.entries()) {
+    const def = parseAmmo(entry, `ammos[${i}]`, errors);
+    if (def === null) continue;
+    if (seen.has(def.weapon)) {
+      errors.push(`ammos[${i}] duplicates weapon ${JSON.stringify(def.weapon)}`);
+    } else {
+      seen.add(def.weapon);
+      parsed.push(def);
+    }
+  }
+  if (errors.length > 0) {
+    throw new Error(`Invalid AmmoDef:\n  - ${errors.join("\n  - ")}`);
+  }
+  return parsed;
+}
+
+const AMMO: ReadonlyMap<string, AmmoDef> = new Map(
+  parseAmmoData(ammoJson).map((def) => [def.weapon.toLowerCase(), def]),
+);
+
+export function getAmmoOrThrow(name: string): AmmoDef {
+  const def = AMMO.get(name.toLowerCase());
+  if (!def) throw new Error(`Unknown ammo weapon: ${name}`);
+  return def;
+}
+
+export function getShotsPerBin(name: string): number | undefined {
+  const def = AMMO.get(name.toLowerCase());
+  return def?.shotsPerBin;
+}
+
+export function getAllAmmo(): readonly AmmoDef[] {
+  return Array.from(AMMO.values());
+}
+
+export function listAmmoWeapons(): string[] {
+  return Array.from(AMMO.keys());
+}

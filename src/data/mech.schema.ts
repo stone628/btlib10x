@@ -1,6 +1,7 @@
 import type { Location } from "../core/types.js";
 import { isLocation, LOCATIONS } from "../core/types.js";
 import { type InternalStructure, internalStructureForTonnage } from "../rules/internalStructure.js";
+import { getAmmoOrThrow } from "./ammo.schema.js";
 import { getWeaponOrThrow } from "./weapon.schema.js";
 
 /** Torso locations that have a separate rear armor pool. */
@@ -472,6 +473,13 @@ export function validateMechDef(data: unknown): MechDef {
       if (shots !== undefined && shots !== null) {
         if (typeof shots !== "number" || !Number.isInteger(shots) || shots <= 0) {
           errors.push("weapon.shots must be a positive integer");
+        } else if (typeof w.weapon === "string") {
+          const ammo = getAmmoOrThrow(w.weapon);
+          if (shots % ammo.shotsPerBin !== 0) {
+            errors.push(
+              `weapon.shots for ${JSON.stringify(w.weapon)} must be a multiple of its ammo bin capacity (${ammo.shotsPerBin})`,
+            );
+          }
         }
       }
     }
@@ -529,6 +537,13 @@ export function validateMechDef(data: unknown): MechDef {
           } catch {
             errors.push(
               `critSlots.${loc}[${i}].weapon ${JSON.stringify(slot.weapon)} is not a known weapon`,
+            );
+          }
+          try {
+            getAmmoOrThrow(slot.weapon);
+          } catch {
+            errors.push(
+              `critSlots.${loc}[${i}].weapon ${JSON.stringify(slot.weapon)} has no ammo definition`,
             );
           }
         } else if (kind === "structure") {
