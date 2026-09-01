@@ -430,7 +430,7 @@ Rules encoded by the state machine:
 ## Version (`version.ts`)
 
 `VERSION: string` — build stamp of the bundled commit in
-`YYMMDDhhmmss-<short-git-hash>` form (e.g. `260901174405-e52ae41`); the
+`YYMMDD-<short-git-hash>` form (e.g. `260901-e52ae41`); the
 timestamp is the commit's committer time rendered in UTC, so the same commit
 stamps identically on any machine. `scripts/build-web.mjs` and
 `scripts/standalone-web.mjs` inject the literal stamp into the web bundles via

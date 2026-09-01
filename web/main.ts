@@ -1,8 +1,11 @@
+import { VERSION } from "btlib10x";
 import { AUTOPLAY_INTERVAL_MS, nextAutoPlayCommand, resetAutoplayState } from "./autoplay.js";
 import { runChunks } from "./cli.js";
 import { buildLinesChunk, type Chunk } from "./format.js";
 import { t } from "./i18n/index.js";
 import * as S from "./session.js";
+
+document.title = `bt10x terminal v${VERSION}`;
 
 const out = document.getElementById("out") as HTMLDivElement;
 const inrow = document.getElementById("inrow") as HTMLDivElement;
@@ -187,7 +190,7 @@ document.getElementById("term")?.addEventListener("click", (e) => {
 
 appendChunk(
   buildLinesChunk(
-    [t(session.locale, "app.banner.title"), t(session.locale, "app.banner.help")],
+    [t(session.locale, "app.banner.title", { version: VERSION }), t(session.locale, "app.banner.help")],
     "banner",
   ),
 );
