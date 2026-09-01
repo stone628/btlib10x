@@ -46,8 +46,8 @@ export {
   validateMapDef,
   validateMechDef,
 } from "./data/index.js";
-export type { WeaponDef } from "./data/weapons.js";
-export { getAllWeapons, getWeaponOrThrow as getWeapon, listWeaponNames } from "./data/weapons.js";
+export type { WeaponDef } from "./data/weapon.schema.js";
+export { getAllWeapons, getWeaponOrThrow as getWeapon, listWeaponNames } from "./data/weapon.schema.js";
 export * from "./rules/arcs.js";
 export type { AttackResolution, HitGroup, WeaponAttackInput } from "./rules/attack.js";
 export { resolveWeaponAttack } from "./rules/attack.js";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getMechDef } from "../src/data/index.js";
-import { getWeaponOrThrow } from "../src/data/weapons.js";
+import { getWeaponOrThrow } from "../src/data/weapon.schema.js";
 import type { BattleState, TerrainHexDef } from "../src/rules/game.js";
 import {
   advancePhase,

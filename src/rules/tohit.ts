@@ -1,5 +1,5 @@
 import type { MoveMode, TerrainType } from "../core/types.js";
-import type { WeaponDef } from "../data/weapons.js";
+import type { WeaponDef } from "../data/weapon.schema.js";
 import { attackerMovementModifier, targetMovementModifier } from "./movement.js";
 
 export type RangeBracket = "short" | "medium" | "long";

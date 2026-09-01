@@ -2,7 +2,7 @@ import { bearing, hexDistance } from "../core/hex.js";
 import { levelAt } from "../core/terrain.js";
 import type { Location } from "../core/types.js";
 import { getMechDef } from "../data/index.js";
-import { getWeaponOrThrow } from "../data/weapons.js";
+import { getWeaponOrThrow } from "../data/weapon.schema.js";
 import { isInFrontArc } from "./arcs.js";
 import { canFireFromLocation } from "./damage.js";
 import type { BattleState } from "./game.js";

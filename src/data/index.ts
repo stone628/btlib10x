@@ -1,9 +1,9 @@
 import beginnerMapJson from "./maps/beginner.json";
 import quickstartMapJson from "./maps/quickstart.json";
 import testMapJson from "./maps/test.json";
-import { type MapDef, validateMapDef } from "./mapschema.js";
+import { type MapDef, validateMapDef } from "./map.schema.js";
 import { MECH_DEFS } from "./mechCatalog.generated.js";
-import type { ResolvedMechDef } from "./schema.js";
+import type { ResolvedMechDef } from "./mech.schema.js";
 
 export function getMechDef(model: string): ResolvedMechDef | undefined {
   return MECH_DEFS.get(model.toUpperCase());
@@ -32,8 +32,8 @@ export function listMapNames(): string[] {
   return Array.from(MAP_DEFS.keys());
 }
 
-export type { MapDef } from "./mapschema.js";
-export { validateMapDef } from "./mapschema.js";
+export type { MapDef } from "./map.schema.js";
+export { validateMapDef } from "./map.schema.js";
 export type {
   CritSlot,
   CritSlots,
@@ -46,13 +46,13 @@ export type {
   ResolvedCritSlots,
   ResolvedMechDef,
   WeaponMount,
-} from "./schema.js";
+} from "./mech.schema.js";
 export {
   CRIT_SLOT_COUNTS,
   CRIT_SOAK_NAMES,
   CRIT_STRUCTURE_NAMES,
   resolveMechDef,
   validateMechDef,
-} from "./schema.js";
-export type { WeaponDef } from "./weapons.js";
-export { getAllWeapons, getWeaponOrThrow as getWeapon, listWeaponNames } from "./weapons.js";
+} from "./mech.schema.js";
+export type { WeaponDef } from "./weapon.schema.js";
+export { getAllWeapons, getWeaponOrThrow as getWeapon, listWeaponNames } from "./weapon.schema.js";

@@ -12,8 +12,8 @@ import {
   type TerrainType,
 } from "../core/types.js";
 import { getMechDef } from "../data/index.js";
-import type { ResolvedMechDef } from "../data/schema.js";
-import { getWeaponOrThrow } from "../data/weapons.js";
+import type { ResolvedMechDef } from "../data/mech.schema.js";
+import { getWeaponOrThrow } from "../data/weapon.schema.js";
 import { isInFrontArc } from "./arcs.js";
 import { type AttackResolution, resolveWeaponAttack } from "./attack.js";
 import { effectiveMovement } from "./critical.js";
