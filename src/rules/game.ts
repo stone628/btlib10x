@@ -16,7 +16,7 @@ import type { ResolvedMechDef } from "../data/schema.js";
 import { getWeaponOrThrow } from "../data/weapons.js";
 import { isInFrontArc } from "./arcs.js";
 import { type AttackResolution, resolveWeaponAttack } from "./attack.js";
-import { type CriticalResolution, effectiveMovement } from "./critical.js";
+import { effectiveMovement } from "./critical.js";
 import { canFireFromLocation, isImmobile, isKilled, type UnitDamageState } from "./damage.js";
 import { rollInitiative } from "./initiative.js";
 import {
@@ -110,12 +110,6 @@ export type GameEvent =
       readonly unitId: string;
       readonly targetId: string;
       readonly resolution: AttackResolution;
-    }
-  | {
-      readonly kind: "critsResolved";
-      readonly unitId: string;
-      readonly targetId: string;
-      readonly resolutions: readonly CriticalResolution[];
     }
   | { readonly kind: "unitDestroyed"; readonly unitId: string }
   | { readonly kind: "unitRemoved"; readonly unitId: string };
@@ -601,12 +595,6 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
           }
         }
       }
-      state.events.push({
-        kind: "critsResolved",
-        unitId: unit.id,
-        targetId: target.id,
-        resolutions: resolution.crits,
-      });
     }
 
     state.events.push({

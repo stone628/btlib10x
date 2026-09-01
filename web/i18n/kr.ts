@@ -49,7 +49,7 @@ export const kr: Catalog = {
   "cmd.clear.help": "화면 스크롤백 지우기",
   "cmd.log.help": "최근 N개 이벤트 표시 (기본 10)",
   "cmd.log.arg.n": "표시할 최근 이벤트 개수 (기본 10)",
-  "cmd.info.help": "'메크 모델 또는 내장 맵 조회",
+  "cmd.info.help": "'메크 모델 또는 내장 맵, 무기 조회",
   "cmd.info.arg.mech": "HBK-4G 같은 모델 키; 생략하면 전체 목록",
   "cmd.info.arg.map": "내장 맵 이름; 생략하면 전체 목록",
   "cmd.info.arg.weapon": "Medium Laser 같은 무기 이름; 생략하면 전체 목록",
@@ -125,6 +125,7 @@ export const kr: Catalog = {
   "skill.veteran": "베테랑",
   "skill.regular": "정규",
   "skill.green": "신병",
+  "err.outOfBounds": "{label} {value} 은(는) 맵 범위(1..{max})를 벗어났습니다",
   "err.hexOccupied": "육각 {col},{row} 은 이미 점유됨",
   "err.noSuchUnit": "그런 유닛이 없습니다: {id}",
   "err.alreadyStarted": "전투가 이미 시작되었습니다",
@@ -310,4 +311,13 @@ export const kr: Catalog = {
   "res.critNoEffect": "{loc} 재굴림 — 남은 크리티컬 가능 슬롯 없음",
   "res.critTransferred": " ({from}에서 이전)",
   "res.critCluster": "폭발이 {loc}에서 새로운 결정 굴림을 유발",
+
+  // phase prompt
+  "prompt.setup": "설정",
+  "prompt.over": "종료({winner}, 총 턴 {turn})",
+  "prompt.turn": "턴({turn}):{phase}(팀 {team}, 메크 {mech})",
+  "prompt.winnerTeam": "팀 {team} 승리",
+  "prompt.draw": "무승부",
+  "prompt.subMove": "이동",
+  "prompt.subAttack": "공격",
 };

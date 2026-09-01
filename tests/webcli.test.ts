@@ -189,6 +189,15 @@ describe("board", () => {
     run(s, "add hbk HBK-4G 0 4 3 3");
     expect(run(s, "add grf GRF-1N 1 4 3 3")[0]).toBe("error: Hex 3,3 already occupied");
   });
+
+  it("rejects units placed off the map", () => {
+    const s = S.newSession();
+    s.critsDisabled = true;
+    run(s, "map test");
+    expect(run(s, "add a AS7-D 0 4 99 99 n")[0]).toBe("error: col 99 is outside the map (1..7)");
+    expect(run(s, "add a AS7-D 0 4 7 99 n")[0]).toBe("error: row 99 is outside the map (1..7)");
+    expect(run(s, "add a AS7-D 0 4 7 7 n")[0]).toBe("a (AS7-D) placed at (7,7) facing n");
+  });
 });
 
 describe("clear", () => {
@@ -283,6 +292,7 @@ describe("sheet", () => {
     expect(out).toContain("hunchy  HBK-4G  9,9 facing n");
     expect(out).toContain("team 1:");
     expect(out).toContain("cicada  CDA-3MA  9,8 facing s");
+    expect(out).toMatch(/armor: HD 9\/9 \| CT 26\/26 \| RT 20\/20/);
   });
 
   it("tracks armor damage during battle", () => {
@@ -353,7 +363,7 @@ describe("movement", () => {
     const declared = run(s, "mode walk");
     // 'mode walk' acknowledges the declaration and prints a clipped hex map
     // (board legend + grid) instead of a textual reachable list.
-    expect(declared[0]).toMatch(/declares walk, can use 4 movement point\.$/);
+    expect(declared[0]).toMatch(/declares walk, can use 4 movement points\.$/);
     expect(declared.join("\n")).toContain("legend:");
     // Walk straight back relative to facing is illegal; sideways too. Forward
     // depends on facing, so use standstill-safe single forward step toward foe.

@@ -157,16 +157,27 @@ export function currentActor(s: Session): UnitState | null {
 export function promptBody(s: Session): string {
   switch (s.app) {
     case "setup":
-      return "setup";
+      return t(s.locale, "prompt.setup");
     case "over": {
-      const winner = s.victory?.draw ? "draw" : `team ${s.victory?.winnerTeam ?? "?"} won`;
-      return `over(${winner}, total turn ${s.battle?.turn ?? "?"})`;
+      const winner = s.victory?.draw
+        ? t(s.locale, "prompt.draw")
+        : t(s.locale, "prompt.winnerTeam", { team: s.victory?.winnerTeam ?? "?" });
+      return t(s.locale, "prompt.over", {
+        winner,
+        turn: s.battle?.turn ?? "?",
+      });
     }
     case "battle": {
       const st = s.battle!;
-      const sub = st.phase === "movement" ? "move" : "attack";
+      const phase =
+        st.phase === "movement" ? t(s.locale, "prompt.subMove") : t(s.locale, "prompt.subAttack");
       const actor = currentActor(s);
-      return `turn(${st.turn}):${sub}(team ${actor?.team ?? "?"}, mech ${actor?.id ?? "?"})`;
+      return t(s.locale, "prompt.turn", {
+        turn: st.turn,
+        phase,
+        team: actor?.team ?? "?",
+        mech: actor?.id ?? "?",
+      });
     }
   }
 }
@@ -199,6 +210,21 @@ export function addUnit(
   }
   if (s.roster.some((u) => sameHex(u.position, position))) {
     throw new Error(t(s.locale, "err.hexOccupied", { col: position.col, row: position.row }));
+  }
+  if (s.mapName) {
+    const map = getMapDef(s.mapName);
+    if (map) {
+      if (position.col > map.width) {
+        throw new Error(
+          t(s.locale, "err.outOfBounds", { label: "col", value: position.col, max: map.width }),
+        );
+      }
+      if (position.row > map.height) {
+        throw new Error(
+          t(s.locale, "err.outOfBounds", { label: "row", value: position.row, max: map.height }),
+        );
+      }
+    }
   }
   s.roster.push({ id, model: m.model, team, gunnery, position, facing });
 }
