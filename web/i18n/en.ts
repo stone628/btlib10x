@@ -104,7 +104,7 @@ export const en = {
   "ok.added": "{id} ({model}) placed at ({col},{row}) facing {facing}",
   "ok.removed": "removed {id}",
   "ok.started": "battle started",
-  "ok.modeDeclared": "{id} declares {mode}, can use {budget} movement point.",
+  "ok.modeDeclared": "{id} declares {mode}, can use {budget} movement points.",
   "ok.stepResult": "{id} {mode} -> {col},{row} facing {facing} [MP {spent}/{budget}]",
   "ok.cancelled": "cancelled",
   "ok.fireQueuedBatch": "queued {target} <- weapons {weapons}",
@@ -128,6 +128,7 @@ export const en = {
   "skill.regular": "Regular",
   "skill.green": "Green",
 
+  "err.outOfBounds": "{label} {value} is outside the map (1..{max})",
   "err.hexOccupied": "Hex {col},{row} already occupied",
   "err.noSuchUnit": "No such unit: {id}",
   "err.alreadyStarted": "Battle already started",
@@ -317,6 +318,15 @@ export const en = {
   "res.critNoEffect": "{loc} reroll — no crit-hittable slot remaining",
   "res.critTransferred": " (transferred from {from})",
   "res.critCluster": "blast cascades a new determining roll on {loc}",
+
+  // phase prompt
+  "prompt.setup": "setup",
+  "prompt.over": "over({winner}, total turn {turn})",
+  "prompt.turn": "turn({turn}):{phase}(team {team}, mech {mech})",
+  "prompt.winnerTeam": "team {team} won",
+  "prompt.draw": "draw",
+  "prompt.subMove": "move",
+  "prompt.subAttack": "attack",
 } as const;
 
 export type Catalog = Record<keyof typeof en, string>;

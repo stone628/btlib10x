@@ -764,6 +764,8 @@ export function unitBriefList(s: Session): string[] {
     for (const [uid, unit] of Object.entries(battle.units).filter(([, u]) => u.team === team)) {
       const def = getMechDef(unit.model)!;
       lines.push(`  ${uid}  ${def.model}  ${disp(unit.position)} facing ${unit.facing}`);
+      const view = battleSheet(unit, uid, s.locale);
+      for (const line of armorLineShort(view, s.locale)) lines.push(`    ${line}`);
     }
   }
   return lines;
@@ -810,15 +812,20 @@ export function sheetLinesShort(view: SheetView, locale: LocaleId, showMode = tr
   }
   lines.push(view.positionLine);
   if (showMode && view.modeLine) lines.push(view.modeLine);
-  lines.push(
+  lines.push(...armorLineShort(view, locale));
+  return lines;
+}
+
+/** Compact armor summary: `HD 9/9 | CT 26/26 | ...` with `!` marking breached. */
+function armorLineShort(view: SheetView, locale: LocaleId): string[] {
+  return [
     t(locale, "sheet.armorLine", {
       list: LOCATIONS.map((loc) => {
         const v = view.armor[loc];
         return `${SHORT_LOC[loc]} ${v}/${view.originalArmor[loc]}${v <= 0 ? "!" : ""}`;
       }).join(" | "),
     }),
-  );
-  return lines;
+  ];
 }
 
 export function overStatusLines(s: Session): string[] {
@@ -1215,13 +1222,6 @@ function eventLines(locale: LocaleId, e: GameEvent): string[] {
       ];
     case "attackResolved":
       return resolutionLines(locale, e.resolution);
-    case "critsResolved": {
-      const lines: string[] = [];
-      for (const crit of e.resolutions) {
-        lines.push(...critLines(locale, crit));
-      }
-      return lines;
-    }
     case "unitDestroyed":
       return [t(locale, "log.destroyed", { id: e.unitId })];
     case "unitRemoved":
