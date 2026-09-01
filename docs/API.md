@@ -427,6 +427,16 @@ Rules encoded by the state machine:
   `attacksDeclared`, `attackResolved`, `unitDestroyed`, `unitRemoved`) makes
   battles fully replayable from the event log.
 
+## Version (`version.ts`)
+
+`VERSION: string` — build stamp of the bundled commit in
+`YYMMDDhhmmss-<short-git-hash>` form (e.g. `260901174405-e52ae41`); the
+timestamp is the commit's committer time rendered in UTC, so the same commit
+stamps identically on any machine. `scripts/build-web.mjs` and
+`scripts/standalone-web.mjs` inject the literal stamp into the web bundles via
+esbuild `define` (visible with the `ver` command in the CLI). The plain npm/tsc
+build has no injection and resolves to `"dev"`.
+
 ## Console rendering
 
 Board and 'Mech-sheet rendering is **web-layer code, not part of the package

@@ -9,10 +9,10 @@
 
 ## To Do
 
-- Add version information to the library and a `version` command to the CLI
 - Fix the misleading 'ammo' concept
 - Implement ammo depletion order and ammo explosions
 - Add a terrain type table
+- Remove 'quick-start' reference from project. goal is a subset of classic battletech game rule.
 
 ## In progress
 
@@ -53,15 +53,18 @@
 - Damage: flat armor HP/location, transfer-inward-on-depletion, hits on dead locations transfer, side-torso loss blows off arm, leg loss immobilizes, head/CT loss kills
 - Single-weapon attack orchestrator: to-hit roll, jam on natural 2 for multi-shot rapid fire, variable damage per bracket
 - Battle state machine (`src/rules/game.ts`): phases, alternating activation via `nextActor`, move execution, attack declaration/resolution, end-phase kill commitment, victory check, serializable event log
-- Public entrypoint `src/index.ts`
+- Public entrypoint `src/index.ts` exports `VERSION` (build stamp `YYMMDDhhmmss-<git hash>`,
+  injected into the web bundles via esbuild `define`; npm/tsc build falls back to `"dev"`);
+  CLI gains a `ver` command
 - Single-file HTML deploy (`npm run dist:standalone` → self-contained `dist/standalone/bt10x.html`)
 
 ## Verify later
 
-- [ ] LOS edge-graze defender tie-break (v1 uses deterministic cube rounding)
-- [ ] Elevation "thrown from height" / falling damage rules (v1 implements LOS + movement + to-hit only)
+- LOS edge-graze defender tie-break (v1 uses deterministic cube rounding)
+- Elevation "thrown from height" / falling damage rules (v1 implements LOS + movement + to-hit only)
 
 ## Later phases
 
-- [ ] Dev-only sarna.net scraper starting at https://www.sarna.net/wiki/BattleMech normalizing into MechDef JSON (Node OK here; library stays browser-first)
-- [ ] Full intro-rules expansion: heat, physicals, piloting/falling, rear hits, multi-target arcs, vehicles/infantry, buildings, basements, water depth, hull-down
+- separate web cli framework to be used at another project
+- Dev-only sarna.net scraper starting at https://www.sarna.net/wiki/BattleMech normalizing into MechDef JSON (Node OK here; library stays browser-first)
+- Full intro-rules expansion: heat, physicals, piloting/falling, rear hits, multi-target arcs, vehicles/infantry, buildings, basements, water depth, hull-down

@@ -80,10 +80,9 @@ describe("critical hit log formatting", () => {
   it("renders each critical hit exactly once, nested under its attack", () => {
     // The engine emits one attackResolved event whose resolution.crits carry
     // the crit; no separate critsResolved event exists.
-    const lines = fmtLog(
-      "en",
-      [{ kind: "attackResolved", unitId: "hbk", targetId: "enf", resolution: critResolution() }],
-    );
+    const lines = fmtLog("en", [
+      { kind: "attackResolved", unitId: "hbk", targetId: "enf", resolution: critResolution() },
+    ]);
     const critHeaders = lines.filter((l) => l.includes("crit roll"));
     expect(critHeaders).toHaveLength(1);
     expect(critHeaders[0]).toMatch(/\S/);

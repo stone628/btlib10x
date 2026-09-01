@@ -5,7 +5,7 @@
  */
 export const en = {
   // app chrome
-  "app.banner.title": "btlib10x terminal - Classic BattleTech quick-start rules",
+  "app.banner.title": "bt10x terminal - Classic BattleTech quick-start rules",
   "app.banner.help": "type 'help' for commands.",
   "err.prefix": "error:",
 
@@ -59,6 +59,8 @@ export const en = {
   "cmd.seed.help": "set the dice seed",
   "cmd.seed.arg.n": "integer seed; the same seed reproduces the same rolls",
   "cmd.reset.help": "wipe everything back to empty setup",
+  "cmd.ver.help": "show the built library version",
+  "version.line": "bt10x {version}",
   "cmd.map.help": "load a bundled rulebook map ({names})",
   "cmd.map.arg.name": "bundled map name: {names}",
   "cmd.add.help": "place a 'Mech on the map",
