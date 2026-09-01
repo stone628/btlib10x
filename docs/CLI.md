@@ -202,3 +202,5 @@ Library sources stay untouched.
 To publish the app's static output (not the npm package), run:
 
     npm run dist:web       # copies web/{index.html,btlib10x.js,app.js,favicon.ico} → dist/web/
+    npm run dist:standalone  # one fully self-contained dist/standalone/bt10x.html
+    # (bundles core + app into the HTML; copy that single file anywhere and open it in a browser)
