@@ -1,6 +1,7 @@
 import { FACINGS, getMapDef, listMapNames, VERSION } from "btlib10x";
 import type { Chunk } from "./format.js";
 import {
+  ammoPolicyLabel,
   attackStatusLines,
   boardChunk,
   buildLinesChunk,
@@ -325,6 +326,20 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
     usage: "weapons [id]",
     argsDoc: [["id", "cmd.weapons.arg.id"]],
     run: (s, a) => weaponsLines(s, a[0]),
+  },
+  ammo: {
+    helpKey: "cmd.ammo.help",
+    usage: "ammo [policy]",
+    argsDoc: [["policy", "cmd.ammo.arg.policy"]],
+    run: (s, a) => {
+      const unit = S.currentActor(s);
+      if (!unit) throw new Error(t(L(s), "err.needsActor"));
+      if (a[0] === undefined) {
+        return [t(L(s), "ammo.current", { policy: ammoPolicyLabel(L(s), unit.ammoPolicy) })];
+      }
+      S.setAmmoPolicy(s, a[0]);
+      return [t(L(s), "ammo.set", { id: unit.id, policy: ammoPolicyLabel(L(s), unit.ammoPolicy) })];
+    },
   },
   fire: {
     helpKey: "cmd.fire.help",

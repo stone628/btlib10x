@@ -86,6 +86,8 @@ export const en = {
   "cmd.doneMove.help": "commit the declared move",
   "cmd.weapons.help": "list a unit's weapons (default: acting unit)",
   "cmd.weapons.arg.id": "unit to inspect; defaults to the acting unit",
+  "cmd.ammo.help": "show or set the acting unit's ammo depletion policy",
+  "cmd.ammo.arg.policy": "exposed | core | spread | least-first; omit to show the current policy",
   "cmd.fire.help": "queue one or more weapon attacks",
   "cmd.fire.arg.weaponIndex":
     "1-based weapon number from the 'weapons' listing; repeat to declare several weapons at once",
@@ -110,6 +112,12 @@ export const en = {
   "ok.stepResult": "{id} {mode} -> {col},{row} facing {facing} [MP {spent}/{budget}]",
   "ok.cancelled": "cancelled",
   "ok.fireQueuedBatch": "queued {target} <- weapons {weapons}",
+  "ammo.current": "ammo policy: {policy}",
+  "ammo.set": "{id}: ammo policy set to {policy}",
+  "ammo.policy.exposed": "exposed",
+  "ammo.policy.core": "core",
+  "ammo.policy.spread": "spread",
+  "ammo.policy.leastFirst": "least-first",
   "ok.seedSet": "seed set to {seed}",
   "ok.resetDone": "reset.",
   "ok.rematchDone": "rematch!",
@@ -163,6 +171,7 @@ export const en = {
     "Weapon #{weapon} may only be declared once per turn (use 'shots' for rapid-fire)",
   "err.rematchOnlyOver": "Only available when the battle is over",
   "err.seedInteger": "seed must be an integer",
+  "err.badAmmoPolicy": "ammo policy must be one of exposed|core|spread|least-first",
   "err.phaseDriver": "phase driver failed to settle",
 
   // setup status
@@ -242,6 +251,7 @@ export const en = {
   "sheet.idLine": "id: {id}, team {team}",
   "sheet.durabilityLine": "durability: {list}",
   "sheet.weaponsHeader": "weapons ({n}):",
+  "sheet.ammoPolicy": "ammo policy: {policy}",
   "sheet.shotsFlag": "shots {n}",
   "sheet.jammed": "[JAM]",
   "sheet.destroyed": "[DST]",

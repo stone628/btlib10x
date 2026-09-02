@@ -84,6 +84,8 @@ export const kr: Catalog = {
   "cmd.doneMove.help": "선언된 이동 확정",
   "cmd.weapons.help": "유닛 무기 목록 (기본: 행동 유닛)",
   "cmd.weapons.arg.id": "조회할 유닛; 생략하면 행동 유닛",
+  "cmd.ammo.help": "행동 유닛의 탄약 소진 정책 표시 또는 설정",
+  "cmd.ammo.arg.policy": "exposed | core | spread | least-first; 생략하면 현재 정책 표시",
   "cmd.fire.help": "하나 이상의 무기 공격 예약",
   "cmd.fire.arg.weaponIndex":
     "'weapons' 목록의 1부터 시작하는 무기 번호; 여러 무기를 한 번에 선언하려면 반복",
@@ -108,6 +110,12 @@ export const kr: Catalog = {
   "ok.stepResult": "{id} {mode} -> {col},{row} 방향 {facing} [MP {spent}/{budget}]",
   "ok.cancelled": "취소되었습니다",
   "ok.fireQueuedBatch": "{target} <- 무기 {weapons} 예약됨",
+  "ammo.current": "탄약 정책: {policy}",
+  "ammo.set": "{id}: 탄약 정책이 {policy}(으)로 설정되었습니다",
+  "ammo.policy.exposed": "노출 우선",
+  "ammo.policy.core": "코어 우선",
+  "ammo.policy.spread": "분산",
+  "ammo.policy.leastFirst": "최소 우선",
   "ok.seedSet": "시드가 {seed}(으)로 설정되었습니다",
   "ok.resetDone": "초기화했습니다.",
   "ok.rematchDone": "재경기!",
@@ -158,6 +166,7 @@ export const kr: Catalog = {
     "Weapon #{weapon} may only be declared once per turn (use 'shots' for rapid-fire)",
   "err.rematchOnlyOver": "전투가 끝난 후에만 사용할 수 있습니다",
   "err.seedInteger": "seed는 정수여야 합니다",
+  "err.badAmmoPolicy": "탄약 정책은 exposed|core|spread|least-first 중 하나여야 합니다",
   "err.phaseDriver": "단계 드라이버가 수렴하지 않았습니다",
 
   // setup status
@@ -238,6 +247,7 @@ export const kr: Catalog = {
   "sheet.durabilityLine": "내구도: {list}",
   "sheet.weaponsHeader": "무기 ({n}):",
   "sheet.shotsFlag": "잔여 발사 {n}",
+  "sheet.ammoPolicy": "탄약 정책: {policy}",
   "sheet.jammed": "[고장]",
   "sheet.destroyed": "[파괴]",
 
