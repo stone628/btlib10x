@@ -166,18 +166,18 @@ function getCompensatedLength(str: string): number {
 // biome-ignore format: just keep it
 const _LIGHT_LINE_THEME = {
   tnw: "┌", tn: "┬", tne: "┐", tnh: "─", tnv: "│",
-  tw: "├", tc: "┼", te: "┤",
+  tw: "├", tc: "┼", te: "┤", tcs: "┬",
   tsw: "└", ts: "┴", tse: "┘", tsh: "─", tsv: "│",
 };
 // biome-ignore format: just keep it
 const _ASCII_LINE_THEME = {
   tnw: "+", tn: "+", tne: "+", tnh: "-", tnv: "|",
-  tw: "+", tc: "+", te: "+",
+  tw: "+", tc: "+", te: "+", tcs: "+",
   tsw: "+", ts: "+", tse: "+", tsh: "-", tsv: "|",
 };
 
 export function buildBoxTableChunk(
-  header: readonly string[],
+  header: readonly (string | null)[],
   rows: readonly (readonly string[])[],
 ): Chunk {
   const n = header.length;
@@ -185,7 +185,8 @@ export function buildBoxTableChunk(
 
   const widths: number[] = [];
   for (let i = 0; i < n; i++) {
-    let w = getCompensatedLength(header[i] ?? "");
+    const currHeader = header[i];
+    let w = currHeader == null ? 0 : getCompensatedLength(currHeader!);
     for (const row of rows) {
       const cell = row[i];
       if (cell !== undefined) {
@@ -196,22 +197,50 @@ export function buildBoxTableChunk(
     widths.push(w);
   }
 
-  const { tnw, tn, tne, tnh, tnv, tw, tc, te, tsw, ts, tse, tsh, tsv } = _LIGHT_LINE_THEME;
-  // const { tnw, tn, tne, tnh, tnv, tw, tc, te, tsw, ts, tse, tsh, tsv } = _ASCII_LINE_THEME;
+  const { tnw, tn, tne, tnh, tnv, tw, tc, te, tcs, tsw, ts, tse, tsh, tsv } = _LIGHT_LINE_THEME;
+  // const { tnw, tn, tne, tnh, tnv, tw, tc, te, tcs, tsw, ts, tse, tsh, tsv } = _ASCII_LINE_THEME;
 
   const height = rows.length;
   const cols: string[][] = [];
+  let prevHeaderExists = true;
   for (let i = 0; i < n; i++) {
     const w = widths[i] ?? 0;
     const stroke = tnh!.repeat(w);
     const isDataFirst = i === 0;
-    const topWall = isDataFirst ? tnw : tn;
-    const sepWall = isDataFirst ? tw : tc;
     const botWall = isDataFirst ? tsw : ts;
     const col: string[] = new Array(height + 3);
-    col[0] = `${topWall}${stroke}`;
-    col[1] = `${tnv}${header[i] ?? ""}`;
-    col[2] = `${sepWall}${stroke}`;
+    const currHeader = header[i];
+
+    if (currHeader == null) {
+      if (isDataFirst) {
+        col[0] = "";
+        col[1] = "";
+        col[2] = `${tnw}${stroke}`;
+      } else {
+        if (prevHeaderExists) {
+          col[0] = tne;
+          col[1] = tnv;
+          col[2] = `${tc}${stroke}`;
+        } else {
+          col[0] = "";
+          col[1] = "";
+          col[2] = `${tcs}${stroke}`;
+        }
+      }
+      prevHeaderExists = false;
+    } else {
+      if (isDataFirst) {
+        col[0] = `${tnw}${stroke}`;
+        col[1] = `${tnv}${currHeader!}`;
+        col[2] = `${tw}${stroke}`;
+      } else {
+        const topWall = prevHeaderExists ? tn : tnw;
+        col[0] = `${topWall}${stroke}`;
+        col[1] = `${tnv}${currHeader!}`;
+        col[2] = `${tc}${stroke}`;
+      }
+      prevHeaderExists = true;
+    }
     for (let r = 0; r < height; r++) {
       col[3 + r] = `${tsv!}${rows[r]?.[i] ?? ""}`;
     }
@@ -220,9 +249,15 @@ export function buildBoxTableChunk(
   }
 
   const closing: string[] = new Array(height + 3);
-  closing[0] = tne!;
-  closing[1] = tnv!;
-  closing[2] = te!;
+  if (prevHeaderExists) {
+    closing[0] = tne!;
+    closing[1] = tnv!;
+    closing[2] = te!;
+  } else {
+    closing[0] = "";
+    closing[1] = "";
+    closing[2] = tne!;
+  }
   for (let r = 0; r < height; r++) closing[3 + r] = tsv!;
   closing[height + 2] = tse!;
   cols.push(closing);
@@ -821,7 +856,7 @@ function critChartChunk(def: ResolvedMechDef, locale: LocaleId, live: CritChartL
   const built = [raLines, hdLines, laLines, rtLines, ctLines, ltLines, rlLines, infoLines, llLines];
   const maxLineLen = built
     .flat()
-    .map((l) => l.length)
+    .map((l) => getCompensatedLength(l))
     .reduce((prev, curr) => Math.max(prev, curr));
   built.forEach((lines) => {
     lines[0] = lines[0]!.padEnd(maxLineLen);
@@ -1597,5 +1632,5 @@ function weaponMountLine(
     mount.jammed ? t(locale, "sheet.jammed") : null,
     mount.destroyed ? t(locale, "sheet.destroyed") : null,
   ].filter((x) => x !== null);
-  return `  #${n} ${mount.weapon} (${SHORT_LOC[mount.location]}) S${w.short}/M${w.medium}/L${w.long}${flags.length ? ` ${flags.join(" ")}` : ""}`;
+  return `  #${n} ${mount.weapon} [${SHORT_LOC[mount.location]}] S${w.short}/M${w.medium}/L${w.long}${flags.length ? ` ${flags.join(" ")}` : ""}`;
 }
