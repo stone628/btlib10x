@@ -42,7 +42,7 @@ describe("critical slot chart (info mech)", () => {
     // Arms: shoulder + actuators + hand; ammo slots named with design capacity.
     expect(text).toContain("Shoulder");
     expect(text).toContain("Upper Arm Actuator");
-    expect(text).toContain("  1 Autocannon/20 shots 5");
+    expect(text).toContain("  1 Autocannon/20 ammo (5)");
     expect(text).toContain("Medium Laser");
   });
 
@@ -113,7 +113,7 @@ describe("critical slot chart (sheet)", () => {
     htk.ammoBins = { ...htk.ammoBins, "leftTorso:1": 3, "leftTorso:2": 5 };
     htk.shotsLeft = { ...htk.shotsLeft, 1: 8 };
     const text = run(s, "sheet hunchy").join("\n");
-    expect(text).toContain("  1 Autocannon/20 shots 5 (3 left) [DST]");
-    expect(text).toContain("  2 Autocannon/20 shots 5 (5 left)");
+    expect(text).toContain("  1 Autocannon/20 ammo (3/5) [DST]");
+    expect(text).toContain("  2 Autocannon/20 ammo (5/5)");
   });
 });

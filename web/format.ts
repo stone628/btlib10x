@@ -27,7 +27,6 @@ import {
   getAllWeapons,
   getMapDef,
   getMechDef,
-  getShotsPerBin,
   getWeapon,
   internalStructureForTonnage,
   isImmobile,
@@ -35,6 +34,7 @@ import {
   LOCATIONS,
   listMapNames,
   listWeaponNames,
+  loadAmmoBins,
   reachableLandings,
   suggestFireTargets,
 } from "btlib10x";
@@ -196,8 +196,8 @@ export function buildBoxTableChunk(
     widths.push(w);
   }
 
-  // const { tnw, tn, tne, tnh, tnv, tw, tc, te, tsw, ts, tse, tsh, tsv } = _LIGHT_LINE_THEME;
-  const { tnw, tn, tne, tnh, tnv, tw, tc, te, tsw, ts, tse, tsh, tsv } = _ASCII_LINE_THEME;
+  const { tnw, tn, tne, tnh, tnv, tw, tc, te, tsw, ts, tse, tsh, tsv } = _LIGHT_LINE_THEME;
+  // const { tnw, tn, tne, tnh, tnv, tw, tc, te, tsw, ts, tse, tsh, tsv } = _ASCII_LINE_THEME;
 
   const height = rows.length;
   const cols: string[][] = [];
@@ -335,7 +335,8 @@ export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
       weaponMountLine(locale, Number(key), {
         weapon: mount.weapon,
         location: mount.location,
-        shotsLeft: mount.shots ?? null,
+        shotsLeft: null,
+        shotsMax: loadAmmoBins(d).totals[Number(key)] ?? null,
         jammed: false,
         destroyed: false,
       }),
@@ -492,6 +493,7 @@ interface SheetView {
     readonly weapon: string;
     readonly location: Location;
     readonly shotsLeft: number | null;
+    readonly shotsMax: number | null;
     readonly jammed: boolean;
     readonly destroyed: boolean;
   }[];
@@ -531,6 +533,7 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
       weapon: mount.weapon,
       location: mount.location,
       shotsLeft: mount.shots !== undefined ? (unit.shotsLeft[Number(key)] ?? 0) : null,
+      shotsMax: loadAmmoBins(def).totals[Number(key)] ?? null,
       jammed: unit.jammedWeapons.includes(Number(key)),
       destroyed:
         unit.destroyedWeapons.includes(Number(key)) ||
@@ -578,10 +581,11 @@ function setupSheet(unit: SetupUnit, id: string, locale: LocaleId): SheetView {
     originalArmor: def.armor,
     originalArmorRear: armorRear,
     originalArmorStructure: damage.internalStructure,
-    mounts: Object.values(def.weapons).map((mount) => ({
+    mounts: Object.entries(def.weapons).map(([key, mount]) => ({
       weapon: mount.weapon,
       location: mount.location,
-      shotsLeft: mount.shots ?? null,
+      shotsLeft: null,
+      shotsMax: loadAmmoBins(def).totals[Number(key)] ?? null,
       jammed: false,
       destroyed: false,
     })),
@@ -767,15 +771,15 @@ function critSlotText(
   const line = ` ${dice} ${body}`;
   const markers: string[] = [];
   if (slot.kind === "ammo") {
-    const perBin = getShotsPerBin(slot.weapon);
-    if (perBin !== undefined) {
-      markers.push(t(locale, "critChart.shotsSuffix", { n: perBin }));
-      if (live !== null) {
-        const liveBin = live.ammoBins[ammoBinId(loc, slotIndex)];
-        if (liveBin !== undefined) {
-          markers.push(t(locale, "critChart.ammoPoolSuffix", { n: liveBin }));
-        }
-      }
+    const binId = ammoBinId(loc, slotIndex);
+    const max = loadAmmoBins(def).bins[binId];
+    if (max !== undefined) {
+      const curr = live !== null ? (live.ammoBins[binId] ?? max) : max;
+      markers.push(
+        live === null
+          ? t(locale, "critChart.ammoDesign", { max })
+          : t(locale, "critChart.ammoSuffix", { curr, max }),
+      );
     }
   }
   if (live !== null && live.critSlotsDestroyed[loc] !== undefined) {
@@ -1242,16 +1246,18 @@ export function weaponsLines(s: Session, unitId?: string): string[] {
     );
   }
   const def = getMechDef(unit.model)!;
+  const totals = loadAmmoBins(def).totals;
   return Object.entries(def.weapons).map(([key, mount]) => {
     const w = getWeapon(mount.weapon);
     const index = Number(key);
+    const max = totals[index];
     const bits = [
       `#${index}`,
       mount.weapon,
       mount.location,
       `S${w.short}/M${w.medium}/L${w.long}`,
-      mount.shots !== undefined
-        ? t(s.locale, "sheet.shotsFlag", { n: unit.shotsLeft[index] ?? 0 })
+      max !== undefined
+        ? t(s.locale, "sheet.shotsRange", { curr: unit.shotsLeft[index] ?? 0, max })
         : null,
       unit.jammedWeapons.includes(index) ? t(s.locale, "sheet.jammed") : null,
       unit.destroyedWeapons.includes(index) ? t(s.locale, "sheet.destroyed") : null,
@@ -1576,13 +1582,18 @@ function weaponMountLine(
     readonly weapon: string;
     readonly location: Location;
     readonly shotsLeft: number | null;
+    readonly shotsMax: number | null;
     readonly jammed: boolean;
     readonly destroyed: boolean;
   },
 ): string {
   const w = getWeapon(mount.weapon);
   const flags = [
-    mount.shotsLeft !== null ? t(locale, "sheet.shotsFlag", { n: mount.shotsLeft }) : null,
+    mount.shotsMax !== null
+      ? mount.shotsLeft !== null
+        ? t(locale, "sheet.shotsRange", { curr: mount.shotsLeft, max: mount.shotsMax })
+        : t(locale, "sheet.shotsDesign", { max: mount.shotsMax })
+      : null,
     mount.jammed ? t(locale, "sheet.jammed") : null,
     mount.destroyed ? t(locale, "sheet.destroyed") : null,
   ].filter((x) => x !== null);
