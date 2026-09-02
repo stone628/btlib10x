@@ -3,6 +3,7 @@ import * as esbuild from "esbuild";
 import { buildStamp } from "./build-stamp.mjs";
 
 const html = readFileSync("web/index.html", "utf8");
+const css = readFileSync("web/bt10x.css", "utf8");
 
 const { outputFiles } = await esbuild.build({
   entryPoints: ["web/main.ts"],
@@ -18,6 +19,7 @@ const { outputFiles } = await esbuild.build({
 const app = outputFiles[0].text;
 
 const single = html
+  .replace('<link rel="stylesheet" href="bt10x.css" />', `<style>\n${css}\n    </style>`)
   .replace(/<script type="importmap">.*?<\/script>\s*/, "")
   .replace(
     '<script type="module" src="./app.js"></script>',
