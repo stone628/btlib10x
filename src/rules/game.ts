@@ -4,6 +4,7 @@ import {
   type Facing,
   type Hex,
   isFacing,
+  LOCATIONS,
   type Location,
   type MoveMode,
   type Rng,
@@ -14,6 +15,15 @@ import {
 import { getMechDef } from "../data/index.js";
 import type { ResolvedMechDef } from "../data/mech.schema.js";
 import { getWeaponOrThrow } from "../data/weapon.schema.js";
+import {
+  type AmmoBinId,
+  type AmmoPolicy,
+  ammoWeaponTotals,
+  binsForWeapon,
+  consumeAmmo,
+  loadAmmoBins,
+  stripBinsInLocation,
+} from "./ammo.js";
 import { isInFrontArc } from "./arcs.js";
 import { type AttackResolution, resolveWeaponAttack } from "./attack.js";
 import { effectiveMovement } from "./critical.js";
@@ -50,6 +60,10 @@ export type MoveStep =
 
 export type Phase = "initiative" | "movement" | "weaponAttack" | "end";
 
+/** Deterministic rng for ammo draws when the caller omits one: ties resolve
+ *  to the first bin and the order is stable run to run. */
+export const DEFAULT_RNG: Rng = { d6: () => 1 };
+
 export interface UnitState {
   readonly id: string;
   readonly model: string;
@@ -60,6 +74,10 @@ export interface UnitState {
   damage: UnitDamageState;
   phaseStartDamage: UnitDamageState;
   shotsLeft: Record<number, number>;
+  /** Per-crit-slot ammo remaining (see `src/rules/ammo.ts`). */
+  ammoBins: Record<AmmoBinId, number>;
+  /** Which of a unit's ammo bins the next shot is drawn from. */
+  ammoPolicy: AmmoPolicy;
   jammedWeapons: number[];
   /** Per-slot destroyed flag for each location's crit slot table. */
   critSlotsDestroyed: Record<Location, boolean[]>;
@@ -203,11 +221,7 @@ export function createBattle(
   const unitStates: Record<string, UnitState> = {};
   for (const init of units) {
     const def: ResolvedMechDef = getMechDef(init.model)!;
-    const shotsLeft: Record<number, number> = {};
-    Object.entries(def.weapons).forEach(([key, mount]) => {
-      const weaponIndex = Number(key);
-      if (mount.shots !== undefined) shotsLeft[weaponIndex] = mount.shots;
-    });
+    const ammoLoad = loadAmmoBins(def);
     const damage: UnitDamageState = {
       armor: { ...def.armor },
       armorRear: { ...def.armorRear },
@@ -226,7 +240,9 @@ export function createBattle(
         armorRear: { ...damage.armorRear },
         internalStructure: { ...damage.internalStructure },
       },
-      shotsLeft,
+      shotsLeft: ammoLoad.totals,
+      ammoBins: ammoLoad.bins,
+      ammoPolicy: "exposed",
       jammedWeapons: [],
       critSlotsDestroyed: initCritDestroyed(def),
       destroyedWeapons: [],
@@ -413,6 +429,7 @@ export function declareAttacks(
   state: BattleState,
   unitId: string,
   decls: readonly AttackDecl[],
+  rng: Rng = DEFAULT_RNG,
 ): void {
   requirePhase(state, "weaponAttack");
   const unit = getUnitOrThrow(state, unitId);
@@ -507,12 +524,14 @@ export function declareAttacks(
     }
 
     const needed = weapon.missiles !== undefined ? 1 : shots;
-    if (mount.shots !== undefined) {
+    if (binsForWeapon(def, decl.weaponIndex).length > 0) {
       const left = unit.shotsLeft[decl.weaponIndex] ?? 0;
       if (left < needed) {
         throw new Error(`${mount.weapon}: needs ${needed} shot(s) but only ${left} remain`);
       }
-      unit.shotsLeft[decl.weaponIndex] = left - needed;
+      const entry = consumeAmmo(def, unit.ammoBins, decl.weaponIndex, needed, unit.ammoPolicy, rng);
+      unit.ammoBins = entry;
+      unit.shotsLeft = ammoWeaponTotals(def, entry);
     }
   });
 
@@ -563,6 +582,7 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
             targetCritSlotsDestroyed: target.critSlotsDestroyed,
             targetDestroyedWeapons: target.destroyedWeapons,
             targetShotsLeft: target.shotsLeft,
+            targetAmmoBins: target.ammoBins,
           }),
     });
 
@@ -581,6 +601,7 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
       const last = resolution.crits[resolution.crits.length - 1]!;
       target.critSlotsDestroyed = last.critSlotsDestroyed;
       target.destroyedWeapons = last.destroyedWeapons;
+      target.ammoBins = last.ammoBins;
       target.shotsLeft = last.shotsLeft;
       // Damage was already committed above (it includes the explosion
       // cascades); the crit rows also include newlyDestroyed /
@@ -596,6 +617,10 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
         }
       }
     }
+
+    // Ammo in any location whose internal structure is gone (blown off,
+    // transferred away, or drained by this attack) can no longer explode.
+    stripDestroyedLocationAmmo(target);
 
     state.events.push({
       kind: "attackResolved",
@@ -760,4 +785,19 @@ function initCritDestroyed(def: ResolvedMechDef): Record<Location, boolean[]> {
     out[loc] = new Array(def.critSlots[loc].length).fill(false);
   }
   return out;
+}
+
+/**
+ * Remove every ammo bin in a location whose internal structure has dropped to
+ * zero (blown-off limbs, destroyed torsos), then refresh the derived per-weapon
+ * totals so out-of-ammo checks and the record sheet stay accurate.
+ */
+function stripDestroyedLocationAmmo(target: UnitState): void {
+  const def = getMechDef(target.model)!;
+  for (const loc of LOCATIONS) {
+    if ((target.damage.internalStructure[loc] ?? 0) <= 0) {
+      stripBinsInLocation(target.ammoBins, loc);
+    }
+  }
+  target.shotsLeft = ammoWeaponTotals(def, target.ammoBins);
 }

@@ -240,10 +240,12 @@ export function resolveMechDef(def: MechDef): ResolvedMechDef {
  * weapon indices, and group consecutive double-heat-sink slots.
  *
  * Multi-slot weapons (e.g. AC/20 = 10 slots) link every crit slot to the
- * same single mount in that location; the per-mount ammo schema likewise
- * pools all bins of a weapon into the single ammo-bearing mount. Two
- * *separate* mounts of the same weapon in the same location (e.g. two
- * Medium Lasers in Atlas's CT) get independent linking — slot 11
+ * same single mount in that location. Ammo bins pool by weapon name: when a
+ * shots-bearing mount exists, every bin of that weapon shares its index
+ * (the per-bin depletion model in `src/rules/ammo.ts`); otherwise the bins
+ * fall back to any mount of the weapon, loaded at the ammo table's per-bin
+ * capacity. Two *separate* mounts of the same weapon in the same location
+ * (e.g. two Medium Lasers in Atlas's CT) get independent linking — slot 11
  * destroys ML #1, slot 12 destroys ML #2.
  */
 function resolveLocationCrits(
@@ -268,14 +270,20 @@ function resolveLocationCrits(
 
   // Ammo-bearing mounts, by weapon name, in ascending index order.
   const ammoBearingByName: Map<string, number[]> = new Map();
+  // Every mount, by weapon name, also in ascending index order (fallback for
+  // ammo bins of weapons that declare no shots).
+  const allByName: Map<string, number[]> = new Map();
   for (const [k, mount] of Object.entries(weapons)) {
-    if (mount.shots === undefined) continue;
     const idx = Number(k);
-    const arr = ammoBearingByName.get(mount.weapon) ?? [];
-    arr.push(idx);
-    ammoBearingByName.set(mount.weapon, arr);
+    const arr = (allByName.get(mount.weapon) ?? []).concat(idx);
+    allByName.set(mount.weapon, arr);
+    if (mount.shots === undefined) continue;
+    const ammoArr = ammoBearingByName.get(mount.weapon) ?? [];
+    ammoArr.push(idx);
+    ammoBearingByName.set(mount.weapon, ammoArr);
   }
   for (const arr of ammoBearingByName.values()) arr.sort((a, b) => a - b);
+  for (const arr of allByName.values()) arr.sort((a, b) => a - b);
   const ammoCursors = new Map<string, number>();
 
   const nextLocal = (weaponName: string): number => {
@@ -292,10 +300,11 @@ function resolveLocationCrits(
   };
 
   const nextAmmo = (weaponName: string): number => {
-    const arr = ammoBearingByName.get(weaponName);
-    if (!arr) {
+    let arr = ammoBearingByName.get(weaponName);
+    if (arr === undefined) arr = allByName.get(weaponName);
+    if (arr === undefined || arr.length === 0) {
       throw new Error(
-        `crit slot is ammo for ${JSON.stringify(weaponName)} but no ammo-bearing mount of that weapon exists`,
+        `crit slot is ammo for ${JSON.stringify(weaponName)} but no mount of that weapon exists`,
       );
     }
     const cursor = ammoCursors.get(weaponName) ?? 0;
@@ -574,15 +583,11 @@ export function validateMechDef(data: unknown): MechDef {
       // one weapon mount of that name anywhere on the 'Mech (multi-slot
       // weapons legitimately occupy several slots for a single mount, so we
       // do not bound the count). Ammo bins pool by weapon name and need at
-      // least one ammo-bearing mount anywhere on the 'Mech.
+      // least one mount (shots-bearing or not) of that weapon anywhere.
       if (Array.isArray(weapons)) {
         const mountNames = new Set<string>();
-        const ammoBearingNames = new Set<string>();
         for (const w of weapons) {
-          if (isRecord(w) && typeof w.weapon === "string") {
-            mountNames.add(w.weapon);
-            if (typeof w.shots === "number") ammoBearingNames.add(w.weapon);
-          }
+          if (isRecord(w) && typeof w.weapon === "string") mountNames.add(w.weapon);
         }
         for (let i = 0; i < arr.length; i++) {
           const slot = arr[i];
@@ -594,9 +599,9 @@ export function validateMechDef(data: unknown): MechDef {
               );
             }
           } else if (slot.kind === "ammo" && typeof slot.weapon === "string") {
-            if (!ammoBearingNames.has(slot.weapon)) {
+            if (!mountNames.has(slot.weapon)) {
               errors.push(
-                `critSlots.${loc}[${i}] is ammo for ${JSON.stringify(slot.weapon)} but no ammo-bearing mount of that weapon exists`,
+                `critSlots.${loc}[${i}] is ammo for ${JSON.stringify(slot.weapon)} but no mount of that weapon exists`,
               );
             }
           }

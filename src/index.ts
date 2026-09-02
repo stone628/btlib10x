@@ -59,6 +59,7 @@ export {
   getWeaponOrThrow as getWeapon,
   listWeaponNames,
 } from "./data/weapon.schema.js";
+export * from "./rules/ammo.js";
 export * from "./rules/arcs.js";
 export type { AttackResolution, HitGroup, WeaponAttackInput } from "./rules/attack.js";
 export { resolveWeaponAttack } from "./rules/attack.js";

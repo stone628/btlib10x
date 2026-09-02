@@ -104,14 +104,16 @@ describe("critical slot chart (sheet)", () => {
     expect(laLine).not.toContain("[JAM]");
   });
 
-  it("shows ammo-slot destroyed and remaining-shots markers", () => {
+  it("shows ammo-slot destroyed and per-bin remaining-shots markers", () => {
     const s = freshSetup();
     const htk = s.battle!.units.hunchy!;
-    // AC/20 ammo is leftTorso slots 1-2 (also weapon index 1).
+    // AC/20 ammo is leftTorso slots 1-2 (also weapon index 1). Drain the
+    // first bin down to 3; the second keeps its full 5.
     htk.critSlotsDestroyed.leftTorso[0] = true;
-    htk.shotsLeft[1] = 6;
+    htk.ammoBins = { ...htk.ammoBins, "leftTorso:1": 3, "leftTorso:2": 5 };
+    htk.shotsLeft = { ...htk.shotsLeft, 1: 8 };
     const text = run(s, "sheet hunchy").join("\n");
-    expect(text).toContain("  1 Autocannon/20 shots 5 (6 left) [DST]");
-    expect(text).toContain("  2 Autocannon/20 shots 5 (6 left)");
+    expect(text).toContain("  1 Autocannon/20 shots 5 (3 left) [DST]");
+    expect(text).toContain("  2 Autocannon/20 shots 5 (5 left)");
   });
 });

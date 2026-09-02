@@ -3,6 +3,7 @@ import type { Location, MoveMode, Rng, TerrainType } from "../core/types.js";
 import type { ResolvedMechDef } from "../data/mech.schema.js";
 import type { WeaponDef } from "../data/weapon.schema.js";
 import { getWeaponOrThrow } from "../data/weapon.schema.js";
+import type { AmmoBinId } from "./ammo.js";
 import type { Arc } from "./arcs.js";
 import { clusterHitsForMissiles, clusterHitsForShots, groupMissiles } from "./cluster.js";
 import { type CriticalResolution, resolveCriticalHits } from "./critical.js";
@@ -39,16 +40,15 @@ export interface WeaponAttackInput {
   /**
    * Target 'Mech definition; required for critical-hit resolution. Omit in
    * tests that only care about raw damage. When provided, `targetDef` is
-   * used for crit-slot layout, weapon linkage, and the per-weapon ammo
-   * pool.
+   * used for crit-slot layout, weapon linkage, and the per-bin ammo state.
    */
   readonly targetDef?: ResolvedMechDef;
   /** Pre-attack crit-slot destroyed flags (snapshot). */
   readonly targetCritSlotsDestroyed?: Record<Location, boolean[]>;
   /** Pre-attack destroyed weapon indices. */
   readonly targetDestroyedWeapons?: readonly number[];
-  /** Pre-attack shots remaining per weapon index. */
-  readonly targetShotsLeft?: Readonly<Record<number, number>>;
+  /** Pre-attack per-crit-slot ammo remaining. */
+  readonly targetAmmoBins?: Readonly<Record<AmmoBinId, number>>;
 }
 
 export interface AttackResolution {
@@ -154,7 +154,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     input.targetDef !== undefined &&
     input.targetCritSlotsDestroyed !== undefined &&
     input.targetDestroyedWeapons !== undefined &&
-    input.targetShotsLeft !== undefined;
+    input.targetAmmoBins !== undefined;
   // Mutable crit tracking; each group that strips IS in the SAME location
   // reuses the snapshot from the previous group's crit, mirroring the rules
   // ("before resolving any further weapons fire" the determining roll is
@@ -165,7 +165,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
   let destroyedWeapons: number[] = input.targetDestroyedWeapons
     ? [...input.targetDestroyedWeapons]
     : [];
-  let shotsLeft: Record<number, number> = input.targetShotsLeft ? { ...input.targetShotsLeft } : {};
+  let ammoBins: Record<AmmoBinId, number> = input.targetAmmoBins ? { ...input.targetAmmoBins } : {};
 
   for (const group of base.groups) {
     const app = applyDamage(damage, group.location, group.damage, arc);
@@ -196,11 +196,11 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
       critSlotsDestroyed: critSlotsDestroyed!,
       destroyedWeapons,
       damage,
-      shotsLeft,
+      ammoBins,
     });
     critSlotsDestroyed = res.critSlotsDestroyed;
     destroyedWeapons = res.destroyedWeapons;
-    shotsLeft = res.shotsLeft;
+    ammoBins = res.ammoBins;
     damage = res.damage;
     // The crit may have blown off the arm or killed the unit; reflect that
     // on the merged damage application.

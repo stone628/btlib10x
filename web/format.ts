@@ -1,4 +1,6 @@
 import type {
+  AmmoBinId,
+  AmmoPolicy,
   ArmorState,
   AttackResolution,
   BattleState,
@@ -17,7 +19,9 @@ import type {
   UnitState,
 } from "btlib10x";
 import {
+  ammoBinId,
   canFireFromLocation,
+  collectAmmoBins,
   getAllMapDefs,
   getAllMechDefs,
   getAllWeapons,
@@ -134,16 +138,15 @@ function isWideCodePoint(cp: number): boolean {
  */
 function getCompensatedLength(str: string): number {
   let extra = 0;
-  let isAscii = true;
   for (const ch of str) {
     const cp = ch.codePointAt(0) ?? 0;
     if (cp > 0x7f) {
-      isAscii = false;
       if (isWideCodePoint(cp)) extra += 1;
     }
   }
 
-  return isAscii ? str.length : str.length + Math.floor(extra / 2) + (extra % 2);
+  // return isAscii ? str.length : str.length + Math.floor(extra / 2) + (extra % 2);
+  return str.length + extra;
 }
 
 /**
@@ -473,6 +476,8 @@ interface SheetView {
   readonly removed: boolean;
   readonly positionLine: string;
   readonly modeLine: string | null;
+  /** Current ammo depletion policy; null when the unit carries no ammo. */
+  readonly ammoPolicyLine: string | null;
   /** Current front armor per location. */
   readonly armor: ArmorState;
   /** Current layered damage (front armor, rear armor, internal structure). */
@@ -513,6 +518,10 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
       unit.moveMode !== null
         ? t(locale, "sheet.modeSuffix", { mode: unit.moveMode, mp: unit.mpSpent })
         : null,
+    ammoPolicyLine:
+      collectAmmoBins(def).length > 0
+        ? t(locale, "sheet.ammoPolicy", { policy: ammoPolicyLabel(locale, unit.ammoPolicy) })
+        : null,
     armor: unit.damage.armor,
     damage: unit.damage,
     originalArmor: def.armor,
@@ -532,6 +541,7 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
       destroyedWeapons: unit.destroyedWeapons,
       jammedWeapons: unit.jammedWeapons,
       shotsLeft: unit.shotsLeft,
+      ammoBins: unit.ammoBins,
     },
   };
 }
@@ -562,6 +572,7 @@ function setupSheet(unit: SetupUnit, id: string, locale: LocaleId): SheetView {
     removed: false,
     positionLine: t(locale, "sheet.at", { pos: disp(unit.position), facing: unit.facing }),
     modeLine: null,
+    ammoPolicyLine: null,
     armor: damage.armor,
     damage,
     originalArmor: def.armor,
@@ -684,7 +695,23 @@ interface CritChartLive {
   readonly critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>;
   readonly destroyedWeapons: readonly number[];
   readonly jammedWeapons: readonly number[];
+  /** Derived per-weapon total shots (for weapon lines); kept for the sheet. */
   readonly shotsLeft: Readonly<Record<number, number>>;
+  /** Per-crit-slot ammo remaining. */
+  readonly ammoBins: Readonly<Record<AmmoBinId, number>>;
+}
+
+/** Human-friendly i18n label for an ammo depletion policy. */
+export function ammoPolicyLabel(locale: LocaleId, policy: AmmoPolicy): string {
+  const key =
+    policy === "exposed"
+      ? "ammo.policy.exposed"
+      : policy === "core"
+        ? "ammo.policy.core"
+        : policy === "spread"
+          ? "ammo.policy.spread"
+          : "ammo.policy.leastFirst";
+  return t(locale, key);
 }
 
 /** Human-friendly i18n key for a structure component name. */
@@ -744,9 +771,9 @@ function critSlotText(
     if (perBin !== undefined) {
       markers.push(t(locale, "critChart.shotsSuffix", { n: perBin }));
       if (live !== null) {
-        const livePool = live.shotsLeft[slot.weaponIndex] ?? def.weapons[slot.weaponIndex]?.shots;
-        if (livePool !== undefined) {
-          markers.push(t(locale, "critChart.ammoPoolSuffix", { n: livePool }));
+        const liveBin = live.ammoBins[ammoBinId(loc, slotIndex)];
+        if (liveBin !== undefined) {
+          markers.push(t(locale, "critChart.ammoPoolSuffix", { n: liveBin }));
         }
       }
     }
@@ -823,6 +850,7 @@ export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
     t(locale, "info.movement", { walk: view.walking, run: view.running, jump: view.jumping }),
   );
   topLines.push(view.positionLine);
+  if (view.ammoPolicyLine !== null) topLines.push(view.ammoPolicyLine);
   const weaponLines: string[] = [];
   weaponLines.push(t(locale, "sheet.weaponsHeader", { n: view.mounts.length }));
   for (const [i, m] of view.mounts.entries()) {

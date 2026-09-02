@@ -1,4 +1,5 @@
 import type {
+  AmmoPolicy,
   AttackDecl,
   BattleState,
   CreateBattleOptions,
@@ -34,6 +35,7 @@ import {
   listMapNames,
   maxMovePoints,
   nextActor,
+  parseAmmoPolicy,
   resolveAllAttacks,
   rollInitiativePhase,
   rotateFacing,
@@ -563,13 +565,24 @@ export function commitFire(s: Session): CommitResult {
   let declEvents: BattleState["events"] = [];
   let driveEvents: BattleState["events"] = [];
   commitAtomic(s, () => {
-    declareAttacks(battle, unit.id, s.fireDecls);
+    declareAttacks(battle, unit.id, s.fireDecls, s.rng);
     declEvents = battle.events.slice(beforeCount);
     s.actorId = null;
     clearBuffers(s);
     driveEvents = drive(s);
   });
   return { state: battle, newEvents: [...declEvents, ...driveEvents] };
+}
+
+/**
+ * Set the acting unit's ammo-depletion policy. Affects the order its ammo
+ * bins are drained by future shots (and which bin explodes on a crit).
+ */
+export function setAmmoPolicy(s: Session, word: string): void {
+  const unit = requireActor(s, "weaponAttack");
+  const policy: AmmoPolicy | null = parseAmmoPolicy(word);
+  if (policy === null) throw new Error(t(s.locale, "err.badAmmoPolicy"));
+  unit.ammoPolicy = policy;
 }
 
 // ------------------------------------------------------------ lifecycle ----

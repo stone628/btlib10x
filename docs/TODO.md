@@ -9,7 +9,6 @@
 
 ## To Do
 
-- Implement ammo depletion order and ammo explosions
 - Add a terrain type table
 
 ## In progress
@@ -27,6 +26,17 @@
   front-arc-only this milestone. Elevation: per-hex `level`, climb MP cost,
   jump ignores elevation, LOS height ray, height-difference to-hit mod, renderer
   + i18n. Web armor diagram shows I/F/R; public API exports updated.
+- **Per-bin ammo depletion** — ammo tracked per crit slot (`ammo.ts`):
+  bins load from the ammo table's per-bin capacity, or declared `shots`
+  pool across all mounts/bins of a weapon name (remainder one per bin);
+  a per-unit policy (`ammo <policy>`: `exposed` default, `core`,
+  `spread`, `leastFirst`) orders which bin takes the next shot, ties
+  broken at random through the injected RNG. Crit hits now detonate only
+  the struck bin (remaining shots × damage-per-shot straight to IS with a
+  cascade on depletion), bins in blown/destroyed locations are stripped,
+  and empty bins soak. `shotsLeft` is a derived per-weapon sum. Wired
+  through `game.ts`/`attack.ts`/`critical.ts`; web CLI `ammo` command,
+  record-sheet policy line, and per-bin `(n left)` markers; i18n en+kr.
 - **Critical hit table** — TW determining table (2D6 12 = blow-off) + 1D6/2D6
   slot rolls with reroll/transfer/excess-lost; `CritSlot` schema + validator,
   `critSlots` on the 8 mech JSONs (MTF + backfill scripts, linkage precheck);
@@ -55,7 +65,7 @@
   injected into the web bundles via esbuild `define`; npm/tsc build falls back to `"dev"`);
   CLI gains a `ver` command
 - Single-file HTML deploy (`npm run dist:standalone` → self-contained `dist/standalone/bt10x.html`)
-- Fix the misleading 'ammo' concept
+- Fixed the misleading 'ammo' concept (per-bin depletion replaces the flat weapon-wide pool)
 
 ## Verify later
 

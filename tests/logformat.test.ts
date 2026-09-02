@@ -2,6 +2,7 @@ import type { AttackResolution, CriticalResolution } from "btlib10x";
 import { describe, expect, it } from "vitest";
 import { getMechDef } from "../src/data/index.js";
 import { getWeaponOrThrow } from "../src/data/weapon.schema.js";
+import { loadAmmoBins } from "../src/rules/ammo.js";
 import { resolveCriticalHits } from "../src/rules/critical.js";
 import type { UnitDamageState } from "../src/rules/damage.js";
 import { computeToHit } from "../src/rules/tohit.js";
@@ -27,11 +28,7 @@ function freshFlags(def = getMechDef("HBK-4G")!) {
 }
 
 function freshAmmo(def = getMechDef("HBK-4G")!) {
-  const out: Record<number, number> = {};
-  for (const [k, mount] of Object.entries(def.weapons)) {
-    if (mount.shots !== undefined) out[Number(k)] = mount.shots;
-  }
-  return out;
+  return loadAmmoBins(def).bins;
 }
 
 function freshDamage(def = getMechDef("HBK-4G")!): UnitDamageState {
@@ -52,7 +49,7 @@ describe("critical hit log formatting", () => {
       critSlotsDestroyed: freshFlags(def),
       destroyedWeapons: [],
       damage: freshDamage(def),
-      shotsLeft: freshAmmo(def),
+      ammoBins: freshAmmo(def),
     });
     return {
       weapon: "Autocannon/20",

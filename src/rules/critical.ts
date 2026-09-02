@@ -29,9 +29,11 @@
  *     first hit disables the whole mount; further slot hits on the same
  *     component only "soak").
  *   - ammo slot hit: explosion damage = per-shot damage value x remaining
- *     shots in the pool, applied directly to the bin's location's internal
- *     structure (the armor pool is bypassed). An ammo explosion that strips
- *     more IS triggers a fresh determining roll, recursively.
+ *     shots in that bin, applied directly to the bin's location's internal
+ *     structure (the armor pool is bypassed). Only the hit bin detonates;
+ *     sibling bins of the same weapon are untouched. An ammo explosion that
+ *     strips more IS triggers a fresh determining roll, recursively, and
+ *     ammo in any location whose IS drops to 0 is gone.
  *   - limb blown off (determining 12 on head/arm/leg): the location's armor
  *     and internal structure are zeroed, killing the head or immobilizing
  *     the leg. An arm is removed from play; its support torso's IS is not
@@ -60,6 +62,7 @@ import type { Location, Rng } from "../core/types.js";
 import type { ResolvedCritSlot, ResolvedMechDef } from "../data/mech.schema.js";
 import { CRIT_SLOT_COUNTS } from "../data/mech.schema.js";
 import { getWeaponOrThrow } from "../data/weapon.schema.js";
+import { type AmmoBinId, ammoBinId, ammoWeaponTotals, stripBinsInLocation } from "./ammo.js";
 import { applyDamage, type DamageApplication, type UnitDamageState } from "./damage.js";
 
 export interface CritSource {
@@ -145,10 +148,12 @@ export interface CriticalResolution {
   /** True if the unit is killed by these crits (head or CT IS to 0, or
    *  cockpit destroyed, or 12 on a head location). */
   readonly killed: boolean;
-  /** Per-weapon remaining shots after this resolution. We index by the
-   *  1-based weapon index from `def.weapons`; absent keys mean "unchanged
-   *  from the input". */
+  /** Per-weapon remaining shots after this resolution, derived from
+   *  `ammoBins` (the sum over each mount's bins). Indexed by the 1-based
+   *  weapon index from `def.weapons`. */
   readonly shotsLeft: Record<number, number>;
+  /** Per-crit-slot ammo remaining after this resolution. */
+  readonly ammoBins: Record<AmmoBinId, number>;
 }
 
 const TRANSFER_INWARD: Readonly<Record<Location, Location | null>> = {
@@ -308,15 +313,15 @@ export interface ResolveCriticalsInput {
   readonly destroyedWeapons: readonly number[];
   /** Pre-damage damage state. */
   readonly damage: UnitDamageState;
-  /** Current per-weapon shots remaining. */
-  readonly shotsLeft: Readonly<Record<number, number>>;
+  /** Current per-crit-slot ammo remaining. */
+  readonly ammoBins: Readonly<Record<AmmoBinId, number>>;
 }
 
 interface MutableCritState {
   destroyed: Record<Location, boolean[]>;
   destroyedWeapons: number[];
   damage: UnitDamageState;
-  shotsLeft: Record<number, number>;
+  ammoBins: Record<AmmoBinId, number>;
   rows: CriticalEffect[];
   blownOffArms: Location[];
   killed: boolean;
@@ -335,13 +340,17 @@ export function resolveCriticalHits(input: ResolveCriticalsInput): CriticalResol
       armorRear: { ...input.damage.armorRear },
       internalStructure: { ...input.damage.internalStructure },
     },
-    shotsLeft: { ...input.shotsLeft },
+    ammoBins: { ...input.ammoBins },
     rows: [],
     blownOffArms: [],
     killed: false,
     depth: 0,
   };
   const topRoll = runDetermining(input.rng, input.def, input.source, state);
+  // Ammo in a location whose IS has dropped to 0 (explosion transfer,
+  // blow-off, cockpit kill) can no longer detonate; remove those bins so
+  // subsequent crits and the committed state stay consistent.
+  stripBinsInZeroedLocations(input.def, state);
   return {
     source: input.source,
     determiningRoll: topRoll ?? 0,
@@ -351,8 +360,18 @@ export function resolveCriticalHits(input: ResolveCriticalsInput): CriticalResol
     damage: state.damage,
     blownOffArms: state.blownOffArms,
     killed: state.killed,
-    shotsLeft: state.shotsLeft,
+    shotsLeft: ammoWeaponTotals(input.def, state.ammoBins),
+    ammoBins: state.ammoBins,
   };
+}
+
+/** Remove bins in any location whose internal structure has reached zero. */
+function stripBinsInZeroedLocations(def: ResolvedMechDef, state: MutableCritState): void {
+  for (const loc of Object.keys(def.critSlots) as Location[]) {
+    if ((state.damage.internalStructure[loc] ?? 0) <= 0) {
+      stripBinsInLocation(state.ammoBins, loc);
+    }
+  }
 }
 
 /**
@@ -479,7 +498,9 @@ function applySlotHit(
   if (slot.kind === "ammo") {
     const weaponName = slot.weapon;
     const weaponIndex = slot.weaponIndex;
-    const shotsRemaining = state.shotsLeft[weaponIndex] ?? 0;
+    // Only the hit bin detonates; sibling bins of the same weapon stay.
+    const binId = ammoBinId(loc, slotIndex);
+    const shotsRemaining = state.ammoBins[binId] ?? 0;
     const damagePerShot = ammoDamagePerShot(weaponName);
     const amount = shotsRemaining * damagePerShot;
     if (amount > 0) {
@@ -494,6 +515,7 @@ function applySlotHit(
       // explosion damages the internal structure of the location where it
       // explodes, a roll to determine critical hits is necessary").
       for (const newlyLost of app.newlyDestroyed) {
+        stripBinsInLocation(state.ammoBins, newlyLost);
         runDetermining(rng, def, { location: newlyLost, damage: amount }, state);
       }
       state.rows.push({
@@ -514,8 +536,8 @@ function applySlotHit(
       // explosion.
       state.rows.push({ kind: "noEffect", rolls: rolls.slice() });
     }
-    // Zero the pool; the bin's contents exploded or the bin is empty.
-    state.shotsLeft[weaponIndex] = 0;
+    // The bin's contents exploded or the bin was empty.
+    state.ammoBins[binId] = 0;
     return;
   }
   // structure component

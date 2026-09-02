@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Location } from "../src/core/types.js";
 import { getMechDef } from "../src/data/index.js";
+import { loadAmmoBins } from "../src/rules/ammo.js";
 import { effectiveMovement, resolveCriticalHits } from "../src/rules/critical.js";
 import type { UnitDamageState } from "../src/rules/damage.js";
 import { scriptedRng } from "./helpers.js";
@@ -20,12 +21,8 @@ function freshFlags(def = getMechDef("HBK-4G")!) {
   return out;
 }
 
-function freshAmmo(def = getMechDef("HBK-4G")!) {
-  const out: Record<number, number> = {};
-  for (const [k, mount] of Object.entries(def.weapons)) {
-    if (mount.shots !== undefined) out[Number(k)] = mount.shots;
-  }
-  return out;
+function freshBins(def = getMechDef("HBK-4G")!) {
+  return loadAmmoBins(def).bins;
 }
 
 describe("determining critical hits table", () => {
@@ -45,7 +42,7 @@ describe("determining critical hits table", () => {
         critSlotsDestroyed: freshFlags(def),
         destroyedWeapons: [],
         damage,
-        shotsLeft: freshAmmo(def),
+        ammoBins: freshBins(def),
       });
       expect(res.determiningRoll).toBe(roll);
       expect(res.rows).toHaveLength(0);
@@ -61,7 +58,7 @@ describe("determining critical hits table", () => {
         critSlotsDestroyed: freshFlags(def),
         destroyedWeapons: [],
         damage,
-        shotsLeft: freshAmmo(def),
+        ammoBins: freshBins(def),
       });
       expect(res.determiningRoll).toBe(roll);
       expect(res.rows).toHaveLength(1);
@@ -80,7 +77,7 @@ describe("determining critical hits table", () => {
         critSlotsDestroyed: freshFlags(def),
         destroyedWeapons: [],
         damage,
-        shotsLeft: freshAmmo(def),
+        ammoBins: freshBins(def),
       });
       expect(res.determiningRoll).toBe(roll);
       expect(res.rows).toHaveLength(2);
@@ -104,7 +101,7 @@ describe("limb / head blow-off on 12", () => {
       critSlotsDestroyed: freshFlags(def),
       destroyedWeapons: [],
       damage,
-      shotsLeft: freshAmmo(def),
+      ammoBins: freshBins(def),
     });
     expect(res.killed).toBe(true);
     expect(res.rows.some((r) => r.kind === "headBlownOff")).toBe(true);
@@ -119,7 +116,7 @@ describe("limb / head blow-off on 12", () => {
       critSlotsDestroyed: freshFlags(def),
       destroyedWeapons: [],
       damage,
-      shotsLeft: freshAmmo(def),
+      ammoBins: freshBins(def),
     });
     expect(res.blownOffArms).toContain("leftArm");
     expect(res.damage.internalStructure.leftArm).toBe(0);
@@ -134,7 +131,7 @@ describe("limb / head blow-off on 12", () => {
       critSlotsDestroyed: freshFlags(def),
       destroyedWeapons: [],
       damage,
-      shotsLeft: freshAmmo(def),
+      ammoBins: freshBins(def),
     });
     expect(res.damage.internalStructure.leftLeg).toBe(0);
     expect(res.damage.armor.leftLeg).toBe(0);
@@ -151,7 +148,7 @@ describe("limb / head blow-off on 12", () => {
       critSlotsDestroyed: freshFlags(def),
       destroyedWeapons: [],
       damage,
-      shotsLeft: freshAmmo(def),
+      ammoBins: freshBins(def),
     });
     expect(res.rows).toHaveLength(3);
     expect(res.killed).toBe(false);
@@ -177,7 +174,7 @@ describe("slot selection", () => {
         critSlotsDestroyed: freshFlags(def),
         destroyedWeapons: [],
         damage,
-        shotsLeft: freshAmmo(def),
+        ammoBins: freshBins(def),
       });
       expect(res.rows).toHaveLength(1);
       const eff = res.rows[0]!;
@@ -212,7 +209,7 @@ describe("slot selection", () => {
         critSlotsDestroyed: freshFlags(def),
         destroyedWeapons: [],
         damage,
-        shotsLeft: freshAmmo(def),
+        ammoBins: freshBins(def),
       });
       expect(res.rows).toHaveLength(1);
       const eff = res.rows[0]!;
@@ -252,7 +249,7 @@ describe("re-rolls", () => {
       critSlotsDestroyed: freshFlags(def),
       destroyedWeapons: [],
       damage,
-      shotsLeft: freshAmmo(def),
+      ammoBins: freshBins(def),
     });
     expect(res.rows).toHaveLength(1);
     const eff = res.rows[0]!;
@@ -280,7 +277,7 @@ describe("weapon and ammo crit effects", () => {
         armorRear: { ...def.armorRear },
         internalStructure: { ...def.internalStructure },
       },
-      shotsLeft: freshAmmo(def),
+      ammoBins: freshBins(def),
     });
     expect(res.rows).toHaveLength(1);
     const eff = res.rows[0]!;
@@ -292,14 +289,14 @@ describe("weapon and ammo crit effects", () => {
     expect(res.destroyedWeapons).toContain(1);
   });
 
-  it("AC/20 ammo explosion = shots x 20 damage applied to the bin's IS", () => {
+  it("AC/20 ammo explosion = hit bin's shots x 20 damage to that bin's IS", () => {
     const def = getMechDef("HBK-4G")!;
-    // HBK ammo bins are in leftTorso (slots 1-2), not rightTorso. Roll 8
-    // -> one crit. To land on slot 1 (the first ammo), need first half
-    // (first die 1-3) and second die 1 -> slot 1.
-    // Use a state where leftTorso IS is large enough that the explosion
-    // (10 shots x 20 = 200) does not drain any location to 0, so no
-    // cascade runs and the test stays focused on the damage formula.
+    // HBK ammo bins are leftTorso slots 1-2, each loaded with 5 shots. Roll
+    // 8 -> one crit; land on slot 1 (first half: first die 1-3, second die
+    // 1 -> slot 1). Only the hit bin detonates: 5 shots x 20 = 100 IS
+    // damage; the sibling bin (slot 2, 5 shots) is untouched, so no cascade
+    // runs (LT IS is large enough that even a full-bin blast wouldn't zero
+    // the location).
     const res = resolveCriticalHits({
       rng: detRoll(8, 1, 1),
       def,
@@ -311,38 +308,42 @@ describe("weapon and ammo crit effects", () => {
         armorRear: { ...def.armorRear },
         internalStructure: { ...def.internalStructure, leftTorso: 1000, centerTorso: 1000 },
       },
-      shotsLeft: { 1: 10 },
+      ammoBins: { "leftTorso:1": 5, "leftTorso:2": 5 },
     });
     expect(res.rows).toHaveLength(1);
     const eff = res.rows[0]!;
     expect(eff.kind).toBe("ammoExplosion");
     if (eff.kind === "ammoExplosion") {
       expect(eff.weaponName).toBe("Autocannon/20");
-      expect(eff.shotsRemaining).toBe(10);
+      expect(eff.shotsRemaining).toBe(5);
       expect(eff.damagePerShot).toBe(20);
-      expect(eff.damage).toBe(200);
+      expect(eff.damage).toBe(100);
     }
-    expect(res.shotsLeft[1]).toBe(0);
+    // The exploded bin is empty; the sibling bin keeps its 5 shots, and the
+    // derived per-weapon total drops from 10 to 5.
+    expect(res.ammoBins["leftTorso:1"]).toBe(0);
+    expect(res.ammoBins["leftTorso:2"]).toBe(5);
+    expect(res.shotsLeft[1]).toBe(5);
   });
 
   it("ammo explosion cascades a fresh determining roll on a newly-emptied IS", () => {
     // Use a near-empty state where the rightTorso IS has 1 point left and
-    // the AC/20 ammo bin has 5 shots. Crit on the ammo: 100 damage, drains
-    // the IS, zeros the location — the cascade rules then trigger a fresh
-    // determining roll.
+    // the AC/20 ammo bin (leftTorso slot 1) has 5 shots. Crit on the ammo:
+    // 5 shots x 20 = 100 damage, drains leftTorso IS, zeros the location —
+    // the cascade rules then trigger a fresh determining roll.
     const def = getMechDef("HBK-4G")!;
     const damage: UnitDamageState = {
       armor: { ...def.armor, rightTorso: 0 },
       armorRear: { ...def.armorRear },
       internalStructure: { ...def.internalStructure, rightTorso: 1 },
     };
-    const ammo: Record<number, number> = { 1: 5 };
-    // Ammo is in leftTorso (slot 1) per the HBK record sheet. The starting
-    // crit lands on slot 1 (det 8 -> first half, slot 1). The explosion
-    // drains leftTorso IS from its fresh value to 0 (transferring into CT),
-    // and the cascade runs two more determining rolls — one for leftTorso
-    // (its IS just hit 0) and one for CT (which then dies when the cascade
-    // hits an engine slot or gyro). Provide ample dice:
+    const ammoBins: Record<string, number> = { "leftTorso:1": 5, "leftTorso:2": 0 };
+    // The starting crit lands on leftTorso slot 1 (det 8 -> first half,
+    // slot 1). The explosion drains leftTorso IS from its fresh value to 0
+    // (transferring into CT), and the cascade runs two more determining
+    // rolls — one for leftTorso (its IS just hit 0) and one for CT (which
+    // then dies when the cascade hits an engine slot or gyro). Provide
+    // ample dice:
     //   det(2) + slot(2) + [cascade LT: det(2) + slot roll that re-rolls once(4)] + [cascade CT: det(2) + slot(2)]
     //   = 14 dice
     const res = resolveCriticalHits({
@@ -352,7 +353,7 @@ describe("weapon and ammo crit effects", () => {
       critSlotsDestroyed: freshFlags(def),
       destroyedWeapons: [],
       damage,
-      shotsLeft: ammo,
+      ammoBins,
     });
     // We at least expect the initial crit to be the ammo explosion.
     expect(res.rows.length).toBeGreaterThanOrEqual(1);
@@ -368,6 +369,11 @@ describe("weapon and ammo crit effects", () => {
     }
     expect(res.killed).toBe(true);
     expect(res.damage.internalStructure.centerTorso).toBe(0);
+    // The exploded bin's location is gone, so all leftTorso bins (and the
+    // derived per-weapon total) are removed entirely.
+    expect(res.ammoBins["leftTorso:1"]).toBeUndefined();
+    expect(res.ammoBins["leftTorso:2"]).toBeUndefined();
+    expect(res.shotsLeft[1]).toBeUndefined();
   });
 
   it("cockpit crit kills the 'Mech", () => {
@@ -384,7 +390,7 @@ describe("weapon and ammo crit effects", () => {
         armorRear: { ...def.armorRear },
         internalStructure: { ...def.internalStructure },
       },
-      shotsLeft: freshAmmo(def),
+      ammoBins: freshBins(def),
     });
     expect(res.killed).toBe(true);
     expect(res.rows.some((r) => r.kind === "cockpitDestroyed")).toBe(true);
@@ -411,7 +417,7 @@ describe("transfer rules", () => {
         armorRear: { ...def.armorRear },
         internalStructure: { ...def.internalStructure },
       },
-      shotsLeft: freshAmmo(def),
+      ammoBins: freshBins(def),
     });
     // Three crits land against 11 hittable slots; none transfer.
     expect(res.rows).toHaveLength(3);
@@ -444,7 +450,7 @@ describe("transfer rules", () => {
         armorRear: { ...def.armorRear },
         internalStructure: { ...def.internalStructure },
       },
-      shotsLeft: freshAmmo(def),
+      ammoBins: freshBins(def),
     });
     expect(res.rows).toHaveLength(1);
     const eff = res.rows[0]!;
@@ -472,7 +478,7 @@ describe("transfer rules", () => {
         armorRear: { ...def.armorRear },
         internalStructure: { ...def.internalStructure },
       },
-      shotsLeft: freshAmmo(def),
+      ammoBins: freshBins(def),
     });
     // Head is terminal: 1 crit declared, no slot found, lost.
     expect(res.rows).toHaveLength(1);

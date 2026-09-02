@@ -73,7 +73,7 @@ The prompt names the acting unit; commands act on that 'Mech.
 | `mode standstill\|walk\|run\|jump` | declare movement mode (required first); for walk/run/jump, renders a clipped ASCII hex map of the reachable hexes — exactly the smallest bounding box around every reachable hex, clamped to the board (no padding). Reachable hexes draw a team-colored `<>` in the belly; every reachable (hex, facing) edge is tinted with the acting unit's team color, and no facing arrows are drawn. Other units inside the crop keep their ids (team-colored) but no facing arrow. Movement paths (the `F`/`B`/`R`/`L` fragment sequence per landing) remain available programmatically via `reachableLandings`/`RevealedLanding.path` for later use, but are not rendered on the map |
 | `move <col> <row>` | queue step into adjacent hex (forward/backward vs facing; jump = any adjacent) |
 | `face <facing>` or `face <±1..5>` | queue facing change (`face ne`, `face -2`) |
-| `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [JAM] / [DST] / ammo {n} markers); without id: brief unit list (id, model, position+facing) grouped by team |
+| `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [JAM] / [DST] / per-bin ammo `(n left)` markers); without id: brief unit list (id, model, position+facing) grouped by team |
 | `status` | queued move steps with running MP cost per step |
 | `cancel` | clear mode + steps |
 | `done` | commit via `executeMove`; prints path + MP spent and total budget |
@@ -83,8 +83,9 @@ The prompt names the acting unit; commands act on that 'Mech.
 | command | effect |
 |---|---|
 | `weapons [id]` | list weapon mounts: 1-based number, name, location, S/M/L, ammo, jammed/destroyed |
+| `ammo [policy]` | show (no argument) or set the acting unit's ammo depletion policy: `exposed` (default), `core`, `spread`, `least-first` (case-insensitive, hyphens optional). The policy picks which bin of a weapon takes the next shot; ties are broken at random |
 | `fire <targetId> <weapon> [<weapon> ...]` | queue weapon declarations using 1-based weapon numbers (target first; declare several weapons at once, all against the one shared target; rapid-fire SRM/LRM fire a full volley — no `shots` argument) |
-| `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [JAM] / [DST] / ammo {n} markers); without id: brief unit list (id, model, position+facing) grouped by team |
+| `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [JAM] / [DST] / per-bin ammo `(n left)` markers); without id: brief unit list (id, model, position+facing) grouped by team |
 | `status` | queued attack declarations |
 | `cancel` | clear declarations |
 | `done` | `declareAttacks` + `resolveDeclaredAttacks`; prints per-weapon GATOR to-hit line, dice, cluster hits, damage by location |
@@ -93,7 +94,7 @@ The prompt names the acting unit; commands act on that 'Mech.
 
 | command | effect |
 |---|---|
-| `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [JAM] / [DST] / ammo {n} markers); without id: brief unit list (id, model, position+facing) grouped by team |
+| `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [JAM] / [DST] / per-bin ammo `(n left)` markers); without id: brief unit list (id, model, position+facing) grouped by team |
 | `rematch` | new battle, same roster + terrain + seed |
 | globals | `board`, `log` remain available; `reset` returns to empty setup |
 
@@ -134,8 +135,14 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
 - **Firing arc** — front arc only. (Side / rear arc classification is
   implemented in `arcs.ts` but is not yet wired into targeting.)
 - **Weapons** — ballistic / energy / missile with short/medium/long range
-  brackets, rapid-fire, pulse (−2 to-hit), ammo tracking, jam on natural 2
-  (multi-shot), LRM lots-of-5 grouping.
+  brackets, rapid-fire, pulse (−2 to-hit), per-bin ammo tracking, jam on
+  natural 2 (multi-shot), LRM lots-of-5 grouping. Ammo is depleted per
+  crit slot ("bin") under a per-unit policy set with `ammo <policy>`:
+  `exposed` arms → legs → side torsos → head → center torso (default),
+  `core` the reverse priority, `spread` fullest-bin-first, `leastFirst`
+  emptiest-first; equal-priority bins are chosen at random. Declared
+  `shots` pool across all mounts and bins of a weapon name (remainder one
+  per bin); `shotsLeft` is the derived per-weapon sum.
 - **Battle flow** — initiative roll, sequential movement phase, weapon
   attack phase, end-phase kill sweep, victory check, rematch.
 - **Critical hit table** — the official TW determining table
@@ -144,9 +151,11 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   empty / soak / already-destroyed slots and the whole determining roll
   transfers inward when the source is exhausted (head and center torso
   are terminal). Effects implemented: weapon destroyed, ammo explosion
-  (per-shot damage × remaining shots, applied directly to the bin
-  location's internal structure with cascading critical roll on the
-  drained IS), arm/leg/head blown off on a 12, cockpit crit kills the
+  (an explosion detonates only the hit bin — its remaining shots ×
+  per-shot damage applied directly to that bin location's internal
+  structure, with a cascading critical roll on the drained IS; bins in a
+  location whose IS is fully gone are removed outright, and an empty bin
+  soaks the hit), arm/leg/head blown off on a 12, cockpit crit kills the
   pilot, leg actuator/hip/jump-jet destruction feeds the effective
   movement helper (leg actuators −1 walk each, hip halves walking, jump
   jets −1 jump each). Engine / gyro / sensor / life-support / heat-sink
