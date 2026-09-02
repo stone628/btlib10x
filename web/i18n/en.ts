@@ -200,7 +200,7 @@ export const en = {
   "fireSuggestion.tn": "TN",
   "fireSuggestion.damage": "dmg",
   "fireSuggestion.shots": "shots",
-  "fireSuggestion.cluster": "({shots} missiles {per} dmg)",
+  "fireSuggestion.cluster": "{shots} missiles {per} dmg",
   "fireSuggestion.blocked": "blocked",
   "fireSuggestion.reason.jammed": "jammed",
   "fireSuggestion.reason.destroyed": "destroyed",

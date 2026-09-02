@@ -83,30 +83,94 @@ export function buildColumnsChunk(columns: readonly (readonly string[])[]): Chun
 }
 
 /**
+ * Whether a Unicode code point occupies 2 columns in a CJK-aware monospace
+ * font. Covers Hangul Jamo, CJK Radicals Supplement through CJK Strokes,
+ * Hangul Syllables, CJK Compatibility Ideographs, Vertical Forms, CJK
+ * Compatibility Forms, Halfwidth and Fullwidth Forms, and CJK Symbols/
+ * Punctuation. Astral-plane characters (Emoji, CJK Unified Ideographs
+ * Extension B and beyond) are caught by the `cp > 0xffff` final check.
+ */
+function isWideCodePoint(cp: number): boolean {
+  return (
+    // Hangul Jamo: U+1100..U+115F — initial/final/trailing jamo syllables.
+    (cp >= 0x1100 && cp <= 0x115f) ||
+    // Angle brackets rendered as wide in CJK contexts: U+2329 LEFT-POINTING,
+    // U+232A RIGHT-POINTING ANGLE BRACKET (the only single-codepoint picks).
+    cp === 0x2329 ||
+    cp === 0x232a ||
+    // CJK Radicals Supplement through CJK Strokes (and Yi syllables in
+    // between): U+2E80..U+A4CF — radicals, Kangxi, ideographic description,
+    // CJK symbols/punctuation, Hiragana, Katakana, Bopomofo, Hangul
+    // Compatibility Jamo, Kanbun, CJK Unified Ideographs Extension A, Yi.
+    (cp >= 0x2e80 && cp <= 0xa4cf) ||
+    // Hangul Syllables: U+AC00..U+D7A3 — precomposed modern Hangul.
+    (cp >= 0xac00 && cp <= 0xd7a3) ||
+    // CJK Compatibility Ideographs: U+F900..U+FAFF — duplicated Han chars.
+    (cp >= 0xf900 && cp <= 0xfaff) ||
+    // Vertical Forms: U+FE10..U+FE1F — CJK punctuation rendered vertically.
+    (cp >= 0xfe10 && cp <= 0xfe1f) ||
+    // CJK Compatibility Forms through Small Form Variants: U+FE30..U+FE6F
+    // — compatibility punctuation, vertical/horizontal presentation forms.
+    (cp >= 0xfe30 && cp <= 0xfe6f) ||
+    // Halfwidth and Fullwidth Forms: U+FF00..U+FF60 — fullwidth ASCII and
+    // halfwidth Katakana variants.
+    (cp >= 0xff00 && cp <= 0xff60) ||
+    // Fullwidth Signs: U+FFE0..U+FFE6 — fullwidth currency and math signs.
+    (cp >= 0xffe0 && cp <= 0xffe6) ||
+    // Any astral code point (planes 1–16): CJK Unified Ideographs
+    // Extension B+, Emoji, historic scripts, etc. All render as wide in
+    // CJK-aware monospace fonts.
+    cp > 0xffff
+  );
+}
+
+/**
+ * Code-unit length padded out to the visual cell count of the string.
+ * Each wide code point contributes 1 extra cell beyond its code-unit
+ * count (BMP wide = 1 unit + 1 cell; astral wide = 2 units + 0 extra
+ * because the wide bonus equals the surrogate-pair size). Pure-ASCII
+ * strings (the dominant `en` case) short-circuit and skip the per-char
+ * range checks entirely.
+ */
+function getCompensatedLength(str: string): number {
+  let extra = 0;
+  let isAscii = true;
+  for (const ch of str) {
+    const cp = ch.codePointAt(0) ?? 0;
+    if (cp > 0x7f) {
+      isAscii = false;
+      if (isWideCodePoint(cp)) extra += 1;
+    }
+  }
+
+  return isAscii ? str.length : str.length + Math.floor(extra / 2) + (extra % 2);
+}
+
+/**
  * Render a header + body table as a `columns` Chunk using Unicode box-drawing
  * glyphs. The returned `columns` array has `header.length + 1` entries:
  *
- *   - cols 0..n-1: data columns. Col 0 starts the box with `┌`/`├`/`└` corners;
- *     cols 1..n-1 have `┬`/`┼`/`┴` connectors and a `│` prefix on each
- *     non-stroke row. Cells are not padded; column width only drives the
- *     horizontal stroke length.
- *   - col n: a dedicated closing-wall column whose strings are the vertical
- *     stroke: `["┐", "│", "┤", ..., "┘"]`.
- *
  * Glyphs (data column 0 / data columns 1..n-1 / closing column):
  *   top:    ┌─── / ┬─── / ┐
- *   header: HEAD  / │HEAD / │
+ *   header: │HEAD  / │HEAD / │
  *   sep:    ├─── / ┼─── / ┤
- *   body:   C     / │C    / │
+ *   body:   │C     / │C    / │
  *   bot:    └─── / ┴─── / ┘
  *
  * Column widths come from `max(strlen)` per column. Box-drawing glyphs are
  * assumed to render at 1 ch in the terminal font.
  */
-const LIGHT_LINE_THEME: Record<string, string> = {
+// biome-ignore format: just keep it
+const _LIGHT_LINE_THEME = {
   tnw: "┌", tn: "┬", tne: "┐", tnh: "─", tnv: "│",
   tw: "├", tc: "┼", te: "┤",
   tsw: "└", ts: "┴", tse: "┘", tsh: "─", tsv: "│",
+};
+// biome-ignore format: just keep it
+const _ASCII_LINE_THEME = {
+  tnw: "+", tn: "+", tne: "+", tnh: "-", tnv: "|",
+  tw: "+", tc: "+", te: "+",
+  tsw: "+", ts: "+", tse: "+", tsh: "-", tsv: "|",
 };
 
 export function buildBoxTableChunk(
@@ -118,15 +182,19 @@ export function buildBoxTableChunk(
 
   const widths: number[] = [];
   for (let i = 0; i < n; i++) {
-    let w = (header[i] ?? "").length;
+    let w = getCompensatedLength(header[i] ?? "");
     for (const row of rows) {
       const cell = row[i];
-      if (cell !== undefined && cell.length > w) w = cell.length;
+      if (cell !== undefined) {
+        const cellLen = getCompensatedLength(cell);
+        if (cellLen > w) w = cellLen;
+      }
     }
     widths.push(w);
   }
 
-  const {tnw, tn, tne, tnh, tnv, tw, tc, te, tsw, ts, tse, tsh, tsv} = LIGHT_LINE_THEME;
+  // const { tnw, tn, tne, tnh, tnv, tw, tc, te, tsw, ts, tse, tsh, tsv } = _LIGHT_LINE_THEME;
+  const { tnw, tn, tne, tnh, tnv, tw, tc, te, tsw, ts, tse, tsh, tsv } = _ASCII_LINE_THEME;
 
   const height = rows.length;
   const cols: string[][] = [];
@@ -139,10 +207,10 @@ export function buildBoxTableChunk(
     const botWall = isDataFirst ? tsw : ts;
     const col: string[] = new Array(height + 3);
     col[0] = `${topWall}${stroke}`;
-    col[1] = `${tnv}${header[i]?.trimEnd() ?? ""}`;
+    col[1] = `${tnv}${header[i] ?? ""}`;
     col[2] = `${sepWall}${stroke}`;
     for (let r = 0; r < height; r++) {
-      col[3 + r] = `${tsv!}${rows[r]?.[i]?.trimEnd() ?? ""}`;
+      col[3 + r] = `${tsv!}${rows[r]?.[i] ?? ""}`;
     }
     col[height + 2] = `${botWall}${tsh!.repeat(w)}`;
     cols.push(col);
@@ -1084,10 +1152,10 @@ function fireWeaponTable(locale: LocaleId, weapons: readonly FireWeapon[]): Chun
     `[${BRACKET_LABEL[w.rangeBracket]}]`,
     String(w.tn),
     w.cluster !== undefined
-      ? `${w.expectedDamage} ${t(locale, "fireSuggestion.cluster", {
+      ? `${w.expectedDamage} (${t(locale, "fireSuggestion.cluster", {
           shots: String(w.cluster.shots),
           per: String(w.cluster.perMissile),
-        })}`
+        })})`
       : String(w.expectedDamage),
     w.shots !== null ? `${w.shots}` : "",
   ]);
