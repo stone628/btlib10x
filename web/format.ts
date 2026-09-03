@@ -17,6 +17,7 @@ import type {
   ResolvedMechDef,
   UnitDamageState,
   UnitState,
+  WeaponCategory,
   WeaponDef,
 } from "btlib10x";
 import {
@@ -525,18 +526,17 @@ export function infoMapList(): string[] {
 }
 
 export function infoWeaponList(locale: LocaleId): string[] {
-  const grouped = new Map<string, WeaponDef[]>();
+  const grouped = new Map<WeaponCategory, WeaponDef[]>();
   let maxNameLen = 0;
   for (const w of getAllWeapons()) {
-    const cat = weaponCategory(w.name);
-    const list = grouped.get(cat) ?? [];
+    const list = grouped.get(w.category) ?? [];
     list.push(w);
-    grouped.set(cat, list);
+    grouped.set(w.category, list);
     maxNameLen = Math.max(maxNameLen, w.name.length);
   }
   const lines: string[] = [];
   for (const [cat, weapons] of grouped) {
-    lines.push(t(locale, "info.weaponCategory", { category: cat }));
+    lines.push(t(locale, "info.weaponCategory", { category: weaponCategory(locale, cat) }));
     for (const w of weapons) {
       lines.push(
         `  ${w.name.padEnd(maxNameLen)}  short ${String(w.short).padStart(2)}` +
@@ -557,7 +557,7 @@ export function infoWeapon(locale: LocaleId, name: string): string[] {
       throw new Error(t(locale, "err.unknownWeapon", { name, list: listWeaponNames().join(", ") }));
     }
   })();
-  const cat = weaponCategory(w.name);
+  const cat = weaponCategory(locale, w.category);
   const lines = [
     t(locale, "info.weaponHead", { name: w.name, category: cat }),
     t(locale, "info.weaponRange", { short: w.short, medium: w.medium, long: w.long }),
@@ -1713,11 +1713,14 @@ function weaponDamageDetail(w: WeaponDef): string {
   return `${w.damage ?? 0} (direct fire)`;
 }
 
-function weaponCategory(name: string): string {
-  if (name.includes("LRM") || name.includes("SRM")) return "Missile";
-  if (name.includes("Autocannon") || name.includes("AC/") || name.includes("Machine Gun"))
-    return "Ballistic";
-  return "Energy";
+const CATEGORY_LABEL: Readonly<Record<WeaponCategory, MessageKey>> = {
+  MISSILE: "info.weaponCategoryMissile",
+  BALLISTIC: "info.weaponCategoryBallistic",
+  ENERGY: "info.weaponCategoryEnergy",
+};
+
+function weaponCategory(locale: LocaleId, category: WeaponCategory): string {
+  return t(locale, CATEGORY_LABEL[category]);
 }
 
 function weaponMountLine(
