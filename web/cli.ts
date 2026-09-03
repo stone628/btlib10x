@@ -22,7 +22,7 @@ import {
   weaponsLines,
 } from "./format.js";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
-import { isLocale, localeList, i18n } from "./i18n/index.js";
+import { i18n, isLocale, localeList } from "./i18n/index.js";
 import * as S from "./session.js";
 
 export interface CmdDef {
@@ -161,7 +161,9 @@ const SETUP_CMDS: Record<string, CmdDef> = {
       const name = a[0]!;
       const m = getMapDef(name);
       if (!m) {
-        throw new Error(i18n(s.locale, "err.unknownMap", { name, list: listMapNames().join(", ") }));
+        throw new Error(
+          i18n(s.locale, "err.unknownMap", { name, list: listMapNames().join(", ") }),
+        );
       }
       S.setMap(s, m.name);
       return [
@@ -200,7 +202,9 @@ const SETUP_CMDS: Record<string, CmdDef> = {
         { col: coord(L(s), a[4]!, "col"), row: coord(L(s), a[5]!, "row") },
         facing,
       );
-      return [i18n(L(s), "ok.added", { id: a[0]!, model: wantModel, col: a[4]!, row: a[5]!, facing })];
+      return [
+        i18n(L(s), "ok.added", { id: a[0]!, model: wantModel, col: a[4]!, row: a[5]!, facing }),
+      ];
     },
   },
   rm: {
@@ -243,7 +247,9 @@ const MOVE_CMDS: Record<string, CmdDef> = {
       const mode = S.parseMoveMode(L(s), a[0]!);
       S.declareMode(s, a[0]!);
       const r = S.stepResult(s);
-      const lines = [i18n(L(s), "ok.modeDeclared", { id: s.actorId ?? "", mode, budget: r.mpBudget })];
+      const lines = [
+        i18n(L(s), "ok.modeDeclared", { id: s.actorId ?? "", mode, budget: r.mpBudget }),
+      ];
       if (mode === "standStill") return lines;
       const chunk = reachChunk(s);
       if (chunk === null) return lines;
@@ -338,7 +344,9 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
         return [i18n(L(s), "ammo.current", { policy: ammoPolicyLabel(L(s), unit.ammoPolicy) })];
       }
       S.setAmmoPolicy(s, a[0]);
-      return [i18n(L(s), "ammo.set", { id: unit.id, policy: ammoPolicyLabel(L(s), unit.ammoPolicy) })];
+      return [
+        i18n(L(s), "ammo.set", { id: unit.id, policy: ammoPolicyLabel(L(s), unit.ammoPolicy) }),
+      ];
     },
   },
   fire: {
@@ -435,7 +443,9 @@ function commandHelp(session: S.Session, name: string): string[] {
   if (!def) throw new Error(i18n(locale, "err.unknownCommand", { name }));
   const names = listMapNames().join("|");
   const lines = [
-    def.usage !== undefined ? `${i18n(locale, "help.usagePrefix")}${def.usage}` : name.toLowerCase(),
+    def.usage !== undefined
+      ? `${i18n(locale, "help.usagePrefix")}${def.usage}`
+      : name.toLowerCase(),
   ];
   lines.push(i18n(locale, def.helpKey).replace(/\{names\}/g, names));
   if (def.argsDoc !== undefined && def.argsDoc.length > 0) {

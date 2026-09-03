@@ -32,14 +32,18 @@ import {
   getMechDef,
   getWeapon,
   internalStructureForTonnage,
+  isArm,
   isImmobile,
   isKilled,
+  isTorso,
   LOCATIONS,
   listMapNames,
   listWeaponNames,
   loadAmmoBins,
   reachableLandings,
+  shoulderOf,
   suggestFireTargets,
+  TORSO_LOCATIONS,
 } from "btlib10x";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
 import { i18n } from "./i18n/index.js";
@@ -481,7 +485,7 @@ export function infoMechList(locale: LocaleId): Chunk {
 export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
   const d = requireMechDef(model, locale);
   const armorRear: Partial<Record<Location, number>> = {};
-  for (const loc of ["centerTorso", "rightTorso", "leftTorso"] as const) {
+  for (const loc of TORSO_LOCATIONS) {
     const v = d.armorRear[loc];
     if (v !== undefined) armorRear[loc] = v;
   }
@@ -565,7 +569,9 @@ export function infoWeapon(locale: LocaleId, name: string): string[] {
     try {
       return getWeapon(name);
     } catch {
-      throw new Error(i18n(locale, "err.unknownWeapon", { name, list: listWeaponNames().join(", ") }));
+      throw new Error(
+        i18n(locale, "err.unknownWeapon", { name, list: listWeaponNames().join(", ") }),
+      );
     }
   })();
   const cat = weaponCategory(locale, w.category);
@@ -574,7 +580,8 @@ export function infoWeapon(locale: LocaleId, name: string): string[] {
     i18n(locale, "info.weaponRange", { short: w.short, medium: w.medium, long: w.long }),
     i18n(locale, "info.weaponDamage", { damage: weaponDamageDetail(w) }),
   ];
-  if (w.missiles !== undefined) lines.push(i18n(locale, "info.weaponMissiles", { count: w.missiles }));
+  if (w.missiles !== undefined)
+    lines.push(i18n(locale, "info.weaponMissiles", { count: w.missiles }));
   if (w.pulse) lines.push(i18n(locale, "info.weaponPulse"));
   if (w.rapidFireShots !== undefined)
     lines.push(i18n(locale, "info.weaponRapidFire", { shots: w.rapidFireShots }));
@@ -585,7 +592,8 @@ export function infoWeapon(locale: LocaleId, name: string): string[] {
 /** `info map <name>` output: header/legend lines followed by the styled grid. */
 export function infoMapChunks(locale: LocaleId, name: string): Chunk[] {
   const map = getMapDef(name);
-  if (!map) throw new Error(i18n(locale, "err.unknownMap", { name, list: listMapNames().join(", ") }));
+  if (!map)
+    throw new Error(i18n(locale, "err.unknownMap", { name, list: listMapNames().join(", ") }));
   const counts = new Map<string, number>();
   for (const t2 of map.terrain) counts.set(t2.type, (counts.get(t2.type) ?? 0) + 1);
   const breakdown = [...counts.entries()]
@@ -608,7 +616,9 @@ export function infoMapChunks(locale: LocaleId, name: string): Chunk[] {
   return [
     buildLinesChunk([
       i18n(locale, "info.mapHead", { name, w: map.width, h: map.height }),
-      i18n(locale, "info.terrainLine", { breakdown: breakdown || i18n(locale, "info.terrainNone") }),
+      i18n(locale, "info.terrainLine", {
+        breakdown: breakdown || i18n(locale, "info.terrainNone"),
+      }),
       i18n(locale, "info.elevationLine", { breakdown: elevationBreakdown }),
     ]),
     buildBoardChunk(
@@ -726,7 +736,7 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
 function setupSheet(unit: SetupUnit, id: string, locale: LocaleId): SheetView {
   const def = requireMechDef(unit.model, locale);
   const armorRear: Partial<Record<Location, number>> = {};
-  for (const loc of ["centerTorso", "rightTorso", "leftTorso"] as const) {
+  for (const loc of TORSO_LOCATIONS) {
     const v = def.armorRear[loc];
     if (v !== undefined) armorRear[loc] = v;
   }
@@ -1021,7 +1031,9 @@ export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
     }),
   ];
   if (view.gunnery !== null) {
-    topLines.push(i18n(locale, "sheet.gunneryLine", { gunnery: gunneryLabel(locale, view.gunnery) }));
+    topLines.push(
+      i18n(locale, "sheet.gunneryLine", { gunnery: gunneryLabel(locale, view.gunnery) }),
+    );
   }
   topLines.push(
     i18n(locale, "info.movement", { walk: view.walking, run: view.running, jump: view.jumping }),
@@ -1155,8 +1167,6 @@ export function sheetLinesShort(view: SheetView, locale: LocaleId, showMode = tr
  * as `cur/max`, with `*` when the front pool is depleted (structure still
  * intact) and `!` when internal structure is depleted. */
 function durabilityLine(view: SheetView, locale: LocaleId): string {
-  const isTorso = (loc: Location) =>
-    loc === "centerTorso" || loc === "rightTorso" || loc === "leftTorso";
   return i18n(locale, "sheet.durabilityLine", {
     list: LOCATIONS.map((loc) => {
       const frontCur = view.armor[loc];
@@ -1727,7 +1737,8 @@ export function transferDetail(locale: LocaleId, r: AttackResolution): string | 
   }
   let text = bits.join(", ");
   for (const arm of app.blownOffArms) {
-    const cause = arm === "rightArm" ? "rightTorso" : "leftTorso";
+    if (!isArm(arm)) continue;
+    const cause = shoulderOf(arm);
     text += i18n(locale, "res.armBlownOff", { cause: SHORT_LOC[cause], arm: SHORT_LOC[arm] });
   }
   const otherDestroyed = app.newlyDestroyed.filter((loc) => !app.blownOffArms.includes(loc));
@@ -1770,7 +1781,6 @@ function weaponCategory(locale: LocaleId, category: WeaponCategory): string {
 function weaponMountLines(locale: LocaleId, mounts: readonly WeaponMountInfo[]): string[] {
   let nameWidth = 0;
   for (const m of mounts) {
-    const w = getWeapon(m.weapon);
     if (m.weapon.length > nameWidth) nameWidth = m.weapon.length;
   }
   return mounts.map((mount, i) => {

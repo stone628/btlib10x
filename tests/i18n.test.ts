@@ -3,7 +3,7 @@ import { getMechDef } from "../src/data/index.js";
 import { canFireFromLocation } from "../src/rules/damage.js";
 import { en } from "../web/i18n/en.js";
 import type { LocaleId, MessageKey } from "../web/i18n/index.js";
-import { LOCALES, i18n } from "../web/i18n/index.js";
+import { i18n, LOCALES } from "../web/i18n/index.js";
 import * as S from "../web/session.js";
 import { newSession } from "../web/session.js";
 import { execute } from "./helpers.js";

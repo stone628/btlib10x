@@ -1,33 +1,17 @@
+import {
+  armFor,
+  damageTransferTo,
+  isArm,
+  isKillLocation,
+  isLeg,
+  isTorso,
+  shoulderOf,
+} from "../core/locations.js";
 import type { Location } from "../core/types.js";
 import type { Arc } from "./arcs.js";
 
-/**
- * Damage transfer graph (bipedal, quick-start damage-transfer diagram).
- * Once a location's armor and internal structure are both depleted, overflow
- * transfers inward. null = no further location; destroying head/centerTorso
- * internal structure kills the 'Mech.
- */
-export const TRANSFER_INWARD: Readonly<Record<Location, Location | null>> = {
-  rightArm: "rightTorso",
-  leftArm: "leftTorso",
-  rightLeg: "rightTorso",
-  leftLeg: "leftTorso",
-  rightTorso: "centerTorso",
-  leftTorso: "centerTorso",
-  centerTorso: null,
-  head: null,
-};
-
 /** Flat hit-point counter per location (front armor, or re-used for IS). */
 export type ArmorState = Record<Location, number>;
-
-const TORSO_LOCATIONS: readonly Location[] = ["centerTorso", "rightTorso", "leftTorso"];
-
-/** When a side torso's structure is destroyed, its arm is blown off too. */
-const TORSO_TO_ARM: Readonly<Partial<Record<Location, Location>>> = {
-  rightTorso: "rightArm",
-  leftTorso: "leftArm",
-};
 
 /**
  * Layered damage state for one unit: front armor plus rear torso armor plus
@@ -78,7 +62,7 @@ function poolOf(
   location: Location,
   arc: Arc,
 ): { kind: "armor" | "armorRear"; value: number } {
-  if (arc === "rear" && TORSO_LOCATIONS.includes(location)) {
+  if (arc === "rear" && isTorso(location)) {
     return { kind: "armorRear", value: state.armorRear[location] ?? 0 };
   }
   return { kind: "armor", value: state.armor[location] };
@@ -138,11 +122,11 @@ export function applyDamage(
       steps.push({ location: cur, pool: "structure", damageApplied: applied, depleted });
       if (depleted) {
         newlyDestroyed.push(cur);
-        if (cur === "head" || cur === "centerTorso") {
+        if (isKillLocation(cur)) {
           killed = true;
           break;
         }
-        const arm = TORSO_TO_ARM[cur];
+        const arm = armFor(cur);
         if (arm !== undefined && next.internalStructure[arm] > 0) {
           next.internalStructure[arm] = 0;
           next.armor[arm] = 0;
@@ -150,10 +134,10 @@ export function applyDamage(
           blownOffArms.push(arm);
         }
       }
-      if (remaining > 0 && !killed) current = TRANSFER_INWARD[cur];
+      if (remaining > 0 && !killed) current = damageTransferTo(cur);
       else break;
     } else {
-      current = TRANSFER_INWARD[cur];
+      current = damageTransferTo(cur);
     }
   }
 
@@ -186,11 +170,8 @@ export function isImmobile(damage: UnitDamageState): boolean {
 /** A weapon in `location` can fire only if that location (and its shoulder for arms) is intact. */
 export function canFireFromLocation(damage: UnitDamageState, location: Location): boolean {
   if (damage.internalStructure[location] <= 0) return false;
-  if (location === "rightArm" || location === "rightLeg") {
-    return damage.internalStructure.rightTorso > 0;
-  }
-  if (location === "leftArm" || location === "leftLeg") {
-    return damage.internalStructure.leftTorso > 0;
+  if (isArm(location) || isLeg(location)) {
+    return damage.internalStructure[shoulderOf(location)] > 0;
   }
   return true;
 }

@@ -1,5 +1,5 @@
 import { type BattleState, FACINGS, type Facing, type TerrainHexDef } from "btlib10x";
-import { type LocaleId, i18n } from "./i18n/index.js";
+import { i18n, type LocaleId } from "./i18n/index.js";
 import type { BoardModel, CharStyle, Span } from "./render.js";
 
 // ---- BoardRenderer type ----
