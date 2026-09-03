@@ -223,6 +223,8 @@ export const kr: Catalog = {
   "info.mechColClass": "등급",
   "info.mechColTon": "톤수",
   "info.mechColMove": "이동(걷기/달리기/점프)",
+  "info.specsCol": "스펙",
+  "info.armorStructureCol": "장갑 및 구조",
   "info.head": "{name} {model} — {weightClass} {tonnage}t ({techBase})",
   "info.movement": "이동: 걷기 {walk} / 달리기 {run} / 점프 {jump}",
   "info.mapHead": "{name}: {w}x{h}",

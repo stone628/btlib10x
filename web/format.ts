@@ -42,7 +42,7 @@ import {
   suggestFireTargets,
 } from "btlib10x";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
-import { t } from "./i18n/index.js";
+import { i18n } from "./i18n/index.js";
 import type { BoardModel, BoardRenderer, CharStyle } from "./render.js";
 import { battleModel, getBoardRenderer, mapModel, TEAM_STYLES } from "./render.js";
 import type { Session, SetupUnit } from "./session.js";
@@ -243,7 +243,7 @@ function buildHeaderTableChunkFromRows(
     const stroke = tnh.repeat(w);
     const isDataFirst = i === 0;
     const botWall = isDataFirst ? tsw : ts;
-    const col: string[] = new Array(height + 3);
+    const col: string[] = new Array(height + 4);
     const currHeader = header[i];
 
     if (currHeader === null) {
@@ -279,7 +279,7 @@ function buildHeaderTableChunkFromRows(
     for (let r = 0; r < height; r++) {
       col[3 + r] = `${tsv}${rows[r]?.[i] ?? ""}`;
     }
-    col[height + 2] = `${botWall}${tsh.repeat(w)}`;
+    col[height + 3] = `${botWall}${tsh.repeat(w)}`;
     cols.push(col);
   }
 
@@ -294,7 +294,7 @@ function buildHeaderTableChunkFromRows(
     closing[2] = tec;
   }
   for (let r = 0; r < height; r++) closing[3 + r] = tsv;
-  closing[height + 2] = tse;
+  closing[height + 3] = tse;
   cols.push(closing);
 
   return buildColumnsChunk(cols);
@@ -316,7 +316,7 @@ function buildHeaderTableChunkFromColumns(
     const currHeader = header[i];
     let w = currHeader === null ? 0 : getCompensatedLength(currHeader!);
     const argCol = columns[i];
-    const col: string[] = new Array(height + 3);
+    const col: string[] = new Array(height + 4);
 
     if (argCol === undefined) {
       for (let r = 0; r < height; r++) {
@@ -377,7 +377,7 @@ function buildHeaderTableChunkFromColumns(
       }
       prevHeaderExists = true;
     }
-    col[height + 2] = `${botWall}${tsh!.repeat(w)}`;
+    col[height + 3] = `${botWall}${tsh!.repeat(w)}`;
   }
 
   const closing: string[] = new Array(height + 3);
@@ -391,7 +391,7 @@ function buildHeaderTableChunkFromColumns(
     closing[2] = tec;
   }
   for (let r = 0; r < height; r++) closing[3 + r] = tsv;
-  closing[height + 2] = tse;
+  closing[height + 3] = tse;
   cols.push(closing);
 
   return buildColumnsChunk(cols);
@@ -419,7 +419,7 @@ function gunneryLabel(locale: LocaleId, gunnery: number): string {
         : gunnery <= 5
           ? "skill.regular"
           : "skill.green";
-  return `${t(locale, band)}(${gunnery})`;
+  return `${i18n(locale, band)}(${gunnery})`;
 }
 
 function mapDims(s: Session): [number, number] | undefined {
@@ -433,7 +433,7 @@ export function boardChunk(s: Session): Chunk {
   const dims = mapDims(s);
   if (!s.battle) {
     if (!s.mapName && s.roster.length === 0) {
-      return buildLinesChunk([t(s.locale, "board.noMap")]);
+      return buildLinesChunk([i18n(s.locale, "board.noMap")]);
     }
     const units = Object.fromEntries(
       s.roster.map((u) => [
@@ -462,11 +462,11 @@ export function infoMechList(locale: LocaleId): Chunk {
     return a.name.localeCompare(b.name);
   });
   const header = [
-    t(locale, "info.mechColModel"),
-    t(locale, "info.mechColName"),
-    t(locale, "info.mechColClass"),
-    t(locale, "info.mechColTon"),
-    t(locale, "info.mechColMove"),
+    i18n(locale, "info.mechColModel"),
+    i18n(locale, "info.mechColName"),
+    i18n(locale, "info.mechColClass"),
+    i18n(locale, "info.mechColTon"),
+    i18n(locale, "info.mechColMove"),
   ];
   const rows = list.map((d) => [
     d.model,
@@ -487,17 +487,17 @@ export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
   }
   const is = internalStructureForTonnage(d.tonnage);
   const topLines = [
-    t(locale, "info.head", {
+    i18n(locale, "info.head", {
       model: d.model,
       name: d.name,
       weightClass: d.weightClass,
       tonnage: d.tonnage,
       techBase: d.techBase,
     }),
-    t(locale, "info.movement", { walk: d.walking, run: d.running, jump: d.jumping }),
+    i18n(locale, "info.movement", { walk: d.walking, run: d.running, jump: d.jumping }),
   ];
   const weaponLines = [
-    t(locale, "sheet.weaponsHeader", { n: Object.keys(d.weapons).length }),
+    i18n(locale, "sheet.weaponsHeader", { n: Object.keys(d.weapons).length }),
     ...Object.entries(d.weapons).map(([key, mount]) =>
       weaponMountLine(locale, Number(key), {
         weapon: mount.weapon,
@@ -511,7 +511,7 @@ export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
   ];
   return [
     buildHeaderTableChunkFromColumns(
-      ["info", "armor/structure"],
+      [i18n(locale, "info.specsCol"), i18n(locale, "info.armorStructureCol")],
       mergeDiagramToColumns(
         topLines,
         weaponLines,
@@ -546,7 +546,7 @@ export function infoWeaponList(locale: LocaleId): string[] {
   }
   const lines: string[] = [];
   for (const [cat, weapons] of grouped) {
-    lines.push(t(locale, "info.weaponCategory", { category: weaponCategory(locale, cat) }));
+    lines.push(i18n(locale, "info.weaponCategory", { category: weaponCategory(locale, cat) }));
     for (const w of weapons) {
       lines.push(
         `  ${w.name.padEnd(maxNameLen)}  short ${String(w.short).padStart(2)}` +
@@ -564,27 +564,27 @@ export function infoWeapon(locale: LocaleId, name: string): string[] {
     try {
       return getWeapon(name);
     } catch {
-      throw new Error(t(locale, "err.unknownWeapon", { name, list: listWeaponNames().join(", ") }));
+      throw new Error(i18n(locale, "err.unknownWeapon", { name, list: listWeaponNames().join(", ") }));
     }
   })();
   const cat = weaponCategory(locale, w.category);
   const lines = [
-    t(locale, "info.weaponHead", { name: w.name, category: cat }),
-    t(locale, "info.weaponRange", { short: w.short, medium: w.medium, long: w.long }),
-    t(locale, "info.weaponDamage", { damage: weaponDamageDetail(w) }),
+    i18n(locale, "info.weaponHead", { name: w.name, category: cat }),
+    i18n(locale, "info.weaponRange", { short: w.short, medium: w.medium, long: w.long }),
+    i18n(locale, "info.weaponDamage", { damage: weaponDamageDetail(w) }),
   ];
-  if (w.missiles !== undefined) lines.push(t(locale, "info.weaponMissiles", { count: w.missiles }));
-  if (w.pulse) lines.push(t(locale, "info.weaponPulse"));
+  if (w.missiles !== undefined) lines.push(i18n(locale, "info.weaponMissiles", { count: w.missiles }));
+  if (w.pulse) lines.push(i18n(locale, "info.weaponPulse"));
   if (w.rapidFireShots !== undefined)
-    lines.push(t(locale, "info.weaponRapidFire", { shots: w.rapidFireShots }));
-  if (w.antiInfantry) lines.push(t(locale, "info.weaponAntiInfantry"));
+    lines.push(i18n(locale, "info.weaponRapidFire", { shots: w.rapidFireShots }));
+  if (w.antiInfantry) lines.push(i18n(locale, "info.weaponAntiInfantry"));
   return lines;
 }
 
 /** `info map <name>` output: header/legend lines followed by the styled grid. */
 export function infoMapChunks(locale: LocaleId, name: string): Chunk[] {
   const map = getMapDef(name);
-  if (!map) throw new Error(t(locale, "err.unknownMap", { name, list: listMapNames().join(", ") }));
+  if (!map) throw new Error(i18n(locale, "err.unknownMap", { name, list: listMapNames().join(", ") }));
   const counts = new Map<string, number>();
   for (const t2 of map.terrain) counts.set(t2.type, (counts.get(t2.type) ?? 0) + 1);
   const breakdown = [...counts.entries()]
@@ -603,12 +603,12 @@ export function infoMapChunks(locale: LocaleId, name: string): Chunk[] {
     [...elevationCounts.entries()]
       .sort(([a], [b]) => a - b)
       .map(([level, n]) => `L${level} ${n}`)
-      .join(", ") || t(locale, "info.terrainNone");
+      .join(", ") || i18n(locale, "info.terrainNone");
   return [
     buildLinesChunk([
-      t(locale, "info.mapHead", { name, w: map.width, h: map.height }),
-      t(locale, "info.terrainLine", { breakdown: breakdown || t(locale, "info.terrainNone") }),
-      t(locale, "info.elevationLine", { breakdown: elevationBreakdown }),
+      i18n(locale, "info.mapHead", { name, w: map.width, h: map.height }),
+      i18n(locale, "info.terrainLine", { breakdown: breakdown || i18n(locale, "info.terrainNone") }),
+      i18n(locale, "info.elevationLine", { breakdown: elevationBreakdown }),
     ]),
     buildBoardChunk(
       boardChunkOf(
@@ -626,7 +626,7 @@ export function infoMapChunks(locale: LocaleId, name: string): Chunk[] {
 
 function requireMechDef(model: string, locale: LocaleId): ResolvedMechDef {
   const def = getMechDef(model);
-  if (!def) throw new Error(t(locale, "err.unknownModel", { model }));
+  if (!def) throw new Error(i18n(locale, "err.unknownModel", { model }));
   return def;
 }
 
@@ -685,14 +685,14 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
     running: def.running,
     jumping: def.jumping,
     removed: unit.removed,
-    positionLine: t(locale, "sheet.at", { pos: disp(unit.position), facing: unit.facing }),
+    positionLine: i18n(locale, "sheet.at", { pos: disp(unit.position), facing: unit.facing }),
     modeLine:
       unit.moveMode !== null
-        ? t(locale, "sheet.modeSuffix", { mode: unit.moveMode, mp: unit.mpSpent })
+        ? i18n(locale, "sheet.modeSuffix", { mode: unit.moveMode, mp: unit.mpSpent })
         : null,
     ammoPolicyLine:
       collectAmmoBins(def).length > 0
-        ? t(locale, "sheet.ammoPolicy", { policy: ammoPolicyLabel(locale, unit.ammoPolicy) })
+        ? i18n(locale, "sheet.ammoPolicy", { policy: ammoPolicyLabel(locale, unit.ammoPolicy) })
         : null,
     armor: unit.damage.armor,
     damage: unit.damage,
@@ -743,7 +743,7 @@ function setupSheet(unit: SetupUnit, id: string, locale: LocaleId): SheetView {
     running: def.running,
     jumping: def.jumping,
     removed: false,
-    positionLine: t(locale, "sheet.at", { pos: disp(unit.position), facing: unit.facing }),
+    positionLine: i18n(locale, "sheet.at", { pos: disp(unit.position), facing: unit.facing }),
     modeLine: null,
     ammoPolicyLine: null,
     armor: damage.armor,
@@ -885,7 +885,7 @@ const AMMO_POLICY_KEY: Readonly<Record<AmmoPolicy, MessageKey>> = {
 
 /** Human-friendly i18n label for an ammo depletion policy. */
 export function ammoPolicyLabel(locale: LocaleId, policy: AmmoPolicy): string {
-  return t(locale, AMMO_POLICY_KEY[policy]);
+  return i18n(locale, AMMO_POLICY_KEY[policy]);
 }
 
 /** Human-friendly i18n key for a structure component name. */
@@ -929,10 +929,10 @@ function critSlotText(
   const markers: string[] = [];
   let body: string;
   if (slot.kind === "empty") {
-    body = t(locale, "critChart.empty");
+    body = i18n(locale, "critChart.empty");
   } else if (slot.kind === "soak") {
     const key = CRIT_SOAK_KEY[slot.name];
-    body = `(${key !== undefined ? t(locale, key) : slot.name})`;
+    body = `(${key !== undefined ? i18n(locale, key) : slot.name})`;
   } else if (slot.kind === "weapon") {
     body = slot.weapon;
   } else if (slot.kind === "ammo") {
@@ -943,13 +943,13 @@ function critSlotText(
       const curr = live !== null ? (live.ammoBins[binId] ?? max) : max;
       markers.push(
         live === null
-          ? t(locale, "critChart.ammoDesign", { max })
-          : t(locale, "critChart.ammoSuffix", { curr, max }),
+          ? i18n(locale, "critChart.ammoDesign", { max })
+          : i18n(locale, "critChart.ammoSuffix", { curr, max }),
       );
     }
   } else {
     const key = CRIT_COMPONENT_KEY[slot.name as CritStructureName];
-    body = key !== undefined ? t(locale, key) : slot.name;
+    body = key !== undefined ? i18n(locale, key) : slot.name;
   }
   const line = ` ${dice} ${body}`;
   if (live !== null && live.critSlotsDestroyed[loc] !== undefined) {
@@ -957,8 +957,8 @@ function critSlotText(
     const mountDestroyed =
       slot.kind === "weapon" && live.destroyedWeapons.includes(slot.weaponIndex);
     const mountJammed = slot.kind === "weapon" && live.jammedWeapons.includes(slot.weaponIndex);
-    if (mountJammed) markers.push(t(locale, "critChart.jammedSuffix"));
-    if (slotHit || mountDestroyed) markers.push(t(locale, "critChart.destroyedSuffix"));
+    if (mountJammed) markers.push(i18n(locale, "critChart.jammedSuffix"));
+    if (slotHit || mountDestroyed) markers.push(i18n(locale, "critChart.destroyedSuffix"));
   }
   return markers.length > 0 ? `${line}${markers.join("")}` : line;
 }
@@ -996,7 +996,7 @@ function critChartChunk(def: ResolvedMechDef, locale: LocaleId, live: CritChartL
   built.forEach((lines) => {
     lines[0] = lines[0]!.padEnd(maxLineLen);
   });
-  return buildCollapsibleChunk(t(locale, "critChart.summary"), [
+  return buildCollapsibleChunk(i18n(locale, "critChart.summary"), [
     buildColumnsChunk([raLines, hdLines, laLines]),
     buildColumnsChunk([rtLines, ctLines, ltLines]),
     buildColumnsChunk([rlLines, infoLines, llLines]),
@@ -1006,10 +1006,10 @@ function critChartChunk(def: ResolvedMechDef, locale: LocaleId, live: CritChartL
 /** Record sheet with armor status per location, side-by-side with ASCII diagram. */
 export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
   const idLine = view.removed
-    ? `${t(locale, "sheet.idLine", { id: view.id, team: view.team })}${t(locale, "sheet.removedId")}`
-    : t(locale, "sheet.idLine", { id: view.id, team: view.team });
+    ? `${i18n(locale, "sheet.idLine", { id: view.id, team: view.team })}${i18n(locale, "sheet.removedId")}`
+    : i18n(locale, "sheet.idLine", { id: view.id, team: view.team });
   const topLines = [
-    t(locale, "sheet.modelLine", {
+    i18n(locale, "sheet.modelLine", {
       model: view.model,
       name: view.name,
       weightClass: view.weightClass,
@@ -1017,21 +1017,21 @@ export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
     }),
   ];
   if (view.gunnery !== null) {
-    topLines.push(t(locale, "sheet.gunneryLine", { gunnery: gunneryLabel(locale, view.gunnery) }));
+    topLines.push(i18n(locale, "sheet.gunneryLine", { gunnery: gunneryLabel(locale, view.gunnery) }));
   }
   topLines.push(
-    t(locale, "info.movement", { walk: view.walking, run: view.running, jump: view.jumping }),
+    i18n(locale, "info.movement", { walk: view.walking, run: view.running, jump: view.jumping }),
   );
   topLines.push(view.positionLine);
   if (view.ammoPolicyLine !== null) topLines.push(view.ammoPolicyLine);
   const weaponLines: string[] = [];
-  weaponLines.push(t(locale, "sheet.weaponsHeader", { n: view.mounts.length }));
+  weaponLines.push(i18n(locale, "sheet.weaponsHeader", { n: view.mounts.length }));
   for (const [i, m] of view.mounts.entries()) {
     weaponLines.push(weaponMountLine(locale, i + 1, m));
   }
   return [
     buildHeaderTableChunkFromColumns(
-      [idLine, "armor/structure"],
+      [idLine, i18n(locale, "info.armorStructureCol")],
       mergeDiagramToColumns(
         topLines,
         weaponLines,
@@ -1076,11 +1076,11 @@ function mergeDiagramToColumns(
 export function sheetForUnit(s: Session, id: string): Chunk[] {
   if (s.battle) {
     const unit = s.battle.units[id];
-    if (!unit) throw new Error(t(s.locale, "err.unknownUnitId", { id }));
+    if (!unit) throw new Error(i18n(s.locale, "err.unknownUnitId", { id }));
     return sheetLines(battleSheet(unit, id, s.locale), s.locale);
   }
   const placed = s.roster.find((u) => u.id === id);
-  if (!placed) throw new Error(t(s.locale, "err.noSuchUnit", { id }));
+  if (!placed) throw new Error(i18n(s.locale, "err.noSuchUnit", { id }));
   return sheetLines(setupSheet(placed, id, s.locale), s.locale);
 }
 
@@ -1091,7 +1091,7 @@ export function unitBriefList(s: Session): string[] {
   const lines: string[] = [];
   const teams = [...new Set(Object.values(battle.units).map((u) => u.team))].sort((a, b) => a - b);
   for (const team of teams) {
-    lines.push(t(s.locale, "setup.teamHeader", { team }));
+    lines.push(i18n(s.locale, "setup.teamHeader", { team }));
     for (const [uid, unit] of Object.entries(battle.units).filter(([, u]) => u.team === team)) {
       // Engine guarantee: `unit.model` was validated by `createBattle`.
       const def = getMechDef(unit.model)!;
@@ -1107,16 +1107,16 @@ export function unitBriefList(s: Session): string[] {
 
 export function fmtSetupStatus(s: Session): string[] {
   const lines: string[] = [
-    t(s.locale, "setup.mapLabel", { name: s.mapName ?? t(s.locale, "setup.mapNone") }),
-    t(s.locale, "setup.terrainCount", { n: s.terrainDefs.length }),
+    i18n(s.locale, "setup.mapLabel", { name: s.mapName ?? i18n(s.locale, "setup.mapNone") }),
+    i18n(s.locale, "setup.terrainCount", { n: s.terrainDefs.length }),
   ];
   const teams = [...new Set(s.roster.map((u) => u.team))].sort((a, b) => a - b);
   for (const team of teams) {
-    lines.push(t(s.locale, "setup.teamHeader", { team }));
+    lines.push(i18n(s.locale, "setup.teamHeader", { team }));
     for (const u of s.roster.filter((x) => x.team === team)) {
       const def = requireMechDef(u.model, s.locale);
       lines.push(
-        t(s.locale, "setup.unitLine", {
+        i18n(s.locale, "setup.unitLine", {
           id: u.id,
           model: u.model,
           name: def.name,
@@ -1127,12 +1127,12 @@ export function fmtSetupStatus(s: Session): string[] {
       );
     }
   }
-  if (teams.length === 0) lines.push(t(s.locale, "setup.noUnits"));
+  if (teams.length === 0) lines.push(i18n(s.locale, "setup.noUnits"));
   return lines;
 }
 
 export function sheetLinesShort(view: SheetView, locale: LocaleId, showMode = true): string[] {
-  const head = t(locale, "sheet.modelLine", {
+  const head = i18n(locale, "sheet.modelLine", {
     model: view.model,
     name: view.name,
     weightClass: view.weightClass,
@@ -1141,7 +1141,7 @@ export function sheetLinesShort(view: SheetView, locale: LocaleId, showMode = tr
   const lines = [head];
   if (view.gunnery !== null) {
     lines.push(
-      `${t(locale, "sheet.gunneryLine", { gunnery: gunneryLabel(locale, view.gunnery) })}`,
+      `${i18n(locale, "sheet.gunneryLine", { gunnery: gunneryLabel(locale, view.gunnery) })}`,
     );
   }
   lines.push(view.positionLine);
@@ -1156,7 +1156,7 @@ export function sheetLinesShort(view: SheetView, locale: LocaleId, showMode = tr
 function durabilityLine(view: SheetView, locale: LocaleId): string {
   const isTorso = (loc: Location) =>
     loc === "centerTorso" || loc === "rightTorso" || loc === "leftTorso";
-  return t(locale, "sheet.durabilityLine", {
+  return i18n(locale, "sheet.durabilityLine", {
     list: LOCATIONS.map((loc) => {
       const frontCur = view.armor[loc];
       const frontMax = view.originalArmor[loc];
@@ -1179,12 +1179,12 @@ export function overStatusLines(s: Session): string[] {
     (a, b) => a - b,
   );
   for (const team of teams) {
-    lines.push(t(s.locale, "setup.teamHeader", { team }));
+    lines.push(i18n(s.locale, "setup.teamHeader", { team }));
     for (const [uid, unit] of Object.entries(s.battle.units).filter(([, u]) => u.team === team)) {
       const view = battleSheet(unit, uid, s.locale);
       const idLine = view.removed
-        ? `${t(s.locale, "over.idLine", { id: view.id })}${t(s.locale, "sheet.removedId")}`
-        : t(s.locale, "over.idLine", { id: view.id });
+        ? `${i18n(s.locale, "over.idLine", { id: view.id })}${i18n(s.locale, "sheet.removedId")}`
+        : i18n(s.locale, "over.idLine", { id: view.id });
       lines.push(`  ${idLine}`);
       for (const line of sheetLinesShort(view, s.locale, false)) lines.push(`    ${line}`);
     }
@@ -1196,15 +1196,15 @@ export function moveStatusLines(s: Session): string[] {
   const info = moveStepsInfo(s);
   const modeText =
     info.mode === null
-      ? t(s.locale, "moveStatus.noMode")
-      : t(s.locale, "moveStatus.mode", { mode: info.mode });
-  const lines = [modeText, t(s.locale, "moveStatus.budget", { budget: info.budget })];
+      ? i18n(s.locale, "moveStatus.noMode")
+      : i18n(s.locale, "moveStatus.mode", { mode: info.mode });
+  const lines = [modeText, i18n(s.locale, "moveStatus.budget", { budget: info.budget })];
   if (info.steps.length === 0) {
-    lines.push(t(s.locale, "moveStatus.none"));
+    lines.push(i18n(s.locale, "moveStatus.none"));
   } else {
     for (const step of info.steps) {
       lines.push(
-        t(s.locale, "moveStatus.stepLine", {
+        i18n(s.locale, "moveStatus.stepLine", {
           label: step.label,
           cost: step.mpCost,
           total: step.mpAfter,
@@ -1311,8 +1311,8 @@ export function reachChunk(s: Session): Chunk | null {
 export function attackStatusLines(s: Session): string[] {
   const actor = s.battle?.units[s.actorId ?? ""];
   if (!actor || !s.battle)
-    throw new Error(t(s.locale, "err.wrongPhase", { phase: "weaponAttack" }));
-  if (s.fireDecls.length === 0) return [t(s.locale, "attackStatus.none")];
+    throw new Error(i18n(s.locale, "err.wrongPhase", { phase: "weaponAttack" }));
+  if (s.fireDecls.length === 0) return [i18n(s.locale, "attackStatus.none")];
   // Engine guarantee: `actor.model` was validated by `createBattle`.
   const def = getMechDef(actor.model)!;
   return s.fireDecls.map((decl) => {
@@ -1342,13 +1342,13 @@ const BLOCKER_LABEL: Readonly<Record<FireBlockerReason, MessageKey>> = {
 
 function fireWeaponTable(locale: LocaleId, weapons: readonly FireWeapon[]): Chunk {
   const header = [
-    t(locale, "fireSuggestion.colIndex"),
-    t(locale, "fireSuggestion.colWeapon"),
-    t(locale, "fireSuggestion.colLoc"),
-    t(locale, "fireSuggestion.colBracket"),
-    t(locale, "fireSuggestion.colTn"),
-    t(locale, "fireSuggestion.colDmg"),
-    t(locale, "fireSuggestion.colShots"),
+    i18n(locale, "fireSuggestion.colIndex"),
+    i18n(locale, "fireSuggestion.colWeapon"),
+    i18n(locale, "fireSuggestion.colLoc"),
+    i18n(locale, "fireSuggestion.colBracket"),
+    i18n(locale, "fireSuggestion.colTn"),
+    i18n(locale, "fireSuggestion.colDmg"),
+    i18n(locale, "fireSuggestion.colShots"),
   ];
   const rows = weapons.map((w) => [
     `#${w.weaponIndex}`,
@@ -1357,7 +1357,7 @@ function fireWeaponTable(locale: LocaleId, weapons: readonly FireWeapon[]): Chun
     `[${BRACKET_LABEL[w.rangeBracket]}]`,
     String(w.tn),
     w.cluster !== undefined
-      ? `${w.expectedDamage} (${t(locale, "fireSuggestion.cluster", {
+      ? `${w.expectedDamage} (${i18n(locale, "fireSuggestion.cluster", {
           shots: String(w.cluster.shots),
           per: String(w.cluster.perMissile),
         })})`
@@ -1371,21 +1371,21 @@ function fireWeaponTable(locale: LocaleId, weapons: readonly FireWeapon[]): Chun
 export function fireSuggestionLines(s: Session): Chunk[] {
   const battle = s.battle;
   if (!battle || s.actorId === null) {
-    throw new Error(t(s.locale, "err.wrongPhase", { phase: "weaponAttack" }));
+    throw new Error(i18n(s.locale, "err.wrongPhase", { phase: "weaponAttack" }));
   }
   const sugg = suggestFireTargets(battle, s.actorId);
   const chunks: Chunk[] = [
-    buildLinesChunk([t(s.locale, "fireSuggestion.header", { id: sugg.targetId })], "hint"),
+    buildLinesChunk([i18n(s.locale, "fireSuggestion.header", { id: sugg.targetId })], "hint"),
   ];
   if (sugg.targets.length === 0) {
-    chunks.push(buildLinesChunk([t(s.locale, "fireSuggestion.noTargets")], "hint"));
+    chunks.push(buildLinesChunk([i18n(s.locale, "fireSuggestion.noTargets")], "hint"));
     return chunks;
   }
   for (const target of sugg.targets) {
     chunks.push(
       buildLinesChunk(
         [
-          t(s.locale, "fireSuggestion.target", {
+          i18n(s.locale, "fireSuggestion.target", {
             id: target.targetId,
             distance: String(target.distance),
           }),
@@ -1400,7 +1400,7 @@ export function fireSuggestionLines(s: Session): Chunk[] {
       chunks.push(
         buildLinesChunk(
           [
-            `${t(s.locale, "fireSuggestion.blocked")}: #${b.weaponIndex} ${b.weapon} — ${t(s.locale, BLOCKER_LABEL[b.reason])}`,
+            `${i18n(s.locale, "fireSuggestion.blocked")}: #${b.weaponIndex} ${b.weapon} — ${i18n(s.locale, BLOCKER_LABEL[b.reason])}`,
           ],
           "hint",
         ),
@@ -1415,7 +1415,7 @@ export function weaponsLines(s: Session, unitId?: string): string[] {
   const unit = typeof id === "string" && id.length > 0 ? s.battle?.units[id] : undefined;
   if (!unit || !s.battle) {
     throw new Error(
-      t(s.locale, "err.unknownUnitId", { id: unitId ?? t(s.locale, "weapons.noActorId") }),
+      i18n(s.locale, "err.unknownUnitId", { id: unitId ?? i18n(s.locale, "weapons.noActorId") }),
     );
   }
   // Engine guarantee: `unit.model` was validated by `createBattle`.
@@ -1431,13 +1431,13 @@ export function weaponsLines(s: Session, unitId?: string): string[] {
       mount.location,
       `S${w.short}/M${w.medium}/L${w.long}`,
       max !== undefined
-        ? t(s.locale, "sheet.shotsRange", { curr: unit.shotsLeft[index] ?? 0, max })
+        ? i18n(s.locale, "sheet.shotsRange", { curr: unit.shotsLeft[index] ?? 0, max })
         : null,
-      unit.jammedWeapons.includes(index) ? t(s.locale, "sheet.jammed") : null,
-      unit.destroyedWeapons.includes(index) ? t(s.locale, "sheet.destroyed") : null,
+      unit.jammedWeapons.includes(index) ? i18n(s.locale, "sheet.jammed") : null,
+      unit.destroyedWeapons.includes(index) ? i18n(s.locale, "sheet.destroyed") : null,
       !unit.destroyedWeapons.includes(index) &&
       !canFireFromLocation(unit.phaseStartDamage, mount.location)
-        ? t(s.locale, "sheet.destroyed")
+        ? i18n(s.locale, "sheet.destroyed")
         : null,
     ].filter((b) => b !== null);
     return bits.join("  ");
@@ -1460,7 +1460,7 @@ export function fmtLog(
     const currKind = e.kind;
     if (isAttackResolutionKind(e.kind)) {
       if (!isAttackResolutionKind(prevKind)) {
-        lines.push(t(locale, "res.attackResolutionStart"));
+        lines.push(i18n(locale, "res.attackResolutionStart"));
       }
       if (currKind === "unitRemoved") {
         removedLines.push(...eventLines(locale, e));
@@ -1476,7 +1476,7 @@ export function fmtLog(
         lines.push(...eventLines(locale, e));
       }
       if (!isAttackResolutionKind(getKindInBatch(i + 1, slice))) {
-        lines.push(t(locale, "res.attackResolutionEnd"));
+        lines.push(i18n(locale, "res.attackResolutionEnd"));
         if (removedLines.length > 0) {
           lines.push(...removedLines);
           removedLines = [];
@@ -1501,21 +1501,21 @@ function getKindInBatch(i: number, slice: readonly GameEvent[]): GameEvent["kind
 function eventLines(locale: LocaleId, e: GameEvent): string[] {
   switch (e.kind) {
     case "turn":
-      return [t(locale, "log.turn", { turn: e.turn })];
+      return [i18n(locale, "log.turn", { turn: e.turn })];
     case "phase":
-      return [t(locale, "log.phase", { phase: e.phase })];
+      return [i18n(locale, "log.phase", { phase: e.phase })];
     case "initiative": {
       const rolls = Object.entries(e.rolls)
         .sort((a, b) => Number(a[0]) - Number(b[0]))
         .map(([team, roll]) => `team ${team} (2D6: ${roll})`)
         .join(", ");
-      return [t(locale, "log.initiative", { rolls, winner: e.winnerTeam })];
+      return [i18n(locale, "log.initiative", { rolls, winner: e.winnerTeam })];
     }
     case "moveDeclared":
-      return [t(locale, "log.moveDeclared", { id: e.unitId, mode: e.mode })];
+      return [i18n(locale, "log.moveDeclared", { id: e.unitId, mode: e.mode })];
     case "moved":
       return [
-        t(locale, "log.moved", {
+        i18n(locale, "log.moved", {
           id: e.unitId,
           mode: e.mode,
           pos: disp(e.position),
@@ -1526,7 +1526,7 @@ function eventLines(locale: LocaleId, e: GameEvent): string[] {
       ];
     case "attacksDeclared":
       return [
-        t(locale, e.count === 1 ? "log.attacksDeclaredOne" : "log.attacksDeclaredOther", {
+        i18n(locale, e.count === 1 ? "log.attacksDeclaredOne" : "log.attacksDeclaredOther", {
           id: e.unitId,
           target: e.targetId,
           count: e.count,
@@ -1536,9 +1536,9 @@ function eventLines(locale: LocaleId, e: GameEvent): string[] {
     case "attackResolved":
       return resolutionLines(locale, e.resolution);
     case "unitDestroyed":
-      return [t(locale, "log.destroyed", { id: e.unitId })];
+      return [i18n(locale, "log.destroyed", { id: e.unitId })];
     case "unitRemoved":
-      return [t(locale, "log.removedEvent", { id: e.unitId })];
+      return [i18n(locale, "log.removedEvent", { id: e.unitId })];
     default: {
       // Exhaustiveness guard: adding a GameEvent kind must add a case above.
       const unreachable: never = e;
@@ -1553,7 +1553,7 @@ function signedMod(n: number): string {
 
 /** Labeled GATOR breakdown: "gunnery 4 + move 1 + terrain 1 + range 2". */
 function gatorText(locale: LocaleId, r: AttackResolution): string {
-  if (r.breakdown.outOfRange) return t(locale, "res.outOfRange");
+  if (r.breakdown.outOfRange) return i18n(locale, "res.outOfRange");
   const b = r.breakdown;
   const parts = [`gunnery ${b.gunnery}`];
   if (b.attackerMod) parts.push(`move ${b.attackerMod}`);
@@ -1562,33 +1562,33 @@ function gatorText(locale: LocaleId, r: AttackResolution): string {
   if (b.rangeMod) parts.push(`range ${b.rangeMod}`);
   if (b.minRangeMod) parts.push(`min ${b.minRangeMod}`);
   if (b.pulseMod) parts.push(`pulse ${b.pulseMod}`);
-  const total = b.automatic === "hit" ? t(locale, "res.needAuto") : String(b.total);
-  return `${t(locale, "res.need", { total })} (${parts.join(" + ")})`;
+  const total = b.automatic === "hit" ? i18n(locale, "res.needAuto") : String(b.total);
+  return `${i18n(locale, "res.need", { total })} (${parts.join(" + ")})`;
 }
 
 export function resolutionLines(locale: LocaleId, r: AttackResolution): string[] {
   if (r.breakdown.outOfRange) {
-    return [t(locale, "res.outOfRangeLine", { weapon: r.weapon, distance: r.distance })];
+    return [i18n(locale, "res.outOfRangeLine", { weapon: r.weapon, distance: r.distance })];
   }
   const verdict =
     r.breakdown.automatic === "hit"
-      ? t(locale, "res.autoHit")
+      ? i18n(locale, "res.autoHit")
       : r.hit
-        ? t(locale, "res.hit")
-        : t(locale, "res.miss");
+        ? i18n(locale, "res.hit")
+        : i18n(locale, "res.miss");
   const lines = [
-    t(locale, "res.line", {
+    i18n(locale, "res.line", {
       weapon: r.weapon,
       gator: gatorText(locale, r),
       roll: String(r.toHitRoll),
       verdict,
-      jam: r.jammed ? t(locale, "res.jamSuffix") : "",
+      jam: r.jammed ? i18n(locale, "res.jamSuffix") : "",
     }),
   ];
-  if (r.clusterRoll !== null) lines.push(t(locale, "res.clusterRoll", { roll: r.clusterRoll }));
+  if (r.clusterRoll !== null) lines.push(i18n(locale, "res.clusterRoll", { roll: r.clusterRoll }));
   if (r.hit && r.groups.length > 0) {
     lines.push(
-      t(locale, "res.hits", {
+      i18n(locale, "res.hits", {
         groups: r.groups.map((g) => `${SHORT_LOC[g.location]}(${g.damage})`).join(" "),
       }),
     );
@@ -1612,9 +1612,9 @@ export function critLines(locale: LocaleId, c: CriticalResolution): string[] {
           ? "res.critTwo"
           : "res.critThree";
   const lines: string[] = [
-    t(locale, "res.critHeader", {
+    i18n(locale, "res.critHeader", {
       roll: String(c.determiningRoll),
-      count: t(locale, headerKey),
+      count: i18n(locale, headerKey),
     }),
   ];
   for (const eff of c.rows) lines.push(`  ${formatCritEffect(locale, eff)}`);
@@ -1624,37 +1624,37 @@ export function critLines(locale: LocaleId, c: CriticalResolution): string[] {
 function formatCritEffect(locale: LocaleId, eff: CriticalEffect): string {
   switch (eff.kind) {
     case "headBlownOff":
-      return t(locale, "res.critHeadBlownOff");
+      return i18n(locale, "res.critHeadBlownOff");
     case "armBlownOff":
-      return t(locale, "res.critArmBlownOff", { arm: SHORT_LOC[eff.arm] });
+      return i18n(locale, "res.critArmBlownOff", { arm: SHORT_LOC[eff.arm] });
     case "legBlownOff":
-      return t(locale, "res.critLegBlownOff", { leg: SHORT_LOC[eff.leg] });
+      return i18n(locale, "res.critLegBlownOff", { leg: SHORT_LOC[eff.leg] });
     case "weaponDestroyed":
-      return t(locale, "res.critWeaponDestroyed", {
+      return i18n(locale, "res.critWeaponDestroyed", {
         loc: SHORT_LOC[eff.location],
         slot: String(eff.slotIndex),
         weapon: eff.weaponName,
       });
     case "ammoExplosion":
-      return t(locale, "res.critAmmoExplosion", {
+      return i18n(locale, "res.critAmmoExplosion", {
         loc: SHORT_LOC[eff.location],
         slot: String(eff.slotIndex),
         weapon: eff.weaponName,
         damage: String(eff.damage),
       });
     case "cockpitDestroyed":
-      return t(locale, "res.critCockpitDestroyed", {
+      return i18n(locale, "res.critCockpitDestroyed", {
         loc: SHORT_LOC[eff.location],
         slot: String(eff.slotIndex),
       });
     case "componentDestroyed":
-      return t(locale, "res.critComponentDestroyed", {
+      return i18n(locale, "res.critComponentDestroyed", {
         loc: SHORT_LOC[eff.location],
         slot: String(eff.slotIndex),
         name: eff.name,
       });
     case "noEffect":
-      return t(locale, "res.critNoEffect", { loc: "reroll" });
+      return i18n(locale, "res.critNoEffect", { loc: "reroll" });
   }
 }
 
@@ -1727,16 +1727,16 @@ export function transferDetail(locale: LocaleId, r: AttackResolution): string | 
   let text = bits.join(", ");
   for (const arm of app.blownOffArms) {
     const cause = arm === "rightArm" ? "rightTorso" : "leftTorso";
-    text += t(locale, "res.armBlownOff", { cause: SHORT_LOC[cause], arm: SHORT_LOC[arm] });
+    text += i18n(locale, "res.armBlownOff", { cause: SHORT_LOC[cause], arm: SHORT_LOC[arm] });
   }
   const otherDestroyed = app.newlyDestroyed.filter((loc) => !app.blownOffArms.includes(loc));
   if (otherDestroyed.length > 0) {
-    text += t(locale, "res.destroyedTail", {
+    text += i18n(locale, "res.destroyedTail", {
       locs: otherDestroyed.map((l) => SHORT_LOC[l]).join(", "),
     });
   }
-  if (isImmobile(app.after) && !wasImmobile) text += t(locale, "res.immobilized");
-  if (app.killed && !wasKilled) text += t(locale, "res.killed");
+  if (isImmobile(app.after) && !wasImmobile) text += i18n(locale, "res.immobilized");
+  if (app.killed && !wasKilled) text += i18n(locale, "res.killed");
   return text;
 }
 
@@ -1763,7 +1763,7 @@ const CATEGORY_LABEL: Readonly<Record<WeaponCategory, MessageKey>> = {
 };
 
 function weaponCategory(locale: LocaleId, category: WeaponCategory): string {
-  return t(locale, CATEGORY_LABEL[category]);
+  return i18n(locale, CATEGORY_LABEL[category]);
 }
 
 function weaponMountLine(
@@ -1782,11 +1782,11 @@ function weaponMountLine(
   const flags = [
     mount.shotsMax !== null
       ? mount.shotsLeft !== null
-        ? t(locale, "sheet.shotsRange", { curr: mount.shotsLeft, max: mount.shotsMax })
-        : t(locale, "sheet.shotsDesign", { max: mount.shotsMax })
+        ? i18n(locale, "sheet.shotsRange", { curr: mount.shotsLeft, max: mount.shotsMax })
+        : i18n(locale, "sheet.shotsDesign", { max: mount.shotsMax })
       : null,
-    mount.jammed ? t(locale, "sheet.jammed") : null,
-    mount.destroyed ? t(locale, "sheet.destroyed") : null,
+    mount.jammed ? i18n(locale, "sheet.jammed") : null,
+    mount.destroyed ? i18n(locale, "sheet.destroyed") : null,
   ].filter((x) => x !== null);
   return `  #${n} ${mount.weapon} [${SHORT_LOC[mount.location]}] S${w.short}/M${w.medium}/L${w.long}${flags.length ? ` ${flags.join(" ")}` : ""}`;
 }

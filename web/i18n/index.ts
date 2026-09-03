@@ -22,7 +22,7 @@ export function localeList(): string {
  * catalog entry is missing (guards locales added before translation).
  * `{param}` placeholders are replaced from `params`.
  */
-export function t(
+export function i18n(
   locale: LocaleId,
   key: MessageKey,
   params?: Readonly<Record<string, string | number>>,

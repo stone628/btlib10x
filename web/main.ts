@@ -2,7 +2,7 @@ import { VERSION } from "btlib10x";
 import { AUTOPLAY_INTERVAL_MS, nextAutoPlayCommand, resetAutoplayState } from "./autoplay.js";
 import { runChunks } from "./cli.js";
 import { buildLinesChunk, type Chunk } from "./format.js";
-import { t } from "./i18n/index.js";
+import { i18n } from "./i18n/index.js";
 import * as S from "./session.js";
 
 document.title = `bt10x terminal v${VERSION}`;
@@ -113,14 +113,14 @@ function stopAutoPlay(finished: boolean): void {
   clearInterval(autoPlayTimer);
   autoPlayTimer = null;
   if (finished) {
-    appendChunk(buildLinesChunk([t(session.locale, "autoPlay.done")], "banner"));
+    appendChunk(buildLinesChunk([i18n(session.locale, "autoPlay.done")], "banner"));
     refreshPrompt();
   }
 }
 
 function startAutoPlay(): void {
   stopAutoPlay(false);
-  appendChunk(buildLinesChunk([t(session.locale, "autoPlay.started")], "banner"));
+  appendChunk(buildLinesChunk([i18n(session.locale, "autoPlay.started")], "banner"));
   scrollToBottom();
   resetAutoplayState(session);
   autoPlayTimer = setInterval(() => {
@@ -191,8 +191,8 @@ document.getElementById("term")?.addEventListener("click", (e) => {
 appendChunk(
   buildLinesChunk(
     [
-      t(session.locale, "app.banner.title", { version: VERSION }),
-      t(session.locale, "app.banner.help"),
+      i18n(session.locale, "app.banner.title", { version: VERSION }),
+      i18n(session.locale, "app.banner.help"),
     ],
     "banner",
   ),

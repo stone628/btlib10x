@@ -228,6 +228,8 @@ export const en = {
   "info.mechColClass": "CLASS",
   "info.mechColTon": "TONNAGE",
   "info.mechColMove": "MOVE(Walk/Run/Jump)",
+  "info.specsCol": "Specs",
+  "info.armorStructureCol": "Armor & Structure",
   "info.head": "{name} {model} — {weightClass} {tonnage}t ({techBase})",
   "info.movement": "movement: walk {walk} / run {run} / jump {jump}",
   "info.mapHead": "{name}: {w}x{h}",
