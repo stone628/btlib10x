@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getMechDef } from "../src/data/index.js";
 import { getWeaponOrThrow } from "../src/data/weapon.schema.js";
-import type { BattleState, TerrainHexDef } from "../src/rules/game.js";
+import type { BattleState, TerrainHexDef, UnitInit } from "../src/rules/game.js";
 import {
   advancePhase,
   checkVictory,
@@ -14,30 +14,28 @@ import {
   resolveDeclaredAttacks,
   rollInitiativePhase,
 } from "../src/rules/game.js";
-import { scriptedRng } from "./helpers.js";
+import { makeBattleOptions, scriptedRng } from "./helpers.js";
 
 function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
-  return createBattle(
-    [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        position: { col: 2, row: 4 },
-        facing: "se",
-      },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        position: { col: 3, row: 4 },
-        facing: "nw",
-      },
-    ],
-    { terrain, critsDisabled: true },
-  );
+  const units: UnitInit[] = [
+    {
+      id: "hbk",
+      model: "HBK-4G",
+      team: 0,
+      gunnery: 4,
+      position: { col: 2, row: 4 },
+      facing: "se",
+    },
+    {
+      id: "enf",
+      model: "ENF-4R",
+      team: 1,
+      gunnery: 4,
+      position: { col: 3, row: 4 },
+      facing: "nw",
+    },
+  ];
+  return createBattle(units, makeBattleOptions(units, true, terrain));
 }
 
 /** Initiative always 6 vs 4 -> team 0 wins; both sides skip movement. */
@@ -62,11 +60,21 @@ describe("createBattle", () => {
       position: { col: 2, row: 2 },
       facing: "n" as const,
     };
-    expect(() => createBattle([base, base])).toThrow(/Duplicate unit id/);
-    expect(() => createBattle([base, { ...base, id: "b", model: "MAD-3R" }])).toThrow(
-      /Unknown 'Mech model/,
+    expect(() => createBattle([base, base], makeBattleOptions([base, base], false))).toThrow(
+      /Duplicate unit id/,
     );
-    expect(() => createBattle([base, { ...base, id: "b", gunnery: 8 }])).toThrow(/Gunnery/);
+    expect(() =>
+      createBattle(
+        [base, { ...base, id: "b", model: "MAD-3R" }],
+        makeBattleOptions([base, base], false),
+      ),
+    ).toThrow(/Unknown 'Mech model/);
+    expect(() =>
+      createBattle(
+        [base, { ...base, id: "b", gunnery: 8 }],
+        makeBattleOptions([base, base], false),
+      ),
+    ).toThrow(/Gunnery/);
   });
 
   it("rejects duplicate terrain hex definitions", () => {
@@ -76,7 +84,7 @@ describe("createBattle", () => {
       position: { col: 2, row: 4 },
       facing: "se" as const,
     };
-    const units = [
+    const units: UnitInit[] = [
       { ...base, id: "a", team: 0 },
       { ...base, id: "b", team: 1 },
     ];
@@ -86,6 +94,9 @@ describe("createBattle", () => {
           { col: 3, row: 4, type: "lightWoods" },
           { col: 3, row: 4, type: "heavyWoods" },
         ],
+        width: 4,
+        height: 5,
+        critsDisabled: false,
       }),
     ).toThrow(/Duplicate terrain definition for hex 3,4/);
   });
@@ -115,26 +126,27 @@ describe("movement phase", () => {
   });
 
   it("charges MP for terrain and facing changes within budget", () => {
+    const units: UnitInit[] = [
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 4 },
+        facing: "se",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 11, row: 11 },
+        facing: "nw",
+      },
+    ];
     const setup = createBattle(
-      [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          position: { col: 2, row: 4 },
-          facing: "se",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          position: { col: 11, row: 11 },
-          facing: "nw",
-        },
-      ],
-      { terrain: [{ col: 3, row: 4, type: "lightWoods" }] },
+      units,
+      makeBattleOptions(units, true, [{ col: 3, row: 4, type: "lightWoods" }]),
     );
     const state = startMovementTurn(setup);
     declareMove(state, "hbk", "walk");
@@ -203,7 +215,7 @@ describe("movement phase", () => {
   });
 
   it("re-evaluates forward/backward relative to facing after each turn", () => {
-    const setup = createBattle([
+    const units: UnitInit[] = [
       {
         id: "hbk",
         model: "HBK-4G",
@@ -220,7 +232,8 @@ describe("movement phase", () => {
         position: { col: 11, row: 11 },
         facing: "nw",
       },
-    ]);
+    ];
+    const setup = createBattle(units, makeBattleOptions(units, true));
     const state = startMovementTurn(setup);
     declareMove(state, "hbk", "walk");
     executeMove(state, "hbk", [
@@ -235,7 +248,7 @@ describe("movement phase", () => {
   });
 
   it("rejects ending in an occupied hex but allows friendly pass-through", () => {
-    const setup = createBattle([
+    const units: UnitInit[] = [
       {
         id: "hbk",
         model: "HBK-4G",
@@ -252,7 +265,8 @@ describe("movement phase", () => {
         position: { col: 3, row: 4 },
         facing: "nw",
       },
-    ]);
+    ];
+    const setup = createBattle(units, makeBattleOptions(units, true));
     const state = startMovementTurn(setup);
     declareMove(state, "hbk", "walk");
     expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: 3, row: 4 } }])).toThrow(
@@ -261,7 +275,7 @@ describe("movement phase", () => {
   });
 
   it("rejects moves exceeding the mode budget", () => {
-    const setup = createBattle([
+    const units: UnitInit[] = [
       {
         id: "hbk",
         model: "HBK-4G",
@@ -278,7 +292,8 @@ describe("movement phase", () => {
         position: { col: 11, row: 11 },
         facing: "nw",
       },
-    ]);
+    ];
+    const setup = createBattle(units, makeBattleOptions(units, true));
     const state = startMovementTurn(setup);
     declareMove(state, "hbk", "walk"); // walking 4
     // Straight southeast line: even columns step se across at the same row,
@@ -313,27 +328,25 @@ describe("movement phase", () => {
   });
 
   it("jumping pays 1 MP per hex entered and may pass over enemies", () => {
-    const setup = createBattle(
-      [
-        {
-          id: "grf",
-          model: "GRF-1N",
-          team: 0,
-          gunnery: 4,
-          position: { col: 2, row: 4 },
-          facing: "se",
-        },
-        {
-          id: "wvr",
-          model: "WVR-6R",
-          team: 1,
-          gunnery: 4,
-          position: { col: 3, row: 4 },
-          facing: "nw",
-        },
-      ],
-      {},
-    );
+    const units: UnitInit[] = [
+      {
+        id: "grf",
+        model: "GRF-1N",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 4 },
+        facing: "se",
+      },
+      {
+        id: "wvr",
+        model: "WVR-6R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 3, row: 4 },
+        facing: "nw",
+      },
+    ];
+    const setup = createBattle(units, makeBattleOptions(units, false));
     const state = startMovementTurn(setup);
     declareMove(state, "grf", "jump");
     // Hop through the enemy-occupied hex (allowed while jumping) and land beyond it.
@@ -379,7 +392,7 @@ describe("nextActor with unequal forces", () => {
         facing: "sw",
       });
     }
-    return createBattle(units, { critsDisabled: true });
+    return createBattle(units, makeBattleOptions(units, true));
   }
 
   /** Walk every alive unit through declareMove + executeMove with empty paths, recording turn order. */
@@ -436,26 +449,25 @@ describe("nextActor with unequal forces", () => {
 describe("weapon attack phase", () => {
   it("validates arc, LOS, range, target count, and auto-miss aborts", () => {
     // Facing northwest, target to the southeast -> outside front arc.
-    let state = startAttackTurn(
-      createBattle([
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          position: { col: 2, row: 4 },
-          facing: "nw",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          position: { col: 3, row: 4 },
-          facing: "nw",
-        },
-      ]),
-    );
+    let units: UnitInit[] = [
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 4 },
+        facing: "nw",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 3, row: 4 },
+        facing: "nw",
+      },
+    ];
+    let state = startAttackTurn(createBattle(units, makeBattleOptions(units, true)));
     expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }])).toThrow(
       /front firing arc/,
     );
@@ -468,31 +480,30 @@ describe("weapon attack phase", () => {
       ]),
     );
     // Move units apart so intervening hexes exist.
-    state = createBattle(
-      [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          position: { col: 2, row: 4 },
-          facing: "se",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          position: { col: 5, row: 4 },
-          facing: "nw",
-        },
-      ],
+    units = [
       {
-        terrain: [
-          { col: 3, row: 4, type: "heavyWoods" },
-          { col: 4, row: 4, type: "heavyWoods" },
-        ],
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 4 },
+        facing: "se",
       },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 5, row: 4 },
+        facing: "nw",
+      },
+    ];
+    state = createBattle(
+      units,
+      makeBattleOptions(units, true, [
+        { col: 3, row: 4, type: "heavyWoods" },
+        { col: 4, row: 4, type: "heavyWoods" },
+      ]),
     );
     state = startAttackTurn(state);
     expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }])).toThrow(
@@ -501,7 +512,7 @@ describe("weapon attack phase", () => {
 
     // Out of range.
     const ac20 = getWeaponOrThrow("Autocannon/20");
-    state = createBattle([
+    units = [
       {
         id: "hbk",
         model: "HBK-4G",
@@ -518,39 +529,39 @@ describe("weapon attack phase", () => {
         position: { col: ac20.long + 3, row: 2 },
         facing: "nw",
       },
-    ]);
+    ];
+    state = createBattle(units, makeBattleOptions(units, true));
     state = startAttackTurn(state);
     expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }])).toThrow(
       /long range/,
     );
 
     // Modified TN > 12 must be aborted at declaration.
-    state = createBattle(
-      [
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 0,
-          gunnery: 7,
-          position: { col: 2, row: 4 },
-          facing: "se",
-        },
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 1,
-          gunnery: 4,
-          position: { col: 11, row: 4 },
-          facing: "nw",
-        },
-      ],
+    units = [
       {
-        terrain: [
-          { col: 5, row: 4, type: "lightWoods" },
-          { col: 7, row: 4, type: "lightWoods" },
-          { col: 11, row: 4, type: "heavyWoods" },
-        ],
+        id: "enf",
+        model: "ENF-4R",
+        team: 0,
+        gunnery: 7,
+        position: { col: 2, row: 4 },
+        facing: "se",
       },
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 1,
+        gunnery: 4,
+        position: { col: 11, row: 4 },
+        facing: "nw",
+      },
+    ];
+    state = createBattle(
+      units,
+      makeBattleOptions(units, true, [
+        { col: 5, row: 4, type: "lightWoods" },
+        { col: 7, row: 4, type: "lightWoods" },
+        { col: 11, row: 4, type: "heavyWoods" },
+      ]),
     );
     state = startAttackTurn(state);
     // Large laser (array index 1 -> weaponIndex 2), distance 9, +2 woods intervening, +2 heavy target.
@@ -614,7 +625,7 @@ describe("weapon attack phase", () => {
   });
 
   it("jams Ultra AC/5 double taps on a natural 2 and tracks the jam", () => {
-    const setup = createBattle([
+    const units: UnitInit[] = [
       {
         id: "her",
         model: "HER-5SA",
@@ -631,7 +642,8 @@ describe("weapon attack phase", () => {
         position: { col: 3, row: 4 },
         facing: "nw",
       },
-    ]);
+    ];
+    const setup = createBattle(units, makeBattleOptions(units, true));
     const state = startAttackTurn(setup);
     declareAttacks(state, "her", [{ weaponIndex: 3, targetId: "cda", rapidFire: true }]);
     expect(getUnit(state, "her").shotsLeft["3"]).toBe(18); // 2 shots spent up front
@@ -644,25 +656,25 @@ describe("weapon attack phase", () => {
   });
 
   it("fires a single shot by default and a double-tap only when rapidFire is set on an Ultra AC/5", () => {
-    const setup = () =>
-      createBattle([
-        {
-          id: "her",
-          model: "HER-5SA",
-          team: 0,
-          gunnery: 4,
-          position: { col: 2, row: 4 },
-          facing: "se",
-        },
-        {
-          id: "cda",
-          model: "CDA-3MA",
-          team: 1,
-          gunnery: 4,
-          position: { col: 3, row: 4 },
-          facing: "nw",
-        },
-      ]);
+    const units: UnitInit[] = [
+      {
+        id: "her",
+        model: "HER-5SA",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 4 },
+        facing: "se",
+      },
+      {
+        id: "cda",
+        model: "CDA-3MA",
+        team: 1,
+        gunnery: 4,
+        position: { col: 3, row: 4 },
+        facing: "nw",
+      },
+    ];
+    const setup = () => createBattle(units, makeBattleOptions(units, true));
 
     // Omitted rapidFire -> single shot (1 UAC/5 hit = 5 dmg, 1 ammo spent).
     const single = startAttackTurn(setup());

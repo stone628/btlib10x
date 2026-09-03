@@ -1,31 +1,29 @@
 import { describe, expect, it } from "vitest";
 import { suggestFireTargets } from "../src/rules/fireability.js";
-import type { BattleState, TerrainHexDef } from "../src/rules/game.js";
+import type { BattleState, TerrainHexDef, UnitInit } from "../src/rules/game.js";
 import { advancePhase, createBattle, rollInitiativePhase } from "../src/rules/game.js";
-import { scriptedRng } from "./helpers.js";
+import { makeBattleOptions, scriptedRng } from "./helpers.js";
 
 function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
-  return createBattle(
-    [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        position: { col: 2, row: 4 },
-        facing: "se",
-      },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        position: { col: 3, row: 4 },
-        facing: "nw",
-      },
-    ],
-    { terrain },
-  );
+  const units: UnitInit[] = [
+    {
+      id: "hbk",
+      model: "HBK-4G",
+      team: 0,
+      gunnery: 4,
+      position: { col: 2, row: 4 },
+      facing: "se",
+    },
+    {
+      id: "enf",
+      model: "ENF-4R",
+      team: 1,
+      gunnery: 4,
+      position: { col: 3, row: 4 },
+      facing: "nw",
+    },
+  ];
+  return createBattle(units, makeBattleOptions(units, false, terrain));
 }
 
 function startAttackTurn(state: BattleState): BattleState {
@@ -91,29 +89,25 @@ describe("suggestFireTargets", () => {
   });
 
   it("marks weapons out of range", () => {
-    const state = startAttackTurn(
-      createBattle(
-        [
-          {
-            id: "hbk",
-            model: "HBK-4G",
-            team: 0,
-            gunnery: 4,
-            position: { col: 2, row: 2 },
-            facing: "n",
-          },
-          {
-            id: "enf",
-            model: "ENF-4R",
-            team: 1,
-            gunnery: 4,
-            position: { col: 2, row: -38 },
-            facing: "s",
-          },
-        ],
-        {},
-      ),
-    );
+    const units: UnitInit[] = [
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 2 },
+        facing: "n",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 2, row: -38 },
+        facing: "s",
+      },
+    ];
+    const state = startAttackTurn(createBattle(units, makeBattleOptions(units, false)));
     const reasons = blockedReasons(state, "hbk", "enf");
     expect(reasons.every((r) => r === "outOfRange")).toBe(true);
     const sugg = suggestFireTargets(state, "hbk");
@@ -121,32 +115,31 @@ describe("suggestFireTargets", () => {
   });
 
   it("marks weapons blocked by intervening woods", () => {
+    const units: UnitInit[] = [
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 10 },
+        facing: "n",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 2, row: 2 },
+        facing: "s",
+      },
+    ];
     const state = startAttackTurn(
       createBattle(
-        [
-          {
-            id: "hbk",
-            model: "HBK-4G",
-            team: 0,
-            gunnery: 4,
-            position: { col: 2, row: 10 },
-            facing: "n",
-          },
-          {
-            id: "enf",
-            model: "ENF-4R",
-            team: 1,
-            gunnery: 4,
-            position: { col: 2, row: 2 },
-            facing: "s",
-          },
-        ],
-        {
-          terrain: [
-            { col: 2, row: 7, type: "heavyWoods" },
-            { col: 2, row: 4, type: "heavyWoods" },
-          ],
-        },
+        units,
+        makeBattleOptions(units, false, [
+          { col: 2, row: 7, type: "heavyWoods" },
+          { col: 2, row: 4, type: "heavyWoods" },
+        ]),
       ),
     );
     const reasons = blockedReasons(state, "hbk", "enf");
@@ -156,29 +149,25 @@ describe("suggestFireTargets", () => {
   });
 
   it("marks weapons that auto-miss", () => {
-    const state = startAttackTurn(
-      createBattle(
-        [
-          {
-            id: "hbk",
-            model: "HBK-4G",
-            team: 0,
-            gunnery: 4,
-            position: { col: 2, row: 2 },
-            facing: "n",
-          },
-          {
-            id: "enf",
-            model: "ENF-4R",
-            team: 1,
-            gunnery: 4,
-            position: { col: 2, row: -7 },
-            facing: "s",
-          },
-        ],
-        {},
-      ),
-    );
+    const units: UnitInit[] = [
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 2 },
+        facing: "n",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 2, row: -7 },
+        facing: "s",
+      },
+    ];
+    const state = startAttackTurn(createBattle(units, makeBattleOptions(units, false)));
     state.units.enf!.movesThisTurn = Array(30).fill("forward");
     const reasons = blockedReasons(state, "hbk", "enf");
     // long range (+4) + target moved 30 (+6) + gunnery 4 = 14 -> auto-miss.

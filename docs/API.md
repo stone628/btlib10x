@@ -363,9 +363,9 @@ getUnit(state, unitId): UnitState
 
 ```ts
 interface CreateBattleOptions {
-  terrain?: TerrainHexDef[];          // non-clear hexes, optional level
-  width?: number; height?: number;    // board size hint for rendering (engine coords)
-  critsDisabled?: boolean;            // suppress crit resolution (default false)
+  terrain: TerrainHexDef[];           // non-clear hexes, optional level; pass [] for a clear board
+  width: number; height: number;      // board size in engine coords (must cover every unit/terrain hex)
+  critsDisabled: boolean;             // suppress crit resolution
 }
 ```
 

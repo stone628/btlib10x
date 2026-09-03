@@ -147,17 +147,17 @@ export type { TerrainHexDef };
 
 export interface CreateBattleOptions {
   /** Non-clear hexes; anything not listed is clear terrain. */
-  readonly terrain?: readonly TerrainHexDef[];
-  /** Board size hint for rendering, in engine coordinates (columns/rows). */
-  readonly width?: number | undefined;
-  readonly height?: number | undefined;
+  readonly terrain: readonly TerrainHexDef[];
+  /** Board size, in engine coordinates (columns/rows). */
+  readonly width: number;
+  readonly height: number;
   /**
-   * Disable critical hit resolution. Off by default. Tests that script
-   * dice for narrow damage scenarios (where any crit would alter the
-   * expected outcome) can set this to `false` so the engine follows the
-   * scripted RNG only for the attack and location rolls.
+   * Disable critical hit resolution. Tests that script dice for narrow
+   * damage scenarios (where any crit would alter the expected outcome) can
+   * set this to `true` so the engine follows the scripted RNG only for the
+   * attack and location rolls.
    */
-  readonly critsDisabled?: boolean;
+  readonly critsDisabled: boolean;
 }
 
 function getUnitOrThrow(state: BattleState, unitId: string): UnitState {
@@ -197,7 +197,7 @@ function markUnitDestroyed(state: BattleState, unit: UnitState): void {
 
 export function createBattle(
   units: readonly UnitInit[],
-  options: CreateBattleOptions = {},
+  options: CreateBattleOptions,
 ): BattleState {
   if (units.length < 2) throw new Error("A battle needs at least two units");
   const seen = new Set<string>();
@@ -256,44 +256,23 @@ export function createBattle(
     ["width", options.width],
     ["height", options.height],
   ] as const) {
-    if (n !== undefined && (!Number.isInteger(n) || n < 1)) {
+    if (!Number.isInteger(n) || n < 1) {
       throw new Error(`Board ${label} must be an integer >= 1`);
     }
   }
 
-  // Derive board dimensions: explicit options win, otherwise size to cover
-  // every unit positions and terrain definition (extent + 1, matching the
-  // renderer's historical content-based fallback).
-  let width = options.width ?? 0;
-  let height = options.height ?? 0;
-  let extentCol = 0;
-  let extentRow = 0;
-  for (const u of units) {
-    extentCol = Math.max(extentCol, u.position.col);
-    extentRow = Math.max(extentRow, u.position.row);
-  }
-  for (const t of options.terrain ?? []) {
-    extentCol = Math.max(extentCol, t.col);
-    extentRow = Math.max(extentRow, t.row);
-  }
-  if (width === 0) width = extentCol + 1;
-  if (height === 0) height = extentRow + 1;
-  if (width < 1) width = 1;
-  if (height < 1) height = 1;
-
+  const { width, height } = options;
   const cells: HexCell[] = new Array<HexCell>(width * height).fill({
     terrain: "clear",
     level: 0,
   });
-  if (options.terrain) {
-    const seen = new Set<string>();
-    for (const { col, row, type, level } of options.terrain) {
-      const key = `${col},${row}`;
-      if (seen.has(key))
-        throw new Error(`Duplicate terrain definition for hex ${fmtHex({ col, row })}`);
-      seen.add(key);
-      cells[col - 1 + (row - 1) * width] = { terrain: type, level: level ?? 0 };
-    }
+  const terrainSeen = new Set<string>();
+  for (const { col, row, type, level } of options.terrain) {
+    const key = `${col},${row}`;
+    if (terrainSeen.has(key))
+      throw new Error(`Duplicate terrain definition for hex ${fmtHex({ col, row })}`);
+    terrainSeen.add(key);
+    cells[col - 1 + (row - 1) * width] = { terrain: type, level: level ?? 0 };
   }
 
   return {
@@ -304,7 +283,7 @@ export function createBattle(
     cells,
     width,
     height,
-    critsDisabled: options.critsDisabled ?? false,
+    critsDisabled: options.critsDisabled,
     actedThisPhase: [],
     events: [{ kind: "turn", turn: 1 }],
   };

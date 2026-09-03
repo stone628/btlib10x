@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getMapDef, listMapNames } from "../src/data/index.js";
 import { type MapDef, validateMapDef } from "../src/data/map.schema.js";
-import { createBattle } from "../src/rules/game.js";
+import { createBattle, type UnitInit } from "../src/rules/game.js";
 
 const valid: MapDef = {
   name: "test-map",
@@ -134,28 +134,32 @@ describe("bundled maps", () => {
 
   it("is directly usable by createBattle (no conversion layer)", () => {
     expect(getMapDef("beginner")!.terrain[0]).toEqual({ col: 2, row: 5, type: "heavyWoods" });
+    const quickstart = getMapDef("quickstart")!;
+    const units: UnitInit[] = [
+      {
+        id: "a",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 4 },
+        facing: "se",
+      },
+      {
+        id: "b",
+        model: "GRF-1N",
+        team: 1,
+        gunnery: 3,
+        position: { col: 10, row: 8 },
+        facing: "nw",
+      },
+    ];
     expect(() =>
-      createBattle(
-        [
-          {
-            id: "a",
-            model: "HBK-4G",
-            team: 0,
-            gunnery: 4,
-            position: { col: 2, row: 4 },
-            facing: "se",
-          },
-          {
-            id: "b",
-            model: "GRF-1N",
-            team: 1,
-            gunnery: 3,
-            position: { col: 10, row: 8 },
-            facing: "nw",
-          },
-        ],
-        { terrain: getMapDef("quickstart")!.terrain },
-      ),
+      createBattle(units, {
+        terrain: quickstart.terrain,
+        width: quickstart.width,
+        height: quickstart.height,
+        critsDisabled: false,
+      }),
     ).not.toThrow();
   });
 });

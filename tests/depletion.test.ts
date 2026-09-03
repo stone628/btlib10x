@@ -20,9 +20,10 @@ import {
   declareAttacks,
   getUnit,
   rollInitiativePhase,
+  type UnitInit,
 } from "../src/rules/game.js";
 import * as S from "../web/session.js";
-import { execute, scriptedRng } from "./helpers.js";
+import { execute, makeBattleOptions, scriptedRng } from "./helpers.js";
 
 const HBK = getMechDef("HBK-4G")!;
 
@@ -221,27 +222,25 @@ describe("consumeAmmo", () => {
 });
 
 function hbkBattle(): ReturnType<typeof createBattle> {
-  return createBattle(
-    [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        position: { col: 2, row: 4 },
-        facing: "se",
-      },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        position: { col: 3, row: 4 },
-        facing: "nw",
-      },
-    ],
-    { critsDisabled: true },
-  );
+  const units: UnitInit[] = [
+    {
+      id: "hbk",
+      model: "HBK-4G",
+      team: 0,
+      gunnery: 4,
+      position: { col: 2, row: 4 },
+      facing: "se",
+    },
+    {
+      id: "enf",
+      model: "ENF-4R",
+      team: 1,
+      gunnery: 4,
+      position: { col: 3, row: 4 },
+      facing: "nw",
+    },
+  ];
+  return createBattle(units, makeBattleOptions(units, true));
 }
 
 function attackPhase(state: ReturnType<typeof createBattle>): void {

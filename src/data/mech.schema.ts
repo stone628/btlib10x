@@ -125,8 +125,7 @@ export interface MechDef {
    * Armor per location (torso = front only) plus optional rear torso values.
    * Convert to engine-facing flat armor with `resolveMechDef`.
    */
-  readonly armor: Readonly<LocationValue> &
-    Readonly<Partial<Record<RearArmorKey, number>>>;
+  readonly armor: Readonly<LocationValue> & Readonly<Partial<Record<RearArmorKey, number>>>;
   readonly weapons: readonly WeaponMount[];
   /**
    * Critical slot table per location, faithful to the record sheet (head/legs

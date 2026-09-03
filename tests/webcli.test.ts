@@ -272,6 +272,7 @@ describe("info", () => {
   it("aligns weapon rows by name, [LOC] and range columns", () => {
     const s = S.newSession();
     s.critsDisabled = true;
+    run(s, "map quickstart");
     const lines = run(s, "info mech HBK-4G");
     const weaponLines = lines.filter(
       (l) => /\[(RT|RA|LA|HD|CT|LT|RL|LL)\]/.test(l) && /S\d+\/M\d+\/L\d+/.test(l),
@@ -386,6 +387,7 @@ describe("setup flow", () => {
   it("rejects starting with one team", () => {
     const s = S.newSession();
     s.critsDisabled = true;
+    run(s, "map quickstart");
     run(s, "add a HBK-4G 0 4 2 2 n");
     run(s, "add b GRF-1N 0 4 3 3 n");
     expect(run(s, "start")[0]).toMatch(/^error: .*\bteam/);

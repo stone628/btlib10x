@@ -1,8 +1,31 @@
 import type { Rng } from "../src/core/types.js";
+import type { CreateBattleOptions, TerrainHexDef, UnitInit } from "../src/rules/game.js";
 import { runChunks } from "../web/cli.js";
 import type { Chunk } from "../web/format.js";
 import { boardLegendText, boardToText } from "../web/render.js";
 import type { Session } from "../web/session.js";
+
+/**
+ * Build createBattle options from unit data (plus optional terrain), sizing the
+ * board to cover every unit position and terrain hex (extent + 1, min 1).
+ */
+export function makeBattleOptions(
+  units: readonly UnitInit[],
+  critsDisabled: boolean,
+  terrain: readonly TerrainHexDef[] = [],
+): CreateBattleOptions {
+  let col = 0;
+  let row = 0;
+  for (const u of units) {
+    col = Math.max(col, u.position.col);
+    row = Math.max(row, u.position.row);
+  }
+  for (const t of terrain) {
+    col = Math.max(col, t.col);
+    row = Math.max(row, t.row);
+  }
+  return { terrain, width: col + 1, height: row + 1, critsDisabled };
+}
 
 /** Deterministic RNG fed an explicit queue of D6 results (asserts exact consumption). */
 export function scriptedRng(...rolls: number[]): Rng & { remaining(): number } {

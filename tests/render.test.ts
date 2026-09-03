@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { BattleState } from "../src/rules/game.js";
-import { createBattle } from "../src/rules/game.js";
+import { createBattle, type TerrainHexDef, type UnitInit } from "../src/rules/game.js";
 import type { BoardModel } from "../web/render.js";
 import { battleModel, boardToText, GRID_GLYPHS, renderMap } from "../web/render.js";
+import { makeBattleOptions } from "./helpers.js";
 
 /** Flat battle text via the structured model (historic renderer shape). */
 const renderBattle = (
@@ -21,10 +22,11 @@ describe("console renderer", () => {
     model: string;
     position: { col: number; row: number };
   }): ReturnType<typeof createBattle> {
-    return createBattle([
+    const units: UnitInit[] = [
       { ...primary, team: 0, gunnery: 4, facing: "n" },
       { id: "far", model: "GRF-1N", team: 1, gunnery: 4, position: farAway, facing: "s" },
-    ]);
+    ];
+    return createBattle(units, makeBattleOptions(units, false));
   }
 
   it("draws hexes with unit ids and coordinates", () => {
@@ -35,27 +37,25 @@ describe("console renderer", () => {
   });
 
   it("staggers even columns down half a hex", () => {
-    const state = createBattle(
-      [
-        {
-          id: "wvr",
-          model: "WVR-6R",
-          team: 0,
-          gunnery: 4,
-          position: { col: 3, row: 1 },
-          facing: "n",
-        },
-        {
-          id: "grf",
-          model: "GRF-1N",
-          team: 1,
-          gunnery: 3,
-          position: { col: 4, row: 1 },
-          facing: "s",
-        },
-      ],
-      { width: 4, height: 2 },
-    );
+    const units: UnitInit[] = [
+      {
+        id: "wvr",
+        model: "WVR-6R",
+        team: 0,
+        gunnery: 4,
+        position: { col: 3, row: 1 },
+        facing: "n",
+      },
+      {
+        id: "grf",
+        model: "GRF-1N",
+        team: 1,
+        gunnery: 3,
+        position: { col: 4, row: 1 },
+        facing: "s",
+      },
+    ];
+    const state = createBattle(units, { ...makeBattleOptions(units, false), width: 4, height: 2 });
     const lines = renderBattle(state).split("\n");
     // Odd-col labels sit at the top (canvas y=0), even-col labels at
     // canvas y=2 — so a same-row even column renders 2 canvas lines lower.
@@ -76,7 +76,7 @@ describe("console renderer", () => {
   });
 
   it("clips long ids and centers short ones in the 6-char belly", () => {
-    const state = createBattle([
+    const units: UnitInit[] = [
       {
         id: "wolverine",
         model: "WVR-6R",
@@ -86,7 +86,8 @@ describe("console renderer", () => {
         facing: "n",
       },
       { id: "ab", model: "GRF-1N", team: 1, gunnery: 4, position: { col: 4, row: 3 }, facing: "s" },
-    ]);
+    ];
+    const state = createBattle(units, makeBattleOptions(units, false));
     const out = renderBattle(state);
     expect(out).toContain(`${GRID_GLYPHS.vertW} wolv ${GRID_GLYPHS.vertE}`); // clipped to 4 chars
     expect(out).toContain(`${GRID_GLYPHS.vertW}  ab  ${GRID_GLYPHS.vertE}`); // centered
@@ -94,27 +95,25 @@ describe("console renderer", () => {
   });
 
   it("caps outer edges with _ and overline, sharing ==== below", () => {
-    const state = createBattle(
-      [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          position: { col: 4, row: 3 },
-          facing: "n",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 0,
-          gunnery: 4,
-          position: { col: 4, row: 4 },
-          facing: "s",
-        },
-      ],
-      { width: 4, height: 4 },
-    );
+    const units: UnitInit[] = [
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 4, row: 3 },
+        facing: "n",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 0,
+        gunnery: 4,
+        position: { col: 4, row: 4 },
+        facing: "s",
+      },
+    ];
+    const state = createBattle(units, { ...makeBattleOptions(units, false), width: 4, height: 4 });
     const lines = renderBattle(state).split("\n");
     // hbk at col 4 (even, staggered down 2). The '↑' sits at the shared edge
     // between row 2 and row 3 (canvas y=10). enf at col 4 row 4 (last row):
@@ -139,28 +138,27 @@ describe("console renderer", () => {
     expect(out).toContain(`${GRID_GLYPHS.edgeNW}0202${GRID_GLYPHS.edgeNE}`); // hex still drawn, empty
   });
 
-  it("derives board size from units and terrain when not given", () => {
-    const state = createBattle(
-      [
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 0,
-          gunnery: 4,
-          position: { col: 3, row: 3 },
-          facing: "n",
-        },
-        {
-          id: "wvr",
-          model: "WVR-6R",
-          team: 1,
-          gunnery: 4,
-          position: { col: 3, row: 4 },
-          facing: "s",
-        },
-      ],
-      { terrain: [{ col: 11, row: 9, type: "lightWoods" }] },
-    );
+  it("helper sizes board to cover unit and terrain extents (engine no longer derives)", () => {
+    const terrain: TerrainHexDef[] = [{ col: 11, row: 9, type: "lightWoods" }];
+    const units: UnitInit[] = [
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 0,
+        gunnery: 4,
+        position: { col: 3, row: 3 },
+        facing: "n",
+      },
+      {
+        id: "wvr",
+        model: "WVR-6R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 3, row: 4 },
+        facing: "s",
+      },
+    ];
+    const state = createBattle(units, makeBattleOptions(units, false, terrain));
     const out = renderBattle(state);
     expect(out.split("\n").length).toBe(10 * 4 + 2 + 1); // rows*stride + stagger + closing border
     expect(out).toContain(`${GRID_GLYPHS.edgeNW}0303${GRID_GLYPHS.edgeNE}`);
@@ -182,14 +180,15 @@ describe("console renderer", () => {
   });
 
   it("marks mech facing at the matching hexside vertex", () => {
-    const state = createBattle([
+    const units: UnitInit[] = [
       { id: "a", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 2, row: 2 }, facing: "n" },
       { id: "b", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 2, row: 3 }, facing: "s" },
       { id: "c", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 3, row: 2 }, facing: "ne" },
       { id: "d", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 3, row: 3 }, facing: "sw" },
       { id: "e", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 4, row: 2 }, facing: "nw" },
       { id: "f", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 4, row: 3 }, facing: "se" },
-    ]);
+    ];
+    const state = createBattle(units, makeBattleOptions(units, false));
     const out = renderBattle(state);
     // Each facing glyph has a distinct unicode codepoint; confirm the
     // output contains all six at some position.
@@ -220,7 +219,7 @@ describe("map renderer", () => {
   });
 
   it("keeps unit ids in the center cell while terrain marks sit at the bottom", () => {
-    const state = createBattle([
+    const units: UnitInit[] = [
       {
         id: "hbk",
         model: "HBK-4G",
@@ -237,33 +236,35 @@ describe("map renderer", () => {
         position: { col: 11, row: 11 },
         facing: "s",
       },
-    ]);
+    ];
+    const state = createBattle(units, makeBattleOptions(units, false));
     const out = renderBattle(state, undefined, { "4,1": "W" });
     expect(out).toContain(`${GRID_GLYPHS.vertW}  hbk ${GRID_GLYPHS.vertE}`);
     expect(out).toContain(`${GRID_GLYPHS.edgeSW} W0 ${GRID_GLYPHS.edgeSE}`);
   });
 
   it("draws battle terrain via the marks layer", () => {
+    const units: UnitInit[] = [
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 3, row: 3 },
+        facing: "n",
+      },
+      {
+        id: "far",
+        model: "GRF-1N",
+        team: 1,
+        gunnery: 4,
+        position: { col: 11, row: 11 },
+        facing: "s",
+      },
+    ];
     const state = createBattle(
-      [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          position: { col: 3, row: 3 },
-          facing: "n",
-        },
-        {
-          id: "far",
-          model: "GRF-1N",
-          team: 1,
-          gunnery: 4,
-          position: { col: 11, row: 11 },
-          facing: "s",
-        },
-      ],
-      { terrain: [{ col: 1, row: 1, type: "lightWoods" }] },
+      units,
+      makeBattleOptions(units, false, [{ col: 1, row: 1, type: "lightWoods" }]),
     );
     const out = renderBattle(state, undefined, { "1,1": "w" });
     expect(out).toContain(`${GRID_GLYPHS.vertW}  hbk ${GRID_GLYPHS.vertE}`);

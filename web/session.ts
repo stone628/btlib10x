@@ -239,16 +239,22 @@ export function removeUnit(s: Session, id: string): void {
 
 /** Shared createBattle options: setup terrain plus the loaded map's size. */
 function battleOptions(s: Session): CreateBattleOptions {
-  const map = s.mapName ? getMapDef(s.mapName) : undefined;
+  const map = getMapDef(s.mapName!);
+  if (!map)
+    throw new Error(
+      i18n(s.locale, "err.unknownMap", { name: s.mapName!, list: listMapNames().join(", ") }),
+    );
   return {
     terrain: s.terrainDefs,
-    ...(map !== undefined ? { width: map.width, height: map.height } : {}),
+    width: map.width,
+    height: map.height,
     critsDisabled: s.critsDisabled,
   };
 }
 
 export function startBattle(s: Session): void {
   if (s.app !== "setup") throw new Error(i18n(s.locale, "err.alreadyStarted"));
+  if (s.mapName === null) throw new Error(i18n(s.locale, "err.noMap"));
   if (s.roster.length < 2) throw new Error(i18n(s.locale, "err.needTwoUnits"));
   const teams = new Set(s.roster.map((u) => u.team));
   if (teams.size < 2) throw new Error(i18n(s.locale, "err.needTwoTeams"));
