@@ -287,7 +287,15 @@ function applyAmmoExplosion(
   amount: number,
 ): DamageApplication {
   if (!Number.isInteger(amount) || amount <= 0) {
-    return { damage: state, steps: [], newlyDestroyed: [], blownOffArms: [], killed: false };
+    // No-op application: `state` is returned unchanged, so `pre` may alias it.
+    return {
+      after: state,
+      before: state as UnitDamageState,
+      steps: [],
+      newlyDestroyed: [],
+      blownOffArms: [],
+      killed: false,
+    };
   }
   // Pre-drain the location's armor pools so the standard applyDamage hits
   // the IS layer directly. Any side-torso arm is unaffected (its own
@@ -505,7 +513,7 @@ function applySlotHit(
     const amount = shotsRemaining * damagePerShot;
     if (amount > 0) {
       const app = applyAmmoExplosion(state.damage, loc, amount);
-      state.damage = app.damage;
+      state.damage = app.after;
       if (app.killed) state.killed = true;
       for (const arm of app.blownOffArms) {
         state.blownOffArms.push(arm);

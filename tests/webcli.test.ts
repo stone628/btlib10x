@@ -219,7 +219,7 @@ describe("info", () => {
     expect(detail).toContain(" 9A");
     expect(detail).toContain("26F");
     expect(detail).toContain("Autocannon/20");
-    expect(detail).toContain("#1 Autocannon/20 (RT)");
+    expect(detail).toContain("#1 Autocannon/20 [RT]");
     expect(detail).toContain("critical slots");
     expect(detail).toContain("  3 Cockpit");
     expect(run(s, "info mech NOPE")[0]).toMatch(/^error: Unknown 'Mech model/);
@@ -279,7 +279,7 @@ describe("sheet", () => {
     expect(lines).toContain("gunnery: Regular(4)");
     expect(lines).toContain("9/ 9A");
     expect(lines).toContain("26/26F");
-    expect(lines).toContain("#1 Autocannon/20 (RT)");
+    expect(lines).toContain("#1 Autocannon/20 [RT]");
     expect(lines).toContain("critical slots");
     expect(lines).toContain("  1 Shoulder");
   });

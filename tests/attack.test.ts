@@ -39,7 +39,7 @@ describe("resolveWeaponAttack", () => {
     expect(res.toHitRoll).toBe(5);
     expect(res.clusterRoll).toBeNull();
     expect(res.groups).toEqual([{ location: "centerTorso", damage: 3 }]);
-    expect(res.application?.damage.armor.centerTorso).toBe(7);
+    expect(res.application?.after.armor.centerTorso).toBe(7);
     expect(rng.remaining()).toBe(0);
   });
 
@@ -96,7 +96,7 @@ describe("resolveWeaponAttack", () => {
       { location: "rightLeg", damage: 5 },
       { location: "centerTorso", damage: 5 },
     ]);
-    expect(res.application?.damage.armor.rightLeg).toBe(5);
+    expect(res.application?.after.armor.rightLeg).toBe(5);
   });
 
   it("rolls LRM missiles in lots of five", () => {
@@ -121,8 +121,8 @@ describe("resolveWeaponAttack", () => {
       { location: "centerTorso", damage: 5 },
       { location: "rightArm", damage: 3 },
     ]);
-    expect(res.application?.damage.armor.centerTorso).toBe(5);
-    expect(res.application?.damage.armor.rightArm).toBe(7);
+    expect(res.application?.after.armor.centerTorso).toBe(5);
+    expect(res.application?.after.armor.rightArm).toBe(7);
   });
 
   it("locates every SRM missile individually", () => {

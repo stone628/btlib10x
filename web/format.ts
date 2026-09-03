@@ -8,6 +8,7 @@ import type {
   CriticalResolution,
   CritSoakName,
   CritStructureName,
+  DamageTransferStep,
   FireBlockerReason,
   FireWeapon,
   GameEvent,
@@ -173,20 +174,20 @@ function getCompensatedLength(str: string): number {
 const LINE_THEME = {
   LIGHT: {
     tnw: "┌", // top left corner of header column
-    tn: "┬",  // separator for top line of header column
+    tn: "┬", // separator for top line of header column
     tne: "┐", // top right corner of header column
     tnh: "─", // top line of header column
     tnv: "│", // vertical line of header column
 
-    tw: "├",  // left end of bottom line of header column
-    tc: "┼",  // seperator for bottom line of header column
-    te: "┤",  // right end of bottom line of header column
+    tw: "├", // left end of bottom line of header column
+    tc: "┼", // seperator for bottom line of header column
+    te: "┤", // right end of bottom line of header column
     tcs: "┬", // separator for bottom line of header column, for hidden header
     twc: "┌", // left end of bottom line of header column, for hidden header
     tec: "┐", // right end of bottom line of header column, for hidden header
 
     tsw: "└", // bottom left corner of body column
-    ts: "┴",  // separator for bottom line of body column
+    ts: "┴", // separator for bottom line of body column
     tse: "┘", // bottom right corner of body column
     tsh: "─", // bottom line of body column
     tsv: "│", // vertical line of body column
@@ -208,8 +209,8 @@ const LINE_THEME = {
     tse: "+",
     tsh: "-",
     tsv: "|",
-  }
-}
+  },
+};
 
 function buildHeaderTableChunkFromRows(
   header: readonly (string | null)[],
@@ -232,7 +233,8 @@ function buildHeaderTableChunkFromRows(
     widths.push(w);
   }
 
-  const { tnw, tn, tne, tnh, tnv, tw, tc, te, tcs, twc, tec, tsw, ts, tse, tsh, tsv } = LINE_THEME.LIGHT;
+  const { tnw, tn, tne, tnh, tnv, tw, tc, te, tcs, twc, tec, tsw, ts, tse, tsh, tsv } =
+    LINE_THEME.LIGHT;
   const height = rows.length;
   const cols: string[][] = [];
   let prevHeaderExists = true;
@@ -305,7 +307,8 @@ function buildHeaderTableChunkFromColumns(
   const n = header.length;
   if (n === 0) return buildColumnsChunk([]);
 
-  const { tnw, tn, tne, tnh, tnv, tw, tc, te, tcs, twc, tec, tsw, ts, tse, tsh, tsv } = LINE_THEME.LIGHT;
+  const { tnw, tn, tne, tnh, tnv, tw, tc, te, tcs, twc, tec, tsw, ts, tse, tsh, tsv } =
+    LINE_THEME.LIGHT;
   const widths: number[] = [];
   const cols: string[][] = [];
   const height = columns.map((c) => c.length).reduce((prev, curr) => (prev > curr ? prev : curr));
@@ -520,7 +523,7 @@ export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
           originalArmorRear: armorRear,
           originalStructure: is,
         }),
-      )
+      ),
     ),
     critChartChunk(d, locale, null),
   ];
@@ -668,6 +671,7 @@ interface SheetView {
 }
 
 function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
+  // Engine guarantee: `unit.model` was validated by `createBattle`.
   const def = getMechDef(unit.model)!;
   return {
     id: id,
@@ -871,17 +875,17 @@ interface CritChartLive {
   readonly ammoBins: Readonly<Record<AmmoBinId, number>>;
 }
 
+/** i18n key per ammo depletion policy. */
+const AMMO_POLICY_KEY: Readonly<Record<AmmoPolicy, MessageKey>> = {
+  exposed: "ammo.policy.exposed",
+  core: "ammo.policy.core",
+  spread: "ammo.policy.spread",
+  leastFirst: "ammo.policy.leastFirst",
+};
+
 /** Human-friendly i18n label for an ammo depletion policy. */
 export function ammoPolicyLabel(locale: LocaleId, policy: AmmoPolicy): string {
-  const key =
-    policy === "exposed"
-      ? "ammo.policy.exposed"
-      : policy === "core"
-        ? "ammo.policy.core"
-        : policy === "spread"
-          ? "ammo.policy.spread"
-          : "ammo.policy.leastFirst";
-  return t(locale, key);
+  return t(locale, AMMO_POLICY_KEY[policy]);
 }
 
 /** Human-friendly i18n key for a structure component name. */
@@ -1039,7 +1043,7 @@ export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
           originalArmorRear: view.originalArmorRear,
           originalStructure: view.originalArmorStructure,
         }),
-      )
+      ),
     ),
     critChartChunk(requireMechDef(view.model, locale), locale, view.critLive),
   ];
@@ -1089,6 +1093,7 @@ export function unitBriefList(s: Session): string[] {
   for (const team of teams) {
     lines.push(t(s.locale, "setup.teamHeader", { team }));
     for (const [uid, unit] of Object.entries(battle.units).filter(([, u]) => u.team === team)) {
+      // Engine guarantee: `unit.model` was validated by `createBattle`.
       const def = getMechDef(unit.model)!;
       lines.push(`  ${uid}  ${def.model}  ${disp(unit.position)} facing ${unit.facing}`);
       const view = battleSheet(unit, uid, s.locale);
@@ -1109,7 +1114,7 @@ export function fmtSetupStatus(s: Session): string[] {
   for (const team of teams) {
     lines.push(t(s.locale, "setup.teamHeader", { team }));
     for (const u of s.roster.filter((x) => x.team === team)) {
-      const def = getMechDef(u.model)!;
+      const def = requireMechDef(u.model, s.locale);
       lines.push(
         t(s.locale, "setup.unitLine", {
           id: u.id,
@@ -1230,6 +1235,7 @@ export function reachableModel(s: Session): BoardModel | null {
   const w = s.battle.width;
   const h = s.battle.height;
   if (w === undefined || h === undefined) return null;
+  // Engine guarantee: `actor.model` was validated by `createBattle`.
   const def = getMechDef(actor.model)!;
   const landings = reachableLandings({ ...actor.position }, actor.facing, {
     mode: s.moveMode,
@@ -1307,6 +1313,7 @@ export function attackStatusLines(s: Session): string[] {
   if (!actor || !s.battle)
     throw new Error(t(s.locale, "err.wrongPhase", { phase: "weaponAttack" }));
   if (s.fireDecls.length === 0) return [t(s.locale, "attackStatus.none")];
+  // Engine guarantee: `actor.model` was validated by `createBattle`.
   const def = getMechDef(actor.model)!;
   return s.fireDecls.map((decl) => {
     const mount = def.weapons[decl.weaponIndex];
@@ -1411,6 +1418,7 @@ export function weaponsLines(s: Session, unitId?: string): string[] {
       t(s.locale, "err.unknownUnitId", { id: unitId ?? t(s.locale, "weapons.noActorId") }),
     );
   }
+  // Engine guarantee: `unit.model` was validated by `createBattle`.
   const def = getMechDef(unit.model)!;
   const totals = loadAmmoBins(def).totals;
   return Object.entries(def.weapons).map(([key, mount]) => {
@@ -1651,44 +1659,68 @@ function formatCritEffect(locale: LocaleId, eff: CriticalEffect): string {
 }
 
 /**
- * Reconstruct before->after armor numbers per transfer step by working back
- * from the final armor state (resolutions carry no pre-damage snapshot).
+ * Per-pool, per-location running totals over `app.steps`. Start from `app.before`
+ * so each step's decrement reads the value present *before that step ran*,
+ * which is the value visible to the player in the per-step `before→after`
+ * label. The engine provides `app.before` directly (snapshot taken at
+ * `applyDamage` entry), so no reconstruction from `after` is needed.
  */
-function transferDetail(locale: LocaleId, r: AttackResolution): string | null {
+function stepLabel(step: DamageTransferStep, before: UnitDamageState): string {
+  if (step.pool === "armor") {
+    // A location carrying a defined rear pool stores its active value as
+    // front armor (F); one without a rear pool holds plain armor (A).
+    return before.armorRear[step.location] !== undefined ? "F" : "A";
+  }
+  return step.pool === "armorRear" ? "R" : "I";
+}
+
+function poolValue(
+  step: DamageTransferStep,
+  run: {
+    armor: Record<Location, number>;
+    armorRear: Partial<Record<Location, number>>;
+    structure: Record<Location, number>;
+  },
+): number {
+  return step.pool === "armor"
+    ? (run.armor[step.location] ?? 0)
+    : step.pool === "armorRear"
+      ? (run.armorRear[step.location] ?? 0)
+      : (run.structure[step.location] ?? 0);
+}
+
+function setPoolValue(
+  step: DamageTransferStep,
+  value: number,
+  run: {
+    armor: Record<Location, number>;
+    armorRear: Partial<Record<Location, number>>;
+    structure: Record<Location, number>;
+  },
+): void {
+  if (step.pool === "armor") run.armor[step.location] = value;
+  else if (step.pool === "armorRear") run.armorRear[step.location] = value;
+  else run.structure[step.location] = value;
+}
+
+export function transferDetail(locale: LocaleId, r: AttackResolution): string | null {
   const app = r.application;
   if (!app || app.steps.length === 0) return null;
-  const armorTotals = {} as ArmorState;
-  const rearTotals: Partial<Record<Location, number>> = {};
-  const strucTotals = {} as ArmorState;
-  for (const step of app.steps) {
-    const map =
-      step.pool === "armor" ? armorTotals : step.pool === "armorRear" ? rearTotals : strucTotals;
-    map[step.location] = (map[step.location] ?? 0) + step.damageApplied;
-  }
-  const post = app.damage;
-  const pre: UnitDamageState = {
-    armor: {} as ArmorState,
-    armorRear: { ...post.armorRear },
-    internalStructure: {} as ArmorState,
+  const wasImmobile = isImmobile(app.before);
+  const wasKilled = isKilled(app.before);
+  const run = {
+    armor: { ...app.before.armor },
+    armorRear: { ...app.before.armorRear } as Partial<Record<Location, number>>,
+    structure: { ...app.before.internalStructure },
   };
-  for (const loc of LOCATIONS) {
-    pre.armor[loc] = post.armor[loc] + (armorTotals[loc] ?? 0);
-    pre.internalStructure[loc] = post.internalStructure[loc] + (strucTotals[loc] ?? 0);
-    if (rearTotals[loc]) pre.armorRear[loc] = (post.armorRear[loc] ?? 0) + rearTotals[loc]!;
-  }
-  const wasImmobile = isImmobile(pre);
-  const wasKilled = isKilled(pre);
-  const runArmor = { ...pre.armor };
-  const runRear = { ...pre.armorRear };
-  const runStruc = { ...pre.internalStructure };
   const bits: string[] = [];
   for (const step of app.steps) {
-    const map = step.pool === "armor" ? runArmor : step.pool === "armorRear" ? runRear : runStruc;
-    const before = map[step.location]!;
+    const before = poolValue(step, run);
     const after = before - step.damageApplied;
-    map[step.location] = after;
-    const label = step.pool === "armor" ? "A" : step.pool === "armorRear" ? "R" : "I";
-    bits.push(`${SHORT_LOC[step.location]}${label} ${before}->${after}${step.depleted ? "*" : ""}`);
+    setPoolValue(step, after, run);
+    bits.push(
+      `${SHORT_LOC[step.location]}${stepLabel(step, app.before)} ${before}->${after}${step.depleted ? "*" : ""}`,
+    );
   }
   let text = bits.join(", ");
   for (const arm of app.blownOffArms) {
@@ -1697,9 +1729,11 @@ function transferDetail(locale: LocaleId, r: AttackResolution): string | null {
   }
   const otherDestroyed = app.newlyDestroyed.filter((loc) => !app.blownOffArms.includes(loc));
   if (otherDestroyed.length > 0) {
-    text += t(locale, "res.destroyedTail", { locs: otherDestroyed.map((l) => SHORT_LOC[l]).join(", ") });
+    text += t(locale, "res.destroyedTail", {
+      locs: otherDestroyed.map((l) => SHORT_LOC[l]).join(", "),
+    });
   }
-  if (isImmobile(app.damage) && !wasImmobile) text += t(locale, "res.immobilized");
+  if (isImmobile(app.after) && !wasImmobile) text += t(locale, "res.immobilized");
   if (app.killed && !wasKilled) text += t(locale, "res.killed");
   return text;
 }
