@@ -53,7 +53,7 @@ export {
   validateMapDef,
   validateMechDef,
 } from "./data/index.js";
-export type { WeaponDef } from "./data/weapon.schema.js";
+export type { WeaponCategory, WeaponDef } from "./data/weapon.schema.js";
 export {
   getAllWeapons,
   getWeaponOrThrow as getWeapon,

@@ -7,6 +7,14 @@
  */
 import weaponsJson from "./weapons.json";
 
+export type WeaponCategory = "MISSILE" | "BALLISTIC" | "ENERGY";
+
+const WEAPON_CATEGORIES: ReadonlySet<WeaponCategory> = new Set<WeaponCategory>([
+  "MISSILE",
+  "BALLISTIC",
+  "ENERGY",
+]);
+
 export interface WeaponDef {
   readonly name: string;
   readonly short: number;
@@ -25,6 +33,8 @@ export interface WeaponDef {
   readonly pulse?: boolean;
   readonly antiInfantry?: boolean;
   readonly rapidFireShots?: number;
+  /** Broad weapon class used for catalog grouping and UI categorization. */
+  readonly category: WeaponCategory;
 }
 
 export interface WeaponsFile {
@@ -56,6 +66,11 @@ function parseWeapon(raw: unknown, label: string, errors: string[]): WeaponDef |
       valid = false;
     }
   }
+  const category = raw.category;
+  if (typeof category !== "string" || !WEAPON_CATEGORIES.has(category as WeaponCategory)) {
+    errors.push(`${label}.category must be one of MISSILE, BALLISTIC, ENERGY`);
+    valid = false;
+  }
   const minRange = raw.minRange;
   if (minRange !== undefined && !isBoundedInt(minRange)) {
     errors.push(`${label}.minRange must be a positive integer`);
@@ -75,6 +90,7 @@ function parseWeapon(raw: unknown, label: string, errors: string[]): WeaponDef |
     "antiInfantry",
     "rapidFireShots",
     "minRange",
+    "category",
   ] as const) {
     const v = raw[key];
     if (v !== undefined) out[key] = v;
