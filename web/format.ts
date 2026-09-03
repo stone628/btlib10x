@@ -143,18 +143,17 @@ function isWideCodePoint(cp: number): boolean {
  * `isWideCodePoint` ranges (including astral planes) still apply.
  */
 function getCompensatedLength(str: string): number {
+  let extra = 0;
   for (let i = 0; i < str.length; i++) {
     const code = str.charCodeAt(i);
     if (code <= 0x7f) continue;
-
-    let extra = 0;
     for (const ch of str.slice(i)) {
       const cp = ch.codePointAt(0) ?? 0;
-      if (code > 0x7f && isWideCodePoint(cp)) extra += 1;
+      if (cp > 0x7f && isWideCodePoint(cp)) extra += 1;
     }
-    return str.length + extra;
+    break;
   }
-  return str.length;
+  return str.length + extra;
 }
 
 /**
@@ -239,7 +238,7 @@ function buildHeaderTableChunkFromRows(
   let prevHeaderExists = true;
   for (let i = 0; i < n; i++) {
     const w = widths[i] ?? 0;
-    const stroke = tnh!.repeat(w);
+    const stroke = tnh.repeat(w);
     const isDataFirst = i === 0;
     const botWall = isDataFirst ? tsw : ts;
     const col: string[] = new Array(height + 3);
@@ -276,7 +275,7 @@ function buildHeaderTableChunkFromRows(
       prevHeaderExists = true;
     }
     for (let r = 0; r < height; r++) {
-      col[3 + r] = `${tsv!}${rows[r]?.[i] ?? ""}`;
+      col[3 + r] = `${tsv}${rows[r]?.[i] ?? ""}`;
     }
     col[height + 2] = `${botWall}${tsh.repeat(w)}`;
     cols.push(col);
@@ -339,7 +338,7 @@ function buildHeaderTableChunkFromColumns(
   let prevHeaderExists = true;
   for (let i = 0; i < n; i++) {
     const w = widths[i] ?? 0;
-    const stroke = tnh!.repeat(w);
+    const stroke = tnh.repeat(w);
     const isDataFirst = i === 0;
     const botWall = isDataFirst ? tsw : ts;
     const col = cols[i]!;
@@ -928,7 +927,7 @@ function critSlotText(
   if (slot.kind === "empty") {
     body = t(locale, "critChart.empty");
   } else if (slot.kind === "soak") {
-    const key = CRIT_SOAK_KEY[slot.name as CritSoakName];
+    const key = CRIT_SOAK_KEY[slot.name];
     body = `(${key !== undefined ? t(locale, key) : slot.name})`;
   } else if (slot.kind === "weapon") {
     body = slot.weapon;
@@ -1406,7 +1405,7 @@ export function fireSuggestionLines(s: Session): Chunk[] {
 
 export function weaponsLines(s: Session, unitId?: string): string[] {
   const id = unitId ?? s.actorId;
-  const unit = id !== undefined && id !== null && id !== "" ? s.battle?.units[id] : undefined;
+  const unit = typeof id === "string" && id.length > 0 ? s.battle?.units[id] : undefined;
   if (!unit || !s.battle) {
     throw new Error(
       t(s.locale, "err.unknownUnitId", { id: unitId ?? t(s.locale, "weapons.noActorId") }),
@@ -1451,8 +1450,8 @@ export function fmtLog(
   for (let i = 0; i < slice.length; i++) {
     const e = slice[i]!;
     const currKind = e.kind;
-    if (isAttacResolutionKind(e.kind)) {
-      if (!isAttacResolutionKind(prevKind)) {
+    if (isAttackResolutionKind(e.kind)) {
+      if (!isAttackResolutionKind(prevKind)) {
         lines.push(t(locale, "res.attackResolutionStart"));
       }
       if (currKind === "unitRemoved") {
@@ -1468,7 +1467,7 @@ export function fmtLog(
       } else {
         lines.push(...eventLines(locale, e));
       }
-      if (!isAttacResolutionKind(getKindInBatch(i + 1, slice))) {
+      if (!isAttackResolutionKind(getKindInBatch(i + 1, slice))) {
         lines.push(t(locale, "res.attackResolutionEnd"));
         if (removedLines.length > 0) {
           lines.push(...removedLines);
@@ -1483,7 +1482,7 @@ export function fmtLog(
   return lines;
 }
 
-function isAttacResolutionKind(kind: GameEvent["kind"] | null): boolean {
+function isAttackResolutionKind(kind: GameEvent["kind"] | null): boolean {
   return kind === "attackResolved" || kind === "unitDestroyed" || kind === "unitRemoved";
 }
 
