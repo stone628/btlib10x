@@ -17,6 +17,7 @@ import type {
   ResolvedMechDef,
   UnitDamageState,
   UnitState,
+  WeaponDef,
 } from "btlib10x";
 import {
   ammoBinId,
@@ -144,8 +145,6 @@ function getCompensatedLength(str: string): number {
       if (isWideCodePoint(cp)) extra += 1;
     }
   }
-
-  // return isAscii ? str.length : str.length + Math.floor(extra / 2) + (extra % 2);
   return str.length + extra;
 }
 
@@ -163,18 +162,46 @@ function getCompensatedLength(str: string): number {
  * Column widths come from `max(strlen)` per column. Box-drawing glyphs are
  * assumed to render at 1 ch in the terminal font.
  */
-// biome-ignore format: just keep it
-const _LIGHT_LINE_THEME = {
-  tnw: "┌", tn: "┬", tne: "┐", tnh: "─", tnv: "│",
-  tw: "├", tc: "┼", te: "┤", tcs: "┬", twc: "┌", tec: "┐",
-  tsw: "└", ts: "┴", tse: "┘", tsh: "─", tsv: "│",
-};
-// biome-ignore format: just keep it
-const _ASCII_LINE_THEME = {
-  tnw: "+", tn: "+", tne: "+", tnh: "-", tnv: "|",
-  tw: "+", tc: "+", te: "+", tcs: "+", twc: "+", tec: "+",
-  tsw: "+", ts: "+", tse: "+", tsh: "-", tsv: "|",
-};
+const LINE_THEME = {
+  LIGHT: {
+    tnw: "┌", // top left corner of header column
+    tn: "┬",  // separator for top line of header column
+    tne: "┐", // top right corner of header column
+    tnh: "─", // top line of header column
+    tnv: "│", // vertical line of header column
+
+    tw: "├",  // left end of bottom line of header column
+    tc: "┼",  // seperator for bottom line of header column
+    te: "┤",  // right end of bottom line of header column
+    tcs: "┬", // separator for bottom line of header column, for hidden header
+    twc: "┌", // left end of bottom line of header column, for hidden header
+    tec: "┐", // right end of bottom line of header column, for hidden header
+
+    tsw: "└", // bottom left corner of body column
+    ts: "┴",  // separator for bottom line of body column
+    tse: "┘", // bottom right corner of body column
+    tsh: "─", // bottom line of body column
+    tsv: "│", // vertical line of body column
+  },
+  ASCII: {
+    tnw: "+",
+    tn: "+",
+    tne: "+",
+    tnh: "-",
+    tnv: "|",
+    tw: "+",
+    tc: "+",
+    te: "+",
+    tcs: "+",
+    twc: "+",
+    tec: "+",
+    tsw: "+",
+    ts: "+",
+    tse: "+",
+    tsh: "-",
+    tsv: "|",
+  }
+}
 
 function buildHeaderTableChunkFromRows(
   header: readonly (string | null)[],
@@ -197,9 +224,7 @@ function buildHeaderTableChunkFromRows(
     widths.push(w);
   }
 
-  const { tnw, tn, tne, tnh, tnv, tw, tc, te, tcs, twc, tec, tsw, ts, tse, tsh, tsv } = _LIGHT_LINE_THEME;
-  // const { tnw, tn, tne, tnh, tnv, tw, tc, te, tcs, twc, tec, tsw, ts, tse, tsh, tsv } = _ASCII_LINE_THEME;
-
+  const { tnw, tn, tne, tnh, tnv, tw, tc, te, tcs, twc, tec, tsw, ts, tse, tsh, tsv } = LINE_THEME.LIGHT;
   const height = rows.length;
   const cols: string[][] = [];
   let prevHeaderExists = true;
@@ -231,12 +256,12 @@ function buildHeaderTableChunkFromRows(
     } else {
       if (isDataFirst) {
         col[0] = `${tnw}${stroke}`;
-        col[1] = `${tnv}${currHeader!}`;
+        col[1] = `${tnv}${currHeader}`;
         col[2] = `${tw}${stroke}`;
       } else {
         const topWall = prevHeaderExists ? tn : tnw;
         col[0] = `${topWall}${stroke}`;
-        col[1] = `${tnv}${currHeader!}`;
+        col[1] = `${tnv}${currHeader}`;
         col[2] = `${tc}${stroke}`;
       }
       prevHeaderExists = true;
@@ -244,22 +269,22 @@ function buildHeaderTableChunkFromRows(
     for (let r = 0; r < height; r++) {
       col[3 + r] = `${tsv!}${rows[r]?.[i] ?? ""}`;
     }
-    col[height + 2] = `${botWall}${tsh!.repeat(w)}`;
+    col[height + 2] = `${botWall}${tsh.repeat(w)}`;
     cols.push(col);
   }
 
   const closing: string[] = new Array(height + 3);
   if (prevHeaderExists) {
-    closing[0] = tne!;
-    closing[1] = tnv!;
-    closing[2] = te!;
+    closing[0] = tne;
+    closing[1] = tnv;
+    closing[2] = te;
   } else {
     closing[0] = "";
     closing[1] = "";
-    closing[2] = tec!;
+    closing[2] = tec;
   }
-  for (let r = 0; r < height; r++) closing[3 + r] = tsv!;
-  closing[height + 2] = tse!;
+  for (let r = 0; r < height; r++) closing[3 + r] = tsv;
+  closing[height + 2] = tse;
   cols.push(closing);
 
   return buildColumnsChunk(cols);
@@ -272,12 +297,10 @@ function buildHeaderTableChunkFromColumns(
   const n = header.length;
   if (n === 0) return buildColumnsChunk([]);
 
-  const { tnw, tn, tne, tnh, tnv, tw, tc, te, tcs, twc, tec, tsw, ts, tse, tsh, tsv } = _LIGHT_LINE_THEME;
-  // const { tnw, tn, tne, tnh, tnv, tw, tc, te, tcs, twc, tec, tsw, ts, tse, tsh, tsv } = _ASCII_LINE_THEME;
-
+  const { tnw, tn, tne, tnh, tnv, tw, tc, te, tcs, twc, tec, tsw, ts, tse, tsh, tsv } = LINE_THEME.LIGHT;
   const widths: number[] = [];
   const cols: string[][] = [];
-  const height = columns.map((c) => c.length).reduce((prev, curr) => prev > curr ? prev : curr);
+  const height = columns.map((c) => c.length).reduce((prev, curr) => (prev > curr ? prev : curr));
   for (let i = 0; i < n; i++) {
     const currHeader = header[i];
     let w = currHeader === null ? 0 : getCompensatedLength(currHeader!);
@@ -286,7 +309,7 @@ function buildHeaderTableChunkFromColumns(
 
     if (argCol === undefined) {
       for (let r = 0; r < height; r++) {
-        col[3 + r] = tsv!;
+        col[3 + r] = tsv;
       }
     } else {
       for (let r = 0; r < height; r++) {
@@ -294,9 +317,9 @@ function buildHeaderTableChunkFromColumns(
         if (cell !== undefined) {
           const cellLen = getCompensatedLength(cell);
           if (cellLen > w) w = cellLen;
-          col[3 + r] = `${tsv!}${cell}`;
+          col[3 + r] = `${tsv}${cell}`;
         } else {
-          col[3 + r] = tsv!;
+          col[3 + r] = tsv;
         }
       }
     }
@@ -348,16 +371,16 @@ function buildHeaderTableChunkFromColumns(
 
   const closing: string[] = new Array(height + 3);
   if (prevHeaderExists) {
-    closing[0] = tne!;
-    closing[1] = tnv!;
-    closing[2] = te!;
+    closing[0] = tne;
+    closing[1] = tnv;
+    closing[2] = te;
   } else {
     closing[0] = "";
     closing[1] = "";
-    closing[2] = tec!;
+    closing[2] = tec;
   }
-  for (let r = 0; r < height; r++) closing[3 + r] = tsv!;
-  closing[height + 2] = tse!;
+  for (let r = 0; r < height; r++) closing[3 + r] = tsv;
+  closing[height + 2] = tse;
   cols.push(closing);
 
   return buildColumnsChunk(cols);
@@ -502,7 +525,7 @@ export function infoMapList(): string[] {
 }
 
 export function infoWeaponList(locale: LocaleId): string[] {
-  const grouped = new Map<string, ReturnType<typeof Object.values>[0][]>();
+  const grouped = new Map<string, WeaponDef[]>();
   let maxNameLen = 0;
   for (const w of getAllWeapons()) {
     const cat = weaponCategory(w.name);
@@ -892,21 +915,17 @@ function critSlotText(
 ): string {
   const slot = def.critSlots[loc][slotIndex - 1] ?? { kind: "empty" };
   const dice = slotIndex.toString().padStart(2);
+  const markers: string[] = [];
   let body: string;
   if (slot.kind === "empty") {
     body = t(locale, "critChart.empty");
   } else if (slot.kind === "soak") {
     const key = CRIT_SOAK_KEY[slot.name as CritSoakName];
     body = `(${key !== undefined ? t(locale, key) : slot.name})`;
-  } else if (slot.kind === "weapon" || slot.kind === "ammo") {
+  } else if (slot.kind === "weapon") {
     body = slot.weapon;
-  } else {
-    const key = CRIT_COMPONENT_KEY[slot.name as CritStructureName];
-    body = key !== undefined ? t(locale, key) : slot.name;
-  }
-  const line = ` ${dice} ${body}`;
-  const markers: string[] = [];
-  if (slot.kind === "ammo") {
+  } else if (slot.kind === "ammo") {
+    body = slot.weapon;
     const binId = ammoBinId(loc, slotIndex);
     const max = loadAmmoBins(def).bins[binId];
     if (max !== undefined) {
@@ -917,7 +936,11 @@ function critSlotText(
           : t(locale, "critChart.ammoSuffix", { curr, max }),
       );
     }
+  } else {
+    const key = CRIT_COMPONENT_KEY[slot.name as CritStructureName];
+    body = key !== undefined ? t(locale, key) : slot.name;
   }
+  const line = ` ${dice} ${body}`;
   if (live !== null && live.critSlotsDestroyed[loc] !== undefined) {
     const slotHit = live.critSlotsDestroyed[loc]?.[slotIndex - 1] ?? false;
     const mountDestroyed =
@@ -1663,27 +1686,18 @@ function transferDetail(locale: LocaleId, r: AttackResolution): string | null {
   let text = bits.join(", ");
   for (const arm of app.blownOffArms) {
     const cause = arm === "rightArm" ? "rightTorso" : "leftTorso";
-    text += t(locale, "res.armBlownOff", { cause: shortLoc(cause), arm: shortLoc(arm) });
+    text += t(locale, "res.armBlownOff", { cause: SHORT_LOC[cause], arm: SHORT_LOC[arm] });
   }
   const otherDestroyed = app.newlyDestroyed.filter((loc) => !app.blownOffArms.includes(loc));
   if (otherDestroyed.length > 0) {
-    text += t(locale, "res.destroyedTail", { locs: otherDestroyed.map(shortLoc).join(", ") });
+    text += t(locale, "res.destroyedTail", { locs: otherDestroyed.map((l) => SHORT_LOC[l]).join(", ") });
   }
   if (isImmobile(app.damage) && !wasImmobile) text += t(locale, "res.immobilized");
   if (app.killed && !wasKilled) text += t(locale, "res.killed");
   return text;
 }
 
-function shortLoc(loc: Location): string {
-  return SHORT_LOC[loc];
-}
-
-function weaponDamageSummary(w: {
-  damage?: number;
-  missileDamage?: 1 | 2;
-  missiles?: number;
-  variableDamage?: readonly [number, number, number];
-}): string {
+function weaponDamageSummary(w: WeaponDef): string {
   if (w.variableDamage)
     return `${w.variableDamage[0]} / ${w.variableDamage[1]} / ${w.variableDamage[2]}`;
   if (w.missileDamage !== undefined && w.missiles !== undefined)
@@ -1691,12 +1705,7 @@ function weaponDamageSummary(w: {
   return String(w.damage ?? 0);
 }
 
-function weaponDamageDetail(w: {
-  damage?: number;
-  missileDamage?: 1 | 2;
-  missiles?: number;
-  variableDamage?: readonly [number, number, number];
-}): string {
+function weaponDamageDetail(w: WeaponDef): string {
   if (w.variableDamage)
     return `${w.variableDamage[0]} (short) / ${w.variableDamage[1]} (medium) / ${w.variableDamage[2]} (long)`;
   if (w.missileDamage !== undefined && w.missiles !== undefined)
