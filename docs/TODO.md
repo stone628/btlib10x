@@ -9,7 +9,6 @@
 
 ## To Do
 
-- rename and unify ArmorState
 - check if both leg lost lead to lose.
 - make durability line in two. show { 'FA gone', 'RA gone', 'internal structure gone' } instead of '*' and '!'
 - make board keep hex instance instead of property maps

@@ -10,8 +10,8 @@ import {
 import type { Location } from "../core/types.js";
 import type { Arc } from "./arcs.js";
 
-/** Flat hit-point counter per location (front armor, or re-used for IS). */
-export type ArmorState = Record<Location, number>;
+/** Per-location numeric value (armor HP, IS HP, etc.). */
+export type LocationValue = Record<Location, number>;
 
 /**
  * Layered damage state for one unit: front armor plus rear torso armor plus
@@ -21,11 +21,11 @@ export type ArmorState = Record<Location, number>;
  */
 export interface UnitDamageState {
   /** Front armor per location; torso values are the front pool only. */
-  readonly armor: ArmorState;
+  readonly armor: LocationValue;
   /** Rear armor on the torso locations (other locations lack one). */
-  readonly armorRear: Partial<Record<Location, number>>;
+  readonly armorRear: Partial<LocationValue>;
   /** Internal structure per location. */
-  readonly internalStructure: ArmorState;
+  readonly internalStructure: LocationValue;
 }
 
 export interface DamageTransferStep {

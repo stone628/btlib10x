@@ -1,6 +1,7 @@
 import type { Location } from "../core/types.js";
 import { isLocation, LOCATIONS } from "../core/types.js";
-import { type InternalStructure, internalStructureForTonnage } from "../rules/internalStructure.js";
+import type { LocationValue } from "../rules/damage.js";
+import { internalStructureForTonnage } from "../rules/internalStructure.js";
 import { getAmmoOrThrow } from "./ammo.schema.js";
 import { getWeaponOrThrow } from "./weapon.schema.js";
 
@@ -124,7 +125,7 @@ export interface MechDef {
    * Armor per location (torso = front only) plus optional rear torso values.
    * Convert to engine-facing flat armor with `resolveMechDef`.
    */
-  readonly armor: Readonly<Record<Location, number>> &
+  readonly armor: Readonly<LocationValue> &
     Readonly<Partial<Record<RearArmorKey, number>>>;
   readonly weapons: readonly WeaponMount[];
   /**
@@ -144,7 +145,7 @@ export interface WeaponMount {
   readonly shots?: number;
 }
 
-export type ResolvedArmor = Readonly<Record<Location, number>>;
+export type ResolvedArmor = Readonly<LocationValue>;
 export type ResolvedRearArmor = Readonly<Partial<Record<TorsoLocation, number>>>;
 
 /**
@@ -168,7 +169,7 @@ export interface ResolvedMechDef {
   /** Rear torso armor; only the three torso locations carry values. */
   readonly armorRear: ResolvedRearArmor;
   /** Internal structure per location, derived from tonnage. */
-  readonly internalStructure: InternalStructure;
+  readonly internalStructure: LocationValue;
   /**
    * Weapons keyed by their 1-based index (dense 1..N). Distinct from
    * `MechDef.weapons`, which is the JSON-array form; `resolveMechDef` re-keys.
@@ -193,7 +194,7 @@ export interface ResolvedMechDef {
  * soak.
  */
 export function resolveMechDef(def: MechDef): ResolvedMechDef {
-  const armor: Record<Location, number> = {} as Record<Location, number>;
+  const armor: LocationValue = {} as LocationValue;
   for (const loc of LOCATIONS) {
     armor[loc] = def.armor[loc];
   }

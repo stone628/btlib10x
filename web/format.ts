@@ -1,7 +1,6 @@
 import type {
   AmmoBinId,
   AmmoPolicy,
-  ArmorState,
   AttackResolution,
   BattleState,
   CriticalEffect,
@@ -14,6 +13,7 @@ import type {
   GameEvent,
   Hex,
   Location,
+  LocationValue,
   RangeBracket,
   ResolvedMechDef,
   UnitDamageState,
@@ -484,7 +484,7 @@ export function infoMechList(locale: LocaleId): Chunk {
 
 export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
   const d = requireMechDef(model, locale);
-  const armorRear: Partial<Record<Location, number>> = {};
+  const armorRear: Partial<LocationValue> = {};
   for (const loc of TORSO_LOCATIONS) {
     const v = d.armorRear[loc];
     if (v !== undefined) armorRear[loc] = v;
@@ -670,15 +670,15 @@ interface SheetView {
   /** Current ammo depletion policy; null when the unit carries no ammo. */
   readonly ammoPolicyLine: string | null;
   /** Current front armor per location. */
-  readonly armor: ArmorState;
+  readonly armor: LocationValue;
   /** Current layered damage (front armor, rear armor, internal structure). */
   readonly damage: UnitDamageState;
   /** Designed (start-of-game) front armor per location. */
-  readonly originalArmor: Readonly<Record<Location, number>>;
+  readonly originalArmor: Readonly<LocationValue>;
   /** Designed (start-of-game) rear torso armor. */
-  readonly originalArmorRear: Partial<Record<Location, number>>;
+  readonly originalArmorRear: Partial<LocationValue>;
   /** Designed (start-of-game) internal structure per location. */
-  readonly originalArmorStructure: ArmorState;
+  readonly originalArmorStructure: LocationValue;
   readonly mounts: readonly WeaponMountInfo[];
   /** Per-unit live crit state for the crit chart; null when only design info exists. */
   readonly critLive: CritChartLive | null;
@@ -735,7 +735,7 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
 
 function setupSheet(unit: SetupUnit, id: string, locale: LocaleId): SheetView {
   const def = requireMechDef(unit.model, locale);
-  const armorRear: Partial<Record<Location, number>> = {};
+  const armorRear: Partial<LocationValue> = {};
   for (const loc of TORSO_LOCATIONS) {
     const v = def.armorRear[loc];
     if (v !== undefined) armorRear[loc] = v;
@@ -789,12 +789,12 @@ const SHORT_LOC: Readonly<Record<Location, string>> = {
 };
 
 interface ArmorInfo {
-  readonly armor: ArmorState;
-  readonly armorRear: Partial<Record<Location, number>>;
-  readonly internalStructure: ArmorState;
-  readonly originalArmor: Readonly<Record<Location, number>>;
-  readonly originalArmorRear: Partial<Record<Location, number>>;
-  readonly originalStructure: ArmorState;
+  readonly armor: LocationValue;
+  readonly armorRear: Partial<LocationValue>;
+  readonly internalStructure: LocationValue;
+  readonly originalArmor: Readonly<LocationValue>;
+  readonly originalArmorRear: Partial<LocationValue>;
+  readonly originalStructure: LocationValue;
 }
 
 /** ASCII humanoid armor diagram: internal structure (I), front armor (F/A), rear (R). */
@@ -1688,9 +1688,9 @@ function stepLabel(step: DamageTransferStep, before: UnitDamageState): string {
 function poolValue(
   step: DamageTransferStep,
   run: {
-    armor: Record<Location, number>;
-    armorRear: Partial<Record<Location, number>>;
-    structure: Record<Location, number>;
+    armor: LocationValue;
+    armorRear: Partial<LocationValue>;
+    structure: LocationValue;
   },
 ): number {
   switch (step.pool) {
@@ -1706,9 +1706,9 @@ function setPoolValue(
   step: DamageTransferStep,
   value: number,
   run: {
-    armor: Record<Location, number>;
-    armorRear: Partial<Record<Location, number>>;
-    structure: Record<Location, number>;
+    armor: LocationValue;
+    armorRear: Partial<LocationValue>;
+    structure: LocationValue;
   },
 ): void {
   if (step.pool === "armor") run.armor[step.location] = value;
@@ -1723,7 +1723,7 @@ export function transferDetail(locale: LocaleId, r: AttackResolution): string | 
   const wasKilled = isKilled(app.before);
   const run = {
     armor: { ...app.before.armor },
-    armorRear: { ...app.before.armorRear } as Partial<Record<Location, number>>,
+    armorRear: { ...app.before.armorRear } as Partial<LocationValue>,
     structure: { ...app.before.internalStructure },
   };
   const bits: string[] = [];

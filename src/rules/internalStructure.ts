@@ -1,7 +1,4 @@
-import type { Location } from "../core/types.js";
-
-/** Internal structure hit points per location. */
-export type InternalStructure = Record<Location, number>;
+import type { LocationValue } from "./damage.js";
 
 export const HEAD_STRUCTURE = 3;
 
@@ -40,7 +37,7 @@ export const STANDARD_INTERNAL_STRUCTURE: Readonly<Record<number, InternalStruct
 };
 
 /** Internal structure hit points for a `tonnage` bipedal 'Mech. */
-export function internalStructureForTonnage(tonnage: number): InternalStructure {
+export function internalStructureForTonnage(tonnage: number): LocationValue {
   const row = STANDARD_INTERNAL_STRUCTURE[tonnage];
   if (!row) throw new Error(`No internal structure table entry for ${tonnage} tons`);
   return {
