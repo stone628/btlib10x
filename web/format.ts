@@ -317,7 +317,7 @@ function buildHeaderTableChunkFromColumns(
       if (isDataFirst) {
         col[0] = "";
         col[1] = "";
-        col[2] = `${tnw}${stroke}`;
+        col[2] = `${twc}${stroke}`;
       } else {
         if (prevHeaderExists) {
           col[0] = tne;
@@ -326,7 +326,7 @@ function buildHeaderTableChunkFromColumns(
         } else {
           col[0] = "";
           col[1] = "";
-          col[2] = `${twc}${stroke}`;
+          col[2] = `${tcs}${stroke}`;
         }
       }
       prevHeaderExists = false;
@@ -1025,7 +1025,6 @@ function mergeDiagramToColumns(
   if (leftLineCount > rightLineCount) {
     const lineDiff = leftLineCount - rightLineCount;
     const topPad = Math.floor(lineDiff / 2);
-
     return [
       [...topLines, ...weaponLines],
       [...new Array(topPad).fill(""), ...diagram, ...new Array(lineDiff - topPad).fill("")],
