@@ -113,10 +113,12 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
   };
 }
 
+const RANGE_VAR_DAMAGE_INDEX: Record<RangeBracket, number> = { short: 0, medium: 1, long: 2 };
+
 /** Damage for the bracket actually rolled (handles V-code variable damage). */
 export function damageForBracket(weapon: WeaponDef, bracket: RangeBracket): number {
   if (weapon.variableDamage !== undefined) {
-    return weapon.variableDamage[bracket === "short" ? 0 : bracket === "medium" ? 1 : 2]!;
+    return weapon.variableDamage[RANGE_VAR_DAMAGE_INDEX[bracket]]!;
   }
   return weapon.damage ?? 0;
 }

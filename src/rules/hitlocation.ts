@@ -52,19 +52,19 @@ export function hitLocation(roll2d6: number): Location {
   return loc;
 }
 
+const ARC_HIT_TABLE: Record<Arc, Readonly<Record<number, Location>>> = {
+  front: HIT_LOCATION_TABLE,
+  rear: HIT_LOCATION_TABLE,
+  leftSide: LEFT_SIDE_TABLE,
+  rightSide: RIGHT_SIDE_TABLE,
+};
 /**
  * Hit location for a given firing arc. Front and rear share the same column
  * (rear only changes which armor pool is depleted); left/right side arcs use
  * their own tables.
  */
 export function hitLocationForArc(arc: Arc, roll2d6: number): Location {
-  const table =
-    arc === "leftSide"
-      ? LEFT_SIDE_TABLE
-      : arc === "rightSide"
-        ? RIGHT_SIDE_TABLE
-        : HIT_LOCATION_TABLE;
-  const loc = table[roll2d6];
+  const loc = ARC_HIT_TABLE[arc][roll2d6];
   if (loc === undefined) throw new Error(`Hit location roll out of range: ${roll2d6}`);
   return loc;
 }

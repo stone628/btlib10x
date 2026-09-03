@@ -1682,11 +1682,13 @@ function poolValue(
     structure: Record<Location, number>;
   },
 ): number {
-  return step.pool === "armor"
-    ? (run.armor[step.location] ?? 0)
-    : step.pool === "armorRear"
-      ? (run.armorRear[step.location] ?? 0)
-      : (run.structure[step.location] ?? 0);
+  switch (step.pool) {
+    case "armor":
+      return run.armor[step.location] ?? 0;
+    case "armorRear":
+      return run.armorRear[step.location] ?? 0;
+  }
+  return run.structure[step.location] ?? 0;
 }
 
 function setPoolValue(
