@@ -268,6 +268,20 @@ describe("info", () => {
     expect(upper).toMatch(/Medium Laser/);
     expect(mixed).toMatch(/Medium Laser/);
   });
+
+  it("aligns weapon rows by name, [LOC] and range columns", () => {
+    const s = S.newSession();
+    s.critsDisabled = true;
+    const lines = run(s, "info mech HBK-4G");
+    const weaponLines = lines.filter(
+      (l) => /\[(RT|RA|LA|HD|CT|LT|RL|LL)\]/.test(l) && /S\d+\/M\d+\/L\d+/.test(l),
+    );
+    expect(weaponLines.length).toBe(4);
+    const rangeCol = new Set(weaponLines.map((l) => l.search(/S\d+\/M\d+\/L\d+/)));
+    expect(rangeCol.size).toBe(1);
+    const bracketCol = new Set(weaponLines.map((l) => l.indexOf("[")));
+    expect(bracketCol.size).toBe(1);
+  });
 });
 
 describe("sheet", () => {
@@ -282,6 +296,20 @@ describe("sheet", () => {
     expect(lines).toContain("#1 Autocannon/20 [RT]");
     expect(lines).toContain("critical slots");
     expect(lines).toContain("  1 Shoulder");
+  });
+
+  it("aligns weapon rows on the battle sheet", () => {
+    const s = freshSetup();
+    run(s, "start");
+    const lines = run(s, "sheet hunchy");
+    const weaponLines = lines.filter(
+      (l) => /\[(RT|RA|LA|HD|CT|LT|RL|LL)\]/.test(l) && /S\d+\/M\d+\/L\d+/.test(l),
+    );
+    expect(weaponLines.length).toBe(4);
+    const rangeCol = new Set(weaponLines.map((l) => l.search(/S\d+\/M\d+\/L\d+/)));
+    expect(rangeCol.size).toBe(1);
+    const bracketCol = new Set(weaponLines.map((l) => l.indexOf("[")));
+    expect(bracketCol.size).toBe(1);
   });
 
   it("lists units grouped by team when no id is given", () => {
