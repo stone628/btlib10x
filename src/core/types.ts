@@ -38,11 +38,16 @@ export interface TerrainHexDef {
   readonly level?: number;
 }
 
-/** A coordinate on the hex grid plus its ground elevation (default 0). */
-export interface Hex {
+/** A coordinate on the hex grid (1-based column and row). */
+export interface HexCoord {
   col: number;
   row: number;
-  level?: number;
+}
+
+/** Terrain and elevation data for a single hex cell. */
+export interface HexCell {
+  terrain: TerrainType;
+  level: number;
 }
 
 export type MoveMode = "standStill" | "walk" | "run" | "jump";

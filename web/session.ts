@@ -4,7 +4,7 @@ import type {
   BattleState,
   CreateBattleOptions,
   Facing,
-  Hex,
+  HexCoord,
   MoveMode,
   MoveStep,
   Rng,
@@ -15,6 +15,7 @@ import type {
 } from "btlib10x";
 import {
   advancePhase,
+  cellAt,
   checkVictory,
   costToClimb,
   costToEnter,
@@ -31,7 +32,6 @@ import {
   isAdjacent,
   isBackwardStep,
   isForwardStep,
-  levelAt,
   listMapNames,
   maxMovePoints,
   nextActor,
@@ -40,7 +40,6 @@ import {
   rollInitiativePhase,
   rotateFacing,
   sameHex,
-  terrainAt,
 } from "btlib10x";
 import type { LocaleId } from "./i18n/index.js";
 import { i18n } from "./i18n/index.js";
@@ -54,7 +53,7 @@ export interface SetupUnit {
   readonly team: number;
   readonly gunnery: number;
   /** 1-based coordinates. */
-  readonly position: Hex;
+  readonly position: HexCoord;
   readonly facing: Facing;
 }
 
@@ -202,7 +201,7 @@ export function addUnit(
   model: string,
   team: number,
   gunnery: number,
-  position: Hex,
+  position: HexCoord,
   facing: Facing,
 ): void {
   const m = getMechDef(model);
@@ -299,7 +298,7 @@ export function declareMode(s: Session, word: string): void {
 }
 
 interface MoveCursor {
-  hex: Hex;
+  hex: HexCoord;
   facing: Facing;
   spent: number;
 }
@@ -313,14 +312,13 @@ function replaySteps(s: Session): MoveCursor {
       cur.spent += facingChangeCost(Math.abs(step.facings));
     } else {
       const battle = requireBattle(s);
-      const fromLevel = levelAt(battle.elevation, cur.hex);
-      const toLevel = levelAt(battle.elevation, step.to);
+      const fromLevel = cellAt(battle, cur.hex).level;
+      const toLevel = cellAt(battle, step.to).level;
       cur.hex = { ...step.to };
       if (s.moveMode === "jump") {
         cur.spent += 1;
       } else {
-        cur.spent +=
-          costToEnter(terrainAt(battle.terrain, step.to)) + costToClimb(fromLevel, toLevel);
+        cur.spent += costToEnter(cellAt(battle, step.to).terrain) + costToClimb(fromLevel, toLevel);
       }
     }
   }
@@ -340,7 +338,7 @@ function budgetFor(s: Session): number {
 }
 
 export interface StepResult {
-  readonly position: Hex;
+  readonly position: HexCoord;
   facing: Facing;
   readonly mpSpent: number;
   readonly mpBudget: number;
@@ -357,7 +355,7 @@ export function stepResult(s: Session): StepResult {
   };
 }
 
-export function queueEnter(s: Session, to: Hex): void {
+export function queueEnter(s: Session, to: HexCoord): void {
   const unit = requireActor(s, "movement");
   if (!s.moveMode) throw new Error(i18n(s.locale, "err.declareModeFirst", { id: unit.id }));
   if (sameHex(unit.position, to)) throw new Error(i18n(s.locale, "err.sameHexMove"));
@@ -375,12 +373,12 @@ export function queueEnter(s: Session, to: Hex): void {
     if (!forward && !backward) {
       throw new Error(i18n(s.locale, "err.groundStraightOnly"));
     }
-    const fromLevel = levelAt(battle.elevation, cur.hex);
-    const toLevel = levelAt(battle.elevation, to);
+    const fromLevel = cellAt(battle, cur.hex).level;
+    const toLevel = cellAt(battle, to).level;
     if (toLevel - fromLevel > 1) {
       throw new Error(i18n(s.locale, "err.climbTooSteep", { col: to.col, row: to.row }));
     }
-    cost = costToEnter(terrainAt(battle.terrain, to)) + costToClimb(fromLevel, toLevel);
+    cost = costToEnter(cellAt(battle, to).terrain) + costToClimb(fromLevel, toLevel);
   }
   const spent = cur.spent + cost;
   const budget = budgetFor(s);
@@ -480,9 +478,9 @@ export function moveStepsInfo(s: Session): {
 } {
   const unit = currentActor(s);
   if (!unit || !s.battle) throw new Error(i18n(s.locale, "err.needsActor"));
-  const { terrain, elevation } = s.battle;
+  const battle = s.battle;
   const steps: MoveStepInfo[] = [];
-  let _hex: Hex = { ...unit.position };
+  let _hex: HexCoord = { ...unit.position };
   let facing: Facing = unit.facing;
   let spent = 0;
   s.moveSteps.forEach((step, i) => {
@@ -504,13 +502,13 @@ export function moveStepsInfo(s: Session): {
         col: step.to.col,
         row: step.to.row,
       });
-      const fromLevel = levelAt(elevation, _hex);
-      const toLevel = levelAt(elevation, step.to);
+      const fromLevel = cellAt(battle, _hex).level;
+      const toLevel = cellAt(battle, step.to).level;
       _hex = { ...step.to };
       if (s.moveMode === "jump") {
         cost = 1;
       } else {
-        cost = costToEnter(terrainAt(terrain, step.to)) + costToClimb(fromLevel, toLevel);
+        cost = costToEnter(cellAt(battle, step.to).terrain) + costToClimb(fromLevel, toLevel);
       }
     }
     spent += cost;

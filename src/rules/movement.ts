@@ -1,6 +1,12 @@
 import { neighbor } from "../core/hex.js";
-import { costToClimb, costToEnter, levelAt, MP_PER_FACING_CHANGE } from "../core/terrain.js";
-import type { Facing, Hex, MoveMode, TerrainType } from "../core/types.js";
+import {
+  cellAt,
+  costToClimb,
+  costToEnter,
+  type HexGrid,
+  MP_PER_FACING_CHANGE,
+} from "../core/terrain.js";
+import type { Facing, HexCoord, MoveMode } from "../core/types.js";
 import { FACINGS, oppositeFacing, rotateFacing } from "../core/types.js";
 
 export function maxMovePoints(
@@ -77,22 +83,18 @@ export function canEndMoveInHex(occupantTeam: number | undefined, _moverTeam: nu
 }
 
 /** True when moving from `from` into `to` would be a step backward relative to `facing`. */
-export function isBackwardStep(from: Hex, to: Hex, facing: Facing): boolean {
+export function isBackwardStep(from: HexCoord, to: HexCoord, facing: Facing): boolean {
   const backHex = neighbor(from, oppositeFacing(facing));
   return backHex.col === to.col && backHex.row === to.row;
 }
 
 /** True when `to` is the adjacent hex directly ahead of `facing`. */
-export function isForwardStep(from: Hex, to: Hex, facing: Facing): boolean {
+export function isForwardStep(from: HexCoord, to: HexCoord, facing: Facing): boolean {
   const ahead = neighbor(from, facing);
   return ahead.col === to.col && ahead.row === to.row;
 }
 
-export function terrainAt(terrain: Readonly<Record<string, TerrainType>>, hex: Hex): TerrainType {
-  return terrain[`${hex.col},${hex.row}`] ?? "clear";
-}
-
-export function hexKey(hex: Hex): string {
+export function hexKey(hex: HexCoord): string {
   return `${hex.col},${hex.row}`;
 }
 
@@ -101,7 +103,7 @@ export type MoveFragment = "F" | "B" | "R" | "L";
 
 /** One landing reachable from the start, with the fragment sequence that reaches it. */
 export interface RevealedLanding {
-  readonly hex: Hex;
+  readonly hex: HexCoord;
   readonly facing: Facing;
   /** Movement fragments from the start (in order) that end at `hex` facing `facing`. */
   readonly path: readonly MoveFragment[];
@@ -112,17 +114,11 @@ export interface ReachabilityOptions {
   readonly walking: number;
   readonly running: number;
   readonly jumping: number;
-  readonly terrain: Readonly<Record<string, TerrainType>>;
-  /** Per-hex ground elevation; missing entries are level 0. */
-  readonly elevation: Readonly<Record<string, number>>;
+  readonly grid: HexGrid;
   /** The mover's team. */
   readonly team: number;
   /** Team of the unit occupying a hex, or undefined when empty. */
-  readonly occupantTeam: (hex: Hex) => number | undefined;
-  /** Board width in 1-based columns (inclusive upper bound). */
-  readonly width: number;
-  /** Board height in 1-based rows (inclusive upper bound). */
-  readonly height: number;
+  readonly occupantTeam: (hex: HexCoord) => number | undefined;
 }
 
 /**
@@ -141,7 +137,7 @@ export interface ReachabilityOptions {
  * appears as its own entry.
  */
 export function reachableLandings(
-  start: Hex,
+  start: HexCoord,
   startFacing: Facing,
   options: ReachabilityOptions,
 ): RevealedLanding[] {
@@ -149,23 +145,24 @@ export function reachableLandings(
   if (budget <= 0 || options.mode === "standStill") return [];
 
   const jumping = options.mode === "jump";
+  const { width, height } = options.grid;
 
   // Ground: R/L cost 1 MP. Jump: R/L are free reorientations before/after the
   // 1-MP jump step (landing facing is chosen freely on jump).
   const turnCost = jumping ? 0 : 1;
-  const stepCost = (hex: Hex): number => {
+  const stepCost = (hex: HexCoord): number => {
     if (jumping) return 1;
-    return costToEnter(terrainAt(options.terrain, hex));
+    return costToEnter(cellAt(options.grid, hex).terrain);
   };
   const backwardAllowed = jumping || options.mode === "walk";
 
   interface State {
-    hex: Hex;
+    hex: HexCoord;
     facing: Facing;
     cost: number;
     path: MoveFragment[];
   }
-  const stateKey = (hex: Hex, facing: Facing): string => `${hexKey(hex)}|${facing}`;
+  const stateKey = (hex: HexCoord, facing: Facing): string => `${hexKey(hex)}|${facing}`;
 
   // Minimum MP to reach each (hex, facing) state, and the fragment path that
   // achieves it. On equal-cost ties, the first-discovered path is kept
@@ -173,7 +170,7 @@ export function reachableLandings(
   const dist = new Map<string, number>();
   const bestPath = new Map<string, MoveFragment[]>();
   const queue: State[] = [];
-  const enqueue = (hex: Hex, facing: Facing, cost: number, path: MoveFragment[]): void => {
+  const enqueue = (hex: HexCoord, facing: Facing, cost: number, path: MoveFragment[]): void => {
     const key = stateKey(hex, facing);
     const known = dist.get(key);
     if (known !== undefined && known <= cost) return;
@@ -183,21 +180,21 @@ export function reachableLandings(
   };
   enqueue(start, startFacing, 0, []);
 
-  const point = (a: Hex, b: Hex): boolean => a.col === b.col && a.row === b.row;
-  const inBounds = (hex: Hex): boolean =>
-    hex.col >= 1 && hex.col <= options.width && hex.row >= 1 && hex.row <= options.height;
+  const point = (a: HexCoord, b: HexCoord): boolean => a.col === b.col && a.row === b.row;
+  const inBounds = (hex: HexCoord): boolean =>
+    hex.col >= 1 && hex.col <= width && hex.row >= 1 && hex.row <= height;
   // Ground pass-through: friendly-occupied hexes are passable but never landable,
   // and a 'Mech cannot step more than one level up in a single hex (jump ignores
   // the climb cap and may change level freely).
   // Jump pass-through: any in-bounds hex; landing is restricted separately.
-  const canEnter = (from: Hex, hex: Hex): boolean => {
+  const canEnter = (from: HexCoord, hex: HexCoord): boolean => {
     if (!inBounds(hex)) return false;
     if (jumping) return true;
-    if (levelAt(options.elevation, hex) - levelAt(options.elevation, from) > 1) return false;
+    if (cellAt(options.grid, hex).level - cellAt(options.grid, from).level > 1) return false;
     const occ = options.occupantTeam(hex);
     return occ === undefined || occ === options.team;
   };
-  const canLand = (hex: Hex): boolean =>
+  const canLand = (hex: HexCoord): boolean =>
     inBounds(hex) && (point(hex, start) || options.occupantTeam(hex) === undefined);
 
   for (let i = 0; i < queue.length; i++) {
@@ -224,7 +221,7 @@ export function reachableLandings(
     if (canEnter(cur.hex, forward)) {
       const climb = jumping
         ? 0
-        : costToClimb(levelAt(options.elevation, cur.hex), levelAt(options.elevation, forward));
+        : costToClimb(cellAt(options.grid, cur.hex).level, cellAt(options.grid, forward).level);
       const c = cur.cost + stepCost(forward) + climb;
       if (c <= budget) enqueue(forward, cur.facing, c, [...cur.path, "F"]);
     }
@@ -233,7 +230,7 @@ export function reachableLandings(
       if (canEnter(cur.hex, backward)) {
         const climb = jumping
           ? 0
-          : costToClimb(levelAt(options.elevation, cur.hex), levelAt(options.elevation, backward));
+          : costToClimb(cellAt(options.grid, cur.hex).level, cellAt(options.grid, backward).level);
         const c = cur.cost + stepCost(backward) + climb;
         if (c <= budget) enqueue(backward, cur.facing, c, [...cur.path, "B"]);
       }
@@ -261,7 +258,7 @@ export function reachableLandings(
   return results;
 }
 
-function parseHexKey(key: string): Hex {
+function parseHexKey(key: string): HexCoord {
   const [col, row] = key.split(",");
   return { col: Number(col), row: Number(row) };
 }

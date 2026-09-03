@@ -1,8 +1,9 @@
 import { bearing, hexDistance, isAdjacent, sameHex } from "../core/hex.js";
-import { costToClimb, costToEnter, levelAt } from "../core/terrain.js";
+import { cellAt, costToClimb, costToEnter, type HexGrid } from "../core/terrain.js";
 import {
   type Facing,
-  type Hex,
+  type HexCell,
+  type HexCoord,
   isFacing,
   LOCATIONS,
   type Location,
@@ -10,7 +11,6 @@ import {
   type Rng,
   rotateFacing,
   type TerrainHexDef,
-  type TerrainType,
 } from "../core/types.js";
 import { getMechDef } from "../data/index.js";
 import type { ResolvedMechDef } from "../data/mech.schema.js";
@@ -43,7 +43,7 @@ export interface UnitInit {
   readonly model: string;
   readonly team: number;
   readonly gunnery: number;
-  readonly position: Hex;
+  readonly position: HexCoord;
   readonly facing: Facing;
 }
 
@@ -55,7 +55,7 @@ export interface AttackDecl {
 }
 
 export type MoveStep =
-  | { readonly kind: "enter"; readonly to: Hex }
+  | { readonly kind: "enter"; readonly to: HexCoord }
   | { readonly kind: "turn"; readonly facings: number };
 
 export type Phase = "initiative" | "movement" | "weaponAttack" | "end";
@@ -69,7 +69,7 @@ export interface UnitState {
   readonly model: string;
   readonly team: number;
   gunnery: number;
-  position: Hex;
+  position: HexCoord;
   facing: Facing;
   damage: UnitDamageState;
   phaseStartDamage: UnitDamageState;
@@ -109,7 +109,7 @@ export type GameEvent =
       readonly kind: "moved";
       readonly unitId: string;
       readonly mode: MoveMode;
-      readonly position: Hex;
+      readonly position: HexCoord;
       readonly facing: Facing;
       readonly mpSpent: number;
       readonly mpBudget: number;
@@ -132,17 +132,11 @@ export type GameEvent =
   | { readonly kind: "unitDestroyed"; readonly unitId: string }
   | { readonly kind: "unitRemoved"; readonly unitId: string };
 
-export interface BattleState {
+export interface BattleState extends HexGrid {
   turn: number;
   phase: Phase;
   initiativeWinnerTeam: number | null;
   units: Record<string, UnitState>;
-  terrain: Record<string, TerrainType>;
-  /** Per-hex ground elevation; missing entries are level 0. */
-  elevation: Record<string, number>;
-  /** Board size hint for rendering (engine coords); renderers fall back to content extent when absent. */
-  width?: number | undefined;
-  height?: number | undefined;
   /** When true, critical hit resolution is suppressed at attack time. */
   critsDisabled: boolean;
   actedThisPhase: string[];
@@ -183,7 +177,7 @@ function requirePhase(state: BattleState, phase: Phase): void {
   }
 }
 
-function occupantAt(state: BattleState, hex: Hex, excludeId?: string): UnitState | undefined {
+function occupantAt(state: BattleState, hex: HexCoord, excludeId?: string): UnitState | undefined {
   for (const unit of Object.values(state.units)) {
     if (unit.removed || unit.id === excludeId) continue;
     if (sameHex(unit.position, hex)) return unit;
@@ -258,17 +252,6 @@ export function createBattle(
     };
   }
 
-  const terrain: Record<string, TerrainType> = {};
-  const elevation: Record<string, number> = {};
-  if (options.terrain) {
-    for (const { col, row, type, level } of options.terrain) {
-      const key = `${col},${row}`;
-      if (key in terrain)
-        throw new Error(`Duplicate terrain definition for hex ${fmtHex({ col, row })}`);
-      terrain[key] = type;
-      if (level !== undefined) elevation[key] = level;
-    }
-  }
   for (const [label, n] of [
     ["width", options.width],
     ["height", options.height],
@@ -278,15 +261,49 @@ export function createBattle(
     }
   }
 
+  // Derive board dimensions: explicit options win, otherwise size to cover
+  // every unit positions and terrain definition (extent + 1, matching the
+  // renderer's historical content-based fallback).
+  let width = options.width ?? 0;
+  let height = options.height ?? 0;
+  let extentCol = 0;
+  let extentRow = 0;
+  for (const u of units) {
+    extentCol = Math.max(extentCol, u.position.col);
+    extentRow = Math.max(extentRow, u.position.row);
+  }
+  for (const t of options.terrain ?? []) {
+    extentCol = Math.max(extentCol, t.col);
+    extentRow = Math.max(extentRow, t.row);
+  }
+  if (width === 0) width = extentCol + 1;
+  if (height === 0) height = extentRow + 1;
+  if (width < 1) width = 1;
+  if (height < 1) height = 1;
+
+  const cells: HexCell[] = new Array<HexCell>(width * height).fill({
+    terrain: "clear",
+    level: 0,
+  });
+  if (options.terrain) {
+    const seen = new Set<string>();
+    for (const { col, row, type, level } of options.terrain) {
+      const key = `${col},${row}`;
+      if (seen.has(key))
+        throw new Error(`Duplicate terrain definition for hex ${fmtHex({ col, row })}`);
+      seen.add(key);
+      cells[col - 1 + (row - 1) * width] = { terrain: type, level: level ?? 0 };
+    }
+  }
+
   return {
     turn: 1,
     phase: "initiative",
     initiativeWinnerTeam: null,
     units: unitStates,
-    terrain,
-    elevation,
-    width: options.width,
-    height: options.height,
+    cells,
+    width,
+    height,
     critsDisabled: options.critsDisabled ?? false,
     actedThisPhase: [],
     events: [{ kind: "turn", turn: 1 }],
@@ -339,7 +356,7 @@ export function executeMove(
   );
   const jumping = unit.moveMode === "jump";
 
-  let cursor: Hex = { ...unit.position };
+  let cursor: HexCoord = { ...unit.position };
   let facing: Facing = unit.facing;
   let spent = 0;
   const directions: ("forward" | "backward")[] = [];
@@ -377,14 +394,14 @@ export function executeMove(
       if (backward && unit.moveMode === "run") {
         throw new Error("Running 'Mechs cannot move backward");
       }
-      const fromLevel = levelAt(state.elevation, cursor);
-      const toLevel = levelAt(state.elevation, to);
+      const fromLevel = cellAt(state, cursor).level;
+      const toLevel = cellAt(state, to).level;
       if (toLevel - fromLevel > 1) {
         throw new Error(
           `Ground moves can climb at most 1 level per hex (${fmtHex(to)} is ${toLevel - fromLevel} levels higher)`,
         );
       }
-      spent += costToEnter(mv.terrainAt(state.terrain, to)) + costToClimb(fromLevel, toLevel);
+      spent += costToEnter(cellAt(state, to).terrain) + costToClimb(fromLevel, toLevel);
       directions.push(forward ? "forward" : "backward");
     }
 
@@ -488,9 +505,9 @@ export function declareAttacks(
       throw new Error(`${mount.weapon}: target not in front firing arc`);
     }
 
-    const woodsPoints = losWoodsPointsBetween(state.terrain, unit.position, target.position);
-    if (!losClear(state.elevation, state.terrain, unit.position, target.position)) {
-      if (losBlockedByElevation(state.elevation, unit.position, target.position)) {
+    const woodsPoints = losWoodsPointsBetween(state, unit.position, target.position);
+    if (!losClear(state, unit.position, target.position)) {
+      if (losBlockedByElevation(state, unit.position, target.position)) {
         throw new Error("Line of sight is blocked by intervening elevation");
       }
       throw new Error("Line of sight is blocked by intervening woods");
@@ -505,12 +522,12 @@ export function declareAttacks(
       attackerMovement: unit.moveMode ?? "standStill",
       targetHexesMoved: mv.hexesSinceLastReversal(target.movesThisTurn),
       targetJumped: target.jumpedThisTurn,
-      targetTerrain: mv.terrainAt(state.terrain, target.position),
+      targetTerrain: cellAt(state, target.position).terrain,
       interveningWoods: woodsPoints,
       distance: dist,
       weapon,
-      attackerLevel: levelAt(state.elevation, unit.position),
-      targetLevel: levelAt(state.elevation, target.position),
+      attackerLevel: cellAt(state, unit.position).level,
+      targetLevel: cellAt(state, target.position).level,
     });
     if (index === 0) {
       attackDistance = dist;
@@ -567,14 +584,14 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
       attackerMoved: unit.moveMode ?? "standStill",
       targetHexesMoved: mv.hexesSinceLastReversal(target.movesThisTurn),
       targetJumped: target.jumpedThisTurn,
-      targetTerrain: mv.terrainAt(state.terrain, target.position),
-      interveningTerrains: interveningTerrains(state.terrain, unit.position, target.position),
+      targetTerrain: cellAt(state, target.position).terrain,
+      interveningTerrains: interveningTerrains(state, unit.position, target.position),
       distance: hexDistance(unit.position, target.position),
       weaponName: weapon.name,
       shots,
       targetDamage: target.damage,
-      attackerLevel: levelAt(state.elevation, unit.position),
-      targetLevel: levelAt(state.elevation, target.position),
+      attackerLevel: cellAt(state, unit.position).level,
+      targetLevel: cellAt(state, target.position).level,
       ...(state.critsDisabled
         ? {}
         : {

@@ -1,5 +1,5 @@
 import { bearing, hexDistance } from "../core/hex.js";
-import { levelAt } from "../core/terrain.js";
+import { cellAt } from "../core/terrain.js";
 import type { Location } from "../core/types.js";
 import { getMechDef } from "../data/index.js";
 import { getWeaponOrThrow } from "../data/weapon.schema.js";
@@ -67,8 +67,8 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
       const distance = hexDistance(unit.position, enemy.position);
       const bearingToTarget = bearing(unit.position, enemy.position);
       const inArc = bearingToTarget !== null && isInFrontArc(unit.facing, bearingToTarget);
-      const interveningWoods = losWoodsPointsBetween(state.terrain, unit.position, enemy.position);
-      const los = losBlockedByElevation(state.elevation, unit.position, enemy.position);
+      const interveningWoods = losWoodsPointsBetween(state, unit.position, enemy.position);
+      const los = losBlockedByElevation(state, unit.position, enemy.position);
 
       const weapons: FireWeapon[] = [];
       const blocked: FireTarget["blocked"] = [];
@@ -106,12 +106,12 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
           attackerMovement: unit.moveMode ?? "standStill",
           targetHexesMoved: mv.hexesSinceLastReversal(enemy.movesThisTurn),
           targetJumped: enemy.jumpedThisTurn,
-          targetTerrain: mv.terrainAt(state.terrain, enemy.position),
+          targetTerrain: cellAt(state, enemy.position).terrain,
           interveningWoods,
           distance,
           weapon,
-          attackerLevel: levelAt(state.elevation, unit.position),
-          targetLevel: levelAt(state.elevation, enemy.position),
+          attackerLevel: cellAt(state, unit.position).level,
+          targetLevel: cellAt(state, enemy.position).level,
         });
         if (breakdown.outOfRange) {
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "outOfRange" });

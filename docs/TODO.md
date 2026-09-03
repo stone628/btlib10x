@@ -9,9 +9,9 @@
 
 ## To Do
 
-- check if both leg lost lead to lose.
 - make durability line in two. show { 'FA gone', 'RA gone', 'internal structure gone' } instead of '*' and '!'
 - make board keep hex instance instead of property maps
+- make fmtLog handle GameEvent based on composition of { onEnterEvent, onEvent, onExitEvent } handlers
 - Add a terrain type table
 
 ## In progress
@@ -19,6 +19,22 @@
 - Later in classic expansion: heat (will pick up the `heatSinksDestroyed` count
   already tracked by crit state), physicals, piloting/falling, side+rear firing
   arcs, vehicles/infantry, buildings, basements, water depth, hull-down
+- **Piloting / consciousness roll on immobile end-of-turn** — TW end-of-turn
+  consciousness roll for an immobile 'Mech (both legs destroyed via
+  `isImmobile`): on a failed roll the unit is destroyed; on a success it is
+  removed as a casualty at end of turn and counted as a loss for victory.
+  Wires into `checkVictory` via a new end-of-turn phase hook in
+  `src/rules/game.ts`; consumes the injected `Rng` for the 2d6 roll.
+  Coverage gap: a 'Mech with both legs destroyed today stays "alive" in
+  the `units` map and only loses once its head/CT is also destroyed.
+
+## Done
+
+- **Checked "lose both legs = lose the game"** — current rule subset treats
+  losing both legs as immobility only (`isImmobile` in `src/rules/damage.ts`),
+  not as a kill; victory (`checkVictory` in `src/rules/game.ts`) only fires on
+  head/CT destruction or `removed` flag. Real TW consciousness-roll removal
+  on immobile end-of-turn is deferred to the piloting/falling milestone above.
 
 ## Done
 
