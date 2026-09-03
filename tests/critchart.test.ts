@@ -97,7 +97,7 @@ describe("critical slot chart (sheet)", () => {
     htk.jammedWeapons.push(2);
     const text = run(s, "sheet hunchy").join("\n");
     expect(text).toContain("  5 Medium Laser [JAM]");
-    expect(text).toContain("#2 Medium Laser [LA]");
+    expect(text).toMatch(/#2 Medium Laser\s+\[LA\]/);
     expect(text).toContain("[JAM]");
     // Structure slots on the same arm stay marker-free.
     const laLine = text.split("\n").find((l) => l.includes(" 1 Shoulder"));

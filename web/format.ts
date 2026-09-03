@@ -498,15 +498,16 @@ export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
   ];
   const weaponLines = [
     i18n(locale, "sheet.weaponsHeader", { n: Object.keys(d.weapons).length }),
-    ...Object.entries(d.weapons).map(([key, mount]) =>
-      weaponMountLine(locale, Number(key), {
+    ...weaponMountLines(
+      locale,
+      Object.entries(d.weapons).map(([key, mount]) => ({
         weapon: mount.weapon,
         location: mount.location,
         shotsLeft: null,
         shotsMax: loadAmmoBins(d).totals[Number(key)] ?? null,
         jammed: false,
         destroyed: false,
-      }),
+      })),
     ),
   ];
   return [
@@ -632,6 +633,16 @@ function requireMechDef(model: string, locale: LocaleId): ResolvedMechDef {
 
 // --------------------------------------------------------------- sheet ----
 
+/** Per-mount presentation info used by sheet and mech-info weapon rows. */
+export type WeaponMountInfo = {
+  readonly weapon: string;
+  readonly location: Location;
+  readonly shotsLeft: number | null;
+  readonly shotsMax: number | null;
+  readonly jammed: boolean;
+  readonly destroyed: boolean;
+};
+
 interface SheetView {
   readonly id: string;
   readonly team: number;
@@ -658,14 +669,7 @@ interface SheetView {
   readonly originalArmorRear: Partial<Record<Location, number>>;
   /** Designed (start-of-game) internal structure per location. */
   readonly originalArmorStructure: ArmorState;
-  readonly mounts: readonly {
-    readonly weapon: string;
-    readonly location: Location;
-    readonly shotsLeft: number | null;
-    readonly shotsMax: number | null;
-    readonly jammed: boolean;
-    readonly destroyed: boolean;
-  }[];
+  readonly mounts: readonly WeaponMountInfo[];
   /** Per-unit live crit state for the crit chart; null when only design info exists. */
   readonly critLive: CritChartLive | null;
 }
@@ -1024,11 +1028,8 @@ export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
   );
   topLines.push(view.positionLine);
   if (view.ammoPolicyLine !== null) topLines.push(view.ammoPolicyLine);
-  const weaponLines: string[] = [];
-  weaponLines.push(i18n(locale, "sheet.weaponsHeader", { n: view.mounts.length }));
-  for (const [i, m] of view.mounts.entries()) {
-    weaponLines.push(weaponMountLine(locale, i + 1, m));
-  }
+  const weaponLines: string[] = [i18n(locale, "sheet.weaponsHeader", { n: view.mounts.length })];
+  weaponLines.push(...weaponMountLines(locale, view.mounts));
   return [
     buildHeaderTableChunkFromColumns(
       [idLine, i18n(locale, "info.armorStructureCol")],
@@ -1766,27 +1767,28 @@ function weaponCategory(locale: LocaleId, category: WeaponCategory): string {
   return i18n(locale, CATEGORY_LABEL[category]);
 }
 
-function weaponMountLine(
-  locale: LocaleId,
-  n: number,
-  mount: {
-    readonly weapon: string;
-    readonly location: Location;
-    readonly shotsLeft: number | null;
-    readonly shotsMax: number | null;
-    readonly jammed: boolean;
-    readonly destroyed: boolean;
-  },
-): string {
-  const w = getWeapon(mount.weapon);
-  const flags = [
-    mount.shotsMax !== null
-      ? mount.shotsLeft !== null
-        ? i18n(locale, "sheet.shotsRange", { curr: mount.shotsLeft, max: mount.shotsMax })
-        : i18n(locale, "sheet.shotsDesign", { max: mount.shotsMax })
-      : null,
-    mount.jammed ? i18n(locale, "sheet.jammed") : null,
-    mount.destroyed ? i18n(locale, "sheet.destroyed") : null,
-  ].filter((x) => x !== null);
-  return `  #${n} ${mount.weapon} [${SHORT_LOC[mount.location]}] S${w.short}/M${w.medium}/L${w.long}${flags.length ? ` ${flags.join(" ")}` : ""}`;
+function weaponMountLines(locale: LocaleId, mounts: readonly WeaponMountInfo[]): string[] {
+  let nameWidth = 0;
+  for (const m of mounts) {
+    const w = getWeapon(m.weapon);
+    if (m.weapon.length > nameWidth) nameWidth = m.weapon.length;
+  }
+  return mounts.map((mount, i) => {
+    const w = getWeapon(mount.weapon);
+    const flags = [
+      mount.shotsMax !== null
+        ? mount.shotsLeft !== null
+          ? i18n(locale, "sheet.shotsRange", { curr: mount.shotsLeft, max: mount.shotsMax })
+          : i18n(locale, "sheet.shotsDesign", { max: mount.shotsMax })
+        : null,
+      mount.jammed ? i18n(locale, "sheet.jammed") : null,
+      mount.destroyed ? i18n(locale, "sheet.destroyed") : null,
+    ].filter((x) => x !== null);
+    const index = `#${i + 1}`.padStart(3);
+    const name = mount.weapon.padEnd(nameWidth);
+    const short = `S${w.short}`.padStart(3);
+    const medium = `M${w.medium}`.padStart(3);
+    const long = `L${w.long}`.padStart(3);
+    return `${index} ${name} [${SHORT_LOC[mount.location]}] ${short}/${medium}/${long}${flags.length ? ` ${flags.join(" ")}` : ""}`;
+  });
 }
