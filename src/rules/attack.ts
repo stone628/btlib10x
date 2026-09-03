@@ -169,12 +169,13 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
 
   for (const group of base.groups) {
     const app = applyDamage(damage, group.location, group.damage, arc);
-    damage = app.damage;
+    damage = app.after;
     application =
       application === null
         ? app
         : {
-            damage: app.damage,
+            after: app.after,
+            before: application.before,
             steps: [...application.steps, ...app.steps],
             newlyDestroyed: [...application.newlyDestroyed, ...app.newlyDestroyed],
             blownOffArms: [...application.blownOffArms, ...app.blownOffArms],
@@ -207,7 +208,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     if (application) {
       application = {
         ...application,
-        damage: res.damage,
+        after: res.damage,
         blownOffArms: mergeUnique(application.blownOffArms, res.blownOffArms),
         killed: application.killed || res.killed,
       };

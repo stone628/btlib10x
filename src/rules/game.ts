@@ -586,7 +586,7 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
           }),
     });
 
-    if (resolution.application !== null) target.damage = resolution.application.damage;
+    if (resolution.application !== null) target.damage = resolution.application.after;
     if (resolution.jammed && !unit.jammedWeapons.includes(decl.weaponIndex)) {
       unit.jammedWeapons.push(decl.weaponIndex);
     }

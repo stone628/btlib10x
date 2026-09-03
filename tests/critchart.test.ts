@@ -42,7 +42,7 @@ describe("critical slot chart (info mech)", () => {
     // Arms: shoulder + actuators + hand; ammo slots named with design capacity.
     expect(text).toContain("Shoulder");
     expect(text).toContain("Upper Arm Actuator");
-    expect(text).toContain("  1 Autocannon/20 ammo (5)");
+    expect(text).toContain("  1 Autocannon/20 ammo (5 shots)");
     expect(text).toContain("Medium Laser");
   });
 
@@ -83,7 +83,7 @@ describe("critical slot chart (sheet)", () => {
     expect(text).toContain("  1 Autocannon/20 [DST]");
     expect(text).toContain(" 10 Autocannon/20 [DST]");
     // The weapons list flag for a crit-destroyed mount shows [DST], same as the chart.
-    expect(text).toContain("#1 Autocannon/20 (RT)");
+    expect(text).toContain("#1 Autocannon/20 [RT]");
     expect(text).toContain("[DST]");
     // Shoulder slot (slot 1 of left arm) is a structure — untouched.
     const laLine = text.split("\n").find((l) => l.includes(" 1 Shoulder"));
@@ -97,7 +97,7 @@ describe("critical slot chart (sheet)", () => {
     htk.jammedWeapons.push(2);
     const text = run(s, "sheet hunchy").join("\n");
     expect(text).toContain("  5 Medium Laser [JAM]");
-    expect(text).toContain("#2 Medium Laser (LA)");
+    expect(text).toContain("#2 Medium Laser [LA]");
     expect(text).toContain("[JAM]");
     // Structure slots on the same arm stay marker-free.
     const laLine = text.split("\n").find((l) => l.includes(" 1 Shoulder"));
@@ -113,7 +113,7 @@ describe("critical slot chart (sheet)", () => {
     htk.ammoBins = { ...htk.ammoBins, "leftTorso:1": 3, "leftTorso:2": 5 };
     htk.shotsLeft = { ...htk.shotsLeft, 1: 8 };
     const text = run(s, "sheet hunchy").join("\n");
-    expect(text).toContain("  1 Autocannon/20 ammo (3/5) [DST]");
-    expect(text).toContain("  2 Autocannon/20 ammo (5/5)");
+    expect(text).toContain("  1 Autocannon/20 ammo (3/5 shots) [DST]");
+    expect(text).toContain("  2 Autocannon/20 ammo (5/5 shots)");
   });
 });

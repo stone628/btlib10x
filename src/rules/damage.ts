@@ -53,7 +53,9 @@ export interface DamageTransferStep {
 
 export interface DamageApplication {
   /** Layered damage state after the application. */
-  readonly damage: UnitDamageState;
+  readonly after: UnitDamageState;
+  /** Layered damage state immediately before the application ran. */
+  readonly before: UnitDamageState;
   readonly steps: readonly DamageTransferStep[];
   /** Locations whose internal structure reached 0 during this application. */
   readonly newlyDestroyed: readonly Location[];
@@ -155,7 +157,15 @@ export function applyDamage(
     }
   }
 
-  return { damage: next, steps, newlyDestroyed, blownOffArms, killed };
+  // `damage` is never mutated (all writes go to `next`), so `pre` may alias it.
+  return {
+    after: next,
+    before: damage as UnitDamageState,
+    steps,
+    newlyDestroyed,
+    blownOffArms,
+    killed,
+  };
 }
 
 /** A location is destroyed when its internal structure is depleted. */
