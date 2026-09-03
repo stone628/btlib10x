@@ -8,6 +8,7 @@ export {
   neighbors,
   sameHex,
 } from "./core/hex.js";
+export * from "./core/locations.js";
 export {
   costToClimb,
   costToEnter,

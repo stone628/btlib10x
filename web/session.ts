@@ -172,7 +172,9 @@ export function promptBody(s: Session): string {
     case "battle": {
       const st = s.battle!;
       const phase =
-        st.phase === "movement" ? i18n(s.locale, "prompt.subMove") : i18n(s.locale, "prompt.subAttack");
+        st.phase === "movement"
+          ? i18n(s.locale, "prompt.subMove")
+          : i18n(s.locale, "prompt.subAttack");
       const actor = currentActor(s);
       return i18n(s.locale, "prompt.turn", {
         turn: st.turn,

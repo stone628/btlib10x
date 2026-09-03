@@ -58,6 +58,7 @@
  */
 
 import { roll2D6, rollD6 } from "../core/dice.js";
+import { damageTransferTo, isArm, isLeg, isLimb } from "../core/locations.js";
 import type { Location, Rng } from "../core/types.js";
 import type { ResolvedCritSlot, ResolvedMechDef } from "../data/mech.schema.js";
 import { CRIT_SLOT_COUNTS } from "../data/mech.schema.js";
@@ -156,20 +157,6 @@ export interface CriticalResolution {
   readonly ammoBins: Record<AmmoBinId, number>;
 }
 
-const TRANSFER_INWARD: Readonly<Record<Location, Location | null>> = {
-  rightArm: "rightTorso",
-  leftArm: "leftTorso",
-  rightLeg: "rightTorso",
-  leftLeg: "leftTorso",
-  rightTorso: "centerTorso",
-  leftTorso: "centerTorso",
-  centerTorso: null,
-  head: null,
-};
-
-const ARM_LOCATIONS: ReadonlySet<Location> = new Set(["rightArm", "leftArm"]);
-const LEG_LOCATIONS: ReadonlySet<Location> = new Set(["rightLeg", "leftLeg"]);
-
 const LEG_ACTUATORS: ReadonlySet<string> = new Set([
   "upperLegActuator",
   "lowerLegActuator",
@@ -214,7 +201,7 @@ function determiningResult(
   if (r <= 11) return { kind: "hits", count: 2, roll: r };
   // 12: blow off head/limb; otherwise 3 hits.
   if (sourceLoc === "head") return { kind: "blownOff", roll: r };
-  if (ARM_LOCATIONS.has(sourceLoc) || LEG_LOCATIONS.has(sourceLoc)) {
+  if (isLimb(sourceLoc)) {
     return { kind: "blownOff", roll: r };
   }
   return { kind: "hits", count: 3, roll: r };
@@ -405,13 +392,13 @@ function runDetermining(
       state.damage.internalStructure.head = 0;
       state.killed = true;
       state.rows.push({ kind: "headBlownOff", rolls: [det.roll] });
-    } else if (ARM_LOCATIONS.has(source.location)) {
+    } else if (isArm(source.location)) {
       zeroLocation(state, source.location);
       state.damage.armor[source.location] = 0;
       state.damage.internalStructure[source.location] = 0;
       state.blownOffArms.push(source.location);
       state.rows.push({ kind: "armBlownOff", arm: source.location, rolls: [det.roll] });
-    } else if (LEG_LOCATIONS.has(source.location)) {
+    } else if (isLeg(source.location)) {
       zeroLocation(state, source.location);
       state.damage.armor[source.location] = 0;
       state.damage.internalStructure[source.location] = 0;
@@ -432,7 +419,7 @@ function runDetermining(
   const sourceDestroyed = state.destroyed[source.location];
   const exhausted = isLocationExhausted(sourceLayout, sourceDestroyed);
   if (exhausted) {
-    const next = TRANSFER_INWARD[source.location];
+    const next = damageTransferTo(source.location);
     if (next === null) {
       for (let i = 0; i < det.count; i++) {
         state.rows.push({ kind: "noEffect", rolls: [] });
