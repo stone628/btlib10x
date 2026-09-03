@@ -134,19 +134,27 @@ function isWideCodePoint(cp: number): boolean {
  * Code-unit length padded out to the visual cell count of the string.
  * Each wide code point contributes 1 extra cell beyond its code-unit
  * count (BMP wide = 1 unit + 1 cell; astral wide = 2 units + 0 extra
- * because the wide bonus equals the surrogate-pair size). Pure-ASCII
- * strings (the dominant `en` case) short-circuit and skip the per-char
- * range checks entirely.
+ * because the wide bonus equals the surrogate-pair size).
+ *
+ * Pure-ASCII strings short-circuit on the first numeric scan: no
+ * iterator allocation, no per-char `codePointAt`, and no range checks
+ * — `getCompensatedLength` reduces to `str.length`. Non-ASCII strings
+ * fall back to the iterator-based path so the existing
+ * `isWideCodePoint` ranges (including astral planes) still apply.
  */
 function getCompensatedLength(str: string): number {
-  let extra = 0;
-  for (const ch of str) {
-    const cp = ch.codePointAt(0) ?? 0;
-    if (cp > 0x7f) {
-      if (isWideCodePoint(cp)) extra += 1;
+  for (let i = 0; i < str.length; i++) {
+    const code = str.charCodeAt(i);
+    if (code <= 0x7f) continue;
+
+    let extra = 0;
+    for (const ch of str.slice(i)) {
+      const cp = ch.codePointAt(0) ?? 0;
+      if (code > 0x7f && isWideCodePoint(cp)) extra += 1;
     }
+    return str.length + extra;
   }
-  return str.length + extra;
+  return str.length;
 }
 
 /**
