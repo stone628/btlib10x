@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getMechDef } from "../src/data/index.js";
-import type { BattleState } from "../src/rules/game.js";
+import type { BattleState, UnitInit } from "../src/rules/game.js";
 import {
   advancePhase,
   checkVictory,
@@ -13,7 +13,7 @@ import {
   resolveDeclaredAttacks,
   rollInitiativePhase,
 } from "../src/rules/game.js";
-import { scriptedRng } from "./helpers.js";
+import { makeBattleOptions, scriptedRng } from "./helpers.js";
 
 /**
  * Full battle reproducing the CBT Quick-Start "Rolling To Hit" diagram (p.6):
@@ -25,29 +25,27 @@ import { scriptedRng } from "./helpers.js";
  *   T2+ Wolverine ML (both stand): g4 + woods1 + long4 = 9
  */
 function setup(): BattleState {
-  return createBattle(
-    [
-      {
-        id: "wvr",
-        model: "WVR-6R",
-        team: 0,
-        gunnery: 4,
-        position: { col: 3, row: 4 },
-        facing: "se",
-      },
-      {
-        id: "grf",
-        model: "GRF-1N",
-        team: 1,
-        gunnery: 3,
-        position: { col: 11, row: 8 },
-        facing: "nw",
-      },
-    ],
+  const units: UnitInit[] = [
     {
-      terrain: [{ col: 7, row: 7, type: "lightWoods" }],
-      critsDisabled: true,
+      id: "wvr",
+      model: "WVR-6R",
+      team: 0,
+      gunnery: 4,
+      position: { col: 3, row: 4 },
+      facing: "se",
     },
+    {
+      id: "grf",
+      model: "GRF-1N",
+      team: 1,
+      gunnery: 3,
+      position: { col: 11, row: 8 },
+      facing: "nw",
+    },
+  ];
+  return createBattle(
+    units,
+    makeBattleOptions(units, true, [{ col: 7, row: 7, type: "lightWoods" }]),
   );
 }
 

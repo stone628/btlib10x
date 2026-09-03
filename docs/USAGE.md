@@ -56,6 +56,9 @@ const state: BattleState = createBattle(
   ],
   {
     terrain: [{ col: 7, row: 7, type: "lightWoods" }],
+    width: 12,
+    height: 9,
+    critsDisabled: false,
   },
 );
 ```
@@ -63,7 +66,9 @@ const state: BattleState = createBattle(
 `createBattle` initializes layered armor (front + rear), internal structure,
 ammo, and crit-slot state from each `ResolvedMechDef`, validates ids, models,
 and gunnery (0–7), and starts the battle in the initiative phase of turn 1.
-Pass `critsDisabled: true` to suppress critical-hit resolution (useful when
+`width`/`height` must cover every unit position and terrain hex (engine
+coordinates are 1-based; the smallest valid board is 1×1). Pass
+`critsDisabled: true` to suppress critical-hit resolution (useful when
 scripting dice for a narrow damage scenario).
 
 To load custom 'Mechs, hand `validateMechDef(JSON.parse(...))` your own
@@ -190,7 +195,7 @@ Griffin TN 9 on turn 1). Use it as the canonical end-to-end reference.
 
 | Step | Call |
 | --- | --- |
-| Build battle | `createBattle(units, { terrain, width?, height?, critsDisabled? })` |
+| Build battle | `createBattle(units, { terrain, width, height, critsDisabled })` |
 | Roll initiative | `rollInitiativePhase(state, rng)` |
 | Move | `declareMove` → `executeMove` |
 | Shoot | `declareAttacks` → `resolveDeclaredAttacks` (or `resolveAllAttacks`) |

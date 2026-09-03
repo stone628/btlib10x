@@ -142,6 +142,7 @@ export const en = {
   "err.hexOccupied": "Hex {col},{row} already occupied",
   "err.noSuchUnit": "No such unit: {id}",
   "err.alreadyStarted": "Battle already started",
+  "err.noMap": "Load a map before starting a battle",
   "err.needTwoUnits": "A battle needs at least two units",
   "err.needTwoTeams": "Units must span at least two teams",
   "err.badModeWord": "mode must be one of standstill|walk|run|jump",

@@ -139,6 +139,7 @@ export const kr: Catalog = {
   "err.hexOccupied": "육각 {col},{row} 은 이미 점유됨",
   "err.noSuchUnit": "그런 유닛이 없습니다: {id}",
   "err.alreadyStarted": "전투가 이미 시작되었습니다",
+  "err.noMap": "전투를 시작하기 전에 맵을 불러오세요",
   "err.needTwoUnits": "전투에는 최소 두 유닛이 필요합니다",
   "err.needTwoTeams": "유닛은 최소 두 팀에 걸쳐 있어야 합니다",
   "err.badModeWord": "mode는 standstill|walk|run|jump 중 하나여야 합니다",
