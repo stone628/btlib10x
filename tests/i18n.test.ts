@@ -3,7 +3,7 @@ import { getMechDef } from "../src/data/index.js";
 import { canFireFromLocation } from "../src/rules/damage.js";
 import { en } from "../web/i18n/en.js";
 import type { LocaleId, MessageKey } from "../web/i18n/index.js";
-import { LOCALES, t } from "../web/i18n/index.js";
+import { LOCALES, i18n } from "../web/i18n/index.js";
 import * as S from "../web/session.js";
 import { newSession } from "../web/session.js";
 import { execute } from "./helpers.js";
@@ -49,24 +49,24 @@ describe("i18n catalogs", () => {
   });
 
   it("interpolates {param} placeholders", () => {
-    expect(t("en", "ok.mapLoaded", { name: "beginner", w: 15, h: 16, n: 20 })).toBe(
+    expect(i18n("en", "ok.mapLoaded", { name: "beginner", w: 15, h: 16, n: 20 })).toBe(
       "map beginner: 15x16, 20 terrain hexes",
     );
-    expect(t("kr", "lang.set", { locale: "kr" })).toBe("언어가 kr(으)로 설정되었습니다");
+    expect(i18n("kr", "lang.set", { locale: "kr" })).toBe("언어가 kr(으)로 설정되었습니다");
   });
 
   it("falls back to English for missing catalog entries", () => {
     const locales = LOCALES as Record<string, unknown>;
     locales.partial = {};
     try {
-      expect(t("partial" as LocaleId, "board.noMap")).toBe(en["board.noMap"]);
+      expect(i18n("partial" as LocaleId, "board.noMap")).toBe(en["board.noMap"]);
     } finally {
       delete locales.partial;
     }
   });
 
   it("leaves unknown keys out of interpolation when params are absent", () => {
-    expect(t("en", "ok.cancelled", {})).toBe("cancelled");
+    expect(i18n("en", "ok.cancelled", {})).toBe("cancelled");
   });
 });
 
@@ -82,7 +82,7 @@ describe("lang command", () => {
     expect(execute(s, "lang kr")).toEqual(["언어가 kr(으)로 설정되었습니다"]);
     expect(s.locale).toBe("kr");
     expect(execute(s, "status")[0]).toBe("맵: (없음)");
-    expect(execute(s, "help")[0]).toBe(t("kr", "hint.setup").split("\n")[0]);
+    expect(execute(s, "help")[0]).toBe(i18n("kr", "hint.setup").split("\n")[0]);
   });
 
   it("rejects unknown locale codes with a localized error", () => {
@@ -112,7 +112,7 @@ describe("localized output smoke test", () => {
   it("renders board placeholder and errors in Korean after switching", () => {
     const s = newSession(7);
     execute(s, "lang kr");
-    expect(execute(s, "board")).toEqual([t("kr", "board.noMap")]);
+    expect(execute(s, "board")).toEqual([i18n("kr", "board.noMap")]);
     expect(execute(s, "bogus")).toEqual([`오류: 알 수 없는 명령 'bogus' ('help'를 입력해 보세요)`]);
     expect(execute(s, "status")).toContain("(배치된 유닛 없음)");
   });

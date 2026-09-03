@@ -22,7 +22,7 @@ import {
   weaponsLines,
 } from "./format.js";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
-import { isLocale, localeList, t } from "./i18n/index.js";
+import { isLocale, localeList, i18n } from "./i18n/index.js";
 import * as S from "./session.js";
 
 export interface CmdDef {
@@ -40,19 +40,19 @@ export interface CmdDef {
 
 function int(locale: LocaleId, value: string, label: string): number {
   const n = Number(value);
-  if (!Number.isInteger(n)) throw new Error(t(locale, "err.notInteger", { label }));
+  if (!Number.isInteger(n)) throw new Error(i18n(locale, "err.notInteger", { label }));
   return n;
 }
 
 /** User-facing 1-based coordinate -> engine coordinate. */
 function coord(locale: LocaleId, value: string, label: string): number {
   const n = int(locale, value, label);
-  if (n < 1) throw new Error(t(locale, "err.oneBased", { label }));
+  if (n < 1) throw new Error(i18n(locale, "err.oneBased", { label }));
   return n;
 }
 
 function expectArgs(locale: LocaleId, args: readonly string[], count: number, usage: string): void {
-  if (args.length < count) throw new Error(t(locale, "err.expectedArgs", { usage }));
+  if (args.length < count) throw new Error(i18n(locale, "err.expectedArgs", { usage }));
 }
 
 const L = (s: S.Session): LocaleId => s.locale;
@@ -75,14 +75,14 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
     run: (s, a) => {
       if (a[0] === undefined) {
         return [
-          t(L(s), "lang.current", { locale: s.locale }),
-          t(L(s), "lang.available", { list: localeList() }),
+          i18n(L(s), "lang.current", { locale: s.locale }),
+          i18n(L(s), "lang.available", { list: localeList() }),
         ];
       }
       if (!isLocale(a[0]))
-        throw new Error(t(L(s), "err.unknownLocale", { name: a[0], list: localeList() }));
+        throw new Error(i18n(L(s), "err.unknownLocale", { name: a[0], list: localeList() }));
       s.locale = a[0];
-      return [t(s.locale, "lang.set", { locale: s.locale })];
+      return [i18n(s.locale, "lang.set", { locale: s.locale })];
     },
   },
   board: {
@@ -120,7 +120,7 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
         return name ? infoWeapon(L(s), name) : infoWeaponList(L(s));
       }
       throw new Error(
-        t(L(s), "err.expectedArgs", {
+        i18n(L(s), "err.expectedArgs", {
           usage: "info mech [model] | info map [name] | info weapon [name]",
         }),
       );
@@ -133,19 +133,19 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
     run: (s, a) => {
       expectArgs(L(s), a, 1, "seed <n>");
       S.setSeed(s, int(L(s), a[0]!, "seed"));
-      return [t(L(s), "ok.seedSet", { seed: s.seed })];
+      return [i18n(L(s), "ok.seedSet", { seed: s.seed })];
     },
   },
   reset: {
     helpKey: "cmd.reset.help",
     run: (s) => {
       S.resetSession(s);
-      return [t(s.locale, "ok.resetDone")];
+      return [i18n(s.locale, "ok.resetDone")];
     },
   },
   ver: {
     helpKey: "cmd.ver.help",
-    run: (s) => [t(L(s), "version.line", { version: VERSION })],
+    run: (s) => [i18n(L(s), "version.line", { version: VERSION })],
   },
 };
 
@@ -161,11 +161,11 @@ const SETUP_CMDS: Record<string, CmdDef> = {
       const name = a[0]!;
       const m = getMapDef(name);
       if (!m) {
-        throw new Error(t(s.locale, "err.unknownMap", { name, list: listMapNames().join(", ") }));
+        throw new Error(i18n(s.locale, "err.unknownMap", { name, list: listMapNames().join(", ") }));
       }
       S.setMap(s, m.name);
       return [
-        t(L(s), "ok.mapLoaded", {
+        i18n(L(s), "ok.mapLoaded", {
           name: m.name,
           w: m.width,
           h: m.height,
@@ -189,7 +189,7 @@ const SETUP_CMDS: Record<string, CmdDef> = {
       expectArgs(L(s), a, 6, "add <id> <model> <team> <gunnery> <col> <row> [facing]");
       const facingWord = (a[6] ?? "n").toLowerCase();
       const facing = FACINGS.find((f) => f === facingWord);
-      if (!facing) throw new Error(t(L(s), "err.faceArg", { facings: FACINGS.join("/") }));
+      if (!facing) throw new Error(i18n(L(s), "err.faceArg", { facings: FACINGS.join("/") }));
       const wantModel = a[1]!.toUpperCase();
       S.addUnit(
         s,
@@ -200,7 +200,7 @@ const SETUP_CMDS: Record<string, CmdDef> = {
         { col: coord(L(s), a[4]!, "col"), row: coord(L(s), a[5]!, "row") },
         facing,
       );
-      return [t(L(s), "ok.added", { id: a[0]!, model: wantModel, col: a[4]!, row: a[5]!, facing })];
+      return [i18n(L(s), "ok.added", { id: a[0]!, model: wantModel, col: a[4]!, row: a[5]!, facing })];
     },
   },
   rm: {
@@ -210,7 +210,7 @@ const SETUP_CMDS: Record<string, CmdDef> = {
     run: (s, a) => {
       expectArgs(L(s), a, 1, "rm <id>");
       S.removeUnit(s, a[0]!);
-      return [t(L(s), "ok.removed", { id: a[0]! })];
+      return [i18n(L(s), "ok.removed", { id: a[0]! })];
     },
   },
   status: { helpKey: "cmd.statusSetup.help", run: (s) => fmtSetupStatus(s) },
@@ -218,7 +218,7 @@ const SETUP_CMDS: Record<string, CmdDef> = {
     helpKey: "cmd.start.help",
     run: (s) => {
       S.startBattle(s);
-      return [t(s.locale, "ok.started"), ...initiativeLine(s)];
+      return [i18n(s.locale, "ok.started"), ...initiativeLine(s)];
     },
   },
 };
@@ -243,7 +243,7 @@ const MOVE_CMDS: Record<string, CmdDef> = {
       const mode = S.parseMoveMode(L(s), a[0]!);
       S.declareMode(s, a[0]!);
       const r = S.stepResult(s);
-      const lines = [t(L(s), "ok.modeDeclared", { id: s.actorId ?? "", mode, budget: r.mpBudget })];
+      const lines = [i18n(L(s), "ok.modeDeclared", { id: s.actorId ?? "", mode, budget: r.mpBudget })];
       if (mode === "standStill") return lines;
       const chunk = reachChunk(s);
       if (chunk === null) return lines;
@@ -261,7 +261,7 @@ const MOVE_CMDS: Record<string, CmdDef> = {
       const col = r.position.col;
       const row = r.position.row;
       return [
-        t(L(s), "ok.stepResult", {
+        i18n(L(s), "ok.stepResult", {
           id: s.actorId ?? "",
           mode: s.moveMode ?? "",
           col,
@@ -286,7 +286,7 @@ const MOVE_CMDS: Record<string, CmdDef> = {
       const col = r.position.col;
       const row = r.position.row;
       return [
-        t(L(s), "ok.stepResult", {
+        i18n(L(s), "ok.stepResult", {
           id: s.actorId ?? "",
           mode: s.moveMode ?? "",
           col,
@@ -309,7 +309,7 @@ const MOVE_CMDS: Record<string, CmdDef> = {
     helpKey: "cmd.cancelMove.help",
     run: (s) => {
       S.cancelMove(s);
-      return [t(s.locale, "ok.cancelled")];
+      return [i18n(s.locale, "ok.cancelled")];
     },
   },
   done: {
@@ -333,12 +333,12 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
     argsDoc: [["policy", "cmd.ammo.arg.policy"]],
     run: (s, a) => {
       const unit = S.currentActor(s);
-      if (!unit) throw new Error(t(L(s), "err.needsActor"));
+      if (!unit) throw new Error(i18n(L(s), "err.needsActor"));
       if (a[0] === undefined) {
-        return [t(L(s), "ammo.current", { policy: ammoPolicyLabel(L(s), unit.ammoPolicy) })];
+        return [i18n(L(s), "ammo.current", { policy: ammoPolicyLabel(L(s), unit.ammoPolicy) })];
       }
       S.setAmmoPolicy(s, a[0]);
-      return [t(L(s), "ammo.set", { id: unit.id, policy: ammoPolicyLabel(L(s), unit.ammoPolicy) })];
+      return [i18n(L(s), "ammo.set", { id: unit.id, policy: ammoPolicyLabel(L(s), unit.ammoPolicy) })];
     },
   },
   fire: {
@@ -356,7 +356,7 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
         S.queueFire(s, { weaponIndex, targetId });
       }
       return [
-        t(L(s), "ok.fireQueuedBatch", {
+        i18n(L(s), "ok.fireQueuedBatch", {
           target: targetId,
           weapons: weapons.join(", "),
         }),
@@ -374,7 +374,7 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
     helpKey: "cmd.cancelFire.help",
     run: (s) => {
       S.cancelFire(s);
-      return [t(s.locale, "ok.cancelled")];
+      return [i18n(s.locale, "ok.cancelled")];
     },
   },
   done: {
@@ -383,7 +383,7 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
       if (s.fireDecls.length === 0) {
         const unit = S.currentActor(s);
         const result = S.passFire(s);
-        const passLine = unit ? t(s.locale, "log.attacksPassed", { id: unit.id }) : "";
+        const passLine = unit ? i18n(s.locale, "log.attacksPassed", { id: unit.id }) : "";
         const rest = fmtLog(s.locale, result.newEvents);
         return passLine ? [passLine, ...rest] : rest;
       }
@@ -406,7 +406,7 @@ const OVER_CMDS: Record<string, CmdDef> = {
     helpKey: "cmd.rematch.help",
     run: (s) => {
       S.rematch(s);
-      return [t(s.locale, "ok.rematchDone"), ...initiativeLine(s)];
+      return [i18n(s.locale, "ok.rematchDone"), ...initiativeLine(s)];
     },
   },
 };
@@ -432,16 +432,16 @@ function availableCmds(session: S.Session): Record<string, CmdDef> {
 function commandHelp(session: S.Session, name: string): string[] {
   const locale = session.locale;
   const def = availableCmds(session)[name.toLowerCase()];
-  if (!def) throw new Error(t(locale, "err.unknownCommand", { name }));
+  if (!def) throw new Error(i18n(locale, "err.unknownCommand", { name }));
   const names = listMapNames().join("|");
   const lines = [
-    def.usage !== undefined ? `${t(locale, "help.usagePrefix")}${def.usage}` : name.toLowerCase(),
+    def.usage !== undefined ? `${i18n(locale, "help.usagePrefix")}${def.usage}` : name.toLowerCase(),
   ];
-  lines.push(t(locale, def.helpKey).replace(/\{names\}/g, names));
+  lines.push(i18n(locale, def.helpKey).replace(/\{names\}/g, names));
   if (def.argsDoc !== undefined && def.argsDoc.length > 0) {
-    lines.push(t(locale, "help.argumentsHeader"));
+    lines.push(i18n(locale, "help.argumentsHeader"));
     for (const [arg, desc] of def.argsDoc)
-      lines.push(`  ${arg.padEnd(12)} ${t(locale, desc).replace(/\{names\}/g, names)}`);
+      lines.push(`  ${arg.padEnd(12)} ${i18n(locale, desc).replace(/\{names\}/g, names)}`);
   }
   return lines;
 }
@@ -474,7 +474,7 @@ function commandList(session: S.Session): string[] {
 
   const renderEntries = (entries: { name: string; def: CmdDef }[]) => {
     for (const { name, def } of entries) {
-      const help = t(locale, def.helpKey).replace(/\{names\}/g, names);
+      const help = i18n(locale, def.helpKey).replace(/\{names\}/g, names);
       if (def.usage === undefined) {
         lines.push(`${name.padEnd(9)} ${help}`);
       } else {
@@ -484,10 +484,10 @@ function commandList(session: S.Session): string[] {
     }
   };
 
-  lines.push(t(locale, "help.sectionGeneral"));
+  lines.push(i18n(locale, "help.sectionGeneral"));
   renderEntries(globalEntries);
   lines.push("");
-  lines.push(t(locale, "help.sectionPhase", { phase: phaseCmds.phase }));
+  lines.push(i18n(locale, "help.sectionPhase", { phase: phaseCmds.phase }));
   renderEntries(phaseEntries);
 
   return lines;
@@ -512,7 +512,7 @@ function stateHint(s: S.Session): string[] {
       : s.app === "over"
         ? HINT_OVER
         : HINT_SETUP;
-  return t(s.locale, key).split("\n");
+  return i18n(s.locale, key).split("\n");
 }
 function helpText(session: S.Session): string[] {
   return [...stateHint(session), "", ...commandList(session)];
@@ -521,8 +521,8 @@ function helpText(session: S.Session): string[] {
 function victoryBanner(s: S.Session): string[] {
   if (s.victory === null) return [];
   return s.victory.draw
-    ? [t(s.locale, "banner.draw")]
-    : [t(s.locale, "banner.win", { team: String(s.victory.winnerTeam) })];
+    ? [i18n(s.locale, "banner.draw")]
+    : [i18n(s.locale, "banner.win", { team: String(s.victory.winnerTeam) })];
 }
 
 function normalize(out: string[] | Chunk[]): Chunk[] {
@@ -552,12 +552,12 @@ export function runChunks(session: S.Session, raw: string): Chunk[] {
       .filter((x) => x.length > 0);
     if (tokens.length === 0) return [];
     const def = availableCmds(session)[tokens[0]!.toLowerCase()];
-    if (!def) throw new Error(t(session.locale, "err.unknownCommand", { name: tokens[0]! }));
+    if (!def) throw new Error(i18n(session.locale, "err.unknownCommand", { name: tokens[0]! }));
     chunks = normalize(def.run(session, tokens.slice(1)));
   } catch (e) {
     return [
       buildLinesChunk(
-        [`${t(session.locale, "err.prefix")} ${e instanceof Error ? e.message : String(e)}`],
+        [`${i18n(session.locale, "err.prefix")} ${e instanceof Error ? e.message : String(e)}`],
         "err",
       ),
     ];

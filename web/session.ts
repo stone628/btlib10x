@@ -43,7 +43,7 @@ import {
   terrainAt,
 } from "btlib10x";
 import type { LocaleId } from "./i18n/index.js";
-import { t } from "./i18n/index.js";
+import { i18n } from "./i18n/index.js";
 import { createRng } from "./rng.js";
 
 export type AppState = "setup" | "battle" | "over";
@@ -147,7 +147,7 @@ function drive(s: Session): BattleState["events"] {
     }
     advancePhase(battle);
   }
-  throw new Error(t(s.locale, "err.phaseDriver"));
+  throw new Error(i18n(s.locale, "err.phaseDriver"));
 }
 
 export function currentActor(s: Session): UnitState | null {
@@ -159,12 +159,12 @@ export function currentActor(s: Session): UnitState | null {
 export function promptBody(s: Session): string {
   switch (s.app) {
     case "setup":
-      return t(s.locale, "prompt.setup");
+      return i18n(s.locale, "prompt.setup");
     case "over": {
       const winner = s.victory?.draw
-        ? t(s.locale, "prompt.draw")
-        : t(s.locale, "prompt.winnerTeam", { team: s.victory?.winnerTeam ?? "?" });
-      return t(s.locale, "prompt.over", {
+        ? i18n(s.locale, "prompt.draw")
+        : i18n(s.locale, "prompt.winnerTeam", { team: s.victory?.winnerTeam ?? "?" });
+      return i18n(s.locale, "prompt.over", {
         winner,
         turn: s.battle?.turn ?? "?",
       });
@@ -172,9 +172,9 @@ export function promptBody(s: Session): string {
     case "battle": {
       const st = s.battle!;
       const phase =
-        st.phase === "movement" ? t(s.locale, "prompt.subMove") : t(s.locale, "prompt.subAttack");
+        st.phase === "movement" ? i18n(s.locale, "prompt.subMove") : i18n(s.locale, "prompt.subAttack");
       const actor = currentActor(s);
-      return t(s.locale, "prompt.turn", {
+      return i18n(s.locale, "prompt.turn", {
         turn: st.turn,
         phase,
         team: actor?.team ?? "?",
@@ -189,7 +189,7 @@ export function promptBody(s: Session): string {
 export function setMap(s: Session, name: string): void {
   const map = getMapDef(name);
   if (!map)
-    throw new Error(t(s.locale, "err.unknownMap", { name, list: listMapNames().join(", ") }));
+    throw new Error(i18n(s.locale, "err.unknownMap", { name, list: listMapNames().join(", ") }));
   s.mapName = name;
   s.terrainDefs = [...map.terrain];
 }
@@ -204,26 +204,26 @@ export function addUnit(
   facing: Facing,
 ): void {
   const m = getMechDef(model);
-  if (!m) throw new Error(t(s.locale, "err.unknownModel", { model }));
-  if (s.roster.some((u) => u.id === id)) throw new Error(t(s.locale, "err.duplicateId", { id }));
-  if (!Number.isInteger(team) || team < 0) throw new Error(t(s.locale, "err.badTeam"));
+  if (!m) throw new Error(i18n(s.locale, "err.unknownModel", { model }));
+  if (s.roster.some((u) => u.id === id)) throw new Error(i18n(s.locale, "err.duplicateId", { id }));
+  if (!Number.isInteger(team) || team < 0) throw new Error(i18n(s.locale, "err.badTeam"));
   if (!Number.isInteger(gunnery) || gunnery < 0 || gunnery > 7) {
-    throw new Error(t(s.locale, "err.badGunnery"));
+    throw new Error(i18n(s.locale, "err.badGunnery"));
   }
   if (s.roster.some((u) => sameHex(u.position, position))) {
-    throw new Error(t(s.locale, "err.hexOccupied", { col: position.col, row: position.row }));
+    throw new Error(i18n(s.locale, "err.hexOccupied", { col: position.col, row: position.row }));
   }
   if (s.mapName) {
     const map = getMapDef(s.mapName);
     if (map) {
       if (position.col > map.width) {
         throw new Error(
-          t(s.locale, "err.outOfBounds", { label: "col", value: position.col, max: map.width }),
+          i18n(s.locale, "err.outOfBounds", { label: "col", value: position.col, max: map.width }),
         );
       }
       if (position.row > map.height) {
         throw new Error(
-          t(s.locale, "err.outOfBounds", { label: "row", value: position.row, max: map.height }),
+          i18n(s.locale, "err.outOfBounds", { label: "row", value: position.row, max: map.height }),
         );
       }
     }
@@ -232,7 +232,7 @@ export function addUnit(
 }
 
 export function removeUnit(s: Session, id: string): void {
-  if (!s.roster.some((u) => u.id === id)) throw new Error(t(s.locale, "err.noSuchUnit", { id }));
+  if (!s.roster.some((u) => u.id === id)) throw new Error(i18n(s.locale, "err.noSuchUnit", { id }));
   s.roster = s.roster.filter((u) => u.id !== id);
 }
 
@@ -247,10 +247,10 @@ function battleOptions(s: Session): CreateBattleOptions {
 }
 
 export function startBattle(s: Session): void {
-  if (s.app !== "setup") throw new Error(t(s.locale, "err.alreadyStarted"));
-  if (s.roster.length < 2) throw new Error(t(s.locale, "err.needTwoUnits"));
+  if (s.app !== "setup") throw new Error(i18n(s.locale, "err.alreadyStarted"));
+  if (s.roster.length < 2) throw new Error(i18n(s.locale, "err.needTwoUnits"));
   const teams = new Set(s.roster.map((u) => u.team));
-  if (teams.size < 2) throw new Error(t(s.locale, "err.needTwoTeams"));
+  if (teams.size < 2) throw new Error(i18n(s.locale, "err.needTwoTeams"));
   const inits: UnitInit[] = s.roster.map((u) => ({ ...u }));
   s.battle = createBattle(inits, battleOptions(s));
   s.victory = null;
@@ -271,19 +271,19 @@ const MOVE_MODES: Readonly<Record<string, MoveMode>> = {
 
 export function parseMoveMode(locale: LocaleId, word: string): MoveMode {
   const mode = MOVE_MODES[word.toLowerCase()];
-  if (!mode) throw new Error(t(locale, "err.badModeWord"));
+  if (!mode) throw new Error(i18n(locale, "err.badModeWord"));
   return mode;
 }
 
 function requireBattle(s: Session): BattleState {
-  if (!s.battle) throw new Error(t(s.locale, "err.noBattle"));
+  if (!s.battle) throw new Error(i18n(s.locale, "err.noBattle"));
   return s.battle;
 }
 
 function requireActor(s: Session, phase: "movement" | "weaponAttack"): UnitState {
   const unit = currentActor(s);
   if (!unit || !s.battle || s.battle.phase !== phase) {
-    throw new Error(t(s.locale, "err.wrongPhase", { phase }));
+    throw new Error(i18n(s.locale, "err.wrongPhase", { phase }));
   }
   return unit;
 }
@@ -357,50 +357,50 @@ export function stepResult(s: Session): StepResult {
 
 export function queueEnter(s: Session, to: Hex): void {
   const unit = requireActor(s, "movement");
-  if (!s.moveMode) throw new Error(t(s.locale, "err.declareModeFirst", { id: unit.id }));
-  if (sameHex(unit.position, to)) throw new Error(t(s.locale, "err.sameHexMove"));
+  if (!s.moveMode) throw new Error(i18n(s.locale, "err.declareModeFirst", { id: unit.id }));
+  if (sameHex(unit.position, to)) throw new Error(i18n(s.locale, "err.sameHexMove"));
   const cur = replaySteps(s);
-  if (sameHex(cur.hex, to)) throw new Error(t(s.locale, "err.alreadyThere"));
-  if (s.moveMode === "standStill") throw new Error(t(s.locale, "err.standStillNoEnter"));
+  if (sameHex(cur.hex, to)) throw new Error(i18n(s.locale, "err.alreadyThere"));
+  if (s.moveMode === "standStill") throw new Error(i18n(s.locale, "err.standStillNoEnter"));
   const battle = requireBattle(s);
   let cost: number;
   if (s.moveMode === "jump") {
-    if (!isAdjacent(cur.hex, to)) throw new Error(t(s.locale, "err.jumpNotAdjacent"));
+    if (!isAdjacent(cur.hex, to)) throw new Error(i18n(s.locale, "err.jumpNotAdjacent"));
     cost = 1;
   } else {
     const forward = isForwardStep(cur.hex, to, cur.facing);
     const backward = !forward && isBackwardStep(cur.hex, to, cur.facing);
     if (!forward && !backward) {
-      throw new Error(t(s.locale, "err.groundStraightOnly"));
+      throw new Error(i18n(s.locale, "err.groundStraightOnly"));
     }
     const fromLevel = levelAt(battle.elevation, cur.hex);
     const toLevel = levelAt(battle.elevation, to);
     if (toLevel - fromLevel > 1) {
-      throw new Error(t(s.locale, "err.climbTooSteep", { col: to.col, row: to.row }));
+      throw new Error(i18n(s.locale, "err.climbTooSteep", { col: to.col, row: to.row }));
     }
     cost = costToEnter(terrainAt(battle.terrain, to)) + costToClimb(fromLevel, toLevel);
   }
   const spent = cur.spent + cost;
   const budget = budgetFor(s);
   if (spent > budget) {
-    throw new Error(t(s.locale, "err.mpExceeded", { spent, mode: s.moveMode, budget }));
+    throw new Error(i18n(s.locale, "err.mpExceeded", { spent, mode: s.moveMode, budget }));
   }
   s.moveSteps.push({ kind: "enter", to });
 }
 
 export function queueTurn(s: Session, facings: number): void {
   const unit = requireActor(s, "movement");
-  if (!s.moveMode) throw new Error(t(s.locale, "err.declareModeFirst", { id: unit.id }));
-  if (s.moveMode === "standStill") throw new Error(t(s.locale, "err.standStillNoFace"));
-  if (s.moveMode === "jump") throw new Error(t(s.locale, "err.jumpFreeFacing"));
+  if (!s.moveMode) throw new Error(i18n(s.locale, "err.declareModeFirst", { id: unit.id }));
+  if (s.moveMode === "standStill") throw new Error(i18n(s.locale, "err.standStillNoFace"));
+  if (s.moveMode === "jump") throw new Error(i18n(s.locale, "err.jumpFreeFacing"));
   if (!Number.isInteger(facings) || facings === 0 || Math.abs(facings) > 5) {
-    throw new Error(t(s.locale, "err.badFacings"));
+    throw new Error(i18n(s.locale, "err.badFacings"));
   }
   const cur = replaySteps(s);
   const spent = cur.spent + facingChangeCost(Math.abs(facings));
   const budget = budgetFor(s);
   if (spent > budget) {
-    throw new Error(t(s.locale, "err.mpExceeded", { spent, mode: s.moveMode, budget }));
+    throw new Error(i18n(s.locale, "err.mpExceeded", { spent, mode: s.moveMode, budget }));
   }
   s.moveSteps.push({ kind: "turn", facings });
 }
@@ -410,15 +410,15 @@ export function faceSteps(locale: LocaleId, current: Facing, arg: string): numbe
   if (/^[+-]?\d+$/.test(arg)) {
     const n = Number(arg);
     if (!Number.isInteger(n) || n === 0 || Math.abs(n) > 5) {
-      throw new Error(t(locale, "err.badFacings"));
+      throw new Error(i18n(locale, "err.badFacings"));
     }
     return n;
   }
   const target = FACINGS.find((f) => f === arg.toLowerCase());
-  if (!target) throw new Error(t(locale, "err.faceArg", { facings: FACINGS.join("/") }));
+  if (!target) throw new Error(i18n(locale, "err.faceArg", { facings: FACINGS.join("/") }));
   const delta0 = FACINGS.indexOf(target) - FACINGS.indexOf(current);
   const delta = delta0 > 3 ? delta0 - 6 : delta0 < -3 ? delta0 + 6 : delta0;
-  if (delta === 0) throw new Error(t(locale, "err.faceCurrent", { facing: current }));
+  if (delta === 0) throw new Error(i18n(locale, "err.faceCurrent", { facing: current }));
   return delta;
 }
 
@@ -477,7 +477,7 @@ export function moveStepsInfo(s: Session): {
   budget: number;
 } {
   const unit = currentActor(s);
-  if (!unit || !s.battle) throw new Error(t(s.locale, "err.needsActor"));
+  if (!unit || !s.battle) throw new Error(i18n(s.locale, "err.needsActor"));
   const { terrain, elevation } = s.battle;
   const steps: MoveStepInfo[] = [];
   let _hex: Hex = { ...unit.position };
@@ -488,7 +488,7 @@ export function moveStepsInfo(s: Session): {
     let cost: number;
     if (step.kind === "turn") {
       const nextFacing = rotateFacing(facing, step.facings);
-      label = t(s.locale, "moveStatus.stepTurn", {
+      label = i18n(s.locale, "moveStatus.stepTurn", {
         i: i + 1,
         steps: signed(step.facings),
         from: facing,
@@ -497,7 +497,7 @@ export function moveStepsInfo(s: Session): {
       facing = nextFacing;
       cost = facingChangeCost(Math.abs(step.facings));
     } else {
-      label = t(s.locale, "moveStatus.stepEnter", {
+      label = i18n(s.locale, "moveStatus.stepEnter", {
         i: i + 1,
         col: step.to.col,
         row: step.to.row,
@@ -543,17 +543,17 @@ export function passFire(s: Session): CommitResult {
 
 export function queueFire(s: Session, decl: AttackDecl): void {
   const unit = requireActor(s, "weaponAttack");
-  if (decl.targetId === unit.id) throw new Error(t(s.locale, "err.selfTarget"));
+  if (decl.targetId === unit.id) throw new Error(i18n(s.locale, "err.selfTarget"));
   const target = requireBattle(s).units[decl.targetId];
-  if (!target) throw new Error(t(s.locale, "err.unknownUnitId", { id: decl.targetId }));
-  if (target.team === unit.team) throw new Error(t(s.locale, "err.selfTarget"));
-  if (target.removed) throw new Error(t(s.locale, "err.targetRemoved", { id: target.id }));
+  if (!target) throw new Error(i18n(s.locale, "err.unknownUnitId", { id: decl.targetId }));
+  if (target.team === unit.team) throw new Error(i18n(s.locale, "err.selfTarget"));
+  if (target.removed) throw new Error(i18n(s.locale, "err.targetRemoved", { id: target.id }));
   const pending = s.fireDecls[0]?.targetId;
   if (pending !== undefined && pending !== decl.targetId) {
-    throw new Error(t(s.locale, "err.oneTarget", { target: pending }));
+    throw new Error(i18n(s.locale, "err.oneTarget", { target: pending }));
   }
   if (s.fireDecls.some((d) => d.weaponIndex === decl.weaponIndex)) {
-    throw new Error(t(s.locale, "err.weaponRepeated", { weapon: decl.weaponIndex }));
+    throw new Error(i18n(s.locale, "err.weaponRepeated", { weapon: decl.weaponIndex }));
   }
   s.fireDecls.push(decl);
 }
@@ -581,14 +581,14 @@ export function commitFire(s: Session): CommitResult {
 export function setAmmoPolicy(s: Session, word: string): void {
   const unit = requireActor(s, "weaponAttack");
   const policy: AmmoPolicy | null = parseAmmoPolicy(word);
-  if (policy === null) throw new Error(t(s.locale, "err.badAmmoPolicy"));
+  if (policy === null) throw new Error(i18n(s.locale, "err.badAmmoPolicy"));
   unit.ammoPolicy = policy;
 }
 
 // ------------------------------------------------------------ lifecycle ----
 
 export function rematch(s: Session): void {
-  if (s.app !== "over") throw new Error(t(s.locale, "err.rematchOnlyOver"));
+  if (s.app !== "over") throw new Error(i18n(s.locale, "err.rematchOnlyOver"));
   s.rng = createRng(s.seed);
   s.battle = createBattle(
     s.roster.map((u) => ({ ...u })),
@@ -614,7 +614,7 @@ export function resetSession(s: Session): void {
 }
 
 export function setSeed(s: Session, n: number): void {
-  if (!Number.isInteger(n)) throw new Error(t(s.locale, "err.seedInteger"));
+  if (!Number.isInteger(n)) throw new Error(i18n(s.locale, "err.seedInteger"));
   s.seed = n >>> 0;
   s.rng = createRng(s.seed);
 }

@@ -1,5 +1,5 @@
 import { type BattleState, FACINGS, type Facing, type TerrainHexDef } from "btlib10x";
-import { type LocaleId, t } from "./i18n/index.js";
+import { type LocaleId, i18n } from "./i18n/index.js";
 import type { BoardModel, CharStyle, Span } from "./render.js";
 
 // ---- BoardRenderer type ----
@@ -50,7 +50,7 @@ function terrainLegendList(): string {
 
 /** Localised board legend text (e.g. `"legend: w(lightWoods)  W(heavyWoods)"`). */
 export function boardLegendText(locale: LocaleId): string {
-  return t(locale, "board.legend", { list: terrainLegendList() });
+  return i18n(locale, "board.legend", { list: terrainLegendList() });
 }
 
 // ---- canvas constants ----
