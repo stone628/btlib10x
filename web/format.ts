@@ -11,7 +11,8 @@ import type {
   FireBlockerReason,
   FireWeapon,
   GameEvent,
-  Hex,
+  HexCell,
+  HexCoord,
   Location,
   LocationValue,
   RangeBracket,
@@ -445,13 +446,32 @@ export function boardChunk(s: Session): Chunk {
         { id: u.id, position: u.position, facing: u.facing, removed: false },
       ]),
     ) as BattleState["units"];
-    const terrain: Record<string, string> = {};
-    for (const t2 of s.terrainDefs) terrain[`${t2.col},${t2.row}`] = t2.type;
+    let width = dims?.[0] ?? 0;
+    let height = dims?.[1] ?? 0;
+    for (const u of s.roster) {
+      width = Math.max(width, u.position.col);
+      height = Math.max(height, u.position.row);
+    }
+    if (width < 1) width = 1;
+    if (height < 1) height = 1;
+    const cells: HexCell[] = new Array<HexCell>(width * height).fill({
+      terrain: "clear",
+      level: 0,
+    });
+    for (const t2 of s.terrainDefs) {
+      cells[t2.col - 1 + (t2.row - 1) * width] = { terrain: t2.type, level: t2.level ?? 0 };
+    }
     const model = battleModel({
       units,
-      terrain,
-      width: dims?.[0],
-      height: dims?.[1],
+      cells,
+      width,
+      height,
+      turn: 0,
+      phase: "initiative",
+      initiativeWinnerTeam: null,
+      critsDisabled: false,
+      actedThisPhase: [],
+      events: [],
     } as BattleState);
     return buildBoardChunk(boardChunkOf(model));
   }
@@ -1245,7 +1265,6 @@ export function reachableModel(s: Session): BoardModel | null {
   if (!actor || !s.battle || s.moveMode === null) return null;
   const w = s.battle.width;
   const h = s.battle.height;
-  if (w === undefined || h === undefined) return null;
   // Engine guarantee: `actor.model` was validated by `createBattle`.
   const def = getMechDef(actor.model)!;
   const landings = reachableLandings({ ...actor.position }, actor.facing, {
@@ -1253,12 +1272,9 @@ export function reachableModel(s: Session): BoardModel | null {
     walking: def.walking,
     running: def.running,
     jumping: def.jumping,
-    terrain: s.battle.terrain,
-    elevation: s.battle.elevation,
+    grid: s.battle,
     team: actor.team,
-    width: w,
-    height: h,
-    occupantTeam: (hex: Hex): number | undefined => {
+    occupantTeam: (hex: HexCoord): number | undefined => {
       for (const u of Object.values(s.battle!.units)) {
         if (u.removed) continue;
         if (u.position.col === hex.col && u.position.row === hex.row) return u.team;

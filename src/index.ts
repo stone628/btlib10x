@@ -9,11 +9,11 @@ export {
   sameHex,
 } from "./core/hex.js";
 export * from "./core/locations.js";
+export type { HexGrid } from "./core/terrain.js";
 export {
+  cellAt,
   costToClimb,
   costToEnter,
-  DEFAULT_LEVEL,
-  levelAt,
   MP_PER_FACING_CHANGE,
   MP_PER_LEVEL_CLIMB,
   MP_TO_ENTER_HEX,

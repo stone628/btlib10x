@@ -412,28 +412,28 @@ export function battleModel(
   marks?: Readonly<Record<string, string>>,
   styles?: Readonly<Record<string, CharStyle>>,
 ): BoardModel {
-  let maxCol = 0;
-  let maxRow = 0;
-  for (const unit of Object.values(state.units)) {
-    if (unit.removed) continue;
-    maxCol = Math.max(maxCol, unit.position.col);
-    maxRow = Math.max(maxRow, unit.position.row);
-  }
-  for (const key of Object.keys(state.terrain)) {
-    const parts = key.split(",");
-    const c = Number(parts[0]);
-    const r = Number(parts[1]);
-    if (!Number.isNaN(c)) maxCol = Math.max(maxCol, c);
-    if (!Number.isNaN(r)) maxRow = Math.max(maxRow, r);
-  }
+  const width = state.width;
+  const height = state.height;
 
   const cells: Record<string, string> = {};
   const facings: Record<string, Facing> = {};
   if (overlay !== undefined) Object.assign(cells, overlay);
   const auto: Record<string, CharStyle> = {};
-  for (const [tKey, tType] of Object.entries(state.terrain)) {
-    const st = TERRAIN_STYLES[tType];
-    if (st !== undefined) auto[tKey] = st;
+  const elevations: Record<string, number> = {};
+  for (let i = 0; i < state.cells.length; i++) {
+    const cell = state.cells[i]!;
+    if (cell.terrain !== "clear") {
+      const col = (i % width) + 1;
+      const row = Math.floor(i / width) + 1;
+      const key = `${col},${row}`;
+      const st = TERRAIN_STYLES[cell.terrain];
+      if (st !== undefined) auto[key] = st;
+    }
+    if (cell.level !== 0) {
+      const col = (i % width) + 1;
+      const row = Math.floor(i / width) + 1;
+      elevations[`${col},${row}`] = cell.level;
+    }
   }
   const autoCells: Record<string, CharStyle> = {};
   for (const unit of Object.values(state.units)) {
@@ -449,25 +449,25 @@ export function battleModel(
     marks ??
     (() => {
       const m: Record<string, string> = {};
-      for (const [key, type] of Object.entries(state.terrain)) {
-        const g = TERRAIN_GLYPHS[type];
+      for (let i = 0; i < state.cells.length; i++) {
+        const cell = state.cells[i]!;
+        if (cell.terrain === "clear") continue;
+        const col = (i % width) + 1;
+        const row = Math.floor(i / width) + 1;
+        const key = `${col},${row}`;
+        const g = TERRAIN_GLYPHS[cell.terrain];
         if (g !== undefined) m[key] = g;
       }
       return Object.keys(m).length > 0 ? m : undefined;
     })();
 
-  const filteredElevations =
-    state.elevation && Object.keys(state.elevation).length > 0
-      ? Object.fromEntries(Object.entries(state.elevation).filter(([, v]) => v !== 0))
-      : undefined;
+  const filteredElevations = Object.keys(elevations).length > 0 ? elevations : undefined;
 
   return {
-    cols: Math.max(1, state.width ?? maxCol + 1),
-    rows: Math.max(1, state.height ?? maxRow + 1),
+    cols: Math.max(1, width),
+    rows: Math.max(1, height),
     cells,
-    ...(filteredElevations !== undefined && Object.keys(filteredElevations).length > 0
-      ? { elevations: filteredElevations }
-      : {}),
+    ...(filteredElevations !== undefined ? { elevations: filteredElevations } : {}),
     ...(Object.keys(facings).length > 0 ? { facings } : {}),
     ...(resolvedMarks === undefined ? {} : { marks: resolvedMarks }),
     ...(styles !== undefined ? { styles } : Object.keys(auto).length > 0 ? { styles: auto } : {}),

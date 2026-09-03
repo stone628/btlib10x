@@ -129,7 +129,7 @@ describe("suggestFireTargets", () => {
             model: "HBK-4G",
             team: 0,
             gunnery: 4,
-            position: { col: 2, row: 2 },
+            position: { col: 2, row: 10 },
             facing: "n",
           },
           {
@@ -137,14 +137,14 @@ describe("suggestFireTargets", () => {
             model: "ENF-4R",
             team: 1,
             gunnery: 4,
-            position: { col: 2, row: -7 },
+            position: { col: 2, row: 2 },
             facing: "s",
           },
         ],
         {
           terrain: [
-            { col: 2, row: -1, type: "heavyWoods" },
-            { col: 2, row: -4, type: "heavyWoods" },
+            { col: 2, row: 7, type: "heavyWoods" },
+            { col: 2, row: 4, type: "heavyWoods" },
           ],
         },
       ),

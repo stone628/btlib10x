@@ -1,14 +1,13 @@
 import { hexDistance, lineHexes } from "../core/hex.js";
-import { levelAt, woodsPoints } from "../core/terrain.js";
-import type { Hex, TerrainType } from "../core/types.js";
-import { terrainAt } from "./movement.js";
+import { cellAt, type HexGrid, woodsPoints } from "../core/terrain.js";
+import type { HexCoord, TerrainType } from "../core/types.js";
 
 /**
  * Hexes along the center-to-center LOS, excluding the attacker's and target's
  * own hexes. The cube-lerp rounding picks one hex deterministically when the
  * line grazes an edge (defender-choice tie-break is a documented v1 gap).
  */
-export function interveningHexes(from: Hex, to: Hex): Hex[] {
+export function interveningHexes(from: HexCoord, to: HexCoord): HexCoord[] {
   return lineHexes(from, to);
 }
 
@@ -24,25 +23,17 @@ export function losBlocked(points: number): boolean {
 }
 
 /** Sum of woods points among hexes between `from` and `to` (endpoints excluded). */
-export function losWoodsPointsBetween(
-  terrain: Readonly<Record<string, TerrainType>>,
-  from: Hex,
-  to: Hex,
-): number {
+export function losWoodsPointsBetween(grid: HexGrid, from: HexCoord, to: HexCoord): number {
   let points = 0;
   for (const h of interveningHexes(from, to)) {
-    points += woodsPoints(terrainAt(terrain, h));
+    points += woodsPoints(cellAt(grid, h).terrain);
   }
   return points;
 }
 
 /** Terrain types of hexes between `from` and `to` (endpoints excluded). */
-export function interveningTerrains(
-  terrain: Readonly<Record<string, TerrainType>>,
-  from: Hex,
-  to: Hex,
-): TerrainType[] {
-  return interveningHexes(from, to).map((h) => terrainAt(terrain, h));
+export function interveningTerrains(grid: HexGrid, from: HexCoord, to: HexCoord): TerrainType[] {
+  return interveningHexes(from, to).map((h) => cellAt(grid, h).terrain);
 }
 
 /**
@@ -52,13 +43,9 @@ export function interveningTerrains(
  * the ray's height at C's center. Bipedal 'Mechs only — no buildings, no
  * hull-down, no partial cover.
  */
-export function losBlockedByElevation(
-  elevation: Readonly<Record<string, number>>,
-  from: Hex,
-  to: Hex,
-): boolean {
-  const a = levelAt(elevation, from);
-  const b = levelAt(elevation, to);
+export function losBlockedByElevation(grid: HexGrid, from: HexCoord, to: HexCoord): boolean {
+  const a = cellAt(grid, from).level;
+  const b = cellAt(grid, to).level;
   const aLos = a + 1;
   const bLos = b + 1;
   const dTotal = hexDistance(from, to);
@@ -66,19 +53,14 @@ export function losBlockedByElevation(
   for (const h of interveningHexes(from, to)) {
     const dA = hexDistance(from, h);
     const rayHeight = aLos + (bLos - aLos) * (dA / dTotal);
-    if (levelAt(elevation, h) + 1 > rayHeight) return true;
+    if (cellAt(grid, h).level + 1 > rayHeight) return true;
   }
   return false;
 }
 
 /** True when both the woods and elevation LOS checks are clear. */
-export function losClear(
-  elevation: Readonly<Record<string, number>>,
-  terrain: Readonly<Record<string, TerrainType>>,
-  from: Hex,
-  to: Hex,
-): boolean {
-  if (losBlocked(losWoodsPointsBetween(terrain, from, to))) return false;
-  if (losBlockedByElevation(elevation, from, to)) return false;
+export function losClear(grid: HexGrid, from: HexCoord, to: HexCoord): boolean {
+  if (losBlocked(losWoodsPointsBetween(grid, from, to))) return false;
+  if (losBlockedByElevation(grid, from, to)) return false;
   return true;
 }

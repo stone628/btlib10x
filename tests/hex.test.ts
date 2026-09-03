@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { bearing, hexDistance, isAdjacent, lineHexes, neighbor, sameHex } from "../src/core/hex.js";
-import { DEFAULT_LEVEL, levelAt } from "../src/core/terrain.js";
+import { cellAt, type HexGrid } from "../src/core/terrain.js";
+import type { HexCell } from "../src/core/types.js";
 
 describe("hex geometry", () => {
   it("computes odd-q neighbors on flat-top hexes", () => {
@@ -60,9 +61,20 @@ describe("hex geometry", () => {
     expect(isAdjacent(a, { col: 2, row: 2 })).toBe(false);
   });
 
-  it("reads elevation off a per-hex map and defaults to 0", () => {
+  it("reads a cell off a grid and defaults to clear/level 0", () => {
+    const width = 5;
+    const height = 5;
+    const cells: HexCell[] = new Array<HexCell>(width * height).fill({
+      terrain: "clear",
+      level: 0,
+    });
+    const grid: HexGrid = { cells, width, height };
     const hex = { col: 4, row: 5 };
-    expect(levelAt({}, hex)).toBe(DEFAULT_LEVEL);
-    expect(levelAt({ "4,5": 2 }, hex)).toBe(2);
+    expect(cellAt(grid, hex).level).toBe(0);
+    expect(cellAt(grid, hex).terrain).toBe("clear");
+    // col 4, row 5 maps to index (4-1)+(5-1)*5 = 23
+    cells[23] = { terrain: "lightWoods", level: 2 };
+    expect(cellAt(grid, hex).level).toBe(2);
+    expect(cellAt(grid, hex).terrain).toBe("lightWoods");
   });
 });
