@@ -166,17 +166,17 @@ function getCompensatedLength(str: string): number {
 // biome-ignore format: just keep it
 const _LIGHT_LINE_THEME = {
   tnw: "┌", tn: "┬", tne: "┐", tnh: "─", tnv: "│",
-  tw: "├", tc: "┼", te: "┤", tcs: "┬",
+  tw: "├", tc: "┼", te: "┤", tcs: "┬", twc: "┌", tec: "┐",
   tsw: "└", ts: "┴", tse: "┘", tsh: "─", tsv: "│",
 };
 // biome-ignore format: just keep it
 const _ASCII_LINE_THEME = {
   tnw: "+", tn: "+", tne: "+", tnh: "-", tnv: "|",
-  tw: "+", tc: "+", te: "+", tcs: "+",
+  tw: "+", tc: "+", te: "+", tcs: "+", twc: "+", tec: "+",
   tsw: "+", ts: "+", tse: "+", tsh: "-", tsv: "|",
 };
 
-export function buildBoxTableChunk(
+function buildHeaderTableChunkFromRows(
   header: readonly (string | null)[],
   rows: readonly (readonly string[])[],
 ): Chunk {
@@ -197,8 +197,8 @@ export function buildBoxTableChunk(
     widths.push(w);
   }
 
-  const { tnw, tn, tne, tnh, tnv, tw, tc, te, tcs, tsw, ts, tse, tsh, tsv } = _LIGHT_LINE_THEME;
-  // const { tnw, tn, tne, tnh, tnv, tw, tc, te, tcs, tsw, ts, tse, tsh, tsv } = _ASCII_LINE_THEME;
+  const { tnw, tn, tne, tnh, tnv, tw, tc, te, tcs, twc, tec, tsw, ts, tse, tsh, tsv } = _LIGHT_LINE_THEME;
+  // const { tnw, tn, tne, tnh, tnv, tw, tc, te, tcs, twc, tec, tsw, ts, tse, tsh, tsv } = _ASCII_LINE_THEME;
 
   const height = rows.length;
   const cols: string[][] = [];
@@ -211,11 +211,11 @@ export function buildBoxTableChunk(
     const col: string[] = new Array(height + 3);
     const currHeader = header[i];
 
-    if (currHeader == null) {
+    if (currHeader === null) {
       if (isDataFirst) {
         col[0] = "";
         col[1] = "";
-        col[2] = `${tnw}${stroke}`;
+        col[2] = `${twc}${stroke}`;
       } else {
         if (prevHeaderExists) {
           col[0] = tne;
@@ -256,7 +256,105 @@ export function buildBoxTableChunk(
   } else {
     closing[0] = "";
     closing[1] = "";
-    closing[2] = tne!;
+    closing[2] = tec!;
+  }
+  for (let r = 0; r < height; r++) closing[3 + r] = tsv!;
+  closing[height + 2] = tse!;
+  cols.push(closing);
+
+  return buildColumnsChunk(cols);
+}
+
+function buildHeaderTableChunkFromColumns(
+  header: readonly (string | null)[],
+  columns: readonly (readonly string[])[],
+): Chunk {
+  const n = header.length;
+  if (n === 0) return buildColumnsChunk([]);
+
+  const { tnw, tn, tne, tnh, tnv, tw, tc, te, tcs, twc, tec, tsw, ts, tse, tsh, tsv } = _LIGHT_LINE_THEME;
+  // const { tnw, tn, tne, tnh, tnv, tw, tc, te, tcs, twc, tec, tsw, ts, tse, tsh, tsv } = _ASCII_LINE_THEME;
+
+  const widths: number[] = [];
+  const cols: string[][] = [];
+  const height = columns.map((c) => c.length).reduce((prev, curr) => prev > curr ? prev : curr);
+  for (let i = 0; i < n; i++) {
+    const currHeader = header[i];
+    let w = currHeader === null ? 0 : getCompensatedLength(currHeader!);
+    const argCol = columns[i];
+    const col: string[] = new Array(height + 3);
+
+    if (argCol === undefined) {
+      for (let r = 0; r < height; r++) {
+        col[3 + r] = tsv!;
+      }
+    } else {
+      for (let r = 0; r < height; r++) {
+        const cell = argCol[r];
+        if (cell !== undefined) {
+          const cellLen = getCompensatedLength(cell);
+          if (cellLen > w) w = cellLen;
+          col[3 + r] = `${tsv!}${cell}`;
+        } else {
+          col[3 + r] = tsv!;
+        }
+      }
+    }
+    widths.push(w);
+    cols.push(col);
+  }
+
+  let prevHeaderExists = true;
+  for (let i = 0; i < n; i++) {
+    const w = widths[i] ?? 0;
+    const stroke = tnh!.repeat(w);
+    const isDataFirst = i === 0;
+    const botWall = isDataFirst ? tsw : ts;
+    const col = cols[i]!;
+    const currHeader = header[i];
+
+    if (currHeader == null) {
+      if (isDataFirst) {
+        col[0] = "";
+        col[1] = "";
+        col[2] = `${tnw}${stroke}`;
+      } else {
+        if (prevHeaderExists) {
+          col[0] = tne;
+          col[1] = tnv;
+          col[2] = `${tc}${stroke}`;
+        } else {
+          col[0] = "";
+          col[1] = "";
+          col[2] = `${twc}${stroke}`;
+        }
+      }
+      prevHeaderExists = false;
+    } else {
+      if (isDataFirst) {
+        col[0] = `${tnw}${stroke}`;
+        col[1] = `${tnv}${currHeader!}`;
+        col[2] = `${tw}${stroke}`;
+      } else {
+        const topWall = prevHeaderExists ? tn : tnw;
+        col[0] = `${topWall}${stroke}`;
+        col[1] = `${tnv}${currHeader!}`;
+        col[2] = `${tc}${stroke}`;
+      }
+      prevHeaderExists = true;
+    }
+    col[height + 2] = `${botWall}${tsh!.repeat(w)}`;
+  }
+
+  const closing: string[] = new Array(height + 3);
+  if (prevHeaderExists) {
+    closing[0] = tne!;
+    closing[1] = tnv!;
+    closing[2] = te!;
+  } else {
+    closing[0] = "";
+    closing[1] = "";
+    closing[2] = tec!;
   }
   for (let r = 0; r < height; r++) closing[3 + r] = tsv!;
   closing[height + 2] = tse!;
@@ -343,7 +441,7 @@ export function infoMechList(locale: LocaleId): Chunk {
     String(d.tonnage),
     `${d.walking}/${d.running}/${d.jumping}`,
   ]);
-  return buildBoxTableChunk(header, rows);
+  return buildHeaderTableChunkFromRows(header, rows);
 }
 
 export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
@@ -378,17 +476,20 @@ export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
     ),
   ];
   return [
-    ...mergeDiagram(
-      topLines,
-      weaponLines,
-      armorDiagramInfo({
-        armor: d.armor,
-        armorRear,
-        internalStructure: is,
-        originalArmor: d.armor,
-        originalArmorRear: armorRear,
-        originalStructure: is,
-      }),
+    buildHeaderTableChunkFromColumns(
+      ["info", "armor/structure"],
+      mergeDiagramToColumns(
+        topLines,
+        weaponLines,
+        armorDiagramInfo({
+          armor: d.armor,
+          armorRear,
+          internalStructure: is,
+          originalArmor: d.armor,
+          originalArmorRear: armorRear,
+          originalStructure: is,
+        }),
+      )
     ),
     critChartChunk(d, locale, null),
   ];
@@ -873,15 +974,14 @@ export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
   const idLine = view.removed
     ? `${t(locale, "sheet.idLine", { id: view.id, team: view.team })}${t(locale, "sheet.removedId")}`
     : t(locale, "sheet.idLine", { id: view.id, team: view.team });
-  const topLines = [idLine];
-  topLines.push(
+  const topLines = [
     t(locale, "sheet.modelLine", {
       model: view.model,
       name: view.name,
       weightClass: view.weightClass,
       tonnage: view.tonnage,
     }),
-  );
+  ];
   if (view.gunnery !== null) {
     topLines.push(t(locale, "sheet.gunneryLine", { gunnery: gunneryLabel(locale, view.gunnery) }));
   }
@@ -896,46 +996,48 @@ export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
     weaponLines.push(weaponMountLine(locale, i + 1, m));
   }
   return [
-    ...mergeDiagram(
-      topLines,
-      weaponLines,
-      armorDiagramSheet({
-        armor: view.armor,
-        armorRear: view.damage.armorRear,
-        internalStructure: view.damage.internalStructure,
-        originalArmor: view.originalArmor,
-        originalArmorRear: view.originalArmorRear,
-        originalStructure: view.originalArmorStructure,
-      }),
+    buildHeaderTableChunkFromColumns(
+      [idLine, "armor/structure"],
+      mergeDiagramToColumns(
+        topLines,
+        weaponLines,
+        armorDiagramSheet({
+          armor: view.armor,
+          armorRear: view.damage.armorRear,
+          internalStructure: view.damage.internalStructure,
+          originalArmor: view.originalArmor,
+          originalArmorRear: view.originalArmorRear,
+          originalStructure: view.originalArmorStructure,
+        }),
+      )
     ),
     critChartChunk(requireMechDef(view.model, locale), locale, view.critLive),
   ];
 }
 
-export function mergeDiagram(
+function mergeDiagramToColumns(
   topLines: string[],
   weaponLines: string[],
   diagram: string[],
-): Chunk[] {
+): (readonly string[])[] {
   const leftLineCount = topLines.length + weaponLines.length;
   const rightLineCount = diagram.length;
   if (leftLineCount > rightLineCount) {
+    const lineDiff = leftLineCount - rightLineCount;
+    const topPad = Math.floor(lineDiff / 2);
+
     return [
-      buildColumnsChunk([
-        [...topLines, ...weaponLines],
-        [...new Array(leftLineCount - rightLineCount).fill(""), ...diagram],
-      ]),
+      [...topLines, ...weaponLines],
+      [...new Array(topPad).fill(""), ...diagram, ...new Array(lineDiff - topPad).fill("")],
     ];
   }
   if (leftLineCount < rightLineCount) {
     return [
-      buildColumnsChunk([
-        [...topLines, ...new Array(rightLineCount - leftLineCount).fill(""), ...weaponLines],
-        diagram,
-      ]),
+      [...topLines, ...new Array(rightLineCount - leftLineCount).fill(""), ...weaponLines],
+      diagram,
     ];
   }
-  return [buildColumnsChunk([[...topLines, ...weaponLines], diagram])];
+  return [[...topLines, ...weaponLines], diagram];
 }
 
 export function sheetForUnit(s: Session, id: string): Chunk[] {
@@ -1005,12 +1107,12 @@ export function sheetLinesShort(view: SheetView, locale: LocaleId, showMode = tr
   const lines = [head];
   if (view.gunnery !== null) {
     lines.push(
-      `  ${t(locale, "sheet.gunneryLine", { gunnery: gunneryLabel(locale, view.gunnery) })}`,
+      `${t(locale, "sheet.gunneryLine", { gunnery: gunneryLabel(locale, view.gunnery) })}`,
     );
   }
   lines.push(view.positionLine);
   if (showMode && view.modeLine) lines.push(view.modeLine);
-  lines.push(`  ${durabilityLine(view, locale)}`);
+  lines.push(`${durabilityLine(view, locale)}`);
   return lines;
 }
 
@@ -1226,7 +1328,7 @@ function fireWeaponTable(locale: LocaleId, weapons: readonly FireWeapon[]): Chun
       : String(w.expectedDamage),
     w.shots !== null ? `${w.shots}` : "",
   ]);
-  return buildBoxTableChunk(header, rows);
+  return buildHeaderTableChunkFromRows(header, rows);
 }
 
 /** Automatic hint shown at the start of a unit's fire turn. */
