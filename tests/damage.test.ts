@@ -1,18 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { LOCATIONS, type Location } from "../src/core/types.js";
-import type { ArmorState, UnitDamageState } from "../src/rules/damage.js";
+import type { LocationValue, UnitDamageState } from "../src/rules/damage.js";
 import { applyDamage, canFireFromLocation, isImmobile, isKilled } from "../src/rules/damage.js";
 
 /** Build a layered damage state; every location defaults to 10 armor / 10 IS. */
 function mk(
   over: {
-    armor?: Partial<Record<Location, number>>;
-    armorRear?: Partial<Record<Location, number>>;
-    is?: Partial<Record<Location, number>>;
+    armor?: Partial<LocationValue>;
+    armorRear?: Partial<LocationValue>;
+    is?: Partial<LocationValue>;
   } = {},
 ): UnitDamageState {
-  const armor = {} as ArmorState;
-  const is = {} as ArmorState;
+  const armor = {} as LocationValue;
+  const is = {} as LocationValue;
   for (const loc of LOCATIONS) {
     armor[loc] = over.armor?.[loc] ?? 10;
     is[loc] = over.is?.[loc] ?? 10;

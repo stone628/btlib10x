@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { LOCATIONS } from "../src/core/types.js";
 import { resolveWeaponAttack } from "../src/rules/attack.js";
-import type { ArmorState, UnitDamageState } from "../src/rules/damage.js";
+import type { LocationValue, UnitDamageState } from "../src/rules/damage.js";
 import { scriptedRng } from "./helpers.js";
 
 function freshState(hp = 10): UnitDamageState {
-  const armor = {} as ArmorState;
-  const is = {} as ArmorState;
+  const armor = {} as LocationValue;
+  const is = {} as LocationValue;
   for (const loc of LOCATIONS) {
     armor[loc] = hp;
     is[loc] = hp;

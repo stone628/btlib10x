@@ -82,7 +82,7 @@ interface MechDef {
   weightClass: "Light" | "Medium" | "Heavy" | "Assault";
   techBase: string;
   walking: number; running: number; jumping: number; // running === ceil(walking*1.5)
-  armor: Record<Location, number> &            // torso = front only
+  armor: LocationValue &                     // torso = front only
     Partial<Record<"centerTorsoRear"|"leftTorsoRear"|"rightTorsoRear", number>>;
   weapons: WeaponMount[];                      // JSON-array form
   critSlots: CritSlots;                        // required; see below
@@ -121,9 +121,9 @@ interface ResolvedMechDef {
   model: string; name: string; tonnage: number;
   weightClass: ...; techBase: string;
   walking: number; running: number; jumping: number;
-  armor: Record<Location, number>;                     // front armor only
+  armor: LocationValue;                     // front armor only
   armorRear: Partial<Record<TorsoLocation, number>>;    // 3 torso rear values
-  internalStructure: Record<Location, number>;          // derived from tonnage
+  internalStructure: LocationValue;         // derived from tonnage
   weapons: Record<number, WeaponMount>;                 // re-keyed 1..N (1-based index)
   critSlots: ResolvedCritSlots;                         // weaponIndex-linked
   source: string;
