@@ -1,348 +1,348 @@
-# REVIEW.md — btlib10x code review
+# BoardModel refactoring plan
 
-Overall: high-quality, well-disciplined TypeScript project. Tight scope (Classic
-BattleTech quick-start subset, bipedal only), strict TS config
-(`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`), zero runtime deps,
-deterministic rule functions, in-place state mutation, atomic rollback at the
-session layer. Tests (167 passing) and the build/lint/typecheck triple are
-clean. Conventions in `AGENTS.md` are followed consistently.
+The rendered board is mature enough to warrant a structural cleanup.
+`BoardModel` and its supporting code grew additively — each new visual
+feature (terrain marks, elevation, facings, team tinting, edge tinting)
+was bolted on as another optional `Record<string, T>` dictionary. The
+result works but conflates layering, naming, and composition in ways that
+make extension and maintenance harder than necessary.
 
-## Findings ranked by impact
+## Current issues
 
-### High impact — correctness / robustness
+### 1. `styles` vs `cellStyles` — confusing dual-role naming
 
-1. `src/rules/game.ts:302-308`, `web/session.ts:317-319` — duplicate
-   hand-rolled "are these two hexes adjacent" check.
-2. `src/rules/game.ts:422-431`, `:500-502`, `src/rules/fireability.ts:48-57`
-   — three copies of the intervening-terrain woods-points sum.
-3. `src/rules/game.ts:447` — `decls.indexOf(decl) === 0` is O(n²) and
-   obscures intent; the values captured inside are loop-invariant.
-4. `src/rules/game.ts:521-528`, `:578-588` — destroy/remove flagging and
-   paired events are duplicated verbatim.
-5. `src/rules/damage.ts:137-148` — arm-blowoff copy/paste.
-6. `src/rules/initiative.ts:18` — `rng.d6() + rng.d6()` instead of `roll2D6`.
-7. `src/data/mechCatalog.generated.ts` — file comment claims "front + rear
-   summed" but the implementation keeps them separate. Same lie is baked
-   into the gen-script template.
+`styles` controls the **entire hex**: grid walls, coord label, belly
+parens, and the terrain mark at the bottom. `cellStyles` controls **just
+the occupant id text** inside the parentheses. The fallback is implicit —
+when `cellStyles[key]` is absent, the renderer uses `styles[key]` for the
+id glyph too.
 
-### Medium impact — convention / maintainability
+The actual semantic split is:
 
-8. `src/rules/attack.ts:128-137` — per-group `DamageApplication` accumulator
-   spreads the whole prior array each iteration (O(n²) for `steps`).
-9. `src/rules/movement.ts:141-248` — `reachableLandings` keeps a full
-   fragment path per state (heap pressure on every enqueue). Parent-pointer
-   BFS would be cheaper.
-10. `web/format.ts` (1075 lines) — biggest file in the repo; consider
-    splitting once a 4th command group lands.
-11. `src/rules/game.ts:618-621` — `nextActor` ordering math has a
-    effectively-unreachable `loser === winner` branch.
-12. `src/data/weapons.ts:30-32` — `WeaponsFile` type is unused outside its
-    module; either export or drop.
-13. `src/index.ts` — wildcard re-exports promote every internal helper
-    (`TRANSFER_INWARD`, `HIT_LOCATION_TABLE`, `parseWeaponsData`) into the
-    public surface. Curate when API stability matters.
+| Field         | What it tints                         | Source          |
+|---------------|---------------------------------------|-----------------|
+| `styles`      | Grid row, coord, walls, parens, mark  | Terrain type    |
+| `cellStyles`  | Occupant id inside `( )` only         | Team color      |
 
-### Low impact — nice-to-have / future-proofing
+The name `cellStyles` suggests it styles the whole cell. It does not.
+Callers must read the JSDoc to discover the fallback. A clearer name
+(`idStyles`) would make the contract self-documenting.
 
-14. `tsconfig.json` — missing `noUnusedLocals` / `noUnusedParameters`
-    (Biome catches unused imports, but TS-side errors are stricter).
-15. `src/rules/cluster.ts:8-20, 28-40` — keyed-by-roll Record types would
-    remove the `row - 2` arithmetic in the lookup helper.
-16. `src/data/schema.ts:232`, `weapons.ts:83`, `mapschema.ts:93` — three
-    `as unknown as` casts at validator exit points; safe but worth
-    documenting why exhaustive checks are trusted.
-17. `web/main.ts` / `web/cli.ts` — confirm no import cycle (visual scan
-    looks clean).
-18. `tests/` — `exampleGame.test.ts` and `webcli.test.ts` are full
-    integration tests; consider tagging with `describe("integration", ...)`.
-19. `web/session.ts:401` — `structuredClone` is the only non-trivial runtime
-    feature the engine relies on. Web-platform available, but worth a
-    comment.
+**Affected files:** `web/render.ts:73`, `web/renderer.text.ts:239,257,494`,
+`web/format.ts:1365,1373,1386`, `tests/render-styled.test.ts:107,151`.
 
-## What's already great (no change needed)
+### 2. No composition helper — `reachableModel()` manually reassembles
 
-- Determinism is enforced at the type system boundary: `Rng` injected
-  everywhere, all rule functions pure on inputs.
-- Atomic commit at `commitAtomic` (`web/session.ts:398-408`) — rules mutate
-  freely, session guarantees all-or-nothing.
-- i18n catalog with compile-time key enforcement; `kr.ts` cannot drift
-  from `en.ts`.
-- Generated `mechCatalog.generated.ts` with a `gen:mechs` step that runs
-  before typecheck/test/build.
-- Hand-rolled validators (no JSON Schema, no Zod) align with the
-  zero-runtime-deps rule and surface all errors at once.
-- Doc comments on every public function describing the rulebook source.
-- Biome for both lint and format.
-- One-shot `npm run lint && npm run typecheck && npm test` in `AGENTS.md`.
+`web/format.ts:1324-1390` (`reachableModel`) is the only call site that
+composes a new BoardModel on top of an existing one. It must:
 
-## Implementation checklist
+1. Call `battleModel(s.battle)` to get a base.
+2. Spread every field into a new mutable local: `const cells = { ...(base.cells ?? {}) }`.
+3. Mutate the locals (add `<>` markers, team-tinted cellStyles, edgeStyles).
+4. Return a fresh BoardModel literal, re-spreading the unchanged fields.
 
-- [x] Write REVIEW.md.
-- [x] Fix misleading comment in `mechCatalog.generated.ts` and the
-      `gen-mech-catalog.mjs` template.
-- [x] Extract `isAdjacent(a, b)` into `core/hex.ts`; reuse in
-      `rules/game.ts:executeMove` and `web/session.ts:queueEnter`. Added
-      coverage in `tests/hex.test.ts`.
-- [x] Extract `losWoodsPointsBetween(terrain, from, to)` and
-      `interveningTerrains(terrain, from, to)` into `rules/los.ts`; reuse
-      in `rules/game.ts:declareAttacks`,
-      `rules/game.ts:resolveUnitAttacks`, and
-      `rules/fireability.ts:suggestFireTargets`.
-- [x] Replace `decls.indexOf(decl) === 0` with a first-iteration flag
-      (`decls.forEach((decl, index) => { ... if (index === 0) ... })`).
-- [x] Extract `markUnitDestroyed(state, unit)` and use in both
-      `resolveUnitAttacks` and `advancePhase`.
-- [x] Replace arm-blowoff copy/paste with a `TORSO_TO_ARM` table loop in
-      `damage.ts`.
-- [x] Use `roll2D6(rng)` in `initiative.ts`.
-- [x] Re-export `isAdjacent` from `src/index.ts` so the web layer can
-      import it from the public surface.
-- [x] Run `npm run lint && npm run typecheck && npm test` — all green
-      (168 tests across 18 files, was 167 before the new adjacency test).
+This spread-mutate-reassemble pattern is the direct cost of a flat bag
+with no composition API. It is 27 lines of boilerplate that must be
+updated every time a new BoardModel field is added.
 
-## Summary of changes
+### 3. Factory functions duplicate terrain derivation logic
 
-- `src/core/hex.ts` — added `isAdjacent(a, b)`.
-- `src/rules/los.ts` — added `losWoodsPointsBetween(terrain, from, to)`
-  and `interveningTerrains(terrain, from, to)`.
-- `src/rules/damage.ts` — added `TORSO_TO_ARM` map; replaced the
-  rightTorso/leftTorso copy/paste with a single lookup.
-- `src/rules/game.ts`:
-  - Removed unused `FACINGS` and `neighbor` imports (replaced by
-    `isAdjacent`); added imports for the new LOS helpers.
-  - Replaced inline jump-adjacency loop with `isAdjacent`.
-  - `declareAttacks` switched to `losWoodsPointsBetween`, switched to
-    `forEach((decl, index) => …)` with an `index === 0` flag (eliminates
-    the O(n²) `decls.indexOf(decl)` lookup).
-  - `resolveUnitAttacks` uses the new `interveningTerrains` helper.
-  - Extracted `markUnitDestroyed(state, unit)`; used in both
-    `resolveUnitAttacks` and `advancePhase`'s end-of-phase kill sweep.
-- `src/rules/fireability.ts` — dropped the local `woodsPoints` helper in
-  favor of `losWoodsPointsBetween`; cleaned up imports.
-- `src/rules/initiative.ts` — uses `roll2D6(rng)` instead of
-  `rng.d6() + rng.d6()`.
-- `src/index.ts` — re-export `isAdjacent` from the public surface.
-- `web/session.ts` — `queueEnter` calls `isAdjacent`; `neighbor` import
-  removed.
-- `scripts/gen-mech-catalog.mjs` and the regenerated
-  `src/data/mechCatalog.generated.ts` — corrected the comment that
-  claimed "front + rear summed" (the implementation keeps them
-  separate).
-- `tests/hex.test.ts` — added an `isAdjacent` test (same-hex, all six
-  neighbors, and a couple of far hexes).
+`mapModel()` (`renderer.text.ts:376-407`) and `battleModel()`
+(`renderer.text.ts:429-496`) both independently:
 
-### reachableLandings parent-pointer experiment
+- Derive terrain marks from a cell list (mapModel from `TerrainHexDef[]`,
+  battleModel from `BattleState.cells`).
+- Build per-hex terrain styles from `TERRAIN_STYLES`.
+- Filter out zero elevations.
 
-Tried the parent-pointer BFS refactor (step 1+3 from the plan). It shipped
-the public API unchanged and stayed 191/191 green, but the bench (`node
-tmp/profile-reach.mjs`, 200 reps on 100×100 empty board) measured a
-**regression on the high end**:
+The logic is structurally identical but operates on different input
+shapes (`TerrainHexDef` vs `HexCell`), so it was copy-pasted rather than
+shared. Adding a new terrain-dependent visual feature (e.g. partial cover
+indicators) would require updating both factories.
 
-| mode / walk | states | before (ms) | after (ms) | delta |
-|-------------|--------|-------------|------------|-------|
-| walk 4      |    116 |       0.154 |       0.148 |  -3.8% |
-| walk 8      |    712 |       0.865 |       0.894 |  +3.3% |
-| walk 12     |  1 880 |       2.492 |       2.652 |  +6.5% |
-| run 4       |    210 |       0.173 |       0.177 |  +2.3% |
-| run 8       |  1 506 |       1.531 |       1.686 | +10.2% |
-| run 12      |  4 098 |       4.514 |       5.118 | +13.4% |
-| jump 4      |  1 302 |       1.143 |       1.223 |  +7.0% |
-| jump 8      |  4 902 |       5.017 |       5.803 | +15.7% |
-| jump 12     | 10 806 |      12.652 |      15.652 | +23.7% |
+### 4. `drawCanvas()` is a monolithic 90-line loop
 
-The CPU profile (`node --cpu-prof`, `tmp/cpuprof-summary.mjs`) explains
-why: `rebuildPath` (the new end-of-search pass) ate 20% of the wall time
-at jump 12 — roughly the same number of array writes, just done after
-the BFS instead of during it. The path-spread savings were not the
-dominant cost; the dominant costs are still:
+`renderer.text.ts:193-281` does everything in one pass:
 
-- 12.4% in `enqueue` (Map ops; the function-call overhead is small but
-  the BFS body has 2 turn + 1 forward + 1 backward call per state).
-- 20.4% in `rebuildPath` (the new function, doing the same array
-  writes the old code did at the BFS call site).
-- 6.2% in `parseHexKey` (the post-search loop re-parses the state
-  key string back into `{col, row}`, even though the state queue
-  already had the parsed hex).
-- The BFS body itself in `reachableLandings` (34.6% self).
+- Hex grid structure (walls, coords, edges)
+- Unit id placement in bellies
+- Terrain mark placement
+- Elevation digit display
+- Facing arrow overlay
+- Edge style tinting
 
-**Reverted.** A second pass that also (a) drops `parseHexKey` by reading
-the hex from the queue at end-of-search, (b) collapses `dist` + `parent`
-into one `Map<key, { cost, parent, frag }>`, and (c) moves the
-end-of-search loop to walk the queue directly instead of `dist`, would
-probably net out positive. Skipped for now because the current bench
-numbers are well under one frame for every realistic CLI case, and the
-deliverable is the *data*, not the refactor.
+Each concern is interleaved with the others inside the same
+`for col → for row` loop. Adding a new rendering layer (e.g. damage
+overlay, LOS highlight, movement trail) requires modifying this single
+function and understanding all existing layers to avoid side effects.
 
-Decision: keep the current implementation. Re-run `node
-tmp/profile-reach.mjs` whenever the engine gains a 'Mech with jump MP
-> 10 or a board > 30×30; if any case crosses 16 ms, revisit.
+### 5. File-level circular re-export chain
 
-## Deferred (not addressed)
+`web/render.ts` re-exports types and values from `web/renderer.text.ts`.
+`web/renderer.text.ts` imports `BoardModel` back from `web/render.ts`.
+This compiles (TypeScript resolves the cycle), but it creates a
+conceptual circularity: the "public" types live in `render.ts` while the
+implementations live in `renderer.text.ts`, and neither file is
+self-contained.
 
-- [ ] `reachableLandings` parent-pointer BFS — **tried, reverted**: see
-      `### reachableLandings parent-pointer experiment` below. The current
-      implementation is the cheapest-correct version we can ship without
-      a follow-up that addresses `rebuildPath` itself or collapses the
-      Map ops. Defer until a real call site shows >16 ms wall time.
+### 6. `battleModel()` suppresses `cellStyles` when explicit `styles` is passed
+
+At `renderer.text.ts:494`:
+
+```ts
+...(styles === undefined && Object.keys(autoCells).length > 0
+  ? { cellStyles: autoCells }
+  : {}),
+```
+
+When a caller passes an explicit `styles` override, the factory silently
+drops all team-colored `cellStyles`. This is intentional (explicit styles
+replace automatic ones entirely — tested at
+`render-styled.test.ts:192-224`) but the behavior is non-obvious. A
+caller passing `styles` for terrain highlighting would not expect to also
+lose team-colored unit ids.
+
+---
+
+## Refactoring plan
+
+Each phase is independently shippable and testable. Run
+`npm run lint && npm run typecheck && npm test` after every phase.
+
+### Phase 1 — Rename `cellStyles` → `idStyles`
+
+**Goal:** Make the field contract self-documenting.
+
+**Changes:**
+
+- `web/render.ts:73` — rename the property in the `BoardModel` interface.
+- `web/renderer.text.ts:239,257,494` — update all reads/writes.
+- `web/format.ts:1365,1373,1386` — update the `reachableModel()` spread
+  and the variable name.
+- `tests/render-styled.test.ts:107,151` — update property access in
+  assertions.
+
+**Risk:** Mechanical rename. No behavioral change.
+
+**Verification:** grep for `cellStyles` across the repo; zero hits
+expected after the rename.
+
+### Phase 2 — Extract terrain-derivation helpers
+
+**Goal:** Single source of truth for terrain→marks, terrain→styles,
+terrain→elevations.
+
+**New file:** `web/board-derivation.ts`
+
+```ts
+import type { HexCell, TerrainHexDef } from "btlib10x";
+import type { CharStyle } from "./render.js";
+import { TERRAIN_GLYPHS, TERRAIN_STYLES } from "./renderer.text.js";
+
+/** Terrain glyphs keyed by "col,row" (non-clear cells only). */
+export function deriveTerrainMarks(
+  cells: readonly HexCell[],
+  width: number,
+): Record<string, string> | undefined;
+
+/** Per-terrain CharStyle keyed by "col,row" (non-clear cells only). */
+export function deriveTerrainStyles(
+  cells: readonly HexCell[],
+  width: number,
+): Record<string, CharStyle> | undefined;
+
+/** Non-zero elevation entries keyed by "col,row". */
+export function deriveElevations(
+  cells: readonly HexCell[],
+  width: number,
+): Record<string, number> | undefined;
+
+/** Same as deriveTerrainMarks but for TerrainHexDef[] (map display). */
+export function deriveMapMarks(
+  terrain: readonly TerrainHexDef[],
+): Record<string, string> | undefined;
+
+/** Same as deriveTerrainStyles but for TerrainHexDef[] (map display). */
+export function deriveMapStyles(
+  terrain: readonly TerrainHexDef[],
+): Record<string, CharStyle> | undefined;
+```
+
+**Changes to `battleModel()`:** Replace the inline derivation loops
+(lines 443-456, 468-482) with calls to `deriveTerrainStyles()`,
+`deriveTerrainMarks()`, `deriveElevations()`.
+
+**Changes to `mapModel()`:** Replace the inline loops (lines 385-396)
+with calls to `deriveMapMarks()`, `deriveMapStyles()`.
+
+**Risk:** Low. The derivation logic is extracted verbatim; factory
+signatures and return values are unchanged.
+
+**Verification:** existing `render.test.ts` and `render-styled.test.ts`
+cover both factories.
+
+### Phase 3 — Add `composeBoard()` helper
+
+**Goal:** Eliminate the manual spread-reassemble pattern.
+
+**Add to `web/board-derivation.ts`:**
+
+```ts
+import type { BoardModel } from "./render.js";
+
+export interface BoardOverlay {
+  readonly cells?: Record<string, string>;
+  readonly idStyles?: Record<string, CharStyle>;
+  readonly edgeStyles?: Record<string, CharStyle>;
+  readonly col0?: number;
+  readonly row0?: number;
+  readonly cols?: number;
+  readonly rows?: number;
+}
+
+/**
+ * Merge `overlay` fields on top of `base`, producing a new BoardModel.
+ * Fields present in `overlay` replace the corresponding base field;
+ * absent fields pass through unchanged.
+ */
+export function composeBoard(base: BoardModel, overlay: BoardOverlay): BoardModel;
+```
+
+**Rewrite `reachableModel()`** (`format.ts:1324-1390`) to build a
+`BoardOverlay` and call `composeBoard(base, overlay)`. The function
+shrinks from ~27 lines of spread-reassemble to ~10 lines of overlay
+construction.
+
+**Risk:** Low. The composition logic is identical to the existing
+spread pattern, just centralized.
+
+**Verification:** `render-styled.test.ts:168-190` (edgeStyles) and
+manual reachable-map testing.
+
+### Phase 4 — Split `drawCanvas()` into named layers
+
+**Goal:** Each rendering concern becomes an independent, testable
+function operating on the same `Canvas`.
+
+**In `web/renderer.text.ts`, replace `drawCanvas()` with:**
+
+```ts
+function drawCanvas(model: BoardModel): Canvas {
+  const canvas = makeCanvas(model);
+  drawHexGrid(canvas, model);     // walls, coord labels, edges
+  drawUnitIds(canvas, model);     // occupant text in bellies
+  drawTerrainMarks(canvas, model);// glyphs at hex bottom
+  drawElevationDigits(canvas, model);
+  drawFacingArrows(canvas, model);
+  applyEdgeStyles(canvas, model); // edge tinting (read-only pass)
+  return canvas;
+}
+```
+
+Each function receives `(canvas: Canvas, model: BoardModel)` and
+mutates only its relevant canvas cells. The layer order is fixed
+(matches the current rendering order: grid → units → marks → elevation →
+facing arrows → edge styles).
+
+**Sub-function signatures:**
+
+```ts
+function drawHexGrid(canvas: Canvas, model: BoardModel): void;
+function drawUnitIds(canvas: Canvas, model: BoardModel): void;
+function drawTerrainMarks(canvas: Canvas, model: BoardModel): void;
+function drawElevationDigits(canvas: Canvas, model: BoardModel): void;
+function drawFacingArrows(canvas: Canvas, model: BoardModel): void;
+function applyEdgeStyles(canvas: Canvas, model: BoardModel): void;
+```
+
+**Risk:** Medium. The logic moves from one function to six, so
+inter-layer assumptions (e.g. "the grid is drawn first so wall chars
+exist for facing arrows to overwrite") must be preserved by the fixed
+call order. Each sub-function can be tested independently via a
+pre-populated canvas.
+
+**Verification:** All existing render tests exercise the full pipeline.
+Add a focused unit test for `applyEdgeStyles` using a synthetic canvas.
+
+### Phase 5 — Flatten the file-level circular re-export
+
+**Goal:** Eliminate the circular dependency between `render.ts` and
+`renderer.text.ts`.
+
+**New file:** `web/board-types.ts`
+
+Move the pure type definitions out of `web/render.ts`:
+
+```ts
+// web/board-types.ts — BoardModel, CharStyle, Span, ColorName
+import type { Facing } from "btlib10x";
+
+export type ColorName = "red" | "green" | "yellow" | "blue"
+  | "magenta" | "cyan" | "white" | "dim";
+
+export interface CharStyle { ... }
+export interface Span { ... }
+export interface BoardModel { ... }
+```
+
+**`web/render.ts` becomes a barrel:**
+
+```ts
+// web/render.ts — re-exports from board-types and renderer
+export type { BoardModel, CharStyle, Span, ColorName } from "./board-types.js";
+export { boardToText, boardToSpans, boardToChars, ... } from "./renderer.text.js";
+export { battleModel, mapModel, renderMap } from "./renderer.text.js";
+```
+
+**`web/renderer.text.ts`** imports from `./board-types.js` instead of
+`./render.js`, breaking the cycle.
+
+**Risk:** Low. No behavioral change; only import paths change.
+
+**Verification:** `tsc --noEmit` confirms no new cycles; all tests pass.
+
+---
+
+## Phase execution order
+
+```
+Phase 1  (rename)            ─── mechanical, zero risk
+Phase 2  (derive helpers)    ─── extract logic, no API change
+Phase 3  (composeBoard)      ─── new helper, rewrite reachableModel
+Phase 4  (drawCanvas split)  ─── restructure internals, same outputs
+Phase 5  (file reorg)        ─── move types, break cycle
+```
+
+Phases 1–3 are independent of 4–5 and can be done in any order.
+Phase 5 depends on nothing else and can be done at any time. Phase 4
+benefits from Phase 2 being done first (the sub-functions can call the
+new derivation helpers directly).
+
+## Deferred
+
+These items are out of scope for this refactoring pass:
+
 - [ ] `web/format.ts` split — defer until a 4th command group lands.
-- [ ] `nextActor` unreachable `loser === winner` branch — leave with a
-      comment.
-- [ ] Curate `src/index.ts` re-exports — defer until API stability matters.
-- [ ] `noUnusedLocals` / `noUnusedParameters` in `tsconfig.json` — Biome
-      already covers unused imports.
-- [ ] Cluster-table typed-as-Record refactor — cosmetic; current form
-      mirrors the printed booklets.
-- [ ] Tag integration tests with `describe("integration", ...)` — defer.
+- [ ] `BoardModel` gaining new fields (e.g. damage overlay, LOS
+      highlight) — do that after the refactoring lands so the new fields
+      go into the clean structure.
+- [ ] `battleModel()` silently dropping `idStyles` when explicit `styles`
+      is passed — document the behavior with a comment; changing it
+      would alter rendering semantics.
 
-## Elevation feature — implementation summary
+## Verification checklist
 
-Adds the four CBT elevation rules (movement climb cost, jump ignoring
-elevation, real-valued LOS ray, height-difference to-hit) to the engine.
-Scope per the planned minimal subset: bipedal 'Mechs only, no buildings,
-basements, water depth, hull-down, or multi-floor interiors.
+After all phases, run:
 
-### Schema & data
+```sh
+npm run lint && npm run typecheck && npm test
+```
 
-- `src/core/types.ts` — `Hex.level?: number` (default 0);
-  `TerrainHexDef.level?: number` (default 0).
-- `src/core/terrain.ts` — new constants/helpers:
-  `DEFAULT_LEVEL`, `MP_PER_LEVEL_CLIMB`, `levelAt(map, hex)`,
-  `costToClimb(fromLevel, toLevel)`.
-- `src/data/mapschema.ts` — accepts optional `level` on terrain entries;
-  validator rejects non-integer / negative values; `toEngineTerrain`
-  passes the level through.
-- `src/index.ts` — re-exports `DEFAULT_LEVEL`, `MP_PER_LEVEL_CLIMB`,
-  `levelAt`, `costToClimb` (and the existing `costToEnter`).
+Additional manual checks:
 
-### Battle state
-
-- `src/rules/game.ts` — `BattleState.elevation: Record<string, number>`;
-  `createBattle` populates it from each `TerrainHexDef.level` (missing
-  values stay at the default 0). `executeMove` rejects >1-level ground
-  steps and adds `costToClimb` to the per-step MP cost.
-- `src/rules/los.ts` — `losBlockedByElevation(elevation, from, to)`
-  computes the real-valued ray between attacker/target LOS levels
-  (`hex.level + 1` for bipedal 'Mechs) and reports a block when an
-  intervening hex's own LOS level exceeds the ray. `losClear(elevation,
-  terrain, from, to)` combines woods and elevation LOS checks.
-- `src/rules/fireability.ts` — `suggestFireTargets` now also reports
-  `noLos` for elevation blocks and passes `attackerLevel` /
-  `targetLevel` to `computeToHit`.
-- `src/rules/attack.ts` — `WeaponAttackInput` gains optional
-  `attackerLevel` / `targetLevel`; `resolveWeaponAttack` plumbs them
-  into `computeToHit`.
-- `src/rules/tohit.ts` — `AttackModifiers` gains `attackerLevel?` /
-  `targetLevel?`; `ToHitBreakdown` exposes `heightDiff` (raw) and
-  `heightMod` (negative `heightDiff`).
-- `src/rules/movement.ts` — `ReachabilityOptions` gains
-  `elevation: Readonly<Record<string, number>>`; `reachableLandings`
-  charges +1 MP per level climbed for ground moves, refuses >1 level
-  steps, and lets jump ignore elevation.
-
-### Web layer
-
-- `web/render.ts` — `BoardModel.elevations?: Readonly<Record<string,
-  number>>` (keyed by `"col,row"`).
-- `web/renderer.text.ts` — `drawCanvas` reads the per-hex level
-  instead of the old `ELEVATION_DIGIT` constant; `mapModel` accepts
-  elevations and emits them only for non-zero values; `battleModel`
-  derives elevations from `state.elevation`.
-- `web/format.ts` — `info map` reports an `elevation: L1 4, L2 1`
-  breakdown alongside the terrain count; threads `elevations` into
-  the static sheet.
-- `web/session.ts` — `replaySteps`, `queueEnter`, and `moveStepsInfo`
-  all add `costToClimb` to per-step MP; `queueEnter` rejects >1-level
-  steps with the new `err.climbTooSteep` error.
-- `web/i18n/en.ts` + `web/i18n/kr.ts` — `err.climbTooSteep`,
-  `info.elevationLine` (with English + Korean text).
-
-### Tests
-
-- `tests/hex.test.ts` — `levelAt` returns the stored value or
-  `DEFAULT_LEVEL`.
-- `tests/los.test.ts` (new) — same-level clear LOS; level-1 ridge
-  blocks level-0-to-level-0; level-2 attacker over a level-1 ridge
-  is clear; tall peak always blocks; `losClear` combines woods and
-  elevation.
-- `tests/reach.test.ts` — +1 MP per level climbed; >1-level ground
-  step rejected; descent is free; jump ignores elevation.
-- `tests/tohit.test.ts` — same level = 0 heightDiff, +1 attacker = -1
-  to TN, attacker -2 = +2 to TN; new `heightDiff` / `heightMod` fields
-  exposed in the breakdown.
-- `tests/elevation.test.ts` (new) — ridge-duel worked example
-  covering all four rules end-to-end on a small board.
-- `tests/mapdata.test.ts` — accepts and rejects optional `level`.
-
-### Final state
-
-- `npm run lint && npm run typecheck && npm test` — all green:
-  191 tests across 20 files (up from 168 / 18).
-- Out of scope (deferred): buildings, basements, water depth,
-  hull-down, multi-floor building interiors, "falling" damage.
-
-### 1-based coordinate conversion (post-elevation)
-
-A project-wide conversion made all hex coordinates 1-based to match the
-printed mapsheet labels. The 0-based → 1-based conversion that lived in
-`toEngineTerrain` and in every `+1`/`-1` at display boundaries was
-deleted.
-
-- `Hex` and `TerrainHexDef` shapes are unchanged; the convention is
-  documented in the type comments.
-- `src/data/mapschema.ts` validates `1..width` / `1..height` directly.
-  `toEngineTerrain` is removed (the public surface re-exports it no
-  longer).
-- The `web/cli.ts` `coord()` helper no longer subtracts 1 — user input
-  is 1-based and goes straight into the engine.
-- The `web/format.ts` `disp()` and `web/renderer.text.ts` `coordLabel()`
-  no longer add 1 — the engine value is already 1-based.
-- The renderer's drawing loop iterates `col = 1..cols` and
-  `row = 1..rows`. Cols' x positions are now `(col - 1) * COL_STRIDE`
-  so col 1 starts at x=0 (matching the 0-based original layout).
-- A `tmp/bump-coords.mjs` script ran the mechanical +1 on every
-  `position: { col: N, row: M }` literal and on every terrain-entry
-  hex literal in `tests/`. Hardcoded `l.hex.col === N` comparisons and
-  display-string expectations were updated by hand after the script.
-
-### Canvas-width fix (uncovered by the 1-based change)
-
-`web/renderer.text.ts` had `canvasCols = (cols - 1) * COL_STRIDE +
-HEX_WIDTH` — fine for 0-based, but after the 1-based switch the
-rightmost cell now starts at `cols*COL_STRIDE` and needed one more
-column's worth of room. Surfaced as tests with 3+ columns truncating
-the rightmost cell. Fixed by changing `canvasCols` to `cols * COL_STRIDE
-+ HEX_WIDTH` (the 1-based form of the same formula). All 12 render
-tests pass.
-
-### Hex-geometry bug (fixed)
-
-User's original report: from a unit at display (3,4) facing "ne", the
-engine reported a forward step to (4,4) but the visual `↗` points to
-what looks like (4,3). Root cause: the diagonal `ne`/`se`/`sw`/`nw`
-deltas in `src/core/hex.ts` were swapped relative to the renderer's
-stagger. The renderer lowers odd columns (`baseY = col % 2 === 1`
-STAGGER), which is the same as raising even columns, so an even-col
-hex's `ne` neighbor is one col over AND one row up — the old code put
-it at the same row. `n`/`s` were already right.
-
-Fix: replaced both delta tables in `src/core/hex.ts`:
-- even col: ne [+1,-1], se [+1,0], nw [-1,-1], sw [-1,0]
-- odd col:  ne [+1,0], se [+1,+1], nw [-1,0], sw [-1,+1]
-
-The `offsetToCube` conversion already encoded even-columns-raised
-(`z = row - (col + (col & 1)) / 2`), consistent with the renderer, so
-cube-distance and line tracing were untouched. Updated the module
-header comment.
-
-Tests that pinned the old relationships were updated: `hex.test.ts`,
-`reach.test.ts` (ne/nw side-neighbor hexes and the diagonal two-MP-walk
-path), `elevation.test.ts` (the ridge-duel units now face se/sw toward
-the ridge, since even-col `ne` went up instead of across), `game.test.ts`
-(se-forward chain, backward hex, occupied-forward hex, jump hop), and
-`exampleGame.test.ts` (the Wolverine's run now ends at (4,6) instead of
-(4,5); range 7, woods (7,7) on the LOS line, and all to-hit numbers are
-unchanged). Full suite: lint + typecheck + 191/191 tests passing.
-
-Final state: lint + typecheck + 191/191 tests passing. Out-of-scope
-items: buildings, basements, water depth, hull-down, multi-floor
-building interiors, "falling" damage, and the hex-geometry delta fix.
+- `board text` renders identical output before and after.
+- `board` (CSS Grid) renders identical styled output.
+- `reachable` map renders with correct team tinting and edge styles.
+- `info map <name>` renders terrain glyphs and elevation digits.
+- No TypeScript import cycles: `tsc --noEmit` clean.
+- `grep -r 'cellStyles' web/ tests/` returns zero hits (Phase 1 done).
