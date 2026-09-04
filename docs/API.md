@@ -484,7 +484,7 @@ The renderer lives in `web/render.ts`, `web/renderer.text.ts`, and
 
 Key model: `battleModel(state, overlay?, marks?, styles?)` / `mapModel(...)`
 build a `BoardModel` (cells + per-character `CharStyle` hints keyed by
-`"col,row"`, including `BoardModel.elevations` and team-colored `cellStyles`);
+`"col,row"`, including `BoardModel.elevations` and team-colored `idStyles`);
 `boardToText(model)` returns the flat ASCII form and `boardToSpans(model)`
 returns styled span runs. Reachable-hex clipping for the movement `mode`
 command is provided by `reachableModel` in `web/format.ts`. The web terminal

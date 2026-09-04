@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getMapDef } from "../src/data/index.js";
+import { getMapDef, type MapDef } from "../src/data/index.js";
 import { createBattle, type UnitInit } from "../src/rules/game.js";
 import type { BoardModel, CharStyle, Span } from "../web/render.js";
 import {
@@ -22,12 +22,11 @@ describe("styled board model", () => {
   if (!beginner) throw new Error("missing beginner map");
 
   it("span text reproduces the flat rendering exactly (maps)", () => {
-    const terrain = beginner.terrain;
-    const flat = renderMap(terrain, beginner.width, beginner.height);
-    const spans = boardToSpans(mapModel(terrain, beginner.width, beginner.height));
+    const flat = renderMap(beginner);
+    const spans = boardToSpans(mapModel(beginner));
     expect(spans.map(spansText).join("\n")).toBe(flat);
     // Cross-check against the independent text serializer too.
-    expect(boardToText(mapModel(terrain, beginner.width, beginner.height))).toBe(flat);
+    expect(boardToText(mapModel(beginner))).toBe(flat);
   });
 
   it("span text reproduces the flat rendering exactly (battles)", () => {
@@ -104,7 +103,7 @@ describe("styled board model", () => {
     const model = battleModel(state);
     const woods = model.styles?.["3,3"];
     expect(woods).toEqual({ cls: "t-lightWoods" });
-    expect(model.cellStyles?.["2,2"]).toEqual(TEAM_STYLES[0]);
+    expect(model.idStyles?.["2,2"]).toEqual(TEAM_STYLES[0]);
 
     const lines = boardToSpans(model);
     const team0 = lines.flat().find((sp) => sp.text.includes("hbk"));
@@ -117,7 +116,14 @@ describe("styled board model", () => {
 
     // Terrain tinting shows up in spans wherever the glyph is drawn;
     // mapModel derives its own marks, so use it for the glyph check.
-    const mapSpans = boardToSpans(mapModel([{ col: 2, row: 2, type: "heavyWoods" }], 2, 2));
+    const tempMap: MapDef = {
+      name: "temp",
+      width: 2,
+      height: 2,
+      terrain: [{ col: 2, row: 2, type: "heavyWoods" }],
+      legends: ["heavyWoods"],
+    };
+    const mapSpans = boardToSpans(mapModel(tempMap));
     const glyph = mapSpans.flat().filter((sp) => sp.style !== undefined && sp.text.includes("W"));
     expect(glyph.length).toBeGreaterThan(0);
     expect(glyph.every((sp) => sp.style?.cls === "t-heavyWoods")).toBe(true);
@@ -148,7 +154,7 @@ describe("styled board model", () => {
     );
     const model = battleModel(state);
     expect(model.styles?.["3,2"]).toEqual({ cls: "t-lightWoods" });
-    expect(model.cellStyles?.["3,2"]).toEqual(TEAM_STYLES[0]);
+    expect(model.idStyles?.["3,2"]).toEqual(TEAM_STYLES[0]);
 
     // Column 3 is odd: not staggered (even columns are staggered down). In
     // 1-based coords, col 3 row 2 has its top label at canvas y = 0 + 1*4 = 4,
@@ -220,13 +226,12 @@ describe("styled board model", () => {
     expect(model.styles?.["1,0"]).toBeUndefined();
     expect(model.styles && Object.keys(model.styles)).toEqual(["0,0"]);
     // Explicit styles suppress automatic styling entirely — including team ids.
-    expect(model.cellStyles).toBeUndefined();
+    expect(model.idStyles).toBeUndefined();
   });
 
   it("trims trailing whitespace exactly like the flat renderer", () => {
-    const terrain = beginner.terrain;
-    const flatLines = renderMap(terrain, beginner.width, beginner.height).split("\n");
-    const spanLines = boardToSpans(mapModel(terrain, beginner.width, beginner.height));
+    const flatLines = renderMap(beginner).split("\n");
+    const spanLines = boardToSpans(mapModel(beginner));
     spanLines.forEach((line, i) => {
       expect(spansText(line)).toBe(flatLines[i]);
       const last = line[line.length - 1];
@@ -238,9 +243,8 @@ describe("styled board model", () => {
   });
 
   it("boardToChars reproduces flat rendering character by character", () => {
-    const terrain = beginner.terrain;
-    const flat = renderMap(terrain, beginner.width, beginner.height);
-    const chars = boardToChars(mapModel(terrain, beginner.width, beginner.height));
+    const flat = renderMap(beginner);
+    const chars = boardToChars(mapModel(beginner));
     const reconstructed = chars.map((line) => line.map((c) => c.text).join("")).join("\n");
     expect(reconstructed).toBe(flat);
   });

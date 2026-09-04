@@ -1,4 +1,11 @@
-import { type BattleState, FACINGS, type Facing, type TerrainHexDef } from "btlib10x";
+import { type BattleState, FACINGS, type Facing, type MapDef } from "btlib10x";
+import {
+  deriveElevations,
+  deriveMapMarks,
+  deriveMapStyles,
+  deriveTerrainMarks,
+  deriveTerrainStyles,
+} from "./board-derivation.js";
 import { i18n, type LocaleId } from "./i18n/index.js";
 import type { BoardModel, CharStyle, Span } from "./render.js";
 
@@ -192,7 +199,7 @@ function stampInto(
 /** Assemble a {@link BoardModel} into the char/style canvases. */
 function drawCanvas(model: BoardModel): Canvas {
   const canvas = makeCanvas(model);
-  const { rows, cells, marks, elevations, styles, cellStyles, facings, edgeStyles } = model;
+  const { rows, cells, marks, elevations, styles, idStyles, facings, edgeStyles } = model;
   const col0 = model.col0 ?? 1;
   const row0 = model.row0 ?? 1;
   const cols = model.cols + (col0 - 1);
@@ -236,7 +243,7 @@ function drawCanvas(model: BoardModel): Canvas {
       stamp(x, y + 2, `${GRID_GLYPHS.vertW}${" ".repeat(BELLY_WIDTH)}${GRID_GLYPHS.vertE}`, style);
       if (shown.length > 0) {
         const left = Math.ceil((BELLY_WIDTH - shown.length) / 2);
-        stamp(x + 1 + left, y + 2, shown, cellStyles?.[key] ?? style);
+        stamp(x + 1 + left, y + 2, shown, idStyles?.[key] ?? style);
       }
       stamp(x + 1, y + 3, `${GRID_GLYPHS.edgeSW}    ${GRID_GLYPHS.edgeSE}`, style);
       const mark = marks?.[key];
@@ -254,7 +261,7 @@ function drawCanvas(model: BoardModel): Canvas {
       const f = facings?.[key];
       const glyph = f === undefined ? undefined : FACING_GLYPH[f];
       if (glyph !== undefined) {
-        const arrowStyle = cellStyles?.[key] ?? style;
+        const arrowStyle = idStyles?.[key] ?? style;
         if (glyph === FACING_GLYPH.n) setChar(x + 3, y, glyph, arrowStyle);
         else if (glyph === FACING_GLYPH.s) setChar(x + 4, y + ROW_STRIDE, glyph, arrowStyle);
         else if (glyph === FACING_GLYPH.nw) setChar(x + 1, y + 1, glyph, arrowStyle);
@@ -374,35 +381,25 @@ export function boardToChars(model: BoardModel): Span[][] {
  * Pass `elevations` to render non-zero ground levels on the map.
  */
 export function mapModel(
-  terrain: readonly TerrainHexDef[],
-  width: number,
-  height: number,
+  map: MapDef,
   styles?: Readonly<Record<string, CharStyle>>,
   elevations?: Readonly<Record<string, number>>,
 ): BoardModel {
-  const marks: Record<string, string> = {};
-  const auto: Record<string, CharStyle> = {};
-  for (const { col, row, type } of terrain) {
-    const glyph = TERRAIN_GLYPHS[type];
-    if (glyph !== undefined) {
-      marks[`${col},${row}`] = glyph;
-      const st = TERRAIN_STYLES[type];
-      if (st !== undefined) auto[`${col},${row}`] = st;
-    }
-  }
+  const marks = deriveMapMarks(map.terrain);
+  const auto = deriveMapStyles(map.terrain);
   const filteredElevations =
     elevations !== undefined
       ? Object.fromEntries(Object.entries(elevations).filter(([, v]) => v !== 0))
       : undefined;
   return {
-    cols: Math.max(1, width),
-    rows: Math.max(1, height),
+    cols: Math.max(1, map.width),
+    rows: Math.max(1, map.height),
     cells: {},
-    ...(Object.keys(marks).length > 0 ? { marks } : {}),
+    ...(marks !== undefined ? { marks } : {}),
     ...(filteredElevations !== undefined && Object.keys(filteredElevations).length > 0
       ? { elevations: filteredElevations }
       : {}),
-    ...(styles !== undefined ? { styles } : Object.keys(auto).length > 0 ? { styles: auto } : {}),
+    ...(styles !== undefined ? { styles } : auto !== undefined ? { styles: auto } : {}),
   };
 }
 
@@ -412,12 +409,8 @@ export function mapModel(
  * {@link TERRAIN_GLYPHS} marker at the bottom center of the hex
  * (`\ w /`); everything else is clear ground.
  */
-export function renderMap(
-  terrain: readonly TerrainHexDef[],
-  width: number,
-  height: number,
-): string {
-  return boardToText(mapModel(terrain, width, height));
+export function renderMap(map: MapDef): string {
+  return boardToText(mapModel(map));
 }
 
 /**
@@ -438,60 +431,33 @@ export function battleModel(
   const cells: Record<string, string> = {};
   const facings: Record<string, Facing> = {};
   if (overlay !== undefined) Object.assign(cells, overlay);
-  const auto: Record<string, CharStyle> = {};
-  const elevations: Record<string, number> = {};
-  for (let i = 0; i < state.cells.length; i++) {
-    const cell = state.cells[i]!;
-    if (cell.terrain !== "clear") {
-      const col = (i % width) + 1;
-      const row = Math.floor(i / width) + 1;
-      const key = `${col},${row}`;
-      const st = TERRAIN_STYLES[cell.terrain];
-      if (st !== undefined) auto[key] = st;
-    }
-    if (cell.level !== 0) {
-      const col = (i % width) + 1;
-      const row = Math.floor(i / width) + 1;
-      elevations[`${col},${row}`] = cell.level;
-    }
-  }
-  const autoCells: Record<string, CharStyle> = {};
   for (const unit of Object.values(state.units)) {
     if (unit.removed) continue;
     const key = `${unit.position.col},${unit.position.row}`;
     cells[key] = unit.id;
     facings[key] = unit.facing;
+  }
+
+  const auto = deriveTerrainStyles(state);
+  const resolvedMarks = marks ?? deriveTerrainMarks(state);
+  const elevations = deriveElevations(state);
+  const autoCells: Record<string, CharStyle> = {};
+  for (const unit of Object.values(state.units)) {
+    if (unit.removed) continue;
+    const key = `${unit.position.col},${unit.position.row}`;
     const team = TEAM_STYLES[unit.team];
     if (team !== undefined) autoCells[key] = team;
   }
-
-  const resolvedMarks =
-    marks ??
-    (() => {
-      const m: Record<string, string> = {};
-      for (let i = 0; i < state.cells.length; i++) {
-        const cell = state.cells[i]!;
-        if (cell.terrain === "clear") continue;
-        const col = (i % width) + 1;
-        const row = Math.floor(i / width) + 1;
-        const key = `${col},${row}`;
-        const g = TERRAIN_GLYPHS[cell.terrain];
-        if (g !== undefined) m[key] = g;
-      }
-      return Object.keys(m).length > 0 ? m : undefined;
-    })();
-
-  const filteredElevations = Object.keys(elevations).length > 0 ? elevations : undefined;
 
   return {
     cols: Math.max(1, width),
     rows: Math.max(1, height),
     cells,
-    ...(filteredElevations !== undefined ? { elevations: filteredElevations } : {}),
+    ...(elevations !== undefined ? { elevations } : {}),
     ...(Object.keys(facings).length > 0 ? { facings } : {}),
     ...(resolvedMarks === undefined ? {} : { marks: resolvedMarks }),
-    ...(styles !== undefined ? { styles } : Object.keys(auto).length > 0 ? { styles: auto } : {}),
-    ...(styles === undefined && Object.keys(autoCells).length > 0 ? { cellStyles: autoCells } : {}),
+    ...(styles !== undefined ? { styles } : auto !== undefined ? { styles: auto } : {}),
+    ...(styles === undefined && Object.keys(autoCells).length > 0 ? { idStyles: autoCells } : {}),
   };
 }
 
