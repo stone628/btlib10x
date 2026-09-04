@@ -260,14 +260,14 @@ export const en = {
   "sheet.ammoPolicy": "ammo policy: {policy}",
   "sheet.shotsRange": "({curr}/{max} shots)",
   "sheet.shotsDesign": "({max} shots)",
-  "sheet.jammed": "[JAM]",
-  "sheet.destroyed": "[DST]",
+  "sheet.jammed": "[J]",
+  "sheet.destroyed": "[-]",
 
   // critical slot chart
   "critChart.summary": "critical slots",
   "critChart.empty": "-",
-  "critChart.destroyedSuffix": " [DST]",
-  "critChart.jammedSuffix": " [JAM]",
+  "critChart.destroyedSuffix": " [-]",
+  "critChart.jammedSuffix": " [J]",
   "critChart.ammoSuffix": " ammo ({curr}/{max} shots)",
   "critChart.ammoDesign": " ammo ({max} shots)",
   "critChart.component.cockpit": "Cockpit",
