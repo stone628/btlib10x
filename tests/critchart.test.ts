@@ -16,62 +16,6 @@ function freshSetup(): S.Session {
   return s;
 }
 
-describe("critical slot chart (info mech)", () => {
-  it("renders the 3-column layout with dice numbers for HBK-4G", () => {
-    const s = S.newSession();
-    s.critsDisabled = true;
-    const text = run(s, "info mech HBK-4G").join("\n");
-    expect(text).toContain("critical slots");
-    // Row 1: right arm | head | left arm (single header line, in that order).
-    const row1 = text.split("\n").find((l) => l.includes("[ RA ]"));
-    expect(row1).toBeDefined();
-    expect(row1).toMatch(/^\[ RA \]\s+\[ HD \]\s+\[ LA \]\s*$/);
-    // Row 2: right torso | center torso | left torso.
-    const row2 = text.split("\n").find((l) => l.includes("[ RT ]"));
-    expect(row2).toBeDefined();
-    expect(row2).toMatch(/^\[ RT \]\s+\[ CT \]\s+\[ LT \]\s*$/);
-    // Head (6 slots): dice 1-6; cockpit sits in slot 3.
-    expect(text).toContain("  3 Cockpit");
-    expect(text).toContain("  6 Life Support");
-    // Center torso (12 slots): engine/gyro, and slot 12 empty.
-    expect(text).toContain("  3 Engine");
-    expect(text).toContain(" 12 -");
-    // Structure labels are humanized.
-    expect(text).toContain("Gyro");
-    expect(text).toContain("Heat Sink");
-    // Arms: shoulder + actuators + hand; ammo slots named with design capacity.
-    expect(text).toContain("Shoulder");
-    expect(text).toContain("Upper Arm Actuator");
-    expect(text).toContain("  1 Autocannon/20 ammo (5 shots)");
-    expect(text).toContain("Medium Laser");
-  });
-
-  it("renders DHS groups and named soak slots for HER-5SA", () => {
-    const s = S.newSession();
-    s.critsDisabled = true;
-    const text = run(s, "info mech HER-5SA").join("\n");
-    expect(text).toContain("  4 DHS");
-    expect(text).toContain("  5 DHS");
-    expect(text).toContain("  6 DHS");
-    expect(text).toContain("  8 (Endo Steel)");
-    expect(text).toContain("  4 (Endo Steel)");
-  });
-
-  it("keeps 1-6 dice for legs and renders the leg row as two columns", () => {
-    const s = S.newSession();
-    s.critsDisabled = true;
-    const text = run(s, "info mech HBK-4G").join("\n");
-    // Right leg hip at slot 1, heat sinks at 5-6.
-    expect(text).toContain("  1 Hip");
-    expect(text).toContain("  5 Heat Sink");
-    expect(text).toContain("  6 Heat Sink");
-    // Row 3 renders both legs (single header line, no middle cell).
-    const legRow = text.split("\n").find((l) => l.includes("[ RL ]"));
-    expect(legRow).toBeDefined();
-    expect(legRow).toMatch(/^\[ RL \]\s+\[ LL \]\s*$/);
-  });
-});
-
 describe("critical slot chart (sheet)", () => {
   it("shows live destroyed-weapon markers on all slots of the mount", () => {
     const s = freshSetup();

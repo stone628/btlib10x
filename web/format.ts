@@ -176,7 +176,7 @@ function getCompensatedLength(str: string): number {
  * Column widths come from `max(strlen)` per column. Box-drawing glyphs are
  * assumed to render at 1 ch in the terminal font.
  */
-const LINE_THEME = {
+const HEADER_TABLE_THEME = {
   LIGHT: {
     tnw: "┌", // top left corner of header column
     tn: "┬", // separator for top line of header column
@@ -239,7 +239,7 @@ function buildHeaderTableChunkFromRows(
   }
 
   const { tnw, tn, tne, tnh, tnv, tw, tc, te, tcs, twc, tec, tsw, ts, tse, tsh, tsv } =
-    LINE_THEME.LIGHT;
+    HEADER_TABLE_THEME.LIGHT;
   const height = rows.length;
   const cols: string[][] = [];
   let prevHeaderExists = true;
@@ -313,7 +313,7 @@ function buildHeaderTableChunkFromColumns(
   if (n === 0) return buildColumnsChunk([]);
 
   const { tnw, tn, tne, tnh, tnv, tw, tc, te, tcs, twc, tec, tsw, ts, tse, tsh, tsv } =
-    LINE_THEME.LIGHT;
+    HEADER_TABLE_THEME.LIGHT;
   const widths: number[] = [];
   const cols: string[][] = [];
   const height = columns.map((c) => c.length).reduce((prev, curr) => (prev > curr ? prev : curr));
@@ -1020,29 +1020,61 @@ function critCell(
   return lines;
 }
 
+const GRID_THEME = {
+  LIGHT: {
+    tnw: "┌", // top left corner of grid
+    tn: "┬", // separator for top line of grid
+    tne: "┐", // top right corner of grid
+    tw: "├", // left end of bottom line of grid
+    tc: "┼", // seperator for bottom line of grid
+    te: "┤", // right end of bottom line of grid
+    tsw: "└", // bottom left corner of grid
+    ts: "┴", // separator for bottom line of grid
+    tse: "┘", // bottom right corner of grid
+
+    th: "─", // horizontal line of grid
+    tv: "│", // vertical line of grid
+  },
+};
+
 /** Collapsible crit chart: one columns chunk per row (arena / torso / legs). */
 function critChartChunk(def: ResolvedMechDef, locale: LocaleId, live: CritChartLive | null): Chunk {
+  const { tnw, tn, tne, tw, tc, te, tsw, /*ts,*/ tse, th, tv } = GRID_THEME.LIGHT;
   const raLines = critCell(def, "rightArm", locale, live);
-  const hdLines = critCell(def, "head", locale, live);
+  const hdLines = [...critCell(def, "head", locale, live), ...new Array<string>(6).fill("")];
   const laLines = critCell(def, "leftArm", locale, live);
   const rtLines = critCell(def, "rightTorso", locale, live);
   const ctLines = critCell(def, "centerTorso", locale, live);
   const ltLines = critCell(def, "leftTorso", locale, live);
   const rlLines = critCell(def, "rightLeg", locale, live);
-  const infoLines = [" "];
+  const infoLines = new Array<string>(7).fill("");
   const llLines = critCell(def, "leftLeg", locale, live);
   const built = [raLines, hdLines, laLines, rtLines, ctLines, ltLines, rlLines, infoLines, llLines];
   const maxLineLen = built
     .flat()
     .map((l) => getCompensatedLength(l))
-    .reduce((prev, curr) => Math.max(prev, curr));
-  built.forEach((lines) => {
-    lines[0] = lines[0]!.padEnd(maxLineLen);
-  });
+    .reduce((prev, curr) => (prev > curr ? prev : curr));
+  const horzLine = th.repeat(maxLineLen);
+  const tvPrefix = (l: string) => tv + l;
   return buildCollapsibleChunk(i18n(locale, "critChart.summary"), [
-    buildColumnsChunk([raLines, hdLines, laLines]),
-    buildColumnsChunk([rtLines, ctLines, ltLines]),
-    buildColumnsChunk([rlLines, infoLines, llLines]),
+    buildColumnsChunk([
+      [`${tnw}${horzLine}`, ...raLines.map(tvPrefix)],
+      [`${tn}${horzLine}`, ...hdLines.map(tvPrefix)],
+      [`${tn}${horzLine}`, ...laLines.map(tvPrefix)],
+      [tne, ...new Array<string>(13).fill(tv)],
+    ]),
+    buildColumnsChunk([
+      [`${tw}${horzLine}`, ...rtLines.map(tvPrefix)],
+      [`${tc}${horzLine}`, ...ctLines.map(tvPrefix)],
+      [`${tc}${horzLine}`, ...ltLines.map(tvPrefix)],
+      [te, ...new Array<string>(13).fill(tv)],
+    ]),
+    buildColumnsChunk([
+      [`${tw}${horzLine}`, ...rlLines.map(tvPrefix), `${tsw}${horzLine}`],
+      [`${tc}${horzLine}`, ...infoLines.map(tvPrefix), tse],
+      [`${tc}${horzLine}`, ...llLines.map(tvPrefix), `${tsw}${horzLine}`],
+      [te, ...new Array<string>(7).fill(tv), tse],
+    ]),
   ]);
 }
 
