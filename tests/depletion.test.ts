@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Location } from "../src/core/types.js";
-import { getShotsPerBin } from "../src/data/ammo.schema.js";
+import { getShotsPerBinFor } from "../src/data/ammo.schema.js";
 import { getMechDef } from "../src/data/index.js";
 import type { AmmoBin, AmmoBinId } from "../src/rules/ammo.js";
 import {
@@ -79,8 +79,8 @@ describe("bin loading", () => {
     };
     const { bins } = loadAmmoBins(stripped);
     expect(bins).toEqual({
-      "rightTorso:5": getShotsPerBin("LRM 10"),
-      "rightTorso:6": getShotsPerBin("LRM 10"),
+      "rightTorso:5": getShotsPerBinFor({ weapon: "LRM 10" }),
+      "rightTorso:6": getShotsPerBinFor({ weapon: "LRM 10" }),
     });
   });
 

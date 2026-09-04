@@ -1,4 +1,4 @@
-import { canFireFromLocation, getMechDef, isImmobile } from "btlib10x";
+import { canFireFromLocation, getMechDefFor, isImmobile } from "btlib10x";
 import type * as S from "./session.js";
 
 /** Delay between generated commands, in milliseconds. */
@@ -116,7 +116,7 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
     }
 
     if (st.phase === "weaponAttack") {
-      const def = getMechDef(actor.model);
+      const def = getMechDefFor(actor);
       if (def === undefined) return null;
       const available: string[] = [];
       for (const key of Object.keys(def.weapons)) {

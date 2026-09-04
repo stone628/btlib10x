@@ -5,6 +5,8 @@ import type {
   CreateBattleOptions,
   Facing,
   HexCoord,
+  MapNameHolder,
+  MechModelHolder,
   MoveMode,
   MoveStep,
   Rng,
@@ -27,7 +29,9 @@ import {
   FACINGS,
   facingChangeCost,
   getMapDef,
+  getMapDefFor,
   getMechDef,
+  getMechDefFor,
   getUnit,
   isAdjacent,
   isBackwardStep,
@@ -47,7 +51,7 @@ import { createRng } from "./rng.js";
 
 export type AppState = "setup" | "battle" | "over";
 
-export interface SetupUnit {
+export interface SetupUnit extends MechModelHolder {
   readonly id: string;
   readonly model: string;
   readonly team: number;
@@ -57,7 +61,7 @@ export interface SetupUnit {
   readonly facing: Facing;
 }
 
-export interface Session {
+export interface Session extends MapNameHolder {
   app: AppState;
   /** Output language (UI preference; preserved across reset/rematch). */
   locale: LocaleId;
@@ -188,11 +192,12 @@ export function promptBody(s: Session): string {
 // ---------------------------------------------------------------- setup ----
 
 export function setMap(s: Session, name: string): void {
-  const map = getMapDef(name);
-  if (!map)
+  const m = getMapDef(name);
+  if (m === undefined) {
     throw new Error(i18n(s.locale, "err.unknownMap", { name, list: listMapNames().join(", ") }));
-  s.mapName = name;
-  s.terrainDefs = [...map.terrain];
+  }
+  s.mapName = m.name;
+  s.terrainDefs = [...m.terrain];
 }
 
 export function addUnit(
@@ -205,7 +210,7 @@ export function addUnit(
   facing: Facing,
 ): void {
   const m = getMechDef(model);
-  if (!m) throw new Error(i18n(s.locale, "err.unknownModel", { model }));
+  if (m === undefined) throw new Error(i18n(s.locale, "err.unknownModel", { model }));
   if (s.roster.some((u) => u.id === id)) throw new Error(i18n(s.locale, "err.duplicateId", { id }));
   if (!Number.isInteger(team) || team < 0) throw new Error(i18n(s.locale, "err.badTeam"));
   if (!Number.isInteger(gunnery) || gunnery < 0 || gunnery > 7) {
@@ -214,19 +219,17 @@ export function addUnit(
   if (s.roster.some((u) => sameHex(u.position, position))) {
     throw new Error(i18n(s.locale, "err.hexOccupied", { col: position.col, row: position.row }));
   }
-  if (s.mapName) {
-    const map = getMapDef(s.mapName);
-    if (map) {
-      if (position.col > map.width) {
-        throw new Error(
-          i18n(s.locale, "err.outOfBounds", { label: "col", value: position.col, max: map.width }),
-        );
-      }
-      if (position.row > map.height) {
-        throw new Error(
-          i18n(s.locale, "err.outOfBounds", { label: "row", value: position.row, max: map.height }),
-        );
-      }
+  if (s.mapName != null) {
+    const map = getMapDefFor(s);
+    if (position.col > map.width) {
+      throw new Error(
+        i18n(s.locale, "err.outOfBounds", { label: "col", value: position.col, max: map.width }),
+      );
+    }
+    if (position.row > map.height) {
+      throw new Error(
+        i18n(s.locale, "err.outOfBounds", { label: "row", value: position.row, max: map.height }),
+      );
     }
   }
   s.roster.push({ id, model: m.model, team, gunnery, position, facing });
@@ -239,11 +242,7 @@ export function removeUnit(s: Session, id: string): void {
 
 /** Shared createBattle options: setup terrain plus the loaded map's size. */
 function battleOptions(s: Session): CreateBattleOptions {
-  const map = getMapDef(s.mapName!);
-  if (!map)
-    throw new Error(
-      i18n(s.locale, "err.unknownMap", { name: s.mapName!, list: listMapNames().join(", ") }),
-    );
+  const map = getMapDefFor(s);
   return {
     terrain: s.terrainDefs,
     width: map.width,
@@ -333,7 +332,7 @@ function replaySteps(s: Session): MoveCursor {
 
 function budgetFor(s: Session): number {
   const unit = currentActor(s)!;
-  const def = getMechDef(unit.model)!;
+  const def = getMechDefFor(unit);
   const movement = effectiveMovement(def, unit.critSlotsDestroyed);
   return maxMovePoints(
     s.moveMode ?? "standStill",

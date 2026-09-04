@@ -135,16 +135,24 @@ export function parseWeaponsData(data: unknown): readonly WeaponDef[] {
 const weaponList = parseWeaponsData(weaponsJson);
 
 const WEAPONS: Readonly<Map<string, WeaponDef>> = new Map<string, WeaponDef>(
-  weaponList.map((def) => [def.name.toLowerCase(), def]),
+  weaponList.map((def) => [def.name, def]),
 );
 
-export function getWeaponOrThrow(name: string): WeaponDef {
-  const def = WEAPONS.get(name.toLowerCase());
-  if (!def) throw new Error(`Unknown weapon: ${name}`);
+export function getWeaponDef(name: string): WeaponDef | undefined {
+  return WEAPONS.get(name);
+}
+
+export interface WeaponNameHolder {
+  readonly weapon: string;
+}
+
+export function getWeaponDefFor(h: WeaponNameHolder): WeaponDef {
+  const def = WEAPONS.get(h.weapon);
+  if (!def) throw new Error(`Unknown weapon: ${h.weapon}`);
   return def;
 }
 
-export function getAllWeapons(): WeaponDef[] {
+export function getAllWeaponDefs(): WeaponDef[] {
   return Array.from(WEAPONS.values());
 }
 

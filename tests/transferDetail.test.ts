@@ -34,7 +34,7 @@ function strike(
   return resolveWeaponAttack({
     ...BASE,
     rng,
-    weaponName,
+    weapon: weaponName,
     targetDamage,
     ...(arc === undefined ? {} : { arc }),
   });

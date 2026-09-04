@@ -23,10 +23,11 @@ export {
 export * from "./core/types.js";
 export type { AmmoDef } from "./data/ammo.schema.js";
 export {
+  type AmmoNameHolder,
   getAllAmmo,
-  getAmmoOrThrow as getAmmo,
-  getShotsPerBin,
-  listAmmoWeapons,
+  getAmmoDef,
+  getAmmoDefFor,
+  getShotsPerBinFor,
 } from "./data/ammo.schema.js";
 export type {
   CritSlot,
@@ -34,7 +35,9 @@ export type {
   CritSoakName,
   CritStructureName,
   MapDef,
+  MapNameHolder,
   MechDef,
+  MechModelHolder,
   RearArmorKey,
   ResolvedArmor,
   ResolvedCritSlot,
@@ -48,18 +51,16 @@ export {
   getAllMapDefs,
   getAllMechDefs,
   getMapDef,
+  getMapDefFor,
   getMechDef,
+  getMechDefFor,
   listMapNames,
   resolveMechDef,
   validateMapDef,
   validateMechDef,
 } from "./data/index.js";
-export type { WeaponCategory, WeaponDef } from "./data/weapon.schema.js";
-export {
-  getAllWeapons,
-  getWeaponOrThrow as getWeapon,
-  listWeaponNames,
-} from "./data/weapon.schema.js";
+export type { WeaponCategory, WeaponDef, WeaponNameHolder } from "./data/weapon.schema.js";
+export { getAllWeaponDefs, getWeaponDefFor, listWeaponNames } from "./data/weapon.schema.js";
 export * from "./rules/ammo.js";
 export * from "./rules/arcs.js";
 export type { AttackResolution, HitGroup, WeaponAttackInput } from "./rules/attack.js";

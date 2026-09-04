@@ -2,7 +2,7 @@ import { roll2D6 } from "../core/dice.js";
 import type { Location, MoveMode, Rng, TerrainType } from "../core/types.js";
 import type { ResolvedMechDef } from "../data/mech.schema.js";
 import type { WeaponDef } from "../data/weapon.schema.js";
-import { getWeaponOrThrow } from "../data/weapon.schema.js";
+import { getWeaponDefFor } from "../data/weapon.schema.js";
 import type { AmmoBinId } from "./ammo.js";
 import type { Arc } from "./arcs.js";
 import { clusterHitsForMissiles, clusterHitsForShots, groupMissiles } from "./cluster.js";
@@ -26,7 +26,7 @@ export interface WeaponAttackInput {
   readonly targetTerrain: TerrainType;
   readonly interveningTerrains: readonly TerrainType[];
   readonly distance: number;
-  readonly weaponName: string;
+  readonly weapon: string;
   /** Shots fired this attack; >1 only valid for rapid-fire (R) weapons. */
   readonly shots?: number;
   /** Layered damage state of the target. */
@@ -71,7 +71,7 @@ export interface AttackResolution {
 
 /** Resolve one declared weapon attack end-to-end: to-hit, location(s), damage. */
 export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution {
-  const weapon: WeaponDef = getWeaponOrThrow(input.weaponName);
+  const weapon: WeaponDef = getWeaponDefFor(input);
   const shots = input.shots ?? 1;
 
   const breakdown = computeToHit({

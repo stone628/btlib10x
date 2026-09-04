@@ -60,9 +60,10 @@
 import { roll2D6, rollD6 } from "../core/dice.js";
 import { damageTransferTo, isArm, isLeg, isLimb } from "../core/locations.js";
 import type { Location, Rng } from "../core/types.js";
+import type { AmmoNameHolder } from "../data/ammo.schema.js";
 import type { ResolvedCritSlot, ResolvedMechDef } from "../data/mech.schema.js";
 import { CRIT_SLOT_COUNTS } from "../data/mech.schema.js";
-import { getWeaponOrThrow } from "../data/weapon.schema.js";
+import { getWeaponDefFor } from "../data/weapon.schema.js";
 import { type AmmoBinId, ammoBinId, ammoWeaponTotals, stripBinsInLocation } from "./ammo.js";
 import { applyDamage, type DamageApplication, type UnitDamageState } from "./damage.js";
 
@@ -231,8 +232,8 @@ function rollSlotNumber(rng: Rng, loc: Location): { slot: number; rolls: readonl
  * per-missile damage by tube count; direct-fire weapons use their damage;
  * variable-damage weapons don't carry ammo so this never fires for them.
  */
-function ammoDamagePerShot(weaponName: string): number {
-  const w = getWeaponOrThrow(weaponName);
+function ammoDamagePerShot(h: AmmoNameHolder): number {
+  const w = getWeaponDefFor(h);
   if (w.missileDamage !== undefined && w.missiles !== undefined) {
     return w.missileDamage * w.missiles;
   }
@@ -496,7 +497,7 @@ function applySlotHit(
     // Only the hit bin detonates; sibling bins of the same weapon stay.
     const binId = ammoBinId(loc, slotIndex);
     const shotsRemaining = state.ammoBins[binId] ?? 0;
-    const damagePerShot = ammoDamagePerShot(weaponName);
+    const damagePerShot = ammoDamagePerShot(slot);
     const amount = shotsRemaining * damagePerShot;
     if (amount > 0) {
       const app = applyAmmoExplosion(state.damage, loc, amount);

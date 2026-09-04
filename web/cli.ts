@@ -1,4 +1,4 @@
-import { FACINGS, getMapDef, listMapNames, VERSION } from "btlib10x";
+import { FACINGS, listMapNames, VERSION } from "btlib10x";
 import type { Chunk } from "./format.js";
 import {
   ammoPolicyLabel,
@@ -23,6 +23,7 @@ import {
 } from "./format.js";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
 import { i18n, isLocale, localeList } from "./i18n/index.js";
+import { canonicalMapName, lookupMap } from "./lookup.js";
 import * as S from "./session.js";
 
 export interface CmdDef {
@@ -159,18 +160,19 @@ const SETUP_CMDS: Record<string, CmdDef> = {
     run: (s, a) => {
       expectArgs(L(s), a, 1, "map <name>");
       const name = a[0]!;
-      const m = getMapDef(name);
-      if (!m) {
+      const canonical = canonicalMapName(name);
+      if (!canonical) {
         throw new Error(
           i18n(s.locale, "err.unknownMap", { name, list: listMapNames().join(", ") }),
         );
       }
-      S.setMap(s, m.name);
+      const m = lookupMap(canonical);
+      S.setMap(s, name);
       return [
         i18n(L(s), "ok.mapLoaded", {
-          name: m.name,
-          w: m.width,
-          h: m.height,
+          name: canonical,
+          w: m?.width ?? 0,
+          h: m?.height ?? 0,
           n: s.terrainDefs.length,
         }),
       ];

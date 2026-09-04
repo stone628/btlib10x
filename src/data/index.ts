@@ -5,9 +5,22 @@ import testMapJson from "./maps/test.json";
 import type { ResolvedMechDef } from "./mech.schema.js";
 import { MECH_DEFS } from "./mechCatalog.generated.js";
 
-export function getMechDef(model: string): ResolvedMechDef | undefined {
-  return MECH_DEFS.get(model.toUpperCase());
+export interface MechModelHolder {
+  readonly model: string;
 }
+
+export function getMechDefFor(h: MechModelHolder): ResolvedMechDef {
+  const def = MECH_DEFS.get(h.model);
+  if (!def) throw new Error(`Unknown mech: ${h.model}`);
+  return def;
+}
+
+export function getMechDef(model: string): ResolvedMechDef | undefined {
+  return MECH_DEFS.get(model);
+}
+
+export { type AmmoNameHolder, getAmmoDefFor } from "./ammo.schema.js";
+export { getWeaponDefFor, type WeaponNameHolder } from "./weapon.schema.js";
 
 export function getAllMechDefs(): ResolvedMechDef[] {
   return Array.from(MECH_DEFS.values());
@@ -16,12 +29,24 @@ export function getAllMechDefs(): ResolvedMechDef[] {
 /** All battle maps shipped with the library, keyed by name; validated at load. */
 const MAP_DEFS: Readonly<Map<string, MapDef>> = new Map<string, MapDef>(
   [beginnerMapJson, quickstartMapJson, testMapJson].map((m) => {
-    return [m.name.toLowerCase(), validateMapDef(m)];
+    return [m.name, validateMapDef(m)];
   }),
 );
 
+export interface MapNameHolder {
+  readonly mapName: string | null;
+}
+
+export function getMapDefFor(h: MapNameHolder): MapDef {
+  const key = h.mapName;
+  if (key == null) throw new Error("Unknown map: <none>");
+  const def = MAP_DEFS.get(key);
+  if (!def) throw new Error(`Unknown map: ${key}`);
+  return def;
+}
+
 export function getMapDef(name: string): MapDef | undefined {
-  return MAP_DEFS.get(name.toLowerCase());
+  return MAP_DEFS.get(name);
 }
 
 export function getAllMapDefs(): MapDef[] {
@@ -33,12 +58,7 @@ export function listMapNames(): string[] {
 }
 
 export type { AmmoDef } from "./ammo.schema.js";
-export {
-  getAllAmmo,
-  getAmmoOrThrow as getAmmo,
-  getShotsPerBin,
-  listAmmoWeapons,
-} from "./ammo.schema.js";
+export { getAllAmmo, listAmmoWeapons } from "./ammo.schema.js";
 export type { MapDef } from "./map.schema.js";
 export { validateMapDef } from "./map.schema.js";
 export type {
@@ -62,4 +82,4 @@ export {
   validateMechDef,
 } from "./mech.schema.js";
 export type { WeaponDef } from "./weapon.schema.js";
-export { getAllWeapons, getWeaponOrThrow as getWeapon, listWeaponNames } from "./weapon.schema.js";
+export { listWeaponNames } from "./weapon.schema.js";

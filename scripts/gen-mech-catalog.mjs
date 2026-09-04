@@ -45,7 +45,7 @@ export const MECH_DEFS: Readonly<Map<string, ResolvedMechDef>> = new Map<string,
 ${values}
   ].map((data) => {
     const def = load(data);
-    return [def.model.toUpperCase(), def];
+    return [def.model, def];
   }),
 );
 `;
