@@ -126,6 +126,6 @@ describe("localized output smoke test", () => {
     execute(s, "start");
     if (s.battle === null) throw new Error("battle not started");
     // location abbreviations stay stable regardless of locale
-    expect(Object.keys(en) as MessageKey[]).toContain("sheet.durabilityLine");
+    expect(Object.keys(en) as MessageKey[]).toContain("sheet.durabilityPrefix");
   });
 });

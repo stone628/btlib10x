@@ -23,7 +23,7 @@ import {
 } from "./format.js";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
 import { i18n, isLocale, localeList } from "./i18n/index.js";
-import { canonicalMapName, lookupMap } from "./lookup.js";
+import { lookupMap } from "./lookup.js";
 import * as S from "./session.js";
 
 export interface CmdDef {
@@ -160,17 +160,16 @@ const SETUP_CMDS: Record<string, CmdDef> = {
     run: (s, a) => {
       expectArgs(L(s), a, 1, "map <name>");
       const name = a[0]!;
-      const canonical = canonicalMapName(name);
-      if (!canonical) {
+      const m = lookupMap(name);
+      if (m === undefined) {
         throw new Error(
           i18n(s.locale, "err.unknownMap", { name, list: listMapNames().join(", ") }),
         );
       }
-      const m = lookupMap(canonical);
-      S.setMap(s, name);
+      S.setMap(s, m.name);
       return [
         i18n(L(s), "ok.mapLoaded", {
-          name: canonical,
+          name: m.name,
           w: m?.width ?? 0,
           h: m?.height ?? 0,
           n: s.terrainDefs.length,

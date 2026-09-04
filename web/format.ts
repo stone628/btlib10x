@@ -37,7 +37,6 @@ import {
   isImmobile,
   isKilled,
   isTorso,
-  LOCATIONS,
   listMapNames,
   listWeaponNames,
   loadAmmoBins,
@@ -1140,7 +1139,7 @@ export function unitBriefList(s: Session): string[] {
       const def = getMechDefFor(unit);
       lines.push(`  ${uid}  ${def.model}  ${disp(unit.position)} facing ${unit.facing}`);
       const view = battleSheet(unit, uid, s.locale);
-      lines.push(`    ${durabilityLine(view, s.locale)}`);
+      lines.push(...durabilityLines(view, s.locale).map((l) => `    ${l}`));
     }
   }
   return lines;
@@ -1189,28 +1188,47 @@ export function sheetLinesShort(view: SheetView, locale: LocaleId, showMode = tr
   }
   lines.push(view.positionLine);
   if (showMode && view.modeLine) lines.push(view.modeLine);
-  lines.push(`${durabilityLine(view, locale)}`);
+  lines.push(...durabilityLines(view, locale));
   return lines;
 }
 
-/** Compact armor summary per location: front + rear + internal-structure summed
- * as `cur/max`, with `*` when the front pool is depleted (structure still
- * intact) and `!` when internal structure is depleted. */
-function durabilityLine(view: SheetView, locale: LocaleId): string {
-  return i18n(locale, "sheet.durabilityLine", {
-    list: LOCATIONS.map((loc) => {
-      const frontCur = view.armor[loc];
-      const frontMax = view.originalArmor[loc];
-      const structCur = view.damage.internalStructure[loc];
-      const structMax = view.originalArmorStructure[loc];
-      const rearCur = isTorso(loc) ? (view.damage.armorRear[loc] ?? 0) : 0;
-      const rearMax = isTorso(loc) ? (view.originalArmorRear[loc] ?? 0) : 0;
-      const cur = frontCur + rearCur + structCur;
-      const max = frontMax + rearMax + structMax;
-      const marker = structCur <= 0 ? "!" : frontCur <= 0 ? "*" : "";
-      return `${SHORT_LOC[loc]} ${cur}/${max}${marker}`;
-    }).join(" | "),
-  });
+/** Compact two-line armor summary: head+torso on line 1, limbs on line 2.
+ * Each location shows front + rear + internal-structure summed as `cur/max`,
+ * with `[-F]`/`[-R]`/`[-A]`/`[-I]` annotations for depleted pools. */
+function durabilityLines(view: SheetView, locale: LocaleId): string[] {
+  const prefix = i18n(locale, "sheet.durabilityPrefix");
+  const indent = " ".repeat(prefix.length);
+  return [
+    `${prefix}${durabilityFrag(view, "head")} ${durabilityFrag(view, "leftTorso")} ${durabilityFrag(view, "centerTorso")} ${durabilityFrag(view, "rightTorso")}`,
+    `${indent}${durabilityFrag(view, "leftArm")} ${durabilityFrag(view, "rightArm")} ${durabilityFrag(view, "leftLeg")} ${durabilityFrag(view, "rightLeg")}`,
+  ];
+}
+
+function durabilityFrag(view: SheetView, loc: Location): string {
+  const frontCur = view.armor[loc];
+  const torso = isTorso(loc);
+  const frontMax = view.originalArmor[loc];
+  const structCur = view.damage.internalStructure[loc];
+  const structMax = view.originalArmorStructure[loc];
+  const rearCur = torso ? (view.damage.armorRear[loc] ?? 0) : 0;
+  const rearMax = torso ? (view.originalArmorRear[loc] ?? 0) : 0;
+  const cur = frontCur + rearCur + structCur;
+  const max = frontMax + rearMax + structMax;
+
+  // Build annotation from depleted pool letters
+  let note = "";
+  if (cur > 0) {
+    if (torso) {
+      if (frontCur <= 0) note += "F";
+      if (rearCur <= 0) note += "R";
+    } else {
+      if (frontCur <= 0) note += "A";
+    }
+    if (structCur <= 0) note += "I";
+    if (note.length > 0) note = `[-${note}]`;
+  }
+
+  return `${SHORT_LOC[loc]}(${cur}/${max}${note})`;
 }
 
 export function overStatusLines(s: Session): string[] {

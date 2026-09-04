@@ -51,18 +51,3 @@ export function lookupWeaponOrThrow(name: string): WeaponDef {
   if (!def) throw new Error(`Unknown weapon: ${name}`);
   return def;
 }
-
-/** Normalize a user-typed model name to its canonical cased form (or null if unknown). */
-export function canonicalModel(model: string): string | null {
-  return lookupMech(model)?.model ?? null;
-}
-
-/** Normalize a user-typed map name to its canonical cased form (or null if unknown). */
-export function canonicalMapName(name: string): string | null {
-  return lookupMap(name)?.name ?? null;
-}
-
-/** Normalize a user-typed weapon name to its canonical cased form (or null if unknown). */
-export function canonicalWeaponName(name: string): string | null {
-  return lookupWeapon(name)?.name ?? null;
-}

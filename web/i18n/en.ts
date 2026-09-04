@@ -255,7 +255,7 @@ export const en = {
   "sheet.modeSuffix": ", {mode} [MP {mp}]",
   "sheet.removedId": " - REMOVED FROM PLAY",
   "sheet.idLine": "id: {id}, team {team}",
-  "sheet.durabilityLine": "durability: {list}",
+  "sheet.durabilityPrefix": "durability: ",
   "sheet.weaponsHeader": "weapons ({n}):",
   "sheet.ammoPolicy": "ammo policy: {policy}",
   "sheet.shotsRange": "({curr}/{max} shots)",
