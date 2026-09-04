@@ -1349,8 +1349,8 @@ export function reachableModel(s: Session): BoardModel | null {
     if (l.hex.row < minR) minR = l.hex.row;
     if (l.hex.row > maxR) maxR = l.hex.row;
   }
-  const col0 = Math.max(1, minC);
-  const row0 = Math.max(1, minR);
+  const anchorCol = Math.max(1, minC);
+  const anchorRow = Math.max(1, minR);
   const col1 = Math.min(w, maxC);
   const row1 = Math.min(h, maxR);
 
@@ -1370,10 +1370,10 @@ export function reachableModel(s: Session): BoardModel | null {
   }
 
   return {
-    cols: col1 - col0 + 1,
-    rows: row1 - row0 + 1,
-    col0,
-    row0,
+    cols: col1 - anchorCol + 1,
+    rows: row1 - anchorRow + 1,
+    anchorCol,
+    anchorRow,
     cells,
     ...(Object.keys(edgeStyles).length > 0 ? { edgeStyles } : {}),
     ...(base.styles !== undefined ? { styles: base.styles } : {}),

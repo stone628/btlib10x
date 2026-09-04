@@ -519,8 +519,8 @@ describe("movement", () => {
     const m = model!;
     // Exact reachable bbox, clamped to the board: larger than one hex and
     // smaller than the full 15x16 board.
-    expect(m.col0).toBeGreaterThanOrEqual(1);
-    expect(m.row0).toBeGreaterThanOrEqual(1);
+    expect(m.anchorCol).toBeGreaterThanOrEqual(1);
+    expect(m.anchorRow).toBeGreaterThanOrEqual(1);
     expect(m.cols * m.rows).toBeLessThan(15 * 16);
     // The acting unit's hex is inside the crop; no per-hex facing arrows.
     expect(m.facings).toBeUndefined();
