@@ -21,9 +21,36 @@ export function oppositeFacing(facing: Facing): Facing {
   return rotateFacing(facing, 3);
 }
 
-export type TerrainType = "clear" | "lightWoods" | "heavyWoods";
+export type TerrainType =
+  | "clear"
+  | "lightWoods"
+  | "heavyWoods"
+  | "rough"
+  | "rubble"
+  | "pavement"
+  | "water1"
+  | "water2"
+  | "water3"
+  | "lightBuilding"
+  | "mediumBuilding"
+  | "heavyBuilding"
+  | "hardenedBuilding";
 
-export const TERRAIN_TYPES: readonly TerrainType[] = ["clear", "lightWoods", "heavyWoods"];
+export const TERRAIN_TYPES: readonly TerrainType[] = [
+  "clear",
+  "lightWoods",
+  "heavyWoods",
+  "rough",
+  "rubble",
+  "pavement",
+  "water1",
+  "water2",
+  "water3",
+  "lightBuilding",
+  "mediumBuilding",
+  "heavyBuilding",
+  "hardenedBuilding",
+];
 
 export function isTerrainType(value: unknown): value is TerrainType {
   return typeof value === "string" && (TERRAIN_TYPES as readonly string[]).includes(value);

@@ -1,3 +1,4 @@
+import { terrainTargetMod } from "../core/terrain.js";
 import type { MoveMode, TerrainType } from "../core/types.js";
 import type { WeaponDef } from "../data/weapon.schema.js";
 import { attackerMovementModifier, targetMovementModifier } from "./movement.js";
@@ -80,9 +81,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
   const attackerMod = attackerMovementModifier(mods.attackerMovement);
   const targetMod = targetMovementModifier(mods.targetHexesMoved, mods.targetJumped);
 
-  let terrainMod = mods.interveningWoods;
-  terrainMod +=
-    mods.targetTerrain === "lightWoods" ? 1 : mods.targetTerrain === "heavyWoods" ? 2 : 0;
+  const terrainMod = mods.interveningWoods + terrainTargetMod(mods.targetTerrain);
 
   const rangeMod = RANGE_MOD[bracket];
   const pulseMod = mods.weapon.pulse === true ? -2 : 0;

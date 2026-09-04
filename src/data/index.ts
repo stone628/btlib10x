@@ -81,5 +81,7 @@ export {
   resolveMechDef,
   validateMechDef,
 } from "./mech.schema.js";
+export type { TerrainDef } from "./terrain.schema.js";
+export { getAllTerrainDefs, getTerrainDef } from "./terrain.schema.js";
 export type { WeaponDef } from "./weapon.schema.js";
 export { listWeaponNames } from "./weapon.schema.js";

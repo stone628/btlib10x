@@ -296,6 +296,7 @@ export const kr: Catalog = {
   "log.attacksPassed": "{id}는 이번 턴 공격하지 않습니다.",
   "log.destroyed": "*** {id} 파괴됨 ***",
   "log.removedEvent": "{id} 게임 제외",
+  "log.buildingCollapsed": "{hex} 위치 건물이 붕괴하여 잔해가 됩니다",
 
   // attack resolution
   "res.attackResolutionStart": "=== 선언된 공격 피해 판정 시작 ===",

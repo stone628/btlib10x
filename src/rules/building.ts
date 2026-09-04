@@ -1,0 +1,90 @@
+import { cellAt, type HexGrid } from "../core/terrain.js";
+import type { HexCell, HexCoord, TerrainType } from "../core/types.js";
+
+/** Building types recognized by the core rulebook. */
+export type BuildingType = "light" | "medium" | "heavy" | "hardened";
+
+/** Maps terrain type string to the corresponding building sub-type. */
+const BUILDING_TERRAIN_MAP: Readonly<Record<string, BuildingType>> = {
+  lightBuilding: "light",
+  mediumBuilding: "medium",
+  heavyBuilding: "heavy",
+  hardenedBuilding: "hardened",
+};
+
+/** Initial structural factor (CF) ranges by building type (core rulebook). */
+const INITIAL_CF: Readonly<Record<BuildingType, number>> = {
+  light: 15,
+  medium: 40,
+  heavy: 90,
+  hardened: 150,
+};
+
+export interface BuildingState {
+  /** Current structural factor; building collapses at 0. */
+  cf: number;
+  /** Building sub-type. */
+  type: BuildingType;
+}
+
+/** Returns the building sub-type for a terrain type, or `undefined` if the
+ *  terrain is not a building. */
+export function buildingTypeOf(terrain: TerrainType): BuildingType | undefined {
+  return BUILDING_TERRAIN_MAP[terrain];
+}
+
+/** True when the terrain is a building hex of any sub-type. */
+export function isBuildingTerrain(terrain: TerrainType): boolean {
+  return buildingTypeOf(terrain) !== undefined;
+}
+
+/** Initial CF for a building sub-type. */
+export function initialCf(type: BuildingType): number {
+  return INITIAL_CF[type];
+}
+
+/** True when the building has collapsed (CF <= 0). */
+export function isCollapsed(state: BuildingState): boolean {
+  return state.cf <= 0;
+}
+
+/**
+ * Apply weapon damage to a building hex. Returns the updated state; CF is
+ * clamped at 0 (collapse).
+ */
+export function applyBuildingDamage(state: BuildingState, damage: number): BuildingState {
+  const cf = Math.max(0, state.cf - damage);
+  return { ...state, cf };
+}
+
+/**
+ * Build the initial `BuildingState` for a building terrain type using the
+ * default CF for that type.
+ */
+export function createBuildingState(type: BuildingType): BuildingState {
+  return { cf: INITIAL_CF[type], type };
+}
+
+/** Return building state for a hex, or `undefined` if the hex is not a building. */
+export function buildingAt(
+  grid: HexGrid,
+  hex: HexCoord,
+  buildings: ReadonlyMap<string, BuildingState>,
+): BuildingState | undefined {
+  const terrain = cellAt(grid, hex).terrain;
+  const bt = buildingTypeOf(terrain);
+  if (bt === undefined) return undefined;
+  const key = `${hex.col},${hex.row}`;
+  return buildings.get(key);
+}
+
+/**
+ * Convert a building hex to rubble when it collapses. Mutates `cell.terrain`
+ * in place and returns true if the hex was a building that collapsed.
+ */
+export function collapseToRubble(cell: HexCell): boolean {
+  const bt = buildingTypeOf(cell.terrain);
+  if (bt === undefined) return false;
+  cell.terrain = "rubble" as TerrainType;
+  return true;
+}

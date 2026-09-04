@@ -112,21 +112,41 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   Front and rear armor are separate pools; internal structure is derived from
   tonnage on the standard TW table.
 - **Movement** — walk, run, jump, standstill. MP costs include the base 1 MP
-  to enter a hex plus a terrain surcharge (lightWoods +1, heavyWoods +2),
-  +1 MP per level of elevation climbed (descent is free), and 1 MP per
+  to enter a hex plus a terrain surcharge (data-driven from
+  `src/data/terrain.json`; e.g. lightWoods +1, heavyWoods +2, rough/rubble +1,
+  water2/3 +3, buildings +1/+2/+3/+4, pavement +0), +1 MP per
+  level of elevation climbed (descent is free), and 1 MP per
   hexside of facing change. Ground moves step straight ahead or back; run
   cannot move backward; ground moves cannot climb more than one level per
   step. Jump steps into any adjacent hex at 1 MP per step, with the
-  landing facing chosen freely; jump ignores elevation.
+  landing facing chosen freely; jump ignores elevation. Water depth-change
+  movement cost is deferred (see below).
 - **Line of sight** — intervening-hex line trace; light/heavy woods points
   (1/2) accumulate along the line and ≥ 3 points block. A real-valued
   "ray height" is drawn between attacker and target LOS levels (hex
   level + 1 for a bipedal 'Mech); an intervening hex blocks when its own
-  LOS level meets or exceeds the ray's height at the hex's center.
+  LOS level meets or exceeds the ray's height at the hex's center. Water
+  depth 2+ (water2/water3) blocks firing into and out of the hex
+  (`blocksTargeting`).
 - **To-hit (GATOR)** — gunnery + attacker movement + target movement + range
   bracket + intervening terrain + pulse + height difference; auto-hit ≤
-  2, auto-miss > 12. Height difference: `−(attackerLevel − targetLevel)`
-  (attacker higher = easier, lower = harder).
+  2, auto-miss > 12. Target-terrain modifier is data-driven
+  (`terrainTargetMod`): lightWoods/heavyWoods +1/+2, water1 −1 (partially
+  submerged target). Height difference: `−(attackerLevel − targetLevel)`
+  (attacker higher = easier, lower = harder). Units inside a water1 or
+  building hex qualify for partial cover (`hasPartialCover`), whose +3
+  resolution is deferred with piloting.
+- **Terrain catalog** — 13 core-rulebook terrain types (`clear`, lightWoods,
+  heavyWoods, rough, rubble, pavement, water1, water2, water3, and four
+  building classes) defined in `src/data/terrain.json` and validated by
+  `terrain.schema.ts`. Move surcharge, screening value, target modifier,
+  partial-cover flag, and targeting-restriction flag all live in the catalog.
+- **Buildings** — building hexes carry a structural factor (CF) initialized
+  from the sub-type (light 15 / medium 40 / heavy 90 / hardened 150).
+  Weapon damage that lands on a unit standing in a building hex is also
+  applied to that building's CF (`damageBuildingAt`); when CF reaches 0 the
+  hex collapses to rubble and a `buildingCollapsed` event fires. Unit damage
+  from a collapse is deferred with piloting.
 - **Hit location** — bipedal front / left side / right side / rear tables.
 - **Cluster hits** — missile 2/4/5/6/10/15/20 + shot columns 2/3/4.
 - **Damage** — front/rear armor transfer inward on depletion; side-torso
@@ -169,9 +189,17 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   sinks already mark the slot destroyed; the dissipation bookkeeping
   lights up when heat is implemented.)
 - **Physical attacks** — punch, kick, charge, DFA.
-- **Piloting rolls** — falling, standing up, leg/gyro damage effects.
+- **Piloting rolls** — falling, standing up, leg/gyro damage effects, and
+  partial cover (+3 to hit, Punch Location Table) for units in water1 /
+  building hexes.
+- **Water depth movement** — level-change MP surcharge when entering water,
+  and the piloting roll to avoid falling on the way in.
+- **Collapse damage** — units inside a building hex take damage when it
+  collapses (only the collapse-to-rubble terrain change is implemented).
 - **Side / rear firing arcs and torso twist** — classification code exists
   but is dormant.
+- **Building structural damage beyond CF** — basements / multi-floor
+  interiors, structural-factor transfer between levels.
 - **Quadripedal 'Mechs**, vehicles, infantry, battle armor.
 - **Called shots**, aimed shots, spotter / indirect fire, ECM.
 - **Pilot abilities** (edge, etc.), quirks, experience beyond the gunnery

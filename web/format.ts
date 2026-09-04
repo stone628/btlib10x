@@ -472,6 +472,7 @@ export function boardChunk(s: Session): Chunk {
       critsDisabled: false,
       actedThisPhase: [],
       events: [],
+      buildings: {},
     } as BattleState);
     return buildBoardChunk(boardChunkOf(model));
   }
@@ -1645,6 +1646,8 @@ function eventLines(locale: LocaleId, e: GameEvent): string[] {
       return [i18n(locale, "log.destroyed", { id: e.unitId })];
     case "unitRemoved":
       return [i18n(locale, "log.removedEvent", { id: e.unitId })];
+    case "buildingCollapsed":
+      return [i18n(locale, "log.buildingCollapsed", { hex: `${e.col},${e.row}` })];
     default: {
       // Exhaustiveness guard: adding a GameEvent kind must add a case above.
       const unreachable: never = e;

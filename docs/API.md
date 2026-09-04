@@ -16,7 +16,7 @@ and unit positions all use the mapsheet labels (`cols 1..width`,
 | Type | Values |
 | --- | --- |
 | `Facing` | `"n" \| "ne" \| "se" \| "s" \| "sw" \| "nw"` (hexside; clockwise from north) |
-| `TerrainType` | `"clear" \| "lightWoods" \| "heavyWoods"` |
+| `TerrainType` | `"clear" \| "lightWoods" \| "heavyWoods" \| "rough" \| "rubble" \| "pavement" \| "water1" \| "water2" \| "water3" \| "lightBuilding" \| "mediumBuilding" \| "heavyBuilding" \| "hardenedBuilding"` |
 | `Hex` | `{ col: number; row: number; level?: number }` (1-based odd-q, flat-top) |
 | `TerrainHexDef` | `{ col; row; type: TerrainType; level?: number }` (elevation, default 0) |
 | `MoveMode` | `"standStill" \| "walk" \| "run" \| "jump"` |
@@ -41,12 +41,27 @@ and unit positions all use the mapsheet labels (`cols 1..width`,
 
 ### Terrain (`core/terrain.ts`)
 
-- `terrainMoveCost(t): 0 | 1 | 2` surcharge, `costToEnter(t): number` (= 1 + surcharge)
-- `woodsPoints(t): 0 | 1 | 2`
+Terrain properties (move surcharge, screening value, target to-hit modifier,
+partial-cover and targeting-restriction flags) are data-driven from the terrain
+catalog in `src/data/terrain.json` (`TerrainDef` in `terrain.schema.ts`); the
+helpers below read that catalog.
+
+- `terrainMoveCost(t): number` surcharge, `costToEnter(t): number` (= 1 + surcharge)
+- `screeningPoints(t): number` LOS-screening points per intervening hex; `woodsPoints`
+  is an alias
+- `terrainTargetMod(t): number` to-hit modifier when the target is inside the hex
+  (e.g. water1 −1, light/heavyWoods +1/+2)
+- `hasPartialCover(t): boolean`, `blocksTargeting(t): boolean` (water2/3 block
+  LOS in/out)
 - `costToClimb(fromLevel, toLevel): number` (+1 per level climbed, descent free)
 - `levelAt(elevation, hex): number` (level for a hex, default `DEFAULT_LEVEL` 0)
 - `MP_PER_FACING_CHANGE = 1`, `MP_TO_ENTER_HEX = 1`, `MP_PER_LEVEL_CLIMB = 1`,
   `DEFAULT_LEVEL = 0`
+
+Also exported from `src/data/terrain.schema.ts`:
+- `getTerrainDef(type): TerrainDef | undefined`, `getAllTerrainDefs()` (read-only
+  catalog map keyed by terrain type)
+- `TerrainDef` type: `{ moveCost; screeningValue; terrainMod ; partialCover?; blocksTargeting? }`
 
 ## Data
 
@@ -200,8 +215,30 @@ Map coordinates are already 1-based and match the engine directly, so there is
 - `losBlockedByElevation(elevation, from, to)` — draws a real-valued ray from
   attacker to target LOS level (hex level + 1); an intervening hex blocks iff
   its own LOS level exceeds the ray's height at its center.
-- `losClear(elevation, terrain, from, to)` — true when both woods and elevation
-  LOS checks are clear.
+- `losBlockedByWater(terrain, from, to)` — true when either endpoint hex is
+  water2/water3 (units cannot fire into or out of depth-2+ water).
+- `losClear(elevation, terrain, from, to)` — true when screening, water, and
+  elevation LOS checks are all clear.
+
+### Buildings (`rules/building.ts`)
+
+- `BuildingType` — `"light" | "medium" | "heavy" | "hardened"`
+- `BuildingState` — `{ cf: number; type: BuildingType }`
+- `buildingTypeOf(terrain): BuildingType | undefined`
+- `isBuildingTerrain(terrain): boolean`
+- `createBuildingState(type): BuildingState` — initial CF from the sub-type
+  (light 15 / medium 40 / heavy 90 / hardened 150)
+- `applyBuildingDamage(state, damage): BuildingState` (CF clamped at 0)
+- `isCollapsed(state): boolean` (CF ≤ 0)
+- `collapseToRubble(cell)` — mutates a building hex cell to `"rubble"`
+
+In the battle engine (`rules/game.ts`), `createBattle` initializes
+`BattleState.buildings["col,row"]` for each building hex in `terrain`.
+`damageBuildingAt(state, hex, damage)` drains a building's CF, collapses it to
+rubble on reaching 0 (emitting a `buildingCollapsed` event), and returns the
+event (or `null` when the hex has no building). Weapon damage that lands on a
+unit standing in a building hex is automatically applied to that building's CF
+during attack resolution.
 
 ### Arcs (`rules/arcs.ts`)
 
@@ -382,15 +419,15 @@ interface AttackDecl { weaponIndex: number; targetId: string; rapidFire?: boolea
 
 type Phase = "initiative" | "movement" | "weaponAttack" | "end";
 
-interface BattleState {
+interface BattleState extends HexGrid {
   turn; phase; initiativeWinnerTeam;
   units: Record<string, UnitState>;
-  terrain: Record<string, TerrainType>;   // keyed "col,row"
-  elevation: Record<string, number>;      // per-hex levels; missing = 0
-  width?; height?;
+  cells: readonly HexCell[];          // per-hex { terrain: TerrainType; level: number }
+  width: number; height: number;      // board size
   critsDisabled: boolean;
   actedThisPhase: string[];
-  events: GameEvent[];                    // serializable audit log
+  events: GameEvent[];                // serializable audit log
+  buildings: Record<string, BuildingState>;  // { cf; type } keyed "col,row"; building hexes only
 }
 
 interface UnitState {

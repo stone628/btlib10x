@@ -42,7 +42,13 @@ For tests you can also script exact die results (see `tests/helpers.ts`).
 ## 2. Load terrain and create the 'Mechs
 
 Terrain is plain data: a list of hex definitions `{ col, row, type, level? }`
-whose missing hexes are clear ground at level 0. 'Mech models reference the
+whose missing hexes are clear ground at level 0. The engine supports 13
+core-rulebook terrain types (`clear`, lightWoods, heavyWoods, rough, rubble,
+pavement, water1, water2, water3, and light/medium/heavy/hardened buildings),
+each with data-driven movement-cost, LOS-screening, and to-hit modifiers in
+`src/data/terrain.json`. Give a building hex a preceding terrain entry and it
+is initialized with a structural factor (`BattleState.buildings`); collapse to
+rubble happens when the CF is depleted. 'Mech models reference the
 bundled record sheets (`MECH_DEFS`: AS7-D, CDA-3MA, ENF-4R, GRF-1N, HBK-4G,
 HER-5SA, MC-MKII-2, TW-Prime, WHK-Prime, WVR-6R).
 
@@ -88,8 +94,10 @@ The loser's team acts first each phase (classic BattleTech convention);
 ## 4. Movement phase
 
 Declare a movement mode, then execute steps. Each step either enters a hex or
-turns 1–5 hexsides. Costs: 1 MP per hex entered (+1 light / +2 heavy woods, +1
-per level climbed, descent free), 1 MP per hexside turned.
+turns 1–5 hexsides. Costs: 1 MP per hex entered plus a per-terrain surcharge
+(lightWoods +1, heavyWoods +2, rough/rubble +1, water2/3 +3, buildings
++1/+2/+3/+4, pavement +0; data-driven from the terrain catalog), +1
+per level climbed (descent free), 1 MP per hexside turned.
 
 ```ts
 declareMove(state, "wvr", "run");                  // running budget: 8 MP

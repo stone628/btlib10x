@@ -9,13 +9,11 @@
 
 ## To Do
 
-- Add a terrain type table
-
 ## In progress
 
 - Later in classic expansion: heat (will pick up the `heatSinksDestroyed` count
-  already tracked by crit state), physicals, piloting/falling, side+rear firing
-  arcs, vehicles/infantry, buildings, basements, water depth, hull-down
+  already tracked by crit state), physicals, piloting/falling, basements,
+  hull-down, water depth movement-cost change, pavement skid (vehicle-specific)
 - **Piloting / consciousness roll on immobile end-of-turn** — TW end-of-turn
   consciousness roll for an immobile 'Mech (both legs destroyed via
   `isImmobile`): on a failed roll the unit is destroyed; on a success it is
@@ -27,6 +25,17 @@
 
 ## Done
 
+- **Core-rulebook terrain expansion** — terrain catalog extracted to
+  `src/data/terrain.json` (13 types), data-driven via `terrain.schema.ts`;
+  `TerrainType` widened to include rough, rubble, pavement, water1/2/3, and
+  light/medium/heavy/hardened buildings. `terrainMoveCost`/`screeningPoints`
+  (formerly `woodsPoints`) / `terrainTargetMod` / `hasPartialCover` /
+  `blocksTargeting` read the catalog instead of inline switches. Water depth 2+
+  blocks LOS in/out (`losBlockedByWater`); water1 grants a -1 target modifier.
+  Building structural-factor damage + collapse-to-rubble wired into
+  `BattleState.buildings` and weapon resolution (`damageBuildingAt`); renderer
+  glyphs (`w W r R = ∼ ≈ ≋ b B # H`) + CSS. Partial cover resolution deferred
+  to the piloting milestone.
 - **Classic rules expansion** — internal structure (derived from tonnage, TW
   standard table), front/rear armor pools + layered damage model, front / side /
   rear arc classification (`arcs.ts`) and hit-location tables
@@ -57,8 +66,6 @@
   `resolveMechDef`); 8 mech JSONs carry front + `centerTorsoRear` /
   `leftTorsoRear` / `rightTorsoRear`.
 - Scaffold project (npm, TypeScript strict ESM, Vitest; zero runtime deps)
-- Extract rules from the source rulebooks (the implemented subset derives from the CBT and Beginner Box rulebooks)
-- Scope decisions: bipedal only; heat, physical attacks, piloting rolls, and elevation are outside the current subset (deferred)
 - Core domain types: odd-q offset flat-top hexes w/ cube math (`src/core/hex.ts`), dice w/ injectable RNG, terrain, locations
 - Weapon catalog incl. P/V/C/R/AI effect codes (`src/data/weapons.ts`)
 - `MechDef` JSON schema + hand-rolled validator (`src/data/schema.ts`)
@@ -73,15 +80,11 @@
   injected into the web bundles via esbuild `define`; npm/tsc build falls back to `"dev"`);
   CLI gains a `ver` command
 - Single-file HTML deploy (`npm run dist:standalone` → self-contained `dist/standalone/bt10x.html`)
-- Fixed the misleading 'ammo' concept (per-bin depletion replaces the flat weapon-wide pool)
 - **Checked "lose both legs = lose the game"** — current rule subset treats
   losing both legs as immobility only (`isImmobile` in `src/rules/damage.ts`),
   not as a kill; victory (`checkVictory` in `src/rules/game.ts`) only fires on
   head/CT destruction or `removed` flag. Real TW consciousness-roll removal
   on immobile end-of-turn is deferred to the piloting/falling milestone above.
-- make board keep hex instance instead of property maps
-- add getMechDefFor(m: MechModelHolder), getMapDefFor(m: MapNameHolder), getWeaponFor(m: WeaponNameHolder) which throws if given arg contains invalid id.
-- make durability line in two. show { 'FA gone', 'RA gone', 'internal structure gone' } instead of '*' and '!'
 
 ## Verify later
 
@@ -92,4 +95,6 @@
 
 - separate web cli framework to be used at another project
 - Dev-only sarna.net scraper starting at https://www.sarna.net/wiki/BattleMech normalizing into MechDef JSON (Node OK here; library stays browser-first)
-- Full intro-rules expansion: heat, physicals, piloting/falling, rear hits, multi-target arcs, vehicles/infantry, buildings, basements, water depth, hull-down
+- Full intro-rules expansion: heat, physicals, piloting/falling (incl. partial
+  cover), rear hits, multi-target arcs, vehicles/infantry, basements,
+  hull-down, full water-depth movement, buildings damage beyond CF collapse
