@@ -1355,8 +1355,8 @@ export function reachableModel(s: Session): BoardModel | null {
   const row1 = Math.min(h, maxR);
 
   const base = battleModel(s.battle);
-  const cells = { ...(base.cells ?? {}) };
-  const idStyles = { ...(base.idStyles ?? {}) };
+  const cells = { ...base.cells };
+  const idStyles = { ...base.idStyles };
   const edgeStyles: Record<string, CharStyle> = {};
   const team = TEAM_STYLES[actor.team];
   const actorKey = `${actor.position.col},${actor.position.row}`;
@@ -1375,11 +1375,12 @@ export function reachableModel(s: Session): BoardModel | null {
     anchorCol,
     anchorRow,
     cells,
-    ...(Object.keys(edgeStyles).length > 0 ? { edgeStyles } : {}),
-    ...(base.styles !== undefined ? { styles: base.styles } : {}),
-    ...(Object.keys(idStyles).length > 0 ? { idStyles } : {}),
-    ...(base.marks !== undefined ? { marks: base.marks } : {}),
-    ...(base.elevations !== undefined ? { elevations: base.elevations } : {}),
+    marks: {},
+    elevations: {},
+    edgeStyles: edgeStyles,
+    styles: {},
+    idStyles,
+    facings: {},
   };
 }
 

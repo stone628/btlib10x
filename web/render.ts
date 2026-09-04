@@ -45,32 +45,26 @@ export interface Span {
 export interface BoardModel {
   readonly cols: number;
   readonly rows: number;
-  /**
-   * Absolute (1-based) column/row of the crop anchor. Hex at `(col,row)`
-   * renders at `(col - anchorCol, row - anchorRow)`; defaults to 1/1 (full board).
-   */
-  readonly anchorCol?: number | undefined;
-  readonly anchorRow?: number | undefined;
+  /** Absolute (1-based) column/row of the crop anchor. Hex at `(col,row)` renders at `(col - anchorCol, row - anchorRow)`. */
+  readonly anchorCol: number;
+  readonly anchorRow: number;
   /** Cell text drawn inside `/...\ ` (unit ids, overlay glyphs). */
   readonly cells: Readonly<Record<string, string>>;
   /** Glyphs drawn at the hex bottom center (e.g. terrain markers). */
-  readonly marks?: Readonly<Record<string, string>> | undefined;
-  /** Per-hex ground elevation; missing entries are level 0. */
-  readonly elevations?: Readonly<Record<string, number>> | undefined;
+  readonly marks: Readonly<Record<string, string>>;
+  /** Per-hex ground elevation. */
+  readonly elevations: Readonly<Record<string, number>>;
   /** Per-hex mech facing (`"col,row"` → {@link Facing}); drawn on the grid. */
-  readonly facings?: Readonly<Record<string, Facing>> | undefined;
+  readonly facings: Readonly<Record<string, Facing>>;
   /**
    * Per-edge style keyed by `"col,row:facing"` — tints the grid edge where
    * that facing's arrow would be placed (e.g. team color on reachable hexes).
    */
-  readonly edgeStyles?: Readonly<Record<string, CharStyle>> | undefined;
+  readonly edgeStyles: Readonly<Record<string, CharStyle>>;
   /** Style applied to a hex's characters: grid rows, belly parens and mark. */
-  readonly styles?: Readonly<Record<string, CharStyle>> | undefined;
-  /**
-   * Style for just the occupant id inside `( )` (e.g. {@link TEAM_STYLES});
-   * falls back to the hex-wide {@link styles} entry when absent.
-   */
-  readonly idStyles?: Readonly<Record<string, CharStyle>> | undefined;
+  readonly styles: Readonly<Record<string, CharStyle>>;
+  /** Style for just the occupant id inside `( )` (e.g. {@link TEAM_STYLES}). */
+  readonly idStyles: Readonly<Record<string, CharStyle>>;
 }
 
 // ---- renderer supplier ----

@@ -287,6 +287,11 @@ describe("map renderer", () => {
         "9,9": "zz", // outside the crop
       },
       facings: { "3,4": "n" },
+      marks: {},
+      elevations: {},
+      edgeStyles: {},
+      styles: {},
+      idStyles: {},
     };
     const out = boardToText(model);
     // In-crop hexes are drawn.

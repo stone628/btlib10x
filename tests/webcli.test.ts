@@ -523,15 +523,15 @@ describe("movement", () => {
     expect(m.anchorRow).toBeGreaterThanOrEqual(1);
     expect(m.cols * m.rows).toBeLessThan(15 * 16);
     // The acting unit's hex is inside the crop; no per-hex facing arrows.
-    expect(m.facings).toBeUndefined();
+    expect(m.facings).toEqual({});
     // Reachable (hex, facing) edges are tinted with the actor's team color.
     const team = TEAM_STYLES[actor.team];
-    expect(Object.values(m.edgeStyles ?? {})).toContainEqual(team);
+    expect(Object.values(m.edgeStyles)).toContainEqual(team);
     // Reachable hexes show a team-tinted `<>` belly marker.
-    const markerKey = Object.keys(m.cells ?? {}).find((k) => m.cells![k] === REACHABLE_MARKER);
+    const markerKey = Object.keys(m.cells).find((k) => m.cells[k] === REACHABLE_MARKER);
     expect(markerKey).toBeDefined();
     expect(markerKey).not.toBe(`${actor.position.col},${actor.position.row}`);
-    expect(m.idStyles?.[markerKey ?? ""]).toEqual(team);
+    expect(m.idStyles[markerKey ?? ""]).toEqual(team);
   });
 });
 

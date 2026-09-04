@@ -6,7 +6,7 @@ import { TERRAIN_GLYPHS, TERRAIN_STYLES } from "./renderer.text.js";
  * Derive per-terrain `CharStyle` keyed by `"col,row"` (non-clear cells only)
  * from a flat `HexCell[]` grid.
  */
-export function deriveTerrainStyles(grid: HexGrid): Record<string, CharStyle> | undefined {
+export function deriveTerrainStyles(grid: HexGrid): Record<string, CharStyle> {
   const m: Record<string, CharStyle> = {};
   const cells = grid.cells;
   const width = grid.width;
@@ -18,14 +18,14 @@ export function deriveTerrainStyles(grid: HexGrid): Record<string, CharStyle> | 
       if (st !== undefined) m[key] = st;
     }
   }
-  return Object.keys(m).length > 0 ? m : undefined;
+  return m;
 }
 
 /**
  * Derive terrain mark glyphs keyed by `"col,row"` (non-clear cells only)
  * from a flat `HexCell[]` grid.
  */
-export function deriveTerrainMarks(grid: HexGrid): Record<string, string> | undefined {
+export function deriveTerrainMarks(grid: HexGrid): Record<string, string> {
   const m: Record<string, string> = {};
   const cells = grid.cells;
   const width = grid.width;
@@ -36,14 +36,14 @@ export function deriveTerrainMarks(grid: HexGrid): Record<string, string> | unde
     const g = TERRAIN_GLYPHS[cell.terrain];
     if (g !== undefined) m[key] = g;
   }
-  return Object.keys(m).length > 0 ? m : undefined;
+  return m;
 }
 
 /**
  * Derive non-zero elevation entries keyed by `"col,row"` from a flat
  * `HexCell[]` grid.
  */
-export function deriveElevations(grid: HexGrid): Record<string, number> | undefined {
+export function deriveElevations(grid: HexGrid): Record<string, number> {
   const m: Record<string, number> = {};
   const cells = grid.cells;
   const width = grid.width;
@@ -53,35 +53,31 @@ export function deriveElevations(grid: HexGrid): Record<string, number> | undefi
       m[`${(i % width) + 1},${Math.floor(i / width) + 1}`] = cell.level;
     }
   }
-  return Object.keys(m).length > 0 ? m : undefined;
+  return m;
 }
 
 /**
  * Derive terrain mark glyphs keyed by `"col,row"` from
  * {@link TerrainHexDef} entries (map display).
  */
-export function deriveMapMarks(
-  terrain: readonly TerrainHexDef[],
-): Record<string, string> | undefined {
+export function deriveMapMarks(terrain: readonly TerrainHexDef[]): Record<string, string> {
   const m: Record<string, string> = {};
   for (const { col, row, type } of terrain) {
     const glyph = TERRAIN_GLYPHS[type];
     if (glyph !== undefined) m[`${col},${row}`] = glyph;
   }
-  return Object.keys(m).length > 0 ? m : undefined;
+  return m;
 }
 
 /**
  * Derive per-terrain `CharStyle` keyed by `"col,row"` from
  * {@link TerrainHexDef} entries (map display).
  */
-export function deriveMapStyles(
-  terrain: readonly TerrainHexDef[],
-): Record<string, CharStyle> | undefined {
+export function deriveMapStyles(terrain: readonly TerrainHexDef[]): Record<string, CharStyle> {
   const m: Record<string, CharStyle> = {};
   for (const { col, row, type } of terrain) {
     const st = TERRAIN_STYLES[type];
     if (st !== undefined) m[`${col},${row}`] = st;
   }
-  return Object.keys(m).length > 0 ? m : undefined;
+  return m;
 }
