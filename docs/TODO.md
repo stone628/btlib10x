@@ -9,7 +9,6 @@
 
 ## To Do
 
-- make durability line in two. show { 'FA gone', 'RA gone', 'internal structure gone' } instead of '*' and '!'
 - make fmtLog handle GameEvent based on composition of { onEnterEvent, onEvent, onExitEvent } handlers
 - Add a terrain type table
 
@@ -83,6 +82,7 @@
   on immobile end-of-turn is deferred to the piloting/falling milestone above.
 - make board keep hex instance instead of property maps
 - add getMechDefFor(m: MechModelHolder), getMapDefFor(m: MapNameHolder), getWeaponFor(m: WeaponNameHolder) which throws if given arg contains invalid id.
+- make durability line in two. show { 'FA gone', 'RA gone', 'internal structure gone' } instead of '*' and '!'
 
 ## Verify later
 

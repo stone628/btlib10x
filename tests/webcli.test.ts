@@ -275,10 +275,10 @@ describe("info", () => {
     run(s, "map quickstart");
     const lines = run(s, "info mech HBK-4G");
     const weaponLines = lines.filter(
-      (l) => /\[(RT|RA|LA|HD|CT|LT|RL|LL)\]/.test(l) && /S\d+\/M\d+\/L\d+/.test(l),
+      (l) => /\[(RT|RA|LA|HD|CT|LT|RL|LL)\]/.test(l) && /S\d+\s*\/\s*M\d+\s*\/\s*L\d+/.test(l),
     );
     expect(weaponLines.length).toBe(4);
-    const rangeCol = new Set(weaponLines.map((l) => l.search(/S\d+\/M\d+\/L\d+/)));
+    const rangeCol = new Set(weaponLines.map((l) => l.search(/S\d+\s*\/\s*M\d+\s*\/\s*L\d+/)));
     expect(rangeCol.size).toBe(1);
     const bracketCol = new Set(weaponLines.map((l) => l.indexOf("[")));
     expect(bracketCol.size).toBe(1);
@@ -304,10 +304,10 @@ describe("sheet", () => {
     run(s, "start");
     const lines = run(s, "sheet hunchy");
     const weaponLines = lines.filter(
-      (l) => /\[(RT|RA|LA|HD|CT|LT|RL|LL)\]/.test(l) && /S\d+\/M\d+\/L\d+/.test(l),
+      (l) => /\[(RT|RA|LA|HD|CT|LT|RL|LL)\]/.test(l) && /S\d+\s*\/\s*M\d+\s*\/\s*L\d+/.test(l),
     );
     expect(weaponLines.length).toBe(4);
-    const rangeCol = new Set(weaponLines.map((l) => l.search(/S\d+\/M\d+\/L\d+/)));
+    const rangeCol = new Set(weaponLines.map((l) => l.search(/S\d+\s*\/\s*M\d+\s*\/\s*L\d+/)));
     expect(rangeCol.size).toBe(1);
     const bracketCol = new Set(weaponLines.map((l) => l.indexOf("[")));
     expect(bracketCol.size).toBe(1);
@@ -323,11 +323,17 @@ describe("sheet", () => {
     expect(out).toContain("cicada  CDA-3MA  9,8 facing s");
     // Hunchback (50t): HD=9+3=12, CT=26+5+16=47, RT=20+4+12=36, LT=20+4+12=36,
     // RA=16+8=24, LA=16+8=24, RL=20+12=32, LL=20+12=32.
-    expect(out).toMatch(/durability: HD 12\/12 \| CT 47\/47 \| RT 36\/36 \| LT 36\/36/);
-    expect(out).toMatch(/\| RA 24\/24 \| LA 24\/24 \| RL 32\/32 \| LL 32\/32/);
+    expect(out).toMatch(/HD\(12\/12\)/);
+    expect(out).toMatch(/CT\(47\/47\)/);
+    expect(out).toMatch(/RT\(36\/36\)/);
+    expect(out).toMatch(/LT\(36\/36\)/);
+    expect(out).toMatch(/RA\(24\/24\)/);
+    expect(out).toMatch(/LA\(24\/24\)/);
+    expect(out).toMatch(/RL\(32\/32\)/);
+    expect(out).toMatch(/LL\(32\/32\)/);
   });
 
-  it("marks front-armor depletion with * and IS destruction with !", () => {
+  it("marks front-armor depletion with [-F] and IS destruction with [-I]", () => {
     const s = freshSetup();
     run(s, "start");
     const hunchy = s.battle!.units.hunchy!;
@@ -336,10 +342,10 @@ describe("sheet", () => {
     // Destroy CT internal structure → killed.
     hunchy.damage.internalStructure.centerTorso = 0;
     const out = run(s, "sheet").join("\n");
-    // RT: 0+4+12 = 16/36, front pool gone, IS intact → "*".
-    expect(out).toMatch(/RT 16\/36\*/);
-    // CT: 26+5+0 = 31/47, IS gone → "!".
-    expect(out).toMatch(/CT 31\/47!/);
+    // RT: 0+4+12 = 16/36, front pool gone, IS intact → "[-F]".
+    expect(out).toMatch(/RT\(16\/36\[-F\]\)/);
+    // CT: 26+5+0 = 31/47, IS gone → "[-I]".
+    expect(out).toMatch(/CT\(31\/47\[-I\]\)/);
   });
 
   it("tracks armor damage during battle", () => {
