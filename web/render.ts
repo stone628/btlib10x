@@ -46,11 +46,11 @@ export interface BoardModel {
   readonly cols: number;
   readonly rows: number;
   /**
-   * Absolute (1-based) column/row of the crop origin. Hex at `(col,row)`
-   * renders at `(col - col0, row - row0)`; defaults to 1/1 (full board).
+   * Absolute (1-based) column/row of the crop anchor. Hex at `(col,row)`
+   * renders at `(col - anchorCol, row - anchorRow)`; defaults to 1/1 (full board).
    */
-  readonly col0?: number | undefined;
-  readonly row0?: number | undefined;
+  readonly anchorCol?: number | undefined;
+  readonly anchorRow?: number | undefined;
   /** Cell text drawn inside `/...\ ` (unit ids, overlay glyphs). */
   readonly cells: Readonly<Record<string, string>>;
   /** Glyphs drawn at the hex bottom center (e.g. terrain markers). */

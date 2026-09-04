@@ -200,10 +200,10 @@ function stampInto(
 function drawCanvas(model: BoardModel): Canvas {
   const canvas = makeCanvas(model);
   const { rows, cells, marks, elevations, styles, idStyles, facings, edgeStyles } = model;
-  const col0 = model.col0 ?? 1;
-  const row0 = model.row0 ?? 1;
-  const cols = model.cols + (col0 - 1);
-  const rowsFull = rows + (row0 - 1);
+  const anchorCol = model.anchorCol ?? 1;
+  const anchorRow = model.anchorRow ?? 1;
+  const cols = model.cols + (anchorCol - 1);
+  const rowsFull = rows + (anchorRow - 1);
 
   const setChar = (x: number, y: number, ch: string, st: CharStyle | null): void => {
     const line = canvas.rows[y];
@@ -223,11 +223,11 @@ function drawCanvas(model: BoardModel): Canvas {
     }
   };
 
-  for (let col = col0; col <= cols; col++) {
+  for (let col = anchorCol; col <= cols; col++) {
     const baseY = col % 2 === 1 ? 0 : STAGGER;
-    for (let row = row0; row <= rowsFull; row++) {
-      const lx = (col - col0) * COL_STRIDE;
-      const y = baseY + (row - row0) * ROW_STRIDE;
+    for (let row = anchorRow; row <= rowsFull; row++) {
+      const lx = (col - anchorCol) * COL_STRIDE;
+      const y = baseY + (row - anchorRow) * ROW_STRIDE;
       const key = `${col},${row}`;
       const cell = cells[key];
       const style = styles?.[key] ?? null;

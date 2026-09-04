@@ -275,12 +275,12 @@ describe("map renderer", () => {
     expect(out).toContain(`${GRID_GLYPHS.edgeSW} w0 ${GRID_GLYPHS.edgeSE}`);
   });
 
-  it("renders a cropped sub-region via col0/row0 and omits out-of-crop hexes", () => {
+  it("renders a cropped sub-region via anchorCol/anchorRow and omits out-of-crop hexes", () => {
     const model: BoardModel = {
       cols: 3,
       rows: 2,
-      col0: 3,
-      row0: 4,
+      anchorCol: 3,
+      anchorRow: 4,
       cells: {
         "3,4": "aa",
         "5,5": "bb",

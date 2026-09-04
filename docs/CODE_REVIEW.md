@@ -194,8 +194,8 @@ export interface BoardOverlay {
   readonly cells?: Record<string, string>;
   readonly idStyles?: Record<string, CharStyle>;
   readonly edgeStyles?: Record<string, CharStyle>;
-  readonly col0?: number;
-  readonly row0?: number;
+  readonly anchorCol?: number;
+  readonly anchorRow?: number;
   readonly cols?: number;
   readonly rows?: number;
 }
