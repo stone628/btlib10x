@@ -260,8 +260,8 @@ export const kr: Catalog = {
 
   "critChart.summary": "critical slots",
   "critChart.empty": "-",
-  "critChart.destroyedSuffix": " [DST]",
-  "critChart.jammedSuffix": " [JAM]",
+  "critChart.destroyedSuffix": " [-]",
+  "critChart.jammedSuffix": " [J]",
   "critChart.ammoSuffix": " 탄약 ({curr}/{max}회분)",
   "critChart.ammoDesign": " 탄약 ({max}회분)",
   "critChart.component.cockpit": "Cockpit",

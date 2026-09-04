@@ -6,7 +6,7 @@ import { loadAmmoBins } from "../src/rules/ammo.js";
 import { resolveCriticalHits } from "../src/rules/critical.js";
 import type { UnitDamageState } from "../src/rules/damage.js";
 import { computeToHit } from "../src/rules/tohit.js";
-import { fmtLog } from "../web/format.js";
+import { formatLog } from "../web/format.js";
 import { scriptedRng } from "./helpers.js";
 
 const LOCS = [
@@ -77,7 +77,7 @@ describe("critical hit log formatting", () => {
   it("renders each critical hit exactly once, nested under its attack", () => {
     // The engine emits one attackResolved event whose resolution.crits carry
     // the crit; no separate critsResolved event exists.
-    const lines = fmtLog("en", [
+    const lines = formatLog("en", [
       { kind: "attackResolved", unitId: "hbk", targetId: "enf", resolution: critResolution() },
     ]);
     const critHeaders = lines.filter((l) => l.includes("crit roll"));
@@ -86,7 +86,7 @@ describe("critical hit log formatting", () => {
   });
 
   it("batches consecutive attack resolutions under a single delimiter pair", () => {
-    const lines = fmtLog("en", [
+    const lines = formatLog("en", [
       { kind: "attackResolved", unitId: "hbk", targetId: "enf", resolution: critResolution() },
       { kind: "attackResolved", unitId: "hbk", targetId: "enf", resolution: critResolution() },
     ]);

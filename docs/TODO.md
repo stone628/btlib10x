@@ -9,7 +9,6 @@
 
 ## To Do
 
-- make fmtLog handle GameEvent based on composition of { onEnterEvent, onEvent, onExitEvent } handlers
 - Add a terrain type table
 
 ## In progress

@@ -6,8 +6,8 @@ import {
   boardChunk,
   buildLinesChunk,
   fireSuggestionLines,
-  fmtLog,
   fmtSetupStatus,
+  formatLog,
   infoMapChunks,
   infoMapList,
   infoMechChunk,
@@ -97,7 +97,7 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
     argsDoc: [["n", "cmd.log.arg.n"]],
     run: (s, a) => {
       const n = a[0] !== undefined ? int(L(s), a[0], "n") : 10;
-      return fmtLog(L(s), s.battle?.events ?? [], n);
+      return formatLog(L(s), s.battle?.events ?? [], n);
     },
   },
   info: {
@@ -230,7 +230,7 @@ const SETUP_CMDS: Record<string, CmdDef> = {
 
 function initiativeLine(s: S.Session): string[] {
   const tail = (s.battle?.events ?? []).slice(-2);
-  return fmtLog(
+  return formatLog(
     s.locale,
     tail.filter((e) => e.kind === "initiative" || e.kind === "phase"),
   );
@@ -321,7 +321,7 @@ const MOVE_CMDS: Record<string, CmdDef> = {
   },
   done: {
     helpKey: "cmd.doneMove.help",
-    run: (s) => fmtLog(s.locale, S.commitMove(s).newEvents),
+    run: (s) => formatLog(s.locale, S.commitMove(s).newEvents),
   },
 };
 
@@ -393,10 +393,10 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
         const unit = S.currentActor(s);
         const result = S.passFire(s);
         const passLine = unit ? i18n(s.locale, "log.attacksPassed", { id: unit.id }) : "";
-        const rest = fmtLog(s.locale, result.newEvents);
+        const rest = formatLog(s.locale, result.newEvents);
         return passLine ? [passLine, ...rest] : rest;
       }
-      return fmtLog(s.locale, S.commitFire(s).newEvents);
+      return formatLog(s.locale, S.commitFire(s).newEvents);
     },
   },
 };

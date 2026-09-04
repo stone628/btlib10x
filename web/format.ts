@@ -1500,57 +1500,76 @@ export function weaponsLines(s: Session, unitId?: string): string[] {
 }
 
 // ------------------------------------------------------------------ log ----
-
-export function fmtLog(
+export function formatLog(
   locale: LocaleId,
   events: readonly GameEvent[],
   n: number = events.length,
 ): string[] {
   const slice = events.slice(-n);
   const lines: string[] = [];
-  let prevKind: GameEvent["kind"] | null = null;
+  let prev: GameEvent | null = null;
   let removedLines: string[] = [];
-  for (let i = 0; i < slice.length; i++) {
-    const e = slice[i]!;
-    const currKind = e.kind;
-    if (isAttackResolutionKind(e.kind)) {
-      if (!isAttackResolutionKind(prevKind)) {
+  let lastUnitPrefix: string = "";
+  const onEnterEvent = (prev: GameEvent | null, curr: GameEvent): void => {
+    if (isAttackResolutionKind(curr.kind)) {
+      if (prev === null || !isAttackResolutionKind(prev.kind)) {
         lines.push(i18n(locale, "res.attackResolutionStart"));
       }
-      if (currKind === "unitRemoved") {
-        removedLines.push(...eventLines(locale, e));
-      } else if (currKind === "attackResolved") {
-        const resolvedLines = eventLines(locale, e);
-        const unitPrefix = `[${e.unitId} -> ${e.targetId}] `;
-        lines.push(unitPrefix + resolvedLines.shift());
-        if (resolvedLines.length > 0) {
-          const indent = " ".repeat(unitPrefix.length);
-          lines.push(...resolvedLines.map((l) => indent + l));
-        }
-      } else {
-        lines.push(...eventLines(locale, e));
+    }
+  };
+  const onEvent = (event: GameEvent): void => {
+    if (isAttackResolutionKind(event.kind)) {
+      switch (event.kind) {
+        case "unitRemoved":
+          removedLines.push(...eventLines(locale, event));
+          return;
+        case "attackResolved":
+          {
+            const resolvedLines = eventLines(locale, event);
+            const unitPrefix = `[${event.unitId} -> ${event.targetId}]`;
+            if (lastUnitPrefix !== unitPrefix) {
+              lines.push(unitPrefix);
+              lastUnitPrefix = unitPrefix;
+            }
+            lines.push(`  ${resolvedLines.shift()}`);
+            if (resolvedLines.length > 0) {
+              lines.push(...resolvedLines.map((l) => `    ${l}`));
+            }
+          }
+          return;
       }
-      if (!isAttackResolutionKind(getKindInBatch(i + 1, slice))) {
+    }
+    lines.push(...eventLines(locale, event));
+  };
+  const onExitEvent = (curr: GameEvent, next: GameEvent | null): void => {
+    if (isAttackResolutionKind(curr.kind)) {
+      if (next === null || !isAttackResolutionKind(next.kind)) {
         lines.push(i18n(locale, "res.attackResolutionEnd"));
         if (removedLines.length > 0) {
           lines.push(...removedLines);
           removedLines = [];
         }
       }
-    } else {
-      lines.push(...eventLines(locale, e));
     }
-    prevKind = currKind;
+  };
+  for (let i = 0; i < slice.length; i++) {
+    const e = slice[i]!;
+    const prevKind: GameEvent["kind"] | null = prev === null ? null : prev.kind;
+    const currKind = e.kind;
+
+    if (prevKind !== currKind) {
+      if (prev !== null) onExitEvent(prev, e);
+      onEnterEvent(prev, e);
+    }
+    onEvent(e);
+    prev = e;
   }
+  onExitEvent(prev!, null);
   return lines;
 }
 
 function isAttackResolutionKind(kind: GameEvent["kind"] | null): boolean {
   return kind === "attackResolved" || kind === "unitDestroyed" || kind === "unitRemoved";
-}
-
-function getKindInBatch(i: number, slice: readonly GameEvent[]): GameEvent["kind"] | null {
-  return i >= 0 && i < slice.length ? slice[i]!.kind : null;
 }
 
 function eventLines(locale: LocaleId, e: GameEvent): string[] {
