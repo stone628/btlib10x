@@ -11,6 +11,7 @@ const valid: MapDef = {
     { col: 3, row: 3, type: "lightWoods" },
     { col: 5, row: 4, type: "heavyWoods" },
   ],
+  legends: ["lightWoods", "heavyWoods"],
 };
 
 describe("validateMapDef", () => {
@@ -94,6 +95,7 @@ describe("validateMapDef", () => {
         { col: 3, row: 3, type: "clear", level: 2 },
         { col: 4, row: 3, type: "clear" },
       ],
+      legends: ["clear"],
     };
     expect(validateMapDef(withLevel)).toEqual(withLevel);
   });

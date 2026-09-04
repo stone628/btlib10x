@@ -1,5 +1,5 @@
 import type { TerrainHexDef } from "../core/types.js";
-import { isTerrainType, TERRAIN_TYPES } from "../core/types.js";
+import { isTerrainType, TERRAIN_TYPES, type TerrainType } from "../core/types.js";
 
 /**
  * Static definition of a battle map: board dimensions plus every non-clear
@@ -13,6 +13,7 @@ export interface MapDef {
   readonly width: number;
   readonly height: number;
   readonly terrain: readonly TerrainHexDef[];
+  readonly legends: readonly TerrainType[];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -96,5 +97,12 @@ export function validateMapDef(data: unknown): MapDef {
     throw new Error(`Invalid MapDef:\n  - ${errors.join("\n  - ")}`);
   }
 
-  return data as unknown as MapDef;
+  const t = data.terrain as TerrainHexDef[];
+  return {
+    name: data.name as string,
+    width: data.width as number,
+    height: data.height as number,
+    terrain: t,
+    legends: [...new Set(t.map((def) => def.type))],
+  };
 }
