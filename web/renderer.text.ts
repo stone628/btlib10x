@@ -200,8 +200,8 @@ function stampInto(
 function drawCanvas(model: BoardModel): Canvas {
   const canvas = makeCanvas(model);
   const { rows, cells, marks, elevations, styles, idStyles, facings, edgeStyles } = model;
-  const anchorCol = model.anchorCol ?? 1;
-  const anchorRow = model.anchorRow ?? 1;
+  const anchorCol = model.anchorCol;
+  const anchorRow = model.anchorRow;
   const cols = model.cols + (anchorCol - 1);
   const rowsFull = rows + (anchorRow - 1);
 
@@ -222,6 +222,27 @@ function drawCanvas(model: BoardModel): Canvas {
       if (line[i] === " ") line[i] = ch;
     }
   };
+  const isEdgeStylesEmpty = () => {
+    for (const key in edgeStyles) {
+      if (Object.hasOwn(edgeStyles, key)) return false;
+    }
+    return true;
+  };
+
+  const checkFacing = isEdgeStylesEmpty()
+    ? (_key: string, _x: number, _y: number): void => {}
+    : (key: string, x: number, y: number): void => {
+        for (const facing of FACINGS) {
+          const es = edgeStyles[`${key}:${facing}`];
+          if (es !== undefined) {
+            const p = facingEdgePos(facing, x, y);
+            const line = canvas.rows[p.y];
+            if (line && p.x >= 0 && p.x < line.length) {
+              canvas.styles[p.y]![p.x] = es;
+            }
+          }
+        }
+      };
 
   for (let col = anchorCol; col <= cols; col++) {
     const baseY = col % 2 === 1 ? 0 : STAGGER;
@@ -230,7 +251,7 @@ function drawCanvas(model: BoardModel): Canvas {
       const y = baseY + (row - anchorRow) * ROW_STRIDE;
       const key = `${col},${row}`;
       const cell = cells[key];
-      const style = styles?.[key] ?? null;
+      const style = styles[key] ?? null;
       const x = lx;
       stampEdge(x, y, GRID_GLYPHS.edgeTop);
       stamp(
@@ -243,11 +264,11 @@ function drawCanvas(model: BoardModel): Canvas {
       stamp(x, y + 2, `${GRID_GLYPHS.vertW}${" ".repeat(BELLY_WIDTH)}${GRID_GLYPHS.vertE}`, style);
       if (shown.length > 0) {
         const left = Math.ceil((BELLY_WIDTH - shown.length) / 2);
-        stamp(x + 1 + left, y + 2, shown, idStyles?.[key] ?? style);
+        stamp(x + 1 + left, y + 2, shown, idStyles[key] ?? style);
       }
       stamp(x + 1, y + 3, `${GRID_GLYPHS.edgeSW}    ${GRID_GLYPHS.edgeSE}`, style);
-      const mark = marks?.[key];
-      const level = elevations?.[key] ?? 0;
+      const mark = marks[key];
+      const level = elevations[key] ?? 0;
       if (mark !== undefined && mark.length > 0) {
         stamp(x + 2, y + 3, fitCell(`${mark}${level}`, 4), style);
       } else {
@@ -258,10 +279,10 @@ function drawCanvas(model: BoardModel): Canvas {
         y + ROW_STRIDE,
         row < rowsFull ? GRID_GLYPHS.edgeShared : GRID_GLYPHS.edgeBottom,
       );
-      const f = facings?.[key];
+      const f = facings[key];
       const glyph = f === undefined ? undefined : FACING_GLYPH[f];
       if (glyph !== undefined) {
-        const arrowStyle = idStyles?.[key] ?? style;
+        const arrowStyle = idStyles[key] ?? style;
         if (glyph === FACING_GLYPH.n) setChar(x + 3, y, glyph, arrowStyle);
         else if (glyph === FACING_GLYPH.s) setChar(x + 4, y + ROW_STRIDE, glyph, arrowStyle);
         else if (glyph === FACING_GLYPH.nw) setChar(x + 1, y + 1, glyph, arrowStyle);
@@ -269,18 +290,7 @@ function drawCanvas(model: BoardModel): Canvas {
         else if (glyph === FACING_GLYPH.sw) setChar(x + 1, y + 3, glyph, arrowStyle);
         else setChar(x + 6, y + 3, glyph, arrowStyle);
       }
-      if (edgeStyles !== undefined) {
-        for (const facing of FACINGS) {
-          const es = edgeStyles[`${col},${row}:${facing}`];
-          if (es !== undefined) {
-            const p = facingEdgePos(facing, x, y);
-            const line = canvas.rows[p.y];
-            if (line && p.x >= 0 && p.x < line.length) {
-              canvas.styles[p.y]![p.x] = es;
-            }
-          }
-        }
-      }
+      checkFacing(key, x, y);
     }
   }
 
@@ -385,21 +395,22 @@ export function mapModel(
   styles?: Readonly<Record<string, CharStyle>>,
   elevations?: Readonly<Record<string, number>>,
 ): BoardModel {
-  const marks = deriveMapMarks(map.terrain);
-  const auto = deriveMapStyles(map.terrain);
   const filteredElevations =
-    elevations !== undefined
-      ? Object.fromEntries(Object.entries(elevations).filter(([, v]) => v !== 0))
-      : undefined;
+    elevations === undefined
+      ? {}
+      : Object.fromEntries(Object.entries(elevations).filter(([, v]) => v !== 0));
   return {
     cols: Math.max(1, map.width),
     rows: Math.max(1, map.height),
+    anchorCol: 1,
+    anchorRow: 1,
     cells: {},
-    ...(marks !== undefined ? { marks } : {}),
-    ...(filteredElevations !== undefined && Object.keys(filteredElevations).length > 0
-      ? { elevations: filteredElevations }
-      : {}),
-    ...(styles !== undefined ? { styles } : auto !== undefined ? { styles: auto } : {}),
+    marks: deriveMapMarks(map.terrain),
+    elevations: filteredElevations,
+    facings: {},
+    edgeStyles: {},
+    styles: styles === undefined ? deriveMapStyles(map.terrain) : styles,
+    idStyles: {},
   };
 }
 
@@ -438,26 +449,28 @@ export function battleModel(
     facings[key] = unit.facing;
   }
 
-  const auto = deriveTerrainStyles(state);
-  const resolvedMarks = marks ?? deriveTerrainMarks(state);
   const elevations = deriveElevations(state);
   const autoCells: Record<string, CharStyle> = {};
-  for (const unit of Object.values(state.units)) {
-    if (unit.removed) continue;
-    const key = `${unit.position.col},${unit.position.row}`;
-    const team = TEAM_STYLES[unit.team];
-    if (team !== undefined) autoCells[key] = team;
+  if (styles === undefined) {
+    for (const unit of Object.values(state.units)) {
+      if (unit.removed) continue;
+      const key = `${unit.position.col},${unit.position.row}`;
+      const team = TEAM_STYLES[unit.team];
+      if (team !== undefined) autoCells[key] = team;
+    }
   }
-
   return {
     cols: Math.max(1, width),
     rows: Math.max(1, height),
+    anchorCol: 1,
+    anchorRow: 1,
     cells,
-    ...(elevations !== undefined ? { elevations } : {}),
-    ...(Object.keys(facings).length > 0 ? { facings } : {}),
-    ...(resolvedMarks === undefined ? {} : { marks: resolvedMarks }),
-    ...(styles !== undefined ? { styles } : auto !== undefined ? { styles: auto } : {}),
-    ...(styles === undefined && Object.keys(autoCells).length > 0 ? { idStyles: autoCells } : {}),
+    marks: marks ?? deriveTerrainMarks(state),
+    elevations,
+    facings,
+    edgeStyles: {},
+    styles: styles ?? deriveTerrainStyles(state),
+    idStyles: autoCells,
   };
 }
 

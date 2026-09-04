@@ -101,9 +101,9 @@ describe("styled board model", () => {
       makeBattleOptions(units, false, [{ col: 3, row: 3, type: "lightWoods" }]),
     );
     const model = battleModel(state);
-    const woods = model.styles?.["3,3"];
+    const woods = model.styles["3,3"];
     expect(woods).toEqual({ cls: "t-lightWoods" });
-    expect(model.idStyles?.["2,2"]).toEqual(TEAM_STYLES[0]);
+    expect(model.idStyles["2,2"]).toEqual(TEAM_STYLES[0]);
 
     const lines = boardToSpans(model);
     const team0 = lines.flat().find((sp) => sp.text.includes("hbk"));
@@ -153,8 +153,8 @@ describe("styled board model", () => {
       makeBattleOptions(units, false, [{ col: 3, row: 2, type: "lightWoods" }]),
     );
     const model = battleModel(state);
-    expect(model.styles?.["3,2"]).toEqual({ cls: "t-lightWoods" });
-    expect(model.idStyles?.["3,2"]).toEqual(TEAM_STYLES[0]);
+    expect(model.styles["3,2"]).toEqual({ cls: "t-lightWoods" });
+    expect(model.idStyles["3,2"]).toEqual(TEAM_STYLES[0]);
 
     // Column 3 is odd: not staggered (even columns are staggered down). In
     // 1-based coords, col 3 row 2 has its top label at canvas y = 0 + 1*4 = 4,
@@ -175,6 +175,8 @@ describe("styled board model", () => {
     const model: BoardModel = {
       cols: 2,
       rows: 2,
+      anchorCol: 1,
+      anchorRow: 1,
       cells: {
         "1,1": "ab",
         "2,2": "cd",
@@ -184,6 +186,10 @@ describe("styled board model", () => {
         "1,1:n": { fg: "cyan" },
         "2,2:se": { fg: "magenta" },
       },
+      marks: {},
+      elevations: {},
+      styles: {},
+      idStyles: {},
     };
     const spans = boardToSpans(model).flat();
     // The n edge of 1,1 is tinted, riding on the actor's facing glyph.
@@ -222,11 +228,11 @@ describe("styled board model", () => {
       "0,0": { fg: "red", bold: true, italic: true, bg: "blue" },
     };
     const model = battleModel(state, undefined, undefined, override);
-    expect(model.styles?.["0,0"]).toEqual(override["0,0"]);
-    expect(model.styles?.["1,0"]).toBeUndefined();
-    expect(model.styles && Object.keys(model.styles)).toEqual(["0,0"]);
+    expect(model.styles["0,0"]).toEqual(override["0,0"]);
+    expect(model.styles["1,0"]).toBeUndefined();
+    expect(Object.keys(model.styles)).toEqual(["0,0"]);
     // Explicit styles suppress automatic styling entirely — including team ids.
-    expect(model.idStyles).toBeUndefined();
+    expect(model.idStyles).toEqual({});
   });
 
   it("trims trailing whitespace exactly like the flat renderer", () => {
