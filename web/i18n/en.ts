@@ -302,6 +302,7 @@ export const en = {
   "log.attacksPassed": "{id} is not attacking this turn.",
   "log.destroyed": "*** {id} DESTROYED ***",
   "log.removedEvent": "{id} removed from play",
+  "log.buildingCollapsed": "Building at {hex} collapses to rubble",
 
   // attack resolution
   "res.attackResolutionStart": "=== resolving declared attacks ===",

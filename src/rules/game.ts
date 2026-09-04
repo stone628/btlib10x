@@ -26,6 +26,12 @@ import {
 } from "./ammo.js";
 import { isInFrontArc } from "./arcs.js";
 import { type AttackResolution, resolveWeaponAttack } from "./attack.js";
+import {
+  type BuildingState,
+  buildingTypeOf,
+  collapseToRubble,
+  createBuildingState,
+} from "./building.js";
 import { effectiveMovement } from "./critical.js";
 import { canFireFromLocation, isImmobile, isKilled, type UnitDamageState } from "./damage.js";
 import { rollInitiative } from "./initiative.js";
@@ -130,7 +136,12 @@ export type GameEvent =
       readonly resolution: AttackResolution;
     }
   | { readonly kind: "unitDestroyed"; readonly unitId: string }
-  | { readonly kind: "unitRemoved"; readonly unitId: string };
+  | { readonly kind: "unitRemoved"; readonly unitId: string }
+  | {
+      readonly kind: "buildingCollapsed";
+      readonly col: number;
+      readonly row: number;
+    };
 
 export interface BattleState extends HexGrid {
   turn: number;
@@ -141,6 +152,8 @@ export interface BattleState extends HexGrid {
   critsDisabled: boolean;
   actedThisPhase: string[];
   events: GameEvent[];
+  /** Building state keyed by hex `"col,row"`; only building hexes present. */
+  buildings: Record<string, BuildingState>;
 }
 
 export type { TerrainHexDef };
@@ -267,12 +280,15 @@ export function createBattle(
     level: 0,
   });
   const terrainSeen = new Set<string>();
+  const buildings: Record<string, BuildingState> = {};
   for (const { col, row, type, level } of options.terrain) {
     const key = `${col},${row}`;
     if (terrainSeen.has(key))
       throw new Error(`Duplicate terrain definition for hex ${fmtHex({ col, row })}`);
     terrainSeen.add(key);
     cells[col - 1 + (row - 1) * width] = { terrain: type, level: level ?? 0 };
+    const bt = buildingTypeOf(type);
+    if (bt !== undefined) buildings[key] = createBuildingState(bt);
   }
 
   return {
@@ -286,7 +302,34 @@ export function createBattle(
     critsDisabled: options.critsDisabled,
     actedThisPhase: [],
     events: [{ kind: "turn", turn: 1 }],
+    buildings,
   };
+}
+
+/**
+ * Apply weapon damage to the building occupying a hex, collapsing it to rubble
+ * when its structural factor reaches zero. Emits a `buildingCollapsed` event on
+ * collapse. Returns the event, or `null` when the hex has no building.
+ */
+export function damageBuildingAt(
+  state: BattleState,
+  hex: HexCoord,
+  damage: number,
+): { readonly kind: "buildingCollapsed"; readonly col: number; readonly row: number } | null {
+  const key = `${hex.col},${hex.row}`;
+  const building = state.buildings[key];
+  if (building === undefined) return null;
+  const cf = Math.max(0, building.cf - damage);
+  building.cf = cf;
+  if (cf <= 0) {
+    const cell = state.cells[hex.col - 1 + (hex.row - 1) * state.width]!;
+    collapseToRubble(cell);
+    delete state.buildings[key];
+    const event = { kind: "buildingCollapsed", col: hex.col, row: hex.row } as const;
+    state.events.push(event);
+    return event;
+  }
+  return null;
 }
 
 export function rollInitiativePhase(state: BattleState, rng: Rng): void {
@@ -585,6 +628,13 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
     if (resolution.application !== null) target.damage = resolution.application.after;
     if (resolution.jammed && !unit.jammedWeapons.includes(decl.weaponIndex)) {
       unit.jammedWeapons.push(decl.weaponIndex);
+    }
+
+    // Weapon damage that lands on a unit standing in a building hex is also
+    // applied to the building's structural factor (total damage that hit).
+    if (resolution.hit && resolution.groups.length > 0) {
+      const total = resolution.groups.reduce((acc, g) => acc + g.damage, 0);
+      damageBuildingAt(state, target.position, total);
     }
 
     // Commit crit results: each crit rolls for a location that lost IS, and

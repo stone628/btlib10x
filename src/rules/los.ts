@@ -1,5 +1,5 @@
 import { hexDistance, lineHexes } from "../core/hex.js";
-import { cellAt, type HexGrid, woodsPoints } from "../core/terrain.js";
+import { blocksTargeting, cellAt, type HexGrid, screeningPoints } from "../core/terrain.js";
 import type { HexCoord, TerrainType } from "../core/types.js";
 
 /**
@@ -13,7 +13,7 @@ export function interveningHexes(from: HexCoord, to: HexCoord): HexCoord[] {
 
 export function losWoodsPoints(intervening: readonly TerrainType[]): number {
   let points = 0;
-  for (const t of intervening) points += woodsPoints(t);
+  for (const t of intervening) points += screeningPoints(t);
   return points;
 }
 
@@ -22,11 +22,11 @@ export function losBlocked(points: number): boolean {
   return points >= 3;
 }
 
-/** Sum of woods points among hexes between `from` and `to` (endpoints excluded). */
+/** Sum of screening points among hexes between `from` and `to` (endpoints excluded). */
 export function losWoodsPointsBetween(grid: HexGrid, from: HexCoord, to: HexCoord): number {
   let points = 0;
   for (const h of interveningHexes(from, to)) {
-    points += woodsPoints(cellAt(grid, h).terrain);
+    points += screeningPoints(cellAt(grid, h).terrain);
   }
   return points;
 }
@@ -34,6 +34,14 @@ export function losWoodsPointsBetween(grid: HexGrid, from: HexCoord, to: HexCoor
 /** Terrain types of hexes between `from` and `to` (endpoints excluded). */
 export function interveningTerrains(grid: HexGrid, from: HexCoord, to: HexCoord): TerrainType[] {
   return interveningHexes(from, to).map((h) => cellAt(grid, h).terrain);
+}
+
+/**
+ * Water depth 2+ blocks LOS: units cannot fire into or out of a water2/water3
+ * hex. This is checked at the endpoint hexes (attacker or target position).
+ */
+export function losBlockedByWater(grid: HexGrid, from: HexCoord, to: HexCoord): boolean {
+  return blocksTargeting(cellAt(grid, from).terrain) || blocksTargeting(cellAt(grid, to).terrain);
 }
 
 /**
@@ -58,9 +66,10 @@ export function losBlockedByElevation(grid: HexGrid, from: HexCoord, to: HexCoor
   return false;
 }
 
-/** True when both the woods and elevation LOS checks are clear. */
+/** True when all LOS checks are clear: screening, water, and elevation. */
 export function losClear(grid: HexGrid, from: HexCoord, to: HexCoord): boolean {
   if (losBlocked(losWoodsPointsBetween(grid, from, to))) return false;
+  if (losBlockedByWater(grid, from, to)) return false;
   if (losBlockedByElevation(grid, from, to)) return false;
   return true;
 }

@@ -1,3 +1,4 @@
+import { getTerrainDef } from "../data/terrain.schema.js";
 import type { HexCell, HexCoord, TerrainType } from "./types.js";
 
 /** Per-level MP cost to climb to a higher ground elevation. */
@@ -24,14 +25,7 @@ export function cellAt(grid: HexGrid, hex: HexCoord): HexCell {
 export const MP_TO_ENTER_HEX = 1;
 
 export function terrainMoveCost(terrain: TerrainType): number {
-  switch (terrain) {
-    case "clear":
-      return 0;
-    case "lightWoods":
-      return 1;
-    case "heavyWoods":
-      return 2;
-  }
+  return getTerrainDef(terrain)?.moveCost ?? 0;
 }
 
 /** Total MP to enter a hex of the given terrain (base entry + terrain surcharge). */
@@ -46,14 +40,25 @@ export function costToClimb(fromLevel: number, toLevel: number): number {
 
 export const MP_PER_FACING_CHANGE = 1;
 
-/** Woods points for LOS blocking/terrain modifiers: Light=1, Heavy=2. */
-export function woodsPoints(terrain: TerrainType): number {
-  switch (terrain) {
-    case "clear":
-      return 0;
-    case "lightWoods":
-      return 1;
-    case "heavyWoods":
-      return 2;
-  }
+/** Screening points for LOS blocking: summed across intervening hexes; >= 3 blocks LOS. */
+export function screeningPoints(terrain: TerrainType): number {
+  return getTerrainDef(terrain)?.screeningValue ?? 0;
 }
+
+/** To-hit modifier when the target is inside a hex of the given terrain. */
+export function terrainTargetMod(terrain: TerrainType): number {
+  return getTerrainDef(terrain)?.terrainMod ?? 0;
+}
+
+/** True when units inside this terrain type receive partial cover. */
+export function hasPartialCover(terrain: TerrainType): boolean {
+  return getTerrainDef(terrain)?.partialCover === true;
+}
+
+/** True when units cannot fire into or out of this terrain type. */
+export function blocksTargeting(terrain: TerrainType): boolean {
+  return getTerrainDef(terrain)?.blocksTargeting === true;
+}
+
+/** Backwards-compatible alias for {@link screeningPoints}. */
+export const woodsPoints = screeningPoints;

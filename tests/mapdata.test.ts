@@ -42,7 +42,9 @@ describe("validateMapDef", () => {
     ).toThrow(/terrain\[0\].col must be an integer/);
     expect(() =>
       validateMapDef({ ...valid, terrain: [{ col: 3, row: 3, type: "water" }] }),
-    ).toThrow(/is not clear\|lightWoods\|heavyWoods/);
+    ).toThrow(
+      /is not one of clear\|lightWoods\|heavyWoods\|rough\|rubble\|pavement\|water1\|water2\|water3\|lightBuilding\|mediumBuilding\|heavyBuilding\|hardenedBuilding/,
+    );
     expect(() => validateMapDef({ ...valid, terrain: [42] })).toThrow(
       /terrain\[0\] must be an object/,
     );

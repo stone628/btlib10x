@@ -1,5 +1,5 @@
 import type { TerrainHexDef } from "../core/types.js";
-import { isTerrainType } from "../core/types.js";
+import { isTerrainType, TERRAIN_TYPES } from "../core/types.js";
 
 /**
  * Static definition of a battle map: board dimensions plus every non-clear
@@ -59,7 +59,9 @@ export function validateMapDef(data: unknown): MapDef {
         errors.push(`${label}.row must be an integer`);
       }
       if (!isTerrainType(type)) {
-        errors.push(`${label}.type ${JSON.stringify(type)} is not clear|lightWoods|heavyWoods`);
+        errors.push(
+          `${label}.type ${JSON.stringify(type)} is not one of ${TERRAIN_TYPES.join("|")}`,
+        );
       }
       const level = entry.level;
       if (

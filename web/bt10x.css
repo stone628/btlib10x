@@ -10,6 +10,16 @@
   --t-lightWoods: var(--c-green);
   --t-heavyWoods: var(--c-green);
   --tb-heavyWoods: var(--cb-dim);
+  --t-rough: #cbb98a;
+  --t-rubble: #a08a6a;
+  --t-pavement: #8a8a9a;
+  --t-water1: #5a9ad8;
+  --t-water2: #4a8ac8;
+  --t-water3: #3a7ab8;
+  --t-lightBuilding: #d8b06a;
+  --t-mediumBuilding: #c89a5a;
+  --t-heavyBuilding: #a87a4a;
+  --t-hardenedBuilding: #8a5a3a;
   --c-red: #e07a6a;
   --c-green: #8fd08f;
   --c-yellow: #d8c26a;
@@ -125,6 +135,36 @@ body {
   color: var(--t-heavyWoods);
   background-color: var(--tb-heavyWoods);
   font-weight: bold;
+}
+.t-rough {
+  color: var(--t-rough);
+}
+.t-rubble {
+  color: var(--t-rubble);
+}
+.t-pavement {
+  color: var(--t-pavement);
+}
+.t-water1 {
+  color: var(--t-water1);
+}
+.t-water2 {
+  color: var(--t-water2);
+}
+.t-water3 {
+  color: var(--t-water3);
+}
+.t-lightBuilding {
+  color: var(--t-lightBuilding);
+}
+.t-mediumBuilding {
+  color: var(--t-mediumBuilding);
+}
+.t-heavyBuilding {
+  color: var(--t-heavyBuilding);
+}
+.t-hardenedBuilding {
+  color: var(--t-hardenedBuilding);
 }
 .f-red {
   color: var(--c-red);

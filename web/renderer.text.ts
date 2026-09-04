@@ -30,12 +30,32 @@ export function styleClasses(style: CharStyle | undefined): string {
 export const TERRAIN_GLYPHS: Readonly<Record<string, string>> = {
   lightWoods: "w",
   heavyWoods: "W",
+  rough: "r",
+  rubble: "R",
+  pavement: "=",
+  water1: "\u223c",
+  water2: "\u2248",
+  water3: "\u224b",
+  lightBuilding: "b",
+  mediumBuilding: "B",
+  heavyBuilding: "#",
+  hardenedBuilding: "H",
 };
 
 /** Per-terrain scheme hooks: the web layer maps each class to CSS vars. */
 export const TERRAIN_STYLES: Readonly<Record<string, CharStyle>> = {
   lightWoods: { cls: "t-lightWoods" },
   heavyWoods: { cls: "t-heavyWoods" },
+  rough: { cls: "t-rough" },
+  rubble: { cls: "t-rubble" },
+  pavement: { cls: "t-pavement" },
+  water1: { cls: "t-water1" },
+  water2: { cls: "t-water2" },
+  water3: { cls: "t-water3" },
+  lightBuilding: { cls: "t-lightBuilding" },
+  mediumBuilding: { cls: "t-mediumBuilding" },
+  heavyBuilding: { cls: "t-heavyBuilding" },
+  hardenedBuilding: { cls: "t-hardenedBuilding" },
 };
 
 /** Team-tinted unit ids: team 0 cyan, team 1 magenta, others unstyled. */

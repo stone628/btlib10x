@@ -11,8 +11,14 @@ TypeScript library encapsulating Classic BattleTech board game logic.
   side/rear firing arcs are outside the current subset. Elevation IS
   implemented: per-hex `level` (default 0) on the map, with movement
   climb cost, jump ignoring elevation, LOS elevation ray, and the
-  height-difference to-hit modifier. Buildings, basements, water depth,
-  hull-down, and multi-floor interiors are still deferred.
+  height-difference to-hit modifier.
+- Terrain: 13 core-rulebook types, data-driven from `src/data/terrain.json`
+  (move surcharge, screening value, target to-hit mod, partial-cover and
+  targeting-restriction flags). Water depth 2+ (water2/water3) blocks LOS
+  in/out; water1 grants a −1 target modifier. Buildings carry a structural
+  factor and collapse to rubble when depleted. Still deferred: basements,
+  hull-down, multi-floor interiors, water depth-change movement cost, and
+  partial-cover attack resolution (with piloting).
 - Damage model: each location holds a flat armor HP number; overflow transfers inward **only after** a location's armor is fully depleted (no per-dot tracking).
 
 ## Commands
