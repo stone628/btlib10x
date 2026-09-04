@@ -70,7 +70,7 @@ export interface BoardModel {
    * Style for just the occupant id inside `( )` (e.g. {@link TEAM_STYLES});
    * falls back to the hex-wide {@link styles} entry when absent.
    */
-  readonly cellStyles?: Readonly<Record<string, CharStyle>> | undefined;
+  readonly idStyles?: Readonly<Record<string, CharStyle>> | undefined;
 }
 
 // ---- renderer supplier ----

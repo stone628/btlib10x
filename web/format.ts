@@ -648,13 +648,7 @@ export function infoMapChunks(locale: LocaleId, name: string): Chunk[] {
     ]),
     buildBoardChunk(
       boardChunkOf(
-        mapModel(
-          map.terrain,
-          map.width,
-          map.height,
-          undefined,
-          Object.keys(elevationMap).length > 0 ? elevationMap : undefined,
-        ),
+        mapModel(map, undefined, Object.keys(elevationMap).length > 0 ? elevationMap : undefined),
       ),
     ),
   ];
@@ -1362,7 +1356,7 @@ export function reachableModel(s: Session): BoardModel | null {
 
   const base = battleModel(s.battle);
   const cells = { ...(base.cells ?? {}) };
-  const cellStyles = { ...(base.cellStyles ?? {}) };
+  const idStyles = { ...(base.idStyles ?? {}) };
   const edgeStyles: Record<string, CharStyle> = {};
   const team = TEAM_STYLES[actor.team];
   const actorKey = `${actor.position.col},${actor.position.row}`;
@@ -1370,7 +1364,7 @@ export function reachableModel(s: Session): BoardModel | null {
     const key = `${l.hex.col},${l.hex.row}`;
     if (key !== actorKey && cells[key] === undefined) {
       cells[key] = REACHABLE_MARKER;
-      if (team !== undefined) cellStyles[key] = team;
+      if (team !== undefined) idStyles[key] = team;
     }
     if (team !== undefined) edgeStyles[`${l.hex.col},${l.hex.row}:${l.facing}`] = team;
   }
@@ -1383,7 +1377,7 @@ export function reachableModel(s: Session): BoardModel | null {
     cells,
     ...(Object.keys(edgeStyles).length > 0 ? { edgeStyles } : {}),
     ...(base.styles !== undefined ? { styles: base.styles } : {}),
-    ...(Object.keys(cellStyles).length > 0 ? { cellStyles } : {}),
+    ...(Object.keys(idStyles).length > 0 ? { idStyles } : {}),
     ...(base.marks !== undefined ? { marks: base.marks } : {}),
     ...(base.elevations !== undefined ? { elevations: base.elevations } : {}),
   };

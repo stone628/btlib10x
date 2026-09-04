@@ -531,7 +531,7 @@ describe("movement", () => {
     const markerKey = Object.keys(m.cells ?? {}).find((k) => m.cells![k] === REACHABLE_MARKER);
     expect(markerKey).toBeDefined();
     expect(markerKey).not.toBe(`${actor.position.col},${actor.position.row}`);
-    expect(m.cellStyles?.[markerKey ?? ""]).toEqual(team);
+    expect(m.idStyles?.[markerKey ?? ""]).toEqual(team);
   });
 });
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { MapDef } from "../src/index.js";
 import type { BattleState } from "../src/rules/game.js";
 import { createBattle, type TerrainHexDef, type UnitInit } from "../src/rules/game.js";
 import type { BoardModel } from "../web/render.js";
@@ -203,15 +204,18 @@ describe("console renderer", () => {
 
 describe("map renderer", () => {
   it("draws terrain glyphs at the hex bottom center, ignoring clear ground", () => {
-    const out = renderMap(
-      [
+    const tempMap: MapDef = {
+      name: "temp",
+      width: 3,
+      height: 2,
+      terrain: [
         { col: 1, row: 1, type: "lightWoods" },
         { col: 3, row: 2, type: "heavyWoods" },
         { col: 2, row: 1, type: "clear" },
       ],
-      3,
-      2,
-    );
+      legends: ["lightWoods", "heavyWoods", "clear"],
+    };
+    const out = renderMap(tempMap);
     expect(out).toContain(`${GRID_GLYPHS.edgeSW} w0 ${GRID_GLYPHS.edgeSE}`);
     expect(out).toContain(`${GRID_GLYPHS.edgeSW} W0 ${GRID_GLYPHS.edgeSE}`);
     expect(out).not.toContain("???");
