@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ResolvedMechDef } from "../src/data/index.js";
 import { getAllMechDefs, getMechDef, resolveMechDef, validateMechDef } from "../src/data/index.js";
-import { getWeaponOrThrow } from "../src/data/weapon.schema.js";
+import { getWeaponDefFor } from "../src/data/weapon.schema.js";
 
 describe("'Mech definitions", () => {
   it("ships more than one 'Mech and every model is registered", () => {
@@ -145,32 +145,30 @@ describe("weapon catalog", () => {
   it("resolves every weapon referenced by a bundled 'Mech", () => {
     for (const def of getAllMechDefs()) {
       for (const mount of Object.values(def.weapons)) {
-        expect(getWeaponOrThrow(mount.weapon).name, `${def.model}: ${mount.weapon}`).toBe(
-          mount.weapon,
-        );
+        expect(getWeaponDefFor(mount).name, `${def.model}: ${mount.weapon}`).toBe(mount.weapon);
       }
     }
   });
 
   it("throws on genuinely unknown weapon names", () => {
-    expect(() => getWeaponOrThrow("Not A Weapon")).toThrow();
+    expect(() => getWeaponDefFor({ weapon: "Not A Weapon" })).toThrow();
   });
 
   it("encodes missile and rapid-fire behavior used by the attack pipeline", () => {
-    expect(getWeaponOrThrow("LRM 10").missiles).toBe(10);
-    expect(getWeaponOrThrow("LRM 10").missileDamage).toBe(1);
-    expect(getWeaponOrThrow("SRM 6").missiles).toBe(6);
-    expect(getWeaponOrThrow("SRM 6").missileDamage).toBe(2);
-    expect(getWeaponOrThrow("Ultra AC/5").rapidFireShots).toBe(2);
-    expect(getWeaponOrThrow("Autocannon/20").rapidFireShots).toBeUndefined();
+    expect(getWeaponDefFor({ weapon: "LRM 10" }).missiles).toBe(10);
+    expect(getWeaponDefFor({ weapon: "LRM 10" }).missileDamage).toBe(1);
+    expect(getWeaponDefFor({ weapon: "SRM 6" }).missiles).toBe(6);
+    expect(getWeaponDefFor({ weapon: "SRM 6" }).missileDamage).toBe(2);
+    expect(getWeaponDefFor({ weapon: "Ultra AC/5" }).rapidFireShots).toBe(2);
+    expect(getWeaponDefFor({ weapon: "Autocannon/20" }).rapidFireShots).toBeUndefined();
   });
 
   it("encodes Clan weapons added for the Mad Cat Mk II", () => {
-    expect(getWeaponOrThrow("CL ER Medium Laser").damage).toBe(7);
-    expect(getWeaponOrThrow("CL Gauss Rifle").damage).toBe(15);
-    expect(getWeaponOrThrow("CL LB 20-X AC").damage).toBe(20);
-    expect(getWeaponOrThrow("CL Streak SRM 4").missiles).toBe(4);
-    expect(getWeaponOrThrow("CL Streak SRM 4").missileDamage).toBe(2);
+    expect(getWeaponDefFor({ weapon: "CL ER Medium Laser" }).damage).toBe(7);
+    expect(getWeaponDefFor({ weapon: "CL Gauss Rifle" }).damage).toBe(15);
+    expect(getWeaponDefFor({ weapon: "CL LB 20-X AC" }).damage).toBe(20);
+    expect(getWeaponDefFor({ weapon: "CL Streak SRM 4" }).missiles).toBe(4);
+    expect(getWeaponDefFor({ weapon: "CL Streak SRM 4" }).missileDamage).toBe(2);
   });
 });
 

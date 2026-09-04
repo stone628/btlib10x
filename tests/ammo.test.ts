@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   getAllAmmo,
-  getAmmoOrThrow,
-  getShotsPerBin,
+  getAmmoDefFor,
+  getShotsPerBinFor,
   listAmmoWeapons,
 } from "../src/data/ammo.schema.js";
 import { getAllMechDefs, getMechDef, validateMechDef } from "../src/data/index.js";
-import { getWeaponOrThrow } from "../src/data/weapon.schema.js";
+import { getWeaponDefFor } from "../src/data/weapon.schema.js";
 
 describe("ammo catalog", () => {
   it("ships every ammo-bearing weapon in the catalog", () => {
@@ -20,24 +20,24 @@ describe("ammo catalog", () => {
 
   it("every ammo weapon resolves as a catalog weapon", () => {
     for (const ammo of getAllAmmo()) {
-      expect(getWeaponOrThrow(ammo.weapon).name).toBe(ammo.weapon);
+      expect(getWeaponDefFor({ weapon: ammo.weapon }).name).toBe(ammo.weapon);
     }
   });
 
-  it("getShotsPerBin returns the catalog value for known ammo weapons", () => {
+  it("getShotsPerBinFor returns the catalog value for known ammo weapons", () => {
     for (const ammo of getAllAmmo()) {
-      expect(getShotsPerBin(ammo.weapon)).toBe(ammo.shotsPerBin);
+      expect(getShotsPerBinFor({ weapon: ammo.weapon })).toBe(ammo.shotsPerBin);
     }
   });
 
-  it("getShotsPerBin returns undefined for non-ammo weapons", () => {
-    expect(getShotsPerBin("Medium Laser")).toBeUndefined();
-    expect(getShotsPerBin("Flamer")).toBeUndefined();
-    expect(getShotsPerBin("Not A Weapon")).toBeUndefined();
+  it("getShotsPerBinFor returns undefined for non-ammo weapons", () => {
+    expect(getShotsPerBinFor({ weapon: "Medium Laser" })).toBeUndefined();
+    expect(getShotsPerBinFor({ weapon: "Flamer" })).toBeUndefined();
+    expect(getShotsPerBinFor({ weapon: "Not A Weapon" })).toBeUndefined();
   });
 
-  it("getAmmoOrThrow throws on an unknown weapon", () => {
-    expect(() => getAmmoOrThrow("Not A Weapon")).toThrow();
+  it("getAmmoDefFor throws on an unknown weapon", () => {
+    expect(() => getAmmoDefFor({ weapon: "Not A Weapon" })).toThrow();
   });
 });
 

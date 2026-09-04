@@ -1,7 +1,7 @@
 import type { AttackResolution, CriticalResolution } from "btlib10x";
 import { describe, expect, it } from "vitest";
 import { getMechDef } from "../src/data/index.js";
-import { getWeaponOrThrow } from "../src/data/weapon.schema.js";
+import { getWeaponDefFor } from "../src/data/weapon.schema.js";
 import { loadAmmoBins } from "../src/rules/ammo.js";
 import { resolveCriticalHits } from "../src/rules/critical.js";
 import type { UnitDamageState } from "../src/rules/damage.js";
@@ -62,7 +62,7 @@ describe("critical hit log formatting", () => {
         targetTerrain: "clear",
         interveningWoods: 0,
         distance: 1,
-        weapon: getWeaponOrThrow("Autocannon/20"),
+        weapon: getWeaponDefFor({ weapon: "Autocannon/20" }),
       }),
       toHitRoll: 7,
       hit: true,

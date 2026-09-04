@@ -1,8 +1,8 @@
 import { bearing, hexDistance } from "../core/hex.js";
 import { cellAt } from "../core/terrain.js";
 import type { Location } from "../core/types.js";
-import { getMechDef } from "../data/index.js";
-import { getWeaponOrThrow } from "../data/weapon.schema.js";
+import { getMechDefFor } from "../data/index.js";
+import { getWeaponDefFor } from "../data/weapon.schema.js";
 import { isInFrontArc } from "./arcs.js";
 import { canFireFromLocation } from "./damage.js";
 import type { BattleState } from "./game.js";
@@ -59,7 +59,7 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
   if (!unit || unit.destroyed || unit.removed) {
     throw new Error(`suggestFireTargets: ${unitId} is not a fireable unit`);
   }
-  const def = getMechDef(unit.model)!;
+  const def = getMechDefFor(unit);
 
   const targets = Object.values(state.units)
     .filter((u) => u.team !== unit.team && !u.removed && !u.destroyed)
@@ -75,7 +75,7 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
 
       Object.entries(def.weapons).forEach(([key, mount]) => {
         const weaponIndex = Number(key);
-        const weapon = getWeaponOrThrow(mount.weapon);
+        const weapon = getWeaponDefFor(mount);
         if (unit.jammedWeapons.includes(weaponIndex)) {
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "jammed" });
           return;

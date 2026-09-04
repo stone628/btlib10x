@@ -21,7 +21,7 @@
  */
 
 import type { Location, Rng } from "../core/types.js";
-import { getShotsPerBin } from "../data/ammo.schema.js";
+import { type AmmoNameHolder, getShotsPerBinFor } from "../data/ammo.schema.js";
 import type { ResolvedMechDef } from "../data/mech.schema.js";
 
 /** Stable identity of one ammo bin: `${location}:${slotIndex}` (1-based slot). */
@@ -52,12 +52,11 @@ export function ammoBinId(loc: Location, slotIndex: number): AmmoBinId {
 }
 
 /** One ammo bin: a single `{kind:"ammo"}` crit slot linked to a weapon mount. */
-export interface AmmoBin {
+export interface AmmoBin extends AmmoNameHolder {
   readonly id: AmmoBinId;
   readonly location: Location;
   readonly slotIndex: number;
   readonly weaponIndex: number;
-  readonly weapon: string;
 }
 
 /** Enumerate every ammo bin in a 'Mech's crit layout, in slot order. */
@@ -119,7 +118,7 @@ export function loadAmmoBins(def: ResolvedMechDef): AmmoLoad {
     const perBin =
       declaredTotal > 0
         ? Math.floor(declaredTotal / list.length)
-        : (getShotsPerBin(weaponName) ?? 0);
+        : (getShotsPerBinFor(list[0]!) ?? 0);
     let remainder = declaredTotal > 0 ? declaredTotal % list.length : 0;
     for (const bin of list) {
       const amount = perBin + (remainder > 0 ? 1 : 0);

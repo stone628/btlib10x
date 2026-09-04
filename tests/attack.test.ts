@@ -31,7 +31,7 @@ describe("resolveWeaponAttack", () => {
     const res = resolveWeaponAttack({
       ...BASE,
       rng,
-      weaponName: "Small Laser",
+      weapon: "Small Laser",
       targetDamage: freshState(),
     });
     expect(res.hit).toBe(true);
@@ -48,7 +48,7 @@ describe("resolveWeaponAttack", () => {
     const res = resolveWeaponAttack({
       ...BASE,
       rng,
-      weaponName: "Small Laser",
+      weapon: "Small Laser",
       targetDamage: freshState(),
     });
     expect(res.hit).toBe(false);
@@ -62,7 +62,7 @@ describe("resolveWeaponAttack", () => {
     const res = resolveWeaponAttack({
       ...BASE,
       rng,
-      weaponName: "Ultra AC/5",
+      weapon: "Ultra AC/5",
       shots: 2,
       targetDamage: freshState(),
     });
@@ -86,7 +86,7 @@ describe("resolveWeaponAttack", () => {
     const res = resolveWeaponAttack({
       ...BASE,
       rng,
-      weaponName: "Ultra AC/5",
+      weapon: "Ultra AC/5",
       shots: 2,
       targetDamage: freshState(),
     });
@@ -113,7 +113,7 @@ describe("resolveWeaponAttack", () => {
     const res = resolveWeaponAttack({
       ...BASE,
       rng,
-      weaponName: "LRM 10",
+      weapon: "LRM 10",
       targetDamage: freshState(),
     });
     expect(res.clusterRoll).toBe(9);
@@ -136,7 +136,7 @@ describe("resolveWeaponAttack", () => {
     const res = resolveWeaponAttack({
       ...BASE,
       rng,
-      weaponName: "SRM 6",
+      weapon: "SRM 6",
       targetDamage: freshState(),
     });
     expect(res.groups).toHaveLength(5);
@@ -149,7 +149,7 @@ describe("resolveWeaponAttack", () => {
       ...BASE,
       rng,
       distance: 999,
-      weaponName: "Medium Laser",
+      weapon: "Medium Laser",
       targetDamage: freshState(),
     });
     expect(res.breakdown.outOfRange).toBe(true);

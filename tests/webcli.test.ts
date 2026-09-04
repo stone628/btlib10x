@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getMapDef, getMechDef } from "../src/data/index.js";
+import { getMapDef, getMechDefFor } from "../src/data/index.js";
 import { canFireFromLocation } from "../src/rules/damage.js";
 import { REACHABLE_MARKER, reachableModel } from "../web/format.js";
 import { GRID_GLYPHS, TEAM_STYLES } from "../web/render.js";
@@ -24,7 +24,7 @@ function freshSetup(): S.Session {
 function fireEverything(s: S.Session, enemy: string): void {
   const st = s.battle!;
   const unit = st.units[S.currentActor(s)!.id]!;
-  const def = getMechDef(unit.model)!;
+  const def = getMechDefFor(unit);
   Object.entries(def.weapons).forEach(([key, mount]) => {
     const weaponIndex = Number(key);
     if (unit.jammedWeapons.includes(weaponIndex)) return;
@@ -355,10 +355,7 @@ describe("sheet", () => {
       Object.values(u.damage.armor).some(
         (v) =>
           v <
-          Object.values(getMechDef(u.model)!.armor).reduce(
-            (a: number, b: number) => Math.max(a, b),
-            0,
-          ),
+          Object.values(getMechDefFor(u).armor).reduce((a: number, b: number) => Math.max(a, b), 0),
       ),
     );
     expect(damaged).toBe(true);
@@ -590,7 +587,7 @@ describe("full game", () => {
         out = run(s, "done");
       } else {
         const unit = st.units[actorId]!;
-        const def = getMechDef(unit.model)!;
+        const def = getMechDefFor(unit);
         Object.entries(def.weapons).forEach(([key, mount]) => {
           const weaponIndex = Number(key);
           if (unit.jammedWeapons.includes(weaponIndex)) return;

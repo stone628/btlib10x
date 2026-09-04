@@ -62,18 +62,25 @@ export function parseAmmoData(data: unknown): readonly AmmoDef[] {
 }
 
 const AMMO: ReadonlyMap<string, AmmoDef> = new Map(
-  parseAmmoData(ammoJson).map((def) => [def.weapon.toLowerCase(), def]),
+  parseAmmoData(ammoJson).map((def) => [def.weapon, def]),
 );
 
-export function getAmmoOrThrow(name: string): AmmoDef {
-  const def = AMMO.get(name.toLowerCase());
-  if (!def) throw new Error(`Unknown ammo weapon: ${name}`);
+export function getAmmoDef(name: string): AmmoDef | undefined {
+  return AMMO.get(name);
+}
+
+export interface AmmoNameHolder {
+  readonly weapon: string;
+}
+
+export function getAmmoDefFor(h: AmmoNameHolder): AmmoDef {
+  const def = AMMO.get(h.weapon);
+  if (!def) throw new Error(`Unknown ammo weapon: ${h.weapon}`);
   return def;
 }
 
-export function getShotsPerBin(name: string): number | undefined {
-  const def = AMMO.get(name.toLowerCase());
-  return def?.shotsPerBin;
+export function getShotsPerBinFor(h: AmmoNameHolder): number | undefined {
+  return AMMO.get(h.weapon)?.shotsPerBin;
 }
 
 export function getAllAmmo(): readonly AmmoDef[] {

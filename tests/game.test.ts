@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getMechDef } from "../src/data/index.js";
-import { getWeaponOrThrow } from "../src/data/weapon.schema.js";
+import { getWeaponDefFor } from "../src/data/weapon.schema.js";
 import type { BattleState, TerrainHexDef, UnitInit } from "../src/rules/game.js";
 import {
   advancePhase,
@@ -511,7 +511,7 @@ describe("weapon attack phase", () => {
     );
 
     // Out of range.
-    const ac20 = getWeaponOrThrow("Autocannon/20");
+    const ac20 = getWeaponDefFor({ weapon: "Autocannon/20" });
     units = [
       {
         id: "hbk",

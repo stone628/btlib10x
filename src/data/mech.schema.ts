@@ -2,8 +2,8 @@ import type { Location } from "../core/types.js";
 import { isLocation, LOCATIONS } from "../core/types.js";
 import type { LocationValue } from "../rules/damage.js";
 import { internalStructureForTonnage } from "../rules/internalStructure.js";
-import { getAmmoOrThrow } from "./ammo.schema.js";
-import { getWeaponOrThrow } from "./weapon.schema.js";
+import { getAmmoDef } from "./ammo.schema.js";
+import { getWeaponDef, type WeaponNameHolder } from "./weapon.schema.js";
 
 /** Torso locations that have a separate rear armor pool. */
 export type TorsoLocation = "centerTorso" | "rightTorso" | "leftTorso";
@@ -89,10 +89,20 @@ export const CRIT_SLOT_COUNTS: Readonly<Record<Location, number>> = {
  * that share a multi-slot component expose a `group` id so a single hit
  * destroys the whole DHS and any further hit on a sibling re-rolls.
  */
+export interface ResolvedCritWeaponSlot extends WeaponNameHolder {
+  readonly kind: "weapon";
+  readonly weapon: string;
+  readonly weaponIndex: number;
+}
+export interface ResolvedCritAmmoSlot extends WeaponNameHolder {
+  readonly kind: "ammo";
+  readonly weapon: string;
+  readonly weaponIndex: number;
+}
 export type ResolvedCritSlot =
   | { readonly kind: "empty" }
-  | { readonly kind: "weapon"; readonly weapon: string; readonly weaponIndex: number }
-  | { readonly kind: "ammo"; readonly weapon: string; readonly weaponIndex: number }
+  | ResolvedCritWeaponSlot
+  | ResolvedCritAmmoSlot
   | {
       readonly kind: "structure";
       readonly name: string;
@@ -137,7 +147,7 @@ export interface MechDef {
   readonly source: string;
 }
 
-export interface WeaponMount {
+export interface WeaponMount extends WeaponNameHolder {
   readonly weapon: string;
   readonly location: Location;
   /** Shots available; omit for weapons without ammunition. */
@@ -483,11 +493,13 @@ export function validateMechDef(data: unknown): MechDef {
         if (typeof shots !== "number" || !Number.isInteger(shots) || shots <= 0) {
           errors.push("weapon.shots must be a positive integer");
         } else if (typeof w.weapon === "string") {
-          const ammo = getAmmoOrThrow(w.weapon);
-          if (shots % ammo.shotsPerBin !== 0) {
-            errors.push(
-              `weapon.shots for ${JSON.stringify(w.weapon)} must be a multiple of its ammo bin capacity (${ammo.shotsPerBin})`,
-            );
+          const ammo = getAmmoDef(w.weapon as string);
+          if (ammo !== undefined) {
+            if (shots % ammo.shotsPerBin !== 0) {
+              errors.push(
+                `weapon.shots for ${JSON.stringify(w.weapon)} must be a multiple of its ammo bin capacity (${ammo.shotsPerBin})`,
+              );
+            }
           }
         }
       }
@@ -529,9 +541,7 @@ export function validateMechDef(data: unknown): MechDef {
             errors.push(`critSlots.${loc}[${i}].weapon must be a string`);
             continue;
           }
-          try {
-            getWeaponOrThrow(slot.weapon);
-          } catch {
+          if (getWeaponDef(slot.weapon) === undefined) {
             errors.push(
               `critSlots.${loc}[${i}].weapon ${JSON.stringify(slot.weapon)} is not a known weapon`,
             );
@@ -541,16 +551,12 @@ export function validateMechDef(data: unknown): MechDef {
             errors.push(`critSlots.${loc}[${i}].weapon must be a string`);
             continue;
           }
-          try {
-            getWeaponOrThrow(slot.weapon);
-          } catch {
+          if (getWeaponDef(slot.weapon) === undefined) {
             errors.push(
               `critSlots.${loc}[${i}].weapon ${JSON.stringify(slot.weapon)} is not a known weapon`,
             );
           }
-          try {
-            getAmmoOrThrow(slot.weapon);
-          } catch {
+          if (getAmmoDef(slot.weapon) === undefined) {
             errors.push(
               `critSlots.${loc}[${i}].weapon ${JSON.stringify(slot.weapon)} has no ammo definition`,
             );

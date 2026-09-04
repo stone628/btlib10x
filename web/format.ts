@@ -28,10 +28,10 @@ import {
   collectAmmoBins,
   getAllMapDefs,
   getAllMechDefs,
-  getAllWeapons,
-  getMapDef,
-  getMechDef,
-  getWeapon,
+  getAllWeaponDefs,
+  getMapDefFor,
+  getMechDefFor,
+  getWeaponDefFor,
   internalStructureForTonnage,
   isArm,
   isImmobile,
@@ -48,6 +48,7 @@ import {
 } from "btlib10x";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
 import { i18n } from "./i18n/index.js";
+import { lookupMapOrThrow, lookupMechOrThrow, lookupWeaponOrThrow } from "./lookup.js";
 import type { BoardModel, BoardRenderer, CharStyle } from "./render.js";
 import { battleModel, getBoardRenderer, mapModel, TEAM_STYLES } from "./render.js";
 import type { Session, SetupUnit } from "./session.js";
@@ -429,8 +430,8 @@ function gunneryLabel(locale: LocaleId, gunnery: number): string {
 
 function mapDims(s: Session): [number, number] | undefined {
   if (!s.mapName) return undefined;
-  const map = getMapDef(s.mapName);
-  return map ? [map.width, map.height] : undefined;
+  const map = getMapDefFor(s);
+  return [map.width, map.height];
 }
 
 /** `board` output: styled grid chunks, or a plain hint when nothing exists. */
@@ -563,7 +564,7 @@ export function infoMapList(): string[] {
 export function infoWeaponList(locale: LocaleId): string[] {
   const grouped = new Map<WeaponCategory, WeaponDef[]>();
   let maxNameLen = 0;
-  for (const w of getAllWeapons()) {
+  for (const w of getAllWeaponDefs()) {
     const list = grouped.get(w.category) ?? [];
     list.push(w);
     grouped.set(w.category, list);
@@ -587,7 +588,7 @@ export function infoWeaponList(locale: LocaleId): string[] {
 export function infoWeapon(locale: LocaleId, name: string): string[] {
   const w = (() => {
     try {
-      return getWeapon(name);
+      return lookupWeaponOrThrow(name);
     } catch {
       throw new Error(
         i18n(locale, "err.unknownWeapon", { name, list: listWeaponNames().join(", ") }),
@@ -611,9 +612,13 @@ export function infoWeapon(locale: LocaleId, name: string): string[] {
 
 /** `info map <name>` output: header/legend lines followed by the styled grid. */
 export function infoMapChunks(locale: LocaleId, name: string): Chunk[] {
-  const map = getMapDef(name);
-  if (!map)
-    throw new Error(i18n(locale, "err.unknownMap", { name, list: listMapNames().join(", ") }));
+  const map = (() => {
+    try {
+      return lookupMapOrThrow(name);
+    } catch {
+      throw new Error(i18n(locale, "err.unknownMap", { name, list: listMapNames().join(", ") }));
+    }
+  })();
   const counts = new Map<string, number>();
   for (const t2 of map.terrain) counts.set(t2.type, (counts.get(t2.type) ?? 0) + 1);
   const breakdown = [...counts.entries()]
@@ -656,8 +661,13 @@ export function infoMapChunks(locale: LocaleId, name: string): Chunk[] {
 }
 
 function requireMechDef(model: string, locale: LocaleId): ResolvedMechDef {
-  const def = getMechDef(model);
-  if (!def) throw new Error(i18n(locale, "err.unknownModel", { model }));
+  const def = (() => {
+    try {
+      return lookupMechOrThrow(model);
+    } catch {
+      throw new Error(i18n(locale, "err.unknownModel", { model }));
+    }
+  })();
   return def;
 }
 
@@ -706,7 +716,7 @@ interface SheetView {
 
 function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
   // Engine guarantee: `unit.model` was validated by `createBattle`.
-  const def = getMechDef(unit.model)!;
+  const def = getMechDefFor(unit);
   return {
     id: id,
     team: unit.team,
@@ -1127,7 +1137,7 @@ export function unitBriefList(s: Session): string[] {
     lines.push(i18n(s.locale, "setup.teamHeader", { team }));
     for (const [uid, unit] of Object.entries(battle.units).filter(([, u]) => u.team === team)) {
       // Engine guarantee: `unit.model` was validated by `createBattle`.
-      const def = getMechDef(unit.model)!;
+      const def = getMechDefFor(unit);
       lines.push(`  ${uid}  ${def.model}  ${disp(unit.position)} facing ${unit.facing}`);
       const view = battleSheet(unit, uid, s.locale);
       lines.push(`    ${durabilityLine(view, s.locale)}`);
@@ -1266,7 +1276,7 @@ export function reachableModel(s: Session): BoardModel | null {
   const w = s.battle.width;
   const h = s.battle.height;
   // Engine guarantee: `actor.model` was validated by `createBattle`.
-  const def = getMechDef(actor.model)!;
+  const def = getMechDefFor(actor);
   const landings = reachableLandings({ ...actor.position }, actor.facing, {
     mode: s.moveMode,
     walking: def.walking,
@@ -1341,11 +1351,11 @@ export function attackStatusLines(s: Session): string[] {
     throw new Error(i18n(s.locale, "err.wrongPhase", { phase: "weaponAttack" }));
   if (s.fireDecls.length === 0) return [i18n(s.locale, "attackStatus.none")];
   // Engine guarantee: `actor.model` was validated by `createBattle`.
-  const def = getMechDef(actor.model)!;
+  const def = getMechDefFor(actor);
   return s.fireDecls.map((decl) => {
     const mount = def.weapons[decl.weaponIndex];
     const name = mount ? mount.weapon : `#${decl.weaponIndex}`;
-    const rapid = mount ? getWeapon(mount.weapon).rapidFireShots : undefined;
+    const rapid = mount ? getWeaponDefFor(mount).rapidFireShots : undefined;
     const suffix = decl.rapidFire && rapid !== undefined ? ` (rapid-fire x${rapid})` : "";
     return `#${decl.weaponIndex} ${name} -> ${decl.targetId}${suffix}`;
   });
@@ -1446,10 +1456,10 @@ export function weaponsLines(s: Session, unitId?: string): string[] {
     );
   }
   // Engine guarantee: `unit.model` was validated by `createBattle`.
-  const def = getMechDef(unit.model)!;
+  const def = getMechDefFor(unit);
   const totals = loadAmmoBins(def).totals;
   return Object.entries(def.weapons).map(([key, mount]) => {
-    const w = getWeapon(mount.weapon);
+    const w = getWeaponDefFor(mount);
     const index = Number(key);
     const max = totals[index];
     const bits = [
@@ -1800,7 +1810,7 @@ function weaponMountLines(locale: LocaleId, mounts: readonly WeaponMountInfo[]):
     if (m.weapon.length > nameWidth) nameWidth = m.weapon.length;
   }
   return mounts.map((mount, i) => {
-    const w = getWeapon(mount.weapon);
+    const w = getWeaponDefFor(mount);
     const flags = [
       mount.shotsMax !== null
         ? mount.shotsLeft !== null

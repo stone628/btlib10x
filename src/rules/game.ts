@@ -12,9 +12,9 @@ import {
   rotateFacing,
   type TerrainHexDef,
 } from "../core/types.js";
-import { getMechDef } from "../data/index.js";
+import { getMechDef, getMechDefFor, type MechModelHolder } from "../data/index.js";
 import type { ResolvedMechDef } from "../data/mech.schema.js";
-import { getWeaponOrThrow } from "../data/weapon.schema.js";
+import { getWeaponDefFor } from "../data/weapon.schema.js";
 import {
   type AmmoBinId,
   type AmmoPolicy,
@@ -38,7 +38,7 @@ import {
 import * as mv from "./movement.js";
 import { computeToHit } from "./tohit.js";
 
-export interface UnitInit {
+export interface UnitInit extends MechModelHolder {
   readonly id: string;
   readonly model: string;
   readonly team: number;
@@ -64,7 +64,7 @@ export type Phase = "initiative" | "movement" | "weaponAttack" | "end";
  *  to the first bin and the order is stable run to run. */
 export const DEFAULT_RNG: Rng = { d6: () => 1 };
 
-export interface UnitState {
+export interface UnitState extends MechModelHolder {
   readonly id: string;
   readonly model: string;
   readonly team: number;
@@ -214,7 +214,7 @@ export function createBattle(
 
   const unitStates: Record<string, UnitState> = {};
   for (const init of units) {
-    const def: ResolvedMechDef = getMechDef(init.model)!;
+    const def: ResolvedMechDef = getMechDefFor(init);
     const ammoLoad = loadAmmoBins(def);
     const damage: UnitDamageState = {
       armor: { ...def.armor },
@@ -325,7 +325,7 @@ export function executeMove(
   if (unit.moveMode === null) throw new Error(`Declare a movement mode for ${unitId} first`);
   if (unit.removed) throw new Error(`${unitId} is removed from play`);
 
-  const def = getMechDef(unit.model)!;
+  const def = getMechDefFor(unit);
   const movement = effectiveMovement(def, unit.critSlotsDestroyed);
   const budget = mv.maxMovePoints(
     unit.moveMode,
@@ -433,7 +433,7 @@ export function declareAttacks(
   if (unit.declaredAttacks.length > 0)
     throw new Error(`${unitId} already declared attacks this turn`);
 
-  const def = getMechDef(unit.model)!;
+  const def = getMechDefFor(unit);
   let targetId: string | null = null;
   let attackDistance = 0;
   let attackRangeBracket: string = "short";
@@ -443,7 +443,7 @@ export function declareAttacks(
   decls.forEach((decl, index) => {
     const mount = def.weapons[decl.weaponIndex];
     if (!mount) throw new Error(`weaponIndex ${decl.weaponIndex} out of range for ${unitId}`);
-    const weapon = getWeaponOrThrow(mount.weapon);
+    const weapon = getWeaponDefFor(mount);
 
     if (seenWeapons.has(decl.weaponIndex)) {
       throw new Error(`${mount.weapon} on ${unitId} may only be declared once per turn`);
@@ -548,11 +548,11 @@ export function declareAttacks(
 }
 
 function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void {
-  const def = getMechDef(unit.model)!;
+  const def = getMechDefFor(unit);
 
   for (const decl of unit.declaredAttacks) {
     const mount = def.weapons[decl.weaponIndex]!;
-    const weapon = getWeaponOrThrow(mount.weapon);
+    const weapon = getWeaponDefFor(mount);
     const target = getUnitOrThrow(state, decl.targetId);
     const rapidFire = decl.rapidFire ?? false;
     const shots = rapidFire ? (weapon.rapidFireShots ?? 1) : 1;
@@ -566,7 +566,7 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
       targetTerrain: cellAt(state, target.position).terrain,
       interveningTerrains: interveningTerrains(state, unit.position, target.position),
       distance: hexDistance(unit.position, target.position),
-      weaponName: weapon.name,
+      weapon: weapon.name,
       shots,
       targetDamage: target.damage,
       attackerLevel: cellAt(state, unit.position).level,
@@ -574,7 +574,7 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
       ...(state.critsDisabled
         ? {}
         : {
-            targetDef: getMechDef(target.model)!,
+            targetDef: getMechDefFor(target),
             targetCritSlotsDestroyed: target.critSlotsDestroyed,
             targetDestroyedWeapons: target.destroyedWeapons,
             targetShotsLeft: target.shotsLeft,
@@ -789,7 +789,7 @@ function initCritDestroyed(def: ResolvedMechDef): Record<Location, boolean[]> {
  * totals so out-of-ammo checks and the record sheet stay accurate.
  */
 function stripDestroyedLocationAmmo(target: UnitState): void {
-  const def = getMechDef(target.model)!;
+  const def = getMechDefFor(target);
   for (const loc of LOCATIONS) {
     if ((target.damage.internalStructure[loc] ?? 0) <= 0) {
       stripBinsInLocation(target.ammoBins, loc);

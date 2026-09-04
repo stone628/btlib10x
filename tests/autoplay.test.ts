@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getMechDef } from "../src/data/index.js";
+import { getMechDefFor } from "../src/data/index.js";
 import { nextAutoPlayCommand } from "../web/autoplay.js";
 import * as S from "../web/session.js";
 import { execute } from "./helpers.js";
@@ -36,7 +36,7 @@ describe("nextAutoPlayCommand (autoplay demo driver)", () => {
     expect(s.battle!.phase).toBe("weaponAttack");
 
     const actor = S.currentActor(s)!;
-    const def = getMechDef(actor.model)!;
+    const def = getMechDefFor(actor);
     // Find a plain (non-ammo) weapon mount on the acting unit and mark it
     // destroyed, simulating a prior-turn critical-slot hit.
     const target = Object.entries(def.weapons).find(([, m]) => m.shots === undefined);

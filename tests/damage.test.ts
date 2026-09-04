@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LOCATIONS, type Location } from "../src/core/types.js";
+import { LOCATIONS } from "../src/core/types.js";
 import type { LocationValue, UnitDamageState } from "../src/rules/damage.js";
 import { applyDamage, canFireFromLocation, isImmobile, isKilled } from "../src/rules/damage.js";
 

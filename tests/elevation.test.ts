@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { HexGrid } from "../src/core/terrain.js";
 import type { HexCell } from "../src/core/types.js";
-import { getWeaponOrThrow } from "../src/data/weapon.schema.js";
+import { getWeaponDefFor } from "../src/data/weapon.schema.js";
 import { losClear, losWoodsPointsBetween } from "../src/rules/los.js";
 import { type ReachabilityOptions, reachableLandings } from "../src/rules/movement.js";
 import { computeToHit } from "../src/rules/tohit.js";
@@ -97,7 +97,7 @@ describe("elevation worked example: ridge duel", () => {
       targetTerrain: "clear",
       interveningWoods: 0,
       distance: 1,
-      weapon: getWeaponOrThrow("Medium Laser"),
+      weapon: getWeaponDefFor({ weapon: "Medium Laser" }),
       attackerLevel: 1,
       targetLevel: 0,
     });
@@ -116,7 +116,7 @@ describe("elevation worked example: ridge duel", () => {
       targetTerrain: "clear",
       interveningWoods: 0,
       distance: 1,
-      weapon: getWeaponOrThrow("Medium Laser"),
+      weapon: getWeaponDefFor({ weapon: "Medium Laser" }),
       attackerLevel: 0,
       targetLevel: 1,
     });
