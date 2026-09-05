@@ -132,48 +132,35 @@ expected after the rename.
 **Goal:** Single source of truth for terrain→marks, terrain→styles,
 terrain→elevations.
 
-**New file:** `web/board-derivation.ts`
+**In `web/renderer.text.ts`**, add module-private derivation helpers
+(they read the `TERRAIN_GLYPHS`/`TERRAIN_STYLES` constants already
+defined in that file):
 
 ```ts
-import type { HexCell, TerrainHexDef } from "btlib10x";
-import type { CharStyle } from "./render.js";
-import { TERRAIN_GLYPHS, TERRAIN_STYLES } from "./renderer.text.js";
+import type { HexGrid, TerrainHexDef } from "btlib10x";
 
 /** Terrain glyphs keyed by "col,row" (non-clear cells only). */
-export function deriveTerrainMarks(
-  cells: readonly HexCell[],
-  width: number,
-): Record<string, string> | undefined;
+function deriveTerrainMarks(grid: HexGrid): Record<string, string>;
 
 /** Per-terrain CharStyle keyed by "col,row" (non-clear cells only). */
-export function deriveTerrainStyles(
-  cells: readonly HexCell[],
-  width: number,
-): Record<string, CharStyle> | undefined;
+function deriveTerrainStyles(grid: HexGrid): Record<string, CharStyle>;
 
 /** Non-zero elevation entries keyed by "col,row". */
-export function deriveElevations(
-  cells: readonly HexCell[],
-  width: number,
-): Record<string, number> | undefined;
+function deriveElevations(grid: HexGrid): Record<string, number>;
 
 /** Same as deriveTerrainMarks but for TerrainHexDef[] (map display). */
-export function deriveMapMarks(
-  terrain: readonly TerrainHexDef[],
-): Record<string, string> | undefined;
+function deriveMapMarks(terrain: readonly TerrainHexDef[]): Record<string, string>;
 
 /** Same as deriveTerrainStyles but for TerrainHexDef[] (map display). */
-export function deriveMapStyles(
-  terrain: readonly TerrainHexDef[],
-): Record<string, CharStyle> | undefined;
+function deriveMapStyles(terrain: readonly TerrainHexDef[]): Record<string, CharStyle>;
 ```
 
-**Changes to `battleModel()`:** Replace the inline derivation loops
-(lines 443-456, 468-482) with calls to `deriveTerrainStyles()`,
-`deriveTerrainMarks()`, `deriveElevations()`.
+**Changes to `battleModel()`:** Replace the inline derivation loops with
+calls to `deriveTerrainStyles()`, `deriveTerrainMarks()`,
+`deriveElevations()`.
 
-**Changes to `mapModel()`:** Replace the inline loops (lines 385-396)
-with calls to `deriveMapMarks()`, `deriveMapStyles()`.
+**Changes to `mapModel()`:** Replace the inline loops with calls to
+`deriveMapMarks()`, `deriveMapStyles()`.
 
 **Risk:** Low. The derivation logic is extracted verbatim; factory
 signatures and return values are unchanged.
@@ -185,7 +172,7 @@ cover both factories.
 
 **Goal:** Eliminate the manual spread-reassemble pattern.
 
-**Add to `web/board-derivation.ts`:**
+**Add to `web/renderer.text.ts`:**
 
 ```ts
 import type { BoardModel } from "./render.js";
@@ -277,40 +264,39 @@ Add a focused unit test for `applyEdgeStyles` using a synthetic canvas.
 
 ### Phase 5 — Flatten the file-level circular re-export
 
-**Goal:** Eliminate the circular dependency between `render.ts` and
+**Goal:** Leave `render.ts` as the only value-level importer of
+`renderer.text.ts`, and remove the second module cycle
+(`renderer.text.ts` ↔ `board-derivation.ts`).
+
+**Merge `web/board-derivation.ts` back into `web/renderer.text.ts`:**
+the five derivation helpers become module-private functions in
+`renderer.text.ts` (they read the `TERRAIN_GLYPHS`/`TERRAIN_STYLES`
+constants already defined there); delete `web/board-derivation.ts`.
+This kills the value-level cycle between the two files.
+
+**Types stay in `web/render.ts`** (no `board-types.ts`):
+`renderer.text.ts` continues to type-import `BoardModel`, `CharStyle`,
+`Span` from `./render.js`. That back-edge is type-only and erased at
+compile time, so the resulting graph is:
+
+```text
+render.ts ──values──► renderer.text.ts
+     ▲                     │
+     └──── types only ─────┘
+```
+
+All value imports flow one way (`render.ts → renderer.text.ts`); there
+is no runtime module cycle. `getBoardRenderer` and its `RENDERERS` map
+stay in `render.ts`. A comment at the top of `render.ts` documents the
+intentional type-only back-edge.
+
+**Risk:** Low. No behavioral change; only file locations and import
+paths change. `web/board-derivation.ts` has no consumers outside
 `renderer.text.ts`.
 
-**New file:** `web/board-types.ts`
-
-Move the pure type definitions out of `web/render.ts`:
-
-```ts
-// web/board-types.ts — BoardModel, CharStyle, Span, ColorName
-import type { Facing } from "btlib10x";
-
-export type ColorName = "red" | "green" | "yellow" | "blue"
-  | "magenta" | "cyan" | "white" | "dim";
-
-export interface CharStyle { ... }
-export interface Span { ... }
-export interface BoardModel { ... }
-```
-
-**`web/render.ts` becomes a barrel:**
-
-```ts
-// web/render.ts — re-exports from board-types and renderer
-export type { BoardModel, CharStyle, Span, ColorName } from "./board-types.js";
-export { boardToText, boardToSpans, boardToChars, ... } from "./renderer.text.js";
-export { battleModel, mapModel, renderMap } from "./renderer.text.js";
-```
-
-**`web/renderer.text.ts`** imports from `./board-types.js` instead of
-`./render.js`, breaking the cycle.
-
-**Risk:** Low. No behavioral change; only import paths change.
-
-**Verification:** `tsc --noEmit` confirms no new cycles; all tests pass.
+**Verification:** `tsc --noEmit` clean; `rg "board-derivation" .`
+returns zero hits; `rg "renderer\.text\.js" web/` lists only
+`render.ts`; all tests pass.
 
 ---
 
@@ -321,7 +307,7 @@ Phase 1  (rename)            ─── mechanical, zero risk
 Phase 2  (derive helpers)    ─── extract logic, no API change
 Phase 3  (composeBoard)      ─── new helper, rewrite reachableModel
 Phase 4  (drawCanvas split)  ─── restructure internals, same outputs
-Phase 5  (file reorg)        ─── move types, break cycle
+Phase 5  (file reorg)        ─── merge derivation back, break cycle
 ```
 
 Phases 1–3 are independent of 4–5 and can be done in any order.
