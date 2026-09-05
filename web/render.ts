@@ -1,4 +1,7 @@
 // ---- Re-export from renderer.text.ts so callers only need `render.ts`. ----
+// Everything value-level flows one way (render.ts → renderer.text.ts); the
+// reverse edge (renderer.text.ts → render.ts) is type-only and erased at
+// compile time, so there is no runtime module cycle.
 import type { Facing } from "btlib10x";
 
 export type { BoardRenderer, Canvas, HexContext } from "./renderer.text.js";
