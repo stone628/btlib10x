@@ -482,13 +482,19 @@ The renderer lives in `web/render.ts`, `web/renderer.text.ts`, and
 `web/format.ts`, and is documented in `docs/CLI.md` (see the `board`, `mode`,
 `info map`, and `sheet` commands).
 
-Key model: `battleModel(state, overlay?, marks?, styles?)` / `mapModel(...)`
-build a `BoardModel` (cells + per-character `CharStyle` hints keyed by
-`"col,row"`, including `BoardModel.elevations` and team-colored `idStyles`);
-`boardToText(model)` returns the flat ASCII form and `boardToSpans(model)`
-returns styled span runs. Reachable-hex clipping for the movement `mode`
-command is provided by `reachableModel` in `web/format.ts`. The web terminal
-renders spans inside a `.board` container whose font family, size and line
-spacing come from the CSS variables `--font-board` / `--board-fs` /
-`--board-lh`; each terrain's color scheme is its own set of variables
-(`--t-lightWoods`, `--t-heavyWoods`, `--tb-heavyWoods`) in `web/index.html`.
+Key model: `web/render.ts` exposes a small facade over `web/renderer.text.ts`
+(which the web CLI must not import directly). The render layer builds a
+`BoardModel` (cells + per-character `CharStyle` hints keyed by `"col,row"`,
+including `BoardModel.elevations` and team-colored `idStyles`) either from a
+`BattleState` (`battleModel(state, overlay?, marks?, styles?)`), from a
+`MapDef` (`mapModel(...)`), or from structured render info via
+`createBoardModel(info)`; `boardToText(model)` returns the flat ASCII form and
+`boardToSpans(model)` returns styled span runs. Commands produce board chunks
+from a `BoardRenderInfo` (`{ map, units, reachables, reachableTeam }`) rather
+than a pre-built model; reachable-hex clipping for the movement `mode` command
+happens inside `createBoardModel` and the info is supplied by `reachableInfo`
+in `web/format.ts`. The web terminal renders spans inside a `.board` container
+whose font family, size and line spacing come from the CSS variables
+`--font-board` / `--board-fs` / `--board-lh`; each terrain's color scheme is
+its own set of variables (`--t-lightWoods`, `--t-heavyWoods`,
+`--tb-heavyWoods`) in `web/index.html`.
