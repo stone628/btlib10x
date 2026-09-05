@@ -224,36 +224,47 @@ manual reachable-map testing.
 **Goal:** Each rendering concern becomes an independent, testable
 function operating on the same `Canvas`.
 
-**In `web/renderer.text.ts`, replace `drawCanvas()` with:**
+**In `web/renderer.text.ts`, replace `drawCanvas()` with a single hex
+pass dispatching one named layer per hex:**
 
 ```ts
 function drawCanvas(model: BoardModel): Canvas {
   const canvas = makeCanvas(model);
-  drawHexGrid(canvas, model);     // walls, coord labels, edges
-  drawUnitIds(canvas, model);     // occupant text in bellies
-  drawTerrainMarks(canvas, model);// glyphs at hex bottom
-  drawElevationDigits(canvas, model);
-  drawFacingArrows(canvas, model);
-  applyEdgeStyles(canvas, model); // edge tinting (read-only pass)
+  for (const hex of eachHex(model)) { // column-major, one visit per hex
+    drawHexGrid(canvas, hex);     // walls, coord labels, edges
+    drawUnitIds(canvas, hex);     // occupant text in bellies
+    drawTerrainMarks(canvas, hex);// glyphs at hex bottom
+    drawElevationDigits(canvas, hex);
+    drawFacingArrows(canvas, hex);
+    applyEdgeStyles(canvas, hex); // edge tinting (style-only)
+  }
   return canvas;
 }
 ```
 
-Each function receives `(canvas: Canvas, model: BoardModel)` and
-mutates only its relevant canvas cells. The layer order is fixed
-(matches the current rendering order: grid → units → marks → elevation →
-facing arrows → edge styles).
+Each function receives `(canvas: Canvas, hex: HexContext)` and mutates
+only its relevant canvas cells. `HexContext` carries the hex's geometry
+(x/y, `col,row` key, terrain `style`, `lastRow`) plus a `model`
+back-reference for per-hex record lookups. The layer order is fixed per
+hex (grid → units → marks → elevation → facing arrows → edge styles),
+matching the historic rendering order. Sharing the `====` edge relies on
+`stampEdge` only filling spaces, so batching order across hexes does not
+matter.
 
 **Sub-function signatures:**
 
 ```ts
-function drawHexGrid(canvas: Canvas, model: BoardModel): void;
-function drawUnitIds(canvas: Canvas, model: BoardModel): void;
-function drawTerrainMarks(canvas: Canvas, model: BoardModel): void;
-function drawElevationDigits(canvas: Canvas, model: BoardModel): void;
-function drawFacingArrows(canvas: Canvas, model: BoardModel): void;
-function applyEdgeStyles(canvas: Canvas, model: BoardModel): void;
+function drawHexGrid(canvas: Canvas, hex: HexContext): void;
+function drawUnitIds(canvas: Canvas, hex: HexContext): void;
+function drawTerrainMarks(canvas: Canvas, hex: HexContext): void;
+function drawElevationDigits(canvas: Canvas, hex: HexContext): void;
+function drawFacingArrows(canvas: Canvas, hex: HexContext): void;
+function applyEdgeStyles(canvas: Canvas, hex: HexContext): void; // exported
 ```
+
+`HexContext` and `eachHex` are exported (through `render.ts`) so a
+synthetic-canvas test can drive `applyEdgeStyles` with the same single
+pass.
 
 **Risk:** Medium. The logic moves from one function to six, so
 inter-layer assumptions (e.g. "the grid is drawn first so wall chars

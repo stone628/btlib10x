@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { getMapDef, type MapDef } from "../src/data/index.js";
 import { createBattle, type UnitInit } from "../src/rules/game.js";
-import type { BoardModel, CharStyle, Span } from "../web/render.js";
+import type { BoardModel, Canvas, CharStyle, Span } from "../web/render.js";
 import {
+  applyEdgeStyles,
   battleModel,
   boardToChars,
   boardToSpans,
   boardToText,
+  eachHex,
+  makeCanvas,
   mapModel,
   renderMap,
   TEAM_STYLES,
@@ -305,5 +308,42 @@ describe("styled board model", () => {
         }
       }
     }
+  });
+});
+
+describe("applyEdgeStyles layer", () => {
+  it("tints hexside vertices on a synthetic canvas without touching characters", () => {
+    const model: BoardModel = {
+      cols: 2,
+      rows: 1,
+      anchorCol: 1,
+      anchorRow: 1,
+      cells: {},
+      marks: {},
+      elevations: {},
+      facings: {},
+      edgeStyles: {
+        "1,1:n": { fg: "cyan" },
+        "1,1:sw": { bg: "blue" },
+        "1,1:se": { fg: "magenta" },
+        "2,1:s": { fg: "green" },
+      },
+      styles: {},
+      idStyles: {},
+    };
+    const canvas: Canvas = makeCanvas(model);
+    for (const hex of eachHex(model)) applyEdgeStyles(canvas, hex);
+    // Hex (1,1) is odd (un-staggered): origin at (0,0). Col 2 is even, so its
+    // origin drops by STAGGER to (6,2).
+    expect(canvas.styles[0]![3]).toEqual({ fg: "cyan" }); // 1,1:n  → (x+3, y+0)
+    expect(canvas.styles[3]![1]).toEqual({ bg: "blue" }); // 1,1:sw → (x+1, y+3)
+    expect(canvas.styles[3]![6]).toEqual({ fg: "magenta" }); // 1,1:se → (x+6, y+3)
+    expect(canvas.styles[6]![10]).toEqual({ fg: "green" }); // 2,1:s  → (x+4, y+4)
+    // Untinted vertices stay null.
+    expect(canvas.styles[4]![4]).toBeNull(); // 1,1:s untouched
+    expect(canvas.styles[0]![0]).toBeNull();
+    // The pass is style-only: characters are never rewritten.
+    expect(canvas.rows[0]![3]).toBe(" ");
+    expect(canvas.rows[6]![10]).toBe(" ");
   });
 });

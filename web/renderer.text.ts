@@ -161,12 +161,14 @@ function coordLabel(col: number, row: number): string {
   return `${String(col).padStart(2, "0")}${String(row).padStart(2, "0")}`;
 }
 
-interface Canvas {
+/** Canvas of painted characters plus per-cell style hints. */
+export interface Canvas {
   readonly rows: string[][];
   readonly styles: (CharStyle | null)[][];
 }
 
-function makeCanvas(model: BoardModel): Canvas {
+/** Allocate a blank canvas sized for `model`'s hex crop. */
+export function makeCanvas(model: BoardModel): Canvas {
   const { cols, rows } = model;
   const canvasRows = rows * ROW_STRIDE + (cols >= 2 ? STAGGER : 0) + 1;
   const canvasCols = (cols - 1) * COL_STRIDE + HEX_WIDTH;
@@ -178,6 +180,7 @@ function makeCanvas(model: BoardModel): Canvas {
   };
 }
 
+/** Paint `text` at (x,y), writing non-space glyphs and skipping spaces. */
 function stampInto(
   canvas: Canvas,
   x: number,
@@ -196,105 +199,156 @@ function stampInto(
   }
 }
 
-/** Assemble a {@link BoardModel} into the char/style canvases. */
-function drawCanvas(model: BoardModel): Canvas {
-  const canvas = makeCanvas(model);
-  const { rows, cells, marks, elevations, styles, idStyles, facings, edgeStyles } = model;
-  const anchorCol = model.anchorCol;
-  const anchorRow = model.anchorRow;
-  const cols = model.cols + (anchorCol - 1);
-  const rowsFull = rows + (anchorRow - 1);
+/** Overwrite a single canvas cell (bounds-checked). */
+function setChar(canvas: Canvas, x: number, y: number, ch: string, st: CharStyle | null): void {
+  const line = canvas.rows[y];
+  if (!line || x < 0 || x >= line.length) return;
+  line[x] = ch;
+  canvas.styles[y]![x] = st;
+}
 
-  const setChar = (x: number, y: number, ch: string, st: CharStyle | null): void => {
-    const line = canvas.rows[y];
-    if (!line || x < 0 || x >= line.length) return;
-    line[x] = ch;
-    canvas.styles[y]![x] = st;
-  };
+/** Fill a hexside edge with `ch`, never overwriting glyphs already there. */
+function stampEdge(canvas: Canvas, x: number, y: number, ch: EdgeGlyph): void {
+  const line = canvas.rows[y];
+  if (!line) return;
+  for (let i = x + 2; i <= x + 5 && i < line.length; i++) {
+    if (line[i] === " ") line[i] = ch;
+  }
+}
 
-  const stamp = (x: number, y: number, text: string, style: CharStyle | null = null): void =>
-    stampInto(canvas, x, y, text, style);
+/** Paint-position context for one hex within the model's crop. */
+export interface HexContext {
+  readonly col: number;
+  readonly row: number;
+  readonly x: number;
+  readonly y: number;
+  readonly key: string;
+  readonly cell: string | undefined;
+  readonly mark: string | undefined;
+  readonly elevation: number;
+  readonly facing: Facing | undefined;
+  readonly idStyle: CharStyle | undefined;
+  readonly style: CharStyle | null;
+  readonly edgeStyles: Readonly<Record<string, CharStyle>>;
+  readonly lastRow: boolean;
+}
 
-  const stampEdge = (x: number, y: number, ch: EdgeGlyph): void => {
-    const line = canvas.rows[y];
-    if (!line) return;
-    for (let i = x + 2; i <= x + 5 && i < line.length; i++) {
-      if (line[i] === " ") line[i] = ch;
-    }
-  };
-  const isEdgeStylesEmpty = () => {
-    for (const key in edgeStyles) {
-      if (Object.hasOwn(edgeStyles, key)) return false;
-    }
-    return true;
-  };
-
-  const checkFacing = isEdgeStylesEmpty()
-    ? (_key: string, _x: number, _y: number): void => {}
-    : (key: string, x: number, y: number): void => {
-        for (const facing of FACINGS) {
-          const es = edgeStyles[`${key}:${facing}`];
-          if (es !== undefined) {
-            const p = facingEdgePos(facing, x, y);
-            const line = canvas.rows[p.y];
-            if (line && p.x >= 0 && p.x < line.length) {
-              canvas.styles[p.y]![p.x] = es;
-            }
-          }
-        }
-      };
-
-  for (let col = anchorCol; col <= cols; col++) {
+/** Yield each hex in the model with its canvas geometry and terrain style. */
+export function* eachHex(model: BoardModel): Generator<HexContext, void, undefined> {
+  const cols = model.cols + (model.anchorCol - 1);
+  const rows = model.rows + (model.anchorRow - 1);
+  for (let col = model.anchorCol; col <= cols; col++) {
     const baseY = col % 2 === 1 ? 0 : STAGGER;
-    for (let row = anchorRow; row <= rowsFull; row++) {
-      const lx = (col - anchorCol) * COL_STRIDE;
-      const y = baseY + (row - anchorRow) * ROW_STRIDE;
+    for (let row = model.anchorRow; row <= rows; row++) {
+      const x = (col - model.anchorCol) * COL_STRIDE;
+      const y = baseY + (row - model.anchorRow) * ROW_STRIDE;
       const key = `${col},${row}`;
-      const cell = cells[key];
-      const style = styles[key] ?? null;
-      const x = lx;
-      stampEdge(x, y, GRID_GLYPHS.edgeTop);
-      stamp(
-        x + 1,
-        y + 1,
-        `${GRID_GLYPHS.edgeNW}${coordLabel(col, row)}${GRID_GLYPHS.edgeNE}`,
-        style,
-      );
-      const shown = cell === undefined ? "" : cell.slice(0, ID_MAX_LEN);
-      stamp(x, y + 2, `${GRID_GLYPHS.vertW}${" ".repeat(BELLY_WIDTH)}${GRID_GLYPHS.vertE}`, style);
-      if (shown.length > 0) {
-        const left = Math.ceil((BELLY_WIDTH - shown.length) / 2);
-        stamp(x + 1 + left, y + 2, shown, idStyles[key] ?? style);
-      }
-      stamp(x + 1, y + 3, `${GRID_GLYPHS.edgeSW}    ${GRID_GLYPHS.edgeSE}`, style);
-      const mark = marks[key];
-      const level = elevations[key] ?? 0;
-      if (mark !== undefined && mark.length > 0) {
-        stamp(x + 2, y + 3, fitCell(`${mark}${level}`, 4), style);
-      } else {
-        stamp(x + 4, y + 3, String(level), style);
-      }
-      stampEdge(
+      yield {
+        col,
+        row,
         x,
-        y + ROW_STRIDE,
-        row < rowsFull ? GRID_GLYPHS.edgeShared : GRID_GLYPHS.edgeBottom,
-      );
-      const f = facings[key];
-      const glyph = f === undefined ? undefined : FACING_GLYPH[f];
-      if (glyph !== undefined) {
-        const arrowStyle = idStyles[key] ?? style;
-        if (glyph === FACING_GLYPH.n) setChar(x + 3, y, glyph, arrowStyle);
-        else if (glyph === FACING_GLYPH.s) setChar(x + 4, y + ROW_STRIDE, glyph, arrowStyle);
-        else if (glyph === FACING_GLYPH.nw) setChar(x + 1, y + 1, glyph, arrowStyle);
-        else if (glyph === FACING_GLYPH.ne) setChar(x + 6, y + 1, glyph, arrowStyle);
-        else if (glyph === FACING_GLYPH.sw) setChar(x + 1, y + 3, glyph, arrowStyle);
-        else setChar(x + 6, y + 3, glyph, arrowStyle);
-      }
-      checkFacing(key, x, y);
+        y,
+        key,
+        cell: model.cells[key],
+        mark: model.marks[key],
+        elevation: model.elevations[key] ?? 0,
+        facing: model.facings[key],
+        idStyle: model.idStyles[key],
+        style: model.styles[key] ?? null,
+        edgeStyles: model.edgeStyles,
+        lastRow: row === rows,
+      };
     }
   }
+}
 
+/**
+ * Assemble a {@link BoardModel} into the char/style canvases by painting
+ * each visual layer per hex in a fixed order (grid → unit ids → terrain →
+ * elevation → facing arrows → edge tint). The hexes are visited once,
+ * column-major; sibling hexes share edge lines, so the shared `====` edge
+ * (upper hex's bottom winning over the lower hex's `_` top) relies on
+ * {@link stampEdge} only filling spaces, not on layer batching.
+ */
+function drawCanvas(model: BoardModel): Canvas {
+  const canvas = makeCanvas(model);
+  for (const hex of eachHex(model)) {
+    drawHexGrid(canvas, hex);
+    drawUnitIds(canvas, hex);
+    drawTerrainMarks(canvas, hex);
+    drawElevationDigits(canvas, hex);
+    drawFacingArrows(canvas, hex);
+    applyEdgeStyles(canvas, hex);
+  }
   return canvas;
+}
+
+/** Layer 1 — one hex's walls, coordinate labels, and shared/outer edges. */
+function drawHexGrid(canvas: Canvas, hex: HexContext): void {
+  const { col, row, x, y, style, lastRow } = hex;
+  stampEdge(canvas, x, y, GRID_GLYPHS.edgeTop);
+  stampInto(
+    canvas,
+    x + 1,
+    y + 1,
+    `${GRID_GLYPHS.edgeNW}${coordLabel(col, row)}${GRID_GLYPHS.edgeNE}`,
+    style,
+  );
+  stampInto(
+    canvas,
+    x,
+    y + 2,
+    `${GRID_GLYPHS.vertW}${" ".repeat(BELLY_WIDTH)}${GRID_GLYPHS.vertE}`,
+    style,
+  );
+  stampInto(canvas, x + 1, y + 3, `${GRID_GLYPHS.edgeSW}    ${GRID_GLYPHS.edgeSE}`, style);
+  stampEdge(canvas, x, y + ROW_STRIDE, lastRow ? GRID_GLYPHS.edgeBottom : GRID_GLYPHS.edgeShared);
+}
+
+/** Layer 2 — one hex's occupant id centered inside its belly. */
+function drawUnitIds(canvas: Canvas, hex: HexContext): void {
+  const { x, y, cell, style, idStyle } = hex;
+  const shown = cell?.slice(0, ID_MAX_LEN) ?? "";
+  if (shown.length === 0) return;
+  const left = Math.ceil((BELLY_WIDTH - shown.length) / 2);
+  stampInto(canvas, x + 1 + left, y + 2, shown, idStyle ?? style);
+}
+
+/** Layer 3 — one hex's terrain glyph at the bottom, with a level digit suffix. */
+function drawTerrainMarks(canvas: Canvas, hex: HexContext): void {
+  const { x, y, mark, elevation, style } = hex;
+  if (mark === undefined || mark.length === 0) return;
+  stampInto(canvas, x + 2, y + 3, fitCell(`${mark}${elevation}`, 4), style);
+}
+
+/** Layer 4 — one hex's bare elevation digit when no terrain mark is shown. */
+function drawElevationDigits(canvas: Canvas, hex: HexContext): void {
+  const { x, y, mark, elevation, style } = hex;
+  if (mark !== undefined && mark.length > 0) return;
+  stampInto(canvas, x + 4, y + 3, String(elevation), style);
+}
+
+/** Layer 5 — one hex's facing arrow overwriting its wall or edge glyph. */
+function drawFacingArrows(canvas: Canvas, hex: HexContext): void {
+  const { x, y, facing, idStyle, style } = hex;
+  if (facing === undefined) return;
+  const glyph = FACING_GLYPH[facing]!;
+  const p = facingEdgePos(facing, x, y);
+  setChar(canvas, p.x, p.y, glyph, idStyle ?? style);
+}
+
+/** Layer 6 — one hex's edge tinting: style-only pass over its hexside vertices. */
+export function applyEdgeStyles(canvas: Canvas, hex: HexContext): void {
+  const { x, y, key } = hex;
+  for (const facing of FACINGS) {
+    const es = hex.edgeStyles[`${key}:${facing}`];
+    if (es === undefined) continue;
+    const p = facingEdgePos(facing, x, y);
+    const line = canvas.rows[p.y];
+    if (line && p.x >= 0 && p.x < line.length) {
+      canvas.styles[p.y]![p.x] = es;
+    }
+  }
 }
 
 function styleEquals(a: CharStyle | null, b: CharStyle | null): boolean {
