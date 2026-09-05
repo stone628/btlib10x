@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { getMapDef, getMechDefFor } from "../src/data/index.js";
 import { canFireFromLocation } from "../src/rules/damage.js";
-import { REACHABLE_MARKER, reachableModel } from "../web/format.js";
-import { GRID_GLYPHS, TEAM_STYLES } from "../web/render.js";
+import { reachableInfo } from "../web/format.js";
+import {
+  createBoardModel,
+  GRID_GLYPHS,
+  REACHABLE_MARKER,
+  TEAM_STYLES,
+} from "../web/renderer.text.js";
 import * as S from "../web/session.js";
 import { execute } from "./helpers.js";
 
@@ -509,14 +514,14 @@ describe("movement", () => {
     expect(out).not.toContain("\u2191");
   });
 
-  it("reachableModel crops to the reachable bbox and tints edges with the actor team", () => {
+  it("reachable info crops to the reachable bbox and tints edges with the actor team", () => {
     const s = freshSetup();
     run(s, "start");
     run(s, "mode walk");
     const actor = S.currentActor(s)!;
-    const model = reachableModel(s);
-    expect(model).not.toBeNull();
-    const m = model!;
+    const info = reachableInfo(s);
+    expect(info).not.toBeNull();
+    const m = createBoardModel(info!);
     // Exact reachable bbox, clamped to the board: larger than one hex and
     // smaller than the full 15x16 board.
     expect(m.anchorCol).toBeGreaterThanOrEqual(1);

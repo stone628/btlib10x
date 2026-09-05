@@ -30,7 +30,7 @@ function appendChunk(chunk: Chunk, parent: HTMLElement = out): void {
 
   if (kind === "board") {
     const div = document.createElement("div");
-    if (chunk.board.renderer) chunk.board.renderer(chunk.board.model, div);
+    if (chunk.renderer) chunk.renderer(chunk.info, div);
     insert(div);
     return;
   }

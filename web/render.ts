@@ -1,79 +1,15 @@
-// ---- Re-export from renderer.text.ts so callers only need `render.ts`. ----
-// Everything value-level flows one way (render.ts → renderer.text.ts); the
+// ---- Public facade over renderer.text.ts. ----
+// All value-level imports flow one way (render.ts → renderer.text.ts); the
 // reverse edge (renderer.text.ts → render.ts) is type-only and erased at
-// compile time, so there is no runtime module cycle.
-import type { Facing } from "btlib10x";
-
-export type { BoardRenderer, Canvas, HexContext } from "./renderer.text.js";
-export {
-  applyEdgeStyles,
-  boardLegendText,
-  boardToChars,
-  boardToSpans,
-  boardToText,
-  cssGridRenderer,
-  eachHex,
-  GRID_GLYPHS,
-  makeCanvas,
-  styleClasses,
-  TEAM_STYLES,
-  textRenderer,
-} from "./renderer.text.js";
-
-import type { BoardRenderer } from "./renderer.text.js";
+// compile time, so there is never a runtime module cycle.
+import type { Facing, HexCoord, MapDef, RevealedLanding, UnitState } from "btlib10x";
 import { cssGridRenderer, textRenderer } from "./renderer.text.js";
-
-// ---- common types ----
-
-/** Named palette slots; the web layer maps these to CSS variables. */
-export type ColorName = "red" | "green" | "yellow" | "blue" | "magenta" | "cyan" | "white" | "dim";
-
-/** Per-character presentation hints for styled board output. */
-export interface CharStyle {
-  readonly fg?: ColorName | undefined;
-  readonly bg?: ColorName | undefined;
-  readonly bold?: boolean | undefined;
-  readonly italic?: boolean | undefined;
-  /** Web-only hook: raw CSS class (e.g. per-terrain scheme `t-lightWoods`). */
-  readonly cls?: string | undefined;
-}
-
-/** A run of characters sharing one {@link CharStyle} within a board line. */
-export interface Span {
-  readonly text: string;
-  readonly style?: CharStyle | undefined;
-}
-
-/**
- * Structured board: the flat text pieces plus optional per-hex style hints.
- * Keys are `"col,row"` in engine coordinates.
- */
-export interface BoardModel {
-  readonly cols: number;
-  readonly rows: number;
-  /** Absolute (1-based) column/row of the crop anchor. Hex at `(col,row)` renders at `(col - anchorCol, row - anchorRow)`. */
-  readonly anchorCol: number;
-  readonly anchorRow: number;
-  /** Cell text drawn inside `/...\ ` (unit ids, overlay glyphs). */
-  readonly cells: Readonly<Record<string, string>>;
-  /** Glyphs drawn at the hex bottom center (e.g. terrain markers). */
-  readonly marks: Readonly<Record<string, string>>;
-  /** Per-hex ground elevation. */
-  readonly elevations: Readonly<Record<string, number>>;
-  /** Per-hex mech facing (`"col,row"` → {@link Facing}); drawn on the grid. */
-  readonly facings: Readonly<Record<string, Facing>>;
-  /**
-   * Per-edge style keyed by `"col,row:facing"` — tints the grid edge where
-   * that facing's arrow would be placed (e.g. team color on reachable hexes).
-   */
-  readonly edgeStyles: Readonly<Record<string, CharStyle>>;
-  /** Style applied to a hex's characters: grid rows, belly parens and mark. */
-  readonly styles: Readonly<Record<string, CharStyle>>;
-  /** Style for just the occupant id inside `( )` (e.g. {@link TEAM_STYLES}). */
-  readonly idStyles: Readonly<Record<string, CharStyle>>;
-}
+import type { SetupUnit } from "./session.js";
 
 // ---- renderer supplier ----
+
+/** Board renderer: populates a parent container from a {@link BoardRenderInfo}. */
+export type BoardRenderer = (info: BoardRenderInfo, el: Element) => void;
 
 const RENDERERS: Readonly<Record<string, BoardRenderer>> = {
   "css-grid": cssGridRenderer,
@@ -85,10 +21,40 @@ export function getBoardRenderer(name: string): BoardRenderer | undefined {
   return RENDERERS[name];
 }
 
-// ---- model builders (self-contained, re-exported from renderer.text.ts) ----
+// ---- board render info (what a BoardRenderer consumes) ----
 
-export {
-  battleModel,
-  mapModel,
-  renderMap,
-} from "./renderer.text.js";
+export interface BoardRenderUnit {
+  readonly id: string;
+  readonly team: number;
+  readonly model: string;
+  readonly position: HexCoord;
+  readonly facing: Facing;
+}
+
+export function createBoardRenderUnit(unit: UnitState | SetupUnit): BoardRenderUnit {
+  return {
+    id: unit.id,
+    team: unit.team,
+    model: unit.model,
+    position: { ...unit.position },
+    facing: unit.facing,
+  };
+}
+
+/**
+ * Everything the web layer needs to describe one board render. `map` always
+ * supplies the board bounds and terrain; `units` (when non-null) places unit
+ * ids/facings; `reachables` (when non-null) draws the reachable-hex overlay
+ * and crops the model to the reachable bounding box, tinting markers and
+ * edges with the acting unit's team (`reachableTeam`).
+ */
+export interface BoardRenderReachableInfo {
+  readonly team: number;
+  readonly revealed: RevealedLanding[];
+}
+
+export interface BoardRenderInfo {
+  readonly map: MapDef;
+  readonly units: BoardRenderUnit[] | null;
+  readonly reachable: BoardRenderReachableInfo | null;
+}

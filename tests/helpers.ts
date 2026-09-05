@@ -2,7 +2,7 @@ import type { Rng } from "../src/core/types.js";
 import type { CreateBattleOptions, TerrainHexDef, UnitInit } from "../src/rules/game.js";
 import { runChunks } from "../web/cli.js";
 import type { Chunk } from "../web/format.js";
-import { boardLegendText, boardToText } from "../web/render.js";
+import { boardLegendText, boardToText, createBoardModel } from "../web/renderer.text.js";
 import type { Session } from "../web/session.js";
 
 /**
@@ -64,7 +64,7 @@ export function seededRng(seed: number): Rng {
 export function chunkText(chunk: Chunk): string[] {
   if (chunk.kind === "board") {
     const lines: string[] = [boardLegendText("en")];
-    lines.push(...boardToText(chunk.board.model).split("\n"));
+    lines.push(...boardToText(createBoardModel(chunk.info)).split("\n"));
     return lines;
   }
   if (chunk.kind === "columns") {

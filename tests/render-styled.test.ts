@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getMapDef, type MapDef } from "../src/data/index.js";
 import { createBattle, type UnitInit } from "../src/rules/game.js";
-import type { BoardModel, Canvas, CharStyle, Span } from "../web/render.js";
+import type { BoardModel, Canvas, CharStyle, Span } from "../web/renderer.text.js";
 import {
   applyEdgeStyles,
   battleModel,
@@ -13,7 +13,7 @@ import {
   mapModel,
   renderMap,
   TEAM_STYLES,
-} from "../web/render.js";
+} from "../web/renderer.text.js";
 import { makeBattleOptions } from "./helpers.js";
 
 function spansText(spans: readonly Span[]): string {

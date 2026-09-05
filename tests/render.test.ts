@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { MapDef } from "../src/index.js";
 import type { BattleState } from "../src/rules/game.js";
 import { createBattle, type TerrainHexDef, type UnitInit } from "../src/rules/game.js";
-import type { BoardModel } from "../web/render.js";
-import { battleModel, boardToText, GRID_GLYPHS, renderMap } from "../web/render.js";
+import type { BoardModel } from "../web/renderer.text.js";
+import { battleModel, boardToText, GRID_GLYPHS, renderMap } from "../web/renderer.text.js";
 import { makeBattleOptions } from "./helpers.js";
 
 /** Flat battle text via the structured model (historic renderer shape). */

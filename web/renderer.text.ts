@@ -7,20 +7,65 @@ import {
   type TerrainHexDef,
 } from "btlib10x";
 import { i18n, type LocaleId } from "./i18n/index.js";
-import type { BoardModel, CharStyle, Span } from "./render.js";
 
-// ---- BoardRenderer type ----
+// ---- shared presentation types ----
+
+/** Named palette slots; the web layer maps these to CSS variables. */
+type ColorName = "red" | "green" | "yellow" | "blue" | "magenta" | "cyan" | "white" | "dim";
+
+/** Per-character presentation hints for styled board output. */
+export interface CharStyle {
+  readonly fg?: ColorName | undefined;
+  readonly bg?: ColorName | undefined;
+  readonly bold?: boolean | undefined;
+  readonly italic?: boolean | undefined;
+  /** Web-only hook: raw CSS class (e.g. per-terrain scheme `t-lightWoods`). */
+  readonly cls?: string | undefined;
+}
+
+/** A run of characters sharing one {@link CharStyle} within a board line. */
+export interface Span {
+  readonly text: string;
+  readonly style?: CharStyle | undefined;
+}
 
 /**
- * Board renderer: populates a parent container. The renderer owns its DOM —
- * creates a legend div and its own board element.
+ * Structured board: the flat text pieces plus optional per-hex style hints.
+ * Keys are `"col,row"` in engine coordinates.
  */
-export type BoardRenderer = (model: BoardModel, el: Element) => void;
+export interface BoardModel {
+  readonly cols: number;
+  readonly rows: number;
+  /** Absolute (1-based) column/row of the crop anchor. Hex at `(col,row)` renders at `(col - anchorCol, row - anchorRow)`. */
+  readonly anchorCol: number;
+  readonly anchorRow: number;
+  /** Cell text drawn inside `/...\ ` (unit ids, overlay glyphs). */
+  readonly cells: Readonly<Record<string, string>>;
+  /** Glyphs drawn at the hex bottom center (e.g. terrain markers). */
+  readonly marks: Readonly<Record<string, string>>;
+  /** Per-hex ground elevation. */
+  readonly elevations: Readonly<Record<string, number>>;
+  /** Per-hex mech facing (`"col,row"` → {@link Facing}); drawn on the grid. */
+  readonly facings: Readonly<Record<string, Facing>>;
+  /**
+   * Per-edge style keyed by `"col,row:facing"` — tints the grid edge where
+   * that facing's arrow would be placed (e.g. team color on reachable hexes).
+   */
+  readonly edgeStyles: Readonly<Record<string, CharStyle>>;
+  /** Style applied to a hex's characters: grid rows, belly parens and mark. */
+  readonly styles: Readonly<Record<string, CharStyle>>;
+  /** Style for just the occupant id inside `( )` (e.g. {@link TEAM_STYLES}). */
+  readonly idStyles: Readonly<Record<string, CharStyle>>;
+}
+
+// ---- board render info (types owned by render.ts) ----
+
+import type { BoardRenderer, BoardRenderInfo } from "./render.js";
 
 // ---- CSS class helper (web-layer) ----
 
 /** Convert a {@link CharStyle} to a space-separated CSS class string. */
-export function styleClasses(style: CharStyle | undefined): string {
+function styleClasses(style: CharStyle | undefined): string {
   if (style === undefined) return "";
   const parts: string[] = [];
   if (style.fg !== undefined) parts.push(`f-${style.fg}`);
@@ -34,7 +79,7 @@ export function styleClasses(style: CharStyle | undefined): string {
 // ---- constants (used by model builders below) ----
 
 /** Glyphs drawn inside hexes by terrain type. */
-export const TERRAIN_GLYPHS: Readonly<Record<string, string>> = {
+const TERRAIN_GLYPHS: Readonly<Record<string, string>> = {
   lightWoods: "w",
   heavyWoods: "W",
   rough: "r",
@@ -50,7 +95,7 @@ export const TERRAIN_GLYPHS: Readonly<Record<string, string>> = {
 };
 
 /** Per-terrain scheme hooks: the web layer maps each class to CSS vars. */
-export const TERRAIN_STYLES: Readonly<Record<string, CharStyle>> = {
+const TERRAIN_STYLES: Readonly<Record<string, CharStyle>> = {
   lightWoods: { cls: "t-lightWoods" },
   heavyWoods: { cls: "t-heavyWoods" },
   rough: { cls: "t-rough" },
@@ -67,6 +112,9 @@ export const TERRAIN_STYLES: Readonly<Record<string, CharStyle>> = {
 
 /** Team-tinted unit ids: team 0 cyan, team 1 magenta, others unstyled. */
 export const TEAM_STYLES: readonly CharStyle[] = [{ fg: "cyan" }, { fg: "magenta" }];
+
+/** Belly marker drawn in a reachable hex on the reachable map. */
+export const REACHABLE_MARKER = "<>";
 
 /** Terrain legend list: `"w(lightWoods)  W(heavyWoods)"`. */
 function terrainLegendList(): string {
@@ -217,7 +265,7 @@ function stampEdge(canvas: Canvas, x: number, y: number, ch: EdgeGlyph): void {
 }
 
 /** Paint-position context for one hex within the model's crop. */
-export interface HexContext {
+interface HexContext {
   readonly col: number;
   readonly row: number;
   readonly x: number;
@@ -610,6 +658,91 @@ export function battleModel(
   };
 }
 
+// ---- compose a BoardModel from BoardRenderInfo ----
+
+/**
+ * Build the {@link BoardModel} described by {@link BoardRenderInfo} for a
+ * {@link BoardRenderer}. Terrain marks/styles/elevations always come from
+ * `info.map`; when `info.units` is set, each unit draws its id (team-tinted)
+ * and facing in its hex. When `info.reachables` is set, the model is cropped
+ * to the reachable-landing bounding box (clamped to the map) and every
+ * reachable landing tints its edge; empty non-actor reachable hexes show the
+ * {@link REACHABLE_MARKER} belly glyph tinted with the acting unit's team
+ * (`info.reachableTeam`).
+ */
+export function createBoardModel(info: BoardRenderInfo): BoardModel {
+  const base = mapModel(info.map);
+
+  const cells = { ...base.cells };
+  const facings: Record<string, Facing> = {};
+  const idStyles: Record<string, CharStyle> = {};
+  if (info.units !== null) {
+    for (const unit of info.units) {
+      const key = `${unit.position.col},${unit.position.row}`;
+      cells[key] = unit.id;
+      facings[key] = unit.facing;
+      const team = TEAM_STYLES[unit.team];
+      if (team !== undefined) idStyles[key] = team;
+    }
+  }
+
+  if (info.reachable === null) {
+    return {
+      cols: base.cols,
+      rows: base.rows,
+      anchorCol: base.anchorCol,
+      anchorRow: base.anchorRow,
+      cells,
+      marks: base.marks,
+      elevations: base.elevations,
+      facings,
+      edgeStyles: base.edgeStyles,
+      styles: base.styles,
+      idStyles,
+    };
+  }
+
+  let minC = Infinity;
+  let minR = Infinity;
+  let maxC = -Infinity;
+  let maxR = -Infinity;
+  for (const l of info.reachable.revealed) {
+    if (l.hex.col < minC) minC = l.hex.col;
+    if (l.hex.col > maxC) maxC = l.hex.col;
+    if (l.hex.row < minR) minR = l.hex.row;
+    if (l.hex.row > maxR) maxR = l.hex.row;
+  }
+  const anchorCol = Math.max(1, minC);
+  const anchorRow = Math.max(1, minR);
+  const col1 = Math.min(base.cols, maxC);
+  const row1 = Math.min(base.rows, maxR);
+
+  const edgeStyles: Record<string, CharStyle> = {};
+  const team = TEAM_STYLES[info.reachable.team]!;
+  for (const l of info.reachable.revealed) {
+    const key = `${l.hex.col},${l.hex.row}`;
+    edgeStyles[`${key}:${l.facing}`] = team;
+    if (cells[key] === undefined) {
+      cells[key] = REACHABLE_MARKER;
+      if (team !== undefined) idStyles[key] = team;
+    }
+  }
+
+  return {
+    cols: col1 - anchorCol + 1,
+    rows: row1 - anchorRow + 1,
+    anchorCol,
+    anchorRow,
+    cells,
+    marks: base.marks,
+    elevations: base.elevations,
+    facings: {},
+    edgeStyles,
+    styles: base.styles,
+    idStyles,
+  };
+}
+
 // ---- board renderers (DOM) ----
 
 function renderLegend(el: Element, locale: LocaleId): void {
@@ -620,11 +753,11 @@ function renderLegend(el: Element, locale: LocaleId): void {
 }
 
 /** CSS Grid renderer: one `<span>` per character, bold isolated to single cells. */
-export const cssGridRenderer: BoardRenderer = (model, el) => {
+export const cssGridRenderer: BoardRenderer = (info, el) => {
   renderLegend(el, "en");
   const grid = document.createElement("div");
   grid.className = "board-grid";
-  const lines = boardToChars(model);
+  const lines = boardToChars(createBoardModel(info));
   const maxCols = Math.max(...lines.map((l) => l.length), 1);
   (grid as HTMLElement).style.gridTemplateColumns = `repeat(${maxCols}, 1ch)`;
   for (const line of lines) {
@@ -644,11 +777,11 @@ export const cssGridRenderer: BoardRenderer = (model, el) => {
 };
 
 /** Text renderer: flat text inside a `<div>`. */
-export const textRenderer: BoardRenderer = (model, el) => {
+export const textRenderer: BoardRenderer = (info, el) => {
   renderLegend(el, "en");
   const board = document.createElement("div");
   board.className = "board";
-  const lines = boardToText(model).split("\n");
+  const lines = boardToText(createBoardModel(info)).split("\n");
   lines.forEach((line, i) => {
     if (i > 0) board.append("\n");
     const span = document.createElement("span");

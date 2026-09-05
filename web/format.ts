@@ -2,7 +2,6 @@ import type {
   AmmoBinId,
   AmmoPolicy,
   AttackResolution,
-  BattleState,
   CriticalEffect,
   CriticalResolution,
   CritSoakName,
@@ -11,7 +10,6 @@ import type {
   FireBlockerReason,
   FireWeapon,
   GameEvent,
-  HexCell,
   HexCoord,
   Location,
   LocationValue,
@@ -48,8 +46,8 @@ import {
 import type { LocaleId, MessageKey } from "./i18n/index.js";
 import { i18n } from "./i18n/index.js";
 import { lookupMapOrThrow, lookupMechOrThrow, lookupWeaponOrThrow } from "./lookup.js";
-import type { BoardModel, BoardRenderer, CharStyle } from "./render.js";
-import { battleModel, getBoardRenderer, mapModel, TEAM_STYLES } from "./render.js";
+import type { BoardRenderer, BoardRenderInfo } from "./render.js";
+import { createBoardRenderUnit, getBoardRenderer } from "./render.js";
 import type { Session, SetupUnit } from "./session.js";
 import { moveStepsInfo } from "./session.js";
 
@@ -61,7 +59,8 @@ export type Chunk =
   | { readonly kind: "lines"; lines: readonly string[]; cls?: string }
   | {
       readonly kind: "board";
-      board: { readonly model: BoardModel; readonly renderer?: BoardRenderer };
+      readonly info: BoardRenderInfo;
+      readonly renderer: BoardRenderer | null;
     }
   | { readonly kind: "columns"; columns: readonly (readonly string[])[] }
   | {
@@ -70,24 +69,12 @@ export type Chunk =
       readonly chunks: readonly Chunk[];
     };
 
-interface BoardChunk {
-  readonly board: { readonly model: BoardModel; readonly renderer?: BoardRenderer };
-}
-
-function boardChunkOf(model: BoardModel): BoardChunk["board"] {
-  const r = getBoardRenderer("css-grid");
-  return r !== undefined ? { model, renderer: r } : { model };
-}
-
 export function buildLinesChunk(lines: readonly string[], cls?: string): Chunk {
   return cls ? { kind: "lines", lines: lines, cls: cls } : { kind: "lines", lines: lines };
 }
 
-export function buildBoardChunk(board: {
-  readonly model: BoardModel;
-  readonly renderer?: BoardRenderer;
-}): Chunk {
-  return { kind: "board", board: board };
+export function buildBoardChunk(info: BoardRenderInfo): Chunk {
+  return { kind: "board", info, renderer: getBoardRenderer("css-grid") ?? null };
 }
 
 export function buildColumnsChunk(columns: readonly (readonly string[])[]): Chunk {
@@ -427,56 +414,18 @@ function gunneryLabel(locale: LocaleId, gunnery: number): string {
   return `${i18n(locale, band)}(${gunnery})`;
 }
 
-function mapDims(s: Session): [number, number] | undefined {
-  if (!s.mapName) return undefined;
-  const map = getMapDefFor(s);
-  return [map.width, map.height];
-}
-
 /** `board` output: styled grid chunks, or a plain hint when nothing exists. */
 export function boardChunk(s: Session): Chunk {
-  const dims = mapDims(s);
-  if (!s.battle) {
-    if (!s.mapName && s.roster.length === 0) {
-      return buildLinesChunk([i18n(s.locale, "board.noMap")]);
-    }
-    const units = Object.fromEntries(
-      s.roster.map((u) => [
-        u.id,
-        { id: u.id, position: u.position, facing: u.facing, removed: false },
-      ]),
-    ) as BattleState["units"];
-    let width = dims?.[0] ?? 0;
-    let height = dims?.[1] ?? 0;
-    for (const u of s.roster) {
-      width = Math.max(width, u.position.col);
-      height = Math.max(height, u.position.row);
-    }
-    if (width < 1) width = 1;
-    if (height < 1) height = 1;
-    const cells: HexCell[] = new Array<HexCell>(width * height).fill({
-      terrain: "clear",
-      level: 0,
-    });
-    for (const t2 of s.terrainDefs) {
-      cells[t2.col - 1 + (t2.row - 1) * width] = { terrain: t2.type, level: t2.level ?? 0 };
-    }
-    const model = battleModel({
-      units,
-      cells,
-      width,
-      height,
-      turn: 0,
-      phase: "initiative",
-      initiativeWinnerTeam: null,
-      critsDisabled: false,
-      actedThisPhase: [],
-      events: [],
-      buildings: {},
-    } as BattleState);
-    return buildBoardChunk(boardChunkOf(model));
+  if (!s.mapName) {
+    return buildLinesChunk([i18n(s.locale, "board.noMap")]);
   }
-  return buildBoardChunk(boardChunkOf(battleModel(s.battle)));
+  const map = getMapDefFor(s);
+  const units = s.battle
+    ? Object.values(s.battle.units)
+        .filter((u) => !u.removed)
+        .map((u) => createBoardRenderUnit(u))
+    : s.roster.map((u) => createBoardRenderUnit(u));
+  return buildBoardChunk({ map, units, reachable: null });
 }
 
 // ---------------------------------------------------------------- info ----
@@ -646,11 +595,7 @@ export function infoMapChunks(locale: LocaleId, name: string): Chunk[] {
       }),
       i18n(locale, "info.elevationLine", { breakdown: elevationBreakdown }),
     ]),
-    buildBoardChunk(
-      boardChunkOf(
-        mapModel(map, undefined, Object.keys(elevationMap).length > 0 ? elevationMap : undefined),
-      ),
-    ),
+    buildBoardChunk({ map, units: null, reachable: null }),
   ];
 }
 
@@ -1301,25 +1246,17 @@ export function moveStatusLines(s: Session): string[] {
   return lines;
 }
 
-/** Belly marker drawn in a reachable hex on the reachable map. */
-export const REACHABLE_MARKER = "<>";
-
 /**
- * Clipped ASCII-hex map of the reachable hexes for the declared mode.
- *
- * The model crops exactly to the smallest axis-aligned bounding box that holds
- * every reachable hex and is clamped to the board bounds (no padding). All
- * units inside the crop keep their ids (team-tinted); no facing arrows are
- * drawn, reachable hexes show a team-tinted `<>` in the belly, and every
- * reachable (hex, facing) landing tints its grid edge with the actor's team
- * color. Raw `RevealedLanding.path` data is retained on the landing but not
- * rendered here (kept for later use).
+ * Board render info of the reachable hex map for the declared mode, or null
+ * when no reachable hexes exist. Every reachable (hex, facing) landing is
+ * handed to `createBoardModel` (in the render layer), which crops the model
+ * to the reachable bounding box and tints markers/edges with the actor team.
+ * Raw `RevealedLanding.path` data is retained on the landing but not rendered
+ * (kept for later use).
  */
-export function reachableModel(s: Session): BoardModel | null {
+export function reachableInfo(s: Session): BoardRenderInfo | null {
   const actor = s.battle?.units[s.actorId ?? ""];
   if (!actor || !s.battle || s.moveMode === null) return null;
-  const w = s.battle.width;
-  const h = s.battle.height;
   // Engine guarantee: `actor.model` was validated by `createBattle`.
   const def = getMechDefFor(actor);
   const landings = reachableLandings({ ...actor.position }, actor.facing, {
@@ -1339,56 +1276,18 @@ export function reachableModel(s: Session): BoardModel | null {
   });
   if (landings.length === 0) return null;
 
-  let minC = Infinity;
-  let minR = Infinity;
-  let maxC = -Infinity;
-  let maxR = -Infinity;
-  for (const l of landings) {
-    if (l.hex.col < minC) minC = l.hex.col;
-    if (l.hex.col > maxC) maxC = l.hex.col;
-    if (l.hex.row < minR) minR = l.hex.row;
-    if (l.hex.row > maxR) maxR = l.hex.row;
-  }
-  const anchorCol = Math.max(1, minC);
-  const anchorRow = Math.max(1, minR);
-  const col1 = Math.min(w, maxC);
-  const row1 = Math.min(h, maxR);
-
-  const base = battleModel(s.battle);
-  const cells = { ...base.cells };
-  const idStyles = { ...base.idStyles };
-  const edgeStyles: Record<string, CharStyle> = {};
-  const team = TEAM_STYLES[actor.team];
-  const actorKey = `${actor.position.col},${actor.position.row}`;
-  for (const l of landings) {
-    const key = `${l.hex.col},${l.hex.row}`;
-    if (key !== actorKey && cells[key] === undefined) {
-      cells[key] = REACHABLE_MARKER;
-      if (team !== undefined) idStyles[key] = team;
-    }
-    if (team !== undefined) edgeStyles[`${l.hex.col},${l.hex.row}:${l.facing}`] = team;
-  }
-
-  return {
-    cols: col1 - anchorCol + 1,
-    rows: row1 - anchorRow + 1,
-    anchorCol,
-    anchorRow,
-    cells,
-    marks: {},
-    elevations: {},
-    edgeStyles: edgeStyles,
-    styles: {},
-    idStyles,
-    facings: {},
-  };
+  const map = getMapDefFor(s);
+  const units = Object.values(s.battle.units)
+    .filter((u) => !u.removed)
+    .map((u) => createBoardRenderUnit(u));
+  return { map, units, reachable: { team: actor.team, revealed: landings } };
 }
 
 /** Board chunk of the reachable hex map, or null when none can be drawn. */
 export function reachChunk(s: Session): Chunk | null {
-  const model = reachableModel(s);
-  if (model === null) return null;
-  return buildBoardChunk(boardChunkOf(model));
+  const info = reachableInfo(s);
+  if (info === null) return null;
+  return buildBoardChunk(info);
 }
 
 export function attackStatusLines(s: Session): string[] {
