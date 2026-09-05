@@ -1,14 +1,17 @@
 // ---- Re-export from renderer.text.ts so callers only need `render.ts`. ----
 import type { Facing } from "btlib10x";
 
-export type { BoardRenderer } from "./renderer.text.js";
+export type { BoardRenderer, Canvas, HexContext } from "./renderer.text.js";
 export {
+  applyEdgeStyles,
   boardLegendText,
   boardToChars,
   boardToSpans,
   boardToText,
   cssGridRenderer,
+  eachHex,
   GRID_GLYPHS,
+  makeCanvas,
   styleClasses,
   TEAM_STYLES,
   textRenderer,
