@@ -144,20 +144,32 @@ export function effectiveMoveBudget(
 }
 
 /** Shutdown avoidance number at the current heat, or null when no shutdown risk. */
-export function shutdownAvoid(heat: number): number | null {
-  if (heat < 14 || heat >= 30) return null;
-  if (heat >= 26) return 10;
-  if (heat >= 22) return 8;
-  if (heat >= 18) return 6;
-  return 4;
+export function shutdownAvoid(heat: number): number {
+  return shutdownAvoidWithThreshold(heat).avoid;
+}
+
+export function shutdownAvoidWithThreshold(heat: number): { avoid: number; threshold: number } {
+  if (heat >= 30) return { avoid: 12, threshold: 30 };
+  if (heat >= 26) return { avoid: 10, threshold: 26 };
+  if (heat >= 22) return { avoid: 8, threshold: 22 };
+  if (heat >= 18) return { avoid: 6, threshold: 18 };
+  if (heat >= 14) return { avoid: 4, threshold: 14 };
+  return { avoid: 0, threshold: 0 };
 }
 
 /** Heat ammo-explosion avoidance number at the current heat, or null when none. */
-export function ammoExplosionAvoid(heat: number): number | null {
-  if (heat < 19) return null;
-  if (heat >= 28) return 8;
-  if (heat >= 23) return 6;
-  return 4;
+export function ammoExplosionAvoid(heat: number): number {
+  return ammoExplosionAvoidWithThreshold(heat).avoid;
+}
+
+export function ammoExplosionAvoidWithThreshold(heat: number): {
+  avoid: number;
+  threshold: number;
+} {
+  if (heat >= 28) return { avoid: 8, threshold: 28 };
+  if (heat >= 23) return { avoid: 6, threshold: 23 };
+  if (heat >= 19) return { avoid: 4, threshold: 19 };
+  return { avoid: 0, threshold: 0 };
 }
 
 export interface HeatScaleEffects {
@@ -173,18 +185,23 @@ export interface HeatScaleEffects {
 /** All Heat Scale effects at a given heat value, for display. */
 export function heatScaleEffects(heat: number): HeatScaleEffects {
   let shutdown: HeatScaleEffects["shutdown"] = null;
-  if (heat >= 30) {
-    shutdown = "auto";
-  } else if (heat >= 14) {
-    const avoid = shutdownAvoid(heat)!;
-    const threshold = heat >= 26 ? 26 : heat >= 22 ? 22 : heat >= 18 ? 18 : 14;
-    shutdown = { threshold, avoid };
+  {
+    const { avoid, threshold } = shutdownAvoidWithThreshold(heat);
+    if (avoid >= 12) {
+      // max 2D6 == 12, always
+      shutdown = "auto";
+    } else {
+      shutdown = { threshold, avoid };
+    }
   }
   let ammoExplosion: HeatScaleEffects["ammoExplosion"] = null;
-  if (heat >= 19) {
-    const avoid = ammoExplosionAvoid(heat)!;
-    const threshold = heat >= 28 ? 28 : heat >= 23 ? 23 : 19;
-    ammoExplosion = { threshold, avoid };
+  {
+    const { avoid, threshold } = ammoExplosionAvoidWithThreshold(heat);
+
+    if (avoid > 0) {
+      // avoid exists
+      ammoExplosion = { threshold, avoid };
+    }
   }
   return {
     heat,

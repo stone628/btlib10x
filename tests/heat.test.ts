@@ -126,7 +126,7 @@ describe("movementMpPenalty", () => {
 
 describe("shutdownAvoid", () => {
   it("null below 14", () => {
-    expect(shutdownAvoid(13)).toBeNull();
+    expect(shutdownAvoid(13)).toBe(0);
   });
   it("4 at 14–17", () => {
     expect(shutdownAvoid(14)).toBe(4);
@@ -145,13 +145,13 @@ describe("shutdownAvoid", () => {
     expect(shutdownAvoid(29)).toBe(10);
   });
   it("null at 30+ (auto)", () => {
-    expect(shutdownAvoid(30)).toBeNull();
+    expect(shutdownAvoid(30)).toBe(12);
   });
 });
 
 describe("ammoExplosionAvoid", () => {
   it("null below 19", () => {
-    expect(ammoExplosionAvoid(18)).toBeNull();
+    expect(ammoExplosionAvoid(18)).toBe(0);
   });
   it("4 at 19–22", () => {
     expect(ammoExplosionAvoid(19)).toBe(4);
