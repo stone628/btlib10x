@@ -552,7 +552,7 @@ describe("attack", () => {
 
     const actor = S.currentActor(s)!.id;
     const enemy = actor === "hunchy" ? "cicada" : "hunchy";
-    expect(run(s, "weapons").join("\n")).toMatch(/#1 .+S\d+\/M\d+\/L\d+/);
+    expect(run(s, `sheet ${actor}`).join("\n")).toMatch(/#1 .+S\d+\/\s*M\d+\/\s*L\d+/);
 
     const shotsBefore = actor === "hunchy" ? (s.battle!.units.hunchy!.shotsLeft[1] ?? 0) : null;
     expect(run(s, `fire ${enemy} 1`).join("\n")).toContain("queued");
@@ -565,7 +565,7 @@ describe("attack", () => {
     run(s, "done");
     // Second unit declares and triggers resolution sweep at phase end.
     const actor2 = S.currentActor(s)!.id;
-    expect(run(s, "weapons").join("\n")).toMatch(/#1 .+S\d+\/M\d+\/L\d+/);
+    expect(run(s, `sheet ${actor}`).join("\n")).toMatch(/#1 .+S\d+\/\s*M\d+\/\s*L\d+/);
     expect(run(s, `fire ${actor} 1`).join("\n")).toContain("queued");
     const out = run(s, "done").join("\n");
     expect(out).toMatch(new RegExp(`${actor2} fires at ${actor}`));

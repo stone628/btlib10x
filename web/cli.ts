@@ -20,7 +20,6 @@ import {
   reachChunk,
   sheetForUnit,
   unitBriefList,
-  weaponsLines,
 } from "./format.js";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
 import { i18n, isLocale, localeList } from "./i18n/index.js";
@@ -350,12 +349,6 @@ const MOVE_CMDS: Record<string, CmdDef> = {
 // -------------------------------------------------------- turn:attack ----
 
 const ATTACK_CMDS: Record<string, CmdDef> = {
-  weapons: {
-    helpKey: "cmd.weapons.help",
-    usage: "weapons [id]",
-    argsDoc: [["id", "cmd.weapons.arg.id"]],
-    run: (s, a) => weaponsLines(s, a[0]),
-  },
   ammo: {
     helpKey: "cmd.ammo.help",
     usage: "ammo [policy]",

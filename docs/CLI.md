@@ -90,7 +90,6 @@ pass), plus `cancel`, `sheet`, `status`, `heat` and the globals.
 
 | command | effect |
 |---|---|
-| `weapons [id]` | list weapon mounts: 1-based number, name, location, S/M/L, ammo, jammed/destroyed |
 | `ammo [policy]` | show (no argument) or set the acting unit's ammo depletion policy: `exposed` (default), `core`, `spread`, `least-first` (case-insensitive, hyphens optional). The policy picks which bin of a weapon takes the next shot; ties are broken at random |
 | `fire <targetId> <weapon> [<weapon> ...]` | queue weapon declarations using 1-based weapon numbers (target first; declare several weapons at once, all against the one shared target; rapid-fire SRM/LRM fire a full volley — no `shots` argument) |
 | `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [J](jam) / [-](destroyed) / per-bin ammo `(n left)` markers); without id: brief unit list (id, model, position+facing) grouped by team |
