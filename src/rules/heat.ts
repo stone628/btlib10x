@@ -17,7 +17,7 @@
 
 import { LOCATIONS, type Location, type MoveMode } from "../core/types.js";
 import type { ResolvedMechDef } from "../data/mech.schema.js";
-import { type AmmoBinId, ammoBinId } from "./ammo.js";
+import { type AmmoBin, type AmmoBinId, collectAmmoBins } from "./ammo.js";
 import { ammoDamagePerShot, type EffectiveMovement } from "./critical.js";
 import { maxMovePoints } from "./movement.js";
 
@@ -197,6 +197,8 @@ export function heatScaleEffects(heat: number): HeatScaleEffects {
 
 export interface LargestAmmoBin {
   readonly binId: AmmoBinId;
+  /** Every bin backing the detonating weapon mount, in slot order. */
+  readonly binIds: readonly AmmoBinId[];
   readonly weapon: string;
   readonly location: Location;
   readonly slotIndex: number;
@@ -207,37 +209,38 @@ export interface LargestAmmoBin {
 
 /**
  * The ammo bin that would detonate in a heat-triggered ammo explosion: the
- * bin whose remaining shots x per-shot damage is largest (ties resolve to the
- * first-found slot, deterministic). Returns null when the 'Mech carries no
- * loaded ammunition.
+ * weapon mount whose remaining shots x per-shot damage is largest. The mount
+ * aggregates every loaded bin it owns (so the full magazine detonates
+ * together); ties resolve to the first-found mount, deterministic. Returns
+ * null when the 'Mech carries no loaded ammunition.
  */
 export function largestAmmoBin(
   def: ResolvedMechDef,
   ammoBins: Readonly<Record<AmmoBinId, number>>,
 ): LargestAmmoBin | null {
+  const byMount = new Map<number, AmmoBin[]>();
+  for (const bin of collectAmmoBins(def)) {
+    const list = byMount.get(bin.weaponIndex) ?? [];
+    list.push(bin);
+    byMount.set(bin.weaponIndex, list);
+  }
   let best: LargestAmmoBin | null = null;
-  for (const loc of LOCATIONS) {
-    const layout = def.critSlots[loc];
-    for (let i = 0; i < layout.length; i++) {
-      const slot = layout[i];
-      if (slot?.kind !== "ammo") continue;
-      const slotIndex = i + 1;
-      const binId = ammoBinId(loc, slotIndex);
-      const shotsRemaining = ammoBins[binId] ?? 0;
-      if (shotsRemaining <= 0) continue;
-      const damagePerShot = ammoDamagePerShot(slot);
-      const damage = shotsRemaining * damagePerShot;
-      const candidate: LargestAmmoBin = {
-        binId,
-        weapon: slot.weapon,
-        location: loc,
-        slotIndex,
-        shotsRemaining,
-        damagePerShot,
-        damage,
-      };
-      if (best === null || candidate.damage > best.damage) best = candidate;
-    }
+  for (const bins of byMount.values()) {
+    const shotsRemaining = bins.reduce((s, b) => s + (ammoBins[b.id] ?? 0), 0);
+    if (shotsRemaining <= 0) continue;
+    const first = bins[0]!;
+    const damagePerShot = ammoDamagePerShot(first);
+    const candidate: LargestAmmoBin = {
+      binId: first.id,
+      binIds: bins.map((b) => b.id),
+      weapon: first.weapon,
+      location: first.location,
+      slotIndex: first.slotIndex,
+      shotsRemaining,
+      damagePerShot,
+      damage: shotsRemaining * damagePerShot,
+    };
+    if (best === null || candidate.damage > best.damage) best = candidate;
   }
   return best;
 }

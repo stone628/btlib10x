@@ -29,7 +29,7 @@ import { makeBattleOptions, scriptedRng } from "./helpers.js";
 function hbkVsEnf(): BattleState {
   const units: UnitInit[] = [
     { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 2, row: 4 }, facing: "se" },
-    { id: "enf", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 3, row: 4 }, facing: "nw" },
+    { id: "enf", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 5, row: 4 }, facing: "nw" },
   ];
   return createBattle(units, makeBattleOptions(units, true));
 }
@@ -184,12 +184,12 @@ describe("effectiveMoveBudget", () => {
 });
 
 describe("heatDissipation / countDestroyedEngineSlots", () => {
-  it("HBK-4G has 15 sinks, 6 engine slots", () => {
+  it("HBK-4G has 15 sinks, 0 engine slots out", () => {
     const state = hbkVsEnf();
     const unit = getUnit(state, "hbk");
     const def = getMechDefFor(unit);
     expect(heatDissipation(def, unit.critSlotsDestroyed)).toBe(15);
-    expect(countDestroyedEngineSlots(def, unit.critSlotsDestroyed)).toBe(6);
+    expect(countDestroyedEngineSlots(def, unit.critSlotsDestroyed)).toBe(0);
   });
   it("destroying 1 engine slot reduces sinks by 1", () => {
     const state = hbkVsEnf();
@@ -200,7 +200,7 @@ describe("heatDissipation / countDestroyedEngineSlots", () => {
       centerTorso: [true, ...unit.critSlotsDestroyed.centerTorso.slice(1)],
     };
     expect(heatDissipation(def, destroyed)).toBe(14);
-    expect(countDestroyedEngineSlots(def, destroyed)).toBe(7);
+    expect(countDestroyedEngineSlots(def, destroyed)).toBe(1);
   });
 });
 
@@ -223,7 +223,7 @@ describe("game integration: movement heat", () => {
     const state = hbkVsEnf();
     startMovementTurn(state);
     declareMove(state, "hbk", "walk");
-    executeMove(state, "hbk", []);
+    executeMove(state, "hbk", [{ kind: "enter", to: { col: 1, row: 3 } }]);
     const hbk = getUnit(state, "hbk");
     expect(hbk.heat).toBe(1);
     expect(
@@ -235,7 +235,8 @@ describe("game integration: movement heat", () => {
     const state = hbkVsEnf();
     startMovementTurn(state);
     declareMove(state, "hbk", "run");
-    executeMove(state, "hbk", []);
+    executeMove(state, "hbk", [{ kind: "enter", to: { col: 3, row: 4 } }]);
+    expect(getUnit(state, "hbk").mpSpent).toBe(1);
     expect(getUnit(state, "hbk").heat).toBe(2);
   });
 
@@ -388,7 +389,7 @@ describe("game integration: heat ammo explosion", () => {
     startAttackTurn(state);
     // shutdown auto: no roll; ammo avoid roll 4 < 8 (avoid=8 for heat 30)
     advancePhase(state, scriptedRng(3, 1, 6, 6, 6, 6));
-    expect(hbk.ammoBins["hbk:leftTorso:1"]).toBe(0);
+    expect(hbk.ammoBins["leftTorso:1"]).toBe(0);
     expect(state.events.some((e) => e.kind === "heatAmmoExplosion" && e.unitId === "hbk")).toBe(
       true,
     );

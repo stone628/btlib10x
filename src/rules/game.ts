@@ -817,7 +817,7 @@ export function advancePhase(state: BattleState, rng: Rng = DEFAULT_RNG): void {
         }
       }
       // The end phase starts with heat resolution: engine crit heat,
-      // dissipation, shutdown/restart checks, and heat ammo explosions.
+      // shutdown/restart checks, heat ammo explosions, then dissipation.
       resolveHeatPhase(state, rng);
       state.phase = "end";
       break;
@@ -847,8 +847,8 @@ export function advancePhase(state: BattleState, rng: Rng = DEFAULT_RNG): void {
 /**
  * Run one turn's heat resolution as the weapon attack phase hands off to the
  * end phase: engine crit heat on top of the turn's accumulated movement and
- * weapon heat, dissipation against the operational heat-sink count,
- * shutdown/restart checks against the Heat Scale, and heat ammo explosions.
+ * weapon heat, then shutdown/restart and heat ammo explosion checks at peak
+ * heat, and finally dissipation against the operational heat-sink count.
  */
 export function resolveHeatPhase(state: BattleState, rng: Rng): void {
   const units = Object.values(state.units).filter((u) => !u.removed);
@@ -866,26 +866,11 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
     }
   }
 
-  // Dissipation: each operational heat sink removes 1 heat point.
-  for (const unit of units) {
-    const def = getMechDefFor(unit);
-    const dissipated = Math.min(heatDissipation(def, unit.critSlotsDestroyed), unit.heat);
-    unit.heat -= dissipated;
-    if (dissipated > 0) {
-      state.events.push({
-        kind: "heatDissipated",
-        unitId: unit.id,
-        dissip: dissipated,
-        heat: unit.heat,
-      });
-    }
-  }
-
   // Shutdown / restart: heat 30+ shuts down automatically; otherwise roll 2D6
   // against the avoidance number when the Heat Scale is in shutdown range. A
   // 'Mech that was down at the start of the phase restarts automatically once
   // heat is back below the shutdown threshold (or succeeds its avoidance
-  // roll).
+  // roll). Checked at peak heat, before sinks dissipate.
   for (const unit of units) {
     if (unit.heat >= 30) {
       unit.shutdown = true;
@@ -902,14 +887,14 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
     }
     const roll = roll2D6(rng);
     if (unit.shutdown) {
-      if (roll < avoid) {
+      if (roll <= avoid) {
         // Remains off-line; try again next end phase.
         state.events.push({ kind: "shutdown", unitId: unit.id, roll, avoid });
       } else {
         unit.shutdown = false;
         state.events.push({ kind: "restarted", unitId: unit.id, heat: unit.heat });
       }
-    } else if (roll < avoid) {
+    } else if (roll <= avoid) {
       unit.shutdown = true;
       state.events.push({ kind: "shutdown", unitId: unit.id, roll, avoid });
     } else {
@@ -919,7 +904,8 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
 
   // Heat ammo explosions: at heat 19+ the largest loaded bin can detonate if
   // the avoidance roll fails. The bin explodes against its location's
-  // internal structure (armor bypassed), cascading normally.
+  // internal structure (armor bypassed), cascading normally. Every bin of the
+  // detonating weapon mount is emptied.
   for (const unit of units) {
     if (unit.heat < 19) continue;
     const def = getMechDefFor(unit);
@@ -930,12 +916,14 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
     if (roll >= avoid) continue;
     const application = applyAmmoExplosion(unit.damage, bin.location, bin.damage);
     unit.damage = application.after;
-    unit.ammoBins[bin.binId] = 0;
     for (const loc of LOCATIONS) {
       if ((unit.damage.internalStructure[loc] ?? 0) <= 0) {
         stripBinsInLocation(unit.ammoBins, loc);
       }
     }
+    // Detonated magazines read as empty (0), like a bin drained by firing;
+    // bins removed by the strip above belonged to destroyed locations only.
+    for (const binId of bin.binIds) unit.ammoBins[binId] = 0;
     unit.shotsLeft = ammoWeaponTotals(def, unit.ammoBins);
     state.events.push({
       kind: "heatAmmoExplosion",
@@ -950,6 +938,21 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
     });
     if (!unit.destroyed && isKilled(unit.damage)) {
       markUnitDestroyed(state, unit);
+    }
+  }
+
+  // Dissipation: each operational heat sink removes 1 heat point.
+  for (const unit of units) {
+    const def = getMechDefFor(unit);
+    const dissipated = Math.min(heatDissipation(def, unit.critSlotsDestroyed), unit.heat);
+    unit.heat -= dissipated;
+    if (dissipated > 0) {
+      state.events.push({
+        kind: "heatDissipated",
+        unitId: unit.id,
+        dissip: dissipated,
+        heat: unit.heat,
+      });
     }
   }
 }
