@@ -85,8 +85,6 @@ export const en = {
   "cmd.statusMove.help": "queued move steps with running MP cost per step",
   "cmd.cancelMove.help": "clear mode and queued steps",
   "cmd.doneMove.help": "commit the declared move",
-  "cmd.weapons.help": "list a unit's weapons (default: acting unit)",
-  "cmd.weapons.arg.id": "unit to inspect; defaults to the acting unit",
   "cmd.ammo.help": "show or set the acting unit's ammo depletion policy",
   "cmd.ammo.arg.policy": "exposed | core | spread | least-first; omit to show the current policy",
   "cmd.fire.help": "queue one or more weapon attacks",
@@ -217,7 +215,6 @@ export const en = {
 
   // attack status
   "attackStatus.none": "(no attacks queued)",
-  "weapons.noActorId": "(no active unit)",
 
   // fire suggestion
   "fireSuggestion.header": "possible targets for {id}:",

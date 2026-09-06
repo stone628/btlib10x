@@ -83,8 +83,6 @@ export const kr: Catalog = {
   "cmd.statusMove.help": "예약된 이동 단계와 누적 MP 비용",
   "cmd.cancelMove.help": "모드와 예약된 단계 지우기",
   "cmd.doneMove.help": "선언된 이동 확정",
-  "cmd.weapons.help": "유닛 무기 목록 (기본: 행동 유닛)",
-  "cmd.weapons.arg.id": "조회할 유닛; 생략하면 행동 유닛",
   "cmd.ammo.help": "행동 유닛의 탄약 소진 정책 표시 또는 설정",
   "cmd.ammo.arg.policy": "exposed | core | spread | least-first; 생략하면 현재 정책 표시",
   "cmd.fire.help": "하나 이상의 무기 공격 예약",
@@ -211,7 +209,6 @@ export const kr: Catalog = {
 
   // attack status/
   "attackStatus.none": "(예약된 공격 없음)",
-  "weapons.noActorId": "(행동 중 유닛 없음)",
 
   // fire suggestion
   "fireSuggestion.header": "{id}의 공격 가능 목표:",

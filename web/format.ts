@@ -1511,40 +1511,6 @@ export function fireSuggestionLines(s: Session): Chunk[] {
   return chunks;
 }
 
-export function weaponsLines(s: Session, unitId?: string): string[] {
-  const id = unitId ?? s.actorId;
-  const unit = typeof id === "string" && id.length > 0 ? s.battle?.units[id] : undefined;
-  if (!unit || !s.battle) {
-    throw new Error(
-      i18n(s.locale, "err.unknownUnitId", { id: unitId ?? i18n(s.locale, "weapons.noActorId") }),
-    );
-  }
-  // Engine guarantee: `unit.model` was validated by `createBattle`.
-  const def = getMechDefFor(unit);
-  const totals = loadAmmoBins(def).totals;
-  return Object.entries(def.weapons).map(([key, mount]) => {
-    const w = getWeaponDefFor(mount);
-    const index = Number(key);
-    const max = totals[index];
-    const bits = [
-      `#${index}`,
-      mount.weapon,
-      mount.location,
-      `S${w.short}/M${w.medium}/L${w.long}`,
-      max !== undefined
-        ? i18n(s.locale, "sheet.shotsRange", { curr: unit.shotsLeft[index] ?? 0, max })
-        : null,
-      unit.jammedWeapons.includes(index) ? i18n(s.locale, "sheet.jammed") : null,
-      unit.destroyedWeapons.includes(index) ? i18n(s.locale, "sheet.destroyed") : null,
-      !unit.destroyedWeapons.includes(index) &&
-      !canFireFromLocation(unit.phaseStartDamage, mount.location)
-        ? i18n(s.locale, "sheet.destroyed")
-        : null,
-    ].filter((b) => b !== null);
-    return bits.join("  ");
-  });
-}
-
 // ------------------------------------------------------------------ log ----
 export function formatLog(
   locale: LocaleId,
