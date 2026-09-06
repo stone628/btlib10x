@@ -105,21 +105,32 @@ export function heatDissipation(
 
 /** To-hit modifier from the Heat Scale table (8 / 13 / 17 / 24+). */
 export function toHitHeatModifier(heat: number): number {
-  if (heat >= 24) return 4;
-  if (heat >= 17) return 3;
-  if (heat >= 13) return 2;
-  if (heat >= 8) return 1;
-  return 0;
+  return toHitHeatModifierWithThreshold(heat).toHit;
+}
+
+export function toHitHeatModifierWithThreshold(heat: number): { toHit: number; threshold: number } {
+  if (heat >= 24) return { toHit: 4, threshold: 24 };
+  if (heat >= 17) return { toHit: 3, threshold: 17 };
+  if (heat >= 13) return { toHit: 2, threshold: 13 };
+  if (heat >= 8) return { toHit: 1, threshold: 8 };
+  return { toHit: 0, threshold: 0 };
 }
 
 /** Movement point penalty from the Heat Scale table (5 / 10 / 15 / 20 / 25+). */
 export function movementMpPenalty(heat: number): number {
-  if (heat >= 25) return 5;
-  if (heat >= 20) return 4;
-  if (heat >= 15) return 3;
-  if (heat >= 10) return 2;
-  if (heat >= 5) return 1;
-  return 0;
+  return movementMpPenaltyWithThreshold(heat).penalty;
+}
+
+export function movementMpPenaltyWithThreshold(heat: number): {
+  penalty: number;
+  threshold: number;
+} {
+  if (heat >= 25) return { penalty: 5, threshold: 25 };
+  if (heat >= 20) return { penalty: 4, threshold: 20 };
+  if (heat >= 15) return { penalty: 3, threshold: 15 };
+  if (heat >= 10) return { penalty: 2, threshold: 10 };
+  if (heat >= 5) return { penalty: 1, threshold: 5 };
+  return { penalty: 0, threshold: 0 };
 }
 
 /** Movement budget after the heat MP penalty, floor 0. */

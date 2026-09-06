@@ -43,12 +43,14 @@ import {
   listWeaponNames,
   loadAmmoBins,
   movementMpPenalty,
+  movementMpPenaltyWithThreshold,
   reachableLandings,
   shoulderOf,
   shutdownAvoid,
   suggestFireTargets,
   TORSO_LOCATIONS,
   toHitHeatModifier,
+  toHitHeatModifierWithThreshold,
 } from "btlib10x";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
 import { i18n } from "./i18n/index.js";
@@ -1035,6 +1037,26 @@ function critChartChunk(def: ResolvedMechDef, locale: LocaleId, live: CritChartL
   ]);
 }
 
+function sheetMovementLine(
+  walking: number,
+  running: number,
+  jumping: number,
+  heat: number,
+  locale: LocaleId,
+): string {
+  const { penalty, threshold } = movementMpPenaltyWithThreshold(heat);
+  if (penalty > 0) {
+    return i18n(locale, "info.movementHeat", {
+      walk: walking,
+      run: running,
+      jump: jumping,
+      penalty,
+      threshold,
+    });
+  }
+  return i18n(locale, "info.movement", { walk: walking, run: running, jump: jumping });
+}
+
 /** Record sheet with armor status per location, side-by-side with ASCII diagram. */
 export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
   const idLine = view.removed
@@ -1049,13 +1071,9 @@ export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
     }),
   ];
   if (view.gunnery !== null) {
-    topLines.push(
-      i18n(locale, "sheet.gunneryLine", { gunnery: gunneryLabel(locale, view.gunnery) }),
-    );
+    topLines.push(sheetGunneryLine(view.gunnery, view.heat, locale));
   }
-  topLines.push(
-    i18n(locale, "info.movement", { walk: view.walking, run: view.running, jump: view.jumping }),
-  );
+  topLines.push(sheetMovementLine(view.walking, view.running, view.jumping, view.heat, locale));
   topLines.push(view.positionLine);
   if (view.ammoPolicyLine !== null) topLines.push(view.ammoPolicyLine);
   const weaponLines: string[] = [i18n(locale, "sheet.weaponsHeader", { n: view.mounts.length })];
@@ -1128,7 +1146,7 @@ export function unitBriefList(s: Session): string[] {
       const def = getMechDefFor(unit);
       lines.push(`  ${uid}  ${def.model}  ${disp(unit.position)} facing ${unit.facing}`);
       const view = battleSheet(unit, uid, s.locale);
-      lines.push(...durabilityLines(view, s.locale).map((l) => `    ${l}`));
+      lines.push(...mechStatusLines(view, s.locale).map((l) => `    ${l}`));
     }
   }
   return lines;
@@ -1191,6 +1209,17 @@ export function heatStatusLines(s: Session, id: string): string[] {
   return lines;
 }
 
+function sheetGunneryLine(gunnery: number, heat: number, locale: LocaleId): string {
+  const { toHit, threshold } = toHitHeatModifierWithThreshold(heat);
+  return toHit > 0
+    ? i18n(locale, "sheet.gunneryLineHeat", {
+        gunnery: gunneryLabel(locale, gunnery),
+        toHit,
+        threshold,
+      })
+    : i18n(locale, "sheet.gunneryLine", { gunnery: gunneryLabel(locale, gunnery) });
+}
+
 export function sheetLinesShort(view: SheetView, locale: LocaleId, showMode = true): string[] {
   const head = i18n(locale, "sheet.modelLine", {
     model: view.model,
@@ -1200,26 +1229,27 @@ export function sheetLinesShort(view: SheetView, locale: LocaleId, showMode = tr
   });
   const lines = [head];
   if (view.gunnery !== null) {
-    lines.push(
-      `${i18n(locale, "sheet.gunneryLine", { gunnery: gunneryLabel(locale, view.gunnery) })}`,
-    );
+    lines.push(sheetGunneryLine(view.gunnery, view.heat, locale));
   }
   lines.push(view.positionLine);
   if (showMode && view.modeLine) lines.push(view.modeLine);
-  if (view.heatLine !== null) lines.push(view.heatLine);
-  lines.push(...durabilityLines(view, locale));
+  lines.push(...mechStatusLines(view, locale));
   return lines;
 }
 
 /** Compact two-line armor summary: head+torso on line 1, limbs on line 2.
  * Each location shows front + rear + internal-structure summed as `cur/max`,
  * with `[-F]`/`[-R]`/`[-A]`/`[-I]` annotations for depleted pools. */
-function durabilityLines(view: SheetView, locale: LocaleId): string[] {
-  const prefix = i18n(locale, "sheet.durabilityPrefix");
-  const indent = " ".repeat(prefix.length);
+function mechStatusLines(view: SheetView, locale: LocaleId): string[] {
+  const status = isKilled(view.damage)
+    ? i18n(locale, "sheet.statusDestroyed")
+    : view.shutdown
+      ? i18n(locale, "sheet.statusShutdown")
+      : i18n(locale, "sheet.statusOnline");
   return [
-    `${prefix}${durabilityFrag(view, "head")} ${durabilityFrag(view, "leftTorso")} ${durabilityFrag(view, "centerTorso")} ${durabilityFrag(view, "rightTorso")}`,
-    `${indent}${durabilityFrag(view, "leftArm")} ${durabilityFrag(view, "rightArm")} ${durabilityFrag(view, "leftLeg")} ${durabilityFrag(view, "rightLeg")}`,
+    i18n(locale, "sheet.statusHeader", { status, currHeat: view.heat, maxHeat: HEAT_CAP }),
+    `  ${durabilityFrag(view, "head")} ${durabilityFrag(view, "leftTorso")} ${durabilityFrag(view, "centerTorso")} ${durabilityFrag(view, "rightTorso")}`,
+    `  ${durabilityFrag(view, "leftArm")} ${durabilityFrag(view, "rightArm")} ${durabilityFrag(view, "leftLeg")} ${durabilityFrag(view, "rightLeg")}`,
   ];
 }
 

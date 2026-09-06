@@ -255,6 +255,8 @@ export const en = {
   "info.armorStructureCol": "Armor & Structure",
   "info.head": "{name} {model} — {weightClass} {tonnage}t ({techBase})",
   "info.movement": "movement: walk {walk} / run {run} / jump {jump}",
+  "info.movementHeat":
+    "movement: walk {walk} / run {run} / jump {jump} - {penalty}MP(heat >= {threshold})",
   "info.mapHead": "{name}: {w}x{h}",
   "info.terrainLine": "terrain: {breakdown}",
   "info.terrainNone": "none",
@@ -273,11 +275,15 @@ export const en = {
   "info.weaponAntiInfantry": "anti-infantry: bonus damage vs infantry",
   "sheet.modelLine": "model: {name} {model} - {weightClass} {tonnage}t",
   "sheet.gunneryLine": "gunnery: {gunnery}",
+  "sheet.gunneryLineHeat": "gunnery: {gunnery} + {toHit}(heat >= {threshold})",
   "sheet.at": "position: {pos} facing {facing}",
   "sheet.modeSuffix": ", {mode} [MP {mp}]",
   "sheet.removedId": " - REMOVED FROM PLAY",
   "sheet.idLine": "id: {id}, team {team}",
-  "sheet.durabilityPrefix": "durability: ",
+  "sheet.statusHeader": "status: {status}, HEAT({currHeat}/{maxHeat})",
+  "sheet.statusOnline": "ONLINE",
+  "sheet.statusShutdown": "SHUTDOWN",
+  "sheet.statusDestroyed": "DESTROYED",
   "sheet.weaponsHeader": "weapons ({n}):",
   "sheet.ammoPolicy": "ammo policy: {policy}",
   "sheet.shotsRange": "({curr}/{max} shots)",
@@ -334,7 +340,7 @@ export const en = {
   "log.shutdownAvoided": "{id} avoids shutdown (2D6 {roll} >= {avoid} avoid)",
   "log.restarted": "{id} restarts (heat {heat})",
   "log.heatAmmoExplosion":
-    "{id} ammo {weapon} ({loc} #{slot}, {shots} shots) explodes for {damage} damage (2D6 {roll} < {avoid} avoid)",
+    "{id} ammo {weapon} ({loc} #{slot}, {shots} shots) explodes for {damage} damage (2D6 = {roll} < {avoid} avoid)",
 
   // attack resolution
   "res.attackResolutionStart": "=== resolving declared attacks ===",
