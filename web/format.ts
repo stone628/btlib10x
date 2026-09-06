@@ -22,14 +22,18 @@ import type {
 } from "btlib10x";
 import {
   ammoBinId,
+  ammoExplosionAvoid,
   canFireFromLocation,
   collectAmmoBins,
+  countDestroyedEngineSlots,
   getAllMapDefs,
   getAllMechDefs,
   getAllWeaponDefs,
   getMapDefFor,
   getMechDefFor,
   getWeaponDefFor,
+  HEAT_CAP,
+  heatDissipation,
   internalStructureForTonnage,
   isArm,
   isImmobile,
@@ -38,10 +42,13 @@ import {
   listMapNames,
   listWeaponNames,
   loadAmmoBins,
+  movementMpPenalty,
   reachableLandings,
   shoulderOf,
+  shutdownAvoid,
   suggestFireTargets,
   TORSO_LOCATIONS,
+  toHitHeatModifier,
 } from "btlib10x";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
 import { i18n } from "./i18n/index.js";
@@ -638,6 +645,9 @@ interface SheetView {
   readonly modeLine: string | null;
   /** Current ammo depletion policy; null when the unit carries no ammo. */
   readonly ammoPolicyLine: string | null;
+  /** Current heat + shutdown state; null when only design info exists. */
+  readonly heat: number;
+  readonly shutdown: boolean;
   /** Current front armor per location. */
   readonly armor: LocationValue;
   /** Current layered damage (front armor, rear armor, internal structure). */
@@ -677,6 +687,8 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
       collectAmmoBins(def).length > 0
         ? i18n(locale, "sheet.ammoPolicy", { policy: ammoPolicyLabel(locale, unit.ammoPolicy) })
         : null,
+    heat: unit.heat,
+    shutdown: unit.shutdown,
     armor: unit.damage.armor,
     damage: unit.damage,
     originalArmor: def.armor,
@@ -729,6 +741,8 @@ function setupSheet(unit: SetupUnit, id: string, locale: LocaleId): SheetView {
     positionLine: i18n(locale, "sheet.at", { pos: disp(unit.position), facing: unit.facing }),
     modeLine: null,
     ammoPolicyLine: null,
+    heat: 0,
+    shutdown: false,
     armor: damage.armor,
     damage,
     originalArmor: def.armor,
@@ -806,23 +820,26 @@ function armorDiagramInfo(info: ArmorInfo): string[] {
 
 /** ASCII humanoid armor diagram: internal structure (I), front armor (F/A), rear (R). */
 /** for 'sheet <id>' command */
-function armorDiagramSheet(info: ArmorInfo): string[] {
+function armorDiagramSheet(view: SheetView, info: ArmorInfo): string[] {
   const cell = (val: number, max: number, label: string) =>
     `${String(val).padStart(2)}/${String(max).padStart(2)}${label}`;
   const p = (n: number) => " ".repeat(n);
   const CT = 14,
-    RT = 7,
-    LT = 21;
+    RT = 7;
   const { armor: a, originalArmor: o } = info;
   const s = info.internalStructure;
   const os = info.originalStructure;
   const ar = info.armorRear;
   const or = info.originalArmorRear;
   const rear = (loc: Location) => cell(ar[loc] ?? 0, or[loc] ?? 0, "R");
+  const pHD = p(CT);
+  const pRT = p(RT);
+  const heatHeader = (view.shutdown ? "[SHUTDOWN]" : "[HEAT]").padStart(CT);
+  const heat = `${view.heat}/${HEAT_CAP} `.padStart(CT);
   return [
-    `${p(CT)}[ HD ]`,
-    `${p(CT)}${cell(s.head, os.head, "I")}`,
-    `${p(CT)}${cell(a.head, o.head, "A")}`,
+    `${pHD}[ HD ]${heatHeader}`,
+    `${pHD}${cell(s.head, os.head, "I")}${heat}`,
+    `${pHD}${cell(a.head, o.head, "A")}`,
     `[ RA ] [ RT ] [ CT ] [ LT ] [ LA ]`,
     [
       cell(s.rightArm, os.rightArm, "I"),
@@ -838,10 +855,10 @@ function armorDiagramSheet(info: ArmorInfo): string[] {
       cell(a.leftTorso, o.leftTorso, "F"),
       cell(a.leftArm, o.leftArm, "A"),
     ].join(" "),
-    `${p(RT)}${[rear("rightTorso"), rear("centerTorso"), rear("leftTorso")].join(" ")}`,
-    `${p(RT)}[ RL ]${p(LT - RT - 6)}[ LL ]`,
-    `${p(RT)}${[cell(s.rightLeg, os.rightLeg, "I"), cell(s.leftLeg, os.leftLeg, "I")].join(p(LT - RT - 6))}`,
-    `${p(RT)}${[cell(a.rightLeg, o.rightLeg, "A"), cell(a.leftLeg, o.leftLeg, "A")].join(p(LT - RT - 6))}`,
+    `${pRT}${[rear("rightTorso"), rear("centerTorso"), rear("leftTorso")].join(" ")}`,
+    `${pRT}[ RL ]        [ LL ]`,
+    `${pRT}${cell(s.rightLeg, os.rightLeg, "I")}        ${cell(s.leftLeg, os.leftLeg, "I")}`,
+    `${pRT}${cell(a.rightLeg, o.rightLeg, "A")}        ${cell(a.leftLeg, o.leftLeg, "A")}`,
   ];
 }
 
@@ -1049,7 +1066,7 @@ export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
       mergeDiagramToColumns(
         topLines,
         weaponLines,
-        armorDiagramSheet({
+        armorDiagramSheet(view, {
           armor: view.armor,
           armorRear: view.damage.armorRear,
           internalStructure: view.damage.internalStructure,
@@ -1145,6 +1162,35 @@ export function fmtSetupStatus(s: Session): string[] {
   return lines;
 }
 
+/** Full heat-scale status for one unit, driven by the `heat` CLI command. */
+export function heatStatusLines(s: Session, id: string): string[] {
+  const battle = s.battle;
+  if (!battle) throw new Error(i18n(s.locale, "err.noBattle"));
+  const unit = battle.units[id];
+  if (!unit) throw new Error(i18n(s.locale, "err.unknownUnitId", { id }));
+  const def = getMechDefFor(unit);
+  const engineOut = countDestroyedEngineSlots(def, unit.critSlotsDestroyed);
+  const sinks = heatDissipation(def, unit.critSlotsDestroyed);
+  const toHit = toHitHeatModifier(unit.heat);
+  const mpPenalty = movementMpPenalty(unit.heat);
+  const shutdown = shutdownAvoid(unit.heat);
+  const ammo = ammoExplosionAvoid(unit.heat);
+
+  const lines: string[] = [
+    i18n(s.locale, "heat.title", { id, heat: unit.heat }),
+    i18n(s.locale, "heat.sinks", { sinks, engineOut }),
+  ];
+  if (toHit > 0) lines.push(i18n(s.locale, "heat.toHit", { mod: toHit }));
+  if (mpPenalty > 0) lines.push(i18n(s.locale, "heat.mp", { penalty: mpPenalty }));
+  if (shutdown === null) lines.push(i18n(s.locale, "heat.shutdownSafe"));
+  else lines.push(i18n(s.locale, "heat.shutdown", { avoid: shutdown }));
+  if (ammo === null) lines.push(i18n(s.locale, "heat.ammoSafe"));
+  else lines.push(i18n(s.locale, "heat.ammo", { avoid: ammo }));
+  lines.push(unit.shutdown ? i18n(s.locale, "heat.stateDown") : i18n(s.locale, "heat.stateOnline"));
+  if (unit.heat >= 30) lines.push(i18n(s.locale, "heat.shutdownAuto"));
+  return lines;
+}
+
 export function sheetLinesShort(view: SheetView, locale: LocaleId, showMode = true): string[] {
   const head = i18n(locale, "sheet.modelLine", {
     model: view.model,
@@ -1160,6 +1206,7 @@ export function sheetLinesShort(view: SheetView, locale: LocaleId, showMode = tr
   }
   lines.push(view.positionLine);
   if (showMode && view.modeLine) lines.push(view.modeLine);
+  if (view.heatLine !== null) lines.push(view.heatLine);
   lines.push(...durabilityLines(view, locale));
   return lines;
 }
@@ -1329,6 +1376,7 @@ function fireWeaponTable(locale: LocaleId, weapons: readonly FireWeapon[]): Chun
     i18n(locale, "fireSuggestion.colLoc"),
     i18n(locale, "fireSuggestion.colBracket"),
     i18n(locale, "fireSuggestion.colTn"),
+    i18n(locale, "fireSuggestion.colHeat"),
     i18n(locale, "fireSuggestion.colDmg"),
     i18n(locale, "fireSuggestion.colShots"),
   ];
@@ -1338,6 +1386,7 @@ function fireWeaponTable(locale: LocaleId, weapons: readonly FireWeapon[]): Chun
     SHORT_LOC[w.location],
     `[${BRACKET_LABEL[w.rangeBracket]}]`,
     String(w.tn),
+    String(w.heat),
     w.cluster !== undefined
       ? `${w.expectedDamage} (${i18n(locale, "fireSuggestion.cluster", {
           shots: String(w.cluster.shots),
@@ -1445,28 +1494,31 @@ export function formatLog(
     }
   };
   const onEvent = (event: GameEvent): void => {
+    const el = eventLines(locale, event);
     if (isAttackResolutionKind(event.kind)) {
       switch (event.kind) {
         case "unitRemoved":
-          removedLines.push(...eventLines(locale, event));
+          removedLines.push(...el);
           return;
         case "attackResolved":
           {
-            const resolvedLines = eventLines(locale, event);
             const unitPrefix = `[${event.unitId} -> ${event.targetId}]`;
             if (lastUnitPrefix !== unitPrefix) {
               lines.push(unitPrefix);
               lastUnitPrefix = unitPrefix;
             }
-            lines.push(`  ${resolvedLines.shift()}`);
-            if (resolvedLines.length > 0) {
-              lines.push(...resolvedLines.map((l) => `    ${l}`));
+            lines.push(`  ${el.shift()}`);
+            if (el.length > 0) {
+              lines.push(...el.map((l) => `    ${l}`));
             }
           }
           return;
+        case "heatWeapon":
+          lines.push(...el.map((l) => `    ${l}`));
+          return;
       }
     }
-    lines.push(...eventLines(locale, event));
+    lines.push(...el);
   };
   const onExitEvent = (curr: GameEvent, next: GameEvent | null): void => {
     if (isAttackResolutionKind(curr.kind)) {
@@ -1496,7 +1548,12 @@ export function formatLog(
 }
 
 function isAttackResolutionKind(kind: GameEvent["kind"] | null): boolean {
-  return kind === "attackResolved" || kind === "unitDestroyed" || kind === "unitRemoved";
+  return (
+    kind === "attackResolved" ||
+    kind === "unitDestroyed" ||
+    kind === "unitRemoved" ||
+    kind === "heatWeapon"
+  );
 }
 
 function eventLines(locale: LocaleId, e: GameEvent): string[] {
@@ -1542,6 +1599,43 @@ function eventLines(locale: LocaleId, e: GameEvent): string[] {
       return [i18n(locale, "log.removedEvent", { id: e.unitId })];
     case "buildingCollapsed":
       return [i18n(locale, "log.buildingCollapsed", { hex: `${e.col},${e.row}` })];
+    case "heatMove":
+      return [i18n(locale, "log.heatMove", { id: e.unitId, heat: e.heat })];
+    case "heatWeapon":
+      return [
+        i18n(locale, "log.heatWeapon", {
+          id: e.unitId,
+          weapon: e.weapon,
+          heat: e.heat,
+          prev: e.prevHeat,
+          curr: e.currHeat,
+        }),
+      ];
+    case "heatEngineCrit":
+      return [i18n(locale, "log.heatEngineCrit", { id: e.unitId, heat: e.heat })];
+    case "heatDissipated":
+      return [i18n(locale, "log.heatDissipated", { id: e.unitId, dissip: e.dissip, heat: e.heat })];
+    case "shutdown":
+      return [i18n(locale, "log.shutdown", { id: e.unitId, roll: e.roll, avoid: e.avoid })];
+    case "shutdownAuto":
+      return [i18n(locale, "log.shutdownAuto", { id: e.unitId })];
+    case "shutdownAvoided":
+      return [i18n(locale, "log.shutdownAvoided", { id: e.unitId, roll: e.roll, avoid: e.avoid })];
+    case "restarted":
+      return [i18n(locale, "log.restarted", { id: e.unitId, heat: e.heat })];
+    case "heatAmmoExplosion":
+      return [
+        i18n(locale, "log.heatAmmoExplosion", {
+          id: e.unitId,
+          weapon: e.weapon,
+          loc: SHORT_LOC[e.location],
+          slot: String(e.slotIndex),
+          roll: e.roll,
+          avoid: e.avoid,
+          shots: e.shotsRemaining,
+          damage: e.damage,
+        }),
+      ];
     default: {
       // Exhaustiveness guard: adding a GameEvent kind must add a case above.
       const unreachable: never = e;
@@ -1565,6 +1659,7 @@ function gatorText(locale: LocaleId, r: AttackResolution): string {
   if (b.rangeMod) parts.push(`range ${b.rangeMod}`);
   if (b.minRangeMod) parts.push(`min ${b.minRangeMod}`);
   if (b.pulseMod) parts.push(`pulse ${b.pulseMod}`);
+  if (b.heatMod) parts.push(`heat ${b.heatMod}`);
   const total = b.automatic === "hit" ? i18n(locale, "res.needAuto") : String(b.total);
   return `${i18n(locale, "res.need", { total })} (${parts.join(" + ")})`;
 }
@@ -1791,6 +1886,7 @@ function weaponMountLines(locale: LocaleId, mounts: readonly WeaponMountInfo[]):
     const short = `S${w.short}`.padStart(3);
     const medium = `M${w.medium}`.padStart(3);
     const long = `L${w.long}`.padStart(3);
-    return `${index} ${name} [${SHORT_LOC[mount.location]}] ${short}/${medium}/${long}${flags.length ? ` ${flags.join(" ")}` : ""}`;
+    const heat = `H${w.heat ?? 0}`.padStart(3);
+    return `${index} ${name} [${SHORT_LOC[mount.location]}] ${short}/${medium}/${long} ${heat}${flags.length ? ` ${flags.join(" ")}` : ""}`;
   });
 }

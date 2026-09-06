@@ -232,7 +232,7 @@ function rollSlotNumber(rng: Rng, loc: Location): { slot: number; rolls: readonl
  * per-missile damage by tube count; direct-fire weapons use their damage;
  * variable-damage weapons don't carry ammo so this never fires for them.
  */
-function ammoDamagePerShot(h: AmmoNameHolder): number {
+export function ammoDamagePerShot(h: AmmoNameHolder): number {
   const w = getWeaponDefFor(h);
   if (w.missileDamage !== undefined && w.missiles !== undefined) {
     return w.missileDamage * w.missiles;
@@ -269,7 +269,7 @@ function findHittableSlot(
  * structure (bypassing the armor pool per the rules), then let the standard
  * transfer graph apply for any overflow. Returns the resulting application.
  */
-function applyAmmoExplosion(
+export function applyAmmoExplosion(
   state: UnitDamageState,
   location: Location,
   amount: number,

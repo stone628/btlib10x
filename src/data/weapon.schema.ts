@@ -33,6 +33,8 @@ export interface WeaponDef {
   readonly pulse?: boolean;
   readonly antiInfantry?: boolean;
   readonly rapidFireShots?: number;
+  /** Heat points generated per shot (Total Warfare Weapons & Equipment tables). */
+  readonly heat?: number;
   /** Broad weapon class used for catalog grouping and UI categorization. */
   readonly category: WeaponCategory;
 }
@@ -76,6 +78,11 @@ function parseWeapon(raw: unknown, label: string, errors: string[]): WeaponDef |
     errors.push(`${label}.minRange must be a positive integer`);
     valid = false;
   }
+  const heat = raw.heat;
+  if (heat !== undefined && (typeof heat !== "number" || !Number.isInteger(heat) || heat < 0)) {
+    errors.push(`${label}.heat must be a non-negative integer`);
+    valid = false;
+  }
   const out: Record<string, unknown> = {};
   for (const key of [
     "name",
@@ -90,6 +97,7 @@ function parseWeapon(raw: unknown, label: string, errors: string[]): WeaponDef |
     "antiInfantry",
     "rapidFireShots",
     "minRange",
+    "heat",
     "category",
   ] as const) {
     const v = raw[key];

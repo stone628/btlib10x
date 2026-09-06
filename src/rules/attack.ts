@@ -8,6 +8,7 @@ import type { Arc } from "./arcs.js";
 import { clusterHitsForMissiles, clusterHitsForShots, groupMissiles } from "./cluster.js";
 import { type CriticalResolution, resolveCriticalHits } from "./critical.js";
 import { applyDamage, type DamageApplication, type UnitDamageState } from "./damage.js";
+import { toHitHeatModifier } from "./heat.js";
 import { hitLocation } from "./hitlocation.js";
 import { losWoodsPoints } from "./los.js";
 import { computeToHit, damageForBracket } from "./tohit.js";
@@ -37,6 +38,11 @@ export interface WeaponAttackInput {
   readonly attackerLevel?: number;
   /** Target's ground elevation in levels (default 0). */
   readonly targetLevel?: number;
+  /**
+   * Attacker's current heat value. Drives the Heat Scale to-hit modifier
+   * (+1..+4). Omitted in tests that never track heat.
+   */
+  readonly attackerHeat?: number;
   /**
    * Target 'Mech definition; required for critical-hit resolution. Omit in
    * tests that only care about raw damage. When provided, `targetDef` is
@@ -85,6 +91,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     weapon,
     ...(input.attackerLevel !== undefined ? { attackerLevel: input.attackerLevel } : {}),
     ...(input.targetLevel !== undefined ? { targetLevel: input.targetLevel } : {}),
+    ...(input.attackerHeat !== undefined ? { heatMod: toHitHeatModifier(input.attackerHeat) } : {}),
   });
 
   const base = {

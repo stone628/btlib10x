@@ -19,6 +19,8 @@ export interface AttackModifiers {
   readonly attackerLevel?: number;
   /** Target's ground elevation in levels (default 0). */
   readonly targetLevel?: number;
+  /** Heat Scale to-hit modifier (+1..+4); caller computes from the heat value. */
+  readonly heatMod?: number;
 }
 
 export interface ToHitBreakdown {
@@ -38,6 +40,8 @@ export interface ToHitBreakdown {
   readonly heightDiff: number;
   /** -heightDiff: positive heightDiff reduces TN. */
   readonly heightMod: number;
+  /** Heat Scale modifier from the attacker's current heat (+1..+4), else 0. */
+  readonly heatMod: number;
   readonly total: number;
   readonly rangeBracket: RangeBracket;
   /** Modified TN <= 2 auto-hits; > 12 auto-misses (attack may be aborted). */
@@ -71,6 +75,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
       minRangeMod: 0,
       heightDiff: 0,
       heightMod: 0,
+      heatMod: 0,
       total: Number.POSITIVE_INFINITY,
       rangeBracket: "long",
       automatic: "miss",
@@ -91,9 +96,18 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
       : 0;
   const heightDiff = (mods.attackerLevel ?? 0) - (mods.targetLevel ?? 0);
   const heightMod = heightDiff === 0 ? 0 : -heightDiff;
+  const heatMod = mods.heatMod ?? 0;
 
   const total =
-    mods.gunnery + attackerMod + targetMod + terrainMod + rangeMod + pulseMod + min + heightMod;
+    mods.gunnery +
+    attackerMod +
+    targetMod +
+    terrainMod +
+    rangeMod +
+    pulseMod +
+    min +
+    heightMod +
+    heatMod;
 
   return {
     gunnery: mods.gunnery,
@@ -105,6 +119,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     minRangeMod: min,
     heightDiff,
     heightMod,
+    heatMod,
     total,
     rangeBracket: bracket,
     automatic: total <= 2 ? "hit" : total > 12 ? "miss" : null,

@@ -1,22 +1,48 @@
 [
-  { "name": "Small Laser", "short": 1, "medium": 2, "long": 3, "damage": 3, "category": "ENERGY" },
-  { "name": "Medium Laser", "short": 3, "medium": 6, "long": 9, "damage": 5, "category": "ENERGY" },
+  {
+    "name": "Small Laser",
+    "short": 1,
+    "medium": 2,
+    "long": 3,
+    "damage": 3,
+    "category": "ENERGY",
+    "heat": 1
+  },
+  {
+    "name": "Medium Laser",
+    "short": 3,
+    "medium": 6,
+    "long": 9,
+    "damage": 5,
+    "category": "ENERGY",
+    "heat": 3
+  },
   {
     "name": "Large Laser",
     "short": 5,
     "medium": 10,
     "long": 15,
     "damage": 8,
-    "category": "ENERGY"
+    "category": "ENERGY",
+    "heat": 8
   },
-  { "name": "PPC", "short": 6, "medium": 12, "long": 18, "damage": 10, "category": "ENERGY" },
+  {
+    "name": "PPC",
+    "short": 6,
+    "medium": 12,
+    "long": 18,
+    "damage": 10,
+    "category": "ENERGY",
+    "heat": 10
+  },
   {
     "name": "Snub-Nose PPC",
     "short": 9,
     "medium": 13,
     "long": 15,
     "variableDamage": [10, 8, 5],
-    "category": "ENERGY"
+    "category": "ENERGY",
+    "heat": 10
   },
   {
     "name": "CL ER PPC",
@@ -34,7 +60,8 @@
     "long": 3,
     "damage": 2,
     "antiInfantry": true,
-    "category": "ENERGY"
+    "category": "ENERGY",
+    "heat": 3
   },
   {
     "name": "Machine Gun",
@@ -43,7 +70,8 @@
     "long": 3,
     "damage": 2,
     "antiInfantry": true,
-    "category": "BALLISTIC"
+    "category": "BALLISTIC",
+    "heat": 0
   },
   {
     "name": "Autocannon/5",
@@ -51,7 +79,8 @@
     "medium": 12,
     "long": 18,
     "damage": 5,
-    "category": "BALLISTIC"
+    "category": "BALLISTIC",
+    "heat": 1
   },
   {
     "name": "Autocannon/10",
@@ -59,7 +88,8 @@
     "medium": 10,
     "long": 15,
     "damage": 10,
-    "category": "BALLISTIC"
+    "category": "BALLISTIC",
+    "heat": 3
   },
   {
     "name": "Autocannon/20",
@@ -67,7 +97,8 @@
     "medium": 6,
     "long": 9,
     "damage": 20,
-    "category": "BALLISTIC"
+    "category": "BALLISTIC",
+    "heat": 7
   },
   {
     "name": "Ultra AC/5",
@@ -76,7 +107,8 @@
     "long": 20,
     "damage": 5,
     "rapidFireShots": 2,
-    "category": "BALLISTIC"
+    "category": "BALLISTIC",
+    "heat": 1
   },
   {
     "name": "Large Pulse Laser",
@@ -85,7 +117,8 @@
     "long": 10,
     "damage": 9,
     "pulse": true,
-    "category": "ENERGY"
+    "category": "ENERGY",
+    "heat": 10
   },
   {
     "name": "Small Pulse Laser",
@@ -95,7 +128,8 @@
     "damage": 3,
     "pulse": true,
     "antiInfantry": true,
-    "category": "ENERGY"
+    "category": "ENERGY",
+    "heat": 2
   },
   {
     "name": "LRM 5",
@@ -104,7 +138,8 @@
     "long": 21,
     "missileDamage": 1,
     "missiles": 5,
-    "category": "MISSILE"
+    "category": "MISSILE",
+    "heat": 2
   },
   {
     "name": "LRM 10",
@@ -113,7 +148,8 @@
     "long": 21,
     "missileDamage": 1,
     "missiles": 10,
-    "category": "MISSILE"
+    "category": "MISSILE",
+    "heat": 4
   },
   {
     "name": "LRM 20",
@@ -122,7 +158,8 @@
     "long": 21,
     "missileDamage": 1,
     "missiles": 20,
-    "category": "MISSILE"
+    "category": "MISSILE",
+    "heat": 6
   },
   {
     "name": "SRM 6",
@@ -131,7 +168,8 @@
     "long": 9,
     "missileDamage": 2,
     "missiles": 6,
-    "category": "MISSILE"
+    "category": "MISSILE",
+    "heat": 4
   },
   {
     "name": "CL ER Medium Laser",
@@ -139,7 +177,8 @@
     "medium": 10,
     "long": 15,
     "damage": 7,
-    "category": "ENERGY"
+    "category": "ENERGY",
+    "heat": 5
   },
   {
     "name": "CL ER Large Laser",
@@ -147,7 +186,8 @@
     "medium": 15,
     "long": 22,
     "damage": 10,
-    "category": "ENERGY"
+    "category": "ENERGY",
+    "heat": 12
   },
   {
     "name": "CL Streak SRM 4",
@@ -156,7 +196,8 @@
     "long": 12,
     "missileDamage": 2,
     "missiles": 4,
-    "category": "MISSILE"
+    "category": "MISSILE",
+    "heat": 3
   },
   {
     "name": "CL Gauss Rifle",
@@ -165,7 +206,8 @@
     "long": 22,
     "damage": 15,
     "minRange": 2,
-    "category": "BALLISTIC"
+    "category": "BALLISTIC",
+    "heat": 1
   },
   {
     "name": "CL LB 20-X AC",
@@ -173,7 +215,8 @@
     "medium": 8,
     "long": 12,
     "damage": 20,
-    "category": "BALLISTIC"
+    "category": "BALLISTIC",
+    "heat": 1
   },
   {
     "name": "CL Machine Gun",
@@ -182,7 +225,8 @@
     "long": 3,
     "damage": 2,
     "antiInfantry": true,
-    "category": "BALLISTIC"
+    "category": "BALLISTIC",
+    "heat": 0
   },
   {
     "name": "CL Medium Pulse Laser",
@@ -191,7 +235,8 @@
     "long": 8,
     "damage": 6,
     "pulse": true,
-    "category": "ENERGY"
+    "category": "ENERGY",
+    "heat": 4
   },
   {
     "name": "CL LRM 10",
@@ -200,7 +245,8 @@
     "long": 21,
     "missileDamage": 1,
     "missiles": 10,
-    "category": "MISSILE"
+    "category": "MISSILE",
+    "heat": 4
   },
   {
     "name": "CL LRM 20",
@@ -209,6 +255,7 @@
     "long": 21,
     "missileDamage": 1,
     "missiles": 20,
-    "category": "MISSILE"
+    "category": "MISSILE",
+    "heat": 6
   }
 ]
