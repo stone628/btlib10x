@@ -319,7 +319,7 @@ describe("game integration: shutdown", () => {
     hbk.heat = 30;
     startAttackTurn(state);
     advancePhase(state, scriptedRng(3, 3, 3, 1));
-    expect(hbk.shutdown).toBe(true);
+    expect(hbk.shutdown).toBe("heat");
     expect(state.events.some((e) => e.kind === "shutdownAuto")).toBe(true);
   });
 
@@ -329,7 +329,7 @@ describe("game integration: shutdown", () => {
     hbk.heat = 18;
     startAttackTurn(state);
     advancePhase(state, scriptedRng(3, 3, 3, 1));
-    expect(hbk.shutdown).toBe(true);
+    expect(hbk.shutdown).toBe("heat");
     expect(state.events.some((e) => e.kind === "shutdown" && e.unitId === "hbk")).toBe(true);
   });
 
@@ -339,7 +339,7 @@ describe("game integration: shutdown", () => {
     hbk.heat = 18;
     startAttackTurn(state);
     advancePhase(state, scriptedRng(6, 6, 6, 6));
-    expect(hbk.shutdown).toBe(false);
+    expect(hbk.shutdown).toBe("not");
     expect(state.events.some((e) => e.kind === "shutdownAvoided" && e.unitId === "hbk")).toBe(true);
   });
 
@@ -348,19 +348,43 @@ describe("game integration: shutdown", () => {
     startMovementTurn(state);
     declareMove(state, "hbk", "walk");
     executeMove(state, "hbk", []);
-    getUnit(state, "hbk").shutdown = true;
+    getUnit(state, "hbk").shutdown = "heat";
     expect(nextActor(state)).toBe("enf");
   });
 
   it("restarts automatically when heat below 14", () => {
     const state = hbkVsEnf();
     const hbk = getUnit(state, "hbk");
-    hbk.shutdown = true;
+    hbk.shutdown = "heat";
     hbk.heat = 12;
     startAttackTurn(state);
     advancePhase(state, scriptedRng(3, 3, 3, 1));
-    expect(hbk.shutdown).toBe(false);
+    expect(hbk.shutdown).toBe("not");
     expect(state.events.some((e) => e.kind === "restarted" && e.unitId === "hbk")).toBe(true);
+  });
+
+  it("does not auto-restart a manual shutdown", () => {
+    const state = hbkVsEnf();
+    const hbk = getUnit(state, "hbk");
+    hbk.shutdown = "manual";
+    hbk.heat = 12;
+    startAttackTurn(state);
+    advancePhase(state, scriptedRng(3, 3, 3, 1));
+    expect(hbk.shutdown).toBe("manual");
+    expect(state.events.some((e) => e.kind === "restarted" && e.unitId === "hbk")).toBe(false);
+  });
+
+  it("leaves a starting unit untouched and brings it online at the next initiative", () => {
+    const state = hbkVsEnf();
+    const hbk = getUnit(state, "hbk");
+    hbk.shutdown = "starting";
+    hbk.heat = 12;
+    startAttackTurn(state);
+    advancePhase(state, scriptedRng(3, 3, 3, 1));
+    expect(hbk.shutdown).toBe("starting");
+    // weaponAttack -> end already ran; advance again: end -> initiative (turn 2).
+    advancePhase(state, scriptedRng(3, 3, 3, 1));
+    expect(hbk.shutdown).toBe("not");
   });
 });
 

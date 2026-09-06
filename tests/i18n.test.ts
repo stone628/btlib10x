@@ -18,10 +18,12 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
       .map((u) => u.id);
     const enemy = ids.find((id) => id !== actorId)!;
     if (st.phase === "movement") {
-      try {
-        S.declareMode(s, "walk");
-      } catch {
-        S.declareMode(s, "standStill");
+      if (st.units[actorId]!.shutdown === "not") {
+        try {
+          S.declareMode(s, "walk");
+        } catch {
+          S.declareMode(s, "standStill");
+        }
       }
       S.commitMove(s);
     } else {

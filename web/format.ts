@@ -15,6 +15,7 @@ import type {
   LocationValue,
   RangeBracket,
   ResolvedMechDef,
+  ShutdownState,
   UnitDamageState,
   UnitState,
   WeaponCategory,
@@ -37,8 +38,8 @@ import {
   internalStructureForTonnage,
   isArm,
   isImmobile,
-  isKilled,
   isTorso,
+  isUnitDestroyed,
   listMapNames,
   listWeaponNames,
   loadAmmoBins,
@@ -649,7 +650,7 @@ interface SheetView {
   readonly ammoPolicyLine: string | null;
   /** Current heat + shutdown state; null when only design info exists. */
   readonly heat: number;
-  readonly shutdown: boolean;
+  readonly shutdown: ShutdownState;
   /** Current front armor per location. */
   readonly armor: LocationValue;
   /** Current layered damage (front armor, rear armor, internal structure). */
@@ -744,7 +745,7 @@ function setupSheet(unit: SetupUnit, id: string, locale: LocaleId): SheetView {
     modeLine: null,
     ammoPolicyLine: null,
     heat: 0,
-    shutdown: false,
+    shutdown: "not",
     armor: damage.armor,
     damage,
     originalArmor: def.armor,
@@ -820,6 +821,20 @@ function armorDiagramInfo(info: ArmorInfo): string[] {
   ];
 }
 
+function getShutdownHeader(view: SheetView): string {
+  if (isUnitDestroyed(view.damage)) return "[DESTROYED]";
+  switch (view.shutdown) {
+    case "manual":
+      return "[SHUTDOWN]";
+    case "heat":
+      return "!SHUTDOWN!";
+    case "starting":
+      return "[STARTING]";
+  }
+  if (isImmobile(view.damage)) return "[IMMOBILE]";
+  return "[NOMINAL]";
+}
+
 /** ASCII humanoid armor diagram: internal structure (I), front armor (F/A), rear (R). */
 /** for 'sheet <id>' command */
 function armorDiagramSheet(view: SheetView, info: ArmorInfo): string[] {
@@ -836,10 +851,11 @@ function armorDiagramSheet(view: SheetView, info: ArmorInfo): string[] {
   const rear = (loc: Location) => cell(ar[loc] ?? 0, or[loc] ?? 0, "R");
   const pHD = p(CT);
   const pRT = p(RT);
-  const heatHeader = (view.shutdown ? "[SHUTDOWN]" : "[HEAT]").padStart(CT);
+  const shutdownHeader = getShutdownHeader(view).padEnd(CT);
+  const heatHeader = "[HEAT]".padStart(CT);
   const heat = `${view.heat}/${HEAT_CAP} `.padStart(CT);
   return [
-    `${pHD}[ HD ]${heatHeader}`,
+    `${shutdownHeader}[ HD ]${heatHeader}`,
     `${pHD}${cell(s.head, os.head, "I")}${heat}`,
     `${pHD}${cell(a.head, o.head, "A")}`,
     `[ RA ] [ RT ] [ CT ] [ LT ] [ LA ]`,
@@ -1204,9 +1220,15 @@ export function heatStatusLines(s: Session, id: string): string[] {
   else lines.push(i18n(s.locale, "heat.shutdown", { avoid: shutdown }));
   if (ammo === null) lines.push(i18n(s.locale, "heat.ammoSafe"));
   else lines.push(i18n(s.locale, "heat.ammo", { avoid: ammo }));
-  lines.push(unit.shutdown ? i18n(s.locale, "heat.stateDown") : i18n(s.locale, "heat.stateOnline"));
+  lines.push(heatStateLabel(s.locale, unit.shutdown));
   if (unit.heat >= 30) lines.push(i18n(s.locale, "heat.shutdownAuto"));
   return lines;
+}
+
+function heatStateLabel(locale: LocaleId, shutdown: ShutdownState): string {
+  if (shutdown === "not") return i18n(locale, "heat.stateOnline");
+  if (shutdown === "starting") return i18n(locale, "heat.stateStarting");
+  return i18n(locale, "heat.stateDown");
 }
 
 function sheetGunneryLine(gunnery: number, heat: number, locale: LocaleId): string {
@@ -1241,11 +1263,13 @@ export function sheetLinesShort(view: SheetView, locale: LocaleId, showMode = tr
  * Each location shows front + rear + internal-structure summed as `cur/max`,
  * with `[-F]`/`[-R]`/`[-A]`/`[-I]` annotations for depleted pools. */
 function mechStatusLines(view: SheetView, locale: LocaleId): string[] {
-  const status = isKilled(view.damage)
+  const status = isUnitDestroyed(view.damage)
     ? i18n(locale, "sheet.statusDestroyed")
-    : view.shutdown
-      ? i18n(locale, "sheet.statusShutdown")
-      : i18n(locale, "sheet.statusOnline");
+    : view.shutdown === "not"
+      ? i18n(locale, "sheet.statusOnline")
+      : view.shutdown === "starting"
+        ? i18n(locale, "sheet.statusStarting")
+        : i18n(locale, "sheet.statusShutdown");
   return [
     i18n(locale, "sheet.statusHeader", { status, currHeat: view.heat, maxHeat: HEAT_CAP }),
     `  ${durabilityFrag(view, "head")} ${durabilityFrag(view, "leftTorso")} ${durabilityFrag(view, "centerTorso")} ${durabilityFrag(view, "rightTorso")}`,
@@ -1333,11 +1357,14 @@ export function moveStatusLines(s: Session): string[] {
  */
 export function reachableInfo(s: Session): BoardRenderInfo | null {
   const actor = s.battle?.units[s.actorId ?? ""];
-  if (!actor || !s.battle || s.moveMode === null) return null;
+  const mode = s.moveMode;
+  if (!actor || !s.battle || mode === null || mode === "shutdown" || mode === "startup") {
+    return null;
+  }
   // Engine guarantee: `actor.model` was validated by `createBattle`.
   const def = getMechDefFor(actor);
   const landings = reachableLandings({ ...actor.position }, actor.facing, {
-    mode: s.moveMode,
+    mode,
     walking: def.walking,
     running: def.running,
     jumping: def.jumping,
@@ -1512,6 +1539,7 @@ export function formatLog(
   n: number = events.length,
 ): string[] {
   const slice = events.slice(-n);
+  if (slice.length == 0) return [];
   const lines: string[] = [];
   let prev: GameEvent | null = null;
   let removedLines: string[] = [];
@@ -1702,6 +1730,28 @@ function eventLines(locale: LocaleId, e: GameEvent): string[] {
           threshold: e.threshold,
         }),
       ];
+    case "shutdownManual":
+      return [i18n(locale, "log.shutdownManual", { id: e.unitId })];
+    case "shutdownPriority":
+      return [i18n(locale, "log.shutdownPriority", { id: e.unitId })];
+    case "startupSuccess":
+      return [
+        i18n(locale, "log.startupSuccess", {
+          id: e.unitId,
+          roll: e.roll,
+          heat: e.heat,
+          avoid: e.avoid,
+        }),
+      ];
+    case "startupFailed":
+      return [
+        i18n(locale, "log.startupFailed", {
+          id: e.unitId,
+          roll: e.roll,
+          heat: e.heat,
+          avoid: e.avoid,
+        }),
+      ];
     case "heatAmmoExplosion":
       return [
         i18n(locale, "log.heatAmmoExplosion", {
@@ -1888,7 +1938,7 @@ export function transferDetail(locale: LocaleId, r: AttackResolution): string | 
   const app = r.application;
   if (!app || app.steps.length === 0) return null;
   const wasImmobile = isImmobile(app.before);
-  const wasKilled = isKilled(app.before);
+  const wasDestroyed = isUnitDestroyed(app.before);
   const run = {
     armor: { ...app.before.armor },
     armorRear: { ...app.before.armorRear } as Partial<LocationValue>,
@@ -1916,7 +1966,7 @@ export function transferDetail(locale: LocaleId, r: AttackResolution): string | 
     });
   }
   if (isImmobile(app.after) && !wasImmobile) text += i18n(locale, "res.immobilized");
-  if (app.killed && !wasKilled) text += i18n(locale, "res.killed");
+  if (app.killed && !wasDestroyed) text += i18n(locale, "res.killed");
   return text;
 }
 

@@ -158,7 +158,7 @@ export function isLocationDestroyed(damage: UnitDamageState, location: Location)
 }
 
 /** Classic destruction: head or center torso internal structure gone ends the 'Mech. */
-export function isKilled(damage: UnitDamageState): boolean {
+export function isUnitDestroyed(damage: UnitDamageState): boolean {
   return damage.internalStructure.head <= 0 || damage.internalStructure.centerTorso <= 0;
 }
 

@@ -308,7 +308,7 @@ interface DamageApplication {
 }
 ```
 
-Predicates: `isKilled(damage)` (head or CT IS gone), `isImmobile(damage)`
+Predicates: `isUnitDestroyed(damage)` (head or CT IS gone), `isImmobile(damage)`
 (either leg IS gone), `isLocationDestroyed(damage, loc)`,
 `canFireFromLocation(damage, loc)` (location + its support torso intact).
 Side-torso IS death blows off the arm; `TRANSFER_INWARD` is exported.

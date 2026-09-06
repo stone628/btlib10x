@@ -17,6 +17,7 @@ import type {
 } from "btlib10x";
 import {
   advancePhase,
+  attemptVoluntaryStartup,
   cellAt,
   checkVictory,
   costToClimb,
@@ -40,10 +41,12 @@ import {
   listMapNames,
   nextActor,
   parseAmmoPolicy,
+  passMovement,
   resolveAllAttacks,
   rollInitiativePhase,
   rotateFacing,
   sameHex,
+  voluntaryShutdown,
 } from "btlib10x";
 import type { LocaleId } from "./i18n/index.js";
 import { i18n } from "./i18n/index.js";
@@ -73,7 +76,10 @@ export interface Session extends MapNameHolder {
   battle: BattleState | null;
   victory: VictoryResult | null;
   actorId: string | null;
-  moveMode: MoveMode | null;
+  /** Pending declaration for the acting unit: a movement mode (engine
+   *  `MoveMode`) or the voluntary `"shutdown"` / `"startup"` declaration,
+   *  committed by the `done` command. */
+  moveMode: MoveMode | "shutdown" | "startup" | null;
   moveSteps: MoveStep[];
   fireDecls: AttackDecl[];
   /** Actor (turn-qualified) whose fire suggestion was last auto-shown. */
@@ -140,6 +146,12 @@ function drive(s: Session): BattleState["events"] {
       s.battle = battle;
       s.app = "battle";
       if (s.actorId !== id) {
+        if (battle.phase === "movement") {
+          const next = getUnit(battle, id);
+          if (next && next.shutdown !== "not") {
+            battle.events.push({ kind: "shutdownPriority", unitId: id });
+          }
+        }
         s.actorId = id;
         clearBuffers(s);
       }
@@ -275,10 +287,19 @@ const MOVE_MODES: Readonly<Record<string, MoveMode>> = {
   jump: "jump",
 };
 
-export function parseMoveMode(locale: LocaleId, word: string): MoveMode {
+const VOLUNTARY_MODES: Readonly<Record<string, "shutdown" | "startup">> = {
+  shutdown: "shutdown",
+  startup: "startup",
+};
+
+export type DeclaredMode = MoveMode | "shutdown" | "startup";
+
+export function parseMoveMode(locale: LocaleId, word: string): DeclaredMode {
   const mode = MOVE_MODES[word.toLowerCase()];
-  if (!mode) throw new Error(i18n(locale, "err.badModeWord"));
-  return mode;
+  if (mode) return mode;
+  const voluntary = VOLUNTARY_MODES[word.toLowerCase()];
+  if (voluntary) return voluntary;
+  throw new Error(i18n(locale, "err.badModeWord"));
 }
 
 function requireBattle(s: Session): BattleState {
@@ -297,6 +318,19 @@ function requireActor(s: Session, phase: "movement" | "weaponAttack"): UnitState
 export function declareMode(s: Session, word: string): void {
   const unit = requireActor(s, "movement");
   const mode = parseMoveMode(s.locale, word);
+  if (mode === "shutdown") {
+    if (unit.shutdown !== "not") throw new Error(i18n(s.locale, "err.mustBeOnlineForShutdown"));
+    s.moveMode = "shutdown";
+    s.moveSteps = [];
+    return;
+  }
+  if (mode === "startup") {
+    if (unit.shutdown === "not") throw new Error(i18n(s.locale, "err.mustBeDownForStartup"));
+    if (unit.shutdown === "starting") throw new Error(i18n(s.locale, "err.alreadyStarting"));
+    s.moveMode = "startup";
+    s.moveSteps = [];
+    return;
+  }
   declareMove(requireBattle(s), unit.id, mode);
   s.moveMode = mode;
   s.moveSteps = [];
@@ -334,7 +368,11 @@ function budgetFor(s: Session): number {
   const unit = currentActor(s)!;
   const def = getMechDefFor(unit);
   const movement = effectiveMovement(def, unit.critSlotsDestroyed);
-  return effectiveMoveBudget(s.moveMode ?? "standStill", movement, unit.heat);
+  const mode: MoveMode =
+    s.moveMode === "shutdown" || s.moveMode === "startup" || s.moveMode === null
+      ? "standStill"
+      : s.moveMode;
+  return effectiveMoveBudget(mode, movement, unit.heat);
 }
 
 export interface StepResult {
@@ -357,6 +395,9 @@ export function stepResult(s: Session): StepResult {
 
 export function queueEnter(s: Session, to: HexCoord): void {
   const unit = requireActor(s, "movement");
+  if (s.moveMode === "shutdown" || s.moveMode === "startup") {
+    throw new Error(i18n(s.locale, "err.noMoveInShutdownMode"));
+  }
   if (!s.moveMode) throw new Error(i18n(s.locale, "err.declareModeFirst", { id: unit.id }));
   if (sameHex(unit.position, to)) throw new Error(i18n(s.locale, "err.sameHexMove"));
   const cur = replaySteps(s);
@@ -390,6 +431,9 @@ export function queueEnter(s: Session, to: HexCoord): void {
 
 export function queueTurn(s: Session, facings: number): void {
   const unit = requireActor(s, "movement");
+  if (s.moveMode === "shutdown" || s.moveMode === "startup") {
+    throw new Error(i18n(s.locale, "err.noMoveInShutdownMode"));
+  }
   if (!s.moveMode) throw new Error(i18n(s.locale, "err.declareModeFirst", { id: unit.id }));
   if (s.moveMode === "standStill") throw new Error(i18n(s.locale, "err.standStillNoFace"));
   if (s.moveMode === "jump") throw new Error(i18n(s.locale, "err.jumpFreeFacing"));
@@ -455,7 +499,16 @@ export function commitMove(s: Session): CommitResult {
   const battle = requireBattle(s);
   const beforeCount = battle.events.length;
   commitAtomic(s, () => {
-    executeMove(battle, unit.id, s.moveSteps);
+    if (s.moveMode === "shutdown") {
+      voluntaryShutdown(battle, unit.id);
+    } else if (s.moveMode === "startup") {
+      attemptVoluntaryStartup(battle, unit.id, s.rng);
+    } else if (unit.shutdown !== "not") {
+      // Shut-down unit committing without a startup attempt: pass.
+      passMovement(battle, unit.id);
+    } else {
+      executeMove(battle, unit.id, s.moveSteps);
+    }
     s.actorId = null;
     clearBuffers(s);
     drive(s);
@@ -472,7 +525,7 @@ export interface MoveStepInfo {
 
 /** Queued movement steps with running MP totals, for `status`. */
 export function moveStepsInfo(s: Session): {
-  mode: MoveMode | null;
+  mode: DeclaredMode | null;
   steps: MoveStepInfo[];
   budget: number;
 } {

@@ -71,12 +71,20 @@ The prompt names the acting unit; commands act on that 'Mech.
 | command | effect |
 |---|---|
 | `mode standstill\|walk\|run\|jump` | declare movement mode (required first); for walk/run/jump, renders a clipped ASCII hex map of the reachable hexes — exactly the smallest bounding box around every reachable hex, clamped to the board (no padding). Reachable hexes draw a team-colored `<>` in the belly; every reachable (hex, facing) edge is tinted with the acting unit's team color, and no facing arrows are drawn. Other units inside the crop keep their ids (team-colored) but no facing arrow. Movement paths (the `F`/`B`/`R`/`L` fragment sequence per landing) remain available programmatically via `reachableLandings`/`RevealedLanding.path` for later use, but are not rendered on the map |
+| `mode shutdown` | declare a voluntary shutdown (online unit only). `move`/`face` stay unavailable; `done` commits it — the unit goes off-line (`manual`) and can no longer move, fire, or act normally this turn. `cancel` resets the declaration |
+| `mode startup` | declare a voluntary startup attempt (shut-down unit only). `done` rolls 2D6 against the heat shutdown avoidance number: success turns the unit `starting` (still off-line now, online just before the next initiative roll); failure keeps it shut down. `done` alone (without `mode startup`) passes — the unit stays off-line |
 | `move <col> <row>` | queue step into adjacent hex (forward/backward vs facing; jump = any adjacent) |
 | `face <facing>` or `face <±1..5>` | queue facing change (`face ne`, `face -2`) |
 | `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [J](jam) / [-](destroyed) / per-bin ammo `(n left)` markers); without id: brief unit list (id, model, position+facing) grouped by team |
 | `status` | queued move steps with running MP cost per step |
 | `cancel` | clear mode + steps |
 | `done` | commit via `executeMove`; prints path + MP spent and total budget |
+
+Shut-down units (including `starting`) act **first** in the movement phase,
+regardless of initiative: the log prints
+`{id} has movement priority — shut down, must attempt startup or pass`, and the
+only move-phase commands available to them are `mode startup` (or `done` to
+pass), plus `cancel`, `sheet`, `status`, `heat` and the globals.
 
 ### turn(N):attack(team T, mech <id>)
 
@@ -179,15 +187,22 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   pilot, leg actuator/hip/jump-jet destruction feeds the effective
   movement helper (leg actuators −1 walk each, hip halves walking, jump
   jets −1 jump each). Engine / gyro / sensor / life-support / heat-sink
-  slots still take and absorb crits in the slot table, but the
-  heat/piloting effects they would cause in the full rules are deferred
-  with the rest of the heat/piloting subset.
+  slots take and absorb crits in the slot table; destroyed engine slots
+  feed the heat system below.
+- **Heat** — heat scale 0-30 with movement heat, weapon heat, engine-crit
+  heat, end-phase dissipation; to-hit and MP penalties; shutdown checks at
+  peak heat (auto at 30+, 2D6 avoidance at 14-29) and automatic restart of
+  *heat-caused* shutdowns once heat drops below the threshold; heat ammo
+  explosion checks at 19+.
+- **Voluntary shutdown / startup** — `mode shutdown` + `done` sends an
+  online unit off-line (`manual`); it persists (no end-phase auto-restart)
+  until a voluntary startup succeeds. `mode startup` + `done` rolls 2D6
+  against the shutdown avoidance: success → `starting` (still off-line,
+  online just before the next initiative roll), failure → stays off-line.
+  Shut-down units act first in the movement phase regardless of initiative.
 
 ### Not yet implemented
 
-- **Heat** — heat scale, overheat effects, shutdown. (Crits against heat
-  sinks already mark the slot destroyed; the dissipation bookkeeping
-  lights up when heat is implemented.)
 - **Physical attacks** — punch, kick, charge, DFA.
 - **Piloting rolls** — falling, standing up, leg/gyro damage effects, and
   partial cover (+3 to hit, Punch Location Table) for units in water1 /
