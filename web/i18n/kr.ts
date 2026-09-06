@@ -250,6 +250,8 @@ export const kr: Catalog = {
   "info.armorStructureCol": "장갑 및 구조",
   "info.head": "{name} {model} — {weightClass} {tonnage}t ({techBase})",
   "info.movement": "이동: 걷기 {walk} / 달리기 {run} / 점프 {jump}",
+  "info.movementHeat":
+    "이동: 걷기 {walk} / 달리기 {run} / 점프 {jump} - {penalty}MP(열 {threshold} 이상)",
   "info.mapHead": "{name}: {w}x{h}",
   "info.terrainLine": "지형: {breakdown}",
   "info.terrainNone": "없음",
@@ -268,11 +270,15 @@ export const kr: Catalog = {
   "info.weaponAntiInfantry": "보병 대응: 보병에게 추가 데미지",
   "sheet.modelLine": "모델: {name} {model} - {weightClass} {tonnage}t",
   "sheet.gunneryLine": "사격력: {gunnery}",
+  "sheet.gunneryLineHeat": "사격력: {gunnery} +{toHit}(열 {threshold} 이상)",
   "sheet.at": "위치: {pos} 방향 {facing}",
   "sheet.modeSuffix": ", {mode} [MP {mp}]",
   "sheet.removedId": " - 게임 제외됨",
   "sheet.idLine": "식별자: {id}",
-  "sheet.durabilityPrefix": "내구도: ",
+  "sheet.statusHeader": "상태: {status}, 방열({currHeat}/{maxHeat})",
+  "sheet.statusOnline": "온라인",
+  "sheet.statusShutdown": "셧다운",
+  "sheet.statusDestroyed": "파괴됨",
   "sheet.weaponsHeader": "무기 ({n}):",
   "sheet.shotsRange": "({curr}/{max}회분)",
   "sheet.shotsDesign": "({max}회분)",
@@ -328,7 +334,7 @@ export const kr: Catalog = {
   "log.shutdownAvoided": "{id} 셧다운 회피 (2D6 {roll} >= {avoid} 회피)",
   "log.restarted": "{id} 재기동됨 (히트 {heat})",
   "log.heatAmmoExplosion":
-    "{id} 탄약 {weapon} ({loc} #{slot}, {shots}발) 폭발, 피해 {damage} (2D6 {roll} < {avoid} 회피)",
+    "{id} 탄약 {weapon} ({loc} #{slot}, {shots}발) 폭발, 피해 {damage} (2D6 = {roll} < {avoid} 회피)",
 
   // attack resolution
   "res.attackResolutionStart": "=== 선언된 공격 피해 판정 시작 ===",
