@@ -17,8 +17,9 @@ const SCRIPT_SETUP: ReadonlyArray<{ id: string; command: string }> = [
 
 /** Queued commands to issue before falling back to state-based logic. */
 let nextCommandQueue: string[] = [];
-let currApp: string | null = null;
+let currApp: S.AppState | null = null;
 let currBattlePhase: string | null = null;
+let helpShown: Record<string, boolean> = {}
 
 // /** Push the rest onto the queue, return the first command. */
 // function queueAndReturn(first: string, ...rest: string[]): string {
@@ -39,11 +40,14 @@ function returnFirstQueuedCommand(): string {
 export function resetAutoplayState(s: S.Session): void {
   nextCommandQueue = [];
   currApp = s.app;
-  const st = s.battle;
-  if (currApp !== "battle" || st === null) {
-    currBattlePhase = null;
-  } else {
-    currBattlePhase = st.phase;
+  currBattlePhase = null;
+  helpShown = {};
+}
+
+function enusreHelpShown(key: string) {
+  if (helpShown[key] === undefined) {
+    helpShown[key] = true;
+    queueNextCommand("help");
   }
 }
 
@@ -61,6 +65,7 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
   currApp = s.app;
 
   if (currApp === "setup") {
+    enusreHelpShown(currApp);
     if (s.mapName === null) queueNextCommand("map test");
     for (const u of SCRIPT_SETUP) {
       if (!s.roster.some((r) => r.id === u.id)) {
@@ -72,6 +77,7 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
   }
 
   if (currApp === "over") {
+    enusreHelpShown(currApp);
     const st = s.battle;
     if (st !== null && prevApp === "battle") {
       queueNextCommand("status");
@@ -94,6 +100,7 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
     );
     if (enemy === undefined) return null;
 
+    enusreHelpShown(`${currApp}${st.phase}`);
     if (prevApp === "setup") {
       queueNextCommand("board");
       return returnFirstQueuedCommand();
