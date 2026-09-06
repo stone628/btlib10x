@@ -254,6 +254,12 @@ const BATTLE_CMDS: Record<string, CmdDef> = {
     argsDoc: [["id", "cmd.heat.arg.id"]],
     run: (s, a) => heatStatusLines(s, idOrActor(s, a)),
   },
+  sheet: {
+    helpKey: "cmd.sheetActing.help",
+    usage: "sheet [id]",
+    argsDoc: [["id", "cmd.sheetActing.arg.id"]],
+    run: (s, a) => (a[0] !== undefined ? sheetForUnit(s, a[0]) : unitBriefList(s)),
+  },
 };
 
 const MOVE_CMDS: Record<string, CmdDef> = {
@@ -326,12 +332,6 @@ const MOVE_CMDS: Record<string, CmdDef> = {
       ];
     },
   },
-  sheet: {
-    helpKey: "cmd.sheetActing.help",
-    usage: "sheet [id]",
-    argsDoc: [["id", "cmd.sheetActing.arg.id"]],
-    run: (s, a) => (a[0] !== undefined ? sheetForUnit(s, a[0]) : unitBriefList(s)),
-  },
   status: { helpKey: "cmd.statusMove.help", run: (s) => moveStatusLines(s) },
   cancel: {
     helpKey: "cmd.cancelMove.help",
@@ -393,12 +393,6 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
         }),
       ];
     },
-  },
-  sheet: {
-    helpKey: "cmd.sheetActing.help",
-    usage: "sheet [id]",
-    argsDoc: [["id", "cmd.sheetActing.arg.id"]],
-    run: (s, a) => (a[0] !== undefined ? sheetForUnit(s, a[0]) : unitBriefList(s)),
   },
   status: { helpKey: "cmd.statusAttack.help", run: (s) => attackStatusLines(s) },
   cancel: {

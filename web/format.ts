@@ -24,6 +24,7 @@ import type {
 import {
   ammoBinId,
   ammoExplosionAvoid,
+  ammoExplosionAvoidWithThreshold,
   canFireFromLocation,
   collectAmmoBins,
   countDestroyedEngineSlots,
@@ -53,6 +54,7 @@ import {
   toHitHeatModifier,
   toHitHeatModifierWithThreshold,
 } from "btlib10x";
+import { AMMO_EXPLOSION_START_HEAT } from "../src/index.js";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
 import { i18n } from "./i18n/index.js";
 import { lookupMapOrThrow, lookupMechOrThrow, lookupWeaponOrThrow } from "./lookup.js";
@@ -646,8 +648,8 @@ interface SheetView {
   readonly removed: boolean;
   readonly positionLine: string;
   readonly modeLine: string | null;
-  /** Current ammo depletion policy; null when the unit carries no ammo. */
-  readonly ammoPolicyLine: string | null;
+  /** Current ammo status: depletion policy, explosion prob; null when the unit carries no ammo. */
+  readonly ammoStatusLine: string | null;
   /** Current heat + shutdown state; null when only design info exists. */
   readonly heat: number;
   readonly shutdown: ShutdownState;
@@ -669,6 +671,20 @@ interface SheetView {
 function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
   // Engine guarantee: `unit.model` was validated by `createBattle`.
   const def = getMechDefFor(unit);
+  let ammoStatusLine: string | null = null;
+  if (collectAmmoBins(def).length > 0) {
+    const { avoid, threshold } = ammoExplosionAvoidWithThreshold(unit.heat);
+    ammoStatusLine = i18n(locale, "sheet.ammoStatus", {
+      policy: ammoPolicyLabel(locale, unit.ammoPolicy),
+      explosion:
+        avoid === 0
+          ? i18n(locale, "sheet.ammoNoExplosion", {
+              heat: unit.heat,
+              threshold: AMMO_EXPLOSION_START_HEAT,
+            })
+          : i18n(locale, "sheet.ammoExplosion", { heat: unit.heat, avoid, threshold }),
+    });
+  }
   return {
     id: id,
     team: unit.team,
@@ -686,10 +702,7 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
       unit.moveMode !== null
         ? i18n(locale, "sheet.modeSuffix", { mode: unit.moveMode, mp: unit.mpSpent })
         : null,
-    ammoPolicyLine:
-      collectAmmoBins(def).length > 0
-        ? i18n(locale, "sheet.ammoPolicy", { policy: ammoPolicyLabel(locale, unit.ammoPolicy) })
-        : null,
+    ammoStatusLine: ammoStatusLine,
     heat: unit.heat,
     shutdown: unit.shutdown,
     armor: unit.damage.armor,
@@ -743,7 +756,7 @@ function setupSheet(unit: SetupUnit, id: string, locale: LocaleId): SheetView {
     removed: false,
     positionLine: i18n(locale, "sheet.at", { pos: disp(unit.position), facing: unit.facing }),
     modeLine: null,
-    ammoPolicyLine: null,
+    ammoStatusLine: null,
     heat: 0,
     shutdown: "not",
     armor: damage.armor,
@@ -1091,7 +1104,7 @@ export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
   }
   topLines.push(sheetMovementLine(view.walking, view.running, view.jumping, view.heat, locale));
   topLines.push(view.positionLine);
-  if (view.ammoPolicyLine !== null) topLines.push(view.ammoPolicyLine);
+  if (view.ammoStatusLine !== null) topLines.push(view.ammoStatusLine);
   const weaponLines: string[] = [i18n(locale, "sheet.weaponsHeader", { n: view.mounts.length })];
   weaponLines.push(...weaponMountLines(locale, view.mounts));
   return [
@@ -1539,7 +1552,7 @@ export function formatLog(
   n: number = events.length,
 ): string[] {
   const slice = events.slice(-n);
-  if (slice.length == 0) return [];
+  if (slice.length === 0) return [];
   const lines: string[] = [];
   let prev: GameEvent | null = null;
   let removedLines: string[] = [];
