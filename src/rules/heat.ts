@@ -162,13 +162,15 @@ export function ammoExplosionAvoid(heat: number): number {
   return ammoExplosionAvoidWithThreshold(heat).avoid;
 }
 
+export const AMMO_EXPLOSION_START_HEAT = 19;
+
 export function ammoExplosionAvoidWithThreshold(heat: number): {
   avoid: number;
   threshold: number;
 } {
   if (heat >= 28) return { avoid: 8, threshold: 28 };
   if (heat >= 23) return { avoid: 6, threshold: 23 };
-  if (heat >= 19) return { avoid: 4, threshold: 19 };
+  if (heat >= AMMO_EXPLOSION_START_HEAT) return { avoid: 4, threshold: AMMO_EXPLOSION_START_HEAT };
   return { avoid: 0, threshold: 0 };
 }
 

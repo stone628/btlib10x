@@ -301,7 +301,7 @@ describe("ammo command (session)", () => {
   it("renders the policy line on the record sheet only for ammo-carrying units", () => {
     const s = freshBrawl();
     s.battle!.units.hunchy!.ammoPolicy = "core";
-    expect(execute(s, "sheet hunchy").join("\n")).toContain("ammo policy: core");
+    expect(execute(s, "sheet hunchy").join("\n")).toContain("ammo status: policy(core");
     expect(execute(s, "sheet cicada").join("\n")).not.toContain("ammo policy");
   });
 });
