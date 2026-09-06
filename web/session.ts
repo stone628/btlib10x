@@ -24,6 +24,7 @@ import {
   createBattle,
   declareAttacks,
   declareMove,
+  effectiveMoveBudget,
   effectiveMovement,
   executeMove,
   FACINGS,
@@ -37,7 +38,6 @@ import {
   isBackwardStep,
   isForwardStep,
   listMapNames,
-  maxMovePoints,
   nextActor,
   parseAmmoPolicy,
   resolveAllAttacks,
@@ -132,7 +132,7 @@ function drive(s: Session): BattleState["events"] {
       continue;
     }
     if (battle.phase === "end") {
-      advancePhase(battle);
+      advancePhase(battle, s.rng);
       continue;
     }
     const id = nextActor(battle);
@@ -148,7 +148,7 @@ function drive(s: Session): BattleState["events"] {
     if (battle.phase === "weaponAttack") {
       resolveAllAttacks(battle, s.rng);
     }
-    advancePhase(battle);
+    advancePhase(battle, s.rng);
   }
   throw new Error(i18n(s.locale, "err.phaseDriver"));
 }
@@ -334,12 +334,7 @@ function budgetFor(s: Session): number {
   const unit = currentActor(s)!;
   const def = getMechDefFor(unit);
   const movement = effectiveMovement(def, unit.critSlotsDestroyed);
-  return maxMovePoints(
-    s.moveMode ?? "standStill",
-    movement.walking,
-    movement.running,
-    movement.jumping,
-  );
+  return effectiveMoveBudget(s.moveMode ?? "standStill", movement, unit.heat);
 }
 
 export interface StepResult {

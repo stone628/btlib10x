@@ -1,4 +1,4 @@
-import { FACINGS, listMapNames, VERSION } from "btlib10x";
+import { FACINGS, listMapNames, restartUnit, shutdownUnit, VERSION } from "btlib10x";
 import type { Chunk } from "./format.js";
 import {
   ammoPolicyLabel,
@@ -8,6 +8,7 @@ import {
   fireSuggestionLines,
   fmtSetupStatus,
   formatLog,
+  heatStatusLines,
   infoMapChunks,
   infoMapList,
   infoMechChunk,
@@ -54,6 +55,13 @@ function coord(locale: LocaleId, value: string, label: string): number {
 
 function expectArgs(locale: LocaleId, args: readonly string[], count: number, usage: string): void {
   if (args.length < count) throw new Error(i18n(locale, "err.expectedArgs", { usage }));
+}
+
+/** Command id argument: explicit unit id, else the acting unit when present. */
+function idOrActor(s: S.Session, args: readonly string[]): string {
+  if (args[0] !== undefined) return args[0];
+  if (s.actorId !== null) return s.actorId;
+  throw new Error(i18n(s.locale, "err.needsActor"));
 }
 
 const L = (s: S.Session): LocaleId => s.locale;
@@ -238,6 +246,40 @@ function initiativeLine(s: S.Session): string[] {
 
 // ---------------------------------------------------------- turn:move ----
 
+/** In-battle maintenance/status commands shared by both battle phases. */
+const BATTLE_CMDS: Record<string, CmdDef> = {
+  heat: {
+    helpKey: "cmd.heat.help",
+    usage: "heat [id]",
+    argsDoc: [["id", "cmd.heat.arg.id"]],
+    run: (s, a) => heatStatusLines(s, idOrActor(s, a)),
+  },
+  shutdown: {
+    helpKey: "cmd.shutdown.help",
+    usage: "shutdown <id>",
+    argsDoc: [["id", "cmd.shutdown.arg.id"]],
+    run: (s, a) => {
+      expectArgs(L(s), a, 1, "shutdown <id>");
+      const battle = s.battle;
+      if (!battle) throw new Error(i18n(L(s), "err.noBattle"));
+      shutdownUnit(battle, a[0]!);
+      return [i18n(L(s), "ok.shutdown", { id: a[0]! })];
+    },
+  },
+  restart: {
+    helpKey: "cmd.restart.help",
+    usage: "restart <id>",
+    argsDoc: [["id", "cmd.restart.arg.id"]],
+    run: (s, a) => {
+      expectArgs(L(s), a, 1, "restart <id>");
+      const battle = s.battle;
+      if (!battle) throw new Error(i18n(L(s), "err.noBattle"));
+      restartUnit(battle, a[0]!);
+      return [i18n(L(s), "ok.restart", { id: a[0]! })];
+    },
+  },
+};
+
 const MOVE_CMDS: Record<string, CmdDef> = {
   mode: {
     helpKey: "cmd.mode.help",
@@ -323,6 +365,7 @@ const MOVE_CMDS: Record<string, CmdDef> = {
     helpKey: "cmd.doneMove.help",
     run: (s) => formatLog(s.locale, S.commitMove(s).newEvents),
   },
+  ...BATTLE_CMDS,
 };
 
 // -------------------------------------------------------- turn:attack ----
@@ -399,6 +442,7 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
       return formatLog(s.locale, S.commitFire(s).newEvents);
     },
   },
+  ...BATTLE_CMDS,
 };
 
 // ----------------------------------------------------------------- over ----

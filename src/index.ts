@@ -79,10 +79,16 @@ export type {
   CritSource,
   EffectiveMovement,
 } from "./rules/critical.js";
-export { effectiveMovement, resolveCriticalHits } from "./rules/critical.js";
+export {
+  ammoDamagePerShot,
+  applyAmmoExplosion,
+  effectiveMovement,
+  resolveCriticalHits,
+} from "./rules/critical.js";
 export * from "./rules/damage.js";
 export * from "./rules/fireability.js";
 export * from "./rules/game.js";
+export * from "./rules/heat.js";
 export * from "./rules/hitlocation.js";
 export * from "./rules/initiative.js";
 export * from "./rules/internalStructure.js";

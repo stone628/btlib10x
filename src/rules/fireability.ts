@@ -6,6 +6,7 @@ import { getWeaponDefFor } from "../data/weapon.schema.js";
 import { isInFrontArc } from "./arcs.js";
 import { canFireFromLocation } from "./damage.js";
 import type { BattleState } from "./game.js";
+import { toHitHeatModifier } from "./heat.js";
 import { losBlockedByElevation, losWoodsPointsBetween } from "./los.js";
 import * as mv from "./movement.js";
 import type { RangeBracket } from "./tohit.js";
@@ -27,6 +28,7 @@ export interface FireWeapon {
   readonly shots: number | null;
   readonly rangeBracket: RangeBracket;
   readonly tn: number;
+  readonly heat: number;
   readonly expectedDamage: number;
   readonly cluster?: { shots: number; perMissile: number };
 }
@@ -112,6 +114,7 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
           weapon,
           attackerLevel: cellAt(state, unit.position).level,
           targetLevel: cellAt(state, enemy.position).level,
+          heatMod: toHitHeatModifier(unit.heat),
         });
         if (breakdown.outOfRange) {
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "outOfRange" });
@@ -128,6 +131,7 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
           shots,
           rangeBracket: breakdown.rangeBracket,
           tn: breakdown.total,
+          heat: weapon.heat ?? 0,
           expectedDamage:
             weapon.missiles !== undefined
               ? (weapon.missileDamage ?? 1) * weapon.missiles

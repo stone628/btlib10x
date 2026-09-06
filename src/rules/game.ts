@@ -1,3 +1,4 @@
+import { roll2D6 } from "../core/dice.js";
 import { bearing, hexDistance, isAdjacent, sameHex } from "../core/hex.js";
 import { cellAt, costToClimb, costToEnter, type HexGrid } from "../core/terrain.js";
 import {
@@ -32,8 +33,20 @@ import {
   collapseToRubble,
   createBuildingState,
 } from "./building.js";
-import { effectiveMovement } from "./critical.js";
+import { applyAmmoExplosion, effectiveMovement } from "./critical.js";
 import { canFireFromLocation, isImmobile, isKilled, type UnitDamageState } from "./damage.js";
+import {
+  ammoExplosionAvoid,
+  countDestroyedEngineSlots,
+  effectiveMoveBudget,
+  engineHitHeat,
+  HEAT_CAP,
+  heatDissipation,
+  largestAmmoBin,
+  movementHeat,
+  shutdownAvoid,
+  toHitHeatModifier,
+} from "./heat.js";
 import { rollInitiative } from "./initiative.js";
 import {
   interveningTerrains,
@@ -94,6 +107,13 @@ export interface UnitState extends MechModelHolder {
   movesThisTurn: ("forward" | "backward")[];
   jumpedThisTurn: boolean;
   mpSpent: number;
+  /** Current heat scale value, capped at {@link HEAT_CAP}. Movement and
+   *  weapon heat accumulate during the turn; dissipation runs in the end
+   *  phase. */
+  heat: number;
+  /** True while the 'Mech is shut down (cannot move, fire, or be targeted as
+   *  the next actor). Cleared by an automatic restart in the end phase. */
+  shutdown: boolean;
   declaredAttacks: AttackDecl[];
   firedTargetId: string | null;
   /** True if the unit explicitly passed on declaring attacks this phase. */
@@ -141,6 +161,47 @@ export type GameEvent =
       readonly kind: "buildingCollapsed";
       readonly col: number;
       readonly row: number;
+    }
+  | { readonly kind: "heatMove"; readonly unitId: string; readonly heat: number }
+  | {
+      readonly kind: "heatWeapon";
+      readonly unitId: string;
+      readonly weapon: string;
+      readonly heat: number;
+      readonly prevHeat: number;
+      readonly currHeat: number;
+    }
+  | { readonly kind: "heatEngineCrit"; readonly unitId: string; readonly heat: number }
+  | {
+      readonly kind: "heatDissipated";
+      readonly unitId: string;
+      readonly dissip: number;
+      readonly heat: number;
+    }
+  | {
+      readonly kind: "shutdown";
+      readonly unitId: string;
+      readonly roll: number;
+      readonly avoid: number;
+    }
+  | { readonly kind: "shutdownAuto"; readonly unitId: string }
+  | {
+      readonly kind: "shutdownAvoided";
+      readonly unitId: string;
+      readonly roll: number;
+      readonly avoid: number;
+    }
+  | { readonly kind: "restarted"; readonly unitId: string; readonly heat: number }
+  | {
+      readonly kind: "heatAmmoExplosion";
+      readonly unitId: string;
+      readonly weapon: string;
+      readonly location: Location;
+      readonly slotIndex: number;
+      readonly roll: number;
+      readonly avoid: number;
+      readonly shotsRemaining: number;
+      readonly damage: number;
     };
 
 export interface BattleState extends HexGrid {
@@ -257,6 +318,8 @@ export function createBattle(
       movesThisTurn: [],
       jumpedThisTurn: false,
       mpSpent: 0,
+      heat: 0,
+      shutdown: false,
       declaredAttacks: [],
       firedTargetId: null,
       passedAttacks: false,
@@ -348,6 +411,7 @@ export function declareMove(state: BattleState, unitId: string, mode: MoveMode):
   requirePhase(state, "movement");
   const unit = getUnitOrThrow(state, unitId);
   if (unit.removed) throw new Error(`${unitId} is removed from play`);
+  if (unit.shutdown) throw new Error(`${unitId} is shut down and cannot move`);
   if (mode !== "standStill" && isImmobile(unit.damage)) {
     throw new Error(`${unitId} has a destroyed leg and can only stand still`);
   }
@@ -367,15 +431,11 @@ export function executeMove(
   const unit = getUnitOrThrow(state, unitId);
   if (unit.moveMode === null) throw new Error(`Declare a movement mode for ${unitId} first`);
   if (unit.removed) throw new Error(`${unitId} is removed from play`);
+  if (unit.shutdown) throw new Error(`${unitId} is shut down and cannot move`);
 
   const def = getMechDefFor(unit);
   const movement = effectiveMovement(def, unit.critSlotsDestroyed);
-  const budget = mv.maxMovePoints(
-    unit.moveMode,
-    movement.walking,
-    movement.running,
-    movement.jumping,
-  );
+  const budget = effectiveMoveBudget(unit.moveMode, movement, unit.heat);
   const jumping = unit.moveMode === "jump";
 
   let cursor: HexCoord = { ...unit.position };
@@ -462,6 +522,11 @@ export function executeMove(
     mpSpent: spent,
     mpBudget: budget,
   });
+  const moveHeat = movementHeat(unit.moveMode, spent);
+  if (moveHeat > 0) {
+    unit.heat = Math.min(HEAT_CAP, unit.heat + moveHeat);
+    state.events.push({ kind: "heatMove", unitId, heat: moveHeat });
+  }
 }
 
 export function declareAttacks(
@@ -473,6 +538,7 @@ export function declareAttacks(
   requirePhase(state, "weaponAttack");
   const unit = getUnitOrThrow(state, unitId);
   if (unit.destroyed || unit.removed) throw new Error(`${unitId} is destroyed`);
+  if (unit.shutdown) throw new Error(`${unitId} is shut down and cannot fire`);
   if (unit.declaredAttacks.length > 0)
     throw new Error(`${unitId} already declared attacks this turn`);
 
@@ -550,6 +616,7 @@ export function declareAttacks(
       weapon,
       attackerLevel: cellAt(state, unit.position).level,
       targetLevel: cellAt(state, target.position).level,
+      heatMod: toHitHeatModifier(unit.heat),
     });
     if (index === 0) {
       attackDistance = dist;
@@ -604,6 +671,7 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
       rng,
       gunnery: unit.gunnery,
       attackerMoved: unit.moveMode ?? "standStill",
+      attackerHeat: unit.heat,
       targetHexesMoved: mv.hexesSinceLastReversal(target.movesThisTurn),
       targetJumped: target.jumpedThisTurn,
       targetTerrain: cellAt(state, target.position).terrain,
@@ -678,6 +746,22 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
     if (!target.destroyed && isKilled(target.damage)) {
       markUnitDestroyed(state, target);
     }
+
+    // Weapon heat is committed here so the Heat Scale reflects it from next
+    // turn onward (this turn's to-hit roll already used the pre-fire heat).
+    const weaponHeat = (weapon.heat ?? 0) * shots;
+    if (weaponHeat > 0) {
+      const prevHeat = unit.heat;
+      unit.heat = Math.min(HEAT_CAP, unit.heat + weaponHeat);
+      state.events.push({
+        kind: "heatWeapon",
+        unitId: unit.id,
+        weapon: weapon.name,
+        heat: weaponHeat,
+        prevHeat,
+        currHeat: unit.heat,
+      });
+    }
   }
 
   unit.declaredAttacks = [];
@@ -705,7 +789,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng): void {
   }
 }
 
-export function advancePhase(state: BattleState): void {
+export function advancePhase(state: BattleState, rng: Rng = DEFAULT_RNG): void {
   switch (state.phase) {
     case "initiative": {
       if (state.initiativeWinnerTeam === null) {
@@ -732,6 +816,9 @@ export function advancePhase(state: BattleState): void {
           markUnitDestroyed(state, unit);
         }
       }
+      // The end phase starts with heat resolution: engine crit heat,
+      // dissipation, shutdown/restart checks, and heat ammo explosions.
+      resolveHeatPhase(state, rng);
       state.phase = "end";
       break;
     }
@@ -755,6 +842,130 @@ export function advancePhase(state: BattleState): void {
   }
 
   state.events.push({ kind: "phase", phase: state.phase });
+}
+
+/**
+ * Run one turn's heat resolution as the weapon attack phase hands off to the
+ * end phase: engine crit heat on top of the turn's accumulated movement and
+ * weapon heat, dissipation against the operational heat-sink count,
+ * shutdown/restart checks against the Heat Scale, and heat ammo explosions.
+ */
+export function resolveHeatPhase(state: BattleState, rng: Rng): void {
+  const units = Object.values(state.units).filter((u) => !u.removed);
+  const wasDown = new Map<string, boolean>();
+  for (const unit of units) wasDown.set(unit.id, unit.shutdown);
+
+  // Engine crit heat: +5 per damaged engine slot (flat once the second slot
+  // is gone, acting as +5 per hit) per turn, stacking on remaining heat.
+  for (const unit of units) {
+    const def = getMechDefFor(unit);
+    const heat = engineHitHeat(countDestroyedEngineSlots(def, unit.critSlotsDestroyed));
+    if (heat > 0) {
+      unit.heat = Math.min(HEAT_CAP, unit.heat + heat);
+      state.events.push({ kind: "heatEngineCrit", unitId: unit.id, heat });
+    }
+  }
+
+  // Dissipation: each operational heat sink removes 1 heat point.
+  for (const unit of units) {
+    const def = getMechDefFor(unit);
+    const dissipated = Math.min(heatDissipation(def, unit.critSlotsDestroyed), unit.heat);
+    unit.heat -= dissipated;
+    if (dissipated > 0) {
+      state.events.push({
+        kind: "heatDissipated",
+        unitId: unit.id,
+        dissip: dissipated,
+        heat: unit.heat,
+      });
+    }
+  }
+
+  // Shutdown / restart: heat 30+ shuts down automatically; otherwise roll 2D6
+  // against the avoidance number when the Heat Scale is in shutdown range. A
+  // 'Mech that was down at the start of the phase restarts automatically once
+  // heat is back below the shutdown threshold (or succeeds its avoidance
+  // roll).
+  for (const unit of units) {
+    if (unit.heat >= 30) {
+      unit.shutdown = true;
+      state.events.push({ kind: "shutdownAuto", unitId: unit.id });
+      continue;
+    }
+    const avoid = shutdownAvoid(unit.heat);
+    if (avoid === null) {
+      if (wasDown.get(unit.id) === true && unit.shutdown) {
+        unit.shutdown = false;
+        state.events.push({ kind: "restarted", unitId: unit.id, heat: unit.heat });
+      }
+      continue;
+    }
+    const roll = roll2D6(rng);
+    if (unit.shutdown) {
+      if (roll < avoid) {
+        // Remains off-line; try again next end phase.
+        state.events.push({ kind: "shutdown", unitId: unit.id, roll, avoid });
+      } else {
+        unit.shutdown = false;
+        state.events.push({ kind: "restarted", unitId: unit.id, heat: unit.heat });
+      }
+    } else if (roll < avoid) {
+      unit.shutdown = true;
+      state.events.push({ kind: "shutdown", unitId: unit.id, roll, avoid });
+    } else {
+      state.events.push({ kind: "shutdownAvoided", unitId: unit.id, roll, avoid });
+    }
+  }
+
+  // Heat ammo explosions: at heat 19+ the largest loaded bin can detonate if
+  // the avoidance roll fails. The bin explodes against its location's
+  // internal structure (armor bypassed), cascading normally.
+  for (const unit of units) {
+    if (unit.heat < 19) continue;
+    const def = getMechDefFor(unit);
+    const bin = largestAmmoBin(def, unit.ammoBins);
+    if (bin === null) continue;
+    const avoid = ammoExplosionAvoid(unit.heat)!;
+    const roll = roll2D6(rng);
+    if (roll >= avoid) continue;
+    const application = applyAmmoExplosion(unit.damage, bin.location, bin.damage);
+    unit.damage = application.after;
+    unit.ammoBins[bin.binId] = 0;
+    for (const loc of LOCATIONS) {
+      if ((unit.damage.internalStructure[loc] ?? 0) <= 0) {
+        stripBinsInLocation(unit.ammoBins, loc);
+      }
+    }
+    unit.shotsLeft = ammoWeaponTotals(def, unit.ammoBins);
+    state.events.push({
+      kind: "heatAmmoExplosion",
+      unitId: unit.id,
+      weapon: bin.weapon,
+      location: bin.location,
+      slotIndex: bin.slotIndex,
+      roll,
+      avoid,
+      shotsRemaining: bin.shotsRemaining,
+      damage: bin.damage,
+    });
+    if (!unit.destroyed && isKilled(unit.damage)) {
+      markUnitDestroyed(state, unit);
+    }
+  }
+}
+
+/** Debug/setup helper: force a unit off-line regardless of its heat value. */
+export function shutdownUnit(state: BattleState, unitId: string): void {
+  const unit = getUnitOrThrow(state, unitId);
+  if (unit.removed) throw new Error(`${unitId} is removed from play`);
+  unit.shutdown = true;
+}
+
+/** Debug/setup helper: force a shut-down unit back on-line. */
+export function restartUnit(state: BattleState, unitId: string): void {
+  const unit = getUnitOrThrow(state, unitId);
+  if (unit.removed) throw new Error(`${unitId} is removed from play`);
+  unit.shutdown = false;
 }
 
 /** Suggest which unit must act next (initiative loser alternates first). */
@@ -796,7 +1007,8 @@ export function nextActor(state: BattleState): string | null {
     .map((entry) => entry.team);
   for (const team of sorted) {
     const candidate = alive.find(
-      (u) => u.team === team && !state.actedThisPhase.includes(u.id) && !u.passedAttacks,
+      (u) =>
+        u.team === team && !state.actedThisPhase.includes(u.id) && !u.passedAttacks && !u.shutdown,
     );
     if (candidate) return candidate.id;
   }

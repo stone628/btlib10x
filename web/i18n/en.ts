@@ -97,6 +97,12 @@ export const en = {
   "cmd.cancelFire.help": "clear queued shots",
   "cmd.doneFire.help": "declare attacks and resolve them",
   "cmd.rematch.help": "new battle with the same roster, terrain and seed",
+  "cmd.heat.help": "show a unit's heat scale status (default: acting unit)",
+  "cmd.heat.arg.id": "unit to inspect; defaults to the acting unit",
+  "cmd.shutdown.help": "debug: force a unit off-line until the next end phase",
+  "cmd.shutdown.arg.id": "unit to shut down",
+  "cmd.restart.help": "debug: force a shut-down unit back on-line",
+  "cmd.restart.arg.id": "unit to restart",
 
   // autoplay demo driver (hidden command, not listed in help)
   "autoPlay.started":
@@ -121,6 +127,8 @@ export const en = {
   "ok.seedSet": "seed set to {seed}",
   "ok.resetDone": "reset.",
   "ok.rematchDone": "rematch!",
+  "ok.shutdown": "{id} shut down",
+  "ok.restart": "{id} restarted",
   "banner.draw": "=== DRAW - NO UNITS REMAIN ===",
   "banner.win": "=== TEAM {team} WINS ===",
 
@@ -192,6 +200,19 @@ export const en = {
   "moveStatus.stepEnter": "{i}. enter ({col},{row})",
   "moveStatus.stepLine": "{label} +{cost} MP (total {total})",
 
+  // heat status
+  "heat.title": "heat: {id} = {heat}",
+  "heat.sinks": "dissipation: {sinks} ({engineOut} engine slot(s) out)",
+  "heat.toHit": "to-hit mod: +{mod}",
+  "heat.mp": "movement penalty: -{penalty} MP",
+  "heat.shutdown": "shutdown: 2D6 < {avoid}",
+  "heat.shutdownSafe": "shutdown: safe (below 14)",
+  "heat.shutdownAuto": "shutdown: automatic at 30",
+  "heat.ammo": "ammo: 2D6 < {avoid} (heat 19+)",
+  "heat.ammoSafe": "ammo: safe (below 19)",
+  "heat.stateOnline": "state: ONLINE",
+  "heat.stateDown": "state: SHUT DOWN",
+
   // attack status
   "attackStatus.none": "(no attacks queued)",
   "weapons.noActorId": "(no active unit)",
@@ -207,6 +228,7 @@ export const en = {
   "fireSuggestion.colTn": "TN",
   "fireSuggestion.colDmg": "DMG",
   "fireSuggestion.colShots": "SHOTS",
+  "fireSuggestion.colHeat": "HEAT",
   "fireSuggestion.tn": "TN",
   "fireSuggestion.damage": "dmg",
   "fireSuggestion.shots": "shots",
@@ -303,6 +325,16 @@ export const en = {
   "log.destroyed": "*** {id} DESTROYED ***",
   "log.removedEvent": "{id} removed from play",
   "log.buildingCollapsed": "Building at {hex} collapses to rubble",
+  "log.heatMove": "{id} generates {heat} heat (movement)",
+  "log.heatWeapon": "generates {heat} heat ({prev}->{curr})",
+  "log.heatEngineCrit": "{id} generates {heat} engine heat (crit)",
+  "log.heatDissipated": "{id} dissipates {dissip} heat (now at {heat})",
+  "log.shutdown": "*** {id} SHUT DOWN (2D6 {roll} < {avoid} avoid) ***",
+  "log.shutdownAuto": "*** {id} AUTO SHUTDOWN (heat 30+) ***",
+  "log.shutdownAvoided": "{id} avoids shutdown (2D6 {roll} >= {avoid} avoid)",
+  "log.restarted": "{id} restarts (heat {heat})",
+  "log.heatAmmoExplosion":
+    "{id} ammo {weapon} ({loc} #{slot}, {shots} shots) explodes for {damage} damage (2D6 {roll} < {avoid} avoid)",
 
   // attack resolution
   "res.attackResolutionStart": "=== resolving declared attacks ===",
