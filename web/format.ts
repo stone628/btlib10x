@@ -1642,17 +1642,66 @@ function eventLines(locale: LocaleId, e: GameEvent): string[] {
         }),
       ];
     case "heatEngineCrit":
-      return [i18n(locale, "log.heatEngineCrit", { id: e.unitId, heat: e.heat })];
+      return [
+        i18n(locale, "log.heatEngineCrit", {
+          id: e.unitId,
+          heat: e.heat,
+          prev: e.prevHeat,
+          curr: e.currHeat,
+        }),
+      ];
     case "heatDissipated":
-      return [i18n(locale, "log.heatDissipated", { id: e.unitId, dissip: e.dissip, heat: e.heat })];
+      return [
+        i18n(locale, "log.heatDissipated", {
+          id: e.unitId,
+          dissip: e.dissip,
+          prev: e.prevHeat,
+          curr: e.currHeat,
+        }),
+      ];
     case "shutdown":
-      return [i18n(locale, "log.shutdown", { id: e.unitId, roll: e.roll, avoid: e.avoid })];
+      return [
+        i18n(locale, "log.shutdown", {
+          id: e.unitId,
+          roll: e.roll,
+          heat: e.heat,
+          avoid: e.avoid,
+          threshold: e.threshold,
+        }),
+      ];
     case "shutdownAuto":
-      return [i18n(locale, "log.shutdownAuto", { id: e.unitId })];
+      return [
+        i18n(locale, "log.shutdownAuto", { id: e.unitId, heat: e.heat, threshold: e.threshold }),
+      ];
     case "shutdownAvoided":
-      return [i18n(locale, "log.shutdownAvoided", { id: e.unitId, roll: e.roll, avoid: e.avoid })];
+      return [
+        i18n(locale, "log.shutdownAvoided", {
+          id: e.unitId,
+          roll: e.roll,
+          heat: e.heat,
+          avoid: e.avoid,
+          threshold: e.threshold,
+        }),
+      ];
     case "restarted":
-      return [i18n(locale, "log.restarted", { id: e.unitId, heat: e.heat })];
+      if (e.avoid === 0) {
+        return [
+          i18n(locale, "log.restartedNoCheck", {
+            id: e.unitId,
+            heat: e.heat,
+            threshold: e.threshold,
+          }),
+        ];
+      }
+      return [
+        i18n(locale, "log.restarted", {
+          id: e.unitId,
+          roll: e.roll,
+          heat: e.heat,
+          avoid: e.avoid,
+          threshold: e.threshold,
+        }),
+      ];
     case "heatAmmoExplosion":
       return [
         i18n(locale, "log.heatAmmoExplosion", {
@@ -1661,7 +1710,9 @@ function eventLines(locale: LocaleId, e: GameEvent): string[] {
           loc: SHORT_LOC[e.location],
           slot: String(e.slotIndex),
           roll: e.roll,
+          heat: e.heat,
           avoid: e.avoid,
+          threshold: e.threshold,
           shots: e.shotsRemaining,
           damage: e.damage,
         }),

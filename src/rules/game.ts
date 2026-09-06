@@ -36,7 +36,7 @@ import {
 import { applyAmmoExplosion, effectiveMovement } from "./critical.js";
 import { canFireFromLocation, isImmobile, isKilled, type UnitDamageState } from "./damage.js";
 import {
-  ammoExplosionAvoid,
+  ammoExplosionAvoidWithThreshold,
   countDestroyedEngineSlots,
   effectiveMoveBudget,
   engineHitHeat,
@@ -44,7 +44,7 @@ import {
   heatDissipation,
   largestAmmoBin,
   movementHeat,
-  shutdownAvoid,
+  shutdownAvoidWithThreshold,
   toHitHeatModifier,
 } from "./heat.js";
 import { rollInitiative } from "./initiative.js";
@@ -171,27 +171,50 @@ export type GameEvent =
       readonly prevHeat: number;
       readonly currHeat: number;
     }
-  | { readonly kind: "heatEngineCrit"; readonly unitId: string; readonly heat: number }
+  | {
+      readonly kind: "heatEngineCrit";
+      readonly unitId: string;
+      readonly heat: number;
+      readonly prevHeat: number;
+      readonly currHeat: number;
+    }
   | {
       readonly kind: "heatDissipated";
       readonly unitId: string;
       readonly dissip: number;
-      readonly heat: number;
+      readonly prevHeat: number;
+      readonly currHeat: number;
     }
   | {
       readonly kind: "shutdown";
       readonly unitId: string;
       readonly roll: number;
+      readonly heat: number;
       readonly avoid: number;
+      readonly threshold: number;
     }
-  | { readonly kind: "shutdownAuto"; readonly unitId: string }
+  | {
+      readonly kind: "shutdownAuto";
+      readonly unitId: string;
+      readonly heat: number;
+      readonly threshold: number;
+    }
   | {
       readonly kind: "shutdownAvoided";
       readonly unitId: string;
       readonly roll: number;
+      readonly heat: number;
       readonly avoid: number;
+      readonly threshold: number;
     }
-  | { readonly kind: "restarted"; readonly unitId: string; readonly heat: number }
+  | {
+      readonly kind: "restarted";
+      readonly unitId: string;
+      readonly roll: number;
+      readonly heat: number;
+      readonly avoid: number;
+      readonly threshold: number;
+    }
   | {
       readonly kind: "heatAmmoExplosion";
       readonly unitId: string;
@@ -199,7 +222,9 @@ export type GameEvent =
       readonly location: Location;
       readonly slotIndex: number;
       readonly roll: number;
+      readonly heat: number;
       readonly avoid: number;
+      readonly threshold: number;
       readonly shotsRemaining: number;
       readonly damage: number;
     };
@@ -659,6 +684,7 @@ export function declareAttacks(
 
 function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void {
   const def = getMechDefFor(unit);
+  const preHeat = unit.heat;
 
   for (const decl of unit.declaredAttacks) {
     const mount = def.weapons[decl.weaponIndex]!;
@@ -671,7 +697,7 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
       rng,
       gunnery: unit.gunnery,
       attackerMoved: unit.moveMode ?? "standStill",
-      attackerHeat: unit.heat,
+      attackerHeat: preHeat,
       targetHexesMoved: mv.hexesSinceLastReversal(target.movesThisTurn),
       targetJumped: target.jumpedThisTurn,
       targetTerrain: cellAt(state, target.position).terrain,
@@ -861,8 +887,15 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
     const def = getMechDefFor(unit);
     const heat = engineHitHeat(countDestroyedEngineSlots(def, unit.critSlotsDestroyed));
     if (heat > 0) {
+      const prevHeat = unit.heat;
       unit.heat = Math.min(HEAT_CAP, unit.heat + heat);
-      state.events.push({ kind: "heatEngineCrit", unitId: unit.id, heat });
+      state.events.push({
+        kind: "heatEngineCrit",
+        unitId: unit.id,
+        heat,
+        prevHeat,
+        currHeat: unit.heat,
+      });
     }
   }
 
@@ -872,16 +905,26 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
   // heat is back below the shutdown threshold (or succeeds its avoidance
   // roll). Checked at peak heat, before sinks dissipate.
   for (const unit of units) {
-    if (unit.heat >= 30) {
+    const heat = unit.heat;
+    const { avoid, threshold } = shutdownAvoidWithThreshold(heat);
+    if (avoid >= 12) {
+      // avoid exceeds 2D6 max, always
       unit.shutdown = true;
-      state.events.push({ kind: "shutdownAuto", unitId: unit.id });
+      state.events.push({ kind: "shutdownAuto", unitId: unit.id, heat, threshold });
       continue;
     }
-    const avoid = shutdownAvoid(unit.heat);
-    if (avoid === null) {
+    if (avoid === 0) {
+      // no check needed
       if (wasDown.get(unit.id) === true && unit.shutdown) {
         unit.shutdown = false;
-        state.events.push({ kind: "restarted", unitId: unit.id, heat: unit.heat });
+        state.events.push({
+          kind: "restarted",
+          unitId: unit.id,
+          roll: 0,
+          heat,
+          avoid: 0,
+          threshold,
+        });
       }
       continue;
     }
@@ -889,16 +932,25 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
     if (unit.shutdown) {
       if (roll <= avoid) {
         // Remains off-line; try again next end phase.
-        state.events.push({ kind: "shutdown", unitId: unit.id, roll, avoid });
+        state.events.push({ kind: "shutdown", unitId: unit.id, roll, heat, avoid, threshold });
       } else {
         unit.shutdown = false;
-        state.events.push({ kind: "restarted", unitId: unit.id, heat: unit.heat });
+        state.events.push({ kind: "restarted", unitId: unit.id, roll, heat, avoid, threshold });
       }
-    } else if (roll <= avoid) {
-      unit.shutdown = true;
-      state.events.push({ kind: "shutdown", unitId: unit.id, roll, avoid });
     } else {
-      state.events.push({ kind: "shutdownAvoided", unitId: unit.id, roll, avoid });
+      if (roll <= avoid) {
+        unit.shutdown = true;
+        state.events.push({ kind: "shutdown", unitId: unit.id, roll, heat, avoid, threshold });
+      } else {
+        state.events.push({
+          kind: "shutdownAvoided",
+          unitId: unit.id,
+          roll,
+          heat,
+          avoid,
+          threshold,
+        });
+      }
     }
   }
 
@@ -907,11 +959,12 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
   // internal structure (armor bypassed), cascading normally. Every bin of the
   // detonating weapon mount is emptied.
   for (const unit of units) {
-    if (unit.heat < 19) continue;
+    const heat = unit.heat;
+    const { avoid, threshold } = ammoExplosionAvoidWithThreshold(heat)!;
+    if (avoid === 0) continue;
     const def = getMechDefFor(unit);
     const bin = largestAmmoBin(def, unit.ammoBins);
     if (bin === null) continue;
-    const avoid = ammoExplosionAvoid(unit.heat)!;
     const roll = roll2D6(rng);
     if (roll >= avoid) continue;
     const application = applyAmmoExplosion(unit.damage, bin.location, bin.damage);
@@ -932,7 +985,9 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
       location: bin.location,
       slotIndex: bin.slotIndex,
       roll,
+      heat,
       avoid,
+      threshold,
       shotsRemaining: bin.shotsRemaining,
       damage: bin.damage,
     });
@@ -943,7 +998,9 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
 
   // Dissipation: each operational heat sink removes 1 heat point.
   for (const unit of units) {
+    if (unit.destroyed) continue; // stop tracking heat for destroyed unit 
     const def = getMechDefFor(unit);
+    const prevHeat = unit.heat;
     const dissipated = Math.min(heatDissipation(def, unit.critSlotsDestroyed), unit.heat);
     unit.heat -= dissipated;
     if (dissipated > 0) {
@@ -951,7 +1008,8 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
         kind: "heatDissipated",
         unitId: unit.id,
         dissip: dissipated,
-        heat: unit.heat,
+        prevHeat,
+        currHeat: unit.heat,
       });
     }
   }

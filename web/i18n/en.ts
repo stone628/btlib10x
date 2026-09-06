@@ -331,16 +331,20 @@ export const en = {
   "log.destroyed": "*** {id} DESTROYED ***",
   "log.removedEvent": "{id} removed from play",
   "log.buildingCollapsed": "Building at {hex} collapses to rubble",
-  "log.heatMove": "{id} generates {heat} heat (movement)",
-  "log.heatWeapon": "generates {heat} heat ({prev}->{curr})",
-  "log.heatEngineCrit": "{id} generates {heat} engine heat (crit)",
-  "log.heatDissipated": "{id} dissipates {dissip} heat (now at {heat})",
-  "log.shutdown": "*** {id} SHUT DOWN (2D6 {roll} < {avoid} avoid) ***",
-  "log.shutdownAuto": "*** {id} AUTO SHUTDOWN (heat 30+) ***",
-  "log.shutdownAvoided": "{id} avoids shutdown (2D6 {roll} >= {avoid} avoid)",
-  "log.restarted": "{id} restarts (heat {heat})",
+  "log.heatMove": "{id} generates {heat} movement heat",
+  "log.heatWeapon": "generates {heat} weapon heat ({prev}->{curr})",
+  "log.heatEngineCrit": "{id} generates {heat} engine heat from crit ({prev}->{curr}))",
+  "log.heatDissipated": "{id} dissipates {dissip} heat ({prev}->{curr})",
+  "log.shutdown":
+    "*** {id} SHUT DOWN (heat {heat} >= {threshold}) avoid fail (2D6 = {roll} < {avoid}) ***",
+  "log.shutdownAuto": "*** {id} AUTO SHUTDOWN (heat {heat} >= {threshold}) ***",
+  "log.shutdownAvoided":
+    "{id} avoids shutdown (heat {heat} >= {threshold}) avoid success(2D6 = {roll} >= {avoid})",
+  "log.restarted":
+    "{id} restarts (heat {heat} < {threshold}) avoid success(2D6 = {roll} > {avoid})",
+  "log.restartedNoCheck": "{id} restarts (heat {heat} below {threshold})",
   "log.heatAmmoExplosion":
-    "{id} ammo {weapon} ({loc} #{slot}, {shots} shots) explodes for {damage} damage (2D6 = {roll} < {avoid} avoid)",
+    "{id} ammo {weapon} ({loc} #{slot}, {shots} shots) explodes for {damage} damage (heat {heat} >= {threshold}) avoid fail(2D6 = {roll} < {avoid})",
 
   // attack resolution
   "res.attackResolutionStart": "=== resolving declared attacks ===",
