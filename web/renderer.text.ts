@@ -116,16 +116,10 @@ export const TEAM_STYLES: readonly CharStyle[] = [{ fg: "cyan" }, { fg: "magenta
 /** Belly marker drawn in a reachable hex on the reachable map. */
 export const REACHABLE_MARKER = "<>";
 
-/** Terrain legend list: `"w(lightWoods)  W(heavyWoods)"`. */
-function terrainLegendList(): string {
-  return Object.entries(TERRAIN_GLYPHS)
-    .map(([type, glyph]) => `${glyph}(${type})`)
-    .join("  ");
-}
-
 /** Localised board legend text (e.g. `"legend: w(lightWoods)  W(heavyWoods)"`). */
-export function boardLegendText(locale: LocaleId): string {
-  return i18n(locale, "board.legend", { list: terrainLegendList() });
+export function boardLegendText(map: MapDef, locale: LocaleId): string {
+  const terrainLegendList = map.legends.map((l) => `${TERRAIN_GLYPHS[l]}(${l})`);
+  return i18n(locale, "board.legend", { list: terrainLegendList.join(" ") });
 }
 
 // ---- canvas constants ----
@@ -745,16 +739,16 @@ export function createBoardModel(info: BoardRenderInfo): BoardModel {
 
 // ---- board renderers (DOM) ----
 
-function renderLegend(el: Element, locale: LocaleId): void {
+function renderLegend(map: MapDef, el: Element, locale: LocaleId): void {
   const legendDiv = document.createElement("div");
   legendDiv.className = "board-legend";
-  legendDiv.textContent = boardLegendText(locale);
+  legendDiv.textContent = boardLegendText(map, locale);
   el.appendChild(legendDiv);
 }
 
 /** CSS Grid renderer: one `<span>` per character, bold isolated to single cells. */
 export const cssGridRenderer: BoardRenderer = (info, el) => {
-  renderLegend(el, "en");
+  renderLegend(info.map, el, "en");
   const grid = document.createElement("div");
   grid.className = "board-grid";
   const lines = boardToChars(createBoardModel(info));
@@ -778,7 +772,7 @@ export const cssGridRenderer: BoardRenderer = (info, el) => {
 
 /** Text renderer: flat text inside a `<div>`. */
 export const textRenderer: BoardRenderer = (info, el) => {
-  renderLegend(el, "en");
+  renderLegend(info.map, el, "en");
   const board = document.createElement("div");
   board.className = "board";
   const lines = boardToText(createBoardModel(info)).split("\n");

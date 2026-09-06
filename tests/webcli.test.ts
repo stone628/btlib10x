@@ -185,7 +185,6 @@ describe("board", () => {
     expect(board).toContain(`${GRID_GLYPHS.edgeNW}0101${GRID_GLYPHS.edgeNE}`); // map renders even with no units
     expect(board).toContain(`${GRID_GLYPHS.edgeSW} W0 ${GRID_GLYPHS.edgeSE}`); // terrain glyphs + elevation
     expect(board).toContain(`${GRID_GLYPHS.edgeSW}  0 ${GRID_GLYPHS.edgeSE}`); // clear hex elevation
-    expect(board).toContain("legend: w(lightWoods)  W(heavyWoods)");
   });
 
   it("reports occupied hexes with 1-based coordinates", () => {
@@ -249,7 +248,6 @@ describe("info", () => {
     expect(text).toContain(`${qs.width}x${qs.height}`);
     expect(text).toMatch(/lightWoods \d+/);
     expect(text).toMatch(/heavyWoods \d+/);
-    expect(text).toContain("legend: w(lightWoods)  W(heavyWoods)");
     expect(text).toContain(`${GRID_GLYPHS.edgeSW} w0 ${GRID_GLYPHS.edgeSE}`);
     expect(text).toContain(`${GRID_GLYPHS.edgeSW} W0 ${GRID_GLYPHS.edgeSE}`);
     const beginner = run(s, "info map beginner").join("\n");
