@@ -1,4 +1,4 @@
-import { FACINGS, listMapNames, restartUnit, shutdownUnit, VERSION } from "btlib10x";
+import { FACINGS, listMapNames, VERSION } from "btlib10x";
 import type { Chunk } from "./format.js";
 import {
   ammoPolicyLabel,
@@ -254,41 +254,20 @@ const BATTLE_CMDS: Record<string, CmdDef> = {
     argsDoc: [["id", "cmd.heat.arg.id"]],
     run: (s, a) => heatStatusLines(s, idOrActor(s, a)),
   },
-  shutdown: {
-    helpKey: "cmd.shutdown.help",
-    usage: "shutdown <id>",
-    argsDoc: [["id", "cmd.shutdown.arg.id"]],
-    run: (s, a) => {
-      expectArgs(L(s), a, 1, "shutdown <id>");
-      const battle = s.battle;
-      if (!battle) throw new Error(i18n(L(s), "err.noBattle"));
-      shutdownUnit(battle, a[0]!);
-      return [i18n(L(s), "ok.shutdown", { id: a[0]! })];
-    },
-  },
-  restart: {
-    helpKey: "cmd.restart.help",
-    usage: "restart <id>",
-    argsDoc: [["id", "cmd.restart.arg.id"]],
-    run: (s, a) => {
-      expectArgs(L(s), a, 1, "restart <id>");
-      const battle = s.battle;
-      if (!battle) throw new Error(i18n(L(s), "err.noBattle"));
-      restartUnit(battle, a[0]!);
-      return [i18n(L(s), "ok.restart", { id: a[0]! })];
-    },
-  },
 };
 
 const MOVE_CMDS: Record<string, CmdDef> = {
   mode: {
     helpKey: "cmd.mode.help",
-    usage: "mode <standstill|walk|run|jump>",
+    usage: "mode <standstill|walk|run|jump|shutdown|startup>",
     argsDoc: [["mode", "cmd.mode.arg.mode"]],
     run: (s, a) => {
-      expectArgs(L(s), a, 1, "mode standstill|walk|run|jump");
+      expectArgs(L(s), a, 1, "mode standstill|walk|run|jump|shutdown|startup");
       const mode = S.parseMoveMode(L(s), a[0]!);
       S.declareMode(s, a[0]!);
+      if (mode === "shutdown" || mode === "startup") {
+        return [i18n(L(s), "ok.modeDeclaredVoluntary", { id: s.actorId ?? "", mode })];
+      }
       const r = S.stepResult(s);
       const lines = [
         i18n(L(s), "ok.modeDeclared", { id: s.actorId ?? "", mode, budget: r.mpBudget }),
@@ -472,9 +451,16 @@ function availableCmds(session: S.Session): Record<string, CmdDef> {
       return { ...GLOBAL_CMDS, ...SETUP_CMDS };
     case "battle": {
       const phase = session.battle?.phase;
-      return phase === "weaponAttack"
-        ? { ...GLOBAL_CMDS, ...ATTACK_CMDS }
-        : { ...GLOBAL_CMDS, ...MOVE_CMDS };
+      if (phase === "weaponAttack") return { ...GLOBAL_CMDS, ...ATTACK_CMDS };
+      if (phase !== "movement") return { ...GLOBAL_CMDS, ...MOVE_CMDS };
+      const actor = S.currentActor(session);
+      const down = actor !== null && actor.shutdown !== "not";
+      if (down || session.moveMode === "shutdown" || session.moveMode === "startup") {
+        // Pending voluntary declaration: no hex movement.
+        const { move: _move, face: _face, ...rest } = MOVE_CMDS;
+        return { ...GLOBAL_CMDS, ...rest };
+      }
+      return { ...GLOBAL_CMDS, ...MOVE_CMDS };
     }
     case "over":
       return { ...GLOBAL_CMDS, ...OVER_CMDS };

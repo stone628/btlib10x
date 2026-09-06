@@ -44,7 +44,10 @@ describe("nextAutoPlayCommand (autoplay demo driver)", () => {
     const destroyedIndex = Number(target![0]);
     actor.destroyedWeapons.push(destroyedIndex);
 
-    const cmd = nextAutoPlayCommand(s);
+    const cmds = [nextAutoPlayCommand(s), nextAutoPlayCommand(s)].filter(
+      (c): c is string => c !== null && c !== "help",
+    );
+    const cmd = cmds[cmds.length - 1];
     expect(cmd).toMatch(/^fire /);
     const indexes = cmd!
       .replace(/^fire \S+\s*/, "")

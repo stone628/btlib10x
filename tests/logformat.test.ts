@@ -95,4 +95,8 @@ describe("critical hit log formatting", () => {
     expect(starts).toHaveLength(1);
     expect(ends).toHaveLength(1);
   });
+
+  it("returns an empty array for an empty event slice", () => {
+    expect(formatLog("en", [])).toEqual([]);
+  });
 });

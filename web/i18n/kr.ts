@@ -73,8 +73,9 @@ export const kr: Catalog = {
   "cmd.rm.arg.id": "이전에 추가한 유닛의 id",
   "cmd.statusSetup.help": "설정 요약: 팀별 유닛 그룹, 선택된 맵",
   "cmd.start.help": "전투 시작 (2팀 이상, 각 2유닛 이상 필요)",
-  "cmd.mode.help": "이동 모드 선언",
-  "cmd.mode.arg.mode": "standstill | walk | run | jump; 각각 고유 MP 풀 사용",
+  "cmd.mode.help": "이동 모드 또는 자발적 셧다운/시동 선언",
+  "cmd.mode.arg.mode":
+    "standstill | walk | run | jump 는 이동 선언 (각각 고유 MP 풀); shutdown | startup 은 자발적 셧다운/시동 시도 ('done'으로 확정)",
   "cmd.move.help": "인접 육각으로 이동 한 칸 예약",
   "cmd.move.arg.colrow": "인접한 목적지 육각, 1-based",
   "cmd.face.help": "방향 변경 예약",
@@ -97,10 +98,6 @@ export const kr: Catalog = {
   "cmd.rematch.help": "같은 편성, 지형, 시드로 새 전투",
   "cmd.heat.help": "유닛의 발열 게이지 상태 표시 (기본: 행동 유닛)",
   "cmd.heat.arg.id": "확인할 유닛; 기본은 행동 유닛",
-  "cmd.shutdown.help": "디버그: 다음 엔드 페이즈까지 유닛 강제 셧다운",
-  "cmd.shutdown.arg.id": "셧다운시킬 유닛",
-  "cmd.restart.help": "디버그: 셧다운된 유닛을 강제 재기동",
-  "cmd.restart.arg.id": "재기동할 유닛",
 
   // autoplay demo driver (hidden command, not listed in help)
   "autoPlay.started":
@@ -125,8 +122,7 @@ export const kr: Catalog = {
   "ok.seedSet": "시드가 {seed}(으)로 설정되었습니다",
   "ok.resetDone": "초기화했습니다.",
   "ok.rematchDone": "재경기!",
-  "ok.shutdown": "{id} 셧다운됨",
-  "ok.restart": "{id} 재기동됨",
+  "ok.modeDeclaredVoluntary": "{id}, {mode} 선언 ('done'으로 확정).",
   "banner.draw": "=== 무승부 - 남은 유닛 없음 ===",
   "banner.win": "=== 팀 {team} 승리 ===",
 
@@ -150,7 +146,11 @@ export const kr: Catalog = {
   "err.noMap": "전투를 시작하기 전에 맵을 불러오세요",
   "err.needTwoUnits": "전투에는 최소 두 유닛이 필요합니다",
   "err.needTwoTeams": "유닛은 최소 두 팀에 걸쳐 있어야 합니다",
-  "err.badModeWord": "mode는 standstill|walk|run|jump 중 하나여야 합니다",
+  "err.badModeWord": "mode는 standstill|walk|run|jump|shutdown|startup 중 하나여야 합니다",
+  "err.noMoveInShutdownMode": "선언된 모드가 shutdown/startup일 때는 이동할 수 없습니다",
+  "err.mustBeOnlineForShutdown": "mode shutdown은 온라인 유닛에서만 사용할 수 있습니다",
+  "err.mustBeDownForStartup": "mode startup은 셧다운된 유닛에서만 사용할 수 있습니다",
+  "err.alreadyStarting": "{id} 은 이미 기동 중입니다",
   "err.noBattle": "진행 중인 전투가 없습니다",
   "err.wrongPhase": "이 명령은 {phase} 단계가 필요합니다",
   "err.declareModeFirst": "{id} 유닛의 이동 모드를 먼저 선언하세요 (mode walk|run|jump|standstill)",
@@ -207,6 +207,7 @@ export const kr: Catalog = {
   "heat.ammoSafe": "탄약: 안전 (19 미만)",
   "heat.stateOnline": "상태: 온라인",
   "heat.stateDown": "상태: 셧다운",
+  "heat.stateStarting": "상태: 기동 중",
 
   // attack status/
   "attackStatus.none": "(예약된 공격 없음)",
@@ -278,6 +279,7 @@ export const kr: Catalog = {
   "sheet.statusHeader": "상태: {status}, 방열({currHeat}/{maxHeat})",
   "sheet.statusOnline": "온라인",
   "sheet.statusShutdown": "셧다운",
+  "sheet.statusStarting": "기동 중",
   "sheet.statusDestroyed": "파괴됨",
   "sheet.weaponsHeader": "무기 ({n}):",
   "sheet.shotsRange": "({curr}/{max}회분)",
@@ -336,6 +338,10 @@ export const kr: Catalog = {
     "{id} 셧다운 회피 (발열 {heat} >= {threshold}) 회피 성공(2D6 = {roll} >= {avoid})",
   "log.restarted": "{id} 재기동됨 (발열 {heat} < {threshold}) 회피 성공(2D6 = {roll} > {avoid})",
   "log.restartedNoCheck": "{id} 재기동됨 (발열 {heat} < {threshold})",
+  "log.shutdownManual": "{id} 수동 셧다운",
+  "log.shutdownPriority": "{id} 이동 우선권 가짐 — 셧다운 상태, 시동 시도 또는 패스 필요",
+  "log.startupSuccess": "{id} 시동 체크 성공 (2D6 = {roll} >= {avoid}) — 다음 턴 온라인",
+  "log.startupFailed": "{id} 시동 체크 실패 (2D6 = {roll} < {avoid}); 여전히 셧다운 상태",
   "log.heatAmmoExplosion":
     "{id} 탄약 {weapon} ({loc} #{slot}, {shots}발) 폭발, 피해 {damage} (발열 {heat} >= {threshold}) 회피 실패(2D6 = {roll} < {avoid})",
 

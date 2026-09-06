@@ -19,7 +19,7 @@ const SCRIPT_SETUP: ReadonlyArray<{ id: string; command: string }> = [
 let nextCommandQueue: string[] = [];
 let currApp: S.AppState | null = null;
 let currBattlePhase: string | null = null;
-let helpShown: Record<string, boolean> = {}
+let helpShown: Record<string, boolean> = {};
 
 // /** Push the rest onto the queue, return the first command. */
 // function queueAndReturn(first: string, ...rest: string[]): string {
@@ -115,7 +115,8 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
           if (!u.removed) queueNextCommand(`sheet ${u.id}`);
         }
       }
-      if (actor.moveMode === null) {
+      // A shut-down unit just passes: no movement mode, stay off-line.
+      if (actor.moveMode === null && actor.shutdown === "not") {
         queueNextCommand(isImmobile(actor.damage) ? "mode standstill" : "mode walk");
       }
       queueNextCommand("done");

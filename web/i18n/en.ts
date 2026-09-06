@@ -74,8 +74,9 @@ export const en = {
   "cmd.rm.arg.id": "id of a previously added unit",
   "cmd.statusSetup.help": "setup summary: units grouped by team, selected map",
   "cmd.start.help": "start the battle (needs >=2 units on >=2 teams)",
-  "cmd.mode.help": "declare movement mode",
-  "cmd.mode.arg.mode": "standstill | walk | run | jump; each has its own MP pool",
+  "cmd.mode.help": "declare movement mode (walk/run/jump/standstill) or voluntary shutdown/startup",
+  "cmd.mode.arg.mode":
+    "standstill | walk | run | jump declares movement with its own MP pool; shutdown | startup declares a voluntary shutdown or startup attempt (committed by 'done')",
   "cmd.move.help": "queue a step into an adjacent hex",
   "cmd.move.arg.colrow": "adjacent destination hex, 1-based",
   "cmd.face.help": "queue a facing change",
@@ -99,10 +100,6 @@ export const en = {
   "cmd.rematch.help": "new battle with the same roster, terrain and seed",
   "cmd.heat.help": "show a unit's heat scale status (default: acting unit)",
   "cmd.heat.arg.id": "unit to inspect; defaults to the acting unit",
-  "cmd.shutdown.help": "debug: force a unit off-line until the next end phase",
-  "cmd.shutdown.arg.id": "unit to shut down",
-  "cmd.restart.help": "debug: force a shut-down unit back on-line",
-  "cmd.restart.arg.id": "unit to restart",
 
   // autoplay demo driver (hidden command, not listed in help)
   "autoPlay.started":
@@ -127,8 +124,7 @@ export const en = {
   "ok.seedSet": "seed set to {seed}",
   "ok.resetDone": "reset.",
   "ok.rematchDone": "rematch!",
-  "ok.shutdown": "{id} shut down",
-  "ok.restart": "{id} restarted",
+  "ok.modeDeclaredVoluntary": "{id} declares {mode} (committed by 'done').",
   "banner.draw": "=== DRAW - NO UNITS REMAIN ===",
   "banner.win": "=== TEAM {team} WINS ===",
 
@@ -153,7 +149,12 @@ export const en = {
   "err.noMap": "Load a map before starting a battle",
   "err.needTwoUnits": "A battle needs at least two units",
   "err.needTwoTeams": "Units must span at least two teams",
-  "err.badModeWord": "mode must be one of standstill|walk|run|jump",
+  "err.badModeWord": "mode must be one of standstill|walk|run|jump|shutdown|startup",
+  "err.noMoveInShutdownMode":
+    "movement is not available while the declared mode is shutdown/startup",
+  "err.mustBeOnlineForShutdown": "mode shutdown requires an online unit",
+  "err.mustBeDownForStartup": "mode startup requires a shut-down unit",
+  "err.alreadyStarting": "{id} is already starting up",
   "err.noBattle": "No active battle",
   "err.wrongPhase": "Command requires the {phase} phase",
   "err.declareModeFirst": "Declare a movement mode for {id} first (mode walk|run|jump|standstill)",
@@ -212,6 +213,7 @@ export const en = {
   "heat.ammoSafe": "ammo: safe (below 19)",
   "heat.stateOnline": "state: ONLINE",
   "heat.stateDown": "state: SHUT DOWN",
+  "heat.stateStarting": "state: STARTING",
 
   // attack status
   "attackStatus.none": "(no attacks queued)",
@@ -283,6 +285,7 @@ export const en = {
   "sheet.statusHeader": "status: {status}, HEAT({currHeat}/{maxHeat})",
   "sheet.statusOnline": "ONLINE",
   "sheet.statusShutdown": "SHUTDOWN",
+  "sheet.statusStarting": "STARTING",
   "sheet.statusDestroyed": "DESTROYED",
   "sheet.weaponsHeader": "weapons ({n}):",
   "sheet.ammoPolicy": "ammo policy: {policy}",
@@ -343,6 +346,10 @@ export const en = {
   "log.restarted":
     "{id} restarts (heat {heat} < {threshold}) avoid success(2D6 = {roll} > {avoid})",
   "log.restartedNoCheck": "{id} restarts (heat {heat} below {threshold})",
+  "log.shutdownManual": "{id} manually shuts down",
+  "log.shutdownPriority": "{id} has movement priority — shut down, must attempt startup or pass",
+  "log.startupSuccess": "{id} startup check passed (2D6 = {roll} >= {avoid}) — online next turn",
+  "log.startupFailed": "{id} startup check failed (2D6 = {roll} < {avoid}); still shut down",
   "log.heatAmmoExplosion":
     "{id} ammo {weapon} ({loc} #{slot}, {shots} shots) explodes for {damage} damage (heat {heat} >= {threshold}) avoid fail(2D6 = {roll} < {avoid})",
 

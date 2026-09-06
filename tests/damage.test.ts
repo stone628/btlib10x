@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { LOCATIONS } from "../src/core/types.js";
 import type { LocationValue, UnitDamageState } from "../src/rules/damage.js";
-import { applyDamage, canFireFromLocation, isImmobile, isKilled } from "../src/rules/damage.js";
+import {
+  applyDamage,
+  canFireFromLocation,
+  isImmobile,
+  isUnitDestroyed,
+} from "../src/rules/damage.js";
 
 /** Build a layered damage state; every location defaults to 10 armor / 10 IS. */
 function mk(
@@ -109,7 +114,7 @@ describe("layered damage resolution", () => {
     const head = mk({ armor: { head: 0 }, is: { head: 2 } });
     const headApp = applyDamage(head, "head", 2);
     expect(headApp.killed).toBe(true);
-    expect(isKilled(headApp.after)).toBe(true);
+    expect(isUnitDestroyed(headApp.after)).toBe(true);
   });
 
   it("immobilizes when a leg structure is destroyed but the 'Mech survives", () => {
@@ -117,7 +122,7 @@ describe("layered damage resolution", () => {
     const app = applyDamage(s, "leftLeg", 7);
     expect(app.after.armor.leftLeg).toBe(0);
     expect(isImmobile(app.after)).toBe(true);
-    expect(isKilled(app.after)).toBe(false);
+    expect(isUnitDestroyed(app.after)).toBe(false);
   });
 
   it("snapshots `pre` as the layered damage state before any mutation", () => {

@@ -49,7 +49,7 @@ function autoPlay(s: S.Session): void {
       .map((u) => u.id);
     const enemy = ids.find((id) => id !== actorId)!;
     if (st.phase === "movement") {
-      S.declareMode(s, "walk");
+      if (st.units[actorId]!.shutdown === "not") S.declareMode(s, "walk");
       S.commitMove(s);
     } else {
       fireEverything(s, enemy);
