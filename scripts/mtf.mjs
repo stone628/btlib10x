@@ -65,16 +65,18 @@ function mapWeapon(codeRaw) {
   return CODE[codeRaw] ?? null;
 }
 
-/** Crit-slot ammo tokens (MTF "IS Ammo <token>") -> catalog weapon name. */
-
-/** Count ammo crit-bins per catalog weapon name from the crit sections. */
+/** Count ammo crit-bins per catalog weapon name from the crit sections.
+ * Each crit-slot in the MTF (e.g. "IS Ammo AC/20" or "IS Machine Gun Ammo
+ * - Half") is one ammo bin keyed by the catalog weapon name. Half-ton
+ * markers ("- Half") are recognised as a distinct bin shape by the caller
+ * via the `bins` map but still count as one crit-slot entry here. */
 function ammoBinsFromCrits(lines) {
   const bins = new Map();
   for (const line of lines) {
     const t = line.trim();
     let name = null;
     // Format 1: "<code> Ammo" (Clan/compact), e.g. "CLStreakSRM4 Ammo".
-    let m = /^(.+?)\s+Ammo\s*$/.exec(t);
+    let m = /^(.+?)\s+Ammo(?:\s*-\s*Half)?\s*$/.exec(t);
     if (m) {
       const stem = m[1]
         .replace(/^IS |^CL /, "")
@@ -82,8 +84,9 @@ function ammoBinsFromCrits(lines) {
         .trim();
       name = CODE[stem] ?? null;
     } else {
-      // Format 2: "IS Ammo <token>", e.g. "IS Ammo AC/20".
-      m = /^IS Ammo\s+(.+?)\s*$/.exec(t);
+      // Format 2: "IS Ammo <token>", e.g. "IS Ammo AC/20" or
+      // "IS Machine Gun Ammo - Half".
+      m = /^IS Ammo\s+(.+?)(?:\s*-\s*Half)?\s*$/.exec(t);
       if (m) name = AMMO_TOKEN[m[1].trim()] ?? null;
     }
     if (name) bins.set(name, (bins.get(name) ?? 0) + 1);
@@ -115,7 +118,7 @@ function parseMtf(text, file) {
   }
   // MTF model codes are emitted all-caps in the catalog so the registry key
   // and the on-disk filename (`<model>.json`) are case-stable.
-  model = model.toUpperCase();
+  // model = model.toUpperCase();
 
   const fields = {};
   for (const line of lines) {

@@ -518,11 +518,12 @@ export function validateMechDef(data: unknown): MechDef {
         } else if (typeof w.weapon === "string") {
           const ammo = getAmmoDef(w.weapon as string);
           if (ammo !== undefined) {
-            if (shots % ammo.shotsPerBin !== 0) {
-              errors.push(
-                `weapon.shots for ${JSON.stringify(w.weapon)} must be a multiple of its ammo bin capacity (${ammo.shotsPerBin})`,
-              );
-            }
+            if (shots % ammo.shotsPerBin === 0) continue;
+            // check half ton
+            if (shots === Math.floor(ammo.shotsPerBin / 2)) continue;
+            errors.push(
+              `weapon.shots for ${JSON.stringify(w.weapon)} must be a multiple of its ammo bin capacity (${ammo.shotsPerBin})`,
+            );
           }
         }
       }

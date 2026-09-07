@@ -8,17 +8,17 @@
   "running": 8,
   "jumping": 5,
   "armor": {
-    "head": 9,
-    "centerTorso": 20,
-    "rightTorso": 20,
-    "leftTorso": 20,
+    "head": 8,
+    "centerTorso": 28,
+    "rightTorso": 26,
+    "leftTorso": 26,
     "rightArm": 16,
     "leftArm": 16,
     "rightLeg": 16,
     "leftLeg": 16,
     "centerTorsoRear": 8,
-    "leftTorsoRear": 6,
-    "rightTorsoRear": 6
+    "rightTorsoRear": 6,
+    "leftTorsoRear": 6
   },
   "weapons": [
     {
@@ -31,12 +31,11 @@
       "shots": 15
     },
     {
-      "weapon": "Autocannon/5",
+      "weapon": "AC/5",
       "location": "rightArm",
       "shots": 20
     }
   ],
-  "source": "Beginner Box Quick-Start Rules record sheet (armor circles transcribed from TRO 3025 allocation; see TODO.md)",
   "critSlots": {
     "centerTorso": [
       {
@@ -228,23 +227,23 @@
       },
       {
         "kind": "weapon",
-        "weapon": "Autocannon/5"
+        "weapon": "AC/5"
       },
       {
         "kind": "weapon",
-        "weapon": "Autocannon/5"
+        "weapon": "AC/5"
       },
       {
         "kind": "weapon",
-        "weapon": "Autocannon/5"
+        "weapon": "AC/5"
       },
       {
         "kind": "weapon",
-        "weapon": "Autocannon/5"
+        "weapon": "AC/5"
       },
       {
         "kind": "ammo",
-        "weapon": "Autocannon/5"
+        "weapon": "AC/5"
       },
       {
         "kind": "empty"
@@ -338,5 +337,6 @@
   "heatsink": {
     "type": "single",
     "count": 12
-  }
+  },
+  "source": "docs/mtf/Wolverine WVR-6R.mtf (TRO 3039 - Star League). Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount; crit slot table per location included."
 }
