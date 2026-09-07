@@ -102,6 +102,23 @@ describe("GATOR to-hit calculation", () => {
     expect(mk(3, true)).toBe(6);
   });
 
+  it("immobile target (shut down / legs destroyed) gets a flat -4 target modifier", () => {
+    const base = {
+      gunnery: 4,
+      attackerMovement: "run" as const,
+      targetHexesMoved: 0,
+      targetJumped: false,
+      targetTerrain: "clear" as const,
+      interveningWoods: 0,
+      distance: 4,
+      weapon: getWeaponDefFor({ weapon: "Medium Laser" }),
+    };
+    const online = computeToHit(base);
+    const immobile = computeToHit({ ...base, targetImmobile: true });
+    expect(immobile.targetMod).toBe(-4);
+    expect(immobile.total).toBe(online.total - 4);
+  });
+
   it("flags auto-hit <= 2 and auto-miss > 12", () => {
     const easy = computeToHit({
       gunnery: 0,

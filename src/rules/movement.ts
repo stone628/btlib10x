@@ -40,8 +40,17 @@ export function attackerMovementModifier(mode: MoveMode): number {
   }
 }
 
-/** Quick-start target movement table (hexes entered), +1 extra when jumping. */
-export function targetMovementModifier(hexesEntered: number, jumped: boolean): number {
+/**
+ * Target movement table (hexes entered), +1 extra when jumping. An immobile
+ * target (unit unable to move — e.g. a shutdown 'Mech or one with both legs
+ * destroyed) gets a flat −4 modifier regardless of hexes entered or jump.
+ */
+export function targetMovementModifier(
+  hexesEntered: number,
+  jumped: boolean,
+  immobile?: boolean,
+): number {
+  if (immobile) return -4;
   let mod: number;
   if (hexesEntered <= 2) mod = 0;
   else if (hexesEntered <= 4) mod = 1;

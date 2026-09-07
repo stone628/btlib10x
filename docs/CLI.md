@@ -140,7 +140,9 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   2, auto-miss > 12. Target-terrain modifier is data-driven
   (`terrainTargetMod`): lightWoods/heavyWoods +1/+2, water1 −1 (partially
   submerged target). Height difference: `−(attackerLevel − targetLevel)`
-  (attacker higher = easier, lower = harder). Units inside a water1 or
+  (attacker higher = easier, lower = harder). A shut-down 'Mech (or one
+  with both legs destroyed) is immobile and applies a flat −4 target
+  modifier instead of a movement band. Units inside a water1 or
   building hex qualify for partial cover (`hasPartialCover`), whose +3
   resolution is deferred with piloting.
 - **Terrain catalog** — 13 core-rulebook terrain types (`clear`, lightWoods,

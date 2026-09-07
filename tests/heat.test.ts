@@ -441,6 +441,28 @@ describe("game integration: heatMod in to-hit", () => {
   });
 });
 
+describe("game integration: immobile target modifier in to-hit", () => {
+  function targetModFor(online: boolean, rng = scriptedRng(6, 6, 3, 4)): number {
+    const state = hbkVsEnf();
+    if (!online) getUnit(state, "enf").shutdown = "manual";
+    startAttackTurn(state);
+    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
+    resolveDeclaredAttacks(state, "hbk", rng);
+    const resolved = state.events.find((e) => e.kind === "attackResolved");
+    expect(resolved).toBeDefined();
+    return (resolved as Extract<(typeof state.events)[number], { kind: "attackResolved" }>)
+      .resolution.breakdown.targetMod;
+  }
+
+  it("online target in place: targetMod 0", () => {
+    expect(targetModFor(true)).toBe(0);
+  });
+
+  it("shut-down target: targetMod -4", () => {
+    expect(targetModFor(false)).toBe(-4);
+  });
+});
+
 describe("game integration: heat ammo explosion", () => {
   it("largest ammo bin detonates when avoidance roll fails", () => {
     const state = hbkVsEnf();

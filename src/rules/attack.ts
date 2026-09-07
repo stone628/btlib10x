@@ -25,6 +25,9 @@ export interface WeaponAttackInput {
   readonly targetHexesMoved: number;
   readonly targetJumped: boolean;
   readonly targetTerrain: TerrainType;
+  /** True when the target cannot move (shut down or both legs destroyed):
+   *  grants a flat −4 target modifier instead of the hex-based band. */
+  readonly targetImmobile?: boolean;
   readonly interveningTerrains: readonly TerrainType[];
   readonly distance: number;
   readonly weapon: string;
@@ -86,6 +89,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     targetHexesMoved: input.targetHexesMoved,
     targetJumped: input.targetJumped,
     targetTerrain: input.targetTerrain,
+    ...(input.targetImmobile !== undefined ? { targetImmobile: input.targetImmobile } : {}),
     interveningWoods: losWoodsPoints(input.interveningTerrains),
     distance: input.distance,
     weapon,
