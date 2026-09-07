@@ -290,6 +290,7 @@ export const en = {
   "sheet.ammoExplosion": "explosion(2D6<{avoid}, heat {heat}>={threshold})",
   "sheet.shotsRange": "({curr}/{max} shots)",
   "sheet.shotsDesign": "({max} shots)",
+  "sheet.shotsShared": "(shots at #{ref})",
   "sheet.jammed": "[J]",
   "sheet.destroyed": "[-]",
 

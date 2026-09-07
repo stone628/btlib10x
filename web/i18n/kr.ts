@@ -281,6 +281,7 @@ export const kr: Catalog = {
   "sheet.weaponsHeader": "무기 ({n}):",
   "sheet.shotsRange": "({curr}/{max}회분)",
   "sheet.shotsDesign": "({max}회분)",
+  "sheet.shotsShared": "(횟수 #{ref} 참조)",
   "sheet.ammoStatus": "탄약 상태: 소모 정책({policy}) {explosion}",
   "sheet.ammoNoExplosion": "안전(발열 {heat}<{threshold})",
   "sheet.ammoExplosion": "유폭 조건(2D6<{avoid}, 발열 {heat}>={threshold})",
