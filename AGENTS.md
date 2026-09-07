@@ -7,7 +7,7 @@ TypeScript library encapsulating Classic BattleTech board game logic.
 - Implements a **subset of classic BattleTech game rules**. The currently
   implemented subset is documented under "Status — Classic BattleTech rule
   coverage" in `docs/CLI.md`.
-- Bipedal 'Mechs only. Heat, physical attacks, piloting rolls, and
+- Bipedal 'Mechs only. Physical attacks, piloting rolls, and
   side/rear firing arcs are outside the current subset. Elevation IS
   implemented: per-hex `level` (default 0) on the map, with movement
   climb cost, jump ignoring elevation, LOS elevation ray, and the

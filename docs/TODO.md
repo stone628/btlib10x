@@ -9,7 +9,6 @@
 
 ## To Do
 
-- heat dissipation from heatsink, not critical slots
 - improve weapon shot display which has shared ammo bin
 - shutdown mech does not affect targetMovementModifier
 - show ammo explosion check avoid (success)
@@ -18,8 +17,7 @@
 
 ## In progress
 
-- Later in classic expansion: heat (will pick up the `heatSinksDestroyed` count
-  already tracked by crit state), physicals, piloting/falling, basements,
+- Later in classic expansion: physicals, piloting/falling, basements,
   hull-down, water depth movement-cost change, pavement skid (vehicle-specific)
 - **Piloting / consciousness roll on immobile end-of-turn** — TW end-of-turn
   consciousness roll for an immobile 'Mech (both legs destroyed via

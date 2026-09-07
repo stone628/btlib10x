@@ -33,8 +33,8 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
         const weaponIndex = Number(key);
         if (unit.jammedWeapons.includes(weaponIndex)) return;
         if (!canFireFromLocation(unit.phaseStartDamage, mount.location)) return;
-        if (unit.shotsLeft[weaponIndex] !== undefined && (unit.shotsLeft[weaponIndex] ?? 0) < 1)
-          return;
+        // Ammo weapons skip when dry (shotsLeft key disappears at zero).
+        if (mount.shots !== undefined && (unit.shotsLeft[weaponIndex] ?? 0) < 1) return;
         S.queueFire(s, { weaponIndex, targetId: enemy });
       });
       S.commitFire(s);

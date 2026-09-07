@@ -192,7 +192,13 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   heat, end-phase dissipation; to-hit and MP penalties; shutdown checks at
   peak heat (auto at 30+, 2D6 avoidance at 14-29) and automatic restart of
   *heat-caused* shutdowns once heat drops below the threshold; heat ammo
-  explosion checks at 19+.
+  explosion checks at 19+. End-phase dissipation comes from the design's
+  heat sinks: the engine mounts `floor(walking × tonnage / 25)` sinks free,
+  the rest occupy crit slots; double heat sinks dissipate 2 heat each and
+  take 3 crits (Inner Sphere) or 2 crits (Clan) per device. Destroyed
+  sink crits reduce dissipation (a DHS retires per whole device); destroyed
+  engine slots add +5 heat but never retire internal sinks (strict
+  Total Warfare).
 - **Voluntary shutdown / startup** — `mode shutdown` + `done` sends an
   online unit off-line (`manual`); it persists (no end-phase auto-restart)
   until a voluntary startup succeeds. `mode startup` + `done` rolls 2D6

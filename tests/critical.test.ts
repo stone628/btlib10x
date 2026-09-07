@@ -284,9 +284,9 @@ describe("weapon and ammo crit effects", () => {
     expect(eff.kind).toBe("weaponDestroyed");
     if (eff.kind === "weaponDestroyed") {
       expect(eff.weaponName).toBe("Autocannon/20");
-      expect(eff.weaponIndex).toBe(1);
+      expect(eff.weaponIndex).toBe(4);
     }
-    expect(res.destroyedWeapons).toContain(1);
+    expect(res.destroyedWeapons).toContain(4);
   });
 
   it("AC/20 ammo explosion = hit bin's shots x 20 damage to that bin's IS", () => {
@@ -323,7 +323,7 @@ describe("weapon and ammo crit effects", () => {
     // derived per-weapon total drops from 10 to 5.
     expect(res.ammoBins["leftTorso:1"]).toBe(0);
     expect(res.ammoBins["leftTorso:2"]).toBe(5);
-    expect(res.shotsLeft[1]).toBe(5);
+    expect(res.shotsLeft[4]).toBe(5);
   });
 
   it("ammo explosion cascades a fresh determining roll on a newly-emptied IS", () => {

@@ -188,12 +188,17 @@ hittable slots, overflow is lost (excess crits simply disappear).
   leg halves walking on that leg (round up) and ignores the other
   actuator penalties on that leg.
 - Jump-jet slot hit → −1 jump MP per destroyed slot.
-- Engine, gyro, sensor, life-support, single/double heat-sink slots →
-  mark destroyed; the side-effects (heat, piloting rolls) are deferred
-  with the rest of the heat / piloting subset.
+- Engine, gyro, sensor, life-support slots → mark destroyed; a destroyed
+  engine slot adds +5 heat per hit. Piloting-roll side-effects stay
+  deferred with the piloting subset.
+- Heat-sink slot hits reduce end-phase dissipation: a destroyed single
+  heat sink −1, a destroyed double heat sink retires the whole device
+  (−2) once any slot of its run is destroyed.
 
 Double heat sinks (DHS) appear in several `IS` 'Mechs (e.g. Hermes II,
-Cicada, Mad Cat Mk II). Each DHS occupies a run of consecutive slots;
-destroying one slot destroys the whole DHS, and the sibling slots in the
-same run are marked destroyed by the resolver so subsequent re-rolls
-don't hit them.
+Cicada, Mad Cat Mk II). A DHS device occupies 3 consecutive slots (Inner
+Sphere) or 2 (Clan); the MTF `Heat Sinks` header fixes the type and total
+count (engine mounts `floor(walking × tonnage / 25)` free). Destroying
+one slot destroys the whole device: dissipation drops by 2 heat and the
+sibling slots in the same run are marked destroyed by the resolver so
+subsequent re-rolls don't hit them.

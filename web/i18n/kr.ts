@@ -329,7 +329,7 @@ export const kr: Catalog = {
   "log.heatMove": "{id} 이동 발열 {heat} 발생",
   "log.heatWeapon": "무기 발열 {heat} 발생 ({prev}->{curr})",
   "log.heatEngineCrit": "{id} 엔진 크리티컬 발열 {heat} 발생 ({prev}->{curr})",
-  "log.heatDissipated": "{id} 발열 {dissip} 방출 ({prev}->{curr})",
+  "log.heatDissipated": "{id} 발열 {dissip}/{cap} 방출 ({prev}->{curr})",
   "log.shutdown":
     "*** {id} 셧다운 (발열 {heat} >= {threshold}) 회피 실패(2D6 = {roll} < {avoid}) ***",
   "log.shutdownAuto": "*** {id} 자동 셧다운 (발열 {heat} >= {threshold}) ***",

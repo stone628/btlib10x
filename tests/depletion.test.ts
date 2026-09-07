@@ -46,10 +46,10 @@ describe("policy parsing", () => {
 
 describe("bin loading", () => {
   it("spreads the declared shot count evenly over a weapon's bins", () => {
-    // HBK-4G AC/20 (index 1): shots 10 across leftTorso slots 1-2.
+    // HBK-4G AC/20 (index 4): shots 10 across leftTorso slots 1-2.
     const { bins, totals } = loadAmmoBins(HBK);
     expect(bins).toEqual({ "leftTorso:1": 5, "leftTorso:2": 5 });
-    expect(totals[1]).toBe(10);
+    expect(totals[4]).toBe(10);
   });
 
   it("pools shots-sharing mounts of one weapon name into every bin", () => {
@@ -90,14 +90,14 @@ describe("bin loading", () => {
         id: "leftTorso:1",
         location: "leftTorso",
         slotIndex: 1,
-        weaponIndex: 1,
+        weaponIndex: 4,
         weapon: "Autocannon/20",
       },
       {
         id: "leftTorso:2",
         location: "leftTorso",
         slotIndex: 2,
-        weaponIndex: 1,
+        weaponIndex: 4,
         weapon: "Autocannon/20",
       },
     ]);
@@ -121,7 +121,7 @@ describe("bin utilities", () => {
 
   it("ammoWeaponTotals sums only the non-empty bins", () => {
     const bins: Record<AmmoBinId, number> = { "leftTorso:1": 0, "leftTorso:2": 5 };
-    expect(ammoWeaponTotals(HBK, bins)[1]).toBe(5);
+    expect(ammoWeaponTotals(HBK, bins)[4]).toBe(5);
   });
 });
 
@@ -197,17 +197,17 @@ describe("drawOrderBins", () => {
 describe("consumeAmmo", () => {
   it("draws each shot from the policy's next bin, ties decided by rng", () => {
     const start = (): Record<AmmoBinId, number> => ({ "leftTorso:1": 5, "leftTorso:2": 5 });
-    const even = consumeAmmo(HBK, start(), 1, 1, "exposed", scriptedRng(2));
+    const even = consumeAmmo(HBK, start(), 4, 1, "exposed", scriptedRng(2));
     expect(even["leftTorso:1"]).toBe(4);
     expect(even["leftTorso:2"]).toBe(5);
-    const odd = consumeAmmo(HBK, start(), 1, 1, "exposed", scriptedRng(1));
+    const odd = consumeAmmo(HBK, start(), 4, 1, "exposed", scriptedRng(1));
     expect(odd["leftTorso:1"]).toBe(5);
     expect(odd["leftTorso:2"]).toBe(4);
   });
 
   it("switches to another bin when the chosen one runs dry mid-burst", () => {
     const bins: Record<AmmoBinId, number> = { "leftTorso:1": 1, "leftTorso:2": 5 };
-    const after = consumeAmmo(HBK, bins, 1, 2, "exposed", scriptedRng(2, 2));
+    const after = consumeAmmo(HBK, bins, 4, 2, "exposed", scriptedRng(2, 2));
     expect(after["leftTorso:1"]).toBe(0);
     expect(after["leftTorso:2"]).toBe(4);
   });
@@ -215,7 +215,7 @@ describe("consumeAmmo", () => {
   it("returns the input untouched when the weapon has no shots left", () => {
     const bins: Record<AmmoBinId, number> = { "leftTorso:1": 0, "leftTorso:2": 0 };
     const rng = scriptedRng(2);
-    const after = consumeAmmo(HBK, bins, 1, 1, "exposed", rng);
+    const after = consumeAmmo(HBK, bins, 4, 1, "exposed", rng);
     expect(after).toEqual(bins);
     expect(rng.remaining()).toBe(1);
   });
@@ -252,18 +252,18 @@ describe("declareAttacks (game level)", () => {
   it("drains the declared weapon's bins and refreshes derived totals", () => {
     const state = hbkBattle();
     attackPhase(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], scriptedRng(2));
+    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], scriptedRng(2));
     const u = getUnit(state, "hbk")!;
     expect(u.ammoBins["leftTorso:1"]).toBe(4);
     expect(u.ammoBins["leftTorso:2"]).toBe(5);
-    expect(u.shotsLeft[1]).toBe(9);
+    expect(u.shotsLeft[4]).toBe(9);
   });
 
   it("uses a deterministic tiebreak rng when none is supplied", () => {
     const state = hbkBattle();
     attackPhase(state);
     // DEFAULT_RNG always rolls 1 -> the tie goes to slot 2.
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
+    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
     const u = getUnit(state, "hbk")!;
     expect(u.ammoBins["leftTorso:1"]).toBe(5);
     expect(u.ammoBins["leftTorso:2"]).toBe(4);

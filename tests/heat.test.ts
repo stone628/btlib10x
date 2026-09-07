@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LOCATIONS, type Location } from "../src/core/types.js";
 import { getMechDef, getMechDefFor } from "../src/data/index.js";
 import type { BattleState, UnitInit } from "../src/rules/game.js";
 import {
@@ -184,14 +185,14 @@ describe("effectiveMoveBudget", () => {
 });
 
 describe("heatDissipation / countDestroyedEngineSlots", () => {
-  it("HBK-4G has 15 sinks, 0 engine slots out", () => {
+  it("HBK-4G dissipates 13 (8 engine + 5 external single)", () => {
     const state = hbkVsEnf();
     const unit = getUnit(state, "hbk");
     const def = getMechDefFor(unit);
-    expect(heatDissipation(def, unit.critSlotsDestroyed)).toBe(15);
+    expect(heatDissipation(def, unit.critSlotsDestroyed)).toBe(13);
     expect(countDestroyedEngineSlots(def, unit.critSlotsDestroyed)).toBe(0);
   });
-  it("destroying 1 engine slot reduces sinks by 1", () => {
+  it("destroying an engine slot adds heat but does not retire a sink (strict TW)", () => {
     const state = hbkVsEnf();
     const unit = getUnit(state, "hbk");
     const def = getMechDefFor(unit);
@@ -199,8 +200,43 @@ describe("heatDissipation / countDestroyedEngineSlots", () => {
       ...unit.critSlotsDestroyed,
       centerTorso: [true, ...unit.critSlotsDestroyed.centerTorso.slice(1)],
     };
-    expect(heatDissipation(def, destroyed)).toBe(14);
+    expect(heatDissipation(def, destroyed)).toBe(13);
     expect(countDestroyedEngineSlots(def, destroyed)).toBe(1);
+  });
+});
+
+describe("heatDissipation: engine sink capacity + double heat sinks", () => {
+  // Classic construction: engine mounts floor(walk x tons / 25) sinks
+  // internally; the rest occupy crit slots. Double sinks dissipate 2 each.
+  const cases: ReadonlyArray<[string, number]> = [
+    ["HBK-4G", 13], // 200 engine: 8 internal + 5 single
+    ["AS7-D", 20], // 300 engine: 12 internal + 8 single
+    ["ENF-4R", 12], // 200 engine: 8 internal + 4 single
+    ["WVR-6R", 12], // 275 engine: 11 internal + 1 single
+    ["GRF-1N", 12], // 275 engine: 11 internal + 1 single
+    ["WHK-Prime", 40], // 340 engine: 13 internal + 7 double devices, x2 each
+    ["TW-Prime", 34], // 375 engine: 15 internal + 2 double devices, x2 each
+    ["MC-MKII-2", 26], // 360 engine: 13 of 14 capacity, all double
+    ["CDA-3MA", 20], // 320 engine: 10 of 12 capacity, all double
+    ["HER-5SA", 20], // 240 engine: 9 internal + 1 IS double device
+  ];
+  it.each(cases)("%s dissipates %i heat per turn", (model, expected) => {
+    const def = getMechDef(model)!;
+    const destroyed = Object.fromEntries(
+      LOCATIONS.map((l) => [l, def.critSlots[l].map(() => false)]),
+    ) as Record<Location, boolean[]>;
+    expect(heatDissipation(def, destroyed)).toBe(expected);
+  });
+
+  it("destroying one DHS crit of a group retires the whole device (-2)", () => {
+    const def = getMechDef("WHK-Prime")!;
+    const destroyed = Object.fromEntries(
+      LOCATIONS.map((l) => [l, def.critSlots[l].map(() => false)]),
+    ) as Record<Location, boolean[]>;
+    // One Clan DHS device = 2 crit slots in a run; destroy one slot of the
+    // left-leg run [5,6].
+    destroyed.leftLeg[4] = true;
+    expect(heatDissipation(def, destroyed)).toBe(38);
   });
 });
 
@@ -267,7 +303,7 @@ describe("game integration: weapon heat", () => {
   it("AC/20 (heat 7) adds 7 heat after attack", () => {
     const state = hbkVsEnf();
     startAttackTurn(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
+    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
     resolveDeclaredAttacks(state, "hbk", scriptedRng(6, 6, 3, 4));
     const hbk = getUnit(state, "hbk");
     expect(hbk.heat).toBe(7);
@@ -286,12 +322,12 @@ describe("game integration: dissipation", () => {
     hbk.heat = 20;
     startAttackTurn(state);
     advancePhase(state, scriptedRng(3, 3, 3, 1));
-    expect(hbk.heat).toBe(20 - 15);
+    expect(hbk.heat).toBe(20 - 13);
     const dissipEvent = state.events.find((e) => e.kind === "heatDissipated" && e.unitId === "hbk");
     expect(dissipEvent).toBeDefined();
     expect(
       (dissipEvent as Extract<(typeof state.events)[number], { kind: "heatDissipated" }>).dissip,
-    ).toBe(15);
+    ).toBe(13);
   });
 });
 

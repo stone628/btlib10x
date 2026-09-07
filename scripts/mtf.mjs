@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseCritSlots, validateCritConstruction } from "./mtf-crit.mjs";
+import { parseCritSlots, validateCritConstruction, validateHeatSinks } from "./mtf-crit.mjs";
 import { AMMO_TOKEN, CODE, LOCATION, MODEL_CODE, SHOTS_PER_TON } from "./mtf-tables.mjs";
 
 /**
@@ -127,6 +127,21 @@ function parseMtf(text, file) {
   const walking = numberRegex(text, "Walk MP");
   const jumping = numberRegex(text, "Jump MP") ?? 0;
 
+  // Heat Sinks:N <Single|Double> header -> canon heat sink config (total
+  // count including engine-mounted sinks). Classic construction rule: an
+  // engine mounts floor(walking * tonnage / 25) sinks internally; the rest
+  // occupy crit slots.
+  const heatsinkMatch = /^Heat Sinks:\s*(\d+)\s+(Single|Double)\s*$/m.exec(text);
+  let heatsink = null;
+  if (heatsinkMatch) {
+    heatsink = {
+      type: heatsinkMatch[2].toLowerCase() === "double" ? "double" : "single",
+      count: Number(heatsinkMatch[1]),
+    };
+  } else {
+    errors.push("Heat Sinks header missing or malformed (expected 'N Single' or 'N Double')");
+  }
+
   // Flat armor; torso = front + rear summed. Rear torso values are also stored
   // alongside, keyed as `centerTorsoRear`/`leftTorsoRear`/`rightTorsoRear`
   // metadata (not used by the flat damage model).
@@ -222,16 +237,17 @@ function parseMtf(text, file) {
   );
 
   const critSlots = parseCritSlots(lines, errors, file);
-  validateCritConstruction(
-    critSlots,
-    {
-      techBase: fields.TechBase,
-      engineField: fields.Engine,
-      structureField: fields.Structure,
-      armorField: fields.Armor,
-    },
-    errors,
-  );
+  const critMeta = {
+    techBase: fields.TechBase,
+    engineField: fields.Engine,
+    structureField: fields.Structure,
+    armorField: fields.Armor,
+    walking,
+    tonnage,
+    heatsink,
+  };
+  validateCritConstruction(critSlots, critMeta, errors);
+  validateHeatSinks(critSlots, critMeta, errors);
 
   const source = `docs/mtf/${file}${fields.Source ? ` (${fields.Source})` : ""}. Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount; crit slot table per location included.`;
 
@@ -247,6 +263,7 @@ function parseMtf(text, file) {
     armor,
     weapons,
     critSlots,
+    heatsink,
     source,
   };
 

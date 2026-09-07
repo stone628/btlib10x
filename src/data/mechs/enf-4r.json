@@ -6,19 +6,19 @@
   "techBase": "Inner Sphere",
   "walking": 4,
   "running": 6,
-  "jumping": 0,
+  "jumping": 4,
   "armor": {
     "head": 9,
-    "centerTorso": 23,
-    "rightTorso": 17,
-    "leftTorso": 17,
+    "centerTorso": 27,
+    "rightTorso": 20,
+    "leftTorso": 20,
     "rightArm": 14,
     "leftArm": 14,
     "rightLeg": 20,
     "leftLeg": 20,
     "centerTorsoRear": 4,
-    "leftTorsoRear": 3,
-    "rightTorsoRear": 3
+    "rightTorsoRear": 3,
+    "leftTorsoRear": 3
   },
   "weapons": [
     {
@@ -35,7 +35,6 @@
       "location": "leftTorso"
     }
   ],
-  "source": "CBT Quick-Start Rules record sheet",
   "critSlots": {
     "centerTorso": [
       {
@@ -335,5 +334,10 @@
         "name": "lifeSupport"
       }
     ]
-  }
+  },
+  "heatsink": {
+    "type": "single",
+    "count": 12
+  },
+  "source": "docs/mtf/Enforcer ENF-4R.mtf (TRO 3039 - Star League). Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount; crit slot table per location included."
 }

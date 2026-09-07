@@ -198,6 +198,7 @@ export type GameEvent =
       readonly dissip: number;
       readonly prevHeat: number;
       readonly currHeat: number;
+      readonly capacity: number;
     }
   | {
       readonly kind: "shutdown";
@@ -1036,7 +1037,8 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
     if (unit.destroyed) continue; // stop tracking heat for destroyed unit
     const def = getMechDefFor(unit);
     const prevHeat = unit.heat;
-    const dissipated = Math.min(heatDissipation(def, unit.critSlotsDestroyed), unit.heat);
+    const capacity = heatDissipation(def, unit.critSlotsDestroyed);
+    const dissipated = Math.min(capacity, prevHeat);
     unit.heat -= dissipated;
     if (dissipated > 0) {
       state.events.push({
@@ -1045,6 +1047,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
         dissip: dissipated,
         prevHeat,
         currHeat: unit.heat,
+        capacity,
       });
     }
   }

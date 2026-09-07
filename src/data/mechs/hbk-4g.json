@@ -9,23 +9,18 @@
   "jumping": 0,
   "armor": {
     "head": 9,
-    "centerTorso": 26,
-    "rightTorso": 20,
-    "leftTorso": 20,
+    "centerTorso": 31,
+    "rightTorso": 24,
+    "leftTorso": 24,
     "rightArm": 16,
     "leftArm": 16,
     "rightLeg": 20,
     "leftLeg": 20,
     "centerTorsoRear": 5,
-    "leftTorsoRear": 4,
-    "rightTorsoRear": 4
+    "rightTorsoRear": 4,
+    "leftTorsoRear": 4
   },
   "weapons": [
-    {
-      "weapon": "Autocannon/20",
-      "location": "rightTorso",
-      "shots": 10
-    },
     {
       "weapon": "Medium Laser",
       "location": "leftArm"
@@ -37,9 +32,13 @@
     {
       "weapon": "Small Laser",
       "location": "head"
+    },
+    {
+      "weapon": "Autocannon/20",
+      "location": "rightTorso",
+      "shots": 10
     }
   ],
-  "source": "CBT Quick-Start Rules record sheet",
   "critSlots": {
     "centerTorso": [
       {
@@ -342,5 +341,10 @@
         "name": "lifeSupport"
       }
     ]
-  }
+  },
+  "heatsink": {
+    "type": "single",
+    "count": 13
+  },
+  "source": "docs/mtf/Hunchback HBK-4G.mtf (TRO 3039 - Star League). Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount; crit slot table per location included."
 }

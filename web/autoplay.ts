@@ -134,8 +134,7 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
         if (actor.jammedWeapons.includes(weaponIndex)) continue;
         if (actor.destroyedWeapons.includes(weaponIndex)) continue;
         if (!canFireFromLocation(actor.phaseStartDamage, mount.location)) continue;
-        if (actor.shotsLeft[weaponIndex] !== undefined && (actor.shotsLeft[weaponIndex] ?? 0) < 1)
-          continue;
+        if (mount.shots !== undefined && (actor.shotsLeft[weaponIndex] ?? 0) < 1) continue;
         available.push(String(weaponIndex));
       }
       if (available.length > 0) {
