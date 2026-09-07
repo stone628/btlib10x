@@ -200,18 +200,17 @@ const SETUP_CMDS: Record<string, CmdDef> = {
       const facingWord = (a[6] ?? "n").toLowerCase();
       const facing = FACINGS.find((f) => f === facingWord);
       if (!facing) throw new Error(i18n(L(s), "err.faceArg", { facings: FACINGS.join("/") }));
-      const wantModel = a[1]!.toUpperCase();
-      S.addUnit(
+      const validModel = S.addUnit(
         s,
         a[0]!,
-        wantModel,
+        a[1]!,
         int(L(s), a[2]!, "team"),
         int(L(s), a[3]!, "gunnery"),
         { col: coord(L(s), a[4]!, "col"), row: coord(L(s), a[5]!, "row") },
         facing,
       );
       return [
-        i18n(L(s), "ok.added", { id: a[0]!, model: wantModel, col: a[4]!, row: a[5]!, facing }),
+        i18n(L(s), "ok.added", { id: a[0]!, model: validModel, col: a[4]!, row: a[5]!, facing }),
       ];
     },
   },

@@ -335,7 +335,7 @@ export const en = {
   "log.buildingCollapsed": "Building at {hex} collapses to rubble",
   "log.heatMove": "{id} generates {heat} movement heat",
   "log.heatWeapon": "generates {heat} weapon heat ({prev}->{curr})",
-  "log.heatEngineCrit": "{id} generates {heat} engine heat from crit ({prev}->{curr}))",
+  "log.heatEngineCrit": "{id} generates {heat} engine heat from crit ({prev}->{curr})",
   "log.heatDissipated": "{id} dissipates {dissip} heat ({prev}->{curr})",
   "log.shutdown":
     "*** {id} SHUT DOWN (heat {heat} >= {threshold}) avoid fail (2D6 = {roll} < {avoid}) ***",

@@ -9,6 +9,13 @@
 
 ## To Do
 
+- heat dissipation from heatsink, not critical slots
+- improve weapon shot display which has shared ammo bin
+- shutdown mech does not affect targetMovementModifier
+- show ammo explosion check avoid (success)
+- enforce minimum range rule for weapons
+- warn min range, reject out of range on 'fire' command immediately
+
 ## In progress
 
 - Later in classic expansion: heat (will pick up the `heatSinksDestroyed` count
