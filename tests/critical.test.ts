@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { Location } from "../src/core/types.js";
 import { getMechDef } from "../src/data/index.js";
 import { loadAmmoBins } from "../src/rules/ammo.js";
-import { effectiveMovement, resolveCriticalHits } from "../src/rules/critical.js";
+import {
+  applyAmmoExplosion,
+  checkCASE,
+  effectiveMovement,
+  resolveCriticalHits,
+} from "../src/rules/critical.js";
 import type { UnitDamageState } from "../src/rules/damage.js";
 import { scriptedRng } from "./helpers.js";
 
@@ -572,5 +577,94 @@ describe("DHS grouping", () => {
     const slot = lt[dhsIndices[0]!] as Extract<(typeof lt)[number], { kind: "structure" }>;
     const group = (slot as { group: readonly number[] }).group;
     expect(group).toEqual(dhsIndices.map((i) => i + 1));
+  });
+});
+
+describe("CASE", () => {
+  const state = (): UnitDamageState => {
+    const def = getMechDef("TW-Prime")!;
+    return {
+      armor: { ...def.armor, leftTorso: 0 },
+      armorRear: { ...def.armorRear },
+      internalStructure: { ...def.internalStructure },
+    };
+  };
+
+  it("hasCase detects implicit Clan protection on both side torsos only", () => {
+    const tw = getMechDef("TW-Prime")!;
+    expect(tw.techBase).toBe("Clan");
+    expect(checkCASE(tw, "leftTorso")).toBe("case");
+    expect(checkCASE(tw, "rightTorso")).toBe("case");
+    expect(checkCASE(tw, "centerTorso")).toBe(undefined);
+    expect(checkCASE(tw, "head")).toBe(undefined);
+
+    const hbk = getMechDef("HBK-4G")!;
+    expect(hbk.techBase).toBe("Inner Sphere");
+    expect(checkCASE(hbk, "leftTorso")).toBe(undefined);
+  });
+
+  it("hasCase recognizes explicit CASE / CASE II slots on an IS mech", () => {
+    const hbk = getMechDef("HBK-4G")!;
+    const withCase: typeof hbk = {
+      ...hbk,
+      techBase: "Inner Sphere",
+      critSlots: {
+        ...hbk.critSlots,
+        leftTorso: [...hbk.critSlots.leftTorso, { kind: "soak", name: "case" }],
+      },
+    };
+    expect(checkCASE(withCase, "leftTorso")).toBe("case");
+
+    const withII: typeof hbk = {
+      ...hbk,
+      techBase: "Inner Sphere",
+      critSlots: {
+        ...hbk.critSlots,
+        leftTorso: [...hbk.critSlots.leftTorso, { kind: "soak", name: "caseII" }],
+      },
+    };
+    expect(checkCASE(withII, "leftTorso")).toBe("caseII");
+  });
+
+  it("CASE: explosion vents at the side torso, center torso untouched", () => {
+    const s = state();
+    const ctBefore = s.internalStructure.centerTorso;
+    // Massive blast (1000) against leftTorso with CASE: LT IS destroyed,
+    // one bonus containment point vents, and CT keeps all its IS.
+    const app = applyAmmoExplosion(s, "leftTorso", 1000, "case");
+    expect(app.after.internalStructure.leftTorso).toBe(-1);
+    expect(app.after.internalStructure.centerTorso).toBe(ctBefore);
+    expect(app.killed).toBe(false);
+  });
+
+  it("CASE II: blast capped at 1 point to the location, no overflow", () => {
+    const s = state();
+    const ltBefore = s.internalStructure.leftTorso;
+    const ctBefore = s.internalStructure.centerTorso;
+    const app = applyAmmoExplosion(s, "leftTorso", 1000, "caseII");
+    expect(app.after.internalStructure.leftTorso).toBe(ltBefore - 1);
+    expect(app.after.internalStructure.centerTorso).toBe(ctBefore);
+    expect(app.killed).toBe(false);
+  });
+
+  it("no CASE: explosion transfers inward to the center torso as normal", () => {
+    const s = state();
+    // Zero the CT armor pool too, so the IS delta is direct.
+    s.armor.centerTorso = 0;
+    const ltBefore = s.internalStructure.leftTorso;
+    const ctBefore = s.internalStructure.centerTorso;
+    const app = applyAmmoExplosion(s, "leftTorso", 100);
+    // LT IS absorbs 23, the remaining 77 bleeds into CT IS.
+    expect(app.after.internalStructure.leftTorso).toBe(0);
+    expect(app.after.internalStructure.centerTorso).toBe(Math.max(0, ctBefore - (100 - ltBefore)));
+  });
+
+  it("CASE: blowing out a side torso also removes its arm, CT still safe", () => {
+    const s = state();
+    const app = applyAmmoExplosion(s, "leftTorso", 1000, "case");
+    expect(app.blownOffArms).toContain("leftArm");
+    expect(app.after.internalStructure.leftArm).toBe(0);
+    expect(app.killed).toBe(false);
+    expect(app.after.internalStructure.centerTorso).toBeGreaterThan(0);
   });
 });
