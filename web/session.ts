@@ -32,7 +32,6 @@ import {
   facingChangeCost,
   getMapDef,
   getMapDefFor,
-  getMechDef,
   getMechDefFor,
   getUnit,
   isAdjacent,
@@ -50,6 +49,7 @@ import {
 } from "btlib10x";
 import type { LocaleId } from "./i18n/index.js";
 import { i18n } from "./i18n/index.js";
+import { lookupMech } from "./lookup.js";
 import { createRng } from "./rng.js";
 
 export type AppState = "setup" | "battle" | "over";
@@ -220,8 +220,8 @@ export function addUnit(
   gunnery: number,
   position: HexCoord,
   facing: Facing,
-): void {
-  const m = getMechDef(model);
+): string {
+  const m = lookupMech(model);
   if (m === undefined) throw new Error(i18n(s.locale, "err.unknownModel", { model }));
   if (s.roster.some((u) => u.id === id)) throw new Error(i18n(s.locale, "err.duplicateId", { id }));
   if (!Number.isInteger(team) || team < 0) throw new Error(i18n(s.locale, "err.badTeam"));
@@ -245,6 +245,7 @@ export function addUnit(
     }
   }
   s.roster.push({ id, model: m.model, team, gunnery, position, facing });
+  return m.model;
 }
 
 export function removeUnit(s: Session, id: string): void {
