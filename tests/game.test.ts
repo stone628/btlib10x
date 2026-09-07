@@ -105,7 +105,7 @@ describe("createBattle", () => {
     const state = hbkVsEnf();
     const hbk = getUnit(state, "hbk");
     expect(hbk.damage.armor).toEqual(getMechDef("HBK-4G")!.armor);
-    expect(hbk.shotsLeft["1"]).toBe(10);
+    expect(hbk.shotsLeft["4"]).toBe(10);
     expect(hbk.phaseStartDamage).toEqual(hbk.damage);
     expect(state.phase).toBe("initiative");
     expect(state.turn).toBe(1);
@@ -573,11 +573,11 @@ describe("weapon attack phase", () => {
   it("deducts ammo at declaration and allows one target per turn", () => {
     const state = startAttackTurn(hbkVsEnf());
     declareAttacks(state, "hbk", [
-      { weaponIndex: 1, targetId: "enf" },
+      { weaponIndex: 4, targetId: "enf" },
       { weaponIndex: 2, targetId: "enf" },
     ]);
-    expect(getUnit(state, "hbk").shotsLeft["1"]).toBe(9);
-    expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 3, targetId: "enf" }])).toThrow(
+    expect(getUnit(state, "hbk").shotsLeft["4"]).toBe(9);
+    expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }])).toThrow(
       /already declared/,
     );
   });
@@ -586,22 +586,22 @@ describe("weapon attack phase", () => {
     const state = startAttackTurn(hbkVsEnf());
     expect(() =>
       declareAttacks(state, "hbk", [
-        { weaponIndex: 1, targetId: "enf" },
-        { weaponIndex: 1, targetId: "enf" },
+        { weaponIndex: 4, targetId: "enf" },
+        { weaponIndex: 4, targetId: "enf" },
       ]),
     ).toThrow(/may only be declared once/);
   });
 
   it("resolves scripted attacks immediately and commits kills only at end of phase", () => {
     const state = startAttackTurn(hbkVsEnf());
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
-    // Turn 1: AC/20 (20 dmg) hits CT (roll 5) -> front 23 - 20 = 3 left.
+    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
+    // Turn 1: AC/20 (20 dmg) hits CT (roll 5) -> CT 27 - 20 = 7 left.
     resolveDeclaredAttacks(state, "hbk", scriptedRng(2, 3, 3, 4));
-    expect(getUnit(state, "enf").damage.armor.centerTorso).toBe(3);
+    expect(getUnit(state, "enf").damage.armor.centerTorso).toBe(7);
     expect(getUnit(state, "enf").destroyed).toBe(false);
 
     advancePhase(state); // weaponAttack -> end
-    expect(getUnit(state, "enf").destroyed).toBe(false); // survived with 3 CT
+    expect(getUnit(state, "enf").destroyed).toBe(false); // survived with 7 CT
 
     advancePhase(state); // end -> initiative, turn 2
     expect(state.turn).toBe(2);
@@ -610,9 +610,18 @@ describe("weapon attack phase", () => {
 
     rollInitiativePhase(state, scriptedRng(3, 3, 3, 1));
     advancePhase(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
+    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
     resolveDeclaredAttacks(state, "hbk", scriptedRng(6, 6, 3, 4)); // hit CT again
     expect(getUnit(state, "enf").damage.armor.centerTorso).toBe(0);
+    expect(getUnit(state, "enf").destroyed).toBe(false); // CT IS still up (16-13=3)
+
+    advancePhase(state); // weaponAttack -> end
+    advancePhase(state); // end -> initiative, turn 3
+    expect(state.turn).toBe(3);
+    rollInitiativePhase(state, scriptedRng(3, 3, 3, 1));
+    advancePhase(state);
+    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
+    resolveDeclaredAttacks(state, "hbk", scriptedRng(6, 6, 3, 4)); // CT IS gone
     expect(getUnit(state, "enf").destroyed).toBe(true); // killed immediately
     expect(getUnit(state, "enf").removed).toBe(true);
 

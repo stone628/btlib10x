@@ -9,62 +9,36 @@
   "jumping": 0,
   "armor": {
     "head": 9,
-    "centerTorso": 17,
-    "rightTorso": 15,
-    "leftTorso": 15,
+    "centerTorso": 23,
+    "rightTorso": 20,
+    "leftTorso": 20,
     "rightArm": 12,
     "leftArm": 12,
     "rightLeg": 20,
     "leftLeg": 20,
     "centerTorsoRear": 6,
-    "leftTorsoRear": 5,
-    "rightTorsoRear": 5
+    "rightTorsoRear": 5,
+    "leftTorsoRear": 5
   },
   "weapons": [
     {
       "weapon": "Medium Laser",
-      "location": "rightArm"
-    },
-    {
-      "weapon": "Medium Laser",
-      "location": "leftArm"
+      "location": "rightTorso"
     },
     {
       "weapon": "Snub-Nose PPC",
-      "location": "rightTorso"
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "leftTorso"
     },
     {
       "weapon": "Small Pulse Laser",
       "location": "centerTorso"
     }
   ],
-  "source": "CBT Quick-Start Rules record sheet",
   "critSlots": {
-    "head": [
-      {
-        "kind": "structure",
-        "name": "lifeSupport"
-      },
-      {
-        "kind": "structure",
-        "name": "sensors"
-      },
-      {
-        "kind": "structure",
-        "name": "cockpit"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "structure",
-        "name": "sensors"
-      },
-      {
-        "kind": "structure",
-        "name": "lifeSupport"
-      }
-    ],
     "centerTorso": [
       {
         "kind": "structure",
@@ -114,7 +88,7 @@
         "kind": "empty"
       }
     ],
-    "rightTorso": [
+    "leftTorso": [
       {
         "kind": "structure",
         "name": "engine"
@@ -137,7 +111,7 @@
       },
       {
         "kind": "weapon",
-        "weapon": "Snub-Nose PPC"
+        "weapon": "Medium Laser"
       },
       {
         "kind": "empty"
@@ -158,7 +132,7 @@
         "kind": "empty"
       }
     ],
-    "leftTorso": [
+    "rightTorso": [
       {
         "kind": "structure",
         "name": "engine"
@@ -170,6 +144,47 @@
       {
         "kind": "structure",
         "name": "engine"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Laser"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "empty"
       },
       {
         "kind": "empty"
@@ -209,8 +224,7 @@
         "name": "upperArmActuator"
       },
       {
-        "kind": "weapon",
-        "weapon": "Medium Laser"
+        "kind": "empty"
       },
       {
         "kind": "empty"
@@ -240,39 +254,22 @@
         "kind": "empty"
       }
     ],
-    "leftArm": [
+    "leftLeg": [
       {
         "kind": "structure",
-        "name": "shoulder"
+        "name": "hip"
       },
       {
         "kind": "structure",
-        "name": "upperArmActuator"
+        "name": "upperLegActuator"
       },
       {
-        "kind": "weapon",
-        "weapon": "Medium Laser"
+        "kind": "structure",
+        "name": "lowerLegActuator"
       },
       {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
+        "kind": "structure",
+        "name": "footActuator"
       },
       {
         "kind": "empty"
@@ -305,29 +302,35 @@
         "kind": "empty"
       }
     ],
-    "leftLeg": [
+    "head": [
       {
         "kind": "structure",
-        "name": "hip"
+        "name": "lifeSupport"
       },
       {
         "kind": "structure",
-        "name": "upperLegActuator"
+        "name": "sensors"
       },
       {
         "kind": "structure",
-        "name": "lowerLegActuator"
-      },
-      {
-        "kind": "structure",
-        "name": "footActuator"
+        "name": "cockpit"
       },
       {
         "kind": "empty"
       },
       {
-        "kind": "empty"
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
       }
     ]
-  }
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 10
+  },
+  "source": "docs/mtf/Cicada CDA-3MA.mtf (TRO 3050 - Jihad). Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount; crit slot table per location included."
 }

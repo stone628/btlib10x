@@ -384,5 +384,9 @@
         "name": "lifeSupport"
       }
     ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 13
   }
 }

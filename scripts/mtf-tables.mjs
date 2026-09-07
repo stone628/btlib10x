@@ -283,6 +283,15 @@ export const SOAK_CRIT_TOTALS = {
   ferroFibrous: { "Inner Sphere": 14, Clan: 7 },
 };
 
+/**
+ * Crit slots occupied by one double heat sink device, by tech base
+ * (TechManual "Additional Heat Sinks").
+ */
+export const DHS_CRIT_SLOTS = {
+  "Inner Sphere": 3,
+  Clan: 2,
+};
+
 // ---------------------------------------------------------------------------
 // Model code generation
 // ---------------------------------------------------------------------------

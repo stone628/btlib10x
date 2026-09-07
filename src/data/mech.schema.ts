@@ -5,6 +5,24 @@ import { internalStructureForTonnage } from "../rules/internalStructure.js";
 import { getAmmoDef } from "./ammo.schema.js";
 import { getWeaponDef, type WeaponNameHolder } from "./weapon.schema.js";
 
+/** Heat sink type: single = 1 heat/turn each, double = 2 heat/turn each. */
+export type HeatSinkType = "single" | "double";
+
+export const HEAT_SINK_TYPES: readonly HeatSinkType[] = ["single", "double"];
+
+/**
+ * Heat sink configuration, faithful to the record sheet / MTF `Heat Sinks:N
+ * Type` header. `count` is the TOTAL number of heat sinks (engine-mounted plus
+ * external). Per construction rules (TechManual "Additional Heat Sinks"), an
+ * engine mounts `floor(walking * tonnage / 25)` sinks internally at no crit
+ * cost; the rest occupy crit slots. Double heat sinks dissipate 2 heat per
+ * turn each, single sinks 1.
+ */
+export interface HeatSinkConfig {
+  readonly type: HeatSinkType;
+  readonly count: number;
+}
+
 /** Torso locations that have a separate rear armor pool. */
 export type TorsoLocation = "centerTorso" | "rightTorso" | "leftTorso";
 
@@ -144,6 +162,8 @@ export interface MechDef {
    * `weapons` by `(location, weapon)` occurrence order at resolve time.
    */
   readonly critSlots: CritSlots;
+  /** Heat sink type and total count (engine-mounted + external). */
+  readonly heatsink: HeatSinkConfig;
   readonly source: string;
 }
 
@@ -191,6 +211,8 @@ export interface ResolvedMechDef {
    * multi-slot components (DHS) marked with their full group of slot indices.
    */
   readonly critSlots: ResolvedCritSlots;
+  /** Heat sink type and total count (engine-mounted + external). */
+  readonly heatsink: HeatSinkConfig;
   readonly source: string;
 }
 
@@ -241,6 +263,7 @@ export function resolveMechDef(def: MechDef): ResolvedMechDef {
     internalStructure: internalStructureForTonnage(def.tonnage),
     weapons,
     critSlots,
+    heatsink: def.heatsink,
     source: def.source,
   };
 }
@@ -611,6 +634,78 @@ export function validateMechDef(data: unknown): MechDef {
               );
             }
           }
+        }
+      }
+    }
+  }
+
+  // Heat sink configuration: type must be single|double and the total count
+  // must reconcile with the engine's internal capacity and the external sinks
+  // mounted in crit slots. Per construction rules an engine mounts
+  // `floor(walking * tonnage / 25)` sinks internally at no crit cost; each
+  // remaining sink (up to `count`) occupies crit slots — single sinks one
+  // slot each, double sinks grouped in runs of 3 (Inner Sphere) or 2 (Clan).
+  {
+    const hsRaw = data.heatsink;
+    if (!isRecord(hsRaw)) {
+      errors.push("heatsink must be an object with type|count");
+    } else {
+      const type = hsRaw.type;
+      if (type !== "single" && type !== "double") {
+        errors.push("heatsink.type must be single|double");
+      }
+      const count = requireNumber(hsRaw, "count", errors);
+      if (Number.isFinite(count) && (!Number.isInteger(count) || count < 10)) {
+        errors.push("heatsink.count must be an integer >= 10");
+      }
+    }
+    if (!isRecord(hsRaw) || typeof hsRaw.type !== "string") {
+      // fall through; type errors already reported above
+    } else if (isRecord(critSlots)) {
+      const type = hsRaw.type;
+      const count = Number.isFinite(hsRaw.count) ? (hsRaw.count as number) : NaN;
+      const width = data.techBase === "Clan" ? 2 : 3;
+      let external = 0;
+      let mixed = false;
+      for (const loc of LOCATIONS) {
+        const arr = critSlots[loc];
+        if (!Array.isArray(arr)) continue;
+        let run = 0;
+        for (const slot of arr) {
+          if (isRecord(slot) && slot.kind === "structure" && slot.name === "doubleHeatSink") {
+            run += 1;
+            if (type === "single") mixed = true;
+            continue;
+          }
+          if (run > 0 && run % width !== 0) {
+            errors.push(
+              `heatsink: ${loc} double heat sink run length ${run} not divisible by ${width}`,
+            );
+          }
+          external += Math.floor(run / width);
+          run = 0;
+          if (isRecord(slot) && slot.kind === "structure" && slot.name === "heatSink") {
+            external += 1;
+            if (type === "double") mixed = true;
+          }
+        }
+        if (run > 0 && run % width !== 0) {
+          errors.push(
+            `heatsink: ${loc} double heat sink run length ${run} not divisible by ${width}`,
+          );
+        }
+        external += Math.floor(run / width);
+      }
+      if (mixed) {
+        errors.push("heatsink: heatSink and doubleHeatSink crit slots cannot be mixed");
+      }
+      if (Number.isFinite(walking) && Number.isFinite(tonnage) && Number.isFinite(count)) {
+        const internal = Math.floor((walking * tonnage) / 25);
+        const expectedExternal = Math.max(0, count - internal);
+        if (external !== expectedExternal) {
+          errors.push(
+            `heatsink.count ${count} needs ${expectedExternal} external sink(s) (engine holds ${internal}); crit slots hold ${external}`,
+          );
         }
       }
     }

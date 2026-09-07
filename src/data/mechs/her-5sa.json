@@ -9,16 +9,16 @@
   "jumping": 0,
   "armor": {
     "head": 9,
-    "centerTorso": 18,
-    "rightTorso": 14,
-    "leftTorso": 14,
+    "centerTorso": 23,
+    "rightTorso": 19,
+    "leftTorso": 19,
     "rightArm": 11,
     "leftArm": 11,
     "rightLeg": 18,
     "leftLeg": 18,
     "centerTorsoRear": 5,
-    "leftTorsoRear": 5,
-    "rightTorsoRear": 5
+    "rightTorsoRear": 5,
+    "leftTorsoRear": 5
   },
   "weapons": [
     {
@@ -35,7 +35,6 @@
       "shots": 20
     }
   ],
-  "source": "CBT Quick-Start Rules record sheet",
   "critSlots": {
     "centerTorso": [
       {
@@ -349,5 +348,10 @@
         "name": "lifeSupport"
       }
     ]
-  }
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 10
+  },
+  "source": "docs/mtf/Hermes II HER-5SA.mtf (TRO 3050 - Jihad). Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount; crit slot table per location included."
 }

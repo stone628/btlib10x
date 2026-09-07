@@ -34,7 +34,8 @@ function fireEverything(s: S.Session, enemy: string): void {
     const weaponIndex = Number(key);
     if (unit.jammedWeapons.includes(weaponIndex)) return;
     if (!canFireFromLocation(unit.phaseStartDamage, mount.location)) return;
-    if (unit.shotsLeft[weaponIndex] !== undefined && (unit.shotsLeft[weaponIndex] ?? 0) < 1) return;
+    // Ammo weapons skip when dry (shotsLeft key disappears at zero).
+    if (mount.shots !== undefined && (unit.shotsLeft[weaponIndex] ?? 0) < 1) return;
     S.queueFire(s, { weaponIndex, targetId: enemy });
   });
 }
@@ -49,7 +50,13 @@ function autoPlay(s: S.Session): void {
       .map((u) => u.id);
     const enemy = ids.find((id) => id !== actorId)!;
     if (st.phase === "movement") {
-      if (st.units[actorId]!.shutdown === "not") S.declareMode(s, "walk");
+      if (st.units[actorId]!.shutdown === "not") {
+        try {
+          S.declareMode(s, "walk");
+        } catch {
+          S.declareMode(s, "standStill");
+        }
+      }
       S.commitMove(s);
     } else {
       fireEverything(s, enemy);
@@ -221,9 +228,9 @@ describe("info", () => {
     const detail = run(s, "info mech HBK-4G").join("\n");
     expect(detail).toContain("walk 4 / run 6 / jump 0");
     expect(detail).toContain(" 9A");
-    expect(detail).toContain("26F");
+    expect(detail).toContain("31F");
     expect(detail).toContain("Autocannon/20");
-    expect(detail).toContain("#1 Autocannon/20 [RT]");
+    expect(detail).toContain("#4 Autocannon/20 [RT]");
     expect(detail).toContain("critical slots");
     expect(detail).toContain("  3 Cockpit");
     expect(run(s, "info mech NOPE")[0]).toMatch(/^error: Unknown 'Mech model/);
@@ -296,8 +303,8 @@ describe("sheet", () => {
     expect(lines).toContain("Hunchback HBK-4G");
     expect(lines).toContain("gunnery: Regular(4)");
     expect(lines).toContain("9/ 9A");
-    expect(lines).toContain("26/26F");
-    expect(lines).toContain("#1 Autocannon/20 [RT]");
+    expect(lines).toContain("31/31F");
+    expect(lines).toContain("#4 Autocannon/20 [RT]");
     expect(lines).toContain("critical slots");
     expect(lines).toContain("  1 Shoulder");
   });
@@ -324,12 +331,12 @@ describe("sheet", () => {
     expect(out).toContain("hunchy  HBK-4G  9,9 facing n");
     expect(out).toContain("team 1:");
     expect(out).toContain("cicada  CDA-3MA  9,8 facing s");
-    // Hunchback (50t): HD=9+3=12, CT=26+5+16=47, RT=20+4+12=36, LT=20+4+12=36,
+    // Hunchback (50t): HD=9+3=12, CT=31+5+16=52, RT=24+4+12=40, LT=24+4+12=40,
     // RA=16+8=24, LA=16+8=24, RL=20+12=32, LL=20+12=32.
     expect(out).toMatch(/HD\(12\/12\)/);
-    expect(out).toMatch(/CT\(47\/47\)/);
-    expect(out).toMatch(/RT\(36\/36\)/);
-    expect(out).toMatch(/LT\(36\/36\)/);
+    expect(out).toMatch(/CT\(52\/52\)/);
+    expect(out).toMatch(/RT\(40\/40\)/);
+    expect(out).toMatch(/LT\(40\/40\)/);
     expect(out).toMatch(/RA\(24\/24\)/);
     expect(out).toMatch(/LA\(24\/24\)/);
     expect(out).toMatch(/RL\(32\/32\)/);
@@ -345,10 +352,10 @@ describe("sheet", () => {
     // Destroy CT internal structure → killed.
     hunchy.damage.internalStructure.centerTorso = 0;
     const out = run(s, "sheet").join("\n");
-    // RT: 0+4+12 = 16/36, front pool gone, IS intact → "[-F]".
-    expect(out).toMatch(/RT\(16\/36\[-F\]\)/);
-    // CT: 26+5+0 = 31/47, IS gone → "[-I]".
-    expect(out).toMatch(/CT\(31\/47\[-I\]\)/);
+    // RT: 0+4+12 = 16/40, front pool gone, IS intact → "[-F]".
+    expect(out).toMatch(/RT\(16\/40\[-F\]\)/);
+    // CT: 31+5+0 = 36/52, IS gone → "[-I]".
+    expect(out).toMatch(/CT\(36\/52\[-I\]\)/);
   });
 
   it("tracks armor damage during battle", () => {
@@ -356,7 +363,7 @@ describe("sheet", () => {
     run(s, "start");
     const before = run(s, "sheet hunchy").join("\n");
     expect(before).toContain("position: 9,9 facing n");
-    expect(before).toContain("26/26F");
+    expect(before).toContain("31/31F");
     autoPlay(s);
     // Battle ended; at least one unit took damage.
     const allUnits = Object.values(s.battle!.units);
@@ -554,10 +561,10 @@ describe("attack", () => {
     const enemy = actor === "hunchy" ? "cicada" : "hunchy";
     expect(run(s, `sheet ${actor}`).join("\n")).toMatch(/#1 .+S\d+\/\s*M\d+\/\s*L\d+/);
 
-    const shotsBefore = actor === "hunchy" ? (s.battle!.units.hunchy!.shotsLeft[1] ?? 0) : null;
-    expect(run(s, `fire ${enemy} 1`).join("\n")).toContain("queued");
-    expect(run(s, `fire ${enemy} 1`)[0]).toMatch(
-      /error: Weapon #1 may only be declared once per turn/,
+    const shotsBefore = actor === "hunchy" ? (s.battle!.units.hunchy!.shotsLeft[4] ?? 0) : null;
+    expect(run(s, `fire ${enemy} 4`).join("\n")).toContain("queued");
+    expect(run(s, `fire ${enemy} 4`)[0]).toMatch(
+      /error: Weapon #4 may only be declared once per turn/,
     );
     expect(run(s, `fire ${actor} 2`)[0]).toMatch(/^error: Target must belong to another team/);
     expect(run(s, "status").join("\n")).toContain(`-> ${enemy}`);
@@ -566,14 +573,14 @@ describe("attack", () => {
     // Second unit declares and triggers resolution sweep at phase end.
     const actor2 = S.currentActor(s)!.id;
     expect(run(s, `sheet ${actor}`).join("\n")).toMatch(/#1 .+S\d+\/\s*M\d+\/\s*L\d+/);
-    expect(run(s, `fire ${actor} 1`).join("\n")).toContain("queued");
+    expect(run(s, `fire ${actor} 4`).join("\n")).toContain("queued");
     const out = run(s, "done").join("\n");
     expect(out).toMatch(new RegExp(`${actor2} fires at ${actor}`));
     expect(out).toMatch(/-> (HIT|MISS|auto-hit)/);
     expect(out).toMatch(/=== resolving declared attacks ===/);
     expect(out).toMatch(/=== attack damage resolved ===/);
     if (shotsBefore !== null) {
-      expect(s.battle!.units.hunchy!.shotsLeft[1]).toBe(shotsBefore - 1);
+      expect(s.battle!.units.hunchy!.shotsLeft[4]).toBe(shotsBefore - 1);
     }
   });
 });

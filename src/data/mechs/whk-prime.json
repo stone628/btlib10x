@@ -354,5 +354,9 @@
       }
     ]
   },
-  "source": "docs/mtf/Masakari Prime.mtf (TRO 3050 - Succession Wars). Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount; crit slot table per location included."
+  "source": "docs/mtf/Masakari Prime.mtf (TRO 3050 - Succession Wars). Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount; crit slot table per location included.",
+  "heatsink": {
+    "type": "double",
+    "count": 20
+  }
 }

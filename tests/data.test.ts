@@ -25,13 +25,13 @@ describe("'Mech definitions", () => {
     expect(hbk.walking).toBe(4);
     expect(hbk.running).toBe(6);
     expect(hbk.jumping).toBe(0);
-    expect(hbk.armor.centerTorso).toBe(26);
+    expect(hbk.armor.centerTorso).toBe(31);
     expect(hbk.armor.head).toBe(9);
     expect(Object.values(hbk.weapons).map((w) => w.weapon)).toContain("Autocannon/20");
   });
 
   it("spot-checks remaining sheets", () => {
-    expect(getMechDef("ENF-4R")!.armor.centerTorso).toBe(23);
+    expect(getMechDef("ENF-4R")!.armor.centerTorso).toBe(27);
     expect(getMechDef("GRF-1N")!.jumping).toBe(5);
     expect(getMechDef("GRF-1N")!.armor.centerTorso).toBe(20);
     expect(getMechDef("CDA-3MA")!.walking).toBe(8);
@@ -52,9 +52,10 @@ describe("'Mech definitions", () => {
       tonnage: 50,
       weightClass: "Medium",
       techBase: "Inner Sphere",
-      walking: 4,
-      running: 6,
+      walking: 5,
+      running: 8,
       jumping: 0,
+      heatsink: { type: "single", count: 10 },
       armor: {
         head: 9,
         centerTorso: 26,

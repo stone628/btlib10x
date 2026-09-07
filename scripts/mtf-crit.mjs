@@ -13,6 +13,7 @@
 import {
   CODE,
   CRIT_SLOT_COUNTS,
+  DHS_CRIT_SLOTS,
   ENGINE_CRIT_SLOTS,
   LOCATIONS,
   SOAK_CRIT_TOTALS,
@@ -241,5 +242,69 @@ export function validateCritConstruction(slots, meta, errors) {
         } expected`,
       );
     }
+  }
+}
+
+/**
+ * Validate the `Heat Sinks:N Type` header against the crit-slot table, using
+ * the construction rules for engine-mounted sinks: an engine mounts
+ * `floor(walking * tonnage / 25)` sinks internally at no crit cost; every
+ * remaining sink up to the header total occupies crit slots. Single sinks
+ * take one slot each; double sinks take runs of `DHS_CRIT_SLOTS[techBase]`
+ * slots per device. Violations are pushed as hard errors.
+ *
+ * `meta` extends `validateCritConstruction`'s meta with:
+ *   - walking        — `Walk MP` (for the engine-rating sink capacity)
+ *   - tonnage        — `Mass`
+ *   - heatsink       — `{ type, count }` parsed from the `Heat Sinks:` header
+ */
+export function validateHeatSinks(slots, meta, errors) {
+  const techBase = meta?.techBase ?? "";
+  const hs = meta?.heatsink;
+  if (!hs || typeof hs.count !== "number" || (hs.type !== "single" && hs.type !== "double")) {
+    errors.push("Heat Sinks header missing or malformed (expected 'N Single' or 'N Double')");
+    return;
+  }
+  const { type, count } = hs;
+  if (count < 10) {
+    errors.push(`Heat Sinks:${count} below minimum of 10`);
+    return;
+  }
+  const width = DHS_CRIT_SLOTS[techBase] ?? 3;
+  let external = 0;
+  let mixed = false;
+  for (const loc of LOCATIONS) {
+    let run = 0;
+    for (const slot of slots[loc] ?? []) {
+      if (slot.kind === "structure" && slot.name === "doubleHeatSink") {
+        run += 1;
+        if (type === "single") mixed = true;
+        continue;
+      }
+      if (run > 0 && run % width !== 0) {
+        errors.push(`${loc}: double heat sink run length ${run} not divisible by ${width}`);
+      }
+      external += Math.floor(run / width);
+      run = 0;
+      if (slot.kind === "structure" && slot.name === "heatSink") {
+        external += 1;
+        if (type === "double") mixed = true;
+      }
+    }
+    if (run > 0 && run % width !== 0) {
+      errors.push(`${loc}: double heat sink run length ${run} not divisible by ${width}`);
+    }
+    external += Math.floor(run / width);
+  }
+  if (mixed) {
+    errors.push("Heat Sinks: heatSink and doubleHeatSink crit slots cannot be mixed");
+    return;
+  }
+  const internal = Math.floor(((meta?.walking ?? 0) * (meta?.tonnage ?? 0)) / 25);
+  const expectedExternal = Math.max(0, count - internal);
+  if (external !== expectedExternal) {
+    errors.push(
+      `Heat Sinks:${count} needs ${expectedExternal} external sink(s) (engine holds ${internal}); crit slots hold ${external}`,
+    );
   }
 }
