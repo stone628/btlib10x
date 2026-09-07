@@ -331,8 +331,10 @@ Runs the TW Determining Critical Hits table (2D6: 2-7 none, 8-9 one, 10-11 two,
 head/legs, 2D6 half+slot torso/arms), re-rolls on empty/soak/destroyed slots,
 and inward transfer (head/CT terminal; excess lost). Effects: weapon destroyed,
 ammo explosion (per-shot damage × remaining shots applied directly to the bin's
-IS with cascading crits), limb/head blown off, cockpit kill, and
-leg-actuator/hip/jump-jet destruction tracked for movement.
+IS with cascading crits), inert-ammo crit (`ammoNoExplosion` — gauss rifle
+and similar rounds do not detonate; the bin still empties), limb/head blown
+off, cockpit kill, and leg-actuator/hip/jump-jet destruction tracked for
+movement.
 
 `CriticalResolution` exposes `rows` (the individual `CriticalEffect`s),
 `determiningRoll`, and the resulting `critSlotsDestroyed` / `destroyedWeapons` /

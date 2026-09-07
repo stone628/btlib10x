@@ -181,12 +181,13 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   the 1D6 / 2D6 half+slot roll per location. Slot selection re-rolls on
   empty / soak / already-destroyed slots and the whole determining roll
   transfers inward when the source is exhausted (head and center torso
-  are terminal). Effects implemented: weapon destroyed, ammo explosion
+  are terminal).   Effects implemented: weapon destroyed, ammo explosion
   (an explosion detonates only the hit bin — its remaining shots ×
   per-shot damage applied directly to that bin location's internal
   structure, with a cascading critical roll on the drained IS; bins in a
   location whose IS is fully gone are removed outright, and an empty bin
-  soaks the hit), arm/leg/head blown off on a 12, cockpit crit kills the
+  soaks the hit), inert ammo (e.g. gauss rifle) recorded as a non-
+  exploding crit that still empties the bin, arm/leg/head blown off on a 12, cockpit crit kills the
   pilot, leg actuator/hip/jump-jet destruction feeds the effective
   movement helper (leg actuators −1 walk each, hip halves walking, jump
   jets −1 jump each). Engine / gyro / sensor / life-support / heat-sink
@@ -196,7 +197,9 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   heat, end-phase dissipation; to-hit and MP penalties; shutdown checks at
   peak heat (auto at 30+, 2D6 avoidance at 14-29) and automatic restart of
   *heat-caused* shutdowns once heat drops below the threshold; heat ammo
-  explosion checks at 19+. End-phase dissipation comes from the design's
+  explosion checks at 19+. Inert ammunition (e.g. gauss rifle rounds)
+  is excluded from the heat-triggered selection and from crit-slot
+  detonation; a crit on such a bin still empties it. End-phase dissipation comes from the design's
   heat sinks: the engine mounts `floor(walking × tonnage / 25)` sinks free,
   the rest occupy crit slots; double heat sinks dissipate 2 heat each and
   take 3 crits (Inner Sphere) or 2 crits (Clan) per device. Destroyed

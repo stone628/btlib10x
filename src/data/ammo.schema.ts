@@ -3,6 +3,13 @@ import ammoJson from "./ammo.json";
 export interface AmmoDef {
   readonly weapon: string;
   readonly shotsPerBin: number;
+  /**
+   * Whether this ammunition detonates from heat-triggered explosion checks
+   * and crit-slot ammo hits. Total Warfare: most ammo is explosive; gauss
+   * rifle rounds are inert slugs. Defaults to true when omitted from the
+   * data file.
+   */
+  readonly explosive: boolean;
 }
 
 export interface AmmosFile {
@@ -29,8 +36,17 @@ function parseAmmo(raw: unknown, label: string, errors: string[]): AmmoDef | nul
   if (!isBoundedInt(raw.shotsPerBin)) {
     errors.push(`${label}.shotsPerBin must be a positive integer`);
   }
+  const explosiveRaw = raw.explosive;
+  let explosive = true;
+  if (explosiveRaw !== undefined) {
+    if (typeof explosiveRaw !== "boolean") {
+      errors.push(`${label}.explosive must be a boolean`);
+    } else {
+      explosive = explosiveRaw;
+    }
+  }
   if (typeof weapon !== "string" || weapon.length === 0) return null;
-  return { weapon, shotsPerBin: raw.shotsPerBin as number } as AmmoDef;
+  return { weapon, shotsPerBin: raw.shotsPerBin as number, explosive };
 }
 
 export function parseAmmoData(data: unknown): readonly AmmoDef[] {

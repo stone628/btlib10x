@@ -91,14 +91,14 @@ describe("bin loading", () => {
         location: "leftTorso",
         slotIndex: 1,
         weaponIndex: 4,
-        weapon: "Autocannon/20",
+        weapon: "AC/20",
       },
       {
         id: "leftTorso:2",
         location: "leftTorso",
         slotIndex: 2,
         weaponIndex: 4,
-        weapon: "Autocannon/20",
+        weapon: "AC/20",
       },
     ]);
   });

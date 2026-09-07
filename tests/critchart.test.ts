@@ -24,10 +24,10 @@ describe("critical slot chart (sheet)", () => {
     htk.destroyedWeapons.push(4);
     const text = run(s, "sheet hunchy").join("\n");
     // Every AC/20 weapon slot in RT is flagged [-]; structure slots are not.
-    expect(text).toContain("  1 Autocannon/20 [-]");
-    expect(text).toContain(" 10 Autocannon/20 [-]");
+    expect(text).toContain("  1 AC/20 [-]");
+    expect(text).toContain(" 10 AC/20 [-]");
     // The weapons list flag for a crit-destroyed mount shows [-], same as the chart.
-    expect(text).toContain("#4 Autocannon/20 [RT]");
+    expect(text).toContain("#4 AC/20");
     expect(text).toContain("[-]");
     // Shoulder slot (slot 1 of left arm) is a structure — untouched.
     const laLine = text.split("\n").find((l) => l.includes(" 1 Shoulder"));
@@ -57,7 +57,7 @@ describe("critical slot chart (sheet)", () => {
     htk.ammoBins = { ...htk.ammoBins, "leftTorso:1": 3, "leftTorso:2": 5 };
     htk.shotsLeft = { ...htk.shotsLeft, 4: 8 };
     const text = run(s, "sheet hunchy").join("\n");
-    expect(text).toContain("  1 Autocannon/20 ammo (3/5 shots) [-]");
-    expect(text).toContain("  2 Autocannon/20 ammo (5/5 shots)");
+    expect(text).toContain("  1 AC/20 ammo (3/5 shots) [-]");
+    expect(text).toContain("  2 AC/20 ammo (5/5 shots)");
   });
 });

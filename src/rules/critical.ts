@@ -63,7 +63,7 @@
 import { roll2D6, rollD6 } from "../core/dice.js";
 import { damageTransferTo, isArm, isLeg, isLimb } from "../core/locations.js";
 import type { Location, Rng } from "../core/types.js";
-import type { AmmoNameHolder } from "../data/ammo.schema.js";
+import { type AmmoNameHolder, getAmmoDefFor } from "../data/ammo.schema.js";
 import type { ResolvedCritSlot, ResolvedMechDef } from "../data/mech.schema.js";
 import { CRIT_SLOT_COUNTS } from "../data/mech.schema.js";
 import { getWeaponDefFor } from "../data/weapon.schema.js";
@@ -100,6 +100,17 @@ export type CriticalEffect =
       readonly damage: number;
       /** The damage application that hit the bin's location's IS directly. */
       readonly application: DamageApplication;
+    }
+  | {
+      /** Crit hit a non-explosive ammo bin (e.g. gauss rifle). The slot
+       *  still takes the crit, the bin empties, but no explosion damage. */
+      readonly kind: "ammoNoExplosion";
+      readonly location: Location;
+      readonly slotIndex: number;
+      readonly rolls: readonly number[];
+      readonly transferred: boolean;
+      readonly weaponIndex: number;
+      readonly weaponName: string;
     }
   | {
       readonly kind: "headBlownOff";
@@ -533,8 +544,24 @@ function applySlotHit(
   if (slot.kind === "ammo") {
     const weaponName = slot.weapon;
     const weaponIndex = slot.weaponIndex;
-    // Only the hit bin detonates; sibling bins of the same weapon stay.
     const binId = ammoBinId(loc, slotIndex);
+    // Non-explosive ammo (e.g. gauss rifle rounds) cannot detonate. The crit
+    // still destroys the slot and empties the bin (slugs spill), but no
+    // damage roll and no cascade.
+    if (!getAmmoDefFor(slot).explosive) {
+      state.ammoBins[binId] = 0;
+      state.rows.push({
+        kind: "ammoNoExplosion",
+        location: loc,
+        slotIndex,
+        rolls: rolls.slice(),
+        transferred,
+        weaponIndex,
+        weaponName,
+      });
+      return;
+    }
+    // Only the hit bin detonates; sibling bins of the same weapon stay.
     const shotsRemaining = state.ammoBins[binId] ?? 0;
     const damagePerShot = ammoDamagePerShot(slot);
     const amount = shotsRemaining * damagePerShot;

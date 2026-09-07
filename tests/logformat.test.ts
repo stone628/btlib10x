@@ -52,7 +52,7 @@ describe("critical hit log formatting", () => {
       ammoBins: freshAmmo(def),
     });
     return {
-      weapon: "Autocannon/20",
+      weapon: "AC/20",
       distance: 1,
       breakdown: computeToHit({
         gunnery: 4,
@@ -62,7 +62,7 @@ describe("critical hit log formatting", () => {
         targetTerrain: "clear",
         interveningWoods: 0,
         distance: 1,
-        weapon: getWeaponDefFor({ weapon: "Autocannon/20" }),
+        weapon: getWeaponDefFor({ weapon: "AC/20" }),
       }),
       toHitRoll: 7,
       hit: true,

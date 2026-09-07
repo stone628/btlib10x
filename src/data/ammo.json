@@ -57,11 +57,13 @@
   },
   {
     "weapon": "CL Gauss Rifle",
-    "shotsPerBin": 8
+    "shotsPerBin": 8,
+    "explosive": false
   },
   {
     "weapon": "Gauss Rifle",
-    "shotsPerBin": 8
+    "shotsPerBin": 8,
+    "explosive": false
   },
   {
     "weapon": "CL LB 20-X AC",

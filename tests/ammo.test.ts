@@ -54,7 +54,7 @@ describe("ammo validation in MechDef", () => {
       validateMechDef({
         ...base,
         weapons: Object.values(base.weapons).map((w) =>
-          w.weapon === "Autocannon/20" ? { ...w, shots: 7 } : w,
+          w.weapon === "AC/20" ? { ...w, shots: 7 } : w,
         ),
       }),
     ).toThrow(/must be a multiple/);
