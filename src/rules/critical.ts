@@ -42,16 +42,19 @@
  *   - leg actuator (upper/lower/foot) and hip: recorded as destroyed and
  *     accounted for by the effective-movement helper.
  *   - jump jet slot: jump MP reduced by 1.
+ *   - ammo explosions in CASE-protected locations: CASE (explicit slot, or
+ *     implicit on Clan side torsos) contains the blast — it vents as one point
+ *     of internal-structure damage to that location and never reaches the
+ *     center torso; CASE II additionally caps the blast at 1 point total.
  *
  * Effects that exist in the official rules but are not modeled here because
- * the current engine subset lacks heat / piloting / physical attacks / CASE:
+ * the current engine subset lacks heat / piloting / physical attacks:
  *   - engine crits (heat generation, eventual shutdown)
  *   - gyro crits (piloting rolls, eventual fall)
  *   - sensor crits (to-hit penalty)
  *   - life-support crits (pilot damage from heat, drowning)
  *   - heat-sink crits (reduced dissipation)
  *   - arm actuators, shoulder, hand (to-hit / physical-attack penalties)
- *   - ammo explosions in CASE-protected locations
  *
  * The engine's rules functions are pure given their inputs and operate on
  * snapshots; the caller (game.ts) commits the resulting state onto UnitState.
@@ -264,15 +267,51 @@ function findHittableSlot(
   return null;
 }
 
+export type CaseKind = "case" | "caseII";
+
+/**
+ * returns if given location is protected by case.
+ * "caseII" overrides any other case state.
+ * Clan mech's have built-in case at side torso
+ */
+export function checkCASE(def: ResolvedMechDef, location: Location): CaseKind | undefined {
+  let hasCase = false;
+  for (const cs of def.critSlots[location] ?? []) {
+    if (cs.kind === "soak") {
+      if (cs.name === "caseII") return "caseII";
+      if (cs.name === "case") {
+        hasCase = true;
+      }
+    }
+  }
+  if (
+    hasCase ||
+    (def.techBase === "Clan" && (location === "leftTorso" || location === "rightTorso"))
+  ) {
+    return "case";
+  }
+  return undefined;
+}
+
 /**
  * Apply an ammo explosion's damage directly to a location's internal
  * structure (bypassing the armor pool per the rules), then let the standard
  * transfer graph apply for any overflow. Returns the resulting application.
+ *
+ * CASE protection (TW):
+ *   - `caseII` — the blast is contained and capped at 1 point of damage to
+ *     the location (no overflow, no extra containment damage).
+ *   - `case` — the blast is contained: it may still shred the location's
+ *     own IS, but it stops there — one bonus point vents out of the location
+ *     and it never reaches the next location. The containment point is applied
+ *     as ordinary IS damage (subject to the armor pool the caller drained) and
+ *     can trigger a crit roll.
  */
 export function applyAmmoExplosion(
   state: UnitDamageState,
   location: Location,
   amount: number,
+  caseKind?: CaseKind,
 ): DamageApplication {
   if (!Number.isInteger(amount) || amount <= 0) {
     // No-op application: `state` is returned unchanged, so `pre` may alias it.
@@ -296,7 +335,7 @@ export function applyAmmoExplosion(
     armorRear: { ...state.armorRear },
     internalStructure: { ...state.internalStructure },
   };
-  return applyDamage(drained, location, amount);
+  return applyDamage(drained, location, amount, "front", caseKind);
 }
 
 export interface ResolveCriticalsInput {
@@ -500,7 +539,7 @@ function applySlotHit(
     const damagePerShot = ammoDamagePerShot(slot);
     const amount = shotsRemaining * damagePerShot;
     if (amount > 0) {
-      const app = applyAmmoExplosion(state.damage, loc, amount);
+      const app = applyAmmoExplosion(state.damage, loc, amount, checkCASE(def, loc));
       state.damage = app.after;
       if (app.killed) state.killed = true;
       for (const arm of app.blownOffArms) {

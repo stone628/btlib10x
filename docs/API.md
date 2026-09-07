@@ -117,7 +117,7 @@ type CritSlot =
   | { kind: "weapon"; weapon: string }
   | { kind: "ammo"; weapon: string }
   | { kind: "structure"; name: CritStructureName }
-  | { kind: "soak"; name: CritSoakName };      // endoSteel / ferroFibrous / case
+  | { kind: "soak"; name: CritSoakName };      // endoSteel / ferroFibrous / case / caseII
 
 type CritSlots = Record<Location, readonly CritSlot[]>;
 ```

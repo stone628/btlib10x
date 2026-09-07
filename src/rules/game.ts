@@ -39,7 +39,7 @@ import {
   collapseToRubble,
   createBuildingState,
 } from "./building.js";
-import { applyAmmoExplosion, effectiveMovement } from "./critical.js";
+import { applyAmmoExplosion, checkCASE, effectiveMovement } from "./critical.js";
 import {
   canFireFromLocation,
   isUnitDestroyed,
@@ -1031,7 +1031,12 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
     if (bin === null) continue;
     const roll = roll2D6(rng);
     if (roll >= avoid) continue;
-    const application = applyAmmoExplosion(unit.damage, bin.location, bin.damage);
+    const application = applyAmmoExplosion(
+      unit.damage,
+      bin.location,
+      bin.damage,
+      checkCASE(def, bin.location),
+    );
     unit.damage = application.after;
     for (const loc of LOCATIONS) {
       if ((unit.damage.internalStructure[loc] ?? 0) <= 0) {

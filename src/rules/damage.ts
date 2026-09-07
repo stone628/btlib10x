@@ -9,6 +9,7 @@ import {
 } from "../core/locations.js";
 import type { Location } from "../core/types.js";
 import type { Arc } from "./arcs.js";
+import type { CaseKind } from "./critical.js";
 
 /** Per-location numeric value (armor HP, IS HP, etc.). */
 export type LocationValue = Record<Location, number>;
@@ -72,14 +73,16 @@ function poolOf(
  * Apply one damage grouping against `damage` starting at `location` for the
  * given firing `arc` (defaults to front). Damage first drains the active armor
  * pool (front, or rear for rear-arc torso hits), then that location's internal
- * structure; once both are gone it transfers inward per the graph. Pure:
- * returns the updated layered damage state.
+ * structure; once both are gone it transfers inward per the graph. CASE
+ * protection (optional, from ammo explosions) caps the overflow at the
+ * protected location. Pure: returns the updated layered damage state.
  */
 export function applyDamage(
   damage: UnitDamageState,
   location: Location,
   amount: number,
   arc: Arc = "front",
+  caseKind?: CaseKind,
 ): DamageApplication {
   if (!Number.isInteger(amount) || amount <= 0) {
     throw new Error(`damage must be a positive integer, got ${amount}`);
@@ -90,7 +93,7 @@ export function applyDamage(
   const blownOffArms: Location[] = [];
   let killed = false;
 
-  let remaining = amount;
+  let remaining = caseKind === "caseII" ? 1 : amount;
   let current: Location | null = location;
   while (current !== null && remaining > 0 && !killed) {
     const cur: Location = current;
@@ -134,8 +137,26 @@ export function applyDamage(
           blownOffArms.push(arm);
         }
       }
-      if (remaining > 0 && !killed) current = damageTransferTo(cur);
-      else break;
+      if (remaining > 0 && !killed) {
+        if (caseKind !== undefined && cur === location) {
+          // CASE / CASE II: contain the blast here instead of transferring
+          // inward. Plain CASE vents the leftover as one bonus point of IS
+          // damage to this location; CASE II (already capped at 1 by the
+          // caller) vents with no bonus. Either way the blast never reaches
+          // the center torso.
+          if (caseKind === "case") {
+            next.internalStructure[cur] -= 1;
+            steps.push({
+              location: cur,
+              pool: "structure",
+              damageApplied: 1,
+              depleted: true,
+            });
+          }
+          break;
+        }
+        current = damageTransferTo(cur);
+      } else break;
     } else {
       current = damageTransferTo(cur);
     }
