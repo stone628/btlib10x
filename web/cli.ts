@@ -1,4 +1,4 @@
-import { FACINGS, listMapNames, VERSION } from "btlib10x";
+import { FACINGS, isShutdown, listMapNames, VERSION } from "btlib10x";
 import type { Chunk } from "./format.js";
 import {
   ammoPolicyLabel,
@@ -440,7 +440,7 @@ function availableCmds(session: S.Session): Record<string, CmdDef> {
       if (phase === "weaponAttack") return { ...GLOBAL_CMDS, ...ATTACK_CMDS };
       if (phase !== "movement") return { ...GLOBAL_CMDS, ...MOVE_CMDS };
       const actor = S.currentActor(session);
-      const down = actor !== null && actor.shutdown !== "not";
+      const down = actor !== null && isShutdown(actor);
       if (down || session.moveMode === "shutdown" || session.moveMode === "startup") {
         // Pending voluntary declaration: no hex movement.
         const { move: _move, face: _face, ...rest } = MOVE_CMDS;

@@ -37,6 +37,7 @@ import {
   isAdjacent,
   isBackwardStep,
   isForwardStep,
+  isShutdown,
   listMapNames,
   nextActor,
   parseAmmoPolicy,
@@ -148,7 +149,7 @@ function drive(s: Session): BattleState["events"] {
       if (s.actorId !== id) {
         if (battle.phase === "movement") {
           const next = getUnit(battle, id);
-          if (next && next.shutdown !== "not") {
+          if (next && isShutdown(next)) {
             battle.events.push({ kind: "shutdownPriority", unitId: id });
           }
         }
@@ -320,7 +321,7 @@ export function declareMode(s: Session, word: string): void {
   const unit = requireActor(s, "movement");
   const mode = parseMoveMode(s.locale, word);
   if (mode === "shutdown") {
-    if (unit.shutdown !== "not") throw new Error(i18n(s.locale, "err.mustBeOnlineForShutdown"));
+    if (isShutdown(unit)) throw new Error(i18n(s.locale, "err.mustBeOnlineForShutdown"));
     s.moveMode = "shutdown";
     s.moveSteps = [];
     return;
@@ -504,7 +505,7 @@ export function commitMove(s: Session): CommitResult {
       voluntaryShutdown(battle, unit.id);
     } else if (s.moveMode === "startup") {
       attemptVoluntaryStartup(battle, unit.id, s.rng);
-    } else if (unit.shutdown !== "not") {
+    } else if (isShutdown(unit)) {
       // Shut-down unit committing without a startup attempt: pass.
       passMovement(battle, unit.id);
     } else {

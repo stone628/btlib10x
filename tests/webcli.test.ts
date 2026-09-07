@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getMapDef, getMechDefFor } from "../src/data/index.js";
+import { isNominal } from "../src/index.js";
 import { canFireFromLocation } from "../src/rules/damage.js";
 import { reachableInfo } from "../web/format.js";
 import {
@@ -50,7 +51,7 @@ function autoPlay(s: S.Session): void {
       .map((u) => u.id);
     const enemy = ids.find((id) => id !== actorId)!;
     if (st.phase === "movement") {
-      if (st.units[actorId]!.shutdown === "not") {
+      if (isNominal(st.units[actorId]!)) {
         try {
           S.declareMode(s, "walk");
         } catch {

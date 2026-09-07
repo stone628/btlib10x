@@ -36,8 +36,8 @@ import {
 import { applyAmmoExplosion, effectiveMovement } from "./critical.js";
 import {
   canFireFromLocation,
-  isImmobile,
   isUnitDestroyed,
+  isUnitImmobile,
   type UnitDamageState,
 } from "./damage.js";
 import {
@@ -290,10 +290,22 @@ export interface CreateBattleOptions {
   readonly critsDisabled: boolean;
 }
 
-function getUnitOrThrow(state: BattleState, unitId: string): UnitState {
+function requireUnit(state: BattleState, unitId: string): UnitState {
   const unit = state.units[unitId];
   if (!unit) throw new Error(`Unknown unit id: ${unitId}`);
   return unit;
+}
+
+export function isNominal(unit: UnitState) {
+  return unit.shutdown === "not";
+}
+
+export function isShutdown(unit: UnitState) {
+  return unit.shutdown !== "not";
+}
+
+export function isImmobile(unit: UnitState) {
+  return isShutdown(unit) || isUnitImmobile(unit.damage);
 }
 
 /** Error messages show 1-based coordinates; positions are stored 1-based. */
@@ -465,10 +477,10 @@ export function rollInitiativePhase(state: BattleState, rng: Rng): void {
 
 export function declareMove(state: BattleState, unitId: string, mode: MoveMode): void {
   requirePhase(state, "movement");
-  const unit = getUnitOrThrow(state, unitId);
+  const unit = requireUnit(state, unitId);
   if (unit.removed) throw new Error(`${unitId} is removed from play`);
-  if (unit.shutdown !== "not") throw new Error(`${unitId} is shut down and cannot move`);
-  if (mode !== "standStill" && isImmobile(unit.damage)) {
+  if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot move`);
+  if (mode !== "standStill" && isUnitImmobile(unit.damage)) {
     throw new Error(`${unitId} has a destroyed leg and can only stand still`);
   }
   unit.moveMode = mode;
@@ -484,10 +496,10 @@ export function executeMove(
   options: { readonly finalFacing?: Facing } = {},
 ): void {
   requirePhase(state, "movement");
-  const unit = getUnitOrThrow(state, unitId);
+  const unit = requireUnit(state, unitId);
   if (unit.moveMode === null) throw new Error(`Declare a movement mode for ${unitId} first`);
   if (unit.removed) throw new Error(`${unitId} is removed from play`);
-  if (unit.shutdown !== "not") throw new Error(`${unitId} is shut down and cannot move`);
+  if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot move`);
 
   const def = getMechDefFor(unit);
   const movement = effectiveMovement(def, unit.critSlotsDestroyed);
@@ -559,7 +571,12 @@ export function executeMove(
   if (spent > budget) {
     throw new Error(`Move costs ${spent} MP but ${unit.moveMode} budget is ${budget}`);
   }
-  if (steps.length > 0 && !jumping && unit.moveMode !== "standStill" && isImmobile(unit.damage)) {
+  if (
+    steps.length > 0 &&
+    !jumping &&
+    unit.moveMode !== "standStill" &&
+    isUnitImmobile(unit.damage)
+  ) {
     throw new Error(`${unitId} has a destroyed leg and cannot move`);
   }
 
@@ -592,9 +609,9 @@ export function declareAttacks(
   rng: Rng = DEFAULT_RNG,
 ): void {
   requirePhase(state, "weaponAttack");
-  const unit = getUnitOrThrow(state, unitId);
+  const unit = requireUnit(state, unitId);
   if (unit.destroyed || unit.removed) throw new Error(`${unitId} is destroyed`);
-  if (unit.shutdown !== "not") throw new Error(`${unitId} is shut down and cannot fire`);
+  if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot fire`);
   if (unit.declaredAttacks.length > 0)
     throw new Error(`${unitId} already declared attacks this turn`);
 
@@ -638,7 +655,7 @@ export function declareAttacks(
       throw new Error("A unit may only declare attacks against one target per turn");
     }
 
-    const target = getUnitOrThrow(state, decl.targetId);
+    const target = requireUnit(state, decl.targetId);
     if (target.removed) throw new Error(`Target ${target.id} is removed from play`);
     if (target.team === unit.team) throw new Error("Target must belong to another team");
 
@@ -666,7 +683,7 @@ export function declareAttacks(
       attackerMovement: unit.moveMode ?? "standStill",
       targetHexesMoved: mv.hexesSinceLastReversal(target.movesThisTurn),
       targetJumped: target.jumpedThisTurn,
-      targetImmobile: isImmobile(target.damage) || target.shutdown !== "not",
+      targetImmobile: isImmobile(target),
       targetTerrain: cellAt(state, target.position).terrain,
       interveningWoods: woodsPoints,
       distance: dist,
@@ -721,7 +738,7 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
   for (const decl of unit.declaredAttacks) {
     const mount = def.weapons[decl.weaponIndex]!;
     const weapon = getWeaponDefFor(mount);
-    const target = getUnitOrThrow(state, decl.targetId);
+    const target = requireUnit(state, decl.targetId);
     const rapidFire = decl.rapidFire ?? false;
     const shots = rapidFire ? (weapon.rapidFireShots ?? 1) : 1;
 
@@ -732,7 +749,7 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
       attackerHeat: preHeat,
       targetHexesMoved: mv.hexesSinceLastReversal(target.movesThisTurn),
       targetJumped: target.jumpedThisTurn,
-      targetImmobile: isImmobile(target.damage) || target.shutdown !== "not",
+      targetImmobile: isImmobile(target),
       targetTerrain: cellAt(state, target.position).terrain,
       interveningTerrains: interveningTerrains(state, unit.position, target.position),
       distance: hexDistance(unit.position, target.position),
@@ -829,7 +846,7 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
 /** Resolve one unit's declared attacks against the current phase snapshot. */
 export function resolveDeclaredAttacks(state: BattleState, unitId: string, rng: Rng): void {
   requirePhase(state, "weaponAttack");
-  const unit = getUnitOrThrow(state, unitId);
+  const unit = requireUnit(state, unitId);
   if (unit.declaredAttacks.length === 0) throw new Error(`${unitId} has no declared attacks`);
   resolveUnitAttacks(state, unit, rng);
 }
@@ -1060,9 +1077,9 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
  *  successful voluntary startup. Marks the unit as having acted. */
 export function voluntaryShutdown(state: BattleState, unitId: string): void {
   requirePhase(state, "movement");
-  const unit = getUnitOrThrow(state, unitId);
+  const unit = requireUnit(state, unitId);
   if (unit.removed) throw new Error(`${unitId} is removed from play`);
-  if (unit.shutdown !== "not") throw new Error(`${unitId} is already shut down`);
+  if (isShutdown(unit)) throw new Error(`${unitId} is already shut down`);
   unit.shutdown = "manual";
   state.actedThisPhase.push(unitId);
   state.events.push({ kind: "shutdownManual", unitId });
@@ -1079,9 +1096,9 @@ export function attemptVoluntaryStartup(
   rng: Rng = DEFAULT_RNG,
 ): void {
   requirePhase(state, "movement");
-  const unit = getUnitOrThrow(state, unitId);
+  const unit = requireUnit(state, unitId);
   if (unit.removed) throw new Error(`${unitId} is removed from play`);
-  if (unit.shutdown === "not") throw new Error(`${unitId} is not shut down`);
+  if (isNominal(unit)) throw new Error(`${unitId} is not shut down`);
   if (unit.shutdown === "starting") throw new Error(`${unitId} is already starting up`);
   const heat = unit.heat;
   const avoid = shutdownAvoid(heat);
@@ -1099,9 +1116,9 @@ export function attemptVoluntaryStartup(
  *  stays off-line and is marked as having acted. */
 export function passMovement(state: BattleState, unitId: string): void {
   requirePhase(state, "movement");
-  const unit = getUnitOrThrow(state, unitId);
+  const unit = requireUnit(state, unitId);
   if (unit.removed) throw new Error(`${unitId} is removed from play`);
-  if (unit.shutdown === "not") throw new Error(`${unitId} is not shut down`);
+  if (isNominal(unit)) throw new Error(`${unitId} is not shut down`);
   state.actedThisPhase.push(unitId);
 }
 
@@ -1113,7 +1130,7 @@ export function nextActor(state: BattleState): string | null {
   // Shut-down units act first during the movement phase regardless of
   // initiative: they can only attempt startup (or pass) and must not wait.
   if (state.phase === "movement") {
-    const down = alive.find((u) => u.shutdown !== "not" && !state.actedThisPhase.includes(u.id));
+    const down = alive.find((u) => isShutdown(u) && !state.actedThisPhase.includes(u.id));
     if (down) return down.id;
   }
   const teams = [...new Set(alive.map((u) => u.team))];
@@ -1151,10 +1168,7 @@ export function nextActor(state: BattleState): string | null {
   for (const team of sorted) {
     const candidate = alive.find(
       (u) =>
-        u.team === team &&
-        !state.actedThisPhase.includes(u.id) &&
-        !u.passedAttacks &&
-        u.shutdown === "not",
+        u.team === team && !state.actedThisPhase.includes(u.id) && !u.passedAttacks && isNominal(u),
     );
     if (candidate) return candidate.id;
   }
@@ -1179,7 +1193,7 @@ export function checkVictory(state: BattleState): VictoryResult {
 }
 
 export function getUnit(state: BattleState, unitId: string): UnitState {
-  return getUnitOrThrow(state, unitId);
+  return requireUnit(state, unitId);
 }
 
 /** Build the per-slot destroyed-flag table for a fresh unit, all false. */

@@ -153,7 +153,7 @@ export function applyDamage(
 }
 
 /** A location is destroyed when its internal structure is depleted. */
-export function isLocationDestroyed(damage: UnitDamageState, location: Location): boolean {
+export function isUnitLocationDestroyed(damage: UnitDamageState, location: Location): boolean {
   return damage.internalStructure[location] <= 0;
 }
 
@@ -163,7 +163,7 @@ export function isUnitDestroyed(damage: UnitDamageState): boolean {
 }
 
 /** One or both legs' internal structure destroyed: cannot move or change facing. */
-export function isImmobile(damage: UnitDamageState): boolean {
+export function isUnitImmobile(damage: UnitDamageState): boolean {
   return damage.internalStructure.rightLeg <= 0 || damage.internalStructure.leftLeg <= 0;
 }
 

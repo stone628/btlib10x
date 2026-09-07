@@ -20,7 +20,7 @@
   hull-down, water depth movement-cost change, pavement skid (vehicle-specific)
 - **Piloting / consciousness roll on immobile end-of-turn** — TW end-of-turn
   consciousness roll for an immobile 'Mech (both legs destroyed via
-  `isImmobile`): on a failed roll the unit is destroyed; on a success it is
+  `isUnitImmobile`): on a failed roll the unit is destroyed; on a success it is
   removed as a casualty at end of turn and counted as a loss for victory.
   Wires into `checkVictory` via a new end-of-turn phase hook in
   `src/rules/game.ts`; consumes the injected `Rng` for the 2d6 roll.
@@ -34,7 +34,7 @@
   destroyed) applies the −4 immobile target-number modifier instead of the
   hex-band movement table. Plumbed through `computeToHit`/`resolveWeaponAttack`
   (`targetImmobile?`) and wired in `declareAttacks`, `resolveUnitAttacks`, and
-  `suggestFireTargets` from `isImmobile(damage) || shutdown !== "not"`,
+  `suggestFireTargets` from `isImmobile(unit)`,
   so fire-suggestion TNs and `autoMiss` reflect shutdown targets.
 - **Core-rulebook terrain expansion** — terrain catalog extracted to
   `src/data/terrain.json` (13 types), data-driven via `terrain.schema.ts`;

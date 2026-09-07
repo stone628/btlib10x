@@ -38,9 +38,9 @@ import {
   heatDissipation,
   internalStructureForTonnage,
   isArm,
-  isImmobile,
   isTorso,
   isUnitDestroyed,
+  isUnitImmobile,
   listMapNames,
   listWeaponNames,
   loadAmmoBins,
@@ -844,7 +844,7 @@ function getShutdownHeader(view: SheetView): string {
     case "starting":
       return "[STARTING]";
   }
-  if (isImmobile(view.damage)) return "[IMMOBILE]";
+  if (isUnitImmobile(view.damage)) return "[IMMOBILE]";
   return "[NOMINAL]";
 }
 
@@ -1916,7 +1916,7 @@ function setPoolValue(
 export function transferDetail(locale: LocaleId, r: AttackResolution): string | null {
   const app = r.application;
   if (!app || app.steps.length === 0) return null;
-  const wasImmobile = isImmobile(app.before);
+  const wasImmobile = isUnitImmobile(app.before);
   const wasDestroyed = isUnitDestroyed(app.before);
   const run = {
     armor: { ...app.before.armor },
@@ -1944,7 +1944,7 @@ export function transferDetail(locale: LocaleId, r: AttackResolution): string | 
       locs: otherDestroyed.map((l) => SHORT_LOC[l]).join(", "),
     });
   }
-  if (isImmobile(app.after) && !wasImmobile) text += i18n(locale, "res.immobilized");
+  if (isUnitImmobile(app.after) && !wasImmobile) text += i18n(locale, "res.immobilized");
   if (app.killed && !wasDestroyed) text += i18n(locale, "res.killed");
   return text;
 }

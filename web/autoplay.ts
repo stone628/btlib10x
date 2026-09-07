@@ -1,4 +1,4 @@
-import { canFireFromLocation, getMechDefFor, isImmobile } from "btlib10x";
+import { canFireFromLocation, getMechDefFor, isNominal, isUnitImmobile } from "btlib10x";
 import type * as S from "./session.js";
 
 /** Delay between generated commands, in milliseconds. */
@@ -116,8 +116,8 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
         }
       }
       // A shut-down unit just passes: no movement mode, stay off-line.
-      if (actor.moveMode === null && actor.shutdown === "not") {
-        queueNextCommand(isImmobile(actor.damage) ? "mode standstill" : "mode walk");
+      if (actor.moveMode === null && isNominal(actor)) {
+        queueNextCommand(isUnitImmobile(actor.damage) ? "mode standstill" : "mode walk");
       }
       queueNextCommand("done");
       return returnFirstQueuedCommand();
