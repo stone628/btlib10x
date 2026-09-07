@@ -1,5 +1,5 @@
 /**
- * Heat accumulation and the Total Warfare Heat Scale (classic BattleTech
+ * Heat accumulation and the Total Warfare Heat Scale (BattleTech Total Warfare
  * subset). Pure functions over a unit's heat value and crit-slot state.
  *
  * Heat is recorded *during* the turn as it is generated (movement heat at the

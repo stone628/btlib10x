@@ -20,7 +20,7 @@ describe("movement rules", () => {
 
   it("charges terrain and facing costs", () => {
     expect(facingChangeCost(3)).toBe(3);
-    // Heavy woods hex: base 1 + 2 = 3 MP (CBT-QS p.12 example says 4 with a
+    // Heavy woods hex: base 1 + 2 = 3 MP (Total Warfare p.12 example says 4 with a
     // one-hexside turn included).
     expect(facingChangeCost(1) + 3).toBe(4);
   });

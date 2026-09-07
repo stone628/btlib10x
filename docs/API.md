@@ -1,7 +1,7 @@
 # btlib10x API Reference
 
-Zero-dependency TypeScript library implementing a **subset of classic
-BattleTech game rules** (bipedal 'Mechs only). All rule functions are pure and
+Zero-dependency TypeScript library implementing a **subset of BattleTech
+Total Warfare rules** (bipedal 'Mechs only). All rule functions are pure and
 deterministic given an injected RNG (`interface Rng { d6(): number }`).
 Everything below is exported from the package root (`btlib10x`).
 

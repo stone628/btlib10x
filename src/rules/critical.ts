@@ -1,5 +1,5 @@
 /**
- * Critical hit resolution (classic BattleTech, Total Warfare subset).
+ * Critical hit resolution (BattleTech Total Warfare subset).
  *
  * Whenever a hit strips internal structure from a location, the player rolls
  * 2D6 on the Determining Critical Hits table:

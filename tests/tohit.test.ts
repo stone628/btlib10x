@@ -3,7 +3,7 @@ import { getWeaponDefFor } from "../src/data/weapon.schema.js";
 import { computeToHit } from "../src/rules/tohit.js";
 
 describe("GATOR to-hit calculation", () => {
-  // CBT Quick-Start Rules, Rolling To Hit diagram (p.6):
+  // Total Warfare, Rolling To Hit diagram (p.6):
   // Wolverine (ran) fires medium laser at Griffin 4 hexes away,
   // light woods intervening; target moved 2 hexes.
   it("matches rulebook example: Wolverine medium laser TN 9", () => {
@@ -38,7 +38,7 @@ describe("GATOR to-hit calculation", () => {
     expect(bd.rangeBracket).toBe("short");
   });
 
-  // CBT-QS Target Movement diagram (p.16): Cicada fires ML at stationary
+  // Total Warfare Target Movement diagram (p.16): Cicada fires ML at stationary
   // Enforcer 4 hexes away -> 7. Hunchback AC/20 at Cicada (5 hexes moved),
   // ran, range 2 short -> 8. Enforcer large laser at Hunchback (2 hexes moved),
   // standing still, short range -> 4.

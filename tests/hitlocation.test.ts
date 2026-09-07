@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  clusterHitsForMissiles,
-  clusterHitsForShots,
-  groupMissiles,
-} from "../src/rules/cluster.js";
+import { clusterHits, groupMissiles } from "../src/rules/cluster.js";
 import {
   HIT_LOCATION_TABLE,
   hitLocation,
@@ -65,23 +61,23 @@ describe("hit location table", () => {
 
 describe("cluster hits tables", () => {
   it("matches the missile table (columns 2/4/5/6/10/15/20)", () => {
-    expect(clusterHitsForMissiles(2, 2)).toBe(1);
-    expect(clusterHitsForMissiles(2, 12)).toBe(2);
-    expect(clusterHitsForMissiles(4, 11)).toBe(4);
-    expect(clusterHitsForMissiles(5, 4)).toBe(2);
-    expect(clusterHitsForMissiles(6, 8)).toBe(4);
-    expect(clusterHitsForMissiles(10, 9)).toBe(8);
-    expect(clusterHitsForMissiles(10, 12)).toBe(10);
-    expect(clusterHitsForMissiles(15, 11)).toBe(15);
-    expect(clusterHitsForMissiles(20, 7)).toBe(12);
-    expect(clusterHitsForMissiles(20, 12)).toBe(20);
+    expect(clusterHits(2, 2)).toBe(1);
+    expect(clusterHits(2, 12)).toBe(2);
+    expect(clusterHits(4, 11)).toBe(4);
+    expect(clusterHits(5, 4)).toBe(2);
+    expect(clusterHits(6, 8)).toBe(4);
+    expect(clusterHits(10, 9)).toBe(8);
+    expect(clusterHits(10, 12)).toBe(10);
+    expect(clusterHits(15, 11)).toBe(14);
+    expect(clusterHits(20, 7)).toBe(12);
+    expect(clusterHits(20, 12)).toBe(20);
   });
 
-  it("matches the rapid-fire shot table (columns 2/3/4)", () => {
-    expect(clusterHitsForShots(2, 2)).toBe(1);
-    expect(clusterHitsForShots(2, 12)).toBe(2);
-    expect(clusterHitsForShots(3, 7)).toBe(2);
-    expect(clusterHitsForShots(4, 11)).toBe(4);
+  it("matches the rapid-fire shot columns (2/3/4)", () => {
+    expect(clusterHits(2, 2)).toBe(1);
+    expect(clusterHits(2, 12)).toBe(2);
+    expect(clusterHits(3, 7)).toBe(2);
+    expect(clusterHits(4, 11)).toBe(4);
   });
 
   it("groups LRM missiles into lots of five", () => {

@@ -5,7 +5,7 @@
  */
 export const en = {
   // app chrome
-  "app.banner.title": "bt10x terminal v{version} - Classic BattleTech rules subset",
+  "app.banner.title": "bt10x terminal v{version} - BattleTech Total Warfare rules subset",
   "app.banner.help": "type 'help' for commands.",
   "err.prefix": "error:",
 

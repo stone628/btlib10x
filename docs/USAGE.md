@@ -88,7 +88,7 @@ rollInitiativePhase(state, rng);   // 2D6 per team, ties reroll
 // state.initiativeWinnerTeam === 0 -> team 0 moves/fires first this round
 ```
 
-The loser's team acts first each phase (classic BattleTech convention);
+The loser's team acts first each phase (Total Warfare convention);
 `nextActor(state)` tells you which unit should act next.
 
 ## 4. Movement phase

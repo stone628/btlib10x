@@ -85,7 +85,7 @@ Right side (`RIGHT_SIDE_TABLE`):
 
 ## Firing Arc
 
-Classic Total Warfare arc classification (`src/rules/arcs.ts`, `classifyArc`),
+Total Warfare arc classification (`src/rules/arcs.ts`, `classifyArc`),
 measured as a **clockwise offset** from a unit's facing hexside. Front (0) and
 rear (3) are one hexside wide; each side arc spans two hexsides. The engine
 currently only fires into the **front** arc (side/rear firing is not yet

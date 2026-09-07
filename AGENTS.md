@@ -1,11 +1,11 @@
 # btlib10x
 
-TypeScript library encapsulating Classic BattleTech board game logic.
+TypeScript library encapsulating BattleTech Total Warfare board game logic.
 
 ## Status
 
-- Implements a **subset of classic BattleTech game rules**. The currently
-  implemented subset is documented under "Status — Classic BattleTech rule
+- Implements a **subset of BattleTech Total Warfare rules**. The currently
+  implemented subset is documented under "Status — BattleTech Total Warfare rule
   coverage" in `docs/CLI.md`.
 - Bipedal 'Mechs only. Physical attacks, piloting rolls, and
   side/rear firing arcs are outside the current subset. Elevation IS
