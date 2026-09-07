@@ -22,7 +22,7 @@
   },
   "weapons": [
     {
-      "weapon": "Autocannon/10",
+      "weapon": "AC/10",
       "location": "rightArm",
       "shots": 10
     },
@@ -136,7 +136,7 @@
       },
       {
         "kind": "ammo",
-        "weapon": "Autocannon/10"
+        "weapon": "AC/10"
       },
       {
         "kind": "empty"
@@ -224,31 +224,31 @@
       },
       {
         "kind": "weapon",
-        "weapon": "Autocannon/10"
+        "weapon": "AC/10"
       },
       {
         "kind": "weapon",
-        "weapon": "Autocannon/10"
+        "weapon": "AC/10"
       },
       {
         "kind": "weapon",
-        "weapon": "Autocannon/10"
+        "weapon": "AC/10"
       },
       {
         "kind": "weapon",
-        "weapon": "Autocannon/10"
+        "weapon": "AC/10"
       },
       {
         "kind": "weapon",
-        "weapon": "Autocannon/10"
+        "weapon": "AC/10"
       },
       {
         "kind": "weapon",
-        "weapon": "Autocannon/10"
+        "weapon": "AC/10"
       },
       {
         "kind": "weapon",
-        "weapon": "Autocannon/10"
+        "weapon": "AC/10"
       },
       {
         "kind": "empty"

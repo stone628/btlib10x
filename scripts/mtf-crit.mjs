@@ -11,6 +11,7 @@
  */
 
 import {
+  AMMO_TOKEN,
   CODE,
   CRIT_SLOT_COUNTS,
   DHS_CRIT_SLOTS,
@@ -46,27 +47,29 @@ function normalizeCritWeaponToken(t) {
 function classifyCritLine(raw, errors, fileLabel) {
   const t = raw.trim();
   if (t === "" || t === "-Empty-") return { ok: true, slot: { kind: "empty" } };
-  // "IS Ammo <token>" / "CL Ammo <token>" (e.g. "IS Ammo AC/20"). Some MTFs
-  // also write "CLGauss Ammo" etc.; the trailing-token lookup below covers
-  // both shapes after the IS/CL prefix is normalized off. Trailing
-  // parenthesized text (e.g. "(200)" denoting the bin's shot count) is
-  // informational and dropped before lookup.
-  let m = /^(?:IS|CL)\s+Ammo\s+(.+?)(?:\s*\(.+?\))?\s*$/.exec(t);
+  // "IS Ammo <token>" / "CL Ammo <token>" (e.g. "IS Ammo AC/20"). The
+  // AMMO_TOKEN table is preferred (the trailing token is a known ammo
+  // shorthand like "AC/20" or "Gauss"); CODE is consulted as a fallback so
+  // catalog-named ammo (e.g. "IS Ammo LRM 5") also resolves.
+  let m = /^(?:IS|CL)\s+Ammo\s+(.+?)(?:\s*(?:\(.+?\))|(?:\s*-\s*Half))?\s*$/.exec(t);
   if (m) {
     const tok = m[1].trim();
     const stripped = normalizeCritWeaponToken(tok);
-    const name = CODE[tok] ?? CODE[stripped] ?? null;
+    const name = AMMO_TOKEN[tok] ?? AMMO_TOKEN[stripped] ?? CODE[tok] ?? CODE[stripped] ?? null;
     if (name) return { ok: true, slot: { kind: "ammo", weapon: name } };
     errors.push(`Unmapped ammo crit-slot token ${JSON.stringify(t)} in ${fileLabel}`);
     return { ok: false };
   }
-  // "<code> Ammo" (compact codes). Same trailing-parenthesized tolerance as
-  // above (e.g. "CLMG Ammo (200)").
-  m = /^(.+?)\s+Ammo(?:\s*\(.+?\))?\s*$/.exec(t);
+  // "<code> Ammo" (compact codes), e.g. "CLMG Ammo", "IS Gauss Ammo", and
+  // "IS Ammo AC/20"-style ammo that already matched the first regex and
+  // reached this fallback. The stem may carry an IS/CL prefix that the
+  // normalized lookup strips; AMMO_TOKEN is consulted first for ammo
+  // shorthands, CODE as the catalog-name fallback.
+  m = /^(.+?)\s+Ammo(?:\s*(?:\(.+?\))|(?:\s*-\s*Half))?\s*$/.exec(t);
   if (m) {
     const stem = m[1];
     const stripped = normalizeCritWeaponToken(stem);
-    const name = CODE[stem] ?? CODE[stripped] ?? null;
+    const name = AMMO_TOKEN[stem] ?? AMMO_TOKEN[stripped] ?? CODE[stem] ?? CODE[stripped] ?? null;
     if (name) return { ok: true, slot: { kind: "ammo", weapon: name } };
     errors.push(`Unmapped ammo crit-slot token ${JSON.stringify(t)} in ${fileLabel}`);
     return { ok: false };

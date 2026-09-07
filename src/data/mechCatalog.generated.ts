@@ -10,6 +10,8 @@ import { resolveMechDef, validateMechDef } from "./mech.schema.js";
 const load = (data: unknown): ResolvedMechDef => resolveMechDef(validateMechDef(data));
 
 import as7dJson from "./mechs/as7-d.json";
+import bswx1Json from "./mechs/bsw-x1.json";
+import bzkf3Json from "./mechs/bzk-f3.json";
 import cda3maJson from "./mechs/cda-3ma.json";
 import enf4rJson from "./mechs/enf-4r.json";
 import grf1nJson from "./mechs/grf-1n.json";
@@ -24,6 +26,8 @@ import wvr6rJson from "./mechs/wvr-6r.json";
 export const MECH_DEFS: Readonly<Map<string, ResolvedMechDef>> = new Map<string, ResolvedMechDef>(
   [
     as7dJson,
+    bswx1Json,
+    bzkf3Json,
     cda3maJson,
     enf4rJson,
     grf1nJson,

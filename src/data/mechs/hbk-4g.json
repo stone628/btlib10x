@@ -34,7 +34,7 @@
       "location": "head"
     },
     {
-      "weapon": "Autocannon/20",
+      "weapon": "AC/20",
       "location": "rightTorso",
       "shots": 10
     }
@@ -92,11 +92,11 @@
     "leftTorso": [
       {
         "kind": "ammo",
-        "weapon": "Autocannon/20"
+        "weapon": "AC/20"
       },
       {
         "kind": "ammo",
-        "weapon": "Autocannon/20"
+        "weapon": "AC/20"
       },
       {
         "kind": "empty"
@@ -132,43 +132,43 @@
     "rightTorso": [
       {
         "kind": "weapon",
-        "weapon": "Autocannon/20"
+        "weapon": "AC/20"
       },
       {
         "kind": "weapon",
-        "weapon": "Autocannon/20"
+        "weapon": "AC/20"
       },
       {
         "kind": "weapon",
-        "weapon": "Autocannon/20"
+        "weapon": "AC/20"
       },
       {
         "kind": "weapon",
-        "weapon": "Autocannon/20"
+        "weapon": "AC/20"
       },
       {
         "kind": "weapon",
-        "weapon": "Autocannon/20"
+        "weapon": "AC/20"
       },
       {
         "kind": "weapon",
-        "weapon": "Autocannon/20"
+        "weapon": "AC/20"
       },
       {
         "kind": "weapon",
-        "weapon": "Autocannon/20"
+        "weapon": "AC/20"
       },
       {
         "kind": "weapon",
-        "weapon": "Autocannon/20"
+        "weapon": "AC/20"
       },
       {
         "kind": "weapon",
-        "weapon": "Autocannon/20"
+        "weapon": "AC/20"
       },
       {
         "kind": "weapon",
-        "weapon": "Autocannon/20"
+        "weapon": "AC/20"
       },
       {
         "kind": "empty"

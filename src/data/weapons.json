@@ -27,6 +27,15 @@
     "heat": 8
   },
   {
+    "name": "ER Large Laser",
+    "short": 7,
+    "medium": 14,
+    "long": 19,
+    "damage": 8,
+    "category": "ENERGY",
+    "heat": 12
+  },
+  {
     "name": "PPC",
     "short": 6,
     "medium": 12,
@@ -74,7 +83,16 @@
     "heat": 0
   },
   {
-    "name": "Autocannon/5",
+    "name": "AC/2",
+    "short": 8,
+    "medium": 15,
+    "long": 24,
+    "damage": 5,
+    "category": "BALLISTIC",
+    "heat": 1
+  },
+  {
+    "name": "AC/5",
     "short": 6,
     "medium": 12,
     "long": 18,
@@ -83,7 +101,7 @@
     "heat": 1
   },
   {
-    "name": "Autocannon/10",
+    "name": "AC/10",
     "short": 5,
     "medium": 10,
     "long": 15,
@@ -92,7 +110,7 @@
     "heat": 3
   },
   {
-    "name": "Autocannon/20",
+    "name": "AC/20",
     "short": 3,
     "medium": 6,
     "long": 9,
@@ -201,6 +219,16 @@
   },
   {
     "name": "CL Gauss Rifle",
+    "short": 7,
+    "medium": 15,
+    "long": 22,
+    "damage": 15,
+    "minRange": 2,
+    "category": "BALLISTIC",
+    "heat": 1
+  },
+  {
+    "name": "Gauss Rifle",
     "short": 7,
     "medium": 15,
     "long": 22,

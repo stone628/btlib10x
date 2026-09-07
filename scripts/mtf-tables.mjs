@@ -35,10 +35,10 @@ export const CODE = {
   "Snub-Nose PPC": "Snub-Nose PPC",
   Flamer: "Flamer",
   "Machine Gun": "Machine Gun",
-  "Autocannon/2": "Autocannon/2",
-  "Autocannon/5": "Autocannon/5",
-  "Autocannon/10": "Autocannon/10",
-  "Autocannon/20": "Autocannon/20",
+  "Autocannon/2": "AC/2",
+  "Autocannon/5": "AC/5",
+  "Autocannon/10": "AC/10",
+  "Autocannon/20": "AC/20",
   "Ultra AC/5": "Ultra AC/5",
   "Large Pulse Laser": "Large Pulse Laser",
   "Small Pulse Laser": "Small Pulse Laser",
@@ -57,10 +57,10 @@ export const CODE = {
   ISSNPPC: "Snub-Nose PPC",
   ISFlamer: "Flamer",
   ISMachineGun: "Machine Gun",
-  ISAC2: "Autocannon/2",
-  ISAC5: "Autocannon/5",
-  ISAC10: "Autocannon/10",
-  ISAC20: "Autocannon/20",
+  ISAC2: "AC/2",
+  ISAC5: "AC/5",
+  ISAC10: "AC/10",
+  ISAC20: "AC/20",
   ISUltraAC5: "Ultra AC/5",
   ISLargePulseLaser: "Large Pulse Laser",
   ISSmallPulseLaser: "Small Pulse Laser",
@@ -71,6 +71,7 @@ export const CODE = {
   ISSRM2: "SRM 2",
   ISSRM4: "SRM 4",
   ISSRM6: "SRM 6",
+  ISGaussRifle: "Gauss Rifle",
   // Clan compact codes.
   CLERMediumLaser: "CL ER Medium Laser",
   CLERLargeLaser: "CL ER Large Laser",
@@ -88,22 +89,32 @@ export const CODE = {
   // Un-prefixed forms (after stripping "IS "/"CL ").
   LBXAC10: "CL LB 10-X AC",
   LBXAC20: "CL LB 20-X AC",
-  GaussRifle: "CL Gauss Rifle",
-  Gauss: "CL Gauss Rifle",
+  // Un-prefixed "Gauss" crit-slot tokens ("CLGauss Ammo", "GaussRifle") are
+  // Clan by convention; the IS Gauss Rifle is reached through the explicit
+  // spaced "Gauss Rifle" form used in weapons blocks (see below).
+  GaussRifle: "Gauss Rifle",
+  Gauss: "Gauss Rifle",
   CLGauss: "CL Gauss Rifle",
-  StreakSRM2: "CL Streak SRM 2",
-  StreakSRM4: "CL Streak SRM 4",
-  StreakSRM6: "CL Streak SRM 6",
-  ERMediumLaser: "CL ER Medium Laser",
-  ERLargeLaser: "CL ER Large Laser",
-  ERPPC: "CL ER PPC",
-  MediumPulseLaser: "CL Medium Pulse Laser",
-  LRM20: "CL LRM 20",
+  CLGaussRifle: "CL Gauss Rifle",
+  // Spaced "Gauss Rifle" form used in the weapons block of IS 'Mechs (e.g.
+  // Hollander BZK-F3). Maps to the Inner Sphere catalog entry.
+  "Gauss Rifle": "Gauss Rifle",
+  // Plain "ER Large Laser" maps to the Clan Extended-Range Large Laser,
+  // matching the prefixed "ERLargeLaser" entry above.
+  "ER Large Laser": "ER Large Laser",
+  StreakSRM2: "Streak SRM 2",
+  StreakSRM4: "Streak SRM 4",
+  StreakSRM6: "Streak SRM 6",
+  ERMediumLaser: "ER Medium Laser",
+  ERLargeLaser: "ER Large Laser",
+  ERPPC: "ER PPC",
+  MediumPulseLaser: "Medium Pulse Laser",
+  LRM20: "LRM 20",
   // IS ammo tokens ("IS Ammo AC/20" etc).
-  "AC/2": "Autocannon/2",
-  "AC/5": "Autocannon/5",
-  "AC/10": "Autocannon/10",
-  "AC/20": "Autocannon/20",
+  "AC/2": "AC/2",
+  "AC/5": "AC/5",
+  "AC/10": "AC/10",
+  "AC/20": "AC/20",
   "LRM-5": "LRM 5",
   "LRM-10": "LRM 10",
   "LRM-15": "LRM 15",
@@ -114,8 +125,8 @@ export const CODE = {
   // Clan ammo tokens.
   "CLLB-20 AC": "CL LB 20-X AC",
   "CLLB-10 AC": "CL LB 10-X AC",
-  "LB-20 AC": "CL LB 20-X AC",
-  "LB-10 AC": "CL LB 10-X AC",
+  "LB-20 AC": "LB 20-X AC",
+  "LB-10 AC": "LB 10-X AC",
 };
 
 /**
@@ -123,10 +134,10 @@ export const CODE = {
  * covering the "IS Ammo <token>" format in crit-slot sections.
  */
 export const AMMO_TOKEN = {
-  "AC/2": "Autocannon/2",
-  "AC/5": "Autocannon/5",
-  "AC/10": "Autocannon/10",
-  "AC/20": "Autocannon/20",
+  "AC/2": "AC/2",
+  "AC/5": "AC/5",
+  "AC/10": "AC/10",
+  "AC/20": "AC/20",
   "LRM-5": "LRM 5",
   "LRM-10": "LRM 10",
   "LRM-15": "LRM 15",
@@ -134,6 +145,11 @@ export const AMMO_TOKEN = {
   "SRM-2": "SRM 2",
   "SRM-4": "SRM 4",
   "SRM-6": "SRM 6",
+  "Machine Gun": "Machine Gun",
+  Gauss: "Gauss Rifle",
+  "Gauss Rifle": "Gauss Rifle",
+  CLGauss: "CL Gauss Rifle",
+  CLGaussRifle: "CL Gauss Rifle",
 };
 
 // ---------------------------------------------------------------------------
@@ -142,10 +158,11 @@ export const AMMO_TOKEN = {
 
 /** Shots per ton of ammunition, keyed by catalog weapon name. */
 export const SHOTS_PER_TON = {
-  "Autocannon/2": 45,
-  "Autocannon/5": 20,
-  "Autocannon/10": 10,
-  "Autocannon/20": 5,
+  "AC/2": 45,
+  "AC/5": 20,
+  "AC/10": 10,
+  "AC/20": 5,
+  "Machine Gun": 200,
   "Ultra AC/5": 20,
   "LRM 5": 24,
   "LRM 10": 12,
@@ -250,6 +267,7 @@ export const SOAK_TOKEN = {
   "IS Endo-Steel": "endoSteel",
   "Endo-Steel": "endoSteel",
   CASE: "case",
+  ISCASE: "case",
   "IS CASE": "case",
   "CL CASE": "case",
   "Ferro-Fibrous": "ferroFibrous",
