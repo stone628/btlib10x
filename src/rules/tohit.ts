@@ -14,6 +14,9 @@ export interface AttackModifiers {
   /** True when the target cannot move (shut down or both legs destroyed):
    *  grants a flat −4 target modifier instead of the hex-based band. */
   readonly targetImmobile?: boolean;
+  /** True when the target stands in partial-cover terrain (water1 / building)
+   *  and the attacker is not higher: grants +1 and leg hits strike the cover. */
+  readonly targetPartialCover?: boolean;
   /** Sum of woods points among intervening hexes (0 when none). */
   readonly interveningWoods: number;
   readonly distance: number;
@@ -93,7 +96,10 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     mods.targetImmobile,
   );
 
-  const terrainMod = mods.interveningWoods + terrainTargetMod(mods.targetTerrain);
+  const terrainMod =
+    mods.interveningWoods +
+    terrainTargetMod(mods.targetTerrain) +
+    (mods.targetPartialCover === true ? 1 : 0);
 
   const rangeMod = RANGE_MOD[bracket];
   const pulseMod = mods.weapon.pulse === true ? -2 : 0;

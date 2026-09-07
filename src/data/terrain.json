@@ -32,7 +32,7 @@
   "water1": {
     "moveCost": 1,
     "screeningValue": 0,
-    "terrainMod": -1,
+    "terrainMod": 0,
     "partialCover": true
   },
   "water2": {

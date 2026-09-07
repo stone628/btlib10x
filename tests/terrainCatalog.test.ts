@@ -69,8 +69,8 @@ describe("core rulebook terrain values", () => {
     }
   });
 
-  it("water1 grants a -1 target modifier (partially submerged)", () => {
-    expect(terrainTargetMod("water1")).toBe(-1);
+  it("water1 grants partial cover (no standalone target mod)", () => {
+    expect(terrainTargetMod("water1")).toBe(0);
     expect(hasPartialCover("water1")).toBe(true);
   });
 

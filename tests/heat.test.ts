@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LOCATIONS, type Location } from "../src/core/types.js";
+import { LOCATIONS, type Location, type TerrainType } from "../src/core/types.js";
 import { getMechDef, getMechDefFor } from "../src/data/index.js";
 import type { BattleState, UnitInit } from "../src/rules/game.js";
 import {
@@ -460,6 +460,53 @@ describe("game integration: immobile target modifier in to-hit", () => {
 
   it("shut-down target: targetMod -4", () => {
     expect(targetModFor(false)).toBe(-4);
+  });
+});
+
+describe("game integration: partial cover in to-hit", () => {
+  function makeBattleWithTargetTerrain(type: TerrainType): BattleState {
+    const units: UnitInit[] = [
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 4 },
+        facing: "se",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 5, row: 4 },
+        facing: "nw",
+      },
+    ];
+    return createBattle(units, makeBattleOptions(units, true, [{ col: 5, row: 4, type }]));
+  }
+
+  function terrainModFor(type: TerrainType): number {
+    const state = makeBattleWithTargetTerrain(type);
+    startAttackTurn(state);
+    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
+    resolveDeclaredAttacks(state, "hbk", scriptedRng(6, 6, 3, 4));
+    const resolved = state.events.find((e) => e.kind === "attackResolved");
+    expect(resolved).toBeDefined();
+    return (resolved as Extract<(typeof state.events)[number], { kind: "attackResolved" }>)
+      .resolution.breakdown.terrainMod;
+  }
+
+  it("target in clear: terrainMod 0", () => {
+    expect(terrainModFor("clear")).toBe(0);
+  });
+
+  it("target in water1: terrainMod 1 (partial cover)", () => {
+    expect(terrainModFor("water1")).toBe(1);
+  });
+
+  it("target in building hex: terrainMod 1 (partial cover)", () => {
+    expect(terrainModFor("mediumBuilding")).toBe(1);
   });
 });
 

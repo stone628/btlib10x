@@ -50,7 +50,7 @@ helpers below read that catalog.
 - `screeningPoints(t): number` LOS-screening points per intervening hex; `woodsPoints`
   is an alias
 - `terrainTargetMod(t): number` to-hit modifier when the target is inside the hex
-  (e.g. water1 −1, light/heavyWoods +1/+2)
+  (e.g. light/heavyWoods +1/+2; water1 is 0 — partial cover, see below)
 - `hasPartialCover(t): boolean`, `blocksTargeting(t): boolean` (water2/3 block
   LOS in/out)
 - `costToClimb(fromLevel, toLevel): number` (+1 per level climbed, descent free)
@@ -253,6 +253,7 @@ during attack resolution.
 ```ts
 computeToHit({
   gunnery, attackerMovement, targetHexesMoved, targetJumped, targetImmobile?,
+  targetPartialCover?,
   targetTerrain, interveningWoods, distance, weapon,
   attackerLevel?, targetLevel?,
 }): ToHitBreakdown
@@ -263,7 +264,10 @@ GATOR stack: gunnery + attacker move + target move + terrain + range bracket
 auto-hit ≤ 2, auto-miss > 12. `attackerLevel − targetLevel` is reported as
 `heightDiff` and subtracts as `heightMod` (attacker higher = easier).
 `targetImmobile` (shut down or both legs destroyed) sets `targetMod` to −4.
-`damageForBracket(weapon, bracket)` resolves plain/V damage values.
+`targetPartialCover` (target in water1/building hex with attacker not higher)
+adds +1 to `terrainMod`; the caller also maps leg hit-location rolls to
+cover strikes. `damageForBracket(weapon, bracket)` resolves plain/V damage
+values.
 `ToHitBreakdown` carries the individual mods, `rangeBracket`, `automatic`,
 and `outOfRange`.
 
@@ -358,7 +362,10 @@ interface WeaponAttackInput {
 
 Handles to-hit roll, jam on natural 2 for multi-shot rapid fire, SRM
 per-missile vs LRM lots-of-five locations, arc-aware location selection, and
-folds all hit groups into one cumulative `DamageApplication`. When
+folds all hit groups into one cumulative `DamageApplication`. When the target
+stands in a water1/building hex and the attacker is not higher, partial cover
+applies: +1 to-hit and a leg hit-location roll strikes the cover (the group
+is dropped). When
 `targetDef` + crit snapshots are supplied, it also runs critical-hit resolution
 per group that stripped IS and folds ammo-explosion damage into the returned
 application. It does **not** mutate the target; callers copy from

@@ -15,11 +15,13 @@ TypeScript library encapsulating Classic BattleTech board game logic.
 - Terrain: 13 core-rulebook types, data-driven from `src/data/terrain.json`
   (move surcharge, screening value, target to-hit mod, partial-cover and
   targeting-restriction flags). Water depth 2+ (water2/water3) blocks LOS
-  in/out; water1 grants a −1 target modifier. Buildings carry a structural
+  in/out; water1 grants partial cover. Buildings carry a structural
   factor and collapse to rubble when depleted. Still deferred: basements,
-  hull-down, multi-floor interiors, water depth-change movement cost, and
-  partial-cover attack resolution (with piloting).
+  hull-down, multi-floor interiors, and water depth-change movement cost.
 - Damage model: each location holds a flat armor HP number; overflow transfers inward **only after** a location's armor is fully depleted (no per-dot tracking).
+- Partial cover (TW): a target in a water1/building hex with the attacker not
+  higher gains +1 to-hit and leg hit-location rolls strike the cover (dealt
+  as a miss). Still deferred: cover-hit building-CF damage (with piloting).
 
 ## Commands
 
