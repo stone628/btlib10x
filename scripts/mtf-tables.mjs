@@ -83,7 +83,6 @@ export const CODE = {
   CLMG: "CL Machine Gun",
   CLLRM10: "CL LRM 10",
   CLLRM20: "CL LRM 20",
-  CLGaussRifle: "CL Gauss Rifle",
   CLLBXAC10: "CL LB 10-X AC",
   CLLBXAC20: "CL LB 20-X AC",
   // Un-prefixed forms (after stripping "IS "/"CL ").

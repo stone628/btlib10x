@@ -28,4 +28,8 @@ declare module "*/mtf-crit.mjs" {
     },
     errors: string[],
   ): void;
+
+  /** Per-catalog-weapon ammo tonnage tally. Full-ton crits add 1, "- Half"
+   * suffixed crits add 0.5. Caller multiplies by SHOTS_PER_TON to get shots. */
+  export function ammoBinsFromCrits(lines: string[]): Map<string, number>;
 }

@@ -1,8 +1,13 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseCritSlots, validateCritConstruction, validateHeatSinks } from "./mtf-crit.mjs";
-import { AMMO_TOKEN, CODE, LOCATION, MODEL_CODE, SHOTS_PER_TON } from "./mtf-tables.mjs";
+import {
+  ammoBinsFromCrits,
+  parseCritSlots,
+  validateCritConstruction,
+  validateHeatSinks,
+} from "./mtf-crit.mjs";
+import { CODE, LOCATION, MODEL_CODE, SHOTS_PER_TON } from "./mtf-tables.mjs";
 
 /**
  * Batch converts BattleTech .mtf (MechTech File) definitions into the library's
@@ -63,35 +68,6 @@ function splitWeaponLine(line) {
 
 function mapWeapon(codeRaw) {
   return CODE[codeRaw] ?? null;
-}
-
-/** Count ammo crit-bins per catalog weapon name from the crit sections.
- * Each crit-slot in the MTF (e.g. "IS Ammo AC/20" or "IS Machine Gun Ammo
- * - Half") is one ammo bin keyed by the catalog weapon name. Half-ton
- * markers ("- Half") are recognised as a distinct bin shape by the caller
- * via the `bins` map but still count as one crit-slot entry here. */
-function ammoBinsFromCrits(lines) {
-  const bins = new Map();
-  for (const line of lines) {
-    const t = line.trim();
-    let name = null;
-    // Format 1: "<code> Ammo" (Clan/compact), e.g. "CLStreakSRM4 Ammo".
-    let m = /^(.+?)\s+Ammo(?:\s*-\s*Half)?\s*$/.exec(t);
-    if (m) {
-      const stem = m[1]
-        .replace(/^IS |^CL /, "")
-        .replace(/\s+CL$/, "")
-        .trim();
-      name = CODE[stem] ?? null;
-    } else {
-      // Format 2: "IS Ammo <token>", e.g. "IS Ammo AC/20" or
-      // "IS Machine Gun Ammo - Half".
-      m = /^IS Ammo\s+(.+?)(?:\s*-\s*Half)?\s*$/.exec(t);
-      if (m) name = AMMO_TOKEN[m[1].trim()] ?? null;
-    }
-    if (name) bins.set(name, (bins.get(name) ?? 0) + 1);
-  }
-  return bins;
 }
 
 function parseMtf(text, file) {

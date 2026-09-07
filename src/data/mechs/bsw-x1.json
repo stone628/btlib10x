@@ -42,7 +42,7 @@
     {
       "weapon": "Machine Gun",
       "location": "rightTorso",
-      "shots": 200
+      "shots": 100
     },
     {
       "weapon": "ER Large Laser",

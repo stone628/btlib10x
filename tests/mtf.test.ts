@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateCritConstruction } from "../scripts/mtf-crit.mjs";
+import { ammoBinsFromCrits, validateCritConstruction } from "../scripts/mtf-crit.mjs";
 
 type Slot =
   | { kind: "empty" }
@@ -190,5 +190,53 @@ describe("MTF crit construction validation", () => {
     );
     expect(errors.length).toBe(1);
     expect(errors[0]).toContain("compact engines");
+  });
+});
+
+describe("ammoBinsFromCrits", () => {
+  it("counts a half-ton Machine Gun crit as 0.5 tons", () => {
+    const bins = ammoBinsFromCrits(["IS Machine Gun Ammo - Half"]);
+    expect(bins.get("Machine Gun")).toBe(0.5);
+  });
+
+  it("counts a full-ton Machine Gun crit as 1 ton", () => {
+    const bins = ammoBinsFromCrits(["IS Machine Gun Ammo"]);
+    expect(bins.get("Machine Gun")).toBe(1);
+  });
+
+  it("resolves IS Ammo <token> form to the catalog weapon", () => {
+    const bins = ammoBinsFromCrits(["IS Ammo AC/10", "IS Ammo LRM-5"]);
+    expect(bins.get("AC/10")).toBe(1);
+    expect(bins.get("LRM 5")).toBe(1);
+  });
+
+  it('resolves Clan compact "<code> Ammo" form', () => {
+    const bins = ammoBinsFromCrits(["CLMG Ammo"]);
+    expect(bins.get("CL Machine Gun")).toBe(1);
+  });
+
+  it("sums multiple half-ton bins for the same weapon", () => {
+    const bins = ammoBinsFromCrits(["IS Machine Gun Ammo - Half", "IS Machine Gun Ammo - Half"]);
+    expect(bins.get("Machine Gun")).toBe(1);
+  });
+
+  it("mixes half-ton and full-ton bins additively", () => {
+    const bins = ammoBinsFromCrits(["IS Machine Gun Ammo - Half", "IS Machine Gun Ammo"]);
+    expect(bins.get("Machine Gun")).toBe(1.5);
+  });
+
+  it("ignores unmapped ammo-shaped lines silently", () => {
+    const bins = ammoBinsFromCrits(["FooBar Ammo", "IS Ammo Mysterio"]);
+    expect(bins.size).toBe(0);
+  });
+
+  it("multiplies half-ton MG by SHOTS_PER_TON to yield 100 shots", () => {
+    // Regression for Bushwacker BSW-X1: "IS Machine Gun Ammo - Half" must
+    // resolve to 100 shots, not 200.
+    const SHOTS_PER_TON: Record<string, number> = { "Machine Gun": 200 };
+    const bins = ammoBinsFromCrits(["IS Machine Gun Ammo - Half"]);
+    const weapon = "Machine Gun";
+    const shots = (bins.get(weapon) ?? 0) * (SHOTS_PER_TON[weapon] ?? 0);
+    expect(shots).toBe(100);
   });
 });
