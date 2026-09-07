@@ -6,7 +6,8 @@ import { loadAmmoBins } from "../src/rules/ammo.js";
 import { resolveCriticalHits } from "../src/rules/critical.js";
 import type { UnitDamageState } from "../src/rules/damage.js";
 import { computeToHit } from "../src/rules/tohit.js";
-import { formatLog } from "../web/format.js";
+import type { Chunk } from "../web/format.js";
+import { formatLog, infoMechChunk } from "../web/format.js";
 import { scriptedRng } from "./helpers.js";
 
 const LOCS = [
@@ -98,5 +99,39 @@ describe("critical hit log formatting", () => {
 
   it("returns an empty array for an empty event slice", () => {
     expect(formatLog("en", [])).toEqual([]);
+  });
+});
+
+function flattenChunks(chunks: readonly Chunk[]): string[] {
+  const out: string[] = [];
+  for (const c of chunks) {
+    switch (c.kind) {
+      case "lines":
+        out.push(...c.lines);
+        break;
+      case "columns":
+        for (const col of c.columns) out.push(...col);
+        break;
+      case "board":
+        break;
+      case "collapsible":
+        out.push(c.summary);
+        out.push(...flattenChunks(c.chunks));
+        break;
+    }
+  }
+  return out;
+}
+
+describe("mech info: shared-ammo weapon rows", () => {
+  it("renders a 'see #N' suffix on every trailing mount of a shared pool", () => {
+    const lines = flattenChunks(infoMechChunk("en", "MC-MKII-2"));
+    const streakLines = lines.filter((l) => /#\d+ CL Streak SRM 4/.test(l));
+    expect(streakLines).toHaveLength(4);
+    expect(streakLines[0]).toContain("(50 shots)");
+    expect(streakLines[0]).not.toContain("see #3");
+    for (let i = 1; i < 4; i++) {
+      expect(streakLines[i]).toContain("(50 shots, see #3)");
+    }
   });
 });

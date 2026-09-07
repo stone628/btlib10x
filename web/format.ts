@@ -486,14 +486,7 @@ export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
     i18n(locale, "sheet.weaponsHeader", { n: Object.keys(d.weapons).length }),
     ...weaponMountLines(
       locale,
-      Object.entries(d.weapons).map(([key, mount]) => ({
-        weapon: mount.weapon,
-        location: mount.location,
-        shotsLeft: null,
-        shotsMax: loadAmmoBins(d).totals[Number(key)] ?? null,
-        jammed: false,
-        destroyed: false,
-      })),
+      buildMountInfos(d, null, () => ({ shotsLeft: null, jammed: false, destroyed: false })),
     ),
   ];
   return [
@@ -630,6 +623,12 @@ export type WeaponMountInfo = {
   readonly location: Location;
   readonly shotsLeft: number | null;
   readonly shotsMax: number | null;
+  /**
+   * 1-based display index of the leader mount for this weapon's shared ammo
+   * pool, when this mount is a trailing follower. `undefined` for leaders and
+   * for mounts with no shared pool.
+   */
+  readonly shotsSharedWith: number | null;
   readonly jammed: boolean;
   readonly destroyed: boolean;
 };
@@ -710,16 +709,16 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
     originalArmor: def.armor,
     originalArmorRear: def.armorRear,
     originalArmorStructure: def.internalStructure,
-    mounts: Object.entries(def.weapons).map(([key, mount]) => ({
-      weapon: mount.weapon,
-      location: mount.location,
-      shotsLeft: mount.shots !== undefined ? (unit.shotsLeft[Number(key)] ?? 0) : null,
-      shotsMax: loadAmmoBins(def).totals[Number(key)] ?? null,
-      jammed: unit.jammedWeapons.includes(Number(key)),
-      destroyed:
-        unit.destroyedWeapons.includes(Number(key)) ||
-        !canFireFromLocation(unit.phaseStartDamage, mount.location),
-    })),
+    mounts: buildMountInfos(def, unit.ammoBins, (key) => {
+      const mount = def.weapons[key];
+      return {
+        shotsLeft: unit.shotsLeft[key] ?? 0,
+        jammed: unit.jammedWeapons.includes(key),
+        destroyed:
+          unit.destroyedWeapons.includes(key) ||
+          (mount !== undefined && !canFireFromLocation(unit.phaseStartDamage, mount.location)),
+      };
+    }),
     critLive: {
       critSlotsDestroyed: unit.critSlotsDestroyed,
       destroyedWeapons: unit.destroyedWeapons,
@@ -764,11 +763,8 @@ function setupSheet(unit: SetupUnit, id: string, locale: LocaleId): SheetView {
     originalArmor: def.armor,
     originalArmorRear: armorRear,
     originalArmorStructure: damage.internalStructure,
-    mounts: Object.entries(def.weapons).map(([key, mount]) => ({
-      weapon: mount.weapon,
-      location: mount.location,
+    mounts: buildMountInfos(def, null, () => ({
       shotsLeft: null,
-      shotsMax: loadAmmoBins(def).totals[Number(key)] ?? null,
       jammed: false,
       destroyed: false,
     })),
@@ -1866,6 +1862,7 @@ function formatCritEffect(locale: LocaleId, eff: CriticalEffect): string {
     case "noEffect":
       return i18n(locale, "res.critNoEffect", { loc: "reroll" });
   }
+  return "";
 }
 
 /**
@@ -1977,6 +1974,68 @@ function weaponCategory(locale: LocaleId, category: WeaponCategory): string {
   return i18n(locale, CATEGORY_LABEL[category]);
 }
 
+/**
+ * Sum remaining ammo per weapon name from a bin map. Bins are keyed by
+ * `AmmoBinId` (`location:slotIndex`) and carry their weapon name in the
+ * resolved `critSlots`, so a name-based sum pools every bin feeding every
+ * mount of that weapon, not just the bins linked to a single `weaponIndex`.
+ */
+function binPoolByWeaponName(
+  def: ResolvedMechDef,
+  bins: Readonly<Record<AmmoBinId, number>>,
+): Readonly<Record<string, number>> {
+  const totals: Record<string, number> = {};
+  for (const bin of collectAmmoBins(def)) {
+    totals[bin.weapon] = (totals[bin.weapon] ?? 0) + (bins[bin.id] ?? 0);
+  }
+  return totals;
+}
+
+/**
+ * Build the per-mount info rows for sheet / mech-info displays. Every mount
+ * of a shared-pool weapon gets the same `shotsMax` (and, if `liveBins` is
+ * supplied, the same `shotsLeft`). The first mount by `weapons`-array order
+ * is the leader; trailing mounts carry `shotsSharedWith` = leader's 1-based
+ * display index so the row can render a `(see #N)` pointer.
+ */
+function buildMountInfos(
+  def: ResolvedMechDef,
+  liveBins: Readonly<Record<AmmoBinId, number>> | null,
+  status: (key: number) => {
+    readonly shotsLeft: number | null;
+    readonly jammed: boolean;
+    readonly destroyed: boolean;
+  },
+): WeaponMountInfo[] {
+  const poolMax = liveBins !== null ? null : loadAmmoBins(def).bins;
+  const designPool = poolMax !== null ? binPoolByWeaponName(def, poolMax) : null;
+  const livePool = liveBins !== null ? binPoolByWeaponName(def, liveBins) : null;
+  const entries = Object.entries(def.weapons);
+  const firstDisplayByWeapon = new Map<string, number>();
+  entries.forEach(([_key, mount], displayIndex) => {
+    if (!firstDisplayByWeapon.has(mount.weapon)) {
+      firstDisplayByWeapon.set(mount.weapon, displayIndex + 1);
+    }
+  });
+  return entries.map(([keyStr, mount], displayIndex) => {
+    const key = Number(keyStr);
+    const st = status(key);
+    const max = (designPool ?? livePool)![mount.weapon] ?? null;
+    const left = livePool !== null ? (livePool[mount.weapon] ?? 0) : st.shotsLeft;
+    const leaderDisplay = firstDisplayByWeapon.get(mount.weapon) ?? displayIndex + 1;
+    const sharedWith = leaderDisplay !== displayIndex + 1 ? leaderDisplay : null;
+    return {
+      weapon: mount.weapon,
+      location: mount.location,
+      shotsLeft: max !== null ? left : null,
+      shotsMax: max,
+      shotsSharedWith: sharedWith,
+      jammed: st.jammed,
+      destroyed: st.destroyed,
+    };
+  });
+}
+
 function weaponMountLines(locale: LocaleId, mounts: readonly WeaponMountInfo[]): string[] {
   let nameWidth = 0;
   for (const m of mounts) {
@@ -1984,12 +2043,16 @@ function weaponMountLines(locale: LocaleId, mounts: readonly WeaponMountInfo[]):
   }
   return mounts.map((mount, i) => {
     const w = getWeaponDefFor(mount);
-    const flags = [
+    const shots =
       mount.shotsMax !== null
-        ? mount.shotsLeft !== null
-          ? i18n(locale, "sheet.shotsRange", { curr: mount.shotsLeft, max: mount.shotsMax })
-          : i18n(locale, "sheet.shotsDesign", { max: mount.shotsMax })
-        : null,
+        ? mount.shotsSharedWith !== null
+          ? i18n(locale, "sheet.shotsShared", { ref: mount.shotsSharedWith })
+          : mount.shotsLeft !== null
+            ? i18n(locale, "sheet.shotsRange", { curr: mount.shotsLeft, max: mount.shotsMax })
+            : i18n(locale, "sheet.shotsDesign", { max: mount.shotsMax })
+        : null;
+    const flags = [
+      shots,
       mount.jammed ? i18n(locale, "sheet.jammed") : null,
       mount.destroyed ? i18n(locale, "sheet.destroyed") : null,
     ].filter((x) => x !== null);
