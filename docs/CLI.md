@@ -105,9 +105,9 @@ pass), plus `cancel`, `sheet`, `status`, `heat` and the globals.
 | `rematch` | new battle, same roster + terrain + seed |
 | globals | `board`, `log` remain available; `reset` returns to empty setup |
 
-## Status — Classic BattleTech rule coverage
+## Status — BattleTech Total Warfare rule coverage
 
-The engine implements a **subset of classic BattleTech game rules** for
+The engine implements a **subset of BattleTech Total Warfare rules** for
 **bipedal 'Mechs only**. The terminal app exposes everything the engine can
 simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
 

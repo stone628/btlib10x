@@ -3,7 +3,7 @@
 ## Goal
 
 - **Library** — zero-dependency TypeScript library implementing a **subset of
-  classic BattleTech game rules** (bipedal 'Mechs only). See `docs/API.md`.
+  BattleTech Total Warfare rules** (bipedal 'Mechs only). See `docs/API.md`.
 - **Web CLI** — single-page terminal-emulator app exposing the core; vanilla
   TypeScript + DOM only, zero runtime dependencies. See `docs/CLI.md`.
 

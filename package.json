@@ -1,7 +1,7 @@
 {
   "name": "btlib10x",
   "version": "0.0.1",
-  "description": "TypeScript library encapsulating Classic BattleTech board game logic",
+  "description": "TypeScript library encapsulating BattleTech Total Warfare board game logic (subset)",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

@@ -16,7 +16,7 @@ export function isInFrontArc(unitFacing: Facing, bearingToTarget: Facing): boole
 }
 
 /**
- * Classic Total Warfare firing-arc classification. The target's bearing is
+ * Total Warfare firing-arc classification. The target's bearing is
  * measured as a clockwise offset from the unit's facing: offset 0 (front) and
  * offset 3 (rear) are one hexside wide, while the two side arcs each span two
  * hexsides. Side/left/right arcs drive the side hit-location tables; the rear
