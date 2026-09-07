@@ -288,7 +288,7 @@ describe("weapon and ammo crit effects", () => {
     const eff = res.rows[0]!;
     expect(eff.kind).toBe("weaponDestroyed");
     if (eff.kind === "weaponDestroyed") {
-      expect(eff.weaponName).toBe("Autocannon/20");
+      expect(eff.weaponName).toBe("AC/20");
       expect(eff.weaponIndex).toBe(4);
     }
     expect(res.destroyedWeapons).toContain(4);
@@ -319,7 +319,7 @@ describe("weapon and ammo crit effects", () => {
     const eff = res.rows[0]!;
     expect(eff.kind).toBe("ammoExplosion");
     if (eff.kind === "ammoExplosion") {
-      expect(eff.weaponName).toBe("Autocannon/20");
+      expect(eff.weaponName).toBe("AC/20");
       expect(eff.shotsRemaining).toBe(5);
       expect(eff.damagePerShot).toBe(20);
       expect(eff.damage).toBe(100);
@@ -379,6 +379,52 @@ describe("weapon and ammo crit effects", () => {
     expect(res.ammoBins["leftTorso:1"]).toBeUndefined();
     expect(res.ammoBins["leftTorso:2"]).toBeUndefined();
     expect(res.shotsLeft[1]).toBeUndefined();
+  });
+
+  it("gauss ammo (inert) crits as ammoNoExplosion, bin empties, no damage", () => {
+    // BZK-F3 carries only gauss rifle rounds. Total Warfare: gauss ammo is
+    // inert — a crit on the bin does not detonate. The slot still takes the
+    // crit and the bin empties (slugs spill), but no damage is dealt and no
+    // cascade runs.
+    const def = getMechDef("BZK-F3")!;
+    const bins = loadAmmoBins(def).bins;
+    // Pre-condition: both CT gauss bins are loaded.
+    expect(bins["centerTorso:11"]).toBe(8);
+    expect(bins["centerTorso:12"]).toBe(8);
+    const ctArmorBefore = def.armor.centerTorso;
+    const res = resolveCriticalHits({
+      // det 8 -> 1 crit. CT is 12-slot: first die 1-3 = slots 1-6, 4-6 =
+      // slots 7-12. (4,5) lands on slot 11 = first gauss ammo bin.
+      rng: detRoll(8, 4, 5),
+      def,
+      source: { location: "centerTorso", damage: 5 },
+      critSlotsDestroyed: freshFlags(def),
+      destroyedWeapons: [],
+      damage: {
+        armor: { ...def.armor, centerTorso: 0 },
+        armorRear: { ...def.armorRear },
+        internalStructure: { ...def.internalStructure, centerTorso: 1000 },
+      },
+      ammoBins: { ...bins },
+    });
+    expect(res.rows).toHaveLength(1);
+    const eff = res.rows[0]!;
+    expect(eff.kind).toBe("ammoNoExplosion");
+    if (eff.kind === "ammoNoExplosion") {
+      expect(eff.weaponName).toBe("Gauss Rifle");
+      expect(eff.location).toBe("centerTorso");
+      expect(eff.slotIndex).toBe(11);
+    }
+    // The hit bin empties; the sibling gauss bin keeps its 8 shots.
+    expect(res.ammoBins["centerTorso:11"]).toBe(0);
+    expect(res.ammoBins["centerTorso:12"]).toBe(8);
+    // No damage, no kill, no cascade rows. We pre-set CT IS to 1000 so
+    // any non-zero damage applied at this slot would show up.
+    expect(res.damage.armor.centerTorso).toBe(0);
+    expect(res.damage.internalStructure.centerTorso).toBe(1000);
+    expect(res.killed).toBe(false);
+    // Guard: armor pool untouched (no explosion damage applied).
+    expect(def.armor.centerTorso).toBe(ctArmorBefore);
   });
 
   it("cockpit crit kills the 'Mech", () => {

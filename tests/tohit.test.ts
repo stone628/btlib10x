@@ -63,7 +63,7 @@ describe("GATOR to-hit calculation", () => {
       targetTerrain: "clear",
       interveningWoods: 0,
       distance: 2,
-      weapon: getWeaponDefFor({ weapon: "Autocannon/20" }),
+      weapon: getWeaponDefFor({ weapon: "AC/20" }),
     });
     expect(ac20.total).toBe(8);
 

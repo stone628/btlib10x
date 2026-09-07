@@ -48,7 +48,7 @@ describe("suggestFireTargets", () => {
     expect(enf!.distance).toBe(1);
     expect(enf!.weapons.map((w) => w.weaponIndex).sort()).toEqual([1, 2, 3, 4]);
     const ac20 = enf!.weapons.find((w) => w.weaponIndex === 4)!;
-    expect(ac20.weapon).toBe("Autocannon/20");
+    expect(ac20.weapon).toBe("AC/20");
     expect(ac20.rangeBracket).toBe("short");
     expect(ac20.tn).toBe(4); // gunnery 4 + short 0
     expect(ac20.expectedDamage).toBe(20);

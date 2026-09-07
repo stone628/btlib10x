@@ -35,6 +35,14 @@ function hbkVsEnf(): BattleState {
   return createBattle(units, makeBattleOptions(units, true));
 }
 
+function bzkVsEnf(): BattleState {
+  const units: UnitInit[] = [
+    { id: "bzk", model: "BZK-F3", team: 0, gunnery: 4, position: { col: 2, row: 4 }, facing: "se" },
+    { id: "enf", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 5, row: 4 }, facing: "nw" },
+  ];
+  return createBattle(units, makeBattleOptions(units, true));
+}
+
 function startMovementTurn(state: BattleState, rng = scriptedRng(3, 3, 3, 1)): BattleState {
   rollInitiativePhase(state, rng);
   return state;
@@ -247,8 +255,18 @@ describe("largestAmmoBin", () => {
     const def = getMechDefFor(unit);
     const bin = largestAmmoBin(def, unit.ammoBins);
     expect(bin).not.toBeNull();
-    expect(bin!.weapon).toBe("Autocannon/20");
+    expect(bin!.weapon).toBe("AC/20");
     expect(bin!.shotsRemaining).toBe(10);
+  });
+
+  it("returns null when only non-explosive ammo is loaded (BZK-F3 gauss)", () => {
+    const state = bzkVsEnf();
+    const unit = getUnit(state, "bzk");
+    const def = getMechDefFor(unit);
+    // BZK-F3 mounts two gauss ammo bins in the center torso.
+    expect(unit.ammoBins["centerTorso:11"]).toBe(8);
+    expect(unit.ammoBins["centerTorso:12"]).toBe(8);
+    expect(largestAmmoBin(def, unit.ammoBins)).toBeNull();
   });
 });
 
@@ -311,7 +329,7 @@ describe("game integration: weapon heat", () => {
     expect(weaponHeatEvent).toBeDefined();
     expect(
       (weaponHeatEvent as Extract<(typeof state.events)[number], { kind: "heatWeapon" }>).weapon,
-    ).toBe("Autocannon/20");
+    ).toBe("AC/20");
   });
 });
 
@@ -522,5 +540,23 @@ describe("game integration: heat ammo explosion", () => {
     expect(state.events.some((e) => e.kind === "heatAmmoExplosion" && e.unitId === "hbk")).toBe(
       true,
     );
+  });
+
+  it("gauss-only unit does not detonate from heat (inert ammo)", () => {
+    const state = bzkVsEnf();
+    const bzk = getUnit(state, "bzk");
+    bzk.heat = 30;
+    startAttackTurn(state);
+    // Shutdown auto: no roll. No ammo avoid roll is taken because the only
+    // loaded ammo is gauss (non-explosive). The same scripted rng would
+    // otherwise fail an avoid=8 roll.
+    advancePhase(state, scriptedRng(3, 1, 6, 6, 6, 6));
+    expect(bzk.shutdown).toBe("heat");
+    expect(state.events.some((e) => e.kind === "heatAmmoExplosion" && e.unitId === "bzk")).toBe(
+      false,
+    );
+    // Gauss ammo bins survive intact.
+    expect(bzk.ammoBins["centerTorso:11"]).toBe(8);
+    expect(bzk.ammoBins["centerTorso:12"]).toBe(8);
   });
 });

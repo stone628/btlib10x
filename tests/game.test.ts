@@ -511,7 +511,7 @@ describe("weapon attack phase", () => {
     );
 
     // Out of range.
-    const ac20 = getWeaponDefFor({ weapon: "Autocannon/20" });
+    const ac20 = getWeaponDefFor({ weapon: "AC/20" });
     units = [
       {
         id: "hbk",

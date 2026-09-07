@@ -27,13 +27,13 @@ describe("'Mech definitions", () => {
     expect(hbk.jumping).toBe(0);
     expect(hbk.armor.centerTorso).toBe(31);
     expect(hbk.armor.head).toBe(9);
-    expect(Object.values(hbk.weapons).map((w) => w.weapon)).toContain("Autocannon/20");
+    expect(Object.values(hbk.weapons).map((w) => w.weapon)).toContain("AC/20");
   });
 
   it("spot-checks remaining sheets", () => {
     expect(getMechDef("ENF-4R")!.armor.centerTorso).toBe(27);
     expect(getMechDef("GRF-1N")!.jumping).toBe(5);
-    expect(getMechDef("GRF-1N")!.armor.centerTorso).toBe(20);
+    expect(getMechDef("GRF-1N")!.armor.centerTorso).toBe(27);
     expect(getMechDef("CDA-3MA")!.walking).toBe(8);
     expect(getMechDef("HER-5SA")!.running).toBe(9);
     const wvr = getMechDef("WVR-6R")!;
@@ -161,7 +161,7 @@ describe("weapon catalog", () => {
     expect(getWeaponDefFor({ weapon: "SRM 6" }).missiles).toBe(6);
     expect(getWeaponDefFor({ weapon: "SRM 6" }).missileDamage).toBe(2);
     expect(getWeaponDefFor({ weapon: "Ultra AC/5" }).rapidFireShots).toBe(2);
-    expect(getWeaponDefFor({ weapon: "Autocannon/20" }).rapidFireShots).toBeUndefined();
+    expect(getWeaponDefFor({ weapon: "AC/20" }).rapidFireShots).toBeUndefined();
   });
 
   it("encodes Clan weapons added for the Mad Cat Mk II", () => {
@@ -180,7 +180,7 @@ describe("ammo validation in MechDef", () => {
       validateMechDef({
         ...base,
         weapons: Object.values(base.weapons).map((w) =>
-          w.weapon === "Autocannon/20" ? { ...w, shots: 7 } : w,
+          w.weapon === "AC/20" ? { ...w, shots: 7 } : w,
         ),
       }),
     ).toThrow(/must be a multiple/);

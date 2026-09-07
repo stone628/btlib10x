@@ -20,6 +20,7 @@
  */
 
 import { LOCATIONS, type Location, type MoveMode } from "../core/types.js";
+import { getAmmoDefFor } from "../data/ammo.schema.js";
 import type { ResolvedMechDef } from "../data/mech.schema.js";
 import { type AmmoBin, type AmmoBinId, collectAmmoBins } from "./ammo.js";
 import { ammoDamagePerShot, type EffectiveMovement } from "./critical.js";
@@ -258,7 +259,10 @@ export interface LargestAmmoBin {
  * weapon mount whose remaining shots x per-shot damage is largest. The mount
  * aggregates every loaded bin it owns (so the full magazine detonates
  * together); ties resolve to the first-found mount, deterministic. Returns
- * null when the 'Mech carries no loaded ammunition.
+ * null when the 'Mech carries no loaded explosive ammunition.
+ *
+ * Non-explosive ammo (e.g. gauss rifle rounds) is excluded from selection per
+ * Total Warfare — it cannot detonate from internal heat.
  */
 export function largestAmmoBin(
   def: ResolvedMechDef,
@@ -272,9 +276,10 @@ export function largestAmmoBin(
   }
   let best: LargestAmmoBin | null = null;
   for (const bins of byMount.values()) {
+    const first = bins[0]!;
+    if (!getAmmoDefFor(first).explosive) continue;
     const shotsRemaining = bins.reduce((s, b) => s + (ammoBins[b.id] ?? 0), 0);
     if (shotsRemaining <= 0) continue;
-    const first = bins[0]!;
     const damagePerShot = ammoDamagePerShot(first);
     const candidate: LargestAmmoBin = {
       binId: first.id,
