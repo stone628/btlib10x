@@ -44,6 +44,38 @@ function normalizeCritWeaponToken(t) {
     .trim();
 }
 
+/** Tally ammo tons per catalog weapon from the MTF crit-slot lines.
+ * Full-ton crits (e.g. "IS Ammo AC/10", "CLMG Ammo", "IS Machine Gun Ammo")
+ * add 1 ton; "- Half" suffixed crits (e.g. "IS Machine Gun Ammo - Half") add
+ * 0.5 tons. The caller multiplies by `SHOTS_PER_TON[weapon]` to get shot count
+ * for the weapons-block `shots` field. Unmapped ammo-shaped lines are skipped
+ * silently — `parseCritSlots` is the strict gate for unknown crit tokens. */
+export function ammoBinsFromCrits(lines) {
+  const bins = new Map();
+  for (const line of lines) {
+    const t = line.trim();
+    let name = null;
+    const half = /-\s*Half\s*$/.test(t);
+    // Format 1: "<code> Ammo" (Clan/compact), e.g. "CLStreakSRM4 Ammo" or
+    // "IS Machine Gun Ammo - Half".
+    let m = /^(.+?)\s+Ammo(?:\s*-\s*Half)?\s*$/.exec(t);
+    if (m) {
+      const stem = m[1]
+        .replace(/^IS |^CL /, "")
+        .replace(/\s+CL$/, "")
+        .trim();
+      name = CODE[stem] ?? CODE[normalizeCritWeaponToken(stem)] ?? null;
+    } else {
+      // Format 2: "IS Ammo <token>", e.g. "IS Ammo AC/20" or
+      // "IS Machine Gun Ammo - Half".
+      m = /^IS Ammo\s+(.+?)(?:\s*-\s*Half)?\s*$/.exec(t);
+      if (m) name = AMMO_TOKEN[m[1].trim()] ?? null;
+    }
+    if (name) bins.set(name, (bins.get(name) ?? 0) + (half ? 0.5 : 1));
+  }
+  return bins;
+}
+
 function classifyCritLine(raw, errors, fileLabel) {
   const t = raw.trim();
   if (t === "" || t === "-Empty-") return { ok: true, slot: { kind: "empty" } };
