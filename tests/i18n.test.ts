@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getMechDefFor } from "../src/data/index.js";
+import { isNominal } from "../src/index.js";
 import { canFireFromLocation } from "../src/rules/damage.js";
 import { en } from "../web/i18n/en.js";
 import type { LocaleId, MessageKey } from "../web/i18n/index.js";
@@ -18,7 +19,7 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
       .map((u) => u.id);
     const enemy = ids.find((id) => id !== actorId)!;
     if (st.phase === "movement") {
-      if (st.units[actorId]!.shutdown === "not") {
+      if (isNominal(st.units[actorId]!)) {
         try {
           S.declareMode(s, "walk");
         } catch {

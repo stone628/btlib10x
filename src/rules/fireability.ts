@@ -4,8 +4,8 @@ import type { Location } from "../core/types.js";
 import { getMechDefFor } from "../data/index.js";
 import { getWeaponDefFor } from "../data/weapon.schema.js";
 import { isInFrontArc } from "./arcs.js";
-import { canFireFromLocation, isImmobile } from "./damage.js";
-import type { BattleState } from "./game.js";
+import { canFireFromLocation } from "./damage.js";
+import { type BattleState, isImmobile } from "./game.js";
 import { toHitHeatModifier } from "./heat.js";
 import { losBlockedByElevation, losWoodsPointsBetween } from "./los.js";
 import * as mv from "./movement.js";
@@ -108,7 +108,7 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
           attackerMovement: unit.moveMode ?? "standStill",
           targetHexesMoved: mv.hexesSinceLastReversal(enemy.movesThisTurn),
           targetJumped: enemy.jumpedThisTurn,
-          targetImmobile: isImmobile(enemy.damage) || enemy.shutdown !== "not",
+          targetImmobile: isImmobile(enemy),
           targetTerrain: cellAt(state, enemy.position).terrain,
           interveningWoods,
           distance,

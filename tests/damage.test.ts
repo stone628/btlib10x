@@ -4,8 +4,8 @@ import type { LocationValue, UnitDamageState } from "../src/rules/damage.js";
 import {
   applyDamage,
   canFireFromLocation,
-  isImmobile,
   isUnitDestroyed,
+  isUnitImmobile,
 } from "../src/rules/damage.js";
 
 /** Build a layered damage state; every location defaults to 10 armor / 10 IS. */
@@ -121,7 +121,7 @@ describe("layered damage resolution", () => {
     const s = mk({ armor: { leftLeg: 2 }, is: { leftLeg: 5 } });
     const app = applyDamage(s, "leftLeg", 7);
     expect(app.after.armor.leftLeg).toBe(0);
-    expect(isImmobile(app.after)).toBe(true);
+    expect(isUnitImmobile(app.after)).toBe(true);
     expect(isUnitDestroyed(app.after)).toBe(false);
   });
 
