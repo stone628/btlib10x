@@ -1,6 +1,12 @@
 import { roll2D6 } from "../core/dice.js";
 import { bearing, hexDistance, isAdjacent, sameHex } from "../core/hex.js";
-import { cellAt, costToClimb, costToEnter, type HexGrid } from "../core/terrain.js";
+import {
+  cellAt,
+  costToClimb,
+  costToEnter,
+  type HexGrid,
+  hasPartialCover,
+} from "../core/terrain.js";
 import {
   type Facing,
   type HexCell,
@@ -685,6 +691,9 @@ export function declareAttacks(
       targetJumped: target.jumpedThisTurn,
       targetImmobile: isImmobile(target),
       targetTerrain: cellAt(state, target.position).terrain,
+      targetPartialCover:
+        hasPartialCover(cellAt(state, target.position).terrain) &&
+        cellAt(state, unit.position).level <= cellAt(state, target.position).level,
       interveningWoods: woodsPoints,
       distance: dist,
       weapon,

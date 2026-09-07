@@ -29,6 +29,15 @@
 
 ## Done
 
+- **Partial cover (TW)** — a target standing in a water1 or building hex is in
+  partial cover when the attacker's ground level is not higher than the
+  target's: +1 to-hit (folded into `terrainMod` via new `targetPartialCover?`
+  on `AttackModifiers`), and a standard hit-location roll that lands on a leg
+  strikes the cover instead (no damage to the target). Derived from
+  `hasPartialCover(targetTerrain) && attackerLevel <= targetLevel` in
+  `declareAttacks`, `resolveWeaponAttack`, and `suggestFireTargets`. `water1`
+  `terrainMod` changed −1 → 0 (TW: depth-1 water grants cover, not an easy-hit
+  bonus). Cover-hit building-CF damage deferred.
 - **Immobile/shutdown target modifier** — `targetMovementModifier` gains an
   `immobile` flag: a target that cannot move (shut down, or both legs
   destroyed) applies the −4 immobile target-number modifier instead of the
@@ -42,11 +51,12 @@
   light/medium/heavy/hardened buildings. `terrainMoveCost`/`screeningPoints`
   (formerly `woodsPoints`) / `terrainTargetMod` / `hasPartialCover` /
   `blocksTargeting` read the catalog instead of inline switches. Water depth 2+
-  blocks LOS in/out (`losBlockedByWater`); water1 grants a -1 target modifier.
+  blocks LOS in/out (`losBlockedByWater`); water1 grants partial cover (+1,
+  TW) rather than a standalone target modifier.
   Building structural-factor damage + collapse-to-rubble wired into
   `BattleState.buildings` and weapon resolution (`damageBuildingAt`); renderer
-  glyphs (`w W r R = ∼ ≈ ≋ b B # H`) + CSS. Partial cover resolution deferred
-  to the piloting milestone.
+  glyphs (`w W r R = ∼ ≈ ≋ b B # H`) + CSS. Partial cover resolution landed
+  with the to-hit milestone.
 - **Classic rules expansion** — internal structure (derived from tonnage, TW
   standard table), front/rear armor pools + layered damage model, front / side /
   rear arc classification (`arcs.ts`) and hit-location tables

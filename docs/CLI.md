@@ -138,13 +138,15 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
 - **To-hit (GATOR)** — gunnery + attacker movement + target movement + range
   bracket + intervening terrain + pulse + height difference; auto-hit ≤
   2, auto-miss > 12. Target-terrain modifier is data-driven
-  (`terrainTargetMod`): lightWoods/heavyWoods +1/+2, water1 −1 (partially
-  submerged target). Height difference: `−(attackerLevel − targetLevel)`
-  (attacker higher = easier, lower = harder). A shut-down 'Mech (or one
-  with both legs destroyed) is immobile and applies a flat −4 target
-  modifier instead of a movement band. Units inside a water1 or
-  building hex qualify for partial cover (`hasPartialCover`), whose +3
-  resolution is deferred with piloting.
+  (`terrainTargetMod`): lightWoods/heavyWoods +1/+2. Height difference:
+  `−(attackerLevel − targetLevel)` (attacker higher = easier, lower =
+  harder). A shut-down 'Mech (or one with both legs destroyed) is immobile
+  and applies a flat −4 target modifier instead of a movement band.
+  **Partial cover (TW)** — a target standing in a water1 or building hex is
+  in partial cover while the attacker's ground level is not higher than the
+  target's: +1 to-hit (folded into `terrainMod`) and a hit-location roll
+  that lands on a leg strikes the cover instead (no damage to the target).
+  A downhill attacker (higher ground level) negates the target's cover.
 - **Terrain catalog** — 13 core-rulebook terrain types (`clear`, lightWoods,
   heavyWoods, rough, rubble, pavement, water1, water2, water3, and four
   building classes) defined in `src/data/terrain.json` and validated by
@@ -212,8 +214,9 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
 
 - **Physical attacks** — punch, kick, charge, DFA.
 - **Piloting rolls** — falling, standing up, leg/gyro damage effects, and
-  partial cover (+3 to hit, Punch Location Table) for units in water1 /
-  building hexes.
+  partial-cover building-CF damage on leg strikes (cover itself is
+  implemented; only the building structural damage on a covered hit is
+  deferred).
 - **Water depth movement** — level-change MP surcharge when entering water,
   and the piloting roll to avoid falling on the way in.
 - **Collapse damage** — units inside a building hex take damage when it

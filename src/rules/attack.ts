@@ -1,4 +1,5 @@
 import { roll2D6 } from "../core/dice.js";
+import { hasPartialCover } from "../core/terrain.js";
 import type { Location, MoveMode, Rng, TerrainType } from "../core/types.js";
 import type { ResolvedMechDef } from "../data/mech.schema.js";
 import type { WeaponDef } from "../data/weapon.schema.js";
@@ -82,6 +83,8 @@ export interface AttackResolution {
 export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution {
   const weapon: WeaponDef = getWeaponDefFor(input);
   const shots = input.shots ?? 1;
+  const partialCover =
+    hasPartialCover(input.targetTerrain) && (input.attackerLevel ?? 0) <= (input.targetLevel ?? 0);
 
   const breakdown = computeToHit({
     gunnery: input.gunnery,
@@ -90,6 +93,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     targetJumped: input.targetJumped,
     targetTerrain: input.targetTerrain,
     ...(input.targetImmobile !== undefined ? { targetImmobile: input.targetImmobile } : {}),
+    ...(partialCover ? { targetPartialCover: true } : {}),
     interveningWoods: losWoodsPoints(input.interveningTerrains),
     distance: input.distance,
     weapon,
@@ -128,15 +132,19 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     const hits = clusterHitsForMissiles(weapon.missiles, clusterRoll);
     if (weapon.missileDamage === 2) {
       for (let i = 0; i < hits; i++) {
+        const location = hitLocationCovered(input.rng, partialCover);
+        if (location === null) continue;
         base.groups.push({
-          location: hitLocation(roll2D6(input.rng)),
+          location,
           damage: weapon.missileDamage,
         });
       }
     } else {
       for (const lot of groupMissiles(hits, 5)) {
+        const location = hitLocationCovered(input.rng, partialCover);
+        if (location === null) continue;
         base.groups.push({
-          location: hitLocation(roll2D6(input.rng)),
+          location,
           damage: lot * weapon.missileDamage,
         });
       }
@@ -146,16 +154,21 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     base.clusterRoll = clusterRoll;
     const hits = clusterHitsForShots(shots, clusterRoll);
     for (let i = 0; i < hits; i++) {
+      const location = hitLocationCovered(input.rng, partialCover);
+      if (location === null) continue;
       base.groups.push({
-        location: hitLocation(roll2D6(input.rng)),
+        location,
         damage: damageForBracket(weapon, breakdown.rangeBracket),
       });
     }
   } else {
-    base.groups.push({
-      location: hitLocation(roll2D6(input.rng)),
-      damage: damageForBracket(weapon, breakdown.rangeBracket),
-    });
+    const location = hitLocationCovered(input.rng, partialCover);
+    if (location !== null) {
+      base.groups.push({
+        location,
+        damage: damageForBracket(weapon, breakdown.rangeBracket),
+      });
+    }
   }
 
   let damage = input.targetDamage;
@@ -228,6 +241,14 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
   }
   base.application = application;
   return base;
+}
+
+/** Standard hit-location roll; under partial cover a leg result strikes the
+ *  cover instead and the attack deals no damage to the target (null). */
+function hitLocationCovered(rng: Rng, partialCover: boolean): Location | null {
+  const location = hitLocation(roll2D6(rng));
+  if (partialCover && (location === "leftLeg" || location === "rightLeg")) return null;
+  return location;
 }
 
 function cloneDestroyed(src: Record<Location, boolean[]>): Record<Location, boolean[]> {

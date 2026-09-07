@@ -1,5 +1,5 @@
 import { bearing, hexDistance } from "../core/hex.js";
-import { cellAt } from "../core/terrain.js";
+import { cellAt, hasPartialCover } from "../core/terrain.js";
 import type { Location } from "../core/types.js";
 import { getMechDefFor } from "../data/index.js";
 import { getWeaponDefFor } from "../data/weapon.schema.js";
@@ -110,6 +110,9 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
           targetJumped: enemy.jumpedThisTurn,
           targetImmobile: isImmobile(enemy),
           targetTerrain: cellAt(state, enemy.position).terrain,
+          targetPartialCover:
+            hasPartialCover(cellAt(state, enemy.position).terrain) &&
+            cellAt(state, unit.position).level <= cellAt(state, enemy.position).level,
           interveningWoods,
           distance,
           weapon,

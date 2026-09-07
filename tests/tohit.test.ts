@@ -119,6 +119,24 @@ describe("GATOR to-hit calculation", () => {
     expect(immobile.total).toBe(online.total - 4);
   });
 
+  it("partial-cover target adds +1 terrain modifier", () => {
+    const base = {
+      gunnery: 4,
+      attackerMovement: "standStill" as const,
+      targetHexesMoved: 0,
+      targetJumped: false,
+      targetTerrain: "water1" as const,
+      interveningWoods: 0,
+      distance: 1,
+      weapon: getWeaponDefFor({ weapon: "Small Laser" }),
+    };
+    const plain = computeToHit(base);
+    expect(plain.terrainMod).toBe(0);
+    const covered = computeToHit({ ...base, targetPartialCover: true });
+    expect(covered.terrainMod).toBe(1);
+    expect(covered.total).toBe(plain.total + 1);
+  });
+
   it("flags auto-hit <= 2 and auto-miss > 12", () => {
     const easy = computeToHit({
       gunnery: 0,

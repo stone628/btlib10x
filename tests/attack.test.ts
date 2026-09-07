@@ -156,4 +156,50 @@ describe("resolveWeaponAttack", () => {
     expect(res.toHitRoll).toBeNull();
     expect(rng.remaining()).toBe(0);
   });
+
+  it("partial cover: +1 TN and leg location hits strike the cover", () => {
+    const rng = scriptedRng(3, 3, 2, 3); // to-hit 6 >= TN 5; location 5 -> rightLeg -> cover
+    const res = resolveWeaponAttack({
+      ...BASE,
+      rng,
+      targetTerrain: "water1",
+      weapon: "Small Laser",
+      targetDamage: freshState(),
+    });
+    expect(res.hit).toBe(true);
+    expect(res.breakdown.terrainMod).toBe(1);
+    expect(res.groups).toHaveLength(0);
+    expect(res.application).toBeNull();
+    expect(rng.remaining()).toBe(0);
+  });
+
+  it("partial cover does not block non-leg locations", () => {
+    const rng = scriptedRng(3, 3, 3, 4); // to-hit 6 >= TN 5; location 7 -> CT
+    const res = resolveWeaponAttack({
+      ...BASE,
+      rng,
+      targetTerrain: "mediumBuilding",
+      weapon: "Small Laser",
+      targetDamage: freshState(),
+    });
+    expect(res.hit).toBe(true);
+    expect(res.breakdown.terrainMod).toBe(1);
+    expect(res.groups).toEqual([{ location: "centerTorso", damage: 3 }]);
+  });
+
+  it("no partial cover when attacker stands higher than target", () => {
+    const rng = scriptedRng(3, 3, 2, 3); // to-hit 6 >= TN 4; location 5 -> rightLeg (no cover)
+    const res = resolveWeaponAttack({
+      ...BASE,
+      rng,
+      targetTerrain: "water1",
+      attackerLevel: 2,
+      targetLevel: 0,
+      weapon: "Small Laser",
+      targetDamage: freshState(),
+    });
+    expect(res.hit).toBe(true);
+    expect(res.breakdown.terrainMod).toBe(0);
+    expect(res.groups).toEqual([{ location: "rightLeg", damage: 3 }]);
+  });
 });
