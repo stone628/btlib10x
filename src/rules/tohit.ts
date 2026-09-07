@@ -11,6 +11,9 @@ export interface AttackModifiers {
   readonly targetHexesMoved: number;
   readonly targetJumped: boolean;
   readonly targetTerrain: TerrainType;
+  /** True when the target cannot move (shut down or both legs destroyed):
+   *  grants a flat −4 target modifier instead of the hex-based band. */
+  readonly targetImmobile?: boolean;
   /** Sum of woods points among intervening hexes (0 when none). */
   readonly interveningWoods: number;
   readonly distance: number;
@@ -84,7 +87,11 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
   }
 
   const attackerMod = attackerMovementModifier(mods.attackerMovement);
-  const targetMod = targetMovementModifier(mods.targetHexesMoved, mods.targetJumped);
+  const targetMod = targetMovementModifier(
+    mods.targetHexesMoved,
+    mods.targetJumped,
+    mods.targetImmobile,
+  );
 
   const terrainMod = mods.interveningWoods + terrainTargetMod(mods.targetTerrain);
 

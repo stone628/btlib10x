@@ -194,7 +194,8 @@ Map coordinates are already 1-based and match the engine directly, so there is
 
 - `maxMovePoints(mode, walking, running, jumping)`
 - `attackerMovementModifier(mode)` → 0/+1/+2/+3
-- `targetMovementModifier(hexesEntered, jumped)` → 0…+7 (+1 jump bonus)
+- `targetMovementModifier(hexesEntered, jumped, immobile?=false)` → 0…+7 (+1
+  jump bonus), or flat −4 when `immobile` (shut down / both legs destroyed)
 - `hexesSinceLastReversal(moves)` — only hexes after the last direction change count
 - `facingChangeCost(facings)`
 - `isForwardStep / isBackwardStep(from, to, facing)`
@@ -251,7 +252,7 @@ during attack resolution.
 
 ```ts
 computeToHit({
-  gunnery, attackerMovement, targetHexesMoved, targetJumped,
+  gunnery, attackerMovement, targetHexesMoved, targetJumped, targetImmobile?,
   targetTerrain, interveningWoods, distance, weapon,
   attackerLevel?, targetLevel?,
 }): ToHitBreakdown
@@ -261,6 +262,7 @@ GATOR stack: gunnery + attacker move + target move + terrain + range bracket
 (S 0 / M +2 / L +4) + pulse (−2) + minimum-range penalty + height difference;
 auto-hit ≤ 2, auto-miss > 12. `attackerLevel − targetLevel` is reported as
 `heightDiff` and subtracts as `heightMod` (attacker higher = easier).
+`targetImmobile` (shut down or both legs destroyed) sets `targetMod` to −4.
 `damageForBracket(weapon, bracket)` resolves plain/V damage values.
 `ToHitBreakdown` carries the individual mods, `rangeBracket`, `automatic`,
 and `outOfRange`.
@@ -344,7 +346,7 @@ resolveWeaponAttack(input: WeaponAttackInput): AttackResolution
 
 ```ts
 interface WeaponAttackInput {
-  rng; gunnery; attackerMoved; targetHexesMoved; targetJumped;
+  rng; gunnery; attackerMoved; targetHexesMoved; targetJumped; targetImmobile?;
   targetTerrain; interveningTerrains; distance; weaponName;
   shots?;                  // rapid-fire volley; defaults 1
   targetDamage: UnitDamageState;   // layered

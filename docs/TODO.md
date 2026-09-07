@@ -10,7 +10,6 @@
 ## To Do
 
 - improve weapon shot display which has shared ammo bin
-- shutdown mech does not affect targetMovementModifier
 - show ammo explosion check avoid (success)
 - enforce minimum range rule for weapons
 - warn min range, reject out of range on 'fire' command immediately
@@ -30,6 +29,13 @@
 
 ## Done
 
+- **Immobile/shutdown target modifier** — `targetMovementModifier` gains an
+  `immobile` flag: a target that cannot move (shut down, or both legs
+  destroyed) applies the −4 immobile target-number modifier instead of the
+  hex-band movement table. Plumbed through `computeToHit`/`resolveWeaponAttack`
+  (`targetImmobile?`) and wired in `declareAttacks`, `resolveUnitAttacks`, and
+  `suggestFireTargets` from `isImmobile(damage) || shutdown !== "not"`,
+  so fire-suggestion TNs and `autoMiss` reflect shutdown targets.
 - **Core-rulebook terrain expansion** — terrain catalog extracted to
   `src/data/terrain.json` (13 types), data-driven via `terrain.schema.ts`;
   `TerrainType` widened to include rough, rubble, pavement, water1/2/3, and
