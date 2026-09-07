@@ -6,7 +6,7 @@ import type { WeaponDef } from "../data/weapon.schema.js";
 import { getWeaponDefFor } from "../data/weapon.schema.js";
 import type { AmmoBinId } from "./ammo.js";
 import type { Arc } from "./arcs.js";
-import { clusterHitsForMissiles, clusterHitsForShots, groupMissiles } from "./cluster.js";
+import { clusterHits, groupMissiles } from "./cluster.js";
 import { type CriticalResolution, resolveCriticalHits } from "./critical.js";
 import { applyDamage, type DamageApplication, type UnitDamageState } from "./damage.js";
 import { toHitHeatModifier } from "./heat.js";
@@ -129,7 +129,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
   if (weapon.missiles !== undefined && weapon.missileDamage !== undefined) {
     const clusterRoll = roll2D6(input.rng);
     base.clusterRoll = clusterRoll;
-    const hits = clusterHitsForMissiles(weapon.missiles, clusterRoll);
+    const hits = clusterHits(weapon.missiles, clusterRoll);
     if (weapon.missileDamage === 2) {
       for (let i = 0; i < hits; i++) {
         const location = hitLocationCovered(input.rng, partialCover);
@@ -152,7 +152,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
   } else if (rapidFire && shots > 1) {
     const clusterRoll = roll2D6(input.rng);
     base.clusterRoll = clusterRoll;
-    const hits = clusterHitsForShots(shots, clusterRoll);
+    const hits = clusterHits(shots, clusterRoll);
     for (let i = 0; i < hits; i++) {
       const location = hitLocationCovered(input.rng, partialCover);
       if (location === null) continue;

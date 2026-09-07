@@ -1,42 +1,22 @@
 /**
- * Beginner Box / CBT quick-start Cluster Hits Table. Columns are missile
+ * Total Warfare Cluster Hits Table. Columns are projectile
  * counts (SRM-2, SRM-5, SRM-6, LRM-10/15, LRM-20); rows are the 2D6 roll.
- * Value = number of missiles that hit.
+ * Value = number of projectile that hit.
  */
-export const CLUSTER_COLUMNS: readonly number[] = [2, 4, 5, 6, 10, 15, 20];
+export const CLUSTER_COLUMNS: readonly number[] = [2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 20, 30, 40];
 
-const MISSILE_TABLE: readonly (readonly number[])[] = [
-  [1, 1, 1, 2, 3, 5, 6],
-  [1, 2, 2, 2, 3, 5, 6],
-  [1, 2, 2, 3, 4, 6, 9],
-  [1, 2, 3, 3, 6, 9, 12],
-  [1, 2, 3, 4, 6, 9, 12],
-  [1, 3, 3, 4, 6, 9, 12],
-  [2, 3, 3, 4, 6, 9, 12],
-  [2, 3, 4, 5, 8, 12, 16],
-  [2, 3, 4, 5, 8, 12, 16],
-  [2, 4, 5, 6, 10, 15, 20],
-  [2, 4, 5, 6, 10, 15, 20],
-];
-
-/**
- * Rapid-fire / multi-shot cluster columns (CBT quick-start p.29), used for
- * Ultra autocannons firing more than one shot; column index = shots fired - 2.
- */
-export const SHOT_CLUSTER_COLUMNS: readonly number[] = [2, 3, 4];
-
-const SHOTS_TABLE: readonly (readonly number[])[] = [
-  [1, 1, 2],
-  [1, 1, 2],
-  [1, 1, 2],
-  [1, 2, 2],
-  [1, 2, 2],
-  [1, 2, 3],
-  [2, 2, 3],
-  [2, 2, 3],
-  [2, 3, 3],
-  [2, 3, 4],
-  [2, 3, 4],
+const CLUSTER_TABLE: readonly (readonly number[])[] = [
+  [1, 1, 1, 1, 2, 3, 3, 3, 4, 5, 6, 10, 12],
+  [1, 1, 2, 2, 2, 3, 3, 4, 4, 5, 6, 10, 12],
+  [1, 1, 2, 2, 3, 4, 4, 4, 5, 6, 9, 12, 18],
+  [1, 2, 2, 3, 3, 4, 5, 6, 6, 9, 12, 18, 24],
+  [1, 2, 3, 3, 4, 5, 5, 6, 8, 9, 12, 18, 24],
+  [1, 2, 3, 3, 4, 5, 6, 6, 8, 9, 12, 18, 24],
+  [2, 2, 3, 4, 4, 5, 6, 6, 8, 12, 15, 21, 28],
+  [2, 2, 3, 4, 4, 5, 6, 8, 9, 12, 15, 21, 28],
+  [2, 3, 3, 4, 5, 6, 7, 8, 10, 12, 16, 24, 32],
+  [2, 3, 4, 5, 5, 7, 8, 9, 11, 14, 18, 27, 36],
+  [2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 20, 30, 40],
 ];
 
 function lookup(table: readonly (readonly number[])[], row: number, col: number): number {
@@ -47,16 +27,10 @@ function lookup(table: readonly (readonly number[])[], row: number, col: number)
   return v;
 }
 
-export function clusterHitsForMissiles(missiles: number, roll2d6: number): number {
+export function clusterHits(missiles: number, roll2d6: number): number {
   const col = CLUSTER_COLUMNS.indexOf(missiles);
   if (col < 0) throw new Error(`No cluster column for ${missiles} missiles`);
-  return lookup(MISSILE_TABLE, roll2d6, col);
-}
-
-export function clusterHitsForShots(shots: number, roll2d6: number): number {
-  const col = SHOT_CLUSTER_COLUMNS.indexOf(shots);
-  if (col < 0) throw new Error(`No shot-cluster column for ${shots} shots`);
-  return lookup(SHOTS_TABLE, roll2d6, col);
+  return lookup(CLUSTER_TABLE, roll2d6, col);
 }
 
 /** Split missiles into damage lots of `per` (LRM: one location per lot of 5). */
