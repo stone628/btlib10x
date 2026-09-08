@@ -9,10 +9,12 @@
 
 ## To Do
 
-- improve weapon shot display which has shared ammo bin
 - show ammo explosion check avoid (success)
 - enforce minimum range rule for weapons
 - warn min range, reject out of range on 'fire' command immediately
+- change movement phase command to set final hex and facing.
+- implement minimum range rule.
+- implement attack direction rule.
 
 ## In progress
 
