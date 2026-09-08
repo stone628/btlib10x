@@ -4,7 +4,6 @@ import { getMechDef, getMechDefFor } from "../src/data/index.js";
 import type { BattleState, UnitInit } from "../src/rules/game.js";
 import {
   advancePhase,
-  createBattle,
   declareAttacks,
   declareMove,
   executeMove,
@@ -25,14 +24,14 @@ import {
   shutdownAvoid,
   toHitHeatModifier,
 } from "../src/rules/heat.js";
-import { makeBattleOptions, scriptedRng } from "./helpers.js";
+import { createTestBattle, scriptedRng } from "./helpers.js";
 
 function hbkVsEnf(): BattleState {
   const units: UnitInit[] = [
     { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 2, row: 4 }, facing: "se" },
     { id: "enf", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 5, row: 4 }, facing: "nw" },
   ];
-  return createBattle(units, makeBattleOptions(units, true));
+  return createTestBattle([], units, true);
 }
 
 function bzkVsEnf(): BattleState {
@@ -40,7 +39,7 @@ function bzkVsEnf(): BattleState {
     { id: "bzk", model: "BZK-F3", team: 0, gunnery: 4, position: { col: 2, row: 4 }, facing: "se" },
     { id: "enf", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 5, row: 4 }, facing: "nw" },
   ];
-  return createBattle(units, makeBattleOptions(units, true));
+  return createTestBattle([], units, true);
 }
 
 function startMovementTurn(state: BattleState, rng = scriptedRng(3, 3, 3, 1)): BattleState {
@@ -501,7 +500,7 @@ describe("game integration: partial cover in to-hit", () => {
         facing: "nw",
       },
     ];
-    return createBattle(units, makeBattleOptions(units, true, [{ col: 5, row: 4, type }]));
+    return createTestBattle([{ col: 5, row: 4, type }], units, true);
   }
 
   function terrainModFor(type: TerrainType): number {

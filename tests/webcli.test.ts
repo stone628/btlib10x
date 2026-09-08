@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { getMapDef, getMechDefFor } from "../src/data/index.js";
 import { isNominal } from "../src/index.js";
 import { canFireFromLocation } from "../src/rules/damage.js";
-import { reachableInfo } from "../web/format.js";
 import {
   createBoardModel,
   GRID_GLYPHS,
@@ -10,7 +9,7 @@ import {
   TEAM_STYLES,
 } from "../web/renderer.text.js";
 import * as S from "../web/session.js";
-import { execute } from "./helpers.js";
+import { execute, reachableInfo } from "./helpers.js";
 
 function run(s: S.Session, cmd: string): string[] {
   return execute(s, cmd);
@@ -70,7 +69,7 @@ function autoPlay(s: S.Session): void {
 
 describe("help", () => {
   it("lists only commands legal in the current state", () => {
-    const s = S.newSession();
+    const s = S.newSession(0);
     s.critsDisabled = true;
     const setupHelp = run(s, "help").join("\n");
     expect(setupHelp).toContain("add");
@@ -88,7 +87,7 @@ describe("help", () => {
   });
 
   it("shows usage and explanation on separate lines for arg commands", () => {
-    const s = S.newSession();
+    const s = S.newSession(0);
     s.critsDisabled = true;
     const help = run(s, "help");
     const addIdx = help.findIndex((l) => l.startsWith("add"));
@@ -102,7 +101,7 @@ describe("help", () => {
 
 describe("hint", () => {
   it("heads the help message with per-state guidance", () => {
-    const s = S.newSession();
+    const s = S.newSession(0);
     s.critsDisabled = true;
     const setupHelp = run(s, "help");
     expect(setupHelp.slice(0, 3).join(" ")).toContain("'setup' phase");
@@ -146,7 +145,7 @@ describe("hint", () => {
 
 describe("help <command>", () => {
   it("details usage and arguments without the state hint", () => {
-    const s = S.newSession();
+    const s = S.newSession(0);
     s.critsDisabled = true;
     const out = run(s, "help add");
     expect(out[0]).toBe("usage: add <id> <model> <team> <gunnery> <col> <row> [facing]");
@@ -178,7 +177,7 @@ describe("help <command>", () => {
 
 describe("board", () => {
   it("explains instead of drawing a 1x1 grid when nothing is loaded", () => {
-    const s = S.newSession();
+    const s = S.newSession(0);
     s.critsDisabled = true;
     const out = run(s, "board").join("\n");
     expect(out).toContain("no battlefield yet");
@@ -196,14 +195,14 @@ describe("board", () => {
   });
 
   it("reports occupied hexes with 1-based coordinates", () => {
-    const s = S.newSession();
+    const s = S.newSession(0);
     s.critsDisabled = true;
     run(s, "add hbk HBK-4G 0 4 3 3");
     expect(run(s, "add grf GRF-1N 1 4 3 3")[0]).toBe("error: Hex 3,3 already occupied");
   });
 
   it("rejects units placed off the map", () => {
-    const s = S.newSession();
+    const s = S.newSession(0);
     s.critsDisabled = true;
     run(s, "map test");
     expect(run(s, "add a AS7-D 0 4 99 99 n")[0]).toBe("error: col 99 is outside the map (1..7)");
@@ -214,7 +213,7 @@ describe("board", () => {
 
 describe("clear", () => {
   it("signals a screen wipe via form feed", () => {
-    const s = S.newSession();
+    const s = S.newSession(0);
     s.critsDisabled = true;
     expect(run(s, "clear")).toEqual(["\f"]);
   });
@@ -222,7 +221,7 @@ describe("clear", () => {
 
 describe("info", () => {
   it("lists mechs and details one", () => {
-    const s = S.newSession();
+    const s = S.newSession(0);
     s.critsDisabled = true;
     const list = run(s, "info mech");
     expect(list.some((l) => l.includes("HBK-4G"))).toBe(true);
@@ -238,7 +237,7 @@ describe("info", () => {
   });
 
   it("matches mech model case-insensitively", () => {
-    const s = S.newSession();
+    const s = S.newSession(0);
     s.critsDisabled = true;
     const upper = run(s, "info mech hbk-4g").join("\n");
     const mixed = run(s, "info mech Hbk-4g").join("\n");
@@ -247,7 +246,7 @@ describe("info", () => {
   });
 
   it("lists maps and renders the ASCII sheet", () => {
-    const s = S.newSession();
+    const s = S.newSession(0);
     s.critsDisabled = true;
     expect(run(s, "info map").join("\n")).toContain("quickstart");
     const qs = getMapDef("quickstart")!;
@@ -263,7 +262,7 @@ describe("info", () => {
   });
 
   it("matches map name case-insensitively", () => {
-    const s = S.newSession();
+    const s = S.newSession(0);
     s.critsDisabled = true;
     const upper = run(s, "info map QUICKSTART").join("\n");
     const mixed = run(s, "info map QuickStart").join("\n");
@@ -272,7 +271,7 @@ describe("info", () => {
   });
 
   it("matches weapon name case-insensitively", () => {
-    const s = S.newSession();
+    const s = S.newSession(0);
     s.critsDisabled = true;
     const upper = run(s, "info weapon MEDIUM LASER").join("\n");
     const mixed = run(s, "info weapon medium laser").join("\n");
@@ -281,7 +280,7 @@ describe("info", () => {
   });
 
   it("aligns weapon rows by name, [LOC] and range columns", () => {
-    const s = S.newSession();
+    const s = S.newSession(0);
     s.critsDisabled = true;
     run(s, "map quickstart");
     const lines = run(s, "info mech HBK-4G");
@@ -399,7 +398,7 @@ describe("setup flow", () => {
   });
 
   it("rejects starting with one team", () => {
-    const s = S.newSession();
+    const s = S.newSession(0);
     s.critsDisabled = true;
     run(s, "map quickstart");
     run(s, "add a HBK-4G 0 4 2 2 n");
@@ -408,12 +407,12 @@ describe("setup flow", () => {
   });
 
   it("accepts map and model arguments case-insensitively", () => {
-    const s = S.newSession();
+    const s = S.newSession(0);
     s.critsDisabled = true;
     expect(run(s, "map QUICKSTART")[0]).toMatch(/^map quickstart:/);
-    expect(s.mapName).toBe("quickstart");
+    expect(s.setup.mapName).toBe("quickstart");
     expect(run(s, "add lower hbk-4g 0 4 2 2 n")[0]).toMatch(/lower \(HBK-4G\) placed at/);
-    expect(s.roster.find((u) => u.id === "lower")?.model).toBe("HBK-4G");
+    expect(s.setup.roster.find((u) => u.id === "lower")?.model).toBe("HBK-4G");
   });
 });
 
@@ -688,8 +687,8 @@ describe("full game", () => {
 
     run(s, "reset");
     expect(s.app).toBe("setup");
-    expect(s.roster).toHaveLength(0);
-    expect(s.mapName).toBeNull();
+    expect(s.setup.roster).toHaveLength(0);
+    expect(s.setup.mapName).toBeNull();
   });
 });
 

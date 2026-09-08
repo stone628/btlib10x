@@ -10,13 +10,12 @@ import {
 } from "../src/rules/building.js";
 import {
   type BattleState,
-  createBattle,
   damageBuildingAt,
   type TerrainHexDef,
   type UnitInit,
 } from "../src/rules/game.js";
 import { losBlockedByWater } from "../src/rules/los.js";
-import { makeBattleOptions } from "./helpers.js";
+import { createTestBattle } from "./helpers.js";
 
 describe("buildingTypeOf", () => {
   it("maps each building terrain to its sub-type", () => {
@@ -112,7 +111,7 @@ function battleWithBuilding(): BattleState {
     },
   ];
   const terrain: readonly TerrainHexDef[] = [{ col: 3, row: 3, type: "lightBuilding" }];
-  return createBattle(units, makeBattleOptions(units, true, terrain));
+  return createTestBattle(terrain, units, true);
 }
 
 describe("battle building integration", () => {

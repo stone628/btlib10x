@@ -96,6 +96,8 @@ export const kr: Catalog = {
   "cmd.rematch.help": "같은 편성, 지형, 시드로 새 전투",
   "cmd.heat.help": "유닛의 발열 게이지 상태 표시 (기본: 행동 유닛)",
   "cmd.heat.arg.id": "확인할 유닛; 기본은 행동 유닛",
+  "cmd.candidateMove.help": "이동 가능 영역을 ASCII 전장 격자로 표시",
+  "cmd.candidateAttack.help": "공격 가능한 목표와 가용 무기를 표시",
 
   // autoplay demo driver (hidden command, not listed in help)
   "autoPlay.started":
@@ -103,7 +105,7 @@ export const kr: Catalog = {
   "autoPlay.done": "autoplay 종료.",
 
   // command acknowledgements
-  "ok.mapLoaded": "맵 {name}: {w}x{h}, 지형 육각 {n}개",
+  "ok.mapLoaded": "맵 {name}: {w}x{h}개",
   "ok.added": "{id} ({model}) 위치 ({col},{row}), 방향 {facing} 배치됨",
   "ok.removed": "{id} 제거됨",
   "ok.started": "전투 시작",
@@ -131,6 +133,8 @@ export const kr: Catalog = {
   "err.duplicateId": "유닛 id 중복: {id}",
   "err.badTeam": "team은 음수가 아닌 정수여야 합니다",
   "err.badGunnery": "gunnery는 0..7 범위의 정수여야 합니다",
+  "err.candidate.movemode": "이동 가능 범위가 존재하지 않습니다",
+  "err.candidate.attack": "공격 가능한 목표가 존재하지 않습니다",
 
   // pilot experience bands (gunnery 0..7, lower is better)
   "skill.elite": "엘리트",
@@ -183,7 +187,6 @@ export const kr: Catalog = {
   // setup status
   "setup.mapLabel": "맵: {name}",
   "setup.mapNone": "(없음)",
-  "setup.terrainCount": "지형 육각: {n}",
   "setup.teamHeader": "팀 {team}:",
   "setup.unitLine": "  {id}  {model} ({name}) gunnery {gunnery} @ {pos} 방향 {facing}",
   "setup.noUnits": "(배치된 유닛 없음)",

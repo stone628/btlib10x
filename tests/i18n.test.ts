@@ -52,8 +52,8 @@ describe("i18n catalogs", () => {
   });
 
   it("interpolates {param} placeholders", () => {
-    expect(i18n("en", "ok.mapLoaded", { name: "beginner", w: 15, h: 16, n: 20 })).toBe(
-      "map beginner: 15x16, 20 terrain hexes",
+    expect(i18n("en", "ok.mapLoaded", { name: "beginner", w: 15, h: 16 })).toBe(
+      "map beginner: 15x16",
     );
     expect(i18n("kr", "lang.set", { locale: "kr" })).toBe("언어가 kr(으)로 설정되었습니다");
   });

@@ -98,6 +98,8 @@ export const en = {
   "cmd.rematch.help": "new battle with the same roster, terrain and seed",
   "cmd.heat.help": "show a unit's heat scale status (default: acting unit)",
   "cmd.heat.arg.id": "unit to inspect; defaults to the acting unit",
+  "cmd.candidateMove.help": "show movement candidate, drawn on the ASCII battle grid",
+  "cmd.candidateAttack.help": "show possible target with available weapons",
 
   // autoplay demo driver (hidden command, not listed in help)
   "autoPlay.started":
@@ -105,7 +107,7 @@ export const en = {
   "autoPlay.done": "autoplay finished.",
 
   // command acknowledgements
-  "ok.mapLoaded": "map {name}: {w}x{h}, {n} terrain hexes",
+  "ok.mapLoaded": "map {name}: {w}x{h}",
   "ok.added": "{id} ({model}) placed at ({col},{row}) facing {facing}",
   "ok.removed": "removed {id}",
   "ok.started": "battle started",
@@ -133,6 +135,8 @@ export const en = {
   "err.duplicateId": "Duplicate unit id: {id}",
   "err.badTeam": "team must be a non-negative integer",
   "err.badGunnery": "gunnery must be an integer 0..7",
+  "err.candidate.movemode": "movement candidate not available",
+  "err.candidate.attack": "possible target not available",
 
   // pilot experience bands (gunnery 0..7, lower is better)
   "skill.elite": "Elite",
@@ -189,7 +193,6 @@ export const en = {
   // setup status
   "setup.mapLabel": "map: {name}",
   "setup.mapNone": "(none)",
-  "setup.terrainCount": "terrain hexes: {n}",
   "setup.teamHeader": "team {team}:",
   "setup.unitLine": "  {id}  {model} ({name}) gunnery {gunnery} @ {pos} facing {facing}",
   "setup.noUnits": "(no units placed)",

@@ -19,7 +19,7 @@ import {
   rotateFacing,
   type TerrainHexDef,
 } from "../core/types.js";
-import { getMechDef, getMechDefFor, type MechModelHolder } from "../data/index.js";
+import { getMechDef, getMechDefFor, type MapDef, type MechModelHolder } from "../data/index.js";
 import type { ResolvedMechDef } from "../data/mech.schema.js";
 import { getWeaponDefFor } from "../data/weapon.schema.js";
 import {
@@ -287,11 +287,6 @@ export interface BattleState extends HexGrid {
 export type { TerrainHexDef };
 
 export interface CreateBattleOptions {
-  /** Non-clear hexes; anything not listed is clear terrain. */
-  readonly terrain: readonly TerrainHexDef[];
-  /** Board size, in engine coordinates (columns/rows). */
-  readonly width: number;
-  readonly height: number;
   /**
    * Disable critical hit resolution. Tests that script dice for narrow
    * damage scenarios (where any crit would alter the expected outcome) can
@@ -349,6 +344,7 @@ function markUnitDestroyed(state: BattleState, unit: UnitState): void {
 }
 
 export function createBattle(
+  map: MapDef,
   units: readonly UnitInit[],
   options: CreateBattleOptions,
 ): BattleState {
@@ -407,23 +403,22 @@ export function createBattle(
     };
   }
 
+  const { width, height } = map;
   for (const [label, n] of [
-    ["width", options.width],
-    ["height", options.height],
+    ["width", width],
+    ["height", height],
   ] as const) {
     if (!Number.isInteger(n) || n < 1) {
       throw new Error(`Board ${label} must be an integer >= 1`);
     }
   }
-
-  const { width, height } = options;
   const cells: HexCell[] = new Array<HexCell>(width * height).fill({
     terrain: "clear",
     level: 0,
   });
   const terrainSeen = new Set<string>();
   const buildings: Record<string, BuildingState> = {};
-  for (const { col, row, type, level } of options.terrain) {
+  for (const { col, row, type, level } of map.terrain) {
     const key = `${col},${row}`;
     if (terrainSeen.has(key))
       throw new Error(`Duplicate terrain definition for hex ${fmtHex({ col, row })}`);

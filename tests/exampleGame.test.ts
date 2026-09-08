@@ -4,7 +4,6 @@ import type { BattleState, UnitInit } from "../src/rules/game.js";
 import {
   advancePhase,
   checkVictory,
-  createBattle,
   declareAttacks,
   declareMove,
   executeMove,
@@ -13,7 +12,7 @@ import {
   resolveDeclaredAttacks,
   rollInitiativePhase,
 } from "../src/rules/game.js";
-import { makeBattleOptions, scriptedRng } from "./helpers.js";
+import { createTestBattle, scriptedRng } from "./helpers.js";
 
 /**
  * Full battle reproducing the Total Warfare "Rolling To Hit" diagram (p.6):
@@ -43,10 +42,7 @@ function setup(): BattleState {
       facing: "nw",
     },
   ];
-  return createBattle(
-    units,
-    makeBattleOptions(units, true, [{ col: 7, row: 7, type: "lightWoods" }]),
-  );
+  return createTestBattle([{ col: 7, row: 7, type: "lightWoods" }], units, true);
 }
 
 describe("example battle: Wolverine vs Griffin", () => {

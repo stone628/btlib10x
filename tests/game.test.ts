@@ -6,7 +6,6 @@ import type { BattleState, TerrainHexDef, UnitInit } from "../src/rules/game.js"
 import {
   advancePhase,
   checkVictory,
-  createBattle,
   declareAttacks,
   declareMove,
   executeMove,
@@ -16,7 +15,7 @@ import {
   rollInitiativePhase,
 } from "../src/rules/game.js";
 import { resolutionLines } from "../web/format.js";
-import { makeBattleOptions, scriptedRng } from "./helpers.js";
+import { createTestBattle, scriptedRng } from "./helpers.js";
 
 function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
   const units: UnitInit[] = [
@@ -37,7 +36,7 @@ function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
       facing: "nw",
     },
   ];
-  return createBattle(units, makeBattleOptions(units, true, terrain));
+  return createTestBattle(terrain, units, true);
 }
 
 /** Initiative always 6 vs 4 -> team 0 wins; both sides skip movement. */
@@ -62,21 +61,13 @@ describe("createBattle", () => {
       position: { col: 2, row: 2 },
       facing: "n" as const,
     };
-    expect(() => createBattle([base, base], makeBattleOptions([base, base], false))).toThrow(
-      /Duplicate unit id/,
-    );
+    expect(() => createTestBattle([], [base, base], false)).toThrow(/Duplicate unit id/);
     expect(() =>
-      createBattle(
-        [base, { ...base, id: "b", model: "MAD-3R" }],
-        makeBattleOptions([base, base], false),
-      ),
+      createTestBattle([], [base, { ...base, id: "b", model: "MAD-3R" }], false),
     ).toThrow(/Unknown 'Mech model/);
-    expect(() =>
-      createBattle(
-        [base, { ...base, id: "b", gunnery: 8 }],
-        makeBattleOptions([base, base], false),
-      ),
-    ).toThrow(/Gunnery/);
+    expect(() => createTestBattle([], [base, { ...base, id: "b", gunnery: 8 }], false)).toThrow(
+      /Gunnery/,
+    );
   });
 
   it("rejects duplicate terrain hex definitions", () => {
@@ -91,15 +82,16 @@ describe("createBattle", () => {
       { ...base, id: "b", team: 1 },
     ];
     expect(() =>
-      createBattle(units, {
-        terrain: [
+      createTestBattle(
+        [
           { col: 3, row: 4, type: "lightWoods" },
           { col: 3, row: 4, type: "heavyWoods" },
         ],
-        width: 4,
-        height: 5,
-        critsDisabled: false,
-      }),
+        units,
+        false,
+        4,
+        5,
+      ),
     ).toThrow(/Duplicate terrain definition for hex 3,4/);
   });
 
@@ -146,10 +138,7 @@ describe("movement phase", () => {
         facing: "nw",
       },
     ];
-    const setup = createBattle(
-      units,
-      makeBattleOptions(units, true, [{ col: 3, row: 4, type: "lightWoods" }]),
-    );
+    const setup = createTestBattle([{ col: 3, row: 4, type: "lightWoods" }], units, true);
     const state = startMovementTurn(setup);
     declareMove(state, "hbk", "walk");
     executeMove(state, "hbk", [
@@ -235,7 +224,7 @@ describe("movement phase", () => {
         facing: "nw",
       },
     ];
-    const setup = createBattle(units, makeBattleOptions(units, true));
+    const setup = createTestBattle([], units, true);
     const state = startMovementTurn(setup);
     declareMove(state, "hbk", "walk");
     executeMove(state, "hbk", [
@@ -268,7 +257,7 @@ describe("movement phase", () => {
         facing: "nw",
       },
     ];
-    const setup = createBattle(units, makeBattleOptions(units, true));
+    const setup = createTestBattle([], units, true);
     const state = startMovementTurn(setup);
     declareMove(state, "hbk", "walk");
     expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: 3, row: 4 } }])).toThrow(
@@ -295,7 +284,7 @@ describe("movement phase", () => {
         facing: "nw",
       },
     ];
-    const setup = createBattle(units, makeBattleOptions(units, true));
+    const setup = createTestBattle([], units, true);
     const state = startMovementTurn(setup);
     declareMove(state, "hbk", "walk"); // walking 4
     // Straight southeast line: even columns step se across at the same row,
@@ -348,7 +337,7 @@ describe("movement phase", () => {
         facing: "nw",
       },
     ];
-    const setup = createBattle(units, makeBattleOptions(units, false));
+    const setup = createTestBattle([], units, false);
     const state = startMovementTurn(setup);
     declareMove(state, "grf", "jump");
     // Hop through the enemy-occupied hex (allowed while jumping) and land beyond it.
@@ -394,7 +383,7 @@ describe("nextActor with unequal forces", () => {
         facing: "sw",
       });
     }
-    return createBattle(units, makeBattleOptions(units, true));
+    return createTestBattle([], units, true);
   }
 
   /** Walk every alive unit through declareMove + executeMove with empty paths, recording turn order. */
@@ -483,7 +472,7 @@ describe("weapon attack phase", () => {
           facing: "nw",
         },
       ];
-      const state = startAttackTurn(createBattle(units, makeBattleOptions(units, true)));
+      const state = startAttackTurn(createTestBattle([], units, true));
       declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
       expect(state.units.hbk!.declaredAttacks).toEqual([
         expect.objectContaining({ weaponIndex: 1, targetId: "enf", arc: c.expected }),
@@ -521,12 +510,13 @@ describe("weapon attack phase", () => {
         facing: "nw",
       },
     ];
-    state = createBattle(
-      units,
-      makeBattleOptions(units, true, [
+    state = createTestBattle(
+      [
         { col: 3, row: 4, type: "heavyWoods" },
         { col: 4, row: 4, type: "heavyWoods" },
-      ]),
+      ],
+      units,
+      true,
     );
     state = startAttackTurn(state);
     expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }])).toThrow(
@@ -553,7 +543,7 @@ describe("weapon attack phase", () => {
         facing: "nw",
       },
     ];
-    state = createBattle(units, makeBattleOptions(units, true));
+    state = createTestBattle([], units, true);
     state = startAttackTurn(state);
     expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }])).toThrow(
       /long range/,
@@ -578,13 +568,14 @@ describe("weapon attack phase", () => {
         facing: "nw",
       },
     ];
-    state = createBattle(
-      units,
-      makeBattleOptions(units, true, [
+    state = createTestBattle(
+      [
         { col: 5, row: 4, type: "lightWoods" },
         { col: 7, row: 4, type: "lightWoods" },
         { col: 11, row: 4, type: "heavyWoods" },
-      ]),
+      ],
+      units,
+      true,
     );
     state = startAttackTurn(state);
     // Large laser (array index 1 -> weaponIndex 2), distance 9, +2 woods intervening, +2 heavy target.
@@ -675,7 +666,7 @@ describe("weapon attack phase", () => {
         facing: "nw",
       },
     ];
-    const setup = createBattle(units, makeBattleOptions(units, true));
+    const setup = createTestBattle([], units, true);
     const state = startAttackTurn(setup);
     declareAttacks(state, "her", [{ weaponIndex: 3, targetId: "cda", rapidFire: true }]);
     expect(getUnit(state, "her").shotsLeft["3"]).toBe(18); // 2 shots spent up front
@@ -706,7 +697,7 @@ describe("weapon attack phase", () => {
         facing: "nw",
       },
     ];
-    const setup = () => createBattle(units, makeBattleOptions(units, true));
+    const setup = () => createTestBattle([], units, true);
 
     // Omitted rapidFire -> single shot (1 UAC/5 hit = 5 dmg, 1 ammo spent).
     const single = startAttackTurn(setup());
@@ -755,8 +746,7 @@ describe("streak missiles", () => {
       facing: "nw",
     },
   ];
-  const streakSetup = () =>
-    startAttackTurn(createBattle(streakUnits, makeBattleOptions(streakUnits, true)));
+  const streakSetup = () => startAttackTurn(createTestBattle([], streakUnits, true));
 
   it("defers ammo to resolution and lands full tubes with no cluster roll", () => {
     const state = streakSetup();

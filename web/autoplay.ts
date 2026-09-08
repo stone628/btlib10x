@@ -66,9 +66,9 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
 
   if (currApp === "setup") {
     enusreHelpShown(currApp);
-    if (s.mapName === null) queueNextCommand("map test");
+    if (s.setup.mapName === null) queueNextCommand("map test");
     for (const u of SCRIPT_SETUP) {
-      if (!s.roster.some((r) => r.id === u.id)) {
+      if (!s.setup.roster.some((r) => r.id === u.id)) {
         queueNextCommand(u.command);
       }
     }

@@ -3,7 +3,6 @@ import type { BattleState, UnitInit } from "../src/rules/game.js";
 import {
   advancePhase,
   attemptVoluntaryStartup,
-  createBattle,
   declareAttacks,
   declareMove,
   executeMove,
@@ -13,14 +12,14 @@ import {
   rollInitiativePhase,
   voluntaryShutdown,
 } from "../src/rules/game.js";
-import { makeBattleOptions, scriptedRng } from "./helpers.js";
+import { createTestBattle, scriptedRng } from "./helpers.js";
 
 function hbkVsEnf(): BattleState {
   const units: UnitInit[] = [
     { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 2, row: 4 }, facing: "se" },
     { id: "enf", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 5, row: 4 }, facing: "nw" },
   ];
-  return createBattle(units, makeBattleOptions(units, true));
+  return createTestBattle([], units, true);
 }
 
 function startMovementTurn(state: BattleState, rng = scriptedRng(3, 3, 3, 1)): BattleState {

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { getMapDef, listMapNames } from "../src/data/index.js";
 import { type MapDef, validateMapDef } from "../src/data/map.schema.js";
-import { createBattle, type UnitInit } from "../src/rules/game.js";
+import type { UnitInit } from "../src/rules/game.js";
+import { createTestBattle } from "./helpers.js";
 
 const valid: MapDef = {
   name: "test-map",
@@ -158,12 +159,7 @@ describe("bundled maps", () => {
       },
     ];
     expect(() =>
-      createBattle(units, {
-        terrain: quickstart.terrain,
-        width: quickstart.width,
-        height: quickstart.height,
-        critsDisabled: false,
-      }),
+      createTestBattle(quickstart.terrain, units, false, quickstart.width, quickstart.height),
     ).not.toThrow();
   });
 });

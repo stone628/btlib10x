@@ -4,13 +4,13 @@ import type {
   BattleState,
   CreateBattleOptions,
   Facing,
+  FireSuggestion,
   HexCoord,
   MapNameHolder,
   MechModelHolder,
   MoveMode,
   MoveStep,
   Rng,
-  TerrainHexDef,
   UnitInit,
   UnitState,
   VictoryResult,
@@ -51,6 +51,7 @@ import {
 import type { LocaleId } from "./i18n/index.js";
 import { i18n } from "./i18n/index.js";
 import { lookupMech } from "./lookup.js";
+import type { BoardRenderReachableInfo } from "./render.js";
 import { createRng } from "./rng.js";
 
 export type AppState = "setup" | "battle" | "over";
@@ -65,15 +66,18 @@ export interface SetupUnit extends MechModelHolder {
   readonly facing: Facing;
 }
 
-export interface Session extends MapNameHolder {
+export interface SetupState extends MapNameHolder {
+  seed: number;
+  mapName: string | null;
+  roster: SetupUnit[];
+}
+
+export interface Session {
   app: AppState;
   /** Output language (UI preference; preserved across reset/rematch). */
   locale: LocaleId;
-  seed: number;
   rng: Rng;
-  mapName: string | null;
-  terrainDefs: TerrainHexDef[];
-  roster: SetupUnit[];
+  setup: SetupState;
   battle: BattleState | null;
   victory: VictoryResult | null;
   actorId: string | null;
@@ -83,21 +87,20 @@ export interface Session extends MapNameHolder {
   moveMode: MoveMode | "shutdown" | "startup" | null;
   moveSteps: MoveStep[];
   fireDecls: AttackDecl[];
-  /** Actor (turn-qualified) whose fire suggestion was last auto-shown. */
-  fireHintShownFor: string | null;
   /** Suppress critical hit resolution (mostly for deterministic testing). */
   critsDisabled: boolean;
+  moveCandidate: BoardRenderReachableInfo | null;
+  /** Actor (turn-qualified) whose fire suggestion was last auto-shown. */
+  fireHintShownFor: string | null;
+  fireCandidate: FireSuggestion | null;
 }
 
-export function newSession(seed = 42): Session {
+export function newSession(seed: number): Session {
   return {
     app: "setup",
     locale: "en",
-    seed,
     rng: createRng(seed),
-    mapName: null,
-    terrainDefs: [],
-    roster: [],
+    setup: { mapName: null, seed: seed, roster: [] },
     battle: null,
     victory: null,
     actorId: null,
@@ -106,6 +109,8 @@ export function newSession(seed = 42): Session {
     fireDecls: [],
     fireHintShownFor: null,
     critsDisabled: false,
+    moveCandidate: null,
+    fireCandidate: null,
   };
 }
 
@@ -209,8 +214,7 @@ export function setMap(s: Session, name: string): void {
   if (m === undefined) {
     throw new Error(i18n(s.locale, "err.unknownMap", { name, list: listMapNames().join(", ") }));
   }
-  s.mapName = m.name;
-  s.terrainDefs = [...m.terrain];
+  s.setup.mapName = m.name;
 }
 
 export function addUnit(
@@ -224,55 +228,55 @@ export function addUnit(
 ): string {
   const m = lookupMech(model);
   if (m === undefined) throw new Error(i18n(s.locale, "err.unknownModel", { model }));
-  if (s.roster.some((u) => u.id === id)) throw new Error(i18n(s.locale, "err.duplicateId", { id }));
+  if (s.setup.roster.some((u) => u.id === id))
+    throw new Error(i18n(s.locale, "err.duplicateId", { id }));
   if (!Number.isInteger(team) || team < 0) throw new Error(i18n(s.locale, "err.badTeam"));
   if (!Number.isInteger(gunnery) || gunnery < 0 || gunnery > 7) {
     throw new Error(i18n(s.locale, "err.badGunnery"));
   }
-  if (s.roster.some((u) => sameHex(u.position, position))) {
+  if (s.setup.roster.some((u) => sameHex(u.position, position))) {
     throw new Error(i18n(s.locale, "err.hexOccupied", { col: position.col, row: position.row }));
   }
-  if (s.mapName != null) {
-    const map = getMapDefFor(s);
-    if (position.col > map.width) {
-      throw new Error(
-        i18n(s.locale, "err.outOfBounds", { label: "col", value: position.col, max: map.width }),
-      );
-    }
-    if (position.row > map.height) {
-      throw new Error(
-        i18n(s.locale, "err.outOfBounds", { label: "row", value: position.row, max: map.height }),
-      );
+  if (s.setup.mapName != null) {
+    const map = getMapDefFor(s.setup);
+    if (map !== undefined) {
+      if (position.col > map.width) {
+        throw new Error(
+          i18n(s.locale, "err.outOfBounds", { label: "col", value: position.col, max: map.width }),
+        );
+      }
+      if (position.row > map.height) {
+        throw new Error(
+          i18n(s.locale, "err.outOfBounds", { label: "row", value: position.row, max: map.height }),
+        );
+      }
     }
   }
-  s.roster.push({ id, model: m.model, team, gunnery, position, facing });
+  s.setup.roster.push({ id, model: m.model, team, gunnery, position, facing });
   return m.model;
 }
 
 export function removeUnit(s: Session, id: string): void {
-  if (!s.roster.some((u) => u.id === id)) throw new Error(i18n(s.locale, "err.noSuchUnit", { id }));
-  s.roster = s.roster.filter((u) => u.id !== id);
+  if (!s.setup.roster.some((u) => u.id === id))
+    throw new Error(i18n(s.locale, "err.noSuchUnit", { id }));
+  s.setup.roster = s.setup.roster.filter((u) => u.id !== id);
 }
 
 /** Shared createBattle options: setup terrain plus the loaded map's size. */
 function battleOptions(s: Session): CreateBattleOptions {
-  const map = getMapDefFor(s);
   return {
-    terrain: s.terrainDefs,
-    width: map.width,
-    height: map.height,
     critsDisabled: s.critsDisabled,
   };
 }
 
 export function startBattle(s: Session): void {
   if (s.app !== "setup") throw new Error(i18n(s.locale, "err.alreadyStarted"));
-  if (s.mapName === null) throw new Error(i18n(s.locale, "err.noMap"));
-  if (s.roster.length < 2) throw new Error(i18n(s.locale, "err.needTwoUnits"));
-  const teams = new Set(s.roster.map((u) => u.team));
+  if (s.setup.roster.length < 2) throw new Error(i18n(s.locale, "err.needTwoUnits"));
+  const teams = new Set(s.setup.roster.map((u) => u.team));
   if (teams.size < 2) throw new Error(i18n(s.locale, "err.needTwoTeams"));
-  const inits: UnitInit[] = s.roster.map((u) => ({ ...u }));
-  s.battle = createBattle(inits, battleOptions(s));
+  const inits: UnitInit[] = s.setup.roster.map((u) => ({ ...u }));
+  const map = getMapDefFor(s.setup);
+  s.battle = createBattle(map, inits, battleOptions(s));
   s.victory = null;
   s.actorId = null;
   s.fireHintShownFor = null;
@@ -644,9 +648,10 @@ export function setAmmoPolicy(s: Session, word: string): void {
 
 export function rematch(s: Session): void {
   if (s.app !== "over") throw new Error(i18n(s.locale, "err.rematchOnlyOver"));
-  s.rng = createRng(s.seed);
+  s.rng = createRng(s.setup.seed);
   s.battle = createBattle(
-    s.roster.map((u) => ({ ...u })),
+    getMapDefFor(s.setup),
+    s.setup.roster.map((u) => ({ ...u })),
     battleOptions(s),
   );
   s.victory = null;
@@ -658,9 +663,7 @@ export function rematch(s: Session): void {
 
 export function resetSession(s: Session): void {
   s.app = "setup";
-  s.mapName = null;
-  s.terrainDefs = [];
-  s.roster = [];
+  s.setup = { mapName: null, roster: [], seed: s.setup.seed };
   s.battle = null;
   s.victory = null;
   s.actorId = null;
@@ -670,6 +673,6 @@ export function resetSession(s: Session): void {
 
 export function setSeed(s: Session, n: number): void {
   if (!Number.isInteger(n)) throw new Error(i18n(s.locale, "err.seedInteger"));
-  s.seed = n >>> 0;
-  s.rng = createRng(s.seed);
+  s.setup.seed = n >>> 0;
+  s.rng = createRng(s.setup.seed);
 }
