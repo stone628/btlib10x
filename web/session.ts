@@ -6,6 +6,7 @@ import type {
   Facing,
   FireSuggestion,
   HexCoord,
+  MapDef,
   MapNameHolder,
   MechModelHolder,
   MoveMode,
@@ -30,7 +31,6 @@ import {
   executeMove,
   FACINGS,
   facingChangeCost,
-  getMapDef,
   getMapDefFor,
   getMechDefFor,
   getUnit,
@@ -38,7 +38,6 @@ import {
   isBackwardStep,
   isForwardStep,
   isShutdown,
-  listMapNames,
   nextActor,
   parseAmmoPolicy,
   passMovement,
@@ -209,10 +208,30 @@ export function promptBody(s: Session): string {
 
 // ---------------------------------------------------------------- setup ----
 
-export function setMap(s: Session, name: string): void {
-  const m = getMapDef(name);
-  if (m === undefined) {
-    throw new Error(i18n(s.locale, "err.unknownMap", { name, list: listMapNames().join(", ") }));
+export function setMap(s: Session, m: MapDef): void {
+  if (s.setup.mapName !== null) {
+    for (const u of s.setup.roster) {
+      if (u.position.col > m.width) {
+        throw new Error(
+          i18n(s.locale, "err.unitOutOfBounds", {
+            id: u.id,
+            label: "col",
+            value: u.position.col,
+            max: m.width,
+          }),
+        );
+      }
+      if (u.position.row > m.height) {
+        throw new Error(
+          i18n(s.locale, "err.unitOutOfBounds", {
+            id: u.id,
+            label: "row",
+            value: u.position.row,
+            max: m.height,
+          }),
+        );
+      }
+    }
   }
   s.setup.mapName = m.name;
 }
