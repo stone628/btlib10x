@@ -1462,8 +1462,12 @@ function fireWeaponTable(locale: LocaleId, weapons: readonly FireWeapon[]): Chun
     `#${w.weaponIndex}`,
     w.weapon,
     SHORT_LOC[w.location],
-    `[${BRACKET_LABEL[w.rangeBracket]}]`,
-    String(w.tn),
+    w.minRangePenalty !== undefined
+      ? `[${BRACKET_LABEL[w.rangeBracket]}!]`
+      : `[${BRACKET_LABEL[w.rangeBracket]}]`,
+    w.minRangePenalty !== undefined
+      ? `${w.tn - w.minRangePenalty} + ${w.minRangePenalty}`
+      : String(w.tn),
     String(w.heat),
     w.cluster !== undefined
       ? `${w.expectedDamage} (${i18n(locale, "fireSuggestion.cluster", {

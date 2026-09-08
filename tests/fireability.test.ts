@@ -114,6 +114,65 @@ describe("suggestFireTargets", () => {
     expect(sugg.targets.find((t) => t.targetId === "enf")!.weapons).toHaveLength(0);
   });
 
+  it("applies the minimum-range penalty inside minimum range", () => {
+    const units: UnitInit[] = [
+      {
+        id: "grf",
+        model: "GRF-1N",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 4 },
+        facing: "se",
+      },
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 1,
+        gunnery: 4,
+        position: { col: 3, row: 4 },
+        facing: "nw",
+      },
+    ];
+    const state = startAttackTurn(createBattle(units, makeBattleOptions(units, false)));
+    const sugg = suggestFireTargets(state, "grf");
+    const hbk = sugg.targets.find((t) => t.targetId === "hbk")!;
+    const ppc = hbk.weapons.find((w) => w.weapon === "PPC")!;
+    // PPC min 3 at range 1: penalty = 3 - 1 + 1 = 3; TN = 4 + 0 + 3.
+    expect(ppc.minRangePenalty).toBe(3);
+    expect(ppc.tn).toBe(7);
+    const lrm = hbk.weapons.find((w) => w.weapon === "LRM 10")!;
+    expect(lrm.minRangePenalty).toBe(6);
+    expect(lrm.tn).toBe(10);
+  });
+
+  it("omits the minimum-range penalty at or beyond minimum range", () => {
+    const units: UnitInit[] = [
+      {
+        id: "grf",
+        model: "GRF-1N",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 4 },
+        facing: "se",
+      },
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 1,
+        gunnery: 4,
+        position: { col: 9, row: 4 },
+        facing: "nw",
+      },
+    ];
+    const state = startAttackTurn(createBattle(units, makeBattleOptions(units, false)));
+    const sugg = suggestFireTargets(state, "grf");
+    const hbk = sugg.targets.find((t) => t.targetId === "hbk")!;
+    expect(hbk.distance).toBe(7); // PPC medium bracket, beyond min range 3.
+    const ppc = hbk.weapons.find((w) => w.weapon === "PPC")!;
+    expect(ppc.minRangePenalty).toBeUndefined();
+    expect(ppc.tn).toBe(6); // gunnery 4 + medium 2
+  });
+
   it("marks weapons blocked by intervening woods", () => {
     const units: UnitInit[] = [
       {
