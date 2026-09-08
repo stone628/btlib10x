@@ -267,6 +267,7 @@ export const en = {
   "info.weaponCategoryEnergy": "Energy",
   "info.weaponHead": "{name} [{category}]",
   "info.weaponRange": "range: short {short} / medium {medium} / long {long}",
+  "info.weaponHeat": "heat: {heat}",
   "info.weaponDamage": "damage: {damage}",
   "info.weaponMissiles": "missiles: {count}",
   "info.weaponPulse": "pulse: -2 to-hit chance (easier to hit)",

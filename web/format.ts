@@ -528,11 +528,13 @@ export function infoWeaponList(locale: LocaleId): string[] {
   for (const [cat, weapons] of grouped) {
     lines.push(i18n(locale, "info.weaponCategory", { category: weaponCategory(locale, cat) }));
     for (const w of weapons) {
+      const rs = `S${w.short}`.padStart(3);
+      const rm = `M${w.medium}`.padStart(3);
+      const rl = `L${w.long}`.padStart(3);
+      const rh = `H${w.heat ?? 0}`.padStart(3);
+
       lines.push(
-        `  ${w.name.padEnd(maxNameLen)}  short ${String(w.short).padStart(2)}` +
-          ` / medium ${String(w.medium).padStart(2)}` +
-          ` / long ${String(w.long).padStart(2)}` +
-          `  ${weaponDamageSummary(w)}`,
+        `  ${w.name.padEnd(maxNameLen)} ${rs} /${rm} /${rl}  ${rh}  D${weaponDamageSummary(w)}`,
       );
     }
   }
@@ -554,6 +556,7 @@ export function infoWeapon(locale: LocaleId, name: string): string[] {
     i18n(locale, "info.weaponHead", { name: w.name, category: cat }),
     i18n(locale, "info.weaponRange", { short: w.short, medium: w.medium, long: w.long }),
     i18n(locale, "info.weaponDamage", { damage: weaponDamageDetail(w) }),
+    i18n(locale, "info.weaponHeat", { heat: w.heat ?? 0 }),
   ];
   if (w.missiles !== undefined)
     lines.push(i18n(locale, "info.weaponMissiles", { count: w.missiles }));

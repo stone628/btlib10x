@@ -131,7 +131,7 @@ describe("mech info: shared-ammo weapon rows", () => {
     expect(streakLines[0]).toContain("(50 shots)");
     expect(streakLines[0]).not.toContain("see #3");
     for (let i = 1; i < 4; i++) {
-      expect(streakLines[i]).toContain("(50 shots, see #3)");
+      expect(streakLines[i]).toContain("(shots at #3)");
     }
   });
 });
