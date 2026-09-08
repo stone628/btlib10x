@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isInFrontArc } from "../src/rules/arcs.js";
+import { classifyArc, isInFrontArc } from "../src/rules/arcs.js";
 import { losBlocked, losWoodsPoints } from "../src/rules/los.js";
 import {
   attackerMovementModifier,
@@ -72,5 +72,17 @@ describe("firing arcs", () => {
     expect(isInFrontArc("s", "se")).toBe(true);
     expect(isInFrontArc("s", "sw")).toBe(true);
     expect(isInFrontArc("s", "ne")).toBe(false);
+  });
+
+  it("classifies all four arcs clockwise from facing", () => {
+    expect(classifyArc("n", "n")).toBe("front");
+    expect(classifyArc("n", "ne")).toBe("rightSide");
+    expect(classifyArc("n", "se")).toBe("rightSide");
+    expect(classifyArc("n", "s")).toBe("rear");
+    expect(classifyArc("n", "sw")).toBe("leftSide");
+    expect(classifyArc("n", "nw")).toBe("leftSide");
+    expect(classifyArc("se", "n")).toBe("leftSide");
+    expect(classifyArc("se", "se")).toBe("front");
+    expect(classifyArc("se", "nw")).toBe("rear");
   });
 });

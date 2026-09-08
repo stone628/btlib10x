@@ -14,7 +14,7 @@
 - warn min range, reject out of range on 'fire' command immediately
 - change movement phase command to set final hex and facing.
 - implement minimum range rule.
-- implement attack direction rule.
+- implement streak missile no cluster rule.
 
 ## In progress
 
@@ -31,6 +31,15 @@
 
 ## Done
 
+- **Attack direction / firing arcs** — `declareAttacks` classifies every
+  target by its TW firing arc (`classifyArc`: front / rear / leftSide /
+  rightSide) and records it on the `AttackDecl`; attacks into any arc are
+  accepted (no more front-only rejection), the arc flows through
+  `resolveWeaponAttack` into `hitLocationForArc` and the front/rear armor
+  pool. `suggestFireTargets` no longer blocks side/rear targets and exposes
+  the classified arc per target and per weapon; the web fire-suggestion
+  header shows the target's arc. Torso twist (per-weapon facing override)
+  remains deferred.
 - **CASE / CASE II ammo-explosion containment** — ammo explosions in
   CASE-protected locations no longer overflow to the center torso. CASE
   (explicit `case` crit slot, or implicit on Clan side torsos) vents the

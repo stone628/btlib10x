@@ -31,7 +31,7 @@ import {
   loadAmmoBins,
   stripBinsInLocation,
 } from "./ammo.js";
-import { isInFrontArc } from "./arcs.js";
+import { type Arc, classifyArc } from "./arcs.js";
 import { type AttackResolution, resolveWeaponAttack } from "./attack.js";
 import {
   type BuildingState,
@@ -83,6 +83,9 @@ export interface AttackDecl {
   readonly targetId: string;
   /** Request a rapid-fire (double-tap) volley; only valid on rapid-fire weapons. Defaults off. */
   readonly rapidFire?: boolean;
+  /** Firing arc of the target relative to the attacker's facing, classified at
+   *  declaration time. Drives the hit-location table and armor pool. */
+  readonly arc?: Arc;
 }
 
 export type MoveStep =
@@ -628,6 +631,7 @@ export function declareAttacks(
   let attackRangeMod = 0;
 
   const seenWeapons = new Set<number>();
+  const arcs: Record<number, Arc> = {};
   decls.forEach((decl, index) => {
     const mount = def.weapons[decl.weaponIndex];
     if (!mount) throw new Error(`weaponIndex ${decl.weaponIndex} out of range for ${unitId}`);
@@ -668,9 +672,7 @@ export function declareAttacks(
     const dist = hexDistance(unit.position, target.position);
     const b = bearing(unit.position, target.position);
     if (b === null) throw new Error("Attacker and target share a hex");
-    if (!isInFrontArc(unit.facing, b)) {
-      throw new Error(`${mount.weapon}: target not in front firing arc`);
-    }
+    arcs[decl.weaponIndex] = classifyArc(unit.facing, b);
 
     const woodsPoints = losWoodsPointsBetween(state, unit.position, target.position);
     if (!losClear(state, unit.position, target.position)) {
@@ -726,7 +728,10 @@ export function declareAttacks(
 
   if (targetId === null) throw new Error("declareAttacks requires at least one declaration");
 
-  unit.declaredAttacks = [...decls];
+  unit.declaredAttacks = decls.map((decl) => {
+    const arc = arcs[decl.weaponIndex];
+    return arc !== undefined ? { ...decl, arc } : { ...decl };
+  });
   unit.firedTargetId = targetId;
   state.actedThisPhase.push(unitId);
   state.events.push({
@@ -762,6 +767,7 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
       targetTerrain: cellAt(state, target.position).terrain,
       interveningTerrains: interveningTerrains(state, unit.position, target.position),
       distance: hexDistance(unit.position, target.position),
+      ...(decl.arc !== undefined ? { arc: decl.arc } : {}),
       weapon: weapon.name,
       shots,
       targetDamage: target.damage,

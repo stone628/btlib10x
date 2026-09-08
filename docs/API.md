@@ -245,8 +245,10 @@ during attack resolution.
 
 - `isInFrontArc(facing, bearingToTarget)` — front three hexsides only.
 - `classifyArc(facing, bearingToTarget): Arc` — `"front" | "rear" | "leftSide" | "rightSide"`.
-- `Arc` — firing arc type. Side/rear classification is implemented but firing
-  itself is still front-arc-only in the current subset.
+- `Arc` — firing arc type. Every accepted attack classifies its target into an
+  arc at declaration time (`declareAttacks` records it on the `AttackDecl`);
+  the arc drives the side/rear hit-location tables and the front/rear armor
+  pool. Torso twist (per-weapon facing override) is not implemented.
 
 ### To-hit (`rules/tohit.ts`)
 
@@ -374,7 +376,8 @@ application. It does **not** mutate the target; callers copy from
 `resolution.application.damage` and `resolution.crits[last]`.
 
 `AttackResolution` = `{ weapon; distance; breakdown; toHitRoll; hit; jammed;
-clusterRoll; groups; application; crits }`.
+clusterRoll; groups; application; arc; crits }` — `arc` is the firing arc the
+attack resolved against (drives the hit-location table and armor pool).
 
 ### Fireability (`rules/fireability.ts`)
 
@@ -382,7 +385,8 @@ clusterRoll; groups; application; crits }`.
 the weapons that could reach it (arc, LOS, range, ammo, not jammed/destroyed,
 not auto-missing) with their computed TN and expected damage, plus per-weapon
 block reasons (`jammed` / `destroyed` / `outOfRange` / `outOfArc` / `noLos` /
-`outOfAmmo` / `autoMiss`). Mirrors `declareAttacks` checks.
+`outOfAmmo` / `autoMiss`). Each `FireTarget` carries the classified `arc` and
+each `FireWeapon` its own `arc`. Mirrors `declareAttacks` checks.
 
 ## Battle state machine (`rules/game.ts`)
 

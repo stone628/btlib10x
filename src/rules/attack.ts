@@ -71,6 +71,9 @@ export interface AttackResolution {
   readonly clusterRoll: number | null;
   readonly groups: readonly HitGroup[];
   readonly application: DamageApplication | null;
+  /** Firing arc the attack resolved against; drives hit-location table and
+   *  armor pool. Defaults to front when the input omitted it. */
+  readonly arc: Arc;
   /**
    * Critical hit resolutions triggered by the attack, one per group that
    * stripped at least 1 internal-structure point. Empty when no crits were
@@ -113,6 +116,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     groups: [] as HitGroup[],
     application: null as DamageApplication | null,
     crits: [] as CriticalResolution[],
+    arc: input.arc ?? "front",
   };
 
   if (breakdown.outOfRange) return base;
