@@ -200,14 +200,8 @@ const SETUP_CMDS: Record<string, CmdDef> = {
           i18n(s.locale, "err.unknownMap", { name, list: listMapNames().join(", ") }),
         );
       }
-      S.setMap(s, m.name);
-      return [
-        i18n(L(s), "ok.mapLoaded", {
-          name: m.name,
-          w: m?.width ?? 0,
-          h: m?.height ?? 0,
-        }),
-      ];
+      S.setMap(s, m);
+      return [i18n(L(s), "ok.mapLoaded", { name: m.name, w: m.width, h: m.height })];
     },
   },
   add: {

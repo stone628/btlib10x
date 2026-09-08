@@ -141,6 +141,7 @@ export const kr: Catalog = {
   "skill.veteran": "베테랑",
   "skill.regular": "정규",
   "skill.green": "신병",
+  "err.unitOutOfBounds": "유닛 {id}의 {label} {value} 은(는) 맵 범위(1..{max})를 벗어났습니다",
   "err.outOfBounds": "{label} {value} 은(는) 맵 범위(1..{max})를 벗어났습니다",
   "err.hexOccupied": "육각 {col},{row} 은 이미 점유됨",
   "err.noSuchUnit": "그런 유닛이 없습니다: {id}",

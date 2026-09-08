@@ -144,6 +144,7 @@ export const en = {
   "skill.regular": "Regular",
   "skill.green": "Green",
 
+  "err.unitOutOfBounds": "{label} {value} for unit {id} is outside the map (1..{max})",
   "err.outOfBounds": "{label} {value} is outside the map (1..{max})",
   "err.hexOccupied": "Hex {col},{row} already occupied",
   "err.noSuchUnit": "No such unit: {id}",
