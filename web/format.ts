@@ -217,7 +217,7 @@ const HEADER_TABLE_THEME = {
   },
 };
 
-function buildHeaderTableChunkFromRows(
+export function buildHeaderTableChunkFromRows(
   header: readonly (string | null)[],
   rows: readonly (readonly string[])[],
 ): Chunk {
@@ -305,7 +305,7 @@ function buildHeaderTableChunkFromRows(
   return buildColumnsChunk(cols);
 }
 
-function buildHeaderTableChunkFromColumns(
+export function buildHeaderTableChunkFromColumns(
   header: readonly (string | null)[],
   columns: readonly (readonly string[])[],
 ): Chunk {
@@ -2078,3 +2078,11 @@ function weaponMountLines(locale: LocaleId, mounts: readonly WeaponMountInfo[]):
     return `${index} ${name} [${SHORT_LOC[mount.location]}] ${short}/${medium}/${long} ${heat}${flags.length ? ` ${flags.join(" ")}` : ""}`;
   });
 }
+
+export {
+  listTables,
+  renderClusterTable,
+  renderCriticalTable,
+  renderHeatScaleTable,
+  renderHitLocationTables,
+} from "./table.js";

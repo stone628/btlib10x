@@ -403,6 +403,46 @@ export const en = {
   "prompt.draw": "draw",
   "prompt.subMove": "move",
   "prompt.subAttack": "attack",
+
+  // table command
+  "cmd.table.help": "show reference tables (cluster, hitloc, crit, heat)",
+  "cmd.table.arg.name": "table name: cluster | hitloc | crit | heat; omit to list",
+
+  // table: cluster hits
+  "table.cluster.title": "Cluster Hits Table (2D6 x cluster size)",
+  "table.cluster.col.roll": "2D6",
+  "table.cluster.col.size": "x{size}",
+
+  // table: hit location
+  "table.hitloc.title": "Hit Location Tables",
+  "table.hitloc.col.roll": "2D6",
+  "table.hitloc.col.location": "Location",
+  "table.hitloc.frontRear": "Front / Rear Arc",
+  "table.hitloc.leftSide": "Left Side Arc",
+  "table.hitloc.rightSide": "Right Side Arc",
+
+  // table: critical determining
+  "table.crit.title": "Critical Determining Table (2D6)",
+  "table.crit.col.roll": "2D6",
+  "table.crit.col.result": "Result",
+
+  // table: heat scale
+  "table.heat.title": "Heat Scale Table",
+  "table.heat.col.heat": "Heat",
+  "table.heat.col.toHit": "To-Hit",
+  "table.heat.col.mp": "MP Penalty",
+  "table.heat.col.shutdown": "Shutdown",
+  "table.heat.col.ammo": "Ammo Explode",
+  "table.heat.shutdownAuto": "auto (12)",
+  "table.heat.shutdownSafe": "—",
+  "table.heat.ammoSafe": "—",
+
+  // table: list
+  "table.list.header": "available tables:",
+  "table.list.cluster": "cluster  — cluster hits (missile/rapid-fire)",
+  "table.list.hitloc": "hitloc   — hit location (all arcs)",
+  "table.list.crit": "crit     — critical determining",
+  "table.list.heat": "heat     — heat scale (to-hit, MP, shutdown, ammo)",
 } as const;
 
 export type Catalog = Record<keyof typeof en, string>;

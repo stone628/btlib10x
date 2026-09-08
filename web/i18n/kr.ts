@@ -394,4 +394,44 @@ export const kr: Catalog = {
   "prompt.draw": "무승부",
   "prompt.subMove": "이동",
   "prompt.subAttack": "공격",
+
+  // table command
+  "cmd.table.help": "참조 표 표시 (cluster, hitloc, crit, heat)",
+  "cmd.table.arg.name": "표 이름: cluster | hitloc | crit | heat; 생략 시 목록",
+
+  // table: cluster hits
+  "table.cluster.title": "클러스터 명중표 (2D6 × 클러스터 크기)",
+  "table.cluster.col.roll": "2D6",
+  "table.cluster.col.size": "x{size}",
+
+  // table: hit location
+  "table.hitloc.title": "피격 부위표",
+  "table.hitloc.col.roll": "2D6",
+  "table.hitloc.col.location": "부위",
+  "table.hitloc.frontRear": "전방/후방 아크",
+  "table.hitloc.leftSide": "좌측면 아크",
+  "table.hitloc.rightSide": "우측면 아크",
+
+  // table: critical determining
+  "table.crit.title": "크리티컬 결정표 (2D6)",
+  "table.crit.col.roll": "2D6",
+  "table.crit.col.result": "결과",
+
+  // table: heat scale
+  "table.heat.title": "발열 게이지표",
+  "table.heat.col.heat": "발열",
+  "table.heat.col.toHit": "명중 보정",
+  "table.heat.col.mp": "MP 페널티",
+  "table.heat.col.shutdown": "셧다운",
+  "table.heat.col.ammo": "탄약 유폭",
+  "table.heat.shutdownAuto": "자동 (12)",
+  "table.heat.shutdownSafe": "—",
+  "table.heat.ammoSafe": "—",
+
+  // table: list
+  "table.list.header": "사용 가능한 표:",
+  "table.list.cluster": "cluster  — 클러스터 명중 (미사일/연사)",
+  "table.list.hitloc": "hitloc   — 피격 부위 (모든 아크)",
+  "table.list.crit": "crit     — 크리티컬 결정",
+  "table.list.heat": "heat     — 발열 게이지 (명중, MP, 셧다운, 유폭)",
 };

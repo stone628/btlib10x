@@ -8,7 +8,7 @@ export const CLUSTER_COLUMNS: readonly number[] = [
   28, 29, 30, 40,
 ];
 
-const CLUSTER_TABLE: readonly (readonly number[])[] = [
+export const CLUSTER_TABLE: readonly (readonly number[])[] = [
   [1, 1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 9, 9, 9, 10, 10, 12],
   [1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 9, 9, 9, 10, 10, 12],
   [
