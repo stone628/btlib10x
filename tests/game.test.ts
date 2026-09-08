@@ -447,30 +447,51 @@ describe("nextActor with unequal forces", () => {
 });
 
 describe("weapon attack phase", () => {
-  it("validates arc, LOS, range, target count, and auto-miss aborts", () => {
-    // Facing northwest, target to the southeast -> outside front arc.
-    let units: UnitInit[] = [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        position: { col: 2, row: 4 },
-        facing: "nw",
-      },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        position: { col: 3, row: 4 },
-        facing: "nw",
-      },
+  it("classifies the firing arc of accepted side and rear attacks", () => {
+    const cases: Array<{
+      facing: string;
+      targetPos: { col: number; row: number };
+      expected: string;
+    }> = [
+      // Facing northwest; target east-southeast -> rear arc.
+      { facing: "nw", targetPos: { col: 3, row: 4 }, expected: "rear" },
+      // Target to the northeast -> right side arc.
+      { facing: "nw", targetPos: { col: 3, row: 3 }, expected: "rightSide" },
+      // Target due south -> left side arc.
+      { facing: "nw", targetPos: { col: 2, row: 5 }, expected: "leftSide" },
+      // Target to the northwest -> front arc.
+      { facing: "nw", targetPos: { col: 1, row: 3 }, expected: "front" },
     ];
-    let state = startAttackTurn(createBattle(units, makeBattleOptions(units, true)));
-    expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }])).toThrow(
-      /front firing arc/,
-    );
+    for (const c of cases) {
+      const units: UnitInit[] = [
+        {
+          id: "hbk",
+          model: "HBK-4G",
+          team: 0,
+          gunnery: 4,
+          position: { col: 2, row: 4 },
+          facing: c.facing as UnitInit["facing"],
+        },
+        {
+          id: "enf",
+          model: "ENF-4R",
+          team: 1,
+          gunnery: 4,
+          position: c.targetPos,
+          facing: "nw",
+        },
+      ];
+      const state = startAttackTurn(createBattle(units, makeBattleOptions(units, true)));
+      declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
+      expect(state.units.hbk!.declaredAttacks).toEqual([
+        expect.objectContaining({ weaponIndex: 1, targetId: "enf", arc: c.expected }),
+      ]);
+    }
+  });
+
+  it("validates LOS, range, target count, and auto-miss aborts", () => {
+    let units: UnitInit[] = [];
+    let state: BattleState;
 
     // Two heavy woods between -> blocked LOS.
     state = startAttackTurn(

@@ -163,8 +163,11 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
 - **Damage** — front/rear armor transfer inward on depletion; side-torso
   internal-structure loss blows off the arm; head/CT IS death kills; leg IS
   death immobilizes. Hits on already-destroyed locations transfer.
-- **Firing arc** — front arc only. (Side / rear arc classification is
-  implemented in `arcs.ts` but is not yet wired into targeting.)
+- **Firing arc** — targets classified into front / rear / left side / right
+  side arcs from the attacker's facing; each arc uses its own hit-location
+  table and rear arc depletes the rear armor pool. The web fire-suggestion
+  header shows the target's arc, and the attack-resolution hit line names the
+  arc it resolved against.
 - **Weapons** — ballistic / energy / missile with short/medium/long range
   brackets, rapid-fire, pulse (−2 to-hit), per-bin ammo tracking, jam on
   natural 2 (multi-shot), LRM lots-of-5 grouping. Ammo is depleted per
@@ -224,8 +227,9 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   and the piloting roll to avoid falling on the way in.
 - **Collapse damage** — units inside a building hex take damage when it
   collapses (only the collapse-to-rubble terrain change is implemented).
-- **Side / rear firing arcs and torso twist** — classification code exists
-  but is dormant.
+- **Torso twist** — per-weapon facing override that shifts a unit's firing
+  arcs during the attack phase (currently only the positional facing is
+  used).
 - **Building structural damage beyond CF** — basements / multi-floor
   interiors, structural-factor transfer between levels.
 - **Quadripedal 'Mechs**, vehicles, infantry, battle armor.

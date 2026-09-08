@@ -72,6 +72,7 @@ describe("critical hit log formatting", () => {
       groups: [],
       application: null,
       crits: [crit],
+      arc: "front",
     };
   }
 

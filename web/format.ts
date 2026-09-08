@@ -1,6 +1,7 @@
 import type {
   AmmoBinId,
   AmmoPolicy,
+  Arc,
   AttackResolution,
   CriticalEffect,
   CriticalResolution,
@@ -1439,6 +1440,13 @@ const BLOCKER_LABEL: Readonly<Record<FireBlockerReason, MessageKey>> = {
   autoMiss: "fireSuggestion.reason.autoMiss",
 };
 
+const ARC_LABEL: Readonly<Record<Arc, MessageKey>> = {
+  front: "fireSuggestion.arc.front",
+  rear: "fireSuggestion.arc.rear",
+  leftSide: "fireSuggestion.arc.leftSide",
+  rightSide: "fireSuggestion.arc.rightSide",
+};
+
 function fireWeaponTable(locale: LocaleId, weapons: readonly FireWeapon[]): Chunk {
   const header = [
     i18n(locale, "fireSuggestion.colIndex"),
@@ -1489,6 +1497,7 @@ export function fireSuggestionLines(s: Session): Chunk[] {
           i18n(s.locale, "fireSuggestion.target", {
             id: target.targetId,
             distance: String(target.distance),
+            arc: target.arc !== null ? i18n(s.locale, ARC_LABEL[target.arc]) : "—",
           }),
         ],
         "hint",
@@ -1799,6 +1808,7 @@ export function resolutionLines(locale: LocaleId, r: AttackResolution): string[]
     lines.push(
       i18n(locale, "res.hits", {
         groups: r.groups.map((g) => `${SHORT_LOC[g.location]}(${g.damage})`).join(" "),
+        arc: i18n(locale, ARC_LABEL[r.arc]),
       }),
     );
     const detail = transferDetail(locale, r);

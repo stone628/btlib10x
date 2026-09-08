@@ -3,7 +3,7 @@ import { cellAt, hasPartialCover } from "../core/terrain.js";
 import type { Location } from "../core/types.js";
 import { getMechDefFor } from "../data/index.js";
 import { getWeaponDefFor } from "../data/weapon.schema.js";
-import { isInFrontArc } from "./arcs.js";
+import { type Arc, classifyArc } from "./arcs.js";
 import { canFireFromLocation } from "./damage.js";
 import { type BattleState, isImmobile } from "./game.js";
 import { toHitHeatModifier } from "./heat.js";
@@ -25,6 +25,8 @@ export interface FireWeapon {
   readonly weaponIndex: number;
   readonly weapon: string;
   readonly location: Location;
+  /** Firing arc of the target relative to the attacker's facing. */
+  readonly arc: Arc;
   readonly shots: number | null;
   readonly rangeBracket: RangeBracket;
   readonly tn: number;
@@ -36,6 +38,9 @@ export interface FireWeapon {
 export interface FireTarget {
   readonly targetId: string;
   readonly distance: number;
+  /** Firing arc of this target relative to the attacker's facing; null when
+   *  attacker and target share a hex (arc undefined, attack unsupported). */
+  readonly arc: Arc | null;
   readonly weapons: FireWeapon[];
   readonly blocked: Array<{
     readonly weaponIndex: number;
@@ -68,7 +73,7 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
     .map((enemy) => {
       const distance = hexDistance(unit.position, enemy.position);
       const bearingToTarget = bearing(unit.position, enemy.position);
-      const inArc = bearingToTarget !== null && isInFrontArc(unit.facing, bearingToTarget);
+      const arc = bearingToTarget !== null ? classifyArc(unit.facing, bearingToTarget) : null;
       const interveningWoods = losWoodsPointsBetween(state, unit.position, enemy.position);
       const los = losBlockedByElevation(state, unit.position, enemy.position);
 
@@ -95,7 +100,7 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "outOfAmmo" });
           return;
         }
-        if (bearingToTarget === null || !inArc) {
+        if (bearingToTarget === null || arc === null) {
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "outOfArc" });
           return;
         }
@@ -132,6 +137,7 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
           weaponIndex,
           weapon: mount.weapon,
           location: mount.location,
+          arc,
           shots,
           rangeBracket: breakdown.rangeBracket,
           tn: breakdown.total,
@@ -152,7 +158,7 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
         weapons.push(weaponSugg);
       });
 
-      return { targetId: enemy.id, distance, weapons, blocked };
+      return { targetId: enemy.id, distance, arc, weapons, blocked };
     });
 
   return { targetId: unitId, targets };
