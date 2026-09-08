@@ -84,6 +84,39 @@ export function binsForWeapon(def: ResolvedMechDef, weaponIndex: number): AmmoBi
   return collectAmmoBins(def).filter((b) => b.weaponIndex === weaponIndex);
 }
 
+/** Mount indices carrying a weapon name (1-based keys, ascending). */
+function mountIndicesForWeapon(def: ResolvedMechDef, weaponName: string): number[] {
+  const out: number[] = [];
+  for (const [key, mount] of Object.entries(def.weapons)) {
+    if (mount.weapon === weaponName) out.push(Number(key));
+  }
+  return out.sort((a, b) => a - b);
+}
+
+/**
+ * Every ammo bin backing any mount of a weapon name. Mounts of one weapon
+ * share a shot pool, but bins link per mount index — a mount with no linked
+ * bins still draws from the shared pool through this helper.
+ */
+export function binsForWeaponName(def: ResolvedMechDef, weaponName: string): AmmoBin[] {
+  const indices = new Set(mountIndicesForWeapon(def, weaponName));
+  return collectAmmoBins(def).filter((b) => indices.has(b.weaponIndex));
+}
+
+/** Shots left across the whole shared pool of a weapon name. */
+export function pooledShotsLeft(
+  def: ResolvedMechDef,
+  bins: Readonly<Record<AmmoBinId, number>>,
+  weaponName: string,
+): number {
+  const ids = new Set(binsForWeaponName(def, weaponName).map((b) => b.id));
+  let total = 0;
+  for (const [id, count] of Object.entries(bins)) {
+    if (ids.has(id)) total += count;
+  }
+  return total;
+}
+
 export interface AmmoLoad {
   /** Per-bin remaining shots. */
   readonly bins: Record<AmmoBinId, number>;
@@ -231,6 +264,31 @@ export function drawOrderBins(
 }
 
 /**
+ * Deduct `needed` shots from `pool` bins, drawing each shot from the next
+ * bin per `policy` (ties broken at random via `rng`). Stops early when the
+ * pool runs dry. Returns a new bin-count map; the caller commits it (with
+ * the refreshed weapon totals) onto the unit.
+ */
+function drainBins(
+  bins: Readonly<Record<AmmoBinId, number>>,
+  pool: readonly AmmoBin[],
+  needed: number,
+  policy: AmmoPolicy,
+  rng: Rng,
+): Record<AmmoBinId, number> {
+  const next = { ...bins };
+  let remaining = needed;
+  while (remaining > 0) {
+    const candidates = pool.filter((b) => (next[b.id] ?? 0) > 0);
+    if (candidates.length === 0) break;
+    const target = drawOrderBins(candidates, next, policy, rng)[0]!;
+    next[target.id] = (next[target.id] ?? 0) - 1;
+    remaining -= 1;
+  }
+  return next;
+}
+
+/**
  * Deduct `needed` shots from the bins backing `weaponIndex`, drawing each
  * shot from the next bin per `policy` (ties broken at random via `rng`).
  * Returns a new bin-count map; the caller commits it (with the refreshed
@@ -244,14 +302,21 @@ export function consumeAmmo(
   policy: AmmoPolicy,
   rng: Rng,
 ): Record<AmmoBinId, number> {
-  const next = { ...bins };
-  let remaining = needed;
-  while (remaining > 0) {
-    const candidates = binsForWeapon(def, weaponIndex).filter((b) => (next[b.id] ?? 0) > 0);
-    if (candidates.length === 0) break;
-    const target = drawOrderBins(candidates, next, policy, rng)[0]!;
-    next[target.id] = (next[target.id] ?? 0) - 1;
-    remaining -= 1;
-  }
-  return next;
+  return drainBins(bins, binsForWeapon(def, weaponIndex), needed, policy, rng);
+}
+
+/**
+ * Deduct `needed` shots from the shared pool of a weapon name (every bin
+ * backing any mount of that name). Streak fire draws through here so mounts
+ * with no directly linked bins still spend shared ammo.
+ */
+export function consumeAmmoForName(
+  def: ResolvedMechDef,
+  bins: Readonly<Record<AmmoBinId, number>>,
+  weaponName: string,
+  needed: number,
+  policy: AmmoPolicy,
+  rng: Rng,
+): Record<AmmoBinId, number> {
+  return drainBins(bins, binsForWeaponName(def, weaponName), needed, policy, rng);
 }

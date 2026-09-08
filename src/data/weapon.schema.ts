@@ -3,7 +3,9 @@
  * (short/medium/long); a target beyond longRange is out of range. Effects
  * mirror the letter codes printed on record sheets:
  *   P = Pulse (-2 to-hit), V = Variable damage by bracket,
- *   C = Cluster (rolls Cluster Hits Table), R = Rapid-fire multi-shot.
+ *   C = Cluster (rolls Cluster Hits Table), R = Rapid-fire multi-shot,
+ *   S = Streak (all missiles hit on a successful to-hit roll, no cluster roll;
+ *   a miss fires nothing: no ammo spent, no heat).
  */
 import weaponsJson from "./weapons.json";
 
@@ -33,6 +35,8 @@ export interface WeaponDef {
   readonly pulse?: boolean;
   readonly antiInfantry?: boolean;
   readonly rapidFireShots?: number;
+  /** Streak launcher: full tube count hits on success, no cluster roll. */
+  readonly streak?: boolean;
   /** Heat points generated per shot (Total Warfare Weapons & Equipment tables). */
   readonly heat?: number;
   /** Broad weapon class used for catalog grouping and UI categorization. */
@@ -83,6 +87,11 @@ function parseWeapon(raw: unknown, label: string, errors: string[]): WeaponDef |
     errors.push(`${label}.heat must be a non-negative integer`);
     valid = false;
   }
+  const streak = raw.streak;
+  if (streak !== undefined && typeof streak !== "boolean") {
+    errors.push(`${label}.streak must be a boolean`);
+    valid = false;
+  }
   const out: Record<string, unknown> = {};
   for (const key of [
     "name",
@@ -96,6 +105,7 @@ function parseWeapon(raw: unknown, label: string, errors: string[]): WeaponDef |
     "pulse",
     "antiInfantry",
     "rapidFireShots",
+    "streak",
     "minRange",
     "heat",
     "category",

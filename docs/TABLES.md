@@ -124,6 +124,13 @@ LRM missiles are applied in lots of **five**: a hit lot lands on one location
 (e.g. an LRM-10 firing 8 hits produces lots of 5 and 3, each on its own
 location).
 
+Streak launchers skip this table: successful to-hit roll lands full tube
+count (SRM: one location roll per missile); failed roll fires nothing (no
+ammo spent, no heat). Launchers share one ammo pool per weapon name: when
+an earlier launcher drains pool mid-resolution, a later launcher with
+nothing left auto-misses without rolling (declaration order sets ammo
+priority; resolution logs an out-of-ammo note).
+
 ## Critical Hits
 
 Whenever a hit strips at least 1 point of internal structure from a

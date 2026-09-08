@@ -1798,11 +1798,12 @@ export function resolutionLines(locale: LocaleId, r: AttackResolution): string[]
     i18n(locale, "res.line", {
       weapon: r.weapon,
       gator: gatorText(locale, r),
-      roll: String(r.toHitRoll),
+      roll: r.toHitRoll === null ? "—" : String(r.toHitRoll),
       verdict,
       jam: r.jammed ? i18n(locale, "res.jamSuffix") : "",
     }),
   ];
+  if (r.ammoExhausted === true) lines.push(i18n(locale, "res.outOfAmmo", { weapon: r.weapon }));
   if (r.clusterRoll !== null) lines.push(i18n(locale, "res.clusterRoll", { roll: r.clusterRoll }));
   if (r.hit && r.groups.length > 0) {
     lines.push(

@@ -143,6 +143,52 @@ describe("resolveWeaponAttack", () => {
     for (const group of res.groups) expect(group.damage).toBe(2);
   });
 
+  it("lands full tube count on streak hits with no cluster roll", () => {
+    const rng = scriptedRng(
+      3,
+      3, // to-hit 6 >= 4
+      3,
+      4, // missile 1 -> center torso (7)
+      3,
+      4, // missile 2 -> center torso (7)
+      3,
+      4, // missile 3 -> center torso (7)
+      3,
+      4, // missile 4 -> center torso (7)
+    );
+    const res = resolveWeaponAttack({
+      ...BASE,
+      rng,
+      weapon: "CL Streak SRM 4",
+      targetDamage: freshState(),
+    });
+    expect(res.hit).toBe(true);
+    expect(res.clusterRoll).toBeNull();
+    expect(res.groups).toEqual([
+      { location: "centerTorso", damage: 2 },
+      { location: "centerTorso", damage: 2 },
+      { location: "centerTorso", damage: 2 },
+      { location: "centerTorso", damage: 2 },
+    ]);
+    expect(res.application?.after.armor.centerTorso).toBe(2);
+    expect(rng.remaining()).toBe(0);
+  });
+
+  it("records streak misses without consuming further rolls", () => {
+    const rng = scriptedRng(1, 2); // total 3 < TN 4
+    const res = resolveWeaponAttack({
+      ...BASE,
+      rng,
+      weapon: "CL Streak SRM 4",
+      targetDamage: freshState(),
+    });
+    expect(res.hit).toBe(false);
+    expect(res.clusterRoll).toBeNull();
+    expect(res.groups).toHaveLength(0);
+    expect(res.application).toBeNull();
+    expect(rng.remaining()).toBe(0);
+  });
+
   it("auto-fails out-of-range shots without rolling", () => {
     const rng = scriptedRng();
     const res = resolveWeaponAttack({

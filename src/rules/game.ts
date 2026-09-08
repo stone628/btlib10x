@@ -28,7 +28,9 @@ import {
   ammoWeaponTotals,
   binsForWeapon,
   consumeAmmo,
+  consumeAmmoForName,
   loadAmmoBins,
+  pooledShotsLeft,
   stripBinsInLocation,
 } from "./ammo.js";
 import { type Arc, classifyArc } from "./arcs.js";
@@ -720,6 +722,9 @@ export function declareAttacks(
       if (left < needed) {
         throw new Error(`${mount.weapon}: needs ${needed} shot(s) but only ${left} remain`);
       }
+      // Streak launchers fire only on successful to-hit roll: ammo leaves
+      // bin at resolution time (see resolveUnitAttacks), not here.
+      if (weapon.streak === true) return;
       const entry = consumeAmmo(def, unit.ammoBins, decl.weaponIndex, needed, unit.ammoPolicy, rng);
       unit.ammoBins = entry;
       unit.shotsLeft = ammoWeaponTotals(def, entry);
@@ -755,6 +760,15 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
     const target = requireUnit(state, decl.targetId);
     const rapidFire = decl.rapidFire ?? false;
     const shots = rapidFire ? (weapon.rapidFireShots ?? 1) : 1;
+    let ammoExhausted = false;
+
+    // Streak launchers share one pool per weapon name and fire only on a
+    // hit: an earlier launcher may have drained the pool mid-resolution.
+    // With nothing left the launcher cannot fire — auto-miss without
+    // touching dice (no ammo spent, no heat).
+    if (weapon.streak === true && pooledShotsLeft(def, unit.ammoBins, weapon.name) < 1) {
+      ammoExhausted = true;
+    }
 
     const resolution = resolveWeaponAttack({
       rng,
@@ -769,6 +783,7 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
       distance: hexDistance(unit.position, target.position),
       ...(decl.arc !== undefined ? { arc: decl.arc } : {}),
       weapon: weapon.name,
+      ammoExhausted,
       shots,
       targetDamage: target.damage,
       attackerLevel: cellAt(state, unit.position).level,
@@ -783,6 +798,27 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
             targetAmmoBins: target.ammoBins,
           }),
     });
+
+    // Streak launchers expend one shot only when to-hit succeeds: miss
+    // means launcher never fired (no ammo, no heat, no damage).
+    const streakFired = weapon.streak === true && resolution.hit;
+    if (weapon.streak === true && !resolution.hit) {
+      state.events.push({
+        kind: "attackResolved",
+        unitId: unit.id,
+        targetId: target.id,
+        resolution,
+      });
+      continue;
+    }
+    // Draw from the shared weapon-name pool so mounts with no directly
+    // linked bins still spend shared ammo. The pre-resolution guard above
+    // guarantees at least one shot remains, so this always draws exactly 1.
+    if (streakFired) {
+      const entry = consumeAmmoForName(def, unit.ammoBins, weapon.name, 1, unit.ammoPolicy, rng);
+      unit.ammoBins = entry;
+      unit.shotsLeft = ammoWeaponTotals(def, entry);
+    }
 
     if (resolution.application !== null) target.damage = resolution.application.after;
     if (resolution.jammed && !unit.jammedWeapons.includes(decl.weaponIndex)) {

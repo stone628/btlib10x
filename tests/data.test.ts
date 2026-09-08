@@ -170,6 +170,25 @@ describe("weapon catalog", () => {
     expect(getWeaponDefFor({ weapon: "CL LB 20-X AC" }).damage).toBe(20);
     expect(getWeaponDefFor({ weapon: "CL Streak SRM 4" }).missiles).toBe(4);
     expect(getWeaponDefFor({ weapon: "CL Streak SRM 4" }).missileDamage).toBe(2);
+    expect(getWeaponDefFor({ weapon: "CL Streak SRM 4" }).streak).toBe(true);
+  });
+
+  it("encodes streak launchers on both tech bases", () => {
+    for (const name of [
+      "Streak SRM 2",
+      "Streak SRM 4",
+      "Streak SRM 6",
+      "CL Streak SRM 2",
+      "CL Streak SRM 6",
+    ]) {
+      const def = getWeaponDefFor({ weapon: name });
+      expect(def.streak).toBe(true);
+      expect(def.missileDamage).toBe(2);
+    }
+    expect(getWeaponDefFor({ weapon: "Streak SRM 2" }).missiles).toBe(2);
+    expect(getWeaponDefFor({ weapon: "Streak SRM 6" }).missiles).toBe(6);
+    expect(getWeaponDefFor({ weapon: "SRM 6" }).streak).toBeUndefined();
+    expect(getWeaponDefFor({ weapon: "LRM 10" }).streak).toBeUndefined();
   });
 });
 

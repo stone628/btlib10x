@@ -160,6 +160,11 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   from a collapse is deferred with piloting.
 - **Hit location** — bipedal front / left side / right side / rear tables.
 - **Cluster hits** — missile 2/4/5/6/10/15/20 + shot columns 2/3/4.
+  Streak launchers skip table: to-hit success lands full tube count, miss
+  fires nothing (no ammo spent, no heat). Launchers share one ammo pool per
+  weapon name; an earlier launcher may drain pool mid-resolution, and a later
+  launcher with nothing left auto-misses without rolling (declaration order
+  sets ammo priority).
 - **Damage** — front/rear armor transfer inward on depletion; side-torso
   internal-structure loss blows off the arm; head/CT IS death kills; leg IS
   death immobilizes. Hits on already-destroyed locations transfer.
@@ -176,7 +181,8 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   `core` the reverse priority, `spread` fullest-bin-first, `leastFirst`
   emptiest-first; equal-priority bins are chosen at random. Declared
   `shots` pool across all mounts and bins of a weapon name (remainder one
-  per bin); `shotsLeft` is the derived per-weapon sum.
+  per bin); `shotsLeft` is the derived per-weapon sum. Streak ammo depletes
+  only on hit (miss = launcher never fired).
 - **Battle flow** — initiative roll, sequential movement phase, weapon
   attack phase, end-phase kill sweep, victory check, rematch.
 - **Critical hit table** — the official TW determining table
