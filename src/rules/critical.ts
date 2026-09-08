@@ -61,7 +61,7 @@
  */
 
 import { roll2D6, rollD6 } from "../core/dice.js";
-import { damageTransferTo, isArm, isLeg, isLimb } from "../core/locations.js";
+import { damageTransferTo, isArm, isLeg, isLimb, isSideTorso } from "../core/locations.js";
 import type { Location, Rng } from "../core/types.js";
 import { type AmmoNameHolder, getAmmoDefFor } from "../data/ammo.schema.js";
 import type { ResolvedCritSlot, ResolvedMechDef } from "../data/mech.schema.js";
@@ -295,10 +295,7 @@ export function checkCASE(def: ResolvedMechDef, location: Location): CaseKind | 
       }
     }
   }
-  if (
-    hasCase ||
-    (def.techBase === "Clan" && (location === "leftTorso" || location === "rightTorso"))
-  ) {
+  if (def.techBase === "Clan" || (hasCase && isSideTorso(location))) {
     return "case";
   }
   return undefined;
