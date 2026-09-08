@@ -371,6 +371,7 @@ export const en = {
   "res.autoHit": "auto-hit",
   "res.hit": "HIT",
   "res.miss": "MISS",
+  "res.outOfAmmo": "{weapon} out of ammo, did not fire",
   "res.clusterRoll": "cluster roll 2D6 = {roll}",
   "res.hits": "hits: {groups} ({arc})",
   "res.armBlownOff": "; {cause} destroyed → {arm} blown off",

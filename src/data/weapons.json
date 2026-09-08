@@ -214,8 +214,64 @@
     "long": 12,
     "missileDamage": 2,
     "missiles": 4,
+    "streak": true,
     "category": "MISSILE",
     "heat": 3
+  },
+  {
+    "name": "Streak SRM 2",
+    "short": 3,
+    "medium": 6,
+    "long": 9,
+    "missileDamage": 2,
+    "missiles": 2,
+    "streak": true,
+    "category": "MISSILE",
+    "heat": 2
+  },
+  {
+    "name": "Streak SRM 4",
+    "short": 3,
+    "medium": 6,
+    "long": 9,
+    "missileDamage": 2,
+    "missiles": 4,
+    "streak": true,
+    "category": "MISSILE",
+    "heat": 3
+  },
+  {
+    "name": "Streak SRM 6",
+    "short": 3,
+    "medium": 6,
+    "long": 9,
+    "missileDamage": 2,
+    "missiles": 6,
+    "streak": true,
+    "category": "MISSILE",
+    "heat": 4
+  },
+  {
+    "name": "CL Streak SRM 2",
+    "short": 4,
+    "medium": 8,
+    "long": 12,
+    "missileDamage": 2,
+    "missiles": 2,
+    "streak": true,
+    "category": "MISSILE",
+    "heat": 2
+  },
+  {
+    "name": "CL Streak SRM 6",
+    "short": 4,
+    "medium": 8,
+    "long": 12,
+    "missileDamage": 2,
+    "missiles": 6,
+    "streak": true,
+    "category": "MISSILE",
+    "heat": 4
   },
   {
     "name": "CL Gauss Rifle",

@@ -32,6 +32,7 @@ export interface WeaponAttackInput {
   readonly interveningTerrains: readonly TerrainType[];
   readonly distance: number;
   readonly weapon: string;
+  readonly ammoExhausted?: boolean;
   /** Shots fired this attack; >1 only valid for rapid-fire (R) weapons. */
   readonly shots?: number;
   /** Layered damage state of the target. */
@@ -68,6 +69,9 @@ export interface AttackResolution {
   readonly toHitRoll: number | null;
   readonly hit: boolean;
   readonly jammed: boolean;
+  /** True when a streak launcher found its shared pool empty at resolution:
+   *  the attack auto-missed without rolling (no ammo spent, no heat). */
+  readonly ammoExhausted?: boolean;
   readonly clusterRoll: number | null;
   readonly groups: readonly HitGroup[];
   readonly application: DamageApplication | null;
@@ -112,6 +116,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     toHitRoll: null as number | null,
     hit: false,
     jammed: false,
+    ammoExhausted: false,
     clusterRoll: null as number | null,
     groups: [] as HitGroup[],
     application: null as DamageApplication | null,
@@ -120,6 +125,10 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
   };
 
   if (breakdown.outOfRange) return base;
+  if (input.ammoExhausted === true) {
+    base.ammoExhausted = true;
+    return base;
+  }
 
   const roll = roll2D6(input.rng);
   base.toHitRoll = roll;
@@ -131,9 +140,17 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
   if (!base.hit) return base;
 
   if (weapon.missiles !== undefined && weapon.missileDamage !== undefined) {
-    const clusterRoll = roll2D6(input.rng);
-    base.clusterRoll = clusterRoll;
-    const hits = clusterHits(weapon.missiles, clusterRoll);
+    // Streak launchers: to-hit success means full tube count hits; no
+    // cluster roll, no extra RNG consumed. Miss path already returned above,
+    // so launcher never fires on miss (no ammo, no heat there either).
+    let hits: number;
+    if (weapon.streak === true) {
+      hits = weapon.missiles;
+    } else {
+      const clusterRoll = roll2D6(input.rng);
+      base.clusterRoll = clusterRoll;
+      hits = clusterHits(weapon.missiles, clusterRoll);
+    }
     if (weapon.missileDamage === 2) {
       for (let i = 0; i < hits; i++) {
         const location = hitLocationCovered(input.rng, partialCover);

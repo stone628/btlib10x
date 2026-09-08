@@ -283,7 +283,7 @@ export type CaseKind = "case" | "caseII";
 /**
  * returns if given location is protected by case.
  * "caseII" overrides any other case state.
- * Clan mech's have built-in case at side torso
+ * Clan mech's have built-in case at all locations
  */
 export function checkCASE(def: ResolvedMechDef, location: Location): CaseKind | undefined {
   let hasCase = false;

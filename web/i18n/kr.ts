@@ -363,6 +363,7 @@ export const kr: Catalog = {
   "res.autoHit": "자동명중",
   "res.hit": "명중",
   "res.miss": "빗나감",
+  "res.outOfAmmo": "{weapon} 탄약 부족으로 발사 중지",
   "res.clusterRoll": "클러스터 굴림 2D6 = {roll}",
   "res.hits": "명중: {groups} ({arc})",
   "res.armBlownOff": "; {cause} 파괴 → {arm} 절단",

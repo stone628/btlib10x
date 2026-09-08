@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getMechDef } from "../src/data/index.js";
 import { getWeaponDefFor } from "../src/data/weapon.schema.js";
+import { ammoWeaponTotals, pooledShotsLeft } from "../src/rules/ammo.js";
 import type { BattleState, TerrainHexDef, UnitInit } from "../src/rules/game.js";
 import {
   advancePhase,
@@ -14,6 +15,7 @@ import {
   resolveDeclaredAttacks,
   rollInitiativePhase,
 } from "../src/rules/game.js";
+import { resolutionLines } from "../web/format.js";
 import { makeBattleOptions, scriptedRng } from "./helpers.js";
 
 function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
@@ -731,6 +733,100 @@ describe("weapon attack phase", () => {
     expect(() =>
       declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf", rapidFire: true }]),
     ).toThrow(/is not rapid-fire/);
+  });
+});
+
+describe("streak missiles", () => {
+  const streakUnits: UnitInit[] = [
+    {
+      id: "mc",
+      model: "MC-MKII-2",
+      team: 0,
+      gunnery: 4,
+      position: { col: 2, row: 4 },
+      facing: "se",
+    },
+    {
+      id: "enf",
+      model: "ENF-4R",
+      team: 1,
+      gunnery: 4,
+      position: { col: 3, row: 4 },
+      facing: "nw",
+    },
+  ];
+  const streakSetup = () =>
+    startAttackTurn(createBattle(streakUnits, makeBattleOptions(streakUnits, true)));
+
+  it("defers ammo to resolution and lands full tubes with no cluster roll", () => {
+    const state = streakSetup();
+    expect(getUnit(state, "mc").shotsLeft["3"]).toBe(50);
+    declareAttacks(state, "mc", [{ weaponIndex: 3, targetId: "enf" }]);
+    // Declare spends nothing; launcher fires only on successful to-hit roll.
+    expect(getUnit(state, "mc").shotsLeft["3"]).toBe(50);
+    // to-hit 6 >= TN 4; four CT locations (7); one exposed tie-break die.
+    resolveDeclaredAttacks(state, "mc", scriptedRng(3, 3, 3, 4, 3, 4, 3, 4, 3, 4, 2));
+    const mc = getUnit(state, "mc");
+    expect(mc.shotsLeft["3"]).toBe(49);
+    expect(mc.heat).toBe(3);
+    const event = state.events.find((e) => e.kind === "attackResolved")!;
+    expect(event.kind === "attackResolved" && event.resolution.clusterRoll).toBeNull();
+    expect(event.kind === "attackResolved" && event.resolution.groups).toHaveLength(4);
+  });
+
+  it("auto-misses the second launcher when one shared shot remains", () => {
+    const state = streakSetup();
+    const mc = getUnit(state, "mc");
+    // Shared pool drained to a single shot in one bin.
+    mc.ammoBins["leftTorso:7"] = 0;
+    mc.ammoBins["rightTorso:7"] = 1;
+    mc.shotsLeft = ammoWeaponTotals(getMechDef("MC-MKII-2")!, mc.ammoBins);
+    expect(pooledShotsLeft(getMechDef("MC-MKII-2")!, mc.ammoBins, "CL Streak SRM 4")).toBe(1);
+    // Mount 4 links zero bins (shared pool lives on mount 3): declare runs
+    // unchecked for it, mirroring the live over-commit hole.
+    declareAttacks(state, "mc", [
+      { weaponIndex: 3, targetId: "enf" },
+      { weaponIndex: 4, targetId: "enf" },
+    ]);
+    // First launcher: to-hit 6 >= TN 4, four CT locations (7). Single live
+    // bin means no tie-break die; second launcher must draw zero dice.
+    const rng = scriptedRng(3, 3, 3, 4, 3, 4, 3, 4, 3, 4);
+    resolveDeclaredAttacks(state, "mc", rng);
+    expect(rng.remaining()).toBe(0);
+    const events = state.events.filter((e) => e.kind === "attackResolved");
+    expect(events).toHaveLength(2);
+    const first = events[0]!;
+    const second = events[1]!;
+    if (first.kind !== "attackResolved" || second.kind !== "attackResolved")
+      throw new Error("bad events");
+    expect(first.resolution.hit).toBe(true);
+    expect(first.resolution.groups).toHaveLength(4);
+    expect(first.resolution.ammoExhausted).toBe(false);
+    expect(second.resolution.hit).toBe(false);
+    expect(second.resolution.ammoExhausted).toBe(true);
+    expect(second.resolution.toHitRoll).toBeNull();
+    expect(second.resolution.groups).toHaveLength(0);
+    expect(second.resolution.application).toBeNull();
+    expect(
+      pooledShotsLeft(getMechDef("MC-MKII-2")!, getUnit(state, "mc").ammoBins, "CL Streak SRM 4"),
+    ).toBe(0);
+    // One volley fired: single launcher heat only.
+    expect(getUnit(state, "mc").heat).toBe(3);
+    const lines = resolutionLines("en", second.resolution);
+    expect(lines.some((l) => l.includes("out of ammo"))).toBe(true);
+  });
+
+  it("spends no ammo and builds no heat on a streak miss", () => {
+    const state = streakSetup();
+    declareAttacks(state, "mc", [{ weaponIndex: 3, targetId: "enf" }]);
+    const armorBefore = getUnit(state, "enf").damage.armor.centerTorso;
+    resolveDeclaredAttacks(state, "mc", scriptedRng(1, 2)); // to-hit 3 < TN 4
+    const mc = getUnit(state, "mc");
+    expect(mc.shotsLeft["3"]).toBe(50);
+    expect(mc.heat).toBe(0);
+    expect(getUnit(state, "enf").damage.armor.centerTorso).toBe(armorBefore);
+    const event = state.events.find((e) => e.kind === "attackResolved")!;
+    expect(event.kind === "attackResolved" && event.resolution.hit).toBe(false);
   });
 });
 

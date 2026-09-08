@@ -14,7 +14,6 @@
 - warn min range, reject out of range on 'fire' command immediately
 - change movement phase command to set final hex and facing.
 - implement minimum range rule.
-- implement streak missile no cluster rule.
 
 ## In progress
 
@@ -31,6 +30,15 @@
 
 ## Done
 
+- **Streak missiles (TW)** — `streak` flag on `WeaponDef` (CL Streak SRM
+  2/4/6, IS Streak SRM 2/4/6). `resolveWeaponAttack` skips Cluster Hits
+  Table on streak hits (full tube count, one location roll per missile,
+  `clusterRoll` null, no cluster RNG drawn).   `declareAttacks` defers ammo
+  draw to resolution; `resolveUnitAttacks` spends one shot and applies heat
+  only on hit — miss means launcher never fired. Shared name pool with a
+  pre-resolution guard: a streak launcher finding the pool empty auto-misses
+  without rolling (`ammoExhausted`, out-of-ammo log note, no heat); draws go
+  through the name pool so unlinked mounts spend shared ammo too.
 - **Attack direction / firing arcs** — `declareAttacks` classifies every
   target by its TW firing arc (`classifyArc`: front / rear / leftSide /
   rightSide) and records it on the `AttackDecl`; attacks into any arc are
@@ -42,7 +50,7 @@
   remains deferred.
 - **CASE / CASE II ammo-explosion containment** — ammo explosions in
   CASE-protected locations no longer overflow to the center torso. CASE
-  (explicit `case` crit slot, or implicit on Clan side torsos) vents the
+  (explicit `case` crit slot, or implicit on all locations of Clan 'Mech) vents the
   overflow as one point of internal-structure damage to the protected location
   (crit-roll eligible) and stops transfer; CASE II (`caseII` slot) additionally
   caps the blast at 1 point total. Detection via `hasCase`/`hasCaseII` in

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Location } from "../src/core/types.js";
+import { LOCATIONS, type Location } from "../src/core/types.js";
 import { getMechDef } from "../src/data/index.js";
 import { loadAmmoBins } from "../src/rules/ammo.js";
 import {
@@ -636,13 +636,12 @@ describe("CASE", () => {
     };
   };
 
-  it("hasCase detects implicit Clan protection on both side torsos only", () => {
+  it("hasCase detects implicit Clan protection on all locations", () => {
     const tw = getMechDef("TW-Prime")!;
     expect(tw.techBase).toBe("Clan");
-    expect(checkCASE(tw, "leftTorso")).toBe("case");
-    expect(checkCASE(tw, "rightTorso")).toBe("case");
-    expect(checkCASE(tw, "centerTorso")).toBe(undefined);
-    expect(checkCASE(tw, "head")).toBe(undefined);
+    for (const loc of LOCATIONS) {
+      expect(checkCASE(tw, loc)).toBe("case");
+    }
 
     const hbk = getMechDef("HBK-4G")!;
     expect(hbk.techBase).toBe("Inner Sphere");
