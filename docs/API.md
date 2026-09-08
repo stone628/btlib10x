@@ -279,8 +279,8 @@ and `outOfRange`.
   8 LT · 9 LL · 10-11 LA · 12 head
 - `hitLocationForArc(arc, roll2d6): Location` — uses `LEFT_SIDE_TABLE` /
   `RIGHT_SIDE_TABLE` for side arcs; front and rear share `HIT_LOCATION_TABLE`.
-- `clusterHitsForMissiles(missiles, roll)` — columns 2/4/5/6/10/15/20
-- `clusterHitsForShots(shots, roll)` — columns 2/3/4 (rapid fire)
+- `clusterHits(missiles, roll)` — full TW p. 116 table, weapon-size columns
+  2–30 plus 40 (missiles and rapid-fire shots share it)
 - `groupMissiles(total, lotSize)` — LRM lots of five
 
 ### Internal structure (`rules/internalStructure.ts`)

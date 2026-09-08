@@ -60,7 +60,7 @@ describe("hit location table", () => {
 });
 
 describe("cluster hits tables", () => {
-  it("matches the missile table (columns 2/4/5/6/10/15/20)", () => {
+  it("matches the missile table (TW p. 116)", () => {
     expect(clusterHits(2, 2)).toBe(1);
     expect(clusterHits(2, 12)).toBe(2);
     expect(clusterHits(4, 11)).toBe(4);
@@ -68,12 +68,25 @@ describe("cluster hits tables", () => {
     expect(clusterHits(6, 8)).toBe(4);
     expect(clusterHits(10, 9)).toBe(8);
     expect(clusterHits(10, 12)).toBe(10);
-    expect(clusterHits(15, 11)).toBe(14);
+    expect(clusterHits(15, 11)).toBe(15);
     expect(clusterHits(20, 7)).toBe(12);
     expect(clusterHits(20, 12)).toBe(20);
   });
 
-  it("matches the rapid-fire shot columns (2/3/4)", () => {
+  it("matches the full weapon-size columns incl. large launchers", () => {
+    expect(clusterHits(30, 2)).toBe(10);
+    expect(clusterHits(30, 4)).toBe(12);
+    expect(clusterHits(30, 9)).toBe(24);
+    expect(clusterHits(40, 2)).toBe(12);
+    expect(clusterHits(40, 4)).toBe(18);
+    expect(clusterHits(40, 5)).toBe(24);
+    expect(clusterHits(40, 9)).toBe(32);
+    expect(clusterHits(40, 11)).toBe(40);
+    expect(clusterHits(7, 6)).toBe(4);
+    expect(clusterHits(13, 8)).toBe(8);
+  });
+
+  it("shares the same table for rapid-fire shots (2/3/4)", () => {
     expect(clusterHits(2, 2)).toBe(1);
     expect(clusterHits(2, 12)).toBe(2);
     expect(clusterHits(3, 7)).toBe(2);
