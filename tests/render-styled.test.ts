@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getMapDef, type MapDef } from "../src/data/index.js";
-import { createBattle, type UnitInit } from "../src/rules/game.js";
+import type { UnitInit } from "../src/rules/game.js";
 import type { BoardModel, Canvas, CharStyle, Span } from "../web/renderer.text.js";
 import {
   applyEdgeStyles,
@@ -14,7 +14,7 @@ import {
   renderMap,
   TEAM_STYLES,
 } from "../web/renderer.text.js";
-import { makeBattleOptions } from "./helpers.js";
+import { createTestBattle } from "./helpers.js";
 
 function spansText(spans: readonly Span[]): string {
   return spans.map((sp) => sp.text).join("");
@@ -51,10 +51,7 @@ describe("styled board model", () => {
         facing: "s",
       },
     ];
-    const state = createBattle(
-      units,
-      makeBattleOptions(units, false, [{ col: 2, row: 2, type: "heavyWoods" }]),
-    );
+    const state = createTestBattle([{ col: 2, row: 2, type: "heavyWoods" }], units, false);
     const flat = boardToText(battleModel(state));
     expect(boardToText(battleModel(state))).toBe(flat);
     expect(boardToSpans(battleModel(state)).map(spansText).join("\n")).toBe(flat);
@@ -65,7 +62,7 @@ describe("styled board model", () => {
       { id: "ab", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 2, row: 2 }, facing: "n" },
       { id: "cd", model: "GRF-1N", team: 1, gunnery: 4, position: { col: 3, row: 2 }, facing: "s" },
     ];
-    const state = createBattle(units, makeBattleOptions(units, false));
+    const state = createTestBattle([], units, false);
     const lines = boardToSpans(battleModel(state));
     const idLine = lines.find((l) => l.some((sp) => sp.text.includes("ab")));
     if (!idLine) throw new Error("no unit line");
@@ -99,10 +96,7 @@ describe("styled board model", () => {
         facing: "s",
       },
     ];
-    const state = createBattle(
-      units,
-      makeBattleOptions(units, false, [{ col: 3, row: 3, type: "lightWoods" }]),
-    );
+    const state = createTestBattle([{ col: 3, row: 3, type: "lightWoods" }], units, false);
     const model = battleModel(state);
     const woods = model.styles["3,3"];
     expect(woods).toEqual({ cls: "t-lightWoods" });
@@ -151,10 +145,7 @@ describe("styled board model", () => {
         facing: "s",
       },
     ];
-    const state = createBattle(
-      units,
-      makeBattleOptions(units, false, [{ col: 3, row: 2, type: "lightWoods" }]),
-    );
+    const state = createTestBattle([{ col: 3, row: 2, type: "lightWoods" }], units, false);
     const model = battleModel(state);
     expect(model.styles["3,2"]).toEqual({ cls: "t-lightWoods" });
     expect(model.idStyles["3,2"]).toEqual(TEAM_STYLES[0]);
@@ -223,10 +214,7 @@ describe("styled board model", () => {
         facing: "s",
       },
     ];
-    const state = createBattle(
-      units,
-      makeBattleOptions(units, false, [{ col: 3, row: 2, type: "lightWoods" }]),
-    );
+    const state = createTestBattle([{ col: 3, row: 2, type: "lightWoods" }], units, false);
     const override: Record<string, CharStyle> = {
       "0,0": { fg: "red", bold: true, italic: true, bg: "blue" },
     };
@@ -277,10 +265,7 @@ describe("styled board model", () => {
         facing: "s",
       },
     ];
-    const state = createBattle(
-      units,
-      makeBattleOptions(units, false, [{ col: 2, row: 2, type: "heavyWoods" }]),
-    );
+    const state = createTestBattle([{ col: 2, row: 2, type: "heavyWoods" }], units, false);
     const spans = boardToSpans(battleModel(state));
     const chars = boardToChars(battleModel(state));
     // Same line count.

@@ -5,6 +5,7 @@ import {
   hexDistance,
   isShutdown,
   listMapNames,
+  suggestFireTargets,
   VERSION,
 } from "btlib10x";
 import type { Chunk } from "./format.js";
@@ -13,7 +14,7 @@ import {
   attackStatusLines,
   boardChunk,
   buildLinesChunk,
-  fireSuggestionLines,
+  fireSuggestionChunks,
   fmtSetupStatus,
   formatLog,
   heatStatusLines,
@@ -26,7 +27,8 @@ import {
   listTables,
   moveStatusLines,
   overStatusLines,
-  reachChunk,
+  reachableChunk,
+  reachablesInfo,
   renderClusterTable,
   renderCriticalTable,
   renderHeatScaleTable,
@@ -147,16 +149,6 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
       );
     },
   },
-  seed: {
-    helpKey: "cmd.seed.help",
-    usage: "seed <n>",
-    argsDoc: [["n", "cmd.seed.arg.n"]],
-    run: (s, a) => {
-      expectArgs(L(s), a, 1, "seed <n>");
-      S.setSeed(s, int(L(s), a[0]!, "seed"));
-      return [i18n(L(s), "ok.seedSet", { seed: s.seed })];
-    },
-  },
   reset: {
     helpKey: "cmd.reset.help",
     run: (s) => {
@@ -214,7 +206,6 @@ const SETUP_CMDS: Record<string, CmdDef> = {
           name: m.name,
           w: m?.width ?? 0,
           h: m?.height ?? 0,
-          n: s.terrainDefs.length,
         }),
       ];
     },
@@ -260,6 +251,16 @@ const SETUP_CMDS: Record<string, CmdDef> = {
     },
   },
   status: { helpKey: "cmd.statusSetup.help", run: (s) => fmtSetupStatus(s) },
+  seed: {
+    helpKey: "cmd.seed.help",
+    usage: "seed <n>",
+    argsDoc: [["n", "cmd.seed.arg.n"]],
+    run: (s, a) => {
+      expectArgs(L(s), a, 1, "seed <n>");
+      S.setSeed(s, int(L(s), a[0]!, "seed"));
+      return [i18n(L(s), "ok.seedSet", { seed: s.setup.seed })];
+    },
+  },
   start: {
     helpKey: "cmd.start.help",
     run: (s) => {
@@ -296,6 +297,27 @@ const BATTLE_CMDS: Record<string, CmdDef> = {
 };
 
 const MOVE_CMDS: Record<string, CmdDef> = {
+  candidate: {
+    helpKey: "cmd.candidateMove.help",
+    run: (s, _a) => {
+      if (s.moveMode === null || s.moveMode === "shutdown" || s.moveMode === "startup") {
+        throw new Error(i18n(L(s), "err.candidate.movemode"));
+      }
+      const r = S.stepResult(s);
+      const lines = [
+        i18n(L(s), "ok.modeDeclared", {
+          id: s.actorId ?? "",
+          mode: s.moveMode,
+          budget: r.mpBudget,
+        }),
+      ];
+      if (s.moveCandidate === null) {
+        s.moveCandidate = reachablesInfo(s) ?? null;
+      }
+      if (s.moveCandidate === null) return lines;
+      return [buildLinesChunk(lines), reachableChunk(s.setup, s.battle!, s.moveCandidate)];
+    },
+  },
   mode: {
     helpKey: "cmd.mode.help",
     usage: "mode <standstill|walk|run|jump|shutdown|startup>",
@@ -305,16 +327,20 @@ const MOVE_CMDS: Record<string, CmdDef> = {
       const mode = S.parseMoveMode(L(s), a[0]!);
       S.declareMode(s, a[0]!);
       if (mode === "shutdown" || mode === "startup") {
+        s.moveCandidate = null;
         return [i18n(L(s), "ok.modeDeclaredVoluntary", { id: s.actorId ?? "", mode })];
       }
       const r = S.stepResult(s);
       const lines = [
         i18n(L(s), "ok.modeDeclared", { id: s.actorId ?? "", mode, budget: r.mpBudget }),
       ];
-      if (mode === "standStill") return lines;
-      const chunk = reachChunk(s);
-      if (chunk === null) return lines;
-      return [buildLinesChunk(lines), chunk];
+      if (mode === "standStill") {
+        s.moveCandidate = null;
+        return lines;
+      }
+      s.moveCandidate = reachablesInfo(s) ?? null;
+      if (s.moveCandidate === null) return lines;
+      return [buildLinesChunk(lines), reachableChunk(s.setup, s.battle!, s.moveCandidate)];
     },
   },
   move: {
@@ -327,6 +353,7 @@ const MOVE_CMDS: Record<string, CmdDef> = {
       const r = S.stepResult(s);
       const col = r.position.col;
       const row = r.position.row;
+      s.moveCandidate = null;
       return [
         i18n(L(s), "ok.stepResult", {
           id: s.actorId ?? "",
@@ -397,6 +424,15 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
       return [
         i18n(L(s), "ammo.set", { id: unit.id, policy: ammoPolicyLabel(L(s), unit.ammoPolicy) }),
       ];
+    },
+  },
+  candidate: {
+    helpKey: "cmd.candidateAttack.help",
+    run: (s, _a) => {
+      if (s.fireCandidate === null) {
+        throw new Error(i18n(L(s), "err.candidate.attack"));
+      }
+      return fireSuggestionChunks(s.locale, s.fireCandidate!);
     },
   },
   fire: {
@@ -629,14 +665,6 @@ function normalize(out: string[] | Chunk[]): Chunk[] {
   return typeof out[0] === "string" ? [buildLinesChunk(out as string[])] : (out as Chunk[]);
 }
 
-/** Turn-qualified key identifying the acting unit's fire turn, or null when none. */
-function fireHintKey(s: S.Session): string | null {
-  if (s.app !== "battle" || s.battle === null || s.battle.phase !== "weaponAttack") return null;
-  const actor = S.currentActor(s);
-  if (actor === null) return null;
-  return `${s.battle.turn}:${actor.id}`;
-}
-
 /**
  * Run one input line against the session; returns presentation chunks
  * (plain text with a class hint, or styled board spans).
@@ -662,12 +690,24 @@ export function runChunks(session: S.Session, raw: string): Chunk[] {
     ];
   }
   if (!wasOver && session.app === "over") {
-    chunks = [...chunks, buildLinesChunk(victoryBanner(session), "banner")];
+    chunks.push(buildLinesChunk(victoryBanner(session), "banner"));
   }
-  const hintKey = fireHintKey(session);
-  if (hintKey !== null && hintKey !== session.fireHintShownFor) {
-    chunks = [...chunks, ...fireSuggestionLines(session)];
-    session.fireHintShownFor = hintKey;
+  if (checkFireHint(session)) {
+    chunks.push(...fireSuggestionChunks(session.locale, session.fireCandidate!));
   }
   return chunks;
+}
+
+function checkFireHint(s: S.Session): boolean {
+  if (s.app !== "battle" || s.battle === null || s.battle.phase !== "weaponAttack") return false;
+  const actor = S.currentActor(s);
+  if (actor === null) return false;
+  const newKey = `${s.battle.turn}:${actor.id}`;
+  if (newKey !== s.fireHintShownFor) {
+    s.fireCandidate = suggestFireTargets(s.battle, actor.id);
+    s.fireHintShownFor = newKey;
+    return true;
+  }
+
+  return false;
 }

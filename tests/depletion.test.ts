@@ -16,14 +16,14 @@ import {
 } from "../src/rules/ammo.js";
 import {
   advancePhase,
-  createBattle,
+  type createBattle,
   declareAttacks,
   getUnit,
   rollInitiativePhase,
   type UnitInit,
 } from "../src/rules/game.js";
 import * as S from "../web/session.js";
-import { execute, makeBattleOptions, scriptedRng } from "./helpers.js";
+import { createTestBattle, execute, scriptedRng } from "./helpers.js";
 
 const HBK = getMechDef("HBK-4G")!;
 
@@ -240,7 +240,7 @@ function hbkBattle(): ReturnType<typeof createBattle> {
       facing: "nw",
     },
   ];
-  return createBattle(units, makeBattleOptions(units, true));
+  return createTestBattle([], units, true);
 }
 
 function attackPhase(state: ReturnType<typeof createBattle>): void {

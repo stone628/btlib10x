@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { MapDef } from "../src/index.js";
-import type { BattleState } from "../src/rules/game.js";
-import { createBattle, type TerrainHexDef, type UnitInit } from "../src/rules/game.js";
+import type { BattleState, createBattle, TerrainHexDef, UnitInit } from "../src/rules/game.js";
 import type { BoardModel } from "../web/renderer.text.js";
 import { battleModel, boardToText, GRID_GLYPHS, renderMap } from "../web/renderer.text.js";
-import { makeBattleOptions } from "./helpers.js";
+import { createTestBattle } from "./helpers.js";
 
 /** Flat battle text via the structured model (historic renderer shape). */
 const renderBattle = (
@@ -27,7 +26,7 @@ describe("console renderer", () => {
       { ...primary, team: 0, gunnery: 4, facing: "n" },
       { id: "far", model: "GRF-1N", team: 1, gunnery: 4, position: farAway, facing: "s" },
     ];
-    return createBattle(units, makeBattleOptions(units, false));
+    return createTestBattle([], units, false);
   }
 
   it("draws hexes with unit ids and coordinates", () => {
@@ -56,7 +55,7 @@ describe("console renderer", () => {
         facing: "s",
       },
     ];
-    const state = createBattle(units, { ...makeBattleOptions(units, false), width: 4, height: 2 });
+    const state = createTestBattle([], units, false, 4, 2);
     const lines = renderBattle(state).split("\n");
     // Odd-col labels sit at the top (canvas y=0), even-col labels at
     // canvas y=2 — so a same-row even column renders 2 canvas lines lower.
@@ -88,7 +87,7 @@ describe("console renderer", () => {
       },
       { id: "ab", model: "GRF-1N", team: 1, gunnery: 4, position: { col: 4, row: 3 }, facing: "s" },
     ];
-    const state = createBattle(units, makeBattleOptions(units, false));
+    const state = createTestBattle([], units, false);
     const out = renderBattle(state);
     expect(out).toContain(`${GRID_GLYPHS.vertW} wolv ${GRID_GLYPHS.vertE}`); // clipped to 4 chars
     expect(out).toContain(`${GRID_GLYPHS.vertW}  ab  ${GRID_GLYPHS.vertE}`); // centered
@@ -114,7 +113,7 @@ describe("console renderer", () => {
         facing: "s",
       },
     ];
-    const state = createBattle(units, { ...makeBattleOptions(units, false), width: 4, height: 4 });
+    const state = createTestBattle([], units, false, 4, 4);
     const lines = renderBattle(state).split("\n");
     // hbk at col 4 (even, staggered down 2). The '↑' sits at the shared edge
     // between row 2 and row 3 (canvas y=10). enf at col 4 row 4 (last row):
@@ -159,7 +158,7 @@ describe("console renderer", () => {
         facing: "s",
       },
     ];
-    const state = createBattle(units, makeBattleOptions(units, false, terrain));
+    const state = createTestBattle(terrain, units, false);
     const out = renderBattle(state);
     expect(out.split("\n").length).toBe(10 * 4 + 2 + 1); // rows*stride + stagger + closing border
     expect(out).toContain(`${GRID_GLYPHS.edgeNW}0303${GRID_GLYPHS.edgeNE}`);
@@ -189,7 +188,7 @@ describe("console renderer", () => {
       { id: "e", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 4, row: 2 }, facing: "nw" },
       { id: "f", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 4, row: 3 }, facing: "se" },
     ];
-    const state = createBattle(units, makeBattleOptions(units, false));
+    const state = createTestBattle([], units, false);
     const out = renderBattle(state);
     // Each facing glyph has a distinct unicode codepoint; confirm the
     // output contains all six at some position.
@@ -241,7 +240,7 @@ describe("map renderer", () => {
         facing: "s",
       },
     ];
-    const state = createBattle(units, makeBattleOptions(units, false));
+    const state = createTestBattle([], units, false);
     const out = renderBattle(state, undefined, { "4,1": "W" });
     expect(out).toContain(`${GRID_GLYPHS.vertW}  hbk ${GRID_GLYPHS.vertE}`);
     expect(out).toContain(`${GRID_GLYPHS.edgeSW} W0 ${GRID_GLYPHS.edgeSE}`);
@@ -266,10 +265,7 @@ describe("map renderer", () => {
         facing: "s",
       },
     ];
-    const state = createBattle(
-      units,
-      makeBattleOptions(units, false, [{ col: 1, row: 1, type: "lightWoods" }]),
-    );
+    const state = createTestBattle([{ col: 1, row: 1, type: "lightWoods" }], units, false);
     const out = renderBattle(state, undefined, { "1,1": "w" });
     expect(out).toContain(`${GRID_GLYPHS.vertW}  hbk ${GRID_GLYPHS.vertE}`);
     expect(out).toContain(`${GRID_GLYPHS.edgeSW} w0 ${GRID_GLYPHS.edgeSE}`);

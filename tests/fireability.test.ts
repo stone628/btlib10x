@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { suggestFireTargets } from "../src/rules/fireability.js";
 import type { BattleState, TerrainHexDef, UnitInit } from "../src/rules/game.js";
-import { advancePhase, createBattle, rollInitiativePhase } from "../src/rules/game.js";
-import { makeBattleOptions, scriptedRng } from "./helpers.js";
+import { advancePhase, rollInitiativePhase } from "../src/rules/game.js";
+import { createTestBattle, scriptedRng } from "./helpers.js";
 
 function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
   const units: UnitInit[] = [
@@ -23,7 +23,7 @@ function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
       facing: "nw",
     },
   ];
-  return createBattle(units, makeBattleOptions(units, false, terrain));
+  return createTestBattle(terrain, units, false);
 }
 
 function startAttackTurn(state: BattleState): BattleState {
@@ -107,7 +107,7 @@ describe("suggestFireTargets", () => {
         facing: "s",
       },
     ];
-    const state = startAttackTurn(createBattle(units, makeBattleOptions(units, false)));
+    const state = startAttackTurn(createTestBattle([], units, false));
     const reasons = blockedReasons(state, "hbk", "enf");
     expect(reasons.every((r) => r === "outOfRange")).toBe(true);
     const sugg = suggestFireTargets(state, "hbk");
@@ -133,7 +133,7 @@ describe("suggestFireTargets", () => {
         facing: "nw",
       },
     ];
-    const state = startAttackTurn(createBattle(units, makeBattleOptions(units, false)));
+    const state = startAttackTurn(createTestBattle([], units, false));
     const sugg = suggestFireTargets(state, "grf");
     const hbk = sugg.targets.find((t) => t.targetId === "hbk")!;
     const ppc = hbk.weapons.find((w) => w.weapon === "PPC")!;
@@ -164,7 +164,7 @@ describe("suggestFireTargets", () => {
         facing: "nw",
       },
     ];
-    const state = startAttackTurn(createBattle(units, makeBattleOptions(units, false)));
+    const state = startAttackTurn(createTestBattle([], units, false));
     const sugg = suggestFireTargets(state, "grf");
     const hbk = sugg.targets.find((t) => t.targetId === "hbk")!;
     expect(hbk.distance).toBe(7); // PPC medium bracket, beyond min range 3.
@@ -193,12 +193,13 @@ describe("suggestFireTargets", () => {
       },
     ];
     const state = startAttackTurn(
-      createBattle(
-        units,
-        makeBattleOptions(units, false, [
+      createTestBattle(
+        [
           { col: 2, row: 7, type: "heavyWoods" },
           { col: 2, row: 4, type: "heavyWoods" },
-        ]),
+        ],
+        units,
+        false,
       ),
     );
     const reasons = blockedReasons(state, "hbk", "enf");
@@ -226,7 +227,7 @@ describe("suggestFireTargets", () => {
         facing: "s",
       },
     ];
-    const state = startAttackTurn(createBattle(units, makeBattleOptions(units, false)));
+    const state = startAttackTurn(createTestBattle([], units, false));
     state.units.enf!.movesThisTurn = Array(30).fill("forward");
     const reasons = blockedReasons(state, "hbk", "enf");
     // long range (+4) + target moved 30 (+6) + gunnery 4 = 14 -> auto-miss.

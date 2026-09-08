@@ -3,17 +3,20 @@ import type {
   AmmoPolicy,
   Arc,
   AttackResolution,
+  BattleState,
   CriticalEffect,
   CriticalResolution,
   CritSoakName,
   CritStructureName,
   DamageTransferStep,
   FireBlockerReason,
+  FireSuggestion,
   FireWeapon,
   GameEvent,
   HexCoord,
   Location,
   LocationValue,
+  MapNameHolder,
   RangeBracket,
   ResolvedMechDef,
   ShutdownState,
@@ -50,7 +53,6 @@ import {
   reachableLandings,
   shoulderOf,
   shutdownAvoid,
-  suggestFireTargets,
   TORSO_LOCATIONS,
   toHitHeatModifier,
   toHitHeatModifierWithThreshold,
@@ -59,7 +61,7 @@ import { AMMO_EXPLOSION_START_HEAT } from "../src/index.js";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
 import { i18n } from "./i18n/index.js";
 import { lookupMapOrThrow, lookupMechOrThrow, lookupWeaponOrThrow } from "./lookup.js";
-import type { BoardRenderer, BoardRenderInfo } from "./render.js";
+import type { BoardRenderer, BoardRenderInfo, BoardRenderReachableInfo } from "./render.js";
 import { createBoardRenderUnit, getBoardRenderer } from "./render.js";
 import type { Session, SetupUnit } from "./session.js";
 import { moveStepsInfo } from "./session.js";
@@ -429,15 +431,15 @@ function gunneryLabel(locale: LocaleId, gunnery: number): string {
 
 /** `board` output: styled grid chunks, or a plain hint when nothing exists. */
 export function boardChunk(s: Session): Chunk {
-  if (!s.mapName) {
+  const map = getMapDefFor(s.setup);
+  if (map === undefined) {
     return buildLinesChunk([i18n(s.locale, "board.noMap")]);
   }
-  const map = getMapDefFor(s);
   const units = s.battle
     ? Object.values(s.battle.units)
         .filter((u) => !u.removed)
         .map((u) => createBoardRenderUnit(u))
-    : s.roster.map((u) => createBoardRenderUnit(u));
+    : s.setup.roster.map((u) => createBoardRenderUnit(u));
   return buildBoardChunk({ map, units, reachable: null });
 }
 
@@ -1158,7 +1160,7 @@ export function sheetForUnit(s: Session, id: string): Chunk[] {
     if (!unit) throw new Error(i18n(s.locale, "err.unknownUnitId", { id }));
     return sheetLines(battleSheet(unit, id, s.locale), s.locale);
   }
-  const placed = s.roster.find((u) => u.id === id);
+  const placed = s.setup.roster.find((u) => u.id === id);
   if (!placed) throw new Error(i18n(s.locale, "err.noSuchUnit", { id }));
   return sheetLines(setupSheet(placed, id, s.locale), s.locale);
 }
@@ -1186,13 +1188,12 @@ export function unitBriefList(s: Session): string[] {
 
 export function fmtSetupStatus(s: Session): string[] {
   const lines: string[] = [
-    i18n(s.locale, "setup.mapLabel", { name: s.mapName ?? i18n(s.locale, "setup.mapNone") }),
-    i18n(s.locale, "setup.terrainCount", { n: s.terrainDefs.length }),
+    i18n(s.locale, "setup.mapLabel", { name: s.setup.mapName ?? i18n(s.locale, "setup.mapNone") }),
   ];
-  const teams = [...new Set(s.roster.map((u) => u.team))].sort((a, b) => a - b);
+  const teams = [...new Set(s.setup.roster.map((u) => u.team))].sort((a, b) => a - b);
   for (const team of teams) {
     lines.push(i18n(s.locale, "setup.teamHeader", { team }));
-    for (const u of s.roster.filter((x) => x.team === team)) {
+    for (const u of s.setup.roster.filter((x) => x.team === team)) {
       const def = requireMechDef(u.model, s.locale);
       lines.push(
         i18n(s.locale, "setup.unitLine", {
@@ -1369,7 +1370,7 @@ export function moveStatusLines(s: Session): string[] {
  * Raw `RevealedLanding.path` data is retained on the landing but not rendered
  * (kept for later use).
  */
-export function reachableInfo(s: Session): BoardRenderInfo | null {
+export function reachablesInfo(s: Session): BoardRenderReachableInfo | null {
   const actor = s.battle?.units[s.actorId ?? ""];
   const mode = s.moveMode;
   if (!actor || !s.battle || mode === null || mode === "shutdown" || mode === "startup") {
@@ -1393,19 +1394,19 @@ export function reachableInfo(s: Session): BoardRenderInfo | null {
     },
   });
   if (landings.length === 0) return null;
-
-  const map = getMapDefFor(s);
-  const units = Object.values(s.battle.units)
-    .filter((u) => !u.removed)
-    .map((u) => createBoardRenderUnit(u));
-  return { map, units, reachable: { team: actor.team, revealed: landings } };
+  return { team: actor.team, revealed: landings };
 }
 
-/** Board chunk of the reachable hex map, or null when none can be drawn. */
-export function reachChunk(s: Session): Chunk | null {
-  const info = reachableInfo(s);
-  if (info === null) return null;
-  return buildBoardChunk(info);
+export function reachableChunk(
+  mapNameHolder: MapNameHolder,
+  battle: BattleState,
+  info: BoardRenderReachableInfo,
+): Chunk {
+  const map = getMapDefFor(mapNameHolder);
+  const units = Object.values(battle.units)
+    .filter((u) => !u.removed)
+    .map((u) => createBoardRenderUnit(u));
+  return buildBoardChunk({ map, units, reachable: info });
 }
 
 export function attackStatusLines(s: Session): string[] {
@@ -1480,41 +1481,35 @@ function fireWeaponTable(locale: LocaleId, weapons: readonly FireWeapon[]): Chun
   return buildHeaderTableChunkFromRows(header, rows);
 }
 
-/** Automatic hint shown at the start of a unit's fire turn. */
-export function fireSuggestionLines(s: Session): Chunk[] {
-  const battle = s.battle;
-  if (!battle || s.actorId === null) {
-    throw new Error(i18n(s.locale, "err.wrongPhase", { phase: "weaponAttack" }));
-  }
-  const sugg = suggestFireTargets(battle, s.actorId);
+export function fireSuggestionChunks(locale: LocaleId, sugg: FireSuggestion): Chunk[] {
   const chunks: Chunk[] = [
-    buildLinesChunk([i18n(s.locale, "fireSuggestion.header", { id: sugg.targetId })], "hint"),
+    buildLinesChunk([i18n(locale, "fireSuggestion.header", { id: sugg.targetId })], "hint"),
   ];
   if (sugg.targets.length === 0) {
-    chunks.push(buildLinesChunk([i18n(s.locale, "fireSuggestion.noTargets")], "hint"));
+    chunks.push(buildLinesChunk([i18n(locale, "fireSuggestion.noTargets")], "hint"));
     return chunks;
   }
   for (const target of sugg.targets) {
     chunks.push(
       buildLinesChunk(
         [
-          i18n(s.locale, "fireSuggestion.target", {
+          i18n(locale, "fireSuggestion.target", {
             id: target.targetId,
             distance: String(target.distance),
-            arc: target.arc !== null ? i18n(s.locale, ARC_LABEL[target.arc]) : "—",
+            arc: target.arc !== null ? i18n(locale, ARC_LABEL[target.arc]) : "—",
           }),
         ],
         "hint",
       ),
     );
     if (target.weapons.length > 0) {
-      chunks.push(fireWeaponTable(s.locale, target.weapons));
+      chunks.push(fireWeaponTable(locale, target.weapons));
     }
     for (const b of target.blocked) {
       chunks.push(
         buildLinesChunk(
           [
-            `${i18n(s.locale, "fireSuggestion.blocked")}: #${b.weaponIndex} ${b.weapon} — ${i18n(s.locale, BLOCKER_LABEL[b.reason])}`,
+            `${i18n(locale, "fireSuggestion.blocked")}: #${b.weaponIndex} ${b.weapon} — ${i18n(locale, BLOCKER_LABEL[b.reason])}`,
           ],
           "hint",
         ),

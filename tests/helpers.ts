@@ -1,7 +1,9 @@
-import type { Rng } from "../src/core/types.js";
-import type { CreateBattleOptions, TerrainHexDef, UnitInit } from "../src/rules/game.js";
+import type { HexCoord, Rng, TerrainType } from "../src/core/types.js";
+import { createBattle, getMapDefFor, getMechDefFor, reachableLandings } from "../src/index.js";
+import type { BattleState, TerrainHexDef, UnitInit } from "../src/rules/game.js";
 import { runChunks } from "../web/cli.js";
 import type { Chunk } from "../web/format.js";
+import { type BoardRenderInfo, createBoardRenderUnit } from "../web/render.js";
 import { boardLegendText, boardToText, createBoardModel } from "../web/renderer.text.js";
 import type { Session } from "../web/session.js";
 
@@ -9,13 +11,16 @@ import type { Session } from "../web/session.js";
  * Build createBattle options from unit data (plus optional terrain), sizing the
  * board to cover every unit position and terrain hex (extent + 1, min 1).
  */
-export function makeBattleOptions(
+export function createTestBattle(
+  terrain: readonly TerrainHexDef[] = [],
   units: readonly UnitInit[],
   critsDisabled: boolean,
-  terrain: readonly TerrainHexDef[] = [],
-): CreateBattleOptions {
+  width?: number,
+  height?: number,
+): BattleState {
   let col = 0;
   let row = 0;
+  const legends = new Set<TerrainType>();
   for (const u of units) {
     col = Math.max(col, u.position.col);
     row = Math.max(row, u.position.row);
@@ -24,7 +29,17 @@ export function makeBattleOptions(
     col = Math.max(col, t.col);
     row = Math.max(row, t.row);
   }
-  return { terrain, width: col + 1, height: row + 1, critsDisabled };
+  return createBattle(
+    {
+      name: "testhelper",
+      width: width ?? col + 1,
+      height: height ?? row + 1,
+      terrain,
+      legends: Array.from(legends),
+    },
+    units,
+    { critsDisabled },
+  );
 }
 
 /** Deterministic RNG fed an explicit queue of D6 results (asserts exact consumption). */
@@ -92,4 +107,36 @@ function columnsText(columns: readonly (readonly string[])[]): string[] {
 /** Run one input line against the session; returns plain output lines. */
 export function execute(session: Session, raw: string): string[] {
   return runChunks(session, raw).flatMap(chunkText);
+}
+
+export function reachableInfo(s: Session): BoardRenderInfo | null {
+  const actor = s.battle?.units[s.actorId ?? ""];
+  const mode = s.moveMode;
+  if (!actor || !s.battle || mode === null || mode === "shutdown" || mode === "startup") {
+    return null;
+  }
+  // Engine guarantee: `actor.model` was validated by `createBattle`.
+  const def = getMechDefFor(actor);
+  const landings = reachableLandings({ ...actor.position }, actor.facing, {
+    mode,
+    walking: def.walking,
+    running: def.running,
+    jumping: def.jumping,
+    grid: s.battle,
+    team: actor.team,
+    occupantTeam: (hex: HexCoord): number | undefined => {
+      for (const u of Object.values(s.battle!.units)) {
+        if (u.removed) continue;
+        if (u.position.col === hex.col && u.position.row === hex.row) return u.team;
+      }
+      return undefined;
+    },
+  });
+  if (landings.length === 0) return null;
+
+  const map = getMapDefFor(s.setup)!;
+  const units = Object.values(s.battle.units)
+    .filter((u) => !u.removed)
+    .map((u) => createBoardRenderUnit(u));
+  return { map, units, reachable: { team: actor.team, revealed: landings } };
 }
