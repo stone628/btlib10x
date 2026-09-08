@@ -15,9 +15,14 @@ import {
   infoMechList,
   infoWeapon,
   infoWeaponList,
+  listTables,
   moveStatusLines,
   overStatusLines,
   reachChunk,
+  renderClusterTable,
+  renderCriticalTable,
+  renderHeatScaleTable,
+  renderHitLocationTables,
   sheetForUnit,
   unitBriefList,
 } from "./format.js";
@@ -154,6 +159,28 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
   ver: {
     helpKey: "cmd.ver.help",
     run: (s) => [i18n(L(s), "version.line", { version: VERSION })],
+  },
+  table: {
+    helpKey: "cmd.table.help",
+    usage: "table [cluster|hitloc|crit|heat]",
+    argsDoc: [["name", "cmd.table.arg.name"]],
+    run: (s, a) => {
+      const name = a[0]?.toLowerCase();
+      const locale = L(s);
+      if (!name) return listTables(locale);
+      switch (name) {
+        case "cluster":
+          return renderClusterTable(locale);
+        case "hitloc":
+          return renderHitLocationTables(locale);
+        case "crit":
+          return renderCriticalTable(locale);
+        case "heat":
+          return renderHeatScaleTable(locale);
+        default:
+          throw new Error(i18n(locale, "err.unknownCommand", { name }));
+      }
+    },
   },
 };
 
