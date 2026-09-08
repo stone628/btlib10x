@@ -1,4 +1,12 @@
-import { FACINGS, isShutdown, listMapNames, VERSION } from "btlib10x";
+import {
+  FACINGS,
+  getMechDefFor,
+  getWeaponDefFor,
+  hexDistance,
+  isShutdown,
+  listMapNames,
+  VERSION,
+} from "btlib10x";
 import type { Chunk } from "./format.js";
 import {
   ammoPolicyLabel,
@@ -402,15 +410,52 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
       expectArgs(L(s), a, 2, "fire <targetId> <weapon> [<weapon> ...]");
       const targetId = a[0]!;
       const weapons = a.slice(1).map((w) => int(L(s), w, "weapon"));
+      const unit = S.currentActor(s);
+      const battle = s.battle;
+      if (!unit || !battle) {
+        throw new Error(i18n(L(s), "err.wrongPhase", { phase: "weaponAttack" }));
+      }
+      const target = battle.units[targetId];
+      if (!target) throw new Error(i18n(L(s), "err.unknownUnitId", { id: targetId }));
+      const def = getMechDefFor(unit);
+      const warnings: string[] = [];
       for (const weaponIndex of weapons) {
+        const mount = def.weapons[weaponIndex];
+        if (!mount) {
+          throw new Error(
+            i18n(L(s), "err.weaponIndex", { unit: unit.id, index: String(weaponIndex) }),
+          );
+        }
+        const weapon = getWeaponDefFor(mount);
+        const dist = hexDistance(unit.position, target.position);
+        if (dist > weapon.long) {
+          throw new Error(
+            i18n(L(s), "err.overRange", {
+              weapon: mount.weapon,
+              dist: String(dist),
+              max: String(weapon.long),
+            }),
+          );
+        }
+        if (weapon.minRange !== undefined && dist <= weapon.minRange) {
+          warnings.push(
+            i18n(L(s), "err.minRange", {
+              weapon: mount.weapon,
+              dist: String(dist),
+              min: String(weapon.minRange),
+              penalty: String(weapon.minRange - dist + 1),
+            }),
+          );
+        }
         S.queueFire(s, { weaponIndex, targetId });
       }
-      return [
+      const lines = [
         i18n(L(s), "ok.fireQueuedBatch", {
           target: targetId,
           weapons: weapons.join(", "),
         }),
       ];
+      return [...lines, ...warnings];
     },
   },
   status: { helpKey: "cmd.statusAttack.help", run: (s) => attackStatusLines(s) },

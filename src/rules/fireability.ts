@@ -30,6 +30,9 @@ export interface FireWeapon {
   readonly shots: number | null;
   readonly rangeBracket: RangeBracket;
   readonly tn: number;
+  /** Added to-hit penalty when the target is closer than the weapon's
+   *  minimum range; `tn` already includes it. */
+  readonly minRangePenalty?: number;
   readonly heat: number;
   readonly expectedDamage: number;
   readonly cluster?: { shots: number; perMissile: number };
@@ -141,6 +144,7 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
           shots,
           rangeBracket: breakdown.rangeBracket,
           tn: breakdown.total,
+          ...(breakdown.minRangeMod > 0 ? { minRangePenalty: breakdown.minRangeMod } : {}),
           heat: weapon.heat ?? 0,
           expectedDamage:
             weapon.missiles !== undefined

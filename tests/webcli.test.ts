@@ -586,6 +586,63 @@ describe("attack", () => {
   });
 });
 
+describe("fire range checks", () => {
+  it("rejects fire beyond a weapon's long range immediately", () => {
+    const s = S.newSession(42);
+    s.critsDisabled = true;
+    expect(run(s, "map quickstart")[0]).toContain("15x16");
+    // Opposite corners: hex distance 22, beyond every IS weapon here.
+    expect(run(s, "add hunchy HBK-4G 0 4 1 1 n")).toHaveLength(1);
+    expect(run(s, "add cicada CDA-3MA 1 4 15 16 s")).toHaveLength(1);
+    run(s, "start");
+    while (s.app === "battle" && s.battle!.phase === "movement") {
+      S.declareMode(s, "walk");
+      S.commitMove(s);
+    }
+    const actor = S.currentActor(s)!.id;
+    if (actor === "hunchy") {
+      // AC/20 (weapon 4, long 9) cannot reach range 22.
+      expect(run(s, "fire cicada 4")[0]).toMatch(/exceeds long range 9/);
+    } else {
+      // Cicada's Medium Laser (weapon 1, long 9) likewise.
+      expect(run(s, "fire hunchy 1")[0]).toMatch(/exceeds long range 9/);
+    }
+  });
+
+  it("warns inside minimum range and marks the bracket with [S!]", () => {
+    const s = S.newSession(42);
+    s.critsDisabled = true;
+    expect(run(s, "map quickstart")[0]).toContain("15x16");
+    // Adjacent, facing each other along the n/s axis (1-based coords).
+    expect(run(s, "add hunchy HBK-4G 0 4 9 9 n")).toHaveLength(1);
+    expect(run(s, "add griffy GRF-1N 1 4 9 8 s")).toHaveLength(1);
+    run(s, "start");
+    while (s.app === "battle" && s.battle!.phase === "movement") {
+      S.declareMode(s, "walk");
+      S.commitMove(s);
+    }
+    const actor = S.currentActor(s)!.id;
+    let handoverOut = "";
+    if (actor === "hunchy") {
+      // Queue hunchy's AC/20 (no min range) and hand the turn over.
+      expect(run(s, "fire griffy 4").join("\n")).toContain("queued");
+      handoverOut = run(s, "done").join("\n");
+      expect(S.currentActor(s)!.id).toBe("griffy");
+    }
+    // Griffy fires its PPC (min 3) at adjacent range 1: warning + queued.
+    const ppcOut = run(s, "fire hunchy 1").join("\n");
+    expect(ppcOut).toContain("within minimum range 3");
+    expect(ppcOut).toContain("queued");
+    // Fire-suggestion hint for griffy: appended to its first command's output.
+    const hintOut = actor === "hunchy" ? handoverOut : ppcOut;
+    expect(hintOut).toContain("[S!]");
+    // Split TN: base (no penalty) "+" penalty 3 at adjacent range.
+    expect(hintOut).toMatch(/\d \+ 3/);
+    // LRM 10 (min 6) at range 1 carries the bigger penalty.
+    expect(run(s, "fire hunchy 2").join("\n")).toContain("within minimum range 6");
+  });
+});
+
 describe("full game", () => {
   it("plays to victory, emits a banner once, and supports rematch/reset", () => {
     const s = freshSetup();

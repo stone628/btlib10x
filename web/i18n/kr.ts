@@ -171,6 +171,10 @@ export const kr: Catalog = {
   "err.oneTarget": "한 유닛은 턴당 하나의 목표에만 공격을 선언할 수 있습니다 (현재 목표: {target})",
   "err.weaponRepeated":
     "Weapon #{weapon} may only be declared once per turn (use 'shots' for rapid-fire)",
+  "err.overRange": "{weapon}: 목표가 사거리 {dist}로 장거리 {max}를 초과합니다",
+  "err.weaponIndex": "{unit}의 무기 인덱스 {index}가 범위를 벗어났습니다",
+  "err.minRange":
+    "{weapon}: 목표가 사거리 {dist}로 최소 사거리 {min} 내에 있습니다 (명중 패널티 {penalty})",
   "err.rematchOnlyOver": "전투가 끝난 후에만 사용할 수 있습니다",
   "err.seedInteger": "seed는 정수여야 합니다",
   "err.badAmmoPolicy": "탄약 정책은 exposed|core|spread|least-first 중 하나여야 합니다",

@@ -702,7 +702,7 @@ describe("weapon attack phase", () => {
         model: "CDA-3MA",
         team: 1,
         gunnery: 4,
-        position: { col: 3, row: 4 },
+        position: { col: 5, row: 4 },
         facing: "nw",
       },
     ];

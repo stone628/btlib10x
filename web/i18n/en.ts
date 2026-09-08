@@ -177,6 +177,10 @@ export const en = {
     "A unit may only declare attacks against one target per turn (already targeting {target})",
   "err.weaponRepeated":
     "Weapon #{weapon} may only be declared once per turn (use 'shots' for rapid-fire)",
+  "err.overRange": "{weapon}: target at range {dist} exceeds long range {max}",
+  "err.weaponIndex": "weapon index {index} out of range for {unit}",
+  "err.minRange":
+    "{weapon}: target at range {dist} is within minimum range {min} ({penalty} to-hit penalty)",
   "err.rematchOnlyOver": "Only available when the battle is over",
   "err.seedInteger": "seed must be an integer",
   "err.badAmmoPolicy": "ammo policy must be one of exposed|core|spread|least-first",

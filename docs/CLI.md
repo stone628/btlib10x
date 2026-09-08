@@ -136,7 +136,8 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   depth 2+ (water2/water3) blocks firing into and out of the hex
   (`blocksTargeting`).
 - **To-hit (GATOR)** — gunnery + attacker movement + target movement + range
-  bracket + intervening terrain + pulse + height difference; auto-hit ≤
+  bracket + intervening terrain + pulse + minimum range penalty + height
+  difference; auto-hit ≤
   2, auto-miss > 12. Target-terrain modifier is data-driven
   (`terrainTargetMod`): lightWoods/heavyWoods +1/+2. Height difference:
   `−(attackerLevel − targetLevel)` (attacker higher = easier, lower =

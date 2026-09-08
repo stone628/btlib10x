@@ -1,4 +1,4 @@
-import { canFireFromLocation, getMechDefFor, isNominal, isUnitImmobile } from "btlib10x";
+import { isNominal, isUnitImmobile, suggestFireTargets } from "btlib10x";
 import type * as S from "./session.js";
 
 /** Delay between generated commands, in milliseconds. */
@@ -124,19 +124,11 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
     }
 
     if (st.phase === "weaponAttack") {
-      const def = getMechDefFor(actor);
-      if (def === undefined) return null;
-      const available: string[] = [];
-      for (const key of Object.keys(def.weapons)) {
-        const weaponIndex = Number(key);
-        const mount = def.weapons[weaponIndex]!;
-        if (s.fireDecls.some((d) => d.weaponIndex === weaponIndex)) continue;
-        if (actor.jammedWeapons.includes(weaponIndex)) continue;
-        if (actor.destroyedWeapons.includes(weaponIndex)) continue;
-        if (!canFireFromLocation(actor.phaseStartDamage, mount.location)) continue;
-        if (mount.shots !== undefined && (actor.shotsLeft[weaponIndex] ?? 0) < 1) continue;
-        available.push(String(weaponIndex));
-      }
+      const sugg = suggestFireTargets(st, actor.id);
+      const target = sugg.targets.find((t) => t.targetId === enemy.id);
+      const available = (target?.weapons ?? [])
+        .filter((w) => !s.fireDecls.some((d) => d.weaponIndex === w.weaponIndex))
+        .map((w) => String(w.weaponIndex));
       if (available.length > 0) {
         queueNextCommand(`fire ${enemy.id} ${available.join(" ")}`);
       }
