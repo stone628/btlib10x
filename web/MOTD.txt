@@ -1,0 +1,10 @@
+<center><div class="banner">Welcome to bt10x terminal!</div></center>
+인터페이스가 좀 불친절한데, 이는 의도적인 것으로,
+터미널에서 텍스트로 플레이 하는 감성을 살리려 노력했습니다.
+
+아직 Sensor, Life Support, Cockpit 관련 구현이 부족하며
+파일럿 관련 작업시 동시에 진행 할 예정입니다.
+
+<center><a href="https://buymeacoffee.com/stone628" target="_blank" class="link-button"><span style="text-decoration: none; font-family: sans-serif; font-weight: bold;">☕</span> Buy me a coffee!</a>
+
+<div class="hint">[hint] 숨겨진 명령어 autoplay를 실행 해 보세요.</div></center>

@@ -13,6 +13,7 @@ const { outputFiles } = await esbuild.build({
   minify: true,
   alias: { btlib10x: "./src/index.ts" },
   define: { __BTLIB_VERSION__: JSON.stringify(buildStamp()) },
+  loader: { ".txt": "text" },
   write: false,
   logLevel: "info",
 });
