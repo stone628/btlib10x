@@ -105,7 +105,7 @@ describe("lang command", () => {
     execute(s, "add b1 HBK-4G 1 4 2 4 n");
     execute(s, "start");
     autoPlay(s);
-    expect(execute(s, "rematch")[0]).toBe("재경기!");
+    expect(execute(s, "rematch")[0]).toBe("=== 재경기 시작 ===");
     expect(s.locale).toBe("kr");
     expect(newSession(7).locale).toBe("en");
   });

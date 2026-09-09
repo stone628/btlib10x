@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getMechDefFor } from "../src/data/index.js";
-import { nextAutoPlayCommand } from "../web/autoplay.js";
+import { nextAutoPlayCommand, resetAutoplayState } from "../web/autoplay.js";
 import * as S from "../web/session.js";
 import { execute } from "./helpers.js";
 
@@ -33,6 +33,7 @@ function sessionAtWeaponAttack(): S.Session {
 describe("nextAutoPlayCommand (autoplay demo driver)", () => {
   it("omits weapons destroyed by a critical slot hit from the fire command", () => {
     const s = sessionAtWeaponAttack();
+    resetAutoplayState(s);
     expect(s.battle!.phase).toBe("weaponAttack");
 
     const actor = S.currentActor(s)!;
@@ -44,11 +45,13 @@ describe("nextAutoPlayCommand (autoplay demo driver)", () => {
     const destroyedIndex = Number(target![0]);
     actor.destroyedWeapons.push(destroyedIndex);
 
-    const cmds = [nextAutoPlayCommand(s), nextAutoPlayCommand(s)].filter(
-      (c): c is string => c !== null && c !== "help" && c !== "status" && c !== "candidate",
-    );
-    const cmd = cmds[cmds.length - 1];
-    expect(cmd).toMatch(/^fire /);
+    const cmds = [0, 1, 2, 3, 4]
+      .map(() => nextAutoPlayCommand(s))
+      .filter(
+        (c): c is string => c !== null && c !== "help" && c !== "status" && c !== "candidate",
+      );
+    const cmd = cmds.find((c) => c.startsWith("fire"));
+    expect(cmd).toBeDefined();
     const indexes = cmd!
       .replace(/^fire \S+\s*/, "")
       .trim()
@@ -60,6 +63,7 @@ describe("nextAutoPlayCommand (autoplay demo driver)", () => {
 
   it("omits auto-miss weapons from the fire command", () => {
     const s = sessionAtWeaponAttack();
+    resetAutoplayState(s);
     expect(s.battle!.phase).toBe("weaponAttack");
 
     const actor = S.currentActor(s)!;
@@ -71,9 +75,11 @@ describe("nextAutoPlayCommand (autoplay demo driver)", () => {
     actor.facing = "n";
     enemy.movesThisTurn = Array(30).fill("forward");
 
-    const cmds = [nextAutoPlayCommand(s), nextAutoPlayCommand(s)].filter(
-      (c): c is string => c !== null && c !== "help" && c !== "status" && c !== "candidate",
-    );
+    const cmds = [0, 1, 2, 3, 4]
+      .map(() => nextAutoPlayCommand(s))
+      .filter(
+        (c): c is string => c !== null && c !== "help" && c !== "status" && c !== "candidate",
+      );
     const fire = cmds.find((c) => c.startsWith("fire"));
     expect(fire).toBeDefined();
     const indexes = fire!

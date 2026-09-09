@@ -392,9 +392,9 @@ describe("setup flow", () => {
   it("starts the battle and lands on a turn(N):move prompt", () => {
     const s = freshSetup();
     const out = run(s, "start");
-    expect(out[0]).toBe("battle started");
+    expect(out[0]).toBe("=== BATTLE STARTED ===");
     expect(out.join("\n")).toMatch(/initiative:.*team \d wins initiative and moves last/);
-    expect(S.promptBody(s)).toMatch(/^turn\(1\):move\(team \d, mech \w+\)$/);
+    expect(S.promptBody(s)).toMatch(/^turn\(1\):move\(\w+, team \d\)$/);
   });
 
   it("rejects starting with one team", () => {
@@ -555,7 +555,7 @@ describe("attack", () => {
       S.commitMove(s);
     }
     expect(s.battle!.phase).toBe("weaponAttack");
-    expect(S.promptBody(s)).toMatch(/^turn\(1\):attack\(team \d, mech \w+\)$/);
+    expect(S.promptBody(s)).toMatch(/^turn\(1\):attack\(\w+, team \d\)$/);
 
     const actor = S.currentActor(s)!.id;
     const enemy = actor === "hunchy" ? "cicada" : "hunchy";
