@@ -5,6 +5,7 @@ import {
   hexDistance,
   isShutdown,
   listMapNames,
+  sameHex,
   suggestFireTargets,
   VERSION,
 } from "btlib10x";
@@ -332,48 +333,37 @@ const MOVE_CMDS: Record<string, CmdDef> = {
       return [buildLinesChunk(lines), reachableChunk(s.setup, s.battle!, s.moveCandidate)];
     },
   },
-  move: {
-    helpKey: "cmd.move.help",
-    usage: "move <col> <row>",
-    argsDoc: [["col row", "cmd.move.arg.colrow"]],
+  place: {
+    helpKey: "cmd.place.help",
+    usage: "place <col> <row> <facing>",
+    argsDoc: [["col row facing", "cmd.place.arg.colrowfacing"]],
     run: (s, a) => {
-      expectArgs(L(s), a, 2, "move <col> <row>");
-      S.queueEnter(s, { col: coord(L(s), a[0]!, "col"), row: coord(L(s), a[1]!, "row") });
-      const r = S.stepResult(s);
-      const col = r.position.col;
-      const row = r.position.row;
-      s.moveCandidate = null;
+      expectArgs(L(s), a, 3, "place <col> <row> <facing>");
+      const hex = {
+        col: coord(L(s), a[0]!, "col"),
+        row: coord(L(s), a[1]!, "row"),
+      };
+      const facing = S.resolveFacing(L(s), a[2]!);
+      if (s.moveCandidate === null) {
+        throw new Error(i18n(L(s), "err.place.noCandidate"));
+      }
+      const landing = s.moveCandidate.revealed.find(
+        (l) => sameHex(l.hex, hex) && l.facing === facing,
+      );
+      if (!landing) {
+        const hexReachable = s.moveCandidate.revealed.some((l) => sameHex(l.hex, hex));
+        if (!hexReachable) {
+          throw new Error(i18n(L(s), "err.place.unreachable", { col: hex.col, row: hex.row }));
+        }
+        throw new Error(i18n(L(s), "err.place.facing", { col: hex.col, row: hex.row, facing }));
+      }
+      const r = S.placeLanding(s, landing);
       return [
         i18n(L(s), "ok.stepResult", {
           id: s.actorId ?? "",
           mode: s.moveMode ?? "",
-          col,
-          row,
-          facing: r.facing,
-          spent: r.mpSpent,
-          budget: r.mpBudget,
-        }),
-      ];
-    },
-  },
-  face: {
-    helpKey: "cmd.face.help",
-    usage: "face <n|ne|se|s|sw|nw|-5..5>",
-    argsDoc: [["facing|steps", "cmd.face.arg.facingsteps"]],
-    run: (s, a) => {
-      expectArgs(L(s), a, 1, "face <facing|steps>");
-      const unit = S.currentActor(s)!;
-      const steps = S.faceSteps(L(s), unit.facing, a[0]!);
-      S.queueTurn(s, steps);
-      const r = S.stepResult(s);
-      const col = r.position.col;
-      const row = r.position.row;
-      return [
-        i18n(L(s), "ok.stepResult", {
-          id: s.actorId ?? "",
-          mode: s.moveMode ?? "",
-          col,
-          row,
+          col: r.position.col,
+          row: r.position.row,
           facing: r.facing,
           spent: r.mpSpent,
           budget: r.mpBudget,

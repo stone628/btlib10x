@@ -11,6 +11,7 @@ import type {
   MapNameHolder,
   MoveMode,
   MoveStep,
+  RevealedLanding,
   Rng,
   UnitInit,
   UnitState,
@@ -34,11 +35,10 @@ import {
   getMapDefFor,
   getMechDefFor,
   getUnit,
-  isAdjacent,
-  isBackwardStep,
-  isForwardStep,
   isShutdown,
+  neighbor,
   nextActor,
+  oppositeFacing,
   parseAmmoPolicy,
   passMovement,
   resolveAllAttacks,
@@ -75,6 +75,10 @@ export interface Session {
    *  committed by the `done` command. */
   moveMode: MoveMode | "shutdown" | "startup" | null;
   moveSteps: MoveStep[];
+  /** Landing facing chosen by `place` (jump only: engine rejects turn steps
+   *  while jumping, so the landing facing travels via `executeMove`'s
+   *  `finalFacing` option). Null when unset or ground movement. */
+  moveFinalFacing: Facing | null;
   fireDecls: AttackDecl[];
   /** Suppress critical hit resolution (mostly for deterministic testing). */
   critsDisabled: boolean;
@@ -95,6 +99,7 @@ export function newSession(seed: number): Session {
     actorId: null,
     moveMode: null,
     moveSteps: [],
+    moveFinalFacing: null,
     fireDecls: [],
     fireHintShownFor: null,
     critsDisabled: false,
@@ -106,6 +111,7 @@ export function newSession(seed: number): Session {
 function clearBuffers(s: Session): void {
   s.moveMode = null;
   s.moveSteps = [];
+  s.moveFinalFacing = null;
   s.fireDecls = [];
 }
 
@@ -401,83 +407,55 @@ export function stepResult(s: Session): StepResult {
   };
 }
 
-export function queueEnter(s: Session, to: HexCoord): void {
+/** Resolve a `place` facing argument: an absolute facing word. */
+export function resolveFacing(locale: LocaleId, arg: string): Facing {
+  const facing = FACINGS.find((f) => f === arg.toLowerCase());
+  if (!facing) throw new Error(i18n(locale, "err.faceArg", { facings: FACINGS.join("/") }));
+  return facing;
+}
+
+/**
+ * Buffer the full path to a reachable landing, replacing any previously queued
+ * steps. `landing` must come from the current `moveCandidate`; its `path`
+ * fragment sequence is replayed from the unit's start, so every enter is
+ * necessarily straight ahead/back vs the moving facing and within the mode
+ * budget (the candidate was validated by `reachableLandings` at `mode` time).
+ * Jump turns are free (engine rejects turn steps), so `R`/`L` fragments only
+ * advance the cursor facing and the landing facing travels via `moveFinalFacing`.
+ */
+export function placeLanding(s: Session, landing: RevealedLanding): StepResult {
   const unit = requireActor(s, "movement");
   if (s.moveMode === "shutdown" || s.moveMode === "startup") {
     throw new Error(i18n(s.locale, "err.noMoveInShutdownMode"));
   }
   if (!s.moveMode) throw new Error(i18n(s.locale, "err.declareModeFirst", { id: unit.id }));
-  if (sameHex(unit.position, to)) throw new Error(i18n(s.locale, "err.sameHexMove"));
-  const cur = replaySteps(s);
-  if (sameHex(cur.hex, to)) throw new Error(i18n(s.locale, "err.alreadyThere"));
   if (s.moveMode === "standStill") throw new Error(i18n(s.locale, "err.standStillNoEnter"));
-  const battle = requireBattle(s);
-  let cost: number;
-  if (s.moveMode === "jump") {
-    if (!isAdjacent(cur.hex, to)) throw new Error(i18n(s.locale, "err.jumpNotAdjacent"));
-    cost = 1;
-  } else {
-    const forward = isForwardStep(cur.hex, to, cur.facing);
-    const backward = !forward && isBackwardStep(cur.hex, to, cur.facing);
-    if (!forward && !backward) {
-      throw new Error(i18n(s.locale, "err.groundStraightOnly"));
+  const jumping = s.moveMode === "jump";
+  const steps: MoveStep[] = [];
+  let hex: HexCoord = { ...unit.position };
+  let facing: Facing = unit.facing;
+  for (const frag of landing.path) {
+    if (frag === "R" || frag === "L") {
+      const delta = frag === "R" ? 1 : -1;
+      facing = rotateFacing(facing, delta);
+      if (!jumping) steps.push({ kind: "turn", facings: delta });
+      continue;
     }
-    const fromLevel = cellAt(battle, cur.hex).level;
-    const toLevel = cellAt(battle, to).level;
-    if (toLevel - fromLevel > 1) {
-      throw new Error(i18n(s.locale, "err.climbTooSteep", { col: to.col, row: to.row }));
-    }
-    cost = costToEnter(cellAt(battle, to).terrain) + costToClimb(fromLevel, toLevel);
+    const to = neighbor(hex, frag === "B" ? oppositeFacing(facing) : facing);
+    steps.push({ kind: "enter", to });
+    hex = to;
   }
-  const spent = cur.spent + cost;
-  const budget = budgetFor(s);
-  if (spent > budget) {
-    throw new Error(i18n(s.locale, "err.mpExceeded", { spent, mode: s.moveMode, budget }));
-  }
-  s.moveSteps.push({ kind: "enter", to });
-}
-
-export function queueTurn(s: Session, facings: number): void {
-  const unit = requireActor(s, "movement");
-  if (s.moveMode === "shutdown" || s.moveMode === "startup") {
-    throw new Error(i18n(s.locale, "err.noMoveInShutdownMode"));
-  }
-  if (!s.moveMode) throw new Error(i18n(s.locale, "err.declareModeFirst", { id: unit.id }));
-  if (s.moveMode === "standStill") throw new Error(i18n(s.locale, "err.standStillNoFace"));
-  if (s.moveMode === "jump") throw new Error(i18n(s.locale, "err.jumpFreeFacing"));
-  if (!Number.isInteger(facings) || facings === 0 || Math.abs(facings) > 5) {
-    throw new Error(i18n(s.locale, "err.badFacings"));
-  }
-  const cur = replaySteps(s);
-  const spent = cur.spent + facingChangeCost(Math.abs(facings));
-  const budget = budgetFor(s);
-  if (spent > budget) {
-    throw new Error(i18n(s.locale, "err.mpExceeded", { spent, mode: s.moveMode, budget }));
-  }
-  s.moveSteps.push({ kind: "turn", facings });
-}
-
-/** Resolve a `face` argument: absolute facing name or signed step count. */
-export function faceSteps(locale: LocaleId, current: Facing, arg: string): number {
-  if (/^[+-]?\d+$/.test(arg)) {
-    const n = Number(arg);
-    if (!Number.isInteger(n) || n === 0 || Math.abs(n) > 5) {
-      throw new Error(i18n(locale, "err.badFacings"));
-    }
-    return n;
-  }
-  const target = FACINGS.find((f) => f === arg.toLowerCase());
-  if (!target) throw new Error(i18n(locale, "err.faceArg", { facings: FACINGS.join("/") }));
-  const delta0 = FACINGS.indexOf(target) - FACINGS.indexOf(current);
-  const delta = delta0 > 3 ? delta0 - 6 : delta0 < -3 ? delta0 + 6 : delta0;
-  if (delta === 0) throw new Error(i18n(locale, "err.faceCurrent", { facing: current }));
-  return delta;
+  s.moveSteps = steps;
+  s.moveFinalFacing = jumping ? landing.facing : null;
+  const r = stepResult(s);
+  return jumping ? { ...r, facing: landing.facing } : r;
 }
 
 export function cancelMove(s: Session): void {
   requireActor(s, "movement");
   s.moveMode = null;
   s.moveSteps = [];
+  s.moveFinalFacing = null;
 }
 
 export interface CommitResult {
@@ -515,7 +493,12 @@ export function commitMove(s: Session): CommitResult {
       // Shut-down unit committing without a startup attempt: pass.
       passMovement(battle, unit.id);
     } else {
-      executeMove(battle, unit.id, s.moveSteps);
+      executeMove(
+        battle,
+        unit.id,
+        s.moveSteps,
+        s.moveFinalFacing === null ? {} : { finalFacing: s.moveFinalFacing },
+      );
     }
     s.actorId = null;
     clearBuffers(s);

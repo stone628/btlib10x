@@ -81,7 +81,7 @@ describe("help", () => {
     run(battle, "start");
     const moveHelp = run(battle, "?").join("\n");
     expect(moveHelp).toContain("mode");
-    expect(moveHelp).toContain("face");
+    expect(moveHelp).toContain("place");
     expect(moveHelp).not.toContain("fire");
     expect(moveHelp).not.toContain("map <name>");
   });
@@ -426,12 +426,11 @@ describe("movement", () => {
     // (board legend + grid) instead of a textual reachable list.
     expect(declared[0]).toMatch(/declares walk, can use 4 movement points\.$/);
     expect(declared.join("\n")).toContain("legend:");
-    // Walk straight back relative to facing is illegal; sideways too. Forward
-    // depends on facing, so use standstill-safe single forward step toward foe.
     const status0 = run(s, "status").join("\n");
     expect(status0).toContain("budget: 4 MP");
 
-    const queued = run(s, "face ne");
+    // Same-hex landing: turning from n to ne costs 1 MP (path: one R).
+    const queued = run(s, "place 9 9 ne");
     expect(queued.join("\n")).toMatch(/facing ne \[MP 1\/4\]/);
     const status1 = run(s, "status").join("\n");
     expect(status1).toMatch(/1\. face \+\d+ .*total 1/);
@@ -440,16 +439,79 @@ describe("movement", () => {
     expect(s.battle!.units[firstActor.id]!.facing).toBe("ne");
   });
 
-  it("rejects illegal steps without corrupting state", () => {
+  it("rejects illegal places without corrupting state", () => {
     const s = freshSetup();
     run(s, "start");
     const posBefore = { ...S.currentActor(s)!.position };
-    expect(run(s, "move 5 5")[0]).toMatch(/^error: Declare a movement mode/);
+    // No movement candidate before a move mode is declared.
+    expect(run(s, "place 9 9 ne")[0]).toMatch(/^error: No movement candidate/);
     run(s, "mode walk");
-    // Whatever the facing, display (5,5) is not adjacent-forward/back from (9,9).
-    const err = run(s, "move 5 5")[0]!;
-    expect(err.startsWith("error:")).toBe(true);
+    // Bad facing word.
+    expect(run(s, "place 9 9 up")[0]).toMatch(/^error: place expects an absolute facing/);
+    // Far hex (5,5) is not reachable with a 4-MP walk.
+    const err = run(s, "place 5 5 n")[0]!;
+    expect(err).toMatch(/^error: Hex \(5,5\) is not reachable/);
     expect(S.currentActor(s)!.position).toEqual(posBefore);
+    // A reachable hex whose remaining MP forbids facing s: the hex is a
+    // landing, but (hex, s) is not.
+    const info = reachableInfo(s)!;
+    const byHex = new Map<string, string[]>();
+    for (const l of info.reachable!.revealed) {
+      const key = `${l.hex.col},${l.hex.row}`;
+      const fs = byHex.get(key) ?? [];
+      fs.push(l.facing);
+      byHex.set(key, fs);
+    }
+    const miss = [...byHex.entries()].find(([, fs]) => !fs.includes("s"));
+    expect(miss).toBeDefined();
+    const [mc, mr] = miss![0].split(",").map(Number);
+    const facingErr = run(s, `place ${mc} ${mr} s`)[0]!;
+    expect(facingErr).toMatch(/^error: Hex \(\d+,\d+\) is reachable but not while facing s/);
+    expect(S.currentActor(s)!.position).toEqual(posBefore);
+  });
+
+  it("re-place replaces the queued steps", () => {
+    const s = freshSetup();
+    run(s, "start");
+    run(s, "mode walk");
+    const actor = S.currentActor(s)!;
+    const p = actor.position;
+    const info = reachableInfo(s)!;
+    const landings = info.reachable!.revealed.filter(
+      (l) => l.hex.col !== p.col || l.hex.row !== p.row,
+    );
+    const a = landings[0]!;
+    const b = landings.find((l) => l.hex.col !== a.hex.col || l.hex.row !== a.hex.row)!;
+    run(s, `place ${a.hex.col} ${a.hex.row} ${a.facing}`);
+    run(s, `place ${b.hex.col} ${b.hex.row} ${b.facing}`);
+    // Only the second landing's steps remain: one step per fragment of b's
+    // path, ending at b's hex. a's steps (and any appended remnants) are gone.
+    const st = run(s, "status").join("\n");
+    expect(st).toContain(`enter (${b.hex.col},${b.hex.row})`);
+    expect(s.moveSteps).toHaveLength(b.path.length);
+    run(s, "done");
+    expect(s.battle!.units[actor.id]!.position).toEqual(b.hex);
+  });
+
+  it("jump place lands with the chosen facing", () => {
+    const s = S.newSession(42);
+    s.critsDisabled = true;
+    run(s, "map quickstart");
+    expect(run(s, "add grf GRF-1N 0 4 5 5 n")).toHaveLength(1);
+    expect(run(s, "add wvr WVR-6R 1 4 12 12 s")).toHaveLength(1);
+    run(s, "start");
+    run(s, "mode jump");
+    const actor = S.currentActor(s)!;
+    const p = actor.position;
+    const info = reachableInfo(s)!;
+    const land = info.reachable!.revealed.find(
+      (l) => l.facing === "s" && (l.hex.col !== p.col || l.hex.row !== p.row),
+    )!;
+    const out = run(s, `place ${land.hex.col} ${land.hex.row} s`).join("\n");
+    expect(out).toMatch(/facing s \[MP \d+\/\d+\]/);
+    run(s, "done");
+    expect(s.battle!.units[actor.id]!.position).toEqual(land.hex);
+    expect(s.battle!.units[actor.id]!.facing).toBe("s");
   });
 
   it("rolls back the battle when a commit fails", () => {
