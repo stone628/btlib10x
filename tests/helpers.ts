@@ -1,6 +1,7 @@
 import type { HexCoord, Rng, TerrainType } from "../src/core/types.js";
 import { createBattle, getMapDefFor, getMechDefFor, reachableLandings } from "../src/index.js";
 import type { BattleState, TerrainHexDef, UnitInit } from "../src/rules/game.js";
+import { advancePhase } from "../src/rules/game.js";
 import { runChunks } from "../web/cli.js";
 import type { Chunk } from "../web/format.js";
 import { type BoardRenderInfo, createBoardRenderUnit } from "../web/render.js";
@@ -29,7 +30,7 @@ export function createTestBattle(
     col = Math.max(col, t.col);
     row = Math.max(row, t.row);
   }
-  return createBattle(
+  const state = createBattle(
     {
       name: "testhelper",
       width: width ?? col + 1,
@@ -40,6 +41,8 @@ export function createTestBattle(
     units,
     { critsDisabled },
   );
+  advancePhase(state); // end -> initiative (turn 1)
+  return state;
 }
 
 /** Deterministic RNG fed an explicit queue of D6 results (asserts exact consumption). */
