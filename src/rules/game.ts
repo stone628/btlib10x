@@ -242,7 +242,6 @@ export type GameEvent =
       readonly threshold: number;
     }
   | { readonly kind: "shutdownManual"; readonly unitId: string }
-  | { readonly kind: "shutdownPriority"; readonly unitId: string }
   | {
       readonly kind: "startupSuccess";
       readonly unitId: string;
@@ -1186,24 +1185,55 @@ export function nextActor(state: BattleState): string | null {
   return pendingActors(state)[0] ?? null;
 }
 
+export interface ActorQueueActorView {
+  readonly id: string;
+  readonly team: number;
+  readonly hasPriority: boolean;
+}
 export interface ActorQueueView {
-  readonly acted: string[];
-  readonly pending: string[];
+  readonly initiative: number | null;
+  readonly acted: ActorQueueActorView[];
+  readonly pending: ActorQueueActorView[];
+  readonly removed: ActorQueueActorView[];
+}
+
+function actorToQueueView(actor: UnitState, forcePriority?: boolean): ActorQueueActorView {
+  return {
+    id: actor.id,
+    team: actor.team,
+    hasPriority: forcePriority ?? (actor.shutdown === "manual" || actor.shutdown === "heat"),
+  };
 }
 
 /** Who already acted this phase, and the ordered queue of who must still act. */
 export function actorQueue(state: BattleState): ActorQueueView {
-  if (state.phase !== "movement" && state.phase !== "weaponAttack") {
-    return { acted: [], pending: [] };
+  if (
+    (state.phase !== "movement" && state.phase !== "weaponAttack") ||
+    state.initiativeWinnerTeam === null
+  ) {
+    return { initiative: state.initiativeWinnerTeam, acted: [], pending: [], removed: [] };
   }
-  if (state.initiativeWinnerTeam === null) return { acted: [], pending: [] };
-  const alive = new Set(
-    Object.values(state.units)
-      .filter((u) => !u.removed)
-      .map((u) => u.id),
-  );
-  const acted = state.actedThisPhase.filter((id) => alive.has(id));
-  return { acted, pending: pendingActors(state) };
+  const alive = new Map<string, UnitState>();
+  const removed: ActorQueueActorView[] = [];
+  for (const u of Object.values(state.units)) {
+    if (u.removed) {
+      removed.push(actorToQueueView(u, false));
+      continue;
+    }
+    alive.set(u.id, u);
+  }
+  // const acted = state.actedThisPhase.filter((id) => alive.has(id));
+  return {
+    initiative: state.initiativeWinnerTeam,
+    acted: state.actedThisPhase
+      .map((id) => {
+        const actor = alive.get(id);
+        return actor !== undefined ? actorToQueueView(actor) : null;
+      })
+      .filter((av) => av !== null),
+    pending: pendingActors(state).map((id) => actorToQueueView(state.units[id]!)),
+    removed,
+  };
 }
 
 /** Units still to act this phase, in activation order (cached per phase). */
