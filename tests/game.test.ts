@@ -469,8 +469,8 @@ describe("actorQueue", () => {
     const state = startMovementTurn(hbkVsEnf()); // team 0 wins initiative
     const q = actorQueue(state);
     expect(q.acted).toEqual([]);
-    expect(q.pending).toEqual(["enf", "hbk"]);
-    expect(q.pending[0]).toBe(nextActor(state));
+    expect(q.pending.map((av)=>av.id)).toEqual(["enf", "hbk"]);
+    expect(q.pending[0]?.id).toBe(nextActor(state));
   });
 
   it("moves acted units from pending to acted", () => {
@@ -478,8 +478,8 @@ describe("actorQueue", () => {
     declareMove(state, "hbk", "walk");
     executeMove(state, "hbk", []);
     const q = actorQueue(state);
-    expect(q.acted).toEqual(["hbk"]);
-    expect(q.pending).toEqual(["enf"]);
+    expect(q.acted.map((av)=>av.id)).toEqual(["hbk"]);
+    expect(q.pending.map((av)=>av.id)).toEqual(["enf"]);
     expect(nextActor(state)).toBe("enf");
   });
 
@@ -501,23 +501,30 @@ describe("actorQueue", () => {
     executeMove(state, "enf", []);
     declareMove(state, "hbk", "walk");
     executeMove(state, "hbk", []);
-    expect(actorQueue(state).acted).toEqual(["enf", "hbk"]);
+    expect(actorQueue(state).acted.map((av)=>av.id)).toEqual(["enf", "hbk"]);
     advancePhase(state); // movement -> weaponAttack
     const q = actorQueue(state);
-    expect(q.acted).toEqual([]);
-    expect(q.pending).toEqual(["enf", "hbk"]);
+    expect(q.acted.map((av)=>av.id)).toEqual([]);
+    expect(q.pending.map((av)=>av.id)).toEqual(["enf", "hbk"]);
   });
 
   it("matches the unequal-force activation order", () => {
     const state = fourVsTwoState();
-    expect(actorQueue(state).pending).toEqual(["a0", "a1", "b0", "a2", "a3", "b1"]);
+    expect(actorQueue(state).pending.map((av) => av.id)).toEqual([
+      "a0",
+      "a1",
+      "b0",
+      "a2",
+      "a3",
+      "b1",
+    ]);
   });
 
   it("front-loads shut-down units in the movement phase", () => {
     const state = startMovementTurn(hbkVsEnf(), scriptedRng(2, 2, 6, 6)); // team 1 wins
     getUnit(state, "hbk").shutdown = "heat";
     const q = actorQueue(state);
-    expect(q.pending).toEqual(["hbk", "enf"]);
+    expect(q.pending.map((av) => av.id)).toEqual(["hbk", "enf"]);
     expect(nextActor(state)).toBe("hbk");
   });
 });

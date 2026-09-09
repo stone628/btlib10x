@@ -200,20 +200,22 @@ export const en = {
 
   // movement status
   "moveStatus.headLine": "queued movements:",
-  "moveStatus.noMode": "(mode not declared)",
-  "moveStatus.mode": "mode: {mode}",
-  "moveStatus.budget": "budget: {budget} MP",
-  "moveStatus.none": "(no steps queued)",
-  "moveStatus.stepTurn": "{i}. face {steps} ({from} -> {to})",
-  "moveStatus.stepEnter": "{i}. enter ({col},{row})",
-  "moveStatus.stepLine": "{label} +{cost} MP (total {total})",
+  "moveStatus.noMode": "  (mode not declared)",
+  "moveStatus.mode": "  mode: {mode}",
+  "moveStatus.budget": "  budget: {budget} MP",
+  "moveStatus.none": "  (no steps queued)",
+  "moveStatus.stepTurn": "  {i}. face {steps} ({from} -> {to})",
+  "moveStatus.stepEnter": "  {i}. enter ({col},{row})",
+  "moveStatus.stepLine": "  {label} +{cost} MP (total {total})",
 
   // turn order status
-  "status.orderHeader": "turn order:",
+  "status.orderHeader": "turn order(initiative team {init}):",
   "status.done": "  done: {ids}",
   "status.next": "  next: {id}",
   "status.pendingAfter": "  pending after: {ids}",
   "status.none": "-",
+  "status.actorView": "{id}(team {team})",
+  "status.actorViewPriority": "{id}(team {team}, priority)",
 
   // heat status
   "heat.title": "heat: {id} = {heat}",
@@ -231,7 +233,8 @@ export const en = {
 
   // attack status
   "attackStatus.header": "queued attacks:",
-  "attackStatus.none": "(no attacks queued)",
+  "attackStatus.none": "  (no attacks queued)",
+  "attackStatus.weapon": "  #{weaponIndex} {weaponName} -> {targetId}{suffix}",
 
   // fire suggestion
   "fireSuggestion.header": "possible targets for {id}:",

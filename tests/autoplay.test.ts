@@ -45,7 +45,7 @@ describe("nextAutoPlayCommand (autoplay demo driver)", () => {
     actor.destroyedWeapons.push(destroyedIndex);
 
     const cmds = [nextAutoPlayCommand(s), nextAutoPlayCommand(s)].filter(
-      (c): c is string => c !== null && c !== "help",
+      (c): c is string => c !== null && c !== "help" && c !== "status" && c !== "candidate",
     );
     const cmd = cmds[cmds.length - 1];
     expect(cmd).toMatch(/^fire /);
@@ -72,7 +72,7 @@ describe("nextAutoPlayCommand (autoplay demo driver)", () => {
     enemy.movesThisTurn = Array(30).fill("forward");
 
     const cmds = [nextAutoPlayCommand(s), nextAutoPlayCommand(s)].filter(
-      (c): c is string => c !== null && c !== "help",
+      (c): c is string => c !== null && c !== "help" && c !== "status" && c !== "candidate",
     );
     const fire = cmds.find((c) => c.startsWith("fire"));
     expect(fire).toBeDefined();

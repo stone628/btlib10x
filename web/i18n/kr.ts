@@ -194,20 +194,22 @@ export const kr: Catalog = {
 
   // movement status
   "moveStatus.headLine": "예약된 이동:",
-  "moveStatus.noMode": "(모드 미선언)",
-  "moveStatus.mode": "모드: {mode}",
-  "moveStatus.budget": "예산: {budget} MP",
-  "moveStatus.none": "(예약된 단계 없음)",
-  "moveStatus.stepTurn": "{i}. 방향 전환 {steps} ({from} -> {to})",
-  "moveStatus.stepEnter": "{i}. 진입 ({col},{row})",
-  "moveStatus.stepLine": "{label} +{cost} MP (누계 {total})",
+  "moveStatus.noMode": "  (모드 미선언)",
+  "moveStatus.mode": "  모드: {mode}",
+  "moveStatus.budget": "  가용 이동 포인트: {budget} MP",
+  "moveStatus.none": "  (예약된 단계 없음)",
+  "moveStatus.stepTurn": "  {i}. 방향 전환 {steps} ({from} -> {to})",
+  "moveStatus.stepEnter": "  {i}. 진입 ({col},{row})",
+  "moveStatus.stepLine": "  {label} +{cost} MP (누계 {total})",
 
   // turn order status
-  "status.orderHeader": "행동 순서:",
+  "status.orderHeader": "행동 순서(선제 팀 {init}):",
   "status.done": "  완료: {ids}",
   "status.next": "  다음: {id}",
   "status.pendingAfter": "  대기: {ids}",
   "status.none": "-",
+  "status.actorView": "{id}(팀 {team})",
+  "status.actorViewPriority": "{id}(팀 {team}, 우선처리)",
 
   // heat status
   "heat.title": "발열: {id} = {heat}",
@@ -226,6 +228,7 @@ export const kr: Catalog = {
   // attack status/
   "attackStatus.header": "예약된 공격:",
   "attackStatus.none": "(예약된 공격 없음)",
+  "attackStatus.weapon": "  #{weaponIndex} {weaponName} -> {targetId}{suffix}",
 
   // fire suggestion
   "fireSuggestion.header": "{id}의 공격 가능 목표:",

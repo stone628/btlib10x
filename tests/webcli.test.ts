@@ -636,7 +636,7 @@ describe("fire range checks", () => {
     const hintOut = actor === "hunchy" ? handoverOut : ppcOut;
     expect(hintOut).toContain("[S!]");
     // Split TN: base (no penalty) "+" penalty 3 at adjacent range.
-    expect(hintOut).toMatch(/\d \+ 3/);
+    expect(hintOut).toMatch(/\d\+3/);
     // LRM 10 (min 6) at range 1 carries the bigger penalty.
     expect(run(s, "fire hunchy 2").join("\n")).toContain("within minimum range 6");
   });
