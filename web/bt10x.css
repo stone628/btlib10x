@@ -48,6 +48,43 @@ body {
   font-size: 13px;
   line-height: 1.35;
 }
+#motd {
+  position: fixed;
+  top: 8px;
+  right: 30px;
+  width: fit-content;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: #0c0f0c;
+  border: 1px solid #233023;
+  border-radius: 4px;
+  z-index: 100;
+  font-size: 12px;
+  color: #b8c9b8;
+}
+#motd > summary {
+  cursor: pointer;
+  padding: 6px 10px;
+  color: #8fd08f;
+  font-weight: bold;
+  user-select: none;
+}
+#motd[open] > summary {
+  border-bottom: 1px solid #233023;
+  text-align: right;
+}
+#motd > #motd-body {
+  padding: 8px 10px;
+  white-space: pre-wrap;
+}
+#motd-body .banner {
+  color: #8fd08f;
+  font-weight: bold;
+}
+#motd-body .hint {
+  color: #b9c9b0;
+  font-style: italic;
+}
 #term {
   display: flex;
   flex-direction: column;
@@ -229,6 +266,7 @@ body {
 #prompt {
   white-space: pre;
   color: #8fd08f;
+  padding-top: 1px;
 }
 #cmd {
   flex: 1;
@@ -237,46 +275,7 @@ body {
   outline: none;
   color: inherit;
   font: inherit;
-  margin: 0;
   caret-shape: bar;
-}
-
-.motd-panel {
-  position: fixed;
-  top: 8px;
-  right: 30px;
-  width: fit-content;
-  max-height: 60vh;
-  overflow-y: auto;
-  background: #0c0f0c;
-  border: 1px solid #233023;
-  border-radius: 4px;
-  z-index: 100;
-  font-size: 12px;
-  color: #b8c9b8;
-}
-.motd-panel > summary {
-  cursor: pointer;
-  padding: 6px 10px;
-  color: #8fd08f;
-  font-weight: bold;
-  user-select: none;
-}
-.motd-panel[open] > summary {
-  border-bottom: 1px solid #233023;
-  text-align: right;
-}
-.motd-panel > #motd-body {
-  padding: 8px 10px;
-  white-space: pre-wrap;
-}
-#motd-body .banner {
-  color: #8fd08f;
-  font-weight: bold;
-}
-#motd-body .hint {
-  color: #b9c9b0;
-  font-style: italic;
 }
 
 .link-button {
@@ -289,7 +288,10 @@ body {
   display: inline-block;
   font-family: inherit;
   font-size: inherit;
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 .link-button:hover {
   background-color: var(--cb-green);
