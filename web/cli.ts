@@ -258,13 +258,12 @@ const SETUP_CMDS: Record<string, CmdDef> = {
   start: {
     helpKey: "cmd.start.help",
     run: (s) => {
+      const newEvents = S.startBattle(s);
       return [
         buildLinesChunk([i18n(s.locale, "ok.started")], "banner"),
-        //  ...initiativeLine(s)
-        buildLinesChunk(formatLog(s.locale, S.startBattle(s))),
+        buildLinesChunk(formatLog(s.locale, newEvents)),
       ];
     },
-    // run: (s) => formatLog(s.locale, S.commitMove(s).newEvents),
   },
 };
 
@@ -521,11 +520,10 @@ const OVER_CMDS: Record<string, CmdDef> = {
   rematch: {
     helpKey: "cmd.rematch.help",
     run: (s) => {
-      S.rematch(s);
+      const newEvents = S.rematch(s);
       return [
         buildLinesChunk([i18n(s.locale, "ok.rematchDone")], "banner"),
-        //  ...initiativeLine(s)
-        buildLinesChunk(formatLog(s.locale, S.rematch(s))),
+        buildLinesChunk(formatLog(s.locale, newEvents)),
       ];
     },
   },
