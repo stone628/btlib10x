@@ -26,6 +26,7 @@ import type {
   WeaponDef,
 } from "btlib10x";
 import {
+  actorQueue,
   ammoBinId,
   ammoExplosionAvoid,
   ammoExplosionAvoidWithThreshold,
@@ -431,10 +432,9 @@ function gunneryLabel(locale: LocaleId, gunnery: number): string {
 
 /** `board` output: styled grid chunks, or a plain hint when nothing exists. */
 export function boardChunk(s: Session): Chunk {
+  const mapName = s.setup.mapName;
+  if (mapName === null) return buildLinesChunk([i18n(s.locale, "board.noMap")]);
   const map = getMapDefFor(s.setup);
-  if (map === undefined) {
-    return buildLinesChunk([i18n(s.locale, "board.noMap")]);
-  }
   const units = s.battle
     ? Object.values(s.battle.units)
         .filter((u) => !u.removed)
@@ -1339,23 +1339,49 @@ export function overStatusLines(s: Session): string[] {
   return lines;
 }
 
+/** Turn-order section for the `status` command: who acted, who is next, who
+ *  remains. Appended to the phase-specific status lines. */
+function actorOrderLines(s: Session): string[] {
+  if (!s.battle) return [];
+  const q = actorQueue(s.battle);
+  const lines: string[] = [];
+  const list = (ids: readonly string[]): string =>
+    ids.length > 0 ? ids.join(", ") : i18n(s.locale, "status.none");
+  lines.push(i18n(s.locale, "status.orderHeader"));
+  lines.push(i18n(s.locale, "status.done", { ids: list(q.acted) }));
+  lines.push(
+    i18n(s.locale, "status.next", {
+      id: q.pending[0] ?? i18n(s.locale, "status.none"),
+    }),
+  );
+  lines.push(i18n(s.locale, "status.pendingAfter", { ids: list(q.pending.slice(1)) }));
+  return lines;
+}
+
 export function moveStatusLines(s: Session): string[] {
+  const lines: string[] = [];
+  lines.push(...actorOrderLines(s));
   const info = moveStepsInfo(s);
-  const modeText =
-    info.mode === null
-      ? i18n(s.locale, "moveStatus.noMode")
-      : i18n(s.locale, "moveStatus.mode", { mode: info.mode });
-  const lines = [modeText, i18n(s.locale, "moveStatus.budget", { budget: info.budget })];
+  const indent = "  ";
+  lines.push(i18n(s.locale, "moveStatus.headLine"));
+  lines.push(
+    indent +
+      (info.mode === null
+        ? i18n(s.locale, "moveStatus.noMode")
+        : i18n(s.locale, "moveStatus.mode", { mode: info.mode })),
+  );
+  lines.push(indent + i18n(s.locale, "moveStatus.budget", { budget: info.budget }));
   if (info.steps.length === 0) {
-    lines.push(i18n(s.locale, "moveStatus.none"));
+    lines.push(indent + i18n(s.locale, "moveStatus.none"));
   } else {
     for (const step of info.steps) {
       lines.push(
-        i18n(s.locale, "moveStatus.stepLine", {
-          label: step.label,
-          cost: step.mpCost,
-          total: step.mpAfter,
-        }),
+        indent +
+          i18n(s.locale, "moveStatus.stepLine", {
+            label: step.label,
+            cost: step.mpCost,
+            total: step.mpAfter,
+          }),
       );
     }
   }
@@ -1413,16 +1439,24 @@ export function attackStatusLines(s: Session): string[] {
   const actor = s.battle?.units[s.actorId ?? ""];
   if (!actor || !s.battle)
     throw new Error(i18n(s.locale, "err.wrongPhase", { phase: "weaponAttack" }));
-  if (s.fireDecls.length === 0) return [i18n(s.locale, "attackStatus.none")];
+  const lines: string[] = [];
+  const indent = "  ";
+  lines.push(...actorOrderLines(s));
+  lines.push(i18n(s.locale, "attackStatus.header"));
+  if (s.fireDecls.length === 0) {
+    lines.push(indent + i18n(s.locale, "attackStatus.none"));
+    return lines;
+  }
   // Engine guarantee: `actor.model` was validated by `createBattle`.
   const def = getMechDefFor(actor);
-  return s.fireDecls.map((decl) => {
+  for (const decl of s.fireDecls) {
     const mount = def.weapons[decl.weaponIndex];
     const name = mount ? mount.weapon : `#${decl.weaponIndex}`;
     const rapid = mount ? getWeaponDefFor(mount).rapidFireShots : undefined;
     const suffix = decl.rapidFire && rapid !== undefined ? ` (rapid-fire x${rapid})` : "";
-    return `#${decl.weaponIndex} ${name} -> ${decl.targetId}${suffix}`;
-  });
+    lines.push(`${indent}#${decl.weaponIndex} ${name} -> ${decl.targetId}${suffix}`);
+  }
+  return lines;
 }
 
 const BRACKET_LABEL: Readonly<Record<RangeBracket, string>> = {
@@ -1467,7 +1501,7 @@ function fireWeaponTable(locale: LocaleId, weapons: readonly FireWeapon[]): Chun
       ? `[${BRACKET_LABEL[w.rangeBracket]}!]`
       : `[${BRACKET_LABEL[w.rangeBracket]}]`,
     w.minRangePenalty !== undefined
-      ? `${w.tn - w.minRangePenalty} + ${w.minRangePenalty}`
+      ? `${w.tn - w.minRangePenalty}+${w.minRangePenalty}`
       : String(w.tn),
     String(w.heat),
     w.cluster !== undefined

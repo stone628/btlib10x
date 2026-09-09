@@ -89,7 +89,9 @@ rollInitiativePhase(state, rng);   // 2D6 per team, ties reroll
 ```
 
 The loser's team acts first each phase (Total Warfare convention);
-`nextActor(state)` tells you which unit should act next.
+`nextActor(state)` tells you which unit should act next. `actorQueue(state)`
+returns the same ordering split into `acted` (already moved/fired this phase)
+and `pending` (in order), e.g. for a `status` display.
 
 ## 4. Movement phase
 

@@ -193,6 +193,7 @@ export const kr: Catalog = {
   "setup.noUnits": "(배치된 유닛 없음)",
 
   // movement status
+  "moveStatus.headLine": "예약된 이동:",
   "moveStatus.noMode": "(모드 미선언)",
   "moveStatus.mode": "모드: {mode}",
   "moveStatus.budget": "예산: {budget} MP",
@@ -200,6 +201,13 @@ export const kr: Catalog = {
   "moveStatus.stepTurn": "{i}. 방향 전환 {steps} ({from} -> {to})",
   "moveStatus.stepEnter": "{i}. 진입 ({col},{row})",
   "moveStatus.stepLine": "{label} +{cost} MP (누계 {total})",
+
+  // turn order status
+  "status.orderHeader": "행동 순서:",
+  "status.done": "  완료: {ids}",
+  "status.next": "  다음: {id}",
+  "status.pendingAfter": "  대기: {ids}",
+  "status.none": "-",
 
   // heat status
   "heat.title": "발열: {id} = {heat}",
@@ -216,6 +224,7 @@ export const kr: Catalog = {
   "heat.stateStarting": "상태: 기동 중",
 
   // attack status/
+  "attackStatus.header": "예약된 공격:",
   "attackStatus.none": "(예약된 공격 없음)",
 
   // fire suggestion

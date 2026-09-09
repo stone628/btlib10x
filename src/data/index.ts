@@ -39,7 +39,7 @@ export interface MapNameHolder {
 
 export function getMapDefFor(h: MapNameHolder): MapDef {
   const key = h.mapName;
-  if (key == null) throw new Error("Unknown map: <none>");
+  if (key === null) throw new Error("Unknown map: <none>");
   const def = MAP_DEFS.get(key);
   if (!def) throw new Error(`Unknown map: ${key}`);
   return def;
