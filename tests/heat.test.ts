@@ -373,7 +373,16 @@ describe("game integration: shutdown", () => {
     startAttackTurn(state);
     advancePhase(state, scriptedRng(3, 3, 3, 1));
     expect(hbk.shutdown).toBe("heat");
-    expect(state.events.some((e) => e.kind === "shutdownAuto")).toBe(true);
+    expect(
+      state.events.some(
+        (e) =>
+          e.kind === "shutdownCheck" &&
+          e.unitId === "hbk" &&
+          !e.avoided &&
+          !e.manual &&
+          e.avoid >= 12,
+      ),
+    ).toBe(true);
   });
 
   it("rolls shutdown avoid at 14–29", () => {
@@ -383,7 +392,9 @@ describe("game integration: shutdown", () => {
     startAttackTurn(state);
     advancePhase(state, scriptedRng(3, 3, 3, 1));
     expect(hbk.shutdown).toBe("heat");
-    expect(state.events.some((e) => e.kind === "shutdown" && e.unitId === "hbk")).toBe(true);
+    expect(
+      state.events.some((e) => e.kind === "shutdownCheck" && e.unitId === "hbk" && !e.avoided),
+    ).toBe(true);
   });
 
   it("avoids shutdown when roll >= avoid", () => {
@@ -393,7 +404,9 @@ describe("game integration: shutdown", () => {
     startAttackTurn(state);
     advancePhase(state, scriptedRng(6, 6, 6, 6));
     expect(hbk.shutdown).toBe("not");
-    expect(state.events.some((e) => e.kind === "shutdownAvoided" && e.unitId === "hbk")).toBe(true);
+    expect(
+      state.events.some((e) => e.kind === "shutdownCheck" && e.unitId === "hbk" && e.avoided),
+    ).toBe(true);
   });
 
   it("skips shutdown unit in nextActor", () => {
@@ -413,7 +426,9 @@ describe("game integration: shutdown", () => {
     startAttackTurn(state);
     advancePhase(state, scriptedRng(3, 3, 3, 1));
     expect(hbk.shutdown).toBe("not");
-    expect(state.events.some((e) => e.kind === "restarted" && e.unitId === "hbk")).toBe(true);
+    expect(
+      state.events.some((e) => e.kind === "restartCheck" && e.unitId === "hbk" && e.success),
+    ).toBe(true);
   });
 
   it("does not auto-restart a manual shutdown", () => {
@@ -424,7 +439,9 @@ describe("game integration: shutdown", () => {
     startAttackTurn(state);
     advancePhase(state, scriptedRng(3, 3, 3, 1));
     expect(hbk.shutdown).toBe("manual");
-    expect(state.events.some((e) => e.kind === "restarted" && e.unitId === "hbk")).toBe(false);
+    expect(
+      state.events.some((e) => e.kind === "restartCheck" && e.unitId === "hbk" && e.success),
+    ).toBe(false);
   });
 
   it("leaves a starting unit untouched and brings it online at the next initiative", () => {
@@ -536,9 +553,9 @@ describe("game integration: heat ammo explosion", () => {
     // shutdown auto: no roll; ammo avoid roll 4 < 8 (avoid=8 for heat 30)
     advancePhase(state, scriptedRng(3, 1, 6, 6, 6, 6));
     expect(hbk.ammoBins["leftTorso:1"]).toBe(0);
-    expect(state.events.some((e) => e.kind === "heatAmmoExplosion" && e.unitId === "hbk")).toBe(
-      true,
-    );
+    expect(
+      state.events.some((e) => e.kind === "ammoExplosionCheck" && e.unitId === "hbk" && !e.avoided),
+    ).toBe(true);
   });
 
   it("gauss-only unit does not detonate from heat (inert ammo)", () => {
@@ -551,9 +568,9 @@ describe("game integration: heat ammo explosion", () => {
     // otherwise fail an avoid=8 roll.
     advancePhase(state, scriptedRng(3, 1, 6, 6, 6, 6));
     expect(bzk.shutdown).toBe("heat");
-    expect(state.events.some((e) => e.kind === "heatAmmoExplosion" && e.unitId === "bzk")).toBe(
-      false,
-    );
+    expect(
+      state.events.some((e) => e.kind === "ammoExplosionCheck" && e.unitId === "bzk" && !e.avoided),
+    ).toBe(false);
     // Gauss ammo bins survive intact.
     expect(bzk.ammoBins["centerTorso:11"]).toBe(8);
     expect(bzk.ammoBins["centerTorso:12"]).toBe(8);

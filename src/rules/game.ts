@@ -212,52 +212,27 @@ export type GameEvent =
       readonly capacity: number;
     }
   | {
-      readonly kind: "shutdown";
+      readonly kind: "shutdownCheck";
       readonly unitId: string;
+      readonly avoided: boolean;
+      readonly manual: boolean;
       readonly roll: number;
       readonly heat: number;
       readonly avoid: number;
       readonly threshold: number;
     }
   | {
-      readonly kind: "shutdownAuto";
+      readonly kind: "restartCheck";
       readonly unitId: string;
-      readonly heat: number;
-      readonly threshold: number;
-    }
-  | {
-      readonly kind: "shutdownAvoided";
-      readonly unitId: string;
+      readonly success: boolean;
+      readonly manual: boolean;
       readonly roll: number;
       readonly heat: number;
       readonly avoid: number;
       readonly threshold: number;
     }
   | {
-      readonly kind: "restarted";
-      readonly unitId: string;
-      readonly roll: number;
-      readonly heat: number;
-      readonly avoid: number;
-      readonly threshold: number;
-    }
-  | { readonly kind: "shutdownManual"; readonly unitId: string }
-  | {
-      readonly kind: "startupSuccess";
-      readonly unitId: string;
-      readonly roll: number;
-      readonly heat: number;
-      readonly avoid: number;
-    }
-  | {
-      readonly kind: "startupFailed";
-      readonly unitId: string;
-      readonly roll: number;
-      readonly heat: number;
-      readonly avoid: number;
-    }
-  | {
-      readonly kind: "heatAmmoExplosion";
+      readonly kind: "ammoExplosionCheck";
       readonly unitId: string;
       readonly weapon: string;
       readonly location: Location;
@@ -268,6 +243,7 @@ export type GameEvent =
       readonly threshold: number;
       readonly shotsRemaining: number;
       readonly damage: number;
+      readonly avoided: boolean;
     };
 
 export interface BattleState extends HexGrid {
@@ -1019,7 +995,16 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
     if (avoid >= 12) {
       // avoid exceeds 2D6 max, always
       unit.shutdown = "heat";
-      state.events.push({ kind: "shutdownAuto", unitId: unit.id, heat, threshold });
+      state.events.push({
+        kind: "shutdownCheck",
+        unitId: unit.id,
+        avoided: false,
+        manual: false,
+        roll: 0,
+        heat,
+        avoid,
+        threshold,
+      });
       continue;
     }
     if (avoid === 0) {
@@ -1027,8 +1012,10 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
       if (unit.shutdown === "heat") {
         unit.shutdown = "not";
         state.events.push({
-          kind: "restarted",
+          kind: "restartCheck",
           unitId: unit.id,
+          success: true,
+          manual: false,
           roll: 0,
           heat,
           avoid: 0,
@@ -1041,19 +1028,48 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
     if (unit.shutdown === "heat") {
       if (roll <= avoid) {
         // Remains off-line; try again next end phase.
-        state.events.push({ kind: "shutdown", unitId: unit.id, roll, heat, avoid, threshold });
+        state.events.push({
+          kind: "restartCheck",
+          unitId: unit.id,
+          success: false,
+          manual: false,
+          roll,
+          heat,
+          avoid,
+          threshold,
+        });
       } else {
         unit.shutdown = "not";
-        state.events.push({ kind: "restarted", unitId: unit.id, roll, heat, avoid, threshold });
+        state.events.push({
+          kind: "restartCheck",
+          unitId: unit.id,
+          success: true,
+          manual: false,
+          roll,
+          heat,
+          avoid,
+          threshold,
+        });
       }
     } else {
       if (roll <= avoid) {
         unit.shutdown = "heat";
-        state.events.push({ kind: "shutdown", unitId: unit.id, roll, heat, avoid, threshold });
+        state.events.push({
+          kind: "shutdownCheck",
+          unitId: unit.id,
+          avoided: false,
+          manual: false,
+          roll,
+          heat,
+          avoid,
+          threshold,
+        });
       } else {
         state.events.push({
-          kind: "shutdownAvoided",
+          kind: "shutdownCheck",
           unitId: unit.id,
+          avoided: true,
+          manual: false,
           roll,
           heat,
           avoid,
@@ -1075,7 +1091,23 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
     const bin = largestAmmoBin(def, unit.ammoBins);
     if (bin === null) continue;
     const roll = roll2D6(rng);
-    if (roll >= avoid) continue;
+    if (roll >= avoid) {
+      state.events.push({
+        kind: "ammoExplosionCheck",
+        unitId: unit.id,
+        weapon: bin.weapon,
+        location: bin.location,
+        slotIndex: bin.slotIndex,
+        roll,
+        heat,
+        avoid,
+        threshold,
+        shotsRemaining: bin.shotsRemaining,
+        damage: bin.damage,
+        avoided: true,
+      });
+      continue;
+    }
     const application = applyAmmoExplosion(
       unit.damage,
       bin.location,
@@ -1093,7 +1125,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
     for (const binId of bin.binIds) unit.ammoBins[binId] = 0;
     unit.shotsLeft = ammoWeaponTotals(def, unit.ammoBins);
     state.events.push({
-      kind: "heatAmmoExplosion",
+      kind: "ammoExplosionCheck",
       unitId: unit.id,
       weapon: bin.weapon,
       location: bin.location,
@@ -1104,6 +1136,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
       threshold,
       shotsRemaining: bin.shotsRemaining,
       damage: bin.damage,
+      avoided: false,
     });
     if (!unit.destroyed && isUnitDestroyed(unit.damage)) {
       markUnitDestroyed(state, unit);
@@ -1141,7 +1174,16 @@ export function voluntaryShutdown(state: BattleState, unitId: string): void {
   if (isShutdown(unit)) throw new Error(`${unitId} is already shut down`);
   unit.shutdown = "manual";
   state.actedThisPhase.push(unitId);
-  state.events.push({ kind: "shutdownManual", unitId });
+  state.events.push({
+    kind: "shutdownCheck",
+    unitId,
+    avoided: false,
+    manual: true,
+    roll: 0,
+    heat: unit.heat,
+    avoid: 0,
+    threshold: 0,
+  });
 }
 
 /** Voluntary startup attempt, resolved during the movement phase: roll 2D6
@@ -1165,9 +1207,27 @@ export function attemptVoluntaryStartup(
   state.actedThisPhase.push(unitId);
   if (roll >= avoid) {
     unit.shutdown = "starting";
-    state.events.push({ kind: "startupSuccess", unitId, roll, heat, avoid });
+    state.events.push({
+      kind: "restartCheck",
+      unitId,
+      success: true,
+      manual: true,
+      roll,
+      heat,
+      avoid,
+      threshold: 0,
+    });
   } else {
-    state.events.push({ kind: "startupFailed", unitId, roll, heat, avoid });
+    state.events.push({
+      kind: "restartCheck",
+      unitId,
+      success: false,
+      manual: true,
+      roll,
+      heat,
+      avoid,
+      threshold: 0,
+    });
   }
 }
 

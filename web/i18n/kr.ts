@@ -369,6 +369,10 @@ export const kr: Catalog = {
   "log.shutdownPriority": "{id} 이동 우선권 가짐 — 셧다운 상태, 시동 시도 또는 패스 필요",
   "log.startupSuccess": "{id} 시동 체크 성공 (2D6 = {roll} >= {avoid}) — 다음 턴 온라인",
   "log.startupFailed": "{id} 시동 체크 실패 (2D6 = {roll} < {avoid}); 여전히 셧다운 상태",
+  "log.restartFailed":
+    "{id} 재기동 체크 실패 (발열 {heat} >= {threshold}) 회피 실패(2D6 = {roll} < {avoid}); 여전히 셧다운 상태",
+  "log.ammoExplosionAvoided":
+    "{id} 탄약 {weapon} ({loc} #{slot}) 폭발 회피 (발열 {heat} >= {threshold}) 회피 성공(2D6 = {roll} >= {avoid})",
   "log.heatAmmoExplosion":
     "{id} 탄약 {weapon} ({loc} #{slot}, {shots}발) 폭발, 피해 {damage} (발열 {heat} >= {threshold}) 회피 실패(2D6 = {roll} < {avoid})",
 
