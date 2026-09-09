@@ -9,7 +9,6 @@ import type {
   HexCoord,
   MapDef,
   MapNameHolder,
-  MechModelHolder,
   MoveMode,
   MoveStep,
   Rng,
@@ -56,20 +55,10 @@ import { createRng } from "./rng.js";
 
 export type AppState = "setup" | "battle" | "over";
 
-export interface SetupUnit extends MechModelHolder {
-  readonly id: string;
-  readonly model: string;
-  readonly team: number;
-  readonly gunnery: number;
-  /** 1-based coordinates. */
-  readonly position: HexCoord;
-  readonly facing: Facing;
-}
-
 export interface SetupState extends MapNameHolder {
   seed: number;
   mapName: string | null;
-  roster: SetupUnit[];
+  roster: UnitInit[];
 }
 
 export interface Session {
@@ -195,7 +184,7 @@ export function promptBody(s: Session): string {
         turn: st.turn,
         phase,
         team: actor?.team ?? "?",
-        mech: actor?.id ?? "?",
+        id: actor?.id ?? "?",
       });
     }
   }
@@ -283,19 +272,18 @@ function battleOptions(s: Session): CreateBattleOptions {
   };
 }
 
-export function startBattle(s: Session): void {
+export function startBattle(s: Session): GameEvent[] {
   if (s.app !== "setup") throw new Error(i18n(s.locale, "err.alreadyStarted"));
   if (s.setup.roster.length < 2) throw new Error(i18n(s.locale, "err.needTwoUnits"));
   const teams = new Set(s.setup.roster.map((u) => u.team));
   if (teams.size < 2) throw new Error(i18n(s.locale, "err.needTwoTeams"));
-  const inits: UnitInit[] = s.setup.roster.map((u) => ({ ...u }));
   const map = getMapDefFor(s.setup);
-  s.battle = createBattle(map, inits, battleOptions(s));
+  s.battle = createBattle(map, s.setup.roster, battleOptions(s));
   s.victory = null;
   s.actorId = null;
   s.fireHintShownFor = null;
   clearBuffers(s);
-  drive(s);
+  return drive(s);
 }
 
 // ------------------------------------------------------------- movement ----
@@ -494,7 +482,7 @@ export function cancelMove(s: Session): void {
 
 export interface CommitResult {
   state: BattleState;
-  newEvents: BattleState["events"];
+  newEvents: GameEvent[];
 }
 
 /**
@@ -635,16 +623,16 @@ export function commitFire(s: Session): CommitResult {
   const unit = requireActor(s, "weaponAttack");
   const battle = requireBattle(s);
   const beforeCount = battle.events.length;
-  let declEvents: BattleState["events"] = [];
-  let driveEvents: BattleState["events"] = [];
+  const newEvents: GameEvent[] = [];
   commitAtomic(s, () => {
     declareAttacks(battle, unit.id, s.fireDecls, s.rng);
-    declEvents = battle.events.slice(beforeCount);
+    const declEvents = battle.events.slice(beforeCount);
     s.actorId = null;
     clearBuffers(s);
-    driveEvents = drive(s);
+    const driveEvents = drive(s);
+    newEvents.push(...declEvents, ...driveEvents);
   });
-  return { state: battle, newEvents: [...declEvents, ...driveEvents] };
+  return { state: battle, newEvents };
 }
 
 /**
@@ -660,19 +648,15 @@ export function setAmmoPolicy(s: Session, word: string): void {
 
 // ------------------------------------------------------------ lifecycle ----
 
-export function rematch(s: Session): void {
+export function rematch(s: Session): GameEvent[] {
   if (s.app !== "over") throw new Error(i18n(s.locale, "err.rematchOnlyOver"));
   s.rng = createRng(s.setup.seed);
-  s.battle = createBattle(
-    getMapDefFor(s.setup),
-    s.setup.roster.map((u) => ({ ...u })),
-    battleOptions(s),
-  );
+  s.battle = createBattle(getMapDefFor(s.setup), s.setup.roster, battleOptions(s));
   s.victory = null;
   s.actorId = null;
   s.fireHintShownFor = null;
   clearBuffers(s);
-  drive(s);
+  return drive(s);
 }
 
 export function resetSession(s: Session): void {

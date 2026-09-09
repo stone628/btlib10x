@@ -110,7 +110,7 @@ export const en = {
   "ok.mapLoaded": "map {name}: {w}x{h}",
   "ok.added": "{id} ({model}) placed at ({col},{row}) facing {facing}",
   "ok.removed": "removed {id}",
-  "ok.started": "battle started",
+  "ok.started": "=== BATTLE STARTED ===",
   "ok.modeDeclared": "{id} declares {mode}, can use {budget} movement points.",
   "ok.stepResult": "{id} {mode} -> {col},{row} facing {facing} [MP {spent}/{budget}]",
   "ok.cancelled": "cancelled",
@@ -122,8 +122,8 @@ export const en = {
   "ammo.policy.spread": "spread",
   "ammo.policy.leastFirst": "least-first",
   "ok.seedSet": "seed set to {seed}",
-  "ok.resetDone": "reset.",
-  "ok.rematchDone": "rematch!",
+  "ok.resetDone": "=== RESET DONE ===",
+  "ok.rematchDone": "=== REMATCH STARTED ===",
   "ok.modeDeclaredVoluntary": "{id} declares {mode} (committed by 'done').",
   "banner.draw": "=== DRAW - NO UNITS REMAIN ===",
   "banner.win": "=== TEAM {team} WINS ===",
@@ -266,7 +266,7 @@ export const en = {
   "fireSuggestion.reason.autoMiss": "auto-miss",
 
   // over status
-  "over.idLine": "id: {id}",
+  "over.idLine": "ID: {id}",
 
   // record sheet / info
   "info.mechColModel": "MODEL",
@@ -303,7 +303,7 @@ export const en = {
   "sheet.at": "position: {pos} facing {facing}",
   "sheet.modeSuffix": ", {mode} [MP {mp}]",
   "sheet.removedId": " - REMOVED FROM PLAY",
-  "sheet.idLine": "id: {id}, team {team}",
+  "sheet.idLine": "ID: {id}, team {team}",
   "sheet.statusHeader": "status: {status}, HEAT({currHeat}/{maxHeat})",
   "sheet.statusOnline": "ONLINE",
   "sheet.statusShutdown": "SHUTDOWN",
@@ -349,8 +349,8 @@ export const en = {
   "critChart.soak.caseII": "CASE II",
 
   // event log
-  "log.turn": "-- turn {turn} --",
-  "log.phase": "phase: {phase}",
+  "log.turn": "[[[   turn {turn}   ]]]",
+  "log.phase": "[[  phase: {phase}  ]]",
   "log.initiative": "initiative: {rolls} -> team {winner} wins initiative and moves last.",
   "log.moveDeclared": "{id} declares {mode}",
   "log.moved": "{id} {mode} -> {pos} facing {facing}, used {mp} of {budget} MP",
@@ -419,7 +419,7 @@ export const en = {
   // phase prompt
   "prompt.setup": "setup",
   "prompt.over": "over({winner}, total turn {turn})",
-  "prompt.turn": "turn({turn}):{phase}(team {team}, mech {mech})",
+  "prompt.turn": "turn({turn}):{phase}({id}, team {team})",
   "prompt.winnerTeam": "team {team} won",
   "prompt.draw": "draw",
   "prompt.subMove": "move",

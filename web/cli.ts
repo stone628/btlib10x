@@ -153,7 +153,7 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
     helpKey: "cmd.reset.help",
     run: (s) => {
       S.resetSession(s);
-      return [i18n(s.locale, "ok.resetDone")];
+      return [buildLinesChunk([i18n(s.locale, "ok.resetDone")], "banner")];
     },
   },
   ver: {
@@ -258,19 +258,15 @@ const SETUP_CMDS: Record<string, CmdDef> = {
   start: {
     helpKey: "cmd.start.help",
     run: (s) => {
-      S.startBattle(s);
-      return [i18n(s.locale, "ok.started"), ...initiativeLine(s)];
+      return [
+        buildLinesChunk([i18n(s.locale, "ok.started")], "banner"),
+        //  ...initiativeLine(s)
+        buildLinesChunk(formatLog(s.locale, S.startBattle(s))),
+      ];
     },
+    // run: (s) => formatLog(s.locale, S.commitMove(s).newEvents),
   },
 };
-
-function initiativeLine(s: S.Session): string[] {
-  const tail = (s.battle?.events ?? []).slice(-2);
-  return formatLog(
-    s.locale,
-    tail.filter((e) => e.kind === "initiative" || e.kind === "phase"),
-  );
-}
 
 // ---------------------------------------------------------- turn:move ----
 
@@ -526,7 +522,11 @@ const OVER_CMDS: Record<string, CmdDef> = {
     helpKey: "cmd.rematch.help",
     run: (s) => {
       S.rematch(s);
-      return [i18n(s.locale, "ok.rematchDone"), ...initiativeLine(s)];
+      return [
+        buildLinesChunk([i18n(s.locale, "ok.rematchDone")], "banner"),
+        //  ...initiativeLine(s)
+        buildLinesChunk(formatLog(s.locale, S.rematch(s))),
+      ];
     },
   },
 };

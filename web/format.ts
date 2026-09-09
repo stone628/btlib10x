@@ -22,6 +22,7 @@ import type {
   ResolvedMechDef,
   ShutdownState,
   UnitDamageState,
+  UnitInit,
   UnitState,
   WeaponCategory,
   WeaponDef,
@@ -65,7 +66,7 @@ import { i18n } from "./i18n/index.js";
 import { lookupMapOrThrow, lookupMechOrThrow, lookupWeaponOrThrow } from "./lookup.js";
 import type { BoardRenderer, BoardRenderInfo, BoardRenderReachableInfo } from "./render.js";
 import { createBoardRenderUnit, getBoardRenderer } from "./render.js";
-import type { Session, SetupUnit } from "./session.js";
+import type { Session } from "./session.js";
 import { moveStepsInfo } from "./session.js";
 
 /** Board renderer type (re-exported from the render layer). */
@@ -736,7 +737,7 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
   };
 }
 
-function setupSheet(unit: SetupUnit, id: string, locale: LocaleId): SheetView {
+function setupSheet(unit: UnitInit, id: string, locale: LocaleId): SheetView {
   const def = requireMechDef(unit.model, locale);
   const armorRear: Partial<LocationValue> = {};
   for (const loc of TORSO_LOCATIONS) {
