@@ -1550,15 +1550,31 @@ export function fireSuggestionChunks(locale: LocaleId, sugg: FireSuggestion): Ch
     if (target.weapons.length > 0) {
       chunks.push(fireWeaponTable(locale, target.weapons));
     }
-    for (const b of target.blocked) {
-      chunks.push(
-        buildLinesChunk(
-          [
-            `${i18n(locale, "fireSuggestion.blocked")}: #${b.weaponIndex} ${b.weapon} — ${i18n(locale, BLOCKER_LABEL[b.reason])}`,
-          ],
-          "hint",
-        ),
-      );
+    if (target.blocked.length > 0) {
+      const blockedLines: string[] = [];
+      for (const b of target.blocked) {
+        // chunks.push(
+        //   buildLinesChunk(
+        //     [
+        //       `${i18n(locale, "fireSuggestion.blocked")}: #${b.weaponIndex} ${b.weapon} — ${i18n(locale, BLOCKER_LABEL[b.reason])}`,
+        //     ],
+        //     "hint",
+        //   ),
+        // );
+        blockedLines.push(
+          `${i18n(locale, "fireSuggestion.blocked")}: #${b.weaponIndex} ${b.weapon} — ${i18n(locale, BLOCKER_LABEL[b.reason])}`,
+        );
+      }
+      if (blockedLines.length > 3) {
+        chunks.push(
+          buildCollapsibleChunk(
+            i18n(locale, "fireSuggestion.blockedSummary", { num: blockedLines.length }),
+            [buildLinesChunk(blockedLines, "hint")],
+          ),
+        );
+      } else {
+        chunks.push(buildLinesChunk(blockedLines, "hint"));
+      }
     }
   }
   return chunks;

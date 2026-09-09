@@ -250,7 +250,7 @@ export const kr: Catalog = {
   "fireSuggestion.damage": "대미지",
   "fireSuggestion.shots": "발사",
   "fireSuggestion.cluster": "{shots}발, 미사일 당 {per}",
-  "fireSuggestion.blocked": "차단됨",
+  "fireSuggestion.blocked": "사용불가",
   "fireSuggestion.reason.jammed": "고장",
   "fireSuggestion.reason.destroyed": "파괴됨",
   "fireSuggestion.reason.outOfRange": "사거리 밖",
@@ -258,6 +258,7 @@ export const kr: Catalog = {
   "fireSuggestion.reason.noLos": "시야 차단",
   "fireSuggestion.reason.outOfAmmo": "탄약 없음",
   "fireSuggestion.reason.autoMiss": "자동 빗나감",
+  "fireSuggestion.blockedSummary": "사용불가 무기 목록 ({num}):",
 
   // over status
   "over.idLine": "식별자: {id}",

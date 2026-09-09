@@ -264,6 +264,7 @@ export const en = {
   "fireSuggestion.reason.noLos": "no line of sight",
   "fireSuggestion.reason.outOfAmmo": "out of ammo",
   "fireSuggestion.reason.autoMiss": "auto-miss",
+  "fireSuggestion.blockedSummary": "blocked weapons ({num}):",
 
   // over status
   "over.idLine": "ID: {id}",
