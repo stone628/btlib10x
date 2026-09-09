@@ -9,8 +9,6 @@
 
 ## To Do
 
-- show ammo explosion check avoid (success)
-- change movement phase command to set final hex and facing.
 
 ## In progress
 
