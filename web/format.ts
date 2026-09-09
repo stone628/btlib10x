@@ -1736,7 +1736,26 @@ function eventLines(locale: LocaleId, e: GameEvent): string[] {
           cap: e.capacity,
         }),
       ];
-    case "shutdown":
+    case "shutdownCheck":
+      if (e.manual) {
+        return [i18n(locale, "log.shutdownManual", { id: e.unitId })];
+      }
+      if (e.avoided) {
+        return [
+          i18n(locale, "log.shutdownAvoided", {
+            id: e.unitId,
+            roll: e.roll,
+            heat: e.heat,
+            avoid: e.avoid,
+            threshold: e.threshold,
+          }),
+        ];
+      }
+      if (e.avoid >= 12) {
+        return [
+          i18n(locale, "log.shutdownAuto", { id: e.unitId, heat: e.heat, threshold: e.threshold }),
+        ];
+      }
       return [
         i18n(locale, "log.shutdown", {
           id: e.unitId,
@@ -1746,22 +1765,28 @@ function eventLines(locale: LocaleId, e: GameEvent): string[] {
           threshold: e.threshold,
         }),
       ];
-    case "shutdownAuto":
-      return [
-        i18n(locale, "log.shutdownAuto", { id: e.unitId, heat: e.heat, threshold: e.threshold }),
-      ];
-    case "shutdownAvoided":
-      return [
-        i18n(locale, "log.shutdownAvoided", {
-          id: e.unitId,
-          roll: e.roll,
-          heat: e.heat,
-          avoid: e.avoid,
-          threshold: e.threshold,
-        }),
-      ];
-    case "restarted":
-      if (e.avoid === 0) {
+    case "restartCheck":
+      if (e.manual && e.success) {
+        return [
+          i18n(locale, "log.startupSuccess", {
+            id: e.unitId,
+            roll: e.roll,
+            heat: e.heat,
+            avoid: e.avoid,
+          }),
+        ];
+      }
+      if (e.manual) {
+        return [
+          i18n(locale, "log.startupFailed", {
+            id: e.unitId,
+            roll: e.roll,
+            heat: e.heat,
+            avoid: e.avoid,
+          }),
+        ];
+      }
+      if (e.success && e.avoid === 0) {
         return [
           i18n(locale, "log.restartedNoCheck", {
             id: e.unitId,
@@ -1770,8 +1795,19 @@ function eventLines(locale: LocaleId, e: GameEvent): string[] {
           }),
         ];
       }
+      if (e.success) {
+        return [
+          i18n(locale, "log.restarted", {
+            id: e.unitId,
+            roll: e.roll,
+            heat: e.heat,
+            avoid: e.avoid,
+            threshold: e.threshold,
+          }),
+        ];
+      }
       return [
-        i18n(locale, "log.restarted", {
+        i18n(locale, "log.restartFailed", {
           id: e.unitId,
           roll: e.roll,
           heat: e.heat,
@@ -1779,27 +1815,21 @@ function eventLines(locale: LocaleId, e: GameEvent): string[] {
           threshold: e.threshold,
         }),
       ];
-    case "shutdownManual":
-      return [i18n(locale, "log.shutdownManual", { id: e.unitId })];
-    case "startupSuccess":
-      return [
-        i18n(locale, "log.startupSuccess", {
-          id: e.unitId,
-          roll: e.roll,
-          heat: e.heat,
-          avoid: e.avoid,
-        }),
-      ];
-    case "startupFailed":
-      return [
-        i18n(locale, "log.startupFailed", {
-          id: e.unitId,
-          roll: e.roll,
-          heat: e.heat,
-          avoid: e.avoid,
-        }),
-      ];
-    case "heatAmmoExplosion":
+    case "ammoExplosionCheck":
+      if (e.avoided) {
+        return [
+          i18n(locale, "log.ammoExplosionAvoided", {
+            id: e.unitId,
+            weapon: e.weapon,
+            loc: SHORT_LOC[e.location],
+            slot: String(e.slotIndex),
+            roll: e.roll,
+            heat: e.heat,
+            avoid: e.avoid,
+            threshold: e.threshold,
+          }),
+        ];
+      }
       return [
         i18n(locale, "log.heatAmmoExplosion", {
           id: e.unitId,

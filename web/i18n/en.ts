@@ -377,6 +377,10 @@ export const en = {
   "log.shutdownPriority": "{id} has movement priority — shut down, must attempt startup or pass",
   "log.startupSuccess": "{id} startup check passed (2D6 = {roll} >= {avoid}) — online next turn",
   "log.startupFailed": "{id} startup check failed (2D6 = {roll} < {avoid}); still shut down",
+  "log.restartFailed":
+    "{id} restart check failed (heat {heat} >= {threshold}) avoid fail(2D6 = {roll} < {avoid}); still shut down",
+  "log.ammoExplosionAvoided":
+    "{id} ammo {weapon} ({loc} #{slot}) avoids exploding (heat {heat} >= {threshold}) avoid success(2D6 = {roll} >= {avoid})",
   "log.heatAmmoExplosion":
     "{id} ammo {weapon} ({loc} #{slot}, {shots} shots) explodes for {damage} damage (heat {heat} >= {threshold}) avoid fail(2D6 = {roll} < {avoid})",
 

@@ -38,7 +38,11 @@ describe("voluntary shutdown", () => {
     voluntaryShutdown(state, "hbk");
     expect(getUnit(state, "hbk").shutdown).toBe("manual");
     expect(state.actedThisPhase).toContain("hbk");
-    expect(state.events.some((e) => e.kind === "shutdownManual" && e.unitId === "hbk")).toBe(true);
+    expect(
+      state.events.some(
+        (e) => e.kind === "shutdownCheck" && e.unitId === "hbk" && e.manual && !e.avoided,
+      ),
+    ).toBe(true);
   });
 
   it("rejects a unit that is already shut down", () => {
@@ -82,7 +86,11 @@ describe("voluntary startup", () => {
     voluntaryShutdown(state, "hbk");
     attemptVoluntaryStartup(state, "hbk", scriptedRng());
     expect(hbk.shutdown).toBe("starting");
-    expect(state.events.some((e) => e.kind === "startupSuccess" && e.unitId === "hbk")).toBe(true);
+    expect(
+      state.events.some(
+        (e) => e.kind === "restartCheck" && e.unitId === "hbk" && e.success && e.manual,
+      ),
+    ).toBe(true);
     expect(state.actedThisPhase).toContain("hbk");
   });
 
@@ -93,7 +101,11 @@ describe("voluntary startup", () => {
     voluntaryShutdown(state, "hbk");
     attemptVoluntaryStartup(state, "hbk", scriptedRng(2, 1)); // 2D6 = 3 < 6
     expect(hbk.shutdown).toBe("manual");
-    expect(state.events.some((e) => e.kind === "startupFailed" && e.unitId === "hbk")).toBe(true);
+    expect(
+      state.events.some(
+        (e) => e.kind === "restartCheck" && e.unitId === "hbk" && !e.success && e.manual,
+      ),
+    ).toBe(true);
     expect(state.actedThisPhase).toContain("hbk");
   });
 
