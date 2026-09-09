@@ -431,8 +431,10 @@ export function createBattle(
   }
 
   return {
-    turn: 1,
-    phase: "initiative",
+    // turn: 1,
+    turn: 0,
+    // phase: "initiative",
+    phase: "end",
     initiativeWinnerTeam: null,
     units: unitStates,
     cells,
@@ -441,7 +443,8 @@ export function createBattle(
     critsDisabled: options.critsDisabled,
     actedThisPhase: [],
     actorQueue: null,
-    events: [{ kind: "turn", turn: 1 }],
+    // events: [{ kind: "turn", turn: 1 }],
+    events: [],
     buildings,
   };
 }

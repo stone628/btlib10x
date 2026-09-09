@@ -2,9 +2,8 @@
 // All value-level imports flow one way (render.ts → renderer.text.ts); the
 // reverse edge (renderer.text.ts → render.ts) is type-only and erased at
 // compile time, so there is never a runtime module cycle.
-import type { Facing, HexCoord, MapDef, RevealedLanding, UnitState } from "btlib10x";
+import type { Facing, HexCoord, MapDef, RevealedLanding, UnitInit, UnitState } from "btlib10x";
 import { cssGridRenderer, textRenderer } from "./renderer.text.js";
-import type { SetupUnit } from "./session.js";
 
 // ---- renderer supplier ----
 
@@ -31,7 +30,7 @@ export interface BoardRenderUnit {
   readonly facing: Facing;
 }
 
-export function createBoardRenderUnit(unit: UnitState | SetupUnit): BoardRenderUnit {
+export function createBoardRenderUnit(unit: UnitState | UnitInit): BoardRenderUnit {
   return {
     id: unit.id,
     team: unit.team,

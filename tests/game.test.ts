@@ -469,7 +469,7 @@ describe("actorQueue", () => {
     const state = startMovementTurn(hbkVsEnf()); // team 0 wins initiative
     const q = actorQueue(state);
     expect(q.acted).toEqual([]);
-    expect(q.pending.map((av)=>av.id)).toEqual(["enf", "hbk"]);
+    expect(q.pending.map((av) => av.id)).toEqual(["enf", "hbk"]);
     expect(q.pending[0]?.id).toBe(nextActor(state));
   });
 
@@ -478,8 +478,8 @@ describe("actorQueue", () => {
     declareMove(state, "hbk", "walk");
     executeMove(state, "hbk", []);
     const q = actorQueue(state);
-    expect(q.acted.map((av)=>av.id)).toEqual(["hbk"]);
-    expect(q.pending.map((av)=>av.id)).toEqual(["enf"]);
+    expect(q.acted.map((av) => av.id)).toEqual(["hbk"]);
+    expect(q.pending.map((av) => av.id)).toEqual(["enf"]);
     expect(nextActor(state)).toBe("enf");
   });
 
@@ -501,11 +501,11 @@ describe("actorQueue", () => {
     executeMove(state, "enf", []);
     declareMove(state, "hbk", "walk");
     executeMove(state, "hbk", []);
-    expect(actorQueue(state).acted.map((av)=>av.id)).toEqual(["enf", "hbk"]);
+    expect(actorQueue(state).acted.map((av) => av.id)).toEqual(["enf", "hbk"]);
     advancePhase(state); // movement -> weaponAttack
     const q = actorQueue(state);
-    expect(q.acted.map((av)=>av.id)).toEqual([]);
-    expect(q.pending.map((av)=>av.id)).toEqual(["enf", "hbk"]);
+    expect(q.acted.map((av) => av.id)).toEqual([]);
+    expect(q.pending.map((av) => av.id)).toEqual(["enf", "hbk"]);
   });
 
   it("matches the unequal-force activation order", () => {
