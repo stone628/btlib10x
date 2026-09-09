@@ -237,5 +237,68 @@ body {
   outline: none;
   color: inherit;
   font: inherit;
+  margin: 0;
   caret-shape: bar;
+}
+
+.motd-panel {
+  position: fixed;
+  top: 8px;
+  right: 30px;
+  width: fit-content;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: #0c0f0c;
+  border: 1px solid #233023;
+  border-radius: 4px;
+  z-index: 100;
+  font-size: 12px;
+  color: #b8c9b8;
+}
+.motd-panel > summary {
+  cursor: pointer;
+  padding: 6px 10px;
+  color: #8fd08f;
+  font-weight: bold;
+  user-select: none;
+}
+.motd-panel[open] > summary {
+  border-bottom: 1px solid #233023;
+  text-align: right;
+}
+.motd-panel > #motd-body {
+  padding: 8px 10px;
+  white-space: pre-wrap;
+}
+#motd-body .banner {
+  color: #8fd08f;
+  font-weight: bold;
+}
+#motd-body .hint {
+  color: #b9c9b0;
+  font-style: italic;
+}
+
+.link-button {
+  text-decoration: none;
+  color: var(--c-green);
+  background: #1a1f1a;
+  border: 1px solid #233023;
+  border-radius: 4px;
+  padding: 6px 12px;
+  display: inline-block;
+  font-family: inherit;
+  font-size: inherit;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.link-button:hover {
+  background-color: var(--cb-green);
+  color: var(--c-white);
+  border-color: var(--c-green);
+  text-decoration: none;
+}
+.link-button:focus-visible {
+  outline: none;
+  border-color: var(--c-yellow);
+  box-shadow: 0 0 0 2px var(--cb-yellow);
 }

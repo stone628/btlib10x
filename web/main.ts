@@ -2,7 +2,8 @@ import { VERSION } from "btlib10x";
 import { AUTOPLAY_INTERVAL_MS, nextAutoPlayCommand, resetAutoplayState } from "./autoplay.js";
 import { runChunks } from "./cli.js";
 import { buildLinesChunk, type Chunk } from "./format.js";
-import { i18n } from "./i18n/index.js";
+import { i18n, isLocale } from "./i18n/index.js";
+import motdText from "./MOTD.txt";
 import * as S from "./session.js";
 
 document.title = `bt10x terminal v${VERSION}`;
@@ -13,6 +14,14 @@ const promptEl = document.getElementById("prompt") as HTMLSpanElement;
 const input = document.getElementById("cmd") as HTMLInputElement;
 
 const session = S.newSession(42);
+const urlLang = new URLSearchParams(window.location.search).get("lang");
+if (urlLang !== null && isLocale(urlLang)) {
+  session.locale = urlLang;
+}
+
+const motdBody = document.getElementById("motd-body");
+if (motdBody) motdBody.innerHTML = motdText;
+
 const history: string[] = [];
 let historyIdx = -1;
 
