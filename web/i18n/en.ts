@@ -199,6 +199,7 @@ export const en = {
   "setup.noUnits": "(no units placed)",
 
   // movement status
+  "moveStatus.headLine": "queued movements:",
   "moveStatus.noMode": "(mode not declared)",
   "moveStatus.mode": "mode: {mode}",
   "moveStatus.budget": "budget: {budget} MP",
@@ -206,6 +207,13 @@ export const en = {
   "moveStatus.stepTurn": "{i}. face {steps} ({from} -> {to})",
   "moveStatus.stepEnter": "{i}. enter ({col},{row})",
   "moveStatus.stepLine": "{label} +{cost} MP (total {total})",
+
+  // turn order status
+  "status.orderHeader": "turn order:",
+  "status.done": "  done: {ids}",
+  "status.next": "  next: {id}",
+  "status.pendingAfter": "  pending after: {ids}",
+  "status.none": "-",
 
   // heat status
   "heat.title": "heat: {id} = {heat}",
@@ -222,6 +230,7 @@ export const en = {
   "heat.stateStarting": "state: STARTING",
 
   // attack status
+  "attackStatus.header": "queued attacks:",
   "attackStatus.none": "(no attacks queued)",
 
   // fire suggestion

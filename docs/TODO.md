@@ -10,8 +10,6 @@
 ## To Do
 
 - show ammo explosion check avoid (success)
-- enforce minimum range rule for weapons
-- warn min range, reject out of range on 'fire' command immediately
 - change movement phase command to set final hex and facing.
 
 ## In progress

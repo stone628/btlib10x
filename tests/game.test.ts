@@ -4,6 +4,7 @@ import { getWeaponDefFor } from "../src/data/weapon.schema.js";
 import { ammoWeaponTotals, pooledShotsLeft } from "../src/rules/ammo.js";
 import type { BattleState, TerrainHexDef, UnitInit } from "../src/rules/game.js";
 import {
+  actorQueue,
   advancePhase,
   checkVictory,
   declareAttacks,
@@ -434,6 +435,90 @@ describe("nextActor with unequal forces", () => {
     const state = startMovementTurn(hbkVsEnf());
     expect(state.initiativeWinnerTeam).toBe(0);
     expect(activationOrder(state)).toEqual(["enf", "hbk"]);
+  });
+});
+
+describe("actorQueue", () => {
+  /** 4-vs-2 state with team 1 winning initiative (see fourVsTwo above). */
+  function fourVsTwoState(): BattleState {
+    const units: UnitInit[] = [];
+    for (let i = 0; i < 4; i++) {
+      units.push({
+        id: `a${i}`,
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: i, row: 0 },
+        facing: "ne",
+      });
+    }
+    for (let i = 0; i < 2; i++) {
+      units.push({
+        id: `b${i}`,
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 5 + i, row: 0 },
+        facing: "sw",
+      });
+    }
+    return startMovementTurn(createTestBattle([], units, true), scriptedRng(1, 1, 3, 3));
+  }
+
+  it("fresh movement phase orders loser-first alternation and matches nextActor", () => {
+    const state = startMovementTurn(hbkVsEnf()); // team 0 wins initiative
+    const q = actorQueue(state);
+    expect(q.acted).toEqual([]);
+    expect(q.pending).toEqual(["enf", "hbk"]);
+    expect(q.pending[0]).toBe(nextActor(state));
+  });
+
+  it("moves acted units from pending to acted", () => {
+    const state = startMovementTurn(hbkVsEnf());
+    declareMove(state, "hbk", "walk");
+    executeMove(state, "hbk", []);
+    const q = actorQueue(state);
+    expect(q.acted).toEqual(["hbk"]);
+    expect(q.pending).toEqual(["enf"]);
+    expect(nextActor(state)).toBe("enf");
+  });
+
+  it("weaponAttack queue excludes shutdown and passed units", () => {
+    const state = startMovementTurn(hbkVsEnf());
+    declareMove(state, "hbk", "walk");
+    executeMove(state, "hbk", []);
+    advancePhase(state); // movement -> weaponAttack
+    getUnit(state, "hbk").shutdown = "heat";
+    getUnit(state, "enf").passedAttacks = true;
+    const q = actorQueue(state);
+    expect(q.acted).toEqual([]);
+    expect(q.pending).toEqual([]);
+  });
+
+  it("rebuilds per phase with a fresh acted pool", () => {
+    const state = startMovementTurn(hbkVsEnf());
+    declareMove(state, "enf", "walk");
+    executeMove(state, "enf", []);
+    declareMove(state, "hbk", "walk");
+    executeMove(state, "hbk", []);
+    expect(actorQueue(state).acted).toEqual(["enf", "hbk"]);
+    advancePhase(state); // movement -> weaponAttack
+    const q = actorQueue(state);
+    expect(q.acted).toEqual([]);
+    expect(q.pending).toEqual(["enf", "hbk"]);
+  });
+
+  it("matches the unequal-force activation order", () => {
+    const state = fourVsTwoState();
+    expect(actorQueue(state).pending).toEqual(["a0", "a1", "b0", "a2", "a3", "b1"]);
+  });
+
+  it("front-loads shut-down units in the movement phase", () => {
+    const state = startMovementTurn(hbkVsEnf(), scriptedRng(2, 2, 6, 6)); // team 1 wins
+    getUnit(state, "hbk").shutdown = "heat";
+    const q = actorQueue(state);
+    expect(q.pending).toEqual(["hbk", "enf"]);
+    expect(nextActor(state)).toBe("hbk");
   });
 });
 

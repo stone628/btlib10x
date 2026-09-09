@@ -114,6 +114,7 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
         for (const u of Object.values(st.units)) {
           if (!u.removed) queueNextCommand(`sheet ${u.id}`);
         }
+        queueNextCommand("status");
       }
       // A shut-down unit just passes: no movement mode, stay off-line.
       if (actor.moveMode === null && isNominal(actor)) {
@@ -124,6 +125,9 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
     }
 
     if (st.phase === "weaponAttack") {
+      if (lastBattlePhase !== "weaponAttack") {
+        queueNextCommand("status");
+      }
       const sugg = suggestFireTargets(st, actor.id);
       const target = sugg.targets.find((t) => t.targetId === enemy.id);
       const available = (target?.weapons ?? [])

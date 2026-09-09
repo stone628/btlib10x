@@ -392,7 +392,9 @@ each `FireWeapon` its own `arc`. Mirrors `declareAttacks` checks.
 
 The engine is **in-place and `void`-returning**: rule functions mutate the
 `BattleState` you pass directly and return `void` (read-only queries like
-`nextActor` / `checkVictory` / `getUnit` return values but never mutate).
+`nextActor` / `actorQueue` / `checkVictory` / `getUnit` return values without
+touching combat state; `nextActor` and `actorQueue` lazily fill the cached
+`actorQueue` activation order on first use each phase).
 The engine is single-threaded and non-concurrent; atomicity is **not**
 guaranteed per rule call — callers that need all-or-nothing behavior (e.g. the
 web session) hold a serializable snapshot and roll back on failure (see
@@ -409,6 +411,7 @@ resolveDeclaredAttacks(state, unitId, rng): void
 resolveAllAttacks(state, rng): void                    // resolves every unit's declared attacks
 advancePhase(state): void                              // drives the phase cycle
 nextActor(state): string | null                        // alternating activation hint
+actorQueue(state): { acted: string[]; pending: string[] }  // activation order view
 checkVictory(state): { winnerTeam; draw }
 getUnit(state, unitId): UnitState
 ```
@@ -441,6 +444,7 @@ interface BattleState extends HexGrid {
   width: number; height: number;      // board size
   critsDisabled: boolean;
   actedThisPhase: string[];
+  actorQueue: string[] | null;    // cached activation order, null until first query
   events: GameEvent[];                // serializable audit log
   buildings: Record<string, BuildingState>;  // { cf; type } keyed "col,row"; building hexes only
 }

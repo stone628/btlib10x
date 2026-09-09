@@ -279,6 +279,9 @@ export interface BattleState extends HexGrid {
   /** When true, critical hit resolution is suppressed at attack time. */
   critsDisabled: boolean;
   actedThisPhase: string[];
+  /** Activation order for the current phase, computed lazily on first query
+   *  and cached until the next phase transition. */
+  actorQueue: string[] | null;
   events: GameEvent[];
   /** Building state keyed by hex `"col,row"`; only building hexes present. */
   buildings: Record<string, BuildingState>;
@@ -438,6 +441,7 @@ export function createBattle(
     height,
     critsDisabled: options.critsDisabled,
     actedThisPhase: [],
+    actorQueue: null,
     events: [{ kind: "turn", turn: 1 }],
     buildings,
   };
@@ -475,6 +479,7 @@ export function rollInitiativePhase(state: BattleState, rng: Rng): void {
   const result = rollInitiative(teams, rng);
   state.initiativeWinnerTeam = result.winnerTeam;
   state.phase = "movement";
+  state.actorQueue = null;
   state.events.push(
     { kind: "initiative", rolls: result.rolls, winnerTeam: result.winnerTeam },
     { kind: "phase", phase: "movement" },
@@ -912,6 +917,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng): void {
 }
 
 export function advancePhase(state: BattleState, rng: Rng = DEFAULT_RNG): void {
+  state.actorQueue = null;
   switch (state.phase) {
     case "initiative": {
       if (state.initiativeWinnerTeam === null) {
@@ -1177,53 +1183,104 @@ export function passMovement(state: BattleState, unitId: string): void {
 export function nextActor(state: BattleState): string | null {
   if (state.phase !== "movement" && state.phase !== "weaponAttack") return null;
   if (state.initiativeWinnerTeam === null) return null;
-  const alive = Object.values(state.units).filter((u) => !u.removed);
-  // Shut-down units act first during the movement phase regardless of
-  // initiative: they can only attempt startup (or pass) and must not wait.
-  if (state.phase === "movement") {
-    const down = alive.find((u) => isShutdown(u) && !state.actedThisPhase.includes(u.id));
-    if (down) return down.id;
+  return pendingActors(state)[0] ?? null;
+}
+
+export interface ActorQueueView {
+  readonly acted: string[];
+  readonly pending: string[];
+}
+
+/** Who already acted this phase, and the ordered queue of who must still act. */
+export function actorQueue(state: BattleState): ActorQueueView {
+  if (state.phase !== "movement" && state.phase !== "weaponAttack") {
+    return { acted: [], pending: [] };
   }
+  if (state.initiativeWinnerTeam === null) return { acted: [], pending: [] };
+  const alive = new Set(
+    Object.values(state.units)
+      .filter((u) => !u.removed)
+      .map((u) => u.id),
+  );
+  const acted = state.actedThisPhase.filter((id) => alive.has(id));
+  return { acted, pending: pendingActors(state) };
+}
+
+/** Units still to act this phase, in activation order (cached per phase). */
+function pendingActors(state: BattleState): string[] {
+  if (state.actorQueue === null) state.actorQueue = buildActorQueue(state);
+  const nominalOnly = state.phase === "weaponAttack";
+  return state.actorQueue.filter((id) => {
+    const unit = state.units[id];
+    if (!unit || unit.removed) return false;
+    if (state.actedThisPhase.includes(id)) return false;
+    if (unit.passedAttacks) return false;
+    if (nominalOnly && !isNominal(unit)) return false;
+    return true;
+  });
+}
+
+/** Full activation order for the current phase: movement phases front-load
+ *  shut-down units (they can only attempt startup or pass); both phases then
+ *  alternate initiative-loser-first, letting the larger team act
+ *  ⌊size/minSize⌋ units per step (TW unequal-force activation). */
+function buildActorQueue(state: BattleState): string[] {
+  const alive = Object.values(state.units).filter((u) => !u.removed);
   const teams = [...new Set(alive.map((u) => u.team))];
-  if (teams.length === 0) return null;
+  if (teams.length === 0 || state.initiativeWinnerTeam === null) return [];
   const winner = state.initiativeWinnerTeam;
   const loser = teams.find((t) => t !== winner) ?? winner;
   const order = loser === winner ? teams : [loser, ...teams.filter((t) => t !== loser)];
 
   const sizeByTeam = new Map<number, number>();
   for (const u of alive) sizeByTeam.set(u.team, (sizeByTeam.get(u.team) ?? 0) + 1);
-
   const minSize = Math.min(...teams.map((t) => sizeByTeam.get(t) ?? 0));
-
-  const actedCount = (team: number): number =>
-    alive.filter((u) => u.team === team && state.actedThisPhase.includes(u.id)).length;
-
   const unitsPerStep = (team: number): number => {
     const size = sizeByTeam.get(team) ?? 0;
     if (size === 0 || minSize === 0) return 1;
     return Math.max(1, Math.floor(size / minSize));
   };
 
-  const stepNumber = (team: number): number => {
-    const ups = unitsPerStep(team);
-    return Math.floor(actedCount(team) / ups);
-  };
-
-  const sorted = order
-    .map((team) => ({ team, step: stepNumber(team) }))
-    .sort((a, b) => {
-      if (a.step !== b.step) return a.step - b.step;
-      return a.team === loser ? -1 : b.team === loser ? 1 : 0;
-    })
-    .map((entry) => entry.team);
-  for (const team of sorted) {
-    const candidate = alive.find(
-      (u) =>
-        u.team === team && !state.actedThisPhase.includes(u.id) && !u.passedAttacks && isNominal(u),
-    );
-    if (candidate) return candidate.id;
+  const downIds = new Set<string>();
+  if (state.phase === "movement") {
+    for (const u of alive) if (isShutdown(u)) downIds.add(u.id);
   }
-  return null;
+
+  // Number of units already "placed" per team, including down units that were
+  // front-loaded; the alternating order is replayed from these counts.
+  const placed = new Map<number, number>();
+  for (const t of teams) placed.set(t, 0);
+
+  const queue: string[] = [];
+  const downOf = alive.filter((u) => downIds.has(u.id));
+  for (const u of downOf) {
+    queue.push(u.id);
+    placed.set(u.team, (placed.get(u.team) ?? 0) + 1);
+  }
+
+  const stepNumber = (team: number): number =>
+    Math.floor((placed.get(team) ?? 0) / unitsPerStep(team));
+
+  const nominal = alive.filter((u) => !downIds.has(u.id));
+  const nextIndex = new Map<number, number>();
+  for (const t of teams) nextIndex.set(t, 0);
+
+  while (queue.length < alive.length) {
+    const pick = order
+      .map((team) => ({ team, step: stepNumber(team) }))
+      .sort((a, b) => {
+        if (a.step !== b.step) return a.step - b.step;
+        return a.team === loser ? -1 : b.team === loser ? 1 : 0;
+      })
+      .map((entry) => entry.team)[0]!;
+    const idx = nextIndex.get(pick) ?? 0;
+    const unit = nominal.filter((u) => u.team === pick)[idx];
+    if (!unit) break;
+    queue.push(unit.id);
+    placed.set(pick, (placed.get(pick) ?? 0) + 1);
+    nextIndex.set(pick, idx + 1);
+  }
+  return queue;
 }
 
 export interface VictoryResult {
