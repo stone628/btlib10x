@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import type { MapDef } from "../src/index.js";
 import type { BattleState, createBattle, TerrainHexDef, UnitInit } from "../src/rules/game.js";
 import type { BoardModel } from "../web/renderer.text.js";
-import { battleModel, boardToText, FACING_GLYPH, GRID_GLYPHS, renderMap } from "../web/renderer.text.js";
+import {
+  battleModel,
+  boardToText,
+  FACING_GLYPH,
+  GRID_GLYPHS,
+  renderMap,
+} from "../web/renderer.text.js";
 import { createTestBattle } from "./helpers.js";
 
 /** Flat battle text via the structured model (historic renderer shape). */
@@ -72,7 +78,7 @@ describe("console renderer", () => {
     // wvr sits at col 3 (odd) row 1; its '↑' lives at the top edge of
     // the cell. The '↑' overwrites the top label's `0` digit at
     // canvas x = 15.
-    expect(lines[wvrAt - 1]!.slice(15, 16)).toBe(FACING_GLYPH["n"]);
+    expect(lines[wvrAt - 1]!.slice(15, 16)).toBe(FACING_GLYPH.n);
   });
 
   it("clips long ids and centers short ones in the 6-char belly", () => {
@@ -121,8 +127,12 @@ describe("console renderer", () => {
     // 20..24 target the right wall and interior of col 4's body.
     const edgeAt = (y: number): string => lines[y]!.slice(20, 24);
     expect(edgeAt(2)).toBe(GRID_GLYPHS.edgeTop.repeat(4));
-    expect(edgeAt(10)).toBe(`${GRID_GLYPHS.edgeShared}${FACING_GLYPH["n"]}${GRID_GLYPHS.edgeShared.repeat(2)}`);
-    expect(edgeAt(18)).toBe(`${GRID_GLYPHS.edgeBottom.repeat(2)}${FACING_GLYPH["s"]}${GRID_GLYPHS.edgeBottom}`);
+    expect(edgeAt(10)).toBe(
+      `${GRID_GLYPHS.edgeShared}${FACING_GLYPH.n}${GRID_GLYPHS.edgeShared.repeat(2)}`,
+    );
+    expect(edgeAt(18)).toBe(
+      `${GRID_GLYPHS.edgeBottom.repeat(2)}${FACING_GLYPH.s}${GRID_GLYPHS.edgeBottom}`,
+    );
   });
 
   it("zero-pads coordinates as fixed XXYY pairs", () => {
@@ -192,12 +202,12 @@ describe("console renderer", () => {
     const out = renderBattle(state);
     // Each facing glyph has a distinct unicode codepoint; confirm the
     // output contains all six at some position.
-    expect(out).toContain(FACING_GLYPH["n"]); // n
-    expect(out).toContain(FACING_GLYPH["s"]); // s
-    expect(out).toContain(FACING_GLYPH["ne"]); // ne
-    expect(out).toContain(FACING_GLYPH["sw"]); // sw
-    expect(out).toContain(FACING_GLYPH["nw"]); // nw
-    expect(out).toContain(FACING_GLYPH["se"]); // se
+    expect(out).toContain(FACING_GLYPH.n); // n
+    expect(out).toContain(FACING_GLYPH.s); // s
+    expect(out).toContain(FACING_GLYPH.ne); // ne
+    expect(out).toContain(FACING_GLYPH.sw); // sw
+    expect(out).toContain(FACING_GLYPH.nw); // nw
+    expect(out).toContain(FACING_GLYPH.se); // se
   });
 });
 
