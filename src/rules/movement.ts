@@ -144,9 +144,12 @@ export function reachableLandings(
   // Ground: R/L cost 1 MP. Jump: R/L are free reorientations before/after the
   // 1-MP jump step (landing facing is chosen freely on jump).
   const turnCost = jumping ? 0 : 1;
-  const stepCost = (hex: HexCoord): number => {
+  const stepCost = (from: HexCoord, to: HexCoord): number => {
     if (jumping) return 1;
-    return costToEnter(cellAt(options.grid, hex).terrain);
+    const cellTo = cellAt(options.grid, to);
+    return (
+      costToEnter(cellTo.terrain) + costToClimb(cellAt(options.grid, from).level, cellTo.level)
+    );
   };
   const backwardAllowed = jumping || options.mode === "walk";
 
@@ -214,19 +217,13 @@ export function reachableLandings(
     // +1 MP per level changed (up or down); jumps ignore elevation.
     const forward = neighbor(cur.hex, cur.facing);
     if (canEnter(cur.hex, forward, false)) {
-      const climb = jumping
-        ? 0
-        : costToClimb(cellAt(options.grid, cur.hex).level, cellAt(options.grid, forward).level);
-      const c = cur.cost + stepCost(forward) + climb;
+      const c = cur.cost + stepCost(cur.hex, forward);
       if (c <= budget) enqueue(forward, cur.facing, c, [...cur.path, "F"]);
     }
     if (backwardAllowed) {
       const backward = neighbor(cur.hex, oppositeFacing(cur.facing));
       if (canEnter(cur.hex, backward, true)) {
-        const climb = jumping
-          ? 0
-          : costToClimb(cellAt(options.grid, cur.hex).level, cellAt(options.grid, backward).level);
-        const c = cur.cost + stepCost(backward) + climb;
+        const c = cur.cost + stepCost(cur.hex, backward);
         if (c <= budget) enqueue(backward, cur.facing, c, [...cur.path, "B"]);
       }
     }
