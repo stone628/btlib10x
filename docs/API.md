@@ -196,7 +196,6 @@ Map coordinates are already 1-based and match the engine directly, so there is
 - `attackerMovementModifier(mode)` → 0/+1/+2/+3
 - `targetMovementModifier(hexesEntered, jumped, immobile?=false)` → 0…+7 (+1
   jump bonus), or flat −4 when `immobile` (shut down / both legs destroyed)
-- `hexesSinceLastReversal(moves)` — only hexes after the last direction change count
 - `facingChangeCost(facings)`
 - `isForwardStep / isBackwardStep(from, to, facing)`
 - `canPassThroughHex(occupantTeam, moverTeam)` — friends yes, enemies no

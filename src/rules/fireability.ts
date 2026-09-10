@@ -8,7 +8,6 @@ import { canFireFromLocation } from "./damage.js";
 import { type BattleState, isImmobile } from "./game.js";
 import { toHitHeatModifier } from "./heat.js";
 import { losBlockedByElevation, losWoodsPointsBetween } from "./los.js";
-import * as mv from "./movement.js";
 import type { RangeBracket } from "./tohit.js";
 import { computeToHit, damageForBracket } from "./tohit.js";
 
@@ -114,7 +113,7 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
         const breakdown = computeToHit({
           gunnery: unit.gunnery,
           attackerMovement: unit.moveMode ?? "standStill",
-          targetHexesMoved: mv.hexesSinceLastReversal(enemy.movesThisTurn),
+          targetHexesMoved: enemy.movesThisTurn.length,
           targetJumped: enemy.jumpedThisTurn,
           targetImmobile: isImmobile(enemy),
           targetTerrain: cellAt(state, enemy.position).terrain,

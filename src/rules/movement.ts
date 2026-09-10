@@ -62,21 +62,6 @@ export function targetMovementModifier(
   return mod + (jumped ? 1 : 0);
 }
 
-/**
- * Hexes counted for the target movement modifier: when a 'Mech reverses
- * direction, only the hexes moved after the last reversal count.
- */
-export function hexesSinceLastReversal(moves: readonly ("forward" | "backward")[]): number {
-  if (moves.length === 0) return 0;
-  const last = moves[moves.length - 1]!;
-  let count = 0;
-  for (let i = moves.length - 1; i >= 0; i--) {
-    if (moves[i] !== last) break;
-    count++;
-  }
-  return count;
-}
-
 export function facingChangeCost(facings: number): number {
   return facings * MP_PER_FACING_CHANGE;
 }

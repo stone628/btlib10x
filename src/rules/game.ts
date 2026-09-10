@@ -689,7 +689,7 @@ export function declareAttacks(
     const breakdown = computeToHit({
       gunnery: unit.gunnery,
       attackerMovement: unit.moveMode ?? "standStill",
-      targetHexesMoved: mv.hexesSinceLastReversal(target.movesThisTurn),
+      targetHexesMoved: target.movesThisTurn.length,
       targetJumped: target.jumpedThisTurn,
       targetImmobile: isImmobile(target),
       targetTerrain: cellAt(state, target.position).terrain,
@@ -784,7 +784,7 @@ function resolveUnitAttacks(
       gunnery: unit.gunnery,
       attackerMoved: unit.moveMode ?? "standStill",
       attackerHeat: preHeat,
-      targetHexesMoved: mv.hexesSinceLastReversal(target.movesThisTurn),
+      targetHexesMoved: target.movesThisTurn.length,
       targetJumped: target.jumpedThisTurn,
       targetImmobile: isImmobile(target),
       targetTerrain: cellAt(state, target.position).terrain,

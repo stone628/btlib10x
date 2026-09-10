@@ -9,7 +9,6 @@
 
 ## To Do
 
-- Target movement modifier. All three call sites still feed it hexesSinceLastReversal(target.movesThisTurn), the trailing run of same-direction steps, where TW counts total hexes moved. Only bites walking units that reverse.
 - Elevation. costToClimb is still max(0, to − from), so descending is free, and the validator still caps climbs at 1 level where the published limit is 2.
 - Buildings. building.ts is byte-identical: CF tiers, damage, collapse to rubble. Still no cover modifier, no LOS blocking, no collapse damage to occupants, and applyBuildingDamage is still exported and unused while game.ts reimplements it inline.
 - Ammo explosion strips armor. applyAmmoExplosion still zeroes the location's armor to force damage inward and leaves it zeroed, deleting armor an internal explosion should not touch. Cosmetically related: the CASE path applies a redundant extra -1 structure step to an already-depleted location.
@@ -35,6 +34,11 @@
 
 ## Done
 
+- **Target movement modifier (TW)** — `targetHexesMoved` now feeds total hexes
+  entered this turn (`movesThisTurn.length`) from all three call sites
+  (`declareAttacks`, `resolveUnitAttacks`, `suggestFireTargets`); TW counts total
+  hexes moved, not the trailing run since the last direction reversal.
+  `hexesSinceLastReversal` deleted.
 - **Streak missiles (TW)** — `streak` flag on `WeaponDef` (CL Streak SRM
   2/4/6, IS Streak SRM 2/4/6). `resolveWeaponAttack` skips Cluster Hits
   Table on streak hits (full tube count, one location roll per missile,
