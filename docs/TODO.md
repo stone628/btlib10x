@@ -9,7 +9,7 @@
 
 ## To Do
 
-- Ammo explosion strips armor. applyAmmoExplosion still zeroes the location's armor to force damage inward and leaves it zeroed, deleting armor an internal explosion should not touch. Cosmetically related: the CASE path applies a redundant extra -1 structure step to an already-depleted location.
+- need snapshot keeping, capable of rollback N steps like ctrl-z
 - Piloting Skill Rolls, falling and prone. Still the largest omission by knock-on effect: the second gyro crit, leg destruction, failed charges and DFAs all terminate in a fall in TW, and there is nothing to fall. createBattle still takes a gunnery skill per unit and no piloting skill, so the gap reaches the public API.
 - The pilot. No pilot entity, no hits, no consciousness rolls. Cockpit destruction kills the unit directly, and the life-support crit has nowhere to land.
 - Indirect LRM fire and spotting, and the whole electronic-warfare layer (TAG, NARC guidance, Artemis, ECM). These are TW-standard 'Mech rules.
@@ -56,9 +56,9 @@
   remains deferred.
 - **CASE / CASE II ammo-explosion containment** — ammo explosions in
   CASE-protected locations no longer overflow to the center torso. CASE
-  (explicit `case` crit slot, or implicit on all locations of Clan 'Mech) vents the
-  overflow as one point of internal-structure damage to the protected location
-  (crit-roll eligible) and stops transfer; CASE II (`caseII` slot) additionally
+  (explicit `case` crit slot, or implicit on all locations of Clan 'Mech)
+  vents the excess out of the protected location (its IS is destroyed and
+  stops at 0) and stops transfer; CASE II (`caseII` slot) additionally
   caps the blast at 1 point total. Detection via `hasCase`/`hasCaseII` in
   `src/rules/critical.ts`; wired through `applyAmmoExplosion` for both the crit
   slot path (`applySlotHit`) and the heat-phase path (`resolveHeatPhase`).

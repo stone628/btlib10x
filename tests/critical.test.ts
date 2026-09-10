@@ -675,9 +675,9 @@ describe("CASE", () => {
     const s = state();
     const ctBefore = s.internalStructure.centerTorso;
     // Massive blast (1000) against leftTorso with CASE: LT IS destroyed,
-    // one bonus containment point vents, and CT keeps all its IS.
+    // and CT keeps all its IS.
     const app = applyAmmoExplosion(s, "leftTorso", 1000, "case");
-    expect(app.after.internalStructure.leftTorso).toBe(-1);
+    expect(app.after.internalStructure.leftTorso).toBe(0);
     expect(app.after.internalStructure.centerTorso).toBe(ctBefore);
     expect(app.killed).toBe(false);
   });
@@ -694,13 +694,14 @@ describe("CASE", () => {
 
   it("no CASE: explosion transfers inward to the center torso as normal", () => {
     const s = state();
-    // Zero the CT armor pool too, so the IS delta is direct.
-    s.armor.centerTorso = 0;
     const ltBefore = s.internalStructure.leftTorso;
     const ctBefore = s.internalStructure.centerTorso;
+    const ctArmorBefore = s.armor.centerTorso;
     const app = applyAmmoExplosion(s, "leftTorso", 100);
-    // LT IS absorbs 23, the remaining 77 bleeds into CT IS.
+    // LT IS absorbs 23, the remaining 77 bleeds into CT IS. Ammo-explosion
+    // overflow bypasses armor everywhere (TW p.125), so CT armor is untouched.
     expect(app.after.internalStructure.leftTorso).toBe(0);
+    expect(app.after.armor.centerTorso).toBe(ctArmorBefore);
     expect(app.after.internalStructure.centerTorso).toBe(Math.max(0, ctBefore - (100 - ltBefore)));
   });
 
@@ -711,5 +712,22 @@ describe("CASE", () => {
     expect(app.after.internalStructure.leftArm).toBe(0);
     expect(app.killed).toBe(false);
     expect(app.after.internalStructure.centerTorso).toBeGreaterThan(0);
+  });
+
+  it("explosion bypasses armor without stripping it", () => {
+    const def = getMechDef("TW-Prime")!;
+    const s: UnitDamageState = {
+      armor: { ...def.armor, leftTorso: 10 },
+      armorRear: { ...def.armorRear },
+      internalStructure: { ...def.internalStructure },
+    };
+    const ctArmorBefore = s.armor.centerTorso;
+    const app = applyAmmoExplosion(s, "leftTorso", 100);
+    // Armor at the explosion site is preserved — explosions bypass, not strip.
+    expect(app.after.armor.leftTorso).toBe(10);
+    // IS is still damaged directly (armor bypassed).
+    expect(app.after.internalStructure.leftTorso).toBe(0);
+    // Overflow into the CT likewise bypasses its armor (TW p.125).
+    expect(app.after.armor.centerTorso).toBe(ctArmorBefore);
   });
 });

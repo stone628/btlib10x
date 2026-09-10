@@ -69,20 +69,29 @@ function poolOf(
   return { kind: "armor", value: state.armor[location] };
 }
 
+export interface DamageOptions {
+  caseKind?: CaseKind | undefined;
+  /** Skip armor at every location; damage hits IS directly (TW ammo explosion). */
+  bypassArmor?: boolean | undefined;
+}
+
 /**
  * Apply one damage grouping against `damage` starting at `location` for the
  * given firing `arc` (defaults to front). Damage first drains the active armor
  * pool (front, or rear for rear-arc torso hits), then that location's internal
  * structure; once both are gone it transfers inward per the graph. CASE
  * protection (optional, from ammo explosions) caps the overflow at the
- * protected location. Pure: returns the updated layered damage state.
+ * protected location. When `bypassArmor` is set, armor is skipped at every
+ * location in the chain — damage goes straight to IS (per TW, ammo-explosion
+ * overflow transfers to the next location's internal structure). Pure: returns
+ * the updated layered damage state.
  */
 export function applyDamage(
   damage: UnitDamageState,
   location: Location,
   amount: number,
   arc: Arc = "front",
-  caseKind?: CaseKind,
+  options?: DamageOptions,
 ): DamageApplication {
   if (!Number.isInteger(amount) || amount <= 0) {
     throw new Error(`damage must be a positive integer, got ${amount}`);
@@ -91,28 +100,33 @@ export function applyDamage(
   const steps: DamageTransferStep[] = [];
   const newlyDestroyed: Location[] = [];
   const blownOffArms: Location[] = [];
+  const caseKind = options?.caseKind;
+  const bypassArmor = options?.bypassArmor;
   let killed = false;
-
   let remaining = caseKind === "caseII" ? 1 : amount;
   let current: Location | null = location;
   while (current !== null && remaining > 0 && !killed) {
     const cur: Location = current;
 
-    const pool = poolOf(next, cur, arc);
-    if (pool.value > 0) {
-      const applied = Math.min(remaining, pool.value);
-      const after = pool.value - applied;
-      if (pool.kind === "armorRear") next.armorRear[cur] = after;
-      else next.armor[cur] = after;
-      remaining -= applied;
-      steps.push({
-        location: cur,
-        pool: pool.kind,
-        damageApplied: applied,
-        depleted: after === 0,
-      });
-      // If armor absorbed everything, we're done; otherwise continue to IS.
-      if (remaining === 0 || after > 0) break;
+    // Ammo-explosion overflow (bypassArmor) skips the armor pool entirely at
+    // every location — damage lands on IS directly (TW).
+    if (!bypassArmor) {
+      const pool = poolOf(next, cur, arc);
+      if (pool.value > 0) {
+        const applied = Math.min(remaining, pool.value);
+        const after = pool.value - applied;
+        if (pool.kind === "armorRear") next.armorRear[cur] = after;
+        else next.armor[cur] = after;
+        remaining -= applied;
+        steps.push({
+          location: cur,
+          pool: pool.kind,
+          damageApplied: applied,
+          depleted: after === 0,
+        });
+        // If armor absorbed everything, we're done; otherwise continue to IS.
+        if (remaining === 0 || after > 0) break;
+      }
     }
 
     const isBefore = next.internalStructure[cur];
@@ -140,19 +154,7 @@ export function applyDamage(
       if (remaining > 0 && !killed) {
         if (caseKind !== undefined && cur === location) {
           // CASE / CASE II: contain the blast here instead of transferring
-          // inward. Plain CASE vents the leftover as one bonus point of IS
-          // damage to this location; CASE II (already capped at 1 by the
-          // caller) vents with no bonus. Either way the blast never reaches
-          // the center torso.
-          if (caseKind === "case") {
-            next.internalStructure[cur] -= 1;
-            steps.push({
-              location: cur,
-              pool: "structure",
-              damageApplied: 1,
-              depleted: true,
-            });
-          }
+          // inward - remaining damage is ignored; the blast just vents.
           break;
         }
         current = damageTransferTo(cur);
