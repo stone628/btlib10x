@@ -497,6 +497,24 @@ describe("game integration: immobile target modifier in to-hit", () => {
   });
 });
 
+describe("game integration: target movement modifier counts total hexes", () => {
+  function targetModForMoves(moves: readonly ("forward" | "backward")[]): number {
+    const state = hbkVsEnf();
+    getUnit(state, "enf").movesThisTurn = [...moves];
+    startAttackTurn(state);
+    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
+    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4));
+    const resolved = state.events.find((e) => e.kind === "attackResolved");
+    expect(resolved).toBeDefined();
+    return (resolved as Extract<(typeof state.events)[number], { kind: "attackResolved" }>)
+      .resolution.breakdown.targetMod;
+  }
+
+  it("reversed 4-hex walk counts all four hexes (not the 2 since reversal)", () => {
+    expect(targetModForMoves(["forward", "forward", "backward", "backward"])).toBe(1);
+  });
+});
+
 describe("game integration: partial cover in to-hit", () => {
   function makeBattleWithTargetTerrain(type: TerrainType): BattleState {
     const units: UnitInit[] = [

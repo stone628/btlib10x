@@ -235,4 +235,30 @@ describe("suggestFireTargets", () => {
     const sugg = suggestFireTargets(state, "hbk");
     expect(sugg.targets.find((t) => t.targetId === "enf")!.weapons).toHaveLength(0);
   });
+
+  it("counts reversed hexes toward the target movement modifier", () => {
+    const units: UnitInit[] = [
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 2 },
+        facing: "n",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 2, row: -7 },
+        facing: "s",
+      },
+    ];
+    const state = startAttackTurn(createTestBattle([], units, false));
+    state.units.enf!.movesThisTurn = [...Array(18).fill("forward"), ...Array(12).fill("backward")];
+    const reasons = blockedReasons(state, "hbk", "enf");
+    // 30 hexes total -> target +6, long range +4, gunnery 4 = 14 -> auto-miss.
+    expect(reasons.filter((r) => r === "autoMiss").length).toBeGreaterThan(0);
+  });
 });

@@ -6,7 +6,6 @@ import {
   canEndMoveInHex,
   canPassThroughHex,
   facingChangeCost,
-  hexesSinceLastReversal,
   maxMovePoints,
 } from "../src/rules/movement.js";
 
@@ -30,13 +29,6 @@ describe("movement rules", () => {
     expect(attackerMovementModifier("walk")).toBe(1);
     expect(attackerMovementModifier("run")).toBe(2);
     expect(attackerMovementModifier("jump")).toBe(3);
-  });
-
-  it("counts only hexes since the last direction reversal", () => {
-    const moves = ["backward", "backward", "backward", "forward", "forward"] as const;
-    expect(hexesSinceLastReversal([...moves])).toBe(2);
-    expect(hexesSinceLastReversal(["forward", "forward"])).toBe(2);
-    expect(hexesSinceLastReversal([])).toBe(0);
   });
 
   it("enforces stacking pass-through vs ending rules", () => {
