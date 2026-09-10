@@ -408,9 +408,7 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
   candidate: {
     helpKey: "cmd.candidateAttack.help",
     run: (s, _a) => {
-      if (s.fireCandidate === null) {
-        throw new Error(i18n(L(s), "err.candidate.attack"));
-      }
+      if (!checkFireHint(s)) throw new Error(i18n(L(s), "err.candidate.attack"));
       return fireSuggestionChunks(s.locale, s.fireCandidate!);
     },
   },
@@ -685,7 +683,7 @@ function checkFireHint(s: S.Session): boolean {
   const actor = S.currentActor(s);
   if (actor === null) return false;
   const newKey = `${s.battle.turn}:${actor.id}`;
-  if (newKey !== s.fireHintShownFor) {
+  if (newKey !== s.fireHintShownFor || s.fireCandidate === null) {
     s.fireCandidate = suggestFireTargets(s.battle, actor.id);
     s.fireHintShownFor = newKey;
     return true;

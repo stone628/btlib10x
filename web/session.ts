@@ -101,9 +101,9 @@ export function newSession(seed: number): Session {
     moveSteps: [],
     moveFinalFacing: null,
     fireDecls: [],
-    fireHintShownFor: null,
     critsDisabled: false,
     moveCandidate: null,
+    fireHintShownFor: null,
     fireCandidate: null,
   };
 }
@@ -112,7 +112,10 @@ function clearBuffers(s: Session): void {
   s.moveMode = null;
   s.moveSteps = [];
   s.moveFinalFacing = null;
+  s.moveCandidate = null;
   s.fireDecls = [];
+  s.fireHintShownFor = null;
+  s.fireCandidate = null;
 }
 
 /**
@@ -287,7 +290,6 @@ export function startBattle(s: Session): GameEvent[] {
   s.battle = createBattle(map, s.setup.roster, battleOptions(s));
   s.victory = null;
   s.actorId = null;
-  s.fireHintShownFor = null;
   clearBuffers(s);
   return drive(s);
 }
@@ -637,7 +639,6 @@ export function rematch(s: Session): GameEvent[] {
   s.battle = createBattle(getMapDefFor(s.setup), s.setup.roster, battleOptions(s));
   s.victory = null;
   s.actorId = null;
-  s.fireHintShownFor = null;
   clearBuffers(s);
   return drive(s);
 }
@@ -648,7 +649,6 @@ export function resetSession(s: Session): void {
   s.battle = null;
   s.victory = null;
   s.actorId = null;
-  s.fireHintShownFor = null;
   clearBuffers(s);
 }
 
