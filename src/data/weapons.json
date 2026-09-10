@@ -86,10 +86,10 @@
   {
     "name": "AC/2",
     "short": 8,
-    "medium": 15,
+    "medium": 16,
     "long": 24,
     "minRange": 4,
-    "damage": 5,
+    "damage": 2,
     "category": "BALLISTIC",
     "heat": 1
   },
@@ -307,7 +307,7 @@
     "long": 12,
     "damage": 20,
     "category": "BALLISTIC",
-    "heat": 1
+    "heat": 6
   },
   {
     "name": "CL Machine Gun",
