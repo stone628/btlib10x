@@ -9,6 +9,17 @@
 
 ## To Do
 
+- Simultaneity. resolveAllAttacks still skips units removed earlier in the same loop, so a 'Mech killed during the weapon attack phase loses its declared shots — and the loop runs in roster insertion order, so which unit is robbed depends on setup order. TW resolves weapon attacks simultaneously.
+- Target movement modifier. All three call sites still feed it hexesSinceLastReversal(target.movesThisTurn), the trailing run of same-direction steps, where TW counts total hexes moved. Only bites walking units that reverse.
+- Elevation. costToClimb is still max(0, to − from), so descending is free, and the validator still caps climbs at 1 level where the published limit is 2.
+- Buildings. building.ts is byte-identical: CF tiers, damage, collapse to rubble. Still no cover modifier, no LOS blocking, no collapse damage to occupants, and applyBuildingDamage is still exported and unused while game.ts reimplements it inline.
+- Ammo explosion strips armor. applyAmmoExplosion still zeroes the location's armor to force damage inward and leaves it zeroed, deleting armor an internal explosion should not touch. Cosmetically related: the CASE path applies a redundant extra -1 structure step to an already-depleted location.
+- Suggestion LOS. fireability.ts gained the two new modifiers but still tests only losBlockedByElevation and woods, never losBlockedByWater, so a target in deep water can be offered as a shot that declareAttacks will refuse.
+- Piloting Skill Rolls, falling and prone. Still the largest omission by knock-on effect: the second gyro crit, leg destruction, failed charges and DFAs all terminate in a fall in TW, and there is nothing to fall. createBattle still takes a gunnery skill per unit and no piloting skill, so the gap reaches the public API.
+- The pilot. No pilot entity, no hits, no consciousness rolls. Cockpit destruction kills the unit directly, and the life-support crit has nowhere to land.
+- Indirect LRM fire and spotting, and the whole electronic-warfare layer (TAG, NARC guidance, Artemis, ECM). These are TW-standard 'Mech rules.
+- LB-X cluster munitions. The Clan LB 20-X AC is modelled as a solid 20-point slug only; TW lets an LB-X switch to cluster ammo and roll on the Cluster Hits Table. The ammo-type concept does not exist.
+- The Physical Attack Phase. advancePhase runs initiative → movement → weaponAttack → end, with the heat phase folded into the weaponAttack exit. TW inserts a physical attack phase between weapon fire and heat, carrying punch, kick, push, club, charge and Death From Above. None exists. This also strands the handActuator and shoulder crit slots, whose published effects are largely physical.
 
 ## In progress
 
