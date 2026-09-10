@@ -139,4 +139,50 @@ describe("layered damage resolution", () => {
     app.after.armor.leftArm = -99;
     expect(app.before.armor.leftArm).toBe(4);
   });
+
+  it("bypassArmor: damage hits IS directly at the initial location, armor untouched", () => {
+    const s = mk({ armor: { leftTorso: 10 }, is: { leftTorso: 7 } });
+    const app = applyDamage(s, "leftTorso", 12, "front", { bypassArmor: true });
+    expect(app.after.armor.leftTorso).toBe(10);
+    expect(app.after.internalStructure.leftTorso).toBe(0);
+    expect(app.newlyDestroyed).toContain("leftTorso");
+  });
+
+  it("bypassArmor: overflow transfers to the next location's IS, skipping its armor too", () => {
+    const s = mk({
+      armor: { leftTorso: 10, centerTorso: 10 },
+      armorRear: { leftTorso: 10, centerTorso: 10 },
+      is: { leftTorso: 5, centerTorso: 10 },
+    });
+    const app = applyDamage(s, "leftTorso", 12, "front", { bypassArmor: true });
+    // LT IS 5 -> 0; the remaining 7 lands on CT IS directly, CT armor (front
+    // and rear) untouched — TW ammo-explosion overflow goes to IS only.
+    expect(app.after.internalStructure.leftTorso).toBe(0);
+    expect(app.after.internalStructure.centerTorso).toBe(3);
+    expect(app.after.armor.centerTorso).toBe(10);
+    expect(app.after.armorRear.centerTorso).toBe(10);
+    expect(app.killed).toBe(false);
+  });
+
+  it("bypassArmor: rear-arc damage also skips the rear armor pool", () => {
+    const s = mk({
+      armor: { centerTorso: 10 },
+      armorRear: { centerTorso: 10 },
+      is: { centerTorso: 6 },
+    });
+    const app = applyDamage(s, "centerTorso", 4, "rear", { bypassArmor: true });
+    expect(app.after.armorRear.centerTorso).toBe(10);
+    expect(app.after.internalStructure.centerTorso).toBe(2);
+  });
+
+  it("bypassArmor: preserves armor even when the 'Mech is killed by the blast", () => {
+    const s = mk({
+      armor: { centerTorso: 10 },
+      is: { centerTorso: 5 },
+    });
+    const app = applyDamage(s, "centerTorso", 5, "front", { bypassArmor: true });
+    expect(app.killed).toBe(true);
+    expect(app.after.armor.centerTorso).toBe(10);
+    expect(app.after.internalStructure.centerTorso).toBe(0);
+  });
 });

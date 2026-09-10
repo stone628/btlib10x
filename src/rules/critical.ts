@@ -43,9 +43,10 @@
  *     accounted for by the effective-movement helper.
  *   - jump jet slot: jump MP reduced by 1.
  *   - ammo explosions in CASE-protected locations: CASE (explicit slot, or
- *     implicit on Clan side torsos) contains the blast — it vents as one point
- *     of internal-structure damage to that location and never reaches the
- *     center torso; CASE II additionally caps the blast at 1 point total.
+ *     implicit on Clan side torsos) contains the blast — it vents rest of
+ *     damage out of the location if explosion damage exceeds internal
+ *     structure point and never reaches the center torso; CASE II
+ *     additionally caps the blast damage at 1 point total.
  *
  * Effects that exist in the official rules but are not modeled here because
  * the current engine subset lacks heat / piloting / physical attacks:
@@ -310,10 +311,8 @@ export function checkCASE(def: ResolvedMechDef, location: Location): CaseKind | 
  *   - `caseII` — the blast is contained and capped at 1 point of damage to
  *     the location (no overflow, no extra containment damage).
  *   - `case` — the blast is contained: it may still shred the location's
- *     own IS, but it stops there — one bonus point vents out of the location
- *     and it never reaches the next location. The containment point is applied
- *     as ordinary IS damage (subject to the armor pool the caller drained) and
- *     can trigger a crit roll.
+ *     own IS, but it stops there — the excess vents out of the location and
+ *     it never reaches the next location.
  */
 export function applyAmmoExplosion(
   state: UnitDamageState,
@@ -332,18 +331,10 @@ export function applyAmmoExplosion(
       killed: false,
     };
   }
-  // Pre-drain the location's armor pools so the standard applyDamage hits
-  // the IS layer directly. Any side-torso arm is unaffected (its own
-  // location is processed via the transfer graph when the side torso is
-  // destroyed). For other locations we just zero the front armor pool; rear
-  // torso armor stays in place — but applyDamage only consults the active
-  // pool, so when remaining IS drops to 0 the damage transfers inward.
-  const drained: UnitDamageState = {
-    armor: { ...state.armor, [location]: 0 },
-    armorRear: { ...state.armorRear },
-    internalStructure: { ...state.internalStructure },
-  };
-  return applyDamage(drained, location, amount, "front", caseKind);
+  // Ammo explosions bypass armor at every location in the transfer chain
+  // (TW p.125): the blast hits IS directly, and any overflow transfers to
+  // the next location's IS — armor is never touched, anywhere.
+  return applyDamage(state, location, amount, "front", { caseKind, bypassArmor: true });
 }
 
 export interface ResolveCriticalsInput {

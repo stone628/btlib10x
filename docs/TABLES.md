@@ -165,7 +165,8 @@ hittable slots, overflow is lost (excess crits simply disappear).
 - Ammo slot hit → explosion of `per-shot damage value × remaining shots`
   applied directly to the bin location's internal structure (the armor
   pool is bypassed per the rules). The explosion drains IS, transfers
-  inward, and any location that newly lost IS triggers a fresh
+  inward to the next location's IS — overflow bypasses armor at every
+  stop (TW p.125) — and any location that newly lost IS triggers a fresh
   determining roll recursively.
 - Limb blown off (determining 12 on arm/leg) → the location's armor
   and IS are zeroed; the arm is removed from play, the leg renders the
