@@ -346,6 +346,8 @@ export const kr: Catalog = {
   "log.destroyed": "*** {id} 파괴됨 ***",
   "log.removedEvent": "{id} 게임 제외",
   "log.buildingCollapsed": "{hex} 위치 건물이 붕괴하여 잔해가 됩니다",
+  "log.buildingDamaged": "{hex} 위치 건물이 구조 피해 {damage} 받음 (CF {cf})",
+  "log.collapseDamage": "{id} 건물 붕괴로 {loc} 부위 피해 {damage} 받음 ({hex})",
   "log.heatMove": "{id} 이동 발열 {heat} 발생",
   "log.heatWeapon": "무기 발열 {heat} 발생 ({prev}->{curr})",
   "log.heatEngineCrit": "{id} 엔진 크리티컬 발열 {heat} 발생 ({prev}->{curr})",

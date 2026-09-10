@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { HexGrid } from "../src/core/terrain.js";
 import type { HexCell } from "../src/core/types.js";
-import { losBlockedByElevation, losClear } from "../src/rules/los.js";
+import { losBlockedByBuilding, losBlockedByElevation, losClear } from "../src/rules/los.js";
 
 /** Build a 5x5 grid with the given per-hex "col,row" elevation overrides (others 0). */
 function gridWithElevation(levels: Record<string, number>): HexGrid {
@@ -14,6 +14,25 @@ function gridWithElevation(levels: Record<string, number>): HexGrid {
   for (const [key, level] of Object.entries(levels)) {
     const [col, row] = key.split(",").map(Number);
     cells[col! - 1 + (row! - 1) * width] = { terrain: "clear", level };
+  }
+  return { cells, width, height };
+}
+
+/** 5x5 grid with `lightBuilding` terrain on the given hexes (elevations otherwise 0). */
+function gridWithBuildings(buildings: string[], levels: Record<string, number> = {}): HexGrid {
+  const width = 5;
+  const height = 5;
+  const cells: HexCell[] = new Array<HexCell>(width * height).fill({
+    terrain: "clear",
+    level: 0,
+  });
+  for (const [key, level] of Object.entries(levels)) {
+    const [col, row] = key.split(",").map(Number);
+    cells[col! - 1 + (row! - 1) * width] = { terrain: "clear", level };
+  }
+  for (const key of buildings) {
+    const [col, row] = key.split(",").map(Number);
+    cells[col! - 1 + (row! - 1) * width] = { terrain: "lightBuilding", level: 0 };
   }
   return { cells, width, height };
 }
@@ -46,6 +65,33 @@ describe("losBlockedByElevation", () => {
     // above the ray → blocks.
     const grid = gridWithElevation({ "2,2": 1, "3,2": 5, "4,2": 0 });
     expect(losBlockedByElevation(grid, { col: 2, row: 2 }, { col: 4, row: 2 })).toBe(true);
+  });
+});
+
+describe("losBlockedByBuilding", () => {
+  it("an intervening building blocks LOS between two level-0 'Mechs", () => {
+    // Building at (3,2) between attacker (2,2) and target (4,2); its top sits
+    // at level 2, the ray at level 1 → blocked.
+    const grid = gridWithBuildings(["3,2"]);
+    expect(losBlockedByBuilding(grid, { col: 2, row: 2 }, { col: 4, row: 2 })).toBe(true);
+    expect(losClear(grid, { col: 2, row: 2 }, { col: 4, row: 2 })).toBe(false);
+  });
+
+  it("elevation folds building blocking into the ray: a level-2 attacker sees over", () => {
+    // Attacker (2,2) L2 (LOS 3), building (3,2) top L2, target (4,2) L0.
+    // Ray at the building's center is 2, which does not strictly exceed → clear.
+    const grid = gridWithBuildings(["3,2"], { "2,2": 2 });
+    expect(losBlockedByBuilding(grid, { col: 2, row: 2 }, { col: 4, row: 2 })).toBe(false);
+    expect(losBlockedByElevation(grid, { col: 2, row: 2 }, { col: 4, row: 2 })).toBe(false);
+    expect(losClear(grid, { col: 2, row: 2 }, { col: 4, row: 2 })).toBe(true);
+  });
+
+  it("the building hex a unit occupies is not intervening", () => {
+    // Attacker inside the building at (2,2); only clear (3,2) lies between it
+    // and the target (4,2) → fire out of the building stays legal.
+    const grid = gridWithBuildings(["2,2"]);
+    expect(losBlockedByBuilding(grid, { col: 2, row: 2 }, { col: 4, row: 2 })).toBe(false);
+    expect(losClear(grid, { col: 2, row: 2 }, { col: 4, row: 2 })).toBe(true);
   });
 });
 

@@ -173,6 +173,64 @@ describe("suggestFireTargets", () => {
     expect(ppc.tn).toBe(6); // gunnery 4 + medium 2
   });
 
+  it("marks weapons blocked when the target stands in deep water (losBlockedByWater)", () => {
+    const units: UnitInit[] = [
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 2 },
+        facing: "se",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 3, row: 2 },
+        facing: "nw",
+      },
+    ];
+    const state = startAttackTurn(
+      createTestBattle([{ col: 3, row: 2, type: "water2" }], units, false),
+    );
+    // Same gate as declareAttacks: water2/3 blocks LOS in/out, so every
+    // weapon is rejected instead of offered for a declaration that would fail.
+    const reasons = blockedReasons(state, "hbk", "enf");
+    expect(reasons.every((r) => r === "noLos")).toBe(true);
+    const sugg = suggestFireTargets(state, "hbk");
+    expect(sugg.targets.find((t) => t.targetId === "enf")!.weapons).toHaveLength(0);
+  });
+
+  it("marks weapons blocked by an intervening building", () => {
+    const units: UnitInit[] = [
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 10 },
+        facing: "n",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 2, row: 2 },
+        facing: "s",
+      },
+    ];
+    const state = startAttackTurn(
+      createTestBattle([{ col: 2, row: 7, type: "lightBuilding" }], units, false),
+    );
+    const reasons = blockedReasons(state, "hbk", "enf");
+    expect(reasons).toContain("noLos");
+    const sugg = suggestFireTargets(state, "hbk");
+    expect(sugg.targets.find((t) => t.targetId === "enf")!.weapons).toHaveLength(0);
+  });
+
   it("marks weapons blocked by intervening woods", () => {
     const units: UnitInit[] = [
       {

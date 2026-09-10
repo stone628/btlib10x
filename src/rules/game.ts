@@ -36,10 +36,12 @@ import {
 import { type Arc, classifyArc } from "./arcs.js";
 import { type AttackResolution, resolveWeaponAttack } from "./attack.js";
 import {
+  applyBuildingDamage,
   type BuildingState,
   buildingTypeOf,
   collapseToRubble,
   createBuildingState,
+  isCollapsed,
 } from "./building.js";
 import {
   applyAmmoExplosion,
@@ -48,6 +50,7 @@ import {
   effectiveMovement,
 } from "./critical.js";
 import {
+  applyDamage,
   canFireFromLocation,
   isUnitDestroyed,
   isUnitImmobile,
@@ -66,9 +69,11 @@ import {
   shutdownAvoidWithThreshold,
   toHitHeatModifier,
 } from "./heat.js";
+import { hitLocation } from "./hitlocation.js";
 import { rollInitiative } from "./initiative.js";
 import {
   interveningTerrains,
+  losBlockedByBuilding,
   losBlockedByElevation,
   losClear,
   losWoodsPointsBetween,
@@ -191,6 +196,22 @@ export type GameEvent =
       readonly kind: "buildingCollapsed";
       readonly col: number;
       readonly row: number;
+    }
+  | {
+      readonly kind: "buildingDamaged";
+      readonly col: number;
+      readonly row: number;
+      readonly damage: number;
+      /** Structural factor remaining after the hit (0 when collapsed). */
+      readonly cf: number;
+    }
+  | {
+      readonly kind: "collapseDamage";
+      readonly unitId: string;
+      readonly col: number;
+      readonly row: number;
+      readonly location: Location;
+      readonly damage: number;
     }
   | { readonly kind: "heatMove"; readonly unitId: string; readonly heat: number }
   | {
@@ -445,30 +466,66 @@ export function createBattle(
   };
 }
 
+/** Outcome of applying weapon damage to a building hex. */
+export interface BuildingDamageResult {
+  readonly col: number;
+  readonly row: number;
+  readonly damage: number;
+  /** Structural factor before the hit. */
+  readonly preCf: number;
+  /** Structural factor remaining after the hit (0 = collapsed). */
+  readonly cf: number;
+  readonly collapsed: boolean;
+  /** Collapse event pushed to the log, or `null` when the building stands. */
+  readonly event: {
+    readonly kind: "buildingCollapsed";
+    readonly col: number;
+    readonly row: number;
+  } | null;
+  /** Unit ids occupying the hex at the moment of collapse. */
+  readonly occupants: readonly string[];
+}
+
 /**
  * Apply weapon damage to the building occupying a hex, collapsing it to rubble
- * when its structural factor reaches zero. Emits a `buildingCollapsed` event on
- * collapse. Returns the event, or `null` when the hex has no building.
+ * when its structural factor reaches zero. Emits a `buildingDamaged` event on
+ * every hit and a `buildingCollapsed` event on collapse. Returns the outcome,
+ * or `null` when the hex has no building. Occupant collapse damage is applied
+ * by the caller (see `resolveAllAttacks`).
  */
 export function damageBuildingAt(
   state: BattleState,
   hex: HexCoord,
   damage: number,
-): { readonly kind: "buildingCollapsed"; readonly col: number; readonly row: number } | null {
+): BuildingDamageResult | null {
   const key = `${hex.col},${hex.row}`;
   const building = state.buildings[key];
   if (building === undefined) return null;
-  const cf = Math.max(0, building.cf - damage);
-  building.cf = cf;
-  if (cf <= 0) {
+  const preCf = building.cf;
+  const occupants = Object.values(state.units)
+    .filter((u) => !u.removed && sameHex(u.position, hex))
+    .map((u) => u.id);
+  state.buildings[key] = applyBuildingDamage(building, damage);
+  const cf = state.buildings[key]!.cf;
+  if (isCollapsed(state.buildings[key]!)) {
     const cell = state.cells[hex.col - 1 + (hex.row - 1) * state.width]!;
     collapseToRubble(cell);
     delete state.buildings[key];
     const event = { kind: "buildingCollapsed", col: hex.col, row: hex.row } as const;
     state.events.push(event);
-    return event;
+    return { col: hex.col, row: hex.row, damage, preCf, cf: 0, collapsed: true, event, occupants };
   }
-  return null;
+  state.events.push({ kind: "buildingDamaged", col: hex.col, row: hex.row, damage, cf });
+  return {
+    col: hex.col,
+    row: hex.row,
+    damage,
+    preCf,
+    cf,
+    collapsed: false,
+    event: null,
+    occupants: [],
+  };
 }
 
 export function rollInitiativePhase(state: BattleState, rng: Rng): void {
@@ -681,6 +738,9 @@ export function declareAttacks(
 
     const woodsPoints = losWoodsPointsBetween(state, unit.position, target.position);
     if (!losClear(state, unit.position, target.position)) {
+      if (losBlockedByBuilding(state, unit.position, target.position)) {
+        throw new Error("Line of sight is blocked by intervening building");
+      }
       if (losBlockedByElevation(state, unit.position, target.position)) {
         throw new Error("Line of sight is blocked by intervening elevation");
       }
@@ -897,6 +957,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng): void {
   const targetAmmoBinsMap: Record<string, Record<AmmoBinId, number>> = {};
   const targetShotsLeftMap: Record<string, Record<number, number>> = {};
   const targetDestroyedWeaponsMap: Record<string, number[]> = {};
+  const buildingOutcomes: BuildingDamageResult[] = [];
 
   for (const result of results) {
     for (const { targetId, resolution, buildingDamage } of result.resolutions) {
@@ -926,7 +987,8 @@ export function resolveAllAttacks(state: BattleState, rng: Rng): void {
 
       // Apply building damage
       if (buildingDamage > 0) {
-        damageBuildingAt(state, target.position, buildingDamage);
+        const outcome = damageBuildingAt(state, target.position, buildingDamage);
+        if (outcome !== null) buildingOutcomes.push(outcome);
       }
 
       // Emit attackResolved event
@@ -1002,6 +1064,30 @@ export function resolveAllAttacks(state: BattleState, rng: Rng): void {
     target.damage = damage;
     // Strip ammo from destroyed locations
     stripDestroyedLocationAmmo(target);
+  }
+
+  // Building collapse damage (TW p.176): each occupant takes ceil(CF at the
+  // start of the phase / 10), rounded up. Level-1 buildings only — no
+  // levels-above multiplier applies. Applied after the write-back so folded
+  // attack damage lands first; new `collapseDamage` events stay inside the
+  // attack-resolution block.
+  for (const outcome of buildingOutcomes) {
+    if (!outcome.collapsed) continue;
+    const damage = Math.ceil(outcome.preCf / 10);
+    for (const unitId of outcome.occupants) {
+      const unit = requireUnit(state, unitId);
+      const location = hitLocation(roll2D6(rng));
+      const application = applyDamage(unit.damage, location, damage);
+      unit.damage = application.after;
+      state.events.push({
+        kind: "collapseDamage",
+        unitId,
+        col: outcome.col,
+        row: outcome.row,
+        location,
+        damage,
+      });
+    }
   }
 
   // Check destruction and mark units

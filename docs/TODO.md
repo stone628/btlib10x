@@ -9,9 +9,7 @@
 
 ## To Do
 
-- Buildings. building.ts is byte-identical: CF tiers, damage, collapse to rubble. Still no cover modifier, no LOS blocking, no collapse damage to occupants, and applyBuildingDamage is still exported and unused while game.ts reimplements it inline.
 - Ammo explosion strips armor. applyAmmoExplosion still zeroes the location's armor to force damage inward and leaves it zeroed, deleting armor an internal explosion should not touch. Cosmetically related: the CASE path applies a redundant extra -1 structure step to an already-depleted location.
-- Suggestion LOS. fireability.ts gained the two new modifiers but still tests only losBlockedByElevation and woods, never losBlockedByWater, so a target in deep water can be offered as a shot that declareAttacks will refuse.
 - Piloting Skill Rolls, falling and prone. Still the largest omission by knock-on effect: the second gyro crit, leg destruction, failed charges and DFAs all terminate in a fall in TW, and there is nothing to fall. createBattle still takes a gunnery skill per unit and no piloting skill, so the gap reaches the public API.
 - The pilot. No pilot entity, no hits, no consciousness rolls. Cockpit destruction kills the unit directly, and the life-support crit has nowhere to land.
 - Indirect LRM fire and spotting, and the whole electronic-warfare layer (TAG, NARC guidance, Artemis, ECM). These are TW-standard 'Mech rules.

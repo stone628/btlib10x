@@ -7,7 +7,7 @@ import { type Arc, classifyArc } from "./arcs.js";
 import { canFireFromLocation } from "./damage.js";
 import { type BattleState, isImmobile } from "./game.js";
 import { toHitHeatModifier } from "./heat.js";
-import { losBlockedByElevation, losWoodsPointsBetween } from "./los.js";
+import { losClear, losWoodsPointsBetween } from "./los.js";
 import type { RangeBracket } from "./tohit.js";
 import { computeToHit, damageForBracket } from "./tohit.js";
 
@@ -77,7 +77,6 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
       const bearingToTarget = bearing(unit.position, enemy.position);
       const arc = bearingToTarget !== null ? classifyArc(unit.facing, bearingToTarget) : null;
       const interveningWoods = losWoodsPointsBetween(state, unit.position, enemy.position);
-      const los = losBlockedByElevation(state, unit.position, enemy.position);
 
       const weapons: FireWeapon[] = [];
       const blocked: FireTarget["blocked"] = [];
@@ -106,7 +105,10 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "outOfArc" });
           return;
         }
-        if (los || interveningWoods >= 3) {
+        // Same gate as `declareAttacks`: woods screening, water2/3 endpoints
+        // (`losBlockedByWater`), elevation and intervening buildings
+        // (`losBlockedByElevation`/`losBlockedByBuilding` fold into the ray).
+        if (!losClear(state, unit.position, enemy.position)) {
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "noLos" });
           return;
         }
