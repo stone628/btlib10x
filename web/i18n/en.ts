@@ -303,7 +303,7 @@ export const en = {
   "sheet.weaponsHeader": "weapons ({n}):",
   "sheet.ammoStatus": "ammo status: policy({policy}) {explosion}",
   "sheet.ammoNoExplosion": "safe(heat {heat}<{threshold})",
-  "sheet.ammoExplosion": "explosion(2D6<{avoid}, heat {heat}>={threshold})",
+  "sheet.ammoExplosion": "explosion(heat {heat}>={threshold}, 2D6<{avoid})",
   "sheet.shotsRange": "({curr}/{max} shots)",
   "sheet.shotsDesign": "({max} shots)",
   "sheet.shotsShared": "(shots at #{ref})",
