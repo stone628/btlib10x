@@ -41,7 +41,12 @@ import {
   collapseToRubble,
   createBuildingState,
 } from "./building.js";
-import { applyAmmoExplosion, checkCASE, effectiveMovement } from "./critical.js";
+import {
+  applyAmmoExplosion,
+  type CriticalResolution,
+  checkCASE,
+  effectiveMovement,
+} from "./critical.js";
 import {
   canFireFromLocation,
   isUnitDestroyed,
@@ -245,6 +250,21 @@ export type GameEvent =
       readonly damage: number;
       readonly avoided: boolean;
     };
+
+interface UnitAttackResolution {
+  readonly targetId: string;
+  readonly resolution: AttackResolution;
+  readonly weaponHeat: number;
+  readonly buildingDamage: number;
+}
+
+export interface UnitAttackResult {
+  readonly unitId: string;
+  readonly resolutions: readonly UnitAttackResolution[];
+  readonly finalAmmoBins: Record<AmmoBinId, number>;
+  readonly finalShotsLeft: Record<number, number>;
+  readonly jammedWeapons: readonly number[];
+}
 
 export interface BattleState extends HexGrid {
   turn: number;
@@ -728,9 +748,18 @@ export function declareAttacks(
   });
 }
 
-function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void {
+function resolveUnitAttacks(
+  state: BattleState,
+  unit: UnitState,
+  rng: Rng,
+  phaseStartDamage: Record<string, UnitDamageState>,
+): UnitAttackResult {
   const def = getMechDefFor(unit);
   const preHeat = unit.heat;
+  let currentAmmoBins = { ...unit.ammoBins };
+  let currentShotsLeft = { ...unit.shotsLeft };
+  const jammedWeapons: number[] = [];
+  const resolutions: UnitAttackResolution[] = [];
 
   for (const decl of unit.declaredAttacks) {
     const mount = def.weapons[decl.weaponIndex]!;
@@ -744,9 +773,11 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
     // hit: an earlier launcher may have drained the pool mid-resolution.
     // With nothing left the launcher cannot fire — auto-miss without
     // touching dice (no ammo spent, no heat).
-    if (weapon.streak === true && pooledShotsLeft(def, unit.ammoBins, weapon.name) < 1) {
+    if (weapon.streak === true && pooledShotsLeft(def, currentAmmoBins, weapon.name) < 1) {
       ammoExhausted = true;
     }
+
+    const targetPhaseStartDamage = phaseStartDamage[target.id] ?? target.damage;
 
     const resolution = resolveWeaponAttack({
       rng,
@@ -763,7 +794,7 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
       weapon: weapon.name,
       ammoExhausted,
       shots,
-      targetDamage: target.damage,
+      targetDamage: targetPhaseStartDamage,
       attackerLevel: cellAt(state, unit.position).level,
       targetLevel: cellAt(state, target.position).level,
       ...(state.critsDisabled
@@ -781,11 +812,11 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
     // means launcher never fired (no ammo, no heat, no damage).
     const streakFired = weapon.streak === true && resolution.hit;
     if (weapon.streak === true && !resolution.hit) {
-      state.events.push({
-        kind: "attackResolved",
-        unitId: unit.id,
+      resolutions.push({
         targetId: target.id,
         resolution,
+        weaponHeat: 0,
+        buildingDamage: 0,
       });
       continue;
     }
@@ -793,104 +824,191 @@ function resolveUnitAttacks(state: BattleState, unit: UnitState, rng: Rng): void
     // linked bins still spend shared ammo. The pre-resolution guard above
     // guarantees at least one shot remains, so this always draws exactly 1.
     if (streakFired) {
-      const entry = consumeAmmoForName(def, unit.ammoBins, weapon.name, 1, unit.ammoPolicy, rng);
-      unit.ammoBins = entry;
-      unit.shotsLeft = ammoWeaponTotals(def, entry);
+      const entry = consumeAmmoForName(def, currentAmmoBins, weapon.name, 1, unit.ammoPolicy, rng);
+      currentAmmoBins = entry;
+      currentShotsLeft = ammoWeaponTotals(def, entry);
     }
 
-    if (resolution.application !== null) target.damage = resolution.application.after;
-    if (resolution.jammed && !unit.jammedWeapons.includes(decl.weaponIndex)) {
-      unit.jammedWeapons.push(decl.weaponIndex);
-    }
+    const weaponHeat = (weapon.heat ?? 0) * shots;
 
-    // Weapon damage that lands on a unit standing in a building hex is also
-    // applied to the building's structural factor (total damage that hit).
+    let buildingDamage = 0;
     if (resolution.hit && resolution.groups.length > 0) {
-      const total = resolution.groups.reduce((acc, g) => acc + g.damage, 0);
-      damageBuildingAt(state, target.position, total);
+      buildingDamage = resolution.groups.reduce((acc, g) => acc + g.damage, 0);
     }
 
-    // Commit crit results: each crit rolls for a location that lost IS, and
-    // its snapshot of destroyed slots, destroyed weapons, ammo, and damage
-    // state must be merged into the target's persistent state. Crits
-    // accumulate in the order they were resolved (each successive crit
-    // sees the post-state of the previous one because resolveWeaponAttack
-    // already threads the updated state through its per-group loop).
-    if (resolution.crits.length > 0) {
-      const last = resolution.crits[resolution.crits.length - 1]!;
-      target.critSlotsDestroyed = last.critSlotsDestroyed;
-      target.destroyedWeapons = last.destroyedWeapons;
-      target.ammoBins = last.ammoBins;
-      target.shotsLeft = last.shotsLeft;
-      // Damage was already committed above (it includes the explosion
-      // cascades); the crit rows also include newlyDestroyed /
-      // blownOffArms contributions that the per-group application didn't
-      // account for, so merge them.
-      for (const crit of resolution.crits) {
-        for (const arm of crit.blownOffArms) {
-          if (!target.destroyed) {
-            // arms blown off by crit -> zero the arm
-            target.damage.armor[arm] = 0;
-            target.damage.internalStructure[arm] = 0;
-          }
-        }
+    resolutions.push({
+      targetId: target.id,
+      resolution,
+      weaponHeat,
+      buildingDamage,
+    });
+
+    if (resolution.jammed && !jammedWeapons.includes(decl.weaponIndex)) {
+      jammedWeapons.push(decl.weaponIndex);
+    }
+  }
+
+  return {
+    unitId: unit.id,
+    resolutions,
+    finalAmmoBins: currentAmmoBins,
+    finalShotsLeft: currentShotsLeft,
+    jammedWeapons,
+  };
+}
+
+/**
+ * Phase-end sweep: resolve every unit's declared attacks simultaneously.
+ * All declarations are collected first (during the weapon attack phase),
+ * then damage is applied in two phases: collect all resolutions, then
+ * apply damage/crits/heat simultaneously. TW resolves weapon attacks
+ * simultaneously — a 'Mech killed during the weapon attack phase still
+ * fires its declared shots.
+ */
+export function resolveAllAttacks(state: BattleState, rng: Rng): void {
+  requirePhase(state, "weaponAttack");
+
+  // Phase 1: collect resolutions for ALL units with declared attacks
+  // (ignore `removed` flag — TW simultaneity means even destroyed units fire)
+  const phaseStartDamage: Record<string, UnitDamageState> = {};
+  for (const unit of Object.values(state.units)) {
+    phaseStartDamage[unit.id] = {
+      armor: { ...unit.damage.armor },
+      armorRear: { ...unit.damage.armorRear },
+      internalStructure: { ...unit.damage.internalStructure },
+    };
+  }
+
+  const results: UnitAttackResult[] = [];
+  for (const unit of Object.values(state.units)) {
+    if (unit.declaredAttacks.length === 0) continue;
+    results.push(resolveUnitAttacks(state, unit, rng, phaseStartDamage));
+  }
+
+  // Phase 2: apply all damage, crits, building damage, and heat simultaneously
+  // Track damage per target
+  const targetDamageMap: Record<string, UnitDamageState> = {};
+  const targetCritsMap: Record<string, CriticalResolution[]> = {};
+  const targetAmmoBinsMap: Record<string, Record<AmmoBinId, number>> = {};
+  const targetShotsLeftMap: Record<string, Record<number, number>> = {};
+  const targetDestroyedWeaponsMap: Record<string, number[]> = {};
+
+  for (const result of results) {
+    for (const { targetId, resolution, buildingDamage } of result.resolutions) {
+      const target = requireUnit(state, targetId);
+
+      // Initialize target accumulators from current state (not phaseStartDamage —
+      // we want sequential crit application within the same target)
+      if (!targetDamageMap[targetId]) {
+        targetDamageMap[targetId] = {
+          armor: { ...target.damage.armor },
+          armorRear: { ...target.damage.armorRear },
+          internalStructure: { ...target.damage.internalStructure },
+        };
+        targetCritsMap[targetId] = [];
+        targetAmmoBinsMap[targetId] = { ...target.ammoBins };
+        targetShotsLeftMap[targetId] = { ...target.shotsLeft };
+        targetDestroyedWeaponsMap[targetId] = [...target.destroyedWeapons];
+      }
+
+      // Apply damage application
+      if (resolution.application !== null) {
+        targetDamageMap[targetId] = resolution.application.after;
+      }
+
+      // Collect crits for later sequential application
+      targetCritsMap[targetId]!.push(...resolution.crits);
+
+      // Apply building damage
+      if (buildingDamage > 0) {
+        damageBuildingAt(state, target.position, buildingDamage);
+      }
+
+      // Emit attackResolved event
+      state.events.push({
+        kind: "attackResolved",
+        unitId: result.unitId,
+        targetId,
+        resolution,
+      });
+    }
+
+    // Apply attacker's ammo state changes
+    const attacker = requireUnit(state, result.unitId);
+    attacker.ammoBins = result.finalAmmoBins;
+    attacker.shotsLeft = result.finalShotsLeft;
+    for (const wi of result.jammedWeapons) {
+      if (!attacker.jammedWeapons.includes(wi)) {
+        attacker.jammedWeapons.push(wi);
       }
     }
 
-    // Ammo in any location whose internal structure is gone (blown off,
-    // transferred away, or drained by this attack) can no longer explode.
-    stripDestroyedLocationAmmo(target);
-
-    state.events.push({
-      kind: "attackResolved",
-      unitId: unit.id,
-      targetId: target.id,
-      resolution,
-    });
-
-    if (!target.destroyed && isUnitDestroyed(target.damage)) {
-      markUnitDestroyed(state, target);
-    }
-
-    // Weapon heat is committed here so the Heat Scale reflects it from next
-    // turn onward (this turn's to-hit roll already used the pre-fire heat).
-    const weaponHeat = (weapon.heat ?? 0) * shots;
-    if (weaponHeat > 0) {
-      const prevHeat = unit.heat;
-      unit.heat = Math.min(HEAT_CAP, unit.heat + weaponHeat);
+    // Apply attacker's weapon heat
+    const totalWeaponHeat = result.resolutions.reduce((sum, r) => sum + r.weaponHeat, 0);
+    if (totalWeaponHeat > 0) {
+      const prevHeat = attacker.heat;
+      attacker.heat = Math.min(HEAT_CAP, attacker.heat + totalWeaponHeat);
       state.events.push({
         kind: "heatWeapon",
-        unitId: unit.id,
-        weapon: weapon.name,
-        heat: weaponHeat,
+        unitId: attacker.id,
+        weapon: result.resolutions[0]?.resolution.weapon ?? "",
+        heat: totalWeaponHeat,
         prevHeat,
-        currHeat: unit.heat,
+        currHeat: attacker.heat,
       });
     }
   }
 
-  unit.declaredAttacks = [];
-}
+  // Apply crits sequentially per target (each crit sees post-state of previous)
+  for (const [targetId, crits] of Object.entries(targetCritsMap)) {
+    if (crits.length === 0) continue;
+    const target = requireUnit(state, targetId);
+    const currentDamage = targetDamageMap[targetId]!;
+    let currentCritSlots = { ...target.critSlotsDestroyed };
+    let currentDestroyedWeapons = [...(targetDestroyedWeaponsMap[targetId] ?? [])];
+    let currentAmmoBins = { ...(targetAmmoBinsMap[targetId] ?? target.ammoBins) };
+    let currentShotsLeft = { ...(targetShotsLeftMap[targetId] ?? target.shotsLeft) };
 
-/** Resolve one unit's declared attacks against the current phase snapshot. */
-export function resolveDeclaredAttacks(state: BattleState, unitId: string, rng: Rng): void {
-  requirePhase(state, "weaponAttack");
-  const unit = requireUnit(state, unitId);
-  if (unit.declaredAttacks.length === 0) throw new Error(`${unitId} has no declared attacks`);
-  resolveUnitAttacks(state, unit, rng);
-}
+    for (const crit of crits) {
+      currentCritSlots = crit.critSlotsDestroyed;
+      currentDestroyedWeapons = crit.destroyedWeapons;
+      currentAmmoBins = crit.ammoBins;
+      currentShotsLeft = crit.shotsLeft;
 
-/**
- * Phase-end sweep: resolve every unit's declared attacks together, then remove
- * the destroyed. All declarations are collected first (during the weapon attack
- * phase), so damage is applied only after every unit has declared.
- */
-export function resolveAllAttacks(state: BattleState, rng: Rng): void {
-  requirePhase(state, "weaponAttack");
+      // Merge newly destroyed / blown off arms from crit
+      for (const arm of crit.blownOffArms) {
+        currentDamage.armor[arm] = 0;
+        currentDamage.internalStructure[arm] = 0;
+      }
+    }
+
+    targetDamageMap[targetId] = currentDamage;
+    targetCritsMap[targetId] = []; // consumed
+    // Update target's persistent crit state
+    target.critSlotsDestroyed = currentCritSlots;
+    target.destroyedWeapons = currentDestroyedWeapons;
+    target.ammoBins = currentAmmoBins;
+    target.shotsLeft = currentShotsLeft;
+  }
+
+  // Write back final damage to all targets
+  for (const [targetId, damage] of Object.entries(targetDamageMap)) {
+    const target = requireUnit(state, targetId);
+    target.damage = damage;
+    // Strip ammo from destroyed locations
+    stripDestroyedLocationAmmo(target);
+  }
+
+  // Check destruction and mark units
   for (const unit of Object.values(state.units)) {
-    if (unit.removed) continue;
-    if (unit.declaredAttacks.length === 0) continue;
-    resolveUnitAttacks(state, unit, rng);
+    if (!unit.destroyed && isUnitDestroyed(unit.damage)) {
+      markUnitDestroyed(state, unit);
+    }
+  }
+
+  // Clear declared attacks for all units
+  for (const unit of Object.values(state.units)) {
+    unit.declaredAttacks = [];
   }
 }
 

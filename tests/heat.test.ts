@@ -9,7 +9,7 @@ import {
   executeMove,
   getUnit,
   nextActor,
-  resolveDeclaredAttacks,
+  resolveAllAttacks,
   rollInitiativePhase,
 } from "../src/rules/game.js";
 import {
@@ -321,7 +321,7 @@ describe("game integration: weapon heat", () => {
     const state = hbkVsEnf();
     startAttackTurn(state);
     declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
-    resolveDeclaredAttacks(state, "hbk", scriptedRng(6, 6, 3, 4));
+    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4));
     const hbk = getUnit(state, "hbk");
     expect(hbk.heat).toBe(7);
     const weaponHeatEvent = state.events.find((e) => e.kind === "heatWeapon");
@@ -465,7 +465,7 @@ describe("game integration: heatMod in to-hit", () => {
     hbk.heat = 13;
     startAttackTurn(state);
     declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
-    resolveDeclaredAttacks(state, "hbk", scriptedRng(6, 6, 3, 4));
+    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4));
     const resolved = state.events.find((e) => e.kind === "attackResolved");
     expect(resolved).toBeDefined();
     expect(
@@ -481,7 +481,7 @@ describe("game integration: immobile target modifier in to-hit", () => {
     if (!online) getUnit(state, "enf").shutdown = "manual";
     startAttackTurn(state);
     declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
-    resolveDeclaredAttacks(state, "hbk", rng);
+    resolveAllAttacks(state, rng);
     const resolved = state.events.find((e) => e.kind === "attackResolved");
     expect(resolved).toBeDefined();
     return (resolved as Extract<(typeof state.events)[number], { kind: "attackResolved" }>)
@@ -524,7 +524,7 @@ describe("game integration: partial cover in to-hit", () => {
     const state = makeBattleWithTargetTerrain(type);
     startAttackTurn(state);
     declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
-    resolveDeclaredAttacks(state, "hbk", scriptedRng(6, 6, 3, 4));
+    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4));
     const resolved = state.events.find((e) => e.kind === "attackResolved");
     expect(resolved).toBeDefined();
     return (resolved as Extract<(typeof state.events)[number], { kind: "attackResolved" }>)

@@ -94,7 +94,7 @@ pass), plus `cancel`, `sheet`, `status`, `heat` and the globals.
 | `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [J](jam) / [-](destroyed) / per-bin ammo `(n left)` markers); without id: brief unit list (id, model, position+facing) grouped by team |
 | `status` | queued attack declarations |
 | `cancel` | clear declarations |
-| `done` | `declareAttacks` + `resolveDeclaredAttacks`; prints per-weapon GATOR to-hit line, dice, cluster hits, damage by location |
+| `done` | `declareAttacks` + `resolveAllAttacks` (simultaneous — every unit's declared shots resolve, even units killed that phase); prints per-weapon GATOR to-hit line, dice, cluster hits, damage by location |
 
 ### over
 

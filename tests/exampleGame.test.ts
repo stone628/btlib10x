@@ -9,7 +9,7 @@ import {
   executeMove,
   getUnit,
   nextActor,
-  resolveDeclaredAttacks,
+  resolveAllAttacks,
   rollInitiativePhase,
 } from "../src/rules/game.js";
 import { createTestBattle, scriptedRng } from "./helpers.js";
@@ -76,14 +76,14 @@ describe("example battle: Wolverine vs Griffin", () => {
     advancePhase(state); // movement -> weaponAttack
     declareAttacks(state, "wvr", [{ weaponIndex: 1, targetId: "grf" }]);
     // To-hit 11 >= TN 11; location roll 8 -> left torso; ML damage 5. LT 18 -> 13.
-    resolveDeclaredAttacks(state, "wvr", scriptedRng(6, 5, 3, 5));
+    resolveAllAttacks(state, scriptedRng(6, 5, 3, 5));
     expect(getUnit(state, "grf").damage.armor.leftTorso).toBe(
       getMechDef("GRF-1N")!.armor.leftTorso! - 5,
     );
 
     // Griffin answers with its PPC: TN 9, rolls 4 -> miss, no damage.
     declareAttacks(state, "grf", [{ weaponIndex: 2, targetId: "wvr" }]);
-    resolveDeclaredAttacks(state, "grf", scriptedRng(1, 3)); // miss
+    resolveAllAttacks(state, scriptedRng(1, 3)); // miss
     expect(getUnit(state, "wvr").damage.armor).toEqual(getMechDef("WVR-6R")!.armor);
   });
 
@@ -104,9 +104,9 @@ describe("example battle: Wolverine vs Griffin", () => {
     executeMove(state, "grf", []);
     advancePhase(state);
     declareAttacks(state, "wvr", [{ weaponIndex: 1, targetId: "grf" }]);
-    resolveDeclaredAttacks(state, "wvr", scriptedRng(6, 5, 3, 5)); // LT hit
+    resolveAllAttacks(state, scriptedRng(6, 5, 3, 5)); // LT hit
     declareAttacks(state, "grf", [{ weaponIndex: 2, targetId: "wvr" }]);
-    resolveDeclaredAttacks(state, "grf", scriptedRng(1, 3)); // miss
+    resolveAllAttacks(state, scriptedRng(1, 3)); // miss
 
     // ---- Turns 2..10: both stand still, Wolverine plinks the CT for 5 each.
     // Griffin front CT is 27 -> 6 hits reach 0 armor, then 18 IS needs 4 more
@@ -123,14 +123,14 @@ describe("example battle: Wolverine vs Griffin", () => {
       if (t < 10) {
         declareAttacks(state, "wvr", [{ weaponIndex: 1, targetId: "grf" }]);
         // 12 hits TN 9; location 7 -> center torso.
-        resolveDeclaredAttacks(state, "wvr", scriptedRng(6, 6, 3, 4));
+        resolveAllAttacks(state, scriptedRng(6, 6, 3, 4));
         const hitsDone = t - 1;
         expect(grfCt()).toBe(Math.max(ctFront - 5 * hitsDone, 0));
         expect(getUnit(state, "grf").destroyed).toBe(false);
       } else {
         // Final blow: front armor gone, CT IS 5, damage 5 -> structure destroyed.
         declareAttacks(state, "wvr", [{ weaponIndex: 1, targetId: "grf" }]);
-        resolveDeclaredAttacks(state, "wvr", scriptedRng(6, 6, 3, 4));
+        resolveAllAttacks(state, scriptedRng(6, 6, 3, 4));
         expect(grfCt()).toBe(0);
         expect(getUnit(state, "grf").destroyed).toBe(true); // killed immediately
         expect(getUnit(state, "grf").removed).toBe(true);

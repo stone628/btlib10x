@@ -12,7 +12,7 @@ import {
   executeMove,
   getUnit,
   nextActor,
-  resolveDeclaredAttacks,
+  resolveAllAttacks,
   rollInitiativePhase,
 } from "../src/rules/game.js";
 import { resolutionLines } from "../web/format.js";
@@ -702,7 +702,7 @@ describe("weapon attack phase", () => {
     const state = startAttackTurn(hbkVsEnf());
     declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
     // Turn 1: AC/20 (20 dmg) hits CT (roll 5) -> CT 27 - 20 = 7 left.
-    resolveDeclaredAttacks(state, "hbk", scriptedRng(2, 3, 3, 4));
+    resolveAllAttacks(state, scriptedRng(2, 3, 3, 4));
     expect(getUnit(state, "enf").damage.armor.centerTorso).toBe(7);
     expect(getUnit(state, "enf").destroyed).toBe(false);
 
@@ -717,7 +717,7 @@ describe("weapon attack phase", () => {
     rollInitiativePhase(state, scriptedRng(3, 3, 3, 1));
     advancePhase(state);
     declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
-    resolveDeclaredAttacks(state, "hbk", scriptedRng(6, 6, 3, 4)); // hit CT again
+    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4)); // hit CT again
     expect(getUnit(state, "enf").damage.armor.centerTorso).toBe(0);
     expect(getUnit(state, "enf").destroyed).toBe(false); // CT IS still up (16-13=3)
 
@@ -727,7 +727,7 @@ describe("weapon attack phase", () => {
     rollInitiativePhase(state, scriptedRng(3, 3, 3, 1));
     advancePhase(state);
     declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
-    resolveDeclaredAttacks(state, "hbk", scriptedRng(6, 6, 3, 4)); // CT IS gone
+    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4)); // CT IS gone
     expect(getUnit(state, "enf").destroyed).toBe(true); // killed immediately
     expect(getUnit(state, "enf").removed).toBe(true);
 
@@ -737,6 +737,34 @@ describe("weapon attack phase", () => {
     expect(enf.removed).toBe(true);
     expect(state.events.some((e) => e.kind === "unitRemoved")).toBe(true);
     expect(checkVictory(state)).toEqual({ winnerTeam: 0, draw: false });
+  });
+
+  it("resolves attacks simultaneously: a unit killed by an earlier attacker still fires", () => {
+    const state = hbkVsEnf();
+    // Enforcer center torso is one AC/20 hit from death (armor 0, IS 5).
+    const enf = getUnit(state, "enf");
+    enf.damage.armor.centerTorso = 0;
+    enf.damage.internalStructure.centerTorso = 5;
+    const hbkCt = () => getUnit(state, "hbk").damage.armor.centerTorso;
+
+    startAttackTurn(state);
+    // Both declare before resolution; roster order puts hbk first.
+    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]); // AC/20 (1-based)
+    declareAttacks(state, "enf", [{ weaponIndex: 1, targetId: "hbk" }]); // AC/10 (1-based)
+
+    // Rolls: hbk to-hit 3+3=6 >= TN 4, location 3+4=7 -> CT (kills enf);
+    // then enf to-hit 3+3=6 >= TN 4, location 3+4=7 -> hbk CT.
+    resolveAllAttacks(state, scriptedRng(3, 3, 3, 4, 3, 3, 3, 4));
+
+    expect(enf.destroyed).toBe(true);
+    expect(enf.removed).toBe(true);
+    // Enforcer's declared AC/10 still resolved despite hbk killing it first.
+    expect(
+      state.events.some(
+        (e) => e.kind === "attackResolved" && e.unitId === "enf" && e.targetId === "hbk",
+      ),
+    ).toBe(true);
+    expect(hbkCt()).toBe(31 - 10);
   });
 
   it("jams Ultra AC/5 double taps on a natural 2 and tracks the jam", () => {
@@ -762,7 +790,7 @@ describe("weapon attack phase", () => {
     const state = startAttackTurn(setup);
     declareAttacks(state, "her", [{ weaponIndex: 3, targetId: "cda", rapidFire: true }]);
     expect(getUnit(state, "her").shotsLeft["3"]).toBe(18); // 2 shots spent up front
-    resolveDeclaredAttacks(state, "her", scriptedRng(1, 1)); // natural 2 -> jam
+    resolveAllAttacks(state, scriptedRng(1, 1)); // natural 2 -> jam
     const her = getUnit(state, "her");
     expect(her.jammedWeapons).toEqual([3]);
     expect(getUnit(state, "cda").damage.armor.centerTorso).toBe(
@@ -797,7 +825,7 @@ describe("weapon attack phase", () => {
     expect(getUnit(single, "her").shotsLeft["3"]).toBe(19); // 1 shot spent up front
     const singleBefore = getUnit(single, "cda").damage.armor.centerTorso;
     // to-hit 4 (2,2), single location rolls 7 -> CT (no cluster roll for 1 shot).
-    resolveDeclaredAttacks(single, "her", scriptedRng(2, 2, 3, 4));
+    resolveAllAttacks(single, scriptedRng(2, 2, 3, 4));
     expect(singleBefore - getUnit(single, "cda").damage.armor.centerTorso).toBe(5);
 
     // rapidFire: true -> double-tap (2 x UAC/5 = 10 dmg, 2 ammo spent).
@@ -806,7 +834,7 @@ describe("weapon attack phase", () => {
     expect(getUnit(state, "her").shotsLeft["3"]).toBe(18); // 2 shots spent up front
     const before = getUnit(state, "cda").damage.armor.centerTorso;
     // to-hit 4 (2,2), cluster 8 (4,4) -> both shots hit; both hit CT (roll 7).
-    resolveDeclaredAttacks(state, "her", scriptedRng(2, 2, 4, 4, 3, 4, 3, 4));
+    resolveAllAttacks(state, scriptedRng(2, 2, 4, 4, 3, 4, 3, 4));
     expect(before - getUnit(state, "cda").damage.armor.centerTorso).toBe(10);
   });
 
@@ -847,7 +875,7 @@ describe("streak missiles", () => {
     // Declare spends nothing; launcher fires only on successful to-hit roll.
     expect(getUnit(state, "mc").shotsLeft["3"]).toBe(50);
     // to-hit 6 >= TN 4; four CT locations (7); one exposed tie-break die.
-    resolveDeclaredAttacks(state, "mc", scriptedRng(3, 3, 3, 4, 3, 4, 3, 4, 3, 4, 2));
+    resolveAllAttacks(state, scriptedRng(3, 3, 3, 4, 3, 4, 3, 4, 3, 4, 2));
     const mc = getUnit(state, "mc");
     expect(mc.shotsLeft["3"]).toBe(49);
     expect(mc.heat).toBe(3);
@@ -873,7 +901,7 @@ describe("streak missiles", () => {
     // First launcher: to-hit 6 >= TN 4, four CT locations (7). Single live
     // bin means no tie-break die; second launcher must draw zero dice.
     const rng = scriptedRng(3, 3, 3, 4, 3, 4, 3, 4, 3, 4);
-    resolveDeclaredAttacks(state, "mc", rng);
+    resolveAllAttacks(state, rng);
     expect(rng.remaining()).toBe(0);
     const events = state.events.filter((e) => e.kind === "attackResolved");
     expect(events).toHaveLength(2);
@@ -902,7 +930,7 @@ describe("streak missiles", () => {
     const state = streakSetup();
     declareAttacks(state, "mc", [{ weaponIndex: 3, targetId: "enf" }]);
     const armorBefore = getUnit(state, "enf").damage.armor.centerTorso;
-    resolveDeclaredAttacks(state, "mc", scriptedRng(1, 2)); // to-hit 3 < TN 4
+    resolveAllAttacks(state, scriptedRng(1, 2)); // to-hit 3 < TN 4
     const mc = getUnit(state, "mc");
     expect(mc.shotsLeft["3"]).toBe(50);
     expect(mc.heat).toBe(0);

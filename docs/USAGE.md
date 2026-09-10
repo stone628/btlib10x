@@ -7,7 +7,7 @@ the package root:
 ```ts
 import {
   createBattle, rollInitiativePhase, declareMove, executeMove,
-  advancePhase, declareAttacks, resolveDeclaredAttacks,
+  advancePhase, declareAttacks,
   resolveAllAttacks, nextActor, checkVictory, getUnit,
   type BattleState, type Rng,
 } from "btlib10x";
@@ -154,12 +154,12 @@ the declaration. Declaration validates arc (front only), line of sight (woods
 points ≥3 or an intervening elevation ridge blocks), range, ammo, jams,
 destroyed weapons, and aborts declarations that would auto-miss (TN > 12).
 
-Resolve in activation order — damage lands immediately on the target's layered
-damage state, but destroyed 'Mechs keep firing until the phase ends:
+Resolve all declared attacks in one simultaneous sweep — TW resolves weapon
+attacks simultaneously, so a 'Mech killed during the phase still fires its
+declared shots (resolution order never depends on roster order):
 
 ```ts
-resolveDeclaredAttacks(state, "wvr", rng);   // rolls to-hit + location(s) + crits
-resolveDeclaredAttacks(state, "grf", rng);
+resolveAllAttacks(state, rng);   // rolls to-hit + location(s) + crits for every unit
 
 const grf = getUnit(state, "grf");
 grf.damage.armor.leftTorso;   // front armor, e.g. 18 - 5 = 13 after an ML hit
@@ -168,9 +168,7 @@ grf.damage.internalStructure; // derived from tonnage
 
 Each resolution is appended to `state.events` as an `attackResolved` event
 carrying the full breakdown (to-hit roll, cluster roll, hit groups, damage
-application, critical hits) — enough to replay the entire battle. As an
-alternative to driving each unit yourself, `resolveAllAttacks(state, rng)`
-resolves every unit's declared attacks in one call.
+application, critical hits) — enough to replay the entire battle.
 
 Commit deaths and close the turn:
 
@@ -208,7 +206,7 @@ Griffin TN 9 on turn 1). Use it as the canonical end-to-end reference.
 | Build battle | `createBattle(units, { terrain, width, height, critsDisabled })` |
 | Roll initiative | `rollInitiativePhase(state, rng)` |
 | Move | `declareMove` → `executeMove` |
-| Shoot | `declareAttacks` → `resolveDeclaredAttacks` (or `resolveAllAttacks`) |
+| Shoot | `declareAttacks` → `resolveAllAttacks` |
 | Advance | `advancePhase` |
 | Who acts? | `nextActor(state)` |
 | Done? | `checkVictory(state)` |
