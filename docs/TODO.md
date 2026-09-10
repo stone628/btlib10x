@@ -9,7 +9,6 @@
 
 ## To Do
 
-- Simultaneity. resolveAllAttacks still skips units removed earlier in the same loop, so a 'Mech killed during the weapon attack phase loses its declared shots — and the loop runs in roster insertion order, so which unit is robbed depends on setup order. TW resolves weapon attacks simultaneously.
 - Target movement modifier. All three call sites still feed it hexesSinceLastReversal(target.movesThisTurn), the trailing run of same-direction steps, where TW counts total hexes moved. Only bites walking units that reverse.
 - Elevation. costToClimb is still max(0, to − from), so descending is free, and the validator still caps climbs at 1 level where the published limit is 2.
 - Buildings. building.ts is byte-identical: CF tiers, damage, collapse to rubble. Still no cover modifier, no LOS blocking, no collapse damage to occupants, and applyBuildingDamage is still exported and unused while game.ts reimplements it inline.

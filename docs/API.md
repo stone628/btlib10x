@@ -407,8 +407,7 @@ rollInitiativePhase(state, rng): void                  // initiative -> movement
 declareMove(state, unitId, mode): void                 // movement phase only
 executeMove(state, unitId, steps, { finalFacing }?): void
 declareAttacks(state, unitId, decls): void             // weaponAttack phase only
-resolveDeclaredAttacks(state, unitId, rng): void
-resolveAllAttacks(state, rng): void                    // resolves every unit's declared attacks
+resolveAllAttacks(state, rng): void                    // resolves every unit's declared attacks simultaneously
 advancePhase(state): void                              // drives the phase cycle
 nextActor(state): string | null                        // alternating activation hint
 actorQueue(state): { acted: string[]; pending: string[] }  // activation order view
