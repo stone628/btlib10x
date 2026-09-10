@@ -61,12 +61,19 @@ describe("elevation worked example: ridge duel", () => {
     expect(landings.find((l) => l.hex.col === 5 && l.hex.row === 2)).toBeDefined();
   });
 
-  it("ground step onto a level-2 hex in one move is not allowed", () => {
+  it("ground step onto a level-2 hex in one move is allowed, +3 rejected", () => {
+    // TW: a forward step may change up to 2 levels per hex. Level-2 hex costs
+    // 1 base + 2 climb = 3 MP (walk budget 4); a level-3 hex is beyond the cap.
     const level2 = gridWithLevels({ "5,2": 2 });
     const landings = reachableLandings({ col: 4, row: 2 }, "se", {
       ...reachOptions(level2),
     });
-    expect(landings.find((l) => l.hex.col === 5 && l.hex.row === 2)).toBeUndefined();
+    expect(landings.find((l) => l.hex.col === 5 && l.hex.row === 2)).toBeDefined();
+    const level3 = gridWithLevels({ "5,2": 3 });
+    const landings3 = reachableLandings({ col: 4, row: 2 }, "se", {
+      ...reachOptions(level3),
+    });
+    expect(landings3.find((l) => l.hex.col === 5 && l.hex.row === 2)).toBeUndefined();
   });
 
   it("jump to the level-1 hex costs 1 MP regardless of elevation", () => {

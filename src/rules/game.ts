@@ -555,9 +555,14 @@ export function executeMove(
       }
       const fromLevel = cellAt(state, cursor).level;
       const toLevel = cellAt(state, to).level;
-      if (toLevel - fromLevel > 1) {
+      const delta = toLevel - fromLevel;
+      const illegalChange = forward ? Math.abs(delta) > 2 : delta !== 0;
+      if (illegalChange) {
+        const slope = delta > 0 ? `${delta} levels higher` : `${-delta} levels lower`;
         throw new Error(
-          `Ground moves can climb at most 1 level per hex (${fmtHex(to)} is ${toLevel - fromLevel} levels higher)`,
+          forward
+            ? `Ground moves can change at most 2 levels per hex (${fmtHex(to)} is ${slope})`
+            : `Walking backward cannot change level (${fmtHex(to)} is ${slope})`,
         );
       }
       spent += costToEnter(cellAt(state, to).terrain) + costToClimb(fromLevel, toLevel);

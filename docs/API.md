@@ -53,7 +53,7 @@ helpers below read that catalog.
   (e.g. light/heavyWoods +1/+2; water1 is 0 — partial cover, see below)
 - `hasPartialCover(t): boolean`, `blocksTargeting(t): boolean` (water2/3 block
   LOS in/out)
-- `costToClimb(fromLevel, toLevel): number` (+1 per level climbed, descent free)
+- `costToClimb(fromLevel, toLevel): number` (+1 per level changed, up or down)
 - `levelAt(elevation, hex): number` (level for a hex, default `DEFAULT_LEVEL` 0)
 - `MP_PER_FACING_CHANGE = 1`, `MP_TO_ENTER_HEX = 1`, `MP_PER_LEVEL_CLIMB = 1`,
   `DEFAULT_LEVEL = 0`
@@ -204,8 +204,8 @@ Map coordinates are already 1-based and match the engine directly, so there is
 - `reachableLandings(start, startFacing, options): RevealedLanding[]` —
   enumerates every (hex, facing) reachable within the mode's MP budget, each
   with a movement `path` (`F` forward / `B` back / `R`/`L` turn). Ground
-  charges 1 MP per turn and 1+terrain+climb per step (jump treats turns as
-  free and ignores elevation).
+  charges 1 MP per turn and 1+terrain+1-per-level-changed per step (jump
+  treats turns as free and ignores elevation).
 
 ### Line of sight (`rules/los.ts`)
 
@@ -473,8 +473,9 @@ Rules encoded by the state machine:
   (`rapidFire: true` only on R weapons), TN > 12 must be aborted (throws), one
   declaration per weapon per turn, destroyed/jammed weapons rejected.
 - **Movement validation**: MP budget per mode (including crit-affected
-  effective ratings), terrain costs, climb at most 1 level per ground step,
-  backward steps banned while running, turn costs 1 MP/hexside, stacking
+  effective ratings), terrain costs, +1 MP per level changed up or down,
+  forward steps capped at 2 levels per hex, backward steps may not change
+  level, backward steps banned while running, turn costs 1 MP/hexside, stacking
   (pass-through friendly-only, never end on another 'Mech); jumping may pass
   over any unit, lands only on empty hexes, and picks its landing facing freely.
 - `GameEvent` union (`turn`, `phase`, `initiative`, `moveDeclared`, `moved`,

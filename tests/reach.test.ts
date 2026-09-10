@@ -161,21 +161,53 @@ describe("reachableLandings", () => {
 
   it("charges +1 MP per level climbed for ground moves", () => {
     // A two-MP walk onto a level-1 hex costs 2 (base 1 + climb 1).
-    const rs = reach("walk", 2, 3, 0, "n", noOccupants, 21, 21, start, { "10,9": 1 });
+    const rs = reach("walk", 2, 3, 0, "n", noOccupants, 21, 21, start, { "12,11": 1 });
     expect(lookup(rs, { col: 12, row: 11 }, "n")).toEqual(["F"]);
   });
 
-  it("rejects a +2 level ground step", () => {
-    // Climbing onto a level-2 hex in one step is not legal.
-    // Start at (12, 12) facing "n" → (12, 11). Put level 2 at (12, 11).
-    const rs = reach("walk", 4, 6, 0, "n", noOccupants, 21, 21, start, { "12,11": 2 });
+  it("allows a +2 level ground step and rejects a +3", () => {
+    // TW: a forward step may change up to 2 levels per hex.
+    // Start at (12, 12) facing "n" → (12, 11). Put level 2 at (12, 11):
+    // 1 base + 2 climb = 3 MP.
+    const rs = reach("walk", 3, 4, 0, "n", noOccupants, 21, 21, start, { "12,11": 2 });
+    expect(lookup(rs, { col: 12, row: 11 }, "n")).toEqual(["F"]);
+    // A 3-level climb costs 4 MP but exceeds the per-hex cap.
+    const rs3 = reach("walk", 4, 6, 0, "n", noOccupants, 21, 21, start, { "12,11": 3 });
+    expect(lookup(rs3, { col: 12, row: 11 }, "n")).toBeUndefined();
+  });
+
+  it("charges +1 MP per level descended", () => {
+    // Starting from a level-1 hex, walking forward onto a level-0 hex costs
+    // 2 MP (1 base + 1 descent); a 1-MP walk cannot reach it.
+    const desc = { "12,12": 1 };
+    expect(
+      lookup(
+        reach("walk", 1, 1, 0, "n", noOccupants, 21, 21, start, desc),
+        { col: 12, row: 11 },
+        "n",
+      ),
+    ).toBeUndefined();
+    expect(
+      lookup(
+        reach("walk", 2, 2, 0, "n", noOccupants, 21, 21, start, desc),
+        { col: 12, row: 11 },
+        "n",
+      ),
+    ).toEqual(["F"]);
+  });
+
+  it("rejects a forward step dropping more than 2 levels", () => {
+    // TW caps forward level change at 2 per hex, up or down.
+    const rs = reach("walk", 4, 6, 0, "n", noOccupants, 21, 21, start, { "12,12": 3 });
     expect(lookup(rs, { col: 12, row: 11 }, "n")).toBeUndefined();
   });
 
-  it("descent is free", () => {
-    // Starting from a level-1 hex, walking onto a level-0 hex costs just 1 MP.
-    const rs = reach("walk", 1, 1, 0, "n", noOccupants, 21, 21, start, { "10,10": 1 });
-    expect(lookup(rs, { col: 12, row: 11 }, "n")).toEqual(["F"]);
+  it("rejects a backward step that changes level", () => {
+    // TW: 'Mechs moving backward may not change levels.
+    const up = reach("walk", 4, 6, 0, "n", noOccupants, 21, 21, start, { "12,13": 1 });
+    expect(lookup(up, { col: 12, row: 13 }, "n")).toBeUndefined();
+    const down = reach("walk", 4, 6, 0, "n", noOccupants, 21, 21, start, { "12,12": 1 });
+    expect(lookup(down, { col: 12, row: 13 }, "n")).toBeUndefined();
   });
 
   it("jump ignores elevation and can change level freely", () => {

@@ -9,7 +9,6 @@
 
 ## To Do
 
-- Elevation. costToClimb is still max(0, to − from), so descending is free, and the validator still caps climbs at 1 level where the published limit is 2.
 - Buildings. building.ts is byte-identical: CF tiers, damage, collapse to rubble. Still no cover modifier, no LOS blocking, no collapse damage to occupants, and applyBuildingDamage is still exported and unused while game.ts reimplements it inline.
 - Ammo explosion strips armor. applyAmmoExplosion still zeroes the location's armor to force damage inward and leaves it zeroed, deleting armor an internal explosion should not touch. Cosmetically related: the CASE path applies a redundant extra -1 structure step to an already-depleted location.
 - Suggestion LOS. fireability.ts gained the two new modifiers but still tests only losBlockedByElevation and woods, never losBlockedByWater, so a target in deep water can be offered as a shot that declareAttacks will refuse.
