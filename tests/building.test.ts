@@ -9,13 +9,18 @@ import {
   isCollapsed,
 } from "../src/rules/building.js";
 import {
+  advancePhase,
   type BattleState,
   damageBuildingAt,
+  declareAttacks,
+  resolveAllAttacks,
+  rollInitiativePhase,
   type TerrainHexDef,
   type UnitInit,
+  type UnitState,
 } from "../src/rules/game.js";
 import { losBlockedByWater } from "../src/rules/los.js";
-import { createTestBattle } from "./helpers.js";
+import { createTestBattle, scriptedRng } from "./helpers.js";
 
 describe("buildingTypeOf", () => {
   it("maps each building terrain to its sub-type", () => {
@@ -123,14 +128,25 @@ describe("battle building integration", () => {
   it("damaging a building below its CF does not collapse it", () => {
     const battle = battleWithBuilding();
     const result = damageBuildingAt(battle, { col: 3, row: 3 }, 5);
-    expect(result).toBeNull();
+    expect(result?.collapsed).toBe(false);
+    expect(result?.cf).toBe(10);
+    expect(result?.event).toBeNull();
     expect(battle.buildings["3,3"]?.cf).toBe(10);
+    expect(battle.events).toContainEqual({
+      kind: "buildingDamaged",
+      col: 3,
+      row: 3,
+      damage: 5,
+      cf: 10,
+    });
   });
 
   it("reduces a building to rubble when its CF reaches zero", () => {
     const battle = battleWithBuilding();
     const result = damageBuildingAt(battle, { col: 3, row: 3 }, 15);
-    expect(result).toEqual({ kind: "buildingCollapsed", col: 3, row: 3 });
+    expect(result?.collapsed).toBe(true);
+    expect(result?.preCf).toBe(15);
+    expect(result?.event).toEqual({ kind: "buildingCollapsed", col: 3, row: 3 });
     expect(battle.buildings["3,3"]).toBeUndefined();
     // width = max(3,3)+1 = 4, so index of (3,3) is (3-1)+(3-1)*4 = 10.
     expect(battle.cells[10]!.terrain).toBe("rubble");
@@ -141,4 +157,59 @@ describe("battle building integration", () => {
     const battle = battleWithBuilding();
     expect(damageBuildingAt(battle, { col: 2, row: 3 }, 100)).toBeNull();
   });
+
+  it("collapsing a building damages occupants (TW: ceil(CF/10) to one location)", () => {
+    const battle: BattleState = createTestBattle(
+      [{ col: 3, row: 3, type: "lightBuilding" }],
+      [
+        {
+          id: "a",
+          model: "HBK-4G",
+          team: 0,
+          gunnery: 4,
+          position: { col: 2, row: 3 },
+          facing: "se",
+        },
+        {
+          id: "b",
+          model: "ENF-4R",
+          team: 1,
+          gunnery: 4,
+          position: { col: 3, row: 3 },
+          facing: "sw",
+        },
+      ],
+      true,
+    );
+    // RNG: initiative 2D6 x2 teams; AC/20 to-hit then location; collapse location.
+    const rng = scriptedRng(1, 2, 3, 3, 3, 3, 3, 4, 3, 3);
+    const totalBefore = poolTotal(battle.units.b!);
+    // Target b stands in partial cover, so leg location rolls strike the cover
+    // instead — location 7 (center torso) keeps the 20-damage group live.
+    rollInitiativePhase(battle, rng);
+    advancePhase(battle);
+    declareAttacks(battle, "a", [{ weaponIndex: 4, targetId: "b" }]);
+    resolveAllAttacks(battle, rng);
+
+    expect(battle.buildings["3,3"]).toBeUndefined();
+    expect(battle.cells[10]!.terrain).toBe("rubble");
+    expect(battle.events).toContainEqual({ kind: "buildingCollapsed", col: 3, row: 3 });
+    expect(battle.events).toContainEqual({
+      kind: "collapseDamage",
+      unitId: "b",
+      col: 3,
+      row: 3,
+      location: "rightTorso",
+      damage: 2,
+    });
+    expect(poolTotal(battle.units.b!)).toBe(totalBefore - 22);
+  });
 });
+
+function poolTotal(unit: UnitState): number {
+  let total = 0;
+  for (const pool of Object.values(unit.damage.armor)) total += pool;
+  for (const pool of Object.values(unit.damage.armorRear)) total += pool;
+  for (const pool of Object.values(unit.damage.internalStructure)) total += pool;
+  return total;
+}

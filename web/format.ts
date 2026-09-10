@@ -1658,7 +1658,9 @@ function isAttackResolutionKind(kind: GameEvent["kind"] | null): boolean {
     kind === "attackResolved" ||
     kind === "unitDestroyed" ||
     kind === "unitRemoved" ||
-    kind === "heatWeapon"
+    kind === "heatWeapon" ||
+    kind === "buildingDamaged" ||
+    kind === "collapseDamage"
   );
 }
 
@@ -1705,6 +1707,23 @@ function eventLines(locale: LocaleId, e: GameEvent): string[] {
       return [i18n(locale, "log.removedEvent", { id: e.unitId })];
     case "buildingCollapsed":
       return [i18n(locale, "log.buildingCollapsed", { hex: `${e.col},${e.row}` })];
+    case "buildingDamaged":
+      return [
+        i18n(locale, "log.buildingDamaged", {
+          hex: `${e.col},${e.row}`,
+          damage: e.damage,
+          cf: e.cf,
+        }),
+      ];
+    case "collapseDamage":
+      return [
+        i18n(locale, "log.collapseDamage", {
+          id: e.unitId,
+          hex: `${e.col},${e.row}`,
+          loc: SHORT_LOC[e.location],
+          damage: e.damage,
+        }),
+      ];
     case "heatMove":
       return [i18n(locale, "log.heatMove", { id: e.unitId, heat: e.heat })];
     case "heatWeapon":

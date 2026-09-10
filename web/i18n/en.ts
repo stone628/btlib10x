@@ -351,6 +351,8 @@ export const en = {
   "log.destroyed": "*** {id} DESTROYED ***",
   "log.removedEvent": "{id} removed from play",
   "log.buildingCollapsed": "Building at {hex} collapses to rubble",
+  "log.buildingDamaged": "Building at {hex} takes {damage} structural damage (CF {cf})",
+  "log.collapseDamage": "{id} takes {damage} damage to {loc} from building collapse at {hex}",
   "log.heatMove": "{id} generates {heat} movement heat",
   "log.heatWeapon": "generates {heat} weapon heat ({prev}->{curr})",
   "log.heatEngineCrit": "{id} generates {heat} engine heat from crit ({prev}->{curr})",

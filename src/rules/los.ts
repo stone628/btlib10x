@@ -1,6 +1,7 @@
 import { hexDistance, lineHexes } from "../core/hex.js";
 import { blocksTargeting, cellAt, type HexGrid, screeningPoints } from "../core/terrain.js";
 import type { HexCoord, TerrainType } from "../core/types.js";
+import { buildingTypeOf } from "./building.js";
 
 /**
  * Hexes along the center-to-center LOS, excluding the attacker's and target's
@@ -45,23 +46,51 @@ export function losBlockedByWater(grid: HexGrid, from: HexCoord, to: HexCoord): 
 }
 
 /**
+ * LOS-blocking height of a hex: its ground level plus the standing feature
+ * (1 level for a 'Mech-height crest, 2 for a building — TW: one building
+ * level equals two hex levels; default single-level buildings).
+ */
+function terrainHeightAt(grid: HexGrid, hex: HexCoord): number {
+  const cell = cellAt(grid, hex);
+  const standing = buildingTypeOf(cell.terrain) !== undefined ? 2 : 1;
+  return cell.level + standing;
+}
+
+/**
  * LOS elevation check: a 'Mech's LOS level is its hex level + 1. Draw a real-
  * valued line from the attacker's LOS level to the target's LOS level; an
- * intervening hex C blocks iff its own LOS level (level + 1) meets or exceeds
- * the ray's height at C's center. Bipedal 'Mechs only — no buildings, no
- * hull-down, no partial cover.
+ * intervening hex C blocks iff its own blocking height (level + 1, or +2 for
+ * a building) meets or exceeds the ray's height at C's center. Bipedal
+ * 'Mechs only — no multi-floor interiors, no hull-down, no partial cover.
  */
 export function losBlockedByElevation(grid: HexGrid, from: HexCoord, to: HexCoord): boolean {
-  const a = cellAt(grid, from).level;
-  const b = cellAt(grid, to).level;
-  const aLos = a + 1;
-  const bLos = b + 1;
+  const aLos = cellAt(grid, from).level + 1;
+  const bLos = cellAt(grid, to).level + 1;
   const dTotal = hexDistance(from, to);
   if (dTotal === 0) return false;
   for (const h of interveningHexes(from, to)) {
     const dA = hexDistance(from, h);
     const rayHeight = aLos + (bLos - aLos) * (dA / dTotal);
-    if (cellAt(grid, h).level + 1 > rayHeight) return true;
+    if (terrainHeightAt(grid, h) > rayHeight) return true;
+  }
+  return false;
+}
+
+/**
+ * True when an intervening building hex rises above the LOS ray. Building
+ * hexes block LOS (TW p.100) unless the attacker's elevation line clears
+ * their height; the building hex a unit occupies is not intervening.
+ */
+export function losBlockedByBuilding(grid: HexGrid, from: HexCoord, to: HexCoord): boolean {
+  const aLos = cellAt(grid, from).level + 1;
+  const bLos = cellAt(grid, to).level + 1;
+  const dTotal = hexDistance(from, to);
+  if (dTotal === 0) return false;
+  for (const h of interveningHexes(from, to)) {
+    if (buildingTypeOf(cellAt(grid, h).terrain) === undefined) continue;
+    const dA = hexDistance(from, h);
+    const rayHeight = aLos + (bLos - aLos) * (dA / dTotal);
+    if (terrainHeightAt(grid, h) > rayHeight) return true;
   }
   return false;
 }
