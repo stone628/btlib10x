@@ -99,7 +99,7 @@ Declare a movement mode, then execute steps. Each step either enters a hex or
 turns 1–5 hexsides. Costs: 1 MP per hex entered plus a per-terrain surcharge
 (lightWoods +1, heavyWoods +2, rough/rubble +1, water2/3 +3, buildings
 +1/+2/+3/+4, pavement +0; data-driven from the terrain catalog), +1
-per level climbed (descent free), 1 MP per hexside turned.
+per level of elevation changed (up or down), 1 MP per hexside turned.
 
 ```ts
 declareMove(state, "wvr", "run");                  // running budget: 8 MP
@@ -111,12 +111,12 @@ executeMove(state, "wvr", [
 ]);                                                // 4 MP spent
 ```
 
-The engine enforces budgets, backward-step rules (no running backward), a 1-
-level-per-step ground climb cap, stacking (never end on another 'Mech; pass
-through friends only), and jump rules (`GRF-1N` may hop over anyone but land
-only on empty hexes; jump steps enter any adjacent hex at 1 MP and ignore
-elevation, with the landing facing chosen freely). Invalid plans throw with a
-reason instead of corrupting state.
+The engine enforces budgets, backward-step rules (no running backward, no
+backward level change), a 2-level-per-hex forward climb cap, stacking (never
+end on another 'Mech; pass through friends only), and jump rules (`GRF-1N` may
+hop over anyone but land only on empty hexes; jump steps enter any adjacent
+hex at 1 MP and ignore elevation, with the landing facing chosen freely).
+Invalid plans throw with a reason instead of corrupting state.
 
 ```ts
 declareMove(state, "grf", "walk");

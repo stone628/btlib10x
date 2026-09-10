@@ -178,13 +178,14 @@ export function reachableLandings(
   const inBounds = (hex: HexCoord): boolean =>
     hex.col >= 1 && hex.col <= width && hex.row >= 1 && hex.row <= height;
   // Ground pass-through: friendly-occupied hexes are passable but never landable,
-  // and a 'Mech cannot step more than one level up in a single hex (jump ignores
-  // the climb cap and may change level freely).
+  // and a 'Mech may change at most 2 levels per hex forward and none backward
+  // (TW; jump ignores elevation and may change level freely).
   // Jump pass-through: any in-bounds hex; landing is restricted separately.
-  const canEnter = (from: HexCoord, hex: HexCoord): boolean => {
+  const canEnter = (from: HexCoord, hex: HexCoord, backward: boolean): boolean => {
     if (!inBounds(hex)) return false;
     if (jumping) return true;
-    if (cellAt(options.grid, hex).level - cellAt(options.grid, from).level > 1) return false;
+    const delta = cellAt(options.grid, hex).level - cellAt(options.grid, from).level;
+    if (backward ? delta !== 0 : Math.abs(delta) > 2) return false;
     const occ = options.occupantTeam(hex);
     return occ === undefined || occ === options.team;
   };
@@ -210,9 +211,9 @@ export function reachableLandings(
 
     // Step transitions: F (forward) and, when allowed, B (backward). The
     // 'Mech keeps its facing after entering the hex. Ground moves also pay
-    // +1 MP per level climbed (descent is free); jumps ignore elevation.
+    // +1 MP per level changed (up or down); jumps ignore elevation.
     const forward = neighbor(cur.hex, cur.facing);
-    if (canEnter(cur.hex, forward)) {
+    if (canEnter(cur.hex, forward, false)) {
       const climb = jumping
         ? 0
         : costToClimb(cellAt(options.grid, cur.hex).level, cellAt(options.grid, forward).level);
@@ -221,7 +222,7 @@ export function reachableLandings(
     }
     if (backwardAllowed) {
       const backward = neighbor(cur.hex, oppositeFacing(cur.facing));
-      if (canEnter(cur.hex, backward)) {
+      if (canEnter(cur.hex, backward, true)) {
         const climb = jumping
           ? 0
           : costToClimb(cellAt(options.grid, cur.hex).level, cellAt(options.grid, backward).level);

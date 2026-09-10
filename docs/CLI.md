@@ -121,12 +121,12 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   to enter a hex plus a terrain surcharge (data-driven from
   `src/data/terrain.json`; e.g. lightWoods +1, heavyWoods +2, rough/rubble +1,
   water2/3 +3, buildings +1/+2/+3/+4, pavement +0), +1 MP per
-  level of elevation climbed (descent is free), and 1 MP per
+  level of elevation changed (up or down), and 1 MP per
   hexside of facing change. Ground moves step straight ahead or back; run
-  cannot move backward; ground moves cannot climb more than one level per
-  step. Jump steps into any adjacent hex at 1 MP per step, with the
-  landing facing chosen freely; jump ignores elevation. Water depth-change
-  movement cost is deferred (see below).
+  cannot move backward; forward steps may change level by at most 2 per hex
+  and backward steps cannot change level at all. Jump steps into any adjacent
+  hex at 1 MP per step, with the landing facing chosen freely; jump ignores
+  elevation. Water depth-change movement cost is deferred (see below).
 - **Line of sight** — intervening-hex line trace; light/heavy woods points
   (1/2) accumulate along the line and ≥ 3 points block. A real-valued
   "ray height" is drawn between attacker and target LOS levels (hex

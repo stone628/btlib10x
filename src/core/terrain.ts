@@ -1,7 +1,7 @@
 import { getTerrainDef } from "../data/terrain.schema.js";
 import type { HexCell, HexCoord, TerrainType } from "./types.js";
 
-/** Per-level MP cost to climb to a higher ground elevation. */
+/** Per-level MP cost to change elevation (up or down). */
 export const MP_PER_LEVEL_CLIMB = 1;
 
 /** Default cell returned for out-of-bounds coordinates. */
@@ -33,9 +33,9 @@ export function costToEnter(terrain: TerrainType): number {
   return MP_TO_ENTER_HEX + terrainMoveCost(terrain);
 }
 
-/** Extra MP to climb from `fromLevel` to `toLevel`; negative deltas are free. */
+/** Extra MP to change level from `fromLevel` to `toLevel`; costs both ways (TW). */
 export function costToClimb(fromLevel: number, toLevel: number): number {
-  return Math.max(0, toLevel - fromLevel) * MP_PER_LEVEL_CLIMB;
+  return Math.abs(toLevel - fromLevel) * MP_PER_LEVEL_CLIMB;
 }
 
 export const MP_PER_FACING_CHANGE = 1;

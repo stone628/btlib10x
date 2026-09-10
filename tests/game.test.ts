@@ -178,6 +178,46 @@ describe("movement phase", () => {
     expect(hbk.mpSpent).toBe(1);
   });
 
+  it("rejects a backward step that changes level", () => {
+    const state = startMovementTurn(hbkVsEnf([{ col: 1, row: 3, type: "clear", level: 1 }]));
+    declareMove(state, "hbk", "walk");
+    expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: 1, row: 3 } }])).toThrow(
+      /cannot change level/,
+    );
+  });
+
+  it("charges +1 MP to descend a level and caps forward level change at 2", () => {
+    // hbk at (2,4) level 1 facing se: turn s (1 MP), enter (2,5) level 0
+    // (1 MP + 1 descent) = 3 total.
+    const state = startMovementTurn(
+      hbkVsEnf([
+        { col: 2, row: 4, type: "clear", level: 1 },
+        { col: 2, row: 5, type: "clear", level: 0 },
+      ]),
+    );
+    declareMove(state, "hbk", "walk");
+    executeMove(state, "hbk", [
+      { kind: "turn", facings: 1 },
+      { kind: "enter", to: { col: 2, row: 5 } },
+    ]);
+    expect(getUnit(state, "hbk").mpSpent).toBe(3);
+
+    // A 2-level climb forward is legal: turn s (1 MP), enter (2,5) at level 2
+    // (1 MP + 2 climb) = 4 total.
+    const state2 = startMovementTurn(
+      hbkVsEnf([
+        { col: 2, row: 4, type: "clear", level: 0 },
+        { col: 2, row: 5, type: "clear", level: 2 },
+      ]),
+    );
+    declareMove(state2, "hbk", "walk");
+    executeMove(state2, "hbk", [
+      { kind: "turn", facings: 1 },
+      { kind: "enter", to: { col: 2, row: 5 } },
+    ]);
+    expect(getUnit(state2, "hbk").mpSpent).toBe(4);
+  });
+
   it("counts turning MP against the mode budget", () => {
     let state = startMovementTurn(hbkVsEnf());
     declareMove(state, "hbk", "walk"); // walking 4
