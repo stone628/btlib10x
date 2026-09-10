@@ -65,7 +65,11 @@ import { roll2D6, rollD6 } from "../core/dice.js";
 import { damageTransferTo, isArm, isLeg, isLimb, isSideTorso } from "../core/locations.js";
 import type { Location, Rng } from "../core/types.js";
 import { type AmmoNameHolder, getAmmoDefFor } from "../data/ammo.schema.js";
-import type { ResolvedCritSlot, ResolvedMechDef } from "../data/mech.schema.js";
+import type {
+  ResolvedCritSlot,
+  ResolvedCritStructure,
+  ResolvedMechDef,
+} from "../data/mech.schema.js";
 import { CRIT_SLOT_COUNTS } from "../data/mech.schema.js";
 import { getWeaponDefFor } from "../data/weapon.schema.js";
 import { type AmmoBinId, ammoBinId, ammoWeaponTotals, stripBinsInLocation } from "./ammo.js";
@@ -180,6 +184,7 @@ const LEG_ACTUATORS: ReadonlySet<string> = new Set([
 ]);
 const HIP = "hip";
 const COCKPIT = "cockpit";
+const JUMPJET = "jumpJet";
 
 /**
  * Is the given static slot capable of taking a critical hit (i.e. its
@@ -655,67 +660,72 @@ export interface EffectiveMovement {
   readonly jumping: number;
 }
 
+function destroyedStructures(
+  def: ResolvedMechDef,
+  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+  loc: Location,
+): ResolvedCritStructure[] {
+  const layout = def.critSlots[loc];
+  const destroyed = critSlotsDestroyed[loc];
+  const result: ResolvedCritStructure[] = [];
+  for (let i = 0; i < layout.length; i++) {
+    const slot = layout[i];
+    if (slot === undefined) continue;
+    if (slot.kind === "structure" && (destroyed[i] ?? false)) {
+      result.push(slot);
+    }
+  }
+  return result;
+}
+
 export function effectiveMovement(
   def: ResolvedMechDef,
   critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
 ): EffectiveMovement {
-  const legMPenalty = (loc: "rightLeg" | "leftLeg"): number => {
-    const layout = def.critSlots[loc];
-    const destroyed = critSlotsDestroyed[loc];
+  const legMovePenalty = (
+    loc: "rightLeg" | "leftLeg",
+  ): { movePenalty: number; jumpPenalty: number; hipHit: boolean } => {
     // Hip on this leg?
     let hipHit = false;
-    for (let i = 0; i < layout.length; i++) {
-      const slot = layout[i] ?? { kind: "empty" };
-      if (slot.kind === "structure" && slot.name === HIP && (destroyed[i] ?? false)) {
+    let movePenalty = 0;
+    let jumpPenalty = 0;
+    for (const slot of destroyedStructures(def, critSlotsDestroyed, loc)) {
+      if (slot.name === HIP) {
         hipHit = true;
-        break;
+      } else if (slot.name === JUMPJET) {
+        jumpPenalty += 1;
+      } else if (LEG_ACTUATORS.has(slot.name)) {
+        movePenalty += 1;
       }
     }
-    if (hipHit) return 0; // walking halved separately below
-    let n = 0;
-    for (let i = 0; i < layout.length; i++) {
-      const slot = layout[i] ?? { kind: "empty" };
-      if (slot.kind === "structure" && LEG_ACTUATORS.has(slot.name) && (destroyed[i] ?? false)) {
-        n += 1;
-      }
-    }
-    return n;
+    return { movePenalty, jumpPenalty, hipHit };
   };
-
   // Hip damage halves walking on each affected leg (round up each leg
   // independently, then combine). Per the rules, when a hip is hit, the
   // other actuator penalties on that leg are ignored; we already drop them
   // by returning 0 above and halving here.
-  const hipOn = (loc: "rightLeg" | "leftLeg"): boolean => {
-    const layout = def.critSlots[loc];
-    const destroyed = critSlotsDestroyed[loc];
-    for (let i = 0; i < layout.length; i++) {
-      const slot = layout[i] ?? { kind: "empty" };
-      if (slot.kind === "structure" && slot.name === HIP && (destroyed[i] ?? false)) {
-        return true;
-      }
-    }
-    return false;
-  };
-
-  const baseWalk = def.walking;
-  let walk = baseWalk;
-  for (const leg of ["rightLeg", "leftLeg"] as const) {
-    if (hipOn(leg)) {
-      walk = Math.min(walk, Math.ceil(baseWalk / 2));
-    } else {
-      walk = Math.max(0, walk - legMPenalty(leg));
-    }
+  // two hip damages lead to 0 MP
+  const { movePenalty: mpl, jumpPenalty: jpl, hipHit: leftHip } = legMovePenalty("leftLeg");
+  const { movePenalty: mpr, jumpPenalty: jpr, hipHit: rightHip } = legMovePenalty("rightLeg");
+  let walk = def.walking;
+  if (leftHip && rightHip) {
+    walk = 0;
+  } else if (!leftHip && !rightHip) {
+    walk = Math.max(0, walk - mpl - mpr);
+  } else if (leftHip) {
+    walk = Math.ceil(Math.max(0, walk - mpr) / 2);
+  } else {
+    // rightHip only
+    walk = Math.ceil(Math.max(0, walk - mpl) / 2);
   }
-  // Jump MP: each destroyed jump jet slot reduces jump MP by 1.
-  let jump = def.jumping;
-  for (const loc of ["leftTorso", "rightTorso", "centerTorso", "leftLeg", "rightLeg"] as const) {
-    const layout = def.critSlots[loc];
-    const destroyed = critSlotsDestroyed[loc];
-    for (let i = 0; i < layout.length; i++) {
-      const slot = layout[i] ?? { kind: "empty" };
-      if (slot.kind === "structure" && slot.name === "jumpJet" && (destroyed[i] ?? false)) {
-        jump = Math.max(0, jump - 1);
+  let jump = Math.max(0, def.jumping - jpl - jpr);
+  if (jump > 0) {
+    // Jump MP: each destroyed jump jet slot reduces jump MP by 1.
+    for (const loc of ["leftTorso", "rightTorso", "centerTorso"] as const) {
+      for (const slot of destroyedStructures(def, critSlotsDestroyed, loc)) {
+        if (slot.name === JUMPJET) {
+          jump = Math.max(0, jump - 1);
+        }
       }
     }
   }

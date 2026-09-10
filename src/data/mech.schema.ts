@@ -117,19 +117,20 @@ export interface ResolvedCritAmmoSlot extends WeaponNameHolder {
   readonly weapon: string;
   readonly weaponIndex: number;
 }
+export interface ResolvedCritStructure {
+  readonly kind: "structure";
+  readonly name: string;
+  /** Sibling slot index (1-based within the same location) of another slot that
+   *  belongs to the same multi-slot component (e.g. double heat sink). For a
+   *  single-slot component or the first slot of a multi-slot group, this is
+   *  the slot's own index. */
+  readonly group: readonly number[];
+}
 export type ResolvedCritSlot =
   | { readonly kind: "empty" }
   | ResolvedCritWeaponSlot
   | ResolvedCritAmmoSlot
-  | {
-      readonly kind: "structure";
-      readonly name: string;
-      /** Sibling slot index (1-based within the same location) of another slot that
-       *  belongs to the same multi-slot component (e.g. double heat sink). For a
-       *  single-slot component or the first slot of a multi-slot group, this is
-       *  the slot's own index. */
-      readonly group: readonly number[];
-    }
+  | ResolvedCritStructure
   | { readonly kind: "soak"; readonly name: CritSoakName };
 
 export type ResolvedCritSlots = Readonly<Record<Location, readonly ResolvedCritSlot[]>>;
