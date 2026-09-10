@@ -158,13 +158,21 @@ type EdgeGlyph =
   | typeof GRID_GLYPHS.edgeBottom;
 
 /** Arrow drawn for each {@link Facing}, replacing the matching wall/edge char. */
+// facing | arrow | triangle | triangle simple
+//--------+-------+----------+-----------------
+//   n    | u2191 | u25b2    | u25b2
+//   ne   | u2197 | u25e5    | u25bc(s)
+//   se   | u2198 | u25e2    | u25b2(n)
+//   s    | u2193 | u25bc    | u25bc
+//   sw   | u2199 | u25e3    | u25b2(n)
+//   nw   | u2196 | u25e4    | u25bc(s)
 export const FACING_GLYPH: Readonly<Record<Facing, string>> = {
-  n: "\u25b2" /*triangle up*/, //"\u2191",/* arrow up */
-  ne: "\u25e5" /*triangle upper right*/, //"\u2197",/* arrow ne */
-  se: "\u25e2" /*triangle lower right*/, //"\u2198",/* arrow se */
-  s: "\u25bc" /*triangle down*/, //"\u2193",/* arrow s */
-  sw: "\u25e3" /*triangle lower left*/, //"\u2199",/* arrow sw */
-  nw: "\u25e4" /*triangle upper left*/, //"\u2196",/* arrow nw */
+  n: "\u25b2",
+  ne: "\u25bc",
+  se: "\u25b2",
+  s: "\u25bc",
+  sw: "\u25b2",
+  nw: "\u25bc",
 };
 
 /** Canvas cell (x offset from the hex origin, absolute y) a facing edge sits on. */

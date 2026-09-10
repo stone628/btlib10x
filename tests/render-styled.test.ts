@@ -110,7 +110,7 @@ describe("styled board model", () => {
     // Team color touches only the id characters and the facing arrow: exactly
     // one cyan span each per board — parens, coords and walls stay unstyled.
     const cyan = lines.flat().filter((sp) => sp.style?.fg === "cyan");
-    expect(cyan.map((sp) => sp.text)).toEqual([FACING_GLYPH["n"], "hbk"]); // top edge renders first
+    expect(cyan.map((sp) => sp.text)).toEqual([FACING_GLYPH.n, "hbk"]); // top edge renders first
 
     // Terrain tinting shows up in spans wherever the glyph is drawn;
     // mapModel derives its own marks, so use it for the glyph check.
@@ -162,7 +162,7 @@ describe("styled board model", () => {
     expect(idSpan?.style?.fg).toBe("cyan");
     // The ne arrow sits on the terrain-tinted coord-row wall yet wears the
     // team color instead.
-    const neArrow = spans.flat().find((sp) => sp.text === FACING_GLYPH["ne"]);
+    const neArrow = spans.flat().find((sp) => sp.text === FACING_GLYPH.ne);
     expect(neArrow?.style?.fg).toBe("cyan");
   });
 
@@ -188,7 +188,7 @@ describe("styled board model", () => {
     };
     const spans = boardToSpans(model).flat();
     // The n edge of 1,1 is tinted, riding on the actor's facing glyph.
-    const nEdge = spans.find((sp) => sp.text === FACING_GLYPH["n"]);
+    const nEdge = spans.find((sp) => sp.text === FACING_GLYPH.n);
     expect(nEdge?.style?.fg).toBe("cyan");
     // The se edge of 2,2 is tinted even though no facing glyph is drawn there.
     const seEdge = spans.find((sp) => sp.style?.fg === "magenta");
