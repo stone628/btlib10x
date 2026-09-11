@@ -60,4 +60,38 @@ describe("critical slot chart (sheet)", () => {
     expect(text).toContain("  1 AC/20 ammo (3/5 shots) [-]");
     expect(text).toContain("  2 AC/20 ammo (5/5 shots)");
   });
+
+  it("marks every non-empty slot [-] when the location's structure is destroyed by damage", () => {
+    const s = freshSetup();
+    const cic = s.battle!.units.cicada!;
+    // Simulate left torso + left arm destroyed by raw damage (no crit roll):
+    // no critSlotsDestroyed flags change, no destroyedWeapons entries.
+    cic.phaseStartDamage = {
+      ...cic.phaseStartDamage,
+      internalStructure: { ...cic.phaseStartDamage.internalStructure, leftTorso: 0, leftArm: 0 },
+    };
+    const text = run(s, "sheet cicada").join("\n");
+    // Every LT slot (engines, Snub-Nose PPC x2, Medium Laser) flagged.
+    expect(text).toContain("  4 Snub-Nose PPC [-]");
+    expect(text).toContain("  5 Snub-Nose PPC [-]");
+    expect(text).toContain("  6 Medium Laser [-]");
+    // LA slots flagged: the LA column sits right of the last grid divider on
+    // RA/HD/LA rows; split on the box-drawing vertical to isolate it.
+    const laCells = text
+      .split("\n")
+      .map((l) => l.split("│")[3] ?? "")
+      .filter((c) => /^\s*\d+ /.test(c));
+    expect(laCells.length).toBeGreaterThanOrEqual(6);
+    expect(laCells[0]).toContain("Shoulder [-]");
+    expect(laCells[1]).toContain("Upper Arm Actuator [-]");
+    // Empty LA slots stay bare.
+    const laEmpty = laCells.find((c) => c.trim().match(/^\d+ -/));
+    expect(laEmpty).toBeDefined();
+    expect(laEmpty).not.toContain("[-]");
+    // Intact locations keep clean slots: RT engine slot 1 has no marker
+    // (first grid cell of the RT/CT/LT row block).
+    const rtRow = text.split("\n").find((l) => l.split("│")[1]?.includes("  1 Engine"));
+    expect(rtRow).toBeDefined();
+    expect(rtRow!.split("│")[1]).not.toContain("[-]");
+  });
 });

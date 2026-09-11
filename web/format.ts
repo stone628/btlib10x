@@ -733,6 +733,7 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
       jammedWeapons: unit.jammedWeapons,
       shotsLeft: unit.shotsLeft,
       ammoBins: unit.ammoBins,
+      locationDestroyed: (loc) => unit.phaseStartDamage.internalStructure[loc] <= 0,
     },
   };
 }
@@ -908,6 +909,8 @@ interface CritChartLive {
   readonly shotsLeft: Readonly<Record<number, number>>;
   /** Per-crit-slot ammo remaining. */
   readonly ammoBins: Readonly<Record<AmmoBinId, number>>;
+  /** Location destroyed by damage (phase-start internal structure at 0). */
+  readonly locationDestroyed: (location: Location) => boolean;
 }
 
 /** i18n key per ammo depletion policy. */
@@ -993,8 +996,13 @@ function critSlotText(
     const mountDestroyed =
       slot.kind === "weapon" && live.destroyedWeapons.includes(slot.weaponIndex);
     const mountJammed = slot.kind === "weapon" && live.jammedWeapons.includes(slot.weaponIndex);
+    // A location whose internal structure is gone has every slot in it
+    // destroyed, even when no crit roll marked them (matches the mount list).
+    const locationGone = slot.kind !== "empty" && live.locationDestroyed(loc);
     if (mountJammed) markers.push(i18n(locale, "critChart.jammedSuffix"));
-    if (slotHit || mountDestroyed) markers.push(i18n(locale, "critChart.destroyedSuffix"));
+    if (slotHit || mountDestroyed || locationGone) {
+      markers.push(i18n(locale, "critChart.destroyedSuffix"));
+    }
   }
   return markers.length > 0 ? `${line}${markers.join("")}` : line;
 }
