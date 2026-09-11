@@ -1,4 +1,4 @@
-import { isNominal, isUnitImmobile, suggestFireTargets } from "btlib10x";
+import { hexDistance, isNominal, isUnitImmobile, suggestFireTargets } from "btlib10x";
 import type * as S from "./session.js";
 
 /** Delay between generated commands, in milliseconds. */
@@ -16,17 +16,13 @@ const SCRIPT_SETUP: ReadonlyArray<{ id: string; command: string }> = [
 ];
 
 /** Queued commands to issue before falling back to state-based logic. */
+let currSession: S.Session | null = null;
 let nextCommandQueue: string[] = [];
 let currApp: S.AppState | null = null;
 let currBattlePhase: string | null = null;
 let helpShown: Record<string, boolean> = {};
-
-// /** Push the rest onto the queue, return the first command. */
-// function queueAndReturn(first: string, ...rest: string[]): string {
-//   if (rest.length > 0) nextCommandQueue.push(...rest);
-//   lastReturned = first;
-//   return first;
-// }
+let noWeapon: Record<string, boolean> = {};
+let unitForwarded: Record<string, boolean> = {};
 
 function queueNextCommand(cmd: string): void {
   nextCommandQueue.push(cmd);
@@ -38,10 +34,21 @@ function returnFirstQueuedCommand(): string {
 
 /** Reset transient autoplay memory; called when the user re-enters setup. */
 export function resetAutoplayState(s: S.Session): void {
-  nextCommandQueue = [];
-  currApp = s.app;
-  currBattlePhase = null;
-  helpShown = {};
+  if (currSession !== s) {
+    currSession = s;
+    nextCommandQueue = [];
+    currApp = s.app;
+    currBattlePhase = null;
+
+    helpShown = {};
+    noWeapon = {};
+    unitForwarded = {};
+  } else {
+    if (currApp !== s.app) {
+      currApp = s.app
+      currBattlePhase = null;
+    }
+  }
 }
 
 function enusreHelpShown(key: string) {
@@ -49,6 +56,22 @@ function enusreHelpShown(key: string) {
     helpShown[key] = true;
     queueNextCommand("help");
   }
+}
+
+export function flushAutoPlayCommand(): string[] {
+  const flushing = nextCommandQueue;
+  nextCommandQueue = [];
+  return flushing;
+}
+
+/** Pick the best 1-step landing (F toward enemy, B away) and queue a place command. */
+function queueStepToward(s: S.Session, fragment: "F" | "B",): void {
+  const candidate = s.moveCandidate;
+  if (candidate === null) return;
+  const oneStep = candidate.revealed.filter((l) => l.path.length === 1 && l.path[0] === fragment);
+  if (oneStep.length === 0) return;
+  const pick = oneStep.shift()!;
+  queueNextCommand(`place ${pick.hex.col} ${pick.hex.row} ${pick.facing}`);
 }
 
 /**
@@ -116,9 +139,35 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
         }
         queueNextCommand("status");
       }
-      // A shut-down unit just passes: no movement mode, stay off-line.
-      if (actor.moveMode === null && isNominal(actor)) {
-        queueNextCommand(isUnitImmobile(actor.damage) ? "mode standstill" : "mode walk");
+      // movement mode not set yet
+      if (actor.moveMode === null) {
+        // A shut-down unit just passes: no movement mode, stay off-line.
+        if (isNominal(actor)) {
+          if (noWeapon[actor.id] === true) {
+            queueNextCommand("mode eject");
+            queueNextCommand("done");
+          } else if (isUnitImmobile(actor.damage)) {
+            queueNextCommand("mode standstill");
+            queueNextCommand("done");
+          } else {
+            queueNextCommand("mode walk");
+          }
+
+          return returnFirstQueuedCommand();
+        }
+
+        queueNextCommand("done");
+        return returnFirstQueuedCommand();
+      }
+      // assume movement mode walk
+      if (unitForwarded[actor.id] === true) {
+        // one step backward
+        queueStepToward(s, "B");
+        unitForwarded[actor.id] = false;
+      } else {
+        // one step forward
+        queueStepToward(s, "F");
+        unitForwarded[actor.id] = true;
       }
       queueNextCommand("done");
       return returnFirstQueuedCommand();
@@ -135,6 +184,8 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
         .map((w) => String(w.weaponIndex));
       if (available.length > 0) {
         queueNextCommand(`fire ${enemy.id} ${available.join(" ")}`);
+      } else {
+        noWeapon[actor.id] = true;
       }
       queueNextCommand("done");
       return returnFirstQueuedCommand();

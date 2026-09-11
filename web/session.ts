@@ -304,12 +304,9 @@ const MOVE_MODES: Readonly<Record<string, MoveMode>> = {
   jump: "jump",
 };
 
-const VOLUNTARY_MODES: Readonly<Record<string, "shutdown" | "startup">> = {
+const VOLUNTARY_MODES: Readonly<Record<string, "shutdown" | "startup" | "eject">> = {
   shutdown: "shutdown",
   startup: "startup",
-};
-
-const EJECT_MODES: Readonly<Record<string, "eject">> = {
   eject: "eject",
 };
 
@@ -320,8 +317,6 @@ export function parseMoveMode(locale: LocaleId, word: string): DeclaredMode {
   if (mode) return mode;
   const voluntary = VOLUNTARY_MODES[word.toLowerCase()];
   if (voluntary) return voluntary;
-  const eject = EJECT_MODES[word.toLowerCase()];
-  if (eject) return eject;
   throw new Error(i18n(locale, "err.badModeWord"));
 }
 
