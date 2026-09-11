@@ -1,9 +1,13 @@
 /**
  * Per-bin ammunition depletion and per-unit depletion policies.
  *
- * Ammo is tracked per crit slot ("bin"), keyed by `AmmoBinId` =
- * `${location}:${slotIndex}`. `UnitState.shotsLeft` remains a derived
- * per-weapon total (the sum of its bins) for fireability checks and display.
+ * Ammo is tracked per crit slot ("bin") as a single `AmmoBinState` object per
+ * bin, keyed by `AmmoBinId` = `${location}:${slotIndex}` in
+ * `UnitState.ammoBins`. Each state object carries the bin's static identity
+ * (location, slot, linked weapon) together with its live remaining `shots`, so
+ * no separate identity walk (`collectAmmoBins`) is needed to interpret a bin
+ * map. Per-weapon totals (`ammoWeaponTotals`, `pooledShotsLeft`,
+ * `pooledTotalsByWeaponName`) are derived on demand and never stored.
  *
  * A unit's `ammoPolicy` orders the bins it draws a shot from, chosen between
  * equal-priority bins at random via the injected rng:
@@ -27,6 +31,23 @@ import type { ResolvedMechDef } from "../data/mech.schema.js";
 /** Stable identity of one ammo bin: `${location}:${slotIndex}` (1-based slot). */
 export type AmmoBinId = string;
 
+/** One ammo bin: a single `{kind:"ammo"}` crit slot linked to a weapon mount. */
+export interface AmmoBin extends AmmoNameHolder {
+  readonly id: AmmoBinId;
+  readonly location: Location;
+  readonly slotIndex: number;
+  readonly weaponIndex: number;
+}
+
+/** Live ammo state of one bin: static identity plus remaining shots. */
+export interface AmmoBinState extends AmmoBin {
+  /** Remaining shots in this bin. */
+  shots: number;
+}
+
+/** Unit-level ammo state: every bin keyed by its `AmmoBinId`. */
+export type AmmoBins = Record<AmmoBinId, AmmoBinState>;
+
 export const AMMO_POLICIES = ["exposed", "core", "spread", "leastFirst"] as const;
 
 /** Per-unit ammo depletion policy. */
@@ -49,14 +70,6 @@ export function parseAmmoPolicy(word: string): AmmoPolicy | null {
 /** Canonical bin id for a 1-based crit slot index in a location. */
 export function ammoBinId(loc: Location, slotIndex: number): AmmoBinId {
   return `${loc}:${slotIndex}`;
-}
-
-/** One ammo bin: a single `{kind:"ammo"}` crit slot linked to a weapon mount. */
-export interface AmmoBin extends AmmoNameHolder {
-  readonly id: AmmoBinId;
-  readonly location: Location;
-  readonly slotIndex: number;
-  readonly weaponIndex: number;
 }
 
 /** Enumerate every ammo bin in a 'Mech's crit layout, in slot order. */
@@ -106,22 +119,27 @@ export function binsForWeaponName(def: ResolvedMechDef, weaponName: string): Amm
 /** Shots left across the whole shared pool of a weapon name. */
 export function pooledShotsLeft(
   def: ResolvedMechDef,
-  bins: Readonly<Record<AmmoBinId, number>>,
+  bins: Readonly<AmmoBins>,
   weaponName: string,
 ): number {
-  const ids = new Set(binsForWeaponName(def, weaponName).map((b) => b.id));
   let total = 0;
-  for (const [id, count] of Object.entries(bins)) {
-    if (ids.has(id)) total += count;
+  for (const bin of binsForWeaponName(def, weaponName)) {
+    total += bins[bin.id]?.shots ?? 0;
   }
   return total;
 }
 
-export interface AmmoLoad {
-  /** Per-bin remaining shots. */
-  readonly bins: Record<AmmoBinId, number>;
-  /** Per-weapon total remaining shots (sum over that mount's bins). */
-  readonly totals: Record<number, number>;
+/** Remaining shots per weapon name across the whole bin map, pooling every
+ *  bin feeding every mount of that name. */
+export function pooledTotalsByWeaponName(
+  def: ResolvedMechDef,
+  bins: Readonly<AmmoBins>,
+): Readonly<Record<string, number>> {
+  const totals: Record<string, number> = {};
+  for (const bin of collectAmmoBins(def)) {
+    totals[bin.weapon] = (totals[bin.weapon] ?? 0) + (bins[bin.id]?.shots ?? 0);
+  }
+  return totals;
 }
 
 /**
@@ -130,9 +148,18 @@ export interface AmmoLoad {
  * sum (across all mounts of that weapon name) is instead spread evenly over
  * every bin, leftover shots landing one per bin in slot order.
  */
-export function loadAmmoBins(def: ResolvedMechDef): AmmoLoad {
+export function loadAmmoBins(def: ResolvedMechDef): AmmoBins {
+  const loaded = loadAmmoCounts(def);
+  const bins: AmmoBins = {};
+  for (const bin of collectAmmoBins(def)) {
+    bins[bin.id] = { ...bin, shots: loaded[bin.id] ?? 0 };
+  }
+  return bins;
+}
+
+/** Starting per-bin shot counts (shared by `loadAmmoBins`). */
+function loadAmmoCounts(def: ResolvedMechDef): Record<AmmoBinId, number> {
   const bins: Record<AmmoBinId, number> = {};
-  const totals: Record<number, number> = {};
   const binsOf = new Map<string, AmmoBin[]>();
   for (const bin of collectAmmoBins(def)) {
     const list = binsOf.get(bin.weapon) ?? [];
@@ -157,27 +184,26 @@ export function loadAmmoBins(def: ResolvedMechDef): AmmoLoad {
       const amount = perBin + (remainder > 0 ? 1 : 0);
       if (remainder > 0) remainder -= 1;
       bins[bin.id] = amount;
-      totals[bin.weaponIndex] = (totals[bin.weaponIndex] ?? 0) + amount;
     }
   }
-  return { bins, totals };
+  return bins;
 }
 
 /** Per-weapon totals (sum over each mount's bins), for out-of-ammo checks. */
 export function ammoWeaponTotals(
   def: ResolvedMechDef,
-  bins: Readonly<Record<AmmoBinId, number>>,
+  bins: Readonly<AmmoBins>,
 ): Record<number, number> {
   const totals: Record<number, number> = {};
   for (const bin of collectAmmoBins(def)) {
-    const n = bins[bin.id] ?? 0;
+    const n = bins[bin.id]?.shots ?? 0;
     if (n > 0) totals[bin.weaponIndex] = (totals[bin.weaponIndex] ?? 0) + n;
   }
   return totals;
 }
 
 /** Delete (in place) every bin located in `loc` (e.g. blown-off / destroyed). */
-export function stripBinsInLocation(bins: Record<AmmoBinId, number>, loc: Location): void {
+export function stripBinsInLocation(bins: AmmoBins, loc: Location): void {
   const prefix = `${loc}:`;
   for (const id of Object.keys(bins)) {
     if (id.startsWith(prefix)) delete bins[id];
@@ -240,13 +266,14 @@ function shuffleRun<T>(arr: T[], rng: Rng): void {
  */
 export function drawOrderBins(
   bins: readonly AmmoBin[],
-  counts: Readonly<Record<AmmoBinId, number>>,
+  state: Readonly<AmmoBins>,
   policy: AmmoPolicy,
   rng: Rng,
 ): AmmoBin[] {
   const key = (b: AmmoBin): number => {
-    if (policy === "spread") return -(counts[b.id] ?? 0);
-    if (policy === "leastFirst") return counts[b.id] ?? 0;
+    const shots = state[b.id]?.shots ?? 0;
+    if (policy === "spread") return -shots;
+    if (policy === "leastFirst") return shots;
     return policy === "exposed" ? (EXPOSED_RANK[b.location] ?? 0) : (CORE_RANK[b.location] ?? 0);
   };
   const sorted = [...bins].sort((a, b) => key(a) - key(b));
@@ -266,23 +293,24 @@ export function drawOrderBins(
 /**
  * Deduct `needed` shots from `pool` bins, drawing each shot from the next
  * bin per `policy` (ties broken at random via `rng`). Stops early when the
- * pool runs dry. Returns a new bin-count map; the caller commits it (with
- * the refreshed weapon totals) onto the unit.
+ * pool runs dry. Returns a new bin-state map with the input untouched; the
+ * caller commits it onto the unit.
  */
 function drainBins(
-  bins: Readonly<Record<AmmoBinId, number>>,
+  bins: Readonly<AmmoBins>,
   pool: readonly AmmoBin[],
   needed: number,
   policy: AmmoPolicy,
   rng: Rng,
-): Record<AmmoBinId, number> {
-  const next = { ...bins };
+): AmmoBins {
+  const next: AmmoBins = {};
+  for (const bin of Object.values(bins)) next[bin.id] = { ...bin };
   let remaining = needed;
   while (remaining > 0) {
-    const candidates = pool.filter((b) => (next[b.id] ?? 0) > 0);
+    const candidates = pool.filter((b) => (next[b.id]?.shots ?? 0) > 0);
     if (candidates.length === 0) break;
     const target = drawOrderBins(candidates, next, policy, rng)[0]!;
-    next[target.id] = (next[target.id] ?? 0) - 1;
+    next[target.id]!.shots -= 1;
     remaining -= 1;
   }
   return next;
@@ -291,17 +319,16 @@ function drainBins(
 /**
  * Deduct `needed` shots from the bins backing `weaponIndex`, drawing each
  * shot from the next bin per `policy` (ties broken at random via `rng`).
- * Returns a new bin-count map; the caller commits it (with the refreshed
- * weapon totals) onto the unit.
+ * Returns a new bin-state map; the caller commits it onto the unit.
  */
 export function consumeAmmo(
   def: ResolvedMechDef,
-  bins: Readonly<Record<AmmoBinId, number>>,
+  bins: Readonly<AmmoBins>,
   weaponIndex: number,
   needed: number,
   policy: AmmoPolicy,
   rng: Rng,
-): Record<AmmoBinId, number> {
+): AmmoBins {
   return drainBins(bins, binsForWeapon(def, weaponIndex), needed, policy, rng);
 }
 
@@ -312,11 +339,11 @@ export function consumeAmmo(
  */
 export function consumeAmmoForName(
   def: ResolvedMechDef,
-  bins: Readonly<Record<AmmoBinId, number>>,
+  bins: Readonly<AmmoBins>,
   weaponName: string,
   needed: number,
   policy: AmmoPolicy,
   rng: Rng,
-): Record<AmmoBinId, number> {
+): AmmoBins {
   return drainBins(bins, binsForWeaponName(def, weaponName), needed, policy, rng);
 }

@@ -72,7 +72,7 @@ import type {
 } from "../data/mech.schema.js";
 import { CRIT_SLOT_COUNTS } from "../data/mech.schema.js";
 import { getWeaponDefFor } from "../data/weapon.schema.js";
-import { type AmmoBinId, ammoBinId, ammoWeaponTotals, stripBinsInLocation } from "./ammo.js";
+import { type AmmoBinState, type AmmoBins, ammoBinId, stripBinsInLocation } from "./ammo.js";
 import { applyDamage, type DamageApplication, type UnitDamageState } from "./damage.js";
 
 export interface CritSource {
@@ -169,12 +169,8 @@ export interface CriticalResolution {
   /** True if the unit is killed by these crits (head or CT IS to 0, or
    *  cockpit destroyed, or 12 on a head location). */
   readonly killed: boolean;
-  /** Per-weapon remaining shots after this resolution, derived from
-   *  `ammoBins` (the sum over each mount's bins). Indexed by the 1-based
-   *  weapon index from `def.weapons`. */
-  readonly shotsLeft: Record<number, number>;
-  /** Per-crit-slot ammo remaining after this resolution. */
-  readonly ammoBins: Record<AmmoBinId, number>;
+  /** Per-crit-slot ammo state after this resolution. */
+  readonly ammoBins: AmmoBins;
 }
 
 const LEG_ACTUATORS: ReadonlySet<string> = new Set([
@@ -352,15 +348,15 @@ export interface ResolveCriticalsInput {
   readonly destroyedWeapons: readonly number[];
   /** Pre-damage damage state. */
   readonly damage: UnitDamageState;
-  /** Current per-crit-slot ammo remaining. */
-  readonly ammoBins: Readonly<Record<AmmoBinId, number>>;
+  /** Current per-crit-slot ammo state. */
+  readonly ammoBins: Readonly<AmmoBins>;
 }
 
 interface MutableCritState {
   destroyed: Record<Location, boolean[]>;
   destroyedWeapons: number[];
   damage: UnitDamageState;
-  ammoBins: Record<AmmoBinId, number>;
+  ammoBins: AmmoBins;
   rows: CriticalEffect[];
   blownOffArms: Location[];
   killed: boolean;
@@ -399,7 +395,6 @@ export function resolveCriticalHits(input: ResolveCriticalsInput): CriticalResol
     damage: state.damage,
     blownOffArms: state.blownOffArms,
     killed: state.killed,
-    shotsLeft: ammoWeaponTotals(input.def, state.ammoBins),
     ammoBins: state.ammoBins,
   };
 }
@@ -538,11 +533,19 @@ function applySlotHit(
     const weaponName = slot.weapon;
     const weaponIndex = slot.weaponIndex;
     const binId = ammoBinId(loc, slotIndex);
+    const emptyBin = (): AmmoBinState => ({
+      id: binId,
+      location: loc,
+      slotIndex,
+      weaponIndex: slot.weaponIndex,
+      weapon: slot.weapon,
+      shots: 0,
+    });
     // Non-explosive ammo (e.g. gauss rifle rounds) cannot detonate. The crit
     // still destroys the slot and empties the bin (slugs spill), but no
     // damage roll and no cascade.
     if (!getAmmoDefFor(slot).explosive) {
-      state.ammoBins[binId] = 0;
+      state.ammoBins[binId] = emptyBin();
       state.rows.push({
         kind: "ammoNoExplosion",
         location: loc,
@@ -555,7 +558,7 @@ function applySlotHit(
       return;
     }
     // Only the hit bin detonates; sibling bins of the same weapon stay.
-    const shotsRemaining = state.ammoBins[binId] ?? 0;
+    const shotsRemaining = state.ammoBins[binId]?.shots ?? 0;
     const damagePerShot = ammoDamagePerShot(slot);
     const amount = shotsRemaining * damagePerShot;
     if (amount > 0) {
@@ -592,7 +595,7 @@ function applySlotHit(
       state.rows.push({ kind: "noEffect", rolls: rolls.slice() });
     }
     // The bin's contents exploded or the bin was empty.
-    state.ammoBins[binId] = 0;
+    state.ammoBins[binId] = emptyBin();
     return;
   }
   // structure component

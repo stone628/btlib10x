@@ -71,9 +71,113 @@ describe("suggestFireTargets", () => {
 
   it("marks an empty ammo bin", () => {
     const state = startAttackTurn(hbkVsEnf());
-    state.units.hbk!.shotsLeft = { ...state.units.hbk!.shotsLeft, 4: 0 };
+    // AC/20 bins are leftTorso slots 1-2; drain both.
+    state.units.hbk!.ammoBins = {
+      ...state.units.hbk!.ammoBins,
+      "leftTorso:1": {
+        id: "leftTorso:1",
+        location: "leftTorso",
+        slotIndex: 1,
+        weaponIndex: 4,
+        weapon: "AC/20",
+        shots: 0,
+      },
+      "leftTorso:2": {
+        id: "leftTorso:2",
+        location: "leftTorso",
+        slotIndex: 2,
+        weaponIndex: 4,
+        weapon: "AC/20",
+        shots: 0,
+      },
+    };
     const reasons = blockedReasons(state, "hbk", "enf");
     expect(reasons.filter((r) => r === "outOfAmmo")).toHaveLength(1);
+  });
+
+  it("shows the shared pool count on every mount of a pooled weapon", () => {
+    const units: UnitInit[] = [
+      {
+        id: "mad",
+        model: "MC-MKII-2",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 4 },
+        facing: "se",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 3, row: 4 },
+        facing: "nw",
+      },
+    ];
+    const state = startAttackTurn(createTestBattle([], units, false));
+    const sugg = suggestFireTargets(state, "mad");
+    const enf = sugg.targets.find((t) => t.targetId === "enf")!;
+    // Four CL Streak SRM 4 mounts share one 50-shot pool (only mount #3
+    // declares `shots`); each mount must report the pooled count.
+    const streaks = enf.weapons.filter((w) => w.weapon === "CL Streak SRM 4");
+    expect(streaks.map((w) => w.weaponIndex).sort()).toEqual([3, 4, 5, 6]);
+    for (const w of streaks) {
+      console.log(w);
+      expect(w.shots).toBe(50);
+    }
+    // Non-ammo weapons still show no shots column.
+    const erml = enf.weapons.find((w) => w.weapon === "CL ER Medium Laser")!;
+    expect(erml.shots).toBeNull();
+  });
+
+  it("blocks every mount of a pooled weapon when the shared pool is dry", () => {
+    const units: UnitInit[] = [
+      {
+        id: "mad",
+        model: "MC-MKII-2",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 4 },
+        facing: "se",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 3, row: 4 },
+        facing: "nw",
+      },
+    ];
+    const state = startAttackTurn(createTestBattle([], units, false));
+    // Streak bins: rightTorso:7, leftTorso:7 (25 each).
+    state.units.mad!.ammoBins = {
+      ...state.units.mad!.ammoBins,
+      "rightTorso:7": {
+        id: "rightTorso:7",
+        location: "rightTorso",
+        slotIndex: 7,
+        weaponIndex: 3,
+        weapon: "CL Streak SRM 4",
+        shots: 0,
+      },
+      "leftTorso:7": {
+        id: "leftTorso:7",
+        location: "leftTorso",
+        slotIndex: 7,
+        weaponIndex: 3,
+        weapon: "CL Streak SRM 4",
+        shots: 0,
+      },
+    };
+    const sugg = suggestFireTargets(state, "mad");
+    const enf = sugg.targets.find((t) => t.targetId === "enf")!;
+    expect(enf.weapons.filter((w) => w.weapon === "CL Streak SRM 4")).toHaveLength(0);
+    const dry = enf.blocked.filter((b) => b.weapon === "CL Streak SRM 4");
+    expect(dry).toHaveLength(4);
+    for (const b of dry) {
+      expect(b.reason).toBe("outOfAmmo");
+    }
   });
 
   it("marks a weapon whose location is destroyed", () => {

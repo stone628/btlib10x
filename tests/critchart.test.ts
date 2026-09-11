@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as S from "../web/session.js";
-import { execute } from "./helpers.js";
+import { execute, overrideAmmoBin } from "./helpers.js";
 
 function run(s: S.Session, cmd: string): string[] {
   return execute(s, cmd);
@@ -53,8 +53,8 @@ describe("critical slot chart (sheet)", () => {
     // AC/20 ammo is leftTorso slots 1-2 (also weapon index 4). Drain the
     // first bin down to 3; the second keeps its full 5.
     htk.critSlotsDestroyed.leftTorso[0] = true;
-    htk.ammoBins = { ...htk.ammoBins, "leftTorso:1": 3, "leftTorso:2": 5 };
-    htk.shotsLeft = { ...htk.shotsLeft, 4: 8 };
+    overrideAmmoBin(htk.ammoBins, "leftTorso", 1, 3);
+    overrideAmmoBin(htk.ammoBins, "leftTorso", 2, 5);
     const text = run(s, "sheet hunchy").join("\n");
     expect(text).toContain("  1 AC/20 ammo (3/5 shots) [-]");
     expect(text).toContain("  2 AC/20 ammo (5/5 shots)");

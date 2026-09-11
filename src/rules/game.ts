@@ -23,10 +23,11 @@ import { getMechDef, getMechDefFor, type MapDef, type MechModelHolder } from "..
 import type { ResolvedMechDef } from "../data/mech.schema.js";
 import { getWeaponDefFor } from "../data/weapon.schema.js";
 import {
-  type AmmoBinId,
+  type AmmoBins,
   type AmmoPolicy,
   ammoWeaponTotals,
   binsForWeapon,
+  collectAmmoBins,
   consumeAmmo,
   consumeAmmoForName,
   loadAmmoBins,
@@ -125,9 +126,9 @@ export interface UnitState extends MechModelHolder {
   facing: Facing;
   damage: UnitDamageState;
   phaseStartDamage: UnitDamageState;
-  shotsLeft: Record<number, number>;
-  /** Per-crit-slot ammo remaining (see `src/rules/ammo.ts`). */
-  ammoBins: Record<AmmoBinId, number>;
+  /** Per-crit-slot ammo state: identity + remaining shots (see
+   *  `src/rules/ammo.ts`). Per-weapon totals are derived on demand. */
+  ammoBins: AmmoBins;
   /** Which of a unit's ammo bins the next shot is drawn from. */
   ammoPolicy: AmmoPolicy;
   jammedWeapons: number[];
@@ -282,8 +283,7 @@ interface UnitAttackResolution {
 export interface UnitAttackResult {
   readonly unitId: string;
   readonly resolutions: readonly UnitAttackResolution[];
-  readonly finalAmmoBins: Record<AmmoBinId, number>;
-  readonly finalShotsLeft: Record<number, number>;
+  readonly finalAmmoBins: AmmoBins;
   readonly jammedWeapons: readonly number[];
 }
 
@@ -383,7 +383,7 @@ export function createBattle(
   const unitStates: Record<string, UnitState> = {};
   for (const init of units) {
     const def: ResolvedMechDef = getMechDefFor(init);
-    const ammoLoad = loadAmmoBins(def);
+    const ammoBins = loadAmmoBins(def);
     const damage: UnitDamageState = {
       armor: { ...def.armor },
       armorRear: { ...def.armorRear },
@@ -402,8 +402,7 @@ export function createBattle(
         armorRear: { ...damage.armorRear },
         internalStructure: { ...damage.internalStructure },
       },
-      shotsLeft: ammoLoad.totals,
-      ammoBins: ammoLoad.bins,
+      ammoBins,
       ammoPolicy: "exposed",
       jammedWeapons: [],
       critSlotsDestroyed: initCritDestroyed(def),
@@ -781,7 +780,7 @@ export function declareAttacks(
 
     const needed = weapon.missiles !== undefined ? 1 : shots;
     if (binsForWeapon(def, decl.weaponIndex).length > 0) {
-      const left = unit.shotsLeft[decl.weaponIndex] ?? 0;
+      const left = ammoWeaponTotals(def, unit.ammoBins)[decl.weaponIndex] ?? 0;
       if (left < needed) {
         throw new Error(`${mount.weapon}: needs ${needed} shot(s) but only ${left} remain`);
       }
@@ -790,7 +789,6 @@ export function declareAttacks(
       if (weapon.streak === true) return;
       const entry = consumeAmmo(def, unit.ammoBins, decl.weaponIndex, needed, unit.ammoPolicy, rng);
       unit.ammoBins = entry;
-      unit.shotsLeft = ammoWeaponTotals(def, entry);
     }
   });
 
@@ -822,7 +820,6 @@ function resolveUnitAttacks(
   const def = getMechDefFor(unit);
   const preHeat = unit.heat;
   let currentAmmoBins = { ...unit.ammoBins };
-  let currentShotsLeft = { ...unit.shotsLeft };
   const jammedWeapons: number[] = [];
   const resolutions: UnitAttackResolution[] = [];
 
@@ -868,7 +865,6 @@ function resolveUnitAttacks(
             targetDef: getMechDefFor(target),
             targetCritSlotsDestroyed: target.critSlotsDestroyed,
             targetDestroyedWeapons: target.destroyedWeapons,
-            targetShotsLeft: target.shotsLeft,
             targetAmmoBins: target.ammoBins,
           }),
     });
@@ -891,7 +887,6 @@ function resolveUnitAttacks(
     if (streakFired) {
       const entry = consumeAmmoForName(def, currentAmmoBins, weapon.name, 1, unit.ammoPolicy, rng);
       currentAmmoBins = entry;
-      currentShotsLeft = ammoWeaponTotals(def, entry);
     }
 
     const weaponHeat = (weapon.heat ?? 0) * shots;
@@ -917,7 +912,6 @@ function resolveUnitAttacks(
     unitId: unit.id,
     resolutions,
     finalAmmoBins: currentAmmoBins,
-    finalShotsLeft: currentShotsLeft,
     jammedWeapons,
   };
 }
@@ -954,8 +948,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng): void {
   // Track damage per target
   const targetDamageMap: Record<string, UnitDamageState> = {};
   const targetCritsMap: Record<string, CriticalResolution[]> = {};
-  const targetAmmoBinsMap: Record<string, Record<AmmoBinId, number>> = {};
-  const targetShotsLeftMap: Record<string, Record<number, number>> = {};
+  const targetAmmoBinsMap: Record<string, AmmoBins> = {};
   const targetDestroyedWeaponsMap: Record<string, number[]> = {};
   const buildingOutcomes: BuildingDamageResult[] = [];
 
@@ -973,7 +966,6 @@ export function resolveAllAttacks(state: BattleState, rng: Rng): void {
         };
         targetCritsMap[targetId] = [];
         targetAmmoBinsMap[targetId] = { ...target.ammoBins };
-        targetShotsLeftMap[targetId] = { ...target.shotsLeft };
         targetDestroyedWeaponsMap[targetId] = [...target.destroyedWeapons];
       }
 
@@ -1003,7 +995,6 @@ export function resolveAllAttacks(state: BattleState, rng: Rng): void {
     // Apply attacker's ammo state changes
     const attacker = requireUnit(state, result.unitId);
     attacker.ammoBins = result.finalAmmoBins;
-    attacker.shotsLeft = result.finalShotsLeft;
     for (const wi of result.jammedWeapons) {
       if (!attacker.jammedWeapons.includes(wi)) {
         attacker.jammedWeapons.push(wi);
@@ -1034,13 +1025,11 @@ export function resolveAllAttacks(state: BattleState, rng: Rng): void {
     let currentCritSlots = { ...target.critSlotsDestroyed };
     let currentDestroyedWeapons = [...(targetDestroyedWeaponsMap[targetId] ?? [])];
     let currentAmmoBins = { ...(targetAmmoBinsMap[targetId] ?? target.ammoBins) };
-    let currentShotsLeft = { ...(targetShotsLeftMap[targetId] ?? target.shotsLeft) };
 
     for (const crit of crits) {
       currentCritSlots = crit.critSlotsDestroyed;
       currentDestroyedWeapons = crit.destroyedWeapons;
       currentAmmoBins = crit.ammoBins;
-      currentShotsLeft = crit.shotsLeft;
 
       // Merge newly destroyed / blown off arms from crit
       for (const arm of crit.blownOffArms) {
@@ -1055,7 +1044,6 @@ export function resolveAllAttacks(state: BattleState, rng: Rng): void {
     target.critSlotsDestroyed = currentCritSlots;
     target.destroyedWeapons = currentDestroyedWeapons;
     target.ammoBins = currentAmmoBins;
-    target.shotsLeft = currentShotsLeft;
   }
 
   // Write back final damage to all targets
@@ -1330,9 +1318,11 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
       }
     }
     // Detonated magazines read as empty (0), like a bin drained by firing;
-    // bins removed by the strip above belonged to destroyed locations only.
-    for (const binId of bin.binIds) unit.ammoBins[binId] = 0;
-    unit.shotsLeft = ammoWeaponTotals(def, unit.ammoBins);
+    // rebuild any bin the strip removed so the empty state is visible.
+    for (const binId of bin.binIds) {
+      const slot = collectAmmoBins(def).find((b) => b.id === binId);
+      if (slot !== undefined) unit.ammoBins[binId] = { ...slot, shots: 0 };
+    }
     state.events.push({
       kind: "ammoExplosionCheck",
       unitId: unit.id,
@@ -1617,15 +1607,13 @@ function initCritDestroyed(def: ResolvedMechDef): Record<Location, boolean[]> {
 
 /**
  * Remove every ammo bin in a location whose internal structure has dropped to
- * zero (blown-off limbs, destroyed torsos), then refresh the derived per-weapon
- * totals so out-of-ammo checks and the record sheet stay accurate.
+ * zero (blown-off limbs, destroyed torsos). Per-weapon totals are derived on
+ * demand, so no refresh is needed here.
  */
 function stripDestroyedLocationAmmo(target: UnitState): void {
-  const def = getMechDefFor(target);
   for (const loc of LOCATIONS) {
     if ((target.damage.internalStructure[loc] ?? 0) <= 0) {
       stripBinsInLocation(target.ammoBins, loc);
     }
   }
-  target.shotsLeft = ammoWeaponTotals(def, target.ammoBins);
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Location } from "../src/core/types.js";
 import { getShotsPerBinFor } from "../src/data/ammo.schema.js";
 import { getMechDef } from "../src/data/index.js";
-import type { AmmoBin, AmmoBinId } from "../src/rules/ammo.js";
+import type { AmmoBin, AmmoBinState, AmmoBins } from "../src/rules/ammo.js";
 import {
   ammoBinId,
   ammoWeaponTotals,
@@ -27,6 +27,18 @@ import { createTestBattle, execute, scriptedRng } from "./helpers.js";
 
 const HBK = getMechDef("HBK-4G")!;
 
+/** One minimal live bin state, for hand-built maps in unit tests. */
+function bin(location: Location, slotIndex: number, shots: number): AmmoBinState {
+  return {
+    id: ammoBinId(location, slotIndex),
+    location,
+    slotIndex,
+    weaponIndex: 4,
+    weapon: "AC/20",
+    shots,
+  };
+}
+
 describe("policy parsing", () => {
   it("recognizes every policy, case-insensitively, with optional hyphens", () => {
     expect(parseAmmoPolicy("exposed")).toBe("exposed");
@@ -47,24 +59,27 @@ describe("policy parsing", () => {
 describe("bin loading", () => {
   it("spreads the declared shot count evenly over a weapon's bins", () => {
     // HBK-4G AC/20 (index 4): shots 10 across leftTorso slots 1-2.
-    const { bins, totals } = loadAmmoBins(HBK);
-    expect(bins).toEqual({ "leftTorso:1": 5, "leftTorso:2": 5 });
-    expect(totals[4]).toBe(10);
+    const bins = loadAmmoBins(HBK);
+    expect(bins).toEqual({
+      "leftTorso:1": { ...bin("leftTorso", 1, 5), weaponIndex: 4 },
+      "leftTorso:2": { ...bin("leftTorso", 2, 5), weaponIndex: 4 },
+    });
+    expect(ammoWeaponTotals(HBK, bins)[4]).toBe(10);
   });
 
   it("pools shots-sharing mounts of one weapon name into every bin", () => {
     // MC-MKII-2: four Streak SRM 4 launchers share one 50-round pool spread
     // over the LT and RT ammo slots.
     const def = getMechDef("MC-MKII-2")!;
-    const { bins, totals } = loadAmmoBins(def);
-    expect(bins["rightTorso:7"]).toBe(25);
-    expect(bins["leftTorso:7"]).toBe(25);
+    const bins = loadAmmoBins(def);
+    expect(bins["rightTorso:7"]?.shots).toBe(25);
+    expect(bins["leftTorso:7"]?.shots).toBe(25);
     const streakIdx = Number(
       Object.entries(def.weapons).find(
         ([, m]) => m.weapon === "CL Streak SRM 4" && m.shots !== undefined,
       )![0],
     );
-    expect(totals[streakIdx]).toBe(50);
+    expect(ammoWeaponTotals(def, bins)[streakIdx]).toBe(50);
   });
 
   it("falls back to the ammo table capacity when no mount declares shots", () => {
@@ -77,11 +92,9 @@ describe("bin loading", () => {
         [lrmKey]: { weapon: lrmMount.weapon, location: lrmMount.location },
       },
     };
-    const { bins } = loadAmmoBins(stripped);
-    expect(bins).toEqual({
-      "rightTorso:5": getShotsPerBinFor({ weapon: "LRM 10" }),
-      "rightTorso:6": getShotsPerBinFor({ weapon: "LRM 10" }),
-    });
+    const bins = loadAmmoBins(stripped);
+    expect(bins["rightTorso:5"]?.shots).toBe(getShotsPerBinFor({ weapon: "LRM 10" }));
+    expect(bins["rightTorso:6"]?.shots).toBe(getShotsPerBinFor({ weapon: "LRM 10" }));
   });
 
   it("collectAmmoBins enumerates in slot order", () => {
@@ -110,17 +123,20 @@ describe("bin utilities", () => {
   });
 
   it("stripBinsInLocation deletes only that location's bins", () => {
-    const bins: Record<AmmoBinId, number> = {
-      "leftTorso:1": 5,
-      "leftTorso:2": 5,
-      "rightTorso:1": 6,
+    const bins: AmmoBins = {
+      "leftTorso:1": bin("leftTorso", 1, 5),
+      "leftTorso:2": bin("leftTorso", 2, 5),
+      "rightTorso:1": bin("rightTorso", 1, 6),
     };
     stripBinsInLocation(bins, "leftTorso");
-    expect(bins).toEqual({ "rightTorso:1": 6 });
+    expect(bins).toEqual({ "rightTorso:1": bin("rightTorso", 1, 6) });
   });
 
   it("ammoWeaponTotals sums only the non-empty bins", () => {
-    const bins: Record<AmmoBinId, number> = { "leftTorso:1": 0, "leftTorso:2": 5 };
+    const bins: AmmoBins = {
+      "leftTorso:1": bin("leftTorso", 1, 0),
+      "leftTorso:2": bin("leftTorso", 2, 5),
+    };
     expect(ammoWeaponTotals(HBK, bins)[4]).toBe(5);
   });
 });
@@ -177,7 +193,10 @@ describe("drawOrderBins", () => {
   });
 
   it("spread favors the fullest bin; leastFirst the emptiest, without drawing rng", () => {
-    const counts: Record<AmmoBinId, number> = { "leftTorso:1": 3, "leftTorso:2": 1 };
+    const counts: AmmoBins = {
+      "leftTorso:1": bin("leftTorso", 1, 3),
+      "leftTorso:2": bin("leftTorso", 2, 1),
+    };
     const base = binsAt(["leftTorso", "leftTorso"]);
     const rng = scriptedRng();
     expect(drawOrderBins(base, counts, "spread", rng)[0]!.id).toBe("leftTorso:1");
@@ -187,7 +206,10 @@ describe("drawOrderBins", () => {
 
   it("breaks equal-priority ties via the injected rng", () => {
     const base = binsAt(["leftTorso", "leftTorso"]);
-    const counts: Record<AmmoBinId, number> = { "leftTorso:1": 2, "leftTorso:2": 2 };
+    const counts: AmmoBins = {
+      "leftTorso:1": bin("leftTorso", 1, 2),
+      "leftTorso:2": bin("leftTorso", 2, 2),
+    };
     // even d6 -> Fisher-Yates swap is a no-op, slot 1 leads; odd d6 -> slot 2.
     expect(drawOrderBins(base, counts, "exposed", scriptedRng(2))[0]!.id).toBe("leftTorso:1");
     expect(drawOrderBins(base, counts, "exposed", scriptedRng(1))[0]!.id).toBe("leftTorso:2");
@@ -195,25 +217,35 @@ describe("drawOrderBins", () => {
 });
 
 describe("consumeAmmo", () => {
+  const start = (): AmmoBins => ({
+    "leftTorso:1": bin("leftTorso", 1, 5),
+    "leftTorso:2": bin("leftTorso", 2, 5),
+  });
+
   it("draws each shot from the policy's next bin, ties decided by rng", () => {
-    const start = (): Record<AmmoBinId, number> => ({ "leftTorso:1": 5, "leftTorso:2": 5 });
     const even = consumeAmmo(HBK, start(), 4, 1, "exposed", scriptedRng(2));
-    expect(even["leftTorso:1"]).toBe(4);
-    expect(even["leftTorso:2"]).toBe(5);
+    expect(even["leftTorso:1"]?.shots).toBe(4);
+    expect(even["leftTorso:2"]?.shots).toBe(5);
     const odd = consumeAmmo(HBK, start(), 4, 1, "exposed", scriptedRng(1));
-    expect(odd["leftTorso:1"]).toBe(5);
-    expect(odd["leftTorso:2"]).toBe(4);
+    expect(odd["leftTorso:1"]?.shots).toBe(5);
+    expect(odd["leftTorso:2"]?.shots).toBe(4);
   });
 
   it("switches to another bin when the chosen one runs dry mid-burst", () => {
-    const bins: Record<AmmoBinId, number> = { "leftTorso:1": 1, "leftTorso:2": 5 };
+    const bins: AmmoBins = {
+      "leftTorso:1": bin("leftTorso", 1, 1),
+      "leftTorso:2": bin("leftTorso", 2, 5),
+    };
     const after = consumeAmmo(HBK, bins, 4, 2, "exposed", scriptedRng(2, 2));
-    expect(after["leftTorso:1"]).toBe(0);
-    expect(after["leftTorso:2"]).toBe(4);
+    expect(after["leftTorso:1"]?.shots).toBe(0);
+    expect(after["leftTorso:2"]?.shots).toBe(4);
   });
 
   it("returns the input untouched when the weapon has no shots left", () => {
-    const bins: Record<AmmoBinId, number> = { "leftTorso:1": 0, "leftTorso:2": 0 };
+    const bins: AmmoBins = {
+      "leftTorso:1": bin("leftTorso", 1, 0),
+      "leftTorso:2": bin("leftTorso", 2, 0),
+    };
     const rng = scriptedRng(2);
     const after = consumeAmmo(HBK, bins, 4, 1, "exposed", rng);
     expect(after).toEqual(bins);
@@ -254,9 +286,9 @@ describe("declareAttacks (game level)", () => {
     attackPhase(state);
     declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], scriptedRng(2));
     const u = getUnit(state, "hbk")!;
-    expect(u.ammoBins["leftTorso:1"]).toBe(4);
-    expect(u.ammoBins["leftTorso:2"]).toBe(5);
-    expect(u.shotsLeft[4]).toBe(9);
+    expect(u.ammoBins["leftTorso:1"]?.shots).toBe(4);
+    expect(u.ammoBins["leftTorso:2"]?.shots).toBe(5);
+    expect(ammoWeaponTotals(HBK, u.ammoBins)[4]).toBe(9);
   });
 
   it("uses a deterministic tiebreak rng when none is supplied", () => {
@@ -265,8 +297,8 @@ describe("declareAttacks (game level)", () => {
     // DEFAULT_RNG always rolls 1 -> the tie goes to slot 2.
     declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
     const u = getUnit(state, "hbk")!;
-    expect(u.ammoBins["leftTorso:1"]).toBe(5);
-    expect(u.ammoBins["leftTorso:2"]).toBe(4);
+    expect(u.ammoBins["leftTorso:1"]?.shots).toBe(5);
+    expect(u.ammoBins["leftTorso:2"]?.shots).toBe(4);
   });
 });
 

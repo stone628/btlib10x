@@ -263,8 +263,8 @@ describe("largestAmmoBin", () => {
     const unit = getUnit(state, "bzk");
     const def = getMechDefFor(unit);
     // BZK-F3 mounts two gauss ammo bins in the center torso.
-    expect(unit.ammoBins["centerTorso:11"]).toBe(8);
-    expect(unit.ammoBins["centerTorso:12"]).toBe(8);
+    expect(unit.ammoBins["centerTorso:11"]?.shots).toBe(8);
+    expect(unit.ammoBins["centerTorso:12"]?.shots).toBe(8);
     expect(largestAmmoBin(def, unit.ammoBins)).toBeNull();
   });
 });
@@ -570,7 +570,7 @@ describe("game integration: heat ammo explosion", () => {
     startAttackTurn(state);
     // shutdown auto: no roll; ammo avoid roll 4 < 8 (avoid=8 for heat 30)
     advancePhase(state, scriptedRng(3, 1, 6, 6, 6, 6));
-    expect(hbk.ammoBins["leftTorso:1"]).toBe(0);
+    expect(hbk.ammoBins["leftTorso:1"]?.shots).toBe(0);
     expect(
       state.events.some((e) => e.kind === "ammoExplosionCheck" && e.unitId === "hbk" && !e.avoided),
     ).toBe(true);
@@ -590,7 +590,7 @@ describe("game integration: heat ammo explosion", () => {
       state.events.some((e) => e.kind === "ammoExplosionCheck" && e.unitId === "bzk" && !e.avoided),
     ).toBe(false);
     // Gauss ammo bins survive intact.
-    expect(bzk.ammoBins["centerTorso:11"]).toBe(8);
-    expect(bzk.ammoBins["centerTorso:12"]).toBe(8);
+    expect(bzk.ammoBins["centerTorso:11"]?.shots).toBe(8);
+    expect(bzk.ammoBins["centerTorso:12"]?.shots).toBe(8);
   });
 });

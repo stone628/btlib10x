@@ -3,6 +3,7 @@ import { cellAt, hasPartialCover } from "../core/terrain.js";
 import type { Location } from "../core/types.js";
 import { getMechDefFor } from "../data/index.js";
 import { getWeaponDefFor } from "../data/weapon.schema.js";
+import { binsForWeaponName, pooledShotsLeft } from "./ammo.js";
 import { type Arc, classifyArc } from "./arcs.js";
 import { canFireFromLocation } from "./damage.js";
 import { type BattleState, isImmobile } from "./game.js";
@@ -60,7 +61,9 @@ export interface FireSuggestion {
  * For the acting unit, enumerate every enemy 'Mech and, per target, list the
  * weapons that could reach it (within arc, LOS, range, ammo, not jammed or
  * destroyed, and not auto-missing). Weapons that cannot fire list the reason.
- * Mirrors the checks made by `declareAttacks` so any suggested combination is
+ * Ammo checks read the shared per-weapon-name pool (`pooledShotsLeft`), so
+ * every mount of a pooled weapon reports the same remaining shots. Mirrors
+ * the checks made by `declareAttacks` so any suggested combination is
  * guaranteed to be accepted there.
  */
 export function suggestFireTargets(state: BattleState, unitId: string): FireSuggestion {
@@ -96,8 +99,9 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "destroyed" });
           return;
         }
-        const shots = mount.shots !== undefined ? (unit.shotsLeft[weaponIndex] ?? 0) : null;
-        if (mount.shots !== undefined && shots! < 1) {
+        const poolable = binsForWeaponName(def, weapon.name).length > 0;
+        const shots = poolable ? pooledShotsLeft(def, unit.ammoBins, weapon.name) : null;
+        if (poolable && (shots ?? 0) < 1) {
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "outOfAmmo" });
           return;
         }

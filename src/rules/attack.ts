@@ -4,7 +4,7 @@ import type { Location, MoveMode, Rng, TerrainType } from "../core/types.js";
 import type { ResolvedMechDef } from "../data/mech.schema.js";
 import type { WeaponDef } from "../data/weapon.schema.js";
 import { getWeaponDefFor } from "../data/weapon.schema.js";
-import type { AmmoBinId } from "./ammo.js";
+import type { AmmoBins } from "./ammo.js";
 import type { Arc } from "./arcs.js";
 import { clusterHits, groupMissiles } from "./cluster.js";
 import { type CriticalResolution, resolveCriticalHits } from "./critical.js";
@@ -58,8 +58,8 @@ export interface WeaponAttackInput {
   readonly targetCritSlotsDestroyed?: Record<Location, boolean[]>;
   /** Pre-attack destroyed weapon indices. */
   readonly targetDestroyedWeapons?: readonly number[];
-  /** Pre-attack per-crit-slot ammo remaining. */
-  readonly targetAmmoBins?: Readonly<Record<AmmoBinId, number>>;
+  /** Pre-attack per-crit-slot ammo state. */
+  readonly targetAmmoBins?: Readonly<AmmoBins>;
 }
 
 export interface AttackResolution {
@@ -210,7 +210,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
   let destroyedWeapons: number[] = input.targetDestroyedWeapons
     ? [...input.targetDestroyedWeapons]
     : [];
-  let ammoBins: Record<AmmoBinId, number> = input.targetAmmoBins ? { ...input.targetAmmoBins } : {};
+  let ammoBins: AmmoBins = input.targetAmmoBins ? { ...input.targetAmmoBins } : {};
 
   for (const group of base.groups) {
     const app = applyDamage(damage, group.location, group.damage, arc);
