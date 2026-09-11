@@ -173,6 +173,10 @@ export interface WeaponMount extends WeaponNameHolder {
   readonly location: Location;
   /** Shots available; omit for weapons without ammunition. */
   readonly shots?: number;
+  /** True when the weapon is mounted rear-facing (MTF `(R)` notation, torso
+   *  locations only on a biped). Rear-facing weapons fire into the rear arc
+   *  instead of the front arc (TW p.105). Default false. */
+  readonly rearFacing?: boolean;
 }
 
 export type ResolvedArmor = Readonly<LocationValue>;
@@ -511,6 +515,18 @@ export function validateMechDef(data: unknown): MechDef {
       if (typeof w.weapon !== "string") errors.push("weapon.weapon must be a string");
       if (typeof w.location !== "string" || !isLocation(w.location)) {
         errors.push(`weapon.location ${JSON.stringify(w.location)} is not a valid location`);
+      }
+      if (w.rearFacing !== undefined && typeof w.rearFacing !== "boolean") {
+        errors.push("weapon.rearFacing must be a boolean");
+      } else if (
+        w.rearFacing === true &&
+        typeof w.location === "string" &&
+        isLocation(w.location) &&
+        w.location !== "centerTorso" &&
+        w.location !== "rightTorso" &&
+        w.location !== "leftTorso"
+      ) {
+        errors.push(`weapon.rearFacing is only valid on torso mounts, got ${w.location}`);
       }
       const shots = w.shots;
       if (shots !== undefined && shots !== null) {

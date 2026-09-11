@@ -261,7 +261,7 @@ function hbkBattle(): ReturnType<typeof createBattle> {
       team: 0,
       gunnery: 4,
       position: { col: 2, row: 4 },
-      facing: "se",
+      facing: "ne",
     },
     {
       id: "enf",

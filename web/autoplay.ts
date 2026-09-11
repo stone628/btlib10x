@@ -1,4 +1,4 @@
-import { hexDistance, isNominal, isUnitImmobile, suggestFireTargets } from "btlib10x";
+import { isNominal, isUnitImmobile, suggestFireTargets } from "btlib10x";
 import type * as S from "./session.js";
 
 /** Delay between generated commands, in milliseconds. */

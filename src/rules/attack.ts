@@ -10,7 +10,7 @@ import { clusterHits, groupMissiles } from "./cluster.js";
 import { type CriticalResolution, resolveCriticalHits } from "./critical.js";
 import { applyDamage, type DamageApplication, type UnitDamageState } from "./damage.js";
 import { toHitHeatModifier } from "./heat.js";
-import { hitLocation } from "./hitlocation.js";
+import { hitLocationForArc } from "./hitlocation.js";
 import { losWoodsPoints } from "./los.js";
 import { computeToHit, damageForBracket } from "./tohit.js";
 
@@ -42,7 +42,9 @@ export interface WeaponAttackInput {
   readonly shots?: number;
   /** Layered damage state of the target. */
   readonly targetDamage: UnitDamageState;
-  /** Firing arc; default front. */
+  /** Attack direction: the side of the TARGET the attack strikes (TW p.107),
+   *  classified from the target's facing. Drives the hit-location table
+   *  column and the front/rear armor pool. Default front. */
   readonly arc?: Arc;
   /** Attacker's ground elevation in levels (default 0). */
   readonly attackerLevel?: number;
@@ -80,8 +82,9 @@ export interface AttackResolution {
   readonly clusterRoll: number | null;
   readonly groups: readonly HitGroup[];
   readonly application: DamageApplication | null;
-  /** Firing arc the attack resolved against; drives hit-location table and
-   *  armor pool. Defaults to front when the input omitted it. */
+  /** Attack direction the attack resolved against (side of the target hit);
+   *  drove the hit-location table and armor pool. Defaults to front when the
+   *  input omitted it. */
   readonly arc: Arc;
   /**
    * Critical hit resolutions triggered by the attack, one per group that
@@ -95,6 +98,7 @@ export interface AttackResolution {
 export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution {
   const weapon: WeaponDef = getWeaponDefFor(input);
   const shots = input.shots ?? 1;
+  const arc = input.arc ?? "front";
   const terrainCoverMod =
     hasPartialCover(input.targetTerrain) && (input.attackerLevel ?? 0) <= (input.targetLevel ?? 0)
       ? 1
@@ -130,7 +134,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     groups: [] as HitGroup[],
     application: null as DamageApplication | null,
     crits: [] as CriticalResolution[],
-    arc: input.arc ?? "front",
+    arc,
   };
 
   if (breakdown.outOfRange) return base;
@@ -162,7 +166,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     }
     if (weapon.missileDamage === 2) {
       for (let i = 0; i < hits; i++) {
-        const location = hitLocationCovered(input.rng, partialCover);
+        const location = hitLocationCovered(input.rng, partialCover, arc);
         if (location === null) continue;
         base.groups.push({
           location,
@@ -171,7 +175,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
       }
     } else {
       for (const lot of groupMissiles(hits, 5)) {
-        const location = hitLocationCovered(input.rng, partialCover);
+        const location = hitLocationCovered(input.rng, partialCover, arc);
         if (location === null) continue;
         base.groups.push({
           location,
@@ -184,7 +188,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     base.clusterRoll = clusterRoll;
     const hits = clusterHits(shots, clusterRoll);
     for (let i = 0; i < hits; i++) {
-      const location = hitLocationCovered(input.rng, partialCover);
+      const location = hitLocationCovered(input.rng, partialCover, arc);
       if (location === null) continue;
       base.groups.push({
         location,
@@ -192,7 +196,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
       });
     }
   } else {
-    const location = hitLocationCovered(input.rng, partialCover);
+    const location = hitLocationCovered(input.rng, partialCover, arc);
     if (location !== null) {
       base.groups.push({
         location,
@@ -203,7 +207,6 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
 
   let damage = input.targetDamage;
   let application: DamageApplication | null = null;
-  const arc = input.arc ?? "front";
   const critStateAvailable =
     input.targetDef !== undefined &&
     input.targetCritSlotsDestroyed !== undefined &&
@@ -273,10 +276,11 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
   return base;
 }
 
-/** Standard hit-location roll; under partial cover a leg result strikes the
- *  cover instead and the attack deals no damage to the target (null). */
-function hitLocationCovered(rng: Rng, partialCover: boolean): Location | null {
-  const location = hitLocation(roll2D6(rng));
+/** Hit-location roll on the column for the attack direction `arc`; under
+ *  partial cover a leg result strikes the cover instead and the attack deals
+ *  no damage to the target (null). */
+function hitLocationCovered(rng: Rng, partialCover: boolean, arc: Arc): Location | null {
+  const location = hitLocationForArc(arc, roll2D6(rng));
   if (partialCover && (location === "leftLeg" || location === "rightLeg")) return null;
   return location;
 }
