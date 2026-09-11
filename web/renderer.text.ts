@@ -674,15 +674,13 @@ export function battleModel(
  */
 export function createBoardModel(info: BoardRenderInfo): BoardModel {
   const base = mapModel(info.map);
-
   const cells = { ...base.cells };
-  const marks = { ...base.marks, ...info.wrecks };
   const facings: Record<string, Facing> = {};
   const idStyles: Record<string, CharStyle> = {};
   if (info.units !== null) {
     for (const unit of info.units) {
       const key = `${unit.position.col},${unit.position.row}`;
-      cells[key] = unit.id;
+      cells[key] = unit.ejected ? `-${unit.id}` : unit.id;
       facings[key] = unit.facing;
       const team = TEAM_STYLES[unit.team];
       if (team !== undefined) idStyles[key] = team;
@@ -696,7 +694,7 @@ export function createBoardModel(info: BoardRenderInfo): BoardModel {
       anchorCol: base.anchorCol,
       anchorRow: base.anchorRow,
       cells,
-      marks,
+      marks: base.marks,
       elevations: base.elevations,
       facings,
       edgeStyles: base.edgeStyles,
@@ -737,7 +735,7 @@ export function createBoardModel(info: BoardRenderInfo): BoardModel {
     anchorCol,
     anchorRow,
     cells,
-    marks,
+    marks: base.marks,
     elevations: base.elevations,
     facings: {},
     edgeStyles,

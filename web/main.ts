@@ -1,5 +1,10 @@
 import { VERSION } from "btlib10x";
-import { AUTOPLAY_INTERVAL_MS, nextAutoPlayCommand, resetAutoplayState } from "./autoplay.js";
+import {
+  AUTOPLAY_INTERVAL_MS,
+  flushAutoPlayCommand,
+  nextAutoPlayCommand,
+  resetAutoplayState,
+} from "./autoplay.js";
 import { runChunks } from "./cli.js";
 import { buildLinesChunk, type Chunk } from "./format.js";
 import { i18n, isLocale } from "./i18n/index.js";
@@ -93,8 +98,7 @@ function refreshPrompt(): void {
   promptEl.textContent = `${S.promptBody(session)} > `;
 }
 
-function submit(raw: string, fromAutoPlay = false): void {
-  if (!fromAutoPlay) stopAutoPlay(false);
+function submitImpl(raw: string) {
   const line = raw.trim();
   const echoed = `${S.promptBody(session)} > ${raw}`;
   const echo = document.createElement("div");
@@ -108,9 +112,23 @@ function submit(raw: string, fromAutoPlay = false): void {
   for (const chunk of runChunks(session, line)) {
     appendChunk(chunk);
   }
+}
+
+function submitEpilog() {
   input.value = "";
   refreshPrompt();
   scrollToBottom();
+}
+
+function submitAuto(raw: string): void {
+  submitImpl(raw);
+  submitEpilog();
+}
+
+function submitInput(raw: string) {
+  stopAutoPlay(false);
+  submitImpl(raw);
+  submitEpilog();
 }
 
 // --- autoplay demo driver (hidden 'autoplay' command) ---
@@ -133,13 +151,19 @@ function startAutoPlay(): void {
   scrollToBottom();
   resetAutoplayState(session);
   autoPlayTimer = setInterval(() => {
-    if (autoPlayTimer === null) return;
+    if (autoPlayTimer === null) {
+      // flush remaining nextAutoPlayCommand
+      const flushed = flushAutoPlayCommand();
+      for (const cmd of flushed) submitImpl(cmd);
+      submitEpilog();
+      return;
+    }
     const command = nextAutoPlayCommand(session);
     if (command === null) {
       stopAutoPlay(true);
       return;
     }
-    submit(command, true);
+    submitAuto(command);
   }, AUTOPLAY_INTERVAL_MS);
 }
 
@@ -156,7 +180,7 @@ input.addEventListener("keydown", (e) => {
       scrollToBottom();
       startAutoPlay();
     } else {
-      submit(input.value);
+      submitInput(input.value);
     }
   } else if (e.key === "ArrowUp") {
     if (history.length > 0 && historyIdx > 0) {

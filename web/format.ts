@@ -67,7 +67,11 @@ import type { LocaleId, MessageKey } from "./i18n/index.js";
 import { i18n } from "./i18n/index.js";
 import { lookupMapOrThrow, lookupMechOrThrow, lookupWeaponOrThrow } from "./lookup.js";
 import type { BoardRenderer, BoardRenderInfo, BoardRenderReachableInfo } from "./render.js";
-import { createBoardRenderUnit, getBoardRenderer } from "./render.js";
+import {
+  createBoardRenderUnit,
+  createEjectedBoardRenderUnits,
+  getBoardRenderer,
+} from "./render.js";
 import type { Session } from "./session.js";
 import { moveStepsInfo } from "./session.js";
 
@@ -439,19 +443,23 @@ export function boardChunk(s: Session): Chunk {
   const mapName = s.setup.mapName;
   if (mapName === null) return buildLinesChunk([i18n(s.locale, "board.noMap")]);
   const map = getMapDefFor(s.setup);
-  const units = s.battle
-    ? Object.values(s.battle.units)
-        .filter((u) => !u.removed)
-        .map((u) => createBoardRenderUnit(u))
-    : s.setup.roster.map((u) => createBoardRenderUnit(u));
-  const wrecks = s.battle
-    ? Object.fromEntries(Object.keys(s.battle.wrecks).map((key) => [key, "X"]))
-    : undefined;
+  if (s.battle) {
+    const battleUnits = s.battle.units;
+    const units = Object.values(battleUnits)
+      .filter((u) => !u.removed)
+      .map((u) => createBoardRenderUnit(u));
+    const ejectedUnits = createEjectedBoardRenderUnits(battleUnits, s.battle.wrecks);
+    if (ejectedUnits.length > 0) units.push(...ejectedUnits);
+    return buildBoardChunk({
+      map,
+      units,
+      reachable: null,
+    });
+  }
   return buildBoardChunk({
     map,
-    units,
+    units: s.setup.roster.map((u) => createBoardRenderUnit(u)),
     reachable: null,
-    ...(wrecks !== undefined ? { wrecks } : {}),
   });
 }
 
@@ -1455,11 +1463,13 @@ export function reachableChunk(
   info: BoardRenderReachableInfo,
 ): Chunk {
   const map = getMapDefFor(mapNameHolder);
-  const units = Object.values(battle.units)
+  const battleUnits = battle.units;
+  const units = Object.values(battleUnits)
     .filter((u) => !u.removed)
     .map((u) => createBoardRenderUnit(u));
-  const wrecks = Object.fromEntries(Object.keys(battle.wrecks).map((key) => [key, "X"]));
-  return buildBoardChunk({ map, units, reachable: info, wrecks });
+  const ejectedUnits = createEjectedBoardRenderUnits(battleUnits, battle.wrecks);
+  if (ejectedUnits.length > 0) units.push(...ejectedUnits);
+  return buildBoardChunk({ map, units, reachable: info });
 }
 
 export function attackStatusLines(s: Session): string[] {
