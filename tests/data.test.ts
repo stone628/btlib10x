@@ -126,6 +126,37 @@ describe("'Mech definitions", () => {
     ).toThrow(/armor\.leftTorsoRear must be a non-negative integer/);
   });
 
+  it("marks the Atlas rear-facing CT lasers (MTF (R)) and validates rearFacing", () => {
+    const atlas = getMechDef("AS7-D")!;
+    const ctLasers = Object.values(atlas.weapons).filter(
+      (w) => w.weapon === "Medium Laser" && w.location === "centerTorso",
+    );
+    expect(ctLasers).toHaveLength(2);
+    for (const m of ctLasers) expect(m.rearFacing).toBe(true);
+    const base = getMechDef("HBK-4G")!;
+    const toMechDef = (d: typeof base) => ({ ...d, weapons: Object.values(d.weapons) });
+    expect(() =>
+      validateMechDef({
+        ...toMechDef(base),
+        weapons: [{ weapon: "Medium Laser", location: "centerTorso", rearFacing: "yes" }],
+      }),
+    ).toThrow(/weapon\.rearFacing must be a boolean/);
+    expect(() =>
+      validateMechDef({
+        ...toMechDef(base),
+        weapons: [{ weapon: "Medium Laser", location: "leftArm", rearFacing: true }],
+      }),
+    ).toThrow(/only valid on torso mounts/);
+    expect(() =>
+      validateMechDef({
+        ...toMechDef(base),
+        weapons: Object.values(base.weapons).map((m, i) =>
+          i === 3 ? { ...m, rearFacing: true } : m,
+        ),
+      }),
+    ).not.toThrow();
+  });
+
   it("rejects invalid definitions", () => {
     const base = getMechDef("HBK-4G")!;
     const toMechDef = (d: typeof base) => ({ ...d, weapons: Object.values(d.weapons) });

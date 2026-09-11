@@ -29,7 +29,7 @@ import { createTestBattle, scriptedRng } from "./helpers.js";
 function hbkVsEnf(): BattleState {
   const units: UnitInit[] = [
     { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 2, row: 4 }, facing: "se" },
-    { id: "enf", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 5, row: 4 }, facing: "nw" },
+    { id: "enf", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 4, row: 5 }, facing: "nw" },
   ];
   return createTestBattle([], units, true);
 }
@@ -37,7 +37,7 @@ function hbkVsEnf(): BattleState {
 function bzkVsEnf(): BattleState {
   const units: UnitInit[] = [
     { id: "bzk", model: "BZK-F3", team: 0, gunnery: 4, position: { col: 2, row: 4 }, facing: "se" },
-    { id: "enf", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 5, row: 4 }, facing: "nw" },
+    { id: "enf", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 4, row: 5 }, facing: "nw" },
   ];
   return createTestBattle([], units, true);
 }

@@ -8,9 +8,11 @@ TypeScript library encapsulating BattleTech Total Warfare board game logic.
   implemented subset is documented under "Status — BattleTech Total Warfare rule
   coverage" in `docs/CLI.md`.
 - Bipedal 'Mechs only. Physical attacks and piloting rolls are outside the
-  current subset. Firing arcs are implemented (front / rear / left side /
-  right side, each with its own hit-location table and front/rear armor
-  pool); torso twist (per-weapon facing override) is not. Elevation IS
+   current subset. Firing arcs implemented per TW: four arcs (front / rear /
+   left / right side), per-weapon mounting arcs (head/legs/torso front-only,
+   arms add own side, `rearFacing` torso mounts rear-only), and attack
+   direction resolved target-side (drives hit-location column + front/rear
+   armor pool); torso twist (per-weapon facing override) is not. Elevation IS
   implemented: per-hex `level` (default 0) on the map, with movement
   climb cost, jump ignoring elevation, LOS elevation ray, and the
   height-difference to-hit modifier.

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { classifyArc, isInFrontArc } from "../src/rules/arcs.js";
+import { bearingExact } from "../src/core/hex.js";
+import {
+  classifyArc,
+  classifyArcWithBoundary,
+  defenderArcChoice,
+  isInFrontArc,
+  weaponCanFireIntoArc,
+} from "../src/rules/arcs.js";
 import { losBlocked, losWoodsPoints } from "../src/rules/los.js";
 import {
   attackerMovementModifier,
@@ -76,5 +83,60 @@ describe("firing arcs", () => {
     expect(classifyArc("se", "n")).toBe("leftSide");
     expect(classifyArc("se", "se")).toBe("front");
     expect(classifyArc("se", "nw")).toBe("rear");
+  });
+});
+
+describe("per-weapon firing arcs (TW p.105)", () => {
+  it("restricts head/leg/front-torso weapons to the front arc", () => {
+    for (const loc of [
+      "head",
+      "centerTorso",
+      "rightTorso",
+      "leftTorso",
+      "rightLeg",
+      "leftLeg",
+    ] as const) {
+      expect(weaponCanFireIntoArc(loc, false, "front")).toBe(true);
+      expect(weaponCanFireIntoArc(loc, false, "rear")).toBe(false);
+      expect(weaponCanFireIntoArc(loc, false, "leftSide")).toBe(false);
+      expect(weaponCanFireIntoArc(loc, false, "rightSide")).toBe(false);
+    }
+  });
+
+  it("lets arm weapons cover the front and their own side arc", () => {
+    expect(weaponCanFireIntoArc("rightArm", false, "front")).toBe(true);
+    expect(weaponCanFireIntoArc("rightArm", false, "rightSide")).toBe(true);
+    expect(weaponCanFireIntoArc("rightArm", false, "leftSide")).toBe(false);
+    expect(weaponCanFireIntoArc("rightArm", false, "rear")).toBe(false);
+    expect(weaponCanFireIntoArc("leftArm", false, "front")).toBe(true);
+    expect(weaponCanFireIntoArc("leftArm", false, "leftSide")).toBe(true);
+    expect(weaponCanFireIntoArc("leftArm", false, "rightSide")).toBe(false);
+    expect(weaponCanFireIntoArc("leftArm", false, "rear")).toBe(false);
+  });
+
+  it("fires rear-facing torso weapons into the rear arc only", () => {
+    expect(weaponCanFireIntoArc("centerTorso", true, "rear")).toBe(true);
+    expect(weaponCanFireIntoArc("centerTorso", true, "front")).toBe(false);
+    expect(weaponCanFireIntoArc("centerTorso", true, "leftSide")).toBe(false);
+    expect(weaponCanFireIntoArc("rightTorso", true, "rear")).toBe(true);
+    expect(weaponCanFireIntoArc("leftTorso", true, "front")).toBe(false);
+  });
+
+  it("resolves boundary-line ambiguity to the defender's dominant choice", () => {
+    expect(defenderArcChoice("front", null)).toBe("front");
+    expect(defenderArcChoice("front", "leftSide")).toBe("front");
+    expect(defenderArcChoice("leftSide", "front")).toBe("front");
+    expect(defenderArcChoice("rear", "rightSide")).toBe("rightSide");
+    expect(defenderArcChoice("leftSide", "rear")).toBe("leftSide");
+  });
+
+  it("classifies both arcs of a boundary pair", () => {
+    // (2,4) -> (3,3) runs exactly along the n|ne sector edge: right side on
+    // both candidates when facing northwest.
+    const b = bearingExact({ col: 2, row: 4 }, { col: 3, row: 3 })!;
+    expect(b.boundary).not.toBeNull();
+    const cls = classifyArcWithBoundary("nw", b);
+    expect(cls.arc).toBe("rightSide");
+    expect(cls.altArc).toBe("rightSide");
   });
 });

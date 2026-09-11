@@ -12,7 +12,7 @@ function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
       team: 0,
       gunnery: 4,
       position: { col: 2, row: 4 },
-      facing: "se",
+      facing: "ne",
     },
     {
       id: "enf",
@@ -56,6 +56,35 @@ describe("suggestFireTargets", () => {
     const ml = enf!.weapons.find((w) => w.weaponIndex === 1)!;
     expect(ml.expectedDamage).toBe(5);
     expect(ml.shots).toBeNull();
+  });
+
+  it("blocks weapons whose mounting arc does not cover the target", () => {
+    // hbk faces nw; enf due south sits in the left side arc: only the
+    // left-arm Medium Laser (weapon 1) may fire.
+    const units: UnitInit[] = [
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 4 },
+        facing: "nw",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 2, row: 5 },
+        facing: "nw",
+      },
+    ];
+    const state = startAttackTurn(createTestBattle([], units, false));
+    const sugg = suggestFireTargets(state, "hbk");
+    const enf = sugg.targets.find((t) => t.targetId === "enf")!;
+    expect(enf.arc).toBe("leftSide");
+    expect(enf.weapons.map((w) => w.weaponIndex)).toEqual([1]);
+    expect(enf.blocked.map((b) => b.reason)).toEqual(["outOfArc", "outOfArc", "outOfArc"]);
   });
 
   it("marks a weapon jammed", () => {
@@ -103,7 +132,7 @@ describe("suggestFireTargets", () => {
         team: 0,
         gunnery: 4,
         position: { col: 2, row: 4 },
-        facing: "se",
+        facing: "ne",
       },
       {
         id: "enf",
@@ -137,7 +166,7 @@ describe("suggestFireTargets", () => {
         team: 0,
         gunnery: 4,
         position: { col: 2, row: 4 },
-        facing: "se",
+        facing: "ne",
       },
       {
         id: "enf",
@@ -225,7 +254,7 @@ describe("suggestFireTargets", () => {
         team: 0,
         gunnery: 4,
         position: { col: 2, row: 4 },
-        facing: "se",
+        facing: "ne",
       },
       {
         id: "hbk",
@@ -256,7 +285,7 @@ describe("suggestFireTargets", () => {
         team: 0,
         gunnery: 4,
         position: { col: 2, row: 4 },
-        facing: "se",
+        facing: "ne",
       },
       {
         id: "hbk",
@@ -284,7 +313,7 @@ describe("suggestFireTargets", () => {
         team: 0,
         gunnery: 4,
         position: { col: 2, row: 2 },
-        facing: "se",
+        facing: "ne",
       },
       {
         id: "enf",

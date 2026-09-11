@@ -103,20 +103,69 @@ function cubeRound(px: number, py: number, pz: number): HexCoord {
   return cubeToOffset(rx, ry, rz);
 }
 
-/** Relative direction of `target` as seen from `origin` (compass sector), or null when identical. */
-export function bearing(from: HexCoord, to: HexCoord): Facing | null {
+/**
+ * Exact bearing of `to` as seen from `from`. `facing` is the hexside-normal
+ * sector (60° wedge) containing the center-to-center line. When the line runs
+ * exactly along a sector edge (a TW arc-boundary line), `boundary` holds the
+ * adjacent sector on the other side of the edge and `facing` is whichever of
+ * the pair comes first in clockwise `FACINGS` order (deterministic).
+ */
+export interface Bearing {
+  readonly facing: Facing;
+  readonly boundary: Facing | null;
+}
+
+/** Cube (x, z) components of each facing's unit delta (y = -x - z). */
+const FACING_XZ: Record<Facing, readonly [number, number]> = {
+  n: [0, -1],
+  ne: [1, -1],
+  se: [1, 0],
+  s: [0, 1],
+  sw: [-1, 1],
+  nw: [-1, 0],
+};
+
+/**
+ * Pixel-space dot product of cube delta (dx, dz) with facing delta (fx, fz),
+ * scaled by 4 to stay integral. Flat-top pixel coords are
+ * (1.5·x, √3·(z + x/2)), so dot = 2.25·dx·fx + 3·(dz + dx/2)·(fz + fx/2);
+ * ×4 gives 9·dx·fx + 3·(2dz + dx)·(2fz + fx). The nearest hexside normal
+ * (max dot) is the exact sector of the line; a tie means the line lies
+ * exactly on the boundary between two sectors.
+ */
+function pixelDot4(dx: number, dz: number, fx: number, fz: number): number {
+  return 9 * dx * fx + 3 * (2 * dz + dx) * (2 * fz + fx);
+}
+
+/** Exact bearing, or null when `from` and `to` share a hex. */
+export function bearingExact(from: HexCoord, to: HexCoord): Bearing | null {
   if (sameHex(from, to)) return null;
-  for (const f of FACINGS) {
-    if (sameHex(neighbor(from, f), to)) return f;
-  }
-  // Not adjacent: approximate a compass heading. Cube +x points east and
-  // cube +z points south (rows run top-to-bottom), so the northward
-  // component is -dz.
   const a = offsetToCube(from);
   const b = offsetToCube(to);
   const dx = b.x - a.x;
   const dz = b.z - a.z;
-  const compassDeg = ((Math.atan2(dx, -dz) * 180) / Math.PI + 360) % 360;
-  const sector = Math.floor(((compassDeg + 30) % 360) / 60);
-  return FACINGS[sector]!;
+  let bestDot = -Infinity;
+  let best: Facing[] = [];
+  for (const f of FACINGS) {
+    const [fx, fz] = FACING_XZ[f];
+    const dot = pixelDot4(dx, dz, fx, fz);
+    if (dot > bestDot) {
+      bestDot = dot;
+      best = [f];
+    } else if (dot === bestDot) {
+      best.push(f);
+    }
+  }
+  // A tie can only happen between two adjacent sectors (the delta is
+  // non-zero, so the max dot is positive and unique in direction).
+  const facing = best[0]!;
+  const boundary = best.length > 1 ? best[1]! : null;
+  return { facing, boundary };
+}
+
+/** Relative direction of `target` as seen from `origin` (compass sector), or
+ *  null when identical. On an exact sector boundary one sector of the pair is
+ *  returned deterministically; use `bearingExact` when the boundary matters. */
+export function bearing(from: HexCoord, to: HexCoord): Facing | null {
+  return bearingExact(from, to)?.facing ?? null;
 }

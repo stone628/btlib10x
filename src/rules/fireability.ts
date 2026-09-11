@@ -1,10 +1,10 @@
-import { bearing, hexDistance } from "../core/hex.js";
+import { bearingExact, hexDistance } from "../core/hex.js";
 import { cellAt } from "../core/terrain.js";
 import type { Location } from "../core/types.js";
 import { getMechDefFor } from "../data/index.js";
 import { getWeaponDefFor } from "../data/weapon.schema.js";
 import { binsForWeaponName, pooledShotsLeft } from "./ammo.js";
-import { type Arc, classifyArc } from "./arcs.js";
+import { type Arc, classifyArcWithBoundary, weaponCanFireIntoArc } from "./arcs.js";
 import { canFireFromLocation } from "./damage.js";
 import { type BattleState, isImmobile, partialCoverMod } from "./game.js";
 import { toHitHeatModifier } from "./heat.js";
@@ -25,7 +25,9 @@ export interface FireWeapon {
   readonly weaponIndex: number;
   readonly weapon: string;
   readonly location: Location;
-  /** Firing arc of the target relative to the attacker's facing. */
+  /** Firing arc of the target relative to the ATTACKER's facing (the arc the
+   *  weapon legally fires into). The side of the target struck (attack
+   *  direction) is classified at declaration time in `declareAttacks`. */
   readonly arc: Arc;
   readonly shots: number | null;
   readonly rangeBracket: RangeBracket;
@@ -41,7 +43,7 @@ export interface FireWeapon {
 export interface FireTarget {
   readonly targetId: string;
   readonly distance: number;
-  /** Firing arc of this target relative to the attacker's facing; null when
+  /** Firing arc of this target relative to the ATTACKER's facing; null when
    *  attacker and target share a hex (arc undefined, attack unsupported). */
   readonly arc: Arc | null;
   readonly weapons: FireWeapon[];
@@ -77,8 +79,9 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
     .filter((u) => u.team !== unit.team && !u.removed && !u.destroyed)
     .map((enemy) => {
       const distance = hexDistance(unit.position, enemy.position);
-      const bearingToTarget = bearing(unit.position, enemy.position);
-      const arc = bearingToTarget !== null ? classifyArc(unit.facing, bearingToTarget) : null;
+      const b = bearingExact(unit.position, enemy.position);
+      const fireCls = b !== null ? classifyArcWithBoundary(unit.facing, b) : null;
+      const arc = fireCls?.arc ?? null;
       const interveningWoods = losWoodsPointsBetween(state, unit.position, enemy.position);
 
       const weapons: FireWeapon[] = [];
@@ -105,7 +108,19 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "outOfAmmo" });
           return;
         }
-        if (bearingToTarget === null || arc === null) {
+        // Same gate as `declareAttacks`: same-hex targets are unsupported,
+        // and the weapon's mounting arc (TW p.105) must cover the target's
+        // firing arc (either arc of the pair on a boundary line).
+        if (fireCls === null || arc === null) {
+          blocked.push({ weaponIndex, weapon: mount.weapon, reason: "outOfArc" });
+          return;
+        }
+        const rearFacing = mount.rearFacing === true;
+        const inArc =
+          weaponCanFireIntoArc(mount.location, rearFacing, fireCls.arc) ||
+          (fireCls.altArc !== null &&
+            weaponCanFireIntoArc(mount.location, rearFacing, fireCls.altArc));
+        if (!inArc) {
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "outOfArc" });
           return;
         }

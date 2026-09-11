@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { bearing, hexDistance, isAdjacent, lineHexes, neighbor, sameHex } from "../src/core/hex.js";
+import {
+  bearing,
+  bearingExact,
+  hexDistance,
+  isAdjacent,
+  lineHexes,
+  neighbor,
+  sameHex,
+} from "../src/core/hex.js";
 import { cellAt, type HexGrid } from "../src/core/terrain.js";
 import type { HexCell } from "../src/core/types.js";
 
@@ -51,6 +59,20 @@ describe("hex geometry", () => {
     expect(bearing({ col: 2, row: 2 }, { col: 2, row: -2 })).toBe("n");
     expect(bearing({ col: 2, row: 2 }, { col: 2, row: 6 })).toBe("s");
     expect(bearing({ col: 2, row: 2 }, { col: 2, row: 2 })).toBeNull();
+  });
+
+  it("computes exact bearings on the true flat-top pixel angle", () => {
+    // Cube delta (4, 3, -7): true angle atan2(6, 5√3)=34.7° (past the 30°
+    // wedge edge), so the exact sector is ne — the old atan2(dx, -dz)
+    // approximation gave n (29.7°).
+    expect(bearingExact({ col: 5, row: 5 }, { col: 9, row: 0 })).toEqual({
+      facing: "ne",
+      boundary: null,
+    });
+    // Cube delta (1, 1, -2) lies exactly on the n|ne sector edge.
+    const edge = bearingExact({ col: 2, row: 4 }, { col: 3, row: 3 })!;
+    expect(edge.boundary).not.toBeNull();
+    expect(new Set([edge.facing, edge.boundary])).toEqual(new Set(["n", "ne"]));
   });
 
   it("reports adjacency symmetrically and excludes far hexes", () => {

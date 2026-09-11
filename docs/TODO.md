@@ -46,14 +46,19 @@
   without rolling (`ammoExhausted`, out-of-ammo log note, no heat); draws go
   through the name pool so unlinked mounts spend shared ammo too.
 - **Attack direction / firing arcs** — `declareAttacks` classifies every
-  target by its TW firing arc (`classifyArc`: front / rear / leftSide /
-  rightSide) and records it on the `AttackDecl`; attacks into any arc are
-  accepted (no more front-only rejection), the arc flows through
-  `resolveWeaponAttack` into `hitLocationForArc` and the front/rear armor
-  pool. `suggestFireTargets` no longer blocks side/rear targets and exposes
-  the classified arc per target and per weapon; the web fire-suggestion
-  header shows the target's arc. Torso twist (per-weapon facing override)
-  remains deferred.
+  target on both ends: the attacker-side firing arc (`classifyArcWithBoundary`;
+  gates each weapon by its TW p.105 mounting arc — head/legs/front-torso
+  front-only, arms add their own side, `rearFacing` (`MechDef` mount flag,
+  MTF `(R)`, e.g. Atlas CT lasers) rear-only) and the target-side attack
+  direction (TW p.107, stored as `AttackDecl.attackDirection`), which flows
+  through `resolveWeaponAttack` into `hitLocationForArc` and the front/rear
+  armor pool. Bearings are exact flat-top pixel angles (`bearingExact`);
+  arc-boundary lines admit both arcs for firing and resolve attack direction
+  to the defender's dominant choice (`defenderArcChoice`). `suggestFireTargets`
+  mirrors the legality checks and exposes the classified arc per target and
+  per weapon; the web fire-suggestion header shows the target's firing arc
+  and the resolution hit line names the attack direction. Torso twist
+  (per-weapon facing override) remains deferred.
 - **CASE / CASE II ammo-explosion containment** — ammo explosions in
   CASE-protected locations no longer overflow to the center torso. CASE
   (explicit `case` crit slot, or implicit on all locations of Clan 'Mech)

@@ -571,19 +571,49 @@ describe("actorQueue", () => {
 
 describe("weapon attack phase", () => {
   it("classifies the firing arc of accepted side and rear attacks", () => {
+    // HBK-4G mounts: 1 = ML leftArm, 2 = ML rightArm, 3 = SL head, 4 = AC/20
+    // rightTorso. Per-weapon firing arcs (TW p.105) gate the declaration.
     const cases: Array<{
       facing: string;
       targetPos: { col: number; row: number };
       expected: string;
+      expectedDir: string;
+      weaponIndex: number;
     }> = [
-      // Facing northwest; target east-southeast -> rear arc.
-      { facing: "nw", targetPos: { col: 3, row: 5 }, expected: "rear" },
-      // Target to the northeast -> right side arc.
-      { facing: "nw", targetPos: { col: 3, row: 3 }, expected: "rightSide" },
-      // Target due south -> left side arc.
-      { facing: "nw", targetPos: { col: 2, row: 5 }, expected: "leftSide" },
-      // Target to the northwest -> front arc.
-      { facing: "nw", targetPos: { col: 1, row: 3 }, expected: "front" },
+      // Target east-southeast -> rear arc; no HBK weapon bears (throws below).
+      {
+        facing: "nw",
+        targetPos: { col: 3, row: 5 },
+        expected: "rear",
+        expectedDir: "",
+        weaponIndex: 0,
+      },
+      // Target to the northeast (exactly on the n|ne boundary) -> right side
+      // arc on both candidate bearings; only the right-arm ML fires.
+      {
+        facing: "nw",
+        targetPos: { col: 3, row: 3 },
+        expected: "rightSide",
+        expectedDir: "leftSide",
+        weaponIndex: 2,
+      },
+      // Target due south -> left side arc; only the left-arm ML fires.
+      {
+        facing: "nw",
+        targetPos: { col: 2, row: 5 },
+        expected: "leftSide",
+        expectedDir: "rightSide",
+        weaponIndex: 1,
+      },
+      // Target to the northwest -> front arc; any weapon fires. The attacker
+      // stands behind the nw-facing target, so the attack direction is rear.
+      {
+        facing: "nw",
+        targetPos: { col: 1, row: 4 },
+        expected: "front",
+        expectedDir: "rear",
+        weaponIndex: 4,
+      },
     ];
     for (const c of cases) {
       const units: UnitInit[] = [
@@ -605,11 +635,166 @@ describe("weapon attack phase", () => {
         },
       ];
       const state = startAttackTurn(createTestBattle([], units, true));
-      declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
+      if (c.weaponIndex === 0) {
+        // Rear arc: no front/side weapon may be declared into it.
+        for (const wi of [1, 2, 3, 4]) {
+          expect(() =>
+            declareAttacks(state, "hbk", [{ weaponIndex: wi, targetId: "enf" }]),
+          ).toThrow(/cannot fire into the rear arc/);
+        }
+        continue;
+      }
+      declareAttacks(state, "hbk", [{ weaponIndex: c.weaponIndex, targetId: "enf" }]);
       expect(state.units.hbk!.declaredAttacks).toEqual([
-        expect.objectContaining({ weaponIndex: 1, targetId: "enf", arc: c.expected }),
+        expect.objectContaining({
+          weaponIndex: c.weaponIndex,
+          targetId: "enf",
+          arc: c.expected,
+          attackDirection: c.expectedDir,
+        }),
       ]);
     }
+  });
+
+  it("blocks weapons whose mounting arc does not cover the target", () => {
+    // Target due south of a nw-facing attacker -> left side arc: the
+    // right-arm ML, head SL and right-torso AC/20 may not fire.
+    const units: UnitInit[] = [
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 4 },
+        facing: "nw",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 2, row: 5 },
+        facing: "nw",
+      },
+    ];
+    const state = startAttackTurn(createTestBattle([], units, true));
+    for (const wi of [2, 3, 4]) {
+      expect(() => declareAttacks(state, "hbk", [{ weaponIndex: wi, targetId: "enf" }])).toThrow(
+        /cannot fire into the leftSide arc/,
+      );
+    }
+    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
+    expect(state.units.hbk!.declaredAttacks[0]).toEqual(
+      expect.objectContaining({ weaponIndex: 1, arc: "leftSide" }),
+    );
+  });
+
+  it("resolves attack direction against the TARGET's facing (rear armor)", () => {
+    // Attacker faces the target squarely (front firing arc) but stands in
+    // the target's rear arc: hits roll on the front/rear column and drain
+    // the rear torso armor pool.
+    const units: UnitInit[] = [
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 4 },
+        facing: "se",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 3, row: 5 },
+        facing: "se", // facing away from the attacker
+      },
+    ];
+    const state = startAttackTurn(createTestBattle([], units, true));
+    declareAttacks(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }]);
+    const decl = state.units.hbk!.declaredAttacks[0]!;
+    expect(decl.arc).toBe("front");
+    expect(decl.attackDirection).toBe("rear");
+    const rearBefore = getUnit(state, "enf").damage.armorRear.centerTorso!;
+    const frontBefore = getUnit(state, "enf").damage.armor.centerTorso;
+    const isBefore = getUnit(state, "enf").damage.internalStructure.centerTorso;
+    // to-hit 12 (6,6) hits; location 7 (3,4) -> center torso; 5 ML damage
+    // strips the 4-point rear pool then 1 internal structure.
+    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4));
+    const enf = getUnit(state, "enf");
+    expect(rearBefore).toBe(4);
+    expect(enf.damage.armorRear.centerTorso!).toBe(0);
+    expect(enf.damage.internalStructure.centerTorso).toBe(isBefore - 1);
+    expect(enf.damage.armor.centerTorso).toBe(frontBefore);
+    const event = state.events.find((e) => e.kind === "attackResolved")!;
+    expect(event.kind === "attackResolved" && event.resolution.arc).toBe("rear");
+  });
+
+  it("rolls side-arc attacks on the side hit-location table", () => {
+    // Attacker in the target's LEFT side: location roll 4 -> left arm on the
+    // left-side column (front column would give right arm).
+    const units: UnitInit[] = [
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 4 },
+        facing: "se",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 3, row: 5 },
+        facing: "ne", // attacker lies in its left side arc
+      },
+    ];
+    const state = startAttackTurn(createTestBattle([], units, true));
+    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
+    const decl = state.units.hbk!.declaredAttacks[0]!;
+    expect(decl.arc).toBe("front");
+    expect(decl.attackDirection).toBe("leftSide");
+    // to-hit 12 (6,6) hits; location 4 (2,2) -> leftArm on the left-side table.
+    resolveAllAttacks(state, scriptedRng(6, 6, 2, 2));
+    const event = state.events.find((e) => e.kind === "attackResolved")!;
+    if (event.kind !== "attackResolved") throw new Error("bad event");
+    expect(event.resolution.groups).toEqual([{ location: "leftArm", damage: 5 }]);
+    expect(event.resolution.arc).toBe("leftSide");
+  });
+
+  it("lets rear-facing torso weapons fire into the rear arc only (AS7-D)", () => {
+    const units: UnitInit[] = [
+      {
+        id: "as7",
+        model: "AS7-D",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 4 },
+        facing: "nw", // target sits in the rear arc
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 3, row: 5 },
+        facing: "nw",
+      },
+    ];
+    const state = startAttackTurn(createTestBattle([], units, true));
+    // Front-firing weapons reject the rear-arc target.
+    expect(() => declareAttacks(state, "as7", [{ weaponIndex: 3, targetId: "enf" }])).toThrow(
+      /cannot fire into the rear arc/,
+    );
+    // The two rear-facing CT Medium Lasers (indices 1-2) bear.
+    declareAttacks(state, "as7", [
+      { weaponIndex: 1, targetId: "enf" },
+      { weaponIndex: 2, targetId: "enf" },
+    ]);
+    expect(state.units.as7!.declaredAttacks).toHaveLength(2);
   });
 
   it("validates LOS, range, target count, and auto-miss aborts", () => {
@@ -815,7 +1000,7 @@ describe("weapon attack phase", () => {
         team: 0,
         gunnery: 4,
         position: { col: 2, row: 4 },
-        facing: "se",
+        facing: "ne",
       },
       {
         id: "cda",
@@ -846,7 +1031,7 @@ describe("weapon attack phase", () => {
         team: 0,
         gunnery: 4,
         position: { col: 2, row: 4 },
-        facing: "se",
+        facing: "ne",
       },
       {
         id: "cda",
@@ -854,7 +1039,8 @@ describe("weapon attack phase", () => {
         team: 1,
         gunnery: 4,
         position: { col: 5, row: 4 },
-        facing: "nw",
+        // Faces the attacker so the attack direction is front (location 7 -> CT).
+        facing: "sw",
       },
     ];
     const setup = () => createTestBattle([], units, true);
@@ -895,7 +1081,7 @@ describe("streak missiles", () => {
       team: 0,
       gunnery: 4,
       position: { col: 2, row: 4 },
-      facing: "se",
+      facing: "ne",
     },
     {
       id: "enf",

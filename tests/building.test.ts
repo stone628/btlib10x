@@ -168,7 +168,7 @@ describe("battle building integration", () => {
           team: 0,
           gunnery: 4,
           position: { col: 2, row: 3 },
-          facing: "se",
+          facing: "ne",
         },
         {
           id: "b",

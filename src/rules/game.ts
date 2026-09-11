@@ -1,5 +1,5 @@
 import { roll2D6 } from "../core/dice.js";
-import { bearing, hexDistance, isAdjacent, sameHex } from "../core/hex.js";
+import { bearingExact, hexDistance, isAdjacent, sameHex } from "../core/hex.js";
 import {
   cellAt,
   costToClimb,
@@ -35,7 +35,12 @@ import {
   pooledShotsLeft,
   stripBinsInLocation,
 } from "./ammo.js";
-import { type Arc, classifyArc } from "./arcs.js";
+import {
+  type Arc,
+  classifyArcWithBoundary,
+  defenderArcChoice,
+  weaponCanFireIntoArc,
+} from "./arcs.js";
 import { type AttackResolution, resolveWeaponAttack } from "./attack.js";
 import {
   applyBuildingDamage,
@@ -97,9 +102,17 @@ export interface AttackDecl {
   readonly targetId: string;
   /** Request a rapid-fire (double-tap) volley; only valid on rapid-fire weapons. Defaults off. */
   readonly rapidFire?: boolean;
-  /** Firing arc of the target relative to the attacker's facing, classified at
-   *  declaration time. Drives the hit-location table and armor pool. */
+  /** Firing arc of the target relative to the ATTACKER's facing, classified at
+   *  declaration time. Drives per-weapon fire legality (TW p.105 weapon
+   *  arcs). On an exact arc-boundary line this is one arc of the pair; the
+   *  legality check accepts the weapon when either arc of the pair allows it. */
   readonly arc?: Arc;
+  /** Attack direction: the side of the TARGET the attack strikes (TW p.107),
+   *  classified from the target's facing at declaration time. Drives the
+   *  hit-location table column and the front/rear armor pool. Boundary-line
+   *  ambiguity resolves to the defender's dominant choice
+   *  (`defenderArcChoice`). */
+  readonly attackDirection?: Arc;
 }
 
 export type MoveStep =
@@ -738,6 +751,7 @@ export function declareAttacks(
 
   const def = getMechDefFor(unit);
   let targetId: string | null = null;
+  let attackDirection: Arc | undefined;
   let attackDistance = 0;
   let attackRangeBracket: string = "short";
   let attackRangeMod = 0;
@@ -782,9 +796,28 @@ export function declareAttacks(
     if (target.team === unit.team) throw new Error("Target must belong to another team");
 
     const dist = hexDistance(unit.position, target.position);
-    const b = bearing(unit.position, target.position);
+    const b = bearingExact(unit.position, target.position);
     if (b === null) throw new Error("Attacker and target share a hex");
-    arcs[decl.weaponIndex] = classifyArc(unit.facing, b);
+    // Attacker-side firing arc (weapon legality, TW p.105). On an exact
+    // boundary line the target counts as lying in both arcs of the pair.
+    const fireArc = classifyArcWithBoundary(unit.facing, b);
+    arcs[decl.weaponIndex] = fireArc.arc;
+    const rearFacing = mount.rearFacing === true;
+    const inArc =
+      weaponCanFireIntoArc(mount.location, rearFacing, fireArc.arc) ||
+      (fireArc.altArc !== null && weaponCanFireIntoArc(mount.location, rearFacing, fireArc.altArc));
+    if (!inArc) {
+      throw new Error(
+        `${mount.weapon} on ${unitId} cannot fire into the ${fireArc.arc} arc (target outside its firing arc)`,
+      );
+    }
+    // Target-side attack direction (TW p.107): which side of the target the
+    // attack strikes. Same for every weapon of this volley.
+    if (attackDirection === undefined) {
+      const back = bearingExact(target.position, unit.position)!;
+      const dir = classifyArcWithBoundary(target.facing, back);
+      attackDirection = defenderArcChoice(dir.arc, dir.altArc);
+    }
 
     const woodsPoints = losWoodsPointsBetween(state, unit.position, target.position);
     if (!losClear(state, unit.position, target.position, state.wrecks)) {
@@ -845,7 +878,11 @@ export function declareAttacks(
 
   unit.declaredAttacks = decls.map((decl) => {
     const arc = arcs[decl.weaponIndex];
-    return arc !== undefined ? { ...decl, arc } : { ...decl };
+    return {
+      ...decl,
+      ...(arc !== undefined ? { arc } : {}),
+      ...(attackDirection !== undefined ? { attackDirection } : {}),
+    };
   });
   unit.firedTargetId = targetId;
   state.actedThisPhase.push(unitId);
@@ -902,7 +939,14 @@ function resolveUnitAttacks(
       partialCoverMod: partialCoverMod(state, unit, target),
       interveningTerrains: interveningTerrains(state, unit.position, target.position),
       distance: hexDistance(unit.position, target.position),
-      ...(decl.arc !== undefined ? { arc: decl.arc } : {}),
+      // Resolution keys hit location and armor pool off the attack direction
+      // (side of the target struck); the attacker-side firing arc only
+      // gatekept the declaration.
+      ...(decl.attackDirection !== undefined
+        ? { arc: decl.attackDirection }
+        : decl.arc !== undefined
+          ? { arc: decl.arc }
+          : {}),
       weapon: weapon.name,
       ammoExhausted,
       shots,
