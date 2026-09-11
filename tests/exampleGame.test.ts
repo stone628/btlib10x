@@ -30,7 +30,7 @@ function setup(): BattleState {
       model: "WVR-6R",
       team: 0,
       gunnery: 4,
-      position: { col: 3, row: 4 },
+      position: { col: 3, row: 5 },
       facing: "se",
     },
     {

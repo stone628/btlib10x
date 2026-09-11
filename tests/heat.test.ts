@@ -276,7 +276,7 @@ describe("game integration: movement heat", () => {
     const state = hbkVsEnf();
     startMovementTurn(state);
     declareMove(state, "hbk", "walk");
-    executeMove(state, "hbk", [{ kind: "enter", to: { col: 1, row: 3 } }]);
+    executeMove(state, "hbk", [{ kind: "enter", to: { col: 1, row: 4 } }]);
     const hbk = getUnit(state, "hbk");
     expect(hbk.heat).toBe(1);
     expect(
@@ -288,7 +288,7 @@ describe("game integration: movement heat", () => {
     const state = hbkVsEnf();
     startMovementTurn(state);
     declareMove(state, "hbk", "run");
-    executeMove(state, "hbk", [{ kind: "enter", to: { col: 3, row: 4 } }]);
+    executeMove(state, "hbk", [{ kind: "enter", to: { col: 3, row: 5 } }]);
     expect(getUnit(state, "hbk").mpSpent).toBe(1);
     expect(getUnit(state, "hbk").heat).toBe(2);
   });

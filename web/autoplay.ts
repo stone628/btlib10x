@@ -45,7 +45,7 @@ export function resetAutoplayState(s: S.Session): void {
     unitForwarded = {};
   } else {
     if (currApp !== s.app) {
-      currApp = s.app
+      currApp = s.app;
       currBattlePhase = null;
     }
   }
@@ -65,7 +65,7 @@ export function flushAutoPlayCommand(): string[] {
 }
 
 /** Pick the best 1-step landing (F toward enemy, B away) and queue a place command. */
-function queueStepToward(s: S.Session, fragment: "F" | "B",): void {
+function queueStepToward(s: S.Session, fragment: "F" | "B"): void {
   const candidate = s.moveCandidate;
   if (candidate === null) return;
   const oneStep = candidate.revealed.filter((l) => l.path.length === 1 && l.path[0] === fragment);

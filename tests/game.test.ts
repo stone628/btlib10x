@@ -33,7 +33,7 @@ function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
       model: "ENF-4R",
       team: 1,
       gunnery: 4,
-      position: { col: 3, row: 4 },
+      position: { col: 3, row: 5 },
       facing: "nw",
     },
   ];
@@ -139,22 +139,22 @@ describe("movement phase", () => {
         facing: "nw",
       },
     ];
-    const setup = createTestBattle([{ col: 3, row: 4, type: "lightWoods" }], units, true);
+    const setup = createTestBattle([{ col: 3, row: 5, type: "lightWoods" }], units, true);
     const state = startMovementTurn(setup);
     declareMove(state, "hbk", "walk");
     executeMove(state, "hbk", [
-      { kind: "enter", to: { col: 3, row: 4 } },
+      { kind: "enter", to: { col: 3, row: 5 } },
       { kind: "turn", facings: 1 },
     ]);
     const hbk = getUnit(state, "hbk");
     expect(hbk.mpSpent).toBe(3); // 1 turn + 2 light woods
-    expect(hbk.position).toEqual({ col: 3, row: 4 });
+    expect(hbk.position).toEqual({ col: 3, row: 5 });
   });
 
   it("rejects running backward", () => {
     const state = startMovementTurn(hbkVsEnf());
     declareMove(state, "hbk", "run");
-    expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: 1, row: 3 } }])).toThrow(
+    expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: 1, row: 4 } }])).toThrow(
       /backward/,
     );
   });
@@ -162,7 +162,7 @@ describe("movement phase", () => {
   it("rejects ground steps that are neither straight ahead nor straight back", () => {
     const state = startMovementTurn(hbkVsEnf());
     declareMove(state, "hbk", "walk");
-    // Facing "se" from (0,2): south (0,3) is adjacent but not the forward or
+    // Facing "se" from (2,4): south (2,5) is adjacent but not the forward or
     // backward hexside -> illegal without turning first.
     expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: 2, row: 5 } }])).toThrow(
       /straight ahead or straight back/,
@@ -172,16 +172,16 @@ describe("movement phase", () => {
   it("allows walking straight backward", () => {
     const state = startMovementTurn(hbkVsEnf());
     declareMove(state, "hbk", "walk");
-    executeMove(state, "hbk", [{ kind: "enter", to: { col: 1, row: 3 } }]);
+    executeMove(state, "hbk", [{ kind: "enter", to: { col: 1, row: 4 } }]);
     const hbk = getUnit(state, "hbk");
-    expect(hbk.position).toEqual({ col: 1, row: 3 });
+    expect(hbk.position).toEqual({ col: 1, row: 4 });
     expect(hbk.mpSpent).toBe(1);
   });
 
   it("rejects a backward step that changes level", () => {
-    const state = startMovementTurn(hbkVsEnf([{ col: 1, row: 3, type: "clear", level: 1 }]));
+    const state = startMovementTurn(hbkVsEnf([{ col: 1, row: 4, type: "clear", level: 1 }]));
     declareMove(state, "hbk", "walk");
-    expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: 1, row: 3 } }])).toThrow(
+    expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: 1, row: 4 } }])).toThrow(
       /cannot change level/,
     );
   });
@@ -269,7 +269,7 @@ describe("movement phase", () => {
     const state = startMovementTurn(setup);
     declareMove(state, "hbk", "walk");
     executeMove(state, "hbk", [
-      { kind: "enter", to: { col: 3, row: 4 } }, // forward (se)
+      { kind: "enter", to: { col: 3, row: 5 } }, // forward (se)
       { kind: "turn", facings: 2 }, // now facing sw
       { kind: "enter", to: { col: 2, row: 5 } }, // new forward (sw)
     ]);
@@ -294,15 +294,15 @@ describe("movement phase", () => {
         model: "ENF-4R",
         team: 1,
         gunnery: 4,
-        position: { col: 3, row: 4 },
+        position: { col: 3, row: 5 },
         facing: "nw",
       },
     ];
     const setup = createTestBattle([], units, true);
     const state = startMovementTurn(setup);
     declareMove(state, "hbk", "walk");
-    expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: 3, row: 4 } }])).toThrow(
-      /end movement in 3,4: occupied by enf/,
+    expect(() => executeMove(state, "hbk", [{ kind: "enter", to: { col: 3, row: 5 } }])).toThrow(
+      /end movement in 3,5: occupied by enf/,
     );
   });
 
@@ -328,14 +328,14 @@ describe("movement phase", () => {
     const setup = createTestBattle([], units, true);
     const state = startMovementTurn(setup);
     declareMove(state, "hbk", "walk"); // walking 4
-    // Straight southeast line: even columns step se across at the same row,
-    // odd columns step one row down, always one col over.
+    // Straight southeast line: even columns step se down to the next row,
+    // odd columns step se across at the same row, always one col over.
     const steps = [
-      { col: 3, row: 4 },
+      { col: 3, row: 5 },
       { col: 4, row: 5 },
-      { col: 5, row: 5 },
+      { col: 5, row: 6 },
       { col: 6, row: 6 },
-      { col: 7, row: 6 },
+      { col: 7, row: 7 },
     ].map((to) => ({ kind: "enter" as const, to }));
     expect(() => executeMove(state, "hbk", steps)).toThrow(/budget/);
   });
@@ -384,10 +384,10 @@ describe("movement phase", () => {
     // Hop through the enemy-occupied hex (allowed while jumping) and land beyond it.
     executeMove(state, "grf", [
       { kind: "enter", to: { col: 3, row: 4 } },
-      { kind: "enter", to: { col: 4, row: 5 } },
+      { kind: "enter", to: { col: 4, row: 4 } },
     ]);
     const grf = getUnit(state, "grf");
-    expect(grf.position).toEqual({ col: 4, row: 5 });
+    expect(grf.position).toEqual({ col: 4, row: 4 });
     expect(grf.mpSpent).toBe(2);
     expect(grf.jumpedThisTurn).toBe(true);
   });
@@ -577,7 +577,7 @@ describe("weapon attack phase", () => {
       expected: string;
     }> = [
       // Facing northwest; target east-southeast -> rear arc.
-      { facing: "nw", targetPos: { col: 3, row: 4 }, expected: "rear" },
+      { facing: "nw", targetPos: { col: 3, row: 5 }, expected: "rear" },
       // Target to the northeast -> right side arc.
       { facing: "nw", targetPos: { col: 3, row: 3 }, expected: "rightSide" },
       // Target due south -> left side arc.

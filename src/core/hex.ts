@@ -2,34 +2,28 @@ import type { Facing, HexCoord } from "./types.js";
 import { FACINGS } from "./types.js";
 
 /**
- * Flat-top hexes in column-offset storage. The layout matches the renderer:
- * even columns sit half a hex higher than odd columns (odd columns are
- * lowered). Every hex's six sides face n / ne / se / s / sw / nw per the
- * rulebook diagrams (there is no east/west hexside). Diagonal deltas shift by
- * column parity as specified below.
+ * Flat-top hexes in column-offset storage. Even columns sit half a hex lower
+ * than odd columns (odd columns are raised), matching the renderer's
+ * `col % 2 === 1 ? 0 : STAGGER` stagger. The board is 1-based, so (1, 1) is
+ * the top-left hex and the SE neighbor of (1, 1) is (2, 1). Every hex's six
+ * sides face n / ne / se / s / sw / nw per the rulebook diagrams (there is no
+ * east/west hexside). The cube deltas below are parity-independent; the
+ * offset (col, row) deltas flip with column parity, but cube space collapses
+ * that into a single mapping.
  */
-const EVEN_COL_DELTAS: Record<Facing, readonly [number, number]> = {
-  n: [0, -1],
-  s: [0, +1],
-  ne: [+1, -1],
-  se: [+1, 0],
-  nw: [-1, -1],
-  sw: [-1, 0],
-};
-
-const ODD_COL_DELTAS: Record<Facing, readonly [number, number]> = {
-  n: [0, -1],
-  s: [0, +1],
-  ne: [+1, 0],
-  se: [+1, +1],
-  nw: [-1, 0],
-  sw: [-1, +1],
+const FACING_CUBE_DELTAS: Record<Facing, readonly [number, number, number]> = {
+  n: [0, +1, -1],
+  s: [0, -1, +1],
+  ne: [+1, 0, -1],
+  se: [+1, -1, 0],
+  sw: [-1, 0, +1],
+  nw: [-1, +1, 0],
 };
 
 export function neighbor(hex: HexCoord, facing: Facing): HexCoord {
-  const deltas = hex.col % 2 === 0 ? EVEN_COL_DELTAS : ODD_COL_DELTAS;
-  const pair = deltas[facing]!;
-  return { col: hex.col + pair[0], row: hex.row + pair[1] };
+  const cube = offsetToCube(hex);
+  const [dx, dy, dz] = FACING_CUBE_DELTAS[facing];
+  return cubeToOffset(cube.x + dx, cube.y + dy, cube.z + dz);
 }
 
 export function neighbors(hex: HexCoord): HexCoord[] {

@@ -4,25 +4,27 @@ import { cellAt, type HexGrid } from "../src/core/terrain.js";
 import type { HexCell } from "../src/core/types.js";
 
 describe("hex geometry", () => {
-  it("computes odd-q neighbors on flat-top hexes", () => {
-    // even columns raised (matching the renderer stagger): an even-col 'ne'
-    // goes one col over and one row up.
+  it("computes even-q neighbors on flat-top hexes (even cols lowered)", () => {
+    // even columns sit half a hex lower (matching the renderer stagger). An
+    // even-col 'ne' steps one col over at the same row; 'se' steps one col
+    // over and one row down.
     const evenCol = { col: 4, row: 4 };
     expect(sameHex(neighbor(evenCol, "n"), { col: 4, row: 3 })).toBe(true);
     expect(sameHex(neighbor(evenCol, "s"), { col: 4, row: 5 })).toBe(true);
-    expect(sameHex(neighbor(evenCol, "ne"), { col: 5, row: 3 })).toBe(true);
-    expect(sameHex(neighbor(evenCol, "se"), { col: 5, row: 4 })).toBe(true);
-    expect(sameHex(neighbor(evenCol, "nw"), { col: 3, row: 3 })).toBe(true);
-    expect(sameHex(neighbor(evenCol, "sw"), { col: 3, row: 4 })).toBe(true);
+    expect(sameHex(neighbor(evenCol, "ne"), { col: 5, row: 4 })).toBe(true);
+    expect(sameHex(neighbor(evenCol, "se"), { col: 5, row: 5 })).toBe(true);
+    expect(sameHex(neighbor(evenCol, "nw"), { col: 3, row: 4 })).toBe(true);
+    expect(sameHex(neighbor(evenCol, "sw"), { col: 3, row: 5 })).toBe(true);
 
-    // odd columns lowered: an odd-col 'ne' goes one col over at the same row.
+    // odd columns sit half a hex higher. An odd-col 'ne' steps one col over
+    // and one row up; 'se' steps one col over at the same row.
     const oddCol = { col: 5, row: 4 };
     expect(sameHex(neighbor(oddCol, "n"), { col: 5, row: 3 })).toBe(true);
     expect(sameHex(neighbor(oddCol, "s"), { col: 5, row: 5 })).toBe(true);
-    expect(sameHex(neighbor(oddCol, "ne"), { col: 6, row: 4 })).toBe(true);
-    expect(sameHex(neighbor(oddCol, "se"), { col: 6, row: 5 })).toBe(true);
-    expect(sameHex(neighbor(oddCol, "nw"), { col: 4, row: 4 })).toBe(true);
-    expect(sameHex(neighbor(oddCol, "sw"), { col: 4, row: 5 })).toBe(true);
+    expect(sameHex(neighbor(oddCol, "ne"), { col: 6, row: 3 })).toBe(true);
+    expect(sameHex(neighbor(oddCol, "se"), { col: 6, row: 4 })).toBe(true);
+    expect(sameHex(neighbor(oddCol, "nw"), { col: 4, row: 3 })).toBe(true);
+    expect(sameHex(neighbor(oddCol, "sw"), { col: 4, row: 4 })).toBe(true);
   });
 
   it("measures distance in hexes", () => {
