@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { suggestFireTargets } from "../src/rules/fireability.js";
+import { bearingExact, hexDistance, neighbor } from "../src/core/hex.js";
+import { classifyArcWithBoundary } from "../src/rules/arcs.js";
+import { bestFireTarget, suggestFireTargets } from "../src/rules/fireability.js";
 import type { BattleState, TerrainHexDef, UnitInit } from "../src/rules/game.js";
 import { advancePhase, rollInitiativePhase } from "../src/rules/game.js";
 import { createTestBattle, scriptedRng } from "./helpers.js";
@@ -450,5 +452,105 @@ describe("suggestFireTargets", () => {
     const reasons = blockedReasons(state, "hbk", "enf");
     // 30 hexes total -> target +6, long range +4, gunnery 4 = 14 -> auto-miss.
     expect(reasons.filter((r) => r === "autoMiss").length).toBeGreaterThan(0);
+  });
+
+  it("sorts targets best-first so first entry holds most firepower", () => {
+    const origin = { col: 5, row: 5 };
+    // Insert worst-first: rear (0 weapons), right side (arm only), front (all).
+    const units: UnitInit[] = [
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: origin,
+        facing: "n",
+      },
+      {
+        id: "rear",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: neighbor(origin, "s"),
+        facing: "n",
+      },
+      {
+        id: "side",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: neighbor(origin, "se"),
+        facing: "n",
+      },
+      {
+        id: "front",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: neighbor(origin, "n"),
+        facing: "n",
+      },
+    ];
+    const state = startAttackTurn(createTestBattle([], units, false));
+    const sugg = suggestFireTargets(state, "hbk");
+    expect(sugg.targets.map((t) => t.targetId)).toEqual(["front", "side", "rear"]);
+    expect(sugg.targets[0]!.weapons).toHaveLength(4);
+    // Right side arc: only right-arm Medium Laser (weapon 2) bears.
+    expect(sugg.targets[1]!.arc).toBe("rightSide");
+    expect(sugg.targets[1]!.weapons.map((w) => w.weaponIndex)).toEqual([2]);
+    expect(sugg.targets[2]!.weapons).toHaveLength(0);
+    expect(bestFireTarget(sugg)?.targetId).toBe("front");
+  });
+
+  it("records per-weapon firing arc on boundary lines", () => {
+    const origin = { col: 5, row: 5 };
+    // Find hex along exact arc-boundary line with side/rear pair: no HBK
+    // weapon fires into rear, so matching side arm must record side arc
+    // (primary or alternate of pair).
+    let boundaryHex: { col: number; row: number } | null = null;
+    for (let col = 2; col <= 8 && boundaryHex === null; col++) {
+      for (let row = 2; row <= 8; row++) {
+        const hex = { col, row };
+        if (hex.col === origin.col && hex.row === origin.row) continue;
+        if (hexDistance(origin, hex) > 3) continue; // keep Medium Lasers in range
+        const b = bearingExact(origin, hex);
+        if (b === null || b.boundary === null) continue;
+        const cls = classifyArcWithBoundary("n", b);
+        const pair = [cls.arc, cls.altArc];
+        if (pair.includes("rear") && (pair.includes("leftSide") || pair.includes("rightSide"))) {
+          boundaryHex = hex;
+          break;
+        }
+      }
+    }
+    expect(boundaryHex).not.toBeNull();
+    const units: UnitInit[] = [
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: origin,
+        facing: "n",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: boundaryHex!,
+        facing: "s",
+      },
+    ];
+    const state = startAttackTurn(createTestBattle([], units, false));
+    const sugg = suggestFireTargets(state, "hbk");
+    const enf = sugg.targets.find((t) => t.targetId === "enf")!;
+    const pair = [enf.arc, enf.altArc];
+    expect(pair).toContain("rear");
+    const side = pair.includes("leftSide") ? "leftSide" : "rightSide";
+    // Only matching side arm bears; rear impossible without rear mounts.
+    const sideArmIndex = side === "leftSide" ? 1 : 2;
+    expect(enf.weapons.map((w) => w.weaponIndex)).toEqual([sideArmIndex]);
+    expect(enf.weapons[0]!.arc).toBe(side);
   });
 });

@@ -1,6 +1,8 @@
 export { roll2D6, rollD6 } from "./core/dice.js";
 export {
+  type Bearing,
   bearing,
+  bearingExact,
   hexDistance,
   isAdjacent,
   lineHexes,
