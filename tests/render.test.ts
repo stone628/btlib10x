@@ -173,7 +173,6 @@ describe("console renderer", () => {
     expect(out.split("\n").length).toBe(10 * 4 + 2 + 1); // rows*stride + stagger + closing border
     expect(out).toContain(`${GRID_GLYPHS.edgeNW}0303${GRID_GLYPHS.edgeNE}`);
     expect(out).toContain(`${GRID_GLYPHS.edgeNW}1109${GRID_GLYPHS.edgeNE}`);
-    console.log(out);
   });
 
   it("stamps overlay glyphs into empty hexes but units win", () => {

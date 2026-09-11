@@ -107,7 +107,7 @@
   broken at random through the injected RNG. Crit hits now detonate only
   the struck bin (remaining shots × damage-per-shot straight to IS with a
   cascade on depletion), bins in blown/destroyed locations are stripped,
-  and empty bins soak. `shotsLeft` is a derived per-weapon sum. Wired
+  and empty bins soak. Per-weapon totals derive live from the bins. Wired
   through `game.ts`/`attack.ts`/`critical.ts`; web CLI `ammo` command,
   record-sheet policy line, and per-bin `(n left)` markers; i18n en+kr.
 - **Critical hit table** — TW determining table (2D6 12 = blow-off) + 1D6/2D6

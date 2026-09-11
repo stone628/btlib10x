@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getMechDefFor } from "../src/data/index.js";
 import { isNominal } from "../src/index.js";
+import { ammoWeaponTotals } from "../src/rules/ammo.js";
 import { canFireFromLocation } from "../src/rules/damage.js";
 import { en } from "../web/i18n/en.js";
 import type { LocaleId, MessageKey } from "../web/i18n/index.js";
@@ -34,8 +35,12 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
         const weaponIndex = Number(key);
         if (unit.jammedWeapons.includes(weaponIndex)) return;
         if (!canFireFromLocation(unit.phaseStartDamage, mount.location)) return;
-        // Ammo weapons skip when dry (shotsLeft key disappears at zero).
-        if (mount.shots !== undefined && (unit.shotsLeft[weaponIndex] ?? 0) < 1) return;
+        // Ammo weapons skip when dry (per-weapon total hits zero).
+        if (
+          mount.shots !== undefined &&
+          (ammoWeaponTotals(def, unit.ammoBins)[weaponIndex] ?? 0) < 1
+        )
+          return;
         S.queueFire(s, { weaponIndex, targetId: enemy });
       });
       S.commitFire(s);

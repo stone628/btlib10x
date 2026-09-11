@@ -324,7 +324,7 @@ Side-torso IS death blows off the arm; `TRANSFER_INWARD` is exported.
 
 `resolveCriticalHits({
   rng; def; source: { location; damage };
-  critSlotsDestroyed; destroyedWeapons; damage; shotsLeft;
+  critSlotsDestroyed; destroyedWeapons; damage; ammoBins;
 }): CriticalResolution`
 
 Runs the TW Determining Critical Hits table (2D6: 2-7 none, 8-9 one, 10-11 two,
@@ -339,7 +339,7 @@ movement.
 
 `CriticalResolution` exposes `rows` (the individual `CriticalEffect`s),
 `determiningRoll`, and the resulting `critSlotsDestroyed` / `destroyedWeapons` /
-`damage` / `blownOffArms` / `killed` / `shotsLeft`.
+`damage` / `blownOffArms` / `killed` / `ammoBins`.
 
 `effectiveMovement(def, critSlotsDestroyed): EffectiveMovement` — computes
 walking/running/jumping after leg-actuator (−1 walk each), hip (halves walking),
@@ -451,7 +451,7 @@ interface UnitState {
   id; model; team; gunnery; position; facing;
   damage: UnitDamageState;            // updated as soon as damage lands
   phaseStartDamage: UnitDamageState;  // snapshot for weapon usability this phase
-  shotsLeft: Record<number, number>;  // per 1-based weapon index
+  ammoBins: AmmoBins;  // per ammo-bin object, keyed "location:slotIndex"
   jammedWeapons: number[];
   critSlotsDestroyed: Record<Location, boolean[]>;
   destroyedWeapons: number[];

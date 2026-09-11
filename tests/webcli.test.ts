@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getMapDef, getMechDefFor } from "../src/data/index.js";
 import { isNominal } from "../src/index.js";
+import { ammoWeaponTotals } from "../src/rules/ammo.js";
 import { canFireFromLocation } from "../src/rules/damage.js";
 import {
   createBoardModel,
@@ -35,8 +36,9 @@ function fireEverything(s: S.Session, enemy: string): void {
     const weaponIndex = Number(key);
     if (unit.jammedWeapons.includes(weaponIndex)) return;
     if (!canFireFromLocation(unit.phaseStartDamage, mount.location)) return;
-    // Ammo weapons skip when dry (shotsLeft key disappears at zero).
-    if (mount.shots !== undefined && (unit.shotsLeft[weaponIndex] ?? 0) < 1) return;
+    // Ammo weapons skip when dry (per-weapon total hits zero).
+    if (mount.shots !== undefined && (ammoWeaponTotals(def, unit.ammoBins)[weaponIndex] ?? 0) < 1)
+      return;
     S.queueFire(s, { weaponIndex, targetId: enemy });
   });
 }
@@ -624,7 +626,13 @@ describe("attack", () => {
     const enemy = actor === "hunchy" ? "cicada" : "hunchy";
     expect(run(s, `sheet ${actor}`).join("\n")).toMatch(/#1 .+S\d+\/\s*M\d+\/\s*L\d+/);
 
-    const shotsBefore = actor === "hunchy" ? (s.battle!.units.hunchy!.shotsLeft[4] ?? 0) : null;
+    const shotsBefore =
+      actor === "hunchy"
+        ? (ammoWeaponTotals(
+            getMechDefFor(s.battle!.units.hunchy!),
+            s.battle!.units.hunchy!.ammoBins,
+          )[4] ?? 0)
+        : null;
     expect(run(s, `fire ${enemy} 4`).join("\n")).toContain("queued");
     expect(run(s, `fire ${enemy} 4`)[0]).toMatch(
       /error: Weapon #4 may only be declared once per turn/,
@@ -643,7 +651,12 @@ describe("attack", () => {
     expect(out).toMatch(/=== resolving declared attacks ===/);
     expect(out).toMatch(/=== attack damage resolved ===/);
     if (shotsBefore !== null) {
-      expect(s.battle!.units.hunchy!.shotsLeft[4]).toBe(shotsBefore - 1);
+      expect(
+        ammoWeaponTotals(
+          getMechDefFor(s.battle!.units.hunchy!),
+          s.battle!.units.hunchy!.ammoBins,
+        )[4],
+      ).toBe(shotsBefore - 1);
     }
   });
 });
@@ -728,7 +741,10 @@ describe("full game", () => {
           const weaponIndex = Number(key);
           if (unit.jammedWeapons.includes(weaponIndex)) return;
           if (!canFireFromLocation(unit.phaseStartDamage, mount.location)) return;
-          if (unit.shotsLeft[weaponIndex] !== undefined && (unit.shotsLeft[weaponIndex] ?? 0) < 1)
+          if (
+            mount.shots !== undefined &&
+            (ammoWeaponTotals(def, unit.ammoBins)[weaponIndex] ?? 0) < 1
+          )
             return;
           run(s, `fire ${enemy} ${weaponIndex}`);
         });

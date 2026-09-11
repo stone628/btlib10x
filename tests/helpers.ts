@@ -1,5 +1,11 @@
-import type { HexCoord, Rng, TerrainType } from "../src/core/types.js";
-import { createBattle, getMapDefFor, getMechDefFor, reachableLandings } from "../src/index.js";
+import type { HexCoord, Location, Rng, TerrainType } from "../src/core/types.js";
+import {
+  type AmmoBins,
+  createBattle,
+  getMapDefFor,
+  getMechDefFor,
+  reachableLandings,
+} from "../src/index.js";
 import type { BattleState, TerrainHexDef, UnitInit } from "../src/rules/game.js";
 import { advancePhase } from "../src/rules/game.js";
 import { runChunks } from "../web/cli.js";
@@ -142,4 +148,15 @@ export function reachableInfo(s: Session): BoardRenderInfo | null {
     .filter((u) => !u.removed)
     .map((u) => createBoardRenderUnit(u));
   return { map, units, reachable: { team: actor.team, revealed: landings } };
+}
+
+export function overrideAmmoBin(
+  src: AmmoBins,
+  location: Location,
+  slotIndex: number,
+  shots: number,
+) {
+  const id = `${location}:${slotIndex}`;
+  const prev = src[id]!;
+  src[id] = { ...prev, shots };
 }

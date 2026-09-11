@@ -29,7 +29,7 @@ function freshFlags(def = getMechDef("HBK-4G")!) {
 }
 
 function freshAmmo(def = getMechDef("HBK-4G")!) {
-  return loadAmmoBins(def).bins;
+  return loadAmmoBins(def);
 }
 
 function freshDamage(def = getMechDef("HBK-4G")!): UnitDamageState {

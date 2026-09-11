@@ -181,7 +181,7 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   `core` the reverse priority, `spread` fullest-bin-first, `leastFirst`
   emptiest-first; equal-priority bins are chosen at random. Declared
   `shots` pool across all mounts and bins of a weapon name (remainder one
-  per bin); `shotsLeft` is the derived per-weapon sum. Streak ammo depletes
+  per bin); per-weapon totals derive live from the bins. Streak ammo depletes
   only on hit (miss = launcher never fired).
 - **Battle flow** — initiative roll, sequential movement phase, weapon
   attack phase, end-phase kill sweep, victory check, rematch.

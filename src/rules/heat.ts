@@ -22,7 +22,7 @@
 import { LOCATIONS, type Location, type MoveMode } from "../core/types.js";
 import { getAmmoDefFor } from "../data/ammo.schema.js";
 import type { ResolvedMechDef } from "../data/mech.schema.js";
-import { type AmmoBin, type AmmoBinId, collectAmmoBins } from "./ammo.js";
+import { type AmmoBin, type AmmoBinId, type AmmoBins, collectAmmoBins } from "./ammo.js";
 import { ammoDamagePerShot, type EffectiveMovement } from "./critical.js";
 import { maxMovePoints } from "./movement.js";
 
@@ -266,7 +266,7 @@ export interface LargestAmmoBin {
  */
 export function largestAmmoBin(
   def: ResolvedMechDef,
-  ammoBins: Readonly<Record<AmmoBinId, number>>,
+  ammoBins: Readonly<AmmoBins>,
 ): LargestAmmoBin | null {
   const byMount = new Map<number, AmmoBin[]>();
   for (const bin of collectAmmoBins(def)) {
@@ -278,7 +278,7 @@ export function largestAmmoBin(
   for (const bins of byMount.values()) {
     const first = bins[0]!;
     if (!getAmmoDefFor(first).explosive) continue;
-    const shotsRemaining = bins.reduce((s, b) => s + (ammoBins[b.id] ?? 0), 0);
+    const shotsRemaining = bins.reduce((s, b) => s + (ammoBins[b.id]?.shots ?? 0), 0);
     if (shotsRemaining <= 0) continue;
     const damagePerShot = ammoDamagePerShot(first);
     const candidate: LargestAmmoBin = {
