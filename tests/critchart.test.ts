@@ -27,8 +27,7 @@ describe("critical slot chart (sheet)", () => {
     expect(text).toContain("  1 AC/20 [-]");
     expect(text).toContain(" 10 AC/20 [-]");
     // The weapons list flag for a crit-destroyed mount shows [-], same as the chart.
-    expect(text).toContain("#4 AC/20");
-    expect(text).toContain("[-]");
+    expect(text).toContain("[-] AC/20");
     // Shoulder slot (slot 1 of left arm) is a structure — untouched.
     const laLine = text.split("\n").find((l) => l.includes(" 1 Shoulder"));
     expect(laLine).not.toContain("[-]");

@@ -76,16 +76,16 @@ export type { BoardRenderer } from "./render.js";
 export type Chunk =
   | { readonly kind: "lines"; lines: readonly string[]; cls?: string }
   | {
-      readonly kind: "board";
-      readonly info: BoardRenderInfo;
-      readonly renderer: BoardRenderer | null;
-    }
+    readonly kind: "board";
+    readonly info: BoardRenderInfo;
+    readonly renderer: BoardRenderer | null;
+  }
   | { readonly kind: "columns"; columns: readonly (readonly string[])[] }
   | {
-      readonly kind: "collapsible";
-      readonly summary: string;
-      readonly chunks: readonly Chunk[];
-    };
+    readonly kind: "collapsible";
+    readonly summary: string;
+    readonly chunks: readonly Chunk[];
+  };
 
 export function buildLinesChunk(lines: readonly string[], cls?: string): Chunk {
   return cls ? { kind: "lines", lines: lines, cls: cls } : { kind: "lines", lines: lines };
@@ -439,8 +439,8 @@ export function boardChunk(s: Session): Chunk {
   const map = getMapDefFor(s.setup);
   const units = s.battle
     ? Object.values(s.battle.units)
-        .filter((u) => !u.removed)
-        .map((u) => createBoardRenderUnit(u))
+      .filter((u) => !u.removed)
+      .map((u) => createBoardRenderUnit(u))
     : s.setup.roster.map((u) => createBoardRenderUnit(u));
   return buildBoardChunk({ map, units, reachable: null });
 }
@@ -686,9 +686,9 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
       explosion:
         avoid === 0
           ? i18n(locale, "sheet.ammoNoExplosion", {
-              heat: unit.heat,
-              threshold: AMMO_EXPLOSION_START_HEAT,
-            })
+            heat: unit.heat,
+            threshold: AMMO_EXPLOSION_START_HEAT,
+          })
           : i18n(locale, "sheet.ammoExplosion", { heat: unit.heat, avoid, threshold }),
     });
   }
@@ -1260,10 +1260,10 @@ function sheetGunneryLine(gunnery: number, heat: number, locale: LocaleId): stri
   const { toHit, threshold } = toHitHeatModifierWithThreshold(heat);
   return toHit > 0
     ? i18n(locale, "sheet.gunneryLineHeat", {
-        gunnery: gunneryLabel(locale, gunnery),
-        toHit,
-        threshold,
-      })
+      gunnery: gunneryLabel(locale, gunnery),
+      toHit,
+      threshold,
+    })
     : i18n(locale, "sheet.gunneryLine", { gunnery: gunneryLabel(locale, gunnery) });
 }
 
@@ -1525,9 +1525,9 @@ function fireWeaponTable(locale: LocaleId, weapons: readonly FireWeapon[]): Chun
     String(w.heat),
     w.cluster !== undefined
       ? `${w.expectedDamage} (${i18n(locale, "fireSuggestion.cluster", {
-          shots: String(w.cluster.shots),
-          per: String(w.cluster.perMissile),
-        })})`
+        shots: String(w.cluster.shots),
+        per: String(w.cluster.perMissile),
+      })})`
       : String(w.expectedDamage),
     w.shots !== null ? `${w.shots}` : "",
   ]);
@@ -1561,14 +1561,6 @@ export function fireSuggestionChunks(locale: LocaleId, sugg: FireSuggestion): Ch
     if (target.blocked.length > 0) {
       const blockedLines: string[] = [];
       for (const b of target.blocked) {
-        // chunks.push(
-        //   buildLinesChunk(
-        //     [
-        //       `${i18n(locale, "fireSuggestion.blocked")}: #${b.weaponIndex} ${b.weapon} — ${i18n(locale, BLOCKER_LABEL[b.reason])}`,
-        //     ],
-        //     "hint",
-        //   ),
-        // );
         blockedLines.push(
           `${i18n(locale, "fireSuggestion.blocked")}: #${b.weaponIndex} ${b.weapon} — ${i18n(locale, BLOCKER_LABEL[b.reason])}`,
         );
@@ -2136,7 +2128,8 @@ function buildMountInfos(
     readonly destroyed: boolean;
   },
 ): WeaponMountInfo[] {
-  const poolMax = liveBins !== null ? null : loadAmmoBins(def).bins;
+  // const poolMax = liveBins !== null ? null : loadAmmoBins(def).bins;
+  const poolMax = loadAmmoBins(def).bins;
   const designPool = poolMax !== null ? binPoolByWeaponName(def, poolMax) : null;
   const livePool = liveBins !== null ? binPoolByWeaponName(def, liveBins) : null;
   const entries = Object.entries(def.weapons);
@@ -2180,18 +2173,17 @@ function weaponMountLines(locale: LocaleId, mounts: readonly WeaponMountInfo[]):
             ? i18n(locale, "sheet.shotsRange", { curr: mount.shotsLeft, max: mount.shotsMax })
             : i18n(locale, "sheet.shotsDesign", { max: mount.shotsMax })
         : null;
-    const flags = [
-      shots,
-      mount.jammed ? i18n(locale, "sheet.jammed") : null,
-      mount.destroyed ? i18n(locale, "sheet.destroyed") : null,
-    ].filter((x) => x !== null);
-    const index = `#${i + 1}`.padStart(3);
+    const flags = [shots, mount.jammed ? i18n(locale, "sheet.jammed") : null].filter(
+      (x) => x !== null,
+    );
+    const index = (mount.destroyed ? i18n(locale, "sheet.destroyed") : `#${i + 1}`).padStart(3);
     const name = mount.weapon.padEnd(nameWidth);
+    const min = (w.minRange === undefined ? "/" : `m${w.minRange}/`).padStart(4);
     const short = `S${w.short}`.padStart(3);
     const medium = `M${w.medium}`.padStart(3);
     const long = `L${w.long}`.padStart(3);
     const heat = `H${w.heat ?? 0}`.padStart(3);
-    return `${index} ${name} [${SHORT_LOC[mount.location]}] ${short}/${medium}/${long} ${heat}${flags.length ? ` ${flags.join(" ")}` : ""}`;
+    return `${index} ${name} [${SHORT_LOC[mount.location]}] ${min}${short}/${medium}/${long} ${heat}${flags.length ? ` ${flags.join(" ")}` : ""}`;
   });
 }
 
