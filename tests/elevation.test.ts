@@ -9,12 +9,14 @@ import { computeToHit } from "../src/rules/tohit.js";
 /**
  * Worked example: a hilly duel between two bipedal 'Mechs.
  *
- *   hbk (HBK-4G) at (4, 2) level 0, facing se (toward (5,2)).
- *   enf (ENF-4R) at (6, 2) level 0, facing sw (toward (5,2)).
+ *   hbk (HBK-4G) at (4, 2) level 0, facing ne (toward (5,2)).
+ *   enf (ENF-4R) at (6, 2) level 0, facing nw (toward (5,2)).
  *   (5, 2) is a level-1 ridge sitting between them.
  *   All other hexes are level 0.
  *
- * Coordinate convention: 1-based.
+ * Coordinate convention: 1-based, even-q (even columns sit half a hex lower
+ * than odd columns). Under that layout 'ne' from an even column steps one
+ * col over at the same row, so the ridge at (5, 2) is the forward hex.
  */
 
 /** Build a 6x3 grid with the given per-hex "col,row" level overrides (others 0). */
@@ -50,8 +52,8 @@ const reachOptions = (grid: HexGrid): ReachabilityOptions => ({
 describe("elevation worked example: ridge duel", () => {
   it("ground step into a level-1 hex costs 2 MP (1 base + 1 climb)", () => {
     // Two-MP walk budget is enough to climb into a level-1 hex (1 base + 1 climb).
-    // From (4,2) facing "se" (col 4 even) leads to (5,2) on the ridge.
-    const landings = reachableLandings({ col: 4, row: 2 }, "se", {
+    // From (4,2) facing "ne" (col 4 even) leads to (5,2) on the ridge.
+    const landings = reachableLandings({ col: 4, row: 2 }, "ne", {
       ...reachOptions(elevation),
       mode: "walk",
       walking: 2,
@@ -65,19 +67,19 @@ describe("elevation worked example: ridge duel", () => {
     // TW: a forward step may change up to 2 levels per hex. Level-2 hex costs
     // 1 base + 2 climb = 3 MP (walk budget 4); a level-3 hex is beyond the cap.
     const level2 = gridWithLevels({ "5,2": 2 });
-    const landings = reachableLandings({ col: 4, row: 2 }, "se", {
+    const landings = reachableLandings({ col: 4, row: 2 }, "ne", {
       ...reachOptions(level2),
     });
     expect(landings.find((l) => l.hex.col === 5 && l.hex.row === 2)).toBeDefined();
     const level3 = gridWithLevels({ "5,2": 3 });
-    const landings3 = reachableLandings({ col: 4, row: 2 }, "se", {
+    const landings3 = reachableLandings({ col: 4, row: 2 }, "ne", {
       ...reachOptions(level3),
     });
     expect(landings3.find((l) => l.hex.col === 5 && l.hex.row === 2)).toBeUndefined();
   });
 
   it("jump to the level-1 hex costs 1 MP regardless of elevation", () => {
-    const landings = reachableLandings({ col: 4, row: 2 }, "se", {
+    const landings = reachableLandings({ col: 4, row: 2 }, "ne", {
       ...reachOptions(elevation),
       mode: "jump",
     });

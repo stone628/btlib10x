@@ -89,10 +89,10 @@ describe("reachableLandings", () => {
   });
 
   it("turns right to step diagonally forward within a two-MP walk", () => {
-    // Two MP: turn right to ne (R, 1 MP) then forward to (13,11) (F, 1 MP).
-    // (12,12) is an even column, so 'ne' steps one col over and one row up.
+    // Two MP: turn right to ne (R, 1 MP) then forward to (13,12) (F, 1 MP).
+    // (12,12) is an even column, so 'ne' steps one col over at the same row.
     const rs = reach("walk", 2, 2, 0);
-    expect(lookup(rs, { col: 13, row: 11 }, "ne")).toEqual(["R", "F"]);
+    expect(lookup(rs, { col: 13, row: 12 }, "ne")).toEqual(["R", "F"]);
   });
 
   it("jump reaches the forward neighbor with F, side neighbors via free R/L + F", () => {
@@ -102,10 +102,11 @@ describe("reachableLandings", () => {
     // Backward neighbor: B.
     expect(lookup(rs, { col: 12, row: 13 }, "n")).toEqual(["B"]);
     // Side neighbor ne: free turn R then F (the actual 1-MP jump step).
-    // (12,12) is an even column, so 'ne' steps one col over and one row up.
-    expect(lookup(rs, { col: 13, row: 11 }, "ne")).toEqual(["R", "F"]);
-    // Side neighbor nw: free turn L then F — 'nw' goes one col over and one row up.
-    expect(lookup(rs, { col: 11, row: 11 }, "nw")).toEqual(["L", "F"]);
+    // (12,12) is an even column, so 'ne' steps one col over at the same row.
+    expect(lookup(rs, { col: 13, row: 12 }, "ne")).toEqual(["R", "F"]);
+    // Side neighbor nw: free turn L then F — 'nw' steps one col over at the
+    // same row.
+    expect(lookup(rs, { col: 11, row: 12 }, "nw")).toEqual(["L", "F"]);
   });
 
   it("jump landing facing is free: every facing at the same cost", () => {

@@ -122,7 +122,6 @@ describe("suggestFireTargets", () => {
     const streaks = enf.weapons.filter((w) => w.weapon === "CL Streak SRM 4");
     expect(streaks.map((w) => w.weaponIndex).sort()).toEqual([3, 4, 5, 6]);
     for (const w of streaks) {
-      console.log(w);
       expect(w.shots).toBe(50);
     }
     // Non-ammo weapons still show no shots column.
