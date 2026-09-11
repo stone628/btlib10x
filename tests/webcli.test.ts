@@ -718,6 +718,28 @@ describe("fire range checks", () => {
   });
 });
 
+describe("eject", () => {
+  it("mode eject + done removes the unit, leaves a level-2 wreck, and ends the battle", () => {
+    const s = freshSetup();
+    run(s, "start");
+    const actor = S.currentActor(s)!;
+    const hex = { ...actor.position };
+    expect(run(s, "mode eject")[0]).toMatch(/declares eject \(committed by 'done'\)/);
+    expect(s.moveMode).toBe("eject");
+    const out = run(s, "done").join("\n");
+    expect(out).toContain("ejects");
+    expect(actor.removed).toBe(true);
+    expect(actor.destroyed).toBe(true);
+    expect(s.battle!.wrecks[`${hex.col},${hex.row}`]).toEqual({
+      unitId: actor.id,
+      level: 2,
+    });
+    // The ejected side is gone: the surviving unit claims victory.
+    expect(s.app).toBe("over");
+    expect(s.victory!.winnerTeam).toBe(1 - actor.team);
+  });
+});
+
 describe("full game", () => {
   it("plays to victory, emits a banner once, and supports rematch/reset", () => {
     const s = freshSetup();

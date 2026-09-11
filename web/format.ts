@@ -60,6 +60,7 @@ import {
   TORSO_LOCATIONS,
   toHitHeatModifier,
   toHitHeatModifierWithThreshold,
+  wreckAt,
 } from "btlib10x";
 import { AMMO_EXPLOSION_START_HEAT } from "../src/index.js";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
@@ -443,7 +444,15 @@ export function boardChunk(s: Session): Chunk {
         .filter((u) => !u.removed)
         .map((u) => createBoardRenderUnit(u))
     : s.setup.roster.map((u) => createBoardRenderUnit(u));
-  return buildBoardChunk({ map, units, reachable: null });
+  const wrecks = s.battle
+    ? Object.fromEntries(Object.keys(s.battle.wrecks).map((key) => [key, "X"]))
+    : undefined;
+  return buildBoardChunk({
+    map,
+    units,
+    reachable: null,
+    ...(wrecks !== undefined ? { wrecks } : {}),
+  });
 }
 
 // ---------------------------------------------------------------- info ----
@@ -1408,7 +1417,14 @@ export function moveStatusLines(s: Session): string[] {
 export function reachablesInfo(s: Session): BoardRenderReachableInfo | null {
   const actor = s.battle?.units[s.actorId ?? ""];
   const mode = s.moveMode;
-  if (!actor || !s.battle || mode === null || mode === "shutdown" || mode === "startup") {
+  if (
+    !actor ||
+    !s.battle ||
+    mode === null ||
+    mode === "shutdown" ||
+    mode === "startup" ||
+    mode === "eject"
+  ) {
     return null;
   }
   // Engine guarantee: `actor.model` was validated by `createBattle`.
@@ -1420,6 +1436,7 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo | null {
     jumping: def.jumping,
     grid: s.battle,
     team: actor.team,
+    wreckAt: (hex: HexCoord): boolean => wreckAt(s.battle!, hex) !== undefined,
     occupantTeam: (hex: HexCoord): number | undefined => {
       for (const u of Object.values(s.battle!.units)) {
         if (u.removed) continue;
@@ -1441,7 +1458,8 @@ export function reachableChunk(
   const units = Object.values(battle.units)
     .filter((u) => !u.removed)
     .map((u) => createBoardRenderUnit(u));
-  return buildBoardChunk({ map, units, reachable: info });
+  const wrecks = Object.fromEntries(Object.keys(battle.wrecks).map((key) => [key, "X"]));
+  return buildBoardChunk({ map, units, reachable: info, wrecks });
 }
 
 export function attackStatusLines(s: Session): string[] {
@@ -1859,6 +1877,8 @@ function eventLines(locale: LocaleId, e: GameEvent): string[] {
           damage: e.damage,
         }),
       ];
+    case "unitEjected":
+      return [i18n(locale, "log.ejected", { id: e.unitId })];
     default: {
       // Exhaustiveness guard: adding a GameEvent kind must add a case above.
       const unreachable: never = e;

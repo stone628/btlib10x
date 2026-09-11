@@ -5,6 +5,7 @@ import {
   getMapDefFor,
   getMechDefFor,
   reachableLandings,
+  wreckAt,
 } from "../src/index.js";
 import type { BattleState, TerrainHexDef, UnitInit } from "../src/rules/game.js";
 import { advancePhase } from "../src/rules/game.js";
@@ -121,7 +122,14 @@ export function execute(session: Session, raw: string): string[] {
 export function reachableInfo(s: Session): BoardRenderInfo | null {
   const actor = s.battle?.units[s.actorId ?? ""];
   const mode = s.moveMode;
-  if (!actor || !s.battle || mode === null || mode === "shutdown" || mode === "startup") {
+  if (
+    !actor ||
+    !s.battle ||
+    mode === null ||
+    mode === "shutdown" ||
+    mode === "startup" ||
+    mode === "eject"
+  ) {
     return null;
   }
   // Engine guarantee: `actor.model` was validated by `createBattle`.
@@ -133,6 +141,7 @@ export function reachableInfo(s: Session): BoardRenderInfo | null {
     jumping: def.jumping,
     grid: s.battle,
     team: actor.team,
+    wreckAt: (hex: HexCoord): boolean => wreckAt(s.battle!, hex) !== undefined,
     occupantTeam: (hex: HexCoord): number | undefined => {
       for (const u of Object.values(s.battle!.units)) {
         if (u.removed) continue;

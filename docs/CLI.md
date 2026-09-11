@@ -73,6 +73,7 @@ The prompt names the acting unit; commands act on that 'Mech.
 | `mode standstill\|walk\|run\|jump` | declare movement mode (required first); for walk/run/jump, renders a clipped ASCII hex map of the reachable hexes — exactly the smallest bounding box around every reachable hex, clamped to the board (no padding). Reachable hexes draw a team-colored `<>` in the belly; every reachable (hex, facing) edge is tinted with the acting unit's team color, and no facing arrows are drawn. Other units inside the crop keep their ids (team-colored) but no facing arrow. Movement paths (the `F`/`B`/`R`/`L` fragment sequence per landing) remain available programmatically via `reachableLandings`/`RevealedLanding.path` for later use, but are not rendered on the map |
 | `mode shutdown` | declare a voluntary shutdown (online unit only). `place` stays unavailable; `done` commits it — the unit goes off-line (`manual`) and can no longer move, fire, or act normally this turn. `cancel` resets the declaration |
 | `mode startup` | declare a voluntary startup attempt (shut-down unit only). `done` rolls 2D6 against the heat shutdown avoidance number: success turns the unit `starting` (still off-line now, online just before the next initiative roll); failure keeps it shut down. `done` alone (without `mode startup`) passes — the unit stays off-line |
+| `mode eject` | declare a pilot ejection (any non-removed unit, including a shut-down one). `place` stays unavailable; `done` commits it — the unit is marked destroyed/removed and its hex becomes a permanent level-2 wreck. `cancel` resets the declaration |
 | `place <col> <row> <facing>` | place the 'Mech at a final hex + facing in one step; `col row` are 1-based, `facing` is an absolute word (`n\|ne\|se\|s\|sw\|nw`). The (hex, facing) must be a reachable landing shown by `mode` (validated against the movement candidate); replaces any previously queued steps. Jump landing facing is chosen freely, so any facing at a reachable hex is legal for `jump` |
 | `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [J](jam) / [-](destroyed) / per-bin ammo `(n left)` markers); without id: brief unit list (id, model, position+facing) grouped by team |
 | `status` | queued move steps with running MP cost per step |
@@ -146,6 +147,10 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   in partial cover while the attacker's ground level is not higher than the
   target's: +1 to-hit (folded into `terrainMod`) and a hit-location roll
   that lands on a leg strikes the cover instead (no damage to the target).
+  A target adjacent to a level-2 'Mech wreck is in partial cover for
+  +2 to-hit while the attacker's ground level is below the wreck's top
+  (hex level + 2); the larger of the terrain and wreck values applies, and
+  the leg-strike miss rule holds under either.
   A downhill attacker (higher ground level) negates the target's cover.
 - **Terrain catalog** — 13 core-rulebook terrain types (`clear`, lightWoods,
   heavyWoods, rough, rubble, pavement, water1, water2, water3, and four
@@ -221,6 +226,14 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   against the shutdown avoidance: success → `starting` (still off-line,
   online just before the next initiative roll), failure → stays off-line.
   Shut-down units act first in the movement phase regardless of initiative.
+- **Pilot ejection / wrecks** — `mode eject` + `done` marks the unit
+  destroyed and removed (counts toward victory; skipped by the actor queue
+  and by occupancy checks) and spawns a **level-2 wreck** in its hex. A
+  wreck is permanent and blocks the hex entirely: no ground or jump
+  movement may enter or land on it, LOS is blocked when the wreck lies
+  strictly between the endpoints (independent of elevation), and a target
+  adjacent to a wreck gains +2 partial cover when the attacker is below the
+  wreck's top. The hex is rendered with an `X` mark.
 
 ### Not yet implemented
 
@@ -238,6 +251,8 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   used).
 - **Building structural damage beyond CF** — basements / multi-floor
   interiors, structural-factor transfer between levels.
+- **Wreck destruction** — wrecks are permanent level-2 obstacles; clearing,
+  damaging, or merging wrecks with building collapse is deferred.
 - **Quadripedal 'Mechs**, vehicles, infantry, battle armor.
 - **Called shots**, aimed shots, spotter / indirect fire, ECM.
 - **Pilot abilities** (edge, etc.), quirks, experience beyond the gunnery

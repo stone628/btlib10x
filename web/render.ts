@@ -56,4 +56,7 @@ export interface BoardRenderInfo {
   readonly map: MapDef;
   readonly units: BoardRenderUnit[] | null;
   readonly reachable: BoardRenderReachableInfo | null;
+  /** Wreck marks keyed by hex `"col,row"` (glyph per hex), overriding the
+   *  terrain mark in that hex. Usually `{"x,y": "X"}` per ejected 'Mech. */
+  readonly wrecks?: Readonly<Record<string, string>>;
 }

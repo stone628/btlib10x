@@ -290,7 +290,12 @@ const MOVE_CMDS: Record<string, CmdDef> = {
   candidate: {
     helpKey: "cmd.candidateMove.help",
     run: (s, _a) => {
-      if (s.moveMode === null || s.moveMode === "shutdown" || s.moveMode === "startup") {
+      if (
+        s.moveMode === null ||
+        s.moveMode === "shutdown" ||
+        s.moveMode === "startup" ||
+        s.moveMode === "eject"
+      ) {
         throw new Error(i18n(L(s), "err.candidate.movemode"));
       }
       const r = S.stepResult(s);
@@ -310,13 +315,13 @@ const MOVE_CMDS: Record<string, CmdDef> = {
   },
   mode: {
     helpKey: "cmd.mode.help",
-    usage: "mode <standstill|walk|run|jump|shutdown|startup>",
+    usage: "mode <standstill|walk|run|jump|shutdown|startup|eject>",
     argsDoc: [["mode", "cmd.mode.arg.mode"]],
     run: (s, a) => {
-      expectArgs(L(s), a, 1, "mode standstill|walk|run|jump|shutdown|startup");
+      expectArgs(L(s), a, 1, "mode standstill|walk|run|jump|shutdown|startup|eject");
       const mode = S.parseMoveMode(L(s), a[0]!);
       S.declareMode(s, a[0]!);
-      if (mode === "shutdown" || mode === "startup") {
+      if (mode === "shutdown" || mode === "startup" || mode === "eject") {
         s.moveCandidate = null;
         return [i18n(L(s), "ok.modeDeclaredVoluntary", { id: s.actorId ?? "", mode })];
       }

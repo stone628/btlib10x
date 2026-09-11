@@ -18,6 +18,7 @@ import {
   type Rng,
   rotateFacing,
   type TerrainHexDef,
+  type WreckState,
 } from "../core/types.js";
 import { getMechDef, getMechDefFor, type MapDef, type MechModelHolder } from "../data/index.js";
 import type { ResolvedMechDef } from "../data/mech.schema.js";
@@ -193,6 +194,9 @@ export type GameEvent =
     }
   | { readonly kind: "unitDestroyed"; readonly unitId: string }
   | { readonly kind: "unitRemoved"; readonly unitId: string }
+  // Pilot ejects: the 'Mech leaves the battle and its hex gains a `wrecks`
+  // entry (a level-2 obstacle), see `ejectPilot`.
+  | { readonly kind: "unitEjected"; readonly unitId: string }
   | {
       readonly kind: "buildingCollapsed";
       readonly col: number;
@@ -301,6 +305,10 @@ export interface BattleState extends HexGrid {
   events: GameEvent[];
   /** Building state keyed by hex `"col,row"`; only building hexes present. */
   buildings: Record<string, BuildingState>;
+  /** 'Mech wrecks left by ejected pilots, keyed by hex `"col,row"`. Each is a
+   *  permanent level-2 obstacle: hex is blocked to all movement, LOS crossing
+   *  the hex is blocked, and an adjacent target gains +2 partial cover. */
+  wrecks: Record<string, WreckState>;
 }
 
 export type { TerrainHexDef };
@@ -333,6 +341,38 @@ export function isImmobile(unit: UnitState) {
   return isShutdown(unit) || isUnitImmobile(unit.damage);
 }
 
+/**
+ * Partial-cover to-hit modifier against `target` from `attacker`: 1 when the
+ * target stands in partial-cover terrain (water1 / building) and the attacker
+ * is not higher, 2 when the target is adjacent to a level-2 wreck and the
+ * attacker is below the wreck's top. Larger wins when both apply (TW: partial
+ * cover does not stack beyond one source). Leg hit-location rolls strike the
+ * cover under either value (see `hitLocationCovered` in `src/rules/attack.ts`).
+ */
+export function partialCoverMod(
+  state: BattleState,
+  attacker: UnitState,
+  target: UnitState,
+): number {
+  const terrain =
+    hasPartialCover(cellAt(state, target.position).terrain) &&
+    cellAt(state, attacker.position).level <= cellAt(state, target.position).level
+      ? 1
+      : 0;
+  let wreck = 0;
+  const attackerLevel = cellAt(state, attacker.position).level;
+  for (const [key, w] of Object.entries(state.wrecks)) {
+    const [col, row] = key.split(",");
+    const wreckHex = { col: Number(col), row: Number(row) };
+    if (!isAdjacent(target.position, wreckHex)) continue;
+    if (attackerLevel < cellAt(state, wreckHex).level + w.level) {
+      wreck = 2;
+      break;
+    }
+  }
+  return Math.max(terrain, wreck);
+}
+
 /** Error messages show 1-based coordinates; positions are stored 1-based. */
 function fmtHex(hex: { col: number; row: number }): string {
   return `${hex.col},${hex.row}`;
@@ -350,6 +390,11 @@ function occupantAt(state: BattleState, hex: HexCoord, excludeId?: string): Unit
     if (sameHex(unit.position, hex)) return unit;
   }
   return undefined;
+}
+
+/** Wreck occupying a hex, or undefined when the hex is clear of wrecks. */
+export function wreckAt(state: BattleState, hex: HexCoord): WreckState | undefined {
+  return state.wrecks[`${hex.col},${hex.row}`];
 }
 
 /** Mark a unit as killed and removed, emitting the paired events. */
@@ -462,6 +507,7 @@ export function createBattle(
     // events: [{ kind: "turn", turn: 1 }],
     events: [],
     buildings,
+    wrecks: {},
   };
 }
 
@@ -625,6 +671,11 @@ export function executeMove(
       directions.push(forward ? "forward" : "backward");
     }
 
+    const wreck = wreckAt(state, to);
+    if (wreck !== undefined) {
+      throw new Error(`Cannot enter ${fmtHex(to)}: blocked by ${wreck.unitId}'s wreck`);
+    }
+
     const occupant = occupantAt(state, to, unitId);
     if (occupant !== undefined) {
       if (isFinalStep) {
@@ -736,7 +787,7 @@ export function declareAttacks(
     arcs[decl.weaponIndex] = classifyArc(unit.facing, b);
 
     const woodsPoints = losWoodsPointsBetween(state, unit.position, target.position);
-    if (!losClear(state, unit.position, target.position)) {
+    if (!losClear(state, unit.position, target.position, state.wrecks)) {
       if (losBlockedByBuilding(state, unit.position, target.position)) {
         throw new Error("Line of sight is blocked by intervening building");
       }
@@ -757,9 +808,7 @@ export function declareAttacks(
       targetJumped: target.jumpedThisTurn,
       targetImmobile: isImmobile(target),
       targetTerrain: cellAt(state, target.position).terrain,
-      targetPartialCover:
-        hasPartialCover(cellAt(state, target.position).terrain) &&
-        cellAt(state, unit.position).level <= cellAt(state, target.position).level,
+      partialCoverMod: partialCoverMod(state, unit, target),
       interveningWoods: woodsPoints,
       distance: dist,
       weapon,
@@ -850,6 +899,7 @@ function resolveUnitAttacks(
       targetJumped: target.jumpedThisTurn,
       targetImmobile: isImmobile(target),
       targetTerrain: cellAt(state, target.position).terrain,
+      partialCoverMod: partialCoverMod(state, unit, target),
       interveningTerrains: interveningTerrains(state, unit.position, target.position),
       distance: hexDistance(unit.position, target.position),
       ...(decl.arc !== undefined ? { arc: decl.arc } : {}),
@@ -1361,6 +1411,24 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
       });
     }
   }
+}
+
+/** Pilot eject, resolved during the movement phase: the pilot abandons the
+ *  'Mech, the unit leaves the battle (counted against victory like a wrecked
+ *  hull), and a permanent level-2 wreck occupies its hex. Available to any
+ *  unit still on the board — including shut-down and immobile ones. */
+export function ejectPilot(state: BattleState, unitId: string): void {
+  requirePhase(state, "movement");
+  const unit = requireUnit(state, unitId);
+  if (unit.removed) throw new Error(`${unitId} is removed from play`);
+  unit.destroyed = true;
+  unit.removed = true;
+  state.wrecks[`${unit.position.col},${unit.position.row}`] = {
+    unitId,
+    level: 2,
+  };
+  state.actedThisPhase.push(unitId);
+  state.events.push({ kind: "unitEjected", unitId }, { kind: "unitRemoved", unitId });
 }
 
 /** Voluntary shutdown declaration, resolved during the movement phase: the

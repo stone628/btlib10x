@@ -77,6 +77,17 @@ export interface HexCell {
   level: number;
 }
 
+/** A 'Mech wreck left behind by an ejected pilot. A permanent level-2
+ *  obstacle: blocks the hex against all movement, blocks LOS entirely when
+ *  between attacker and target, and grants +2 partial cover to an adjacent
+ *  target (see `partialCoverMod` in `src/rules/game.ts`). */
+export interface WreckState {
+  /** Unit that ejected and left the wreck. */
+  readonly unitId: string;
+  /** Obstacle height in levels (TW: a wrecked 'Mech is level 2). */
+  readonly level: number;
+}
+
 export type MoveMode = "standStill" | "walk" | "run" | "jump";
 
 export type Location =

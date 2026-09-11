@@ -73,6 +73,19 @@
   `declareAttacks`, `resolveWeaponAttack`, and `suggestFireTargets`. `water1`
   `terrainMod` changed −1 → 0 (TW: depth-1 water grants cover, not an easy-hit
   bonus). Cover-hit building-CF damage deferred.
+- **Pilot ejection / wrecks** — `ejectPilot` (movement phase only) marks a
+  unit destroyed + removed (counts toward victory; skipped by the actor
+  queue and occupancy checks) and spawns a permanent **level-2 wreck**
+  (`BattleState.wrecks`, `WreckState { unitId; level }`). Wreck hexes are
+  unenterable: `reachableLandings` excludes them via the `wreckAt` option and
+  `executeMove` rejects entry/landing. LOS is blocked when a wreck lies
+  strictly between endpoints (`losBlockedByWreck`, new optional `wrecks`
+  arg to `losClear`). A target adjacent to a wreck takes +2 partial cover
+  (larger of terrain/wreck applies, leg-roll strikes the cover) via
+  `partialCoverMod` wired through `declareAttacks`/`resolveUnitAttacks`/
+  `suggestFireTargets`; replaced `AttackModifiers.targetPartialCover` with
+  `partialCoverMod?`. Web CLI `mode eject` + `done`, board `X` mark,
+  i18n `err.alreadyEjected`/`log.ejected` en+kr. Wreck destruction deferred.
 - **Immobile/shutdown target modifier** — `targetMovementModifier` gains an
   `immobile` flag: a target that cannot move (shut down, or both legs
   destroyed) applies the −4 immobile target-number modifier instead of the

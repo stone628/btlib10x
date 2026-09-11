@@ -676,6 +676,7 @@ export function createBoardModel(info: BoardRenderInfo): BoardModel {
   const base = mapModel(info.map);
 
   const cells = { ...base.cells };
+  const marks = { ...base.marks, ...info.wrecks };
   const facings: Record<string, Facing> = {};
   const idStyles: Record<string, CharStyle> = {};
   if (info.units !== null) {
@@ -695,7 +696,7 @@ export function createBoardModel(info: BoardRenderInfo): BoardModel {
       anchorCol: base.anchorCol,
       anchorRow: base.anchorRow,
       cells,
-      marks: base.marks,
+      marks,
       elevations: base.elevations,
       facings,
       edgeStyles: base.edgeStyles,
@@ -736,7 +737,7 @@ export function createBoardModel(info: BoardRenderInfo): BoardModel {
     anchorCol,
     anchorRow,
     cells,
-    marks: base.marks,
+    marks,
     elevations: base.elevations,
     facings: {},
     edgeStyles,

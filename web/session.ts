@@ -29,6 +29,7 @@ import {
   declareMove,
   effectiveMoveBudget,
   effectiveMovement,
+  ejectPilot,
   executeMove,
   FACINGS,
   facingChangeCost,
@@ -71,9 +72,9 @@ export interface Session {
   victory: VictoryResult | null;
   actorId: string | null;
   /** Pending declaration for the acting unit: a movement mode (engine
-   *  `MoveMode`) or the voluntary `"shutdown"` / `"startup"` declaration,
-   *  committed by the `done` command. */
-  moveMode: MoveMode | "shutdown" | "startup" | null;
+   *  `MoveMode`) or the voluntary `"shutdown"` / `"startup"` / `"eject"`
+   *  declaration, committed by the `done` command. */
+  moveMode: MoveMode | "shutdown" | "startup" | "eject" | null;
   moveSteps: MoveStep[];
   /** Landing facing chosen by `place` (jump only: engine rejects turn steps
    *  while jumping, so the landing facing travels via `executeMove`'s
@@ -308,13 +309,19 @@ const VOLUNTARY_MODES: Readonly<Record<string, "shutdown" | "startup">> = {
   startup: "startup",
 };
 
-export type DeclaredMode = MoveMode | "shutdown" | "startup";
+const EJECT_MODES: Readonly<Record<string, "eject">> = {
+  eject: "eject",
+};
+
+export type DeclaredMode = MoveMode | "shutdown" | "startup" | "eject";
 
 export function parseMoveMode(locale: LocaleId, word: string): DeclaredMode {
   const mode = MOVE_MODES[word.toLowerCase()];
   if (mode) return mode;
   const voluntary = VOLUNTARY_MODES[word.toLowerCase()];
   if (voluntary) return voluntary;
+  const eject = EJECT_MODES[word.toLowerCase()];
+  if (eject) return eject;
   throw new Error(i18n(locale, "err.badModeWord"));
 }
 
@@ -344,6 +351,12 @@ export function declareMode(s: Session, word: string): void {
     if (unit.shutdown === "not") throw new Error(i18n(s.locale, "err.mustBeDownForStartup"));
     if (unit.shutdown === "starting") throw new Error(i18n(s.locale, "err.alreadyStarting"));
     s.moveMode = "startup";
+    s.moveSteps = [];
+    return;
+  }
+  if (mode === "eject") {
+    if (unit.removed) throw new Error(i18n(s.locale, "err.alreadyEjected", { id: unit.id }));
+    s.moveMode = "eject";
     s.moveSteps = [];
     return;
   }
@@ -385,7 +398,10 @@ function budgetFor(s: Session): number {
   const def = getMechDefFor(unit);
   const movement = effectiveMovement(def, unit.critSlotsDestroyed);
   const mode: MoveMode =
-    s.moveMode === "shutdown" || s.moveMode === "startup" || s.moveMode === null
+    s.moveMode === "shutdown" ||
+    s.moveMode === "startup" ||
+    s.moveMode === "eject" ||
+    s.moveMode === null
       ? "standStill"
       : s.moveMode;
   return effectiveMoveBudget(mode, movement, unit.heat);
@@ -427,7 +443,7 @@ export function resolveFacing(locale: LocaleId, arg: string): Facing {
  */
 export function placeLanding(s: Session, landing: RevealedLanding): StepResult {
   const unit = requireActor(s, "movement");
-  if (s.moveMode === "shutdown" || s.moveMode === "startup") {
+  if (s.moveMode === "shutdown" || s.moveMode === "startup" || s.moveMode === "eject") {
     throw new Error(i18n(s.locale, "err.noMoveInShutdownMode"));
   }
   if (!s.moveMode) throw new Error(i18n(s.locale, "err.declareModeFirst", { id: unit.id }));
@@ -491,6 +507,8 @@ export function commitMove(s: Session): CommitResult {
       voluntaryShutdown(battle, unit.id);
     } else if (s.moveMode === "startup") {
       attemptVoluntaryStartup(battle, unit.id, s.rng);
+    } else if (s.moveMode === "eject") {
+      ejectPilot(battle, unit.id);
     } else if (isShutdown(unit)) {
       // Shut-down unit committing without a startup attempt: pass.
       passMovement(battle, unit.id);
