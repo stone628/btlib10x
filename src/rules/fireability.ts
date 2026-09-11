@@ -1,12 +1,12 @@
 import { bearing, hexDistance } from "../core/hex.js";
-import { cellAt, hasPartialCover } from "../core/terrain.js";
+import { cellAt } from "../core/terrain.js";
 import type { Location } from "../core/types.js";
 import { getMechDefFor } from "../data/index.js";
 import { getWeaponDefFor } from "../data/weapon.schema.js";
 import { binsForWeaponName, pooledShotsLeft } from "./ammo.js";
 import { type Arc, classifyArc } from "./arcs.js";
 import { canFireFromLocation } from "./damage.js";
-import { type BattleState, isImmobile } from "./game.js";
+import { type BattleState, isImmobile, partialCoverMod } from "./game.js";
 import { toHitHeatModifier } from "./heat.js";
 import { losClear, losWoodsPointsBetween } from "./los.js";
 import type { RangeBracket } from "./tohit.js";
@@ -112,7 +112,7 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
         // Same gate as `declareAttacks`: woods screening, water2/3 endpoints
         // (`losBlockedByWater`), elevation and intervening buildings
         // (`losBlockedByElevation`/`losBlockedByBuilding` fold into the ray).
-        if (!losClear(state, unit.position, enemy.position)) {
+        if (!losClear(state, unit.position, enemy.position, state.wrecks)) {
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "noLos" });
           return;
         }
@@ -123,9 +123,7 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
           targetJumped: enemy.jumpedThisTurn,
           targetImmobile: isImmobile(enemy),
           targetTerrain: cellAt(state, enemy.position).terrain,
-          targetPartialCover:
-            hasPartialCover(cellAt(state, enemy.position).terrain) &&
-            cellAt(state, unit.position).level <= cellAt(state, enemy.position).level,
+          partialCoverMod: partialCoverMod(state, unit, enemy),
           interveningWoods,
           distance,
           weapon,

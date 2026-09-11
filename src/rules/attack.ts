@@ -29,6 +29,11 @@ export interface WeaponAttackInput {
   /** True when the target cannot move (shut down or both legs destroyed):
    *  grants a flat −4 target modifier instead of the hex-based band. */
   readonly targetImmobile?: boolean;
+  /** Partial-cover to-hit modifier supplied by the caller (the board aware
+   *  of wrecks): 2 when the target is adjacent to a level-2 wreck and the
+   *  attacker is below its top. Merged with the terrain-derived value
+   *  (larger wins); the caller computes it in `partialCoverMod`. */
+  readonly partialCoverMod?: number;
   readonly interveningTerrains: readonly TerrainType[];
   readonly distance: number;
   readonly weapon: string;
@@ -90,8 +95,12 @@ export interface AttackResolution {
 export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution {
   const weapon: WeaponDef = getWeaponDefFor(input);
   const shots = input.shots ?? 1;
-  const partialCover =
-    hasPartialCover(input.targetTerrain) && (input.attackerLevel ?? 0) <= (input.targetLevel ?? 0);
+  const terrainCoverMod =
+    hasPartialCover(input.targetTerrain) && (input.attackerLevel ?? 0) <= (input.targetLevel ?? 0)
+      ? 1
+      : 0;
+  const partialCoverMod = Math.max(terrainCoverMod, input.partialCoverMod ?? 0);
+  const partialCover = partialCoverMod > 0;
 
   const breakdown = computeToHit({
     gunnery: input.gunnery,
@@ -100,7 +109,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     targetJumped: input.targetJumped,
     targetTerrain: input.targetTerrain,
     ...(input.targetImmobile !== undefined ? { targetImmobile: input.targetImmobile } : {}),
-    ...(partialCover ? { targetPartialCover: true } : {}),
+    ...(partialCoverMod > 0 ? { partialCoverMod } : {}),
     interveningWoods: losWoodsPoints(input.interveningTerrains),
     distance: input.distance,
     weapon,

@@ -205,7 +205,9 @@ Map coordinates are already 1-based and match the engine directly, so there is
   enumerates every (hex, facing) reachable within the mode's MP budget, each
   with a movement `path` (`F` forward / `B` back / `R`/`L` turn). Ground
   charges 1 MP per turn and 1+terrain+1-per-level-changed per step (jump
-  treats turns as free and ignores elevation).
+  treats turns as free and ignores elevation). Options include `wreckAt?`
+  (`(hex) => boolean`): hexes holding a wreck are excluded from landings and
+  cannot be passed through.
 
 ### Line of sight (`rules/los.ts`)
 
@@ -217,8 +219,11 @@ Map coordinates are already 1-based and match the engine directly, so there is
   its own LOS level exceeds the ray's height at its center.
 - `losBlockedByWater(terrain, from, to)` — true when either endpoint hex is
   water2/water3 (units cannot fire into or out of depth-2+ water).
-- `losClear(elevation, terrain, from, to)` — true when screening, water, and
-  elevation LOS checks are all clear.
+- `losBlockedByWreck(from, to, wrecks?)` — true when a wreck hex lies
+  strictly between the endpoints (level-2 wrecks block LOS entirely,
+  independent of elevation).
+- `losClear(grid, from, to, wrecks?)` — true when screening, water, elevation,
+  and wreck LOS checks are all clear.
 
 ### Buildings (`rules/building.ts`)
 
@@ -359,6 +364,7 @@ interface WeaponAttackInput {
   targetDamage: UnitDamageState;   // layered
   arc?: Arc;               // defaults "front"
   attackerLevel?; targetLevel?;
+  partialCoverMod?;        // wreck cover (+2) merged with terrain (larger wins)
   targetDef?; targetCritSlotsDestroyed?; targetDestroyedWeapons?; targetAmmoLeft?;
 }
 ```
@@ -368,7 +374,10 @@ per-missile vs LRM lots-of-five locations, arc-aware location selection, and
 folds all hit groups into one cumulative `DamageApplication`. When the target
 stands in a water1/building hex and the attacker is not higher, partial cover
 applies: +1 to-hit and a leg hit-location roll strikes the cover (the group
-is dropped). When
+is dropped). A supplied `partialCoverMod` merges with the terrain value
+(larger wins): the engine-wide `rules/game.ts` `partialCoverMod` returns 2
+when the target is adjacent to a level-2 wreck and the attacker is below the
+wreck's top. When
 `targetDef` + crit snapshots are supplied, it also runs critical-hit resolution
 per group that stripped IS and folds ammo-explosion damage into the returned
 application. It does **not** mutate the target; callers copy from
@@ -405,6 +414,7 @@ createBattle(units: UnitInit[], options?: CreateBattleOptions): BattleState
 rollInitiativePhase(state, rng): void                  // initiative -> movement
 declareMove(state, unitId, mode): void                 // movement phase only
 executeMove(state, unitId, steps, { finalFacing }?): void
+ejectPilot(state, unitId): void                        // movement phase only: destroys/removes the unit and spawns a level-2 wreck in its hex
 declareAttacks(state, unitId, decls): void             // weaponAttack phase only
 resolveAllAttacks(state, rng): void                    // resolves every unit's declared attacks simultaneously
 advancePhase(state): void                              // drives the phase cycle
@@ -445,6 +455,7 @@ interface BattleState extends HexGrid {
   actorQueue: string[] | null;    // cached activation order, null until first query
   events: GameEvent[];                // serializable audit log
   buildings: Record<string, BuildingState>;  // { cf; type } keyed "col,row"; building hexes only
+  wrecks: Record<string, WreckState>;  // { unitId; level: 2 } keyed "col,row"; ejected-'Mech obstacles
 }
 
 interface UnitState {

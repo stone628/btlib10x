@@ -132,7 +132,7 @@ describe("GATOR to-hit calculation", () => {
     };
     const plain = computeToHit(base);
     expect(plain.terrainMod).toBe(0);
-    const covered = computeToHit({ ...base, targetPartialCover: true });
+    const covered = computeToHit({ ...base, partialCoverMod: 1 });
     expect(covered.terrainMod).toBe(1);
     expect(covered.total).toBe(plain.total + 1);
   });

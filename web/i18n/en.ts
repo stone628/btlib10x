@@ -74,9 +74,10 @@ export const en = {
   "cmd.rm.arg.id": "id of a previously added unit",
   "cmd.statusSetup.help": "setup summary: units grouped by team, selected map",
   "cmd.start.help": "start the battle (needs >=2 units on >=2 teams)",
-  "cmd.mode.help": "declare movement mode (walk/run/jump/standstill) or voluntary shutdown/startup",
+  "cmd.mode.help":
+    "declare movement mode (walk/run/jump/standstill), voluntary shutdown/startup, or eject",
   "cmd.mode.arg.mode":
-    "standstill | walk | run | jump declares movement with its own MP pool; shutdown | startup declares a voluntary shutdown or startup attempt (committed by 'done')",
+    "standstill | walk | run | jump declares movement with its own MP pool; shutdown | startup declares a voluntary shutdown or startup attempt (committed by 'done'); eject abandons the 'Mech — the pilot leaves, the fielded unit is removed, and its hex becomes a level-2 wreck (committed by 'done')",
   "cmd.place.help": "place the 'Mech at a reachable final hex and facing",
   "cmd.place.arg.colrowfacing":
     "final hex (1-based col row) and absolute facing word n|ne|se|s|sw|nw; must appear in the reachable map shown by 'mode'",
@@ -150,11 +151,12 @@ export const en = {
   "err.noMap": "Load a map before starting a battle",
   "err.needTwoUnits": "A battle needs at least two units",
   "err.needTwoTeams": "Units must span at least two teams",
-  "err.badModeWord": "mode must be one of standstill|walk|run|jump|shutdown|startup",
+  "err.badModeWord": "mode must be one of standstill|walk|run|jump|shutdown|startup|eject",
   "err.noMoveInShutdownMode":
-    "movement is not available while the declared mode is shutdown/startup",
+    "movement is not available while the declared mode is shutdown/startup/eject",
   "err.mustBeOnlineForShutdown": "mode shutdown requires an online unit",
   "err.mustBeDownForStartup": "mode startup requires a shut-down unit",
+  "err.alreadyEjected": "{id} is no longer on the battlefield",
   "err.alreadyStarting": "{id} is already starting up",
   "err.noBattle": "No active battle",
   "err.wrongPhase": "Command requires the {phase} phase",
@@ -350,6 +352,7 @@ export const en = {
   "log.attacksPassed": "{id} is not attacking this turn.",
   "log.destroyed": "*** {id} DESTROYED ***",
   "log.removedEvent": "{id} removed from play",
+  "log.ejected": "{id} ejects — abandoned 'Mech left as a level-2 wreck",
   "log.buildingCollapsed": "Building at {hex} collapses to rubble",
   "log.buildingDamaged": "Building at {hex} takes {damage} structural damage (CF {cf})",
   "log.collapseDamage": "{id} takes {damage} damage to {loc} from building collapse at {hex}",

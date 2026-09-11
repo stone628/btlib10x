@@ -1,6 +1,6 @@
 import { hexDistance, lineHexes } from "../core/hex.js";
 import { blocksTargeting, cellAt, type HexGrid, screeningPoints } from "../core/terrain.js";
-import type { HexCoord, TerrainType } from "../core/types.js";
+import type { HexCoord, TerrainType, WreckState } from "../core/types.js";
 import { buildingTypeOf } from "./building.js";
 
 /**
@@ -95,10 +95,33 @@ export function losBlockedByBuilding(grid: HexGrid, from: HexCoord, to: HexCoord
   return false;
 }
 
-/** True when all LOS checks are clear: screening, water, and elevation. */
-export function losClear(grid: HexGrid, from: HexCoord, to: HexCoord): boolean {
+/** True when all LOS checks are clear: screening, water, elevation, and
+ *  wrecks. `wrecks` (keyed by `"col,row"`) supplies the ejected-'Mech
+ *  obstacles; one strictly between the endpoints blocks LOS entirely.
+ *  Endpoints themselves cannot hold a wreck (the hex is unenterable). */
+export function losClear(
+  grid: HexGrid,
+  from: HexCoord,
+  to: HexCoord,
+  wrecks?: Readonly<Record<string, WreckState>>,
+): boolean {
   if (losBlocked(losWoodsPointsBetween(grid, from, to))) return false;
   if (losBlockedByWater(grid, from, to)) return false;
   if (losBlockedByElevation(grid, from, to)) return false;
+  if (losBlockedByWreck(from, to, wrecks)) return false;
   return true;
+}
+
+/** True when a wreck hex lies strictly between `from` and `to`: a level-2
+ *  wreck blocks LOS entirely, independent of any elevation advantage. */
+export function losBlockedByWreck(
+  from: HexCoord,
+  to: HexCoord,
+  wrecks?: Readonly<Record<string, WreckState>>,
+): boolean {
+  if (wrecks === undefined) return false;
+  for (const h of interveningHexes(from, to)) {
+    if (wrecks[`${h.col},${h.row}`] !== undefined) return true;
+  }
+  return false;
 }

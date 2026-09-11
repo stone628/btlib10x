@@ -113,6 +113,8 @@ export interface ReachabilityOptions {
   readonly team: number;
   /** Team of the unit occupying a hex, or undefined when empty. */
   readonly occupantTeam: (hex: HexCoord) => number | undefined;
+  /** True when `hex` holds a wreck obstacle: never passable, never landable. */
+  readonly wreckAt?: (hex: HexCoord) => boolean;
 }
 
 /**
@@ -186,6 +188,7 @@ export function reachableLandings(
   // Jump pass-through: any in-bounds hex; landing is restricted separately.
   const canEnter = (from: HexCoord, hex: HexCoord, backward: boolean): boolean => {
     if (!inBounds(hex)) return false;
+    if (options.wreckAt?.(hex)) return false;
     if (jumping) return true;
     const delta = cellAt(options.grid, hex).level - cellAt(options.grid, from).level;
     if (backward ? delta !== 0 : Math.abs(delta) > 2) return false;
@@ -193,7 +196,9 @@ export function reachableLandings(
     return occ === undefined || occ === options.team;
   };
   const canLand = (hex: HexCoord): boolean =>
-    inBounds(hex) && (point(hex, start) || options.occupantTeam(hex) === undefined);
+    inBounds(hex) &&
+    (options.wreckAt === undefined || !options.wreckAt(hex)) &&
+    (point(hex, start) || options.occupantTeam(hex) === undefined);
 
   for (let i = 0; i < queue.length; i++) {
     const cur = queue[i]!;
