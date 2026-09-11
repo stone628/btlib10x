@@ -9,6 +9,8 @@
 
 ## To Do
 
+- movement candidate MP calculated wrong
+- ammo explosion count total shots, not the exploded bin
 - need snapshot keeping, capable of rollback N steps like ctrl-z
 - Piloting Skill Rolls, falling and prone. Still the largest omission by knock-on effect: the second gyro crit, leg destruction, failed charges and DFAs all terminate in a fall in TW, and there is nothing to fall. createBattle still takes a gunnery skill per unit and no piloting skill, so the gap reaches the public API.
 - The pilot. No pilot entity, no hits, no consciousness rolls. Cockpit destruction kills the unit directly, and the life-support crit has nowhere to land.

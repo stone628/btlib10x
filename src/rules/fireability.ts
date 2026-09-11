@@ -46,6 +46,10 @@ export interface FireTarget {
   /** Firing arc of this target relative to the ATTACKER's facing; null when
    *  attacker and target share a hex (arc undefined, attack unsupported). */
   readonly arc: Arc | null;
+  /** Alternate arc when the center-to-center line runs exactly along an
+   *  arc-boundary line; otherwise null. A weapon is legal when it can fire
+   *  into either arc of the pair. */
+  readonly altArc: Arc | null;
   readonly weapons: FireWeapon[];
   readonly blocked: Array<{
     readonly weaponIndex: number;
@@ -56,7 +60,38 @@ export interface FireTarget {
 
 export interface FireSuggestion {
   readonly targetId: string;
+  /** Enemy targets sorted best-first (most fireable weapons, then highest
+   *  hit-weighted damage, then shortest distance). */
   readonly targets: FireTarget[];
+}
+
+/** 2d6 ways to roll >= tn, over 36. TNs below 3 always hit; above 12 never do. */
+const WAYS_TO_HIT: readonly number[] = [36, 36, 36, 35, 33, 30, 26, 21, 15, 10, 6, 3, 1, 0];
+
+function hitProbability(tn: number): number {
+  if (tn <= 2) return 1;
+  if (tn >= 13) return 0;
+  return WAYS_TO_HIT[tn]! / 36;
+}
+
+/** Hit-weighted damage across a target's fireable weapons. Higher is better. */
+export function fireTargetScore(target: FireTarget): number {
+  return target.weapons.reduce((sum, w) => sum + w.expectedDamage * hitProbability(w.tn), 0);
+}
+
+/** Best-first ordering for fire targets. */
+export function compareFireTargets(a: FireTarget, b: FireTarget): number {
+  if (a.weapons.length !== b.weapons.length) return b.weapons.length - a.weapons.length;
+  const score = fireTargetScore(b) - fireTargetScore(a);
+  if (score !== 0) return score;
+  if (a.distance !== b.distance) return a.distance - b.distance;
+  return a.targetId < b.targetId ? -1 : a.targetId > b.targetId ? 1 : 0;
+}
+
+/** Best fire target (most fireable weapons, then hit-weighted damage), or
+ *  null when no enemy targets exist. */
+export function bestFireTarget(sugg: FireSuggestion): FireTarget | null {
+  return sugg.targets[0] ?? null;
 }
 
 /**
@@ -66,7 +101,9 @@ export interface FireSuggestion {
  * Ammo checks read the shared per-weapon-name pool (`pooledShotsLeft`), so
  * every mount of a pooled weapon reports the same remaining shots. Mirrors
  * the checks made by `declareAttacks` so any suggested combination is
- * guaranteed to be accepted there.
+ * guaranteed to be accepted there. Targets sort best-first (most fireable
+ * weapons, then hit-weighted damage, then shortest distance), so callers
+ * picking `targets[0]` engage with most firepower.
  */
 export function suggestFireTargets(state: BattleState, unitId: string): FireSuggestion {
   const unit = state.units[unitId];
@@ -74,7 +111,6 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
     throw new Error(`suggestFireTargets: ${unitId} is not a fireable unit`);
   }
   const def = getMechDefFor(unit);
-
   const targets = Object.values(state.units)
     .filter((u) => u.team !== unit.team && !u.removed && !u.destroyed)
     .map((enemy) => {
@@ -82,6 +118,7 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
       const b = bearingExact(unit.position, enemy.position);
       const fireCls = b !== null ? classifyArcWithBoundary(unit.facing, b) : null;
       const arc = fireCls?.arc ?? null;
+      const altArc = fireCls?.altArc ?? null;
       const interveningWoods = losWoodsPointsBetween(state, unit.position, enemy.position);
 
       const weapons: FireWeapon[] = [];
@@ -116,14 +153,17 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
           return;
         }
         const rearFacing = mount.rearFacing === true;
-        const inArc =
-          weaponCanFireIntoArc(mount.location, rearFacing, fireCls.arc) ||
-          (fireCls.altArc !== null &&
-            weaponCanFireIntoArc(mount.location, rearFacing, fireCls.altArc));
-        if (!inArc) {
+        const primaryOk = weaponCanFireIntoArc(mount.location, rearFacing, fireCls.arc);
+        const altOk =
+          fireCls.altArc !== null &&
+          weaponCanFireIntoArc(mount.location, rearFacing, fireCls.altArc);
+        if (!primaryOk && !altOk) {
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "outOfArc" });
           return;
         }
+        // Record arc weapon actually fires through: primary when legal,
+        // otherwise alternate of boundary pair.
+        const firingArc = primaryOk ? fireCls.arc : fireCls.altArc!;
         // Same gate as `declareAttacks`: woods screening, water2/3 endpoints
         // (`losBlockedByWater`), elevation and intervening buildings
         // (`losBlockedByElevation`/`losBlockedByBuilding` fold into the ray).
@@ -158,7 +198,7 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
           weaponIndex,
           weapon: mount.weapon,
           location: mount.location,
-          arc,
+          arc: firingArc,
           shots,
           rangeBracket: breakdown.rangeBracket,
           tn: breakdown.total,
@@ -180,8 +220,9 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
         weapons.push(weaponSugg);
       });
 
-      return { targetId: enemy.id, distance, arc, weapons, blocked };
+      return { targetId: enemy.id, distance, arc, altArc, weapons, blocked };
     });
+  targets.sort(compareFireTargets);
 
   return { targetId: unitId, targets };
 }
