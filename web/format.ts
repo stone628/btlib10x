@@ -1594,6 +1594,28 @@ function fireWeaponTable(locale: LocaleId, weapons: readonly FireWeapon[]): Chun
   return buildHeaderTableChunkFromRows(header, rows);
 }
 
+function blockedLines(
+  locale: LocaleId,
+  list: readonly { weaponIndex: number; weapon: string; reason: FireBlockerReason }[],
+): string[] {
+  return list.map(
+    (b) =>
+      `${i18n(locale, "fireSuggestion.blocked")}: #${b.weaponIndex} ${b.weapon} — ${i18n(locale, BLOCKER_LABEL[b.reason])}`,
+  );
+}
+
+function blockedChunks(locale: LocaleId, list: ReturnType<typeof blockedLines>): Chunk[] {
+  if (list.length === 0) return [];
+  if (list.length > 3) {
+    return [
+      buildCollapsibleChunk(i18n(locale, "fireSuggestion.blockedSummary", { num: list.length }), [
+        buildLinesChunk(list, "hint"),
+      ]),
+    ];
+  }
+  return [buildLinesChunk(list, "hint")];
+}
+
 export function fireSuggestionChunks(locale: LocaleId, sugg: FireSuggestion): Chunk[] {
   const chunks: Chunk[] = [
     buildLinesChunk([i18n(locale, "fireSuggestion.header", { id: sugg.targetId })], "hint"),
@@ -1615,27 +1637,39 @@ export function fireSuggestionChunks(locale: LocaleId, sugg: FireSuggestion): Ch
         "hint",
       ),
     );
+    const split =
+      target.weaponsIfPropLeft.length !== target.weaponsIfPropRight.length ||
+      target.weaponsIfPropLeft.some(
+        (w, i) => w.weaponIndex !== target.weaponsIfPropRight[i]?.weaponIndex,
+      ) ||
+      target.blockedIfPropLeft.length !== target.blockedIfPropRight.length;
+    if (split) {
+      chunks.push(
+        buildLinesChunk(
+          [i18n(locale, "fireSuggestion.propLeft", { num: target.weaponsIfPropLeft.length })],
+          "hint",
+        ),
+      );
+      if (target.weaponsIfPropLeft.length > 0) {
+        chunks.push(fireWeaponTable(locale, target.weaponsIfPropLeft));
+      }
+      chunks.push(...blockedChunks(locale, blockedLines(locale, target.blockedIfPropLeft)));
+      chunks.push(
+        buildLinesChunk(
+          [i18n(locale, "fireSuggestion.propRight", { num: target.weaponsIfPropRight.length })],
+          "hint",
+        ),
+      );
+      if (target.weaponsIfPropRight.length > 0) {
+        chunks.push(fireWeaponTable(locale, target.weaponsIfPropRight));
+      }
+      chunks.push(...blockedChunks(locale, blockedLines(locale, target.blockedIfPropRight)));
+      continue;
+    }
     if (target.weapons.length > 0) {
       chunks.push(fireWeaponTable(locale, target.weapons));
     }
-    if (target.blocked.length > 0) {
-      const blockedLines: string[] = [];
-      for (const b of target.blocked) {
-        blockedLines.push(
-          `${i18n(locale, "fireSuggestion.blocked")}: #${b.weaponIndex} ${b.weapon} — ${i18n(locale, BLOCKER_LABEL[b.reason])}`,
-        );
-      }
-      if (blockedLines.length > 3) {
-        chunks.push(
-          buildCollapsibleChunk(
-            i18n(locale, "fireSuggestion.blockedSummary", { num: blockedLines.length }),
-            [buildLinesChunk(blockedLines, "hint")],
-          ),
-        );
-      } else {
-        chunks.push(buildLinesChunk(blockedLines, "hint"));
-      }
-    }
+    chunks.push(...blockedChunks(locale, blockedLines(locale, target.blocked)));
   }
   return chunks;
 }

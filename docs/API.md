@@ -384,17 +384,21 @@ application. It does **not** mutate the target; callers copy from
 `resolution.application.damage` and `resolution.crits[last]`.
 
 `AttackResolution` = `{ weapon; distance; breakdown; toHitRoll; hit; jammed;
-clusterRoll; groups; application; arc; crits }` — `arc` is the firing arc the
-attack resolved against (drives the hit-location table and armor pool).
+prone; propArm; clusterRoll; groups; application; arc; crits }` — `arc` is the firing arc the
+attack resolved against (drives the hit-location table and armor pool); `prone`
+marks shots fired while prone and `propArm` (null when standing or with no
+arm weapons) names the propped arm.
 
 ### Fireability (`rules/fireability.ts`)
 
-`suggestFireTargets(state, unitId, propArm = "rightArm"): FireSuggestion` — for every enemy, lists
+`suggestFireTargets(state, unitId): FireSuggestion` — for every enemy, lists
 the weapons that could reach it (arc, LOS, range, ammo, not jammed/destroyed,
-not auto-missing, not leg- or propping-arm-blocked while prone) with their computed TN and expected damage, plus per-weapon
+not auto-missing, not leg-blocked while prone) with their computed TN and expected damage, plus per-weapon
 block reasons (`jammed` / `destroyed` / `outOfRange` / `outOfArc` / `noLos` /
 `outOfAmmo` / `autoMiss` / `prone`). Each `FireTarget` carries the classified `arc` and
-each `FireWeapon` its own `arc`. Mirrors `declareAttacks` checks.
+each `FireWeapon` its own `arc`. When the attacker is prone, each target also
+carries `weaponsIfPropLeft` / `weaponsIfPropRight` (+ matching blocked lists):
+a legal prone volley draws from exactly one side. Mirrors `declareAttacks` checks.
 
 ## Battle state machine (`rules/game.ts`)
 
@@ -418,7 +422,7 @@ attemptStandUp(state, unitId, rng?): void              // movement phase only: p
 dropProne(state, unitId): void                         // movement phase only: go prone voluntarily
 proneFacingTurn(state, unitId, facings): void          // movement phase only: prone unit turns ±1 hexside
 ejectPilot(state, unitId): void                        // movement phase only: destroys/removes the unit and spawns a level-2 wreck in its hex
-declareAttacks(state, unitId, decls, rng?, { propArm }?): void  // weaponAttack phase only
+declareAttacks(state, unitId, decls, rng?): void  // weaponAttack phase only
 resolveAllAttacks(state, rng): void                    // resolves every unit's declared attacks simultaneously, then runs the end-of-phase piloting sweep
 applyFall(state, unitId, rng, { cause, seatbeltModifier, halved }): void
 applyPilotHits(state, unitId, hits, reason, rng): void // pilot damage + consciousness rolls

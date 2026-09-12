@@ -94,8 +94,7 @@ pass), plus `cancel`, `sheet`, `status`, `heat` and the globals.
 | command | effect |
 |---|---|
 | `ammo [policy]` | show (no argument) or set the acting unit's ammo depletion policy: `exposed` (default), `core`, `spread`, `least-first` (case-insensitive, hyphens optional). The policy picks which bin of a weapon takes the next shot; ties are broken at random |
-| `prop <left\|right>` | choose the arm a prone attacker props itself up on (default `right`); weapons mounted in that arm cannot fire while prone |
-| `fire <targetId> <weapon> [<weapon> ...]` | queue weapon declarations using 1-based weapon numbers (target first; declare several weapons at once, all against the one shared target; rapid-fire SRM/LRM fire a full volley — no `shots` argument). A prone attacker fires at +2, cannot fire leg-mounted weapons, and cannot fire the propping arm's weapons |
+| `fire <targetId> <weapon> [<weapon> ...]` | queue weapon declarations using 1-based weapon numbers (target first; declare several weapons at once, all against the one shared target; rapid-fire SRM/LRM fire a full volley — no `shots` argument). A prone attacker fires at +2, cannot fire leg-mounted weapons, and must draw the whole volley from one prop side (left-arm and right-arm weapons cannot mix — the suggestion shows both prop-left and prop-right sets; firing an arm set props the other arm) |
 | `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [J](jam) / [-](destroyed) / per-bin ammo `(n left)` markers); without id: brief unit list (id, model, position+facing) grouped by team |
 | `status` | queued attack declarations |
 | `cancel` | clear declarations |
@@ -260,8 +259,9 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   standup` (one attempt per activation, +1 heat; failure crashes back down
   for fresh fall damage), drop with `mode drop`, and turn 1 hexside with
   `turn <left|right>`; a destroyed gyro or two destroyed legs forbid
-  standing. Prone attackers fire at +2 without leg or propping-arm weapons
-  (`prop <left|right>` picks the propping arm); prone targets take −2.
+  standing. Prone attackers fire at +2 without leg weapons and cannot mix
+  left-arm and right-arm weapons in one volley (each volley props the
+  opposite arm; the fire suggestion shows both prop sides); prone targets take −2.
 - **Pilot damage / consciousness** — head hits (1 point per damaging
   grouping, even armor-only), ammo explosions (2 points), falls (failed
   seatbelt), shut-down falls, and heat-soaked life support (destroyed slot +

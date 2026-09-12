@@ -452,16 +452,6 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
       ];
     },
   },
-  prop: {
-    helpKey: "cmd.prop.help",
-    usage: "prop <left|right>",
-    argsDoc: [["arm", "cmd.prop.arg.arm"]],
-    run: (s, a) => {
-      expectArgs(L(s), a, 1, "prop <left|right>");
-      S.setPropArm(s, a[0]!);
-      return [i18n(L(s), "ok.propSet", { id: s.actorId ?? "", arm: a[0]!.toLowerCase() })];
-    },
-  },
   candidate: {
     helpKey: "cmd.candidateAttack.help",
     run: (s, _a) => {
@@ -748,7 +738,7 @@ function checkFireHint(s: S.Session): boolean {
   if (actor === null) return false;
   const newKey = `${s.battle.turn}:${actor.id}`;
   if (newKey !== s.fireHintShownFor || s.fireCandidate === null) {
-    s.fireCandidate = suggestFireTargets(s.battle, actor.id, s.propArm);
+    s.fireCandidate = suggestFireTargets(s.battle, actor.id);
     s.fireHintShownFor = newKey;
     return true;
   }

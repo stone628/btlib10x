@@ -42,6 +42,12 @@ export interface FireWeapon {
   readonly cluster?: { shots: number; perMissile: number };
 }
 
+export interface FireBlocked {
+  readonly weaponIndex: number;
+  readonly weapon: string;
+  readonly reason: FireBlockerReason;
+}
+
 export interface FireTarget {
   readonly targetId: string;
   readonly distance: number;
@@ -52,12 +58,21 @@ export interface FireTarget {
    *  arc-boundary line; otherwise null. A weapon is legal when it can fire
    *  into either arc of the pair. */
   readonly altArc: Arc | null;
+  /**
+   * Fireable weapons when standing, else alias of the prop-right variant
+   * (historic default). Prefer the `weaponsIfProp*` lists when prone.
+   */
   readonly weapons: FireWeapon[];
-  readonly blocked: Array<{
-    readonly weaponIndex: number;
-    readonly weapon: string;
-    readonly reason: FireBlockerReason;
-  }>;
+  /** Alias of `blockedIfPropRight` when prone; standing shares all lists. */
+  readonly blocked: FireBlocked[];
+  /** Fireable weapons while propping on the left arm (left-arm mounts out). */
+  readonly weaponsIfPropLeft: FireWeapon[];
+  /** Fireable weapons while propping on the right arm (right-arm mounts out). */
+  readonly weaponsIfPropRight: FireWeapon[];
+  /** Blocked weapons while propping on the left arm. */
+  readonly blockedIfPropLeft: FireBlocked[];
+  /** Blocked weapons while propping on the right arm. */
+  readonly blockedIfPropRight: FireBlocked[];
 }
 
 export interface FireSuggestion {
@@ -78,12 +93,20 @@ function hitProbability(tn: number): number {
 
 /** Hit-weighted damage across a target's fireable weapons. Higher is better. */
 export function fireTargetScore(target: FireTarget): number {
-  return target.weapons.reduce((sum, w) => sum + w.expectedDamage * hitProbability(w.tn), 0);
+  const lists = [target.weaponsIfPropLeft, target.weaponsIfPropRight];
+  let best = 0;
+  for (const list of lists) {
+    const score = list.reduce((sum, w) => sum + w.expectedDamage * hitProbability(w.tn), 0);
+    if (score > best) best = score;
+  }
+  return best;
 }
 
 /** Best-first ordering for fire targets. */
 export function compareFireTargets(a: FireTarget, b: FireTarget): number {
-  if (a.weapons.length !== b.weapons.length) return b.weapons.length - a.weapons.length;
+  const aCount = Math.max(a.weaponsIfPropLeft.length, a.weaponsIfPropRight.length);
+  const bCount = Math.max(b.weaponsIfPropLeft.length, b.weaponsIfPropRight.length);
+  if (aCount !== bCount) return bCount - aCount;
   const score = fireTargetScore(b) - fireTargetScore(a);
   if (score !== 0) return score;
   if (a.distance !== b.distance) return a.distance - b.distance;
@@ -106,12 +129,14 @@ export function bestFireTarget(sugg: FireSuggestion): FireTarget | null {
  * guaranteed to be accepted there. Targets sort best-first (most fireable
  * weapons, then hit-weighted damage, then shortest distance), so callers
  * picking `targets[0]` engage with most firepower.
+ *
+ * When the attacker is prone, each target carries two weapon sets: propping
+ * on the left arm blocks left-arm mounts (`weaponsIfPropLeft`), propping on
+ * the right arm blocks right-arm mounts (`weaponsIfPropRight`). A legal
+ * prone volley draws from exactly one set (never both arms at once); leg
+ * mounts stay blocked in both. When standing, all lists match.
  */
-export function suggestFireTargets(
-  state: BattleState,
-  unitId: string,
-  propArm: "leftArm" | "rightArm" = "rightArm",
-): FireSuggestion {
+export function suggestFireTargets(state: BattleState, unitId: string): FireSuggestion {
   const unit = state.units[unitId];
   if (!unit || unit.destroyed || unit.removed) {
     throw new Error(`suggestFireTargets: ${unitId} is not a fireable unit`);
@@ -128,45 +153,53 @@ export function suggestFireTargets(
       const altArc = fireCls?.altArc ?? null;
       const interveningWoods = losWoodsPointsBetween(state, unit.position, enemy.position);
 
-      const weapons: FireWeapon[] = [];
-      const blocked: FireTarget["blocked"] = [];
+      const weaponsIfPropLeft: FireWeapon[] = [];
+      const weaponsIfPropRight: FireWeapon[] = [];
+      const blockedIfPropLeft: FireBlocked[] = [];
+      const blockedIfPropRight: FireBlocked[] = [];
 
       Object.entries(def.weapons).forEach(([key, mount]) => {
         const weaponIndex = Number(key);
         const weapon = getWeaponDefFor(mount);
+        const blockedEntry = (reason: FireBlockerReason): FireBlocked => ({
+          weaponIndex,
+          weapon: mount.weapon,
+          reason,
+        });
+        const blockBoth = (reason: FireBlockerReason): void => {
+          blockedIfPropLeft.push(blockedEntry(reason));
+          blockedIfPropRight.push(blockedEntry(reason));
+        };
         if (unit.jammedWeapons.includes(weaponIndex)) {
-          blocked.push({ weaponIndex, weapon: mount.weapon, reason: "jammed" });
+          blockBoth("jammed");
           return;
         }
         if (unit.destroyedWeapons.includes(weaponIndex)) {
-          blocked.push({ weaponIndex, weapon: mount.weapon, reason: "destroyed" });
+          blockBoth("destroyed");
           return;
         }
         if (!canFireFromLocation(unit.phaseStartDamage, mount.location)) {
-          blocked.push({ weaponIndex, weapon: mount.weapon, reason: "destroyed" });
+          blockBoth("destroyed");
           return;
         }
-        // Same gate as `declareAttacks`: a prone attacker props on one arm
-        // (its weapons cannot fire) and cannot fire leg-mounted weapons.
+        // Prone gates mirror `declareAttacks`: leg mounts never fire; each
+        // prop choice blocks its own arm only, so arm mounts land in exactly
+        // one variant list.
         if (unit.prone && (mount.location === "rightLeg" || mount.location === "leftLeg")) {
-          blocked.push({ weaponIndex, weapon: mount.weapon, reason: "prone" });
-          return;
-        }
-        if (unit.prone && mount.location === propArm) {
-          blocked.push({ weaponIndex, weapon: mount.weapon, reason: "prone" });
+          blockBoth("prone");
           return;
         }
         const poolable = binsForWeaponName(def, weapon.name).length > 0;
         const shots = poolable ? pooledShotsLeft(def, unit.ammoBins, weapon.name) : null;
         if (poolable && (shots ?? 0) < 1) {
-          blocked.push({ weaponIndex, weapon: mount.weapon, reason: "outOfAmmo" });
+          blockBoth("outOfAmmo");
           return;
         }
         // Same gate as `declareAttacks`: same-hex targets are unsupported,
         // and the weapon's mounting arc (TW p.105) must cover the target's
         // firing arc (either arc of the pair on a boundary line).
         if (fireCls === null || arc === null) {
-          blocked.push({ weaponIndex, weapon: mount.weapon, reason: "outOfArc" });
+          blockBoth("outOfArc");
           return;
         }
         const rearFacing = mount.rearFacing === true;
@@ -175,7 +208,7 @@ export function suggestFireTargets(
           fireCls.altArc !== null &&
           weaponCanFireIntoArc(mount.location, rearFacing, fireCls.altArc);
         if (!primaryOk && !altOk) {
-          blocked.push({ weaponIndex, weapon: mount.weapon, reason: "outOfArc" });
+          blockBoth("outOfArc");
           return;
         }
         // Record arc weapon actually fires through: primary when legal,
@@ -185,7 +218,7 @@ export function suggestFireTargets(
         // (`losBlockedByWater`), elevation and intervening buildings
         // (`losBlockedByElevation`/`losBlockedByBuilding` fold into the ray).
         if (!losClear(state, unit.position, enemy.position, state.wrecks)) {
-          blocked.push({ weaponIndex, weapon: mount.weapon, reason: "noLos" });
+          blockBoth("noLos");
           return;
         }
         const breakdown = computeToHit({
@@ -207,11 +240,11 @@ export function suggestFireTargets(
           heatMod: toHitHeatModifier(unit.heat),
         });
         if (breakdown.outOfRange) {
-          blocked.push({ weaponIndex, weapon: mount.weapon, reason: "outOfRange" });
+          blockBoth("outOfRange");
           return;
         }
         if (breakdown.automatic === "miss") {
-          blocked.push({ weaponIndex, weapon: mount.weapon, reason: "autoMiss" });
+          blockBoth("autoMiss");
           return;
         }
         const weaponSugg: FireWeapon = {
@@ -237,10 +270,32 @@ export function suggestFireTargets(
               }
             : {}),
         };
-        weapons.push(weaponSugg);
+        if (unit.prone && mount.location === "leftArm") {
+          blockedIfPropLeft.push(blockedEntry("prone"));
+          weaponsIfPropRight.push(weaponSugg);
+          return;
+        }
+        if (unit.prone && mount.location === "rightArm") {
+          weaponsIfPropLeft.push(weaponSugg);
+          blockedIfPropRight.push(blockedEntry("prone"));
+          return;
+        }
+        weaponsIfPropLeft.push(weaponSugg);
+        weaponsIfPropRight.push(weaponSugg);
       });
 
-      return { targetId: enemy.id, distance, arc, altArc, weapons, blocked };
+      return {
+        targetId: enemy.id,
+        distance,
+        arc,
+        altArc,
+        weapons: weaponsIfPropRight,
+        blocked: blockedIfPropRight,
+        weaponsIfPropLeft,
+        weaponsIfPropRight,
+        blockedIfPropLeft,
+        blockedIfPropRight,
+      };
     });
   targets.sort(compareFireTargets);
 

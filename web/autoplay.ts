@@ -8,7 +8,7 @@ import {
   suggestFireTargets,
   weaponCanFireIntoArc,
 } from "btlib10x";
-import type { FireTarget } from "../src/index.js";
+import type { FireTarget, FireWeapon } from "../src/index.js";
 import type * as S from "./session.js";
 
 /** Delay between generated commands, in milliseconds. */
@@ -275,11 +275,16 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
       }
       const sugg = suggestFireTargets(st, actor.id);
       const declared = new Set(s.fireDecls.map((d) => d.weaponIndex));
-      // Targets arrive best-first: first with an undeclared fireable weapon.
+      const variantWeapons = (t: FireTarget): FireWeapon[] =>
+        t.weaponsIfPropLeft.length >= t.weaponsIfPropRight.length
+          ? [...t.weaponsIfPropLeft]
+          : [...t.weaponsIfPropRight];
+      // Targets arrive best-first: first with an undeclared fireable weapon
+      // in either prop variant.
       const target =
-        sugg.targets.find((t) => t.weapons.some((w) => !declared.has(w.weaponIndex))) ??
+        sugg.targets.find((t) => variantWeapons(t).some((w) => !declared.has(w.weaponIndex))) ??
         bestFireTarget(sugg);
-      const available = (target?.weapons ?? [])
+      const available = (target ? variantWeapons(target) : [])
         .filter((w) => !declared.has(w.weaponIndex))
         .map((w) => String(w.weaponIndex));
       if (target !== null && available.length > 0) {
