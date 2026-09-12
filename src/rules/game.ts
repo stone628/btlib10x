@@ -55,6 +55,7 @@ import {
   type CriticalResolution,
   checkCASE,
   effectiveMovement,
+  resolveCriticalHits,
 } from "./critical.js";
 import {
   applyDamage,
@@ -76,7 +77,7 @@ import {
   shutdownAvoidWithThreshold,
   toHitHeatModifier,
 } from "./heat.js";
-import { hitLocation } from "./hitlocation.js";
+import { hitLocation, hitLocationForArc } from "./hitlocation.js";
 import { rollInitiative } from "./initiative.js";
 import {
   interveningTerrains,
@@ -86,6 +87,26 @@ import {
   losWoodsPointsBetween,
 } from "./los.js";
 import * as mv from "./movement.js";
+import {
+  buildingEntryModifier,
+  consciousnessTarget,
+  countDestroyedStructure,
+  DEFAULT_PILOTING,
+  facingAfterFall,
+  fallingDamageGroups,
+  fallingDamageTotal,
+  GYRO,
+  HIP,
+  LEG_ACTUATORS,
+  LIFE_SUPPORT,
+  PSR_DAMAGE_THRESHOLD,
+  preexistingDamageModifier,
+  rollConsciousness,
+  rollFallDirection,
+  rollPilotingCheck,
+  SENSORS,
+  waterEntryModifier,
+} from "./piloting.js";
 import { computeToHit } from "./tohit.js";
 
 export interface UnitInit extends MechModelHolder {
@@ -93,6 +114,8 @@ export interface UnitInit extends MechModelHolder {
   readonly model: string;
   readonly team: number;
   readonly gunnery: number;
+  /** Pilot skill (TW regular = 5); defaults to {@link DEFAULT_PILOTING}. */
+  readonly piloting?: number;
   readonly position: HexCoord;
   readonly facing: Facing;
 }
@@ -136,10 +159,25 @@ export interface UnitState extends MechModelHolder {
   readonly model: string;
   readonly team: number;
   gunnery: number;
+  /** Piloting skill (TW regular = 5); drives every Piloting Skill Roll. */
+  piloting: number;
+  /** Pilot hits taken (0..6; 6 kills the pilot and destroys the unit). */
+  pilotHits: number;
+  /** True once the pilot fails a consciousness roll; the unit cannot act
+   *  and counts as immobile until it wakes in a later end phase. */
+  unconscious: boolean;
+  /** Turn number the pilot was knocked out on (no wake attempt that turn). */
+  unconsciousSinceTurn: number | null;
+  /** True while the 'Mech lies on the ground (fell or dropped). */
+  prone: boolean;
   position: HexCoord;
   facing: Facing;
   damage: UnitDamageState;
   phaseStartDamage: UnitDamageState;
+  /** Crit-slot destroyed flags at the start of the weapon attack phase; the
+   *  piloting sweep diffs against this to find newly destroyed actuators,
+   *  hips, and gyros (TW "previously destroyed" = destroyed before now). */
+  phaseStartCritSlotsDestroyed: Record<Location, boolean[]>;
   /** Per-crit-slot ammo state: identity + remaining shots (see
    *  `src/rules/ammo.ts`). Per-weapon totals are derived on demand. */
   ammoBins: AmmoBins;
@@ -288,6 +326,73 @@ export type GameEvent =
       readonly shotsRemaining: number;
       readonly damage: number;
       readonly avoided: boolean;
+    }
+  | {
+      /** One Piloting Skill Roll (TW p.59). `roll` is null when the outcome
+       *  was automatic (target <= 2 auto-success, target > 12 auto-fall). */
+      readonly kind: "pilotingCheck";
+      readonly unitId: string;
+      /** Trigger code: damage20 | legActuator | hip | gyro | standUp |
+       *  rubble | water1 | water2 | water3 | building | seatbelt. */
+      readonly reason: string;
+      readonly modifier: number;
+      readonly target: number;
+      readonly roll: number | null;
+      readonly success: boolean;
+    }
+  | {
+      /** The 'Mech falls (TW p.68): facing rotates per the Facing After
+       *  Fall roll and the damage clusters land on that column. `crits`
+       *  holds the determining resolutions the fall damage triggered. */
+      readonly kind: "unitFell";
+      readonly unitId: string;
+      /** failedPsr:<reason> | legDestroyed | gyroDestroyed | shutdown |
+       *  rubble | water | building. */
+      readonly cause: string;
+      readonly facingAfter: Facing;
+      readonly fallRoll: number;
+      readonly column: Arc;
+      readonly groups: ReadonlyArray<{ readonly location: Location; readonly damage: number }>;
+      readonly totalDamage: number;
+      readonly crits: readonly CriticalResolution[];
+    }
+  | {
+      readonly kind: "pilotDamaged";
+      readonly unitId: string;
+      /** headHit | ammoExplosion | fall | lifeSupport | shutdownFall. */
+      readonly reason: string;
+      readonly hits: number;
+      readonly totalHits: number;
+    }
+  | {
+      readonly kind: "consciousnessCheck";
+      readonly unitId: string;
+      readonly roll: number;
+      readonly target: number;
+      readonly success: boolean;
+      readonly hits: number;
+    }
+  | { readonly kind: "pilotUnconscious"; readonly unitId: string }
+  | {
+      readonly kind: "pilotRecovered";
+      readonly unitId: string;
+      readonly roll: number;
+      readonly target: number;
+    }
+  | { readonly kind: "pilotKilled"; readonly unitId: string }
+  | { readonly kind: "stoodUp"; readonly unitId: string }
+  | { readonly kind: "droppedProne"; readonly unitId: string }
+  | {
+      /** Building-entry PSR failed (TW p.166): the crash damages the 'Mech
+       *  (ceil(CF / 10) in 5-point groups on the front column) but never
+       *  knocks it down. `crits` holds the determining resolutions. */
+      readonly kind: "buildingCrash";
+      readonly unitId: string;
+      readonly col: number;
+      readonly row: number;
+      readonly groups: ReadonlyArray<{ readonly location: Location; readonly damage: number }>;
+      readonly totalDamage: number;
+      readonly crits: readonly CriticalResolution[];
     };
 
 interface UnitAttackResolution {
@@ -351,7 +456,7 @@ export function isShutdown(unit: UnitState) {
 }
 
 export function isImmobile(unit: UnitState) {
-  return isShutdown(unit) || isUnitImmobile(unit.damage);
+  return isShutdown(unit) || unit.unconscious || isUnitImmobile(unit.damage);
 }
 
 /**
@@ -436,6 +541,12 @@ export function createBattle(
     if (!Number.isInteger(init.gunnery) || init.gunnery < 0 || init.gunnery > 7) {
       throw new Error(`Gunnery for ${init.id} must be an integer 0..7`);
     }
+    if (
+      init.piloting !== undefined &&
+      (!Number.isInteger(init.piloting) || init.piloting < 0 || init.piloting > 7)
+    ) {
+      throw new Error(`Piloting for ${init.id} must be an integer 0..7`);
+    }
   }
 
   const unitStates: Record<string, UnitState> = {};
@@ -452,6 +563,11 @@ export function createBattle(
       model: init.model,
       team: init.team,
       gunnery: init.gunnery,
+      piloting: init.piloting ?? DEFAULT_PILOTING,
+      pilotHits: 0,
+      unconscious: false,
+      unconsciousSinceTurn: null,
+      prone: false,
       position: { ...init.position },
       facing: init.facing,
       damage,
@@ -460,6 +576,7 @@ export function createBattle(
         armorRear: { ...damage.armorRear },
         internalStructure: { ...damage.internalStructure },
       },
+      phaseStartCritSlotsDestroyed: initCritDestroyed(def),
       ammoBins,
       ammoPolicy: "exposed",
       jammedWeapons: [],
@@ -604,8 +721,14 @@ export function declareMove(state: BattleState, unitId: string, mode: MoveMode):
   const unit = requireUnit(state, unitId);
   if (unit.removed) throw new Error(`${unitId} is removed from play`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot move`);
+  if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot move`);
   if (mode !== "standStill" && isUnitImmobile(unit.damage)) {
     throw new Error(`${unitId} has a destroyed leg and can only stand still`);
+  }
+  if (unit.prone && mode !== "standStill") {
+    throw new Error(
+      `${unitId} is prone: stand up or turn in place (attemptStandUp/proneFacingTurn)`,
+    );
   }
   unit.moveMode = mode;
   unit.movesThisTurn = [];
@@ -617,13 +740,21 @@ export function executeMove(
   state: BattleState,
   unitId: string,
   steps: readonly MoveStep[],
-  options: { readonly finalFacing?: Facing } = {},
+  options: { readonly finalFacing?: Facing; readonly rng?: Rng } = {},
 ): void {
   requirePhase(state, "movement");
   const unit = requireUnit(state, unitId);
   if (unit.moveMode === null) throw new Error(`Declare a movement mode for ${unitId} first`);
+  const mode = unit.moveMode;
   if (unit.removed) throw new Error(`${unitId} is removed from play`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot move`);
+  if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot move`);
+  if (unit.prone && steps.length > 0) {
+    throw new Error(
+      `${unitId} is prone: stand up or turn in place (attemptStandUp/proneFacingTurn)`,
+    );
+  }
+  const rng = options.rng ?? DEFAULT_RNG;
 
   const def = getMechDefFor(unit);
   const movement = effectiveMovement(def, unit.critSlotsDestroyed);
@@ -714,26 +845,91 @@ export function executeMove(
     throw new Error(`${unitId} has a destroyed leg and cannot move`);
   }
 
-  unit.position = cursor;
-  unit.facing = options.finalFacing ?? facing;
-  unit.jumpedThisTurn = jumping && steps.length > 0;
-  unit.movesThisTurn = directions;
-  unit.mpSpent = spent;
-  state.actedThisPhase.push(unitId);
-  state.events.push({
-    kind: "moved",
-    unitId,
-    mode: unit.moveMode,
-    position: { ...cursor },
-    facing: unit.facing,
-    mpSpent: spent,
-    mpBudget: budget,
-  });
-  const moveHeat = movementHeat(unit.moveMode, spent);
-  if (moveHeat > 0) {
-    unit.heat = Math.min(HEAT_CAP, unit.heat + moveHeat);
-    state.events.push({ kind: "heatMove", unitId, heat: moveHeat });
+  // Preexisting damage applies to every movement-entry PSR (TW p.60).
+  const pre = preexistingDamageModifier(def, unit.critSlotsDestroyed, (leg) =>
+    legGone(unit.damage, leg),
+  );
+  const commitAt = (
+    hex: HexCoord,
+    face: Facing,
+    mode: MoveMode,
+    mp: number,
+    dirs: ("forward" | "backward")[],
+  ): void => {
+    unit.position = { ...hex };
+    unit.facing = face;
+    unit.jumpedThisTurn = jumping && steps.length > 0;
+    unit.movesThisTurn = [...dirs];
+    unit.mpSpent = mp;
+    state.actedThisPhase.push(unitId);
+    state.events.push({
+      kind: "moved",
+      unitId,
+      mode,
+      position: { ...hex },
+      facing: face,
+      mpSpent: mp,
+      mpBudget: budget,
+    });
+    const moveHeat = movementHeat(mode, mp);
+    if (moveHeat > 0) {
+      unit.heat = Math.min(HEAT_CAP, unit.heat + moveHeat);
+      state.events.push({ kind: "heatMove", unitId, heat: moveHeat });
+    }
+  };
+
+  // Progressive commit: the validated path replays step by step so a failed
+  // terrain PSR stops the 'Mech in the hex it fell in (TW: falls resolve as
+  // they happen in the movement phase).
+  let cur: HexCoord = { ...unit.position };
+  let curFacing: Facing = unit.facing;
+  let curSpent = 0;
+  const curDirs: ("forward" | "backward")[] = [];
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i]!;
+    const isFinal = i === steps.length - 1;
+    if (step.kind === "turn") {
+      curFacing = rotateFacing(curFacing, step.facings);
+      curSpent += mv.facingChangeCost(Math.abs(step.facings));
+      continue;
+    }
+    const from = cur;
+    const to = step.to;
+    if (jumping) {
+      curSpent += 1;
+      curDirs.push("forward");
+    } else {
+      const forward = mv.isForwardStep(from, to, curFacing);
+      curSpent +=
+        costToEnter(cellAt(state, to).terrain) +
+        costToClimb(cellAt(state, from).level, cellAt(state, to).level);
+      curDirs.push(forward ? "forward" : "backward");
+    }
+    cur = { ...to };
+    // Terrain-entry PSRs (TW p.60): ground checks every entered hex, jump
+    // only its landing. A fall, crash-kill, or shutdown ends the move here.
+    if (!jumping || isFinal) {
+      if (movementTerrainPsr(state, unit, rng, from, to, !jumping, pre.modifier)) {
+        commitAt({ ...cur }, unit.facing, mode, curSpent, curDirs);
+        return;
+      }
+      if (unit.prone || unit.destroyed) {
+        commitAt({ ...cur }, unit.facing, mode, curSpent, curDirs);
+        return;
+      }
+    }
   }
+
+  commitAt(cursor, options.finalFacing ?? facing, mode, spent, directions);
+}
+
+/** Options for `declareAttacks`. */
+export interface DeclareAttacksOptions {
+  /**
+   * Arm the prone attacker props itself up on (TW p.61): weapons mounted in
+   * that arm cannot fire while prone. Defaults to the right arm.
+   */
+  readonly propArm?: "leftArm" | "rightArm";
 }
 
 export function declareAttacks(
@@ -741,15 +937,19 @@ export function declareAttacks(
   unitId: string,
   decls: readonly AttackDecl[],
   rng: Rng = DEFAULT_RNG,
+  options: DeclareAttacksOptions = {},
 ): void {
   requirePhase(state, "weaponAttack");
   const unit = requireUnit(state, unitId);
   if (unit.destroyed || unit.removed) throw new Error(`${unitId} is destroyed`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot fire`);
+  if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot fire`);
   if (unit.declaredAttacks.length > 0)
     throw new Error(`${unitId} already declared attacks this turn`);
 
   const def = getMechDefFor(unit);
+  const propArm = options.propArm ?? "rightArm";
+  const sensorsOut = countDestroyedStructure(def, unit.critSlotsDestroyed, SENSORS);
   let targetId: string | null = null;
   let attackDirection: Arc | undefined;
   let attackDistance = 0;
@@ -778,6 +978,12 @@ export function declareAttacks(
       throw new Error(
         `${mount.weapon} location (${mount.location}) is destroyed or its support torso is gone`,
       );
+    }
+    if (unit.prone && (mount.location === "rightLeg" || mount.location === "leftLeg")) {
+      throw new Error(`${mount.weapon} on ${unitId} cannot fire while prone (leg-mounted)`);
+    }
+    if (unit.prone && mount.location === propArm) {
+      throw new Error(`${mount.weapon} on ${unitId} cannot fire while prone (propping arm)`);
     }
 
     const rapidFire = decl.rapidFire ?? false;
@@ -837,9 +1043,12 @@ export function declareAttacks(
     const breakdown = computeToHit({
       gunnery: unit.gunnery,
       attackerMovement: unit.moveMode ?? "standStill",
+      attackerProne: unit.prone,
+      sensorMod: sensorsOut,
       targetHexesMoved: target.movesThisTurn.length,
       targetJumped: target.jumpedThisTurn,
       targetImmobile: isImmobile(target),
+      targetProne: target.prone,
       targetTerrain: cellAt(state, target.position).terrain,
       partialCoverMod: partialCoverMod(state, unit, target),
       interveningWoods: woodsPoints,
@@ -905,6 +1114,7 @@ function resolveUnitAttacks(
 ): UnitAttackResult {
   const def = getMechDefFor(unit);
   const preHeat = unit.heat;
+  const sensorsOut = countDestroyedStructure(def, unit.critSlotsDestroyed, SENSORS);
   let currentAmmoBins = { ...unit.ammoBins };
   const jammedWeapons: number[] = [];
   const resolutions: UnitAttackResolution[] = [];
@@ -932,9 +1142,12 @@ function resolveUnitAttacks(
       gunnery: unit.gunnery,
       attackerMoved: unit.moveMode ?? "standStill",
       attackerHeat: preHeat,
+      attackerProne: unit.prone,
+      sensorMod: sensorsOut,
       targetHexesMoved: target.movesThisTurn.length,
       targetJumped: target.jumpedThisTurn,
       targetImmobile: isImmobile(target),
+      targetProne: target.prone,
       targetTerrain: cellAt(state, target.position).terrain,
       partialCoverMod: partialCoverMod(state, unit, target),
       interveningTerrains: interveningTerrains(state, unit.position, target.position),
@@ -1008,6 +1221,314 @@ function resolveUnitAttacks(
     finalAmmoBins: currentAmmoBins,
     jammedWeapons,
   };
+}
+
+/**
+ * Total armor + structure points lost between two damage states (TW "damage
+ * points taken" for the 20-point PSR trigger).
+ */
+function damageTaken(before: UnitDamageState, after: UnitDamageState): number {
+  let n = 0;
+  for (const loc of LOCATIONS) {
+    n += Math.max(0, before.armor[loc] - after.armor[loc]);
+    n += Math.max(0, (before.armorRear[loc] ?? 0) - (after.armorRear[loc] ?? 0));
+    n += Math.max(0, before.internalStructure[loc] - after.internalStructure[loc]);
+  }
+  return n;
+}
+
+interface NewStructureHit {
+  readonly location: Location;
+  readonly name: string;
+}
+
+/** Structure slots destroyed now that were intact in the phase snapshot. */
+function newlyDestroyedStructures(
+  def: ResolvedMechDef,
+  before: Readonly<Record<Location, readonly boolean[]>>,
+  now: Readonly<Record<Location, readonly boolean[]>>,
+): NewStructureHit[] {
+  const out: NewStructureHit[] = [];
+  for (const loc of Object.keys(def.critSlots) as Location[]) {
+    const layout = def.critSlots[loc];
+    const beforeFlags = before[loc] ?? [];
+    const nowFlags = now[loc] ?? [];
+    for (let i = 0; i < layout.length; i++) {
+      const slot = layout[i];
+      if (slot?.kind !== "structure") continue;
+      if ((nowFlags[i] ?? false) && !(beforeFlags[i] ?? false)) {
+        out.push({ location: loc, name: slot.name });
+      }
+    }
+  }
+  return out;
+}
+
+function legGone(damage: UnitDamageState, leg: "rightLeg" | "leftLeg"): boolean {
+  return (damage.internalStructure[leg] ?? 0) <= 0;
+}
+
+/**
+ * Deal `hits` pilot hits to `unit` (TW p.41-42): head hits, ammo explosions,
+ * falls, and heat-soaked life support all land here. Every point forces a
+ * consciousness roll (2D6 >= the table target) unless the pilot is already
+ * unconscious; six total hits kills the pilot and destroys the unit.
+ */
+export function applyPilotHits(
+  state: BattleState,
+  unit: UnitState,
+  hits: number,
+  reason: string,
+  rng: Rng,
+): void {
+  for (let i = 0; i < hits; i++) {
+    if (unit.destroyed || unit.removed) return;
+    unit.pilotHits += 1;
+    state.events.push({
+      kind: "pilotDamaged",
+      unitId: unit.id,
+      reason,
+      hits: 1,
+      totalHits: unit.pilotHits,
+    });
+    const target = consciousnessTarget(unit.pilotHits);
+    if (target === null) {
+      state.events.push({ kind: "pilotKilled", unitId: unit.id });
+      markUnitDestroyed(state, unit);
+      return;
+    }
+    // No further consciousness rolls once out this turn (TW p.42).
+    if (unit.unconscious) continue;
+    const { roll, success } = rollConsciousness(rng, target);
+    state.events.push({
+      kind: "consciousnessCheck",
+      unitId: unit.id,
+      roll,
+      target,
+      success,
+      hits: unit.pilotHits,
+    });
+    if (!success) {
+      unit.unconscious = true;
+      unit.unconsciousSinceTurn = state.turn;
+      state.events.push({ kind: "pilotUnconscious", unitId: unit.id });
+    }
+  }
+}
+
+/**
+ * Apply pre-rolled damage groupings (falling, building crashes) with the
+ * normal crit cascade per stripping group; ammo explosions injure the pilot
+ * (2 hits each). Returns the determining resolutions for the event log.
+ */
+function applyDamageGroups(
+  state: BattleState,
+  unit: UnitState,
+  rng: Rng,
+  groups: ReadonlyArray<{ location: Location; damage: number }>,
+  arc: Arc,
+): CriticalResolution[] {
+  const def = getMechDefFor(unit);
+  const crits: CriticalResolution[] = [];
+  for (const group of groups) {
+    const app = applyDamage(unit.damage, group.location, group.damage, arc);
+    unit.damage = app.after;
+    if (!state.critsDisabled) {
+      const stripped = app.steps.some(
+        (s) => s.location === group.location && s.pool === "structure" && s.damageApplied > 0,
+      );
+      if (stripped) {
+        const res = resolveCriticalHits({
+          rng,
+          def,
+          source: { location: group.location, damage: group.damage },
+          critSlotsDestroyed: unit.critSlotsDestroyed,
+          destroyedWeapons: unit.destroyedWeapons,
+          damage: unit.damage,
+          ammoBins: unit.ammoBins,
+        });
+        unit.critSlotsDestroyed = res.critSlotsDestroyed;
+        unit.destroyedWeapons = res.destroyedWeapons;
+        unit.ammoBins = res.ammoBins;
+        unit.damage = res.damage;
+        for (const row of res.rows) {
+          if (row.kind === "ammoExplosion") applyPilotHits(state, unit, 2, "ammoExplosion", rng);
+        }
+        crits.push(res);
+      }
+    }
+  }
+  for (const loc of LOCATIONS) {
+    if ((unit.damage.internalStructure[loc] ?? 0) <= 0) {
+      stripBinsInLocation(unit.ammoBins, loc);
+    }
+  }
+  if (!unit.destroyed && isUnitDestroyed(unit.damage)) {
+    markUnitDestroyed(state, unit);
+  }
+  return crits;
+}
+export interface FallOptions {
+  /** failedPsr:<reason> | legDestroyed | gyroDestroyed | water | rubble | building. */
+  readonly cause: string;
+  /**
+   * Seatbelt-check modifier (same modifiers as the failed PSR; +5 for an
+   * automatic fall off a destroyed leg, +6 off a destroyed gyro). `null`
+   * skips the roll — the pilot takes 1 hit automatically (shut-down fall).
+   */
+  readonly seatbeltModifier: number | null;
+  /** Halve the falling damage, rounding down (fall underwater, depth 2+). */
+  readonly halved: boolean;
+  /** Allow the fall damage path on an already-prone unit (failed stand-up). */
+  readonly allowProne?: boolean;
+}
+
+/**
+ * Drop `unit` to the ground (TW p.68): facing rotates per the Facing After
+ * Fall roll, `ceil(tonnage / 10)` damage lands in 5-point clusters on the
+ * fall column (with crit rolls like any damage), and the pilot makes a
+ * seatbelt PSR or takes 1 hit. A no-op on an already-prone unit unless
+ * `allowProne` is set (a failed stand-up crashes back down).
+ */
+export function applyFall(state: BattleState, unit: UnitState, rng: Rng, opts: FallOptions): void {
+  if (unit.destroyed || unit.removed) return;
+  if (unit.prone && opts.allowProne !== true) return;
+  const def = getMechDefFor(unit);
+  const dir = rollFallDirection(rng);
+  unit.facing = facingAfterFall(unit.facing, dir.shift);
+  unit.prone = true;
+
+  let total = fallingDamageTotal(def.tonnage, 0);
+  if (opts.halved) total = Math.floor(total / 2);
+  const groups: Array<{ location: Location; damage: number }> = [];
+  for (const amount of fallingDamageGroups(total)) {
+    groups.push({ location: hitLocationForArc(dir.column, roll2D6(rng)), damage: amount });
+  }
+  const crits = applyDamageGroups(
+    state,
+    unit,
+    rng,
+    groups,
+    dir.column === "rear" ? "rear" : "front",
+  );
+  state.events.push({
+    kind: "unitFell",
+    unitId: unit.id,
+    cause: opts.cause,
+    facingAfter: unit.facing,
+    fallRoll: dir.roll,
+    column: dir.column,
+    groups,
+    totalDamage: total,
+    crits,
+  });
+
+  // Seatbelt check (TW p.68): same modifiers as the failed roll, or automatic
+  // pilot damage when the 'Mech is immobile or the TN exceeds 12.
+  const down = isShutdown(unit) || unit.unconscious || isUnitImmobile(unit.damage);
+  const modifier = opts.seatbeltModifier;
+  if (modifier === null || down || unit.piloting + modifier > 12) {
+    applyPilotHits(state, unit, 1, modifier === null ? "shutdownFall" : "fall", rng);
+  } else {
+    const r = rollPilotingCheck(rng, unit.piloting, modifier);
+    state.events.push({
+      kind: "pilotingCheck",
+      unitId: unit.id,
+      reason: "seatbelt",
+      modifier,
+      target: r.target,
+      roll: r.roll,
+      success: r.success,
+    });
+    if (!r.success) applyPilotHits(state, unit, 1, "fall", rng);
+  }
+  if (!unit.destroyed && isUnitDestroyed(unit.damage)) {
+    markUnitDestroyed(state, unit);
+  }
+}
+
+export interface PhaseSnapshots {
+  readonly damage: Record<string, UnitDamageState>;
+  readonly crit: Record<string, Record<Location, boolean[]>>;
+}
+
+/**
+ * End-of-phase piloting sweep (TW p.59-60): every standing unit that took
+ * 20+ damage rolls a PSR (+1); every newly destroyed leg/foot actuator (+1),
+ * hip (+2), and first gyro hit (+3) forces its own PSR; a destroyed second
+ * gyro slot or a destroyed leg falls the 'Mech automatically. A shut-down or
+ * unconscious unit that must roll falls automatically instead. Stops a unit's
+ * queue at its first failed roll. Fall damage never re-triggers the sweep.
+ */
+export function resolvePhasePiloting(state: BattleState, rng: Rng, before: PhaseSnapshots): void {
+  for (const unit of Object.values(state.units)) {
+    if (unit.removed || unit.destroyed || unit.prone) continue;
+    const def = getMechDefFor(unit);
+    const dmgBefore = before.damage[unit.id] ?? unit.damage;
+    const critBefore = before.crit[unit.id] ?? unit.critSlotsDestroyed;
+    const pre = preexistingDamageModifier(def, critBefore, (leg) => legGone(dmgBefore, leg));
+
+    const triggers: Array<{ reason: string; modifier: number }> = [];
+    if (damageTaken(dmgBefore, unit.damage) >= PSR_DAMAGE_THRESHOLD) {
+      triggers.push({ reason: "damage20", modifier: 1 });
+    }
+    for (const hit of newlyDestroyedStructures(def, critBefore, unit.critSlotsDestroyed)) {
+      if (hit.name === HIP) triggers.push({ reason: "hip", modifier: 2 });
+      else if (LEG_ACTUATORS.has(hit.name)) triggers.push({ reason: "legActuator", modifier: 1 });
+    }
+    const gyroBefore = countDestroyedStructure(def, critBefore, GYRO);
+    const gyroNow = countDestroyedStructure(def, unit.critSlotsDestroyed, GYRO);
+    if (gyroNow < 2 && gyroBefore < 1 && gyroNow >= 1) {
+      triggers.push({ reason: "gyro", modifier: 3 });
+    }
+    let autoFall: { cause: string; seatbelt: number | null } | null = null;
+    const legDestroyed =
+      (legGone(unit.damage, "rightLeg") && !legGone(dmgBefore, "rightLeg")) ||
+      (legGone(unit.damage, "leftLeg") && !legGone(dmgBefore, "leftLeg"));
+    if (legDestroyed) autoFall = { cause: "legDestroyed", seatbelt: 5 };
+    else if (gyroNow >= 2 && gyroBefore < 2) autoFall = { cause: "gyroDestroyed", seatbelt: 6 };
+
+    let fell = false;
+    for (const t of triggers) {
+      const modifier = t.modifier + pre.modifier;
+      if (isShutdown(unit) || unit.unconscious) {
+        // TW p.60: a PSR required of a shut-down 'Mech falls it automatically
+        // (and the pilot takes the hit automatically).
+        autoFall = { cause: `failedPsr:${t.reason}`, seatbelt: null };
+        break;
+      }
+      const r = rollPilotingCheck(rng, unit.piloting, modifier);
+      state.events.push({
+        kind: "pilotingCheck",
+        unitId: unit.id,
+        reason: t.reason,
+        modifier,
+        target: r.target,
+        roll: r.roll,
+        success: r.success,
+      });
+      if (!r.success) {
+        const terrain = cellAt(state, unit.position).terrain;
+        const halved = terrain === "water2" || terrain === "water3";
+        applyFall(state, unit, rng, {
+          cause: `failedPsr:${t.reason}`,
+          seatbeltModifier: modifier,
+          halved,
+        });
+        fell = true;
+        break;
+      }
+    }
+    if (!fell && autoFall !== null) {
+      const terrain = cellAt(state, unit.position).terrain;
+      const halved = terrain === "water2" || terrain === "water3";
+      applyFall(state, unit, rng, {
+        cause: autoFall.cause,
+        seatbeltModifier: autoFall.seatbelt,
+        halved,
+      });
+    }
+  }
 }
 
 /**
@@ -1179,6 +1700,40 @@ export function resolveAllAttacks(state: BattleState, rng: Rng): void {
     }
   }
 
+  // Pilot damage (TW p.41): a head hit lands 1 point per damaging grouping,
+  // an ammo explosion 2 points. Consciousness rolls run per point at once,
+  // before any Piloting Skill Rolls (TW p.42 errata).
+  for (const result of results) {
+    for (const { targetId, resolution } of result.resolutions) {
+      if (!resolution.hit) continue;
+      const target = requireUnit(state, targetId);
+      if (target.destroyed || target.removed) continue;
+      const headGroups = resolution.groups.filter(
+        (g) => g.location === "head" && g.damage >= 1,
+      ).length;
+      if (headGroups > 0) applyPilotHits(state, target, headGroups, "headHit", rng);
+      let ammoBlasts = 0;
+      for (const crit of resolution.crits) {
+        for (const row of crit.rows) {
+          if (row.kind === "ammoExplosion") ammoBlasts += 1;
+        }
+      }
+      if (ammoBlasts > 0) applyPilotHits(state, target, ammoBlasts * 2, "ammoExplosion", rng);
+    }
+  }
+  for (const unit of Object.values(state.units)) {
+    if (!unit.destroyed && isUnitDestroyed(unit.damage)) {
+      markUnitDestroyed(state, unit);
+    }
+  }
+
+  // End-of-phase piloting: falls from this phase's damage and crits.
+  const before: PhaseSnapshots = { damage: phaseStartDamage, crit: {} };
+  for (const unit of Object.values(state.units)) {
+    before.crit[unit.id] = unit.phaseStartCritSlotsDestroyed;
+  }
+  resolvePhasePiloting(state, rng, before);
+
   // Clear declared attacks for all units
   for (const unit of Object.values(state.units)) {
     unit.declaredAttacks = [];
@@ -1203,6 +1758,7 @@ export function advancePhase(state: BattleState, rng: Rng = DEFAULT_RNG): void {
           armorRear: { ...unit.damage.armorRear },
           internalStructure: { ...unit.damage.internalStructure },
         };
+        unit.phaseStartCritSlotsDestroyed = cloneCritDestroyed(unit.critSlotsDestroyed);
       }
       state.actedThisPhase = [];
       break;
@@ -1252,6 +1808,15 @@ export function advancePhase(state: BattleState, rng: Rng = DEFAULT_RNG): void {
  */
 export function resolveHeatPhase(state: BattleState, rng: Rng): void {
   const units = Object.values(state.units).filter((u) => !u.removed);
+  const before: PhaseSnapshots = { damage: {}, crit: {} };
+  for (const unit of units) {
+    before.damage[unit.id] = {
+      armor: { ...unit.damage.armor },
+      armorRear: { ...unit.damage.armorRear },
+      internalStructure: { ...unit.damage.internalStructure },
+    };
+    before.crit[unit.id] = cloneCritDestroyed(unit.critSlotsDestroyed);
+  }
 
   // Engine crit heat: +5 per damaged engine slot (flat once the second slot
   // is gone, acting as +5 per hit) per turn, stacking on remaining heat.
@@ -1455,6 +2020,263 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
       });
     }
   }
+
+  // Life-support pilot damage (TW p.41): with a destroyed life-support slot
+  // the pilot takes 1 hit when end-of-heat-phase heat is 15+, 2 hits at 26+.
+  for (const unit of units) {
+    if (unit.destroyed || unit.removed) continue;
+    const def = getMechDefFor(unit);
+    if (countDestroyedStructure(def, unit.critSlotsDestroyed, LIFE_SUPPORT) <= 0) continue;
+    if (unit.heat >= 26) applyPilotHits(state, unit, 2, "lifeSupport", rng);
+    else if (unit.heat >= 15) applyPilotHits(state, unit, 1, "lifeSupport", rng);
+  }
+
+  // Wake attempts (TW p.42): end phase of a turn after the knockout turn.
+  for (const unit of units) {
+    if (!unit.unconscious || unit.destroyed || unit.removed) continue;
+    if (unit.unconsciousSinceTurn === null || unit.unconsciousSinceTurn >= state.turn) continue;
+    const target = consciousnessTarget(unit.pilotHits);
+    if (target === null) continue;
+    const { roll, success } = rollConsciousness(rng, target);
+    if (success) {
+      unit.unconscious = false;
+      unit.unconsciousSinceTurn = null;
+      state.events.push({ kind: "pilotRecovered", unitId: unit.id, roll, target });
+    } else {
+      state.events.push({
+        kind: "consciousnessCheck",
+        unitId: unit.id,
+        roll,
+        target,
+        success,
+        hits: unit.pilotHits,
+      });
+    }
+  }
+
+  // End-of-heat-phase piloting: falls from heat-phase ammo-explosion damage.
+  resolvePhasePiloting(state, rng, before);
+}
+
+/**
+ * Movement terrain PSRs for one entered hex (TW p.60, p.166): leaving a
+ * building hex, entering water (depth 1: -1, depth 2: +0, depth 3+: +1),
+ * rubble (+0), or a building hex (light +0 / medium +1 / heavy +2 /
+ * hardened +5). Failed water/rubble rolls drop the 'Mech in the hex; a
+ * failed building roll crashes it (ceil(CF / 10) front-column damage, no
+ * fall) instead. Returns true when the move must stop here (fell, crashed
+ * dead, or shut down mid-path).
+ */
+function movementTerrainPsr(
+  state: BattleState,
+  unit: UnitState,
+  rng: Rng,
+  from: HexCoord,
+  to: HexCoord,
+  ground: boolean,
+  preModifier: number,
+): boolean {
+  const stop = (): boolean => unit.prone || unit.destroyed || isShutdown(unit);
+  const rollFall = (reason: string, trigger: number, cause: string, hex: HexCoord): boolean => {
+    const modifier = trigger + preModifier;
+    if (isShutdown(unit) || unit.unconscious) {
+      applyFall(state, unit, rng, { cause, seatbeltModifier: null, halved: false });
+      return true;
+    }
+    const r = rollPilotingCheck(rng, unit.piloting, modifier);
+    state.events.push({
+      kind: "pilotingCheck",
+      unitId: unit.id,
+      reason,
+      modifier,
+      target: r.target,
+      roll: r.roll,
+      success: r.success,
+    });
+    if (r.success) return false;
+    const terrain = cellAt(state, hex).terrain;
+    applyFall(state, unit, rng, {
+      cause,
+      seatbeltModifier: modifier,
+      halved: terrain === "water2" || terrain === "water3",
+    });
+    return true;
+  };
+  if (ground) {
+    const leaving = buildingEntryModifier(cellAt(state, from).terrain);
+    if (leaving !== null && rollFall("building", leaving, "building", from)) return true;
+    if (stop()) return true;
+  }
+  const entering = cellAt(state, to).terrain;
+  const water = waterEntryModifier(entering);
+  if (water !== null) {
+    const reason = entering === "water1" ? "water1" : entering === "water2" ? "water2" : "water3";
+    if (rollFall(reason, water, "water", to)) return true;
+    if (stop()) return true;
+  }
+  if (entering === "rubble") {
+    if (rollFall("rubble", 0, "rubble", to)) return true;
+    if (stop()) return true;
+  }
+  const building = buildingEntryModifier(entering);
+  if (building !== null) {
+    const modifier = building + preModifier;
+    if (isShutdown(unit) || unit.unconscious) {
+      applyFall(state, unit, rng, { cause: "building", seatbeltModifier: null, halved: false });
+      return true;
+    }
+    const r = rollPilotingCheck(rng, unit.piloting, modifier);
+    state.events.push({
+      kind: "pilotingCheck",
+      unitId: unit.id,
+      reason: "building",
+      modifier,
+      target: r.target,
+      roll: r.roll,
+      success: r.success,
+    });
+    if (!r.success) {
+      const cf = state.buildings[`${to.col},${to.row}`]?.cf ?? 0;
+      const total = Math.ceil(cf / 10);
+      const groups: Array<{ location: Location; damage: number }> = [];
+      for (const amount of fallingDamageGroups(total)) {
+        groups.push({ location: hitLocation(roll2D6(rng)), damage: amount });
+      }
+      const crits = applyDamageGroups(state, unit, rng, groups, "front");
+      state.events.push({
+        kind: "buildingCrash",
+        unitId: unit.id,
+        col: to.col,
+        row: to.row,
+        groups,
+        totalDamage: total,
+        crits,
+      });
+      return true;
+    }
+  }
+  return stop();
+}
+
+/**
+ * Stand-up attempt for a prone unit (TW p.61): costs the unit's movement
+ * activation plus 1 heat, rolls a PSR with preexisting-damage modifiers only.
+ * Success leaves the 'Mech standing (counts as walking for to-hit); failure
+ * crashes it back down for fresh falling damage. A 'Mech with a destroyed
+ * gyro or with both legs destroyed cannot attempt to stand.
+ */
+export function attemptStandUp(state: BattleState, unitId: string, rng: Rng = DEFAULT_RNG): void {
+  requirePhase(state, "movement");
+  const unit = requireUnit(state, unitId);
+  if (unit.removed) throw new Error(`${unitId} is removed from play`);
+  if (!unit.prone) throw new Error(`${unitId} is not prone`);
+  if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot stand up`);
+  if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot stand up`);
+  const def = getMechDefFor(unit);
+  const pre = preexistingDamageModifier(def, unit.critSlotsDestroyed, (leg) =>
+    legGone(unit.damage, leg),
+  );
+  if (pre.gyroHits >= 2) throw new Error(`${unitId} has a destroyed gyro and cannot stand up`);
+  if (pre.legsDestroyed >= 2) throw new Error(`${unitId} has no intact legs and cannot stand up`);
+  unit.moveMode = "walk";
+  unit.movesThisTurn = [];
+  unit.jumpedThisTurn = false;
+  unit.mpSpent = 2;
+  state.actedThisPhase.push(unitId);
+  unit.heat = Math.min(HEAT_CAP, unit.heat + 1);
+  state.events.push({ kind: "heatMove", unitId, heat: 1 });
+  const r = rollPilotingCheck(rng, unit.piloting, pre.modifier);
+  state.events.push({
+    kind: "pilotingCheck",
+    unitId,
+    reason: "standUp",
+    modifier: pre.modifier,
+    target: r.target,
+    roll: r.roll,
+    success: r.success,
+  });
+  if (r.success) {
+    unit.prone = false;
+    state.events.push({ kind: "stoodUp", unitId });
+    return;
+  }
+  // Failed stand: the 'Mech crashes back down (TW p.61) for fresh fall damage.
+  const terrain = cellAt(state, unit.position).terrain;
+  applyFall(state, unit, rng, {
+    cause: "failedPsr:standUp",
+    seatbeltModifier: pre.modifier,
+    halved: terrain === "water2" || terrain === "water3",
+    allowProne: true,
+  });
+}
+
+/**
+ * Voluntary drop to the ground (TW p.60, 1 MP): no roll, no damage; the
+ * 'Mech counts as walking for to-hit this turn.
+ */
+export function dropProne(state: BattleState, unitId: string): void {
+  requirePhase(state, "movement");
+  const unit = requireUnit(state, unitId);
+  if (unit.removed) throw new Error(`${unitId} is removed from play`);
+  if (unit.prone) throw new Error(`${unitId} is already prone`);
+  if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot move`);
+  if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot move`);
+  const def = getMechDefFor(unit);
+  const budget = effectiveMoveBudget(
+    "walk",
+    effectiveMovement(def, unit.critSlotsDestroyed),
+    unit.heat,
+  );
+  if (budget < 1) throw new Error(`${unitId} has no MP to drop prone`);
+  unit.moveMode = "walk";
+  unit.movesThisTurn = [];
+  unit.jumpedThisTurn = false;
+  unit.mpSpent = 1;
+  unit.prone = true;
+  state.actedThisPhase.push(unitId);
+  unit.heat = Math.min(HEAT_CAP, unit.heat + 1);
+  state.events.push({ kind: "heatMove", unitId, heat: 1 });
+  state.events.push({ kind: "droppedProne", unitId });
+}
+
+/**
+ * Facing change by one hexside while prone (TW p.61): costs the unit's
+ * movement activation plus 1 heat, counts as walking for to-hit.
+ */
+export function proneFacingTurn(state: BattleState, unitId: string, facings: number): void {
+  requirePhase(state, "movement");
+  const unit = requireUnit(state, unitId);
+  if (unit.removed) throw new Error(`${unitId} is removed from play`);
+  if (!unit.prone) throw new Error(`${unitId} is not prone`);
+  if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot move`);
+  if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot move`);
+  if (!Number.isInteger(facings) || Math.abs(facings) !== 1) {
+    throw new Error("A prone 'Mech may only turn 1 hexside");
+  }
+  const def = getMechDefFor(unit);
+  const budget = effectiveMoveBudget(
+    "walk",
+    effectiveMovement(def, unit.critSlotsDestroyed),
+    unit.heat,
+  );
+  if (budget < 1) throw new Error(`${unitId} has no MP to turn while prone`);
+  unit.facing = rotateFacing(unit.facing, facings);
+  unit.moveMode = "walk";
+  unit.movesThisTurn = [];
+  unit.jumpedThisTurn = false;
+  unit.mpSpent = 1;
+  state.actedThisPhase.push(unitId);
+  unit.heat = Math.min(HEAT_CAP, unit.heat + 1);
+  state.events.push({ kind: "heatMove", unitId, heat: 1 });
+  state.events.push({
+    kind: "moved",
+    unitId,
+    mode: "walk",
+    position: { ...unit.position },
+    facing: unit.facing,
+    mpSpent: 1,
+    mpBudget: budget,
+  });
 }
 
 /** Pilot eject, resolved during the movement phase: the pilot abandons the
@@ -1619,6 +2441,8 @@ function pendingActors(state: BattleState): string[] {
     if (!unit || unit.removed) return false;
     if (state.actedThisPhase.includes(id)) return false;
     if (unit.passedAttacks) return false;
+    // An unconscious pilot cannot move, fire, or act (TW p.42).
+    if (unit.unconscious) return false;
     if (nominalOnly && !isNominal(unit)) return false;
     return true;
   });
@@ -1714,6 +2538,15 @@ function initCritDestroyed(def: ResolvedMechDef): Record<Location, boolean[]> {
   for (const loc of Object.keys(def.critSlots) as Location[]) {
     out[loc] = new Array(def.critSlots[loc].length).fill(false);
   }
+  return out;
+}
+
+/** Deep copy of a per-slot destroyed-flag table (phase snapshots). */
+function cloneCritDestroyed(src: Record<Location, boolean[]>): Record<Location, boolean[]> {
+  const out: Record<Location, boolean[]> = {} as Record<Location, boolean[]>;
+  (Object.keys(src) as Location[]).forEach((loc) => {
+    out[loc] = src[loc].slice();
+  });
   return out;
 }
 

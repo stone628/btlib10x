@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getMapDef, getMechDefFor } from "../src/data/index.js";
-import { isNominal } from "../src/index.js";
+import { bestFireTarget, isNominal, suggestFireTargets } from "../src/index.js";
 import { ammoWeaponTotals } from "../src/rules/ammo.js";
-import { canFireFromLocation } from "../src/rules/damage.js";
 import {
   createBoardModel,
   FACING_GLYPH,
@@ -31,16 +30,12 @@ function freshSetup(): S.Session {
 function fireEverything(s: S.Session, enemy: string): void {
   const st = s.battle!;
   const unit = st.units[S.currentActor(s)!.id]!;
-  const def = getMechDefFor(unit);
-  Object.entries(def.weapons).forEach(([key, mount]) => {
-    const weaponIndex = Number(key);
-    if (unit.jammedWeapons.includes(weaponIndex)) return;
-    if (!canFireFromLocation(unit.phaseStartDamage, mount.location)) return;
-    // Ammo weapons skip when dry (per-weapon total hits zero).
-    if (mount.shots !== undefined && (ammoWeaponTotals(def, unit.ammoBins)[weaponIndex] ?? 0) < 1)
-      return;
-    S.queueFire(s, { weaponIndex, targetId: enemy });
-  });
+  const sugg = suggestFireTargets(st, unit.id, s.propArm);
+  const target = sugg.targets.find((t) => t.targetId === enemy) ?? bestFireTarget(sugg);
+  for (const w of target?.weapons ?? []) {
+    if (unit.jammedWeapons.includes(w.weaponIndex)) continue;
+    S.queueFire(s, { weaponIndex: w.weaponIndex, targetId: enemy });
+  }
 }
 
 /** Drive a started battle until it is over using minimal legal actions. */
@@ -55,7 +50,8 @@ function autoPlay(s: S.Session): void {
     if (st.phase === "movement") {
       if (isNominal(st.units[actorId]!)) {
         try {
-          S.declareMode(s, "walk");
+          if (st.units[actorId]!.prone) S.declareMode(s, "standup");
+          else S.declareMode(s, "walk");
         } catch {
           S.declareMode(s, "standStill");
         }
@@ -63,7 +59,8 @@ function autoPlay(s: S.Session): void {
       S.commitMove(s);
     } else {
       fireEverything(s, enemy);
-      S.commitFire(s);
+      if (s.fireDecls.length === 0) S.passFire(s);
+      else S.commitFire(s);
     }
   }
   expect(s.app).toBe("over");
@@ -151,7 +148,9 @@ describe("help <command>", () => {
     const s = S.newSession(0);
     s.critsDisabled = true;
     const out = run(s, "help add");
-    expect(out[0]).toBe("usage: add <id> <model> <team> <gunnery> <col> <row> [facing]");
+    expect(out[0]).toBe(
+      "usage: add <id> <model> <team> <gunnery> <col> <row> [facing|piloting] [piloting]",
+    );
     expect(out.join("\n")).toContain("arguments:");
     expect(out.join("\n")).toMatch(/gunnery\s+pilot gunnery skill/);
     expect(out.join("\n")).not.toContain("setup' phase");
@@ -754,22 +753,17 @@ describe("full game", () => {
       const enemy = ids.find((id) => id !== actorId)!;
       let out: string[];
       if (st.phase === "movement") {
-        run(s, "mode walk");
+        const actor = st.units[actorId]!;
+        const modeOut = run(s, actor.prone ? "mode standup" : "mode walk");
+        if (modeOut.some((l) => l.startsWith("error:"))) run(s, "mode standstill");
         out = run(s, "done");
       } else {
         const unit = st.units[actorId]!;
-        const def = getMechDefFor(unit);
-        Object.entries(def.weapons).forEach(([key, mount]) => {
-          const weaponIndex = Number(key);
-          if (unit.jammedWeapons.includes(weaponIndex)) return;
-          if (!canFireFromLocation(unit.phaseStartDamage, mount.location)) return;
-          if (
-            mount.shots !== undefined &&
-            (ammoWeaponTotals(def, unit.ammoBins)[weaponIndex] ?? 0) < 1
-          )
-            return;
-          run(s, `fire ${enemy} ${weaponIndex}`);
-        });
+        const sugg = suggestFireTargets(st, unit.id, s.propArm);
+        const target = sugg.targets.find((t) => t.targetId === enemy) ?? bestFireTarget(sugg);
+        for (const w of target?.weapons ?? []) {
+          run(s, `fire ${enemy} ${w.weaponIndex}`);
+        }
         out = run(s, "done");
       }
       if (out.some((l) => l.startsWith("=== TEAM") || l.startsWith("=== DRAW"))) {

@@ -59,7 +59,7 @@ Examples:
 | command | effect |
 |---|---|
 | `map <name>` | load a bundled map as terrain (`beginner`, `quickstart`, `test`) |
-| `add <id> <model> <team> <gunnery> <col> <row> [facing]` | place unit (facing default `n`) |
+| `add <id> <model> <team> <gunnery> <col> <row> [facing\|piloting] [piloting]` | place unit (facing default `n`, piloting default `5`; either trailing word may be the facing or the piloting skill) |
 | `rm <id>` | remove placed unit |
 | `status` | setup summary: 'Mechs grouped by team, selected map name |
 | `start` | ≥2 units on ≥2 teams required; creates battle, rolls initiative → `turn` |
@@ -71,6 +71,9 @@ The prompt names the acting unit; commands act on that 'Mech.
 | command | effect |
 |---|---|
 | `mode standstill\|walk\|run\|jump` | declare movement mode (required first); for walk/run/jump, renders a clipped ASCII hex map of the reachable hexes — exactly the smallest bounding box around every reachable hex, clamped to the board (no padding). Reachable hexes draw a team-colored `<>` in the belly; every reachable (hex, facing) edge is tinted with the acting unit's team color, and no facing arrows are drawn. Other units inside the crop keep their ids (team-colored) but no facing arrow. Movement paths (the `F`/`B`/`R`/`L` fragment sequence per landing) remain available programmatically via `reachableLandings`/`RevealedLanding.path` for later use, but are not rendered on the map |
+| `mode standup` | declare a stand-up attempt for a prone unit (PSR with preexisting-damage modifiers, +1 heat; failure crashes back down for fresh falling damage). `done` commits the single attempt — the activation ends either way |
+| `mode drop` | declare a voluntary drop to prone (no roll, +1 heat). `done` commits it |
+| `turn <left\|right>` | queue a 1-hexside facing change for a prone unit (+1 heat, counts as walking); committed by `done` |
 | `mode shutdown` | declare a voluntary shutdown (online unit only). `place` stays unavailable; `done` commits it — the unit goes off-line (`manual`) and can no longer move, fire, or act normally this turn. `cancel` resets the declaration |
 | `mode startup` | declare a voluntary startup attempt (shut-down unit only). `done` rolls 2D6 against the heat shutdown avoidance number: success turns the unit `starting` (still off-line now, online just before the next initiative roll); failure keeps it shut down. `done` alone (without `mode startup`) passes — the unit stays off-line |
 | `mode eject` | declare a pilot ejection (any non-removed unit, including a shut-down one). `place` stays unavailable; `done` commits it — the unit is marked destroyed/removed and its hex becomes a permanent level-2 wreck. `cancel` resets the declaration |
@@ -91,7 +94,8 @@ pass), plus `cancel`, `sheet`, `status`, `heat` and the globals.
 | command | effect |
 |---|---|
 | `ammo [policy]` | show (no argument) or set the acting unit's ammo depletion policy: `exposed` (default), `core`, `spread`, `least-first` (case-insensitive, hyphens optional). The policy picks which bin of a weapon takes the next shot; ties are broken at random |
-| `fire <targetId> <weapon> [<weapon> ...]` | queue weapon declarations using 1-based weapon numbers (target first; declare several weapons at once, all against the one shared target; rapid-fire SRM/LRM fire a full volley — no `shots` argument) |
+| `prop <left\|right>` | choose the arm a prone attacker props itself up on (default `right`); weapons mounted in that arm cannot fire while prone |
+| `fire <targetId> <weapon> [<weapon> ...]` | queue weapon declarations using 1-based weapon numbers (target first; declare several weapons at once, all against the one shared target; rapid-fire SRM/LRM fire a full volley — no `shots` argument). A prone attacker fires at +2, cannot fire leg-mounted weapons, and cannot fire the propping arm's weapons |
 | `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [J](jam) / [-](destroyed) / per-bin ammo `(n left)` markers); without id: brief unit list (id, model, position+facing) grouped by team |
 | `status` | queued attack declarations |
 | `cancel` | clear declarations |
@@ -239,16 +243,51 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   strictly between the endpoints (independent of elevation), and a target
   adjacent to a wreck gains +2 partial cover when the attacker is below the
   wreck's top. The hex is rendered with an `X` mark.
+- **Piloting skill rolls, falling, prone** — every unit carries a piloting
+  skill (`add` argument, default 5). End-of-phase PSRs fire for 20+ damage
+  (+1), each destroyed leg/foot actuator (+1), each destroyed hip (+2), and
+  a first gyro hit (+3); a destroyed gyro or leg drops the 'Mech
+  automatically, as does any required PSR on a shut-down or unconscious
+  unit. Preexisting damage modifies every PSR (+1 per destroyed leg/foot
+  actuator, +2 per destroyed hip replacing that leg's other mods, +3 for a
+  hit gyro, +5 per destroyed leg replacing that leg's other mods). A fall
+  rotates facing per the Facing After Fall table and lands
+  `ceil(tonnage / 10)` damage in 5-point clusters on the fall column (halved
+  round-down underwater at depth 2+), with normal crit rolls; the pilot then
+  makes a seatbelt PSR (+5 off a destroyed leg, +6 off a destroyed gyro, or
+  the failed roll's modifiers) or takes 1 hit — automatic when the 'Mech is
+  immobile or the target exceeds 12. Prone units stand up with `mode
+  standup` (one attempt per activation, +1 heat; failure crashes back down
+  for fresh fall damage), drop with `mode drop`, and turn 1 hexside with
+  `turn <left|right>`; a destroyed gyro or two destroyed legs forbid
+  standing. Prone attackers fire at +2 without leg or propping-arm weapons
+  (`prop <left|right>` picks the propping arm); prone targets take −2.
+- **Pilot damage / consciousness** — head hits (1 point per damaging
+  grouping, even armor-only), ammo explosions (2 points), falls (failed
+  seatbelt), shut-down falls, and heat-soaked life support (destroyed slot +
+  end-of-heat-phase heat 15+ → 1 point, 26+ → 2 points) injure the pilot;
+  every point forces a consciousness roll (1→3+, 2→5+, 3→7+, 4→10+, 5→11+)
+  taken before any simultaneous PSR. A failed roll knocks the pilot out:
+  the unit cannot act and counts as immobile until it wakes in a later end
+  phase; six total hits kills the pilot and destroys the unit. Cockpit
+  destruction still kills outright.
+- **Movement-entry PSRs** — entering rubble (+0) or water (depth 1: −1,
+  depth 2: +0, depth 3+: +1) and entering/leaving a building hex (light +0
+  / medium +1 / heavy +2 / hardened +5) forces a PSR (plus preexisting
+  damage); a failed water/rubble roll falls the 'Mech in the entered hex
+  (jump checks the landing only), while a failed building roll crashes it
+  for `ceil(CF / 10)` front-column damage without falling.
+- **Sensor crits** — each destroyed sensor slot adds +1 to the unit's weapon
+  to-hit numbers.
 
 ### Not yet implemented
 
 - **Physical attacks** — punch, kick, charge, DFA.
-- **Piloting rolls** — falling, standing up, leg/gyro damage effects, and
-  partial-cover building-CF damage on leg strikes (cover itself is
-  implemented; only the building structural damage on a covered hit is
-  deferred).
-- **Water depth movement** — level-change MP surcharge when entering water,
-  and the piloting roll to avoid falling on the way in.
+- **Physical-attack PSR triggers** — kicks, pushes, charges, DFAs, and
+  missed kicks/charges force falls in TW, but without a physical attack
+  phase there is nothing to trigger them (see Not viable below).
+- **Water depth movement** — level-change MP surcharge when entering water
+  (the water-entry PSR itself is implemented above).
 - **Collapse damage** — units inside a building hex take damage when it
   collapses (only the collapse-to-rubble terrain change is implemented).
 - **Torso twist** — per-weapon facing override that shifts a unit's firing
@@ -262,6 +301,34 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
 - **Called shots**, aimed shots, spotter / indirect fire, ECM.
 - **Pilot abilities** (edge, etc.), quirks, experience beyond the gunnery
   skill band.
+
+### Not viable in this subset (blocked by explicit limits)
+
+These piloting-adjacent rules cannot be implemented without breaking limits
+stated elsewhere in this document or the codebase:
+
+- **Pavement skidding with displacement** (TW p.62) — a failed running skid
+  slides the 'Mech extra hexes before it falls. The engine has no
+  unit-displacement mechanic (nothing pushes or throws a 'Mech; cf.
+  "Physical attacks" above and the atomic commit boundary in AGENTS.md), so
+  only the fall itself could land, never the slide.
+- **Falls from height / being thrown off level** (TW p.68) — all falls here
+  happen in place (0 levels fallen) because no rule in the subset displaces
+  a unit across hexes or levels; the `levelsFallen` term of falling damage
+  only activates once displacement exists.
+- **One-legged hopping movement** (TW p.122: 1 MP) — the damage model
+  treats any destroyed leg as immobility ("leg IS death immobilizes" under
+  Damage above). A one-legged 'Mech may still stand (at +5) and fire, but it
+  cannot spend its TW 1 MP hop.
+- **Standing up with continued movement** — a stand-up attempt consumes the
+  whole movement activation because rule functions commit atomically at the
+  caller's boundary (AGENTS.md): the outcome roll cannot interleave with
+  further steps in one commit.
+- **Four-legged / vehicle PSR rows** (quads, skidding vehicles,
+  sideslipping VTOLs) — bipedal 'Mechs only (top of this section).
+- **Drowning / underwater life-support pressure** — water blocks targeting
+  at depth 2+ and halves falls, but breath-holding and hull-breach pressure
+  belong to the deferred water-depth movement rules.
 
 ### Verify-later
 

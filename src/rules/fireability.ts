@@ -9,6 +9,7 @@ import { canFireFromLocation } from "./damage.js";
 import { type BattleState, isImmobile, partialCoverMod } from "./game.js";
 import { toHitHeatModifier } from "./heat.js";
 import { losClear, losWoodsPointsBetween } from "./los.js";
+import { countDestroyedStructure, SENSORS } from "./piloting.js";
 import type { RangeBracket } from "./tohit.js";
 import { computeToHit, damageForBracket } from "./tohit.js";
 
@@ -19,7 +20,8 @@ export type FireBlockerReason =
   | "outOfArc"
   | "noLos"
   | "outOfAmmo"
-  | "autoMiss";
+  | "autoMiss"
+  | "prone";
 
 export interface FireWeapon {
   readonly weaponIndex: number;
@@ -105,12 +107,17 @@ export function bestFireTarget(sugg: FireSuggestion): FireTarget | null {
  * weapons, then hit-weighted damage, then shortest distance), so callers
  * picking `targets[0]` engage with most firepower.
  */
-export function suggestFireTargets(state: BattleState, unitId: string): FireSuggestion {
+export function suggestFireTargets(
+  state: BattleState,
+  unitId: string,
+  propArm: "leftArm" | "rightArm" = "rightArm",
+): FireSuggestion {
   const unit = state.units[unitId];
   if (!unit || unit.destroyed || unit.removed) {
     throw new Error(`suggestFireTargets: ${unitId} is not a fireable unit`);
   }
   const def = getMechDefFor(unit);
+  const sensorsOut = countDestroyedStructure(def, unit.critSlotsDestroyed, SENSORS);
   const targets = Object.values(state.units)
     .filter((u) => u.team !== unit.team && !u.removed && !u.destroyed)
     .map((enemy) => {
@@ -137,6 +144,16 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
         }
         if (!canFireFromLocation(unit.phaseStartDamage, mount.location)) {
           blocked.push({ weaponIndex, weapon: mount.weapon, reason: "destroyed" });
+          return;
+        }
+        // Same gate as `declareAttacks`: a prone attacker props on one arm
+        // (its weapons cannot fire) and cannot fire leg-mounted weapons.
+        if (unit.prone && (mount.location === "rightLeg" || mount.location === "leftLeg")) {
+          blocked.push({ weaponIndex, weapon: mount.weapon, reason: "prone" });
+          return;
+        }
+        if (unit.prone && mount.location === propArm) {
+          blocked.push({ weaponIndex, weapon: mount.weapon, reason: "prone" });
           return;
         }
         const poolable = binsForWeaponName(def, weapon.name).length > 0;
@@ -174,9 +191,12 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
         const breakdown = computeToHit({
           gunnery: unit.gunnery,
           attackerMovement: unit.moveMode ?? "standStill",
+          attackerProne: unit.prone,
+          sensorMod: sensorsOut,
           targetHexesMoved: enemy.movesThisTurn.length,
           targetJumped: enemy.jumpedThisTurn,
           targetImmobile: isImmobile(enemy),
+          targetProne: enemy.prone,
           targetTerrain: cellAt(state, enemy.position).terrain,
           partialCoverMod: partialCoverMod(state, unit, enemy),
           interveningWoods,

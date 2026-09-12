@@ -33,14 +33,24 @@
  *     structure (the armor pool is bypassed). Only the hit bin detonates;
  *     sibling bins of the same weapon are untouched. An ammo explosion that
  *     strips more IS triggers a fresh determining roll, recursively, and
- *     ammo in any location whose IS drops to 0 is gone.
+ *     ammo in any location whose IS drops to 0 is gone. Every ammo explosion
+ *     also injures the pilot (2 hits + consciousness rolls, TW p.41).
  *   - limb blown off (determining 12 on head/arm/leg): the location's armor
  *     and internal structure are zeroed, killing the head or immobilizing
  *     the leg. An arm is removed from play; its support torso's IS is not
- *     affected.
+ *     affected. A destroyed leg drops the 'Mech automatically (TW p.60).
  *   - cockpit slot hit: the pilot is killed (the 'Mech is destroyed).
- *   - leg actuator (upper/lower/foot) and hip: recorded as destroyed and
- *     accounted for by the effective-movement helper.
+ *   - leg actuator (upper/lower/foot) and hip: recorded as destroyed,
+ *     accounted for by the effective-movement helper, and each forces its
+ *     own PSR at the end of the phase (+1 / +2, TW p.60).
+ *   - first gyro hit: forces a PSR at +3 at the end of the phase; a
+ *     destroyed gyro drops the 'Mech automatically. All PSRs also take +3
+ *     from a previously hit gyro (preexisting damage, TW p.60).
+ *   - sensor slots: each destroyed sensor adds +1 to the unit's weapon
+ *     to-hit numbers (TW p.123).
+ *   - life-support slot: a destroyed life support injures the pilot at the
+ *     end of any heat phase whose post-dissipation heat is 15+ (1 hit) or
+ *     26+ (2 hits) (TW p.41).
  *   - jump jet slot: jump MP reduced by 1.
  *   - ammo explosions in CASE-protected locations: CASE (explicit slot, or
  *     implicit on Clan side torsos) contains the blast — it vents rest of
@@ -49,12 +59,9 @@
  *     additionally caps the blast damage at 1 point total.
  *
  * Effects that exist in the official rules but are not modeled here because
- * the current engine subset lacks heat / piloting / physical attacks:
- *   - engine crits (heat generation, eventual shutdown)
- *   - gyro crits (piloting rolls, eventual fall)
- *   - sensor crits (to-hit penalty)
- *   - life-support crits (pilot damage from heat, drowning)
- *   - heat-sink crits (reduced dissipation)
+ * the current engine subset lacks heat / physical attacks:
+ *   - engine crits feed heat only (no eventual shutdown modeling beyond the
+ *     heat scale)
  *   - arm actuators, shoulder, hand (to-hit / physical-attack penalties)
  *
  * The engine's rules functions are pure given their inputs and operate on

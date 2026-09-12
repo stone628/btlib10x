@@ -389,11 +389,11 @@ attack resolved against (drives the hit-location table and armor pool).
 
 ### Fireability (`rules/fireability.ts`)
 
-`suggestFireTargets(state, unitId): FireSuggestion` — for every enemy, lists
+`suggestFireTargets(state, unitId, propArm = "rightArm"): FireSuggestion` — for every enemy, lists
 the weapons that could reach it (arc, LOS, range, ammo, not jammed/destroyed,
-not auto-missing) with their computed TN and expected damage, plus per-weapon
+not auto-missing, not leg- or propping-arm-blocked while prone) with their computed TN and expected damage, plus per-weapon
 block reasons (`jammed` / `destroyed` / `outOfRange` / `outOfArc` / `noLos` /
-`outOfAmmo` / `autoMiss`). Each `FireTarget` carries the classified `arc` and
+`outOfAmmo` / `autoMiss` / `prone`). Each `FireTarget` carries the classified `arc` and
 each `FireWeapon` its own `arc`. Mirrors `declareAttacks` checks.
 
 ## Battle state machine (`rules/game.ts`)
@@ -413,12 +413,18 @@ the caller's boundary.
 createBattle(units: UnitInit[], options?: CreateBattleOptions): BattleState
 rollInitiativePhase(state, rng): void                  // initiative -> movement
 declareMove(state, unitId, mode): void                 // movement phase only
-executeMove(state, unitId, steps, { finalFacing }?): void
+executeMove(state, unitId, steps, { finalFacing, rng }?): void
+attemptStandUp(state, unitId, rng?): void              // movement phase only: prone unit tries to rise (one attempt per activation)
+dropProne(state, unitId): void                         // movement phase only: go prone voluntarily
+proneFacingTurn(state, unitId, facings): void          // movement phase only: prone unit turns ±1 hexside
 ejectPilot(state, unitId): void                        // movement phase only: destroys/removes the unit and spawns a level-2 wreck in its hex
-declareAttacks(state, unitId, decls): void             // weaponAttack phase only
-resolveAllAttacks(state, rng): void                    // resolves every unit's declared attacks simultaneously
+declareAttacks(state, unitId, decls, rng?, { propArm }?): void  // weaponAttack phase only
+resolveAllAttacks(state, rng): void                    // resolves every unit's declared attacks simultaneously, then runs the end-of-phase piloting sweep
+applyFall(state, unitId, rng, { cause, seatbeltModifier, halved }): void
+applyPilotHits(state, unitId, hits, reason, rng): void // pilot damage + consciousness rolls
+resolvePhasePiloting(state, rng, before): void         // end-of-phase PSR sweep against snapshots
 advancePhase(state): void                              // drives the phase cycle
-nextActor(state): string | null                        // alternating activation hint
+nextActor(state): string | null                        // alternating activation hint (skips unconscious units)
 actorQueue(state): { acted: string[]; pending: string[] }  // activation order view
 checkVictory(state): { winnerTeam; draw }
 getUnit(state, unitId): UnitState
@@ -435,7 +441,7 @@ interface CreateBattleOptions {
 Key types:
 
 ```ts
-interface UnitInit { id; model; team; gunnery; position: Hex; facing: Facing }
+interface UnitInit { id; model; team; gunnery; piloting?; position: Hex; facing: Facing }
 
 type MoveStep =
   | { kind: "enter"; to: Hex }      // forward/backward (ground) or adjacent hop (jump)

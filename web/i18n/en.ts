@@ -68,6 +68,7 @@ export const en = {
   "cmd.add.arg.model": "'Mech model key, see 'info mech'",
   "cmd.add.arg.team": "team number (0 or 1)",
   "cmd.add.arg.gunnery": "pilot gunnery skill; lower is better",
+  "cmd.add.arg.piloting": "optional pilot piloting skill 0..7 (default 5); lower is better",
   "cmd.add.arg.colrow": "target hex, 1-based, must be inside the map",
   "cmd.add.arg.facing": "optional facing n|ne|se|s|sw|nw (default n)",
   "cmd.rm.help": "remove a placed unit",
@@ -75,9 +76,13 @@ export const en = {
   "cmd.statusSetup.help": "setup summary: units grouped by team, selected map",
   "cmd.start.help": "start the battle (needs >=2 units on >=2 teams)",
   "cmd.mode.help":
-    "declare movement mode (walk/run/jump/standstill), voluntary shutdown/startup, or eject",
+    "declare movement mode (walk/run/jump/standstill/standup/drop), voluntary shutdown/startup, or eject",
   "cmd.mode.arg.mode":
-    "standstill | walk | run | jump declares movement with its own MP pool; shutdown | startup declares a voluntary shutdown or startup attempt (committed by 'done'); eject abandons the 'Mech — the pilot leaves, the fielded unit is removed, and its hex becomes a level-2 wreck (committed by 'done')",
+    "standstill | walk | run | jump declares movement with its own MP pool; standup attempts to rise from prone and drop goes prone voluntarily (both committed by 'done'); shutdown | startup declares a voluntary shutdown or startup attempt (committed by 'done'); eject abandons the 'Mech — the pilot leaves, the fielded unit is removed, and its hex becomes a level-2 wreck (committed by 'done')",
+  "cmd.turn.help": "turn 1 hexside left or right while prone (committed by 'done')",
+  "cmd.turn.arg.dir": "left | right",
+  "cmd.prop.help": "choose the arm a prone attacker props itself up on (its weapons cannot fire)",
+  "cmd.prop.arg.arm": "left | right (default right)",
   "cmd.place.help": "place the 'Mech at a reachable final hex and facing",
   "cmd.place.arg.colrowfacing":
     "final hex (1-based col row) and absolute facing word n|ne|se|s|sw|nw; must appear in the reachable map shown by 'mode'",
@@ -114,6 +119,7 @@ export const en = {
   "ok.stepResult": "{id} {mode} -> {col},{row} facing {facing} [MP {spent}/{budget}]",
   "ok.cancelled": "cancelled",
   "ok.fireQueuedBatch": "queued {target} <- weapons {weapons}",
+  "ok.propSet": "{id} props on the {arm} arm",
   "ammo.current": "ammo policy: {policy}",
   "ammo.set": "{id}: ammo policy set to {policy}",
   "ammo.policy.exposed": "exposed",
@@ -134,6 +140,7 @@ export const en = {
   "err.duplicateId": "Duplicate unit id: {id}",
   "err.badTeam": "team must be a non-negative integer",
   "err.badGunnery": "gunnery must be an integer 0..7",
+  "err.badPiloting": "piloting must be an integer 0..7",
   "err.candidate.movemode": "movement candidate not available",
   "err.candidate.attack": "possible target not available",
 
@@ -151,7 +158,13 @@ export const en = {
   "err.noMap": "Load a map before starting a battle",
   "err.needTwoUnits": "A battle needs at least two units",
   "err.needTwoTeams": "Units must span at least two teams",
-  "err.badModeWord": "mode must be one of standstill|walk|run|jump|shutdown|startup|eject",
+  "err.badModeWord":
+    "mode must be one of standstill|walk|run|jump|standup|drop|shutdown|startup|eject",
+  "err.standupRequiresProne": "{id} is not prone — mode standup needs a prone unit",
+  "err.dropRequiresStanding": "{id} is already prone",
+  "err.turnRequiresProne": "{id} is not prone — turn needs a prone unit",
+  "err.turnDir": "turn expects left or right",
+  "err.propArm": "prop expects left or right",
   "err.noMoveInShutdownMode":
     "movement is not available while the declared mode is shutdown/startup/eject",
   "err.mustBeOnlineForShutdown": "mode shutdown requires an online unit",
@@ -256,6 +269,7 @@ export const en = {
   "fireSuggestion.reason.noLos": "no line of sight",
   "fireSuggestion.reason.outOfAmmo": "out of ammo",
   "fireSuggestion.reason.autoMiss": "auto-miss",
+  "fireSuggestion.reason.prone": "prone (leg or propping arm)",
   "fireSuggestion.blockedSummary": "blocked weapons ({num}):",
 
   // over status
@@ -292,6 +306,11 @@ export const en = {
   "info.weaponAntiInfantry": "anti-infantry: bonus damage vs infantry",
   "sheet.modelLine": "model: {name} {model} - {weightClass} {tonnage}t",
   "sheet.gunneryLine": "gunnery: {gunnery}",
+  "sheet.pilotLine": "piloting: {piloting}, pilot hits: {hits} ({state})",
+  "sheet.pilotOk": "conscious, standing",
+  "sheet.pilotProne": "conscious, PRONE",
+  "sheet.pilotOut": "UNCONSCIOUS",
+  "sheet.pilotOutProne": "UNCONSCIOUS, PRONE",
   "sheet.gunneryLineHeat": "gunnery: {gunnery} + {toHit}(heat >= {threshold})",
   "sheet.at": "position: {pos} facing {facing}",
   "sheet.modeSuffix": ", {mode} [MP {mp}]",
@@ -376,6 +395,21 @@ export const en = {
     "{id} restart check failed (heat {heat} >= {threshold}) avoid fail(2D6 = {roll} < {avoid}); still shut down",
   "log.ammoExplosionAvoided":
     "{id} ammo {weapon} ({loc} #{slot}) avoids exploding (heat {heat} >= {threshold}) avoid success(2D6 = {roll} >= {avoid})",
+  "log.pilotingCheck": "{id} PSR ({reason}) needs {target}: 2D6 = {roll} -> {verdict}",
+  "log.psrSuccess": "SUCCESS",
+  "log.psrFail": "FAIL",
+  "log.psrAuto": "auto",
+  "log.unitFell": "*** {id} FALLS ({cause}) facing {facing}: {groups} ({damage} total) ***",
+  "log.pilotDamaged": "{id} pilot takes a hit ({reason}) — {total} total",
+  "log.consciousnessCheck": "{id} consciousness needs {target}: 2D6 = {roll} -> {result}",
+  "log.consciousAwake": "AWAKE",
+  "log.consciousOut": "OUT",
+  "log.pilotUnconscious": "*** {id} pilot UNCONSCIOUS ***",
+  "log.pilotRecovered": "{id} pilot regains consciousness (2D6 = {roll})",
+  "log.pilotKilled": "*** {id} pilot KILLED ***",
+  "log.stoodUp": "{id} stands up",
+  "log.droppedProne": "{id} drops prone",
+  "log.buildingCrash": "{id} crashes into building at {hex}: {groups} ({damage} total)",
   "log.heatAmmoExplosion":
     "{id} ammo {weapon} ({loc} #{slot}, {shots} shots) explodes for {damage} damage (heat {heat} >= {threshold}) avoid fail(2D6 = {roll} < {avoid})",
 

@@ -321,7 +321,8 @@ describe("game integration: weapon heat", () => {
     const state = hbkVsEnf();
     startAttackTurn(state);
     declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
-    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4));
+    // 20+ damage PSR (needs 6: 3+3 succeeds, no fall).
+    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4, 3, 3));
     const hbk = getUnit(state, "hbk");
     expect(hbk.heat).toBe(7);
     const weaponHeatEvent = state.events.find((e) => e.kind === "heatWeapon");

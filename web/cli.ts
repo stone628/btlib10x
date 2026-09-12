@@ -207,7 +207,7 @@ const SETUP_CMDS: Record<string, CmdDef> = {
   },
   add: {
     helpKey: "cmd.add.help",
-    usage: "add <id> <model> <team> <gunnery> <col> <row> [facing]",
+    usage: "add <id> <model> <team> <gunnery> <col> <row> [facing|piloting] [piloting]",
     argsDoc: [
       ["id", "cmd.add.arg.id"],
       ["model", "cmd.add.arg.model"],
@@ -215,12 +215,26 @@ const SETUP_CMDS: Record<string, CmdDef> = {
       ["gunnery", "cmd.add.arg.gunnery"],
       ["col row", "cmd.add.arg.colrow"],
       ["facing", "cmd.add.arg.facing"],
+      ["piloting", "cmd.add.arg.piloting"],
     ],
     run: (s, a) => {
-      expectArgs(L(s), a, 6, "add <id> <model> <team> <gunnery> <col> <row> [facing]");
-      const facingWord = (a[6] ?? "n").toLowerCase();
-      const facing = FACINGS.find((f) => f === facingWord);
-      if (!facing) throw new Error(i18n(L(s), "err.faceArg", { facings: FACINGS.join("/") }));
+      expectArgs(
+        L(s),
+        a,
+        6,
+        "add <id> <model> <team> <gunnery> <col> <row> [facing|piloting] [piloting]",
+      );
+      let facing = "n";
+      let piloting = 5;
+      for (const token of a.slice(6, 8)) {
+        if (/^-?\d+$/.test(token)) {
+          piloting = int(L(s), token, "piloting");
+        } else {
+          const f = FACINGS.find((x) => x === token.toLowerCase());
+          if (!f) throw new Error(i18n(L(s), "err.faceArg", { facings: FACINGS.join("/") }));
+          facing = f;
+        }
+      }
       const validModel = S.addUnit(
         s,
         a[0]!,
@@ -228,7 +242,8 @@ const SETUP_CMDS: Record<string, CmdDef> = {
         int(L(s), a[2]!, "team"),
         int(L(s), a[3]!, "gunnery"),
         { col: coord(L(s), a[4]!, "col"), row: coord(L(s), a[5]!, "row") },
-        facing,
+        facing as (typeof FACINGS)[number],
+        piloting,
       );
       return [
         i18n(L(s), "ok.added", { id: a[0]!, model: validModel, col: a[4]!, row: a[5]!, facing }),
@@ -315,13 +330,19 @@ const MOVE_CMDS: Record<string, CmdDef> = {
   },
   mode: {
     helpKey: "cmd.mode.help",
-    usage: "mode <standstill|walk|run|jump|shutdown|startup|eject>",
+    usage: "mode <standstill|walk|run|jump|standup|drop|shutdown|startup|eject>",
     argsDoc: [["mode", "cmd.mode.arg.mode"]],
     run: (s, a) => {
-      expectArgs(L(s), a, 1, "mode standstill|walk|run|jump|shutdown|startup|eject");
+      expectArgs(L(s), a, 1, "mode standstill|walk|run|jump|standup|drop|shutdown|startup|eject");
       const mode = S.parseMoveMode(L(s), a[0]!);
       S.declareMode(s, a[0]!);
-      if (mode === "shutdown" || mode === "startup" || mode === "eject") {
+      if (
+        mode === "shutdown" ||
+        mode === "startup" ||
+        mode === "eject" ||
+        mode === "standup" ||
+        mode === "drop"
+      ) {
         s.moveCandidate = null;
         return [i18n(L(s), "ok.modeDeclaredVoluntary", { id: s.actorId ?? "", mode })];
       }
@@ -377,6 +398,27 @@ const MOVE_CMDS: Record<string, CmdDef> = {
     },
   },
   status: { helpKey: "cmd.statusMove.help", run: (s) => moveStatusLines(s) },
+  turn: {
+    helpKey: "cmd.turn.help",
+    usage: "turn <left|right>",
+    argsDoc: [["dir", "cmd.turn.arg.dir"]],
+    run: (s, a) => {
+      expectArgs(L(s), a, 1, "turn <left|right>");
+      S.queueProneTurn(s, a[0]!);
+      const r = S.stepResult(s);
+      return [
+        i18n(L(s), "ok.stepResult", {
+          id: s.actorId ?? "",
+          mode: s.moveMode ?? "",
+          col: r.position.col,
+          row: r.position.row,
+          facing: r.facing,
+          spent: r.mpSpent,
+          budget: r.mpBudget,
+        }),
+      ];
+    },
+  },
   cancel: {
     helpKey: "cmd.cancelMove.help",
     run: (s) => {
@@ -408,6 +450,16 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
       return [
         i18n(L(s), "ammo.set", { id: unit.id, policy: ammoPolicyLabel(L(s), unit.ammoPolicy) }),
       ];
+    },
+  },
+  prop: {
+    helpKey: "cmd.prop.help",
+    usage: "prop <left|right>",
+    argsDoc: [["arm", "cmd.prop.arg.arm"]],
+    run: (s, a) => {
+      expectArgs(L(s), a, 1, "prop <left|right>");
+      S.setPropArm(s, a[0]!);
+      return [i18n(L(s), "ok.propSet", { id: s.actorId ?? "", arm: a[0]!.toLowerCase() })];
     },
   },
   candidate: {
@@ -534,7 +586,14 @@ function availableCmds(session: S.Session): Record<string, CmdDef> {
       if (phase !== "movement") return { ...GLOBAL_CMDS, ...MOVE_CMDS };
       const actor = S.currentActor(session);
       const down = actor !== null && isShutdown(actor);
-      if (down || session.moveMode === "shutdown" || session.moveMode === "startup") {
+      if (
+        down ||
+        session.moveMode === "shutdown" ||
+        session.moveMode === "startup" ||
+        session.moveMode === "standup" ||
+        session.moveMode === "drop" ||
+        session.moveMode === "proneTurn"
+      ) {
         // Pending voluntary declaration: no hex movement.
         const { move: _move, face: _face, ...rest } = MOVE_CMDS;
         return { ...GLOBAL_CMDS, ...rest };
@@ -689,7 +748,7 @@ function checkFireHint(s: S.Session): boolean {
   if (actor === null) return false;
   const newKey = `${s.battle.turn}:${actor.id}`;
   if (newKey !== s.fireHintShownFor || s.fireCandidate === null) {
-    s.fireCandidate = suggestFireTargets(s.battle, actor.id);
+    s.fireCandidate = suggestFireTargets(s.battle, actor.id, s.propArm);
     s.fireHintShownFor = newKey;
     return true;
   }

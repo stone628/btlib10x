@@ -7,8 +7,10 @@ TypeScript library encapsulating BattleTech Total Warfare board game logic.
 - Implements a **subset of BattleTech Total Warfare rules**. The currently
   implemented subset is documented under "Status — BattleTech Total Warfare rule
   coverage" in `docs/CLI.md`.
-- Bipedal 'Mechs only. Physical attacks and piloting rolls are outside the
-   current subset. Firing arcs implemented per TW: four arcs (front / rear /
+- Bipedal 'Mechs only. Physical attacks are outside the
+   current subset (piloting rolls, falling/prone, pilot damage and
+   consciousness are implemented; physical-triggered PSRs wait on the
+   physical phase). Firing arcs implemented per TW: four arcs (front / rear /
    left / right side), per-weapon mounting arcs (head/legs/torso front-only,
    arms add own side, `rearFacing` torso mounts rear-only), and attack
    direction resolved target-side (drives hit-location column + front/rear

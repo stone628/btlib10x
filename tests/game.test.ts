@@ -927,7 +927,8 @@ describe("weapon attack phase", () => {
     const state = startAttackTurn(hbkVsEnf());
     declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
     // Turn 1: AC/20 (20 dmg) hits CT (roll 5) -> CT 27 - 20 = 7 left.
-    resolveAllAttacks(state, scriptedRng(2, 3, 3, 4));
+    // 20+ damage PSR (needs 6: 3+3 succeeds, no fall).
+    resolveAllAttacks(state, scriptedRng(2, 3, 3, 4, 3, 3));
     expect(getUnit(state, "enf").damage.armor.centerTorso).toBe(7);
     expect(getUnit(state, "enf").destroyed).toBe(false);
 
@@ -942,7 +943,7 @@ describe("weapon attack phase", () => {
     rollInitiativePhase(state, scriptedRng(3, 3, 3, 1));
     advancePhase(state);
     declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
-    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4)); // hit CT again
+    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4, 3, 3)); // hit CT again
     expect(getUnit(state, "enf").damage.armor.centerTorso).toBe(0);
     expect(getUnit(state, "enf").destroyed).toBe(false); // CT IS still up (16-13=3)
 

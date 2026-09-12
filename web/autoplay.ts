@@ -228,6 +228,9 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
           if (noWeapon[actor.id] === true) {
             queueNextCommand("mode eject");
             queueNextCommand("done");
+          } else if (actor.prone) {
+            queueNextCommand("mode standup");
+            queueNextCommand("done");
           } else if (isUnitImmobile(actor.damage)) {
             queueNextCommand("mode standstill");
             queueNextCommand("done");

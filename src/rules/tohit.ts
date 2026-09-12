@@ -14,6 +14,12 @@ export interface AttackModifiers {
   /** True when the target cannot move (shut down or both legs destroyed):
    *  grants a flat −4 target modifier instead of the hex-based band. */
   readonly targetImmobile?: boolean;
+  /** True when the target is prone (but not immobile): flat −2 (TW p.109). */
+  readonly targetProne?: boolean;
+  /** True when the attacker is prone: +2 attacker modifier (TW p.109). */
+  readonly attackerProne?: boolean;
+  /** Destroyed sensor crit slots on the attacker: +1 each (TW p.123). */
+  readonly sensorMod?: number;
   /** Partial-cover to-hit modifier: 1 for partial-cover terrain (water1 /
    *  building), 2 for a target adjacent to a level-2 wreck; both only when
    *  the attacker is not higher than the cover. Leg hit-location rolls
@@ -50,6 +56,8 @@ export interface ToHitBreakdown {
   readonly heightMod: number;
   /** Heat Scale modifier from the attacker's current heat (+1..+4), else 0. */
   readonly heatMod: number;
+  /** Destroyed-sensor modifier from the attacker (+1 per destroyed sensor). */
+  readonly sensorMod: number;
   readonly total: number;
   readonly rangeBracket: RangeBracket;
   /** Modified TN <= 2 auto-hits; > 12 auto-misses (attack may be aborted). */
@@ -84,6 +92,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
       heightDiff: 0,
       heightMod: 0,
       heatMod: 0,
+      sensorMod: 0,
       total: Number.POSITIVE_INFINITY,
       rangeBracket: "long",
       automatic: "miss",
@@ -91,12 +100,14 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     };
   }
 
-  const attackerMod = attackerMovementModifier(mods.attackerMovement);
-  const targetMod = targetMovementModifier(
-    mods.targetHexesMoved,
-    mods.targetJumped,
-    mods.targetImmobile,
-  );
+  const attackerMod =
+    mods.attackerProne === true ? 2 : attackerMovementModifier(mods.attackerMovement);
+  const targetMod =
+    mods.targetImmobile === true
+      ? targetMovementModifier(mods.targetHexesMoved, mods.targetJumped, true)
+      : mods.targetProne === true
+        ? -2
+        : targetMovementModifier(mods.targetHexesMoved, mods.targetJumped, undefined);
 
   const terrainMod =
     mods.interveningWoods + terrainTargetMod(mods.targetTerrain) + (mods.partialCoverMod ?? 0);
@@ -110,6 +121,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
   const heightDiff = (mods.attackerLevel ?? 0) - (mods.targetLevel ?? 0);
   const heightMod = heightDiff === 0 ? 0 : -heightDiff;
   const heatMod = mods.heatMod ?? 0;
+  const sensorMod = mods.sensorMod ?? 0;
 
   const total =
     mods.gunnery +
@@ -120,7 +132,8 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     pulseMod +
     min +
     heightMod +
-    heatMod;
+    heatMod +
+    sensorMod;
 
   return {
     gunnery: mods.gunnery,
@@ -133,6 +146,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     heightDiff,
     heightMod,
     heatMod,
+    sensorMod,
     total,
     rangeBracket: bracket,
     automatic: total <= 2 ? "hit" : total > 12 ? "miss" : null,

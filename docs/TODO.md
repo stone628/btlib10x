@@ -9,19 +9,21 @@
 
 ## To Do
 
-- movement candidate MP calculated wrong
+- drop 'prop' command in 'weaponAttack' phase. make fireSuggestion show two sets of weapons for left-arm-prop and right-arm-prop when unit is in prone posture. make queueFire and commitFire and declareAttack validate if attacks can happen. add 'prone' in AttackResolution if resolved weapon attack happend in prone posture.
+- merge consciousnessCheck, pilotRecovered, pilotUnconscious into consciousnessCheck with consciousBefore so that event handler can tell what happened.
+- remove "stoodUp", "droppedProne" GameEvent. add prevMode in "moved" GameEvent, so that event handler can show what happened without "stoodUp", "droppedProne" GameEvent.
+- redesign 'move' command supporting posture-change then move, like 'mode prone' and 'place' within range of crawl, or 'mode standup [walk|run|jump]' and 'place'. on command 'done', eval posture-change first and then place unit only when successful eval.
+- make MoveFragment contain MP used and why.
 - ammo explosion count total shots, not the exploded bin
 - need snapshot keeping, capable of rollback N steps like ctrl-z
-- Piloting Skill Rolls, falling and prone. Still the largest omission by knock-on effect: the second gyro crit, leg destruction, failed charges and DFAs all terminate in a fall in TW, and there is nothing to fall. createBattle still takes a gunnery skill per unit and no piloting skill, so the gap reaches the public API.
-- The pilot. No pilot entity, no hits, no consciousness rolls. Cockpit destruction kills the unit directly, and the life-support crit has nowhere to land.
-- Indirect LRM fire and spotting, and the whole electronic-warfare layer (TAG, NARC guidance, Artemis, ECM). These are TW-standard 'Mech rules.
-- LB-X cluster munitions. The Clan LB 20-X AC is modelled as a solid 20-point slug only; TW lets an LB-X switch to cluster ammo and roll on the Cluster Hits Table. The ammo-type concept does not exist.
-- The Physical Attack Phase. advancePhase runs initiative → movement → weaponAttack → end, with the heat phase folded into the weaponAttack exit. TW inserts a physical attack phase between weapon fire and heat, carrying punch, kick, push, club, charge and Death From Above. None exists. This also strands the handActuator and shoulder crit slots, whose published effects are largely physical.
+- The Physical Attack Phase. advancePhase runs initiative → movement → weaponAttack → end, with the heat phase folded into the weaponAttack exit. TW inserts a physical attack phase between weapon fire and heat, carrying punch, kick, push, club, charge and Death From Above. None exists. This also strands the handActuator and shoulder crit slots, whose published effects are largely physical. (Physical-triggered PSRs — kicks, pushes, charges, DFAs — wait on this phase; see "Not viable" in `docs/CLI.md`.)
 
 ## In progress
 
-- Later in classic expansion: physicals, piloting/falling, basements,
-  hull-down, water depth movement-cost change, pavement skid (vehicle-specific)
+- Later in classic expansion: physicals, basements,
+  hull-down, water depth movement-cost change, pavement skid (vehicle-specific;
+  skid displacement is not viable without a displacement mechanic — see
+  `docs/CLI.md`)
 - **Piloting / consciousness roll on immobile end-of-turn** — TW end-of-turn
   consciousness roll for an immobile 'Mech (both legs destroyed via
   `isUnitImmobile`): on a failed roll the unit is destroyed; on a success it is
@@ -30,9 +32,24 @@
   `src/rules/game.ts`; consumes the injected `Rng` for the 2d6 roll.
   Coverage gap: a 'Mech with both legs destroyed today stays "alive" in
   the `units` map and only loses once its head/CT is also destroyed.
+  (Now unblocked: pilot hits, consciousness rolls, and the unconscious state
+  exist, so this can build on `applyPilotHits` instead of inventing them.)
 
 ## Done
 
+- **Piloting Skill Rolls, falling, prone, and the pilot** — `UnitInit`
+  takes an optional piloting skill (default 5); `UnitState` tracks pilot
+  hits, unconsciousness, and prone. End-of-phase PSRs (20+ damage,
+  leg/foot actuators, hips, first gyro hit; automatic falls for destroyed
+  gyros/legs and shut-down/unconscious units), Facing After Fall damage
+  with crits, seatbelt pilot checks, stand-up/drop/prone-turn movement
+  actions, prone combat modifiers (+2 attack / −2 target / propping arm),
+  sensor-crit to-hit penalties, water/rubble/building entry PSRs, pilot
+  damage (head hits, ammo explosions, falls, heat-soaked life support),
+  consciousness rolls with knockout/wake, immobile targeting for the
+  unconscious. Covered by `tests/piloting.test.ts`. Remaining gaps are the
+  physical-phase triggers and the displacement-bound rules listed under
+  "Not viable" in `docs/CLI.md`.
 - **Target movement modifier (TW)** — `targetHexesMoved` now feeds total hexes
   entered this turn (`movesThisTurn.length`) from all three call sites
   (`declareAttacks`, `resolveUnitAttacks`, `suggestFireTargets`); TW counts total
