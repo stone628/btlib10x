@@ -10,7 +10,6 @@
 ## To Do
 
 - drop 'prop' command in 'weaponAttack' phase. make fireSuggestion show two sets of weapons for left-arm-prop and right-arm-prop when unit is in prone posture. make queueFire and commitFire and declareAttack validate if attacks can happen. add 'prone' in AttackResolution if resolved weapon attack happend in prone posture.
-- merge consciousnessCheck, pilotRecovered, pilotUnconscious into consciousnessCheck with consciousBefore so that event handler can tell what happened.
 - remove "stoodUp", "droppedProne" GameEvent. add prevMode in "moved" GameEvent, so that event handler can show what happened without "stoodUp", "droppedProne" GameEvent.
 - redesign 'move' command supporting posture-change then move, like 'mode prone' and 'place' within range of crawl, or 'mode standup [walk|run|jump]' and 'place'. on command 'done', eval posture-change first and then place unit only when successful eval.
 - make MoveFragment contain MP used and why.

@@ -1956,19 +1956,22 @@ function eventLines(locale: LocaleId, e: GameEvent): string[] {
       return [
         i18n(locale, "log.pilotDamaged", { id: e.unitId, reason: e.reason, total: e.totalHits }),
       ];
-    case "consciousnessCheck":
+    case "consciousnessCheck": {
+      const { unitId, roll, target, success, consciousBefore } = e;
+      if (consciousBefore && !success) {
+        return [i18n(locale, "log.pilotUnconscious", { id: unitId, roll, target })];
+      }
+      if (!consciousBefore && success) {
+        return [i18n(locale, "log.pilotRecovered", { id: unitId, roll, target })];
+      }
       return [
-        i18n(locale, "log.consciousnessCheck", {
-          id: e.unitId,
-          roll: e.roll,
-          target: e.target,
-          result: e.success ? i18n(locale, "log.consciousAwake") : i18n(locale, "log.consciousOut"),
+        i18n(locale, success ? "log.consciousnessCheckSuccess" : "log.consciousnessCheckFail", {
+          id: unitId,
+          roll,
+          target,
         }),
       ];
-    case "pilotUnconscious":
-      return [i18n(locale, "log.pilotUnconscious", { id: e.unitId })];
-    case "pilotRecovered":
-      return [i18n(locale, "log.pilotRecovered", { id: e.unitId, roll: e.roll })];
+    }
     case "pilotKilled":
       return [i18n(locale, "log.pilotKilled", { id: e.unitId })];
     case "stoodUp":

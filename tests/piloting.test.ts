@@ -3,8 +3,8 @@ import type { Location } from "../src/core/types.js";
 import {
   applyDamage,
   getMechDefFor,
-  suggestFireTargets,
   type ResolvedCritSlot,
+  suggestFireTargets,
   type UnitDamageState,
 } from "../src/index.js";
 import {
@@ -33,8 +33,22 @@ function hbkEnf(critsDisabled = true) {
   return createTestBattle(
     [],
     [
-      { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 2, row: 2 }, facing: "s" },
-      { id: "enf", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 2, row: 3 }, facing: "n" },
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 2 },
+        facing: "s",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 2, row: 3 },
+        facing: "n",
+      },
     ],
     critsDisabled,
   );
@@ -105,7 +119,14 @@ describe("piloting skill", () => {
           position: { col: 1, row: 1 },
           facing: "n",
         },
-        { id: "b", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 1, row: 2 }, facing: "s" },
+        {
+          id: "b",
+          model: "ENF-4R",
+          team: 1,
+          gunnery: 4,
+          position: { col: 1, row: 2 },
+          facing: "s",
+        },
       ],
       true,
     );
@@ -123,7 +144,14 @@ describe("piloting skill", () => {
             position: { col: 1, row: 1 },
             facing: "n",
           },
-          { id: "b", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 1, row: 2 }, facing: "s" },
+          {
+            id: "b",
+            model: "ENF-4R",
+            team: 1,
+            gunnery: 4,
+            position: { col: 1, row: 2 },
+            facing: "s",
+          },
         ],
         { critsDisabled: true },
       ),
@@ -288,7 +316,9 @@ describe("standing up", () => {
     attemptStandUp(state, "enf", scriptedRng(3, 3));
     expect(enf.prone).toBe(false);
     expect(enf.moveMode).toBe("walk");
-    expect(state.events).toContainEqual(expect.objectContaining({ kind: "stoodUp", unitId: "enf" }));
+    expect(state.events).toContainEqual(
+      expect.objectContaining({ kind: "stoodUp", unitId: "enf" }),
+    );
   });
 
   it("failure crashes back down for fresh fall damage", () => {
@@ -462,7 +492,14 @@ describe("movement terrain PSRs", () => {
           position: { col: 2, row: 2 },
           facing: "s",
         },
-        { id: "enf", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 3, row: 3 }, facing: "n" },
+        {
+          id: "enf",
+          model: "ENF-4R",
+          team: 1,
+          gunnery: 4,
+          position: { col: 3, row: 3 },
+          facing: "n",
+        },
       ],
       true,
     );
@@ -489,7 +526,14 @@ describe("movement terrain PSRs", () => {
           position: { col: 2, row: 2 },
           facing: "s",
         },
-        { id: "enf", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 3, row: 3 }, facing: "n" },
+        {
+          id: "enf",
+          model: "ENF-4R",
+          team: 1,
+          gunnery: 4,
+          position: { col: 3, row: 3 },
+          facing: "n",
+        },
       ],
       true,
     );
@@ -516,7 +560,14 @@ describe("movement terrain PSRs", () => {
           position: { col: 2, row: 2 },
           facing: "s",
         },
-        { id: "enf", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 3, row: 3 }, facing: "n" },
+        {
+          id: "enf",
+          model: "ENF-4R",
+          team: 1,
+          gunnery: 4,
+          position: { col: 3, row: 3 },
+          facing: "n",
+        },
       ],
       true,
     );
