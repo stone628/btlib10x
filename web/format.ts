@@ -732,7 +732,7 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
     running: def.running,
     jumping: def.jumping,
     removed: unit.removed,
-    positionLine: i18n(locale, "sheet.at", { pos: disp(unit.position), facing: unit.facing }),
+    positionLine: i18n(locale, "sheet.at", { pos: disp(unit.position), facing: i18n(locale, `sheet.facing.${unit.facing}`), posture: i18n(locale, unit.prone ? "sheet.postureProne" : "sheet.postureStand") }),
     modeLine:
       unit.moveMode !== null
         ? i18n(locale, "sheet.modeSuffix", { mode: unit.moveMode, mp: unit.mpSpent })
@@ -792,7 +792,7 @@ function setupSheet(unit: UnitInit, id: string, locale: LocaleId): SheetView {
     running: def.running,
     jumping: def.jumping,
     removed: false,
-    positionLine: i18n(locale, "sheet.at", { pos: disp(unit.position), facing: unit.facing }),
+    positionLine: i18n(locale, "sheet.at", { pos: disp(unit.position), facing: i18n(locale, `sheet.facing.${unit.facing}`), posture: "" }),
     modeLine: null,
     ammoStatusLine: null,
     heat: 0,
@@ -1107,23 +1107,20 @@ function critChartChunk(def: ResolvedMechDef, locale: LocaleId, live: CritChartL
 }
 
 function sheetMovementLine(
-  walking: number,
-  running: number,
-  jumping: number,
-  heat: number,
   locale: LocaleId,
+  view: SheetView
 ): string {
-  const { penalty, threshold } = movementMpPenaltyWithThreshold(heat);
+  const { penalty, threshold } = movementMpPenaltyWithThreshold(view.heat);
   if (penalty > 0) {
     return i18n(locale, "info.movementHeat", {
-      walk: walking,
-      run: running,
-      jump: jumping,
+      walk: view.walking,
+      run: view.running,
+      jump: view.jumping,
       penalty,
       threshold,
     });
   }
-  return i18n(locale, "info.movement", { walk: walking, run: running, jump: jumping });
+  return i18n(locale, "info.movement", { walk: view.walking, run: view.running, jump: view.jumping });
 }
 
 /** Record sheet with armor status per location, side-by-side with ASCII diagram. */
@@ -1141,7 +1138,7 @@ export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
   ];
   if (view.gunnery !== null) topLines.push(sheetGunneryLine(locale, view));
   if (view.piloting !== null) topLines.push(sheetPilotLine(locale, view));
-  topLines.push(sheetMovementLine(view.walking, view.running, view.jumping, view.heat, locale));
+  topLines.push(sheetMovementLine(locale, view));
   topLines.push(view.positionLine);
   if (view.ammoStatusLine !== null) topLines.push(view.ammoStatusLine);
   const weaponLines: string[] = [i18n(locale, "sheet.weaponsHeader", { n: view.mounts.length })];
@@ -1299,16 +1296,7 @@ function sheetPilotLine(locale: LocaleId, view: SheetView): string {
   return i18n(locale, "sheet.pilotLine", {
     piloting: view.piloting!,
     hits: view.pilotHits,
-    state: i18n(
-      locale,
-      view.unconscious && view.prone
-        ? "sheet.pilotOutProne"
-        : view.unconscious
-          ? "sheet.pilotOut"
-          : view.prone
-            ? "sheet.pilotProne"
-            : "sheet.pilotOk",
-    ),
+    state: i18n(locale, view.unconscious ? "sheet.pilotOut" : "sheet.pilotOk",),
   });
 }
 
