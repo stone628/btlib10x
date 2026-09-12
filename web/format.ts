@@ -1139,9 +1139,8 @@ export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
       tonnage: view.tonnage,
     }),
   ];
-  if (view.gunnery !== null) {
-    topLines.push(sheetGunneryLine(view.gunnery, view.heat, locale));
-  }
+  if (view.gunnery !== null) topLines.push(sheetGunneryLine(locale, view));
+  if (view.piloting !== null) topLines.push(sheetPilotLine(locale, view));
   topLines.push(sheetMovementLine(view.walking, view.running, view.jumping, view.heat, locale));
   topLines.push(view.positionLine);
   if (view.ammoStatusLine !== null) topLines.push(view.ammoStatusLine);
@@ -1284,8 +1283,9 @@ function heatStateLabel(locale: LocaleId, shutdown: ShutdownState): string {
   return i18n(locale, "heat.stateDown");
 }
 
-function sheetGunneryLine(gunnery: number, heat: number, locale: LocaleId): string {
-  const { toHit, threshold } = toHitHeatModifierWithThreshold(heat);
+function sheetGunneryLine(locale: LocaleId, view: SheetView): string {
+  const { toHit, threshold } = toHitHeatModifierWithThreshold(view.heat);
+  const gunnery = view.gunnery!;
   return toHit > 0
     ? i18n(locale, "sheet.gunneryLineHeat", {
         gunnery: gunneryLabel(locale, gunnery),
@@ -1293,6 +1293,23 @@ function sheetGunneryLine(gunnery: number, heat: number, locale: LocaleId): stri
         threshold,
       })
     : i18n(locale, "sheet.gunneryLine", { gunnery: gunneryLabel(locale, gunnery) });
+}
+
+function sheetPilotLine(locale: LocaleId, view: SheetView): string {
+  return i18n(locale, "sheet.pilotLine", {
+    piloting: view.piloting!,
+    hits: view.pilotHits,
+    state: i18n(
+      locale,
+      view.unconscious && view.prone
+        ? "sheet.pilotOutProne"
+        : view.unconscious
+          ? "sheet.pilotOut"
+          : view.prone
+            ? "sheet.pilotProne"
+            : "sheet.pilotOk",
+    ),
+  });
 }
 
 export function sheetLinesShort(view: SheetView, locale: LocaleId, showMode = true): string[] {
@@ -1303,25 +1320,8 @@ export function sheetLinesShort(view: SheetView, locale: LocaleId, showMode = tr
     tonnage: view.tonnage,
   });
   const lines = [head];
-  if (view.gunnery !== null) {
-    lines.push(sheetGunneryLine(view.gunnery, view.heat, locale));
-  }
-  if (view.piloting !== null) {
-    lines.push(
-      i18n(locale, "sheet.pilotLine", {
-        piloting: view.piloting,
-        hits: view.pilotHits,
-        state:
-          view.unconscious && view.prone
-            ? i18n(locale, "sheet.pilotOutProne")
-            : view.unconscious
-              ? i18n(locale, "sheet.pilotOut")
-              : view.prone
-                ? i18n(locale, "sheet.pilotProne")
-                : i18n(locale, "sheet.pilotOk"),
-      }),
-    );
-  }
+  if (view.gunnery !== null) lines.push(sheetGunneryLine(locale, view));
+  if (view.piloting !== null) lines.push(sheetPilotLine(locale, view));
   lines.push(view.positionLine);
   if (showMode && view.modeLine) lines.push(view.modeLine);
   lines.push(...mechStatusLines(view, locale));
