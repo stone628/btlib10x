@@ -1774,6 +1774,12 @@ function eventLines(locale: LocaleId, e: GameEvent): string[] {
     case "moveDeclared":
       return [i18n(locale, "log.moveDeclared", { id: e.unitId, mode: e.mode })];
     case "moved":
+      if (e.mode === "prone") {
+        return [i18n(locale, "log.droppedProne", { id: e.unitId })];
+      }
+      if (e.prevMode === "prone") {
+        return [i18n(locale, "log.stoodUp", { id: e.unitId })];
+      }
       return [
         i18n(locale, "log.moved", {
           id: e.unitId,
@@ -2008,10 +2014,6 @@ function eventLines(locale: LocaleId, e: GameEvent): string[] {
     }
     case "pilotKilled":
       return [i18n(locale, "log.pilotKilled", { id: e.unitId })];
-    case "stoodUp":
-      return [i18n(locale, "log.stoodUp", { id: e.unitId })];
-    case "droppedProne":
-      return [i18n(locale, "log.droppedProne", { id: e.unitId })];
     case "buildingCrash": {
       const lines = [
         i18n(locale, "log.buildingCrash", {

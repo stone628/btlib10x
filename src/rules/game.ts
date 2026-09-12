@@ -223,6 +223,7 @@ export type GameEvent =
       readonly kind: "moved";
       readonly unitId: string;
       readonly mode: MoveMode;
+      readonly prevMode: MoveMode;
       readonly position: HexCoord;
       readonly facing: Facing;
       readonly mpSpent: number;
@@ -374,8 +375,6 @@ export type GameEvent =
       readonly consciousBefore: boolean;
     }
   | { readonly kind: "pilotKilled"; readonly unitId: string }
-  | { readonly kind: "stoodUp"; readonly unitId: string }
-  | { readonly kind: "droppedProne"; readonly unitId: string }
   | {
       /** Building-entry PSR failed (TW p.166): the crash damages the 'Mech
        *  (ceil(CF / 10) in 5-point groups on the front column) but never
@@ -860,6 +859,7 @@ export function executeMove(
       kind: "moved",
       unitId,
       mode,
+      prevMode: mode,
       position: { ...hex },
       facing: face,
       mpSpent: mp,
@@ -2191,6 +2191,11 @@ export function attemptStandUp(state: BattleState, unitId: string, rng: Rng = DE
   const pre = preexistingDamageModifier(def, unit.critSlotsDestroyed, (leg) =>
     legGone(unit.damage, leg),
   );
+  const budget = effectiveMoveBudget(
+    "walk",
+    effectiveMovement(def, unit.critSlotsDestroyed),
+    unit.heat,
+  );
   if (pre.gyroHits >= 2) throw new Error(`${unitId} has a destroyed gyro and cannot stand up`);
   if (pre.legsDestroyed >= 2) throw new Error(`${unitId} has no intact legs and cannot stand up`);
   unit.moveMode = "walk";
@@ -2212,7 +2217,16 @@ export function attemptStandUp(state: BattleState, unitId: string, rng: Rng = DE
   });
   if (r.success) {
     unit.prone = false;
-    state.events.push({ kind: "stoodUp", unitId });
+    state.events.push({
+      kind: "moved",
+      unitId,
+      mode: "walk",
+      prevMode: "prone",
+      position: { ...unit.position },
+      facing: unit.facing,
+      mpSpent: 2,
+      mpBudget: budget,
+    });
     return;
   }
   // Failed stand: the 'Mech crashes back down (TW p.61) for fresh fall damage.
@@ -2243,6 +2257,7 @@ export function dropProne(state: BattleState, unitId: string): void {
     unit.heat,
   );
   if (budget < 1) throw new Error(`${unitId} has no MP to drop prone`);
+  const prevMode = unit.moveMode ?? "standStill";
   unit.moveMode = "walk";
   unit.movesThisTurn = [];
   unit.jumpedThisTurn = false;
@@ -2251,7 +2266,16 @@ export function dropProne(state: BattleState, unitId: string): void {
   state.actedThisPhase.push(unitId);
   unit.heat = Math.min(HEAT_CAP, unit.heat + 1);
   state.events.push({ kind: "heatMove", unitId, heat: 1 });
-  state.events.push({ kind: "droppedProne", unitId });
+  state.events.push({
+    kind: "moved",
+    unitId,
+    mode: "prone",
+    prevMode,
+    position: { ...unit.position },
+    facing: unit.facing,
+    mpSpent: 1,
+    mpBudget: budget,
+  });
 }
 
 /**
@@ -2287,6 +2311,7 @@ export function proneFacingTurn(state: BattleState, unitId: string, facings: num
     kind: "moved",
     unitId,
     mode: "walk",
+    prevMode: "walk",
     position: { ...unit.position },
     facing: unit.facing,
     mpSpent: 1,

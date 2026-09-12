@@ -88,7 +88,7 @@ export interface WreckState {
   readonly level: number;
 }
 
-export type MoveMode = "standStill" | "walk" | "run" | "jump";
+export type MoveMode = "standStill" | "walk" | "run" | "jump" | "prone";
 
 export type Location =
   | "head"
