@@ -9,7 +9,6 @@
 
 ## To Do
 
-- remove "stoodUp", "droppedProne" GameEvent. add prevMode in "moved" GameEvent, so that event handler can show what happened without "stoodUp", "droppedProne" GameEvent.
 - redesign 'move' command supporting posture-change then move, like 'mode prone' and 'place' within range of crawl, or 'mode standup [walk|run|jump]' and 'place'. on command 'done', eval posture-change first and then place unit only when successful eval.
 - make MoveFragment contain MP used and why.
 - ammo explosion count total shots, not the exploded bin

@@ -317,7 +317,13 @@ describe("standing up", () => {
     expect(enf.prone).toBe(false);
     expect(enf.moveMode).toBe("walk");
     expect(state.events).toContainEqual(
-      expect.objectContaining({ kind: "stoodUp", unitId: "enf" }),
+      expect.objectContaining({
+        kind: "moved",
+        unitId: "enf",
+        mode: "walk",
+        prevMode: "prone",
+        mpSpent: 2,
+      }),
     );
   });
 
@@ -361,7 +367,13 @@ describe("going prone voluntarily", () => {
     expect(enf.prone).toBe(true);
     expect(enf.heat).toBe(1);
     expect(state.events).toContainEqual(
-      expect.objectContaining({ kind: "droppedProne", unitId: "enf" }),
+      expect.objectContaining({
+        kind: "moved",
+        unitId: "enf",
+        mode: "prone",
+        prevMode: "standStill",
+        mpSpent: 1,
+      }),
     );
   });
 
