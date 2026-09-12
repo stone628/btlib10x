@@ -19,6 +19,7 @@ import type {
 } from "btlib10x";
 import {
   advancePhase,
+  attemptStandUp,
   attemptVoluntaryStartup,
   cellAt,
   checkVictory,
@@ -27,6 +28,7 @@ import {
   createBattle,
   declareAttacks,
   declareMove,
+  dropProne,
   effectiveMoveBudget,
   effectiveMovement,
   ejectPilot,
@@ -42,6 +44,7 @@ import {
   oppositeFacing,
   parseAmmoPolicy,
   passMovement,
+  proneFacingTurn,
   resolveAllAttacks,
   rollInitiativePhase,
   rotateFacing,
@@ -72,15 +75,18 @@ export interface Session {
   victory: VictoryResult | null;
   actorId: string | null;
   /** Pending declaration for the acting unit: a movement mode (engine
-   *  `MoveMode`) or the voluntary `"shutdown"` / `"startup"` / `"eject"`
-   *  declaration, committed by the `done` command. */
-  moveMode: MoveMode | "shutdown" | "startup" | "eject" | null;
+   *  `MoveMode`), a prone-mode `standup` / `drop` / `proneTurn` attempt, or
+   *  the voluntary `"shutdown"` / `"startup"` / `"eject"` declaration,
+   *  committed by the `done` command. */
+  moveMode: MoveMode | "shutdown" | "startup" | "eject" | "standup" | "drop" | "proneTurn" | null;
   moveSteps: MoveStep[];
   /** Landing facing chosen by `place` (jump only: engine rejects turn steps
    *  while jumping, so the landing facing travels via `executeMove`'s
    *  `finalFacing` option). Null when unset or ground movement. */
   moveFinalFacing: Facing | null;
   fireDecls: AttackDecl[];
+  /** Arm a prone attacker props itself up on (its weapons cannot fire). */
+  propArm: "leftArm" | "rightArm";
   /** Suppress critical hit resolution (mostly for deterministic testing). */
   critsDisabled: boolean;
   moveCandidate: BoardRenderReachableInfo | null;
@@ -102,6 +108,7 @@ export function newSession(seed: number): Session {
     moveSteps: [],
     moveFinalFacing: null,
     fireDecls: [],
+    propArm: "rightArm",
     critsDisabled: false,
     moveCandidate: null,
     fireHintShownFor: null,
@@ -115,6 +122,7 @@ function clearBuffers(s: Session): void {
   s.moveFinalFacing = null;
   s.moveCandidate = null;
   s.fireDecls = [];
+  s.propArm = "rightArm";
   s.fireHintShownFor = null;
   s.fireCandidate = null;
 }
@@ -238,6 +246,7 @@ export function addUnit(
   gunnery: number,
   position: HexCoord,
   facing: Facing,
+  piloting: number = 5,
 ): string {
   const m = lookupMech(model);
   if (m === undefined) throw new Error(i18n(s.locale, "err.unknownModel", { model }));
@@ -246,6 +255,9 @@ export function addUnit(
   if (!Number.isInteger(team) || team < 0) throw new Error(i18n(s.locale, "err.badTeam"));
   if (!Number.isInteger(gunnery) || gunnery < 0 || gunnery > 7) {
     throw new Error(i18n(s.locale, "err.badGunnery"));
+  }
+  if (!Number.isInteger(piloting) || piloting < 0 || piloting > 7) {
+    throw new Error(i18n(s.locale, "err.badPiloting"));
   }
   if (s.setup.roster.some((u) => sameHex(u.position, position))) {
     throw new Error(i18n(s.locale, "err.hexOccupied", { col: position.col, row: position.row }));
@@ -265,7 +277,7 @@ export function addUnit(
       }
     }
   }
-  s.setup.roster.push({ id, model: m.model, team, gunnery, position, facing });
+  s.setup.roster.push({ id, model: m.model, team, gunnery, piloting, position, facing });
   return m.model;
 }
 
@@ -310,13 +322,27 @@ const VOLUNTARY_MODES: Readonly<Record<string, "shutdown" | "startup" | "eject">
   eject: "eject",
 };
 
-export type DeclaredMode = MoveMode | "shutdown" | "startup" | "eject";
+const PRONE_MODES: Readonly<Record<string, "standup" | "drop">> = {
+  standup: "standup",
+  drop: "drop",
+};
+
+export type DeclaredMode =
+  | MoveMode
+  | "shutdown"
+  | "startup"
+  | "eject"
+  | "standup"
+  | "drop"
+  | "proneTurn";
 
 export function parseMoveMode(locale: LocaleId, word: string): DeclaredMode {
   const mode = MOVE_MODES[word.toLowerCase()];
   if (mode) return mode;
   const voluntary = VOLUNTARY_MODES[word.toLowerCase()];
   if (voluntary) return voluntary;
+  const prone = PRONE_MODES[word.toLowerCase()];
+  if (prone) return prone;
   throw new Error(i18n(locale, "err.badModeWord"));
 }
 
@@ -355,6 +381,21 @@ export function declareMode(s: Session, word: string): void {
     s.moveSteps = [];
     return;
   }
+  if (mode === "standup") {
+    if (!unit.prone) throw new Error(i18n(s.locale, "err.standupRequiresProne", { id: unit.id }));
+    s.moveMode = "standup";
+    s.moveSteps = [];
+    return;
+  }
+  if (mode === "drop") {
+    if (unit.prone) throw new Error(i18n(s.locale, "err.dropRequiresStanding", { id: unit.id }));
+    s.moveMode = "drop";
+    s.moveSteps = [];
+    return;
+  }
+  if (mode !== "standStill" && mode !== "walk" && mode !== "run" && mode !== "jump") {
+    throw new Error(i18n(s.locale, "err.badModeWord"));
+  }
   declareMove(requireBattle(s), unit.id, mode);
   s.moveMode = mode;
   s.moveSteps = [];
@@ -392,13 +433,17 @@ function budgetFor(s: Session): number {
   const unit = currentActor(s)!;
   const def = getMechDefFor(unit);
   const movement = effectiveMovement(def, unit.critSlotsDestroyed);
+  const declared = s.moveMode;
   const mode: MoveMode =
-    s.moveMode === "shutdown" ||
-    s.moveMode === "startup" ||
-    s.moveMode === "eject" ||
-    s.moveMode === null
+    declared === "shutdown" ||
+    declared === "startup" ||
+    declared === "eject" ||
+    declared === "standup" ||
+    declared === "drop" ||
+    declared === "proneTurn" ||
+    declared === null
       ? "standStill"
-      : s.moveMode;
+      : declared;
   return effectiveMoveBudget(mode, movement, unit.heat);
 }
 
@@ -464,6 +509,24 @@ export function placeLanding(s: Session, landing: RevealedLanding): StepResult {
   return jumping ? { ...r, facing: landing.facing } : r;
 }
 
+export function queueProneTurn(s: Session, dir: string): void {
+  const unit = requireActor(s, "movement");
+  if (!unit.prone) throw new Error(i18n(s.locale, "err.turnRequiresProne", { id: unit.id }));
+  const d = dir.toLowerCase();
+  if (d !== "left" && d !== "right") throw new Error(i18n(s.locale, "err.turnDir"));
+  s.moveMode = "proneTurn";
+  s.moveSteps = [{ kind: "turn", facings: d === "left" ? -1 : 1 }];
+  s.moveFinalFacing = null;
+}
+
+export function setPropArm(s: Session, word: string): void {
+  const unit = requireActor(s, "weaponAttack");
+  const w = word.toLowerCase();
+  if (w !== "left" && w !== "right") throw new Error(i18n(s.locale, "err.propArm"));
+  s.propArm = w === "left" ? "leftArm" : "rightArm";
+  void unit;
+}
+
 export function cancelMove(s: Session): void {
   requireActor(s, "movement");
   s.moveMode = null;
@@ -504,6 +567,16 @@ export function commitMove(s: Session): CommitResult {
       attemptVoluntaryStartup(battle, unit.id, s.rng);
     } else if (s.moveMode === "eject") {
       ejectPilot(battle, unit.id);
+    } else if (s.moveMode === "standup") {
+      attemptStandUp(battle, unit.id, s.rng);
+    } else if (s.moveMode === "drop") {
+      dropProne(battle, unit.id);
+    } else if (s.moveMode === "proneTurn") {
+      const step = s.moveSteps[0];
+      if (step === undefined || step.kind !== "turn") {
+        throw new Error(i18n(s.locale, "err.declareModeFirst", { id: unit.id }));
+      }
+      proneFacingTurn(battle, unit.id, step.facings);
     } else if (isShutdown(unit)) {
       // Shut-down unit committing without a startup attempt: pass.
       passMovement(battle, unit.id);
@@ -512,7 +585,9 @@ export function commitMove(s: Session): CommitResult {
         battle,
         unit.id,
         s.moveSteps,
-        s.moveFinalFacing === null ? {} : { finalFacing: s.moveFinalFacing },
+        s.moveFinalFacing === null
+          ? { rng: s.rng }
+          : { finalFacing: s.moveFinalFacing, rng: s.rng },
       );
     }
     s.actorId = null;
@@ -623,7 +698,7 @@ export function commitFire(s: Session): CommitResult {
   const beforeCount = battle.events.length;
   const newEvents: GameEvent[] = [];
   commitAtomic(s, () => {
-    declareAttacks(battle, unit.id, s.fireDecls, s.rng);
+    declareAttacks(battle, unit.id, s.fireDecls, s.rng, { propArm: s.propArm });
     const declEvents = battle.events.slice(beforeCount);
     s.actorId = null;
     clearBuffers(s);

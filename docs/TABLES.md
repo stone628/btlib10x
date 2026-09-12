@@ -180,8 +180,10 @@ hittable slots, overflow is lost (excess crits simply disappear).
   actuator penalties on that leg.
 - Jump-jet slot hit → −1 jump MP per destroyed slot.
 - Engine, gyro, sensor, life-support slots → mark destroyed; a destroyed
-  engine slot adds +5 heat per hit. Piloting-roll side-effects stay
-  deferred with the piloting subset.
+  engine slot adds +5 heat per hit. Destroyed gyros/hips/leg actuators feed
+  the piloting sweep (PSRs and automatic falls, TW p.60), destroyed sensors
+  add +1 to-hit each, and a destroyed life support injures the pilot on hot
+  heat phases (see "Piloting skill rolls" in `docs/CLI.md`).
 - Heat-sink slot hits reduce end-phase dissipation: a destroyed single
   heat sink −1, a destroyed double heat sink retires the whole device
   (−2) once any slot of its run is destroyed.

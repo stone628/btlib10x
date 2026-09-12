@@ -29,6 +29,12 @@ export interface WeaponAttackInput {
   /** True when the target cannot move (shut down or both legs destroyed):
    *  grants a flat −4 target modifier instead of the hex-based band. */
   readonly targetImmobile?: boolean;
+  /** True when the target is prone (but not immobile): flat −2 (TW p.109). */
+  readonly targetProne?: boolean;
+  /** True when the attacker is prone: +2 attacker modifier (TW p.109). */
+  readonly attackerProne?: boolean;
+  /** Destroyed sensor crit slots on the attacker: +1 each (TW p.123). */
+  readonly sensorMod?: number;
   /** Partial-cover to-hit modifier supplied by the caller (the board aware
    *  of wrecks): 2 when the target is adjacent to a level-2 wreck and the
    *  attacker is below its top. Merged with the terrain-derived value
@@ -109,10 +115,13 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
   const breakdown = computeToHit({
     gunnery: input.gunnery,
     attackerMovement: input.attackerMoved,
+    ...(input.attackerProne !== undefined ? { attackerProne: input.attackerProne } : {}),
     targetHexesMoved: input.targetHexesMoved,
     targetJumped: input.targetJumped,
     targetTerrain: input.targetTerrain,
     ...(input.targetImmobile !== undefined ? { targetImmobile: input.targetImmobile } : {}),
+    ...(input.targetProne !== undefined ? { targetProne: input.targetProne } : {}),
+    ...(input.sensorMod !== undefined ? { sensorMod: input.sensorMod } : {}),
     ...(partialCoverMod > 0 ? { partialCoverMod } : {}),
     interveningWoods: losWoodsPoints(input.interveningTerrains),
     distance: input.distance,

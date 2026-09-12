@@ -181,8 +181,9 @@ describe("battle building integration", () => {
       ],
       true,
     );
-    // RNG: initiative 2D6 x2 teams; AC/20 to-hit then location; collapse location.
-    const rng = scriptedRng(1, 2, 3, 3, 3, 3, 3, 4, 3, 3);
+    // RNG: initiative 2D6 x2 teams; AC/20 to-hit then location; collapse location;
+    // 20+ damage PSR (needs 6: 3+3 succeeds, no fall).
+    const rng = scriptedRng(1, 2, 3, 3, 3, 3, 3, 4, 3, 3, 3, 3);
     const totalBefore = poolTotal(battle.units.b!);
     // Target b stands in partial cover, so leg location rolls strike the cover
     // instead — location 7 (center torso) keeps the 20-damage group live.

@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getMechDefFor } from "../src/data/index.js";
-import { isNominal } from "../src/index.js";
-import { ammoWeaponTotals } from "../src/rules/ammo.js";
-import { canFireFromLocation } from "../src/rules/damage.js";
+import { bestFireTarget, isNominal, suggestFireTargets } from "../src/index.js";
 import { en } from "../web/i18n/en.js";
 import type { LocaleId, MessageKey } from "../web/i18n/index.js";
 import { i18n, LOCALES } from "../web/i18n/index.js";
@@ -22,7 +19,8 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
     if (st.phase === "movement") {
       if (isNominal(st.units[actorId]!)) {
         try {
-          S.declareMode(s, "walk");
+          if (st.units[actorId]!.prone) S.declareMode(s, "standup");
+          else S.declareMode(s, "walk");
         } catch {
           S.declareMode(s, "standStill");
         }
@@ -30,20 +28,14 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
       S.commitMove(s);
     } else {
       const unit = st.units[actorId]!;
-      const def = getMechDefFor(unit);
-      Object.entries(def.weapons).forEach(([key, mount]) => {
-        const weaponIndex = Number(key);
-        if (unit.jammedWeapons.includes(weaponIndex)) return;
-        if (!canFireFromLocation(unit.phaseStartDamage, mount.location)) return;
-        // Ammo weapons skip when dry (per-weapon total hits zero).
-        if (
-          mount.shots !== undefined &&
-          (ammoWeaponTotals(def, unit.ammoBins)[weaponIndex] ?? 0) < 1
-        )
-          return;
-        S.queueFire(s, { weaponIndex, targetId: enemy });
-      });
-      S.commitFire(s);
+      const sugg = suggestFireTargets(st, unit.id, s.propArm);
+      const target = sugg.targets.find((t) => t.targetId === enemy) ?? bestFireTarget(sugg);
+      for (const w of target?.weapons ?? []) {
+        if (unit.jammedWeapons.includes(w.weaponIndex)) continue;
+        S.queueFire(s, { weaponIndex: w.weaponIndex, targetId: enemy });
+      }
+      if (s.fireDecls.length === 0) S.passFire(s);
+      else S.commitFire(s);
     }
   }
   if (s.app !== "over") throw new Error("battle did not finish");

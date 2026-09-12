@@ -128,7 +128,10 @@ export function reachableInfo(s: Session): BoardRenderInfo | null {
     mode === null ||
     mode === "shutdown" ||
     mode === "startup" ||
-    mode === "eject"
+    mode === "eject" ||
+    mode === "standup" ||
+    mode === "drop" ||
+    mode === "proneTurn"
   ) {
     return null;
   }

@@ -35,6 +35,7 @@ import {
   canFireFromLocation,
   collectAmmoBins,
   countDestroyedEngineSlots,
+  DEFAULT_PILOTING,
   effectiveMovement,
   getAllMapDefs,
   getAllMechDefs,
@@ -668,6 +669,10 @@ interface SheetView {
   readonly weightClass: string;
   readonly tonnage: number;
   readonly gunnery: number | null;
+  readonly piloting: number | null;
+  readonly pilotHits: number;
+  readonly prone: boolean;
+  readonly unconscious: boolean;
   readonly walking: number;
   readonly running: number;
   readonly jumping: number;
@@ -719,6 +724,10 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
     weightClass: def.weightClass,
     tonnage: def.tonnage,
     gunnery: unit.gunnery,
+    piloting: unit.piloting,
+    pilotHits: unit.pilotHits,
+    prone: unit.prone,
+    unconscious: unit.unconscious,
     walking: def.walking,
     running: def.running,
     jumping: def.jumping,
@@ -775,6 +784,10 @@ function setupSheet(unit: UnitInit, id: string, locale: LocaleId): SheetView {
     weightClass: def.weightClass,
     tonnage: def.tonnage,
     gunnery: unit.gunnery,
+    piloting: unit.piloting ?? DEFAULT_PILOTING,
+    pilotHits: 0,
+    prone: false,
+    unconscious: false,
     walking: def.walking,
     running: def.running,
     jumping: def.jumping,
@@ -1200,7 +1213,8 @@ export function unitBriefList(s: Session): string[] {
     for (const [uid, unit] of Object.entries(battle.units).filter(([, u]) => u.team === team)) {
       // Engine guarantee: `unit.model` was validated by `createBattle`.
       const def = getMechDefFor(unit);
-      lines.push(`  ${uid}  ${def.model}  ${disp(unit.position)} facing ${unit.facing}`);
+      const flags = `${unit.prone ? " PRONE" : ""}${unit.unconscious ? " UNCONSCIOUS" : ""}`;
+      lines.push(`  ${uid}  ${def.model}  ${disp(unit.position)} facing ${unit.facing}${flags}`);
       const view = battleSheet(unit, uid, s.locale);
       lines.push(...mechStatusLines(view, s.locale).map((l) => `    ${l}`));
     }
@@ -1291,6 +1305,22 @@ export function sheetLinesShort(view: SheetView, locale: LocaleId, showMode = tr
   const lines = [head];
   if (view.gunnery !== null) {
     lines.push(sheetGunneryLine(view.gunnery, view.heat, locale));
+  }
+  if (view.piloting !== null) {
+    lines.push(
+      i18n(locale, "sheet.pilotLine", {
+        piloting: view.piloting,
+        hits: view.pilotHits,
+        state:
+          view.unconscious && view.prone
+            ? i18n(locale, "sheet.pilotOutProne")
+            : view.unconscious
+              ? i18n(locale, "sheet.pilotOut")
+              : view.prone
+                ? i18n(locale, "sheet.pilotProne")
+                : i18n(locale, "sheet.pilotOk"),
+      }),
+    );
   }
   lines.push(view.positionLine);
   if (showMode && view.modeLine) lines.push(view.modeLine);
@@ -1432,7 +1462,10 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo | null {
     mode === null ||
     mode === "shutdown" ||
     mode === "startup" ||
-    mode === "eject"
+    mode === "eject" ||
+    mode === "standup" ||
+    mode === "drop" ||
+    mode === "proneTurn"
   ) {
     return null;
   }
@@ -1518,6 +1551,7 @@ const BLOCKER_LABEL: Readonly<Record<FireBlockerReason, MessageKey>> = {
   noLos: "fireSuggestion.reason.noLos",
   outOfAmmo: "fireSuggestion.reason.outOfAmmo",
   autoMiss: "fireSuggestion.reason.autoMiss",
+  prone: "fireSuggestion.reason.prone",
 };
 
 const ARC_LABEL: Readonly<Record<Arc, MessageKey>> = {
@@ -1891,6 +1925,70 @@ function eventLines(locale: LocaleId, e: GameEvent): string[] {
       ];
     case "unitEjected":
       return [i18n(locale, "log.ejected", { id: e.unitId })];
+    case "pilotingCheck": {
+      const verdict = e.success ? i18n(locale, "log.psrSuccess") : i18n(locale, "log.psrFail");
+      return [
+        i18n(locale, "log.pilotingCheck", {
+          id: e.unitId,
+          reason: e.reason,
+          target: e.target,
+          roll: e.roll === null ? i18n(locale, "log.psrAuto") : String(e.roll),
+          verdict,
+        }),
+      ];
+    }
+    case "unitFell": {
+      const lines = [
+        i18n(locale, "log.unitFell", {
+          id: e.unitId,
+          cause: e.cause,
+          facing: e.facingAfter,
+          groups: e.groups.map((g) => `${SHORT_LOC[g.location]}(${g.damage})`).join(" "),
+          damage: e.totalDamage,
+        }),
+      ];
+      for (const crit of e.crits) {
+        for (const line of critLines(locale, crit)) lines.push(`  ${line}`);
+      }
+      return lines;
+    }
+    case "pilotDamaged":
+      return [
+        i18n(locale, "log.pilotDamaged", { id: e.unitId, reason: e.reason, total: e.totalHits }),
+      ];
+    case "consciousnessCheck":
+      return [
+        i18n(locale, "log.consciousnessCheck", {
+          id: e.unitId,
+          roll: e.roll,
+          target: e.target,
+          result: e.success ? i18n(locale, "log.consciousAwake") : i18n(locale, "log.consciousOut"),
+        }),
+      ];
+    case "pilotUnconscious":
+      return [i18n(locale, "log.pilotUnconscious", { id: e.unitId })];
+    case "pilotRecovered":
+      return [i18n(locale, "log.pilotRecovered", { id: e.unitId, roll: e.roll })];
+    case "pilotKilled":
+      return [i18n(locale, "log.pilotKilled", { id: e.unitId })];
+    case "stoodUp":
+      return [i18n(locale, "log.stoodUp", { id: e.unitId })];
+    case "droppedProne":
+      return [i18n(locale, "log.droppedProne", { id: e.unitId })];
+    case "buildingCrash": {
+      const lines = [
+        i18n(locale, "log.buildingCrash", {
+          id: e.unitId,
+          hex: `${e.col},${e.row}`,
+          groups: e.groups.map((g) => `${SHORT_LOC[g.location]}(${g.damage})`).join(" "),
+          damage: e.totalDamage,
+        }),
+      ];
+      for (const crit of e.crits) {
+        for (const line of critLines(locale, crit)) lines.push(`  ${line}`);
+      }
+      return lines;
+    }
     default: {
       // Exhaustiveness guard: adding a GameEvent kind must add a case above.
       const unreachable: never = e;
@@ -1915,6 +2013,7 @@ function gatorText(locale: LocaleId, r: AttackResolution): string {
   if (b.minRangeMod) parts.push(`min ${b.minRangeMod}`);
   if (b.pulseMod) parts.push(`pulse ${b.pulseMod}`);
   if (b.heatMod) parts.push(`heat ${b.heatMod}`);
+  if (b.sensorMod) parts.push(`sensors ${b.sensorMod}`);
   const total = b.automatic === "hit" ? i18n(locale, "res.needAuto") : String(b.total);
   return `${i18n(locale, "res.need", { total })} (${parts.join(" + ")})`;
 }
