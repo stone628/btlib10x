@@ -81,8 +81,6 @@ export const en = {
     "standstill | walk | run | jump declares movement with its own MP pool; standup attempts to rise from prone and drop goes prone voluntarily (both committed by 'done'); shutdown | startup declares a voluntary shutdown or startup attempt (committed by 'done'); eject abandons the 'Mech — the pilot leaves, the fielded unit is removed, and its hex becomes a level-2 wreck (committed by 'done')",
   "cmd.turn.help": "turn 1 hexside left or right while prone (committed by 'done')",
   "cmd.turn.arg.dir": "left | right",
-  "cmd.prop.help": "choose the arm a prone attacker props itself up on (its weapons cannot fire)",
-  "cmd.prop.arg.arm": "left | right (default right)",
   "cmd.place.help": "place the 'Mech at a reachable final hex and facing",
   "cmd.place.arg.colrowfacing":
     "final hex (1-based col row) and absolute facing word n|ne|se|s|sw|nw; must appear in the reachable map shown by 'mode'",
@@ -119,7 +117,6 @@ export const en = {
   "ok.stepResult": "{id} {mode} -> {col},{row} facing {facing} [MP {spent}/{budget}]",
   "ok.cancelled": "cancelled",
   "ok.fireQueuedBatch": "queued {target} <- weapons {weapons}",
-  "ok.propSet": "{id} props on the {arm} arm",
   "ammo.current": "ammo policy: {policy}",
   "ammo.set": "{id}: ammo policy set to {policy}",
   "ammo.policy.exposed": "exposed",
@@ -164,7 +161,6 @@ export const en = {
   "err.dropRequiresStanding": "{id} is already prone",
   "err.turnRequiresProne": "{id} is not prone — turn needs a prone unit",
   "err.turnDir": "turn expects left or right",
-  "err.propArm": "prop expects left or right",
   "err.noMoveInShutdownMode":
     "movement is not available while the declared mode is shutdown/startup/eject",
   "err.mustBeOnlineForShutdown": "mode shutdown requires an online unit",
@@ -187,6 +183,7 @@ export const en = {
     "A unit may only declare attacks against one target per turn (already targeting {target})",
   "err.weaponRepeated":
     "Weapon #{weapon} may only be declared once per turn (use 'shots' for rapid-fire)",
+  "err.noAttacksQueued": "no attacks queued — queue weapons with 'fire' or pass with 'done'",
   "err.overRange": "{weapon}: target at range {dist} exceeds long range {max}",
   "err.weaponIndex": "weapon index {index} out of range for {unit}",
   "err.minRange":
@@ -269,8 +266,10 @@ export const en = {
   "fireSuggestion.reason.noLos": "no line of sight",
   "fireSuggestion.reason.outOfAmmo": "out of ammo",
   "fireSuggestion.reason.autoMiss": "auto-miss",
-  "fireSuggestion.reason.prone": "prone (leg or propping arm)",
+  "fireSuggestion.reason.prone": "prone (leg or arm)",
   "fireSuggestion.blockedSummary": "blocked weapons ({num}):",
+  "fireSuggestion.propLeft": "prop left — {num} fireable (left-arm mounts out):",
+  "fireSuggestion.propRight": "prop right — {num} fireable (right-arm mounts out):",
 
   // over status
   "over.idLine": "ID: {id}",

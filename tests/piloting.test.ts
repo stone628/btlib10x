@@ -377,17 +377,48 @@ describe("going prone voluntarily", () => {
 });
 
 describe("prone combat", () => {
-  it("blocks the propping arm and adds +2 to fire", () => {
+  it("rejects mixed-arm volleys and infers the propping arm", () => {
     const state = hbkEnf();
     toAttack(state);
     const hbk = getUnit(state, "hbk");
     hbk.prone = true;
-    // HBK-4G: 1 ML leftArm, 2 ML rightArm (default prop), 3 SL head.
-    expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }])).toThrow(
-      /propping arm/,
-    );
+    // HBK-4G: 1 ML leftArm, 2 ML rightArm, 3 SL head.
+    expect(() =>
+      declareAttacks(state, "hbk", [
+        { weaponIndex: 1, targetId: "enf" },
+        { weaponIndex: 2, targetId: "enf" },
+      ]),
+    ).toThrow(/both arms/);
+  });
+
+  it("accepts single-arm volleys and records prone + propArm on resolution", () => {
+    const state = hbkEnf();
+    toAttack(state);
+    const hbk = getUnit(state, "hbk");
+    hbk.prone = true;
     declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
     expect(hbk.declaredAttacks).toHaveLength(1);
+    resolveAllAttacks(state, scriptedRng(1, 1));
+    const res = state.events.find((e) => e.kind === "attackResolved") as
+      | { resolution: { prone: boolean; propArm: string | null } }
+      | undefined;
+    expect(res?.resolution.prone).toBe(true);
+    expect(res?.resolution.propArm).toBe("rightArm");
+  });
+
+  it("shows prop-left and prop-right weapon sets while prone", () => {
+    const state = hbkEnf();
+    toAttack(state);
+    getUnit(state, "hbk").prone = true;
+    const target = suggestFireTargets(state, "hbk").targets[0]!;
+    const left = target.weaponsIfPropLeft.map((w) => w.weaponIndex);
+    const right = target.weaponsIfPropRight.map((w) => w.weaponIndex);
+    // Left-arm ML (1) fires only when propping right; right-arm ML (2) only
+    // when propping left.
+    expect(left).toContain(2);
+    expect(left).not.toContain(1);
+    expect(right).toContain(1);
+    expect(right).not.toContain(2);
   });
 
   it("gives a prone attacker +2 and a prone target -2", () => {

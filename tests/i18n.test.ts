@@ -28,9 +28,13 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
       S.commitMove(s);
     } else {
       const unit = st.units[actorId]!;
-      const sugg = suggestFireTargets(st, unit.id, s.propArm);
+      const sugg = suggestFireTargets(st, unit.id);
       const target = sugg.targets.find((t) => t.targetId === enemy) ?? bestFireTarget(sugg);
-      for (const w of target?.weapons ?? []) {
+      const weapons =
+        (target?.weaponsIfPropLeft.length ?? 0) >= (target?.weaponsIfPropRight.length ?? 0)
+          ? (target?.weaponsIfPropLeft ?? [])
+          : (target?.weaponsIfPropRight ?? []);
+      for (const w of weapons) {
         if (unit.jammedWeapons.includes(w.weaponIndex)) continue;
         S.queueFire(s, { weaponIndex: w.weaponIndex, targetId: enemy });
       }

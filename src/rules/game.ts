@@ -917,13 +917,28 @@ export function executeMove(
   commitAt(cursor, options.finalFacing ?? facing, mode, spent, directions);
 }
 
-/** Options for `declareAttacks`. */
-export interface DeclareAttacksOptions {
-  /**
-   * Arm the prone attacker props itself up on (TW p.61): weapons mounted in
-   * that arm cannot fire while prone. Defaults to the right arm.
-   */
-  readonly propArm?: "leftArm" | "rightArm";
+/**
+ * Arm a prone volley props itself up on, inferred from its declared weapons:
+ * a volley with left-arm weapons props on the right arm and vice versa.
+ * Null when standing, or when a prone volley fires no arm-mounted weapons.
+ */
+export function inferPronePropArm(
+  def: ResolvedMechDef,
+  decls: readonly AttackDecl[],
+  prone: boolean,
+): "leftArm" | "rightArm" | null {
+  if (!prone) return null;
+  let hasLeft = false;
+  let hasRight = false;
+  for (const decl of decls) {
+    const loc = def.weapons[decl.weaponIndex]?.location;
+    if (loc === "leftArm") hasLeft = true;
+    if (loc === "rightArm") hasRight = true;
+  }
+  if (hasLeft && hasRight) return null;
+  if (hasLeft) return "rightArm";
+  if (hasRight) return "leftArm";
+  return null;
 }
 
 export function declareAttacks(
@@ -931,7 +946,6 @@ export function declareAttacks(
   unitId: string,
   decls: readonly AttackDecl[],
   rng: Rng = DEFAULT_RNG,
-  options: DeclareAttacksOptions = {},
 ): void {
   requirePhase(state, "weaponAttack");
   const unit = requireUnit(state, unitId);
@@ -942,7 +956,6 @@ export function declareAttacks(
     throw new Error(`${unitId} already declared attacks this turn`);
 
   const def = getMechDefFor(unit);
-  const propArm = options.propArm ?? "rightArm";
   const sensorsOut = countDestroyedStructure(def, unit.critSlotsDestroyed, SENSORS);
   let targetId: string | null = null;
   let attackDirection: Arc | undefined;
@@ -976,8 +989,14 @@ export function declareAttacks(
     if (unit.prone && (mount.location === "rightLeg" || mount.location === "leftLeg")) {
       throw new Error(`${mount.weapon} on ${unitId} cannot fire while prone (leg-mounted)`);
     }
-    if (unit.prone && mount.location === propArm) {
-      throw new Error(`${mount.weapon} on ${unitId} cannot fire while prone (propping arm)`);
+    if (unit.prone) {
+      const volleyHasLeft = decls.some((d) => def.weapons[d.weaponIndex]?.location === "leftArm");
+      const volleyHasRight = decls.some((d) => def.weapons[d.weaponIndex]?.location === "rightArm");
+      if (volleyHasLeft && volleyHasRight) {
+        throw new Error(
+          `${mount.weapon} on ${unitId} cannot fire while prone (volley uses both arms; prop one)`,
+        );
+      }
     }
 
     const rapidFire = decl.rapidFire ?? false;
@@ -1109,6 +1128,7 @@ function resolveUnitAttacks(
   const def = getMechDefFor(unit);
   const preHeat = unit.heat;
   const sensorsOut = countDestroyedStructure(def, unit.critSlotsDestroyed, SENSORS);
+  const pronePropArm = inferPronePropArm(def, unit.declaredAttacks, unit.prone);
   let currentAmmoBins = { ...unit.ammoBins };
   const jammedWeapons: number[] = [];
   const resolutions: UnitAttackResolution[] = [];
@@ -1137,6 +1157,7 @@ function resolveUnitAttacks(
       attackerMoved: unit.moveMode ?? "standStill",
       attackerHeat: preHeat,
       attackerProne: unit.prone,
+      ...(pronePropArm !== null ? { propArm: pronePropArm } : {}),
       sensorMod: sensorsOut,
       targetHexesMoved: target.movesThisTurn.length,
       targetJumped: target.jumpedThisTurn,

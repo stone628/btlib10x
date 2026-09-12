@@ -68,6 +68,8 @@ describe("critical hit log formatting", () => {
       toHitRoll: 7,
       hit: true,
       jammed: false,
+      prone: false,
+      propArm: null,
       clusterRoll: null,
       groups: [],
       application: null,

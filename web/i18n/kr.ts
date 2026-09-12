@@ -79,8 +79,6 @@ export const kr: Catalog = {
     "standstill | walk | run | jump 는 이동 선언 (각각 고유 MP 풀); standup 은 넘어진 상태에서 일어나기 시도, drop 은 자발적으로 엎드리기 (모두 'done'으로 확정); shutdown | startup 은 자발적 셧다운/시동 시도 ('done'으로 확정); eject 는 파일럿 탈출 — 유닛 제거, 육각은 레벨-2 잔해가 됨 ('done'으로 확정)",
   "cmd.turn.help": "엎드린 상태에서 좌/우 1헥스 방향 전환 ('done'으로 확정)",
   "cmd.turn.arg.dir": "left | right",
-  "cmd.prop.help": "엎드린 공격자가 몸을 지탱할 팔 선택 (해당 팔 무기는 발사 불가)",
-  "cmd.prop.arg.arm": "left | right (기본 right)",
   "cmd.place.help": "도달 가능한 최종 육각과 방향으로 기체 배치",
   "cmd.place.arg.colrowfacing":
     "최종 육각 (1-based col row) 과 절대 방향 단어 n|ne|se|s|sw|nw; 'mode'가 보여준 도달 가능 지도에 있어야 함",
@@ -117,7 +115,6 @@ export const kr: Catalog = {
   "ok.stepResult": "{id} {mode} -> {col},{row} 방향 {facing} [MP {spent}/{budget}]",
   "ok.cancelled": "취소되었습니다",
   "ok.fireQueuedBatch": "{target} <- 무기 {weapons} 예약됨",
-  "ok.propSet": "{id}, {arm} 팔로 몸 지탱",
   "ammo.current": "탄약 정책: {policy}",
   "ammo.set": "{id}: 탄약 정책이 {policy}(으)로 설정되었습니다",
   "ammo.policy.exposed": "노출 우선",
@@ -161,7 +158,6 @@ export const kr: Catalog = {
   "err.dropRequiresStanding": "{id}는 이미 엎드린 상태임",
   "err.turnRequiresProne": "{id}는 엎드린 상태가 아님 — turn은 엎드린 유닛 필요",
   "err.turnDir": "turn은 left 또는 right 필요",
-  "err.propArm": "prop은 left 또는 right 필요",
   "err.noMoveInShutdownMode": "선언된 모드가 shutdown/startup/eject일 때는 이동할 수 없습니다",
   "err.mustBeOnlineForShutdown": "mode shutdown은 온라인 유닛에서만 사용할 수 있습니다",
   "err.mustBeDownForStartup": "mode startup은 셧다운된 유닛에서만 사용할 수 있습니다",
@@ -182,6 +178,7 @@ export const kr: Catalog = {
   "err.oneTarget": "한 유닛은 턴당 하나의 목표에만 공격을 선언할 수 있습니다 (현재 목표: {target})",
   "err.weaponRepeated":
     "Weapon #{weapon} may only be declared once per turn (use 'shots' for rapid-fire)",
+  "err.noAttacksQueued": "예약된 공격 없음 — 'fire'로 무기를 예약하거나 'done'으로 패스",
   "err.overRange": "{weapon}: 목표가 사거리 {dist}로 장거리 {max}를 초과합니다",
   "err.weaponIndex": "{unit}의 무기 인덱스 {index}가 범위를 벗어났습니다",
   "err.minRange":
@@ -264,8 +261,10 @@ export const kr: Catalog = {
   "fireSuggestion.reason.noLos": "시야 차단",
   "fireSuggestion.reason.outOfAmmo": "탄약 없음",
   "fireSuggestion.reason.autoMiss": "자동 빗나감",
-  "fireSuggestion.reason.prone": "엎드림 (다리 또는 지탱 팔)",
+  "fireSuggestion.reason.prone": "엎드림 (다리 또는 팔)",
   "fireSuggestion.blockedSummary": "사용불가 무기 목록 ({num}):",
+  "fireSuggestion.propLeft": "왼팔 지탱 — {num}문 발사 가능 (왼팔 무기 제외):",
+  "fireSuggestion.propRight": "오른팔 지탱 — {num}문 발사 가능 (오른팔 무기 제외):",
 
   // over status
   "over.idLine": "식별자: {id}",

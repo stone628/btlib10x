@@ -33,6 +33,13 @@ export interface WeaponAttackInput {
   readonly targetProne?: boolean;
   /** True when the attacker is prone: +2 attacker modifier (TW p.109). */
   readonly attackerProne?: boolean;
+  /**
+   * Arm the prone attacker props itself up on (TW p.61): weapons mounted in
+   * the other arm remain fireable. Null (or omitted) when standing, or when a
+   * prone attacker fires no arm-mounted weapons (nothing to prop against).
+   * Echoed into `AttackResolution.propArm`.
+   */
+  readonly propArm?: "leftArm" | "rightArm" | null;
   /** Destroyed sensor crit slots on the attacker: +1 each (TW p.123). */
   readonly sensorMod?: number;
   /** Partial-cover to-hit modifier supplied by the caller (the board aware
@@ -82,6 +89,14 @@ export interface AttackResolution {
   readonly toHitRoll: number | null;
   readonly hit: boolean;
   readonly jammed: boolean;
+  /** True when the shot was fired while the attacker was prone (TW p.61). */
+  readonly prone: boolean;
+  /**
+   * Arm the prone attacker propped itself up on for this shot (its weapons
+   * could not fire). Null when standing, or when a prone attacker fired no
+   * arm-mounted weapons.
+   */
+  readonly propArm: "leftArm" | "rightArm" | null;
   /** True when a streak launcher found its shared pool empty at resolution:
    *  the attack auto-missed without rolling (no ammo spent, no heat). */
   readonly ammoExhausted?: boolean;
@@ -131,6 +146,9 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     ...(input.attackerHeat !== undefined ? { heatMod: toHitHeatModifier(input.attackerHeat) } : {}),
   });
 
+  const prone = input.attackerProne ?? false;
+  const propArm = prone ? (input.propArm ?? null) : null;
+
   const base = {
     weapon: weapon.name,
     distance: input.distance,
@@ -138,6 +156,8 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     toHitRoll: null as number | null,
     hit: false,
     jammed: false,
+    prone,
+    propArm,
     ammoExhausted: false,
     clusterRoll: null as number | null,
     groups: [] as HitGroup[],
