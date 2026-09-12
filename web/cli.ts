@@ -15,6 +15,7 @@ import {
   attackStatusLines,
   boardChunk,
   buildLinesChunk,
+  F,
   fireSuggestionChunks,
   fmtSetupStatus,
   formatLog,
@@ -28,6 +29,8 @@ import {
   listTables,
   moveStatusLines,
   overStatusLines,
+  PRN,
+  queuedMoveLines,
   reachableChunk,
   reachablesInfo,
   renderClusterTable,
@@ -35,6 +38,8 @@ import {
   renderHeatScaleTable,
   renderHitLocationTables,
   sheetForUnit,
+  stepResultFromLine,
+  stepResultLines,
   unitBriefList,
 } from "./format.js";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
@@ -313,14 +318,7 @@ const MOVE_CMDS: Record<string, CmdDef> = {
       ) {
         throw new Error(i18n(L(s), "err.candidate.movemode"));
       }
-      const r = S.stepResult(s);
-      const lines = [
-        i18n(L(s), "ok.modeDeclared", {
-          id: s.actorId ?? "",
-          mode: s.moveMode,
-          budget: r.mpBudget,
-        }),
-      ];
+      const lines = queuedMoveLines(s);
       if (s.moveCandidate === null) {
         s.moveCandidate = reachablesInfo(s) ?? null;
       }
@@ -333,9 +331,11 @@ const MOVE_CMDS: Record<string, CmdDef> = {
     usage: "mode <standstill|walk|run|jump|standup|drop|shutdown|startup|eject>",
     argsDoc: [["mode", "cmd.mode.arg.mode"]],
     run: (s, a) => {
-      expectArgs(L(s), a, 1, "mode standstill|walk|run|jump|standup|drop|shutdown|startup|eject");
-      const mode = S.parseMoveMode(L(s), a[0]!);
+      const locale = L(s);
+      expectArgs(locale, a, 1, "mode standstill|walk|run|jump|standup|drop|shutdown|startup|eject");
+      const mode = S.parseMoveMode(locale, a[0]!);
       S.declareMode(s, a[0]!);
+      const actor = S.currentActor(s)!;
       if (
         mode === "shutdown" ||
         mode === "startup" ||
@@ -344,11 +344,20 @@ const MOVE_CMDS: Record<string, CmdDef> = {
         mode === "drop"
       ) {
         s.moveCandidate = null;
-        return [i18n(L(s), "ok.modeDeclaredVoluntary", { id: s.actorId ?? "", mode })];
+        return [
+          i18n(locale, "ok.modeDeclaredVoluntary", { id: actor.id, mode }),
+          i18n(locale, "stepResult.from", {
+            col: actor.position.col,
+            row: actor.position.row,
+            facing: F(locale, actor.facing),
+            posture: PRN(locale, actor.prone),
+          }),
+        ];
       }
       const r = S.stepResult(s);
       const lines = [
-        i18n(L(s), "ok.modeDeclared", { id: s.actorId ?? "", mode, budget: r.mpBudget }),
+        i18n(locale, "ok.modeDeclared", { id: actor.id, mode, budget: r.mpBudget }),
+        stepResultFromLine(locale, r),
       ];
       if (mode === "standStill") {
         s.moveCandidate = null;
@@ -384,17 +393,7 @@ const MOVE_CMDS: Record<string, CmdDef> = {
         throw new Error(i18n(L(s), "err.place.facing", { col: hex.col, row: hex.row, facing }));
       }
       const r = S.placeLanding(s, landing);
-      return [
-        i18n(L(s), "ok.stepResult", {
-          id: s.actorId ?? "",
-          mode: s.moveMode ?? "",
-          col: r.position.col,
-          row: r.position.row,
-          facing: r.facing,
-          spent: r.mpSpent,
-          budget: r.mpBudget,
-        }),
-      ];
+      return stepResultLines(s, r);
     },
   },
   status: { helpKey: "cmd.statusMove.help", run: (s) => moveStatusLines(s) },
@@ -406,17 +405,7 @@ const MOVE_CMDS: Record<string, CmdDef> = {
       expectArgs(L(s), a, 1, "turn <left|right>");
       S.queueProneTurn(s, a[0]!);
       const r = S.stepResult(s);
-      return [
-        i18n(L(s), "ok.stepResult", {
-          id: s.actorId ?? "",
-          mode: s.moveMode ?? "",
-          col: r.position.col,
-          row: r.position.row,
-          facing: r.facing,
-          spent: r.mpSpent,
-          budget: r.mpBudget,
-        }),
-      ];
+      return stepResultLines(s, r);
     },
   },
   cancel: {
