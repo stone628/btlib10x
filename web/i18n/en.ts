@@ -401,11 +401,12 @@ export const en = {
   "log.psrAuto": "auto",
   "log.unitFell": "*** {id} FALLS ({cause}) facing {facing}: {groups} ({damage} total) ***",
   "log.pilotDamaged": "{id} pilot takes a hit ({reason}) — {total} total",
-  "log.consciousnessCheck": "{id} consciousness needs {target}: 2D6 = {roll} -> {result}",
-  "log.consciousAwake": "AWAKE",
-  "log.consciousOut": "OUT",
-  "log.pilotUnconscious": "*** {id} pilot UNCONSCIOUS ***",
-  "log.pilotRecovered": "{id} pilot regains consciousness (2D6 = {roll})",
+  "log.consciousnessCheckSuccess":
+    "{id} consciousness check success(2D6 = {roll} >= {target}) -> AWAKE",
+  "log.consciousnessCheckFail":
+    "{id} consciousness check fail(2D6 = {roll} < {target}) -> STILL UNCONSCIOUS",
+  "log.pilotUnconscious": "*** {id} pilot UNCONSCIOUS (2D6 = {roll} < {target})***",
+  "log.pilotRecovered": "{id} pilot regains consciousness (2D6 = {roll} >= {target})",
   "log.pilotKilled": "*** {id} pilot KILLED ***",
   "log.stoodUp": "{id} stands up",
   "log.droppedProne": "{id} drops prone",

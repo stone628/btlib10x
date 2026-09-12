@@ -371,13 +371,7 @@ export type GameEvent =
       readonly target: number;
       readonly success: boolean;
       readonly hits: number;
-    }
-  | { readonly kind: "pilotUnconscious"; readonly unitId: string }
-  | {
-      readonly kind: "pilotRecovered";
-      readonly unitId: string;
-      readonly roll: number;
-      readonly target: number;
+      readonly consciousBefore: boolean;
     }
   | { readonly kind: "pilotKilled"; readonly unitId: string }
   | { readonly kind: "stoodUp"; readonly unitId: string }
@@ -1300,6 +1294,7 @@ export function applyPilotHits(
     // No further consciousness rolls once out this turn (TW p.42).
     if (unit.unconscious) continue;
     const { roll, success } = rollConsciousness(rng, target);
+    const wasConscious = !unit.unconscious;
     state.events.push({
       kind: "consciousnessCheck",
       unitId: unit.id,
@@ -1307,11 +1302,11 @@ export function applyPilotHits(
       target,
       success,
       hits: unit.pilotHits,
+      consciousBefore: wasConscious,
     });
     if (!success) {
       unit.unconscious = true;
       unit.unconsciousSinceTurn = state.turn;
-      state.events.push({ kind: "pilotUnconscious", unitId: unit.id });
     }
   }
 }
@@ -2041,17 +2036,16 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
     if (success) {
       unit.unconscious = false;
       unit.unconsciousSinceTurn = null;
-      state.events.push({ kind: "pilotRecovered", unitId: unit.id, roll, target });
-    } else {
-      state.events.push({
-        kind: "consciousnessCheck",
-        unitId: unit.id,
-        roll,
-        target,
-        success,
-        hits: unit.pilotHits,
-      });
     }
+    state.events.push({
+      kind: "consciousnessCheck",
+      unitId: unit.id,
+      roll,
+      target,
+      success,
+      hits: unit.pilotHits,
+      consciousBefore: false,
+    });
   }
 
   // End-of-heat-phase piloting: falls from heat-phase ammo-explosion damage.
