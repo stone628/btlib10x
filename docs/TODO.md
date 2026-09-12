@@ -10,7 +10,6 @@
 ## To Do
 
 - redesign 'move' command supporting posture-change then move, like 'mode prone' and 'place' within range of crawl, or 'mode standup [walk|run|jump]' and 'place'. on command 'done', eval posture-change first and then place unit only when successful eval.
-- make MoveFragment contain MP used and why.
 - need snapshot keeping, capable of rollback N steps like ctrl-z
 - The Physical Attack Phase. advancePhase runs initiative → movement → weaponAttack → end, with the heat phase folded into the weaponAttack exit. TW inserts a physical attack phase between weapon fire and heat, carrying punch, kick, push, club, charge and Death From Above. None exists. This also strands the handActuator and shoulder crit slots, whose published effects are largely physical. (Physical-triggered PSRs — kicks, pushes, charges, DFAs — wait on this phase; see "Not viable" in `docs/CLI.md`.)
 

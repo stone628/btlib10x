@@ -13,6 +13,7 @@ import type {
   MoveStep,
   RevealedLanding,
   Rng,
+  TerrainType,
   UnitInit,
   UnitState,
   VictoryResult,
@@ -52,6 +53,7 @@ import {
   isShutdown,
   losClear,
   losWoodsPointsBetween,
+  MP_PER_FACING_CHANGE,
   neighbor,
   nextActor,
   oppositeFacing,
@@ -65,6 +67,7 @@ import {
   rotateFacing,
   SENSORS,
   sameHex,
+  terrainMoveCost,
   toHitHeatModifier,
   voluntaryShutdown,
   weaponCanFireIntoArc,
@@ -421,26 +424,76 @@ interface MoveCursor {
   spent: number;
 }
 
-function replaySteps(s: Session): MoveCursor {
+/** One queued step's cost breakdown, for the `place` result. */
+export type StepResultStep =
+  | {
+      readonly kind: "turn";
+      readonly facings: number;
+      readonly mp: number;
+      readonly reason: { readonly kind: "faceChange"; readonly perFacing: number };
+    }
+  | {
+      readonly kind: "enter";
+      readonly to: HexCoord;
+      readonly type: "walk" | "run" | "jump";
+      readonly mp: number;
+      readonly reason:
+        | { readonly kind: "jump" }
+        | {
+            readonly kind: "enter";
+            readonly terrain: TerrainType;
+            readonly terrainSurcharge: number;
+            readonly climbLevels: number;
+            readonly climbCost: number;
+          };
+    };
+
+function replaySteps(s: Session): { cur: MoveCursor; steps: StepResultStep[] } {
   const unit = currentActor(s)!;
   const cur: MoveCursor = { hex: { ...unit.position }, facing: unit.facing, spent: 0 };
+  const steps: StepResultStep[] = [];
   for (const step of s.moveSteps) {
     if (step.kind === "turn") {
       cur.facing = rotateFacing(cur.facing, step.facings);
-      cur.spent += facingChangeCost(Math.abs(step.facings));
+      const mp = facingChangeCost(Math.abs(step.facings));
+      cur.spent += mp;
+      steps.push({
+        kind: "turn",
+        facings: step.facings,
+        mp,
+        reason: { kind: "faceChange", perFacing: MP_PER_FACING_CHANGE },
+      });
     } else {
       const battle = requireBattle(s);
       const fromLevel = cellAt(battle, cur.hex).level;
       const toLevel = cellAt(battle, step.to).level;
-      cur.hex = { ...step.to };
+      const to = { ...step.to };
+      cur.hex = to;
       if (s.moveMode === "jump") {
         cur.spent += 1;
+        steps.push({ kind: "enter", to, type: "jump", mp: 1, reason: { kind: "jump" } });
       } else {
-        cur.spent += costToEnter(cellAt(battle, step.to).terrain) + costToClimb(fromLevel, toLevel);
+        const terrain = cellAt(battle, to).terrain;
+        const climbCost = costToClimb(fromLevel, toLevel);
+        const mp = costToEnter(terrain) + climbCost;
+        cur.spent += mp;
+        steps.push({
+          kind: "enter",
+          to,
+          type: s.moveMode === "walk" ? "walk" : "run",
+          mp,
+          reason: {
+            kind: "enter",
+            terrain,
+            terrainSurcharge: terrainMoveCost(terrain),
+            climbLevels: Math.abs(toLevel - fromLevel),
+            climbCost,
+          },
+        });
       }
     }
   }
-  return cur;
+  return { cur, steps };
 }
 
 function budgetFor(s: Session): number {
@@ -462,20 +515,32 @@ function budgetFor(s: Session): number {
 }
 
 export interface StepResult {
+  readonly fromPosition: HexCoord;
+  readonly fromFacing: Facing;
+  readonly fromProne: boolean;
   readonly position: HexCoord;
-  facing: Facing;
+  readonly facing: Facing;
+  readonly prone: boolean;
   readonly mpSpent: number;
   readonly mpBudget: number;
+  /** Per-step breakdown of movement type, MP spent, and the MP cost reason. */
+  readonly steps: readonly StepResultStep[];
 }
 
-/** Cursor state after replaying all queued movement steps. */
+/** Cursor + per-step breakdown after replaying all queued movement steps. */
 export function stepResult(s: Session): StepResult {
-  const cur = replaySteps(s);
+  const actor = currentActor(s)!;
+  const { cur, steps } = replaySteps(s);
   return {
+    fromPosition: actor.position,
+    fromFacing: actor.facing,
+    fromProne: actor.prone,
     position: cur.hex,
     facing: cur.facing,
     mpSpent: cur.spent,
     mpBudget: budgetFor(s),
+    prone: false, // FIXME: will get from MoveCursor later
+    steps,
   };
 }
 
@@ -602,63 +667,6 @@ export function commitMove(s: Session): CommitResult {
   });
   const newEvents = battle.events.slice(beforeCount);
   return { state: battle, newEvents };
-}
-
-export interface MoveStepInfo {
-  readonly label: string;
-  readonly mpCost: number;
-  readonly mpAfter: number;
-}
-
-/** Queued movement steps with running MP totals, for `status`. */
-export function moveStepsInfo(s: Session): {
-  mode: DeclaredMode | null;
-  steps: MoveStepInfo[];
-  budget: number;
-} {
-  const unit = currentActor(s);
-  if (!unit || !s.battle) throw new Error(i18n(s.locale, "err.needsActor"));
-  const battle = s.battle;
-  const steps: MoveStepInfo[] = [];
-  let _hex: HexCoord = { ...unit.position };
-  let facing: Facing = unit.facing;
-  let spent = 0;
-  s.moveSteps.forEach((step, i) => {
-    let label: string;
-    let cost: number;
-    if (step.kind === "turn") {
-      const nextFacing = rotateFacing(facing, step.facings);
-      label = i18n(s.locale, "moveStatus.stepTurn", {
-        i: i + 1,
-        steps: signed(step.facings),
-        from: facing,
-        to: nextFacing,
-      });
-      facing = nextFacing;
-      cost = facingChangeCost(Math.abs(step.facings));
-    } else {
-      label = i18n(s.locale, "moveStatus.stepEnter", {
-        i: i + 1,
-        col: step.to.col,
-        row: step.to.row,
-      });
-      const fromLevel = cellAt(battle, _hex).level;
-      const toLevel = cellAt(battle, step.to).level;
-      _hex = { ...step.to };
-      if (s.moveMode === "jump") {
-        cost = 1;
-      } else {
-        cost = costToEnter(cellAt(battle, step.to).terrain) + costToClimb(fromLevel, toLevel);
-      }
-    }
-    spent += cost;
-    steps.push({ label, mpCost: cost, mpAfter: spent });
-  });
-  return { mode: s.moveMode, steps, budget: budgetFor(s) };
-}
-
-function signed(n: number): string {
-  return n >= 0 ? `+${n}` : String(n);
 }
 
 // -------------------------------------------------------------- attacks ----

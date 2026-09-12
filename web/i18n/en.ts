@@ -114,7 +114,13 @@ export const en = {
   "ok.removed": "removed {id}",
   "ok.started": "=== BATTLE STARTED ===",
   "ok.modeDeclared": "{id} declares {mode}, can use {budget} movement points.",
-  "ok.stepResult": "{id} {mode} -> {col},{row} facing {facing} [MP {spent}/{budget}]",
+  "ok.stepResult":
+    "{id} in {mode} mode will be placed at ({col},{row}) facing {facing} {posture}, spending {spent}MP out of {budget}MP",
+  "stepResult.from": "  from ({col},{row}) facing {facing} {posture}",
+  "stepResult.turn": "  turn {dir} x{facings}: {mp} MP (face change, {perFacing} MP/hexside)",
+  "stepResult.jump": "  jump ({col},{row}): {mp} MP (jump step, flat 1 MP)",
+  "stepResult.enter":
+    "  {type} enter ({col},{row}) {terrain}: {mp} MP (1 base, +{surcharge} terrain, +{climb} climb {levels}lv)",
   "ok.cancelled": "cancelled",
   "ok.fireQueuedBatch": "queued {target} <- weapons {weapons}",
   "ammo.current": "ammo policy: {policy}",
@@ -213,7 +219,7 @@ export const en = {
   // turn order status
   "status.orderHeader": "turn order(initiative team {init}):",
   "status.done": "  done: {ids}",
-  "status.next": "  next: {id}",
+  "status.current": "  current: {id}",
   "status.pendingAfter": "  pending after: {ids}",
   "status.none": "-",
   "status.actorView": "{id}(team {team})",
@@ -309,7 +315,7 @@ export const en = {
   "sheet.pilotOk": "conscious",
   "sheet.postureProne": "prone",
   "sheet.pilotOut": "UNCONSCIOUS",
-  "sheet.postureStand": "stand",
+  "sheet.postureStand": "standing",
   "sheet.gunneryLineHeat": "gunnery: {gunnery} + {toHit}(heat >= {threshold})",
   "sheet.at": "position: {pos} facing {facing} {posture}",
   "sheet.modeSuffix": ", {mode} [MP {mp}]",

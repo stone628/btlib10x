@@ -10,6 +10,7 @@ import type {
   CritSoakName,
   CritStructureName,
   DamageTransferStep,
+  Facing,
   FireBlockerReason,
   FireSuggestion,
   FireWeapon,
@@ -74,8 +75,11 @@ import {
   createEjectedBoardRenderUnits,
   getBoardRenderer,
 } from "./render.js";
-import type { Session } from "./session.js";
-import { moveStepsInfo } from "./session.js";
+import { currentActor, type Session, type StepResult, stepResult } from "./session.js";
+
+export const F = (l: LocaleId, f: Facing): string => i18n(l, `sheet.facing.${f}` as MessageKey);
+export const PRN = (l: LocaleId, prone: boolean): string =>
+  i18n(l, prone ? "sheet.postureProne" : "sheet.postureStand");
 
 /** Board renderer type (re-exported from the render layer). */
 export type { BoardRenderer } from "./render.js";
@@ -732,7 +736,11 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
     running: def.running,
     jumping: def.jumping,
     removed: unit.removed,
-    positionLine: i18n(locale, "sheet.at", { pos: disp(unit.position), facing: i18n(locale, `sheet.facing.${unit.facing}`), posture: i18n(locale, unit.prone ? "sheet.postureProne" : "sheet.postureStand") }),
+    positionLine: i18n(locale, "sheet.at", {
+      pos: disp(unit.position),
+      facing: F(locale, unit.facing),
+      posture: PRN(locale, unit.prone),
+    }),
     modeLine:
       unit.moveMode !== null
         ? i18n(locale, "sheet.modeSuffix", { mode: unit.moveMode, mp: unit.mpSpent })
@@ -792,7 +800,11 @@ function setupSheet(unit: UnitInit, id: string, locale: LocaleId): SheetView {
     running: def.running,
     jumping: def.jumping,
     removed: false,
-    positionLine: i18n(locale, "sheet.at", { pos: disp(unit.position), facing: i18n(locale, `sheet.facing.${unit.facing}`), posture: "" }),
+    positionLine: i18n(locale, "sheet.at", {
+      pos: disp(unit.position),
+      facing: F(locale, unit.facing),
+      posture: "",
+    }),
     modeLine: null,
     ammoStatusLine: null,
     heat: 0,
@@ -1106,10 +1118,7 @@ function critChartChunk(def: ResolvedMechDef, locale: LocaleId, live: CritChartL
   ]);
 }
 
-function sheetMovementLine(
-  locale: LocaleId,
-  view: SheetView
-): string {
+function sheetMovementLine(locale: LocaleId, view: SheetView): string {
   const { penalty, threshold } = movementMpPenaltyWithThreshold(view.heat);
   if (penalty > 0) {
     return i18n(locale, "info.movementHeat", {
@@ -1120,7 +1129,11 @@ function sheetMovementLine(
       threshold,
     });
   }
-  return i18n(locale, "info.movement", { walk: view.walking, run: view.running, jump: view.jumping });
+  return i18n(locale, "info.movement", {
+    walk: view.walking,
+    run: view.running,
+    jump: view.jumping,
+  });
 }
 
 /** Record sheet with armor status per location, side-by-side with ASCII diagram. */
@@ -1296,7 +1309,7 @@ function sheetPilotLine(locale: LocaleId, view: SheetView): string {
   return i18n(locale, "sheet.pilotLine", {
     piloting: view.piloting!,
     hits: view.pilotHits,
-    state: i18n(locale, view.unconscious ? "sheet.pilotOut" : "sheet.pilotOk",),
+    state: i18n(locale, view.unconscious ? "sheet.pilotOut" : "sheet.pilotOk"),
   });
 }
 
@@ -1401,34 +1414,97 @@ function actorOrderLines(s: Session): string[] {
       : i18n(s.locale, "status.none");
   lines.push(i18n(s.locale, "status.orderHeader", { init: q.initiative ?? "-" }));
   lines.push(i18n(s.locale, "status.done", { ids: list(q.acted) }));
-  lines.push(i18n(s.locale, "status.next", { id: queueActorViewStr(s.locale, q.pending[0]) }));
+  lines.push(i18n(s.locale, "status.current", { id: queueActorViewStr(s.locale, q.pending[0]) }));
   lines.push(i18n(s.locale, "status.pendingAfter", { ids: list(q.pending.slice(1)) }));
+  return lines;
+}
+
+export function stepResultFromLine(locale: LocaleId, r: StepResult): string {
+  return i18n(locale, "stepResult.from", {
+    col: r.fromPosition.col,
+    row: r.fromPosition.row,
+    facing: F(locale, r.fromFacing),
+    posture: PRN(locale, r.fromProne),
+  });
+}
+
+/** Header plus one line per queued step, for `place` and `turn` output. */
+export function stepResultLines(s: Session, r: StepResult): string[] {
+  const locale = s.locale;
+  const lines = [
+    i18n(locale, "ok.stepResult", {
+      id: s.actorId ?? "",
+      mode: s.moveMode ?? "",
+      col: r.position.col,
+      row: r.position.row,
+      facing: F(locale, r.facing),
+      posture: PRN(locale, r.prone),
+      spent: r.mpSpent,
+      budget: r.mpBudget,
+    }),
+    stepResultFromLine(locale, r),
+  ];
+  for (const step of r.steps) {
+    if (step.kind === "turn") {
+      lines.push(
+        i18n(locale, "stepResult.turn", {
+          dir: step.facings > 0 ? "R" : "L",
+          facings: Math.abs(step.facings),
+          mp: step.mp,
+          perFacing: step.reason.perFacing,
+        }),
+      );
+    } else if (step.reason.kind === "jump") {
+      lines.push(
+        i18n(locale, "stepResult.jump", { col: step.to.col, row: step.to.row, mp: step.mp }),
+      );
+    } else {
+      lines.push(
+        i18n(locale, "stepResult.enter", {
+          type: step.type,
+          col: step.to.col,
+          row: step.to.row,
+          terrain: step.reason.terrain,
+          surcharge: step.reason.terrainSurcharge,
+          climb: step.reason.climbCost,
+          levels: step.reason.climbLevels,
+          mp: step.mp,
+        }),
+      );
+    }
+  }
+  return lines;
+}
+
+export function queuedMoveLines(s: Session): string[] {
+  const lines: string[] = [];
+  const locale = s.locale;
+  const actor = currentActor(s)!;
+  const r = stepResult(s);
+  if (r.steps.length === 0) {
+    lines.push(
+      i18n(locale, "ok.modeDeclared", { id: actor.id, mode: s.moveMode ?? "", budget: r.mpBudget }),
+    );
+    lines.push(stepResultFromLine(locale, r));
+  } else {
+    lines.push(...stepResultLines(s, r));
+  }
   return lines;
 }
 
 export function moveStatusLines(s: Session): string[] {
   const lines: string[] = [];
   lines.push(...actorOrderLines(s));
-  const info = moveStepsInfo(s);
   lines.push(i18n(s.locale, "moveStatus.headLine"));
-  lines.push(
-    info.mode === null
-      ? i18n(s.locale, "moveStatus.noMode")
-      : i18n(s.locale, "moveStatus.mode", { mode: info.mode }),
-  );
-  lines.push(i18n(s.locale, "moveStatus.budget", { budget: info.budget }));
-  if (info.steps.length === 0) {
-    lines.push(i18n(s.locale, "moveStatus.none"));
+  if (
+    s.moveMode === null ||
+    s.moveMode === "shutdown" ||
+    s.moveMode === "startup" ||
+    s.moveMode === "eject"
+  ) {
+    lines.push(i18n(s.locale, "moveStatus.noMode"));
   } else {
-    for (const step of info.steps) {
-      lines.push(
-        i18n(s.locale, "moveStatus.stepLine", {
-          label: step.label,
-          cost: step.mpCost,
-          total: step.mpAfter,
-        }),
-      );
-    }
+    lines.push(...queuedMoveLines(s).map((l) => `  ${l}`));
   }
   return lines;
 }

@@ -111,8 +111,14 @@ export const kr: Catalog = {
   "ok.added": "{id} ({model}) 위치 ({col},{row}), 방향 {facing} 배치됨",
   "ok.removed": "{id} 제거됨",
   "ok.started": "=== 전투 시작 ===",
-  "ok.modeDeclared": "{id}, {mode} 선언, {budget} MP 사용 가능.",
-  "ok.stepResult": "{id} {mode} -> {col},{row} 방향 {facing} [MP {spent}/{budget}]",
+  "ok.modeDeclared": "{id}, {mode} 모드 선언. {budget} MP 사용 가능.",
+  "ok.stepResult":
+    "{id}, {mode} 모드로 다음 좌표 ({col},{row}) {facing}향 {posture} 상태로 최종 이동 예정. 가용 MP {budget} 중 {spent} 소모",
+  "stepResult.from": "  시작 상태: 좌표 ({col},{row}) {facing}향 {posture}",
+  "stepResult.turn": "  방향 전환 {dir} x{facings}: MP {mp} 사용 (방향 전환당 {perFacing} MP)",
+  "stepResult.jump": "  점프: 좌표 ({col},{row}), MP {mp} 사용 (타일 이동당 1 MP)",
+  "stepResult.enter":
+    "  {type} 모드 진입 ({col},{row}) {terrain}: MP {mp} 사용 (기본 1, 지형 +{surcharge}, 고도차 +{climb} {levels}lv)",
   "ok.cancelled": "취소되었습니다",
   "ok.fireQueuedBatch": "{target} <- 무기 {weapons} 예약됨",
   "ammo.current": "탄약 정책: {policy}",
@@ -208,8 +214,8 @@ export const kr: Catalog = {
   // turn order status
   "status.orderHeader": "행동 순서(선제 팀 {init}):",
   "status.done": "  완료: {ids}",
-  "status.next": "  다음: {id}",
-  "status.pendingAfter": "  대기: {ids}",
+  "status.current": "  진행중: {id}",
+  "status.pendingAfter": "  대기중: {ids}",
   "status.none": "-",
   "status.actorView": "{id}(팀 {team})",
   "status.actorViewPriority": "{id}(팀 {team}, 우선처리)",
