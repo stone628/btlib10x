@@ -19,6 +19,7 @@ export function maxMovePoints(
     case "standStill":
       return 0;
     case "walk":
+    case "prone":
       return walking;
     case "run":
       return running;
@@ -32,6 +33,7 @@ export function attackerMovementModifier(mode: MoveMode): number {
     case "standStill":
       return 0;
     case "walk":
+    case "prone":
       return 1;
     case "run":
       return 2;

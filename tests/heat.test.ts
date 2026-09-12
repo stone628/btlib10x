@@ -255,7 +255,10 @@ describe("largestAmmoBin", () => {
     const bin = largestAmmoBin(def, unit.ammoBins);
     expect(bin).not.toBeNull();
     expect(bin!.weapon).toBe("AC/20");
-    expect(bin!.shotsRemaining).toBe(10);
+    // 10 declared shots spread over two 5-shot bins: only the single
+    // largest bin detonates, not the whole mount.
+    expect(bin!.shotsRemaining).toBe(5);
+    expect(bin!.damage).toBe(100);
   });
 
   it("returns null when only non-explosive ammo is loaded (BZK-F3 gauss)", () => {
@@ -571,10 +574,17 @@ describe("game integration: heat ammo explosion", () => {
     startAttackTurn(state);
     // shutdown auto: no roll; ammo avoid roll 4 < 8 (avoid=8 for heat 30)
     advancePhase(state, scriptedRng(3, 1, 6, 6, 6, 6));
+    // The exploded bin empties (its 5 shots x 20 = 100 damage), not the
+    // mount's full 10-shot magazine. The 100-point blast kills the 50-ton
+    // HBK outright, so the sibling bin's location is stripped away.
     expect(hbk.ammoBins["leftTorso:1"]?.shots).toBe(0);
-    expect(
-      state.events.some((e) => e.kind === "ammoExplosionCheck" && e.unitId === "hbk" && !e.avoided),
-    ).toBe(true);
+    const blast = state.events.find(
+      (e): e is Extract<(typeof state.events)[number], { kind: "ammoExplosionCheck" }> =>
+        e.kind === "ammoExplosionCheck" && e.unitId === "hbk" && !e.avoided,
+    );
+    expect(blast).toBeDefined();
+    expect(blast!.shotsRemaining).toBe(5);
+    expect(blast!.damage).toBe(100);
   });
 
   it("gauss-only unit does not detonate from heat (inert ammo)", () => {
