@@ -1953,8 +1953,8 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
 
   // Heat ammo explosions: at heat 19+ the largest loaded bin can detonate if
   // the avoidance roll fails. The bin explodes against its location's
-  // internal structure (armor bypassed), cascading normally. Every bin of the
-  // detonating weapon mount is emptied.
+  // internal structure (armor bypassed), cascading normally. Only the
+  // detonating bin empties; sibling bins of the same weapon stay loaded.
   for (const unit of units) {
     const heat = unit.heat;
     const { avoid, threshold } = ammoExplosionAvoidWithThreshold(heat)!;
@@ -1992,12 +1992,10 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
         stripBinsInLocation(unit.ammoBins, loc);
       }
     }
-    // Detonated magazines read as empty (0), like a bin drained by firing;
-    // rebuild any bin the strip removed so the empty state is visible.
-    for (const binId of bin.binIds) {
-      const slot = collectAmmoBins(def).find((b) => b.id === binId);
-      if (slot !== undefined) unit.ammoBins[binId] = { ...slot, shots: 0 };
-    }
+    // Detonated magazine reads as empty (0), like a bin drained by firing;
+    // rebuild enough to surface the empty state in case the strip removed it.
+    const slot = collectAmmoBins(def).find((b) => b.id === bin.binId);
+    if (slot !== undefined) unit.ammoBins[bin.binId] = { ...slot, shots: 0 };
     state.events.push({
       kind: "ammoExplosionCheck",
       unitId: unit.id,
