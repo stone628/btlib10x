@@ -35,6 +35,7 @@ import {
   canFireFromLocation,
   collectAmmoBins,
   countDestroyedEngineSlots,
+  effectiveMovement,
   getAllMapDefs,
   getAllMechDefs,
   getAllWeaponDefs,
@@ -1437,11 +1438,13 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo | null {
   }
   // Engine guarantee: `actor.model` was validated by `createBattle`.
   const def = getMechDefFor(actor);
+  const effMove = effectiveMovement(def, actor.critSlotsDestroyed);
+  const heatPenalty = movementMpPenalty(actor.heat);
   const landings = reachableLandings({ ...actor.position }, actor.facing, {
     mode,
-    walking: def.walking,
-    running: def.running,
-    jumping: def.jumping,
+    walking: Math.max(0, effMove.walking - heatPenalty),
+    running: Math.max(0, effMove.running - heatPenalty),
+    jumping: Math.max(0, effMove.jumping - heatPenalty),
     grid: s.battle,
     team: actor.team,
     wreckAt: (hex: HexCoord): boolean => wreckAt(s.battle!, hex) !== undefined,
@@ -1453,7 +1456,6 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo | null {
       return undefined;
     },
   });
-  if (landings.length === 0) return null;
   return { team: actor.team, revealed: landings };
 }
 
