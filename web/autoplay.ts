@@ -81,7 +81,9 @@ export function flushAutoPlayCommand(): string[] {
 function queueStepToward(s: S.Session, fragment: "F" | "B"): void {
   const candidate = s.moveCandidate;
   if (candidate === null) return;
-  const oneStep = candidate.revealed.filter((l) => l.path.length === 1 && l.path[0] === fragment);
+  const oneStep = candidate.revealed.filter(
+    (l) => l.path.length === 1 && l.path[0]?.fragment === fragment,
+  );
   if (oneStep.length === 0) return;
   const pick = oneStep.shift()!;
   queueNextCommand(`place ${pick.hex.col} ${pick.hex.row} ${pick.facing}`);

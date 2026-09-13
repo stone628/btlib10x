@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { HexGrid } from "../src/core/terrain.js";
 import type { Facing, HexCell, MoveMode } from "../src/core/types.js";
-import type { MoveFragment } from "../src/rules/movement.js";
+import type { MovePathStep } from "../src/rules/movement.js";
 import { reachableLandings } from "../src/rules/movement.js";
 
 // Start in the middle of a large board so the search radius is not clipped.
@@ -36,12 +36,14 @@ function reach(
   height: number = boardHeight,
   at: { col: number; row: number } = start,
   levels: Record<string, number> = {},
+  prone = false,
 ) {
   return reachableLandings(at, facing, {
     mode,
     walking,
     running,
     jumping,
+    prone,
     grid: grid(width, height, levels),
     team,
     occupantTeam,
@@ -52,9 +54,13 @@ function lookup(
   rs: ReturnType<typeof reach>,
   hex: { col: number; row: number },
   facing: Facing,
-): readonly MoveFragment[] | undefined {
+): readonly MovePathStep[] | undefined {
   return rs.find((l) => l.hex.col === hex.col && l.hex.row === hex.row && l.facing === facing)
     ?.path;
+}
+
+function fragments(path: readonly MovePathStep[] | undefined): string[] {
+  return path ? path.map((s) => s.fragment) : [];
 }
 
 describe("reachableLandings", () => {
@@ -64,54 +70,40 @@ describe("reachableLandings", () => {
 
   it("includes the starting hex with the initial facing and an empty path", () => {
     const rs = reach("walk", 4, 6, 0);
-    expect(lookup(rs, start, "n")).toEqual([]);
+    expect(fragments(lookup(rs, start, "n"))).toEqual([]);
   });
 
   it("lists the start hex with every facing reachable by turns alone", () => {
-    // Walk budget 4: the max single rotation is 3 hexsides, so all 6 facings
-    // are reachable from the start purely by turning (no F/B). The initial
-    // facing has an empty path (no movement); the other five have R/L-only
-    // paths.
     const rs = reach("walk", 4, 6, 0);
     const others: Facing[] = ["ne", "se", "s", "sw", "nw"];
     for (const f of others) {
       const p = lookup(rs, start, f);
       expect(p).toBeDefined();
       expect(p!.length).toBeGreaterThan(0);
-      expect(p!.every((x) => x === "R" || x === "L")).toBe(true);
+      expect(p!.every((s) => s.fragment === "R" || s.fragment === "L")).toBe(true);
     }
   });
 
   it("walks one MP forward or backward and keeps the original facing", () => {
     const rs = reach("walk", 1, 1, 0);
-    expect(lookup(rs, { col: 12, row: 11 }, "n")).toEqual(["F"]);
-    expect(lookup(rs, { col: 12, row: 13 }, "n")).toEqual(["B"]);
+    expect(fragments(lookup(rs, { col: 12, row: 11 }, "n"))).toEqual(["F"]);
+    expect(fragments(lookup(rs, { col: 12, row: 13 }, "n"))).toEqual(["B"]);
   });
 
   it("turns right to step diagonally forward within a two-MP walk", () => {
-    // Two MP: turn right to ne (R, 1 MP) then forward to (13,12) (F, 1 MP).
-    // (12,12) is an even column, so 'ne' steps one col over at the same row.
     const rs = reach("walk", 2, 2, 0);
-    expect(lookup(rs, { col: 13, row: 12 }, "ne")).toEqual(["R", "F"]);
+    expect(fragments(lookup(rs, { col: 13, row: 12 }, "ne"))).toEqual(["R", "F"]);
   });
 
-  it("jump reaches the forward neighbor with F, side neighbors via free R/L + F", () => {
+  it("jump reaches the forward neighbor with J, side neighbors via free R/L + J, backward via B", () => {
     const rs = reach("jump", 6, 8, 1);
-    // Forward neighbor (current facing n): one F, no reorientation needed.
-    expect(lookup(rs, { col: 12, row: 11 }, "n")).toEqual(["F"]);
-    // Backward neighbor: B.
-    expect(lookup(rs, { col: 12, row: 13 }, "n")).toEqual(["B"]);
-    // Side neighbor ne: free turn R then F (the actual 1-MP jump step).
-    // (12,12) is an even column, so 'ne' steps one col over at the same row.
-    expect(lookup(rs, { col: 13, row: 12 }, "ne")).toEqual(["R", "F"]);
-    // Side neighbor nw: free turn L then F — 'nw' steps one col over at the
-    // same row.
-    expect(lookup(rs, { col: 11, row: 12 }, "nw")).toEqual(["L", "F"]);
+    expect(fragments(lookup(rs, { col: 12, row: 11 }, "n"))).toEqual(["J"]);
+    expect(fragments(lookup(rs, { col: 12, row: 13 }, "n"))).toEqual(["B"]);
+    expect(fragments(lookup(rs, { col: 13, row: 12 }, "ne"))).toEqual(["R", "J"]);
+    expect(fragments(lookup(rs, { col: 11, row: 12 }, "nw"))).toEqual(["L", "J"]);
   });
 
   it("jump landing facing is free: every facing at the same cost", () => {
-    // From the start, a single 1-MP jump step lands on (10,9); the final
-    // facing is chosen freely, so all 6 facings at that hex cost exactly 1.
     const rs = reach("jump", 6, 8, 1);
     const hex = { col: 12, row: 11 };
     for (const f of ["n", "ne", "se", "s", "sw", "nw"] as const) {
@@ -120,33 +112,26 @@ describe("reachableLandings", () => {
   });
 
   it("passes through a friendly-occupied hex but does not land on it", () => {
-    // Start (12, 12) facing "n" → forward neighbor is (12, 11). Put a
-    // friendly unit at (12, 11) so the forward hex is passable but
-    // not landable.
     const occupantTeam = (hex: { col: number; row: number }): number | undefined =>
       hex.col === 12 && hex.row === 11 ? 0 : undefined;
     const rs = reach("walk", 2, 2, 0, "n", occupantTeam);
-    // The friendly-occupied hex is passable but never a landing.
     expect(lookup(rs, { col: 12, row: 11 }, "n")).toBeUndefined();
-    // The hex beyond it remains reachable.
     expect(lookup(rs, { col: 12, row: 10 }, "n")).toBeDefined();
   });
 
   it("run with a one-MP budget only reaches the forward hex", () => {
     const rs = reach("run", 4, 1, 0);
-    expect(lookup(rs, { col: 12, row: 11 }, "n")).toEqual(["F"]);
-    // Backward is forbidden for run.
+    expect(fragments(lookup(rs, { col: 12, row: 11 }, "n"))).toEqual(["U"]);
     expect(lookup(rs, { col: 12, row: 13 }, "n")).toBeUndefined();
   });
 
   it("clips reachable hexes to the board width and height", () => {
-    // 13x13 board; start on the bottom-right edge (bottom-right in 1-based
-    // coordinates is (13,13)).
     const rs = reachableLandings({ col: 13, row: 13 }, "n", {
       mode: "walk",
       walking: 4,
       running: 6,
       jumping: 0,
+      prone: false,
       grid: grid(13, 13),
       team: 0,
       occupantTeam: noOccupants,
@@ -161,25 +146,18 @@ describe("reachableLandings", () => {
   });
 
   it("charges +1 MP per level climbed for ground moves", () => {
-    // A two-MP walk onto a level-1 hex costs 2 (base 1 + climb 1).
     const rs = reach("walk", 2, 3, 0, "n", noOccupants, 21, 21, start, { "12,11": 1 });
-    expect(lookup(rs, { col: 12, row: 11 }, "n")).toEqual(["F"]);
+    expect(fragments(lookup(rs, { col: 12, row: 11 }, "n"))).toEqual(["F"]);
   });
 
   it("allows a +2 level ground step and rejects a +3", () => {
-    // TW: a forward step may change up to 2 levels per hex.
-    // Start at (12, 12) facing "n" → (12, 11). Put level 2 at (12, 11):
-    // 1 base + 2 climb = 3 MP.
     const rs = reach("walk", 3, 4, 0, "n", noOccupants, 21, 21, start, { "12,11": 2 });
-    expect(lookup(rs, { col: 12, row: 11 }, "n")).toEqual(["F"]);
-    // A 3-level climb costs 4 MP but exceeds the per-hex cap.
+    expect(fragments(lookup(rs, { col: 12, row: 11 }, "n"))).toEqual(["F"]);
     const rs3 = reach("walk", 4, 6, 0, "n", noOccupants, 21, 21, start, { "12,11": 3 });
     expect(lookup(rs3, { col: 12, row: 11 }, "n")).toBeUndefined();
   });
 
   it("charges +1 MP per level descended", () => {
-    // Starting from a level-1 hex, walking forward onto a level-0 hex costs
-    // 2 MP (1 base + 1 descent); a 1-MP walk cannot reach it.
     const desc = { "12,12": 1 };
     expect(
       lookup(
@@ -189,22 +167,22 @@ describe("reachableLandings", () => {
       ),
     ).toBeUndefined();
     expect(
-      lookup(
-        reach("walk", 2, 2, 0, "n", noOccupants, 21, 21, start, desc),
-        { col: 12, row: 11 },
-        "n",
+      fragments(
+        lookup(
+          reach("walk", 2, 2, 0, "n", noOccupants, 21, 21, start, desc),
+          { col: 12, row: 11 },
+          "n",
+        ),
       ),
     ).toEqual(["F"]);
   });
 
   it("rejects a forward step dropping more than 2 levels", () => {
-    // TW caps forward level change at 2 per hex, up or down.
     const rs = reach("walk", 4, 6, 0, "n", noOccupants, 21, 21, start, { "12,12": 3 });
     expect(lookup(rs, { col: 12, row: 11 }, "n")).toBeUndefined();
   });
 
   it("rejects a backward step that changes level", () => {
-    // TW: 'Mechs moving backward may not change levels.
     const up = reach("walk", 4, 6, 0, "n", noOccupants, 21, 21, start, { "12,13": 1 });
     expect(lookup(up, { col: 12, row: 13 }, "n")).toBeUndefined();
     const down = reach("walk", 4, 6, 0, "n", noOccupants, 21, 21, start, { "12,12": 1 });
@@ -212,9 +190,35 @@ describe("reachableLandings", () => {
   });
 
   it("jump ignores elevation and can change level freely", () => {
-    // A single jump to a level-3 hex is reachable in 1 MP, even though no
-    // ground step of 3 levels would be allowed.
     const rs = reach("jump", 6, 8, 1, "n", noOccupants, 21, 21, start, { "10,9": 3 });
-    expect(lookup(rs, { col: 12, row: 11 }, "n")).toEqual(["F"]);
+    expect(fragments(lookup(rs, { col: 12, row: 11 }, "n"))).toEqual(["J"]);
+  });
+
+  it("prone crawl costs 2 MP per hex, forward only, no backward", () => {
+    const rs = reach("walk", 4, 6, 0, "n", noOccupants, 21, 21, start, {}, true);
+    expect(fragments(lookup(rs, { col: 12, row: 11 }, "n"))).toEqual(["P"]);
+    expect(lookup(rs, { col: 12, row: 13 }, "n")).toBeUndefined();
+    // Two hexes = 4 MP
+    const rs2 = reach("walk", 4, 6, 0, "n", noOccupants, 21, 21, start, {}, true);
+    expect(fragments(lookup(rs2, { col: 12, row: 10 }, "n"))).toEqual(["P", "P"]);
+  });
+
+  it("prone crawl turns cost 1 MP", () => {
+    const rs = reach("walk", 3, 4, 0, "n", noOccupants, 21, 21, start, {}, true);
+    // Turn right (1 MP) + crawl forward (2 MP) = 3 MP
+    expect(fragments(lookup(rs, { col: 13, row: 12 }, "ne"))).toEqual(["R", "P"]);
+  });
+
+  it("run uses U fragments, no backward", () => {
+    const rs = reach("run", 4, 2, 0, "n", noOccupants, 21, 21, start, {});
+    expect(fragments(lookup(rs, { col: 12, row: 11 }, "n"))).toEqual(["U"]);
+    expect(lookup(rs, { col: 12, row: 13 }, "n")).toBeUndefined();
+    // Two hexes forward
+    expect(fragments(lookup(rs, { col: 12, row: 10 }, "n"))).toEqual(["U", "U"]);
+  });
+
+  it("run turns cost 1 MP", () => {
+    const rs = reach("run", 3, 2, 0, "n", noOccupants, 21, 21, start, {});
+    expect(fragments(lookup(rs, { col: 13, row: 12 }, "ne"))).toEqual(["R", "U"]);
   });
 });

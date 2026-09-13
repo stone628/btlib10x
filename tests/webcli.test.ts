@@ -436,7 +436,7 @@ describe("movement", () => {
     expect(status0).toContain("4 movement points");
 
     // Same-hex landing: turning from n to ne costs 1 MP (path: one R).
-    const queued = run(s, "place 9 9 ne");
+    const _queued = run(s, "place 9 9 ne");
     // FIXME: fix following 3 lines, changed web-cli output format
     // expect(queued.join("\n")).toContain("facing NE standing, spending 1MP out of 4MP");
     // const status1 = run(s, "status").join("\n");
@@ -522,30 +522,27 @@ describe("movement", () => {
     expect(s.battle!.units[actor.id]!.facing).toBe("s");
   });
 
-  it("placeLanding reports per-step movement type, mp and reason", () => {
+  it("place preview renders per-step type, mp and reason from the candidate path", () => {
     const s = freshSetup();
     run(s, "start");
     run(s, "mode walk");
     const info = reachableInfo(s)!;
-    const land = info.reachable!.revealed.find(
-      (l) => l.path.includes("R") || l.path.includes("L"),
+    const land = info.reachable!.revealed.find((l) =>
+      l.path.some((step) => step.fragment === "R" || step.fragment === "L"),
     )!;
-    const r = S.placeLanding(s, land);
-    expect(r.steps).toHaveLength(land.path.length);
-    expect(r.mpSpent).toBe(r.steps.reduce((sum, st) => sum + st.mp, 0));
-    for (const st of r.steps) {
-      expect(st.mp).toBeGreaterThan(0);
-      if (st.kind === "turn") {
-        expect(st.reason.kind).toBe("faceChange");
-        expect(st.reason.perFacing).toBeGreaterThan(0);
-      } else {
-        expect(["walk", "run", "jump"]).toContain(st.type);
-        if (st.reason.kind === "enter") {
-          expect(st.reason.terrainSurcharge).toBeGreaterThanOrEqual(0);
-          expect(st.reason.climbLevels).toBeGreaterThanOrEqual(0);
-        }
+    expect(land.path.length).toBeGreaterThan(0);
+    let spent = 0;
+    for (const step of land.path) {
+      expect(step.baseMp).toBeGreaterThan(0);
+      spent += step.baseMp;
+      if (step.fragment !== "R" && step.fragment !== "L") {
+        expect(step.terrainSurcharge).toBeGreaterThanOrEqual(0);
+        expect(step.climbLevels).toBeGreaterThanOrEqual(0);
       }
     }
+    expect(land.path[land.path.length - 1]!.totalMp).toBe(spent);
+    S.placeLanding(s, land);
+    expect(s.placedLanding).toBe(land);
     const out = run(s, `place ${land.hex.col} ${land.hex.row} ${land.facing}`).join("\n");
     expect(out).toMatch(/\d+MP out of \d+MP/);
     expect(out).toContain("walk enter");

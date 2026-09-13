@@ -142,6 +142,7 @@ export function reachableInfo(s: Session): BoardRenderInfo | null {
     walking: def.walking,
     running: def.running,
     jumping: def.jumping,
+    prone: actor.prone,
     grid: s.battle,
     team: actor.team,
     wreckAt: (hex: HexCoord): boolean => wreckAt(s.battle!, hex) !== undefined,
