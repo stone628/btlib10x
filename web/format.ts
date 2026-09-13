@@ -19,6 +19,7 @@ import type {
   Location,
   LocationValue,
   MapNameHolder,
+  MoveMode,
   RangeBracket,
   ResolvedMechDef,
   RevealedLanding,
@@ -38,8 +39,8 @@ import {
   collectAmmoBins,
   countDestroyedEngineSlots,
   DEFAULT_PILOTING,
+  DROP_MP_COST,
   effectiveMovement,
-  facingChangeCost,
   getAllMapDefs,
   getAllMechDefs,
   getAllWeaponDefs,
@@ -64,6 +65,7 @@ import {
   pooledTotalsByWeaponName,
   reachableLandings,
   rotateFacing,
+  STAND_MP_COST,
   shoulderOf,
   shutdownAvoid,
   TORSO_LOCATIONS,
@@ -81,7 +83,7 @@ import {
   createEjectedBoardRenderUnits,
   getBoardRenderer,
 } from "./render.js";
-import { budgetFor, currentActor, type Session } from "./session.js";
+import { budgetFor, currentActor, displayModeFor, fullBudgetFor, type Session } from "./session.js";
 
 export const F = (l: LocaleId, f: Facing): string => i18n(l, `sheet.facing.${f}` as MessageKey);
 export const PRN = (l: LocaleId, prone: boolean): string =>
@@ -1446,20 +1448,24 @@ export function stepResultLines(s: Session, landing: RevealedLanding): string[] 
   const actor = currentActor(s)!;
   const path = landing.path;
   const last = path[path.length - 1];
+  const postureCost =
+    s.moveMode === "prone" ? DROP_MP_COST : s.moveMode === "standup" ? STAND_MP_COST : 0;
+  const locomotion =
+    s.moveMode === "standup" || s.moveMode === "prone" ? (s.postureMove ?? "walk") : s.moveMode;
   const lines = [
     i18n(locale, "ok.stepResult", {
       id: s.actorId ?? "",
-      mode: s.moveMode ?? "",
+      mode: s.moveMode === "standup" ? `standup ${s.postureMove ?? "walk"}` : (s.moveMode ?? ""),
       col: landing.hex.col,
       row: landing.hex.row,
       facing: F(locale, landing.facing),
       posture: PRN(locale, actor.prone),
-      spent: last?.totalMp ?? 0,
-      budget: budgetFor(s),
+      spent: postureCost + (last?.totalMp ?? 0),
+      budget: fullBudgetFor(s),
     }),
     stepResultFromLine(locale, s),
   ];
-  const jumping = s.moveMode === "jump";
+  const jumping = locomotion === "jump";
   let hex = { ...actor.position };
   let facing = actor.facing;
   for (const step of path) {
@@ -1484,7 +1490,7 @@ export function stepResultLines(s: Session, landing: RevealedLanding): string[] 
     } else {
       lines.push(
         i18n(locale, "stepResult.enter", {
-          type: s.moveMode === "walk" ? "walk" : "run",
+          type: s.moveMode === "prone" ? "crawl" : locomotion === "walk" ? "walk" : "run",
           col: hex.col,
           row: hex.row,
           terrain: step.terrain,
@@ -1499,49 +1505,21 @@ export function stepResultLines(s: Session, landing: RevealedLanding): string[] 
   return lines;
 }
 
-/** Preview lines for the queued prone turn (`turn` output + status). */
-export function turnPreviewLines(s: Session): string[] {
-  const locale = s.locale;
-  const actor = currentActor(s)!;
-  const facings = s.placedTurn ?? 1;
-  const mp = facingChangeCost(1);
-  return [
-    i18n(locale, "ok.stepResult", {
-      id: s.actorId ?? "",
-      mode: s.moveMode ?? "",
-      col: actor.position.col,
-      row: actor.position.row,
-      facing: F(locale, rotateFacing(actor.facing, facings)),
-      posture: PRN(locale, actor.prone),
-      spent: mp,
-      budget: budgetFor(s),
-    }),
-    stepResultFromLine(locale, s),
-    i18n(locale, "stepResult.turn", {
-      dir: facings > 0 ? "R" : "L",
-      facings: 1,
-      mp,
-      perFacing: MP_PER_FACING_CHANGE,
-    }),
-  ];
-}
-
 export function queuedMoveLines(s: Session): string[] {
   const locale = s.locale;
   const actor = currentActor(s)!;
   const landing = s.placedLanding;
-  if (landing === null && s.placedTurn === null) {
+  if (landing === null) {
     return [
       i18n(locale, "ok.modeDeclared", {
         id: actor.id,
-        mode: s.moveMode ?? "",
+        mode: displayModeFor(s),
         budget: budgetFor(s),
       }),
       stepResultFromLine(locale, s),
     ];
   }
-  if (landing !== null) return stepResultLines(s, landing);
-  return turnPreviewLines(s);
+  return stepResultLines(s, landing);
 }
 
 export function moveStatusLines(s: Session): string[] {
@@ -1578,10 +1556,7 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo | null {
     mode === null ||
     mode === "shutdown" ||
     mode === "startup" ||
-    mode === "eject" ||
-    mode === "standup" ||
-    mode === "drop" ||
-    mode === "proneTurn"
+    mode === "eject"
   ) {
     return null;
   }
@@ -1589,12 +1564,33 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo | null {
   const def = getMechDefFor(actor);
   const effMove = effectiveMovement(def, actor.critSlotsDestroyed);
   const heatPenalty = movementMpPenalty(actor.heat);
+  // Posture-change modes share one budget: candidate assumes posture succeeds.
+  // prone: drop first (1 MP) then crawl (walk + prone, 2 flat per hex).
+  // standup: stand first (2 MP) then chosen locomotion as standing unit.
+  let locomotion: MoveMode = mode as MoveMode;
+  let proneFlag = actor.prone;
+  let walking = Math.max(0, effMove.walking - heatPenalty);
+  let running = Math.max(0, effMove.running - heatPenalty);
+  let jumping = Math.max(0, effMove.jumping - heatPenalty);
+  if (mode === "prone") {
+    locomotion = "walk";
+    proneFlag = true;
+    walking = Math.max(0, walking - DROP_MP_COST);
+  } else if (mode === "standup") {
+    locomotion = s.postureMove ?? "standStill";
+    proneFlag = false;
+    if (locomotion === "standStill") return null; // stand in place: no map, `place` stays shut
+    if (locomotion === "walk") walking = Math.max(0, walking - STAND_MP_COST);
+    else if (locomotion === "run") running = Math.max(0, running - STAND_MP_COST);
+    else if (locomotion === "jump") jumping = Math.max(0, jumping - STAND_MP_COST);
+    else walking = Math.max(0, walking - STAND_MP_COST);
+  }
   const landings = reachableLandings({ ...actor.position }, actor.facing, {
-    mode,
-    walking: Math.max(0, effMove.walking - heatPenalty),
-    running: Math.max(0, effMove.running - heatPenalty),
-    jumping: Math.max(0, effMove.jumping - heatPenalty),
-    prone: actor.prone,
+    mode: locomotion,
+    walking,
+    running,
+    jumping,
+    prone: proneFlag,
     grid: s.battle,
     team: actor.team,
     wreckAt: (hex: HexCoord): boolean => wreckAt(s.battle!, hex) !== undefined,

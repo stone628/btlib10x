@@ -76,11 +76,9 @@ export const en = {
   "cmd.statusSetup.help": "setup summary: units grouped by team, selected map",
   "cmd.start.help": "start the battle (needs >=2 units on >=2 teams)",
   "cmd.mode.help":
-    "declare movement mode (walk/run/jump/standstill/standup/drop), voluntary shutdown/startup, or eject",
+    "declare movement mode (walk/run/jump/standstill/prone/standup), voluntary shutdown/startup, or eject",
   "cmd.mode.arg.mode":
-    "standstill | walk | run | jump declares movement with its own MP pool; standup attempts to rise from prone and drop goes prone voluntarily (both committed by 'done'); shutdown | startup declares a voluntary shutdown or startup attempt (committed by 'done'); eject abandons the 'Mech — the pilot leaves, the fielded unit is removed, and its hex becomes a level-2 wreck (committed by 'done')",
-  "cmd.turn.help": "turn 1 hexside left or right while prone (committed by 'done')",
-  "cmd.turn.arg.dir": "left | right",
+    "standstill | walk | run | jump declares movement with its own MP pool; prone drops prone voluntarily then may crawl (both committed by 'done'); standup [walk|run|jump|standstill] rises from prone then may move with the named mode sharing one MP pool (default standstill: stand in place; stand costs 2, drop costs 1; committed by 'done'; failed stand discards the queued place); shutdown | startup declares a voluntary shutdown or startup attempt (committed by 'done'); eject abandons the 'Mech — the pilot leaves, the fielded unit is removed, and its hex becomes a level-2 wreck (committed by 'done')",
   "cmd.place.help": "place the 'Mech at a reachable final hex and facing",
   "cmd.place.arg.colrowfacing":
     "final hex (1-based col row) and absolute facing word n|ne|se|s|sw|nw; must appear in the reachable map shown by 'mode'",
@@ -162,11 +160,11 @@ export const en = {
   "err.needTwoUnits": "A battle needs at least two units",
   "err.needTwoTeams": "Units must span at least two teams",
   "err.badModeWord":
-    "mode must be one of standstill|walk|run|jump|standup|drop|shutdown|startup|eject",
+    "mode must be one of standstill|walk|run|jump|prone|standup [walk|run|jump|standstill]|shutdown|startup|eject",
   "err.standupRequiresProne": "{id} is not prone — mode standup needs a prone unit",
-  "err.dropRequiresStanding": "{id} is already prone",
-  "err.turnRequiresProne": "{id} is not prone — turn needs a prone unit",
-  "err.turnDir": "turn expects left or right",
+  "err.standupNeedsMode": "mode standup takes only walk|run|jump|standstill (default standstill)",
+  "err.proneRequiresStanding": "{id} is already prone",
+  "err.postureBudget": "{id} has no MP left for the posture change in this mode",
   "err.noMoveInShutdownMode":
     "movement is not available while the declared mode is shutdown/startup/eject",
   "err.mustBeOnlineForShutdown": "mode shutdown requires an online unit",
@@ -177,7 +175,7 @@ export const en = {
   "err.wrongPhase": "Command requires the {phase} phase",
   "err.declareModeFirst": "Declare a movement mode for {id} first (mode walk|run|jump|standstill)",
   "err.standStillNoEnter": "Standing still forbids entering hexes",
-  "err.place.noCandidate": "No movement candidate — declare walk|run|jump first",
+  "err.place.noCandidate": "No movement candidate — declare walk|run|jump|prone|standup first",
   "err.place.unreachable": "Hex ({col},{row}) is not reachable in the declared mode",
   "err.place.facing": "Hex ({col},{row}) is reachable but not while facing {facing}",
   "err.faceArg": "place expects an absolute facing ({facings})",

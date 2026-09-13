@@ -1,4 +1,4 @@
-import type { HexCoord, Location, Rng, TerrainType } from "../src/core/types.js";
+import type { HexCoord, Location, MoveMode, Rng, TerrainType } from "../src/core/types.js";
 import {
   type AmmoBins,
   createBattle,
@@ -128,21 +128,36 @@ export function reachableInfo(s: Session): BoardRenderInfo | null {
     mode === null ||
     mode === "shutdown" ||
     mode === "startup" ||
-    mode === "eject" ||
-    mode === "standup" ||
-    mode === "drop" ||
-    mode === "proneTurn"
+    mode === "eject"
   ) {
     return null;
   }
   // Engine guarantee: `actor.model` was validated by `createBattle`.
   const def = getMechDefFor(actor);
+  let locomotion: MoveMode;
+  let proneFlag = actor.prone;
+  let walking = def.walking;
+  let running = def.running;
+  let jumping = def.jumping;
+  if (mode === "prone") {
+    locomotion = "walk";
+    proneFlag = true;
+    walking = Math.max(0, walking - 1);
+  } else if (mode === "standup") {
+    locomotion = s.postureMove ?? "walk";
+    proneFlag = false;
+    if (locomotion === "walk") walking = Math.max(0, walking - 2);
+    else if (locomotion === "run") running = Math.max(0, running - 2);
+    else if (locomotion === "jump") jumping = Math.max(0, jumping - 2);
+  } else {
+    locomotion = mode;
+  }
   const landings = reachableLandings({ ...actor.position }, actor.facing, {
-    mode,
-    walking: def.walking,
-    running: def.running,
-    jumping: def.jumping,
-    prone: actor.prone,
+    mode: locomotion,
+    walking,
+    running,
+    jumping,
+    prone: proneFlag,
     grid: s.battle,
     team: actor.team,
     wreckAt: (hex: HexCoord): boolean => wreckAt(s.battle!, hex) !== undefined,

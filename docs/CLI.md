@@ -71,9 +71,8 @@ The prompt names the acting unit; commands act on that 'Mech.
 | command | effect |
 |---|---|
 | `mode standstill\|walk\|run\|jump` | declare movement mode (required first); for walk/run/jump, renders a clipped ASCII hex map of the reachable hexes — exactly the smallest bounding box around every reachable hex, clamped to the board (no padding). Reachable hexes draw a team-colored `<>` in the belly; every reachable (hex, facing) edge is tinted with the acting unit's team color, and no facing arrows are drawn. Other units inside the crop keep their ids (team-colored) but no facing arrow. Movement paths (the `F`/`B`/`R`/`L` fragment sequence per landing) remain available programmatically via `reachableLandings`/`RevealedLanding.path` for later use, but are not rendered on the map |
-| `mode standup` | declare a stand-up attempt for a prone unit (PSR with preexisting-damage modifiers, +1 heat; failure crashes back down for fresh falling damage). `done` commits the single attempt — the activation ends either way |
-| `mode drop` | declare a voluntary drop to prone (no roll, +1 heat). `done` commits it |
-| `turn <left\|right>` | queue a 1-hexside facing change for a prone unit (+1 heat, counts as walking); committed by `done` |
+| `mode standup [walk\|run\|jump\|standstill]` | declare a stand-up attempt for a prone unit plus optional movement sharing one MP pool (stand costs 2; default `standstill` stands in place with no map; PSR with preexisting-damage modifiers, +1 heat; failure crashes back down for fresh falling damage and discards any queued `place`). Renders the reachable map for the named mode minus the stand cost, assuming the stand succeeds. `done` evaluates the stand first, then moves only on success — the activation ends either way; without a queued `place`, `done` just stands in place |
+| `mode prone` | declare a voluntary drop to prone (no roll, +1 heat, costs 1 MP) plus optional crawl sharing the walk budget (2 MP per forward hex, no backward). Renders the crawl map minus the drop cost. `done` drops first, then crawls to the queued `place` — without a `place`, `done` just drops in place |
 | `mode shutdown` | declare a voluntary shutdown (online unit only). `place` stays unavailable; `done` commits it — the unit goes off-line (`manual`) and can no longer move, fire, or act normally this turn. `cancel` resets the declaration |
 | `mode startup` | declare a voluntary startup attempt (shut-down unit only). `done` rolls 2D6 against the heat shutdown avoidance number: success turns the unit `starting` (still off-line now, online just before the next initiative roll); failure keeps it shut down. `done` alone (without `mode startup`) passes — the unit stays off-line |
 | `mode eject` | declare a pilot ejection (any non-removed unit, including a shut-down one). `place` stays unavailable; `done` commits it — the unit is marked destroyed/removed and its hex becomes a permanent level-2 wreck. `cancel` resets the declaration |
@@ -81,7 +80,7 @@ The prompt names the acting unit; commands act on that 'Mech.
 | `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [J](jam) / [-](destroyed) / per-bin ammo `(n left)` markers); without id: brief unit list (id, model, position+facing) grouped by team |
 | `status` | queued move steps with running MP cost per step |
 | `cancel` | clear mode + steps |
-| `done` | commit via `executeMove`; prints path + MP spent and total budget |
+| `done` | commit posture-change first, then move only on success (`attemptStandUp`/`dropProne` then `executeMove` in one atomic commit; failed stand discards queued `place`); prints path + MP spent (posture cost folded in) and full budget |
 
 Shut-down units (including `starting`) act **first** in the movement phase,
 regardless of initiative: the log prints
@@ -256,9 +255,12 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   makes a seatbelt PSR (+5 off a destroyed leg, +6 off a destroyed gyro, or
   the failed roll's modifiers) or takes 1 hit — automatic when the 'Mech is
   immobile or the target exceeds 12. Prone units stand up with `mode
-  standup` (one attempt per activation, +1 heat; failure crashes back down
-  for fresh fall damage), drop with `mode drop`, and turn 1 hexside with
-  `turn <left|right>`; a destroyed gyro or two destroyed legs forbid
+  standup <walk|run|jump>` (one attempt per activation sharing one MP pool,
+  stand costs 2, +1 heat; failure crashes back down for fresh fall damage and
+  discards any queued `place`), drop and optionally crawl with `mode prone`
+  (drop costs 1, crawl 2 per forward hex); facing changes (including a
+  prone turn in place) go through `place` at the current or a new hex —
+  a destroyed gyro or two destroyed legs forbid
   standing. Prone attackers fire at +2 without leg weapons and cannot mix
   left-arm and right-arm weapons in one volley (each volley props the
   opposite arm; the fire suggestion shows both prop sides); prone targets take −2.
@@ -320,10 +322,6 @@ stated elsewhere in this document or the codebase:
   treats any destroyed leg as immobility ("leg IS death immobilizes" under
   Damage above). A one-legged 'Mech may still stand (at +5) and fire, but it
   cannot spend its TW 1 MP hop.
-- **Standing up with continued movement** — a stand-up attempt consumes the
-  whole movement activation because rule functions commit atomically at the
-  caller's boundary (AGENTS.md): the outcome roll cannot interleave with
-  further steps in one commit.
 - **Four-legged / vehicle PSR rows** (quads, skidding vehicles,
   sideslipping VTOLs) — bipedal 'Mechs only (top of this section).
 - **Drowning / underwater life-support pressure** — water blocks targeting

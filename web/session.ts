@@ -32,6 +32,7 @@ import {
   computeToHit,
   countDestroyedStructure,
   createBattle,
+  DROP_MP_COST,
   declareAttacks,
   declareMove,
   dropProne,
@@ -56,11 +57,11 @@ import {
   partialCoverMod,
   passMovement,
   pooledShotsLeft,
-  proneFacingTurn,
   resolveAllAttacks,
   rollInitiativePhase,
   rotateFacing,
   SENSORS,
+  STAND_MP_COST,
   sameHex,
   toHitHeatModifier,
   voluntaryShutdown,
@@ -90,10 +91,15 @@ export interface Session {
   victory: VictoryResult | null;
   actorId: string | null;
   /** Pending declaration for the acting unit: a movement mode (engine
-   *  `MoveMode`), a prone-mode `standup` / `drop` / `proneTurn` attempt, or
+   *  `MoveMode`), a posture-change `standup` / `prone` attempt, or
    *  the voluntary `"shutdown"` / `"startup"` / `"eject"` declaration,
-   *  committed by the `done` command. */
-  moveMode: MoveMode | "shutdown" | "startup" | "eject" | "standup" | "drop" | "proneTurn" | null;
+   *  committed by the `done` command. `standup` / `prone` may carry a queued
+   *  `place` landing in `placedLanding`; `postureMove` holds the locomotion
+   *  mode the queued steps run under after the posture change succeeds. */
+  moveMode: MoveMode | "shutdown" | "startup" | "eject" | "standup" | "prone" | null;
+  /** Locomotion mode for a posture-change + move: always `walk` for `prone`
+   *  (crawl), the declared walk/run/jump for `standup`. Null otherwise. */
+  postureMove: MoveMode | null;
   moveSteps: MoveStep[];
   /** Landing facing chosen by `place` (jump only: engine rejects turn steps
    *  while jumping, so the landing facing travels via `executeMove`'s
@@ -102,8 +108,6 @@ export interface Session {
   /** Landing from `moveCandidate` buffered by `place`; `status`/`candidate`
    *  preview renders its `path` directly. Null when no landing queued. */
   placedLanding: RevealedLanding | null;
-  /** Prone turn facings queued by `turn` (no candidate landing exists for it). */
-  placedTurn: 1 | -1 | null;
   fireDecls: AttackDecl[];
   /** Suppress critical hit resolution (mostly for deterministic testing). */
   critsDisabled: boolean;
@@ -123,10 +127,10 @@ export function newSession(seed: number): Session {
     victory: null,
     actorId: null,
     moveMode: null,
+    postureMove: null,
     moveSteps: [],
     moveFinalFacing: null,
     placedLanding: null,
-    placedTurn: null,
     fireDecls: [],
     critsDisabled: false,
     moveCandidate: null,
@@ -137,6 +141,7 @@ export function newSession(seed: number): Session {
 
 function clearBuffers(s: Session): void {
   s.moveMode = null;
+  s.postureMove = null;
   clearMoveQueue(s);
   s.moveCandidate = null;
   s.fireDecls = [];
@@ -339,25 +344,18 @@ const VOLUNTARY_MODES: Readonly<Record<string, "shutdown" | "startup" | "eject">
   eject: "eject",
 };
 
-const PRONE_MODES: Readonly<Record<string, "standup" | "drop">> = {
-  standup: "standup",
-  drop: "drop",
+const PRONE_MODES: Readonly<Record<string, "prone">> = {
+  prone: "prone",
 };
 
-export type DeclaredMode =
-  | MoveMode
-  | "shutdown"
-  | "startup"
-  | "eject"
-  | "standup"
-  | "drop"
-  | "proneTurn";
+export type DeclaredMode = MoveMode | "shutdown" | "startup" | "eject" | "standup" | "prone";
 
 export function parseMoveMode(locale: LocaleId, word: string): DeclaredMode {
   const mode = MOVE_MODES[word.toLowerCase()];
   if (mode) return mode;
   const voluntary = VOLUNTARY_MODES[word.toLowerCase()];
   if (voluntary) return voluntary;
+  if (word.toLowerCase() === "standup") return "standup";
   const prone = PRONE_MODES[word.toLowerCase()];
   if (prone) return prone;
   throw new Error(i18n(locale, "err.badModeWord"));
@@ -376,12 +374,13 @@ function requireActor(s: Session, phase: "movement" | "weaponAttack"): UnitState
   return unit;
 }
 
-export function declareMode(s: Session, word: string): void {
+export function declareMode(s: Session, word: string, locomotionWord?: string): void {
   const unit = requireActor(s, "movement");
   const mode = parseMoveMode(s.locale, word);
   if (mode === "shutdown") {
     if (isShutdown(unit)) throw new Error(i18n(s.locale, "err.mustBeOnlineForShutdown"));
     s.moveMode = "shutdown";
+    s.postureMove = null;
     clearMoveQueue(s);
     return;
   }
@@ -389,24 +388,43 @@ export function declareMode(s: Session, word: string): void {
     if (unit.shutdown === "not") throw new Error(i18n(s.locale, "err.mustBeDownForStartup"));
     if (unit.shutdown === "starting") throw new Error(i18n(s.locale, "err.alreadyStarting"));
     s.moveMode = "startup";
+    s.postureMove = null;
     clearMoveQueue(s);
     return;
   }
   if (mode === "eject") {
     if (unit.removed) throw new Error(i18n(s.locale, "err.alreadyEjected", { id: unit.id }));
     s.moveMode = "eject";
+    s.postureMove = null;
     clearMoveQueue(s);
     return;
   }
   if (mode === "standup") {
     if (!unit.prone) throw new Error(i18n(s.locale, "err.standupRequiresProne", { id: unit.id }));
+    const chosen = parseStandupLocomotion(s, locomotionWord);
+    const def = getMechDefFor(unit);
+    const movement = effectiveMovement(def, unit.critSlotsDestroyed);
+    // Standing in place draws the stand cost from the walk pool.
+    const budgetMode = chosen === "standStill" ? "walk" : chosen;
+    if (effectiveMoveBudget(budgetMode, movement, unit.heat) < STAND_MP_COST) {
+      throw new Error(i18n(s.locale, "err.postureBudget", { id: unit.id }));
+    }
+    // Engine declareMove deferred to commit: unit still prone, would throw.
     s.moveMode = "standup";
+    s.postureMove = chosen;
     clearMoveQueue(s);
     return;
   }
-  if (mode === "drop") {
-    if (unit.prone) throw new Error(i18n(s.locale, "err.dropRequiresStanding", { id: unit.id }));
-    s.moveMode = "drop";
+  if (mode === "prone") {
+    if (unit.prone) throw new Error(i18n(s.locale, "err.proneRequiresStanding", { id: unit.id }));
+    const def = getMechDefFor(unit);
+    const movement = effectiveMovement(def, unit.critSlotsDestroyed);
+    if (effectiveMoveBudget("walk", movement, unit.heat) < DROP_MP_COST) {
+      throw new Error(i18n(s.locale, "err.postureBudget", { id: unit.id }));
+    }
+    // Drop deferred to commit; crawl candidate assumes prone-after-drop.
+    s.moveMode = "prone";
+    s.postureMove = "walk";
     clearMoveQueue(s);
     return;
   }
@@ -415,34 +433,69 @@ export function declareMode(s: Session, word: string): void {
   }
   declareMove(requireBattle(s), unit.id, mode);
   s.moveMode = mode;
+  s.postureMove = null;
   clearMoveQueue(s);
+}
+
+/** Locomotion arg for `mode standup [walk|run|jump|standstill]` (default standstill). */
+function parseStandupLocomotion(s: Session, word: string | undefined): MoveMode {
+  if (word === undefined) return "standStill";
+  const w = word.toLowerCase();
+  if (w === "walk" || w === "run" || w === "jump" || w === "standstill")
+    return w === "standstill" ? "standStill" : w;
+  throw new Error(i18n(s.locale, "err.standupNeedsMode"));
 }
 
 /** Clear queued movement: steps, buffered landing/turn, landing facing. */
 function clearMoveQueue(s: Session): void {
   s.moveSteps = [];
   s.placedLanding = null;
-  s.placedTurn = null;
   s.moveFinalFacing = null;
 }
 
-/** Movement budget for the declared mode (stand-in modes map to standstill). */
+/** Movement budget for the declared mode (stand-in modes map to standstill).
+ *  Posture-change modes share one budget: drop 1 / stand 2 deducted. */
 export function budgetFor(s: Session): number {
   const unit = currentActor(s)!;
   const def = getMechDefFor(unit);
   const movement = effectiveMovement(def, unit.critSlotsDestroyed);
   const declared = s.moveMode;
+  if (declared === "prone") {
+    return Math.max(0, effectiveMoveBudget("walk", movement, unit.heat) - DROP_MP_COST);
+  }
+  if (declared === "standup") {
+    const loco = s.postureMove ?? "walk";
+    return Math.max(0, effectiveMoveBudget(loco, movement, unit.heat) - STAND_MP_COST);
+  }
   const mode: MoveMode =
-    declared === "shutdown" ||
-    declared === "startup" ||
-    declared === "eject" ||
-    declared === "standup" ||
-    declared === "drop" ||
-    declared === "proneTurn" ||
-    declared === null
+    declared === "shutdown" || declared === "startup" || declared === "eject" || declared === null
       ? "standStill"
       : declared;
   return effectiveMoveBudget(mode, movement, unit.heat);
+}
+
+/** Full locomotion budget without posture deduction (stepResult denominator). */
+export function fullBudgetFor(s: Session): number {
+  const unit = currentActor(s)!;
+  const def = getMechDefFor(unit);
+  const movement = effectiveMovement(def, unit.critSlotsDestroyed);
+  if (s.moveMode === "prone") return effectiveMoveBudget("walk", movement, unit.heat);
+  if (s.moveMode === "standup")
+    return effectiveMoveBudget(s.postureMove ?? "walk", movement, unit.heat);
+  return budgetFor(s);
+}
+
+/** Posture MP already reserved by the declared mode (0 for plain moves). */
+export function postureCostFor(s: Session): number {
+  if (s.moveMode === "prone") return DROP_MP_COST;
+  if (s.moveMode === "standup") return STAND_MP_COST;
+  return 0;
+}
+
+/** Display mode for previews: standup carries its locomotion arg. */
+export function displayModeFor(s: Session): string {
+  if (s.moveMode === "standup") return `standup ${s.postureMove ?? "walk"}`;
+  return s.moveMode ?? "";
 }
 
 /** Resolve a `place` facing argument: an absolute facing word. */
@@ -470,7 +523,9 @@ export function placeLanding(s: Session, landing: RevealedLanding): void {
   }
   if (!s.moveMode) throw new Error(i18n(s.locale, "err.declareModeFirst", { id: unit.id }));
   if (s.moveMode === "standStill") throw new Error(i18n(s.locale, "err.standStillNoEnter"));
-  const jumping = s.moveMode === "jump";
+  const locomotion =
+    s.moveMode === "standup" || s.moveMode === "prone" ? (s.postureMove ?? "walk") : s.moveMode;
+  const jumping = locomotion === "jump";
   const steps: MoveStep[] = [];
   let hex: HexCoord = { ...unit.position };
   let facing: Facing = unit.facing;
@@ -490,25 +545,12 @@ export function placeLanding(s: Session, landing: RevealedLanding): void {
   s.moveSteps = steps;
   s.moveFinalFacing = jumping ? landing.facing : null;
   s.placedLanding = landing;
-  s.placedTurn = null;
-}
-
-export function queueProneTurn(s: Session, dir: string): void {
-  const unit = requireActor(s, "movement");
-  if (!unit.prone) throw new Error(i18n(s.locale, "err.turnRequiresProne", { id: unit.id }));
-  const d = dir.toLowerCase();
-  if (d !== "left" && d !== "right") throw new Error(i18n(s.locale, "err.turnDir"));
-  s.moveMode = "proneTurn";
-  const facings = d === "left" ? -1 : 1;
-  s.moveSteps = [{ kind: "turn", facings }];
-  s.moveFinalFacing = null;
-  s.placedLanding = null;
-  s.placedTurn = facings;
 }
 
 export function cancelMove(s: Session): void {
   requireActor(s, "movement");
   s.moveMode = null;
+  s.postureMove = null;
   clearMoveQueue(s);
 }
 
@@ -534,6 +576,28 @@ function commitAtomic(s: Session, fn: () => void): void {
   }
 }
 
+/**
+ * Fold a posture-change cost into a just-executed move: the posture call and
+ * `executeMove` each push `actedThisPhase` and a `moved` event, so drop the
+ * duplicate act mark and add the posture MP to both the unit and its event.
+ */
+function foldPostureCost(battle: BattleState, unitId: string, postureCost: number): void {
+  const lastActed = battle.actedThisPhase.lastIndexOf(unitId);
+  const prevActed = battle.actedThisPhase.lastIndexOf(unitId, lastActed - 1);
+  if (lastActed !== -1 && prevActed !== -1) {
+    battle.actedThisPhase.splice(lastActed, 1);
+  }
+  const unit = battle.units[unitId];
+  if (unit) unit.mpSpent += postureCost;
+  for (let i = battle.events.length - 1; i >= 0; i--) {
+    const ev = battle.events[i]!;
+    if (ev.kind === "moved" && ev.unitId === unitId) {
+      battle.events[i] = { ...ev, mpSpent: ev.mpSpent + postureCost };
+      break;
+    }
+  }
+}
+
 export function commitMove(s: Session): CommitResult {
   const unit = requireActor(s, "movement");
   const battle = requireBattle(s);
@@ -546,15 +610,41 @@ export function commitMove(s: Session): CommitResult {
     } else if (s.moveMode === "eject") {
       ejectPilot(battle, unit.id);
     } else if (s.moveMode === "standup") {
+      const locomotion = s.postureMove ?? "walk";
+      const steps = s.moveSteps;
+      const finalFacing = s.moveFinalFacing;
       attemptStandUp(battle, unit.id, s.rng);
-    } else if (s.moveMode === "drop") {
-      dropProne(battle, unit.id);
-    } else if (s.moveMode === "proneTurn") {
-      const step = s.moveSteps[0];
-      if (step === undefined || step.kind !== "turn") {
-        throw new Error(i18n(s.locale, "err.declareModeFirst", { id: unit.id }));
+      const after = battle.units[unit.id]!;
+      if (after.prone) {
+        // Failed stand: queued place discarded, activation ends.
+        s.actorId = null;
+        clearBuffers(s);
+        drive(s);
+        return;
       }
-      proneFacingTurn(battle, unit.id, step.facings);
+      if (steps.length > 0 || finalFacing !== null) {
+        declareMove(battle, unit.id, locomotion);
+        executeMove(
+          battle,
+          unit.id,
+          steps,
+          finalFacing === null ? { rng: s.rng } : { finalFacing, rng: s.rng },
+        );
+        foldPostureCost(battle, unit.id, STAND_MP_COST);
+      }
+    } else if (s.moveMode === "prone") {
+      const steps = s.moveSteps;
+      const finalFacing = s.moveFinalFacing;
+      dropProne(battle, unit.id);
+      if (steps.length > 0 || finalFacing !== null) {
+        executeMove(
+          battle,
+          unit.id,
+          steps,
+          finalFacing === null ? { rng: s.rng } : { finalFacing, rng: s.rng },
+        );
+        foldPostureCost(battle, unit.id, DROP_MP_COST);
+      }
     } else if (isShutdown(unit)) {
       // Shut-down unit committing without a startup attempt: pass.
       passMovement(battle, unit.id);

@@ -19,7 +19,7 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
     if (st.phase === "movement") {
       if (isNominal(st.units[actorId]!)) {
         try {
-          if (st.units[actorId]!.prone) S.declareMode(s, "standup");
+          if (st.units[actorId]!.prone) S.declareMode(s, "standup", "walk");
           else S.declareMode(s, "walk");
         } catch {
           S.declareMode(s, "standStill");

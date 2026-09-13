@@ -54,7 +54,7 @@ function autoPlay(s: S.Session): void {
     if (st.phase === "movement") {
       if (isNominal(st.units[actorId]!)) {
         try {
-          if (st.units[actorId]!.prone) S.declareMode(s, "standup");
+          if (st.units[actorId]!.prone) S.declareMode(s, "standup", "walk");
           else S.declareMode(s, "walk");
         } catch {
           S.declareMode(s, "standStill");
@@ -788,7 +788,7 @@ describe("full game", () => {
       let out: string[];
       if (st.phase === "movement") {
         const actor = st.units[actorId]!;
-        const modeOut = run(s, actor.prone ? "mode standup" : "mode walk");
+        const modeOut = run(s, actor.prone ? "mode standup walk" : "mode walk");
         if (modeOut.some((l) => l.startsWith("error:"))) run(s, "mode standstill");
         out = run(s, "done");
       } else {
