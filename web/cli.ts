@@ -40,7 +40,6 @@ import {
   sheetForUnit,
   stepResultFromLine,
   stepResultLines,
-  turnPreviewLines,
   unitBriefList,
 } from "./format.js";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
@@ -329,21 +328,21 @@ const MOVE_CMDS: Record<string, CmdDef> = {
   },
   mode: {
     helpKey: "cmd.mode.help",
-    usage: "mode <standstill|walk|run|jump|standup|drop|shutdown|startup|eject>",
+    usage:
+      "mode <standstill|walk|run|jump|prone|standup [walk|run|jump|standstill]|shutdown|startup|eject>",
     argsDoc: [["mode", "cmd.mode.arg.mode"]],
     run: (s, a) => {
       const locale = L(s);
-      expectArgs(locale, a, 1, "mode standstill|walk|run|jump|standup|drop|shutdown|startup|eject");
+      expectArgs(
+        locale,
+        a,
+        1,
+        "mode standstill|walk|run|jump|prone|standup [walk|run|jump|standstill]|shutdown|startup|eject",
+      );
       const mode = S.parseMoveMode(locale, a[0]!);
-      S.declareMode(s, a[0]!);
+      S.declareMode(s, a[0]!, a[1]);
       const actor = S.currentActor(s)!;
-      if (
-        mode === "shutdown" ||
-        mode === "startup" ||
-        mode === "eject" ||
-        mode === "standup" ||
-        mode === "drop"
-      ) {
+      if (mode === "shutdown" || mode === "startup" || mode === "eject") {
         s.moveCandidate = null;
         return [
           i18n(locale, "ok.modeDeclaredVoluntary", { id: actor.id, mode }),
@@ -355,8 +354,9 @@ const MOVE_CMDS: Record<string, CmdDef> = {
           }),
         ];
       }
+      const shown = mode === "standup" ? `standup ${s.postureMove ?? "walk"}` : (mode as string);
       const lines = [
-        i18n(locale, "ok.modeDeclared", { id: actor.id, mode, budget: S.budgetFor(s) }),
+        i18n(locale, "ok.modeDeclared", { id: actor.id, mode: shown, budget: S.budgetFor(s) }),
         stepResultFromLine(locale, s),
       ];
       if (mode === "standStill") {
@@ -397,16 +397,6 @@ const MOVE_CMDS: Record<string, CmdDef> = {
     },
   },
   status: { helpKey: "cmd.statusMove.help", run: (s) => moveStatusLines(s) },
-  turn: {
-    helpKey: "cmd.turn.help",
-    usage: "turn <left|right>",
-    argsDoc: [["dir", "cmd.turn.arg.dir"]],
-    run: (s, a) => {
-      expectArgs(L(s), a, 1, "turn <left|right>");
-      S.queueProneTurn(s, a[0]!);
-      return turnPreviewLines(s);
-    },
-  },
   cancel: {
     helpKey: "cmd.cancelMove.help",
     run: (s) => {
@@ -568,9 +558,7 @@ function availableCmds(session: S.Session): Record<string, CmdDef> {
         down ||
         session.moveMode === "shutdown" ||
         session.moveMode === "startup" ||
-        session.moveMode === "standup" ||
-        session.moveMode === "drop" ||
-        session.moveMode === "proneTurn"
+        session.moveMode === "prone"
       ) {
         // Pending voluntary declaration: no hex movement.
         const { move: _move, face: _face, ...rest } = MOVE_CMDS;

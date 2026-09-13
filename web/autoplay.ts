@@ -231,7 +231,7 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
             queueNextCommand("mode eject");
             queueNextCommand("done");
           } else if (actor.prone) {
-            queueNextCommand("mode standup");
+            queueNextCommand("mode standup walk");
             queueNextCommand("done");
           } else if (isUnitImmobile(actor.damage)) {
             queueNextCommand("mode standstill");
