@@ -40,6 +40,7 @@ import {
   sheetForUnit,
   stepResultFromLine,
   stepResultLines,
+  turnPreviewLines,
   unitBriefList,
 } from "./format.js";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
@@ -354,10 +355,9 @@ const MOVE_CMDS: Record<string, CmdDef> = {
           }),
         ];
       }
-      const r = S.stepResult(s);
       const lines = [
-        i18n(locale, "ok.modeDeclared", { id: actor.id, mode, budget: r.mpBudget }),
-        stepResultFromLine(locale, r),
+        i18n(locale, "ok.modeDeclared", { id: actor.id, mode, budget: S.budgetFor(s) }),
+        stepResultFromLine(locale, s),
       ];
       if (mode === "standStill") {
         s.moveCandidate = null;
@@ -392,8 +392,8 @@ const MOVE_CMDS: Record<string, CmdDef> = {
         }
         throw new Error(i18n(L(s), "err.place.facing", { col: hex.col, row: hex.row, facing }));
       }
-      const r = S.placeLanding(s, landing);
-      return stepResultLines(s, r);
+      S.placeLanding(s, landing);
+      return stepResultLines(s, landing);
     },
   },
   status: { helpKey: "cmd.statusMove.help", run: (s) => moveStatusLines(s) },
@@ -404,8 +404,7 @@ const MOVE_CMDS: Record<string, CmdDef> = {
     run: (s, a) => {
       expectArgs(L(s), a, 1, "turn <left|right>");
       S.queueProneTurn(s, a[0]!);
-      const r = S.stepResult(s);
-      return stepResultLines(s, r);
+      return turnPreviewLines(s);
     },
   },
   cancel: {

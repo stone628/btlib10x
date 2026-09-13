@@ -21,6 +21,7 @@ import type {
   MapNameHolder,
   RangeBracket,
   ResolvedMechDef,
+  RevealedLanding,
   ShutdownState,
   UnitDamageState,
   UnitInit,
@@ -38,6 +39,7 @@ import {
   countDestroyedEngineSlots,
   DEFAULT_PILOTING,
   effectiveMovement,
+  facingChangeCost,
   getAllMapDefs,
   getAllMechDefs,
   getAllWeaponDefs,
@@ -54,10 +56,14 @@ import {
   listMapNames,
   listWeaponNames,
   loadAmmoBins,
+  MP_PER_FACING_CHANGE,
   movementMpPenalty,
   movementMpPenaltyWithThreshold,
+  neighbor,
+  oppositeFacing,
   pooledTotalsByWeaponName,
   reachableLandings,
+  rotateFacing,
   shoulderOf,
   shutdownAvoid,
   TORSO_LOCATIONS,
@@ -75,7 +81,7 @@ import {
   createEjectedBoardRenderUnits,
   getBoardRenderer,
 } from "./render.js";
-import { currentActor, type Session, type StepResult, stepResult } from "./session.js";
+import { budgetFor, currentActor, type Session } from "./session.js";
 
 export const F = (l: LocaleId, f: Facing): string => i18n(l, `sheet.facing.${f}` as MessageKey);
 export const PRN = (l: LocaleId, prone: boolean): string =>
@@ -1419,56 +1425,73 @@ function actorOrderLines(s: Session): string[] {
   return lines;
 }
 
-export function stepResultFromLine(locale: LocaleId, r: StepResult): string {
+export function stepResultFromLine(locale: LocaleId, s: Session): string {
+  const actor = currentActor(s)!;
   return i18n(locale, "stepResult.from", {
-    col: r.fromPosition.col,
-    row: r.fromPosition.row,
-    facing: F(locale, r.fromFacing),
-    posture: PRN(locale, r.fromProne),
+    col: actor.position.col,
+    row: actor.position.row,
+    facing: F(locale, actor.facing),
+    posture: PRN(locale, actor.prone),
   });
 }
 
-/** Header plus one line per queued step, for `place` and `turn` output. */
-export function stepResultLines(s: Session, r: StepResult): string[] {
+/** Header plus one line per path step, for `place` output. Costs come
+ *  straight from `MovePathStep` (`baseMp` per step, `totalMp` cumulative);
+ *  destination hexes are recomputed by walking fragments from the actor start
+ *  (turns rotate the cursor, `F`/`J`/`P`/`U` go forward, `B` goes backward).
+ *  Jump re-facing fragments cost 0 and render no line (landing facing rides
+ *  in the header). */
+export function stepResultLines(s: Session, landing: RevealedLanding): string[] {
   const locale = s.locale;
+  const actor = currentActor(s)!;
+  const path = landing.path;
+  const last = path[path.length - 1];
   const lines = [
     i18n(locale, "ok.stepResult", {
       id: s.actorId ?? "",
       mode: s.moveMode ?? "",
-      col: r.position.col,
-      row: r.position.row,
-      facing: F(locale, r.facing),
-      posture: PRN(locale, r.prone),
-      spent: r.mpSpent,
-      budget: r.mpBudget,
+      col: landing.hex.col,
+      row: landing.hex.row,
+      facing: F(locale, landing.facing),
+      posture: PRN(locale, actor.prone),
+      spent: last?.totalMp ?? 0,
+      budget: budgetFor(s),
     }),
-    stepResultFromLine(locale, r),
+    stepResultFromLine(locale, s),
   ];
-  for (const step of r.steps) {
-    if (step.kind === "turn") {
-      lines.push(
-        i18n(locale, "stepResult.turn", {
-          dir: step.facings > 0 ? "R" : "L",
-          facings: Math.abs(step.facings),
-          mp: step.mp,
-          perFacing: step.reason.perFacing,
-        }),
-      );
-    } else if (step.reason.kind === "jump") {
-      lines.push(
-        i18n(locale, "stepResult.jump", { col: step.to.col, row: step.to.row, mp: step.mp }),
-      );
+  const jumping = s.moveMode === "jump";
+  let hex = { ...actor.position };
+  let facing = actor.facing;
+  for (const step of path) {
+    const frag = step.fragment;
+    if (frag === "R" || frag === "L") {
+      facing = rotateFacing(facing, frag === "R" ? 1 : -1);
+      if (!jumping) {
+        lines.push(
+          i18n(locale, "stepResult.turn", {
+            dir: frag,
+            facings: 1,
+            mp: step.baseMp,
+            perFacing: MP_PER_FACING_CHANGE,
+          }),
+        );
+      }
+      continue;
+    }
+    hex = neighbor(hex, frag === "B" ? oppositeFacing(facing) : facing);
+    if (jumping) {
+      lines.push(i18n(locale, "stepResult.jump", { col: hex.col, row: hex.row, mp: step.baseMp }));
     } else {
       lines.push(
         i18n(locale, "stepResult.enter", {
-          type: step.type,
-          col: step.to.col,
-          row: step.to.row,
-          terrain: step.reason.terrain,
-          surcharge: step.reason.terrainSurcharge,
-          climb: step.reason.climbCost,
-          levels: step.reason.climbLevels,
-          mp: step.mp,
+          type: s.moveMode === "walk" ? "walk" : "run",
+          col: hex.col,
+          row: hex.row,
+          terrain: step.terrain,
+          surcharge: step.terrainSurcharge,
+          climb: step.climbCost,
+          levels: step.climbLevels,
+          mp: step.baseMp,
         }),
       );
     }
@@ -1476,20 +1499,49 @@ export function stepResultLines(s: Session, r: StepResult): string[] {
   return lines;
 }
 
-export function queuedMoveLines(s: Session): string[] {
-  const lines: string[] = [];
+/** Preview lines for the queued prone turn (`turn` output + status). */
+export function turnPreviewLines(s: Session): string[] {
   const locale = s.locale;
   const actor = currentActor(s)!;
-  const r = stepResult(s);
-  if (r.steps.length === 0) {
-    lines.push(
-      i18n(locale, "ok.modeDeclared", { id: actor.id, mode: s.moveMode ?? "", budget: r.mpBudget }),
-    );
-    lines.push(stepResultFromLine(locale, r));
-  } else {
-    lines.push(...stepResultLines(s, r));
+  const facings = s.placedTurn ?? 1;
+  const mp = facingChangeCost(1);
+  return [
+    i18n(locale, "ok.stepResult", {
+      id: s.actorId ?? "",
+      mode: s.moveMode ?? "",
+      col: actor.position.col,
+      row: actor.position.row,
+      facing: F(locale, rotateFacing(actor.facing, facings)),
+      posture: PRN(locale, actor.prone),
+      spent: mp,
+      budget: budgetFor(s),
+    }),
+    stepResultFromLine(locale, s),
+    i18n(locale, "stepResult.turn", {
+      dir: facings > 0 ? "R" : "L",
+      facings: 1,
+      mp,
+      perFacing: MP_PER_FACING_CHANGE,
+    }),
+  ];
+}
+
+export function queuedMoveLines(s: Session): string[] {
+  const locale = s.locale;
+  const actor = currentActor(s)!;
+  const landing = s.placedLanding;
+  if (landing === null && s.placedTurn === null) {
+    return [
+      i18n(locale, "ok.modeDeclared", {
+        id: actor.id,
+        mode: s.moveMode ?? "",
+        budget: budgetFor(s),
+      }),
+      stepResultFromLine(locale, s),
+    ];
   }
-  return lines;
+  if (landing !== null) return stepResultLines(s, landing);
+  return turnPreviewLines(s);
 }
 
 export function moveStatusLines(s: Session): string[] {
@@ -1514,8 +1566,8 @@ export function moveStatusLines(s: Session): string[] {
  * when no reachable hexes exist. Every reachable (hex, facing) landing is
  * handed to `createBoardModel` (in the render layer), which crops the model
  * to the reachable bounding box and tints markers/edges with the actor team.
- * Raw `RevealedLanding.path` data is retained on the landing but not rendered
- * (kept for later use).
+ * Raw `RevealedLanding.path` data is retained on the landing and rendered
+ * by the `place`/`status` preview straight from the candidate.
  */
 export function reachablesInfo(s: Session): BoardRenderReachableInfo | null {
   const actor = s.battle?.units[s.actorId ?? ""];
@@ -1542,6 +1594,7 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo | null {
     walking: Math.max(0, effMove.walking - heatPenalty),
     running: Math.max(0, effMove.running - heatPenalty),
     jumping: Math.max(0, effMove.jumping - heatPenalty),
+    prone: actor.prone,
     grid: s.battle,
     team: actor.team,
     wreckAt: (hex: HexCoord): boolean => wreckAt(s.battle!, hex) !== undefined,

@@ -103,6 +103,7 @@ describe("eject", () => {
         walking: 4,
         running: 7,
         jumping: 3,
+        prone: false,
         grid: state,
         team: 1,
         wreckAt: (hex) => wreckAt(state, hex) !== undefined,

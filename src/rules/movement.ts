@@ -6,7 +6,7 @@ import {
   type HexGrid,
   MP_PER_FACING_CHANGE,
 } from "../core/terrain.js";
-import type { Facing, HexCoord, MoveMode } from "../core/types.js";
+import type { Facing, HexCoord, MoveMode, TerrainType } from "../core/types.js";
 import { FACINGS, oppositeFacing, rotateFacing } from "../core/types.js";
 
 export function maxMovePoints(
@@ -95,14 +95,23 @@ export function hexKey(hex: HexCoord): string {
 }
 
 /** A single movement fragment in a reachability path. */
-export type MoveFragment = "F" | "B" | "R" | "L";
+export type MoveFragment = "F" | "B" | "R" | "L" | "J" | "P" | "U";
+export interface MovePathStep {
+  readonly fragment: MoveFragment;
+  readonly totalMp: number;
+  readonly baseMp: number;
+  readonly terrain: TerrainType;
+  readonly terrainSurcharge: number;
+  readonly climbLevels: number;
+  readonly climbCost: number;
+}
 
 /** One landing reachable from the start, with the fragment sequence that reaches it. */
 export interface RevealedLanding {
   readonly hex: HexCoord;
   readonly facing: Facing;
   /** Movement fragments from the start (in order) that end at `hex` facing `facing`. */
-  readonly path: readonly MoveFragment[];
+  readonly path: readonly MovePathStep[];
 }
 
 export interface ReachabilityOptions {
@@ -110,6 +119,7 @@ export interface ReachabilityOptions {
   readonly walking: number;
   readonly running: number;
   readonly jumping: number;
+  readonly prone: boolean;
   readonly grid: HexGrid;
   /** The mover's team. */
   readonly team: number;
@@ -124,11 +134,19 @@ export interface ReachabilityOptions {
  * given mode's MP budget, paired with a movement fragment sequence that
  * achieves each one.
  *
- * Fragment vocabulary: F = step forward, B = step backward, R/L = 1-hexside
- * turn (right/left). Ground (walk/run) charges 1 MP per R/L and 1+terrain per
- * F/B; run never moves backward. Jump charges 1 MP per F/B and treats R/L as
- * free reorientations (landing facing is chosen freely), so a side-neighbor
- * jump is expressed as `R...+F` (free turns) + `F` (the 1-MP step).
+ * Fragment vocabulary:
+ *   F = step forward (walk)
+ *   B = step backward (walk or jump)
+ *   R/L = 1-hexside turn (right/left)
+ *   J = jump step forward (jump mode)
+ *   P = prone crawl step (walk mode + prone)
+ *   U = run step (run mode)
+ *
+ * Ground (walk/run) charges 1 MP per R/L and 1+terrain+climb per F/B/U;
+ * run never moves backward. Prone crawl (walk+prone) charges 2 MP per P step
+ * forward only, no backward, turns cost 1 MP. Jump charges 1 MP per J step
+ * forward (backward steps stay B) and treats R/L as free reorientations
+ * (landing facing chosen freely).
  *
  * The starting hex is included: the initial state has an empty path, and every
  * facing reachable from it by pure turns (free for jump, paid for ground)
@@ -143,35 +161,67 @@ export function reachableLandings(
   if (budget <= 0 || options.mode === "standStill") return [];
 
   const jumping = options.mode === "jump";
+  const prone = options.prone && options.mode === "walk";
+  const running = options.mode === "run";
   const { width, height } = options.grid;
 
-  // Ground: R/L cost 1 MP. Jump: R/L are free reorientations before/after the
-  // 1-MP jump step (landing facing is chosen freely on jump).
   const turnCost = jumping ? 0 : 1;
+
   const stepCost = (from: HexCoord, to: HexCoord): number => {
     if (jumping) return 1;
+    if (prone) return 2;
     const cellTo = cellAt(options.grid, to);
     return (
       costToEnter(cellTo.terrain) + costToClimb(cellAt(options.grid, from).level, cellTo.level)
     );
   };
-  const backwardAllowed = jumping || options.mode === "walk";
+
+  const stepFragment = (): MoveFragment => {
+    if (jumping) return "J";
+    if (prone) return "P";
+    if (running) return "U";
+    return "F";
+  };
+
+  const backwardAllowed = jumping || (options.mode === "walk" && !prone);
 
   interface State {
     hex: HexCoord;
     facing: Facing;
     cost: number;
-    path: MoveFragment[];
+    path: MovePathStep[];
   }
   const stateKey = (hex: HexCoord, facing: Facing): string => `${hexKey(hex)}|${facing}`;
 
-  // Minimum MP to reach each (hex, facing) state, and the fragment path that
-  // achieves it. On equal-cost ties, the first-discovered path is kept
-  // (deterministic given the transition iteration order).
   const dist = new Map<string, number>();
-  const bestPath = new Map<string, MoveFragment[]>();
+  const bestPath = new Map<string, MovePathStep[]>();
   const queue: State[] = [];
-  const enqueue = (hex: HexCoord, facing: Facing, cost: number, path: MoveFragment[]): void => {
+
+  const makeStep = (
+    from: HexCoord,
+    to: HexCoord,
+    fragment: MoveFragment,
+    baseMp: number,
+    prevTotal: number,
+  ): MovePathStep => {
+    const cellTo = cellAt(options.grid, to);
+    const cellFrom = cellAt(options.grid, from);
+    const climbLevels = jumping ? 0 : cellTo.level - cellFrom.level;
+    const climbCost = jumping ? 0 : costToClimb(cellFrom.level, cellTo.level);
+    const terrain = cellTo.terrain;
+    const terrainSurcharge = jumping || prone ? 0 : costToEnter(terrain) - 1;
+    return {
+      fragment,
+      totalMp: prevTotal + baseMp,
+      baseMp,
+      terrain,
+      terrainSurcharge,
+      climbLevels: Math.abs(climbLevels),
+      climbCost,
+    };
+  };
+
+  const enqueue = (hex: HexCoord, facing: Facing, cost: number, path: MovePathStep[]): void => {
     const key = stateKey(hex, facing);
     const known = dist.get(key);
     if (known !== undefined && known <= cost) return;
@@ -184,10 +234,7 @@ export function reachableLandings(
   const point = (a: HexCoord, b: HexCoord): boolean => a.col === b.col && a.row === b.row;
   const inBounds = (hex: HexCoord): boolean =>
     hex.col >= 1 && hex.col <= width && hex.row >= 1 && hex.row <= height;
-  // Ground pass-through: friendly-occupied hexes are passable but never landable,
-  // and a 'Mech may change at most 2 levels per hex forward and none backward
-  // (TW; jump ignores elevation and may change level freely).
-  // Jump pass-through: any in-bounds hex; landing is restricted separately.
+
   const canEnter = (from: HexCoord, hex: HexCoord, backward: boolean): boolean => {
     if (!inBounds(hex)) return false;
     if (options.wreckAt?.(hex)) return false;
@@ -208,35 +255,48 @@ export function reachableLandings(
     const key = stateKey(cur.hex, cur.facing);
     if ((dist.get(key) ?? Infinity) < cur.cost) continue;
 
-    // Turn transitions: 1-hexside right/left. For jump these are free; for
-    // ground each costs 1 MP.
     for (const [frag, delta] of [
       ["R", 1],
       ["L", -1],
     ] as const) {
       const newFacing = rotateFacing(cur.facing, delta);
       const c = cur.cost + turnCost;
-      if (c <= budget) enqueue(cur.hex, newFacing, c, [...cur.path, frag]);
+      if (c <= budget) {
+        const turnStep: MovePathStep = {
+          fragment: frag,
+          totalMp: c,
+          baseMp: turnCost,
+          terrain: cellAt(options.grid, cur.hex).terrain,
+          terrainSurcharge: 0,
+          climbLevels: 0,
+          climbCost: 0,
+        };
+        enqueue(cur.hex, newFacing, c, [...cur.path, turnStep]);
+      }
     }
 
-    // Step transitions: F (forward) and, when allowed, B (backward). The
-    // 'Mech keeps its facing after entering the hex. Ground moves also pay
-    // +1 MP per level changed (up or down); jumps ignore elevation.
     const forward = neighbor(cur.hex, cur.facing);
     if (canEnter(cur.hex, forward, false)) {
-      const c = cur.cost + stepCost(cur.hex, forward);
-      if (c <= budget) enqueue(forward, cur.facing, c, [...cur.path, "F"]);
+      const base = stepCost(cur.hex, forward);
+      const c = cur.cost + base;
+      if (c <= budget) {
+        const step = makeStep(cur.hex, forward, stepFragment(), base, cur.cost);
+        enqueue(forward, cur.facing, c, [...cur.path, step]);
+      }
     }
     if (backwardAllowed) {
       const backward = neighbor(cur.hex, oppositeFacing(cur.facing));
       if (canEnter(cur.hex, backward, true)) {
-        const c = cur.cost + stepCost(cur.hex, backward);
-        if (c <= budget) enqueue(backward, cur.facing, c, [...cur.path, "B"]);
+        const base = stepCost(cur.hex, backward);
+        const c = cur.cost + base;
+        if (c <= budget) {
+          const step = makeStep(cur.hex, backward, "B", base, cur.cost);
+          enqueue(backward, cur.facing, c, [...cur.path, step]);
+        }
       }
     }
   }
 
-  // Collect every (hex, facing) that is a valid landing within budget.
   const results: RevealedLanding[] = [];
   for (const [key, cost] of dist) {
     if (cost > budget) continue;

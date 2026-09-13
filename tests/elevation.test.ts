@@ -45,6 +45,7 @@ const reachOptions = (grid: HexGrid): ReachabilityOptions => ({
   running: 6,
   jumping: 4,
   grid,
+  prone: false,
   team,
   occupantTeam: noOcc,
 });
@@ -59,6 +60,7 @@ describe("elevation worked example: ridge duel", () => {
       walking: 2,
       running: 3,
       jumping: 0,
+      prone: false,
     });
     expect(landings.find((l) => l.hex.col === 5 && l.hex.row === 2)).toBeDefined();
   });

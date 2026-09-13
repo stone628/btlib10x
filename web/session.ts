@@ -13,7 +13,6 @@ import type {
   MoveStep,
   RevealedLanding,
   Rng,
-  TerrainType,
   UnitInit,
   UnitState,
   VictoryResult,
@@ -31,8 +30,6 @@ import {
   checkVictory,
   classifyArcWithBoundary,
   computeToHit,
-  costToClimb,
-  costToEnter,
   countDestroyedStructure,
   createBattle,
   declareAttacks,
@@ -43,7 +40,6 @@ import {
   ejectPilot,
   executeMove,
   FACINGS,
-  facingChangeCost,
   getMapDefFor,
   getMechDefFor,
   getUnit,
@@ -53,7 +49,6 @@ import {
   isShutdown,
   losClear,
   losWoodsPointsBetween,
-  MP_PER_FACING_CHANGE,
   neighbor,
   nextActor,
   oppositeFacing,
@@ -67,7 +62,6 @@ import {
   rotateFacing,
   SENSORS,
   sameHex,
-  terrainMoveCost,
   toHitHeatModifier,
   voluntaryShutdown,
   weaponCanFireIntoArc,
@@ -105,6 +99,11 @@ export interface Session {
    *  while jumping, so the landing facing travels via `executeMove`'s
    *  `finalFacing` option). Null when unset or ground movement. */
   moveFinalFacing: Facing | null;
+  /** Landing from `moveCandidate` buffered by `place`; `status`/`candidate`
+   *  preview renders its `path` directly. Null when no landing queued. */
+  placedLanding: RevealedLanding | null;
+  /** Prone turn facings queued by `turn` (no candidate landing exists for it). */
+  placedTurn: 1 | -1 | null;
   fireDecls: AttackDecl[];
   /** Suppress critical hit resolution (mostly for deterministic testing). */
   critsDisabled: boolean;
@@ -126,6 +125,8 @@ export function newSession(seed: number): Session {
     moveMode: null,
     moveSteps: [],
     moveFinalFacing: null,
+    placedLanding: null,
+    placedTurn: null,
     fireDecls: [],
     critsDisabled: false,
     moveCandidate: null,
@@ -136,8 +137,7 @@ export function newSession(seed: number): Session {
 
 function clearBuffers(s: Session): void {
   s.moveMode = null;
-  s.moveSteps = [];
-  s.moveFinalFacing = null;
+  clearMoveQueue(s);
   s.moveCandidate = null;
   s.fireDecls = [];
   s.fireHintShownFor = null;
@@ -382,32 +382,32 @@ export function declareMode(s: Session, word: string): void {
   if (mode === "shutdown") {
     if (isShutdown(unit)) throw new Error(i18n(s.locale, "err.mustBeOnlineForShutdown"));
     s.moveMode = "shutdown";
-    s.moveSteps = [];
+    clearMoveQueue(s);
     return;
   }
   if (mode === "startup") {
     if (unit.shutdown === "not") throw new Error(i18n(s.locale, "err.mustBeDownForStartup"));
     if (unit.shutdown === "starting") throw new Error(i18n(s.locale, "err.alreadyStarting"));
     s.moveMode = "startup";
-    s.moveSteps = [];
+    clearMoveQueue(s);
     return;
   }
   if (mode === "eject") {
     if (unit.removed) throw new Error(i18n(s.locale, "err.alreadyEjected", { id: unit.id }));
     s.moveMode = "eject";
-    s.moveSteps = [];
+    clearMoveQueue(s);
     return;
   }
   if (mode === "standup") {
     if (!unit.prone) throw new Error(i18n(s.locale, "err.standupRequiresProne", { id: unit.id }));
     s.moveMode = "standup";
-    s.moveSteps = [];
+    clearMoveQueue(s);
     return;
   }
   if (mode === "drop") {
     if (unit.prone) throw new Error(i18n(s.locale, "err.dropRequiresStanding", { id: unit.id }));
     s.moveMode = "drop";
-    s.moveSteps = [];
+    clearMoveQueue(s);
     return;
   }
   if (mode !== "standStill" && mode !== "walk" && mode !== "run" && mode !== "jump") {
@@ -415,88 +415,19 @@ export function declareMode(s: Session, word: string): void {
   }
   declareMove(requireBattle(s), unit.id, mode);
   s.moveMode = mode;
+  clearMoveQueue(s);
+}
+
+/** Clear queued movement: steps, buffered landing/turn, landing facing. */
+function clearMoveQueue(s: Session): void {
   s.moveSteps = [];
+  s.placedLanding = null;
+  s.placedTurn = null;
+  s.moveFinalFacing = null;
 }
 
-interface MoveCursor {
-  hex: HexCoord;
-  facing: Facing;
-  spent: number;
-}
-
-/** One queued step's cost breakdown, for the `place` result. */
-export type StepResultStep =
-  | {
-      readonly kind: "turn";
-      readonly facings: number;
-      readonly mp: number;
-      readonly reason: { readonly kind: "faceChange"; readonly perFacing: number };
-    }
-  | {
-      readonly kind: "enter";
-      readonly to: HexCoord;
-      readonly type: "walk" | "run" | "jump";
-      readonly mp: number;
-      readonly reason:
-        | { readonly kind: "jump" }
-        | {
-            readonly kind: "enter";
-            readonly terrain: TerrainType;
-            readonly terrainSurcharge: number;
-            readonly climbLevels: number;
-            readonly climbCost: number;
-          };
-    };
-
-function replaySteps(s: Session): { cur: MoveCursor; steps: StepResultStep[] } {
-  const unit = currentActor(s)!;
-  const cur: MoveCursor = { hex: { ...unit.position }, facing: unit.facing, spent: 0 };
-  const steps: StepResultStep[] = [];
-  for (const step of s.moveSteps) {
-    if (step.kind === "turn") {
-      cur.facing = rotateFacing(cur.facing, step.facings);
-      const mp = facingChangeCost(Math.abs(step.facings));
-      cur.spent += mp;
-      steps.push({
-        kind: "turn",
-        facings: step.facings,
-        mp,
-        reason: { kind: "faceChange", perFacing: MP_PER_FACING_CHANGE },
-      });
-    } else {
-      const battle = requireBattle(s);
-      const fromLevel = cellAt(battle, cur.hex).level;
-      const toLevel = cellAt(battle, step.to).level;
-      const to = { ...step.to };
-      cur.hex = to;
-      if (s.moveMode === "jump") {
-        cur.spent += 1;
-        steps.push({ kind: "enter", to, type: "jump", mp: 1, reason: { kind: "jump" } });
-      } else {
-        const terrain = cellAt(battle, to).terrain;
-        const climbCost = costToClimb(fromLevel, toLevel);
-        const mp = costToEnter(terrain) + climbCost;
-        cur.spent += mp;
-        steps.push({
-          kind: "enter",
-          to,
-          type: s.moveMode === "walk" ? "walk" : "run",
-          mp,
-          reason: {
-            kind: "enter",
-            terrain,
-            terrainSurcharge: terrainMoveCost(terrain),
-            climbLevels: Math.abs(toLevel - fromLevel),
-            climbCost,
-          },
-        });
-      }
-    }
-  }
-  return { cur, steps };
-}
-
-function budgetFor(s: Session): number {
+/** Movement budget for the declared mode (stand-in modes map to standstill). */
+export function budgetFor(s: Session): number {
   const unit = currentActor(s)!;
   const def = getMechDefFor(unit);
   const movement = effectiveMovement(def, unit.critSlotsDestroyed);
@@ -514,36 +445,6 @@ function budgetFor(s: Session): number {
   return effectiveMoveBudget(mode, movement, unit.heat);
 }
 
-export interface StepResult {
-  readonly fromPosition: HexCoord;
-  readonly fromFacing: Facing;
-  readonly fromProne: boolean;
-  readonly position: HexCoord;
-  readonly facing: Facing;
-  readonly prone: boolean;
-  readonly mpSpent: number;
-  readonly mpBudget: number;
-  /** Per-step breakdown of movement type, MP spent, and the MP cost reason. */
-  readonly steps: readonly StepResultStep[];
-}
-
-/** Cursor + per-step breakdown after replaying all queued movement steps. */
-export function stepResult(s: Session): StepResult {
-  const actor = currentActor(s)!;
-  const { cur, steps } = replaySteps(s);
-  return {
-    fromPosition: actor.position,
-    fromFacing: actor.facing,
-    fromProne: actor.prone,
-    position: cur.hex,
-    facing: cur.facing,
-    mpSpent: cur.spent,
-    mpBudget: budgetFor(s),
-    prone: false, // FIXME: will get from MoveCursor later
-    steps,
-  };
-}
-
 /** Resolve a `place` facing argument: an absolute facing word. */
 export function resolveFacing(locale: LocaleId, arg: string): Facing {
   const facing = FACINGS.find((f) => f === arg.toLowerCase());
@@ -559,8 +460,10 @@ export function resolveFacing(locale: LocaleId, arg: string): Facing {
  * budget (the candidate was validated by `reachableLandings` at `mode` time).
  * Jump turns are free (engine rejects turn steps), so `R`/`L` fragments only
  * advance the cursor facing and the landing facing travels via `moveFinalFacing`.
+ * The buffered landing doubles as the preview source: `status`/`candidate`
+ * render `placedLanding.path` directly, no replay.
  */
-export function placeLanding(s: Session, landing: RevealedLanding): StepResult {
+export function placeLanding(s: Session, landing: RevealedLanding): void {
   const unit = requireActor(s, "movement");
   if (s.moveMode === "shutdown" || s.moveMode === "startup" || s.moveMode === "eject") {
     throw new Error(i18n(s.locale, "err.noMoveInShutdownMode"));
@@ -571,21 +474,23 @@ export function placeLanding(s: Session, landing: RevealedLanding): StepResult {
   const steps: MoveStep[] = [];
   let hex: HexCoord = { ...unit.position };
   let facing: Facing = unit.facing;
-  for (const frag of landing.path) {
+  for (const step of landing.path) {
+    const frag = step.fragment;
     if (frag === "R" || frag === "L") {
       const delta = frag === "R" ? 1 : -1;
       facing = rotateFacing(facing, delta);
       if (!jumping) steps.push({ kind: "turn", facings: delta });
       continue;
     }
-    const to = neighbor(hex, frag === "B" ? oppositeFacing(facing) : facing);
+    const isBackward = frag === "B";
+    const to = neighbor(hex, isBackward ? oppositeFacing(facing) : facing);
     steps.push({ kind: "enter", to });
     hex = to;
   }
   s.moveSteps = steps;
   s.moveFinalFacing = jumping ? landing.facing : null;
-  const r = stepResult(s);
-  return jumping ? { ...r, facing: landing.facing } : r;
+  s.placedLanding = landing;
+  s.placedTurn = null;
 }
 
 export function queueProneTurn(s: Session, dir: string): void {
@@ -594,15 +499,17 @@ export function queueProneTurn(s: Session, dir: string): void {
   const d = dir.toLowerCase();
   if (d !== "left" && d !== "right") throw new Error(i18n(s.locale, "err.turnDir"));
   s.moveMode = "proneTurn";
-  s.moveSteps = [{ kind: "turn", facings: d === "left" ? -1 : 1 }];
+  const facings = d === "left" ? -1 : 1;
+  s.moveSteps = [{ kind: "turn", facings }];
   s.moveFinalFacing = null;
+  s.placedLanding = null;
+  s.placedTurn = facings;
 }
 
 export function cancelMove(s: Session): void {
   requireActor(s, "movement");
   s.moveMode = null;
-  s.moveSteps = [];
-  s.moveFinalFacing = null;
+  clearMoveQueue(s);
 }
 
 export interface CommitResult {

@@ -37,8 +37,10 @@ TypeScript library encapsulating BattleTech Total Warfare board game logic.
 - `npm run lint` — Biome check (lint + format + import order) over `src/`, `tests/`, `scripts/`, `web/` (generated `web/app.js` excluded)
 - `npm run lint:fix` — same, applying safe+unsafe fixes (formatting, unused imports/params, literal keys)
 - `npm run build` — emit ESM + declarations to `dist/`
-- `npm run build:web` — bundle the `web/` terminal app with esbuild → `web/app.js`
-- `npm run dev:web` — same but watch mode (rebuilds `web/app.js` on every source change)
+- `npm run build:web` — esbuild-bundle `src/index.ts` → `web/btlib10x.js` (core) and `web/main.ts` → `web/app.js` (app; core kept external)
+- `npm run dev:web` — same but watch mode (rebuilds `web/btlib10x.js` + `web/app.js` on every source change)
+
+**Stale-dist trap.** Anything importing `"btlib10x"` resolves through package `exports` to `dist/` — web sources typecheck against `dist/index.d.ts`, tests exercising `web/session.ts` run against `dist/index.js`, while rule tests import `src/` directly. After any engine change, run `npm run build` before lint/typecheck/test, or `web/` code and tests silently use a stale engine (real failure mode: identical `reachableLandings` inputs producing different move paths). `web/btlib10x.js` (the browser-runtime core bundle) rebuilds via `build:web`/`dev:web` and never reads `dist/`.
 
 Run lint + typecheck + tests together before considering work done: `npm run lint && npm run typecheck && npm test`.
 
