@@ -2173,6 +2173,11 @@ function formatCritEffect(locale: LocaleId, eff: CriticalEffect): string {
         slot: String(eff.slotIndex),
         name: eff.name,
       });
+    case "engineDestroyed":
+      return i18n(locale, "res.critEngineDestroyed", {
+        loc: SHORT_LOC[eff.location],
+        slot: String(eff.slotIndex),
+      });
     case "noEffect":
       return i18n(locale, "res.critNoEffect", { loc: "reroll" });
   }

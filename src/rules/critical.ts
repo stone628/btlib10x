@@ -69,7 +69,14 @@
  */
 
 import { roll2D6, rollD6 } from "../core/dice.js";
-import { damageTransferTo, isArm, isLeg, isLimb, isSideTorso } from "../core/locations.js";
+import {
+  damageTransferTo,
+  isArm,
+  isLeg,
+  isLimb,
+  isSideTorso,
+  TORSO_LOCATIONS,
+} from "../core/locations.js";
 import type { Location, Rng } from "../core/types.js";
 import { type AmmoNameHolder, getAmmoDefFor } from "../data/ammo.schema.js";
 import type {
@@ -153,6 +160,14 @@ export type CriticalEffect =
       readonly transferred: boolean;
       /** A name like "engine", "gyro", "heatSink", "doubleHeatSink", "shoulder", etc. */
       readonly name: string;
+    }
+  | {
+      /** Three engine crit slots destroyed — 'Mech is killed (TW p.33). */
+      readonly kind: "engineDestroyed";
+      readonly location: Location;
+      readonly slotIndex: number;
+      readonly rolls: readonly number[];
+      readonly transferred: boolean;
     }
   | {
       readonly kind: "noEffect";
@@ -630,6 +645,21 @@ function applySlotHit(
       if (j >= 0 && j < state.destroyed[loc].length) state.destroyed[loc][j] = true;
     }
   }
+  if (name === "engine") {
+    // Three engine crit slots destroyed = 'Mech killed (TW p.33).
+    const engineCount = countDestroyedEngineSlots(def, state.destroyed);
+    if (engineCount >= 3) {
+      state.killed = true;
+      state.rows.push({
+        kind: "engineDestroyed",
+        location: loc,
+        slotIndex,
+        rolls: rolls.slice(),
+        transferred,
+      });
+      return;
+    }
+  }
   state.rows.push({
     kind: "componentDestroyed",
     location: loc,
@@ -741,4 +771,23 @@ export function effectiveMovement(
   }
   const run = Math.ceil((walk * 3) / 2); // ceil(walk * 1.5)
   return { walking: walk, running: run, jumping: jump };
+}
+
+/** Number of destroyed `engine` crit slots on the 'Mech. */
+export function countDestroyedEngineSlots(
+  def: ResolvedMechDef,
+  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+): number {
+  let n = 0;
+  for (const loc of TORSO_LOCATIONS) {
+    const layout = def.critSlots[loc];
+    const destroyed = critSlotsDestroyed[loc];
+    for (let i = 0; i < layout.length; i++) {
+      const slot = layout[i];
+      if (slot?.kind === "structure" && slot.name === "engine" && (destroyed?.[i] ?? false)) {
+        n += 1;
+      }
+    }
+  }
+  return n;
 }

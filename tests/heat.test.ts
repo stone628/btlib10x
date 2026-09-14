@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { LOCATIONS, type Location, type TerrainType } from "../src/core/types.js";
 import { getMechDef, getMechDefFor } from "../src/data/index.js";
+import { countDestroyedEngineSlots } from "../src/rules/critical.js";
 import type { BattleState, UnitInit } from "../src/rules/game.js";
 import {
   advancePhase,
@@ -14,7 +15,6 @@ import {
 } from "../src/rules/game.js";
 import {
   ammoExplosionAvoid,
-  countDestroyedEngineSlots,
   effectiveMoveBudget,
   engineHitHeat,
   heatDissipation,

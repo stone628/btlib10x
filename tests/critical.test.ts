@@ -732,3 +732,54 @@ describe("CASE", () => {
     expect(app.after.armor.centerTorso).toBe(ctArmorBefore);
   });
 });
+
+describe("engine crit destruction", () => {
+  it("three engine crit slots destroyed kills the 'Mech", () => {
+    const def = getMechDef("HBK-4G")!;
+    // Pre-destroy 2 engine slots (CT indices 0 and 1).
+    const destroyed = freshFlags(def);
+    destroyed.centerTorso[0] = true;
+    destroyed.centerTorso[1] = true;
+    // Roll 8 (one crit) targeting CT. Slot roll: first=4 (half 1), second=2
+    // → slot=8, index 7 = engine. Not pre-destroyed.
+    const res = resolveCriticalHits({
+      rng: detRoll(8, 4, 2, 1, 1),
+      def,
+      source: { location: "centerTorso", damage: 5 },
+      critSlotsDestroyed: destroyed,
+      destroyedWeapons: [],
+      damage: {
+        armor: { ...def.armor },
+        armorRear: { ...def.armorRear },
+        internalStructure: { ...def.internalStructure },
+      },
+      ammoBins: loadAmmoBins(def),
+    });
+    expect(res.killed).toBe(true);
+    expect(res.rows.some((r) => r.kind === "engineDestroyed")).toBe(true);
+  });
+
+  it("two engine crits does not kill the 'Mech", () => {
+    const def = getMechDef("HBK-4G")!;
+    // Pre-destroy 1 engine slot (CT index 0).
+    const destroyed = freshFlags(def);
+    destroyed.centerTorso[0] = true;
+    // Roll 8 (one crit) targeting CT. Slot roll: first=1 (half 0), second=2
+    // → slot=2, index 1 = engine. Not pre-destroyed.
+    const res = resolveCriticalHits({
+      rng: detRoll(8, 1, 2, 1, 1),
+      def,
+      source: { location: "centerTorso", damage: 5 },
+      critSlotsDestroyed: destroyed,
+      destroyedWeapons: [],
+      damage: {
+        armor: { ...def.armor },
+        armorRear: { ...def.armorRear },
+        internalStructure: { ...def.internalStructure },
+      },
+      ammoBins: loadAmmoBins(def),
+    });
+    expect(res.killed).toBe(false);
+    expect(res.rows.some((r) => r.kind === "engineDestroyed")).toBe(false);
+  });
+});

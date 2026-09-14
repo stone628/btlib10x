@@ -456,6 +456,7 @@ export const en = {
   "res.critAmmoExplosion": "{loc} #{slot} ammo {weapon} explodes for {damage} damage",
   "res.critCockpitDestroyed": "{loc} #{slot} cockpit destroyed — pilot killed",
   "res.critComponentDestroyed": "{loc} #{slot} {name} destroyed",
+  "res.critEngineDestroyed": "{loc} #{slot} ENGINE DESTROYED — 'Mech killed",
   "res.critNoEffect": "{loc} reroll — no crit-hittable slot remaining",
   "res.critTransferred": " (transferred from {from})",
   "res.critCluster": "blast cascades a new determining roll on {loc}",

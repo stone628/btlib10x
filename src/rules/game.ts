@@ -54,6 +54,7 @@ import {
   applyAmmoExplosion,
   type CriticalResolution,
   checkCASE,
+  countDestroyedEngineSlots,
   effectiveMovement,
   resolveCriticalHits,
 } from "./critical.js";
@@ -66,7 +67,6 @@ import {
 } from "./damage.js";
 import {
   ammoExplosionAvoidWithThreshold,
-  countDestroyedEngineSlots,
   effectiveMoveBudget,
   engineHitHeat,
   HEAT_CAP,
