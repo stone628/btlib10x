@@ -6,7 +6,7 @@ import { getWeaponDefFor } from "../data/weapon.schema.js";
 import { binsForWeaponName, pooledShotsLeft } from "./ammo.js";
 import { type Arc, classifyArcWithBoundary, weaponCanFireIntoArc } from "./arcs.js";
 import { canFireFromLocation } from "./damage.js";
-import { type BattleState, isImmobile, partialCoverMod } from "./game.js";
+import { type BattleState, isImmobile, isUnitRemoved, partialCoverMod } from "./game.js";
 import { toHitHeatModifier } from "./heat.js";
 import { losClear, losWoodsPointsBetween } from "./los.js";
 import { countDestroyedStructure, SENSORS } from "./piloting.js";
@@ -138,13 +138,13 @@ export function bestFireTarget(sugg: FireSuggestion): FireTarget | null {
  */
 export function suggestFireTargets(state: BattleState, unitId: string): FireSuggestion {
   const unit = state.units[unitId];
-  if (!unit || unit.destroyed || unit.removed) {
+  if (!unit || isUnitRemoved(unit)) {
     throw new Error(`suggestFireTargets: ${unitId} is not a fireable unit`);
   }
   const def = getMechDefFor(unit);
   const sensorsOut = countDestroyedStructure(def, unit.critSlotsDestroyed, SENSORS);
   const targets = Object.values(state.units)
-    .filter((u) => u.team !== unit.team && !u.removed && !u.destroyed)
+    .filter((u) => u.team !== unit.team && !isUnitRemoved(u))
     .map((enemy) => {
       const distance = hexDistance(unit.position, enemy.position);
       const b = bearingExact(unit.position, enemy.position);

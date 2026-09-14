@@ -148,6 +148,24 @@ export type MoveStep =
  *  successful startup still pending the next initiative roll. */
 export type ShutdownState = "manual" | "heat" | "starting" | "not";
 
+/** Physical destruction state of a unit: "not" = intact. Reason tracks
+ *  which kill condition ended the 'Mech (head/CT IS depleted, cockpit
+ *  crit, head blown off, or three engine crits). */
+export type DestroyedReason =
+  | "headDestroyed"
+  | "centerTorsoDestroyed"
+  | "cockpitDestroyed"
+  | "headBlownOff"
+  | "engineDestroyed";
+export type DestroyedState = "not" | DestroyedReason;
+
+/** Removal from play: "not" = on the board. "destroyed" = unit killed
+ *  (paired with a DestroyedState reason). "pilotEjected" = pilot left
+ *  the 'Mech (wreck left behind). "pilotKilled" = six pilot hits, unit
+ *  removed but frame not destroyed (wreck left behind, like eject). */
+export type RemovalReason = "destroyed" | "pilotEjected" | "pilotKilled";
+export type RemovedState = "not" | RemovalReason;
+
 export type Phase = "initiative" | "movement" | "weaponAttack" | "end";
 
 /** Deterministic rng for ammo draws when the caller omits one: ties resolve
@@ -206,8 +224,8 @@ export interface UnitState extends MechModelHolder {
   firedTargetId: string | null;
   /** True if the unit explicitly passed on declaring attacks this phase. */
   passedAttacks: boolean;
-  destroyed: boolean;
-  removed: boolean;
+  destroyed: DestroyedState;
+  removed: RemovedState;
 }
 
 export type GameEvent =
@@ -244,11 +262,13 @@ export type GameEvent =
       readonly targetId: string;
       readonly resolution: AttackResolution;
     }
-  | { readonly kind: "unitDestroyed"; readonly unitId: string }
-  | { readonly kind: "unitRemoved"; readonly unitId: string }
+  | { readonly kind: "unitDestroyed"; readonly unitId: string; readonly destroyed: DestroyedReason }
+  | { readonly kind: "unitRemoved"; readonly unitId: string; readonly reason: RemovalReason }
   // Pilot ejects: the 'Mech leaves the battle and its hex gains a `wrecks`
-  // entry (a level-2 obstacle), see `ejectPilot`.
-  | { readonly kind: "unitEjected"; readonly unitId: string }
+  // entry (a level-2 obstacle), see `ejectPilot`. Emits `unitRemoved` with
+  // reason "pilotEjected". A pilot killed by six pilot hits emits
+  // `unitRemoved` with reason "pilotKilled" and likewise leaves a level-2
+  // wreck, see `removePilotKilled`.
   | {
       readonly kind: "buildingCollapsed";
       readonly col: number;
@@ -374,7 +394,6 @@ export type GameEvent =
       readonly hits: number;
       readonly consciousBefore: boolean;
     }
-  | { readonly kind: "pilotKilled"; readonly unitId: string }
   | {
       /** Building-entry PSR failed (TW p.166): the crash damages the 'Mech
        *  (ceil(CF / 10) in 5-point groups on the front column) but never
@@ -452,6 +471,14 @@ export function isImmobile(unit: UnitState) {
   return isShutdown(unit) || unit.unconscious || isUnitImmobile(unit.damage);
 }
 
+export function isUnitRemoved(unit: UnitState): boolean {
+  return unit.removed !== "not";
+}
+
+export function isUnitAvailable(unit: UnitState): boolean {
+  return unit.removed === "not";
+}
+
 /**
  * Partial-cover to-hit modifier against `target` from `attacker`: 1 when the
  * target stands in partial-cover terrain (water1 / building) and the attacker
@@ -497,7 +524,7 @@ function requirePhase(state: BattleState, phase: Phase): void {
 
 function occupantAt(state: BattleState, hex: HexCoord, excludeId?: string): UnitState | undefined {
   for (const unit of Object.values(state.units)) {
-    if (unit.removed || unit.id === excludeId) continue;
+    if (isUnitRemoved(unit) || unit.id === excludeId) continue;
     if (sameHex(unit.position, hex)) return unit;
   }
   return undefined;
@@ -508,14 +535,51 @@ export function wreckAt(state: BattleState, hex: HexCoord): WreckState | undefin
   return state.wrecks[`${hex.col},${hex.row}`];
 }
 
-/** Mark a unit as killed and removed, emitting the paired events. */
-function markUnitDestroyed(state: BattleState, unit: UnitState): void {
-  unit.destroyed = true;
-  unit.removed = true;
+/** Mark a unit as killed and removed, emitting the paired events. The first
+ *  kill wins: an already-removed unit (e.g. ejected or pilot-killed) is left
+ *  untouched so the recorded reason stays the earliest cause. */
+function markUnitDestroyed(state: BattleState, unit: UnitState, destroyed: DestroyedReason): void {
+  if (isUnitRemoved(unit)) return;
+  unit.destroyed = destroyed;
+  unit.removed = "destroyed";
   state.events.push(
-    { kind: "unitDestroyed", unitId: unit.id },
-    { kind: "unitRemoved", unitId: unit.id },
+    { kind: "unitDestroyed", unitId: unit.id, destroyed },
+    { kind: "unitRemoved", unitId: unit.id, reason: "destroyed" },
   );
+}
+
+/** A pilot killed by six accumulated pilot hits removes the unit from play
+ *  without destroying the 'Mech (TW p.41-42: the pilot is dead; the hull is
+ *  intact). Handled like an eject: a permanent level-2 wreck occupies the
+ *  hex. Emits a single `unitRemoved` event with reason "pilotKilled". */
+function removePilotKilled(state: BattleState, unit: UnitState): void {
+  if (isUnitRemoved(unit)) return;
+  unit.removed = "pilotKilled";
+  state.wrecks[`${unit.position.col},${unit.position.row}`] = {
+    unitId: unit.id,
+    level: 2,
+  };
+  state.events.push({ kind: "unitRemoved", unitId: unit.id, reason: "pilotKilled" });
+}
+
+/** Physical kill reason from the current damage state, preferring a
+ *  crit-derived cause when `critRows` carry one (cockpit, engine, head
+ *  blow-off) and falling back to the location whose IS hit zero. */
+function destroyedReasonFor(
+  damage: UnitDamageState,
+  critRows?: readonly CriticalResolution[],
+): DestroyedReason {
+  if (critRows) {
+    for (const res of critRows) {
+      for (const row of res.rows) {
+        if (row.kind === "cockpitDestroyed") return "cockpitDestroyed";
+        if (row.kind === "engineDestroyed") return "engineDestroyed";
+        if (row.kind === "headBlownOff") return "headBlownOff";
+      }
+    }
+  }
+  if (damage.internalStructure.head <= 0) return "headDestroyed";
+  return "centerTorsoDestroyed";
 }
 
 export function createBattle(
@@ -584,8 +648,8 @@ export function createBattle(
       declaredAttacks: [],
       firedTargetId: null,
       passedAttacks: false,
-      destroyed: false,
-      removed: false,
+      destroyed: "not",
+      removed: "not",
     };
   }
 
@@ -671,7 +735,7 @@ export function damageBuildingAt(
   if (building === undefined) return null;
   const preCf = building.cf;
   const occupants = Object.values(state.units)
-    .filter((u) => !u.removed && sameHex(u.position, hex))
+    .filter((u) => !isUnitRemoved(u) && sameHex(u.position, hex))
     .map((u) => u.id);
   state.buildings[key] = applyBuildingDamage(building, damage);
   const cf = state.buildings[key]!.cf;
@@ -719,7 +783,7 @@ export const CRAWL_MP_PER_HEX = 2;
 export function declareMove(state: BattleState, unitId: string, mode: MoveMode): void {
   requirePhase(state, "movement");
   const unit = requireUnit(state, unitId);
-  if (unit.removed) throw new Error(`${unitId} is removed from play`);
+  if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot move`);
   if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot move`);
   if (mode !== "standStill" && isUnitImmobile(unit.damage)) {
@@ -744,7 +808,7 @@ export function executeMove(
   const unit = requireUnit(state, unitId);
   if (unit.moveMode === null) throw new Error(`Declare a movement mode for ${unitId} first`);
   const mode = unit.moveMode;
-  if (unit.removed) throw new Error(`${unitId} is removed from play`);
+  if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot move`);
   if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot move`);
   if (unit.prone && steps.length > 0 && !(unit.moveMode === "walk")) {
@@ -927,7 +991,7 @@ export function executeMove(
         commitAt({ ...cur }, unit.facing, mode, curSpent, curDirs);
         return;
       }
-      if ((!crawling && unit.prone) || unit.destroyed) {
+      if ((!crawling && unit.prone) || unit.destroyed !== "not") {
         commitAt({ ...cur }, unit.facing, mode, curSpent, curDirs);
         return;
       }
@@ -969,7 +1033,7 @@ export function declareAttacks(
 ): void {
   requirePhase(state, "weaponAttack");
   const unit = requireUnit(state, unitId);
-  if (unit.destroyed || unit.removed) throw new Error(`${unitId} is destroyed`);
+  if (isUnitRemoved(unit)) throw new Error(`${unitId} is destroyed`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot fire`);
   if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot fire`);
   if (unit.declaredAttacks.length > 0)
@@ -1031,7 +1095,7 @@ export function declareAttacks(
     }
 
     const target = requireUnit(state, decl.targetId);
-    if (target.removed) throw new Error(`Target ${target.id} is removed from play`);
+    if (isUnitRemoved(target)) throw new Error(`Target ${target.id} is removed from play`);
     if (target.team === unit.team) throw new Error("Target must belong to another team");
 
     const dist = hexDistance(unit.position, target.position);
@@ -1317,7 +1381,7 @@ export function applyPilotHits(
   rng: Rng,
 ): void {
   for (let i = 0; i < hits; i++) {
-    if (unit.destroyed || unit.removed) return;
+    if (isUnitRemoved(unit)) return;
     unit.pilotHits += 1;
     state.events.push({
       kind: "pilotDamaged",
@@ -1328,8 +1392,7 @@ export function applyPilotHits(
     });
     const target = consciousnessTarget(unit.pilotHits);
     if (target === null) {
-      state.events.push({ kind: "pilotKilled", unitId: unit.id });
-      markUnitDestroyed(state, unit);
+      removePilotKilled(state, unit);
       return;
     }
     // No further consciousness rolls once out this turn (TW p.42).
@@ -1399,8 +1462,11 @@ function applyDamageGroups(
       stripBinsInLocation(unit.ammoBins, loc);
     }
   }
-  if (!unit.destroyed && isUnitDestroyed(unit.damage)) {
-    markUnitDestroyed(state, unit);
+  if (
+    isUnitAvailable(unit) &&
+    (isUnitDestroyed(unit.damage) || crits.some((c) => c.killedReason !== null))
+  ) {
+    markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage, crits));
   }
   return crits;
 }
@@ -1427,7 +1493,7 @@ export interface FallOptions {
  * `allowProne` is set (a failed stand-up crashes back down).
  */
 export function applyFall(state: BattleState, unit: UnitState, rng: Rng, opts: FallOptions): void {
-  if (unit.destroyed || unit.removed) return;
+  if (isUnitRemoved(unit)) return;
   if (unit.prone && opts.allowProne !== true) return;
   const def = getMechDefFor(unit);
   const dir = rollFallDirection(rng);
@@ -1478,8 +1544,8 @@ export function applyFall(state: BattleState, unit: UnitState, rng: Rng, opts: F
     });
     if (!r.success) applyPilotHits(state, unit, 1, "fall", rng);
   }
-  if (!unit.destroyed && isUnitDestroyed(unit.damage)) {
-    markUnitDestroyed(state, unit);
+  if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
+    markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage));
   }
 }
 
@@ -1498,7 +1564,7 @@ export interface PhaseSnapshots {
  */
 export function resolvePhasePiloting(state: BattleState, rng: Rng, before: PhaseSnapshots): void {
   for (const unit of Object.values(state.units)) {
-    if (unit.removed || unit.destroyed || unit.prone) continue;
+    if (isUnitRemoved(unit) || unit.prone) continue;
     const def = getMechDefFor(unit);
     const dmgBefore = before.damage[unit.id] ?? unit.damage;
     const critBefore = before.crit[unit.id] ?? unit.critSlotsDestroyed;
@@ -1602,6 +1668,10 @@ export function resolveAllAttacks(state: BattleState, rng: Rng): void {
   const targetAmmoBinsMap: Record<string, AmmoBins> = {};
   const targetDestroyedWeaponsMap: Record<string, number[]> = {};
   const buildingOutcomes: BuildingDamageResult[] = [];
+  /** First crit-derived kill reason per target (cockpit, engine, head
+   *  blow-off); drives `markUnitDestroyed` when the damage state alone
+   *  wouldn't show a kill (the engine-crit case). */
+  const targetKilledReason: Record<string, DestroyedReason> = {};
 
   for (const result of results) {
     for (const { targetId, resolution, buildingDamage } of result.resolutions) {
@@ -1687,6 +1757,9 @@ export function resolveAllAttacks(state: BattleState, rng: Rng): void {
         currentDamage.armor[arm] = 0;
         currentDamage.internalStructure[arm] = 0;
       }
+      if (crit.killedReason !== null && targetKilledReason[targetId] === undefined) {
+        targetKilledReason[targetId] = crit.killedReason;
+      }
     }
 
     targetDamageMap[targetId] = currentDamage;
@@ -1731,8 +1804,15 @@ export function resolveAllAttacks(state: BattleState, rng: Rng): void {
 
   // Check destruction and mark units
   for (const unit of Object.values(state.units)) {
-    if (!unit.destroyed && isUnitDestroyed(unit.damage)) {
-      markUnitDestroyed(state, unit);
+    if (
+      isUnitAvailable(unit) &&
+      (isUnitDestroyed(unit.damage) || targetKilledReason[unit.id] !== undefined)
+    ) {
+      markUnitDestroyed(
+        state,
+        unit,
+        targetKilledReason[unit.id] ?? destroyedReasonFor(unit.damage),
+      );
     }
   }
 
@@ -1743,7 +1823,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng): void {
     for (const { targetId, resolution } of result.resolutions) {
       if (!resolution.hit) continue;
       const target = requireUnit(state, targetId);
-      if (target.destroyed || target.removed) continue;
+      if (isUnitRemoved(target)) continue;
       const headGroups = resolution.groups.filter(
         (g) => g.location === "head" && g.damage >= 1,
       ).length;
@@ -1758,8 +1838,8 @@ export function resolveAllAttacks(state: BattleState, rng: Rng): void {
     }
   }
   for (const unit of Object.values(state.units)) {
-    if (!unit.destroyed && isUnitDestroyed(unit.damage)) {
-      markUnitDestroyed(state, unit);
+    if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
+      markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage));
     }
   }
 
@@ -1801,8 +1881,8 @@ export function advancePhase(state: BattleState, rng: Rng = DEFAULT_RNG): void {
     }
     case "weaponAttack": {
       for (const unit of Object.values(state.units)) {
-        if (!unit.destroyed && isUnitDestroyed(unit.damage)) {
-          markUnitDestroyed(state, unit);
+        if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
+          markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage));
         }
       }
       // The end phase starts with heat resolution: engine crit heat,
@@ -1843,7 +1923,7 @@ export function advancePhase(state: BattleState, rng: Rng = DEFAULT_RNG): void {
  * heat, and finally dissipation against the operational heat-sink count.
  */
 export function resolveHeatPhase(state: BattleState, rng: Rng): void {
-  const units = Object.values(state.units).filter((u) => !u.removed);
+  const units = Object.values(state.units).filter((u) => !isUnitRemoved(u));
   const before: PhaseSnapshots = { damage: {}, crit: {} };
   for (const unit of units) {
     before.damage[unit.id] = {
@@ -2030,14 +2110,14 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
       damage: bin.damage,
       avoided: false,
     });
-    if (!unit.destroyed && isUnitDestroyed(unit.damage)) {
-      markUnitDestroyed(state, unit);
+    if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
+      markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage));
     }
   }
 
   // Dissipation: each operational heat sink removes 1 heat point.
   for (const unit of units) {
-    if (unit.destroyed) continue; // stop tracking heat for destroyed unit
+    if (isUnitRemoved(unit)) continue; // stop tracking heat for removed unit
     const def = getMechDefFor(unit);
     const prevHeat = unit.heat;
     const capacity = heatDissipation(def, unit.critSlotsDestroyed);
@@ -2058,7 +2138,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
   // Life-support pilot damage (TW p.41): with a destroyed life-support slot
   // the pilot takes 1 hit when end-of-heat-phase heat is 15+, 2 hits at 26+.
   for (const unit of units) {
-    if (unit.destroyed || unit.removed) continue;
+    if (isUnitRemoved(unit)) continue;
     const def = getMechDefFor(unit);
     if (countDestroyedStructure(def, unit.critSlotsDestroyed, LIFE_SUPPORT) <= 0) continue;
     if (unit.heat >= 26) applyPilotHits(state, unit, 2, "lifeSupport", rng);
@@ -2067,7 +2147,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
 
   // Wake attempts (TW p.42): end phase of a turn after the knockout turn.
   for (const unit of units) {
-    if (!unit.unconscious || unit.destroyed || unit.removed) continue;
+    if (!unit.unconscious || isUnitRemoved(unit)) continue;
     if (unit.unconsciousSinceTurn === null || unit.unconsciousSinceTurn >= state.turn) continue;
     const target = consciousnessTarget(unit.pilotHits);
     if (target === null) continue;
@@ -2111,7 +2191,7 @@ function movementTerrainPsr(
   crawling = false,
 ): boolean {
   // Crawling starts prone: a prone crawler is not a fresh fall.
-  const stop = (): boolean => (!crawling && unit.prone) || unit.destroyed || isShutdown(unit);
+  const stop = (): boolean => (!crawling && unit.prone) || isUnitRemoved(unit) || isShutdown(unit);
   const rollFall = (reason: string, trigger: number, cause: string, hex: HexCoord): boolean => {
     const modifier = trigger + preModifier;
     if (isShutdown(unit) || unit.unconscious) {
@@ -2203,7 +2283,7 @@ function movementTerrainPsr(
 export function attemptStandUp(state: BattleState, unitId: string, rng: Rng = DEFAULT_RNG): void {
   requirePhase(state, "movement");
   const unit = requireUnit(state, unitId);
-  if (unit.removed) throw new Error(`${unitId} is removed from play`);
+  if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
   if (!unit.prone) throw new Error(`${unitId} is not prone`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot stand up`);
   if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot stand up`);
@@ -2266,7 +2346,7 @@ export function attemptStandUp(state: BattleState, unitId: string, rng: Rng = DE
 export function dropProne(state: BattleState, unitId: string): void {
   requirePhase(state, "movement");
   const unit = requireUnit(state, unitId);
-  if (unit.removed) throw new Error(`${unitId} is removed from play`);
+  if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
   if (unit.prone) throw new Error(`${unitId} is already prone`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot move`);
   if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot move`);
@@ -2305,7 +2385,7 @@ export function dropProne(state: BattleState, unitId: string): void {
 export function proneFacingTurn(state: BattleState, unitId: string, facings: number): void {
   requirePhase(state, "movement");
   const unit = requireUnit(state, unitId);
-  if (unit.removed) throw new Error(`${unitId} is removed from play`);
+  if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
   if (!unit.prone) throw new Error(`${unitId} is not prone`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot move`);
   if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot move`);
@@ -2346,15 +2426,14 @@ export function proneFacingTurn(state: BattleState, unitId: string, facings: num
 export function ejectPilot(state: BattleState, unitId: string): void {
   requirePhase(state, "movement");
   const unit = requireUnit(state, unitId);
-  if (unit.removed) throw new Error(`${unitId} is removed from play`);
-  unit.destroyed = true;
-  unit.removed = true;
+  if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
+  unit.removed = "pilotEjected";
   state.wrecks[`${unit.position.col},${unit.position.row}`] = {
     unitId,
     level: 2,
   };
   state.actedThisPhase.push(unitId);
-  state.events.push({ kind: "unitEjected", unitId }, { kind: "unitRemoved", unitId });
+  state.events.push({ kind: "unitRemoved", unitId, reason: "pilotEjected" });
 }
 
 /** Voluntary shutdown declaration, resolved during the movement phase: the
@@ -2363,7 +2442,7 @@ export function ejectPilot(state: BattleState, unitId: string): void {
 export function voluntaryShutdown(state: BattleState, unitId: string): void {
   requirePhase(state, "movement");
   const unit = requireUnit(state, unitId);
-  if (unit.removed) throw new Error(`${unitId} is removed from play`);
+  if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
   if (isShutdown(unit)) throw new Error(`${unitId} is already shut down`);
   unit.shutdown = "manual";
   state.actedThisPhase.push(unitId);
@@ -2391,7 +2470,7 @@ export function attemptVoluntaryStartup(
 ): void {
   requirePhase(state, "movement");
   const unit = requireUnit(state, unitId);
-  if (unit.removed) throw new Error(`${unitId} is removed from play`);
+  if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
   if (isNominal(unit)) throw new Error(`${unitId} is not shut down`);
   if (unit.shutdown === "starting") throw new Error(`${unitId} is already starting up`);
   const heat = unit.heat;
@@ -2429,7 +2508,7 @@ export function attemptVoluntaryStartup(
 export function passMovement(state: BattleState, unitId: string): void {
   requirePhase(state, "movement");
   const unit = requireUnit(state, unitId);
-  if (unit.removed) throw new Error(`${unitId} is removed from play`);
+  if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
   if (isNominal(unit)) throw new Error(`${unitId} is not shut down`);
   state.actedThisPhase.push(unitId);
 }
@@ -2472,7 +2551,7 @@ export function actorQueue(state: BattleState): ActorQueueView {
   const alive = new Map<string, UnitState>();
   const removed: ActorQueueActorView[] = [];
   for (const u of Object.values(state.units)) {
-    if (u.removed) {
+    if (isUnitRemoved(u)) {
       removed.push(actorToQueueView(u, false));
       continue;
     }
@@ -2498,7 +2577,7 @@ function pendingActors(state: BattleState): string[] {
   const nominalOnly = state.phase === "weaponAttack";
   return state.actorQueue.filter((id) => {
     const unit = state.units[id];
-    if (!unit || unit.removed) return false;
+    if (!unit || isUnitRemoved(unit)) return false;
     if (state.actedThisPhase.includes(id)) return false;
     if (unit.passedAttacks) return false;
     // An unconscious pilot cannot move, fire, or act (TW p.42).
@@ -2513,7 +2592,7 @@ function pendingActors(state: BattleState): string[] {
  *  alternate initiative-loser-first, letting the larger team act
  *  ⌊size/minSize⌋ units per step (TW unequal-force activation). */
 function buildActorQueue(state: BattleState): string[] {
-  const alive = Object.values(state.units).filter((u) => !u.removed);
+  const alive = Object.values(state.units).filter((u) => !isUnitRemoved(u));
   const teams = [...new Set(alive.map((u) => u.team))];
   if (teams.length === 0 || state.initiativeWinnerTeam === null) return [];
   const winner = state.initiativeWinnerTeam;
@@ -2579,7 +2658,7 @@ export interface VictoryResult {
 export function checkVictory(state: BattleState): VictoryResult {
   const aliveTeams = new Set(
     Object.values(state.units)
-      .filter((u) => !u.removed)
+      .filter((u) => !isUnitRemoved(u))
       .map((u) => u.team),
   );
   if (aliveTeams.size <= 1) {

@@ -26,6 +26,7 @@ import {
   resolveHeatPhase,
   resolvePhasePiloting,
   rollInitiativePhase,
+  wreckAt,
 } from "../src/rules/game.js";
 import { createTestBattle, scriptedRng } from "./helpers.js";
 
@@ -473,18 +474,22 @@ describe("pilot damage", () => {
     );
   });
 
-  it("the sixth hit kills the pilot and destroys the unit", () => {
+  it("the sixth hit kills the pilot, removes the unit, and leaves a level-2 wreck", () => {
     const state = hbkEnf();
     const enf = getUnit(state, "enf");
     // consciousness TN 3/5/7/10/11: all succeed.
     applyPilotHits(state, enf, 5, "headHit", scriptedRng(2, 2, 3, 3, 4, 4, 5, 5, 6, 6));
     expect(enf.pilotHits).toBe(5);
-    expect(enf.destroyed).toBe(false);
+    expect(enf.destroyed).toBe("not");
+    expect(state.wrecks["2,3"]).toBeUndefined();
     applyPilotHits(state, enf, 1, "fall", scriptedRng());
     expect(enf.pilotHits).toBe(6);
-    expect(enf.destroyed).toBe(true);
+    expect(enf.destroyed).toBe("not");
+    expect(enf.removed).toBe("pilotKilled");
+    expect(state.wrecks["2,3"]).toEqual({ unitId: "enf", level: 2 });
+    expect(wreckAt(state, { col: 2, row: 3 })?.unitId).toBe("enf");
     expect(state.events).toContainEqual(
-      expect.objectContaining({ kind: "pilotKilled", unitId: "enf" }),
+      expect.objectContaining({ kind: "unitRemoved", unitId: "enf", reason: "pilotKilled" }),
     );
   });
 

@@ -48,6 +48,7 @@ import {
   hexDistance,
   isImmobile,
   isShutdown,
+  isUnitRemoved,
   losClear,
   losWoodsPointsBetween,
   neighbor,
@@ -393,7 +394,7 @@ export function declareMode(s: Session, word: string, locomotionWord?: string): 
     return;
   }
   if (mode === "eject") {
-    if (unit.removed) throw new Error(i18n(s.locale, "err.alreadyEjected", { id: unit.id }));
+    if (isUnitRemoved(unit)) throw new Error(i18n(s.locale, "err.alreadyEjected", { id: unit.id }));
     s.moveMode = "eject";
     s.postureMove = null;
     clearMoveQueue(s);
@@ -697,7 +698,7 @@ function validateQueuedAttacks(
   unit: UnitState,
   decls: readonly AttackDecl[],
 ): void {
-  if (unit.destroyed || unit.removed) throw new Error(`${unit.id} is destroyed`);
+  if (isUnitRemoved(unit)) throw new Error(`${unit.id} is destroyed`);
   if (isShutdown(unit)) throw new Error(`${unit.id} is shut down and cannot fire`);
   if (unit.unconscious) throw new Error(`${unit.id} is unconscious and cannot fire`);
   if (unit.declaredAttacks.length > 0)
@@ -739,7 +740,7 @@ function validateQueuedAttacks(
     }
     const target = battle.units[decl.targetId];
     if (!target) throw new Error(`Unknown unit id: ${decl.targetId}`);
-    if (target.removed) throw new Error(`Target ${target.id} is removed from play`);
+    if (isUnitRemoved(target)) throw new Error(`Target ${target.id} is removed from play`);
     if (target.team === unit.team) throw new Error("Target must belong to another team");
     const dist = hexDistance(unit.position, target.position);
     const b = bearingExact(unit.position, target.position);
@@ -812,7 +813,8 @@ export function queueFire(s: Session, decl: AttackDecl): void {
   const target = battle.units[decl.targetId];
   if (!target) throw new Error(i18n(s.locale, "err.unknownUnitId", { id: decl.targetId }));
   if (target.team === unit.team) throw new Error(i18n(s.locale, "err.selfTarget"));
-  if (target.removed) throw new Error(i18n(s.locale, "err.targetRemoved", { id: target.id }));
+  if (isUnitRemoved(target))
+    throw new Error(i18n(s.locale, "err.targetRemoved", { id: target.id }));
   const pending = s.fireDecls[0]?.targetId;
   if (pending !== undefined && pending !== decl.targetId) {
     throw new Error(i18n(s.locale, "err.oneTarget", { target: pending }));

@@ -296,7 +296,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
         ...application,
         after: res.damage,
         blownOffArms: mergeUnique(application.blownOffArms, res.blownOffArms),
-        killed: application.killed || res.killed,
+        killed: application.killed || res.killedReason !== null,
       };
     }
     base.crits.push(res);

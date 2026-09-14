@@ -88,6 +88,7 @@ import { CRIT_SLOT_COUNTS } from "../data/mech.schema.js";
 import { getWeaponDefFor } from "../data/weapon.schema.js";
 import { type AmmoBinState, type AmmoBins, ammoBinId, stripBinsInLocation } from "./ammo.js";
 import { applyDamage, type DamageApplication, type UnitDamageState } from "./damage.js";
+import type { DestroyedReason } from "./game.js";
 
 export interface CritSource {
   /** Location where the original hit stripped at least 1 internal-structure point. */
@@ -188,9 +189,10 @@ export interface CriticalResolution {
   /** Limbs blown off (after this determining's effects, in addition to those
    *  present in the input state). */
   readonly blownOffArms: readonly Location[];
-  /** True if the unit is killed by these crits (head or CT IS to 0, or
-   *  cockpit destroyed, or 12 on a head location). */
-  readonly killed: boolean;
+  /** Reason the unit is killed by these crits (null when it survives): head
+   *  or CT IS to 0, cockpit destroyed, head blown off, or three engine
+   *  crits. See `DestroyedReason`. */
+  readonly killedReason: DestroyedReason | null;
   /** Per-crit-slot ammo state after this resolution. */
   readonly ammoBins: AmmoBins;
 }
@@ -381,7 +383,7 @@ interface MutableCritState {
   ammoBins: AmmoBins;
   rows: CriticalEffect[];
   blownOffArms: Location[];
-  killed: boolean;
+  killedReason: DestroyedReason | null;
   /** Guard against pathological recursion in ammo-explosion cascades. */
   depth: number;
 }
@@ -400,7 +402,7 @@ export function resolveCriticalHits(input: ResolveCriticalsInput): CriticalResol
     ammoBins: { ...input.ammoBins },
     rows: [],
     blownOffArms: [],
-    killed: false,
+    killedReason: null,
     depth: 0,
   };
   const topRoll = runDetermining(input.rng, input.def, input.source, state);
@@ -416,7 +418,7 @@ export function resolveCriticalHits(input: ResolveCriticalsInput): CriticalResol
     destroyedWeapons: state.destroyedWeapons,
     damage: state.damage,
     blownOffArms: state.blownOffArms,
-    killed: state.killed,
+    killedReason: state.killedReason,
     ammoBins: state.ammoBins,
   };
 }
@@ -451,7 +453,7 @@ function runDetermining(
       zeroLocation(state, "head");
       state.damage.armor.head = 0;
       state.damage.internalStructure.head = 0;
-      state.killed = true;
+      state.killedReason = "headBlownOff";
       state.rows.push({ kind: "headBlownOff", rolls: [det.roll] });
     } else if (isArm(source.location)) {
       zeroLocation(state, source.location);
@@ -586,7 +588,10 @@ function applySlotHit(
     if (amount > 0) {
       const app = applyAmmoExplosion(state.damage, loc, amount, checkCASE(def, loc));
       state.damage = app.after;
-      if (app.killed) state.killed = true;
+      if (app.killed) {
+        state.killedReason =
+          state.damage.internalStructure.head <= 0 ? "headDestroyed" : "centerTorsoDestroyed";
+      }
       for (const arm of app.blownOffArms) {
         state.blownOffArms.push(arm);
       }
@@ -624,7 +629,7 @@ function applySlotHit(
   const name = slot.name;
   if (name === COCKPIT) {
     // Cockpit crit kills the 'Mech (pilot killed).
-    state.killed = true;
+    state.killedReason = "cockpitDestroyed";
     state.damage.armor.head = 0;
     state.damage.internalStructure.head = 0;
     zeroLocation(state, "head");
@@ -649,7 +654,7 @@ function applySlotHit(
     // Three engine crit slots destroyed = 'Mech killed (TW p.33).
     const engineCount = countDestroyedEngineSlots(def, state.destroyed);
     if (engineCount >= 3) {
-      state.killed = true;
+      state.killedReason = "engineDestroyed";
       state.rows.push({
         kind: "engineDestroyed",
         location: loc,

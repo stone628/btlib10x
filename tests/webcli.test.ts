@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getMapDef, getMechDefFor } from "../src/data/index.js";
-import { bestFireTarget, isNominal, suggestFireTargets } from "../src/index.js";
+import { bestFireTarget, isNominal, isUnitAvailable, suggestFireTargets } from "../src/index.js";
 import { ammoWeaponTotals } from "../src/rules/ammo.js";
 import {
   createBoardModel,
@@ -48,7 +48,7 @@ function autoPlay(s: S.Session): void {
     const st = s.battle!;
     const actorId = S.currentActor(s)!.id;
     const ids = Object.values(st.units)
-      .filter((u) => !u.removed)
+      .filter((u) => isUnitAvailable(u))
       .map((u) => u.id);
     const enemy = ids.find((id) => id !== actorId)!;
     if (st.phase === "movement") {
@@ -761,8 +761,8 @@ describe("eject", () => {
     expect(s.moveMode).toBe("eject");
     const out = run(s, "done").join("\n");
     expect(out).toContain("ejects");
-    expect(actor.removed).toBe(true);
-    expect(actor.destroyed).toBe(true);
+    expect(actor.removed).toBe("pilotEjected");
+    expect(actor.destroyed).toBe("not");
     expect(s.battle!.wrecks[`${hex.col},${hex.row}`]).toEqual({
       unitId: actor.id,
       level: 2,
@@ -782,7 +782,7 @@ describe("full game", () => {
       const st = s.battle!;
       const actorId = S.currentActor(s)!.id;
       const ids = Object.values(st.units)
-        .filter((u) => !u.removed)
+        .filter((u) => isUnitAvailable(u))
         .map((u) => u.id);
       const enemy = ids.find((id) => id !== actorId)!;
       let out: string[];

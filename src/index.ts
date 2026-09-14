@@ -84,6 +84,7 @@ export type {
 export {
   ammoDamagePerShot,
   applyAmmoExplosion,
+  countDestroyedEngineSlots,
   effectiveMovement,
   resolveCriticalHits,
 } from "./rules/critical.js";

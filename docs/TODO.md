@@ -9,8 +9,6 @@
 
 ## To Do
 
-- fix 'REMOVED FROM PLAY' contains reason (destroy, eject, pilot kill, ...etc)
-- pilot unconscious with 6 hit? pilot kill maybe?
 - need snapshot keeping, capable of rollback N steps like ctrl-z
 - integrate torso twist in attack phase
 - improve 'add' command at 'setup' phase
@@ -96,7 +94,8 @@
   `terrainMod` changed −1 → 0 (TW: depth-1 water grants cover, not an easy-hit
   bonus). Cover-hit building-CF damage deferred.
 - **Pilot ejection / wrecks** — `ejectPilot` (movement phase only) marks a
-  unit destroyed + removed (counts toward victory; skipped by the actor
+  unit removed (`removed = "pilotEjected"`, destroyed stays `"not"`; counts
+  toward victory; skipped by the actor
   queue and occupancy checks) and spawns a permanent **level-2 wreck**
   (`BattleState.wrecks`, `WreckState { unitId; level }`). Wreck hexes are
   unenterable: `reachableLandings` excludes them via the `wreckAt` option and
@@ -174,7 +173,8 @@
 - **Checked "lose both legs = lose the game"** — current rule subset treats
   losing both legs as immobility only (`isImmobile` in `src/rules/damage.ts`),
   not as a kill; victory (`checkVictory` in `src/rules/game.ts`) only fires on
-  head/CT destruction or `removed` flag. Real TW consciousness-roll removal
+  head/CT destruction or `removed` flag (reason union `"not"` < `"destroyed"` /
+  `"pilotEjected"` / `"pilotKilled"`). Real TW consciousness-roll removal
   on immobile end-of-turn is deferred to the piloting/falling milestone above.
 
 ## Verify later
