@@ -14,7 +14,7 @@ import { CODE, LOCATION, MODEL_CODE, SHOTS_PER_TON } from "./mtf-tables.mjs";
  * MechDef JSON. Drop a .mtf into docs/mtf/ and run `npm run mtf`; the new 'Mech
  * is emitted to src/data/mechs/ and auto-registered by the catalog generator.
  *
- * Conventions (must match src/data/mechs/*.json):
+ * Conventions (must match src/data/mechs/*.ts):
  *   - Flat armor per location; torso values SUM the MTF front + rear boxes. The
  *     rear torso values are also stored inside `armor` as `centerTorsoRear` /
  *     `leftTorsoRear` / `rightTorsoRear` (metadata only; the flat damage model
@@ -261,13 +261,19 @@ for (const file of files) {
     for (const e of errors) console.error(`  - ${e}`);
     continue;
   }
-  const outFile = join(outDir, `${def.model.toLowerCase()}.json`);
+  const outFile = join(outDir, `${def.model.toLowerCase()}.ts`);
   if (existsSync(outFile) && !force) {
     console.log(`skip existing ${outFile.replace(`${root}/`, "")} (use --force to overwrite)`);
     skipped++;
     continue;
   }
-  writeFileSync(outFile, `${JSON.stringify(def, null, 2)}\n`);
+  const ts = `import type { MechDef } from "../mech.schema.js";
+
+const def: MechDef = ${JSON.stringify(def, null, 2)} as const satisfies MechDef;
+
+export default def;
+`;
+  writeFileSync(outFile, ts);
   console.log(`wrote ${outFile.replace(`${root}/`, "")}`);
   generated++;
 }

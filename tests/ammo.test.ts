@@ -5,8 +5,14 @@ import {
   getShotsPerBinFor,
   listAmmoWeapons,
 } from "../src/data/ammo.schema.js";
+import type { MechDef, ResolvedMechDef } from "../src/data/index.js";
 import { getAllMechDefs, getMechDef, validateMechDef } from "../src/data/index.js";
 import { getWeaponDefFor } from "../src/data/weapon.schema.js";
+
+function toMechDef(d: ResolvedMechDef): MechDef {
+  const { armorRear: _ar, internalStructure: _is, weapons: rw, ...rest } = d;
+  return { ...rest, weapons: Object.values(rw) };
+}
 
 describe("ammo catalog", () => {
   it("ships every ammo-bearing weapon in the catalog", () => {
@@ -44,24 +50,22 @@ describe("ammo catalog", () => {
 describe("ammo validation in MechDef", () => {
   it("re-validates every bundled definition with the ammo rule", () => {
     for (const def of getAllMechDefs()) {
-      expect(() => validateMechDef({ ...def, weapons: Object.values(def.weapons) })).not.toThrow();
+      expect(() => validateMechDef(toMechDef(def))).not.toThrow();
     }
   });
 
   it("rejects a mount.shots that is not a multiple of shotsPerBin", () => {
-    const base = getMechDef("HBK-4G")!;
+    const base = toMechDef(getMechDef("HBK-4G")!);
     expect(() =>
       validateMechDef({
         ...base,
-        weapons: Object.values(base.weapons).map((w) =>
-          w.weapon === "AC/20" ? { ...w, shots: 7 } : w,
-        ),
-      }),
+        weapons: base.weapons.map((w) => (w.weapon === "AC/20" ? { ...w, shots: 7 } : w)),
+      } as MechDef),
     ).toThrow(/must be a multiple/);
   });
 
   it("rejects an ammo crit slot whose weapon has no ammo definition", () => {
-    const base = getMechDef("HBK-4G")!;
+    const base = toMechDef(getMechDef("HBK-4G")!);
     expect(() =>
       validateMechDef({
         ...base,
@@ -71,7 +75,7 @@ describe("ammo validation in MechDef", () => {
             i === 0 ? { kind: "ammo" as const, weapon: "Medium Laser" } : s,
           ),
         },
-      }),
+      } as MechDef),
     ).toThrow(/has no ammo definition/);
   });
 });

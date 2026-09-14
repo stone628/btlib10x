@@ -1,44 +1,41 @@
 /**
  * GENERATED FILE - do not edit by hand. Regenerate with `npm run gen:mechs`
- * (build/typecheck run it automatically). Indexes every src/data/mechs/*.json,
- * validating each against the raw JSON schema and resolving it into the
- * engine-facing definition that keeps front and rear armor as separate pools.
+ * (build/typecheck run it automatically). Indexes every src/data/mechs/*.ts,
+ * resolving each typed MechDef into the engine-facing ResolvedMechDef that
+ * keeps front and rear armor as separate pools.
  */
-import type { ResolvedMechDef } from "./mech.schema.js";
-import { resolveMechDef, validateMechDef } from "./mech.schema.js";
+import type { MechDef, ResolvedMechDef } from "./mech.schema.js";
+import { resolveMechDef } from "./mech.schema.js";
 
-const load = (data: unknown): ResolvedMechDef => resolveMechDef(validateMechDef(data));
+import as7dDef from "./mechs/as7-d.js";
+import bswx1Def from "./mechs/bsw-x1.js";
+import bzkf3Def from "./mechs/bzk-f3.js";
+import cda3maDef from "./mechs/cda-3ma.js";
+import enf4rDef from "./mechs/enf-4r.js";
+import grf1nDef from "./mechs/grf-1n.js";
+import hbk4gDef from "./mechs/hbk-4g.js";
+import her5saDef from "./mechs/her-5sa.js";
+import mcmkii2Def from "./mechs/mc-mkii-2.js";
+import twprimeDef from "./mechs/tw-prime.js";
+import whkprimeDef from "./mechs/whk-prime.js";
+import wvr6rDef from "./mechs/wvr-6r.js";
 
-import as7dJson from "./mechs/as7-d.json";
-import bswx1Json from "./mechs/bsw-x1.json";
-import bzkf3Json from "./mechs/bzk-f3.json";
-import cda3maJson from "./mechs/cda-3ma.json";
-import enf4rJson from "./mechs/enf-4r.json";
-import grf1nJson from "./mechs/grf-1n.json";
-import hbk4gJson from "./mechs/hbk-4g.json";
-import her5saJson from "./mechs/her-5sa.json";
-import mcmkii2Json from "./mechs/mc-mkii-2.json";
-import twprimeJson from "./mechs/tw-prime.json";
-import whkprimeJson from "./mechs/whk-prime.json";
-import wvr6rJson from "./mechs/wvr-6r.json";
+const mechs: readonly [string, MechDef][] = [
+  [as7dDef.model, as7dDef],
+  [bswx1Def.model, bswx1Def],
+  [bzkf3Def.model, bzkf3Def],
+  [cda3maDef.model, cda3maDef],
+  [enf4rDef.model, enf4rDef],
+  [grf1nDef.model, grf1nDef],
+  [hbk4gDef.model, hbk4gDef],
+  [her5saDef.model, her5saDef],
+  [mcmkii2Def.model, mcmkii2Def],
+  [twprimeDef.model, twprimeDef],
+  [whkprimeDef.model, whkprimeDef],
+  [wvr6rDef.model, wvr6rDef],
+];
 
 /** All 'Mech definitions shipped with the library, keyed by model. */
 export const MECH_DEFS: Readonly<Map<string, ResolvedMechDef>> = new Map<string, ResolvedMechDef>(
-  [
-    as7dJson,
-    bswx1Json,
-    bzkf3Json,
-    cda3maJson,
-    enf4rJson,
-    grf1nJson,
-    hbk4gJson,
-    her5saJson,
-    mcmkii2Json,
-    twprimeJson,
-    whkprimeJson,
-    wvr6rJson,
-  ].map((data) => {
-    const def = load(data);
-    return [def.model, def];
-  }),
+  mechs.map(([model, def]) => [model, resolveMechDef(def)]),
 );

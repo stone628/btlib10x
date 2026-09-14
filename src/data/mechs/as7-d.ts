@@ -1,0 +1,385 @@
+import type { MechDef } from "../mech.schema.js";
+
+const def: MechDef = {
+  model: "AS7-D",
+  name: "Atlas",
+  tonnage: 100,
+  weightClass: "Assault",
+  techBase: "Inner Sphere",
+  walking: 3,
+  running: 5,
+  jumping: 0,
+  armor: {
+    head: 9,
+    centerTorso: 61,
+    rightTorso: 42,
+    leftTorso: 42,
+    rightArm: 34,
+    leftArm: 34,
+    rightLeg: 41,
+    leftLeg: 41,
+    centerTorsoRear: 14,
+    rightTorsoRear: 10,
+    leftTorsoRear: 10,
+  },
+  weapons: [
+    {
+      weapon: "Medium Laser",
+      location: "centerTorso",
+      rearFacing: true,
+    },
+    {
+      weapon: "Medium Laser",
+      location: "centerTorso",
+      rearFacing: true,
+    },
+    {
+      weapon: "AC/20",
+      location: "rightTorso",
+      shots: 10,
+    },
+    {
+      weapon: "LRM 20",
+      location: "leftTorso",
+      shots: 12,
+    },
+    {
+      weapon: "SRM 6",
+      location: "leftTorso",
+      shots: 15,
+    },
+    {
+      weapon: "Medium Laser",
+      location: "rightArm",
+    },
+    {
+      weapon: "Medium Laser",
+      location: "leftArm",
+    },
+  ],
+  critSlots: {
+    centerTorso: [
+      {
+        kind: "structure",
+        name: "engine",
+      },
+      {
+        kind: "structure",
+        name: "engine",
+      },
+      {
+        kind: "structure",
+        name: "engine",
+      },
+      {
+        kind: "structure",
+        name: "gyro",
+      },
+      {
+        kind: "structure",
+        name: "gyro",
+      },
+      {
+        kind: "structure",
+        name: "gyro",
+      },
+      {
+        kind: "structure",
+        name: "gyro",
+      },
+      {
+        kind: "structure",
+        name: "engine",
+      },
+      {
+        kind: "structure",
+        name: "engine",
+      },
+      {
+        kind: "structure",
+        name: "engine",
+      },
+      {
+        kind: "weapon",
+        weapon: "Medium Laser",
+      },
+      {
+        kind: "weapon",
+        weapon: "Medium Laser",
+      },
+    ],
+    leftTorso: [
+      {
+        kind: "structure",
+        name: "heatSink",
+      },
+      {
+        kind: "weapon",
+        weapon: "LRM 20",
+      },
+      {
+        kind: "weapon",
+        weapon: "LRM 20",
+      },
+      {
+        kind: "weapon",
+        weapon: "LRM 20",
+      },
+      {
+        kind: "weapon",
+        weapon: "LRM 20",
+      },
+      {
+        kind: "weapon",
+        weapon: "LRM 20",
+      },
+      {
+        kind: "weapon",
+        weapon: "SRM 6",
+      },
+      {
+        kind: "weapon",
+        weapon: "SRM 6",
+      },
+      {
+        kind: "ammo",
+        weapon: "LRM 20",
+      },
+      {
+        kind: "ammo",
+        weapon: "LRM 20",
+      },
+      {
+        kind: "ammo",
+        weapon: "SRM 6",
+      },
+      {
+        kind: "empty",
+      },
+    ],
+    rightTorso: [
+      {
+        kind: "weapon",
+        weapon: "AC/20",
+      },
+      {
+        kind: "weapon",
+        weapon: "AC/20",
+      },
+      {
+        kind: "weapon",
+        weapon: "AC/20",
+      },
+      {
+        kind: "weapon",
+        weapon: "AC/20",
+      },
+      {
+        kind: "weapon",
+        weapon: "AC/20",
+      },
+      {
+        kind: "weapon",
+        weapon: "AC/20",
+      },
+      {
+        kind: "weapon",
+        weapon: "AC/20",
+      },
+      {
+        kind: "weapon",
+        weapon: "AC/20",
+      },
+      {
+        kind: "weapon",
+        weapon: "AC/20",
+      },
+      {
+        kind: "weapon",
+        weapon: "AC/20",
+      },
+      {
+        kind: "ammo",
+        weapon: "AC/20",
+      },
+      {
+        kind: "ammo",
+        weapon: "AC/20",
+      },
+    ],
+    leftArm: [
+      {
+        kind: "structure",
+        name: "shoulder",
+      },
+      {
+        kind: "structure",
+        name: "upperArmActuator",
+      },
+      {
+        kind: "structure",
+        name: "lowerArmActuator",
+      },
+      {
+        kind: "structure",
+        name: "handActuator",
+      },
+      {
+        kind: "structure",
+        name: "heatSink",
+      },
+      {
+        kind: "weapon",
+        weapon: "Medium Laser",
+      },
+      {
+        kind: "empty",
+      },
+      {
+        kind: "empty",
+      },
+      {
+        kind: "empty",
+      },
+      {
+        kind: "empty",
+      },
+      {
+        kind: "empty",
+      },
+      {
+        kind: "empty",
+      },
+    ],
+    rightArm: [
+      {
+        kind: "structure",
+        name: "shoulder",
+      },
+      {
+        kind: "structure",
+        name: "upperArmActuator",
+      },
+      {
+        kind: "structure",
+        name: "lowerArmActuator",
+      },
+      {
+        kind: "structure",
+        name: "handActuator",
+      },
+      {
+        kind: "structure",
+        name: "heatSink",
+      },
+      {
+        kind: "weapon",
+        weapon: "Medium Laser",
+      },
+      {
+        kind: "empty",
+      },
+      {
+        kind: "empty",
+      },
+      {
+        kind: "empty",
+      },
+      {
+        kind: "empty",
+      },
+      {
+        kind: "empty",
+      },
+      {
+        kind: "empty",
+      },
+    ],
+    leftLeg: [
+      {
+        kind: "structure",
+        name: "hip",
+      },
+      {
+        kind: "structure",
+        name: "upperLegActuator",
+      },
+      {
+        kind: "structure",
+        name: "lowerLegActuator",
+      },
+      {
+        kind: "structure",
+        name: "footActuator",
+      },
+      {
+        kind: "structure",
+        name: "heatSink",
+      },
+      {
+        kind: "structure",
+        name: "heatSink",
+      },
+    ],
+    rightLeg: [
+      {
+        kind: "structure",
+        name: "hip",
+      },
+      {
+        kind: "structure",
+        name: "upperLegActuator",
+      },
+      {
+        kind: "structure",
+        name: "lowerLegActuator",
+      },
+      {
+        kind: "structure",
+        name: "footActuator",
+      },
+      {
+        kind: "structure",
+        name: "heatSink",
+      },
+      {
+        kind: "structure",
+        name: "heatSink",
+      },
+    ],
+    head: [
+      {
+        kind: "structure",
+        name: "lifeSupport",
+      },
+      {
+        kind: "structure",
+        name: "sensors",
+      },
+      {
+        kind: "structure",
+        name: "cockpit",
+      },
+      {
+        kind: "structure",
+        name: "heatSink",
+      },
+      {
+        kind: "structure",
+        name: "sensors",
+      },
+      {
+        kind: "structure",
+        name: "lifeSupport",
+      },
+    ],
+  },
+  heatsink: {
+    type: "single",
+    count: 20,
+  },
+  source:
+    "docs/mtf/Atlas AS7-D.mtf (TRO 3039 - Star League). Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount; crit slot table per location included; CT Medium Lasers are rear-facing (MTF (R)).",
+} as const satisfies MechDef;
+
+export default def;

@@ -6,7 +6,7 @@ import {
   type MapDef,
   type TerrainHexDef,
 } from "btlib10x";
-import { i18n, type LocaleId, type MessageKey } from "./i18n/index.js";
+import { getCompensatedLength, i18n, type LocaleId, type MessageKey } from "./i18n/index.js";
 
 // ---- shared presentation types ----
 
@@ -80,6 +80,7 @@ function styleClasses(style: CharStyle | undefined): string {
 
 /** Glyphs drawn inside hexes by terrain type. */
 const TERRAIN_GLYPHS: Readonly<Record<string, string>> = {
+  clear: " ",
   lightWoods: "w",
   heavyWoods: "W",
   rough: "r",
@@ -117,11 +118,28 @@ export const TEAM_STYLES: readonly CharStyle[] = [{ fg: "cyan" }, { fg: "magenta
 export const REACHABLE_MARKER = "<>";
 
 /** Localised board legend text (e.g. `"legend: w(light woods)  W(heavy woods)"`). */
-export function boardLegendText(map: MapDef, locale: LocaleId): string {
-  const terrainLegendList = map.legends.map(
-    (l) => `${TERRAIN_GLYPHS[l]}(${i18n(locale, `terrain.${l}` as MessageKey)})`,
-  );
-  return i18n(locale, "board.legend", { list: terrainLegendList.join(" ") });
+export function boardLegendText(map: MapDef, locale: LocaleId): string[] {
+  const header = i18n(locale, "board.legend");
+  const headerLen = getCompensatedLength(header);
+  const widthMax = COL_STRIDE * map.width;
+  let width = headerLen;
+  let legends: string[] = [header];
+  const lines: string[] = [];
+  const delimiter = " ";
+  const delimiterLen = delimiter.length;
+  for (const l of map.legends) {
+    const lt = `'${TERRAIN_GLYPHS[l]}'(${i18n(locale, `terrain.${l}` as MessageKey)})`;
+    const ltLen = getCompensatedLength(lt);
+    if (width >= widthMax - ltLen) {
+      lines.push(legends.join(delimiter));
+      width = headerLen;
+      legends = [" ".repeat(headerLen)];
+    }
+    legends.push(lt);
+    width += delimiterLen + ltLen;
+  }
+  if (legends.length > 0) lines.push(legends.join(delimiter));
+  return lines;
 }
 
 // ---- canvas constants ----
@@ -751,7 +769,7 @@ export function createBoardModel(info: BoardRenderInfo): BoardModel {
 function renderLegend(map: MapDef, el: Element, locale: LocaleId): void {
   const legendDiv = document.createElement("div");
   legendDiv.className = "board-legend";
-  legendDiv.textContent = boardLegendText(map, locale);
+  legendDiv.textContent = boardLegendText(map, locale).join("\n");
   el.appendChild(legendDiv);
 }
 

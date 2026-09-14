@@ -88,7 +88,7 @@ export function seededRng(seed: number): Rng {
 /** Flat text of one chunk (boards contribute legend + visible characters). */
 export function chunkText(chunk: Chunk): string[] {
   if (chunk.kind === "board") {
-    const lines: string[] = [boardLegendText(chunk.info.map, "en")];
+    const lines: string[] = boardLegendText(chunk.info.map, "en");
     lines.push(...boardToText(createBoardModel(chunk.info)).split("\n"));
     return lines;
   }
