@@ -259,8 +259,8 @@ describe("info", () => {
     const detail = run(s, "info map quickstart");
     const text = detail.join("\n");
     expect(text).toContain(`${qs.width}x${qs.height}`);
-    expect(text).toMatch(/lightWoods \d+/);
-    expect(text).toMatch(/heavyWoods \d+/);
+    expect(text).toMatch(/light woods/);
+    expect(text).toMatch(/heavy woods/);
     expect(text).toContain(`${GRID_GLYPHS.edgeSW} w0 ${GRID_GLYPHS.edgeSE}`);
     expect(text).toContain(`${GRID_GLYPHS.edgeSW} W0 ${GRID_GLYPHS.edgeSE}`);
     const beginner = run(s, "info map beginner").join("\n");
@@ -272,8 +272,8 @@ describe("info", () => {
     s.critsDisabled = true;
     const upper = run(s, "info map QUICKSTART").join("\n");
     const mixed = run(s, "info map QuickStart").join("\n");
-    expect(upper).toMatch(/lightWoods \d+/);
-    expect(mixed).toMatch(/lightWoods \d+/);
+    expect(upper).toMatch(/light woods/);
+    expect(mixed).toMatch(/light woods/);
   });
 
   it("matches weapon name case-insensitively", () => {

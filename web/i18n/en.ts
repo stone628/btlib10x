@@ -290,7 +290,7 @@ export const en = {
   "info.movement": "movement: walk {walk} / run {run} / jump {jump}",
   "info.movementHeat":
     "movement: walk {walk} / run {run} / jump {jump} - {penalty}MP(heat >= {threshold})",
-  "info.mapHead": "{name}: {w}x{h}",
+  "info.mapHead": "map: name({name}) {w}x{h}",
   "info.terrainLine": "terrain: {breakdown}",
   "info.terrainNone": "none",
   "info.elevationLine": "elevation: {breakdown}",
@@ -508,6 +508,21 @@ export const en = {
   "table.list.hitloc": "hitloc   — hit location (all arcs)",
   "table.list.crit": "crit     — critical determining",
   "table.list.heat": "heat     — heat scale (to-hit, MP, shutdown, ammo)",
+
+  // terrain types
+  "terrain.clear": "clear",
+  "terrain.lightWoods": "light woods",
+  "terrain.heavyWoods": "heavy woods",
+  "terrain.rough": "rough",
+  "terrain.rubble": "rubble",
+  "terrain.pavement": "pavement",
+  "terrain.water1": "shallow water",
+  "terrain.water2": "deep water",
+  "terrain.water3": "very deep water",
+  "terrain.lightBuilding": "light building",
+  "terrain.mediumBuilding": "medium building",
+  "terrain.heavyBuilding": "heavy building",
+  "terrain.hardenedBuilding": "hardened building",
 } as const;
 
 export type Catalog = Record<keyof typeof en, string>;

@@ -6,7 +6,7 @@ import {
   type MapDef,
   type TerrainHexDef,
 } from "btlib10x";
-import { i18n, type LocaleId } from "./i18n/index.js";
+import { i18n, type LocaleId, type MessageKey } from "./i18n/index.js";
 
 // ---- shared presentation types ----
 
@@ -116,9 +116,11 @@ export const TEAM_STYLES: readonly CharStyle[] = [{ fg: "cyan" }, { fg: "magenta
 /** Belly marker drawn in a reachable hex on the reachable map. */
 export const REACHABLE_MARKER = "<>";
 
-/** Localised board legend text (e.g. `"legend: w(lightWoods)  W(heavyWoods)"`). */
+/** Localised board legend text (e.g. `"legend: w(light woods)  W(heavy woods)"`). */
 export function boardLegendText(map: MapDef, locale: LocaleId): string {
-  const terrainLegendList = map.legends.map((l) => `${TERRAIN_GLYPHS[l]}(${l})`);
+  const terrainLegendList = map.legends.map(
+    (l) => `${TERRAIN_GLYPHS[l]}(${i18n(locale, `terrain.${l}` as MessageKey)})`,
+  );
   return i18n(locale, "board.legend", { list: terrainLegendList.join(" ") });
 }
 
@@ -755,7 +757,7 @@ function renderLegend(map: MapDef, el: Element, locale: LocaleId): void {
 
 /** CSS Grid renderer: one `<span>` per character, bold isolated to single cells. */
 export const cssGridRenderer: BoardRenderer = (info, el) => {
-  renderLegend(info.map, el, "en");
+  renderLegend(info.map, el, info.locale);
   const grid = document.createElement("div");
   grid.className = "board-grid";
   const lines = boardToChars(createBoardModel(info));
@@ -779,7 +781,7 @@ export const cssGridRenderer: BoardRenderer = (info, el) => {
 
 /** Text renderer: flat text inside a `<div>`. */
 export const textRenderer: BoardRenderer = (info, el) => {
-  renderLegend(info.map, el, "en");
+  renderLegend(info.map, el, info.locale);
   const board = document.createElement("div");
   board.className = "board";
   const lines = boardToText(createBoardModel(info)).split("\n");

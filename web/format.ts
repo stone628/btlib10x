@@ -24,6 +24,7 @@ import type {
   ResolvedMechDef,
   RevealedLanding,
   ShutdownState,
+  TerrainType,
   UnitDamageState,
   UnitInit,
   UnitState,
@@ -88,6 +89,9 @@ import { budgetFor, currentActor, displayModeFor, fullBudgetFor, type Session } 
 export const F = (l: LocaleId, f: Facing): string => i18n(l, `sheet.facing.${f}` as MessageKey);
 export const PRN = (l: LocaleId, prone: boolean): string =>
   i18n(l, prone ? "sheet.postureProne" : "sheet.postureStand");
+
+export const TRN = (l: LocaleId, terrain: TerrainType): string =>
+  i18n(l, `terrain.${terrain}` as MessageKey);
 
 /** Board renderer type (re-exported from the render layer). */
 export type { BoardRenderer } from "./render.js";
@@ -468,12 +472,14 @@ export function boardChunk(s: Session): Chunk {
       map,
       units,
       reachable: null,
+      locale: s.locale,
     });
   }
   return buildBoardChunk({
     map,
     units: s.setup.roster.map((u) => createBoardRenderUnit(u)),
     reachable: null,
+    locale: s.locale,
   });
 }
 
@@ -613,34 +619,9 @@ export function infoMapChunks(locale: LocaleId, name: string): Chunk[] {
       throw new Error(i18n(locale, "err.unknownMap", { name, list: listMapNames().join(", ") }));
     }
   })();
-  const counts = new Map<string, number>();
-  for (const t2 of map.terrain) counts.set(t2.type, (counts.get(t2.type) ?? 0) + 1);
-  const breakdown = [...counts.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([type, n]) => `${type} ${n}`)
-    .join(", ");
-  const elevationCounts = new Map<number, number>();
-  const elevationMap: Record<string, number> = {};
-  for (const t2 of map.terrain) {
-    if (t2.level !== undefined && t2.level !== 0) {
-      elevationMap[`${t2.col},${t2.row}`] = t2.level;
-      elevationCounts.set(t2.level, (elevationCounts.get(t2.level) ?? 0) + 1);
-    }
-  }
-  const elevationBreakdown =
-    [...elevationCounts.entries()]
-      .sort(([a], [b]) => a - b)
-      .map(([level, n]) => `L${level} ${n}`)
-      .join(", ") || i18n(locale, "info.terrainNone");
   return [
-    buildLinesChunk([
-      i18n(locale, "info.mapHead", { name, w: map.width, h: map.height }),
-      i18n(locale, "info.terrainLine", {
-        breakdown: breakdown || i18n(locale, "info.terrainNone"),
-      }),
-      i18n(locale, "info.elevationLine", { breakdown: elevationBreakdown }),
-    ]),
-    buildBoardChunk({ map, units: null, reachable: null }),
+    buildLinesChunk([i18n(locale, "info.mapHead", { name, w: map.width, h: map.height })]),
+    buildBoardChunk({ map, units: null, reachable: null, locale }),
   ];
 }
 
@@ -1493,7 +1474,7 @@ export function stepResultLines(s: Session, landing: RevealedLanding): string[] 
           type: s.moveMode === "prone" ? "crawl" : locomotion === "walk" ? "walk" : "run",
           col: hex.col,
           row: hex.row,
-          terrain: step.terrain,
+          terrain: TRN(locale, step.terrain),
           surcharge: step.terrainSurcharge,
           climb: step.climbCost,
           levels: step.climbLevels,
@@ -1606,6 +1587,7 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo | null {
 }
 
 export function reachableChunk(
+  locale: LocaleId,
   mapNameHolder: MapNameHolder,
   battle: BattleState,
   info: BoardRenderReachableInfo,
@@ -1617,7 +1599,7 @@ export function reachableChunk(
     .map((u) => createBoardRenderUnit(u));
   const ejectedUnits = createEjectedBoardRenderUnits(battleUnits, battle.wrecks);
   if (ejectedUnits.length > 0) units.push(...ejectedUnits);
-  return buildBoardChunk({ map, units, reachable: info });
+  return buildBoardChunk({ map, units, reachable: info, locale });
 }
 
 export function attackStatusLines(s: Session): string[] {

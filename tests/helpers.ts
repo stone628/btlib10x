@@ -175,7 +175,7 @@ export function reachableInfo(s: Session): BoardRenderInfo | null {
   const units = Object.values(s.battle.units)
     .filter((u) => !u.removed)
     .map((u) => createBoardRenderUnit(u));
-  return { map, units, reachable: { team: actor.team, revealed: landings } };
+  return { map, units, reachable: { team: actor.team, revealed: landings }, locale: s.locale };
 }
 
 export function overrideAmmoBin(

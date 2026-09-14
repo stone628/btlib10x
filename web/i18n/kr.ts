@@ -285,7 +285,7 @@ export const kr: Catalog = {
   "info.movement": "이동: 걷기 {walk} / 달리기 {run} / 점프 {jump}",
   "info.movementHeat":
     "이동: 걷기 {walk} / 달리기 {run} / 점프 {jump} - {penalty}MP(열 {threshold} 이상)",
-  "info.mapHead": "{name}: {w}x{h}",
+  "info.mapHead": "맵: 이름({name}) {w}x{h}",
   "info.terrainLine": "지형: {breakdown}",
   "info.terrainNone": "없음",
   "info.elevationLine": "고도: {breakdown}",
@@ -498,4 +498,19 @@ export const kr: Catalog = {
   "table.list.hitloc": "hitloc   — 피격 부위 (모든 아크)",
   "table.list.crit": "crit     — 크리티컬 결정",
   "table.list.heat": "heat     — 발열 게이지 (명중, MP, 셧다운, 유폭)",
+
+  // terrain types
+  "terrain.clear": "평지",
+  "terrain.lightWoods": "성긴 숲",
+  "terrain.heavyWoods": "빽빽한 숲",
+  "terrain.rough": "험지",
+  "terrain.rubble": "잔해",
+  "terrain.pavement": "포장도로",
+  "terrain.water1": "얕은 물",
+  "terrain.water2": "깊은 물",
+  "terrain.water3": "아주 깊은 물",
+  "terrain.lightBuilding": "경량 구조물",
+  "terrain.mediumBuilding": "건물",
+  "terrain.heavyBuilding": "중형 건물",
+  "terrain.hardenedBuilding": "방호 건물",
 };
