@@ -63,25 +63,6 @@ export function engineHitHeat(destroyedEngineSlots: number): number {
   return destroyedEngineSlots >= 2 ? 10 : 5;
 }
 
-/** Number of destroyed `engine` crit slots on the 'Mech. */
-export function countDestroyedEngineSlots(
-  def: ResolvedMechDef,
-  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
-): number {
-  let n = 0;
-  for (const loc of LOCATIONS) {
-    const layout = def.critSlots[loc];
-    const destroyed = critSlotsDestroyed[loc];
-    for (let i = 0; i < layout.length; i++) {
-      const slot = layout[i];
-      if (slot?.kind === "structure" && slot.name === "engine" && (destroyed?.[i] ?? false)) {
-        n += 1;
-      }
-    }
-  }
-  return n;
-}
-
 /**
  * Operational heat sinks: engine-internal sinks (`floor(rating/25)`, never
  * destroyed by engine crits) plus one per intact external sink device — each

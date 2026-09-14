@@ -446,6 +446,7 @@ export const kr: Catalog = {
   "res.critAmmoExplosion": "{loc} #{slot} {weapon} 탄약 폭발, {damage} 피해",
   "res.critCockpitDestroyed": "{loc} #{slot} 조종석 파괴 — 파일럿 사망",
   "res.critComponentDestroyed": "{loc} #{slot} {name} 파괴",
+  "res.critEngineDestroyed": "{loc} #{slot} 엔진 파괴 — 메크 격파",
   "res.critNoEffect": "{loc} 재굴림 — 남은 크리티컬 가능 슬롯 없음",
   "res.critTransferred": " ({from}에서 이전)",
   "res.critCluster": "폭발이 {loc}에서 새로운 결정 굴림을 유발",
