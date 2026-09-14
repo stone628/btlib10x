@@ -146,7 +146,6 @@ body {
 #out .board-legend {
   font-family: var(--board-ff);
   font-size: var(--board-fs);
-  margin-bottom: 0.2em;
 }
 #out .board {
   font-family: var(--board-ff);

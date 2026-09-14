@@ -323,7 +323,10 @@ const MOVE_CMDS: Record<string, CmdDef> = {
         s.moveCandidate = reachablesInfo(s) ?? null;
       }
       if (s.moveCandidate === null) return lines;
-      return [buildLinesChunk(lines), reachableChunk(s.setup, s.battle!, s.moveCandidate)];
+      return [
+        buildLinesChunk(lines),
+        reachableChunk(s.locale, s.setup, s.battle!, s.moveCandidate),
+      ];
     },
   },
   mode: {
@@ -365,7 +368,10 @@ const MOVE_CMDS: Record<string, CmdDef> = {
       }
       s.moveCandidate = reachablesInfo(s) ?? null;
       if (s.moveCandidate === null) return lines;
-      return [buildLinesChunk(lines), reachableChunk(s.setup, s.battle!, s.moveCandidate)];
+      return [
+        buildLinesChunk(lines),
+        reachableChunk(s.locale, s.setup, s.battle!, s.moveCandidate),
+      ];
     },
   },
   place: {
