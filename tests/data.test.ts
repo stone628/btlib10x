@@ -146,6 +146,28 @@ describe("'Mech definitions", () => {
     ).not.toThrow();
   });
 
+  it("restricts CASE to side torsos on Inner Sphere 'Mechs", () => {
+    const base = toMechDef(getMechDef("HBK-4G")!);
+    const withCase = (
+      loc: "leftTorso" | "rightTorso" | "centerTorso" | "head" | "rightArm",
+      slotIndex: number,
+    ) =>
+      ({
+        ...base,
+        critSlots: {
+          ...base.critSlots,
+          [loc]: base.critSlots[loc].map((s, i) =>
+            i === slotIndex ? { kind: "soak" as const, name: "case" as const } : s,
+          ),
+        },
+      }) as MechDef;
+    expect(() => validateMechDef(withCase("leftTorso", 2))).not.toThrow();
+    expect(() => validateMechDef(withCase("rightTorso", 10))).not.toThrow();
+    expect(() => validateMechDef(withCase("centerTorso", 11))).toThrow(/side torso/);
+    expect(() => validateMechDef(withCase("head", 0))).toThrow(/side torso/);
+    expect(() => validateMechDef(withCase("rightArm", 5))).toThrow(/side torso/);
+  });
+
   it("rejects invalid definitions", () => {
     const base = toMechDef(getMechDef("HBK-4G")!);
     expect(() => validateMechDef({ ...base, running: 7 } as MechDef)).toThrow(/running/);

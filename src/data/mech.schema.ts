@@ -1,3 +1,4 @@
+import { isSideTorso, isTorso } from "../core/locations.js";
 import type { Location } from "../core/types.js";
 import { isLocation, LOCATIONS } from "../core/types.js";
 import type { LocationValue } from "../rules/damage.js";
@@ -462,12 +463,7 @@ export function validateMechDef(def: MechDef): void {
     if (!isLocation(w.location)) {
       errors.push(`weapon.location ${JSON.stringify(w.location)} is not a valid location`);
     }
-    if (
-      w.rearFacing === true &&
-      w.location !== "centerTorso" &&
-      w.location !== "rightTorso" &&
-      w.location !== "leftTorso"
-    ) {
+    if (w.rearFacing === true && !isTorso(w.location)) {
       errors.push(`weapon.rearFacing is only valid on torso mounts, got ${w.location}`);
     }
     if (w.shots !== undefined) {
@@ -542,6 +538,11 @@ export function validateMechDef(def: MechDef): void {
           if (!(CRIT_SOAK_NAMES as readonly string[]).includes(slot.name)) {
             errors.push(
               `critSlots.${loc}[${i}].name ${JSON.stringify(slot.name)} is not a known soak component`,
+            );
+          }
+          if (slot.name === "case" && techBase !== "Clan" && !isSideTorso(loc)) {
+            errors.push(
+              `critSlots.${loc}[${i}].name ${JSON.stringify(slot.name)} is only allowed in side torso locations on Inner Sphere 'Mechs`,
             );
           }
           break;
