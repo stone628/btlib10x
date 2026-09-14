@@ -1,0 +1,26 @@
+import type { AmmoDef } from "./ammo.schema.js";
+
+export const AMMO_DATA: readonly AmmoDef[] = [
+  { weapon: "AC/2", shotsPerBin: 45, explosive: true },
+  { weapon: "AC/5", shotsPerBin: 20, explosive: true },
+  { weapon: "AC/10", shotsPerBin: 10, explosive: true },
+  { weapon: "AC/20", shotsPerBin: 5, explosive: true },
+  { weapon: "Ultra AC/5", shotsPerBin: 20, explosive: true },
+  { weapon: "LRM 5", shotsPerBin: 24, explosive: true },
+  { weapon: "LRM 10", shotsPerBin: 12, explosive: true },
+  { weapon: "LRM 20", shotsPerBin: 6, explosive: true },
+  { weapon: "SRM 6", shotsPerBin: 15, explosive: true },
+  { weapon: "CL Streak SRM 4", shotsPerBin: 25, explosive: true },
+  { weapon: "CL Streak SRM 2", shotsPerBin: 50, explosive: true },
+  { weapon: "CL Streak SRM 6", shotsPerBin: 15, explosive: true },
+  { weapon: "Streak SRM 2", shotsPerBin: 50, explosive: true },
+  { weapon: "Streak SRM 4", shotsPerBin: 25, explosive: true },
+  { weapon: "Streak SRM 6", shotsPerBin: 15, explosive: true },
+  { weapon: "CL LRM 10", shotsPerBin: 12, explosive: true },
+  { weapon: "CL LRM 20", shotsPerBin: 12, explosive: true },
+  { weapon: "CL Machine Gun", shotsPerBin: 200, explosive: true },
+  { weapon: "Machine Gun", shotsPerBin: 200, explosive: true },
+  { weapon: "CL Gauss Rifle", shotsPerBin: 8, explosive: false },
+  { weapon: "Gauss Rifle", shotsPerBin: 8, explosive: false },
+  { weapon: "CL LB 20-X AC", shotsPerBin: 5, explosive: true },
+] as const;

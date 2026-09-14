@@ -136,7 +136,7 @@ export type ResolvedCritSlot =
 export type ResolvedCritSlots = Readonly<Record<Location, readonly ResolvedCritSlot[]>>;
 
 /**
- * Static definition of a bipedal BattleMech as written in `src/data/mechs/*.json`,
+ * Static definition of a bipedal BattleMech as written in `src/data/mechs/*.ts`,
  * faithful to the source record sheet / MTF: torso locations hold FRONT armor,
  * and rear torso armor is stored alongside under `centerTorsoRear` /
  * `leftTorsoRear` / `rightTorsoRear`. This is the on-disk (JSON) schema.
@@ -410,188 +410,109 @@ function resolveLocationCrits(
   return out as ResolvedCritSlot[];
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function requireNumber(obj: Record<string, unknown>, key: string, errors: string[]): number {
-  const v = obj[key];
-  if (typeof v !== "number" || !Number.isFinite(v)) {
-    errors.push(`${key} must be a finite number`);
-    return NaN;
-  }
-  return v;
-}
-
 /**
- * Hand-rolled structural validator (zero-dependency policy).
- * Throws with all accumulated problems when `data` is not a valid MechDef.
+ * Validate a typed MechDef against Total Warfare rules. TypeScript enforces
+ * the structural shape at compile time; this catches runtime logical
+ * inconsistencies (movement ratings, armor values, crit-slot counts, heat
+ * sink reconciliation, weapon/ammo linkage).
  */
-export function validateMechDef(data: unknown): MechDef {
+export function validateMechDef(def: MechDef): void {
   const errors: string[] = [];
-  if (!isRecord(data)) {
-    throw new Error("MechDef must be a JSON object");
+
+  const { tonnage, walking, running, jumping, techBase } = def;
+
+  if (tonnage < 10 || tonnage > 100) errors.push("tonnage must be 10..100");
+
+  if (!Number.isInteger(walking) || walking <= 0) errors.push("walking must be a positive integer");
+  if (running !== Math.ceil(walking * 1.5)) {
+    errors.push(
+      `running must equal ceil(walking*1.5) = ${Math.ceil(walking * 1.5)} (quick-start convention)`,
+    );
   }
+  if (!Number.isInteger(jumping) || jumping < 0)
+    errors.push("jumping must be a non-negative integer");
 
-  const model = data.model;
-  if (typeof model !== "string" || model.length === 0)
-    errors.push("model must be a non-empty string");
-
-  const name = data.name;
-  if (typeof name !== "string" || name.length === 0) errors.push("name must be a non-empty string");
-
-  const tonnage = requireNumber(data, "tonnage", errors);
-  if (Number.isFinite(tonnage) && (tonnage < 10 || tonnage > 100))
-    errors.push("tonnage must be 10..100");
-
-  const weightClass = data.weightClass;
-  if (
-    weightClass !== "Light" &&
-    weightClass !== "Medium" &&
-    weightClass !== "Heavy" &&
-    weightClass !== "Assault"
-  ) {
-    errors.push("weightClass must be Light|Medium|Heavy|Assault");
-  }
-
-  if (typeof data.techBase !== "string") errors.push("techBase must be a string");
-
-  const walking = requireNumber(data, "walking", errors);
-  const running = requireNumber(data, "running", errors);
-  const jumping = requireNumber(data, "jumping", errors);
-  if (Number.isFinite(walking) && Number.isFinite(running) && Number.isFinite(jumping)) {
-    if (!Number.isInteger(walking) || walking <= 0)
-      errors.push("walking must be a positive integer");
-    // Quick-start running rating is walking x1.5 rounded up.
-    if (running !== Math.ceil(walking * 1.5)) {
-      errors.push(
-        `running must equal ceil(walking*1.5) = ${Math.ceil(walking * 1.5)} (quick-start convention)`,
-      );
+  for (const loc of [
+    "head",
+    "centerTorso",
+    "rightTorso",
+    "leftTorso",
+    "rightArm",
+    "leftArm",
+    "rightLeg",
+    "leftLeg",
+  ] as const) {
+    const v = def.armor[loc];
+    if (!Number.isInteger(v) || v < 0) {
+      errors.push(`armor.${loc} must be a non-negative integer`);
     }
-    if (!Number.isInteger(jumping) || jumping < 0)
-      errors.push("jumping must be a non-negative integer");
   }
-
-  const armorRaw = data.armor;
-  if (!isRecord(armorRaw)) {
-    errors.push("armor must be an object keyed by location");
-  } else {
-    for (const loc of [
-      "head",
-      "centerTorso",
-      "rightTorso",
-      "leftTorso",
-      "rightArm",
-      "leftArm",
-      "rightLeg",
-      "leftLeg",
-    ]) {
-      const v = armorRaw[loc];
-      if (typeof v !== "number" || !Number.isInteger(v) || v < 0) {
-        errors.push(`armor.${loc} must be a non-negative integer`);
+  for (const key of Object.keys(def.armor)) {
+    if (REAR_ARMOR_KEYS.includes(key as RearArmorKey)) {
+      const v = (def.armor as Record<string, number | undefined>)[key];
+      if (v === undefined || !Number.isInteger(v) || v < 0) {
+        errors.push(`armor.${key} must be a non-negative integer`);
       }
-    }
-    for (const key of Object.keys(armorRaw)) {
-      if (REAR_ARMOR_KEYS.includes(key as RearArmorKey)) {
-        const v = armorRaw[key];
-        if (typeof v !== "number" || !Number.isInteger(v) || v < 0) {
-          errors.push(`armor.${key} must be a non-negative integer`);
-        }
-      } else if (!isLocation(key)) {
-        errors.push(`armor.${key} is not a valid location`);
-      }
+    } else if (!isLocation(key)) {
+      errors.push(`armor.${key} is not a valid location`);
     }
   }
 
-  const weapons = data.weapons;
-  if (!Array.isArray(weapons)) {
-    errors.push("weapons must be an array");
-  } else {
-    for (const w of weapons) {
-      if (!isRecord(w)) {
-        errors.push("each weapon mount must be an object");
-        continue;
-      }
-      if (typeof w.weapon !== "string") errors.push("weapon.weapon must be a string");
-      if (typeof w.location !== "string" || !isLocation(w.location)) {
-        errors.push(`weapon.location ${JSON.stringify(w.location)} is not a valid location`);
-      }
-      if (w.rearFacing !== undefined && typeof w.rearFacing !== "boolean") {
-        errors.push("weapon.rearFacing must be a boolean");
-      } else if (
-        w.rearFacing === true &&
-        typeof w.location === "string" &&
-        isLocation(w.location) &&
-        w.location !== "centerTorso" &&
-        w.location !== "rightTorso" &&
-        w.location !== "leftTorso"
-      ) {
-        errors.push(`weapon.rearFacing is only valid on torso mounts, got ${w.location}`);
-      }
-      const shots = w.shots;
-      if (shots !== undefined && shots !== null) {
-        if (typeof shots !== "number" || !Number.isInteger(shots) || shots <= 0) {
-          errors.push("weapon.shots must be a positive integer");
-        } else if (typeof w.weapon === "string") {
-          const ammo = getAmmoDef(w.weapon as string);
-          if (ammo !== undefined) {
-            if (shots % ammo.shotsPerBin === 0) continue;
-            // check half ton
-            if (shots === Math.floor(ammo.shotsPerBin / 2)) continue;
-            errors.push(
-              `weapon.shots for ${JSON.stringify(w.weapon)} must be a multiple of its ammo bin capacity (${ammo.shotsPerBin})`,
-            );
-          }
-        }
-      }
+  for (const w of def.weapons) {
+    if (!isLocation(w.location)) {
+      errors.push(`weapon.location ${JSON.stringify(w.location)} is not a valid location`);
     }
-  }
-
-  const critSlots = data.critSlots;
-  if (!isRecord(critSlots)) {
-    errors.push("critSlots must be an object keyed by location");
-  } else {
-    for (const loc of LOCATIONS) {
-      const arr = critSlots[loc];
-      const expected = CRIT_SLOT_COUNTS[loc];
-      if (!Array.isArray(arr)) {
-        errors.push(`critSlots.${loc} must be an array of length ${expected}`);
-        continue;
-      }
-      if (arr.length !== expected) {
-        errors.push(`critSlots.${loc} must have exactly ${expected} entries (got ${arr.length})`);
-        continue;
-      }
-      for (let i = 0; i < arr.length; i++) {
-        const slot = arr[i];
-        if (slot === null) {
+    if (
+      w.rearFacing === true &&
+      w.location !== "centerTorso" &&
+      w.location !== "rightTorso" &&
+      w.location !== "leftTorso"
+    ) {
+      errors.push(`weapon.rearFacing is only valid on torso mounts, got ${w.location}`);
+    }
+    if (w.shots !== undefined) {
+      if (!Number.isInteger(w.shots) || w.shots <= 0) {
+        errors.push("weapon.shots must be a positive integer");
+      } else {
+        const ammo = getAmmoDef(w.weapon);
+        if (ammo !== undefined) {
+          if (w.shots % ammo.shotsPerBin === 0) continue;
+          if (w.shots === Math.floor(ammo.shotsPerBin / 2)) continue;
           errors.push(
-            `critSlots.${loc}[${i}] must not be null; use {"kind":"empty"} for an empty slot`,
+            `weapon.shots for ${JSON.stringify(w.weapon)} must be a multiple of its ammo bin capacity (${ammo.shotsPerBin})`,
           );
-          continue;
         }
-        if (!isRecord(slot)) {
-          errors.push(`critSlots.${loc}[${i}] must be a slot object`);
-          continue;
-        }
-        const kind = slot.kind;
-        if (kind === "empty") {
-          // ok
-        } else if (kind === "weapon") {
-          if (typeof slot.weapon !== "string") {
-            errors.push(`critSlots.${loc}[${i}].weapon must be a string`);
-            continue;
-          }
+      }
+    }
+  }
+
+  const mountNames = new Set(def.weapons.map((w) => w.weapon));
+
+  for (const loc of LOCATIONS) {
+    const arr = def.critSlots[loc];
+    const expected = CRIT_SLOT_COUNTS[loc];
+    if (arr.length !== expected) {
+      errors.push(`critSlots.${loc} must have exactly ${expected} entries (got ${arr.length})`);
+      continue;
+    }
+    for (let i = 0; i < arr.length; i++) {
+      const slot = arr[i];
+      if (!slot) continue;
+      switch (slot.kind) {
+        case "weapon": {
           if (getWeaponDef(slot.weapon) === undefined) {
             errors.push(
               `critSlots.${loc}[${i}].weapon ${JSON.stringify(slot.weapon)} is not a known weapon`,
             );
           }
-        } else if (kind === "ammo") {
-          if (typeof slot.weapon !== "string") {
-            errors.push(`critSlots.${loc}[${i}].weapon must be a string`);
-            continue;
+          if (!mountNames.has(slot.weapon)) {
+            errors.push(
+              `critSlots.${loc}[${i}] references weapon ${JSON.stringify(slot.weapon)} but no mount of that weapon is declared`,
+            );
           }
+          break;
+        }
+        case "ammo": {
           if (getWeaponDef(slot.weapon) === undefined) {
             errors.push(
               `critSlots.${loc}[${i}].weapon ${JSON.stringify(slot.weapon)} is not a known weapon`,
@@ -602,110 +523,52 @@ export function validateMechDef(data: unknown): MechDef {
               `critSlots.${loc}[${i}].weapon ${JSON.stringify(slot.weapon)} has no ammo definition`,
             );
           }
-        } else if (kind === "structure") {
-          if (
-            typeof slot.name !== "string" ||
-            !(CRIT_STRUCTURE_NAMES as readonly string[]).includes(slot.name)
-          ) {
+          if (!mountNames.has(slot.weapon)) {
+            errors.push(
+              `critSlots.${loc}[${i}] is ammo for ${JSON.stringify(slot.weapon)} but no mount of that weapon exists`,
+            );
+          }
+          break;
+        }
+        case "structure": {
+          if (!(CRIT_STRUCTURE_NAMES as readonly string[]).includes(slot.name)) {
             errors.push(
               `critSlots.${loc}[${i}].name ${JSON.stringify(slot.name)} is not a known structure component`,
             );
           }
-        } else if (kind === "soak") {
-          if (
-            typeof slot.name !== "string" ||
-            !(CRIT_SOAK_NAMES as readonly string[]).includes(slot.name)
-          ) {
+          break;
+        }
+        case "soak": {
+          if (!(CRIT_SOAK_NAMES as readonly string[]).includes(slot.name)) {
             errors.push(
               `critSlots.${loc}[${i}].name ${JSON.stringify(slot.name)} is not a known soak component`,
             );
           }
-        } else {
-          errors.push(
-            `critSlots.${loc}[${i}].kind ${JSON.stringify(kind)} must be empty|weapon|ammo|structure|soak`,
-          );
-        }
-      }
-      // Linkage check: a crit-slot weapon reference must resolve to at least
-      // one weapon mount of that name anywhere on the 'Mech (multi-slot
-      // weapons legitimately occupy several slots for a single mount, so we
-      // do not bound the count). Ammo bins pool by weapon name and need at
-      // least one mount (shots-bearing or not) of that weapon anywhere.
-      if (Array.isArray(weapons)) {
-        const mountNames = new Set<string>();
-        for (const w of weapons) {
-          if (isRecord(w) && typeof w.weapon === "string") mountNames.add(w.weapon);
-        }
-        for (let i = 0; i < arr.length; i++) {
-          const slot = arr[i];
-          if (!isRecord(slot)) continue;
-          if (slot.kind === "weapon" && typeof slot.weapon === "string") {
-            if (!mountNames.has(slot.weapon)) {
-              errors.push(
-                `critSlots.${loc}[${i}] references weapon ${JSON.stringify(slot.weapon)} but no mount of that weapon is declared`,
-              );
-            }
-          } else if (slot.kind === "ammo" && typeof slot.weapon === "string") {
-            if (!mountNames.has(slot.weapon)) {
-              errors.push(
-                `critSlots.${loc}[${i}] is ammo for ${JSON.stringify(slot.weapon)} but no mount of that weapon exists`,
-              );
-            }
-          }
+          break;
         }
       }
     }
   }
 
-  // Heat sink configuration: type must be single|double and the total count
-  // must reconcile with the engine's internal capacity and the external sinks
-  // mounted in crit slots. Per construction rules an engine mounts
-  // `floor(walking * tonnage / 25)` sinks internally at no crit cost; each
-  // remaining sink (up to `count`) occupies crit slots — single sinks one
-  // slot each, double sinks grouped in runs of 3 (Inner Sphere) or 2 (Clan).
+  // Heat sink reconciliation: engine mounts floor(walking * tonnage / 25)
+  // sinks internally; the rest occupy crit slots (single = 1 slot each,
+  // double = grouped in runs of 3 IS / 2 Clan).
   {
-    const hsRaw = data.heatsink;
-    if (!isRecord(hsRaw)) {
-      errors.push("heatsink must be an object with type|count");
-    } else {
-      const type = hsRaw.type;
-      if (type !== "single" && type !== "double") {
-        errors.push("heatsink.type must be single|double");
-      }
-      const count = requireNumber(hsRaw, "count", errors);
-      if (Number.isFinite(count) && (!Number.isInteger(count) || count < 10)) {
-        errors.push("heatsink.count must be an integer >= 10");
-      }
+    const { heatsink } = def;
+    if (!Number.isInteger(heatsink.count) || heatsink.count < 10) {
+      errors.push("heatsink.count must be an integer >= 10");
     }
-    if (!isRecord(hsRaw) || typeof hsRaw.type !== "string") {
-      // fall through; type errors already reported above
-    } else if (isRecord(critSlots)) {
-      const type = hsRaw.type;
-      const count = Number.isFinite(hsRaw.count) ? (hsRaw.count as number) : NaN;
-      const width = data.techBase === "Clan" ? 2 : 3;
-      let external = 0;
-      let mixed = false;
-      for (const loc of LOCATIONS) {
-        const arr = critSlots[loc];
-        if (!Array.isArray(arr)) continue;
-        let run = 0;
-        for (const slot of arr) {
-          if (isRecord(slot) && slot.kind === "structure" && slot.name === "doubleHeatSink") {
-            run += 1;
-            if (type === "single") mixed = true;
-            continue;
-          }
-          if (run > 0 && run % width !== 0) {
-            errors.push(
-              `heatsink: ${loc} double heat sink run length ${run} not divisible by ${width}`,
-            );
-          }
-          external += Math.floor(run / width);
-          run = 0;
-          if (isRecord(slot) && slot.kind === "structure" && slot.name === "heatSink") {
-            external += 1;
-            if (type === "double") mixed = true;
-          }
+    const width = techBase === "Clan" ? 2 : 3;
+    let external = 0;
+    let mixed = false;
+    for (const loc of LOCATIONS) {
+      const arr = def.critSlots[loc];
+      let run = 0;
+      for (const slot of arr) {
+        if (slot.kind === "structure" && slot.name === "doubleHeatSink") {
+          run += 1;
+          if (heatsink.type === "single") mixed = true;
+          continue;
         }
         if (run > 0 && run % width !== 0) {
           errors.push(
@@ -713,25 +576,32 @@ export function validateMechDef(data: unknown): MechDef {
           );
         }
         external += Math.floor(run / width);
-      }
-      if (mixed) {
-        errors.push("heatsink: heatSink and doubleHeatSink crit slots cannot be mixed");
-      }
-      if (Number.isFinite(walking) && Number.isFinite(tonnage) && Number.isFinite(count)) {
-        const internal = Math.floor((walking * tonnage) / 25);
-        const expectedExternal = Math.max(0, count - internal);
-        if (external !== expectedExternal) {
-          errors.push(
-            `heatsink.count ${count} needs ${expectedExternal} external sink(s) (engine holds ${internal}); crit slots hold ${external}`,
-          );
+        run = 0;
+        if (slot.kind === "structure" && slot.name === "heatSink") {
+          external += 1;
+          if (heatsink.type === "double") mixed = true;
         }
       }
+      if (run > 0 && run % width !== 0) {
+        errors.push(
+          `heatsink: ${loc} double heat sink run length ${run} not divisible by ${width}`,
+        );
+      }
+      external += Math.floor(run / width);
+    }
+    if (mixed) {
+      errors.push("heatsink: heatSink and doubleHeatSink crit slots cannot be mixed");
+    }
+    const internal = Math.floor((walking * tonnage) / 25);
+    const expectedExternal = Math.max(0, heatsink.count - internal);
+    if (external !== expectedExternal) {
+      errors.push(
+        `heatsink.count ${heatsink.count} needs ${expectedExternal} external sink(s) (engine holds ${internal}); crit slots hold ${external}`,
+      );
     }
   }
 
   if (errors.length > 0) {
-    throw new Error(`Invalid MechDef (${String(model ?? "?")}):\n  - ${errors.join("\n  - ")}`);
+    throw new Error(`Invalid MechDef (${def.model}):\n  - ${errors.join("\n  - ")}`);
   }
-
-  return data as unknown as MechDef;
 }

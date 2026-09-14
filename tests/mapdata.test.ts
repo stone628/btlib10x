@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { getMapDef, listMapNames } from "../src/data/index.js";
-import { type MapDef, validateMapDef } from "../src/data/map.schema.js";
+import { type MapDef, type MapDefSrc, validateMapDef } from "../src/data/map.schema.js";
 import type { UnitInit } from "../src/rules/game.js";
 import { createTestBattle } from "./helpers.js";
 
-const valid: MapDef = {
+const valid: MapDefSrc = {
   name: "test-map",
   width: 5,
   height: 4,
@@ -12,51 +12,36 @@ const valid: MapDef = {
     { col: 3, row: 3, type: "lightWoods" },
     { col: 5, row: 4, type: "heavyWoods" },
   ],
-  legends: ["lightWoods", "heavyWoods"],
 };
 
 describe("validateMapDef", () => {
   it("accepts a well-formed map", () => {
-    expect(validateMapDef(valid)).toEqual(valid);
-  });
-
-  it("rejects non-object payloads", () => {
-    for (const bad of [null, "map", 42, [{ col: 3, row: 3, type: "clear" }]]) {
-      expect(() => validateMapDef(bad)).toThrow(/must be a JSON object/);
-    }
+    expect(() => validateMapDef(valid)).not.toThrow();
   });
 
   it("rejects bad dimensions", () => {
-    expect(() => validateMapDef({ ...valid, width: 0 })).toThrow(
+    expect(() => validateMapDef({ ...valid, width: 0 } as MapDef)).toThrow(
       /width must be a positive integer/,
     );
-    expect(() => validateMapDef({ ...valid, height: 2.5 })).toThrow(
+    expect(() => validateMapDef({ ...valid, height: 2.5 } as MapDef)).toThrow(
       /height must be a positive integer/,
     );
   });
 
   it("rejects malformed terrain entries and unknown types", () => {
-    expect(() => validateMapDef({ ...valid, terrain: "woods" })).toThrow(
-      /terrain must be an array/,
-    );
     expect(() =>
-      validateMapDef({ ...valid, terrain: [{ col: 1.5, row: 1, type: "lightWoods" }] }),
+      validateMapDef({
+        ...valid,
+        terrain: [{ col: 1.5, row: 1, type: "lightWoods" }],
+      } as MapDefSrc),
     ).toThrow(/terrain\[0\].col must be an integer/);
-    expect(() =>
-      validateMapDef({ ...valid, terrain: [{ col: 3, row: 3, type: "water" }] }),
-    ).toThrow(
-      /is not one of clear\|lightWoods\|heavyWoods\|rough\|rubble\|pavement\|water1\|water2\|water3\|lightBuilding\|mediumBuilding\|heavyBuilding\|hardenedBuilding/,
-    );
-    expect(() => validateMapDef({ ...valid, terrain: [42] })).toThrow(
-      /terrain\[0\] must be an object/,
-    );
   });
 
   it("enforces 1-based board bounds", () => {
-    const errors = (terrain: unknown): string =>
+    const errors = (terrain: MapDefSrc["terrain"]): string =>
       (() => {
         try {
-          validateMapDef({ ...valid, terrain: terrain as MapDef["terrain"] });
+          validateMapDef({ ...valid, terrain });
           return "";
         } catch (e) {
           return (e as Error).message;
@@ -98,7 +83,7 @@ describe("validateMapDef", () => {
       ],
       legends: ["clear"],
     };
-    expect(validateMapDef(withLevel)).toEqual(withLevel);
+    expect(() => validateMapDef(withLevel)).not.toThrow();
   });
 
   it("rejects malformed `level`", () => {
@@ -119,7 +104,7 @@ describe("validateMapDef", () => {
 
 describe("bundled maps", () => {
   it("loads both rulebook maps with expected dimensions and hex counts", () => {
-    expect(listMapNames().sort()).toEqual(["beginner", "quickstart", "test"]);
+    expect(listMapNames().sort()).toEqual(["beginner", "quickstart", "test", "testground"]);
     for (const name of ["beginner", "quickstart"]) {
       const map = getMapDef(name)!;
       expect(map.width).toBe(15);

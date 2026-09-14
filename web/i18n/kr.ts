@@ -20,7 +20,7 @@ export const kr: Catalog = {
   // board
   "board.noMap":
     "아직 전장이 없습니다 - 'map'으로 불러오세요. 'info map'에서 목록을 볼 수 있습니다.",
-  "board.legend": "범례: {list}",
+  "board.legend": "범례:",
 
   // lang command
   "lang.current": "언어: {locale}",

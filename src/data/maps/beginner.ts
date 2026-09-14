@@ -1,0 +1,111 @@
+import type { MapDefSrc } from "../map.schema.js";
+
+const def: MapDefSrc = {
+  name: "beginner",
+  width: 15,
+  height: 16,
+  terrain: [
+    {
+      col: 2,
+      row: 5,
+      type: "heavyWoods",
+    },
+    {
+      col: 3,
+      row: 6,
+      type: "heavyWoods",
+    },
+    {
+      col: 11,
+      row: 3,
+      type: "heavyWoods",
+    },
+    {
+      col: 13,
+      row: 2,
+      type: "heavyWoods",
+    },
+    {
+      col: 13,
+      row: 9,
+      type: "heavyWoods",
+    },
+    {
+      col: 14,
+      row: 10,
+      type: "heavyWoods",
+    },
+    {
+      col: 6,
+      row: 13,
+      type: "heavyWoods",
+    },
+    {
+      col: 4,
+      row: 5,
+      type: "lightWoods",
+    },
+    {
+      col: 4,
+      row: 6,
+      type: "lightWoods",
+    },
+    {
+      col: 10,
+      row: 4,
+      type: "lightWoods",
+    },
+    {
+      col: 11,
+      row: 4,
+      type: "lightWoods",
+    },
+    {
+      col: 11,
+      row: 5,
+      type: "lightWoods",
+    },
+    {
+      col: 12,
+      row: 2,
+      type: "lightWoods",
+    },
+    {
+      col: 12,
+      row: 3,
+      type: "lightWoods",
+    },
+    {
+      col: 12,
+      row: 11,
+      type: "lightWoods",
+    },
+    {
+      col: 13,
+      row: 10,
+      type: "lightWoods",
+    },
+    {
+      col: 13,
+      row: 11,
+      type: "lightWoods",
+    },
+    {
+      col: 5,
+      row: 14,
+      type: "lightWoods",
+    },
+    {
+      col: 6,
+      row: 14,
+      type: "lightWoods",
+    },
+    {
+      col: 6,
+      row: 16,
+      type: "lightWoods",
+    },
+  ],
+} as const satisfies MapDefSrc;
+
+export default def;

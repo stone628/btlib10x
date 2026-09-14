@@ -21,7 +21,7 @@ export const en = {
 
   // board
   "board.noMap": "no battlefield yet - load one via 'map'; 'info map' lists the choices.",
-  "board.legend": "legend: {list}",
+  "board.legend": "legend:",
 
   // lang command
   "lang.current": "language: {locale}",

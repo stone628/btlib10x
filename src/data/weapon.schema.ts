@@ -7,7 +7,7 @@
  *   S = Streak (all missiles hit on a successful to-hit roll, no cluster roll;
  *   a miss fires nothing: no ammo spent, no heat).
  */
-import weaponsJson from "./weapons.json";
+import { WEAPON_DATA } from "./weapon.data.js";
 
 export type WeaponCategory = "MISSILE" | "BALLISTIC" | "ENERGY";
 
@@ -41,10 +41,6 @@ export interface WeaponDef {
   readonly heat?: number;
   /** Broad weapon class used for catalog grouping and UI categorization. */
   readonly category: WeaponCategory;
-}
-
-export interface WeaponsFile {
-  readonly weapons: readonly WeaponDef[];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -149,11 +145,8 @@ export function parseWeaponsData(data: unknown): readonly WeaponDef[] {
   return parsed;
 }
 
-/** Load and validate the shipped catalog; fails fast at import on bad data. */
-const weaponList = parseWeaponsData(weaponsJson);
-
 const WEAPONS: Readonly<Map<string, WeaponDef>> = new Map<string, WeaponDef>(
-  weaponList.map((def) => [def.name, def]),
+  WEAPON_DATA.map((def) => [def.name, def]),
 );
 
 export function getWeaponDef(name: string): WeaponDef | undefined {

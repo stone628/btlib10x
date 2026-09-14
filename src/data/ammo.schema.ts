@@ -1,4 +1,4 @@
-import ammoJson from "./ammo.json";
+import { AMMO_DATA } from "./ammo.data.js";
 
 export interface AmmoDef {
   readonly weapon: string;
@@ -10,10 +10,6 @@ export interface AmmoDef {
    * data file.
    */
   readonly explosive: boolean;
-}
-
-export interface AmmosFile {
-  readonly ammos: readonly AmmoDef[];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -77,9 +73,7 @@ export function parseAmmoData(data: unknown): readonly AmmoDef[] {
   return parsed;
 }
 
-const AMMO: ReadonlyMap<string, AmmoDef> = new Map(
-  parseAmmoData(ammoJson).map((def) => [def.weapon, def]),
-);
+const AMMO: ReadonlyMap<string, AmmoDef> = new Map(AMMO_DATA.map((def) => [def.weapon, def]));
 
 export function getAmmoDef(name: string): AmmoDef | undefined {
   return AMMO.get(name);

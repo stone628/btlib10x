@@ -1,7 +1,4 @@
-import { type MapDef, validateMapDef } from "./map.schema.js";
-import beginnerMapJson from "./maps/beginner.json";
-import quickstartMapJson from "./maps/quickstart.json";
-import testMapJson from "./maps/test.json";
+import { MAP_DEFS, type MapDef } from "./map.schema.js";
 import type { ResolvedMechDef } from "./mech.schema.js";
 import { MECH_DEFS } from "./mechCatalog.generated.js";
 
@@ -25,13 +22,6 @@ export { getWeaponDefFor, type WeaponNameHolder } from "./weapon.schema.js";
 export function getAllMechDefs(): ResolvedMechDef[] {
   return Array.from(MECH_DEFS.values());
 }
-
-/** All battle maps shipped with the library, keyed by name; validated at load. */
-const MAP_DEFS: Readonly<Map<string, MapDef>> = new Map<string, MapDef>(
-  [beginnerMapJson, quickstartMapJson, testMapJson].map((m) => {
-    return [m.name, validateMapDef(m)];
-  }),
-);
 
 export interface MapNameHolder {
   readonly mapName: string | null;

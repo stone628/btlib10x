@@ -1,5 +1,16 @@
 import type { TerrainHexDef } from "../core/types.js";
 import { isTerrainType, TERRAIN_TYPES, type TerrainType } from "../core/types.js";
+import beginnerMap from "./maps/beginner.js";
+import quickstartMap from "./maps/quickstart.js";
+import testMap from "./maps/test.js";
+import testgroundMap from "./maps/testground.js";
+
+export interface MapDefSrc {
+  readonly name: string;
+  readonly width: number;
+  readonly height: number;
+  readonly terrain: readonly TerrainHexDef[];
+}
 
 /**
  * Static definition of a battle map: board dimensions plus every non-clear
@@ -16,79 +27,64 @@ export interface MapDef {
   readonly legends: readonly TerrainType[];
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+/** All battle maps shipped with the library, keyed by name; validated at load. */
+export const MAP_DEFS: Readonly<Map<string, MapDef>> = new Map<string, MapDef>(
+  [beginnerMap, quickstartMap, testMap, testgroundMap].map((m) => {
+    return [m.name, loadMap(m)];
+  }),
+);
+
+function loadMap(src: MapDefSrc): MapDef {
+  validateMapDef(src);
+  const legends = [...new Set(src.terrain.map((h) => h.type))];
+  return { ...src, legends };
 }
 
 /**
- * Hand-rolled structural validator (zero-dependency policy).
- * Throws with all accumulated problems when `data` is not a valid MapDef.
+ * Validate a typed MapDef against board rules. TypeScript enforces the
+ * structural shape at compile time; this catches runtime logical
+ * inconsistencies (board bounds, duplicate hexes, terrain types).
  */
-export function validateMapDef(data: unknown): MapDef {
+export function validateMapDef(def: MapDefSrc): void {
   const errors: string[] = [];
-  if (!isRecord(data)) {
-    throw new Error("MapDef must be a JSON object");
-  }
+  const { width, height } = def;
 
-  const width = data.width;
-  if (typeof width !== "number" || !Number.isInteger(width) || width <= 0) {
+  if (!Number.isInteger(width) || width <= 0) {
     errors.push("width must be a positive integer");
   }
-  const height = data.height;
-  if (typeof height !== "number" || !Number.isInteger(height) || height <= 0) {
+  if (!Number.isInteger(height) || height <= 0) {
     errors.push("height must be a positive integer");
   }
 
   const seen = new Set<string>();
-  const raw = data.terrain;
-  if (!Array.isArray(raw)) {
-    errors.push("terrain must be an array");
-  } else {
-    for (const [i, entry] of raw.entries()) {
-      const label = `terrain[${i}]`;
-      if (!isRecord(entry)) {
-        errors.push(`${label} must be an object`);
-        continue;
+  for (const [i, entry] of def.terrain.entries()) {
+    const label = `terrain[${i}]`;
+    if (!Number.isInteger(entry.col)) {
+      errors.push(`${label}.col must be an integer`);
+    }
+    if (!Number.isInteger(entry.row)) {
+      errors.push(`${label}.row must be an integer`);
+    }
+    if (!isTerrainType(entry.type)) {
+      errors.push(
+        `${label}.type ${JSON.stringify(entry.type)} is not one of ${TERRAIN_TYPES.join("|")}`,
+      );
+    }
+    if (entry.level !== undefined && (!Number.isInteger(entry.level) || entry.level < 0)) {
+      errors.push(`${label}.level must be a non-negative integer when present`);
+    }
+    if (Number.isInteger(entry.col) && Number.isInteger(entry.row)) {
+      if (entry.col < 1 || entry.col > width) {
+        errors.push(`${label}.col ${entry.col} outside board bounds 1..${width}`);
       }
-      const col = entry.col;
-      const row = entry.row;
-      const type = entry.type;
-      if (typeof col !== "number" || !Number.isInteger(col)) {
-        errors.push(`${label}.col must be an integer`);
+      if (entry.row < 1 || entry.row > height) {
+        errors.push(`${label}.row ${entry.row} outside board bounds 1..${height}`);
       }
-      if (typeof row !== "number" || !Number.isInteger(row)) {
-        errors.push(`${label}.row must be an integer`);
-      }
-      if (!isTerrainType(type)) {
-        errors.push(
-          `${label}.type ${JSON.stringify(type)} is not one of ${TERRAIN_TYPES.join("|")}`,
-        );
-      }
-      const level = entry.level;
-      if (
-        level !== undefined &&
-        (typeof level !== "number" || !Number.isInteger(level) || level < 0)
-      ) {
-        errors.push(`${label}.level must be a non-negative integer when present`);
-      }
-      if (
-        typeof col === "number" &&
-        typeof row === "number" &&
-        typeof width === "number" &&
-        typeof height === "number"
-      ) {
-        if (col < 1 || col > width) {
-          errors.push(`${label}.col ${col} outside board bounds 1..${width}`);
-        }
-        if (row < 1 || row > height) {
-          errors.push(`${label}.row ${row} outside board bounds 1..${height}`);
-        }
-        const key = `${col},${row}`;
-        if (seen.has(key)) {
-          errors.push(`${label} duplicates hex ${key}`);
-        } else {
-          seen.add(key);
-        }
+      const key = `${entry.col},${entry.row}`;
+      if (seen.has(key)) {
+        errors.push(`${label} duplicates hex ${key}`);
+      } else {
+        seen.add(key);
       }
     }
   }
@@ -96,13 +92,4 @@ export function validateMapDef(data: unknown): MapDef {
   if (errors.length > 0) {
     throw new Error(`Invalid MapDef:\n  - ${errors.join("\n  - ")}`);
   }
-
-  const t = data.terrain as TerrainHexDef[];
-  return {
-    name: data.name as string,
-    width: data.width as number,
-    height: data.height as number,
-    terrain: t,
-    legends: [...new Set(t.map((def) => def.type))],
-  };
 }

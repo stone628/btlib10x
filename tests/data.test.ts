@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
-import type { ResolvedMechDef } from "../src/data/index.js";
+import type { MechDef, ResolvedMechDef } from "../src/data/index.js";
 import { getAllMechDefs, getMechDef, resolveMechDef, validateMechDef } from "../src/data/index.js";
 import { getWeaponDefFor } from "../src/data/weapon.schema.js";
+
+/** Strip engine-resolved fields to recover a MechDef (for testing). */
+function toMechDef(d: ResolvedMechDef): MechDef {
+  const { armorRear: _ar, internalStructure: _is, weapons: rw, ...rest } = d;
+  return { ...rest, weapons: Object.values(rw) };
+}
 
 describe("'Mech definitions", () => {
   it("ships more than one 'Mech and every model is registered", () => {
@@ -14,7 +20,7 @@ describe("'Mech definitions", () => {
 
   it("re-validates every bundled definition", () => {
     for (const def of getAllMechDefs()) {
-      expect(() => validateMechDef({ ...def, weapons: Object.values(def.weapons) })).not.toThrow();
+      expect(() => validateMechDef(toMechDef(def))).not.toThrow();
     }
   });
 
@@ -55,7 +61,7 @@ describe("'Mech definitions", () => {
       walking: 5,
       running: 8,
       jumping: 0,
-      heatsink: { type: "single", count: 10 },
+      heatsink: { type: "single" as const, count: 10 },
       armor: {
         head: 9,
         centerTorso: 26,
@@ -69,25 +75,25 @@ describe("'Mech definitions", () => {
         rightTorsoRear: 4,
         leftTorsoRear: 4,
       },
-      weapons: [{ weapon: "Medium Laser", location: "centerTorso" }],
+      weapons: [{ weapon: "Medium Laser", location: "centerTorso" as const }],
       critSlots: {
-        head: new Array(6).fill({ kind: "empty" }),
-        centerTorso: new Array(12).fill({ kind: "empty" }),
-        rightTorso: new Array(12).fill({ kind: "empty" }),
-        leftTorso: new Array(12).fill({ kind: "empty" }),
-        rightArm: new Array(12).fill({ kind: "empty" }),
-        leftArm: new Array(12).fill({ kind: "empty" }),
-        rightLeg: new Array(6).fill({ kind: "empty" }),
-        leftLeg: new Array(6).fill({ kind: "empty" }),
+        head: new Array(6).fill({ kind: "empty" as const }),
+        centerTorso: new Array(12).fill({ kind: "empty" as const }),
+        rightTorso: new Array(12).fill({ kind: "empty" as const }),
+        leftTorso: new Array(12).fill({ kind: "empty" as const }),
+        rightArm: new Array(12).fill({ kind: "empty" as const }),
+        leftArm: new Array(12).fill({ kind: "empty" as const }),
+        rightLeg: new Array(6).fill({ kind: "empty" as const }),
+        leftLeg: new Array(6).fill({ kind: "empty" as const }),
       },
       source: "test",
-    };
-    const raw = validateMechDef(json);
-    expect(raw.armor.centerTorso).toBe(26);
-    expect(raw.armor.centerTorsoRear).toBe(5);
-    expect(raw.armor.rightTorsoRear).toBe(4);
-    expect(raw.armor.leftTorsoRear).toBe(4);
-    const resolved = resolveMechDef(raw);
+    } satisfies MechDef;
+    expect(() => validateMechDef(json)).not.toThrow();
+    expect(json.armor.centerTorso).toBe(26);
+    expect(json.armor.centerTorsoRear).toBe(5);
+    expect(json.armor.rightTorsoRear).toBe(4);
+    expect(json.armor.leftTorsoRear).toBe(4);
+    const resolved = resolveMechDef(json);
     expect(resolved.armor.centerTorso).toBe(26);
     expect(resolved.armor.rightTorso).toBe(20);
     expect("centerTorsoRear" in resolved.armor).toBe(false);
@@ -100,75 +106,54 @@ describe("'Mech definitions", () => {
   });
 
   it("derives internal structure from the tonnage table on resolve", () => {
-    const toMechDef = (d: ResolvedMechDef) => ({
-      ...d,
-      weapons: Object.values(d.weapons),
-    });
     expect(resolveMechDef(toMechDef(getMechDef("WVR-6R")!)).internalStructure.centerTorso).toBe(18);
     expect(resolveMechDef(toMechDef(getMechDef("AS7-D")!)).internalStructure.centerTorso).toBe(31);
     expect(resolveMechDef(toMechDef(getMechDef("AS7-D")!)).internalStructure.rightArm).toBe(17);
   });
 
   it("rejects invalid rear armor entries in the JSON schema", () => {
-    const base = getMechDef("HBK-4G")!;
-    const toMechDef = (d: typeof base) => ({ ...d, weapons: Object.values(d.weapons) });
+    const base = toMechDef(getMechDef("HBK-4G")!);
     expect(() =>
-      validateMechDef({
-        ...toMechDef(base),
-        armor: { ...base.armor, centerTorsoRear: -3 },
-      }),
+      validateMechDef({ ...base, armor: { ...base.armor, centerTorsoRear: -3 } } as MechDef),
     ).toThrow(/armor\.centerTorsoRear must be a non-negative integer/);
     expect(() =>
-      validateMechDef({
-        ...toMechDef(base),
-        armor: { ...base.armor, leftTorsoRear: 1.5 },
-      }),
+      validateMechDef({ ...base, armor: { ...base.armor, leftTorsoRear: 1.5 } } as MechDef),
     ).toThrow(/armor\.leftTorsoRear must be a non-negative integer/);
   });
 
   it("marks the Atlas rear-facing CT lasers (MTF (R)) and validates rearFacing", () => {
-    const atlas = getMechDef("AS7-D")!;
-    const ctLasers = Object.values(atlas.weapons).filter(
+    const atlas = toMechDef(getMechDef("AS7-D")!);
+    const ctLasers = atlas.weapons.filter(
       (w) => w.weapon === "Medium Laser" && w.location === "centerTorso",
     );
     expect(ctLasers).toHaveLength(2);
     for (const m of ctLasers) expect(m.rearFacing).toBe(true);
-    const base = getMechDef("HBK-4G")!;
-    const toMechDef = (d: typeof base) => ({ ...d, weapons: Object.values(d.weapons) });
+    const base = toMechDef(getMechDef("HBK-4G")!);
     expect(() =>
       validateMechDef({
-        ...toMechDef(base),
-        weapons: [{ weapon: "Medium Laser", location: "centerTorso", rearFacing: "yes" }],
-      }),
-    ).toThrow(/weapon\.rearFacing must be a boolean/);
-    expect(() =>
-      validateMechDef({
-        ...toMechDef(base),
-        weapons: [{ weapon: "Medium Laser", location: "leftArm", rearFacing: true }],
-      }),
+        ...base,
+        weapons: [
+          ...base.weapons,
+          { weapon: "Medium Laser", location: "leftArm", rearFacing: true },
+        ],
+      } as MechDef),
     ).toThrow(/only valid on torso mounts/);
     expect(() =>
       validateMechDef({
-        ...toMechDef(base),
-        weapons: Object.values(base.weapons).map((m, i) =>
-          i === 3 ? { ...m, rearFacing: true } : m,
-        ),
-      }),
+        ...base,
+        weapons: base.weapons.map((m, i) => (i === 3 ? { ...m, rearFacing: true } : m)),
+      } as MechDef),
     ).not.toThrow();
   });
 
   it("rejects invalid definitions", () => {
-    const base = getMechDef("HBK-4G")!;
-    const toMechDef = (d: typeof base) => ({ ...d, weapons: Object.values(d.weapons) });
-    expect(() => validateMechDef({ ...toMechDef(base), running: 7 })).toThrow(/running/);
+    const base = toMechDef(getMechDef("HBK-4G")!);
+    expect(() => validateMechDef({ ...base, running: 7 } as MechDef)).toThrow(/running/);
     expect(() =>
-      validateMechDef({ ...toMechDef(base), armor: { ...base.armor, head: -1 } }),
+      validateMechDef({ ...base, armor: { ...base.armor, head: -1 } } as MechDef),
     ).toThrow(/armor\.head/);
     expect(() =>
-      validateMechDef({
-        ...toMechDef(base),
-        armor: { ...base.armor, center: 10 },
-      }),
+      validateMechDef({ ...base, armor: { ...base.armor, center: 10 } } as MechDef),
     ).toThrow(/not a valid location/);
   });
 });
@@ -225,19 +210,17 @@ describe("weapon catalog", () => {
 
 describe("ammo validation in MechDef", () => {
   it("rejects a mount.shots that is not a multiple of shotsPerBin", () => {
-    const base = getMechDef("HBK-4G")!;
+    const base = toMechDef(getMechDef("HBK-4G")!);
     expect(() =>
       validateMechDef({
         ...base,
-        weapons: Object.values(base.weapons).map((w) =>
-          w.weapon === "AC/20" ? { ...w, shots: 7 } : w,
-        ),
-      }),
+        weapons: base.weapons.map((w) => (w.weapon === "AC/20" ? { ...w, shots: 7 } : w)),
+      } as MechDef),
     ).toThrow(/must be a multiple/);
   });
 
   it("rejects an ammo crit slot whose weapon has no ammo definition", () => {
-    const base = getMechDef("HBK-4G")!;
+    const base = toMechDef(getMechDef("HBK-4G")!);
     expect(() =>
       validateMechDef({
         ...base,
@@ -247,7 +230,7 @@ describe("ammo validation in MechDef", () => {
             i === 0 ? { kind: "ammo" as const, weapon: "Medium Laser" } : s,
           ),
         },
-      }),
+      } as MechDef),
     ).toThrow(/has no ammo definition/);
   });
 });
