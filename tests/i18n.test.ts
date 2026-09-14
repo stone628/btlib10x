@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bestFireTarget, isNominal, suggestFireTargets } from "../src/index.js";
+import { bestFireTarget, isNominal, isUnitAvailable, suggestFireTargets } from "../src/index.js";
 import { en } from "../web/i18n/en.js";
 import type { LocaleId, MessageKey } from "../web/i18n/index.js";
 import { i18n, LOCALES } from "../web/i18n/index.js";
@@ -13,7 +13,7 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
     const st = s.battle!;
     const actorId = S.currentActor(s)!.id;
     const ids = Object.values(st.units)
-      .filter((u) => !u.removed)
+      .filter((u) => isUnitAvailable(u))
       .map((u) => u.id);
     const enemy = ids.find((id) => id !== actorId)!;
     if (st.phase === "movement") {

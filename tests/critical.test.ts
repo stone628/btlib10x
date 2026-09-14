@@ -104,7 +104,7 @@ describe("limb / head blow-off on 12", () => {
       damage,
       ammoBins: loadAmmoBins(def),
     });
-    expect(res.killed).toBe(true);
+    expect(res.killedReason).toBe("headBlownOff");
     expect(res.rows.some((r) => r.kind === "headBlownOff")).toBe(true);
     expect(res.damage.internalStructure.head).toBe(0);
   });
@@ -152,7 +152,7 @@ describe("limb / head blow-off on 12", () => {
       ammoBins: loadAmmoBins(def),
     });
     expect(res.rows).toHaveLength(3);
-    expect(res.killed).toBe(false);
+    expect(res.killedReason).toBe(null);
   });
 });
 
@@ -373,7 +373,7 @@ describe("weapon and ammo crit effects", () => {
       // terminal), so the unit is killed.
       expect(first.damage).toBe(100);
     }
-    expect(res.killed).toBe(true);
+    expect(res.killedReason).toBe("centerTorsoDestroyed");
     expect(res.damage.internalStructure.centerTorso).toBe(0);
     // The exploded bin's location is gone, so all leftTorso bins (and the
     // derived per-weapon total) are removed entirely.
@@ -423,7 +423,7 @@ describe("weapon and ammo crit effects", () => {
     // any non-zero damage applied at this slot would show up.
     expect(res.damage.armor.centerTorso).toBe(0);
     expect(res.damage.internalStructure.centerTorso).toBe(1000);
-    expect(res.killed).toBe(false);
+    expect(res.killedReason).toBe(null);
     // Guard: armor pool untouched (no explosion damage applied).
     expect(def.armor.centerTorso).toBe(ctArmorBefore);
   });
@@ -444,7 +444,7 @@ describe("weapon and ammo crit effects", () => {
       },
       ammoBins: loadAmmoBins(def),
     });
-    expect(res.killed).toBe(true);
+    expect(res.killedReason).toBe("cockpitDestroyed");
     expect(res.rows.some((r) => r.kind === "cockpitDestroyed")).toBe(true);
   });
 });
@@ -755,7 +755,7 @@ describe("engine crit destruction", () => {
       },
       ammoBins: loadAmmoBins(def),
     });
-    expect(res.killed).toBe(true);
+    expect(res.killedReason).toBe("engineDestroyed");
     expect(res.rows.some((r) => r.kind === "engineDestroyed")).toBe(true);
   });
 
@@ -779,7 +779,7 @@ describe("engine crit destruction", () => {
       },
       ammoBins: loadAmmoBins(def),
     });
-    expect(res.killed).toBe(false);
+    expect(res.killedReason).toBe(null);
     expect(res.rows.some((r) => r.kind === "engineDestroyed")).toBe(false);
   });
 });

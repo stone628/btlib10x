@@ -142,7 +142,7 @@ describe("console renderer", () => {
 
   it("omits removed units from the map", () => {
     const state = battleWith({ id: "hbk", model: "HBK-4G", position: { col: 3, row: 3 } });
-    state.units.hbk!.removed = true;
+    state.units.hbk!.removed = "destroyed";
     const out = renderBattle(state);
     expect(out).not.toContain(`(${GRID_GLYPHS.vertW} hbk`);
     expect(out).toContain(`${GRID_GLYPHS.edgeNW}0202${GRID_GLYPHS.edgeNE}`); // hex still drawn, empty

@@ -4,6 +4,7 @@ import {
   createBattle,
   getMapDefFor,
   getMechDefFor,
+  isUnitRemoved,
   reachableLandings,
   wreckAt,
 } from "../src/index.js";
@@ -163,7 +164,7 @@ export function reachableInfo(s: Session): BoardRenderInfo | null {
     wreckAt: (hex: HexCoord): boolean => wreckAt(s.battle!, hex) !== undefined,
     occupantTeam: (hex: HexCoord): number | undefined => {
       for (const u of Object.values(s.battle!.units)) {
-        if (u.removed) continue;
+        if (isUnitRemoved(u)) continue;
         if (u.position.col === hex.col && u.position.row === hex.row) return u.team;
       }
       return undefined;
@@ -173,7 +174,7 @@ export function reachableInfo(s: Session): BoardRenderInfo | null {
 
   const map = getMapDefFor(s.setup)!;
   const units = Object.values(s.battle.units)
-    .filter((u) => !u.removed)
+    .filter((u) => !isUnitRemoved(u))
     .map((u) => createBoardRenderUnit(u));
   return { map, units, reachable: { team: actor.team, revealed: landings }, locale: s.locale };
 }

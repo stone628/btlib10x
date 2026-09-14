@@ -40,12 +40,15 @@ describe("eject", () => {
     const state = startMovementTurn(hbkVsEnf());
     ejectPilot(state, "hbk");
     const hbk = getUnit(state, "hbk");
-    expect(hbk.removed).toBe(true);
-    expect(hbk.destroyed).toBe(true);
+    expect(hbk.removed).toBe("pilotEjected");
+    expect(hbk.destroyed).toBe("not");
     expect(state.actedThisPhase).toContain("hbk");
     expect(state.wrecks["2,4"]).toEqual({ unitId: "hbk", level: 2 });
-    expect(state.events.some((e) => e.kind === "unitEjected" && e.unitId === "hbk")).toBe(true);
-    expect(state.events.some((e) => e.kind === "unitRemoved" && e.unitId === "hbk")).toBe(true);
+    expect(
+      state.events.some(
+        (e) => e.kind === "unitRemoved" && e.unitId === "hbk" && e.reason === "pilotEjected",
+      ),
+    ).toBe(true);
     expect(wreckAt(state, { col: 2, row: 4 })?.unitId).toBe("hbk");
   });
 
@@ -59,7 +62,7 @@ describe("eject", () => {
     const state = startMovementTurn(hbkVsEnf());
     getUnit(state, "hbk").shutdown = "manual";
     ejectPilot(state, "hbk");
-    expect(getUnit(state, "hbk").removed).toBe(true);
+    expect(getUnit(state, "hbk").removed).toBe("pilotEjected");
     expect(state.wrecks["2,4"]).toEqual({ unitId: "hbk", level: 2 });
   });
 

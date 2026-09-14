@@ -4,7 +4,9 @@ import {
   classifyArcWithBoundary,
   getMechDefFor,
   isNominal,
+  isUnitAvailable,
   isUnitImmobile,
+  isUnitRemoved,
   suggestFireTargets,
   weaponCanFireIntoArc,
 } from "btlib10x";
@@ -102,7 +104,7 @@ function queueFaceTarget(s: S.Session, actorId: string, targetId: string): boole
   if (st === null || candidate === null) return false;
   const actor = st.units[actorId];
   const target = st.units[targetId];
-  if (actor === undefined || target === undefined || target.removed || target.destroyed) {
+  if (actor === undefined || target === undefined || isUnitRemoved(target)) {
     return false;
   }
   let blocked: number[];
@@ -201,9 +203,9 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
     if (st === null || s.actorId === null) return null;
 
     const actor = st.units[s.actorId];
-    if (actor === undefined || actor.removed) return null;
+    if (actor === undefined || isUnitRemoved(actor)) return null;
     const enemy = Object.values(st.units).find(
-      (u) => !u.removed && u.id !== actor.id && u.team !== actor.team,
+      (u) => isUnitAvailable(u) && u.id !== actor.id && u.team !== actor.team,
     );
     if (enemy === undefined) return null;
 
@@ -219,7 +221,7 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
     if (currBattlePhase === "movement") {
       if (lastBattlePhase !== "movement") {
         for (const u of Object.values(st.units)) {
-          if (!u.removed) queueNextCommand(`sheet ${u.id}`);
+          if (isUnitAvailable(u)) queueNextCommand(`sheet ${u.id}`);
         }
         queueNextCommand("status");
       }

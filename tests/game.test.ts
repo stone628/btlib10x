@@ -930,10 +930,10 @@ describe("weapon attack phase", () => {
     // 20+ damage PSR (needs 6: 3+3 succeeds, no fall).
     resolveAllAttacks(state, scriptedRng(2, 3, 3, 4, 3, 3));
     expect(getUnit(state, "enf").damage.armor.centerTorso).toBe(7);
-    expect(getUnit(state, "enf").destroyed).toBe(false);
+    expect(getUnit(state, "enf").destroyed).toBe("not");
 
     advancePhase(state); // weaponAttack -> end
-    expect(getUnit(state, "enf").destroyed).toBe(false); // survived with 7 CT
+    expect(getUnit(state, "enf").destroyed).toBe("not"); // survived with 7 CT
 
     advancePhase(state); // end -> initiative, turn 2
     expect(state.turn).toBe(2);
@@ -945,7 +945,7 @@ describe("weapon attack phase", () => {
     declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
     resolveAllAttacks(state, scriptedRng(6, 6, 3, 4, 3, 3)); // hit CT again
     expect(getUnit(state, "enf").damage.armor.centerTorso).toBe(0);
-    expect(getUnit(state, "enf").destroyed).toBe(false); // CT IS still up (16-13=3)
+    expect(getUnit(state, "enf").destroyed).toBe("not"); // CT IS still up (16-13=3)
 
     advancePhase(state); // weaponAttack -> end
     advancePhase(state); // end -> initiative, turn 3
@@ -954,13 +954,13 @@ describe("weapon attack phase", () => {
     advancePhase(state);
     declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
     resolveAllAttacks(state, scriptedRng(6, 6, 3, 4)); // CT IS gone
-    expect(getUnit(state, "enf").destroyed).toBe(true); // killed immediately
-    expect(getUnit(state, "enf").removed).toBe(true);
+    expect(getUnit(state, "enf").destroyed).toBe("centerTorsoDestroyed"); // killed immediately
+    expect(getUnit(state, "enf").removed).toBe("destroyed");
 
     advancePhase(state); // weaponAttack -> end (kill already committed)
     const enf = getUnit(state, "enf");
-    expect(enf.destroyed).toBe(true);
-    expect(enf.removed).toBe(true);
+    expect(enf.destroyed).toBe("centerTorsoDestroyed");
+    expect(enf.removed).toBe("destroyed");
     expect(state.events.some((e) => e.kind === "unitRemoved")).toBe(true);
     expect(checkVictory(state)).toEqual({ winnerTeam: 0, draw: false });
   });
@@ -982,8 +982,8 @@ describe("weapon attack phase", () => {
     // then enf to-hit 3+3=6 >= TN 4, location 3+4=7 -> hbk CT.
     resolveAllAttacks(state, scriptedRng(3, 3, 3, 4, 3, 3, 3, 4));
 
-    expect(enf.destroyed).toBe(true);
-    expect(enf.removed).toBe(true);
+    expect(enf.destroyed).toBe("centerTorsoDestroyed");
+    expect(enf.removed).toBe("destroyed");
     // Enforcer's declared AC/10 still resolved despite hbk killing it first.
     expect(
       state.events.some(

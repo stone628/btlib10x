@@ -421,7 +421,7 @@ executeMove(state, unitId, steps, { finalFacing, rng }?): void
 attemptStandUp(state, unitId, rng?): void              // movement phase only: prone unit tries to rise (one attempt per activation)
 dropProne(state, unitId): void                         // movement phase only: go prone voluntarily
 proneFacingTurn(state, unitId, facings): void          // movement phase only: prone unit turns ±1 hexside
-ejectPilot(state, unitId): void                        // movement phase only: destroys/removes the unit and spawns a level-2 wreck in its hex
+ejectPilot(state, unitId): void                        // movement phase only: removes the unit (removed = "pilotEjected") and spawns a level-2 wreck in its hex
 declareAttacks(state, unitId, decls, rng?): void  // weaponAttack phase only
 resolveAllAttacks(state, rng): void                    // resolves every unit's declared attacks simultaneously, then runs the end-of-phase piloting sweep
 applyFall(state, unitId, rng, { cause, seatbeltModifier, halved }): void
@@ -478,7 +478,8 @@ interface UnitState {
   destroyedWeapons: number[];
   moveMode; movesThisTurn; jumpedThisTurn; mpSpent;
   declaredAttacks; firedTargetId; passedAttacks;
-  destroyed; removed;
+  destroyed: "not" | "headDestroyed" | "centerTorsoDestroyed" | "cockpitDestroyed" | "headBlownOff" | "engineDestroyed";
+  removed: "not" | "destroyed" | "pilotEjected" | "pilotKilled";
 }
 ```
 
@@ -486,7 +487,10 @@ Rules encoded by the state machine:
 
 - **Damage deferral**: units keep fighting during the weapon attack phase even
   if destroyed mid-phase; kills are committed when advancing
-  `weaponAttack -> end` (`destroyed = removed = true`, events emitted).
+  `weaponAttack -> end` (`destroyed`/`removed` set to the reason, e.g.
+  `"centerTorsoDestroyed"` / `"destroyed"`; paired `unitDestroyed` +
+  `unitRemoved` events emitted). A pilot kill or eject sets only
+  `removed` (`"pilotKilled"` / `"pilotEjected"`), leaving `destroyed = "not"`.
 - **Weapon usability** is judged against `phaseStartDamage`.
 - **Ammo** is deducted at declaration time; jams persist for the rest of the game.
 - **Declaration validation**: weapon indexes are 1-based; one target per turn,

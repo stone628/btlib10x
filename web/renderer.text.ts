@@ -3,6 +3,7 @@ import {
   FACINGS,
   type Facing,
   type HexGrid,
+  isUnitRemoved,
   type MapDef,
   type TerrainHexDef,
 } from "btlib10x";
@@ -649,7 +650,7 @@ export function battleModel(
   const facings: Record<string, Facing> = {};
   if (overlay !== undefined) Object.assign(cells, overlay);
   for (const unit of Object.values(state.units)) {
-    if (unit.removed) continue;
+    if (isUnitRemoved(unit)) continue;
     const key = `${unit.position.col},${unit.position.row}`;
     cells[key] = unit.id;
     facings[key] = unit.facing;
@@ -659,7 +660,7 @@ export function battleModel(
   const autoCells: Record<string, CharStyle> = {};
   if (styles === undefined) {
     for (const unit of Object.values(state.units)) {
-      if (unit.removed) continue;
+      if (isUnitRemoved(unit)) continue;
       const key = `${unit.position.col},${unit.position.row}`;
       const team = TEAM_STYLES[unit.team];
       if (team !== undefined) autoCells[key] = team;

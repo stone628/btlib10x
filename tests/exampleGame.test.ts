@@ -126,20 +126,20 @@ describe("example battle: Wolverine vs Griffin", () => {
         resolveAllAttacks(state, scriptedRng(6, 6, 3, 4));
         const hitsDone = t - 1;
         expect(grfCt()).toBe(Math.max(ctFront - 5 * hitsDone, 0));
-        expect(getUnit(state, "grf").destroyed).toBe(false);
+        expect(getUnit(state, "grf").destroyed).toBe("not");
       } else {
         // Final blow: front armor gone, CT IS 5, damage 5 -> structure destroyed.
         declareAttacks(state, "wvr", [{ weaponIndex: 1, targetId: "grf" }]);
         resolveAllAttacks(state, scriptedRng(6, 6, 3, 4));
         expect(grfCt()).toBe(0);
-        expect(getUnit(state, "grf").destroyed).toBe(true); // killed immediately
-        expect(getUnit(state, "grf").removed).toBe(true);
+        expect(getUnit(state, "grf").destroyed).toBe("centerTorsoDestroyed"); // killed immediately
+        expect(getUnit(state, "grf").removed).toBe("destroyed");
       }
     }
 
     advancePhase(state); // weaponAttack -> end: kill committed
-    expect(getUnit(state, "grf").destroyed).toBe(true);
-    expect(getUnit(state, "grf").removed).toBe(true);
+    expect(getUnit(state, "grf").destroyed).toBe("centerTorsoDestroyed");
+    expect(getUnit(state, "grf").removed).toBe("destroyed");
     expect(checkVictory(state)).toEqual({ winnerTeam: 0, draw: false });
     expect(state.events.filter((e) => e.kind === "unitRemoved")).toHaveLength(1);
   });

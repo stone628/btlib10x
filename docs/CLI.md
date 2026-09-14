@@ -75,7 +75,7 @@ The prompt names the acting unit; commands act on that 'Mech.
 | `mode prone` | declare a voluntary drop to prone (no roll, +1 heat, costs 1 MP) plus optional crawl sharing the walk budget (2 MP per forward hex, no backward). Renders the crawl map minus the drop cost. `done` drops first, then crawls to the queued `place` — without a `place`, `done` just drops in place |
 | `mode shutdown` | declare a voluntary shutdown (online unit only). `place` stays unavailable; `done` commits it — the unit goes off-line (`manual`) and can no longer move, fire, or act normally this turn. `cancel` resets the declaration |
 | `mode startup` | declare a voluntary startup attempt (shut-down unit only). `done` rolls 2D6 against the heat shutdown avoidance number: success turns the unit `starting` (still off-line now, online just before the next initiative roll); failure keeps it shut down. `done` alone (without `mode startup`) passes — the unit stays off-line |
-| `mode eject` | declare a pilot ejection (any non-removed unit, including a shut-down one). `place` stays unavailable; `done` commits it — the unit is marked destroyed/removed and its hex becomes a permanent level-2 wreck. `cancel` resets the declaration |
+| `mode eject` | declare a pilot ejection (any non-removed unit, including a shut-down one). `place` stays unavailable; `done` commits it — the unit is marked removed (`pilotEjected`) and its hex becomes a permanent level-2 wreck. `cancel` resets the declaration |
 | `place <col> <row> <facing>` | place the 'Mech at a final hex + facing in one step; `col row` are 1-based, `facing` is an absolute word (`n\|ne\|se\|s\|sw\|nw`). The (hex, facing) must be a reachable landing shown by `mode` (validated against the movement candidate); replaces any previously queued steps. Jump landing facing is chosen freely, so any facing at a reachable hex is legal for `jump` |
 | `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [J](jam) / [-](destroyed) / per-bin ammo `(n left)` markers); without id: brief unit list (id, model, position+facing) grouped by team |
 | `status` | queued move steps with running MP cost per step |
@@ -234,8 +234,9 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   online just before the next initiative roll), failure → stays off-line.
   Shut-down units act first in the movement phase regardless of initiative.
 - **Pilot ejection / wrecks** — `mode eject` + `done` marks the unit
-  destroyed and removed (counts toward victory; skipped by the actor queue
-  and by occupancy checks) and spawns a **level-2 wreck** in its hex. A
+  removed (`removed = "pilotEjected"`; destroyed stays `"not"`; counts toward
+  victory; skipped by the actor queue and by occupancy checks) and spawns a
+  **level-2 wreck** in its hex. A
   wreck is permanent and blocks the hex entirely: no ground or jump
   movement may enter or land on it, LOS is blocked when the wreck lies
   strictly between the endpoints (independent of elevation), and a target
@@ -271,7 +272,9 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   every point forces a consciousness roll (1→3+, 2→5+, 3→7+, 4→10+, 5→11+)
   taken before any simultaneous PSR. A failed roll knocks the pilot out:
   the unit cannot act and counts as immobile until it wakes in a later end
-  phase; six total hits kills the pilot and destroys the unit. Cockpit
+  phase; six total hits kills the pilot and removes the unit
+  (`removed = "pilotKilled"`, destroyed stays `"not"`), leaving a level-2
+  wreck like an eject. Cockpit
   destruction still kills outright.
 - **Movement-entry PSRs** — entering rubble (+0) or water (depth 1: −1,
   depth 2: +0, depth 3+: +1) and entering/leaving a building hex (light +0
