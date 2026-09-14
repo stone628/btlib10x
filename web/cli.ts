@@ -333,7 +333,17 @@ const MOVE_CMDS: Record<string, CmdDef> = {
     helpKey: "cmd.mode.help",
     usage:
       "mode <standstill|walk|run|jump|prone|standup [walk|run|jump|standstill]|shutdown|startup|eject>",
-    argsDoc: [["mode", "cmd.mode.arg.mode"]],
+    argsDoc: [
+      ["standstill", "cmd.mode.arg.standstill"],
+      ["walk", "cmd.mode.arg.walk"],
+      ["run", "cmd.mode.arg.run"],
+      ["jump", "cmd.mode.arg.jump"],
+      ["prone", "cmd.mode.arg.prone"],
+      ["standup [mode]", "cmd.mode.arg.standup"],
+      ["shutdown", "cmd.mode.arg.shutdown"],
+      ["startup", "cmd.mode.arg.startup"],
+      ["eject", "cmd.mode.arg.eject"],
+    ],
     run: (s, a) => {
       const locale = L(s);
       expectArgs(
@@ -591,8 +601,19 @@ function commandHelp(session: S.Session, name: string): string[] {
   lines.push(i18n(locale, def.helpKey).replace(/\{names\}/g, names));
   if (def.argsDoc !== undefined && def.argsDoc.length > 0) {
     lines.push(i18n(locale, "help.argumentsHeader"));
-    for (const [arg, desc] of def.argsDoc)
-      lines.push(`  ${arg.padEnd(12)} ${i18n(locale, desc).replace(/\{names\}/g, names)}`);
+    const padLen = Math.max(
+      12,
+      def.argsDoc.map(([arg, _]) => arg.length).reduce((prev, curr) => Math.max(prev, curr)),
+    );
+
+    for (const [arg, desc] of def.argsDoc) {
+      const text = i18n(locale, desc).replace(/\{names\}/g, names);
+      const [first = "", ...rest] = text.split("\n");
+      const prefix = `  ${arg.padEnd(padLen)} `;
+      lines.push(`${prefix}${first}`);
+      const indent = " ".repeat(prefix.length);
+      for (const line of rest) lines.push(`${indent}${line}`);
+    }
   }
   return lines;
 }
