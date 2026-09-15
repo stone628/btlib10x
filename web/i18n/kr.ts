@@ -405,6 +405,7 @@ export const kr: Catalog = {
   "critChart.soak.endoSteel": "Endo Steel",
   "critChart.soak.ferroFibrous": "Ferro-Fibrous",
   "critChart.soak.case": "CASE",
+  "critChart.soak.caseII": "CASE II",
 
   // event log
   "log.turn": "[[[   턴 {turn}   ]]]",

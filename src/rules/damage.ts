@@ -103,7 +103,7 @@ export function applyDamage(
   const caseKind = options?.caseKind;
   const bypassArmor = options?.bypassArmor;
   let killed = false;
-  let remaining = amount;
+  let remaining = caseKind === "caseII" ? 1 : amount;
   let current: Location | null = location;
   while (current !== null && remaining > 0 && !killed) {
     const cur: Location = current;
