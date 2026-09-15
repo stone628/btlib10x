@@ -41,11 +41,14 @@ function steppedLanding(s: S.Session): { col: number; row: number; facing: strin
 }
 
 describe("posture-change then move", () => {
-  it("mode drop is gone; bare mode standup defaults to standstill", () => {
+  it("mode drop/crawl are gone; bare mode standup defaults to standstill", () => {
     const { s } = started();
     expect(run(s, "mode drop")[0]).toMatch(/^error:/);
+    expect(run(s, "mode crawl")[0]).toMatch(/^error:/);
+    expect(run(s, "mode crawl")[0]).toMatch(/valid modes:/);
     forceProne(s, S.currentActor(s)!.id);
     expect(run(s, "mode standup foo")[0]).toMatch(/^error:/);
+    expect(run(s, "mode walk")[0]).toMatch(/valid modes:/);
   });
 
   it("bare mode standup + done stands in place with no candidate map", () => {
@@ -68,22 +71,86 @@ describe("posture-change then move", () => {
     expect(unit.mpSpent).toBe(2);
   });
 
-  it("mode prone + place crawls sharing one walk budget (drop 1 + 2 per hex)", () => {
+  it("bare mode prone defaults to turn; prone turn + place turns sharing one walk budget", () => {
     const { s, actor } = started();
     run(s, "mode prone");
     expect(s.moveMode).toBe("prone");
+    expect(s.postureMove).toBe("walk");
     expect(s.moveCandidate).not.toBeNull();
-    const target = steppedLanding(s);
-    run(s, `place ${target.col} ${target.row} ${target.facing}`);
-    // All-6s RNG: every terrain-entry PSR succeeds (12 always succeeds).
-    s.rng = scriptedRng(...Array.from({ length: 40 }, () => 6));
+    // Turn-only map: every landing stays in place.
+    for (const l of s.moveCandidate!.revealed) {
+      expect(l.hex).toEqual(s.battle!.units[actor]!.position);
+    }
+    const before = s.battle!.units[actor]!;
+    const landing = s.moveCandidate!.revealed.find((l) => l.facing !== before.facing)!;
+    expect(landing).toBeDefined();
+    const spent = landing.path[landing.path.length - 1]!.totalMp;
+    run(s, `place ${landing.hex.col} ${landing.hex.row} ${landing.facing}`);
+    const heatBefore = s.battle!.units[actor]!.heat;
     run(s, "done");
     const unit = s.battle!.units[actor]!;
     expect(unit.prone).toBe(true);
-    expect(unit.position).toEqual({ col: target.col, row: target.row });
-    expect(unit.facing).toBe(target.facing);
+    expect(unit.position).toEqual(before.position);
+    expect(unit.facing).toBe(landing.facing);
     expect(unit.moveMode).toBe("walk");
-    expect(unit.mpSpent).toBe(1 + target.spent);
+    expect(unit.mpSpent).toBe(1 + spent); // drop 1 + turn fragments
+    expect(unit.heat).toBe(heatBefore + 2); // drop 1 + turn 1
+  });
+
+  it("mode prone pronestill drops in place with no candidate map", () => {
+    const { s, actor } = started();
+    run(s, "mode prone pronestill");
+    expect(s.moveMode).toBe("prone");
+    expect(s.postureMove).toBe("standStill");
+    expect(s.moveCandidate).toBeNull();
+    expect(run(s, `place 9 9 n`)[0]).toMatch(/^error:/);
+    const heatBefore = s.battle!.units[actor]!.heat;
+    run(s, "done");
+    const unit = s.battle!.units[actor]!;
+    expect(unit.prone).toBe(true);
+    expect(unit.mpSpent).toBe(1);
+    expect(unit.heat).toBe(heatBefore + 1); // drop only, no turn heat
+  });
+
+  it("prone mode turn + place turns in place with +1 heat", () => {
+    const { s, actor } = started();
+    forceProne(s, actor);
+    const before = s.battle!.units[actor]!;
+    run(s, "mode turn");
+    expect(s.moveMode).toBe("turn");
+    expect(s.moveCandidate).not.toBeNull();
+    const landing = s.moveCandidate!.revealed.find((l) => l.facing !== before.facing)!;
+    expect(landing).toBeDefined();
+    expect(landing.hex).toEqual(before.position);
+    run(s, `place ${landing.hex.col} ${landing.hex.row} ${landing.facing}`);
+    const heatBefore = s.battle!.units[actor]!.heat;
+    run(s, "done");
+    const unit = s.battle!.units[actor]!;
+    expect(unit.prone).toBe(true);
+    expect(unit.position).toEqual(before.position);
+    expect(unit.facing).toBe(landing.facing);
+    expect(unit.moveMode).toBe("walk");
+    expect(unit.heat).toBe(heatBefore + 1);
+  });
+
+  it("prone mode pronestill holds with no heat and no candidate", () => {
+    const { s, actor } = started();
+    forceProne(s, actor);
+    run(s, "mode pronestill");
+    expect(s.moveMode).toBe("pronestill");
+    expect(s.moveCandidate).toBeNull();
+    expect(run(s, "place 9 9 n")[0]).toMatch(/^error:/);
+    const heatBefore = s.battle!.units[actor]!.heat;
+    run(s, "done");
+    const unit = s.battle!.units[actor]!;
+    expect(unit.prone).toBe(true);
+    expect(unit.heat).toBe(heatBefore);
+  });
+
+  it("standing mode turn/pronestill are rejected with the valid-modes hint", () => {
+    const { s } = started();
+    expect(run(s, "mode turn")[0]).toMatch(/valid modes:/);
+    expect(run(s, "mode pronestill")[0]).toMatch(/valid modes:/);
   });
 
   it("mode prone + done without place just drops in place", () => {
@@ -185,8 +252,8 @@ describe("posture-change then move", () => {
   });
 });
 
-describe("engine crawl", () => {
-  function crawlBattle(): ReturnType<typeof createTestBattle> {
+describe("engine prone turn", () => {
+  function proneBattle(): ReturnType<typeof createTestBattle> {
     const state = createTestBattle(
       [],
       [
@@ -213,22 +280,34 @@ describe("engine crawl", () => {
     return state;
   }
 
-  it("crawls forward for flat 2 MP ignoring terrain", () => {
-    const state = crawlBattle();
+  it("turns in place for 1 MP per hexside, multiple turns allowed", () => {
+    const state = proneBattle();
     dropProne(state, "hbk");
-    const to = neighbor({ col: 3, row: 3 }, "n");
-    executeMove(state, "hbk", [{ kind: "enter", to }]);
+    executeMove(state, "hbk", [
+      { kind: "turn", facings: 1 },
+      { kind: "turn", facings: 1 },
+    ]);
     const unit = state.units.hbk!;
     expect(unit.prone).toBe(true);
-    expect(unit.position).toEqual(to);
+    expect(unit.position).toEqual({ col: 3, row: 3 });
+    expect(unit.facing).toBe("se");
     expect(unit.mpSpent).toBe(2);
-    expect(unit.movesThisTurn).toEqual(["forward"]);
+    expect(unit.movesThisTurn).toEqual([]);
   });
 
-  it("rejects backward crawl", () => {
-    const state = crawlBattle();
+  it("rejects hex enters while prone", () => {
+    const state = proneBattle();
     dropProne(state, "hbk");
-    const to = neighbor({ col: 3, row: 3 }, "s");
-    expect(() => executeMove(state, "hbk", [{ kind: "enter", to }])).toThrow(/only crawl forward/);
+    const to = neighbor({ col: 3, row: 3 }, "n");
+    expect(() => executeMove(state, "hbk", [{ kind: "enter", to }])).toThrow(
+      /turn or pronestill only/,
+    );
+  });
+
+  it("rejects zero-hex jump declarations", () => {
+    const state = proneBattle();
+    const hbk = state.units.hbk!;
+    hbk.moveMode = "jump";
+    expect(() => executeMove(state, "hbk", [])).toThrow(/at least 1 hex/);
   });
 });

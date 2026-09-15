@@ -660,16 +660,6 @@ describe("CASE", () => {
       },
     };
     expect(checkCASE(withCase, "leftTorso")).toBe("case");
-
-    const withII: typeof hbk = {
-      ...hbk,
-      techBase: "Inner Sphere",
-      critSlots: {
-        ...hbk.critSlots,
-        leftTorso: [...hbk.critSlots.leftTorso, { kind: "soak", name: "caseII" }],
-      },
-    };
-    expect(checkCASE(withII, "leftTorso")).toBe("caseII");
   });
 
   it("CASE: explosion vents at the side torso, center torso untouched", () => {
@@ -679,16 +669,6 @@ describe("CASE", () => {
     // and CT keeps all its IS.
     const app = applyAmmoExplosion(s, "leftTorso", 1000, "case");
     expect(app.after.internalStructure.leftTorso).toBe(0);
-    expect(app.after.internalStructure.centerTorso).toBe(ctBefore);
-    expect(app.killed).toBe(false);
-  });
-
-  it("CASE II: blast capped at 1 point to the location, no overflow", () => {
-    const s = state();
-    const ltBefore = s.internalStructure.leftTorso;
-    const ctBefore = s.internalStructure.centerTorso;
-    const app = applyAmmoExplosion(s, "leftTorso", 1000, "caseII");
-    expect(app.after.internalStructure.leftTorso).toBe(ltBefore - 1);
     expect(app.after.internalStructure.centerTorso).toBe(ctBefore);
     expect(app.killed).toBe(false);
   });

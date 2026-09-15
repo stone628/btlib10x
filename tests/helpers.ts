@@ -141,9 +141,15 @@ export function reachableInfo(s: Session): BoardRenderInfo | null {
   let running = def.running;
   let jumping = def.jumping;
   if (mode === "prone") {
+    if ((s.postureMove ?? "walk") === "standStill") return null;
     locomotion = "walk";
     proneFlag = true;
     walking = Math.max(0, walking - 1);
+  } else if (mode === "turn") {
+    locomotion = "walk";
+    proneFlag = true;
+  } else if (mode === "pronestill") {
+    return null;
   } else if (mode === "standup") {
     locomotion = s.postureMove ?? "walk";
     proneFlag = false;

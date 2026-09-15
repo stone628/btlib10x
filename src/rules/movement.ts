@@ -95,7 +95,7 @@ export function hexKey(hex: HexCoord): string {
 }
 
 /** A single movement fragment in a reachability path. */
-export type MoveFragment = "F" | "B" | "R" | "L" | "J" | "P" | "U";
+export type MoveFragment = "F" | "B" | "R" | "L" | "J" | "U";
 export interface MovePathStep {
   readonly fragment: MoveFragment;
   readonly totalMp: number;
@@ -139,14 +139,14 @@ export interface ReachabilityOptions {
  *   B = step backward (walk or jump)
  *   R/L = 1-hexside turn (right/left)
  *   J = jump step forward (jump mode)
- *   P = prone crawl step (walk mode + prone)
  *   U = run step (run mode)
  *
  * Ground (walk/run) charges 1 MP per R/L and 1+terrain+climb per F/B/U;
- * run never moves backward. Prone crawl (walk+prone) charges 2 MP per P step
- * forward only, no backward, turns cost 1 MP. Jump charges 1 MP per J step
- * forward (backward steps stay B) and treats R/L as free reorientations
- * (landing facing chosen freely).
+ * run never moves backward. Prone turn (walk+prone) allows only R/L turns
+ * (1 MP each, multiple turns within budget), no hex enters. Jump charges
+ * 1 MP per J step forward (backward steps stay B) and treats R/L as free
+ * reorientations (landing facing chosen freely). Jump needs >= 1 hex enter;
+ * zero-hex jump declarations are rejected at commit.
  *
  * The starting hex is included: the initial state has an empty path, and every
  * facing reachable from it by pure turns (free for jump, paid for ground)
@@ -161,7 +161,7 @@ export function reachableLandings(
   if (budget <= 0 || options.mode === "standStill") return [];
 
   const jumping = options.mode === "jump";
-  const prone = options.prone && options.mode === "walk";
+  const proneTurn = options.prone && options.mode === "walk";
   const running = options.mode === "run";
   const { width, height } = options.grid;
 
@@ -169,7 +169,6 @@ export function reachableLandings(
 
   const stepCost = (from: HexCoord, to: HexCoord): number => {
     if (jumping) return 1;
-    if (prone) return 2;
     const cellTo = cellAt(options.grid, to);
     return (
       costToEnter(cellTo.terrain) + costToClimb(cellAt(options.grid, from).level, cellTo.level)
@@ -178,12 +177,11 @@ export function reachableLandings(
 
   const stepFragment = (): MoveFragment => {
     if (jumping) return "J";
-    if (prone) return "P";
     if (running) return "U";
     return "F";
   };
 
-  const backwardAllowed = jumping || (options.mode === "walk" && !prone);
+  const backwardAllowed = jumping || options.mode === "walk";
 
   interface State {
     hex: HexCoord;
@@ -209,7 +207,7 @@ export function reachableLandings(
     const climbLevels = jumping ? 0 : cellTo.level - cellFrom.level;
     const climbCost = jumping ? 0 : costToClimb(cellFrom.level, cellTo.level);
     const terrain = cellTo.terrain;
-    const terrainSurcharge = jumping || prone ? 0 : costToEnter(terrain) - 1;
+    const terrainSurcharge = jumping ? 0 : costToEnter(terrain) - 1;
     return {
       fragment,
       totalMp: prevTotal + baseMp,
@@ -275,16 +273,18 @@ export function reachableLandings(
       }
     }
 
-    const forward = neighbor(cur.hex, cur.facing);
-    if (canEnter(cur.hex, forward, false)) {
-      const base = stepCost(cur.hex, forward);
-      const c = cur.cost + base;
-      if (c <= budget) {
-        const step = makeStep(cur.hex, forward, stepFragment(), base, cur.cost);
-        enqueue(forward, cur.facing, c, [...cur.path, step]);
+    if (!proneTurn) {
+      const forward = neighbor(cur.hex, cur.facing);
+      if (canEnter(cur.hex, forward, false)) {
+        const base = stepCost(cur.hex, forward);
+        const c = cur.cost + base;
+        if (c <= budget) {
+          const step = makeStep(cur.hex, forward, stepFragment(), base, cur.cost);
+          enqueue(forward, cur.facing, c, [...cur.path, step]);
+        }
       }
     }
-    if (backwardAllowed) {
+    if (backwardAllowed && !proneTurn) {
       const backward = neighbor(cur.hex, oppositeFacing(cur.facing));
       if (canEnter(cur.hex, backward, true)) {
         const base = stepCost(cur.hex, backward);

@@ -928,7 +928,6 @@ const CRIT_SOAK_KEY: Readonly<Record<CritSoakName, MessageKey>> = {
   endoSteel: "critChart.soak.endoSteel",
   ferroFibrous: "critChart.soak.ferroFibrous",
   case: "critChart.soak.case",
-  caseII: "critChart.soak.caseII",
 };
 
 /** One slot line: dice number + component label, plus live markers. */
@@ -1394,11 +1393,15 @@ export function stepResultLines(s: Session, landing: RevealedLanding): string[] 
   const postureCost =
     s.moveMode === "prone" ? DROP_MP_COST : s.moveMode === "standup" ? STAND_MP_COST : 0;
   const locomotion =
-    s.moveMode === "standup" || s.moveMode === "prone" ? (s.postureMove ?? "walk") : s.moveMode;
+    s.moveMode === "standup" || s.moveMode === "prone"
+      ? (s.postureMove ?? "walk")
+      : s.moveMode === "turn"
+        ? "walk"
+        : (s.moveMode ?? "standStill");
   const lines = [
     i18n(locale, "ok.stepResult", {
       id: s.actorId ?? "",
-      mode: s.moveMode === "standup" ? `standup ${s.postureMove ?? "walk"}` : (s.moveMode ?? ""),
+      mode: displayModeFor(s),
       col: landing.hex.col,
       row: landing.hex.row,
       facing: F(locale, landing.facing),
@@ -1433,7 +1436,7 @@ export function stepResultLines(s: Session, landing: RevealedLanding): string[] 
     } else {
       lines.push(
         i18n(locale, "stepResult.enter", {
-          type: s.moveMode === "prone" ? "crawl" : locomotion === "walk" ? "walk" : "run",
+          type: locomotion === "walk" ? "walk" : "run",
           col: hex.col,
           row: hex.row,
           terrain: TRN(locale, step.terrain),
@@ -1508,17 +1511,25 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo | null {
   const effMove = effectiveMovement(def, actor.critSlotsDestroyed);
   const heatPenalty = movementMpPenalty(actor.heat);
   // Posture-change modes share one budget: candidate assumes posture succeeds.
-  // prone: drop first (1 MP) then crawl (walk + prone, 2 flat per hex).
+  // prone turn: drop first (1 MP) then in-place turns (walk + prone, 1 MP each).
+  // prone pronestill: drop in place, no map. turn: in-place turns on walk budget.
+  // pronestill: no map, `place` stays shut.
   // standup: stand first (2 MP) then chosen locomotion as standing unit.
-  let locomotion: MoveMode = mode as MoveMode;
+  let locomotion: MoveMode;
   let proneFlag = actor.prone;
   let walking = Math.max(0, effMove.walking - heatPenalty);
   let running = Math.max(0, effMove.running - heatPenalty);
   let jumping = Math.max(0, effMove.jumping - heatPenalty);
   if (mode === "prone") {
+    if ((s.postureMove ?? "walk") === "standStill") return null; // drop in place: no map
     locomotion = "walk";
     proneFlag = true;
     walking = Math.max(0, walking - DROP_MP_COST);
+  } else if (mode === "turn") {
+    locomotion = "walk";
+    proneFlag = true;
+  } else if (mode === "pronestill") {
+    return null; // stay prone: no map, `place` stays shut
   } else if (mode === "standup") {
     locomotion = s.postureMove ?? "standStill";
     proneFlag = false;
@@ -1527,6 +1538,8 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo | null {
     else if (locomotion === "run") running = Math.max(0, running - STAND_MP_COST);
     else if (locomotion === "jump") jumping = Math.max(0, jumping - STAND_MP_COST);
     else walking = Math.max(0, walking - STAND_MP_COST);
+  } else {
+    locomotion = mode;
   }
   const landings = reachableLandings({ ...actor.position }, actor.facing, {
     mode: locomotion,

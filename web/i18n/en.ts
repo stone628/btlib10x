@@ -13,7 +13,7 @@ export const en = {
   "hint.setup":
     "you are in 'setup' phase.\nload a battlefield via 'map' and place mechs via 'add'.\nreview the roster via 'status', remove mistakes via 'rm', then begin with 'start'.",
   "hint.move":
-    "you are in the movement phase - the prompt shows whose turn it is.\ndeclare a speed via 'mode', then queue steps via 'move' or 'face'; check MP costs with 'status'.\ncommit the move with 'done', or discard it with 'cancel'.",
+    "you are in the movement phase - the prompt shows whose turn it is.\ndeclare a speed via 'mode', then queue a landing via 'place'; check MP costs with 'status'.\ncommit the move with 'done', or discard it with 'cancel'.",
   "hint.attack":
     "you are in the weapon attack phase - the prompt shows who is firing.\nbrowse the acting unit's guns via 'weapons', then declare shots against one target via 'fire'.\nreview the declaration with 'status', resolve with 'done', or discard it with 'cancel'.",
   "hint.over":
@@ -76,13 +76,17 @@ export const en = {
   "cmd.statusSetup.help": "setup summary: units grouped by team, selected map",
   "cmd.start.help": "start the battle (needs >=2 units on >=2 teams)",
   "cmd.mode.help":
-    "declare movement mode (walk/run/jump/standstill/prone/standup), voluntary shutdown/startup, or eject",
+    "declare movement mode (walk/run/jump/standstill/prone/turn/pronestill/standup), voluntary shutdown/startup, or eject",
   "cmd.mode.arg.standstill": "stay in place — no movement points spent. committed by 'done'",
   "cmd.mode.arg.walk": "walk movement — uses the walk MP pool. committed by 'done'",
   "cmd.mode.arg.run": "run movement — uses the run MP pool (1.5× walk). committed by 'done'",
-  "cmd.mode.arg.jump": "jump movement — uses the jump MP pool. committed by 'done'",
+  "cmd.mode.arg.jump":
+    "jump movement — uses the jump MP pool, needs at least 1 hex entered (min 3 heat). committed by 'done'",
   "cmd.mode.arg.prone":
-    "drop prone voluntarily — costs 1 MP. may crawl afterward. committed by 'done'",
+    "drop prone voluntarily — costs 1 MP + 1 heat. optional in-place turn afterward: 'prone [turn|pronestill]' (default turn). committed by 'done'",
+  "cmd.mode.arg.turn":
+    "turn in place while prone — 1 MP per hexside, multiple turns within the walk budget, +1 heat. committed by 'done'",
+  "cmd.mode.arg.pronestill": "stay prone — no movement points spent. committed by 'done'",
   "cmd.mode.arg.standup":
     "rise from prone then move with a sub-mode — 'standup [walk|run|jump|standstill]'\nsub-mode shares one MP pool (default standstill) including stand costs 2 MP.\ncommitted by 'done', stand check will follow.\nfailed stand discards the queued placement.",
   "cmd.mode.arg.shutdown": "voluntary shutdown attempt. committed by 'done'",
@@ -169,11 +173,24 @@ export const en = {
   "err.noMap": "Load a map before starting a battle",
   "err.needTwoUnits": "A battle needs at least two units",
   "err.needTwoTeams": "Units must span at least two teams",
-  "err.badModeWord":
-    "mode must be one of standstill|walk|run|jump|prone|standup [walk|run|jump|standstill]|shutdown|startup|eject",
-  "err.standupRequiresProne": "{id} is not prone — mode standup needs a prone unit",
+  "err.badModeWord": "unknown move mode — valid modes: {modes}",
+  "err.standupRequiresProne":
+    "{id} is not prone — mode standup needs a prone unit. valid modes: {modes}",
   "err.standupNeedsMode": "mode standup takes only walk|run|jump|standstill (default standstill)",
-  "err.proneRequiresStanding": "{id} is already prone",
+  "err.proneRequiresStanding": "{id} is already prone. valid modes: {modes}",
+  "err.proneNeedsMode":
+    "mode prone takes only turn|pronestill (default turn). valid modes: {modes}",
+  "err.turnRequiresProne": "{id} is not prone — mode turn needs a prone unit. valid modes: {modes}",
+  "err.turnTakesNoArg": "mode turn takes no argument. valid modes: {modes}",
+  "err.pronestillRequiresProne":
+    "{id} is not prone — mode pronestill needs a prone unit. valid modes: {modes}",
+  "err.pronestillTakesNoArg": "mode pronestill takes no argument. valid modes: {modes}",
+  "err.shutdownNoMove":
+    "{id} is shut down — declare startup or eject, or 'done' to pass. valid modes: {modes}",
+  "err.proneMustDeclare":
+    "{id} is prone — declare turn, pronestill, or standup first. valid modes: {modes}",
+  "err.immobileStandstill": "{id} is immobile and can only stand still. valid modes: {modes}",
+  "mode.hint": "modes: {modes}",
   "err.postureBudget": "{id} has no MP left for the posture change in this mode",
   "err.noMoveInShutdownMode":
     "movement is not available while the declared mode is shutdown/startup/eject",
@@ -183,9 +200,10 @@ export const en = {
   "err.alreadyStarting": "{id} is already starting up",
   "err.noBattle": "No active battle",
   "err.wrongPhase": "Command requires the {phase} phase",
-  "err.declareModeFirst": "Declare a movement mode for {id} first (mode walk|run|jump|standstill)",
+  "err.declareModeFirst": "Declare a movement mode for {id} first. valid modes: {modes}",
   "err.standStillNoEnter": "Standing still forbids entering hexes",
-  "err.place.noCandidate": "No movement candidate — declare walk|run|jump|prone|standup first",
+  "err.place.noCandidate":
+    "No movement candidate — declare a move mode first. valid modes: {modes}",
   "err.place.unreachable": "Hex ({col},{row}) is not reachable in the declared mode",
   "err.place.facing": "Hex ({col},{row}) is reachable but not while facing {facing}",
   "err.faceArg": "place expects an absolute facing ({facings})",
@@ -381,7 +399,6 @@ export const en = {
   "critChart.soak.endoSteel": "Endo Steel",
   "critChart.soak.ferroFibrous": "Ferro-Fibrous",
   "critChart.soak.case": "CASE",
-  "critChart.soak.caseII": "CASE II",
 
   // event log
   "log.turn": "[[[   turn {turn}   ]]]",

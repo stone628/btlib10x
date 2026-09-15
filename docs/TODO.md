@@ -74,16 +74,15 @@
   per weapon; the web fire-suggestion header shows the target's firing arc
   and the resolution hit line names the attack direction. Torso twist
   (per-weapon facing override) remains deferred.
-- **CASE / CASE II ammo-explosion containment** — ammo explosions in
+- **CASE ammo-explosion containment** — ammo explosions in
   CASE-protected locations no longer overflow to the center torso. CASE
   (explicit `case` crit slot, or implicit on all locations of Clan 'Mech)
   vents the excess out of the protected location (its IS is destroyed and
-  stops at 0) and stops transfer; CASE II (`caseII` slot) additionally
-  caps the blast at 1 point total. Detection via `hasCase`/`hasCaseII` in
+  stops at 0) and stops transfer. Detection via `checkCASE` in
   `src/rules/critical.ts`; wired through `applyAmmoExplosion` for both the crit
   slot path (`applySlotHit`) and the heat-phase path (`resolveHeatPhase`).
-  `applyDamage` gained an optional `caseProtection` arg to stop transfer at the
-  protected location. `caseII` added to `CRIT_SOAK_NAMES` + i18n en/kr.
+  `applyDamage` takes an optional `caseKind` arg to stop transfer at the
+  protected location.
 - **Partial cover (TW)** — a target standing in a water1 or building hex is in
   partial cover when the attacker's ground level is not higher than the
   target's: +1 to-hit (folded into `terrainMod` via new `targetPartialCover?`

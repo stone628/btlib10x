@@ -83,7 +83,7 @@ export const CRIT_STRUCTURE_NAMES = [
 export type CritStructureName = (typeof CRIT_STRUCTURE_NAMES)[number];
 
 /** All soak (armor-tech) component names recognized by the crit table. */
-export const CRIT_SOAK_NAMES = ["endoSteel", "ferroFibrous", "case", "caseII"] as const;
+export const CRIT_SOAK_NAMES = ["endoSteel", "ferroFibrous", "case"] as const;
 
 export type CritSoakName = (typeof CRIT_SOAK_NAMES)[number];
 
