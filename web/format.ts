@@ -1632,6 +1632,13 @@ const ARC_LABEL: Readonly<Record<Arc, MessageKey>> = {
   rightSide: "fireSuggestion.arc.rightSide",
 };
 
+const TWIST_LABEL: Readonly<Record<Arc, MessageKey>> = {
+  front: "fireSuggestion.twist.front",
+  leftSide: "fireSuggestion.twist.left",
+  rightSide: "fireSuggestion.twist.right",
+  rear: "fireSuggestion.twist.front",
+};
+
 function fireWeaponTable(locale: LocaleId, weapons: readonly FireWeapon[]): Chunk {
   const header = [
     i18n(locale, "fireSuggestion.colIndex"),
@@ -1687,10 +1694,22 @@ function blockedChunks(locale: LocaleId, list: ReturnType<typeof blockedLines>):
   return [buildLinesChunk(list, "hint")];
 }
 
-export function fireSuggestionChunks(locale: LocaleId, sugg: FireSuggestion): Chunk[] {
+export function fireSuggestionChunks(
+  locale: LocaleId,
+  sugg: FireSuggestion,
+  twist: Arc | null = null,
+): Chunk[] {
   const chunks: Chunk[] = [
     buildLinesChunk([i18n(locale, "fireSuggestion.header", { id: sugg.targetId })], "hint"),
   ];
+  if (twist !== null) {
+    chunks.push(
+      buildLinesChunk(
+        [i18n(locale, "fireSuggestion.twist", { dir: i18n(locale, TWIST_LABEL[twist]) })],
+        "hint",
+      ),
+    );
+  }
   if (sugg.targets.length === 0) {
     chunks.push(buildLinesChunk([i18n(locale, "fireSuggestion.noTargets")], "hint"));
     return chunks;

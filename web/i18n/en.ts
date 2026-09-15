@@ -101,6 +101,10 @@ export const en = {
   "cmd.doneMove.help": "commit the declared move",
   "cmd.ammo.help": "show or set the acting unit's ammo depletion policy",
   "cmd.ammo.arg.policy": "exposed | core | spread | least-first. omit to show the current policy",
+  "cmd.torso.help":
+    "twist the acting unit's torso (TW p.62). arms and front torso fire into the twisted arc",
+  "cmd.torso.arg.direction":
+    "front = untwisted, left/right = one hexside twist in that direction. cannot change once a fire command is queued",
   "cmd.fire.help": "queue one or more weapon attacks",
   "cmd.fire.arg.weaponIndex":
     "1-based weapon number from the 'weapons' listing\nrepeat to declare several weapons at once",
@@ -135,6 +139,8 @@ export const en = {
     "  {type} enter ({col},{row}) {terrain}: {mp} MP (1 base, +{surcharge} terrain, +{climb} climb {levels}lv)",
   "ok.cancelled": "cancelled",
   "ok.fireQueuedBatch": "queued {target} <- weapons {weapons}",
+  "ok.twistSet": "{id}: torso twisted to {dir}",
+  "ok.twistAlready": "{id}: torso is already facing {dir}",
   "ammo.current": "ammo policy: {policy}",
   "ammo.set": "{id}: ammo policy set to {policy}",
   "ammo.policy.exposed": "exposed",
@@ -224,6 +230,8 @@ export const en = {
   "err.seedInteger": "seed must be an integer",
   "err.badAmmoPolicy": "ammo policy must be one of exposed|core|spread|least-first",
   "err.phaseDriver": "phase driver failed to settle",
+  "err.twist.badDirection": "torso direction must be front, left, or right",
+  "err.twist.locked": "torso twist is locked once a fire command is queued; cancel first",
 
   // setup status
   "setup.mapLabel": "map: {name}",
@@ -303,6 +311,10 @@ export const en = {
   "fireSuggestion.blockedSummary": "blocked weapons ({num}):",
   "fireSuggestion.propLeft": "prop left — {num} fireable (left-arm mounts out):",
   "fireSuggestion.propRight": "prop right — {num} fireable (right-arm mounts out):",
+  "fireSuggestion.twist": "torso twist: {dir}",
+  "fireSuggestion.twist.front": "front",
+  "fireSuggestion.twist.left": "left",
+  "fireSuggestion.twist.right": "right",
 
   // over status
   "over.idLine": "ID: {id}",

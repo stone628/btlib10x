@@ -1,3 +1,4 @@
+import type { Arc } from "btlib10x";
 import {
   FACINGS,
   getMechDefFor,
@@ -448,11 +449,28 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
       ];
     },
   },
+  torso: {
+    helpKey: "cmd.torso.help",
+    usage: "torso <front|left|right>",
+    argsDoc: [["direction", "cmd.torso.arg.direction"]],
+    run: (s, a) => {
+      expectArgs(L(s), a, 1, "torso <front|left|right>");
+      const actor = S.currentActor(s);
+      if (!actor) throw new Error(i18n(L(s), "err.needsActor"));
+      const prev = s.torsoTwist;
+      S.setTorsoTwist(s, a[0]!);
+      const dir: Arc = s.torsoTwist;
+      if (prev === dir) {
+        return [i18n(L(s), "ok.twistAlready", { id: actor.id, dir })];
+      }
+      return [i18n(L(s), "ok.twistSet", { id: actor.id, dir })];
+    },
+  },
   candidate: {
     helpKey: "cmd.candidateAttack.help",
     run: (s, _a) => {
       if (!checkFireHint(s)) throw new Error(i18n(L(s), "err.candidate.attack"));
-      return fireSuggestionChunks(s.locale, s.fireCandidate!);
+      return fireSuggestionChunks(s.locale, s.fireCandidate!, s.torsoTwist);
     },
   },
   fire: {
@@ -732,7 +750,9 @@ export function runChunks(session: S.Session, raw: string): Chunk[] {
     chunks.push(buildLinesChunk(victoryBanner(session), "banner"));
   }
   if (checkFireHint(session)) {
-    chunks.push(...fireSuggestionChunks(session.locale, session.fireCandidate!));
+    chunks.push(
+      ...fireSuggestionChunks(session.locale, session.fireCandidate!, session.torsoTwist),
+    );
   }
   return chunks;
 }
@@ -741,9 +761,9 @@ function checkFireHint(s: S.Session): boolean {
   if (s.app !== "battle" || s.battle === null || s.battle.phase !== "weaponAttack") return false;
   const actor = S.currentActor(s);
   if (actor === null) return false;
-  const newKey = `${s.battle.turn}:${actor.id}`;
+  const newKey = `${s.battle.turn}:${actor.id}:${s.torsoTwist}`;
   if (newKey !== s.fireHintShownFor || s.fireCandidate === null) {
-    s.fireCandidate = suggestFireTargets(s.battle, actor.id);
+    s.fireCandidate = suggestFireTargets(s.battle, actor.id, s.torsoTwist);
     s.fireHintShownFor = newKey;
     return true;
   }

@@ -5,7 +5,12 @@ import type { Location } from "../core/types.js";
 import { getMechDefFor } from "../data/index.js";
 import { getWeaponDefFor } from "../data/weapon.schema.js";
 import { binsForWeaponName, pooledShotsLeft } from "./ammo.js";
-import { type Arc, classifyArcWithBoundary, weaponCanFireIntoArc } from "./arcs.js";
+import {
+  type Arc,
+  classifyArcWithBoundary,
+  effectiveFacingForTwist,
+  weaponCanFireIntoArc,
+} from "./arcs.js";
 import { canFireFromLocation } from "./damage.js";
 import { type BattleState, isImmobile, isUnitRemoved, partialCoverMod } from "./game.js";
 import { toHitHeatModifier } from "./heat.js";
@@ -143,7 +148,11 @@ export function bestFireTarget(sugg: FireSuggestion): FireTarget | null {
  * prone volley draws from exactly one set (never both arms at once); leg
  * mounts stay blocked in both. When standing, all lists match.
  */
-export function suggestFireTargets(state: BattleState, unitId: string): FireSuggestion {
+export function suggestFireTargets(
+  state: BattleState,
+  unitId: string,
+  twist: Arc | null = null,
+): FireSuggestion {
   const unit = state.units[unitId];
   if (!unit || isUnitRemoved(unit)) {
     throw new Error(`suggestFireTargets: ${unitId} is not a fireable unit`);
@@ -152,12 +161,13 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
   const sensorsOut = countDestroyedStructure(def, unit.critSlotsDestroyed, SENSORS);
   const blind = sensorsBlind(sensorsOut);
   const sensorMod = sensorAttackModifier(sensorsOut);
+  const effectiveFacing = effectiveFacingForTwist(unit.facing, twist);
   const targets = Object.values(state.units)
     .filter((u) => u.team !== unit.team && !isUnitRemoved(u))
     .map((enemy) => {
       const distance = hexDistance(unit.position, enemy.position);
       const b = bearingExact(unit.position, enemy.position);
-      const fireCls = b !== null ? classifyArcWithBoundary(unit.facing, b) : null;
+      const fireCls = b !== null ? classifyArcWithBoundary(effectiveFacing, b) : null;
       const arc = fireCls?.arc ?? null;
       const altArc = fireCls?.altArc ?? null;
       const interveningWoods = losWoodsPointsBetween(state, unit.position, enemy.position);
