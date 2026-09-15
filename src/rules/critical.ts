@@ -1,8 +1,9 @@
 /**
  * Critical hit resolution (BattleTech Total Warfare subset).
  *
- * Whenever a hit strips internal structure from a location, the player rolls
- * 2D6 on the Determining Critical Hits table:
+ * Whenever a hit strips internal structure from a location — or the
+ * hit-location roll is a 2 (through-armor critical, armor unbreached) —
+ * the player rolls 2D6 on the Determining Critical Hits table:
  *
  *   2 - 7  : no critical hit
  *   8 - 9  : 1 critical hit
@@ -46,8 +47,9 @@
  *   - first gyro hit: forces a PSR at +3 at the end of the phase; a
  *     destroyed gyro drops the 'Mech automatically. All PSRs also take +3
  *     from a previously hit gyro (preexisting damage, TW p.60).
- *   - sensor slots: each destroyed sensor adds +1 to the unit's weapon
- *     to-hit numbers (TW p.123).
+ *   - sensor slots: first destroyed sensor adds +2 to the unit's weapon
+ *     to-hit numbers; a second destroyed sensor blinds the 'Mech (no weapon
+ *     attacks at all, TW p.123).
  *   - life-support slot: a destroyed life support injures the pilot at the
  *     end of any heat phase whose post-dissipation heat is 15+ (1 hit) or
  *     26+ (2 hits) (TW p.41).
@@ -179,6 +181,9 @@ export interface CriticalResolution {
   readonly source: CritSource;
   /** Determining roll (2D6 sum) for the table itself. */
   readonly determiningRoll: number;
+  /** True when the determining roll came from a through-armor hit-location
+   *  roll of 2 rather than stripped internal structure. */
+  readonly throughArmor: boolean;
   readonly rows: readonly CriticalEffect[];
   /** Per-location per-slot destroyed flags after this resolution. */
   readonly critSlotsDestroyed: Record<Location, boolean[]>;
@@ -384,6 +389,9 @@ export interface ResolveCriticalsInput {
   readonly rng: Rng;
   readonly def: ResolvedMechDef;
   readonly source: CritSource;
+  /** True when triggered by a through-armor hit-location roll of 2 (armor
+   *  unbreached); echoed into the resolution as a tag. Defaults false. */
+  readonly throughArmor?: boolean;
   /** Pre-damage destroyed-slot flags. */
   readonly critSlotsDestroyed: Record<Location, boolean[]>;
   /** Pre-damage destroyed-weapon indices. */
@@ -431,6 +439,7 @@ export function resolveCriticalHits(input: ResolveCriticalsInput): CriticalResol
   return {
     source: input.source,
     determiningRoll: topRoll ?? 0,
+    throughArmor: input.throughArmor ?? false,
     rows: state.rows,
     critSlotsDestroyed: state.destroyed,
     destroyedWeapons: state.destroyedWeapons,

@@ -10,7 +10,12 @@ import { canFireFromLocation } from "./damage.js";
 import { type BattleState, isImmobile, isUnitRemoved, partialCoverMod } from "./game.js";
 import { toHitHeatModifier } from "./heat.js";
 import { losClear, losWoodsPointsBetween } from "./los.js";
-import { countDestroyedStructure, SENSORS } from "./piloting.js";
+import {
+  countDestroyedStructure,
+  SENSORS,
+  sensorAttackModifier,
+  sensorsBlind,
+} from "./piloting.js";
 import type { RangeBracket } from "./tohit.js";
 import { computeToHit, damageForBracket } from "./tohit.js";
 
@@ -22,7 +27,8 @@ export type FireBlockerReason =
   | "noLos"
   | "outOfAmmo"
   | "autoMiss"
-  | "prone";
+  | "prone"
+  | "noSensor";
 
 export interface FireWeapon {
   readonly weaponIndex: number;
@@ -144,6 +150,8 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
   }
   const def = getMechDefFor(unit);
   const sensorsOut = countDestroyedStructure(def, unit.critSlotsDestroyed, SENSORS);
+  const blind = sensorsBlind(sensorsOut);
+  const sensorMod = sensorAttackModifier(sensorsOut);
   const targets = Object.values(state.units)
     .filter((u) => u.team !== unit.team && !isUnitRemoved(u))
     .map((enemy) => {
@@ -171,6 +179,11 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
           blockedIfPropLeft.push(blockedEntry(reason));
           blockedIfPropRight.push(blockedEntry(reason));
         };
+        // Second destroyed sensor blinds the 'Mech: no weapon attacks (TW p.123).
+        if (blind) {
+          blockBoth("noSensor");
+          return;
+        }
         if (unit.jammedWeapons.includes(weaponIndex)) {
           blockBoth("jammed");
           return;
@@ -226,7 +239,7 @@ export function suggestFireTargets(state: BattleState, unitId: string): FireSugg
           gunnery: unit.gunnery,
           attackerMovement: unit.moveMode ?? "standStill",
           attackerProne: unit.prone,
-          sensorMod: sensorsOut,
+          sensorMod,
           targetHexesMoved: enemy.movesThisTurn.length,
           targetJumped: enemy.jumpedThisTurn,
           targetImmobile: isImmobile(enemy),

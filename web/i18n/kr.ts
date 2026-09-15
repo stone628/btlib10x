@@ -293,6 +293,7 @@ export const kr: Catalog = {
   "fireSuggestion.reason.outOfAmmo": "탄약 없음",
   "fireSuggestion.reason.autoMiss": "자동 빗나감",
   "fireSuggestion.reason.prone": "엎드림 (다리 또는 팔)",
+  "fireSuggestion.reason.noSensor": "센서 파괴",
   "fireSuggestion.blockedSummary": "사용불가 무기 목록 ({num}):",
   "fireSuggestion.propLeft": "왼팔 지탱 — {num}문 발사 가능 (왼팔 무기 제외):",
   "fireSuggestion.propRight": "오른팔 지탱 — {num}문 발사 가능 (오른팔 무기 제외):",
@@ -479,6 +480,7 @@ export const kr: Catalog = {
   "res.critEngineDestroyed": "{loc} #{slot} 엔진 파괴 — 메크 격파",
   "res.critNoEffect": "{loc} 재굴림 — 남은 크리티컬 가능 슬롯 없음",
   "res.critTransferred": " ({from}에서 이전)",
+  "res.throughArmorTag": "관통 크리티컬",
   "res.critCluster": "폭발이 {loc}에서 새로운 결정 굴림을 유발",
 
   // phase prompt

@@ -343,8 +343,9 @@ off, cockpit kill, and leg-actuator/hip/jump-jet destruction tracked for
 movement.
 
 `CriticalResolution` exposes `rows` (the individual `CriticalEffect`s),
-`determiningRoll`, and the resulting `critSlotsDestroyed` / `destroyedWeapons` /
-`damage` / `blownOffArms` / `killed` / `ammoBins`.
+`determiningRoll`, `throughArmor` (true when the roll came from a hit-location
+2 with armor unbreached), and the resulting `critSlotsDestroyed` /
+`destroyedWeapons` / `damage` / `blownOffArms` / `killed` / `ammoBins`.
 
 `effectiveMovement(def, critSlotsDestroyed): EffectiveMovement` — computes
 walking/running/jumping after leg-actuator (−1 walk each), hip (halves walking),
@@ -379,15 +380,18 @@ is dropped). A supplied `partialCoverMod` merges with the terrain value
 when the target is adjacent to a level-2 wreck and the attacker is below the
 wreck's top. When
 `targetDef` + crit snapshots are supplied, it also runs critical-hit resolution
-per group that stripped IS and folds ammo-explosion damage into the returned
-application. It does **not** mutate the target; callers copy from
+per group that stripped IS — plus one unconditional determining roll per group
+whose hit-location roll was a 2 (through-armor critical, damage still lands on
+armor normally; tagged `throughArmor` on the group and the resolution) — and
+folds ammo-explosion damage into the returned application. It does **not** mutate the target; callers copy from
 `resolution.application.damage` and `resolution.crits[last]`.
 
 `AttackResolution` = `{ weapon; distance; breakdown; toHitRoll; hit; jammed;
 prone; propArm; clusterRoll; groups; application; arc; crits }` — `arc` is the firing arc the
 attack resolved against (drives the hit-location table and armor pool); `prone`
 marks shots fired while prone and `propArm` (null when standing or with no
-arm weapons) names the propped arm.
+arm weapons) names the propped arm. Each `groups` entry carries `throughArmor`
+(true on a hit-location roll of 2).
 
 ### Fireability (`rules/fireability.ts`)
 
@@ -395,7 +399,8 @@ arm weapons) names the propped arm.
 the weapons that could reach it (arc, LOS, range, ammo, not jammed/destroyed,
 not auto-missing, not leg-blocked while prone) with their computed TN and expected damage, plus per-weapon
 block reasons (`jammed` / `destroyed` / `outOfRange` / `outOfArc` / `noLos` /
-`outOfAmmo` / `autoMiss` / `prone`). Each `FireTarget` carries the classified `arc` and
+`outOfAmmo` / `autoMiss` / `prone` / `noSensor` — blind after the second
+destroyed sensor slot). Each `FireTarget` carries the classified `arc` and
 each `FireWeapon` its own `arc`. When the attacker is prone, each target also
 carries `weaponsIfPropLeft` / `weaponsIfPropRight` (+ matching blocked lists):
 a legal prone volley draws from exactly one side. Mirrors `declareAttacks` checks.

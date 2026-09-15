@@ -761,7 +761,9 @@ describe("weapon attack phase", () => {
     resolveAllAttacks(state, scriptedRng(6, 6, 2, 2));
     const event = state.events.find((e) => e.kind === "attackResolved")!;
     if (event.kind !== "attackResolved") throw new Error("bad event");
-    expect(event.resolution.groups).toEqual([{ location: "leftArm", damage: 5 }]);
+    expect(event.resolution.groups).toEqual([
+      { location: "leftArm", damage: 5, throughArmor: false },
+    ]);
     expect(event.resolution.arc).toBe("leftSide");
   });
 

@@ -201,7 +201,10 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   attack phase, end-phase kill sweep, victory check, rematch.
 - **Critical hit table** — the official TW determining table
   (2D6: 2-7 no crit, 8-9 one, 10-11 two, 12 blow-off or three on torso) plus
-  the 1D6 / 2D6 half+slot roll per location. Slot selection re-rolls on
+  the 1D6 / 2D6 half+slot roll per location. A hit-location roll of 2 is a
+  through-armor critical: damage lands on armor normally and the attacker
+  still rolls once on the determining table (tagged `through-armor` in the
+  log). Slot selection re-rolls on
   empty / soak / already-destroyed slots and the whole determining roll
   transfers inward when the source is exhausted (head and center torso
   are terminal).   Effects implemented: weapon destroyed, ammo explosion
@@ -267,7 +270,11 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   at the current or a new hex — a destroyed gyro or two destroyed legs forbid
   standing. Prone attackers fire at +2 without leg weapons and cannot mix
   left-arm and right-arm weapons in one volley (each volley props the
-  opposite arm; the fire suggestion shows both prop sides); prone targets take −2.
+  opposite arm; the fire suggestion shows both prop sides); prone targets take
+  −2 from an adjacent hex and +1 from every other hex.
+- **Sensor crits** — the first destroyed sensor slot adds +2 to the unit's weapon
+  to-hit numbers; a second destroyed sensor blinds the 'Mech (no weapon
+  attacks at all).
 - **Pilot damage / consciousness** — head hits (1 point per damaging
   grouping, even armor-only), ammo explosions (2 points), falls (failed
   seatbelt), shut-down falls, and heat-soaked life support (destroyed slot +
@@ -285,8 +292,6 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   damage); a failed water/rubble roll falls the 'Mech in the entered hex
   (jump checks the landing only), while a failed building roll crashes it
   for `ceil(CF / 10)` front-column damage without falling.
-- **Sensor crits** — each destroyed sensor slot adds +1 to the unit's weapon
-  to-hit numbers.
 
 ### Not yet implemented
 

@@ -299,6 +299,7 @@ export const en = {
   "fireSuggestion.reason.outOfAmmo": "out of ammo",
   "fireSuggestion.reason.autoMiss": "auto-miss",
   "fireSuggestion.reason.prone": "prone (leg or arm)",
+  "fireSuggestion.reason.noSensor": "sensors destroyed",
   "fireSuggestion.blockedSummary": "blocked weapons ({num}):",
   "fireSuggestion.propLeft": "prop left — {num} fireable (left-arm mounts out):",
   "fireSuggestion.propRight": "prop right — {num} fireable (right-arm mounts out):",
@@ -490,6 +491,7 @@ export const en = {
   "res.critEngineDestroyed": "{loc} #{slot} ENGINE DESTROYED — 'Mech killed",
   "res.critNoEffect": "{loc} reroll — no crit-hittable slot remaining",
   "res.critTransferred": " (transferred from {from})",
+  "res.throughArmorTag": "through-armor",
   "res.critCluster": "blast cascades a new determining roll on {loc}",
 
   // phase prompt

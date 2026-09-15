@@ -134,7 +134,9 @@ priority; resolution logs an out-of-ammo note).
 ## Critical Hits
 
 Whenever a hit strips at least 1 point of internal structure from a
-location, the player rolls 2D6 on the Determining Critical Hits table
+location — or the hit-location roll is a 2 (through-armor critical: damage
+lands on armor normally, plus one determining roll) — the player rolls 2D6
+on the Determining Critical Hits table
 (`src/rules/critical.ts`, `determiningResult`).
 
 | 2D6 | Result |
@@ -181,8 +183,9 @@ hittable slots, overflow is lost (excess crits simply disappear).
 - Jump-jet slot hit → −1 jump MP per destroyed slot.
 - Engine, gyro, sensor, life-support slots → mark destroyed; a destroyed
   engine slot adds +5 heat per hit. Destroyed gyros/hips/leg actuators feed
-  the piloting sweep (PSRs and automatic falls, TW p.60), destroyed sensors
-  add +1 to-hit each, and a destroyed life support injures the pilot on hot
+   the piloting sweep (PSRs and automatic falls, TW p.60), a first destroyed
+   sensor adds +2 to-hit and a second blinds the 'Mech (no weapon attacks),
+   and a destroyed life support injures the pilot on hot
   heat phases (see "Piloting skill rolls" in `docs/CLI.md`).
 - Heat-sink slot hits reduce end-phase dissipation: a destroyed single
   heat sink −1, a destroyed double heat sink retires the whole device
