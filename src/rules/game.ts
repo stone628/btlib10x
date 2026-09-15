@@ -366,7 +366,8 @@ export type GameEvent =
       readonly kind: "pilotingCheck";
       readonly unitId: string;
       /** Trigger code: damage20 | legActuator | hip | gyro | standUp |
-       *  rubble | water1 | water2 | water3 | building | seatbelt. */
+       *  rubble | water1 | water2 | water3 | building | seatbelt |
+       *  shutdown | runDamaged | jumpDamaged. */
       readonly reason: string;
       readonly modifier: number;
       readonly target: number;
@@ -821,6 +822,9 @@ const SEATBELT_LEG_DESTROYED = 5;
 const SEATBELT_GYRO_DESTROYED = 6;
 /** PSR modifier for the 20+ damage trigger in the phase sweep. */
 const PHASE_DAMAGE_PSR_MOD = 1;
+/** PSR modifier when a reactor shuts down (TW p.60). Rolled immediately;
+ *  only *other* PSRs required while the 'Mech is down fail automatically. */
+const SHUTDOWN_PSR_MOD = 3;
 /** Divisor for building-crash damage: ceil(remaining CF / 10). */
 const BUILDING_CRASH_DIVISOR = 10;
 /** Permanent wreck height in levels. */
@@ -1046,6 +1050,39 @@ export function executeMove(
   }
 
   commitAt(cursor, options.finalFacing ?? facing, mode, spent, directions);
+
+  // Running with a damaged hip/gyro, or jumping with damaged gyro, leg,
+  // foot, or hip actuators (or a destroyed leg), forces a PSR at the end of
+  // the move with preexisting-damage modifiers (TW p.60). The trigger adds
+  // nothing on top of `pre`: both table rows read "per Preexisting Damage".
+  // Stationary declarations (no hex entered) skip the check.
+  if (!unit.prone && directions.length > 0) {
+    const gyroHits = countDestroyedStructure(def, unit.critSlotsDestroyed, GYRO);
+    const hipHits = countDestroyedStructure(def, unit.critSlotsDestroyed, HIP);
+    const strained =
+      mode === "run" ? hipHits > 0 || gyroHits > 0 : mode === "jump" ? pre.modifier > 0 : false;
+    if (strained) {
+      const reason = mode === "run" ? "runDamaged" : "jumpDamaged";
+      const r = rollPilotingCheck(rng, unit.piloting, pre.modifier);
+      state.events.push({
+        kind: "pilotingCheck",
+        unitId,
+        reason,
+        modifier: pre.modifier,
+        target: r.target,
+        roll: r.roll,
+        success: r.success,
+      });
+      if (!r.success) {
+        const terrain = cellAt(state, cursor).terrain;
+        applyFall(state, unit, rng, {
+          cause: `failedPsr:${reason}`,
+          seatbeltModifier: pre.modifier,
+          halved: terrain === "water2" || terrain === "water3",
+        });
+      }
+    }
+  }
 }
 
 /**
@@ -1536,6 +1573,35 @@ export interface FallOptions {
   readonly halved: boolean;
   /** Allow the fall damage path on an already-prone unit (failed stand-up). */
   readonly allowProne?: boolean;
+}
+
+/**
+ * Immediate PSR when a unit's reactor shuts down (TW p.60, +3): rolled with
+ * preexisting-damage modifiers even though the 'Mech is now down (only
+ * *other* PSRs required while shut down fail automatically). Failure drops
+ * the 'Mech on the spot; the pilot then takes the hit automatically via the
+ * shutdown path in `applyFall`. No-op for removed or already-prone units.
+ */
+function shutdownFallCheck(state: BattleState, unit: UnitState, rng: Rng): void {
+  if (isUnitRemoved(unit) || unit.prone) return;
+  const def = getMechDefFor(unit);
+  const pre = preexistingDamageModifier(def, unit.critSlotsDestroyed, (leg) =>
+    legGone(unit.damage, leg),
+  );
+  const modifier = SHUTDOWN_PSR_MOD + pre.modifier;
+  const r = rollPilotingCheck(rng, unit.piloting, modifier);
+  state.events.push({
+    kind: "pilotingCheck",
+    unitId: unit.id,
+    reason: "shutdown",
+    modifier,
+    target: r.target,
+    roll: r.roll,
+    success: r.success,
+  });
+  if (!r.success) {
+    applyFall(state, unit, rng, { cause: "shutdown", seatbeltModifier: null, halved: false });
+  }
 }
 
 /**
@@ -2034,6 +2100,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
         avoid,
         threshold,
       });
+      shutdownFallCheck(state, unit, rng);
       continue;
     }
     if (avoid === 0) {
@@ -2093,6 +2160,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
           avoid,
           threshold,
         });
+        shutdownFallCheck(state, unit, rng);
       } else {
         state.events.push({
           kind: "shutdownCheck",
@@ -2247,7 +2315,8 @@ function movementTerrainPsr(
   ground: boolean,
   preModifier: number,
 ): boolean {
-  const stop = (): boolean => unit.prone || isUnitRemoved(unit) || isShutdown(unit);
+  const stop = (): boolean =>
+    unit.prone || isUnitRemoved(unit) || isShutdown(unit) || unit.unconscious;
   const rollFall = (reason: string, trigger: number, cause: string, hex: HexCoord): boolean => {
     const modifier = trigger + preModifier;
     if (isShutdown(unit) || unit.unconscious) {
@@ -2291,6 +2360,9 @@ function movementTerrainPsr(
   }
   const building = buildingEntryModifier(entering);
   if (building !== null) {
+    const legWasGoneR = legGone(unit.damage, "rightLeg");
+    const legWasGoneL = legGone(unit.damage, "leftLeg");
+    const gyroWasGone = countDestroyedStructure(getMechDefFor(unit), unit.critSlotsDestroyed, GYRO);
     const modifier = building + preModifier;
     if (isShutdown(unit) || unit.unconscious) {
       applyFall(state, unit, rng, { cause: "building", seatbeltModifier: null, halved: false });
@@ -2323,6 +2395,29 @@ function movementTerrainPsr(
         totalDamage: total,
         crits,
       });
+      // A crash that wrecks a leg or the gyro (or knocks the pilot out via
+      // an ammo blast) drops the 'Mech on the spot (TW automatic fall);
+      // without this the unit would stand into the weapon phase on a gone
+      // leg or keep moving while unconscious.
+      if (!unit.prone && !isUnitRemoved(unit)) {
+        const legFell =
+          (!legWasGoneR && legGone(unit.damage, "rightLeg")) ||
+          (!legWasGoneL && legGone(unit.damage, "leftLeg"));
+        const gyroNow = countDestroyedStructure(getMechDefFor(unit), unit.critSlotsDestroyed, GYRO);
+        const gyroFell = gyroNow >= GYRO_DESTROYED_HITS && gyroWasGone < GYRO_DESTROYED_HITS;
+        const down = isShutdown(unit) || unit.unconscious;
+        if (legFell || gyroFell || down) {
+          applyFall(state, unit, rng, {
+            cause: "building",
+            seatbeltModifier: down
+              ? null
+              : gyroFell
+                ? SEATBELT_GYRO_DESTROYED
+                : SEATBELT_LEG_DESTROYED,
+            halved: false,
+          });
+        }
+      }
       return true;
     }
   }
@@ -2496,8 +2591,14 @@ export function ejectPilot(state: BattleState, unitId: string): void {
 
 /** Voluntary shutdown declaration, resolved during the movement phase: the
  *  unit goes off-line ("manual") immediately and stays down until a
- *  successful voluntary startup. Marks the unit as having acted. */
-export function voluntaryShutdown(state: BattleState, unitId: string): void {
+ *  successful voluntary startup. The shutdown itself forces the immediate
+ *  +3 PSR like any reactor shutdown (TW p.60). Marks the unit as having
+ *  acted. */
+export function voluntaryShutdown(
+  state: BattleState,
+  unitId: string,
+  rng: Rng = DEFAULT_RNG,
+): void {
   requirePhase(state, "movement");
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
@@ -2514,6 +2615,7 @@ export function voluntaryShutdown(state: BattleState, unitId: string): void {
     avoid: 0,
     threshold: 0,
   });
+  shutdownFallCheck(state, unit, rng);
 }
 
 /** Voluntary startup attempt, resolved during the movement phase: roll 2D6

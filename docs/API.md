@@ -427,12 +427,13 @@ attemptStandUp(state, unitId, rng?): void              // movement phase only: p
 dropProne(state, unitId): void                         // movement phase only: go prone voluntarily
 proneFacingTurn(state, unitId, facings): void          // movement phase only: prone unit turns ±1 hexside
 ejectPilot(state, unitId): void                        // movement phase only: removes the unit (removed = "pilotEjected") and spawns a level-2 wreck in its hex
+voluntaryShutdown(state, unitId, rng?): void          // movement phase only: shuts down ("manual") plus the immediate +3 shutdown PSR
 declareAttacks(state, unitId, decls, rng?): void  // weaponAttack phase only
 resolveAllAttacks(state, rng): void                    // resolves every unit's declared attacks simultaneously, then runs the end-of-phase piloting sweep
 applyFall(state, unitId, rng, { cause, seatbeltModifier, halved }): void
 applyPilotHits(state, unitId, hits, reason, rng): void // pilot damage + consciousness rolls
 resolvePhasePiloting(state, rng, before): void         // end-of-phase PSR sweep against snapshots
-advancePhase(state): void                              // drives the phase cycle
+advancePhase(state, rng?): void                        // drives the phase cycle
 nextActor(state): string | null                        // alternating activation hint (skips unconscious units)
 actorQueue(state): { acted: string[]; pending: string[] }  // activation order view
 checkVictory(state): { winnerTeam; draw }

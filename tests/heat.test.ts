@@ -342,7 +342,9 @@ describe("game integration: dissipation", () => {
     const hbk = getUnit(state, "hbk");
     hbk.heat = 20;
     startAttackTurn(state);
-    advancePhase(state, scriptedRng(3, 3, 3, 1));
+    // shutdown roll 6 <= 6 shuts down; shutdown PSR 12 passes (stays up);
+    // ammo avoid 4 >= 4 avoids.
+    advancePhase(state, scriptedRng(3, 3, 6, 6, 3, 1));
     expect(hbk.heat).toBe(20 - 13);
     const dissipEvent = state.events.find((e) => e.kind === "heatDissipated" && e.unitId === "hbk");
     expect(dissipEvent).toBeDefined();
@@ -375,7 +377,8 @@ describe("game integration: shutdown", () => {
     const hbk = getUnit(state, "hbk");
     hbk.heat = 30;
     startAttackTurn(state);
-    advancePhase(state, scriptedRng(3, 3, 3, 1));
+    // auto shutdown (no roll); shutdown PSR 12 passes (stays up).
+    advancePhase(state, scriptedRng(6, 6, 3, 3, 3, 1));
     expect(hbk.shutdown).toBe("heat");
     expect(
       state.events.some(
@@ -387,6 +390,11 @@ describe("game integration: shutdown", () => {
           e.avoid >= 12,
       ),
     ).toBe(true);
+    expect(
+      state.events.some(
+        (e) => e.kind === "pilotingCheck" && e.unitId === "hbk" && e.reason === "shutdown",
+      ),
+    ).toBe(true);
   });
 
   it("rolls shutdown avoid at 14–29", () => {
@@ -394,7 +402,8 @@ describe("game integration: shutdown", () => {
     const hbk = getUnit(state, "hbk");
     hbk.heat = 18;
     startAttackTurn(state);
-    advancePhase(state, scriptedRng(3, 3, 3, 1));
+    // shutdown roll 6 <= 6 shuts down; shutdown PSR 12 passes (stays up).
+    advancePhase(state, scriptedRng(3, 3, 6, 6, 3, 1));
     expect(hbk.shutdown).toBe("heat");
     expect(
       state.events.some((e) => e.kind === "shutdownCheck" && e.unitId === "hbk" && !e.avoided),
@@ -572,8 +581,15 @@ describe("game integration: heat ammo explosion", () => {
     const hbk = getUnit(state, "hbk");
     hbk.heat = 30; // auto shutdown first
     startAttackTurn(state);
-    // shutdown auto: no roll; ammo avoid roll 4 < 8 (avoid=8 for heat 30)
-    advancePhase(state, scriptedRng(3, 1, 6, 6, 6, 6));
+    // shutdown auto: no roll; shutdown PSR 2 fails -> fall (dir 1 front,
+    // loc 7 CT, pilot stays awake); ammo avoid roll 4 < 8 (avoid=8 for heat 30)
+    advancePhase(state, scriptedRng(1, 1, 1, 3, 4, 3, 3, 3, 1));
+    expect(hbk.prone).toBe(true);
+    expect(
+      state.events.some(
+        (e) => e.kind === "pilotingCheck" && e.unitId === "hbk" && e.reason === "shutdown",
+      ),
+    ).toBe(true);
     // The exploded bin empties (its 5 shots x 20 = 100 damage), not the
     // mount's full 10-shot magazine. The 100-point blast kills the 50-ton
     // HBK outright, so the sibling bin's location is stripped away.
@@ -593,10 +609,11 @@ describe("game integration: heat ammo explosion", () => {
     bzk.heat = 30;
     startAttackTurn(state);
     // Shutdown auto: no roll. No ammo avoid roll is taken because the only
-    // loaded ammo is gauss (non-explosive). The same scripted rng would
-    // otherwise fail an avoid=8 roll.
-    advancePhase(state, scriptedRng(3, 1, 6, 6, 6, 6));
+    // loaded ammo is gauss (non-explosive). Shutdown PSR 2 fails -> fall
+    // (dir 1 front, loc 7 CT, pilot stays awake).
+    advancePhase(state, scriptedRng(1, 1, 1, 3, 4, 3, 3));
     expect(bzk.shutdown).toBe("heat");
+    expect(bzk.prone).toBe(true);
     expect(
       state.events.some((e) => e.kind === "ammoExplosionCheck" && e.unitId === "bzk" && !e.avoided),
     ).toBe(false);
