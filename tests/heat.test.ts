@@ -59,17 +59,17 @@ describe("movementHeat", () => {
     expect(movementHeat("standStill", 0)).toBe(0);
     expect(movementHeat("standStill", 5)).toBe(0);
   });
-  it("walk returns 1 if mpSpent>0, else 0", () => {
-    expect(movementHeat("walk", 0)).toBe(0);
+  it("walk always 1 (movable declaration yields heat even with zero steps)", () => {
+    expect(movementHeat("walk", 0)).toBe(1);
     expect(movementHeat("walk", 1)).toBe(1);
     expect(movementHeat("walk", 4)).toBe(1);
   });
-  it("run returns 2 if mpSpent>0, else 0", () => {
-    expect(movementHeat("run", 0)).toBe(0);
+  it("run returns 2 if mpSpent>0, else 1", () => {
+    expect(movementHeat("run", 0)).toBe(1);
     expect(movementHeat("run", 3)).toBe(2);
   });
   it("jump returns max(3, mpSpent)", () => {
-    expect(movementHeat("jump", 0)).toBe(0);
+    expect(movementHeat("jump", 0)).toBe(3);
     expect(movementHeat("jump", 2)).toBe(3);
     expect(movementHeat("jump", 6)).toBe(6);
   });

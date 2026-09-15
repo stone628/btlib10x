@@ -48,6 +48,7 @@ import {
   hexDistance,
   isImmobile,
   isShutdown,
+  isUnitImmobile,
   isUnitRemoved,
   losClear,
   losWoodsPointsBetween,
@@ -97,9 +98,19 @@ export interface Session {
    *  committed by the `done` command. `standup` / `prone` may carry a queued
    *  `place` landing in `placedLanding`; `postureMove` holds the locomotion
    *  mode the queued steps run under after the posture change succeeds. */
-  moveMode: MoveMode | "shutdown" | "startup" | "eject" | "standup" | "prone" | null;
-  /** Locomotion mode for a posture-change + move: always `walk` for `prone`
-   *  (crawl), the declared walk/run/jump for `standup`. Null otherwise. */
+  moveMode:
+    | MoveMode
+    | "shutdown"
+    | "startup"
+    | "eject"
+    | "standup"
+    | "prone"
+    | "turn"
+    | "pronestill"
+    | null;
+  /** Locomotion mode for a posture-change + move: `walk` for `prone turn`
+   *  (in-place turns after the drop), `standStill` for `prone pronestill`,
+   *  the declared walk/run/jump for `standup`. Null otherwise. */
   postureMove: MoveMode | null;
   moveSteps: MoveStep[];
   /** Landing facing chosen by `place` (jump only: engine rejects turn steps
@@ -349,17 +360,47 @@ const PRONE_MODES: Readonly<Record<string, "prone">> = {
   prone: "prone",
 };
 
-export type DeclaredMode = MoveMode | "shutdown" | "startup" | "eject" | "standup" | "prone";
+export type DeclaredMode =
+  | MoveMode
+  | "shutdown"
+  | "startup"
+  | "eject"
+  | "standup"
+  | "prone"
+  | "turn"
+  | "pronestill";
 
 export function parseMoveMode(locale: LocaleId, word: string): DeclaredMode {
   const mode = MOVE_MODES[word.toLowerCase()];
   if (mode) return mode;
   const voluntary = VOLUNTARY_MODES[word.toLowerCase()];
   if (voluntary) return voluntary;
-  if (word.toLowerCase() === "standup") return "standup";
+  const w = word.toLowerCase();
+  if (w === "standup") return "standup";
+  if (w === "turn") return "turn";
+  if (w === "pronestill") return "pronestill";
   const prone = PRONE_MODES[word.toLowerCase()];
   if (prone) return prone;
-  throw new Error(i18n(locale, "err.badModeWord"));
+  throw new Error(i18n(locale, "err.badModeWord", { modes: modeSyntaxFor(null) }));
+}
+
+/** Locale-neutral `mode` syntax legal for `unit` right now (null = unknown unit). */
+export function modeSyntaxFor(unit: UnitState | null): string {
+  if (unit === null)
+    return "standstill|walk|run|jump|prone [turn|pronestill]|turn|pronestill|standup [walk|run|jump|standstill]|shutdown|startup|eject";
+  if (isShutdown(unit)) return "startup|eject";
+  if (isUnitImmobile(unit.damage))
+    return unit.prone ? "pronestill|shutdown|eject" : "standstill|shutdown|eject";
+  if (unit.prone) return "turn|pronestill|standup [walk|run|jump|standstill]|shutdown|eject";
+  return "standstill|walk|run|jump|prone [turn|pronestill]|shutdown|eject";
+}
+
+/** One-line `modes: ...` hint shown above the movement prompt; null outside it. */
+export function moveModesHint(s: Session): string | null {
+  if (s.app !== "battle" || s.battle?.phase !== "movement") return null;
+  const actor = currentActor(s);
+  if (actor === null) return null;
+  return i18n(s.locale, "mode.hint", { modes: modeSyntaxFor(actor) });
 }
 
 function requireBattle(s: Session): BattleState {
@@ -401,7 +442,15 @@ export function declareMode(s: Session, word: string, locomotionWord?: string): 
     return;
   }
   if (mode === "standup") {
-    if (!unit.prone) throw new Error(i18n(s.locale, "err.standupRequiresProne", { id: unit.id }));
+    if (!unit.prone)
+      throw new Error(
+        i18n(s.locale, "err.standupRequiresProne", {
+          id: unit.id,
+          modes: modeSyntaxFor(unit),
+        }),
+      );
+    if (isUnitImmobile(unit.damage))
+      throw new Error(i18n(s.locale, "err.postureBudget", { id: unit.id }));
     const chosen = parseStandupLocomotion(s, locomotionWord);
     const def = getMechDefFor(unit);
     const movement = effectiveMovement(def, unit.critSlotsDestroyed);
@@ -417,20 +466,79 @@ export function declareMode(s: Session, word: string, locomotionWord?: string): 
     return;
   }
   if (mode === "prone") {
-    if (unit.prone) throw new Error(i18n(s.locale, "err.proneRequiresStanding", { id: unit.id }));
+    if (unit.prone)
+      throw new Error(
+        i18n(s.locale, "err.proneRequiresStanding", {
+          id: unit.id,
+          modes: modeSyntaxFor(unit),
+        }),
+      );
+    if (isUnitImmobile(unit.damage))
+      throw new Error(i18n(s.locale, "err.postureBudget", { id: unit.id }));
+    const sub = parseProneLocomotion(s, locomotionWord);
     const def = getMechDefFor(unit);
     const movement = effectiveMovement(def, unit.critSlotsDestroyed);
     if (effectiveMoveBudget("walk", movement, unit.heat) < DROP_MP_COST) {
       throw new Error(i18n(s.locale, "err.postureBudget", { id: unit.id }));
     }
-    // Drop deferred to commit; crawl candidate assumes prone-after-drop.
+    // Drop deferred to commit; turn candidate assumes prone-after-drop.
     s.moveMode = "prone";
-    s.postureMove = "walk";
+    s.postureMove = sub;
     clearMoveQueue(s);
     return;
   }
+  if (mode === "turn") {
+    if (!unit.prone)
+      throw new Error(
+        i18n(s.locale, "err.turnRequiresProne", { id: unit.id, modes: modeSyntaxFor(unit) }),
+      );
+    if (isUnitImmobile(unit.damage))
+      throw new Error(i18n(s.locale, "err.postureBudget", { id: unit.id }));
+    if (locomotionWord !== undefined)
+      throw new Error(i18n(s.locale, "err.turnTakesNoArg", { modes: modeSyntaxFor(unit) }));
+    const def = getMechDefFor(unit);
+    const movement = effectiveMovement(def, unit.critSlotsDestroyed);
+    if (effectiveMoveBudget("walk", movement, unit.heat) < 1) {
+      throw new Error(i18n(s.locale, "err.postureBudget", { id: unit.id }));
+    }
+    // Engine declareMove deferred to commit: unit still prone, would throw.
+    s.moveMode = "turn";
+    s.postureMove = null;
+    clearMoveQueue(s);
+    return;
+  }
+  if (mode === "pronestill") {
+    if (!unit.prone)
+      throw new Error(
+        i18n(s.locale, "err.pronestillRequiresProne", {
+          id: unit.id,
+          modes: modeSyntaxFor(unit),
+        }),
+      );
+    if (locomotionWord !== undefined)
+      throw new Error(i18n(s.locale, "err.pronestillTakesNoArg", { modes: modeSyntaxFor(unit) }));
+    s.moveMode = "pronestill";
+    s.postureMove = null;
+    clearMoveQueue(s);
+    return;
+  }
+  if (isShutdown(unit)) {
+    throw new Error(
+      i18n(s.locale, "err.shutdownNoMove", { id: unit.id, modes: modeSyntaxFor(unit) }),
+    );
+  }
+  if (unit.prone) {
+    throw new Error(
+      i18n(s.locale, "err.proneMustDeclare", { id: unit.id, modes: modeSyntaxFor(unit) }),
+    );
+  }
   if (mode !== "standStill" && mode !== "walk" && mode !== "run" && mode !== "jump") {
-    throw new Error(i18n(s.locale, "err.badModeWord"));
+    throw new Error(i18n(s.locale, "err.badModeWord", { modes: modeSyntaxFor(unit) }));
+  }
+  if (isUnitImmobile(unit.damage) && mode !== "standStill") {
+    throw new Error(
+      i18n(s.locale, "err.immobileStandstill", { id: unit.id, modes: modeSyntaxFor(unit) }),
+    );
   }
   declareMove(requireBattle(s), unit.id, mode);
   s.moveMode = mode;
@@ -438,6 +546,14 @@ export function declareMode(s: Session, word: string, locomotionWord?: string): 
   clearMoveQueue(s);
 }
 
+/** Locomotion arg for `mode prone [turn|pronestill]` (default turn). */
+function parseProneLocomotion(s: Session, word: string | undefined): MoveMode {
+  if (word === undefined) return "walk";
+  const w = word.toLowerCase();
+  if (w === "turn") return "walk";
+  if (w === "pronestill") return "standStill";
+  throw new Error(i18n(s.locale, "err.proneNeedsMode", { modes: modeSyntaxFor(currentActor(s)) }));
+}
 /** Locomotion arg for `mode standup [walk|run|jump|standstill]` (default standstill). */
 function parseStandupLocomotion(s: Session, word: string | undefined): MoveMode {
   if (word === undefined) return "standStill";
@@ -464,6 +580,12 @@ export function budgetFor(s: Session): number {
   if (declared === "prone") {
     return Math.max(0, effectiveMoveBudget("walk", movement, unit.heat) - DROP_MP_COST);
   }
+  if (declared === "turn") {
+    return effectiveMoveBudget("walk", movement, unit.heat);
+  }
+  if (declared === "pronestill") {
+    return 0;
+  }
   if (declared === "standup") {
     const loco = s.postureMove ?? "walk";
     return Math.max(0, effectiveMoveBudget(loco, movement, unit.heat) - STAND_MP_COST);
@@ -481,6 +603,8 @@ export function fullBudgetFor(s: Session): number {
   const def = getMechDefFor(unit);
   const movement = effectiveMovement(def, unit.critSlotsDestroyed);
   if (s.moveMode === "prone") return effectiveMoveBudget("walk", movement, unit.heat);
+  if (s.moveMode === "turn") return effectiveMoveBudget("walk", movement, unit.heat);
+  if (s.moveMode === "pronestill") return 0;
   if (s.moveMode === "standup")
     return effectiveMoveBudget(s.postureMove ?? "walk", movement, unit.heat);
   return budgetFor(s);
@@ -493,9 +617,11 @@ export function postureCostFor(s: Session): number {
   return 0;
 }
 
-/** Display mode for previews: standup carries its locomotion arg. */
+/** Display mode for previews: prone/standup carry their sub-mode arg. */
 export function displayModeFor(s: Session): string {
   if (s.moveMode === "standup") return `standup ${s.postureMove ?? "walk"}`;
+  if (s.moveMode === "prone")
+    return `prone ${s.postureMove === "standStill" ? "pronestill" : "turn"}`;
   return s.moveMode ?? "";
 }
 
@@ -522,10 +648,18 @@ export function placeLanding(s: Session, landing: RevealedLanding): void {
   if (s.moveMode === "shutdown" || s.moveMode === "startup" || s.moveMode === "eject") {
     throw new Error(i18n(s.locale, "err.noMoveInShutdownMode"));
   }
-  if (!s.moveMode) throw new Error(i18n(s.locale, "err.declareModeFirst", { id: unit.id }));
-  if (s.moveMode === "standStill") throw new Error(i18n(s.locale, "err.standStillNoEnter"));
+  if (!s.moveMode)
+    throw new Error(
+      i18n(s.locale, "err.declareModeFirst", { id: unit.id, modes: modeSyntaxFor(unit) }),
+    );
+  if (s.moveMode === "standStill" || s.moveMode === "pronestill")
+    throw new Error(i18n(s.locale, "err.standStillNoEnter"));
   const locomotion =
-    s.moveMode === "standup" || s.moveMode === "prone" ? (s.postureMove ?? "walk") : s.moveMode;
+    s.moveMode === "standup" || s.moveMode === "prone"
+      ? (s.postureMove ?? "walk")
+      : s.moveMode === "turn"
+        ? "walk"
+        : s.moveMode;
   const jumping = locomotion === "jump";
   const steps: MoveStep[] = [];
   let hex: HexCoord = { ...unit.position };
@@ -646,6 +780,19 @@ export function commitMove(s: Session): CommitResult {
         );
         foldPostureCost(battle, unit.id, DROP_MP_COST);
       }
+    } else if (s.moveMode === "turn") {
+      const steps = s.moveSteps;
+      const live = battle.units[unit.id]!;
+      live.moveMode = "walk";
+      live.movesThisTurn = [];
+      live.mpSpent = 0;
+      executeMove(battle, unit.id, steps, { rng: s.rng });
+    } else if (s.moveMode === "pronestill") {
+      const live = battle.units[unit.id]!;
+      live.moveMode = "standStill";
+      live.movesThisTurn = [];
+      live.mpSpent = 0;
+      executeMove(battle, unit.id, [], { rng: s.rng });
     } else if (isShutdown(unit)) {
       // Shut-down unit committing without a startup attempt: pass.
       passMovement(battle, unit.id);

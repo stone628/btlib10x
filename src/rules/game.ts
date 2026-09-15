@@ -777,8 +777,6 @@ export function rollInitiativePhase(state: BattleState, rng: Rng): void {
 export const STAND_MP_COST = 2;
 /** MP cost of a voluntary drop to prone (TW p.60): shares the walk budget. */
 export const DROP_MP_COST = 1;
-/** MP cost of one prone crawl hex (walk mode + prone): flat, forward only. */
-export const CRAWL_MP_PER_HEX = 2;
 
 export function declareMove(state: BattleState, unitId: string, mode: MoveMode): void {
   requirePhase(state, "movement");
@@ -790,7 +788,7 @@ export function declareMove(state: BattleState, unitId: string, mode: MoveMode):
     throw new Error(`${unitId} has a destroyed leg and can only stand still`);
   }
   if (unit.prone && mode !== "standStill") {
-    throw new Error(`${unitId} is prone: stand up or crawl (attemptStandUp/executeMove)`);
+    throw new Error(`${unitId} is prone: stand up, turn, or pronestill`);
   }
   unit.moveMode = mode;
   unit.movesThisTurn = [];
@@ -812,7 +810,7 @@ export function executeMove(
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot move`);
   if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot move`);
   if (unit.prone && steps.length > 0 && !(unit.moveMode === "walk")) {
-    throw new Error(`${unitId} is prone: stand up or crawl (attemptStandUp/proneFacingTurn)`);
+    throw new Error(`${unitId} is prone: stand up, turn, or pronestill`);
   }
   const rng = options.rng ?? DEFAULT_RNG;
 
@@ -820,7 +818,7 @@ export function executeMove(
   const movement = effectiveMovement(def, unit.critSlotsDestroyed);
   const budget = effectiveMoveBudget(unit.moveMode, movement, unit.heat);
   const jumping = unit.moveMode === "jump";
-  const crawling = unit.prone && unit.moveMode === "walk";
+  const proneTurn = unit.prone && unit.moveMode === "walk";
 
   let cursor: HexCoord = { ...unit.position };
   let facing: Facing = unit.facing;
@@ -844,43 +842,37 @@ export function executeMove(
 
     const to = step.to;
     if (jumping) {
-      const jumpInPlace = sameHex(cursor, to);
-      if (!isAdjacent(cursor, to) && !(jumpInPlace && spent === 0 && directions.length === 0)) {
-        throw new Error("Jump steps must enter an adjacent hex (or jump in place once)");
+      if (!isAdjacent(cursor, to)) {
+        throw new Error("Jump steps must enter an adjacent hex");
       }
       spent += 1;
       directions.push("forward");
     } else {
       if (unit.moveMode === "standStill") throw new Error("Standing still forbids entering hexes");
+      if (proneTurn) {
+        throw new Error(`${unitId} is prone: turn or pronestill only (no hex enters)`);
+      }
       const forward = mv.isForwardStep(cursor, to, facing);
       const backward = !forward && mv.isBackwardStep(cursor, to, facing);
       if (!forward && !backward) {
         throw new Error("Ground moves must go straight ahead or straight back relative to facing");
       }
-      if (crawling) {
-        if (!forward) {
-          throw new Error("A prone 'Mech can only crawl forward");
-        }
-      } else {
-        if (backward && unit.moveMode === "run") {
-          throw new Error("Running 'Mechs cannot move backward");
-        }
-        const fromLevel = cellAt(state, cursor).level;
-        const toLevel = cellAt(state, to).level;
-        const delta = toLevel - fromLevel;
-        const illegalChange = forward ? Math.abs(delta) > 2 : delta !== 0;
-        if (illegalChange) {
-          const slope = delta > 0 ? `${delta} levels higher` : `${-delta} levels lower`;
-          throw new Error(
-            forward
-              ? `Ground moves can change at most 2 levels per hex (${fmtHex(to)} is ${slope})`
-              : `Walking backward cannot change level (${fmtHex(to)} is ${slope})`,
-          );
-        }
+      if (backward && unit.moveMode === "run") {
+        throw new Error("Running 'Mechs cannot move backward");
       }
-      if (crawling) {
-        spent += CRAWL_MP_PER_HEX;
-      } else {
+      const fromLevel = cellAt(state, cursor).level;
+      const toLevel = cellAt(state, to).level;
+      const delta = toLevel - fromLevel;
+      const illegalChange = forward ? Math.abs(delta) > 2 : delta !== 0;
+      if (illegalChange) {
+        const slope = delta > 0 ? `${delta} levels higher` : `${-delta} levels lower`;
+        throw new Error(
+          forward
+            ? `Ground moves can change at most 2 levels per hex (${fmtHex(to)} is ${slope})`
+            : `Walking backward cannot change level (${fmtHex(to)} is ${slope})`,
+        );
+      }
+      {
         const fromLevel = cellAt(state, cursor).level;
         const toLevel = cellAt(state, to).level;
         spent += costToEnter(cellAt(state, to).terrain) + costToClimb(fromLevel, toLevel);
@@ -908,6 +900,9 @@ export function executeMove(
 
   if (spent > budget) {
     throw new Error(`Move costs ${spent} MP but ${unit.moveMode} budget is ${budget}`);
+  }
+  if (jumping && directions.length === 0) {
+    throw new Error("Jump needs at least 1 hex move");
   }
   if (
     steps.length > 0 &&
@@ -972,9 +967,6 @@ export function executeMove(
     if (jumping) {
       curSpent += 1;
       curDirs.push("forward");
-    } else if (crawling) {
-      curSpent += CRAWL_MP_PER_HEX;
-      curDirs.push("forward");
     } else {
       const forward = mv.isForwardStep(from, to, curFacing);
       curSpent +=
@@ -985,13 +977,12 @@ export function executeMove(
     cur = { ...to };
     // Terrain-entry PSRs (TW p.60): ground checks every entered hex, jump
     // only its landing. A fall, crash-kill, or shutdown ends the move here.
-    // (Crawling starts prone, so only a *new* fall or kill stops the move.)
     if (!jumping || isFinal) {
-      if (movementTerrainPsr(state, unit, rng, from, to, !jumping, pre.modifier, crawling)) {
+      if (movementTerrainPsr(state, unit, rng, from, to, !jumping, pre.modifier)) {
         commitAt({ ...cur }, unit.facing, mode, curSpent, curDirs);
         return;
       }
-      if ((!crawling && unit.prone) || unit.destroyed !== "not") {
+      if (unit.prone || unit.destroyed !== "not") {
         commitAt({ ...cur }, unit.facing, mode, curSpent, curDirs);
         return;
       }
@@ -2188,10 +2179,8 @@ function movementTerrainPsr(
   to: HexCoord,
   ground: boolean,
   preModifier: number,
-  crawling = false,
 ): boolean {
-  // Crawling starts prone: a prone crawler is not a fresh fall.
-  const stop = (): boolean => (!crawling && unit.prone) || isUnitRemoved(unit) || isShutdown(unit);
+  const stop = (): boolean => unit.prone || isUnitRemoved(unit) || isShutdown(unit);
   const rollFall = (reason: string, trigger: number, cause: string, hex: HexCoord): boolean => {
     const modifier = trigger + preModifier;
     if (isShutdown(unit) || unit.unconscious) {

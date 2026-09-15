@@ -19,6 +19,10 @@ const promptEl = document.getElementById("prompt") as HTMLSpanElement;
 const input = document.getElementById("cmd") as HTMLInputElement;
 
 const session = S.newSession(42);
+
+const modeHint = document.createElement("div");
+modeHint.id = "modehint";
+out.insertBefore(modeHint, inrow);
 const urlLang = new URLSearchParams(window.location.search).get("lang");
 if (urlLang !== null && isLocale(urlLang)) {
   session.locale = urlLang;
@@ -96,6 +100,7 @@ function appendChunk(chunk: Chunk, parent: HTMLElement = out): void {
 
 function refreshPrompt(): void {
   promptEl.textContent = `${S.promptBody(session)} > `;
+  modeHint.textContent = S.moveModesHint(session) ?? "";
 }
 
 function submitImpl(raw: string) {

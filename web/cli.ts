@@ -332,13 +332,15 @@ const MOVE_CMDS: Record<string, CmdDef> = {
   mode: {
     helpKey: "cmd.mode.help",
     usage:
-      "mode <standstill|walk|run|jump|prone|standup [walk|run|jump|standstill]|shutdown|startup|eject>",
+      "mode <standstill|walk|run|jump|prone [turn|pronestill]|turn|pronestill|standup [walk|run|jump|standstill]|shutdown|startup|eject>",
     argsDoc: [
       ["standstill", "cmd.mode.arg.standstill"],
       ["walk", "cmd.mode.arg.walk"],
       ["run", "cmd.mode.arg.run"],
       ["jump", "cmd.mode.arg.jump"],
-      ["prone", "cmd.mode.arg.prone"],
+      ["prone [turn|pronestill]", "cmd.mode.arg.prone"],
+      ["turn", "cmd.mode.arg.turn"],
+      ["pronestill", "cmd.mode.arg.pronestill"],
       ["standup [mode]", "cmd.mode.arg.standup"],
       ["shutdown", "cmd.mode.arg.shutdown"],
       ["startup", "cmd.mode.arg.startup"],
@@ -350,7 +352,7 @@ const MOVE_CMDS: Record<string, CmdDef> = {
         locale,
         a,
         1,
-        "mode standstill|walk|run|jump|prone|standup [walk|run|jump|standstill]|shutdown|startup|eject",
+        "mode standstill|walk|run|jump|prone [turn|pronestill]|turn|pronestill|standup [walk|run|jump|standstill]|shutdown|startup|eject",
       );
       const mode = S.parseMoveMode(locale, a[0]!);
       S.declareMode(s, a[0]!, a[1]);
@@ -367,12 +369,12 @@ const MOVE_CMDS: Record<string, CmdDef> = {
           }),
         ];
       }
-      const shown = mode === "standup" ? `standup ${s.postureMove ?? "walk"}` : (mode as string);
+      const shown = S.displayModeFor(s);
       const lines = [
         i18n(locale, "ok.modeDeclared", { id: actor.id, mode: shown, budget: S.budgetFor(s) }),
         stepResultFromLine(locale, s),
       ];
-      if (mode === "standStill") {
+      if (mode === "standStill" || mode === "pronestill") {
         s.moveCandidate = null;
         return lines;
       }

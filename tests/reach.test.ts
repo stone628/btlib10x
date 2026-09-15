@@ -194,19 +194,18 @@ describe("reachableLandings", () => {
     expect(fragments(lookup(rs, { col: 12, row: 11 }, "n"))).toEqual(["J"]);
   });
 
-  it("prone crawl costs 2 MP per hex, forward only, no backward", () => {
+  it("prone turn allows only in-place turns, no hex enters", () => {
     const rs = reach("walk", 4, 6, 0, "n", noOccupants, 21, 21, start, {}, true);
-    expect(fragments(lookup(rs, { col: 12, row: 11 }, "n"))).toEqual(["P"]);
+    expect(fragments(lookup(rs, { col: 12, row: 12 }, "ne"))).toEqual(["R"]);
+    expect(fragments(lookup(rs, { col: 12, row: 12 }, "nw"))).toEqual(["L"]);
+    expect(lookup(rs, { col: 12, row: 11 }, "n")).toBeUndefined();
     expect(lookup(rs, { col: 12, row: 13 }, "n")).toBeUndefined();
-    // Two hexes = 4 MP
-    const rs2 = reach("walk", 4, 6, 0, "n", noOccupants, 21, 21, start, {}, true);
-    expect(fragments(lookup(rs2, { col: 12, row: 10 }, "n"))).toEqual(["P", "P"]);
   });
 
-  it("prone crawl turns cost 1 MP", () => {
+  it("prone turn allows multiple turns within budget", () => {
     const rs = reach("walk", 3, 4, 0, "n", noOccupants, 21, 21, start, {}, true);
-    // Turn right (1 MP) + crawl forward (2 MP) = 3 MP
-    expect(fragments(lookup(rs, { col: 13, row: 12 }, "ne"))).toEqual(["R", "P"]);
+    // Two right turns (2 MP) to face se, staying in place.
+    expect(fragments(lookup(rs, { col: 12, row: 12 }, "se"))).toEqual(["R", "R"]);
   });
 
   it("run uses U fragments, no backward", () => {

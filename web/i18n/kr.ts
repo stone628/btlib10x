@@ -11,7 +11,7 @@ export const kr: Catalog = {
   "hint.setup":
     "'설정(setup)' 단계입니다.\n'map'으로 맵을 불러오고 'add'로 메크를 배치하세요.\n'status'로 편성을 확인하거나 'rm'으로 제거한 뒤 'start'로 전투를 시작하세요.",
   "hint.move":
-    "이동 단계입니다 - 프롬프트에 현재 차례가 표시됩니다.\n'mode'로 이동 속도를 선언한 뒤 'move' 또는 'face'로 행동을 추가하고, 'status'로 MP 소비를 확인하세요.\n'done'으로 확정하거나 'cancel'로 취소합니다.",
+    "이동 단계입니다 - 프롬프트에 현재 차례가 표시됩니다.\n'mode'로 이동 속도를 선언한 뒤 'place'로 목적지를 예약하고, 'status'로 MP 소비를 확인하세요.\n'done'으로 확정하거나 'cancel'로 취소합니다.",
   "hint.attack":
     "무기 공격 단계입니다 - 프롬프트에 사격 유닛이 표시됩니다.\n'weapons'로 무기를 확인하고 'fire'로 하나의 목표에 대한 사격을 선언하세요.\n'status'로 선언을 확인한 뒤 'done'으로 해결하거나 'cancel'로 취소합니다.",
   "hint.over":
@@ -74,12 +74,18 @@ export const kr: Catalog = {
   "cmd.rm.arg.id": "이전에 추가한 유닛의 id",
   "cmd.statusSetup.help": "설정 요약: 팀별 유닛 그룹, 선택된 맵",
   "cmd.start.help": "전투 시작 (2팀 이상, 각 2유닛 이상 필요)",
-  "cmd.mode.help": "이동 모드(prone/standup 포함), 자발적 셧다운/시동, 또는 탈출 선언",
+  "cmd.mode.help":
+    "이동 모드(walk/run/jump/standstill/prone/turn/pronestill/standup), 자발적 셧다운/시동, 또는 탈출 선언",
   "cmd.mode.arg.standstill": "제자리 대기 — MP 소비 없음. 'done'으로 확정",
   "cmd.mode.arg.walk": "걷기 이동 — 걷기 MP 풀 사용. 'done'으로 확정",
   "cmd.mode.arg.run": "달리기 이동 — 달리기 MP 풀 사용 (걷기의 1.5배). 'done'으로 확정",
-  "cmd.mode.arg.jump": "점프 이동 — 점프 MP 풀 사용. 'done'으로 확정",
-  "cmd.mode.arg.prone": "자발적으로 엎드리기 — 1 MP 소모. 이후 기어갈 수 있음. 'done'으로 확정",
+  "cmd.mode.arg.jump":
+    "점프 이동 — 점프 MP 풀 사용, 최소 1헥스 진입 필요 (최소 3 열). 'done'으로 확정",
+  "cmd.mode.arg.prone":
+    "자발적으로 엎드리기 — 1 MP + 1 열 소모. 이후 제자리 방향 전환 가능: 'prone [turn|pronestill]' (기본 turn). 'done'으로 확정",
+  "cmd.mode.arg.turn":
+    "엎드린 상태에서 제자리 방향 전환 — 방향당 1 MP, 걷기 예산 내에서 여러 번 가능, +1 열. 'done'으로 확정",
+  "cmd.mode.arg.pronestill": "엎드린 채 대기 — MP 소비 없음. 'done'으로 확정",
   "cmd.mode.arg.standup":
     "엎드린 상태에서 일어난 뒤 서브 모드로 이동 — 'standup [walk|run|jump|standstill]'.\n서브 모드는 일어서기 2MP를 포함해서 하나의 MP 풀 공유 (기본 standstill)\n'done'으로 확정시 성공 여부 결정. 실패시 place를 통한 예약 이동 무시",
   "cmd.mode.arg.shutdown": "자발적 셧다운 시도. 'done'으로 확정",
@@ -164,11 +170,24 @@ export const kr: Catalog = {
   "err.noMap": "전투를 시작하기 전에 맵을 불러오세요",
   "err.needTwoUnits": "전투에는 최소 두 유닛이 필요합니다",
   "err.needTwoTeams": "유닛은 최소 두 팀에 걸쳐 있어야 합니다",
-  "err.badModeWord":
-    "mode는 standstill|walk|run|jump|prone|standup [walk|run|jump|standstill]|shutdown|startup|eject 중 하나여야 합니다",
-  "err.standupRequiresProne": "{id}는 엎드린 상태가 아님 — mode standup은 엎드린 유닛 필요",
+  "err.badModeWord": "알 수 없는 이동 모드 — 유효 모드: {modes}",
+  "err.standupRequiresProne":
+    "{id}는 엎드린 상태가 아님 — mode standup은 엎드린 유닛 필요. 유효 모드: {modes}",
   "err.standupNeedsMode": "mode standup 인자는 walk|run|jump|standstill만 가능 (기본 standstill)",
-  "err.proneRequiresStanding": "{id}는 이미 엎드린 상태임",
+  "err.proneRequiresStanding": "{id}는 이미 엎드린 상태임. 유효 모드: {modes}",
+  "err.proneNeedsMode": "mode prone 인자는 turn|pronestill만 가능 (기본 turn). 유효 모드: {modes}",
+  "err.turnRequiresProne":
+    "{id}는 엎드린 상태가 아님 — mode turn은 엎드린 유닛 필요. 유효 모드: {modes}",
+  "err.turnTakesNoArg": "mode turn은 인자를 받지 않음. 유효 모드: {modes}",
+  "err.pronestillRequiresProne":
+    "{id}는 엎드린 상태가 아님 — mode pronestill은 엎드린 유닛 필요. 유효 모드: {modes}",
+  "err.pronestillTakesNoArg": "mode pronestill은 인자를 받지 않음. 유효 모드: {modes}",
+  "err.shutdownNoMove":
+    "{id}는 셧다운 상태임 — startup/eject 선언 또는 'done'으로 통과. 유효 모드: {modes}",
+  "err.proneMustDeclare":
+    "{id}는 엎드린 상태임 — turn/pronestill/standup 중 먼저 선언. 유효 모드: {modes}",
+  "err.immobileStandstill": "{id}는 기동 불가 — standstill만 가능. 유효 모드: {modes}",
+  "mode.hint": "모드: {modes}",
   "err.postureBudget": "{id}는 자세 변경에 쓸 MP가 부족함",
   "err.noMoveInShutdownMode": "선언된 모드가 shutdown/startup/eject일 때는 이동할 수 없습니다",
   "err.mustBeOnlineForShutdown": "mode shutdown은 온라인 유닛에서만 사용할 수 있습니다",
@@ -177,9 +196,9 @@ export const kr: Catalog = {
   "err.alreadyStarting": "{id} 은 이미 기동 중입니다",
   "err.noBattle": "진행 중인 전투가 없습니다",
   "err.wrongPhase": "이 명령은 {phase} 단계가 필요합니다",
-  "err.declareModeFirst": "{id} 유닛의 이동 모드를 먼저 선언하세요 (mode walk|run|jump|standstill)",
+  "err.declareModeFirst": "{id} 유닛의 이동 모드를 먼저 선언하세요. 유효 모드: {modes}",
   "err.standStillNoEnter": "제자리 대기(standStill)에서는 육각에 진입할 수 없습니다",
-  "err.place.noCandidate": "이동 후보가 없습니다 — 먼저 walk|run|jump|prone|standup 선언",
+  "err.place.noCandidate": "이동 후보가 없습니다 — 먼저 이동 모드 선언. 유효 모드: {modes}",
   "err.place.unreachable": "육각 ({col},{row}) 는 선언된 모드로 도달할 수 없습니다",
   "err.place.facing": "육각 ({col},{row}) 는 도달 가능하지만 {facing} 방향으로는 불가",
   "err.faceArg": "place는 절대 방향({facings})을 기대합니다",
@@ -373,7 +392,6 @@ export const kr: Catalog = {
   "critChart.soak.endoSteel": "Endo Steel",
   "critChart.soak.ferroFibrous": "Ferro-Fibrous",
   "critChart.soak.case": "CASE",
-  "critChart.soak.caseII": "CASE II",
 
   // event log
   "log.turn": "[[[   턴 {turn}   ]]]",

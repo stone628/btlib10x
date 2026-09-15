@@ -119,7 +119,7 @@ describe("hint", () => {
     const moveHelp = run(battle, "?");
     expect(moveHelp[0]).toContain("movement phase");
     expect(moveHelp[1]).toContain("'mode'");
-    expect(moveHelp[1]).toContain("'move'");
+    expect(moveHelp[1]).toContain("'place'");
     expect(moveHelp[1]).not.toContain("<");
     expect(moveHelp[2]).toContain("'done'");
     expect(moveHelp[3]).toBe("");
