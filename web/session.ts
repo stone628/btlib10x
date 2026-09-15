@@ -746,6 +746,12 @@ export function commitMove(s: Session): CommitResult {
       attemptVoluntaryStartup(battle, unit.id, s.rng);
     } else if (s.moveMode === "eject") {
       ejectPilot(battle, unit.id);
+    } else if (isShutdown(unit) || unit.unconscious) {
+      // Down unit committing any other movement mode: hold position and
+      // pass (startup/shutdown/eject handled above; nothing else is legal
+      // while off-line or out cold). Without this the commit throws and the
+      // activation never advances.
+      passMovement(battle, unit.id);
     } else if (s.moveMode === "standup") {
       const locomotion = s.postureMove ?? "walk";
       const steps = s.moveSteps;
@@ -795,9 +801,6 @@ export function commitMove(s: Session): CommitResult {
       live.movesThisTurn = [];
       live.mpSpent = 0;
       executeMove(battle, unit.id, [], { rng: s.rng });
-    } else if (isShutdown(unit)) {
-      // Shut-down unit committing without a startup attempt: pass.
-      passMovement(battle, unit.id);
     } else {
       executeMove(
         battle,

@@ -202,6 +202,7 @@ export function preexistingDamageModifier(
  * the pilot (see PILOT_HITS_DEAD).
  */
 const CONSCIOUSNESS_TARGETS: Readonly<Record<number, number>> = {
+  0: 0,
   1: 3,
   2: 5,
   3: 7,

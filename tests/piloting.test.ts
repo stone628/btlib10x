@@ -26,8 +26,10 @@ import {
   resolveHeatPhase,
   resolvePhasePiloting,
   rollInitiativePhase,
+  voluntaryShutdown,
   wreckAt,
 } from "../src/rules/game.js";
+
 import { createTestBattle, scriptedRng } from "./helpers.js";
 
 function hbkEnf(critsDisabled = true) {
@@ -61,6 +63,11 @@ function toMovement(state: ReturnType<typeof hbkEnf>): void {
 }
 
 function toAttack(state: ReturnType<typeof hbkEnf>): void {
+  toMovement(state);
+  advancePhase(state);
+}
+
+function startAttackTurn(state: ReturnType<typeof hbkEnf>): void {
   toMovement(state);
   advancePhase(state);
 }
@@ -305,6 +312,339 @@ describe("shutdown PSR", () => {
     expect(state.events).not.toContainEqual(
       expect.objectContaining({ kind: "pilotingCheck", unitId: "enf", reason: "damage20" }),
     );
+  });
+});
+
+describe("immediate shutdown PSR (+3)", () => {
+  it("heat shutdown rolls +3 PSR; pass stays standing", () => {
+    const state = hbkEnf();
+    const hbk = getUnit(state, "hbk");
+    hbk.heat = 30;
+    // startAttackTurn: 4 dice (initiative).
+    // resolveHeatPhase: 4 dice (traced via debug):
+    //   shutdownFallCheck PSR 2D6=12 passes (2 dice),
+    //   restart check 2D6=8>6 comes online (2 dice).
+    startAttackTurn(state);
+    advancePhase(state, scriptedRng(6, 6, 6, 6));
+    expect(hbk.shutdown).toBe("heat");
+    expect(
+      state.events.some(
+        (e) => e.kind === "pilotingCheck" && e.unitId === "hbk" && e.reason === "shutdown",
+      ),
+    ).toBe(true);
+    expect(hbk.prone).toBe(false);
+  });
+
+  it("heat shutdown rolls +3 PSR; fail drops the 'Mech", () => {
+    const state = hbkEnf();
+    const hbk = getUnit(state, "hbk");
+    hbk.heat = 30;
+    // resolveHeatPhase: 9 dice (traced via debug):
+    //   PSR 2D6=2<8 fails (2), fallDir=1 (1), fallLoc 3+4=7 (2),
+    //   consciousness 5+6=11>=3 pass (2), ammoExplosion 2+3=5<8 explodes (2).
+    startAttackTurn(state);
+    advancePhase(state, scriptedRng(1, 1, 1, 3, 4, 5, 6, 2, 3));
+    expect(hbk.prone).toBe(true);
+    expect(hbk.pilotHits).toBe(1);
+  });
+
+  it("voluntary shutdown triggers the same +3 PSR", () => {
+    const state = hbkEnf();
+    toMovement(state);
+    const enf = getUnit(state, "enf");
+    // No heat → no restart/ammoExplosion in shutdown path.
+    // PSR 2D6=4<8 fails (2), fallDir=1 (1), fallLoc 3+4=7 (2),
+    // seatbelt null → auto hit, consciousness 2D6=4>=3 (2). Total 7.
+    voluntaryShutdown(state, "enf", scriptedRng(4, 1, 3, 4, 2, 2, 2));
+    expect(enf.shutdown).toBe("manual");
+    expect(enf.prone).toBe(true);
+    expect(enf.pilotHits).toBe(1);
+  });
+});
+
+describe("run-damaged PSR", () => {
+  it("PSR fires at end of move when running with a damaged hip", () => {
+    // hbkEnf: ENF at (2,3) facing "n". North forward: (2,2) occupied by hbk.
+    // Use custom setup: ENF at (2,4) facing "n", hbk at (8,8) out of the way.
+    const state = createTestBattle(
+      [],
+      [
+        {
+          id: "hbk",
+          model: "HBK-4G",
+          team: 0,
+          gunnery: 4,
+          position: { col: 8, row: 8 },
+          facing: "s",
+        },
+        {
+          id: "enf",
+          model: "ENF-4R",
+          team: 1,
+          gunnery: 4,
+          position: { col: 2, row: 4 },
+          facing: "n",
+        },
+      ],
+      true,
+    );
+    toMovement(state);
+    const enf = getUnit(state, "enf");
+    declareMove(state, "enf", "run");
+    const hipSlots = structureSlots(state, "enf", "rightLeg", "hip");
+    expect(hipSlots.length).toBeGreaterThanOrEqual(1);
+    enf.critSlotsDestroyed.rightLeg[hipSlots[0]!] = true;
+    // North forward: (2,3), then (2,2). PSR 5+2=7, 2D6=8 passes.
+    executeMove(
+      state,
+      "enf",
+      [
+        { kind: "enter", to: { col: 2, row: 3 } },
+        { kind: "enter", to: { col: 2, row: 2 } },
+      ],
+      { rng: scriptedRng(4, 4) },
+    );
+    expect(
+      state.events.some(
+        (e) => e.kind === "pilotingCheck" && e.unitId === "enf" && e.reason === "runDamaged",
+      ),
+    ).toBe(true);
+    expect(enf.prone).toBe(false);
+  });
+
+  it("PSR fail drops the unit", () => {
+    const state = createTestBattle(
+      [],
+      [
+        {
+          id: "hbk",
+          model: "HBK-4G",
+          team: 0,
+          gunnery: 4,
+          position: { col: 8, row: 8 },
+          facing: "s",
+        },
+        {
+          id: "enf",
+          model: "ENF-4R",
+          team: 1,
+          gunnery: 4,
+          position: { col: 2, row: 4 },
+          facing: "n",
+        },
+      ],
+      true,
+    );
+    toMovement(state);
+    const enf = getUnit(state, "enf");
+    declareMove(state, "enf", "run");
+    const hipSlots = structureSlots(state, "enf", "rightLeg", "hip");
+    enf.critSlotsDestroyed.rightLeg[hipSlots[0]!] = true;
+    // PSR 2D6=2<7 fails; fall dir 1, loc 3+4 CT; seatbelt 5+2=7, 2D6=2 fails.
+    // Consciousness 2D6=6>=3 pass.
+    executeMove(state, "enf", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+      rng: scriptedRng(1, 1, 1, 3, 4, 1, 1, 3, 3),
+    });
+    expect(enf.prone).toBe(true);
+    expect(enf.pilotHits).toBe(1);
+  });
+});
+
+describe("jump-damaged PSR", () => {
+  it("PSR fires at landing when jumping with damaged actuators", () => {
+    // ENF at (2,4) facing "n". Jump to (2,3) — adjacent hex.
+    const state = createTestBattle(
+      [],
+      [
+        {
+          id: "hbk",
+          model: "HBK-4G",
+          team: 0,
+          gunnery: 4,
+          position: { col: 8, row: 8 },
+          facing: "s",
+        },
+        {
+          id: "enf",
+          model: "ENF-4R",
+          team: 1,
+          gunnery: 4,
+          position: { col: 2, row: 4 },
+          facing: "n",
+        },
+      ],
+      true,
+    );
+    toMovement(state);
+    const enf = getUnit(state, "enf");
+    declareMove(state, "enf", "jump");
+    const footSlots = structureSlots(state, "enf", "rightLeg", "footActuator");
+    expect(footSlots.length).toBeGreaterThanOrEqual(1);
+    enf.critSlotsDestroyed.rightLeg[footSlots[0]!] = true;
+    // PSR 5+1=6, 2D6=6 passes.
+    executeMove(state, "enf", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+      rng: scriptedRng(3, 3),
+    });
+    expect(
+      state.events.some(
+        (e) => e.kind === "pilotingCheck" && e.unitId === "enf" && e.reason === "jumpDamaged",
+      ),
+    ).toBe(true);
+    expect(enf.prone).toBe(false);
+  });
+
+  it("PSR fail drops the unit", () => {
+    const state = createTestBattle(
+      [],
+      [
+        {
+          id: "hbk",
+          model: "HBK-4G",
+          team: 0,
+          gunnery: 4,
+          position: { col: 8, row: 8 },
+          facing: "s",
+        },
+        {
+          id: "enf",
+          model: "ENF-4R",
+          team: 1,
+          gunnery: 4,
+          position: { col: 2, row: 4 },
+          facing: "n",
+        },
+      ],
+      true,
+    );
+    toMovement(state);
+    const enf = getUnit(state, "enf");
+    declareMove(state, "enf", "jump");
+    const footSlots = structureSlots(state, "enf", "rightLeg", "footActuator");
+    enf.critSlotsDestroyed.rightLeg[footSlots[0]!] = true;
+    // PSR 2D6=2<6 fails; fall dir 1, loc 3+4 CT; seatbelt 5+1=6, 2D6=2 fails.
+    // Consciousness 2D6=6>=3 pass.
+    executeMove(state, "enf", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+      rng: scriptedRng(1, 1, 1, 3, 4, 1, 1, 3, 3),
+    });
+    expect(enf.prone).toBe(true);
+    expect(enf.pilotHits).toBe(1);
+  });
+});
+
+describe("building crash auto-fall", () => {
+  it("crash that destroys a leg drops the unit immediately", () => {
+    // ENF at (2,4) facing "n". Place heavyBuilding at (2,3) — forward hex.
+    const state = createTestBattle(
+      [{ col: 2, row: 3, type: "heavyBuilding" }],
+      [
+        {
+          id: "hbk",
+          model: "HBK-4G",
+          team: 0,
+          gunnery: 4,
+          position: { col: 8, row: 8 },
+          facing: "s",
+        },
+        {
+          id: "enf",
+          model: "ENF-4R",
+          team: 1,
+          gunnery: 4,
+          position: { col: 2, row: 4 },
+          facing: "n",
+        },
+      ],
+      true,
+    );
+    toMovement(state);
+    const enf = getUnit(state, "enf");
+    enf.damage.armor.rightLeg = 0;
+    enf.damage.internalStructure.rightLeg = 1;
+    declareMove(state, "enf", "walk");
+    // Building entry PSR 5+2=7, 2D6=2<7 fails → crash.
+    // Crash: ceil(90/10)=9 damage → 2 groups (5+4). Each needs loc roll.
+    // Group1 loc 1+4=5 rightLeg, group2 loc 1+3=4 rightArm.
+    // Auto-fall (leg destroyed, seatbelt auto because immobile).
+    // Fall dir 1, loc 3+4=7 CT. Consciousness 2D6=12>=3 pass.
+    executeMove(state, "enf", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+      rng: scriptedRng(1, 1, 1, 4, 1, 3, 1, 3, 4, 6, 6),
+    });
+    expect(enf.prone).toBe(true);
+    expect(enf.pilotHits).toBe(1);
+  });
+
+  it("crash seatbelt fail injures the pilot", () => {
+    const state = createTestBattle(
+      [{ col: 2, row: 3, type: "heavyBuilding" }],
+      [
+        {
+          id: "hbk",
+          model: "HBK-4G",
+          team: 0,
+          gunnery: 4,
+          position: { col: 8, row: 8 },
+          facing: "s",
+        },
+        {
+          id: "enf",
+          model: "ENF-4R",
+          team: 1,
+          gunnery: 4,
+          position: { col: 2, row: 4 },
+          facing: "n",
+        },
+      ],
+      true,
+    );
+    toMovement(state);
+    const enf = getUnit(state, "enf");
+    enf.damage.armor.rightLeg = 0;
+    enf.damage.internalStructure.rightLeg = 1;
+    declareMove(state, "enf", "walk");
+    // Building entry PSR 5+2=7, 2D6=2<7 fails → crash.
+    // Crash 9 dmg → 2 groups (5+4). Loc: 5 rightLeg, 4 rightArm.
+    // Auto-fall (leg destroyed, seatbelt auto because immobile).
+    // Fall dir 1, loc 3+4=7 CT. Consciousness 2D6=2<3 fail → pilot hit.
+    executeMove(state, "enf", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+      rng: scriptedRng(1, 1, 1, 4, 1, 3, 1, 3, 4, 1, 1),
+    });
+    expect(enf.prone).toBe(true);
+    expect(enf.pilotHits).toBe(1);
+  });
+
+  it("crash that does not destroy the leg does not trigger auto-fall", () => {
+    const state = createTestBattle(
+      [{ col: 2, row: 3, type: "heavyBuilding" }],
+      [
+        {
+          id: "hbk",
+          model: "HBK-4G",
+          team: 0,
+          gunnery: 4,
+          position: { col: 8, row: 8 },
+          facing: "s",
+        },
+        {
+          id: "enf",
+          model: "ENF-4R",
+          team: 1,
+          gunnery: 4,
+          position: { col: 2, row: 4 },
+          facing: "n",
+        },
+      ],
+      true,
+    );
+    toMovement(state);
+    const enf = getUnit(state, "enf");
+    declareMove(state, "enf", "walk");
+    // Building entry PSR 7 pass. Crash: 2 damage front column,
+    // loc 7 CT. CT has 10 armor, no IS loss.
+    executeMove(state, "enf", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+      rng: scriptedRng(3, 4, 3, 4),
+    });
+    expect(enf.prone).toBe(false);
+    expect(enf.unconscious).toBe(false);
   });
 });
 

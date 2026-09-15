@@ -33,6 +33,14 @@
 
 ## Done
 
+- **Shutdown +3 PSR, run/jump damaged PSRs, building-crash auto-falls** —
+  reactor shutdown (heat or voluntary) forces an immediate +3 PSR
+  (`shutdownFallCheck`; only *other* PSRs while down fail automatically);
+  running with damaged hip/gyro or jumping with damaged actuators forces
+  an end-of-move PSR at preexisting modifiers; a building crash that
+  wrecks a leg/gyro or KOs the pilot drops the 'Mech on the spot (move
+  also stops on unconsciousness). Pilot wounds stay consciousness-only
+  per TW RAW — never a to-hit/PSR modifier.
 - **Piloting Skill Rolls, falling, prone, and the pilot** — `UnitInit`
   takes an optional piloting skill (default 5); `UnitState` tracks pilot
   hits, unconsciousness, and prone. End-of-phase PSRs (20+ damage,

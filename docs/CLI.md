@@ -252,9 +252,14 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   (+1), each destroyed leg/foot actuator (+1), each destroyed hip (+2), and
   a first gyro hit (+3); a destroyed gyro or leg drops the 'Mech
   automatically, as does any required PSR on a shut-down or unconscious
-  unit. Preexisting damage modifies every PSR (+1 per destroyed leg/foot
+  unit. A reactor shutdown (heat or voluntary) forces an immediate +3 PSR;
+  running with a damaged hip/gyro or jumping with damaged gyro/leg/foot/hip
+  actuators (or a destroyed leg) forces a PSR with preexisting-damage
+  modifiers at the end of the move. Preexisting damage modifies every PSR (+1 per destroyed leg/foot
   actuator, +2 per destroyed hip replacing that leg's other mods, +3 for a
-  hit gyro, +5 per destroyed leg replacing that leg's other mods). A fall
+  hit gyro, +5 per destroyed leg replacing that leg's other mods). Pilot
+  wounds never modify PSRs or to-hit numbers (TW tracks wounds through
+  consciousness rolls only). A fall
   rotates facing per the Facing After Fall table and lands
   `ceil(tonnage / 10)` damage in 5-point clusters on the fall column (halved
   round-down underwater at depth 2+), with normal crit rolls; the pilot then
@@ -283,15 +288,17 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   taken before any simultaneous PSR. A failed roll knocks the pilot out:
   the unit cannot act and counts as immobile until it wakes in a later end
   phase; six total hits kills the pilot and removes the unit
-  (`removed = "pilotKilled"`, destroyed stays `"not"`), leaving a level-2
-  wreck like an eject. Cockpit
-  destruction still kills outright.
+   (`removed = "pilotKilled"`, destroyed stays `"not"`), leaving a level-2
+   wreck like an eject. Cockpit
+   destruction still kills outright.
 - **Movement-entry PSRs** — entering rubble (+0) or water (depth 1: −1,
   depth 2: +0, depth 3+: +1) and entering/leaving a building hex (light +0
   / medium +1 / heavy +2 / hardened +5) forces a PSR (plus preexisting
   damage); a failed water/rubble roll falls the 'Mech in the entered hex
   (jump checks the landing only), while a failed building roll crashes it
-  for `ceil(CF / 10)` front-column damage without falling.
+  for `ceil(CF / 10)` front-column damage without falling — unless the crash
+  wrecks a leg/gyro or knocks the pilot out, which drops the 'Mech on the
+  spot.
 
 ### Not yet implemented
 
