@@ -1,3 +1,4 @@
+import { D2D6_FUMBLE, D2D6_MAX } from "../core/dice.js";
 import { terrainTargetMod } from "../core/terrain.js";
 import type { MoveMode, TerrainType } from "../core/types.js";
 import type { WeaponDef } from "../data/weapon.schema.js";
@@ -78,6 +79,13 @@ const RANGE_MOD: Record<RangeBracket, number> = {
   long: 4,
 };
 
+/** Attacker modifier while prone (TW p.109). */
+const PRONE_ATTACKER_MOD = 2;
+/** Target modifier while prone but mobile (TW p.109). */
+const PRONE_TARGET_MOD = -2;
+/** To-hit bonus for pulse weapons. */
+const PULSE_MOD = -2;
+
 export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
   const bracket = rangeBracket(mods.weapon, mods.distance);
   if (bracket === null) {
@@ -101,19 +109,21 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
   }
 
   const attackerMod =
-    mods.attackerProne === true ? 2 : attackerMovementModifier(mods.attackerMovement);
+    mods.attackerProne === true
+      ? PRONE_ATTACKER_MOD
+      : attackerMovementModifier(mods.attackerMovement);
   const targetMod =
     mods.targetImmobile === true
       ? targetMovementModifier(mods.targetHexesMoved, mods.targetJumped, true)
       : mods.targetProne === true
-        ? -2
+        ? PRONE_TARGET_MOD
         : targetMovementModifier(mods.targetHexesMoved, mods.targetJumped, undefined);
 
   const terrainMod =
     mods.interveningWoods + terrainTargetMod(mods.targetTerrain) + (mods.partialCoverMod ?? 0);
 
   const rangeMod = RANGE_MOD[bracket];
-  const pulseMod = mods.weapon.pulse === true ? -2 : 0;
+  const pulseMod = mods.weapon.pulse === true ? PULSE_MOD : 0;
   const min =
     mods.weapon.minRange !== undefined && mods.distance <= mods.weapon.minRange
       ? mods.weapon.minRange - mods.distance + 1
@@ -149,7 +159,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     sensorMod,
     total,
     rangeBracket: bracket,
-    automatic: total <= 2 ? "hit" : total > 12 ? "miss" : null,
+    automatic: total <= D2D6_FUMBLE ? "hit" : total > D2D6_MAX ? "miss" : null,
     outOfRange: false,
   };
 }

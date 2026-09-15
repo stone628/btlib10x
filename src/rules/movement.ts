@@ -28,41 +28,70 @@ export function maxMovePoints(
   }
 }
 
+/** Attacker movement to-hit modifiers by locomotion (TW GATOR steps). */
+const ATTACKER_MOVE_MOD_STAND = 0;
+const ATTACKER_MOVE_MOD_WALK = 1;
+const ATTACKER_MOVE_MOD_RUN = 2;
+const ATTACKER_MOVE_MOD_JUMP = 3;
+
 export function attackerMovementModifier(mode: MoveMode): number {
   switch (mode) {
     case "standStill":
-      return 0;
+      return ATTACKER_MOVE_MOD_STAND;
     case "walk":
     case "prone":
-      return 1;
+      return ATTACKER_MOVE_MOD_WALK;
     case "run":
-      return 2;
+      return ATTACKER_MOVE_MOD_RUN;
     case "jump":
-      return 3;
+      return ATTACKER_MOVE_MOD_JUMP;
   }
 }
+
+/** Target modifier when the target cannot move (shutdown / both legs gone). */
+export const TARGET_IMMOBILE_MOD = -4;
+/** Extra target modifier when the target jumped. */
+export const TARGET_JUMP_BONUS = 1;
+/** Hexes-entered ceilings (hexes moved, target modifier), ascending. */
+const TARGET_MOVE_STEPS: ReadonlyArray<readonly [maxHexes: number, mod: number]> = [
+  [2, 0],
+  [4, 1],
+  [6, 2],
+  [9, 3],
+  [17, 4],
+  [24, 5],
+];
+/** Target modifier past the last step ceiling. */
+const TARGET_MOVE_MOD_MAX = 6;
+
+/** Max elevation change per forward hex (TW). */
+export const FORWARD_LEVEL_CHANGE_MAX = 2;
+/** Elevation change allowed per backward hex (none). */
+export const BACKWARD_LEVEL_CHANGE_MAX = 0;
 
 /**
  * Target movement table (hexes entered), +1 extra when jumping. An immobile
  * target (unit unable to move — e.g. a shutdown 'Mech or one with both legs
- * destroyed) gets a flat −4 modifier regardless of hexes entered or jump.
+ * destroyed) gets a flat TARGET_IMMOBILE_MOD regardless of hexes entered or jump.
  */
 export function targetMovementModifier(
   hexesEntered: number,
   jumped: boolean,
   immobile?: boolean,
 ): number {
-  if (immobile) return -4;
-  let mod: number;
-  if (hexesEntered <= 2) mod = 0;
-  else if (hexesEntered <= 4) mod = 1;
-  else if (hexesEntered <= 6) mod = 2;
-  else if (hexesEntered <= 9) mod = 3;
-  else if (hexesEntered <= 17) mod = 4;
-  else if (hexesEntered <= 24) mod = 5;
-  else mod = 6;
-  return mod + (jumped ? 1 : 0);
+  if (immobile) return TARGET_IMMOBILE_MOD;
+  let mod = TARGET_MOVE_MOD_MAX;
+  for (const [maxHexes, stepMod] of TARGET_MOVE_STEPS) {
+    if (hexesEntered <= maxHexes) {
+      mod = stepMod;
+      break;
+    }
+  }
+  return mod + (jumped ? TARGET_JUMP_BONUS : 0);
 }
+
+/** MP per jump hex entered (flat, ignores terrain and climb). */
+export const JUMP_MP_PER_HEX = 1;
 
 export function facingChangeCost(facings: number): number {
   return facings * MP_PER_FACING_CHANGE;
@@ -168,7 +197,7 @@ export function reachableLandings(
   const turnCost = jumping ? 0 : 1;
 
   const stepCost = (from: HexCoord, to: HexCoord): number => {
-    if (jumping) return 1;
+    if (jumping) return JUMP_MP_PER_HEX;
     const cellTo = cellAt(options.grid, to);
     return (
       costToEnter(cellTo.terrain) + costToClimb(cellAt(options.grid, from).level, cellTo.level)
@@ -238,7 +267,8 @@ export function reachableLandings(
     if (options.wreckAt?.(hex)) return false;
     if (jumping) return true;
     const delta = cellAt(options.grid, hex).level - cellAt(options.grid, from).level;
-    if (backward ? delta !== 0 : Math.abs(delta) > 2) return false;
+    if (backward ? delta !== BACKWARD_LEVEL_CHANGE_MAX : Math.abs(delta) > FORWARD_LEVEL_CHANGE_MAX)
+      return false;
     const occ = options.occupantTeam(hex);
     return occ === undefined || occ === options.team;
   };

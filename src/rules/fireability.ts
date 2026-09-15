@@ -1,3 +1,4 @@
+import { D2D6_FUMBLE, D2D6_MAX } from "../core/dice.js";
 import { bearingExact, hexDistance } from "../core/hex.js";
 import { cellAt } from "../core/terrain.js";
 import type { Location } from "../core/types.js";
@@ -86,8 +87,8 @@ export interface FireSuggestion {
 const WAYS_TO_HIT: readonly number[] = [36, 36, 36, 35, 33, 30, 26, 21, 15, 10, 6, 3, 1, 0];
 
 function hitProbability(tn: number): number {
-  if (tn <= 2) return 1;
-  if (tn >= 13) return 0;
+  if (tn <= D2D6_FUMBLE) return 1;
+  if (tn > D2D6_MAX) return 0;
   return WAYS_TO_HIT[tn]! / 36;
 }
 
