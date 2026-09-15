@@ -73,7 +73,9 @@ export function defenderArcChoice(arc: Arc, altArc: Arc | null): Arc {
  * front-torso-mounted weapons fire into the front arc only; arm-mounted
  * weapons add their own side arc (right arm → right side); torso weapons
  * mounted rear-facing (`rearFacing` on the mount) fire into the rear arc
- * only. Torso twist (which also lets arms cover the rear arc) is deferred.
+ * only. The arc input is the attacker's *effective* facing — call
+ * `effectiveFacingForTwist` first when the 'Mech is twisting its torso, so
+ * the side arms cover matches the twisted direction.
  */
 export function weaponCanFireIntoArc(location: Location, rearFacing: boolean, arc: Arc): boolean {
   if (rearFacing) return arc === "rear";
@@ -87,4 +89,35 @@ export function weaponCanFireIntoArc(location: Location, rearFacing: boolean, ar
     case "rightSide":
       return location === "rightArm";
   }
+}
+
+/**
+ * Hexside offset a torso twist applies to the attacker's effective facing
+ * (TW p.62): `left` rotates one hexside counter-clockwise (so the left arm
+ * covers the left side of the twisted torso), `right` one hexside
+ * clockwise, `front` is untwisted. Used to translate a session-side twist
+ * state into an input for `classifyArcWithBoundary` /
+ * `weaponCanFireIntoArc`.
+ */
+export function twistDelta(twist: Arc): -1 | 0 | 1 {
+  switch (twist) {
+    case "leftSide":
+      return 1;
+    case "rightSide":
+      return -1;
+    case "front":
+      return 0;
+    case "rear":
+      return 0;
+  }
+}
+
+/**
+ * Effective attacker facing after applying a torso twist (TW p.62). The
+ * 'Mech's body keeps its `facing`; arm and front-torso weapons fire as if
+ * the torso pointed `twist` hexsides off. `front` is a no-op.
+ */
+export function effectiveFacingForTwist(facing: Facing, twist: Arc | null | undefined): Facing {
+  const delta = twist === null || twist === undefined ? 0 : twistDelta(twist);
+  return delta === 0 ? facing : rotateFacing(facing, delta);
 }

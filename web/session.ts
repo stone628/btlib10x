@@ -1,5 +1,6 @@
 import type {
   AmmoPolicy,
+  Arc,
   AttackDecl,
   BattleState,
   CreateBattleOptions,
@@ -36,6 +37,7 @@ import {
   declareAttacks,
   declareMove,
   dropProne,
+  effectiveFacingForTwist,
   effectiveMoveBudget,
   effectiveMovement,
   ejectPilot,
@@ -123,6 +125,12 @@ export interface Session {
    *  preview renders its `path` directly. Null when no landing queued. */
   placedLanding: RevealedLanding | null;
   fireDecls: AttackDecl[];
+  /** Acting unit's torso twist (TW p.62) for the current attack-phase
+   *  declaration: defaults to `"front"` and resets every time a new actor
+   *  becomes current or the weapon attack phase begins. Locked once any
+   *  fire command is queued (see {@link setTorsoTwist}). Session-owned
+   *  because it is a UI declaration, not persistent battle state. */
+  torsoTwist: Arc;
   /** Suppress critical hit resolution (mostly for deterministic testing). */
   critsDisabled: boolean;
   moveCandidate: BoardRenderReachableInfo | null;
@@ -146,6 +154,7 @@ export function newSession(seed: number): Session {
     moveFinalFacing: null,
     placedLanding: null,
     fireDecls: [],
+    torsoTwist: "front",
     critsDisabled: false,
     moveCandidate: null,
     fireHintShownFor: null,
@@ -159,6 +168,7 @@ function clearBuffers(s: Session): void {
   clearMoveQueue(s);
   s.moveCandidate = null;
   s.fireDecls = [];
+  s.torsoTwist = "front";
   s.fireHintShownFor = null;
   s.fireCandidate = null;
 }
@@ -203,7 +213,11 @@ function drive(s: Session): GameEvent[] {
     if (battle.phase === "weaponAttack") {
       resolveAllAttacks(battle, s.rng);
     }
+    const prevPhase = battle.phase;
     advancePhase(battle, s.rng);
+    if (prevPhase === "movement" && battle.phase === "weaponAttack") {
+      s.torsoTwist = "front";
+    }
   }
   throw new Error(i18n(s.locale, "err.phaseDriver"));
 }
@@ -849,6 +863,7 @@ function validateQueuedAttacks(
   battle: BattleState,
   unit: UnitState,
   decls: readonly AttackDecl[],
+  twist: Arc,
 ): void {
   if (isUnitRemoved(unit)) throw new Error(`${unit.id} is destroyed`);
   if (isShutdown(unit)) throw new Error(`${unit.id} is shut down and cannot fire`);
@@ -861,6 +876,7 @@ function validateQueuedAttacks(
     throw new Error(`${unit.id} cannot fire: sensors destroyed (no weapon attacks)`);
   }
   const sensorMod = sensorAttackModifier(sensorsOut);
+  const effectiveFacing = effectiveFacingForTwist(unit.facing, twist);
   let targetId: string | null = null;
   const seen = new Set<number>();
   for (const decl of decls) {
@@ -901,7 +917,7 @@ function validateQueuedAttacks(
     const dist = hexDistance(unit.position, target.position);
     const b = bearingExact(unit.position, target.position);
     if (b === null) throw new Error("Attacker and target share a hex");
-    const fireArc = classifyArcWithBoundary(unit.facing, b);
+    const fireArc = classifyArcWithBoundary(effectiveFacing, b);
     const rearFacing = mount.rearFacing === true;
     const inArc =
       weaponCanFireIntoArc(mount.location, rearFacing, fireArc.arc) ||
@@ -978,7 +994,7 @@ export function queueFire(s: Session, decl: AttackDecl): void {
   if (s.fireDecls.some((d) => d.weaponIndex === decl.weaponIndex)) {
     throw new Error(i18n(s.locale, "err.weaponRepeated", { weapon: decl.weaponIndex }));
   }
-  validateQueuedAttacks(battle, unit, [...s.fireDecls, decl]);
+  validateQueuedAttacks(battle, unit, [...s.fireDecls, decl], s.torsoTwist);
   s.fireDecls.push(decl);
 }
 
@@ -986,11 +1002,11 @@ export function commitFire(s: Session): CommitResult {
   const unit = requireActor(s, "weaponAttack");
   const battle = requireBattle(s);
   if (s.fireDecls.length === 0) throw new Error(i18n(s.locale, "err.noAttacksQueued"));
-  validateQueuedAttacks(battle, unit, s.fireDecls);
+  validateQueuedAttacks(battle, unit, s.fireDecls, s.torsoTwist);
   const beforeCount = battle.events.length;
   const newEvents: GameEvent[] = [];
   commitAtomic(s, () => {
-    declareAttacks(battle, unit.id, s.fireDecls, s.rng);
+    declareAttacks(battle, unit.id, s.fireDecls, s.rng, { twist: s.torsoTwist });
     const declEvents = battle.events.slice(beforeCount);
     s.actorId = null;
     clearBuffers(s);
@@ -998,6 +1014,32 @@ export function commitFire(s: Session): CommitResult {
     newEvents.push(...declEvents, ...driveEvents);
   });
   return { state: battle, newEvents };
+}
+
+/**
+ * Set the acting unit's torso twist (TW p.62) for its current attack-phase
+ * declaration. Locked once any fire command is queued — the user must
+ * `cancel` first — and resets to `"front"` on phase entry or new actor.
+ */
+export function setTorsoTwist(s: Session, direction: string): void {
+  const unit = requireActor(s, "weaponAttack");
+  const allowed: Readonly<Record<string, Arc>> = {
+    front: "front",
+    left: "leftSide",
+    right: "rightSide",
+  };
+  const arc = allowed[direction.toLowerCase()];
+  if (arc === undefined) {
+    throw new Error(i18n(s.locale, "err.twist.badDirection"));
+  }
+  if (s.fireDecls.length > 0) {
+    throw new Error(i18n(s.locale, "err.twist.locked"));
+  }
+  if (s.torsoTwist === arc) return;
+  s.torsoTwist = arc;
+  s.fireCandidate = null;
+  s.fireHintShownFor = null;
+  void unit;
 }
 
 /**

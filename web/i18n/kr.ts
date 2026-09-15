@@ -99,6 +99,10 @@ export const kr: Catalog = {
   "cmd.doneMove.help": "선언된 이동 확정",
   "cmd.ammo.help": "행동 유닛의 탄약 소진 정책 표시 또는 설정",
   "cmd.ammo.arg.policy": "exposed | core | spread | least-first\n생략하면 현재 정책 표시",
+  "cmd.torso.help":
+    "행동 유닛의 상체를 회전(TW p.62). 회전 시 팔과 앞쪽 torso가 회전 방향의 아크로 사격 가능",
+  "cmd.torso.arg.direction":
+    "front = 회전 없음, left/right = 한 변만큼 그 방향으로 회전. fire 명령 예약 후에는 변경 불가",
   "cmd.fire.help": "하나 이상의 무기 공격 예약",
   "cmd.fire.arg.weaponIndex":
     "'weapons' 목록의 1부터 시작하는 무기 번호\n여러 무기를 한 번에 선언하려면 반복",
@@ -133,6 +137,8 @@ export const kr: Catalog = {
     "  {type} 모드 진입 ({col},{row}) {terrain}: MP {mp} 사용 (기본 1, 지형 +{surcharge}, 고도차 +{climb} {levels}lv)",
   "ok.cancelled": "취소되었습니다",
   "ok.fireQueuedBatch": "{target} <- 무기 {weapons} 예약됨",
+  "ok.twistSet": "{id}: 상체가 {dir}(으)로 회전",
+  "ok.twistAlready": "{id}: 이미 {dir}(으)로 회전 상태",
   "ammo.current": "탄약 정책: {policy}",
   "ammo.set": "{id}: 탄약 정책이 {policy}(으)로 설정되었습니다",
   "ammo.policy.exposed": "노출 우선",
@@ -218,6 +224,8 @@ export const kr: Catalog = {
   "err.seedInteger": "seed는 정수여야 합니다",
   "err.badAmmoPolicy": "탄약 정책은 exposed|core|spread|least-first 중 하나여야 합니다",
   "err.phaseDriver": "단계 드라이버가 수렴하지 않았습니다",
+  "err.twist.badDirection": "상체 회전 방향은 front, left, right 중 하나여야 합니다",
+  "err.twist.locked": "fire 명령이 예약되면 상체 회전은 잠김 — 먼저 cancel 하세요",
 
   // setup status
   "setup.mapLabel": "맵: {name}",
@@ -297,6 +305,10 @@ export const kr: Catalog = {
   "fireSuggestion.blockedSummary": "사용불가 무기 목록 ({num}):",
   "fireSuggestion.propLeft": "왼팔 지탱 — {num}문 발사 가능 (왼팔 무기 제외):",
   "fireSuggestion.propRight": "오른팔 지탱 — {num}문 발사 가능 (오른팔 무기 제외):",
+  "fireSuggestion.twist": "상체 회전: {dir}",
+  "fireSuggestion.twist.front": "정면",
+  "fireSuggestion.twist.left": "좌측",
+  "fireSuggestion.twist.right": "우측",
 
   // over status
   "over.idLine": "식별자: {id}",

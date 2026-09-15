@@ -40,6 +40,7 @@ import {
   type Arc,
   classifyArcWithBoundary,
   defenderArcChoice,
+  effectiveFacingForTwist,
   weaponCanFireIntoArc,
 } from "./arcs.js";
 import { type AttackResolution, PARTIAL_COVER_TERRAIN_MOD, resolveWeaponAttack } from "./attack.js";
@@ -1109,11 +1110,18 @@ export function inferPronePropArm(
   return null;
 }
 
+export interface DeclareAttacksOptions {
+  /** Torso twist (TW p.62): shifts the attacker's effective facing by one
+   *  hexside before classifying the firing arc. Defaults to untwisted. */
+  readonly twist?: Arc | null;
+}
+
 export function declareAttacks(
   state: BattleState,
   unitId: string,
   decls: readonly AttackDecl[],
   rng: Rng = DEFAULT_RNG,
+  options: DeclareAttacksOptions = {},
 ): void {
   requirePhase(state, "weaponAttack");
   const unit = requireUnit(state, unitId);
@@ -1129,6 +1137,7 @@ export function declareAttacks(
     throw new Error(`${unitId} cannot fire: sensors destroyed (no weapon attacks)`);
   }
   const sensorMod = sensorAttackModifier(sensorsOut);
+  const effectiveFacing = effectiveFacingForTwist(unit.facing, options.twist ?? null);
   let targetId: string | null = null;
   let attackDirection: Arc | undefined;
   let attackDistance = 0;
@@ -1191,7 +1200,10 @@ export function declareAttacks(
     if (b === null) throw new Error("Attacker and target share a hex");
     // Attacker-side firing arc (weapon legality, TW p.105). On an exact
     // boundary line the target counts as lying in both arcs of the pair.
-    const fireArc = classifyArcWithBoundary(unit.facing, b);
+    // Torso twist rotates the attacker's effective facing (see
+    // `effectiveFacingForTwist`) before this classification so arm and
+    // front-torso weapons cover the twisted arc.
+    const fireArc = classifyArcWithBoundary(effectiveFacing, b);
     arcs[decl.weaponIndex] = fireArc.arc;
     const rearFacing = mount.rearFacing === true;
     const inArc =
