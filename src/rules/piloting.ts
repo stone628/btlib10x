@@ -40,7 +40,14 @@
  * All functions here are pure; game.ts commits the results onto UnitState.
  */
 
-import { roll2D6, rollD6 } from "../core/dice.js";
+import {
+  D2D6_AUTO_SUCCESS,
+  D2D6_FUMBLE,
+  D2D6_MAX,
+  D2D6_MIN,
+  roll2D6,
+  rollD6,
+} from "../core/dice.js";
 import type { Facing, Location, Rng } from "../core/types.js";
 import { rotateFacing } from "../core/types.js";
 import type { ResolvedMechDef } from "../data/mech.schema.js";
@@ -78,11 +85,11 @@ export function rollPilotingCheck(
   modifier: number,
 ): { target: number; roll: number | null; success: boolean } {
   const target = piloting + modifier;
-  if (target <= 2) return { target, roll: null, success: true };
-  if (target > 12) return { target, roll: null, success: false };
+  if (target <= D2D6_MIN) return { target, roll: null, success: true };
+  if (target > D2D6_MAX) return { target, roll: null, success: false };
   const roll = roll2D6(rng);
-  if (roll === 2) return { target, roll, success: false };
-  if (roll === 12) return { target, roll, success: true };
+  if (roll === D2D6_FUMBLE) return { target, roll, success: false };
+  if (roll === D2D6_AUTO_SUCCESS) return { target, roll, success: true };
   return { target, roll, success: roll >= target };
 }
 
@@ -122,11 +129,24 @@ export function destroyedLegStructures(
 
 /**
  * Preexisting-damage modifier for a PSR, evaluated against a crit-slot state
- * (TW p.60 "Preexisting Damage"): +1 per destroyed leg/foot actuator, +2 per
- * destroyed hip (which replaces the other actuator mods on that leg), +3 for
- * a previously hit gyro, +5 per previously destroyed leg (which replaces all
+ * (TW p.60 "Preexisting Damage"): LEG_ACTUATOR_MOD per destroyed leg/foot
+ * actuator, HIP_MOD per destroyed hip (which replaces the other actuator
+ * mods on that leg), GYRO_HIT_MOD for a previously hit gyro,
+ * GYRO_DESTROYED_HITS or more gyro hits blocks standing, and
+ * LEG_DESTROYED_MOD per previously destroyed leg (which replaces all
  * other mods on that leg).
  */
+/** PSR modifier per destroyed leg (leg gone; replaces all other mods on that leg). */
+export const LEG_DESTROYED_MOD = 5;
+/** PSR modifier per destroyed hip (replaces other actuator mods on that leg). */
+export const HIP_MOD = 2;
+/** PSR modifier per destroyed leg/foot actuator. */
+export const LEG_ACTUATOR_MOD = 1;
+/** PSR modifier for a previously hit (but intact) gyro. */
+export const GYRO_HIT_MOD = 3;
+/** Destroyed gyro slots that forbid standing. */
+export const GYRO_DESTROYED_HITS = 2;
+
 export interface PreexistingDamage {
   readonly modifier: number;
   /** Destroyed gyro slots (0, 1, or 2). */
@@ -146,41 +166,40 @@ export function preexistingDamageModifier(
   for (const leg of ["rightLeg", "leftLeg"] as const) {
     if (legIsGone(leg)) {
       legsDestroyed += 1;
-      modifier += 5;
+      modifier += LEG_DESTROYED_MOD;
       continue;
     }
     const names = destroyedLegStructures(def, destroyed, leg);
     if (names.includes(HIP)) {
-      modifier += 2;
+      modifier += HIP_MOD;
       continue;
     }
     for (const name of names) {
-      if (LEG_ACTUATORS.has(name)) modifier += 1;
+      if (LEG_ACTUATORS.has(name)) modifier += LEG_ACTUATOR_MOD;
     }
   }
-  if (gyroHits >= 1 && gyroHits < 2) modifier += 3;
+  if (gyroHits >= 1 && gyroHits < GYRO_DESTROYED_HITS) modifier += GYRO_HIT_MOD;
   return { modifier, gyroHits, legsDestroyed };
 }
 
 /**
- * Consciousness target number for a pilot with `hits` hits (TW p.42):
- * 1 -> 3, 2 -> 5, 3 -> 7, 4 -> 10, 5 -> 11. Six hits kills the pilot.
+ * Consciousness target numbers by pilot hits (TW p.42). Six hits kills
+ * the pilot (see PILOT_HITS_DEAD).
  */
+const CONSCIOUSNESS_TARGETS: Readonly<Record<number, number>> = {
+  1: 3,
+  2: 5,
+  3: 7,
+  4: 10,
+  5: 11,
+};
+
+/** Tonnage divisor for falling-damage totals: ceil(tonnage / 10). */
+export const FALL_TONNAGE_DIVISOR = 10;
+/** Falling damage lands in clusters of this size (last group takes remnant). */
+export const FALL_CLUSTER_SIZE = 5;
 export function consciousnessTarget(hits: number): number | null {
-  switch (hits) {
-    case 1:
-      return 3;
-    case 2:
-      return 5;
-    case 3:
-      return 7;
-    case 4:
-      return 10;
-    case 5:
-      return 11;
-    default:
-      return null;
-  }
+  return CONSCIOUSNESS_TARGETS[hits] ?? null;
 }
 
 /** Roll one consciousness check: 2D6 >= target keeps the pilot awake. */
@@ -189,17 +208,17 @@ export function rollConsciousness(rng: Rng, target: number): { roll: number; suc
   return { roll, success: roll >= target };
 }
 
-/** Falling-damage total: ceil(tonnage / 10) x (levels fallen + 1) (TW p.68). */
+/** Falling-damage total: ceil(tonnage / FALL_TONNAGE_DIVISOR) x (levels fallen + 1) (TW p.68). */
 export function fallingDamageTotal(tonnage: number, levelsFallen: number): number {
-  return Math.ceil(tonnage / 10) * (levelsFallen + 1);
+  return Math.ceil(tonnage / FALL_TONNAGE_DIVISOR) * (levelsFallen + 1);
 }
 
-/** Damage totals split into 5-point clusters (last group takes the remnant). */
+/** Damage totals split into FALL_CLUSTER_SIZE-point clusters (last group takes the remnant). */
 export function fallingDamageGroups(total: number): number[] {
   const groups: number[] = [];
   let rest = total;
   while (rest > 0) {
-    const g = Math.min(5, rest);
+    const g = Math.min(FALL_CLUSTER_SIZE, rest);
     groups.push(g);
     rest -= g;
   }
@@ -241,32 +260,27 @@ export function facingAfterFall(facing: Facing, shift: number): Facing {
   return rotateFacing(facing, shift);
 }
 
+/** Building-entry PSR modifiers by building class (TW p.166). */
+const BUILDING_ENTRY_MODS: Readonly<Record<string, number>> = {
+  lightBuilding: 0,
+  mediumBuilding: 1,
+  heavyBuilding: 2,
+  hardenedBuilding: 5,
+};
+
 /** Building-entry PSR modifier by building class (TW p.166). */
 export function buildingEntryModifier(terrain: string): number | null {
-  switch (terrain) {
-    case "lightBuilding":
-      return 0;
-    case "mediumBuilding":
-      return 1;
-    case "heavyBuilding":
-      return 2;
-    case "hardenedBuilding":
-      return 5;
-    default:
-      return null;
-  }
+  return BUILDING_ENTRY_MODS[terrain] ?? null;
 }
+
+/** Water-entry PSR modifiers by depth (TW p.60). */
+const WATER_ENTRY_MODS: Readonly<Record<string, number>> = {
+  water1: -1,
+  water2: 0,
+  water3: 1,
+};
 
 /** Terrain-entry PSR modifier for water depth (TW p.60). */
 export function waterEntryModifier(terrain: string): number | null {
-  switch (terrain) {
-    case "water1":
-      return -1;
-    case "water2":
-      return 0;
-    case "water3":
-      return 1;
-    default:
-      return null;
-  }
+  return WATER_ENTRY_MODS[terrain] ?? null;
 }

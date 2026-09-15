@@ -1,4 +1,11 @@
-export { roll2D6, rollD6 } from "./core/dice.js";
+export {
+  D2D6_AUTO_SUCCESS,
+  D2D6_FUMBLE,
+  D2D6_MAX,
+  D2D6_MIN,
+  roll2D6,
+  rollD6,
+} from "./core/dice.js";
 export {
   type Bearing,
   bearing,

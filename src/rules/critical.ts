@@ -228,6 +228,13 @@ function isLocationExhausted(
   return true;
 }
 
+/** 2D6 determining roll at or below this: no critical hit. */
+const CRIT_NONE_MAX = 7;
+/** 2D6 determining roll at or below this: one critical hit. */
+const CRIT_ONE_MAX = 9;
+/** 2D6 determining roll at or below this: two critical hits (12 blows off / three hits). */
+const CRIT_TWO_MAX = 11;
+
 /** 2D6 determining critical hits. */
 function determiningResult(
   rng: Rng,
@@ -237,9 +244,9 @@ function determiningResult(
   | { kind: "hits"; count: number; roll: number }
   | { kind: "blownOff"; roll: number } {
   const r = roll2D6(rng);
-  if (r <= 7) return { kind: "none", roll: r };
-  if (r <= 9) return { kind: "hits", count: 1, roll: r };
-  if (r <= 11) return { kind: "hits", count: 2, roll: r };
+  if (r <= CRIT_NONE_MAX) return { kind: "none", roll: r };
+  if (r <= CRIT_ONE_MAX) return { kind: "hits", count: 1, roll: r };
+  if (r <= CRIT_TWO_MAX) return { kind: "hits", count: 2, roll: r };
   // 12: blow off head/limb; otherwise 3 hits.
   if (sourceLoc === "head") return { kind: "blownOff", roll: r };
   if (isLimb(sourceLoc)) {
@@ -248,6 +255,21 @@ function determiningResult(
   return { kind: "hits", count: 3, roll: r };
 }
 
+/** Slot count on head/leg locations (rolled with 1D6). */
+const HEAD_LEG_SLOTS = 6;
+/** Slots per half on 12-slot torso/arm locations. */
+const TORSO_ARM_HALF = 6;
+/** First-die roll at or below this picks the lower half (slots 1-6). */
+const HALF_SELECT_MAX = 3;
+/** Reroll cap when hunting a crit-hittable slot. */
+const SLOT_REROLL_CAP = 50;
+/** Destroyed engine slots that kill the 'Mech (TW p.33). */
+const ENGINE_SLOTS_KILL = 3;
+/** Running MP numerator over walking MP (run = ceil(walk * 3 / 2)). */
+const RUN_WALK_NUMERATOR = 3;
+/** Running MP denominator over walking MP. */
+const RUN_WALK_DENOMINATOR = 2;
+
 /**
  * Roll a 1-based slot number for the given location, using the official
  * procedure: 1D6 for head/legs, 2D6 (half + slot) for torso/arms. Returns
@@ -255,15 +277,15 @@ function determiningResult(
  */
 function rollSlotNumber(rng: Rng, loc: Location): { slot: number; rolls: readonly number[] } {
   const count = CRIT_SLOT_COUNTS[loc];
-  if (count === 6) {
+  if (count === HEAD_LEG_SLOTS) {
     const r = rollD6(rng);
     return { slot: r, rolls: [r] };
   }
   // 12-slot location: 2D6, first die = half selector, second = slot within half.
   const first = rollD6(rng);
   const second = rollD6(rng);
-  const half = first <= 3 ? 0 : 1; // 0 = slots 1-6, 1 = slots 7-12
-  const slot = half * 6 + second;
+  const half = first <= HALF_SELECT_MAX ? 0 : 1; // 0 = slots 1-6, 1 = slots 7-12
+  const slot = half * TORSO_ARM_HALF + second;
   return { slot, rolls: [first, second] };
 }
 
@@ -291,7 +313,7 @@ function findHittableSlot(
   layout: readonly ResolvedCritSlot[],
   destroyed: readonly boolean[],
 ): { slotIndex: number; rolls: number[] } | null {
-  const maxTries = 50;
+  const maxTries = SLOT_REROLL_CAP;
   for (let i = 0; i < maxTries; i++) {
     const { slot, rolls } = rollSlotNumber(rng, loc);
     const i0 = slot - 1;
@@ -647,9 +669,9 @@ function applySlotHit(
     }
   }
   if (name === "engine") {
-    // Three engine crit slots destroyed = 'Mech killed (TW p.33).
+    // ENGINE_SLOTS_KILL engine crit slots destroyed = 'Mech killed (TW p.33).
     const engineCount = countDestroyedEngineSlots(def, state.destroyed);
-    if (engineCount >= 3) {
+    if (engineCount >= ENGINE_SLOTS_KILL) {
       state.killedReason = "engineDestroyed";
       state.rows.push({
         kind: "engineDestroyed",
@@ -770,7 +792,7 @@ export function effectiveMovement(
       }
     }
   }
-  const run = Math.ceil((walk * 3) / 2); // ceil(walk * 1.5)
+  const run = Math.ceil((walk * RUN_WALK_NUMERATOR) / RUN_WALK_DENOMINATOR);
   return { walking: walk, running: run, jumping: jump };
 }
 

@@ -115,6 +115,15 @@ export interface AttackResolution {
   readonly crits: readonly CriticalResolution[];
 }
 
+/** Partial-cover to-hit modifier for cover terrain (water1 / building). */
+export const PARTIAL_COVER_TERRAIN_MOD = 1;
+/** 2D6 roll that jams a rapid-fire volley of more than one shot. */
+const RAPID_FIRE_JAM_ROLL = 2;
+/** Missile damage per missile that still splits into lots (above this: per-missile locations). */
+const MISSILE_SINGLE_DAMAGE = 2;
+/** Missiles grouped per hit location below MISSILE_SINGLE_DAMAGE. */
+const MISSILE_LOT_SIZE = 5;
+
 /** Resolve one declared weapon attack end-to-end: to-hit, location(s), damage. */
 export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution {
   const weapon: WeaponDef = getWeaponDefFor(input);
@@ -122,7 +131,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
   const arc = input.arc ?? "front";
   const terrainCoverMod =
     hasPartialCover(input.targetTerrain) && (input.attackerLevel ?? 0) <= (input.targetLevel ?? 0)
-      ? 1
+      ? PARTIAL_COVER_TERRAIN_MOD
       : 0;
   const partialCoverMod = Math.max(terrainCoverMod, input.partialCoverMod ?? 0);
   const partialCover = partialCoverMod > 0;
@@ -176,7 +185,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
   base.toHitRoll = roll;
 
   const rapidFire = weapon.rapidFireShots !== undefined && weapon.rapidFireShots > 0;
-  if (rapidFire && shots > 1 && roll === 2) base.jammed = true;
+  if (rapidFire && shots > 1 && roll === RAPID_FIRE_JAM_ROLL) base.jammed = true;
 
   base.hit = breakdown.automatic !== null ? breakdown.automatic === "hit" : roll >= breakdown.total;
   if (!base.hit) return base;
@@ -193,7 +202,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
       base.clusterRoll = clusterRoll;
       hits = clusterHits(weapon.missiles, clusterRoll);
     }
-    if (weapon.missileDamage === 2) {
+    if (weapon.missileDamage === MISSILE_SINGLE_DAMAGE) {
       for (let i = 0; i < hits; i++) {
         const location = hitLocationCovered(input.rng, partialCover, arc);
         if (location === null) continue;
@@ -203,7 +212,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
         });
       }
     } else {
-      for (const lot of groupMissiles(hits, 5)) {
+      for (const lot of groupMissiles(hits, MISSILE_LOT_SIZE)) {
         const location = hitLocationCovered(input.rng, partialCover, arc);
         if (location === null) continue;
         base.groups.push({

@@ -18,9 +18,12 @@ export function losWoodsPoints(intervening: readonly TerrainType[]): number {
   return points;
 }
 
+/** Intervening woods points that block line of sight. */
+const WOODS_BLOCK_POINTS = 3;
+
 /** Three or more points of intervening woods block line of sight. */
 export function losBlocked(points: number): boolean {
-  return points >= 3;
+  return points >= WOODS_BLOCK_POINTS;
 }
 
 /** Sum of screening points among hexes between `from` and `to` (endpoints excluded). */
@@ -50,9 +53,15 @@ export function losBlockedByWater(grid: HexGrid, from: HexCoord, to: HexCoord): 
  * (1 level for a 'Mech-height crest, 2 for a building — TW: one building
  * level equals two hex levels; default single-level buildings).
  */
+/** Standing-feature height of a 'Mech-height crest (levels). */
+const MECH_LOS_HEIGHT = 1;
+/** Standing-feature height of a building hex (levels). */
+const BUILDING_LOS_HEIGHT = 2;
+
 function terrainHeightAt(grid: HexGrid, hex: HexCoord): number {
   const cell = cellAt(grid, hex);
-  const standing = buildingTypeOf(cell.terrain) !== undefined ? 2 : 1;
+  const standing =
+    buildingTypeOf(cell.terrain) !== undefined ? BUILDING_LOS_HEIGHT : MECH_LOS_HEIGHT;
   return cell.level + standing;
 }
 
@@ -64,8 +73,8 @@ function terrainHeightAt(grid: HexGrid, hex: HexCoord): number {
  * 'Mechs only — no multi-floor interiors, no hull-down, no partial cover.
  */
 export function losBlockedByElevation(grid: HexGrid, from: HexCoord, to: HexCoord): boolean {
-  const aLos = cellAt(grid, from).level + 1;
-  const bLos = cellAt(grid, to).level + 1;
+  const aLos = cellAt(grid, from).level + MECH_LOS_HEIGHT;
+  const bLos = cellAt(grid, to).level + MECH_LOS_HEIGHT;
   const dTotal = hexDistance(from, to);
   if (dTotal === 0) return false;
   for (const h of interveningHexes(from, to)) {
@@ -82,8 +91,8 @@ export function losBlockedByElevation(grid: HexGrid, from: HexCoord, to: HexCoor
  * their height; the building hex a unit occupies is not intervening.
  */
 export function losBlockedByBuilding(grid: HexGrid, from: HexCoord, to: HexCoord): boolean {
-  const aLos = cellAt(grid, from).level + 1;
-  const bLos = cellAt(grid, to).level + 1;
+  const aLos = cellAt(grid, from).level + MECH_LOS_HEIGHT;
+  const bLos = cellAt(grid, to).level + MECH_LOS_HEIGHT;
   const dTotal = hexDistance(from, to);
   if (dTotal === 0) return false;
   for (const h of interveningHexes(from, to)) {
