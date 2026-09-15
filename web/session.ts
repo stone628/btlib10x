@@ -65,6 +65,8 @@ import {
   SENSORS,
   STAND_MP_COST,
   sameHex,
+  sensorAttackModifier,
+  sensorsBlind,
   toHitHeatModifier,
   voluntaryShutdown,
   weaponCanFireIntoArc,
@@ -852,6 +854,10 @@ function validateQueuedAttacks(
     throw new Error(`${unit.id} already declared attacks this turn`);
   const def = getMechDefFor(unit);
   const sensorsOut = countDestroyedStructure(def, unit.critSlotsDestroyed, SENSORS);
+  if (sensorsBlind(sensorsOut)) {
+    throw new Error(`${unit.id} cannot fire: sensors destroyed (no weapon attacks)`);
+  }
+  const sensorMod = sensorAttackModifier(sensorsOut);
   let targetId: string | null = null;
   const seen = new Set<number>();
   for (const decl of decls) {
@@ -913,7 +919,7 @@ function validateQueuedAttacks(
       gunnery: unit.gunnery,
       attackerMovement: unit.moveMode ?? "standStill",
       attackerProne: unit.prone,
-      sensorMod: sensorsOut,
+      sensorMod,
       targetHexesMoved: target.movesThisTurn.length,
       targetJumped: target.jumpedThisTurn,
       targetImmobile: isImmobile(target),

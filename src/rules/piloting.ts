@@ -67,6 +67,21 @@ export const GYRO = "gyro";
 export const HIP = "hip";
 export const LIFE_SUPPORT = "lifeSupport";
 export const SENSORS = "sensors";
+
+/** To-hit penalty while exactly one sensor slot is destroyed (TW p.123). */
+export const SENSOR_ONE_HIT_MOD = 2;
+/** Destroyed sensor slots that blind the 'Mech: no weapon attacks at all (TW p.123). */
+export const SENSOR_BLIND_HITS = 2;
+
+/** Weapon to-hit modifier for a destroyed-sensor count (0 intact, +2 on first hit). */
+export function sensorAttackModifier(destroyedSensors: number): number {
+  return destroyedSensors > 0 ? SENSOR_ONE_HIT_MOD : 0;
+}
+
+/** True when destroyed sensors blind the 'Mech entirely (second hit). */
+export function sensorsBlind(destroyedSensors: number): boolean {
+  return destroyedSensors >= SENSOR_BLIND_HITS;
+}
 export const LEG_ACTUATORS: ReadonlySet<string> = new Set([
   "upperLegActuator",
   "lowerLegActuator",

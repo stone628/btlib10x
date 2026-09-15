@@ -434,7 +434,7 @@ describe("prone combat", () => {
     expect(right).not.toContain(2);
   });
 
-  it("gives a prone attacker +2 and a prone target -2", () => {
+  it("gives a prone attacker +2 and a prone adjacent target -2", () => {
     const state = hbkEnf();
     toAttack(state);
     const hbk = getUnit(state, "hbk");
@@ -448,16 +448,24 @@ describe("prone combat", () => {
     expect(proneTarget - base).toBe(-2);
   });
 
-  it("adds +1 per destroyed sensor", () => {
+  it("adds +2 on the first destroyed sensor and blinds on the second", () => {
     const state = hbkEnf();
     toAttack(state);
     const base = suggestFireTargets(state, "hbk").targets[0]!.weapons[0]!.tn;
     const hbk = getUnit(state, "hbk");
     const sensors = structureSlots(state, "hbk", "head", "sensors");
-    expect(sensors.length).toBeGreaterThan(0);
+    expect(sensors).toHaveLength(2);
     hbk.critSlotsDestroyed.head[sensors[0]!] = true;
     const one = suggestFireTargets(state, "hbk").targets[0]!.weapons[0]!.tn;
-    expect(one - base).toBe(1);
+    expect(one - base).toBe(2);
+    hbk.critSlotsDestroyed.head[sensors[1]!] = true;
+    const blind = suggestFireTargets(state, "hbk").targets[0]!;
+    expect(blind.weapons).toHaveLength(0);
+    expect(blind.blocked.length).toBeGreaterThan(0);
+    for (const b of blind.blocked) expect(b.reason).toBe("noSensor");
+    expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }])).toThrow(
+      /sensors/,
+    );
   });
 });
 

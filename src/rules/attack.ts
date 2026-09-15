@@ -17,6 +17,9 @@ import { computeToHit, damageForBracket } from "./tohit.js";
 export interface HitGroup {
   readonly location: Location;
   readonly damage: number;
+  /** True when the hit-location roll was a 2: through-armor critical
+   *  (damage lands on armor normally, plus a determining roll, TW p.123). */
+  readonly throughArmor: boolean;
 }
 
 export interface WeaponAttackInput {
@@ -29,7 +32,8 @@ export interface WeaponAttackInput {
   /** True when the target cannot move (shut down or both legs destroyed):
    *  grants a flat −4 target modifier instead of the hex-based band. */
   readonly targetImmobile?: boolean;
-  /** True when the target is prone (but not immobile): flat −2 (TW p.109). */
+  /** True when the target is prone (but not immobile): −2 adjacent, +1
+   *  otherwise (TW p.109). Forwarded to `computeToHit` with `distance`. */
   readonly targetProne?: boolean;
   /** True when the attacker is prone: +2 attacker modifier (TW p.109). */
   readonly attackerProne?: boolean;
@@ -40,7 +44,9 @@ export interface WeaponAttackInput {
    * Echoed into `AttackResolution.propArm`.
    */
   readonly propArm?: "leftArm" | "rightArm" | null;
-  /** Destroyed sensor crit slots on the attacker: +1 each (TW p.123). */
+  /** Destroyed-sensor to-hit modifier on the attacker: 0 intact, +2 on the
+   *  first hit; a second hit blinds the 'Mech (declare no attacks, TW p.123).
+   *  Callers map the destroyed-slot count via `sensorAttackModifier`. */
   readonly sensorMod?: number;
   /** Partial-cover to-hit modifier supplied by the caller (the board aware
    *  of wrecks): 2 when the target is adjacent to a level-2 wreck and the
@@ -109,8 +115,9 @@ export interface AttackResolution {
   readonly arc: Arc;
   /**
    * Critical hit resolutions triggered by the attack, one per group that
-   * stripped at least 1 internal-structure point. Empty when no crits were
-   * rolled (e.g. `targetDef` was not supplied).
+   * stripped at least 1 internal-structure point or rolled a through-armor
+   * hit location of 2. Empty when no crits were rolled (e.g. `targetDef`
+   * was not supplied).
    */
   readonly crits: readonly CriticalResolution[];
 }
@@ -119,6 +126,9 @@ export interface AttackResolution {
 export const PARTIAL_COVER_TERRAIN_MOD = 1;
 /** 2D6 roll that jams a rapid-fire volley of more than one shot. */
 const RAPID_FIRE_JAM_ROLL = 2;
+/** Hit-location roll triggering a through-armor critical (TW p.123):
+ *  damage lands on armor normally, plus one determining roll. */
+const THROUGH_ARMOR_LOCATION_ROLL = 2;
 /** Missile damage per missile that still splits into lots (above this: per-missile locations). */
 const MISSILE_SINGLE_DAMAGE = 2;
 /** Missiles grouped per hit location below MISSILE_SINGLE_DAMAGE. */
@@ -204,20 +214,22 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     }
     if (weapon.missileDamage === MISSILE_SINGLE_DAMAGE) {
       for (let i = 0; i < hits; i++) {
-        const location = hitLocationCovered(input.rng, partialCover, arc);
-        if (location === null) continue;
+        const placed = hitLocationPlaced(input.rng, partialCover, arc);
+        if (placed === null) continue;
         base.groups.push({
-          location,
+          location: placed.location,
           damage: weapon.missileDamage,
+          throughArmor: placed.throughArmor,
         });
       }
     } else {
       for (const lot of groupMissiles(hits, MISSILE_LOT_SIZE)) {
-        const location = hitLocationCovered(input.rng, partialCover, arc);
-        if (location === null) continue;
+        const placed = hitLocationPlaced(input.rng, partialCover, arc);
+        if (placed === null) continue;
         base.groups.push({
-          location,
+          location: placed.location,
           damage: lot * weapon.missileDamage,
+          throughArmor: placed.throughArmor,
         });
       }
     }
@@ -226,19 +238,21 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     base.clusterRoll = clusterRoll;
     const hits = clusterHits(shots, clusterRoll);
     for (let i = 0; i < hits; i++) {
-      const location = hitLocationCovered(input.rng, partialCover, arc);
-      if (location === null) continue;
+      const placed = hitLocationPlaced(input.rng, partialCover, arc);
+      if (placed === null) continue;
       base.groups.push({
-        location,
+        location: placed.location,
         damage: damageForBracket(weapon, breakdown.rangeBracket),
+        throughArmor: placed.throughArmor,
       });
     }
   } else {
-    const location = hitLocationCovered(input.rng, partialCover, arc);
-    if (location !== null) {
+    const placed = hitLocationPlaced(input.rng, partialCover, arc);
+    if (placed !== null) {
       base.groups.push({
-        location,
+        location: placed.location,
         damage: damageForBracket(weapon, breakdown.rangeBracket),
+        throughArmor: placed.throughArmor,
       });
     }
   }
@@ -280,15 +294,18 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     if (!critStateAvailable || !input.targetDef) continue;
     // Did this group strip at least 1 IS point at the group's *original*
     // location (not a transferred one)? The rules call for one determining
-    // roll per location that loses IS in a given group.
+    // roll per location that loses IS in a given group. A hit-location roll
+    // of 2 adds one determining roll even with armor unbreached
+    // (through-armor critical, TW p.123).
     const stripped = app.steps.some(
       (s) => s.location === group.location && s.pool === "structure" && s.damageApplied > 0,
     );
-    if (!stripped) continue;
+    if (!stripped && !group.throughArmor) continue;
     const res = resolveCriticalHits({
       rng: input.rng,
       def: input.targetDef,
       source: { location: group.location, damage: group.damage },
+      ...(group.throughArmor ? { throughArmor: true } : {}),
       critSlotsDestroyed: critSlotsDestroyed!,
       destroyedWeapons,
       damage,
@@ -314,13 +331,19 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
   return base;
 }
 
-/** Hit-location roll on the column for the attack direction `arc`; under
- *  partial cover a leg result strikes the cover instead and the attack deals
- *  no damage to the target (null). */
-function hitLocationCovered(rng: Rng, partialCover: boolean, arc: Arc): Location | null {
-  const location = hitLocationForArc(arc, roll2D6(rng));
+/** Hit-location roll on the column for the attack direction `arc`, tagged
+ *  when the roll is a through-armor 2. Under partial cover a leg result
+ *  strikes the cover instead and the attack deals no damage to the target
+ *  (null). */
+function hitLocationPlaced(
+  rng: Rng,
+  partialCover: boolean,
+  arc: Arc,
+): { location: Location; throughArmor: boolean } | null {
+  const roll = roll2D6(rng);
+  const location = hitLocationForArc(arc, roll);
   if (partialCover && (location === "leftLeg" || location === "rightLeg")) return null;
-  return location;
+  return { location, throughArmor: roll === THROUGH_ARMOR_LOCATION_ROLL };
 }
 
 function cloneDestroyed(src: Record<Location, boolean[]>): Record<Location, boolean[]> {

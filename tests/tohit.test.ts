@@ -102,6 +102,30 @@ describe("GATOR to-hit calculation", () => {
     expect(mk(3, true)).toBe(6);
   });
 
+  it("prone target: -2 adjacent, +1 at range, -4 when immobile", () => {
+    const base = {
+      gunnery: 4,
+      attackerMovement: "standStill" as const,
+      targetHexesMoved: 0,
+      targetJumped: false,
+      targetTerrain: "clear" as const,
+      interveningWoods: 0,
+      weapon: getWeaponDefFor({ weapon: "Small Laser" }),
+    };
+    const adjacent = computeToHit({ ...base, distance: 1, targetProne: true });
+    expect(adjacent.targetMod).toBe(-2);
+    const distant = computeToHit({ ...base, distance: 3, targetProne: true });
+    expect(distant.targetMod).toBe(1);
+    expect(distant.targetMod - adjacent.targetMod).toBe(3);
+    const immobileProne = computeToHit({
+      ...base,
+      distance: 3,
+      targetProne: true,
+      targetImmobile: true,
+    });
+    expect(immobileProne.targetMod).toBe(-4);
+  });
+
   it("immobile target (shut down / legs destroyed) gets a flat -4 target modifier", () => {
     const base = {
       gunnery: 4,

@@ -47,7 +47,23 @@ describe("determining critical hits table", () => {
       });
       expect(res.determiningRoll).toBe(roll);
       expect(res.rows).toHaveLength(0);
+      expect(res.throughArmor).toBe(false);
     }
+  });
+
+  it("tags through-armor resolutions when triggered by a hit-location 2", () => {
+    const res = resolveCriticalHits({
+      rng: detRoll(8, 1, 1),
+      def,
+      source: { location: "centerTorso", damage: 5 },
+      throughArmor: true,
+      critSlotsDestroyed: freshFlags(def),
+      destroyedWeapons: [],
+      damage,
+      ammoBins: loadAmmoBins(def),
+    });
+    expect(res.throughArmor).toBe(true);
+    expect(res.rows).toHaveLength(1);
   });
 
   it("rolls 8-9 as one crit", () => {

@@ -1622,6 +1622,7 @@ const BLOCKER_LABEL: Readonly<Record<FireBlockerReason, MessageKey>> = {
   outOfAmmo: "fireSuggestion.reason.outOfAmmo",
   autoMiss: "fireSuggestion.reason.autoMiss",
   prone: "fireSuggestion.reason.prone",
+  noSensor: "fireSuggestion.reason.noSensor",
 };
 
 const ARC_LABEL: Readonly<Record<Arc, MessageKey>> = {
@@ -2149,7 +2150,7 @@ export function resolutionLines(locale: LocaleId, r: AttackResolution): string[]
   if (r.hit && r.groups.length > 0) {
     lines.push(
       i18n(locale, "res.hits", {
-        groups: r.groups.map((g) => `${SHORT_LOC[g.location]}(${g.damage})`).join(" "),
+        groups: r.groups.map((g) => formatHitGroup(locale, g)).join(" "),
         arc: i18n(locale, ARC_LABEL[r.arc]),
       }),
     );
@@ -2160,6 +2161,15 @@ export function resolutionLines(locale: LocaleId, r: AttackResolution): string[]
     for (const line of critLines(locale, crit)) lines.push(`  ${line}`);
   }
   return lines;
+}
+
+/** One damage group label, tagged when the hit location rolled a through-armor 2. */
+function formatHitGroup(
+  locale: LocaleId,
+  g: { location: Location; damage: number; throughArmor?: boolean },
+): string {
+  const base = `${SHORT_LOC[g.location]}(${g.damage})`;
+  return g.throughArmor === true ? `${base} [${i18n(locale, "res.throughArmorTag")}]` : base;
 }
 
 /** Pretty-print one CriticalResolution into one or more terminal lines. */
@@ -2175,7 +2185,7 @@ export function critLines(locale: LocaleId, c: CriticalResolution): string[] {
   const lines: string[] = [
     i18n(locale, "res.critHeader", {
       roll: String(c.determiningRoll),
-      count: i18n(locale, headerKey),
+      count: `${i18n(locale, headerKey)}${c.throughArmor ? ` [${i18n(locale, "res.throughArmorTag")}]` : ""}`,
     }),
   ];
   for (const eff of c.rows) lines.push(`  ${formatCritEffect(locale, eff)}`);

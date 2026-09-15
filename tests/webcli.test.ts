@@ -53,11 +53,19 @@ function autoPlay(s: S.Session): void {
     const enemy = ids.find((id) => id !== actorId)!;
     if (st.phase === "movement") {
       if (isNominal(st.units[actorId]!)) {
-        try {
-          if (st.units[actorId]!.prone) S.declareMode(s, "standup", "walk");
-          else S.declareMode(s, "walk");
-        } catch {
-          S.declareMode(s, "standStill");
+        if (st.units[actorId]!.prone) {
+          try {
+            S.declareMode(s, "standup", "walk");
+          } catch {
+            // Cannot afford the stand (wrecked legs/heat): hold prone.
+            S.declareMode(s, "pronestill");
+          }
+        } else {
+          try {
+            S.declareMode(s, "walk");
+          } catch {
+            S.declareMode(s, "standStill");
+          }
         }
       }
       S.commitMove(s);

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
+import type { Location } from "../src/core/types.js";
 import { LOCATIONS } from "../src/core/types.js";
+import { getMechDef } from "../src/data/index.js";
+import { loadAmmoBins } from "../src/rules/ammo.js";
 import { resolveWeaponAttack } from "../src/rules/attack.js";
 import type { LocationValue, UnitDamageState } from "../src/rules/damage.js";
 import { scriptedRng } from "./helpers.js";
@@ -12,6 +15,14 @@ function freshState(hp = 10): UnitDamageState {
     is[loc] = hp;
   }
   return { armor, armorRear: {}, internalStructure: is };
+}
+
+function freshFlags(def = getMechDef("HBK-4G")!) {
+  const out: Record<Location, boolean[]> = {} as Record<Location, boolean[]>;
+  for (const loc of Object.keys(def.critSlots) as Location[]) {
+    out[loc] = new Array(def.critSlots[loc].length).fill(false);
+  }
+  return out;
 }
 
 /** Stationary gunnery-4 shooter at range 1 vs stationary target in the clear: TN 4. */
@@ -38,7 +49,7 @@ describe("resolveWeaponAttack", () => {
     expect(res.jammed).toBe(false);
     expect(res.toHitRoll).toBe(5);
     expect(res.clusterRoll).toBeNull();
-    expect(res.groups).toEqual([{ location: "centerTorso", damage: 3 }]);
+    expect(res.groups).toEqual([{ location: "centerTorso", damage: 3, throughArmor: false }]);
     expect(res.application?.after.armor.centerTorso).toBe(7);
     expect(rng.remaining()).toBe(0);
   });
@@ -93,8 +104,8 @@ describe("resolveWeaponAttack", () => {
     expect(res.hit).toBe(true);
     expect(res.clusterRoll).toBe(9);
     expect(res.groups).toEqual([
-      { location: "rightLeg", damage: 5 },
-      { location: "centerTorso", damage: 5 },
+      { location: "rightLeg", damage: 5, throughArmor: false },
+      { location: "centerTorso", damage: 5, throughArmor: false },
     ]);
     expect(res.application?.after.armor.rightLeg).toBe(5);
   });
@@ -118,8 +129,8 @@ describe("resolveWeaponAttack", () => {
     });
     expect(res.clusterRoll).toBe(9);
     expect(res.groups).toEqual([
-      { location: "centerTorso", damage: 5 },
-      { location: "rightArm", damage: 3 },
+      { location: "centerTorso", damage: 5, throughArmor: true },
+      { location: "rightArm", damage: 3, throughArmor: false },
     ]);
     expect(res.application?.after.armor.centerTorso).toBe(5);
     expect(res.application?.after.armor.rightArm).toBe(7);
@@ -165,10 +176,10 @@ describe("resolveWeaponAttack", () => {
     expect(res.hit).toBe(true);
     expect(res.clusterRoll).toBeNull();
     expect(res.groups).toEqual([
-      { location: "centerTorso", damage: 2 },
-      { location: "centerTorso", damage: 2 },
-      { location: "centerTorso", damage: 2 },
-      { location: "centerTorso", damage: 2 },
+      { location: "centerTorso", damage: 2, throughArmor: false },
+      { location: "centerTorso", damage: 2, throughArmor: false },
+      { location: "centerTorso", damage: 2, throughArmor: false },
+      { location: "centerTorso", damage: 2, throughArmor: false },
     ]);
     expect(res.application?.after.armor.centerTorso).toBe(2);
     expect(rng.remaining()).toBe(0);
@@ -230,7 +241,7 @@ describe("resolveWeaponAttack", () => {
     });
     expect(res.hit).toBe(true);
     expect(res.breakdown.terrainMod).toBe(1);
-    expect(res.groups).toEqual([{ location: "centerTorso", damage: 3 }]);
+    expect(res.groups).toEqual([{ location: "centerTorso", damage: 3, throughArmor: false }]);
   });
 
   it("no partial cover when attacker stands higher than target", () => {
@@ -246,6 +257,81 @@ describe("resolveWeaponAttack", () => {
     });
     expect(res.hit).toBe(true);
     expect(res.breakdown.terrainMod).toBe(0);
-    expect(res.groups).toEqual([{ location: "rightLeg", damage: 3 }]);
+    expect(res.groups).toEqual([{ location: "rightLeg", damage: 3, throughArmor: false }]);
+  });
+});
+
+describe("through-armor criticals (hit-location roll of 2)", () => {
+  const def = getMechDef("HBK-4G")!;
+
+  function critInput(rng: ReturnType<typeof scriptedRng>) {
+    return {
+      ...BASE,
+      rng,
+      weapon: "Small Laser",
+      targetDamage: freshState(),
+      targetDef: def,
+      targetCritSlotsDestroyed: freshFlags(def),
+      targetDestroyedWeapons: [] as number[],
+      targetAmmoBins: loadAmmoBins(def),
+    };
+  }
+
+  it("rolls once on the determining table with armor unbreached (front CT)", () => {
+    const rng = scriptedRng(
+      2,
+      3, // to-hit 5 >= TN 4
+      1,
+      1, // location 2 -> centerTorso, through-armor
+      3,
+      5, // determining 8 -> one crit
+      1,
+      1, // CT slot 1 (engine)
+    );
+    const res = resolveWeaponAttack(critInput(rng));
+    expect(res.hit).toBe(true);
+    expect(res.groups).toEqual([{ location: "centerTorso", damage: 3, throughArmor: true }]);
+    // Damage lands on armor normally; structure untouched.
+    expect(res.application?.after.armor.centerTorso).toBe(7);
+    expect(res.application?.after.internalStructure.centerTorso).toBe(10);
+    expect(res.crits).toHaveLength(1);
+    expect(res.crits[0]!.throughArmor).toBe(true);
+    expect(res.crits[0]!.determiningRoll).toBe(8);
+    expect(res.crits[0]!.rows).toHaveLength(1);
+    expect(rng.remaining()).toBe(0);
+  });
+
+  it("applies to the near torso on side columns (rightSide roll of 2)", () => {
+    const rng = scriptedRng(
+      2,
+      3, // to-hit 5 >= TN 4
+      1,
+      1, // location 2 -> rightTorso on the right-side table, through-armor
+      3,
+      5, // determining 8 -> one crit
+      1,
+      1, // rightTorso slot 1 (AC/20)
+    );
+    const res = resolveWeaponAttack({ ...critInput(rng), arc: "rightSide" });
+    expect(res.hit).toBe(true);
+    expect(res.groups).toEqual([{ location: "rightTorso", damage: 3, throughArmor: true }]);
+    expect(res.application?.after.armor.rightTorso).toBe(7);
+    expect(res.crits).toHaveLength(1);
+    expect(res.crits[0]!.throughArmor).toBe(true);
+    expect(rng.remaining()).toBe(0);
+  });
+
+  it("rolls no determining table on other locations with armor unbreached", () => {
+    const rng = scriptedRng(
+      2,
+      3, // to-hit 5 >= TN 4
+      3,
+      4, // location 7 -> centerTorso, ordinary
+    );
+    const res = resolveWeaponAttack(critInput(rng));
+    expect(res.hit).toBe(true);
+    expect(res.groups).toEqual([{ location: "centerTorso", damage: 3, throughArmor: false }]);
+    expect(res.crits).toHaveLength(0);
+    expect(rng.remaining()).toBe(0);
   });
 });

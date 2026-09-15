@@ -39,8 +39,9 @@
   leg/foot actuators, hips, first gyro hit; automatic falls for destroyed
   gyros/legs and shut-down/unconscious units), Facing After Fall damage
   with crits, seatbelt pilot checks, stand-up/drop/prone-turn movement
-  actions, prone combat modifiers (+2 attack / −2 target / propping arm),
-  sensor-crit to-hit penalties, water/rubble/building entry PSRs, pilot
+   actions, prone combat modifiers (+2 attack / −2 adjacent-target or +1
+   distant-target / propping arm),
+   sensor-crit effects (+2 to-hit on first hit, blind on second), water/rubble/building entry PSRs, pilot
   damage (head hits, ammo explosions, falls, heat-soaked life support),
   consciousness rolls with knockout/wake, immobile targeting for the
   unconscious. Covered by `tests/piloting.test.ts`. Remaining gaps are the

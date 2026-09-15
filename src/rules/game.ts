@@ -115,6 +115,8 @@ import {
   rollFallDirection,
   rollPilotingCheck,
   SENSORS,
+  sensorAttackModifier,
+  sensorsBlind,
   waterEntryModifier,
 } from "./piloting.js";
 import { computeToHit } from "./tohit.js";
@@ -1086,6 +1088,10 @@ export function declareAttacks(
 
   const def = getMechDefFor(unit);
   const sensorsOut = countDestroyedStructure(def, unit.critSlotsDestroyed, SENSORS);
+  if (sensorsBlind(sensorsOut)) {
+    throw new Error(`${unitId} cannot fire: sensors destroyed (no weapon attacks)`);
+  }
+  const sensorMod = sensorAttackModifier(sensorsOut);
   let targetId: string | null = null;
   let attackDirection: Arc | undefined;
   let attackDistance = 0;
@@ -1186,7 +1192,7 @@ export function declareAttacks(
       gunnery: unit.gunnery,
       attackerMovement: unit.moveMode ?? "standStill",
       attackerProne: unit.prone,
-      sensorMod: sensorsOut,
+      sensorMod,
       targetHexesMoved: target.movesThisTurn.length,
       targetJumped: target.jumpedThisTurn,
       targetImmobile: isImmobile(target),
@@ -1256,7 +1262,9 @@ function resolveUnitAttacks(
 ): UnitAttackResult {
   const def = getMechDefFor(unit);
   const preHeat = unit.heat;
-  const sensorsOut = countDestroyedStructure(def, unit.critSlotsDestroyed, SENSORS);
+  const sensorMod = sensorAttackModifier(
+    countDestroyedStructure(def, unit.critSlotsDestroyed, SENSORS),
+  );
   const pronePropArm = inferPronePropArm(def, unit.declaredAttacks, unit.prone);
   let currentAmmoBins = { ...unit.ammoBins };
   const jammedWeapons: number[] = [];
@@ -1287,7 +1295,7 @@ function resolveUnitAttacks(
       attackerHeat: preHeat,
       attackerProne: unit.prone,
       ...(pronePropArm !== null ? { propArm: pronePropArm } : {}),
-      sensorMod: sensorsOut,
+      sensorMod,
       targetHexesMoved: target.movesThisTurn.length,
       targetJumped: target.jumpedThisTurn,
       targetImmobile: isImmobile(target),
