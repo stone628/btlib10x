@@ -928,6 +928,7 @@ const CRIT_SOAK_KEY: Readonly<Record<CritSoakName, MessageKey>> = {
   endoSteel: "critChart.soak.endoSteel",
   ferroFibrous: "critChart.soak.ferroFibrous",
   case: "critChart.soak.case",
+  caseII: "critChart.soak.caseII",
 };
 
 /** One slot line: dice number + component label, plus live markers. */

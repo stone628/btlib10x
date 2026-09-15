@@ -331,16 +331,18 @@ function findHittableSlot(
   return null;
 }
 
-export type CaseKind = "case";
+export type CaseKind = "case" | "caseII";
 
 /**
  * returns if given location is protected by case.
+ * "caseII" overrides any other case state.
  * Clan mech's have built-in case at all locations
  */
 export function checkCASE(def: ResolvedMechDef, location: Location): CaseKind | undefined {
   let hasCase = false;
   for (const cs of def.critSlots[location] ?? []) {
     if (cs.kind === "soak") {
+      if (cs.name === "caseII") return "caseII";
       if (cs.name === "case") {
         hasCase = true;
       }
@@ -361,6 +363,8 @@ export function checkCASE(def: ResolvedMechDef, location: Location): CaseKind | 
  *   - `case` — the blast is contained: it may still shred the location's
  *     own IS, but it stops there — the excess vents out of the location and
  *     it never reaches the next location.
+ *   - `caseII` — the blast is contained and capped at 1 point of damage to
+ *     the location (no overflow, no extra containment damage).
  */
 export function applyAmmoExplosion(
   state: UnitDamageState,
