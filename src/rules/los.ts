@@ -106,7 +106,8 @@ export function losBlockedByBuilding(grid: HexGrid, from: HexCoord, to: HexCoord
 
 /** True when all LOS checks are clear: screening, water, elevation, and
  *  wrecks. `wrecks` (keyed by `"col,row"`) supplies the ejected-'Mech
- *  obstacles; one strictly between the endpoints blocks LOS entirely.
+ *  obstacles; a level-2 wreck strictly between the endpoints blocks LOS
+ *  entirely; a level-1 wreck does NOT block LOS (Tactical Operations).
  *  Endpoints themselves cannot hold a wreck (the hex is unenterable). */
 export function losClear(
   grid: HexGrid,
@@ -121,8 +122,14 @@ export function losClear(
   return true;
 }
 
-/** True when a wreck hex lies strictly between `from` and `to`: a level-2
- *  wreck blocks LOS entirely, independent of any elevation advantage. */
+/** True when a wreck hex lies strictly between `from` and `to`:
+ *  - Tactical Operations: a level-1 wreck does NOT block LOS between two
+ *    standing Level 2 'Mechs (standard ground 'Mechs). L1 cover is purely
+ *    a to-hit modifier handled by `partialCoverMod` in `src/rules/game.ts`.
+ *  - A level-2 wreck blocks LOS entirely, independent of any elevation
+ *    advantage. Implementation note: "between" means the intervening hexes
+ *    along the LOS ray (endpoints excluded — wrecks can't sit on either
+ *    endpoint because the hex is unenterable). */
 export function losBlockedByWreck(
   from: HexCoord,
   to: HexCoord,
@@ -130,7 +137,8 @@ export function losBlockedByWreck(
 ): boolean {
   if (wrecks === undefined) return false;
   for (const h of interveningHexes(from, to)) {
-    if (wrecks[`${h.col},${h.row}`] !== undefined) return true;
+    const w = wrecks[`${h.col},${h.row}`];
+    if (w !== undefined && w.level >= 2) return true;
   }
   return false;
 }

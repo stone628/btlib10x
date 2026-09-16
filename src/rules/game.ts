@@ -21,7 +21,13 @@ import {
   type TerrainHexDef,
   type WreckState,
 } from "../core/types.js";
-import { getMechDef, getMechDefFor, type MapDef, type MechModelHolder } from "../data/index.js";
+import {
+  getMechDef,
+  getMechDefFor,
+  getUnitTonnage,
+  type MapDef,
+  type MechModelHolder,
+} from "../data/index.js";
 import type { ResolvedMechDef } from "../data/mech.schema.js";
 import { getWeaponDefFor } from "../data/weapon.schema.js";
 import {
@@ -494,12 +500,17 @@ export function isUnitAvailable(unit: UnitState): boolean {
 }
 
 /**
- * Partial-cover to-hit modifier against `target` from `attacker`: 1 when the
- * target stands in partial-cover terrain (water1 / building) and the attacker
- * is not higher, 2 when the target is adjacent to a level-2 wreck and the
- * attacker is below the wreck's top. Larger wins when both apply (TW: partial
- * cover does not stack beyond one source). Leg hit-location rolls strike the
- * cover under either value (see `hitLocationCovered` in `src/rules/attack.ts`).
+ * Partial-cover to-hit modifier against `target` from `attacker`:
+ *  - terrain: 1 when the target stands in partial-cover terrain
+ *    (water1 / building) and the attacker is not higher.
+ *  - L2 wreck adjacent + attacker below wreck top: +2 (TW).
+ *  - L2 wreck adjacent + attacker at/above wreck top + target elevated
+ *    (target hex higher than attacker) or target at Level 3+: +1 (TO).
+ *  - L1 wreck adjacent + attacker below wreck top + target is a standing
+ *    ground 'Mech (not prone, not shut down, not unconscious): +1 (TO).
+ * Larger wins when both apply (TW: partial cover does not stack beyond one
+ * source). Leg hit-location rolls strike the cover under any non-zero value
+ * (see `hitLocationCovered` in `src/rules/attack.ts`).
  */
 export function partialCoverMod(
   state: BattleState,
@@ -513,13 +524,31 @@ export function partialCoverMod(
       : 0;
   let wreck = 0;
   const attackerLevel = cellAt(state, attacker.position).level;
+  const targetLevel = cellAt(state, target.position).level;
+  const targetStandingGround = !target.prone && isNominal(target) && !target.unconscious;
   for (const [key, w] of Object.entries(state.wrecks)) {
     const [col, row] = key.split(",");
     const wreckHex = { col: Number(col), row: Number(row) };
     if (!isAdjacent(target.position, wreckHex)) continue;
-    if (attackerLevel < cellAt(state, wreckHex).level + w.level) {
-      wreck = WRECK_COVER_MOD;
-      break;
+    const wreckTop = cellAt(state, wreckHex).level + w.level;
+    if (attackerLevel < wreckTop) {
+      // Attacker is below the wreck top: LOS may still pass for L1; cover mod
+      // depends on wreck level and target posture.
+      if (w.level === 1) {
+        // Tactical Operations: L1 provides +1 partial cover to standing ground
+        // 'Mechs behind it; no cover against prone / shutdown / unconscious
+        // targets.
+        if (targetStandingGround) wreck = Math.max(wreck, WRECK_COVER_BY_LEVEL[1]!);
+      } else {
+        // TW default: L2 provides +2 to any adjacent target the attacker
+        // can't see over.
+        wreck = Math.max(wreck, WRECK_COVER_BY_LEVEL[2]!);
+      }
+    } else if (w.level === 2 && (targetLevel > attackerLevel || targetLevel >= 3)) {
+      // Tactical Operations: L2 wreck provides +1 partial cover to elevated
+      // units or Level 3+ targets even when the attacker is at/above the
+      // wreck top (LOS still passes; wreck under attacker's LOS plane).
+      wreck = Math.max(wreck, WRECK_L2_ELEVATED_COVER_MOD);
     }
   }
   return Math.max(terrain, wreck);
@@ -564,14 +593,16 @@ function markUnitDestroyed(state: BattleState, unit: UnitState, destroyed: Destr
 
 /** A pilot killed by six accumulated pilot hits removes the unit from play
  *  without destroying the 'Mech (TW p.41-42: the pilot is dead; the hull is
- *  intact). Handled like an eject: a permanent level-2 wreck occupies the
- *  hex. Emits a single `unitRemoved` event with reason "pilotKilled". */
+ *  intact). Handled like an eject: a permanent wreck occupies the hex.
+ *  Wreck level is decided by `wreckLevelFor` (TO rule: light chassis or
+ *  prone posture reduce it to level 1). Emits a single `unitRemoved` event
+ *  with reason "pilotKilled". */
 function removePilotKilled(state: BattleState, unit: UnitState): void {
   if (isUnitRemoved(unit)) return;
   unit.removed = "pilotKilled";
   state.wrecks[`${unit.position.col},${unit.position.row}`] = {
     unitId: unit.id,
-    level: 2,
+    level: wreckLevelFor(state, unit),
   };
   state.events.push({ kind: "unitRemoved", unitId: unit.id, reason: "pilotKilled" });
 }
@@ -828,10 +859,34 @@ const PHASE_DAMAGE_PSR_MOD = 1;
 const SHUTDOWN_PSR_MOD = 3;
 /** Divisor for building-crash damage: ceil(remaining CF / 10). */
 const BUILDING_CRASH_DIVISOR = 10;
-/** Permanent wreck height in levels. */
+/** Default wreck height in levels for a standing non-light 'Mech (TW).
+ *  L1 wrecks are produced for light 'Mechs and for prone units via
+ *  `wreckLevelFor` (see Tactical Operations block below). */
 export const WRECK_LEVEL = 2;
-/** Partial-cover to-hit modifier for a target adjacent to a wreck. */
-export const WRECK_COVER_MOD = 2;
+/** Tactical Operations: light 'Mechs (<40 t) leave a level-1 wreck regardless
+ *  of posture; a prone unit with a killed/ejected pilot also leaves a level-1
+ *  wreck. Standing non-light units stay at WRECK_LEVEL = 2 (TW default). */
+export const LIGHT_MECH_TONNAGE_MAX = 40;
+/** Tactical Operations: per-level partial-cover to-hit mod provided by a
+ *  wreck to a target adjacent to it. L1 = +1 to standing ground 'Mech;
+ *  L2 = +2 (TW default), or +1 to elevated / Level 3+ targets per TO. */
+export const WRECK_COVER_BY_LEVEL: Readonly<Record<number, number>> = { 1: 1, 2: 2 };
+/** Tactical Operations: partial-cover to-hit mod granted by a L2 wreck to an
+ *  elevated attacker looking down at a standard ground target or any
+ *  attacker looking down at a Level 3+ target. */
+export const WRECK_L2_ELEVATED_COVER_MOD = 1;
+
+/** Tactical Operations wreck-level rule. Light chassis (<40 t) leave a
+ *  level-1 wreck regardless of posture; otherwise a prone unit with a
+ *  killed/ejected pilot leaves a level-1 wreck; standing non-light units
+ *  leave the standard TW level-2 wreck. Caller reads `unit.prone` *before*
+ *  setting `unit.removed = "pilotEjected" | "pilotKilled"`, since the
+ *  posture field is discarded with the removed unit record. */
+export function wreckLevelFor(_state: BattleState, unit: UnitState): 1 | 2 {
+  if (getUnitTonnage(unit) < LIGHT_MECH_TONNAGE_MAX) return 1;
+  if (unit.prone) return 1;
+  return WRECK_LEVEL;
+}
 
 export function declareMove(state: BattleState, unitId: string, mode: MoveMode): void {
   requirePhase(state, "movement");
@@ -2586,8 +2641,10 @@ export function proneFacingTurn(state: BattleState, unitId: string, facings: num
 
 /** Pilot eject, resolved during the movement phase: the pilot abandons the
  *  'Mech, the unit leaves the battle (counted against victory like a wrecked
- *  hull), and a permanent level-2 wreck occupies its hex. Available to any
- *  unit still on the board — including shut-down and immobile ones. */
+ *  hull), and a permanent wreck occupies its hex. Available to any unit
+ *  still on the board — including shut-down and immobile ones.
+ *  Wreck level is decided by `wreckLevelFor` (TO rule: light chassis or
+ *  prone posture reduce it to level 1). */
 export function ejectPilot(state: BattleState, unitId: string): void {
   requirePhase(state, "movement");
   const unit = requireUnit(state, unitId);
@@ -2595,7 +2652,7 @@ export function ejectPilot(state: BattleState, unitId: string): void {
   unit.removed = "pilotEjected";
   state.wrecks[`${unit.position.col},${unit.position.row}`] = {
     unitId,
-    level: WRECK_LEVEL,
+    level: wreckLevelFor(state, unit),
   };
   state.actedThisPhase.push(unitId);
   state.events.push({ kind: "unitRemoved", unitId, reason: "pilotEjected" });

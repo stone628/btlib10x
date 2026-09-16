@@ -77,14 +77,24 @@ export interface HexCell {
   level: number;
 }
 
-/** A 'Mech wreck left behind by an ejected pilot. A permanent level-2
- *  obstacle: blocks the hex against all movement, blocks LOS entirely when
- *  between attacker and target, and grants +2 partial cover to an adjacent
- *  target (see `partialCoverMod` in `src/rules/game.ts`). */
+/** A 'Mech wreck left behind by an ejected or pilot-killed unit. A
+ *  permanent obstacle: blocks the hex against all movement (TW; entry
+ *  remains forbidden — TO rough/severe-rough MP + PSR surcharge on entry
+ *  is deferred), and provides partial cover to an adjacent target (see
+ *  `partialCoverMod` in `src/rules/game.ts`).
+ *  Level meaning (Tactical Operations):
+ *   - 1 = light 'Mech (<40 t) wreck, or prone 'Mech with killed/ejected
+ *         pilot. Does NOT block LOS between standard ground 'Mechs; +1
+ *         partial cover to standing ground 'Mechs behind it.
+ *   - 2 = standard TW wreck. Blocks LOS entirely between standard ground
+ *         'Mechs; +2 partial cover to adjacent targets, or +1 to elevated
+ *         / Level 3+ targets.
+ *  Wreck level is computed by `wreckLevelFor` in `src/rules/game.ts` when
+ *  the wreck is spawned (`ejectPilot`, `removePilotKilled`). */
 export interface WreckState {
   /** Unit that ejected and left the wreck. */
   readonly unitId: string;
-  /** Obstacle height in levels (TW: a wrecked 'Mech is level 2). */
+  /** Obstacle height in levels (1 or 2; see Tactical Operations block above). */
   readonly level: number;
 }
 
