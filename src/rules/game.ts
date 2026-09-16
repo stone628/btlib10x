@@ -249,8 +249,13 @@ export interface UnitState extends MechModelHolder {
 }
 
 export type GameEvent =
-  | { readonly kind: "turn"; readonly turn: number }
-  | { readonly kind: "phase"; readonly phase: Phase }
+  | {
+      readonly kind: "phase";
+      readonly prevTurn: number;
+      readonly prevPhase: Phase;
+      readonly turn: number;
+      readonly phase: Phase;
+    }
   | {
       readonly kind: "initiative";
       readonly rolls: Readonly<Record<number, number>>;
@@ -815,7 +820,13 @@ export function rollInitiativePhase(state: BattleState, rng: Rng): void {
   state.actorQueue = null;
   state.events.push(
     { kind: "initiative", rolls: result.rolls, winnerTeam: result.winnerTeam },
-    { kind: "phase", phase: "movement" },
+    {
+      kind: "phase",
+      prevTurn: state.turn,
+      prevPhase: "initiative",
+      turn: state.turn,
+      phase: "movement",
+    },
   );
 }
 
@@ -2048,6 +2059,8 @@ export function resolveAllAttacks(state: BattleState, rng: Rng): void {
 }
 
 export function advancePhase(state: BattleState, rng: Rng = DEFAULT_RNG): void {
+  const prevTurn = state.turn;
+  const prevPhase = state.phase;
   state.actorQueue = null;
   switch (state.phase) {
     case "initiative": {
@@ -2099,12 +2112,10 @@ export function advancePhase(state: BattleState, rng: Rng = DEFAULT_RNG): void {
         // initiative roll.
         if (unit.shutdown === "starting") unit.shutdown = "not";
       }
-      state.events.push({ kind: "turn", turn: state.turn });
       break;
     }
   }
-
-  state.events.push({ kind: "phase", phase: state.phase });
+  state.events.push({ kind: "phase", prevTurn, prevPhase, turn: state.turn, phase: state.phase });
 }
 
 /**

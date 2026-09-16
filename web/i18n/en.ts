@@ -420,8 +420,7 @@ export const en = {
   "critChart.soak.caseII": "CASE II",
 
   // event log
-  "log.turn": "[[[   turn {turn}   ]]]",
-  "log.phase": "[[  phase: {phase}  ]]",
+  "log.phase": "   turn: {turn}, phase: {phase}   ",
   "log.initiative": "initiative: {rolls} -> team {winner} wins initiative and moves last.",
   "log.moveDeclared": "{id} declares {mode}",
   "log.moved": "{id} {mode} -> {pos} facing {facing}, used {mp} of {budget} MP",

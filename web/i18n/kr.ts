@@ -412,8 +412,7 @@ export const kr: Catalog = {
   "critChart.soak.caseII": "CASE II",
 
   // event log
-  "log.turn": "[[[   턴 {turn}   ]]]",
-  "log.phase": "[[  단계: {phase}  ]]",
+  "log.phase": "   턴 {turn}, 단계 {phase}   ",
   "log.initiative": "선제: {rolls} -> 팀 {winner} 선제 획득, 마지막에 이동.",
   "log.moveDeclared": "{id}, {mode} 선언",
   "log.moved": "{id} {mode} -> {pos} 방향 {facing}, MP {mp}/{budget} 사용",
