@@ -900,7 +900,13 @@ export function wreckLevelFor(_state: BattleState, unit: UnitState): 1 | 2 {
   return WRECK_LEVEL;
 }
 
-export function declareMove(state: BattleState, unitId: string, mode: MoveMode): void {
+export function executeMove(
+  state: BattleState,
+  unitId: string,
+  mode: MoveMode,
+  steps: readonly MoveStep[],
+  options: { readonly finalFacing?: Facing; readonly rng?: Rng } = {},
+): void {
   requirePhase(state, "movement");
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
@@ -909,31 +915,18 @@ export function declareMove(state: BattleState, unitId: string, mode: MoveMode):
   if (mode !== "standStill" && isUnitImmobile(unit.damage)) {
     throw new Error(`${unitId} has a destroyed leg and can only stand still`);
   }
-  if (unit.prone && mode !== "standStill") {
+  // Prone units may only stand still or walk turn-only steps. Combined check:
+  // reject run/jump outright; reject walk with any hex-enter step.
+  if (unit.prone && mode !== "standStill" && mode !== "walk") {
     throw new Error(`${unitId} is prone: stand up, turn, or pronestill`);
+  }
+  if (unit.prone && mode === "walk" && steps.some((s) => s.kind === "enter")) {
+    throw new Error(`${unitId} is prone: turn or pronestill only (no hex enters)`);
   }
   unit.moveMode = mode;
   unit.movesThisTurn = [];
   unit.mpSpent = 0;
   state.events.push({ kind: "moveDeclared", unitId, mode });
-}
-
-export function executeMove(
-  state: BattleState,
-  unitId: string,
-  steps: readonly MoveStep[],
-  options: { readonly finalFacing?: Facing; readonly rng?: Rng } = {},
-): void {
-  requirePhase(state, "movement");
-  const unit = requireUnit(state, unitId);
-  if (unit.moveMode === null) throw new Error(`Declare a movement mode for ${unitId} first`);
-  const mode = unit.moveMode;
-  if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
-  if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot move`);
-  if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot move`);
-  if (unit.prone && steps.length > 0 && !(unit.moveMode === "walk")) {
-    throw new Error(`${unitId} is prone: stand up, turn, or pronestill`);
-  }
   const rng = options.rng ?? DEFAULT_RNG;
 
   const def = getMechDefFor(unit);

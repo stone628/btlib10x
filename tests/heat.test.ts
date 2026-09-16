@@ -6,7 +6,6 @@ import type { BattleState, UnitInit } from "../src/rules/game.js";
 import {
   advancePhase,
   declareAttacks,
-  declareMove,
   executeMove,
   getUnit,
   nextActor,
@@ -278,8 +277,7 @@ describe("game integration: movement heat", () => {
   it("walk adds 1 heat", () => {
     const state = hbkVsEnf();
     startMovementTurn(state);
-    declareMove(state, "hbk", "walk");
-    executeMove(state, "hbk", [{ kind: "enter", to: { col: 1, row: 4 } }]);
+    executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 1, row: 4 } }]);
     const hbk = getUnit(state, "hbk");
     expect(hbk.heat).toBe(1);
     expect(
@@ -290,8 +288,7 @@ describe("game integration: movement heat", () => {
   it("run adds 2 heat", () => {
     const state = hbkVsEnf();
     startMovementTurn(state);
-    declareMove(state, "hbk", "run");
-    executeMove(state, "hbk", [{ kind: "enter", to: { col: 3, row: 5 } }]);
+    executeMove(state, "hbk", "run", [{ kind: "enter", to: { col: 3, row: 5 } }]);
     expect(getUnit(state, "hbk").mpSpent).toBe(1);
     expect(getUnit(state, "hbk").heat).toBe(2);
   });
@@ -299,8 +296,7 @@ describe("game integration: movement heat", () => {
   it("standStill adds 0 heat", () => {
     const state = hbkVsEnf();
     startMovementTurn(state);
-    declareMove(state, "hbk", "standStill");
-    executeMove(state, "hbk", []);
+    executeMove(state, "hbk", "standStill", []);
     expect(getUnit(state, "hbk").heat).toBe(0);
   });
 
@@ -309,8 +305,7 @@ describe("game integration: movement heat", () => {
     startMovementTurn(state);
     const hbk = getUnit(state, "hbk");
     hbk.heat = 10;
-    declareMove(state, "hbk", "run");
-    executeMove(state, "hbk", []);
+    executeMove(state, "hbk", "run", []);
     const moved = state.events.find((e) => e.kind === "moved" && e.unitId === "hbk");
     expect(moved).toBeDefined();
     expect((moved as Extract<(typeof state.events)[number], { kind: "moved" }>).mpBudget).toBe(
@@ -425,8 +420,7 @@ describe("game integration: shutdown", () => {
   it("skips shutdown unit in nextActor", () => {
     const state = hbkVsEnf();
     startMovementTurn(state);
-    declareMove(state, "hbk", "walk");
-    executeMove(state, "hbk", []);
+    executeMove(state, "hbk", "walk", []);
     getUnit(state, "hbk").shutdown = "heat";
     expect(nextActor(state)).toBe("enf");
   });

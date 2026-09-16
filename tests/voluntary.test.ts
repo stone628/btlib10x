@@ -4,7 +4,6 @@ import {
   advancePhase,
   attemptVoluntaryStartup,
   declareAttacks,
-  declareMove,
   executeMove,
   getUnit,
   nextActor,
@@ -57,8 +56,7 @@ describe("voluntary shutdown", () => {
     // hbk is down; only enf remains in the movement phase. Move enf, then
     // advance to weapon attack. hbk (still down as "starting") must be
     // refused a target declaration.
-    declareMove(state, "enf", "walk");
-    executeMove(state, "enf", []);
+    executeMove(state, "enf", "walk", []);
     expect(getUnit(state, "hbk").shutdown).toBe("manual");
     getUnit(state, "hbk").shutdown = "starting";
     advancePhase(state); // movement -> weaponAttack
@@ -159,8 +157,7 @@ describe("movement priority for shut-down units", () => {
   it("skips down units in the weapon attack phase", () => {
     const state = startMovementTurn(hbkVsEnf());
     voluntaryShutdown(state, "hbk");
-    declareMove(state, "enf", "walk");
-    executeMove(state, "enf", []);
+    executeMove(state, "enf", "walk", []);
     advancePhase(state); // movement -> weaponAttack
     expect(nextActor(state)).toBe("enf");
   });

@@ -4,7 +4,6 @@ import { resolveWeaponAttack } from "../src/rules/attack.js";
 import type { BattleState, TerrainHexDef, UnitInit } from "../src/rules/game.js";
 import {
   checkVictory,
-  declareMove,
   ejectPilot,
   executeMove,
   getUnit,
@@ -82,9 +81,8 @@ describe("eject", () => {
     ];
     const state = startMovementTurn(createTestBattle([], units, true));
     ejectPilot(state, "hbk");
-    declareMove(state, "enf", "walk");
     expect(() =>
-      executeMove(state, "enf", [
+      executeMove(state, "enf", "walk", [
         { kind: "enter", to: neighbor(start, "n") },
         { kind: "enter", to: wreck },
       ]),
@@ -113,8 +111,9 @@ describe("eject", () => {
         occupantTeam: () => undefined,
       }).some((l) => l.hex.col === wreck.col && l.hex.row === wreck.row),
     ).toBe(false);
-    declareMove(state, "enf", "jump");
-    expect(() => executeMove(state, "enf", [{ kind: "enter", to: wreck }])).toThrow(/wreck/);
+    expect(() => executeMove(state, "enf", "walk", [{ kind: "enter", to: wreck }])).toThrow(
+      /wreck/,
+    );
   });
 
   it("a level-2 wreck blocks LOS only when lying strictly between the endpoints", () => {

@@ -28,6 +28,7 @@
     "test:watch": "npm run gen:mechs && vitest",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
+    "lint:api": "node scripts/check-public-api.mjs",
     "dev:web": "node scripts/build-web.mjs --watch --serve"
   },
   "keywords": [
