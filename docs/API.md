@@ -611,7 +611,7 @@ advancePhase(state, rng?): void                      // drives the phase cycle
 nextActor(state): string | null                      // alternating activation hint (skips unconscious units)
 actorQueue(state): { acted: string[]; pending: string[] }  // activation order view
 checkVictory(state): { winnerTeam; draw }
-getUnit(state, unitId): UnitState
+requireUnit(state, unitId): UnitState
 ```
 
 ```ts

@@ -7,8 +7,8 @@ import {
   advancePhase,
   declareAttacks,
   executeMove,
-  getUnit,
   nextActor,
+  requireUnit,
   resolveAllAttacks,
   rollInitiativePhase,
 } from "../src/rules/game.js";
@@ -27,16 +27,48 @@ import { createTestBattle, scriptedRng } from "./helpers.js";
 
 function hbkVsEnf(): BattleState {
   const units: UnitInit[] = [
-    { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 2, row: 4 }, facing: "se" },
-    { id: "enf", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 4, row: 5 }, facing: "nw" },
+    {
+      id: "hbk",
+      model: "HBK-4G",
+      team: 0,
+      gunnery: 4,
+      piloting: 5,
+      position: { col: 2, row: 4 },
+      facing: "se",
+    },
+    {
+      id: "enf",
+      model: "ENF-4R",
+      team: 1,
+      gunnery: 4,
+      piloting: 5,
+      position: { col: 4, row: 5 },
+      facing: "nw",
+    },
   ];
   return createTestBattle([], units, true);
 }
 
 function bzkVsEnf(): BattleState {
   const units: UnitInit[] = [
-    { id: "bzk", model: "BZK-F3", team: 0, gunnery: 4, position: { col: 2, row: 4 }, facing: "se" },
-    { id: "enf", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 4, row: 5 }, facing: "nw" },
+    {
+      id: "bzk",
+      model: "BZK-F3",
+      team: 0,
+      gunnery: 4,
+      piloting: 5,
+      position: { col: 2, row: 4 },
+      facing: "se",
+    },
+    {
+      id: "enf",
+      model: "ENF-4R",
+      team: 1,
+      gunnery: 4,
+      piloting: 5,
+      position: { col: 4, row: 5 },
+      facing: "nw",
+    },
   ];
   return createTestBattle([], units, true);
 }
@@ -193,14 +225,14 @@ describe("effectiveMoveBudget", () => {
 describe("heatDissipation / countDestroyedEngineSlots", () => {
   it("HBK-4G dissipates 13 (8 engine + 5 external single)", () => {
     const state = hbkVsEnf();
-    const unit = getUnit(state, "hbk");
+    const unit = requireUnit(state, "hbk");
     const def = getMechDefFor(unit);
     expect(heatDissipation(def, unit.critSlotsDestroyed)).toBe(13);
     expect(countDestroyedEngineSlots(def, unit.critSlotsDestroyed)).toBe(0);
   });
   it("destroying an engine slot adds heat but does not retire a sink (strict TW)", () => {
     const state = hbkVsEnf();
-    const unit = getUnit(state, "hbk");
+    const unit = requireUnit(state, "hbk");
     const def = getMechDefFor(unit);
     const destroyed = {
       ...unit.critSlotsDestroyed,
@@ -249,7 +281,7 @@ describe("heatDissipation: engine sink capacity + double heat sinks", () => {
 describe("largestAmmoBin", () => {
   it("returns the AC/20 bin for HBK-4G", () => {
     const state = hbkVsEnf();
-    const unit = getUnit(state, "hbk");
+    const unit = requireUnit(state, "hbk");
     const def = getMechDefFor(unit);
     const bin = largestAmmoBin(def, unit.ammoBins);
     expect(bin).not.toBeNull();
@@ -262,7 +294,7 @@ describe("largestAmmoBin", () => {
 
   it("returns null when only non-explosive ammo is loaded (BZK-F3 gauss)", () => {
     const state = bzkVsEnf();
-    const unit = getUnit(state, "bzk");
+    const unit = requireUnit(state, "bzk");
     const def = getMechDefFor(unit);
     // BZK-F3 mounts two gauss ammo bins in the center torso.
     expect(unit.ammoBins["centerTorso:11"]?.shots).toBe(8);
@@ -278,7 +310,7 @@ describe("game integration: movement heat", () => {
     const state = hbkVsEnf();
     startMovementTurn(state);
     executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 1, row: 4 } }]);
-    const hbk = getUnit(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
     expect(hbk.heat).toBe(1);
     expect(
       state.events.some((e) => e.kind === "heatMove" && e.unitId === "hbk" && e.heat === 1),
@@ -289,21 +321,21 @@ describe("game integration: movement heat", () => {
     const state = hbkVsEnf();
     startMovementTurn(state);
     executeMove(state, "hbk", "run", [{ kind: "enter", to: { col: 3, row: 5 } }]);
-    expect(getUnit(state, "hbk").mpSpent).toBe(1);
-    expect(getUnit(state, "hbk").heat).toBe(2);
+    expect(requireUnit(state, "hbk").mpSpent).toBe(1);
+    expect(requireUnit(state, "hbk").heat).toBe(2);
   });
 
   it("standStill adds 0 heat", () => {
     const state = hbkVsEnf();
     startMovementTurn(state);
     executeMove(state, "hbk", "standStill", []);
-    expect(getUnit(state, "hbk").heat).toBe(0);
+    expect(requireUnit(state, "hbk").heat).toBe(0);
   });
 
   it("heat 10 reduces run MP budget by 2 in moved event", () => {
     const state = hbkVsEnf();
     startMovementTurn(state);
-    const hbk = getUnit(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
     hbk.heat = 10;
     executeMove(state, "hbk", "run", []);
     const moved = state.events.find((e) => e.kind === "moved" && e.unitId === "hbk");
@@ -321,7 +353,7 @@ describe("game integration: weapon heat", () => {
     declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
     // 20+ damage PSR (needs 6: 3+3 succeeds, no fall).
     resolveAllAttacks(state, scriptedRng(6, 6, 3, 4, 3, 3));
-    const hbk = getUnit(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
     expect(hbk.heat).toBe(7);
     const weaponHeatEvent = state.events.find((e) => e.kind === "heatWeapon");
     expect(weaponHeatEvent).toBeDefined();
@@ -334,7 +366,7 @@ describe("game integration: weapon heat", () => {
 describe("game integration: dissipation", () => {
   it("resolveHeatPhase dissipates up to sink count", () => {
     const state = hbkVsEnf();
-    const hbk = getUnit(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
     hbk.heat = 20;
     startAttackTurn(state);
     // shutdown roll 6 <= 6 shuts down; shutdown PSR 12 passes (stays up);
@@ -352,7 +384,7 @@ describe("game integration: dissipation", () => {
 describe("game integration: engine crit heat", () => {
   it("adds 10 engine heat when 2+ engine slots destroyed", () => {
     const state = hbkVsEnf();
-    const hbk = getUnit(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
     const def = getMechDefFor(hbk);
     hbk.critSlotsDestroyed = {
       ...hbk.critSlotsDestroyed,
@@ -369,7 +401,7 @@ describe("game integration: engine crit heat", () => {
 describe("game integration: shutdown", () => {
   it("auto shutdown at heat 30+", () => {
     const state = hbkVsEnf();
-    const hbk = getUnit(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
     hbk.heat = 30;
     startAttackTurn(state);
     // auto shutdown (no roll); shutdown PSR 12 passes (stays up).
@@ -394,7 +426,7 @@ describe("game integration: shutdown", () => {
 
   it("rolls shutdown avoid at 14–29", () => {
     const state = hbkVsEnf();
-    const hbk = getUnit(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
     hbk.heat = 18;
     startAttackTurn(state);
     // shutdown roll 6 <= 6 shuts down; shutdown PSR 12 passes (stays up).
@@ -407,7 +439,7 @@ describe("game integration: shutdown", () => {
 
   it("avoids shutdown when roll >= avoid", () => {
     const state = hbkVsEnf();
-    const hbk = getUnit(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
     hbk.heat = 18;
     startAttackTurn(state);
     advancePhase(state, scriptedRng(6, 6, 6, 6));
@@ -421,13 +453,13 @@ describe("game integration: shutdown", () => {
     const state = hbkVsEnf();
     startMovementTurn(state);
     executeMove(state, "hbk", "walk", []);
-    getUnit(state, "hbk").shutdown = "heat";
+    requireUnit(state, "hbk").shutdown = "heat";
     expect(nextActor(state)).toBe("enf");
   });
 
   it("restarts automatically when heat below 14", () => {
     const state = hbkVsEnf();
-    const hbk = getUnit(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
     hbk.shutdown = "heat";
     hbk.heat = 12;
     startAttackTurn(state);
@@ -440,7 +472,7 @@ describe("game integration: shutdown", () => {
 
   it("does not auto-restart a manual shutdown", () => {
     const state = hbkVsEnf();
-    const hbk = getUnit(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
     hbk.shutdown = "manual";
     hbk.heat = 12;
     startAttackTurn(state);
@@ -453,7 +485,7 @@ describe("game integration: shutdown", () => {
 
   it("leaves a starting unit untouched and brings it online at the next initiative", () => {
     const state = hbkVsEnf();
-    const hbk = getUnit(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
     hbk.shutdown = "starting";
     hbk.heat = 12;
     startAttackTurn(state);
@@ -468,7 +500,7 @@ describe("game integration: shutdown", () => {
 describe("game integration: heatMod in to-hit", () => {
   it("attack includes heatMod 2 at heat 13", () => {
     const state = hbkVsEnf();
-    const hbk = getUnit(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
     hbk.heat = 13;
     startAttackTurn(state);
     declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
@@ -485,7 +517,7 @@ describe("game integration: heatMod in to-hit", () => {
 describe("game integration: immobile target modifier in to-hit", () => {
   function targetModFor(online: boolean, rng = scriptedRng(6, 6, 3, 4)): number {
     const state = hbkVsEnf();
-    if (!online) getUnit(state, "enf").shutdown = "manual";
+    if (!online) requireUnit(state, "enf").shutdown = "manual";
     startAttackTurn(state);
     declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
     resolveAllAttacks(state, rng);
@@ -507,7 +539,7 @@ describe("game integration: immobile target modifier in to-hit", () => {
 describe("game integration: target movement modifier counts total hexes", () => {
   function targetModForMoves(moves: readonly ("forward" | "backward")[]): number {
     const state = hbkVsEnf();
-    getUnit(state, "enf").movesThisTurn = [...moves];
+    requireUnit(state, "enf").movesThisTurn = [...moves];
     startAttackTurn(state);
     declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
     resolveAllAttacks(state, scriptedRng(6, 6, 3, 4));
@@ -530,6 +562,7 @@ describe("game integration: partial cover in to-hit", () => {
         model: "HBK-4G",
         team: 0,
         gunnery: 4,
+        piloting: 5,
         position: { col: 2, row: 4 },
         facing: "se",
       },
@@ -538,6 +571,7 @@ describe("game integration: partial cover in to-hit", () => {
         model: "ENF-4R",
         team: 1,
         gunnery: 4,
+        piloting: 5,
         position: { col: 5, row: 4 },
         facing: "nw",
       },
@@ -572,7 +606,7 @@ describe("game integration: partial cover in to-hit", () => {
 describe("game integration: heat ammo explosion", () => {
   it("largest ammo bin detonates when avoidance roll fails", () => {
     const state = hbkVsEnf();
-    const hbk = getUnit(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
     hbk.heat = 30; // auto shutdown first
     startAttackTurn(state);
     // shutdown auto: no roll; shutdown PSR 2 fails -> fall (dir 1 front,
@@ -599,7 +633,7 @@ describe("game integration: heat ammo explosion", () => {
 
   it("gauss-only unit does not detonate from heat (inert ammo)", () => {
     const state = bzkVsEnf();
-    const bzk = getUnit(state, "bzk");
+    const bzk = requireUnit(state, "bzk");
     bzk.heat = 30;
     startAttackTurn(state);
     // Shutdown auto: no roll. No ammo avoid roll is taken because the only

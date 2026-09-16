@@ -5,9 +5,9 @@ import {
   attemptVoluntaryStartup,
   declareAttacks,
   executeMove,
-  getUnit,
   nextActor,
   passMovement,
+  requireUnit,
   rollInitiativePhase,
   voluntaryShutdown,
 } from "../src/rules/game.js";
@@ -15,8 +15,24 @@ import { createTestBattle, scriptedRng } from "./helpers.js";
 
 function hbkVsEnf(): BattleState {
   const units: UnitInit[] = [
-    { id: "hbk", model: "HBK-4G", team: 0, gunnery: 4, position: { col: 2, row: 4 }, facing: "se" },
-    { id: "enf", model: "ENF-4R", team: 1, gunnery: 4, position: { col: 5, row: 4 }, facing: "nw" },
+    {
+      id: "hbk",
+      model: "HBK-4G",
+      team: 0,
+      gunnery: 4,
+      piloting: 5,
+      position: { col: 2, row: 4 },
+      facing: "se",
+    },
+    {
+      id: "enf",
+      model: "ENF-4R",
+      team: 1,
+      gunnery: 4,
+      piloting: 5,
+      position: { col: 5, row: 4 },
+      facing: "nw",
+    },
   ];
   return createTestBattle([], units, true);
 }
@@ -35,7 +51,7 @@ describe("voluntary shutdown", () => {
   it("takes an online unit off-line and marks it as acted", () => {
     const state = startMovementTurn(hbkVsEnf());
     voluntaryShutdown(state, "hbk");
-    expect(getUnit(state, "hbk").shutdown).toBe("manual");
+    expect(requireUnit(state, "hbk").shutdown).toBe("manual");
     expect(state.actedThisPhase).toContain("hbk");
     expect(
       state.events.some(
@@ -57,8 +73,8 @@ describe("voluntary shutdown", () => {
     // advance to weapon attack. hbk (still down as "starting") must be
     // refused a target declaration.
     executeMove(state, "enf", "walk", []);
-    expect(getUnit(state, "hbk").shutdown).toBe("manual");
-    getUnit(state, "hbk").shutdown = "starting";
+    expect(requireUnit(state, "hbk").shutdown).toBe("manual");
+    requireUnit(state, "hbk").shutdown = "starting";
     advancePhase(state); // movement -> weaponAttack
     expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }])).toThrow(
       /shut down|current actor/,
@@ -67,7 +83,7 @@ describe("voluntary shutdown", () => {
 
   it("persists through the heat phase instead of auto-restarting", () => {
     const state = hbkVsEnf();
-    const hbk = getUnit(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
     hbk.shutdown = "manual";
     hbk.heat = 12;
     startMovementTurn(state);
@@ -80,7 +96,7 @@ describe("voluntary shutdown", () => {
 describe("voluntary startup", () => {
   it("auto-succeeds below the shutdown threshold (heat < 14)", () => {
     const state = startMovementTurn(hbkVsEnf());
-    const hbk = getUnit(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
     voluntaryShutdown(state, "hbk");
     attemptVoluntaryStartup(state, "hbk", scriptedRng());
     expect(hbk.shutdown).toBe("starting");
@@ -94,7 +110,7 @@ describe("voluntary startup", () => {
 
   it("fails when the avoidance roll is too low", () => {
     const state = startMovementTurn(hbkVsEnf());
-    const hbk = getUnit(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
     hbk.heat = 18; // avoid 6
     voluntaryShutdown(state, "hbk");
     attemptVoluntaryStartup(state, "hbk", scriptedRng(2, 1)); // 2D6 = 3 < 6
@@ -117,7 +133,7 @@ describe("voluntary startup", () => {
 
   it("still counts as down until the next initiative roll", () => {
     const state = startMovementTurn(hbkVsEnf());
-    const hbk = getUnit(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
     voluntaryShutdown(state, "hbk");
     attemptVoluntaryStartup(state, "hbk", scriptedRng());
     expect(hbk.shutdown).toBe("starting");
@@ -135,7 +151,7 @@ describe("movement pass for shut-down units", () => {
     const state = startMovementTurn(hbkVsEnf());
     voluntaryShutdown(state, "hbk");
     passMovement(state, "hbk");
-    expect(getUnit(state, "hbk").shutdown).toBe("manual");
+    expect(requireUnit(state, "hbk").shutdown).toBe("manual");
     expect(state.actedThisPhase).toContain("hbk");
     expect(nextActor(state)).toBe("enf");
   });
@@ -150,7 +166,7 @@ describe("movement priority for shut-down units", () => {
   it("puts a down unit first regardless of initiative", () => {
     const state = hbkVsEnf();
     startMovementTurn(state, scriptedRng(2, 2, 6, 6)); // team 1 (enf) wins initiative
-    getUnit(state, "hbk").shutdown = "heat"; // down, not acted this turn
+    requireUnit(state, "hbk").shutdown = "heat"; // down, not acted this turn
     expect(nextActor(state)).toBe("hbk");
   });
 

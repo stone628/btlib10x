@@ -28,7 +28,6 @@ import type {
   ShutdownState,
   TerrainType,
   UnitDamageState,
-  UnitInit,
   UnitState,
   WeaponCategory,
   WeaponDef,
@@ -42,7 +41,6 @@ import {
   collectAmmoBins,
   consciousnessTarget,
   countDestroyedEngineSlots,
-  DEFAULT_PILOTING,
   DROP_MP_COST,
   effectiveMovement,
   getAllMapDefs,
@@ -82,7 +80,7 @@ import {
 import { AMMO_EXPLOSION_START_HEAT } from "../src/index.js";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
 import { getCompensatedLength, i18n } from "./i18n/index.js";
-import { lookupMapOrThrow, lookupMechOrThrow, lookupWeaponOrThrow } from "./lookup.js";
+import { lookupMap, lookupMech, lookupWeapon } from "./lookup.js";
 import type { BoardRenderer, BoardRenderInfo, BoardRenderReachableInfo } from "./render.js";
 import {
   createBoardRenderUnit,
@@ -530,15 +528,12 @@ export function infoWeaponList(locale: LocaleId): string[] {
 }
 
 export function infoWeapon(locale: LocaleId, name: string): string[] {
-  const w = (() => {
-    try {
-      return lookupWeaponOrThrow(name);
-    } catch {
-      throw new Error(
-        i18n(locale, "err.unknownWeapon", { name, list: listWeaponNames().join(", ") }),
-      );
-    }
-  })();
+  const w = lookupWeapon(name);
+  if (w === undefined) {
+    throw new Error(
+      i18n(locale, "err.unknownWeapon", { name, list: listWeaponNames().join(", ") }),
+    );
+  }
   const cat = weaponCategory(locale, w.category);
   const lines = [
     i18n(locale, "info.weaponHead", { name: w.name, category: cat }),
@@ -557,13 +552,10 @@ export function infoWeapon(locale: LocaleId, name: string): string[] {
 
 /** `info map <name>` output: header/legend lines followed by the styled grid. */
 export function infoMapChunks(locale: LocaleId, name: string): Chunk[] {
-  const map = (() => {
-    try {
-      return lookupMapOrThrow(name);
-    } catch {
-      throw new Error(i18n(locale, "err.unknownMap", { name, list: listMapNames().join(", ") }));
-    }
-  })();
+  const map = lookupMap(name);
+  if (map === undefined) {
+    throw new Error(i18n(locale, "err.unknownMap", { name, list: listMapNames().join(", ") }));
+  }
   return [
     buildLinesChunk([i18n(locale, "info.mapHead", { name, w: map.width, h: map.height })]),
     buildBoardChunk({ map, units: null, reachable: null, locale }),
@@ -571,13 +563,10 @@ export function infoMapChunks(locale: LocaleId, name: string): Chunk[] {
 }
 
 function requireMechDef(model: string, locale: LocaleId): ResolvedMechDef {
-  const def = (() => {
-    try {
-      return lookupMechOrThrow(model);
-    } catch {
-      throw new Error(i18n(locale, "err.unknownModel", { model }));
-    }
-  })();
+  const def = lookupMech(model);
+  if (def === undefined) {
+    throw new Error(i18n(locale, "err.unknownModel", { model }));
+  }
   return def;
 }
 
@@ -617,7 +606,6 @@ interface SheetView {
   readonly removed: RemovedState;
   readonly destroyed: DestroyedState;
   readonly positionLine: string;
-  readonly modeLine: string | null;
   /** Current ammo status: depletion policy, explosion prob; null when the unit carries no ammo. */
   readonly ammoStatusLine: string | null;
   /** Current heat + shutdown state; null when only design info exists. */
@@ -677,10 +665,6 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
       facing: F(locale, unit.facing),
       posture: PRN(locale, unit.prone),
     }),
-    modeLine:
-      unit.moveMode !== null
-        ? i18n(locale, "sheet.modeSuffix", { mode: unit.moveMode, mp: unit.mpSpent })
-        : null,
     ammoStatusLine: ammoStatusLine,
     heat: unit.heat,
     shutdown: unit.shutdown,
@@ -705,57 +689,6 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
       ammoBins: unit.ammoBins,
       locationDestroyed: (loc) => unit.phaseStartDamage.internalStructure[loc] <= 0,
     },
-  };
-}
-
-function setupSheet(unit: UnitInit, id: string, locale: LocaleId): SheetView {
-  const def = requireMechDef(unit.model, locale);
-  const armorRear: Partial<LocationValue> = {};
-  for (const loc of TORSO_LOCATIONS) {
-    const v = def.armorRear[loc];
-    if (v !== undefined) armorRear[loc] = v;
-  }
-  const damage: UnitDamageState = {
-    armor: { ...def.armor },
-    armorRear,
-    internalStructure: internalStructureForTonnage(def.tonnage),
-  };
-  return {
-    id: id,
-    team: unit.team,
-    model: def.model,
-    name: def.name,
-    weightClass: def.weightClass,
-    tonnage: def.tonnage,
-    gunnery: unit.gunnery,
-    piloting: unit.piloting ?? DEFAULT_PILOTING,
-    pilotHits: 0,
-    prone: false,
-    unconscious: false,
-    walking: def.walking,
-    running: def.running,
-    jumping: def.jumping,
-    removed: "not",
-    destroyed: "not",
-    positionLine: i18n(locale, "sheet.at", {
-      pos: disp(unit.position),
-      facing: F(locale, unit.facing),
-      posture: "",
-    }),
-    modeLine: null,
-    ammoStatusLine: null,
-    heat: 0,
-    shutdown: "not",
-    armor: damage.armor,
-    damage,
-    originalArmor: def.armor,
-    originalArmorRear: armorRear,
-    originalArmorStructure: damage.internalStructure,
-    mounts: buildMountInfos(def, null, () => ({
-      jammed: false,
-      destroyed: false,
-    })),
-    critLive: null,
   };
 }
 
@@ -1148,12 +1081,11 @@ function mergeDiagramToColumns(
 export function sheetForUnit(s: Session, id: string): Chunk[] {
   if (s.battle) {
     const unit = s.battle.units[id];
-    if (!unit) throw new Error(i18n(s.locale, "err.unknownUnitId", { id }));
-    return sheetLines(battleSheet(unit, id, s.locale), s.locale);
+    const locale = s.locale;
+    if (!unit) throw new Error(i18n(locale, "err.unknownUnitId", { id }));
+    return sheetLines(battleSheet(unit, id, locale), locale);
   }
-  const placed = s.setup.roster.find((u) => u.id === id);
-  if (!placed) throw new Error(i18n(s.locale, "err.noSuchUnit", { id }));
-  return sheetLines(setupSheet(placed, id, s.locale), s.locale);
+  return [];
 }
 
 /** Brief unit list grouped by team: id, model, position with facing. */
@@ -1262,7 +1194,7 @@ function sheetPilotLine(locale: LocaleId, view: SheetView): string {
   });
 }
 
-export function sheetLinesShort(view: SheetView, locale: LocaleId, showMode = true): string[] {
+export function sheetLinesShort(locale: LocaleId, view: SheetView): string[] {
   const head = i18n(locale, "sheet.modelLine", {
     model: view.model,
     name: view.name,
@@ -1273,7 +1205,6 @@ export function sheetLinesShort(view: SheetView, locale: LocaleId, showMode = tr
   if (view.gunnery !== null) lines.push(sheetGunneryLine(locale, view));
   if (view.piloting !== null) lines.push(sheetPilotLine(locale, view));
   lines.push(view.positionLine);
-  if (showMode && view.modeLine) lines.push(view.modeLine);
   lines.push(...mechStatusLines(view, locale));
   return lines;
 }
@@ -1339,7 +1270,7 @@ export function overStatusLines(s: Session): string[] {
           ? i18n(locale, "over.idLine", { id: view.id })
           : `${i18n(locale, "over.idLine", { id: view.id })}${i18n(locale, "sheet.removedId", { reason: i18n(locale, REMOVED_REASON_KEY[view.removed]) })}`;
       lines.push(`  ${idLine}`);
-      for (const line of sheetLinesShort(view, s.locale, false)) lines.push(`    ${line}`);
+      for (const line of sheetLinesShort(s.locale, view)) lines.push(`    ${line}`);
     }
   }
   return lines;
