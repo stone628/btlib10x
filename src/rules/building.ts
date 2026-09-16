@@ -79,12 +79,10 @@ export function buildingAt(
 }
 
 /**
- * Convert a building hex to rubble when it collapses. Mutates `cell.terrain`
- * in place and returns true if the hex was a building that collapsed.
+ * Convert a building hex to rubble when it collapses. Returns the rubble cell
+ * if the terrain was a building, or null if no change is needed.
  */
-export function collapseToRubble(cell: HexCell): boolean {
-  const bt = buildingTypeOf(cell.terrain);
-  if (bt === undefined) return false;
-  cell.terrain = "rubble" as TerrainType;
-  return true;
+export function collapseToRubble(cell: HexCell): HexCell | null {
+  if (buildingTypeOf(cell.terrain) === undefined) return null;
+  return { terrain: "rubble", level: cell.level };
 }

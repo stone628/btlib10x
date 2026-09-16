@@ -10,7 +10,6 @@
 ## To Do
 
 - need snapshot keeping, capable of rollback N steps like ctrl-z
-- integrate torso twist in attack phase
 - improve 'add' command at 'setup' phase
 - The Physical Attack Phase. advancePhase runs initiative → movement → weaponAttack → end, with the heat phase folded into the weaponAttack exit. TW inserts a physical attack phase between weapon fire and heat, carrying punch, kick, push, club, charge and Death From Above. None exists. This also strands the handActuator and shoulder crit slots, whose published effects are largely physical. (Physical-triggered PSRs — kicks, pushes, charges, DFAs — wait on this phase; see "Not viable" in `docs/CLI.md`.)
 

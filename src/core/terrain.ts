@@ -22,6 +22,13 @@ export function cellAt(grid: HexGrid, hex: HexCoord): HexCell {
   return grid.cells[col - 1 + (row - 1) * grid.width]!;
 }
 
+/** Replace the cell at `hex` with a new value. Mutates the grid in place. */
+export function setCell(grid: HexGrid, hex: HexCoord, cell: HexCell): void {
+  const { col, row } = hex;
+  if (col < 1 || col > grid.width || row < 1 || row > grid.height) return;
+  (grid.cells as HexCell[])[col - 1 + (row - 1) * grid.width] = cell;
+}
+
 export const MP_TO_ENTER_HEX = 1;
 
 export function terrainMoveCost(terrain: TerrainType): number {
