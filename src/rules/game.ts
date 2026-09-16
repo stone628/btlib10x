@@ -127,17 +127,18 @@ import {
   sensorsBlind,
   waterEntryModifier,
 } from "./piloting.js";
-import { computeToHit } from "./tohit.js";
+import { computeToHit, DEFAULT_GUNNERY } from "./tohit.js";
 
 export interface UnitInit extends MechModelHolder {
   readonly id: string;
-  readonly model: string;
-  readonly team: number;
-  readonly gunnery: number;
+  model: string;
+  team: number;
+  /** Gunnery skill (TW regular = 4); defaults to {@link DEFAULT_GUNNERY}. */
+  gunnery: number;
   /** Pilot skill (TW regular = 5); defaults to {@link DEFAULT_PILOTING}. */
-  readonly piloting?: number;
-  readonly position: HexCoord;
-  readonly facing: Facing;
+  piloting: number;
+  position: HexCoord;
+  facing: Facing;
 }
 
 export interface AttackDecl {
@@ -479,7 +480,7 @@ export interface CreateBattleOptions {
   readonly critsDisabled: boolean;
 }
 
-function requireUnit(state: BattleState, unitId: string): UnitState {
+export function requireUnit(state: BattleState, unitId: string): UnitState {
   const unit = state.units[unitId];
   if (!unit) throw new Error(`Unknown unit id: ${unitId}`);
   return unit;
@@ -674,8 +675,9 @@ export function createBattle(
       throw new Error(`Gunnery for ${init.id} must be an integer 0..7`);
     }
     if (
-      init.piloting !== undefined &&
-      (!Number.isInteger(init.piloting) || init.piloting < SKILL_MIN || init.piloting > SKILL_MAX)
+      !Number.isInteger(init.piloting) ||
+      init.piloting < SKILL_MIN ||
+      init.piloting > SKILL_MAX
     ) {
       throw new Error(`Piloting for ${init.id} must be an integer 0..7`);
     }
@@ -695,7 +697,7 @@ export function createBattle(
       model: init.model,
       team: init.team,
       gunnery: init.gunnery,
-      piloting: init.piloting ?? DEFAULT_PILOTING,
+      piloting: init.piloting,
       pilotHits: 0,
       unconscious: false,
       unconsciousSinceTurn: null,
@@ -2989,10 +2991,6 @@ export function checkVictory(state: BattleState): VictoryResult {
     return { winnerTeam: aliveTeams.values().next().value ?? null, draw: aliveTeams.size === 0 };
   }
   return { winnerTeam: null, draw: false };
-}
-
-export function getUnit(state: BattleState, unitId: string): UnitState {
-  return requireUnit(state, unitId);
 }
 
 /** Build the per-slot destroyed-flag table for a fresh unit, all false. */

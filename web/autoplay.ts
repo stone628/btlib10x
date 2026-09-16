@@ -226,7 +226,7 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
         queueNextCommand("status");
       }
       // movement mode not set yet
-      if (actor.moveMode === null) {
+      if (s.moveMode === null) {
         // A shut-down unit just passes: no movement mode, stay off-line.
         if (isNominal(actor)) {
           if (noWeapon[actor.id] === true) {

@@ -82,6 +82,8 @@ const RANGE_MOD: Record<RangeBracket, number> = {
   long: 4,
 };
 
+/** Default gunnery skill for `UnitInit`s that omit it (TW regular pilot). */
+export const DEFAULT_GUNNERY = 4;
 /** Attacker modifier while prone (TW p.109). */
 const PRONE_ATTACKER_MOD = 2;
 /** Target modifier while prone and adjacent (TW p.109). */

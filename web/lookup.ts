@@ -33,21 +33,3 @@ export function lookupMap(name: string): MapDef | undefined {
 export function lookupWeapon(name: string): WeaponDef | undefined {
   return WEAPON_BY_LC.get(name.toLowerCase());
 }
-
-export function lookupMechOrThrow(model: string): ResolvedMechDef {
-  const def = lookupMech(model);
-  if (!def) throw new Error(`Unknown mech: ${model}`);
-  return def;
-}
-
-export function lookupMapOrThrow(name: string): MapDef {
-  const def = lookupMap(name);
-  if (!def) throw new Error(`Unknown map: ${name}`);
-  return def;
-}
-
-export function lookupWeaponOrThrow(name: string): WeaponDef {
-  const def = lookupWeapon(name);
-  if (!def) throw new Error(`Unknown weapon: ${name}`);
-  return def;
-}

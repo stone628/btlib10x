@@ -9,8 +9,8 @@ import {
   checkVictory,
   declareAttacks,
   executeMove,
-  getUnit,
   nextActor,
+  requireUnit,
   resolveAllAttacks,
   rollInitiativePhase,
 } from "../src/rules/game.js";
@@ -24,6 +24,7 @@ function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
       model: "HBK-4G",
       team: 0,
       gunnery: 4,
+      piloting: 5,
       position: { col: 2, row: 4 },
       facing: "se",
     },
@@ -32,6 +33,7 @@ function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
       model: "ENF-4R",
       team: 1,
       gunnery: 4,
+      piloting: 5,
       position: { col: 3, row: 5 },
       facing: "nw",
     },
@@ -63,6 +65,7 @@ describe("createBattle", () => {
       model: "HBK-4G",
       team: 0,
       gunnery: 4,
+      piloting: 5,
       position: { col: 2, row: 2 },
       facing: "n" as const,
     };
@@ -79,6 +82,7 @@ describe("createBattle", () => {
     const base = {
       model: "HBK-4G",
       gunnery: 4,
+      piloting: 5,
       position: { col: 2, row: 4 },
       facing: "se" as const,
     };
@@ -102,7 +106,7 @@ describe("createBattle", () => {
 
   it("initializes armor and ammo from the definition", () => {
     const state = hbkVsEnf();
-    const hbk = getUnit(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
     expect(hbk.damage.armor).toEqual(getMechDef("HBK-4G")!.armor);
     expect(ammoWeaponTotals(getMechDef("HBK-4G")!, hbk.ammoBins)["4"]).toBe(10);
     expect(hbk.phaseStartDamage).toEqual(hbk.damage);
@@ -123,6 +127,7 @@ describe("movement phase", () => {
         model: "HBK-4G",
         team: 0,
         gunnery: 4,
+        piloting: 5,
         position: { col: 2, row: 4 },
         facing: "se",
       },
@@ -131,6 +136,7 @@ describe("movement phase", () => {
         model: "ENF-4R",
         team: 1,
         gunnery: 4,
+        piloting: 5,
         position: { col: 11, row: 11 },
         facing: "nw",
       },
@@ -141,7 +147,7 @@ describe("movement phase", () => {
       { kind: "enter", to: { col: 3, row: 5 } },
       { kind: "turn", facings: 1 },
     ]);
-    const hbk = getUnit(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
     expect(hbk.mpSpent).toBe(3); // 1 turn + 2 light woods
     expect(hbk.position).toEqual({ col: 3, row: 5 });
   });
@@ -165,7 +171,7 @@ describe("movement phase", () => {
   it("allows walking straight backward", () => {
     const state = startMovementTurn(hbkVsEnf());
     executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 1, row: 4 } }]);
-    const hbk = getUnit(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
     expect(hbk.position).toEqual({ col: 1, row: 4 });
     expect(hbk.mpSpent).toBe(1);
   });
@@ -190,7 +196,7 @@ describe("movement phase", () => {
       { kind: "turn", facings: 1 },
       { kind: "enter", to: { col: 2, row: 5 } },
     ]);
-    expect(getUnit(state, "hbk").mpSpent).toBe(3);
+    expect(requireUnit(state, "hbk").mpSpent).toBe(3);
 
     // A 2-level climb forward is legal: turn s (1 MP), enter (2,5) at level 2
     // (1 MP + 2 climb) = 4 total.
@@ -204,7 +210,7 @@ describe("movement phase", () => {
       { kind: "turn", facings: 1 },
       { kind: "enter", to: { col: 2, row: 5 } },
     ]);
-    expect(getUnit(state2, "hbk").mpSpent).toBe(4);
+    expect(requireUnit(state2, "hbk").mpSpent).toBe(4);
   });
 
   it("counts turning MP against the mode budget", () => {
@@ -215,7 +221,7 @@ describe("movement phase", () => {
 
     state = startMovementTurn(hbkVsEnf());
     executeMove(state, "hbk", "walk", [{ kind: "turn", facings: 2 }]);
-    const hbk = getUnit(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
     expect(hbk.mpSpent).toBe(2); // 2 hexsides x 1 MP
     expect(hbk.facing).toBe("sw"); // se rotated two hexsides clockwise
     expect(hbk.position).toEqual({ col: 2, row: 4 });
@@ -224,7 +230,7 @@ describe("movement phase", () => {
   it("charges counterclockwise turns one MP per hexside", () => {
     let state = startMovementTurn(hbkVsEnf());
     executeMove(state, "hbk", "walk", [{ kind: "turn", facings: -1 }]);
-    const hbk = getUnit(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
     expect(hbk.facing).toBe("ne"); // se rotated one hexside counterclockwise
     expect(hbk.mpSpent).toBe(1);
 
@@ -242,6 +248,7 @@ describe("movement phase", () => {
         model: "HBK-4G",
         team: 0,
         gunnery: 4,
+        piloting: 5,
         position: { col: 2, row: 4 },
         facing: "se",
       },
@@ -250,6 +257,7 @@ describe("movement phase", () => {
         model: "ENF-4R",
         team: 1,
         gunnery: 4,
+        piloting: 5,
         position: { col: 11, row: 11 },
         facing: "nw",
       },
@@ -261,7 +269,7 @@ describe("movement phase", () => {
       { kind: "turn", facings: 2 }, // now facing sw
       { kind: "enter", to: { col: 2, row: 5 } }, // new forward (sw)
     ]);
-    const hbk = getUnit(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
     expect(hbk.position).toEqual({ col: 2, row: 5 });
     expect(hbk.facing).toBe("sw");
     expect(hbk.mpSpent).toBe(4); // 2 enters + 2-hexside turn
@@ -274,6 +282,7 @@ describe("movement phase", () => {
         model: "HBK-4G",
         team: 0,
         gunnery: 4,
+        piloting: 5,
         position: { col: 2, row: 4 },
         facing: "se",
       },
@@ -282,6 +291,7 @@ describe("movement phase", () => {
         model: "ENF-4R",
         team: 1,
         gunnery: 4,
+        piloting: 5,
         position: { col: 3, row: 5 },
         facing: "nw",
       },
@@ -300,6 +310,7 @@ describe("movement phase", () => {
         model: "HBK-4G",
         team: 0,
         gunnery: 4,
+        piloting: 5,
         position: { col: 2, row: 4 },
         facing: "se",
       },
@@ -308,6 +319,7 @@ describe("movement phase", () => {
         model: "ENF-4R",
         team: 1,
         gunnery: 4,
+        piloting: 5,
         position: { col: 11, row: 11 },
         facing: "nw",
       },
@@ -350,6 +362,7 @@ describe("movement phase", () => {
         model: "GRF-1N",
         team: 0,
         gunnery: 4,
+        piloting: 5,
         position: { col: 2, row: 4 },
         facing: "se",
       },
@@ -358,6 +371,7 @@ describe("movement phase", () => {
         model: "WVR-6R",
         team: 1,
         gunnery: 4,
+        piloting: 5,
         position: { col: 3, row: 4 },
         facing: "nw",
       },
@@ -369,7 +383,7 @@ describe("movement phase", () => {
       { kind: "enter", to: { col: 3, row: 4 } },
       { kind: "enter", to: { col: 4, row: 4 } },
     ]);
-    const grf = getUnit(state, "grf");
+    const grf = requireUnit(state, "grf");
     expect(grf.position).toEqual({ col: 4, row: 4 });
     expect(grf.mpSpent).toBe(2);
     expect(grf.jumpedThisTurn).toBe(true);
@@ -383,6 +397,7 @@ describe("nextActor with unequal forces", () => {
       model: "HBK-4G" | "ENF-4R";
       team: 0 | 1;
       gunnery: number;
+      piloting: number;
       position: { col: number; row: number };
       facing: "n" | "ne" | "se" | "s" | "sw" | "nw";
     };
@@ -393,6 +408,7 @@ describe("nextActor with unequal forces", () => {
         model: "HBK-4G",
         team: teamOfFour,
         gunnery: 4,
+        piloting: 5,
         position: { col: i, row: 0 },
         facing: "ne",
       });
@@ -403,6 +419,7 @@ describe("nextActor with unequal forces", () => {
         model: "ENF-4R",
         team: (1 - teamOfFour) as 0 | 1,
         gunnery: 4,
+        piloting: 5,
         position: { col: 5 + i, row: 0 },
         facing: "sw",
       });
@@ -470,6 +487,7 @@ describe("actorQueue", () => {
         model: "HBK-4G",
         team: 0,
         gunnery: 4,
+        piloting: 5,
         position: { col: i, row: 0 },
         facing: "ne",
       });
@@ -480,6 +498,7 @@ describe("actorQueue", () => {
         model: "ENF-4R",
         team: 1,
         gunnery: 4,
+        piloting: 5,
         position: { col: 5 + i, row: 0 },
         facing: "sw",
       });
@@ -508,8 +527,8 @@ describe("actorQueue", () => {
     const state = startMovementTurn(hbkVsEnf());
     executeMove(state, "hbk", "walk", []);
     advancePhase(state); // movement -> weaponAttack
-    getUnit(state, "hbk").shutdown = "heat";
-    getUnit(state, "enf").passedAttacks = true;
+    requireUnit(state, "hbk").shutdown = "heat";
+    requireUnit(state, "enf").passedAttacks = true;
     const q = actorQueue(state);
     expect(q.acted).toEqual([]);
     expect(q.pending).toEqual([]);
@@ -540,7 +559,7 @@ describe("actorQueue", () => {
 
   it("front-loads shut-down units in the movement phase", () => {
     const state = startMovementTurn(hbkVsEnf(), scriptedRng(2, 2, 6, 6)); // team 1 wins
-    getUnit(state, "hbk").shutdown = "heat";
+    requireUnit(state, "hbk").shutdown = "heat";
     const q = actorQueue(state);
     expect(q.pending.map((av) => av.id)).toEqual(["hbk", "enf"]);
     expect(nextActor(state)).toBe("hbk");
@@ -600,6 +619,7 @@ describe("weapon attack phase", () => {
           model: "HBK-4G",
           team: 0,
           gunnery: 4,
+          piloting: 5,
           position: { col: 2, row: 4 },
           facing: c.facing as UnitInit["facing"],
         },
@@ -608,6 +628,7 @@ describe("weapon attack phase", () => {
           model: "ENF-4R",
           team: 1,
           gunnery: 4,
+          piloting: 5,
           position: c.targetPos,
           facing: "nw",
         },
@@ -643,6 +664,7 @@ describe("weapon attack phase", () => {
         model: "HBK-4G",
         team: 0,
         gunnery: 4,
+        piloting: 5,
         position: { col: 2, row: 4 },
         facing: "nw",
       },
@@ -651,6 +673,7 @@ describe("weapon attack phase", () => {
         model: "ENF-4R",
         team: 1,
         gunnery: 4,
+        piloting: 5,
         position: { col: 2, row: 5 },
         facing: "nw",
       },
@@ -677,6 +700,7 @@ describe("weapon attack phase", () => {
         model: "HBK-4G",
         team: 0,
         gunnery: 4,
+        piloting: 5,
         position: { col: 2, row: 4 },
         facing: "se",
       },
@@ -685,6 +709,7 @@ describe("weapon attack phase", () => {
         model: "ENF-4R",
         team: 1,
         gunnery: 4,
+        piloting: 5,
         position: { col: 3, row: 5 },
         facing: "se", // facing away from the attacker
       },
@@ -694,13 +719,13 @@ describe("weapon attack phase", () => {
     const decl = state.units.hbk!.declaredAttacks[0]!;
     expect(decl.arc).toBe("front");
     expect(decl.attackDirection).toBe("rear");
-    const rearBefore = getUnit(state, "enf").damage.armorRear.centerTorso!;
-    const frontBefore = getUnit(state, "enf").damage.armor.centerTorso;
-    const isBefore = getUnit(state, "enf").damage.internalStructure.centerTorso;
+    const rearBefore = requireUnit(state, "enf").damage.armorRear.centerTorso!;
+    const frontBefore = requireUnit(state, "enf").damage.armor.centerTorso;
+    const isBefore = requireUnit(state, "enf").damage.internalStructure.centerTorso;
     // to-hit 12 (6,6) hits; location 7 (3,4) -> center torso; 5 ML damage
     // strips the 4-point rear pool then 1 internal structure.
     resolveAllAttacks(state, scriptedRng(6, 6, 3, 4));
-    const enf = getUnit(state, "enf");
+    const enf = requireUnit(state, "enf");
     expect(rearBefore).toBe(4);
     expect(enf.damage.armorRear.centerTorso!).toBe(0);
     expect(enf.damage.internalStructure.centerTorso).toBe(isBefore - 1);
@@ -718,6 +743,7 @@ describe("weapon attack phase", () => {
         model: "HBK-4G",
         team: 0,
         gunnery: 4,
+        piloting: 5,
         position: { col: 2, row: 4 },
         facing: "se",
       },
@@ -726,6 +752,7 @@ describe("weapon attack phase", () => {
         model: "ENF-4R",
         team: 1,
         gunnery: 4,
+        piloting: 5,
         position: { col: 3, row: 5 },
         facing: "ne", // attacker lies in its left side arc
       },
@@ -752,6 +779,7 @@ describe("weapon attack phase", () => {
         model: "AS7-D",
         team: 0,
         gunnery: 4,
+        piloting: 5,
         position: { col: 2, row: 4 },
         facing: "nw", // target sits in the rear arc
       },
@@ -760,6 +788,7 @@ describe("weapon attack phase", () => {
         model: "ENF-4R",
         team: 1,
         gunnery: 4,
+        piloting: 5,
         position: { col: 3, row: 5 },
         facing: "nw",
       },
@@ -795,6 +824,7 @@ describe("weapon attack phase", () => {
         model: "HBK-4G",
         team: 0,
         gunnery: 4,
+        piloting: 5,
         position: { col: 2, row: 4 },
         facing: "se",
       },
@@ -803,6 +833,7 @@ describe("weapon attack phase", () => {
         model: "ENF-4R",
         team: 1,
         gunnery: 4,
+        piloting: 5,
         position: { col: 5, row: 4 },
         facing: "nw",
       },
@@ -828,6 +859,7 @@ describe("weapon attack phase", () => {
         model: "HBK-4G",
         team: 0,
         gunnery: 4,
+        piloting: 5,
         position: { col: 2, row: 4 },
         facing: "se",
       },
@@ -836,6 +868,7 @@ describe("weapon attack phase", () => {
         model: "ENF-4R",
         team: 1,
         gunnery: 4,
+        piloting: 5,
         position: { col: ac20.long + 3, row: 2 },
         facing: "nw",
       },
@@ -853,6 +886,7 @@ describe("weapon attack phase", () => {
         model: "ENF-4R",
         team: 0,
         gunnery: 7,
+        piloting: 5,
         position: { col: 2, row: 4 },
         facing: "se",
       },
@@ -861,6 +895,7 @@ describe("weapon attack phase", () => {
         model: "HBK-4G",
         team: 1,
         gunnery: 4,
+        piloting: 5,
         position: { col: 11, row: 4 },
         facing: "nw",
       },
@@ -887,7 +922,9 @@ describe("weapon attack phase", () => {
       { weaponIndex: 4, targetId: "enf" },
       { weaponIndex: 2, targetId: "enf" },
     ]);
-    expect(ammoWeaponTotals(getMechDef("HBK-4G")!, getUnit(state, "hbk").ammoBins)["4"]).toBe(9);
+    expect(ammoWeaponTotals(getMechDef("HBK-4G")!, requireUnit(state, "hbk").ammoBins)["4"]).toBe(
+      9,
+    );
     expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }])).toThrow(
       /current actor/,
     );
@@ -909,23 +946,23 @@ describe("weapon attack phase", () => {
     // Turn 1: AC/20 (20 dmg) hits CT (roll 5) -> CT 27 - 20 = 7 left.
     // 20+ damage PSR (needs 6: 3+3 succeeds, no fall).
     resolveAllAttacks(state, scriptedRng(2, 3, 3, 4, 3, 3));
-    expect(getUnit(state, "enf").damage.armor.centerTorso).toBe(7);
-    expect(getUnit(state, "enf").destroyed).toBe("not");
+    expect(requireUnit(state, "enf").damage.armor.centerTorso).toBe(7);
+    expect(requireUnit(state, "enf").destroyed).toBe("not");
 
     advancePhase(state); // weaponAttack -> end
-    expect(getUnit(state, "enf").destroyed).toBe("not"); // survived with 7 CT
+    expect(requireUnit(state, "enf").destroyed).toBe("not"); // survived with 7 CT
 
     advancePhase(state); // end -> initiative, turn 2
     expect(state.turn).toBe(2);
-    expect(getUnit(state, "hbk").moveMode).toBeNull();
-    expect(getUnit(state, "hbk").declaredAttacks).toHaveLength(0);
+    expect(requireUnit(state, "hbk").moveMode).toBeNull();
+    expect(requireUnit(state, "hbk").declaredAttacks).toHaveLength(0);
 
     rollInitiativePhase(state, scriptedRng(1, 1, 4, 4));
     advancePhase(state);
     declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
     resolveAllAttacks(state, scriptedRng(6, 6, 3, 4, 3, 3)); // hit CT again
-    expect(getUnit(state, "enf").damage.armor.centerTorso).toBe(0);
-    expect(getUnit(state, "enf").destroyed).toBe("not"); // CT IS still up (16-13=3)
+    expect(requireUnit(state, "enf").damage.armor.centerTorso).toBe(0);
+    expect(requireUnit(state, "enf").destroyed).toBe("not"); // CT IS still up (16-13=3)
 
     advancePhase(state); // weaponAttack -> end
     advancePhase(state); // end -> initiative, turn 3
@@ -934,11 +971,11 @@ describe("weapon attack phase", () => {
     advancePhase(state);
     declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
     resolveAllAttacks(state, scriptedRng(6, 6, 3, 4)); // CT IS gone
-    expect(getUnit(state, "enf").destroyed).toBe("centerTorsoDestroyed"); // killed immediately
-    expect(getUnit(state, "enf").removed).toBe("destroyed");
+    expect(requireUnit(state, "enf").destroyed).toBe("centerTorsoDestroyed"); // killed immediately
+    expect(requireUnit(state, "enf").removed).toBe("destroyed");
 
     advancePhase(state); // weaponAttack -> end (kill already committed)
-    const enf = getUnit(state, "enf");
+    const enf = requireUnit(state, "enf");
     expect(enf.destroyed).toBe("centerTorsoDestroyed");
     expect(enf.removed).toBe("destroyed");
     expect(state.events.some((e) => e.kind === "unitRemoved")).toBe(true);
@@ -948,10 +985,10 @@ describe("weapon attack phase", () => {
   it("resolves attacks simultaneously: a unit killed by an earlier attacker still fires", () => {
     const state = hbkVsEnf();
     // Enforcer center torso is one AC/20 hit from death (armor 0, IS 5).
-    const enf = getUnit(state, "enf");
+    const enf = requireUnit(state, "enf");
     enf.damage.armor.centerTorso = 0;
     enf.damage.internalStructure.centerTorso = 5;
-    const hbkCt = () => getUnit(state, "hbk").damage.armor.centerTorso;
+    const hbkCt = () => requireUnit(state, "hbk").damage.armor.centerTorso;
 
     startAttackTurn(state);
     // Both declare before resolution; roster order puts hbk first.
@@ -980,6 +1017,7 @@ describe("weapon attack phase", () => {
         model: "HER-5SA",
         team: 0,
         gunnery: 4,
+        piloting: 5,
         position: { col: 2, row: 4 },
         facing: "ne",
       },
@@ -988,6 +1026,7 @@ describe("weapon attack phase", () => {
         model: "CDA-3MA",
         team: 1,
         gunnery: 4,
+        piloting: 5,
         position: { col: 3, row: 4 },
         facing: "nw",
       },
@@ -995,11 +1034,13 @@ describe("weapon attack phase", () => {
     const setup = createTestBattle([], units, true);
     const state = startAttackTurn(setup);
     declareAttacks(state, "her", [{ weaponIndex: 3, targetId: "cda", rapidFire: true }]);
-    expect(ammoWeaponTotals(getMechDef("HER-5SA")!, getUnit(state, "her").ammoBins)["3"]).toBe(18); // 2 shots spent up front
+    expect(ammoWeaponTotals(getMechDef("HER-5SA")!, requireUnit(state, "her").ammoBins)["3"]).toBe(
+      18,
+    ); // 2 shots spent up front
     resolveAllAttacks(state, scriptedRng(1, 1)); // natural 2 -> jam
-    const her = getUnit(state, "her");
+    const her = requireUnit(state, "her");
     expect(her.jammedWeapons).toEqual([3]);
-    expect(getUnit(state, "cda").damage.armor.centerTorso).toBe(
+    expect(requireUnit(state, "cda").damage.armor.centerTorso).toBe(
       getMechDef("CDA-3MA")!.armor.centerTorso,
     );
   });
@@ -1011,6 +1052,7 @@ describe("weapon attack phase", () => {
         model: "HER-5SA",
         team: 0,
         gunnery: 4,
+        piloting: 5,
         position: { col: 2, row: 4 },
         facing: "ne",
       },
@@ -1019,6 +1061,7 @@ describe("weapon attack phase", () => {
         model: "CDA-3MA",
         team: 1,
         gunnery: 4,
+        piloting: 5,
         position: { col: 5, row: 4 },
         // Faces the attacker so the attack direction is front (location 7 -> CT).
         facing: "sw",
@@ -1029,20 +1072,24 @@ describe("weapon attack phase", () => {
     // Omitted rapidFire -> single shot (1 UAC/5 hit = 5 dmg, 1 ammo spent).
     const single = startAttackTurn(setup());
     declareAttacks(single, "her", [{ weaponIndex: 3, targetId: "cda" }]);
-    expect(ammoWeaponTotals(getMechDef("HER-5SA")!, getUnit(single, "her").ammoBins)["3"]).toBe(19); // 1 shot spent up front
-    const singleBefore = getUnit(single, "cda").damage.armor.centerTorso;
+    expect(ammoWeaponTotals(getMechDef("HER-5SA")!, requireUnit(single, "her").ammoBins)["3"]).toBe(
+      19,
+    ); // 1 shot spent up front
+    const singleBefore = requireUnit(single, "cda").damage.armor.centerTorso;
     // to-hit 4 (2,2), single location rolls 7 -> CT (no cluster roll for 1 shot).
     resolveAllAttacks(single, scriptedRng(2, 2, 3, 4));
-    expect(singleBefore - getUnit(single, "cda").damage.armor.centerTorso).toBe(5);
+    expect(singleBefore - requireUnit(single, "cda").damage.armor.centerTorso).toBe(5);
 
     // rapidFire: true -> double-tap (2 x UAC/5 = 10 dmg, 2 ammo spent).
     const state = startAttackTurn(setup());
     declareAttacks(state, "her", [{ weaponIndex: 3, targetId: "cda", rapidFire: true }]);
-    expect(ammoWeaponTotals(getMechDef("HER-5SA")!, getUnit(state, "her").ammoBins)["3"]).toBe(18); // 2 shots spent up front
-    const before = getUnit(state, "cda").damage.armor.centerTorso;
+    expect(ammoWeaponTotals(getMechDef("HER-5SA")!, requireUnit(state, "her").ammoBins)["3"]).toBe(
+      18,
+    ); // 2 shots spent up front
+    const before = requireUnit(state, "cda").damage.armor.centerTorso;
     // to-hit 4 (2,2), cluster 8 (4,4) -> both shots hit; both hit CT (roll 7).
     resolveAllAttacks(state, scriptedRng(2, 2, 4, 4, 3, 4, 3, 4));
-    expect(before - getUnit(state, "cda").damage.armor.centerTorso).toBe(10);
+    expect(before - requireUnit(state, "cda").damage.armor.centerTorso).toBe(10);
   });
 
   it("rejects rapidFire on a weapon that is not rapid-fire", () => {
@@ -1061,6 +1108,7 @@ describe("streak missiles", () => {
       model: "MC-MKII-2",
       team: 0,
       gunnery: 4,
+      piloting: 5,
       position: { col: 2, row: 4 },
       facing: "ne",
     },
@@ -1069,6 +1117,7 @@ describe("streak missiles", () => {
       model: "ENF-4R",
       team: 1,
       gunnery: 4,
+      piloting: 5,
       position: { col: 3, row: 4 },
       facing: "nw",
     },
@@ -1077,13 +1126,17 @@ describe("streak missiles", () => {
 
   it("defers ammo to resolution and lands full tubes with no cluster roll", () => {
     const state = streakSetup();
-    expect(ammoWeaponTotals(getMechDef("MC-MKII-2")!, getUnit(state, "mc").ammoBins)["3"]).toBe(50);
+    expect(ammoWeaponTotals(getMechDef("MC-MKII-2")!, requireUnit(state, "mc").ammoBins)["3"]).toBe(
+      50,
+    );
     declareAttacks(state, "mc", [{ weaponIndex: 3, targetId: "enf" }]);
     // Declare spends nothing; launcher fires only on successful to-hit roll.
-    expect(ammoWeaponTotals(getMechDef("MC-MKII-2")!, getUnit(state, "mc").ammoBins)["3"]).toBe(50);
+    expect(ammoWeaponTotals(getMechDef("MC-MKII-2")!, requireUnit(state, "mc").ammoBins)["3"]).toBe(
+      50,
+    );
     // to-hit 6 >= TN 4; four CT locations (7); one exposed tie-break die.
     resolveAllAttacks(state, scriptedRng(3, 3, 3, 4, 3, 4, 3, 4, 3, 4, 2));
-    const mc = getUnit(state, "mc");
+    const mc = requireUnit(state, "mc");
     expect(ammoWeaponTotals(getMechDef("MC-MKII-2")!, mc.ammoBins)["3"]).toBe(49);
     expect(mc.heat).toBe(3);
     const event = state.events.find((e) => e.kind === "attackResolved")!;
@@ -1093,7 +1146,7 @@ describe("streak missiles", () => {
 
   it("auto-misses the second launcher when one shared shot remains", () => {
     const state = streakSetup();
-    const mc = getUnit(state, "mc");
+    const mc = requireUnit(state, "mc");
     // Shared pool drained to a single shot in one bin.
     mc.ammoBins["leftTorso:7"]!.shots = 0;
     mc.ammoBins["rightTorso:7"]!.shots = 1;
@@ -1124,10 +1177,14 @@ describe("streak missiles", () => {
     expect(second.resolution.groups).toHaveLength(0);
     expect(second.resolution.application).toBeNull();
     expect(
-      pooledShotsLeft(getMechDef("MC-MKII-2")!, getUnit(state, "mc").ammoBins, "CL Streak SRM 4"),
+      pooledShotsLeft(
+        getMechDef("MC-MKII-2")!,
+        requireUnit(state, "mc").ammoBins,
+        "CL Streak SRM 4",
+      ),
     ).toBe(0);
     // One volley fired: single launcher heat only.
-    expect(getUnit(state, "mc").heat).toBe(3);
+    expect(requireUnit(state, "mc").heat).toBe(3);
     const lines = resolutionLines("en", second.resolution);
     expect(lines.some((l) => l.includes("out of ammo"))).toBe(true);
   });
@@ -1135,12 +1192,12 @@ describe("streak missiles", () => {
   it("spends no ammo and builds no heat on a streak miss", () => {
     const state = streakSetup();
     declareAttacks(state, "mc", [{ weaponIndex: 3, targetId: "enf" }]);
-    const armorBefore = getUnit(state, "enf").damage.armor.centerTorso;
+    const armorBefore = requireUnit(state, "enf").damage.armor.centerTorso;
     resolveAllAttacks(state, scriptedRng(1, 2)); // to-hit 3 < TN 4
-    const mc = getUnit(state, "mc");
+    const mc = requireUnit(state, "mc");
     expect(ammoWeaponTotals(getMechDef("MC-MKII-2")!, mc.ammoBins)["3"]).toBe(50);
     expect(mc.heat).toBe(0);
-    expect(getUnit(state, "enf").damage.armor.centerTorso).toBe(armorBefore);
+    expect(requireUnit(state, "enf").damage.armor.centerTorso).toBe(armorBefore);
     const event = state.events.find((e) => e.kind === "attackResolved")!;
     expect(event.kind === "attackResolved" && event.resolution.hit).toBe(false);
   });
@@ -1150,16 +1207,16 @@ describe("passedAttacks", () => {
   it("nextActor skips units that have passed this phase", () => {
     const state = startAttackTurn(hbkVsEnf());
     expect(nextActor(state)).toBe("hbk");
-    getUnit(state, "hbk").passedAttacks = true;
+    requireUnit(state, "hbk").passedAttacks = true;
     expect(nextActor(state)).toBe("enf");
   });
 
   it("passedAttacks resets at the end of the turn", () => {
     const state = startAttackTurn(hbkVsEnf());
-    getUnit(state, "enf").passedAttacks = true;
+    requireUnit(state, "enf").passedAttacks = true;
     advancePhase(state); // weaponAttack -> end
     advancePhase(state); // end -> initiative, turn 2
-    expect(getUnit(state, "enf").passedAttacks).toBe(false);
+    expect(requireUnit(state, "enf").passedAttacks).toBe(false);
   });
 });
 
@@ -1187,7 +1244,7 @@ describe("current-actor guard", () => {
   it("executeMove rejects an unconscious unit (filtered from pending queue)", () => {
     const state = startMovementTurn(hbkVsEnf());
     executeMove(state, "hbk", "walk", []); // hbk acts first
-    getUnit(state, "enf").unconscious = true;
+    requireUnit(state, "enf").unconscious = true;
     // hbk is no longer eligible (already acted) and enf is filtered out.
     expect(nextActor(state)).toBeNull();
     expect(() => executeMove(state, "enf", "walk", [])).toThrow(/not the current actor/);
@@ -1202,7 +1259,7 @@ describe("current-actor guard", () => {
 
   it("declareAttacks rejects a unit that passedAttacks this phase", () => {
     const state = startAttackTurn(hbkVsEnf());
-    getUnit(state, "hbk").passedAttacks = true;
+    requireUnit(state, "hbk").passedAttacks = true;
     expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }])).toThrow(
       /not the current actor/,
     );
@@ -1210,7 +1267,7 @@ describe("current-actor guard", () => {
 
   it("declareAttacks rejects a shut-down unit in the weapon phase", () => {
     const state = startAttackTurn(hbkVsEnf());
-    getUnit(state, "hbk").shutdown = "heat";
+    requireUnit(state, "hbk").shutdown = "heat";
     // hbk is filtered out of the weapon phase queue (shutdown units skip),
     // leaving enf as the head.
     expect(nextActor(state)).toBe("enf");

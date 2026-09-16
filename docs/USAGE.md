@@ -175,7 +175,7 @@ declared shots (resolution order never depends on roster order):
 ```ts
 resolveAllAttacks(state, rng);   // rolls to-hit + location(s) + crits for every unit
 
-const grf = getUnit(state, "grf");
+const grf = requireUnit(state, "grf");
 grf.damage.armor.leftTorso;   // front armor, e.g. 18 - 5 = 13 after an ML hit
 grf.damage.internalStructure; // derived from tonnage
 ```

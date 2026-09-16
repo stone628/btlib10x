@@ -18,7 +18,7 @@ import {
   advancePhase,
   type createBattle,
   declareAttacks,
-  getUnit,
+  requireUnit,
   rollInitiativePhase,
   type UnitInit,
 } from "../src/rules/game.js";
@@ -260,6 +260,7 @@ function hbkBattle(): ReturnType<typeof createBattle> {
       model: "HBK-4G",
       team: 0,
       gunnery: 4,
+      piloting: 5,
       position: { col: 2, row: 4 },
       facing: "ne",
     },
@@ -268,6 +269,7 @@ function hbkBattle(): ReturnType<typeof createBattle> {
       model: "ENF-4R",
       team: 1,
       gunnery: 4,
+      piloting: 5,
       position: { col: 3, row: 4 },
       facing: "nw",
     },
@@ -285,7 +287,7 @@ describe("declareAttacks (game level)", () => {
     const state = hbkBattle();
     attackPhase(state);
     declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], scriptedRng(2));
-    const u = getUnit(state, "hbk")!;
+    const u = requireUnit(state, "hbk")!;
     expect(u.ammoBins["leftTorso:1"]?.shots).toBe(4);
     expect(u.ammoBins["leftTorso:2"]?.shots).toBe(5);
     expect(ammoWeaponTotals(HBK, u.ammoBins)[4]).toBe(9);
@@ -296,7 +298,7 @@ describe("declareAttacks (game level)", () => {
     attackPhase(state);
     // DEFAULT_RNG always rolls 1 -> the tie goes to slot 2.
     declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
-    const u = getUnit(state, "hbk")!;
+    const u = requireUnit(state, "hbk")!;
     expect(u.ammoBins["leftTorso:1"]?.shots).toBe(5);
     expect(u.ammoBins["leftTorso:2"]?.shots).toBe(4);
   });

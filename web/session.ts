@@ -31,6 +31,8 @@ import {
   computeToHit,
   countDestroyedStructure,
   createBattle,
+  DEFAULT_GUNNERY,
+  DEFAULT_PILOTING,
   DROP_MP_COST,
   declareAttacks,
   dropProne,
@@ -43,7 +45,6 @@ import {
   gameLoop,
   getMapDefFor,
   getMechDefFor,
-  getUnit,
   getWeaponDefFor,
   hexDistance,
   isImmobile,
@@ -58,6 +59,7 @@ import {
   partialCoverMod,
   passMovement,
   pooledShotsLeft,
+  requireUnit,
   rotateFacing,
   SENSORS,
   STAND_MP_COST,
@@ -203,7 +205,7 @@ function drive(s: Session): GameEvent[] {
 
 export function currentActor(s: Session): UnitState | null {
   if (s.app !== "battle" || !s.battle || s.actorId === null) return null;
-  return getUnit(s.battle, s.actorId);
+  return requireUnit(s.battle, s.actorId);
 }
 
 /** Prompt body without the trailing ">". */
@@ -266,9 +268,6 @@ export function setMap(s: Session, m: MapDef): void {
   }
   s.setup.mapName = m.name;
 }
-
-export const DEFAULT_GUNNERY = 4;
-export const DEFAULT_PILOTING = 5;
 
 export function pickTeam(roster: UnitInit[]): number {
   if (roster.length === 0) return 0;
@@ -360,13 +359,13 @@ export function setUnitProp(
     case "model": {
       const m = lookupMech(raw);
       if (m === undefined) throw new Error(i18n(locale, "err.unknownModel", { model: raw }));
-      (unit as { model: string }).model = m.model;
+      unit.model = m.model;
       return { prop, value: m.model };
     }
     case "team": {
       const n = Number(raw);
       if (!Number.isInteger(n) || n < 0) throw new Error(i18n(locale, "err.badTeam"));
-      (unit as { team: number }).team = n;
+      unit.team = n;
       return { prop, value: String(n) };
     }
     case "col": {
@@ -383,7 +382,7 @@ export function setUnitProp(
         s.setup.roster.some((u) => u.id !== id && u.position.col === n && u.position.row === newRow)
       )
         throw new Error(i18n(locale, "err.hexOccupied", { col: n, row: newRow }));
-      (unit as { position: HexCoord }).position = { col: n, row: newRow };
+      unit.position = { col: n, row: newRow };
       return { prop, value: String(n) };
     }
     case "row": {
@@ -400,25 +399,25 @@ export function setUnitProp(
         s.setup.roster.some((u) => u.id !== id && u.position.col === newCol && u.position.row === n)
       )
         throw new Error(i18n(locale, "err.hexOccupied", { col: newCol, row: n }));
-      (unit as { position: HexCoord }).position = { col: newCol, row: n };
+      unit.position = { col: newCol, row: n };
       return { prop, value: String(n) };
     }
     case "facing": {
       const f = FACINGS.find((x) => x === raw.toLowerCase());
       if (!f) throw new Error(i18n(locale, "err.faceArg", { facings: FACINGS.join("/") }));
-      (unit as { facing: Facing }).facing = f;
+      unit.facing = f;
       return { prop, value: f };
     }
     case "gunnery": {
       const n = Number(raw);
       if (!Number.isInteger(n) || n < 0 || n > 7) throw new Error(i18n(locale, "err.badGunnery"));
-      (unit as { gunnery: number }).gunnery = n;
+      unit.gunnery = n;
       return { prop, value: String(n) };
     }
     case "piloting": {
       const n = Number(raw);
       if (!Number.isInteger(n) || n < 0 || n > 7) throw new Error(i18n(locale, "err.badPiloting"));
-      (unit as { piloting: number }).piloting = n;
+      unit.piloting = n;
       return { prop, value: String(n) };
     }
   }
