@@ -443,11 +443,11 @@ describe("movement", () => {
     expect(status0).toContain("4 movement points");
 
     // Same-hex landing: turning from n to ne costs 1 MP (path: one R).
-    const _queued = run(s, "place 9 9 ne");
-    // FIXME: fix following 3 lines, changed web-cli output format
-    // expect(queued.join("\n")).toContain("facing NE standing, spending 1MP out of 4MP");
-    // const status1 = run(s, "status").join("\n");
-    // expect(status1).toMatch(/1\. face \+\d+ .*total 1/);
+    const queued = run(s, "place 9 9 ne");
+    expect(queued.join("\n")).toMatch(/1MP out of 4MP/);
+    expect(queued.join("\n")).toMatch(/turn R x1: 1 MP/);
+    const status1 = run(s, "status").join("\n");
+    expect(status1).toMatch(/turn R x1: 1 MP/);
 
     expect(run(s, "done").length).toBeGreaterThan(0);
     expect(s.battle!.units[firstActor.id]!.facing).toBe("ne");

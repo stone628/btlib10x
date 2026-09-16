@@ -191,7 +191,13 @@ export type Phase = "initiative" | "movement" | "weaponAttack" | "end";
 
 /** Deterministic rng for ammo draws when the caller omits one: ties resolve
  *  to the first bin and the order is stable run to run. */
-export const DEFAULT_RNG: Rng = { d6: () => 1 };
+export const DEFAULT_RNG: Rng = {
+  d6: () => 1,
+  snapshot(): string {
+    return "";
+  },
+  load(snapshot: string): void {},
+};
 
 export interface UnitState extends MechModelHolder {
   readonly id: string;
