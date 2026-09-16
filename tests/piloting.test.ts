@@ -56,13 +56,21 @@ function hbkEnf(critsDisabled = true) {
   );
 }
 
-function toMovement(state: ReturnType<typeof hbkEnf>): void {
+function toMovement(
+  state: ReturnType<typeof hbkEnf>,
+  rng: ReturnType<typeof scriptedRng> = scriptedRng(4, 4, 2, 2),
+): void {
   // rollInitiativePhase lands the battle straight in the movement phase.
-  rollInitiativePhase(state, scriptedRng(3, 3, 4, 4));
+  // Default rng makes team 0 win: enf is the loser and acts first. Tests
+  // that need hbk to act first pass an explicit rng.
+  rollInitiativePhase(state, rng);
 }
 
-function toAttack(state: ReturnType<typeof hbkEnf>): void {
-  toMovement(state);
+function toAttack(
+  state: ReturnType<typeof hbkEnf>,
+  rng: ReturnType<typeof scriptedRng> = scriptedRng(4, 4, 2, 2),
+): void {
+  toMovement(state, rng);
   advancePhase(state);
 }
 
@@ -169,7 +177,7 @@ describe("piloting skill", () => {
 describe("20+ damage PSR", () => {
   it("success keeps the 'Mech up", () => {
     const state = hbkEnf();
-    toAttack(state);
+    toAttack(state, scriptedRng(2, 2, 5, 5));
     // AC/20 to-hit 3+3, location 1+1 (CT), 20+ PSR 3+3 (needs 6: success).
     declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
     resolveAllAttacks(state, scriptedRng(3, 3, 1, 1, 3, 3));
@@ -187,7 +195,7 @@ describe("20+ damage PSR", () => {
 
   it("failure falls the 'Mech and rolls a seatbelt check", () => {
     const state = hbkEnf();
-    toAttack(state);
+    toAttack(state, scriptedRng(2, 2, 5, 5));
     // to-hit 3+3, CT 1+1, PSR 1+2 (fail), fall dir 2 (right, +1 facing),
     // fall loc 1+1 (rightTorso), seatbelt 3+3 (needs 6: success).
     declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
@@ -725,7 +733,7 @@ describe("going prone voluntarily", () => {
 describe("prone combat", () => {
   it("rejects mixed-arm volleys and infers the propping arm", () => {
     const state = hbkEnf();
-    toAttack(state);
+    toAttack(state, scriptedRng(2, 2, 5, 5));
     const hbk = getUnit(state, "hbk");
     hbk.prone = true;
     // HBK-4G: 1 ML leftArm, 2 ML rightArm, 3 SL head.
@@ -739,7 +747,7 @@ describe("prone combat", () => {
 
   it("accepts single-arm volleys and records prone + propArm on resolution", () => {
     const state = hbkEnf();
-    toAttack(state);
+    toAttack(state, scriptedRng(2, 2, 5, 5));
     const hbk = getUnit(state, "hbk");
     hbk.prone = true;
     declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
@@ -754,7 +762,7 @@ describe("prone combat", () => {
 
   it("shows prop-left and prop-right weapon sets while prone", () => {
     const state = hbkEnf();
-    toAttack(state);
+    toAttack(state, scriptedRng(2, 2, 5, 5));
     getUnit(state, "hbk").prone = true;
     const target = suggestFireTargets(state, "hbk").targets[0]!;
     const left = target.weaponsIfPropLeft.map((w) => w.weaponIndex);
@@ -769,7 +777,7 @@ describe("prone combat", () => {
 
   it("gives a prone attacker +2 and a prone adjacent target -2", () => {
     const state = hbkEnf();
-    toAttack(state);
+    toAttack(state, scriptedRng(2, 2, 5, 5));
     const hbk = getUnit(state, "hbk");
     const base = suggestFireTargets(state, "hbk").targets[0]!.weapons[0]!.tn;
     hbk.prone = true;
@@ -783,7 +791,7 @@ describe("prone combat", () => {
 
   it("adds +2 on the first destroyed sensor and blinds on the second", () => {
     const state = hbkEnf();
-    toAttack(state);
+    toAttack(state, scriptedRng(2, 2, 5, 5));
     const base = suggestFireTargets(state, "hbk").targets[0]!.weapons[0]!.tn;
     const hbk = getUnit(state, "hbk");
     const sensors = structureSlots(state, "hbk", "head", "sensors");
@@ -805,7 +813,7 @@ describe("prone combat", () => {
 describe("pilot damage", () => {
   it("a head hit lands 1 point with a consciousness roll", () => {
     const state = hbkEnf();
-    toAttack(state);
+    toAttack(state, scriptedRng(2, 2, 5, 5));
     // ML to-hit 3+3, location 6+6 (head), consciousness 2+2 (needs 3: awake).
     declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
     resolveAllAttacks(state, scriptedRng(3, 3, 6, 6, 2, 2));
@@ -848,7 +856,7 @@ describe("pilot damage", () => {
 
   it("knockout skips the unit in the actor queue as immobile", () => {
     const state = hbkEnf();
-    toMovement(state);
+    toMovement(state, scriptedRng(2, 2, 5, 5));
     const enf = getUnit(state, "enf");
     applyPilotHits(state, enf, 1, "fall", scriptedRng(1, 1));
     expect(enf.unconscious).toBe(true);
@@ -904,7 +912,7 @@ describe("movement terrain PSRs", () => {
       ],
       true,
     );
-    toMovement(state);
+    toMovement(state, scriptedRng(2, 2, 5, 5));
     // PSR 1+2 (needs 5: fail), fall dir 2, loc 3+3, seatbelt 3+3 (success).
     executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], {
       rng: scriptedRng(1, 2, 2, 3, 3, 3, 3),
@@ -937,7 +945,7 @@ describe("movement terrain PSRs", () => {
       ],
       true,
     );
-    toMovement(state);
+    toMovement(state, scriptedRng(2, 2, 5, 5));
     // needs 4: 2+2 succeeds.
     executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], {
       rng: scriptedRng(2, 2),
@@ -970,7 +978,7 @@ describe("movement terrain PSRs", () => {
       ],
       true,
     );
-    toMovement(state);
+    toMovement(state, scriptedRng(2, 2, 5, 5));
     // PSR 1+2 (needs 5: fail), crash loc 3+3, ceil(15/10) = 2 damage.
     executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], {
       rng: scriptedRng(1, 2, 3, 3),

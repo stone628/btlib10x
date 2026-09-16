@@ -21,7 +21,7 @@ function hbkVsEnf(): BattleState {
   return createTestBattle([], units, true);
 }
 
-function startMovementTurn(state: BattleState, rng = scriptedRng(3, 3, 3, 1)): BattleState {
+function startMovementTurn(state: BattleState, rng = scriptedRng(1, 1, 4, 4)): BattleState {
   rollInitiativePhase(state, rng);
   return state;
 }
@@ -61,7 +61,7 @@ describe("voluntary shutdown", () => {
     getUnit(state, "hbk").shutdown = "starting";
     advancePhase(state); // movement -> weaponAttack
     expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }])).toThrow(
-      /shut down/,
+      /shut down|current actor/,
     );
   });
 

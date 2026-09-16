@@ -485,6 +485,30 @@ function requireUnit(state: BattleState, unitId: string): UnitState {
   return unit;
 }
 
+/**
+ * Enforce that `unitId` is the next pending actor for the given phase.
+ * Drives off `pendingActors` so the same exclusions apply: removed, shut-down
+ * (weapon phase), unconscious, and already-acted or passed units are not
+ * eligible. Callers must pass the head-of-queue unit, otherwise the engine
+ * rejects the action. Matches TW turn flow.
+ */
+function requireCurrentActor(
+  state: BattleState,
+  unitId: string,
+  phase: "movement" | "weaponAttack",
+): void {
+  if (state.initiativeWinnerTeam === null) {
+    throw new Error(`${unitId} cannot act before initiative is set`);
+  }
+  if (state.phase !== phase) {
+    throw new Error(`${unitId} is not acting in the ${phase} phase`);
+  }
+  const head = pendingActors(state)[0] ?? null;
+  if (head !== unitId) {
+    throw new Error(`${unitId} is not the current actor (expected ${head ?? "none"})`);
+  }
+}
+
 export function isNominal(unit: UnitState) {
   return unit.shutdown === "not";
 }
@@ -900,14 +924,27 @@ export function wreckLevelFor(_state: BattleState, unit: UnitState): 1 | 2 {
   return WRECK_LEVEL;
 }
 
+export interface ExecuteMoveOptions {
+  /** Final facing after the move; when omitted, the unit keeps its facing. */
+  readonly finalFacing?: Facing;
+  /** Per-call random source. Defaults to `DEFAULT_RNG`. */
+  readonly rng?: Rng;
+  /** Skip the head-of-queue actor check. Only the movement-commit layer
+   *  uses this when folding a posture change (drop/standup) into a same-
+   *  activation follow-up `executeMove`; the unit has already been pushed
+   *  to `actedThisPhase` by the posture change in that case. */
+  readonly skipActorCheck?: boolean;
+}
+
 export function executeMove(
   state: BattleState,
   unitId: string,
   mode: MoveMode,
   steps: readonly MoveStep[],
-  options: { readonly finalFacing?: Facing; readonly rng?: Rng } = {},
+  options: ExecuteMoveOptions = {},
 ): void {
   requirePhase(state, "movement");
+  if (!options.skipActorCheck) requireCurrentActor(state, unitId, "movement");
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot move`);
@@ -1174,6 +1211,9 @@ export interface DeclareAttacksOptions {
   /** Torso twist (TW p.62): shifts the attacker's effective facing by one
    *  hexside before classifying the firing arc. Defaults to untwisted. */
   readonly twist?: Arc | null;
+  /** Skip the head-of-queue actor check. Reserved for the weapon-commit
+   *  layer; user-facing callers should leave it false. */
+  readonly skipActorCheck?: boolean;
 }
 
 export function declareAttacks(
@@ -1184,12 +1224,11 @@ export function declareAttacks(
   options: DeclareAttacksOptions = {},
 ): void {
   requirePhase(state, "weaponAttack");
+  if (!options.skipActorCheck) requireCurrentActor(state, unitId, "weaponAttack");
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is destroyed`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot fire`);
   if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot fire`);
-  if (unit.declaredAttacks.length > 0)
-    throw new Error(`${unitId} already declared attacks this turn`);
 
   const def = getMechDefFor(unit);
   const sensorsOut = countDestroyedStructure(def, unit.critSlotsDestroyed, SENSORS);
