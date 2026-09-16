@@ -7,6 +7,7 @@ import {
   type HexGrid,
   hasPartialCover,
   MP_PER_FACING_CHANGE,
+  setCell,
 } from "../core/terrain.js";
 import {
   type Facing,
@@ -785,8 +786,8 @@ export function damageBuildingAt(
   state.buildings[key] = applyBuildingDamage(building, damage);
   const cf = state.buildings[key]!.cf;
   if (isCollapsed(state.buildings[key]!)) {
-    const cell = state.cells[hex.col - 1 + (hex.row - 1) * state.width]!;
-    collapseToRubble(cell);
+    const rubble = collapseToRubble(state.cells[hex.col - 1 + (hex.row - 1) * state.width]!);
+    if (rubble !== null) setCell(state, hex, rubble);
     delete state.buildings[key];
     const event = { kind: "buildingCollapsed", col: hex.col, row: hex.row } as const;
     state.events.push(event);
@@ -930,7 +931,7 @@ export function executeMove(
   const jumping = unit.moveMode === "jump";
   const proneTurn = unit.prone && unit.moveMode === "walk";
 
-  let cursor: HexCoord = { ...unit.position };
+  let cursor: HexCoord = unit.position;
   let facing: Facing = unit.facing;
   let spent = 0;
   const directions: ("forward" | "backward")[] = [];
@@ -1011,7 +1012,7 @@ export function executeMove(
       }
     }
 
-    cursor = { ...to };
+    cursor = to;
   }
 
   if (spent > budget) {
@@ -1040,7 +1041,7 @@ export function executeMove(
     mp: number,
     dirs: ("forward" | "backward")[],
   ): void => {
-    unit.position = { ...hex };
+    unit.position = hex;
     unit.facing = face;
     unit.jumpedThisTurn = jumping && steps.length > 0;
     unit.movesThisTurn = [...dirs];
@@ -1051,7 +1052,7 @@ export function executeMove(
       unitId,
       mode,
       prevMode: mode,
-      position: { ...hex },
+      position: hex,
       facing: face,
       mpSpent: mp,
       mpBudget: budget,
@@ -1066,7 +1067,7 @@ export function executeMove(
   // Progressive commit: the validated path replays step by step so a failed
   // terrain PSR stops the 'Mech in the hex it fell in (TW: falls resolve as
   // they happen in the movement phase).
-  let cur: HexCoord = { ...unit.position };
+  let cur: HexCoord = unit.position;
   let curFacing: Facing = unit.facing;
   let curSpent = 0;
   const curDirs: ("forward" | "backward")[] = [];
@@ -1090,7 +1091,7 @@ export function executeMove(
         costToClimb(cellAt(state, from).level, cellAt(state, to).level);
       curDirs.push(forward ? "forward" : "backward");
     }
-    cur = { ...to };
+    cur = to;
     // Terrain-entry PSRs (TW p.60): ground checks every entered hex, jump
     // only its landing. A fall, crash-kill, or shutdown ends the move here.
     if (!jumping || isFinal) {

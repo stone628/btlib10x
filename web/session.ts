@@ -678,7 +678,7 @@ export function placeLanding(s: Session, landing: RevealedLanding): void {
         : s.moveMode;
   const jumping = locomotion === "jump";
   const steps: MoveStep[] = [];
-  let hex: HexCoord = { ...unit.position };
+  let hex: HexCoord = unit.position;
   let facing: Facing = unit.facing;
   for (const step of landing.path) {
     const frag = step.fragment;

@@ -67,14 +67,14 @@ export interface TerrainHexDef {
 
 /** A coordinate on the hex grid (1-based column and row). */
 export interface HexCoord {
-  col: number;
-  row: number;
+  readonly col: number;
+  readonly row: number;
 }
 
 /** Terrain and elevation data for a single hex cell. */
 export interface HexCell {
-  terrain: TerrainType;
-  level: number;
+  readonly terrain: TerrainType;
+  readonly level: number;
 }
 
 /** A 'Mech wreck left behind by an ejected or pilot-killed unit. A

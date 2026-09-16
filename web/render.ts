@@ -45,7 +45,7 @@ export function createBoardRenderUnit(unit: UnitState | UnitInit): BoardRenderUn
     id: unit.id,
     team: unit.team,
     model: unit.model,
-    position: { ...unit.position },
+    position: unit.position,
     facing: unit.facing,
     ejected: false,
   };
