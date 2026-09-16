@@ -820,28 +820,6 @@ function commitAtomic(s: Session, fn: () => void): void {
   }
 }
 
-/**
- * Fold a posture-change cost into a just-executed move: the posture call and
- * `executeMove` each push `actedThisPhase` and a `moved` event, so drop the
- * duplicate act mark and add the posture MP to both the unit and its event.
- */
-function foldPostureCost(battle: BattleState, unitId: string, postureCost: number): void {
-  const lastActed = battle.actedThisPhase.lastIndexOf(unitId);
-  const prevActed = battle.actedThisPhase.lastIndexOf(unitId, lastActed - 1);
-  if (lastActed !== -1 && prevActed !== -1) {
-    battle.actedThisPhase.splice(lastActed, 1);
-  }
-  const unit = battle.units[unitId];
-  if (unit) unit.mpSpent += postureCost;
-  for (let i = battle.events.length - 1; i >= 0; i--) {
-    const ev = battle.events[i]!;
-    if (ev.kind === "moved" && ev.unitId === unitId) {
-      battle.events[i] = { ...ev, mpSpent: ev.mpSpent + postureCost };
-      break;
-    }
-  }
-}
-
 export function commitMove(s: Session): CommitResult {
   const unit = requireActor(s, "movement");
   const battle = requireBattle(s);
@@ -873,14 +851,11 @@ export function commitMove(s: Session): CommitResult {
         return;
       }
       if (steps.length > 0 || finalFacing !== null) {
-        // attemptStandUp already pushed unitId to actedThisPhase; this
-        // executeMove continues the same activation (foldPostureCost merges
-        // the duplicate act mark) so skip the head-of-queue guard.
+        const posture = STAND_MP_COST;
         executeMove(battle, unit.id, locomotion, steps, {
           ...(finalFacing === null ? { rng: s.rng } : { finalFacing, rng: s.rng }),
-          skipActorCheck: true,
+          spentMP: posture,
         });
-        foldPostureCost(battle, unit.id, STAND_MP_COST);
       }
     } else if (s.moveMode === "prone") {
       const steps = s.moveSteps;
@@ -888,13 +863,11 @@ export function commitMove(s: Session): CommitResult {
       const locomotion = s.postureMove ?? "walk";
       dropProne(battle, unit.id);
       if (steps.length > 0 || finalFacing !== null) {
-        // dropProne already pushed unitId to actedThisPhase; this
-        // executeMove continues the same activation so skip the guard.
+        const posture = DROP_MP_COST;
         executeMove(battle, unit.id, locomotion, steps, {
           ...(finalFacing === null ? { rng: s.rng } : { finalFacing, rng: s.rng }),
-          skipActorCheck: true,
+          spentMP: posture,
         });
-        foldPostureCost(battle, unit.id, DROP_MP_COST);
       }
     } else if (s.moveMode === "turn") {
       const steps = s.moveSteps;

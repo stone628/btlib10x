@@ -1219,15 +1219,16 @@ describe("current-actor guard", () => {
     );
   });
 
-  it("executeMove with skipActorCheck bypasses the head-of-queue guard", () => {
+  it("executeMove with spentMP bypasses the head-of-queue guard", () => {
     const state = startMovementTurn(hbkVsEnf());
     executeMove(state, "hbk", "standStill", []); // hbk consumes its turn
-    // Without the bypass option this would throw; with it the call completes.
+    // Without spentMP this would throw; passing it (here 0) tells executeMove
+    // the activation is mid-flight and skips the actor guard.
     // Walk toward the empty south-west hex (hbk at (2,4) facing "se" -> backing
     // west is invalid; turn first, then step along the row).
     expect(() =>
       executeMove(state, "hbk", "walk", [{ kind: "turn", facings: 1 }], {
-        skipActorCheck: true,
+        spentMP: 0,
       }),
     ).not.toThrow();
   });
