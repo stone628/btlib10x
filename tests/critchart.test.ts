@@ -10,8 +10,8 @@ function freshSetup(): S.Session {
   const s = S.newSession(42);
   s.critsDisabled = true;
   run(s, "map quickstart");
-  run(s, "add hunchy HBK-4G 0 4 9 9 n");
-  run(s, "add cicada CDA-3MA 1 4 9 8 s");
+  run(s, "add hunchy HBK-4G 9 9 n");
+  run(s, "add cicada CDA-3MA 9 8 s");
   run(s, "start");
   return s;
 }

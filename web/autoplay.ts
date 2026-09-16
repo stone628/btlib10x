@@ -21,10 +21,10 @@ export const AUTOPLAY_INTERVAL_MS = 100;
  * tests/webcli.test.ts): adjacent foes facing each other along the n/s axis.
  */
 const SCRIPT_SETUP: ReadonlyArray<{ id: string; command: string }> = [
-  { id: "AT", command: "add AT AS7-D 0 3 3 4 ne" },
-  { id: "MD", command: "add MD MC-MKII-2 1 3 5 3 sw" },
-  { id: "ENF", command: "add ENF ENF-4R 0 2 4 5 ne" },
-  { id: "WVR", command: "add WVR WVR-6R 1 2 6 4 sw" },
+  { id: "AT", command: "add AT AS7-D 3 4 ne" },
+  { id: "MD", command: "add MD MC-MKII-2 5 3 sw" },
+  { id: "ENF", command: "add ENF ENF-4R 4 5 ne" },
+  { id: "WVR", command: "add WVR WVR-6R 6 4 sw" },
 ];
 
 /** Queued commands to issue before falling back to state-based logic. */

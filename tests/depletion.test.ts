@@ -306,8 +306,8 @@ function freshBrawl(): S.Session {
   const s = S.newSession(42);
   s.critsDisabled = true;
   execute(s, "map quickstart");
-  execute(s, "add hunchy HBK-4G 0 4 9 9 n");
-  execute(s, "add cicada CDA-3MA 1 4 9 8 s");
+  execute(s, "add hunchy HBK-4G 9 9 n");
+  execute(s, "add cicada CDA-3MA 9 8 s");
   execute(s, "start");
   return s;
 }

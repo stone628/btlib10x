@@ -66,11 +66,13 @@ export const en = {
   "cmd.add.help": "place a 'Mech on the map",
   "cmd.add.arg.id": "unique unit id used by later commands",
   "cmd.add.arg.model": "'Mech model key, see 'info mech'",
-  "cmd.add.arg.team": "team number (0 or 1)",
-  "cmd.add.arg.gunnery": "pilot gunnery skill. lower is better",
-  "cmd.add.arg.piloting": "optional pilot piloting skill 0..7 (default 5). lower is better",
   "cmd.add.arg.colrow": "target hex, 1-based, must be inside the map",
   "cmd.add.arg.facing": "optional facing n|ne|se|s|sw|nw (default n)",
+  "cmd.set.help": "edit a property on a unit already on the roster",
+  "cmd.set.arg.id": "unit id to modify",
+  "cmd.set.arg.prop": "property name: model, team, col, row, facing, gunnery, piloting",
+  "cmd.set.arg.value":
+    "new value (integer for numeric props, 'Mech key for model, facing word for facing)",
   "cmd.rm.help": "remove a placed unit",
   "cmd.rm.arg.id": "id of a previously added unit",
   "cmd.statusSetup.help": "setup summary: units grouped by team, selected map",
@@ -126,7 +128,8 @@ export const en = {
 
   // command acknowledgements
   "ok.mapLoaded": "map {name}: {w}x{h}",
-  "ok.added": "{id} ({model}) placed at ({col},{row}) facing {facing}",
+  "ok.added": "{id} ({model}) placed at ({col},{row}) facing {facing} on team {team}",
+  "ok.set": "{id}: {prop} set to {value}",
   "ok.removed": "removed {id}",
   "ok.started": "=== BATTLE STARTED ===",
   "ok.modeDeclared": "{id} declares {mode}, can use {budget} movement points.",
@@ -162,6 +165,8 @@ export const en = {
   "err.badTeam": "team must be a non-negative integer",
   "err.badGunnery": "gunnery must be an integer 0..7",
   "err.badPiloting": "piloting must be an integer 0..7",
+  "err.cantSetId": "cannot modify 'id'; remove the unit and re-add instead",
+  "err.unknownProp": "unknown property '{name}'; legal: {list}",
   "err.candidate.movemode": "movement candidate not available",
   "err.candidate.attack": "possible target not available",
 

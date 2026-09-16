@@ -1,6 +1,6 @@
 import type { Arc } from "btlib10x";
 import {
-  FACINGS,
+  type FACINGS,
   getMechDefFor,
   getWeaponDefFor,
   hexDistance,
@@ -213,47 +213,49 @@ const SETUP_CMDS: Record<string, CmdDef> = {
   },
   add: {
     helpKey: "cmd.add.help",
-    usage: "add <id> <model> <team> <gunnery> <col> <row> [facing|piloting] [piloting]",
+    usage: "add <id> <model> <col> <row> [facing]",
     argsDoc: [
       ["id", "cmd.add.arg.id"],
       ["model", "cmd.add.arg.model"],
-      ["team", "cmd.add.arg.team"],
-      ["gunnery", "cmd.add.arg.gunnery"],
       ["col row", "cmd.add.arg.colrow"],
       ["facing", "cmd.add.arg.facing"],
-      ["piloting", "cmd.add.arg.piloting"],
     ],
     run: (s, a) => {
-      expectArgs(
-        L(s),
-        a,
-        6,
-        "add <id> <model> <team> <gunnery> <col> <row> [facing|piloting] [piloting]",
-      );
-      let facing = "n";
-      let piloting = 5;
-      for (const token of a.slice(6, 8)) {
-        if (/^-?\d+$/.test(token)) {
-          piloting = int(L(s), token, "piloting");
-        } else {
-          const f = FACINGS.find((x) => x === token.toLowerCase());
-          if (!f) throw new Error(i18n(L(s), "err.faceArg", { facings: FACINGS.join("/") }));
-          facing = f;
-        }
-      }
-      const validModel = S.addUnit(
+      expectArgs(L(s), a, 4, "add <id> <model> <col> <row> [facing]");
+      const facing = a[4] !== undefined ? S.resolveFacing(L(s), a[4]!) : "n";
+      const result = S.addUnit(
         s,
         a[0]!,
         a[1]!,
-        int(L(s), a[2]!, "team"),
-        int(L(s), a[3]!, "gunnery"),
-        { col: coord(L(s), a[4]!, "col"), row: coord(L(s), a[5]!, "row") },
+        { col: coord(L(s), a[2]!, "col"), row: coord(L(s), a[3]!, "row") },
         facing as (typeof FACINGS)[number],
-        piloting,
       );
       return [
-        i18n(L(s), "ok.added", { id: a[0]!, model: validModel, col: a[4]!, row: a[5]!, facing }),
+        i18n(L(s), "ok.added", {
+          id: a[0]!,
+          model: result.model,
+          col: a[2]!,
+          row: a[3]!,
+          facing,
+          team: String(result.team),
+        }),
       ];
+    },
+  },
+  set: {
+    helpKey: "cmd.set.help",
+    usage: "set <id> <prop> <value>",
+    argsDoc: [
+      ["id", "cmd.set.arg.id"],
+      ["prop", "cmd.set.arg.prop"],
+      ["value", "cmd.set.arg.value"],
+    ],
+    run: (s, a) => {
+      expectArgs(L(s), a, 3, "set <id> <prop> <value>");
+      if (a[1]!.toLowerCase() === "id") throw new Error(i18n(L(s), "err.cantSetId"));
+      const prop = S.parseUnitProp(L(s), a[1]!);
+      const { value } = S.setUnitProp(s, a[0]!, prop, a[2]!);
+      return [i18n(L(s), "ok.set", { id: a[0]!, prop, value })];
     },
   },
   rm: {

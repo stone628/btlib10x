@@ -16,8 +16,8 @@ function started(piloting?: number, model = "HBK-4G"): { s: S.Session; actor: st
   const pilotArg = piloting === undefined ? "" : ` ${piloting}`;
   // NB: facing token before piloting per `add` arg parsing. Both units share
   // model + piloting so either initiative winner can run the script.
-  expect(run(s, `add hunchy ${model} 0 4 9 9 n${pilotArg}`)).toHaveLength(1);
-  expect(run(s, `add cicada ${model} 1 4 9 8 s${pilotArg}`)).toHaveLength(1);
+  expect(run(s, `add hunchy ${model} 9 9 n${pilotArg}`)).toHaveLength(1);
+  expect(run(s, `add cicada ${model} 9 8 s${pilotArg}`)).toHaveLength(1);
   expect(run(s, "start")[0]).toContain("BATTLE STARTED");
   return { s, actor: S.currentActor(s)!.id };
 }

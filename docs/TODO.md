@@ -9,8 +9,8 @@
 
 ## To Do
 
+- show engine heatsink status somewhere in 'sheet' command
 - need snapshot keeping, capable of rollback N steps like ctrl-z
-- improve 'add' command at 'setup' phase
 - The Physical Attack Phase. advancePhase runs initiative → movement → weaponAttack → end, with the heat phase folded into the weaponAttack exit. TW inserts a physical attack phase between weapon fire and heat, carrying punch, kick, push, club, charge and Death From Above. None exists. This also strands the handActuator and shoulder crit slots, whose published effects are largely physical. (Physical-triggered PSRs — kicks, pushes, charges, DFAs — wait on this phase; see "Not viable" in `docs/CLI.md`.)
 
 ## In progress
@@ -19,16 +19,6 @@
   hull-down, water depth movement-cost change, pavement skid (vehicle-specific;
   skid displacement is not viable without a displacement mechanic — see
   `docs/CLI.md`)
-- **Piloting / consciousness roll on immobile end-of-turn** — TW end-of-turn
-  consciousness roll for an immobile 'Mech (both legs destroyed via
-  `isUnitImmobile`): on a failed roll the unit is destroyed; on a success it is
-  removed as a casualty at end of turn and counted as a loss for victory.
-  Wires into `checkVictory` via a new end-of-turn phase hook in
-  `src/rules/game.ts`; consumes the injected `Rng` for the 2d6 roll.
-  Coverage gap: a 'Mech with both legs destroyed today stays "alive" in
-  the `units` map and only loses once its head/CT is also destroyed.
-  (Now unblocked: pilot hits, consciousness rolls, and the unconscious state
-  exist, so this can build on `applyPilotHits` instead of inventing them.)
 
 ## Done
 

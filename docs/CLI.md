@@ -59,7 +59,8 @@ Examples:
 | command | effect |
 |---|---|
 | `map <name>` | load a bundled map as terrain (`beginner`, `quickstart`, `test`) |
-| `add <id> <model> <team> <gunnery> <col> <row> [facing\|piloting] [piloting]` | place unit (facing default `n`, piloting default `5`; either trailing word may be the facing or the piloting skill) |
+| `add <id> <model> <col> <row> [facing]` | place unit (team auto-assigned to smallest team; default gunnery `4`, piloting `5`, facing `n`) |
+| `set <id> <prop> <value>` | edit a property on a unit already on the roster (`model`, `team`, `col`, `row`, `facing`, `gunnery`, `piloting`; cannot modify `id`) |
 | `rm <id>` | remove placed unit |
 | `status` | setup summary: 'Mechs grouped by team, selected map name |
 | `start` | ≥2 units on ≥2 teams required; creates battle, rolls initiative → `turn` |
@@ -248,7 +249,7 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   adjacent to a wreck gains +2 partial cover when the attacker is below the
   wreck's top. The hex is rendered with an `X` mark.
 - **Piloting skill rolls, falling, prone** — every unit carries a piloting
-  skill (`add` argument, default 5). End-of-phase PSRs fire for 20+ damage
+  skill (`add`/`set` argument, default 5). End-of-phase PSRs fire for 20+ damage
   (+1), each destroyed leg/foot actuator (+1), each destroyed hip (+2), and
   a first gyro hit (+3); a destroyed gyro or leg drops the 'Mech
   automatically, as does any required PSR on a shut-down or unconscious
