@@ -206,6 +206,8 @@ export {
   dropProne,
   ejectPilot,
   executeMove,
+  type GameLoopResult,
+  gameLoop,
   getUnit,
   inferPronePropArm,
   isImmobile,
