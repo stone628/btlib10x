@@ -929,11 +929,14 @@ export interface ExecuteMoveOptions {
   readonly finalFacing?: Facing;
   /** Per-call random source. Defaults to `DEFAULT_RNG`. */
   readonly rng?: Rng;
-  /** Skip the head-of-queue actor check. Only the movement-commit layer
-   *  uses this when folding a posture change (drop/standup) into a same-
-   *  activation follow-up `executeMove`; the unit has already been pushed
-   *  to `actedThisPhase` by the posture change in that case. */
-  readonly skipActorCheck?: boolean;
+  /** MP already charged by a preceding call on this same activation
+   *  (e.g. `attemptStandUp`, `dropProne`). Added to the step-derived MP so
+   *  both `unit.mpSpent` and the pushed `moved` event carry the combined
+   *  posture+move total. Caller MUST also guarantee the unit is already
+   *  in `actedThisPhase` (it pushed itself there) — `executeMove` then
+   *  skips the head-of-queue guard and the redundant `actedThisPhase`
+   *  push, so the activation marks exactly once. */
+  readonly spentMP?: number;
 }
 
 export function executeMove(
@@ -944,7 +947,8 @@ export function executeMove(
   options: ExecuteMoveOptions = {},
 ): void {
   requirePhase(state, "movement");
-  if (!options.skipActorCheck) requireCurrentActor(state, unitId, "movement");
+  const needActorCheck = options.spentMP === undefined;
+  if (needActorCheck) requireCurrentActor(state, unitId, "movement");
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot move`);
@@ -965,6 +969,7 @@ export function executeMove(
   unit.mpSpent = 0;
   state.events.push({ kind: "moveDeclared", unitId, mode });
   const rng = options.rng ?? DEFAULT_RNG;
+  const prechargedMP = options.spentMP ?? 0;
 
   const def = getMechDefFor(unit);
   const movement = effectiveMovement(def, unit.critSlotsDestroyed);
@@ -1086,8 +1091,7 @@ export function executeMove(
     unit.facing = face;
     unit.jumpedThisTurn = jumping && steps.length > 0;
     unit.movesThisTurn = [...dirs];
-    unit.mpSpent = mp;
-    state.actedThisPhase.push(unitId);
+    unit.mpSpent = mp + prechargedMP;
     state.events.push({
       kind: "moved",
       unitId,
@@ -1095,7 +1099,7 @@ export function executeMove(
       prevMode: mode,
       position: hex,
       facing: face,
-      mpSpent: mp,
+      mpSpent: mp + prechargedMP,
       mpBudget: budget,
     });
     const moveHeat = movementHeat(mode, mp);
@@ -1148,6 +1152,7 @@ export function executeMove(
   }
 
   commitAt(cursor, options.finalFacing ?? facing, mode, spent, directions);
+  if (needActorCheck) state.actedThisPhase.push(unitId);
 
   // Running with a damaged hip/gyro, or jumping with damaged gyro, leg,
   // foot, or hip actuators (or a destroyed leg), forces a PSR at the end of
