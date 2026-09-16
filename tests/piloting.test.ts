@@ -14,7 +14,6 @@ import {
   attemptStandUp,
   createBattle,
   declareAttacks,
-  declareMove,
   dropProne,
   executeMove,
   getUnit,
@@ -390,7 +389,6 @@ describe("run-damaged PSR", () => {
     );
     toMovement(state);
     const enf = getUnit(state, "enf");
-    declareMove(state, "enf", "run");
     const hipSlots = structureSlots(state, "enf", "rightLeg", "hip");
     expect(hipSlots.length).toBeGreaterThanOrEqual(1);
     enf.critSlotsDestroyed.rightLeg[hipSlots[0]!] = true;
@@ -398,6 +396,7 @@ describe("run-damaged PSR", () => {
     executeMove(
       state,
       "enf",
+      "run",
       [
         { kind: "enter", to: { col: 2, row: 3 } },
         { kind: "enter", to: { col: 2, row: 2 } },
@@ -437,12 +436,11 @@ describe("run-damaged PSR", () => {
     );
     toMovement(state);
     const enf = getUnit(state, "enf");
-    declareMove(state, "enf", "run");
     const hipSlots = structureSlots(state, "enf", "rightLeg", "hip");
     enf.critSlotsDestroyed.rightLeg[hipSlots[0]!] = true;
     // PSR 2D6=2<7 fails; fall dir 1, loc 3+4 CT; seatbelt 5+2=7, 2D6=2 fails.
     // Consciousness 2D6=6>=3 pass.
-    executeMove(state, "enf", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+    executeMove(state, "enf", "run", [{ kind: "enter", to: { col: 2, row: 3 } }], {
       rng: scriptedRng(1, 1, 1, 3, 4, 1, 1, 3, 3),
     });
     expect(enf.prone).toBe(true);
@@ -477,12 +475,11 @@ describe("jump-damaged PSR", () => {
     );
     toMovement(state);
     const enf = getUnit(state, "enf");
-    declareMove(state, "enf", "jump");
     const footSlots = structureSlots(state, "enf", "rightLeg", "footActuator");
     expect(footSlots.length).toBeGreaterThanOrEqual(1);
     enf.critSlotsDestroyed.rightLeg[footSlots[0]!] = true;
     // PSR 5+1=6, 2D6=6 passes.
-    executeMove(state, "enf", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+    executeMove(state, "enf", "jump", [{ kind: "enter", to: { col: 2, row: 3 } }], {
       rng: scriptedRng(3, 3),
     });
     expect(
@@ -518,12 +515,11 @@ describe("jump-damaged PSR", () => {
     );
     toMovement(state);
     const enf = getUnit(state, "enf");
-    declareMove(state, "enf", "jump");
     const footSlots = structureSlots(state, "enf", "rightLeg", "footActuator");
     enf.critSlotsDestroyed.rightLeg[footSlots[0]!] = true;
     // PSR 2D6=2<6 fails; fall dir 1, loc 3+4 CT; seatbelt 5+1=6, 2D6=2 fails.
     // Consciousness 2D6=6>=3 pass.
-    executeMove(state, "enf", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+    executeMove(state, "enf", "jump", [{ kind: "enter", to: { col: 2, row: 3 } }], {
       rng: scriptedRng(1, 1, 1, 3, 4, 1, 1, 3, 3),
     });
     expect(enf.prone).toBe(true);
@@ -560,13 +556,12 @@ describe("building crash auto-fall", () => {
     const enf = getUnit(state, "enf");
     enf.damage.armor.rightLeg = 0;
     enf.damage.internalStructure.rightLeg = 1;
-    declareMove(state, "enf", "walk");
     // Building entry PSR 5+2=7, 2D6=2<7 fails → crash.
     // Crash: ceil(90/10)=9 damage → 2 groups (5+4). Each needs loc roll.
     // Group1 loc 1+4=5 rightLeg, group2 loc 1+3=4 rightArm.
     // Auto-fall (leg destroyed, seatbelt auto because immobile).
     // Fall dir 1, loc 3+4=7 CT. Consciousness 2D6=12>=3 pass.
-    executeMove(state, "enf", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+    executeMove(state, "enf", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], {
       rng: scriptedRng(1, 1, 1, 4, 1, 3, 1, 3, 4, 6, 6),
     });
     expect(enf.prone).toBe(true);
@@ -600,12 +595,11 @@ describe("building crash auto-fall", () => {
     const enf = getUnit(state, "enf");
     enf.damage.armor.rightLeg = 0;
     enf.damage.internalStructure.rightLeg = 1;
-    declareMove(state, "enf", "walk");
     // Building entry PSR 5+2=7, 2D6=2<7 fails → crash.
     // Crash 9 dmg → 2 groups (5+4). Loc: 5 rightLeg, 4 rightArm.
     // Auto-fall (leg destroyed, seatbelt auto because immobile).
     // Fall dir 1, loc 3+4=7 CT. Consciousness 2D6=2<3 fail → pilot hit.
-    executeMove(state, "enf", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+    executeMove(state, "enf", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], {
       rng: scriptedRng(1, 1, 1, 4, 1, 3, 1, 3, 4, 1, 1),
     });
     expect(enf.prone).toBe(true);
@@ -637,10 +631,9 @@ describe("building crash auto-fall", () => {
     );
     toMovement(state);
     const enf = getUnit(state, "enf");
-    declareMove(state, "enf", "walk");
     // Building entry PSR 7 pass. Crash: 2 damage front column,
     // loc 7 CT. CT has 10 armor, no IS loss.
-    executeMove(state, "enf", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+    executeMove(state, "enf", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], {
       rng: scriptedRng(3, 4, 3, 4),
     });
     expect(enf.prone).toBe(false);
@@ -912,9 +905,8 @@ describe("movement terrain PSRs", () => {
       true,
     );
     toMovement(state);
-    declareMove(state, "hbk", "walk");
     // PSR 1+2 (needs 5: fail), fall dir 2, loc 3+3, seatbelt 3+3 (success).
-    executeMove(state, "hbk", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+    executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], {
       rng: scriptedRng(1, 2, 2, 3, 3, 3, 3),
     });
     const hbk = getUnit(state, "hbk");
@@ -946,9 +938,8 @@ describe("movement terrain PSRs", () => {
       true,
     );
     toMovement(state);
-    declareMove(state, "hbk", "walk");
     // needs 4: 2+2 succeeds.
-    executeMove(state, "hbk", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+    executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], {
       rng: scriptedRng(2, 2),
     });
     const hbk = getUnit(state, "hbk");
@@ -980,9 +971,8 @@ describe("movement terrain PSRs", () => {
       true,
     );
     toMovement(state);
-    declareMove(state, "hbk", "walk");
     // PSR 1+2 (needs 5: fail), crash loc 3+3, ceil(15/10) = 2 damage.
-    executeMove(state, "hbk", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+    executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], {
       rng: scriptedRng(1, 2, 3, 3),
     });
     const hbk = getUnit(state, "hbk");

@@ -35,7 +35,6 @@ import {
   createBattle,
   DROP_MP_COST,
   declareAttacks,
-  declareMove,
   dropProne,
   effectiveFacingForTwist,
   effectiveMoveBudget,
@@ -670,7 +669,7 @@ export function declareMode(s: Session, word: string, locomotionWord?: string): 
       i18n(s.locale, "err.immobileStandstill", { id: unit.id, modes: modeSyntaxFor(unit) }),
     );
   }
-  declareMove(requireBattle(s), unit.id, mode);
+  // Engine call is deferred to commit (mode walk/run/jump/standstill executeMove).
   s.moveMode = mode;
   s.postureMove = null;
   clearMoveQueue(s);
@@ -894,10 +893,10 @@ export function commitMove(s: Session): CommitResult {
         return;
       }
       if (steps.length > 0 || finalFacing !== null) {
-        declareMove(battle, unit.id, locomotion);
         executeMove(
           battle,
           unit.id,
+          locomotion,
           steps,
           finalFacing === null ? { rng: s.rng } : { finalFacing, rng: s.rng },
         );
@@ -906,11 +905,13 @@ export function commitMove(s: Session): CommitResult {
     } else if (s.moveMode === "prone") {
       const steps = s.moveSteps;
       const finalFacing = s.moveFinalFacing;
+      const locomotion = s.postureMove ?? "walk";
       dropProne(battle, unit.id);
       if (steps.length > 0 || finalFacing !== null) {
         executeMove(
           battle,
           unit.id,
+          locomotion,
           steps,
           finalFacing === null ? { rng: s.rng } : { finalFacing, rng: s.rng },
         );
@@ -918,21 +919,17 @@ export function commitMove(s: Session): CommitResult {
       }
     } else if (s.moveMode === "turn") {
       const steps = s.moveSteps;
-      const live = battle.units[unit.id]!;
-      live.moveMode = "walk";
-      live.movesThisTurn = [];
-      live.mpSpent = 0;
-      executeMove(battle, unit.id, steps, { rng: s.rng });
+      executeMove(battle, unit.id, "walk", steps, { rng: s.rng });
     } else if (s.moveMode === "pronestill") {
-      const live = battle.units[unit.id]!;
-      live.moveMode = "standStill";
-      live.movesThisTurn = [];
-      live.mpSpent = 0;
-      executeMove(battle, unit.id, [], { rng: s.rng });
+      executeMove(battle, unit.id, "standStill", [], { rng: s.rng });
     } else {
+      // Past this branch s.moveMode is a real MoveMode (the special posture
+      // strings above were the only alternatives).
+      const mode = s.moveMode as MoveMode;
       executeMove(
         battle,
         unit.id,
+        mode,
         s.moveSteps,
         s.moveFinalFacing === null
           ? { rng: s.rng }

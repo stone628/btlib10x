@@ -5,7 +5,6 @@ import {
   advancePhase,
   checkVictory,
   declareAttacks,
-  declareMove,
   executeMove,
   getUnit,
   nextActor,
@@ -57,8 +56,7 @@ describe("example battle: Wolverine vs Griffin", () => {
     // (1 MP), steps south into (4,6), and squares up southeast (1 MP) -
     // 4 of the 8-MP run budget.
     expect(nextActor(state)).toBe("grf");
-    declareMove(state, "wvr", "run"); // running budget 8
-    executeMove(state, "wvr", [
+    executeMove(state, "wvr", "run", [
       { kind: "enter", to: { col: 4, row: 5 } }, // forward (se)
       { kind: "turn", facings: 1 }, // se -> s
       { kind: "enter", to: { col: 4, row: 6 } }, // forward (s)
@@ -68,8 +66,7 @@ describe("example battle: Wolverine vs Griffin", () => {
     expect(wvr.position).toEqual({ col: 4, row: 6 });
     expect(wvr.mpSpent).toBe(4);
     // Griffin walks in place (keeps the walked attacker modifier).
-    declareMove(state, "grf", "walk");
-    executeMove(state, "grf", []);
+    executeMove(state, "grf", "walk", []);
 
     // Weapon phase: Wolverine medium laser at range 7 (long bracket); the
     // light woods between at (7,7) add +1 -> TN 11.
@@ -93,15 +90,13 @@ describe("example battle: Wolverine vs Griffin", () => {
 
     // ---- Turn 1 ----
     rollInitiativePhase(state, scriptedRng(3, 4, 2, 3));
-    declareMove(state, "wvr", "run");
-    executeMove(state, "wvr", [
+    executeMove(state, "wvr", "run", [
       { kind: "enter", to: { col: 4, row: 5 } },
       { kind: "turn", facings: 1 },
       { kind: "enter", to: { col: 4, row: 6 } },
       { kind: "turn", facings: -1 },
     ]);
-    declareMove(state, "grf", "walk");
-    executeMove(state, "grf", []);
+    executeMove(state, "grf", "walk", []);
     advancePhase(state);
     declareAttacks(state, "wvr", [{ weaponIndex: 1, targetId: "grf" }]);
     resolveAllAttacks(state, scriptedRng(6, 5, 3, 5)); // LT hit

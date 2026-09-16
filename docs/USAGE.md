@@ -1,15 +1,23 @@
 # Using btlib10x
 
 A walkthrough of one full battle turn: build the engine state, load a map,
-create two 'Mechs, move, shoot, and check for victory. All imports come from
-the package root:
+create two 'Mechs, move, shoot, and check for victory. Every name below is
+on the public surface listed in `docs/API.md`. If you don't see a helper in
+that file, it's engine-internal — import from its source module instead.
 
 ```ts
 import {
-  createBattle, rollInitiativePhase, declareMove, executeMove,
-  advancePhase, declareAttacks,
-  resolveAllAttacks, nextActor, checkVictory, getUnit,
-  type BattleState, type Rng,
+  createBattle,
+  rollInitiativePhase,
+  executeMove,
+  advancePhase,
+  declareAttacks,
+  resolveAllAttacks,
+  nextActor,
+  checkVictory,
+  getUnit,
+  type BattleState,
+  type Rng,
 } from "btlib10x";
 ```
 
@@ -37,7 +45,8 @@ function mulberry32(seed: number): Rng {
 const rng = mulberry32(42);
 ```
 
-For tests you can also script exact die results (see `tests/helpers.ts`).
+For tests you can also script exact die results (see `tests/helpers.ts`
+`scriptedRng`).
 
 ## 2. Load terrain and create the 'Mechs
 
@@ -46,17 +55,24 @@ whose missing hexes are clear ground at level 0. The engine supports 13
 core-rulebook terrain types (`clear`, lightWoods, heavyWoods, rough, rubble,
 pavement, water1, water2, water3, and light/medium/heavy/hardened buildings),
 each with data-driven movement-cost, LOS-screening, and to-hit modifiers in
-`src/data/terrain.json`. Give a building hex a preceding terrain entry and it
-is initialized with a structural factor (`BattleState.buildings`); collapse to
-rubble happens when the CF is depleted. 'Mech models reference the
-bundled record sheets (`MECH_DEFS`: AS7-D, CDA-3MA, ENF-4R, GRF-1N, HBK-4G,
-HER-5SA, MC-MKII-2, TW-Prime, WHK-Prime, WVR-6R).
+`src/data/terrain.json` (read with `terrainMoveCost`, `costToEnter`,
+`screeningPoints`, `terrainTargetMod`, `hasPartialCover`, `blocksTargeting`).
+Give a building hex a preceding terrain entry and it is initialized with a
+structural factor in `BattleState.buildings`; collapse to rubble happens when
+the CF is depleted.
+
+'Mech models reference the bundled record sheets — look them up with
+`getMechDef(model)` or `getMechDefFor({ model })`, list every one with
+`getAllMechDefs()`. Bundled: AS7-D (Atlas), BSW-X1, BZK-F3, CDA-3MA (Cicada),
+ENF-4R (Enforcer), GRF-1N (Griffin), HBK-4G (Hunchback), HER-5SA (Hermes II),
+MC-MKII-2 (Mad Cat Mk II), TW-Prime (Mad Cat), WHK-Prime (Masakari),
+WVR-6R (Wolverine).
 
 ```ts
 const state: BattleState = createBattle(
   [
     { id: "wvr", model: "WVR-6R", team: 0, gunnery: 4,
-      position: { col: 3, row: 4 }, facing: "se" },       // facing southeast
+      position: { col: 3, row: 5 }, facing: "se" },       // facing southeast
     { id: "grf", model: "GRF-1N", team: 1, gunnery: 3,
       position: { col: 11, row: 8 }, facing: "nw" },      // facing northwest
   ],
@@ -95,15 +111,14 @@ and `pending` (in order), e.g. for a `status` display.
 
 ## 4. Movement phase
 
-Declare a movement mode, then execute steps. Each step either enters a hex or
-turns 1–5 hexsides. Costs: 1 MP per hex entered plus a per-terrain surcharge
-(lightWoods +1, heavyWoods +2, rough/rubble +1, water2/3 +3, buildings
-+1/+2/+3/+4, pavement +0; data-driven from the terrain catalog), +1
-per level of elevation changed (up or down), 1 MP per hexside turned.
+Declare a movement mode and walk the steps in a single `executeMove` call.
+Each step either enters a hex or turns 1–5 hexsides. Costs: 1 MP per hex
+entered plus a per-terrain surcharge (see `terrainMoveCost` / `costToEnter`
+from the terrain catalog), +1 per level of elevation changed (up or down), 1
+MP per hexside turned.
 
 ```ts
-declareMove(state, "wvr", "run");                  // running budget: 8 MP
-executeMove(state, "wvr", [
+executeMove(state, "wvr", "run", [
   { kind: "enter", to: { col: 4, row: 5 } },       // forward (se)
   { kind: "turn", facings: 1 },                    // se -> s (1 MP)
   { kind: "enter", to: { col: 4, row: 6 } },       // forward (s)
@@ -119,8 +134,7 @@ hex at 1 MP and ignore elevation, with the landing facing chosen freely).
 Invalid plans throw with a reason instead of corrupting state.
 
 ```ts
-declareMove(state, "grf", "walk");
-executeMove(state, "grf", []);               // walk in place
+executeMove(state, "grf", "walk", []);         // walk in place
 ```
 
 Advance to shooting:
@@ -132,32 +146,27 @@ advancePhase(state);                         // movement -> weaponAttack
 ## 5. Weapon attack phase
 
 Declare attacks per unit (one target per turn; ammo is spent at declaration).
-Weapon indexes are **1-based** and match the model's mount order, e.g. WVR-6R:
-`[1] Medium Laser (head), [2] SRM 6 (LT), [3] AC/5 (RA)`.
+Weapon indexes are **1-based** and match the model's mount order, e.g.
+WVR-6R (Wolverine): `[1] Medium Laser (head), [2] SRM 6 (leftTorso),
+[3] AC/5 (rightArm)`. The example below fires the Medium Laser.
 
 ```ts
 declareAttacks(state, "wvr", [
   { weaponIndex: 1, targetId: "grf" },
 ]);
-// Wolverine ML: gunnery 4 + ran +2 + target moved ~ + light woods +1
+// Wolverine ML: gunnery 4 + ran +2 + target moved ~0 + light woods +1
 //              + long range +4                              => TN 11
-
-declareAttacks(state, "grf", [
-  { weaponIndex: 1, targetId: "wvr" },
-]);
-// Griffin PPC:  gunnery 3 + walked +1 + target moved ~
-//              + long range +4 + light woods +1             => TN 9
 ```
 
 To fire a rapid-fire (R) weapon for its double tap, add `rapidFire: true` to
 the declaration. Declaration validates per-weapon firing arc (TW p.105:
 head/legs/torso weapons front-only, arm weapons front plus their own side,
-rear-facing torso weapons rear-only), line of sight (woods
-points ≥3 or an intervening elevation ridge blocks), range, ammo, jams,
-destroyed weapons, and aborts declarations that would auto-miss (TN > 12).
-The attack direction (TW p.107, side of the target struck) is classified
-from the target's facing and recorded on the declaration; it drives the
-hit-location table and the front/rear armor pool.
+rear-facing torso weapons rear-only), line of sight (woods points ≥3 or an
+intervening elevation ridge blocks), range, ammo, jams, destroyed weapons,
+and aborts declarations that would auto-miss (TN > 12). The attack direction
+(TW p.107, side of the target struck) is classified from the target's facing
+and recorded on the declaration; it drives the hit-location table and the
+front/rear armor pool.
 
 Resolve all declared attacks in one simultaneous sweep — TW resolves weapon
 attacks simultaneously, so a 'Mech killed during the phase still fires its
@@ -173,7 +182,10 @@ grf.damage.internalStructure; // derived from tonnage
 
 Each resolution is appended to `state.events` as an `attackResolved` event
 carrying the full breakdown (to-hit roll, cluster roll, hit groups, damage
-application, critical hits) — enough to replay the entire battle.
+application, critical hits) — enough to replay the entire battle. If you
+need a per-target suggestion before declaring, `suggestFireTargets(state,
+unitId)` returns a `FireSuggestion` with arc, LOS, range, ammo, jam, and
+prone-prop checks already applied.
 
 Commit deaths and close the turn:
 
@@ -201,8 +213,9 @@ penalties) unless `critsDisabled` was set.
 ## Worked example
 
 `tests/exampleGame.test.ts` plays exactly this scenario with fully scripted
-dice and asserts every rulebook number along the way (Wolverine TN 11 /
-Griffin TN 9 on turn 1). Use it as the canonical end-to-end reference.
+dice and asserts every rulebook number along the way (Wolverine TN 11 on
+turn 1, then a 10-turn duel where the Griffin loses its center torso). Use
+it as the canonical end-to-end reference.
 
 ## API cheat sheet
 
@@ -210,10 +223,12 @@ Griffin TN 9 on turn 1). Use it as the canonical end-to-end reference.
 | --- | --- |
 | Build battle | `createBattle(units, { terrain, width, height, critsDisabled })` |
 | Roll initiative | `rollInitiativePhase(state, rng)` |
-| Move | `declareMove` → `executeMove` |
+| Move | `executeMove(state, unitId, mode, steps)` |
+| Suggest fire plan | `suggestFireTargets(state, unitId)` |
 | Shoot | `declareAttacks` → `resolveAllAttacks` |
-| Advance | `advancePhase` |
+| Advance | `advancePhase(state)` |
 | Who acts? | `nextActor(state)` |
 | Done? | `checkVictory(state)` |
 
-See `docs/API.md` for the complete reference.
+See `docs/API.md` for the complete reference; `scripts/check-public-api.mjs`
+keeps this file in sync with the actual `dist/index.d.ts` exports.

@@ -283,7 +283,7 @@ describe("engine prone turn", () => {
   it("turns in place for 1 MP per hexside, multiple turns allowed", () => {
     const state = proneBattle();
     dropProne(state, "hbk");
-    executeMove(state, "hbk", [
+    executeMove(state, "hbk", "walk", [
       { kind: "turn", facings: 1 },
       { kind: "turn", facings: 1 },
     ]);
@@ -299,15 +299,13 @@ describe("engine prone turn", () => {
     const state = proneBattle();
     dropProne(state, "hbk");
     const to = neighbor({ col: 3, row: 3 }, "n");
-    expect(() => executeMove(state, "hbk", [{ kind: "enter", to }])).toThrow(
+    expect(() => executeMove(state, "hbk", "walk", [{ kind: "enter", to }])).toThrow(
       /turn or pronestill only/,
     );
   });
 
   it("rejects zero-hex jump declarations", () => {
     const state = proneBattle();
-    const hbk = state.units.hbk!;
-    hbk.moveMode = "jump";
-    expect(() => executeMove(state, "hbk", [])).toThrow(/at least 1 hex/);
+    expect(() => executeMove(state, "hbk", "jump", [])).toThrow(/at least 1 hex/);
   });
 });

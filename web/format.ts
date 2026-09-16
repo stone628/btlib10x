@@ -1850,7 +1850,7 @@ function isAttackResolutionKind(kind: GameEvent["kind"] | null): boolean {
 }
 
 function phaseLines(locale: LocaleId, e: Extract<GameEvent, { kind: "phase" }>): string[] {
-  const phaseLine = i18n(locale, "log.phase", { turn: e.turn, phase: e.phase })
+  const phaseLine = i18n(locale, "log.phase", { turn: e.turn, phase: e.phase });
   const len = getCompensatedLength(phaseLine);
   const separator = "-".repeat(len);
   return [" ", separator, phaseLine, separator, " "];
