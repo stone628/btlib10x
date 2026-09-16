@@ -14,8 +14,8 @@ function freshSetup(): S.Session {
   // Place two HBK-4Gs adjacent along the n/s axis with the bodies facing each
   // other so the head-to-head shot is in the front arc; we move them into a
   // side-arc configuration for the torso tests below.
-  expect(run(s, "add hunchy HBK-4G 0 4 9 9 n")).toHaveLength(1);
-  expect(run(s, "add cicada CDA-3MA 1 4 9 8 s")).toHaveLength(1);
+  expect(run(s, "add hunchy HBK-4G 9 9 n")).toHaveLength(1);
+  expect(run(s, "add cicada CDA-3MA 9 8 s")).toHaveLength(1);
   return s;
 }
 
@@ -34,8 +34,8 @@ function sideArcSetup(): S.Session {
   expect(run(s, "map quickstart")[0]).toContain("15x16");
   // hunchy at (9,9) facing n; cicada at (10,8) — bearing "ne" → hunchy's
   // rightSide arc when twist is "front", and the front arc when twist=left.
-  expect(run(s, "add hunchy HBK-4G 0 4 9 9 n")).toHaveLength(1);
-  expect(run(s, "add cicada CDA-3MA 1 4 10 8 s")).toHaveLength(1);
+  expect(run(s, "add hunchy HBK-4G 9 9 n")).toHaveLength(1);
+  expect(run(s, "add cicada CDA-3MA 10 8 s")).toHaveLength(1);
   run(s, "start");
   return s;
 }

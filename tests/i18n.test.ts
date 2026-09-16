@@ -110,8 +110,8 @@ describe("lang command", () => {
     expect(s.locale).toBe("kr");
 
     execute(s, "map beginner");
-    execute(s, "add a1 HBK-4G 0 4 2 2 s");
-    execute(s, "add b1 HBK-4G 1 4 2 4 n");
+    execute(s, "add a1 HBK-4G 2 2 s");
+    execute(s, "add b1 HBK-4G 2 4 n");
     execute(s, "start");
     autoPlay(s);
     expect(execute(s, "rematch")[0]).toBe("=== 재경기 시작 ===");
@@ -133,8 +133,8 @@ describe("localized output smoke test", () => {
     const s = newSession(7);
     execute(s, "lang kr");
     execute(s, "map beginner");
-    execute(s, "add a1 HBK-4G 0 4 8 8");
-    execute(s, "add b1 HBK-4G 1 4 12 12");
+    execute(s, "add a1 HBK-4G 8 8");
+    execute(s, "add b1 HBK-4G 12 12");
     execute(s, "start");
     if (s.battle === null) throw new Error("battle not started");
     // location abbreviations stay stable regardless of locale

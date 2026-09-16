@@ -21,8 +21,8 @@ function freshSetup(): S.Session {
   s.critsDisabled = true;
   expect(run(s, "map quickstart")[0]).toContain("15x16");
   // Adjacent foes, facing each other along the n/s axis (1-based coords).
-  expect(run(s, "add hunchy HBK-4G 0 4 9 9 n")).toHaveLength(1);
-  expect(run(s, "add cicada CDA-3MA 1 4 9 8 s")).toHaveLength(1);
+  expect(run(s, "add hunchy HBK-4G 9 9 n")).toHaveLength(1);
+  expect(run(s, "add cicada CDA-3MA 9 8 s")).toHaveLength(1);
   return s;
 }
 
@@ -160,11 +160,9 @@ describe("help <command>", () => {
     const s = S.newSession(0);
     s.critsDisabled = true;
     const out = run(s, "help add");
-    expect(out[0]).toBe(
-      "usage: add <id> <model> <team> <gunnery> <col> <row> [facing|piloting] [piloting]",
-    );
+    expect(out[0]).toBe("usage: add <id> <model> <col> <row> [facing]");
     expect(out.join("\n")).toContain("arguments:");
-    expect(out.join("\n")).toMatch(/gunnery\s+pilot gunnery skill/);
+    expect(out.join("\n")).toContain("model");
     expect(out.join("\n")).not.toContain("setup' phase");
 
     const board = run(s, "help board");
@@ -199,7 +197,7 @@ describe("board", () => {
     expect(out).not.toContain("---");
 
     run(s, "map beginner");
-    run(s, "add hbk HBK-4G 0 4 3 3");
+    run(s, "add hbk HBK-4G 3 3");
     const board = run(s, "board").join("\n");
     expect(board).toContain(`${GRID_GLYPHS.vertW}  hbk ${GRID_GLYPHS.vertE}`); // placed unit id drawn
     expect(board).toContain(FACING_GLYPH.n); // facing glyph drawn in setup
@@ -211,17 +209,17 @@ describe("board", () => {
   it("reports occupied hexes with 1-based coordinates", () => {
     const s = S.newSession(0);
     s.critsDisabled = true;
-    run(s, "add hbk HBK-4G 0 4 3 3");
-    expect(run(s, "add grf GRF-1N 1 4 3 3")[0]).toBe("error: Hex 3,3 already occupied");
+    run(s, "add hbk HBK-4G 3 3");
+    expect(run(s, "add grf GRF-1N 3 3")[0]).toBe("error: Hex 3,3 already occupied");
   });
 
   it("rejects units placed off the map", () => {
     const s = S.newSession(0);
     s.critsDisabled = true;
     run(s, "map test");
-    expect(run(s, "add a AS7-D 0 4 99 99 n")[0]).toBe("error: col 99 is outside the map (1..7)");
-    expect(run(s, "add a AS7-D 0 4 7 99 n")[0]).toBe("error: row 99 is outside the map (1..7)");
-    expect(run(s, "add a AS7-D 0 4 7 7 n")[0]).toBe("a (AS7-D) placed at (7,7) facing n");
+    expect(run(s, "add a AS7-D 99 99 n")[0]).toBe("error: col 99 is outside the map (1..7)");
+    expect(run(s, "add a AS7-D 7 99 n")[0]).toBe("error: row 99 is outside the map (1..7)");
+    expect(run(s, "add a AS7-D 7 7 n")[0]).toBe("a (AS7-D) placed at (7,7) facing n on team 0");
   });
 });
 
@@ -415,8 +413,9 @@ describe("setup flow", () => {
     const s = S.newSession(0);
     s.critsDisabled = true;
     run(s, "map quickstart");
-    run(s, "add a HBK-4G 0 4 2 2 n");
-    run(s, "add b GRF-1N 0 4 3 3 n");
+    run(s, "add a HBK-4G 2 2 n");
+    run(s, "add b GRF-1N 3 3 n");
+    run(s, "set b team 0");
     expect(run(s, "start")[0]).toMatch(/^error: .*\bteam/);
   });
 
@@ -425,7 +424,7 @@ describe("setup flow", () => {
     s.critsDisabled = true;
     expect(run(s, "map QUICKSTART")[0]).toMatch(/^map quickstart:/);
     expect(s.setup.mapName).toBe("quickstart");
-    expect(run(s, "add lower hbk-4g 0 4 2 2 n")[0]).toMatch(/lower \(HBK-4G\) placed at/);
+    expect(run(s, "add lower hbk-4g 2 2 n")[0]).toMatch(/lower \(HBK-4G\) placed at/);
     expect(s.setup.roster.find((u) => u.id === "lower")?.model).toBe("HBK-4G");
   });
 });
@@ -512,8 +511,8 @@ describe("movement", () => {
     const s = S.newSession(42);
     s.critsDisabled = true;
     run(s, "map quickstart");
-    expect(run(s, "add grf GRF-1N 0 4 5 5 n")).toHaveLength(1);
-    expect(run(s, "add wvr WVR-6R 1 4 12 12 s")).toHaveLength(1);
+    expect(run(s, "add grf GRF-1N 5 5 n")).toHaveLength(1);
+    expect(run(s, "add wvr WVR-6R 12 12 s")).toHaveLength(1);
     run(s, "start");
     run(s, "mode jump");
     const actor = S.currentActor(s)!;
@@ -612,8 +611,8 @@ describe("movement", () => {
     // Load a map so the board bounds exist; place two jump-capable 'Mechs
     // far apart on a clear region of the board; either may act first.
     run(s, "map quickstart");
-    expect(run(s, "add grf GRF-1N 0 4 5 5 n")).toHaveLength(1);
-    expect(run(s, "add wvr WVR-6R 1 4 12 12 s")).toHaveLength(1);
+    expect(run(s, "add grf GRF-1N 5 5 n")).toHaveLength(1);
+    expect(run(s, "add wvr WVR-6R 12 12 s")).toHaveLength(1);
     run(s, "start");
     const out = run(s, "mode jump").join("\n");
     expect(out).toContain("legend:");
@@ -708,8 +707,8 @@ describe("fire range checks", () => {
     s.critsDisabled = true;
     expect(run(s, "map quickstart")[0]).toContain("15x16");
     // Opposite corners: hex distance 22, beyond every IS weapon here.
-    expect(run(s, "add hunchy HBK-4G 0 4 1 1 n")).toHaveLength(1);
-    expect(run(s, "add cicada CDA-3MA 1 4 15 16 s")).toHaveLength(1);
+    expect(run(s, "add hunchy HBK-4G 1 1 n")).toHaveLength(1);
+    expect(run(s, "add cicada CDA-3MA 15 16 s")).toHaveLength(1);
     run(s, "start");
     while (s.app === "battle" && s.battle!.phase === "movement") {
       S.declareMode(s, "walk");
@@ -730,8 +729,8 @@ describe("fire range checks", () => {
     s.critsDisabled = true;
     expect(run(s, "map quickstart")[0]).toContain("15x16");
     // Adjacent, facing each other along the n/s axis (1-based coords).
-    expect(run(s, "add hunchy HBK-4G 0 4 9 9 n")).toHaveLength(1);
-    expect(run(s, "add griffy GRF-1N 1 4 9 8 s")).toHaveLength(1);
+    expect(run(s, "add hunchy HBK-4G 9 9 n")).toHaveLength(1);
+    expect(run(s, "add griffy GRF-1N 9 8 s")).toHaveLength(1);
     run(s, "start");
     while (s.app === "battle" && s.battle!.phase === "movement") {
       S.declareMode(s, "walk");
@@ -839,8 +838,8 @@ describe("seed", () => {
       const s = S.newSession(7);
       s.critsDisabled = true;
       run(s, "map beginner");
-      run(s, "add hunchy HBK-4G 0 4 9 9 n");
-      run(s, "add cicada CDA-3MA 1 4 9 8 s");
+      run(s, "add hunchy HBK-4G 9 9 n");
+      run(s, "add cicada CDA-3MA 9 8 s");
       run(s, "start");
       autoPlay(s);
       return s.battle!.events.flatMap((e) =>

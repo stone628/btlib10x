@@ -288,47 +288,161 @@ export function setMap(s: Session, m: MapDef): void {
   s.setup.mapName = m.name;
 }
 
+export const DEFAULT_GUNNERY = 4;
+export const DEFAULT_PILOTING = 5;
+
+export function pickTeam(roster: UnitInit[]): number {
+  if (roster.length === 0) return 0;
+  const counts: [number, number] = [0, 0];
+  for (const u of roster) {
+    if (u.team === 0) counts[0]++;
+    else if (u.team === 1) counts[1]++;
+  }
+  return counts[0] <= counts[1] ? 0 : 1;
+}
+
+export interface AddUnitResult {
+  model: string;
+  team: number;
+}
+
 export function addUnit(
   s: Session,
   id: string,
   model: string,
-  team: number,
-  gunnery: number,
   position: HexCoord,
   facing: Facing,
-  piloting: number = 5,
-): string {
+): AddUnitResult {
   const m = lookupMech(model);
   if (m === undefined) throw new Error(i18n(s.locale, "err.unknownModel", { model }));
   if (s.setup.roster.some((u) => u.id === id))
     throw new Error(i18n(s.locale, "err.duplicateId", { id }));
-  if (!Number.isInteger(team) || team < 0) throw new Error(i18n(s.locale, "err.badTeam"));
-  if (!Number.isInteger(gunnery) || gunnery < 0 || gunnery > 7) {
-    throw new Error(i18n(s.locale, "err.badGunnery"));
-  }
-  if (!Number.isInteger(piloting) || piloting < 0 || piloting > 7) {
-    throw new Error(i18n(s.locale, "err.badPiloting"));
-  }
   if (s.setup.roster.some((u) => sameHex(u.position, position))) {
     throw new Error(i18n(s.locale, "err.hexOccupied", { col: position.col, row: position.row }));
   }
-  if (s.setup.mapName != null) {
-    const map = getMapDefFor(s.setup);
-    if (map !== undefined) {
-      if (position.col > map.width) {
-        throw new Error(
-          i18n(s.locale, "err.outOfBounds", { label: "col", value: position.col, max: map.width }),
-        );
-      }
-      if (position.row > map.height) {
-        throw new Error(
-          i18n(s.locale, "err.outOfBounds", { label: "row", value: position.row, max: map.height }),
-        );
-      }
+  const map = s.setup.mapName != null ? getMapDefFor(s.setup) : undefined;
+  if (map !== undefined) {
+    if (position.col > map.width) {
+      throw new Error(
+        i18n(s.locale, "err.outOfBounds", { label: "col", value: position.col, max: map.width }),
+      );
+    }
+    if (position.row > map.height) {
+      throw new Error(
+        i18n(s.locale, "err.outOfBounds", { label: "row", value: position.row, max: map.height }),
+      );
     }
   }
-  s.setup.roster.push({ id, model: m.model, team, gunnery, piloting, position, facing });
-  return m.model;
+  const team = pickTeam(s.setup.roster);
+  s.setup.roster.push({
+    id,
+    model: m.model,
+    team,
+    gunnery: DEFAULT_GUNNERY,
+    piloting: DEFAULT_PILOTING,
+    position,
+    facing,
+  });
+  return { model: m.model, team };
+}
+
+export type UnitProp = "model" | "team" | "col" | "row" | "facing" | "gunnery" | "piloting";
+
+export const UNIT_PROPS: ReadonlyArray<UnitProp> = [
+  "model",
+  "team",
+  "col",
+  "row",
+  "facing",
+  "gunnery",
+  "piloting",
+];
+
+export function parseUnitProp(locale: LocaleId, word: string): UnitProp {
+  const lower = word.toLowerCase();
+  if ((UNIT_PROPS as readonly string[]).includes(lower)) return lower as UnitProp;
+  throw new Error(i18n(locale, "err.unknownProp", { name: word, list: UNIT_PROPS.join(", ") }));
+}
+
+export function findUnit(s: Session, id: string): UnitInit | undefined {
+  return s.setup.roster.find((u) => u.id === id);
+}
+
+export function setUnitProp(
+  s: Session,
+  id: string,
+  prop: UnitProp,
+  raw: string,
+): { prop: UnitProp; value: string } {
+  const unit = findUnit(s, id);
+  if (unit === undefined) throw new Error(i18n(s.locale, "err.unknownUnitId", { id }));
+  const locale = s.locale;
+  switch (prop) {
+    case "model": {
+      const m = lookupMech(raw);
+      if (m === undefined) throw new Error(i18n(locale, "err.unknownModel", { model: raw }));
+      (unit as { model: string }).model = m.model;
+      return { prop, value: m.model };
+    }
+    case "team": {
+      const n = Number(raw);
+      if (!Number.isInteger(n) || n < 0) throw new Error(i18n(locale, "err.badTeam"));
+      (unit as { team: number }).team = n;
+      return { prop, value: String(n) };
+    }
+    case "col": {
+      const n = Number(raw);
+      if (!Number.isInteger(n) || n < 1)
+        throw new Error(i18n(locale, "err.oneBased", { label: "col" }));
+      const map = s.setup.mapName != null ? getMapDefFor(s.setup) : undefined;
+      if (map !== undefined && n > map.width)
+        throw new Error(
+          i18n(locale, "err.outOfBounds", { label: "col", value: n, max: map.width }),
+        );
+      const newRow = unit.position.row;
+      if (
+        s.setup.roster.some((u) => u.id !== id && u.position.col === n && u.position.row === newRow)
+      )
+        throw new Error(i18n(locale, "err.hexOccupied", { col: n, row: newRow }));
+      (unit as { position: HexCoord }).position = { col: n, row: newRow };
+      return { prop, value: String(n) };
+    }
+    case "row": {
+      const n = Number(raw);
+      if (!Number.isInteger(n) || n < 1)
+        throw new Error(i18n(locale, "err.oneBased", { label: "row" }));
+      const map = s.setup.mapName != null ? getMapDefFor(s.setup) : undefined;
+      if (map !== undefined && n > map.height)
+        throw new Error(
+          i18n(locale, "err.outOfBounds", { label: "row", value: n, max: map.height }),
+        );
+      const newCol = unit.position.col;
+      if (
+        s.setup.roster.some((u) => u.id !== id && u.position.col === newCol && u.position.row === n)
+      )
+        throw new Error(i18n(locale, "err.hexOccupied", { col: newCol, row: n }));
+      (unit as { position: HexCoord }).position = { col: newCol, row: n };
+      return { prop, value: String(n) };
+    }
+    case "facing": {
+      const f = FACINGS.find((x) => x === raw.toLowerCase());
+      if (!f) throw new Error(i18n(locale, "err.faceArg", { facings: FACINGS.join("/") }));
+      (unit as { facing: Facing }).facing = f;
+      return { prop, value: f };
+    }
+    case "gunnery": {
+      const n = Number(raw);
+      if (!Number.isInteger(n) || n < 0 || n > 7) throw new Error(i18n(locale, "err.badGunnery"));
+      (unit as { gunnery: number }).gunnery = n;
+      return { prop, value: String(n) };
+    }
+    case "piloting": {
+      const n = Number(raw);
+      if (!Number.isInteger(n) || n < 0 || n > 7) throw new Error(i18n(locale, "err.badPiloting"));
+      (unit as { piloting: number }).piloting = n;
+      return { prop, value: String(n) };
+    }
+  }
 }
 
 export function removeUnit(s: Session, id: string): void {
