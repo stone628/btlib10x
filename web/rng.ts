@@ -10,5 +10,13 @@ export function createRng(seed: number): Rng {
       t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
       return (((t ^ (t >>> 14)) >>> 0) % 6) + 1;
     },
+    snapshot(): string {
+      return a.toString(16);
+    },
+    load(snapshot: string): void {
+      const v = parseInt(snapshot, 16);
+      if (Number.isNaN(v)) throw new Error("Invalid RNG snapshot");
+      a = v >>> 0;
+    },
   };
 }

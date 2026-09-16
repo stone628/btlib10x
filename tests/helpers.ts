@@ -68,10 +68,20 @@ export function scriptedRng(...rolls: number[]): Rng & { remaining(): number } {
       i += 1;
       return v;
     },
+    snapshot(): string {
+      return i.toString();
+    },
+    load(snapshot: string): void {
+      const v = parseInt(snapshot, 10);
+      if (Number.isNaN(v) || v < 0) throw new Error("Invalid RNG snapshot");
+      i = v;
+    },
   };
 }
 
-/** Seedable PRNG (mulberry32) mapped to D6 faces, for long randomized battles. */
+/** Seedable PRNG (mulberry32) mapped to D6 faces, for long randomized battles.
+ *  `a` is the PRNG state; snapshot/load round-trip it as a hex string so a
+ *  saved battle resumes with identical rolls. */
 export function seededRng(seed: number): Rng {
   let a = seed >>> 0;
   return {
@@ -82,6 +92,14 @@ export function seededRng(seed: number): Rng {
       t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
       const u = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
       return Math.floor(u * 6) + 1;
+    },
+    snapshot(): string {
+      return a.toString(16);
+    },
+    load(snapshot: string): void {
+      const v = parseInt(snapshot, 16);
+      if (Number.isNaN(v)) throw new Error("Invalid RNG snapshot");
+      a = v >>> 0;
     },
   };
 }

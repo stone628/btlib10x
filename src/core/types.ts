@@ -127,4 +127,6 @@ export function isLocation(value: string): value is Location {
 
 export interface Rng {
   d6(): number;
+  snapshot(): string;
+  load(snapshot: string): void;
 }
