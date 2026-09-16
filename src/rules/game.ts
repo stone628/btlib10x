@@ -2747,6 +2747,52 @@ export function passMovement(state: BattleState, unitId: string): void {
   state.actedThisPhase.push(unitId);
 }
 
+/** Outcome of one {@link gameLoop} invocation. */
+export interface GameLoopResult {
+  /** Next unit that must act, or null if no actor ready (victory or transient phase). */
+  actorId: string | null;
+  /** True iff {@link checkVictory} reported the game over during the loop. */
+  ended: boolean;
+  /** Result when ended is true; null otherwise. */
+  victory: VictoryResult | null;
+  /** Events pushed onto `state.events` during this loop call, in push order. */
+  events: readonly GameEvent[];
+}
+
+/**
+ * Advance the battle through transient phases (initiative roll, attack
+ * resolution, phase transitions) until an actor must act or the game ends.
+ * Mutates `state` in place; pure engine rules only — no session/UI state.
+ * Throws if the loop exceeds 200 iterations (debug-only safety net).
+ */
+export function gameLoop(state: BattleState, rng: Rng): GameLoopResult {
+  const beforeCount = state.events.length;
+  const slice = () => state.events.slice(beforeCount);
+  for (let i = 0; i < 200; i++) {
+    const v = checkVictory(state);
+    if (v.winnerTeam !== null || v.draw) {
+      return { actorId: null, ended: true, victory: v, events: slice() };
+    }
+    if (state.phase === "initiative") {
+      rollInitiativePhase(state, rng);
+      continue;
+    }
+    if (state.phase === "end") {
+      advancePhase(state, rng);
+      continue;
+    }
+    const id = nextActor(state);
+    if (id !== null) {
+      return { actorId: id, ended: false, victory: null, events: slice() };
+    }
+    if (state.phase === "weaponAttack") {
+      resolveAllAttacks(state, rng);
+    }
+    advancePhase(state, rng);
+  }
+  throw new Error("phase driver exceeded 200 iterations");
+}
+
 /** Suggest which unit must act next (initiative loser alternates first). */
 export function nextActor(state: BattleState): string | null {
   if (state.phase !== "movement" && state.phase !== "weaponAttack") return null;
