@@ -41,12 +41,12 @@ function bzkVsEnf(): BattleState {
   return createTestBattle([], units, true);
 }
 
-function startMovementTurn(state: BattleState, rng = scriptedRng(3, 3, 3, 1)): BattleState {
+function startMovementTurn(state: BattleState, rng = scriptedRng(1, 1, 4, 4)): BattleState {
   rollInitiativePhase(state, rng);
   return state;
 }
 
-function startAttackTurn(state: BattleState, rng = scriptedRng(3, 3, 3, 1)): BattleState {
+function startAttackTurn(state: BattleState, rng = scriptedRng(1, 1, 4, 4)): BattleState {
   advancePhase(startMovementTurn(state, rng));
   return state;
 }

@@ -873,13 +873,13 @@ export function commitMove(s: Session): CommitResult {
         return;
       }
       if (steps.length > 0 || finalFacing !== null) {
-        executeMove(
-          battle,
-          unit.id,
-          locomotion,
-          steps,
-          finalFacing === null ? { rng: s.rng } : { finalFacing, rng: s.rng },
-        );
+        // attemptStandUp already pushed unitId to actedThisPhase; this
+        // executeMove continues the same activation (foldPostureCost merges
+        // the duplicate act mark) so skip the head-of-queue guard.
+        executeMove(battle, unit.id, locomotion, steps, {
+          ...(finalFacing === null ? { rng: s.rng } : { finalFacing, rng: s.rng }),
+          skipActorCheck: true,
+        });
         foldPostureCost(battle, unit.id, STAND_MP_COST);
       }
     } else if (s.moveMode === "prone") {
@@ -888,13 +888,12 @@ export function commitMove(s: Session): CommitResult {
       const locomotion = s.postureMove ?? "walk";
       dropProne(battle, unit.id);
       if (steps.length > 0 || finalFacing !== null) {
-        executeMove(
-          battle,
-          unit.id,
-          locomotion,
-          steps,
-          finalFacing === null ? { rng: s.rng } : { finalFacing, rng: s.rng },
-        );
+        // dropProne already pushed unitId to actedThisPhase; this
+        // executeMove continues the same activation so skip the guard.
+        executeMove(battle, unit.id, locomotion, steps, {
+          ...(finalFacing === null ? { rng: s.rng } : { finalFacing, rng: s.rng }),
+          skipActorCheck: true,
+        });
         foldPostureCost(battle, unit.id, DROP_MP_COST);
       }
     } else if (s.moveMode === "turn") {

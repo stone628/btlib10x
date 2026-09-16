@@ -7,7 +7,7 @@ import { advancePhase, declareAttacks, rollInitiativePhase } from "../src/rules/
 import { createTestBattle, scriptedRng } from "./helpers.js";
 
 function startAttackTurn(state: BattleState): BattleState {
-  rollInitiativePhase(state, scriptedRng(3, 3, 3, 1));
+  rollInitiativePhase(state, scriptedRng(1, 1, 4, 4));
   advancePhase(state);
   return state;
 }

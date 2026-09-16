@@ -48,14 +48,14 @@ describe("example battle: Wolverine vs Griffin", () => {
   it("plays turn 1 exactly as the rulebook diagram describes", () => {
     const state = setup();
 
-    // Initiative: WVR rolls 7 (3+4), GRF rolls 5 (2+3) -> team 0 wins.
-    rollInitiativePhase(state, scriptedRng(3, 4, 2, 3));
-    expect(state.initiativeWinnerTeam).toBe(0);
+    // Initiative: GRF rolls 10 (5+5), WVR rolls 5 (2+3) -> team 1 wins.
+    rollInitiativePhase(state, scriptedRng(2, 3, 5, 5));
+    expect(state.initiativeWinnerTeam).toBe(1);
 
     // Movement phase: Wolverine runs southeast into (4,5), turns south
     // (1 MP), steps south into (4,6), and squares up southeast (1 MP) -
     // 4 of the 8-MP run budget.
-    expect(nextActor(state)).toBe("grf");
+    expect(nextActor(state)).toBe("wvr");
     executeMove(state, "wvr", "run", [
       { kind: "enter", to: { col: 4, row: 5 } }, // forward (se)
       { kind: "turn", facings: 1 }, // se -> s
@@ -89,7 +89,7 @@ describe("example battle: Wolverine vs Griffin", () => {
     const grfCt = (): number => getUnit(state, "grf").damage.armor.centerTorso ?? -1;
 
     // ---- Turn 1 ----
-    rollInitiativePhase(state, scriptedRng(3, 4, 2, 3));
+    rollInitiativePhase(state, scriptedRng(2, 3, 5, 5)); // wvr loses, moves first
     executeMove(state, "wvr", "run", [
       { kind: "enter", to: { col: 4, row: 5 } },
       { kind: "turn", facings: 1 },
@@ -113,7 +113,7 @@ describe("example battle: Wolverine vs Griffin", () => {
       advancePhase(state); // end -> initiative
       expect(state.turn).toBe(t);
 
-      rollInitiativePhase(state, scriptedRng(3, 3, 3, 1)); // team 0 wins
+      rollInitiativePhase(state, scriptedRng(1, 1, 4, 4)); // wvr loses, moves first
       advancePhase(state); // -> weaponAttack (both skip moving)
       if (t < 10) {
         declareAttacks(state, "wvr", [{ weaponIndex: 1, targetId: "grf" }]);

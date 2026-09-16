@@ -39,14 +39,19 @@ function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
   return createTestBattle(terrain, units, true);
 }
 
-/** Initiative always 6 vs 4 -> team 0 wins; both sides skip movement. */
-function startMovementTurn(state: BattleState, rng = scriptedRng(3, 3, 3, 1)): BattleState {
+/** Initiative rolls the first-inserted unit's team low (1+1) so it loses
+ *  and acts first. Tests asserting a specific initiative winner pass an
+ *  explicit `rng`. */
+function startMovementTurn(state: BattleState, rng = scriptedRng(1, 1, 4, 4)): BattleState {
   rollInitiativePhase(state, rng);
   return state;
 }
 
 /** Movement phase resolved with nobody moving -> ready for weapon attacks. */
-function startAttackTurn(state: BattleState, rng?: ReturnType<typeof scriptedRng>): BattleState {
+function startAttackTurn(
+  state: BattleState,
+  rng: ReturnType<typeof scriptedRng> = scriptedRng(1, 1, 4, 4),
+): BattleState {
   advancePhase(startMovementTurn(state, rng));
   return state;
 }
@@ -332,8 +337,8 @@ describe("movement phase", () => {
   });
 
   it("alternates activation via nextActor", () => {
-    const state = startMovementTurn(hbkVsEnf()); // team 0 wins initiative
-    expect(nextActor(state)).toBe("enf");
+    const state = startMovementTurn(hbkVsEnf()); // first-iterated team loses
+    expect(nextActor(state)).toBe("hbk");
     executeMove(state, "hbk", "walk", []);
     expect(nextActor(state)).toBe("enf");
   });
@@ -450,8 +455,8 @@ describe("nextActor with unequal forces", () => {
 
   it("with equal force sizes, ordering falls back to simple loser-first alternation", () => {
     const state = startMovementTurn(hbkVsEnf());
-    expect(state.initiativeWinnerTeam).toBe(0);
-    expect(activationOrder(state)).toEqual(["enf", "hbk"]);
+    expect(state.initiativeWinnerTeam).toBe(1);
+    expect(activationOrder(state)).toEqual(["hbk", "enf"]);
   });
 });
 
@@ -483,10 +488,10 @@ describe("actorQueue", () => {
   }
 
   it("fresh movement phase orders loser-first alternation and matches nextActor", () => {
-    const state = startMovementTurn(hbkVsEnf()); // team 0 wins initiative
+    const state = startMovementTurn(hbkVsEnf()); // first-iterated team loses
     const q = actorQueue(state);
     expect(q.acted).toEqual([]);
-    expect(q.pending.map((av) => av.id)).toEqual(["enf", "hbk"]);
+    expect(q.pending.map((av) => av.id)).toEqual(["hbk", "enf"]);
     expect(q.pending[0]?.id).toBe(nextActor(state));
   });
 
@@ -512,13 +517,13 @@ describe("actorQueue", () => {
 
   it("rebuilds per phase with a fresh acted pool", () => {
     const state = startMovementTurn(hbkVsEnf());
-    executeMove(state, "enf", "walk", []);
     executeMove(state, "hbk", "walk", []);
-    expect(actorQueue(state).acted.map((av) => av.id)).toEqual(["enf", "hbk"]);
+    executeMove(state, "enf", "walk", []);
+    expect(actorQueue(state).acted.map((av) => av.id)).toEqual(["hbk", "enf"]);
     advancePhase(state); // movement -> weaponAttack
     const q = actorQueue(state);
     expect(q.acted.map((av) => av.id)).toEqual([]);
-    expect(q.pending.map((av) => av.id)).toEqual(["enf", "hbk"]);
+    expect(q.pending.map((av) => av.id)).toEqual(["hbk", "enf"]);
   });
 
   it("matches the unequal-force activation order", () => {
@@ -884,7 +889,7 @@ describe("weapon attack phase", () => {
     ]);
     expect(ammoWeaponTotals(getMechDef("HBK-4G")!, getUnit(state, "hbk").ammoBins)["4"]).toBe(9);
     expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }])).toThrow(
-      /already declared/,
+      /current actor/,
     );
   });
 
@@ -915,7 +920,7 @@ describe("weapon attack phase", () => {
     expect(getUnit(state, "hbk").moveMode).toBeNull();
     expect(getUnit(state, "hbk").declaredAttacks).toHaveLength(0);
 
-    rollInitiativePhase(state, scriptedRng(3, 3, 3, 1));
+    rollInitiativePhase(state, scriptedRng(1, 1, 4, 4));
     advancePhase(state);
     declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
     resolveAllAttacks(state, scriptedRng(6, 6, 3, 4, 3, 3)); // hit CT again
@@ -925,7 +930,7 @@ describe("weapon attack phase", () => {
     advancePhase(state); // weaponAttack -> end
     advancePhase(state); // end -> initiative, turn 3
     expect(state.turn).toBe(3);
-    rollInitiativePhase(state, scriptedRng(3, 3, 3, 1));
+    rollInitiativePhase(state, scriptedRng(1, 1, 4, 4));
     advancePhase(state);
     declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
     resolveAllAttacks(state, scriptedRng(6, 6, 3, 4)); // CT IS gone
@@ -1144,9 +1149,9 @@ describe("streak missiles", () => {
 describe("passedAttacks", () => {
   it("nextActor skips units that have passed this phase", () => {
     const state = startAttackTurn(hbkVsEnf());
-    expect(nextActor(state)).toBe("enf");
-    getUnit(state, "enf").passedAttacks = true;
     expect(nextActor(state)).toBe("hbk");
+    getUnit(state, "hbk").passedAttacks = true;
+    expect(nextActor(state)).toBe("enf");
   });
 
   it("passedAttacks resets at the end of the turn", () => {
@@ -1155,5 +1160,75 @@ describe("passedAttacks", () => {
     advancePhase(state); // weaponAttack -> end
     advancePhase(state); // end -> initiative, turn 2
     expect(getUnit(state, "enf").passedAttacks).toBe(false);
+  });
+});
+
+describe("current-actor guard", () => {
+  it("executeMove rejects a unit that is not head of the pending queue", () => {
+    const state = startMovementTurn(hbkVsEnf());
+    // hbk is head; advance through it so the queue head becomes enf.
+    executeMove(state, "hbk", "standStill", []);
+    expect(nextActor(state)).toBe("enf");
+    expect(() => executeMove(state, "hbk", "walk", [])).toThrow(/not the current actor/);
+  });
+
+  it("executeMove rejects a unit that has already acted this phase", () => {
+    const state = startMovementTurn(hbkVsEnf());
+    executeMove(state, "hbk", "walk", []);
+    expect(state.actedThisPhase).toContain("hbk");
+    expect(() => executeMove(state, "hbk", "walk", [])).toThrow(/not the current actor/);
+  });
+
+  it("executeMove rejects acting before initiative is rolled", () => {
+    const state = hbkVsEnf(); // still in initiative phase
+    expect(() => executeMove(state, "hbk", "walk", [])).toThrow(/current actor|initiative/);
+  });
+
+  it("executeMove rejects an unconscious unit (filtered from pending queue)", () => {
+    const state = startMovementTurn(hbkVsEnf());
+    executeMove(state, "hbk", "walk", []); // hbk acts first
+    getUnit(state, "enf").unconscious = true;
+    // hbk is no longer eligible (already acted) and enf is filtered out.
+    expect(nextActor(state)).toBeNull();
+    expect(() => executeMove(state, "enf", "walk", [])).toThrow(/not the current actor/);
+  });
+
+  it("declareAttacks rejects a unit that is not head of the pending queue", () => {
+    const state = startAttackTurn(hbkVsEnf());
+    expect(() => declareAttacks(state, "enf", [{ weaponIndex: 1, targetId: "hbk" }])).toThrow(
+      /not the current actor/,
+    );
+  });
+
+  it("declareAttacks rejects a unit that passedAttacks this phase", () => {
+    const state = startAttackTurn(hbkVsEnf());
+    getUnit(state, "hbk").passedAttacks = true;
+    expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }])).toThrow(
+      /not the current actor/,
+    );
+  });
+
+  it("declareAttacks rejects a shut-down unit in the weapon phase", () => {
+    const state = startAttackTurn(hbkVsEnf());
+    getUnit(state, "hbk").shutdown = "heat";
+    // hbk is filtered out of the weapon phase queue (shutdown units skip),
+    // leaving enf as the head.
+    expect(nextActor(state)).toBe("enf");
+    expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }])).toThrow(
+      /not the current actor/,
+    );
+  });
+
+  it("executeMove with skipActorCheck bypasses the head-of-queue guard", () => {
+    const state = startMovementTurn(hbkVsEnf());
+    executeMove(state, "hbk", "standStill", []); // hbk consumes its turn
+    // Without the bypass option this would throw; with it the call completes.
+    // Walk toward the empty south-west hex (hbk at (2,4) facing "se" -> backing
+    // west is invalid; turn first, then step along the row).
+    expect(() =>
+      executeMove(state, "hbk", "walk", [{ kind: "turn", facings: 1 }], {
+        skipActorCheck: true,
+      }),
+    ).not.toThrow();
   });
 });

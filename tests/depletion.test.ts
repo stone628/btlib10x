@@ -276,7 +276,7 @@ function hbkBattle(): ReturnType<typeof createBattle> {
 }
 
 function attackPhase(state: ReturnType<typeof createBattle>): void {
-  rollInitiativePhase(state, scriptedRng(3, 3, 3, 1));
+  rollInitiativePhase(state, scriptedRng(1, 1, 4, 4));
   advancePhase(state);
 }
 

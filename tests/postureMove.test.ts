@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { neighbor } from "../src/core/hex.js";
-import { dropProne, executeMove, rollInitiativePhase } from "../src/rules/game.js";
+import { executeMove, getUnit, rollInitiativePhase } from "../src/rules/game.js";
 import * as S from "../web/session.js";
 import { createTestBattle, execute, scriptedRng } from "./helpers.js";
 
@@ -282,7 +282,7 @@ describe("engine prone turn", () => {
 
   it("turns in place for 1 MP per hexside, multiple turns allowed", () => {
     const state = proneBattle();
-    dropProne(state, "hbk");
+    getUnit(state, "hbk").prone = true;
     executeMove(state, "hbk", "walk", [
       { kind: "turn", facings: 1 },
       { kind: "turn", facings: 1 },
@@ -297,8 +297,8 @@ describe("engine prone turn", () => {
 
   it("rejects hex enters while prone", () => {
     const state = proneBattle();
-    dropProne(state, "hbk");
     const to = neighbor({ col: 3, row: 3 }, "n");
+    getUnit(state, "hbk").prone = true;
     expect(() => executeMove(state, "hbk", "walk", [{ kind: "enter", to }])).toThrow(
       /turn or pronestill only/,
     );
