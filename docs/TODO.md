@@ -104,17 +104,29 @@
 - **Pilot ejection / wrecks** — `ejectPilot` (movement phase only) marks a
   unit removed (`removed = "pilotEjected"`, destroyed stays `"not"`; counts
   toward victory; skipped by the actor
-  queue and occupancy checks) and spawns a permanent **level-2 wreck**
-  (`BattleState.wrecks`, `WreckState { unitId; level }`). Wreck hexes are
-  unenterable: `reachableLandings` excludes them via the `wreckAt` option and
-  `executeMove` rejects entry/landing. LOS is blocked when a wreck lies
-  strictly between endpoints (`losBlockedByWreck`, new optional `wrecks`
-  arg to `losClear`). A target adjacent to a wreck takes +2 partial cover
-  (larger of terrain/wreck applies, leg-roll strikes the cover) via
-  `partialCoverMod` wired through `declareAttacks`/`resolveUnitAttacks`/
-  `suggestFireTargets`; replaced `AttackModifiers.targetPartialCover` with
-  `partialCoverMod?`. Web CLI `mode eject` + `done`, board `X` mark,
-  i18n `err.alreadyEjected`/`log.ejected` en+kr. Wreck destruction deferred.
+  queue and occupancy checks) and spawns a permanent wreck
+  (`BattleState.wrecks`, `WreckState { unitId; level }`). Wreck level is
+  decided by `wreckLevelFor` (Tactical Operations): light chassis (<40 t)
+  or prone posture → level-1 wreck; otherwise the standard TW level-2
+  wreck. `removePilotKilled` (six pilot hits) uses the same level rule.
+  Wreck hexes are unenterable: `reachableLandings` excludes them via the
+  `wreckAt` option and `executeMove` rejects entry/landing.
+  LOS / partial-cover outcomes (engine-side, Tactical Operations):
+  - L2 wreck between endpoints blocks LOS entirely (`losBlockedByWreck`,
+    optional `wrecks` arg to `losClear`); a L1 wreck does NOT block LOS
+    between two standing standard 'Mechs.
+  - L2 wreck + adjacent target → +2 partial cover; +1 (per TO) when the
+    attacker is at/above the wreck top and the target is elevated
+    (target hex higher than attacker) or Level 3+; larger of terrain/wreck
+    applies, leg-roll strikes the cover (`partialCoverMod` wired through
+    `declareAttacks`/`resolveUnitAttacks`/`suggestFireTargets`).
+  - L1 wreck + adjacent standing-ground target (not prone, not shut down,
+    not unconscious) + attacker below wreck top → +1 partial cover; +0
+    against prone/shutdown/unconscious targets.
+  Web CLI `mode eject` + `done`, board `X` mark, i18n
+  `err.alreadyEjected`/`log.ejected` en+kr. Wreck destruction deferred; the
+  TO rough / severe-rough MP surcharge and entry PSR/PSC stay deferred
+  because entry into wreck hexes is still rejected.
 - **Immobile/shutdown target modifier** — `targetMovementModifier` gains an
   `immobile` flag: a target that cannot move (shut down, or both legs
   destroyed) applies the −4 immobile target-number modifier instead of the

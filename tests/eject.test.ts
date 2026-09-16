@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { neighbor } from "../src/core/hex.js";
 import { resolveWeaponAttack } from "../src/rules/attack.js";
-import type { BattleState, UnitInit } from "../src/rules/game.js";
+import type { BattleState, TerrainHexDef, UnitInit } from "../src/rules/game.js";
 import {
   checkVictory,
   declareMove,
@@ -117,15 +117,46 @@ describe("eject", () => {
     expect(() => executeMove(state, "enf", [{ kind: "enter", to: wreck }])).toThrow(/wreck/);
   });
 
-  it("blocks LOS only when the wreck lies strictly between the endpoints", () => {
+  it("a level-2 wreck blocks LOS only when lying strictly between the endpoints", () => {
     const state = startMovementTurn(hbkVsEnf());
     getUnit(state, "hbk").position = { col: 3, row: 4 };
     const from = { col: 2, row: 4 };
     const to = { col: 4, row: 4 };
     expect(losClear(state, from, to)).toBe(true);
     ejectPilot(state, "hbk");
+    expect(state.wrecks["3,4"]?.level).toBe(2);
     expect(losClear(state, from, to, state.wrecks)).toBe(false);
     expect(losClear(state, from, { col: 3, row: 4 }, state.wrecks)).toBe(true);
+  });
+
+  it("a level-1 wreck does not block LOS between standard ground 'Mechs (TO)", () => {
+    const units: UnitInit[] = [
+      // BZK-F3 is 35t (light) → eject produces a level-1 wreck per TO.
+      {
+        id: "bzk",
+        model: "BZK-F3",
+        team: 0,
+        gunnery: 4,
+        position: { col: 3, row: 4 },
+        facing: "n",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 5, row: 4 },
+        facing: "nw",
+      },
+    ];
+    const state = startMovementTurn(createTestBattle([], units, true));
+    const from = { col: 2, row: 4 };
+    const to = { col: 4, row: 4 };
+    expect(losClear(state, from, to)).toBe(true);
+    ejectPilot(state, "bzk");
+    expect(state.wrecks["3,4"]?.level).toBe(1);
+    // Tactical Operations: L1 does not block LOS between two standing standard 'Mechs.
+    expect(losClear(state, from, to, state.wrecks)).toBe(true);
   });
 
   it("grants +2 partial cover to a target adjacent to a wreck", () => {
@@ -154,6 +185,207 @@ describe("eject", () => {
     expect(partialCoverMod(state, getUnit(state, "cda"), getUnit(state, "enf"))).toBe(2);
     getUnit(state, "enf").position = { col: 1, row: 5 };
     expect(partialCoverMod(state, getUnit(state, "cda"), getUnit(state, "enf"))).toBe(0);
+  });
+
+  it("prone eject leaves a level-1 wreck regardless of tonnage (TO)", () => {
+    const state = startMovementTurn(hbkVsEnf());
+    getUnit(state, "hbk").prone = true;
+    ejectPilot(state, "hbk");
+    expect(state.wrecks["2,4"]).toEqual({ unitId: "hbk", level: 1 });
+  });
+
+  it("light 'Mech eject leaves a level-1 wreck regardless of posture (TO)", () => {
+    // BZK-F3 is 35t (light). Eject from standing or prone → L1 either way.
+    const units: UnitInit[] = [
+      {
+        id: "bzk",
+        model: "BZK-F3",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 4 },
+        facing: "n",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 5, row: 4 },
+        facing: "nw",
+      },
+    ];
+    const standing = startMovementTurn(createTestBattle([], units, true));
+    ejectPilot(standing, "bzk");
+    expect(standing.wrecks["2,4"]).toEqual({ unitId: "bzk", level: 1 });
+
+    const proneUnits: UnitInit[] = [
+      {
+        id: "bzk",
+        model: "BZK-F3",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 4 },
+        facing: "n",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 5, row: 4 },
+        facing: "nw",
+      },
+    ];
+    const prone = startMovementTurn(createTestBattle([], proneUnits, true));
+    getUnit(prone, "bzk").prone = true;
+    ejectPilot(prone, "bzk");
+    expect(prone.wrecks["2,4"]).toEqual({ unitId: "bzk", level: 1 });
+  });
+
+  it("L1 wreck grants +1 partial cover to a standing ground target behind it (TO)", () => {
+    // Light wreck (BZK) at (3,3); ENF adjacent at (3,4) standing; attacker
+    // CDA at (2,4) on the same level as the target — below the L1 wreck top.
+    const units: UnitInit[] = [
+      {
+        id: "bzk",
+        model: "BZK-F3",
+        team: 0,
+        gunnery: 4,
+        position: { col: 3, row: 3 },
+        facing: "n",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 3, row: 4 },
+        facing: "s",
+      },
+      {
+        id: "cda",
+        model: "CDA-3MA",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 4 },
+        facing: "se",
+      },
+    ];
+    const state = startMovementTurn(createTestBattle([], units, true));
+    ejectPilot(state, "bzk");
+    expect(state.wrecks["3,3"]?.level).toBe(1);
+    expect(partialCoverMod(state, getUnit(state, "cda"), getUnit(state, "enf"))).toBe(1);
+  });
+
+  it("L1 wreck provides no cover to a prone target (TO: standing ground only)", () => {
+    const units: UnitInit[] = [
+      {
+        id: "bzk",
+        model: "BZK-F3",
+        team: 0,
+        gunnery: 4,
+        position: { col: 3, row: 3 },
+        facing: "n",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 3, row: 4 },
+        facing: "s",
+      },
+      {
+        id: "cda",
+        model: "CDA-3MA",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 4 },
+        facing: "se",
+      },
+    ];
+    const state = startMovementTurn(createTestBattle([], units, true));
+    ejectPilot(state, "bzk");
+    getUnit(state, "enf").prone = true;
+    expect(partialCoverMod(state, getUnit(state, "cda"), getUnit(state, "enf"))).toBe(0);
+  });
+
+  it("L2 wreck: +1 partial cover for an elevated target with attacker at wreck top (TO)", () => {
+    // HBK wreck at (3,3) on default hex level 0 → wreckTop = 0 + 2 = 2.
+    // Target ENF on hex level 3 (Level 3+ target). Attacker CDA on hex level
+    // 2 (equal to wreck top, so attacker is "at" the wreck top → attacker is
+    // NOT below). Target is elevated vs attacker. → TO +1 branch fires.
+    const units: UnitInit[] = [
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 3, row: 3 },
+        facing: "n",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 3, row: 4 },
+        facing: "s",
+      },
+      {
+        id: "cda",
+        model: "CDA-3MA",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 3 },
+        facing: "se",
+      },
+    ];
+    const terrain: TerrainHexDef[] = [
+      { col: 3, row: 4, type: "clear", level: 3 },
+      { col: 2, row: 3, type: "clear", level: 2 },
+    ];
+    const state = startMovementTurn(createTestBattle(terrain, units, true));
+    ejectPilot(state, "hbk");
+    expect(state.wrecks["3,3"]?.level).toBe(2);
+    expect(partialCoverMod(state, getUnit(state, "cda"), getUnit(state, "enf"))).toBe(1);
+  });
+
+  it("L2 wreck still grants +2 when the attacker is below the wreck top even with an elevated target", () => {
+    // Target is on hex level 2 (elevated above attacker), but the attacker is
+    // still below the wreck top (cell level 0 < 0 + 2 = 2) → TW default +2
+    // path wins over the TO elevated-target branch.
+    const units: UnitInit[] = [
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        position: { col: 3, row: 3 },
+        facing: "n",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        position: { col: 3, row: 4 },
+        facing: "s",
+      },
+      {
+        id: "cda",
+        model: "CDA-3MA",
+        team: 0,
+        gunnery: 4,
+        position: { col: 2, row: 4 },
+        facing: "se",
+      },
+    ];
+    const terrain: TerrainHexDef[] = [{ col: 3, row: 4, type: "clear", level: 2 }];
+    const state = startMovementTurn(createTestBattle(terrain, units, true));
+    ejectPilot(state, "hbk");
+    expect(state.wrecks["3,3"]?.level).toBe(2);
+    expect(partialCoverMod(state, getUnit(state, "cda"), getUnit(state, "enf"))).toBe(2);
   });
 
   it("strikes the cover on a leg roll and deals no damage", () => {

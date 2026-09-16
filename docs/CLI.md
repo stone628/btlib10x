@@ -315,8 +315,21 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   used).
 - **Building structural damage beyond CF** — basements / multi-floor
   interiors, structural-factor transfer between levels.
-- **Wreck destruction** — wrecks are permanent level-2 obstacles; clearing,
-  damaging, or merging wrecks with building collapse is deferred.
+- **Wreck destruction** — wrecks are permanent obstacles; clearing,
+  damaging, or merging wrecks with building collapse is deferred. Movement
+  entry is still rejected (`executeMove` throw; `reachableLandings` ignores
+  wreck hexes via the `wreckAt` option), so the Tactical Operations rough
+  (+1 MP) and severe-rough (+2 MP) entry surcharge and the PSR/PSC triggers
+  that come with it remain unimplemented pending an open-entry policy.
+- **Tactical Operations wreck levels** (engine-side, baked in):
+  light 'Mechs (<40 t) and prone units with a killed/ejected pilot leave a
+  level-1 wreck; everything else leaves a level-2 wreck
+  (`wreckLevelFor` in `src/rules/game.ts`). L1 wrecks do **not** block LOS
+  between two standing standard 'Mechs but grant +1 partial cover to
+  standing ground 'Mechs behind them; L2 wrecks block LOS entirely, give
+  +2 partial cover to adjacent targets, and +1 (per TO) to elevated or
+  Level 3+ targets when the attacker is at/above the wreck top
+  (`losBlockedByWreck`, `partialCoverMod`).
 - **Quadripedal 'Mechs**, vehicles, infantry, battle armor.
 - **Called shots**, aimed shots, spotter / indirect fire, ECM.
 - **Pilot abilities** (edge, etc.), quirks, experience beyond the gunnery

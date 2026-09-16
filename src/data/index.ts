@@ -16,6 +16,15 @@ export function getMechDef(model: string): ResolvedMechDef | undefined {
   return MECH_DEFS.get(model);
 }
 
+/** Tonnage of the unit's mech chassis. Reads the catalog def; throws on
+ *  unknown models. TW weight class boundaries run 20/35/55/75/100; rule code
+ *  using tonnage (e.g. light-mech wreck level, see
+ *  `wreckLevelFor` in `src/rules/game.ts`) keys off the raw `tonnage` field,
+ *  not the human-friendly `weightClass` label. */
+export function getUnitTonnage(h: MechModelHolder): number {
+  return getMechDefFor(h).tonnage;
+}
+
 export { type AmmoNameHolder, getAmmoDefFor } from "./ammo.schema.js";
 export { getWeaponDefFor, type WeaponNameHolder } from "./weapon.schema.js";
 
