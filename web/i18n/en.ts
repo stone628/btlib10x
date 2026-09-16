@@ -48,8 +48,6 @@ export const en = {
   "cmd.lang.arg.locale": "locale code. omit to show the current language",
   "cmd.board.help": "draw the ASCII battle grid",
   "cmd.clear.help": "clear the scrollback screen",
-  "cmd.log.help": "show last N events (default 10)",
-  "cmd.log.arg.n": "how many recent events to show (default 10)",
   "cmd.info.help": "look up 'Mech models, bundled maps, or weapons",
   "cmd.info.arg.mech": "model key like HBK-4G. omit to list all models",
   "cmd.info.arg.map": "bundled map name; omit to list maps",

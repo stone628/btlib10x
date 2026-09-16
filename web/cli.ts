@@ -120,15 +120,6 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
     run: (s) => [boardChunk(s)],
   },
   clear: { helpKey: "cmd.clear.help", run: () => ["\f"] },
-  log: {
-    helpKey: "cmd.log.help",
-    usage: "log [n]",
-    argsDoc: [["n", "cmd.log.arg.n"]],
-    run: (s, a) => {
-      const n = a[0] !== undefined ? int(L(s), a[0], "n") : 10;
-      return formatLog(L(s), s.battle?.events ?? [], n);
-    },
-  },
   info: {
     helpKey: "cmd.info.help",
     usage: "info mech [model] | info map [name] | info weapon [name]",

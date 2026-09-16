@@ -47,8 +47,6 @@ export const kr: Catalog = {
   "cmd.lang.arg.locale": "언어 코드. 생략하면 현재 언어 표시",
   "cmd.board.help": "ASCII 전장 격자 그리기",
   "cmd.clear.help": "화면 스크롤백 지우기",
-  "cmd.log.help": "최근 N개 이벤트 표시 (기본 10)",
-  "cmd.log.arg.n": "표시할 최근 이벤트 개수 (기본 10)",
   "cmd.info.help": "'메크 모델 또는 내장 맵, 무기 조회",
   "cmd.info.arg.mech": "HBK-4G 같은 모델 키. 생략하면 전체 목록",
   "cmd.info.arg.map": "내장 맵 이름. 생략하면 전체 목록",
