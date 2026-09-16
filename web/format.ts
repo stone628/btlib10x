@@ -1849,12 +1849,17 @@ function isAttackResolutionKind(kind: GameEvent["kind"] | null): boolean {
   );
 }
 
+function phaseLines(locale: LocaleId, e: Extract<GameEvent, { kind: "phase" }>): string[] {
+  const phaseLine = i18n(locale, "log.phase", { turn: e.turn, phase: e.phase })
+  const len = getCompensatedLength(phaseLine);
+  const separator = "-".repeat(len);
+  return [" ", separator, phaseLine, separator, " "];
+}
+
 function eventLines(locale: LocaleId, e: GameEvent): string[] {
   switch (e.kind) {
-    case "turn":
-      return [i18n(locale, "log.turn", { turn: e.turn })];
     case "phase":
-      return [i18n(locale, "log.phase", { phase: e.phase })];
+      return phaseLines(locale, e);
     case "initiative": {
       const rolls = Object.entries(e.rolls)
         .sort((a, b) => Number(a[0]) - Number(b[0]))
