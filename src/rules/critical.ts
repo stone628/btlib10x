@@ -207,9 +207,13 @@ const LEG_ACTUATORS: ReadonlySet<string> = new Set([
   "lowerLegActuator",
   "footActuator",
 ]);
-const HIP = "hip";
-const COCKPIT = "cockpit";
-const JUMPJET = "jumpJet";
+export const ENGINE = "engine";
+export const GYRO = "gyro";
+export const HIP = "hip";
+export const LIFE_SUPPORT = "lifeSupport";
+export const SENSORS = "sensors";
+export const COCKPIT = "cockpit";
+export const JUMPJET = "jumpJet";
 
 /**
  * Is the given static slot capable of taking a critical hit (i.e. its
@@ -269,7 +273,7 @@ const HALF_SELECT_MAX = 3;
 /** Reroll cap when hunting a crit-hittable slot. */
 const SLOT_REROLL_CAP = 50;
 /** Destroyed engine slots that kill the 'Mech (TW p.33). */
-const ENGINE_SLOTS_KILL = 3;
+export const ENGINE_SLOTS_KILL = 3;
 /** Running MP numerator over walking MP (run = ceil(walk * 3 / 2)). */
 const RUN_WALK_NUMERATOR = 3;
 /** Running MP denominator over walking MP. */
@@ -681,9 +685,9 @@ function applySlotHit(
       if (j >= 0 && j < state.destroyed[loc].length) state.destroyed[loc][j] = true;
     }
   }
-  if (name === "engine") {
+  if (name === ENGINE) {
     // ENGINE_SLOTS_KILL engine crit slots destroyed = 'Mech killed (TW p.33).
-    const engineCount = countDestroyedEngineSlots(def, state.destroyed);
+    const engineCount = countDestroyedEngine(def, state.destroyed);
     if (engineCount >= ENGINE_SLOTS_KILL) {
       state.killedReason = "engineDestroyed";
       state.rows.push({
@@ -809,21 +813,143 @@ export function effectiveMovement(
   return { walking: walk, running: run, jumping: jump };
 }
 
+/** Per-component crit counts (destroyed/total) for status display. */
+export interface CritComponentCount {
+  readonly destroyed: number;
+  readonly total: number;
+}
+
 /** Number of destroyed `engine` crit slots on the 'Mech. */
-export function countDestroyedEngineSlots(
+export function countDestroyedEngine(
   def: ResolvedMechDef,
   critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
 ): number {
-  let n = 0;
-  for (const loc of TORSO_LOCATIONS) {
+  let destroyed = 0;
+  for (const name of iterateDestoyedStructures(def, TORSO_LOCATIONS, critSlotsDestroyed)) {
+    if (name === ENGINE) destroyed += 1;
+  }
+  return destroyed;
+}
+
+function countDestroyedHeadStructure(
+  def: ResolvedMechDef,
+  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+  name: string,
+): number {
+  let destroyed = 0;
+  for (const n of iterateDestoyedStructures(def, ["head"], critSlotsDestroyed)) {
+    if (n === name) destroyed += 1;
+  }
+  return destroyed;
+}
+
+export function countDestroyedSensor(
+  def: ResolvedMechDef,
+  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+): number {
+  return countDestroyedHeadStructure(def, critSlotsDestroyed, SENSORS);
+}
+
+export function countDestroyedLifeSupport(
+  def: ResolvedMechDef,
+  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+): number {
+  return countDestroyedHeadStructure(def, critSlotsDestroyed, LIFE_SUPPORT);
+}
+
+export function countDestroyedGyro(
+  def: ResolvedMechDef,
+  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+): number {
+  let destroyed = 0;
+  for (const name of iterateDestoyedStructures(def, ["centerTorso"], critSlotsDestroyed)) {
+    if (name === GYRO) destroyed += 1;
+  }
+  return destroyed;
+}
+
+export function countDestroyedHip(
+  def: ResolvedMechDef,
+  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+): number {
+  let destroyed = 0;
+  for (const name of iterateDestoyedStructures(def, ["leftLeg", "rightLeg"], critSlotsDestroyed)) {
+    if (name === HIP) destroyed += 1;
+  }
+  return destroyed;
+}
+
+function* iterateDestoyedStructures(
+  def: ResolvedMechDef,
+  locations: Readonly<Location[]>,
+  destroyed: Readonly<Record<Location, readonly boolean[]>>,
+): Generator<string> {
+  for (const loc of locations) {
     const layout = def.critSlots[loc];
-    const destroyed = critSlotsDestroyed[loc];
+    const flags = destroyed[loc];
     for (let i = 0; i < layout.length; i++) {
       const slot = layout[i];
-      if (slot?.kind === "structure" && slot.name === "engine" && (destroyed?.[i] ?? false)) {
-        n += 1;
+      if (slot?.kind === "structure" && (flags?.[i] ?? false)) {
+        yield slot.name;
       }
     }
   }
-  return n;
+}
+
+/**
+ * Aggregate crit-slot counts for the four components whose mechanical impact
+ * is surfaceable in 'Mech status: engine (kill threshold 3), gyro (PSR/cannot
+ * stand), sensors (to-hit / blind), life support (pilot hits at heat 15+/26+).
+ * Engine `total` is fixed at 3 per TW (matches the destroy threshold in
+ * `applySlotHit`); the other totals derive from the def's crit layout.
+ */
+export interface CoreComponentDestroyCounts {
+  readonly engine: number;
+  readonly gyro: number;
+  readonly sensors: number;
+  readonly lifeSupport: number;
+}
+
+export function computeCritCounts(
+  def: ResolvedMechDef,
+  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+): CoreComponentDestroyCounts {
+  let engineDestoryed = 0;
+  let gyroDestroyed = 0;
+  let sensorDestroyed = 0;
+  let lifeSupportDestroyed = 0;
+  for (const name of iterateDestoyedStructures(def, ["head"], critSlotsDestroyed)) {
+    switch (name) {
+      case GYRO: {
+        gyroDestroyed += 1;
+        break;
+      }
+      case SENSORS: {
+        sensorDestroyed += 1;
+        break;
+      }
+      case LIFE_SUPPORT: {
+        lifeSupportDestroyed += 1;
+        break;
+      }
+    }
+  }
+  for (const name of iterateDestoyedStructures(def, TORSO_LOCATIONS, critSlotsDestroyed)) {
+    switch (name) {
+      case ENGINE: {
+        engineDestoryed += 1;
+        break;
+      }
+      case GYRO: {
+        gyroDestroyed += 1;
+        break;
+      }
+    }
+  }
+  return {
+    engine: engineDestoryed,
+    gyro: gyroDestroyed,
+    sensors: sensorDestroyed,
+    lifeSupport: lifeSupportDestroyed,
+  };
 }

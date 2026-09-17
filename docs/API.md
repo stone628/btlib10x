@@ -456,7 +456,7 @@ for movement.
   + ammo pair.
 - `checkCASE(ammoBin, ...): CaseKind` — returns the CASE protection kind for
   the ammo bin (used to decide whether the explosion hits the bin only).
-- `countDestroyedEngineSlots(slotsDestroyed): number` — engine crit count
+- `countDestroyedEngine(slotsDestroyed): number` — engine crit count
   for heat dissipation.
 - `CaseKind` (`"none" | "case" | "caseII"`), `CriticalEffect`,
   `CriticalResolution`, `CritSource` (the crit-source record carried into

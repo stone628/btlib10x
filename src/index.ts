@@ -147,6 +147,8 @@ export {
 export { CLUSTER_COLUMNS, CLUSTER_TABLE, clusterHits, groupMissiles } from "./rules/cluster.js";
 export type {
   CaseKind,
+  CoreComponentDestroyCounts as CritCounts,
+  CritComponentCount,
   CriticalEffect,
   CriticalResolution,
   CritSource,
@@ -156,9 +158,13 @@ export {
   ammoDamagePerShot,
   applyAmmoExplosion,
   checkCASE,
-  countDestroyedEngineSlots,
+  computeCritCounts,
+  countDestroyedEngine,
+  countDestroyedSensor,
+  ENGINE_SLOTS_KILL,
   effectiveMovement,
   resolveCriticalHits,
+  SENSORS,
 } from "./rules/critical.js";
 export {
   applyDamage,
@@ -313,7 +319,6 @@ export {
 export {
   buildingEntryModifier,
   consciousnessTarget,
-  countDestroyedStructure,
   DEFAULT_PILOTING,
   destroyedLegStructures,
   FALL_CLUSTER_SIZE,
@@ -337,7 +342,6 @@ export {
   rollPilotingCheck,
   SENSOR_BLIND_HITS,
   SENSOR_ONE_HIT_MOD,
-  SENSORS,
   sensorAttackModifier,
   sensorsBlind,
   waterEntryModifier,

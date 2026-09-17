@@ -29,7 +29,7 @@ import {
   cellAt,
   classifyArcWithBoundary,
   computeToHit,
-  countDestroyedStructure,
+  countDestroyedSensor,
   createBattle,
   DEFAULT_GUNNERY,
   DEFAULT_PILOTING,
@@ -61,7 +61,6 @@ import {
   pooledShotsLeft,
   requireUnit,
   rotateFacing,
-  SENSORS,
   STAND_MP_COST,
   sameHex,
   sensorAttackModifier,
@@ -933,7 +932,7 @@ function validateQueuedAttacks(
   if (unit.declaredAttacks.length > 0)
     throw new Error(`${unit.id} already declared attacks this turn`);
   const def = getMechDefFor(unit);
-  const sensorsOut = countDestroyedStructure(def, unit.critSlotsDestroyed, SENSORS);
+  const sensorsOut = countDestroyedSensor(def, unit.critSlotsDestroyed);
   if (sensorsBlind(sensorsOut)) {
     throw new Error(`${unit.id} cannot fire: sensors destroyed (no weapon attacks)`);
   }

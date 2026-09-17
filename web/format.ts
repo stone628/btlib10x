@@ -5,6 +5,7 @@ import type {
   Arc,
   AttackResolution,
   BattleState,
+  CritCounts,
   CriticalEffect,
   CriticalResolution,
   CritSoakName,
@@ -40,9 +41,11 @@ import {
   ammoExplosionAvoidWithThreshold,
   canFireFromLocation,
   collectAmmoBins,
+  computeCritCounts,
   consciousnessTarget,
-  countDestroyedEngineSlots,
+  countDestroyedEngine,
   DROP_MP_COST,
+  ENGINE_SLOTS_KILL,
   effectiveMovement,
   getAllMapDefs,
   getAllMechDefs,
@@ -79,6 +82,8 @@ import {
   wreckAt,
 } from "btlib10x";
 import { AMMO_EXPLOSION_START_HEAT } from "../src/index.js";
+import type { RemovalReason } from "../src/rules/game.js";
+import { GYRO_DESTROYED_HITS, GYRO_HIT_MOD, SENSOR_BLIND_HITS } from "../src/rules/piloting.js";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
 import { getCompensatedLength, i18n } from "./i18n/index.js";
 import { lookupMap, lookupMech, lookupWeapon } from "./lookup.js";
@@ -89,7 +94,6 @@ import {
   getBoardRenderer,
 } from "./render.js";
 import { budgetFor, currentActor, displayModeFor, fullBudgetFor, type Session } from "./session.js";
-import type { RemovalReason } from "../src/rules/game.js";
 
 const SHEET_FACING_KEYS: Readonly<Record<Facing, MessageKey>> = {
   n: "sheet.facing.n",
@@ -493,7 +497,7 @@ export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
         }),
       ),
     ),
-    critChartChunk(d, locale, null),
+    critChartChunk(d, locale, null, null),
   ];
 }
 
@@ -626,6 +630,8 @@ interface SheetView {
   readonly mounts: readonly WeaponMountInfo[];
   /** Per-unit live crit state for the crit chart; null when only design info exists. */
   readonly critLive: CritChartLive | null;
+  /** Aggregate engine/gyro/sensors/life-support counts (destroyed/total); null when only design info exists. */
+  readonly critCounts: CritCounts | null;
 }
 
 function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
@@ -691,6 +697,7 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
       ammoBins: unit.ammoBins,
       locationDestroyed: (loc) => unit.phaseStartDamage.internalStructure[loc] <= 0,
     },
+    critCounts: computeCritCounts(def, unit.critSlotsDestroyed),
   };
 }
 
@@ -918,6 +925,47 @@ function critSlotText(
   return markers.length > 0 ? `${line}${markers.join("")}` : line;
 }
 
+function critCountLine(
+  locale: LocaleId,
+  comp: CritStructureName,
+  hit: number,
+  messageForHit: MessageKey[],
+): string {
+  const maxHit = messageForHit.length;
+  const effectiveHit = Math.min(hit, maxHit);
+  const effect = effectiveHit === 0 ? "" : `: ${i18n(locale, messageForHit[effectiveHit - 1]!)}`;
+
+  return i18n(locale, "critChart.coreComponent", {
+    name: i18n(locale, CRIT_COMPONENT_KEY[comp]),
+    hit: effectiveHit,
+    total: maxHit,
+    effect,
+  });
+}
+
+function critCountLines(locale: LocaleId, counts: CritCounts | null): string[] {
+  const out: string[] = new Array<string>(7).fill("");
+  if (counts !== null) {
+    out[1] = critCountLine(locale, "engine", counts.engine, [
+      "critChart.coreComponentEffect.engine1",
+      "critChart.coreComponentEffect.engine2",
+      "critChart.coreComponentEffect.engine3",
+    ]);
+    out[2] = critCountLine(locale, "gyro", counts.gyro, [
+      "critChart.coreComponentEffect.gyro1",
+      "critChart.coreComponentEffect.gyro2",
+    ]);
+    out[3] = critCountLine(locale, "sensors", counts.sensors, [
+      "critChart.coreComponentEffect.sensor1",
+      "critChart.coreComponentEffect.sensor2",
+    ]);
+    out[4] = critCountLine(locale, "lifeSupport", counts.lifeSupport, [
+      "critChart.coreComponentEffect.lifeSupport1",
+    ]);
+  }
+  return out;
+}
+
 /** Render one location's crit slots as a vertical column (unpadded). */
 function critCell(
   def: ResolvedMechDef,
@@ -950,7 +998,12 @@ const GRID_THEME = {
 };
 
 /** Collapsible crit chart: one columns chunk per row (arena / torso / legs). */
-function critChartChunk(def: ResolvedMechDef, locale: LocaleId, live: CritChartLive | null): Chunk {
+function critChartChunk(
+  def: ResolvedMechDef,
+  locale: LocaleId,
+  live: CritChartLive | null,
+  counts: CritCounts | null,
+): Chunk {
   const { tnw, tn, tne, tw, tc, te, tsw, /*ts,*/ tse, th, tv } = GRID_THEME.LIGHT;
   const raLines = critCell(def, "rightArm", locale, live);
   const hdLines = [...critCell(def, "head", locale, live), ...new Array<string>(6).fill("")];
@@ -959,7 +1012,8 @@ function critChartChunk(def: ResolvedMechDef, locale: LocaleId, live: CritChartL
   const ctLines = critCell(def, "centerTorso", locale, live);
   const ltLines = critCell(def, "leftTorso", locale, live);
   const rlLines = critCell(def, "rightLeg", locale, live);
-  const infoLines = new Array<string>(7).fill("");
+  // const infoLines = new Array<string>(7).fill("");
+  const infoLines = critCountLines(locale, counts);
   const llLines = critCell(def, "leftLeg", locale, live);
   const built = [raLines, hdLines, laLines, rtLines, ctLines, ltLines, rlLines, infoLines, llLines];
   const maxLineLen = built
@@ -1001,7 +1055,7 @@ const DESTROYED_REASON_KEY: Readonly<Record<DestroyedReason, MessageKey>> = {
   cockpitDestroyed: "sheet.remove.cockpitDestroyed",
   headBlownOff: "sheet.remove.hdBlownOff",
   engineDestroyed: "sheet.remove.engineDestroyed",
-}
+};
 
 function sheetIdLine(locale: LocaleId, view: SheetView): string {
   if (view.removed === "not") return i18n(locale, "sheet.idLine", { id: view.id, team: view.team });
@@ -1062,7 +1116,7 @@ export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
         }),
       ),
     ),
-    critChartChunk(requireMechDef(view.model, locale), locale, view.critLive),
+    critChartChunk(requireMechDef(view.model, locale), locale, view.critLive, view.critCounts),
   ];
 }
 
@@ -1154,7 +1208,7 @@ export function heatStatusLines(s: Session, id: string): string[] {
   const unit = battle.units[id];
   if (!unit) throw new Error(i18n(s.locale, "err.unknownUnitId", { id }));
   const def = getMechDefFor(unit);
-  const engineOut = countDestroyedEngineSlots(def, unit.critSlotsDestroyed);
+  const engineOut = countDestroyedEngine(def, unit.critSlotsDestroyed);
   const sinks = heatDissipation(def, unit.critSlotsDestroyed);
   const toHit = toHitHeatModifier(unit.heat);
   const mpPenalty = movementMpPenalty(unit.heat);
@@ -1221,6 +1275,37 @@ export function sheetLinesShort(locale: LocaleId, view: SheetView): string[] {
   return lines;
 }
 
+/** One-line summary of each crit-affected component (engine/gyro/sensors/life-support). */
+function critEffectLines(counts: CritCounts | null, locale: LocaleId): string[] {
+  if (counts === null) return [];
+  const out: string[] = [];
+  if (counts.engine >= 1) {
+    out.push(
+      `  ${i18n(locale, "sheet.critEffect.engine", { destroyed: counts.engine, total: ENGINE_SLOTS_KILL })}`,
+    );
+  }
+  if (counts.gyro >= 1) {
+    const key =
+      counts.gyro >= GYRO_DESTROYED_HITS
+        ? "sheet.critEffect.gyroDestroyed"
+        : "sheet.critEffect.gyroHit";
+    out.push(
+      `  ${i18n(locale, key, { destroyed: counts.gyro, total: GYRO_DESTROYED_HITS, mod: GYRO_HIT_MOD })}`,
+    );
+  }
+  if (counts.sensors >= 1) {
+    const key =
+      counts.sensors >= SENSOR_BLIND_HITS
+        ? "sheet.critEffect.sensorsBlind"
+        : "sheet.critEffect.sensorsHit";
+    out.push(`  ${i18n(locale, key, { destroyed: counts.sensors, total: SENSOR_BLIND_HITS })}`);
+  }
+  if (counts.lifeSupport >= 1) {
+    out.push(`  ${i18n(locale, "sheet.critEffect.lifeSupport")}`);
+  }
+  return out;
+}
+
 /** Compact two-line armor summary: head+torso on line 1, limbs on line 2.
  * Each location shows front + rear + internal-structure summed as `cur/max`,
  * with `[-F]`/`[-R]`/`[-A]`/`[-I]` annotations for depleted pools. */
@@ -1236,6 +1321,7 @@ function mechStatusLines(view: SheetView, locale: LocaleId): string[] {
     i18n(locale, "sheet.statusHeader", { status, currHeat: view.heat, maxHeat: HEAT_CAP }),
     `  ${durabilityFrag(view, "head")} ${durabilityFrag(view, "leftTorso")} ${durabilityFrag(view, "centerTorso")} ${durabilityFrag(view, "rightTorso")}`,
     `  ${durabilityFrag(view, "leftArm")} ${durabilityFrag(view, "rightArm")} ${durabilityFrag(view, "leftLeg")} ${durabilityFrag(view, "rightLeg")}`,
+    ...critEffectLines(view.critCounts, locale),
   ];
 }
 
