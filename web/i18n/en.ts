@@ -319,9 +319,6 @@ export const en = {
   "fireSuggestion.twist.left": "left",
   "fireSuggestion.twist.right": "right",
 
-  // over status
-  "over.idLine": "ID: {id}",
-
   // record sheet / info
   "info.mechColModel": "MODEL",
   "info.mechColName": "NAME",
@@ -387,6 +384,11 @@ export const en = {
   "sheet.remove.destroyed": "destroyed",
   "sheet.remove.pilotEjected": "pilot ejected",
   "sheet.remove.pilotKilled": "pilot killed",
+  "sheet.remove.hdDestroyed": "HD destroyed",
+  "sheet.remove.ctDestroyed": "CT destroyed",
+  "sheet.remove.cockpitDestroyed": "cockpit destroyed",
+  "sheet.remove.hdBlownOff": "HD blown off",
+  "sheet.remove.engineDestroyed": "engine destroyed",
 
   // critical slot chart
   "critChart.summary": "critical slots",

@@ -196,7 +196,7 @@ export const DEFAULT_RNG: Rng = {
   snapshot(): string {
     return "";
   },
-  load(snapshot: string): void {},
+  load(_snapshot: string): void {},
 };
 
 export interface UnitState extends MechModelHolder {

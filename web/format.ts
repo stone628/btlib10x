@@ -10,6 +10,7 @@ import type {
   CritSoakName,
   CritStructureName,
   DamageTransferStep,
+  DestroyedReason,
   DestroyedState,
   Facing,
   FireBlockerReason,
@@ -88,6 +89,7 @@ import {
   getBoardRenderer,
 } from "./render.js";
 import { budgetFor, currentActor, displayModeFor, fullBudgetFor, type Session } from "./session.js";
+import type { RemovalReason } from "../src/rules/game.js";
 
 const SHEET_FACING_KEYS: Readonly<Record<Facing, MessageKey>> = {
   n: "sheet.facing.n",
@@ -988,6 +990,27 @@ function critChartChunk(def: ResolvedMechDef, locale: LocaleId, live: CritChartL
   ]);
 }
 
+const REMOVAL_REASON_KEY: Readonly<Record<RemovalReason, MessageKey>> = {
+  destroyed: "sheet.remove.destroyed",
+  pilotEjected: "sheet.remove.pilotEjected",
+  pilotKilled: "sheet.remove.pilotKilled",
+};
+const DESTROYED_REASON_KEY: Readonly<Record<DestroyedReason, MessageKey>> = {
+  headDestroyed: "sheet.remove.hdDestroyed",
+  centerTorsoDestroyed: "sheet.remove.ctDestroyed",
+  cockpitDestroyed: "sheet.remove.cockpitDestroyed",
+  headBlownOff: "sheet.remove.hdBlownOff",
+  engineDestroyed: "sheet.remove.engineDestroyed",
+}
+
+function sheetIdLine(locale: LocaleId, view: SheetView): string {
+  if (view.removed === "not") return i18n(locale, "sheet.idLine", { id: view.id, team: view.team });
+  if (view.removed === "destroyed" && view.destroyed !== "not") {
+    return `${i18n(locale, "sheet.idLine", { id: view.id, team: view.team })}${i18n(locale, "sheet.removedId", { reason: i18n(locale, DESTROYED_REASON_KEY[view.destroyed]) })}`;
+  }
+  return `${i18n(locale, "sheet.idLine", { id: view.id, team: view.team })}${i18n(locale, "sheet.removedId", { reason: i18n(locale, REMOVAL_REASON_KEY[view.removed]) })}`;
+}
+
 function sheetMovementLine(locale: LocaleId, view: SheetView): string {
   const { penalty, threshold } = movementMpPenaltyWithThreshold(view.heat);
   if (penalty > 0) {
@@ -1006,19 +1029,8 @@ function sheetMovementLine(locale: LocaleId, view: SheetView): string {
   });
 }
 
-const REMOVED_REASON_KEY: Readonly<Record<RemovedState, MessageKey>> = {
-  not: "status.none",
-  destroyed: "sheet.remove.destroyed",
-  pilotEjected: "sheet.remove.pilotEjected",
-  pilotKilled: "sheet.remove.pilotKilled",
-};
-
 /** Record sheet with armor status per location, side-by-side with ASCII diagram. */
 export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
-  const idLine =
-    view.removed === "not"
-      ? i18n(locale, "sheet.idLine", { id: view.id, team: view.team })
-      : `${i18n(locale, "sheet.idLine", { id: view.id, team: view.team })}${i18n(locale, "sheet.removedId", { reason: i18n(locale, REMOVED_REASON_KEY[view.removed]) })}`;
   const topLines = [
     i18n(locale, "sheet.modelLine", {
       model: view.model,
@@ -1036,7 +1048,7 @@ export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
   weaponLines.push(...weaponMountLines(locale, view.mounts));
   return [
     buildHeaderTableChunkFromColumns(
-      [idLine, i18n(locale, "info.armorStructureCol")],
+      [sheetIdLine(locale, view), i18n(locale, "info.armorStructureCol")],
       mergeDiagramToColumns(
         topLines,
         weaponLines,
@@ -1265,11 +1277,7 @@ export function overStatusLines(s: Session): string[] {
     lines.push(i18n(locale, "setup.teamHeader", { team }));
     for (const [uid, unit] of Object.entries(s.battle.units).filter(([, u]) => u.team === team)) {
       const view = battleSheet(unit, uid, locale);
-      const idLine =
-        view.removed === "not"
-          ? i18n(locale, "over.idLine", { id: view.id })
-          : `${i18n(locale, "over.idLine", { id: view.id })}${i18n(locale, "sheet.removedId", { reason: i18n(locale, REMOVED_REASON_KEY[view.removed]) })}`;
-      lines.push(`  ${idLine}`);
+      lines.push(`  ${sheetIdLine(locale, view)}`);
       for (const line of sheetLinesShort(s.locale, view)) lines.push(`    ${line}`);
     }
   }

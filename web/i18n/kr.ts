@@ -312,9 +312,6 @@ export const kr: Catalog = {
   "fireSuggestion.twist.left": "좌측",
   "fireSuggestion.twist.right": "우측",
 
-  // over status
-  "over.idLine": "식별자: {id}",
-
   // record sheet / info
   "info.mechColModel": "모델",
   "info.mechColName": "이름",
@@ -380,6 +377,11 @@ export const kr: Catalog = {
   "sheet.remove.destroyed": "파괴됨",
   "sheet.remove.pilotEjected": "파일럿 탈출",
   "sheet.remove.pilotKilled": "파일럿 사망",
+  "sheet.remove.hdDestroyed": "HD 파괴",
+  "sheet.remove.ctDestroyed": "CT 파괴",
+  "sheet.remove.cockpitDestroyed": "조종석 파괴",
+  "sheet.remove.hdBlownOff": "HD 폭발",
+  "sheet.remove.engineDestroyed": "엔진 파괴",
 
   "critChart.summary": "critical slots",
   "critChart.empty": "-",
