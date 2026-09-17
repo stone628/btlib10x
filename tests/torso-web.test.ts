@@ -33,7 +33,7 @@ function sideArcSetup(): S.Session {
   s.critsDisabled = true;
   expect(run(s, "map quickstart")[0]).toContain("15x16");
   // hunchy at (9,9) facing n; cicada at (10,8) — bearing "ne" → hunchy's
-  // rightSide arc when twist is "front", and the front arc when twist=left.
+  // rightSide arc when twist is "front", and the front arc when twist=right.
   expect(run(s, "add hunchy HBK-4G 9 9 n")).toHaveLength(1);
   expect(run(s, "add cicada CDA-3MA 10 8 s")).toHaveLength(1);
   run(s, "start");
@@ -110,8 +110,8 @@ describe("torso command", () => {
     // the cicada (rightSide arc of the body).
     expect(baseEnf.weapons.map((w) => w.weaponIndex)).toEqual([2]);
 
-    run(s, "torso left");
-    const twistSugg = suggestFireTargets(s.battle!, "hunchy", "leftSide");
+    run(s, "torso right");
+    const twistSugg = suggestFireTargets(s.battle!, "hunchy", "rightSide");
     const twistEnf = twistSugg.targets.find((t) => t.targetId === "cicada")!;
     expect(twistEnf.weapons.map((w) => w.weaponIndex).sort()).toEqual([1, 2, 3, 4]);
   });
@@ -135,8 +135,8 @@ describe("torso command", () => {
   it("resets the twist when a new actor becomes current", () => {
     const s = sideArcSetup();
     burnMovePhase(s);
-    run(s, "torso left");
-    expect(s.torsoTwist).toBe("leftSide");
+    run(s, "torso right");
+    expect(s.torsoTwist).toBe("rightSide");
     // Queue a fire so hunchy's turn ends and cicada becomes current.
     expect(run(s, "fire cicada 2")[0]).toContain("queued");
     run(s, "done");

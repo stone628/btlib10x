@@ -102,9 +102,9 @@ export function weaponCanFireIntoArc(location: Location, rearFacing: boolean, ar
 export function twistDelta(twist: Arc): -1 | 0 | 1 {
   switch (twist) {
     case "leftSide":
-      return 1;
-    case "rightSide":
       return -1;
+    case "rightSide":
+      return 1;
     case "front":
       return 0;
     case "rear":

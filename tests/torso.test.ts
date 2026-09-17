@@ -70,19 +70,19 @@ function hbkFacingAt(targetBearing: "ne" | "n"): {
 }
 
 describe("twistDelta + effectiveFacingForTwist", () => {
-  it("maps left to +1, right to -1, front/rear to 0", () => {
-    expect(twistDelta("leftSide")).toBe(1);
-    expect(twistDelta("rightSide")).toBe(-1);
+  it("maps left to -1, right to +1, front/rear to 0", () => {
+    expect(twistDelta("leftSide")).toBe(-1);
+    expect(twistDelta("rightSide")).toBe(1);
     expect(twistDelta("front")).toBe(0);
     expect(twistDelta("rear")).toBe(0);
   });
 
   it("rotates facing by twist delta (or no-op for front)", () => {
-    expect(effectiveFacingForTwist("n", "leftSide")).toBe("ne");
-    expect(effectiveFacingForTwist("n", "rightSide")).toBe("nw");
+    expect(effectiveFacingForTwist("n", "leftSide")).toBe("nw");
+    expect(effectiveFacingForTwist("n", "rightSide")).toBe("ne");
     expect(effectiveFacingForTwist("n", "front")).toBe("n");
-    expect(effectiveFacingForTwist("ne", "leftSide")).toBe("se");
-    expect(effectiveFacingForTwist("ne", "rightSide")).toBe("n");
+    expect(effectiveFacingForTwist("ne", "leftSide")).toBe("n");
+    expect(effectiveFacingForTwist("ne", "rightSide")).toBe("se");
   });
 
   it("treats null/undefined as untwisted", () => {
@@ -92,27 +92,27 @@ describe("twistDelta + effectiveFacingForTwist", () => {
 
   it("matches rotateFacing for non-zero deltas", () => {
     for (const f of ["n", "ne", "se", "s", "sw", "nw"] as const) {
-      expect(effectiveFacingForTwist(f, "leftSide")).toBe(rotateFacing(f, 1));
-      expect(effectiveFacingForTwist(f, "rightSide")).toBe(rotateFacing(f, -1));
+      expect(effectiveFacingForTwist(f, "leftSide")).toBe(rotateFacing(f, -1));
+      expect(effectiveFacingForTwist(f, "rightSide")).toBe(rotateFacing(f, 1));
     }
   });
 });
 
 describe("classifyArcWithBoundary on a twisted facing", () => {
-  it("moves a right-side bearing into the front arc under a left twist", () => {
+  it("moves a right-side bearing into the front arc under a right twist", () => {
     const b = classifyArcWithBoundary("n", { facing: "ne", boundary: null });
     expect(b.arc).toBe("rightSide");
-    const twisted = classifyArcWithBoundary(effectiveFacingForTwist("n", "leftSide"), {
+    const twisted = classifyArcWithBoundary(effectiveFacingForTwist("n", "rightSide"), {
       facing: "ne",
       boundary: null,
     });
     expect(twisted.arc).toBe("front");
   });
 
-  it("moves a left-side bearing into the front arc under a right twist", () => {
+  it("moves a left-side bearing into the front arc under a left twist", () => {
     const b = classifyArcWithBoundary("ne", { facing: "n", boundary: null });
     expect(b.arc).toBe("leftSide");
-    const twisted = classifyArcWithBoundary(effectiveFacingForTwist("ne", "rightSide"), {
+    const twisted = classifyArcWithBoundary(effectiveFacingForTwist("ne", "leftSide"), {
       facing: "n",
       boundary: null,
     });
@@ -131,16 +131,16 @@ describe("suggestFireTargets with torso twist", () => {
     expect(enf.weapons.map((w) => w.weaponIndex).sort()).toEqual([2]);
   });
 
-  it("with twist=left all four weapons fire (twisted front arc)", () => {
+  it("with twist=right all four weapons fire (twisted front arc)", () => {
     const { units } = hbkFacingAt("ne");
     const state = startAttackTurn(createTestBattle([], units, false));
-    const sugg = suggestFireTargets(state, "hbk", "leftSide");
+    const sugg = suggestFireTargets(state, "hbk", "rightSide");
     const enf = sugg.targets.find((t) => t.targetId === "enf")!;
     expect(enf.arc).toBe("front");
     expect(enf.weapons.map((w) => w.weaponIndex).sort()).toEqual([1, 2, 3, 4]);
   });
 
-  it("with twist=right on a left-bearing target lets every weapon fire", () => {
+  it("with twist=left on a left-bearing target lets every weapon fire", () => {
     const { units, facing } = hbkFacingAt("n");
     expect(facing).toBe("ne");
     const state = startAttackTurn(createTestBattle([], units, false));
@@ -149,7 +149,7 @@ describe("suggestFireTargets with torso twist", () => {
     expect(baseEnf.arc).toBe("leftSide");
     expect(baseEnf.weapons.map((w) => w.weaponIndex).sort()).toEqual([1]);
 
-    const twistedSugg = suggestFireTargets(state, "hbk", "rightSide");
+    const twistedSugg = suggestFireTargets(state, "hbk", "leftSide");
     const twistedEnf = twistedSugg.targets.find((t) => t.targetId === "enf")!;
     expect(twistedEnf.arc).toBe("front");
     expect(twistedEnf.weapons.map((w) => w.weaponIndex).sort()).toEqual([1, 2, 3, 4]);
@@ -172,7 +172,7 @@ describe("declareAttacks with torso twist", () => {
     const state = startAttackTurn(createTestBattle([], units, false));
     expect(() =>
       declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], scriptedRng(4), {
-        twist: "leftSide",
+        twist: "rightSide",
       }),
     ).not.toThrow();
   });
@@ -185,13 +185,13 @@ describe("declareAttacks with torso twist", () => {
     );
   });
 
-  it("rejects the rightArm weapon when twist=left leaves the target in the left side", () => {
+  it("rejects the rightArm weapon when twist=right leaves the target in the left side", () => {
     const { units, facing } = hbkFacingAt("n");
     expect(facing).toBe("ne");
     const state = startAttackTurn(createTestBattle([], units, false));
     expect(() =>
       declareAttacks(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }], scriptedRng(4), {
-        twist: "leftSide",
+        twist: "rightSide",
       }),
     ).toThrow(/firing arc/);
   });
