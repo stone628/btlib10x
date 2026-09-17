@@ -494,6 +494,7 @@ export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
           originalArmor: d.armor,
           originalArmorRear: armorRear,
           originalStructure: is,
+          dissipMax: heatDissipationMax(d),
         }),
       ),
     ),
@@ -732,43 +733,47 @@ interface ArmorInfo {
   readonly originalArmor: Readonly<LocationValue>;
   readonly originalArmorRear: Partial<LocationValue>;
   readonly originalStructure: LocationValue;
+  readonly dissipMax: number;
 }
 
 /** ASCII humanoid armor diagram: internal structure (I), front armor (F/A), rear (R). */
 /** for 'info mech <model>' command */
 function armorDiagramInfo(info: ArmorInfo): string[] {
   const cell = (max: number, label: string) => ` ${String(max).padStart(2)}${label}`;
-  const p = (n: number) => " ".repeat(n);
-  const CT = 10,
-    RT = 5,
-    LT = 17;
   const o = info.originalArmor;
   const os = info.originalStructure;
   const or = info.originalArmorRear;
   const rear = (loc: Location) => cell(or[loc] ?? 0, "R");
+  const hs = `-${info.dissipMax} `.padStart(4);
   return [
-    `${p(CT)}[HD]`,
-    `${p(CT)}${cell(os.head, "I")}`,
-    `${p(CT)}${cell(o.head, "A")}`,
-    `[RA] [RT] [CT] [LT] [LA]`,
+    `          [HD]      [HS]`,
+    `          ${cell(os.head, "I")}      ${hs}`,
+    `          ${cell(o.head, "A")}`,
+    `     [RT] [CT] [LT]`,
     [
-      cell(os.rightArm, "I"),
+      "[RA]",
       cell(os.rightTorso, "I"),
       cell(os.centerTorso, "I"),
       cell(os.leftTorso, "I"),
+      "[LA]",
+    ].join(" "),
+    [
+      cell(os.rightArm, "I"),
+      cell(o.rightTorso, "F"),
+      cell(o.centerTorso, "F"),
+      cell(o.leftTorso, "F"),
       cell(os.leftArm, "I"),
     ].join(" "),
     [
       cell(o.rightArm, "A"),
-      cell(o.rightTorso, "F"),
-      cell(o.centerTorso, "F"),
-      cell(o.leftTorso, "F"),
+      rear("rightTorso"),
+      rear("centerTorso"),
+      rear("leftTorso"),
       cell(o.leftArm, "A"),
     ].join(" "),
-    `${p(RT)}${[rear("rightTorso"), rear("centerTorso"), rear("leftTorso")].join(" ")}`,
-    `${p(RT)}[RL]${p(LT - RT - 6)}[LL]`,
-    `${p(RT)}${[cell(os.rightLeg, "I"), cell(os.leftLeg, "I")].join(p(LT - RT - 6))}`,
-    `${p(RT)}${[cell(o.rightLeg, "A"), cell(o.leftLeg, "A")].join(p(LT - RT - 6))}`,
+    `     [RL]      [LL]`,
+    `     ${cell(os.rightLeg, "I")}      ${cell(os.leftLeg, "I")}`,
+    `     ${cell(o.rightLeg, "A")}      ${cell(o.leftLeg, "A")}`,
   ];
 }
 
@@ -814,17 +819,18 @@ function gyroSensors(view: SheetView): string {
 
 /** ASCII humanoid armor diagram: internal structure (I), front armor (F/A), rear (R). */
 /** for 'sheet <id>' command */
-function armorDiagramSheet(view: SheetView, info: ArmorInfo): string[] {
+function armorDiagramSheet(view: SheetView): string[] {
   const cell = (val: number, max: number, label: string) =>
     `${String(val).padStart(2)}/${String(max).padStart(2)}${label}`;
   const p = (n: number) => " ".repeat(n);
   const CT = 14,
     RT = 7;
-  const { armor: a, originalArmor: o } = info;
-  const s = info.internalStructure;
-  const os = info.originalStructure;
-  const ar = info.armorRear;
-  const or = info.originalArmorRear;
+  const a = view.armor;
+  const o = view.originalArmor;
+  const s = view.damage.internalStructure;
+  const os = view.originalArmorStructure;
+  const ar = view.damage.armorRear;
+  const or = view.originalArmorRear;
   const rear = (loc: Location) => cell(ar[loc] ?? 0, or[loc] ?? 0, "R");
   const pRT = p(RT);
   const statusHeader = shutdownHeader(view).padEnd(CT);
@@ -1150,18 +1156,7 @@ export function sheetLines(view: SheetView, locale: LocaleId): Chunk[] {
   return [
     buildHeaderTableChunkFromColumns(
       [sheetIdLine(locale, view), i18n(locale, "info.armorStructureCol")],
-      mergeDiagramToColumns(
-        topLines,
-        weaponLines,
-        armorDiagramSheet(view, {
-          armor: view.armor,
-          armorRear: view.damage.armorRear,
-          internalStructure: view.damage.internalStructure,
-          originalArmor: view.originalArmor,
-          originalArmorRear: view.originalArmorRear,
-          originalStructure: view.originalArmorStructure,
-        }),
-      ),
+      mergeDiagramToColumns(topLines, weaponLines, armorDiagramSheet(view)),
     ),
     critChartChunk(requireMechDef(view.model, locale), locale, view.critLive, view.critCounts),
   ];
