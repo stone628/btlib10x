@@ -365,7 +365,7 @@ export const kr: Catalog = {
   "sheet.shotsShared": "(횟수 #{ref} 참조)",
   "sheet.ammoStatus": "탄약 상태: 소모 정책({policy}) {explosion}",
   "sheet.ammoNoExplosion": "안전(발열 {heat}<{threshold})",
-  "sheet.ammoExplosion": "유폭 조건(발열 {heat}>={threshold}, 2D6<{avoid})",
+  "sheet.ammoExplosion": "위험(발열 {heat}>={threshold}, 2D6<{avoid})",
   "sheet.jammed": "[고장]",
   "sheet.destroyed": "[파괴]",
   "sheet.facing.n": "북",
