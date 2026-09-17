@@ -91,6 +91,7 @@ import { getWeaponDefFor } from "../data/weapon.schema.js";
 import { type AmmoBinState, type AmmoBins, ammoBinId, stripBinsInLocation } from "./ammo.js";
 import { applyDamage, type DamageApplication, type UnitDamageState } from "./damage.js";
 import type { DestroyedReason } from "./game.js";
+import { GYRO_DESTROYED_HITS, SENSOR_BLIND_HITS } from "./piloting.js";
 
 export interface CritSource {
   /** Location where the original hit stripped at least 1 internal-structure point. */
@@ -813,12 +814,6 @@ export function effectiveMovement(
   return { walking: walk, running: run, jumping: jump };
 }
 
-/** Per-component crit counts (destroyed/total) for status display. */
-export interface CritComponentCount {
-  readonly destroyed: number;
-  readonly total: number;
-}
-
 /** Number of destroyed `engine` crit slots on the 'Mech. */
 export function countDestroyedEngine(
   def: ResolvedMechDef,
@@ -903,17 +898,17 @@ function* iterateDestoyedStructures(
  * Engine `total` is fixed at 3 per TW (matches the destroy threshold in
  * `applySlotHit`); the other totals derive from the def's crit layout.
  */
-export interface CoreComponentDestroyCounts {
+export interface CoreComponentStatus {
   readonly engine: number;
   readonly gyro: number;
   readonly sensors: number;
   readonly lifeSupport: number;
 }
 
-export function computeCritCounts(
+export function coreComponentStatus(
   def: ResolvedMechDef,
   critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
-): CoreComponentDestroyCounts {
+): CoreComponentStatus {
   let engineDestoryed = 0;
   let gyroDestroyed = 0;
   let sensorDestroyed = 0;
@@ -947,9 +942,9 @@ export function computeCritCounts(
     }
   }
   return {
-    engine: engineDestoryed,
-    gyro: gyroDestroyed,
-    sensors: sensorDestroyed,
-    lifeSupport: lifeSupportDestroyed,
+    engine: Math.min(engineDestoryed, ENGINE_SLOTS_KILL),
+    gyro: Math.min(gyroDestroyed, GYRO_DESTROYED_HITS),
+    sensors: Math.min(sensorDestroyed, SENSOR_BLIND_HITS),
+    lifeSupport: Math.min(lifeSupportDestroyed, 1),
   };
 }

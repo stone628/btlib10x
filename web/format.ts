@@ -5,7 +5,7 @@ import type {
   Arc,
   AttackResolution,
   BattleState,
-  CritCounts,
+  CoreComponentStatus,
   CriticalEffect,
   CriticalResolution,
   CritSoakName,
@@ -41,8 +41,8 @@ import {
   ammoExplosionAvoidWithThreshold,
   canFireFromLocation,
   collectAmmoBins,
-  computeCritCounts,
   consciousnessTarget,
+  coreComponentStatus,
   countDestroyedEngine,
   DROP_MP_COST,
   ENGINE_SLOTS_KILL,
@@ -81,7 +81,7 @@ import {
   toHitHeatModifierWithThreshold,
   wreckAt,
 } from "btlib10x";
-import { AMMO_EXPLOSION_START_HEAT } from "../src/index.js";
+import { AMMO_EXPLOSION_START_HEAT, heatDissipationMax } from "../src/index.js";
 import type { RemovalReason } from "../src/rules/game.js";
 import { GYRO_DESTROYED_HITS, GYRO_HIT_MOD, SENSOR_BLIND_HITS } from "../src/rules/piloting.js";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
@@ -616,6 +616,12 @@ interface SheetView {
   readonly ammoStatusLine: string | null;
   /** Current heat + shutdown state; null when only design info exists. */
   readonly heat: number;
+  readonly dissipMax: number;
+  readonly dissipCurr: number;
+  readonly engineHit: number;
+  readonly gyroHit: number;
+  readonly sensorHit: number;
+  readonly lifeHit: number;
   readonly shutdown: ShutdownState;
   /** Current front armor per location. */
   readonly armor: LocationValue;
@@ -631,7 +637,7 @@ interface SheetView {
   /** Per-unit live crit state for the crit chart; null when only design info exists. */
   readonly critLive: CritChartLive | null;
   /** Aggregate engine/gyro/sensors/life-support counts (destroyed/total); null when only design info exists. */
-  readonly critCounts: CritCounts | null;
+  readonly critCounts: CoreComponentStatus | null;
 }
 
 function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
@@ -651,6 +657,7 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
           : i18n(locale, "sheet.ammoExplosion", { heat: unit.heat, avoid, threshold }),
     });
   }
+  const ccStatus = coreComponentStatus(def, unit.critSlotsDestroyed);
   return {
     id: id,
     team: unit.team,
@@ -675,6 +682,12 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
     }),
     ammoStatusLine: ammoStatusLine,
     heat: unit.heat,
+    dissipCurr: heatDissipation(def, unit.critSlotsDestroyed),
+    dissipMax: heatDissipationMax(def),
+    engineHit: ccStatus.engine,
+    gyroHit: ccStatus.gyro,
+    sensorHit: ccStatus.sensors,
+    lifeHit: ccStatus.lifeSupport,
     shutdown: unit.shutdown,
     armor: unit.damage.armor,
     damage: unit.damage,
@@ -697,7 +710,7 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
       ammoBins: unit.ammoBins,
       locationDestroyed: (loc) => unit.phaseStartDamage.internalStructure[loc] <= 0,
     },
-    critCounts: computeCritCounts(def, unit.critSlotsDestroyed),
+    critCounts: coreComponentStatus(def, unit.critSlotsDestroyed),
   };
 }
 
@@ -759,7 +772,7 @@ function armorDiagramInfo(info: ArmorInfo): string[] {
   ];
 }
 
-function getShutdownHeader(view: SheetView): string {
+function shutdownHeader(view: SheetView): string {
   if (isUnitDestroyed(view.damage)) return "[DESTROYED]";
   switch (view.shutdown) {
     case "manual":
@@ -771,6 +784,32 @@ function getShutdownHeader(view: SheetView): string {
   }
   if (isUnitImmobile(view.damage)) return "[IMMOBILE]";
   return "[NOMINAL]";
+}
+
+// E:#-- L:-
+// G:-- S:--
+const GLYPH_CORE_COMPONENT_HIT = "#";
+const GLYPH_CORE_COMPONENT_UNHIT = "-";
+
+function engineLifeSupport(view: SheetView): string {
+  const e = GLYPH_CORE_COMPONENT_HIT.repeat(view.engineHit).padEnd(
+    ENGINE_SLOTS_KILL,
+    GLYPH_CORE_COMPONENT_UNHIT,
+  );
+  const l = view.lifeHit > 0 ? GLYPH_CORE_COMPONENT_HIT : GLYPH_CORE_COMPONENT_UNHIT;
+  return `E:${e} L:${l}`;
+}
+
+function gyroSensors(view: SheetView): string {
+  const g = GLYPH_CORE_COMPONENT_HIT.repeat(view.gyroHit).padEnd(
+    GYRO_DESTROYED_HITS,
+    GLYPH_CORE_COMPONENT_UNHIT,
+  );
+  const s = GLYPH_CORE_COMPONENT_HIT.repeat(view.sensorHit).padEnd(
+    SENSOR_BLIND_HITS,
+    GLYPH_CORE_COMPONENT_UNHIT,
+  );
+  return `G:${g} S:${s}`;
 }
 
 /** ASCII humanoid armor diagram: internal structure (I), front armor (F/A), rear (R). */
@@ -787,31 +826,39 @@ function armorDiagramSheet(view: SheetView, info: ArmorInfo): string[] {
   const ar = info.armorRear;
   const or = info.originalArmorRear;
   const rear = (loc: Location) => cell(ar[loc] ?? 0, or[loc] ?? 0, "R");
-  const pHD = p(CT);
   const pRT = p(RT);
-  const shutdownHeader = getShutdownHeader(view).padEnd(CT);
+  const statusHeader = shutdownHeader(view).padEnd(CT);
   const heatHeader = "[HEAT]".padStart(CT);
-  const heat = `${view.heat}/${HEAT_CAP} `.padStart(CT);
+  const heat = cell(view.heat, HEAT_CAP, " ").padStart(CT);
+  const dissip = cell(-view.dissipCurr, view.dissipMax, " ").padStart(CT);
+  const el = engineLifeSupport(view).padEnd(CT);
+  const gs = gyroSensors(view).padEnd(CT);
   return [
-    `${shutdownHeader}[ HD ]${heatHeader}`,
-    `${pHD}${cell(s.head, os.head, "I")}${heat}`,
-    `${pHD}${cell(a.head, o.head, "A")}`,
-    `[ RA ] [ RT ] [ CT ] [ LT ] [ LA ]`,
+    `${statusHeader}[ HD ]${heatHeader}`,
+    `${el}${cell(s.head, os.head, "I")}${heat}`,
+    `${gs}${cell(a.head, o.head, "A")}${dissip}`,
+    `       [ RT ] [ CT ] [ LT ]`,
     [
-      cell(s.rightArm, os.rightArm, "I"),
+      "[ RA ]",
       cell(s.rightTorso, os.rightTorso, "I"),
       cell(s.centerTorso, os.centerTorso, "I"),
       cell(s.leftTorso, os.leftTorso, "I"),
+      "[ LA ]",
+    ].join(" "),
+    [
+      cell(s.rightArm, os.rightArm, "I"),
+      cell(a.rightTorso, o.rightTorso, "F"),
+      cell(a.centerTorso, o.centerTorso, "F"),
+      cell(a.leftTorso, o.leftTorso, "F"),
       cell(s.leftArm, os.leftArm, "I"),
     ].join(" "),
     [
       cell(a.rightArm, o.rightArm, "A"),
-      cell(a.rightTorso, o.rightTorso, "F"),
-      cell(a.centerTorso, o.centerTorso, "F"),
-      cell(a.leftTorso, o.leftTorso, "F"),
+      rear("rightTorso"),
+      rear("centerTorso"),
+      rear("leftTorso"),
       cell(a.leftArm, o.leftArm, "A"),
     ].join(" "),
-    `${pRT}${[rear("rightTorso"), rear("centerTorso"), rear("leftTorso")].join(" ")}`,
     `${pRT}[ RL ]        [ LL ]`,
     `${pRT}${cell(s.rightLeg, os.rightLeg, "I")}        ${cell(s.leftLeg, os.leftLeg, "I")}`,
     `${pRT}${cell(a.rightLeg, o.rightLeg, "A")}        ${cell(a.leftLeg, o.leftLeg, "A")}`,
@@ -943,7 +990,7 @@ function critCountLine(
   });
 }
 
-function critCountLines(locale: LocaleId, counts: CritCounts | null): string[] {
+function critCountLines(locale: LocaleId, counts: CoreComponentStatus | null): string[] {
   const out: string[] = new Array<string>(7).fill("");
   if (counts !== null) {
     out[1] = critCountLine(locale, "engine", counts.engine, [
@@ -1002,7 +1049,7 @@ function critChartChunk(
   def: ResolvedMechDef,
   locale: LocaleId,
   live: CritChartLive | null,
-  counts: CritCounts | null,
+  counts: CoreComponentStatus | null,
 ): Chunk {
   const { tnw, tn, tne, tw, tc, te, tsw, /*ts,*/ tse, th, tv } = GRID_THEME.LIGHT;
   const raLines = critCell(def, "rightArm", locale, live);
@@ -1276,7 +1323,7 @@ export function sheetLinesShort(locale: LocaleId, view: SheetView): string[] {
 }
 
 /** One-line summary of each crit-affected component (engine/gyro/sensors/life-support). */
-function critEffectLines(counts: CritCounts | null, locale: LocaleId): string[] {
+function critEffectLines(counts: CoreComponentStatus | null, locale: LocaleId): string[] {
   if (counts === null) return [];
   const out: string[] = [];
   if (counts.engine >= 1) {

@@ -137,6 +137,12 @@ export function heatDissipation(
   return def.heatsink.type === "double" ? sinks * DOUBLE_SINK_RATE : sinks;
 }
 
+export function heatDissipationMax(def: ResolvedMechDef): number {
+  return def.heatsink.type === "double"
+    ? def.heatsink.count * DOUBLE_SINK_RATE
+    : def.heatsink.count;
+}
+
 // Total Warfare Heat Scale breakpoints (descending: first match wins).
 
 /** Heat thresholds (8 / 13 / 17 / 24+) mapping to to-hit modifiers. */

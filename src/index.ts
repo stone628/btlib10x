@@ -147,8 +147,7 @@ export {
 export { CLUSTER_COLUMNS, CLUSTER_TABLE, clusterHits, groupMissiles } from "./rules/cluster.js";
 export type {
   CaseKind,
-  CoreComponentDestroyCounts as CritCounts,
-  CritComponentCount,
+  CoreComponentStatus,
   CriticalEffect,
   CriticalResolution,
   CritSource,
@@ -158,7 +157,7 @@ export {
   ammoDamagePerShot,
   applyAmmoExplosion,
   checkCASE,
-  computeCritCounts,
+  coreComponentStatus,
   countDestroyedEngine,
   countDestroyedSensor,
   ENGINE_SLOTS_KILL,
@@ -258,6 +257,7 @@ export {
   HEAT_CAP,
   type HeatScaleEffects,
   heatDissipation,
+  heatDissipationMax,
   heatScaleEffects,
   heatSinksOperational,
   type LargestAmmoBin,
