@@ -63,8 +63,13 @@ import {
   applyAmmoExplosion,
   type CriticalResolution,
   checkCASE,
-  countDestroyedEngineSlots,
+  countDestroyedEngine,
+  countDestroyedGyro,
+  countDestroyedHip,
+  countDestroyedLifeSupport,
+  countDestroyedSensor,
   effectiveMovement,
+  HIP,
   resolveCriticalHits,
 } from "./critical.js";
 import {
@@ -104,25 +109,20 @@ import {
 import {
   buildingEntryModifier,
   consciousnessTarget,
-  countDestroyedStructure,
   DEFAULT_PILOTING,
   facingAfterFall,
   fallingDamageGroups,
   fallingDamageTotal,
-  GYRO,
   GYRO_DESTROYED_HITS,
   GYRO_HIT_MOD,
-  HIP,
   HIP_MOD,
   LEG_ACTUATOR_MOD,
   LEG_ACTUATORS,
-  LIFE_SUPPORT,
   PSR_DAMAGE_THRESHOLD,
   preexistingDamageModifier,
   rollConsciousness,
   rollFallDirection,
   rollPilotingCheck,
-  SENSORS,
   sensorAttackModifier,
   sensorsBlind,
   waterEntryModifier,
@@ -1168,8 +1168,8 @@ export function executeMove(
   // nothing on top of `pre`: both table rows read "per Preexisting Damage".
   // Stationary declarations (no hex entered) skip the check.
   if (!unit.prone && directions.length > 0) {
-    const gyroHits = countDestroyedStructure(def, unit.critSlotsDestroyed, GYRO);
-    const hipHits = countDestroyedStructure(def, unit.critSlotsDestroyed, HIP);
+    const gyroHits = countDestroyedGyro(def, unit.critSlotsDestroyed);
+    const hipHits = countDestroyedHip(def, unit.critSlotsDestroyed);
     const strained =
       mode === "run" ? hipHits > 0 || gyroHits > 0 : mode === "jump" ? pre.modifier > 0 : false;
     if (strained) {
@@ -1244,7 +1244,7 @@ export function declareAttacks(
   if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot fire`);
 
   const def = getMechDefFor(unit);
-  const sensorsOut = countDestroyedStructure(def, unit.critSlotsDestroyed, SENSORS);
+  const sensorsOut = countDestroyedSensor(def, unit.critSlotsDestroyed);
   if (sensorsBlind(sensorsOut)) {
     throw new Error(`${unitId} cannot fire: sensors destroyed (no weapon attacks)`);
   }
@@ -1423,9 +1423,7 @@ function resolveUnitAttacks(
 ): UnitAttackResult {
   const def = getMechDefFor(unit);
   const preHeat = unit.heat;
-  const sensorMod = sensorAttackModifier(
-    countDestroyedStructure(def, unit.critSlotsDestroyed, SENSORS),
-  );
+  const sensorMod = sensorAttackModifier(countDestroyedSensor(def, unit.critSlotsDestroyed));
   const pronePropArm = inferPronePropArm(def, unit.declaredAttacks, unit.prone);
   let currentAmmoBins = { ...unit.ammoBins };
   const jammedWeapons: number[] = [];
@@ -1822,8 +1820,8 @@ export function resolvePhasePiloting(state: BattleState, rng: Rng, before: Phase
       else if (LEG_ACTUATORS.has(hit.name))
         triggers.push({ reason: "legActuator", modifier: LEG_ACTUATOR_MOD });
     }
-    const gyroBefore = countDestroyedStructure(def, critBefore, GYRO);
-    const gyroNow = countDestroyedStructure(def, unit.critSlotsDestroyed, GYRO);
+    const gyroBefore = countDestroyedGyro(def, critBefore);
+    const gyroNow = countDestroyedGyro(def, unit.critSlotsDestroyed);
     if (gyroNow < GYRO_DESTROYED_HITS && gyroBefore < 1 && gyroNow >= 1) {
       triggers.push({ reason: "gyro", modifier: GYRO_HIT_MOD });
     }
@@ -2185,7 +2183,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
   // is gone, acting as +5 per hit) per turn, stacking on remaining heat.
   for (const unit of units) {
     const def = getMechDefFor(unit);
-    const heat = engineHitHeat(countDestroyedEngineSlots(def, unit.critSlotsDestroyed));
+    const heat = engineHitHeat(countDestroyedEngine(def, unit.critSlotsDestroyed));
     if (heat > 0) {
       const prevHeat = unit.heat;
       unit.heat = Math.min(HEAT_CAP, unit.heat + heat);
@@ -2389,7 +2387,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
   for (const unit of units) {
     if (isUnitRemoved(unit)) continue;
     const def = getMechDefFor(unit);
-    if (countDestroyedStructure(def, unit.critSlotsDestroyed, LIFE_SUPPORT) <= 0) continue;
+    if (countDestroyedLifeSupport(def, unit.critSlotsDestroyed) <= 0) continue;
     if (unit.heat >= LIFE_SUPPORT_HEAT_2HITS) applyPilotHits(state, unit, 2, "lifeSupport", rng);
     else if (unit.heat >= LIFE_SUPPORT_HEAT_1HIT)
       applyPilotHits(state, unit, 1, "lifeSupport", rng);
@@ -2486,7 +2484,7 @@ function movementTerrainPsr(
   if (building !== null) {
     const legWasGoneR = legGone(unit.damage, "rightLeg");
     const legWasGoneL = legGone(unit.damage, "leftLeg");
-    const gyroWasGone = countDestroyedStructure(getMechDefFor(unit), unit.critSlotsDestroyed, GYRO);
+    const gyroWasGone = countDestroyedGyro(getMechDefFor(unit), unit.critSlotsDestroyed);
     const modifier = building + preModifier;
     if (isShutdown(unit) || unit.unconscious) {
       applyFall(state, unit, rng, { cause: "building", seatbeltModifier: null, halved: false });
@@ -2527,7 +2525,7 @@ function movementTerrainPsr(
         const legFell =
           (!legWasGoneR && legGone(unit.damage, "rightLeg")) ||
           (!legWasGoneL && legGone(unit.damage, "leftLeg"));
-        const gyroNow = countDestroyedStructure(getMechDefFor(unit), unit.critSlotsDestroyed, GYRO);
+        const gyroNow = countDestroyedGyro(getMechDefFor(unit), unit.critSlotsDestroyed);
         const gyroFell = gyroNow >= GYRO_DESTROYED_HITS && gyroWasGone < GYRO_DESTROYED_HITS;
         const down = isShutdown(unit) || unit.unconscious;
         if (legFell || gyroFell || down) {

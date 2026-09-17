@@ -11,16 +11,12 @@ import {
   effectiveFacingForTwist,
   weaponCanFireIntoArc,
 } from "./arcs.js";
+import { countDestroyedSensor } from "./critical.js";
 import { canFireFromLocation } from "./damage.js";
 import { type BattleState, isImmobile, isUnitRemoved, partialCoverMod } from "./game.js";
 import { toHitHeatModifier } from "./heat.js";
 import { losClear, losWoodsPointsBetween } from "./los.js";
-import {
-  countDestroyedStructure,
-  SENSORS,
-  sensorAttackModifier,
-  sensorsBlind,
-} from "./piloting.js";
+import { sensorAttackModifier, sensorsBlind } from "./piloting.js";
 import type { RangeBracket } from "./tohit.js";
 import { computeToHit, damageForBracket } from "./tohit.js";
 
@@ -158,7 +154,7 @@ export function suggestFireTargets(
     throw new Error(`suggestFireTargets: ${unitId} is not a fireable unit`);
   }
   const def = getMechDefFor(unit);
-  const sensorsOut = countDestroyedStructure(def, unit.critSlotsDestroyed, SENSORS);
+  const sensorsOut = countDestroyedSensor(def, unit.critSlotsDestroyed);
   const blind = sensorsBlind(sensorsOut);
   const sensorMod = sensorAttackModifier(sensorsOut);
   const effectiveFacing = effectiveFacingForTwist(unit.facing, twist);

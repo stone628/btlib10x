@@ -52,6 +52,7 @@ import type { Facing, Location, Rng } from "../core/types.js";
 import { rotateFacing } from "../core/types.js";
 import type { ResolvedMechDef } from "../data/mech.schema.js";
 import type { Arc } from "./arcs.js";
+import { countDestroyedGyro, HIP } from "./critical.js";
 
 /** Default pilot skill for `UnitInit`s that omit it (TW regular pilot). */
 export const DEFAULT_PILOTING = 5;
@@ -61,12 +62,6 @@ export const PILOT_HITS_DEAD = 6;
 
 /** Damage in a single phase that forces a PSR (TW p.60). */
 export const PSR_DAMAGE_THRESHOLD = 20;
-
-/** Crit-slot structure names that feed piloting. */
-export const GYRO = "gyro";
-export const HIP = "hip";
-export const LIFE_SUPPORT = "lifeSupport";
-export const SENSORS = "sensors";
 
 /** To-hit penalty while exactly one sensor slot is destroyed (TW p.123). */
 export const SENSOR_ONE_HIT_MOD = 2;
@@ -106,24 +101,6 @@ export function rollPilotingCheck(
   if (roll === D2D6_FUMBLE) return { target, roll, success: false };
   if (roll === D2D6_AUTO_SUCCESS) return { target, roll, success: true };
   return { target, roll, success: roll >= target };
-}
-
-/** Count destroyed structure slots named `name` across all locations. */
-export function countDestroyedStructure(
-  def: ResolvedMechDef,
-  destroyed: Readonly<Record<Location, readonly boolean[]>>,
-  name: string,
-): number {
-  let n = 0;
-  for (const loc of Object.keys(def.critSlots) as Location[]) {
-    const layout = def.critSlots[loc];
-    const flags = destroyed[loc];
-    for (let i = 0; i < layout.length; i++) {
-      const slot = layout[i];
-      if (slot?.kind === "structure" && slot.name === name && (flags?.[i] ?? false)) n += 1;
-    }
-  }
-  return n;
 }
 
 /** Destroyed structure names on one leg (`rightLeg` / `leftLeg`). */
@@ -175,7 +152,7 @@ export function preexistingDamageModifier(
   destroyed: Readonly<Record<Location, readonly boolean[]>>,
   legIsGone: (leg: "rightLeg" | "leftLeg") => boolean,
 ): PreexistingDamage {
-  const gyroHits = countDestroyedStructure(def, destroyed, GYRO);
+  const gyroHits = countDestroyedGyro(def, destroyed);
   let modifier = 0;
   let legsDestroyed = 0;
   for (const leg of ["rightLeg", "leftLeg"] as const) {
