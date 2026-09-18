@@ -802,45 +802,111 @@ export interface CommitResult {
 }
 
 /**
- * Apply a commit atomically: on any thrown error the held `s.battle` is rolled
- * back to a snapshot taken before the commit, so a failed validation can never
- * leave live game state partially mutated.
+ * Plain-data session fields mutated inside atomic commits (via `clearBuffers`
+ * and `drive`). Snapshotted beside battle + rng so failed commits leave zero
+ * trace. Excludes `rng` itself (closures break structuredClone), `battle`
+ * (snapshotted separately), `setup`/`locale`/`critsDisabled` (never mutated
+ * inside commits).
+ */
+interface SessionCommitSnapshot {
+  app: AppState;
+  victory: VictoryResult | null;
+  actorId: string | null;
+  moveMode: Session["moveMode"];
+  postureMove: Session["postureMove"];
+  moveSteps: MoveStep[];
+  moveFinalFacing: Facing | null;
+  placedLanding: RevealedLanding | null;
+  fireDecls: AttackDecl[];
+  torsoTwist: Arc;
+  moveCandidate: BoardRenderReachableInfo | null;
+  fireHintShownFor: string | null;
+  fireCandidate: FireSuggestion | null;
+}
+
+function snapshotSessionCommit(s: Session): SessionCommitSnapshot {
+  return {
+    app: s.app,
+    victory: s.victory === null ? null : structuredClone(s.victory),
+    actorId: s.actorId,
+    moveMode: s.moveMode,
+    postureMove: s.postureMove,
+    moveSteps: structuredClone(s.moveSteps),
+    moveFinalFacing: s.moveFinalFacing,
+    placedLanding: s.placedLanding === null ? null : structuredClone(s.placedLanding),
+    fireDecls: structuredClone(s.fireDecls),
+    torsoTwist: s.torsoTwist,
+    moveCandidate: s.moveCandidate === null ? null : structuredClone(s.moveCandidate),
+    fireHintShownFor: s.fireHintShownFor,
+    fireCandidate: s.fireCandidate === null ? null : structuredClone(s.fireCandidate),
+  };
+}
+
+function restoreSessionCommit(s: Session, snap: SessionCommitSnapshot): void {
+  s.app = snap.app;
+  s.victory = snap.victory;
+  s.actorId = snap.actorId;
+  s.moveMode = snap.moveMode;
+  s.postureMove = snap.postureMove;
+  s.moveSteps = snap.moveSteps;
+  s.moveFinalFacing = snap.moveFinalFacing;
+  s.placedLanding = snap.placedLanding;
+  s.fireDecls = snap.fireDecls;
+  s.torsoTwist = snap.torsoTwist;
+  s.moveCandidate = snap.moveCandidate;
+  s.fireHintShownFor = snap.fireHintShownFor;
+  s.fireCandidate = snap.fireCandidate;
+}
+
+/**
+ * Apply a commit atomically: on any thrown error battle, rng, and session
+ * buffers roll back to snapshots taken before commit, so failed validation
+ * can never leave live game state partially mutated nor shift deterministic
+ * seed sequence. Callers must re-read live battle from `s.battle` after
+ * success; closures must resolve units from live battle by id, never hold
+ * pre-commit object refs across rollback boundary.
  */
 function commitAtomic(s: Session, fn: () => void): void {
   const battle = s.battle;
   if (!battle) return;
-  const snapshot = structuredClone(battle);
+  const battleSnapshot = structuredClone(battle);
+  const rngSnapshot = s.rng.snapshot();
+  const sessionSnapshot = snapshotSessionCommit(s);
   try {
     fn();
   } catch (e) {
-    s.battle = snapshot;
+    s.battle = battleSnapshot;
+    s.rng.load(rngSnapshot);
+    restoreSessionCommit(s, sessionSnapshot);
     throw e;
   }
 }
 
 export function commitMove(s: Session): CommitResult {
-  const unit = requireActor(s, "movement");
-  const battle = requireBattle(s);
-  const beforeCount = battle.events.length;
+  const actor = requireActor(s, "movement");
+  const unitId = actor.id;
+  const beforeCount = requireBattle(s).events.length;
   commitAtomic(s, () => {
+    const battle = requireBattle(s);
+    const unit = requireUnit(battle, unitId);
     if (s.moveMode === "shutdown") {
-      voluntaryShutdown(battle, unit.id);
+      voluntaryShutdown(battle, unitId);
     } else if (s.moveMode === "startup") {
-      attemptVoluntaryStartup(battle, unit.id, s.rng);
+      attemptVoluntaryStartup(battle, unitId, s.rng);
     } else if (s.moveMode === "eject") {
-      ejectPilot(battle, unit.id);
+      ejectPilot(battle, unitId);
     } else if (isShutdown(unit) || unit.unconscious) {
       // Down unit committing any other movement mode: hold position and
       // pass (startup/shutdown/eject handled above; nothing else is legal
       // while off-line or out cold). Without this the commit throws and the
       // activation never advances.
-      passMovement(battle, unit.id);
+      passMovement(battle, unitId);
     } else if (s.moveMode === "standup") {
       const locomotion = s.postureMove ?? "walk";
       const steps = s.moveSteps;
       const finalFacing = s.moveFinalFacing;
-      attemptStandUp(battle, unit.id, s.rng);
-      const after = battle.units[unit.id]!;
+      attemptStandUp(battle, unitId, s.rng);
+      const after = battle.units[unitId]!;
       if (after.prone) {
         // Failed stand: queued place discarded, activation ends.
         s.actorId = null;
@@ -850,7 +916,7 @@ export function commitMove(s: Session): CommitResult {
       }
       if (steps.length > 0 || finalFacing !== null) {
         const posture = STAND_MP_COST;
-        executeMove(battle, unit.id, locomotion, steps, {
+        executeMove(battle, unitId, locomotion, steps, {
           ...(finalFacing === null ? { rng: s.rng } : { finalFacing, rng: s.rng }),
           spentMP: posture,
         });
@@ -859,26 +925,26 @@ export function commitMove(s: Session): CommitResult {
       const steps = s.moveSteps;
       const finalFacing = s.moveFinalFacing;
       const locomotion = s.postureMove ?? "walk";
-      dropProne(battle, unit.id, s.rng);
+      dropProne(battle, unitId, s.rng);
       if (steps.length > 0 || finalFacing !== null) {
         const posture = DROP_MP_COST;
-        executeMove(battle, unit.id, locomotion, steps, {
+        executeMove(battle, unitId, locomotion, steps, {
           ...(finalFacing === null ? { rng: s.rng } : { finalFacing, rng: s.rng }),
           spentMP: posture,
         });
       }
     } else if (s.moveMode === "turn") {
       const steps = s.moveSteps;
-      executeMove(battle, unit.id, "walk", steps, { rng: s.rng });
+      executeMove(battle, unitId, "walk", steps, { rng: s.rng });
     } else if (s.moveMode === "pronestill") {
-      executeMove(battle, unit.id, "standStill", [], { rng: s.rng });
+      executeMove(battle, unitId, "standStill", [], { rng: s.rng });
     } else {
       // Past this branch s.moveMode is a real MoveMode (the special posture
       // strings above were the only alternatives).
       const mode = s.moveMode as MoveMode;
       executeMove(
         battle,
-        unit.id,
+        unitId,
         mode,
         s.moveSteps,
         s.moveFinalFacing === null
@@ -890,8 +956,8 @@ export function commitMove(s: Session): CommitResult {
     clearBuffers(s);
     drive(s);
   });
-  const newEvents = battle.events.slice(beforeCount);
-  return { state: battle, newEvents };
+  const live = requireBattle(s);
+  return { state: live, newEvents: live.events.slice(beforeCount) };
 }
 
 // -------------------------------------------------------------- attacks ----
@@ -902,16 +968,17 @@ export function cancelFire(s: Session): void {
 }
 
 export function passFire(s: Session): CommitResult {
-  const unit = requireActor(s, "weaponAttack");
-  const battle = requireBattle(s);
-  const beforeCount = battle.events.length;
+  const actor = requireActor(s, "weaponAttack");
+  const unitId = actor.id;
+  const beforeCount = requireBattle(s).events.length;
   commitAtomic(s, () => {
-    unit.passedAttacks = true;
+    requireUnit(requireBattle(s), unitId).passedAttacks = true;
     s.actorId = null;
     clearBuffers(s);
     drive(s);
   });
-  return { state: battle, newEvents: battle.events.slice(beforeCount) };
+  const live = requireBattle(s);
+  return { state: live, newEvents: live.events.slice(beforeCount) };
 }
 
 /**
@@ -1060,21 +1127,20 @@ export function queueFire(s: Session, decl: AttackDecl): void {
 }
 
 export function commitFire(s: Session): CommitResult {
-  const unit = requireActor(s, "weaponAttack");
+  const actor = requireActor(s, "weaponAttack");
+  const unitId = actor.id;
   const battle = requireBattle(s);
   if (s.fireDecls.length === 0) throw new Error(i18n(s.locale, "err.noAttacksQueued"));
-  validateQueuedAttacks(battle, unit, s.fireDecls, s.torsoTwist);
+  validateQueuedAttacks(battle, actor, s.fireDecls, s.torsoTwist);
   const beforeCount = battle.events.length;
-  const newEvents: GameEvent[] = [];
   commitAtomic(s, () => {
-    declareAttacks(battle, unit.id, s.fireDecls, s.rng, { twist: s.torsoTwist });
-    const declEvents = battle.events.slice(beforeCount);
+    declareAttacks(requireBattle(s), unitId, s.fireDecls, s.rng, { twist: s.torsoTwist });
     s.actorId = null;
     clearBuffers(s);
-    const driveEvents = drive(s);
-    newEvents.push(...declEvents, ...driveEvents);
+    drive(s);
   });
-  return { state: battle, newEvents };
+  const live = requireBattle(s);
+  return { state: live, newEvents: live.events.slice(beforeCount) };
 }
 
 /**
