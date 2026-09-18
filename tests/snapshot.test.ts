@@ -5,6 +5,7 @@ import {
   damageBuildingAt,
   declareAttacks,
   loadBattleState,
+  parseBattleState,
   requireUnit,
   resolveAllAttacks,
   rollInitiativePhase,
@@ -151,6 +152,49 @@ describe("snapshot", () => {
       expect(() => loadBattleState(state, bad)).toThrow(/Invalid battle snapshot string/);
     }
     expect(saveBattleState(state)).toBe(before);
+  });
+
+  it("parseBattleState builds fresh state from string, reusable twice", () => {
+    const state = startAttackTurn(hbkEnf(false));
+    rearCtHit(state);
+    advancePhase(state);
+    const snap = saveBattleState(state);
+    const first = parseBattleState(snap);
+    expect(first).toEqual(state);
+    expect(first).not.toBe(state);
+
+    dirtyBattle(state);
+    expect(state).not.toEqual(first);
+    const second = parseBattleState(snap);
+    expect(second).toEqual(first);
+    expect(second).not.toBe(first);
+  });
+
+  it("parseBattleState detaches: parsed mutation never leaks into string", () => {
+    const state = startAttackTurn(hbkEnf(false));
+    rearCtHit(state);
+    const snap = saveBattleState(state);
+    const revived = parseBattleState(snap);
+    requireUnit(revived, "hbk").heat = 11;
+    revived.turn = 99;
+    revived.events.length = 0;
+    expect(saveBattleState(state)).toBe(snap);
+    expect(parseBattleState(snap)).not.toEqual(revived);
+  });
+
+  it("parseBattleState rejects corrupt strings", () => {
+    for (const bad of ["nope", "", "[]", "null", '{"turn":1}', '{"turn":1,"phase":"end"}']) {
+      expect(() => parseBattleState(bad)).toThrow(/Invalid battle snapshot string/);
+    }
+  });
+
+  it("parsed state drives engine APIs", () => {
+    const state = startAttackTurn(hbkEnf(false));
+    rearCtHit(state);
+    const revived = parseBattleState(saveBattleState(state));
+    expect(requireUnit(revived, "enf").id).toBe("enf");
+    advancePhase(revived);
+    expect(revived.phase).toBe("end");
   });
 
   it("unit save/load preserves sibling + reference", () => {

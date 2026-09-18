@@ -345,7 +345,7 @@ export {
   sensorsBlind,
   waterEntryModifier,
 } from "./rules/piloting.js";
-export { loadBattleState, saveBattleState } from "./rules/snapshot.js";
+export { loadBattleState, parseBattleState, saveBattleState } from "./rules/snapshot.js";
 export {
   type AttackModifiers,
   computeToHit,
