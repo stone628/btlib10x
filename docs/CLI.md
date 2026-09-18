@@ -73,7 +73,7 @@ The prompt names the acting unit; commands act on that 'Mech.
 |---|---|
 | `mode standstill\|walk\|run\|jump` | declare movement mode (required first); for walk/run/jump, renders a clipped ASCII hex map of the reachable hexes — exactly the smallest bounding box around every reachable hex, clamped to the board (no padding). Reachable hexes draw a team-colored `<>` in the belly; every reachable (hex, facing) edge is tinted with the acting unit's team color, and no facing arrows are drawn. Other units inside the crop keep their ids (team-colored) but no facing arrow. Movement paths (the `F`/`B`/`R`/`L` fragment sequence per landing) remain available programmatically via `reachableLandings`/`RevealedLanding.path` for later use, but are not rendered on the map |
 | `mode standup [walk\|run\|jump\|standstill]` | declare a stand-up attempt for a prone unit plus optional movement sharing one MP pool (stand costs 2; default `standstill` stands in place with no map; PSR with preexisting-damage modifiers, +1 heat; failure crashes back down for fresh falling damage and discards any queued `place`). Renders the reachable map for the named mode minus the stand cost, assuming the stand succeeds. `done` evaluates the stand first, then moves only on success — the activation ends either way; without a queued `place`, `done` just stands in place |
-| `mode prone [turn\|pronestill]` | declare a voluntary drop to prone (no roll, +1 heat, costs 1 MP) plus an optional in-place turn sharing the walk budget (default `turn`: 1 MP per hexside, multiple turns allowed, +1 turn heat; `pronestill` drops in place with no map). Renders the turn map minus the drop cost. `done` drops first, then turns to the queued `place` (same hex) — without a `place`, `done` just drops in place |
+| `mode prone [turn\|pronestill]` | declare a voluntary drop to prone (no roll, no heat, costs 1 MP, deals 1 damage on the front column with normal crit rolls) plus an optional in-place turn sharing the walk budget (default `turn`: 1 MP per hexside, multiple turns allowed, +1 turn heat; `pronestill` drops in place with no map). Renders the turn map minus the drop cost. `done` drops first, then turns to the queued `place` (same hex) — without a `place`, `done` just drops in place |
 | `mode turn` | turn in place while prone (prone unit only; 1 MP per hexside, multiple turns within the walk budget, +1 heat). `place` takes the same hex with a new facing; `done` commits |
 | `mode pronestill` | stay prone (prone unit only; 0 MP, 0 heat). `place` stays unavailable; `done` ends the activation |
 | `mode shutdown` | declare a voluntary shutdown (online unit only). `place` stays unavailable; `done` commits it — the unit goes off-line (`manual`) and can no longer move, fire, or act normally this turn. `cancel` resets the declaration |
@@ -261,16 +261,17 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   hit gyro, +5 per destroyed leg replacing that leg's other mods). Pilot
   wounds never modify PSRs or to-hit numbers (TW tracks wounds through
   consciousness rolls only). A fall
-  rotates facing per the Facing After Fall table and lands
-  `ceil(tonnage / 10)` damage in 5-point clusters on the fall column (halved
-  round-down underwater at depth 2+), with normal crit rolls; the pilot then
+   rotates facing per the Facing After Fall table and lands
+   `ceil(tonnage / 10)` damage in 5-point clusters on the fall column (halved
+   with standard rounding underwater at depth 2+), with normal crit rolls; the pilot then
   makes a seatbelt PSR (+5 off a destroyed leg, +6 off a destroyed gyro, or
   the failed roll's modifiers) or takes 1 hit — automatic when the 'Mech is
   immobile or the target exceeds 12. Prone units stand up with `mode
   standup <walk|run|jump>` (one attempt per activation sharing one MP pool,
   stand costs 2, +1 heat; failure crashes back down for fresh fall damage and
-  discards any queued `place`), drop and optionally turn in place with `mode prone
-  [turn|pronestill]` (drop costs 1 MP + 1 heat, turns cost 1 MP per hexside
+   discards any queued `place`), drop and optionally turn in place with `mode prone
+   [turn|pronestill]` (drop costs 1 MP, no heat, deals 1 front-column damage with
+   normal crit rolls; turns cost 1 MP per hexside
   within the remaining walk budget + 1 turn heat); prone units turn with
   `mode turn` or hold with `mode pronestill`. Facing changes go through `place`
   at the current or a new hex — a destroyed gyro or two destroyed legs forbid

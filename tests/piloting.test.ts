@@ -719,13 +719,29 @@ describe("standing up", () => {
 });
 
 describe("going prone voluntarily", () => {
-  it("dropProne costs heat and needs no roll", () => {
+  it("dropProne costs no heat, needs no roll, deals 1 front damage", () => {
     const state = hbkEnf();
     toMovement(state);
-    dropProne(state, "enf");
+    const before = requireUnit(state, "enf");
+    const armorBefore = before.damage.armor.centerTorso;
+    const facingBefore = before.facing;
+    // Location roll 3+4 = 7 -> centerTorso on the front column.
+    dropProne(state, "enf", scriptedRng(3, 4));
     const enf = requireUnit(state, "enf");
     expect(enf.prone).toBe(true);
-    expect(enf.heat).toBe(1);
+    expect(enf.heat).toBe(0);
+    expect(enf.facing).toBe(facingBefore);
+    expect(enf.pilotHits).toBe(0);
+    expect(enf.damage.armor.centerTorso).toBe(armorBefore - 1);
+    expect(state.events).toContainEqual(
+      expect.objectContaining({
+        kind: "unitFell",
+        unitId: "enf",
+        cause: "voluntaryDrop",
+        column: "front",
+        totalDamage: 1,
+      }),
+    );
     expect(state.events).toContainEqual(
       expect.objectContaining({
         kind: "moved",
@@ -735,6 +751,42 @@ describe("going prone voluntarily", () => {
         mpSpent: 1,
       }),
     );
+    expect(state.events.some((e) => e.kind === "heatMove")).toBe(false);
+  });
+
+  it("a voluntary drop underwater still deals its point (rounded halving)", () => {
+    const state = createTestBattle(
+      [{ col: 2, row: 3, type: "water2" }],
+      [
+        {
+          id: "hbk",
+          model: "HBK-4G",
+          team: 0,
+          gunnery: 4,
+          piloting: 5,
+          position: { col: 2, row: 2 },
+          facing: "s",
+        },
+        {
+          id: "enf",
+          model: "ENF-4R",
+          team: 1,
+          gunnery: 4,
+          piloting: 5,
+          position: { col: 2, row: 3 },
+          facing: "n",
+        },
+      ],
+      true,
+    );
+    toMovement(state);
+    const before = requireUnit(state, "enf");
+    const armorBefore = before.damage.armor.centerTorso;
+    dropProne(state, "enf", scriptedRng(3, 4));
+    const enf = requireUnit(state, "enf");
+    expect(enf.prone).toBe(true);
+    expect(enf.heat).toBe(0);
+    expect(enf.damage.armor.centerTorso).toBe(armorBefore - 1);
   });
 
   it("a prone 'Mech turns one hexside at a time", () => {

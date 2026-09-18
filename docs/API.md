@@ -591,7 +591,7 @@ createBattle(units: UnitInit[], options?: CreateBattleOptions): BattleState
 rollInitiativePhase(state, rng): void                // initiative -> movement
 executeMove(state, unitId, mode, steps, { finalFacing, rng }?): void  // declares mode + walks steps in one call
 attemptStandUp(state, unitId, rng?): void            // movement phase only: prone unit tries to rise (one attempt per activation)
-dropProne(state, unitId): void                       // movement phase only: go prone voluntarily
+dropProne(state, unitId, rng?): void                // movement phase only: go prone voluntarily (1 MP, no heat, 1 front-column damage)
 proneFacingTurn(state, unitId, facings): void        // movement phase only: prone unit turns ±1 hexside
 ejectPilot(state, unitId): void                      // movement phase only: removes the unit (removed = "pilotEjected") and spawns a level-2 wreck in its hex
 voluntaryShutdown(state, unitId, rng?): void        // movement phase only: shuts down ("manual") plus the immediate +3 shutdown PSR

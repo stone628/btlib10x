@@ -859,7 +859,7 @@ export function commitMove(s: Session): CommitResult {
       const steps = s.moveSteps;
       const finalFacing = s.moveFinalFacing;
       const locomotion = s.postureMove ?? "walk";
-      dropProne(battle, unit.id);
+      dropProne(battle, unit.id, s.rng);
       if (steps.length > 0 || finalFacing !== null) {
         const posture = DROP_MP_COST;
         executeMove(battle, unit.id, locomotion, steps, {

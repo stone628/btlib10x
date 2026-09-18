@@ -81,7 +81,7 @@ export const kr: Catalog = {
   "cmd.mode.arg.jump":
     "점프 이동 — 점프 MP 풀 사용, 최소 1헥스 진입 필요 (최소 3 열). 'done'으로 확정",
   "cmd.mode.arg.prone":
-    "자발적으로 엎드리기 — 1 MP + 1 열 소모. 이후 제자리 방향 전환 가능.\n'prone [turn|pronestill]' (기본 turn). 'done'으로 확정",
+    "자발적으로 엎드리기 — 1 MP 소모, 열 없음, 앞면 1 피해 발생. 이후 제자리 방향 전환 가능.\n'prone [turn|pronestill]' (기본 turn). 'done'으로 확정",
   "cmd.mode.arg.turn":
     "엎드린 상태에서 제자리 방향 전환 — 방향당 1 MP, 걷기 예산 내에서 여러 번 가능, +1 열. 'done'으로 확정",
   "cmd.mode.arg.pronestill": "엎드린 채 대기 — MP 소비 없음. 'done'으로 확정",
