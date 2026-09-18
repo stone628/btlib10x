@@ -2873,27 +2873,27 @@ export function passMovement(state: BattleState, unitId: string): void {
 export interface GameLoopResult {
   /** Next unit that must act, or null if no actor ready (victory or transient phase). */
   actorId: string | null;
-  /** True iff {@link checkVictory} reported the game over during the loop. */
-  ended: boolean;
-  /** Result when ended is true; null otherwise. */
-  victory: VictoryResult | null;
+  /** True iff game loop stopper decides to stop. */
+  stopped: boolean;
   /** Events pushed onto `state.events` during this loop call, in push order. */
   events: readonly GameEvent[];
 }
+
+export type GameLoopStopper = (state: BattleState) => boolean;
 
 /**
  * Advance the battle through transient phases (initiative roll, attack
  * resolution, phase transitions) until an actor must act or the game ends.
  * Mutates `state` in place; pure engine rules only — no session/UI state.
  * Throws if the loop exceeds 200 iterations (debug-only safety net).
+ * engine keeps simulating, not responsible for win or lose
  */
-export function gameLoop(state: BattleState, rng: Rng): GameLoopResult {
+export function gameLoop(state: BattleState, rng: Rng, stopper: GameLoopStopper): GameLoopResult {
   const beforeCount = state.events.length;
   const slice = () => state.events.slice(beforeCount);
   for (let i = 0; i < 200; i++) {
-    const v = checkVictory(state);
-    if (v.winnerTeam !== null || v.draw) {
-      return { actorId: null, ended: true, victory: v, events: slice() };
+    if (stopper(state)) {
+      return { actorId: null, stopped: true, events: slice() };
     }
     if (state.phase === "initiative") {
       rollInitiativePhase(state, rng);
@@ -2904,9 +2904,7 @@ export function gameLoop(state: BattleState, rng: Rng): GameLoopResult {
       continue;
     }
     const id = nextActor(state);
-    if (id !== null) {
-      return { actorId: id, ended: false, victory: null, events: slice() };
-    }
+    if (id !== null) return { actorId: id, stopped: false, events: slice() };
     if (state.phase === "weaponAttack") {
       resolveAllAttacks(state, rng);
     }
@@ -3050,23 +3048,6 @@ function buildActorQueue(state: BattleState): string[] {
     nextIndex.set(pick, idx + 1);
   }
   return queue;
-}
-
-export interface VictoryResult {
-  readonly winnerTeam: number | null;
-  readonly draw: boolean;
-}
-
-export function checkVictory(state: BattleState): VictoryResult {
-  const aliveTeams = new Set(
-    Object.values(state.units)
-      .filter((u) => !isUnitRemoved(u))
-      .map((u) => u.team),
-  );
-  if (aliveTeams.size <= 1) {
-    return { winnerTeam: aliveTeams.values().next().value ?? null, draw: aliveTeams.size === 0 };
-  }
-  return { winnerTeam: null, draw: false };
 }
 
 /** Build the per-slot destroyed-flag table for a fresh unit, all false. */

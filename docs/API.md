@@ -577,9 +577,13 @@ custom UIs.
 
 The engine is **in-place and `void`-returning**: rule functions mutate the
 `BattleState` you pass directly and return `void` (read-only queries like
-`nextActor` / `actorQueue` / `checkVictory` / `getUnit` return values without
+`nextActor` / `actorQueue` / `getUnit` return values without
 touching combat state; `nextActor` and `actorQueue` lazily fill the cached
-activation order on first use each phase).
+activation order on first use each phase). The engine never decides
+winner: `gameLoop(state, rng, stopper)` advances transient phases until
+caller-supplied `GameLoopStopper` returns true; victory checks live
+outside engine (`checkSessionVictory` in `web/session.ts`, `checkVictory`
+test helper in `tests/helpers.ts`).
 The engine is single-threaded and non-concurrent; atomicity is **not**
 guaranteed per rule call — callers that need all-or-nothing behavior (e.g. the
 web session) hold a serializable snapshot and roll back on failure (see
@@ -610,9 +614,15 @@ partialCoverMod(state, targetHex, attackerLevel): number  // engine-wide partial
 advancePhase(state, rng?): void                      // drives the phase cycle
 nextActor(state): string | null                      // alternating activation hint (skips unconscious units)
 actorQueue(state): { acted: string[]; pending: string[] }  // activation order view
-checkVictory(state): { winnerTeam; draw }
+gameLoop(state, rng, stopper: GameLoopStopper): GameLoopResult  // transient phases until actor acts or stopper(state) true
 requireUnit(state, unitId): UnitState
 ```
+
+`GameLoopStopper = (state: BattleState) => boolean` — caller owns
+stop condition. Engine returns `{ actorId; stopped; events }` with no
+winner field. See `web/session.ts` `drive()` feeding
+`checkSessionVictory` as stopper; tests use `checkVictory` helper in
+`tests/helpers.ts` same role.
 
 ```ts
 interface CreateBattleOptions {
@@ -702,7 +712,10 @@ type GameEvent =
   | ... ;                              // see src/rules/game.ts for the full union
 
 interface ActorQueueActorView { id; team; shutdown; destroyed; removed }
-type VictoryResult = { winnerTeam: number; draw: boolean };
+type GameLoopStopper = (state: BattleState) => boolean;
+interface GameLoopResult { actorId: string | null; stopped: boolean; events: readonly GameEvent[] }
+// No VictoryResult in engine. Winner checks live outside engine:
+// SessionVictoryResult in web/session.ts, VictoryResult test helper in tests/helpers.ts.
 ```
 
 Rules encoded by the state machine:

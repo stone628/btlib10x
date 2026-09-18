@@ -3,7 +3,6 @@ import { getMechDef } from "../src/data/index.js";
 import type { BattleState, UnitInit } from "../src/rules/game.js";
 import {
   advancePhase,
-  checkVictory,
   declareAttacks,
   executeMove,
   nextActor,
@@ -11,7 +10,7 @@ import {
   resolveAllAttacks,
   rollInitiativePhase,
 } from "../src/rules/game.js";
-import { createTestBattle, scriptedRng } from "./helpers.js";
+import { checkVictory, createTestBattle, scriptedRng } from "./helpers.js";
 
 /**
  * Full battle reproducing the Total Warfare "Rolling To Hit" diagram (p.6):
