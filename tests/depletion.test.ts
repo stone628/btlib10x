@@ -278,15 +278,15 @@ function hbkBattle(): ReturnType<typeof createBattle> {
 }
 
 function attackPhase(state: ReturnType<typeof createBattle>): void {
-  rollInitiativePhase(state, scriptedRng(1, 1, 4, 4));
-  advancePhase(state);
+  rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []);
+  advancePhase(state, []);
 }
 
 describe("declareAttacks (game level)", () => {
   it("drains the declared weapon's bins and refreshes derived totals", () => {
     const state = hbkBattle();
     attackPhase(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], scriptedRng(2));
+    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], [], scriptedRng(2));
     const u = requireUnit(state, "hbk")!;
     expect(u.ammoBins["leftTorso:1"]?.shots).toBe(4);
     expect(u.ammoBins["leftTorso:2"]?.shots).toBe(5);
@@ -297,7 +297,7 @@ describe("declareAttacks (game level)", () => {
     const state = hbkBattle();
     attackPhase(state);
     // DEFAULT_RNG always rolls 1 -> the tie goes to slot 2.
-    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
+    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], []);
     const u = requireUnit(state, "hbk")!;
     expect(u.ammoBins["leftTorso:1"]?.shots).toBe(5);
     expect(u.ammoBins["leftTorso:2"]?.shots).toBe(4);

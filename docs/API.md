@@ -592,29 +592,29 @@ the caller's boundary.
 
 ```ts
 createBattle(units: UnitInit[], options?: CreateBattleOptions): BattleState
-rollInitiativePhase(state, rng): void                // initiative -> movement
-executeMove(state, unitId, mode, steps, { finalFacing, rng }?): void  // declares mode + walks steps in one call
-attemptStandUp(state, unitId, rng?): void            // movement phase only: prone unit tries to rise (one attempt per activation)
-dropProne(state, unitId, rng?): void                // movement phase only: go prone voluntarily (1 MP, no heat, 1 front-column damage)
-proneFacingTurn(state, unitId, facings): void        // movement phase only: prone unit turns ±1 hexside
-ejectPilot(state, unitId): void                      // movement phase only: removes the unit (removed = "pilotEjected") and spawns a level-2 wreck in its hex
-voluntaryShutdown(state, unitId, rng?): void        // movement phase only: shuts down ("manual") plus the immediate +3 shutdown PSR
-attemptVoluntaryStartup(state, unitId, rng?): void  // startup attempt after a manual shutdown
-declareAttacks(state, unitId, decls, rng?): void    // weaponAttack phase only
-resolveAllAttacks(state, rng): void                  // resolves every unit's declared attacks simultaneously, then runs the end-of-phase piloting sweep
-applyFall(state, unitId, rng, { cause, seatbeltModifier, halved }): void
-applyPilotHits(state, unitId, hits, reason, rng): void  // pilot damage + consciousness rolls
-resolveHeatPhase(state, rng): void                  // end-of-phase heat scale + shutdown PSRs
-resolvePhasePiloting(state, rng, before): void       // end-of-phase PSR sweep against snapshots
-passMovement(state, unitId): void                    // mark "passed" for the current activation
-damageBuildingAt(state, hex, damage): GameEvent | null   // drains a building hex's CF, collapses to rubble on reaching 0
+rollInitiativePhase(state, rng, sink: GameEvent[]): void                // initiative -> movement
+executeMove(state, unitId, mode, steps, sink: GameEvent[], { finalFacing, rng }?): void  // declares mode + walks steps in one call
+attemptStandUp(state, unitId, sink: GameEvent[], rng?): void            // movement phase only: prone unit tries to rise (one attempt per activation)
+dropProne(state, unitId, sink: GameEvent[], rng?): void                // movement phase only: go prone voluntarily (1 MP, no heat, 1 front-column damage)
+proneFacingTurn(state, unitId, facings, sink: GameEvent[]): void        // movement phase only: prone unit turns ±1 hexside
+ejectPilot(state, unitId, sink: GameEvent[]): void                      // movement phase only: removes the unit (removed = "pilotEjected") and spawns a level-2 wreck in its hex
+voluntaryShutdown(state, unitId, sink: GameEvent[], rng?): void        // movement phase only: shuts down ("manual") plus the immediate +3 shutdown PSR
+attemptVoluntaryStartup(state, unitId, sink: GameEvent[], rng?): void  // startup attempt after a manual shutdown
+declareAttacks(state, unitId, decls, sink: GameEvent[], rng?): void    // weaponAttack phase only
+resolveAllAttacks(state, rng, sink: GameEvent[]): void                  // resolves every unit's declared attacks simultaneously, then runs the end-of-phase piloting sweep
+applyFall(state, unitId, rng, opts, sink: GameEvent[]): void
+applyPilotHits(state, unitId, hits, reason, rng, sink: GameEvent[]): void  // pilot damage + consciousness rolls
+resolveHeatPhase(state, rng, sink: GameEvent[]): void                  // end-of-phase heat scale + shutdown PSRs
+resolvePhasePiloting(state, rng, before, sink: GameEvent[]): void       // end-of-phase PSR sweep against snapshots
+passMovement(state, unitId): void                                       // mark "passed" for the current activation
+damageBuildingAt(state, hex, damage, sink: GameEvent[]): BuildingDamageResult | null   // drains a building hex's CF, collapses to rubble on reaching 0
 inferPronePropArm(state, unitId): { arm: "leftArm"|"rightArm"|null }  // hint for the web UI when picking a prone volley side
 wreckAt(state, hex): WreckState | undefined
 partialCoverMod(state, targetHex, attackerLevel): number  // engine-wide partial-cover modifier (wreck cover +2 etc.)
-advancePhase(state, rng?): void                      // drives the phase cycle
+advancePhase(state, sink: GameEvent[], rng?): void                      // drives the phase cycle, pushes `phase` event into sink
 nextActor(state): string | null                      // alternating activation hint (skips unconscious units)
 actorQueue(state): { acted: string[]; pending: string[] }  // activation order view
-gameLoop(state, rng, stopper: GameLoopStopper): GameLoopResult  // transient phases until actor acts or stopper(state) true
+gameLoop(state, rng, stopper: GameLoopStopper, sink: GameEvent[]): GameLoopResult  // transient phases until actor acts or stopper(state) true; GameLoopResult.events aliases sink
 requireUnit(state, unitId): UnitState
 ```
 
@@ -672,7 +672,6 @@ interface BattleState extends HexGrid {
   width: number; height: number;      // board size
   critsDisabled: boolean;
   actedThisPhase: string[];
-  events: GameEvent[];                // serializable audit log
   buildings: Record<string, BuildingState>;  // { cf; type } keyed "col,row"; building hexes only
   wrecks: Record<string, WreckState>;  // { unitId; level: 2 } keyed "col,row"; ejected-'Mech obstacles
 }
@@ -713,7 +712,7 @@ type GameEvent =
 
 interface ActorQueueActorView { id; team; shutdown; destroyed; removed }
 type GameLoopStopper = (state: BattleState) => boolean;
-interface GameLoopResult { actorId: string | null; stopped: boolean; events: readonly GameEvent[] }
+interface GameLoopResult { actorId: string | null; stopped: boolean; }  // transient: nothing stored on BattleState
 // No VictoryResult in engine. Winner checks live outside engine:
 // SessionVictoryResult in web/session.ts, VictoryResult test helper in tests/helpers.ts.
 ```
@@ -724,7 +723,7 @@ Rules encoded by the state machine:
   if destroyed mid-phase; kills are committed when advancing
   `weaponAttack -> end` (`destroyed`/`removed` set to the reason, e.g.
   `"centerTorsoDestroyed"` / `"destroyed"`; paired `unitDestroyed` +
-  `unitRemoved` events emitted). A pilot kill or eject sets only
+  `unitRemoved` events returned). A pilot kill or eject sets only
   `removed` (`"pilotKilled"` / `"pilotEjected"`), leaving `destroyed = "not"`.
 - **Weapon usability** is judged against `phaseStartDamage`.
 - **Ammo** is deducted at declaration time; jams persist for the rest of the game.
@@ -738,7 +737,8 @@ Rules encoded by the state machine:
   level, backward steps banned while running, turn costs 1 MP/hexside, stacking
   (pass-through friendly-only, never end on another 'Mech); jumping may pass
   over any unit, lands only on empty hexes, and picks its landing facing freely.
-- `GameEvent` union makes battles fully replayable from the event log.
+- Engine calls return transient `GameEvent[]` (formatted then discarded by the
+  caller); `BattleState` stores no log, keeping snapshots small.
 
 ## Version (`version.ts`)
 

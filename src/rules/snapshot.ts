@@ -24,17 +24,17 @@
  * Manual field-by-field copy under the JSON, not `structuredClone`:
  * explicit list guards against future `BattleState` additions, keeps `src/`
  * browser-first with zero runtime dependencies. Finer-grained save/load
- * helpers (unit, damage, ammo, crits, buildings, wrecks, events) stay in
+ * helpers (unit, damage, ammo, crits, buildings, wrecks) stay in
  * this module for internal reuse and tests; only the battle pair is public.
+ * `BattleState` carries no event log: engine calls return transient
+ * `GameEvent[]` instead, so snapshots stay small.
  */
 
 import type { HexCell, HexCoord, Location, WreckState } from "../core/types.js";
 import type { AmmoBins } from "./ammo.js";
-import type { AttackResolution } from "./attack.js";
 import type { BuildingState } from "./building.js";
-import type { CriticalEffect, CriticalResolution } from "./critical.js";
-import type { DamageApplication, UnitDamageState } from "./damage.js";
-import type { AttackDecl, BattleState, GameEvent, Phase, UnitState } from "./game.js";
+import type { UnitDamageState } from "./damage.js";
+import type { AttackDecl, BattleState, Phase, UnitState } from "./game.js";
 
 /** Detached deep copy of a `BattleState`. Treat as immutable. */
 type BattleSnapshot = BattleState;
@@ -50,8 +50,6 @@ type CritTableSnapshot = Record<Location, boolean[]>;
 type BuildingsSnapshot = Record<string, BuildingState>;
 /** Detached deep copy of the wreck map. Treat as immutable. */
 type WrecksSnapshot = Record<string, WreckState>;
-/** Detached deep copy of the event log. Treat as immutable. */
-type EventsSnapshot = GameEvent[];
 
 function cloneHexCoord(hex: HexCoord): HexCoord {
   return { col: hex.col, row: hex.row };
@@ -95,76 +93,6 @@ function cloneBuildingState(building: BuildingState): BuildingState {
 
 function cloneWreckState(wreck: WreckState): WreckState {
   return { unitId: wreck.unitId, level: wreck.level };
-}
-
-function cloneDamageApplication(app: DamageApplication): DamageApplication {
-  return {
-    after: cloneDamageState(app.after),
-    before: cloneDamageState(app.before),
-    steps: app.steps.map((s) => ({ ...s })),
-    newlyDestroyed: [...app.newlyDestroyed],
-    blownOffArms: [...app.blownOffArms],
-    killed: app.killed,
-  };
-}
-
-function cloneCriticalEffect(row: CriticalEffect): CriticalEffect {
-  switch (row.kind) {
-    case "ammoExplosion":
-      return {
-        ...row,
-        rolls: [...row.rolls],
-        application: cloneDamageApplication(row.application),
-      };
-    default:
-      return { ...row, rolls: [...row.rolls] };
-  }
-}
-
-function cloneCriticalResolution(crit: CriticalResolution): CriticalResolution {
-  return {
-    source: { ...crit.source },
-    determiningRoll: crit.determiningRoll,
-    throughArmor: crit.throughArmor,
-    rows: crit.rows.map(cloneCriticalEffect),
-    critSlotsDestroyed: cloneCritTable(crit.critSlotsDestroyed),
-    destroyedWeapons: [...crit.destroyedWeapons],
-    damage: cloneDamageState(crit.damage),
-    blownOffArms: [...crit.blownOffArms],
-    killedReason: crit.killedReason,
-    ammoBins: cloneAmmoBins(crit.ammoBins),
-  };
-}
-
-function cloneAttackResolution(resolution: AttackResolution): AttackResolution {
-  return {
-    ...resolution,
-    breakdown: { ...resolution.breakdown },
-    groups: resolution.groups.map((g) => ({ ...g })),
-    application:
-      resolution.application === null ? null : cloneDamageApplication(resolution.application),
-    crits: resolution.crits.map(cloneCriticalResolution),
-  };
-}
-
-function cloneGameEvent(event: GameEvent): GameEvent {
-  switch (event.kind) {
-    case "initiative":
-      return { ...event, rolls: { ...event.rolls } };
-    case "moved":
-      return { ...event, position: cloneHexCoord(event.position) };
-    case "attackResolved":
-      return { ...event, resolution: cloneAttackResolution(event.resolution) };
-    case "unitFell":
-    case "buildingCrash":
-      return {
-        ...event,
-        groups: event.groups.map((g) => ({ ...g })),
-        crits: event.crits.map(cloneCriticalResolution),
-      };
-    default:
-      return { ...event };
-  }
 }
 
 function cloneUnitState(unit: UnitState): UnitState {
@@ -215,7 +143,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /** Light shape-guard over parsed JSON; engine trusts own output, this
- *  rejects garbage / wrong-payload strings before touching live state. */
+ *  rejects garbage / wrong-payload strings before touching live state.
+ *  Snapshots pre-dating event-log removal carry an `events` key and are
+ *  rejected outright (clean break, no migration). */
 function isBattleSnapshotObject(value: unknown): value is BattleSnapshot {
   if (!isRecord(value)) return false;
   return (
@@ -229,7 +159,7 @@ function isBattleSnapshotObject(value: unknown): value is BattleSnapshot {
     Array.isArray(value.cells) &&
     Array.isArray(value.actedThisPhase) &&
     (value.actorQueue === null || Array.isArray(value.actorQueue)) &&
-    Array.isArray(value.events) &&
+    !("events" in value) &&
     isRecord(value.buildings) &&
     isRecord(value.wrecks)
   );
@@ -285,7 +215,6 @@ function cloneBattleState(state: BattleState): BattleSnapshot {
     critsDisabled: state.critsDisabled,
     actedThisPhase: [...state.actedThisPhase],
     actorQueue: state.actorQueue === null ? null : [...state.actorQueue],
-    events: state.events.map(cloneGameEvent),
     buildings,
     wrecks,
   };
@@ -310,8 +239,6 @@ function loadClonedBattleState(state: BattleState, snapshot: BattleSnapshot): vo
   state.actedThisPhase.length = 0;
   state.actedThisPhase.push(...snapshot.actedThisPhase);
   state.actorQueue = snapshot.actorQueue === null ? null : [...snapshot.actorQueue];
-  state.events.length = 0;
-  for (const event of snapshot.events) state.events.push(cloneGameEvent(event));
   for (const key of Object.keys(state.buildings)) delete state.buildings[key];
   for (const [key, building] of Object.entries(snapshot.buildings)) {
     state.buildings[key] = cloneBuildingState(building);
@@ -443,15 +370,4 @@ export function loadWrecks(target: Record<string, WreckState>, snapshot: WrecksS
   for (const [key, wreck] of Object.entries(snapshot)) {
     target[key] = cloneWreckState(wreck);
   }
-}
-
-/** Detached deep copy of event log, incl nested resolutions. Treat as immutable. */
-export function saveEvents(events: readonly GameEvent[]): EventsSnapshot {
-  return events.map(cloneGameEvent);
-}
-
-/** Roll event log back to snapshot in place; truncates events added after save. */
-export function loadEvents(target: GameEvent[], snapshot: EventsSnapshot): void {
-  target.length = 0;
-  for (const event of snapshot) target.push(cloneGameEvent(event));
 }

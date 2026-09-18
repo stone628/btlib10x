@@ -31,9 +31,9 @@ function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
 }
 
 function startAttackTurn(state: BattleState): BattleState {
-  rollInitiativePhase(state, scriptedRng(3, 3, 3, 1));
-  advancePhase(state); // initiative -> movement
-  advancePhase(state); // movement -> weaponAttack (nobody moved)
+  rollInitiativePhase(state, scriptedRng(3, 3, 3, 1), []);
+  advancePhase(state, []); // initiative -> movement
+  advancePhase(state, []); // movement -> weaponAttack (nobody moved)
   return state;
 }
 

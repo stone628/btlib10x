@@ -278,17 +278,23 @@ describe("engine prone turn", () => {
       ],
       true,
     );
-    rollInitiativePhase(state, scriptedRng(3, 3, 4, 4));
+    rollInitiativePhase(state, scriptedRng(3, 3, 4, 4), []);
     return state;
   }
 
   it("turns in place for 1 MP per hexside, multiple turns allowed", () => {
     const state = proneBattle();
     requireUnit(state, "hbk").prone = true;
-    executeMove(state, "hbk", "walk", [
-      { kind: "turn", facings: 1 },
-      { kind: "turn", facings: 1 },
-    ]);
+    executeMove(
+      state,
+      "hbk",
+      "walk",
+      [
+        { kind: "turn", facings: 1 },
+        { kind: "turn", facings: 1 },
+      ],
+      [],
+    );
     const unit = state.units.hbk!;
     expect(unit.prone).toBe(true);
     expect(unit.position).toEqual({ col: 3, row: 3 });
@@ -301,13 +307,13 @@ describe("engine prone turn", () => {
     const state = proneBattle();
     const to = neighbor({ col: 3, row: 3 }, "n");
     requireUnit(state, "hbk").prone = true;
-    expect(() => executeMove(state, "hbk", "walk", [{ kind: "enter", to }])).toThrow(
+    expect(() => executeMove(state, "hbk", "walk", [{ kind: "enter", to }], [])).toThrow(
       /turn or pronestill only/,
     );
   });
 
   it("rejects zero-hex jump declarations", () => {
     const state = proneBattle();
-    expect(() => executeMove(state, "hbk", "jump", [])).toThrow(/at least 1 hex/);
+    expect(() => executeMove(state, "hbk", "jump", [], [])).toThrow(/at least 1 hex/);
   });
 });

@@ -49,7 +49,7 @@ export function createTestBattle(
     units,
     { critsDisabled },
   );
-  advancePhase(state); // end -> initiative (turn 1)
+  advancePhase(state, []); // end -> initiative (turn 1)
   return state;
 }
 

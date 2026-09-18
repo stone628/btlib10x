@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { neighbor } from "../src/core/hex.js";
 import { resolveWeaponAttack } from "../src/rules/attack.js";
-import type { BattleState, TerrainHexDef, UnitInit } from "../src/rules/game.js";
+import type { BattleState, GameEvent, TerrainHexDef, UnitInit } from "../src/rules/game.js";
 import {
   ejectPilot,
   executeMove,
@@ -40,26 +40,27 @@ function hbkVsEnf(): BattleState {
 }
 
 function startMovementTurn(state: BattleState, rng = scriptedRng(3, 3, 3, 1)): BattleState {
-  rollInitiativePhase(state, rng);
+  rollInitiativePhase(state, rng, []);
   return state;
 }
 
 describe("eject", () => {
   it("requires the movement phase", () => {
     const state = hbkVsEnf();
-    expect(() => ejectPilot(state, "hbk")).toThrow(/movement/);
+    expect(() => ejectPilot(state, "hbk", [])).toThrow(/movement/);
   });
 
   it("removes the unit, marks it acted, emits events, and spawns a level-2 wreck", () => {
     const state = startMovementTurn(hbkVsEnf());
-    ejectPilot(state, "hbk");
+    const events: GameEvent[] = [];
+    ejectPilot(state, "hbk", events);
     const hbk = requireUnit(state, "hbk");
     expect(hbk.removed).toBe("pilotEjected");
     expect(hbk.destroyed).toBe("not");
     expect(state.actedThisPhase).toContain("hbk");
     expect(state.wrecks["2,4"]).toEqual({ unitId: "hbk", level: 2 });
     expect(
-      state.events.some(
+      events.some(
         (e) => e.kind === "unitRemoved" && e.unitId === "hbk" && e.reason === "pilotEjected",
       ),
     ).toBe(true);
@@ -68,21 +69,21 @@ describe("eject", () => {
 
   it("rejects a unit already removed from play", () => {
     const state = startMovementTurn(hbkVsEnf());
-    ejectPilot(state, "hbk");
-    expect(() => ejectPilot(state, "hbk")).toThrow(/removed from play/);
+    ejectPilot(state, "hbk", []);
+    expect(() => ejectPilot(state, "hbk", [])).toThrow(/removed from play/);
   });
 
   it("allows a shut-down unit to eject", () => {
     const state = startMovementTurn(hbkVsEnf());
     requireUnit(state, "hbk").shutdown = "manual";
-    ejectPilot(state, "hbk");
+    ejectPilot(state, "hbk", []);
     expect(requireUnit(state, "hbk").removed).toBe("pilotEjected");
     expect(state.wrecks["2,4"]).toEqual({ unitId: "hbk", level: 2 });
   });
 
   it("skips the ejected unit in the actor queue and settles victory", () => {
     const state = startMovementTurn(hbkVsEnf());
-    ejectPilot(state, "hbk");
+    ejectPilot(state, "hbk", []);
     expect(nextActor(state)).toBe("enf");
     expect(checkVictory(state).winnerTeam).toBe(1);
   });
@@ -111,12 +112,18 @@ describe("eject", () => {
       },
     ];
     const state = startMovementTurn(createTestBattle([], units, true));
-    ejectPilot(state, "hbk");
+    ejectPilot(state, "hbk", []);
     expect(() =>
-      executeMove(state, "enf", "walk", [
-        { kind: "enter", to: neighbor(start, "n") },
-        { kind: "enter", to: wreck },
-      ]),
+      executeMove(
+        state,
+        "enf",
+        "walk",
+        [
+          { kind: "enter", to: neighbor(start, "n") },
+          { kind: "enter", to: wreck },
+        ],
+        [],
+      ),
     ).toThrow(/wreck/);
   });
 
@@ -144,7 +151,7 @@ describe("eject", () => {
       },
     ];
     const state = startMovementTurn(createTestBattle([], units, true));
-    ejectPilot(state, "hbk");
+    ejectPilot(state, "hbk", []);
     expect(
       reachableLandings(start, "s", {
         mode: "jump",
@@ -158,7 +165,7 @@ describe("eject", () => {
         occupantTeam: () => undefined,
       }).some((l) => l.hex.col === wreck.col && l.hex.row === wreck.row),
     ).toBe(false);
-    expect(() => executeMove(state, "enf", "walk", [{ kind: "enter", to: wreck }])).toThrow(
+    expect(() => executeMove(state, "enf", "walk", [{ kind: "enter", to: wreck }], [])).toThrow(
       /wreck/,
     );
   });
@@ -169,7 +176,7 @@ describe("eject", () => {
     const from = { col: 2, row: 4 };
     const to = { col: 4, row: 4 };
     expect(losClear(state, from, to)).toBe(true);
-    ejectPilot(state, "hbk");
+    ejectPilot(state, "hbk", []);
     expect(state.wrecks["3,4"]?.level).toBe(2);
     expect(losClear(state, from, to, state.wrecks)).toBe(false);
     expect(losClear(state, from, { col: 3, row: 4 }, state.wrecks)).toBe(true);
@@ -201,7 +208,7 @@ describe("eject", () => {
     const from = { col: 2, row: 4 };
     const to = { col: 4, row: 4 };
     expect(losClear(state, from, to)).toBe(true);
-    ejectPilot(state, "bzk");
+    ejectPilot(state, "bzk", []);
     expect(state.wrecks["3,4"]?.level).toBe(1);
     // Tactical Operations: L1 does not block LOS between two standing standard 'Mechs.
     expect(losClear(state, from, to, state.wrecks)).toBe(true);
@@ -239,7 +246,7 @@ describe("eject", () => {
       },
     ];
     const state = startMovementTurn(createTestBattle([], units, true));
-    ejectPilot(state, "hbk");
+    ejectPilot(state, "hbk", []);
     expect(partialCoverMod(state, requireUnit(state, "cda"), requireUnit(state, "enf"))).toBe(2);
     requireUnit(state, "enf").position = { col: 1, row: 5 };
     expect(partialCoverMod(state, requireUnit(state, "cda"), requireUnit(state, "enf"))).toBe(0);
@@ -248,7 +255,7 @@ describe("eject", () => {
   it("prone eject leaves a level-1 wreck regardless of tonnage (TO)", () => {
     const state = startMovementTurn(hbkVsEnf());
     requireUnit(state, "hbk").prone = true;
-    ejectPilot(state, "hbk");
+    ejectPilot(state, "hbk", []);
     expect(state.wrecks["2,4"]).toEqual({ unitId: "hbk", level: 1 });
   });
 
@@ -275,7 +282,7 @@ describe("eject", () => {
       },
     ];
     const standing = startMovementTurn(createTestBattle([], units, true));
-    ejectPilot(standing, "bzk");
+    ejectPilot(standing, "bzk", []);
     expect(standing.wrecks["2,4"]).toEqual({ unitId: "bzk", level: 1 });
 
     const proneUnits: UnitInit[] = [
@@ -300,7 +307,7 @@ describe("eject", () => {
     ];
     const prone = startMovementTurn(createTestBattle([], proneUnits, true));
     requireUnit(prone, "bzk").prone = true;
-    ejectPilot(prone, "bzk");
+    ejectPilot(prone, "bzk", []);
     expect(prone.wrecks["2,4"]).toEqual({ unitId: "bzk", level: 1 });
   });
 
@@ -337,7 +344,7 @@ describe("eject", () => {
       },
     ];
     const state = startMovementTurn(createTestBattle([], units, true));
-    ejectPilot(state, "bzk");
+    ejectPilot(state, "bzk", []);
     expect(state.wrecks["3,3"]?.level).toBe(1);
     expect(partialCoverMod(state, requireUnit(state, "cda"), requireUnit(state, "enf"))).toBe(1);
   });
@@ -373,7 +380,7 @@ describe("eject", () => {
       },
     ];
     const state = startMovementTurn(createTestBattle([], units, true));
-    ejectPilot(state, "bzk");
+    ejectPilot(state, "bzk", []);
     requireUnit(state, "enf").prone = true;
     expect(partialCoverMod(state, requireUnit(state, "cda"), requireUnit(state, "enf"))).toBe(0);
   });
@@ -417,7 +424,7 @@ describe("eject", () => {
       { col: 2, row: 3, type: "clear", level: 2 },
     ];
     const state = startMovementTurn(createTestBattle(terrain, units, true));
-    ejectPilot(state, "hbk");
+    ejectPilot(state, "hbk", []);
     expect(state.wrecks["3,3"]?.level).toBe(2);
     expect(partialCoverMod(state, requireUnit(state, "cda"), requireUnit(state, "enf"))).toBe(1);
   });
@@ -457,7 +464,7 @@ describe("eject", () => {
     ];
     const terrain: TerrainHexDef[] = [{ col: 3, row: 4, type: "clear", level: 2 }];
     const state = startMovementTurn(createTestBattle(terrain, units, true));
-    ejectPilot(state, "hbk");
+    ejectPilot(state, "hbk", []);
     expect(state.wrecks["3,3"]?.level).toBe(2);
     expect(partialCoverMod(state, requireUnit(state, "cda"), requireUnit(state, "enf"))).toBe(2);
   });
