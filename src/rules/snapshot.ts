@@ -1,11 +1,13 @@
 /**
  * Engine state snapshots: save + rollback for `BattleState`.
  *
- * Public surface is two functions: `saveBattleState` serializes live state
+ * Public surface is three functions: `saveBattleState` serializes live state
  * to a JSON string; `loadBattleState` parses it back onto live state in
  * place (engine mutates passed state, returns void — see
- * `src/rules/game.ts`). The string itself is the reusable snapshot: load
- * the same string repeatedly for repeated rollbacks.
+ * `src/rules/game.ts`); `parseBattleState` parses a snapshot string into a
+ * fresh detached `BattleState` with no placeholder needed. The string itself
+ * is the reusable snapshot: load the same string repeatedly for repeated
+ * rollbacks.
  *
  * Typical phase-change use:
  *
@@ -13,6 +15,11 @@
  *   const snap = saveBattleState(state);
  *   // ... play on ...
  *   loadBattleState(state, snap);
+ *
+ * Fresh-state use:
+ *
+ *   const snap = saveBattleState(state);
+ *   const revived = parseBattleState(snap);
  *
  * Manual field-by-field copy under the JSON, not `structuredClone`:
  * explicit list guards against future `BattleState` additions, keeps `src/`
@@ -239,6 +246,19 @@ export function loadBattleState(state: BattleState, data: string): void {
   }
   if (!isBattleSnapshotObject(parsed)) throw new Error("Invalid battle snapshot string");
   loadClonedBattleState(state, parsed);
+}
+
+/** Parses snapshot string into fresh detached `BattleState`. Same string
+ *  parses repeatedly. Throws when `data` is not a battle snapshot string. */
+export function parseBattleState(data: string): BattleState {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(data);
+  } catch {
+    throw new Error("Invalid battle snapshot string");
+  }
+  if (!isBattleSnapshotObject(parsed)) throw new Error("Invalid battle snapshot string");
+  return cloneBattleState(parsed);
 }
 
 function cloneBattleState(state: BattleState): BattleSnapshot {
