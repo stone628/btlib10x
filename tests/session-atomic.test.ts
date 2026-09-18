@@ -31,7 +31,7 @@ describe("commitAtomic rollback", () => {
     const { s, actor } = started(4);
     s.battle!.units[actor]!.prone = true;
     run(s, "mode standup");
-    expect(s.moveMode).toBe("standup");
+    expect(s.move!.moveMode).toBe("standup");
 
     const heatBefore = s.battle!.units[actor]!.heat;
     const rng = scriptedRng(6, 6, 6, 6);
@@ -39,7 +39,7 @@ describe("commitAtomic rollback", () => {
     const rngSnap = rng.snapshot();
     // Illegal enter step: attemptStandUp draws 2D6 first, then executeMove
     // throws, so the commit consumed rng before failing.
-    s.moveSteps = [{ kind: "enter", to: { col: 0, row: 0 } }];
+    s.move!.moveSteps = [{ kind: "enter", to: { col: 0, row: 0 } }];
 
     expect(() => S.commitMove(s)).toThrow(/Standing still forbids entering hexes/);
 
@@ -53,13 +53,13 @@ describe("commitAtomic rollback", () => {
     expect(s.battle!.units[actor]!.mpSpent).toBe(0);
     expect(s.battle!.units[actor]!.declaredAttacks ?? []).toEqual([]);
     // Session buffers preserved: declaration intact, actor still current.
-    expect(s.moveMode).toBe("standup");
-    expect(s.moveSteps).toHaveLength(1);
-    expect(s.actorId).toBe(actor);
+    expect(s.move!.moveMode).toBe("standup");
+    expect(s.move!.moveSteps).toHaveLength(1);
+    expect(s.move!.actorId).toBe(actor);
 
     // Retry with legal (empty) steps succeeds on identical rolls and returns
     // the live battle object.
-    s.moveSteps = [];
+    s.move!.moveSteps = [];
     const res = S.commitMove(s);
     expect(res.state).toBe(s.battle);
     expect(res.newEvents.length).toBeGreaterThan(0);
@@ -103,9 +103,9 @@ describe("commitAtomic rollback", () => {
     // First unit committed successfully before the scripted rng was
     // installed: its declarations predate the snapshot and survive.
     expect(s.battle!.units[first]!.declaredAttacks).toHaveLength(2);
-    expect(s.actorId).toBe(attacker);
-    expect(s.fireDecls).toHaveLength(2);
-    expect(s.torsoTwist).toBe("front");
+    expect(s.attack!.actorId).toBe(attacker);
+    expect(s.attack!.fireDecls).toHaveLength(2);
+    expect(s.attack!.torsoTwist).toBe("front");
   });
 
   it("successful commits return the live battle object", () => {
@@ -116,6 +116,6 @@ describe("commitAtomic rollback", () => {
     expect(res.state).toBe(s.battle);
     expect(res.newEvents.length).toBeGreaterThan(0);
     expect(res.newEvents.some((e) => e.kind === "moveDeclared")).toBe(true);
-    expect(s.actorId).not.toBe(actor);
+    expect(S.currentActor(s)?.id).not.toBe(actor);
   });
 });

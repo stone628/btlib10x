@@ -107,7 +107,8 @@ function expectArgs(locale: LocaleId, args: readonly string[], count: number, us
 /** Command id argument: explicit unit id, else the acting unit when present. */
 function idOrActor(s: Session, args: readonly string[]): string {
   if (args[0] !== undefined) return args[0];
-  if (s.actorId !== null) return s.actorId;
+  const actor = currentActor(s);
+  if (actor !== null) return actor.id;
   throw new Error(i18n(s.locale, "err.needsActor"));
 }
 
@@ -330,22 +331,24 @@ const MOVE_CMDS: Record<string, CmdDef> = {
   candidate: {
     helpKey: "cmd.candidateMove.help",
     run: (s, _a) => {
+      const m = s.move;
       if (
-        s.moveMode === null ||
-        s.moveMode === "shutdown" ||
-        s.moveMode === "startup" ||
-        s.moveMode === "eject"
+        !m ||
+        m.moveMode === null ||
+        m.moveMode === "shutdown" ||
+        m.moveMode === "startup" ||
+        m.moveMode === "eject"
       ) {
         throw new Error(i18n(L(s), "err.candidate.movemode"));
       }
       const lines = queuedMoveLines(s);
-      if (s.moveCandidate === null) {
-        s.moveCandidate = reachablesInfo(s) ?? null;
+      if (m.moveCandidate === null) {
+        m.moveCandidate = reachablesInfo(s) ?? null;
       }
-      if (s.moveCandidate === null) return lines;
+      if (m.moveCandidate === null) return lines;
       return [
         buildLinesChunk(lines),
-        reachableChunk(s.locale, s.setup, s.battle!, s.moveCandidate),
+        reachableChunk(s.locale, s.setup, s.battle!, m.moveCandidate),
       ];
     },
   },
@@ -377,8 +380,9 @@ const MOVE_CMDS: Record<string, CmdDef> = {
       const mode = parseMoveMode(locale, a[0]!);
       declareMode(s, a[0]!, a[1]);
       const actor = currentActor(s)!;
+      const m = s.move!;
       if (mode === "shutdown" || mode === "startup" || mode === "eject") {
-        s.moveCandidate = null;
+        m.moveCandidate = null;
         return [
           i18n(locale, "ok.modeDeclaredVoluntary", { id: actor.id, mode }),
           i18n(locale, "stepResult.from", {
@@ -395,14 +399,14 @@ const MOVE_CMDS: Record<string, CmdDef> = {
         stepResultFromLine(locale, s),
       ];
       if (mode === "standStill" || mode === "pronestill") {
-        s.moveCandidate = null;
+        m.moveCandidate = null;
         return lines;
       }
-      s.moveCandidate = reachablesInfo(s) ?? null;
-      if (s.moveCandidate === null) return lines;
+      m.moveCandidate = reachablesInfo(s) ?? null;
+      if (m.moveCandidate === null) return lines;
       return [
         buildLinesChunk(lines),
-        reachableChunk(s.locale, s.setup, s.battle!, s.moveCandidate),
+        reachableChunk(s.locale, s.setup, s.battle!, m.moveCandidate),
       ];
     },
   },
@@ -417,14 +421,13 @@ const MOVE_CMDS: Record<string, CmdDef> = {
         row: coord(L(s), a[1]!, "row"),
       };
       const facing = resolveFacing(L(s), a[2]!);
-      if (s.moveCandidate === null) {
+      const candidate = s.move?.moveCandidate ?? null;
+      if (candidate === null) {
         throw new Error(i18n(L(s), "err.place.noCandidate"));
       }
-      const landing = s.moveCandidate.revealed.find(
-        (l) => sameHex(l.hex, hex) && l.facing === facing,
-      );
+      const landing = candidate.revealed.find((l) => sameHex(l.hex, hex) && l.facing === facing);
       if (!landing) {
-        const hexReachable = s.moveCandidate.revealed.some((l) => sameHex(l.hex, hex));
+        const hexReachable = candidate.revealed.some((l) => sameHex(l.hex, hex));
         if (!hexReachable) {
           throw new Error(i18n(L(s), "err.place.unreachable", { col: hex.col, row: hex.row }));
         }
@@ -476,9 +479,9 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
       expectArgs(L(s), a, 1, "torso <front|left|right>");
       const actor = currentActor(s);
       if (!actor) throw new Error(i18n(L(s), "err.needsActor"));
-      const prev = s.torsoTwist;
+      const prev = s.attack?.torsoTwist ?? "front";
       setTorsoTwist(s, a[0]!);
-      const dir: Arc = s.torsoTwist;
+      const dir: Arc = s.attack!.torsoTwist;
       if (prev === dir) {
         return [i18n(L(s), "ok.twistAlready", { id: actor.id, dir })];
       }
@@ -489,7 +492,8 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
     helpKey: "cmd.candidateAttack.help",
     run: (s, _a) => {
       if (!checkFireHint(s)) throw new Error(i18n(L(s), "err.candidate.attack"));
-      return fireSuggestionChunks(s.locale, s.fireCandidate!, s.torsoTwist);
+      const a = s.attack!;
+      return fireSuggestionChunks(s.locale, a.fireCandidate!, a.torsoTwist);
     },
   },
   fire: {
@@ -562,7 +566,8 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
   done: {
     helpKey: "cmd.doneFire.help",
     run: (s) => {
-      if (s.fireDecls.length === 0) {
+      const decls = s.attack?.fireDecls ?? [];
+      if (decls.length === 0) {
         const unit = currentActor(s);
         const result = passFire(s);
         const passLine = unit ? i18n(s.locale, "log.attacksPassed", { id: unit.id }) : "";
@@ -609,12 +614,8 @@ function availableCmds(session: Session): Record<string, CmdDef> {
       if (phase !== "movement") return { ...GLOBAL_CMDS, ...MOVE_CMDS };
       const actor = currentActor(session);
       const down = actor !== null && isShutdown(actor);
-      if (
-        down ||
-        session.moveMode === "shutdown" ||
-        session.moveMode === "startup" ||
-        session.moveMode === "prone"
-      ) {
+      const declared = session.move?.moveMode ?? null;
+      if (down || declared === "shutdown" || declared === "startup" || declared === "prone") {
         // Pending voluntary declaration: no hex movement.
         const { move: _move, face: _face, ...rest } = MOVE_CMDS;
         return { ...GLOBAL_CMDS, ...rest };
@@ -730,10 +731,11 @@ function helpText(session: Session): string[] {
 }
 
 function victoryBanner(s: Session): string[] {
-  if (s.victory === null) return [];
-  return s.victory.draw
+  const victory = s.over?.victory ?? null;
+  if (victory === null) return [];
+  return victory.draw
     ? [i18n(s.locale, "banner.draw")]
-    : [i18n(s.locale, "banner.win", { team: String(s.victory.winnerTeam) })];
+    : [i18n(s.locale, "banner.win", { team: String(victory.winnerTeam) })];
 }
 
 function normalize(out: string[] | Chunk[]): Chunk[] {
@@ -769,21 +771,22 @@ export function runChunks(session: Session, raw: string): Chunk[] {
     chunks.push(buildLinesChunk(victoryBanner(session), "banner"));
   }
   if (checkFireHint(session)) {
-    chunks.push(
-      ...fireSuggestionChunks(session.locale, session.fireCandidate!, session.torsoTwist),
-    );
+    const a = session.attack!;
+    chunks.push(...fireSuggestionChunks(session.locale, a.fireCandidate!, a.torsoTwist));
   }
   return chunks;
 }
 
 function checkFireHint(s: Session): boolean {
   if (s.app !== "battle" || s.battle === null || s.battle.phase !== "weaponAttack") return false;
+  const a = s.attack;
+  if (a === null) return false;
   const actor = currentActor(s);
   if (actor === null) return false;
-  const newKey = `${s.battle.turn}:${actor.id}:${s.torsoTwist}`;
-  if (newKey !== s.fireHintShownFor || s.fireCandidate === null) {
-    s.fireCandidate = suggestFireTargets(s.battle, actor.id, s.torsoTwist);
-    s.fireHintShownFor = newKey;
+  const newKey = `${s.battle.turn}:${actor.id}:${a.torsoTwist}`;
+  if (newKey !== a.fireHintShownFor || a.fireCandidate === null) {
+    a.fireCandidate = suggestFireTargets(s.battle, actor.id, a.torsoTwist);
+    a.fireHintShownFor = newKey;
     return true;
   }
 

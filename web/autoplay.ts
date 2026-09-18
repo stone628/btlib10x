@@ -7,11 +7,13 @@ import {
   isUnitAvailable,
   isUnitImmobile,
   isUnitRemoved,
+  type RevealedLanding,
   suggestFireTargets,
   weaponCanFireIntoArc,
 } from "btlib10x";
 import type { FireTarget, FireWeapon } from "../src/index.js";
-import type * as S from "./session.js";
+import type { AppState, Session } from "./session.js";
+// import type * as S from "./session.js";
 
 /** Delay between generated commands, in milliseconds. */
 export const AUTOPLAY_INTERVAL_MS = 100;
@@ -28,9 +30,9 @@ const SCRIPT_SETUP: ReadonlyArray<{ id: string; command: string }> = [
 ];
 
 /** Queued commands to issue before falling back to state-based logic. */
-let currSession: S.Session | null = null;
+let currSession: Session | null = null;
 let nextCommandQueue: string[] = [];
-let currApp: S.AppState | null = null;
+let currApp: AppState | null = null;
 let currBattlePhase: string | null = null;
 let helpShown: Record<string, boolean> = {};
 let noWeapon: Record<string, boolean> = {};
@@ -47,7 +49,7 @@ function returnFirstQueuedCommand(): string {
 }
 
 /** Reset transient autoplay memory; called when the user re-enters setup. */
-export function resetAutoplayState(s: S.Session): void {
+export function resetAutoplayState(s: Session): void {
   if (currSession !== s) {
     currSession = s;
     nextCommandQueue = [];
@@ -80,11 +82,11 @@ export function flushAutoPlayCommand(): string[] {
 }
 
 /** Pick the best 1-step landing (F toward enemy, B away) and queue a place command. */
-function queueStepToward(s: S.Session, fragment: "F" | "B"): void {
-  const candidate = s.moveCandidate;
+function queueStepToward(s: Session, fragment: "F" | "B"): void {
+  const candidate = s.move?.moveCandidate ?? null;
   if (candidate === null) return;
   const oneStep = candidate.revealed.filter(
-    (l) => l.path.length === 1 && l.path[0]?.fragment === fragment,
+    (l: RevealedLanding) => l.path.length === 1 && l.path[0]?.fragment === fragment,
   );
   if (oneStep.length === 0) return;
   const pick = oneStep.shift()!;
@@ -98,9 +100,9 @@ function queueStepToward(s: S.Session, fragment: "F" | "B"): void {
  * landing's arc toward the target; prefers pure turns, then shortest path.
  * Returns true when a facing landing was queued.
  */
-function queueFaceTarget(s: S.Session, actorId: string, targetId: string): boolean {
+function queueFaceTarget(s: Session, actorId: string, targetId: string): boolean {
   const st = s.battle;
-  const candidate = s.moveCandidate;
+  const candidate = s.move?.moveCandidate ?? null;
   if (st === null || candidate === null) return false;
   const actor = st.units[actorId];
   const target = st.units[targetId];
@@ -166,7 +168,7 @@ function queueFaceTarget(s: S.Session, actorId: string, targetId: string): boole
  * or a state the script cannot drive). Feed each result through execute()
  * one AUTOPLAY_INTERVAL_MS at a time.
  */
-export function nextAutoPlayCommand(s: S.Session): string | null {
+export function nextAutoPlayCommand(s: Session): string | null {
   if (nextCommandQueue.length > 0) {
     return nextCommandQueue.shift()!;
   }
@@ -200,9 +202,10 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
   if (currApp === "battle") {
     const st = s.battle;
 
-    if (st === null || s.actorId === null) return null;
+    const actorId = s.move?.actorId ?? s.attack?.actorId ?? null;
+    if (st === null || actorId === null) return null;
 
-    const actor = st.units[s.actorId];
+    const actor = st.units[actorId];
     if (actor === undefined || isUnitRemoved(actor)) return null;
     const enemy = Object.values(st.units).find(
       (u) => isUnitAvailable(u) && u.id !== actor.id && u.team !== actor.team,
@@ -226,7 +229,7 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
         queueNextCommand("status");
       }
       // movement mode not set yet
-      if (s.moveMode === null) {
+      if ((s.move?.moveMode ?? null) === null) {
         // A shut-down unit just passes: no movement mode, stay off-line.
         if (isNominal(actor)) {
           if (noWeapon[actor.id] === true) {
@@ -278,7 +281,9 @@ export function nextAutoPlayCommand(s: S.Session): string | null {
         queueNextCommand("status");
       }
       const sugg = suggestFireTargets(st, actor.id);
-      const declared = new Set(s.fireDecls.map((d) => d.weaponIndex));
+      const declared = new Set(
+        (s.attack?.fireDecls ?? []).map((d: { weaponIndex: number }) => d.weaponIndex),
+      );
       const variantWeapons = (t: FireTarget): FireWeapon[] =>
         t.weaponsIfPropLeft.length >= t.weaponsIfPropRight.length
           ? [...t.weaponsIfPropLeft]

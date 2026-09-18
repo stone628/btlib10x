@@ -1395,7 +1395,7 @@ function durabilityFrag(view: SheetView, loc: Location): string {
 }
 
 export function overStatusLines(s: Session): string[] {
-  if (!s.battle || !s.victory) return [];
+  if (!s.battle || !s.over) return [];
   const lines: string[] = [];
   const teams = [...new Set(Object.values(s.battle.units).map((u) => u.team))].sort(
     (a, b) => a - b,
@@ -1458,17 +1458,18 @@ export function stepResultLines(s: Session, landing: RevealedLanding): string[] 
   const actor = currentActor(s)!;
   const path = landing.path;
   const last = path[path.length - 1];
-  const postureCost =
-    s.moveMode === "prone" ? DROP_MP_COST : s.moveMode === "standup" ? STAND_MP_COST : 0;
+  const m = s.move;
+  const mode = m?.moveMode ?? null;
+  const postureCost = mode === "prone" ? DROP_MP_COST : mode === "standup" ? STAND_MP_COST : 0;
   const locomotion =
-    s.moveMode === "standup" || s.moveMode === "prone"
-      ? (s.postureMove ?? "walk")
-      : s.moveMode === "turn"
+    mode === "standup" || mode === "prone"
+      ? (m?.postureMove ?? "walk")
+      : mode === "turn"
         ? "walk"
-        : (s.moveMode ?? "standStill");
+        : (mode ?? "standStill");
   const lines = [
     i18n(locale, "ok.stepResult", {
-      id: s.actorId ?? "",
+      id: m?.actorId ?? "",
       mode: displayModeFor(s),
       col: landing.hex.col,
       row: landing.hex.row,
@@ -1522,7 +1523,7 @@ export function stepResultLines(s: Session, landing: RevealedLanding): string[] 
 export function queuedMoveLines(s: Session): string[] {
   const locale = s.locale;
   const actor = currentActor(s)!;
-  const landing = s.placedLanding;
+  const landing = s.move?.placedLanding ?? null;
   if (landing === null) {
     return [
       i18n(locale, "ok.modeDeclared", {
@@ -1540,12 +1541,8 @@ export function moveStatusLines(s: Session): string[] {
   const lines: string[] = [];
   lines.push(...actorOrderLines(s));
   lines.push(i18n(s.locale, "moveStatus.headLine"));
-  if (
-    s.moveMode === null ||
-    s.moveMode === "shutdown" ||
-    s.moveMode === "startup" ||
-    s.moveMode === "eject"
-  ) {
+  const mode = s.move?.moveMode ?? null;
+  if (mode === null || mode === "shutdown" || mode === "startup" || mode === "eject") {
     lines.push(i18n(s.locale, "moveStatus.noMode"));
   } else {
     lines.push(...queuedMoveLines(s).map((l) => `  ${l}`));
@@ -1562,8 +1559,8 @@ export function moveStatusLines(s: Session): string[] {
  * by the `place`/`status` preview straight from the candidate.
  */
 export function reachablesInfo(s: Session): BoardRenderReachableInfo | null {
-  const actor = s.battle?.units[s.actorId ?? ""];
-  const mode = s.moveMode;
+  const actor = currentActor(s);
+  const mode = s.move?.moveMode ?? null;
   if (
     !actor ||
     !s.battle ||
@@ -1588,8 +1585,9 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo | null {
   let walking = Math.max(0, effMove.walking - heatPenalty);
   let running = Math.max(0, effMove.running - heatPenalty);
   let jumping = Math.max(0, effMove.jumping - heatPenalty);
+  const postureMove = s.move?.postureMove ?? null;
   if (mode === "prone") {
-    if ((s.postureMove ?? "walk") === "standStill") return null; // drop in place: no map
+    if ((postureMove ?? "walk") === "standStill") return null; // drop in place: no map
     locomotion = "walk";
     proneFlag = true;
     walking = Math.max(0, walking - DROP_MP_COST);
@@ -1599,7 +1597,7 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo | null {
   } else if (mode === "pronestill") {
     return null; // stay prone: no map, `place` stays shut
   } else if (mode === "standup") {
-    locomotion = s.postureMove ?? "standStill";
+    locomotion = postureMove ?? "standStill";
     proneFlag = false;
     if (locomotion === "standStill") return null; // stand in place: no map, `place` stays shut
     if (locomotion === "walk") walking = Math.max(0, walking - STAND_MP_COST);
@@ -1646,19 +1644,20 @@ export function reachableChunk(
 }
 
 export function attackStatusLines(s: Session): string[] {
-  const actor = s.battle?.units[s.actorId ?? ""];
+  const actor = currentActor(s);
   if (!actor || !s.battle)
     throw new Error(i18n(s.locale, "err.wrongPhase", { phase: "weaponAttack" }));
   const lines: string[] = [];
   lines.push(...actorOrderLines(s));
   lines.push(i18n(s.locale, "attackStatus.header"));
-  if (s.fireDecls.length === 0) {
+  const decls = s.attack?.fireDecls ?? [];
+  if (decls.length === 0) {
     lines.push(i18n(s.locale, "attackStatus.none"));
     return lines;
   }
   // Engine guarantee: `actor.model` was validated by `createBattle`.
   const def = getMechDefFor(actor);
-  for (const decl of s.fireDecls) {
+  for (const decl of decls) {
     const mount = def.weapons[decl.weaponIndex];
     const name = mount ? mount.weapon : `#${decl.weaponIndex}`;
     const rapid = mount ? getWeaponDefFor(mount).rapidFireShots : undefined;

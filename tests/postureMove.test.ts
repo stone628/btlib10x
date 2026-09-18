@@ -28,8 +28,8 @@ function forceProne(s: S.Session, id: string): void {
 
 /** First candidate landing with actual steps (skips the in-place facing set). */
 function steppedLanding(s: S.Session): { col: number; row: number; facing: string; spent: number } {
-  const landings = s.moveCandidate!.revealed;
-  const landing = landings.find((l) => l.path.length > 0)!;
+  const landings = s.move!.moveCandidate!.revealed;
+  const landing = landings.find((l: { path: readonly unknown[] }) => l.path.length > 0)!;
   expect(landing).toBeDefined();
   const last = landing.path[landing.path.length - 1]!;
   return {
@@ -58,9 +58,9 @@ describe("posture-change then move", () => {
     const from = { ...s.battle!.units[actor]!.position };
     const facing = s.battle!.units[actor]!.facing;
     run(s, "mode standup");
-    expect(s.moveMode).toBe("standup");
-    expect(s.postureMove).toBe("standStill");
-    expect(s.moveCandidate).toBeNull();
+    expect(s.move!.moveMode).toBe("standup");
+    expect(s.move!.postureMove).toBe("standStill");
+    expect(s.move!.moveCandidate).toBeNull();
     expect(run(s, "place 9 9 n")[0]).toMatch(/^error:/);
     run(s, "done");
     const unit = s.battle!.units[actor]!;
@@ -74,15 +74,15 @@ describe("posture-change then move", () => {
   it("bare mode prone defaults to turn; prone turn + place turns sharing one walk budget", () => {
     const { s, actor } = started();
     run(s, "mode prone");
-    expect(s.moveMode).toBe("prone");
-    expect(s.postureMove).toBe("walk");
-    expect(s.moveCandidate).not.toBeNull();
+    expect(s.move!.moveMode).toBe("prone");
+    expect(s.move!.postureMove).toBe("walk");
+    expect(s.move!.moveCandidate).not.toBeNull();
     // Turn-only map: every landing stays in place.
-    for (const l of s.moveCandidate!.revealed) {
+    for (const l of s.move!.moveCandidate!.revealed) {
       expect(l.hex).toEqual(s.battle!.units[actor]!.position);
     }
     const before = s.battle!.units[actor]!;
-    const landing = s.moveCandidate!.revealed.find((l) => l.facing !== before.facing)!;
+    const landing = s.move!.moveCandidate!.revealed.find((l) => l.facing !== before.facing)!;
     expect(landing).toBeDefined();
     const spent = landing.path[landing.path.length - 1]!.totalMp;
     run(s, `place ${landing.hex.col} ${landing.hex.row} ${landing.facing}`);
@@ -100,9 +100,9 @@ describe("posture-change then move", () => {
   it("mode prone pronestill drops in place with no candidate map", () => {
     const { s, actor } = started();
     run(s, "mode prone pronestill");
-    expect(s.moveMode).toBe("prone");
-    expect(s.postureMove).toBe("standStill");
-    expect(s.moveCandidate).toBeNull();
+    expect(s.move!.moveMode).toBe("prone");
+    expect(s.move!.postureMove).toBe("standStill");
+    expect(s.move!.moveCandidate).toBeNull();
     expect(run(s, `place 9 9 n`)[0]).toMatch(/^error:/);
     const heatBefore = s.battle!.units[actor]!.heat;
     run(s, "done");
@@ -117,9 +117,9 @@ describe("posture-change then move", () => {
     forceProne(s, actor);
     const before = s.battle!.units[actor]!;
     run(s, "mode turn");
-    expect(s.moveMode).toBe("turn");
-    expect(s.moveCandidate).not.toBeNull();
-    const landing = s.moveCandidate!.revealed.find((l) => l.facing !== before.facing)!;
+    expect(s.move!.moveMode).toBe("turn");
+    expect(s.move!.moveCandidate).not.toBeNull();
+    const landing = s.move!.moveCandidate!.revealed.find((l) => l.facing !== before.facing)!;
     expect(landing).toBeDefined();
     expect(landing.hex).toEqual(before.position);
     run(s, `place ${landing.hex.col} ${landing.hex.row} ${landing.facing}`);
@@ -137,8 +137,8 @@ describe("posture-change then move", () => {
     const { s, actor } = started();
     forceProne(s, actor);
     run(s, "mode pronestill");
-    expect(s.moveMode).toBe("pronestill");
-    expect(s.moveCandidate).toBeNull();
+    expect(s.move!.moveMode).toBe("pronestill");
+    expect(s.move!.moveCandidate).toBeNull();
     expect(run(s, "place 9 9 n")[0]).toMatch(/^error:/);
     const heatBefore = s.battle!.units[actor]!.heat;
     run(s, "done");
@@ -169,7 +169,7 @@ describe("posture-change then move", () => {
     const before = s.battle!.units[actor]!;
     const from = { ...before.position };
     run(s, "mode prone");
-    const landing = s.moveCandidate!.revealed.find(
+    const landing = s.move!.moveCandidate!.revealed.find(
       (l) => l.hex.col === from.col && l.hex.row === from.row && l.facing !== before.facing,
     )!;
     expect(landing).toBeDefined();
@@ -189,9 +189,9 @@ describe("posture-change then move", () => {
     const { s, actor } = started(0);
     forceProne(s, actor);
     run(s, "mode standup walk");
-    expect(s.moveMode).toBe("standup");
-    expect(s.postureMove).toBe("walk");
-    expect(s.moveCandidate).not.toBeNull();
+    expect(s.move!.moveMode).toBe("standup");
+    expect(s.move!.postureMove).toBe("walk");
+    expect(s.move!.moveCandidate).not.toBeNull();
     const target = steppedLanding(s);
     run(s, `place ${target.col} ${target.row} ${target.facing}`);
     s.rng = scriptedRng(...Array.from({ length: 40 }, () => 6));
@@ -207,8 +207,8 @@ describe("posture-change then move", () => {
     const { s, actor } = started(0, "GRF-1N");
     forceProne(s, actor);
     run(s, "mode standup jump");
-    expect(s.postureMove).toBe("jump");
-    expect(s.moveCandidate).not.toBeNull();
+    expect(s.move!.postureMove).toBe("jump");
+    expect(s.move!.moveCandidate).not.toBeNull();
     const target = steppedLanding(s);
     run(s, `place ${target.col} ${target.row} ${target.facing}`);
     s.rng = scriptedRng(...Array.from({ length: 40 }, () => 6));
@@ -228,16 +228,16 @@ describe("posture-change then move", () => {
     run(s, "mode standup walk");
     const target = steppedLanding(s);
     run(s, `place ${target.col} ${target.row} ${target.facing}`);
-    expect(s.moveSteps.length).toBeGreaterThan(0);
+    expect(s.move!.moveSteps.length).toBeGreaterThan(0);
     // Natural 2 on the PSR always fails; over-provision fall dice.
     s.rng = scriptedRng(1, 1, ...Array.from({ length: 30 }, () => 3));
     run(s, "done");
     const unit = s.battle!.units[actor]!;
     expect(unit.prone).toBe(true);
     expect(unit.position).toEqual(from);
-    expect(s.moveMode).toBeNull();
-    expect(s.moveSteps).toHaveLength(0);
-    expect(s.placedLanding).toBeNull();
+    expect(s.move!.moveMode).toBeNull();
+    expect(s.move!.moveSteps).toHaveLength(0);
+    expect(s.move!.placedLanding).toBeNull();
   });
 
   it("candidate landings fit the shared (reduced) budget", () => {
@@ -245,7 +245,7 @@ describe("posture-change then move", () => {
     forceProne(s, actor);
     run(s, "mode standup walk");
     const budget = S.budgetFor(s);
-    for (const landing of s.moveCandidate!.revealed) {
+    for (const landing of s.move!.moveCandidate!.revealed) {
       const last = landing.path[landing.path.length - 1];
       expect(last?.totalMp ?? 0).toBeLessThanOrEqual(budget);
     }
