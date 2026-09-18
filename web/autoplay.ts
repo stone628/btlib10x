@@ -2,13 +2,17 @@ import {
   bearingExact,
   bestFireTarget,
   classifyArcWithBoundary,
+  effectiveMoveBudget,
+  effectiveMovement,
   getMechDefFor,
   isNominal,
   isUnitAvailable,
   isUnitImmobile,
   isUnitRemoved,
   type RevealedLanding,
+  STAND_MP_COST,
   suggestFireTargets,
+  type UnitState,
   weaponCanFireIntoArc,
 } from "btlib10x";
 import type { FireTarget, FireWeapon } from "../src/index.js";
@@ -37,6 +41,9 @@ let currBattlePhase: string | null = null;
 let helpShown: Record<string, boolean> = {};
 let noWeapon: Record<string, boolean> = {};
 let unitForwarded: Record<string, boolean> = {};
+/** Immobile-prone actors: first turn emits `mode pronestill`, subsequent turns
+ *  promote to `mode eject` so the wreck leaves play. */
+let pronestillThenEject: Record<string, boolean> = {};
 /** Actor id → enemy id whose out-of-arc weapons need facing next movement. */
 let faceEnemy: Record<string, string> = {};
 
@@ -59,6 +66,7 @@ export function resetAutoplayState(s: Session): void {
     helpShown = {};
     noWeapon = {};
     unitForwarded = {};
+    pronestillThenEject = {};
     faceEnemy = {};
   } else {
     if (currApp !== s.app) {
@@ -66,6 +74,13 @@ export function resetAutoplayState(s: Session): void {
       currBattlePhase = null;
     }
   }
+}
+
+/** Post-heat walk budget for the actor; 0 when heat/structure deny walking. */
+function walkBudgetFor(actor: UnitState): number {
+  const def = getMechDefFor(actor);
+  const movement = effectiveMovement(def, actor.critSlotsDestroyed);
+  return effectiveMoveBudget("walk", movement, actor.heat);
 }
 
 function enusreHelpShown(key: string) {
@@ -236,9 +251,24 @@ export function nextAutoPlayCommand(s: Session): string | null {
             queueNextCommand("mode eject");
             queueNextCommand("done");
           } else if (actor.prone) {
-            queueNextCommand("mode standup walk");
-            queueNextCommand("done");
-          } else if (isUnitImmobile(actor.damage)) {
+            if (isUnitImmobile(actor.damage)) {
+              // Leg destroyed + prone: stay still this turn, eject next.
+              if (pronestillThenEject[actor.id] === true) {
+                queueNextCommand("mode eject");
+              } else {
+                pronestillThenEject[actor.id] = true;
+                queueNextCommand("mode pronestill");
+              }
+              queueNextCommand("done");
+            } else if (walkBudgetFor(actor) < STAND_MP_COST) {
+              // Heat or hip damage collapse walk MP below the 2-MP stand cost.
+              queueNextCommand("mode pronestill");
+              queueNextCommand("done");
+            } else {
+              queueNextCommand("mode standup walk");
+              queueNextCommand("done");
+            }
+          } else if (isUnitImmobile(actor.damage) || walkBudgetFor(actor) === 0) {
             queueNextCommand("mode standstill");
             queueNextCommand("done");
           } else {

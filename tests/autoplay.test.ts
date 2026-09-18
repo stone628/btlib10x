@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { getMechDefFor } from "../src/data/index.js";
+import {
+  effectiveMoveBudget,
+  effectiveMovement,
+  isUnitImmobile,
+  STAND_MP_COST,
+} from "../src/index.js";
 import { nextAutoPlayCommand, resetAutoplayState } from "../web/autoplay.js";
 import * as S from "../web/session.js";
-import { execute } from "./helpers.js";
+import { execute, scriptedRng } from "./helpers.js";
 
 function run(s: S.Session, cmd: string): string[] {
   return execute(s, cmd);
@@ -28,6 +34,41 @@ function sessionAtWeaponAttack(): S.Session {
     }
   }
   return s;
+}
+
+/** Build a fresh session at the start of movement phase 1 with `hunchy`
+ *  (HBK-4G, walk 4) guaranteed to be the first mover. Per TW p.21 the loser
+ *  of initiative moves first, so we force hunchy to LOSE (5 vs 12). */
+function sessionAtMovementStart(): S.Session {
+  const s = S.newSession(7);
+  s.critsDisabled = true;
+  // Hunchy rolls 5 (2+3), cicada rolls 12 (6+6). Loser-of-initiative moves
+  // first, so hunchy becomes the first actor.
+  s.rng = scriptedRng(2, 3, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6);
+  run(s, "map quickstart");
+  run(s, "add hunchy HBK-4G 9 9 n");
+  run(s, "add cicada CDA-3MA 9 8 s");
+  run(s, "start");
+  expect(s.battle!.phase).toBe("movement");
+  expect(s.move!.actorId).toBe("hunchy");
+  return s;
+}
+
+/** Drain the autoplay queue until a `mode …` command surfaces (or `n` ticks
+ *  have elapsed with nothing found). Drops sheet/status/help noise. */
+function nextModeCommand(s: S.Session, n = 8): string | null {
+  for (let i = 0; i < n; i++) {
+    const cmd = nextAutoPlayCommand(s);
+    if (cmd === null) return null;
+    if (cmd.startsWith("mode ")) return cmd;
+    if (cmd.startsWith("done") || cmd.startsWith("place ") || cmd.startsWith("fire ")) return cmd;
+  }
+  return null;
+}
+
+/** Mutate the actor on the right leg internal structure (depleted). */
+function destroyLeg(s: S.Session, id: string, leg: "rightLeg" | "leftLeg" = "rightLeg"): void {
+  s.battle!.units[id]!.damage.internalStructure[leg] = 0;
 }
 
 describe("nextAutoPlayCommand (autoplay demo driver)", () => {
@@ -91,5 +132,126 @@ describe("nextAutoPlayCommand (autoplay demo driver)", () => {
     // Snub-Nose PPC (2) keeps a fireable TN; the lasers auto-miss and the
     // Small Pulse Laser is out of range.
     expect(indexes).toEqual([2]);
+  });
+});
+
+describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
+  it("immobile + prone: emits `mode pronestill` (not the illegal `mode standup walk`)", () => {
+    const s = sessionAtMovementStart();
+    const actorId = s.move!.actorId!;
+    const actor = s.battle!.units[actorId]!;
+    destroyLeg(s, actorId);
+    actor.prone = true;
+
+    resetAutoplayState(s);
+    const cmd = nextModeCommand(s);
+    expect(cmd).toBe("mode pronestill");
+  });
+
+  it("immobile + prone: applying the emitted mode commits without throwing", () => {
+    const s = sessionAtMovementStart();
+    const actorId = s.move!.actorId!;
+    const actor = s.battle!.units[actorId]!;
+    destroyLeg(s, actorId);
+    actor.prone = true;
+
+    resetAutoplayState(s);
+    const cmd = nextModeCommand(s);
+    expect(cmd).toBe("mode pronestill");
+    const out = run(s, "mode pronestill");
+    expect(out[0]).not.toMatch(/^error:/);
+    expect(() => S.commitMove(s)).not.toThrow();
+  });
+
+  it("mobile + prone + walk budget < STAND_MP_COST: emits `mode pronestill`", () => {
+    const s = sessionAtMovementStart();
+    const actorId = s.move!.actorId!;
+    const actor = s.battle!.units[actorId]!;
+    actor.prone = true;
+    // Climb heat until the actor's walk budget drops below the 2-MP stand
+    // cost, without making the unit immobile.
+    const def = getMechDefFor(actor);
+    for (let heat = 0; heat <= 30; heat++) {
+      actor.heat = heat;
+      const budget = effectiveMoveBudget(
+        "walk",
+        effectiveMovement(def, actor.critSlotsDestroyed),
+        actor.heat,
+      );
+      if (budget < STAND_MP_COST) {
+        break;
+      }
+    }
+    const finalBudget = effectiveMoveBudget(
+      "walk",
+      effectiveMovement(def, actor.critSlotsDestroyed),
+      actor.heat,
+    );
+    expect(isUnitImmobile(actor.damage)).toBe(false);
+    expect(finalBudget).toBeLessThan(STAND_MP_COST);
+
+    resetAutoplayState(s);
+    const cmd = nextModeCommand(s);
+    expect(cmd).toBe("mode pronestill");
+  });
+
+  it("notprone + walk budget 0 (heat-shutdown walk MP): emits `mode standstill`", () => {
+    const s = sessionAtMovementStart();
+    const actorId = s.move!.actorId!;
+    const actor = s.battle!.units[actorId]!;
+    const def = getMechDefFor(actor);
+    // Climb heat until walk MP is clamped to 0.
+    for (let heat = 0; heat <= 30; heat++) {
+      actor.heat = heat;
+      const budget = effectiveMoveBudget(
+        "walk",
+        effectiveMovement(def, actor.critSlotsDestroyed),
+        actor.heat,
+      );
+      if (budget === 0) {
+        break;
+      }
+    }
+    const finalBudget = effectiveMoveBudget(
+      "walk",
+      effectiveMovement(def, actor.critSlotsDestroyed),
+      actor.heat,
+    );
+    expect(isUnitImmobile(actor.damage)).toBe(false);
+    expect(finalBudget).toBe(0);
+
+    resetAutoplayState(s);
+    const cmd = nextModeCommand(s);
+    expect(cmd).toBe("mode standstill");
+  });
+
+  it("mobile + prone + walk budget >= STAND_MP_COST: still emits `mode standup walk`", () => {
+    const s = sessionAtMovementStart();
+    const actorId = s.move!.actorId!;
+    const actor = s.battle!.units[actorId]!;
+    actor.prone = true;
+    actor.heat = 0;
+    const def = getMechDefFor(actor);
+    const budget = effectiveMoveBudget(
+      "walk",
+      effectiveMovement(def, actor.critSlotsDestroyed),
+      actor.heat,
+    );
+    expect(isUnitImmobile(actor.damage)).toBe(false);
+    expect(budget).toBeGreaterThanOrEqual(STAND_MP_COST);
+
+    resetAutoplayState(s);
+    const cmd = nextModeCommand(s);
+    expect(cmd).toBe("mode standup walk");
+  });
+
+  it("notprone + immobile (leg destroyed): still emits `mode standstill` (regression)", () => {
+    const s = sessionAtMovementStart();
+    const actorId = s.move!.actorId!;
+    destroyLeg(s, actorId);
+
+    resetAutoplayState(s);
+    const cmd = nextModeCommand(s);
+    expect(cmd).toBe("mode standstill");
   });
 });
