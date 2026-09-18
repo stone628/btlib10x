@@ -100,7 +100,7 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
         if (unit.jammedWeapons.includes(w.weaponIndex)) continue;
         S.queueFire(s, { weaponIndex: w.weaponIndex, targetId: enemy });
       }
-      if (s.fireDecls.length === 0) {
+      if ((s.attack?.fireDecls ?? []).length === 0) {
         S.passFire(s);
         faceEnemy = true;
       } else S.commitFire(s);

@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { getMapDef, getMechDefFor } from "../src/data/index.js";
+import { getMapDef, getMapDefFor, getMechDefFor } from "../src/data/index.js";
 import {
   bestFireTarget,
   type GameEvent,
   isNominal,
   isUnitAvailable,
+  isUnitRemoved,
   suggestFireTargets,
 } from "../src/index.js";
 import { ammoWeaponTotals } from "../src/rules/ammo.js";
+import { reachablesInfo } from "../web/format.js";
+import { type BoardRenderInfo, createBoardRenderUnit } from "../web/render.js";
 import {
   createBoardModel,
   FACING_GLYPH,
@@ -16,7 +19,7 @@ import {
   TEAM_STYLES,
 } from "../web/renderer.text.js";
 import * as S from "../web/session.js";
-import { execute, reachableInfo } from "./helpers.js";
+import { execute } from "./helpers.js";
 
 function run(s: S.Session, cmd: string): string[] {
   return execute(s, cmd);
@@ -81,7 +84,7 @@ function autoPlay(s: S.Session, collected?: GameEvent[]): void {
       collected?.push(...moveRes.newEvents);
     } else {
       fireEverything(s, enemy);
-      if (s.fireDecls.length === 0) {
+      if ((s.attack?.fireDecls ?? []).length === 0) {
         const passRes = S.passFire(s);
         collected?.push(...passRes.newEvents);
       } else {
@@ -91,7 +94,7 @@ function autoPlay(s: S.Session, collected?: GameEvent[]): void {
     }
   }
   expect(s.app).toBe("over");
-  expect(s.victory).not.toBeNull();
+  expect(s.over).not.toBeNull();
 }
 
 describe("help", () => {
@@ -483,9 +486,9 @@ describe("movement", () => {
     expect(S.currentActor(s)!.position).toEqual(posBefore);
     // A reachable hex whose remaining MP forbids facing s: the hex is a
     // landing, but (hex, s) is not.
-    const info = reachableInfo(s)!;
+    const info = reachablesInfo(s)!;
     const byHex = new Map<string, string[]>();
-    for (const l of info.reachable!.revealed) {
+    for (const l of info.revealed) {
       const key = `${l.hex.col},${l.hex.row}`;
       const fs = byHex.get(key) ?? [];
       fs.push(l.facing);
@@ -505,10 +508,8 @@ describe("movement", () => {
     run(s, "mode walk");
     const actor = S.currentActor(s)!;
     const p = actor.position;
-    const info = reachableInfo(s)!;
-    const landings = info.reachable!.revealed.filter(
-      (l) => l.hex.col !== p.col || l.hex.row !== p.row,
-    );
+    const info = reachablesInfo(s)!;
+    const landings = info.revealed.filter((l) => l.hex.col !== p.col || l.hex.row !== p.row);
     const a = landings[0]!;
     const b = landings.find((l) => l.hex.col !== a.hex.col || l.hex.row !== a.hex.row)!;
     run(s, `place ${a.hex.col} ${a.hex.row} ${a.facing}`);
@@ -517,7 +518,7 @@ describe("movement", () => {
     // path, ending at b's hex. a's steps (and any appended remnants) are gone.
     const st = run(s, "status").join("\n");
     expect(st).toContain(`enter (${b.hex.col},${b.hex.row})`);
-    expect(s.moveSteps).toHaveLength(b.path.length);
+    expect(s.move!.moveSteps).toHaveLength(b.path.length);
     run(s, "done");
     expect(s.battle!.units[actor.id]!.position).toEqual(b.hex);
   });
@@ -532,8 +533,8 @@ describe("movement", () => {
     run(s, "mode jump");
     const actor = S.currentActor(s)!;
     const p = actor.position;
-    const info = reachableInfo(s)!;
-    const land = info.reachable!.revealed.find(
+    const info = reachablesInfo(s)!;
+    const land = info.revealed.find(
       (l) => l.facing === "s" && (l.hex.col !== p.col || l.hex.row !== p.row),
     )!;
     const out = run(s, `place ${land.hex.col} ${land.hex.row} s`).join("\n");
@@ -548,8 +549,8 @@ describe("movement", () => {
     const s = freshSetup();
     run(s, "start");
     run(s, "mode walk");
-    const info = reachableInfo(s)!;
-    const land = info.reachable!.revealed.find((l) =>
+    const info = reachablesInfo(s)!;
+    const land = info.revealed.find((l) =>
       l.path.some((step) => step.fragment === "R" || step.fragment === "L"),
     )!;
     expect(land.path.length).toBeGreaterThan(0);
@@ -564,7 +565,7 @@ describe("movement", () => {
     }
     expect(land.path[land.path.length - 1]!.totalMp).toBe(spent);
     S.placeLanding(s, land);
-    expect(s.placedLanding).toBe(land);
+    expect(s.move!.placedLanding).toBe(land);
     const out = run(s, `place ${land.hex.col} ${land.hex.row} ${land.facing}`).join("\n");
     expect(out).toMatch(/\d+MP out of \d+MP/);
     expect(out).toContain("walk enter");
@@ -581,7 +582,7 @@ describe("movement", () => {
     const actor = S.currentActor(s)!;
     const beforeSnap = JSON.stringify(s.battle);
     const beforePos = { ...actor.position };
-    s.moveSteps.push({ kind: "enter", to: { col: 2, row: 2 } }); // not straight ahead/back
+    s.move!.moveSteps.push({ kind: "enter", to: { col: 2, row: 2 } }); // not straight ahead/back
     expect(run(s, "done")[0]).toMatch(/^error:/);
     expect(JSON.stringify(s.battle)).toBe(beforeSnap);
     expect(s.battle!.units[actor.id]!.position).toEqual(beforePos);
@@ -644,9 +645,14 @@ describe("movement", () => {
     run(s, "start");
     run(s, "mode walk");
     const actor = S.currentActor(s)!;
-    const info = reachableInfo(s);
-    expect(info).not.toBeNull();
-    const m = createBoardModel(info!);
+    const reachable = reachablesInfo(s);
+    expect(reachable).not.toBeNull();
+    const map = getMapDefFor(s.setup)!;
+    const units = Object.values(s.battle!.units)
+      .filter((u) => !isUnitRemoved(u))
+      .map((u) => createBoardRenderUnit(u));
+    const info: BoardRenderInfo = { map, units, reachable, locale: s.locale };
+    const m = createBoardModel(info);
     // Exact reachable bbox, clamped to the board: larger than one hex and
     // smaller than the full 15x16 board.
     expect(m.anchorCol).toBeGreaterThanOrEqual(1);
@@ -780,7 +786,7 @@ describe("eject", () => {
     const actor = S.currentActor(s)!;
     const hex = { ...actor.position };
     expect(run(s, "mode eject")[0]).toMatch(/declares eject \(committed by 'done'\)/);
-    expect(s.moveMode).toBe("eject");
+    expect(s.move!.moveMode).toBe("eject");
     const out = run(s, "done").join("\n");
     expect(out).toContain("ejects");
     expect(actor.removed).toBe("pilotEjected");
@@ -791,7 +797,7 @@ describe("eject", () => {
     });
     // The ejected side is gone: the surviving unit claims victory.
     expect(s.app).toBe("over");
-    expect(s.victory!.winnerTeam).toBe(1 - actor.team);
+    expect(s.over!.victory.winnerTeam).toBe(1 - actor.team);
   });
 });
 
@@ -838,7 +844,7 @@ describe("full game", () => {
 
     run(s, "rematch");
     expect(s.app).toBe("battle");
-    expect(s.victory).toBeNull();
+    expect(s.over).toBeNull();
 
     run(s, "reset");
     expect(s.app).toBe("setup");

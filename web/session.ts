@@ -76,21 +76,19 @@ import { createRng } from "./rng.js";
 
 export type AppState = "setup" | "battle" | "over";
 
-export interface SetupState extends MapNameHolder {
+export interface SetupContext extends MapNameHolder {
   seed: number;
   mapName: string | null;
   roster: UnitInit[];
 }
 
-export interface Session {
-  app: AppState;
-  /** Output language (UI preference; preserved across reset/rematch). */
-  locale: LocaleId;
-  rng: Rng;
-  setup: SetupState;
-  battle: BattleState | null;
-  victory: SessionVictoryResult | null;
-  actorId: string | null;
+/** Eagerly allocated by `drive()` on movement-phase entry, nulled when the
+ *  phase exits or a new actor becomes current. Carries the pending move
+ *  declaration: `moveMode`, `postureMove`, `moveSteps`, `moveFinalFacing`,
+ *  `placedLanding`, plus `moveCandidate` (cached reachable map). Snapshotted
+ *  whole by `commitAtomic` so failed commits can restore the declaration. */
+export interface MoveContext {
+  actorId: string;
   /** Pending declaration for the acting unit: a movement mode (engine
    *  `MoveMode`), a posture-change `standup` / `prone` attempt, or
    *  the voluntary `"shutdown"` / `"startup"` / `"eject"` declaration,
@@ -119,19 +117,49 @@ export interface Session {
   /** Landing from `moveCandidate` buffered by `place`; `status`/`candidate`
    *  preview renders its `path` directly. Null when no landing queued. */
   placedLanding: RevealedLanding | null;
+  moveCandidate: BoardRenderReachableInfo | null;
+}
+
+/** Eagerly allocated by `drive()` on weapon-attack-phase entry, nulled when
+ *  the phase exits or a new actor becomes current. Carries `fireDecls`,
+ *  `torsoTwist` (UI declaration, resets to `"front"` on allocation),
+ *  `fireHintShownFor`, `fireCandidate`. */
+export interface AttackContext {
+  actorId: string;
   fireDecls: AttackDecl[];
   /** Acting unit's torso twist (TW p.62) for the current attack-phase
-   *  declaration: defaults to `"front"` and resets every time a new actor
-   *  becomes current or the weapon attack phase begins. Locked once any
-   *  fire command is queued (see {@link setTorsoTwist}). Session-owned
-   *  because it is a UI declaration, not persistent battle state. */
+   *  declaration: starts at `"front"` on context allocation (new actor or
+   *  phase entry). Locked once any fire command is queued (see
+   *  {@link setTorsoTwist}). Session-owned because it is a UI declaration,
+   *  not persistent battle state. */
   torsoTwist: Arc;
-  /** Suppress critical hit resolution (mostly for deterministic testing). */
-  critsDisabled: boolean;
-  moveCandidate: BoardRenderReachableInfo | null;
   /** Actor (turn-qualified) whose fire suggestion was last auto-shown. */
   fireHintShownFor: string | null;
   fireCandidate: FireSuggestion | null;
+}
+
+/** Set by `drive()` when `checkSessionVictory` reports a winner; cleared
+ *  on `startBattle` / `rematch` so the next battle starts fresh. */
+export interface OverContext {
+  victory: SessionVictoryResult;
+}
+
+export interface Session {
+  app: AppState;
+  /** Output language (UI preference; preserved across reset/rematch). */
+  locale: LocaleId;
+  rng: Rng;
+  /** Always present: setup roster preserved across rematch. */
+  setup: SetupContext;
+  /** Eagerly populated by `drive()` on battle entry, nulled on phase exit. */
+  move: MoveContext | null;
+  /** Eagerly populated by `drive()` on attack-phase entry, nulled on exit. */
+  attack: AttackContext | null;
+  /** Populated when `drive()` detects victory, cleared on next battle. */
+  over: OverContext | null;
+  battle: BattleState | null;
+  /** Suppress critical hit resolution (mostly for deterministic testing). */
+  critsDisabled: boolean;
 }
 
 export function newSession(seed: number): Session {
@@ -140,32 +168,45 @@ export function newSession(seed: number): Session {
     locale: "en",
     rng: createRng(seed),
     setup: { mapName: null, seed: seed, roster: [] },
+    move: null,
+    attack: null,
+    over: null,
     battle: null,
-    victory: null,
-    actorId: null,
+    critsDisabled: false,
+  };
+}
+
+/** Allocate a fresh move context for `actorId`. Default declaration is
+ *  empty (`moveMode: null`); mutators fill in. */
+function newMoveContext(actorId: string): MoveContext {
+  return {
+    actorId,
     moveMode: null,
     postureMove: null,
     moveSteps: [],
     moveFinalFacing: null,
     placedLanding: null,
+    moveCandidate: null,
+  };
+}
+
+/** Allocate a fresh attack context for `actorId`. `torsoTwist` starts at
+ *  `"front"`; fire declarations and suggestion cache empty. */
+function newAttackContext(actorId: string): AttackContext {
+  return {
+    actorId,
     fireDecls: [],
     torsoTwist: "front",
-    critsDisabled: false,
-    moveCandidate: null,
     fireHintShownFor: null,
     fireCandidate: null,
   };
 }
 
-function clearBuffers(s: Session): void {
-  s.moveMode = null;
-  s.postureMove = null;
-  clearMoveQueue(s);
-  s.moveCandidate = null;
-  s.fireDecls = [];
-  s.torsoTwist = "front";
-  s.fireHintShownFor = null;
-  s.fireCandidate = null;
+/** Drop both per-phase contexts. Used on actor change / phase boundary
+ *  inside `drive()` and on lifecycle resets (start, rematch, reset). */
+function clearContexts(s: Session): void {
+  s.move = null;
+  s.attack = null;
 }
 
 export interface SessionVictoryResult {
@@ -188,8 +229,14 @@ export function checkSessionVictory(state: BattleState): SessionVictoryResult | 
 /**
  * Advance the battle through transient phases until an actor must act or the
  * game ends. Wraps {@link gameLoop} with session-side effects (app state,
- * actor id, torso-twist reset, buffer clears) and returns the events
- * generated during this call.
+ * per-phase context allocation) and returns the events generated during
+ * this call.
+ *
+ * Per-phase contexts are eagerly (re)allocated whenever the current actor
+ * changes or the phase changes mid-actor. The inactive side is always
+ * nulled first, so `s.move` and `s.attack` are never simultaneously
+ * populated. A fresh `AttackContext` starts with `torsoTwist: "front"`,
+ * subsuming the prior "phase entry reset" step.
  */
 function drive(s: Session): GameEvent[] {
   const battle = s.battle;
@@ -209,33 +256,37 @@ function drive(s: Session): GameEvent[] {
     },
     collected,
   );
-  if (
-    collected.some(
-      (e) => e.kind === "phase" && e.prevPhase === "movement" && e.phase === "weaponAttack",
-    )
-  ) {
-    s.torsoTwist = "front";
-  }
   if (v.length > 0) {
     const victory = v[0]!;
     s.app = "over";
-    s.victory = victory;
-    s.actorId = null;
-    clearBuffers(s);
+    s.over = { victory };
+    clearContexts(s);
   } else {
     s.app = "battle";
     const id = r.actorId;
-    if (id !== null && s.actorId !== id) {
-      s.actorId = id;
-      clearBuffers(s);
+    if (id !== null) {
+      const inMovement = battle.phase === "movement";
+      const moveOutdated = s.move === null || s.move.actorId !== id || !inMovement;
+      const attackOutdated = s.attack === null || s.attack.actorId !== id || inMovement;
+      if (moveOutdated && attackOutdated) {
+        clearContexts(s);
+      }
+      if (inMovement && (s.move === null || s.move.actorId !== id)) {
+        s.move = newMoveContext(id);
+        s.attack = null;
+      } else if (!inMovement && (s.attack === null || s.attack.actorId !== id)) {
+        s.attack = newAttackContext(id);
+        s.move = null;
+      }
     }
   }
   return collected;
 }
 
 export function currentActor(s: Session): UnitState | null {
-  if (s.app !== "battle" || !s.battle || s.actorId === null) return null;
-  return requireUnit(s.battle, s.actorId);
+  if (s.app !== "battle" || !s.battle) return null;
+  const id = s.move?.actorId ?? s.attack?.actorId ?? null;
+  return id === null ? null : requireUnit(s.battle, id);
 }
 
 /** Prompt body without the trailing ">". */
@@ -244,9 +295,10 @@ export function promptBody(s: Session): string {
     case "setup":
       return i18n(s.locale, "prompt.setup");
     case "over": {
-      const winner = s.victory?.draw
+      const victory = s.over?.victory;
+      const winner = victory?.draw
         ? i18n(s.locale, "prompt.draw")
-        : i18n(s.locale, "prompt.winnerTeam", { team: s.victory?.winnerTeam ?? "?" });
+        : i18n(s.locale, "prompt.winnerTeam", { team: victory?.winnerTeam ?? "?" });
       return i18n(s.locale, "prompt.over", {
         winner,
         turn: s.battle?.turn ?? "?",
@@ -473,9 +525,8 @@ export function startBattle(s: Session): GameEvent[] {
   if (teams.size < 2) throw new Error(i18n(s.locale, "err.needTwoTeams"));
   const map = getMapDefFor(s.setup);
   s.battle = createBattle(map, s.setup.roster, battleOptions(s));
-  s.victory = null;
-  s.actorId = null;
-  clearBuffers(s);
+  s.over = null;
+  clearContexts(s);
   return drive(s);
 }
 
@@ -554,29 +605,49 @@ function requireActor(s: Session, phase: "movement" | "weaponAttack"): UnitState
   return unit;
 }
 
+/** Mutator-side accessor for the active move context. Throws if not in the
+ *  movement phase (the engine never reaches a move-declaring code path
+ *  outside movement). */
+function requireMove(s: Session): MoveContext {
+  if (!s.move || s.battle?.phase !== "movement") {
+    throw new Error(i18n(s.locale, "err.wrongPhase", { phase: "movement" }));
+  }
+  return s.move;
+}
+
+/** Mutator-side accessor for the active attack context. Throws if not in
+ *  the weapon-attack phase. */
+function requireAttack(s: Session): AttackContext {
+  if (!s.attack || s.battle?.phase !== "weaponAttack") {
+    throw new Error(i18n(s.locale, "err.wrongPhase", { phase: "weaponAttack" }));
+  }
+  return s.attack;
+}
+
 export function declareMode(s: Session, word: string, locomotionWord?: string): void {
   const unit = requireActor(s, "movement");
   const mode = parseMoveMode(s.locale, word);
+  const m = requireMove(s);
   if (mode === "shutdown") {
     if (isShutdown(unit)) throw new Error(i18n(s.locale, "err.mustBeOnlineForShutdown"));
-    s.moveMode = "shutdown";
-    s.postureMove = null;
-    clearMoveQueue(s);
+    m.moveMode = "shutdown";
+    m.postureMove = null;
+    clearMoveQueue(m);
     return;
   }
   if (mode === "startup") {
     if (unit.shutdown === "not") throw new Error(i18n(s.locale, "err.mustBeDownForStartup"));
     if (unit.shutdown === "starting") throw new Error(i18n(s.locale, "err.alreadyStarting"));
-    s.moveMode = "startup";
-    s.postureMove = null;
-    clearMoveQueue(s);
+    m.moveMode = "startup";
+    m.postureMove = null;
+    clearMoveQueue(m);
     return;
   }
   if (mode === "eject") {
     if (isUnitRemoved(unit)) throw new Error(i18n(s.locale, "err.alreadyEjected", { id: unit.id }));
-    s.moveMode = "eject";
-    s.postureMove = null;
-    clearMoveQueue(s);
+    m.moveMode = "eject";
+    m.postureMove = null;
+    clearMoveQueue(m);
     return;
   }
   if (mode === "standup") {
@@ -598,9 +669,9 @@ export function declareMode(s: Session, word: string, locomotionWord?: string): 
       throw new Error(i18n(s.locale, "err.postureBudget", { id: unit.id }));
     }
     // Engine declareMove deferred to commit: unit still prone, would throw.
-    s.moveMode = "standup";
-    s.postureMove = chosen;
-    clearMoveQueue(s);
+    m.moveMode = "standup";
+    m.postureMove = chosen;
+    clearMoveQueue(m);
     return;
   }
   if (mode === "prone") {
@@ -620,9 +691,9 @@ export function declareMode(s: Session, word: string, locomotionWord?: string): 
       throw new Error(i18n(s.locale, "err.postureBudget", { id: unit.id }));
     }
     // Drop deferred to commit; turn candidate assumes prone-after-drop.
-    s.moveMode = "prone";
-    s.postureMove = sub;
-    clearMoveQueue(s);
+    m.moveMode = "prone";
+    m.postureMove = sub;
+    clearMoveQueue(m);
     return;
   }
   if (mode === "turn") {
@@ -640,9 +711,9 @@ export function declareMode(s: Session, word: string, locomotionWord?: string): 
       throw new Error(i18n(s.locale, "err.postureBudget", { id: unit.id }));
     }
     // Engine declareMove deferred to commit: unit still prone, would throw.
-    s.moveMode = "turn";
-    s.postureMove = null;
-    clearMoveQueue(s);
+    m.moveMode = "turn";
+    m.postureMove = null;
+    clearMoveQueue(m);
     return;
   }
   if (mode === "pronestill") {
@@ -655,9 +726,9 @@ export function declareMode(s: Session, word: string, locomotionWord?: string): 
       );
     if (locomotionWord !== undefined)
       throw new Error(i18n(s.locale, "err.pronestillTakesNoArg", { modes: modeSyntaxFor(unit) }));
-    s.moveMode = "pronestill";
-    s.postureMove = null;
-    clearMoveQueue(s);
+    m.moveMode = "pronestill";
+    m.postureMove = null;
+    clearMoveQueue(m);
     return;
   }
   if (isShutdown(unit)) {
@@ -679,9 +750,9 @@ export function declareMode(s: Session, word: string, locomotionWord?: string): 
     );
   }
   // Engine call is deferred to commit (mode walk/run/jump/standstill executeMove).
-  s.moveMode = mode;
-  s.postureMove = null;
-  clearMoveQueue(s);
+  m.moveMode = mode;
+  m.postureMove = null;
+  clearMoveQueue(m);
 }
 
 /** Locomotion arg for `mode prone [turn|pronestill]` (default turn). */
@@ -702,10 +773,10 @@ function parseStandupLocomotion(s: Session, word: string | undefined): MoveMode 
 }
 
 /** Clear queued movement: steps, buffered landing/turn, landing facing. */
-function clearMoveQueue(s: Session): void {
-  s.moveSteps = [];
-  s.placedLanding = null;
-  s.moveFinalFacing = null;
+function clearMoveQueue(m: MoveContext): void {
+  m.moveSteps = [];
+  m.placedLanding = null;
+  m.moveFinalFacing = null;
 }
 
 /** Movement budget for the declared mode (stand-in modes map to standstill).
@@ -714,7 +785,7 @@ export function budgetFor(s: Session): number {
   const unit = currentActor(s)!;
   const def = getMechDefFor(unit);
   const movement = effectiveMovement(def, unit.critSlotsDestroyed);
-  const declared = s.moveMode;
+  const declared = s.move?.moveMode ?? null;
   if (declared === "prone") {
     return Math.max(0, effectiveMoveBudget("walk", movement, unit.heat) - DROP_MP_COST);
   }
@@ -725,7 +796,7 @@ export function budgetFor(s: Session): number {
     return 0;
   }
   if (declared === "standup") {
-    const loco = s.postureMove ?? "walk";
+    const loco = s.move?.postureMove ?? "walk";
     return Math.max(0, effectiveMoveBudget(loco, movement, unit.heat) - STAND_MP_COST);
   }
   const mode: MoveMode =
@@ -740,27 +811,30 @@ export function fullBudgetFor(s: Session): number {
   const unit = currentActor(s)!;
   const def = getMechDefFor(unit);
   const movement = effectiveMovement(def, unit.critSlotsDestroyed);
-  if (s.moveMode === "prone") return effectiveMoveBudget("walk", movement, unit.heat);
-  if (s.moveMode === "turn") return effectiveMoveBudget("walk", movement, unit.heat);
-  if (s.moveMode === "pronestill") return 0;
-  if (s.moveMode === "standup")
-    return effectiveMoveBudget(s.postureMove ?? "walk", movement, unit.heat);
+  const mode = s.move?.moveMode ?? null;
+  if (mode === "prone") return effectiveMoveBudget("walk", movement, unit.heat);
+  if (mode === "turn") return effectiveMoveBudget("walk", movement, unit.heat);
+  if (mode === "pronestill") return 0;
+  if (mode === "standup")
+    return effectiveMoveBudget(s.move?.postureMove ?? "walk", movement, unit.heat);
   return budgetFor(s);
 }
 
 /** Posture MP already reserved by the declared mode (0 for plain moves). */
 export function postureCostFor(s: Session): number {
-  if (s.moveMode === "prone") return DROP_MP_COST;
-  if (s.moveMode === "standup") return STAND_MP_COST;
+  const mode = s.move?.moveMode ?? null;
+  if (mode === "prone") return DROP_MP_COST;
+  if (mode === "standup") return STAND_MP_COST;
   return 0;
 }
 
 /** Display mode for previews: prone/standup carry their sub-mode arg. */
 export function displayModeFor(s: Session): string {
-  if (s.moveMode === "standup") return `standup ${s.postureMove ?? "walk"}`;
-  if (s.moveMode === "prone")
-    return `prone ${s.postureMove === "standStill" ? "pronestill" : "turn"}`;
-  return s.moveMode ?? "";
+  const m = s.move;
+  if (m?.moveMode === "standup") return `standup ${m.postureMove ?? "walk"}`;
+  if (m?.moveMode === "prone")
+    return `prone ${m.postureMove === "standStill" ? "pronestill" : "turn"}`;
+  return m?.moveMode ?? "";
 }
 
 /** Resolve a `place` facing argument: an absolute facing word. */
@@ -783,21 +857,22 @@ export function resolveFacing(locale: LocaleId, arg: string): Facing {
  */
 export function placeLanding(s: Session, landing: RevealedLanding): void {
   const unit = requireActor(s, "movement");
-  if (s.moveMode === "shutdown" || s.moveMode === "startup" || s.moveMode === "eject") {
+  const m = requireMove(s);
+  if (m.moveMode === "shutdown" || m.moveMode === "startup" || m.moveMode === "eject") {
     throw new Error(i18n(s.locale, "err.noMoveInShutdownMode"));
   }
-  if (!s.moveMode)
+  if (!m.moveMode)
     throw new Error(
       i18n(s.locale, "err.declareModeFirst", { id: unit.id, modes: modeSyntaxFor(unit) }),
     );
-  if (s.moveMode === "standStill" || s.moveMode === "pronestill")
+  if (m.moveMode === "standStill" || m.moveMode === "pronestill")
     throw new Error(i18n(s.locale, "err.standStillNoEnter"));
   const locomotion =
-    s.moveMode === "standup" || s.moveMode === "prone"
-      ? (s.postureMove ?? "walk")
-      : s.moveMode === "turn"
+    m.moveMode === "standup" || m.moveMode === "prone"
+      ? (m.postureMove ?? "walk")
+      : m.moveMode === "turn"
         ? "walk"
-        : s.moveMode;
+        : m.moveMode;
   const jumping = locomotion === "jump";
   const steps: MoveStep[] = [];
   let hex: HexCoord = unit.position;
@@ -815,16 +890,16 @@ export function placeLanding(s: Session, landing: RevealedLanding): void {
     steps.push({ kind: "enter", to });
     hex = to;
   }
-  s.moveSteps = steps;
-  s.moveFinalFacing = jumping ? landing.facing : null;
-  s.placedLanding = landing;
+  m.moveSteps = steps;
+  m.moveFinalFacing = jumping ? landing.facing : null;
+  m.placedLanding = landing;
 }
 
 export function cancelMove(s: Session): void {
-  requireActor(s, "movement");
-  s.moveMode = null;
-  s.postureMove = null;
-  clearMoveQueue(s);
+  const m = requireMove(s);
+  m.moveMode = null;
+  m.postureMove = null;
+  clearMoveQueue(m);
 }
 
 export interface CommitResult {
@@ -833,60 +908,34 @@ export interface CommitResult {
 }
 
 /**
- * Plain-data session fields mutated inside atomic commits (via `clearBuffers`
- * and `drive`). Snapshotted beside battle + rng so failed commits leave zero
- * trace. Excludes `rng` itself (closures break structuredClone), `battle`
- * (snapshotted separately), `setup`/`locale`/`critsDisabled` (never mutated
- * inside commits).
+ * Per-phase session contexts snapshotted beside battle + rng so failed
+ * commits leave zero trace. Excludes `rng` (closures break structuredClone),
+ * `battle` (snapshotted separately), `setup`/`locale`/`critsDisabled`
+ * (never mutated inside commits). Snapshots are deep on whichever context
+ * is active: setup/over commits skip move entirely, movement commits skip
+ * attack (and its `fireCandidate` cache).
  */
 interface SessionCommitSnapshot {
   app: AppState;
-  victory: SessionVictoryResult | null;
-  actorId: string | null;
-  moveMode: Session["moveMode"];
-  postureMove: Session["postureMove"];
-  moveSteps: MoveStep[];
-  moveFinalFacing: Facing | null;
-  placedLanding: RevealedLanding | null;
-  fireDecls: AttackDecl[];
-  torsoTwist: Arc;
-  moveCandidate: BoardRenderReachableInfo | null;
-  fireHintShownFor: string | null;
-  fireCandidate: FireSuggestion | null;
+  move: MoveContext | null;
+  attack: AttackContext | null;
+  over: OverContext | null;
 }
 
 function snapshotSessionCommit(s: Session): SessionCommitSnapshot {
   return {
     app: s.app,
-    victory: s.victory === null ? null : structuredClone(s.victory),
-    actorId: s.actorId,
-    moveMode: s.moveMode,
-    postureMove: s.postureMove,
-    moveSteps: structuredClone(s.moveSteps),
-    moveFinalFacing: s.moveFinalFacing,
-    placedLanding: s.placedLanding === null ? null : structuredClone(s.placedLanding),
-    fireDecls: structuredClone(s.fireDecls),
-    torsoTwist: s.torsoTwist,
-    moveCandidate: s.moveCandidate === null ? null : structuredClone(s.moveCandidate),
-    fireHintShownFor: s.fireHintShownFor,
-    fireCandidate: s.fireCandidate === null ? null : structuredClone(s.fireCandidate),
+    move: s.move === null ? null : structuredClone(s.move),
+    attack: s.attack === null ? null : structuredClone(s.attack),
+    over: s.over === null ? null : structuredClone(s.over),
   };
 }
 
 function restoreSessionCommit(s: Session, snap: SessionCommitSnapshot): void {
   s.app = snap.app;
-  s.victory = snap.victory;
-  s.actorId = snap.actorId;
-  s.moveMode = snap.moveMode;
-  s.postureMove = snap.postureMove;
-  s.moveSteps = snap.moveSteps;
-  s.moveFinalFacing = snap.moveFinalFacing;
-  s.placedLanding = snap.placedLanding;
-  s.fireDecls = snap.fireDecls;
-  s.torsoTwist = snap.torsoTwist;
-  s.moveCandidate = snap.moveCandidate;
-  s.fireHintShownFor = snap.fireHintShownFor;
-  s.fireCandidate = snap.fireCandidate;
+  s.move = snap.move;
+  s.attack = snap.attack;
+  s.over = snap.over;
 }
 
 /**
@@ -921,11 +970,12 @@ export function commitMove(s: Session): CommitResult {
     const collected: GameEvent[] = [];
     const battle = requireBattle(s);
     const unit = requireUnit(battle, unitId);
-    if (s.moveMode === "shutdown") {
+    const m = requireMove(s);
+    if (m.moveMode === "shutdown") {
       voluntaryShutdown(battle, unitId, collected);
-    } else if (s.moveMode === "startup") {
+    } else if (m.moveMode === "startup") {
       attemptVoluntaryStartup(battle, unitId, collected, s.rng);
-    } else if (s.moveMode === "eject") {
+    } else if (m.moveMode === "eject") {
       ejectPilot(battle, unitId, collected);
     } else if (isShutdown(unit) || unit.unconscious) {
       // Down unit committing any other movement mode: hold position and
@@ -933,16 +983,16 @@ export function commitMove(s: Session): CommitResult {
       // while off-line or out cold). Without this the commit throws and the
       // activation never advances.
       passMovement(battle, unitId);
-    } else if (s.moveMode === "standup") {
-      const locomotion = s.postureMove ?? "walk";
-      const steps = s.moveSteps;
-      const finalFacing = s.moveFinalFacing;
+    } else if (m.moveMode === "standup") {
+      const locomotion = m.postureMove ?? "walk";
+      const steps = m.moveSteps;
+      const finalFacing = m.moveFinalFacing;
       attemptStandUp(battle, unitId, collected, s.rng);
       const after = battle.units[unitId]!;
       if (after.prone) {
-        // Failed stand: queued place discarded, activation ends.
-        s.actorId = null;
-        clearBuffers(s);
+        // Failed stand: queued place discarded, drive() reallocates the
+        // next context (the actor is gone for this turn).
+        clearContexts(s);
         collected.push(...drive(s));
         newEvents = collected;
         return;
@@ -954,10 +1004,10 @@ export function commitMove(s: Session): CommitResult {
           spentMP: posture,
         });
       }
-    } else if (s.moveMode === "prone") {
-      const steps = s.moveSteps;
-      const finalFacing = s.moveFinalFacing;
-      const locomotion = s.postureMove ?? "walk";
+    } else if (m.moveMode === "prone") {
+      const steps = m.moveSteps;
+      const finalFacing = m.moveFinalFacing;
+      const locomotion = m.postureMove ?? "walk";
       dropProne(battle, unitId, collected, s.rng);
       if (steps.length > 0 || finalFacing !== null) {
         const posture = DROP_MP_COST;
@@ -966,28 +1016,27 @@ export function commitMove(s: Session): CommitResult {
           spentMP: posture,
         });
       }
-    } else if (s.moveMode === "turn") {
-      const steps = s.moveSteps;
+    } else if (m.moveMode === "turn") {
+      const steps = m.moveSteps;
       executeMove(battle, unitId, "walk", steps, collected, { rng: s.rng });
-    } else if (s.moveMode === "pronestill") {
+    } else if (m.moveMode === "pronestill") {
       executeMove(battle, unitId, "standStill", [], collected, { rng: s.rng });
     } else {
-      // Past this branch s.moveMode is a real MoveMode (the special posture
+      // Past this branch m.moveMode is a real MoveMode (the special posture
       // strings above were the only alternatives).
-      const mode = s.moveMode as MoveMode;
+      const mode = m.moveMode as MoveMode;
       executeMove(
         battle,
         unitId,
         mode,
-        s.moveSteps,
+        m.moveSteps,
         collected,
-        s.moveFinalFacing === null
+        m.moveFinalFacing === null
           ? { rng: s.rng }
-          : { finalFacing: s.moveFinalFacing, rng: s.rng },
+          : { finalFacing: m.moveFinalFacing, rng: s.rng },
       );
     }
-    s.actorId = null;
-    clearBuffers(s);
+    clearContexts(s);
     collected.push(...drive(s));
     newEvents = collected;
   });
@@ -997,8 +1046,8 @@ export function commitMove(s: Session): CommitResult {
 // -------------------------------------------------------------- attacks ----
 
 export function cancelFire(s: Session): void {
-  requireActor(s, "weaponAttack");
-  s.fireDecls = [];
+  const a = requireAttack(s);
+  a.fireDecls = [];
 }
 
 export function passFire(s: Session): CommitResult {
@@ -1007,8 +1056,7 @@ export function passFire(s: Session): CommitResult {
   let newEvents: GameEvent[] = [];
   commitAtomic(s, () => {
     requireUnit(requireBattle(s), unitId).passedAttacks = true;
-    s.actorId = null;
-    clearBuffers(s);
+    clearContexts(s);
     newEvents = drive(s);
   });
   return { state: requireBattle(s), newEvents };
@@ -1142,37 +1190,39 @@ function validateQueuedAttacks(
 export function queueFire(s: Session, decl: AttackDecl): void {
   const unit = requireActor(s, "weaponAttack");
   const battle = requireBattle(s);
+  const a = requireAttack(s);
   if (decl.targetId === unit.id) throw new Error(i18n(s.locale, "err.selfTarget"));
   const target = battle.units[decl.targetId];
   if (!target) throw new Error(i18n(s.locale, "err.unknownUnitId", { id: decl.targetId }));
   if (target.team === unit.team) throw new Error(i18n(s.locale, "err.selfTarget"));
   if (isUnitRemoved(target))
     throw new Error(i18n(s.locale, "err.targetRemoved", { id: target.id }));
-  const pending = s.fireDecls[0]?.targetId;
+  const pending = a.fireDecls[0]?.targetId;
   if (pending !== undefined && pending !== decl.targetId) {
     throw new Error(i18n(s.locale, "err.oneTarget", { target: pending }));
   }
-  if (s.fireDecls.some((d) => d.weaponIndex === decl.weaponIndex)) {
+  if (a.fireDecls.some((d) => d.weaponIndex === decl.weaponIndex)) {
     throw new Error(i18n(s.locale, "err.weaponRepeated", { weapon: decl.weaponIndex }));
   }
-  validateQueuedAttacks(battle, unit, [...s.fireDecls, decl], s.torsoTwist);
-  s.fireDecls.push(decl);
+  validateQueuedAttacks(battle, unit, [...a.fireDecls, decl], a.torsoTwist);
+  a.fireDecls.push(decl);
 }
 
 export function commitFire(s: Session): CommitResult {
   const actor = requireActor(s, "weaponAttack");
   const unitId = actor.id;
   const battle = requireBattle(s);
-  if (s.fireDecls.length === 0) throw new Error(i18n(s.locale, "err.noAttacksQueued"));
-  validateQueuedAttacks(battle, actor, s.fireDecls, s.torsoTwist);
+  const a = requireAttack(s);
+  if (a.fireDecls.length === 0) throw new Error(i18n(s.locale, "err.noAttacksQueued"));
+  validateQueuedAttacks(battle, actor, a.fireDecls, a.torsoTwist);
   let newEvents: GameEvent[] = [];
   commitAtomic(s, () => {
     const collected: GameEvent[] = [];
-    declareAttacks(requireBattle(s), unitId, s.fireDecls, collected, s.rng, {
-      twist: s.torsoTwist,
+    const live = requireAttack(s);
+    declareAttacks(requireBattle(s), unitId, live.fireDecls, collected, s.rng, {
+      twist: live.torsoTwist,
     });
-    s.actorId = null;
-    clearBuffers(s);
+    clearContexts(s);
     collected.push(...drive(s));
     newEvents = collected;
   });
@@ -1185,7 +1235,7 @@ export function commitFire(s: Session): CommitResult {
  * `cancel` first — and resets to `"front"` on phase entry or new actor.
  */
 export function setTorsoTwist(s: Session, direction: string): void {
-  const unit = requireActor(s, "weaponAttack");
+  const a = requireAttack(s);
   const allowed: Readonly<Record<string, Arc>> = {
     front: "front",
     left: "leftSide",
@@ -1195,14 +1245,13 @@ export function setTorsoTwist(s: Session, direction: string): void {
   if (arc === undefined) {
     throw new Error(i18n(s.locale, "err.twist.badDirection"));
   }
-  if (s.fireDecls.length > 0) {
+  if (a.fireDecls.length > 0) {
     throw new Error(i18n(s.locale, "err.twist.locked"));
   }
-  if (s.torsoTwist === arc) return;
-  s.torsoTwist = arc;
-  s.fireCandidate = null;
-  s.fireHintShownFor = null;
-  void unit;
+  if (a.torsoTwist === arc) return;
+  a.torsoTwist = arc;
+  a.fireCandidate = null;
+  a.fireHintShownFor = null;
 }
 
 /**
@@ -1222,9 +1271,8 @@ export function rematch(s: Session): GameEvent[] {
   if (s.app !== "over") throw new Error(i18n(s.locale, "err.rematchOnlyOver"));
   s.rng = createRng(s.setup.seed);
   s.battle = createBattle(getMapDefFor(s.setup), s.setup.roster, battleOptions(s));
-  s.victory = null;
-  s.actorId = null;
-  clearBuffers(s);
+  s.over = null;
+  clearContexts(s);
   return drive(s);
 }
 
@@ -1232,9 +1280,8 @@ export function resetSession(s: Session): void {
   s.app = "setup";
   s.setup = { mapName: null, roster: [], seed: s.setup.seed };
   s.battle = null;
-  s.victory = null;
-  s.actorId = null;
-  clearBuffers(s);
+  s.over = null;
+  clearContexts(s);
 }
 
 export function setSeed(s: Session, n: number): void {

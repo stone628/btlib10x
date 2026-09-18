@@ -1,18 +1,9 @@
-import type { HexCoord, Location, MoveMode, Rng, TerrainType } from "../src/core/types.js";
-import {
-  type AmmoBins,
-  createBattle,
-  getMapDefFor,
-  getMechDefFor,
-  isUnitRemoved,
-  reachableLandings,
-  wreckAt,
-} from "../src/index.js";
+import type { Location, Rng, TerrainType } from "../src/core/types.js";
+import { type AmmoBins, createBattle, isUnitRemoved } from "../src/index.js";
 import type { BattleState, TerrainHexDef, UnitInit } from "../src/rules/game.js";
 import { advancePhase } from "../src/rules/game.js";
 import { runChunks } from "../web/cli.js";
 import type { Chunk } from "../web/format.js";
-import { type BoardRenderInfo, createBoardRenderUnit } from "../web/render.js";
 import { boardLegendText, boardToText, createBoardModel } from "../web/renderer.text.js";
 import type { Session } from "../web/session.js";
 
@@ -136,71 +127,6 @@ function columnsText(columns: readonly (readonly string[])[]): string[] {
 /** Run one input line against the session; returns plain output lines. */
 export function execute(session: Session, raw: string): string[] {
   return runChunks(session, raw).flatMap(chunkText);
-}
-
-export function reachableInfo(s: Session): BoardRenderInfo | null {
-  const actor = s.battle?.units[s.actorId ?? ""];
-  const mode = s.moveMode;
-  if (
-    !actor ||
-    !s.battle ||
-    mode === null ||
-    mode === "shutdown" ||
-    mode === "startup" ||
-    mode === "eject"
-  ) {
-    return null;
-  }
-  // Engine guarantee: `actor.model` was validated by `createBattle`.
-  const def = getMechDefFor(actor);
-  let locomotion: MoveMode;
-  let proneFlag = actor.prone;
-  let walking = def.walking;
-  let running = def.running;
-  let jumping = def.jumping;
-  if (mode === "prone") {
-    if ((s.postureMove ?? "walk") === "standStill") return null;
-    locomotion = "walk";
-    proneFlag = true;
-    walking = Math.max(0, walking - 1);
-  } else if (mode === "turn") {
-    locomotion = "walk";
-    proneFlag = true;
-  } else if (mode === "pronestill") {
-    return null;
-  } else if (mode === "standup") {
-    locomotion = s.postureMove ?? "walk";
-    proneFlag = false;
-    if (locomotion === "walk") walking = Math.max(0, walking - 2);
-    else if (locomotion === "run") running = Math.max(0, running - 2);
-    else if (locomotion === "jump") jumping = Math.max(0, jumping - 2);
-  } else {
-    locomotion = mode;
-  }
-  const landings = reachableLandings({ ...actor.position }, actor.facing, {
-    mode: locomotion,
-    walking,
-    running,
-    jumping,
-    prone: proneFlag,
-    grid: s.battle,
-    team: actor.team,
-    wreckAt: (hex: HexCoord): boolean => wreckAt(s.battle!, hex) !== undefined,
-    occupantTeam: (hex: HexCoord): number | undefined => {
-      for (const u of Object.values(s.battle!.units)) {
-        if (isUnitRemoved(u)) continue;
-        if (u.position.col === hex.col && u.position.row === hex.row) return u.team;
-      }
-      return undefined;
-    },
-  });
-  if (landings.length === 0) return null;
-
-  const map = getMapDefFor(s.setup)!;
-  const units = Object.values(s.battle.units)
-    .filter((u) => !isUnitRemoved(u))
-    .map((u) => createBoardRenderUnit(u));
-  return { map, units, reachable: { team: actor.team, revealed: landings }, locale: s.locale };
 }
 
 export function overrideAmmoBin(
