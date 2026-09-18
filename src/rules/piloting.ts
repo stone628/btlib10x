@@ -31,7 +31,7 @@
  * takes 1 point of damage (TW p.60 footnote). Falling damage is
  * `ceil(tonnage / 10) x (levels fallen + 1)`, grouped in 5-point clusters on
  * the Facing After Fall column (TW p.68); a fall underwater (depth 2+)
- * halves the damage, rounding down (TW errata). After the fall the pilot
+ * halves the damage with standard rounding. After the fall the pilot
  * makes a second PSR with the same modifiers (or +5 for an automatic fall
  * from a destroyed leg, +6 from a destroyed gyro) or takes 1 pilot hit.
  * Pilot hits force consciousness rolls (TW p.42): 1 hit -> 3+, 2 -> 5+,

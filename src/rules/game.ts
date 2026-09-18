@@ -397,14 +397,17 @@ export type GameEvent =
   | {
       /** The 'Mech falls (TW p.68): facing rotates per the Facing After
        *  Fall roll and the damage clusters land on that column. `crits`
-       *  holds the determining resolutions the fall damage triggered. */
+       *  holds the determining resolutions the fall damage triggered.
+       *  A voluntary drop reuses this shape with `cause: "voluntaryDrop"`:
+       *  facing stays put, so `fallRoll` is null. */
       readonly kind: "unitFell";
       readonly unitId: string;
       /** failedPsr:<reason> | legDestroyed | gyroDestroyed | shutdown |
-       *  rubble | water | building. */
+       *  rubble | water | building | voluntaryDrop. */
       readonly cause: string;
       readonly facingAfter: Facing;
-      readonly fallRoll: number;
+      /** Facing After Fall roll, or null when no facing roll happened. */
+      readonly fallRoll: number | null;
       readonly column: Arc;
       readonly groups: ReadonlyArray<{ readonly location: Location; readonly damage: number }>;
       readonly totalDamage: number;
@@ -874,8 +877,11 @@ const SKILL_MAX = 7;
 const TURN_FACINGS_MAX = 5;
 /** Minimum hexes entered for a jump declaration. */
 const JUMP_MIN_HEXES = 1;
-/** Heat from a posture move (stand up, drop prone, prone turn). */
+/** Heat from a posture move (stand up, prone turn). A voluntary drop to
+ *  prone costs no heat. */
 const POSTURE_MOVE_HEAT = 1;
+/** Fixed damage from a voluntary drop to prone: 1 point on the front column. */
+const VOLUNTARY_DROP_DAMAGE = 1;
 /** Destroyed legs that forbid standing. */
 const LEGS_STAND_LIMIT = 2;
 /** Walk budget below which a prone drop or turn is refused. */
@@ -1691,7 +1697,7 @@ export interface FallOptions {
    * skips the roll — the pilot takes 1 hit automatically (shut-down fall).
    */
   readonly seatbeltModifier: number | null;
-  /** Halve the falling damage, rounding down (fall underwater, depth 2+). */
+  /** Halve the falling damage with standard rounding (fall underwater, depth 2+). */
   readonly halved: boolean;
   /** Allow the fall damage path on an already-prone unit (failed stand-up). */
   readonly allowProne?: boolean;
@@ -1742,7 +1748,7 @@ export function applyFall(state: BattleState, unit: UnitState, rng: Rng, opts: F
   unit.prone = true;
 
   let total = fallingDamageTotal(def.tonnage, 0);
-  if (opts.halved) total = Math.floor(total / 2);
+  if (opts.halved) total = Math.round(total / 2);
   const groups: Array<{ location: Location; damage: number }> = [];
   for (const amount of fallingDamageGroups(total)) {
     groups.push({ location: hitLocationForArc(dir.column, roll2D6(rng)), damage: amount });
@@ -2615,10 +2621,12 @@ export function attemptStandUp(state: BattleState, unitId: string, rng: Rng = DE
 }
 
 /**
- * Voluntary drop to the ground (TW p.60, 1 MP): no roll, no damage; the
- * 'Mech counts as walking for to-hit this turn.
+ * Voluntary drop to the ground (1 MP): no roll, no heat; the 'Mech counts
+ * as walking for to-hit this turn. Landing jars the chassis: fixed 1 point
+ * on the front hit-location column (crit rolls like any damage). Underwater
+ * at depth 2+ that point halves with standard rounding, so it stays 1.
  */
-export function dropProne(state: BattleState, unitId: string): void {
+export function dropProne(state: BattleState, unitId: string, rng: Rng = DEFAULT_RNG): void {
   requirePhase(state, "movement");
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
@@ -2639,8 +2647,25 @@ export function dropProne(state: BattleState, unitId: string): void {
   unit.mpSpent = DROP_MP_COST;
   unit.prone = true;
   state.actedThisPhase.push(unitId);
-  unit.heat = Math.min(HEAT_CAP, unit.heat + POSTURE_MOVE_HEAT);
-  state.events.push({ kind: "heatMove", unitId, heat: POSTURE_MOVE_HEAT });
+  const location = hitLocationForArc("front", roll2D6(rng));
+  const terrain = cellAt(state, unit.position).terrain;
+  const total =
+    terrain === "water2" || terrain === "water3"
+      ? Math.round(VOLUNTARY_DROP_DAMAGE / 2)
+      : VOLUNTARY_DROP_DAMAGE;
+  const groups = [{ location, damage: total }];
+  const crits = applyDamageGroups(state, unit, rng, groups, "front");
+  state.events.push({
+    kind: "unitFell",
+    unitId,
+    cause: "voluntaryDrop",
+    facingAfter: unit.facing,
+    fallRoll: null,
+    column: "front",
+    groups,
+    totalDamage: total,
+    crits,
+  });
   state.events.push({
     kind: "moved",
     unitId,

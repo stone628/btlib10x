@@ -94,7 +94,7 @@ describe("posture-change then move", () => {
     expect(unit.facing).toBe(landing.facing);
     expect(unit.moveMode).toBe("walk");
     expect(unit.mpSpent).toBe(1 + spent); // drop 1 + turn fragments
-    expect(unit.heat).toBe(heatBefore + 2); // drop 1 + turn 1
+    expect(unit.heat).toBe(heatBefore + 1); // drop 0 + turn 1
   });
 
   it("mode prone pronestill drops in place with no candidate map", () => {
@@ -109,7 +109,7 @@ describe("posture-change then move", () => {
     const unit = s.battle!.units[actor]!;
     expect(unit.prone).toBe(true);
     expect(unit.mpSpent).toBe(1);
-    expect(unit.heat).toBe(heatBefore + 1); // drop only, no turn heat
+    expect(unit.heat).toBe(heatBefore); // drop only, no heat
   });
 
   it("prone mode turn + place turns in place with +1 heat", () => {

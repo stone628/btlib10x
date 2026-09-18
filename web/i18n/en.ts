@@ -83,7 +83,7 @@ export const en = {
   "cmd.mode.arg.jump":
     "jump movement — uses the jump MP pool, needs at least 1 hex entered (min 3 heat). committed by 'done'",
   "cmd.mode.arg.prone":
-    "drop prone voluntarily — costs 1 MP + 1 heat.\noptional in-place turn afterward: 'prone [turn|pronestill]' (default turn).\ncommitted by 'done'",
+    "drop prone voluntarily — costs 1 MP, no heat, deals 1 damage on the front column.\noptional in-place turn afterward: 'prone [turn|pronestill]' (default turn).\ncommitted by 'done'",
   "cmd.mode.arg.turn":
     "turn in place while prone — 1 MP per hexside, multiple turns within the walk budget, +1 heat. committed by 'done'",
   "cmd.mode.arg.pronestill": "stay prone — no movement points spent. committed by 'done'",
