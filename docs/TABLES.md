@@ -99,6 +99,29 @@ pool.
 | 3 | rear | Front / Rear | rear (torso) |
 | 4–5 | leftSide | Left side | front |
 
+## Facing After a Fall
+
+Total Warfare p.68 (`rollFallDirection` in `src/rules/piloting.ts`).
+Shifts run clockwise (positive = right) from the 'Mech's facing.
+
+| 1D6 | New facing | Hit-location column |
+| --- | --- | --- |
+| 1 | Same direction | Front |
+| 2 | 1 hexside right | Right side |
+| 3 | 2 hexsides right | Right side |
+| 4 | Opposite direction | Rear |
+| 5 | 2 hexsides left | Left side |
+| 6 | 1 hexside left | Left side |
+
+Falling damage is `ceil(tonnage / 10) × (levels fallen + 1)` in 5-point
+clusters on the rolled column; levels fallen measure underlying terrain
+(hex fell into minus hex the fall began from — a fall across levels drops
+into the lower hex; jump-phase falls count 0 levels per errata). A fall
+underwater (depth 2+) halves the total, rounding down (TW errata, p.57 —
+an explicit exception to the usual round-up convention). The pilot then
+rolls a seatbelt PSR (failed roll's modifiers, +5 off a destroyed leg, +6
+off a destroyed gyro, +1 per level above 1 fallen) or takes 1 hit.
+
 ## Cluster Hits
 
 Cluster Hits Table (`src/rules/cluster.ts`, Total Warfare p. 116). Each row

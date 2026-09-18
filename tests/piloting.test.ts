@@ -4,6 +4,7 @@ import {
   applyDamage,
   getMechDefFor,
   type ResolvedCritSlot,
+  rollFallDirection,
   suggestFireTargets,
   type UnitDamageState,
 } from "../src/index.js";
@@ -754,7 +755,7 @@ describe("going prone voluntarily", () => {
     expect(state.events.some((e) => e.kind === "heatMove")).toBe(false);
   });
 
-  it("a voluntary drop underwater still deals its point (rounded halving)", () => {
+  it("a voluntary drop underwater deals no damage (halved rounding down)", () => {
     const state = createTestBattle(
       [{ col: 2, row: 3, type: "water2" }],
       [
@@ -786,7 +787,11 @@ describe("going prone voluntarily", () => {
     const enf = requireUnit(state, "enf");
     expect(enf.prone).toBe(true);
     expect(enf.heat).toBe(0);
-    expect(enf.damage.armor.centerTorso).toBe(armorBefore - 1);
+    // 1 point halved underwater rounds down to 0 (TW errata, p.57).
+    expect(enf.damage.armor.centerTorso).toBe(armorBefore);
+    expect(state.events).toContainEqual(
+      expect.objectContaining({ kind: "unitFell", unitId: "enf", totalDamage: 0 }),
+    );
   });
 
   it("a prone 'Mech turns one hexside at a time", () => {
@@ -1065,6 +1070,151 @@ describe("movement terrain PSRs", () => {
       expect.objectContaining({ kind: "buildingCrash", unitId: "hbk", totalDamage: 2 }),
     );
   });
+
+  it("a downhill fall drops into the lower hex with levels-fallen damage", () => {
+    const state = createTestBattle(
+      [
+        { col: 2, row: 2, type: "clear", level: 2 },
+        { col: 2, row: 3, type: "rubble", level: 0 },
+      ],
+      [
+        {
+          id: "hbk",
+          model: "HBK-4G",
+          team: 0,
+          gunnery: 4,
+          piloting: 5,
+          position: { col: 2, row: 2 },
+          facing: "s",
+        },
+        {
+          id: "enf",
+          model: "ENF-4R",
+          team: 1,
+          gunnery: 4,
+          piloting: 5,
+          position: { col: 3, row: 3 },
+          facing: "n",
+        },
+      ],
+      true,
+    );
+    toMovement(state, scriptedRng(2, 2, 5, 5));
+    // PSR 1+2 (needs 5: fail), fall dir 1 (front), three loc rolls 3+3 (CT)
+    // for ceil(50/10) x (2+1) = 15 damage, seatbelt needs 6 (0 mods + 1 for
+    // the second level fallen): 1+2 fails, consciousness needs 3: 2+2 awake.
+    executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+      rng: scriptedRng(1, 2, 1, 3, 3, 3, 3, 3, 3, 1, 2, 2, 2),
+    });
+    const hbk = requireUnit(state, "hbk");
+    expect(hbk.position).toEqual({ col: 2, row: 3 });
+    expect(hbk.prone).toBe(true);
+    expect(hbk.pilotHits).toBe(1);
+    expect(state.events).toContainEqual(
+      expect.objectContaining({
+        kind: "unitFell",
+        unitId: "hbk",
+        levelsFallen: 2,
+        totalDamage: 15,
+      }),
+    );
+    expect(state.events).toContainEqual(
+      expect.objectContaining({ kind: "pilotingCheck", reason: "seatbelt", target: 6 }),
+    );
+  });
+
+  it("an uphill fall drops back into the lower hex at 0 levels", () => {
+    const state = createTestBattle(
+      [{ col: 2, row: 3, type: "rubble", level: 2 }],
+      [
+        {
+          id: "hbk",
+          model: "HBK-4G",
+          team: 0,
+          gunnery: 4,
+          piloting: 5,
+          position: { col: 2, row: 2 },
+          facing: "s",
+        },
+        {
+          id: "enf",
+          model: "ENF-4R",
+          team: 1,
+          gunnery: 4,
+          piloting: 5,
+          position: { col: 3, row: 3 },
+          facing: "n",
+        },
+      ],
+      true,
+    );
+    toMovement(state, scriptedRng(2, 2, 5, 5));
+    // PSR 1+2 (needs 5: fail), fall dir 1 (front), loc 3+3 (CT) for
+    // ceil(50/10) x (0+1) = 5 damage, seatbelt needs 5: 3+3 succeeds.
+    executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+      rng: scriptedRng(1, 2, 1, 3, 3, 3, 3),
+    });
+    const hbk = requireUnit(state, "hbk");
+    expect(hbk.position).toEqual({ col: 2, row: 2 });
+    expect(hbk.prone).toBe(true);
+    expect(hbk.pilotHits).toBe(0);
+    expect(state.events).toContainEqual(
+      expect.objectContaining({
+        kind: "unitFell",
+        unitId: "hbk",
+        levelsFallen: 0,
+        totalDamage: 5,
+      }),
+    );
+  });
+
+  it("a jump-landing fall counts 0 levels per errata", () => {
+    const state = createTestBattle(
+      [
+        { col: 2, row: 2, type: "clear", level: 2 },
+        { col: 2, row: 3, type: "water1", level: 0 },
+      ],
+      [
+        {
+          id: "enf",
+          model: "ENF-4R",
+          team: 0,
+          gunnery: 4,
+          piloting: 5,
+          position: { col: 2, row: 2 },
+          facing: "s",
+        },
+        {
+          id: "hbk",
+          model: "HBK-4G",
+          team: 1,
+          gunnery: 4,
+          piloting: 5,
+          position: { col: 1, row: 1 },
+          facing: "s",
+        },
+      ],
+      true,
+    );
+    toMovement(state, scriptedRng(2, 2, 5, 5));
+    // Water1 PSR needs 4 (5-1): 1+2 fails; dir 1 (front), loc 3+3 (CT) for
+    // ceil(50/10) x (0+1) = 5 damage; seatbelt needs 4: 3+3 succeeds.
+    executeMove(state, "enf", "jump", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+      rng: scriptedRng(1, 2, 1, 3, 3, 3, 3),
+    });
+    const enf = requireUnit(state, "enf");
+    expect(enf.position).toEqual({ col: 2, row: 3 });
+    expect(enf.prone).toBe(true);
+    expect(enf.pilotHits).toBe(0);
+    expect(state.events).toContainEqual(
+      expect.objectContaining({
+        kind: "unitFell",
+        unitId: "enf",
+        levelsFallen: 0,
+        totalDamage: 5,
+      }),
+    );
+  });
 });
 
 describe("applyFall", () => {
@@ -1074,5 +1224,55 @@ describe("applyFall", () => {
     enf.prone = true;
     applyFall(state, enf, scriptedRng(), { cause: "water", seatbeltModifier: 0, halved: false });
     expect(state.events.some((e) => e.kind === "unitFell")).toBe(false);
+  });
+
+  it("halved falls round down (TW errata)", () => {
+    const state = hbkEnf();
+    const enf = requireUnit(state, "enf");
+    // ENF-4R 50t -> 5 damage, halved down to 2. Dir 1 (front), loc 3+3
+    // (CT), seatbelt needs 5: 3+3 succeeds.
+    applyFall(state, enf, scriptedRng(1, 3, 3, 3, 3), {
+      cause: "water",
+      seatbeltModifier: 0,
+      halved: true,
+    });
+    expect(state.events).toContainEqual(
+      expect.objectContaining({
+        kind: "unitFell",
+        unitId: "enf",
+        levelsFallen: 0,
+        totalDamage: 2,
+      }),
+    );
+  });
+
+  it("scales damage by levels fallen", () => {
+    const state = hbkEnf();
+    const enf = requireUnit(state, "enf");
+    // ENF-4R 50t x (2+1) = 15 damage in three 5-point groups. Dir 1
+    // (front), locs 3+3 (CT), seatbelt needs 5 + 1 (second level): 3+4.
+    applyFall(state, enf, scriptedRng(1, 3, 3, 3, 3, 3, 3, 3, 4), {
+      cause: "failedPsr:rubble",
+      seatbeltModifier: 1,
+      halved: false,
+      levelsFallen: 2,
+    });
+    expect(state.events).toContainEqual(
+      expect.objectContaining({
+        kind: "unitFell",
+        unitId: "enf",
+        levelsFallen: 2,
+        totalDamage: 15,
+      }),
+    );
+  });
+});
+
+describe("rollFallDirection", () => {
+  it("maps 5 to two hexsides left and 6 to one (TW p.68)", () => {
+    expect(rollFallDirection(scriptedRng(1))).toEqual({ roll: 1, shift: 0, column: "front" });
+    expect(rollFallDirection(scriptedRng(4))).toEqual({ roll: 4, shift: 3, column: "rear" });
+    expect(rollFallDirection(scriptedRng(5))).toEqual({ roll: 5, shift: -2, column: "leftSide" });
+    expect(rollFallDirection(scriptedRng(6))).toEqual({ roll: 6, shift: -1, column: "leftSide" });
   });
 });

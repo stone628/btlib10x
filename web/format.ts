@@ -2148,6 +2148,7 @@ function eventLines(locale: LocaleId, e: GameEvent): string[] {
           facing: e.facingAfter,
           groups: e.groups.map((g) => `${SHORT_LOC[g.location]}(${g.damage})`).join(" "),
           damage: e.totalDamage,
+          levels: e.levelsFallen,
         }),
       ];
       for (const crit of e.crits) {
