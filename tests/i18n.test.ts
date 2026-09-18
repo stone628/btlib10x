@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { bestFireTarget, isNominal, isUnitAvailable, suggestFireTargets } from "../src/index.js";
+import {
+  bearing,
+  bestFireTarget,
+  getMechDefFor,
+  isNominal,
+  isUnitAvailable,
+  isUnitRemoved,
+  reachableLandings,
+  suggestFireTargets,
+  wreckAt,
+} from "../src/index.js";
 import { en } from "../web/i18n/en.js";
 import type { LocaleId, MessageKey } from "../web/i18n/index.js";
 import { i18n, LOCALES } from "../web/i18n/index.js";
@@ -9,6 +19,9 @@ import { execute } from "./helpers.js";
 
 /** Drive a started battle until it is over using minimal legal actions. */
 function autoPlay(s: ReturnType<typeof newSession>): void {
+  // A unit that cannot bear on its enemy turns toward it next activation;
+  // without this two face-away 'Mechs passFire forever.
+  let faceEnemy = false;
   for (let i = 0; i < 500 && s.app === "battle"; i++) {
     const st = s.battle!;
     const actorId = S.currentActor(s)!.id;
@@ -31,6 +44,47 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
           } catch {
             S.declareMode(s, "standStill");
           }
+          if (faceEnemy) {
+            faceEnemy = false;
+            const me = st.units[actorId]!;
+            const foe = st.units[enemy];
+            if (foe !== undefined && !isUnitRemoved(foe)) {
+              const want = bearing(me.position, foe.position);
+              if (want !== null && want !== me.facing) {
+                // Turn in place via a same-hex landing; a missing landing
+                // (or place error) falls back to standing in place.
+                try {
+                  const def = getMechDefFor(me);
+                  const landings = reachableLandings({ ...me.position }, me.facing, {
+                    mode: "walk",
+                    walking: def.walking,
+                    running: def.running,
+                    jumping: def.jumping,
+                    prone: false,
+                    grid: st,
+                    team: me.team,
+                    wreckAt: (hex) => wreckAt(st, hex) !== undefined,
+                    occupantTeam: (hex) => {
+                      for (const u of Object.values(st.units)) {
+                        if (isUnitRemoved(u)) continue;
+                        if (u.position.col === hex.col && u.position.row === hex.row) return u.team;
+                      }
+                      return undefined;
+                    },
+                  });
+                  const turn = landings.find(
+                    (l) =>
+                      l.hex.col === me.position.col &&
+                      l.hex.row === me.position.row &&
+                      l.facing === want,
+                  );
+                  if (turn !== undefined) S.placeLanding(s, turn);
+                } catch {
+                  // fall through to standing in place
+                }
+              }
+            }
+          }
         }
       }
       S.commitMove(s);
@@ -46,8 +100,10 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
         if (unit.jammedWeapons.includes(w.weaponIndex)) continue;
         S.queueFire(s, { weaponIndex: w.weaponIndex, targetId: enemy });
       }
-      if (s.fireDecls.length === 0) S.passFire(s);
-      else S.commitFire(s);
+      if (s.fireDecls.length === 0) {
+        S.passFire(s);
+        faceEnemy = true;
+      } else S.commitFire(s);
     }
   }
   if (s.app !== "over") throw new Error("battle did not finish");

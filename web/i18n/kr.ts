@@ -470,7 +470,8 @@ export const kr: Catalog = {
   "log.psrSuccess": "성공",
   "log.psrFail": "실패",
   "log.psrAuto": "자동",
-  "log.unitFell": "*** {id} 넘어짐 ({cause}) 방향 {facing}: {groups} (합계 {damage}) ***",
+  "log.unitFell":
+    "*** {id} 넘어짐 ({cause}) 방향 {facing}: {groups} (합계 {damage}, {levels}레벨 추락) ***",
   "log.pilotDamaged": "{id} 조종사 피해 1점 ({reason}) — 누적 {total}점",
   "log.consciousnessCheckSuccess": "{id} 의식 판정 성공(2D6 = {roll} >= {target}) -> 의식 유지",
   "log.consciousnessCheckFail": "{id} 의식 판정 실패(2D6 = {roll} < {target}) -> 의식 미회복",

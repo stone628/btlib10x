@@ -261,11 +261,17 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   hit gyro, +5 per destroyed leg replacing that leg's other mods). Pilot
   wounds never modify PSRs or to-hit numbers (TW tracks wounds through
   consciousness rolls only). A fall
-   rotates facing per the Facing After Fall table and lands
-   `ceil(tonnage / 10)` damage in 5-point clusters on the fall column (halved
-   with standard rounding underwater at depth 2+), with normal crit rolls; the pilot then
+   rotates facing per the Facing After Fall table (1 same/front, 2 +1/right,
+   3 +2/right, 4 opposite/rear, 5 −2/left, 6 −1/left) and lands
+   `ceil(tonnage / 10) × (levels fallen + 1)` damage in 5-point clusters
+   on the fall column (halved rounding down underwater at depth 2+ per TW
+   errata), with normal crit rolls; levels fallen measure underlying
+   terrain (hex fell into minus hex the fall began from — a fall across
+   levels drops into the lower hex; jump-phase falls count 0 levels), and
+   the pilot then
   makes a seatbelt PSR (+5 off a destroyed leg, +6 off a destroyed gyro, or
-  the failed roll's modifiers) or takes 1 hit — automatic when the 'Mech is
+  the failed roll's modifiers, plus +1 per level above 1 fallen) or takes
+  1 hit — automatic when the 'Mech is
   immobile or the target exceeds 12. Prone units stand up with `mode
   standup <walk|run|jump>` (one attempt per activation sharing one MP pool,
   stand costs 2, +1 heat; failure crashes back down for fresh fall damage and
@@ -347,10 +353,13 @@ stated elsewhere in this document or the codebase:
   unit-displacement mechanic (nothing pushes or throws a 'Mech; cf.
   "Physical attacks" above and the atomic commit boundary in AGENTS.md), so
   only the fall itself could land, never the slide.
-- **Falls from height / being thrown off level** (TW p.68) — all falls here
-  happen in place (0 levels fallen) because no rule in the subset displaces
-  a unit across hexes or levels; the `levelsFallen` term of falling damage
-  only activates once displacement exists.
+- **Falls from displacement / above** (TW pp.151-152) — pushes, charges,
+  DFAs and accidental falls from above displace a unit across hexes or
+  levels before it falls. All falls here from combat PSRs, shutdowns,
+  stand-up attempts and building crashes happen in place (0 levels fallen);
+  only ground-movement falls across levels use the `levelsFallen` term
+  (lower-hex rule), since no rule in the subset displaces a unit. DFA's
+  2-level rear-column fall waits on the physical phase.
 - **One-legged hopping movement** (TW p.122: 1 MP) — the damage model
   treats any destroyed leg as immobility ("leg IS death immobilizes" under
   Damage above). A one-legged 'Mech may still stand (at +5) and fire, but it

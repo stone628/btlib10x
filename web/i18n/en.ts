@@ -479,7 +479,8 @@ export const en = {
   "log.psrSuccess": "SUCCESS",
   "log.psrFail": "FAIL",
   "log.psrAuto": "auto",
-  "log.unitFell": "*** {id} FALLS ({cause}) facing {facing}: {groups} ({damage} total) ***",
+  "log.unitFell":
+    "*** {id} FALLS ({cause}) facing {facing}: {groups} ({damage} total, {levels}-level fall) ***",
   "log.pilotDamaged": "{id} pilot takes a hit ({reason}) — {total} total",
   "log.consciousnessCheckSuccess":
     "{id} consciousness check success(2D6 = {roll} >= {target}) -> AWAKE",

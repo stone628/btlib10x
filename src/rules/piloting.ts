@@ -31,11 +31,15 @@
  * takes 1 point of damage (TW p.60 footnote). Falling damage is
  * `ceil(tonnage / 10) x (levels fallen + 1)`, grouped in 5-point clusters on
  * the Facing After Fall column (TW p.68); a fall underwater (depth 2+)
- * halves the damage with standard rounding. After the fall the pilot
+ * halves the damage, rounding the final total down (TW errata, p.57).
+ * Levels fallen measure underlying terrain (hex fell into minus hex the
+ * fall began from); a 'Mech that jumped that phase and falls from a failed
+ * PSR counts as fallen 0 levels (TW errata, p.68). After the fall the pilot
  * makes a second PSR with the same modifiers (or +5 for an automatic fall
- * from a destroyed leg, +6 from a destroyed gyro) or takes 1 pilot hit.
- * Pilot hits force consciousness rolls (TW p.42): 1 hit -> 3+, 2 -> 5+,
- * 3 -> 7+, 4 -> 10+, 5 -> 11+, 6 hits = dead.
+ * from a destroyed leg, +6 from a destroyed gyro) plus +1 per level above
+ * 1 fallen, or takes 1 pilot hit. Pilot hits force consciousness rolls
+ * (TW p.42): 1 hit -> 3+, 2 -> 5+, 3 -> 7+, 4 -> 10+, 5 -> 11+,
+ * 6 hits = dead.
  *
  * All functions here are pure; game.ts commits the results onto UnitState.
  */
@@ -228,7 +232,10 @@ export interface FallDirection {
 /**
  * Facing After a Fall table (TW p.68): 1D6 picks the direction the 'Mech
  * falls relative to its facing, which rotates the 'Mech and selects the hit
- * column for the falling damage.
+ * column for the falling damage. Shifts run clockwise (positive = right):
+ *
+ *   1 same facing / front | 2 +1 / rightSide | 3 +2 / rightSide |
+ *   4 +3 / rear | 5 -2 / leftSide | 6 -1 / leftSide
  */
 export function rollFallDirection(rng: Rng): { roll: number } & FallDirection {
   const roll = rollD6(rng);
@@ -242,9 +249,9 @@ export function rollFallDirection(rng: Rng): { roll: number } & FallDirection {
     case 4:
       return { roll, shift: 3, column: "rear" };
     case 5:
-      return { roll, shift: -1, column: "leftSide" };
-    default:
       return { roll, shift: -2, column: "leftSide" };
+    default:
+      return { roll, shift: -1, column: "leftSide" };
   }
 }
 

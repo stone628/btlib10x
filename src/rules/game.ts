@@ -409,6 +409,8 @@ export type GameEvent =
       /** Facing After Fall roll, or null when no facing roll happened. */
       readonly fallRoll: number | null;
       readonly column: Arc;
+      /** Underlying-terrain levels fallen (0 for a same-hex fall). */
+      readonly levelsFallen: number;
       readonly groups: ReadonlyArray<{ readonly location: Location; readonly damage: number }>;
       readonly totalDamage: number;
       readonly crits: readonly CriticalResolution[];
@@ -1152,10 +1154,13 @@ export function executeMove(
     }
     cur = to;
     // Terrain-entry PSRs (TW p.60): ground checks every entered hex, jump
-    // only its landing. A fall, crash-kill, or shutdown ends the move here.
+    // only its landing. A fall, crash-kill, or shutdown ends the move here,
+    // committed at the hex the fall rule leaves the 'Mech in (the lower
+    // hex on a fall across levels).
     if (!jumping || isFinal) {
-      if (movementTerrainPsr(state, unit, rng, from, to, !jumping, pre.modifier)) {
-        commitAt({ ...cur }, unit.facing, mode, curSpent, curDirs);
+      const fellAt = movementTerrainPsr(state, unit, rng, from, to, !jumping, pre.modifier);
+      if (fellAt !== null) {
+        commitAt({ ...fellAt }, unit.facing, mode, curSpent, curDirs);
         return;
       }
       if (unit.prone || unit.destroyed !== "not") {
@@ -1172,7 +1177,9 @@ export function executeMove(
   // foot, or hip actuators (or a destroyed leg), forces a PSR at the end of
   // the move with preexisting-damage modifiers (TW p.60). The trigger adds
   // nothing on top of `pre`: both table rows read "per Preexisting Damage".
-  // Stationary declarations (no hex entered) skip the check.
+  // Stationary declarations (no hex entered) skip the check. A failed
+  // jump-phase PSR falls 0 levels per errata even across levels, and the
+  // landing hex is already committed, so no levelsFallen is passed.
   if (!unit.prone && directions.length > 0) {
     const gyroHits = countDestroyedGyro(def, unit.critSlotsDestroyed);
     const hipHits = countDestroyedHip(def, unit.critSlotsDestroyed);
@@ -1697,8 +1704,13 @@ export interface FallOptions {
    * skips the roll — the pilot takes 1 hit automatically (shut-down fall).
    */
   readonly seatbeltModifier: number | null;
-  /** Halve the falling damage with standard rounding (fall underwater, depth 2+). */
+  /** Halve the falling damage, rounding down (fall underwater, depth 2+). */
   readonly halved: boolean;
+  /** Underlying-terrain levels fallen (TW p.68): hex fell into minus hex
+   *  the fall began from. Defaults to 0 (same-hex fall); callers that fall
+   *  while moving across levels pass the drop. Jump-phase falls stay 0
+   *  per errata even when the landing sits at another level. */
+  readonly levelsFallen?: number;
   /** Allow the fall damage path on an already-prone unit (failed stand-up). */
   readonly allowProne?: boolean;
 }
@@ -1734,10 +1746,11 @@ function shutdownFallCheck(state: BattleState, unit: UnitState, rng: Rng): void 
 
 /**
  * Drop `unit` to the ground (TW p.68): facing rotates per the Facing After
- * Fall roll, `ceil(tonnage / 10)` damage lands in 5-point clusters on the
- * fall column (with crit rolls like any damage), and the pilot makes a
- * seatbelt PSR or takes 1 hit. A no-op on an already-prone unit unless
- * `allowProne` is set (a failed stand-up crashes back down).
+ * Fall roll, `ceil(tonnage / 10) x (levels fallen + 1)` damage lands in
+ * 5-point clusters on the fall column (with crit rolls like any damage;
+ * halved rounding down underwater), and the pilot makes a seatbelt PSR or
+ * takes 1 hit. A no-op on an already-prone unit unless `allowProne` is set
+ * (a failed stand-up crashes back down).
  */
 export function applyFall(state: BattleState, unit: UnitState, rng: Rng, opts: FallOptions): void {
   if (isUnitRemoved(unit)) return;
@@ -1747,8 +1760,9 @@ export function applyFall(state: BattleState, unit: UnitState, rng: Rng, opts: F
   unit.facing = facingAfterFall(unit.facing, dir.shift);
   unit.prone = true;
 
-  let total = fallingDamageTotal(def.tonnage, 0);
-  if (opts.halved) total = Math.round(total / 2);
+  const levels = opts.levelsFallen ?? 0;
+  let total = fallingDamageTotal(def.tonnage, levels);
+  if (opts.halved) total = Math.floor(total / 2);
   const groups: Array<{ location: Location; damage: number }> = [];
   for (const amount of fallingDamageGroups(total)) {
     groups.push({ location: hitLocationForArc(dir.column, roll2D6(rng)), damage: amount });
@@ -1767,6 +1781,7 @@ export function applyFall(state: BattleState, unit: UnitState, rng: Rng, opts: F
     facingAfter: unit.facing,
     fallRoll: dir.roll,
     column: dir.column,
+    levelsFallen: levels,
     groups,
     totalDamage: total,
     crits,
@@ -2431,8 +2446,11 @@ export function resolveHeatPhase(state: BattleState, rng: Rng): void {
  * rubble (+0), or a building hex (light +0 / medium +1 / heavy +2 /
  * hardened +5). Failed water/rubble rolls drop the 'Mech in the hex; a
  * failed building roll crashes it (ceil(CF / 10) front-column damage, no
- * fall) instead. Returns true when the move must stop here (fell, crashed
- * dead, or shut down mid-path).
+ * fall) instead. A fall across levels drops into the lower of the two hexes
+ * (TW p.68) with levels fallen feeding damage and the seatbelt check (+1
+ * per level above 1); jump landings stay 0-level falls per errata.
+ * Returns the hex the move stops in when it must stop here (fell,
+ * crashed, or shut down mid-path), or null to continue.
  */
 function movementTerrainPsr(
   state: BattleState,
@@ -2442,14 +2460,34 @@ function movementTerrainPsr(
   to: HexCoord,
   ground: boolean,
   preModifier: number,
-): boolean {
+): HexCoord | null {
   const stop = (): boolean =>
     unit.prone || isUnitRemoved(unit) || isShutdown(unit) || unit.unconscious;
-  const rollFall = (reason: string, trigger: number, cause: string, hex: HexCoord): boolean => {
+  /** Lower hex of the step plus levels fallen into it (jump: landing, 0). */
+  const lowerLanding = (hex: HexCoord): { lower: HexCoord; levels: number } => {
+    if (!ground) return { lower: hex, levels: 0 };
+    const fromLevel = cellAt(state, from).level;
+    const toLevel = cellAt(state, to).level;
+    const lower = toLevel <= fromLevel ? to : from;
+    return { lower, levels: Math.max(0, fromLevel - cellAt(state, lower).level) };
+  };
+  const rollFall = (
+    reason: string,
+    trigger: number,
+    cause: string,
+    hex: HexCoord,
+  ): HexCoord | null => {
     const modifier = trigger + preModifier;
+    const { lower, levels } = lowerLanding(hex);
     if (isShutdown(unit) || unit.unconscious) {
-      applyFall(state, unit, rng, { cause, seatbeltModifier: null, halved: false });
-      return true;
+      const terrain = cellAt(state, lower).terrain;
+      applyFall(state, unit, rng, {
+        cause,
+        seatbeltModifier: null,
+        halved: terrain === "water2" || terrain === "water3",
+        levelsFallen: levels,
+      });
+      return lower;
     }
     const r = rollPilotingCheck(rng, unit.piloting, modifier);
     state.events.push({
@@ -2461,30 +2499,36 @@ function movementTerrainPsr(
       roll: r.roll,
       success: r.success,
     });
-    if (r.success) return false;
-    const terrain = cellAt(state, hex).terrain;
+    if (r.success) return null;
+    const terrain = cellAt(state, lower).terrain;
     applyFall(state, unit, rng, {
       cause,
-      seatbeltModifier: modifier,
+      seatbeltModifier: modifier + Math.max(0, levels - 1),
       halved: terrain === "water2" || terrain === "water3",
+      levelsFallen: levels,
     });
-    return true;
+    return lower;
   };
   if (ground) {
     const leaving = buildingEntryModifier(cellAt(state, from).terrain);
-    if (leaving !== null && rollFall("building", leaving, "building", from)) return true;
-    if (stop()) return true;
+    if (leaving !== null) {
+      const fellAt = rollFall("building", leaving, "building", from);
+      if (fellAt !== null) return fellAt;
+    }
+    if (stop()) return to;
   }
   const entering = cellAt(state, to).terrain;
   const water = waterEntryModifier(entering);
   if (water !== null) {
     const reason = entering === "water1" ? "water1" : entering === "water2" ? "water2" : "water3";
-    if (rollFall(reason, water, "water", to)) return true;
-    if (stop()) return true;
+    const fellAt = rollFall(reason, water, "water", to);
+    if (fellAt !== null) return fellAt;
+    if (stop()) return to;
   }
   if (entering === "rubble") {
-    if (rollFall("rubble", 0, "rubble", to)) return true;
-    if (stop()) return true;
+    const fellAt = rollFall("rubble", 0, "rubble", to);
+    if (fellAt !== null) return fellAt;
+    if (stop()) return to;
   }
   const building = buildingEntryModifier(entering);
   if (building !== null) {
@@ -2494,7 +2538,7 @@ function movementTerrainPsr(
     const modifier = building + preModifier;
     if (isShutdown(unit) || unit.unconscious) {
       applyFall(state, unit, rng, { cause: "building", seatbeltModifier: null, halved: false });
-      return true;
+      return to;
     }
     const r = rollPilotingCheck(rng, unit.piloting, modifier);
     state.events.push({
@@ -2546,10 +2590,10 @@ function movementTerrainPsr(
           });
         }
       }
-      return true;
+      return to;
     }
   }
-  return stop();
+  return stop() ? to : null;
 }
 
 /**
@@ -2624,7 +2668,7 @@ export function attemptStandUp(state: BattleState, unitId: string, rng: Rng = DE
  * Voluntary drop to the ground (1 MP): no roll, no heat; the 'Mech counts
  * as walking for to-hit this turn. Landing jars the chassis: fixed 1 point
  * on the front hit-location column (crit rolls like any damage). Underwater
- * at depth 2+ that point halves with standard rounding, so it stays 1.
+ * at depth 2+ that point halves rounding down, so it lands 0.
  */
 export function dropProne(state: BattleState, unitId: string, rng: Rng = DEFAULT_RNG): void {
   requirePhase(state, "movement");
@@ -2649,11 +2693,13 @@ export function dropProne(state: BattleState, unitId: string, rng: Rng = DEFAULT
   state.actedThisPhase.push(unitId);
   const location = hitLocationForArc("front", roll2D6(rng));
   const terrain = cellAt(state, unit.position).terrain;
+  // Underwater falls halve rounding down (TW errata, p.57): a 1-point drop
+  // in depth-2+ water lands 0 damage.
   const total =
     terrain === "water2" || terrain === "water3"
-      ? Math.round(VOLUNTARY_DROP_DAMAGE / 2)
+      ? Math.floor(VOLUNTARY_DROP_DAMAGE / 2)
       : VOLUNTARY_DROP_DAMAGE;
-  const groups = [{ location, damage: total }];
+  const groups = total > 0 ? [{ location, damage: total }] : [];
   const crits = applyDamageGroups(state, unit, rng, groups, "front");
   state.events.push({
     kind: "unitFell",
@@ -2662,6 +2708,7 @@ export function dropProne(state: BattleState, unitId: string, rng: Rng = DEFAULT
     facingAfter: unit.facing,
     fallRoll: null,
     column: "front",
+    levelsFallen: 0,
     groups,
     totalDamage: total,
     crits,
