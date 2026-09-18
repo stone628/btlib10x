@@ -195,16 +195,22 @@ function drive(s: Session): GameEvent[] {
   const battle = s.battle;
   if (!battle) return [];
   const v: SessionVictoryResult[] = [];
-  const r = gameLoop(battle, s.rng, (state) => {
-    const victory = checkSessionVictory(state);
-    if (victory !== null) {
-      v.push(victory);
-      return true;
-    }
-    return false;
-  });
+  const collected: GameEvent[] = [];
+  const r = gameLoop(
+    battle,
+    s.rng,
+    (state) => {
+      const victory = checkSessionVictory(state);
+      if (victory !== null) {
+        v.push(victory);
+        return true;
+      }
+      return false;
+    },
+    collected,
+  );
   if (
-    r.events.some(
+    collected.some(
       (e) => e.kind === "phase" && e.prevPhase === "movement" && e.phase === "weaponAttack",
     )
   ) {
@@ -224,7 +230,7 @@ function drive(s: Session): GameEvent[] {
       clearBuffers(s);
     }
   }
-  return r.events.slice();
+  return collected;
 }
 
 export function currentActor(s: Session): UnitState | null {
@@ -910,16 +916,17 @@ function commitAtomic(s: Session, fn: () => void): void {
 export function commitMove(s: Session): CommitResult {
   const actor = requireActor(s, "movement");
   const unitId = actor.id;
-  const beforeCount = requireBattle(s).events.length;
+  let newEvents: GameEvent[] = [];
   commitAtomic(s, () => {
+    const collected: GameEvent[] = [];
     const battle = requireBattle(s);
     const unit = requireUnit(battle, unitId);
     if (s.moveMode === "shutdown") {
-      voluntaryShutdown(battle, unitId);
+      voluntaryShutdown(battle, unitId, collected);
     } else if (s.moveMode === "startup") {
-      attemptVoluntaryStartup(battle, unitId, s.rng);
+      attemptVoluntaryStartup(battle, unitId, collected, s.rng);
     } else if (s.moveMode === "eject") {
-      ejectPilot(battle, unitId);
+      ejectPilot(battle, unitId, collected);
     } else if (isShutdown(unit) || unit.unconscious) {
       // Down unit committing any other movement mode: hold position and
       // pass (startup/shutdown/eject handled above; nothing else is legal
@@ -930,18 +937,19 @@ export function commitMove(s: Session): CommitResult {
       const locomotion = s.postureMove ?? "walk";
       const steps = s.moveSteps;
       const finalFacing = s.moveFinalFacing;
-      attemptStandUp(battle, unitId, s.rng);
+      attemptStandUp(battle, unitId, collected, s.rng);
       const after = battle.units[unitId]!;
       if (after.prone) {
         // Failed stand: queued place discarded, activation ends.
         s.actorId = null;
         clearBuffers(s);
-        drive(s);
+        collected.push(...drive(s));
+        newEvents = collected;
         return;
       }
       if (steps.length > 0 || finalFacing !== null) {
         const posture = STAND_MP_COST;
-        executeMove(battle, unitId, locomotion, steps, {
+        executeMove(battle, unitId, locomotion, steps, collected, {
           ...(finalFacing === null ? { rng: s.rng } : { finalFacing, rng: s.rng }),
           spentMP: posture,
         });
@@ -950,19 +958,19 @@ export function commitMove(s: Session): CommitResult {
       const steps = s.moveSteps;
       const finalFacing = s.moveFinalFacing;
       const locomotion = s.postureMove ?? "walk";
-      dropProne(battle, unitId, s.rng);
+      dropProne(battle, unitId, collected, s.rng);
       if (steps.length > 0 || finalFacing !== null) {
         const posture = DROP_MP_COST;
-        executeMove(battle, unitId, locomotion, steps, {
+        executeMove(battle, unitId, locomotion, steps, collected, {
           ...(finalFacing === null ? { rng: s.rng } : { finalFacing, rng: s.rng }),
           spentMP: posture,
         });
       }
     } else if (s.moveMode === "turn") {
       const steps = s.moveSteps;
-      executeMove(battle, unitId, "walk", steps, { rng: s.rng });
+      executeMove(battle, unitId, "walk", steps, collected, { rng: s.rng });
     } else if (s.moveMode === "pronestill") {
-      executeMove(battle, unitId, "standStill", [], { rng: s.rng });
+      executeMove(battle, unitId, "standStill", [], collected, { rng: s.rng });
     } else {
       // Past this branch s.moveMode is a real MoveMode (the special posture
       // strings above were the only alternatives).
@@ -972,6 +980,7 @@ export function commitMove(s: Session): CommitResult {
         unitId,
         mode,
         s.moveSteps,
+        collected,
         s.moveFinalFacing === null
           ? { rng: s.rng }
           : { finalFacing: s.moveFinalFacing, rng: s.rng },
@@ -979,10 +988,10 @@ export function commitMove(s: Session): CommitResult {
     }
     s.actorId = null;
     clearBuffers(s);
-    drive(s);
+    collected.push(...drive(s));
+    newEvents = collected;
   });
-  const live = requireBattle(s);
-  return { state: live, newEvents: live.events.slice(beforeCount) };
+  return { state: requireBattle(s), newEvents };
 }
 
 // -------------------------------------------------------------- attacks ----
@@ -995,15 +1004,14 @@ export function cancelFire(s: Session): void {
 export function passFire(s: Session): CommitResult {
   const actor = requireActor(s, "weaponAttack");
   const unitId = actor.id;
-  const beforeCount = requireBattle(s).events.length;
+  let newEvents: GameEvent[] = [];
   commitAtomic(s, () => {
     requireUnit(requireBattle(s), unitId).passedAttacks = true;
     s.actorId = null;
     clearBuffers(s);
-    drive(s);
+    newEvents = drive(s);
   });
-  const live = requireBattle(s);
-  return { state: live, newEvents: live.events.slice(beforeCount) };
+  return { state: requireBattle(s), newEvents };
 }
 
 /**
@@ -1157,15 +1165,18 @@ export function commitFire(s: Session): CommitResult {
   const battle = requireBattle(s);
   if (s.fireDecls.length === 0) throw new Error(i18n(s.locale, "err.noAttacksQueued"));
   validateQueuedAttacks(battle, actor, s.fireDecls, s.torsoTwist);
-  const beforeCount = battle.events.length;
+  let newEvents: GameEvent[] = [];
   commitAtomic(s, () => {
-    declareAttacks(requireBattle(s), unitId, s.fireDecls, s.rng, { twist: s.torsoTwist });
+    const collected: GameEvent[] = [];
+    declareAttacks(requireBattle(s), unitId, s.fireDecls, collected, s.rng, {
+      twist: s.torsoTwist,
+    });
     s.actorId = null;
     clearBuffers(s);
-    drive(s);
+    collected.push(...drive(s));
+    newEvents = collected;
   });
-  const live = requireBattle(s);
-  return { state: live, newEvents: live.events.slice(beforeCount) };
+  return { state: requireBattle(s), newEvents };
 }
 
 /**

@@ -180,12 +180,12 @@ grf.damage.armor.leftTorso;   // front armor, e.g. 18 - 5 = 13 after an ML hit
 grf.damage.internalStructure; // derived from tonnage
 ```
 
-Each resolution is appended to `state.events` as an `attackResolved` event
-carrying the full breakdown (to-hit roll, cluster roll, hit groups, damage
-application, critical hits) — enough to replay the entire battle. If you
-need a per-target suggestion before declaring, `suggestFireTargets(state,
-unitId)` returns a `FireSuggestion` with arc, LOS, range, ammo, jam, and
-prone-prop checks already applied.
+Each resolution returns as an `attackResolved` event carrying the full
+breakdown (to-hit roll, cluster roll, hit groups, damage application,
+critical hits). Events are transient — returned, never stored — so snapshots
+stay small. If you need a per-target suggestion before declaring,
+`suggestFireTargets(state, unitId)` returns a `FireSuggestion` with arc, LOS,
+range, ammo, and prone-prop checks already applied.
 
 Commit deaths and close the turn. Engine never declares winner —
 world around it owns stop condition, passed as `GameLoopStopper`:

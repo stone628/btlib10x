@@ -33,7 +33,6 @@ describe("commitAtomic rollback", () => {
     run(s, "mode standup");
     expect(s.moveMode).toBe("standup");
 
-    const eventsBefore = s.battle!.events.length;
     const heatBefore = s.battle!.units[actor]!.heat;
     const rng = scriptedRng(6, 6, 6, 6);
     s.rng = rng;
@@ -47,8 +46,8 @@ describe("commitAtomic rollback", () => {
     // Rng rewound: retry sees identical sequence.
     expect(rng.snapshot()).toBe(rngSnap);
     expect(rng.remaining()).toBe(4);
-    // Battle rewound: standup effects (prone cleared, heat, events) gone.
-    expect(s.battle!.events.length).toBe(eventsBefore);
+    // Battle rewound: standup effects (prone cleared, heat) gone; no log stored.
+    expect("events" in s.battle!).toBe(false);
     expect(s.battle!.units[actor]!.prone).toBe(true);
     expect(s.battle!.units[actor]!.heat).toBe(heatBefore);
     expect(s.battle!.units[actor]!.mpSpent).toBe(0);
@@ -86,7 +85,6 @@ describe("commitAtomic rollback", () => {
     expect(run(s, `fire ${target} 1`)[0]).toContain("queued");
     expect(run(s, `fire ${target} 2`)[0]).toContain("queued");
 
-    const eventsBefore = s.battle!.events.length;
     const damageBefore = structuredClone(s.battle!.units[target]!.damage);
     // Per hitting laser: to-hit 2D6 + location 2D6. Script covers three full
     // lasers (all CT hits, TN hit) plus one to-hit die; the fourth laser's
@@ -100,7 +98,6 @@ describe("commitAtomic rollback", () => {
 
     expect(rng.snapshot()).toBe(rngSnap);
     expect(rng.remaining()).toBe(13);
-    expect(s.battle!.events.length).toBe(eventsBefore);
     expect(s.battle!.units[target]!.damage).toEqual(damageBefore);
     expect(s.battle!.units[attacker]!.declaredAttacks).toEqual([]);
     // First unit committed successfully before the scripted rng was
@@ -115,10 +112,10 @@ describe("commitAtomic rollback", () => {
     const { s } = started();
     const actor = S.currentActor(s)!.id;
     S.declareMode(s, "walk");
-    const beforeCount = s.battle!.events.length;
     const res = S.commitMove(s);
     expect(res.state).toBe(s.battle);
-    expect(res.newEvents).toEqual(s.battle!.events.slice(beforeCount));
+    expect(res.newEvents.length).toBeGreaterThan(0);
+    expect(res.newEvents.some((e) => e.kind === "moveDeclared")).toBe(true);
     expect(s.actorId).not.toBe(actor);
   });
 });

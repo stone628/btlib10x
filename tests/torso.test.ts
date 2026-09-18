@@ -7,8 +7,8 @@ import { advancePhase, declareAttacks, rollInitiativePhase } from "../src/rules/
 import { createTestBattle, scriptedRng } from "./helpers.js";
 
 function startAttackTurn(state: BattleState): BattleState {
-  rollInitiativePhase(state, scriptedRng(1, 1, 4, 4));
-  advancePhase(state);
+  rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []);
+  advancePhase(state, []);
   return state;
 }
 
@@ -171,7 +171,7 @@ describe("declareAttacks with torso twist", () => {
     const { units } = hbkFacingAt("ne");
     const state = startAttackTurn(createTestBattle([], units, false));
     expect(() =>
-      declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], scriptedRng(4), {
+      declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], scriptedRng(4), {
         twist: "rightSide",
       }),
     ).not.toThrow();
@@ -180,7 +180,7 @@ describe("declareAttacks with torso twist", () => {
   it("rejects the same weapon without twist (target outside its firing arc)", () => {
     const { units } = hbkFacingAt("ne");
     const state = startAttackTurn(createTestBattle([], units, false));
-    expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }])).toThrow(
+    expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [])).toThrow(
       /firing arc/,
     );
   });
@@ -190,7 +190,7 @@ describe("declareAttacks with torso twist", () => {
     expect(facing).toBe("ne");
     const state = startAttackTurn(createTestBattle([], units, false));
     expect(() =>
-      declareAttacks(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }], scriptedRng(4), {
+      declareAttacks(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }], [], scriptedRng(4), {
         twist: "rightSide",
       }),
     ).toThrow(/firing arc/);
@@ -199,6 +199,8 @@ describe("declareAttacks with torso twist", () => {
   it("omitting opts keeps untwisted behavior", () => {
     const { units } = hbkFacingAt("ne");
     const state = startAttackTurn(createTestBattle([], units, false));
-    expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }])).not.toThrow();
+    expect(() =>
+      declareAttacks(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }], []),
+    ).not.toThrow();
   });
 });

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { getMapDef, getMechDefFor } from "../src/data/index.js";
-import { bestFireTarget, isNominal, isUnitAvailable, suggestFireTargets } from "../src/index.js";
+import {
+  bestFireTarget,
+  type GameEvent,
+  isNominal,
+  isUnitAvailable,
+  suggestFireTargets,
+} from "../src/index.js";
 import { ammoWeaponTotals } from "../src/rules/ammo.js";
 import {
   createBoardModel,
@@ -42,8 +48,9 @@ function fireEverything(s: S.Session, enemy: string): void {
   }
 }
 
-/** Drive a started battle until it is over using minimal legal actions. */
-function autoPlay(s: S.Session): void {
+/** Drive a started battle until it is over using minimal legal actions.
+ *  Transient commit events accumulate into `collected` when provided. */
+function autoPlay(s: S.Session, collected?: GameEvent[]): void {
   for (let i = 0; i < 500 && s.app === "battle"; i++) {
     const st = s.battle!;
     const actorId = S.currentActor(s)!.id;
@@ -68,11 +75,19 @@ function autoPlay(s: S.Session): void {
           }
         }
       }
-      S.commitMove(s);
+      // NOTE: never place the commit call inside the `?.push(...)`
+      // arguments — a nullish collector short-circuits the call itself.
+      const moveRes = S.commitMove(s);
+      collected?.push(...moveRes.newEvents);
     } else {
       fireEverything(s, enemy);
-      if (s.fireDecls.length === 0) S.passFire(s);
-      else S.commitFire(s);
+      if (s.fireDecls.length === 0) {
+        const passRes = S.passFire(s);
+        collected?.push(...passRes.newEvents);
+      } else {
+        const fireRes = S.commitFire(s);
+        collected?.push(...fireRes.newEvents);
+      }
     }
   }
   expect(s.app).toBe("over");
@@ -564,11 +579,11 @@ describe("movement", () => {
     // Tamper directly with the internal step buffer to force executeMove to
     // throw at commit time (illegal sideways step) rather than at queue time.
     const actor = S.currentActor(s)!;
-    const beforeLen = s.battle!.events.length;
+    const beforeSnap = JSON.stringify(s.battle);
     const beforePos = { ...actor.position };
     s.moveSteps.push({ kind: "enter", to: { col: 2, row: 2 } }); // not straight ahead/back
     expect(run(s, "done")[0]).toMatch(/^error:/);
-    expect(s.battle!.events).toHaveLength(beforeLen);
+    expect(JSON.stringify(s.battle)).toBe(beforeSnap);
     expect(s.battle!.units[actor.id]!.position).toEqual(beforePos);
   });
 
@@ -841,8 +856,9 @@ describe("seed", () => {
       run(s, "add hunchy HBK-4G 9 9 n");
       run(s, "add cicada CDA-3MA 9 8 s");
       run(s, "start");
-      autoPlay(s);
-      return s.battle!.events.flatMap((e) =>
+      const collected: GameEvent[] = [];
+      autoPlay(s, collected);
+      return collected.flatMap((e) =>
         e.kind === "attackResolved"
           ? [`${e.unitId}:${e.resolution.weapon}:${e.resolution.toHitRoll}:${e.resolution.hit}`]
           : [],

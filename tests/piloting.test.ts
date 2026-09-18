@@ -17,6 +17,7 @@ import {
   declareAttacks,
   dropProne,
   executeMove,
+  type GameEvent,
   isImmobile,
   nextActor,
   type PhaseSnapshots,
@@ -66,7 +67,7 @@ function toMovement(
   // rollInitiativePhase lands the battle straight in the movement phase.
   // Default rng makes team 0 win: enf is the loser and acts first. Tests
   // that need hbk to act first pass an explicit rng.
-  rollInitiativePhase(state, rng);
+  rollInitiativePhase(state, rng, []);
 }
 
 function toAttack(
@@ -74,12 +75,12 @@ function toAttack(
   rng: ReturnType<typeof scriptedRng> = scriptedRng(4, 4, 2, 2),
 ): void {
   toMovement(state, rng);
-  advancePhase(state);
+  advancePhase(state, []);
 }
 
 function startAttackTurn(state: ReturnType<typeof hbkEnf>): void {
   toMovement(state);
-  advancePhase(state);
+  advancePhase(state, []);
 }
 
 function cloneDamage(d: UnitDamageState): UnitDamageState {
@@ -184,11 +185,12 @@ describe("20+ damage PSR", () => {
     const state = hbkEnf();
     toAttack(state, scriptedRng(2, 2, 5, 5));
     // AC/20 to-hit 3+3, location 1+1 (CT), 20+ PSR 3+3 (needs 6: success).
-    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
-    resolveAllAttacks(state, scriptedRng(3, 3, 1, 1, 3, 3));
+    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], []);
+    const events: GameEvent[] = [];
+    resolveAllAttacks(state, scriptedRng(3, 3, 1, 1, 3, 3), events);
     const enf = requireUnit(state, "enf");
     expect(enf.prone).toBe(false);
-    expect(state.events).toContainEqual(
+    expect(events).toContainEqual(
       expect.objectContaining({
         kind: "pilotingCheck",
         unitId: "enf",
@@ -203,13 +205,14 @@ describe("20+ damage PSR", () => {
     toAttack(state, scriptedRng(2, 2, 5, 5));
     // to-hit 3+3, CT 1+1, PSR 1+2 (fail), fall dir 2 (right, +1 facing),
     // fall loc 1+1 (rightTorso), seatbelt 3+3 (needs 6: success).
-    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
-    resolveAllAttacks(state, scriptedRng(3, 3, 1, 1, 1, 2, 2, 1, 1, 3, 3));
+    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], []);
+    const events: GameEvent[] = [];
+    resolveAllAttacks(state, scriptedRng(3, 3, 1, 1, 1, 2, 2, 1, 1, 3, 3), events);
     const enf = requireUnit(state, "enf");
     expect(enf.prone).toBe(true);
     expect(enf.facing).toBe("ne"); // n rotated +1 hexside
     expect(enf.pilotHits).toBe(0);
-    expect(state.events).toContainEqual(
+    expect(events).toContainEqual(
       expect.objectContaining({ kind: "unitFell", unitId: "enf", cause: "failedPsr:damage20" }),
     );
   });
@@ -223,17 +226,18 @@ describe("leg destruction", () => {
     enf.damage.internalStructure.rightLeg = 0;
     // fall dir 1 (front, no turn), loc 3+4 (CT); legless 'Mech is immobile so
     // the seatbelt check is automatic damage + consciousness 2+2 (awake).
-    resolvePhasePiloting(state, scriptedRng(1, 3, 4, 2, 2), before);
+    const events: GameEvent[] = [];
+    resolvePhasePiloting(state, scriptedRng(1, 3, 4, 2, 2), before, events);
     expect(enf.prone).toBe(true);
     expect(enf.facing).toBe("n");
     expect(enf.pilotHits).toBe(1);
-    expect(state.events).toContainEqual(
+    expect(events).toContainEqual(
       expect.objectContaining({ kind: "unitFell", unitId: "enf", cause: "legDestroyed" }),
     );
-    expect(state.events).toContainEqual(
+    expect(events).toContainEqual(
       expect.objectContaining({ kind: "pilotDamaged", unitId: "enf", reason: "fall" }),
     );
-    expect(state.events).not.toContainEqual(
+    expect(events).not.toContainEqual(
       expect.objectContaining({ kind: "pilotingCheck", unitId: "enf", reason: "seatbelt" }),
     );
   });
@@ -248,9 +252,10 @@ describe("gyro crits", () => {
     expect(gyro.length).toBeGreaterThan(0);
     enf.critSlotsDestroyed.centerTorso[gyro[0]!] = true;
     // modifier 3, target 8: 4+4 succeeds, stays up.
-    resolvePhasePiloting(state, scriptedRng(4, 4), before);
+    const events: GameEvent[] = [];
+    resolvePhasePiloting(state, scriptedRng(4, 4), before, events);
     expect(enf.prone).toBe(false);
-    expect(state.events).toContainEqual(
+    expect(events).toContainEqual(
       expect.objectContaining({
         kind: "pilotingCheck",
         unitId: "enf",
@@ -270,12 +275,13 @@ describe("gyro crits", () => {
       enf.critSlotsDestroyed.centerTorso[i] = true;
     }
     // fall dir 1, loc 3+4, seatbelt 5+6 (needs 11: success).
-    resolvePhasePiloting(state, scriptedRng(1, 3, 4, 5, 6), before);
+    const events: GameEvent[] = [];
+    resolvePhasePiloting(state, scriptedRng(1, 3, 4, 5, 6), before, events);
     expect(enf.prone).toBe(true);
-    expect(state.events).toContainEqual(
+    expect(events).toContainEqual(
       expect.objectContaining({ kind: "unitFell", unitId: "enf", cause: "gyroDestroyed" }),
     );
-    expect(state.events).toContainEqual(
+    expect(events).toContainEqual(
       expect.objectContaining({
         kind: "pilotingCheck",
         unitId: "enf",
@@ -295,9 +301,10 @@ describe("actuator crits", () => {
     expect(hip.length).toBeGreaterThan(0);
     enf.critSlotsDestroyed.rightLeg[hip[0]!] = true;
     // modifier 2, target 7: 4+3 succeeds.
-    resolvePhasePiloting(state, scriptedRng(4, 3), before);
+    const events: GameEvent[] = [];
+    resolvePhasePiloting(state, scriptedRng(4, 3), before, events);
     expect(enf.prone).toBe(false);
-    expect(state.events).toContainEqual(
+    expect(events).toContainEqual(
       expect.objectContaining({
         kind: "pilotingCheck",
         unitId: "enf",
@@ -318,10 +325,11 @@ describe("shutdown PSR", () => {
     enf.shutdown = "manual";
     enf.damage = applyDamage(enf.damage, "centerTorso", 20).after;
     // fall dir 1, loc 3+4; no PSR or seatbelt dice (automatic pilot damage).
-    resolvePhasePiloting(state, scriptedRng(1, 3, 4, 2, 2), before);
+    const events: GameEvent[] = [];
+    resolvePhasePiloting(state, scriptedRng(1, 3, 4, 2, 2), before, events);
     expect(enf.prone).toBe(true);
     expect(enf.pilotHits).toBe(1);
-    expect(state.events).not.toContainEqual(
+    expect(events).not.toContainEqual(
       expect.objectContaining({ kind: "pilotingCheck", unitId: "enf", reason: "damage20" }),
     );
   });
@@ -337,10 +345,11 @@ describe("immediate shutdown PSR (+3)", () => {
     //   shutdownFallCheck PSR 2D6=12 passes (2 dice),
     //   restart check 2D6=8>6 comes online (2 dice).
     startAttackTurn(state);
-    advancePhase(state, scriptedRng(6, 6, 6, 6));
+    const events: GameEvent[] = [];
+    advancePhase(state, events, scriptedRng(6, 6, 6, 6));
     expect(hbk.shutdown).toBe("heat");
     expect(
-      state.events.some(
+      events.some(
         (e) => e.kind === "pilotingCheck" && e.unitId === "hbk" && e.reason === "shutdown",
       ),
     ).toBe(true);
@@ -355,7 +364,7 @@ describe("immediate shutdown PSR (+3)", () => {
     //   PSR 2D6=2<8 fails (2), fallDir=1 (1), fallLoc 3+4=7 (2),
     //   consciousness 5+6=11>=3 pass (2), ammoExplosion 2+3=5<8 explodes (2).
     startAttackTurn(state);
-    advancePhase(state, scriptedRng(1, 1, 1, 3, 4, 5, 6, 2, 3));
+    advancePhase(state, [], scriptedRng(1, 1, 1, 3, 4, 5, 6, 2, 3));
     expect(hbk.prone).toBe(true);
     expect(hbk.pilotHits).toBe(1);
   });
@@ -367,7 +376,7 @@ describe("immediate shutdown PSR (+3)", () => {
     // No heat → no restart/ammoExplosion in shutdown path.
     // PSR 2D6=4<8 fails (2), fallDir=1 (1), fallLoc 3+4=7 (2),
     // seatbelt null → auto hit, consciousness 2D6=4>=3 (2). Total 7.
-    voluntaryShutdown(state, "enf", scriptedRng(4, 1, 3, 4, 2, 2, 2));
+    voluntaryShutdown(state, "enf", [], scriptedRng(4, 1, 3, 4, 2, 2, 2));
     expect(enf.shutdown).toBe("manual");
     expect(enf.prone).toBe(true);
     expect(enf.pilotHits).toBe(1);
@@ -408,6 +417,7 @@ describe("run-damaged PSR", () => {
     expect(hipSlots.length).toBeGreaterThanOrEqual(1);
     enf.critSlotsDestroyed.rightLeg[hipSlots[0]!] = true;
     // North forward: (2,3), then (2,2). PSR 5+2=7, 2D6=8 passes.
+    const events: GameEvent[] = [];
     executeMove(
       state,
       "enf",
@@ -416,10 +426,11 @@ describe("run-damaged PSR", () => {
         { kind: "enter", to: { col: 2, row: 3 } },
         { kind: "enter", to: { col: 2, row: 2 } },
       ],
+      events,
       { rng: scriptedRng(4, 4) },
     );
     expect(
-      state.events.some(
+      events.some(
         (e) => e.kind === "pilotingCheck" && e.unitId === "enf" && e.reason === "runDamaged",
       ),
     ).toBe(true);
@@ -457,7 +468,7 @@ describe("run-damaged PSR", () => {
     enf.critSlotsDestroyed.rightLeg[hipSlots[0]!] = true;
     // PSR 2D6=2<7 fails; fall dir 1, loc 3+4 CT; seatbelt 5+2=7, 2D6=2 fails.
     // Consciousness 2D6=6>=3 pass.
-    executeMove(state, "enf", "run", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+    executeMove(state, "enf", "run", [{ kind: "enter", to: { col: 2, row: 3 } }], [], {
       rng: scriptedRng(1, 1, 1, 3, 4, 1, 1, 3, 3),
     });
     expect(enf.prone).toBe(true);
@@ -498,11 +509,12 @@ describe("jump-damaged PSR", () => {
     expect(footSlots.length).toBeGreaterThanOrEqual(1);
     enf.critSlotsDestroyed.rightLeg[footSlots[0]!] = true;
     // PSR 5+1=6, 2D6=6 passes.
-    executeMove(state, "enf", "jump", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+    const events: GameEvent[] = [];
+    executeMove(state, "enf", "jump", [{ kind: "enter", to: { col: 2, row: 3 } }], events, {
       rng: scriptedRng(3, 3),
     });
     expect(
-      state.events.some(
+      events.some(
         (e) => e.kind === "pilotingCheck" && e.unitId === "enf" && e.reason === "jumpDamaged",
       ),
     ).toBe(true);
@@ -540,7 +552,7 @@ describe("jump-damaged PSR", () => {
     enf.critSlotsDestroyed.rightLeg[footSlots[0]!] = true;
     // PSR 2D6=2<6 fails; fall dir 1, loc 3+4 CT; seatbelt 5+1=6, 2D6=2 fails.
     // Consciousness 2D6=6>=3 pass.
-    executeMove(state, "enf", "jump", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+    executeMove(state, "enf", "jump", [{ kind: "enter", to: { col: 2, row: 3 } }], [], {
       rng: scriptedRng(1, 1, 1, 3, 4, 1, 1, 3, 3),
     });
     expect(enf.prone).toBe(true);
@@ -584,7 +596,7 @@ describe("building crash auto-fall", () => {
     // Group1 loc 1+4=5 rightLeg, group2 loc 1+3=4 rightArm.
     // Auto-fall (leg destroyed, seatbelt auto because immobile).
     // Fall dir 1, loc 3+4=7 CT. Consciousness 2D6=12>=3 pass.
-    executeMove(state, "enf", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+    executeMove(state, "enf", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], [], {
       rng: scriptedRng(1, 1, 1, 4, 1, 3, 1, 3, 4, 6, 6),
     });
     expect(enf.prone).toBe(true);
@@ -624,7 +636,7 @@ describe("building crash auto-fall", () => {
     // Crash 9 dmg → 2 groups (5+4). Loc: 5 rightLeg, 4 rightArm.
     // Auto-fall (leg destroyed, seatbelt auto because immobile).
     // Fall dir 1, loc 3+4=7 CT. Consciousness 2D6=2<3 fail → pilot hit.
-    executeMove(state, "enf", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+    executeMove(state, "enf", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], [], {
       rng: scriptedRng(1, 1, 1, 4, 1, 3, 1, 3, 4, 1, 1),
     });
     expect(enf.prone).toBe(true);
@@ -660,8 +672,8 @@ describe("building crash auto-fall", () => {
     const enf = requireUnit(state, "enf");
     // Building entry PSR 7 pass. Crash: 2 damage front column,
     // loc 7 CT. CT has 10 armor, no IS loss.
-    executeMove(state, "enf", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], {
-      rng: scriptedRng(3, 4, 3, 4),
+    executeMove(state, "enf", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], [], {
+      rng: scriptedRng(1, 2, 2, 3, 3, 3, 3),
     });
     expect(enf.prone).toBe(false);
     expect(enf.unconscious).toBe(false);
@@ -674,10 +686,11 @@ describe("standing up", () => {
     toMovement(state);
     const enf = requireUnit(state, "enf");
     enf.prone = true;
-    attemptStandUp(state, "enf", scriptedRng(3, 3));
+    const events: GameEvent[] = [];
+    attemptStandUp(state, "enf", events, scriptedRng(3, 3));
     expect(enf.prone).toBe(false);
     expect(enf.moveMode).toBe("walk");
-    expect(state.events).toContainEqual(
+    expect(events).toContainEqual(
       expect.objectContaining({
         kind: "moved",
         unitId: "enf",
@@ -695,7 +708,7 @@ describe("standing up", () => {
     enf.prone = true;
     // stand 1+1 (fail), fall dir 4 (rear, +3), loc 3+3, seatbelt 1+2 (fail),
     // consciousness 2+2 (needs 3: awake).
-    attemptStandUp(state, "enf", scriptedRng(1, 1, 4, 3, 3, 1, 2, 2, 2));
+    attemptStandUp(state, "enf", [], scriptedRng(1, 1, 4, 3, 3, 1, 2, 2, 2));
     expect(enf.prone).toBe(true);
     expect(enf.facing).toBe("s"); // n rotated +3 hexsides
     expect(enf.pilotHits).toBe(1);
@@ -709,13 +722,13 @@ describe("standing up", () => {
     for (const i of structureSlots(state, "enf", "centerTorso", "gyro")) {
       enf.critSlotsDestroyed.centerTorso[i] = true;
     }
-    expect(() => attemptStandUp(state, "enf")).toThrow(/destroyed gyro/);
+    expect(() => attemptStandUp(state, "enf", [])).toThrow(/destroyed gyro/);
     for (const i of structureSlots(state, "enf", "centerTorso", "gyro")) {
       enf.critSlotsDestroyed.centerTorso[i] = false;
     }
     enf.damage.internalStructure.rightLeg = 0;
     enf.damage.internalStructure.leftLeg = 0;
-    expect(() => attemptStandUp(state, "enf")).toThrow(/no intact legs/);
+    expect(() => attemptStandUp(state, "enf", [])).toThrow(/no intact legs/);
   });
 });
 
@@ -727,14 +740,15 @@ describe("going prone voluntarily", () => {
     const armorBefore = before.damage.armor.centerTorso;
     const facingBefore = before.facing;
     // Location roll 3+4 = 7 -> centerTorso on the front column.
-    dropProne(state, "enf", scriptedRng(3, 4));
+    const events: GameEvent[] = [];
+    dropProne(state, "enf", events, scriptedRng(3, 4));
     const enf = requireUnit(state, "enf");
     expect(enf.prone).toBe(true);
     expect(enf.heat).toBe(0);
     expect(enf.facing).toBe(facingBefore);
     expect(enf.pilotHits).toBe(0);
     expect(enf.damage.armor.centerTorso).toBe(armorBefore - 1);
-    expect(state.events).toContainEqual(
+    expect(events).toContainEqual(
       expect.objectContaining({
         kind: "unitFell",
         unitId: "enf",
@@ -743,7 +757,7 @@ describe("going prone voluntarily", () => {
         totalDamage: 1,
       }),
     );
-    expect(state.events).toContainEqual(
+    expect(events).toContainEqual(
       expect.objectContaining({
         kind: "moved",
         unitId: "enf",
@@ -752,7 +766,7 @@ describe("going prone voluntarily", () => {
         mpSpent: 1,
       }),
     );
-    expect(state.events.some((e) => e.kind === "heatMove")).toBe(false);
+    expect(events.some((e) => e.kind === "heatMove")).toBe(false);
   });
 
   it("a voluntary drop underwater deals no damage (halved rounding down)", () => {
@@ -783,13 +797,14 @@ describe("going prone voluntarily", () => {
     toMovement(state);
     const before = requireUnit(state, "enf");
     const armorBefore = before.damage.armor.centerTorso;
-    dropProne(state, "enf", scriptedRng(3, 4));
+    const events: GameEvent[] = [];
+    dropProne(state, "enf", events, scriptedRng(3, 4));
     const enf = requireUnit(state, "enf");
     expect(enf.prone).toBe(true);
     expect(enf.heat).toBe(0);
     // 1 point halved underwater rounds down to 0 (TW errata, p.57).
     expect(enf.damage.armor.centerTorso).toBe(armorBefore);
-    expect(state.events).toContainEqual(
+    expect(events).toContainEqual(
       expect.objectContaining({ kind: "unitFell", unitId: "enf", totalDamage: 0 }),
     );
   });
@@ -799,9 +814,9 @@ describe("going prone voluntarily", () => {
     toMovement(state);
     const enf = requireUnit(state, "enf");
     enf.prone = true;
-    proneFacingTurn(state, "enf", 1);
+    proneFacingTurn(state, "enf", 1, []);
     expect(enf.facing).toBe("ne");
-    expect(() => proneFacingTurn(state, "enf", 2)).toThrow(/only turn 1 hexside/);
+    expect(() => proneFacingTurn(state, "enf", 2, [])).toThrow(/only turn 1 hexside/);
   });
 });
 
@@ -813,10 +828,15 @@ describe("prone combat", () => {
     hbk.prone = true;
     // HBK-4G: 1 ML leftArm, 2 ML rightArm, 3 SL head.
     expect(() =>
-      declareAttacks(state, "hbk", [
-        { weaponIndex: 1, targetId: "enf" },
-        { weaponIndex: 2, targetId: "enf" },
-      ]),
+      declareAttacks(
+        state,
+        "hbk",
+        [
+          { weaponIndex: 1, targetId: "enf" },
+          { weaponIndex: 2, targetId: "enf" },
+        ],
+        [],
+      ),
     ).toThrow(/both arms/);
   });
 
@@ -825,10 +845,11 @@ describe("prone combat", () => {
     toAttack(state, scriptedRng(2, 2, 5, 5));
     const hbk = requireUnit(state, "hbk");
     hbk.prone = true;
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
+    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], []);
     expect(hbk.declaredAttacks).toHaveLength(1);
-    resolveAllAttacks(state, scriptedRng(1, 1));
-    const res = state.events.find((e) => e.kind === "attackResolved") as
+    const events: GameEvent[] = [];
+    resolveAllAttacks(state, scriptedRng(1, 1), events);
+    const res = events.find((e) => e.kind === "attackResolved") as
       | { resolution: { prone: boolean; propArm: string | null } }
       | undefined;
     expect(res?.resolution.prone).toBe(true);
@@ -879,7 +900,7 @@ describe("prone combat", () => {
     expect(blind.weapons).toHaveLength(0);
     expect(blind.blocked.length).toBeGreaterThan(0);
     for (const b of blind.blocked) expect(b.reason).toBe("noSensor");
-    expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }])).toThrow(
+    expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [])).toThrow(
       /sensors/,
     );
   });
@@ -890,10 +911,11 @@ describe("pilot damage", () => {
     const state = hbkEnf();
     toAttack(state, scriptedRng(2, 2, 5, 5));
     // ML to-hit 3+3, location 6+6 (head), consciousness 2+2 (needs 3: awake).
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
-    resolveAllAttacks(state, scriptedRng(3, 3, 6, 6, 2, 2));
+    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], []);
+    const events: GameEvent[] = [];
+    resolveAllAttacks(state, scriptedRng(3, 3, 6, 6, 2, 2), events);
     expect(requireUnit(state, "enf").pilotHits).toBe(1);
-    expect(state.events).toContainEqual(
+    expect(events).toContainEqual(
       expect.objectContaining({ kind: "pilotDamaged", unitId: "enf", reason: "headHit" }),
     );
   });
@@ -903,8 +925,8 @@ describe("pilot damage", () => {
     const enf = requireUnit(state, "enf");
     enf.prone = true;
     // consciousness TN 3/5/7/10/11: all succeed for the first five hits.
-    applyPilotHits(state, enf, 5, "headHit", scriptedRng(2, 2, 3, 3, 4, 4, 5, 5, 6, 6));
-    applyPilotHits(state, enf, 1, "fall", scriptedRng());
+    applyPilotHits(state, enf, 5, "headHit", scriptedRng(2, 2, 3, 3, 4, 4, 5, 5, 6, 6), []);
+    applyPilotHits(state, enf, 1, "fall", scriptedRng(), []);
     expect(enf.prone).toBe(true);
     expect(enf.removed).toBe("pilotKilled");
     expect(state.wrecks["2,3"]).toEqual({ unitId: "enf", level: 1 });
@@ -914,17 +936,18 @@ describe("pilot damage", () => {
     const state = hbkEnf();
     const enf = requireUnit(state, "enf");
     // consciousness TN 3/5/7/10/11: all succeed.
-    applyPilotHits(state, enf, 5, "headHit", scriptedRng(2, 2, 3, 3, 4, 4, 5, 5, 6, 6));
+    applyPilotHits(state, enf, 5, "headHit", scriptedRng(2, 2, 3, 3, 4, 4, 5, 5, 6, 6), []);
     expect(enf.pilotHits).toBe(5);
     expect(enf.destroyed).toBe("not");
     expect(state.wrecks["2,3"]).toBeUndefined();
-    applyPilotHits(state, enf, 1, "fall", scriptedRng());
+    const events: GameEvent[] = [];
+    applyPilotHits(state, enf, 1, "fall", scriptedRng(), events);
     expect(enf.pilotHits).toBe(6);
     expect(enf.destroyed).toBe("not");
     expect(enf.removed).toBe("pilotKilled");
     expect(state.wrecks["2,3"]).toEqual({ unitId: "enf", level: 2 });
     expect(wreckAt(state, { col: 2, row: 3 })?.unitId).toBe("enf");
-    expect(state.events).toContainEqual(
+    expect(events).toContainEqual(
       expect.objectContaining({ kind: "unitRemoved", unitId: "enf", reason: "pilotKilled" }),
     );
   });
@@ -933,7 +956,7 @@ describe("pilot damage", () => {
     const state = hbkEnf();
     toMovement(state, scriptedRng(2, 2, 5, 5));
     const enf = requireUnit(state, "enf");
-    applyPilotHits(state, enf, 1, "fall", scriptedRng(1, 1));
+    applyPilotHits(state, enf, 1, "fall", scriptedRng(1, 1), []);
     expect(enf.unconscious).toBe(true);
     expect(isImmobile(enf)).toBe(true);
     expect(nextActor(state)).toBe("hbk");
@@ -955,9 +978,10 @@ describe("pilot damage", () => {
     // shutdown avoid (needs 11+: 5+6), ammo avoid (needs 8+: 4+4),
     // dissipation leaves 16 (heat 29 - 13 sinks), life support 1 hit,
     // consciousness (needs 3: 2+2).
-    resolveHeatPhase(state, scriptedRng(5, 6, 4, 4, 2, 2));
+    const events: GameEvent[] = [];
+    resolveHeatPhase(state, scriptedRng(5, 6, 4, 4, 2, 2), events);
     expect(hbk.pilotHits).toBe(1);
-    expect(state.events).toContainEqual(
+    expect(events).toContainEqual(
       expect.objectContaining({ kind: "pilotDamaged", unitId: "hbk", reason: "lifeSupport" }),
     );
   });
@@ -991,7 +1015,7 @@ describe("movement terrain PSRs", () => {
     );
     toMovement(state, scriptedRng(2, 2, 5, 5));
     // PSR 1+2 (needs 5: fail), fall dir 2, loc 3+3, seatbelt 3+3 (success).
-    executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+    executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], [], {
       rng: scriptedRng(1, 2, 2, 3, 3, 3, 3),
     });
     const hbk = requireUnit(state, "hbk");
@@ -1026,7 +1050,7 @@ describe("movement terrain PSRs", () => {
     );
     toMovement(state, scriptedRng(2, 2, 5, 5));
     // needs 4: 2+2 succeeds.
-    executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+    executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], [], {
       rng: scriptedRng(2, 2),
     });
     const hbk = requireUnit(state, "hbk");
@@ -1061,12 +1085,13 @@ describe("movement terrain PSRs", () => {
     );
     toMovement(state, scriptedRng(2, 2, 5, 5));
     // PSR 1+2 (needs 5: fail), crash loc 3+3, ceil(15/10) = 2 damage.
-    executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+    const crashEvents: GameEvent[] = [];
+    executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], crashEvents, {
       rng: scriptedRng(1, 2, 3, 3),
     });
     const hbk = requireUnit(state, "hbk");
     expect(hbk.prone).toBe(false);
-    expect(state.events).toContainEqual(
+    expect(crashEvents).toContainEqual(
       expect.objectContaining({ kind: "buildingCrash", unitId: "hbk", totalDamage: 2 }),
     );
   });
@@ -1103,14 +1128,15 @@ describe("movement terrain PSRs", () => {
     // PSR 1+2 (needs 5: fail), fall dir 1 (front), three loc rolls 3+3 (CT)
     // for ceil(50/10) x (2+1) = 15 damage, seatbelt needs 6 (0 mods + 1 for
     // the second level fallen): 1+2 fails, consciousness needs 3: 2+2 awake.
-    executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+    const events: GameEvent[] = [];
+    executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], events, {
       rng: scriptedRng(1, 2, 1, 3, 3, 3, 3, 3, 3, 1, 2, 2, 2),
     });
     const hbk = requireUnit(state, "hbk");
     expect(hbk.position).toEqual({ col: 2, row: 3 });
     expect(hbk.prone).toBe(true);
     expect(hbk.pilotHits).toBe(1);
-    expect(state.events).toContainEqual(
+    expect(events).toContainEqual(
       expect.objectContaining({
         kind: "unitFell",
         unitId: "hbk",
@@ -1118,7 +1144,7 @@ describe("movement terrain PSRs", () => {
         totalDamage: 15,
       }),
     );
-    expect(state.events).toContainEqual(
+    expect(events).toContainEqual(
       expect.objectContaining({ kind: "pilotingCheck", reason: "seatbelt", target: 6 }),
     );
   });
@@ -1151,14 +1177,15 @@ describe("movement terrain PSRs", () => {
     toMovement(state, scriptedRng(2, 2, 5, 5));
     // PSR 1+2 (needs 5: fail), fall dir 1 (front), loc 3+3 (CT) for
     // ceil(50/10) x (0+1) = 5 damage, seatbelt needs 5: 3+3 succeeds.
-    executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+    const events: GameEvent[] = [];
+    executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], events, {
       rng: scriptedRng(1, 2, 1, 3, 3, 3, 3),
     });
     const hbk = requireUnit(state, "hbk");
     expect(hbk.position).toEqual({ col: 2, row: 2 });
     expect(hbk.prone).toBe(true);
     expect(hbk.pilotHits).toBe(0);
-    expect(state.events).toContainEqual(
+    expect(events).toContainEqual(
       expect.objectContaining({
         kind: "unitFell",
         unitId: "hbk",
@@ -1199,14 +1226,15 @@ describe("movement terrain PSRs", () => {
     toMovement(state, scriptedRng(2, 2, 5, 5));
     // Water1 PSR needs 4 (5-1): 1+2 fails; dir 1 (front), loc 3+3 (CT) for
     // ceil(50/10) x (0+1) = 5 damage; seatbelt needs 4: 3+3 succeeds.
-    executeMove(state, "enf", "jump", [{ kind: "enter", to: { col: 2, row: 3 } }], {
+    const events: GameEvent[] = [];
+    executeMove(state, "enf", "jump", [{ kind: "enter", to: { col: 2, row: 3 } }], events, {
       rng: scriptedRng(1, 2, 1, 3, 3, 3, 3),
     });
     const enf = requireUnit(state, "enf");
     expect(enf.position).toEqual({ col: 2, row: 3 });
     expect(enf.prone).toBe(true);
     expect(enf.pilotHits).toBe(0);
-    expect(state.events).toContainEqual(
+    expect(events).toContainEqual(
       expect.objectContaining({
         kind: "unitFell",
         unitId: "enf",
@@ -1222,8 +1250,19 @@ describe("applyFall", () => {
     const state = hbkEnf();
     const enf = requireUnit(state, "enf");
     enf.prone = true;
-    applyFall(state, enf, scriptedRng(), { cause: "water", seatbeltModifier: 0, halved: false });
-    expect(state.events.some((e) => e.kind === "unitFell")).toBe(false);
+    const noEvents: GameEvent[] = [];
+    applyFall(
+      state,
+      enf,
+      scriptedRng(),
+      {
+        cause: "water",
+        seatbeltModifier: 0,
+        halved: false,
+      },
+      noEvents,
+    );
+    expect(noEvents.some((e) => e.kind === "unitFell")).toBe(false);
   });
 
   it("halved falls round down (TW errata)", () => {
@@ -1231,12 +1270,19 @@ describe("applyFall", () => {
     const enf = requireUnit(state, "enf");
     // ENF-4R 50t -> 5 damage, halved down to 2. Dir 1 (front), loc 3+3
     // (CT), seatbelt needs 5: 3+3 succeeds.
-    applyFall(state, enf, scriptedRng(1, 3, 3, 3, 3), {
-      cause: "water",
-      seatbeltModifier: 0,
-      halved: true,
-    });
-    expect(state.events).toContainEqual(
+    const events: GameEvent[] = [];
+    applyFall(
+      state,
+      enf,
+      scriptedRng(1, 3, 3, 3, 3),
+      {
+        cause: "water",
+        seatbeltModifier: 0,
+        halved: true,
+      },
+      events,
+    );
+    expect(events).toContainEqual(
       expect.objectContaining({
         kind: "unitFell",
         unitId: "enf",
@@ -1251,13 +1297,20 @@ describe("applyFall", () => {
     const enf = requireUnit(state, "enf");
     // ENF-4R 50t x (2+1) = 15 damage in three 5-point groups. Dir 1
     // (front), locs 3+3 (CT), seatbelt needs 5 + 1 (second level): 3+4.
-    applyFall(state, enf, scriptedRng(1, 3, 3, 3, 3, 3, 3, 3, 4), {
-      cause: "failedPsr:rubble",
-      seatbeltModifier: 1,
-      halved: false,
-      levelsFallen: 2,
-    });
-    expect(state.events).toContainEqual(
+    const events: GameEvent[] = [];
+    applyFall(
+      state,
+      enf,
+      scriptedRng(1, 3, 3, 3, 3, 3, 3, 3, 4),
+      {
+        cause: "failedPsr:rubble",
+        seatbeltModifier: 1,
+        halved: false,
+        levelsFallen: 2,
+      },
+      events,
+    );
+    expect(events).toContainEqual(
       expect.objectContaining({
         kind: "unitFell",
         unitId: "enf",

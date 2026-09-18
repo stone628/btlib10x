@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { LOCATIONS, type Location, type TerrainType } from "../src/core/types.js";
 import { getMechDef, getMechDefFor } from "../src/data/index.js";
 import { countDestroyedEngine } from "../src/rules/critical.js";
-import type { BattleState, UnitInit } from "../src/rules/game.js";
+import type { BattleState, GameEvent, UnitInit } from "../src/rules/game.js";
 import {
   advancePhase,
   declareAttacks,
@@ -74,12 +74,12 @@ function bzkVsEnf(): BattleState {
 }
 
 function startMovementTurn(state: BattleState, rng = scriptedRng(1, 1, 4, 4)): BattleState {
-  rollInitiativePhase(state, rng);
+  rollInitiativePhase(state, rng, []);
   return state;
 }
 
 function startAttackTurn(state: BattleState, rng = scriptedRng(1, 1, 4, 4)): BattleState {
-  advancePhase(startMovementTurn(state, rng));
+  advancePhase(startMovementTurn(state, rng), []);
   return state;
 }
 
@@ -309,18 +309,19 @@ describe("game integration: movement heat", () => {
   it("walk adds 1 heat", () => {
     const state = hbkVsEnf();
     startMovementTurn(state);
-    executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 1, row: 4 } }]);
+    const events: GameEvent[] = [];
+    executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 1, row: 4 } }], events);
     const hbk = requireUnit(state, "hbk");
     expect(hbk.heat).toBe(1);
-    expect(
-      state.events.some((e) => e.kind === "heatMove" && e.unitId === "hbk" && e.heat === 1),
-    ).toBe(true);
+    expect(events.some((e) => e.kind === "heatMove" && e.unitId === "hbk" && e.heat === 1)).toBe(
+      true,
+    );
   });
 
   it("run adds 2 heat", () => {
     const state = hbkVsEnf();
     startMovementTurn(state);
-    executeMove(state, "hbk", "run", [{ kind: "enter", to: { col: 3, row: 5 } }]);
+    executeMove(state, "hbk", "run", [{ kind: "enter", to: { col: 3, row: 5 } }], []);
     expect(requireUnit(state, "hbk").mpSpent).toBe(1);
     expect(requireUnit(state, "hbk").heat).toBe(2);
   });
@@ -328,7 +329,7 @@ describe("game integration: movement heat", () => {
   it("standStill adds 0 heat", () => {
     const state = hbkVsEnf();
     startMovementTurn(state);
-    executeMove(state, "hbk", "standStill", []);
+    executeMove(state, "hbk", "standStill", [], []);
     expect(requireUnit(state, "hbk").heat).toBe(0);
   });
 
@@ -337,10 +338,11 @@ describe("game integration: movement heat", () => {
     startMovementTurn(state);
     const hbk = requireUnit(state, "hbk");
     hbk.heat = 10;
-    executeMove(state, "hbk", "run", []);
-    const moved = state.events.find((e) => e.kind === "moved" && e.unitId === "hbk");
+    const events: GameEvent[] = [];
+    executeMove(state, "hbk", "run", [], events);
+    const moved = events.find((e) => e.kind === "moved" && e.unitId === "hbk");
     expect(moved).toBeDefined();
-    expect((moved as Extract<(typeof state.events)[number], { kind: "moved" }>).mpBudget).toBe(
+    expect((moved as Extract<GameEvent, { kind: "moved" }>).mpBudget).toBe(
       getMechDef("HBK-4G")!.running - 2,
     );
   });
@@ -350,16 +352,15 @@ describe("game integration: weapon heat", () => {
   it("AC/20 (heat 7) adds 7 heat after attack", () => {
     const state = hbkVsEnf();
     startAttackTurn(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }]);
+    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], []);
     // 20+ damage PSR (needs 6: 3+3 succeeds, no fall).
-    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4, 3, 3));
+    const events: GameEvent[] = [];
+    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4, 3, 3), events);
     const hbk = requireUnit(state, "hbk");
     expect(hbk.heat).toBe(7);
-    const weaponHeatEvent = state.events.find((e) => e.kind === "heatWeapon");
+    const weaponHeatEvent = events.find((e) => e.kind === "heatWeapon");
     expect(weaponHeatEvent).toBeDefined();
-    expect(
-      (weaponHeatEvent as Extract<(typeof state.events)[number], { kind: "heatWeapon" }>).weapon,
-    ).toBe("AC/20");
+    expect((weaponHeatEvent as Extract<GameEvent, { kind: "heatWeapon" }>).weapon).toBe("AC/20");
   });
 });
 
@@ -371,13 +372,12 @@ describe("game integration: dissipation", () => {
     startAttackTurn(state);
     // shutdown roll 6 <= 6 shuts down; shutdown PSR 12 passes (stays up);
     // ammo avoid 4 >= 4 avoids.
-    advancePhase(state, scriptedRng(3, 3, 6, 6, 3, 1));
+    const events: GameEvent[] = [];
+    advancePhase(state, events, scriptedRng(3, 3, 6, 6, 3, 1));
     expect(hbk.heat).toBe(20 - 13);
-    const dissipEvent = state.events.find((e) => e.kind === "heatDissipated" && e.unitId === "hbk");
+    const dissipEvent = events.find((e) => e.kind === "heatDissipated" && e.unitId === "hbk");
     expect(dissipEvent).toBeDefined();
-    expect(
-      (dissipEvent as Extract<(typeof state.events)[number], { kind: "heatDissipated" }>).dissip,
-    ).toBe(13);
+    expect((dissipEvent as Extract<GameEvent, { kind: "heatDissipated" }>).dissip).toBe(13);
   });
 });
 
@@ -392,9 +392,10 @@ describe("game integration: engine crit heat", () => {
     };
     hbk.heat = 0;
     startAttackTurn(state);
-    advancePhase(state, scriptedRng(3, 3, 3, 1));
+    const events: GameEvent[] = [];
+    advancePhase(state, events, scriptedRng(3, 3, 3, 1));
     expect(hbk.heat).toBe(10 - Math.min(10, heatDissipation(def, hbk.critSlotsDestroyed)));
-    expect(state.events.some((e) => e.kind === "heatEngineCrit" && e.unitId === "hbk")).toBe(true);
+    expect(events.some((e) => e.kind === "heatEngineCrit" && e.unitId === "hbk")).toBe(true);
   });
 });
 
@@ -405,10 +406,11 @@ describe("game integration: shutdown", () => {
     hbk.heat = 30;
     startAttackTurn(state);
     // auto shutdown (no roll); shutdown PSR 12 passes (stays up).
-    advancePhase(state, scriptedRng(6, 6, 3, 3, 3, 1));
+    const events: GameEvent[] = [];
+    advancePhase(state, events, scriptedRng(6, 6, 3, 3, 3, 1));
     expect(hbk.shutdown).toBe("heat");
     expect(
-      state.events.some(
+      events.some(
         (e) =>
           e.kind === "shutdownCheck" &&
           e.unitId === "hbk" &&
@@ -418,7 +420,7 @@ describe("game integration: shutdown", () => {
       ),
     ).toBe(true);
     expect(
-      state.events.some(
+      events.some(
         (e) => e.kind === "pilotingCheck" && e.unitId === "hbk" && e.reason === "shutdown",
       ),
     ).toBe(true);
@@ -430,11 +432,12 @@ describe("game integration: shutdown", () => {
     hbk.heat = 18;
     startAttackTurn(state);
     // shutdown roll 6 <= 6 shuts down; shutdown PSR 12 passes (stays up).
-    advancePhase(state, scriptedRng(3, 3, 6, 6, 3, 1));
+    const events: GameEvent[] = [];
+    advancePhase(state, events, scriptedRng(3, 3, 6, 6, 3, 1));
     expect(hbk.shutdown).toBe("heat");
-    expect(
-      state.events.some((e) => e.kind === "shutdownCheck" && e.unitId === "hbk" && !e.avoided),
-    ).toBe(true);
+    expect(events.some((e) => e.kind === "shutdownCheck" && e.unitId === "hbk" && !e.avoided)).toBe(
+      true,
+    );
   });
 
   it("avoids shutdown when roll >= avoid", () => {
@@ -442,17 +445,18 @@ describe("game integration: shutdown", () => {
     const hbk = requireUnit(state, "hbk");
     hbk.heat = 18;
     startAttackTurn(state);
-    advancePhase(state, scriptedRng(6, 6, 6, 6));
+    const events: GameEvent[] = [];
+    advancePhase(state, events, scriptedRng(6, 6, 6, 6));
     expect(hbk.shutdown).toBe("not");
-    expect(
-      state.events.some((e) => e.kind === "shutdownCheck" && e.unitId === "hbk" && e.avoided),
-    ).toBe(true);
+    expect(events.some((e) => e.kind === "shutdownCheck" && e.unitId === "hbk" && e.avoided)).toBe(
+      true,
+    );
   });
 
   it("skips shutdown unit in nextActor", () => {
     const state = hbkVsEnf();
     startMovementTurn(state);
-    executeMove(state, "hbk", "walk", []);
+    executeMove(state, "hbk", "walk", [], []);
     requireUnit(state, "hbk").shutdown = "heat";
     expect(nextActor(state)).toBe("enf");
   });
@@ -463,11 +467,12 @@ describe("game integration: shutdown", () => {
     hbk.shutdown = "heat";
     hbk.heat = 12;
     startAttackTurn(state);
-    advancePhase(state, scriptedRng(3, 3, 3, 1));
+    const events: GameEvent[] = [];
+    advancePhase(state, events, scriptedRng(3, 3, 3, 1));
     expect(hbk.shutdown).toBe("not");
-    expect(
-      state.events.some((e) => e.kind === "restartCheck" && e.unitId === "hbk" && e.success),
-    ).toBe(true);
+    expect(events.some((e) => e.kind === "restartCheck" && e.unitId === "hbk" && e.success)).toBe(
+      true,
+    );
   });
 
   it("does not auto-restart a manual shutdown", () => {
@@ -476,11 +481,12 @@ describe("game integration: shutdown", () => {
     hbk.shutdown = "manual";
     hbk.heat = 12;
     startAttackTurn(state);
-    advancePhase(state, scriptedRng(3, 3, 3, 1));
+    const events: GameEvent[] = [];
+    advancePhase(state, events, scriptedRng(3, 3, 3, 1));
     expect(hbk.shutdown).toBe("manual");
-    expect(
-      state.events.some((e) => e.kind === "restartCheck" && e.unitId === "hbk" && e.success),
-    ).toBe(false);
+    expect(events.some((e) => e.kind === "restartCheck" && e.unitId === "hbk" && e.success)).toBe(
+      false,
+    );
   });
 
   it("leaves a starting unit untouched and brings it online at the next initiative", () => {
@@ -489,10 +495,10 @@ describe("game integration: shutdown", () => {
     hbk.shutdown = "starting";
     hbk.heat = 12;
     startAttackTurn(state);
-    advancePhase(state, scriptedRng(3, 3, 3, 1));
+    advancePhase(state, [], scriptedRng(3, 3, 3, 1));
     expect(hbk.shutdown).toBe("starting");
     // weaponAttack -> end already ran; advance again: end -> initiative (turn 2).
-    advancePhase(state, scriptedRng(3, 3, 3, 1));
+    advancePhase(state, [], scriptedRng(3, 3, 3, 1));
     expect(hbk.shutdown).toBe("not");
   });
 });
@@ -503,13 +509,13 @@ describe("game integration: heatMod in to-hit", () => {
     const hbk = requireUnit(state, "hbk");
     hbk.heat = 13;
     startAttackTurn(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
-    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4));
-    const resolved = state.events.find((e) => e.kind === "attackResolved");
+    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], []);
+    const events: GameEvent[] = [];
+    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4), events);
+    const resolved = events.find((e) => e.kind === "attackResolved");
     expect(resolved).toBeDefined();
     expect(
-      (resolved as Extract<(typeof state.events)[number], { kind: "attackResolved" }>).resolution
-        .breakdown.heatMod,
+      (resolved as Extract<GameEvent, { kind: "attackResolved" }>).resolution.breakdown.heatMod,
     ).toBe(2);
   });
 });
@@ -519,12 +525,13 @@ describe("game integration: immobile target modifier in to-hit", () => {
     const state = hbkVsEnf();
     if (!online) requireUnit(state, "enf").shutdown = "manual";
     startAttackTurn(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
-    resolveAllAttacks(state, rng);
-    const resolved = state.events.find((e) => e.kind === "attackResolved");
+    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], []);
+    const events: GameEvent[] = [];
+    resolveAllAttacks(state, rng, events);
+    const resolved = events.find((e) => e.kind === "attackResolved");
     expect(resolved).toBeDefined();
-    return (resolved as Extract<(typeof state.events)[number], { kind: "attackResolved" }>)
-      .resolution.breakdown.targetMod;
+    return (resolved as Extract<GameEvent, { kind: "attackResolved" }>).resolution.breakdown
+      .targetMod;
   }
 
   it("online target in place: targetMod 0", () => {
@@ -541,12 +548,13 @@ describe("game integration: target movement modifier counts total hexes", () => 
     const state = hbkVsEnf();
     requireUnit(state, "enf").movesThisTurn = [...moves];
     startAttackTurn(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
-    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4));
-    const resolved = state.events.find((e) => e.kind === "attackResolved");
+    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], []);
+    const events: GameEvent[] = [];
+    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4), events);
+    const resolved = events.find((e) => e.kind === "attackResolved");
     expect(resolved).toBeDefined();
-    return (resolved as Extract<(typeof state.events)[number], { kind: "attackResolved" }>)
-      .resolution.breakdown.targetMod;
+    return (resolved as Extract<GameEvent, { kind: "attackResolved" }>).resolution.breakdown
+      .targetMod;
   }
 
   it("reversed 4-hex walk counts all four hexes (not the 2 since reversal)", () => {
@@ -582,12 +590,13 @@ describe("game integration: partial cover in to-hit", () => {
   function terrainModFor(type: TerrainType): number {
     const state = makeBattleWithTargetTerrain(type);
     startAttackTurn(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }]);
-    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4));
-    const resolved = state.events.find((e) => e.kind === "attackResolved");
+    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], []);
+    const events: GameEvent[] = [];
+    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4), events);
+    const resolved = events.find((e) => e.kind === "attackResolved");
     expect(resolved).toBeDefined();
-    return (resolved as Extract<(typeof state.events)[number], { kind: "attackResolved" }>)
-      .resolution.breakdown.terrainMod;
+    return (resolved as Extract<GameEvent, { kind: "attackResolved" }>).resolution.breakdown
+      .terrainMod;
   }
 
   it("target in clear: terrainMod 0", () => {
@@ -611,10 +620,11 @@ describe("game integration: heat ammo explosion", () => {
     startAttackTurn(state);
     // shutdown auto: no roll; shutdown PSR 2 fails -> fall (dir 1 front,
     // loc 7 CT, pilot stays awake); ammo avoid roll 4 < 8 (avoid=8 for heat 30)
-    advancePhase(state, scriptedRng(1, 1, 1, 3, 4, 3, 3, 3, 1));
+    const events: GameEvent[] = [];
+    advancePhase(state, events, scriptedRng(1, 1, 1, 3, 4, 3, 3, 3, 1));
     expect(hbk.prone).toBe(true);
     expect(
-      state.events.some(
+      events.some(
         (e) => e.kind === "pilotingCheck" && e.unitId === "hbk" && e.reason === "shutdown",
       ),
     ).toBe(true);
@@ -622,8 +632,8 @@ describe("game integration: heat ammo explosion", () => {
     // mount's full 10-shot magazine. The 100-point blast kills the 50-ton
     // HBK outright, so the sibling bin's location is stripped away.
     expect(hbk.ammoBins["leftTorso:1"]?.shots).toBe(0);
-    const blast = state.events.find(
-      (e): e is Extract<(typeof state.events)[number], { kind: "ammoExplosionCheck" }> =>
+    const blast = events.find(
+      (e): e is Extract<GameEvent, { kind: "ammoExplosionCheck" }> =>
         e.kind === "ammoExplosionCheck" && e.unitId === "hbk" && !e.avoided,
     );
     expect(blast).toBeDefined();
@@ -639,11 +649,12 @@ describe("game integration: heat ammo explosion", () => {
     // Shutdown auto: no roll. No ammo avoid roll is taken because the only
     // loaded ammo is gauss (non-explosive). Shutdown PSR 2 fails -> fall
     // (dir 1 front, loc 7 CT, pilot stays awake).
-    advancePhase(state, scriptedRng(1, 1, 1, 3, 4, 3, 3));
+    const events: GameEvent[] = [];
+    advancePhase(state, events, scriptedRng(1, 1, 1, 3, 4, 3, 3));
     expect(bzk.shutdown).toBe("heat");
     expect(bzk.prone).toBe(true);
     expect(
-      state.events.some((e) => e.kind === "ammoExplosionCheck" && e.unitId === "bzk" && !e.avoided),
+      events.some((e) => e.kind === "ammoExplosionCheck" && e.unitId === "bzk" && !e.avoided),
     ).toBe(false);
     // Gauss ammo bins survive intact.
     expect(bzk.ammoBins["centerTorso:11"]?.shots).toBe(8);

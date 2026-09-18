@@ -11,20 +11,18 @@ import {
   rollInitiativePhase,
   saveBattleState,
 } from "../src/index.js";
-import type { BattleState, UnitInit } from "../src/rules/game.js";
+import type { BattleState, GameEvent, UnitInit } from "../src/rules/game.js";
 import {
   loadAmmoState,
   loadBuildings,
   loadCritTable,
   loadDamageState,
-  loadEvents,
   loadUnitState,
   loadWrecks,
   saveAmmoState,
   saveBuildings,
   saveCritTable,
   saveDamageState,
-  saveEvents,
   saveUnitState,
   saveWrecks,
 } from "../src/rules/snapshot.js";
@@ -56,18 +54,18 @@ function hbkEnf(critsDisabled: boolean): BattleState {
 
 /** initiative -> weaponAttack with nobody moving. */
 function startAttackTurn(state: BattleState): BattleState {
-  rollInitiativePhase(state, scriptedRng(1, 1, 4, 4));
-  advancePhase(state);
+  rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []);
+  advancePhase(state, []);
   return state;
 }
 
-/** Rear-CT medium laser hit with crits enabled: exercises nested
- *  resolution clones (application before/after, crit rows, rolls). */
+/** Rear-CT medium laser hit with crits enabled: exercises damage, crit,
+ *  and heat mutation across the snapshot boundary. */
 function rearCtHit(state: BattleState): void {
-  declareAttacks(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }]);
+  declareAttacks(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }], []);
   // to-hit 12 hits; location 7 -> CT rear (4 pool, 1 IS stripped -> crit);
   // padded dice cover determining + effect rolls.
-  resolveAllAttacks(state, scriptedRng(6, 6, 3, 4, 3, 3, 3, 3, 3, 3, 3, 3));
+  resolveAllAttacks(state, scriptedRng(6, 6, 3, 4, 3, 3, 3, 3, 3, 3, 3, 3), []);
 }
 
 /** Dirties every mutable layer of live state. */
@@ -94,19 +92,6 @@ function dirtyBattle(state: BattleState): void {
   delete hbk.ammoBins[Object.keys(hbk.ammoBins)[0]!];
   state.actedThisPhase.push("hbk");
   state.actorQueue = ["stale"];
-  // mutate nested resolution state before clearing log: proves deep detach
-  const resolved = state.events.find((e) => e.kind === "attackResolved");
-  if (resolved !== undefined && resolved.kind === "attackResolved") {
-    for (const g of resolved.resolution.groups as unknown as { damage: number }[]) g.damage = 999;
-    const app = resolved.resolution.application as unknown as {
-      after: { armor: Record<string, number> };
-    } | null;
-    if (app !== null) app.after.armor.centerTorso = 999;
-    for (const c of resolved.resolution.crits) {
-      for (const r of c.rows as unknown as { rolls: number[] }[]) r.rolls.push(6);
-    }
-  }
-  state.events.length = 0;
   state.buildings["9,9"] = { cf: 1, type: "light" };
   delete state.buildings[Object.keys(state.buildings)[0] ?? "never"];
   state.wrecks["1,1"] = { unitId: "hbk", level: 2 };
@@ -116,13 +101,13 @@ describe("snapshot", () => {
   it("round-trips full battle string after phase change, reusable twice", () => {
     const state = startAttackTurn(hbkEnf(false));
     rearCtHit(state);
-    advancePhase(state); // weaponAttack -> end: snapshot right after change
+    advancePhase(state, []); // weaponAttack -> end: snapshot right after change
     expect(state.phase).toBe("end");
     const snap = saveBattleState(state);
     expect(typeof snap).toBe("string");
     const parsed = JSON.parse(snap) as BattleState;
-    // nested resolution clones exist
-    expect(parsed.events.some((e) => e.kind === "attackResolved")).toBe(true);
+    // no event log travels with the snapshot
+    expect("events" in parsed).toBe(false);
 
     dirtyBattle(state);
     expect(state).not.toEqual(parsed);
@@ -157,7 +142,7 @@ describe("snapshot", () => {
   it("parseBattleState builds fresh state from string, reusable twice", () => {
     const state = startAttackTurn(hbkEnf(false));
     rearCtHit(state);
-    advancePhase(state);
+    advancePhase(state, []);
     const snap = saveBattleState(state);
     const first = parseBattleState(snap);
     expect(first).toEqual(state);
@@ -177,7 +162,6 @@ describe("snapshot", () => {
     const revived = parseBattleState(snap);
     requireUnit(revived, "hbk").heat = 11;
     revived.turn = 99;
-    revived.events.length = 0;
     expect(saveBattleState(state)).toBe(snap);
     expect(parseBattleState(snap)).not.toEqual(revived);
   });
@@ -193,7 +177,7 @@ describe("snapshot", () => {
     rearCtHit(state);
     const revived = parseBattleState(saveBattleState(state));
     expect(requireUnit(revived, "enf").id).toBe("enf");
-    advancePhase(revived);
+    advancePhase(revived, []);
     expect(revived.phase).toBe("end");
   });
 
@@ -235,7 +219,18 @@ describe("snapshot", () => {
     expect(enf.critSlotsDestroyed).toEqual(critSnap);
   });
 
-  it("buildings/wrecks/events granularity restores collapse + log", () => {
+  it("rejects pre-removal snapshots carrying an events key", () => {
+    const state = startAttackTurn(hbkEnf(false));
+    rearCtHit(state);
+    const snap = JSON.parse(saveBattleState(state)) as Record<string, unknown>;
+    snap.events = [];
+    expect(() => loadBattleState(state, JSON.stringify(snap))).toThrow(
+      /Invalid battle snapshot string/,
+    );
+    expect(() => parseBattleState(JSON.stringify(snap))).toThrow(/Invalid battle snapshot string/);
+  });
+
+  it("buildings/wrecks granularity restores collapse", () => {
     const units: UnitInit[] = [
       {
         id: "hbk",
@@ -259,7 +254,10 @@ describe("snapshot", () => {
     const state = createTestBattle([{ col: 3, row: 5, type: "lightBuilding" }], units, false);
     const buildingsSnap = saveBuildings(state.buildings);
     expect(state.buildings["3,5"]).toBeDefined();
-    damageBuildingAt(state, { col: 3, row: 5 }, 999);
+    const events: GameEvent[] = [];
+    const result = damageBuildingAt(state, { col: 3, row: 5 }, 999, events);
+    expect(result?.collapsed).toBe(true);
+    expect(events).toHaveLength(1);
     expect(state.buildings["3,5"]).toBeUndefined();
     loadBuildings(state.buildings, buildingsSnap);
     expect(state.buildings).toEqual(buildingsSnap);
@@ -269,11 +267,5 @@ describe("snapshot", () => {
     delete state.wrecks["2,4"];
     loadWrecks(state.wrecks, wrecksSnap);
     expect(state.wrecks).toEqual(wrecksSnap);
-
-    const eventsSnap = saveEvents(state.events);
-    state.events.length = 0;
-    expect(state.events).toHaveLength(0);
-    loadEvents(state.events, eventsSnap);
-    expect(state.events).toEqual(eventsSnap);
   });
 });

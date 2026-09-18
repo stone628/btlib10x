@@ -385,7 +385,7 @@ stated elsewhere in this document or the codebase:
                         derived {setup|turn|over} + sub-state,
                         auto advancePhase / initiative roll / victory check
     web/rng.ts          mulberry32-seeded Rng
-    web/format.ts       board, event-log, info/status, record-sheet/resolution formatters, crit slot chart
+    web/format.ts       board, transient-event, info/status, record-sheet/resolution formatters, crit slot chart
     web/render.ts       structured BoardModel / Span model + boardToText / boardToSpans
     scripts/build-web.mjs  esbuild bundles: src/index.ts → web/btlib10x.js (core),
                         web/main.ts → web/app.js (app; btlib10x.js kept external)
