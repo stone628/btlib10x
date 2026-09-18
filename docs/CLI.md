@@ -13,8 +13,9 @@ terminal emulator UI. Vanilla TypeScript + DOM only; zero runtime dependencies
   phase `movement`, `(N):attack(team T, mech ID)` during `weaponAttack` —
   N is the turn number; team and id come from `nextActor(state)`.
 - Phases auto-advance when every living unit has acted. After attacks resolve,
-  `checkVictory()` decides: more teams alive → next turn (auto initiative roll),
-  otherwise → `over`.
+  `drive()` in `web/session.ts` feeds `checkSessionVictory` as stopper into
+  engine `gameLoop()`: more teams alive → next turn (auto initiative roll),
+  otherwise → `over`. Engine itself never decides winner.
 
 Examples:
 

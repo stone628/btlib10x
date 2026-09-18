@@ -14,8 +14,8 @@ import {
   declareAttacks,
   resolveAllAttacks,
   nextActor,
-  checkVictory,
-  getUnit,
+  gameLoop,
+  requireUnit,
   type BattleState,
   type Rng,
 } from "btlib10x";
@@ -187,20 +187,32 @@ need a per-target suggestion before declaring, `suggestFireTargets(state,
 unitId)` returns a `FireSuggestion` with arc, LOS, range, ammo, jam, and
 prone-prop checks already applied.
 
-Commit deaths and close the turn:
+Commit deaths and close the turn. Engine never declares winner —
+world around it owns stop condition, passed as `GameLoopStopper`:
 
 ```ts
 advancePhase(state);                         // weaponAttack -> end (kills committed)
-if (!checkVictory(state).winnerTeam && !checkVictory(state).draw) {
+// world-side victory check, e.g. test helper in tests/helpers.ts or
+// checkSessionVictory in web/session.ts:
+const aliveTeams = new Set(
+  Object.values(state.units).filter((u) => u.removed === "not").map((u) => u.team),
+);
+if (aliveTeams.size > 1) {
   advancePhase(state);                       // end -> initiative, next turn
 }
 ```
 
 ## 6. Ending the battle
 
+Engine simulates; caller decides finish. Define a stopper over
+`BattleState` and feed it to `gameLoop(state, rng, stopper)` —
+`gameLoop` returns `{ actorId; stopped; events }` with no winner field.
+`tests/helpers.ts` `checkVictory` shows minimal test-world version;
+`web/session.ts` `checkSessionVictory` + `drive()` shows app version:
+
 ```ts
-const result = checkVictory(state);   // { winnerTeam: 0 | 1 | null, draw }
-if (result.winnerTeam !== null) console.log(`Team ${result.winnerTeam} wins`);
+const r = gameLoop(state, rng, (s) => checkVictory(s).winnerTeam !== null);
+if (r.stopped) console.log("battle over");
 ```
 
 A 'Mech dies when its center torso (or head) internal structure is destroyed;
@@ -228,7 +240,7 @@ it as the canonical end-to-end reference.
 | Shoot | `declareAttacks` → `resolveAllAttacks` |
 | Advance | `advancePhase(state)` |
 | Who acts? | `nextActor(state)` |
-| Done? | `checkVictory(state)` |
+| Done? | caller stopper fed to `gameLoop(state, rng, stopper)` |
 
 See `docs/API.md` for the complete reference; `scripts/check-public-api.mjs`
 keeps this file in sync with the actual `dist/index.d.ts` exports.

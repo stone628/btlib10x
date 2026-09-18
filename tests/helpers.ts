@@ -213,3 +213,20 @@ export function overrideAmmoBin(
   const prev = src[id]!;
   src[id] = { ...prev, shots };
 }
+
+export interface VictoryResult {
+  readonly winnerTeam: number | null;
+  readonly draw: boolean;
+}
+
+export function checkVictory(state: BattleState): VictoryResult {
+  const aliveTeams = new Set(
+    Object.values(state.units)
+      .filter((u) => !isUnitRemoved(u))
+      .map((u) => u.team),
+  );
+  if (aliveTeams.size <= 1) {
+    return { winnerTeam: aliveTeams.values().next().value ?? null, draw: aliveTeams.size === 0 };
+  }
+  return { winnerTeam: null, draw: false };
+}

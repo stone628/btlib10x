@@ -3,7 +3,6 @@ import { neighbor } from "../src/core/hex.js";
 import { resolveWeaponAttack } from "../src/rules/attack.js";
 import type { BattleState, TerrainHexDef, UnitInit } from "../src/rules/game.js";
 import {
-  checkVictory,
   ejectPilot,
   executeMove,
   nextActor,
@@ -14,7 +13,7 @@ import {
 } from "../src/rules/game.js";
 import { losClear } from "../src/rules/los.js";
 import { reachableLandings } from "../src/rules/movement.js";
-import { createTestBattle, scriptedRng } from "./helpers.js";
+import { checkVictory, createTestBattle, scriptedRng } from "./helpers.js";
 
 function hbkVsEnf(): BattleState {
   const units: UnitInit[] = [

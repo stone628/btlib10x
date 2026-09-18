@@ -6,7 +6,6 @@ import type { BattleState, TerrainHexDef, UnitInit } from "../src/rules/game.js"
 import {
   actorQueue,
   advancePhase,
-  checkVictory,
   declareAttacks,
   executeMove,
   nextActor,
@@ -15,7 +14,7 @@ import {
   rollInitiativePhase,
 } from "../src/rules/game.js";
 import { resolutionLines } from "../web/format.js";
-import { createTestBattle, scriptedRng } from "./helpers.js";
+import { checkVictory, createTestBattle, scriptedRng } from "./helpers.js";
 
 function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
   const units: UnitInit[] = [

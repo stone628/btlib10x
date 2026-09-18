@@ -197,13 +197,13 @@ export type {
   DestroyedState,
   GameEvent,
   GameLoopResult,
+  GameLoopStopper,
   MoveStep,
   Phase,
   RemovedState,
   ShutdownState,
   UnitInit,
   UnitState,
-  VictoryResult,
 } from "./rules/game.js";
 export {
   actorQueue,
@@ -212,7 +212,6 @@ export {
   applyPilotHits,
   attemptStandUp,
   attemptVoluntaryStartup,
-  checkVictory,
   createBattle,
   DEFAULT_RNG,
   DROP_MP_COST,

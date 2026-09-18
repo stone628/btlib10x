@@ -16,7 +16,6 @@ import type {
   Rng,
   UnitInit,
   UnitState,
-  VictoryResult,
 } from "btlib10x";
 import {
   ammoWeaponTotals,
@@ -90,7 +89,7 @@ export interface Session {
   rng: Rng;
   setup: SetupState;
   battle: BattleState | null;
-  victory: VictoryResult | null;
+  victory: SessionVictoryResult | null;
   actorId: string | null;
   /** Pending declaration for the acting unit: a movement mode (engine
    *  `MoveMode`), a posture-change `standup` / `prone` attempt, or
@@ -169,6 +168,23 @@ function clearBuffers(s: Session): void {
   s.fireCandidate = null;
 }
 
+export interface SessionVictoryResult {
+  readonly winnerTeam: number | null;
+  readonly draw: boolean;
+}
+
+export function checkSessionVictory(state: BattleState): SessionVictoryResult | null {
+  const aliveTeams = new Set(
+    Object.values(state.units)
+      .filter((u) => !isUnitRemoved(u))
+      .map((u) => u.team),
+  );
+  if (aliveTeams.size <= 1) {
+    return { winnerTeam: aliveTeams.values().next().value ?? null, draw: aliveTeams.size === 0 };
+  }
+  return null;
+}
+
 /**
  * Advance the battle through transient phases until an actor must act or the
  * game ends. Wraps {@link gameLoop} with session-side effects (app state,
@@ -178,7 +194,15 @@ function clearBuffers(s: Session): void {
 function drive(s: Session): GameEvent[] {
   const battle = s.battle;
   if (!battle) return [];
-  const r = gameLoop(battle, s.rng);
+  const v: SessionVictoryResult[] = [];
+  const r = gameLoop(battle, s.rng, (state) => {
+    const victory = checkSessionVictory(state);
+    if (victory !== null) {
+      v.push(victory);
+      return true;
+    }
+    return false;
+  });
   if (
     r.events.some(
       (e) => e.kind === "phase" && e.prevPhase === "movement" && e.phase === "weaponAttack",
@@ -186,9 +210,10 @@ function drive(s: Session): GameEvent[] {
   ) {
     s.torsoTwist = "front";
   }
-  if (r.ended) {
+  if (v.length > 0) {
+    const victory = v[0]!;
     s.app = "over";
-    s.victory = r.victory;
+    s.victory = victory;
     s.actorId = null;
     clearBuffers(s);
   } else {
@@ -810,7 +835,7 @@ export interface CommitResult {
  */
 interface SessionCommitSnapshot {
   app: AppState;
-  victory: VictoryResult | null;
+  victory: SessionVictoryResult | null;
   actorId: string | null;
   moveMode: Session["moveMode"];
   postureMove: Session["postureMove"];
