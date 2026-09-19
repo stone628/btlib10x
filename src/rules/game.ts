@@ -127,7 +127,7 @@ import {
   sensorsBlind,
   waterEntryModifier,
 } from "./piloting.js";
-import { computeToHit, DEFAULT_GUNNERY } from "./tohit.js";
+import { computeToHit, DEFAULT_GUNNERY, type RangeBracket } from "./tohit.js";
 
 export interface UnitInit extends MechModelHolder {
   readonly id: string;
@@ -1234,26 +1234,45 @@ export interface DeclareAttacksOptions {
   /** Torso twist (TW p.62): shifts the attacker's effective facing by one
    *  hexside before classifying the firing arc. Defaults to untwisted. */
   readonly twist?: Arc | null;
-  /** Skip the head-of-queue actor check. Reserved for the weapon-commit
-   *  layer; user-facing callers should leave it false. */
-  readonly skipActorCheck?: boolean;
 }
 
-export function declareAttacks(
+export interface ValidateAttacksOptions {
+  /** Torso twist (TW p.62): shifts the attacker's effective facing by one
+   *  hexside before classifying the firing arc. Defaults to untwisted. */
+  readonly twist?: Arc | null;
+}
+
+/** Per-weapon resolved arc plus volley-wide direction/range fields.
+ *  Returned by `validateAttacks` so `declareAttacks` (and any UIs that
+ *  want to display the resolved arc before commit) can skip recomputing
+ *  LOS, arc classification, and the to-hit range breakdown. */
+export interface ValidatedAttackVolley {
+  readonly targetId: string;
+  readonly attackDirection: Arc;
+  readonly attackDistance: number;
+  readonly attackRangeBracket: RangeBracket;
+  readonly attackRangeMod: number;
+  readonly arcs: Readonly<Record<number, Arc>>;
+}
+
+/** Validation core shared by `validateAttacks` and `declareAttacks`.
+ *  Runs every gate `declareAttacks` enforces: unit status (removed /
+ *  shutdown / unconscious), sensors, prone arm-prop, and per-decl checks
+ *  (weapon bounds, dup, jammed / destroyed, location, rapid-fire, single
+ *  target, target validity, arc, LOS, range, to-hit, ammo). On success
+ *  returns the volley's resolved arc, attack direction, distance, and
+ *  range bracket. Does NOT mutate state, consume RNG, or emit events.
+ *  Phase and actor-queue are checked by `declareAttacks`, not here. */
+export function validateAttacksImpl(
   state: BattleState,
   unitId: string,
   decls: readonly AttackDecl[],
-  sink: GameEvent[],
-  rng: Rng = DEFAULT_RNG,
-  options: DeclareAttacksOptions = {},
-): void {
-  requirePhase(state, "weaponAttack");
-  if (!options.skipActorCheck) requireCurrentActor(state, unitId, "weaponAttack");
+  options: ValidateAttacksOptions,
+): ValidatedAttackVolley {
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is destroyed`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot fire`);
   if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot fire`);
-
   const def = getMechDefFor(unit);
   const sensorsOut = countDestroyedSensor(def, unit.critSlotsDestroyed);
   if (sensorsBlind(sensorsOut)) {
@@ -1261,10 +1280,18 @@ export function declareAttacks(
   }
   const sensorMod = sensorAttackModifier(sensorsOut);
   const effectiveFacing = effectiveFacingForTwist(unit.facing, options.twist ?? null);
+  if (unit.prone) {
+    const hasLeft = decls.some((d) => def.weapons[d.weaponIndex]?.location === "leftArm");
+    const hasRight = decls.some((d) => def.weapons[d.weaponIndex]?.location === "rightArm");
+    if (hasLeft && hasRight) {
+      throw new Error(`${unitId} cannot fire while prone (volley uses both arms; prop one)`);
+    }
+  }
+
   let targetId: string | null = null;
   let attackDirection: Arc | undefined;
   let attackDistance = 0;
-  let attackRangeBracket: string = "short";
+  let attackRangeBracket: RangeBracket = "short";
   let attackRangeMod = 0;
 
   const seenWeapons = new Set<number>();
@@ -1293,16 +1320,6 @@ export function declareAttacks(
     if (unit.prone && (mount.location === "rightLeg" || mount.location === "leftLeg")) {
       throw new Error(`${mount.weapon} on ${unitId} cannot fire while prone (leg-mounted)`);
     }
-    if (unit.prone) {
-      const volleyHasLeft = decls.some((d) => def.weapons[d.weaponIndex]?.location === "leftArm");
-      const volleyHasRight = decls.some((d) => def.weapons[d.weaponIndex]?.location === "rightArm");
-      if (volleyHasLeft && volleyHasRight) {
-        throw new Error(
-          `${mount.weapon} on ${unitId} cannot fire while prone (volley uses both arms; prop one)`,
-        );
-      }
-    }
-
     const rapidFire = decl.rapidFire ?? false;
     if (rapidFire && weapon.rapidFireShots === undefined) {
       throw new Error(`${mount.weapon} is not rapid-fire`);
@@ -1395,34 +1412,73 @@ export function declareAttacks(
       if (left < needed) {
         throw new Error(`${mount.weapon}: needs ${needed} shot(s) but only ${left} remain`);
       }
-      // Streak launchers fire only on successful to-hit roll: ammo leaves
-      // bin at resolution time (see resolveUnitAttacks), not here.
-      if (weapon.streak === true) return;
-      const entry = consumeAmmo(def, unit.ammoBins, decl.weaponIndex, needed, unit.ammoPolicy, rng);
-      unit.ammoBins = entry;
     }
   });
 
   if (targetId === null) throw new Error("declareAttacks requires at least one declaration");
+  return {
+    targetId,
+    attackDirection: attackDirection!,
+    attackDistance,
+    attackRangeBracket,
+    attackRangeMod,
+    arcs,
+  };
+}
 
-  unit.declaredAttacks = decls.map((decl) => {
-    const arc = arcs[decl.weaponIndex];
-    return {
+export function validateAttacks(
+  state: BattleState,
+  unitId: string,
+  decls: readonly AttackDecl[],
+  options: ValidateAttacksOptions = {},
+): void {
+  validateAttacksImpl(state, unitId, decls, options);
+}
+
+export function declareAttacks(
+  state: BattleState,
+  unitId: string,
+  decls: readonly AttackDecl[],
+  sink: GameEvent[],
+  rng: Rng = DEFAULT_RNG,
+  options: DeclareAttacksOptions = {},
+): void {
+  requireCurrentActor(state, unitId, "weaponAttack");
+  const unit = requireUnit(state, unitId);
+  if (unit.declaredAttacks.length > 0)
+    throw new Error(`${unitId} already declared attacks this turn`);
+  const volley = validateAttacksImpl(state, unitId, decls, { twist: options.twist ?? null });
+  const def = getMechDefFor(unit);
+  // Consume non-streak per-bin ammo per decl; streak fires on hit and
+  // resolves its own ammo in `resolveUnitAttacks`. RNG via ammo policy.
+  for (const decl of decls) {
+    unit.declaredAttacks.push({
       ...decl,
-      ...(arc !== undefined ? { arc } : {}),
-      ...(attackDirection !== undefined ? { attackDirection } : {}),
-    };
-  });
-  unit.firedTargetId = targetId;
+      ...(volley.arcs[decl.weaponIndex] !== undefined
+        ? { arc: volley.arcs[decl.weaponIndex] }
+        : {}),
+      attackDirection: volley.attackDirection,
+    });
+    const mount = def.weapons[decl.weaponIndex];
+    if (!mount) continue;
+    const weapon = getWeaponDefFor(mount);
+    const rapidFire = decl.rapidFire ?? false;
+    const shots = rapidFire ? (weapon.rapidFireShots ?? 1) : 1;
+    const needed = weapon.missiles !== undefined ? 1 : shots;
+    if (binsForWeapon(def, decl.weaponIndex).length === 0) continue;
+    if (weapon.streak === true) continue;
+    unit.ammoBins = consumeAmmo(def, unit.ammoBins, decl.weaponIndex, needed, unit.ammoPolicy, rng);
+  }
+  unit.firedTargetId = volley.targetId;
   state.actedThisPhase.push(unitId);
   sink.push({
     kind: "attacksDeclared",
     unitId,
-    targetId,
+    targetId: volley.targetId,
     count: decls.length,
-    distance: attackDistance,
-    rangeBracket: attackRangeBracket,
-    rangeMod: attackRangeMod,
+    distance: volley.attackDistance,
+    rangeBracket: volley.attackRangeBracket,
+    rangeMod: volley.attackRangeMod,
   });
 }
 
