@@ -17,15 +17,27 @@ import {
   REACHABLE_MARKER,
   TEAM_STYLES,
 } from "../web/renderer.text.js";
-import * as S from "../web/session.js";
+import {
+  commitFire,
+  commitMove,
+  currentActor,
+  declareMode,
+  newSession,
+  passFire,
+  placeLanding,
+  promptBody,
+  queueFire,
+  type Session,
+  type SessionGameEvent,
+} from "../web/session.js";
 import { execute } from "./helpers.js";
 
-function run(s: S.Session, cmd: string): string[] {
+function run(s: Session, cmd: string): string[] {
   return execute(s, cmd);
 }
 
-function freshSetup(): S.Session {
-  const s = S.newSession(42);
+function freshSetup(): Session {
+  const s = newSession(42);
   s.critsDisabled = true;
   expect(run(s, "map quickstart")[0]).toContain("15x16");
   // Adjacent foes, facing each other along the n/s axis (1-based coords).
@@ -35,9 +47,9 @@ function freshSetup(): S.Session {
 }
 
 /** Queue every currently usable mount of the acting unit at its enemy. */
-function fireEverything(s: S.Session, enemy: string): void {
+function fireEverything(s: Session, enemy: string): void {
   const st = s.battle!;
-  const unit = st.units[S.currentActor(s)!.id]!;
+  const unit = st.units[currentActor(s)!.id]!;
   const sugg = suggestFireTargets(st, unit.id);
   const target = sugg.targets.find((t) => t.targetId === enemy) ?? bestFireTarget(sugg);
   const weapons =
@@ -46,16 +58,16 @@ function fireEverything(s: S.Session, enemy: string): void {
       : (target?.weaponsIfPropRight ?? []);
   for (const w of weapons) {
     if (unit.jammedWeapons.includes(w.weaponIndex)) continue;
-    S.queueFire(s, { weaponIndex: w.weaponIndex, targetId: enemy });
+    queueFire(s, { weaponIndex: w.weaponIndex, targetId: enemy });
   }
 }
 
 /** Drive a started battle until it is over using minimal legal actions.
  *  Transient commit events accumulate into `collected` when provided. */
-function autoPlay(s: S.Session, collected?: S.SessionGameEvent[]): void {
+function autoPlay(s: Session, collected?: SessionGameEvent[]): void {
   for (let i = 0; i < 500 && s.app === "battle"; i++) {
     const st = s.battle!;
-    const actorId = S.currentActor(s)!.id;
+    const actorId = currentActor(s)!.id;
     const ids = Object.values(st.units)
       .filter((u) => isUnitAvailable(u))
       .map((u) => u.id);
@@ -64,30 +76,30 @@ function autoPlay(s: S.Session, collected?: S.SessionGameEvent[]): void {
       if (isNominal(st.units[actorId]!)) {
         if (st.units[actorId]!.prone) {
           try {
-            S.declareMode(s, "standup", "walk");
+            declareMode(s, "standup", "walk");
           } catch {
             // Cannot afford the stand (wrecked legs/heat): hold prone.
-            S.declareMode(s, "pronestill");
+            declareMode(s, "pronestill");
           }
         } else {
           try {
-            S.declareMode(s, "walk");
+            declareMode(s, "walk");
           } catch {
-            S.declareMode(s, "standStill");
+            declareMode(s, "standStill");
           }
         }
       }
       // NOTE: never place the commit call inside the `?.push(...)`
       // arguments — a nullish collector short-circuits the call itself.
-      const moveRes = S.commitMove(s);
+      const moveRes = commitMove(s);
       collected?.push(...moveRes.events);
     } else {
       fireEverything(s, enemy);
       if ((s.attack?.fireDecls ?? []).length === 0) {
-        const passRes = S.passFire(s);
+        const passRes = passFire(s);
         collected?.push(...passRes.events);
       } else {
-        const fireRes = S.commitFire(s);
+        const fireRes = commitFire(s);
         collected?.push(...fireRes.events);
       }
     }
@@ -98,7 +110,7 @@ function autoPlay(s: S.Session, collected?: S.SessionGameEvent[]): void {
 
 describe("help", () => {
   it("lists only commands legal in the current state", () => {
-    const s = S.newSession(0);
+    const s = newSession(0);
     s.critsDisabled = true;
     const setupHelp = run(s, "help").join("\n");
     expect(setupHelp).toContain("add");
@@ -116,7 +128,7 @@ describe("help", () => {
   });
 
   it("shows usage and explanation on separate lines for arg commands", () => {
-    const s = S.newSession(0);
+    const s = newSession(0);
     s.critsDisabled = true;
     const help = run(s, "help");
     const addIdx = help.findIndex((l) => l.startsWith("add"));
@@ -130,7 +142,7 @@ describe("help", () => {
 
 describe("hint", () => {
   it("heads the help message with per-state guidance", () => {
-    const s = S.newSession(0);
+    const s = newSession(0);
     s.critsDisabled = true;
     const setupHelp = run(s, "help");
     expect(setupHelp.slice(0, 3).join(" ")).toContain("'setup' phase");
@@ -174,7 +186,7 @@ describe("hint", () => {
 
 describe("help <command>", () => {
   it("details usage and arguments without the state hint", () => {
-    const s = S.newSession(0);
+    const s = newSession(0);
     s.critsDisabled = true;
     const out = run(s, "help add");
     expect(out[0]).toBe("usage: add <id> <model> <col> <row> [facing]");
@@ -206,7 +218,7 @@ describe("help <command>", () => {
 
 describe("board", () => {
   it("explains instead of drawing a 1x1 grid when nothing is loaded", () => {
-    const s = S.newSession(0);
+    const s = newSession(0);
     s.critsDisabled = true;
     const out = run(s, "board").join("\n");
     expect(out).toContain("no battlefield yet");
@@ -224,14 +236,14 @@ describe("board", () => {
   });
 
   it("reports occupied hexes with 1-based coordinates", () => {
-    const s = S.newSession(0);
+    const s = newSession(0);
     s.critsDisabled = true;
     run(s, "add hbk HBK-4G 3 3");
     expect(run(s, "add grf GRF-1N 3 3")[0]).toBe("error: Hex 3,3 already occupied");
   });
 
   it("rejects units placed off the map", () => {
-    const s = S.newSession(0);
+    const s = newSession(0);
     s.critsDisabled = true;
     run(s, "map test");
     expect(run(s, "add a AS7-D 99 99 n")[0]).toBe("error: col 99 is outside the map (1..7)");
@@ -242,7 +254,7 @@ describe("board", () => {
 
 describe("clear", () => {
   it("signals a screen wipe via form feed", () => {
-    const s = S.newSession(0);
+    const s = newSession(0);
     s.critsDisabled = true;
     expect(run(s, "clear")).toEqual(["\f"]);
   });
@@ -250,7 +262,7 @@ describe("clear", () => {
 
 describe("info", () => {
   it("lists mechs and details one", () => {
-    const s = S.newSession(0);
+    const s = newSession(0);
     s.critsDisabled = true;
     const list = run(s, "info mech");
     expect(list.some((l) => l.includes("HBK-4G"))).toBe(true);
@@ -266,7 +278,7 @@ describe("info", () => {
   });
 
   it("matches mech model case-insensitively", () => {
-    const s = S.newSession(0);
+    const s = newSession(0);
     s.critsDisabled = true;
     const upper = run(s, "info mech hbk-4g").join("\n");
     const mixed = run(s, "info mech Hbk-4g").join("\n");
@@ -275,7 +287,7 @@ describe("info", () => {
   });
 
   it("lists maps and renders the ASCII sheet", () => {
-    const s = S.newSession(0);
+    const s = newSession(0);
     s.critsDisabled = true;
     expect(run(s, "info map").join("\n")).toContain("quickstart");
     const qs = getMapDef("quickstart")!;
@@ -291,7 +303,7 @@ describe("info", () => {
   });
 
   it("matches map name case-insensitively", () => {
-    const s = S.newSession(0);
+    const s = newSession(0);
     s.critsDisabled = true;
     const upper = run(s, "info map QUICKSTART").join("\n");
     const mixed = run(s, "info map QuickStart").join("\n");
@@ -300,7 +312,7 @@ describe("info", () => {
   });
 
   it("matches weapon name case-insensitively", () => {
-    const s = S.newSession(0);
+    const s = newSession(0);
     s.critsDisabled = true;
     const upper = run(s, "info weapon MEDIUM LASER").join("\n");
     const mixed = run(s, "info weapon medium laser").join("\n");
@@ -309,7 +321,7 @@ describe("info", () => {
   });
 
   it("aligns weapon rows by name, [LOC] and range columns", () => {
-    const s = S.newSession(0);
+    const s = newSession(0);
     s.critsDisabled = true;
     run(s, "map quickstart");
     const lines = run(s, "info mech HBK-4G");
@@ -423,11 +435,11 @@ describe("setup flow", () => {
     const out = run(s, "start");
     expect(out[0]).toBe("=== BATTLE STARTED ===");
     expect(out.join("\n")).toMatch(/initiative:.*team \d wins initiative and moves last/);
-    expect(S.promptBody(s)).toMatch(/^turn\(1\):move\(\w+, team \d\)$/);
+    expect(promptBody(s)).toMatch(/^turn\(1\):move\(\w+, team \d\)$/);
   });
 
   it("rejects starting with one team", () => {
-    const s = S.newSession(0);
+    const s = newSession(0);
     s.critsDisabled = true;
     run(s, "map quickstart");
     run(s, "add a HBK-4G 2 2 n");
@@ -437,7 +449,7 @@ describe("setup flow", () => {
   });
 
   it("accepts map and model arguments case-insensitively", () => {
-    const s = S.newSession(0);
+    const s = newSession(0);
     s.critsDisabled = true;
     expect(run(s, "map QUICKSTART")[0]).toMatch(/^map quickstart:/);
     expect(s.setup.mapName).toBe("quickstart");
@@ -450,7 +462,7 @@ describe("movement", () => {
   it("queues steps with running MP totals and commits", () => {
     const s = freshSetup();
     run(s, "start");
-    const firstActor = S.currentActor(s)!;
+    const firstActor = currentActor(s)!;
     const declared = run(s, "mode walk");
     // 'mode walk' acknowledges the declaration and prints a clipped hex map
     // (board legend + grid) instead of a textual reachable list.
@@ -473,7 +485,7 @@ describe("movement", () => {
   it("rejects illegal places without corrupting state", () => {
     const s = freshSetup();
     run(s, "start");
-    const posBefore = { ...S.currentActor(s)!.position };
+    const posBefore = { ...currentActor(s)!.position };
     // No movement candidate before a move mode is declared.
     expect(run(s, "place 9 9 ne")[0]).toMatch(/^error: No movement candidate/);
     run(s, "mode walk");
@@ -482,7 +494,7 @@ describe("movement", () => {
     // Far hex (5,5) is not reachable with a 4-MP walk.
     const err = run(s, "place 5 5 n")[0]!;
     expect(err).toMatch(/^error: Hex \(5,5\) is not reachable/);
-    expect(S.currentActor(s)!.position).toEqual(posBefore);
+    expect(currentActor(s)!.position).toEqual(posBefore);
     // A reachable hex whose remaining MP forbids facing s: the hex is a
     // landing, but (hex, s) is not.
     const info = reachablesInfo(s)!;
@@ -498,14 +510,14 @@ describe("movement", () => {
     const [mc, mr] = miss![0].split(",").map(Number);
     const facingErr = run(s, `place ${mc} ${mr} s`)[0]!;
     expect(facingErr).toMatch(/^error: Hex \(\d+,\d+\) is reachable but not while facing s/);
-    expect(S.currentActor(s)!.position).toEqual(posBefore);
+    expect(currentActor(s)!.position).toEqual(posBefore);
   });
 
   it("re-place replaces the queued steps", () => {
     const s = freshSetup();
     run(s, "start");
     run(s, "mode walk");
-    const actor = S.currentActor(s)!;
+    const actor = currentActor(s)!;
     const p = actor.position;
     const info = reachablesInfo(s)!;
     const landings = info.revealed.filter((l) => l.hex.col !== p.col || l.hex.row !== p.row);
@@ -523,14 +535,14 @@ describe("movement", () => {
   });
 
   it("jump place lands with the chosen facing", () => {
-    const s = S.newSession(42);
+    const s = newSession(42);
     s.critsDisabled = true;
     run(s, "map quickstart");
     expect(run(s, "add grf GRF-1N 5 5 n")).toHaveLength(1);
     expect(run(s, "add wvr WVR-6R 12 12 s")).toHaveLength(1);
     run(s, "start");
     run(s, "mode jump");
-    const actor = S.currentActor(s)!;
+    const actor = currentActor(s)!;
     const p = actor.position;
     const info = reachablesInfo(s)!;
     const land = info.revealed.find(
@@ -563,7 +575,7 @@ describe("movement", () => {
       }
     }
     expect(land.path[land.path.length - 1]!.totalMp).toBe(spent);
-    S.placeLanding(s, land);
+    placeLanding(s, land);
     expect(s.move!.placedLanding).toBe(land);
     const out = run(s, `place ${land.hex.col} ${land.hex.row} ${land.facing}`).join("\n");
     expect(out).toMatch(/\d+MP out of \d+MP/);
@@ -578,7 +590,7 @@ describe("movement", () => {
     run(s, "mode walk");
     // Tamper directly with the internal step buffer to force executeMove to
     // throw at commit time (illegal sideways step) rather than at queue time.
-    const actor = S.currentActor(s)!;
+    const actor = currentActor(s)!;
     const beforeSnap = JSON.stringify(s.battle);
     const beforePos = { ...actor.position };
     s.move!.moveSteps.push({ kind: "enter", to: { col: 2, row: 2 } }); // not straight ahead/back
@@ -590,7 +602,7 @@ describe("movement", () => {
   it("shows a clipped reachable hex map on 'mode' except for standstill", () => {
     const s = freshSetup();
     run(s, "start");
-    const actor = S.currentActor(s)!;
+    const actor = currentActor(s)!;
     const ownCoord = `${String(actor.position.col).padStart(2, "0")}${String(
       actor.position.row,
     ).padStart(2, "0")}`;
@@ -621,7 +633,7 @@ describe("movement", () => {
   });
 
   it("shows a clipped reachable hex map for jump", () => {
-    const s = S.newSession(42);
+    const s = newSession(42);
     s.critsDisabled = true;
     // Load a map so the board bounds exist; place two jump-capable 'Mechs
     // far apart on a clear region of the board; either may act first.
@@ -643,7 +655,7 @@ describe("movement", () => {
     const s = freshSetup();
     run(s, "start");
     run(s, "mode walk");
-    const actor = S.currentActor(s)!;
+    const actor = currentActor(s)!;
     const reachable = reachablesInfo(s);
     expect(reachable).not.toBeNull();
     const map = getMapDefFor(s.setup)!;
@@ -676,13 +688,13 @@ describe("attack", () => {
     run(s, "start");
     // Both units walk in place to burn the movement phase.
     while (s.app === "battle" && s.battle!.phase === "movement") {
-      S.declareMode(s, "walk");
-      S.commitMove(s);
+      declareMode(s, "walk");
+      commitMove(s);
     }
     expect(s.battle!.phase).toBe("weaponAttack");
-    expect(S.promptBody(s)).toMatch(/^turn\(1\):attack\(\w+, team \d\)$/);
+    expect(promptBody(s)).toMatch(/^turn\(1\):attack\(\w+, team \d\)$/);
 
-    const actor = S.currentActor(s)!.id;
+    const actor = currentActor(s)!.id;
     const enemy = actor === "hunchy" ? "cicada" : "hunchy";
     expect(run(s, `sheet ${actor}`).join("\n")).toMatch(/#1 .+S\d+\/\s*M\d+\/\s*L\d+/);
 
@@ -702,7 +714,7 @@ describe("attack", () => {
     // First unit declares; no resolution yet (sweep at phase end).
     run(s, "done");
     // Second unit declares and triggers resolution sweep at phase end.
-    const actor2 = S.currentActor(s)!.id;
+    const actor2 = currentActor(s)!.id;
     expect(run(s, `sheet ${actor}`).join("\n")).toMatch(/#1 .+S\d+\/\s*M\d+\/\s*L\d+/);
     expect(run(s, `fire ${actor} 4`).join("\n")).toContain("queued");
     const out = run(s, "done").join("\n");
@@ -723,7 +735,7 @@ describe("attack", () => {
 
 describe("fire range checks", () => {
   it("rejects fire beyond a weapon's long range immediately", () => {
-    const s = S.newSession(42);
+    const s = newSession(42);
     s.critsDisabled = true;
     expect(run(s, "map quickstart")[0]).toContain("15x16");
     // Opposite corners: hex distance 22, beyond every IS weapon here.
@@ -731,10 +743,10 @@ describe("fire range checks", () => {
     expect(run(s, "add cicada CDA-3MA 15 16 s")).toHaveLength(1);
     run(s, "start");
     while (s.app === "battle" && s.battle!.phase === "movement") {
-      S.declareMode(s, "walk");
-      S.commitMove(s);
+      declareMode(s, "walk");
+      commitMove(s);
     }
-    const actor = S.currentActor(s)!.id;
+    const actor = currentActor(s)!.id;
     if (actor === "hunchy") {
       // AC/20 (weapon 4, long 9) cannot reach range 22.
       expect(run(s, "fire cicada 4")[0]).toMatch(/exceeds long range 9/);
@@ -745,7 +757,7 @@ describe("fire range checks", () => {
   });
 
   it("warns inside minimum range and marks the bracket with [S!]", () => {
-    const s = S.newSession(42);
+    const s = newSession(42);
     s.critsDisabled = true;
     expect(run(s, "map quickstart")[0]).toContain("15x16");
     // Adjacent, facing each other along the n/s axis (1-based coords).
@@ -753,16 +765,16 @@ describe("fire range checks", () => {
     expect(run(s, "add griffy GRF-1N 9 8 s")).toHaveLength(1);
     run(s, "start");
     while (s.app === "battle" && s.battle!.phase === "movement") {
-      S.declareMode(s, "walk");
-      S.commitMove(s);
+      declareMode(s, "walk");
+      commitMove(s);
     }
-    const actor = S.currentActor(s)!.id;
+    const actor = currentActor(s)!.id;
     let handoverOut = "";
     if (actor === "hunchy") {
       // Queue hunchy's AC/20 (no min range) and hand the turn over.
       expect(run(s, "fire griffy 4").join("\n")).toContain("queued");
       handoverOut = run(s, "done").join("\n");
-      expect(S.currentActor(s)!.id).toBe("griffy");
+      expect(currentActor(s)!.id).toBe("griffy");
     }
     // Griffy fires its PPC (min 3) at adjacent range 1: warning + queued.
     const ppcOut = run(s, "fire hunchy 1").join("\n");
@@ -782,7 +794,7 @@ describe("eject", () => {
   it("mode eject + done removes the unit, leaves a level-2 wreck, and ends the battle", () => {
     const s = freshSetup();
     run(s, "start");
-    const actor = S.currentActor(s)!;
+    const actor = currentActor(s)!;
     const hex = { ...actor.position };
     expect(run(s, "mode eject")[0]).toMatch(/declares eject \(committed by 'done'\)/);
     expect(s.move!.moveMode).toBe("eject");
@@ -807,7 +819,7 @@ describe("full game", () => {
     let sawBanner = false;
     for (let i = 0; i < 500 && s.app === "battle"; i++) {
       const st = s.battle!;
-      const actorId = S.currentActor(s)!.id;
+      const actorId = currentActor(s)!.id;
       const ids = Object.values(st.units)
         .filter((u) => isUnitAvailable(u))
         .map((u) => u.id);
@@ -838,7 +850,7 @@ describe("full game", () => {
     }
     expect(s.app).toBe("over");
     expect(sawBanner).toBe(true);
-    expect(S.promptBody(s)).toMatch(/^over\(.*won, total turn \d+\)$/);
+    expect(promptBody(s)).toMatch(/^over\(.*won, total turn \d+\)$/);
     expect(run(s, "fire 1 x")[0]).toMatch(/error: unknown command 'fire'/);
 
     run(s, "rematch");
@@ -855,13 +867,13 @@ describe("full game", () => {
 describe("seed", () => {
   it("replays identically for the same seed", () => {
     const transcript = (): string[] => {
-      const s = S.newSession(7);
+      const s = newSession(7);
       s.critsDisabled = true;
       run(s, "map beginner");
       run(s, "add hunchy HBK-4G 9 9 n");
       run(s, "add cicada CDA-3MA 9 8 s");
       run(s, "start");
-      const collected: S.SessionGameEvent[] = [];
+      const collected: SessionGameEvent[] = [];
       autoPlay(s, collected);
       return collected.flatMap((e) =>
         e.kind === "attackResolved"

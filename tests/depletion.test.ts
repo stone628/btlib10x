@@ -22,7 +22,7 @@ import {
   rollInitiativePhase,
   type UnitInit,
 } from "../src/rules/game.js";
-import * as S from "../web/session.js";
+import { commitMove, currentActor, declareMode, newSession, type Session } from "../web/session.js";
 import { createTestBattle, execute, scriptedRng } from "./helpers.js";
 
 const HBK = getMechDef("HBK-4G")!;
@@ -304,8 +304,8 @@ describe("declareAttacks (game level)", () => {
   });
 });
 
-function freshBrawl(): S.Session {
-  const s = S.newSession(42);
+function freshBrawl(): Session {
+  const s = newSession(42);
   s.critsDisabled = true;
   execute(s, "map quickstart");
   execute(s, "add hunchy HBK-4G 9 9 n");
@@ -318,11 +318,11 @@ describe("ammo command (session)", () => {
   it("shows the acting unit's policy, sets it, and rejects gibberish", () => {
     const s = freshBrawl();
     while (s.app === "battle" && s.battle!.phase === "movement") {
-      S.declareMode(s, "walk");
-      S.commitMove(s);
+      declareMode(s, "walk");
+      commitMove(s);
     }
     expect(s.battle!.phase).toBe("weaponAttack");
-    const actor = S.currentActor(s)!.id;
+    const actor = currentActor(s)!.id;
     expect(execute(s, "ammo")[0]).toBe("ammo policy: exposed");
     expect(execute(s, "ammo spread")).toEqual([`${actor}: ammo policy set to spread`]);
     expect(s.battle!.units[actor]!.ammoPolicy).toBe("spread");

@@ -7,10 +7,10 @@ import {
   STAND_MP_COST,
 } from "../src/index.js";
 import { nextAutoPlayCommand, resetAutoplayState } from "../web/autoplay.js";
-import * as S from "../web/session.js";
+import { commitMove, currentActor, declareMode, newSession, type Session } from "../web/session.js";
 import { execute, scriptedRng } from "./helpers.js";
 
-function run(s: S.Session, cmd: string): string[] {
+function run(s: Session, cmd: string): string[] {
   return execute(s, cmd);
 }
 
@@ -19,8 +19,8 @@ function run(s: S.Session, cmd: string): string[] {
  * units have moved), returning the session. The current actor is whoever
  * acts next in the weapon attack phase.
  */
-function sessionAtWeaponAttack(): S.Session {
-  const s = S.newSession(7);
+function sessionAtWeaponAttack(): Session {
+  const s = newSession(7);
   s.critsDisabled = true;
   run(s, "map quickstart");
   run(s, "add hunchy HBK-4G 9 9 n");
@@ -29,8 +29,8 @@ function sessionAtWeaponAttack(): S.Session {
   // Movement phase: both units move (walk), advancing to weapon attack.
   for (let i = 0; i < 2; i++) {
     if (s.battle!.phase === "movement") {
-      S.declareMode(s, "walk");
-      S.commitMove(s);
+      declareMode(s, "walk");
+      commitMove(s);
     }
   }
   return s;
@@ -39,8 +39,8 @@ function sessionAtWeaponAttack(): S.Session {
 /** Build a fresh session at the start of movement phase 1 with `hunchy`
  *  (HBK-4G, walk 4) guaranteed to be the first mover. Per TW p.21 the loser
  *  of initiative moves first, so we force hunchy to LOSE (5 vs 12). */
-function sessionAtMovementStart(): S.Session {
-  const s = S.newSession(7);
+function sessionAtMovementStart(): Session {
+  const s = newSession(7);
   s.critsDisabled = true;
   // Hunchy rolls 5 (2+3), cicada rolls 12 (6+6). Loser-of-initiative moves
   // first, so hunchy becomes the first actor.
@@ -56,7 +56,7 @@ function sessionAtMovementStart(): S.Session {
 
 /** Drain the autoplay queue until a `mode …` command surfaces (or `n` ticks
  *  have elapsed with nothing found). Drops sheet/status/help noise. */
-function nextModeCommand(s: S.Session, n = 8): string | null {
+function nextModeCommand(s: Session, n = 8): string | null {
   for (let i = 0; i < n; i++) {
     const cmd = nextAutoPlayCommand(s);
     if (cmd === null) return null;
@@ -67,7 +67,7 @@ function nextModeCommand(s: S.Session, n = 8): string | null {
 }
 
 /** Mutate the actor on the right leg internal structure (depleted). */
-function destroyLeg(s: S.Session, id: string, leg: "rightLeg" | "leftLeg" = "rightLeg"): void {
+function destroyLeg(s: Session, id: string, leg: "rightLeg" | "leftLeg" = "rightLeg"): void {
   s.battle!.units[id]!.damage.internalStructure[leg] = 0;
 }
 
@@ -77,7 +77,7 @@ describe("nextAutoPlayCommand (autoplay demo driver)", () => {
     resetAutoplayState(s);
     expect(s.battle!.phase).toBe("weaponAttack");
 
-    const actor = S.currentActor(s)!;
+    const actor = currentActor(s)!;
     const def = getMechDefFor(actor);
     // Find a plain (non-ammo) weapon mount on the acting unit and mark it
     // destroyed, simulating a prior-turn critical-slot hit.
@@ -107,7 +107,7 @@ describe("nextAutoPlayCommand (autoplay demo driver)", () => {
     resetAutoplayState(s);
     expect(s.battle!.phase).toBe("weaponAttack");
 
-    const actor = S.currentActor(s)!;
+    const actor = currentActor(s)!;
     const enemyId = actor.id === "hunchy" ? "cicada" : "hunchy";
     const enemy = s.battle!.units[enemyId]!;
     // Push the enemy up the column (long range) with heavy movement (+6):
@@ -160,7 +160,7 @@ describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
     expect(cmd).toBe("mode pronestill");
     const out = run(s, "mode pronestill");
     expect(out[0]).not.toMatch(/^error:/);
-    expect(() => S.commitMove(s)).not.toThrow();
+    expect(() => commitMove(s)).not.toThrow();
   });
 
   it("mobile + prone + walk budget < STAND_MP_COST: emits `mode pronestill`", () => {

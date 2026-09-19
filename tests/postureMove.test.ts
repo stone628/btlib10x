@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { neighbor } from "../src/core/hex.js";
 import { executeMove, requireUnit, rollInitiativePhase } from "../src/rules/game.js";
-import * as S from "../web/session.js";
+import { budgetFor, currentActor, newSession, type Session } from "../web/session.js";
 import { createTestBattle, execute, scriptedRng } from "./helpers.js";
 
-function run(s: S.Session, cmd: string): string[] {
+function run(s: Session, cmd: string): string[] {
   return execute(s, cmd);
 }
 
 /** Started quickstart battle; returns session plus acting-unit id. */
-function started(piloting?: number, model = "HBK-4G"): { s: S.Session; actor: string } {
-  const s = S.newSession(7);
+function started(piloting?: number, model = "HBK-4G"): { s: Session; actor: string } {
+  const s = newSession(7);
   s.critsDisabled = true;
   expect(run(s, "map quickstart")[0]).toContain("15x16");
   const pilotArg = piloting === undefined ? "" : ` ${piloting}`;
@@ -19,15 +19,15 @@ function started(piloting?: number, model = "HBK-4G"): { s: S.Session; actor: st
   expect(run(s, `add hunchy ${model} 9 9 n${pilotArg}`)).toHaveLength(1);
   expect(run(s, `add cicada ${model} 9 8 s${pilotArg}`)).toHaveLength(1);
   expect(run(s, "start")[0]).toContain("BATTLE STARTED");
-  return { s, actor: S.currentActor(s)!.id };
+  return { s, actor: currentActor(s)!.id };
 }
 
-function forceProne(s: S.Session, id: string): void {
+function forceProne(s: Session, id: string): void {
   s.battle!.units[id]!.prone = true;
 }
 
 /** First candidate landing with actual steps (skips the in-place facing set). */
-function steppedLanding(s: S.Session): { col: number; row: number; facing: string; spent: number } {
+function steppedLanding(s: Session): { col: number; row: number; facing: string; spent: number } {
   const landings = s.move!.moveCandidate!.revealed;
   const landing = landings.find((l: { path: readonly unknown[] }) => l.path.length > 0)!;
   expect(landing).toBeDefined();
@@ -46,7 +46,7 @@ describe("posture-change then move", () => {
     expect(run(s, "mode drop")[0]).toMatch(/^error:/);
     expect(run(s, "mode crawl")[0]).toMatch(/^error:/);
     expect(run(s, "mode crawl")[0]).toMatch(/valid modes:/);
-    forceProne(s, S.currentActor(s)!.id);
+    forceProne(s, currentActor(s)!.id);
     expect(run(s, "mode standup foo")[0]).toMatch(/^error:/);
     expect(run(s, "mode walk")[0]).toMatch(/valid modes:/);
   });
@@ -244,7 +244,7 @@ describe("posture-change then move", () => {
     const { s, actor } = started(0);
     forceProne(s, actor);
     run(s, "mode standup walk");
-    const budget = S.budgetFor(s);
+    const budget = budgetFor(s);
     for (const landing of s.move!.moveCandidate!.revealed) {
       const last = landing.path[landing.path.length - 1];
       expect(last?.totalMp ?? 0).toBeLessThanOrEqual(budget);
