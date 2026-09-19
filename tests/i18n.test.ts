@@ -19,7 +19,6 @@ import {
   currentActor,
   declareMode,
   newSession,
-  passFire,
   placeLanding,
   queueFire,
 } from "../web/session.js";
@@ -109,9 +108,9 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
         queueFire(s, { weaponIndex: w.weaponIndex, targetId: enemy });
       }
       if ((s.attack?.fireDecls ?? []).length === 0) {
-        passFire(s);
         faceEnemy = true;
-      } else commitFire(s);
+      }
+      commitFire(s);
     }
   }
   if (s.app !== "over") throw new Error("battle did not finish");
