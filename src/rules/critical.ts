@@ -898,17 +898,17 @@ function* iterateDestoyedStructures(
  * Engine `total` is fixed at 3 per TW (matches the destroy threshold in
  * `applySlotHit`); the other totals derive from the def's crit layout.
  */
-export interface CoreComponentStatus {
+export interface ComponentHitStatus {
   readonly engine: number;
   readonly gyro: number;
   readonly sensors: number;
   readonly lifeSupport: number;
 }
 
-export function coreComponentStatus(
+export function componentHitStatus(
   def: ResolvedMechDef,
   critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
-): CoreComponentStatus {
+): ComponentHitStatus {
   let engineDestoryed = 0;
   let gyroDestroyed = 0;
   let sensorDestroyed = 0;

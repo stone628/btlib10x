@@ -147,7 +147,7 @@ export {
 export { CLUSTER_COLUMNS, CLUSTER_TABLE, clusterHits, groupMissiles } from "./rules/cluster.js";
 export type {
   CaseKind,
-  CoreComponentStatus,
+  ComponentHitStatus as CoreComponentStatus,
   CriticalEffect,
   CriticalResolution,
   CritSource,
@@ -157,7 +157,7 @@ export {
   ammoDamagePerShot,
   applyAmmoExplosion,
   checkCASE,
-  coreComponentStatus,
+  componentHitStatus as coreComponentStatus,
   countDestroyedEngine,
   countDestroyedSensor,
   ENGINE_SLOTS_KILL,
