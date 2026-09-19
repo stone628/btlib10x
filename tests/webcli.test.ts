@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { getMapDef, getMapDefFor, getMechDefFor } from "../src/data/index.js";
 import {
   bestFireTarget,
-  type GameEvent,
   isNominal,
   isUnitAvailable,
   isUnitRemoved,
@@ -53,7 +52,7 @@ function fireEverything(s: S.Session, enemy: string): void {
 
 /** Drive a started battle until it is over using minimal legal actions.
  *  Transient commit events accumulate into `collected` when provided. */
-function autoPlay(s: S.Session, collected?: GameEvent[]): void {
+function autoPlay(s: S.Session, collected?: S.SessionGameEvent[]): void {
   for (let i = 0; i < 500 && s.app === "battle"; i++) {
     const st = s.battle!;
     const actorId = S.currentActor(s)!.id;
@@ -81,15 +80,15 @@ function autoPlay(s: S.Session, collected?: GameEvent[]): void {
       // NOTE: never place the commit call inside the `?.push(...)`
       // arguments — a nullish collector short-circuits the call itself.
       const moveRes = S.commitMove(s);
-      collected?.push(...moveRes.newEvents);
+      collected?.push(...moveRes.events);
     } else {
       fireEverything(s, enemy);
       if ((s.attack?.fireDecls ?? []).length === 0) {
         const passRes = S.passFire(s);
-        collected?.push(...passRes.newEvents);
+        collected?.push(...passRes.events);
       } else {
         const fireRes = S.commitFire(s);
-        collected?.push(...fireRes.newEvents);
+        collected?.push(...fireRes.events);
       }
     }
   }
@@ -862,7 +861,7 @@ describe("seed", () => {
       run(s, "add hunchy HBK-4G 9 9 n");
       run(s, "add cicada CDA-3MA 9 8 s");
       run(s, "start");
-      const collected: GameEvent[] = [];
+      const collected: S.SessionGameEvent[] = [];
       autoPlay(s, collected);
       return collected.flatMap((e) =>
         e.kind === "attackResolved"

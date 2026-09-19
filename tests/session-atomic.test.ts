@@ -62,7 +62,7 @@ describe("commitAtomic rollback", () => {
     s.move!.moveSteps = [];
     const res = S.commitMove(s);
     expect(res.state).toBe(s.battle);
-    expect(res.newEvents.length).toBeGreaterThan(0);
+    expect(res.events.length).toBeGreaterThan(0);
     expect(s.battle!.units[actor]!.prone).toBe(false);
     expect(rng.remaining()).toBe(2);
   });
@@ -114,8 +114,8 @@ describe("commitAtomic rollback", () => {
     S.declareMode(s, "walk");
     const res = S.commitMove(s);
     expect(res.state).toBe(s.battle);
-    expect(res.newEvents.length).toBeGreaterThan(0);
-    expect(res.newEvents.some((e) => e.kind === "moveDeclared")).toBe(true);
+    expect(res.events.length).toBeGreaterThan(0);
+    expect(res.events.some((e) => e.kind === "moveDeclared")).toBe(true);
     expect(S.currentActor(s)?.id).not.toBe(actor);
   });
 });
