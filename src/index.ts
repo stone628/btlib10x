@@ -238,6 +238,7 @@ export {
   resolvePhasePiloting,
   rollInitiativePhase,
   STAND_MP_COST,
+  validateAttacks,
   voluntaryShutdown,
   WRECK_COVER_BY_LEVEL,
   WRECK_L2_ELEVATED_COVER_MOD,

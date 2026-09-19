@@ -18,24 +18,14 @@ import type {
   UnitState,
 } from "btlib10x";
 import {
-  ammoWeaponTotals,
   attemptStandUp,
   attemptVoluntaryStartup,
-  bearingExact,
-  binsForWeapon,
-  binsForWeaponName,
-  canFireFromLocation,
-  cellAt,
-  classifyArcWithBoundary,
-  computeToHit,
-  countDestroyedSensor,
   createBattle,
   DEFAULT_GUNNERY,
   DEFAULT_PILOTING,
   DROP_MP_COST,
   declareAttacks,
   dropProne,
-  effectiveFacingForTwist,
   effectiveMoveBudget,
   effectiveMovement,
   ejectPilot,
@@ -44,29 +34,19 @@ import {
   gameLoop,
   getMapDefFor,
   getMechDefFor,
-  getWeaponDefFor,
-  hexDistance,
-  isImmobile,
   isShutdown,
   isUnitImmobile,
   isUnitRemoved,
-  losClear,
-  losWoodsPointsBetween,
   neighbor,
   oppositeFacing,
   parseAmmoPolicy,
-  partialCoverMod,
   passMovement,
-  pooledShotsLeft,
   requireUnit,
   rotateFacing,
   STAND_MP_COST,
   sameHex,
-  sensorAttackModifier,
-  sensorsBlind,
-  toHitHeatModifier,
+  validateAttacks,
   voluntaryShutdown,
-  weaponCanFireIntoArc,
 } from "btlib10x";
 import type { LocaleId } from "./i18n/index.js";
 import { i18n } from "./i18n/index.js";
@@ -1065,131 +1045,6 @@ export function commitMove(s: Session): CommitResult {
 
 // -------------------------------------------------------------- attacks ----
 
-/**
- * Read-only mirror of `declareAttacks` gates (no ammo consumed, no state
- * mutated): rejects illegal weapons at queue time so `commitFire` cannot
- * fail on a weapon the suggestion showed as blocked. `declareAttacks`
- * re-validates atomically at commit.
- */
-function validateQueuedAttacks(
-  battle: BattleState,
-  unit: UnitState,
-  decls: readonly AttackDecl[],
-  twist: Arc,
-): void {
-  if (isUnitRemoved(unit)) throw new Error(`${unit.id} is destroyed`);
-  if (isShutdown(unit)) throw new Error(`${unit.id} is shut down and cannot fire`);
-  if (unit.unconscious) throw new Error(`${unit.id} is unconscious and cannot fire`);
-  if (unit.declaredAttacks.length > 0)
-    throw new Error(`${unit.id} already declared attacks this turn`);
-  const def = getMechDefFor(unit);
-  const sensorsOut = countDestroyedSensor(def, unit.critSlotsDestroyed);
-  if (sensorsBlind(sensorsOut)) {
-    throw new Error(`${unit.id} cannot fire: sensors destroyed (no weapon attacks)`);
-  }
-  const sensorMod = sensorAttackModifier(sensorsOut);
-  const effectiveFacing = effectiveFacingForTwist(unit.facing, twist);
-  let targetId: string | null = null;
-  const seen = new Set<number>();
-  for (const decl of decls) {
-    const mount = def.weapons[decl.weaponIndex];
-    if (!mount) throw new Error(`weaponIndex ${decl.weaponIndex} out of range for ${unit.id}`);
-    const weapon = getWeaponDefFor(mount);
-    if (seen.has(decl.weaponIndex)) {
-      throw new Error(`${mount.weapon} on ${unit.id} may only be declared once per turn`);
-    }
-    seen.add(decl.weaponIndex);
-    if (unit.jammedWeapons.includes(decl.weaponIndex)) {
-      throw new Error(`${mount.weapon} on ${unit.id} is jammed`);
-    }
-    if (unit.destroyedWeapons.includes(decl.weaponIndex)) {
-      throw new Error(`${mount.weapon} on ${unit.id} is destroyed by a critical hit`);
-    }
-    if (!canFireFromLocation(unit.phaseStartDamage, mount.location)) {
-      throw new Error(
-        `${mount.weapon} location (${mount.location}) is destroyed or its support torso is gone`,
-      );
-    }
-    if (unit.prone && (mount.location === "rightLeg" || mount.location === "leftLeg")) {
-      throw new Error(`${mount.weapon} on ${unit.id} cannot fire while prone (leg-mounted)`);
-    }
-    const rapidFire = decl.rapidFire ?? false;
-    if (rapidFire && weapon.rapidFireShots === undefined) {
-      throw new Error(`${mount.weapon} is not rapid-fire`);
-    }
-    const shots = rapidFire ? (weapon.rapidFireShots ?? 1) : 1;
-    if (targetId === null) targetId = decl.targetId;
-    else if (targetId !== decl.targetId) {
-      throw new Error("A unit may only declare attacks against one target per turn");
-    }
-    const target = battle.units[decl.targetId];
-    if (!target) throw new Error(`Unknown unit id: ${decl.targetId}`);
-    if (isUnitRemoved(target)) throw new Error(`Target ${target.id} is removed from play`);
-    if (target.team === unit.team) throw new Error("Target must belong to another team");
-    const dist = hexDistance(unit.position, target.position);
-    const b = bearingExact(unit.position, target.position);
-    if (b === null) throw new Error("Attacker and target share a hex");
-    const fireArc = classifyArcWithBoundary(effectiveFacing, b);
-    const rearFacing = mount.rearFacing === true;
-    const inArc =
-      weaponCanFireIntoArc(mount.location, rearFacing, fireArc.arc) ||
-      (fireArc.altArc !== null && weaponCanFireIntoArc(mount.location, rearFacing, fireArc.altArc));
-    if (!inArc) {
-      throw new Error(
-        `${mount.weapon} on ${unit.id} cannot fire into the ${fireArc.arc} arc (target outside its firing arc)`,
-      );
-    }
-    const woodsPoints = losWoodsPointsBetween(battle, unit.position, target.position);
-    if (!losClear(battle, unit.position, target.position, battle.wrecks)) {
-      throw new Error("Line of sight is blocked");
-    }
-    if (dist > weapon.long) {
-      throw new Error(`${mount.weapon}: target at range ${dist} exceeds long range ${weapon.long}`);
-    }
-    const breakdown = computeToHit({
-      gunnery: unit.gunnery,
-      attackerMovement: unit.moveMode ?? "standStill",
-      attackerProne: unit.prone,
-      sensorMod,
-      targetHexesMoved: target.movesThisTurn.length,
-      targetJumped: target.jumpedThisTurn,
-      targetImmobile: isImmobile(target),
-      targetProne: target.prone,
-      targetTerrain: cellAt(battle, target.position).terrain,
-      partialCoverMod: partialCoverMod(battle, unit, target),
-      interveningWoods: woodsPoints,
-      distance: dist,
-      weapon,
-      attackerLevel: cellAt(battle, unit.position).level,
-      targetLevel: cellAt(battle, target.position).level,
-      heatMod: toHitHeatModifier(unit.heat),
-    });
-    if (breakdown.automatic === "miss") {
-      throw new Error(
-        `${mount.weapon}: modified TN ${breakdown.total} auto-misses; abort the declaration instead`,
-      );
-    }
-    const needed = weapon.missiles !== undefined ? 1 : shots;
-    if (binsForWeapon(def, decl.weaponIndex).length > 0) {
-      const left = ammoWeaponTotals(def, unit.ammoBins)[decl.weaponIndex] ?? 0;
-      if (left < needed) {
-        throw new Error(`${mount.weapon}: needs ${needed} shot(s) but only ${left} remain`);
-      }
-    } else if (binsForWeaponName(def, weapon.name).length > 0) {
-      if (pooledShotsLeft(def, unit.ammoBins, weapon.name) < needed) {
-        throw new Error(`${mount.weapon}: needs ${needed} shot(s) but pool is empty`);
-      }
-    }
-  }
-  if (unit.prone) {
-    const hasLeft = decls.some((d) => def.weapons[d.weaponIndex]?.location === "leftArm");
-    const hasRight = decls.some((d) => def.weapons[d.weaponIndex]?.location === "rightArm");
-    if (hasLeft && hasRight) {
-      throw new Error(`${unit.id} cannot fire while prone (volley uses both arms; prop one)`);
-    }
-  }
-}
-
 export function queueFire(s: Session, decl: AttackDecl): void {
   const unit = requireActor(s, "weaponAttack");
   const battle = requireBattle(s);
@@ -1207,7 +1062,7 @@ export function queueFire(s: Session, decl: AttackDecl): void {
   if (a.fireDecls.some((d) => d.weaponIndex === decl.weaponIndex)) {
     throw new Error(i18n(s.locale, "err.weaponRepeated", { weapon: decl.weaponIndex }));
   }
-  validateQueuedAttacks(battle, unit, [...a.fireDecls, decl], a.torsoTwist);
+  validateAttacks(battle, unit.id, [...a.fireDecls, decl], { twist: a.torsoTwist });
   a.fireDecls.push(decl);
 }
 
@@ -1236,7 +1091,6 @@ export function commitFire(s: Session): CommitResult {
       );
     });
   } else {
-    validateQueuedAttacks(battle, actor, live.fireDecls, live.torsoTwist);
     commitAtomic(s, () => {
       const collected: GameEvent[] = [];
       declareAttacks(battle, unitId, live.fireDecls, collected, s.rng, {

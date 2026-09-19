@@ -601,6 +601,7 @@ ejectPilot(state, unitId, sink: GameEvent[]): void                      // movem
 voluntaryShutdown(state, unitId, sink: GameEvent[], rng?): void        // movement phase only: shuts down ("manual") plus the immediate +3 shutdown PSR
 attemptVoluntaryStartup(state, unitId, sink: GameEvent[], rng?): void  // startup attempt after a manual shutdown
 declareAttacks(state, unitId, decls, sink: GameEvent[], rng?): void    // weaponAttack phase only
+validateAttacks(state, unitId, decls, { twist? }?): void               // read-only gate check; throws on any rule violation without mutating state or emitting events. Returns the resolved volley metadata via `validateAttacksImpl`.
 resolveAllAttacks(state, rng, sink: GameEvent[]): void                  // resolves every unit's declared attacks simultaneously, then runs the end-of-phase piloting sweep
 applyFall(state, unitId, rng, opts, sink: GameEvent[]): void
 applyPilotHits(state, unitId, hits, reason, rng, sink: GameEvent[]): void  // pilot damage + consciousness rolls
