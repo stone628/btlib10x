@@ -59,7 +59,6 @@ import {
   displayModeFor,
   parseMoveMode,
   parseUnitProp,
-  passFire,
   placeLanding,
   queueFire,
   rematch,
@@ -566,14 +565,6 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
   done: {
     helpKey: "cmd.doneFire.help",
     run: (s) => {
-      const decls = s.attack?.fireDecls ?? [];
-      if (decls.length === 0) {
-        const unit = currentActor(s);
-        const result = passFire(s);
-        const passLine = unit ? i18n(s.locale, "log.attacksPassed", { id: unit.id }) : "";
-        const rest = formatLog(s.locale, result.events);
-        return passLine ? [passLine, ...rest] : rest;
-      }
       return formatLog(s.locale, commitFire(s).events);
     },
   },

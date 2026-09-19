@@ -23,7 +23,6 @@ import {
   currentActor,
   declareMode,
   newSession,
-  passFire,
   placeLanding,
   promptBody,
   queueFire,
@@ -95,13 +94,10 @@ function autoPlay(s: Session, collected?: SessionGameEvent[]): void {
       collected?.push(...moveRes.events);
     } else {
       fireEverything(s, enemy);
-      if ((s.attack?.fireDecls ?? []).length === 0) {
-        const passRes = passFire(s);
-        collected?.push(...passRes.events);
-      } else {
-        const fireRes = commitFire(s);
-        collected?.push(...fireRes.events);
-      }
+      // NOTE: never place the commit call inside the `?.push(...)`
+      // arguments — a nullish collector short-circuits the call itself.
+      const fireRes = commitFire(s);
+      collected?.push(...fireRes.events);
     }
   }
   expect(s.app).toBe("over");

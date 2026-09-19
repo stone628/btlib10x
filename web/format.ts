@@ -2197,10 +2197,19 @@ function eventLines(locale: LocaleId, e: SessionGameEvent): string[] {
       return lines;
     }
     case "sessionMoveActor": {
-      return [`tempLine: session move actor(${e.actorId})`];
+      return [`&&&& session move actor(${e.actorId})`];
+    }
+    case "sessionMoveActorDone": {
+      return [`&&&& session move actor(${e.actorId})`];
     }
     case "sessionAttackActor": {
-      return [`tempLine: session attack actor(${e.actorId})`];
+      return [`&&&& session attack actor(${e.actorId})`];
+    }
+    case "sessionAttackActorDone": {
+      if (e.pass) {
+        return [i18n(locale, "log.attacksPassed", { id: e.actorId })];
+      }
+      return [`&&&& session attack actor(${e.actorId}) pass(${e.pass})`];
     }
     default: {
       // Exhaustiveness guard: adding a GameEvent kind must add a case above.
