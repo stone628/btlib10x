@@ -144,6 +144,17 @@ export interface OverContext {
   victory: SessionVictoryResult;
 }
 
+export type SessionGameEvent =
+  | GameEvent
+  | {
+      readonly kind: "sessionMoveActor";
+      readonly actorId: string;
+    }
+  | {
+      readonly kind: "sessionAttackActor";
+      readonly actorId: string;
+    };
+
 export interface Session {
   app: AppState;
   /** Output language (UI preference; preserved across reset/rematch). */
@@ -238,7 +249,7 @@ export function checkSessionVictory(state: BattleState): SessionVictoryResult | 
  * populated. A fresh `AttackContext` starts with `torsoTwist: "front"`,
  * subsuming the prior "phase entry reset" step.
  */
-function drive(s: Session): GameEvent[] {
+function drive(s: Session): SessionGameEvent[] {
   const battle = s.battle;
   if (!battle) return [];
   const v: SessionVictoryResult[] = [];
@@ -261,23 +272,26 @@ function drive(s: Session): GameEvent[] {
     s.app = "over";
     s.over = { victory };
     clearContexts(s);
-  } else {
-    s.app = "battle";
-    const id = r.actorId;
-    if (id !== null) {
-      const inMovement = battle.phase === "movement";
-      const moveOutdated = s.move === null || s.move.actorId !== id || !inMovement;
-      const attackOutdated = s.attack === null || s.attack.actorId !== id || inMovement;
-      if (moveOutdated && attackOutdated) {
-        clearContexts(s);
-      }
-      if (inMovement && (s.move === null || s.move.actorId !== id)) {
-        s.move = newMoveContext(id);
-        s.attack = null;
-      } else if (!inMovement && (s.attack === null || s.attack.actorId !== id)) {
-        s.attack = newAttackContext(id);
-        s.move = null;
-      }
+    return collected;
+  }
+  s.app = "battle";
+  const id = r.actorId;
+  if (id !== null) {
+    const inMovement = battle.phase === "movement";
+    const moveOutdated = s.move === null || s.move.actorId !== id || !inMovement;
+    const attackOutdated = s.attack === null || s.attack.actorId !== id || inMovement;
+    if (moveOutdated && attackOutdated) {
+      clearContexts(s);
+    }
+    if (inMovement && (s.move === null || s.move.actorId !== id)) {
+      s.move = newMoveContext(id);
+      s.attack = null;
+      return [...collected, { kind: "sessionMoveActor", actorId: s.move.actorId }];
+    }
+    if (!inMovement && (s.attack === null || s.attack.actorId !== id)) {
+      s.attack = newAttackContext(id);
+      s.move = null;
+      return [...collected, { kind: "sessionAttackActor", actorId: s.attack.actorId }];
     }
   }
   return collected;
@@ -518,7 +532,7 @@ function battleOptions(s: Session): CreateBattleOptions {
   };
 }
 
-export function startBattle(s: Session): GameEvent[] {
+export function startBattle(s: Session): SessionGameEvent[] {
   if (s.app !== "setup") throw new Error(i18n(s.locale, "err.alreadyStarted"));
   if (s.setup.roster.length < 2) throw new Error(i18n(s.locale, "err.needTwoUnits"));
   const teams = new Set(s.setup.roster.map((u) => u.team));
@@ -904,7 +918,7 @@ export function cancelMove(s: Session): void {
 
 export interface CommitResult {
   state: BattleState;
-  newEvents: GameEvent[];
+  events: SessionGameEvent[];
 }
 
 /**
@@ -965,12 +979,13 @@ function commitAtomic(s: Session, fn: () => void): void {
 export function commitMove(s: Session): CommitResult {
   const actor = requireActor(s, "movement");
   const unitId = actor.id;
-  let newEvents: GameEvent[] = [];
+  const newEvents: SessionGameEvent[] = [];
   commitAtomic(s, () => {
-    const collected: GameEvent[] = [];
+    // const collected: GameEvent[] = [];
     const battle = requireBattle(s);
     const unit = requireUnit(battle, unitId);
     const m = requireMove(s);
+    const collected: GameEvent[] = [];
     if (m.moveMode === "shutdown") {
       voluntaryShutdown(battle, unitId, collected);
     } else if (m.moveMode === "startup") {
@@ -989,20 +1004,14 @@ export function commitMove(s: Session): CommitResult {
       const finalFacing = m.moveFinalFacing;
       attemptStandUp(battle, unitId, collected, s.rng);
       const after = battle.units[unitId]!;
-      if (after.prone) {
-        // Failed stand: queued place discarded, drive() reallocates the
-        // next context (the actor is gone for this turn).
-        clearContexts(s);
-        collected.push(...drive(s));
-        newEvents = collected;
-        return;
-      }
-      if (steps.length > 0 || finalFacing !== null) {
-        const posture = STAND_MP_COST;
-        executeMove(battle, unitId, locomotion, steps, collected, {
-          ...(finalFacing === null ? { rng: s.rng } : { finalFacing, rng: s.rng }),
-          spentMP: posture,
-        });
+      if (!after.prone) {
+        if (steps.length > 0 || finalFacing !== null) {
+          const posture = STAND_MP_COST;
+          executeMove(battle, unitId, locomotion, steps, collected, {
+            ...(finalFacing === null ? { rng: s.rng } : { finalFacing, rng: s.rng }),
+            spentMP: posture,
+          });
+        }
       }
     } else if (m.moveMode === "prone") {
       const steps = m.moveSteps;
@@ -1037,10 +1046,10 @@ export function commitMove(s: Session): CommitResult {
       );
     }
     clearContexts(s);
-    collected.push(...drive(s));
-    newEvents = collected;
+    newEvents.push(...collected);
+    newEvents.push(...drive(s));
   });
-  return { state: requireBattle(s), newEvents };
+  return { state: requireBattle(s), events: newEvents };
 }
 
 // -------------------------------------------------------------- attacks ----
@@ -1053,13 +1062,13 @@ export function cancelFire(s: Session): void {
 export function passFire(s: Session): CommitResult {
   const actor = requireActor(s, "weaponAttack");
   const unitId = actor.id;
-  let newEvents: GameEvent[] = [];
+  const newEvents: SessionGameEvent[] = [];
   commitAtomic(s, () => {
     requireUnit(requireBattle(s), unitId).passedAttacks = true;
     clearContexts(s);
-    newEvents = drive(s);
+    newEvents.push(...drive(s));
   });
-  return { state: requireBattle(s), newEvents };
+  return { state: requireBattle(s), events: newEvents };
 }
 
 /**
@@ -1215,7 +1224,7 @@ export function commitFire(s: Session): CommitResult {
   const a = requireAttack(s);
   if (a.fireDecls.length === 0) throw new Error(i18n(s.locale, "err.noAttacksQueued"));
   validateQueuedAttacks(battle, actor, a.fireDecls, a.torsoTwist);
-  let newEvents: GameEvent[] = [];
+  const newEvents: SessionGameEvent[] = [];
   commitAtomic(s, () => {
     const collected: GameEvent[] = [];
     const live = requireAttack(s);
@@ -1223,10 +1232,10 @@ export function commitFire(s: Session): CommitResult {
       twist: live.torsoTwist,
     });
     clearContexts(s);
-    collected.push(...drive(s));
-    newEvents = collected;
+    newEvents.push(...collected);
+    newEvents.push(...drive(s));
   });
-  return { state: requireBattle(s), newEvents };
+  return { state: requireBattle(s), events: newEvents };
 }
 
 /**
@@ -1267,7 +1276,7 @@ export function setAmmoPolicy(s: Session, word: string): void {
 
 // ------------------------------------------------------------ lifecycle ----
 
-export function rematch(s: Session): GameEvent[] {
+export function rematch(s: Session): SessionGameEvent[] {
   if (s.app !== "over") throw new Error(i18n(s.locale, "err.rematchOnlyOver"));
   s.rng = createRng(s.setup.seed);
   s.battle = createBattle(getMapDefFor(s.setup), s.setup.roster, battleOptions(s));

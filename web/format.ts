@@ -93,7 +93,14 @@ import {
   createEjectedBoardRenderUnits,
   getBoardRenderer,
 } from "./render.js";
-import { budgetFor, currentActor, displayModeFor, fullBudgetFor, type Session } from "./session.js";
+import {
+  budgetFor,
+  currentActor,
+  displayModeFor,
+  fullBudgetFor,
+  type Session,
+  type SessionGameEvent,
+} from "./session.js";
 
 const SHEET_FACING_KEYS: Readonly<Record<Facing, MessageKey>> = {
   n: "sheet.facing.n",
@@ -1834,23 +1841,23 @@ export function fireSuggestionChunks(
 // ------------------------------------------------------------------ log ----
 export function formatLog(
   locale: LocaleId,
-  events: readonly GameEvent[],
+  events: readonly SessionGameEvent[],
   n: number = events.length,
 ): string[] {
   const slice = events.slice(-n);
   if (slice.length === 0) return [];
   const lines: string[] = [];
-  let prev: GameEvent | null = null;
+  let prev: SessionGameEvent | null = null;
   let removedLines: string[] = [];
   let lastUnitPrefix: string = "";
-  const onEnterEvent = (prev: GameEvent | null, curr: GameEvent): void => {
+  const onEnterEvent = (prev: SessionGameEvent | null, curr: SessionGameEvent): void => {
     if (isAttackResolutionKind(curr.kind)) {
       if (prev === null || !isAttackResolutionKind(prev.kind)) {
         lines.push(i18n(locale, "res.attackResolutionStart"));
       }
     }
   };
-  const onEvent = (event: GameEvent): void => {
+  const onEvent = (event: SessionGameEvent): void => {
     const el = eventLines(locale, event);
     if (isAttackResolutionKind(event.kind)) {
       switch (event.kind) {
@@ -1877,7 +1884,7 @@ export function formatLog(
     }
     lines.push(...el);
   };
-  const onExitEvent = (curr: GameEvent, next: GameEvent | null): void => {
+  const onExitEvent = (curr: SessionGameEvent, next: SessionGameEvent | null): void => {
     if (isAttackResolutionKind(curr.kind)) {
       if (next === null || !isAttackResolutionKind(next.kind)) {
         lines.push(i18n(locale, "res.attackResolutionEnd"));
@@ -1890,7 +1897,7 @@ export function formatLog(
   };
   for (let i = 0; i < slice.length; i++) {
     const e = slice[i]!;
-    const prevKind: GameEvent["kind"] | null = prev === null ? null : prev.kind;
+    const prevKind: SessionGameEvent["kind"] | null = prev === null ? null : prev.kind;
     const currKind = e.kind;
 
     if (prevKind !== currKind) {
@@ -1904,7 +1911,7 @@ export function formatLog(
   return lines;
 }
 
-function isAttackResolutionKind(kind: GameEvent["kind"] | null): boolean {
+function isAttackResolutionKind(kind: SessionGameEvent["kind"] | null): boolean {
   return (
     kind === "attackResolved" ||
     kind === "unitDestroyed" ||
@@ -1922,7 +1929,7 @@ function phaseLines(locale: LocaleId, e: Extract<GameEvent, { kind: "phase" }>):
   return [" ", separator, phaseLine, separator, " "];
 }
 
-function eventLines(locale: LocaleId, e: GameEvent): string[] {
+function eventLines(locale: LocaleId, e: SessionGameEvent): string[] {
   switch (e.kind) {
     case "phase":
       return phaseLines(locale, e);
@@ -2188,6 +2195,12 @@ function eventLines(locale: LocaleId, e: GameEvent): string[] {
         for (const line of critLines(locale, crit)) lines.push(`  ${line}`);
       }
       return lines;
+    }
+    case "sessionMoveActor": {
+      return [`tempLine: session move actor(${e.actorId})`];
+    }
+    case "sessionAttackActor": {
+      return [`tempLine: session attack actor(${e.actorId})`];
     }
     default: {
       // Exhaustiveness guard: adding a GameEvent kind must add a case above.

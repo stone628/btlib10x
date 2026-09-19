@@ -447,7 +447,7 @@ const MOVE_CMDS: Record<string, CmdDef> = {
   },
   done: {
     helpKey: "cmd.doneMove.help",
-    run: (s) => formatLog(s.locale, commitMove(s).newEvents),
+    run: (s) => formatLog(s.locale, commitMove(s).events),
   },
   ...BATTLE_CMDS,
 };
@@ -571,10 +571,10 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
         const unit = currentActor(s);
         const result = passFire(s);
         const passLine = unit ? i18n(s.locale, "log.attacksPassed", { id: unit.id }) : "";
-        const rest = formatLog(s.locale, result.newEvents);
+        const rest = formatLog(s.locale, result.events);
         return passLine ? [passLine, ...rest] : rest;
       }
-      return formatLog(s.locale, commitFire(s).newEvents);
+      return formatLog(s.locale, commitFire(s).events);
     },
   },
   ...BATTLE_CMDS,
