@@ -1,28 +1,35 @@
 import { describe, expect, it } from "vitest";
-import * as S from "../web/session.js";
+import {
+  commitFire,
+  commitMove,
+  currentActor,
+  declareMode,
+  newSession,
+  type Session,
+} from "../web/session.js";
 import { execute, scriptedRng } from "./helpers.js";
 
-function run(s: S.Session, cmd: string): string[] {
+function run(s: Session, cmd: string): string[] {
   return execute(s, cmd);
 }
 
 /** Started quickstart battle; returns session plus acting-unit id. */
-function started(piloting?: number): { s: S.Session; actor: string } {
-  const s = S.newSession(7);
+function started(piloting?: number): { s: Session; actor: string } {
+  const s = newSession(7);
   s.critsDisabled = true;
   expect(run(s, "map quickstart")[0]).toContain("15x16");
   const pilotArg = piloting === undefined ? "" : ` ${piloting}`;
   expect(run(s, `add hunchy HBK-4G 9 9 n${pilotArg}`)).toHaveLength(1);
   expect(run(s, `add cicada HBK-4G 9 8 s${pilotArg}`)).toHaveLength(1);
   expect(run(s, "start")[0]).toContain("BATTLE STARTED");
-  return { s, actor: S.currentActor(s)!.id };
+  return { s, actor: currentActor(s)!.id };
 }
 
 /** Drain the movement phase by walking in place until the weapon phase opens. */
-function burnMovePhase(s: S.Session): void {
+function burnMovePhase(s: Session): void {
   while (s.app === "battle" && s.battle!.phase === "movement") {
-    S.declareMode(s, "walk");
-    S.commitMove(s);
+    declareMode(s, "walk");
+    commitMove(s);
   }
 }
 
@@ -41,7 +48,7 @@ describe("commitAtomic rollback", () => {
     // throws, so the commit consumed rng before failing.
     s.move!.moveSteps = [{ kind: "enter", to: { col: 0, row: 0 } }];
 
-    expect(() => S.commitMove(s)).toThrow(/Standing still forbids entering hexes/);
+    expect(() => commitMove(s)).toThrow(/Standing still forbids entering hexes/);
 
     // Rng rewound: retry sees identical sequence.
     expect(rng.snapshot()).toBe(rngSnap);
@@ -60,7 +67,7 @@ describe("commitAtomic rollback", () => {
     // Retry with legal (empty) steps succeeds on identical rolls and returns
     // the live battle object.
     s.move!.moveSteps = [];
-    const res = S.commitMove(s);
+    const res = commitMove(s);
     expect(res.state).toBe(s.battle);
     expect(res.events.length).toBeGreaterThan(0);
     expect(s.battle!.units[actor]!.prone).toBe(false);
@@ -71,14 +78,14 @@ describe("commitAtomic rollback", () => {
     const { s } = started();
     burnMovePhase(s);
     expect(s.battle!.phase).toBe("weaponAttack");
-    const first = S.currentActor(s)!.id;
+    const first = currentActor(s)!.id;
     const firstTarget = first === "hunchy" ? "cicada" : "hunchy";
     // First unit declares + commits: rival still pending, so drive resolves
     // nothing and draws no rng.
     expect(run(s, `fire ${firstTarget} 1`)[0]).toContain("queued");
     expect(run(s, `fire ${firstTarget} 2`)[0]).toContain("queued");
     run(s, "done");
-    const attacker = S.currentActor(s)!.id;
+    const attacker = currentActor(s)!.id;
     const target = attacker === "hunchy" ? "cicada" : "hunchy";
     // Two ammo-free medium lasers (CLI weapon numbers are 1-based: HBK-4G
     // weapons 1+2 are the arm medium lasers): declaration draws no rng.
@@ -94,7 +101,7 @@ describe("commitAtomic rollback", () => {
     s.rng = rng;
     const rngSnap = rng.snapshot();
 
-    expect(() => S.commitFire(s)).toThrow(/RNG script exhausted/);
+    expect(() => commitFire(s)).toThrow(/RNG script exhausted/);
 
     expect(rng.snapshot()).toBe(rngSnap);
     expect(rng.remaining()).toBe(13);
@@ -110,12 +117,12 @@ describe("commitAtomic rollback", () => {
 
   it("successful commits return the live battle object", () => {
     const { s } = started();
-    const actor = S.currentActor(s)!.id;
-    S.declareMode(s, "walk");
-    const res = S.commitMove(s);
+    const actor = currentActor(s)!.id;
+    declareMode(s, "walk");
+    const res = commitMove(s);
     expect(res.state).toBe(s.battle);
     expect(res.events.length).toBeGreaterThan(0);
     expect(res.events.some((e) => e.kind === "moveDeclared")).toBe(true);
-    expect(S.currentActor(s)?.id).not.toBe(actor);
+    expect(currentActor(s)?.id).not.toBe(actor);
   });
 });

@@ -13,8 +13,16 @@ import {
 import { en } from "../web/i18n/en.js";
 import type { LocaleId, MessageKey } from "../web/i18n/index.js";
 import { i18n, LOCALES } from "../web/i18n/index.js";
-import * as S from "../web/session.js";
-import { newSession } from "../web/session.js";
+import {
+  commitFire,
+  commitMove,
+  currentActor,
+  declareMode,
+  newSession,
+  passFire,
+  placeLanding,
+  queueFire,
+} from "../web/session.js";
 import { execute } from "./helpers.js";
 
 /** Drive a started battle until it is over using minimal legal actions. */
@@ -24,7 +32,7 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
   let faceEnemy = false;
   for (let i = 0; i < 500 && s.app === "battle"; i++) {
     const st = s.battle!;
-    const actorId = S.currentActor(s)!.id;
+    const actorId = currentActor(s)!.id;
     const ids = Object.values(st.units)
       .filter((u) => isUnitAvailable(u))
       .map((u) => u.id);
@@ -33,16 +41,16 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
       if (isNominal(st.units[actorId]!)) {
         if (st.units[actorId]!.prone) {
           try {
-            S.declareMode(s, "standup", "walk");
+            declareMode(s, "standup", "walk");
           } catch {
             // Cannot afford the stand (wrecked legs/heat): hold prone.
-            S.declareMode(s, "pronestill");
+            declareMode(s, "pronestill");
           }
         } else {
           try {
-            S.declareMode(s, "walk");
+            declareMode(s, "walk");
           } catch {
-            S.declareMode(s, "standStill");
+            declareMode(s, "standStill");
           }
           if (faceEnemy) {
             faceEnemy = false;
@@ -78,7 +86,7 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
                       l.hex.row === me.position.row &&
                       l.facing === want,
                   );
-                  if (turn !== undefined) S.placeLanding(s, turn);
+                  if (turn !== undefined) placeLanding(s, turn);
                 } catch {
                   // fall through to standing in place
                 }
@@ -87,7 +95,7 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
           }
         }
       }
-      S.commitMove(s);
+      commitMove(s);
     } else {
       const unit = st.units[actorId]!;
       const sugg = suggestFireTargets(st, unit.id);
@@ -98,12 +106,12 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
           : (target?.weaponsIfPropRight ?? []);
       for (const w of weapons) {
         if (unit.jammedWeapons.includes(w.weaponIndex)) continue;
-        S.queueFire(s, { weaponIndex: w.weaponIndex, targetId: enemy });
+        queueFire(s, { weaponIndex: w.weaponIndex, targetId: enemy });
       }
       if ((s.attack?.fireDecls ?? []).length === 0) {
-        S.passFire(s);
+        passFire(s);
         faceEnemy = true;
-      } else S.commitFire(s);
+      } else commitFire(s);
     }
   }
   if (s.app !== "over") throw new Error("battle did not finish");

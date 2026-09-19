@@ -1,13 +1,20 @@
 import { describe, expect, it } from "vitest";
-import * as S from "../web/session.js";
+import {
+  commitMove,
+  currentActor,
+  declareMode,
+  newSession,
+  type Session,
+  setTorsoTwist,
+} from "../web/session.js";
 import { execute } from "./helpers.js";
 
-function run(s: S.Session, cmd: string): string[] {
+function run(s: Session, cmd: string): string[] {
   return execute(s, cmd);
 }
 
-function started(): S.Session {
-  const s = S.newSession(7);
+function started(): Session {
+  const s = newSession(7);
   s.critsDisabled = true;
   expect(run(s, "map quickstart")[0]).toContain("15x16");
   expect(run(s, "add hunchy HBK-4G 9 9 n")).toHaveLength(1);
@@ -19,28 +26,28 @@ function started(): S.Session {
 /** Drain the movement phase by walking in place until weapon phase opens.
  *  Two units → two movement activations per round; cap iterations to break
  *  any inadvertent loop. */
-function burnMovePhase(s: S.Session): void {
+function burnMovePhase(s: Session): void {
   let guard = 0;
   while (s.app === "battle" && s.battle!.phase === "movement") {
-    S.declareMode(s, "walk");
-    S.commitMove(s);
+    declareMode(s, "walk");
+    commitMove(s);
     if (++guard > 64) throw new Error("burnMovePhase did not advance");
   }
 }
 
 /** Drive a session to `app === "over"` by ejecting both units. Bounded. */
-function driveToOver(s: S.Session): void {
+function driveToOver(s: Session): void {
   let guard = 0;
   while (s.app === "battle") {
     if (++guard > 200) throw new Error("driveToOver did not finish");
     if (s.battle!.phase === "movement") {
       // Eject whoever's acting this turn.
-      S.declareMode(s, "eject");
+      declareMode(s, "eject");
       try {
-        S.commitMove(s);
+        commitMove(s);
       } catch {
         // Some units can't eject (already ejected). Skip the round.
-        S.commitMove(s);
+        commitMove(s);
       }
     } else {
       // Pass through attack phase.
@@ -51,7 +58,7 @@ function driveToOver(s: S.Session): void {
 
 describe("per-AppState context invariants", () => {
   it("setup: all per-phase contexts are null, only setup populated", () => {
-    const s = S.newSession(42);
+    const s = newSession(42);
     expect(s.move).toBeNull();
     expect(s.attack).toBeNull();
     expect(s.over).toBeNull();
@@ -66,7 +73,7 @@ describe("per-AppState context invariants", () => {
     expect(s.move).not.toBeNull();
     expect(s.attack).toBeNull();
     expect(s.over).toBeNull();
-    expect(s.move!.actorId).toBe(S.currentActor(s)!.id);
+    expect(s.move!.actorId).toBe(currentActor(s)!.id);
   });
 
   it("battle + attack: move null, attack allocated with torsoTwist front, over null", () => {
@@ -81,7 +88,7 @@ describe("per-AppState context invariants", () => {
   });
 
   it("over: move null, attack null, over populated with victory", () => {
-    const s = S.newSession(42);
+    const s = newSession(42);
     s.critsDisabled = true;
     run(s, "map quickstart");
     run(s, "add a HBK-4G 5 5 n");
@@ -124,13 +131,13 @@ describe("per-AppState context invariants", () => {
     const s = started();
     burnMovePhase(s);
     expect(s.battle!.phase).toBe("weaponAttack");
-    expect(() => S.declareMode(s, "walk")).toThrow(/requires the movement phase/i);
+    expect(() => declareMode(s, "walk")).toThrow(/requires the movement phase/i);
   });
 
   it("setTorsoTwist throws when not in weaponAttack phase", () => {
     const s = started();
     expect(s.battle!.phase).toBe("movement");
-    expect(() => S.setTorsoTwist(s, "left")).toThrow(/requires the weaponAttack phase/i);
+    expect(() => setTorsoTwist(s, "left")).toThrow(/requires the weaponAttack phase/i);
   });
 
   it("fresh attack context always starts with torsoTwist: front", () => {
@@ -156,7 +163,7 @@ describe("per-AppState context invariants", () => {
 
   it("commit rollback preserves the move context only", () => {
     const s = started();
-    const actor = S.currentActor(s)!.id;
+    const actor = currentActor(s)!.id;
     run(s, "mode walk");
     s.move!.moveSteps = [{ kind: "enter", to: { col: 1, row: 1 } }];
     const out = run(s, "done");
