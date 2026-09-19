@@ -5,7 +5,7 @@ import { ammoWeaponTotals, loadAmmoBins } from "../src/rules/ammo.js";
 import {
   applyAmmoExplosion,
   checkCASE,
-  coreComponentStatus,
+  componentHitStatus,
   effectiveMovement,
   resolveCriticalHits,
 } from "../src/rules/critical.js";
@@ -784,7 +784,7 @@ describe("engine crit destruction", () => {
 describe("computeCritCounts", () => {
   it("reports zero for every component on a fresh 'Mech", () => {
     const def = getMechDef("HBK-4G")!;
-    const counts = coreComponentStatus(def, freshFlags(def));
+    const counts = componentHitStatus(def, freshFlags(def));
     expect(counts.engine).toEqual(0);
     expect(counts.gyro).toEqual(0);
     expect(counts.sensors).toEqual(0);
@@ -799,7 +799,7 @@ describe("computeCritCounts", () => {
     destroyed.centerTorso[3] = true; // gyro slot 4
     destroyed.centerTorso[0] = true; // engine slot 1 (first band)
     destroyed.centerTorso[7] = true; // engine slot 8 (second band)
-    const counts = coreComponentStatus(def, destroyed);
+    const counts = componentHitStatus(def, destroyed);
     expect(counts.engine).toBe(2);
     expect(counts.gyro).toBe(1);
     expect(counts.sensors).toBe(0);
@@ -814,7 +814,7 @@ describe("computeCritCounts", () => {
     destroyed.head[1] = true;
     destroyed.head[4] = true;
     destroyed.head[5] = true;
-    const counts = coreComponentStatus(def, destroyed);
+    const counts = componentHitStatus(def, destroyed);
     expect(counts.sensors).toBe(2);
     expect(counts.lifeSupport).toBe(1);
     expect(counts.engine).toBe(0);
