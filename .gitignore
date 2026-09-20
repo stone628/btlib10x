@@ -5,4 +5,5 @@ web/btlib10x.js
 .DS_Store
 tmp/
 .agents/
+.opencode.json
 

@@ -1344,3 +1344,139 @@ describe("current-actor guard", () => {
     ).not.toThrow();
   });
 });
+
+describe("weapon-volley crit accumulation (TW p. 38 simultaneity)", () => {
+  // Regression for the bug where `commitFire` overwrote the running
+  // crit-slot/destroyed-weapons/ammo-bins accumulator with the LAST crit's
+  // output. Each `resolveWeaponAttack` call resolves its own crit chain
+  // from a fresh pre-volley snapshot, so its returned table only carries
+  // that weapon's own hits. Volley-wide merge (OR new flags in) is what
+  // TW p. 38 (simultaneous damage) and p. 124–125 (transfer / re-roll
+  // against already-destroyed slots) require.
+
+  function hbkVsEnfCrits(): BattleState {
+    const units: UnitInit[] = [
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        piloting: 5,
+        position: { col: 2, row: 4 },
+        facing: "se",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        piloting: 5,
+        position: { col: 3, row: 5 },
+        facing: "nw",
+      },
+    ];
+    return createTestBattle([], units, false);
+  }
+
+  it("accumulates gyro/engine crits from one weapon when a later weapon only destroys a weapon slot", () => {
+    const state = startAttackTurn(hbkVsEnfCrits());
+    // Pre-strip CT armor and RA armor so the medium lasers (5 dmg each)
+    // both reach internal structure and roll determining crits.
+    const enf = requireUnit(state, "enf");
+    enf.damage.armor.centerTorso = 0;
+    enf.damage.armor.rightArm = 0;
+
+    declareAttacks(
+      state,
+      "hbk",
+      [
+        { weaponIndex: 2, targetId: "enf" }, // rightArm ML -> CT (roll 2 front)
+        { weaponIndex: 1, targetId: "enf" }, // leftArm ML  -> RA (roll 3 front)
+      ],
+      [],
+    );
+    // Dice order: for each weapon in declared order
+    //   to-hit (2d6) | location (2d6) | crit determining (2d6) | crit slot (2d6)
+    //   ML#1 -> CT slot 4 (gyro on ENF centerTorso: layout[3])
+    //   ML#2 -> RA slot 4 (AC/10 first slot on ENF rightArm: layout[3])
+    // Then the first-gyro PSR at end of weapon attack: roll 2D6 vs TN 8
+    // (piloting 5 + gyro +3); a roll >= 8 succeeds and skips the fall path.
+    const rng = scriptedRng(
+      // ML#1: hit, CT, 1 crit, gyro slot 4 (lower half, slot 4)
+      3,
+      1,
+      1,
+      1,
+      4,
+      4,
+      1,
+      4,
+      // ML#2: hit, RA, 1 crit, AC/10 slot 4 (lower half, slot 4)
+      2,
+      2,
+      1,
+      2,
+      4,
+      4,
+      1,
+      4,
+      // gyro-hit PSR: 10 >= 8 succeeds
+      5,
+      5,
+    );
+    resolveAllAttacks(state, rng, []);
+
+    const after = requireUnit(state, "enf");
+    // CT gyro slot 4 (layout index 3) must be flagged — pre-fix this was
+    // wiped by the second weapon's overwrite.
+    expect(after.critSlotsDestroyed.centerTorso[3]).toBe(true);
+    // RA AC/10 first slot must be flagged.
+    expect(after.critSlotsDestroyed.rightArm[3]).toBe(true);
+    // AC/10 (ENF weaponIndex 1) must appear in destroyedWeapons.
+    expect(after.destroyedWeapons).toContain(1);
+  });
+
+  it("accumulates destroyed weapons across multiple crits in the same volley", () => {
+    const state = startAttackTurn(hbkVsEnfCrits());
+    const enf = requireUnit(state, "enf");
+    // Strip RA and LA armor so both MLs reach IS.
+    enf.damage.armor.rightArm = 0;
+    enf.damage.armor.leftArm = 0;
+
+    declareAttacks(
+      state,
+      "hbk",
+      [
+        { weaponIndex: 2, targetId: "enf" }, // rightArm ML -> RA
+        { weaponIndex: 1, targetId: "enf" }, // leftArm ML  -> LA
+      ],
+      [],
+    );
+    // ML#1 -> RA roll 3, slot 4 = AC/10 weapon (ENF weaponIndex 1)
+    // ML#2 -> LA roll 10, slot 4 = Large Laser first slot (ENF weaponIndex 2)
+    const rng = scriptedRng(
+      2,
+      2,
+      1,
+      2,
+      4,
+      4,
+      1,
+      4, // ML#1: hit, RA, 1 crit, AC/10 slot 4
+      5,
+      5,
+      4,
+      6,
+      4,
+      4,
+      1,
+      4, // ML#2: hit, LA, 1 crit, LL slot 4
+    );
+    resolveAllAttacks(state, rng, []);
+
+    const after = requireUnit(state, "enf");
+    expect(after.destroyedWeapons).toContain(1); // AC/10 from first ML (ENF weaponIndex 1)
+    // Shoulder crit on LA: destroys the Large Laser (ENF weaponIndex 2).
+    expect(after.destroyedWeapons).toContain(2);
+  });
+});

@@ -1615,6 +1615,15 @@ function damageTaken(before: UnitDamageState, after: UnitDamageState): number {
   return n;
 }
 
+/** Append `extra` items to `base` skipping any already present. Returns `base`
+ *  when nothing new arrives; otherwise a fresh array. */
+function appendUnique<T>(base: readonly T[], extra: readonly T[]): T[] {
+  if (extra.length === 0) return base.slice();
+  const out = base.slice();
+  for (const x of extra) if (!out.includes(x)) out.push(x);
+  return out;
+}
+
 interface NewStructureHit {
   readonly location: Location;
   readonly name: string;
@@ -2090,19 +2099,48 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     }
   }
 
-  // Apply crits sequentially per target (each crit sees post-state of previous)
+  // Apply crits sequentially per target. TW p. 38 simultaneity: all damage
+  // and crits from a volley take effect at end of phase, so flags set by
+  // earlier weapons must persist for later weapons and survive into the
+  // unit's persistent state. Each crit's `critSlotsDestroyed` was resolved
+  // from a fresh pre-volley snapshot inside `resolveWeaponAttack` and
+  // therefore only carries ITS own hits — merge (OR) into the running
+  // accumulator instead of overwriting.
   for (const [targetId, crits] of Object.entries(targetCritsMap)) {
     if (crits.length === 0) continue;
     const target = requireUnit(state, targetId);
     const currentDamage = targetDamageMap[targetId]!;
-    let currentCritSlots = { ...target.critSlotsDestroyed };
+    // Clone the inner arrays so OR-merge below mutates a fresh copy, not
+    // the unit's persistent table.
+    const currentCritSlots: Record<Location, boolean[]> = {} as Record<Location, boolean[]>;
+    for (const loc of Object.keys(target.critSlotsDestroyed) as Location[]) {
+      currentCritSlots[loc] = target.critSlotsDestroyed[loc]!.slice();
+    }
     let currentDestroyedWeapons = [...(targetDestroyedWeaponsMap[targetId] ?? [])];
-    let currentAmmoBins = { ...(targetAmmoBinsMap[targetId] ?? target.ammoBins) };
+    let currentAmmoBins: AmmoBins = {
+      ...(targetAmmoBinsMap[targetId] ?? target.ammoBins),
+    };
 
     for (const crit of crits) {
-      currentCritSlots = crit.critSlotsDestroyed;
-      currentDestroyedWeapons = crit.destroyedWeapons;
-      currentAmmoBins = crit.ammoBins;
+      // OR new destroyed flags into the accumulator. TW p. 124–125: crit
+      // re-roll skips already-destroyed slots; crit transfer checks prior
+      // hits in the location. Both rules require flags to be visible
+      // across weapons in the same volley.
+      for (const loc of Object.keys(crit.critSlotsDestroyed) as Location[]) {
+        const next = crit.critSlotsDestroyed[loc];
+        const cur = currentCritSlots[loc];
+        if (cur === undefined) {
+          currentCritSlots[loc] = next.slice();
+          continue;
+        }
+        for (let i = 0; i < next.length; i++) if (next[i]) cur[i] = true;
+      }
+      currentDestroyedWeapons = appendUnique(currentDestroyedWeapons, crit.destroyedWeapons);
+      // Ammo bins: per-bin last-write-wins. Two weapons in the same volley
+      // never share a bin id (each crit touches bins only in the location
+      // it hit, and simultaneous weapons can't both hit the same bin), so
+      // the spread already preserves earlier hits.
+      currentAmmoBins = { ...currentAmmoBins, ...crit.ammoBins };
 
       // Merge newly destroyed / blown off arms from crit
       for (const arm of crit.blownOffArms) {
