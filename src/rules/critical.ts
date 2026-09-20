@@ -915,10 +915,6 @@ export function componentHitStatus(
   let lifeSupportDestroyed = 0;
   for (const name of iterateDestoyedStructures(def, ["head"], critSlotsDestroyed)) {
     switch (name) {
-      case GYRO: {
-        gyroDestroyed += 1;
-        break;
-      }
       case SENSORS: {
         sensorDestroyed += 1;
         break;

@@ -499,7 +499,7 @@ export const kr: Catalog = {
   "res.outOfAmmo": "{weapon} 탄약 부족으로 발사 중지",
   "res.clusterRoll": "클러스터 굴림 2D6 = {roll}",
   "res.hits": "명중: {groups} ({arc})",
-  "res.armBlownOff": "; {cause} 파괴 → {arm} 절단",
+  "res.armBlownOff": "; {cause} 파괴 -> {arm} 절단",
   "res.immobilized": "; 이동 불능",
   "res.killed": "; 격파",
   "res.destroyedTail": "; 파괴됨 {locs}",
