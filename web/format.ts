@@ -44,6 +44,7 @@ import {
   consciousnessTarget,
   coreComponentStatus,
   countDestroyedEngine,
+  D2D6_AUTO_SUCCESS,
   DROP_MP_COST,
   ENGINE_SLOTS_KILL,
   effectiveMovement,
@@ -1839,6 +1840,7 @@ export function fireSuggestionChunks(
 }
 
 // ------------------------------------------------------------------ log ----
+const UNIT_ID_PREFIX_REGEX = /^\[[^\]]+\] /;
 export function formatLog(
   locale: LocaleId,
   events: readonly SessionGameEvent[],
@@ -1848,53 +1850,72 @@ export function formatLog(
   if (slice.length === 0) return [];
   const lines: string[] = [];
   let prev: SessionGameEvent | null = null;
-  let removedLines: string[] = [];
   let lastUnitPrefix: string = "";
-  const onEnterEvent = (prev: SessionGameEvent | null, curr: SessionGameEvent): void => {
-    if (isAttackResolutionKind(curr.kind)) {
-      if (prev === null || !isAttackResolutionKind(prev.kind)) {
-        lines.push(i18n(locale, "res.attackResolutionStart"));
-      }
-    }
+  let skipUnitPrefix = false;
+  const buffered: string[] = [];
+  const { tnw, tsw, tv } = GRID_THEME.LIGHT;
+  const onEnterEvent = (_prev: SessionGameEvent | null, _curr: SessionGameEvent): void => {
+    // do nothing
   };
-  const onEvent = (event: SessionGameEvent): void => {
-    const el = eventLines(locale, event);
-    if (isAttackResolutionKind(event.kind)) {
-      switch (event.kind) {
-        case "unitRemoved":
-          removedLines.push(...el);
-          return;
-        case "attackResolved":
-          {
-            const unitPrefix = `[${event.unitId} -> ${event.targetId}]`;
-            if (lastUnitPrefix !== unitPrefix) {
-              lines.push(unitPrefix);
-              lastUnitPrefix = unitPrefix;
-            }
-            lines.push(`  ${el.shift()}`);
-            if (el.length > 0) {
-              lines.push(...el.map((l) => `    ${l}`));
-            }
-          }
-          return;
-        case "heatWeapon":
-          lines.push(...el.map((l) => `    ${l}`));
-          return;
-      }
-    }
-    lines.push(...el);
-  };
-  const onExitEvent = (curr: SessionGameEvent, next: SessionGameEvent | null): void => {
-    if (isAttackResolutionKind(curr.kind)) {
-      if (next === null || !isAttackResolutionKind(next.kind)) {
-        lines.push(i18n(locale, "res.attackResolutionEnd"));
-        if (removedLines.length > 0) {
-          lines.push(...removedLines);
-          removedLines = [];
+  const flushBuffered = () => {
+    const bufferedLen = buffered.length;
+    if (bufferedLen > 0) {
+      const prefixLen = lastUnitPrefix.length - 1;
+      const blank = " ".repeat(prefixLen);
+      if (bufferedLen == 1) {
+        if (skipUnitPrefix) {
+          lines.push(`${blank} ${buffered[0]!}`);
+        } else {
+          lines.push(`${lastUnitPrefix}${buffered[0]!}`);
         }
+      } else {
+        if (skipUnitPrefix) {
+          lines.push(`${blank}${tnw} ${buffered[0]!}`);
+        } else {
+          lines.push(`${lastUnitPrefix.substring(0, prefixLen)}${tnw} ${buffered[0]!}`);
+        }
+        for (let i = 1; i < bufferedLen - 1; i += 1) {
+          lines.push(`${blank}${tv} ${buffered[i]!}`);
+        }
+        lines.push(`${blank}${tsw} ${buffered[bufferedLen - 1]!}`);
+      }
+      buffered.length = 0;
+    }
+    skipUnitPrefix = false;
+  };
+  const onEvent = (curr: SessionGameEvent): void => {
+    const el = eventLines(locale, curr);
+    switch (curr.kind) {
+      case "attackResolved":
+        {
+          const unitPrefix = `[${curr.unitId}] `;
+          if (lastUnitPrefix !== unitPrefix) {
+            flushBuffered();
+            lines.push(`[${curr.unitId} -> ${curr.targetId}]`);
+            lastUnitPrefix = unitPrefix;
+            skipUnitPrefix = true;
+          }
+          buffered.push(...el);
+        }
+        return;
+    }
+    for (const line of el) {
+      const match = UNIT_ID_PREFIX_REGEX.exec(line);
+      if (match) {
+        const matched = match[0];
+        if (lastUnitPrefix !== matched) {
+          flushBuffered();
+          lastUnitPrefix = matched;
+        }
+        buffered.push(line.substring(matched.length));
+      } else {
+        flushBuffered();
+        lastUnitPrefix = "";
+        lines.push(line);
       }
     }
   };
+  const onExitEvent = (_curr: SessionGameEvent, _next: SessionGameEvent | null): void => {};
   for (let i = 0; i < slice.length; i++) {
     const e = slice[i]!;
     const prevKind: SessionGameEvent["kind"] | null = prev === null ? null : prev.kind;
@@ -1911,22 +1932,11 @@ export function formatLog(
   return lines;
 }
 
-function isAttackResolutionKind(kind: SessionGameEvent["kind"] | null): boolean {
-  return (
-    kind === "attackResolved" ||
-    kind === "unitDestroyed" ||
-    kind === "unitRemoved" ||
-    kind === "heatWeapon" ||
-    kind === "buildingDamaged" ||
-    kind === "collapseDamage"
-  );
-}
-
 function phaseLines(locale: LocaleId, e: Extract<GameEvent, { kind: "phase" }>): string[] {
   const phaseLine = i18n(locale, "log.phase", { turn: e.turn, phase: e.phase });
   const len = getCompensatedLength(phaseLine);
   const separator = "-".repeat(len);
-  return [" ", separator, phaseLine, separator, " "];
+  return [" ", separator, phaseLine, separator];
 }
 
 function eventLines(locale: LocaleId, e: SessionGameEvent): string[] {
@@ -1970,12 +1980,14 @@ function eventLines(locale: LocaleId, e: SessionGameEvent): string[] {
       ];
     case "attackResolved":
       return resolutionLines(locale, e.resolution);
-    case "unitDestroyed":
-      return [i18n(locale, "log.destroyed", { id: e.unitId, destroyed: e.destroyed })];
     case "unitRemoved":
-      if (e.reason === "pilotEjected") return [i18n(locale, "log.ejected", { id: e.unitId })];
-      if (e.reason === "pilotKilled") return [i18n(locale, "log.pilotKilled", { id: e.unitId })];
-      return [i18n(locale, "log.removedEvent", { id: e.unitId })];
+      switch (e.reason) {
+        case "pilotEjected":
+          return [i18n(locale, "log.ejected", { id: e.unitId })];
+        case "pilotKilled":
+          return [i18n(locale, "log.pilotKilled", { id: e.unitId })];
+      }
+      return [i18n(locale, "log.destroyed", { id: e.unitId, destroyed: e.destroyReason! })];
     case "buildingCollapsed":
       return [i18n(locale, "log.buildingCollapsed", { hex: `${e.col},${e.row}` })];
     case "buildingDamaged":
@@ -2024,6 +2036,7 @@ function eventLines(locale: LocaleId, e: SessionGameEvent): string[] {
           prev: e.prevHeat,
           curr: e.currHeat,
           cap: e.capacity,
+          capMax: e.capacityMax,
         }),
       ];
     case "shutdownCheck":
@@ -2041,7 +2054,7 @@ function eventLines(locale: LocaleId, e: SessionGameEvent): string[] {
           }),
         ];
       }
-      if (e.avoid >= 12) {
+      if (e.avoid >= D2D6_AUTO_SUCCESS) {
         return [
           i18n(locale, "log.shutdownAuto", { id: e.unitId, heat: e.heat, threshold: e.threshold }),
         ];
@@ -2199,9 +2212,8 @@ function eventLines(locale: LocaleId, e: SessionGameEvent): string[] {
     case "sessionMoveActor": {
       return [`&&&& session move actor(${e.actorId})`];
     }
-    case "sessionMoveActorDone": {
-      return [`&&&& session move done actor(${e.actorId})`];
-    }
+    case "sessionMoveActorDone":
+      return [];
     case "sessionAttackActor": {
       return [`&&&& session attack actor(${e.actorId})`];
     }
@@ -2209,8 +2221,18 @@ function eventLines(locale: LocaleId, e: SessionGameEvent): string[] {
       if (e.pass) {
         return [i18n(locale, "log.attacksPassed", { id: e.actorId })];
       }
-      return [`&&&& session attack done actor(${e.actorId}) pass(${e.pass})`];
+      return [];
     }
+    case "sessionPhase":
+      if (e.phase === "attackResolution") {
+        return [i18n(locale, "res.attackResolutionStart")];
+      }
+      return [];
+    case "sessionPhaseDone":
+      if (e.phase === "attackResolution") {
+        return [i18n(locale, "res.attackResolutionEnd")];
+      }
+      return [];
     default: {
       // Exhaustiveness guard: adding a GameEvent kind must add a case above.
       const unreachable: never = e;

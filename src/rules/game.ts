@@ -85,6 +85,7 @@ import {
   engineHitHeat,
   HEAT_CAP,
   heatDissipation,
+  heatDissipationMax,
   largestAmmoBin,
   movementHeat,
   shutdownAvoid,
@@ -294,8 +295,12 @@ export type GameEvent =
       readonly targetId: string;
       readonly resolution: AttackResolution;
     }
-  | { readonly kind: "unitDestroyed"; readonly unitId: string; readonly destroyed: DestroyedReason }
-  | { readonly kind: "unitRemoved"; readonly unitId: string; readonly reason: RemovalReason }
+  | {
+      readonly kind: "unitRemoved";
+      readonly unitId: string;
+      readonly reason: RemovalReason;
+      readonly destroyReason?: DestroyedReason | null;
+    }
   // Pilot ejects: the 'Mech leaves the battle and its hex gains a `wrecks`
   // entry (a level-2 obstacle), see `ejectPilot`. Emits `unitRemoved` with
   // reason "pilotEjected". A pilot killed by six pilot hits emits
@@ -345,6 +350,7 @@ export type GameEvent =
       readonly prevHeat: number;
       readonly currHeat: number;
       readonly capacity: number;
+      readonly capacityMax: number;
     }
   | {
       readonly kind: "shutdownCheck";
@@ -626,10 +632,12 @@ function markUnitDestroyed(unit: UnitState, destroyed: DestroyedReason, sink: Ga
   if (isUnitRemoved(unit)) return;
   unit.destroyed = destroyed;
   unit.removed = "destroyed";
-  sink.push(
-    { kind: "unitDestroyed", unitId: unit.id, destroyed },
-    { kind: "unitRemoved", unitId: unit.id, reason: "destroyed" },
-  );
+  sink.push({
+    kind: "unitRemoved",
+    unitId: unit.id,
+    reason: "destroyed",
+    destroyReason: destroyed,
+  });
 }
 
 /** A pilot killed by six accumulated pilot hits removes the unit from play
@@ -2518,6 +2526,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
     const def = getMechDefFor(unit);
     const prevHeat = unit.heat;
     const capacity = heatDissipation(def, unit.critSlotsDestroyed);
+    const capacityMax = heatDissipationMax(def);
     const dissipated = Math.min(capacity, prevHeat);
     unit.heat -= dissipated;
     if (dissipated > 0) {
@@ -2528,6 +2537,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
         prevHeat,
         currHeat: unit.heat,
         capacity,
+        capacityMax,
       });
     }
   }
