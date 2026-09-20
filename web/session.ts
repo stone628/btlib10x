@@ -124,8 +124,18 @@ export interface OverContext {
   victory: SessionVictoryResult;
 }
 
+export type SessionPhase = "attackResolution";
+
 export type SessionGameEvent =
   | GameEvent
+  | {
+      readonly kind: "sessionPhase";
+      readonly phase: SessionPhase;
+    }
+  | {
+      readonly kind: "sessionPhaseDone";
+      readonly phase: SessionPhase;
+    }
   | {
       readonly kind: "sessionMoveActor";
       readonly actorId: string;
@@ -249,6 +259,7 @@ function drive(s: Session): SessionGameEvent[] {
   if (!battle) return [];
   const v: SessionVictoryResult[] = [];
   const collected: GameEvent[] = [];
+  const wasInAttack = battle.phase === "weaponAttack";
   const r = gameLoop(
     battle,
     s.rng,
@@ -269,24 +280,34 @@ function drive(s: Session): SessionGameEvent[] {
     clearContexts(s);
     return collected;
   }
+  const result: SessionGameEvent[] = [];
+  if (wasInAttack && battle.phase !== "weaponAttack") {
+    result.push({ kind: "sessionPhase", phase: "attackResolution" });
+    for (const e of collected) {
+      if (e.kind === "phase" && e.prevPhase === "weaponAttack") {
+        result.push({ kind: "sessionPhaseDone", phase: "attackResolution" });
+      }
+      result.push(e);
+    }
+  }
   s.app = "battle";
   const id = r.actorId;
+  const inMovement = battle.phase === "movement";
   if (id !== null) {
-    const inMovement = battle.phase === "movement";
     if (inMovement && (s.move === null || s.move.actorId !== id)) {
       ensureContextsCleared(s);
       s.move = newMoveContext(id);
       s.attack = null;
-      return [...collected, { kind: "sessionMoveActor", actorId: s.move.actorId }];
+      result.push({ kind: "sessionMoveActor", actorId: s.move.actorId });
     }
     if (!inMovement && (s.attack === null || s.attack.actorId !== id)) {
       ensureContextsCleared(s);
       s.attack = newAttackContext(id);
       s.move = null;
-      return [...collected, { kind: "sessionAttackActor", actorId: s.attack.actorId }];
+      result.push({ kind: "sessionAttackActor", actorId: s.attack.actorId });
     }
   }
-  return collected;
+  return result;
 }
 
 export function currentActor(s: Session): UnitState | null {
