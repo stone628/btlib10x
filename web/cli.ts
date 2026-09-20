@@ -699,7 +699,6 @@ function commandList(session: Session): string[] {
 // ---------------------------------------------------------------- hints ----
 
 /** Per-state guidance shown at the top of `help`, focused on legal commands. */
-/** Per-state guidance shown at the top of `help`, focused on legal commands. */
 const HINT_SETUP: MessageKey = "hint.setup";
 const HINT_MOVE: MessageKey = "hint.move";
 const HINT_ATTACK: MessageKey = "hint.attack";

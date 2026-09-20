@@ -798,10 +798,10 @@ function shutdownHeader(view: SheetView): string {
   return "[NOMINAL]";
 }
 
-// E:#-- L:-
-// G:-- S:--
-const GLYPH_CORE_COMPONENT_HIT = "#";
-const GLYPH_CORE_COMPONENT_UNHIT = "-";
+// E:-OO L:O
+// G:OO S:OO
+const GLYPH_CORE_COMPONENT_HIT = "-";
+const GLYPH_CORE_COMPONENT_UNHIT = "O";
 
 function engineLifeSupport(view: SheetView): string {
   const e = GLYPH_CORE_COMPONENT_HIT.repeat(view.engineHit).padEnd(
