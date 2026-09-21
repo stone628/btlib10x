@@ -809,14 +809,46 @@ describe("going prone voluntarily", () => {
     );
   });
 
-  it("a prone 'Mech turns one hexside at a time", () => {
+  it("undamaged prone 'Mech: 1 MP per hexside, up to 3 hexsides per turn", () => {
     const state = hbkEnf();
     toMovement(state);
     const enf = requireUnit(state, "enf");
     enf.prone = true;
+    const events: GameEvent[] = [];
+    proneFacingTurn(state, "enf", 2, events);
+    expect(enf.facing).toBe("se");
+    expect(enf.mpSpent).toBe(2);
+    expect(enf.heat).toBe(1);
+    expect(events).toContainEqual(expect.objectContaining({ kind: "moved", mpSpent: 2 }));
+    const second: GameEvent[] = [];
+    proneFacingTurn(state, "enf", -3, second);
+    expect(enf.facing).toBe("nw");
+    expect(enf.mpSpent).toBe(3);
+    expect(() => proneFacingTurn(state, "enf", 4, [])).toThrow(/1-3 hexsides/);
+    expect(() => proneFacingTurn(state, "enf", 0, [])).toThrow(/non-zero integer/);
+  });
+
+  it("prone 'Mech with one leg destroyed: exactly one hexside per turn", () => {
+    const state = hbkEnf();
+    toMovement(state);
+    const enf = requireUnit(state, "enf");
+    enf.prone = true;
+    enf.damage.internalStructure.rightLeg = 0;
     proneFacingTurn(state, "enf", 1, []);
     expect(enf.facing).toBe("ne");
-    expect(() => proneFacingTurn(state, "enf", 2, [])).toThrow(/only turn 1 hexside/);
+    expect(() => proneFacingTurn(state, "enf", 2, [])).toThrow(
+      /leg destroyed and may only turn 1 hexside/,
+    );
+  });
+
+  it("prone 'Mech with both legs destroyed: cannot turn", () => {
+    const state = hbkEnf();
+    toMovement(state);
+    const enf = requireUnit(state, "enf");
+    enf.prone = true;
+    enf.damage.internalStructure.rightLeg = 0;
+    enf.damage.internalStructure.leftLeg = 0;
+    expect(() => proneFacingTurn(state, "enf", 1, [])).toThrow(/no intact legs/);
   });
 });
 
