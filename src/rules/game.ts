@@ -2764,11 +2764,20 @@ function movementTerrainPsr(
 }
 
 /**
- * Stand-up attempt for a prone unit (TW p.50): costs the unit's movement
- * activation plus 1 heat, rolls a PSR with preexisting-damage modifiers only.
- * Success leaves the 'Mech standing (counts as walking for to-hit); failure
- * crashes it back down for fresh falling damage. A 'Mech with a destroyed
- * gyro or with both legs destroyed cannot attempt to stand.
+ * Stand-up attempt for a prone unit (TW p.50): spends `STAND_MP_COST` from the
+ * declared walk/run MP pool and adds 1 heat, then rolls a PSR with
+ * preexisting-damage modifiers only. On success the 'Mech is left standing
+ * facing the direction it had been prone in; on failure it crashes back down
+ * for fresh falling damage. A 'Mech with a destroyed gyro or with no intact
+ * legs cannot attempt to stand.
+ *
+ * This call only handles the posture change. The "Once standing, it may face
+ * any direction at no cost and continue moving under the declared mode" half
+ * (TW p.50) is the caller's job: chain an `executeMove` with
+ * `options.spentMP = STAND_MP_COST` for the continuation. `attemptStandUp`
+ * pushes `unitId` to `actedThisPhase` so the chained `executeMove` skips the
+ * head-of-queue guard and the redundant `actedThisPhase` push, marking the
+ * activation exactly once.
  */
 export function attemptStandUp(
   state: BattleState,

@@ -917,9 +917,36 @@ export function placeLanding(s: Session, landing: RevealedLanding): void {
     steps.push({ kind: "enter", to });
     hex = to;
   }
+  // Standup free facing pick (TW p.50): the unit is staying on its start
+  // hex but wants a different facing — no MP, no steps, just the new facing
+  // carried through `moveFinalFacing`. Other landings replay from
+  // `unit.facing` normally.
+  if (m.moveMode === "standup" && isStandupFreePick(unit, landing)) {
+    m.moveSteps = [];
+    m.moveFinalFacing = landing.facing;
+    m.placedLanding = landing;
+    return;
+  }
   m.moveSteps = steps;
   m.moveFinalFacing = jumping ? landing.facing : null;
   m.placedLanding = landing;
+}
+
+/**
+ * Detect the standup "free facing" pick (TW p.50): start hex, empty path,
+ * non-unit facing. Such a pick costs no MP and no turn steps; the chosen
+ * facing is carried via `moveFinalFacing`.
+ */
+function isStandupFreePick(
+  unit: { position: HexCoord; facing: Facing },
+  landing: RevealedLanding,
+): boolean {
+  return (
+    landing.path.length === 0 &&
+    landing.hex.col === unit.position.col &&
+    landing.hex.row === unit.position.row &&
+    landing.facing !== unit.facing
+  );
 }
 
 export function cancelMove(s: Session): void {

@@ -156,6 +156,18 @@ export interface ReachabilityOptions {
   readonly occupantTeam: (hex: HexCoord) => number | undefined;
   /** True when `hex` holds a wreck obstacle: never passable, never landable. */
   readonly wreckAt?: (hex: HexCoord) => boolean;
+  /**
+   * TW p.50 standup free pick: "Once standing, it may face any direction at
+   * no cost and continue moving under the declared mode." When true, the
+   * start hex gets a zero-cost empty-path landing for every facing — five
+   * extras beyond the BFS's existing `(start, startFacing, [])` entry. The
+   * convention `(start, f, [], 0)` with `f !== startFacing` is consumed by
+   * the web layer's `placeLanding` via `moveFinalFacing`. Non-start hexes
+   * remain BFS-generated from `startFacing` only, so their paths replay
+   * cleanly. Combine with `mode: "walk" | "run" | "jump"` (the caller
+   * already deducted `STAND_MP_COST` from the budget).
+   */
+  readonly standup?: boolean;
 }
 
 /**
@@ -187,6 +199,14 @@ export function reachableLandings(
   options: ReachabilityOptions,
 ): RevealedLanding[] {
   const budget = maxMovePoints(options.mode, options.walking, options.running, options.jumping);
+  // TW p.50 standup free pick: even at zero MP, the unit can stand and pick
+  // any facing. Return the six start-hex free picks without running the BFS
+  // when the budget can't afford any actual movement.
+  if (options.standup && options.mode !== "standStill") {
+    if (budget <= 0) {
+      return FACINGS.map((f) => ({ hex: start, facing: f, path: [] }));
+    }
+  }
   if (budget <= 0 || options.mode === "standStill") return [];
 
   const jumping = options.mode === "jump";
@@ -256,6 +276,20 @@ export function reachableLandings(
     bestPath.set(key, path);
     queue.push({ hex, facing, cost, path });
   };
+  if (options.standup) {
+    // TW p.50 free pick: seed the five non-startFacing start-hex facings at
+    // zero cost before the BFS runs. Later MP-charged turn-path entries
+    // (e.g. (start, ne, [R], 1)) hit the `known <= cost` guard above and
+    // never overwrite the free picks. The `startFacing` entry is left to
+    // the `enqueue(start, startFacing, 0, [])` below so the BFS can still
+    // explore forward/backward from it.
+    for (const f of FACINGS) {
+      if (f === startFacing) continue;
+      const key = stateKey(start, f);
+      dist.set(key, 0);
+      bestPath.set(key, []);
+    }
+  }
   enqueue(start, startFacing, 0, []);
 
   const point = (a: HexCoord, b: HexCoord): boolean => a.col === b.col && a.row === b.row;

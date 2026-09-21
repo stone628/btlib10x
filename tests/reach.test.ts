@@ -220,4 +220,66 @@ describe("reachableLandings", () => {
     const rs = reach("run", 3, 2, 0, "n", noOccupants, 21, 21, start, {});
     expect(fragments(lookup(rs, { col: 13, row: 12 }, "ne"))).toEqual(["R", "U"]);
   });
+
+  it("standup seeds all six start-hex facings with empty paths (TW p.50)", () => {
+    const rs = reachableLandings(start, "n", {
+      mode: "walk",
+      walking: 1,
+      running: 1,
+      jumping: 0,
+      prone: false,
+      grid: grid(boardWidth, boardHeight),
+      team,
+      occupantTeam: noOccupants,
+      standup: true,
+    });
+    for (const f of ["n", "ne", "se", "s", "sw", "nw"] as const) {
+      const p = lookup(rs, start, f);
+      expect(p).toBeDefined();
+      expect(p).toEqual([]);
+    }
+  });
+
+  it("standup free picks cost nothing against a tight budget", () => {
+    // 1 MP walk budget after stand; user picks facing se (free pick) and
+    // then B-steps backward from the start hex... but backward from start
+    // IS a hex enter, so it should NOT be reachable without forward
+    // movement first. Verify the 180°-turn pick is reachable for free even
+    // when turn cost would have eaten the entire budget.
+    const rs = reachableLandings(start, "n", {
+      mode: "walk",
+      walking: 0,
+      running: 0,
+      jumping: 0,
+      prone: false,
+      grid: grid(boardWidth, boardHeight),
+      team,
+      occupantTeam: noOccupants,
+      standup: true,
+    });
+    for (const f of ["n", "ne", "se", "s", "sw", "nw"] as const) {
+      expect(lookup(rs, start, f)).toEqual([]);
+    }
+  });
+
+  it("standup leaves non-start paths replayable from startFacing", () => {
+    // After the free pick, the unit can still walk forward in any chosen
+    // facing. But because non-start paths are seeded only from
+    // startFacing, they replay cleanly under placeLanding.
+    const rs = reachableLandings(start, "n", {
+      mode: "walk",
+      walking: 3,
+      running: 4,
+      jumping: 0,
+      prone: false,
+      grid: grid(boardWidth, boardHeight),
+      team,
+      occupantTeam: noOccupants,
+      standup: true,
+    });
+    // The forward hex from startFacing=n is (col:12, row:11), path [F].
+    expect(fragments(lookup(rs, { col: 12, row: 11 }, "n"))).toEqual(["F"]);
+    // The free pick at start hex facing se stays empty-path, cost 0.
+    expect(lookup(rs, start, "se")).toEqual([]);
+  });
 });

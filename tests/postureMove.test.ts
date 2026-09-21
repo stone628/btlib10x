@@ -250,6 +250,46 @@ describe("posture-change then move", () => {
       expect(last?.totalMp ?? 0).toBeLessThanOrEqual(budget);
     }
   });
+
+  it("standup offers the start hex in every facing for free (TW p.50)", () => {
+    const { s, actor } = started(0);
+    forceProne(s, actor);
+    const from = { ...s.battle!.units[actor]!.position };
+    run(s, "mode standup walk");
+    const revealed = s.move!.moveCandidate!.revealed;
+    const startEntries = revealed.filter(
+      (l: { hex: { col: number; row: number } }) =>
+        l.hex.col === from.col && l.hex.row === from.row,
+    );
+    const facings = new Set(startEntries.map((l: { facing: string }) => l.facing));
+    for (const f of ["n", "ne", "se", "s", "sw", "nw"]) {
+      expect(facings.has(f)).toBe(true);
+      const entry = startEntries.find((l: { facing: string }) => l.facing === f);
+      expect(entry?.path).toEqual([]);
+    }
+  });
+
+  it("standup + place picks a free facing: no MP turn, no steps (TW p.50)", () => {
+    const { s, actor } = started(0);
+    forceProne(s, actor);
+    const from = { ...s.battle!.units[actor]!.position };
+    const unitFacing = s.battle!.units[actor]!.facing;
+    // Pick a non-unit facing — otherwise it's the stay-in-place pick (no
+    // facing change) and `moveFinalFacing` stays null.
+    const freeFacing = unitFacing === "n" ? "s" : "n";
+    run(s, "mode standup walk");
+    run(s, `place ${from.col} ${from.row} ${freeFacing}`);
+    expect(s.move!.moveSteps).toEqual([]);
+    expect(s.move!.moveFinalFacing).toBe(freeFacing);
+    s.rng = scriptedRng(...Array.from({ length: 40 }, () => 6));
+    run(s, "done");
+    const unit = s.battle!.units[actor]!;
+    expect(unit.prone).toBe(false);
+    expect(unit.position).toEqual(from);
+    expect(unit.facing).toBe(freeFacing);
+    // 2 MP for standing; no MP charged for the free facing pick.
+    expect(unit.mpSpent).toBe(2);
+  });
 });
 
 describe("engine prone turn", () => {

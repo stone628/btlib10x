@@ -1629,6 +1629,7 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo | null {
     prone: proneFlag,
     grid: s.battle,
     team: actor.team,
+    ...(mode === "standup" ? { standup: true } : {}),
     wreckAt: (hex: HexCoord): boolean => wreckAt(s.battle!, hex) !== undefined,
     occupantTeam: (hex: HexCoord): number | undefined => {
       for (const u of Object.values(s.battle!.units)) {
@@ -2486,6 +2487,7 @@ const CATEGORY_LABEL: Readonly<Record<WeaponCategory, MessageKey>> = {
   MISSILE: "info.weaponCategoryMissile",
   BALLISTIC: "info.weaponCategoryBallistic",
   ENERGY: "info.weaponCategoryEnergy",
+  EQUIPMENT: "info.weaponCategoryEquipment",
 };
 
 function weaponCategory(locale: LocaleId, category: WeaponCategory): string {
