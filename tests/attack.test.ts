@@ -83,6 +83,82 @@ describe("resolveWeaponAttack", () => {
     expect(rng.remaining()).toBe(0);
   });
 
+  it("raw 2 with auto-hit TN jams and still resolves damage", () => {
+    // gunnery 0 + immobile target -> TN -4 -> breakdown.automatic = "hit".
+    // Raw roll 2 triggers jam (TW p.113); auto-hit override still lands
+    // damage before the jam locks the weapon.
+    const rng = scriptedRng(
+      1,
+      1, // to-hit roll 2 (jam trigger)
+      1,
+      2, // cluster roll 3, 2-shot column -> 1 hit
+      3,
+      4, // location 7 -> center torso
+    );
+    const res = resolveWeaponAttack({
+      ...BASE,
+      rng,
+      gunnery: 0,
+      targetImmobile: true,
+      weapon: "Ultra AC/5",
+      shots: 2,
+      targetDamage: freshState(),
+    });
+    expect(res.breakdown.automatic).toBe("hit");
+    expect(res.toHitRoll).toBe(2);
+    expect(res.jammed).toBe(true);
+    expect(res.hit).toBe(true);
+    expect(res.groups).toEqual([{ location: "centerTorso", damage: 5, throughArmor: false }]);
+    expect(res.application?.after.armor.centerTorso).toBe(5);
+  });
+
+  it("raw roll above 2 with auto-hit TN hits without jamming", () => {
+    // Same TN-<= 2 setup as above, but raw roll 6 != 2: jam trigger stays
+    // false while the modified-TN override still auto-hits.
+    const rng = scriptedRng(
+      3,
+      3, // to-hit roll 6 (no jam: != 2)
+      1,
+      2, // cluster roll 3, 2-shot column -> 1 hit
+      3,
+      4, // location 7 -> center torso
+    );
+    const res = resolveWeaponAttack({
+      ...BASE,
+      rng,
+      gunnery: 0,
+      targetImmobile: true,
+      weapon: "Ultra AC/5",
+      shots: 2,
+      targetDamage: freshState(),
+    });
+    expect(res.breakdown.automatic).toBe("hit");
+    expect(res.toHitRoll).toBe(6);
+    expect(res.jammed).toBe(false);
+    expect(res.hit).toBe(true);
+    expect(res.groups).toEqual([{ location: "centerTorso", damage: 5, throughArmor: false }]);
+  });
+
+  it("single-tap Ultra AC does not jam on raw 2 (jam requires shots > 1)", () => {
+    // TW p.113: jam threshold applies to 2-3 shot volleys; a single-tap
+    // Ultra AC resolves as a normal single-shot attack. Distance 2 clears
+    // the UAC/5 min-range of 2 so BASE.gunnery 4 reaches unmodified TN 4.
+    const rng = scriptedRng(2, 3, 3, 4); // to-hit 5 -> hit; location 7 -> CT
+    const res = resolveWeaponAttack({
+      ...BASE,
+      rng,
+      distance: 2,
+      weapon: "Ultra AC/5",
+      shots: 1,
+      targetDamage: freshState(),
+    });
+    expect(res.toHitRoll).toBe(5);
+    expect(res.jammed).toBe(false);
+    expect(res.hit).toBe(true);
+    expect(res.clusterRoll).toBeNull();
+    expect(rng.remaining()).toBe(0);
+  });
+
   it("uses the rapid-fire cluster table for Ultra AC/5 double taps", () => {
     const rng = scriptedRng(
       3,

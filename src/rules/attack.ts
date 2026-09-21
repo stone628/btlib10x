@@ -126,6 +126,14 @@ export interface AttackResolution {
 export const PARTIAL_COVER_TERRAIN_MOD = 1;
 /** 2D6 roll that jams a rapid-fire volley of more than one shot. */
 const RAPID_FIRE_JAM_ROLL = 2;
+/**
+ * TW p.113: rapid-fire (Ultra / rotary autocannon) jams on a raw 2D6 of 2
+ * (threshold scales +1 per two extra shots). Trigger is the RAW roll, not
+ * the modified TN — independent of the auto-hit / auto-miss thresholds from
+ * to-hit breakdown. Damage still resolves if the hit test below succeeds,
+ * then the jam persists for the rest of the game (rotary AC has its own
+ * clearing rule, p.140).
+ */
 /** Hit-location roll triggering a through-armor critical (TW p.123):
  *  damage lands on armor normally, plus one determining roll. */
 const THROUGH_ARMOR_LOCATION_ROLL = 2;
