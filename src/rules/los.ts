@@ -1,6 +1,6 @@
 import { hexDistance, lineHexes } from "../core/hex.js";
 import { blocksTargeting, cellAt, type HexGrid, screeningPoints } from "../core/terrain.js";
-import type { HexCoord, TerrainType, WreckState } from "../core/types.js";
+import { isWoodsTerrain, type HexCoord, type TerrainType, type WreckState } from "../core/types.js";
 import { buildingTypeOf } from "./building.js";
 
 /**
@@ -49,28 +49,32 @@ export function losBlockedByWater(grid: HexGrid, from: HexCoord, to: HexCoord): 
 }
 
 /**
- * LOS-blocking height of a hex: its ground level plus the standing feature
- * (1 level for a 'Mech-height crest, 2 for a building — TW: one building
- * level equals two hex levels; default single-level buildings).
+ * Standing feature heights above the underlying hex level (TW p. 100):
+ *  - 'Mechs: 2 levels for LOS ray (TW p. 99 unit height).
+ *  - woods: 2 levels (p. 100).
+ *  - buildings: 2 levels default (p. 166–167 medium default).
+ *  - clear / rough / rubble / pavement / water: 0 (no LOS height).
  */
-/** Standing-feature height of a 'Mech-height crest (levels). */
-const MECH_LOS_HEIGHT = 1;
-/** Standing-feature height of a building hex (levels). */
+const MECH_LOS_HEIGHT = 2;
 const BUILDING_LOS_HEIGHT = 2;
+const WOODS_LOS_HEIGHT = 2;
 
 function terrainHeightAt(grid: HexGrid, hex: HexCoord): number {
   const cell = cellAt(grid, hex);
-  const standing =
-    buildingTypeOf(cell.terrain) !== undefined ? BUILDING_LOS_HEIGHT : MECH_LOS_HEIGHT;
-  return cell.level + standing;
+  const t = cell.terrain;
+  if (buildingTypeOf(t) !== undefined) return cell.level + BUILDING_LOS_HEIGHT;
+  if (isWoodsTerrain(t)) return cell.level + WOODS_LOS_HEIGHT;
+  return cell.level;
 }
 
 /**
- * LOS elevation check: a 'Mech's LOS level is its hex level + 1. Draw a real-
- * valued line from the attacker's LOS level to the target's LOS level; an
- * intervening hex C blocks iff its own blocking height (level + 1, or +2 for
- * a building) meets or exceeds the ray's height at C's center. Bipedal
- * 'Mechs only — no multi-floor interiors, no hull-down, no partial cover.
+ * LOS elevation check (TW p. 100): the ray runs between the two units' eye
+ * levels (ground + MECH_LOS_HEIGHT) and an intervening feature blocks if its
+ * top strictly exceeds the ray height at that hex's center. Woods are sized
+ * equal to a standing 'Mech (2 levels) so the elevation ray never blocks on
+ * woods alone — the screening-points rule (losBlocked) handles woods LOS.
+ * Bipedal 'Mechs only — no multi-floor interiors, no hull-down, no partial
+ * cover.
  */
 export function losBlockedByElevation(grid: HexGrid, from: HexCoord, to: HexCoord): boolean {
   const aLos = cellAt(grid, from).level + MECH_LOS_HEIGHT;
@@ -87,8 +91,8 @@ export function losBlockedByElevation(grid: HexGrid, from: HexCoord, to: HexCoor
 
 /**
  * True when an intervening building hex rises above the LOS ray. Building
- * hexes block LOS (TW p.100) unless the attacker's elevation line clears
- * their height; the building hex a unit occupies is not intervening.
+ * hexes block LOS (TW p. 100) unless the eye-level ray clears their height;
+ * the building hex a unit occupies is not intervening.
  */
 export function losBlockedByBuilding(grid: HexGrid, from: HexCoord, to: HexCoord): boolean {
   const aLos = cellAt(grid, from).level + MECH_LOS_HEIGHT;

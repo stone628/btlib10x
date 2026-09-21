@@ -56,6 +56,11 @@ export function isTerrainType(value: unknown): value is TerrainType {
   return typeof value === "string" && (TERRAIN_TYPES as readonly string[]).includes(value);
 }
 
+/** True for woods hex types (TW p. 100: woods rise 2 levels above hex). */
+export function isWoodsTerrain(value: TerrainType): boolean {
+  return value === "lightWoods" || value === "heavyWoods";
+}
+
 /** A single non-clear terrain hex on the board (map data and battle setup). */
 export interface TerrainHexDef {
   readonly col: number;

@@ -375,7 +375,7 @@ describe("suggestFireTargets", () => {
       },
     ];
     const state = startAttackTurn(
-      createTestBattle([{ col: 2, row: 7, type: "lightBuilding" }], units, false),
+      createTestBattle([{ col: 2, row: 7, type: "lightBuilding", level: 1 }], units, false),
     );
     const reasons = blockedReasons(state, "hbk", "enf");
     expect(reasons).toContain("noLos");

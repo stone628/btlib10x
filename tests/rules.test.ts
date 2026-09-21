@@ -123,11 +123,15 @@ describe("per-weapon firing arcs (TW p.105)", () => {
   });
 
   it("resolves boundary-line ambiguity to the defender's dominant choice", () => {
+    // Engine policy tied to TW p.119 (locked-in LOS hexside) — see
+    // defenderArcChoice docstring. `front` wins; otherwise drop `rear`.
     expect(defenderArcChoice("front", null)).toBe("front");
     expect(defenderArcChoice("front", "leftSide")).toBe("front");
     expect(defenderArcChoice("leftSide", "front")).toBe("front");
     expect(defenderArcChoice("rear", "rightSide")).toBe("rightSide");
     expect(defenderArcChoice("leftSide", "rear")).toBe("leftSide");
+    expect(defenderArcChoice("rear", "leftSide")).toBe("leftSide");
+    expect(defenderArcChoice("rightSide", "rear")).toBe("rightSide");
   });
 
   it("classifies both arcs of a boundary pair", () => {
