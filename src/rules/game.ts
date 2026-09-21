@@ -440,7 +440,7 @@ export type GameEvent =
       readonly consciousBefore: boolean;
     }
   | {
-      /** Building-entry PSR failed (TW p.166): the crash damages the 'Mech
+      /** Building-entry PSR failed (TW p.167): the crash damages the 'Mech
        *  (ceil(CF / 10) in 5-point groups on the front column) but never
        *  knocks it down. `crits` holds the determining resolutions. */
       readonly kind: "buildingCrash";
@@ -866,9 +866,9 @@ export function rollInitiativePhase(state: BattleState, rng: Rng, sink: GameEven
   );
 }
 
-/** MP cost of a stand-up attempt (TW p.61): shares the move budget. */
+/** MP cost of a stand-up attempt (TW p.50): shares the move budget. */
 export const STAND_MP_COST = 2;
-/** MP cost of a voluntary drop to prone (TW p.60): shares the walk budget. */
+/** MP cost of a voluntary drop to prone (TW p.49): shares the walk budget. */
 export const DROP_MP_COST = 1;
 
 /** Pilot skill bounds for gunnery and piloting (TW regular scale 0..7). */
@@ -1240,13 +1240,13 @@ export function inferPronePropArm(
 }
 
 export interface DeclareAttacksOptions {
-  /** Torso twist (TW p.62): shifts the attacker's effective facing by one
+  /** Torso twist (TW pp.105-106): shifts the attacker's effective facing by one
    *  hexside before classifying the firing arc. Defaults to untwisted. */
   readonly twist?: Arc | null;
 }
 
 export interface ValidateAttacksOptions {
-  /** Torso twist (TW p.62): shifts the attacker's effective facing by one
+  /** Torso twist (TW pp.105-106): shifts the attacker's effective facing by one
    *  hexside before classifying the firing arc. Defaults to untwisted. */
   readonly twist?: Arc | null;
 }
@@ -1363,7 +1363,7 @@ export function validateAttacksImpl(
         `${mount.weapon} on ${unitId} cannot fire into the ${fireArc.arc} arc (target outside its firing arc)`,
       );
     }
-    // Target-side attack direction (TW p.107): which side of the target the
+    // Target-side attack direction (TW p.119): which side of the target the
     // attack strikes. Same for every weapon of this volley.
     if (attackDirection === undefined) {
       const back = bearingExact(target.position, unit.position)!;
@@ -2584,7 +2584,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
 }
 
 /**
- * Movement terrain PSRs for one entered hex (TW p.60, p.166): entering water
+ * Movement terrain PSRs for one entered hex (TW p.60, p.167): entering water
  * (depth 1: -1, depth 2: +0, depth 3+: +1), rubble (+0), or a building hex
  * (light +0 / medium +1 / heavy +2 / hardened +5). Exiting a building hex
  * does NOT trigger a PSR (TW p.170). Failed water/rubble rolls drop the
@@ -2758,7 +2758,7 @@ function movementTerrainPsr(
 }
 
 /**
- * Stand-up attempt for a prone unit (TW p.61): costs the unit's movement
+ * Stand-up attempt for a prone unit (TW p.50): costs the unit's movement
  * activation plus 1 heat, rolls a PSR with preexisting-damage modifiers only.
  * Success leaves the 'Mech standing (counts as walking for to-hit); failure
  * crashes it back down for fresh falling damage. A 'Mech with a destroyed
@@ -2820,7 +2820,7 @@ export function attemptStandUp(
     });
     return;
   }
-  // Failed stand: the 'Mech crashes back down (TW p.61) for fresh fall damage.
+  // Failed stand: the 'Mech crashes back down (TW p.50) for fresh fall damage.
   const terrain = cellAt(state, unit.position).terrain;
   applyFall(
     state,
@@ -2905,7 +2905,7 @@ export function dropProne(
 }
 
 /**
- * Facing change by one hexside while prone (TW p.61): costs the unit's
+ * Facing change by one hexside while prone (TW p.49): costs the unit's
  * movement activation plus 1 heat, counts as walking for to-hit.
  */
 export function proneFacingTurn(

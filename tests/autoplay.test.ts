@@ -37,7 +37,7 @@ function sessionAtWeaponAttack(): Session {
 }
 
 /** Build a fresh session at the start of movement phase 1 with `hunchy`
- *  (HBK-4G, walk 4) guaranteed to be the first mover. Per TW p.21 the loser
+ *  (HBK-4G, walk 4) guaranteed to be the first mover. Per TW p.37 the loser
  *  of initiative moves first, so we force hunchy to LOSE (5 vs 12). */
 function sessionAtMovementStart(): Session {
   const s = newSession(7);

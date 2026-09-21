@@ -62,7 +62,7 @@
   gates each weapon by its TW p.105 mounting arc — head/legs/front-torso
   front-only, arms add their own side, `rearFacing` (`MechDef` mount flag,
   MTF `(R)`, e.g. Atlas CT lasers) rear-only) and the target-side attack
-  direction (TW p.107, stored as `AttackDecl.attackDirection`), which flows
+  direction (TW p.119, stored as `AttackDecl.attackDirection`), which flows
   through `resolveWeaponAttack` into `hitLocationForArc` and the front/rear
   armor pool. Bearings are exact flat-top pixel angles (`bearingExact`);
   arc-boundary lines admit both arcs for firing and resolve attack direction

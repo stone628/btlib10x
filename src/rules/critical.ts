@@ -159,7 +159,7 @@ export type CriticalEffect =
       readonly name: string;
     }
   | {
-      /** Three engine crit slots destroyed — 'Mech is killed (TW p.33). */
+      /** Three engine crit slots destroyed — 'Mech is killed (TW p.125). */
       readonly kind: "engineDestroyed";
       readonly location: Location;
       readonly slotIndex: number;
@@ -266,7 +266,7 @@ const TORSO_ARM_HALF = 6;
 const HALF_SELECT_MAX = 3;
 /** Reroll cap when hunting a crit-hittable slot. */
 const SLOT_REROLL_CAP = 50;
-/** Destroyed engine slots that kill the 'Mech (TW p.33). */
+/** Destroyed engine slots that kill the 'Mech (TW p.125). */
 export const ENGINE_SLOTS_KILL = 3;
 /** Running MP numerator over walking MP (run = ceil(walk * 3 / 2)). */
 const RUN_WALK_NUMERATOR = 3;
@@ -681,7 +681,7 @@ function applySlotHit(
     }
   }
   if (name === ENGINE) {
-    // ENGINE_SLOTS_KILL engine crit slots destroyed = 'Mech killed (TW p.33).
+    // ENGINE_SLOTS_KILL engine crit slots destroyed = 'Mech killed (TW p.125).
     const engineCount = countDestroyedEngine(def, state.destroyed);
     if (engineCount >= ENGINE_SLOTS_KILL) {
       state.killedReason = "engineDestroyed";
