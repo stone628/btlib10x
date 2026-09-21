@@ -71,14 +71,7 @@
  */
 
 import { roll2D6, rollD6 } from "../core/dice.js";
-import {
-  damageTransferTo,
-  isArm,
-  isLeg,
-  isLimb,
-  isSideTorso,
-  TORSO_LOCATIONS,
-} from "../core/locations.js";
+import { damageTransferTo, isArm, isLeg, isLimb, TORSO_LOCATIONS } from "../core/locations.js";
 import type { Location, Rng } from "../core/types.js";
 import { type AmmoNameHolder, getAmmoDefFor } from "../data/ammo.schema.js";
 import type {
@@ -341,7 +334,8 @@ export type CaseKind = "case" | "caseII";
 /**
  * returns if given location is protected by case.
  * "caseII" overrides any other case state.
- * Clan mech's have built-in case at all locations
+ * CASE functions wherever it is mounted (TW p.133). Clan mech's have
+ * built-in case at all locations (TacOps / stock Clan sheets).
  */
 export function checkCASE(def: ResolvedMechDef, location: Location): CaseKind | undefined {
   let hasCase = false;
@@ -353,7 +347,7 @@ export function checkCASE(def: ResolvedMechDef, location: Location): CaseKind | 
       }
     }
   }
-  if (def.techBase === "Clan" || (hasCase && isSideTorso(location))) {
+  if (def.techBase === "Clan" || hasCase) {
     return "case";
   }
   return undefined;
