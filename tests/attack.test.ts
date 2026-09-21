@@ -334,4 +334,40 @@ describe("through-armor criticals (hit-location roll of 2)", () => {
     expect(res.crits).toHaveLength(0);
     expect(rng.remaining()).toBe(0);
   });
+
+  it("rolls twice when hit-location 2 also strips IS (TW p.124, in addition to)", () => {
+    // Pre-armor CT = 2, IS CT = 10; 3pt Small Laser breaches armor + strips 1 IS.
+    // Roll of 2 -> through-armor crit in addition to structure-damage crit (2 rolls).
+    const rng = scriptedRng(
+      2,
+      3, // to-hit 5 >= TN 4
+      1,
+      1, // location 2 -> centerTorso, through-armor
+      3,
+      5, // determining 8 -> 1 crit (structure breach)
+      1,
+      1, // CT slot 1 (engine)
+      3,
+      5, // determining 8 -> 1 crit (through-armor)
+      1,
+      2, // CT slot 2 (engine)
+    );
+    const res = resolveWeaponAttack({
+      ...critInput(rng),
+      targetDamage: freshState(2),
+    });
+    expect(res.hit).toBe(true);
+    expect(res.groups).toEqual([{ location: "centerTorso", damage: 3, throughArmor: true }]);
+    expect(res.application?.after.armor.centerTorso).toBe(0);
+    expect(res.application?.after.internalStructure.centerTorso).toBe(1);
+    expect(res.crits).toHaveLength(2);
+    expect(res.crits[0]!.throughArmor).toBe(false);
+    expect(res.crits[0]!.determiningRoll).toBe(8);
+    expect(res.crits[0]!.rows[0]!.kind).toBe("componentDestroyed");
+    expect(res.crits[1]!.throughArmor).toBe(true);
+    expect(res.crits[1]!.determiningRoll).toBe(8);
+    // Second roll must not re-hit slot 1 (already destroyed by first call).
+    expect(res.crits[1]!.rows[0]!.kind).toBe("componentDestroyed");
+    expect(rng.remaining()).toBe(0);
+  });
 });
