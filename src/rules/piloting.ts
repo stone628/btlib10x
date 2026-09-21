@@ -18,7 +18,7 @@
  *   entering depth-1 water hex      -1
  *   entering depth-2 water hex      +0
  *   entering depth-3+ water hex     +1
- *   entering/leaving a building     +0 light / +1 medium / +2 heavy / +5 hardened
+ *   entering a building             +0 light / +1 medium / +2 heavy / +5 hardened
  *   attempting to stand             +0
  *
  *   preexisting damage (applies to every PSR)

@@ -1058,6 +1058,50 @@ describe("movement terrain PSRs", () => {
     expect(hbk.prone).toBe(false);
   });
 
+  it("exiting a building hex requires no PSR (TW p.170)", () => {
+    const state = createTestBattle(
+      [
+        { col: 2, row: 3, type: "lightBuilding" },
+        { col: 2, row: 4, type: "clear" },
+      ],
+      [
+        {
+          id: "hbk",
+          model: "HBK-4G",
+          team: 0,
+          gunnery: 4,
+          piloting: 5,
+          position: { col: 2, row: 3 },
+          facing: "s",
+        },
+        {
+          id: "enf",
+          model: "ENF-4R",
+          team: 1,
+          gunnery: 4,
+          piloting: 5,
+          position: { col: 8, row: 8 },
+          facing: "n",
+        },
+      ],
+      true,
+    );
+    toMovement(state, scriptedRng(2, 2, 5, 5));
+    // Roll 2+2 would auto-fail any building PSR (target 5). If the engine
+    // mistakenly rolls on exit, a `pilotingCheck` reason:"building" event
+    // would be emitted; this test pins that off.
+    const events: GameEvent[] = [];
+    executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 2, row: 4 } }], events, {
+      rng: scriptedRng(2, 2),
+    });
+    const hbk = requireUnit(state, "hbk");
+    expect(hbk.position).toEqual({ col: 2, row: 4 });
+    expect(hbk.prone).toBe(false);
+    expect(events.some((e) => e.kind === "pilotingCheck" && e.reason === "building")).toBe(false);
+    expect(events.some((e) => e.kind === "buildingCrash")).toBe(false);
+    expect(events.some((e) => e.kind === "unitFell")).toBe(false);
+  });
+
   it("a failed building entry crashes without falling", () => {
     const state = createTestBattle(
       [{ col: 2, row: 3, type: "lightBuilding" }],
