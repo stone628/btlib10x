@@ -379,11 +379,12 @@ export type GameEvent =
       readonly location: Location;
       readonly slotIndex: number;
       readonly roll: number;
-      readonly heat: number;
       readonly avoid: number;
+      readonly heat: number;
       readonly threshold: number;
       readonly shotsRemaining: number;
       readonly damage: number;
+      readonly damagePerShot: number;
       readonly avoided: boolean;
     }
   | {
@@ -2481,6 +2482,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
         threshold,
         shotsRemaining: bin.shotsRemaining,
         damage: bin.damage,
+        damagePerShot: bin.damagePerShot,
         avoided: true,
       });
       continue;
@@ -2513,6 +2515,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
       threshold,
       shotsRemaining: bin.shotsRemaining,
       damage: bin.damage,
+      damagePerShot: bin.damagePerShot,
       avoided: false,
     });
     if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
