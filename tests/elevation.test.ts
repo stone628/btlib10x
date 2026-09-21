@@ -89,8 +89,11 @@ describe("elevation worked example: ridge duel", () => {
     expect(ridge).toBeDefined();
   });
 
-  it("LOS from level-0 to level-0 across a level-1 ridge is blocked", () => {
-    expect(losClear(elevation, { col: 4, row: 2 }, { col: 6, row: 2 })).toBe(false);
+  it("LOS from level-0 to level-0 across a tall ridge is blocked", () => {
+    // Eye-level ray sits at LOS level 2; the ridge needs to top out strictly
+    // above 2 to block (default L1 ridge tops at L1 — below the ray).
+    const tall = gridWithLevels({ "5,2": 3 });
+    expect(losClear(tall, { col: 4, row: 2 }, { col: 6, row: 2 })).toBe(false);
   });
 
   it("LOS from the level-1 ridge down to the level-0 target is clear", () => {

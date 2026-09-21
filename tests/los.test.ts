@@ -32,7 +32,8 @@ function gridWithBuildings(buildings: string[], levels: Record<string, number> =
   }
   for (const key of buildings) {
     const [col, row] = key.split(",").map(Number);
-    cells[col! - 1 + (row! - 1) * width] = { terrain: "lightBuilding", level: 0 };
+    const level = levels[key] ?? 0;
+    cells[col! - 1 + (row! - 1) * width] = { terrain: "lightBuilding", level };
   }
   return { cells, width, height };
 }
@@ -43,11 +44,11 @@ describe("losBlockedByElevation", () => {
     expect(losBlockedByElevation(grid, { col: 2, row: 2 }, { col: 4, row: 2 })).toBe(false);
   });
 
-  it("a level-1 ridge blocks LOS between two level-0 'Mechs two hexes apart", () => {
-    // Ridge at (3,2); attacker at (2,2); target at (4,2). The ray sits at
-    // LOS level 1 (hex level + 1, since both endpoints are level 0); the
-    // ridge's top is at level 2, which meets/exceeds the ray → blocks.
-    const grid = gridWithElevation({ "3,2": 1 });
+  it("a tall ridge blocks LOS between two level-0 'Mechs two hexes apart", () => {
+    // Ridge at (3,2) level 3; attacker at (2,2) L0; target at (4,2) L0.
+    // Eye-level ray sits at LOS level 2; the ridge's top is at level 3,
+    // which strictly exceeds the ray → blocks.
+    const grid = gridWithElevation({ "3,2": 3 });
     expect(losBlockedByElevation(grid, { col: 2, row: 2 }, { col: 4, row: 2 })).toBe(true);
   });
 
@@ -69,10 +70,13 @@ describe("losBlockedByElevation", () => {
 });
 
 describe("losBlockedByBuilding", () => {
-  it("an intervening building blocks LOS between two level-0 'Mechs", () => {
-    // Building at (3,2) between attacker (2,2) and target (4,2); its top sits
-    // at level 2, the ray at level 1 → blocked.
-    const grid = gridWithBuildings(["3,2"]);
+  it("an intervening tall building blocks LOS between two level-0 'Mechs", () => {
+    // Building at (3,2) level 1 between attacker (2,2) L0 and target (4,2) L0;
+    // default 2-level building top sits at level 3, the eye-level ray at 2 →
+    // blocked. (Default L0 building tops at L2 equal to the eye-level ray and
+    // does not strictly exceed it — the codebase's ray abstraction requires
+    // the building top to clear the eye-level ray.)
+    const grid = gridWithBuildings(["3,2"], { "3,2": 1 });
     expect(losBlockedByBuilding(grid, { col: 2, row: 2 }, { col: 4, row: 2 })).toBe(true);
     expect(losClear(grid, { col: 2, row: 2 }, { col: 4, row: 2 })).toBe(false);
   });
@@ -101,7 +105,8 @@ describe("losClear", () => {
   });
 
   it("fails when elevation blocks even with no woods", () => {
-    const grid = gridWithElevation({ "3,2": 1 });
+    // Tall ridge at (3,2) level 3; eye-level ray at 2 is strictly exceeded.
+    const grid = gridWithElevation({ "3,2": 3 });
     expect(losClear(grid, { col: 2, row: 2 }, { col: 4, row: 2 })).toBe(false);
   });
 });

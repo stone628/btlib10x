@@ -56,11 +56,22 @@ export function classifyArcWithBoundary(unitFacing: Facing, b: Bearing): ArcClas
 }
 
 /**
- * TW p.119 attack direction: when the attack line crosses the target's hex
- * exactly along the intersection of two hexsides, the TARGET chooses which
- * side is hit. The engine cannot ask mid-resolution, so it applies the
- * defender's dominant choice deterministically: never rear when an
- * alternative exists, and front over a side.
+ * TW p.119 attack direction (locked-in LOS hexside).
+ *
+ * When the attack line crosses the target's hex exactly along the
+ * intersection of two hexsides, the side hit is the LOS hexside chosen
+ * at the *first* attack declaration between those two units this phase.
+ * Per TW p. 99, when the center-to-center line passes between two hexes
+ * it is the target's controlling player who picks which hex lies along
+ * the LOS, and that choice locks for every attack between those two
+ * units for the rest of the turn.
+ *
+ * Engine policy: the engine never re-asks the target's controller, so
+ * this helper picks the defender-favouring member of the boundary pair
+ * deterministically — `front` always wins; otherwise drop `rear`. This
+ * only matches the rule when the real locked-in choice would have
+ * landed on the same arc; treat as engine behaviour, not a paraphrase
+ * of the rule.
  */
 export function defenderArcChoice(arc: Arc, altArc: Arc | null): Arc {
   if (altArc === null) return arc;
