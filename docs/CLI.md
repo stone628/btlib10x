@@ -221,19 +221,30 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   jets −1 jump each). Engine / gyro / sensor / life-support / heat-sink
   slots take and absorb crits in the slot table; destroyed engine slots
   feed the heat system below.
-- **Heat** — heat scale 0-30 with movement heat, weapon heat, engine-crit
-  heat, end-phase dissipation; to-hit and MP penalties; shutdown checks at
-  peak heat (auto at 30+, 2D6 avoidance at 14-29) and automatic restart of
-  *heat-caused* shutdowns once heat drops below the threshold; heat ammo
-  explosion checks at 19+. Inert ammunition (e.g. gauss rifle rounds)
-  is excluded from the heat-triggered selection and from crit-slot
-  detonation; a crit on such a bin still empties it. End-phase dissipation comes from the design's
-  heat sinks: the engine mounts `floor(walking × tonnage / 25)` sinks free,
-  the rest occupy crit slots; double heat sinks dissipate 2 heat each and
-  take 3 crits (Inner Sphere) or 2 crits (Clan) per device. Destroyed
-  sink crits reduce dissipation (a DHS retires per whole device); destroyed
-  engine slots add +5 heat but never retire internal sinks (strict
-  Total Warfare).
+- **Heat** — heat scale 0-30 with movement heat, weapon heat, posture heat
+  (stand-up, prone-turn), and engine-crit heat. Per TW p.159 the scale
+  updates once at the heat phase: own heat generated during the movement
+  and weapon attack phases accumulates into `unit.heatPending` (does not
+  touch the scale mid-turn — weapon to-hit this turn reads the previous
+  turn's end value), then lands on the scale, dissipation subtracts, and
+  the result is the new `unit.heat`. Shutdown/restart and ammo-explosion
+  checks read `max(startHeat, endHeat)` — the worst the scale reached at
+  any discrete read; peak within the heat phase has no separate meaning.
+  Heat-caused shutdown auto-fires at 30+ (initial only; restart at 30+ is
+  a roll — roll 12 succeeds). 2D6 avoidance runs at 14, 18, 22, 26 with
+  `roll >= avoid` for success (matches the voluntary startup convention);
+  automatic restart once dissipation drops the unit below 14. Heat ammo
+  explosion checks at 19, 23, 28 with `roll >= avoid` for avoided.
+  Engine crit heat skips any non-online unit (TW p.160 "even engine
+  criticals generate no extra heat while shut down"). Inert ammunition
+  (gauss rifle rounds) is excluded from the heat-triggered selection and
+  from crit-slot detonation; a crit on such a bin still empties it.
+  Dissipation comes from the design's heat sinks: the engine mounts
+  `floor(walking × tonnage / 25)` sinks free, the rest occupy crit slots;
+  double heat sinks dissipate 2 heat each and take 3 crits (Inner Sphere)
+  or 2 crits (Clan) per device. Destroyed sink crits reduce dissipation
+  (a DHS retires per whole device); destroyed engine slots add +5/+10 heat
+  per turn but never retire internal sinks (strict Total Warfare).
 - **Voluntary shutdown / startup** — `mode shutdown` + `done` sends an
   online unit off-line (`manual`); it persists (no end-phase auto-restart)
   until a voluntary startup succeeds. `mode startup` + `done` rolls 2D6

@@ -1185,7 +1185,8 @@ describe("streak missiles", () => {
     resolveAllAttacks(state, scriptedRng(3, 3, 3, 4, 3, 4, 3, 4, 3, 4, 2), events);
     const mc = requireUnit(state, "mc");
     expect(ammoWeaponTotals(getMechDef("MC-MKII-2")!, mc.ammoBins)["3"]).toBe(49);
-    expect(mc.heat).toBe(3);
+    expect(mc.heat).toBe(0);
+    expect(mc.heatPending).toBe(3);
     const event = events.find((e) => e.kind === "attackResolved")!;
     expect(event.kind === "attackResolved" && event.resolution.clusterRoll).toBeNull();
     expect(event.kind === "attackResolved" && event.resolution.groups).toHaveLength(4);
@@ -1235,8 +1236,9 @@ describe("streak missiles", () => {
         "CL Streak SRM 4",
       ),
     ).toBe(0);
-    // One volley fired: single launcher heat only.
-    expect(requireUnit(state, "mc").heat).toBe(3);
+    // One volley fired: single launcher heat only (deferred).
+    expect(requireUnit(state, "mc").heat).toBe(0);
+    expect(requireUnit(state, "mc").heatPending).toBe(3);
     const lines = resolutionLines("en", second.resolution);
     expect(lines.some((l) => l.includes("out of ammo"))).toBe(true);
   });

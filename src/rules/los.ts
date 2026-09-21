@@ -1,6 +1,6 @@
 import { hexDistance, lineHexes } from "../core/hex.js";
 import { blocksTargeting, cellAt, type HexGrid, screeningPoints } from "../core/terrain.js";
-import { isWoodsTerrain, type HexCoord, type TerrainType, type WreckState } from "../core/types.js";
+import { type HexCoord, isWoodsTerrain, type TerrainType, type WreckState } from "../core/types.js";
 import { buildingTypeOf } from "./building.js";
 
 /**

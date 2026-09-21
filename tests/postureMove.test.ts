@@ -94,7 +94,8 @@ describe("posture-change then move", () => {
     expect(unit.facing).toBe(landing.facing);
     expect(unit.moveMode).toBe("walk");
     expect(unit.mpSpent).toBe(1 + spent); // drop 1 + turn fragments
-    expect(unit.heat).toBe(heatBefore + 1); // drop 0 + turn 1
+    expect(unit.heat).toBe(heatBefore); // deferred until heat phase
+    expect(unit.heatPending).toBe(1); // drop 0 + turn 1
   });
 
   it("mode prone pronestill drops in place with no candidate map", () => {
@@ -130,7 +131,8 @@ describe("posture-change then move", () => {
     expect(unit.position).toEqual(before.position);
     expect(unit.facing).toBe(landing.facing);
     expect(unit.moveMode).toBe("walk");
-    expect(unit.heat).toBe(heatBefore + 1);
+    expect(unit.heat).toBe(heatBefore);
+    expect(unit.heatPending).toBe(1);
   });
 
   it("prone mode pronestill holds with no heat and no candidate", () => {

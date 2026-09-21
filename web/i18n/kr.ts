@@ -445,11 +445,11 @@ export const kr: Catalog = {
   "log.buildingCollapsed": "{hex} 위치 건물이 붕괴하여 잔해가 됨",
   "log.buildingDamaged": "{hex} 위치 건물이 구조 피해 {damage} 받음 (CF {cf})",
   "log.collapseDamage": "[{id}] 건물 붕괴로 {loc} 부위 피해 {damage} 받음 ({hex})",
-  "log.heatMove": "[{id}] 이동 발열 {heat} 발생",
-  "log.heatWeapon": "[{id}] 무기 발열 {heat} 발생 ({prev}->{curr})",
-  "log.heatEngineCrit": "[{id}] 엔진 크리티컬 발열 {heat} 발생 ({prev}->{curr})",
+  "log.heatMove": "[{id}] 이동 발열 {heat} 발생 (기본 {base}, 턴 누적 {total})",
+  "log.heatWeapon": "[{id}] {weapon} 발열 {heat} 발생 (기본 {base}, 턴 누적 {total})",
+  "log.heatEngineCrit": "[{id}] 엔진 크리티컬 발열 {heat} 발생 (기본 {base}, 턴 누적 {total})",
   "log.heatDissipated":
-    "[{id}] 열 {dissip} 방출 (발열 {prev}->{curr}, 턴 당 방출 성능 -{cap}/{capMax})",
+    "[{id}] 발열 처리: 시작값({start}) + 턴 발생({total}) - 방출({dissip}) = {end} (증감 {net}, 턴 당 방출 -{cap}/{capMax})",
   "log.shutdown":
     "[{id}] *** 셧다운 (발열 {heat} >= {threshold}) 회피 실패(2D6 = {roll} < {avoid}) ***",
   "log.shutdownAuto": "[{id}] *** 자동 셧다운 (발열 {heat} >= {threshold}) ***",

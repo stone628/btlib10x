@@ -2016,15 +2016,22 @@ function eventLines(locale: LocaleId, e: SessionGameEvent): string[] {
         }),
       ];
     case "heatMove":
-      return [i18n(locale, "log.heatMove", { id: e.unitId, heat: e.heat })];
+      return [
+        i18n(locale, "log.heatMove", {
+          id: e.unitId,
+          heat: e.heat,
+          base: e.base,
+          total: e.totalGenerated,
+        }),
+      ];
     case "heatWeapon":
       return [
         i18n(locale, "log.heatWeapon", {
           id: e.unitId,
           weapon: e.weapon,
           heat: e.heat,
-          prev: e.prevHeat,
-          curr: e.currHeat,
+          base: e.base,
+          total: e.totalGenerated,
         }),
       ];
     case "heatEngineCrit":
@@ -2032,8 +2039,8 @@ function eventLines(locale: LocaleId, e: SessionGameEvent): string[] {
         i18n(locale, "log.heatEngineCrit", {
           id: e.unitId,
           heat: e.heat,
-          prev: e.prevHeat,
-          curr: e.currHeat,
+          base: e.base,
+          total: e.totalGenerated,
         }),
       ];
     case "heatDissipated":
@@ -2041,8 +2048,10 @@ function eventLines(locale: LocaleId, e: SessionGameEvent): string[] {
         i18n(locale, "log.heatDissipated", {
           id: e.unitId,
           dissip: e.dissip,
-          prev: e.prevHeat,
-          curr: e.currHeat,
+          start: e.startHeat,
+          total: e.totalGenerated,
+          end: e.endHeat,
+          net: e.netChange,
           cap: e.capacity,
           capMax: e.capacityMax,
         }),
