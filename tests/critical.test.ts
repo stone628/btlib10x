@@ -679,6 +679,34 @@ describe("CASE", () => {
     expect(checkCASE(withCase, "leftTorso")).toBe("case");
   });
 
+  it("IS CASE works in any location (TW p.133)", () => {
+    const hbk = getMechDef("HBK-4G")!;
+    const withCase = (loc: Location): typeof hbk => ({
+      ...hbk,
+      techBase: "Inner Sphere",
+      critSlots: {
+        ...hbk.critSlots,
+        [loc]: [...hbk.critSlots[loc], { kind: "soak", name: "case" }],
+      },
+    });
+    for (const loc of LOCATIONS) {
+      expect(checkCASE(withCase(loc), loc)).toBe("case");
+    }
+  });
+
+  it("IS CASE in center torso caps the blast and kills via CT destruction", () => {
+    const s = state();
+    const ltBefore = s.internalStructure.leftTorso;
+    const rtBefore = s.internalStructure.rightTorso;
+    const app = applyAmmoExplosion(s, "centerTorso", 1000, "case");
+    // CT IS absorbs the blast; CASE caps transfer; MechWarrior dies via
+    // CT destruction (TW p.128). Other locations untouched.
+    expect(app.after.internalStructure.centerTorso).toBe(0);
+    expect(app.after.internalStructure.leftTorso).toBe(ltBefore);
+    expect(app.after.internalStructure.rightTorso).toBe(rtBefore);
+    expect(app.killed).toBe(true);
+  });
+
   it("CASE: explosion vents at the side torso, center torso untouched", () => {
     const s = state();
     const ctBefore = s.internalStructure.centerTorso;

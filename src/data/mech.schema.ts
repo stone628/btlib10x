@@ -1,4 +1,4 @@
-import { isSideTorso, isTorso } from "../core/locations.js";
+import { isTorso } from "../core/locations.js";
 import type { Location } from "../core/types.js";
 import { isLocation, LOCATIONS } from "../core/types.js";
 import type { LocationValue } from "../rules/damage.js";
@@ -538,11 +538,6 @@ export function validateMechDef(def: MechDef): void {
           if (!(CRIT_SOAK_NAMES as readonly string[]).includes(slot.name)) {
             errors.push(
               `critSlots.${loc}[${i}].name ${JSON.stringify(slot.name)} is not a known soak component`,
-            );
-          }
-          if (slot.name === "case" && techBase !== "Clan" && !isSideTorso(loc)) {
-            errors.push(
-              `critSlots.${loc}[${i}].name ${JSON.stringify(slot.name)} is only allowed in side torso locations on Inner Sphere 'Mechs`,
             );
           }
           break;

@@ -146,7 +146,7 @@ describe("'Mech definitions", () => {
     ).not.toThrow();
   });
 
-  it("restricts CASE to side torsos on Inner Sphere 'Mechs", () => {
+  it("CASE can mount in any location (TW p.133)", () => {
     const base = toMechDef(getMechDef("HBK-4G")!);
     const withCase = (
       loc: "leftTorso" | "rightTorso" | "centerTorso" | "head" | "rightArm",
@@ -163,9 +163,9 @@ describe("'Mech definitions", () => {
       }) as MechDef;
     expect(() => validateMechDef(withCase("leftTorso", 2))).not.toThrow();
     expect(() => validateMechDef(withCase("rightTorso", 10))).not.toThrow();
-    expect(() => validateMechDef(withCase("centerTorso", 11))).toThrow(/side torso/);
-    expect(() => validateMechDef(withCase("head", 0))).toThrow(/side torso/);
-    expect(() => validateMechDef(withCase("rightArm", 5))).toThrow(/side torso/);
+    expect(() => validateMechDef(withCase("centerTorso", 11))).not.toThrow();
+    expect(() => validateMechDef(withCase("head", 0))).not.toThrow();
+    expect(() => validateMechDef(withCase("rightArm", 5))).not.toThrow();
   });
 
   it("rejects invalid definitions", () => {

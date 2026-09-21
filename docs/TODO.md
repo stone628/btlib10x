@@ -79,7 +79,11 @@
   `src/rules/critical.ts`; wired through `applyAmmoExplosion` for both the crit
   slot path (`applySlotHit`) and the heat-phase path (`resolveHeatPhase`).
   `applyDamage` takes an optional `caseKind` arg to stop transfer at the
-  protected location.
+  protected location. IS CASE can mount in any location per TW p.133 (the
+  previous side-torso-only restriction is lifted). Latent flavor bug:
+  Clan implicit CASE returns `"case"` rather than `"caseII"` (per TacOps /
+  stock Clan sheets); switch when a Clan mech's ammo explosion outcome
+  matters enough to justify the 1-point cap.
 - **Partial cover (TW)** — a target standing in a water1 or building hex is in
   partial cover when the attacker's ground level is not higher than the
   target's: +1 to-hit (folded into `terrainMod` via new `targetPartialCover?`
