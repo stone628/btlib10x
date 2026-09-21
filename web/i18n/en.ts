@@ -434,12 +434,10 @@ export const en = {
   "critChart.componentCount.sensorsBlind": "{name} {destroyed}/{total} BLIND",
   "critChart.componentCount.lifeSupport": "{name} hit heat15+",
 
-  "sheet.critEffect.engine": "Engine {destroyed}/{total} (kill @ 3)",
-  "sheet.critEffect.gyroHit": "Gyro {destroyed}/{total} (PSR +3)",
-  "sheet.critEffect.gyroDestroyed": "Gyro {destroyed}/{total} (cannot stand)",
-  "sheet.critEffect.sensorsHit": "Sensors {destroyed}/{total} (to-hit +2)",
-  "sheet.critEffect.sensorsBlind": "Sensors {destroyed}/{total} BLIND",
-  "sheet.critEffect.lifeSupport": "Life Support hit (heat 15+)",
+  "sheet.critEffect.engine": "Engine({destroyed}/{total})",
+  "sheet.critEffect.gyro": "Gyro({destroyed}/{total})",
+  "sheet.critEffect.sensors": "Sensors({destroyed}/{total})",
+  "sheet.critEffect.lifeSupport": "Life Support hit",
 
   // event log
   "log.phase": "   turn: {turn}, phase: {phase}   ",
@@ -472,9 +470,12 @@ export const en = {
   "log.startupFailed": "[{id}] startup check failed (2D6 = {roll} < {avoid}); still shut down",
   "log.restartFailed":
     "[{id}] restart check failed (heat {heat} >= {threshold}) avoid fail(2D6 = {roll} < {avoid}); still shut down",
-  "log.ammoExplosionAvoided":
-    "[{id}] ammo {weapon} ({loc} #{slot}) avoids exploding (heat {heat} >= {threshold}) avoid success(2D6 = {roll} >= {avoid})",
-  "log.pilotingCheck": "[{id}] PSR ({reason}) needs {target}: 2D6 = {roll} -> {verdict}",
+  "log.ammoExplosionAvoidCheck":
+    "[{id}] {weapon} ammo ({loc} #{slot}) exploding by heat({heat} >= {threshold}), need {avoid} to avoid, 2D6 = {roll} -> {verdict}",
+  "log.heatAmmoExplosion":
+    "  {shots} shots exploded, total {damage} damage({shots} shots x {damagePerShot} per shot)",
+  "log.pilotingCheck":
+    "[{id}] piloting skill roll for {reason} needs {target}, 2D6 = {roll} -> {verdict}",
   "log.psrSuccess": "SUCCESS",
   "log.psrFail": "FAIL",
   "log.psrAuto": "auto",
@@ -491,8 +492,6 @@ export const en = {
   "log.stoodUp": "[{id}] stands up",
   "log.droppedProne": "[{id}] drops prone",
   "log.buildingCrash": "[{id}] crashes into building at {hex}: {groups} ({damage} total)",
-  "log.heatAmmoExplosion":
-    "[{id}] ammo {weapon} ({loc} #{slot}, {shots} shots) explodes for {damage} damage (heat {heat} >= {threshold}) avoid fail(2D6 = {roll} < {avoid})",
 
   // attack resolution
   "res.attackResolutionStart": "=== resolving declared attacks ===",

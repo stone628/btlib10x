@@ -426,12 +426,10 @@ export const kr: Catalog = {
   "critChart.componentCount.sensorsBlind": "{name} {destroyed}/{total} BLIND",
   "critChart.componentCount.lifeSupport": "{name} hit heat15+",
 
-  "sheet.critEffect.engine": "Engine {destroyed}/{total} (kill @ 3)",
-  "sheet.critEffect.gyroHit": "Gyro {destroyed}/{total} (PSR +3)",
-  "sheet.critEffect.gyroDestroyed": "Gyro {destroyed}/{total} (cannot stand)",
-  "sheet.critEffect.sensorsHit": "Sensors {destroyed}/{total} (to-hit +2)",
-  "sheet.critEffect.sensorsBlind": "Sensors {destroyed}/{total} BLIND",
-  "sheet.critEffect.lifeSupport": "Life Support hit (heat 15+)",
+  "sheet.critEffect.engine": "Engine({destroyed}/{total})",
+  "sheet.critEffect.gyro": "Gyro({destroyed}/{total})",
+  "sheet.critEffect.sensors": "Sensors({destroyed}/{total})",
+  "sheet.critEffect.lifeSupport": "Life Support hit",
 
   // event log
   "log.phase": "   턴 {turn}, 단계 {phase}   ",
@@ -463,9 +461,12 @@ export const kr: Catalog = {
   "log.startupFailed": "[{id}] 시동 체크 실패 (2D6 = {roll} < {avoid}); 여전히 셧다운 상태",
   "log.restartFailed":
     "[{id}] 재기동 체크 실패 (발열 {heat} >= {threshold}) 회피 실패(2D6 = {roll} < {avoid}); 여전히 셧다운 상태",
-  "log.ammoExplosionAvoided":
-    "[{id}] 탄약 {weapon} ({loc} #{slot}) 폭발 회피 (발열 {heat} >= {threshold}) 회피 성공(2D6 = {roll} >= {avoid})",
-  "log.pilotingCheck": "[{id}] 조종 판정 ({reason}) 필요 {target}: 2D6 = {roll} -> {verdict}",
+  "log.ammoExplosionAvoidCheck":
+    "[{id}] {weapon} 탄약({loc} #{slot}) 과열 폭발 판정({heat} >= {threshold}), 회피에 {avoid} 필요, 2D6 = {roll} -> {verdict}",
+  "log.heatAmmoExplosion":
+    "  {shots}회분 폭발, 총 {damage} 피해 발생({shots}회분 x 1회당 피해 {damagePerShot})",
+  "log.pilotingCheck":
+    "[{id}] {reason} 에 대한 조종 스킬 판정, 성공에 {target} 필요, 2D6 = {roll} -> {verdict}",
   "log.psrSuccess": "성공",
   "log.psrFail": "실패",
   "log.psrAuto": "자동",
@@ -480,8 +481,6 @@ export const kr: Catalog = {
   "log.stoodUp": "[{id}] 일어남",
   "log.droppedProne": "[{id}] 엎드림",
   "log.buildingCrash": "[{id}] 건물 {hex}에 충돌: {groups} (합계 {damage})",
-  "log.heatAmmoExplosion":
-    "[{id}] 탄약 {weapon} ({loc} #{slot}, {shots}발) 폭발, 피해 {damage} (발열 {heat} >= {threshold}) 회피 실패(2D6 = {roll} < {avoid})",
 
   // attack resolution
   "res.attackResolutionStart": "=== 선언된 공격 피해 판정 시작 ===",

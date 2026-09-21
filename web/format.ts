@@ -1326,34 +1326,38 @@ export function sheetLinesShort(locale: LocaleId, view: SheetView): string[] {
 }
 
 /** One-line summary of each crit-affected component (engine/gyro/sensors/life-support). */
-function critEffectLines(counts: CoreComponentStatus | null, locale: LocaleId): string[] {
-  if (counts === null) return [];
+function critEffectLines(counts: CoreComponentStatus | null, locale: LocaleId): string | null {
+  if (counts === null) return null;
   const out: string[] = [];
   if (counts.engine >= 1) {
     out.push(
-      `  ${i18n(locale, "sheet.critEffect.engine", { destroyed: counts.engine, total: ENGINE_SLOTS_KILL })}`,
+      i18n(locale, "sheet.critEffect.engine", {
+        destroyed: counts.engine,
+        total: ENGINE_SLOTS_KILL,
+      }),
     );
   }
   if (counts.gyro >= 1) {
-    const key =
-      counts.gyro >= GYRO_DESTROYED_HITS
-        ? "sheet.critEffect.gyroDestroyed"
-        : "sheet.critEffect.gyroHit";
     out.push(
-      `  ${i18n(locale, key, { destroyed: counts.gyro, total: GYRO_DESTROYED_HITS, mod: GYRO_HIT_MOD })}`,
+      i18n(locale, "sheet.critEffect.gyro", {
+        destroyed: counts.gyro,
+        total: GYRO_DESTROYED_HITS,
+        mod: GYRO_HIT_MOD,
+      }),
     );
   }
   if (counts.sensors >= 1) {
-    const key =
-      counts.sensors >= SENSOR_BLIND_HITS
-        ? "sheet.critEffect.sensorsBlind"
-        : "sheet.critEffect.sensorsHit";
-    out.push(`  ${i18n(locale, key, { destroyed: counts.sensors, total: SENSOR_BLIND_HITS })}`);
+    out.push(
+      i18n(locale, "sheet.critEffect.sensors", {
+        destroyed: counts.sensors,
+        total: SENSOR_BLIND_HITS,
+      }),
+    );
   }
   if (counts.lifeSupport >= 1) {
-    out.push(`  ${i18n(locale, "sheet.critEffect.lifeSupport")}`);
+    out.push(i18n(locale, "sheet.critEffect.lifeSupport"));
   }
-  return out;
+  return out.length > 0 ? `  ${out.join(" ")}` : null;
 }
 
 /** Compact two-line armor summary: head+torso on line 1, limbs on line 2.
@@ -1367,12 +1371,14 @@ function mechStatusLines(view: SheetView, locale: LocaleId): string[] {
       : view.shutdown === "starting"
         ? i18n(locale, "sheet.statusStarting")
         : i18n(locale, "sheet.statusShutdown");
-  return [
+  const lines: string[] = [
     i18n(locale, "sheet.statusHeader", { status, currHeat: view.heat, maxHeat: HEAT_CAP }),
     `  ${durabilityFrag(view, "head")} ${durabilityFrag(view, "leftTorso")} ${durabilityFrag(view, "centerTorso")} ${durabilityFrag(view, "rightTorso")}`,
     `  ${durabilityFrag(view, "leftArm")} ${durabilityFrag(view, "rightArm")} ${durabilityFrag(view, "leftLeg")} ${durabilityFrag(view, "rightLeg")}`,
-    ...critEffectLines(view.critCounts, locale),
   ];
+  const critLine = critEffectLines(view.critCounts, locale);
+  if (critLine !== null) lines.push(critLine);
+  return lines;
 }
 
 function durabilityFrag(view: SheetView, loc: Location): string {
@@ -1862,7 +1868,7 @@ export function formatLog(
     if (bufferedLen > 0) {
       const prefixLen = lastUnitPrefix.length - 1;
       const blank = " ".repeat(prefixLen);
-      if (bufferedLen == 1) {
+      if (bufferedLen === 1) {
         if (skipUnitPrefix) {
           lines.push(`${blank} ${buffered[0]!}`);
         } else {
@@ -1899,19 +1905,20 @@ export function formatLog(
         }
         return;
     }
-    for (const line of el) {
-      const match = UNIT_ID_PREFIX_REGEX.exec(line);
+    if (el.length > 0) {
+      const firstLine = el.shift()!;
+      const match = UNIT_ID_PREFIX_REGEX.exec(firstLine);
       if (match) {
         const matched = match[0];
         if (lastUnitPrefix !== matched) {
           flushBuffered();
           lastUnitPrefix = matched;
         }
-        buffered.push(line.substring(matched.length));
+        buffered.push(firstLine.substring(matched.length), ...el);
       } else {
         flushBuffered();
         lastUnitPrefix = "";
-        lines.push(line);
+        lines.push(...el);
       }
     }
   };
@@ -2121,7 +2128,7 @@ function eventLines(locale: LocaleId, e: SessionGameEvent): string[] {
     case "ammoExplosionCheck":
       if (e.avoided) {
         return [
-          i18n(locale, "log.ammoExplosionAvoided", {
+          i18n(locale, "log.ammoExplosionAvoidCheck", {
             id: e.unitId,
             weapon: e.weapon,
             loc: SHORT_LOC[e.location],
@@ -2130,11 +2137,12 @@ function eventLines(locale: LocaleId, e: SessionGameEvent): string[] {
             heat: e.heat,
             avoid: e.avoid,
             threshold: e.threshold,
+            verdict: i18n(locale, "log.psrSuccess"),
           }),
         ];
       }
       return [
-        i18n(locale, "log.heatAmmoExplosion", {
+        i18n(locale, "log.ammoExplosionAvoidCheck", {
           id: e.unitId,
           weapon: e.weapon,
           loc: SHORT_LOC[e.location],
@@ -2143,8 +2151,12 @@ function eventLines(locale: LocaleId, e: SessionGameEvent): string[] {
           heat: e.heat,
           avoid: e.avoid,
           threshold: e.threshold,
+          verdict: i18n(locale, "log.psrFail"),
+        }),
+        i18n(locale, "log.heatAmmoExplosion", {
           shots: e.shotsRemaining,
           damage: e.damage,
+          damagePerShot: e.damagePerShot,
         }),
       ];
     case "pilotingCheck": {
