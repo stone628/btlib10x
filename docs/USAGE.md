@@ -164,7 +164,7 @@ head/legs/torso weapons front-only, arm weapons front plus their own side,
 rear-facing torso weapons rear-only), line of sight (woods points ≥3 or an
 intervening elevation ridge blocks), range, ammo, jams, destroyed weapons,
 and aborts declarations that would auto-miss (TN > 12). The attack direction
-(TW p.107, side of the target struck) is classified from the target's facing
+(TW p.119, side of the target struck) is classified from the target's facing
 and recorded on the declaration; it drives the hit-location table and the
 front/rear armor pool.
 

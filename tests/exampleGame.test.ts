@@ -13,7 +13,7 @@ import {
 import { checkVictory, createTestBattle, scriptedRng } from "./helpers.js";
 
 /**
- * Full battle reproducing the Total Warfare "Rolling To Hit" diagram (p.6):
+ * Full battle reproducing the Total Warfare "Rolling To Hit" diagram (p.106):
  * a Wolverine closes on a Griffin and trades fire through light woods.
  *
  * Dice are fully scripted; every to-hit number below is derived by hand:

@@ -99,7 +99,7 @@ export const kr: Catalog = {
   "cmd.ammo.help": "행동 유닛의 탄약 소진 정책 표시 또는 설정",
   "cmd.ammo.arg.policy": "exposed | core | spread | least-first\n생략하면 현재 정책 표시",
   "cmd.torso.help":
-    "행동 유닛의 상체를 회전(TW p.62). 회전 시 팔과 앞쪽 torso가 회전 방향의 아크로 사격 가능",
+    "행동 유닛의 상체를 회전(TW pp.105-106). 회전 시 팔과 앞쪽 torso가 회전 방향의 아크로 사격 가능",
   "cmd.torso.arg.direction":
     "front = 회전 없음, left/right = 한 변만큼 그 방향으로 회전. fire 명령 예약 후에는 변경 불가",
   "cmd.fire.help": "하나 이상의 무기 공격 예약",

@@ -260,7 +260,7 @@ export function facingAfterFall(facing: Facing, shift: number): Facing {
   return rotateFacing(facing, shift);
 }
 
-/** Building-entry PSR modifiers by building class (TW p.166). */
+/** Building-entry PSR modifiers by building class (TW p.167). */
 const BUILDING_ENTRY_MODS: Readonly<Record<string, number>> = {
   lightBuilding: 0,
   mediumBuilding: 1,
@@ -268,7 +268,7 @@ const BUILDING_ENTRY_MODS: Readonly<Record<string, number>> = {
   hardenedBuilding: 5,
 };
 
-/** Building-entry PSR modifier by building class (TW p.166). */
+/** Building-entry PSR modifier by building class (TW p.167). */
 export function buildingEntryModifier(terrain: string): number | null {
   return BUILDING_ENTRY_MODS[terrain] ?? null;
 }

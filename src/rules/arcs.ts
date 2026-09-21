@@ -56,7 +56,7 @@ export function classifyArcWithBoundary(unitFacing: Facing, b: Bearing): ArcClas
 }
 
 /**
- * TW p.107 attack direction: when the attack line crosses the target's hex
+ * TW p.119 attack direction: when the attack line crosses the target's hex
  * exactly along the intersection of two hexsides, the TARGET chooses which
  * side is hit. The engine cannot ask mid-resolution, so it applies the
  * defender's dominant choice deterministically: never rear when an
@@ -93,7 +93,7 @@ export function weaponCanFireIntoArc(location: Location, rearFacing: boolean, ar
 
 /**
  * Hexside offset a torso twist applies to the attacker's effective facing
- * (TW p.62): `left` rotates one hexside counter-clockwise (so the left arm
+ * (TW pp.105-106): `left` rotates one hexside counter-clockwise (so the left arm
  * covers the left side of the twisted torso), `right` one hexside
  * clockwise, `front` is untwisted. Used to translate a session-side twist
  * state into an input for `classifyArcWithBoundary` /
@@ -113,7 +113,7 @@ export function twistDelta(twist: Arc): -1 | 0 | 1 {
 }
 
 /**
- * Effective attacker facing after applying a torso twist (TW p.62). The
+ * Effective attacker facing after applying a torso twist (TW pp.105-106). The
  * 'Mech's body keeps its `facing`; arm and front-torso weapons fire as if
  * the torso pointed `twist` hexsides off. `front` is a no-op.
  */

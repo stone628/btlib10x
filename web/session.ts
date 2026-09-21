@@ -107,7 +107,7 @@ export interface MoveContext {
 export interface AttackContext {
   actorId: string;
   fireDecls: AttackDecl[];
-  /** Acting unit's torso twist (TW p.62) for the current attack-phase
+  /** Acting unit's torso twist (TW pp.105-106) for the current attack-phase
    *  declaration: starts at `"front"` on context allocation (new actor or
    *  phase entry). Locked once any fire command is queued (see
    *  {@link setTorsoTwist}). Session-owned because it is a UI declaration,
@@ -1133,7 +1133,7 @@ export function commitFire(s: Session): CommitResult {
 }
 
 /**
- * Set the acting unit's torso twist (TW p.62) for its current attack-phase
+ * Set the acting unit's torso twist (TW pp.105-106) for its current attack-phase
  * declaration. Locked once any fire command is queued — the user must
  * `cancel` first — and resets to `"front"` on phase entry or new actor.
  */

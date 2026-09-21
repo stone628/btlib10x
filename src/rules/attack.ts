@@ -35,10 +35,10 @@ export interface WeaponAttackInput {
   /** True when the target is prone (but not immobile): −2 adjacent, +1
    *  otherwise (TW p.109). Forwarded to `computeToHit` with `distance`. */
   readonly targetProne?: boolean;
-  /** True when the attacker is prone: +2 attacker modifier (TW p.109). */
+  /** True when the attacker is prone: +2 attacker modifier (TW p.113). */
   readonly attackerProne?: boolean;
   /**
-   * Arm the prone attacker props itself up on (TW p.61): weapons mounted in
+   * Arm the prone attacker props itself up on (TW p.113): weapons mounted in
    * the other arm remain fireable. Null (or omitted) when standing, or when a
    * prone attacker fires no arm-mounted weapons (nothing to prop against).
    * Echoed into `AttackResolution.propArm`.
@@ -61,7 +61,7 @@ export interface WeaponAttackInput {
   readonly shots?: number;
   /** Layered damage state of the target. */
   readonly targetDamage: UnitDamageState;
-  /** Attack direction: the side of the TARGET the attack strikes (TW p.107),
+  /** Attack direction: the side of the TARGET the attack strikes (TW p.119),
    *  classified from the target's facing. Drives the hit-location table
    *  column and the front/rear armor pool. Default front. */
   readonly arc?: Arc;
@@ -95,7 +95,7 @@ export interface AttackResolution {
   readonly toHitRoll: number | null;
   readonly hit: boolean;
   readonly jammed: boolean;
-  /** True when the shot was fired while the attacker was prone (TW p.61). */
+  /** True when the shot was fired while the attacker was prone (TW p.113). */
   readonly prone: boolean;
   /**
    * Arm the prone attacker propped itself up on for this shot (its weapons

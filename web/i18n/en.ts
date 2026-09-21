@@ -102,7 +102,7 @@ export const en = {
   "cmd.ammo.help": "show or set the acting unit's ammo depletion policy",
   "cmd.ammo.arg.policy": "exposed | core | spread | least-first. omit to show the current policy",
   "cmd.torso.help":
-    "twist the acting unit's torso (TW p.62). arms and front torso fire into the twisted arc",
+    "twist the acting unit's torso (TW pp.105-106). arms and front torso fire into the twisted arc",
   "cmd.torso.arg.direction":
     "front = untwisted, left/right = one hexside twist in that direction. cannot change once a fire command is queued",
   "cmd.fire.help": "queue one or more weapon attacks",

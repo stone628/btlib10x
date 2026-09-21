@@ -16,9 +16,9 @@ export interface AttackModifiers {
    *  grants a flat −4 target modifier instead of the hex-based band. */
   readonly targetImmobile?: boolean;
   /** True when the target is prone (but not immobile): −2 from an adjacent
-   *  hex, +1 from every other hex (TW p.109). */
+   *  hex, +1 from every other hex (TW p.113). */
   readonly targetProne?: boolean;
-  /** True when the attacker is prone: +2 attacker modifier (TW p.109). */
+  /** True when the attacker is prone: +2 attacker modifier (TW p.113). */
   readonly attackerProne?: boolean;
   /** Destroyed-sensor to-hit modifier on the attacker: 0 intact, +2 on the
    *  first hit; a second hit blinds the 'Mech (no weapon attacks, TW p.123).
@@ -84,18 +84,18 @@ const RANGE_MOD: Record<RangeBracket, number> = {
 
 /** Default gunnery skill for `UnitInit`s that omit it (TW regular pilot). */
 export const DEFAULT_GUNNERY = 4;
-/** Attacker modifier while prone (TW p.109). */
+/** Attacker modifier while prone (TW p.113). */
 const PRONE_ATTACKER_MOD = 2;
-/** Target modifier while prone and adjacent (TW p.109). */
+/** Target modifier while prone and adjacent (TW p.113). */
 const PRONE_TARGET_ADJACENT_MOD = -2;
-/** Target modifier while prone and non-adjacent (TW p.109). */
+/** Target modifier while prone and non-adjacent (TW p.113). */
 const PRONE_TARGET_DISTANT_MOD = 1;
 /** Max distance counting as adjacent for the prone-target modifier. */
 const PRONE_ADJACENT_MAX_DISTANCE = 1;
 /** To-hit bonus for pulse weapons. */
 const PULSE_MOD = -2;
 
-/** Prone-target modifier by range (TW p.109): −2 adjacent, +1 otherwise. */
+/** Prone-target modifier by range (TW p.113): −2 adjacent, +1 otherwise. */
 export function proneTargetModifier(distance: number): number {
   return distance <= PRONE_ADJACENT_MAX_DISTANCE
     ? PRONE_TARGET_ADJACENT_MOD
