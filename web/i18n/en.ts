@@ -340,6 +340,7 @@ export const en = {
   "info.weaponCategoryMissile": "Missile",
   "info.weaponCategoryBallistic": "Ballistic",
   "info.weaponCategoryEnergy": "Energy",
+  "info.weaponCategoryEquipment": "Equipment",
   "info.weaponHead": "{name} [{category}]",
   "info.weaponRange": "range: short {short} / medium {medium} / long {long}",
   "info.weaponHeat": "heat: {heat}",

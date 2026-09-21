@@ -333,6 +333,7 @@ export const kr: Catalog = {
   "info.weaponCategoryMissile": "미사일",
   "info.weaponCategoryBallistic": "탄도",
   "info.weaponCategoryEnergy": "에너지",
+  "info.weaponCategoryEquipment": "장비",
   "info.weaponHead": "{name} [{category}]",
   "info.weaponRange": "사거리: 단거리 {short} / 중거리 {medium} / 장거리 {long}",
   "info.weaponHeat": "발열: {heat}",
