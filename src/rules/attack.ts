@@ -296,36 +296,46 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     // location (not a transferred one)? The rules call for one determining
     // roll per location that loses IS in a given group. A hit-location roll
     // of 2 adds one determining roll even with armor unbreached
-    // (through-armor critical, TW p.123).
+    // (through-armor critical, TW p.123), and is explicitly "in addition to
+    // any structure-damage critical roll" (TW p.124): when the group both
+    // strips IS and rolled a 2, two independent determining rolls resolve
+    // against the same source location, slot state advancing between them.
     const stripped = app.steps.some(
       (s) => s.location === group.location && s.pool === "structure" && s.damageApplied > 0,
     );
     if (!stripped && !group.throughArmor) continue;
-    const res = resolveCriticalHits({
-      rng: input.rng,
-      def: input.targetDef,
-      source: { location: group.location, damage: group.damage },
-      ...(group.throughArmor ? { throughArmor: true } : {}),
-      critSlotsDestroyed: critSlotsDestroyed!,
-      destroyedWeapons,
-      damage,
-      ammoBins,
-    });
-    critSlotsDestroyed = res.critSlotsDestroyed;
-    destroyedWeapons = res.destroyedWeapons;
-    ammoBins = res.ammoBins;
-    damage = res.damage;
-    // The crit may have blown off the arm or killed the unit; reflect that
-    // on the merged damage application.
-    if (application) {
-      application = {
-        ...application,
-        after: res.damage,
-        blownOffArms: mergeUnique(application.blownOffArms, res.blownOffArms),
-        killed: application.killed || res.killedReason !== null,
-      };
+    const rollCount = stripped && group.throughArmor ? 2 : 1;
+    for (let rollIdx = 0; rollIdx < rollCount; rollIdx++) {
+      // Single-roll triggers tag from the firing cause: structure breach or
+      // through-armor. Two-roll path fires the structure-breach roll first
+      // (untagged) and the through-armor roll second (tagged).
+      const tagThroughArmor = rollCount === 1 ? group.throughArmor : rollIdx > 0;
+      const res = resolveCriticalHits({
+        rng: input.rng,
+        def: input.targetDef,
+        source: { location: group.location, damage: group.damage },
+        ...(tagThroughArmor ? { throughArmor: true } : {}),
+        critSlotsDestroyed: critSlotsDestroyed!,
+        destroyedWeapons,
+        damage,
+        ammoBins,
+      });
+      critSlotsDestroyed = res.critSlotsDestroyed;
+      destroyedWeapons = res.destroyedWeapons;
+      ammoBins = res.ammoBins;
+      damage = res.damage;
+      // The crit may have blown off the arm or killed the unit; reflect that
+      // on the merged damage application.
+      if (application) {
+        application = {
+          ...application,
+          after: res.damage,
+          blownOffArms: mergeUnique(application.blownOffArms, res.blownOffArms),
+          killed: application.killed || res.killedReason !== null,
+        };
+      }
+      base.crits.push(res);
     }
-    base.crits.push(res);
   }
   base.application = application;
   return base;

@@ -1402,16 +1402,20 @@ describe("weapon-volley crit accumulation (TW p. 38 simultaneity)", () => {
     // Then the first-gyro PSR at end of weapon attack: roll 2D6 vs TN 8
     // (piloting 5 + gyro +3); a roll >= 8 succeeds and skips the fall path.
     const rng = scriptedRng(
-      // ML#1: hit, CT, 1 crit, gyro slot 4 (lower half, slot 4)
+      // ML#1: hit, CT (roll 2 = through-armor + IS-stripped -> 2 crit calls)
       3,
       1,
       1,
       1,
+      //   call 1 (structure): det 8 -> 1 crit, gyro slot 4
       4,
       4,
       1,
       4,
-      // ML#2: hit, RA, 1 crit, AC/10 slot 4 (lower half, slot 4)
+      //   call 2 (through-armor): det 7 -> no crit
+      3,
+      4,
+      // ML#2: hit, RA (roll 3, not through-armor), 1 crit, AC/10 slot 4
       2,
       2,
       1,
