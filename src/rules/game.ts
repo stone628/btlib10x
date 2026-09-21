@@ -243,6 +243,13 @@ export interface UnitState extends MechModelHolder {
    *  weapon heat accumulate during the turn; dissipation runs in the end
    *  phase. */
   heat: number;
+  /** Own heat generated this turn that has not yet been applied to the
+   *  scale. Movement, weapon, posture, and engine-crit heat all accumulate
+   *  here during their producing phases and land on the scale only in the
+   *  end phase (TW p.159 single-step net update). Reset to 0 by the heat
+   *  phase. The to-hit modifier used during this turn's weapon attack
+   *  phase reads `heat` (not `heat + heatPending`), matching TW p.160. */
+  heatPending: number;
   /** Shutdown state: "manual" (voluntary), "heat" (automatic, restartable in
    *  the end phase), "starting" (startup roll succeeded; still off-line until
    *  the next initiative roll) or "not" (online). Anything but "not" counts
@@ -327,28 +334,45 @@ export type GameEvent =
       readonly location: Location;
       readonly damage: number;
     }
-  | { readonly kind: "heatMove"; readonly unitId: string; readonly heat: number }
+  | {
+      readonly kind: "heatMove";
+      readonly unitId: string;
+      readonly heat: number;
+      /** Scale value at the time of the action (= previous turn's end).
+       *  Same value the weapon attack phase uses for to-hit this turn. */
+      readonly base: number;
+      /** Cumulative own heat generated this turn for this unit, including
+       *  this push. Equals `unit.heatPending` after the event. */
+      readonly totalGenerated: number;
+    }
   | {
       readonly kind: "heatWeapon";
       readonly unitId: string;
       readonly weapon: string;
       readonly heat: number;
-      readonly prevHeat: number;
-      readonly currHeat: number;
+      readonly base: number;
+      readonly totalGenerated: number;
     }
   | {
       readonly kind: "heatEngineCrit";
       readonly unitId: string;
       readonly heat: number;
-      readonly prevHeat: number;
-      readonly currHeat: number;
+      readonly base: number;
+      readonly totalGenerated: number;
     }
   | {
       readonly kind: "heatDissipated";
       readonly unitId: string;
       readonly dissip: number;
-      readonly prevHeat: number;
-      readonly currHeat: number;
+      /** Scale value entering the heat phase (pre-own-heat application). */
+      readonly startHeat: number;
+      /** Sum of own heat generated this turn (= `heatPending` at phase
+       *  entry). */
+      readonly totalGenerated: number;
+      /** Scale value after dissipation (= `unit.heat` after this event). */
+      readonly endHeat: number;
+      /** Net change this turn = endHeat - startHeat. */
+      readonly netChange: number;
       readonly capacity: number;
       readonly capacityMax: number;
     }
@@ -740,6 +764,7 @@ export function createBattle(
       jumpedThisTurn: false,
       mpSpent: 0,
       heat: 0,
+      heatPending: 0,
       shutdown: "not",
       declaredAttacks: [],
       firedTargetId: null,
@@ -1126,8 +1151,16 @@ export function executeMove(
     });
     const moveHeat = movementHeat(mode, mp);
     if (moveHeat > 0) {
-      unit.heat = Math.min(HEAT_CAP, unit.heat + moveHeat);
-      sink.push({ kind: "heatMove", unitId, heat: moveHeat });
+      // Deferred own heat: accumulate into heatPending; the scale only
+      // updates at the heat phase (TW p.159).
+      unit.heatPending += moveHeat;
+      sink.push({
+        kind: "heatMove",
+        unitId,
+        heat: moveHeat,
+        base: unit.heat,
+        totalGenerated: unit.heatPending,
+      });
     }
   };
 
@@ -2098,18 +2131,17 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       }
     }
 
-    // Apply attacker's weapon heat
+    // Apply attacker's weapon heat (deferred).
     const totalWeaponHeat = result.resolutions.reduce((sum, r) => sum + r.weaponHeat, 0);
     if (totalWeaponHeat > 0) {
-      const prevHeat = attacker.heat;
-      attacker.heat = Math.min(HEAT_CAP, attacker.heat + totalWeaponHeat);
+      attacker.heatPending += totalWeaponHeat;
       sink.push({
         kind: "heatWeapon",
         unitId: attacker.id,
         weapon: result.resolutions[0]?.resolution.weapon ?? "",
         heat: totalWeaponHeat,
-        prevHeat,
-        currHeat: attacker.heat,
+        base: attacker.heat,
+        totalGenerated: attacker.heatPending,
       });
     }
   }
@@ -2328,261 +2360,283 @@ export function advancePhase(state: BattleState, sink: GameEvent[], rng: Rng = D
 
 /**
  * Run one turn's heat resolution as the weapon attack phase hands off to the
- * end phase: engine crit heat on top of the turn's accumulated movement and
- * weapon heat, then shutdown/restart and heat ammo explosion checks at peak
- * heat, and finally dissipation against the operational heat-sink count.
+ * end phase. TW p.159 reads the heat scale update as a single step:
+ * "add own heat + outside heat, subtract heat sink dissipation, apply the net
+ * result to the Heat Scale." Movement, weapon, posture, and engine-crit heat
+ * were all accumulated into `unit.heatPending` during their producing
+ * phases; here we land them on the scale, subtract dissipation, then run the
+ * shutdown/restart and ammo-explosion checks against `max(startHeat, endHeat)`
+ * (the worst the scale reached at any discrete read — start, post-own-heat,
+ * or post-dissipation). Peak within the heat phase has no separate meaning;
+ * the user's TW p.159 reading explicitly rejects it.
+ *
+ * Engine crit heat is skipped for any non-online unit (TW p.160: "even
+ * engine criticals generate no extra heat while shut down"), bundled with
+ * the rest of the deferred own-heat.
+ *
+ * Shutdown / restart uses `roll >= avoid` for success (matches the
+ * voluntary startup and ammo-explosion checks; previously the involuntary
+ * branch used `roll <= avoid = fail`, an off-by-one).
  */
 export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]): void {
   const units = Object.values(state.units).filter((u) => !isUnitRemoved(u));
   const before: PhaseSnapshots = { damage: {}, crit: {} };
+
+  // Single pass: snapshot pre-heat-phase state, then for each unit apply
+  // deferred own-heat, dissipate, run shutdown/restart, run ammo explosion,
+  // apply life-support pilot damage, attempt consciousness wakeup. Per-unit
+  // mutations are isolated; cross-iteration state is only `before`, captured
+  // here and consumed by `resolvePhasePiloting` after the loop.
   for (const unit of units) {
+    // Snapshot pre-heat-phase damage/crit for `resolvePhasePiloting` diff.
     before.damage[unit.id] = {
       armor: { ...unit.damage.armor },
       armorRear: { ...unit.damage.armorRear },
       internalStructure: { ...unit.damage.internalStructure },
     };
     before.crit[unit.id] = cloneCritDestroyed(unit.critSlotsDestroyed);
-  }
 
-  // Engine crit heat: +5 per damaged engine slot (flat once the second slot
-  // is gone, acting as +5 per hit) per turn, stacking on remaining heat.
-  for (const unit of units) {
     const def = getMechDefFor(unit);
-    const heat = engineHitHeat(countDestroyedEngine(def, unit.critSlotsDestroyed));
-    if (heat > 0) {
-      const prevHeat = unit.heat;
-      unit.heat = Math.min(HEAT_CAP, unit.heat + heat);
-      sink.push({
-        kind: "heatEngineCrit",
-        unitId: unit.id,
-        heat,
-        prevHeat,
-        currHeat: unit.heat,
-      });
-    }
-  }
+    const startHeat = unit.heat;
+    const heatPending = unit.heatPending;
 
-  // Shutdown / restart: heat 30+ shuts down automatically; otherwise roll 2D6
-  // against the avoidance number when the Heat Scale is in shutdown range.
-  // Only a heat-caused shutdown ("heat") restarts automatically once heat is
-  // back below the shutdown threshold (or succeeds its avoidance roll). A
-  // manually shut-down unit ("manual") stays off-line until a voluntary
-  // startup roll succeeds, and a pending startup ("starting") is untouched
-  // here — it comes online at the next initiative roll. Checked at peak heat,
-  // before sinks dissipate.
-  for (const unit of units) {
-    const heat = unit.heat;
-    if (unit.shutdown === "manual" || unit.shutdown === "starting") continue;
-    const { avoid, threshold } = shutdownAvoidWithThreshold(heat);
-    if (avoid >= D2D6_MAX) {
-      // avoid exceeds 2D6 max, always
-      unit.shutdown = "heat";
-      sink.push({
-        kind: "shutdownCheck",
-        unitId: unit.id,
-        avoided: false,
-        manual: false,
-        roll: 0,
-        heat,
-        avoid,
-        threshold,
-      });
-      shutdownFallCheck(state, unit, rng, sink);
-      continue;
-    }
-    if (avoid === 0) {
-      // no check needed
-      if (unit.shutdown === "heat") {
-        unit.shutdown = "not";
+    // Apply deferred own-heat: movement + weapon + posture + engine crit
+    // (engine crit only if online per TW p.160). Reset pending; the
+    // post-own-heat read is the scale value dissipation will subtract from.
+    const engineHeat = isNominal(unit) ? engineHitHeat(countDestroyedEngine(def, unit.critSlotsDestroyed)) : 0;
+    const totalGenerated = heatPending + engineHeat;
+    if (totalGenerated > 0) {
+      unit.heat = Math.min(HEAT_CAP, unit.heat + totalGenerated);
+      if (engineHeat > 0) {
         sink.push({
-          kind: "restartCheck",
+          kind: "heatEngineCrit",
           unitId: unit.id,
-          success: true,
-          manual: false,
-          roll: 0,
-          heat,
-          avoid: 0,
-          threshold,
-        });
-      }
-      continue;
-    }
-    const roll = roll2D6(rng);
-    if (unit.shutdown === "heat") {
-      if (roll <= avoid) {
-        // Remains off-line; try again next end phase.
-        sink.push({
-          kind: "restartCheck",
-          unitId: unit.id,
-          success: false,
-          manual: false,
-          roll,
-          heat,
-          avoid,
-          threshold,
-        });
-      } else {
-        unit.shutdown = "not";
-        sink.push({
-          kind: "restartCheck",
-          unitId: unit.id,
-          success: true,
-          manual: false,
-          roll,
-          heat,
-          avoid,
-          threshold,
-        });
-      }
-    } else {
-      if (roll <= avoid) {
-        unit.shutdown = "heat";
-        sink.push({
-          kind: "shutdownCheck",
-          unitId: unit.id,
-          avoided: false,
-          manual: false,
-          roll,
-          heat,
-          avoid,
-          threshold,
-        });
-        shutdownFallCheck(state, unit, rng, sink);
-      } else {
-        sink.push({
-          kind: "shutdownCheck",
-          unitId: unit.id,
-          avoided: true,
-          manual: false,
-          roll,
-          heat,
-          avoid,
-          threshold,
+          heat: engineHeat,
+          base: startHeat,
+          totalGenerated,
         });
       }
     }
-  }
+    unit.heatPending = 0;
 
-  // Heat ammo explosions: at heat 19+ the largest loaded bin can detonate if
-  // the avoidance roll fails. The bin explodes against its location's
-  // internal structure (armor bypassed), cascading normally. Only the
-  // detonating bin empties; sibling bins of the same weapon stay loaded.
-  for (const unit of units) {
-    const heat = unit.heat;
-    const { avoid, threshold } = ammoExplosionAvoidWithThreshold(heat)!;
-    if (avoid === 0) continue;
-    const def = getMechDefFor(unit);
-    const bin = largestAmmoBin(def, unit.ammoBins);
-    if (bin === null) continue;
-    const roll = roll2D6(rng);
-    if (roll >= avoid) {
-      sink.push({
-        kind: "ammoExplosionCheck",
-        unitId: unit.id,
-        weapon: bin.weapon,
-        location: bin.location,
-        slotIndex: bin.slotIndex,
-        roll,
-        heat,
-        avoid,
-        threshold,
-        shotsRemaining: bin.shotsRemaining,
-        damage: bin.damage,
-        damagePerShot: bin.damagePerShot,
-        avoided: true,
-      });
-      continue;
-    }
-    const application = applyAmmoExplosion(
-      unit.damage,
-      bin.location,
-      bin.damage,
-      checkCASE(def, bin.location),
-    );
-    unit.damage = application.after;
-    for (const loc of LOCATIONS) {
-      if ((unit.damage.internalStructure[loc] ?? 0) <= 0) {
-        stripBinsInLocation(unit.ammoBins, loc);
-      }
-    }
-    // Detonated magazine reads as empty (0), like a bin drained by firing;
-    // rebuild enough to surface the empty state in case the strip removed it.
-    const slot = collectAmmoBins(def).find((b) => b.id === bin.binId);
-    if (slot !== undefined) unit.ammoBins[bin.binId] = { ...slot, shots: 0 };
-    sink.push({
-      kind: "ammoExplosionCheck",
-      unitId: unit.id,
-      weapon: bin.weapon,
-      location: bin.location,
-      slotIndex: bin.slotIndex,
-      roll,
-      heat,
-      avoid,
-      threshold,
-      shotsRemaining: bin.shotsRemaining,
-      damage: bin.damage,
-      damagePerShot: bin.damagePerShot,
-      avoided: false,
-    });
-    if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
-      markUnitDestroyed(unit, destroyedReasonFor(unit.damage), sink);
-    }
-  }
-
-  // Dissipation: each operational heat sink removes 1 heat point.
-  for (const unit of units) {
-    if (isUnitRemoved(unit)) continue; // stop tracking heat for removed unit
-    const def = getMechDefFor(unit);
-    const prevHeat = unit.heat;
+    // Dissipate (TW p.159 net update; applies to all units including
+    // shut-down — heat sinks keep working).
     const capacity = heatDissipation(def, unit.critSlotsDestroyed);
     const capacityMax = heatDissipationMax(def);
-    const dissipated = Math.min(capacity, prevHeat);
-    unit.heat -= dissipated;
-    if (dissipated > 0) {
+    const dissipated = Math.min(capacity, unit.heat);
+    const endHeat = unit.heat - dissipated;
+    unit.heat = endHeat;
+    if (dissipated > 0 || totalGenerated > 0) {
       sink.push({
         kind: "heatDissipated",
         unitId: unit.id,
         dissip: dissipated,
-        prevHeat,
-        currHeat: unit.heat,
+        startHeat,
+        totalGenerated,
+        endHeat,
+        netChange: endHeat - startHeat,
         capacity,
         capacityMax,
       });
     }
-  }
 
-  // Life-support pilot damage (TW p.41): with a destroyed life-support slot
-  // the pilot takes 1 hit when end-of-heat-phase heat is 15+, 2 hits at 26+.
-  for (const unit of units) {
-    if (isUnitRemoved(unit)) continue;
-    const def = getMechDefFor(unit);
-    if (countDestroyedLifeSupport(def, unit.critSlotsDestroyed) <= 0) continue;
-    if (unit.heat >= LIFE_SUPPORT_HEAT_2HITS)
-      applyPilotHits(state, unit, 2, "lifeSupport", rng, sink);
-    else if (unit.heat >= LIFE_SUPPORT_HEAT_1HIT)
-      applyPilotHits(state, unit, 1, "lifeSupport", rng, sink);
-  }
+    // Shutdown / restart at checkHeat = max(start, end). Voluntary "manual"
+    // and pending "starting" skip (voluntary restart only; comes-online at
+    // next initiative roll).
+    if (unit.shutdown !== "manual" && unit.shutdown !== "starting") {
+      const checkHeat = Math.max(startHeat, endHeat);
+      const { avoid, threshold } = shutdownAvoidWithThreshold(checkHeat);
 
-  // Wake attempts (TW p.42): end phase of a turn after the knockout turn.
-  for (const unit of units) {
-    if (!unit.unconscious || isUnitRemoved(unit)) continue;
-    if (unit.unconsciousSinceTurn === null || unit.unconsciousSinceTurn >= state.turn) continue;
-    const target = consciousnessTarget(unit.pilotHits);
-    if (target === null) continue;
-    const { roll, success } = rollConsciousness(rng, target);
-    if (success) {
-      unit.unconscious = false;
-      unit.unconsciousSinceTurn = null;
+      if (unit.shutdown === "heat") {
+        // Already heat-shut-down: restart path.
+        if (avoid === 0) {
+          unit.shutdown = "not";
+          sink.push({
+            kind: "restartCheck",
+            unitId: unit.id,
+            success: true,
+            manual: false,
+            roll: 0,
+            heat: checkHeat,
+            avoid: 0,
+            threshold,
+          });
+        } else {
+          const roll = roll2D6(rng);
+          if (roll >= avoid) {
+            unit.shutdown = "not";
+            sink.push({
+              kind: "restartCheck",
+              unitId: unit.id,
+              success: true,
+              manual: false,
+              roll,
+              heat: checkHeat,
+              avoid,
+              threshold,
+            });
+          } else {
+            sink.push({
+              kind: "restartCheck",
+              unitId: unit.id,
+              success: false,
+              manual: false,
+              roll,
+              heat: checkHeat,
+              avoid,
+              threshold,
+            });
+          }
+        }
+      } else if (avoid > 0) {
+        // Online unit — initial check.
+        if (avoid >= D2D6_MAX) {
+          // 30+ heat: auto-shutdown (TW p.160 "Shutdown cannot be avoided
+          // at 30+ heat").
+          unit.shutdown = "heat";
+          sink.push({
+            kind: "shutdownCheck",
+            unitId: unit.id,
+            avoided: false,
+            manual: false,
+            roll: 0,
+            heat: checkHeat,
+            avoid,
+            threshold,
+          });
+          shutdownFallCheck(state, unit, rng, sink);
+        } else {
+          const roll = roll2D6(rng);
+          if (roll >= avoid) {
+            sink.push({
+              kind: "shutdownCheck",
+              unitId: unit.id,
+              avoided: true,
+              manual: false,
+              roll,
+              heat: checkHeat,
+              avoid,
+              threshold,
+            });
+          } else {
+            unit.shutdown = "heat";
+            sink.push({
+              kind: "shutdownCheck",
+              unitId: unit.id,
+              avoided: false,
+              manual: false,
+              roll,
+              heat: checkHeat,
+              avoid,
+              threshold,
+            });
+            shutdownFallCheck(state, unit, rng, sink);
+          }
+        }
+      }
     }
-    sink.push({
-      kind: "consciousnessCheck",
-      unitId: unit.id,
-      roll,
-      target,
-      success,
-      hits: unit.pilotHits,
-      consciousBefore: false,
-    });
+
+    // Heat ammo explosion at the same checkHeat. Largest loaded explosive
+    // bin; on avoidance fail it detonates against the bin's location with
+    // CASE-aware damage transfer.
+    if (!isUnitRemoved(unit)) {
+      const checkHeat = Math.max(startHeat, endHeat);
+      const { avoid, threshold } = ammoExplosionAvoidWithThreshold(checkHeat)!;
+      if (avoid > 0) {
+        const bin = largestAmmoBin(def, unit.ammoBins);
+        if (bin !== null) {
+          const roll = roll2D6(rng);
+          if (roll >= avoid) {
+            sink.push({
+              kind: "ammoExplosionCheck",
+              unitId: unit.id,
+              weapon: bin.weapon,
+              location: bin.location,
+              slotIndex: bin.slotIndex,
+              roll,
+              heat: checkHeat,
+              avoid,
+              threshold,
+              shotsRemaining: bin.shotsRemaining,
+              damage: bin.damage,
+              damagePerShot: bin.damagePerShot,
+              avoided: true,
+            });
+          } else {
+            const application = applyAmmoExplosion(
+              unit.damage,
+              bin.location,
+              bin.damage,
+              checkCASE(def, bin.location),
+            );
+            unit.damage = application.after;
+            for (const loc of LOCATIONS) {
+              if ((unit.damage.internalStructure[loc] ?? 0) <= 0) {
+                stripBinsInLocation(unit.ammoBins, loc);
+              }
+            }
+            const slot = collectAmmoBins(def).find((b) => b.id === bin.binId);
+            if (slot !== undefined) unit.ammoBins[bin.binId] = { ...slot, shots: 0 };
+            sink.push({
+              kind: "ammoExplosionCheck",
+              unitId: unit.id,
+              weapon: bin.weapon,
+              location: bin.location,
+              slotIndex: bin.slotIndex,
+              roll,
+              heat: checkHeat,
+              avoid,
+              threshold,
+              shotsRemaining: bin.shotsRemaining,
+              damage: bin.damage,
+              damagePerShot: bin.damagePerShot,
+              avoided: false,
+            });
+            if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
+              markUnitDestroyed(unit, destroyedReasonFor(unit.damage), sink);
+            }
+          }
+        }
+      }
+    }
+
+    // Life-support pilot damage (TW p.41): 1 hit at end-of-phase heat 15+,
+    // 2 hits at 26+. Skip if ammo explosion just removed the unit.
+    if (!isUnitRemoved(unit)) {
+      if (countDestroyedLifeSupport(def, unit.critSlotsDestroyed) > 0) {
+        if (unit.heat >= LIFE_SUPPORT_HEAT_2HITS)
+          applyPilotHits(state, unit, 2, "lifeSupport", rng, sink);
+        else if (unit.heat >= LIFE_SUPPORT_HEAT_1HIT)
+          applyPilotHits(state, unit, 1, "lifeSupport", rng, sink);
+      }
+    }
+
+    // Consciousness wakeup (TW p.42): end phase of a turn after the
+    // knockout turn. May flip `unconscious` false if the roll passes.
+    if (
+      !isUnitRemoved(unit) &&
+      unit.unconscious &&
+      unit.unconsciousSinceTurn !== null &&
+      unit.unconsciousSinceTurn < state.turn
+    ) {
+      const target = consciousnessTarget(unit.pilotHits);
+      if (target !== null) {
+        const { roll, success } = rollConsciousness(rng, target);
+        if (success) {
+          unit.unconscious = false;
+          unit.unconsciousSinceTurn = null;
+        }
+        sink.push({
+          kind: "consciousnessCheck",
+          unitId: unit.id,
+          roll,
+          target,
+          success,
+          hits: unit.pilotHits,
+          consciousBefore: false,
+        });
+      }
+    }
   }
 
   // End-of-heat-phase piloting: falls from heat-phase ammo-explosion damage.
@@ -2809,8 +2863,14 @@ export function attemptStandUp(
   unit.jumpedThisTurn = false;
   unit.mpSpent = STAND_MP_COST;
   state.actedThisPhase.push(unitId);
-  unit.heat = Math.min(HEAT_CAP, unit.heat + POSTURE_MOVE_HEAT);
-  sink.push({ kind: "heatMove", unitId, heat: POSTURE_MOVE_HEAT });
+  unit.heatPending += POSTURE_MOVE_HEAT;
+  sink.push({
+    kind: "heatMove",
+    unitId,
+    heat: POSTURE_MOVE_HEAT,
+    base: unit.heat,
+    totalGenerated: unit.heatPending,
+  });
   const r = rollPilotingCheck(rng, unit.piloting, pre.modifier);
   sink.push({
     kind: "pilotingCheck",
@@ -2975,9 +3035,15 @@ export function proneFacingTurn(
   unit.jumpedThisTurn = false;
   unit.mpSpent = mpCost;
   state.actedThisPhase.push(unitId);
-  unit.heat = Math.min(HEAT_CAP, unit.heat + POSTURE_MOVE_HEAT);
+  unit.heatPending += POSTURE_MOVE_HEAT;
   sink.push(
-    { kind: "heatMove", unitId, heat: POSTURE_MOVE_HEAT },
+    {
+      kind: "heatMove",
+      unitId,
+      heat: POSTURE_MOVE_HEAT,
+      base: unit.heat,
+      totalGenerated: unit.heatPending,
+    },
     {
       kind: "moved",
       unitId,

@@ -453,11 +453,12 @@ export const en = {
   "log.buildingCollapsed": "Building at {hex} collapses to rubble",
   "log.buildingDamaged": "Building at {hex} takes {damage} structural damage (CF {cf})",
   "log.collapseDamage": "[{id}] takes {damage} damage to {loc} from building collapse at {hex}",
-  "log.heatMove": "[{id}] generates {heat} movement heat",
-  "log.heatWeapon": "[{id}] generates {heat} weapon heat ({prev}->{curr})",
-  "log.heatEngineCrit": "[{id}] generates {heat} engine heat from crit ({prev}->{curr})",
+  "log.heatMove": "[{id}] generates {heat} movement heat (base {base}, total this turn {total})",
+  "log.heatWeapon": "[{id}] generates {heat} {weapon} heat (base {base}, total this turn {total})",
+  "log.heatEngineCrit":
+    "[{id}] generates {heat} engine-crit heat (base {base}, total this turn {total})",
   "log.heatDissipated":
-    "[{id}] dissipates {dissip} heat ({prev}->{curr}, capable -{cap}/{capMax} per turn)",
+    "[{id}] heat phase: start({start}) + generated({total}) - dissipated({dissip}) = {end} (net {net}, capable -{cap}/{capMax} per turn)",
   "log.shutdown":
     "[{id}] *** SHUT DOWN (heat {heat} >= {threshold}) avoid fail (2D6 = {roll} < {avoid}) ***",
   "log.shutdownAuto": "[{id}] *** AUTO SHUTDOWN (heat {heat} >= {threshold}) ***",

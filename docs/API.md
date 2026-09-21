@@ -248,20 +248,44 @@ Heat is a public subsystem. Constants: `HEAT_CAP = 50`,
 - `dhsCritWidth(def): number` — slot width of the DHS chain
 - `movementHeat(mode, mpSpent): number`
 - `engineHitHeat(destroyedEngineSlots): number`
-- `heatSinksOperational(def, destroyedSlots): { operational, internal, dhs, dhsHit, external }`
-- `heatDissipation(def, destroyedEngineSlots, heat, ...): number`
+- `heatSinksOperational(def, critSlotsDestroyed): number`
+- `heatDissipation(def, critSlotsDestroyed): number`
+- `heatDissipationMax(def): number`
 - `toHitHeatModifier(heat): number`
 - `toHitHeatModifierWithThreshold(heat): { toHit: number; threshold: number }`
 - `movementMpPenalty(heat): number`
-- `movementMpPenaltyWithThreshold(heat): { mpPenalty: number; threshold: number }`
-- `effectiveMoveBudget({ def, mode, walking, running, jumping, destroyedSlots, heat, piloting? })`
+- `movementMpPenaltyWithThreshold(heat): { penalty: number; threshold: number }`
+- `effectiveMoveBudget(mode, movement, heat): number`
 - `shutdownAvoid(heat): number`
 - `shutdownAvoidWithThreshold(heat): { avoid: number; threshold: number }`
 - `ammoExplosionAvoid(heat): number`
 - `ammoExplosionAvoidWithThreshold(heat): { avoid: number; threshold: number }`
 - `heatScaleEffects(heat): HeatScaleEffects`
-- `largestAmmoBin(bins: Readonly<AmmoBins>): LargestAmmoBin | null`
+- `largestAmmoBin(def, bins): LargestAmmoBin | null`
 - `HeatScaleEffects`, `LargestAmmoBin` — return shapes
+
+### Heat phase (`rules/game.ts` `resolveHeatPhase`)
+
+Per TW p.159, the heat scale updates once at the heat phase: own heat
+(movement + weapon + posture + engine crit, summed into `unit.heatPending`
+during their producing phases) lands on the scale, dissipation subtracts,
+and the result is the new `unit.heat`. The shutdown/restart and ammo-
+explosion checks then read `max(startHeat, endHeat)` (the worst the scale
+reached between phase entry and phase exit). Peak within the heat phase
+has no separate meaning.
+
+Engine crit heat is skipped for any non-online unit (`shutdown !== "not"`)
+per TW p.160: *"even engine criticals generate no extra heat while shut
+down."* Voluntary `manual` and pending `starting` shutdowns generate no
+own heat at all.
+
+The involuntary shutdown / restart roll convention is `roll >= avoid` =
+success, matching the voluntary startup path and the ammo-explosion
+check. The previous `roll <= avoid = fail` convention was off-by-one.
+
+`unit.heat` is the previous-turn end value during the movement and weapon
+attack phases. Own heat generated this turn does not affect to-hit or MP
+budget until the heat phase runs.
 
 ### Movement (`rules/movement.ts`)
 

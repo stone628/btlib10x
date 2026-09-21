@@ -818,7 +818,8 @@ describe("going prone voluntarily", () => {
     proneFacingTurn(state, "enf", 2, events);
     expect(enf.facing).toBe("se");
     expect(enf.mpSpent).toBe(2);
-    expect(enf.heat).toBe(1);
+    expect(enf.heat).toBe(0);
+    expect(enf.heatPending).toBe(1);
     expect(events).toContainEqual(expect.objectContaining({ kind: "moved", mpSpent: 2 }));
     const second: GameEvent[] = [];
     proneFacingTurn(state, "enf", -3, second);

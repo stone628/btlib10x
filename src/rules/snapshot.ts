@@ -121,6 +121,7 @@ function cloneUnitState(unit: UnitState): UnitState {
     jumpedThisTurn: unit.jumpedThisTurn,
     mpSpent: unit.mpSpent,
     heat: unit.heat,
+    heatPending: unit.heatPending,
     shutdown: unit.shutdown,
     declaredAttacks: unit.declaredAttacks.map(cloneAttackDecl),
     firedTargetId: unit.firedTargetId,
@@ -278,6 +279,7 @@ export function loadUnitState(unit: UnitState, snapshot: UnitSnapshot): void {
   unit.jumpedThisTurn = next.jumpedThisTurn;
   unit.mpSpent = next.mpSpent;
   unit.heat = next.heat;
+  unit.heatPending = next.heatPending;
   unit.shutdown = next.shutdown;
   unit.declaredAttacks = next.declaredAttacks;
   unit.firedTargetId = next.firedTargetId;
