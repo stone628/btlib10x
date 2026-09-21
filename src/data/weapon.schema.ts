@@ -9,12 +9,13 @@
  */
 import { WEAPON_DATA } from "./weapon.data.js";
 
-export type WeaponCategory = "MISSILE" | "BALLISTIC" | "ENERGY";
+export type WeaponCategory = "MISSILE" | "BALLISTIC" | "ENERGY" | "EQUIPMENT";
 
 const WEAPON_CATEGORIES: ReadonlySet<WeaponCategory> = new Set<WeaponCategory>([
   "MISSILE",
   "BALLISTIC",
   "ENERGY",
+  "EQUIPMENT",
 ]);
 
 export interface WeaponDef {
@@ -70,7 +71,7 @@ function parseWeapon(raw: unknown, label: string, errors: string[]): WeaponDef |
   }
   const category = raw.category;
   if (typeof category !== "string" || !WEAPON_CATEGORIES.has(category as WeaponCategory)) {
-    errors.push(`${label}.category must be one of MISSILE, BALLISTIC, ENERGY`);
+    errors.push(`${label}.category must be one of MISSILE, BALLISTIC, ENERGY, EQUIPMENT`);
     valid = false;
   }
   const minRange = raw.minRange;
