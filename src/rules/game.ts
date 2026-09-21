@@ -2584,16 +2584,17 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
 }
 
 /**
- * Movement terrain PSRs for one entered hex (TW p.60, p.166): leaving a
- * building hex, entering water (depth 1: -1, depth 2: +0, depth 3+: +1),
- * rubble (+0), or a building hex (light +0 / medium +1 / heavy +2 /
- * hardened +5). Failed water/rubble rolls drop the 'Mech in the hex; a
- * failed building roll crashes it (ceil(CF / 10) front-column damage, no
- * fall) instead. A fall across levels drops into the lower of the two hexes
- * (TW p.68) with levels fallen feeding damage and the seatbelt check (+1
- * per level above 1); jump landings stay 0-level falls per errata.
- * Returns the hex the move stops in when it must stop here (fell,
- * crashed, or shut down mid-path), or null to continue.
+ * Movement terrain PSRs for one entered hex (TW p.60, p.166): entering water
+ * (depth 1: -1, depth 2: +0, depth 3+: +1), rubble (+0), or a building hex
+ * (light +0 / medium +1 / heavy +2 / hardened +5). Exiting a building hex
+ * does NOT trigger a PSR (TW p.170). Failed water/rubble rolls drop the
+ * 'Mech in the hex; a failed building roll crashes it (ceil(CF / 10)
+ * front-column damage, no fall) instead. A fall across levels drops into
+ * the lower of the two hexes (TW p.68) with levels fallen feeding damage
+ * and the seatbelt check (+1 per level above 1); jump landings stay
+ * 0-level falls per errata. Returns the hex the move stops in when it
+ * must stop here (fell, crashed, or shut down mid-path), or null to
+ * continue.
  */
 function movementTerrainPsr(
   state: BattleState,
@@ -2665,14 +2666,6 @@ function movementTerrainPsr(
     );
     return lower;
   };
-  if (ground) {
-    const leaving = buildingEntryModifier(cellAt(state, from).terrain);
-    if (leaving !== null) {
-      const fellAt = rollFall("building", leaving, "building", from);
-      if (fellAt !== null) return fellAt;
-    }
-    if (stop()) return to;
-  }
   const entering = cellAt(state, to).terrain;
   const water = waterEntryModifier(entering);
   if (water !== null) {

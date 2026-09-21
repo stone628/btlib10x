@@ -301,13 +301,13 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
    wreck like an eject. Cockpit
    destruction still kills outright.
 - **Movement-entry PSRs** — entering rubble (+0) or water (depth 1: −1,
-  depth 2: +0, depth 3+: +1) and entering/leaving a building hex (light +0
-  / medium +1 / heavy +2 / hardened +5) forces a PSR (plus preexisting
+  depth 2: +0, depth 3+: +1) and entering a building hex (light +0 /
+  medium +1 / heavy +2 / hardened +5) forces a PSR (plus preexisting
   damage); a failed water/rubble roll falls the 'Mech in the entered hex
   (jump checks the landing only), while a failed building roll crashes it
   for `ceil(CF / 10)` front-column damage without falling — unless the crash
   wrecks a leg/gyro or knocks the pilot out, which drops the 'Mech on the
-  spot.
+  spot. Exiting a building hex requires no PSR.
 
 ### Not yet implemented
 
