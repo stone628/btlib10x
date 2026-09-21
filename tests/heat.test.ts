@@ -95,8 +95,8 @@ describe("movementHeat", () => {
     expect(movementHeat("walk", 1)).toBe(1);
     expect(movementHeat("walk", 4)).toBe(1);
   });
-  it("run returns 2 if mpSpent>0, else 1", () => {
-    expect(movementHeat("run", 0)).toBe(1);
+  it("run always returns 2 (TW p. 159: declared mode, not distance)", () => {
+    expect(movementHeat("run", 0)).toBe(2);
     expect(movementHeat("run", 3)).toBe(2);
   });
   it("jump returns max(3, mpSpent)", () => {
