@@ -99,11 +99,13 @@ import {
 import { hitLocation, hitLocationForArc } from "./hitlocation.js";
 import { rollInitiative } from "./initiative.js";
 import {
+  interveningHexes,
   interveningTerrains,
   losBlockedByBuilding,
   losBlockedByElevation,
   losClear,
   losWoodsPointsBetween,
+  MECH_LOS_HEIGHT,
 } from "./los.js";
 import * as mv from "./movement.js";
 import {
@@ -583,8 +585,14 @@ export function isUnitAvailable(unit: UnitState): boolean {
 
 /**
  * Partial-cover to-hit modifier against `target` from `attacker`:
- *  - terrain: 1 when the target stands in partial-cover terrain
- *    (water1 / building) and the attacker is not higher.
+ *  - water1 target hex: +1 for a standing 'Mech, regardless of relative
+ *    elevation (TW p.102: water surrounds it, applies even when attacker higher).
+ *  - building target hex: +1 for a standing 'Mech when attacker level ≤
+ *    target level (target's own hex, attacker not firing downhill).
+ *  - intervening higher hex (TW p.102): +1 for a standing 'Mech when an
+ *    adjacent hex lies between attacker and target, is at least one level
+ *    above the target's underlying hex, and attacker LOS level ≤ target LOS
+ *    level (attacker not firing downhill).
  *  - L2 wreck adjacent + attacker below wreck top: +2 (TW).
  *  - L2 wreck adjacent + attacker at/above wreck top + target elevated
  *    (target hex higher than attacker) or target at Level 3+: +1 (TO).
@@ -599,15 +607,41 @@ export function partialCoverMod(
   attacker: UnitState,
   target: UnitState,
 ): number {
-  const terrain =
-    hasPartialCover(cellAt(state, target.position).terrain) &&
-    cellAt(state, attacker.position).level <= cellAt(state, target.position).level
-      ? PARTIAL_COVER_TERRAIN_MOD
-      : 0;
-  let wreck = 0;
+  const targetTerrain = cellAt(state, target.position).terrain;
   const attackerLevel = cellAt(state, attacker.position).level;
   const targetLevel = cellAt(state, target.position).level;
   const targetStandingGround = !target.prone && isNominal(target) && !target.unconscious;
+
+  let terrain = 0;
+  if (targetStandingGround) {
+    if (targetTerrain === "water1") {
+      // TW p.102: water1 surrounds the 'Mech, applies even when attacker higher.
+      terrain = PARTIAL_COVER_TERRAIN_MOD;
+    } else if (hasPartialCover(targetTerrain) && attackerLevel <= targetLevel) {
+      // Target's own building hex: walls provide cover when attacker not higher.
+      terrain = PARTIAL_COVER_TERRAIN_MOD;
+    } else {
+      // Intervening higher hex (TW p.102): adjacent to target, between
+      // attacker and target, at least one level above target's underlying
+      // hex, attacker not firing downhill.
+      const attackerLos = attackerLevel + MECH_LOS_HEIGHT;
+      const targetLos = targetLevel + MECH_LOS_HEIGHT;
+      if (attackerLos <= targetLos) {
+        for (const h of interveningHexes(attacker.position, target.position)) {
+          if (!isAdjacent(h, target.position)) continue;
+          const cell = cellAt(state, h);
+          const effectiveLevel =
+            buildingTypeOf(cell.terrain) !== undefined ? cell.level + 2 : cell.level;
+          if (effectiveLevel >= targetLevel + 1) {
+            terrain = PARTIAL_COVER_TERRAIN_MOD;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  let wreck = 0;
   for (const [key, w] of Object.entries(state.wrecks)) {
     const [col, row] = key.split(",");
     const wreckHex = { col: Number(col), row: Number(row) };

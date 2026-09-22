@@ -147,11 +147,16 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
   const weapon: WeaponDef = getWeaponDefFor(input);
   const shots = input.shots ?? 1;
   const arc = input.arc ?? "front";
-  const terrainCoverMod =
-    hasPartialCover(input.targetTerrain) && (input.attackerLevel ?? 0) <= (input.targetLevel ?? 0)
+  // Caller-computed value (battle-state aware, includes wrecks + intervening)
+  // wins; direct callers without it get the target-hex fallback.
+  const partialCoverMod =
+    input.partialCoverMod ??
+    (input.targetTerrain === "water1"
       ? PARTIAL_COVER_TERRAIN_MOD
-      : 0;
-  const partialCoverMod = Math.max(terrainCoverMod, input.partialCoverMod ?? 0);
+      : hasPartialCover(input.targetTerrain) &&
+          (input.attackerLevel ?? 0) <= (input.targetLevel ?? 0)
+        ? PARTIAL_COVER_TERRAIN_MOD
+        : 0);
   const partialCover = partialCoverMod > 0;
 
   const breakdown = computeToHit({
