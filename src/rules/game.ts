@@ -185,6 +185,11 @@ export type DestroyedReason =
   | "engineDestroyed";
 export type DestroyedState = "not" | DestroyedReason;
 
+/** Why the pilot took damage. Drives the `pilotDamaged` event `reason`
+ *  field and the `applyPilotHits` parameter; both stay typed so web and
+ *  tests can pattern-match exhaustively. */
+export type PilotHitReason = "headHit" | "ammoExplosion" | "fall" | "shutdownFall" | "lifeSupport";
+
 /** Removal from play: "not" = on the board. "destroyed" = unit killed
  *  (paired with a DestroyedState reason). "pilotEjected" = pilot left
  *  the 'Mech (wreck left behind). "pilotKilled" = six pilot hits, unit
@@ -453,8 +458,7 @@ export type GameEvent =
   | {
       readonly kind: "pilotDamaged";
       readonly unitId: string;
-      /** headHit | ammoExplosion | fall | lifeSupport | shutdownFall. */
-      readonly reason: string;
+      readonly reason: PilotHitReason;
       readonly hits: number;
       readonly totalHits: number;
     }
@@ -1721,7 +1725,7 @@ export function applyPilotHits(
   state: BattleState,
   unit: UnitState,
   hits: number,
-  reason: string,
+  reason: PilotHitReason,
   rng: Rng,
   sink: GameEvent[],
 ): void {
@@ -2551,7 +2555,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
       const checkHeat = Math.max(startHeat, endHeat);
       const { avoid, threshold } = ammoExplosionAvoidWithThreshold(checkHeat)!;
       if (avoid > 0) {
-        const bin = largestAmmoBin(def, unit.ammoBins);
+        const bin = largestAmmoBin(def, unit.ammoBins, rng);
         if (bin !== null) {
           const roll = roll2D6(rng);
           if (roll >= avoid) {
@@ -2608,6 +2612,11 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
               damagePerShot: bin.damagePerShot,
               avoided: false,
             });
+            // TW p.160: ammo explosion auto-deals 2 pilot hits and a
+            // Consciousness Roll per hit. Apply before the destroyed check
+            // so a pilot killed by the explosion is recorded with reason
+            // "pilotKilled" rather than the explosion's structural kill.
+            applyPilotHits(state, unit, AMMO_BLAST_PILOT_HITS, "ammoExplosion", rng, sink);
             if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
               markUnitDestroyed(unit, destroyedReasonFor(unit.damage), sink);
             }

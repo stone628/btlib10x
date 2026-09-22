@@ -283,7 +283,7 @@ describe("largestAmmoBin", () => {
     const state = hbkVsEnf();
     const unit = requireUnit(state, "hbk");
     const def = getMechDefFor(unit);
-    const bin = largestAmmoBin(def, unit.ammoBins);
+    const bin = largestAmmoBin(def, unit.ammoBins, scriptedRng(6));
     expect(bin).not.toBeNull();
     expect(bin!.weapon).toBe("AC/20");
     // 10 declared shots spread over two 5-shot bins: only the single
@@ -299,7 +299,51 @@ describe("largestAmmoBin", () => {
     // BZK-F3 mounts two gauss ammo bins in the center torso.
     expect(unit.ammoBins["centerTorso:11"]?.shots).toBe(8);
     expect(unit.ammoBins["centerTorso:12"]?.shots).toBe(8);
-    expect(largestAmmoBin(def, unit.ammoBins)).toBeNull();
+    expect(largestAmmoBin(def, unit.ammoBins, scriptedRng(6))).toBeNull();
+  });
+
+  it("picks by per-shot DV first (TW p.160): SRM-6 bin over fuller AC/5", () => {
+    // WVR-6R carries SRM 6 (DV 12) and AC/5 (DV 5). With SRM drained to a
+    // single shot (12 dmg) and AC/5 fully loaded (100 dmg), the old
+    // shots*DV criterion would pick AC/5; TW requires the higher per-shot
+    // DV bin to blow first regardless of remaining shot count.
+    const state = createTestBattle(
+      [],
+      [
+        {
+          id: "wvr",
+          model: "WVR-6R",
+          team: 0,
+          gunnery: 4,
+          piloting: 5,
+          position: { col: 2, row: 4 },
+          facing: "n",
+        },
+        {
+          id: "dummy",
+          model: "ENF-4R",
+          team: 1,
+          gunnery: 4,
+          piloting: 5,
+          position: { col: 6, row: 6 },
+          facing: "nw",
+        },
+      ],
+      true,
+    );
+    const unit = requireUnit(state, "wvr");
+    const def = getMechDefFor(unit);
+    // Drain every SRM-6 ammo bin down to 1 shot.
+    for (const [id, bin] of Object.entries(unit.ammoBins)) {
+      if (bin.weapon === "SRM 6") {
+        unit.ammoBins[id] = { ...bin, shots: 1 };
+      }
+    }
+    const bin = largestAmmoBin(def, unit.ammoBins, scriptedRng(6));
+    expect(bin).not.toBeNull();
+    expect(bin!.weapon).toBe("SRM 6");
+    expect(bin!.damagePerShot).toBe(12);
+    expect(bin!.shotsRemaining).toBe(1);
   });
 });
 
@@ -382,10 +426,11 @@ describe("game integration: dissipation", () => {
     const hbk = requireUnit(state, "hbk");
     hbk.heat = 20;
     startAttackTurn(state);
-    // shutdown avoid at 20 -> 6, roll 6 fails (new conv: roll < avoid);
-    // shutdown PSR 12 passes; ammo avoid 4, roll 4 avoids.
+    // shutdown avoid at 20 -> 6, roll 2+3=5 < 6 fails;
+    // shutdown PSR 6+6=12 >= 8 passes; +1 die for `largestAmmoBin`
+    // tiebreak on two equal AC/20 bins; ammo avoid 3+1=4 >= 4 passes.
     const events: GameEvent[] = [];
-    advancePhase(state, events, scriptedRng(2, 3, 6, 6, 3, 1));
+    advancePhase(state, events, scriptedRng(2, 3, 6, 6, 6, 3, 1));
     expect(hbk.heat).toBe(20 - 13);
     const dissipEvent = events.find(
       (e): e is Extract<GameEvent, { kind: "heatDissipated" }> =>
@@ -424,9 +469,11 @@ describe("game integration: shutdown", () => {
     const hbk = requireUnit(state, "hbk");
     hbk.heat = 30;
     startAttackTurn(state);
-    // auto shutdown (no roll); shutdown PSR 12 passes (stays up).
+    // auto shutdown (no roll); shutdown PSR 6+6=12 passes; ammo avoid
+    // 6+6=12 >= 8 passes. +1 die for `largestAmmoBin` tiebreak on the two
+    // equal-AC/20 bins.
     const events: GameEvent[] = [];
-    advancePhase(state, events, scriptedRng(6, 6, 3, 3, 3, 1));
+    advancePhase(state, events, scriptedRng(6, 6, 6, 6, 6));
     expect(hbk.shutdown).toBe("heat");
     expect(
       events.some(
@@ -640,10 +687,13 @@ describe("game integration: heat ammo explosion", () => {
     const hbk = requireUnit(state, "hbk");
     hbk.heat = 30; // auto shutdown first
     startAttackTurn(state);
-    // shutdown auto: no roll; shutdown PSR 2 fails -> fall (dir 1 front,
-    // loc 7 CT, pilot stays awake); ammo avoid roll 4 < 8 (avoid=8 for heat 30)
+    // shutdown auto: no roll; shutdown PSR 1+1=2 fails -> fall (dir 1, loc 7
+    // CT, pilot stays awake at 3+3=6 >= 3); ammo avoid 3+1=4 < 8 fails; +1
+    // die for the `largestAmmoBin` tiebreak between the two equal AC/20
+    // bins; TW p.160 then forces 2 pilot hits + Consciousness Roll per hit,
+    // both rolls 6,6 -> 12 (targets 5 then 7, pilot stays awake).
     const events: GameEvent[] = [];
-    advancePhase(state, events, scriptedRng(1, 1, 1, 3, 4, 3, 3, 3, 1));
+    advancePhase(state, events, scriptedRng(1, 1, 1, 3, 4, 3, 3, 3, 1, 6, 6, 6, 6, 6));
     expect(hbk.prone).toBe(true);
     expect(
       events.some(
@@ -661,6 +711,20 @@ describe("game integration: heat ammo explosion", () => {
     expect(blast).toBeDefined();
     expect(blast!.shotsRemaining).toBe(5);
     expect(blast!.damage).toBe(100);
+    // TW p.160: ammo explosion deals 2 pilot hits and forces a Consciousness
+    // Roll per hit. Fall already landed 1 hit (pilotHits = 1 + 2 = 3).
+    const ammoHits = events.filter(
+      (e): e is Extract<GameEvent, { kind: "pilotDamaged" }> =>
+        e.kind === "pilotDamaged" && e.reason === "ammoExplosion",
+    );
+    expect(ammoHits).toHaveLength(2);
+    const consciousness = events.filter(
+      (e): e is Extract<GameEvent, { kind: "consciousnessCheck" }> =>
+        e.kind === "consciousnessCheck" && e.unitId === "hbk",
+    );
+    expect(consciousness.length).toBeGreaterThanOrEqual(3);
+    expect(hbk.pilotHits).toBe(3);
+    expect(hbk.unconscious).toBe(false);
   });
 
   it("gauss-only unit does not detonate from heat (inert ammo)", () => {
@@ -845,8 +909,11 @@ describe("deferred event payload (base, heat, totalGenerated)", () => {
     hbk.heat = 20;
     hbk.heatPending = 3; // 3 own heat (we won't actually generate this turn)
     startAttackTurn(state);
+    // shutdown avoid 2+3=5 < 6 fails; PSR 6+6=12 >= 8 passes; +1 die for
+    // `largestAmmoBin` tiebreak (the two equal AC/20 bins); ammo avoid
+    // 1+6=7 >= 4 passes.
     const events: GameEvent[] = [];
-    advancePhase(state, events, scriptedRng(2, 3, 6, 6, 3, 1));
+    advancePhase(state, events, scriptedRng(2, 3, 6, 6, 6, 1, 6));
     const d = events.find(
       (e): e is Extract<GameEvent, { kind: "heatDissipated" }> =>
         e.kind === "heatDissipated" && e.unitId === "hbk",

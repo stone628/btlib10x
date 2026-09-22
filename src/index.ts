@@ -203,6 +203,7 @@ export type {
   GameLoopStopper,
   MoveStep,
   Phase,
+  PilotHitReason,
   RemovedState,
   ShutdownState,
   UnitInit,

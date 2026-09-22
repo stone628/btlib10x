@@ -19,8 +19,8 @@
  * destroy heat sinks (strict Total Warfare).
  */
 
-import { D2D6_MAX } from "../core/dice.js";
-import { LOCATIONS, type Location, type MoveMode } from "../core/types.js";
+import { D2D6_MAX, diceIndex } from "../core/dice.js";
+import { LOCATIONS, type Location, type MoveMode, type Rng } from "../core/types.js";
 import { getAmmoDefFor } from "../data/ammo.schema.js";
 import type { ResolvedMechDef } from "../data/mech.schema.js";
 import { type AmmoBinId, type AmmoBins, collectAmmoBins } from "./ammo.js";
@@ -293,11 +293,13 @@ export interface LargestAmmoBin {
 }
 
 /**
- * The ammo bin that would detonate in a heat-triggered ammo explosion: the
- * single loaded bin whose remaining shots x per-shot damage is largest.
- * Only the struck bin detonates — sibling bins of the same weapon mount stay
- * loaded. Ties resolve to the first-found bin, deterministic. Returns null
- * when the 'Mech carries no loaded explosive ammunition.
+ * The ammo bin that would detonate in a heat-triggered ammo explosion.
+ * Selection follows TW p.160: among loaded explosive bins pick the one with
+ * the highest damage-per-shot value (LRM-15's 15 beats AC/10's 10 even when
+ * the AC/10 is fuller); within that group pick the bin with the most shots
+ * remaining; ties broken randomly via `rng`. Only the struck bin detonates —
+ * sibling bins of the same weapon mount stay loaded. Returns null when the
+ * 'Mech carries no loaded explosive ammunition.
  *
  * Non-explosive ammo (e.g. gauss rifle rounds) is excluded from selection per
  * Total Warfare — it cannot detonate from internal heat.
@@ -305,14 +307,15 @@ export interface LargestAmmoBin {
 export function largestAmmoBin(
   def: ResolvedMechDef,
   ammoBins: Readonly<AmmoBins>,
+  rng: Rng,
 ): LargestAmmoBin | null {
-  let best: LargestAmmoBin | null = null;
+  const candidates: LargestAmmoBin[] = [];
   for (const bin of collectAmmoBins(def)) {
     if (!getAmmoDefFor(bin).explosive) continue;
     const shotsRemaining = ammoBins[bin.id]?.shots ?? 0;
     if (shotsRemaining <= 0) continue;
     const damagePerShot = ammoDamagePerShot(bin);
-    const candidate: LargestAmmoBin = {
+    candidates.push({
       binId: bin.id,
       weapon: bin.weapon,
       location: bin.location,
@@ -320,8 +323,16 @@ export function largestAmmoBin(
       shotsRemaining,
       damagePerShot,
       damage: shotsRemaining * damagePerShot,
-    };
-    if (best === null || candidate.damage > best.damage) best = candidate;
+    });
   }
-  return best;
+  if (candidates.length === 0) return null;
+  const maxDps = candidates.reduce((m, c) => Math.max(m, c.damagePerShot), 0);
+  const topDps = candidates.filter((c) => c.damagePerShot === maxDps);
+  if (topDps.length === 1) return topDps[0]!;
+  const maxShots = topDps.reduce((m, c) => Math.max(m, c.shotsRemaining), 0);
+  const topShots = topDps.filter((c) => c.shotsRemaining === maxShots);
+  if (topShots.length === 1) return topShots[0]!;
+  // Tie on per-shot DV and shots remaining — random pick per TW.
+  const idx = diceIndex(rng, topShots.length);
+  return topShots[idx]!;
 }
