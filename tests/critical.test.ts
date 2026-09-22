@@ -6,10 +6,13 @@ import {
   applyAmmoExplosion,
   checkCASE,
   componentHitStatus,
+  countDestroyedEngine,
   effectiveMovement,
+  markLocationCatastrophicallyDestroyed,
   resolveCriticalHits,
 } from "../src/rules/critical.js";
 import type { UnitDamageState } from "../src/rules/damage.js";
+import { heatSinksOperational } from "../src/rules/heat.js";
 import { overrideAmmoBin, scriptedRng } from "./helpers.js";
 
 /** Helper: returns an Rng whose first 2D6 sums to `sum` (1..12), then yields `tail`. */
@@ -847,5 +850,173 @@ describe("computeCritCounts", () => {
     expect(counts.lifeSupport).toBe(1);
     expect(counts.engine).toBe(0);
     expect(counts.gyro).toBe(0);
+  });
+});
+
+describe("markLocationCatastrophicallyDestroyed", () => {
+  it("zeroes armor and IS, marks every slot destroyed, strips ammo bins", () => {
+    const def = getMechDef("HBK-4G")!;
+    const damage: UnitDamageState = {
+      armor: { ...def.armor },
+      armorRear: { ...def.armorRear },
+      internalStructure: { ...def.internalStructure },
+    };
+    const destroyed = freshFlags(def);
+    expect(destroyed.leftTorso.some((f) => f)).toBe(false);
+    // HBK-4G carries AC/20 ammo in the leftTorso.
+    const ammoBins = loadAmmoBins(def);
+    const binKeys = Object.keys(ammoBins).filter((k) => k.startsWith("leftTorso:"));
+    expect(binKeys.length).toBeGreaterThan(0);
+
+    markLocationCatastrophicallyDestroyed(damage, destroyed, ammoBins, "leftTorso");
+
+    expect(damage.armor.leftTorso).toBe(0);
+    expect(damage.internalStructure.leftTorso).toBe(0);
+    expect(destroyed.leftTorso.every((f) => f === true)).toBe(true);
+    for (const k of binKeys) {
+      expect(ammoBins[k]).toBeUndefined();
+    }
+    // Untouched location stays intact
+    expect(damage.armor.centerTorso).toBe(def.armor.centerTorso);
+    expect(destroyed.centerTorso.some((f) => f)).toBe(false);
+  });
+
+  it("does not throw or mutate ammo bins in other locations", () => {
+    const def = getMechDef("HBK-4G")!;
+    const damage: UnitDamageState = {
+      armor: { ...def.armor },
+      armorRear: { ...def.armorRear },
+      internalStructure: { ...def.internalStructure },
+    };
+    const destroyed = freshFlags(def);
+    const ammoBins = loadAmmoBins(def);
+    const before = { ...ammoBins };
+
+    markLocationCatastrophicallyDestroyed(damage, destroyed, ammoBins, "head");
+
+    for (const key of Object.keys(before)) {
+      if (key.startsWith("head:")) {
+        expect(ammoBins[key]).toBeUndefined();
+      } else {
+        expect(ammoBins[key]).toEqual(before[key]);
+      }
+    }
+  });
+
+  it("keeps crits and ammo bins intact in locations destroyed by plain damage", () => {
+    // Asymmetry check: plain `applyDamage` zeroes IS at a side torso but
+    // intentionally leaves `critSlotsDestroyed` unflagged so salvage
+    // readers can recover components in the destroyed location.
+    const def = getMechDef("HBK-4G")!;
+    const damage: UnitDamageState = {
+      armor: { ...def.armor, leftTorso: 0 },
+      armorRear: { ...def.armorRear },
+      internalStructure: { ...def.internalStructure, leftTorso: 0 },
+    };
+    const destroyed = freshFlags(def);
+    const ammoBins = loadAmmoBins(def);
+    expect(damage.internalStructure.leftTorso).toBe(0);
+    expect(destroyed.leftTorso.every((f) => f === false)).toBe(true);
+    // Counters read only flags and must NOT auto-include the destroyed
+    // location's contents.
+    expect(countDestroyedEngine(def, destroyed)).toBe(0);
+    // Heat sinks in the LT (the HBK-4G has none, so check CT external sinks).
+    const sinksBefore = heatSinksOperational(def, destroyed);
+    expect(sinksBefore).toBeGreaterThan(0);
+    const binCount = Object.keys(ammoBins).filter((k) => k.startsWith("leftTorso:")).length;
+    expect(binCount).toBeGreaterThan(0);
+  });
+});
+
+describe("ammo-explosion casualty: catastrophic mark", () => {
+  it("zeroing a side torso via applyAmmoExplosion marks every slot in it destroyed", () => {
+    const def = getMechDef("HBK-4G")!;
+    const damage: UnitDamageState = {
+      armor: { ...def.armor, rightTorso: 0 },
+      armorRear: { ...def.armorRear },
+      internalStructure: { ...def.internalStructure, rightTorso: 1 },
+    };
+    const destroyed = freshFlags(def);
+    const ammoBins = loadAmmoBins(def);
+
+    const app = applyAmmoExplosion(damage, "rightTorso", 5, checkCASE(def, "rightTorso"));
+    expect(app.newlyDestroyed).toContain("rightTorso");
+
+    for (const lost of app.newlyDestroyed) {
+      markLocationCatastrophicallyDestroyed(damage, destroyed, ammoBins, lost);
+    }
+
+    expect(destroyed.rightTorso.every((f) => f === true)).toBe(true);
+    const rtBins = Object.keys(ammoBins).filter((k) => k.startsWith("rightTorso:"));
+    for (const k of rtBins) expect(ammoBins[k]).toBeUndefined();
+  });
+
+  it("cascade runDetermining sees zeroed-source locations as exhausted (TW p.124)", () => {
+    // After the catastrophic mark, every crit slot in the freshly-zeroed
+    // location reads destroyed. The cascade `runDetermining` therefore
+    // finds the source exhausted and re-routes inward per TW p.124
+    // (no crit check in a destroyed location unless explosive slots
+    // involved). Verify by inspecting the resolution rows: no
+    // weaponDestroyed / componentDestroyed rows in the zeroed RT.
+    const def = getMechDef("HBK-4G")!;
+    const damage: UnitDamageState = {
+      armor: { ...def.armor, rightTorso: 0, centerTorso: 0 },
+      armorRear: { ...def.armorRear },
+      internalStructure: { ...def.internalStructure, rightTorso: 0, centerTorso: 5 },
+    };
+    const destroyed = freshFlags(def);
+    const ammoBins = loadAmmoBins(def);
+    // Pre-mark RT as fully destroyed (catastrophic mark already applied).
+    markLocationCatastrophicallyDestroyed(damage, destroyed, ammoBins, "rightTorso");
+
+    // Trigger a fresh cascade roll against the destroyed RT. With a
+    // determining roll of 8 ("1 hit"), the slot-picker would normally
+    // land on an RT weapon/structure slot — but every slot is flagged
+    // destroyed, so `isLocationExhausted` returns true and the result
+    // transfers inward to the next location (centerTorso).
+    const res = resolveCriticalHits({
+      rng: detRoll(8, 1, 1),
+      def,
+      source: { location: "rightTorso", damage: 0 },
+      critSlotsDestroyed: destroyed,
+      destroyedWeapons: [],
+      damage,
+      ammoBins,
+    });
+    expect(res.determiningRoll).toBe(8);
+    // No row should claim a weapon/component in the destroyed RT.
+    const inRt = res.rows.filter(
+      (r) =>
+        (r.kind === "weaponDestroyed" || r.kind === "componentDestroyed") &&
+        r.location === "rightTorso",
+    );
+    expect(inRt).toHaveLength(0);
+  });
+
+  it("countDestroyedEngine reflects engine slots in a center torso destroyed by ammo transfer", () => {
+    // Regression for the engine-heat path: an LRM ammo explosion that
+    // overflows from an RT (with no engine slots on the HBK-4G RT) into
+    // the CT zeroes the CT IS, and the catastrophic mark must record
+    // every CT engine slot as destroyed — not just one slot.
+    const def = getMechDef("HBK-4G")!;
+    const damage: UnitDamageState = {
+      armor: { ...def.armor, rightTorso: 0, centerTorso: 0 },
+      armorRear: { ...def.armorRear },
+      internalStructure: { ...def.internalStructure, rightTorso: 0, centerTorso: 1 },
+    };
+    const destroyed = freshFlags(def);
+    const ammoBins = loadAmmoBins(def);
+
+    const app = applyAmmoExplosion(damage, "rightTorso", 50, checkCASE(def, "rightTorso"));
+    expect(app.newlyDestroyed).toContain("centerTorso");
+
+    for (const lost of app.newlyDestroyed) {
+      markLocationCatastrophicallyDestroyed(damage, destroyed, ammoBins, lost);
+    }
+
+    const totalEngineSlots = def.critSlots.centerTorso.filter(
+      (s) => s.kind === "structure" && s.name === "engine",
+    ).length;
+    expect(countDestroyedEngine(def, destroyed)).toBe(totalEngineSlots);
   });
 });

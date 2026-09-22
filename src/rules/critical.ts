@@ -628,9 +628,19 @@ function applySlotHit(
       // Cascade a fresh determining roll for each location that lost IS
       // during the explosion (the official rule: "Because an ammunition
       // explosion damages the internal structure of the location where it
-      // explodes, a roll to determine critical hits is necessary").
+      // explodes, a roll to determine critical hits is necessary"). Mark
+      // each freshly-destroyed location as catastrophic first so the
+      // cascade sees every slot as already destroyed and re-routes to the
+      // next inward location per TW p.124 (no crit check in a destroyed
+      // location unless an explosive slot is involved — and we just
+      // stripped the bins, so even that carve-out cannot fire).
       for (const newlyLost of app.newlyDestroyed) {
-        stripBinsInLocation(state.ammoBins, newlyLost);
+        markLocationCatastrophicallyDestroyed(
+          state.damage,
+          state.destroyed,
+          state.ammoBins,
+          newlyLost,
+        );
         runDetermining(rng, def, { location: newlyLost, damage: amount }, state);
       }
       state.rows.push({
@@ -709,6 +719,37 @@ function zeroLocation(state: MutableCritState, loc: Location): void {
   state.damage.armor[loc] = 0;
   state.damage.internalStructure[loc] = 0;
   state.destroyed[loc] = state.destroyed[loc].map(() => true);
+}
+
+/**
+ * Mark a location fully destroyed by a catastrophic event (ammo-explosion
+ * cascade). Zero armor and internal structure, mark every crit slot in
+ * the location destroyed, and strip any ammo bins there.
+ *
+ * Two callers:
+ *   - `applySlotHit` on an exploding ammo bin (crit path) — fires before
+ *     the cascade `runDetermining`, so cascade rolls into the location
+ *     see it as exhausted and (correctly per TW p.124) re-route to the
+ *     next inward location rather than re-rolling on already-destroyed
+ *     components.
+ *   - `resolveHeatPhase` heat-triggered ammo explosion — no cascade; just
+ *     keeps `critSlotsDestroyed` and `ammoBins` aligned with the IS=0
+ *     state so counters (`countDestroyedEngine`, `heatSinksOperational`,
+ *     `effectiveMovement`) report the destruction truthfully.
+ *
+ * Plain-damage destruction (overflow, building collapse) does NOT go
+ * through here — see the asymmetry note in `src/rules/damage.ts:140`.
+ */
+export function markLocationCatastrophicallyDestroyed(
+  damage: UnitDamageState,
+  destroyed: Record<Location, boolean[]>,
+  ammoBins: AmmoBins,
+  loc: Location,
+): void {
+  damage.armor[loc] = 0;
+  damage.internalStructure[loc] = 0;
+  destroyed[loc] = destroyed[loc].map(() => true);
+  stripBinsInLocation(ammoBins, loc);
 }
 
 function cloneDestroyed(src: Record<Location, boolean[]>): Record<Location, boolean[]> {
