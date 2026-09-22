@@ -383,12 +383,13 @@ describe("immediate shutdown PSR (+3)", () => {
     const hbk = requireUnit(state, "hbk");
     hbk.heat = 30;
     // startAttackTurn: 4 dice (initiative).
-    // resolveHeatPhase: 4 dice (traced via debug):
-    //   shutdownFallCheck PSR 2D6=12 passes (2 dice),
-    //   restart check 2D6=8>6 comes online (2 dice).
+    // resolveHeatPhase: 5 dice (traced via debug):
+    //   auto shutdown (no roll); PSR 2D6=12 passes (2 dice);
+    //   `largestAmmoBin` tiebreak on two equal AC/20 bins (1 die);
+    //   ammo avoid 2D6=12 >= 8 passes (2 dice) — no explosion.
     startAttackTurn(state);
     const events: GameEvent[] = [];
-    advancePhase(state, events, scriptedRng(6, 6, 6, 6));
+    advancePhase(state, events, scriptedRng(6, 6, 6, 6, 6));
     expect(hbk.shutdown).toBe("heat");
     expect(
       events.some(
@@ -402,13 +403,18 @@ describe("immediate shutdown PSR (+3)", () => {
     const state = hbkEnf();
     const hbk = requireUnit(state, "hbk");
     hbk.heat = 30;
-    // resolveHeatPhase: 9 dice (traced via debug):
-    //   PSR 2D6=2<8 fails (2), fallDir=1 (1), fallLoc 3+4=7 (2),
-    //   consciousness 5+6=11>=3 pass (2), ammoExplosion 2+3=5<8 explodes (2).
+    // resolveHeatPhase: 14 dice (traced via debug):
+    //   auto shutdown (no roll); PSR 1+1=2 < 8 fails -> fall:
+    //     fallDir=1 (1), fallLoc 3+4=7 (2), consciousness 3+3=6 >= 3 pass (2);
+    //   `largestAmmoBin` tiebreak on two equal AC/20 bins (1);
+    //   ammo avoid 3+1=4 < 8 explodes;
+    //   TW p.160 pilot damage: 2 hits, each forces a Consciousness Roll;
+    //   6+6=12 >= 5 (target @ pilotHits=2) and 6+6=12 >= 7 (target @ pilotHits=3).
     startAttackTurn(state);
-    advancePhase(state, [], scriptedRng(1, 1, 1, 3, 4, 5, 6, 2, 3));
+    advancePhase(state, [], scriptedRng(1, 1, 1, 3, 4, 3, 3, 3, 1, 6, 6, 6, 6, 6));
     expect(hbk.prone).toBe(true);
-    expect(hbk.pilotHits).toBe(1);
+    expect(hbk.pilotHits).toBe(3);
+    expect(hbk.unconscious).toBe(false);
   });
 
   it("voluntary shutdown triggers the same +3 PSR", () => {
@@ -1051,11 +1057,11 @@ describe("pilot damage", () => {
     });
     expect(marked).toBe(true);
     hbk.heat = 29;
-    // shutdown avoid (needs 11+: 5+6), ammo avoid (needs 8+: 4+4),
-    // dissipation leaves 16 (heat 29 - 13 sinks), life support 1 hit,
-    // consciousness (needs 3: 2+2).
+    // shutdown avoid (needs 10+: 5+6), `largestAmmoBin` tiebreak (1),
+    // ammo avoid (needs 8+: 4+4), dissipation leaves 16 (heat 29 - 13 sinks),
+    // life support 1 hit, consciousness (needs 3: 2+2).
     const events: GameEvent[] = [];
-    resolveHeatPhase(state, scriptedRng(5, 6, 4, 4, 2, 2), events);
+    resolveHeatPhase(state, scriptedRng(5, 6, 6, 4, 4, 2, 2), events);
     expect(hbk.pilotHits).toBe(1);
     expect(events).toContainEqual(
       expect.objectContaining({ kind: "pilotDamaged", unitId: "hbk", reason: "lifeSupport" }),

@@ -16,3 +16,19 @@ export function rollD6(rng: Rng): number {
 export function roll2D6(rng: Rng): number {
   return rng.d6() + rng.d6();
 }
+
+/** Uniform-ish int in [0, n) built from base-6 d6 digits via rejection sampling. */
+export function diceIndex(rng: Rng, n: number): number {
+  let digits = 1;
+  let range = 6;
+  while (range < n) {
+    digits += 1;
+    range *= 6;
+  }
+  const bound = Math.floor(range / n) * n;
+  for (;;) {
+    let v = 0;
+    for (let i = 0; i < digits; i++) v = v * 6 + (rng.d6() - 1);
+    if (v < bound) return v % n;
+  }
+}
