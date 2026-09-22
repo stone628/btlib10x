@@ -5,6 +5,7 @@ import {
   effectiveMoveBudget,
   effectiveMovement,
   getMechDefFor,
+  isImmobile,
   isNominal,
   isUnitAvailable,
   isUnitImmobile,
@@ -251,7 +252,7 @@ export function nextAutoPlayCommand(s: Session): string | null {
             queueNextCommand("mode eject");
             queueNextCommand("done");
           } else if (actor.prone) {
-            if (isUnitImmobile(actor.damage)) {
+            if (isImmobile(actor)) {
               // Leg destroyed + prone: stay still this turn, eject next.
               if (pronestillThenEject[actor.id] === true) {
                 queueNextCommand("mode eject");

@@ -37,16 +37,19 @@ import {
   isShutdown,
   isUnitImmobile,
   isUnitRemoved,
+  movementMpPenalty,
   neighbor,
   oppositeFacing,
   parseAmmoPolicy,
   passMovement,
+  reachableLandings,
   requireUnit,
   rotateFacing,
   STAND_MP_COST,
   sameHex,
   validateAttacks,
   voluntaryShutdown,
+  wreckAt,
 } from "btlib10x";
 import type { LocaleId } from "./i18n/index.js";
 import { i18n } from "./i18n/index.js";
@@ -242,6 +245,23 @@ export function checkSessionVictory(state: BattleState): SessionVictoryResult | 
   return null;
 }
 
+export function ensureMoveCandidate(
+  s: Session,
+  forceUpdate: boolean = false,
+): BoardRenderReachableInfo {
+  const m = s.move!;
+  if (m.moveCandidate == null || forceUpdate) {
+    m.moveCandidate = reachablesInfo(s);
+  }
+  return m.moveCandidate;
+}
+
+export function emptyMoveCandidate(s: Session): BoardRenderReachableInfo {
+  const mc = { team: requireMoveActor(s).team, revealed: [] };
+  s.move!.moveCandidate = mc;
+  return mc;
+}
+
 /**
  * Advance the battle through transient phases until an actor must act or the
  * game ends. Wraps {@link gameLoop} with session-side effects (app state,
@@ -314,6 +334,10 @@ export function currentActor(s: Session): UnitState | null {
   if (s.app !== "battle" || !s.battle) return null;
   const id = s.move?.actorId ?? s.attack?.actorId ?? null;
   return id === null ? null : requireUnit(s.battle, id);
+}
+
+export function requireMoveActor(s: Session): UnitState {
+  return requireUnit(requireBattle(s), s.move!.actorId);
 }
 
 /** Prompt body without the trailing ">". */
@@ -451,17 +475,13 @@ export function parseUnitProp(locale: LocaleId, word: string): UnitProp {
   throw new Error(i18n(locale, "err.unknownProp", { name: word, list: UNIT_PROPS.join(", ") }));
 }
 
-export function findUnit(s: Session, id: string): UnitInit | undefined {
-  return s.setup.roster.find((u) => u.id === id);
-}
-
 export function setUnitProp(
   s: Session,
   id: string,
   prop: UnitProp,
   raw: string,
 ): { prop: UnitProp; value: string } {
-  const unit = findUnit(s, id);
+  const unit = s.setup.roster.find((u) => u.id === id);
   if (unit === undefined) throw new Error(i18n(s.locale, "err.unknownUnitId", { id }));
   const locale = s.locale;
   switch (prop) {
@@ -649,6 +669,83 @@ function requireAttack(s: Session): AttackContext {
     throw new Error(i18n(s.locale, "err.wrongPhase", { phase: "weaponAttack" }));
   }
   return s.attack;
+}
+
+/**
+ * Board render info of the reachable hex map for the declared mode, or null
+ * when no reachable hexes exist. Every reachable (hex, facing) landing is
+ * handed to `createBoardModel` (in the render layer), which crops the model
+ * to the reachable bounding box and tints markers/edges with the actor team.
+ * Raw `RevealedLanding.path` data is retained on the landing and rendered
+ * by the `place`/`status` preview straight from the candidate.
+ */
+export function reachablesInfo(s: Session): BoardRenderReachableInfo {
+  const actor = requireMoveActor(s);
+  const mode = s.move!.moveMode;
+  if (
+    mode === null ||
+    mode === "shutdown" ||
+    mode === "startup" ||
+    mode === "eject" ||
+    mode === "pronestill"
+  ) {
+    return { team: actor.team, revealed: [] };
+  }
+  // Engine guarantee: `actor.model` was validated by `createBattle`.
+  const def = getMechDefFor(actor);
+  const effMove = effectiveMovement(def, actor.critSlotsDestroyed);
+  const heatPenalty = movementMpPenalty(actor.heat);
+  // Posture-change modes share one budget: candidate assumes posture succeeds.
+  // prone turn: drop first (1 MP) then in-place turns (walk + prone, 1 MP each).
+  // prone pronestill: drop in place, no map. turn: in-place turns on walk budget.
+  // pronestill: no map, `place` stays shut.
+  // standup: stand first (2 MP) then chosen locomotion as standing unit.
+  let locomotion: MoveMode;
+  let proneFlag = actor.prone;
+  let walking = Math.max(0, effMove.walking - heatPenalty);
+  let running = Math.max(0, effMove.running - heatPenalty);
+  let jumping = Math.max(0, effMove.jumping - heatPenalty);
+  const postureMove = s.move?.postureMove ?? null;
+  if (mode === "prone") {
+    if ((postureMove ?? "walk") === "standStill") return { team: actor.team, revealed: [] }; // drop in place: no map
+    locomotion = "walk";
+    proneFlag = true;
+    walking = Math.max(0, walking - DROP_MP_COST);
+  } else if (mode === "turn") {
+    locomotion = "walk";
+    proneFlag = true;
+  } else if (mode === "standup") {
+    locomotion = postureMove ?? "standStill";
+    proneFlag = false;
+    if (locomotion === "standStill") return { team: actor.team, revealed: [] }; // stand in place: no map, `place` stays shut
+    if (locomotion === "walk") walking = Math.max(0, walking - STAND_MP_COST);
+    else if (locomotion === "run") running = Math.max(0, running - STAND_MP_COST);
+    else if (locomotion === "jump") jumping = Math.max(0, jumping - STAND_MP_COST);
+    else walking = Math.max(0, walking - STAND_MP_COST);
+  } else {
+    locomotion = mode;
+  }
+  return {
+    team: actor.team,
+    revealed: reachableLandings({ ...actor.position }, actor.facing, {
+      mode: locomotion,
+      walking,
+      running,
+      jumping,
+      prone: proneFlag,
+      grid: s.battle!,
+      team: actor.team,
+      ...(mode === "standup" ? { standup: true } : {}),
+      wreckAt: (hex: HexCoord): boolean => wreckAt(s.battle!, hex) !== undefined,
+      occupantTeam: (hex: HexCoord): number | undefined => {
+        for (const u of Object.values(s.battle!.units)) {
+          if (isUnitRemoved(u)) continue;
+          if (u.position.col === hex.col && u.position.row === hex.row) return u.team;
+        }
+        return undefined;
+      },
+    }),
+  };
 }
 
 export function declareMode(s: Session, word: string, locomotionWord?: string): void {

@@ -560,7 +560,10 @@ export function isShutdown(unit: UnitState) {
 }
 
 export function isImmobile(unit: UnitState) {
-  return isShutdown(unit) || unit.unconscious || isUnitImmobile(unit.damage);
+  if (isShutdown(unit) || unit.unconscious || isUnitImmobile(unit.damage)) return true;
+  const def = getMechDefFor(unit);
+  if (countDestroyedGyro(def, unit.critSlotsDestroyed) >= GYRO_DESTROYED_HITS) return true;
+  return false;
 }
 
 export function isUnitRemoved(unit: UnitState): boolean {
@@ -2403,7 +2406,9 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
     // Apply deferred own-heat: movement + weapon + posture + engine crit
     // (engine crit only if online per TW p.160). Reset pending; the
     // post-own-heat read is the scale value dissipation will subtract from.
-    const engineHeat = isNominal(unit) ? engineHitHeat(countDestroyedEngine(def, unit.critSlotsDestroyed)) : 0;
+    const engineHeat = isNominal(unit)
+      ? engineHitHeat(countDestroyedEngine(def, unit.critSlotsDestroyed))
+      : 0;
     const totalGenerated = heatPending + engineHeat;
     if (totalGenerated > 0) {
       unit.heat = Math.min(HEAT_CAP, unit.heat + totalGenerated);

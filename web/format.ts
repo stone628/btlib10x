@@ -18,11 +18,9 @@ import type {
   FireSuggestion,
   FireWeapon,
   GameEvent,
-  HexCoord,
   Location,
   LocationValue,
   MapNameHolder,
-  MoveMode,
   RangeBracket,
   RemovedState,
   ResolvedMechDef,
@@ -47,7 +45,6 @@ import {
   D2D6_AUTO_SUCCESS,
   DROP_MP_COST,
   ENGINE_SLOTS_KILL,
-  effectiveMovement,
   getAllMapDefs,
   getAllMechDefs,
   getAllWeaponDefs,
@@ -72,7 +69,6 @@ import {
   neighbor,
   oppositeFacing,
   pooledTotalsByWeaponName,
-  reachableLandings,
   rotateFacing,
   STAND_MP_COST,
   shoulderOf,
@@ -80,7 +76,6 @@ import {
   TORSO_LOCATIONS,
   toHitHeatModifier,
   toHitHeatModifierWithThreshold,
-  wreckAt,
 } from "btlib10x";
 import { AMMO_EXPLOSION_START_HEAT, heatDissipationMax } from "../src/index.js";
 import type { RemovalReason } from "../src/rules/game.js";
@@ -442,7 +437,7 @@ export function boardChunk(s: Session): Chunk {
 
 // ---------------------------------------------------------------- info ----
 
-export function infoMechList(locale: LocaleId): Chunk {
+export function infoMechListChunk(locale: LocaleId): Chunk {
   const list = getAllMechDefs().sort((a, b) => {
     if (a.tonnage !== b.tonnage) return a.tonnage - b.tonnage;
     return a.name.localeCompare(b.name);
@@ -510,13 +505,15 @@ export function infoMechChunk(locale: LocaleId, model: string): Chunk[] {
   ];
 }
 
-export function infoMapList(): string[] {
-  return getAllMapDefs().map(
-    (m) => `${m.name}: ${m.width}x${m.height}, ${m.terrain.length} terrain hexes`,
+export function infoMapListChunk(): Chunk {
+  return buildLinesChunk(
+    getAllMapDefs().map(
+      (m) => `${m.name}: ${m.width}x${m.height}, ${m.terrain.length} terrain hexes`,
+    ),
   );
 }
 
-export function infoWeaponList(locale: LocaleId): string[] {
+export function infoWeaponListChunk(locale: LocaleId): Chunk {
   const grouped = new Map<WeaponCategory, WeaponDef[]>();
   let maxNameLen = 0;
   for (const w of getAllWeaponDefs()) {
@@ -539,10 +536,10 @@ export function infoWeaponList(locale: LocaleId): string[] {
       );
     }
   }
-  return lines;
+  return buildLinesChunk(lines);
 }
 
-export function infoWeapon(locale: LocaleId, name: string): string[] {
+export function infoWeaponChunk(locale: LocaleId, name: string): Chunk {
   const w = lookupWeapon(name);
   if (w === undefined) {
     throw new Error(
@@ -562,7 +559,7 @@ export function infoWeapon(locale: LocaleId, name: string): string[] {
   if (w.rapidFireShots !== undefined)
     lines.push(i18n(locale, "info.weaponRapidFire", { shots: w.rapidFireShots }));
   if (w.antiInfantry) lines.push(i18n(locale, "info.weaponAntiInfantry"));
-  return lines;
+  return buildLinesChunk(lines);
 }
 
 /** `info map <name>` output: header/legend lines followed by the styled grid. */
@@ -1205,9 +1202,8 @@ export function sheetForUnit(s: Session, id: string): Chunk[] {
 }
 
 /** Brief unit list grouped by team: id, model, position with facing. */
-export function unitBriefList(s: Session): string[] {
-  const battle = s.battle;
-  if (!battle) return [];
+export function unitBriefList(s: Session): Chunk {
+  const battle = s.battle!;
   const lines: string[] = [];
   const teams = [...new Set(Object.values(battle.units).map((u) => u.team))].sort((a, b) => a - b);
   for (const team of teams) {
@@ -1221,12 +1217,12 @@ export function unitBriefList(s: Session): string[] {
       lines.push(...mechStatusLines(view, s.locale).map((l) => `    ${l}`));
     }
   }
-  return lines;
+  return buildLinesChunk(lines);
 }
 
 // -------------------------------------------------------------- status ----
 
-export function fmtSetupStatus(s: Session): string[] {
+export function fmtSetupStatus(s: Session): Chunk {
   const lines: string[] = [
     i18n(s.locale, "setup.mapLabel", { name: s.setup.mapName ?? i18n(s.locale, "setup.mapNone") }),
   ];
@@ -1248,11 +1244,11 @@ export function fmtSetupStatus(s: Session): string[] {
     }
   }
   if (teams.length === 0) lines.push(i18n(s.locale, "setup.noUnits"));
-  return lines;
+  return buildLinesChunk(lines);
 }
 
 /** Full heat-scale status for one unit, driven by the `heat` CLI command. */
-export function heatStatusLines(s: Session, id: string): string[] {
+export function heatStatusLines(s: Session, id: string): Chunk {
   const battle = s.battle;
   if (!battle) throw new Error(i18n(s.locale, "err.noBattle"));
   const unit = battle.units[id];
@@ -1277,7 +1273,7 @@ export function heatStatusLines(s: Session, id: string): string[] {
   else lines.push(i18n(s.locale, "heat.ammo", { avoid: ammo }));
   lines.push(heatStateLabel(s.locale, unit.shutdown));
   if (unit.heat >= 30) lines.push(i18n(s.locale, "heat.shutdownAuto"));
-  return lines;
+  return buildLinesChunk(lines);
 }
 
 function heatStateLabel(locale: LocaleId, shutdown: ShutdownState): string {
@@ -1408,22 +1404,20 @@ function durabilityFrag(view: SheetView, loc: Location): string {
   return `${SHORT_LOC[loc]}(${cur}/${max}${note})`;
 }
 
-export function overStatusLines(s: Session): string[] {
-  if (!s.battle || !s.over) return [];
+export function overStatusChunk(s: Session): Chunk {
+  const battle = s.battle!;
   const lines: string[] = [];
-  const teams = [...new Set(Object.values(s.battle.units).map((u) => u.team))].sort(
-    (a, b) => a - b,
-  );
+  const teams = [...new Set(Object.values(battle.units).map((u) => u.team))].sort((a, b) => a - b);
   const locale = s.locale;
   for (const team of teams) {
     lines.push(i18n(locale, "setup.teamHeader", { team }));
-    for (const [uid, unit] of Object.entries(s.battle.units).filter(([, u]) => u.team === team)) {
+    for (const [uid, unit] of Object.entries(battle.units).filter(([, u]) => u.team === team)) {
       const view = battleSheet(unit, uid, locale);
       lines.push(`  ${sheetIdLine(locale, view)}`);
       for (const line of sheetLinesShort(s.locale, view)) lines.push(`    ${line}`);
     }
   }
-  return lines;
+  return buildLinesChunk(lines);
 }
 
 function queueActorViewStr(locale: LocaleId, av: ActorQueueActorView | undefined): string {
@@ -1467,7 +1461,7 @@ export function stepResultFromLine(locale: LocaleId, s: Session): string {
  *  (turns rotate the cursor, `F`/`J`/`P`/`U` go forward, `B` goes backward).
  *  Jump re-facing fragments cost 0 and render no line (landing facing rides
  *  in the header). */
-export function stepResultLines(s: Session, landing: RevealedLanding): string[] {
+function stepResultLines(s: Session, landing: RevealedLanding): string[] {
   const locale = s.locale;
   const actor = currentActor(s)!;
   const path = landing.path;
@@ -1534,24 +1528,31 @@ export function stepResultLines(s: Session, landing: RevealedLanding): string[] 
   return lines;
 }
 
-export function queuedMoveLines(s: Session): string[] {
+export function stepResultChunk(s: Session, landing: RevealedLanding): Chunk {
+  return buildLinesChunk(stepResultLines(s, landing));
+}
+
+function queuedMoveLines(s: Session): string[] {
   const locale = s.locale;
   const actor = currentActor(s)!;
   const landing = s.move?.placedLanding ?? null;
-  if (landing === null) {
-    return [
-      i18n(locale, "ok.modeDeclared", {
-        id: actor.id,
-        mode: displayModeFor(s),
-        budget: budgetFor(s),
-      }),
-      stepResultFromLine(locale, s),
-    ];
-  }
-  return stepResultLines(s, landing);
+  return landing === null
+    ? [
+        i18n(locale, "ok.modeDeclared", {
+          id: actor.id,
+          mode: displayModeFor(s),
+          budget: budgetFor(s),
+        }),
+        stepResultFromLine(locale, s),
+      ]
+    : stepResultLines(s, landing);
 }
 
-export function moveStatusLines(s: Session): string[] {
+export function queuedMoveChunk(s: Session): Chunk {
+  return buildLinesChunk(queuedMoveLines(s));
+}
+
+export function moveStatusChunk(s: Session): Chunk {
   const lines: string[] = [];
   lines.push(...actorOrderLines(s));
   lines.push(i18n(s.locale, "moveStatus.headLine"));
@@ -1561,85 +1562,7 @@ export function moveStatusLines(s: Session): string[] {
   } else {
     lines.push(...queuedMoveLines(s).map((l) => `  ${l}`));
   }
-  return lines;
-}
-
-/**
- * Board render info of the reachable hex map for the declared mode, or null
- * when no reachable hexes exist. Every reachable (hex, facing) landing is
- * handed to `createBoardModel` (in the render layer), which crops the model
- * to the reachable bounding box and tints markers/edges with the actor team.
- * Raw `RevealedLanding.path` data is retained on the landing and rendered
- * by the `place`/`status` preview straight from the candidate.
- */
-export function reachablesInfo(s: Session): BoardRenderReachableInfo | null {
-  const actor = currentActor(s);
-  const mode = s.move?.moveMode ?? null;
-  if (
-    !actor ||
-    !s.battle ||
-    mode === null ||
-    mode === "shutdown" ||
-    mode === "startup" ||
-    mode === "eject"
-  ) {
-    return null;
-  }
-  // Engine guarantee: `actor.model` was validated by `createBattle`.
-  const def = getMechDefFor(actor);
-  const effMove = effectiveMovement(def, actor.critSlotsDestroyed);
-  const heatPenalty = movementMpPenalty(actor.heat);
-  // Posture-change modes share one budget: candidate assumes posture succeeds.
-  // prone turn: drop first (1 MP) then in-place turns (walk + prone, 1 MP each).
-  // prone pronestill: drop in place, no map. turn: in-place turns on walk budget.
-  // pronestill: no map, `place` stays shut.
-  // standup: stand first (2 MP) then chosen locomotion as standing unit.
-  let locomotion: MoveMode;
-  let proneFlag = actor.prone;
-  let walking = Math.max(0, effMove.walking - heatPenalty);
-  let running = Math.max(0, effMove.running - heatPenalty);
-  let jumping = Math.max(0, effMove.jumping - heatPenalty);
-  const postureMove = s.move?.postureMove ?? null;
-  if (mode === "prone") {
-    if ((postureMove ?? "walk") === "standStill") return null; // drop in place: no map
-    locomotion = "walk";
-    proneFlag = true;
-    walking = Math.max(0, walking - DROP_MP_COST);
-  } else if (mode === "turn") {
-    locomotion = "walk";
-    proneFlag = true;
-  } else if (mode === "pronestill") {
-    return null; // stay prone: no map, `place` stays shut
-  } else if (mode === "standup") {
-    locomotion = postureMove ?? "standStill";
-    proneFlag = false;
-    if (locomotion === "standStill") return null; // stand in place: no map, `place` stays shut
-    if (locomotion === "walk") walking = Math.max(0, walking - STAND_MP_COST);
-    else if (locomotion === "run") running = Math.max(0, running - STAND_MP_COST);
-    else if (locomotion === "jump") jumping = Math.max(0, jumping - STAND_MP_COST);
-    else walking = Math.max(0, walking - STAND_MP_COST);
-  } else {
-    locomotion = mode;
-  }
-  const landings = reachableLandings({ ...actor.position }, actor.facing, {
-    mode: locomotion,
-    walking,
-    running,
-    jumping,
-    prone: proneFlag,
-    grid: s.battle,
-    team: actor.team,
-    ...(mode === "standup" ? { standup: true } : {}),
-    wreckAt: (hex: HexCoord): boolean => wreckAt(s.battle!, hex) !== undefined,
-    occupantTeam: (hex: HexCoord): number | undefined => {
-      for (const u of Object.values(s.battle!.units)) {
-        if (isUnitRemoved(u)) continue;
-        if (u.position.col === hex.col && u.position.row === hex.row) return u.team;
-      }
-      return undefined;
-    },
-  });
-  return { team: actor.team, revealed: landings };
+  return buildLinesChunk(lines);
 }
 
 export function reachableChunk(
@@ -1658,7 +1581,7 @@ export function reachableChunk(
   return buildBoardChunk({ map, units, reachable: info, locale });
 }
 
-export function attackStatusLines(s: Session): string[] {
+export function attackStatusChunk(s: Session): Chunk {
   const actor = currentActor(s);
   if (!actor || !s.battle)
     throw new Error(i18n(s.locale, "err.wrongPhase", { phase: "weaponAttack" }));
@@ -1668,25 +1591,25 @@ export function attackStatusLines(s: Session): string[] {
   const decls = s.attack?.fireDecls ?? [];
   if (decls.length === 0) {
     lines.push(i18n(s.locale, "attackStatus.none"));
-    return lines;
+  } else {
+    // Engine guarantee: `actor.model` was validated by `createBattle`.
+    const def = getMechDefFor(actor);
+    for (const decl of decls) {
+      const mount = def.weapons[decl.weaponIndex];
+      const name = mount ? mount.weapon : `#${decl.weaponIndex}`;
+      const rapid = mount ? getWeaponDefFor(mount).rapidFireShots : undefined;
+      const suffix = decl.rapidFire && rapid !== undefined ? ` (rapid-fire x${rapid})` : "";
+      lines.push(
+        i18n(s.locale, "attackStatus.weapon", {
+          weaponIndex: decl.weaponIndex,
+          weaponName: name,
+          targetId: decl.targetId,
+          suffix,
+        }),
+      );
+    }
   }
-  // Engine guarantee: `actor.model` was validated by `createBattle`.
-  const def = getMechDefFor(actor);
-  for (const decl of decls) {
-    const mount = def.weapons[decl.weaponIndex];
-    const name = mount ? mount.weapon : `#${decl.weaponIndex}`;
-    const rapid = mount ? getWeaponDefFor(mount).rapidFireShots : undefined;
-    const suffix = decl.rapidFire && rapid !== undefined ? ` (rapid-fire x${rapid})` : "";
-    lines.push(
-      i18n(s.locale, "attackStatus.weapon", {
-        weaponIndex: decl.weaponIndex,
-        weaponName: name,
-        targetId: decl.targetId,
-        suffix,
-      }),
-    );
-  }
-  return lines;
+  return buildLinesChunk(lines);
 }
 
 const BRACKET_LABEL: Readonly<Record<RangeBracket, string>> = {
@@ -1919,7 +1842,7 @@ export function formatLog(
       } else {
         flushBuffered();
         lastUnitPrefix = "";
-        lines.push(...el);
+        lines.push(firstLine, ...el);
       }
     }
   };
