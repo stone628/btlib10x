@@ -137,6 +137,14 @@ export function applyDamage(
       remaining -= applied;
       const depleted = after === 0;
       steps.push({ location: cur, pool: "structure", damageApplied: applied, depleted });
+      // Asymmetry note: plain-damage destruction (this branch) does NOT
+      // mark the location's crit slots destroyed and does NOT strip its
+      // ammo bins here. Only ammo-explosion destruction does so, via
+      // `markLocationCatastrophicallyDestroyed` in `critical.ts`. The
+      // design lets salvage readers recover components in locations
+      // destroyed by overflow; future salvage module must gate on
+      // `isUnitLocationDestroyed(damage, loc) || critSlotsDestroyed[loc][i]`
+      // to cover both paths.
       if (depleted) {
         newlyDestroyed.push(cur);
         if (isKillLocation(cur)) {

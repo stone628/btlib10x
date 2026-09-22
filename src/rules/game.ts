@@ -70,6 +70,7 @@ import {
   countDestroyedSensor,
   effectiveMovement,
   HIP,
+  markLocationCatastrophicallyDestroyed,
   resolveCriticalHits,
 } from "./critical.js";
 import {
@@ -2573,10 +2574,18 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
               checkCASE(def, bin.location),
             );
             unit.damage = application.after;
-            for (const loc of LOCATIONS) {
-              if ((unit.damage.internalStructure[loc] ?? 0) <= 0) {
-                stripBinsInLocation(unit.ammoBins, loc);
-              }
+            // Mark every freshly-zeroed location as catastrophic so
+            // counters (`countDestroyedEngine`, `heatSinksOperational`,
+            // `effectiveMovement`) report truthful destruction state for
+            // the rest of the phase. No cascade `runDetermining` here —
+            // heat-triggered ammo explosions do not chain crit determining.
+            for (const lost of application.newlyDestroyed) {
+              markLocationCatastrophicallyDestroyed(
+                unit.damage,
+                unit.critSlotsDestroyed,
+                unit.ammoBins,
+                lost,
+              );
             }
             const slot = collectAmmoBins(def).find((b) => b.id === bin.binId);
             if (slot !== undefined) unit.ammoBins[bin.binId] = { ...slot, shots: 0 };

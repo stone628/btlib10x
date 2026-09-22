@@ -222,6 +222,15 @@
 
 ## Later phases
 
+- Salvage module (pure-function over end-state): readers must gate destroyed
+  components on `isUnitLocationDestroyed(damage, loc) ||
+  critSlotsDestroyed[loc][i]` — the OR is mandatory because plain-damage
+  destruction (overflow, building collapse) intentionally leaves crit-slot
+  flags unflagged (engine-by-design quirk), while ammo-explosion destruction
+  marks every slot in zeroed locations explicitly via
+  `markLocationCatastrophicallyDestroyed`. Salvage value table deferred
+  (TW does not publish salvage; rulebook reliance on TacOps / A Time of War /
+  Strategic Operations).
 - separate web cli framework to be used at another project
 - Dev-only sarna.net scraper starting at https://www.sarna.net/wiki/BattleMech normalizing into MechDef JSON (Node OK here; library stays browser-first)
 - Full intro-rules expansion: heat, physicals, piloting/falling (incl. partial
