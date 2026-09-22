@@ -228,7 +228,7 @@ describe("heatDissipation / countDestroyedEngineSlots", () => {
     const unit = requireUnit(state, "hbk");
     const def = getMechDefFor(unit);
     expect(heatDissipation(def, unit.critSlotsDestroyed)).toBe(13);
-    expect(countDestroyedEngine(def, unit.critSlotsDestroyed)).toBe(0);
+    expect(countDestroyedEngine(def, unit.damage, unit.critSlotsDestroyed)).toBe(0);
   });
   it("destroying an engine slot adds heat but does not retire a sink (strict TW)", () => {
     const state = hbkVsEnf();
@@ -239,7 +239,7 @@ describe("heatDissipation / countDestroyedEngineSlots", () => {
       centerTorso: [true, ...unit.critSlotsDestroyed.centerTorso.slice(1)],
     };
     expect(heatDissipation(def, destroyed)).toBe(13);
-    expect(countDestroyedEngine(def, destroyed)).toBe(1);
+    expect(countDestroyedEngine(def, unit.damage, destroyed)).toBe(1);
   });
 });
 

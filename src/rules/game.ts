@@ -14,6 +14,7 @@ import {
   type HexCell,
   type HexCoord,
   isFacing,
+  isTorso,
   LOCATIONS,
   type Location,
   type MoveMode,
@@ -563,7 +564,7 @@ export function isShutdown(unit: UnitState) {
 export function isImmobile(unit: UnitState) {
   if (isShutdown(unit) || unit.unconscious || isUnitImmobile(unit.damage)) return true;
   const def = getMechDefFor(unit);
-  if (countDestroyedGyro(def, unit.critSlotsDestroyed) >= GYRO_DESTROYED_HITS) return true;
+  if (countDestroyedGyro(def, unit.damage, unit.critSlotsDestroyed) >= GYRO_DESTROYED_HITS) return true;
   return false;
 }
 
@@ -1023,7 +1024,7 @@ export function executeMove(
   const prechargedMP = options.spentMP ?? 0;
 
   const def = getMechDefFor(unit);
-  const movement = effectiveMovement(def, unit.critSlotsDestroyed);
+  const movement = effectiveMovement(def, unit.phaseStartDamage, unit.critSlotsDestroyed);
   const budget = effectiveMoveBudget(unit.moveMode, movement, unit.heat);
   const jumping = unit.moveMode === "jump";
   const proneTurn = unit.prone && unit.moveMode === "walk";
@@ -1128,9 +1129,7 @@ export function executeMove(
   }
 
   // Preexisting damage applies to every movement-entry PSR (TW p.60).
-  const pre = preexistingDamageModifier(def, unit.critSlotsDestroyed, (leg) =>
-    legGone(unit.damage, leg),
-  );
+  const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
   const commitAt = (
     hex: HexCoord,
     face: Facing,
@@ -1224,8 +1223,8 @@ export function executeMove(
   // jump-phase PSR falls 0 levels per errata even across levels, and the
   // landing hex is already committed, so no levelsFallen is passed.
   if (!unit.prone && directions.length > 0) {
-    const gyroHits = countDestroyedGyro(def, unit.critSlotsDestroyed);
-    const hipHits = countDestroyedHip(def, unit.critSlotsDestroyed);
+    const gyroHits = countDestroyedGyro(def, unit.damage, unit.critSlotsDestroyed);
+    const hipHits = countDestroyedHip(def, unit.damage, unit.critSlotsDestroyed);
     const strained =
       mode === "run" ? hipHits > 0 || gyroHits > 0 : mode === "jump" ? pre.modifier > 0 : false;
     if (strained) {
@@ -1326,7 +1325,7 @@ export function validateAttacksImpl(
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot fire`);
   if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot fire`);
   const def = getMechDefFor(unit);
-  const sensorsOut = countDestroyedSensor(def, unit.critSlotsDestroyed);
+  const sensorsOut = countDestroyedSensor(def, unit.damage, unit.critSlotsDestroyed);
   if (sensorsBlind(sensorsOut)) {
     throw new Error(`${unitId} cannot fire: sensors destroyed (no weapon attacks)`);
   }
@@ -1540,7 +1539,7 @@ function resolveUnitAttacks(
 ): UnitAttackResult {
   const def = getMechDefFor(unit);
   const preHeat = unit.heat;
-  const sensorMod = sensorAttackModifier(countDestroyedSensor(def, unit.critSlotsDestroyed));
+  const sensorMod = sensorAttackModifier(countDestroyedSensor(def, unit.damage, unit.critSlotsDestroyed));
   const pronePropArm = inferPronePropArm(def, unit.declaredAttacks, unit.prone);
   let currentAmmoBins = { ...unit.ammoBins };
   const jammedWeapons: number[] = [];
@@ -1659,7 +1658,9 @@ function damageTaken(before: UnitDamageState, after: UnitDamageState): number {
   let n = 0;
   for (const loc of LOCATIONS) {
     n += Math.max(0, before.armor[loc] - after.armor[loc]);
-    n += Math.max(0, (before.armorRear[loc] ?? 0) - (after.armorRear[loc] ?? 0));
+    if (isTorso(loc)) {
+      n += Math.max(0, (before.armorRear[loc] ?? 0) - (after.armorRear[loc] ?? 0));
+    }
     n += Math.max(0, before.internalStructure[loc] - after.internalStructure[loc]);
   }
   return n;
@@ -1841,9 +1842,7 @@ export interface FallOptions {
 function shutdownFallCheck(state: BattleState, unit: UnitState, rng: Rng, sink: GameEvent[]): void {
   if (isUnitRemoved(unit) || unit.prone) return;
   const def = getMechDefFor(unit);
-  const pre = preexistingDamageModifier(def, unit.critSlotsDestroyed, (leg) =>
-    legGone(unit.damage, leg),
-  );
+  const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
   const modifier = SHUTDOWN_PSR_MOD + pre.modifier;
   const r = rollPilotingCheck(rng, unit.piloting, modifier);
   sink.push({
@@ -1965,7 +1964,7 @@ export function resolvePhasePiloting(
     const def = getMechDefFor(unit);
     const dmgBefore = before.damage[unit.id] ?? unit.damage;
     const critBefore = before.crit[unit.id] ?? unit.critSlotsDestroyed;
-    const pre = preexistingDamageModifier(def, critBefore, (leg) => legGone(dmgBefore, leg));
+    const pre = preexistingDamageModifier(def, dmgBefore, critBefore);
 
     const triggers: Array<{ reason: string; modifier: number }> = [];
     if (damageTaken(dmgBefore, unit.damage) >= PSR_DAMAGE_THRESHOLD) {
@@ -1976,8 +1975,8 @@ export function resolvePhasePiloting(
       else if (LEG_ACTUATORS.has(hit.name))
         triggers.push({ reason: "legActuator", modifier: LEG_ACTUATOR_MOD });
     }
-    const gyroBefore = countDestroyedGyro(def, critBefore);
-    const gyroNow = countDestroyedGyro(def, unit.critSlotsDestroyed);
+    const gyroBefore = countDestroyedGyro(def, dmgBefore, critBefore);
+    const gyroNow = countDestroyedGyro(def, unit.damage, unit.critSlotsDestroyed);
     if (gyroNow < GYRO_DESTROYED_HITS && gyroBefore < 1 && gyroNow >= 1) {
       triggers.push({ reason: "gyro", modifier: GYRO_HIT_MOD });
     }
@@ -2406,7 +2405,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
     // (engine crit only if online per TW p.160). Reset pending; the
     // post-own-heat read is the scale value dissipation will subtract from.
     const engineHeat = isNominal(unit)
-      ? engineHitHeat(countDestroyedEngine(def, unit.critSlotsDestroyed))
+      ? engineHitHeat(countDestroyedEngine(def, unit.damage, unit.critSlotsDestroyed))
       : 0;
     const totalGenerated = heatPending + engineHeat;
     if (totalGenerated > 0) {
@@ -2615,7 +2614,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
     // Life-support pilot damage (TW p.41): 1 hit at end-of-phase heat 15+,
     // 2 hits at 26+. Skip if ammo explosion just removed the unit.
     if (!isUnitRemoved(unit)) {
-      if (countDestroyedLifeSupport(def, unit.critSlotsDestroyed) > 0) {
+      if (countDestroyedLifeSupport(def, unit.damage, unit.critSlotsDestroyed) > 0) {
         if (unit.heat >= LIFE_SUPPORT_HEAT_2HITS)
           applyPilotHits(state, unit, 2, "lifeSupport", rng, sink);
         else if (unit.heat >= LIFE_SUPPORT_HEAT_1HIT)
@@ -2752,10 +2751,11 @@ function movementTerrainPsr(
     if (stop()) return to;
   }
   const building = buildingEntryModifier(entering);
+  const def = getMechDefFor(unit);
   if (building !== null) {
     const legWasGoneR = legGone(unit.damage, "rightLeg");
     const legWasGoneL = legGone(unit.damage, "leftLeg");
-    const gyroWasGone = countDestroyedGyro(getMechDefFor(unit), unit.critSlotsDestroyed);
+    const gyroWasGone = countDestroyedGyro(def, unit.damage, unit.critSlotsDestroyed);
     const modifier = building + preModifier;
     if (isShutdown(unit) || unit.unconscious) {
       applyFall(
@@ -2802,7 +2802,7 @@ function movementTerrainPsr(
         const legFell =
           (!legWasGoneR && legGone(unit.damage, "rightLeg")) ||
           (!legWasGoneL && legGone(unit.damage, "leftLeg"));
-        const gyroNow = countDestroyedGyro(getMechDefFor(unit), unit.critSlotsDestroyed);
+        const gyroNow = countDestroyedGyro(def, unit.damage, unit.critSlotsDestroyed);
         const gyroFell = gyroNow >= GYRO_DESTROYED_HITS && gyroWasGone < GYRO_DESTROYED_HITS;
         const down = isShutdown(unit) || unit.unconscious;
         if (legFell || gyroFell || down) {
@@ -2858,12 +2858,10 @@ export function attemptStandUp(
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot stand up`);
   if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot stand up`);
   const def = getMechDefFor(unit);
-  const pre = preexistingDamageModifier(def, unit.critSlotsDestroyed, (leg) =>
-    legGone(unit.damage, leg),
-  );
+  const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
   const budget = effectiveMoveBudget(
     "walk",
-    effectiveMovement(def, unit.critSlotsDestroyed),
+    effectiveMovement(def, unit.damage, unit.critSlotsDestroyed),
     unit.heat,
   );
   if (pre.gyroHits >= GYRO_DESTROYED_HITS)
@@ -2944,7 +2942,7 @@ export function dropProne(
   const def = getMechDefFor(unit);
   const budget = effectiveMoveBudget(
     "walk",
-    effectiveMovement(def, unit.critSlotsDestroyed),
+    effectiveMovement(def, unit.damage, unit.critSlotsDestroyed),
     unit.heat,
   );
   if (budget < DROP_BUDGET_MIN) throw new Error(`${unitId} has no MP to drop prone`);
@@ -3013,9 +3011,7 @@ export function proneFacingTurn(
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot move`);
   if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot move`);
   const def = getMechDefFor(unit);
-  const pre = preexistingDamageModifier(def, unit.critSlotsDestroyed, (leg) =>
-    legGone(unit.damage, leg),
-  );
+  const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
   if (pre.legsDestroyed >= LEGS_STAND_LIMIT) {
     throw new Error(`${unitId} has no intact legs and cannot turn while prone`);
   }
@@ -3035,7 +3031,7 @@ export function proneFacingTurn(
   const mpCost = absFacings * MP_PER_FACING_CHANGE;
   const budget = effectiveMoveBudget(
     "walk",
-    effectiveMovement(def, unit.critSlotsDestroyed),
+    effectiveMovement(def, unit.damage, unit.critSlotsDestroyed),
     unit.heat,
   );
   if (budget < mpCost) {

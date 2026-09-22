@@ -175,7 +175,7 @@ describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
       actor.heat = heat;
       const budget = effectiveMoveBudget(
         "walk",
-        effectiveMovement(def, actor.critSlotsDestroyed),
+        effectiveMovement(def, actor.damage, actor.critSlotsDestroyed),
         actor.heat,
       );
       if (budget < STAND_MP_COST) {
@@ -184,7 +184,7 @@ describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
     }
     const finalBudget = effectiveMoveBudget(
       "walk",
-      effectiveMovement(def, actor.critSlotsDestroyed),
+      effectiveMovement(def, actor.damage, actor.critSlotsDestroyed),
       actor.heat,
     );
     expect(isUnitImmobile(actor.damage)).toBe(false);
@@ -205,7 +205,7 @@ describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
       actor.heat = heat;
       const budget = effectiveMoveBudget(
         "walk",
-        effectiveMovement(def, actor.critSlotsDestroyed),
+        effectiveMovement(def, actor.damage, actor.critSlotsDestroyed),
         actor.heat,
       );
       if (budget === 0) {
@@ -214,7 +214,7 @@ describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
     }
     const finalBudget = effectiveMoveBudget(
       "walk",
-      effectiveMovement(def, actor.critSlotsDestroyed),
+      effectiveMovement(def, actor.damage, actor.critSlotsDestroyed),
       actor.heat,
     );
     expect(isUnitImmobile(actor.damage)).toBe(false);
@@ -234,7 +234,7 @@ describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
     const def = getMechDefFor(actor);
     const budget = effectiveMoveBudget(
       "walk",
-      effectiveMovement(def, actor.critSlotsDestroyed),
+      effectiveMovement(def, actor.damage, actor.critSlotsDestroyed),
       actor.heat,
     );
     expect(isUnitImmobile(actor.damage)).toBe(false);

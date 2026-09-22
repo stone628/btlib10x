@@ -80,7 +80,7 @@ export function resetAutoplayState(s: Session): void {
 /** Post-heat walk budget for the actor; 0 when heat/structure deny walking. */
 function walkBudgetFor(actor: UnitState): number {
   const def = getMechDefFor(actor);
-  const movement = effectiveMovement(def, actor.critSlotsDestroyed);
+  const movement = effectiveMovement(def, actor.damage, actor.critSlotsDestroyed);
   return effectiveMoveBudget("walk", movement, actor.heat);
 }
 

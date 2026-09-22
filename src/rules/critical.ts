@@ -40,7 +40,11 @@
  *     and internal structure are zeroed, killing the head or immobilizing
  *     the leg. An arm is removed from play; its support torso's IS is not
  *     affected. A destroyed leg drops the 'Mech automatically (TW p.60).
+ *     Crit-slot flags for the blown-off location are NOT marked
+ *     wholesale — per TW p.145 the limb "may be picked up and used as a
+ *     club", so weapons/equipment inside ride along intact for salvage.
  *   - cockpit slot hit: the pilot is killed (the 'Mech is destroyed).
+ *     Head crit-slot flags preserved for the same salvage reason.
  *   - leg actuator (upper/lower/foot) and hip: recorded as destroyed,
  *     accounted for by the effective-movement helper, and each forces its
  *     own PSR at the end of the phase (+1 / +2, TW p.60).
@@ -71,18 +75,19 @@
  */
 
 import { roll2D6, rollD6 } from "../core/dice.js";
-import { damageTransferTo, isArm, isLeg, isLimb, TORSO_LOCATIONS } from "../core/locations.js";
 import type { Location, Rng } from "../core/types.js";
+import { damageTransferTo, isArm, isLeg, isLimb, isTorso, TORSO_LOCATIONS } from "../core/types.js";
 import { type AmmoNameHolder, getAmmoDefFor } from "../data/ammo.schema.js";
-import type {
-  ResolvedCritSlot,
-  ResolvedCritStructure,
-  ResolvedMechDef,
-} from "../data/mech.schema.js";
+import type { ResolvedCritSlot, ResolvedMechDef } from "../data/mech.schema.js";
 import { CRIT_SLOT_COUNTS } from "../data/mech.schema.js";
 import { getWeaponDefFor } from "../data/weapon.schema.js";
 import { type AmmoBinState, type AmmoBins, ammoBinId, stripBinsInLocation } from "./ammo.js";
-import { applyDamage, type DamageApplication, type UnitDamageState } from "./damage.js";
+import {
+  applyDamage,
+  type DamageApplication,
+  isUnitLocationDestroyed,
+  type UnitDamageState,
+} from "./damage.js";
 import type { DestroyedReason } from "./game.js";
 import { GYRO_DESTROYED_HITS, SENSOR_BLIND_HITS } from "./piloting.js";
 
@@ -480,21 +485,24 @@ function runDetermining(
   // source is the original hit location in this determining's call chain.
   if (det.kind === "blownOff") {
     if (source.location === "head") {
-      zeroLocation(state, "head");
-      state.damage.armor.head = 0;
-      state.damage.internalStructure.head = 0;
+      // Pilot dies — head is destroyed as side-effect. Per salvage design
+      // the head's components (sensors, life support) remain readable
+      // from `def.critSlots.head` and `state.destroyed.head`; only the
+      // structural pools are wiped here. `critSlotsDestroyed[head]` flags
+      // are NOT set to true en masse.
+      zeroLocationStructure(state, "head");
       state.killedReason = "headBlownOff";
       state.rows.push({ kind: "headBlownOff", rolls: [det.roll] });
     } else if (isArm(source.location)) {
-      zeroLocation(state, source.location);
-      state.damage.armor[source.location] = 0;
-      state.damage.internalStructure[source.location] = 0;
+      // TW p.145: blown-off arm rides away intact ("may be picked up and
+      // used as a club"). Salvage sees weapons, heat sinks, etc. as
+      // salvageable on the severed limb — do not mass-mark slot flags.
+      zeroLocationStructure(state, source.location);
       state.blownOffArms.push(source.location);
       state.rows.push({ kind: "armBlownOff", arm: source.location, rolls: [det.roll] });
     } else if (isLeg(source.location)) {
-      zeroLocation(state, source.location);
-      state.damage.armor[source.location] = 0;
-      state.damage.internalStructure[source.location] = 0;
+      // Same as arm blow-off — leg rides away intact for club use.
+      zeroLocationStructure(state, source.location);
       state.rows.push({ kind: "legBlownOff", leg: source.location, rolls: [det.roll] });
     }
     state.depth -= 1;
@@ -505,12 +513,14 @@ function runDetermining(
     return det.roll;
   }
   // det.count hits: walk the determining against the source. If the source
-  // is exhausted (no hittable slot remaining at the start of THIS
-  // determining), the whole thing transfers inward; otherwise excess is
+  // is exhausted — either IS has depleted (TW p.124 destroyed-location
+  // carve-out) or no hittable slot remains at the start of THIS
+  // determining — the whole thing transfers inward; otherwise excess is
   // lost.
   const sourceLayout = def.critSlots[source.location];
   const sourceDestroyed = state.destroyed[source.location];
-  const exhausted = isLocationExhausted(sourceLayout, sourceDestroyed);
+  const sourceLocationLost = isUnitLocationDestroyed(state.damage, source.location);
+  const exhausted = sourceLocationLost || isLocationExhausted(sourceLayout, sourceDestroyed);
   if (exhausted) {
     const next = damageTransferTo(source.location);
     if (next === null) {
@@ -668,11 +678,12 @@ function applySlotHit(
   // structure component
   const name = slot.name;
   if (name === COCKPIT) {
-    // Cockpit crit kills the 'Mech (pilot killed).
+    // Cockpit crit kills the 'Mech (pilot killed). Structural pools wipe;
+    // salvaged head components (sensors, life-support slots) ride away
+    // on the head — leave `state.destroyed.head` flags intact for the
+    // salvage reader.
+    zeroLocationStructure(state, "head");
     state.killedReason = "cockpitDestroyed";
-    state.damage.armor.head = 0;
-    state.damage.internalStructure.head = 0;
-    zeroLocation(state, "head");
     state.rows.push({
       kind: "cockpitDestroyed",
       location: loc,
@@ -692,7 +703,7 @@ function applySlotHit(
   }
   if (name === ENGINE) {
     // ENGINE_SLOTS_KILL engine crit slots destroyed = 'Mech killed (TW p.125).
-    const engineCount = countDestroyedEngine(def, state.destroyed);
+    const engineCount = countDestroyedEngine(def, state.damage, state.destroyed);
     if (engineCount >= ENGINE_SLOTS_KILL) {
       state.killedReason = "engineDestroyed";
       state.rows.push({
@@ -715,16 +726,18 @@ function applySlotHit(
   });
 }
 
-function zeroLocation(state: MutableCritState, loc: Location): void {
+function zeroLocationStructure(state: MutableCritState, loc: Location): void {
   state.damage.armor[loc] = 0;
+  if (isTorso(loc)) state.damage.armorRear[loc] = 0;
   state.damage.internalStructure[loc] = 0;
-  state.destroyed[loc] = state.destroyed[loc].map(() => true);
 }
 
 /**
  * Mark a location fully destroyed by a catastrophic event (ammo-explosion
- * cascade). Zero armor and internal structure, mark every crit slot in
- * the location destroyed, and strip any ammo bins there.
+ * cascade). Zero front armor, rear armor, and internal structure; mark
+ * every crit slot in the location destroyed; strip any ammo bins there.
+ * Per TW p.121 the location and "remaining armor there (front or rear)"
+ * are wiped together.
  *
  * Two callers:
  *   - `applySlotHit` on an exploding ammo bin (crit path) — fires before
@@ -747,6 +760,7 @@ export function markLocationCatastrophicallyDestroyed(
   loc: Location,
 ): void {
   damage.armor[loc] = 0;
+  if (isTorso(loc)) damage.armorRear[loc] = 0;
   damage.internalStructure[loc] = 0;
   destroyed[loc] = destroyed[loc].map(() => true);
   stripBinsInLocation(ammoBins, loc);
@@ -776,26 +790,18 @@ export interface EffectiveMovement {
   readonly jumping: number;
 }
 
-function destroyedStructures(
+export function destroyedStructures(
   def: ResolvedMechDef,
+  damage: UnitDamageState,
   critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
   loc: Location,
-): ResolvedCritStructure[] {
-  const layout = def.critSlots[loc];
-  const destroyed = critSlotsDestroyed[loc];
-  const result: ResolvedCritStructure[] = [];
-  for (let i = 0; i < layout.length; i++) {
-    const slot = layout[i];
-    if (slot === undefined) continue;
-    if (slot.kind === "structure" && (destroyed[i] ?? false)) {
-      result.push(slot);
-    }
-  }
-  return result;
+): string[] {
+  return [...iterateDestoyedStructures(def, damage, critSlotsDestroyed, [loc])];
 }
 
 export function effectiveMovement(
   def: ResolvedMechDef,
+  damage: UnitDamageState,
   critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
 ): EffectiveMovement {
   const legMovePenalty = (
@@ -805,12 +811,12 @@ export function effectiveMovement(
     let hipHit = false;
     let movePenalty = 0;
     let jumpPenalty = 0;
-    for (const slot of destroyedStructures(def, critSlotsDestroyed, loc)) {
-      if (slot.name === HIP) {
+    for (const n of iterateDestoyedStructures(def, damage, critSlotsDestroyed, [loc])) {
+      if (n === HIP) {
         hipHit = true;
-      } else if (slot.name === JUMPJET) {
+      } else if (n === JUMPJET) {
         jumpPenalty += 1;
-      } else if (LEG_ACTUATORS.has(slot.name)) {
+      } else if (LEG_ACTUATORS.has(n)) {
         movePenalty += 1;
       }
     }
@@ -837,11 +843,10 @@ export function effectiveMovement(
   let jump = Math.max(0, def.jumping - jpl - jpr);
   if (jump > 0) {
     // Jump MP: each destroyed jump jet slot reduces jump MP by 1.
-    for (const loc of ["leftTorso", "rightTorso", "centerTorso"] as const) {
-      for (const slot of destroyedStructures(def, critSlotsDestroyed, loc)) {
-        if (slot.name === JUMPJET) {
-          jump = Math.max(0, jump - 1);
-        }
+    // jumpjets from legs are already counted.
+    for (const n of iterateDestoyedStructures(def, damage, critSlotsDestroyed, TORSO_LOCATIONS)) {
+      if (n === JUMPJET) {
+        jump = Math.max(0, jump - 1);
       }
     }
   }
@@ -852,10 +857,11 @@ export function effectiveMovement(
 /** Number of destroyed `engine` crit slots on the 'Mech. */
 export function countDestroyedEngine(
   def: ResolvedMechDef,
+  damage: UnitDamageState,
   critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
 ): number {
   let destroyed = 0;
-  for (const name of iterateDestoyedStructures(def, TORSO_LOCATIONS, critSlotsDestroyed)) {
+  for (const name of iterateDestoyedStructures(def, damage, critSlotsDestroyed, TORSO_LOCATIONS)) {
     if (name === ENGINE) destroyed += 1;
   }
   return destroyed;
@@ -863,11 +869,12 @@ export function countDestroyedEngine(
 
 function countDestroyedHeadStructure(
   def: ResolvedMechDef,
+  damage: UnitDamageState,
   critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
   name: string,
 ): number {
   let destroyed = 0;
-  for (const n of iterateDestoyedStructures(def, ["head"], critSlotsDestroyed)) {
+  for (const n of iterateDestoyedStructures(def, damage, critSlotsDestroyed, ["head"])) {
     if (n === name) destroyed += 1;
   }
   return destroyed;
@@ -875,24 +882,27 @@ function countDestroyedHeadStructure(
 
 export function countDestroyedSensor(
   def: ResolvedMechDef,
+  damage: UnitDamageState,
   critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
 ): number {
-  return countDestroyedHeadStructure(def, critSlotsDestroyed, SENSORS);
+  return countDestroyedHeadStructure(def, damage, critSlotsDestroyed, SENSORS);
 }
 
 export function countDestroyedLifeSupport(
   def: ResolvedMechDef,
+  damage: UnitDamageState,
   critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
 ): number {
-  return countDestroyedHeadStructure(def, critSlotsDestroyed, LIFE_SUPPORT);
+  return countDestroyedHeadStructure(def, damage, critSlotsDestroyed, LIFE_SUPPORT);
 }
 
 export function countDestroyedGyro(
   def: ResolvedMechDef,
+  damage: UnitDamageState,
   critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
 ): number {
   let destroyed = 0;
-  for (const name of iterateDestoyedStructures(def, ["centerTorso"], critSlotsDestroyed)) {
+  for (const name of iterateDestoyedStructures(def, damage, critSlotsDestroyed, ["centerTorso"])) {
     if (name === GYRO) destroyed += 1;
   }
   return destroyed;
@@ -900,10 +910,14 @@ export function countDestroyedGyro(
 
 export function countDestroyedHip(
   def: ResolvedMechDef,
+  damage: UnitDamageState,
   critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
 ): number {
   let destroyed = 0;
-  for (const name of iterateDestoyedStructures(def, ["leftLeg", "rightLeg"], critSlotsDestroyed)) {
+  for (const name of iterateDestoyedStructures(def, damage, critSlotsDestroyed, [
+    "leftLeg",
+    "rightLeg",
+  ])) {
     if (name === HIP) destroyed += 1;
   }
   return destroyed;
@@ -911,15 +925,17 @@ export function countDestroyedHip(
 
 function* iterateDestoyedStructures(
   def: ResolvedMechDef,
-  locations: Readonly<Location[]>,
+  damage: UnitDamageState,
   destroyed: Readonly<Record<Location, readonly boolean[]>>,
+  locations: Readonly<Location[]>,
 ): Generator<string> {
   for (const loc of locations) {
+    const ld = isUnitLocationDestroyed(damage, loc);
     const layout = def.critSlots[loc];
     const flags = destroyed[loc];
     for (let i = 0; i < layout.length; i++) {
       const slot = layout[i];
-      if (slot?.kind === "structure" && (flags?.[i] ?? false)) {
+      if (slot?.kind === "structure" && (ld || (flags?.[i] ?? false))) {
         yield slot.name;
       }
     }
@@ -942,13 +958,14 @@ export interface ComponentHitStatus {
 
 export function componentHitStatus(
   def: ResolvedMechDef,
+  damage: UnitDamageState,
   critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
 ): ComponentHitStatus {
   let engineDestoryed = 0;
   let gyroDestroyed = 0;
   let sensorDestroyed = 0;
   let lifeSupportDestroyed = 0;
-  for (const name of iterateDestoyedStructures(def, ["head"], critSlotsDestroyed)) {
+  for (const name of iterateDestoyedStructures(def, damage, critSlotsDestroyed, ["head"])) {
     switch (name) {
       case SENSORS: {
         sensorDestroyed += 1;
@@ -960,7 +977,7 @@ export function componentHitStatus(
       }
     }
   }
-  for (const name of iterateDestoyedStructures(def, TORSO_LOCATIONS, critSlotsDestroyed)) {
+  for (const name of iterateDestoyedStructures(def, damage, critSlotsDestroyed, TORSO_LOCATIONS)) {
     switch (name) {
       case ENGINE: {
         engineDestoryed += 1;

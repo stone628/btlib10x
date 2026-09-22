@@ -154,7 +154,7 @@ export function suggestFireTargets(
     throw new Error(`suggestFireTargets: ${unitId} is not a fireable unit`);
   }
   const def = getMechDefFor(unit);
-  const sensorsOut = countDestroyedSensor(def, unit.critSlotsDestroyed);
+  const sensorsOut = countDestroyedSensor(def, unit.damage, unit.critSlotsDestroyed);
   const blind = sensorsBlind(sensorsOut);
   const sensorMod = sensorAttackModifier(sensorsOut);
   const effectiveFacing = effectiveFacingForTwist(unit.facing, twist);

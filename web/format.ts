@@ -78,6 +78,7 @@ import {
   toHitHeatModifierWithThreshold,
 } from "btlib10x";
 import { AMMO_EXPLOSION_START_HEAT, heatDissipationMax } from "../src/index.js";
+import type { TorsoLocationValue } from "../src/rules/damage.js";
 import type { RemovalReason } from "../src/rules/game.js";
 import { GYRO_DESTROYED_HITS, GYRO_HIT_MOD, SENSOR_BLIND_HITS } from "../src/rules/piloting.js";
 import type { LocaleId, MessageKey } from "./i18n/index.js";
@@ -636,7 +637,7 @@ interface SheetView {
   /** Designed (start-of-game) front armor per location. */
   readonly originalArmor: Readonly<LocationValue>;
   /** Designed (start-of-game) rear torso armor. */
-  readonly originalArmorRear: Partial<LocationValue>;
+  readonly originalArmorRear: Readonly<TorsoLocationValue>;
   /** Designed (start-of-game) internal structure per location. */
   readonly originalArmorStructure: LocationValue;
   readonly mounts: readonly WeaponMountInfo[];
@@ -663,7 +664,7 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
           : i18n(locale, "sheet.ammoExplosion", { heat: unit.heat, avoid, threshold }),
     });
   }
-  const ccStatus = coreComponentStatus(def, unit.critSlotsDestroyed);
+  const ccStatus = coreComponentStatus(def, unit.damage, unit.critSlotsDestroyed);
   return {
     id: id,
     team: unit.team,
@@ -716,7 +717,7 @@ function battleSheet(unit: UnitState, id: string, locale: LocaleId): SheetView {
       ammoBins: unit.ammoBins,
       locationDestroyed: (loc) => unit.phaseStartDamage.internalStructure[loc] <= 0,
     },
-    critCounts: coreComponentStatus(def, unit.critSlotsDestroyed),
+    critCounts: coreComponentStatus(def, unit.damage, unit.critSlotsDestroyed),
   };
 }
 
@@ -836,7 +837,7 @@ function armorDiagramSheet(view: SheetView): string[] {
   const os = view.originalArmorStructure;
   const ar = view.damage.armorRear;
   const or = view.originalArmorRear;
-  const rear = (loc: Location) => cell(ar[loc] ?? 0, or[loc] ?? 0, "R");
+  const rear = (loc: Location) => (isTorso(loc) ? cell(ar[loc], or[loc], "R") : cell(0, 0, "R"));
   const pRT = p(RT);
   const statusHeader = shutdownHeader(view).padEnd(CT);
   const heatHeader = "[HEAT]".padStart(CT);
@@ -1254,7 +1255,7 @@ export function heatStatusLines(s: Session, id: string): Chunk {
   const unit = battle.units[id];
   if (!unit) throw new Error(i18n(s.locale, "err.unknownUnitId", { id }));
   const def = getMechDefFor(unit);
-  const engineOut = countDestroyedEngine(def, unit.critSlotsDestroyed);
+  const engineOut = countDestroyedEngine(def, unit.damage, unit.critSlotsDestroyed);
   const sinks = heatDissipation(def, unit.critSlotsDestroyed);
   const toHit = toHitHeatModifier(unit.heat);
   const mpPenalty = movementMpPenalty(unit.heat);
@@ -2323,11 +2324,11 @@ function formatCritEffect(locale: LocaleId, eff: CriticalEffect): string {
  * label. The engine provides `app.before` directly (snapshot taken at
  * `applyDamage` entry), so no reconstruction from `after` is needed.
  */
-function stepLabel(step: DamageTransferStep, before: UnitDamageState): string {
+function stepLabel(step: DamageTransferStep): string {
   if (step.pool === "armor") {
     // A location carrying a defined rear pool stores its active value as
     // front armor (F); one without a rear pool holds plain armor (A).
-    return before.armorRear[step.location] !== undefined ? "F" : "A";
+    return isTorso(step.location) ? "F" : "A";
   }
   return step.pool === "armorRear" ? "R" : "I";
 }
@@ -2379,7 +2380,7 @@ export function transferDetail(locale: LocaleId, r: AttackResolution): string | 
     const after = before - step.damageApplied;
     setPoolValue(step, after, run);
     bits.push(
-      `${SHORT_LOC[step.location]}${stepLabel(step, app.before)} ${before}->${after}${step.depleted ? "*" : ""}`,
+      `${SHORT_LOC[step.location]}${stepLabel(step)} ${before}->${after}${step.depleted ? "*" : ""}`,
     );
   }
   let text = bits.join(", ");

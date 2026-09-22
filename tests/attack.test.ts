@@ -4,7 +4,7 @@ import { LOCATIONS } from "../src/core/types.js";
 import { getMechDef } from "../src/data/index.js";
 import { loadAmmoBins } from "../src/rules/ammo.js";
 import { resolveWeaponAttack } from "../src/rules/attack.js";
-import type { LocationValue, UnitDamageState } from "../src/rules/damage.js";
+import type { LocationValue, TorsoLocationValue, UnitDamageState } from "../src/rules/damage.js";
 import { scriptedRng } from "./helpers.js";
 
 function freshState(hp = 10): UnitDamageState {
@@ -14,7 +14,7 @@ function freshState(hp = 10): UnitDamageState {
     armor[loc] = hp;
     is[loc] = hp;
   }
-  return { armor, armorRear: {}, internalStructure: is };
+  return { armor, armorRear: {} as TorsoLocationValue, internalStructure: is };
 }
 
 function freshFlags(def = getMechDef("HBK-4G")!) {

@@ -1,7 +1,6 @@
-import { isTorso } from "../core/locations.js";
 import type { Location } from "../core/types.js";
-import { isLocation, LOCATIONS } from "../core/types.js";
-import type { LocationValue } from "../rules/damage.js";
+import { isLocation, isTorso, LOCATIONS } from "../core/types.js";
+import type { LocationValue, TorsoLocationValue } from "../rules/damage.js";
 import { internalStructureForTonnage } from "../rules/internalStructure.js";
 import { getAmmoDef } from "./ammo.schema.js";
 import { getWeaponDef, type WeaponNameHolder } from "./weapon.schema.js";
@@ -181,7 +180,7 @@ export interface WeaponMount extends WeaponNameHolder {
 }
 
 export type ResolvedArmor = Readonly<LocationValue>;
-export type ResolvedRearArmor = Readonly<Partial<Record<TorsoLocation, number>>>;
+export type ResolvedRearArmor = Readonly<TorsoLocationValue>;
 
 /**
  * Engine-facing 'Mech definition produced by `resolveMechDef`. Armor keeps the
@@ -235,7 +234,7 @@ export function resolveMechDef(def: MechDef): ResolvedMechDef {
   for (const loc of LOCATIONS) {
     armor[loc] = def.armor[loc];
   }
-  const armorRear: Partial<Record<TorsoLocation, number>> = {};
+  const armorRear: TorsoLocationValue = {} as TorsoLocationValue;
   for (const [loc, key] of [
     ["centerTorso", "centerTorsoRear"],
     ["rightTorso", "rightTorsoRear"],
