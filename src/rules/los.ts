@@ -55,7 +55,7 @@ export function losBlockedByWater(grid: HexGrid, from: HexCoord, to: HexCoord): 
  *  - buildings: 2 levels default (p. 166–167 medium default).
  *  - clear / rough / rubble / pavement / water: 0 (no LOS height).
  */
-const MECH_LOS_HEIGHT = 2;
+export const MECH_LOS_HEIGHT = 2;
 const BUILDING_LOS_HEIGHT = 2;
 const WOODS_LOS_HEIGHT = 2;
 

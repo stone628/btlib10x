@@ -320,8 +320,8 @@ describe("resolveWeaponAttack", () => {
     expect(res.groups).toEqual([{ location: "centerTorso", damage: 3, throughArmor: false }]);
   });
 
-  it("no partial cover when attacker stands higher than target", () => {
-    const rng = scriptedRng(3, 3, 2, 3); // to-hit 6 >= TN 4; location 5 -> rightLeg (no cover)
+  it("water1 grants partial cover even when attacker higher", () => {
+    const rng = scriptedRng(3, 3, 2, 3); // to-hit 6 >= TN 5; location 5 -> rightLeg -> cover
     const res = resolveWeaponAttack({
       ...BASE,
       rng,
@@ -332,8 +332,10 @@ describe("resolveWeaponAttack", () => {
       targetDamage: freshState(),
     });
     expect(res.hit).toBe(true);
-    expect(res.breakdown.terrainMod).toBe(0);
-    expect(res.groups).toEqual([{ location: "rightLeg", damage: 3, throughArmor: false }]);
+    expect(res.breakdown.terrainMod).toBe(1);
+    expect(res.groups).toHaveLength(0);
+    expect(res.application).toBeNull();
+    expect(rng.remaining()).toBe(0);
   });
 });
 
