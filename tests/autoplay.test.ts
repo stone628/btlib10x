@@ -70,6 +70,12 @@ function nextModeCommand(s: Session, n = 8): string | null {
 function destroyLeg(s: Session, id: string, leg: "rightLeg" | "leftLeg" = "rightLeg"): void {
   s.battle!.units[id]!.damage.internalStructure[leg] = 0;
 }
+/** Strip both legs and both arms to make the unit a true immobile target. */
+function makeImmobile(s: Session, id: string): void {
+  for (const loc of ["rightLeg", "leftLeg", "rightArm", "leftArm"] as const) {
+    s.battle!.units[id]!.damage.internalStructure[loc] = 0;
+  }
+}
 
 describe("nextAutoPlayCommand (autoplay demo driver)", () => {
   it("omits weapons destroyed by a critical slot hit from the fire command", () => {
@@ -140,7 +146,7 @@ describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
     const s = sessionAtMovementStart();
     const actorId = s.move!.actorId!;
     const actor = s.battle!.units[actorId]!;
-    destroyLeg(s, actorId);
+    makeImmobile(s, actorId);
     actor.prone = true;
 
     resetAutoplayState(s);
@@ -152,7 +158,7 @@ describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
     const s = sessionAtMovementStart();
     const actorId = s.move!.actorId!;
     const actor = s.battle!.units[actorId]!;
-    destroyLeg(s, actorId);
+    makeImmobile(s, actorId);
     actor.prone = true;
 
     resetAutoplayState(s);
@@ -161,6 +167,44 @@ describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
     const out = run(s, "mode pronestill");
     expect(out[0]).not.toMatch(/^error:/);
     expect(() => commitMove(s)).not.toThrow();
+  });
+
+  it("one-leg + prone: attempts `mode standup walk` (canAttemptStandUp)", () => {
+    const s = sessionAtMovementStart();
+    const actorId = s.move!.actorId!;
+    const actor = s.battle!.units[actorId]!;
+    destroyLeg(s, actorId);
+    actor.prone = true;
+    expect(isUnitImmobile(actor.damage)).toBe(false);
+
+    resetAutoplayState(s);
+    const cmd = nextModeCommand(s);
+    expect(cmd).toBe("mode standup walk");
+  });
+
+  it("one-leg + two-arms + prone: cannot stand, emits `mode pronestill` (TW p.50)", () => {
+    const s = sessionAtMovementStart();
+    const actorId = s.move!.actorId!;
+    const actor = s.battle!.units[actorId]!;
+    destroyLeg(s, actorId);
+    actor.damage.internalStructure.rightArm = 0;
+    actor.damage.internalStructure.leftArm = 0;
+    actor.prone = true;
+    expect(isUnitImmobile(actor.damage)).toBe(false);
+
+    resetAutoplayState(s);
+    const cmd = nextModeCommand(s);
+    expect(cmd).toBe("mode pronestill");
+  });
+
+  it("one-leg + standing: emits `mode walk` (TW p.122: walk 1 MP)", () => {
+    const s = sessionAtMovementStart();
+    const actorId = s.move!.actorId!;
+    destroyLeg(s, actorId);
+
+    resetAutoplayState(s);
+    const cmd = nextModeCommand(s);
+    expect(cmd).toBe("mode walk");
   });
 
   it("mobile + prone + walk budget < STAND_MP_COST: emits `mode pronestill`", () => {
@@ -245,10 +289,10 @@ describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
     expect(cmd).toBe("mode standup walk");
   });
 
-  it("notprone + immobile (leg destroyed): still emits `mode standstill` (regression)", () => {
+  it("notprone + immobile (both legs and both arms): emits `mode standstill`", () => {
     const s = sessionAtMovementStart();
     const actorId = s.move!.actorId!;
-    destroyLeg(s, actorId);
+    makeImmobile(s, actorId);
 
     resetAutoplayState(s);
     const cmd = nextModeCommand(s);

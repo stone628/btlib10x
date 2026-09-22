@@ -194,9 +194,39 @@ export function isUnitDestroyed(damage: UnitDamageState): boolean {
   return damage.internalStructure.head <= 0 || damage.internalStructure.centerTorso <= 0;
 }
 
-/** One or both legs' internal structure destroyed: cannot move or change facing. */
+/** Number of destroyed leg locations (TW p.122). */
+export function destroyedLegs(damage: UnitDamageState): number {
+  return (
+    (damage.internalStructure.rightLeg <= 0 ? 1 : 0) +
+    (damage.internalStructure.leftLeg <= 0 ? 1 : 0)
+  );
+}
+
+/** Number of destroyed arm locations (TW p.50 / p.113). */
+export function destroyedArms(damage: UnitDamageState): number {
+  return (
+    (damage.internalStructure.rightArm <= 0 ? 1 : 0) +
+    (damage.internalStructure.leftArm <= 0 ? 1 : 0)
+  );
+}
+
+/** True when both legs AND both arms are gone (TW p.122 "no legs and no arms
+ *  = immobile"). A unit with both legs gone but arms intact can prop itself
+ *  up to fire (p.122) and is not an immobile target. A unit with one leg and
+ *  both arms gone is permanently prone (cannot stand, cannot fire) but per
+ *  p.110 is not classed as an immobile target either. */
 export function isUnitImmobile(damage: UnitDamageState): boolean {
-  return damage.internalStructure.rightLeg <= 0 || damage.internalStructure.leftLeg <= 0;
+  return destroyedLegs(damage) === 2 && destroyedArms(damage) === 2;
+}
+
+/** True when the unit is allowed to attempt a stand-up (TW p.50):
+ *  one leg + both arms = cannot stand; both legs = cannot stand. */
+export function canAttemptStandUp(damage: UnitDamageState): boolean {
+  const legs = destroyedLegs(damage);
+  const arms = destroyedArms(damage);
+  if (legs >= 2) return false;
+  if (legs === 1 && arms >= 2) return false;
+  return true;
 }
 
 /** A weapon in `location` can fire only if that location (and its shoulder for arms) is intact. */

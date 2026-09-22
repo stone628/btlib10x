@@ -85,6 +85,7 @@ import { type AmmoBinState, type AmmoBins, ammoBinId, stripBinsInLocation } from
 import {
   applyDamage,
   type DamageApplication,
+  destroyedLegs,
   isUnitLocationDestroyed,
   type UnitDamageState,
 } from "./damage.js";
@@ -783,6 +784,11 @@ function cloneDestroyed(src: Record<Location, boolean[]>): Record<Location, bool
  * previous critical hits on that leg"). Two destroyed hips reduce walking
  * MP to 0 but do not render the unit immobile (the leg-destroyed rule
  * still applies; this only affects MP).
+ *
+ * `prone` is the unit's posture at call time; when `false` and exactly one
+ * leg is destroyed, walking is clamped to 1 (TW p.122, "overriding all MP
+ * increases"). When `true`, both-legs-gone clamps to 0; one-leg-destroyed
+ * still walks 1 (the 'Mech may stand on one leg).
  */
 export interface EffectiveMovement {
   readonly walking: number;
@@ -850,7 +856,19 @@ export function effectiveMovement(
       }
     }
   }
-  const run = Math.ceil((walk * RUN_WALK_NUMERATOR) / RUN_WALK_DENOMINATOR);
+  // Leg-destroyed clamps (TW p.122). One-leg 'Mech: walking MP 1 (overrides
+  // all MP increases); cannot run. Two legs gone: 0 walk. Jump MP unchanged —
+  // one-leg may still jump with a PSR each landing. The clamp applies
+  // regardless of posture: a prone one-leg unit's walking budget is the MP
+  // it will have once it stands, used for the stand attempt and prone-turn
+  // costs alike.
+  const legsGone = destroyedLegs(damage);
+  if (legsGone >= 2) {
+    walk = 0;
+  } else if (legsGone === 1) {
+    walk = Math.min(walk, 1);
+  }
+  const run = legsGone >= 1 ? 0 : Math.ceil((walk * RUN_WALK_NUMERATOR) / RUN_WALK_DENOMINATOR);
   return { walking: walk, running: run, jumping: jump };
 }
 

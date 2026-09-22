@@ -199,6 +199,8 @@ export const en = {
   "err.proneMustDeclare":
     "{id} is prone — declare turn, pronestill, or standup first. valid modes: {modes}",
   "err.immobileStandstill": "{id} is immobile and can only stand still. valid modes: {modes}",
+  "err.oneLegNoRun":
+    "{id} has a destroyed leg and cannot run (TW p.122: walk 1 MP, no run). valid modes: {modes}",
   "mode.hint": "modes: {modes}",
   "err.postureBudget": "{id} has no MP left for the posture change in this mode",
   "err.noMoveInShutdownMode":
