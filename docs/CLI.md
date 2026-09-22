@@ -142,13 +142,11 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   depth 2+ (water2/water3) blocks firing into and out of the hex
   (`blocksTargeting`).
 - **To-hit (GATOR)** — gunnery + attacker movement + target movement + range
-  bracket + intervening terrain + pulse + minimum range penalty + height
-  difference; auto-hit ≤
+  bracket + intervening terrain + pulse + minimum range penalty; auto-hit ≤
   2, auto-miss > 12. Target-terrain modifier is data-driven
-  (`terrainTargetMod`): lightWoods/heavyWoods +1/+2. Height difference:
-  `−(attackerLevel − targetLevel)` (attacker higher = easier, lower =
-  harder). A shut-down 'Mech (or one with both legs destroyed) is immobile
-  and applies a flat −4 target modifier instead of a movement band.
+  (`terrainTargetMod`): lightWoods/heavyWoods +1/+2. A shut-down 'Mech (or
+  one with both legs destroyed) is immobile and applies a flat −4 target
+  modifier instead of a movement band.
   **Partial cover (TW)** — a target standing in a water1 or building hex is
   in partial cover while the attacker's ground level is not higher than the
   target's: +1 to-hit (folded into `terrainMod`) and a hit-location roll

@@ -379,10 +379,9 @@ computeToHit({
 ```
 
 GATOR stack: gunnery + attacker move + target move + terrain + range bracket
-(S 0 / M +2 / L +4) + pulse (−2) + minimum-range penalty + height difference;
-auto-hit ≤ 2, auto-miss > 12. `attackerLevel − targetLevel` is reported as
-`heightDiff` and subtracts as `heightMod` (attacker higher = easier).
-`targetImmobile` (shut down or both legs destroyed) sets `targetMod` to −4.
+(S 0 / M +2 / L +4) + pulse (−2) + minimum-range penalty; auto-hit ≤ 2,
+auto-miss > 12. `targetImmobile` (shut down or both legs destroyed) sets
+`targetMod` to −4.
 `targetPartialCover` (target in water1/building hex with attacker not higher)
 adds +1 to `terrainMod`; the caller also maps leg hit-location rolls to
 cover strikes. `damageForBracket(weapon, bracket)` resolves plain/V damage
