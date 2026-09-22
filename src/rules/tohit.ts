@@ -33,10 +33,6 @@ export interface AttackModifiers {
   readonly interveningWoods: number;
   readonly distance: number;
   readonly weapon: WeaponDef;
-  /** Attacker's ground elevation in levels (default 0). */
-  readonly attackerLevel?: number;
-  /** Target's ground elevation in levels (default 0). */
-  readonly targetLevel?: number;
   /** Heat Scale to-hit modifier (+1..+4); caller computes from the heat value. */
   readonly heatMod?: number;
 }
@@ -51,13 +47,6 @@ export interface ToHitBreakdown {
   readonly pulseMod: number;
   /** Closer-than-minimum-range penalty: (minRange - distance) + 1, else 0. */
   readonly minRangeMod: number;
-  /**
-   * Height difference (attackerLevel - targetLevel). Positive = attacker
-   * higher; the same sign is subtracted from TN via {@link heightMod}.
-   */
-  readonly heightDiff: number;
-  /** -heightDiff: positive heightDiff reduces TN. */
-  readonly heightMod: number;
   /** Heat Scale modifier from the attacker's current heat (+1..+4), else 0. */
   readonly heatMod: number;
   /** Destroyed-sensor modifier from the attacker (0 intact, +2 on first hit). */
@@ -113,8 +102,6 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
       rangeMod: 0,
       pulseMod: 0,
       minRangeMod: 0,
-      heightDiff: 0,
-      heightMod: 0,
       heatMod: 0,
       sensorMod: 0,
       total: Number.POSITIVE_INFINITY,
@@ -144,8 +131,6 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     mods.weapon.minRange !== undefined && mods.distance <= mods.weapon.minRange
       ? mods.weapon.minRange - mods.distance + 1
       : 0;
-  const heightDiff = (mods.attackerLevel ?? 0) - (mods.targetLevel ?? 0);
-  const heightMod = heightDiff === 0 ? 0 : -heightDiff;
   const heatMod = mods.heatMod ?? 0;
   const sensorMod = mods.sensorMod ?? 0;
 
@@ -157,7 +142,6 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     rangeMod +
     pulseMod +
     min +
-    heightMod +
     heatMod +
     sensorMod;
 
@@ -169,8 +153,6 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     rangeMod,
     pulseMod,
     minRangeMod: min,
-    heightDiff,
-    heightMod,
     heatMod,
     sensorMod,
     total,

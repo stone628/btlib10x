@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { HexGrid } from "../src/core/terrain.js";
 import type { HexCell } from "../src/core/types.js";
-import { getWeaponDefFor } from "../src/data/weapon.schema.js";
 import { losClear, losWoodsPointsBetween } from "../src/rules/los.js";
 import { type ReachabilityOptions, reachableLandings } from "../src/rules/movement.js";
-import { computeToHit } from "../src/rules/tohit.js";
 
 /**
  * Worked example: a hilly duel between two bipedal 'Mechs.
@@ -99,43 +97,5 @@ describe("elevation worked example: ridge duel", () => {
   it("LOS from the level-1 ridge down to the level-0 target is clear", () => {
     expect(losWoodsPointsBetween(clear, { col: 5, row: 2 }, { col: 6, row: 2 })).toBe(0);
     expect(losClear(elevation, { col: 5, row: 2 }, { col: 6, row: 2 })).toBe(true);
-  });
-
-  it("to-hit bonus when firing down from a level-1 ridge to a level-0 target", () => {
-    // attacker at (5,2) level 1, target at (6,2) level 0. heightDiff = 1.
-    const bd = computeToHit({
-      gunnery: 4,
-      attackerMovement: "standStill",
-      targetHexesMoved: 0,
-      targetJumped: false,
-      targetTerrain: "clear",
-      interveningWoods: 0,
-      distance: 1,
-      weapon: getWeaponDefFor({ weapon: "Medium Laser" }),
-      attackerLevel: 1,
-      targetLevel: 0,
-    });
-    expect(bd.heightDiff).toBe(1);
-    expect(bd.heightMod).toBe(-1);
-    expect(bd.total).toBe(3);
-  });
-
-  it("to-hit penalty when firing up from level 0 to a level-1 target", () => {
-    // attacker at (4,2) level 0, target at (5,2) level 1. heightDiff = -1.
-    const bd = computeToHit({
-      gunnery: 4,
-      attackerMovement: "standStill",
-      targetHexesMoved: 0,
-      targetJumped: false,
-      targetTerrain: "clear",
-      interveningWoods: 0,
-      distance: 1,
-      weapon: getWeaponDefFor({ weapon: "Medium Laser" }),
-      attackerLevel: 0,
-      targetLevel: 1,
-    });
-    expect(bd.heightDiff).toBe(-1);
-    expect(bd.heightMod).toBe(1);
-    expect(bd.total).toBe(5);
   });
 });

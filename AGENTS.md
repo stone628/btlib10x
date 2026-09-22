@@ -16,8 +16,7 @@ TypeScript library encapsulating BattleTech Total Warfare board game logic.
    direction resolved target-side (drives hit-location column + front/rear
    armor pool); torso twist (per-weapon facing override) is not. Elevation IS
   implemented: per-hex `level` (default 0) on the map, with movement
-  climb cost, jump ignoring elevation, LOS elevation ray, and the
-  height-difference to-hit modifier.
+   climb cost, jump ignoring elevation, and LOS elevation ray.
 - Terrain: 13 core-rulebook types, data-driven from `src/data/terrain.json`
   (move surcharge, screening value, target to-hit mod, partial-cover and
   targeting-restriction flags). Water depth 2+ (water2/water3) blocks LOS

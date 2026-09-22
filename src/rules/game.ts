@@ -1442,8 +1442,6 @@ export function validateAttacksImpl(
       interveningWoods: woodsPoints,
       distance: dist,
       weapon,
-      attackerLevel: cellAt(state, unit.position).level,
-      targetLevel: cellAt(state, target.position).level,
       heatMod: toHitHeatModifier(unit.heat),
     });
     if (index === 0) {

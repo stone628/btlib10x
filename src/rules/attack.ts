@@ -168,8 +168,6 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     interveningWoods: losWoodsPoints(input.interveningTerrains),
     distance: input.distance,
     weapon,
-    ...(input.attackerLevel !== undefined ? { attackerLevel: input.attackerLevel } : {}),
-    ...(input.targetLevel !== undefined ? { targetLevel: input.targetLevel } : {}),
     ...(input.attackerHeat !== undefined ? { heatMod: toHitHeatModifier(input.attackerHeat) } : {}),
   });
 

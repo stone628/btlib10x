@@ -255,8 +255,6 @@ export function suggestFireTargets(
           interveningWoods,
           distance,
           weapon,
-          attackerLevel: cellAt(state, unit.position).level,
-          targetLevel: cellAt(state, enemy.position).level,
           heatMod: toHitHeatModifier(unit.heat),
         });
         if (breakdown.outOfRange) {
