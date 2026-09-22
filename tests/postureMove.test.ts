@@ -3,6 +3,7 @@ import { neighbor } from "../src/core/hex.js";
 import { executeMove, requireUnit, rollInitiativePhase } from "../src/rules/game.js";
 import { budgetFor, currentActor, newSession, type Session } from "../web/session.js";
 import { createTestBattle, execute, scriptedRng } from "./helpers.js";
+import type { RevealedLanding } from "../src/index.js";
 
 function run(s: Session, cmd: string): string[] {
   return execute(s, cmd);
@@ -60,7 +61,7 @@ describe("posture-change then move", () => {
     run(s, "mode standup");
     expect(s.move!.moveMode).toBe("standup");
     expect(s.move!.postureMove).toBe("standStill");
-    expect(s.move!.moveCandidate).toBeNull();
+    expect(s.move!.moveCandidate?.revealed).toStrictEqual([] as RevealedLanding[]);
     expect(run(s, "place 9 9 n")[0]).toMatch(/^error:/);
     run(s, "done");
     const unit = s.battle!.units[actor]!;
@@ -103,7 +104,7 @@ describe("posture-change then move", () => {
     run(s, "mode prone pronestill");
     expect(s.move!.moveMode).toBe("prone");
     expect(s.move!.postureMove).toBe("standStill");
-    expect(s.move!.moveCandidate).toBeNull();
+    expect(s.move!.moveCandidate?.revealed).toStrictEqual([] as RevealedLanding[]);
     expect(run(s, `place 9 9 n`)[0]).toMatch(/^error:/);
     const heatBefore = s.battle!.units[actor]!.heat;
     run(s, "done");
@@ -140,7 +141,7 @@ describe("posture-change then move", () => {
     forceProne(s, actor);
     run(s, "mode pronestill");
     expect(s.move!.moveMode).toBe("pronestill");
-    expect(s.move!.moveCandidate).toBeNull();
+    expect(s.move!.moveCandidate?.revealed).toStrictEqual([] as RevealedLanding[]);
     expect(run(s, "place 9 9 n")[0]).toMatch(/^error:/);
     const heatBefore = s.battle!.units[actor]!.heat;
     run(s, "done");

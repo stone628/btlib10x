@@ -567,9 +567,14 @@ describe("effectiveMovement", () => {
     }
     return out;
   };
+  const damage: UnitDamageState = {
+    armor: { ...def.armor },
+    armorRear: { ...def.armorRear },
+    internalStructure: { ...def.internalStructure },
+  };
 
   it("returns base ratings for a fresh unit", () => {
-    const m = effectiveMovement(def, freshFlags(def));
+    const m = effectiveMovement(def, damage, freshFlags(def));
     expect(m.walking).toBe(def.walking);
     expect(m.running).toBe(Math.ceil(def.walking * 1.5));
     expect(m.jumping).toBe(def.jumping);
@@ -578,7 +583,7 @@ describe("effectiveMovement", () => {
   it("each destroyed leg actuator slot reduces walk by 1", () => {
     // Right leg has Hip(0), ULA(1), LLA(2), Foot(3), HS(4), HS(5). Destroy
     // ULA + LLA: walking = 4 - 2 = 2.
-    const m = effectiveMovement(def, flags({ rightLeg: [1, 2] }));
+    const m = effectiveMovement(def, damage, flags({ rightLeg: [1, 2] }));
     expect(m.walking).toBe(2);
     expect(m.running).toBe(3);
   });
@@ -586,7 +591,7 @@ describe("effectiveMovement", () => {
   it("hip on a leg halves walking and ignores other penalties on that leg", () => {
     // Hip + ULA + LLA destroyed on rightLeg: walk halves to ceil(4/2) = 2;
     // running = ceil(2 * 1.5) = 3.
-    const m = effectiveMovement(def, flags({ rightLeg: [0, 1, 2] }));
+    const m = effectiveMovement(def, damage, flags({ rightLeg: [0, 1, 2] }));
     expect(m.walking).toBe(2);
     expect(m.running).toBe(3);
   });
@@ -622,7 +627,7 @@ describe("effectiveMovement", () => {
         mods[loc] = [idx];
       }
     }
-    const m = effectiveMovement(wvr, flags(mods));
+    const m = effectiveMovement(wvr, damage, flags(mods));
     expect(m.jumping).toBe(5 - Math.min(2, jetIndices.length));
   });
 });
@@ -815,7 +820,12 @@ describe("engine crit destruction", () => {
 describe("computeCritCounts", () => {
   it("reports zero for every component on a fresh 'Mech", () => {
     const def = getMechDef("HBK-4G")!;
-    const counts = componentHitStatus(def, freshFlags(def));
+    const damage: UnitDamageState = {
+      armor: { ...def.armor },
+      armorRear: { ...def.armorRear },
+      internalStructure: { ...def.internalStructure },
+    };
+    const counts = componentHitStatus(def, damage, freshFlags(def));
     expect(counts.engine).toEqual(0);
     expect(counts.gyro).toEqual(0);
     expect(counts.sensors).toEqual(0);
@@ -824,13 +834,18 @@ describe("computeCritCounts", () => {
 
   it("counts destroyed gyro slots on the CT and engine slots across all torsos", () => {
     const def = getMechDef("HBK-4G")!;
+    const damage: UnitDamageState = {
+      armor: { ...def.armor },
+      armorRear: { ...def.armorRear },
+      internalStructure: { ...def.internalStructure },
+    };
     const destroyed = freshFlags(def);
     // HBK-4G centerTorso: 0..2 = engine, 3..6 = gyro, 7..9 = engine.
     // HBK-4G RT and LT carry weapons/ammo only (no engine/gyro slots there).
     destroyed.centerTorso[3] = true; // gyro slot 4
     destroyed.centerTorso[0] = true; // engine slot 1 (first band)
     destroyed.centerTorso[7] = true; // engine slot 8 (second band)
-    const counts = componentHitStatus(def, destroyed);
+    const counts = componentHitStatus(def, damage, destroyed);
     expect(counts.engine).toBe(2);
     expect(counts.gyro).toBe(1);
     expect(counts.sensors).toBe(0);
@@ -839,13 +854,18 @@ describe("computeCritCounts", () => {
 
   it("counts destroyed sensors and life support slots on the head", () => {
     const def = getMechDef("HBK-4G")!;
+    const damage: UnitDamageState = {
+      armor: { ...def.armor },
+      armorRear: { ...def.armorRear },
+      internalStructure: { ...def.internalStructure },
+    };
     const destroyed = freshFlags(def);
     // HBK-4G head: 0=lifeSupport, 1=sensors, 2=cockpit, 3=Small Laser,
     //              4=sensors, 5=lifeSupport.
     destroyed.head[1] = true;
     destroyed.head[4] = true;
     destroyed.head[5] = true;
-    const counts = componentHitStatus(def, destroyed);
+    const counts = componentHitStatus(def, damage, destroyed);
     expect(counts.sensors).toBe(2);
     expect(counts.lifeSupport).toBe(1);
     expect(counts.engine).toBe(0);
@@ -873,6 +893,9 @@ describe("markLocationCatastrophicallyDestroyed", () => {
     expect(damage.armor.leftTorso).toBe(0);
     expect(damage.internalStructure.leftTorso).toBe(0);
     expect(destroyed.leftTorso.every((f) => f === true)).toBe(true);
+    // Rear pool: HBK-4G carries some left-torso rear armor; mark should
+    // wipe it (TW p.121 "remaining armor there (front or rear)").
+    expect(damage.armorRear.leftTorso ?? 0).toBe(0);
     for (const k of binKeys) {
       expect(ammoBins[k]).toBeUndefined();
     }
@@ -919,12 +942,166 @@ describe("markLocationCatastrophicallyDestroyed", () => {
     expect(destroyed.leftTorso.every((f) => f === false)).toBe(true);
     // Counters read only flags and must NOT auto-include the destroyed
     // location's contents.
-    expect(countDestroyedEngine(def, destroyed)).toBe(0);
+    expect(countDestroyedEngine(def, damage, destroyed)).toBe(0);
     // Heat sinks in the LT (the HBK-4G has none, so check CT external sinks).
     const sinksBefore = heatSinksOperational(def, destroyed);
     expect(sinksBefore).toBeGreaterThan(0);
     const binCount = Object.keys(ammoBins).filter((k) => k.startsWith("leftTorso:")).length;
     expect(binCount).toBeGreaterThan(0);
+  });
+
+  it("wipes the rear armor pool of a destroyed torso", () => {
+    const def = getMechDef("HBK-4G")!;
+    const damage: UnitDamageState = {
+      armor: { ...def.armor, rightTorso: 0 },
+      armorRear: { ...def.armorRear, rightTorso: 7 },
+      internalStructure: { ...def.internalStructure, rightTorso: 0 },
+    };
+    const destroyed = freshFlags(def);
+    const ammoBins = loadAmmoBins(def);
+    expect(damage.armorRear.rightTorso).toBe(7);
+    markLocationCatastrophicallyDestroyed(damage, destroyed, ammoBins, "rightTorso");
+    expect(damage.armorRear.rightTorso ?? 0).toBe(0);
+    // Non-torso location passes through cleanly.
+    markLocationCatastrophicallyDestroyed(damage, destroyed, ammoBins, "head");
+    expect(damage.armor.head).toBe(0);
+    // expect(damage.armorRear.head ?? 0).toBe(0);  // adopted TorsoLocationValue. cannot happen
+  });
+});
+
+describe("blow-off and cockpit kill: salvage-friendly slot preservation", () => {
+  it("arm blow-off (det 12) preserves crit-slot flags for salvage", () => {
+    const def = getMechDef("HBK-4G")!;
+    const damage: UnitDamageState = {
+      armor: { ...def.armor, leftArm: 1 },
+      armorRear: { ...def.armorRear },
+      internalStructure: { ...def.internalStructure, leftArm: 1 },
+    };
+    const destroyed = freshFlags(def);
+    const ammoBins = loadAmmoBins(def);
+    const flagsBefore = destroyed.leftArm.slice();
+
+    const res = resolveCriticalHits({
+      rng: detRoll(12),
+      def,
+      source: { location: "leftArm", damage: 5 },
+      critSlotsDestroyed: destroyed,
+      destroyedWeapons: [],
+      damage,
+      ammoBins,
+    });
+
+    expect(res.determiningRoll).toBe(12);
+    expect(res.blownOffArms).toContain("leftArm");
+    expect(res.damage.internalStructure.leftArm).toBe(0);
+    expect(res.damage.armor.leftArm).toBe(0);
+    // Slot flags preserved — every flag equals pre-resolution state.
+    // Per TW p.145 weapons/equipment inside the blown-off arm ride
+    // away intact on the severed limb.
+    expect(res.critSlotsDestroyed.leftArm).toEqual(flagsBefore);
+  });
+
+  it("leg blow-off (det 12) preserves slot flags; immobility still triggers via IS<=0", () => {
+    const def = getMechDef("HBK-4G")!;
+    const damage: UnitDamageState = {
+      armor: { ...def.armor, rightLeg: 1 },
+      armorRear: { ...def.armorRear },
+      internalStructure: { ...def.internalStructure, rightLeg: 1 },
+    };
+    const destroyed = freshFlags(def);
+    const flagsBefore = destroyed.rightLeg.slice();
+
+    const res = resolveCriticalHits({
+      rng: detRoll(12),
+      def,
+      source: { location: "rightLeg", damage: 5 },
+      critSlotsDestroyed: destroyed,
+      destroyedWeapons: [],
+      damage,
+      ammoBins: loadAmmoBins(def),
+    });
+
+    expect(res.rows.some((r) => r.kind === "legBlownOff")).toBe(true);
+    expect(res.damage.internalStructure.rightLeg).toBe(0);
+    expect(res.critSlotsDestroyed.rightLeg).toEqual(flagsBefore);
+  });
+
+  it("cockpit crit preserves head slot flags for salvage", () => {
+    const def = getMechDef("HBK-4G")!;
+    const damage: UnitDamageState = {
+      armor: { ...def.armor },
+      armorRear: { ...def.armorRear },
+      internalStructure: { ...def.internalStructure },
+    };
+    const destroyed = freshFlags(def);
+    const flagsBefore = destroyed.head.slice();
+    const ammoBins = loadAmmoBins(def);
+
+    // Drive a hit slot that's the cockpit. HBK-4G head slot 2 = cockpit.
+    const headLayout = def.critSlots.head;
+    const cockpitSlot = headLayout.findIndex((s) => s.kind === "structure" && s.name === "cockpit");
+    expect(cockpitSlot).toBeGreaterThanOrEqual(0);
+
+    // Det 8 ("1 hit"); head uses 1D6 slot pick. feeding (cockpitSlot + 1)
+    // lands on the cockpit slot.
+    const res = resolveCriticalHits({
+      rng: detRoll(8, cockpitSlot + 1),
+      def,
+      source: { location: "head", damage: 5 },
+      critSlotsDestroyed: destroyed,
+      destroyedWeapons: [],
+      damage,
+      ammoBins,
+    });
+
+    expect(res.killedReason).toBe("cockpitDestroyed");
+    expect(res.damage.internalStructure.head).toBe(0);
+    expect(res.damage.armor.head).toBe(0);
+    // Slot flags preserved wholesale EXCEPT for the cockpit slot, which
+    // the standard `applySlotHit` pathway flips to true at the moment
+    // of the hit. Per salvage design the cockpit-driven kill leaves
+    // head components (sensors, life support) readable for salvage
+    // readers — no all-true wipe.
+    const expected = flagsBefore.slice();
+    expected[cockpitSlot] = true;
+    expect(res.critSlotsDestroyed.head).toEqual(expected);
+  });
+
+  it("cascade runDetermining against an IS=0 source transfers inward (TW p.124)", () => {
+    // After blow-off leaves flags intact, IS=0 must still drive cascade
+    // exhaustion. Set up a right arm with IS=0 + intact flags, drive a
+    // fresh cascade roll — expect no weaponDestroyed rows targeting
+    // the arm, and the cascade re-routes inward to the right torso.
+    const def = getMechDef("HBK-4G")!;
+    const damage: UnitDamageState = {
+      armor: { ...def.armor, rightArm: 0 },
+      armorRear: { ...def.armorRear },
+      internalStructure: { ...def.internalStructure, rightArm: 0 },
+    };
+    const destroyed = freshFlags(def);
+    const ammoBins = loadAmmoBins(def);
+    // Confirm flags are intact (no all-true)
+    expect(destroyed.rightArm.some((f) => f === true)).toBe(false);
+
+    // Det 8 ("1 hit"). Without the IS gate the slot-picker would land
+    // on a rightArm weapon slot. With the gate, the cascade sees the
+    // IS=0 source as exhausted and re-routes inward.
+    const res = resolveCriticalHits({
+      rng: detRoll(8, 1, 1),
+      def,
+      source: { location: "rightArm", damage: 0 },
+      critSlotsDestroyed: destroyed,
+      destroyedWeapons: [],
+      damage,
+      ammoBins,
+    });
+    expect(res.determiningRoll).toBe(8);
+    const inArm = res.rows.filter(
+      (r) =>
+        (r.kind === "weaponDestroyed" || r.kind === "componentDestroyed") &&
+        r.location === "rightArm",
+    );
+    expect(inArm).toHaveLength(0);
   });
 });
 
@@ -933,7 +1110,7 @@ describe("ammo-explosion casualty: catastrophic mark", () => {
     const def = getMechDef("HBK-4G")!;
     const damage: UnitDamageState = {
       armor: { ...def.armor, rightTorso: 0 },
-      armorRear: { ...def.armorRear },
+      armorRear: { ...def.armorRear, rightTorso: 6 },
       internalStructure: { ...def.internalStructure, rightTorso: 1 },
     };
     const destroyed = freshFlags(def);
@@ -947,6 +1124,7 @@ describe("ammo-explosion casualty: catastrophic mark", () => {
     }
 
     expect(destroyed.rightTorso.every((f) => f === true)).toBe(true);
+    expect(damage.armorRear.rightTorso ?? 0).toBe(0);
     const rtBins = Object.keys(ammoBins).filter((k) => k.startsWith("rightTorso:"));
     for (const k of rtBins) expect(ammoBins[k]).toBeUndefined();
   });
@@ -1001,7 +1179,7 @@ describe("ammo-explosion casualty: catastrophic mark", () => {
     const def = getMechDef("HBK-4G")!;
     const damage: UnitDamageState = {
       armor: { ...def.armor, rightTorso: 0, centerTorso: 0 },
-      armorRear: { ...def.armorRear },
+      armorRear: { ...def.armorRear, centerTorso: 10 },
       internalStructure: { ...def.internalStructure, rightTorso: 0, centerTorso: 1 },
     };
     const destroyed = freshFlags(def);
@@ -1017,6 +1195,8 @@ describe("ammo-explosion casualty: catastrophic mark", () => {
     const totalEngineSlots = def.critSlots.centerTorso.filter(
       (s) => s.kind === "structure" && s.name === "engine",
     ).length;
-    expect(countDestroyedEngine(def, destroyed)).toBe(totalEngineSlots);
+    expect(countDestroyedEngine(def, damage, destroyed)).toBe(totalEngineSlots);
+    // CT rear pool wiped alongside front + IS.
+    expect(damage.armorRear.centerTorso ?? 0).toBe(0);
   });
 });

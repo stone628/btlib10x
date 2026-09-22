@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { LOCATIONS } from "../src/core/types.js";
 import { resolveWeaponAttack } from "../src/rules/attack.js";
-import type { LocationValue, UnitDamageState } from "../src/rules/damage.js";
+import type { LocationValue, TorsoLocationValue, UnitDamageState } from "../src/rules/damage.js";
 import { transferDetail } from "../web/format.js";
 import { scriptedRng } from "./helpers.js";
 
@@ -12,7 +12,7 @@ function freshState(hp = 10): UnitDamageState {
     armor[loc] = hp;
     is[loc] = hp;
   }
-  return { armor, armorRear: {}, internalStructure: is };
+  return { armor, armorRear: {} as TorsoLocationValue, internalStructure: is };
 }
 
 const BASE = {
@@ -48,7 +48,7 @@ describe("transferDetail", () => {
     expect(res.application?.before.armor.rightTorso).toBe(10);
     const text = transferDetail("en", res);
     expect(text).not.toBeNull();
-    expect(text).toMatch(/RTA 10->7\b/);
+    expect(text).toMatch(/RTF 10->7\b/);
     expect(text).not.toMatch(/RTI/);
   });
 
@@ -59,12 +59,16 @@ describe("transferDetail", () => {
       armor[loc] = loc === "rightTorso" ? 2 : 10;
       is[loc] = 10;
     }
-    const s: UnitDamageState = { armor, armorRear: {}, internalStructure: is };
+    const s: UnitDamageState = {
+      armor,
+      armorRear: {} as TorsoLocationValue,
+      internalStructure: is,
+    };
     const rng = scriptedRng(6, 6, 3, 3); // to-hit 12, location 6 -> RT, dmg 3
     const res = strike(s, rng);
     const text = transferDetail("en", res);
     expect(text).not.toBeNull();
-    expect(text).toMatch(/RTA 2->0\*?/);
+    expect(text).toMatch(/RTF 2->0\*?/);
     expect(text).toMatch(/RTI 10->9\b/);
   });
 
@@ -92,7 +96,7 @@ describe("transferDetail", () => {
   it("labels torso armor as front-armor F when a rear pool is present", () => {
     const s: UnitDamageState = {
       ...freshState(),
-      armorRear: { rightTorso: 5 },
+      armorRear: { rightTorso: 5 } as TorsoLocationValue,
     };
     const rng = scriptedRng(6, 6, 3, 3); // to-hit 12, location 6 -> RT, dmg 3
     const res = strike(s, rng);
@@ -115,7 +119,7 @@ describe("transferDetail", () => {
   it("labels rear-arc torso hits on the rear pool as R", () => {
     const s: UnitDamageState = {
       ...freshState(),
-      armorRear: { rightTorso: 5 },
+      armorRear: { rightTorso: 5 } as TorsoLocationValue,
     };
     const rng = scriptedRng(6, 6, 3, 3); // to-hit 12, location 6 -> RT, rear arc
     const res = strike(s, rng, "Small Laser", "rear");

@@ -56,7 +56,8 @@ import type { Facing, Location, Rng } from "../core/types.js";
 import { rotateFacing } from "../core/types.js";
 import type { ResolvedMechDef } from "../data/mech.schema.js";
 import type { Arc } from "./arcs.js";
-import { countDestroyedGyro, HIP } from "./critical.js";
+import { countDestroyedGyro, destroyedStructures, HIP } from "./critical.js";
+import { isUnitLocationDestroyed, type UnitDamageState } from "./damage.js";
 
 /** Default pilot skill for `UnitInit`s that omit it (TW regular pilot). */
 export const DEFAULT_PILOTING = 5;
@@ -107,22 +108,6 @@ export function rollPilotingCheck(
   return { target, roll, success: roll >= target };
 }
 
-/** Destroyed structure names on one leg (`rightLeg` / `leftLeg`). */
-export function destroyedLegStructures(
-  def: ResolvedMechDef,
-  destroyed: Readonly<Record<Location, readonly boolean[]>>,
-  leg: "rightLeg" | "leftLeg",
-): string[] {
-  const out: string[] = [];
-  const layout = def.critSlots[leg];
-  const flags = destroyed[leg];
-  for (let i = 0; i < layout.length; i++) {
-    const slot = layout[i];
-    if (slot?.kind === "structure" && (flags?.[i] ?? false)) out.push(slot.name);
-  }
-  return out;
-}
-
 /**
  * Preexisting-damage modifier for a PSR, evaluated against a crit-slot state
  * (TW p.60 "Preexisting Damage"): LEG_ACTUATOR_MOD per destroyed leg/foot
@@ -153,25 +138,24 @@ export interface PreexistingDamage {
 
 export function preexistingDamageModifier(
   def: ResolvedMechDef,
+  damage: UnitDamageState,
   destroyed: Readonly<Record<Location, readonly boolean[]>>,
-  legIsGone: (leg: "rightLeg" | "leftLeg") => boolean,
 ): PreexistingDamage {
-  const gyroHits = countDestroyedGyro(def, destroyed);
+  const gyroHits = countDestroyedGyro(def, damage, destroyed);
   let modifier = 0;
   let legsDestroyed = 0;
   for (const leg of ["rightLeg", "leftLeg"] as const) {
-    if (legIsGone(leg)) {
+    if (isUnitLocationDestroyed(damage, leg)) {
       legsDestroyed += 1;
       modifier += LEG_DESTROYED_MOD;
       continue;
     }
-    const names = destroyedLegStructures(def, destroyed, leg);
-    if (names.includes(HIP)) {
-      modifier += HIP_MOD;
-      continue;
-    }
-    for (const name of names) {
-      if (LEG_ACTUATORS.has(name)) modifier += LEG_ACTUATOR_MOD;
+    for (const n of destroyedStructures(def, damage, destroyed, leg)) {
+      if (n === HIP) {
+        modifier += HIP_MOD;
+        continue;
+      }
+      if (LEG_ACTUATORS.has(n)) modifier += LEG_ACTUATOR_MOD;
     }
   }
   if (gyroHits >= 1 && gyroHits < GYRO_DESTROYED_HITS) modifier += GYRO_HIT_MOD;

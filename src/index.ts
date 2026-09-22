@@ -17,14 +17,6 @@ export {
   neighbors,
   sameHex,
 } from "./core/hex.js";
-export {
-  isArm,
-  isLeg,
-  isLimb,
-  isTorso,
-  shoulderOf,
-  TORSO_LOCATIONS,
-} from "./core/locations.js";
 export type { HexGrid } from "./core/terrain.js";
 export {
   blocksTargeting,
@@ -40,24 +32,32 @@ export {
   terrainTargetMod,
   woodsPoints,
 } from "./core/terrain.js";
+export type {
+  Facing,
+  HexCell,
+  HexCoord,
+  Location,
+  MoveMode,
+  Rng,
+  TerrainHexDef,
+  TerrainType,
+  WreckState,
+} from "./core/types.js";
 export {
   FACINGS,
-  type Facing,
-  type HexCell,
-  type HexCoord,
+  isArm,
   isFacing,
+  isLeg,
+  isLimb,
   isLocation,
   isTerrainType,
+  isTorso,
   LOCATIONS,
-  type Location,
-  type MoveMode,
   oppositeFacing,
-  type Rng,
   rotateFacing,
+  shoulderOf,
   TERRAIN_TYPES,
-  type TerrainHexDef,
-  type TerrainType,
-  type WreckState,
+  TORSO_LOCATIONS,
 } from "./core/types.js";
 export type { AmmoDef } from "./data/ammo.schema.js";
 export {
@@ -320,7 +320,6 @@ export {
   buildingEntryModifier,
   consciousnessTarget,
   DEFAULT_PILOTING,
-  destroyedLegStructures,
   FALL_CLUSTER_SIZE,
   FALL_TONNAGE_DIVISOR,
   type FallDirection,

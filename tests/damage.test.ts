@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { LOCATIONS } from "../src/core/types.js";
-import type { LocationValue, UnitDamageState } from "../src/rules/damage.js";
+import type { LocationValue, TorsoLocationValue, UnitDamageState } from "../src/rules/damage.js";
 import {
   applyDamage,
   canFireFromLocation,
@@ -12,7 +12,7 @@ import {
 function mk(
   over: {
     armor?: Partial<LocationValue>;
-    armorRear?: Partial<LocationValue>;
+    armorRear?: Partial<TorsoLocationValue>;
     is?: Partial<LocationValue>;
   } = {},
 ): UnitDamageState {
@@ -22,7 +22,7 @@ function mk(
     armor[loc] = over.armor?.[loc] ?? 10;
     is[loc] = over.is?.[loc] ?? 10;
   }
-  return { armor, armorRear: { ...over.armorRear }, internalStructure: is };
+  return { armor, armorRear: { ...over.armorRear } as TorsoLocationValue, internalStructure: is };
 }
 
 describe("layered damage resolution", () => {

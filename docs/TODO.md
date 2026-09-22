@@ -228,9 +228,26 @@
   destruction (overflow, building collapse) intentionally leaves crit-slot
   flags unflagged (engine-by-design quirk), while ammo-explosion destruction
   marks every slot in zeroed locations explicitly via
-  `markLocationCatastrophicallyDestroyed`. Salvage value table deferred
-  (TW does not publish salvage; rulebook reliance on TacOps / A Time of War /
-  Strategic Operations).
+  `markLocationCatastrophicallyDestroyed`. Blow-off (head/arm/leg 12
+  determining) and cockpit-crit now ALSO preserve slot flags — per TW
+  p.145 the blown-off limb carries its components intact for club use,
+  and head components remain readable for salvage despite pilot death.
+  Salvage value table deferred (TW does not publish salvage; rulebook
+  reliance on TacOps / A Time of War / Strategic Operations).
+- Plain-destruction rear-armor carry-over in `src/rules/damage.ts` `applyDamage`:
+  same gap as the crit-slot asymmetry — when a torso's IS depletes mid-cycle
+  (rear pool partial + IS hit 0), the remaining rear armor reads as intact in
+  the next arc-pool calc. The catastrophic path now wipes it; the plain path
+  does not. Either widen `markLocationCatastrophicallyDestroyed` to also
+  cover plain destruction and accept the salvage-symmetry cost, or have
+  `applyDamage` zero rear IS-depletion on the affected location. Deferred to
+  keep the engine-by-design asymmetry consistent.
+- Ammo ride-along in blown-off limbs: current behavior strips bins from any
+  IS=0 location at end of `resolveCriticalHits`
+  (`stripBinsInZeroedLocations` in `critical.ts:457`), so an explosive bin
+  in a severed arm is treated as gone — at odds with the limb's salvageable
+  intact-components design. Deferring the carve-out per user scope; the
+  fix is a sentinel-bypass in the strip pass for blow-off-only locations.
 - separate web cli framework to be used at another project
 - Dev-only sarna.net scraper starting at https://www.sarna.net/wiki/BattleMech normalizing into MechDef JSON (Node OK here; library stays browser-first)
 - Full intro-rules expansion: heat, physicals, piloting/falling (incl. partial

@@ -693,7 +693,7 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo {
   }
   // Engine guarantee: `actor.model` was validated by `createBattle`.
   const def = getMechDefFor(actor);
-  const effMove = effectiveMovement(def, actor.critSlotsDestroyed);
+  const effMove = effectiveMovement(def, actor.damage, actor.critSlotsDestroyed);
   const heatPenalty = movementMpPenalty(actor.heat);
   // Posture-change modes share one budget: candidate assumes posture succeeds.
   // prone turn: drop first (1 MP) then in-place turns (walk + prone, 1 MP each).
@@ -786,7 +786,7 @@ export function declareMode(s: Session, word: string, locomotionWord?: string): 
       throw new Error(i18n(s.locale, "err.postureBudget", { id: unit.id }));
     const chosen = parseStandupLocomotion(s, locomotionWord);
     const def = getMechDefFor(unit);
-    const movement = effectiveMovement(def, unit.critSlotsDestroyed);
+    const movement = effectiveMovement(def, unit.damage, unit.critSlotsDestroyed);
     // Standing in place draws the stand cost from the walk pool.
     const budgetMode = chosen === "standStill" ? "walk" : chosen;
     if (effectiveMoveBudget(budgetMode, movement, unit.heat) < STAND_MP_COST) {
@@ -810,7 +810,7 @@ export function declareMode(s: Session, word: string, locomotionWord?: string): 
       throw new Error(i18n(s.locale, "err.postureBudget", { id: unit.id }));
     const sub = parseProneLocomotion(s, locomotionWord);
     const def = getMechDefFor(unit);
-    const movement = effectiveMovement(def, unit.critSlotsDestroyed);
+    const movement = effectiveMovement(def, unit.damage, unit.critSlotsDestroyed);
     if (effectiveMoveBudget("walk", movement, unit.heat) < DROP_MP_COST) {
       throw new Error(i18n(s.locale, "err.postureBudget", { id: unit.id }));
     }
@@ -830,7 +830,7 @@ export function declareMode(s: Session, word: string, locomotionWord?: string): 
     if (locomotionWord !== undefined)
       throw new Error(i18n(s.locale, "err.turnTakesNoArg", { modes: modeSyntaxFor(unit) }));
     const def = getMechDefFor(unit);
-    const movement = effectiveMovement(def, unit.critSlotsDestroyed);
+    const movement = effectiveMovement(def, unit.damage, unit.critSlotsDestroyed);
     if (effectiveMoveBudget("walk", movement, unit.heat) < 1) {
       throw new Error(i18n(s.locale, "err.postureBudget", { id: unit.id }));
     }
@@ -908,7 +908,7 @@ function clearMoveQueue(m: MoveContext): void {
 export function budgetFor(s: Session): number {
   const unit = currentActor(s)!;
   const def = getMechDefFor(unit);
-  const movement = effectiveMovement(def, unit.critSlotsDestroyed);
+  const movement = effectiveMovement(def, unit.damage, unit.critSlotsDestroyed);
   const declared = s.move?.moveMode ?? null;
   if (declared === "prone") {
     return Math.max(0, effectiveMoveBudget("walk", movement, unit.heat) - DROP_MP_COST);
@@ -934,7 +934,7 @@ export function budgetFor(s: Session): number {
 export function fullBudgetFor(s: Session): number {
   const unit = currentActor(s)!;
   const def = getMechDefFor(unit);
-  const movement = effectiveMovement(def, unit.critSlotsDestroyed);
+  const movement = effectiveMovement(def, unit.damage, unit.critSlotsDestroyed);
   const mode = s.move?.moveMode ?? null;
   if (mode === "prone") return effectiveMoveBudget("walk", movement, unit.heat);
   if (mode === "turn") return effectiveMoveBudget("walk", movement, unit.heat);

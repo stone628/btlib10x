@@ -1,3 +1,4 @@
+import type { Location, TorsoLocation } from "../core/types.js";
 import {
   armFor,
   damageTransferTo,
@@ -6,13 +7,13 @@ import {
   isLeg,
   isTorso,
   shoulderOf,
-} from "../core/locations.js";
-import type { Location } from "../core/types.js";
+} from "../core/types.js";
 import type { Arc } from "./arcs.js";
 import type { CaseKind } from "./critical.js";
 
 /** Per-location numeric value (armor HP, IS HP, etc.). */
 export type LocationValue = Record<Location, number>;
+export type TorsoLocationValue = Record<TorsoLocation, number>;
 
 /**
  * Layered damage state for one unit: front armor plus rear torso armor plus
@@ -24,7 +25,7 @@ export interface UnitDamageState {
   /** Front armor per location; torso values are the front pool only. */
   readonly armor: LocationValue;
   /** Rear armor on the torso locations (other locations lack one). */
-  readonly armorRear: Partial<LocationValue>;
+  readonly armorRear: TorsoLocationValue;
   /** Internal structure per location. */
   readonly internalStructure: LocationValue;
 }
@@ -115,7 +116,7 @@ export function applyDamage(
       if (pool.value > 0) {
         const applied = Math.min(remaining, pool.value);
         const after = pool.value - applied;
-        if (pool.kind === "armorRear") next.armorRear[cur] = after;
+        if (pool.kind === "armorRear" && isTorso(cur)) next.armorRear[cur] = after;
         else next.armor[cur] = after;
         remaining -= applied;
         steps.push({
