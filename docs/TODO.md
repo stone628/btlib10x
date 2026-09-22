@@ -208,12 +208,15 @@
   CLI gains a `ver` command
 - Single-file HTML deploy (`npm run dist:standalone` → self-contained `dist/standalone/bt10x.html`)
 - **Checked "lose both legs = lose the game"** — current rule subset treats
-  losing both legs as immobility only (`isImmobile` in `src/rules/damage.ts`),
-  not as a kill; victory (`checkSessionVictory` in `web/session.ts`, test
-  helper `checkVictory` in `tests/helpers.ts`) only fires on
-  head/CT destruction or `removed` flag (reason union `"not"` < `"destroyed"` /
-  `"pilotEjected"` / `"pilotKilled"`). Real TW consciousness-roll removal
-  on immobile end-of-turn is deferred to the piloting/falling milestone above.
+  losing both legs as immobility only when both arms are also gone
+  (`isUnitImmobile` in `src/rules/damage.ts`, requires both legs AND both
+  arms destroyed). One leg destroyed = standing on the remaining leg at
+  1 walking MP, no running, +5 preexisting PSR (TW p.122). Victory
+  (`checkSessionVictory` in `web/session.ts`, test helper `checkVictory`
+  in `tests/helpers.ts`) only fires on head/CT destruction or `removed`
+  flag (reason union `"not"` < `"destroyed"` / `"pilotEjected"` /
+  `"pilotKilled"`). Real TW consciousness-roll removal on immobile
+  end-of-turn is deferred to the piloting/falling milestone above.
 
 ## Verify later
 

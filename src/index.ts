@@ -167,10 +167,13 @@ export {
 } from "./rules/critical.js";
 export {
   applyDamage,
+  canAttemptStandUp,
   canFireFromLocation,
   type DamageApplication,
   type DamageOptions,
   type DamageTransferStep,
+  destroyedArms,
+  destroyedLegs,
   isUnitDestroyed,
   isUnitImmobile,
   isUnitLocationDestroyed,

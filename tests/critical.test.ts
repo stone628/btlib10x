@@ -630,6 +630,27 @@ describe("effectiveMovement", () => {
     const m = effectiveMovement(wvr, damage, flags(mods));
     expect(m.jumping).toBe(5 - Math.min(2, jetIndices.length));
   });
+
+  it("one leg destroyed: walking clamped to 1, running to 0 (TW p.122)", () => {
+    const legless: UnitDamageState = {
+      ...damage,
+      internalStructure: { ...damage.internalStructure, rightLeg: 0 },
+    };
+    const m = effectiveMovement(def, legless, freshFlags(def));
+    expect(m.walking).toBe(1);
+    expect(m.running).toBe(0);
+    expect(m.jumping).toBe(def.jumping);
+  });
+
+  it("both legs destroyed: walking 0", () => {
+    const legless: UnitDamageState = {
+      ...damage,
+      internalStructure: { ...damage.internalStructure, rightLeg: 0, leftLeg: 0 },
+    };
+    const m = effectiveMovement(def, legless, freshFlags(def));
+    expect(m.walking).toBe(0);
+    expect(m.running).toBe(0);
+  });
 });
 
 describe("DHS grouping", () => {

@@ -219,15 +219,16 @@ describe("20+ damage PSR", () => {
 });
 
 describe("leg destruction", () => {
-  it("falls automatically; the immobile pilot takes the hit automatically", () => {
+  it("falls automatically; seatbelt PSR +5 (TW p.122) — not auto-damage", () => {
     const state = hbkEnf();
     const before = snapshot(state);
     const enf = requireUnit(state, "enf");
     enf.damage.internalStructure.rightLeg = 0;
-    // fall dir 1 (front, no turn), loc 3+4 (CT); legless 'Mech is immobile so
-    // the seatbelt check is automatic damage + consciousness 2+2 (awake).
+    // ENF-4R 50-ton fall damage = 5 (1 group). Fall dir 1, loc 3+4=7 CT.
+    // Seatbelt PSR (piloting 5 + 5 = 10): 4+5=9 fails → pilot hit.
+    // Consciousness: 6+6=12 pass.
     const events: GameEvent[] = [];
-    resolvePhasePiloting(state, scriptedRng(1, 3, 4, 2, 2), before, events);
+    resolvePhasePiloting(state, scriptedRng(1, 3, 4, 4, 5, 6, 6), before, events);
     expect(enf.prone).toBe(true);
     expect(enf.facing).toBe("n");
     expect(enf.pilotHits).toBe(1);
@@ -235,8 +236,49 @@ describe("leg destruction", () => {
       expect.objectContaining({ kind: "unitFell", unitId: "enf", cause: "legDestroyed" }),
     );
     expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: "pilotingCheck",
+        unitId: "enf",
+        reason: "seatbelt",
+        modifier: 5,
+        target: 10,
+      }),
+    );
+    expect(events).toContainEqual(
       expect.objectContaining({ kind: "pilotDamaged", unitId: "enf", reason: "fall" }),
     );
+  });
+
+  it("falls automatically; seatbelt PSR +5 success → no pilot hit", () => {
+    const state = hbkEnf();
+    const before = snapshot(state);
+    const enf = requireUnit(state, "enf");
+    enf.damage.internalStructure.rightLeg = 0;
+    // ENF-4R 50-ton fall damage = 5 (1 group). Fall dir 1, loc 3+4=7 CT.
+    // Seatbelt PSR (piloting 5 + 5 = 10): 5+6=11 success.
+    const events: GameEvent[] = [];
+    resolvePhasePiloting(state, scriptedRng(1, 3, 4, 5, 6), before, events);
+    expect(enf.prone).toBe(true);
+    expect(enf.pilotHits).toBe(0);
+    expect(events).not.toContainEqual(
+      expect.objectContaining({ kind: "pilotDamaged", unitId: "enf", reason: "fall" }),
+    );
+  });
+
+  it("both legs and both arms gone: seatbelt auto-damage (TW p.122 immobile)", () => {
+    const state = hbkEnf();
+    const before = snapshot(state);
+    const enf = requireUnit(state, "enf");
+    enf.damage.internalStructure.rightLeg = 0;
+    enf.damage.internalStructure.leftLeg = 0;
+    enf.damage.internalStructure.rightArm = 0;
+    enf.damage.internalStructure.leftArm = 0;
+    // TW p.122: immobile target → seatbelt auto-pilot-hit, no PSR roll.
+    // Fall dir 1, loc1 3+4=7 CT, loc2 2+2=4 RA. Consciousness 2D6=6+6 pass.
+    const events: GameEvent[] = [];
+    resolvePhasePiloting(state, scriptedRng(1, 3, 4, 2, 2, 6, 6), before, events);
+    expect(enf.prone).toBe(true);
+    expect(enf.pilotHits).toBe(1);
     expect(events).not.toContainEqual(
       expect.objectContaining({ kind: "pilotingCheck", unitId: "enf", reason: "seatbelt" }),
     );
@@ -594,10 +636,10 @@ describe("building crash auto-fall", () => {
     // Building entry PSR 5+2=7, 2D6=2<7 fails → crash.
     // Crash: ceil(90/10)=9 damage → 2 groups (5+4). Each needs loc roll.
     // Group1 loc 1+4=5 rightLeg, group2 loc 1+3=4 rightArm.
-    // Auto-fall (leg destroyed, seatbelt auto because immobile).
-    // Fall dir 1, loc 3+4=7 CT. Consciousness 2D6=12>=3 pass.
+    // Auto-fall (leg destroyed); seatbelt PSR 5+5=10, 2D6=4+5=9 fails.
+    // Fall dir 1, loc 3+4=7 CT. Consciousness 2D6=6+6=12 pass.
     executeMove(state, "enf", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], [], {
-      rng: scriptedRng(1, 1, 1, 4, 1, 3, 1, 3, 4, 6, 6),
+      rng: scriptedRng(1, 1, 1, 4, 1, 3, 1, 3, 4, 4, 5, 6, 6),
     });
     expect(enf.prone).toBe(true);
     expect(enf.pilotHits).toBe(1);
@@ -634,13 +676,14 @@ describe("building crash auto-fall", () => {
     enf.damage.internalStructure.rightLeg = 1;
     // Building entry PSR 5+2=7, 2D6=2<7 fails → crash.
     // Crash 9 dmg → 2 groups (5+4). Loc: 5 rightLeg, 4 rightArm.
-    // Auto-fall (leg destroyed, seatbelt auto because immobile).
-    // Fall dir 1, loc 3+4=7 CT. Consciousness 2D6=2<3 fail → pilot hit.
+    // Auto-fall (leg destroyed); seatbelt PSR 5+5=10, 2D6=4+5=9 fails.
+    // Fall dir 1, loc 3+4=7 CT. Consciousness 2D6=1+1=2<3 fail.
     executeMove(state, "enf", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], [], {
-      rng: scriptedRng(1, 1, 1, 4, 1, 3, 1, 3, 4, 1, 1),
+      rng: scriptedRng(1, 1, 1, 4, 1, 3, 1, 3, 4, 4, 5, 1, 1),
     });
     expect(enf.prone).toBe(true);
     expect(enf.pilotHits).toBe(1);
+    expect(enf.unconscious).toBe(true);
   });
 
   it("crash that does not destroy the leg does not trigger auto-fall", () => {
@@ -728,7 +771,7 @@ describe("standing up", () => {
     }
     enf.damage.internalStructure.rightLeg = 0;
     enf.damage.internalStructure.leftLeg = 0;
-    expect(() => attemptStandUp(state, "enf", [])).toThrow(/no intact legs/);
+    expect(() => attemptStandUp(state, "enf", [])).toThrow(/cannot stand up/);
   });
 });
 

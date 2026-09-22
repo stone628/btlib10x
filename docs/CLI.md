@@ -370,10 +370,13 @@ stated elsewhere in this document or the codebase:
   only ground-movement falls across levels use the `levelsFallen` term
   (lower-hex rule), since no rule in the subset displaces a unit. DFA's
   2-level rear-column fall waits on the physical phase.
-- **One-legged hopping movement** (TW p.122: 1 MP) — the damage model
-  treats any destroyed leg as immobility ("leg IS death immobilizes" under
-  Damage above). A one-legged 'Mech may still stand (at +5) and fire, but it
-  cannot spend its TW 1 MP hop.
+- **One-legged hopping movement** (TW p.122: walk 1 MP, no run, jump with PSR
+  each landing) — `effectiveMovement` caps a standing one-leg 'Mech at
+  `walking: 1, running: 0`; jump MP unchanged. A prone one-leg 'Mech may
+  turn 1 hexside/turn. Standing attempt at +5 PSR (consumes the 1-MP walk
+  budget). The +5 seatbelt PSR after a leg-destroying hit is rolled
+  normally; only the truly immobile case (both legs AND both arms) takes
+  the auto-pilot-damage shortcut.
 - **Four-legged / vehicle PSR rows** (quads, skidding vehicles,
   sideslipping VTOLs) — bipedal 'Mechs only (top of this section).
 - **Drowning / underwater life-support pressure** — water blocks targeting

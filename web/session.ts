@@ -20,11 +20,14 @@ import type {
 import {
   attemptStandUp,
   attemptVoluntaryStartup,
+  canAttemptStandUp,
   createBattle,
   DEFAULT_GUNNERY,
   DEFAULT_PILOTING,
   DROP_MP_COST,
   declareAttacks,
+  destroyedArms,
+  destroyedLegs,
   dropProne,
   effectiveMoveBudget,
   effectiveMovement,
@@ -625,9 +628,35 @@ export function modeSyntaxFor(unit: UnitState | null): string {
   if (unit === null)
     return "standstill|walk|run|jump|prone [turn|pronestill]|turn|pronestill|standup [walk|run|jump|standstill]|shutdown|startup|eject";
   if (isShutdown(unit)) return "startup|eject";
-  if (isUnitImmobile(unit.damage))
+  const legs = destroyedLegs(unit.damage);
+  const arms = destroyedArms(unit.damage);
+  if (isUnitImmobile(unit.damage)) {
     return unit.prone ? "pronestill|shutdown|eject" : "standstill|shutdown|eject";
-  if (unit.prone) return "turn|pronestill|standup [walk|run|jump|standstill]|shutdown|eject";
+  }
+  // Both legs gone but not immobile (props up with arms intact): cannot stand,
+  // cannot change facing (TW p.122). Stay prone; fire while propped.
+  if (legs >= 2) {
+    return "pronestill|shutdown|eject";
+  }
+  // One leg destroyed + both arms: cannot stand, cannot fire, cannot turn.
+  if (legs === 1 && arms >= 2) {
+    return "pronestill|shutdown|eject";
+  }
+  if (unit.prone) {
+    const standOk = canAttemptStandUp(unit.damage);
+    const runOk = false; // one-leg cannot run
+    const standupModes = standOk
+      ? runOk
+        ? "standup [walk|run|jump|standstill]"
+        : "standup [walk|jump|standstill]"
+      : "";
+    const sep = standupModes ? "|" : "";
+    return `turn|pronestill${sep}${standupModes}|shutdown|eject`;
+  }
+  // Standing one-leg 'Mech: walk 1 MP, jump allowed, no run.
+  if (legs === 1) {
+    return "standstill|walk|jump|prone [turn|pronestill]|shutdown|eject";
+  }
   return "standstill|walk|run|jump|prone [turn|pronestill]|shutdown|eject";
 }
 
@@ -872,6 +901,9 @@ export function declareMode(s: Session, word: string, locomotionWord?: string): 
     throw new Error(
       i18n(s.locale, "err.immobileStandstill", { id: unit.id, modes: modeSyntaxFor(unit) }),
     );
+  }
+  if (mode === "run" && destroyedLegs(unit.damage) >= 1) {
+    throw new Error(i18n(s.locale, "err.oneLegNoRun", { id: unit.id, modes: modeSyntaxFor(unit) }));
   }
   // Engine call is deferred to commit (mode walk/run/jump/standstill executeMove).
   m.moveMode = mode;
@@ -1139,11 +1171,10 @@ export function commitMove(s: Session): CommitResult {
       const locomotion = m.postureMove ?? "walk";
       const steps = m.moveSteps;
       const finalFacing = m.moveFinalFacing;
-      attemptStandUp(battle, unitId, collected, s.rng);
+      const posture = attemptStandUp(battle, unitId, collected, s.rng);
       const after = battle.units[unitId]!;
       if (!after.prone) {
         if (steps.length > 0 || finalFacing !== null) {
-          const posture = STAND_MP_COST;
           executeMove(battle, unitId, locomotion, steps, collected, {
             ...(finalFacing === null ? { rng: s.rng } : { finalFacing, rng: s.rng }),
             spentMP: posture,

@@ -76,7 +76,9 @@ import {
 } from "./critical.js";
 import {
   applyDamage,
+  canAttemptStandUp,
   canFireFromLocation,
+  destroyedLegs,
   isUnitDestroyed,
   isUnitImmobile,
   type UnitDamageState,
@@ -564,8 +566,7 @@ export function isShutdown(unit: UnitState) {
 export function isImmobile(unit: UnitState) {
   if (isShutdown(unit) || unit.unconscious || isUnitImmobile(unit.damage)) return true;
   const def = getMechDefFor(unit);
-  if (countDestroyedGyro(def, unit.damage, unit.critSlotsDestroyed) >= GYRO_DESTROYED_HITS) return true;
-  return false;
+  return countDestroyedGyro(def, unit.damage, unit.critSlotsDestroyed) >= GYRO_DESTROYED_HITS;
 }
 
 export function isUnitRemoved(unit: UnitState): boolean {
@@ -913,8 +914,6 @@ const JUMP_MIN_HEXES = 1;
 const POSTURE_MOVE_HEAT = 1;
 /** Fixed damage from a voluntary drop to prone: 1 point on the front column. */
 const VOLUNTARY_DROP_DAMAGE = 1;
-/** Destroyed legs that forbid standing. */
-const LEGS_STAND_LIMIT = 2;
 /** Walk budget below which a prone drop or turn is refused. */
 const DROP_BUDGET_MIN = 1;
 /** One-hexside cap when a prone 'Mech has lost a leg (TW p. 122: "Staying
@@ -1006,7 +1005,11 @@ export function executeMove(
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot move`);
   if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot move`);
   if (mode !== "standStill" && isUnitImmobile(unit.damage)) {
-    throw new Error(`${unitId} has a destroyed leg and can only stand still`);
+    throw new Error(`${unitId} has no intact legs and arms and can only stand still`);
+  }
+  // TW p.122: a one-leg-destroyed 'Mech cannot run (running MP is 0).
+  if (mode === "run" && destroyedLegs(unit.damage) >= 1) {
+    throw new Error(`${unitId} has a destroyed leg and cannot run`);
   }
   // Prone units may only stand still or walk turn-only steps. Combined check:
   // reject run/jump outright; reject walk with any hex-enter step.
@@ -1125,7 +1128,7 @@ export function executeMove(
     unit.moveMode !== "standStill" &&
     isUnitImmobile(unit.damage)
   ) {
-    throw new Error(`${unitId} has a destroyed leg and cannot move`);
+    throw new Error(`${unitId} has no intact legs and arms and cannot move`);
   }
 
   // Preexisting damage applies to every movement-entry PSR (TW p.60).
@@ -1539,7 +1542,9 @@ function resolveUnitAttacks(
 ): UnitAttackResult {
   const def = getMechDefFor(unit);
   const preHeat = unit.heat;
-  const sensorMod = sensorAttackModifier(countDestroyedSensor(def, unit.damage, unit.critSlotsDestroyed));
+  const sensorMod = sensorAttackModifier(
+    countDestroyedSensor(def, unit.damage, unit.critSlotsDestroyed),
+  );
   const pronePropArm = inferPronePropArm(def, unit.declaredAttacks, unit.prone);
   let currentAmmoBins = { ...unit.ammoBins };
   const jammedWeapons: number[] = [];
@@ -2830,27 +2835,27 @@ function movementTerrainPsr(
 }
 
 /**
- * Stand-up attempt for a prone unit (TW p.50): spends `STAND_MP_COST` from the
- * declared walk/run MP pool and adds 1 heat, then rolls a PSR with
- * preexisting-damage modifiers only. On success the 'Mech is left standing
- * facing the direction it had been prone in; on failure it crashes back down
- * for fresh falling damage. A 'Mech with a destroyed gyro or with no intact
- * legs cannot attempt to stand.
+ * Stand-up attempt for a prone unit (TW p.50): spends `STAND_MP_COST` (or the
+ * remaining walk budget, whichever is smaller — TW p.50 lets a 1-MP-prone
+ * 'Mech like a one-leg unit still attempt to stand) and adds 1 heat, then
+ * rolls a PSR with preexisting-damage modifiers only. On success the 'Mech
+ * is left standing facing the direction it had been prone in; on failure it
+ * crashes back down for fresh falling damage. A 'Mech with a destroyed gyro,
+ * both legs gone, or one leg + both arms gone cannot attempt to stand (TW
+ * p.50).
  *
- * This call only handles the posture change. The "Once standing, it may face
- * any direction at no cost and continue moving under the declared mode" half
- * (TW p.50) is the caller's job: chain an `executeMove` with
- * `options.spentMP = STAND_MP_COST` for the continuation. `attemptStandUp`
- * pushes `unitId` to `actedThisPhase` so the chained `executeMove` skips the
- * head-of-queue guard and the redundant `actedThisPhase` push, marking the
- * activation exactly once.
+ * Returns the MP cost actually charged for the stand, so the caller can
+ * chain an `executeMove` with `options.spentMP = <returned>` for the
+ * continuation. `attemptStandUp` pushes `unitId` to `actedThisPhase` so the
+ * chained `executeMove` skips the head-of-queue guard and the redundant
+ * `actedThisPhase` push, marking the activation exactly once.
  */
 export function attemptStandUp(
   state: BattleState,
   unitId: string,
   sink: GameEvent[],
   rng: Rng = DEFAULT_RNG,
-): void {
+): number {
   requirePhase(state, "movement");
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
@@ -2866,12 +2871,15 @@ export function attemptStandUp(
   );
   if (pre.gyroHits >= GYRO_DESTROYED_HITS)
     throw new Error(`${unitId} has a destroyed gyro and cannot stand up`);
-  if (pre.legsDestroyed >= LEGS_STAND_LIMIT)
-    throw new Error(`${unitId} has no intact legs and cannot stand up`);
+  if (!canAttemptStandUp(unit.damage)) throw new Error(`${unitId} cannot stand up in this state`);
+  // TW p.50: a prone 'Mech with only 1 MP (e.g. a one-leg 'Mech) may still
+  // attempt to stand, but the stand cost is whatever walking budget they
+  // have. Charge the actual budget so the move still resolves.
+  const standCost = Math.min(STAND_MP_COST, budget);
   unit.moveMode = "walk";
   unit.movesThisTurn = [];
   unit.jumpedThisTurn = false;
-  unit.mpSpent = STAND_MP_COST;
+  unit.mpSpent = standCost;
   state.actedThisPhase.push(unitId);
   unit.heatPending += POSTURE_MOVE_HEAT;
   sink.push({
@@ -2900,10 +2908,10 @@ export function attemptStandUp(
       prevMode: "prone",
       position: { ...unit.position },
       facing: unit.facing,
-      mpSpent: STAND_MP_COST,
+      mpSpent: standCost,
       mpBudget: budget,
     });
-    return;
+    return standCost;
   }
   // Failed stand: the 'Mech crashes back down (TW p.50) for fresh fall damage.
   const terrain = cellAt(state, unit.position).terrain;
@@ -2919,6 +2927,7 @@ export function attemptStandUp(
     },
     sink,
   );
+  return standCost;
 }
 
 /**
@@ -3012,7 +3021,7 @@ export function proneFacingTurn(
   if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot move`);
   const def = getMechDefFor(unit);
   const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
-  if (pre.legsDestroyed >= LEGS_STAND_LIMIT) {
+  if (pre.legsDestroyed >= 2) {
     throw new Error(`${unitId} has no intact legs and cannot turn while prone`);
   }
   const absFacings = Math.abs(facings);

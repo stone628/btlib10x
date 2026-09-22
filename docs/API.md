@@ -292,7 +292,8 @@ budget until the heat phase runs.
 - `maxMovePoints(mode, walking, running, jumping)`
 - `attackerMovementModifier(mode)` → 0/+1/+2/+3
 - `targetMovementModifier(hexesEntered, jumped, immobile?=false)` → 0…+7 (+1
-  jump bonus), or flat −4 when `immobile` (shut down / both legs destroyed)
+  jump bonus), or flat −4 when `immobile` (shut down / unconscious / both
+  legs + both arms gone per `isUnitImmobile`)
 - `facingChangeCost(facings)`
 - `isForwardStep(from, to, facing)`, `isBackwardStep(from, to, facing)`
 - `canPassThroughHex(occupantTeam, moverTeam)` — friends yes, enemies no
@@ -440,10 +441,13 @@ interface DamageApplication {
 `DamageTransferStep` is the per-step shape used in `steps`.
 
 Predicates: `isUnitDestroyed(damage)` (head or CT IS gone),
-`isUnitImmobile(damage)` (either leg IS gone),
+`isUnitImmobile(damage)` (both legs AND both arms gone — TW p.122),
+`destroyedLegs(damage)`, `destroyedArms(damage)`,
+`canAttemptStandUp(damage)` (TW p.50: false for 2-legs or 1-leg + 2-arms),
 `isUnitLocationDestroyed(damage, loc)`,
 `canFireFromLocation(damage, loc)` (location + its support torso intact).
-Side-torso IS death blows off the arm.
+Side-torso IS death blows off the arm. One leg destroyed = walk MP 1,
+running MP 0 (TW p.122), not immobile.
 
 ### Critical hits (`rules/critical.ts`)
 

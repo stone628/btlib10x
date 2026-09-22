@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { neighbor } from "../src/core/hex.js";
+import type { RevealedLanding } from "../src/index.js";
 import { executeMove, requireUnit, rollInitiativePhase } from "../src/rules/game.js";
 import { budgetFor, currentActor, newSession, type Session } from "../web/session.js";
 import { createTestBattle, execute, scriptedRng } from "./helpers.js";
-import type { RevealedLanding } from "../src/index.js";
 
 function run(s: Session, cmd: string): string[] {
   return execute(s, cmd);

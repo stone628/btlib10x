@@ -1,7 +1,9 @@
 import {
   bearingExact,
   bestFireTarget,
+  canAttemptStandUp,
   classifyArcWithBoundary,
+  destroyedLegs,
   effectiveMoveBudget,
   effectiveMovement,
   getMechDefFor,
@@ -261,6 +263,15 @@ export function nextAutoPlayCommand(s: Session): string | null {
                 queueNextCommand("mode pronestill");
               }
               queueNextCommand("done");
+            } else if (!canAttemptStandUp(actor.damage)) {
+              // Both legs gone (or one leg + both arms): cannot stand, stay prone.
+              queueNextCommand("mode pronestill");
+              queueNextCommand("done");
+            } else if (destroyedLegs(actor.damage) === 1 && walkBudgetFor(actor) >= 1) {
+              // TW p.50: a one-leg 'Mech with 1 MP walk budget may still
+              // stand; the stand costs the actual budget (≤ STAND_MP_COST).
+              queueNextCommand("mode standup walk");
+              queueNextCommand("done");
             } else if (walkBudgetFor(actor) < STAND_MP_COST) {
               // Heat or hip damage collapse walk MP below the 2-MP stand cost.
               queueNextCommand("mode pronestill");
@@ -271,6 +282,10 @@ export function nextAutoPlayCommand(s: Session): string | null {
             }
           } else if (isUnitImmobile(actor.damage) || walkBudgetFor(actor) === 0) {
             queueNextCommand("mode standstill");
+            queueNextCommand("done");
+          } else if (destroyedLegs(actor.damage) >= 1) {
+            // One-leg standing 'Mech: walk 1 MP, jump allowed, no run.
+            queueNextCommand("mode walk");
             queueNextCommand("done");
           } else {
             // s.moveCandidate wil be available only after "mode walk" command is processed.

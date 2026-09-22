@@ -3,7 +3,10 @@ import { LOCATIONS } from "../src/core/types.js";
 import type { LocationValue, TorsoLocationValue, UnitDamageState } from "../src/rules/damage.js";
 import {
   applyDamage,
+  canAttemptStandUp,
   canFireFromLocation,
+  destroyedArms,
+  destroyedLegs,
   isUnitDestroyed,
   isUnitImmobile,
 } from "../src/rules/damage.js";
@@ -117,12 +120,44 @@ describe("layered damage resolution", () => {
     expect(isUnitDestroyed(headApp.after)).toBe(true);
   });
 
-  it("immobilizes when a leg structure is destroyed but the 'Mech survives", () => {
+  it("one destroyed leg: not immobile, survives (TW p.122)", () => {
     const s = mk({ armor: { leftLeg: 2 }, is: { leftLeg: 5 } });
     const app = applyDamage(s, "leftLeg", 7);
     expect(app.after.armor.leftLeg).toBe(0);
-    expect(isUnitImmobile(app.after)).toBe(true);
+    expect(isUnitImmobile(app.after)).toBe(false);
     expect(isUnitDestroyed(app.after)).toBe(false);
+  });
+
+  it("both legs and both arms destroyed: immobile target (TW p.122)", () => {
+    const s = mk({
+      armor: { leftLeg: 2, rightLeg: 2, leftArm: 2, rightArm: 2 },
+      is: { leftLeg: 5, rightLeg: 5, leftArm: 4, rightArm: 4 },
+    });
+    const app = applyDamage(s, "leftLeg", 7);
+    expect(app.after.internalStructure.leftLeg).toBe(0);
+    const app2 = applyDamage(app.after, "rightLeg", 7);
+    expect(app2.after.internalStructure.rightLeg).toBe(0);
+    const app3 = applyDamage(app2.after, "leftArm", 6);
+    const app4 = applyDamage(app3.after, "rightArm", 6);
+    expect(isUnitImmobile(app4.after)).toBe(true);
+    expect(isUnitDestroyed(app4.after)).toBe(false);
+  });
+
+  it("canAttemptStandUp: one leg + both arms = cannot stand (TW p.50)", () => {
+    const s = mk({
+      armor: { leftLeg: 0, rightLeg: 5, leftArm: 0, rightArm: 0 },
+      is: { leftLeg: 0, rightLeg: 5, leftArm: 0, rightArm: 0 },
+    });
+    expect(destroyedLegs(s)).toBe(1);
+    expect(destroyedArms(s)).toBe(2);
+    expect(canAttemptStandUp(s)).toBe(false);
+  });
+
+  it("canAttemptStandUp: one leg + arms intact = can stand", () => {
+    const s = mk({ armor: { leftLeg: 0 }, is: { leftLeg: 0 } });
+    expect(destroyedLegs(s)).toBe(1);
+    expect(destroyedArms(s)).toBe(0);
+    expect(canAttemptStandUp(s)).toBe(true);
   });
 
   it("snapshots `pre` as the layered damage state before any mutation", () => {

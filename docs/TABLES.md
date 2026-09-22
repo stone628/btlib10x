@@ -194,8 +194,10 @@ hittable slots, overflow is lost (excess crits simply disappear).
   stop (TW p.125) — and any location that newly lost IS triggers a fresh
   determining roll recursively.
 - Limb blown off (determining 12 on arm/leg) → the location's armor
-  and IS are zeroed; the arm is removed from play, the leg renders the
-  unit immobile.
+  and IS are zeroed; the arm is removed from play. The leg case renders
+  the unit immobile only when both legs AND both arms are gone (TW p.122);
+  one leg destroyed leaves a standing 'Mech with 1 walking MP and no
+  running MP, prone one-leg may turn 1 hexside/turn.
 - Head blown off (determining 12 on head) or cockpit slot hit → 'Mech
   destroyed.
 - Leg actuators (upper/lower/foot) and hip → mark the slots destroyed

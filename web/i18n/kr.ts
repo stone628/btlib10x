@@ -195,6 +195,8 @@ export const kr: Catalog = {
   "err.proneMustDeclare":
     "{id}는 엎드린 상태임 — turn/pronestill/standup 중 먼저 선언. 유효 모드: {modes}",
   "err.immobileStandstill": "{id}는 기동 불가 — standstill만 가능. 유효 모드: {modes}",
+  "err.oneLegNoRun":
+    "{id}는 다리가 파괴되어 달리기 불가 (TW p.122: walk 1 MP, run 불가). 유효 모드: {modes}",
   "mode.hint": "모드: {modes}",
   "err.postureBudget": "{id}는 자세 변경에 쓸 MP가 부족함",
   "err.noMoveInShutdownMode": "선언된 모드가 shutdown/startup/eject일 때는 이동할 수 없습니다",
