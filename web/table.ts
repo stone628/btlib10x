@@ -1,32 +1,41 @@
 import {
+  allMapDefs,
+  allMechDefs,
+  allWeaponDefs,
   CLUSTER_COLUMNS,
   CLUSTER_TABLE,
   HIT_LOCATION_TABLE,
   LEFT_SIDE_TABLE,
+  listMapNames,
+  listWeaponNames,
   RIGHT_SIDE_TABLE,
+  type WeaponCategory,
+  type WeaponDef,
 } from "btlib10x";
 import {
+  buildBoardChunk,
   buildHeaderTableChunkFromColumns,
   buildHeaderTableChunkFromRows,
   buildLinesChunk,
   type Chunk,
-} from "./format.js";
-import type { LocaleId } from "./i18n/index.js";
-import { i18n } from "./i18n/index.js";
+} from "./chunk";
+import { i18n } from "./i18n/index";
+import { lookupMap, lookupWeapon } from "./lookup";
+import { weaponCategory } from "./misc";
 
 const CLUSTER_SIZES = CLUSTER_COLUMNS;
 
-function critResult(locale: LocaleId, roll: number): string {
-  if (roll <= 7) return i18n(locale, "res.critNone");
-  if (roll <= 9) return i18n(locale, "res.critOne");
-  if (roll <= 11) return i18n(locale, "res.critTwo");
-  return i18n(locale, "res.critThree");
+function critResult(roll: number): string {
+  if (roll <= 7) return i18n("res.critNone");
+  if (roll <= 9) return i18n("res.critOne");
+  if (roll <= 11) return i18n("res.critTwo");
+  return i18n("res.critThree");
 }
 
-export function renderClusterTable(locale: LocaleId): Chunk[] {
+export function renderClusterTable(): Chunk[] {
   const header = [
-    i18n(locale, "table.cluster.col.roll"),
-    ...CLUSTER_SIZES.map((s) => i18n(locale, "table.cluster.col.size", { size: String(s) })),
+    i18n("table.cluster.col.roll"),
+    ...CLUSTER_SIZES.map((s) => i18n("table.cluster.col.size", { size: String(s) })),
   ];
   const rows: string[][] = [];
   for (let roll = 2; roll <= 12; roll++) {
@@ -38,12 +47,12 @@ export function renderClusterTable(locale: LocaleId): Chunk[] {
     rows.push(row);
   }
   return [
-    buildLinesChunk([i18n(locale, "table.cluster.title")]),
+    buildLinesChunk(i18n("table.cluster.title")),
     buildHeaderTableChunkFromRows(header, rows),
   ];
 }
 
-export function renderHitLocationTables(locale: LocaleId): Chunk[] {
+export function renderHitLocationTables(): Chunk[] {
   const dice: string[] = [];
   const fr: string[] = [];
   const ls: string[] = [];
@@ -57,57 +66,42 @@ export function renderHitLocationTables(locale: LocaleId): Chunk[] {
   }
 
   return [
-    buildLinesChunk([i18n(locale, "table.hitloc.title")]),
+    buildLinesChunk(i18n("table.hitloc.title")),
     buildHeaderTableChunkFromColumns(
       [
-        i18n(locale, "table.hitloc.col.roll"),
-        i18n(locale, "table.hitloc.frontRear"),
-        i18n(locale, "table.hitloc.leftSide"),
-        i18n(locale, "table.hitloc.rightSide"),
+        i18n("table.hitloc.col.roll"),
+        i18n("table.hitloc.frontRear"),
+        i18n("table.hitloc.leftSide"),
+        i18n("table.hitloc.rightSide"),
       ],
       [dice, fr, ls, rs],
     ),
   ];
 }
 
-export function renderCriticalTable(locale: LocaleId): Chunk[] {
-  const header = [i18n(locale, "table.crit.col.roll"), i18n(locale, "table.crit.col.result")];
+export function renderCriticalTable(): Chunk[] {
+  const header = [i18n("table.crit.col.roll"), i18n("table.crit.col.result")];
   const rows: string[][] = [];
   for (let roll = 2; roll <= 12; roll++) {
-    rows.push([String(roll), critResult(locale, roll)]);
+    rows.push([String(roll), critResult(roll)]);
   }
-  return [
-    buildLinesChunk([i18n(locale, "table.crit.title")]),
-    buildHeaderTableChunkFromRows(header, rows),
-  ];
+  return [buildLinesChunk(i18n("table.crit.title")), buildHeaderTableChunkFromRows(header, rows)];
 }
 
-export function renderHeatScaleTable(locale: LocaleId): Chunk[] {
+export function renderHeatScaleTable(): Chunk[] {
   const header = [
-    i18n(locale, "table.heat.col.heat"),
-    i18n(locale, "table.heat.col.toHit"),
-    i18n(locale, "table.heat.col.mp"),
-    i18n(locale, "table.heat.col.shutdown"),
-    i18n(locale, "table.heat.col.ammo"),
+    i18n("table.heat.col.heat"),
+    i18n("table.heat.col.toHit"),
+    i18n("table.heat.col.mp"),
+    i18n("table.heat.col.shutdown"),
+    i18n("table.heat.col.ammo"),
   ];
   const rows: string[][] = [
-    ["0–7", "0", "0", i18n(locale, "table.heat.shutdownSafe"), i18n(locale, "table.heat.ammoSafe")],
-    [
-      "8–12",
-      "+1",
-      "0",
-      i18n(locale, "table.heat.shutdownSafe"),
-      i18n(locale, "table.heat.ammoSafe"),
-    ],
-    [
-      "13–16",
-      "+2",
-      "0",
-      i18n(locale, "table.heat.shutdownSafe"),
-      i18n(locale, "table.heat.ammoSafe"),
-    ],
-    ["14–17", "+2", "0", "2D6 < 4", i18n(locale, "table.heat.ammoSafe")],
-    ["17–19", "+3", "+1", "2D6 < 6", i18n(locale, "table.heat.ammoSafe")],
+    ["0–7", "0", "0", i18n("table.heat.shutdownSafe"), i18n("table.heat.ammoSafe")],
+    ["8–12", "+1", "0", i18n("table.heat.shutdownSafe"), i18n("table.heat.ammoSafe")],
+    ["13–16", "+2", "0", i18n("table.heat.shutdownSafe"), i18n("table.heat.ammoSafe")],
+    ["14–17", "+2", "0", "2D6 < 4", i18n("table.heat.ammoSafe")],
+    ["17–19", "+3", "+1", "2D6 < 6", i18n("table.heat.ammoSafe")],
     ["19–21", "+3", "+1", "2D6 < 6", "2D6 < 4"],
     ["20–22", "+3", "+2", "2D6 < 8", "2D6 < 6"],
     ["22–24", "+3", "+3", "2D6 < 8", "2D6 < 6"],
@@ -115,22 +109,123 @@ export function renderHeatScaleTable(locale: LocaleId): Chunk[] {
     ["24–26", "+4", "+4", "2D6 < 10", "2D6 < 6"],
     ["26–28", "+4", "+4", "2D6 < 10", "2D6 < 8"],
     ["28–29", "+4", "+4", "2D6 < 10", "2D6 < 8"],
-    ["30+", "+4", "+5", i18n(locale, "table.heat.shutdownAuto"), "2D6 < 8"],
+    ["30+", "+4", "+5", i18n("table.heat.shutdownAuto"), "2D6 < 8"],
   ];
+  return [buildLinesChunk(i18n("table.heat.title")), buildHeaderTableChunkFromRows(header, rows)];
+}
+
+export function listTables(): Chunk[] {
   return [
-    buildLinesChunk([i18n(locale, "table.heat.title")]),
-    buildHeaderTableChunkFromRows(header, rows),
+    buildLinesChunk(
+      i18n("table.list.header"),
+      i18n("table.list.cluster"),
+      i18n("table.list.hitloc"),
+      i18n("table.list.crit"),
+      i18n("table.list.heat"),
+    ),
   ];
 }
 
-export function listTables(locale: LocaleId): Chunk[] {
+export function infoMechListChunk(): Chunk {
+  const list = allMechDefs().sort((a, b) => {
+    if (a.tonnage !== b.tonnage) return a.tonnage - b.tonnage;
+    return a.name.localeCompare(b.name);
+  });
+  const header = [
+    i18n("info.mechColModel"),
+    i18n("info.mechColName"),
+    i18n("info.mechColClass"),
+    i18n("info.mechColTon"),
+    i18n("info.mechColMove"),
+  ];
+  const rows = list.map((d) => [
+    d.model,
+    d.name,
+    d.weightClass,
+    String(d.tonnage),
+    `${d.walking}/${d.running}/${d.jumping}`,
+  ]);
+  return buildHeaderTableChunkFromRows(header, rows);
+}
+
+export function infoMapListChunk(): Chunk {
+  return buildLinesChunk(
+    ...allMapDefs().map(
+      (m) => `${m.name}: ${m.width}x${m.height}, ${m.terrain.length} terrain hexes`,
+    ),
+  );
+}
+
+function weaponDamageSummary(w: WeaponDef): string {
+  if (w.variableDamage)
+    return `${w.variableDamage[0]} / ${w.variableDamage[1]} / ${w.variableDamage[2]}`;
+  if (w.missileDamage !== undefined && w.missiles !== undefined)
+    return `${w.missileDamage * w.missiles} = ${w.missileDamage} per missile × ${w.missiles}`;
+  return String(w.damage ?? 0);
+}
+
+export function infoWeaponListChunk(): Chunk {
+  const grouped = new Map<WeaponCategory, WeaponDef[]>();
+  let maxNameLen = 0;
+  for (const w of allWeaponDefs()) {
+    const list = grouped.get(w.category) ?? [];
+    list.push(w);
+    grouped.set(w.category, list);
+    maxNameLen = Math.max(maxNameLen, w.name.length);
+  }
+  const lines: string[] = [];
+  for (const [cat, weapons] of grouped) {
+    lines.push(i18n("info.weaponCategory", { category: weaponCategory(cat) }));
+    for (const w of weapons) {
+      const rs = `S${w.short}`.padStart(3);
+      const rm = `M${w.medium}`.padStart(3);
+      const rl = `L${w.long}`.padStart(3);
+      const rh = `H${w.heat ?? 0}`.padStart(3);
+
+      lines.push(
+        `  ${w.name.padEnd(maxNameLen)} ${rs} /${rm} /${rl}  ${rh}  D${weaponDamageSummary(w)}`,
+      );
+    }
+  }
+  return buildLinesChunk(...lines);
+}
+
+function weaponDamageDetail(w: WeaponDef): string {
+  if (w.variableDamage)
+    return `${w.variableDamage[0]} (short) / ${w.variableDamage[1]} (medium) / ${w.variableDamage[2]} (long)`;
+  if (w.missileDamage !== undefined && w.missiles !== undefined)
+    return i18n("info.damagePerMissile", { damage: w.missileDamage! });
+  return `${w.damage ?? 0} (direct fire)`;
+}
+
+export function infoWeaponChunk(name: string): Chunk {
+  const w = lookupWeapon(name);
+  if (w === undefined) {
+    throw new Error(i18n("err.unknownWeapon", { name, list: listWeaponNames().join(", ") }));
+  }
+  const cat = weaponCategory(w.category);
+  const lines = [
+    i18n("info.weaponHead", { name: w.name, category: cat }),
+    i18n("info.weaponRange", { short: w.short, medium: w.medium, long: w.long }),
+    i18n("info.weaponDamage", { damage: weaponDamageDetail(w) }),
+    i18n("info.weaponHeat", { heat: w.heat ?? 0 }),
+  ];
+  if (w.missiles !== undefined) lines.push(i18n("info.weaponMissiles", { count: w.missiles }));
+  if (w.pulse) lines.push(i18n("info.weaponPulse"));
+  if (w.rapidFireShots !== undefined)
+    lines.push(i18n("info.weaponRapidFire", { shots: w.rapidFireShots }));
+  if (w.antiInfantry) lines.push(i18n("info.weaponAntiInfantry"));
+  return buildLinesChunk(...lines);
+}
+
+/** `info map <name>` output: header/legend lines followed by the styled grid. */
+export function infoMapChunks(name: string): Chunk[] {
+  const map = lookupMap(name);
+  if (map === undefined) {
+    throw new Error(i18n("err.unknownMap", { name, list: listMapNames().join(", ") }));
+  }
   return [
-    buildLinesChunk([
-      i18n(locale, "table.list.header"),
-      i18n(locale, "table.list.cluster"),
-      i18n(locale, "table.list.hitloc"),
-      i18n(locale, "table.list.crit"),
-      i18n(locale, "table.list.heat"),
-    ]),
+    buildLinesChunk(i18n("info.mapHead", { name, w: map.width, h: map.height })),
+    buildBoardChunk({ map, units: null, reachable: null }),
   ];
 }

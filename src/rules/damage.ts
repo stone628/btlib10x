@@ -1,4 +1,4 @@
-import type { Location, TorsoLocation } from "../core/types.js";
+import type { Location, TorsoLocation } from "../core/types";
 import {
   armFor,
   damageTransferTo,
@@ -7,9 +7,9 @@ import {
   isLeg,
   isTorso,
   shoulderOf,
-} from "../core/types.js";
-import type { Arc } from "./arcs.js";
-import type { CaseKind } from "./critical.js";
+} from "../core/types";
+import type { Arc } from "./arcs";
+import type { CaseKind } from "./critical";
 
 /** Per-location numeric value (armor HP, IS HP, etc.). */
 export type LocationValue = Record<Location, number>;

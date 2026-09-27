@@ -4,22 +4,22 @@
  * these wrappers normalize input to match the catalog key shape.
  */
 import {
-  getAllMapDefs,
-  getAllMechDefs,
-  getAllWeaponDefs,
+  allMapDefs,
+  allMechDefs,
+  allWeaponDefs,
   type MapDef,
   type ResolvedMechDef,
   type WeaponDef,
 } from "btlib10x";
 
 const MECH_BY_UC: ReadonlyMap<string, ResolvedMechDef> = new Map(
-  getAllMechDefs().map((d) => [d.model.toLowerCase(), d]),
+  allMechDefs().map((d) => [d.model.toLowerCase(), d]),
 );
 const MAP_BY_LC: ReadonlyMap<string, MapDef> = new Map(
-  getAllMapDefs().map((m) => [m.name.toLowerCase(), m]),
+  allMapDefs().map((m) => [m.name.toLowerCase(), m]),
 );
 const WEAPON_BY_LC: ReadonlyMap<string, WeaponDef> = new Map(
-  getAllWeaponDefs().map((w) => [w.name.toLowerCase(), w]),
+  allWeaponDefs().map((w) => [w.name.toLowerCase(), w]),
 );
 
 export function lookupMech(model: string): ResolvedMechDef | undefined {

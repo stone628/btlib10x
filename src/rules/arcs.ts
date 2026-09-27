@@ -1,11 +1,5 @@
-import type { Bearing } from "../core/hex.js";
-import {
-  FACINGS,
-  type Facing,
-  type Location,
-  oppositeFacing,
-  rotateFacing,
-} from "../core/types.js";
+import type { Bearing } from "../core/hex";
+import { FACINGS, type Facing, type Location, oppositeFacing, rotateFacing } from "../core/types";
 
 /** Firing arc of a target relative to a unit. */
 export type Arc = "front" | "rear" | "leftSide" | "rightSide";

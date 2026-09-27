@@ -1,6 +1,6 @@
-import type { Catalog, MessageKey } from "./en.js";
-import { en } from "./en.js";
-import { kr } from "./kr.js";
+import type { Catalog, MessageKey } from "./en";
+import { en } from "./en";
+import { kr } from "./kr";
 
 export type { Catalog, MessageKey };
 
@@ -17,12 +17,18 @@ export function localeList(): string {
   return Object.keys(LOCALES).join(", ");
 }
 
+let defaultLocale: LocaleId = "en";
+
+export function setI18nDefaultLocale(locale: LocaleId) {
+  defaultLocale = locale;
+}
+
 /**
  * Translate `key` for `locale`, falling back silently to English when a
  * catalog entry is missing (guards locales added before translation).
  * `{param}` placeholders are replaced from `params`.
  */
-export function i18n(
+export function i18nIn(
   locale: LocaleId,
   key: MessageKey,
   params?: Readonly<Record<string, string | number>>,
@@ -35,6 +41,10 @@ export function i18n(
     }
   }
   return text;
+}
+
+export function i18n(key: MessageKey, params?: Readonly<Record<string, string | number>>): string {
+  return i18nIn(defaultLocale, key, params);
 }
 
 /**
@@ -91,7 +101,7 @@ function isWideCodePoint(cp: number): boolean {
  * fall back to the iterator-based path so the existing
  * `isWideCodePoint` ranges (including astral planes) still apply.
  */
-export function getCompensatedLength(str: string): number {
+export function compensatedLength(str: string): number {
   let extra = 0;
   for (let i = 0; i < str.length; i++) {
     const code = str.charCodeAt(i);

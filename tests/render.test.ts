@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
-import type { MapDef } from "../src/index.js";
-import type { BattleState, createBattle, TerrainHexDef, UnitInit } from "../src/rules/game.js";
-import type { BoardModel } from "../web/renderer.text.js";
+import type { MapDef } from "../src/index";
+import type { BattleState, createBattle, TerrainHexDef, UnitInit } from "../src/rules/game";
+import type { BoardModel } from "../web/renderer.text";
 import {
   battleModel,
   boardToText,
   FACING_GLYPH,
   GRID_GLYPHS,
   renderMap,
-} from "../web/renderer.text.js";
-import { createTestBattle } from "./helpers.js";
+} from "../web/renderer.text";
+import { createTestBattle } from "./helpers";
 
 /** Flat battle text via the structured model (historic renderer shape). */
 const renderBattle = (

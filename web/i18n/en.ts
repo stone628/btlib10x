@@ -337,6 +337,7 @@ export const en = {
   "info.terrainLine": "terrain: {breakdown}",
   "info.terrainNone": "none",
   "info.elevationLine": "elevation: {breakdown}",
+  "info.damagePerMissile": "{damage} per missile",
   "info.weaponListLine": "{name} {range} dmg {damage}",
   "info.weaponCategory": "[{category}]",
   "info.weaponCategoryMissile": "Missile",

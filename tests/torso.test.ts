@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { rotateFacing } from "../src/core/types.js";
-import { classifyArcWithBoundary, effectiveFacingForTwist, twistDelta } from "../src/rules/arcs.js";
-import { suggestFireTargets } from "../src/rules/fireability.js";
-import type { BattleState, UnitInit } from "../src/rules/game.js";
-import { advancePhase, declareAttacks, rollInitiativePhase } from "../src/rules/game.js";
-import { createTestBattle, scriptedRng } from "./helpers.js";
+import { rotateFacing } from "../src/core/types";
+import { classifyArcWithBoundary, effectiveFacingForTwist, twistDelta } from "../src/rules/arcs";
+import { suggestFireTargets } from "../src/rules/fireability";
+import type { BattleState, UnitInit } from "../src/rules/game";
+import { advancePhase, declareAttacks, rollInitiativePhase } from "../src/rules/game";
+import { createTestBattle, scriptedRng } from "./helpers";
 
 function startAttackTurn(state: BattleState): BattleState {
   rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []);

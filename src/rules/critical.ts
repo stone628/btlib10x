@@ -74,23 +74,23 @@
  * snapshots; the caller (game.ts) commits the resulting state onto UnitState.
  */
 
-import { roll2D6, rollD6 } from "../core/dice.js";
-import type { Location, Rng } from "../core/types.js";
-import { damageTransferTo, isArm, isLeg, isLimb, isTorso, TORSO_LOCATIONS } from "../core/types.js";
-import { type AmmoNameHolder, getAmmoDefFor } from "../data/ammo.schema.js";
-import type { ResolvedCritSlot, ResolvedMechDef } from "../data/mech.schema.js";
-import { CRIT_SLOT_COUNTS } from "../data/mech.schema.js";
-import { getWeaponDefFor } from "../data/weapon.schema.js";
-import { type AmmoBinState, type AmmoBins, ammoBinId, stripBinsInLocation } from "./ammo.js";
+import { roll2D6, rollD6 } from "../core/dice";
+import type { Location, Rng } from "../core/types";
+import { damageTransferTo, isArm, isLeg, isLimb, isTorso, TORSO_LOCATIONS } from "../core/types";
+import { type AmmoNameHolder, ammoDefFor } from "../data/ammo.schema";
+import type { ResolvedCritSlot, ResolvedMechDef } from "../data/mech.schema";
+import { CRIT_SLOT_COUNTS } from "../data/mech.schema";
+import { weaponDefFor } from "../data/weapon.schema";
+import { type AmmoBinState, type AmmoBins, ammoBinId, stripBinsInLocation } from "./ammo";
 import {
   applyDamage,
   type DamageApplication,
   destroyedLegs,
   isUnitLocationDestroyed,
   type UnitDamageState,
-} from "./damage.js";
-import type { DestroyedReason } from "./game.js";
-import { GYRO_DESTROYED_HITS, SENSOR_BLIND_HITS } from "./piloting.js";
+} from "./damage";
+import type { DestroyedReason } from "./game";
+import { GYRO_DESTROYED_HITS, SENSOR_BLIND_HITS } from "./piloting";
 
 export interface CritSource {
   /** Location where the original hit stripped at least 1 internal-structure point. */
@@ -304,7 +304,7 @@ function rollSlotNumber(rng: Rng, loc: Location): { slot: number; rolls: readonl
  * variable-damage weapons don't carry ammo so this never fires for them.
  */
 export function ammoDamagePerShot(h: AmmoNameHolder): number {
-  const w = getWeaponDefFor(h);
+  const w = weaponDefFor(h);
   if (w.missileDamage !== undefined && w.missiles !== undefined) {
     return w.missileDamage * w.missiles;
   }
@@ -609,7 +609,7 @@ function applySlotHit(
     // Non-explosive ammo (e.g. gauss rifle rounds) cannot detonate. The crit
     // still destroys the slot and empties the bin (slugs spill), but no
     // damage roll and no cascade.
-    if (!getAmmoDefFor(slot).explosive) {
+    if (!ammoDefFor(slot).explosive) {
       state.ammoBins[binId] = emptyBin();
       state.rows.push({
         kind: "ammoNoExplosion",

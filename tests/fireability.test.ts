@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { bearingExact, hexDistance, neighbor } from "../src/core/hex.js";
-import { classifyArcWithBoundary } from "../src/rules/arcs.js";
-import { bestFireTarget, suggestFireTargets } from "../src/rules/fireability.js";
-import type { BattleState, TerrainHexDef, UnitInit } from "../src/rules/game.js";
-import { advancePhase, rollInitiativePhase } from "../src/rules/game.js";
-import { createTestBattle, scriptedRng } from "./helpers.js";
+import { bearingExact, hexDistance, neighbor } from "../src/core/hex";
+import { classifyArcWithBoundary } from "../src/rules/arcs";
+import { bestFireTarget, suggestFireTargets } from "../src/rules/fireability";
+import type { BattleState, TerrainHexDef, UnitInit } from "../src/rules/game";
+import { advancePhase, rollInitiativePhase } from "../src/rules/game";
+import { createTestBattle, scriptedRng } from "./helpers";
 
 function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
   const units: UnitInit[] = [

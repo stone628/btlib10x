@@ -1,5 +1,5 @@
-import { TERRAIN_TYPES, type TerrainType } from "../core/types.js";
-import { TERRAIN_DATA } from "./terrain.data.js";
+import { TERRAIN_TYPES, type TerrainType } from "../core/types";
+import { TERRAIN_DATA } from "./terrain.data";
 
 /**
  * Properties of a terrain type that drive the rules engine: movement cost
@@ -86,10 +86,10 @@ export function parseTerrainData(data: unknown): ReadonlyMap<string, TerrainDef>
 
 const TERRAIN_CATALOG: ReadonlyMap<string, TerrainDef> = TERRAIN_DATA;
 
-export function getTerrainDef(type: TerrainType): TerrainDef | undefined {
+export function terrainDef(type: TerrainType): TerrainDef | undefined {
   return TERRAIN_CATALOG.get(type);
 }
 
-export function getAllTerrainDefs(): ReadonlyMap<string, TerrainDef> {
+export function allTerrainDefs(): ReadonlyMap<string, TerrainDef> {
   return TERRAIN_CATALOG;
 }

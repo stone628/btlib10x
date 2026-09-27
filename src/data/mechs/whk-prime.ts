@@ -1,4 +1,4 @@
-import type { MechDef } from "../mech.schema.js";
+import type { MechDef } from "../mech.schema";
 
 const def: MechDef = {
   model: "WHK-Prime",

@@ -1,13 +1,13 @@
-import { neighbor } from "../core/hex.js";
+import { neighbor } from "../core/hex";
 import {
   cellAt,
   costToClimb,
   costToEnter,
   type HexGrid,
   MP_PER_FACING_CHANGE,
-} from "../core/terrain.js";
-import type { Facing, HexCoord, MoveMode, TerrainType } from "../core/types.js";
-import { FACINGS, oppositeFacing, rotateFacing } from "../core/types.js";
+} from "../core/terrain";
+import type { Facing, HexCoord, MoveMode, TerrainType } from "../core/types";
+import { FACINGS, oppositeFacing, rotateFacing } from "../core/types";
 
 export function maxMovePoints(
   mode: MoveMode,

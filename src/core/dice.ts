@@ -1,4 +1,4 @@
-import type { Rng } from "./types.js";
+import type { Rng } from "./types";
 
 /** Minimum 2D6 total (snake eyes). */
 export const D2D6_MIN = 2;

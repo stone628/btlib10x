@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { getMechDef } from "../src/data/index.js";
-import { getWeaponDefFor } from "../src/data/weapon.schema.js";
-import { ammoWeaponTotals, pooledShotsLeft } from "../src/rules/ammo.js";
-import type { BattleState, GameEvent, TerrainHexDef, UnitInit } from "../src/rules/game.js";
+import { mechDef } from "../src/data/index";
+import { weaponDefFor } from "../src/data/weapon.schema";
+import { ammoWeaponTotals, pooledShotsLeft } from "../src/rules/ammo";
+import type { BattleState, GameEvent, TerrainHexDef, UnitInit } from "../src/rules/game";
 import {
   actorQueue,
   advancePhase,
@@ -12,9 +12,9 @@ import {
   requireUnit,
   resolveAllAttacks,
   rollInitiativePhase,
-} from "../src/rules/game.js";
-import { resolutionLines } from "../web/format.js";
-import { checkVictory, createTestBattle, scriptedRng } from "./helpers.js";
+} from "../src/rules/game";
+import { resolutionLines } from "../web/session.weapon";
+import { checkVictory, createTestBattle, scriptedRng } from "./helpers";
 
 function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
   const units: UnitInit[] = [
@@ -106,8 +106,8 @@ describe("createBattle", () => {
   it("initializes armor and ammo from the definition", () => {
     const state = hbkVsEnf();
     const hbk = requireUnit(state, "hbk");
-    expect(hbk.damage.armor).toEqual(getMechDef("HBK-4G")!.armor);
-    expect(ammoWeaponTotals(getMechDef("HBK-4G")!, hbk.ammoBins)["4"]).toBe(10);
+    expect(hbk.damage.armor).toEqual(mechDef("HBK-4G")!.armor);
+    expect(ammoWeaponTotals(mechDef("HBK-4G")!, hbk.ammoBins)["4"]).toBe(10);
     expect(hbk.phaseStartDamage).toEqual(hbk.damage);
     expect(state.phase).toBe("initiative");
     expect(state.turn).toBe(1);
@@ -888,7 +888,7 @@ describe("weapon attack phase", () => {
     );
 
     // Out of range.
-    const ac20 = getWeaponDefFor({ weapon: "AC/20" });
+    const ac20 = weaponDefFor({ weapon: "AC/20" });
     units = [
       {
         id: "hbk",
@@ -963,9 +963,7 @@ describe("weapon attack phase", () => {
       ],
       [],
     );
-    expect(ammoWeaponTotals(getMechDef("HBK-4G")!, requireUnit(state, "hbk").ammoBins)["4"]).toBe(
-      9,
-    );
+    expect(ammoWeaponTotals(mechDef("HBK-4G")!, requireUnit(state, "hbk").ammoBins)["4"]).toBe(9);
     expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }], [])).toThrow(
       /current actor/,
     );
@@ -1080,14 +1078,12 @@ describe("weapon attack phase", () => {
     const setup = createTestBattle([], units, true);
     const state = startAttackTurn(setup);
     declareAttacks(state, "her", [{ weaponIndex: 3, targetId: "cda", rapidFire: true }], []);
-    expect(ammoWeaponTotals(getMechDef("HER-5SA")!, requireUnit(state, "her").ammoBins)["3"]).toBe(
-      18,
-    ); // 2 shots spent up front
+    expect(ammoWeaponTotals(mechDef("HER-5SA")!, requireUnit(state, "her").ammoBins)["3"]).toBe(18); // 2 shots spent up front
     resolveAllAttacks(state, scriptedRng(1, 1), []); // natural 2 -> jam
     const her = requireUnit(state, "her");
     expect(her.jammedWeapons).toEqual([3]);
     expect(requireUnit(state, "cda").damage.armor.centerTorso).toBe(
-      getMechDef("CDA-3MA")!.armor.centerTorso,
+      mechDef("CDA-3MA")!.armor.centerTorso,
     );
   });
 
@@ -1118,7 +1114,7 @@ describe("weapon attack phase", () => {
     // Omitted rapidFire -> single shot (1 UAC/5 hit = 5 dmg, 1 ammo spent).
     const single = startAttackTurn(setup());
     declareAttacks(single, "her", [{ weaponIndex: 3, targetId: "cda" }], []);
-    expect(ammoWeaponTotals(getMechDef("HER-5SA")!, requireUnit(single, "her").ammoBins)["3"]).toBe(
+    expect(ammoWeaponTotals(mechDef("HER-5SA")!, requireUnit(single, "her").ammoBins)["3"]).toBe(
       19,
     ); // 1 shot spent up front
     const singleBefore = requireUnit(single, "cda").damage.armor.centerTorso;
@@ -1129,9 +1125,7 @@ describe("weapon attack phase", () => {
     // rapidFire: true -> double-tap (2 x UAC/5 = 10 dmg, 2 ammo spent).
     const state = startAttackTurn(setup());
     declareAttacks(state, "her", [{ weaponIndex: 3, targetId: "cda", rapidFire: true }], []);
-    expect(ammoWeaponTotals(getMechDef("HER-5SA")!, requireUnit(state, "her").ammoBins)["3"]).toBe(
-      18,
-    ); // 2 shots spent up front
+    expect(ammoWeaponTotals(mechDef("HER-5SA")!, requireUnit(state, "her").ammoBins)["3"]).toBe(18); // 2 shots spent up front
     const before = requireUnit(state, "cda").damage.armor.centerTorso;
     // to-hit 4 (2,2), cluster 8 (4,4) -> both shots hit; both hit CT (roll 7).
     resolveAllAttacks(state, scriptedRng(2, 2, 4, 4, 3, 4, 3, 4), []);
@@ -1172,19 +1166,19 @@ describe("streak missiles", () => {
 
   it("defers ammo to resolution and lands full tubes with no cluster roll", () => {
     const state = streakSetup();
-    expect(ammoWeaponTotals(getMechDef("MC-MKII-2")!, requireUnit(state, "mc").ammoBins)["3"]).toBe(
+    expect(ammoWeaponTotals(mechDef("MC-MKII-2")!, requireUnit(state, "mc").ammoBins)["3"]).toBe(
       50,
     );
     declareAttacks(state, "mc", [{ weaponIndex: 3, targetId: "enf" }], []);
     // Declare spends nothing; launcher fires only on successful to-hit roll.
-    expect(ammoWeaponTotals(getMechDef("MC-MKII-2")!, requireUnit(state, "mc").ammoBins)["3"]).toBe(
+    expect(ammoWeaponTotals(mechDef("MC-MKII-2")!, requireUnit(state, "mc").ammoBins)["3"]).toBe(
       50,
     );
     // to-hit 6 >= TN 4; four CT locations (7); one exposed tie-break die.
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(3, 3, 3, 4, 3, 4, 3, 4, 3, 4, 2), events);
     const mc = requireUnit(state, "mc");
-    expect(ammoWeaponTotals(getMechDef("MC-MKII-2")!, mc.ammoBins)["3"]).toBe(49);
+    expect(ammoWeaponTotals(mechDef("MC-MKII-2")!, mc.ammoBins)["3"]).toBe(49);
     expect(mc.heat).toBe(0);
     expect(mc.heatPending).toBe(3);
     const event = events.find((e) => e.kind === "attackResolved")!;
@@ -1198,7 +1192,7 @@ describe("streak missiles", () => {
     // Shared pool drained to a single shot in one bin.
     mc.ammoBins["leftTorso:7"]!.shots = 0;
     mc.ammoBins["rightTorso:7"]!.shots = 1;
-    expect(pooledShotsLeft(getMechDef("MC-MKII-2")!, mc.ammoBins, "CL Streak SRM 4")).toBe(1);
+    expect(pooledShotsLeft(mechDef("MC-MKII-2")!, mc.ammoBins, "CL Streak SRM 4")).toBe(1);
     // Mount 4 links zero bins (shared pool lives on mount 3): declare runs
     // unchecked for it, mirroring the live over-commit hole.
     declareAttacks(
@@ -1230,16 +1224,12 @@ describe("streak missiles", () => {
     expect(second.resolution.groups).toHaveLength(0);
     expect(second.resolution.application).toBeNull();
     expect(
-      pooledShotsLeft(
-        getMechDef("MC-MKII-2")!,
-        requireUnit(state, "mc").ammoBins,
-        "CL Streak SRM 4",
-      ),
+      pooledShotsLeft(mechDef("MC-MKII-2")!, requireUnit(state, "mc").ammoBins, "CL Streak SRM 4"),
     ).toBe(0);
     // One volley fired: single launcher heat only (deferred).
     expect(requireUnit(state, "mc").heat).toBe(0);
     expect(requireUnit(state, "mc").heatPending).toBe(3);
-    const lines = resolutionLines("en", second.resolution);
+    const lines = resolutionLines(second.resolution);
     expect(lines.some((l) => l.includes("out of ammo"))).toBe(true);
   });
 
@@ -1250,7 +1240,7 @@ describe("streak missiles", () => {
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(1, 2), events); // to-hit 3 < TN 4
     const mc = requireUnit(state, "mc");
-    expect(ammoWeaponTotals(getMechDef("MC-MKII-2")!, mc.ammoBins)["3"]).toBe(50);
+    expect(ammoWeaponTotals(mechDef("MC-MKII-2")!, mc.ammoBins)["3"]).toBe(50);
     expect(mc.heat).toBe(0);
     expect(requireUnit(state, "enf").damage.armor.centerTorso).toBe(armorBefore);
     const event = events.find((e) => e.kind === "attackResolved")!;

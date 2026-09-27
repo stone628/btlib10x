@@ -1,4 +1,4 @@
-import type { Catalog } from "./en.js";
+import type { Catalog } from "./en";
 
 /** Korean catalog. Keys are compile-checked against the English original. */
 export const kr: Catalog = {
@@ -330,6 +330,7 @@ export const kr: Catalog = {
   "info.terrainLine": "지형: {breakdown}",
   "info.terrainNone": "없음",
   "info.elevationLine": "고도: {breakdown}",
+  "info.damagePerMissile": "미사일 당 {damage}",
   "info.weaponListLine": "{name} {range} 데미지 {damage}",
   "info.weaponCategory": "[{category}]",
   "info.weaponCategoryMissile": "미사일",

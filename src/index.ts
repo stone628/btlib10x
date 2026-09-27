@@ -5,7 +5,7 @@ export {
   D2D6_MIN,
   roll2D6,
   rollD6,
-} from "./core/dice.js";
+} from "./core/dice";
 export {
   type Bearing,
   bearing,
@@ -16,8 +16,8 @@ export {
   neighbor,
   neighbors,
   sameHex,
-} from "./core/hex.js";
-export type { HexGrid } from "./core/terrain.js";
+} from "./core/hex";
+export type { HexGrid } from "./core/terrain";
 export {
   blocksTargeting,
   cellAt,
@@ -31,7 +31,7 @@ export {
   terrainMoveCost,
   terrainTargetMod,
   woodsPoints,
-} from "./core/terrain.js";
+} from "./core/terrain";
 export type {
   Facing,
   HexCell,
@@ -41,8 +41,9 @@ export type {
   Rng,
   TerrainHexDef,
   TerrainType,
+  TorsoLocation,
   WreckState,
-} from "./core/types.js";
+} from "./core/types";
 export {
   FACINGS,
   isArm,
@@ -58,31 +59,30 @@ export {
   shoulderOf,
   TERRAIN_TYPES,
   TORSO_LOCATIONS,
-} from "./core/types.js";
-export type { AmmoDef } from "./data/ammo.schema.js";
+} from "./core/types";
+export type { AmmoDef } from "./data/ammo.schema";
 export {
-  getAllAmmo,
-  getAmmoDefFor,
-  getShotsPerBinFor,
+  allAmmo as getAllAmmo,
+  ammoDefFor,
   listAmmoWeapons,
-} from "./data/ammo.schema.js";
+  shotsPerBinFor,
+} from "./data/ammo.schema";
 export {
   type AmmoNameHolder,
-  getAllMapDefs,
-  getAllMechDefs,
-  getMapDef,
-  getMapDefFor,
-  getMechDef,
-  getMechDefFor,
-  getUnitTonnage,
+  allMapDefs,
+  allMechDefs,
   listMapNames,
   type MapNameHolder,
   type MechModelHolder,
+  mapDef,
+  mapDefFor,
+  mechDef,
+  mechDefFor,
   resolveMechDef,
   validateMapDef,
   validateMechDef,
-} from "./data/index.js";
-export type { MapDef } from "./data/map.schema.js";
+} from "./data/index";
+export type { MapDef } from "./data/map.schema";
 export type {
   CRIT_SLOT_COUNTS,
   CRIT_SOAK_NAMES,
@@ -100,11 +100,11 @@ export type {
   ResolvedMechDef,
   ResolvedRearArmor,
   WeaponMount,
-} from "./data/mech.schema.js";
-export type { TerrainDef } from "./data/terrain.schema.js";
-export { getAllTerrainDefs, getTerrainDef } from "./data/terrain.schema.js";
-export type { WeaponCategory, WeaponDef, WeaponNameHolder } from "./data/weapon.schema.js";
-export { getAllWeaponDefs, getWeaponDefFor, listWeaponNames } from "./data/weapon.schema.js";
+} from "./data/mech.schema";
+export type { TerrainDef } from "./data/terrain.schema";
+export { allTerrainDefs, terrainDef } from "./data/terrain.schema";
+export type { WeaponCategory, WeaponDef, WeaponNameHolder } from "./data/weapon.schema";
+export { allWeaponDefs, listWeaponNames, weaponDefFor } from "./data/weapon.schema";
 export {
   AMMO_POLICIES,
   type AmmoBins,
@@ -123,7 +123,7 @@ export {
   pooledShotsLeft,
   pooledTotalsByWeaponName,
   stripBinsInLocation,
-} from "./rules/ammo.js";
+} from "./rules/ammo";
 export {
   type Arc,
   classifyArc,
@@ -131,9 +131,9 @@ export {
   effectiveFacingForTwist,
   isInFrontArc,
   weaponCanFireIntoArc,
-} from "./rules/arcs.js";
-export type { AttackResolution, HitGroup, WeaponAttackInput } from "./rules/attack.js";
-export { resolveWeaponAttack } from "./rules/attack.js";
+} from "./rules/arcs";
+export type { AttackResolution, HitGroup, WeaponAttackInput } from "./rules/attack";
+export { resolveWeaponAttack } from "./rules/attack";
 export {
   applyBuildingDamage,
   buildingAt,
@@ -143,8 +143,8 @@ export {
   initialCf,
   isBuildingTerrain,
   isCollapsed,
-} from "./rules/building.js";
-export { CLUSTER_COLUMNS, CLUSTER_TABLE, clusterHits, groupMissiles } from "./rules/cluster.js";
+} from "./rules/building";
+export { CLUSTER_COLUMNS, CLUSTER_TABLE, clusterHits, groupMissiles } from "./rules/cluster";
 export type {
   CaseKind,
   ComponentHitStatus as CoreComponentStatus,
@@ -152,7 +152,7 @@ export type {
   CriticalResolution,
   CritSource,
   EffectiveMovement,
-} from "./rules/critical.js";
+} from "./rules/critical";
 export {
   ammoDamagePerShot,
   applyAmmoExplosion,
@@ -164,7 +164,7 @@ export {
   effectiveMovement,
   resolveCriticalHits,
   SENSORS,
-} from "./rules/critical.js";
+} from "./rules/critical";
 export {
   applyDamage,
   canAttemptStandUp,
@@ -178,8 +178,9 @@ export {
   isUnitImmobile,
   isUnitLocationDestroyed,
   type LocationValue,
+  type TorsoLocationValue,
   type UnitDamageState,
-} from "./rules/damage.js";
+} from "./rules/damage";
 export {
   bestFireTarget,
   compareFireTargets,
@@ -190,7 +191,7 @@ export {
   type FireWeapon,
   fireTargetScore,
   suggestFireTargets,
-} from "./rules/fireability.js";
+} from "./rules/fireability";
 export type {
   ActorQueueActorView,
   AttackDecl,
@@ -204,11 +205,12 @@ export type {
   MoveStep,
   Phase,
   PilotHitReason,
+  RemovalReason,
   RemovedState,
   ShutdownState,
   UnitInit,
   UnitState,
-} from "./rules/game.js";
+} from "./rules/game";
 export {
   actorQueue,
   advancePhase,
@@ -249,7 +251,7 @@ export {
   WRECK_LEVEL,
   wreckAt,
   wreckLevelFor,
-} from "./rules/game.js";
+} from "./rules/game";
 export {
   AMMO_EXPLOSION_START_HEAT,
   ammoExplosionAvoid,
@@ -273,21 +275,21 @@ export {
   shutdownAvoidWithThreshold,
   toHitHeatModifier,
   toHitHeatModifierWithThreshold,
-} from "./rules/heat.js";
+} from "./rules/heat";
 export {
   HIT_LOCATION_TABLE,
   hitLocation,
   hitLocationForArc,
   LEFT_SIDE_TABLE,
   RIGHT_SIDE_TABLE,
-} from "./rules/hitlocation.js";
-export type { InitiativeResult } from "./rules/initiative.js";
-export { rollInitiative } from "./rules/initiative.js";
+} from "./rules/hitlocation";
+export type { InitiativeResult } from "./rules/initiative";
+export { rollInitiative } from "./rules/initiative";
 export {
   HEAD_STRUCTURE,
   internalStructureForTonnage,
   STANDARD_INTERNAL_STRUCTURE,
-} from "./rules/internalStructure.js";
+} from "./rules/internalStructure";
 export {
   interveningHexes,
   interveningTerrains,
@@ -299,7 +301,7 @@ export {
   losClear,
   losWoodsPoints,
   losWoodsPointsBetween,
-} from "./rules/los.js";
+} from "./rules/los";
 export {
   attackerMovementModifier,
   BACKWARD_LEVEL_CHANGE_MAX,
@@ -319,7 +321,7 @@ export {
   TARGET_IMMOBILE_MOD,
   TARGET_JUMP_BONUS,
   targetMovementModifier,
-} from "./rules/movement.js";
+} from "./rules/movement";
 export {
   buildingEntryModifier,
   consciousnessTarget,
@@ -348,8 +350,8 @@ export {
   sensorAttackModifier,
   sensorsBlind,
   waterEntryModifier,
-} from "./rules/piloting.js";
-export { loadBattleState, parseBattleState, saveBattleState } from "./rules/snapshot.js";
+} from "./rules/piloting";
+export { loadBattleState, parseBattleState, saveBattleState } from "./rules/snapshot";
 export {
   type AttackModifiers,
   computeToHit,
@@ -358,5 +360,5 @@ export {
   proneTargetModifier,
   type RangeBracket,
   type ToHitBreakdown,
-} from "./rules/tohit.js";
-export { VERSION } from "./version.js";
+} from "./rules/tohit";
+export { VERSION } from "./version";

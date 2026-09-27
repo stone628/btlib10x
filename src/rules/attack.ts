@@ -1,18 +1,18 @@
-import { roll2D6 } from "../core/dice.js";
-import { hasPartialCover } from "../core/terrain.js";
-import type { Location, MoveMode, Rng, TerrainType } from "../core/types.js";
-import type { ResolvedMechDef } from "../data/mech.schema.js";
-import type { WeaponDef } from "../data/weapon.schema.js";
-import { getWeaponDefFor } from "../data/weapon.schema.js";
-import type { AmmoBins } from "./ammo.js";
-import type { Arc } from "./arcs.js";
-import { clusterHits, groupMissiles } from "./cluster.js";
-import { type CriticalResolution, resolveCriticalHits } from "./critical.js";
-import { applyDamage, type DamageApplication, type UnitDamageState } from "./damage.js";
-import { toHitHeatModifier } from "./heat.js";
-import { hitLocationForArc } from "./hitlocation.js";
-import { losWoodsPoints } from "./los.js";
-import { computeToHit, damageForBracket } from "./tohit.js";
+import { roll2D6 } from "../core/dice";
+import { hasPartialCover } from "../core/terrain";
+import type { Location, MoveMode, Rng, TerrainType } from "../core/types";
+import type { ResolvedMechDef } from "../data/mech.schema";
+import type { WeaponDef } from "../data/weapon.schema";
+import { weaponDefFor } from "../data/weapon.schema";
+import type { AmmoBins } from "./ammo";
+import type { Arc } from "./arcs";
+import { clusterHits, groupMissiles } from "./cluster";
+import { type CriticalResolution, resolveCriticalHits } from "./critical";
+import { applyDamage, type DamageApplication, type UnitDamageState } from "./damage";
+import { toHitHeatModifier } from "./heat";
+import { hitLocationForArc } from "./hitlocation";
+import { losWoodsPoints } from "./los";
+import { computeToHit, damageForBracket } from "./tohit";
 
 export interface HitGroup {
   readonly location: Location;
@@ -144,7 +144,7 @@ const MISSILE_LOT_SIZE = 5;
 
 /** Resolve one declared weapon attack end-to-end: to-hit, location(s), damage. */
 export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution {
-  const weapon: WeaponDef = getWeaponDefFor(input);
+  const weapon: WeaponDef = weaponDefFor(input);
   const shots = input.shots ?? 1;
   const arc = input.arc ?? "front";
   // Caller-computed value (battle-state aware, includes wrecks + intervening)

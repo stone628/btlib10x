@@ -4,12 +4,12 @@ import {
   flushAutoPlayCommand,
   nextAutoPlayCommand,
   resetAutoplayState,
-} from "./autoplay.js";
-import { runChunks } from "./cli.js";
-import { buildLinesChunk, type Chunk } from "./format.js";
-import { i18n, isLocale } from "./i18n/index.js";
+} from "./autoplay";
+import { buildLinesChunkWith, type Chunk } from "./chunk";
+import { runChunks } from "./cli";
+import { i18n, isLocale } from "./i18n/index";
 import motdText from "./MOTD.txt";
-import * as S from "./session.js";
+import { newSession, promptBody, promptHint, setConfigLocale } from "./session";
 
 document.title = `bt10x terminal v${VERSION}`;
 
@@ -18,14 +18,14 @@ const inrow = document.getElementById("inrow") as HTMLDivElement;
 const promptEl = document.getElementById("prompt") as HTMLSpanElement;
 const input = document.getElementById("cmd") as HTMLInputElement;
 
-const session = S.newSession(42);
+const session = newSession(42);
 
 const modeHint = document.createElement("div");
 modeHint.id = "modehint";
 out.insertBefore(modeHint, inrow);
 const urlLang = new URLSearchParams(window.location.search).get("lang");
 if (urlLang !== null && isLocale(urlLang)) {
-  session.locale = urlLang;
+  setConfigLocale(urlLang);
 }
 
 const motdBody = document.getElementById("motd-body");
@@ -99,13 +99,13 @@ function appendChunk(chunk: Chunk, parent: HTMLElement = out): void {
 }
 
 function refreshPrompt(): void {
-  promptEl.textContent = `${S.promptBody(session)} > `;
-  modeHint.textContent = S.moveModesHint(session) ?? "";
+  promptEl.textContent = `${promptBody(session)} > `;
+  modeHint.textContent = promptHint(session);
 }
 
 function submitImpl(raw: string) {
   const line = raw.trim();
-  const echoed = `${S.promptBody(session)} > ${raw}`;
+  const echoed = `${promptBody(session)} > ${raw}`;
   const echo = document.createElement("div");
   echo.className = "cmd";
   echo.textContent = echoed;
@@ -115,7 +115,7 @@ function submitImpl(raw: string) {
     historyIdx = history.length;
   }
   for (const chunk of runChunks(session, line)) {
-    appendChunk(chunk);
+    appendChunk(chunk, out);
   }
 }
 
@@ -145,14 +145,14 @@ function stopAutoPlay(finished: boolean): void {
   clearInterval(autoPlayTimer);
   autoPlayTimer = null;
   if (finished) {
-    appendChunk(buildLinesChunk([i18n(session.locale, "autoPlay.done")], "banner"));
+    appendChunk(buildLinesChunkWith("banner", i18n("autoPlay.done")));
     refreshPrompt();
   }
 }
 
 function startAutoPlay(): void {
   stopAutoPlay(false);
-  appendChunk(buildLinesChunk([i18n(session.locale, "autoPlay.started")], "banner"));
+  appendChunk(buildLinesChunkWith("banner", i18n("autoPlay.started")));
   scrollToBottom();
   resetAutoplayState(session);
   autoPlayTimer = setInterval(() => {
@@ -175,7 +175,7 @@ function startAutoPlay(): void {
 input.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
     if (input.value.trim() === "autoplay") {
-      const echoed = `${S.promptBody(session)} > autoplay`;
+      const echoed = `${promptBody(session)} > autoplay`;
       const echo = document.createElement("div");
       echo.className = "cmd";
       echo.textContent = echoed;
@@ -227,12 +227,10 @@ document.getElementById("term")?.addEventListener("click", (e) => {
 });
 
 appendChunk(
-  buildLinesChunk(
-    [
-      i18n(session.locale, "app.banner.title", { version: VERSION }),
-      i18n(session.locale, "app.banner.help"),
-    ],
+  buildLinesChunkWith(
     "banner",
+    i18n("app.banner.title", { version: VERSION }),
+    i18n("app.banner.help"),
   ),
 );
 refreshPrompt();

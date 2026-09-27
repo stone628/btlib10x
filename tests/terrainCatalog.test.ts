@@ -6,27 +6,27 @@ import {
   screeningPoints,
   terrainMoveCost,
   terrainTargetMod,
-} from "../src/core/terrain.js";
-import { TERRAIN_TYPES, type TerrainType } from "../src/core/types.js";
-import { getAllTerrainDefs } from "../src/data/terrain.schema.js";
+} from "../src/core/terrain";
+import { TERRAIN_TYPES, type TerrainType } from "../src/core/types";
+import { allTerrainDefs } from "../src/data/terrain.schema";
 
 describe("terrain catalog integrity", () => {
   it("defines every TerrainType with a catalog entry", () => {
-    const catalog = getAllTerrainDefs();
+    const catalog = allTerrainDefs();
     for (const t of TERRAIN_TYPES) {
       expect(catalog.has(t), `missing catalog entry for ${t}`).toBe(true);
     }
   });
 
   it("does not define unknown terrain types beyond TERRAIN_TYPES", () => {
-    const catalog = getAllTerrainDefs();
+    const catalog = allTerrainDefs();
     for (const key of catalog.keys()) {
       expect(TERRAIN_TYPES).toContain(key as (typeof TERRAIN_TYPES)[number]);
     }
   });
 
   it("engine helpers match the catalog for every terrain type", () => {
-    const catalog = getAllTerrainDefs();
+    const catalog = allTerrainDefs();
     for (const [type, def] of catalog) {
       const t = type as (typeof TERRAIN_TYPES)[number];
       expect(terrainMoveCost(t), `${type}.moveCost`).toBe(def.moveCost);
@@ -36,7 +36,7 @@ describe("terrain catalog integrity", () => {
   });
 
   it("flags partial cover and targeting restrictions correctly", () => {
-    const catalog = getAllTerrainDefs();
+    const catalog = allTerrainDefs();
     for (const [type, def] of catalog) {
       const t = type as (typeof TERRAIN_TYPES)[number];
       expect(hasPartialCover(t)).toBe(def.partialCover === true);

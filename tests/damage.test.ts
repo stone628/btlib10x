@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { LOCATIONS } from "../src/core/types.js";
-import type { LocationValue, TorsoLocationValue, UnitDamageState } from "../src/rules/damage.js";
+import { LOCATIONS } from "../src/core/types";
+import type { LocationValue, TorsoLocationValue, UnitDamageState } from "../src/rules/damage";
 import {
   applyDamage,
   canAttemptStandUp,
@@ -9,7 +9,7 @@ import {
   destroyedLegs,
   isUnitDestroyed,
   isUnitImmobile,
-} from "../src/rules/damage.js";
+} from "../src/rules/damage";
 
 /** Build a layered damage state; every location defaults to 10 armor / 10 IS. */
 function mk(

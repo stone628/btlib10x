@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { suggestFireTargets } from "../src/rules/fireability.js";
-import { commitMove, currentActor, declareMode, newSession, type Session } from "../web/session.js";
-import { execute } from "./helpers.js";
+import { suggestFireTargets } from "../src/rules/fireability";
+import { newSession, type Session } from "../web/session";
+import { commitMovement, declareMovementMode } from "../web/session.move";
+import { requireWeaponAttackActor } from "../web/session.weapon";
+import { disableCritical, execute } from "./helpers";
 
 function run(s: Session, cmd: string): string[] {
   return execute(s, cmd);
@@ -9,41 +11,41 @@ function run(s: Session, cmd: string): string[] {
 
 function freshSetup(): Session {
   const s = newSession(42);
-  s.critsDisabled = true;
   expect(run(s, "map quickstart")[0]).toContain("15x16");
   // Place two HBK-4Gs adjacent along the n/s axis with the bodies facing each
   // other so the head-to-head shot is in the front arc; we move them into a
   // side-arc configuration for the torso tests below.
   expect(run(s, "add hunchy HBK-4G 9 9 n")).toHaveLength(1);
   expect(run(s, "add cicada CDA-3MA 9 8 s")).toHaveLength(1);
+  run(s, "start");
+  disableCritical(s);
   return s;
 }
 
 /** Drain the movement phase by walking in place until the weapon phase opens. */
 function burnMovePhase(s: Session): void {
-  while (s.app === "battle" && s.battle!.phase === "movement") {
-    declareMode(s, "walk");
-    commitMove(s);
+  while (s.state === "battle" && s.battle!.phase === "movement") {
+    declareMovementMode(s, "walk");
+    commitMovement(s);
   }
 }
 
 /** Place hunchy facing north, cicada at bearing "ne" (rightSide arc). */
 function sideArcSetup(): Session {
   const s = newSession(42);
-  s.critsDisabled = true;
   expect(run(s, "map quickstart")[0]).toContain("15x16");
   // hunchy at (9,9) facing n; cicada at (10,8) — bearing "ne" → hunchy's
   // rightSide arc when twist is "front", and the front arc when twist=right.
   expect(run(s, "add hunchy HBK-4G 9 9 n")).toHaveLength(1);
   expect(run(s, "add cicada CDA-3MA 10 8 s")).toHaveLength(1);
   run(s, "start");
+  disableCritical(s);
   return s;
 }
 
 describe("torso command", () => {
   it("defaults the twist to front at attack-phase entry", () => {
     const s = freshSetup();
-    run(s, "start");
     burnMovePhase(s);
     expect(s.battle!.phase).toBe("weaponAttack");
     expect(s.attack!.torsoTwist).toBe("front");
@@ -51,7 +53,6 @@ describe("torso command", () => {
 
   it("rejects the torso command outside the weapon attack phase", () => {
     const s = freshSetup();
-    run(s, "start");
     expect(s.battle!.phase).toBe("movement");
     expect(run(s, "torso left")[0]).toMatch(/^error:/);
     // Movement phase → attack context absent, default twist "front".
@@ -141,7 +142,7 @@ describe("torso command", () => {
     // Queue a fire so hunchy's turn ends and cicada becomes current.
     expect(run(s, "fire cicada 2")[0]).toContain("queued");
     run(s, "done");
-    expect(currentActor(s)!.id).toBe("cicada");
+    expect(requireWeaponAttackActor(s).id).toBe("cicada");
     expect(s.attack!.torsoTwist).toBe("front");
     // Cicada's own twist should also start at "front".
     expect(s.attack!.torsoTwist).toBe("front");

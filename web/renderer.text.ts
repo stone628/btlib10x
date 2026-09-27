@@ -7,7 +7,7 @@ import {
   type MapDef,
   type TerrainHexDef,
 } from "btlib10x";
-import { getCompensatedLength, i18n, type LocaleId, type MessageKey } from "./i18n/index.js";
+import { compensatedLength, i18n, type MessageKey } from "./i18n/index";
 
 // ---- shared presentation types ----
 
@@ -61,7 +61,7 @@ export interface BoardModel {
 
 // ---- board render info (types owned by render.ts) ----
 
-import type { BoardRenderer, BoardRenderInfo } from "./render.js";
+import type { BoardRenderer, BoardRenderInfo } from "./render";
 
 // ---- CSS class helper (web-layer) ----
 
@@ -119,9 +119,9 @@ export const TEAM_STYLES: readonly CharStyle[] = [{ fg: "cyan" }, { fg: "magenta
 export const REACHABLE_MARKER = "<>";
 
 /** Localised board legend text (e.g. `"legend: w(light woods)  W(heavy woods)"`). */
-export function boardLegendText(map: MapDef, locale: LocaleId): string[] {
-  const header = i18n(locale, "board.legend");
-  const headerLen = getCompensatedLength(header);
+export function boardLegendText(map: MapDef): string[] {
+  const header = i18n("board.legend");
+  const headerLen = compensatedLength(header);
   const widthMax = COL_STRIDE * map.width;
   let width = headerLen;
   let legends: string[] = [header];
@@ -129,8 +129,8 @@ export function boardLegendText(map: MapDef, locale: LocaleId): string[] {
   const delimiter = " ";
   const delimiterLen = delimiter.length;
   for (const l of map.legends) {
-    const lt = `'${TERRAIN_GLYPHS[l]}'(${i18n(locale, `terrain.${l}` as MessageKey)})`;
-    const ltLen = getCompensatedLength(lt);
+    const lt = `'${TERRAIN_GLYPHS[l]}'(${i18n(`terrain.${l}` as MessageKey)})`;
+    const ltLen = compensatedLength(lt);
     if (width >= widthMax - ltLen) {
       lines.push(legends.join(delimiter));
       width = headerLen;
@@ -767,16 +767,16 @@ export function createBoardModel(info: BoardRenderInfo): BoardModel {
 
 // ---- board renderers (DOM) ----
 
-function renderLegend(map: MapDef, el: Element, locale: LocaleId): void {
+function renderLegend(map: MapDef, el: Element): void {
   const legendDiv = document.createElement("div");
   legendDiv.className = "board-legend";
-  legendDiv.textContent = boardLegendText(map, locale).join("\n");
+  legendDiv.textContent = boardLegendText(map).join("\n");
   el.appendChild(legendDiv);
 }
 
 /** CSS Grid renderer: one `<span>` per character, bold isolated to single cells. */
 export const cssGridRenderer: BoardRenderer = (info, el) => {
-  renderLegend(info.map, el, info.locale);
+  renderLegend(info.map, el);
   const grid = document.createElement("div");
   grid.className = "board-grid";
   const lines = boardToChars(createBoardModel(info));
@@ -800,7 +800,7 @@ export const cssGridRenderer: BoardRenderer = (info, el) => {
 
 /** Text renderer: flat text inside a `<div>`. */
 export const textRenderer: BoardRenderer = (info, el) => {
-  renderLegend(info.map, el, info.locale);
+  renderLegend(info.map, el);
   const board = document.createElement("div");
   board.className = "board";
   const lines = boardToText(createBoardModel(info)).split("\n");

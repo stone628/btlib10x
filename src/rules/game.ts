@@ -1,5 +1,5 @@
-import { D2D6_MAX, roll2D6 } from "../core/dice.js";
-import { bearingExact, hexDistance, isAdjacent, sameHex } from "../core/hex.js";
+import { D2D6_MAX, roll2D6 } from "../core/dice";
+import { bearingExact, hexDistance, isAdjacent, sameHex } from "../core/hex";
 import {
   cellAt,
   costToClimb,
@@ -8,7 +8,7 @@ import {
   hasPartialCover,
   MP_PER_FACING_CHANGE,
   setCell,
-} from "../core/terrain.js";
+} from "../core/terrain";
 import {
   type Facing,
   type HexCell,
@@ -22,16 +22,10 @@ import {
   rotateFacing,
   type TerrainHexDef,
   type WreckState,
-} from "../core/types.js";
-import {
-  getMechDef,
-  getMechDefFor,
-  getUnitTonnage,
-  type MapDef,
-  type MechModelHolder,
-} from "../data/index.js";
-import type { ResolvedMechDef } from "../data/mech.schema.js";
-import { getWeaponDefFor } from "../data/weapon.schema.js";
+} from "../core/types";
+import { type MapDef, type MechModelHolder, mechDef, mechDefFor } from "../data/index";
+import type { ResolvedMechDef } from "../data/mech.schema";
+import { weaponDefFor } from "../data/weapon.schema";
 import {
   type AmmoBins,
   type AmmoPolicy,
@@ -43,15 +37,15 @@ import {
   loadAmmoBins,
   pooledShotsLeft,
   stripBinsInLocation,
-} from "./ammo.js";
+} from "./ammo";
 import {
   type Arc,
   classifyArcWithBoundary,
   defenderArcChoice,
   effectiveFacingForTwist,
   weaponCanFireIntoArc,
-} from "./arcs.js";
-import { type AttackResolution, PARTIAL_COVER_TERRAIN_MOD, resolveWeaponAttack } from "./attack.js";
+} from "./arcs";
+import { type AttackResolution, PARTIAL_COVER_TERRAIN_MOD, resolveWeaponAttack } from "./attack";
 import {
   applyBuildingDamage,
   type BuildingState,
@@ -59,7 +53,7 @@ import {
   collapseToRubble,
   createBuildingState,
   isCollapsed,
-} from "./building.js";
+} from "./building";
 import {
   applyAmmoExplosion,
   type CriticalResolution,
@@ -73,7 +67,7 @@ import {
   HIP,
   markLocationCatastrophicallyDestroyed,
   resolveCriticalHits,
-} from "./critical.js";
+} from "./critical";
 import {
   applyDamage,
   canAttemptStandUp,
@@ -82,7 +76,7 @@ import {
   isUnitDestroyed,
   isUnitImmobile,
   type UnitDamageState,
-} from "./damage.js";
+} from "./damage";
 import {
   ammoExplosionAvoidWithThreshold,
   effectiveMoveBudget,
@@ -95,9 +89,9 @@ import {
   shutdownAvoid,
   shutdownAvoidWithThreshold,
   toHitHeatModifier,
-} from "./heat.js";
-import { hitLocation, hitLocationForArc } from "./hitlocation.js";
-import { rollInitiative } from "./initiative.js";
+} from "./heat";
+import { hitLocation, hitLocationForArc } from "./hitlocation";
+import { rollInitiative } from "./initiative";
 import {
   interveningHexes,
   interveningTerrains,
@@ -106,13 +100,9 @@ import {
   losClear,
   losWoodsPointsBetween,
   MECH_LOS_HEIGHT,
-} from "./los.js";
-import * as mv from "./movement.js";
-import {
-  BACKWARD_LEVEL_CHANGE_MAX,
-  FORWARD_LEVEL_CHANGE_MAX,
-  JUMP_MP_PER_HEX,
-} from "./movement.js";
+} from "./los";
+import * as mv from "./movement";
+import { BACKWARD_LEVEL_CHANGE_MAX, FORWARD_LEVEL_CHANGE_MAX, JUMP_MP_PER_HEX } from "./movement";
 import {
   buildingEntryModifier,
   consciousnessTarget,
@@ -133,8 +123,8 @@ import {
   sensorAttackModifier,
   sensorsBlind,
   waterEntryModifier,
-} from "./piloting.js";
-import { computeToHit, DEFAULT_GUNNERY, type RangeBracket } from "./tohit.js";
+} from "./piloting";
+import { computeToHit, DEFAULT_GUNNERY, type RangeBracket } from "./tohit";
 
 export interface UnitInit extends MechModelHolder {
   readonly id: string;
@@ -198,8 +188,8 @@ export type PilotHitReason = "headHit" | "ammoExplosion" | "fall" | "shutdownFal
  *  removed but frame not destroyed (wreck left behind, like eject). */
 export type RemovalReason = "destroyed" | "pilotEjected" | "pilotKilled";
 export type RemovedState = "not" | RemovalReason;
-
-export type Phase = "initiative" | "movement" | "weaponAttack" | "end";
+export type ActorPhase = "movement" | "weaponAttack";
+export type Phase = "initiative" | ActorPhase | "end";
 
 /** Deterministic rng for ammo draws when the caller omits one: ties resolve
  *  to the first bin and the order is stable run to run. */
@@ -531,6 +521,10 @@ export interface CreateBattleOptions {
   readonly critsDisabled: boolean;
 }
 
+export const DEFAULT_CREATE_BATTLE_OPTION: CreateBattleOptions = {
+  critsDisabled: false,
+};
+
 export function requireUnit(state: BattleState, unitId: string): UnitState {
   const unit = state.units[unitId];
   if (!unit) throw new Error(`Unknown unit id: ${unitId}`);
@@ -544,11 +538,7 @@ export function requireUnit(state: BattleState, unitId: string): UnitState {
  * eligible. Callers must pass the head-of-queue unit, otherwise the engine
  * rejects the action. Matches TW turn flow.
  */
-function requireCurrentActor(
-  state: BattleState,
-  unitId: string,
-  phase: "movement" | "weaponAttack",
-): void {
+function requireCurrentActor(state: BattleState, unitId: string, phase: ActorPhase): void {
   if (state.initiativeWinnerTeam === null) {
     throw new Error(`${unitId} cannot act before initiative is set`);
   }
@@ -561,6 +551,15 @@ function requireCurrentActor(
   }
 }
 
+/** Tonnage of the unit's mech chassis. Reads the catalog def; throws on
+ *  unknown models. TW weight class boundaries run 20/35/55/75/100; rule code
+ *  using tonnage (e.g. light-mech wreck level, see
+ *  `wreckLevelFor` in `src/rules/game.ts`) keys off the raw `tonnage` field,
+ *  not the human-friendly `weightClass` label. */
+function unitTonnage(h: MechModelHolder): number {
+  return mechDefFor(h).tonnage;
+}
+
 export function isNominal(unit: UnitState) {
   return unit.shutdown === "not";
 }
@@ -571,7 +570,7 @@ export function isShutdown(unit: UnitState) {
 
 export function isImmobile(unit: UnitState) {
   if (isShutdown(unit) || unit.unconscious || isUnitImmobile(unit.damage)) return true;
-  const def = getMechDefFor(unit);
+  const def = mechDefFor(unit);
   return countDestroyedGyro(def, unit.damage, unit.critSlotsDestroyed) >= GYRO_DESTROYED_HITS;
 }
 
@@ -748,14 +747,14 @@ function destroyedReasonFor(
 export function createBattle(
   map: MapDef,
   units: readonly UnitInit[],
-  options: CreateBattleOptions,
+  options: CreateBattleOptions = DEFAULT_CREATE_BATTLE_OPTION,
 ): BattleState {
   if (units.length < 2) throw new Error("A battle needs at least two units");
   const seen = new Set<string>();
   for (const init of units) {
     if (seen.has(init.id)) throw new Error(`Duplicate unit id: ${init.id}`);
     seen.add(init.id);
-    if (!getMechDef(init.model)) throw new Error(`Unknown 'Mech model: ${init.model}`);
+    if (!mechDef(init.model)) throw new Error(`Unknown 'Mech model: ${init.model}`);
     if (!isFacing(init.facing))
       throw new Error(`Invalid facing for ${init.id}: ${String(init.facing)}`);
     if (!Number.isInteger(init.gunnery) || init.gunnery < SKILL_MIN || init.gunnery > SKILL_MAX) {
@@ -772,7 +771,7 @@ export function createBattle(
 
   const unitStates: Record<string, UnitState> = {};
   for (const init of units) {
-    const def: ResolvedMechDef = getMechDefFor(init);
+    const def: ResolvedMechDef = mechDefFor(init);
     const ammoBins = loadAmmoBins(def);
     const damage: UnitDamageState = {
       armor: { ...def.armor },
@@ -1007,7 +1006,7 @@ export const WRECK_L2_ELEVATED_COVER_MOD = 1;
  *  setting `unit.removed = "pilotEjected" | "pilotKilled"`, since the
  *  posture field is discarded with the removed unit record. */
 export function wreckLevelFor(_state: BattleState, unit: UnitState): 1 | 2 {
-  if (getUnitTonnage(unit) < LIGHT_MECH_TONNAGE_MAX) return 1;
+  if (unitTonnage(unit) < LIGHT_MECH_TONNAGE_MAX) return 1;
   if (unit.prone) return 1;
   return WRECK_LEVEL;
 }
@@ -1064,7 +1063,7 @@ export function executeMove(
   const rng = options.rng ?? DEFAULT_RNG;
   const prechargedMP = options.spentMP ?? 0;
 
-  const def = getMechDefFor(unit);
+  const def = mechDefFor(unit);
   const movement = effectiveMovement(def, unit.phaseStartDamage, unit.critSlotsDestroyed);
   const budget = effectiveMoveBudget(unit.moveMode, movement, unit.heat);
   const jumping = unit.moveMode === "jump";
@@ -1365,7 +1364,7 @@ export function validateAttacksImpl(
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is destroyed`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot fire`);
   if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot fire`);
-  const def = getMechDefFor(unit);
+  const def = mechDefFor(unit);
   const sensorsOut = countDestroyedSensor(def, unit.damage, unit.critSlotsDestroyed);
   if (sensorsBlind(sensorsOut)) {
     throw new Error(`${unitId} cannot fire: sensors destroyed (no weapon attacks)`);
@@ -1391,7 +1390,7 @@ export function validateAttacksImpl(
   decls.forEach((decl, index) => {
     const mount = def.weapons[decl.weaponIndex];
     if (!mount) throw new Error(`weaponIndex ${decl.weaponIndex} out of range for ${unitId}`);
-    const weapon = getWeaponDefFor(mount);
+    const weapon = weaponDefFor(mount);
 
     if (seenWeapons.has(decl.weaponIndex)) {
       throw new Error(`${mount.weapon} on ${unitId} may only be declared once per turn`);
@@ -1538,7 +1537,7 @@ export function declareAttacks(
   if (unit.declaredAttacks.length > 0)
     throw new Error(`${unitId} already declared attacks this turn`);
   const volley = validateAttacksImpl(state, unitId, decls, { twist: options.twist ?? null });
-  const def = getMechDefFor(unit);
+  const def = mechDefFor(unit);
   // Consume non-streak per-bin ammo per decl; streak fires on hit and
   // resolves its own ammo in `resolveUnitAttacks`. RNG via ammo policy.
   for (const decl of decls) {
@@ -1551,7 +1550,7 @@ export function declareAttacks(
     });
     const mount = def.weapons[decl.weaponIndex];
     if (!mount) continue;
-    const weapon = getWeaponDefFor(mount);
+    const weapon = weaponDefFor(mount);
     const rapidFire = decl.rapidFire ?? false;
     const shots = rapidFire ? (weapon.rapidFireShots ?? 1) : 1;
     const needed = weapon.missiles !== undefined ? 1 : shots;
@@ -1578,7 +1577,7 @@ function resolveUnitAttacks(
   rng: Rng,
   phaseStartDamage: Record<string, UnitDamageState>,
 ): UnitAttackResult {
-  const def = getMechDefFor(unit);
+  const def = mechDefFor(unit);
   const preHeat = unit.heat;
   const sensorMod = sensorAttackModifier(
     countDestroyedSensor(def, unit.damage, unit.critSlotsDestroyed),
@@ -1590,7 +1589,7 @@ function resolveUnitAttacks(
 
   for (const decl of unit.declaredAttacks) {
     const mount = def.weapons[decl.weaponIndex]!;
-    const weapon = getWeaponDefFor(mount);
+    const weapon = weaponDefFor(mount);
     const target = requireUnit(state, decl.targetId);
     const rapidFire = decl.rapidFire ?? false;
     const shots = rapidFire ? (weapon.rapidFireShots ?? 1) : 1;
@@ -1639,7 +1638,7 @@ function resolveUnitAttacks(
       ...(state.critsDisabled
         ? {}
         : {
-            targetDef: getMechDefFor(target),
+            targetDef: mechDefFor(target),
             targetCritSlotsDestroyed: target.critSlotsDestroyed,
             targetDestroyedWeapons: target.destroyedWeapons,
             targetAmmoBins: target.ammoBins,
@@ -1811,7 +1810,7 @@ function applyDamageGroups(
   arc: Arc,
   sink: GameEvent[],
 ): CriticalResolution[] {
-  const def = getMechDefFor(unit);
+  const def = mechDefFor(unit);
   const crits: CriticalResolution[] = [];
   for (const group of groups) {
     const app = applyDamage(unit.damage, group.location, group.damage, arc);
@@ -1884,7 +1883,7 @@ export interface FallOptions {
  */
 function shutdownFallCheck(state: BattleState, unit: UnitState, rng: Rng, sink: GameEvent[]): void {
   if (isUnitRemoved(unit) || unit.prone) return;
-  const def = getMechDefFor(unit);
+  const def = mechDefFor(unit);
   const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
   const modifier = SHUTDOWN_PSR_MOD + pre.modifier;
   const r = rollPilotingCheck(rng, unit.piloting, modifier);
@@ -1919,7 +1918,7 @@ export function applyFall(
 ): void {
   if (isUnitRemoved(unit)) return;
   if (unit.prone && opts.allowProne !== true) return;
-  const def = getMechDefFor(unit);
+  const def = mechDefFor(unit);
   const dir = rollFallDirection(rng);
   unit.facing = facingAfterFall(unit.facing, dir.shift);
   unit.prone = true;
@@ -2004,7 +2003,7 @@ export function resolvePhasePiloting(
 ): void {
   for (const unit of Object.values(state.units)) {
     if (isUnitRemoved(unit) || unit.prone) continue;
-    const def = getMechDefFor(unit);
+    const def = mechDefFor(unit);
     const dmgBefore = before.damage[unit.id] ?? unit.damage;
     const critBefore = before.crit[unit.id] ?? unit.critSlotsDestroyed;
     const pre = preexistingDamageModifier(def, dmgBefore, critBefore);
@@ -2440,7 +2439,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
     };
     before.crit[unit.id] = cloneCritDestroyed(unit.critSlotsDestroyed);
 
-    const def = getMechDefFor(unit);
+    const def = mechDefFor(unit);
     const startHeat = unit.heat;
     const heatPending = unit.heatPending;
 
@@ -2799,7 +2798,7 @@ function movementTerrainPsr(
     if (stop()) return to;
   }
   const building = buildingEntryModifier(entering);
-  const def = getMechDefFor(unit);
+  const def = mechDefFor(unit);
   if (building !== null) {
     const legWasGoneR = legGone(unit.damage, "rightLeg");
     const legWasGoneL = legGone(unit.damage, "leftLeg");
@@ -2905,7 +2904,7 @@ export function attemptStandUp(
   if (!unit.prone) throw new Error(`${unitId} is not prone`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot stand up`);
   if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot stand up`);
-  const def = getMechDefFor(unit);
+  const def = mechDefFor(unit);
   const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
   const budget = effectiveMoveBudget(
     "walk",
@@ -2991,7 +2990,7 @@ export function dropProne(
   if (unit.prone) throw new Error(`${unitId} is already prone`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot move`);
   if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot move`);
-  const def = getMechDefFor(unit);
+  const def = mechDefFor(unit);
   const budget = effectiveMoveBudget(
     "walk",
     effectiveMovement(def, unit.damage, unit.critSlotsDestroyed),
@@ -3062,7 +3061,7 @@ export function proneFacingTurn(
   if (!unit.prone) throw new Error(`${unitId} is not prone`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot move`);
   if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot move`);
-  const def = getMechDefFor(unit);
+  const def = mechDefFor(unit);
   const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
   if (pre.legsDestroyed >= 2) {
     throw new Error(`${unitId} has no intact legs and cannot turn while prone`);

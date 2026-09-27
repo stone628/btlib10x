@@ -1,5 +1,5 @@
-import type { Location } from "../core/types.js";
-import type { Arc } from "./arcs.js";
+import type { Location } from "../core/types";
+import type { Arc } from "./arcs";
 
 /** Bipedal 'Mech hit location table (front arc / rear arc), identical in both booklets. */
 export const HIT_LOCATION_TABLE: Readonly<Record<number, Location>> = {

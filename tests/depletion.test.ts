@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { Location } from "../src/core/types.js";
-import { getShotsPerBinFor } from "../src/data/ammo.schema.js";
-import { getMechDef } from "../src/data/index.js";
-import type { AmmoBin, AmmoBinState, AmmoBins } from "../src/rules/ammo.js";
+import type { Location } from "../src/core/types";
+import { shotsPerBinFor } from "../src/data/ammo.schema";
+import { mechDef } from "../src/data/index";
+import type { AmmoBin, AmmoBinState, AmmoBins } from "../src/rules/ammo";
 import {
   ammoBinId,
   ammoWeaponTotals,
@@ -13,7 +13,7 @@ import {
   loadAmmoBins,
   parseAmmoPolicy,
   stripBinsInLocation,
-} from "../src/rules/ammo.js";
+} from "../src/rules/ammo";
 import {
   advancePhase,
   type createBattle,
@@ -21,11 +21,13 @@ import {
   requireUnit,
   rollInitiativePhase,
   type UnitInit,
-} from "../src/rules/game.js";
-import { commitMove, currentActor, declareMode, newSession, type Session } from "../web/session.js";
-import { createTestBattle, execute, scriptedRng } from "./helpers.js";
+} from "../src/rules/game";
+import { newSession, type Session } from "../web/session";
+import { commitMovement, declareMovementMode } from "../web/session.move";
+import { requireWeaponAttackActor } from "../web/session.weapon";
+import { createTestBattle, disableCritical, execute, scriptedRng } from "./helpers";
 
-const HBK = getMechDef("HBK-4G")!;
+const HBK = mechDef("HBK-4G")!;
 
 /** One minimal live bin state, for hand-built maps in unit tests. */
 function bin(location: Location, slotIndex: number, shots: number): AmmoBinState {
@@ -70,7 +72,7 @@ describe("bin loading", () => {
   it("pools shots-sharing mounts of one weapon name into every bin", () => {
     // MC-MKII-2: four Streak SRM 4 launchers share one 50-round pool spread
     // over the LT and RT ammo slots.
-    const def = getMechDef("MC-MKII-2")!;
+    const def = mechDef("MC-MKII-2")!;
     const bins = loadAmmoBins(def);
     expect(bins["rightTorso:7"]?.shots).toBe(25);
     expect(bins["leftTorso:7"]?.shots).toBe(25);
@@ -83,7 +85,7 @@ describe("bin loading", () => {
   });
 
   it("falls back to the ammo table capacity when no mount declares shots", () => {
-    const def = getMechDef("GRF-1N")!;
+    const def = mechDef("GRF-1N")!;
     const [lrmKey, lrmMount] = Object.entries(def.weapons).find(([, m]) => m.weapon === "LRM 10")!;
     const stripped = {
       ...def,
@@ -93,8 +95,8 @@ describe("bin loading", () => {
       },
     };
     const bins = loadAmmoBins(stripped);
-    expect(bins["rightTorso:5"]?.shots).toBe(getShotsPerBinFor({ weapon: "LRM 10" }));
-    expect(bins["rightTorso:6"]?.shots).toBe(getShotsPerBinFor({ weapon: "LRM 10" }));
+    expect(bins["rightTorso:5"]?.shots).toBe(shotsPerBinFor({ weapon: "LRM 10" }));
+    expect(bins["rightTorso:6"]?.shots).toBe(shotsPerBinFor({ weapon: "LRM 10" }));
   });
 
   it("collectAmmoBins enumerates in slot order", () => {
@@ -306,23 +308,23 @@ describe("declareAttacks (game level)", () => {
 
 function freshBrawl(): Session {
   const s = newSession(42);
-  s.critsDisabled = true;
   execute(s, "map quickstart");
   execute(s, "add hunchy HBK-4G 9 9 n");
   execute(s, "add cicada CDA-3MA 9 8 s");
   execute(s, "start");
+  disableCritical(s);
   return s;
 }
 
 describe("ammo command (session)", () => {
   it("shows the acting unit's policy, sets it, and rejects gibberish", () => {
     const s = freshBrawl();
-    while (s.app === "battle" && s.battle!.phase === "movement") {
-      declareMode(s, "walk");
-      commitMove(s);
+    while (s.state === "battle" && s.battle!.phase === "movement") {
+      declareMovementMode(s, "walk");
+      commitMovement(s);
     }
     expect(s.battle!.phase).toBe("weaponAttack");
-    const actor = currentActor(s)!.id;
+    const actor = requireWeaponAttackActor(s).id;
     expect(execute(s, "ammo")[0]).toBe("ammo policy: exposed");
     expect(execute(s, "ammo spread")).toEqual([`${actor}: ammo policy set to spread`]);
     expect(s.battle!.units[actor]!.ammoPolicy).toBe("spread");

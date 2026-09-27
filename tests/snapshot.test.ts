@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { HexCell } from "../src/core/types.js";
+import type { HexCell } from "../src/core/types";
 import {
   advancePhase,
   damageBuildingAt,
@@ -10,8 +10,8 @@ import {
   resolveAllAttacks,
   rollInitiativePhase,
   saveBattleState,
-} from "../src/index.js";
-import type { BattleState, GameEvent, UnitInit } from "../src/rules/game.js";
+} from "../src/index";
+import type { BattleState, GameEvent, UnitInit } from "../src/rules/game";
 import {
   loadAmmoState,
   loadBuildings,
@@ -25,8 +25,8 @@ import {
   saveDamageState,
   saveUnitState,
   saveWrecks,
-} from "../src/rules/snapshot.js";
-import { createTestBattle, scriptedRng } from "./helpers.js";
+} from "../src/rules/snapshot";
+import { createTestBattle, scriptedRng } from "./helpers";
 
 function hbkEnf(critsDisabled: boolean): BattleState {
   const units: UnitInit[] = [

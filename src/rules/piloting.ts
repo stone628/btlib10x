@@ -44,20 +44,13 @@
  * All functions here are pure; game.ts commits the results onto UnitState.
  */
 
-import {
-  D2D6_AUTO_SUCCESS,
-  D2D6_FUMBLE,
-  D2D6_MAX,
-  D2D6_MIN,
-  roll2D6,
-  rollD6,
-} from "../core/dice.js";
-import type { Facing, Location, Rng } from "../core/types.js";
-import { rotateFacing } from "../core/types.js";
-import type { ResolvedMechDef } from "../data/mech.schema.js";
-import type { Arc } from "./arcs.js";
-import { countDestroyedGyro, destroyedStructures, HIP } from "./critical.js";
-import { isUnitLocationDestroyed, type UnitDamageState } from "./damage.js";
+import { D2D6_AUTO_SUCCESS, D2D6_FUMBLE, D2D6_MAX, D2D6_MIN, roll2D6, rollD6 } from "../core/dice";
+import type { Facing, Location, Rng } from "../core/types";
+import { rotateFacing } from "../core/types";
+import type { ResolvedMechDef } from "../data/mech.schema";
+import type { Arc } from "./arcs";
+import { countDestroyedGyro, destroyedStructures, HIP } from "./critical";
+import { isUnitLocationDestroyed, type UnitDamageState } from "./damage";
 
 /** Default pilot skill for `UnitInit`s that omit it (TW regular pilot). */
 export const DEFAULT_PILOTING = 5;

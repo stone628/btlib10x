@@ -11,8 +11,7 @@ import type {
   UnitState,
   WreckState,
 } from "btlib10x";
-import type { LocaleId } from "./i18n/index.js";
-import { cssGridRenderer, textRenderer } from "./renderer.text.js";
+import { cssGridRenderer, textRenderer } from "./renderer.text";
 
 // ---- renderer supplier ----
 
@@ -88,5 +87,4 @@ export interface BoardRenderInfo {
   readonly map: MapDef;
   readonly units: BoardRenderUnit[] | null;
   readonly reachable: BoardRenderReachableInfo | null;
-  readonly locale: LocaleId;
 }

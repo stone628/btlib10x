@@ -1,5 +1,5 @@
-import type { Facing, HexCoord } from "./types.js";
-import { FACINGS } from "./types.js";
+import type { Facing, HexCoord } from "./types";
+import { FACINGS } from "./types";
 
 /**
  * Flat-top hexes in column-offset storage. Even columns sit half a hex lower

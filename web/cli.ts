@@ -1,79 +1,75 @@
-import type { Arc } from "btlib10x";
+import type { Arc, Facing, UnitState } from "btlib10x";
 import {
-  type FACINGS,
-  getMechDefFor,
-  getWeaponDefFor,
+  FACINGS,
   hexDistance,
   isShutdown,
   listMapNames,
+  mechDefFor,
+  requireUnit,
   sameHex,
   suggestFireTargets,
   VERSION,
+  weaponDefFor,
 } from "btlib10x";
-import type { Chunk } from "./format.js";
+import { buildLinesChunk, buildLinesChunkWith, type Chunk } from "./chunk";
+import type { MessageKey } from "./i18n/index";
+import { i18n, isLocale, localeList } from "./i18n/index";
+import { lookupMap } from "./lookup";
+import type { Session } from "./session";
+import { configLocale, requireBattle, resetSession, setConfigLocale, setSeed } from "./session";
 import {
   ammoPolicyLabel,
-  attackStatusChunk,
   boardChunk,
-  buildLinesChunk,
-  F,
-  fireSuggestionChunks,
-  fmtSetupStatus,
-  formatLog,
+  handleSessionGameEvents,
   heatStatusLines,
+  infoMechChunk,
+  sheetForUnit,
+  unitBriefList,
+} from "./session.common";
+import {
+  cancelMovement,
+  commitMovement,
+  declaredMovementModeChunk,
+  declareMovementMode,
+  ensureMoveCandidate,
+  moveStatusChunk,
+  parseMoveMode,
+  placeLanding,
+  queuedMoveChunk,
+  reachableChunk,
+  stepResultChunk,
+} from "./session.move";
+import { overRematch, overStatusChunk } from "./session.over";
+import {
+  parseUnitProp,
+  setupAddUnit,
+  setupRemoveUnit,
+  setupSetMap,
+  setupSetUnitProp,
+  setupStartBattle,
+  setupStatus,
+} from "./session.setup";
+import {
+  attackStatusChunk,
+  cancelWeaponFire,
+  commitWeaponFire,
+  fireSuggestionChunks,
+  queueWeaponFire,
+  setAmmoPolicy,
+  setTorsoTwist,
+} from "./session.weapon";
+import {
   infoMapChunks,
   infoMapListChunk,
-  infoMechChunk,
   infoMechListChunk,
   infoWeaponChunk,
   infoWeaponListChunk,
   listTables,
-  moveStatusChunk,
-  overStatusChunk,
-  PRN,
-  queuedMoveChunk,
-  reachableChunk,
   renderClusterTable,
   renderCriticalTable,
   renderHeatScaleTable,
   renderHitLocationTables,
-  sheetForUnit,
-  stepResultChunk,
-  stepResultFromLine,
-  unitBriefList,
-} from "./format.js";
-import type { LocaleId, MessageKey } from "./i18n/index.js";
-import { i18n, isLocale, localeList } from "./i18n/index.js";
-import { lookupMap } from "./lookup.js";
-import type { Session } from "./session.js";
-import {
-  addUnit,
-  budgetFor,
-  cancelFire,
-  cancelMove,
-  commitFire,
-  commitMove,
-  currentActor,
-  declareMode,
-  displayModeFor,
-  emptyMoveCandidate,
-  ensureMoveCandidate,
-  parseMoveMode,
-  parseUnitProp,
-  placeLanding,
-  queueFire,
-  rematch,
-  removeUnit,
-  requireMoveActor,
-  resetSession,
-  resolveFacing,
-  setAmmoPolicy,
-  setMap,
-  setSeed,
-  setTorsoTwist,
-  setUnitProp,
-  startBattle,
-} from "./session.js";
+} from "./table";
 
 export interface CmdDef {
   /** Catalog key of the one-line description. */
@@ -88,39 +84,61 @@ export interface CmdDef {
 
 // ------------------------------------------------------------- parsing ----
 
-function int(locale: LocaleId, value: string, label: string): number {
+function int(value: string, label: string): number {
   const n = Number(value);
-  if (!Number.isInteger(n)) throw new Error(i18n(locale, "err.notInteger", { label }));
+  if (!Number.isInteger(n)) throw new Error(i18n("err.notInteger", { label }));
   return n;
 }
 
 /** User-facing 1-based coordinate -> engine coordinate. */
-function coord(locale: LocaleId, value: string, label: string): number {
-  const n = int(locale, value, label);
-  if (n < 1) throw new Error(i18n(locale, "err.oneBased", { label }));
+function coord(value: string, label: string): number {
+  const n = int(value, label);
+  if (n < 1) throw new Error(i18n("err.oneBased", { label }));
   return n;
 }
 
-function expectArgs(locale: LocaleId, args: readonly string[], count: number, usage: string): void {
-  if (args.length < count) throw new Error(i18n(locale, "err.expectedArgs", { usage }));
+function expectArgs(args: readonly string[], count: number, usage: string): void {
+  if (args.length < count) throw new Error(i18n("err.expectedArgs", { usage }));
 }
 
 /** Command id argument: explicit unit id, else the acting unit when present. */
-function idOrActor(s: Session, args: readonly string[]): string {
+function _idOrActor(s: Session, args: readonly string[]): string {
   if (args[0] !== undefined) return args[0];
   const actor = currentActor(s);
   if (actor !== null) return actor.id;
-  throw new Error(i18n(s.locale, "err.needsActor"));
+  throw new Error(i18n("err.needsActor"));
 }
 
-const L = (s: Session): LocaleId => s.locale;
+function currentActor(s: Session): UnitState | null {
+  if (s.battle !== null) {
+    switch (s.battle.phase) {
+      case "movement":
+        if (s.move !== null) return requireUnit(s.battle, s.move.actorId);
+        break;
+      case "weaponAttack":
+        if (s.attack !== null) return requireUnit(s.battle, s.attack.actorId);
+        break;
+    }
+  }
+  return null;
+}
+
+function actorBy(s: Session, id: string): UnitState | null {
+  return requireBattle(s).units[id] ?? null;
+}
+
+/** Resolve a `place` facing argument: an absolute facing word. */
+export function resolveFacing(arg: string): Facing {
+  const facing = FACINGS.find((f) => f === arg.toLowerCase());
+  if (!facing) throw new Error(i18n("err.faceArg", { facings: FACINGS.join("/") }));
+  return facing;
+}
 
 function cmdRunChunks(...lines: string[]): Chunk[] {
-  return [buildLinesChunk(lines)];
+  return [buildLinesChunk(...lines)];
 }
 
 // ------------------------------------------------------------- globals ----
-
 const GLOBAL_CMDS: Record<string, CmdDef> = {
   help: {
     helpKey: "cmd.help.help",
@@ -134,17 +152,17 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
     helpKey: "cmd.lang.help",
     usage: "lang [<locale>]",
     argsDoc: [["locale", "cmd.lang.arg.locale"]],
-    run: (s, a) => {
+    run: (_s, a) => {
       if (a[0] === undefined) {
         return cmdRunChunks(
-          i18n(L(s), "lang.current", { locale: s.locale }),
-          i18n(L(s), "lang.available", { list: localeList() }),
+          i18n("lang.current", { locale: configLocale() }),
+          i18n("lang.available", { list: localeList() }),
         );
       }
       if (!isLocale(a[0]))
-        throw new Error(i18n(L(s), "err.unknownLocale", { name: a[0], list: localeList() }));
-      s.locale = a[0];
-      return cmdRunChunks(i18n(s.locale, "lang.set", { locale: s.locale }));
+        throw new Error(i18n("err.unknownLocale", { name: a[0], list: localeList() }));
+      setConfigLocale(a[0]);
+      return cmdRunChunks(i18n("lang.set", { locale: configLocale() }));
     },
   },
   board: {
@@ -160,20 +178,19 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
       ["map [name]", "cmd.info.arg.map"],
       ["weapon [name]", "cmd.info.arg.weapon"],
     ],
-    run: (s, a) => {
-      expectArgs(L(s), a, 1, "info mech [model] | info map [name] | info weapon [name]");
+    run: (_s, a) => {
+      expectArgs(a, 1, "info mech [model] | info map [name] | info weapon [name]");
       const what = a[0]!.toLowerCase();
-      if (what === "mech")
-        return a[1] !== undefined ? infoMechChunk(L(s), a[1]) : [infoMechListChunk(L(s))];
+      if (what === "mech") return a[1] !== undefined ? infoMechChunk(a[1]) : [infoMechListChunk()];
       if (what === "map") {
-        return a[1] !== undefined ? infoMapChunks(L(s), a[1]) : [infoMapListChunk()];
+        return a[1] !== undefined ? infoMapChunks(a[1]) : [infoMapListChunk()];
       }
       if (what === "weapon") {
         const name = a.slice(1).join(" ");
-        return [name ? infoWeaponChunk(L(s), name) : infoWeaponListChunk(L(s))];
+        return [name ? infoWeaponChunk(name) : infoWeaponListChunk()];
       }
       throw new Error(
-        i18n(L(s), "err.expectedArgs", {
+        i18n("err.expectedArgs", {
           usage: "info mech [model] | info map [name] | info weapon [name]",
         }),
       );
@@ -183,32 +200,31 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
     helpKey: "cmd.reset.help",
     run: (s) => {
       resetSession(s);
-      return [buildLinesChunk([i18n(s.locale, "ok.resetDone")], "banner")];
+      return [buildLinesChunkWith("banner", i18n("ok.resetDone"))];
     },
   },
   ver: {
     helpKey: "cmd.ver.help",
-    run: (s) => cmdRunChunks(i18n(L(s), "version.line", { version: VERSION })),
+    run: (_s) => cmdRunChunks(i18n("version.line", { version: VERSION })),
   },
   table: {
     helpKey: "cmd.table.help",
     usage: "table [cluster|hitloc|crit|heat]",
     argsDoc: [["name", "cmd.table.arg.name"]],
-    run: (s, a) => {
+    run: (_s, a) => {
       const name = a[0]?.toLowerCase();
-      const locale = L(s);
-      if (!name) return listTables(locale);
+      if (!name) return listTables();
       switch (name) {
         case "cluster":
-          return renderClusterTable(locale);
+          return renderClusterTable();
         case "hitloc":
-          return renderHitLocationTables(locale);
+          return renderHitLocationTables();
         case "crit":
-          return renderCriticalTable(locale);
+          return renderCriticalTable();
         case "heat":
-          return renderHeatScaleTable(locale);
+          return renderHeatScaleTable();
         default:
-          throw new Error(i18n(locale, "err.unknownCommand", { name }));
+          throw new Error(i18n("err.unknownCommand", { name }));
       }
     },
   },
@@ -222,16 +238,14 @@ const SETUP_CMDS: Record<string, CmdDef> = {
     usage: "map <name>",
     argsDoc: [["name", "cmd.map.arg.name"]],
     run: (s, a) => {
-      expectArgs(L(s), a, 1, "map <name>");
+      expectArgs(a, 1, "map <name>");
       const name = a[0]!;
       const m = lookupMap(name);
       if (m === undefined) {
-        throw new Error(
-          i18n(s.locale, "err.unknownMap", { name, list: listMapNames().join(", ") }),
-        );
+        throw new Error(i18n("err.unknownMap", { name, list: listMapNames().join(", ") }));
       }
-      setMap(s, m);
-      return cmdRunChunks(i18n(L(s), "ok.mapLoaded", { name: m.name, w: m.width, h: m.height }));
+      setupSetMap(s.setup, m);
+      return cmdRunChunks(i18n("ok.mapLoaded", { name: m.name, w: m.width, h: m.height }));
     },
   },
   add: {
@@ -244,17 +258,17 @@ const SETUP_CMDS: Record<string, CmdDef> = {
       ["facing", "cmd.add.arg.facing"],
     ],
     run: (s, a) => {
-      expectArgs(L(s), a, 4, "add <id> <model> <col> <row> [facing]");
-      const facing = a[4] !== undefined ? resolveFacing(L(s), a[4]!) : "n";
-      const result = addUnit(
-        s,
+      expectArgs(a, 4, "add <id> <model> <col> <row> [facing]");
+      const facing = a[4] !== undefined ? resolveFacing(a[4]!) : "n";
+      const result = setupAddUnit(
+        s.setup,
         a[0]!,
         a[1]!,
-        { col: coord(L(s), a[2]!, "col"), row: coord(L(s), a[3]!, "row") },
+        { col: coord(a[2]!, "col"), row: coord(a[3]!, "row") },
         facing as (typeof FACINGS)[number],
       );
       return cmdRunChunks(
-        i18n(L(s), "ok.added", {
+        i18n("ok.added", {
           id: a[0]!,
           model: result.model,
           col: a[2]!,
@@ -274,11 +288,11 @@ const SETUP_CMDS: Record<string, CmdDef> = {
       ["value", "cmd.set.arg.value"],
     ],
     run: (s, a) => {
-      expectArgs(L(s), a, 3, "set <id> <prop> <value>");
-      if (a[1]!.toLowerCase() === "id") throw new Error(i18n(L(s), "err.cantSetId"));
-      const prop = parseUnitProp(L(s), a[1]!);
-      const { value } = setUnitProp(s, a[0]!, prop, a[2]!);
-      return cmdRunChunks(i18n(L(s), "ok.set", { id: a[0]!, prop, value }));
+      expectArgs(a, 3, "set <id> <prop> <value>");
+      if (a[1]!.toLowerCase() === "id") throw new Error(i18n("err.cantSetId"));
+      const prop = parseUnitProp(a[1]!);
+      const { value } = setupSetUnitProp(s.setup, a[0]!, prop, a[2]!);
+      return cmdRunChunks(i18n("ok.set", { id: a[0]!, prop, value }));
     },
   },
   rm: {
@@ -286,29 +300,29 @@ const SETUP_CMDS: Record<string, CmdDef> = {
     usage: "rm <id>",
     argsDoc: [["id", "cmd.rm.arg.id"]],
     run: (s, a) => {
-      expectArgs(L(s), a, 1, "rm <id>");
-      removeUnit(s, a[0]!);
-      return cmdRunChunks(i18n(L(s), "ok.removed", { id: a[0]! }));
+      expectArgs(a, 1, "rm <id>");
+      setupRemoveUnit(s.setup, a[0]!);
+      return cmdRunChunks(i18n("ok.removed", { id: a[0]! }));
     },
   },
-  status: { helpKey: "cmd.statusSetup.help", run: (s) => [fmtSetupStatus(s)] },
+  status: { helpKey: "cmd.statusSetup.help", run: (s) => [setupStatus(s.setup)] },
   seed: {
     helpKey: "cmd.seed.help",
     usage: "seed <n>",
     argsDoc: [["n", "cmd.seed.arg.n"]],
     run: (s, a) => {
-      expectArgs(L(s), a, 1, "seed <n>");
-      setSeed(s, int(L(s), a[0]!, "seed"));
-      return cmdRunChunks(i18n(L(s), "ok.seedSet", { seed: s.setup.seed }));
+      expectArgs(a, 1, "seed <n>");
+      setSeed(s, int(a[0]!, "seed"));
+      return cmdRunChunks(i18n("ok.seedSet", { seed: s.setup.seed }));
     },
   },
   start: {
     helpKey: "cmd.start.help",
     run: (s) => {
-      const newEvents = startBattle(s);
+      const newEvents = setupStartBattle(s);
       return [
-        buildLinesChunk([i18n(s.locale, "ok.started")], "banner"),
-        buildLinesChunk(formatLog(s.locale, newEvents)),
+        buildLinesChunkWith("banner", i18n("ok.started")),
+        ...handleSessionGameEvents(newEvents),
       ];
     },
   },
@@ -322,7 +336,12 @@ const BATTLE_CMDS: Record<string, CmdDef> = {
     helpKey: "cmd.heat.help",
     usage: "heat [id]",
     argsDoc: [["id", "cmd.heat.arg.id"]],
-    run: (s, a) => [heatStatusLines(s, idOrActor(s, a))],
+    run: (s, a) => {
+      const actorId = a[0];
+      const actor = actorId !== undefined ? actorBy(s, actorId) : currentActor(s);
+      if (actor === null) throw new Error(i18n("err.needsActor"));
+      return [heatStatusLines(actor)];
+    },
   },
   sheet: {
     helpKey: "cmd.sheetActing.help",
@@ -343,12 +362,12 @@ const MOVE_CMDS: Record<string, CmdDef> = {
         m.moveMode === "startup" ||
         m.moveMode === "eject"
       ) {
-        throw new Error(i18n(L(s), "err.candidate.movemode"));
+        throw new Error(i18n("err.candidate.movemode"));
       }
       const chunks = [queuedMoveChunk(s)];
       const mc = ensureMoveCandidate(s);
       if (mc.revealed.length > 0) {
-        chunks.push(reachableChunk(s.locale, s.setup, s.battle!, mc));
+        chunks.push(reachableChunk(s.setup, s.battle!, mc));
       }
       return chunks;
     },
@@ -371,41 +390,14 @@ const MOVE_CMDS: Record<string, CmdDef> = {
       ["eject", "cmd.mode.arg.eject"],
     ],
     run: (s, a) => {
-      const locale = L(s);
       expectArgs(
-        locale,
         a,
         1,
         "mode standstill|walk|run|jump|prone [turn|pronestill]|turn|pronestill|standup [walk|run|jump|standstill]|shutdown|startup|eject",
       );
-      const mode = parseMoveMode(locale, a[0]!);
-      declareMode(s, a[0]!, a[1]);
-      const actor = requireMoveActor(s)!;
-      const _m = s.move!;
-      if (mode === "shutdown" || mode === "startup" || mode === "eject") {
-        emptyMoveCandidate(s);
-        return cmdRunChunks(
-          i18n(locale, "ok.modeDeclaredVoluntary", { id: actor.id, mode }),
-          i18n(locale, "stepResult.from", {
-            col: actor.position.col,
-            row: actor.position.row,
-            facing: F(locale, actor.facing),
-            posture: PRN(locale, actor.prone),
-          }),
-        );
-      }
-      const shown = displayModeFor(s);
-      const chunks = [
-        buildLinesChunk([
-          i18n(locale, "ok.modeDeclared", { id: actor.id, mode: shown, budget: budgetFor(s) }),
-          stepResultFromLine(locale, s),
-        ]),
-      ];
-      const mc = ensureMoveCandidate(s, true);
-      if (mc.revealed.length > 0) {
-        chunks.push(reachableChunk(s.locale, s.setup, s.battle!, mc));
-      }
-      return chunks;
+      const mode = parseMoveMode(a[0]!);
+      declareMovementMode(s, mode, a[1]);
+      return declaredMovementModeChunk(s, mode);
     },
   },
   place: {
@@ -413,20 +405,20 @@ const MOVE_CMDS: Record<string, CmdDef> = {
     usage: "place <col> <row> <facing>",
     argsDoc: [["col row facing", "cmd.place.arg.colrowfacing"]],
     run: (s, a) => {
-      expectArgs(L(s), a, 3, "place <col> <row> <facing>");
+      expectArgs(a, 3, "place <col> <row> <facing>");
       const hex = {
-        col: coord(L(s), a[0]!, "col"),
-        row: coord(L(s), a[1]!, "row"),
+        col: coord(a[0]!, "col"),
+        row: coord(a[1]!, "row"),
       };
-      const facing = resolveFacing(L(s), a[2]!);
+      const facing = resolveFacing(a[2]!);
       const mc = ensureMoveCandidate(s);
       const landing = mc.revealed.find((l) => sameHex(l.hex, hex) && l.facing === facing);
       if (!landing) {
         const hexReachable = mc.revealed.some((l) => sameHex(l.hex, hex));
         if (!hexReachable) {
-          throw new Error(i18n(L(s), "err.place.unreachable", { col: hex.col, row: hex.row }));
+          throw new Error(i18n("err.place.unreachable", { col: hex.col, row: hex.row }));
         }
-        throw new Error(i18n(L(s), "err.place.facing", { col: hex.col, row: hex.row, facing }));
+        throw new Error(i18n("err.place.facing", { col: hex.col, row: hex.row, facing }));
       }
       placeLanding(s, landing);
       return [stepResultChunk(s, landing)];
@@ -436,13 +428,13 @@ const MOVE_CMDS: Record<string, CmdDef> = {
   cancel: {
     helpKey: "cmd.cancelMove.help",
     run: (s) => {
-      cancelMove(s);
-      return cmdRunChunks(i18n(s.locale, "ok.cancelled"));
+      cancelMovement(s);
+      return cmdRunChunks(i18n("ok.cancelled"));
     },
   },
   done: {
     helpKey: "cmd.doneMove.help",
-    run: (s) => [buildLinesChunk(formatLog(s.locale, commitMove(s).events))],
+    run: (s) => handleSessionGameEvents(commitMovement(s)),
   },
   ...BATTLE_CMDS,
 };
@@ -456,15 +448,13 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
     argsDoc: [["policy", "cmd.ammo.arg.policy"]],
     run: (s, a) => {
       const unit = currentActor(s);
-      if (!unit) throw new Error(i18n(L(s), "err.needsActor"));
+      if (!unit) throw new Error(i18n("err.needsActor"));
       if (a[0] === undefined) {
-        return cmdRunChunks(
-          i18n(L(s), "ammo.current", { policy: ammoPolicyLabel(L(s), unit.ammoPolicy) }),
-        );
+        return cmdRunChunks(i18n("ammo.current", { policy: ammoPolicyLabel(unit.ammoPolicy) }));
       }
       setAmmoPolicy(s, a[0]);
       return cmdRunChunks(
-        i18n(L(s), "ammo.set", { id: unit.id, policy: ammoPolicyLabel(L(s), unit.ammoPolicy) }),
+        i18n("ammo.set", { id: unit.id, policy: ammoPolicyLabel(unit.ammoPolicy) }),
       );
     },
   },
@@ -473,25 +463,25 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
     usage: "torso <front|left|right>",
     argsDoc: [["direction", "cmd.torso.arg.direction"]],
     run: (s, a) => {
-      expectArgs(L(s), a, 1, "torso <front|left|right>");
+      expectArgs(a, 1, "torso <front|left|right>");
       const actor = currentActor(s);
-      if (!actor) throw new Error(i18n(L(s), "err.needsActor"));
+      if (!actor) throw new Error(i18n("err.needsActor"));
       const prev = s.attack?.torsoTwist ?? "front";
       setTorsoTwist(s, a[0]!);
       const dir: Arc = s.attack!.torsoTwist;
       return cmdRunChunks(
         prev === dir
-          ? i18n(L(s), "ok.twistAlready", { id: actor.id, dir })
-          : i18n(L(s), "ok.twistSet", { id: actor.id, dir }),
+          ? i18n("ok.twistAlready", { id: actor.id, dir })
+          : i18n("ok.twistSet", { id: actor.id, dir }),
       );
     },
   },
   candidate: {
     helpKey: "cmd.candidateAttack.help",
     run: (s, _a) => {
-      if (!checkFireHint(s)) throw new Error(i18n(L(s), "err.candidate.attack"));
+      if (!checkFireHint(s)) throw new Error(i18n("err.candidate.attack"));
       const a = s.attack!;
-      return fireSuggestionChunks(s.locale, a.fireCandidate!, a.torsoTwist);
+      return fireSuggestionChunks(a.fireCandidate!, a.torsoTwist);
     },
   },
   fire: {
@@ -502,30 +492,28 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
       ["weapon", "cmd.fire.arg.weaponIndex"],
     ],
     run: (s, a) => {
-      expectArgs(L(s), a, 2, "fire <targetId> <weapon> [<weapon> ...]");
+      expectArgs(a, 2, "fire <targetId> <weapon> [<weapon> ...]");
       const targetId = a[0]!;
-      const weapons = a.slice(1).map((w) => int(L(s), w, "weapon"));
+      const weapons = a.slice(1).map((w) => int(w, "weapon"));
       const unit = currentActor(s);
       const battle = s.battle;
       if (!unit || !battle) {
-        throw new Error(i18n(L(s), "err.wrongPhase", { phase: "weaponAttack" }));
+        throw new Error(i18n("err.wrongPhase", { phase: "weaponAttack" }));
       }
       const target = battle.units[targetId];
-      if (!target) throw new Error(i18n(L(s), "err.unknownUnitId", { id: targetId }));
-      const def = getMechDefFor(unit);
+      if (!target) throw new Error(i18n("err.unknownUnitId", { id: targetId }));
+      const def = mechDefFor(unit);
       const warnings: string[] = [];
       for (const weaponIndex of weapons) {
         const mount = def.weapons[weaponIndex];
         if (!mount) {
-          throw new Error(
-            i18n(L(s), "err.weaponIndex", { unit: unit.id, index: String(weaponIndex) }),
-          );
+          throw new Error(i18n("err.weaponIndex", { unit: unit.id, index: String(weaponIndex) }));
         }
-        const weapon = getWeaponDefFor(mount);
+        const weapon = weaponDefFor(mount);
         const dist = hexDistance(unit.position, target.position);
         if (dist > weapon.long) {
           throw new Error(
-            i18n(L(s), "err.overRange", {
+            i18n("err.overRange", {
               weapon: mount.weapon,
               dist: String(dist),
               max: String(weapon.long),
@@ -534,7 +522,7 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
         }
         if (weapon.minRange !== undefined && dist <= weapon.minRange) {
           warnings.push(
-            i18n(L(s), "err.minRange", {
+            i18n("err.minRange", {
               weapon: mount.weapon,
               dist: String(dist),
               min: String(weapon.minRange),
@@ -542,10 +530,10 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
             }),
           );
         }
-        queueFire(s, { weaponIndex, targetId });
+        queueWeaponFire(s, { weaponIndex, targetId });
       }
       return cmdRunChunks(
-        i18n(L(s), "ok.fireQueuedBatch", { target: targetId, weapons: weapons.join(", ") }),
+        i18n("ok.fireQueuedBatch", { target: targetId, weapons: weapons.join(", ") }),
         ...warnings,
       );
     },
@@ -554,15 +542,13 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
   cancel: {
     helpKey: "cmd.cancelFire.help",
     run: (s) => {
-      cancelFire(s);
-      return cmdRunChunks(i18n(s.locale, "ok.cancelled"));
+      cancelWeaponFire(s);
+      return cmdRunChunks(i18n("ok.cancelled"));
     },
   },
   done: {
     helpKey: "cmd.doneFire.help",
-    run: (s) => {
-      return [buildLinesChunk(formatLog(s.locale, commitFire(s).events))];
-    },
+    run: (s) => handleSessionGameEvents(commitWeaponFire(s)),
   },
   ...BATTLE_CMDS,
 };
@@ -580,10 +566,10 @@ const OVER_CMDS: Record<string, CmdDef> = {
   rematch: {
     helpKey: "cmd.rematch.help",
     run: (s) => {
-      const newEvents = rematch(s);
+      const newEvents = overRematch(s);
       return [
-        buildLinesChunk([i18n(s.locale, "ok.rematchDone")], "banner"),
-        buildLinesChunk(formatLog(s.locale, newEvents)),
+        buildLinesChunkWith("banner", i18n("ok.rematchDone")),
+        ...handleSessionGameEvents(newEvents),
       ];
     },
   },
@@ -592,7 +578,7 @@ const OVER_CMDS: Record<string, CmdDef> = {
 // ------------------------------------------------------------ dispatch ----
 
 function availableCmds(session: Session): Record<string, CmdDef> {
-  switch (session.app) {
+  switch (session.state) {
     case "setup":
       return { ...GLOBAL_CMDS, ...SETUP_CMDS };
     case "battle": {
@@ -616,25 +602,22 @@ function availableCmds(session: Session): Record<string, CmdDef> {
 
 /** Detailed single-command help: usage + argument explanations, no state hint. */
 function commandHelpChunk(session: Session, name: string): Chunk {
-  const locale = session.locale;
   const def = availableCmds(session)[name.toLowerCase()];
-  if (!def) throw new Error(i18n(locale, "err.unknownCommand", { name }));
+  if (!def) throw new Error(i18n("err.unknownCommand", { name }));
   const names = listMapNames().join("|");
   const lines = [
-    def.usage !== undefined
-      ? `${i18n(locale, "help.usagePrefix")}${def.usage}`
-      : name.toLowerCase(),
+    def.usage !== undefined ? `${i18n("help.usagePrefix")}${def.usage}` : name.toLowerCase(),
   ];
-  lines.push(i18n(locale, def.helpKey).replace(/\{names\}/g, names));
+  lines.push(i18n(def.helpKey).replace(/\{names\}/g, names));
   if (def.argsDoc !== undefined && def.argsDoc.length > 0) {
-    lines.push(i18n(locale, "help.argumentsHeader"));
+    lines.push(i18n("help.argumentsHeader"));
     const padLen = Math.max(
       12,
       def.argsDoc.map(([arg, _]) => arg.length).reduce((prev, curr) => Math.max(prev, curr)),
     );
 
     for (const [arg, desc] of def.argsDoc) {
-      const text = i18n(locale, desc).replace(/\{names\}/g, names);
+      const text = i18n(desc).replace(/\{names\}/g, names);
       const [first = "", ...rest] = text.split("\n");
       const prefix = `  ${arg.padEnd(padLen)} `;
       lines.push(`${prefix}${first}`);
@@ -642,19 +625,16 @@ function commandHelpChunk(session: Session, name: string): Chunk {
       for (const line of rest) lines.push(`${indent}${line}`);
     }
   }
-  return buildLinesChunk(lines);
+  return buildLinesChunk(...lines);
 }
 
 function commandList(session: Session): string[] {
-  const locale = session.locale;
   const names = listMapNames().join("|");
-
   const globalEntries = Object.keys(GLOBAL_CMDS)
     .sort()
     .map((name) => ({ name, def: GLOBAL_CMDS[name]! }));
-
   const phaseCmds = (() => {
-    switch (session.app) {
+    switch (session.state) {
       case "setup":
         return { cmds: SETUP_CMDS, phase: "setup" as const };
       case "battle": {
@@ -668,12 +648,10 @@ function commandList(session: Session): string[] {
   const phaseEntries = Object.keys(phaseCmds.cmds)
     .sort()
     .map((name) => ({ name, def: phaseCmds.cmds[name]! }));
-
   const lines: string[] = [];
-
   const renderEntries = (entries: { name: string; def: CmdDef }[]) => {
     for (const { name, def } of entries) {
-      const help = i18n(locale, def.helpKey).replace(/\{names\}/g, names);
+      const help = i18n(def.helpKey).replace(/\{names\}/g, names);
       if (def.usage === undefined) {
         lines.push(`${name.padEnd(9)} ${help}`);
       } else {
@@ -682,13 +660,11 @@ function commandList(session: Session): string[] {
       }
     }
   };
-
-  lines.push(i18n(locale, "help.sectionGeneral"));
+  lines.push(i18n("help.sectionGeneral"));
   renderEntries(globalEntries);
   lines.push("");
-  lines.push(i18n(locale, "help.sectionPhase", { phase: phaseCmds.phase }));
+  lines.push(i18n("help.sectionPhase", { phase: phaseCmds.phase }));
   renderEntries(phaseEntries);
-
   return lines;
 }
 
@@ -703,30 +679,25 @@ const HINT_OVER: MessageKey = "hint.over";
 /** Per-state guidance, focused on the commands legal right now. */
 function stateHint(s: Session): string[] {
   const key =
-    s.app === "battle"
+    s.state === "battle"
       ? s.battle?.phase === "weaponAttack"
         ? HINT_ATTACK
         : HINT_MOVE
-      : s.app === "over"
+      : s.state === "over"
         ? HINT_OVER
         : HINT_SETUP;
-  return i18n(s.locale, key).split("\n");
+  return i18n(key).split("\n");
 }
 function helpTextChunk(session: Session): Chunk {
-  return buildLinesChunk([...stateHint(session), "", ...commandList(session)]);
+  return buildLinesChunk(...stateHint(session), "", ...commandList(session));
 }
 
 function victoryBanner(s: Session): string[] {
   const victory = s.over?.victory ?? null;
   if (victory === null) return [];
   return victory.draw
-    ? [i18n(s.locale, "banner.draw")]
-    : [i18n(s.locale, "banner.win", { team: String(victory.winnerTeam) })];
-}
-
-function normalize(out: string[] | Chunk[]): Chunk[] {
-  if (out.length === 0) return out as Chunk[];
-  return typeof out[0] === "string" ? [buildLinesChunk(out as string[])] : (out as Chunk[]);
+    ? [i18n("banner.draw")]
+    : [i18n("banner.win", { team: String(victory.winnerTeam) })];
 }
 
 /**
@@ -734,7 +705,7 @@ function normalize(out: string[] | Chunk[]): Chunk[] {
  * (plain text with a class hint, or styled board spans).
  */
 export function runChunks(session: Session, raw: string): Chunk[] {
-  const wasOver = session.app === "over";
+  const wasOver = session.state === "over";
   let chunks: Chunk[];
   try {
     const tokens = raw
@@ -743,28 +714,28 @@ export function runChunks(session: Session, raw: string): Chunk[] {
       .filter((x) => x.length > 0);
     if (tokens.length === 0) return [];
     const def = availableCmds(session)[tokens[0]!.toLowerCase()];
-    if (!def) throw new Error(i18n(session.locale, "err.unknownCommand", { name: tokens[0]! }));
-    chunks = normalize(def.run(session, tokens.slice(1)));
+    if (!def) throw new Error(i18n("err.unknownCommand", { name: tokens[0]! }));
+    chunks = def.run(session, tokens.slice(1));
   } catch (e) {
     return [
-      buildLinesChunk(
-        [`${i18n(session.locale, "err.prefix")} ${e instanceof Error ? e.message : String(e)}`],
+      buildLinesChunkWith(
         "err",
+        `${i18n("err.prefix")} ${e instanceof Error ? e.message : String(e)}`,
       ),
     ];
   }
-  if (!wasOver && session.app === "over") {
-    chunks.push(buildLinesChunk(victoryBanner(session), "banner"));
+  if (!wasOver && session.state === "over") {
+    chunks.push(buildLinesChunkWith("banner", ...victoryBanner(session)));
   }
   if (checkFireHint(session)) {
     const a = session.attack!;
-    chunks.push(...fireSuggestionChunks(session.locale, a.fireCandidate!, a.torsoTwist));
+    chunks.push(...fireSuggestionChunks(a.fireCandidate!, a.torsoTwist));
   }
   return chunks;
 }
 
 function checkFireHint(s: Session): boolean {
-  if (s.app !== "battle" || s.battle === null || s.battle.phase !== "weaponAttack") return false;
+  if (s.state !== "battle" || s.battle === null || s.battle.phase !== "weaponAttack") return false;
   const a = s.attack;
   if (a === null) return false;
   const actor = currentActor(s);
