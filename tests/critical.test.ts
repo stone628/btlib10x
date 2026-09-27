@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { LOCATIONS, type Location } from "../src/core/types.js";
-import { getMechDef } from "../src/data/index.js";
-import { ammoWeaponTotals, loadAmmoBins } from "../src/rules/ammo.js";
+import { LOCATIONS, type Location } from "../src/core/types";
+import { mechDef } from "../src/data/index";
+import { ammoWeaponTotals, loadAmmoBins } from "../src/rules/ammo";
 import {
   applyAmmoExplosion,
   checkCASE,
@@ -10,10 +10,10 @@ import {
   effectiveMovement,
   markLocationCatastrophicallyDestroyed,
   resolveCriticalHits,
-} from "../src/rules/critical.js";
-import type { UnitDamageState } from "../src/rules/damage.js";
-import { heatSinksOperational } from "../src/rules/heat.js";
-import { overrideAmmoBin, scriptedRng } from "./helpers.js";
+} from "../src/rules/critical";
+import type { UnitDamageState } from "../src/rules/damage";
+import { heatSinksOperational } from "../src/rules/heat";
+import { overrideAmmoBin, scriptedRng } from "./helpers";
 
 /** Helper: returns an Rng whose first 2D6 sums to `sum` (1..12), then yields `tail`. */
 function detRoll(sum: number, ...tail: number[]): ReturnType<typeof scriptedRng> {
@@ -22,7 +22,7 @@ function detRoll(sum: number, ...tail: number[]): ReturnType<typeof scriptedRng>
   return scriptedRng(a, b, ...tail);
 }
 
-function freshFlags(def = getMechDef("HBK-4G")!) {
+function freshFlags(def = mechDef("HBK-4G")!) {
   const out: Record<Location, boolean[]> = {} as Record<Location, boolean[]>;
   for (const loc of Object.keys(def.critSlots) as Location[]) {
     out[loc] = new Array(def.critSlots[loc].length).fill(false);
@@ -31,7 +31,7 @@ function freshFlags(def = getMechDef("HBK-4G")!) {
 }
 
 describe("determining critical hits table", () => {
-  const def = getMechDef("HBK-4G")!;
+  const def = mechDef("HBK-4G")!;
   const damage: UnitDamageState = {
     armor: { ...def.armor },
     armorRear: { ...def.armorRear },
@@ -107,7 +107,7 @@ describe("determining critical hits table", () => {
 });
 
 describe("limb / head blow-off on 12", () => {
-  const def = getMechDef("HBK-4G")!;
+  const def = mechDef("HBK-4G")!;
   const damage: UnitDamageState = {
     armor: { ...def.armor },
     armorRear: { ...def.armorRear },
@@ -177,7 +177,7 @@ describe("limb / head blow-off on 12", () => {
 });
 
 describe("slot selection", () => {
-  const def = getMechDef("HBK-4G")!;
+  const def = mechDef("HBK-4G")!;
   const damage: UnitDamageState = {
     armor: { ...def.armor },
     armorRear: { ...def.armorRear },
@@ -248,7 +248,7 @@ describe("slot selection", () => {
 });
 
 describe("re-rolls", () => {
-  const def = getMechDef("HBK-4G")!;
+  const def = mechDef("HBK-4G")!;
   const damage: UnitDamageState = {
     armor: { ...def.armor },
     armorRear: { ...def.armorRear },
@@ -284,7 +284,7 @@ describe("re-rolls", () => {
 
 describe("weapon and ammo crit effects", () => {
   it("destroying a weapon prevents it from firing", () => {
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     // HBK rightTorso: slots 1-10 are AC/20 (weapon), 11-12 are AC/20 ammo.
     // Roll 8 -> one crit. Slot 1,1 (CT half=1, slot=1) lands on AC/20.
     const res = resolveCriticalHits({
@@ -311,7 +311,7 @@ describe("weapon and ammo crit effects", () => {
   });
 
   it("AC/20 ammo explosion = hit bin's shots x 20 damage to that bin's IS", () => {
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     // HBK ammo bins are leftTorso slots 1-2, each loaded with 5 shots. Roll
     // 8 -> one crit; land on slot 1 (first half: first die 1-3, second die
     // 1 -> slot 1). Only the hit bin detonates: 5 shots x 20 = 100 IS
@@ -355,7 +355,7 @@ describe("weapon and ammo crit effects", () => {
     // the AC/20 ammo bin (leftTorso slot 1) has 5 shots. Crit on the ammo:
     // 5 shots x 20 = 100 damage, drains leftTorso IS, zeros the location —
     // the cascade rules then trigger a fresh determining roll.
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     const damage: UnitDamageState = {
       armor: { ...def.armor, rightTorso: 0 },
       armorRear: { ...def.armorRear },
@@ -407,7 +407,7 @@ describe("weapon and ammo crit effects", () => {
     // inert — a crit on the bin does not detonate. The slot still takes the
     // crit and the bin empties (slugs spill), but no damage is dealt and no
     // cascade runs.
-    const def = getMechDef("BZK-F3")!;
+    const def = mechDef("BZK-F3")!;
     const bins = loadAmmoBins(def);
     // Pre-condition: both CT gauss bins are loaded.
     expect(bins["centerTorso:11"]?.shots).toBe(8);
@@ -449,7 +449,7 @@ describe("weapon and ammo crit effects", () => {
   });
 
   it("cockpit crit kills the 'Mech", () => {
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     // HBK head slot 3 = cockpit. Roll 8 -> one crit. Slot 3 (1D6 = 3).
     const res = resolveCriticalHits({
       rng: detRoll(8, 3),
@@ -475,7 +475,7 @@ describe("transfer rules", () => {
     // 2 Medium Laser (R) + 1 empty = 12. With 2 separate ML mounts and
     // 3 crits, we get 3 rows (no transfers because the source still has
     // hittable slots throughout the determining).
-    const def = getMechDef("AS7-D")!;
+    const def = mechDef("AS7-D")!;
     const res = resolveCriticalHits({
       // Provide 12 dice. det 2 + 3 slot rolls (with possible re-rolls)
       // = up to 10 dice; extra margin.
@@ -498,7 +498,7 @@ describe("transfer rules", () => {
   });
 
   it("crits transfer inward when the source is exhausted from a prior phase", () => {
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     // Simulate: every crit-hittable slot in leftTorso is already destroyed
     // from a previous turn. Roll 8 -> one crit -> source is exhausted,
     // transfer to centerTorso. Provide 6 dice: 2 for the top-level
@@ -533,7 +533,7 @@ describe("transfer rules", () => {
   });
 
   it("crits on a terminal source (head) with no eligible slot are lost", () => {
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     // Mark every head slot destroyed.
     const destroyed = freshFlags(def);
     for (let i = 0; i < def.critSlots.head.length; i++) {
@@ -559,7 +559,7 @@ describe("transfer rules", () => {
 });
 
 describe("effectiveMovement", () => {
-  const def = getMechDef("HBK-4G")!;
+  const def = mechDef("HBK-4G")!;
   const flags = (mods: Partial<Record<Location, number[]>>) => {
     const out = freshFlags(def);
     for (const [loc, idxs] of Object.entries(mods) as [Location, number[]][]) {
@@ -597,7 +597,7 @@ describe("effectiveMovement", () => {
   });
 
   it("destroyed jump jet slots reduce jumping by 1 each", () => {
-    const wvr = getMechDef("WVR-6R")!;
+    const wvr = mechDef("WVR-6R")!;
     const layout = wvr.critSlots;
     // Find the index of any jump jet slot per location.
     const jetIndices: { loc: Location; idx: number }[] = [];
@@ -658,7 +658,7 @@ describe("DHS grouping", () => {
     // The Hermes II (HER-5SA) leftTorso has 3 consecutive ISDouble Heat Sink
     // entries. Destroying one crit slot destroys the whole DHS; the next
     // reroll sees all 3 slots marked destroyed and produces noEffect.
-    const her = getMechDef("HER-5SA")!;
+    const her = mechDef("HER-5SA")!;
     const lt = her.critSlots.leftTorso;
     const dhsIndices: number[] = [];
     for (let i = 0; i < lt.length; i++) {
@@ -675,7 +675,7 @@ describe("DHS grouping", () => {
 
 describe("CASE", () => {
   const state = (): UnitDamageState => {
-    const def = getMechDef("TW-Prime")!;
+    const def = mechDef("TW-Prime")!;
     return {
       armor: { ...def.armor, leftTorso: 0 },
       armorRear: { ...def.armorRear },
@@ -684,19 +684,19 @@ describe("CASE", () => {
   };
 
   it("hasCase detects implicit Clan protection on all locations", () => {
-    const tw = getMechDef("TW-Prime")!;
+    const tw = mechDef("TW-Prime")!;
     expect(tw.techBase).toBe("Clan");
     for (const loc of LOCATIONS) {
       expect(checkCASE(tw, loc)).toBe("case");
     }
 
-    const hbk = getMechDef("HBK-4G")!;
+    const hbk = mechDef("HBK-4G")!;
     expect(hbk.techBase).toBe("Inner Sphere");
     expect(checkCASE(hbk, "leftTorso")).toBe(undefined);
   });
 
   it("hasCase recognizes explicit CASE / CASE II slots on an IS mech", () => {
-    const hbk = getMechDef("HBK-4G")!;
+    const hbk = mechDef("HBK-4G")!;
     const withCase: typeof hbk = {
       ...hbk,
       techBase: "Inner Sphere",
@@ -709,7 +709,7 @@ describe("CASE", () => {
   });
 
   it("IS CASE works in any location (TW p.133)", () => {
-    const hbk = getMechDef("HBK-4G")!;
+    const hbk = mechDef("HBK-4G")!;
     const withCase = (loc: Location): typeof hbk => ({
       ...hbk,
       techBase: "Inner Sphere",
@@ -770,7 +770,7 @@ describe("CASE", () => {
   });
 
   it("explosion bypasses armor without stripping it", () => {
-    const def = getMechDef("TW-Prime")!;
+    const def = mechDef("TW-Prime")!;
     const s: UnitDamageState = {
       armor: { ...def.armor, leftTorso: 10 },
       armorRear: { ...def.armorRear },
@@ -789,7 +789,7 @@ describe("CASE", () => {
 
 describe("engine crit destruction", () => {
   it("three engine crit slots destroyed kills the 'Mech", () => {
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     // Pre-destroy 2 engine slots (CT indices 0 and 1).
     const destroyed = freshFlags(def);
     destroyed.centerTorso[0] = true;
@@ -814,7 +814,7 @@ describe("engine crit destruction", () => {
   });
 
   it("two engine crits does not kill the 'Mech", () => {
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     // Pre-destroy 1 engine slot (CT index 0).
     const destroyed = freshFlags(def);
     destroyed.centerTorso[0] = true;
@@ -840,7 +840,7 @@ describe("engine crit destruction", () => {
 
 describe("computeCritCounts", () => {
   it("reports zero for every component on a fresh 'Mech", () => {
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     const damage: UnitDamageState = {
       armor: { ...def.armor },
       armorRear: { ...def.armorRear },
@@ -854,7 +854,7 @@ describe("computeCritCounts", () => {
   });
 
   it("counts destroyed gyro slots on the CT and engine slots across all torsos", () => {
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     const damage: UnitDamageState = {
       armor: { ...def.armor },
       armorRear: { ...def.armorRear },
@@ -874,7 +874,7 @@ describe("computeCritCounts", () => {
   });
 
   it("counts destroyed sensors and life support slots on the head", () => {
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     const damage: UnitDamageState = {
       armor: { ...def.armor },
       armorRear: { ...def.armorRear },
@@ -896,7 +896,7 @@ describe("computeCritCounts", () => {
 
 describe("markLocationCatastrophicallyDestroyed", () => {
   it("zeroes armor and IS, marks every slot destroyed, strips ammo bins", () => {
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     const damage: UnitDamageState = {
       armor: { ...def.armor },
       armorRear: { ...def.armorRear },
@@ -926,7 +926,7 @@ describe("markLocationCatastrophicallyDestroyed", () => {
   });
 
   it("does not throw or mutate ammo bins in other locations", () => {
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     const damage: UnitDamageState = {
       armor: { ...def.armor },
       armorRear: { ...def.armorRear },
@@ -951,7 +951,7 @@ describe("markLocationCatastrophicallyDestroyed", () => {
     // Asymmetry check: plain `applyDamage` zeroes IS at a side torso but
     // intentionally leaves `critSlotsDestroyed` unflagged so salvage
     // readers can recover components in the destroyed location.
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     const damage: UnitDamageState = {
       armor: { ...def.armor, leftTorso: 0 },
       armorRear: { ...def.armorRear },
@@ -972,7 +972,7 @@ describe("markLocationCatastrophicallyDestroyed", () => {
   });
 
   it("wipes the rear armor pool of a destroyed torso", () => {
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     const damage: UnitDamageState = {
       armor: { ...def.armor, rightTorso: 0 },
       armorRear: { ...def.armorRear, rightTorso: 7 },
@@ -992,7 +992,7 @@ describe("markLocationCatastrophicallyDestroyed", () => {
 
 describe("blow-off and cockpit kill: salvage-friendly slot preservation", () => {
   it("arm blow-off (det 12) preserves crit-slot flags for salvage", () => {
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     const damage: UnitDamageState = {
       armor: { ...def.armor, leftArm: 1 },
       armorRear: { ...def.armorRear },
@@ -1023,7 +1023,7 @@ describe("blow-off and cockpit kill: salvage-friendly slot preservation", () => 
   });
 
   it("leg blow-off (det 12) preserves slot flags; immobility still triggers via IS<=0", () => {
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     const damage: UnitDamageState = {
       armor: { ...def.armor, rightLeg: 1 },
       armorRear: { ...def.armorRear },
@@ -1048,7 +1048,7 @@ describe("blow-off and cockpit kill: salvage-friendly slot preservation", () => 
   });
 
   it("cockpit crit preserves head slot flags for salvage", () => {
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     const damage: UnitDamageState = {
       armor: { ...def.armor },
       armorRear: { ...def.armorRear },
@@ -1093,7 +1093,7 @@ describe("blow-off and cockpit kill: salvage-friendly slot preservation", () => 
     // exhaustion. Set up a right arm with IS=0 + intact flags, drive a
     // fresh cascade roll — expect no weaponDestroyed rows targeting
     // the arm, and the cascade re-routes inward to the right torso.
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     const damage: UnitDamageState = {
       armor: { ...def.armor, rightArm: 0 },
       armorRear: { ...def.armorRear },
@@ -1128,7 +1128,7 @@ describe("blow-off and cockpit kill: salvage-friendly slot preservation", () => 
 
 describe("ammo-explosion casualty: catastrophic mark", () => {
   it("zeroing a side torso via applyAmmoExplosion marks every slot in it destroyed", () => {
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     const damage: UnitDamageState = {
       armor: { ...def.armor, rightTorso: 0 },
       armorRear: { ...def.armorRear, rightTorso: 6 },
@@ -1157,7 +1157,7 @@ describe("ammo-explosion casualty: catastrophic mark", () => {
     // (no crit check in a destroyed location unless explosive slots
     // involved). Verify by inspecting the resolution rows: no
     // weaponDestroyed / componentDestroyed rows in the zeroed RT.
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     const damage: UnitDamageState = {
       armor: { ...def.armor, rightTorso: 0, centerTorso: 0 },
       armorRear: { ...def.armorRear },
@@ -1197,7 +1197,7 @@ describe("ammo-explosion casualty: catastrophic mark", () => {
     // overflows from an RT (with no engine slots on the HBK-4G RT) into
     // the CT zeroes the CT IS, and the catastrophic mark must record
     // every CT engine slot as destroyed — not just one slot.
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     const damage: UnitDamageState = {
       armor: { ...def.armor, rightTorso: 0, centerTorso: 0 },
       armorRear: { ...def.armorRear, centerTorso: 10 },

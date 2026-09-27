@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { getMapDef, listMapNames } from "../src/data/index.js";
-import { type MapDef, type MapDefSrc, validateMapDef } from "../src/data/map.schema.js";
-import type { UnitInit } from "../src/rules/game.js";
-import { createTestBattle } from "./helpers.js";
+import { listMapNames, mapDef } from "../src/data/index";
+import { type MapDef, type MapDefSrc, validateMapDef } from "../src/data/map.schema";
+import type { UnitInit } from "../src/rules/game";
+import { createTestBattle } from "./helpers";
 
 const valid: MapDefSrc = {
   name: "test-map",
@@ -106,7 +106,7 @@ describe("bundled maps", () => {
   it("loads both rulebook maps with expected dimensions and hex counts", () => {
     expect(listMapNames().sort()).toEqual(["beginner", "quickstart", "test", "testground"]);
     for (const name of ["beginner", "quickstart"]) {
-      const map = getMapDef(name)!;
+      const map = mapDef(name)!;
       expect(map.width).toBe(15);
       expect(map.height).toBe(16);
       expect(map.terrain.length).toBeGreaterThan(0);
@@ -117,14 +117,14 @@ describe("bundled maps", () => {
         expect(h.row).toBeLessThanOrEqual(map.height);
       }
     }
-    expect(getMapDef("beginner")!.terrain).toHaveLength(20);
-    expect(getMapDef("quickstart")!.terrain).toHaveLength(31);
-    expect(getMapDef("beginner")!.terrain[0]).toEqual({ col: 2, row: 5, type: "heavyWoods" });
+    expect(mapDef("beginner")!.terrain).toHaveLength(20);
+    expect(mapDef("quickstart")!.terrain).toHaveLength(31);
+    expect(mapDef("beginner")!.terrain[0]).toEqual({ col: 2, row: 5, type: "heavyWoods" });
   });
 
   it("is directly usable by createBattle (no conversion layer)", () => {
-    expect(getMapDef("beginner")!.terrain[0]).toEqual({ col: 2, row: 5, type: "heavyWoods" });
-    const quickstart = getMapDef("quickstart")!;
+    expect(mapDef("beginner")!.terrain[0]).toEqual({ col: 2, row: 5, type: "heavyWoods" });
+    const quickstart = mapDef("quickstart")!;
     const units: UnitInit[] = [
       {
         id: "a",

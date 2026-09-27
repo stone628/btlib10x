@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { BattleState } from "../src/rules/game.js";
+import type { BattleState } from "../src/rules/game";
 import {
   advancePhase,
   requireUnit,
   rollInitiativePhase,
   validateAttacksImpl,
-} from "../src/rules/game.js";
-import { createTestBattle, scriptedRng } from "./helpers.js";
+} from "../src/rules/game";
+import { createTestBattle, scriptedRng } from "./helpers";
 
 /** initiative -> weaponAttack with nobody moving. hbk acts first (team 0). */
 function startAttackTurn(state: BattleState): BattleState {

@@ -1,4 +1,4 @@
-import type { MechDef } from "../mech.schema.js";
+import type { MechDef } from "../mech.schema";
 
 const def: MechDef = {
   model: "AS7-D",
@@ -26,12 +26,10 @@ const def: MechDef = {
     {
       weapon: "Medium Laser",
       location: "centerTorso",
-      rearFacing: true,
     },
     {
       weapon: "Medium Laser",
       location: "centerTorso",
-      rearFacing: true,
     },
     {
       weapon: "AC/20",
@@ -379,7 +377,7 @@ const def: MechDef = {
     count: 20,
   },
   source:
-    "docs/mtf/Atlas AS7-D.mtf (TRO 3039 - Star League). Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount; crit slot table per location included; CT Medium Lasers are rear-facing (MTF (R)).",
+    "docs/mtf/Atlas AS7-D.mtf (TRO 3039 - Star League). Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount; crit slot table per location included.",
 } as const satisfies MechDef;
 
 export default def;

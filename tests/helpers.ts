@@ -1,11 +1,11 @@
-import type { Location, Rng, TerrainType } from "../src/core/types.js";
-import { type AmmoBins, createBattle, isUnitRemoved } from "../src/index.js";
-import type { BattleState, TerrainHexDef, UnitInit } from "../src/rules/game.js";
-import { advancePhase } from "../src/rules/game.js";
-import { runChunks } from "../web/cli.js";
-import type { Chunk } from "../web/format.js";
-import { boardLegendText, boardToText, createBoardModel } from "../web/renderer.text.js";
-import type { Session } from "../web/session.js";
+import type { Location, Rng, TerrainType } from "../src/core/types";
+import { type AmmoBins, createBattle, isUnitRemoved } from "../src/index";
+import type { BattleState, TerrainHexDef, UnitInit, UnitState } from "../src/rules/game";
+import { advancePhase, requireUnit } from "../src/rules/game";
+import type { Chunk } from "../web/chunk";
+import { runChunks } from "../web/cli";
+import { boardLegendText, boardToText, createBoardModel } from "../web/renderer.text";
+import type { Session } from "../web/session";
 
 /**
  * Build createBattle options from unit data (plus optional terrain), sizing the
@@ -42,6 +42,24 @@ export function createTestBattle(
   );
   advancePhase(state, []); // end -> initiative (turn 1)
   return state;
+}
+
+export function disableCritical(s: Session) {
+  s.battle!.critsDisabled = true;
+}
+
+export function currentActor(s: Session): UnitState | null {
+  if (s.state !== "battle" || !s.battle) return null;
+  let id: string | null = null;
+  switch (s.battle.phase) {
+    case "movement":
+      id = s.move?.actorId ?? null;
+      break;
+    case "weaponAttack":
+      id = s.attack?.actorId ?? null;
+      break;
+  }
+  return id === null ? null : requireUnit(s.battle, id);
 }
 
 /** Deterministic RNG fed an explicit queue of D6 results (asserts exact consumption). */
@@ -98,7 +116,7 @@ export function seededRng(seed: number): Rng {
 /** Flat text of one chunk (boards contribute legend + visible characters). */
 export function chunkText(chunk: Chunk): string[] {
   if (chunk.kind === "board") {
-    const lines: string[] = boardLegendText(chunk.info.map, "en");
+    const lines: string[] = boardLegendText(chunk.info.map);
     lines.push(...boardToText(createBoardModel(chunk.info)).split("\n"));
     return lines;
   }

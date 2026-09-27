@@ -1,13 +1,8 @@
 import { describe, expect, it } from "vitest";
-import {
-  commitMove,
-  currentActor,
-  declareMode,
-  newSession,
-  type Session,
-  setTorsoTwist,
-} from "../web/session.js";
-import { execute } from "./helpers.js";
+import { newSession, type Session } from "../web/session";
+import { commitMovement, declareMovementMode, requireMovementActor } from "../web/session.move";
+import { setTorsoTwist } from "../web/session.weapon";
+import { disableCritical, execute } from "./helpers";
 
 function run(s: Session, cmd: string): string[] {
   return execute(s, cmd);
@@ -15,11 +10,11 @@ function run(s: Session, cmd: string): string[] {
 
 function started(): Session {
   const s = newSession(7);
-  s.critsDisabled = true;
   expect(run(s, "map quickstart")[0]).toContain("15x16");
   expect(run(s, "add hunchy HBK-4G 9 9 n")).toHaveLength(1);
   expect(run(s, "add cicada HBK-4G 9 8 s")).toHaveLength(1);
   run(s, "start");
+  disableCritical(s);
   return s;
 }
 
@@ -28,9 +23,9 @@ function started(): Session {
  *  any inadvertent loop. */
 function burnMovePhase(s: Session): void {
   let guard = 0;
-  while (s.app === "battle" && s.battle!.phase === "movement") {
-    declareMode(s, "walk");
-    commitMove(s);
+  while (s.state === "battle" && s.battle!.phase === "movement") {
+    declareMovementMode(s, "walk");
+    commitMovement(s);
     if (++guard > 64) throw new Error("burnMovePhase did not advance");
   }
 }
@@ -38,16 +33,16 @@ function burnMovePhase(s: Session): void {
 /** Drive a session to `app === "over"` by ejecting both units. Bounded. */
 function driveToOver(s: Session): void {
   let guard = 0;
-  while (s.app === "battle") {
+  while (s.state === "battle") {
     if (++guard > 200) throw new Error("driveToOver did not finish");
     if (s.battle!.phase === "movement") {
       // Eject whoever's acting this turn.
-      declareMode(s, "eject");
+      declareMovementMode(s, "eject");
       try {
-        commitMove(s);
+        commitMovement(s);
       } catch {
         // Some units can't eject (already ejected). Skip the round.
-        commitMove(s);
+        commitMovement(s);
       }
     } else {
       // Pass through attack phase.
@@ -68,12 +63,12 @@ describe("per-AppState context invariants", () => {
 
   it("battle + movement: move allocated, attack null, over null", () => {
     const s = started();
-    expect(s.app).toBe("battle");
+    expect(s.state).toBe("battle");
     expect(s.battle!.phase).toBe("movement");
     expect(s.move).not.toBeNull();
     expect(s.attack).toBeNull();
     expect(s.over).toBeNull();
-    expect(s.move!.actorId).toBe(currentActor(s)!.id);
+    expect(s.move!.actorId).toBe(requireMovementActor(s).id);
   });
 
   it("battle + attack: move null, attack allocated with torsoTwist front, over null", () => {
@@ -89,13 +84,13 @@ describe("per-AppState context invariants", () => {
 
   it("over: move null, attack null, over populated with victory", () => {
     const s = newSession(42);
-    s.critsDisabled = true;
     run(s, "map quickstart");
     run(s, "add a HBK-4G 5 5 n");
     run(s, "add b HBK-4G 6 5 s");
     run(s, "start");
+    disableCritical(s);
     driveToOver(s);
-    expect(s.app).toBe("over");
+    expect(s.state).toBe("over");
     expect(s.over).not.toBeNull();
     expect(s.move).toBeNull();
     expect(s.attack).toBeNull();
@@ -131,7 +126,7 @@ describe("per-AppState context invariants", () => {
     const s = started();
     burnMovePhase(s);
     expect(s.battle!.phase).toBe("weaponAttack");
-    expect(() => declareMode(s, "walk")).toThrow(/requires the movement phase/i);
+    expect(() => declareMovementMode(s, "walk")).toThrow(/requires the movement phase/i);
   });
 
   it("setTorsoTwist throws when not in weaponAttack phase", () => {
@@ -163,7 +158,7 @@ describe("per-AppState context invariants", () => {
 
   it("commit rollback preserves the move context only", () => {
     const s = started();
-    const actor = currentActor(s)!.id;
+    const actor = requireMovementActor(s).id;
     run(s, "mode walk");
     s.move!.moveSteps = [{ kind: "enter", to: { col: 1, row: 1 } }];
     const out = run(s, "done");

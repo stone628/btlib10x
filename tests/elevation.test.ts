@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { HexGrid } from "../src/core/terrain.js";
-import type { HexCell } from "../src/core/types.js";
-import { losClear, losWoodsPointsBetween } from "../src/rules/los.js";
-import { type ReachabilityOptions, reachableLandings } from "../src/rules/movement.js";
+import type { HexGrid } from "../src/core/terrain";
+import type { HexCell } from "../src/core/types";
+import { losClear, losWoodsPointsBetween } from "../src/rules/los";
+import { type ReachabilityOptions, reachableLandings } from "../src/rules/movement";
 
 /**
  * Worked example: a hilly duel between two bipedal 'Mechs.

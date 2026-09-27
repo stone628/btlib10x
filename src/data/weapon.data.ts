@@ -1,4 +1,4 @@
-import type { WeaponDef } from "./weapon.schema.js";
+import type { WeaponDef } from "./weapon.schema";
 
 export const WEAPON_DATA: readonly WeaponDef[] = [
   { name: "Small Laser", short: 1, medium: 2, long: 3, damage: 3, category: "ENERGY", heat: 1 },

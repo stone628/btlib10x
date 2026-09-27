@@ -6,21 +6,21 @@ import {
   destroyedLegs,
   effectiveMoveBudget,
   effectiveMovement,
-  getMechDefFor,
   isImmobile,
   isNominal,
   isUnitAvailable,
   isUnitImmobile,
   isUnitRemoved,
+  mechDefFor,
   type RevealedLanding,
   STAND_MP_COST,
   suggestFireTargets,
   type UnitState,
   weaponCanFireIntoArc,
 } from "btlib10x";
-import type { FireTarget, FireWeapon } from "../src/index.js";
-import type { AppState, Session } from "./session.js";
-// import type * as S from "./session.js";
+import type { FireTarget, FireWeapon } from "../src/index";
+import type { Session, SessionState } from "./session";
+// import type * as S from "./session";
 
 /** Delay between generated commands, in milliseconds. */
 export const AUTOPLAY_INTERVAL_MS = 100;
@@ -39,7 +39,7 @@ const SCRIPT_SETUP: ReadonlyArray<{ id: string; command: string }> = [
 /** Queued commands to issue before falling back to state-based logic. */
 let currSession: Session | null = null;
 let nextCommandQueue: string[] = [];
-let currApp: AppState | null = null;
+let currApp: SessionState | null = null;
 let currBattlePhase: string | null = null;
 let helpShown: Record<string, boolean> = {};
 let noWeapon: Record<string, boolean> = {};
@@ -63,7 +63,7 @@ export function resetAutoplayState(s: Session): void {
   if (currSession !== s) {
     currSession = s;
     nextCommandQueue = [];
-    currApp = s.app;
+    currApp = s.state;
     currBattlePhase = null;
 
     helpShown = {};
@@ -72,8 +72,8 @@ export function resetAutoplayState(s: Session): void {
     pronestillThenEject = {};
     faceEnemy = {};
   } else {
-    if (currApp !== s.app) {
-      currApp = s.app;
+    if (currApp !== s.state) {
+      currApp = s.state;
       currBattlePhase = null;
     }
   }
@@ -81,7 +81,7 @@ export function resetAutoplayState(s: Session): void {
 
 /** Post-heat walk budget for the actor; 0 when heat/structure deny walking. */
 function walkBudgetFor(actor: UnitState): number {
-  const def = getMechDefFor(actor);
+  const def = mechDefFor(actor);
   const movement = effectiveMovement(def, actor.damage, actor.critSlotsDestroyed);
   return effectiveMoveBudget("walk", movement, actor.heat);
 }
@@ -137,7 +137,7 @@ function queueFaceTarget(s: Session, actorId: string, targetId: string): boolean
     return false;
   }
   if (blocked.length === 0) return false;
-  const def = getMechDefFor(actor);
+  const def = mechDefFor(actor);
   let best: { col: number; row: number; facing: string; score: number; pathLen: number } | null =
     null;
   for (const landing of candidate.revealed) {
@@ -191,7 +191,7 @@ export function nextAutoPlayCommand(s: Session): string | null {
     return nextCommandQueue.shift()!;
   }
   const prevApp = currApp;
-  currApp = s.app;
+  currApp = s.state;
 
   if (currApp === "setup") {
     enusreHelpShown(currApp);

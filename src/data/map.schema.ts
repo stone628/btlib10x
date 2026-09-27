@@ -1,9 +1,9 @@
-import type { TerrainHexDef } from "../core/types.js";
-import { isTerrainType, TERRAIN_TYPES, type TerrainType } from "../core/types.js";
-import beginnerMap from "./maps/beginner.js";
-import quickstartMap from "./maps/quickstart.js";
-import testMap from "./maps/test.js";
-import testgroundMap from "./maps/testground.js";
+import type { TerrainHexDef } from "../core/types";
+import { isTerrainType, TERRAIN_TYPES, type TerrainType } from "../core/types";
+import beginnerMap from "./maps/beginner";
+import quickstartMap from "./maps/quickstart";
+import testMap from "./maps/test";
+import testgroundMap from "./maps/testground";
 
 export interface MapDefSrc {
   readonly name: string;

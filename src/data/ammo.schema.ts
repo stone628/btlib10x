@@ -1,4 +1,4 @@
-import { AMMO_DATA } from "./ammo.data.js";
+import { AMMO_DATA } from "./ammo.data";
 
 export interface AmmoDef {
   readonly weapon: string;
@@ -75,7 +75,7 @@ export function parseAmmoData(data: unknown): readonly AmmoDef[] {
 
 const AMMO: ReadonlyMap<string, AmmoDef> = new Map(AMMO_DATA.map((def) => [def.weapon, def]));
 
-export function getAmmoDef(name: string): AmmoDef | undefined {
+export function ammoDef(name: string): AmmoDef | undefined {
   return AMMO.get(name);
 }
 
@@ -83,17 +83,17 @@ export interface AmmoNameHolder {
   readonly weapon: string;
 }
 
-export function getAmmoDefFor(h: AmmoNameHolder): AmmoDef {
+export function ammoDefFor(h: AmmoNameHolder): AmmoDef {
   const def = AMMO.get(h.weapon);
   if (!def) throw new Error(`Unknown ammo weapon: ${h.weapon}`);
   return def;
 }
 
-export function getShotsPerBinFor(h: AmmoNameHolder): number | undefined {
+export function shotsPerBinFor(h: AmmoNameHolder): number | undefined {
   return AMMO.get(h.weapon)?.shotsPerBin;
 }
 
-export function getAllAmmo(): readonly AmmoDef[] {
+export function allAmmo(): readonly AmmoDef[] {
   return Array.from(AMMO.values());
 }
 

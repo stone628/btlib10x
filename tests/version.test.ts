@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { VERSION } from "../src/index.js";
+import { VERSION } from "../src/index";
 
 describe("library version", () => {
   it("is either the dev fallback or a YYMMDD-<hash> stamp", () => {

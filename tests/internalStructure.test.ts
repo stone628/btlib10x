@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HEAD_STRUCTURE, internalStructureForTonnage } from "../src/rules/internalStructure.js";
+import { HEAD_STRUCTURE, internalStructureForTonnage } from "../src/rules/internalStructure";
 
 describe("internal structure derivation", () => {
   it("head is always 3 regardless of tonnage", () => {

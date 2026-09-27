@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { getMapDef, type MapDef } from "../src/data/index.js";
-import type { UnitInit } from "../src/rules/game.js";
-import type { BoardModel, Canvas, CharStyle, Span } from "../web/renderer.text.js";
+import { type MapDef, mapDef } from "../src/data/index";
+import type { UnitInit } from "../src/rules/game";
+import type { BoardModel, Canvas, CharStyle, Span } from "../web/renderer.text";
 import {
   applyEdgeStyles,
   battleModel,
@@ -14,15 +14,15 @@ import {
   mapModel,
   renderMap,
   TEAM_STYLES,
-} from "../web/renderer.text.js";
-import { createTestBattle } from "./helpers.js";
+} from "../web/renderer.text";
+import { createTestBattle } from "./helpers";
 
 function spansText(spans: readonly Span[]): string {
   return spans.map((sp) => sp.text).join("");
 }
 
 describe("styled board model", () => {
-  const beginner = getMapDef("beginner");
+  const beginner = mapDef("beginner");
   if (!beginner) throw new Error("missing beginner map");
 
   it("span text reproduces the flat rendering exactly (maps)", () => {

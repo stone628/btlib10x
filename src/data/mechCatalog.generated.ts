@@ -4,21 +4,21 @@
  * resolving each typed MechDef into the engine-facing ResolvedMechDef that
  * keeps front and rear armor as separate pools.
  */
-import type { MechDef, ResolvedMechDef } from "./mech.schema.js";
-import { resolveMechDef } from "./mech.schema.js";
+import type { MechDef, ResolvedMechDef } from "./mech.schema";
+import { resolveMechDef } from "./mech.schema";
 
-import as7dDef from "./mechs/as7-d.js";
-import bswx1Def from "./mechs/bsw-x1.js";
-import bzkf3Def from "./mechs/bzk-f3.js";
-import cda3maDef from "./mechs/cda-3ma.js";
-import enf4rDef from "./mechs/enf-4r.js";
-import grf1nDef from "./mechs/grf-1n.js";
-import hbk4gDef from "./mechs/hbk-4g.js";
-import her5saDef from "./mechs/her-5sa.js";
-import mcmkii2Def from "./mechs/mc-mkii-2.js";
-import twprimeDef from "./mechs/tw-prime.js";
-import whkprimeDef from "./mechs/whk-prime.js";
-import wvr6rDef from "./mechs/wvr-6r.js";
+import as7dDef from "./mechs/as7-d";
+import bswx1Def from "./mechs/bsw-x1";
+import bzkf3Def from "./mechs/bzk-f3";
+import cda3maDef from "./mechs/cda-3ma";
+import enf4rDef from "./mechs/enf-4r";
+import grf1nDef from "./mechs/grf-1n";
+import hbk4gDef from "./mechs/hbk-4g";
+import her5saDef from "./mechs/her-5sa";
+import mcmkii2Def from "./mechs/mc-mkii-2";
+import twprimeDef from "./mechs/tw-prime";
+import whkprimeDef from "./mechs/whk-prime";
+import wvr6rDef from "./mechs/wvr-6r";
 
 const mechs: readonly [string, MechDef][] = [
   [as7dDef.model, as7dDef],

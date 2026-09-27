@@ -2,34 +2,28 @@ import { describe, expect, it } from "vitest";
 import {
   bearing,
   bestFireTarget,
-  getMechDefFor,
   isNominal,
   isUnitAvailable,
   isUnitRemoved,
+  mechDefFor,
   reachableLandings,
   suggestFireTargets,
   wreckAt,
-} from "../src/index.js";
-import { en } from "../web/i18n/en.js";
-import type { LocaleId, MessageKey } from "../web/i18n/index.js";
-import { i18n, LOCALES } from "../web/i18n/index.js";
-import {
-  commitFire,
-  commitMove,
-  currentActor,
-  declareMode,
-  newSession,
-  placeLanding,
-  queueFire,
-} from "../web/session.js";
-import { execute } from "./helpers.js";
+} from "../src/index";
+import { en } from "../web/i18n/en";
+import type { LocaleId, MessageKey } from "../web/i18n/index";
+import { i18nIn, LOCALES } from "../web/i18n/index";
+import { configLocale, newSession } from "../web/session";
+import { commitMovement, declareMovementMode, placeLanding } from "../web/session.move";
+import { commitWeaponFire, queueWeaponFire } from "../web/session.weapon";
+import { currentActor, execute } from "./helpers";
 
 /** Drive a started battle until it is over using minimal legal actions. */
 function autoPlay(s: ReturnType<typeof newSession>): void {
   // A unit that cannot bear on its enemy turns toward it next activation;
   // without this two face-away 'Mechs passFire forever.
   let faceEnemy = false;
-  for (let i = 0; i < 500 && s.app === "battle"; i++) {
+  for (let i = 0; i < 500 && s.state === "battle"; i++) {
     const st = s.battle!;
     const actorId = currentActor(s)!.id;
     const ids = Object.values(st.units)
@@ -40,16 +34,16 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
       if (isNominal(st.units[actorId]!)) {
         if (st.units[actorId]!.prone) {
           try {
-            declareMode(s, "standup", "walk");
+            declareMovementMode(s, "standup", "walk");
           } catch {
             // Cannot afford the stand (wrecked legs/heat): hold prone.
-            declareMode(s, "pronestill");
+            declareMovementMode(s, "pronestill");
           }
         } else {
           try {
-            declareMode(s, "walk");
+            declareMovementMode(s, "walk");
           } catch {
-            declareMode(s, "standStill");
+            declareMovementMode(s, "standStill");
           }
           if (faceEnemy) {
             faceEnemy = false;
@@ -61,7 +55,7 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
                 // Turn in place via a same-hex landing; a missing landing
                 // (or place error) falls back to standing in place.
                 try {
-                  const def = getMechDefFor(me);
+                  const def = mechDefFor(me);
                   const landings = reachableLandings({ ...me.position }, me.facing, {
                     mode: "walk",
                     walking: def.walking,
@@ -94,7 +88,7 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
           }
         }
       }
-      commitMove(s);
+      commitMovement(s);
     } else {
       const unit = st.units[actorId]!;
       const sugg = suggestFireTargets(st, unit.id);
@@ -105,15 +99,15 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
           : (target?.weaponsIfPropRight ?? []);
       for (const w of weapons) {
         if (unit.jammedWeapons.includes(w.weaponIndex)) continue;
-        queueFire(s, { weaponIndex: w.weaponIndex, targetId: enemy });
+        queueWeaponFire(s, { weaponIndex: w.weaponIndex, targetId: enemy });
       }
       if ((s.attack?.fireDecls ?? []).length === 0) {
         faceEnemy = true;
       }
-      commitFire(s);
+      commitWeaponFire(s);
     }
   }
-  if (s.app !== "over") throw new Error("battle did not finish");
+  if (s.state !== "over") throw new Error("battle did not finish");
 }
 
 describe("i18n catalogs", () => {
@@ -124,40 +118,40 @@ describe("i18n catalogs", () => {
   });
 
   it("interpolates {param} placeholders", () => {
-    expect(i18n("en", "ok.mapLoaded", { name: "beginner", w: 15, h: 16 })).toBe(
+    expect(i18nIn("en", "ok.mapLoaded", { name: "beginner", w: 15, h: 16 })).toBe(
       "map beginner: 15x16",
     );
-    expect(i18n("kr", "lang.set", { locale: "kr" })).toBe("언어가 kr(으)로 설정되었습니다");
+    expect(i18nIn("kr", "lang.set", { locale: "kr" })).toBe("언어가 kr(으)로 설정되었습니다");
   });
 
   it("falls back to English for missing catalog entries", () => {
     const locales = LOCALES as Record<string, unknown>;
     locales.partial = {};
     try {
-      expect(i18n("partial" as LocaleId, "board.noMap")).toBe(en["board.noMap"]);
+      expect(i18nIn("partial" as LocaleId, "board.noMap")).toBe(en["board.noMap"]);
     } finally {
       delete locales.partial;
     }
   });
 
   it("leaves unknown keys out of interpolation when params are absent", () => {
-    expect(i18n("en", "ok.cancelled", {})).toBe("cancelled");
+    expect(i18nIn("en", "ok.cancelled", {})).toBe("cancelled");
   });
 });
 
 describe("lang command", () => {
   it("defaults to English and lists available locales", () => {
     const s = newSession(7);
-    expect(s.locale).toBe("en");
+    expect(configLocale()).toBe("en");
     expect(execute(s, "lang")).toEqual(["language: en", "available: en, kr"]);
   });
 
   it("switches output language for subsequent commands", () => {
     const s = newSession(7);
     expect(execute(s, "lang kr")).toEqual(["언어가 kr(으)로 설정되었습니다"]);
-    expect(s.locale).toBe("kr");
+    expect(configLocale()).toBe("kr");
     expect(execute(s, "status")[0]).toBe("맵: (없음)");
-    expect(execute(s, "help")[0]).toBe(i18n("kr", "hint.setup").split("\n")[0]);
+    expect(execute(s, "help")[0]).toBe(i18nIn("kr", "hint.setup").split("\n")[0]);
   });
 
   it("rejects unknown locale codes with a localized error", () => {
@@ -166,11 +160,11 @@ describe("lang command", () => {
     expect(execute(s, "lang xx")).toEqual([`오류: 알 수 없는 언어 'xx' (사용 가능: en, kr)`]);
   });
 
-  it("preserves the locale across reset and rematch but not new sessions", () => {
+  it("preserves the locale across reset and rematch", () => {
     const s = newSession(7);
     execute(s, "lang kr");
     execute(s, "reset");
-    expect(s.locale).toBe("kr");
+    expect(configLocale()).toBe("kr");
 
     execute(s, "map beginner");
     execute(s, "add a1 HBK-4G 2 2 s");
@@ -178,8 +172,7 @@ describe("lang command", () => {
     execute(s, "start");
     autoPlay(s);
     expect(execute(s, "rematch")[0]).toBe("=== 재경기 시작 ===");
-    expect(s.locale).toBe("kr");
-    expect(newSession(7).locale).toBe("en");
+    expect(configLocale()).toBe("kr");
   });
 });
 
@@ -187,7 +180,7 @@ describe("localized output smoke test", () => {
   it("renders board placeholder and errors in Korean after switching", () => {
     const s = newSession(7);
     execute(s, "lang kr");
-    expect(execute(s, "board")).toEqual([i18n("kr", "board.noMap")]);
+    expect(execute(s, "board")).toEqual([i18nIn("kr", "board.noMap")]);
     expect(execute(s, "bogus")).toEqual([`오류: 알 수 없는 명령 'bogus' ('help'를 입력해 보세요)`]);
     expect(execute(s, "status")).toContain("(배치된 유닛 없음)");
   });

@@ -1,34 +1,25 @@
-import { MAP_DEFS, type MapDef } from "./map.schema.js";
-import type { ResolvedMechDef } from "./mech.schema.js";
-import { MECH_DEFS } from "./mechCatalog.generated.js";
+import { MAP_DEFS, type MapDef } from "./map.schema";
+import type { ResolvedMechDef } from "./mech.schema";
+import { MECH_DEFS } from "./mechCatalog.generated";
 
 export interface MechModelHolder {
   readonly model: string;
 }
 
-export function getMechDefFor(h: MechModelHolder): ResolvedMechDef {
+export function mechDefFor(h: MechModelHolder): ResolvedMechDef {
   const def = MECH_DEFS.get(h.model);
   if (!def) throw new Error(`Unknown mech: ${h.model}`);
   return def;
 }
 
-export function getMechDef(model: string): ResolvedMechDef | undefined {
+export function mechDef(model: string): ResolvedMechDef | undefined {
   return MECH_DEFS.get(model);
 }
 
-/** Tonnage of the unit's mech chassis. Reads the catalog def; throws on
- *  unknown models. TW weight class boundaries run 20/35/55/75/100; rule code
- *  using tonnage (e.g. light-mech wreck level, see
- *  `wreckLevelFor` in `src/rules/game.ts`) keys off the raw `tonnage` field,
- *  not the human-friendly `weightClass` label. */
-export function getUnitTonnage(h: MechModelHolder): number {
-  return getMechDefFor(h).tonnage;
-}
+export { type AmmoNameHolder, ammoDefFor } from "./ammo.schema";
+export { type WeaponNameHolder, weaponDefFor } from "./weapon.schema";
 
-export { type AmmoNameHolder, getAmmoDefFor } from "./ammo.schema.js";
-export { getWeaponDefFor, type WeaponNameHolder } from "./weapon.schema.js";
-
-export function getAllMechDefs(): ResolvedMechDef[] {
+export function allMechDefs(): ResolvedMechDef[] {
   return Array.from(MECH_DEFS.values());
 }
 
@@ -36,7 +27,7 @@ export interface MapNameHolder {
   readonly mapName: string | null;
 }
 
-export function getMapDefFor(h: MapNameHolder): MapDef {
+export function mapDefFor(h: MapNameHolder): MapDef {
   const key = h.mapName;
   if (key === null) throw new Error("Unknown map: <none>");
   const def = MAP_DEFS.get(key);
@@ -44,11 +35,11 @@ export function getMapDefFor(h: MapNameHolder): MapDef {
   return def;
 }
 
-export function getMapDef(name: string): MapDef | undefined {
+export function mapDef(name: string): MapDef | undefined {
   return MAP_DEFS.get(name);
 }
 
-export function getAllMapDefs(): MapDef[] {
+export function allMapDefs(): MapDef[] {
   return Array.from(MAP_DEFS.values());
 }
 
@@ -56,10 +47,10 @@ export function listMapNames(): string[] {
   return Array.from(MAP_DEFS.keys());
 }
 
-export type { AmmoDef } from "./ammo.schema.js";
-export { getAllAmmo, listAmmoWeapons } from "./ammo.schema.js";
-export type { MapDef } from "./map.schema.js";
-export { validateMapDef } from "./map.schema.js";
+export type { AmmoDef } from "./ammo.schema";
+export { allAmmo as getAllAmmo, listAmmoWeapons } from "./ammo.schema";
+export type { MapDef } from "./map.schema";
+export { validateMapDef } from "./map.schema";
 export type {
   CritSlot,
   CritSlots,
@@ -72,15 +63,15 @@ export type {
   ResolvedCritSlots,
   ResolvedMechDef,
   WeaponMount,
-} from "./mech.schema.js";
+} from "./mech.schema";
 export {
   CRIT_SLOT_COUNTS,
   CRIT_SOAK_NAMES,
   CRIT_STRUCTURE_NAMES,
   resolveMechDef,
   validateMechDef,
-} from "./mech.schema.js";
-export type { TerrainDef } from "./terrain.schema.js";
-export { getAllTerrainDefs, getTerrainDef } from "./terrain.schema.js";
-export type { WeaponDef } from "./weapon.schema.js";
-export { listWeaponNames } from "./weapon.schema.js";
+} from "./mech.schema";
+export type { TerrainDef } from "./terrain.schema";
+export { allTerrainDefs, terrainDef } from "./terrain.schema";
+export type { WeaponDef } from "./weapon.schema";
+export { listWeaponNames } from "./weapon.schema";

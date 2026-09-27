@@ -1,20 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { bearingExact } from "../src/core/hex.js";
+import { bearingExact } from "../src/core/hex";
 import {
   classifyArc,
   classifyArcWithBoundary,
   defenderArcChoice,
   isInFrontArc,
   weaponCanFireIntoArc,
-} from "../src/rules/arcs.js";
-import { losBlocked, losWoodsPoints } from "../src/rules/los.js";
+} from "../src/rules/arcs";
+import { losBlocked, losWoodsPoints } from "../src/rules/los";
 import {
   attackerMovementModifier,
   canEndMoveInHex,
   canPassThroughHex,
   facingChangeCost,
   maxMovePoints,
-} from "../src/rules/movement.js";
+} from "../src/rules/movement";
 
 describe("movement rules", () => {
   it("computes MP budgets per movement mode", () => {

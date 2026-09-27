@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FACINGS, isFacing, oppositeFacing, rotateFacing } from "../src/core/types.js";
+import { FACINGS, isFacing, oppositeFacing, rotateFacing } from "../src/core/types";
 
 describe("facing helpers", () => {
   it("lists facings clockwise from north", () => {

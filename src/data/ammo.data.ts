@@ -1,4 +1,4 @@
-import type { AmmoDef } from "./ammo.schema.js";
+import type { AmmoDef } from "./ammo.schema";
 
 export const AMMO_DATA: readonly AmmoDef[] = [
   { weapon: "AC/2", shotsPerBin: 45, explosive: true },

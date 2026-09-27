@@ -1,13 +1,8 @@
 import { describe, expect, it } from "vitest";
-import {
-  getAllAmmo,
-  getAmmoDefFor,
-  getShotsPerBinFor,
-  listAmmoWeapons,
-} from "../src/data/ammo.schema.js";
-import type { MechDef, ResolvedMechDef } from "../src/data/index.js";
-import { getAllMechDefs, getMechDef, validateMechDef } from "../src/data/index.js";
-import { getWeaponDefFor } from "../src/data/weapon.schema.js";
+import { allAmmo, ammoDefFor, listAmmoWeapons, shotsPerBinFor } from "../src/data/ammo.schema";
+import type { MechDef, ResolvedMechDef } from "../src/data/index";
+import { allMechDefs, mechDef, validateMechDef } from "../src/data/index";
+import { weaponDefFor } from "../src/data/weapon.schema";
 
 function toMechDef(d: ResolvedMechDef): MechDef {
   const { armorRear: _ar, internalStructure: _is, weapons: rw, ...rest } = d;
@@ -16,7 +11,7 @@ function toMechDef(d: ResolvedMechDef): MechDef {
 
 describe("ammo catalog", () => {
   it("ships every ammo-bearing weapon in the catalog", () => {
-    expect(getAllAmmo().length).toBeGreaterThan(0);
+    expect(allAmmo().length).toBeGreaterThan(0);
   });
 
   it("has no duplicate weapon names", () => {
@@ -25,37 +20,37 @@ describe("ammo catalog", () => {
   });
 
   it("every ammo weapon resolves as a catalog weapon", () => {
-    for (const ammo of getAllAmmo()) {
-      expect(getWeaponDefFor({ weapon: ammo.weapon }).name).toBe(ammo.weapon);
+    for (const ammo of allAmmo()) {
+      expect(weaponDefFor({ weapon: ammo.weapon }).name).toBe(ammo.weapon);
     }
   });
 
   it("getShotsPerBinFor returns the catalog value for known ammo weapons", () => {
-    for (const ammo of getAllAmmo()) {
-      expect(getShotsPerBinFor({ weapon: ammo.weapon })).toBe(ammo.shotsPerBin);
+    for (const ammo of allAmmo()) {
+      expect(shotsPerBinFor({ weapon: ammo.weapon })).toBe(ammo.shotsPerBin);
     }
   });
 
   it("getShotsPerBinFor returns undefined for non-ammo weapons", () => {
-    expect(getShotsPerBinFor({ weapon: "Medium Laser" })).toBeUndefined();
-    expect(getShotsPerBinFor({ weapon: "Flamer" })).toBeUndefined();
-    expect(getShotsPerBinFor({ weapon: "Not A Weapon" })).toBeUndefined();
+    expect(shotsPerBinFor({ weapon: "Medium Laser" })).toBeUndefined();
+    expect(shotsPerBinFor({ weapon: "Flamer" })).toBeUndefined();
+    expect(shotsPerBinFor({ weapon: "Not A Weapon" })).toBeUndefined();
   });
 
   it("getAmmoDefFor throws on an unknown weapon", () => {
-    expect(() => getAmmoDefFor({ weapon: "Not A Weapon" })).toThrow();
+    expect(() => ammoDefFor({ weapon: "Not A Weapon" })).toThrow();
   });
 });
 
 describe("ammo validation in MechDef", () => {
   it("re-validates every bundled definition with the ammo rule", () => {
-    for (const def of getAllMechDefs()) {
+    for (const def of allMechDefs()) {
       expect(() => validateMechDef(toMechDef(def))).not.toThrow();
     }
   });
 
   it("rejects a mount.shots that is not a multiple of shotsPerBin", () => {
-    const base = toMechDef(getMechDef("HBK-4G")!);
+    const base = toMechDef(mechDef("HBK-4G")!);
     expect(() =>
       validateMechDef({
         ...base,
@@ -65,7 +60,7 @@ describe("ammo validation in MechDef", () => {
   });
 
   it("rejects an ammo crit slot whose weapon has no ammo definition", () => {
-    const base = toMechDef(getMechDef("HBK-4G")!);
+    const base = toMechDef(mechDef("HBK-4G")!);
     expect(() =>
       validateMechDef({
         ...base,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { BattleState, GameEvent, UnitInit } from "../src/rules/game.js";
+import type { BattleState, GameEvent, UnitInit } from "../src/rules/game";
 import {
   advancePhase,
   attemptVoluntaryStartup,
@@ -10,8 +10,8 @@ import {
   requireUnit,
   rollInitiativePhase,
   voluntaryShutdown,
-} from "../src/rules/game.js";
-import { createTestBattle, scriptedRng } from "./helpers.js";
+} from "../src/rules/game";
+import { createTestBattle, scriptedRng } from "./helpers";
 
 function hbkVsEnf(): BattleState {
   const units: UnitInit[] = [

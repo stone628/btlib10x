@@ -1,14 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { getMechDefFor } from "../src/data/index.js";
+import { mechDefFor } from "../src/data/index";
 import {
   effectiveMoveBudget,
   effectiveMovement,
   isUnitImmobile,
   STAND_MP_COST,
-} from "../src/index.js";
-import { nextAutoPlayCommand, resetAutoplayState } from "../web/autoplay.js";
-import { commitMove, currentActor, declareMode, newSession, type Session } from "../web/session.js";
-import { execute, scriptedRng } from "./helpers.js";
+} from "../src/index";
+import { nextAutoPlayCommand, resetAutoplayState } from "../web/autoplay";
+import { newSession, type Session } from "../web/session";
+import { commitMovement, declareMovementMode } from "../web/session.move";
+import { requireWeaponAttackActor } from "../web/session.weapon";
+import { disableCritical, execute, scriptedRng } from "./helpers";
 
 function run(s: Session, cmd: string): string[] {
   return execute(s, cmd);
@@ -21,16 +23,16 @@ function run(s: Session, cmd: string): string[] {
  */
 function sessionAtWeaponAttack(): Session {
   const s = newSession(7);
-  s.critsDisabled = true;
   run(s, "map quickstart");
   run(s, "add hunchy HBK-4G 9 9 n");
   run(s, "add cicada CDA-3MA 9 8 s");
   run(s, "start");
+  disableCritical(s);
   // Movement phase: both units move (walk), advancing to weapon attack.
   for (let i = 0; i < 2; i++) {
     if (s.battle!.phase === "movement") {
-      declareMode(s, "walk");
-      commitMove(s);
+      declareMovementMode(s, "walk");
+      commitMovement(s);
     }
   }
   return s;
@@ -41,7 +43,6 @@ function sessionAtWeaponAttack(): Session {
  *  of initiative moves first, so we force hunchy to LOSE (5 vs 12). */
 function sessionAtMovementStart(): Session {
   const s = newSession(7);
-  s.critsDisabled = true;
   // Hunchy rolls 5 (2+3), cicada rolls 12 (6+6). Loser-of-initiative moves
   // first, so hunchy becomes the first actor.
   s.rng = scriptedRng(2, 3, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6);
@@ -49,6 +50,7 @@ function sessionAtMovementStart(): Session {
   run(s, "add hunchy HBK-4G 9 9 n");
   run(s, "add cicada CDA-3MA 9 8 s");
   run(s, "start");
+  disableCritical(s);
   expect(s.battle!.phase).toBe("movement");
   expect(s.move!.actorId).toBe("hunchy");
   return s;
@@ -83,8 +85,8 @@ describe("nextAutoPlayCommand (autoplay demo driver)", () => {
     resetAutoplayState(s);
     expect(s.battle!.phase).toBe("weaponAttack");
 
-    const actor = currentActor(s)!;
-    const def = getMechDefFor(actor);
+    const actor = requireWeaponAttackActor(s);
+    const def = mechDefFor(actor);
     // Find a plain (non-ammo) weapon mount on the acting unit and mark it
     // destroyed, simulating a prior-turn critical-slot hit.
     const target = Object.entries(def.weapons).find(([, m]) => m.shots === undefined);
@@ -113,7 +115,7 @@ describe("nextAutoPlayCommand (autoplay demo driver)", () => {
     resetAutoplayState(s);
     expect(s.battle!.phase).toBe("weaponAttack");
 
-    const actor = currentActor(s)!;
+    const actor = requireWeaponAttackActor(s);
     const enemyId = actor.id === "hunchy" ? "cicada" : "hunchy";
     const enemy = s.battle!.units[enemyId]!;
     // Push the enemy up the column (long range) with heavy movement (+6):
@@ -166,7 +168,7 @@ describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
     expect(cmd).toBe("mode pronestill");
     const out = run(s, "mode pronestill");
     expect(out[0]).not.toMatch(/^error:/);
-    expect(() => commitMove(s)).not.toThrow();
+    expect(() => commitMovement(s)).not.toThrow();
   });
 
   it("one-leg + prone: attempts `mode standup walk` (canAttemptStandUp)", () => {
@@ -214,7 +216,7 @@ describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
     actor.prone = true;
     // Climb heat until the actor's walk budget drops below the 2-MP stand
     // cost, without making the unit immobile.
-    const def = getMechDefFor(actor);
+    const def = mechDefFor(actor);
     for (let heat = 0; heat <= 30; heat++) {
       actor.heat = heat;
       const budget = effectiveMoveBudget(
@@ -243,7 +245,7 @@ describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
     const s = sessionAtMovementStart();
     const actorId = s.move!.actorId!;
     const actor = s.battle!.units[actorId]!;
-    const def = getMechDefFor(actor);
+    const def = mechDefFor(actor);
     // Climb heat until walk MP is clamped to 0.
     for (let heat = 0; heat <= 30; heat++) {
       actor.heat = heat;
@@ -275,7 +277,7 @@ describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
     const actor = s.battle!.units[actorId]!;
     actor.prone = true;
     actor.heat = 0;
-    const def = getMechDefFor(actor);
+    const def = mechDefFor(actor);
     const budget = effectiveMoveBudget(
       "walk",
       effectiveMovement(def, actor.damage, actor.critSlotsDestroyed),

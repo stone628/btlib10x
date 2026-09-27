@@ -24,9 +24,9 @@
  * order.
  */
 
-import type { Location, Rng } from "../core/types.js";
-import { type AmmoNameHolder, getShotsPerBinFor } from "../data/ammo.schema.js";
-import type { ResolvedMechDef } from "../data/mech.schema.js";
+import type { Location, Rng } from "../core/types";
+import { type AmmoNameHolder, shotsPerBinFor } from "../data/ammo.schema";
+import type { ResolvedMechDef } from "../data/mech.schema";
 
 /** Stable identity of one ammo bin: `${location}:${slotIndex}` (1-based slot). */
 export type AmmoBinId = string;
@@ -176,9 +176,7 @@ function loadAmmoCounts(def: ResolvedMechDef): Record<AmmoBinId, number> {
   for (const [weaponName, list] of binsOf) {
     const declaredTotal = declaredShots(weaponName);
     const perBin =
-      declaredTotal > 0
-        ? Math.floor(declaredTotal / list.length)
-        : (getShotsPerBinFor(list[0]!) ?? 0);
+      declaredTotal > 0 ? Math.floor(declaredTotal / list.length) : (shotsPerBinFor(list[0]!) ?? 0);
     let remainder = declaredTotal > 0 ? declaredTotal % list.length : 0;
     for (const bin of list) {
       const amount = perBin + (remainder > 0 ? 1 : 0);

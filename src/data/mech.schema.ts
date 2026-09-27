@@ -1,9 +1,9 @@
-import type { Location } from "../core/types.js";
-import { isLocation, isTorso, LOCATIONS } from "../core/types.js";
-import type { LocationValue, TorsoLocationValue } from "../rules/damage.js";
-import { internalStructureForTonnage } from "../rules/internalStructure.js";
-import { getAmmoDef } from "./ammo.schema.js";
-import { getWeaponDef, type WeaponNameHolder } from "./weapon.schema.js";
+import type { Location } from "../core/types";
+import { isLocation, isTorso, LOCATIONS } from "../core/types";
+import type { LocationValue, TorsoLocationValue } from "../rules/damage";
+import { internalStructureForTonnage } from "../rules/internalStructure";
+import { ammoDef } from "./ammo.schema";
+import { type WeaponNameHolder, weaponDef } from "./weapon.schema";
 
 /** Heat sink type: single = 1 heat/turn each, double = 2 heat/turn each. */
 export type HeatSinkType = "single" | "double";
@@ -469,7 +469,7 @@ export function validateMechDef(def: MechDef): void {
       if (!Number.isInteger(w.shots) || w.shots <= 0) {
         errors.push("weapon.shots must be a positive integer");
       } else {
-        const ammo = getAmmoDef(w.weapon);
+        const ammo = ammoDef(w.weapon);
         if (ammo !== undefined) {
           if (w.shots % ammo.shotsPerBin === 0) continue;
           if (w.shots === Math.floor(ammo.shotsPerBin / 2)) continue;
@@ -495,7 +495,7 @@ export function validateMechDef(def: MechDef): void {
       if (!slot) continue;
       switch (slot.kind) {
         case "weapon": {
-          if (getWeaponDef(slot.weapon) === undefined) {
+          if (weaponDef(slot.weapon) === undefined) {
             errors.push(
               `critSlots.${loc}[${i}].weapon ${JSON.stringify(slot.weapon)} is not a known weapon`,
             );
@@ -508,12 +508,12 @@ export function validateMechDef(def: MechDef): void {
           break;
         }
         case "ammo": {
-          if (getWeaponDef(slot.weapon) === undefined) {
+          if (weaponDef(slot.weapon) === undefined) {
             errors.push(
               `critSlots.${loc}[${i}].weapon ${JSON.stringify(slot.weapon)} is not a known weapon`,
             );
           }
-          if (getAmmoDef(slot.weapon) === undefined) {
+          if (ammoDef(slot.weapon) === undefined) {
             errors.push(
               `critSlots.${loc}[${i}].weapon ${JSON.stringify(slot.weapon)} has no ammo definition`,
             );

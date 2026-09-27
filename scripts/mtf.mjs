@@ -267,7 +267,7 @@ for (const file of files) {
     skipped++;
     continue;
   }
-  const ts = `import type { MechDef } from "../mech.schema.js";
+  const ts = `import type { MechDef } from "../mech.schema";
 
 const def: MechDef = ${JSON.stringify(def, null, 2)} as const satisfies MechDef;
 

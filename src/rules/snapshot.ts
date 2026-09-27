@@ -30,11 +30,11 @@
  * `GameEvent[]` instead, so snapshots stay small.
  */
 
-import type { HexCell, HexCoord, Location, WreckState } from "../core/types.js";
-import type { AmmoBins } from "./ammo.js";
-import type { BuildingState } from "./building.js";
-import type { UnitDamageState } from "./damage.js";
-import type { AttackDecl, BattleState, Phase, UnitState } from "./game.js";
+import type { HexCell, HexCoord, Location, WreckState } from "../core/types";
+import type { AmmoBins } from "./ammo";
+import type { BuildingState } from "./building";
+import type { UnitDamageState } from "./damage";
+import type { AttackDecl, BattleState, Phase, UnitState } from "./game";
 
 /** Detached deep copy of a `BattleState`. Treat as immutable. */
 type BattleSnapshot = BattleState;

@@ -7,7 +7,7 @@
  *   S = Streak (all missiles hit on a successful to-hit roll, no cluster roll;
  *   a miss fires nothing: no ammo spent, no heat).
  */
-import { WEAPON_DATA } from "./weapon.data.js";
+import { WEAPON_DATA } from "./weapon.data";
 
 export type WeaponCategory = "MISSILE" | "BALLISTIC" | "ENERGY" | "EQUIPMENT";
 
@@ -150,7 +150,7 @@ const WEAPONS: Readonly<Map<string, WeaponDef>> = new Map<string, WeaponDef>(
   WEAPON_DATA.map((def) => [def.name, def]),
 );
 
-export function getWeaponDef(name: string): WeaponDef | undefined {
+export function weaponDef(name: string): WeaponDef | undefined {
   return WEAPONS.get(name);
 }
 
@@ -158,13 +158,13 @@ export interface WeaponNameHolder {
   readonly weapon: string;
 }
 
-export function getWeaponDefFor(h: WeaponNameHolder): WeaponDef {
+export function weaponDefFor(h: WeaponNameHolder): WeaponDef {
   const def = WEAPONS.get(h.weapon);
   if (!def) throw new Error(`Unknown weapon: ${h.weapon}`);
   return def;
 }
 
-export function getAllWeaponDefs(): WeaponDef[] {
+export function allWeaponDefs(): WeaponDef[] {
   return Array.from(WEAPONS.values());
 }
 

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { clusterHits, groupMissiles } from "../src/rules/cluster.js";
+import { clusterHits, groupMissiles } from "../src/rules/cluster";
 import {
   HIT_LOCATION_TABLE,
   hitLocation,
   hitLocationForArc,
   LEFT_SIDE_TABLE,
   RIGHT_SIDE_TABLE,
-} from "../src/rules/hitlocation.js";
+} from "../src/rules/hitlocation";
 
 describe("hit location table", () => {
   it("maps every 2D6 result per the record sheets", () => {

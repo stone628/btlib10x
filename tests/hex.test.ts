@@ -7,9 +7,9 @@ import {
   lineHexes,
   neighbor,
   sameHex,
-} from "../src/core/hex.js";
-import { cellAt, type HexGrid } from "../src/core/terrain.js";
-import type { HexCell } from "../src/core/types.js";
+} from "../src/core/hex";
+import { cellAt, type HexGrid } from "../src/core/terrain";
+import type { HexCell } from "../src/core/types";
 
 describe("hex geometry", () => {
   it("computes even-q neighbors on flat-top hexes (even cols lowered)", () => {

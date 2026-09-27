@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { HexGrid } from "../src/core/terrain.js";
-import type { HexCell } from "../src/core/types.js";
-import { losBlockedByBuilding, losBlockedByElevation, losClear } from "../src/rules/los.js";
+import type { HexGrid } from "../src/core/terrain";
+import type { HexCell } from "../src/core/types";
+import { losBlockedByBuilding, losBlockedByElevation, losClear } from "../src/rules/los";
 
 /** Build a 5x5 grid with the given per-hex "col,row" elevation overrides (others 0). */
 function gridWithElevation(levels: Record<string, number>): HexGrid {

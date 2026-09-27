@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { LOCATIONS, type Location, type TerrainType } from "../src/core/types.js";
-import { getMechDef, getMechDefFor } from "../src/data/index.js";
-import { countDestroyedEngine } from "../src/rules/critical.js";
-import type { BattleState, GameEvent, UnitInit } from "../src/rules/game.js";
+import { LOCATIONS, type Location, type TerrainType } from "../src/core/types";
+import { mechDef, mechDefFor } from "../src/data/index";
+import { countDestroyedEngine } from "../src/rules/critical";
+import type { BattleState, GameEvent, UnitInit } from "../src/rules/game";
 import {
   advancePhase,
   declareAttacks,
@@ -11,7 +11,7 @@ import {
   requireUnit,
   resolveAllAttacks,
   rollInitiativePhase,
-} from "../src/rules/game.js";
+} from "../src/rules/game";
 import {
   ammoExplosionAvoid,
   effectiveMoveBudget,
@@ -22,8 +22,8 @@ import {
   movementMpPenalty,
   shutdownAvoid,
   toHitHeatModifier,
-} from "../src/rules/heat.js";
-import { createTestBattle, scriptedRng } from "./helpers.js";
+} from "../src/rules/heat";
+import { createTestBattle, scriptedRng } from "./helpers";
 
 function hbkVsEnf(): BattleState {
   const units: UnitInit[] = [
@@ -208,14 +208,14 @@ describe("ammoExplosionAvoid", () => {
 
 describe("effectiveMoveBudget", () => {
   it("full walk/run at heat 0", () => {
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     const move = { walking: def.walking, running: def.running, jumping: def.jumping };
     expect(effectiveMoveBudget("walk", move, 0)).toBe(def.walking);
     expect(effectiveMoveBudget("run", move, 0)).toBe(def.running);
     expect(effectiveMoveBudget("jump", move, 0)).toBe(def.jumping);
   });
   it("subtracts MP penalty", () => {
-    const def = getMechDef("HBK-4G")!;
+    const def = mechDef("HBK-4G")!;
     const move = { walking: def.walking, running: def.running, jumping: def.jumping };
     expect(effectiveMoveBudget("run", move, 10)).toBe(def.running - 2);
     expect(effectiveMoveBudget("walk", move, 25)).toBe(0);
@@ -226,14 +226,14 @@ describe("heatDissipation / countDestroyedEngineSlots", () => {
   it("HBK-4G dissipates 13 (8 engine + 5 external single)", () => {
     const state = hbkVsEnf();
     const unit = requireUnit(state, "hbk");
-    const def = getMechDefFor(unit);
+    const def = mechDefFor(unit);
     expect(heatDissipation(def, unit.critSlotsDestroyed)).toBe(13);
     expect(countDestroyedEngine(def, unit.damage, unit.critSlotsDestroyed)).toBe(0);
   });
   it("destroying an engine slot adds heat but does not retire a sink (strict TW)", () => {
     const state = hbkVsEnf();
     const unit = requireUnit(state, "hbk");
-    const def = getMechDefFor(unit);
+    const def = mechDefFor(unit);
     const destroyed = {
       ...unit.critSlotsDestroyed,
       centerTorso: [true, ...unit.critSlotsDestroyed.centerTorso.slice(1)],
@@ -259,7 +259,7 @@ describe("heatDissipation: engine sink capacity + double heat sinks", () => {
     ["HER-5SA", 20], // 240 engine: 9 internal + 1 IS double device
   ];
   it.each(cases)("%s dissipates %i heat per turn", (model, expected) => {
-    const def = getMechDef(model)!;
+    const def = mechDef(model)!;
     const destroyed = Object.fromEntries(
       LOCATIONS.map((l) => [l, def.critSlots[l].map(() => false)]),
     ) as Record<Location, boolean[]>;
@@ -267,7 +267,7 @@ describe("heatDissipation: engine sink capacity + double heat sinks", () => {
   });
 
   it("destroying one DHS crit of a group retires the whole device (-2)", () => {
-    const def = getMechDef("WHK-Prime")!;
+    const def = mechDef("WHK-Prime")!;
     const destroyed = Object.fromEntries(
       LOCATIONS.map((l) => [l, def.critSlots[l].map(() => false)]),
     ) as Record<Location, boolean[]>;
@@ -282,7 +282,7 @@ describe("largestAmmoBin", () => {
   it("returns the AC/20 bin for HBK-4G", () => {
     const state = hbkVsEnf();
     const unit = requireUnit(state, "hbk");
-    const def = getMechDefFor(unit);
+    const def = mechDefFor(unit);
     const bin = largestAmmoBin(def, unit.ammoBins, scriptedRng(6));
     expect(bin).not.toBeNull();
     expect(bin!.weapon).toBe("AC/20");
@@ -295,7 +295,7 @@ describe("largestAmmoBin", () => {
   it("returns null when only non-explosive ammo is loaded (BZK-F3 gauss)", () => {
     const state = bzkVsEnf();
     const unit = requireUnit(state, "bzk");
-    const def = getMechDefFor(unit);
+    const def = mechDefFor(unit);
     // BZK-F3 mounts two gauss ammo bins in the center torso.
     expect(unit.ammoBins["centerTorso:11"]?.shots).toBe(8);
     expect(unit.ammoBins["centerTorso:12"]?.shots).toBe(8);
@@ -332,7 +332,7 @@ describe("largestAmmoBin", () => {
       true,
     );
     const unit = requireUnit(state, "wvr");
-    const def = getMechDefFor(unit);
+    const def = mechDefFor(unit);
     // Drain every SRM-6 ammo bin down to 1 shot.
     for (const [id, bin] of Object.entries(unit.ammoBins)) {
       if (bin.weapon === "SRM 6") {
@@ -394,7 +394,7 @@ describe("game integration: movement heat", () => {
     const moved = events.find((e) => e.kind === "moved" && e.unitId === "hbk");
     expect(moved).toBeDefined();
     expect((moved as Extract<GameEvent, { kind: "moved" }>).mpBudget).toBe(
-      getMechDef("HBK-4G")!.running - 2,
+      mechDef("HBK-4G")!.running - 2,
     );
   });
 });
@@ -449,7 +449,7 @@ describe("game integration: engine crit heat", () => {
   it("adds 10 engine heat when 2+ engine slots destroyed", () => {
     const state = hbkVsEnf();
     const hbk = requireUnit(state, "hbk");
-    const def = getMechDefFor(hbk);
+    const def = mechDefFor(hbk);
     hbk.critSlotsDestroyed = {
       ...hbk.critSlotsDestroyed,
       centerTorso: [true, true, ...hbk.critSlotsDestroyed.centerTorso.slice(2)],

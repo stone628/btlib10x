@@ -1,24 +1,24 @@
-import { D2D6_FUMBLE, D2D6_MAX } from "../core/dice.js";
-import { bearingExact, hexDistance } from "../core/hex.js";
-import { cellAt } from "../core/terrain.js";
-import type { Location } from "../core/types.js";
-import { getMechDefFor } from "../data/index.js";
-import { getWeaponDefFor } from "../data/weapon.schema.js";
-import { binsForWeaponName, pooledShotsLeft } from "./ammo.js";
+import { D2D6_FUMBLE, D2D6_MAX } from "../core/dice";
+import { bearingExact, hexDistance } from "../core/hex";
+import { cellAt } from "../core/terrain";
+import type { Location } from "../core/types";
+import { mechDefFor } from "../data/index";
+import { weaponDefFor } from "../data/weapon.schema";
+import { binsForWeaponName, pooledShotsLeft } from "./ammo";
 import {
   type Arc,
   classifyArcWithBoundary,
   effectiveFacingForTwist,
   weaponCanFireIntoArc,
-} from "./arcs.js";
-import { countDestroyedSensor } from "./critical.js";
-import { canFireFromLocation } from "./damage.js";
-import { type BattleState, isImmobile, isUnitRemoved, partialCoverMod } from "./game.js";
-import { toHitHeatModifier } from "./heat.js";
-import { losClear, losWoodsPointsBetween } from "./los.js";
-import { sensorAttackModifier, sensorsBlind } from "./piloting.js";
-import type { RangeBracket } from "./tohit.js";
-import { computeToHit, damageForBracket } from "./tohit.js";
+} from "./arcs";
+import { countDestroyedSensor } from "./critical";
+import { canFireFromLocation } from "./damage";
+import { type BattleState, isImmobile, isUnitRemoved, partialCoverMod } from "./game";
+import { toHitHeatModifier } from "./heat";
+import { losClear, losWoodsPointsBetween } from "./los";
+import { sensorAttackModifier, sensorsBlind } from "./piloting";
+import type { RangeBracket } from "./tohit";
+import { computeToHit, damageForBracket } from "./tohit";
 
 export type FireBlockerReason =
   | "jammed"
@@ -153,7 +153,7 @@ export function suggestFireTargets(
   if (!unit || isUnitRemoved(unit)) {
     throw new Error(`suggestFireTargets: ${unitId} is not a fireable unit`);
   }
-  const def = getMechDefFor(unit);
+  const def = mechDefFor(unit);
   const sensorsOut = countDestroyedSensor(def, unit.damage, unit.critSlotsDestroyed);
   const blind = sensorsBlind(sensorsOut);
   const sensorMod = sensorAttackModifier(sensorsOut);
@@ -175,7 +175,7 @@ export function suggestFireTargets(
 
       Object.entries(def.weapons).forEach(([key, mount]) => {
         const weaponIndex = Number(key);
-        const weapon = getWeaponDefFor(mount);
+        const weapon = weaponDefFor(mount);
         const blockedEntry = (reason: FireBlockerReason): FireBlocked => ({
           weaponIndex,
           weapon: mount.weapon,

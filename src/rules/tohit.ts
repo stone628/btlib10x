@@ -1,8 +1,8 @@
-import { D2D6_FUMBLE, D2D6_MAX } from "../core/dice.js";
-import { terrainTargetMod } from "../core/terrain.js";
-import type { MoveMode, TerrainType } from "../core/types.js";
-import type { WeaponDef } from "../data/weapon.schema.js";
-import { attackerMovementModifier, targetMovementModifier } from "./movement.js";
+import { D2D6_FUMBLE, D2D6_MAX } from "../core/dice";
+import { terrainTargetMod } from "../core/terrain";
+import type { MoveMode, TerrainType } from "../core/types";
+import type { WeaponDef } from "../data/weapon.schema";
+import { attackerMovementModifier, targetMovementModifier } from "./movement";
 
 export type RangeBracket = "short" | "medium" | "long";
 

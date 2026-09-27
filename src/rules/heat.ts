@@ -19,13 +19,13 @@
  * destroy heat sinks (strict Total Warfare).
  */
 
-import { D2D6_MAX, diceIndex } from "../core/dice.js";
-import { LOCATIONS, type Location, type MoveMode, type Rng } from "../core/types.js";
-import { getAmmoDefFor } from "../data/ammo.schema.js";
-import type { ResolvedMechDef } from "../data/mech.schema.js";
-import { type AmmoBinId, type AmmoBins, collectAmmoBins } from "./ammo.js";
-import { ammoDamagePerShot, type EffectiveMovement } from "./critical.js";
-import { maxMovePoints } from "./movement.js";
+import { D2D6_MAX, diceIndex } from "../core/dice";
+import { LOCATIONS, type Location, type MoveMode, type Rng } from "../core/types";
+import { ammoDefFor } from "../data/ammo.schema";
+import type { ResolvedMechDef } from "../data/mech.schema";
+import { type AmmoBinId, type AmmoBins, collectAmmoBins } from "./ammo";
+import { ammoDamagePerShot, type EffectiveMovement } from "./critical";
+import { maxMovePoints } from "./movement";
 
 export const HEAT_CAP = 50;
 
@@ -311,7 +311,7 @@ export function largestAmmoBin(
 ): LargestAmmoBin | null {
   const candidates: LargestAmmoBin[] = [];
   for (const bin of collectAmmoBins(def)) {
-    if (!getAmmoDefFor(bin).explosive) continue;
+    if (!ammoDefFor(bin).explosive) continue;
     const shotsRemaining = ammoBins[bin.id]?.shots ?? 0;
     if (shotsRemaining <= 0) continue;
     const damagePerShot = ammoDamagePerShot(bin);

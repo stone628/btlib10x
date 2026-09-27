@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { getWeaponDefFor } from "../src/data/weapon.schema.js";
-import { computeToHit } from "../src/rules/tohit.js";
+import { weaponDefFor } from "../src/data/weapon.schema";
+import { computeToHit } from "../src/rules/tohit";
 
 describe("GATOR to-hit calculation", () => {
   // Total Warfare, Rolling To Hit diagram (p.106):
@@ -15,7 +15,7 @@ describe("GATOR to-hit calculation", () => {
       targetTerrain: "clear",
       interveningWoods: 1,
       distance: 4,
-      weapon: getWeaponDefFor({ weapon: "Medium Laser" }),
+      weapon: weaponDefFor({ weapon: "Medium Laser" }),
     });
     expect(bd.total).toBe(9);
     expect(bd.rangeBracket).toBe("medium");
@@ -32,7 +32,7 @@ describe("GATOR to-hit calculation", () => {
       targetTerrain: "lightWoods",
       interveningWoods: 1,
       distance: 4,
-      weapon: getWeaponDefFor({ weapon: "PPC" }),
+      weapon: weaponDefFor({ weapon: "PPC" }),
     });
     expect(bd.total).toBe(8);
     expect(bd.rangeBracket).toBe("short");
@@ -51,7 +51,7 @@ describe("GATOR to-hit calculation", () => {
       targetTerrain: "clear",
       interveningWoods: 0,
       distance: 4,
-      weapon: getWeaponDefFor({ weapon: "Medium Laser" }),
+      weapon: weaponDefFor({ weapon: "Medium Laser" }),
     });
     expect(ml.total).toBe(7);
 
@@ -63,7 +63,7 @@ describe("GATOR to-hit calculation", () => {
       targetTerrain: "clear",
       interveningWoods: 0,
       distance: 2,
-      weapon: getWeaponDefFor({ weapon: "AC/20" }),
+      weapon: weaponDefFor({ weapon: "AC/20" }),
     });
     expect(ac20.total).toBe(8);
 
@@ -75,7 +75,7 @@ describe("GATOR to-hit calculation", () => {
       targetTerrain: "clear",
       interveningWoods: 0,
       distance: 4,
-      weapon: getWeaponDefFor({ weapon: "Large Laser" }),
+      weapon: weaponDefFor({ weapon: "Large Laser" }),
     });
     expect(ll.total).toBe(4);
   });
@@ -90,7 +90,7 @@ describe("GATOR to-hit calculation", () => {
         targetTerrain: "clear",
         interveningWoods: 0,
         distance: 1,
-        weapon: getWeaponDefFor({ weapon: "Small Laser" }),
+        weapon: weaponDefFor({ weapon: "Small Laser" }),
       }).total;
     expect(mk(2)).toBe(4);
     expect(mk(3)).toBe(5);
@@ -110,7 +110,7 @@ describe("GATOR to-hit calculation", () => {
       targetJumped: false,
       targetTerrain: "clear" as const,
       interveningWoods: 0,
-      weapon: getWeaponDefFor({ weapon: "Small Laser" }),
+      weapon: weaponDefFor({ weapon: "Small Laser" }),
     };
     const adjacent = computeToHit({ ...base, distance: 1, targetProne: true });
     expect(adjacent.targetMod).toBe(-2);
@@ -135,7 +135,7 @@ describe("GATOR to-hit calculation", () => {
       targetTerrain: "clear" as const,
       interveningWoods: 0,
       distance: 4,
-      weapon: getWeaponDefFor({ weapon: "Medium Laser" }),
+      weapon: weaponDefFor({ weapon: "Medium Laser" }),
     };
     const online = computeToHit(base);
     const immobile = computeToHit({ ...base, targetImmobile: true });
@@ -152,7 +152,7 @@ describe("GATOR to-hit calculation", () => {
       targetTerrain: "water1" as const,
       interveningWoods: 0,
       distance: 1,
-      weapon: getWeaponDefFor({ weapon: "Small Laser" }),
+      weapon: weaponDefFor({ weapon: "Small Laser" }),
     };
     const plain = computeToHit(base);
     expect(plain.terrainMod).toBe(0);
@@ -170,7 +170,7 @@ describe("GATOR to-hit calculation", () => {
       targetTerrain: "clear",
       interveningWoods: 0,
       distance: 1,
-      weapon: getWeaponDefFor({ weapon: "Small Laser" }),
+      weapon: weaponDefFor({ weapon: "Small Laser" }),
     });
     expect(easy.automatic).toBe("hit");
     expect(easy.pulseMod).toBe(0);
@@ -183,7 +183,7 @@ describe("GATOR to-hit calculation", () => {
       targetTerrain: "clear",
       interveningWoods: 0,
       distance: 1,
-      weapon: getWeaponDefFor({ weapon: "Small Pulse Laser" }),
+      weapon: weaponDefFor({ weapon: "Small Pulse Laser" }),
     });
     expect(pulse.pulseMod).toBe(-2);
 
@@ -195,7 +195,7 @@ describe("GATOR to-hit calculation", () => {
       targetTerrain: "heavyWoods",
       interveningWoods: 2,
       distance: 15,
-      weapon: getWeaponDefFor({ weapon: "Large Laser" }),
+      weapon: weaponDefFor({ weapon: "Large Laser" }),
     });
     expect(hard.automatic).toBe("miss");
   });
@@ -209,14 +209,14 @@ describe("GATOR to-hit calculation", () => {
       targetTerrain: "clear",
       interveningWoods: 0,
       distance: 10,
-      weapon: getWeaponDefFor({ weapon: "Medium Laser" }),
+      weapon: weaponDefFor({ weapon: "Medium Laser" }),
     });
     expect(bd.outOfRange).toBe(true);
     expect(bd.automatic).toBe("miss");
   });
 
   it("applies the closer-than-minimum-range penalty", () => {
-    const gauss = getWeaponDefFor({ weapon: "CL Gauss Rifle" });
+    const gauss = weaponDefFor({ weapon: "CL Gauss Rifle" });
     expect(gauss.minRange).toBe(2);
 
     const at = (distance: number) =>
@@ -240,7 +240,7 @@ describe("GATOR to-hit calculation", () => {
   });
 
   it("resolves variable damage per bracket (Snub-Nose PPC V10/8/5)", () => {
-    const snub = getWeaponDefFor({ weapon: "Snub-Nose PPC" });
+    const snub = weaponDefFor({ weapon: "Snub-Nose PPC" });
     const short = computeToHit({
       gunnery: 4,
       attackerMovement: "standStill",

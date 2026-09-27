@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { Location } from "../src/core/types.js";
-import { LOCATIONS } from "../src/core/types.js";
-import { getMechDef } from "../src/data/index.js";
-import { loadAmmoBins } from "../src/rules/ammo.js";
-import { resolveWeaponAttack } from "../src/rules/attack.js";
-import type { LocationValue, TorsoLocationValue, UnitDamageState } from "../src/rules/damage.js";
-import { scriptedRng } from "./helpers.js";
+import type { Location } from "../src/core/types";
+import { LOCATIONS } from "../src/core/types";
+import { mechDef } from "../src/data/index";
+import { loadAmmoBins } from "../src/rules/ammo";
+import { resolveWeaponAttack } from "../src/rules/attack";
+import type { LocationValue, TorsoLocationValue, UnitDamageState } from "../src/rules/damage";
+import { scriptedRng } from "./helpers";
 
 function freshState(hp = 10): UnitDamageState {
   const armor = {} as LocationValue;
@@ -17,7 +17,7 @@ function freshState(hp = 10): UnitDamageState {
   return { armor, armorRear: {} as TorsoLocationValue, internalStructure: is };
 }
 
-function freshFlags(def = getMechDef("HBK-4G")!) {
+function freshFlags(def = mechDef("HBK-4G")!) {
   const out: Record<Location, boolean[]> = {} as Record<Location, boolean[]>;
   for (const loc of Object.keys(def.critSlots) as Location[]) {
     out[loc] = new Array(def.critSlots[loc].length).fill(false);
@@ -340,7 +340,7 @@ describe("resolveWeaponAttack", () => {
 });
 
 describe("through-armor criticals (hit-location roll of 2)", () => {
-  const def = getMechDef("HBK-4G")!;
+  const def = mechDef("HBK-4G")!;
 
   function critInput(rng: ReturnType<typeof scriptedRng>) {
     return {

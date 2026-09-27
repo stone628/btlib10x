@@ -1,5 +1,5 @@
-import { cellAt, type HexGrid } from "../core/terrain.js";
-import type { HexCell, HexCoord, TerrainType } from "../core/types.js";
+import { cellAt, type HexGrid } from "../core/terrain";
+import type { HexCell, HexCoord, TerrainType } from "../core/types";
 
 /** Building types recognized by the core rulebook. */
 export type BuildingType = "light" | "medium" | "heavy" | "hardened";

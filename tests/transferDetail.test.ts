@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { LOCATIONS } from "../src/core/types.js";
-import { resolveWeaponAttack } from "../src/rules/attack.js";
-import type { LocationValue, TorsoLocationValue, UnitDamageState } from "../src/rules/damage.js";
-import { transferDetail } from "../web/format.js";
-import { scriptedRng } from "./helpers.js";
+import { LOCATIONS } from "../src/core/types";
+import { resolveWeaponAttack } from "../src/rules/attack";
+import type { LocationValue, TorsoLocationValue, UnitDamageState } from "../src/rules/damage";
+import { transferDetail } from "../web/session.weapon";
+import { scriptedRng } from "./helpers";
 
 function freshState(hp = 10): UnitDamageState {
   const armor = {} as LocationValue;
@@ -46,7 +46,7 @@ describe("transferDetail", () => {
     const rng = scriptedRng(6, 6, 3, 3); // to-hit 12, location 6 -> RT, dmg 3
     const res = strike(s, rng);
     expect(res.application?.before.armor.rightTorso).toBe(10);
-    const text = transferDetail("en", res);
+    const text = transferDetail(res);
     expect(text).not.toBeNull();
     expect(text).toMatch(/RTF 10->7\b/);
     expect(text).not.toMatch(/RTI/);
@@ -66,7 +66,7 @@ describe("transferDetail", () => {
     };
     const rng = scriptedRng(6, 6, 3, 3); // to-hit 12, location 6 -> RT, dmg 3
     const res = strike(s, rng);
-    const text = transferDetail("en", res);
+    const text = transferDetail(res);
     expect(text).not.toBeNull();
     expect(text).toMatch(/RTF 2->0\*?/);
     expect(text).toMatch(/RTI 10->9\b/);
@@ -89,7 +89,7 @@ describe("transferDetail", () => {
     const s = freshState();
     const rng = scriptedRng(6, 6, 3, 3);
     const res = strike(s, rng);
-    const text = transferDetail("en", res) ?? "";
+    const text = transferDetail(res) ?? "";
     expect(text).not.toMatch(/NaN/);
   });
 
@@ -101,7 +101,7 @@ describe("transferDetail", () => {
     const rng = scriptedRng(6, 6, 3, 3); // to-hit 12, location 6 -> RT, dmg 3
     const res = strike(s, rng);
     expect(res.application?.before.armorRear.rightTorso).toBe(5);
-    const text = transferDetail("en", res) ?? "";
+    const text = transferDetail(res) ?? "";
     expect(text).toMatch(/RTF 10->7\b/);
     expect(text).not.toMatch(/RTA/);
   });
@@ -111,7 +111,7 @@ describe("transferDetail", () => {
     const rng = scriptedRng(6, 6, 4, 5); // to-hit 12, location 9 -> leftLeg, dmg 3
     const res = strike(s, rng);
     expect(res.application?.before.armor.leftLeg).toBe(10);
-    const text = transferDetail("en", res) ?? "";
+    const text = transferDetail(res) ?? "";
     expect(text).toMatch(/LLA 10->7\b/);
     expect(text).not.toMatch(/LLF/);
   });
@@ -124,7 +124,7 @@ describe("transferDetail", () => {
     const rng = scriptedRng(6, 6, 3, 3); // to-hit 12, location 6 -> RT, rear arc
     const res = strike(s, rng, "Small Laser", "rear");
     expect(res.application?.before.armorRear.rightTorso).toBe(5);
-    const text = transferDetail("en", res) ?? "";
+    const text = transferDetail(res) ?? "";
     expect(text).toMatch(/RTR 5->2\b/);
     expect(text).not.toMatch(/RT[AFI]/);
   });

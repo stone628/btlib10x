@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { neighbor } from "../src/core/hex.js";
-import { resolveWeaponAttack } from "../src/rules/attack.js";
-import type { BattleState, GameEvent, TerrainHexDef, UnitInit } from "../src/rules/game.js";
+import { neighbor } from "../src/core/hex";
+import { resolveWeaponAttack } from "../src/rules/attack";
+import type { BattleState, GameEvent, TerrainHexDef, UnitInit } from "../src/rules/game";
 import {
   ejectPilot,
   executeMove,
@@ -10,10 +10,10 @@ import {
   requireUnit,
   rollInitiativePhase,
   wreckAt,
-} from "../src/rules/game.js";
-import { losClear } from "../src/rules/los.js";
-import { reachableLandings } from "../src/rules/movement.js";
-import { checkVictory, createTestBattle, scriptedRng } from "./helpers.js";
+} from "../src/rules/game";
+import { losClear } from "../src/rules/los";
+import { reachableLandings } from "../src/rules/movement";
+import { checkVictory, createTestBattle, scriptedRng } from "./helpers";
 
 function hbkVsEnf(): BattleState {
   const units: UnitInit[] = [

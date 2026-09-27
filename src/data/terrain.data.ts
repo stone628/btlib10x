@@ -1,4 +1,4 @@
-import type { TerrainDef } from "./terrain.schema.js";
+import type { TerrainDef } from "./terrain.schema";
 
 export const TERRAIN_DATA: ReadonlyMap<string, TerrainDef> = new Map<string, TerrainDef>([
   ["clear", { moveCost: 0, screeningValue: 0, terrainMod: 0 }],

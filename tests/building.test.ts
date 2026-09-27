@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import type { HexGrid } from "../src/core/terrain.js";
-import type { HexCell } from "../src/core/types.js";
+import type { HexGrid } from "../src/core/terrain";
+import type { HexCell } from "../src/core/types";
 import {
   applyBuildingDamage,
   buildingTypeOf,
   createBuildingState,
   isBuildingTerrain,
   isCollapsed,
-} from "../src/rules/building.js";
+} from "../src/rules/building";
 import {
   advancePhase,
   type BattleState,
@@ -19,9 +19,9 @@ import {
   type TerrainHexDef,
   type UnitInit,
   type UnitState,
-} from "../src/rules/game.js";
-import { losBlockedByWater } from "../src/rules/los.js";
-import { createTestBattle, scriptedRng } from "./helpers.js";
+} from "../src/rules/game";
+import { losBlockedByWater } from "../src/rules/los";
+import { createTestBattle, scriptedRng } from "./helpers";
 
 describe("buildingTypeOf", () => {
   it("maps each building terrain to its sub-type", () => {

@@ -23,7 +23,7 @@ function ident(filename) {
   return `${base}Def`;
 }
 
-const imports = files.map((f) => `import ${ident(f)} from "./mechs/${f.replace(/\.ts$/, ".js")}";`);
+const imports = files.map((f) => `import ${ident(f)} from "./mechs/${f.replace(/\.ts$/, "")}";`);
 const entries = files.map((f) => `    [${ident(f)}.model, ${ident(f)}],`).join("\n");
 
 const content = `/**
@@ -32,8 +32,8 @@ const content = `/**
  * resolving each typed MechDef into the engine-facing ResolvedMechDef that
  * keeps front and rear armor as separate pools.
  */
-import type { MechDef, ResolvedMechDef } from "./mech.schema.js";
-import { resolveMechDef } from "./mech.schema.js";
+import type { MechDef, ResolvedMechDef } from "./mech.schema";
+import { resolveMechDef } from "./mech.schema";
 
 ${imports.join("\n")}
 

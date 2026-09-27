@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import type { Location } from "../src/core/types.js";
+import type { Location } from "../src/core/types";
 import {
   applyDamage,
-  getMechDefFor,
+  mechDefFor,
   type ResolvedCritSlot,
   rollFallDirection,
   suggestFireTargets,
   type UnitDamageState,
-} from "../src/index.js";
+} from "../src/index";
 import {
   advancePhase,
   applyFall,
@@ -29,9 +29,9 @@ import {
   rollInitiativePhase,
   voluntaryShutdown,
   wreckAt,
-} from "../src/rules/game.js";
+} from "../src/rules/game";
 
-import { createTestBattle, scriptedRng } from "./helpers.js";
+import { createTestBattle, scriptedRng } from "./helpers";
 
 function hbkEnf(critsDisabled = true) {
   return createTestBattle(
@@ -114,7 +114,7 @@ function structureSlots(
   name: string,
 ): number[] {
   const unit = requireUnit(state, id);
-  const def = getMechDefFor(unit);
+  const def = mechDefFor(unit);
   const out: number[] = [];
   def.critSlots[loc].forEach((slot: ResolvedCritSlot | undefined, i: number) => {
     if (slot?.kind === "structure" && slot.name === name) out.push(i);
@@ -1047,7 +1047,7 @@ describe("pilot damage", () => {
   it("life support plus heat injures the pilot in the heat phase", () => {
     const state = hbkEnf();
     const hbk = requireUnit(state, "hbk");
-    const def = getMechDefFor(hbk);
+    const def = mechDefFor(hbk);
     let marked = false;
     def.critSlots.head.forEach((slot: ResolvedCritSlot | undefined, i: number) => {
       if (slot?.kind === "structure" && slot.name === "lifeSupport") {

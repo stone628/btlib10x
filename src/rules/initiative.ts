@@ -1,5 +1,5 @@
-import { roll2D6 } from "../core/dice.js";
-import type { Rng } from "../core/types.js";
+import { roll2D6 } from "../core/dice";
+import type { Rng } from "../core/types";
 
 export interface InitiativeResult {
   readonly rolls: Readonly<Record<number, number>>;

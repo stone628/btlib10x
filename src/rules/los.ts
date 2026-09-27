@@ -1,7 +1,7 @@
-import { hexDistance, lineHexes } from "../core/hex.js";
-import { blocksTargeting, cellAt, type HexGrid, screeningPoints } from "../core/terrain.js";
-import { type HexCoord, isWoodsTerrain, type TerrainType, type WreckState } from "../core/types.js";
-import { buildingTypeOf } from "./building.js";
+import { hexDistance, lineHexes } from "../core/hex";
+import { blocksTargeting, cellAt, type HexGrid, screeningPoints } from "../core/terrain";
+import { type HexCoord, isWoodsTerrain, type TerrainType, type WreckState } from "../core/types";
+import { buildingTypeOf } from "./building";
 
 /**
  * Hexes along the center-to-center LOS, excluding the attacker's and target's

@@ -1,4 +1,4 @@
-import type { LocationValue } from "./damage.js";
+import type { LocationValue } from "./damage";
 
 export const HEAD_STRUCTURE = 3;
 

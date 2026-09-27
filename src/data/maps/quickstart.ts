@@ -1,4 +1,4 @@
-import type { MapDefSrc } from "../map.schema.js";
+import type { MapDefSrc } from "../map.schema";
 
 const def: MapDefSrc = {
   name: "quickstart",

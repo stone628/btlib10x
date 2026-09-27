@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { HexGrid } from "../src/core/terrain.js";
-import type { Facing, HexCell, MoveMode } from "../src/core/types.js";
-import type { MovePathStep } from "../src/rules/movement.js";
-import { reachableLandings } from "../src/rules/movement.js";
+import type { HexGrid } from "../src/core/terrain";
+import type { Facing, HexCell, MoveMode } from "../src/core/types";
+import type { MovePathStep } from "../src/rules/movement";
+import { reachableLandings } from "../src/rules/movement";
 
 // Start in the middle of a large board so the search radius is not clipped.
 const start = { col: 12, row: 12 };

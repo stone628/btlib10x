@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { getMechDef } from "../src/data/index.js";
-import type { BattleState, GameEvent, UnitInit } from "../src/rules/game.js";
+import { mechDef } from "../src/data/index";
+import type { BattleState, GameEvent, UnitInit } from "../src/rules/game";
 import {
   advancePhase,
   declareAttacks,
@@ -9,8 +9,8 @@ import {
   requireUnit,
   resolveAllAttacks,
   rollInitiativePhase,
-} from "../src/rules/game.js";
-import { checkVictory, createTestBattle, scriptedRng } from "./helpers.js";
+} from "../src/rules/game";
+import { checkVictory, createTestBattle, scriptedRng } from "./helpers";
 
 /**
  * Full battle reproducing the Total Warfare "Rolling To Hit" diagram (p.106):
@@ -82,14 +82,14 @@ describe("example battle: Wolverine vs Griffin", () => {
     // To-hit 11 >= TN 11; location roll 8 -> left torso; ML damage 5. LT 18 -> 13.
     resolveAllAttacks(state, scriptedRng(6, 5, 3, 5), []);
     expect(requireUnit(state, "grf").damage.armor.leftTorso).toBe(
-      getMechDef("GRF-1N")!.armor.leftTorso! - 5,
+      mechDef("GRF-1N")!.armor.leftTorso! - 5,
     );
 
     // Griffin answers with its PPC: TN 9, rolls 4 -> miss, no damage.
     declareAttacks(state, "grf", [{ weaponIndex: 2, targetId: "wvr" }], []);
     const missEvents: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(1, 3), missEvents); // miss
-    expect(requireUnit(state, "wvr").damage.armor).toEqual(getMechDef("WVR-6R")!.armor);
+    expect(requireUnit(state, "wvr").damage.armor).toEqual(mechDef("WVR-6R")!.armor);
   });
 
   it("fights through turn 6 until the Griffin loses its center torso", () => {
@@ -121,7 +121,7 @@ describe("example battle: Wolverine vs Griffin", () => {
     // ---- Turns 2..10: both stand still, Wolverine plinks the CT for 5 each.
     // Griffin front CT is 27 -> 6 hits reach 0 armor, then 18 IS needs 4 more
     // hits (3 to drop to 5, final hit to destroy).
-    const ctFront = getMechDef("GRF-1N")!.armor.centerTorso;
+    const ctFront = mechDef("GRF-1N")!.armor.centerTorso;
     expect(grfCt()).toBe(ctFront);
     for (let t = 2; t <= 10; t++) {
       advancePhase(state, []); // weaponAttack -> end

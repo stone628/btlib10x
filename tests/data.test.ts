@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { MechDef, ResolvedMechDef } from "../src/data/index.js";
-import { getAllMechDefs, getMechDef, resolveMechDef, validateMechDef } from "../src/data/index.js";
-import { getWeaponDefFor } from "../src/data/weapon.schema.js";
+import type { MechDef, ResolvedMechDef } from "../src/data/index";
+import { allMechDefs, mechDef, resolveMechDef, validateMechDef } from "../src/data/index";
+import { weaponDefFor } from "../src/data/weapon.schema";
 
 /** Strip engine-resolved fields to recover a MechDef (for testing). */
 function toMechDef(d: ResolvedMechDef): MechDef {
@@ -11,21 +11,21 @@ function toMechDef(d: ResolvedMechDef): MechDef {
 
 describe("'Mech definitions", () => {
   it("ships more than one 'Mech and every model is registered", () => {
-    expect(getAllMechDefs().length).toBeGreaterThan(1);
-    for (const def of getAllMechDefs()) {
-      expect(getMechDef(def.model)).toBe(def);
+    expect(allMechDefs().length).toBeGreaterThan(1);
+    for (const def of allMechDefs()) {
+      expect(mechDef(def.model)).toBe(def);
       expect(def.model).not.toBe("");
     }
   });
 
   it("re-validates every bundled definition", () => {
-    for (const def of getAllMechDefs()) {
+    for (const def of allMechDefs()) {
       expect(() => validateMechDef(toMechDef(def))).not.toThrow();
     }
   });
 
   it("matches record-sheet stats for the Hunchback", () => {
-    const hbk = getMechDef("HBK-4G")!;
+    const hbk = mechDef("HBK-4G")!;
     expect(hbk.name).toBe("Hunchback");
     expect(hbk.tonnage).toBe(50);
     expect(hbk.walking).toBe(4);
@@ -37,14 +37,14 @@ describe("'Mech definitions", () => {
   });
 
   it("spot-checks remaining sheets", () => {
-    expect(getMechDef("ENF-4R")!.armor.centerTorso).toBe(27);
-    expect(getMechDef("GRF-1N")!.jumping).toBe(5);
-    expect(getMechDef("GRF-1N")!.armor.centerTorso).toBe(27);
-    expect(getMechDef("CDA-3MA")!.walking).toBe(8);
-    expect(getMechDef("HER-5SA")!.running).toBe(9);
-    const wvr = getMechDef("WVR-6R")!;
+    expect(mechDef("ENF-4R")!.armor.centerTorso).toBe(27);
+    expect(mechDef("GRF-1N")!.jumping).toBe(5);
+    expect(mechDef("GRF-1N")!.armor.centerTorso).toBe(27);
+    expect(mechDef("CDA-3MA")!.walking).toBe(8);
+    expect(mechDef("HER-5SA")!.running).toBe(9);
+    const wvr = mechDef("WVR-6R")!;
     expect(Object.values(wvr.weapons).find((w) => w.weapon === "SRM 6")?.shots).toBe(15);
-    const atlas = getMechDef("AS7-D")!;
+    const atlas = mechDef("AS7-D")!;
     expect(atlas.tonnage).toBe(100);
     expect(atlas.weightClass).toBe("Assault");
     expect(atlas.running).toBe(5);
@@ -106,13 +106,13 @@ describe("'Mech definitions", () => {
   });
 
   it("derives internal structure from the tonnage table on resolve", () => {
-    expect(resolveMechDef(toMechDef(getMechDef("WVR-6R")!)).internalStructure.centerTorso).toBe(18);
-    expect(resolveMechDef(toMechDef(getMechDef("AS7-D")!)).internalStructure.centerTorso).toBe(31);
-    expect(resolveMechDef(toMechDef(getMechDef("AS7-D")!)).internalStructure.rightArm).toBe(17);
+    expect(resolveMechDef(toMechDef(mechDef("WVR-6R")!)).internalStructure.centerTorso).toBe(18);
+    expect(resolveMechDef(toMechDef(mechDef("AS7-D")!)).internalStructure.centerTorso).toBe(31);
+    expect(resolveMechDef(toMechDef(mechDef("AS7-D")!)).internalStructure.rightArm).toBe(17);
   });
 
   it("rejects invalid rear armor entries in the JSON schema", () => {
-    const base = toMechDef(getMechDef("HBK-4G")!);
+    const base = toMechDef(mechDef("HBK-4G")!);
     expect(() =>
       validateMechDef({ ...base, armor: { ...base.armor, centerTorsoRear: -3 } } as MechDef),
     ).toThrow(/armor\.centerTorsoRear must be a non-negative integer/);
@@ -122,13 +122,13 @@ describe("'Mech definitions", () => {
   });
 
   it("marks the Atlas rear-facing CT lasers (MTF (R)) and validates rearFacing", () => {
-    const atlas = toMechDef(getMechDef("AS7-D")!);
+    const atlas = toMechDef(mechDef("AS7-D")!);
     const ctLasers = atlas.weapons.filter(
       (w) => w.weapon === "Medium Laser" && w.location === "centerTorso",
     );
     expect(ctLasers).toHaveLength(2);
     for (const m of ctLasers) expect(m.rearFacing).toBe(true);
-    const base = toMechDef(getMechDef("HBK-4G")!);
+    const base = toMechDef(mechDef("HBK-4G")!);
     expect(() =>
       validateMechDef({
         ...base,
@@ -147,7 +147,7 @@ describe("'Mech definitions", () => {
   });
 
   it("CASE can mount in any location (TW p.133)", () => {
-    const base = toMechDef(getMechDef("HBK-4G")!);
+    const base = toMechDef(mechDef("HBK-4G")!);
     const withCase = (
       loc: "leftTorso" | "rightTorso" | "centerTorso" | "head" | "rightArm",
       slotIndex: number,
@@ -169,7 +169,7 @@ describe("'Mech definitions", () => {
   });
 
   it("rejects invalid definitions", () => {
-    const base = toMechDef(getMechDef("HBK-4G")!);
+    const base = toMechDef(mechDef("HBK-4G")!);
     expect(() => validateMechDef({ ...base, running: 7 } as MechDef)).toThrow(/running/);
     expect(() =>
       validateMechDef({ ...base, armor: { ...base.armor, head: -1 } } as MechDef),
@@ -182,33 +182,33 @@ describe("'Mech definitions", () => {
 
 describe("weapon catalog", () => {
   it("resolves every weapon referenced by a bundled 'Mech", () => {
-    for (const def of getAllMechDefs()) {
+    for (const def of allMechDefs()) {
       for (const mount of Object.values(def.weapons)) {
-        expect(getWeaponDefFor(mount).name, `${def.model}: ${mount.weapon}`).toBe(mount.weapon);
+        expect(weaponDefFor(mount).name, `${def.model}: ${mount.weapon}`).toBe(mount.weapon);
       }
     }
   });
 
   it("throws on genuinely unknown weapon names", () => {
-    expect(() => getWeaponDefFor({ weapon: "Not A Weapon" })).toThrow();
+    expect(() => weaponDefFor({ weapon: "Not A Weapon" })).toThrow();
   });
 
   it("encodes missile and rapid-fire behavior used by the attack pipeline", () => {
-    expect(getWeaponDefFor({ weapon: "LRM 10" }).missiles).toBe(10);
-    expect(getWeaponDefFor({ weapon: "LRM 10" }).missileDamage).toBe(1);
-    expect(getWeaponDefFor({ weapon: "SRM 6" }).missiles).toBe(6);
-    expect(getWeaponDefFor({ weapon: "SRM 6" }).missileDamage).toBe(2);
-    expect(getWeaponDefFor({ weapon: "Ultra AC/5" }).rapidFireShots).toBe(2);
-    expect(getWeaponDefFor({ weapon: "AC/20" }).rapidFireShots).toBeUndefined();
+    expect(weaponDefFor({ weapon: "LRM 10" }).missiles).toBe(10);
+    expect(weaponDefFor({ weapon: "LRM 10" }).missileDamage).toBe(1);
+    expect(weaponDefFor({ weapon: "SRM 6" }).missiles).toBe(6);
+    expect(weaponDefFor({ weapon: "SRM 6" }).missileDamage).toBe(2);
+    expect(weaponDefFor({ weapon: "Ultra AC/5" }).rapidFireShots).toBe(2);
+    expect(weaponDefFor({ weapon: "AC/20" }).rapidFireShots).toBeUndefined();
   });
 
   it("encodes Clan weapons added for the Mad Cat Mk II", () => {
-    expect(getWeaponDefFor({ weapon: "CL ER Medium Laser" }).damage).toBe(7);
-    expect(getWeaponDefFor({ weapon: "CL Gauss Rifle" }).damage).toBe(15);
-    expect(getWeaponDefFor({ weapon: "CL LB 20-X AC" }).damage).toBe(20);
-    expect(getWeaponDefFor({ weapon: "CL Streak SRM 4" }).missiles).toBe(4);
-    expect(getWeaponDefFor({ weapon: "CL Streak SRM 4" }).missileDamage).toBe(2);
-    expect(getWeaponDefFor({ weapon: "CL Streak SRM 4" }).streak).toBe(true);
+    expect(weaponDefFor({ weapon: "CL ER Medium Laser" }).damage).toBe(7);
+    expect(weaponDefFor({ weapon: "CL Gauss Rifle" }).damage).toBe(15);
+    expect(weaponDefFor({ weapon: "CL LB 20-X AC" }).damage).toBe(20);
+    expect(weaponDefFor({ weapon: "CL Streak SRM 4" }).missiles).toBe(4);
+    expect(weaponDefFor({ weapon: "CL Streak SRM 4" }).missileDamage).toBe(2);
+    expect(weaponDefFor({ weapon: "CL Streak SRM 4" }).streak).toBe(true);
   });
 
   it("encodes streak launchers on both tech bases", () => {
@@ -219,20 +219,20 @@ describe("weapon catalog", () => {
       "CL Streak SRM 2",
       "CL Streak SRM 6",
     ]) {
-      const def = getWeaponDefFor({ weapon: name });
+      const def = weaponDefFor({ weapon: name });
       expect(def.streak).toBe(true);
       expect(def.missileDamage).toBe(2);
     }
-    expect(getWeaponDefFor({ weapon: "Streak SRM 2" }).missiles).toBe(2);
-    expect(getWeaponDefFor({ weapon: "Streak SRM 6" }).missiles).toBe(6);
-    expect(getWeaponDefFor({ weapon: "SRM 6" }).streak).toBeUndefined();
-    expect(getWeaponDefFor({ weapon: "LRM 10" }).streak).toBeUndefined();
+    expect(weaponDefFor({ weapon: "Streak SRM 2" }).missiles).toBe(2);
+    expect(weaponDefFor({ weapon: "Streak SRM 6" }).missiles).toBe(6);
+    expect(weaponDefFor({ weapon: "SRM 6" }).streak).toBeUndefined();
+    expect(weaponDefFor({ weapon: "LRM 10" }).streak).toBeUndefined();
   });
 });
 
 describe("ammo validation in MechDef", () => {
   it("rejects a mount.shots that is not a multiple of shotsPerBin", () => {
-    const base = toMechDef(getMechDef("HBK-4G")!);
+    const base = toMechDef(mechDef("HBK-4G")!);
     expect(() =>
       validateMechDef({
         ...base,
@@ -242,7 +242,7 @@ describe("ammo validation in MechDef", () => {
   });
 
   it("rejects an ammo crit slot whose weapon has no ammo definition", () => {
-    const base = toMechDef(getMechDef("HBK-4G")!);
+    const base = toMechDef(mechDef("HBK-4G")!);
     expect(() =>
       validateMechDef({
         ...base,
