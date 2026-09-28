@@ -162,11 +162,13 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   `terrain.schema.ts`. Move surcharge, screening value, target modifier,
   partial-cover flag, and targeting-restriction flag all live in the catalog.
 - **Buildings** — building hexes carry a structural factor (CF) initialized
-  from the sub-type (light 15 / medium 40 / heavy 90 / hardened 150).
-  Weapon damage that lands on a unit standing in a building hex is also
-  applied to that building's CF (`damageBuildingAt`); when CF reaches 0 the
-  hex collapses to rubble and a `buildingCollapsed` event fires. Unit damage
-  from a collapse is deferred with piloting.
+  from the sub-type (light 15 / medium 40 / heavy 90 / hardened 120).
+  Each weapon grouping that hits a unit inside costs the hex ceil(CF at
+  phase start / 10), applied after all weapons fire (`damageBuildingAt`);
+  when CF reaches 0 the hex collapses to rubble and a `buildingCollapsed`
+  event fires. Collapse damage is ceil(CF/10 x (1 + levels above)) in
+  5-point punch-table groups, plus standard falling damage above Level 0.
+  Unit damage from a collapse is deferred with piloting.
 - **Hit location** — bipedal front / left side / right side / rear tables.
 - **Cluster hits** — missile 2/4/5/6/10/15/20 + shot columns 2/3/4.
   Streak launchers skip table: to-hit success lands full tube count, miss
@@ -326,8 +328,6 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   phase there is nothing to trigger them (see Not viable below).
 - **Water depth movement** — level-change MP surcharge when entering water
   (the water-entry PSR itself is implemented above).
-- **Collapse damage** — units inside a building hex take damage when it
-  collapses (only the collapse-to-rubble terrain change is implemented).
 - **Torso twist** — per-weapon facing override that shifts a unit's firing
   arcs during the attack phase (currently only the positional facing is
   used).

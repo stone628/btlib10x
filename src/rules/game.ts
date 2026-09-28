@@ -1,4 +1,4 @@
-import { D2D6_MAX, roll2D6 } from "../core/dice";
+import { D2D6_MAX, roll2D6, rollD6 } from "../core/dice";
 import { bearingExact, hexDistance, isAdjacent, sameHex } from "../core/hex";
 import {
   cellAt,
@@ -52,6 +52,7 @@ import {
   buildingTypeOf,
   collapseToRubble,
   createBuildingState,
+  DEFAULT_BUILDING_LEVELS,
   isCollapsed,
 } from "./building";
 import {
@@ -90,7 +91,7 @@ import {
   shutdownAvoidWithThreshold,
   toHitHeatModifier,
 } from "./heat";
-import { hitLocation, hitLocationForArc } from "./hitlocation";
+import { hitLocation, hitLocationForArc, punchHitLocation } from "./hitlocation";
 import { rollInitiative } from "./initiative";
 import {
   interveningHexes,
@@ -982,6 +983,18 @@ const PHASE_DAMAGE_PSR_MOD = 1;
 const SHUTDOWN_PSR_MOD = 3;
 /** Divisor for building-crash damage: ceil(remaining CF / 10). */
 const BUILDING_CRASH_DIVISOR = 10;
+/** Per-attack CF toll divisor for units inside buildings (TW p. 171):
+ *  each hitting Damage Value grouping costs ceil(CF at phase start / 10). */
+const BUILDING_ABSORB_DIVISOR = 10;
+
+/**
+ * Collapse damage total for a building hex (TW p. 176): base damage (CF at
+ * the start of the phase / 10) plus base × levels above the unit, rounded
+ * up at the end. Pure: exported for tests.
+ */
+export function collapseDamageTotal(preCf: number, levelsAbove: number): number {
+  return Math.ceil((preCf / BUILDING_ABSORB_DIVISOR) * (1 + levelsAbove));
+}
 /** Default wreck height in levels for a standing non-light 'Mech (TW).
  *  L1 wrecks are produced for light 'Mechs and for prone units via
  *  `wreckLevelFor` (see Tactical Operations block below). */
@@ -1576,6 +1589,7 @@ function resolveUnitAttacks(
   unit: UnitState,
   rng: Rng,
   phaseStartDamage: Record<string, UnitDamageState>,
+  phaseStartCf: Record<string, number>,
 ): UnitAttackResult {
   const def = mechDefFor(unit);
   const preHeat = unit.heat;
@@ -1667,9 +1681,18 @@ function resolveUnitAttacks(
 
     const weaponHeat = (weapon.heat ?? 0) * shots;
 
+    // TW p. 171: the hex absorbs, from each attack that hits, damage equal
+    // to its CF at the beginning of the phase / 10 (round up). Each Damage
+    // Value grouping with its own hit location roll counts as a separate
+    // attack. The unit inside still takes its full damage (applied by the
+    // caller from `resolution.application`).
     let buildingDamage = 0;
     if (resolution.hit && resolution.groups.length > 0) {
-      buildingDamage = resolution.groups.reduce((acc, g) => acc + g.damage, 0);
+      const toll = Math.ceil(
+        (phaseStartCf[`${target.position.col},${target.position.row}`] ?? 0) /
+          BUILDING_ABSORB_DIVISOR,
+      );
+      buildingDamage = toll * resolution.groups.length;
     }
 
     resolutions.push({
@@ -2108,9 +2131,15 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   }
 
   const results: UnitAttackResult[] = [];
+  // TW p. 171: the absorb toll keys off the CF at the beginning of the phase,
+  // and p. 171 mandates CF reduction only after all weapons fire completes.
+  const phaseStartCf: Record<string, number> = {};
+  for (const [key, building] of Object.entries(state.buildings)) {
+    phaseStartCf[key] = building.cf;
+  }
   for (const unit of Object.values(state.units)) {
     if (unit.declaredAttacks.length === 0) continue;
-    results.push(resolveUnitAttacks(state, unit, rng, phaseStartDamage));
+    results.push(resolveUnitAttacks(state, unit, rng, phaseStartDamage, phaseStartCf));
   }
 
   // Phase 2: apply all damage, crits, building damage, and heat simultaneously
@@ -2120,6 +2149,9 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   const targetAmmoBinsMap: Record<string, AmmoBins> = {};
   const targetDestroyedWeaponsMap: Record<string, number[]> = {};
   const buildingOutcomes: BuildingDamageResult[] = [];
+  /** Deferred per-hex CF tolls (TW p. 171: CF reduction only after all
+   *  weapons fire is complete). Applied after the damage write-back. */
+  const buildingDamageByHex: Record<string, { hex: HexCoord; damage: number }> = {};
   /** First crit-derived kill reason per target (cockpit, engine, head
    *  blow-off); drives `markUnitDestroyed` when the damage state alone
    *  wouldn't show a kill (the engine-crit case). */
@@ -2150,10 +2182,22 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       // Collect crits for later sequential application
       targetCritsMap[targetId]!.push(...resolution.crits);
 
-      // Apply building damage
+      // Defer building damage: accumulate the toll per hex, applied after
+      // all weapons fire completes (TW p. 171).
       if (buildingDamage > 0) {
-        const outcome = damageBuildingAt(state, target.position, buildingDamage, sink);
-        if (outcome !== null) buildingOutcomes.push(outcome);
+        const key = `${target.position.col},${target.position.row}`;
+        const entry = buildingDamageByHex[key];
+        if (entry === undefined) {
+          buildingDamageByHex[key] = {
+            hex: { ...target.position },
+            damage: buildingDamage,
+          };
+        } else {
+          buildingDamageByHex[key] = {
+            hex: entry.hex,
+            damage: entry.damage + buildingDamage,
+          };
+        }
       }
 
       // Emit attackResolved event
@@ -2258,27 +2302,60 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     stripDestroyedLocationAmmo(target);
   }
 
-  // Building collapse damage (TW p.176): each occupant takes ceil(CF at the
-  // start of the phase / 10), rounded up. Level-1 buildings only — no
-  // levels-above multiplier applies. Applied after the write-back so folded
-  // attack damage lands first; new `collapseDamage` events stay inside the
-  // attack-resolution block.
+  // TW p. 171: CF reduction only after all weapons fire is complete, so the
+  // toll stays frozen at the phase-start CF for every attack this phase.
+  for (const { hex, damage } of Object.values(buildingDamageByHex)) {
+    const outcome = damageBuildingAt(state, hex, damage, sink);
+    if (outcome !== null) buildingOutcomes.push(outcome);
+  }
+
+  // Building collapse damage (TW pp. 176–177): base damage (CF at the start
+  // of the phase / 10) plus base × levels above the unit, rounded up at the
+  // end. Split into 5-point groupings plus a remainder, each to a different
+  // hit location: 'Mechs inside roll the Front column of the Punch table.
+  // Units above Level 0 also take standard falling damage. Applied after the
+  // write-back so folded attack damage lands first; new `collapseDamage`
+  // events stay inside the attack-resolution block. The engine tracks no
+  // multi-floor interiors, so every occupant counts as ground-floor with
+  // DEFAULT_BUILDING_LEVELS above (TW default Level 2, pp. 166–167).
   for (const outcome of buildingOutcomes) {
     if (!outcome.collapsed) continue;
-    const damage = Math.ceil(outcome.preCf / 10);
+    const total = collapseDamageTotal(outcome.preCf, DEFAULT_BUILDING_LEVELS);
     for (const unitId of outcome.occupants) {
       const unit = requireUnit(state, unitId);
-      const location = hitLocation(roll2D6(rng));
-      const application = applyDamage(unit.damage, location, damage);
-      unit.damage = application.after;
-      sink.push({
-        kind: "collapseDamage",
-        unitId,
-        col: outcome.col,
-        row: outcome.row,
-        location,
-        damage,
-      });
+      if (isUnitRemoved(unit)) continue;
+      const groups: Array<{ location: Location; damage: number }> = [];
+      for (const amount of fallingDamageGroups(total)) {
+        groups.push({ location: punchHitLocation(rollD6(rng)), damage: amount });
+      }
+      applyDamageGroups(state, unit, rng, groups, "front", sink);
+      for (const group of groups) {
+        sink.push({
+          kind: "collapseDamage",
+          unitId,
+          col: outcome.col,
+          row: outcome.row,
+          location: group.location,
+          damage: group.damage,
+        });
+      }
+      // TW p. 177: any unit above Level 0 (including the roof) also takes
+      // standard falling damage on top of the collapse damage.
+      const groundLevel = cellAt(state, { col: outcome.col, row: outcome.row }).level;
+      if (groundLevel > 0 && !isUnitRemoved(unit)) {
+        applyFall(
+          state,
+          unit,
+          rng,
+          {
+            cause: "buildingCollapse",
+            seatbeltModifier: null,
+            halved: false,
+            levelsFallen: groundLevel,
+          },
+          sink,
+        );
+      }
     }
   }
 

@@ -140,6 +140,7 @@ export {
   buildingTypeOf,
   collapseToRubble,
   createBuildingState,
+  DEFAULT_BUILDING_LEVELS,
   initialCf,
   isBuildingTerrain,
   isCollapsed,
@@ -218,6 +219,7 @@ export {
   applyPilotHits,
   attemptStandUp,
   attemptVoluntaryStartup,
+  collapseDamageTotal,
   createBattle,
   DEFAULT_RNG,
   DROP_MP_COST,
@@ -281,6 +283,8 @@ export {
   hitLocation,
   hitLocationForArc,
   LEFT_SIDE_TABLE,
+  PUNCH_LOCATION_TABLE,
+  punchHitLocation,
   RIGHT_SIDE_TABLE,
 } from "./rules/hitlocation";
 export type { InitiativeResult } from "./rules/initiative";
