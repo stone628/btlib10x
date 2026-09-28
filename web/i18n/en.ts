@@ -232,6 +232,7 @@ export const en = {
   "err.minRange":
     "{weapon}: target at range {dist} is within minimum range {min} ({penalty} to-hit penalty)",
   "err.rematchOnlyOver": "Only available when the battle is over",
+  "err.notOver": "battle not over yet",
   "err.seedInteger": "seed must be an integer",
   "err.badAmmoPolicy": "ammo policy must be one of exposed|core|spread|least-first",
   "err.phaseDriver": "phase driver failed to settle",
@@ -447,6 +448,8 @@ export const en = {
   "log.phase": "   turn: {turn}, phase: {phase}   ",
   "log.initiative": "initiative: {rolls} -> team {winner} wins initiative and moves last.",
   "log.moveDeclared": "[{id}] declares {mode}",
+  "log.moveActor":
+    "[{id}] is at ({pos}) facing {facing} {posture}, on terrain {terrain} elevation {elevation}.",
   "log.moved": "[{id}] {mode} -> {pos} facing {facing}, used {mp} of {budget} MP",
   "log.attacksDeclaredOne": "[{id}] fires at {target} ({count} weapon, {rangeCtx})",
   "log.attacksDeclaredOther": "[{id}] fires at {target} ({count} weapons, {rangeCtx})",

@@ -1,4 +1,12 @@
-import type { BattleState, GameEvent, Rng, UnitState } from "btlib10x";
+import type {
+  BattleState,
+  Facing,
+  GameEvent,
+  HexCoord,
+  Rng,
+  TerrainType,
+  UnitState,
+} from "btlib10x";
 import { gameLoop, isUnitRemoved } from "btlib10x";
 import type { LocaleId } from "./i18n/index";
 import { i18n, setI18nDefaultLocale } from "./i18n/index";
@@ -7,12 +15,14 @@ import {
   initMovementContext,
   type MovementContext,
   movementContextInvalid,
+  onEnterMovement,
   requireMovementActor,
 } from "./session.move";
 import type { OverContext, SessionVictoryResult } from "./session.over";
 import type { SetupContext } from "./session.setup";
 import {
   initWeaponAttackContext,
+  onEnterWeaponAttack,
   requireWeaponAttackActor,
   type WeaponAttackContext,
   weaponAttackContextInvalid,
@@ -210,6 +220,12 @@ export type SessionGameEvent =
   | {
       readonly kind: "sessionMoveActor";
       readonly actorId: string;
+      readonly position: HexCoord;
+      readonly facing: Facing;
+      readonly prone: boolean;
+      readonly terrain: TerrainType;
+      readonly elevation: number;
+      readonly modes: string;
     }
   | {
       readonly kind: "sessionMoveActorDone";
@@ -290,10 +306,8 @@ export function drive(s: Session): SessionGameEvent[] {
     clearBattleContexts(s);
     return [...collected, { kind: "sessionOver" }];
   }
+  s.state = "battle";
   const result: SessionGameEvent[] = [];
-  if (s.state !== "battle") {
-    s.state = "battle";
-  }
   const inMovement = battle.phase === "movement";
   const inWeaponAttack = battle.phase === "weaponAttack";
   if (wasInWeaponAttack && !inWeaponAttack) {
@@ -310,12 +324,12 @@ export function drive(s: Session): SessionGameEvent[] {
     if (inMovement && movementContextInvalid(s, id)) {
       ensureBattleContextsCleared(s);
       initMovementContext(s, id);
-      result.push({ kind: "sessionMoveActor", actorId: id });
+      onEnterMovement(s, result);
     }
     if (inWeaponAttack && weaponAttackContextInvalid(s, id)) {
       ensureBattleContextsCleared(s);
       initWeaponAttackContext(s, id);
-      result.push({ kind: "sessionAttackActor", actorId: id });
+      onEnterWeaponAttack(s, result);
     }
   }
   return result;

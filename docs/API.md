@@ -107,8 +107,8 @@ interface WeaponDef {
 }
 ```
 
-- `getWeaponDefFor(h: WeaponNameHolder): WeaponDef` (throws on unknown names)
-- `getAllWeaponDefs(): WeaponDef[]`
+- `weaponDefFor(h: WeaponNameHolder): WeaponDef` (throws on unknown names)
+- `allWeaponDefs(): WeaponDef[]`
 - `listWeaponNames(): string[]`
 - `WeaponNameHolder` — minimal interface (`{ weapon: string }`) accepted by
   the `…For` lookup helpers
@@ -118,10 +118,10 @@ interface WeaponDef {
 
 - `AmmoDef` — per-bin ammo record (damage-per-shot, shots-per-bin)
 - `AmmoNameHolder` — `{ weapon: string }` for lookup helpers
-- `getAmmoDefFor(h): AmmoDef` (throws on unknown)
-- `getAllAmmo(): readonly AmmoDef[]`
+- `ammoDefFor(h): AmmoDef` (throws on unknown)
+- `allAmmo(): readonly AmmoDef[]`
 - `listAmmoWeapons(): string[]`
-- `getShotsPerBinFor(h): number | undefined`
+- `shotsPerBinFor(h): number | undefined`
 
 ### 'Mech definitions (`data/mech.schema.ts`, `data/index.ts`)
 
@@ -190,10 +190,10 @@ interface ResolvedMechDef {
 1-based `weaponIndex` in `weapons`, and gives multi-slot structure components
 (DHS) a `group` of sibling slot indices so one hit destroys the whole DHS.
 
-- `getMechDef(model: string): ResolvedMechDef | undefined`
-- `getMechDefFor(h: MechModelHolder): ResolvedMechDef` (throws on unknown)
-- `getAllMechDefs(): ResolvedMechDef[]`
-- `getUnitTonnage(h: MechModelHolder): number`
+- `mechDef(model: string): ResolvedMechDef | undefined`
+- `mechDefFor(h: MechModelHolder): ResolvedMechDef` (throws on unknown)
+- `allMechDefs(): ResolvedMechDef[]`
+- `unitTonnage(h: MechModelHolder): number`
 - `validateMechDef(def: MechDef): void` — hand-rolled validator; throws with
   all problems listed
 - `resolveMechDef(def: MechDef): ResolvedMechDef`
@@ -217,9 +217,9 @@ interface MapDef {
 }
 ```
 
-- `getMapDef(name: string): MapDef | undefined`
-- `getMapDefFor(h: MapNameHolder): MapDef` (throws on unknown)
-- `getAllMapDefs(): MapDef[]`
+- `mapDef(name: string): MapDef | undefined`
+- `mapDefFor(h: MapNameHolder): MapDef` (throws on unknown)
+- `allMapDefs(): MapDef[]`
 - `listMapNames(): string[]`
 - `validateMapDef(def: MapDefSrc): void` — checks shape, integer coords,
   terrain type, 1-based bounds, duplicate hexes, and optional non-negative

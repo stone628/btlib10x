@@ -3,6 +3,7 @@ import {
   attemptVoluntaryStartup,
   type BattleState,
   canAttemptStandUp,
+  cellAt,
   DROP_MP_COST,
   destroyedArms,
   destroyedLegs,
@@ -838,4 +839,20 @@ export function displayModeFor(m: MovementContext): string {
   if (m.moveMode === "prone")
     return `prone ${m.postureMove === "standStill" ? "pronestill" : "turn"}`;
   return m.moveMode ?? "";
+}
+
+export function onEnterMovement(s: Session, sink: SessionGameEvent[]) {
+  const { battle, context } = requireBattleAndContext(s);
+  const actor = requireUnit(battle, context.actorId);
+  const cell = cellAt(battle, actor.position);
+  sink.push({
+    kind: "sessionMoveActor",
+    actorId: actor.id,
+    position: actor.position,
+    facing: actor.facing,
+    prone: actor.prone,
+    terrain: cell.terrain,
+    elevation: cell.level,
+    modes: modeSyntaxFor(actor),
+  });
 }

@@ -61,10 +61,19 @@ import {
   type Chunk,
 } from "./chunk";
 import { compensatedLength, i18n, type MessageKey } from "./i18n";
-import { F, gunneryLabel, hexCoordStr, PRN, requireMechDef, SHORT_LOC, signedMod } from "./misc";
+import {
+  F,
+  gunneryLabel,
+  hexCoordStr,
+  PRN,
+  requireMechDef,
+  SHORT_LOC,
+  signedMod,
+  TRN,
+} from "./misc";
 import { createBoardRenderUnit, createEjectedBoardRenderUnits } from "./render";
-import { requireBattle, type Session, type SessionGameEvent } from "./session";
-import { critLines, resolutionLines } from "./session.weapon";
+import { requireBattle, type Session, type SessionGameEvent, victoryBannerChunk } from "./session";
+import { critLines, fireSuggestionChunks, resolutionLines } from "./session.weapon";
 
 /** Full heat-scale status for one unit, driven by the `heat` CLI command. */
 export function heatStatusLines(unit: UnitState): Chunk {
@@ -989,7 +998,7 @@ export function actorOrderLines(s: Session): string[] {
 
 const _UNIT_ID_PREFIX_REGEX = /^\[[^\]]+\] /;
 
-export function handleSessionGameEvents(events: SessionGameEvent[]): Chunk[] {
+export function handleSessionGameEvents(s: Session, events: SessionGameEvent[]): Chunk[] {
   const result: Chunk[] = [];
   const linesBuf: string[] = [];
   const idLinesBuf: string[] = [];
@@ -1059,16 +1068,17 @@ export function handleSessionGameEvents(events: SessionGameEvent[]): Chunk[] {
     flushLinesBuf();
     result.push(...chunks);
   };
-  for (const e of events) handleSessionGameEvent(e, lines, idLines, chunks);
+  for (const e of events) handleSessionGameEvent(s, e, lines, idLines, chunks);
   flushLinesBuf();
   return result;
 }
 
 function handleSessionGameEvent(
+  s: Session,
   e: SessionGameEvent,
   lines: (...lines: string[]) => void,
   idLines: (id: string, ...lines: string[]) => void,
-  _chunks: (...chunks: Chunk[]) => void,
+  chunks: (...chunks: Chunk[]) => void,
 ): void {
   switch (e.kind) {
     case "phase":
@@ -1419,12 +1429,23 @@ function handleSessionGameEvent(
       }
       break;
     case "sessionMoveActor":
-      lines(`&&&& session move actor(${e.actorId})`);
+      idLines(
+        e.actorId,
+        i18n("log.moveActor", {
+          id: e.actorId,
+          pos: hexCoordStr(e.position),
+          facing: F(e.facing),
+          posture: PRN(e.prone),
+          terrain: TRN(e.terrain),
+          elevation: e.elevation,
+        }),
+        i18n("mode.hint", { modes: e.modes }),
+      );
       break;
     case "sessionMoveActorDone":
       break;
     case "sessionAttackActor":
-      lines(`&&&& session attack actor(${e.actorId})`);
+      chunks(...fireSuggestionChunks(s));
       break;
     case "sessionAttackActorDone":
       if (e.pass) {
@@ -1443,6 +1464,7 @@ function handleSessionGameEvent(
       }
       break;
     case "sessionOver":
+      chunks(victoryBannerChunk(s));
       break;
     default: {
       // Exhaustiveness guard: adding a GameEvent kind must add a case above.

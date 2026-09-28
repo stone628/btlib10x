@@ -24,6 +24,7 @@ import {
   type RangeBracket,
   requireUnit,
   shoulderOf,
+  suggestFireTargets,
   type TorsoLocationValue,
   validateAttacks,
   weaponDefFor,
@@ -286,7 +287,11 @@ function blockedChunks(list: ReturnType<typeof blockedLines>): Chunk[] {
   return [buildLinesChunkWith("hint", ...list)];
 }
 
-export function fireSuggestionChunks(sugg: FireSuggestion, twist: Arc | null = null): Chunk[] {
+// export function fireSuggestionChunks(sugg: FireSuggestion, twist: Arc | null = null): Chunk[] {
+export function fireSuggestionChunks(s: Session): Chunk[] {
+  const { context } = requireBattleAndContext(s);
+  const sugg = context.fireCandidate!;
+  const twist = context.torsoTwist;
   const chunks: Chunk[] = [
     buildLinesChunkWith("hint", i18n("fireSuggestion.header", { id: sugg.targetId })),
   ];
@@ -588,4 +593,11 @@ function stepLabel(step: DamageTransferStep): string {
     return isTorso(step.location) ? "F" : "A";
   }
   return step.pool === "armorRear" ? "R" : "I";
+}
+
+export function onEnterWeaponAttack(s: Session, sink: SessionGameEvent[]) {
+  const { battle, context } = requireBattleAndContext(s);
+  const actor = requireUnit(battle, context.actorId);
+  context.fireCandidate = suggestFireTargets(battle, actor.id, context.torsoTwist);
+  sink.push({ kind: "sessionAttackActor", actorId: actor.id });
 }
