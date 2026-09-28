@@ -18,6 +18,20 @@ import {
   weaponAttackContextInvalid,
 } from "./session.weapon";
 
+/**
+ * Public barrel for the session layer: everything below is implemented in
+ * `session.common` / `session.move` / `session.over` / `session.setup` /
+ * `session.weapon` and re-exported here, so callers outside `web/session.*`
+ * import from this module only. The sub-modules deliberately import each
+ * other (and this file) directly — going through the barrel would turn
+ * already-existing intra-layer cycles into ones that reach module init.
+ */
+export * from "./session.common";
+export * from "./session.move";
+export * from "./session.over";
+export * from "./session.setup";
+export * from "./session.weapon";
+
 export type SessionState = "setup" | "battle" | "over";
 
 export interface Session {

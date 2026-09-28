@@ -37,11 +37,16 @@ const BODY_PART_HEADERS = [
 ];
 
 function normalizeCritWeaponToken(t) {
-  return t
-    .replace(/\s*\((R|F)\)\s*$/i, "")
-    .replace(/^(IS|CL)[\s_-]?/i, "")
-    .replace(/\s+CL$/, "")
-    .trim();
+  const facingMatch = t.match(/\((R|F)\)\s*$/i);
+  const rearFacing = facingMatch ? facingMatch[1].toUpperCase() === "R" : false;
+  return {
+    name: t
+      .replace(/\s*\((R|F)\)\s*$/i, "")
+      .replace(/^(IS|CL)[\s_-]?/i, "")
+      .replace(/\s+CL$/, "")
+      .trim(),
+    rearFacing,
+  };
 }
 
 /** Tally ammo tons per catalog weapon from the MTF crit-slot lines.
@@ -113,8 +118,12 @@ function classifyCritLine(raw, errors, fileLabel) {
     return { ok: true, slot: { kind: "soak", name: SOAK_TOKEN[t] } };
   }
   const stripped = normalizeCritWeaponToken(t);
-  const name = CODE[t] ?? CODE[stripped] ?? null;
-  if (name) return { ok: true, slot: { kind: "weapon", weapon: name } };
+  const name = CODE[t] ?? CODE[stripped.name] ?? null;
+  if (name)
+    return {
+      ok: true,
+      slot: { kind: "weapon", weapon: name, ...(stripped.rearFacing && { rearFacing: true }) },
+    };
   errors.push(`Unmapped crit-slot token ${JSON.stringify(t)} in ${fileLabel}`);
   return { ok: false };
 }

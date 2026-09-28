@@ -2,8 +2,7 @@ import { describe, expect, it } from "vitest";
 import { neighbor } from "../src/core/hex";
 import type { RevealedLanding } from "../src/index";
 import { executeMove, requireUnit, rollInitiativePhase } from "../src/rules/game";
-import { newSession, type Session } from "../web/session";
-import { budgetFor, requireMovementActor } from "../web/session.move";
+import { budgetFor, newSession, requireMovementActor, type Session } from "../web/session";
 import { createTestBattle, disableCritical, execute, scriptedRng } from "./helpers";
 
 function run(s: Session, cmd: string): string[] {

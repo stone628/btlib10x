@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { LOCATIONS } from "../src/core/types";
 import { resolveWeaponAttack } from "../src/rules/attack";
 import type { LocationValue, TorsoLocationValue, UnitDamageState } from "../src/rules/damage";
-import { transferDetail } from "../web/session.weapon";
+import { transferDetail } from "../web/session";
 import { scriptedRng } from "./helpers";
 
 function freshState(hp = 10): UnitDamageState {

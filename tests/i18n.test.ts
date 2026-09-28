@@ -13,9 +13,15 @@ import {
 import { en } from "../web/i18n/en";
 import type { LocaleId, MessageKey } from "../web/i18n/index";
 import { i18nIn, LOCALES } from "../web/i18n/index";
-import { configLocale, newSession } from "../web/session";
-import { commitMovement, declareMovementMode, placeLanding } from "../web/session.move";
-import { commitWeaponFire, queueWeaponFire } from "../web/session.weapon";
+import {
+  commitMovement,
+  commitWeaponFire,
+  configLocale,
+  declareMovementMode,
+  newSession,
+  placeLanding,
+  queueWeaponFire,
+} from "../web/session";
 import { currentActor, execute } from "./helpers";
 
 /** Drive a started battle until it is over using minimal legal actions. */

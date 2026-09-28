@@ -13,7 +13,7 @@ import {
   resolveAllAttacks,
   rollInitiativePhase,
 } from "../src/rules/game";
-import { resolutionLines } from "../web/session.weapon";
+import { resolutionLines } from "../web/session";
 import { checkVictory, createTestBattle, scriptedRng } from "./helpers";
 
 function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {

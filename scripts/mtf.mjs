@@ -50,20 +50,23 @@ function numberRegex(text, label) {
   return m ? Number(m[1]) : null;
 }
 
-/** Normalize an MTF weapon line into {code, location, explicitAmmo}. */
+/** Normalize an MTF weapon line into {code, location, explicitAmmo, rearFacing}. */
 function splitWeaponLine(line) {
   const parts = line.split(",").map((s) => s.trim());
-  const codeRaw = (parts[0] ?? "")
-    .replace(/^\d+\s+/, "")
-    .replace(/\((R|F)\)\s*$/, "")
-    .trim();
+  let codeRaw = (parts[0] ?? "").replace(/^\d+\s+/, "").trim();
+  let rearFacing = false;
+  const facingMatch = codeRaw.match(/\((R|F)\)\s*$/);
+  if (facingMatch) {
+    rearFacing = facingMatch[1] === "R";
+    codeRaw = codeRaw.replace(/\((R|F)\)\s*$/, "").trim();
+  }
   const location = (parts[1] ?? "").trim();
   let explicitAmmo = null;
   if (parts[2]) {
     const m = parts[2].match(/^Ammo:(\d+)/);
     if (m) explicitAmmo = Number(m[1]);
   }
-  return { codeRaw, location, explicitAmmo };
+  return { codeRaw, location, explicitAmmo, rearFacing };
 }
 
 function mapWeapon(codeRaw) {
@@ -177,7 +180,7 @@ function parseMtf(text, file) {
   const bins = ammoBinsFromCrits(lines);
   const parsed = block
     .map(splitWeaponLine)
-    .map(({ codeRaw, location, explicitAmmo }) => {
+    .map(({ codeRaw, location, explicitAmmo, rearFacing }) => {
       const weapon = mapWeapon(codeRaw);
       if (!weapon) {
         errors.push(`Unmapped weapon code ${JSON.stringify(codeRaw)}`);
@@ -193,7 +196,7 @@ function parseMtf(text, file) {
       if (ammo === null && SHOTS_PER_TON[weapon] && (bins.get(weapon) ?? 0) > 0) {
         ammo = bins.get(weapon) * SHOTS_PER_TON[weapon];
       }
-      return { weapon, location: loc, ammo, explicit: explicitAmmo !== null };
+      return { weapon, location: loc, ammo, explicit: explicitAmmo !== null, rearFacing };
     })
     .filter((m) => m !== null);
 
@@ -211,11 +214,35 @@ function parseMtf(text, file) {
     if (owner !== m) m.ammo = null;
   }
 
-  const weapons = parsed.map(({ weapon, location, ammo }) =>
-    ammo !== null ? { weapon, location, shots: ammo } : { weapon, location },
+  const weapons = parsed.map(({ weapon, location, ammo, rearFacing }) =>
+    ammo !== null
+      ? { weapon, location, shots: ammo, ...(rearFacing && { rearFacing: true }) }
+      : { weapon, location, ...(rearFacing && { rearFacing: true }) },
   );
 
   const critSlots = parseCritSlots(lines, errors, file);
+
+  // Build rear-facing map from crit slots: (location, weapon) -> true if any slot is rear-facing
+  const rearFacingFromCrits = new Map();
+  for (const [loc, slots] of Object.entries(critSlots)) {
+    for (const slot of slots) {
+      if (slot.kind === "weapon" && slot.rearFacing) {
+        rearFacingFromCrits.set(`${loc}:${slot.weapon}`, true);
+      }
+    }
+  }
+
+  // Apply rear-facing from crit slots to weapon mounts (by location + weapon, in order)
+  const mountCursors = new Map();
+  for (const mount of weapons) {
+    const key = `${mount.location}:${mount.weapon}`;
+    const cursor = mountCursors.get(key) ?? 0;
+    if (rearFacingFromCrits.get(key) === true) {
+      mount.rearFacing = true;
+    }
+    mountCursors.set(key, cursor + 1);
+  }
+
   const critMeta = {
     techBase: fields.TechBase,
     engineField: fields.Engine,

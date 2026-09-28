@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { newSession, type Session } from "../web/session";
-import { commitMovement, declareMovementMode, requireMovementActor } from "../web/session.move";
-import { setTorsoTwist } from "../web/session.weapon";
+import {
+  commitMovement,
+  declareMovementMode,
+  newSession,
+  requireMovementActor,
+  type Session,
+  setTorsoTwist,
+} from "../web/session";
 import { disableCritical, execute } from "./helpers";
 
 function run(s: Session, cmd: string): string[] {
