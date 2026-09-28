@@ -12,12 +12,18 @@ const BUILDING_TERRAIN_MAP: Readonly<Record<string, BuildingType>> = {
   hardenedBuilding: "hardened",
 };
 
-/** Initial structural factor (CF) ranges by building type (core rulebook). */
+/** Default building height in levels (TW pp. 166–167: an unspecified
+ *  building is medium, Level 2). The engine tracks no multi-floor interiors,
+ *  so every occupant counts as ground-floor with this many levels above. */
+export const DEFAULT_BUILDING_LEVELS = 2;
+
+/** Default Construction Factor by building type (TW pp. 166–167:
+ *  unspecified-building defaults; hardened tops its 91–150 band at 150). */
 const INITIAL_CF: Readonly<Record<BuildingType, number>> = {
   light: 15,
   medium: 40,
   heavy: 90,
-  hardened: 150,
+  hardened: 120,
 };
 
 export interface BuildingState {

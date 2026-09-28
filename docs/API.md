@@ -338,7 +338,7 @@ Types: `MoveFragment` (`"F" | "B" | "R" | "L" | "J" | "U"`),
 - `isBuildingTerrain(terrain): boolean`
 - `buildingAt(grid, hex): BuildingState | undefined`
 - `createBuildingState(type): BuildingState` — initial CF from the sub-type
-  (light 15 / medium 40 / heavy 90 / hardened 150)
+  (light 15 / medium 40 / heavy 90 / hardened 120)
 - `initialCf(type): number` — bare lookup of the initial CF value
 - `applyBuildingDamage(state, damage): BuildingState` (CF clamped at 0)
 - `isCollapsed(state): boolean` (CF ≤ 0)
@@ -348,9 +348,12 @@ In the battle engine (`rules/game.ts`), `createBattle` initializes
 `BattleState.buildings["col,row"]` for each building hex in `terrain`.
 `damageBuildingAt(state, hex, damage)` drains a building's CF, collapses it
 to rubble on reaching 0 (emitting a `buildingCollapsed` event), and returns
-the event (or `null` when the hex has no building). Weapon damage that lands
-on a unit standing in a building hex is automatically applied to that
-building's CF during attack resolution.
+the event (or `null` when the hex has no building). Each weapon grouping that
+hits a unit standing in a building hex costs the hex a toll of ceil(CF at the
+start of the phase / 10) per grouping (TW p. 171); the unit inside still takes
+its full damage. CF reduction applies after all weapons fire completes, and a
+collapse deals ceil(CF/10 x (1 + levels above)) in 5-point punch-table groups
+plus standard falling damage above Level 0 (TW pp. 176-177).
 
 ### Arcs (`rules/arcs.ts`)
 

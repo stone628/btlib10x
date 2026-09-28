@@ -52,6 +52,23 @@ export function hitLocation(roll2d6: number): Location {
   return loc;
 }
 
+/** Bipedal 'Mech punch location table, Front/Rear column (TW p. 145).
+ *  Used for collapse damage on 'Mechs inside a building (TW p. 176). */
+export const PUNCH_LOCATION_TABLE: Readonly<Record<number, Location>> = {
+  1: "leftArm",
+  2: "leftTorso",
+  3: "centerTorso",
+  4: "rightTorso",
+  5: "rightArm",
+  6: "head",
+};
+
+export function punchHitLocation(roll1d6: number): Location {
+  const loc = PUNCH_LOCATION_TABLE[roll1d6];
+  if (loc === undefined) throw new Error(`Punch location roll out of range: ${roll1d6}`);
+  return loc;
+}
+
 const ARC_HIT_TABLE: Record<Arc, Readonly<Record<number, Location>>> = {
   front: HIT_LOCATION_TABLE,
   rear: HIT_LOCATION_TABLE,
