@@ -7,7 +7,6 @@ import {
   mechDefFor,
   requireUnit,
   sameHex,
-  suggestFireTargets,
   VERSION,
   weaponDefFor,
 } from "btlib10x";
@@ -321,7 +320,7 @@ const SETUP_CMDS: Record<string, CmdDef> = {
       const newEvents = setupStartBattle(s);
       return [
         buildLinesChunkWith("banner", i18n("ok.started")),
-        ...handleSessionGameEvents(newEvents),
+        ...handleSessionGameEvents(s, newEvents),
       ];
     },
   },
@@ -433,7 +432,7 @@ const MOVE_CMDS: Record<string, CmdDef> = {
   },
   done: {
     helpKey: "cmd.doneMove.help",
-    run: (s) => handleSessionGameEvents(commitMovement(s)),
+    run: (s) => handleSessionGameEvents(s, commitMovement(s)),
   },
   ...BATTLE_CMDS,
 };
@@ -477,11 +476,7 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
   },
   candidate: {
     helpKey: "cmd.candidateAttack.help",
-    run: (s, _a) => {
-      if (!checkFireHint(s)) throw new Error(i18n("err.candidate.attack"));
-      const a = s.attack!;
-      return fireSuggestionChunks(a.fireCandidate!, a.torsoTwist);
-    },
+    run: (s, _a) => fireSuggestionChunks(s),
   },
   fire: {
     helpKey: "cmd.fire.help",
@@ -547,7 +542,7 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
   },
   done: {
     helpKey: "cmd.doneFire.help",
-    run: (s) => handleSessionGameEvents(commitWeaponFire(s)),
+    run: (s) => handleSessionGameEvents(s, commitWeaponFire(s)),
   },
   ...BATTLE_CMDS,
 };
@@ -568,7 +563,7 @@ const OVER_CMDS: Record<string, CmdDef> = {
       const newEvents = overRematch(s);
       return [
         buildLinesChunkWith("banner", i18n("ok.rematchDone")),
-        ...handleSessionGameEvents(newEvents),
+        ...handleSessionGameEvents(s, newEvents),
       ];
     },
   },
@@ -691,20 +686,11 @@ function helpTextChunk(session: Session): Chunk {
   return buildLinesChunk(...stateHint(session), "", ...commandList(session));
 }
 
-function victoryBanner(s: Session): string[] {
-  const victory = s.over?.victory ?? null;
-  if (victory === null) return [];
-  return victory.draw
-    ? [i18n("banner.draw")]
-    : [i18n("banner.win", { team: String(victory.winnerTeam) })];
-}
-
 /**
  * Run one input line against the session; returns presentation chunks
  * (plain text with a class hint, or styled board spans).
  */
 export function runChunks(session: Session, raw: string): Chunk[] {
-  const wasOver = session.state === "over";
   let chunks: Chunk[];
   try {
     const tokens = raw
@@ -723,28 +709,5 @@ export function runChunks(session: Session, raw: string): Chunk[] {
       ),
     ];
   }
-  if (!wasOver && session.state === "over") {
-    chunks.push(buildLinesChunkWith("banner", ...victoryBanner(session)));
-  }
-  if (checkFireHint(session)) {
-    const a = session.attack!;
-    chunks.push(...fireSuggestionChunks(a.fireCandidate!, a.torsoTwist));
-  }
   return chunks;
-}
-
-function checkFireHint(s: Session): boolean {
-  if (s.state !== "battle" || s.battle === null || s.battle.phase !== "weaponAttack") return false;
-  const a = s.attack;
-  if (a === null) return false;
-  const actor = currentActor(s);
-  if (actor === null) return false;
-  const newKey = `${s.battle.turn}:${actor.id}:${a.torsoTwist}`;
-  if (newKey !== a.fireHintShownFor || a.fireCandidate === null) {
-    a.fireCandidate = suggestFireTargets(s.battle, actor.id, a.torsoTwist);
-    a.fireHintShownFor = newKey;
-    return true;
-  }
-
-  return false;
 }

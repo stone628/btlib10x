@@ -225,6 +225,7 @@ export const kr: Catalog = {
   "err.minRange":
     "{weapon}: 목표가 사거리 {dist}로 최소 사거리 {min} 내에 있습니다 (명중 패널티 {penalty})",
   "err.rematchOnlyOver": "전투가 끝난 후에만 사용할 수 있습니다",
+  "err.notOver": "전투가 아직 끝나지 않았습니다",
   "err.seedInteger": "seed는 정수여야 합니다",
   "err.badAmmoPolicy": "탄약 정책은 exposed|core|spread|least-first 중 하나여야 합니다",
   "err.phaseDriver": "단계 드라이버가 수렴하지 않았습니다",
@@ -439,6 +440,8 @@ export const kr: Catalog = {
   "log.phase": "   턴 {turn}, 단계 {phase}   ",
   "log.initiative": "선제: {rolls} -> 팀 {winner} 선제 획득, 마지막에 이동.",
   "log.moveDeclared": "[{id}] {mode} 선언",
+  "log.moveActor":
+    "[{id}] 현재 좌표 ({pos}) {facing}향 {posture}, 높이 {elevation}인 {terrain} 지형 에 위치",
   "log.moved": "[{id}] {mode} -> {pos} 방향 {facing}, MP {mp}/{budget} 사용",
   "log.attacksDeclaredOne": "[{id}] {target} 에게 사격 ({count}문, {rangeCtx})",
   "log.attacksDeclaredOther": "[{id}] {target} 에게 사격 ({count}문, {rangeCtx})",

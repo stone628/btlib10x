@@ -1,5 +1,5 @@
 import { createBattle, mapDefFor } from "btlib10x";
-import { buildLinesChunk, type Chunk } from "./chunk";
+import { buildLinesChunk, buildLinesChunkWith, type Chunk } from "./chunk";
 import { i18n } from "./i18n";
 import { createRng } from "./rng";
 import { drive, type Session, type SessionGameEvent } from "./session";
@@ -39,4 +39,13 @@ export function overStatusChunk(s: Session): Chunk {
     }
   }
   return buildLinesChunk(...lines);
+}
+
+export function victoryBannerChunk(s: Session): Chunk {
+  if (s.state !== "over" || s.over === null) throw new Error(i18n("err.notOver"));
+  const victory = s.over.victory;
+  return buildLinesChunkWith(
+    "banner",
+    victory.draw ? i18n("banner.draw") : i18n("banner.win", { team: String(victory.winnerTeam) }),
+  );
 }
