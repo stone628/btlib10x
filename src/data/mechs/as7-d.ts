@@ -26,10 +26,12 @@ const def: MechDef = {
     {
       weapon: "Medium Laser",
       location: "centerTorso",
+      rearFacing: true,
     },
     {
       weapon: "Medium Laser",
       location: "centerTorso",
+      rearFacing: true,
     },
     {
       weapon: "AC/20",
@@ -100,10 +102,12 @@ const def: MechDef = {
       {
         kind: "weapon",
         weapon: "Medium Laser",
+        rearFacing: true,
       },
       {
         kind: "weapon",
         weapon: "Medium Laser",
+        rearFacing: true,
       },
     ],
     leftTorso: [

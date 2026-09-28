@@ -53,7 +53,7 @@ const REAR_ARMOR_KEYS: readonly RearArmorKey[] = [
  */
 export type CritSlot =
   | { readonly kind: "empty" }
-  | { readonly kind: "weapon"; readonly weapon: string }
+  | { readonly kind: "weapon"; readonly weapon: string; readonly rearFacing?: boolean }
   | { readonly kind: "ammo"; readonly weapon: string }
   | { readonly kind: "structure"; readonly name: string }
   | { readonly kind: "soak"; readonly name: CritSoakName };

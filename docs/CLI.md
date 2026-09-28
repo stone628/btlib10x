@@ -392,15 +392,18 @@ stated elsewhere in this document or the codebase:
     web/index.html      terminal chrome: scrollback <pre>, prompt line, key capture, inline CSS
     web/main.ts         bootstrap; wires DOM ↔ session/cli; reprints prompt after each command
     web/cli.ts          tokenizer + per-state command registry + help generator
-    web/session.ts      app-level state machine over the in-place BattleState:
-                        setup roster, move-step & attack-decl buffers,
-                        derived {setup|turn|over} + sub-state,
-                        auto advancePhase / initiative roll / victory check
+    web/session.ts      core session state machine: setup/battle/over, RNG, atomic commit (commitAtomic),
+                         drive() phase-advance wrapper around engine gameLoop()
+    web/session.common.ts  shared formatters: heat, board, info, sheet, crit chart, log events
+    web/session.move.ts    movement phase: mode parsing, reachable map, place/cancel/done commit
+    web/session.weapon.ts  weapon-attack phase: fire queue, validation, torso twist, ammo policy, resolve
+    web/session.setup.ts   setup phase: map, add/set/rm units, status, start
+    web/session.over.ts    over state: rematch, status
+    web/chunk.ts       structured output chunks: lines, board, columns, collapsible
     web/rng.ts          mulberry32-seeded Rng
-    web/format.ts       board, transient-event, info/status, record-sheet/resolution formatters, crit slot chart
     web/render.ts       structured BoardModel / Span model + boardToText / boardToSpans
     scripts/build-web.mjs  esbuild bundles: src/index.ts → web/btlib10x.js (core),
-                        web/main.ts → web/app.js (app; btlib10x.js kept external)
+                         web/main.ts → web/app.js (app; btlib10x.js kept external)
 
 Import wrinkle: tsc-emitted `.json` imports are not loadable by browsers, so the
 app ships as an esbuild single-file bundle instead of consuming `dist/` directly.

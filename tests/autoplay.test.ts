@@ -7,9 +7,13 @@ import {
   STAND_MP_COST,
 } from "../src/index";
 import { nextAutoPlayCommand, resetAutoplayState } from "../web/autoplay";
-import { newSession, type Session } from "../web/session";
-import { commitMovement, declareMovementMode } from "../web/session.move";
-import { requireWeaponAttackActor } from "../web/session.weapon";
+import {
+  commitMovement,
+  declareMovementMode,
+  newSession,
+  requireWeaponAttackActor,
+  type Session,
+} from "../web/session";
 import { disableCritical, execute, scriptedRng } from "./helpers";
 
 function run(s: Session, cmd: string): string[] {

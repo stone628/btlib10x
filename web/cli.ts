@@ -16,48 +16,47 @@ import type { MessageKey } from "./i18n/index";
 import { i18n, isLocale, localeList } from "./i18n/index";
 import { lookupMap } from "./lookup";
 import type { Session } from "./session";
-import { configLocale, requireBattle, resetSession, setConfigLocale, setSeed } from "./session";
 import {
   ammoPolicyLabel,
+  attackStatusChunk,
   boardChunk,
-  handleSessionGameEvents,
-  heatStatusLines,
-  infoMechChunk,
-  sheetForUnit,
-  unitBriefList,
-} from "./session.common";
-import {
   cancelMovement,
+  cancelWeaponFire,
   commitMovement,
+  commitWeaponFire,
+  configLocale,
   declaredMovementModeChunk,
   declareMovementMode,
   ensureMoveCandidate,
+  fireSuggestionChunks,
+  handleSessionGameEvents,
+  heatStatusLines,
+  infoMechChunk,
   moveStatusChunk,
+  overRematch,
+  overStatusChunk,
   parseMoveMode,
+  parseUnitProp,
   placeLanding,
   queuedMoveChunk,
+  queueWeaponFire,
   reachableChunk,
-  stepResultChunk,
-} from "./session.move";
-import { overRematch, overStatusChunk } from "./session.over";
-import {
-  parseUnitProp,
+  requireBattle,
+  resetSession,
+  setAmmoPolicy,
+  setConfigLocale,
+  setSeed,
+  setTorsoTwist,
   setupAddUnit,
   setupRemoveUnit,
   setupSetMap,
   setupSetUnitProp,
   setupStartBattle,
   setupStatus,
-} from "./session.setup";
-import {
-  attackStatusChunk,
-  cancelWeaponFire,
-  commitWeaponFire,
-  fireSuggestionChunks,
-  queueWeaponFire,
-  setAmmoPolicy,
-  setTorsoTwist,
-} from "./session.weapon";
+  sheetForUnit,
+  stepResultChunk,
+  unitBriefList,
+} from "./session";
 import {
   infoMapChunks,
   infoMapListChunk,

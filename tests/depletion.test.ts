@@ -22,9 +22,13 @@ import {
   rollInitiativePhase,
   type UnitInit,
 } from "../src/rules/game";
-import { newSession, type Session } from "../web/session";
-import { commitMovement, declareMovementMode } from "../web/session.move";
-import { requireWeaponAttackActor } from "../web/session.weapon";
+import {
+  commitMovement,
+  declareMovementMode,
+  newSession,
+  requireWeaponAttackActor,
+  type Session,
+} from "../web/session";
 import { createTestBattle, disableCritical, execute, scriptedRng } from "./helpers";
 
 const HBK = mechDef("HBK-4G")!;
