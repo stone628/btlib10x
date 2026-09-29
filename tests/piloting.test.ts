@@ -381,7 +381,8 @@ describe("immediate shutdown PSR (+3)", () => {
   it("heat shutdown rolls +3 PSR; pass stays standing", () => {
     const state = hbkEnf();
     const hbk = requireUnit(state, "hbk");
-    hbk.heat = 30;
+    // Post-dissipation: 43 - 13 = 30 endHeat (auto shutdown + ammo avoid 8).
+    hbk.heat = 43;
     // startAttackTurn: 4 dice (initiative).
     // resolveHeatPhase: 5 dice (traced via debug):
     //   auto shutdown (no roll); PSR 2D6=12 passes (2 dice);
@@ -402,7 +403,8 @@ describe("immediate shutdown PSR (+3)", () => {
   it("heat shutdown rolls +3 PSR; fail drops the 'Mech", () => {
     const state = hbkEnf();
     const hbk = requireUnit(state, "hbk");
-    hbk.heat = 30;
+    // Post-dissipation: 43 - 13 = 30 endHeat (auto shutdown + ammo avoid 8).
+    hbk.heat = 43;
     // resolveHeatPhase: 14 dice (traced via debug):
     //   auto shutdown (no roll); PSR 1+1=2 < 8 fails -> fall:
     //     fallDir=1 (1), fallLoc 3+4=7 (2), consciousness 3+3=6 >= 3 pass (2);

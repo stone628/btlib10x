@@ -467,7 +467,8 @@ describe("game integration: shutdown", () => {
   it("auto shutdown at heat 30+", () => {
     const state = hbkVsEnf();
     const hbk = requireUnit(state, "hbk");
-    hbk.heat = 30;
+    // Post-dissipation check (TW p.159 net update): 43 - 13 sinks = 30 endHeat.
+    hbk.heat = 43;
     startAttackTurn(state);
     // auto shutdown (no roll); shutdown PSR 6+6=12 passes; ammo avoid
     // 6+6=12 >= 8 passes. +1 die for `largestAmmoBin` tiebreak on the two
@@ -495,7 +496,8 @@ describe("game integration: shutdown", () => {
   it("rolls shutdown avoid at 14–29", () => {
     const state = hbkVsEnf();
     const hbk = requireUnit(state, "hbk");
-    hbk.heat = 18;
+    // Post-dissipation: 31 - 13 = 18 endHeat (avoid 6).
+    hbk.heat = 31;
     startAttackTurn(state);
     // shutdown avoid 6; roll 5 < 6 fails; PSR 12 passes.
     const events: GameEvent[] = [];
@@ -512,7 +514,8 @@ describe("game integration: shutdown", () => {
   it("avoids shutdown when roll >= avoid", () => {
     const state = hbkVsEnf();
     const hbk = requireUnit(state, "hbk");
-    hbk.heat = 18;
+    // Post-dissipation: 31 - 13 = 18 endHeat (avoid 6).
+    hbk.heat = 31;
     startAttackTurn(state);
     const events: GameEvent[] = [];
     advancePhase(state, events, scriptedRng(6, 6, 6, 6));
@@ -685,7 +688,8 @@ describe("game integration: heat ammo explosion", () => {
   it("largest ammo bin detonates when avoidance roll fails", () => {
     const state = hbkVsEnf();
     const hbk = requireUnit(state, "hbk");
-    hbk.heat = 30; // auto shutdown first
+    // Post-dissipation: 43 - 13 = 30 endHeat (auto shutdown + ammo avoid 8).
+    hbk.heat = 43; // auto shutdown first
     startAttackTurn(state);
     // shutdown auto: no roll; shutdown PSR 1+1=2 fails -> fall (dir 1, loc 7
     // CT, pilot stays awake at 3+3=6 >= 3); ammo avoid 3+1=4 < 8 fails; +1
@@ -730,7 +734,8 @@ describe("game integration: heat ammo explosion", () => {
   it("gauss-only unit does not detonate from heat (inert ammo)", () => {
     const state = bzkVsEnf();
     const bzk = requireUnit(state, "bzk");
-    bzk.heat = 30;
+    // Post-dissipation: 40 - 10 sinks = 30 endHeat (auto shutdown).
+    bzk.heat = 40;
     startAttackTurn(state);
     // Shutdown auto: no roll. No ammo avoid roll is taken because the only
     // loaded ammo is gauss (non-explosive). Shutdown PSR 2 fails -> fall
@@ -815,7 +820,8 @@ describe("Bug C: involuntary shutdown rolls use roll >= avoid for success", () =
   it("roll equal to avoid avoids shutdown", () => {
     const state = hbkVsEnf();
     const hbk = requireUnit(state, "hbk");
-    hbk.heat = 18; // avoid 6
+    // Post-dissipation: 31 - 13 = 18 endHeat (avoid 6).
+    hbk.heat = 31; // avoid 6
     startAttackTurn(state);
     // roll 6 >= 6 -> avoided
     const events: GameEvent[] = [];
@@ -831,9 +837,8 @@ describe("Bug C: involuntary shutdown rolls use roll >= avoid for success", () =
 });
 
 describe("Bug D: heat phase net update (TW p.159 single step)", () => {
-  it("max(startHeat, endHeat) drives the shutdown check", () => {
-    // start 5, own 25 (deferred in heatPending), dissip 5 → end 25.
-    // max(5, 25) = 25; avoid 4 (threshold 14). Roll, but not auto.
+  it("post-dissipation endHeat drives the shutdown check", () => {
+    // start 5, own 25 (deferred in heatPending), dissip 13 → end 17.
     const state = hbkVsEnf();
     const hbk = requireUnit(state, "hbk");
     hbk.heat = 5;
@@ -841,7 +846,7 @@ describe("Bug D: heat phase net update (TW p.159 single step)", () => {
     startAttackTurn(state);
     const events: GameEvent[] = [];
     advancePhase(state, events, scriptedRng(2, 3, 6, 6, 3, 1));
-    // End = 5 + 25 - 13 = 17; max(5, 17) = 17; avoid at 17 = 4 (threshold 14).
+    // End = 5 + 25 - 13 = 17; avoid at 17 = 4 (threshold 14).
     expect(hbk.heat).toBe(17);
     const check = events.find(
       (e): e is Extract<GameEvent, { kind: "shutdownCheck" }> =>

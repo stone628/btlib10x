@@ -54,8 +54,6 @@ export interface WeaponAttackContext {
    *  {@link setTorsoTwist}). Session-owned because it is a UI declaration,
    *  not persistent battle state. */
   torsoTwist: Arc;
-  /** Actor (turn-qualified) whose fire suggestion was last auto-shown. */
-  fireHintShownFor: string | null;
   fireCandidate: FireSuggestion | null;
 }
 
@@ -66,7 +64,6 @@ export function initWeaponAttackContext(s: Session, actorId: string): WeaponAtta
     actorId,
     fireDecls: [],
     torsoTwist: "front",
-    fireHintShownFor: null,
     fireCandidate: null,
   };
   s.attack = newContext;
@@ -170,8 +167,8 @@ export function commitWeaponFire(s: Session): SessionGameEvent[] {
  * declaration. Locked once any fire command is queued — the user must
  * `cancel` first — and resets to `"front"` on phase entry or new actor.
  */
-export function setTorsoTwist(s: Session, direction: string): void {
-  const { context } = requireBattleAndContext(s);
+export function setTorsoTwist(s: Session, direction: string): WeaponAttackContext {
+  const { battle, context } = requireBattleAndContext(s);
   const allowed: Readonly<Record<string, Arc>> = {
     front: "front",
     left: "leftSide",
@@ -184,10 +181,11 @@ export function setTorsoTwist(s: Session, direction: string): void {
   if (context.fireDecls.length > 0) {
     throw new Error(i18n("err.twist.locked"));
   }
-  if (context.torsoTwist === arc) return;
-  context.torsoTwist = arc;
-  context.fireCandidate = null;
-  context.fireHintShownFor = null;
+  if (context.torsoTwist !== arc) {
+    context.torsoTwist = arc;
+    ensureFireCandidate(battle, context, true);
+  }
+  return context;
 }
 
 /**
@@ -287,10 +285,21 @@ function blockedChunks(list: ReturnType<typeof blockedLines>): Chunk[] {
   return [buildLinesChunkWith("hint", ...list)];
 }
 
+function ensureFireCandidate(
+  battle: BattleState,
+  context: WeaponAttackContext,
+  force: boolean = false,
+): FireSuggestion {
+  if (context.fireCandidate === null || force) {
+    context.fireCandidate = suggestFireTargets(battle, context.actorId, context.torsoTwist);
+  }
+  return context.fireCandidate;
+}
+
 // export function fireSuggestionChunks(sugg: FireSuggestion, twist: Arc | null = null): Chunk[] {
 export function fireSuggestionChunks(s: Session): Chunk[] {
-  const { context } = requireBattleAndContext(s);
-  const sugg = context.fireCandidate!;
+  const { battle, context } = requireBattleAndContext(s);
+  const sugg = ensureFireCandidate(battle, context);
   const twist = context.torsoTwist;
   const chunks: Chunk[] = [
     buildLinesChunkWith("hint", i18n("fireSuggestion.header", { id: sugg.targetId })),
@@ -597,7 +606,6 @@ function stepLabel(step: DamageTransferStep): string {
 
 export function onEnterWeaponAttack(s: Session, sink: SessionGameEvent[]) {
   const { battle, context } = requireBattleAndContext(s);
-  const actor = requireUnit(battle, context.actorId);
-  context.fireCandidate = suggestFireTargets(battle, actor.id, context.torsoTwist);
-  sink.push({ kind: "sessionAttackActor", actorId: actor.id });
+  ensureFireCandidate(battle, context);
+  sink.push({ kind: "sessionAttackActor", actorId: context.actorId });
 }

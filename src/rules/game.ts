@@ -2485,10 +2485,10 @@ export function advancePhase(state: BattleState, sink: GameEvent[], rng: Rng = D
  * result to the Heat Scale." Movement, weapon, posture, and engine-crit heat
  * were all accumulated into `unit.heatPending` during their producing
  * phases; here we land them on the scale, subtract dissipation, then run the
- * shutdown/restart and ammo-explosion checks against `max(startHeat, endHeat)`
- * (the worst the scale reached at any discrete read — start, post-own-heat,
- * or post-dissipation). Peak within the heat phase has no separate meaning;
- * the user's TW p.159 reading explicitly rejects it.
+ * shutdown/restart and ammo-explosion checks against `endHeat`
+ * (the post-dissipation Heat Scale per TW p.159 net update). Peak
+ * within the heat phase has no separate meaning; start-of-turn heat was
+ * already checked last turn.
  *
  * Engine crit heat is skipped for any non-online unit (TW p.160: "even
  * engine criticals generate no extra heat while shut down"), bundled with
@@ -2562,12 +2562,11 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
       });
     }
 
-    // Shutdown / restart at checkHeat = max(start, end). Voluntary "manual"
+    // Shutdown / restart at `endHeat`. Voluntary "manual"
     // and pending "starting" skip (voluntary restart only; comes-online at
     // next initiative roll).
     if (unit.shutdown !== "manual" && unit.shutdown !== "starting") {
-      const checkHeat = Math.max(startHeat, endHeat);
-      const { avoid, threshold } = shutdownAvoidWithThreshold(checkHeat);
+      const { avoid, threshold } = shutdownAvoidWithThreshold(endHeat);
 
       if (unit.shutdown === "heat") {
         // Already heat-shut-down: restart path.
@@ -2579,7 +2578,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
             success: true,
             manual: false,
             roll: 0,
-            heat: checkHeat,
+            heat: endHeat,
             avoid: 0,
             threshold,
           });
@@ -2593,7 +2592,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
               success: true,
               manual: false,
               roll,
-              heat: checkHeat,
+              heat: endHeat,
               avoid,
               threshold,
             });
@@ -2604,7 +2603,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
               success: false,
               manual: false,
               roll,
-              heat: checkHeat,
+              heat: endHeat,
               avoid,
               threshold,
             });
@@ -2622,7 +2621,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
             avoided: false,
             manual: false,
             roll: 0,
-            heat: checkHeat,
+            heat: endHeat,
             avoid,
             threshold,
           });
@@ -2636,7 +2635,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
               avoided: true,
               manual: false,
               roll,
-              heat: checkHeat,
+              heat: endHeat,
               avoid,
               threshold,
             });
@@ -2648,7 +2647,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
               avoided: false,
               manual: false,
               roll,
-              heat: checkHeat,
+              heat: endHeat,
               avoid,
               threshold,
             });
@@ -2658,12 +2657,11 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
       }
     }
 
-    // Heat ammo explosion at the same checkHeat. Largest loaded explosive
+    // Heat ammo explosion at the same endHeat. Largest loaded explosive
     // bin; on avoidance fail it detonates against the bin's location with
     // CASE-aware damage transfer.
     if (!isUnitRemoved(unit)) {
-      const checkHeat = Math.max(startHeat, endHeat);
-      const { avoid, threshold } = ammoExplosionAvoidWithThreshold(checkHeat)!;
+      const { avoid, threshold } = ammoExplosionAvoidWithThreshold(endHeat)!;
       if (avoid > 0) {
         const bin = largestAmmoBin(def, unit.ammoBins, rng);
         if (bin !== null) {
@@ -2676,7 +2674,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
               location: bin.location,
               slotIndex: bin.slotIndex,
               roll,
-              heat: checkHeat,
+              heat: endHeat,
               avoid,
               threshold,
               shotsRemaining: bin.shotsRemaining,
@@ -2714,7 +2712,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
               location: bin.location,
               slotIndex: bin.slotIndex,
               roll,
-              heat: checkHeat,
+              heat: endHeat,
               avoid,
               threshold,
               shotsRemaining: bin.shotsRemaining,
