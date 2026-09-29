@@ -4,6 +4,7 @@ import {
   allWeaponDefs,
   CLUSTER_COLUMNS,
   CLUSTER_TABLE,
+  HEAT_CAP,
   HIT_LOCATION_TABLE,
   heatScaleEffects,
   LEFT_SIDE_TABLE,
@@ -12,7 +13,6 @@ import {
   RIGHT_SIDE_TABLE,
   type WeaponCategory,
   type WeaponDef,
-  HEAT_CAP,
 } from "btlib10x";
 import {
   buildBoardChunk,
