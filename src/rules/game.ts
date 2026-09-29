@@ -2543,7 +2543,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
 
     // Dissipate (TW p.159 net update; applies to all units including
     // shut-down — heat sinks keep working).
-    const capacity = heatDissipation(def, unit.critSlotsDestroyed);
+    const capacity = heatDissipation(def, unit.damage, unit.critSlotsDestroyed);
     const capacityMax = heatDissipationMax(def);
     const dissipated = Math.min(capacity, unit.heat);
     const endHeat = unit.heat - dissipated;

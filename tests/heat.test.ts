@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { UnitDamageState } from "../src";
 import { LOCATIONS, type Location, type TerrainType } from "../src/core/types";
 import { mechDef, mechDefFor } from "../src/data/index";
 import { countDestroyedEngine } from "../src/rules/critical";
@@ -227,7 +228,7 @@ describe("heatDissipation / countDestroyedEngineSlots", () => {
     const state = hbkVsEnf();
     const unit = requireUnit(state, "hbk");
     const def = mechDefFor(unit);
-    expect(heatDissipation(def, unit.critSlotsDestroyed)).toBe(13);
+    expect(heatDissipation(def, unit.damage, unit.critSlotsDestroyed)).toBe(13);
     expect(countDestroyedEngine(def, unit.damage, unit.critSlotsDestroyed)).toBe(0);
   });
   it("destroying an engine slot adds heat but does not retire a sink (strict TW)", () => {
@@ -238,7 +239,7 @@ describe("heatDissipation / countDestroyedEngineSlots", () => {
       ...unit.critSlotsDestroyed,
       centerTorso: [true, ...unit.critSlotsDestroyed.centerTorso.slice(1)],
     };
-    expect(heatDissipation(def, destroyed)).toBe(13);
+    expect(heatDissipation(def, unit.damage, destroyed)).toBe(13);
     expect(countDestroyedEngine(def, unit.damage, destroyed)).toBe(1);
   });
 });
@@ -260,21 +261,31 @@ describe("heatDissipation: engine sink capacity + double heat sinks", () => {
   ];
   it.each(cases)("%s dissipates %i heat per turn", (model, expected) => {
     const def = mechDef(model)!;
+    const damage: UnitDamageState = {
+      armor: { ...def.armor },
+      armorRear: { ...def.armorRear },
+      internalStructure: { ...def.internalStructure },
+    };
     const destroyed = Object.fromEntries(
       LOCATIONS.map((l) => [l, def.critSlots[l].map(() => false)]),
     ) as Record<Location, boolean[]>;
-    expect(heatDissipation(def, destroyed)).toBe(expected);
+    expect(heatDissipation(def, damage, destroyed)).toBe(expected);
   });
 
   it("destroying one DHS crit of a group retires the whole device (-2)", () => {
     const def = mechDef("WHK-Prime")!;
+    const damage: UnitDamageState = {
+      armor: { ...def.armor },
+      armorRear: { ...def.armorRear },
+      internalStructure: { ...def.internalStructure },
+    };
     const destroyed = Object.fromEntries(
       LOCATIONS.map((l) => [l, def.critSlots[l].map(() => false)]),
     ) as Record<Location, boolean[]>;
     // One Clan DHS device = 2 crit slots in a run; destroy one slot of the
     // left-leg run [5,6].
     destroyed.leftLeg[4] = true;
-    expect(heatDissipation(def, destroyed)).toBe(38);
+    expect(heatDissipation(def, damage, destroyed)).toBe(38);
   });
 });
 
@@ -458,7 +469,9 @@ describe("game integration: engine crit heat", () => {
     startAttackTurn(state);
     const events: GameEvent[] = [];
     advancePhase(state, events, scriptedRng(3, 3, 3, 1));
-    expect(hbk.heat).toBe(10 - Math.min(10, heatDissipation(def, hbk.critSlotsDestroyed)));
+    expect(hbk.heat).toBe(
+      10 - Math.min(10, heatDissipation(def, hbk.damage, hbk.critSlotsDestroyed)),
+    );
     expect(events.some((e) => e.kind === "heatEngineCrit" && e.unitId === "hbk")).toBe(true);
   });
 });

@@ -965,7 +965,7 @@ describe("markLocationCatastrophicallyDestroyed", () => {
     // location's contents.
     expect(countDestroyedEngine(def, damage, destroyed)).toBe(0);
     // Heat sinks in the LT (the HBK-4G has none, so check CT external sinks).
-    const sinksBefore = heatSinksOperational(def, destroyed);
+    const sinksBefore = heatSinksOperational(def, damage, destroyed);
     expect(sinksBefore).toBeGreaterThan(0);
     const binCount = Object.keys(ammoBins).filter((k) => k.startsWith("leftTorso:")).length;
     expect(binCount).toBeGreaterThan(0);
