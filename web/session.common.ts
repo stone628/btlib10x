@@ -15,7 +15,7 @@ import {
   consciousnessTarget,
   coreComponentStatus,
   countDestroyedEngine,
-  D2D6_AUTO_SUCCESS,
+  D2D6_MAX,
   type DestroyedReason,
   type DestroyedState,
   ENGINE_SLOTS_KILL,
@@ -1231,7 +1231,7 @@ function handleSessionGameEvent(
         );
         break;
       }
-      if (e.avoid >= D2D6_AUTO_SUCCESS) {
+      if (e.avoid >= D2D6_MAX) {
         idLines(
           e.unitId,
           i18n("log.shutdownAuto", { id: e.unitId, heat: e.heat, threshold: e.threshold }),

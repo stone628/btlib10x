@@ -783,13 +783,13 @@ describe("standing up", () => {
 });
 
 describe("going prone voluntarily", () => {
-  it("dropProne costs no heat, needs no roll, deals 1 front damage", () => {
+  it("dropProne costs no heat, needs no roll, deals no damage (TW p.49)", () => {
     const state = hbkEnf();
     toMovement(state);
     const before = requireUnit(state, "enf");
-    const armorBefore = before.damage.armor.centerTorso;
+    const armorBefore = { ...before.damage.armor };
+    const structBefore = { ...before.damage.internalStructure };
     const facingBefore = before.facing;
-    // Location roll 3+4 = 7 -> centerTorso on the front column.
     const events: GameEvent[] = [];
     dropProne(state, "enf", events, scriptedRng(3, 4));
     const enf = requireUnit(state, "enf");
@@ -797,14 +797,17 @@ describe("going prone voluntarily", () => {
     expect(enf.heat).toBe(0);
     expect(enf.facing).toBe(facingBefore);
     expect(enf.pilotHits).toBe(0);
-    expect(enf.damage.armor.centerTorso).toBe(armorBefore - 1);
+    expect(enf.damage.armor).toEqual(armorBefore);
+    expect(enf.damage.internalStructure).toEqual(structBefore);
     expect(events).toContainEqual(
       expect.objectContaining({
         kind: "unitFell",
         unitId: "enf",
         cause: "voluntaryDrop",
         column: "front",
-        totalDamage: 1,
+        totalDamage: 0,
+        groups: [],
+        crits: [],
       }),
     );
     expect(events).toContainEqual(
@@ -819,7 +822,7 @@ describe("going prone voluntarily", () => {
     expect(events.some((e) => e.kind === "heatMove")).toBe(false);
   });
 
-  it("a voluntary drop underwater deals no damage (halved rounding down)", () => {
+  it("a voluntary drop underwater deals no damage either (TW p.49: no falling damage)", () => {
     const state = createTestBattle(
       [{ col: 2, row: 3, type: "water2" }],
       [
@@ -846,17 +849,25 @@ describe("going prone voluntarily", () => {
     );
     toMovement(state);
     const before = requireUnit(state, "enf");
-    const armorBefore = before.damage.armor.centerTorso;
+    const armorBefore = { ...before.damage.armor };
     const events: GameEvent[] = [];
     dropProne(state, "enf", events, scriptedRng(3, 4));
     const enf = requireUnit(state, "enf");
     expect(enf.prone).toBe(true);
     expect(enf.heat).toBe(0);
-    // 1 point halved underwater rounds down to 0 (TW errata, p.57).
-    expect(enf.damage.armor.centerTorso).toBe(armorBefore);
+    // TW p.49: dropping causes no falling damage on any terrain.
+    expect(enf.damage.armor).toEqual(armorBefore);
     expect(events).toContainEqual(
       expect.objectContaining({ kind: "unitFell", unitId: "enf", totalDamage: 0 }),
     );
+  });
+
+  it("dropProne is refused in a turn the 'Mech jumped (TW p.49)", () => {
+    const state = hbkEnf();
+    toMovement(state);
+    requireUnit(state, "enf").jumpedThisTurn = true;
+    expect(() => dropProne(state, "enf", [], scriptedRng(3, 4))).toThrow(/jumped/);
+    expect(requireUnit(state, "enf").prone).toBe(false);
   });
 
   it("undamaged prone 'Mech: 1 MP per hexside via walk turn steps", () => {
