@@ -710,7 +710,7 @@ interface BattleState extends HexGrid {
 interface UnitState {
   id; model; team; gunnery; position; facing;
   damage: UnitDamageState;            // updated as soon as damage lands
-  phaseStartDamage: UnitDamageState;  // snapshot for weapon usability this phase
+  baseDamage: UnitDamageState;  // snapshot for weapon usability this phase
   ammoBins: AmmoBins;                 // per ammo-bin object, keyed "location:slotIndex"
   jammedWeapons: number[];
   critSlotsDestroyed: Record<Location, boolean[]>;
@@ -756,7 +756,7 @@ Rules encoded by the state machine:
   `"centerTorsoDestroyed"` / `"destroyed"`; paired `unitDestroyed` +
   `unitRemoved` events returned). A pilot kill or eject sets only
   `removed` (`"pilotKilled"` / `"pilotEjected"`), leaving `destroyed = "not"`.
-- **Weapon usability** is judged against `phaseStartDamage`.
+- **Weapon usability** is judged against `baseDamage`.
 - **Ammo** is deducted at declaration time; jams persist for the rest of the game.
 - **Declaration validation**: weapon indexes are 1-based; one target per turn,
   front arc, unblocked LOS (woods + elevation), range check, rapid-fire limits

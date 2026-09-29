@@ -108,7 +108,7 @@ describe("createBattle", () => {
     const hbk = requireUnit(state, "hbk");
     expect(hbk.damage.armor).toEqual(mechDef("HBK-4G")!.armor);
     expect(ammoWeaponTotals(mechDef("HBK-4G")!, hbk.ammoBins)["4"]).toBe(10);
-    expect(hbk.phaseStartDamage).toEqual(hbk.damage);
+    expect(hbk.baseDamage).toEqual(hbk.damage);
     expect(state.phase).toBe("initiative");
     expect(state.turn).toBe(1);
   });
@@ -1245,6 +1245,33 @@ describe("streak missiles", () => {
     expect(requireUnit(state, "enf").damage.armor.centerTorso).toBe(armorBefore);
     const event = events.find((e) => e.kind === "attackResolved")!;
     expect(event.kind === "attackResolved" && event.resolution.hit).toBe(false);
+  });
+
+  it("accumulates damage from multiple weapons against the same target in one volley", () => {
+    // Use original hbkVsEnf positions: HBK at (2,4) facing SE, ENF at (3,5) facing NW
+    // Attack direction is front. Front arc CT is roll 2 (through armor) or 7.
+    const state = startAttackTurn(hbkVsEnf());
+    declareAttacks(
+      state,
+      "hbk",
+      [
+        { weaponIndex: 2, targetId: "enf" }, // rightArm ML
+        { weaponIndex: 1, targetId: "enf" }, // leftArm ML
+      ],
+      [],
+    );
+    // RNG: to-hit rolls (need >= 4 for ML at range 1), then hit location rolls
+    // Front arc CT is roll 7 (no through-armor). Use (3,4)=7 for both.
+    // ML#1: to-hit 6 (3,3), hit loc CT (3,4)=7
+    // ML#2: to-hit 6 (3,3), hit loc CT (3,4)=7
+    const events: GameEvent[] = [];
+    resolveAllAttacks(state, scriptedRng(3, 3, 3, 4, 3, 3, 3, 4), events);
+    const enf = requireUnit(state, "enf");
+    // ENF-4R CT armor is 27. Two MLs (5 dmg each) hitting CT = 10 damage -> 17
+    expect(enf.damage.armor.centerTorso).toBe(17);
+    // Two attackResolved events
+    const attacks = events.filter((e) => e.kind === "attackResolved");
+    expect(attacks).toHaveLength(2);
   });
 });
 

@@ -109,8 +109,8 @@ function cloneUnitState(unit: UnitState): UnitState {
     position: cloneHexCoord(unit.position),
     facing: unit.facing,
     damage: cloneDamageState(unit.damage),
-    phaseStartDamage: cloneDamageState(unit.phaseStartDamage),
-    phaseStartCritSlotsDestroyed: cloneCritTable(unit.phaseStartCritSlotsDestroyed),
+    baseDamage: cloneDamageState(unit.baseDamage),
+    baseCritSlotsDestroyed: cloneCritTable(unit.baseCritSlotsDestroyed),
     ammoBins: cloneAmmoBins(unit.ammoBins),
     ammoPolicy: unit.ammoPolicy,
     jammedWeapons: [...unit.jammedWeapons],
@@ -267,8 +267,8 @@ export function loadUnitState(unit: UnitState, snapshot: UnitSnapshot): void {
   unit.position = next.position;
   unit.facing = next.facing;
   unit.damage = next.damage;
-  unit.phaseStartDamage = next.phaseStartDamage;
-  unit.phaseStartCritSlotsDestroyed = next.phaseStartCritSlotsDestroyed;
+  unit.baseDamage = next.baseDamage;
+  unit.baseCritSlotsDestroyed = next.baseCritSlotsDestroyed;
   unit.ammoBins = next.ammoBins;
   unit.ammoPolicy = next.ammoPolicy;
   unit.jammedWeapons = next.jammedWeapons;

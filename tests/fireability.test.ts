@@ -221,10 +221,10 @@ describe("suggestFireTargets", () => {
   it("marks a weapon whose location is destroyed", () => {
     const state = startAttackTurn(hbkVsEnf());
     const damage = {
-      ...state.units.hbk!.phaseStartDamage,
-      internalStructure: { ...state.units.hbk!.phaseStartDamage.internalStructure, rightTorso: 0 },
+      ...state.units.hbk!.baseDamage,
+      internalStructure: { ...state.units.hbk!.baseDamage.internalStructure, rightTorso: 0 },
     };
-    state.units.hbk!.phaseStartDamage = damage;
+    state.units.hbk!.baseDamage = damage;
     const reasons = blockedReasons(state, "hbk", "enf");
     // AC/20 (rightTorso) and the right-arm Medium Laser both lost support.
     expect(reasons.filter((r) => r === "destroyed")).toHaveLength(2);
