@@ -86,6 +86,12 @@ describe("cluster hits tables", () => {
     expect(clusterHits(13, 8)).toBe(8);
   });
 
+  it("matches the size-8 column (all eleven 2D6 rows, TW p. 116)", () => {
+    // Full column, so a single transposed cell cannot pass unnoticed.
+    const column = Array.from({ length: 11 }, (_, i) => clusterHits(8, i + 2));
+    expect(column).toEqual([3, 3, 4, 4, 5, 5, 5, 6, 6, 8, 8]);
+  });
+
   it("shares the same table for rapid-fire shots (2/3/4)", () => {
     expect(clusterHits(2, 2)).toBe(1);
     expect(clusterHits(2, 12)).toBe(2);
