@@ -208,7 +208,9 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
   const rapidFire = weapon.rapidFireShots !== undefined && weapon.rapidFireShots > 0;
   if (rapidFire && shots > 1 && roll === RAPID_FIRE_JAM_ROLL) base.jammed = true;
 
-  base.hit = breakdown.automatic !== null ? breakdown.automatic === "hit" : roll >= breakdown.total;
+  base.hit =
+    !base.jammed &&
+    (breakdown.automatic !== null ? breakdown.automatic === "hit" : roll >= breakdown.total);
   if (!base.hit) return base;
 
   if (weapon.missiles !== undefined && weapon.missileDamage !== undefined) {
