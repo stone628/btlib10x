@@ -12,6 +12,7 @@ import {
   type FireSuggestion,
   type FireWeapon,
   type GameEvent,
+  hexDistance,
   isArm,
   isTorso,
   isUnitDestroyed,
@@ -99,23 +100,55 @@ function clearContext(s: Session) {
   s.attack = null;
 }
 
-export function queueWeaponFire(s: Session, decl: AttackDecl): void {
+export function queueWeaponFires(s: Session, targetId: string, weapons: number[]): string[] {
   const { battle, context } = requireBattleAndContext(s);
   const unit = requireUnit(battle, context.actorId);
-  if (decl.targetId === unit.id) throw new Error(i18n("err.selfTarget"));
-  const target = battle.units[decl.targetId];
-  if (!target) throw new Error(i18n("err.unknownUnitId", { id: decl.targetId }));
+  if (targetId === unit.id) throw new Error(i18n("err.selfTarget"));
+  const target = battle.units[targetId];
+  if (!target) throw new Error(i18n("err.unknownUnitId", { id: targetId }));
   if (target.team === unit.team) throw new Error(i18n("err.selfTarget"));
   if (isUnitRemoved(target)) throw new Error(i18n("err.targetRemoved", { id: target.id }));
   const pending = context.fireDecls[0]?.targetId;
-  if (pending !== undefined && pending !== decl.targetId) {
+  if (pending !== undefined && pending !== targetId) {
     throw new Error(i18n("err.oneTarget", { target: pending }));
   }
-  if (context.fireDecls.some((d) => d.weaponIndex === decl.weaponIndex)) {
-    throw new Error(i18n("err.weaponRepeated", { weapon: decl.weaponIndex }));
+  const def = mechDefFor(unit);
+  const warnings: string[] = [];
+  const decls: AttackDecl[] = [];
+  for (const weaponIndex of weapons) {
+    const mount = def.weapons[weaponIndex];
+    if (!mount) {
+      throw new Error(i18n("err.weaponIndex", { unit: unit.id, index: String(weaponIndex) }));
+    }
+    const weapon = weaponDefFor(mount);
+    const dist = hexDistance(unit.position, target.position);
+    if (dist > weapon.long) {
+      throw new Error(
+        i18n("err.overRange", {
+          weapon: mount.weapon,
+          dist: String(dist),
+          max: String(weapon.long),
+        }),
+      );
+    }
+    if (weapon.minRange !== undefined && dist <= weapon.minRange) {
+      warnings.push(
+        i18n("err.minRange", {
+          weapon: mount.weapon,
+          dist: String(dist),
+          min: String(weapon.minRange),
+          penalty: String(weapon.minRange - dist + 1),
+        }),
+      );
+    }
+    if (context.fireDecls.some((d) => d.weaponIndex === weaponIndex)) {
+      throw new Error(i18n("err.weaponRepeated", { weapon: weaponIndex }));
+    }
+    decls.push({ targetId, weaponIndex });
   }
-  validateAttacks(battle, unit.id, [...context.fireDecls, decl], { twist: context.torsoTwist });
-  context.fireDecls.push(decl);
+  validateAttacks(battle, unit.id, [...context.fireDecls, ...decls], { twist: context.torsoTwist });
+  context.fireDecls.push(...decls);
+  return warnings;
 }
 
 export function cancelWeaponFire(s: Session): void {
@@ -162,30 +195,36 @@ export function commitWeaponFire(s: Session): SessionGameEvent[] {
   return events;
 }
 
+const TWIST: Readonly<Record<string, Arc>> = {
+  front: "front",
+  left: "leftSide",
+  right: "rightSide",
+};
+
+export function parseTorsoTwist(direction: string): Arc {
+  const arc = TWIST[direction.toLowerCase()];
+  if (arc === undefined) {
+    throw new Error(i18n("err.twist.badDirection"));
+  }
+  return arc;
+}
+
 /**
  * Set the acting unit's torso twist (TW pp.105-106) for its current attack-phase
  * declaration. Locked once any fire command is queued — the user must
  * `cancel` first — and resets to `"front"` on phase entry or new actor.
  */
-export function setTorsoTwist(s: Session, direction: string): WeaponAttackContext {
+export function setTorsoTwist(s: Session, arc: Arc): Arc {
   const { battle, context } = requireBattleAndContext(s);
-  const allowed: Readonly<Record<string, Arc>> = {
-    front: "front",
-    left: "leftSide",
-    right: "rightSide",
-  };
-  const arc = allowed[direction.toLowerCase()];
-  if (arc === undefined) {
-    throw new Error(i18n("err.twist.badDirection"));
-  }
   if (context.fireDecls.length > 0) {
     throw new Error(i18n("err.twist.locked"));
   }
-  if (context.torsoTwist !== arc) {
+  const prev = context.torsoTwist;
+  if (prev !== arc) {
     context.torsoTwist = arc;
     ensureFireCandidate(battle, context, true);
   }
-  return context;
+  return prev;
 }
 
 /**
