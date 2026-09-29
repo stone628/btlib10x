@@ -44,7 +44,7 @@
  * All functions here are pure; game.ts commits the results onto UnitState.
  */
 
-import { D2D6_AUTO_SUCCESS, D2D6_FUMBLE, D2D6_MAX, D2D6_MIN, roll2D6, rollD6 } from "../core/dice";
+import { D2D6_MAX, D2D6_MIN, roll2D6, rollD6 } from "../core/dice";
 import type { Facing, Location, Rng } from "../core/types";
 import { rotateFacing } from "../core/types";
 import type { ResolvedMechDef } from "../data/mech.schema";
@@ -96,8 +96,6 @@ export function rollPilotingCheck(
   if (target <= D2D6_MIN) return { target, roll: null, success: true };
   if (target > D2D6_MAX) return { target, roll: null, success: false };
   const roll = roll2D6(rng);
-  if (roll === D2D6_FUMBLE) return { target, roll, success: false };
-  if (roll === D2D6_AUTO_SUCCESS) return { target, roll, success: true };
   return { target, roll, success: roll >= target };
 }
 

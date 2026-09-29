@@ -4,7 +4,6 @@ import {
   classifyArc,
   classifyArcWithBoundary,
   defenderArcChoice,
-  isInFrontArc,
   weaponCanFireIntoArc,
 } from "../src/rules/arcs";
 import { losBlocked, losWoodsPoints } from "../src/rules/los";
@@ -60,19 +59,6 @@ describe("line of sight", () => {
 });
 
 describe("firing arcs", () => {
-  it("treats the three front hexsides as the front arc", () => {
-    expect(isInFrontArc("n", "n")).toBe(true);
-    expect(isInFrontArc("n", "ne")).toBe(true);
-    expect(isInFrontArc("n", "nw")).toBe(true);
-    expect(isInFrontArc("n", "se")).toBe(false);
-    expect(isInFrontArc("n", "s")).toBe(false);
-    expect(isInFrontArc("n", "sw")).toBe(false);
-    expect(isInFrontArc("s", "s")).toBe(true);
-    expect(isInFrontArc("s", "se")).toBe(true);
-    expect(isInFrontArc("s", "sw")).toBe(true);
-    expect(isInFrontArc("s", "ne")).toBe(false);
-  });
-
   it("classifies all four arcs clockwise from facing", () => {
     expect(classifyArc("n", "n")).toBe("front");
     expect(classifyArc("n", "ne")).toBe("rightSide");

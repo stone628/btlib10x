@@ -5,18 +5,6 @@ import { FACINGS, type Facing, type Location, oppositeFacing, rotateFacing } fro
 export type Arc = "front" | "rear" | "leftSide" | "rightSide";
 
 /**
- * Quick-start firing arc: every weapon fires into the front arc only. The
- * booklet's front arc spans the hexside faced and its two neighbors.
- */
-export function isInFrontArc(unitFacing: Facing, bearingToTarget: Facing): boolean {
-  return (
-    bearingToTarget === unitFacing ||
-    bearingToTarget === rotateFacing(unitFacing, 1) ||
-    bearingToTarget === rotateFacing(unitFacing, -1)
-  );
-}
-
-/**
  * Total Warfare firing-arc classification. The target's bearing is
  * measured as a clockwise offset from the unit's facing: offset 0 (front) and
  * offset 3 (rear) are one hexside wide, while the two side arcs each span two
@@ -112,9 +100,8 @@ export function twistDelta(twist: Arc): -1 | 0 | 1 {
       return 1;
     case "front":
       return 0;
-    case "rear":
-      return 0;
   }
+  throw new Error(`cannot twist to ${twist}`);
 }
 
 /**

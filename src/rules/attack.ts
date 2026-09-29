@@ -1,6 +1,6 @@
 import { roll2D6 } from "../core/dice";
 import { hasPartialCover } from "../core/terrain";
-import type { Location, MoveMode, Rng, TerrainType } from "../core/types";
+import type { ArmLocation, Location, MoveMode, Rng, TerrainType } from "../core/types";
 import type { ResolvedMechDef } from "../data/mech.schema";
 import type { WeaponDef } from "../data/weapon.schema";
 import { weaponDefFor } from "../data/weapon.schema";
@@ -43,7 +43,7 @@ export interface WeaponAttackInput {
    * prone attacker fires no arm-mounted weapons (nothing to prop against).
    * Echoed into `AttackResolution.propArm`.
    */
-  readonly propArm?: "leftArm" | "rightArm" | null;
+  readonly propArm?: ArmLocation | null;
   /** Destroyed-sensor to-hit modifier on the attacker: 0 intact, +2 on the
    *  first hit; a second hit blinds the 'Mech (declare no attacks, TW p.123).
    *  Callers map the destroyed-slot count via `sensorAttackModifier`. */
@@ -102,7 +102,7 @@ export interface AttackResolution {
    * could not fire). Null when standing, or when a prone attacker fired no
    * arm-mounted weapons.
    */
-  readonly propArm: "leftArm" | "rightArm" | null;
+  readonly propArm: ArmLocation | null;
   /** True when a streak launcher found its shared pool empty at resolution:
    *  the attack auto-missed without rolling (no ammo spent, no heat). */
   readonly ammoExhausted?: boolean;

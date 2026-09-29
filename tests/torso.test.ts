@@ -70,11 +70,11 @@ function hbkFacingAt(targetBearing: "ne" | "n"): {
 }
 
 describe("twistDelta + effectiveFacingForTwist", () => {
-  it("maps left to -1, right to +1, front/rear to 0", () => {
+  it("maps left to -1, right to +1, front to 0, rear to throw", () => {
     expect(twistDelta("leftSide")).toBe(-1);
     expect(twistDelta("rightSide")).toBe(1);
     expect(twistDelta("front")).toBe(0);
-    expect(twistDelta("rear")).toBe(0);
+    expect(() => twistDelta("rear")).toThrow(/cannot twist/);
   });
 
   it("rotates facing by twist delta (or no-op for front)", () => {

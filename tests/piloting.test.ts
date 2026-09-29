@@ -21,7 +21,6 @@ import {
   isImmobile,
   nextActor,
   type PhaseSnapshots,
-  proneFacingTurn,
   requireUnit,
   resolveAllAttacks,
   resolveHeatPhase,
@@ -860,47 +859,62 @@ describe("going prone voluntarily", () => {
     );
   });
 
-  it("undamaged prone 'Mech: 1 MP per hexside, up to 3 hexsides per turn", () => {
+  it("undamaged prone 'Mech: 1 MP per hexside via walk turn steps", () => {
     const state = hbkEnf();
     toMovement(state);
     const enf = requireUnit(state, "enf");
     enf.prone = true;
     const events: GameEvent[] = [];
-    proneFacingTurn(state, "enf", 2, events);
+    executeMove(state, "enf", "walk", [{ kind: "turn", facings: 2 }], events);
     expect(enf.facing).toBe("se");
     expect(enf.mpSpent).toBe(2);
     expect(enf.heat).toBe(0);
     expect(enf.heatPending).toBe(1);
     expect(events).toContainEqual(expect.objectContaining({ kind: "moved", mpSpent: 2 }));
-    const second: GameEvent[] = [];
-    proneFacingTurn(state, "enf", -3, second);
-    expect(enf.facing).toBe("nw");
-    expect(enf.mpSpent).toBe(3);
-    expect(() => proneFacingTurn(state, "enf", 4, [])).toThrow(/1-3 hexsides/);
-    expect(() => proneFacingTurn(state, "enf", 0, [])).toThrow(/non-zero integer/);
   });
 
-  it("prone 'Mech with one leg destroyed: exactly one hexside per turn", () => {
+  it("prone turn rejects bad facings", () => {
+    const zero = hbkEnf();
+    toMovement(zero);
+    requireUnit(zero, "enf").prone = true;
+    expect(() => executeMove(zero, "enf", "walk", [{ kind: "turn", facings: 0 }], [])).toThrow(
+      /1\.\.5 hexsides/,
+    );
+    const over = hbkEnf();
+    toMovement(over);
+    requireUnit(over, "enf").prone = true;
+    expect(() => executeMove(over, "enf", "walk", [{ kind: "turn", facings: 6 }], [])).toThrow(
+      /1\.\.5 hexsides/,
+    );
+  });
+
+  it("prone 'Mech with one leg destroyed: walk budget 1 so only a 1-hexside turn", () => {
     const state = hbkEnf();
     toMovement(state);
     const enf = requireUnit(state, "enf");
     enf.prone = true;
     enf.damage.internalStructure.rightLeg = 0;
-    proneFacingTurn(state, "enf", 1, []);
+    executeMove(state, "enf", "walk", [{ kind: "turn", facings: 1 }], []);
     expect(enf.facing).toBe("ne");
-    expect(() => proneFacingTurn(state, "enf", 2, [])).toThrow(
-      /leg destroyed and may only turn 1 hexside/,
+    const over = hbkEnf();
+    toMovement(over);
+    requireUnit(over, "enf").prone = true;
+    requireUnit(over, "enf").damage.internalStructure.rightLeg = 0;
+    expect(() => executeMove(over, "enf", "walk", [{ kind: "turn", facings: 2 }], [])).toThrow(
+      /Move costs 2 MP but walk budget is 1/,
     );
   });
 
-  it("prone 'Mech with both legs destroyed: cannot turn", () => {
+  it("prone 'Mech with both legs destroyed: cannot turn (zero budget)", () => {
     const state = hbkEnf();
     toMovement(state);
     const enf = requireUnit(state, "enf");
     enf.prone = true;
     enf.damage.internalStructure.rightLeg = 0;
     enf.damage.internalStructure.leftLeg = 0;
-    expect(() => proneFacingTurn(state, "enf", 1, [])).toThrow(/no intact legs/);
+    expect(() => executeMove(state, "enf", "walk", [{ kind: "turn", facings: 1 }], [])).toThrow(
+      /Move costs 1 MP but walk budget is 0/,
+    );
   });
 });
 

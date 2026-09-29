@@ -66,6 +66,3 @@ export function hasPartialCover(terrain: TerrainType): boolean {
 export function blocksTargeting(terrain: TerrainType): boolean {
   return terrainDef(terrain)?.blocksTargeting === true;
 }
-
-/** Backwards-compatible alias for {@link screeningPoints}. */
-export const woodsPoints = screeningPoints;

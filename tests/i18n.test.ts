@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  bearing,
   bestFireTarget,
   isNominal,
   isUnitAvailable,
@@ -22,7 +21,7 @@ import {
   placeLanding,
   queueWeaponFires,
 } from "../web/session";
-import { currentActor, execute } from "./helpers";
+import { bearing, currentActor, execute } from "./helpers";
 
 /** Drive a started battle until it is over using minimal legal actions. */
 function autoPlay(s: ReturnType<typeof newSession>): void {

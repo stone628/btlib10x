@@ -6,7 +6,6 @@ import {
   costToEnter,
   type HexGrid,
   hasPartialCover,
-  MP_PER_FACING_CHANGE,
   setCell,
 } from "../core/terrain";
 import {
@@ -22,6 +21,7 @@ import {
   rotateFacing,
   type TerrainHexDef,
   type WreckState,
+  type ArmLocation,
 } from "../core/types";
 import { type MapDef, type MechModelHolder, mechDef, mechDefFor } from "../data/index";
 import type { ResolvedMechDef } from "../data/mech.schema";
@@ -946,21 +946,13 @@ const SKILL_MAX = 7;
 const TURN_FACINGS_MAX = 5;
 /** Minimum hexes entered for a jump declaration. */
 const JUMP_MIN_HEXES = 1;
-/** Heat from a posture move (stand up, prone turn). A voluntary drop to
+/** Heat from a stand-up attempt. A voluntary drop to
  *  prone costs no heat. */
 const POSTURE_MOVE_HEAT = 1;
 /** Fixed damage from a voluntary drop to prone: 1 point on the front column. */
 const VOLUNTARY_DROP_DAMAGE = 1;
-/** Walk budget below which a prone drop or turn is refused. */
+/** Walk budget below which a prone drop is refused. */
 const DROP_BUDGET_MIN = 1;
-/** One-hexside cap when a prone 'Mech has lost a leg (TW p. 122: "Staying
- *  prone, it may change facing one hexside per turn"). An undamaged prone
- *  'Mech (TW pp. 49, 50) instead pays 1 MP per hexside with no per-turn cap
- *  other than the in-place maximum below. */
-const LEG_DESTROYED_PRONE_TURN_HEXSIDE = 1;
-/** Largest in-place facing change for an undamaged prone 'Mech: 180° = 3
- *  hexsides (TW p. 50). Larger values would loop back to the same facing. */
-const MAX_PRONE_TURN_HEXSIDE = 3;
 /** End-of-heat-phase heat dealing 1 pilot hit with destroyed life support. */
 const LIFE_SUPPORT_HEAT_1HIT = 15;
 /** End-of-heat-phase heat dealing 2 pilot hits with destroyed life support. */
@@ -1318,7 +1310,7 @@ export function inferPronePropArm(
   def: ResolvedMechDef,
   decls: readonly AttackDecl[],
   prone: boolean,
-): "leftArm" | "rightArm" | null {
+): ArmLocation | null {
   if (!prone) return null;
   let hasLeft = false;
   let hasRight = false;
@@ -3129,82 +3121,6 @@ export function dropProne(
       position: { ...unit.position },
       facing: unit.facing,
       mpSpent: DROP_MP_COST,
-      mpBudget: budget,
-    },
-  );
-}
-
-/**
- * Facing change while prone (TW pp. 49, 50, 122): costs the unit's movement
- * activation plus 1 heat, counts as walking for to-hit, and charges 1 MP per
- * hexside rotated.
- *
- * - Both legs destroyed (TW p. 122): cannot turn at all.
- * - One leg destroyed (TW p. 122): exactly one hexside per turn.
- * - Undamaged (TW pp. 49, 50): 1 MP per hexside, up to 3 (180°) in place.
- */
-export function proneFacingTurn(
-  state: BattleState,
-  unitId: string,
-  facings: number,
-  sink: GameEvent[],
-): void {
-  requirePhase(state, "movement");
-  const unit = requireUnit(state, unitId);
-  if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
-  if (!unit.prone) throw new Error(`${unitId} is not prone`);
-  if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot move`);
-  if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot move`);
-  const def = mechDefFor(unit);
-  const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
-  if (pre.legsDestroyed >= 2) {
-    throw new Error(`${unitId} has no intact legs and cannot turn while prone`);
-  }
-  const absFacings = Math.abs(facings);
-  if (!Number.isInteger(facings) || absFacings === 0) {
-    throw new Error(`${unitId} prone turn: facings must be a non-zero integer`);
-  }
-  if (pre.legsDestroyed === 1) {
-    if (absFacings !== LEG_DESTROYED_PRONE_TURN_HEXSIDE) {
-      throw new Error(
-        `${unitId} is prone with a leg destroyed and may only turn 1 hexside per turn`,
-      );
-    }
-  } else if (absFacings > MAX_PRONE_TURN_HEXSIDE) {
-    throw new Error(`${unitId} prone turn: 1-3 hexsides per turn (got ${facings})`);
-  }
-  const mpCost = absFacings * MP_PER_FACING_CHANGE;
-  const budget = effectiveMoveBudget(
-    "walk",
-    effectiveMovement(def, unit.damage, unit.critSlotsDestroyed),
-    unit.heat,
-  );
-  if (budget < mpCost) {
-    throw new Error(`${unitId} has no MP to turn ${absFacings} hexside(s) while prone`);
-  }
-  unit.facing = rotateFacing(unit.facing, facings);
-  unit.moveMode = "walk";
-  unit.movesThisTurn = [];
-  unit.jumpedThisTurn = false;
-  unit.mpSpent = mpCost;
-  state.actedThisPhase.push(unitId);
-  unit.heatPending += POSTURE_MOVE_HEAT;
-  sink.push(
-    {
-      kind: "heatMove",
-      unitId,
-      heat: POSTURE_MOVE_HEAT,
-      base: unit.heat,
-      totalGenerated: unit.heatPending,
-    },
-    {
-      kind: "moved",
-      unitId,
-      mode: "walk",
-      prevMode: "walk",
-      position: { ...unit.position },
-      facing: unit.facing,
-      mpSpent: mpCost,
       mpBudget: budget,
     },
   );

@@ -1,5 +1,5 @@
-import type { Location, Rng, TerrainType } from "../src/core/types";
-import { type AmmoBins, createBattle, isUnitRemoved } from "../src/index";
+import type { Facing, HexCoord, Location, Rng, TerrainType } from "../src/core/types";
+import { type AmmoBins, bearingExact, createBattle, isUnitRemoved } from "../src/index";
 import type { BattleState, TerrainHexDef, UnitInit, UnitState } from "../src/rules/game";
 import { advancePhase, requireUnit } from "../src/rules/game";
 import type { Chunk } from "../web/chunk";
@@ -173,4 +173,11 @@ export function checkVictory(state: BattleState): VictoryResult {
     return { winnerTeam: aliveTeams.values().next().value ?? null, draw: aliveTeams.size === 0 };
   }
   return { winnerTeam: null, draw: false };
+}
+
+/** Relative direction of `target` as seen from `origin` (compass sector), or
+ *  null when identical. On an exact sector boundary one sector of the pair is
+ *  returned deterministically; use `bearingExact` when the boundary matters. */
+export function bearing(from: HexCoord, to: HexCoord): Facing | null {
+  return bearingExact(from, to)?.facing ?? null;
 }
