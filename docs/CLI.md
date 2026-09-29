@@ -218,7 +218,10 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   exploding crit that still empties the bin, arm/leg/head blown off on a 12, cockpit crit kills the
   pilot, leg actuator/hip/jump-jet destruction feeds the effective
   movement helper (leg actuators −1 walk each, hip halves walking, jump
-  jets −1 jump each). Engine / gyro / sensor / life-support / heat-sink
+  jets −1 jump each), and arm actuator/shoulder destruction feeds the
+  weapon to-hit modifier (shoulder +4 suppressing upper/lower, otherwise
+  +1 per destroyed upper/lower actuator in the firing arm; hand has no
+  weapon effect). Engine / gyro / sensor / life-support / heat-sink
   slots take and absorb crits in the slot table; destroyed engine slots
   feed the heat system below.
 - **Heat** — heat scale 0-30 with movement heat, weapon heat, posture heat

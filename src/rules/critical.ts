@@ -68,7 +68,10 @@
  * the current engine subset lacks heat / physical attacks:
  *   - engine crits feed heat only (no eventual shutdown modeling beyond the
  *     heat scale)
- *   - arm actuators, shoulder, hand (to-hit / physical-attack penalties)
+ *   - arm actuators, shoulder, hand physical-attack effects (to-hit /
+ *     damage / punch / club / push legality — deferred with the physical
+ *     attack phase; the WEAPON-fire modifiers, TW p.125, live in
+ *     `src/rules/actuators.ts`)
  *
  * The engine's rules functions are pure given their inputs and operate on
  * snapshots; the caller (game.ts) commits the resulting state onto UnitState.

@@ -12,7 +12,7 @@ import { applyDamage, type DamageApplication, type UnitDamageState } from "./dam
 import { toHitHeatModifier } from "./heat";
 import { hitLocationForArc } from "./hitlocation";
 import { losWoodsPoints } from "./los";
-import { computeToHit, damageForBracket } from "./tohit";
+import { computeToHit, damageForBracket, type ToHitBreakdown } from "./tohit";
 
 export interface HitGroup {
   readonly location: Location;
@@ -48,6 +48,9 @@ export interface WeaponAttackInput {
    *  first hit; a second hit blinds the 'Mech (declare no attacks, TW p.123).
    *  Callers map the destroyed-slot count via `sensorAttackModifier`. */
   readonly sensorMod?: number;
+  /** Arm-actuator to-hit modifier for the firing arm (TW p.125); caller
+   *  computes per weapon mount via `armWeaponToHitModifier`. */
+  readonly actuatorMod?: number;
   /** Partial-cover to-hit modifier supplied by the caller (the board aware
    *  of wrecks): 2 when the target is adjacent to a level-2 wreck and the
    *  attacker is below its top. Merged with the terrain-derived value
@@ -91,7 +94,7 @@ export interface WeaponAttackInput {
 export interface AttackResolution {
   readonly weapon: string;
   readonly distance: number;
-  readonly breakdown: ReturnType<typeof computeToHit>;
+  readonly breakdown: ToHitBreakdown;
   readonly toHitRoll: number | null;
   readonly hit: boolean;
   readonly jammed: boolean;
@@ -169,6 +172,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     ...(input.targetImmobile !== undefined ? { targetImmobile: input.targetImmobile } : {}),
     ...(input.targetProne !== undefined ? { targetProne: input.targetProne } : {}),
     ...(input.sensorMod !== undefined ? { sensorMod: input.sensorMod } : {}),
+    ...(input.actuatorMod !== undefined ? { actuatorMod: input.actuatorMod } : {}),
     ...(partialCoverMod > 0 ? { partialCoverMod } : {}),
     interveningWoods: losWoodsPoints(input.interveningTerrains),
     distance: input.distance,

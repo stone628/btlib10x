@@ -101,6 +101,13 @@ export type { TerrainDef } from "./data/terrain.schema";
 export { allTerrainDefs, terrainDef } from "./data/terrain.schema";
 export type { WeaponCategory, WeaponDef, WeaponNameHolder } from "./data/weapon.schema";
 export { allWeaponDefs, listWeaponNames, weaponDefFor } from "./data/weapon.schema";
+export type { ArmActuatorCounts } from "./rules/actuators";
+export {
+  ARM_ACTUATOR_WEAPON_MOD,
+  armWeaponToHitModifier,
+  countArmActuators,
+  SHOULDER_WEAPON_MOD,
+} from "./rules/actuators";
 export {
   AMMO_POLICIES,
   type AmmoBins,
