@@ -5,12 +5,14 @@ import {
   CLUSTER_COLUMNS,
   CLUSTER_TABLE,
   HIT_LOCATION_TABLE,
+  heatScaleEffects,
   LEFT_SIDE_TABLE,
   listMapNames,
   listWeaponNames,
   RIGHT_SIDE_TABLE,
   type WeaponCategory,
   type WeaponDef,
+  HEAT_CAP,
 } from "btlib10x";
 import {
   buildBoardChunk,
@@ -88,6 +90,9 @@ export function renderCriticalTable(): Chunk[] {
   return [buildLinesChunk(i18n("table.crit.title")), buildHeaderTableChunkFromRows(header, rows)];
 }
 
+/** Top of the displayed Heat Scale: 30+ auto-shuts down, sharing one row. */
+const HEAT_TABLE_MAX = 30;
+
 export function renderHeatScaleTable(): Chunk[] {
   const header = [
     i18n("table.heat.col.heat"),
@@ -96,21 +101,35 @@ export function renderHeatScaleTable(): Chunk[] {
     i18n("table.heat.col.shutdown"),
     i18n("table.heat.col.ammo"),
   ];
-  const rows: string[][] = [
-    ["0–7", "0", "0", i18n("table.heat.shutdownSafe"), i18n("table.heat.ammoSafe")],
-    ["8–12", "+1", "0", i18n("table.heat.shutdownSafe"), i18n("table.heat.ammoSafe")],
-    ["13–16", "+2", "0", i18n("table.heat.shutdownSafe"), i18n("table.heat.ammoSafe")],
-    ["14–17", "+2", "0", "2D6 < 4", i18n("table.heat.ammoSafe")],
-    ["17–19", "+3", "+1", "2D6 < 6", i18n("table.heat.ammoSafe")],
-    ["19–21", "+3", "+1", "2D6 < 6", "2D6 < 4"],
-    ["20–22", "+3", "+2", "2D6 < 8", "2D6 < 6"],
-    ["22–24", "+3", "+3", "2D6 < 8", "2D6 < 6"],
-    ["23–25", "+4", "+3", "2D6 < 10", "2D6 < 6"],
-    ["24–26", "+4", "+4", "2D6 < 10", "2D6 < 6"],
-    ["26–28", "+4", "+4", "2D6 < 10", "2D6 < 8"],
-    ["28–29", "+4", "+4", "2D6 < 10", "2D6 < 8"],
-    ["30+", "+4", "+5", i18n("table.heat.shutdownAuto"), "2D6 < 8"],
-  ];
+  const rows: string[][] = [];
+  let rangeStart = 0;
+  let prevKey: string | null = null;
+  let prevCells: string[] | null = null;
+  const pushRow = (start: number, end: number, cells: string[]): void => {
+    const label = start === end ? `${start}` : `${start}–${end}`;
+    rows.push([label, ...cells]);
+  };
+  for (let heat = 0; heat <= HEAT_TABLE_MAX; heat++) {
+    const fx = heatScaleEffects(heat);
+    const toHit = fx.toHitMod === 0 ? "0" : `+${fx.toHitMod}`;
+    const mp = fx.mpPenalty === 0 ? "0" : `+${fx.mpPenalty}`;
+    const shutdown =
+      fx.shutdown === null
+        ? i18n("table.heat.shutdownSafe")
+        : fx.shutdown === "auto"
+          ? i18n("table.heat.shutdownAuto")
+          : `2D6 < ${fx.shutdown.avoid}`;
+    const ammo =
+      fx.ammoExplosion === null ? i18n("table.heat.ammoSafe") : `2D6 < ${fx.ammoExplosion.avoid}`;
+    const key = `${toHit}|${mp}|${shutdown}|${ammo}`;
+    if (prevKey !== null && key !== prevKey && prevCells !== null) {
+      pushRow(rangeStart, heat - 1, prevCells);
+      rangeStart = heat;
+    }
+    prevKey = key;
+    prevCells = [toHit, mp, shutdown, ammo];
+  }
+  if (prevCells !== null) pushRow(rangeStart, HEAT_CAP, prevCells);
   return [buildLinesChunk(i18n("table.heat.title")), buildHeaderTableChunkFromRows(header, rows)];
 }
 
