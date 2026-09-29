@@ -33,7 +33,6 @@ import {
   type LocationValue,
   loadAmmoBins,
   mapDefFor,
-  mechDef,
   mechDefFor,
   movementMpPenalty,
   movementMpPenaltyWithThreshold,
@@ -44,7 +43,6 @@ import {
   SENSOR_BLIND_HITS,
   type ShutdownState,
   shutdownAvoid,
-  TORSO_LOCATIONS,
   type TorsoLocationValue,
   toHitHeatModifier,
   toHitHeatModifierWithThreshold,
@@ -61,6 +59,7 @@ import {
   type Chunk,
 } from "./chunk";
 import { compensatedLength, i18n, type MessageKey } from "./i18n";
+import { lookupMech } from "./lookup";
 import {
   F,
   gunneryLabel,
@@ -74,7 +73,6 @@ import {
 import { createBoardRenderUnit, createEjectedBoardRenderUnits } from "./render";
 import { requireBattle, type Session, type SessionGameEvent, victoryBannerChunk } from "./session";
 import { critLines, fireSuggestionChunks, resolutionLines } from "./session.weapon";
-import { lookupMech } from "./lookup";
 
 /** Full heat-scale status for one unit, driven by the `heat` CLI command. */
 export function heatStatusLines(unit: UnitState): Chunk {

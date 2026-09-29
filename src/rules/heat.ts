@@ -264,7 +264,7 @@ export function heatScaleEffects(heat: number): HeatScaleEffects {
     if (avoid >= D2D6_MAX) {
       // max 2D6 == 12, always
       shutdown = "auto";
-    } else {
+    } else if (avoid > 0) {
       shutdown = { threshold, avoid };
     }
   }
