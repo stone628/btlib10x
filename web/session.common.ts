@@ -74,6 +74,7 @@ import {
 import { createBoardRenderUnit, createEjectedBoardRenderUnits } from "./render";
 import { requireBattle, type Session, type SessionGameEvent, victoryBannerChunk } from "./session";
 import { critLines, fireSuggestionChunks, resolutionLines } from "./session.weapon";
+import { lookupMech } from "./lookup";
 
 /** Full heat-scale status for one unit, driven by the `heat` CLI command. */
 export function heatStatusLines(unit: UnitState): Chunk {
@@ -128,13 +129,8 @@ export function boardChunk(s: Session): Chunk {
 
 // ---------------------------------------------------------------- info ----
 export function infoMechChunk(model: string): Chunk[] {
-  const d = mechDef(model);
+  const d = lookupMech(model);
   if (d === undefined) throw new Error(i18n("err.unknownModel", { model }));
-  const armorRear: TorsoLocationValue = {} as TorsoLocationValue;
-  for (const loc of TORSO_LOCATIONS) {
-    const v = d.armorRear[loc];
-    if (v !== undefined) armorRear[loc] = v;
-  }
   const is = internalStructureForTonnage(d.tonnage);
   const topLines = [
     i18n("info.head", {
@@ -158,10 +154,10 @@ export function infoMechChunk(model: string): Chunk[] {
         weaponLines,
         armorDiagramInfo({
           armor: d.armor,
-          armorRear,
+          armorRear: d.armorRear,
           internalStructure: is,
           originalArmor: d.armor,
-          originalArmorRear: armorRear,
+          originalArmorRear: d.armorRear,
           originalStructure: is,
           dissipMax: heatDissipationMax(d),
         }),

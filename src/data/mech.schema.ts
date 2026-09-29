@@ -416,7 +416,7 @@ function resolveLocationCrits(
  * inconsistencies (movement ratings, armor values, crit-slot counts, heat
  * sink reconciliation, weapon/ammo linkage).
  */
-export function validateMechDef(def: MechDef): void {
+export function validateMechDef(def: MechDef): MechDef {
   const errors: string[] = [];
 
   const { tonnage, walking, running, jumping, techBase } = def;
@@ -599,4 +599,6 @@ export function validateMechDef(def: MechDef): void {
   if (errors.length > 0) {
     throw new Error(`Invalid MechDef (${def.model}):\n  - ${errors.join("\n  - ")}`);
   }
+
+  return def;
 }
