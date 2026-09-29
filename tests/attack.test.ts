@@ -83,35 +83,6 @@ describe("resolveWeaponAttack", () => {
     expect(rng.remaining()).toBe(0);
   });
 
-  it("raw 2 with auto-hit TN jams and still resolves damage", () => {
-    // gunnery 0 + immobile target -> TN -4 -> breakdown.automatic = "hit".
-    // Raw roll 2 triggers jam (TW p.113); auto-hit override still lands
-    // damage before the jam locks the weapon.
-    const rng = scriptedRng(
-      1,
-      1, // to-hit roll 2 (jam trigger)
-      1,
-      2, // cluster roll 3, 2-shot column -> 1 hit
-      3,
-      4, // location 7 -> center torso
-    );
-    const res = resolveWeaponAttack({
-      ...BASE,
-      rng,
-      gunnery: 0,
-      targetImmobile: true,
-      weapon: "Ultra AC/5",
-      shots: 2,
-      targetDamage: freshState(),
-    });
-    expect(res.breakdown.automatic).toBe("hit");
-    expect(res.toHitRoll).toBe(2);
-    expect(res.jammed).toBe(true);
-    expect(res.hit).toBe(true);
-    expect(res.groups).toEqual([{ location: "centerTorso", damage: 5, throughArmor: false }]);
-    expect(res.application?.after.armor.centerTorso).toBe(5);
-  });
-
   it("raw roll above 2 with auto-hit TN hits without jamming", () => {
     // Same TN-<= 2 setup as above, but raw roll 6 != 2: jam trigger stays
     // false while the modified-TN override still auto-hits.

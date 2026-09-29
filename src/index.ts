@@ -1,6 +1,4 @@
 export {
-  D2D6_AUTO_SUCCESS,
-  D2D6_FUMBLE,
   D2D6_MAX,
   D2D6_MIN,
   roll2D6,
@@ -8,7 +6,6 @@ export {
 } from "./core/dice";
 export {
   type Bearing,
-  bearing,
   bearingExact,
   hexDistance,
   isAdjacent,
@@ -30,7 +27,6 @@ export {
   screeningPoints,
   terrainMoveCost,
   terrainTargetMod,
-  woodsPoints,
 } from "./core/terrain";
 export type {
   Facing,
@@ -129,7 +125,6 @@ export {
   classifyArc,
   classifyArcWithBoundary,
   effectiveFacingForTwist,
-  isInFrontArc,
   weaponCanFireIntoArc,
 } from "./rules/arcs";
 export type { AttackResolution, HitGroup, WeaponAttackInput } from "./rules/attack";
@@ -239,7 +234,6 @@ export {
   nextActor,
   partialCoverMod,
   passMovement,
-  proneFacingTurn,
   requireUnit,
   resolveAllAttacks,
   resolveHeatPhase,

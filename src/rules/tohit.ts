@@ -1,4 +1,4 @@
-import { D2D6_FUMBLE, D2D6_MAX } from "../core/dice";
+import { D2D6_MAX, D2D6_MIN } from "../core/dice";
 import { terrainTargetMod } from "../core/terrain";
 import type { MoveMode, TerrainType } from "../core/types";
 import type { WeaponDef } from "../data/weapon.schema";
@@ -157,7 +157,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     sensorMod,
     total,
     rangeBracket: bracket,
-    automatic: total <= D2D6_FUMBLE ? "hit" : total > D2D6_MAX ? "miss" : null,
+    automatic: total <= D2D6_MIN ? "hit" : total > D2D6_MAX ? "miss" : null,
     outOfRange: false,
   };
 }

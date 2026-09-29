@@ -162,10 +162,3 @@ export function bearingExact(from: HexCoord, to: HexCoord): Bearing | null {
   const boundary = best.length > 1 ? best[1]! : null;
   return { facing, boundary };
 }
-
-/** Relative direction of `target` as seen from `origin` (compass sector), or
- *  null when identical. On an exact sector boundary one sector of the pair is
- *  returned deterministically; use `bearingExact` when the boundary matters. */
-export function bearing(from: HexCoord, to: HexCoord): Facing | null {
-  return bearingExact(from, to)?.facing ?? null;
-}

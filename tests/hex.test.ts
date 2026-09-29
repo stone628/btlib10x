@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  bearing,
   bearingExact,
   hexDistance,
   isAdjacent,
@@ -10,6 +9,7 @@ import {
 } from "../src/core/hex";
 import { cellAt, type HexGrid } from "../src/core/terrain";
 import type { HexCell } from "../src/core/types";
+import { bearing } from "./helpers";
 
 describe("hex geometry", () => {
   it("computes even-q neighbors on flat-top hexes (even cols lowered)", () => {
