@@ -84,7 +84,7 @@ function dirtyBattle(state: BattleState): void {
   hbk.pilotHits = 3;
   hbk.damage.armor.head = 0;
   hbk.critSlotsDestroyed.centerTorso[0] = true;
-  hbk.phaseStartCritSlotsDestroyed.centerTorso[0] = true;
+  hbk.baseCritSlotsDestroyed.centerTorso[0] = true;
   hbk.jammedWeapons.push(0);
   hbk.destroyedWeapons.push(1);
   hbk.movesThisTurn.push("forward");

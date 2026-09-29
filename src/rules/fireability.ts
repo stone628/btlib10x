@@ -198,7 +198,8 @@ export function suggestFireTargets(
           blockBoth("destroyed");
           return;
         }
-        if (!canFireFromLocation(unit.phaseStartDamage, mount.location)) {
+        const baseDamage = unit.baseDamage ?? unit.damage;
+        if (!canFireFromLocation(baseDamage, mount.location)) {
           blockBoth("destroyed");
           return;
         }

@@ -221,19 +221,19 @@ export interface UnitState extends MechModelHolder {
   position: HexCoord;
   facing: Facing;
   damage: UnitDamageState;
-  phaseStartDamage: UnitDamageState;
+  baseDamage: UnitDamageState;
+  /** Per-slot destroyed flag for each location's crit slot table. */
+  critSlotsDestroyed: Record<Location, boolean[]>;
   /** Crit-slot destroyed flags at the start of the weapon attack phase; the
    *  piloting sweep diffs against this to find newly destroyed actuators,
    *  hips, and gyros (TW "previously destroyed" = destroyed before now). */
-  phaseStartCritSlotsDestroyed: Record<Location, boolean[]>;
+  baseCritSlotsDestroyed: Record<Location, boolean[]>;
   /** Per-crit-slot ammo state: identity + remaining shots (see
    *  `src/rules/ammo.ts`). Per-weapon totals are derived on demand. */
   ammoBins: AmmoBins;
   /** Which of a unit's ammo bins the next shot is drawn from. */
   ammoPolicy: AmmoPolicy;
   jammedWeapons: number[];
-  /** Per-slot destroyed flag for each location's crit slot table. */
-  critSlotsDestroyed: Record<Location, boolean[]>;
   /** Weapon indices destroyed by a critical hit (in addition to destroyed
    *  locations, which the canFireFromLocation check already covers). */
   destroyedWeapons: number[];
@@ -792,12 +792,12 @@ export function createBattle(
       position: { ...init.position },
       facing: init.facing,
       damage,
-      phaseStartDamage: {
+      baseDamage: {
         armor: { ...damage.armor },
         armorRear: { ...damage.armorRear },
         internalStructure: { ...damage.internalStructure },
       },
-      phaseStartCritSlotsDestroyed: initCritDestroyed(def),
+      baseCritSlotsDestroyed: initCritDestroyed(def),
       ammoBins,
       ammoPolicy: "exposed",
       jammedWeapons: [],
@@ -1077,7 +1077,7 @@ export function executeMove(
   const prechargedMP = options.spentMP ?? 0;
 
   const def = mechDefFor(unit);
-  const movement = effectiveMovement(def, unit.phaseStartDamage, unit.critSlotsDestroyed);
+  const movement = effectiveMovement(def, unit.damage, unit.critSlotsDestroyed);
   const budget = effectiveMoveBudget(unit.moveMode, movement, unit.heat);
   const jumping = unit.moveMode === "jump";
   const proneTurn = unit.prone && unit.moveMode === "walk";
@@ -1416,7 +1416,7 @@ export function validateAttacksImpl(
     if (unit.destroyedWeapons.includes(decl.weaponIndex)) {
       throw new Error(`${mount.weapon} on ${unitId} is destroyed by a critical hit`);
     }
-    if (!canFireFromLocation(unit.phaseStartDamage, mount.location)) {
+    if (!canFireFromLocation(unit.baseDamage, mount.location)) {
       throw new Error(
         `${mount.weapon} location (${mount.location}) is destroyed or its support torso is gone`,
       );
@@ -1588,7 +1588,7 @@ function resolveUnitAttacks(
   state: BattleState,
   unit: UnitState,
   rng: Rng,
-  phaseStartDamage: Record<string, UnitDamageState>,
+  baseDamage: Record<string, UnitDamageState>,
   phaseStartCf: Record<string, number>,
 ): UnitAttackResult {
   const def = mechDefFor(unit);
@@ -1617,7 +1617,7 @@ function resolveUnitAttacks(
       ammoExhausted = true;
     }
 
-    const targetPhaseStartDamage = phaseStartDamage[target.id] ?? target.damage;
+    const targetBaseDamage = baseDamage[target.id] ?? target.damage;
 
     const resolution = resolveWeaponAttack({
       rng,
@@ -1646,7 +1646,7 @@ function resolveUnitAttacks(
       weapon: weapon.name,
       ammoExhausted,
       shots,
-      targetDamage: targetPhaseStartDamage,
+      targetDamage: targetBaseDamage,
       attackerLevel: cellAt(state, unit.position).level,
       targetLevel: cellAt(state, target.position).level,
       ...(state.critsDisabled
@@ -2121,9 +2121,9 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
 
   // Phase 1: collect resolutions for ALL units with declared attacks
   // (ignore `removed` flag — TW simultaneity means even destroyed units fire)
-  const phaseStartDamage: Record<string, UnitDamageState> = {};
+  const baseDamage: Record<string, UnitDamageState> = {};
   for (const unit of Object.values(state.units)) {
-    phaseStartDamage[unit.id] = {
+    baseDamage[unit.id] = {
       armor: { ...unit.damage.armor },
       armorRear: { ...unit.damage.armorRear },
       internalStructure: { ...unit.damage.internalStructure },
@@ -2139,7 +2139,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   }
   for (const unit of Object.values(state.units)) {
     if (unit.declaredAttacks.length === 0) continue;
-    results.push(resolveUnitAttacks(state, unit, rng, phaseStartDamage, phaseStartCf));
+    results.push(resolveUnitAttacks(state, unit, rng, baseDamage, phaseStartCf));
   }
 
   // Phase 2: apply all damage, crits, building damage, and heat simultaneously
@@ -2161,7 +2161,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     for (const { targetId, resolution, buildingDamage } of result.resolutions) {
       const target = requireUnit(state, targetId);
 
-      // Initialize target accumulators from current state (not phaseStartDamage —
+      // Initialize target accumulators from current state (not baseDamage —
       // we want sequential crit application within the same target)
       if (!targetDamageMap[targetId]) {
         targetDamageMap[targetId] = {
@@ -2174,9 +2174,17 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         targetDestroyedWeaponsMap[targetId] = [...target.destroyedWeapons];
       }
 
-      // Apply damage application
-      if (resolution.application !== null) {
-        targetDamageMap[targetId] = resolution.application.after;
+      // Apply damage by re-applying each hit group to the accumulating damage state.
+      // This ensures damage from multiple attacks against the same target accumulates
+      // (TW p.38: all weapon attack damage applied at end of phase).
+      if (resolution.application !== null && resolution.groups.length > 0) {
+        let currentDamage = targetDamageMap[targetId];
+        for (const group of resolution.groups) {
+          // Apply each hit group with the attack's arc (determines armor pool)
+          const app = applyDamage(currentDamage, group.location, group.damage, resolution.arc);
+          currentDamage = app.after;
+        }
+        targetDamageMap[targetId] = currentDamage;
       }
 
       // Collect crits for later sequential application
@@ -2406,15 +2414,26 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   }
 
   // End-of-phase piloting: falls from this phase's damage and crits.
-  const before: PhaseSnapshots = { damage: phaseStartDamage, crit: {} };
+  const before: PhaseSnapshots = { damage: baseDamage, crit: {} };
   for (const unit of Object.values(state.units)) {
-    before.crit[unit.id] = unit.phaseStartCritSlotsDestroyed;
+    before.crit[unit.id] = unit.baseCritSlotsDestroyed;
   }
   resolvePhasePiloting(state, rng, before, sink);
 
   // Clear declared attacks for all units
   for (const unit of Object.values(state.units)) {
     unit.declaredAttacks = [];
+  }
+}
+
+function updatePhaseBaseValues(state: BattleState) {
+  for (const unit of Object.values(state.units)) {
+    unit.baseDamage = {
+      armor: { ...unit.damage.armor },
+      armorRear: { ...unit.damage.armorRear },
+      internalStructure: { ...unit.damage.internalStructure },
+    };
+    unit.baseCritSlotsDestroyed = cloneCritDestroyed(unit.critSlotsDestroyed);
   }
 }
 
@@ -2427,19 +2446,14 @@ export function advancePhase(state: BattleState, sink: GameEvent[], rng: Rng = D
       if (state.initiativeWinnerTeam === null) {
         throw new Error("Roll initiative before leaving the initiative phase");
       }
+      // Capture base snapshots at start of movement phase
+      updatePhaseBaseValues(state);
       state.phase = "movement";
       break;
     }
     case "movement": {
       state.phase = "weaponAttack";
-      for (const unit of Object.values(state.units)) {
-        unit.phaseStartDamage = {
-          armor: { ...unit.damage.armor },
-          armorRear: { ...unit.damage.armorRear },
-          internalStructure: { ...unit.damage.internalStructure },
-        };
-        unit.phaseStartCritSlotsDestroyed = cloneCritDestroyed(unit.critSlotsDestroyed);
-      }
+      updatePhaseBaseValues(state);
       state.actedThisPhase = [];
       break;
     }
