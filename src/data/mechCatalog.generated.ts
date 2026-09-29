@@ -5,7 +5,7 @@
  * keeps front and rear armor as separate pools.
  */
 import type { MechDef, ResolvedMechDef } from "./mech.schema";
-import { resolveMechDef } from "./mech.schema";
+import { resolveMechDef, validateMechDef } from "./mech.schema";
 
 import as7dDef from "./mechs/as7-d";
 import bswx1Def from "./mechs/bsw-x1";
@@ -37,5 +37,5 @@ const mechs: readonly [string, MechDef][] = [
 
 /** All 'Mech definitions shipped with the library, keyed by model. */
 export const MECH_DEFS: Readonly<Map<string, ResolvedMechDef>> = new Map<string, ResolvedMechDef>(
-  mechs.map(([model, def]) => [model, resolveMechDef(def)]),
+  mechs.map(([model, def]) => [model, resolveMechDef(validateMechDef(def))]),
 );
