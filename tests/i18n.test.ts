@@ -103,15 +103,13 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
         (target?.weaponsIfPropLeft.length ?? 0) >= (target?.weaponsIfPropRight.length ?? 0)
           ? (target?.weaponsIfPropLeft ?? [])
           : (target?.weaponsIfPropRight ?? []);
-      queueWeaponFires(
-        s,
-        enemy,
-        weapons
-          .filter((w) => !unit.jammedWeapons.includes(w.weaponIndex))
-          .map((w) => w.weaponIndex),
-      );
-      if ((s.attack?.fireDecls ?? []).length === 0) {
+      const weaponIndexList = weapons
+        .filter((w) => !unit.jammedWeapons.includes(w.weaponIndex))
+        .map((w) => w.weaponIndex);
+      if (weaponIndexList.length === 0) {
         faceEnemy = true;
+      } else {
+        queueWeaponFires(s, enemy, weaponIndexList);
       }
       commitWeaponFire(s);
     }
