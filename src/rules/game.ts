@@ -9,6 +9,7 @@ import {
   setCell,
 } from "../core/terrain";
 import {
+  type ArmLocation,
   type Facing,
   type HexCell,
   type HexCoord,
@@ -21,7 +22,6 @@ import {
   rotateFacing,
   type TerrainHexDef,
   type WreckState,
-  type ArmLocation,
 } from "../core/types";
 import { type MapDef, type MechModelHolder, mechDef, mechDefFor } from "../data/index";
 import type { ResolvedMechDef } from "../data/mech.schema";
@@ -192,6 +192,15 @@ export type RemovalReason = "destroyed" | "pilotEjected" | "pilotKilled";
 export type RemovedState = "not" | RemovalReason;
 export type ActorPhase = "movement" | "weaponAttack";
 export type Phase = "initiative" | ActorPhase | "end";
+
+export type UnitFallReason =
+  | "legDestroyed"
+  | "gyroDestroyed"
+  | "shutdown"
+  | "rubble"
+  | "water"
+  | "building"
+  | "voluntaryDrop";
 
 /** Deterministic rng for ammo draws when the caller omits one: ties resolve
  *  to the first bin and the order is stable run to run. */
@@ -433,7 +442,8 @@ export type GameEvent =
        *  Fall roll and the damage clusters land on that column. `crits`
        *  holds the determining resolutions the fall damage triggered.
        *  A voluntary drop reuses this shape with `cause: "voluntaryDrop"`:
-       *  facing stays put, so `fallRoll` is null. */
+       *  facing stays put, so `fallRoll` is null, and TW p.49 causes no
+       *  falling damage, so `groups`/`crits` are empty with `totalDamage` 0. */
       readonly kind: "unitFell";
       readonly unitId: string;
       /** failedPsr:<reason> | legDestroyed | gyroDestroyed | shutdown |
@@ -949,8 +959,6 @@ const JUMP_MIN_HEXES = 1;
 /** Heat from a stand-up attempt. A voluntary drop to
  *  prone costs no heat. */
 const POSTURE_MOVE_HEAT = 1;
-/** Fixed damage from a voluntary drop to prone: 1 point on the front column. */
-const VOLUNTARY_DROP_DAMAGE = 1;
 /** Walk budget below which a prone drop is refused. */
 const DROP_BUDGET_MIN = 1;
 /** End-of-heat-phase heat dealing 1 pilot hit with destroyed life support. */
@@ -3059,21 +3067,21 @@ export function attemptStandUp(
 }
 
 /**
- * Voluntary drop to the ground (1 MP): no roll, no heat; the 'Mech counts
- * as walking for to-hit this turn. Landing jars the chassis: fixed 1 point
- * on the front hit-location column (crit rolls like any damage). Underwater
- * at depth 2+ that point halves rounding down, so it lands 0.
+ * Voluntary drop to the ground (TW p.49; 1 MP): no roll, no heat, no
+ * falling damage; the 'Mech counts as walking for to-hit this turn.
+ * Not allowed in a turn the 'Mech jumped.
  */
 export function dropProne(
   state: BattleState,
   unitId: string,
   sink: GameEvent[],
-  rng: Rng = DEFAULT_RNG,
+  _rng: Rng = DEFAULT_RNG,
 ): void {
   requirePhase(state, "movement");
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
   if (unit.prone) throw new Error(`${unitId} is already prone`);
+  if (unit.jumpedThisTurn) throw new Error(`${unitId} jumped this turn and cannot drop prone`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot move`);
   if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot move`);
   const def = mechDefFor(unit);
@@ -3090,16 +3098,9 @@ export function dropProne(
   unit.mpSpent = DROP_MP_COST;
   unit.prone = true;
   state.actedThisPhase.push(unitId);
-  const location = hitLocationForArc("front", roll2D6(rng));
-  const terrain = cellAt(state, unit.position).terrain;
-  // Underwater falls halve rounding down (TW errata, p.57): a 1-point drop
-  // in depth-2+ water lands 0 damage.
-  const total =
-    terrain === "water2" || terrain === "water3"
-      ? Math.floor(VOLUNTARY_DROP_DAMAGE / 2)
-      : VOLUNTARY_DROP_DAMAGE;
-  const groups = total > 0 ? [{ location, damage: total }] : [];
-  const crits = applyDamageGroups(state, unit, rng, groups, "front", sink);
+  // TW p.49: dropping to the ground causes no falling damage. The unitFell
+  // marker is kept (zero damage, no groups, no crits) so the posture change
+  // stays visible in the event log.
   sink.push(
     {
       kind: "unitFell",
@@ -3109,9 +3110,9 @@ export function dropProne(
       fallRoll: null,
       column: "front",
       levelsFallen: 0,
-      groups,
-      totalDamage: total,
-      crits,
+      groups: [],
+      totalDamage: 0,
+      crits: [],
     },
     {
       kind: "moved",

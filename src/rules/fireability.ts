@@ -1,4 +1,4 @@
-import { D2D6_MIN, D2D6_MAX } from "../core/dice";
+import { D2D6_MAX, D2D6_MIN } from "../core/dice";
 import { bearingExact, hexDistance } from "../core/hex";
 import { cellAt } from "../core/terrain";
 import type { Location } from "../core/types";
