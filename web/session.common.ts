@@ -79,7 +79,7 @@ import { critLines, fireSuggestionChunks, resolutionLines } from "./session.weap
 export function heatStatusLines(unit: UnitState): Chunk {
   const def = mechDefFor(unit);
   const engineOut = countDestroyedEngine(def, unit.damage, unit.critSlotsDestroyed);
-  const sinks = heatDissipation(def, unit.critSlotsDestroyed);
+  const sinks = heatDissipation(def, unit.damage, unit.critSlotsDestroyed);
   const toHit = toHitHeatModifier(unit.heat);
   const mpPenalty = movementMpPenalty(unit.heat);
   const shutdown = shutdownAvoid(unit.heat);
@@ -347,7 +347,7 @@ export function battleSheet(unit: UnitState, id: string): SheetView {
     }),
     ammoStatusLine: ammoStatusLine,
     heat: unit.heat,
-    dissipCurr: heatDissipation(def, unit.critSlotsDestroyed),
+    dissipCurr: heatDissipation(def, unit.damage, unit.critSlotsDestroyed),
     dissipMax: heatDissipationMax(def),
     engineHit: ccStatus.engine,
     gyroHit: ccStatus.gyro,

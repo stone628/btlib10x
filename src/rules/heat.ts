@@ -25,6 +25,7 @@ import { ammoDefFor } from "../data/ammo.schema";
 import type { ResolvedMechDef } from "../data/mech.schema";
 import { type AmmoBinId, type AmmoBins, collectAmmoBins } from "./ammo";
 import { ammoDamagePerShot, type EffectiveMovement } from "./critical";
+import { isUnitLocationDestroyed, type UnitDamageState } from "./damage";
 import { maxMovePoints } from "./movement";
 
 export const HEAT_CAP = 50;
@@ -97,6 +98,7 @@ export function engineHitHeat(destroyedEngineSlots: number): number {
  */
 export function heatSinksOperational(
   def: ResolvedMechDef,
+  damage: UnitDamageState,
   critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
 ): number {
   const internal = engineInternalSinks(def);
@@ -105,17 +107,18 @@ export function heatSinksOperational(
   for (const loc of LOCATIONS) {
     const layout = def.critSlots[loc];
     const destroyed = critSlotsDestroyed[loc];
+    const locDead = isUnitLocationDestroyed(damage, loc);
     for (let i = 0; i < layout.length; i++) {
       const slot = layout[i];
       if (slot?.kind !== "structure") continue;
       if (slot.name === "heatSink") {
-        if (!(destroyed?.[i] ?? false)) external += 1;
+        if (!locDead && !(destroyed?.[i] ?? false)) external += 1;
       } else if (slot.name === "doubleHeatSink") {
         // Count a DHS device once (via its first slot); the whole group is
         // destroyed together by a single critical hit.
         const group = slot.group;
         if (group[0] !== i + 1) continue;
-        const anyDestroyed = group.some((j) => destroyed?.[j - 1] ?? false);
+        const anyDestroyed = locDead || group.some((j) => destroyed?.[j - 1] ?? false);
         if (!anyDestroyed) external += Math.floor(group.length / width);
       }
     }
@@ -129,9 +132,10 @@ export function heatSinksOperational(
  */
 export function heatDissipation(
   def: ResolvedMechDef,
+  damage: UnitDamageState,
   critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
 ): number {
-  const sinks = heatSinksOperational(def, critSlotsDestroyed);
+  const sinks = heatSinksOperational(def, damage, critSlotsDestroyed);
   return def.heatsink.type === "double" ? sinks * DOUBLE_SINK_RATE : sinks;
 }
 
