@@ -20,7 +20,7 @@ import {
   declareMovementMode,
   newSession,
   placeLanding,
-  queueWeaponFire,
+  queueWeaponFires,
 } from "../web/session";
 import { currentActor, execute } from "./helpers";
 
@@ -103,10 +103,13 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
         (target?.weaponsIfPropLeft.length ?? 0) >= (target?.weaponsIfPropRight.length ?? 0)
           ? (target?.weaponsIfPropLeft ?? [])
           : (target?.weaponsIfPropRight ?? []);
-      for (const w of weapons) {
-        if (unit.jammedWeapons.includes(w.weaponIndex)) continue;
-        queueWeaponFire(s, { weaponIndex: w.weaponIndex, targetId: enemy });
-      }
+      queueWeaponFires(
+        s,
+        enemy,
+        weapons
+          .filter((w) => !unit.jammedWeapons.includes(w.weaponIndex))
+          .map((w) => w.weaponIndex),
+      );
       if ((s.attack?.fireDecls ?? []).length === 0) {
         faceEnemy = true;
       }

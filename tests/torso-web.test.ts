@@ -134,7 +134,7 @@ describe("torso command", () => {
   it("renders twist: front in the auto-hint when untwisted", () => {
     const s = sideArcSetup();
     burnMovePhase(s);
-    const out = run(s, "status").join("\n");
+    const out = run(s, "candidate").join("\n");
     expect(out).toMatch(/torso twist:\s*front/);
   });
 

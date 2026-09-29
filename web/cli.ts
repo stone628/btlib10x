@@ -1,15 +1,5 @@
-import type { Arc, Facing, UnitState } from "btlib10x";
-import {
-  FACINGS,
-  hexDistance,
-  isShutdown,
-  listMapNames,
-  mechDefFor,
-  requireUnit,
-  sameHex,
-  VERSION,
-  weaponDefFor,
-} from "btlib10x";
+import type { Facing, UnitState } from "btlib10x";
+import { FACINGS, isShutdown, listMapNames, requireUnit, sameHex, VERSION } from "btlib10x";
 import { buildLinesChunk, buildLinesChunkWith, type Chunk } from "./chunk";
 import type { MessageKey } from "./i18n/index";
 import { i18n, isLocale, localeList } from "./i18n/index";
@@ -35,10 +25,11 @@ import {
   overRematch,
   overStatusChunk,
   parseMoveMode,
+  parseTorsoTwist,
   parseUnitProp,
   placeLanding,
   queuedMoveChunk,
-  queueWeaponFire,
+  queueWeaponFires,
   reachableChunk,
   requireBattle,
   resetSession,
@@ -464,14 +455,11 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
       expectArgs(a, 1, "torso <front|left|right>");
       const actor = currentActor(s);
       if (!actor) throw new Error(i18n("err.needsActor"));
-      const prev = s.attack?.torsoTwist ?? "front";
-      setTorsoTwist(s, a[0]!);
-      const dir: Arc = s.attack!.torsoTwist;
-      return cmdRunChunks(
-        prev === dir
-          ? i18n("ok.twistAlready", { id: actor.id, dir })
-          : i18n("ok.twistSet", { id: actor.id, dir }),
-      );
+      const dir = parseTorsoTwist(a[0]!);
+      const prev = setTorsoTwist(s, dir);
+      return prev === dir
+        ? cmdRunChunks(i18n("ok.twistAlready", { id: actor.id, dir }))
+        : [buildLinesChunk(i18n("ok.twistSet", { id: actor.id, dir })), ...fireSuggestionChunks(s)];
     },
   },
   candidate: {
@@ -489,43 +477,7 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
       expectArgs(a, 2, "fire <targetId> <weapon> [<weapon> ...]");
       const targetId = a[0]!;
       const weapons = a.slice(1).map((w) => int(w, "weapon"));
-      const unit = currentActor(s);
-      const battle = s.battle;
-      if (!unit || !battle) {
-        throw new Error(i18n("err.wrongPhase", { phase: "weaponAttack" }));
-      }
-      const target = battle.units[targetId];
-      if (!target) throw new Error(i18n("err.unknownUnitId", { id: targetId }));
-      const def = mechDefFor(unit);
-      const warnings: string[] = [];
-      for (const weaponIndex of weapons) {
-        const mount = def.weapons[weaponIndex];
-        if (!mount) {
-          throw new Error(i18n("err.weaponIndex", { unit: unit.id, index: String(weaponIndex) }));
-        }
-        const weapon = weaponDefFor(mount);
-        const dist = hexDistance(unit.position, target.position);
-        if (dist > weapon.long) {
-          throw new Error(
-            i18n("err.overRange", {
-              weapon: mount.weapon,
-              dist: String(dist),
-              max: String(weapon.long),
-            }),
-          );
-        }
-        if (weapon.minRange !== undefined && dist <= weapon.minRange) {
-          warnings.push(
-            i18n("err.minRange", {
-              weapon: mount.weapon,
-              dist: String(dist),
-              min: String(weapon.minRange),
-              penalty: String(weapon.minRange - dist + 1),
-            }),
-          );
-        }
-        queueWeaponFire(s, { weaponIndex, targetId });
-      }
+      const warnings = queueWeaponFires(s, targetId, weapons);
       return cmdRunChunks(
         i18n("ok.fireQueuedBatch", { target: targetId, weapons: weapons.join(", ") }),
         ...warnings,
