@@ -76,6 +76,7 @@ import {
   destroyedLegs,
   isUnitDestroyed,
   isUnitImmobile,
+  isUnitLocationDestroyed,
   type UnitDamageState,
 } from "./damage";
 import {
@@ -1383,6 +1384,12 @@ export function validateAttacksImpl(
   const sensorMod = sensorAttackModifier(sensorsOut);
   const effectiveFacing = effectiveFacingForTwist(unit.facing, options.twist ?? null);
   if (unit.prone) {
+    if (
+      isUnitLocationDestroyed(unit.baseDamage, "leftArm") ||
+      isUnitLocationDestroyed(unit.baseDamage, "rightArm")
+    ) {
+      throw new Error(`${unitId} cannot fire while prone (need both arm location)`);
+    }
     const hasLeft = decls.some((d) => def.weapons[d.weaponIndex]?.location === "leftArm");
     const hasRight = decls.some((d) => def.weapons[d.weaponIndex]?.location === "rightArm");
     if (hasLeft && hasRight) {
