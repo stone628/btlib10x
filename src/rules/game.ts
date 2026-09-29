@@ -570,9 +570,7 @@ export function isShutdown(unit: UnitState) {
 }
 
 export function isImmobile(unit: UnitState) {
-  if (isShutdown(unit) || unit.unconscious || isUnitImmobile(unit.damage)) return true;
-  const def = mechDefFor(unit);
-  return countDestroyedGyro(def, unit.damage, unit.critSlotsDestroyed) >= GYRO_DESTROYED_HITS;
+  return isShutdown(unit) || unit.unconscious || isUnitImmobile(unit.damage);
 }
 
 export function isUnitRemoved(unit: UnitState): boolean {
