@@ -4,6 +4,7 @@ import { cellAt } from "../core/terrain";
 import type { Location } from "../core/types";
 import { mechDefFor } from "../data/index";
 import { weaponDefFor } from "../data/weapon.schema";
+import { armWeaponToHitModifier } from "./actuators";
 import { binsForWeaponName, pooledShotsLeft } from "./ammo";
 import {
   type Arc,
@@ -247,6 +248,12 @@ export function suggestFireTargets(
           attackerMovement: unit.moveMode ?? "standStill",
           attackerProne: unit.prone,
           sensorMod,
+          actuatorMod: armWeaponToHitModifier(
+            def,
+            unit.damage,
+            unit.critSlotsDestroyed,
+            mount.location,
+          ),
           targetHexesMoved: enemy.movesThisTurn.length,
           targetJumped: enemy.jumpedThisTurn,
           targetImmobile: isImmobile(enemy),

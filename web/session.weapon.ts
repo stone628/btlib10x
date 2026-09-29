@@ -442,6 +442,7 @@ function gatorText(r: AttackResolution): string {
   if (b.pulseMod) parts.push(`pulse ${b.pulseMod}`);
   if (b.heatMod) parts.push(`heat ${b.heatMod}`);
   if (b.sensorMod) parts.push(`sensors ${b.sensorMod}`);
+  if (b.actuatorMod) parts.push(`actuators ${b.actuatorMod}`);
   const total = b.automatic === "hit" ? i18n("res.needAuto") : String(b.total);
   return `${i18n("res.need", { total })} (${parts.join(" + ")})`;
 }

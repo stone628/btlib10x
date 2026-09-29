@@ -26,6 +26,7 @@ import {
 import { type MapDef, type MechModelHolder, mechDef, mechDefFor } from "../data/index";
 import type { ResolvedMechDef } from "../data/mech.schema";
 import { weaponDefFor } from "../data/weapon.schema";
+import { armWeaponToHitModifier } from "./actuators";
 import {
   type AmmoBins,
   type AmmoPolicy,
@@ -1491,6 +1492,12 @@ export function validateAttacksImpl(
       attackerMovement: unit.moveMode ?? "standStill",
       attackerProne: unit.prone,
       sensorMod,
+      actuatorMod: armWeaponToHitModifier(
+        def,
+        unit.damage,
+        unit.critSlotsDestroyed,
+        mount.location,
+      ),
       targetHexesMoved: target.movesThisTurn.length,
       targetJumped: target.jumpedThisTurn,
       targetImmobile: isImmobile(target),
@@ -1632,6 +1639,12 @@ function resolveUnitAttacks(
       attackerProne: unit.prone,
       ...(pronePropArm !== null ? { propArm: pronePropArm } : {}),
       sensorMod,
+      actuatorMod: armWeaponToHitModifier(
+        def,
+        unit.damage,
+        unit.critSlotsDestroyed,
+        mount.location,
+      ),
       targetHexesMoved: target.movesThisTurn.length,
       targetJumped: target.jumpedThisTurn,
       targetImmobile: isImmobile(target),

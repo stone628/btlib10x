@@ -35,6 +35,11 @@ export interface AttackModifiers {
   readonly weapon: WeaponDef;
   /** Heat Scale to-hit modifier (+1..+4); caller computes from the heat value. */
   readonly heatMod?: number;
+  /** Arm-actuator to-hit modifier for the firing arm: +4 on a destroyed
+   *  shoulder (suppressing upper/lower), else +1 per destroyed upper/lower
+   *  actuator in that arm (TW p.125). Caller computes per weapon mount via
+   *  `armWeaponToHitModifier`. */
+  readonly actuatorMod?: number;
 }
 
 export interface ToHitBreakdown {
@@ -51,6 +56,8 @@ export interface ToHitBreakdown {
   readonly heatMod: number;
   /** Destroyed-sensor modifier from the attacker (0 intact, +2 on first hit). */
   readonly sensorMod: number;
+  /** Arm-actuator modifier for the firing arm (0 when intact / non-arm). */
+  readonly actuatorMod: number;
   readonly total: number;
   readonly rangeBracket: RangeBracket;
   /** Modified TN <= 2 auto-hits; > 12 auto-misses (attack may be aborted). */
@@ -104,6 +111,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
       minRangeMod: 0,
       heatMod: 0,
       sensorMod: 0,
+      actuatorMod: 0,
       total: Number.POSITIVE_INFINITY,
       rangeBracket: "long",
       automatic: "miss",
@@ -133,6 +141,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
       : 0;
   const heatMod = mods.heatMod ?? 0;
   const sensorMod = mods.sensorMod ?? 0;
+  const actuatorMod = mods.actuatorMod ?? 0;
 
   const total =
     mods.gunnery +
@@ -143,7 +152,8 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     pulseMod +
     min +
     heatMod +
-    sensorMod;
+    sensorMod +
+    actuatorMod;
 
   return {
     gunnery: mods.gunnery,
@@ -155,6 +165,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     minRangeMod: min,
     heatMod,
     sensorMod,
+    actuatorMod,
     total,
     rangeBracket: bracket,
     automatic: total <= D2D6_MIN ? "hit" : total > D2D6_MAX ? "miss" : null,
