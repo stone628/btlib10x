@@ -8,11 +8,13 @@ import {
   type CriticalResolution,
   type DamageTransferStep,
   declareAttacks,
+  declarePhysicalAttacks,
   type FireBlockerReason,
   type FireSuggestion,
   type FireWeapon,
   type GameEvent,
   hexDistance,
+  isAdjacent,
   isArm,
   isTorso,
   isUnitDestroyed,
@@ -21,6 +23,9 @@ import {
   type Location,
   type LocationValue,
   mechDefFor,
+  type PhysicalAttackDecl,
+  type PhysicalAttackType,
+  type PhysicalResolution,
   parseAmmoPolicy,
   type RangeBracket,
   requireUnit,
@@ -28,6 +33,7 @@ import {
   suggestFireTargets,
   type TorsoLocationValue,
   validateAttacks,
+  validatePhysicalAttack,
   weaponDefFor,
 } from "btlib10x";
 import {
@@ -43,12 +49,15 @@ import { commitAtomic, drive, requireBattle, type Session, type SessionGameEvent
 import { actorOrderLines } from "./session.common";
 
 /** Eagerly allocated by `drive()` on weapon-attack-phase entry, nulled when
- *  the phase exits or a new actor becomes current. Carries `fireDecls`,
+ *  the phase exits or a new actor becomes current. Carries `fireDecls`
+ *  (weapon volley, single target) plus `physicalDecls` (punch, kick, push,
+ *  club — TW p.144 one-type-per-turn rule, two-arm punch excepted),
  *  `torsoTwist` (UI declaration, resets to `"front"` on allocation),
  *  `fireHintShownFor`, `fireCandidate`. */
 export interface WeaponAttackContext {
   actorId: string;
   fireDecls: AttackDecl[];
+  physicalDecls: PhysicalAttackDecl[];
   /** Acting unit's torso twist (TW pp.105-106) for the current attack-phase
    *  declaration: starts at `"front"` on context allocation (new actor or
    *  phase entry). Locked once any fire command is queued (see
@@ -64,6 +73,7 @@ export function initWeaponAttackContext(s: Session, actorId: string): WeaponAtta
   const newContext: WeaponAttackContext = {
     actorId,
     fireDecls: [],
+    physicalDecls: [],
     torsoTwist: "front",
     fireCandidate: null,
   };
@@ -146,6 +156,33 @@ export function queueWeaponFires(s: Session, targetId: string, weapons: number[]
     }
     decls.push({ targetId, weaponIndex });
   }
+  // Physical-attack interaction (TW pp. 145, 147): a punching arm or
+  // kicking leg cannot fire its mounted weapons; a pushing / clubbing
+  // 'Mech fires no arm-mounted weapons at all.
+  const punchedArms: ReadonlySet<Location> = new Set(
+    context.physicalDecls.flatMap((d) =>
+      d.type === "punch" && d.limb !== undefined ? [d.limb] : [],
+    ),
+  );
+  const kickedLegs: ReadonlySet<Location> = new Set(
+    context.physicalDecls.flatMap((d) =>
+      d.type === "kick" && d.limb !== undefined ? [d.limb] : [],
+    ),
+  );
+  const noArmWeapons = context.physicalDecls.some((d) => d.type === "push" || d.type === "club");
+  for (const decl of decls) {
+    const loc = def.weapons[decl.weaponIndex]?.location;
+    if (loc === undefined) continue;
+    if (punchedArms.has(loc)) {
+      throw new Error(i18n("err.physical.armConflict", { limb: loc }));
+    }
+    if (kickedLegs.has(loc)) {
+      throw new Error(i18n("err.physical.legConflict", { limb: loc }));
+    }
+    if (noArmWeapons && isArm(loc)) {
+      throw new Error(i18n("err.physical.noArmWeapons"));
+    }
+  }
   validateAttacks(battle, unit.id, [...context.fireDecls, ...decls], { twist: context.torsoTwist });
   context.fireDecls.push(...decls);
   return warnings;
@@ -154,6 +191,7 @@ export function queueWeaponFires(s: Session, targetId: string, weapons: number[]
 export function cancelWeaponFire(s: Session): void {
   const { context } = requireBattleAndContext(s);
   context.fireDecls = [];
+  context.physicalDecls = [];
 }
 
 export function commitWeaponFire(s: Session): SessionGameEvent[] {
@@ -161,7 +199,7 @@ export function commitWeaponFire(s: Session): SessionGameEvent[] {
   const actor = requireUnit(battle, context.actorId);
   const unitId = actor.id;
   const events: SessionGameEvent[] = [];
-  if (context.fireDecls.length === 0) {
+  if (context.fireDecls.length === 0 && context.physicalDecls.length === 0) {
     commitAtomic(s, () => {
       actor.passedAttacks = true;
       clearContext(s);
@@ -177,9 +215,14 @@ export function commitWeaponFire(s: Session): SessionGameEvent[] {
   } else {
     commitAtomic(s, () => {
       const collected: GameEvent[] = [];
-      declareAttacks(battle, unitId, context.fireDecls, collected, s.rng, {
-        twist: context.torsoTwist,
-      });
+      if (context.fireDecls.length > 0) {
+        declareAttacks(battle, unitId, context.fireDecls, collected, s.rng, {
+          twist: context.torsoTwist,
+        });
+      }
+      if (context.physicalDecls.length > 0) {
+        declarePhysicalAttacks(battle, unitId, context.physicalDecls, collected, s.rng);
+      }
       clearContext(s);
       events.push(
         ...collected,
@@ -193,6 +236,200 @@ export function commitWeaponFire(s: Session): SessionGameEvent[] {
     });
   }
   return events;
+}
+
+// ---------------------------------------------------------------------------
+// Physical attacks (punch, kick, push, club)
+// ---------------------------------------------------------------------------
+
+/** Queue a physical attack declaration. Validates and appends to the
+ *  attack context's physical list (kept separate from the weapon volley so
+ *  physical targets stay independent of the single-target weapon rule). */
+export function queuePhysicalAttack(
+  s: Session,
+  type: PhysicalAttackType,
+  targetId: string,
+  limb?: "leftArm" | "rightArm" | "leftLeg" | "rightLeg",
+): string[] {
+  const { battle, context } = requireBattleAndContext(s);
+  const unit = requireUnit(battle, context.actorId);
+  if (targetId === unit.id) throw new Error(i18n("err.selfTarget"));
+  const target = battle.units[targetId];
+  if (!target) throw new Error(i18n("err.unknownUnitId", { id: targetId }));
+  if (target.team === unit.team) throw new Error(i18n("err.selfTarget"));
+  if (isUnitRemoved(target)) throw new Error(i18n("err.targetRemoved", { id: target.id }));
+
+  // Default limb: right arm for punches, right leg for kicks (TW lets the
+  // attacker pick; the CLI default keeps single-command declarations
+  // deterministic, and actuator damage is usually symmetric early).
+  const resolvedLimb =
+    limb ?? (type === "punch" ? "rightArm" : type === "kick" ? "rightLeg" : undefined);
+  const decl: PhysicalAttackDecl = {
+    type,
+    targetId,
+    ...(resolvedLimb !== undefined ? { limb: resolvedLimb } : {}),
+  };
+
+  // One type of physical attack per turn (TW p. 144); two-arm punches are
+  // the exception (one punch per arm, resolved as separate rolls).
+  const queuedTypes = new Set(context.physicalDecls.map((d) => d.type));
+  if (queuedTypes.size > 0 && !queuedTypes.has(type)) {
+    throw new Error(i18n("err.physical.oneType"));
+  }
+  if (type === "punch") {
+    const queuedLimbs = context.physicalDecls.filter((d) => d.type === "punch").map((d) => d.limb);
+    if (queuedLimbs.includes(resolvedLimb)) {
+      throw new Error(i18n("err.physical.duplicate", { type }));
+    }
+    if (queuedLimbs.length >= 2) {
+      throw new Error(i18n("err.physical.duplicate", { type }));
+    }
+  } else if (context.physicalDecls.length > 0) {
+    throw new Error(i18n("err.physical.duplicate", { type }));
+  }
+
+  const result = validatePhysicalAttack(battle, unit.id, decl);
+  if (!result.ok) {
+    throw new Error(i18n("err.physical.invalid", { reason: result.reason ?? "invalid" }));
+  }
+
+  // Weapon interaction, mirrored against already-queued weapons: the arm /
+  // leg used physically cannot fire, and push / club bars all arm weapons.
+  const def = mechDefFor(unit);
+  const queuedLocs = new Set(
+    context.fireDecls.flatMap((d) => {
+      const loc = def.weapons[d.weaponIndex]?.location;
+      return loc !== undefined ? [loc] : [];
+    }),
+  );
+  if (type === "punch" && resolvedLimb !== undefined && queuedLocs.has(resolvedLimb)) {
+    throw new Error(i18n("err.physical.armConflict", { limb: resolvedLimb }));
+  }
+  if (type === "kick" && resolvedLimb !== undefined && queuedLocs.has(resolvedLimb)) {
+    throw new Error(i18n("err.physical.legConflict", { limb: resolvedLimb }));
+  }
+  if ((type === "push" || type === "club") && [...queuedLocs].some((loc) => isArm(loc))) {
+    throw new Error(i18n("err.physical.noArmWeapons"));
+  }
+
+  const warnings: string[] = [];
+  if (type === "punch" && resolvedLimb !== undefined) {
+    warnings.push(i18n("warn.physical.armWeapons", { limb: resolvedLimb }));
+  }
+  if (type === "kick" && resolvedLimb !== undefined) {
+    warnings.push(i18n("warn.physical.legWeapons", { limb: resolvedLimb }));
+  }
+  if (type === "push" || type === "club") {
+    warnings.push(i18n("warn.physical.noArmWeapons"));
+  }
+
+  context.physicalDecls.push(decl);
+  return warnings;
+}
+
+/** Get physical attack suggestions for the current actor. */
+export function physicalAttackSuggestions(s: Session): PhysicalAttackSuggestion[] {
+  const { battle, context } = requireBattleAndContext(s);
+  const unit = requireUnit(battle, context.actorId);
+  const suggestions: PhysicalAttackSuggestion[] = [];
+
+  for (const [targetId, target] of Object.entries(battle.units)) {
+    if (target.team === unit.team) continue;
+    if (isUnitRemoved(target)) continue;
+    if (!isAdjacent(unit.position, target.position)) continue;
+
+    // Check each attack type
+    for (const type of ["punch", "kick", "push", "club"] as const) {
+      const decl: PhysicalAttackDecl = { type, targetId };
+      const result = validatePhysicalAttack(battle, unit.id, decl);
+      if (result.ok) {
+        suggestions.push({ type, targetId, attackDirection: result.attackDirection });
+      }
+    }
+  }
+
+  return suggestions;
+}
+
+export interface PhysicalAttackSuggestion {
+  readonly type: "punch" | "kick" | "push" | "club";
+  readonly targetId: string;
+  readonly attackDirection: Arc | undefined;
+}
+
+/** Format physical attack resolution for display. */
+export function physicalResolutionLines(r: PhysicalResolution): string[] {
+  const lines: string[] = [];
+  const verdict = r.autoHit
+    ? i18n("res.autoHit")
+    : r.autoMiss
+      ? i18n("res.autoMiss")
+      : r.hit
+        ? i18n("res.hit")
+        : i18n("res.miss");
+
+  lines.push(
+    i18n("res.physical.header", {
+      type: r.type,
+      attacker: r.attackerId,
+      target: r.targetId,
+    }),
+  );
+  lines.push(
+    i18n("res.physical.toHit", {
+      total: r.toHit,
+      roll: r.roll === null ? "—" : r.roll,
+      verdict,
+    }),
+  );
+
+  if (r.hit && r.damageToTarget.length > 0) {
+    const dmgStr = r.damageToTarget.map((g) => `${SHORT_LOC[g.location]}(${g.damage})`).join(" ");
+    lines.push(i18n("res.physical.targetDamage", { groups: dmgStr }));
+  }
+
+  if (r.damageToAttacker.length > 0) {
+    const dmgStr = r.damageToAttacker.map((g) => `${SHORT_LOC[g.location]}(${g.damage})`).join(" ");
+    lines.push(i18n("res.physical.attackerDamage", { groups: dmgStr }));
+  }
+
+  if (r.targetDisplacedTo) {
+    lines.push(
+      i18n("res.physical.targetDisplaced", {
+        col: r.targetDisplacedTo.col,
+        row: r.targetDisplacedTo.row,
+      }),
+    );
+  }
+  if (r.attackerDisplacedTo) {
+    lines.push(
+      i18n("res.physical.attackerDisplaced", {
+        col: r.attackerDisplacedTo.col,
+        row: r.attackerDisplacedTo.row,
+      }),
+    );
+  }
+
+  if (r.targetPsr) {
+    const outcome =
+      r.targetPsr.roll === null
+        ? i18n(r.targetPsr.success ? "res.physical.autoStand" : "res.physical.autoFall")
+        : i18n(r.targetPsr.success ? "res.physical.stands" : "res.physical.falls", {
+            roll: r.targetPsr.roll,
+          });
+    lines.push(i18n("res.physical.targetPsr", { outcome }));
+  }
+  if (r.attackerPsr) {
+    const outcome =
+      r.attackerPsr.roll === null
+        ? i18n(r.attackerPsr.success ? "res.physical.autoStand" : "res.physical.autoFall")
+        : i18n(r.attackerPsr.success ? "res.physical.stands" : "res.physical.falls", {
+            roll: r.attackerPsr.roll,
+          });
+    lines.push(i18n("res.physical.attackerPsr", { outcome }));
+  }
+
+  return lines;
 }
 
 const TWIST: Readonly<Record<string, Arc>> = {
@@ -397,6 +634,31 @@ export function fireSuggestionChunks(s: Session): Chunk[] {
     }
     chunks.push(...blockedChunks(blockedLines(target.blocked)));
   }
+  // Physical attacks (TW pp. 144-147) only matter at adjacency: list them
+  // after the weapon tables so most turns show no extra noise.
+  const actor = requireUnit(battle, context.actorId);
+  const physical: string[] = [];
+  for (const [targetId, target] of Object.entries(battle.units)) {
+    if (target.team === actor.team || isUnitRemoved(target)) continue;
+    if (!isAdjacent(actor.position, target.position)) continue;
+    for (const type of ["punch", "kick", "push", "club"] as const) {
+      const decl: PhysicalAttackDecl = { type, targetId };
+      if (validatePhysicalAttack(battle, actor.id, decl).ok) {
+        physical.push(
+          i18n("physicalSuggestion.line", {
+            type,
+            target: targetId,
+          }),
+        );
+      }
+    }
+  }
+  chunks.push(buildLinesChunkWith("hint", i18n("physicalSuggestion.header")));
+  if (physical.length === 0) {
+    chunks.push(buildLinesChunkWith("hint", i18n("physicalSuggestion.none")));
+  } else {
+    chunks.push(buildLinesChunkWith("hint", ...physical));
+  }
   return chunks;
 }
 
@@ -406,7 +668,8 @@ export function attackStatusChunk(s: Session): Chunk {
   const lines: string[] = [];
   lines.push(...actorOrderLines(s), i18n("attackStatus.header"));
   const decls = context.fireDecls ?? [];
-  if (decls.length === 0) {
+  const physical = context.physicalDecls ?? [];
+  if (decls.length === 0 && physical.length === 0) {
     lines.push(i18n("attackStatus.none"));
   } else {
     // Engine guarantee: `actor.model` was validated by `createBattle`.
@@ -422,6 +685,15 @@ export function attackStatusChunk(s: Session): Chunk {
           weaponName: name,
           targetId: decl.targetId,
           suffix,
+        }),
+      );
+    }
+    for (const decl of physical) {
+      lines.push(
+        i18n("attackStatus.physical", {
+          type: decl.type,
+          limb: decl.limb ?? "—",
+          targetId: decl.targetId,
         }),
       );
     }

@@ -13,7 +13,7 @@ export const kr: Catalog = {
   "hint.move":
     "이동 단계입니다 - 프롬프트에 현재 차례가 표시됩니다.\n'mode'로 이동 속도를 선언한 뒤 'place'로 목적지를 예약하고, 'status'로 MP 소비를 확인하세요.\n'done'으로 확정하거나 'cancel'로 취소합니다.",
   "hint.attack":
-    "무기 공격 단계입니다 - 프롬프트에 사격 유닛이 표시됩니다.\n'weapons'로 무기를 확인하고 'fire'로 하나의 목표에 대한 사격을 선언하세요.\n'status'로 선언을 확인한 뒤 'done'으로 해결하거나 'cancel'로 취소합니다.",
+    "무기 공격 단계입니다 - 프롬프트에 사격 유닛이 표시됩니다.\n'weapons'로 무기를 확인하고 'fire'로 하나의 목표에 대한 사격을 선언하세요.\n인접한 적이 있으면 'punch', 'kick', 'push', 'club'도 가능합니다 (무기 이후에 해결).\n'status'로 선언을 확인한 뒤 'done'으로 해결하거나 'cancel'로 취소합니다.",
   "hint.over":
     "전투가 종료되었습니다.\n'rematch'로 같은 편성과 시드로 재대국하거나, 'reset'으로 빈 설정 화면으로 돌아갑니다.",
 
@@ -115,6 +115,16 @@ export const kr: Catalog = {
   "cmd.heat.arg.id": "확인할 유닛\n기본은 행동 유닛",
   "cmd.candidateMove.help": "이동 가능 영역을 ASCII 전장 격자로 표시",
   "cmd.candidateAttack.help": "공격 가능한 목표와 가용 무기를 표시",
+  "cmd.punch.help": "인접한 적에 펀치 공격 예약 (TW p.145)",
+  "cmd.punch.arg.targetId": "전방 또는 측면 아크에 있는 적 유닛 id",
+  "cmd.punch.arg.limb": "펀치하는 팔: left|right (기본 right; 양팔은 두 번 예약)",
+  "cmd.kick.help": "전방 아크의 인접한 적에 킥 공격 예약 (TW p.147)",
+  "cmd.kick.arg.targetId": "전방 아크에 있는 적 유닛 id",
+  "cmd.kick.arg.limb": "차는 다리: left|right (기본 right)",
+  "cmd.push.help": "정면 육각의 적을 밀기 예약 (TW p.147): 피해 없음, 목표를 변위",
+  "cmd.push.arg.targetId": "정면 육각에 있는 적 유닛 id",
+  "cmd.club.help": "전방 아크의 인접한 적에 곤봉 공격 예약 (TW p.145; 곤봉 획득은 미구현)",
+  "cmd.club.arg.targetId": "전방 아크에 있는 적 유닛 id",
 
   // autoplay demo driver (hidden command, not listed in help)
   "autoPlay.started":
@@ -137,6 +147,7 @@ export const kr: Catalog = {
     "  {type} 모드 진입 ({col},{row}) {terrain}: MP {mp} 사용 (기본 1, 지형 +{surcharge}, 고도차 +{climb} {levels}lv)",
   "ok.cancelled": "취소되었습니다",
   "ok.fireQueuedBatch": "{target} <- 무기 {weapons} 예약됨",
+  "ok.physical.queued": "{type} -> {target} 예약됨",
   "ok.twistSet": "{id}: 상체가 {dir}(으)로 회전",
   "ok.twistAlready": "{id}: 이미 {dir}(으)로 회전 상태",
   "ammo.current": "탄약 정책: {policy}",
@@ -231,6 +242,16 @@ export const kr: Catalog = {
   "err.phaseDriver": "단계 드라이버가 수렴하지 않았습니다",
   "err.twist.badDirection": "상체 회전 방향은 front, left, right 중 하나여야 합니다",
   "err.twist.locked": "fire 명령이 예약되면 상체 회전은 잠김 — 먼저 cancel 하세요",
+  "err.badLimb": "팔/다리는 left 또는 right여야 합니다 ('{limb}' 입력됨)",
+  "err.physical.duplicate": "{type} 공격이 이미 예약됨 (턴당 한 종류의 격투 공격만 가능)",
+  "err.physical.oneType": "턴당 한 종류의 격투 공격만 가능합니다 (다른 종류가 이미 예약됨)",
+  "err.physical.invalid": "격투 공격 거부: {reason}",
+  "err.physical.armConflict": "그 팔로 펀치하는 동안 {limb} 무기는 발사 불가",
+  "err.physical.legConflict": "그 다리로 킥하는 동안 {limb} 무기는 발사 불가",
+  "err.physical.noArmWeapons": "밀기/곤봉 중에는 팔 장착 무기를 발사할 수 없음",
+  "warn.physical.armWeapons": "참고: 그 팔로 펀치하는 동안 {limb} 무기는 발사 불가",
+  "warn.physical.legWeapons": "참고: 그 다리로 킥하는 동안 {limb} 무기는 발사 불가",
+  "warn.physical.noArmWeapons": "참고: 밀기/곤봉 중에는 팔 장착 무기를 발사할 수 없음",
 
   // setup status
   "setup.mapLabel": "맵: {name}",
@@ -276,6 +297,7 @@ export const kr: Catalog = {
   "attackStatus.header": "예약된 공격:",
   "attackStatus.none": "(예약된 공격 없음)",
   "attackStatus.weapon": "  #{weaponIndex} {weaponName} -> {targetId}{suffix}",
+  "attackStatus.physical": "  {type} ({limb}) -> {targetId}",
 
   // fire suggestion
   "fireSuggestion.header": "{id}의 공격 가능 목표:",
@@ -314,6 +336,11 @@ export const kr: Catalog = {
   "fireSuggestion.twist.front": "정면",
   "fireSuggestion.twist.left": "좌측",
   "fireSuggestion.twist.right": "우측",
+
+  // physical attack suggestions (adjacent enemies only)
+  "physicalSuggestion.header": "격투 공격 (인접한 경우만):",
+  "physicalSuggestion.none": "(인접한 적 중 유효한 각도 없음)",
+  "physicalSuggestion.line": "{type} -> {target} ('{type} {target}' 명령으로 예약)",
 
   // record sheet / info
   "info.mechColModel": "모델",
@@ -446,6 +473,8 @@ export const kr: Catalog = {
   "log.attacksDeclaredOne": "[{id}] {target} 에게 사격 ({count}문, {rangeCtx})",
   "log.attacksDeclaredOther": "[{id}] {target} 에게 사격 ({count}문, {rangeCtx})",
   "log.attacksPassed": "[{id}] 이번 턴 공격하지 않음.",
+  "log.physicalDeclaredOne": "[{id}] {target}에게 {type} 선언 ({count}회)",
+  "log.physicalDeclaredOther": "[{id}] {target}에게 {type} 선언 ({count}회)",
   "log.destroyed": "[{id}] *** 파괴됨 ({destroyed}) ***",
   "log.ejected": "[{id}] 탈출 — 버려진 메크는 레벨-2 잔해가 됨",
   "log.buildingCollapsed": "{hex} 위치 건물이 붕괴하여 잔해가 됨",
@@ -498,9 +527,22 @@ export const kr: Catalog = {
   "res.need": "최소 {total} 필요",
   "res.line": "{weapon}: {gator}, 2D6 = {roll} -> {verdict}{jam}",
   "res.jamSuffix": " 고장",
-  "res.autoHit": "자동명중",
+  "res.autoHit": "항상 명중",
+  "res.autoMiss": "항상 빗나감",
   "res.hit": "명중",
   "res.miss": "빗나감",
+  "res.physical.header": "{type}: {attacker} -> {target}",
+  "res.physical.toHit": "필요 {total}, 2D6 = {roll} -> {verdict}",
+  "res.physical.targetDamage": "명중: {groups}",
+  "res.physical.attackerDamage": "자해: {groups}",
+  "res.physical.targetDisplaced": "목표가 ({col},{row})으로 밀려남",
+  "res.physical.attackerDisplaced": "공격자가 ({col},{row})으로 전진",
+  "res.physical.targetPsr": "목표 조종 판정: {outcome}",
+  "res.physical.attackerPsr": "공격자 조종 판정: {outcome}",
+  "res.physical.stands": "2D6 = {roll} 버팀",
+  "res.physical.falls": "2D6 = {roll} 넘어짐",
+  "res.physical.autoStand": "자동으로 버팀",
+  "res.physical.autoFall": "자동으로 넘어짐",
   "res.outOfAmmo": "{weapon} 탄약 부족으로 발사 중지",
   "res.clusterRoll": "클러스터 굴림 2D6 = {roll}",
   "res.hits": "명중: {groups} ({arc})",

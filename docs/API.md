@@ -405,6 +405,27 @@ adjacent targets. `ToHitBreakdown` carries the individual mods,
   2–30 plus 40 (missiles and rapid-fire shots share it); `CLUSTER_COLUMNS`
   and `CLUSTER_TABLE` are the underlying data
 - `groupMissiles(total, lotSize)` — LRM lots of five
+- `PUNCH_LOCATION_TABLE`, `punchHitLocation(roll1d6)` — bipedal punch
+  column (also reused for building-collapse damage)
+
+### Physical attacks (`rules/physical.ts`, TW pp. 144-147)
+
+Punch, kick, push, and club (charge/DFA deferred). Base to-hit is the
+attacker's piloting plus the type modifier (`PUNCH_ATTACK_MOD` +0,
+`KICK_ATTACK_MOD` −2, `PUSH_ATTACK_MOD` −1, `CLUB_ATTACK_MOD` −1) and the
+standard weapon-attack modifiers except heat/sensors; over
+`PHYSICAL_MAX_TOHIT` (12) auto-misses, `PHYSICAL_MIN_TOHIT` (2) or less
+auto-hits. Damage: `PUNCH_DAMAGE_PER_TONS` (1 per 10 t, halved per damaged
+arm actuator), `KICK_DAMAGE_PER_TONS` / `CLUB_DAMAGE_PER_TONS` (1 per 5 t).
+`PhysicalAttackType` is `"punch" | "kick" | "push" | "club"`;
+`PhysicalAttackDecl` carries `{ type, targetId, limb? }`;
+`PhysicalModifiers` is the to-hit breakdown from `computePhysicalToHit`;
+`PhysicalResolution` carries the roll, `DamageGroup` hits (`{ location,
+damage }`), push displacement hexes, and kick/push PSR outcomes.
+`physicalDamage(type, attacker, limb?)`, `kickHitLocation(roll1d6, arc)`,
+`validatePhysicalAttack`, `resolvePhysicalAttack`, and
+`declarePhysicalAttacks` are the entry points (see the phase-driver list
+below for the declare/resolve pair).
 
 ### Internal structure (`rules/internalStructure.ts`)
 
@@ -630,7 +651,10 @@ voluntaryShutdown(state, unitId, sink: GameEvent[], rng?): void        // moveme
 attemptVoluntaryStartup(state, unitId, sink: GameEvent[], rng?): void  // startup attempt after a manual shutdown
 declareAttacks(state, unitId, decls, sink: GameEvent[], rng?): void    // weaponAttack phase only
 validateAttacks(state, unitId, decls, { twist? }?): void               // read-only gate check; throws on any rule violation without mutating state or emitting events. Returns the resolved volley metadata via `validateAttacksImpl`.
-resolveAllAttacks(state, rng, sink: GameEvent[]): void                  // resolves every unit's declared attacks simultaneously, then runs the end-of-phase piloting sweep
+declarePhysicalAttacks(state, unitId, decls: PhysicalAttackDecl[], sink: GameEvent[], rng?): void  // weaponAttack phase only: punch/kick/push/club, one type per turn (two-arm punch excepted); emits `physicalAttacksDeclared`
+validatePhysicalAttack(state, unitId, decl: PhysicalAttackDecl): ValidationResult  // read-only single-decl check (adjacency, arc, level, actuators); consumed by `declarePhysicalAttacks` and the web `candidate` hints
+resolvePhysicalAttack(state, attackerId, decl: PhysicalAttackDecl, rng): PhysicalResolution  // pure single-attack resolution (to-hit, damage groups, push displacement, kick/push PSRs)
+resolveAllAttacks(state, rng, sink: GameEvent[]): void                  // resolves every unit's declared weapon attacks simultaneously, then physical attacks (`physicalAttackResolved`), then runs the end-of-phase piloting sweep
 applyFall(state, unitId, rng, opts, sink: GameEvent[]): void
 applyPilotHits(state, unitId, hits, reason, rng, sink: GameEvent[]): void  // pilot damage + consciousness rolls
 resolveHeatPhase(state, rng, sink: GameEvent[]): void                  // end-of-phase heat scale + shutdown PSRs

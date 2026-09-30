@@ -29,6 +29,7 @@ import {
   parseUnitProp,
   placeLanding,
   queuedMoveChunk,
+  queuePhysicalAttack,
   queueWeaponFires,
   reachableChunk,
   requireBattle,
@@ -484,6 +485,70 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
       );
     },
   },
+  punch: {
+    helpKey: "cmd.punch.help",
+    usage: "punch <targetId> [left|right]",
+    argsDoc: [
+      ["targetId", "cmd.punch.arg.targetId"],
+      ["limb", "cmd.punch.arg.limb"],
+    ],
+    run: (s, a) => {
+      expectArgs(a, 1, "punch <targetId> [left|right]");
+      const targetId = a[0]!;
+      const limb = parseArm(a[1]);
+      const warnings = queuePhysicalAttack(s, "punch", targetId, limb);
+      return cmdRunChunks(
+        i18n("ok.physical.queued", { type: "punch", target: targetId }),
+        ...warnings,
+      );
+    },
+  },
+  kick: {
+    helpKey: "cmd.kick.help",
+    usage: "kick <targetId> [left|right]",
+    argsDoc: [
+      ["targetId", "cmd.kick.arg.targetId"],
+      ["limb", "cmd.kick.arg.limb"],
+    ],
+    run: (s, a) => {
+      expectArgs(a, 1, "kick <targetId> [left|right]");
+      const targetId = a[0]!;
+      const limb = parseLeg(a[1]);
+      const warnings = queuePhysicalAttack(s, "kick", targetId, limb);
+      return cmdRunChunks(
+        i18n("ok.physical.queued", { type: "kick", target: targetId }),
+        ...warnings,
+      );
+    },
+  },
+  push: {
+    helpKey: "cmd.push.help",
+    usage: "push <targetId>",
+    argsDoc: [["targetId", "cmd.push.arg.targetId"]],
+    run: (s, a) => {
+      expectArgs(a, 1, "push <targetId>");
+      const targetId = a[0]!;
+      const warnings = queuePhysicalAttack(s, "push", targetId);
+      return cmdRunChunks(
+        i18n("ok.physical.queued", { type: "push", target: targetId }),
+        ...warnings,
+      );
+    },
+  },
+  club: {
+    helpKey: "cmd.club.help",
+    usage: "club <targetId>",
+    argsDoc: [["targetId", "cmd.club.arg.targetId"]],
+    run: (s, a) => {
+      expectArgs(a, 1, "club <targetId>");
+      const targetId = a[0]!;
+      const warnings = queuePhysicalAttack(s, "club", targetId);
+      return cmdRunChunks(
+        i18n("ok.physical.queued", { type: "club", target: targetId }),
+        ...warnings,
+      );
+    },
+  },
   status: { helpKey: "cmd.statusAttack.help", run: (s) => [attackStatusChunk(s)] },
   cancel: {
     helpKey: "cmd.cancelFire.help",
@@ -520,6 +585,24 @@ const OVER_CMDS: Record<string, CmdDef> = {
     },
   },
 };
+
+// ------------------------------------------------------------ helpers ----
+
+function parseArm(word: string | undefined): "leftArm" | "rightArm" | undefined {
+  if (word === undefined) return undefined;
+  const w = word.toLowerCase();
+  if (w === "left" || w === "l") return "leftArm";
+  if (w === "right" || w === "r") return "rightArm";
+  throw new Error(i18n("err.badLimb", { limb: word }));
+}
+
+function parseLeg(word: string | undefined): "leftLeg" | "rightLeg" | undefined {
+  if (word === undefined) return undefined;
+  const w = word.toLowerCase();
+  if (w === "left" || w === "l") return "leftLeg";
+  if (w === "right" || w === "r") return "rightLeg";
+  throw new Error(i18n("err.badLimb", { limb: word }));
+}
 
 // ------------------------------------------------------------ dispatch ----
 

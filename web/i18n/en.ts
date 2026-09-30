@@ -15,7 +15,7 @@ export const en = {
   "hint.move":
     "you are in the movement phase - the prompt shows whose turn it is.\ndeclare a speed via 'mode', then queue a landing via 'place'; check MP costs with 'status'.\ncommit the move with 'done', or discard it with 'cancel'.",
   "hint.attack":
-    "you are in the weapon attack phase - the prompt shows who is firing.\nbrowse the acting unit's guns via 'weapons', then declare shots against one target via 'fire'.\nreview the declaration with 'status', resolve with 'done', or discard it with 'cancel'.",
+    "you are in the weapon attack phase - the prompt shows who is firing.\nbrowse the acting unit's guns via 'weapons', then declare shots against one target via 'fire'.\nagainst an adjacent enemy you may also 'punch', 'kick', 'push', or 'club' (resolved after weapons).\nreview the declaration with 'status', resolve with 'done', or discard it with 'cancel'.",
   "hint.over":
     "the battle is over.\nreplay the same roster and seed with 'rematch', or return to an empty setup with 'reset'.",
 
@@ -118,6 +118,18 @@ export const en = {
   "cmd.heat.arg.id": "unit to inspect; defaults to the acting unit",
   "cmd.candidateMove.help": "show movement candidate, drawn on the ASCII battle grid",
   "cmd.candidateAttack.help": "show possible target with available weapons",
+  "cmd.punch.help": "queue a punch attack against an adjacent enemy (TW p.145)",
+  "cmd.punch.arg.targetId": "enemy unit id in the forward or side arc",
+  "cmd.punch.arg.limb": "punching arm: left|right (default right; queue twice for both arms)",
+  "cmd.kick.help": "queue a kick attack against an adjacent enemy in the forward arc (TW p.147)",
+  "cmd.kick.arg.targetId": "enemy unit id in the forward arc",
+  "cmd.kick.arg.limb": "kicking leg: left|right (default right)",
+  "cmd.push.help":
+    "queue a push against the enemy in the hex directly ahead (TW p.147): no damage, displaces the target",
+  "cmd.push.arg.targetId": "enemy unit id in the hex directly ahead",
+  "cmd.club.help":
+    "queue a club attack against an adjacent enemy in the forward arc (TW p.145; club acquisition not yet tracked)",
+  "cmd.club.arg.targetId": "enemy unit id in the forward arc",
 
   // autoplay demo driver (hidden command, not listed in help)
   "autoPlay.started":
@@ -140,6 +152,7 @@ export const en = {
     "  {type} enter ({col},{row}) {terrain}: {mp} MP (1 base, +{surcharge} terrain, +{climb} climb {levels}lv)",
   "ok.cancelled": "cancelled",
   "ok.fireQueuedBatch": "queued {target} <- weapons {weapons}",
+  "ok.physical.queued": "queued {type} -> {target}",
   "ok.twistSet": "{id}: torso twisted to {dir}",
   "ok.twistAlready": "{id}: torso is already facing {dir}",
   "ammo.current": "ammo policy: {policy}",
@@ -238,6 +251,18 @@ export const en = {
   "err.phaseDriver": "phase driver failed to settle",
   "err.twist.badDirection": "torso direction must be front, left, or right",
   "err.twist.locked": "torso twist is locked once a fire command is queued; cancel first",
+  "err.badLimb": "limb must be left or right (got '{limb}')",
+  "err.physical.duplicate":
+    "a {type} attack is already queued (one type of physical attack per turn)",
+  "err.physical.oneType":
+    "a 'Mech may make only one type of physical attack per turn (already queued a different type)",
+  "err.physical.invalid": "physical attack rejected: {reason}",
+  "err.physical.armConflict": "cannot fire {limb} weapons while punching with that arm",
+  "err.physical.legConflict": "cannot fire {limb} weapons while kicking with that leg",
+  "err.physical.noArmWeapons": "cannot fire arm-mounted weapons while pushing or clubbing",
+  "warn.physical.armWeapons": "note: {limb} weapons cannot fire while punching with that arm",
+  "warn.physical.legWeapons": "note: {limb} weapons cannot fire while kicking with that leg",
+  "warn.physical.noArmWeapons": "note: arm-mounted weapons cannot fire while pushing or clubbing",
 
   // setup status
   "setup.mapLabel": "map: {name}",
@@ -283,6 +308,7 @@ export const en = {
   "attackStatus.header": "queued attacks:",
   "attackStatus.none": "  (no attacks queued)",
   "attackStatus.weapon": "  #{weaponIndex} {weaponName} -> {targetId}{suffix}",
+  "attackStatus.physical": "  {type} ({limb}) -> {targetId}",
 
   // fire suggestion
   "fireSuggestion.header": "possible targets for {id}:",
@@ -321,6 +347,11 @@ export const en = {
   "fireSuggestion.twist.front": "front",
   "fireSuggestion.twist.left": "left",
   "fireSuggestion.twist.right": "right",
+
+  // physical attack suggestions (adjacent enemies only)
+  "physicalSuggestion.header": "physical attacks (adjacent only):",
+  "physicalSuggestion.none": "(no adjacent enemy in a legal arc)",
+  "physicalSuggestion.line": "{type} -> {target} (queue with '{type} {target}')",
 
   // record sheet / info
   "info.mechColModel": "MODEL",
@@ -454,6 +485,8 @@ export const en = {
   "log.attacksDeclaredOne": "[{id}] fires at {target} ({count} weapon, {rangeCtx})",
   "log.attacksDeclaredOther": "[{id}] fires at {target} ({count} weapons, {rangeCtx})",
   "log.attacksPassed": "[{id}] is not attacking this turn.",
+  "log.physicalDeclaredOne": "[{id}] declares {type} against {target} ({count} attack)",
+  "log.physicalDeclaredOther": "[{id}] declares {type} against {target} ({count} attacks)",
   "log.destroyed": "[{id}] *** DESTROYED ({destroyed}) ***",
   "log.ejected": "[{id}] ejects — abandoned 'Mech left as a level-2 wreck",
   "log.buildingCollapsed": "Building at {hex} collapses to rubble",
@@ -511,8 +544,21 @@ export const en = {
   "res.line": "{weapon}: {gator}, 2D6 = {roll} -> {verdict}{jam}",
   "res.jamSuffix": " JAMMED",
   "res.autoHit": "auto-hit",
+  "res.autoMiss": "auto-miss",
   "res.hit": "HIT",
   "res.miss": "MISS",
+  "res.physical.header": "{type}: {attacker} -> {target}",
+  "res.physical.toHit": "need {total}, 2D6 = {roll} -> {verdict}",
+  "res.physical.targetDamage": "hits: {groups}",
+  "res.physical.attackerDamage": "self-damage: {groups}",
+  "res.physical.targetDisplaced": "target displaced to ({col},{row})",
+  "res.physical.attackerDisplaced": "attacker advances to ({col},{row})",
+  "res.physical.targetPsr": "target PSR: {outcome}",
+  "res.physical.attackerPsr": "attacker PSR: {outcome}",
+  "res.physical.stands": "2D6 = {roll} stands",
+  "res.physical.falls": "2D6 = {roll} FALLS",
+  "res.physical.autoStand": "stands automatically",
+  "res.physical.autoFall": "falls automatically",
   "res.outOfAmmo": "{weapon} out of ammo, did not fire",
   "res.clusterRoll": "cluster roll 2D6 = {roll}",
   "res.hits": "hits: {groups} ({arc})",
