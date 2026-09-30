@@ -219,6 +219,8 @@ describe("kick", () => {
     const decl: PhysicalAttackDecl = { type: "kick", targetId: "t", limb: "rightLeg" };
     const resolution = resolvePhysicalAttack(battle, "a", decl, HIGH_RNG);
     expect(resolution.targetPsr).not.toBeNull();
+    // Undamaged target: piloting 5 + 0 preexisting = target 5.
+    expect(resolution.targetPsr!.target).toBe(5);
   });
 
   it("attacker makes PSR on miss", () => {
@@ -231,6 +233,33 @@ describe("kick", () => {
     // With piloting 5 and kick mod -2, TN = 3. Rolling 2 (1+1) misses.
     expect(resolution.hit).toBe(false);
     expect(resolution.attackerPsr).not.toBeNull();
+    expect(resolution.attackerPsr!.target).toBe(5);
+  });
+
+  it("adds the target's preexisting damage to its PSR target", () => {
+    const battle = makeBattle(
+      makeUnitInit("a", 1, { col: 5, row: 5 }, "ne"),
+      makeUnitInit("t", 2, { col: 6, row: 5 }, "sw"),
+    );
+    battle.units.t!.critSlotsDestroyed.leftLeg![1] = true; // upperLegActuator: +1
+    const decl: PhysicalAttackDecl = { type: "kick", targetId: "t", limb: "rightLeg" };
+    const resolution = resolvePhysicalAttack(battle, "a", decl, HIGH_RNG);
+    expect(resolution.targetPsr!.target).toBe(6);
+  });
+
+  it("skips the target PSR when the target is prone", () => {
+    const battle = makeBattle(
+      makeUnitInit("a", 1, { col: 5, row: 5 }, "ne"),
+      makeUnitInit("t", 2, { col: 6, row: 5 }, "sw"),
+    );
+    battle.units.t!.prone = true;
+    const decl: PhysicalAttackDecl = { type: "kick", targetId: "t", limb: "rightLeg" };
+    const resolution = resolvePhysicalAttack(battle, "a", decl, HIGH_RNG);
+    // Damage still lands, but prone 'Mechs ignore fall-avoidance PSRs.
+    expect(resolution.hit).toBe(true);
+    expect(resolution.damageToTarget.length).toBe(1);
+    expect(resolution.targetPsr).toBeNull();
+    expect(resolution.targetFalls).toBe(false);
   });
 });
 
@@ -294,6 +323,9 @@ describe("push", () => {
     expect(resolution.attackerDisplacedTo).not.toBeNull();
     // Attacker moves into target's old hex
     expect(resolution.attackerDisplacedTo).toEqual({ col: 6, row: 4 });
+    // Both sides roll PSRs against their own piloting (5 + 0 preexisting).
+    expect(resolution.targetPsr!.target).toBe(5);
+    expect(resolution.attackerPsr!.target).toBe(5);
   });
 });
 

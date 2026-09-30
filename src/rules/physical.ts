@@ -23,7 +23,7 @@ import { applyDamage, type DamageApplication, type UnitDamageState } from "./dam
 import type { BattleState, UnitState } from "./game";
 import { isUnitRemoved } from "./game";
 import { hitLocationForArc, punchHitLocation } from "./hitlocation";
-import { rollPilotingCheck } from "./piloting";
+import { preexistingDamageModifier, rollPilotingCheck } from "./piloting";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -75,8 +75,8 @@ export interface PhysicalResolution {
   readonly damageToAttacker: DamageGroup[];
   readonly targetDisplacedTo: HexCoord | null;
   readonly attackerDisplacedTo: HexCoord | null;
-  readonly targetPsr: { roll: number | null; success: boolean } | null;
-  readonly attackerPsr: { roll: number | null; success: boolean } | null;
+  readonly targetPsr: { target: number; roll: number | null; success: boolean } | null;
+  readonly attackerPsr: { target: number; roll: number | null; success: boolean } | null;
   readonly attackerFalls: boolean;
   readonly targetFalls: boolean;
   readonly notes: string[];
@@ -630,13 +630,27 @@ export function resolvePhysicalAttack(
     damageToTarget.push({ location, damage: dmg });
   }
 
-  // Displacement and PSRs
+  // Displacement and PSRs. Preexisting damage (leg/hip/gyro, TW p.60)
+  // applies to every PSR, evaluated against each side's own damage state.
   let targetDisplacedTo: HexCoord | null = null;
   let attackerDisplacedTo: HexCoord | null = null;
-  let targetPsr: { roll: number | null; success: boolean } | null = null;
-  let attackerPsr: { roll: number | null; success: boolean } | null = null;
+  let targetPsr: { target: number; roll: number | null; success: boolean } | null = null;
+  let attackerPsr: { target: number; roll: number | null; success: boolean } | null = null;
   let attackerFalls = false;
   let targetFalls = false;
+
+  /**
+   * Roll one physical-attack PSR for `unit`, applying its own preexisting
+   * damage (TW p.60). Pure dice wrapper so push/kick call sites stay flat.
+   */
+  function rollPhysicalPsr(
+    rollRng: Rng,
+    unit: UnitState,
+  ): { target: number; roll: number | null; success: boolean } {
+    const def = mechDefFor(unit);
+    const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
+    return rollPilotingCheck(rollRng, unit.piloting, pre.modifier);
+  }
 
   if (decl.type === "push") {
     if (hit) {
@@ -647,25 +661,28 @@ export function resolvePhysicalAttack(
       attackerDisplacedTo = { ...target.position };
 
       // Both make PSR (TW p. 147)
-      const targetPsrResult = rollPilotingCheck(rng, target.piloting, 0);
+      const targetPsrResult = rollPhysicalPsr(rng, target);
       targetPsr = targetPsrResult;
       if (!targetPsrResult.success) targetFalls = true;
 
-      const attackerPsrResult = rollPilotingCheck(rng, attacker.piloting, 0);
+      const attackerPsrResult = rollPhysicalPsr(rng, attacker);
       attackerPsr = attackerPsrResult;
       if (!attackerPsrResult.success) attackerFalls = true;
     }
   }
 
   if (decl.type === "kick") {
-    // Target must make PSR regardless of hit/miss (TW p. 147)
-    const targetPsrResult = rollPilotingCheck(rng, target.piloting, 0);
-    targetPsr = targetPsrResult;
-    if (!targetPsrResult.success) targetFalls = true;
+    // Target must make PSR regardless of hit/miss (TW p. 147), unless it
+    // is prone: prone 'Mechs ignore PSRs to avoid falls (TW p.151).
+    if (!target.prone) {
+      const targetPsrResult = rollPhysicalPsr(rng, target);
+      targetPsr = targetPsrResult;
+      if (!targetPsrResult.success) targetFalls = true;
+    }
 
     // Attacker makes PSR on miss (TW p. 147)
     if (!hit) {
-      const attackerPsrResult = rollPilotingCheck(rng, attacker.piloting, 0);
+      const attackerPsrResult = rollPhysicalPsr(rng, attacker);
       attackerPsr = attackerPsrResult;
       if (!attackerPsrResult.success) attackerFalls = true;
     }
