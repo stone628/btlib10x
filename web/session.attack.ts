@@ -1,6 +1,7 @@
 import {
   type AmmoPolicy,
   type Arc,
+  type ArmLocation,
   type AttackDecl,
   type AttackResolution,
   type BattleState,
@@ -20,6 +21,7 @@ import {
   isUnitDestroyed,
   isUnitImmobile,
   isUnitRemoved,
+  type LegLocation,
   type Location,
   type LocationValue,
   mechDefFor,
@@ -249,7 +251,7 @@ export function queuePhysicalAttack(
   s: Session,
   type: PhysicalAttackType,
   targetId: string,
-  limb?: "leftArm" | "rightArm" | "leftLeg" | "rightLeg",
+  limb?: ArmLocation | LegLocation,
 ): string[] {
   const { battle, context } = requireBattleAndContext(s);
   const unit = requireUnit(battle, context.actorId);
