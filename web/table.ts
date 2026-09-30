@@ -231,6 +231,13 @@ export function infoWeaponChunk(name: string): Chunk {
   ];
   if (w.missiles !== undefined) lines.push(i18n("info.weaponMissiles", { count: w.missiles }));
   if (w.pulse) lines.push(i18n("info.weaponPulse"));
+  // Non-pulse weapons with a To-Hit Mod column value (TW p.303-304: MRM +1,
+  // Clan heavy lasers +1). Pulse lasers already show their -2 above.
+  if (w.toHitMod !== undefined && w.toHitMod !== 0 && w.pulse !== true) {
+    lines.push(
+      i18n("info.weaponToHitMod", { mod: w.toHitMod > 0 ? `+${w.toHitMod}` : `${w.toHitMod}` }),
+    );
+  }
   if (w.rapidFireShots !== undefined)
     lines.push(i18n("info.weaponRapidFire", { shots: w.rapidFireShots }));
   if (w.antiInfantry) lines.push(i18n("info.weaponAntiInfantry"));

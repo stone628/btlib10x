@@ -371,6 +371,7 @@ export const kr: Catalog = {
   "info.weaponDamage": "데미지: {damage}",
   "info.weaponMissiles": "미사일: {count}",
   "info.weaponPulse": "펄스: 명중 보정 -2 (더 쉽게 명중)",
+  "info.weaponToHitMod": "명중 보정: {mod}",
   "info.weaponRapidFire": "연사: 매턴 {shots}발 발사",
   "info.weaponAntiInfantry": "보병 대응: 보병에게 추가 데미열",
   "sheet.modelLine": "모델: {name} {model} - {weightClass} {tonnage}t",

@@ -98,7 +98,8 @@ interface WeaponDef {
   readonly missiles?: number;     // cluster column (LRM/SRM)
   readonly missileDamage?: 1 | 2;
   readonly variableDamage?: readonly [number, number, number]; // V-code per bracket
-  readonly pulse?: boolean;       // P-code (-2 to-hit)
+  readonly pulse?: boolean;       // P-code eligibility flag (TC / aimed-shot rules)
+  readonly toHitMod?: number;     // To-Hit Mod column: -2 pulse, +1 MRM / Clan heavy lasers
   readonly antiInfantry?: boolean;
   readonly rapidFireShots?: number; // R-code max shots
   readonly streak?: boolean;      // SRM-Streak: full tube on success, no cluster roll
@@ -382,7 +383,8 @@ computeToHit({
 ```
 
 GATOR stack: gunnery + attacker move + target move + terrain + range bracket
-(S 0 / M +2 / L +4) + pulse (−2) + minimum-range penalty; auto-hit ≤ 2,
+(S 0 / M +2 / L +4) + weapon mod (−2 pulse, +1 MRM / Clan heavy lasers) +
+minimum-range penalty; auto-hit ≤ 2,
 auto-miss > 12. `targetImmobile` (shut down or both legs destroyed) sets
 `targetMod` to −4.
 `targetPartialCover` (target in water1/building hex with attacker not higher)

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { weaponDefFor } from "../src/data/weapon.schema";
-import { computeToHit } from "../src/rules/tohit";
+import { computeToHit, weaponToHitModifier } from "../src/rules/tohit";
 
 describe("GATOR to-hit calculation", () => {
   // Total Warfare, Rolling To Hit diagram (p.106):
@@ -123,7 +123,9 @@ describe("GATOR to-hit calculation", () => {
       targetProne: true,
       targetImmobile: true,
     });
-    expect(immobileProne.targetMod).toBe(-4);
+    // Target modifiers are cumulative (Attack Modifiers Table, TW p.117):
+    // -4 immobile + 1 prone-at-range.
+    expect(immobileProne.targetMod).toBe(-3);
   });
 
   it("immobile target (shut down / legs destroyed) gets a flat -4 target modifier", () => {
@@ -173,7 +175,7 @@ describe("GATOR to-hit calculation", () => {
       weapon: weaponDefFor({ weapon: "Small Laser" }),
     });
     expect(easy.automatic).toBe("hit");
-    expect(easy.pulseMod).toBe(0);
+    expect(easy.weaponMod).toBe(0);
 
     const pulse = computeToHit({
       gunnery: 4,
@@ -185,7 +187,7 @@ describe("GATOR to-hit calculation", () => {
       distance: 1,
       weapon: weaponDefFor({ weapon: "Small Pulse Laser" }),
     });
-    expect(pulse.pulseMod).toBe(-2);
+    expect(pulse.weaponMod).toBe(-2);
 
     const hard = computeToHit({
       gunnery: 7,
@@ -237,6 +239,51 @@ describe("GATOR to-hit calculation", () => {
     expect(at(2).total).toBe(5); // gunnery 4 + min (2-2+1) 1
     expect(at(3).minRangeMod).toBe(0);
     expect(at(3).total).toBe(4); // within short range, no penalty
+  });
+
+  it("applies the weapon To-Hit Mod column (TW p.303-304)", () => {
+    const base = {
+      gunnery: 4,
+      attackerMovement: "standStill" as const,
+      targetHexesMoved: 0,
+      targetJumped: false,
+      targetTerrain: "clear" as const,
+      interveningWoods: 0,
+      distance: 3,
+    };
+    // MRM +1, Clan heavy lasers +1, pulse -2, everything else 0.
+    expect(computeToHit({ ...base, weapon: weaponDefFor({ weapon: "MRM 20" }) }).weaponMod).toBe(1);
+    expect(
+      computeToHit({ ...base, weapon: weaponDefFor({ weapon: "CL Heavy Medium Laser" }) })
+        .weaponMod,
+    ).toBe(1);
+    expect(
+      computeToHit({ ...base, weapon: weaponDefFor({ weapon: "Medium Pulse Laser" }) }).weaponMod,
+    ).toBe(-2);
+    expect(
+      computeToHit({ ...base, weapon: weaponDefFor({ weapon: "Medium Laser" }) }).weaponMod,
+    ).toBe(0);
+    // The +1 lands in the total: same TN as a 0-mod weapon, plus one.
+    const mrm = computeToHit({ ...base, weapon: weaponDefFor({ weapon: "MRM 10" }) });
+    const ml = computeToHit({ ...base, weapon: weaponDefFor({ weapon: "Medium Laser" }) });
+    expect(ml.rangeBracket).toBe(mrm.rangeBracket);
+    expect(mrm.total).toBe(ml.total + 1);
+  });
+
+  it("falls back to -2 for legacy pulse-only defs without toHitMod", () => {
+    expect(
+      weaponToHitModifier({
+        name: "x",
+        short: 1,
+        medium: 2,
+        long: 3,
+        pulse: true,
+        category: "ENERGY",
+      }),
+    ).toBe(-2);
+    expect(
+      weaponToHitModifier({ name: "x", short: 1, medium: 2, long: 3, category: "ENERGY" }),
+    ).toBe(0);
   });
 
   it("resolves variable damage per bracket (Snub-Nose PPC V10/8/5)", () => {

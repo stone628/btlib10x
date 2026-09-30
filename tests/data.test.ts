@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { MechDef, ResolvedMechDef } from "../src/data/index";
 import { allMechDefs, mechDef, resolveMechDef, validateMechDef } from "../src/data/index";
-import { weaponDefFor } from "../src/data/weapon.schema";
+import { WEAPON_DATA } from "../src/data/weapon.data";
+import { parseWeaponsData, weaponDefFor } from "../src/data/weapon.schema";
 
 /** Strip engine-resolved fields to recover a MechDef (for testing). */
 function toMechDef(d: ResolvedMechDef): MechDef {
@@ -227,6 +228,74 @@ describe("weapon catalog", () => {
     expect(weaponDefFor({ weapon: "Streak SRM 6" }).missiles).toBe(6);
     expect(weaponDefFor({ weapon: "SRM 6" }).streak).toBeUndefined();
     expect(weaponDefFor({ weapon: "LRM 10" }).streak).toBeUndefined();
+  });
+
+  it("encodes the weapon To-Hit Mod column (TW p.303-304)", () => {
+    for (const name of ["MRM 10", "MRM 20", "MRM 30", "MRM 40"]) {
+      expect(weaponDefFor({ weapon: name }).toHitMod).toBe(1);
+    }
+    for (const name of ["CL Heavy Large Laser", "CL Heavy Medium Laser", "CL Heavy Small Laser"]) {
+      expect(weaponDefFor({ weapon: name }).toHitMod).toBe(1);
+    }
+    for (const name of [
+      "Large Pulse Laser",
+      "Medium Pulse Laser",
+      "Small Pulse Laser",
+      "CL Large Pulse Laser",
+      "CL Medium Pulse Laser",
+      "CL Small Pulse Laser",
+      "CL Micro Pulse Laser",
+    ]) {
+      const def = weaponDefFor({ weapon: name });
+      expect(def.pulse).toBe(true);
+      expect(def.toHitMod).toBe(-2);
+    }
+    expect(weaponDefFor({ weapon: "Medium Laser" }).toHitMod).toBeUndefined();
+    expect(weaponDefFor({ weapon: "AC/20" }).toHitMod).toBeUndefined();
+  });
+
+  it("round-trips every catalog entry through parseWeaponsData", () => {
+    const parsed = parseWeaponsData(WEAPON_DATA);
+    expect(parsed).toHaveLength(WEAPON_DATA.length);
+    for (const def of WEAPON_DATA) {
+      const back = parsed.find((p) => p.name === def.name);
+      expect(back, def.name).toBeDefined();
+      expect(back).toMatchObject(JSON.parse(JSON.stringify(def)));
+    }
+  });
+
+  it("round-trips clusterRangeMod and critExplosion instead of dropping them", () => {
+    const hag = parseWeaponsData([
+      {
+        name: "HAG 20",
+        short: 8,
+        medium: 16,
+        long: 24,
+        minRange: 2,
+        missileDamage: 1,
+        missiles: 20,
+        category: "BALLISTIC",
+        heat: 4,
+        critExplosion: 10,
+        clusterRangeMod: { short: 2, medium: 0, long: -2 },
+      },
+    ]);
+    expect(hag[0]!.critExplosion).toBe(10);
+    expect(hag[0]!.clusterRangeMod).toEqual({ short: 2, medium: 0, long: -2 });
+    expect(weaponDefFor({ weapon: "HAG 20" }).clusterRangeMod).toEqual({
+      short: 2,
+      medium: 0,
+      long: -2,
+    });
+    expect(weaponDefFor({ weapon: "Gauss Rifle" }).critExplosion).toBe(20);
+  });
+
+  it("rejects out-of-range toHitMod values", () => {
+    expect(() =>
+      parseWeaponsData([
+        { name: "X", short: 1, medium: 2, long: 3, category: "ENERGY", toHitMod: 6 },
+      ]),
+    ).toThrow(/toHitMod/);
   });
 });
 
