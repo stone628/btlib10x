@@ -647,7 +647,7 @@ executeMove(state, unitId, mode, steps, sink: GameEvent[], { finalFacing, rng }?
 attemptStandUp(state, unitId, sink: GameEvent[], rng?): void            // movement phase only: prone unit tries to rise (one attempt per activation)
 dropProne(state, unitId, sink: GameEvent[], rng?): void                // movement phase only: go prone voluntarily (1 MP, no heat, no roll, no damage; refused after jumping)
 ejectPilot(state, unitId, sink: GameEvent[]): void                      // movement phase only: removes the unit (removed = "pilotEjected") and spawns a level-2 wreck in its hex
-voluntaryShutdown(state, unitId, sink: GameEvent[], rng?): void        // movement phase only: shuts down ("manual") plus the immediate +3 shutdown PSR
+voluntaryShutdown(state, unitId, sink: GameEvent[]): void              // movement phase only: shuts down ("manual")
 attemptVoluntaryStartup(state, unitId, sink: GameEvent[], rng?): void  // startup attempt after a manual shutdown
 declareAttacks(state, unitId, decls, sink: GameEvent[], rng?): void    // weaponAttack phase only
 validateAttacks(state, unitId, decls, { twist? }?): void               // read-only gate check; throws on any rule violation without mutating state or emitting events. Returns the resolved volley metadata via `validateAttacksImpl`.

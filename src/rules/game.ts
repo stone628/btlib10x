@@ -3365,12 +3365,7 @@ export function ejectPilot(state: BattleState, unitId: string, sink: GameEvent[]
  *  successful voluntary startup. The shutdown itself forces the immediate
  *  +3 PSR like any reactor shutdown (TW p.60). Marks the unit as having
  *  acted. */
-export function voluntaryShutdown(
-  state: BattleState,
-  unitId: string,
-  sink: GameEvent[],
-  rng: Rng = DEFAULT_RNG,
-): void {
+export function voluntaryShutdown(state: BattleState, unitId: string, sink: GameEvent[]): void {
   requirePhase(state, "movement");
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
@@ -3387,7 +3382,6 @@ export function voluntaryShutdown(
     avoid: 0,
     threshold: 0,
   });
-  shutdownFallCheck(state, unit, rng, sink);
 }
 
 /** Voluntary startup attempt, resolved during the movement phase: roll 2D6
