@@ -3208,6 +3208,7 @@ export function attemptStandUp(
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
   if (!unit.prone) throw new Error(`${unitId} is not prone`);
+  if (unit.jumpedThisTurn) throw new Error(`${unitId} jumped this turn and cannot stand up`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot stand up`);
   if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot stand up`);
   const def = mechDefFor(unit);
