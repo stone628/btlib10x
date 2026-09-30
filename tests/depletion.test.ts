@@ -32,6 +32,7 @@ import {
 import { createTestBattle, disableCritical, execute, scriptedRng } from "./helpers";
 
 const HBK = mechDef("HBK-4G")!;
+const HER = mechDef("HER-5SA")!;
 
 /** One minimal live bin state, for hand-built maps in unit tests. */
 function bin(location: Location, slotIndex: number, shots: number): AmmoBinState {
@@ -297,6 +298,43 @@ describe("declareAttacks (game level)", () => {
     expect(u.ammoBins["leftTorso:1"]?.shots).toBe(4);
     expect(u.ammoBins["leftTorso:2"]?.shots).toBe(5);
     expect(ammoWeaponTotals(HBK, u.ammoBins)[4]).toBe(9);
+  });
+
+  it("drains one shot per rapid-fire round declared (TW p.103-104)", () => {
+    // HER-5SA Ultra AC/5 (weaponIndex 3, 1-based): 20 shots loaded; a double-tap declares 2.
+    const units: UnitInit[] = [
+      {
+        id: "her",
+        model: "HER-5SA",
+        team: 0,
+        gunnery: 4,
+        piloting: 5,
+        position: { col: 2, row: 4 },
+        facing: "ne",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        piloting: 5,
+        position: { col: 3, row: 4 },
+        facing: "nw",
+      },
+    ];
+    const state = createTestBattle([], units, true);
+    attackPhase(state);
+    const before = ammoWeaponTotals(HER, requireUnit(state, "her")!.ammoBins)[3];
+    expect(before).toBe(20);
+    declareAttacks(
+      state,
+      "her",
+      [{ weaponIndex: 3, targetId: "enf", rapidFire: true }],
+      [],
+      scriptedRng(6, 6, 6, 6, 6, 6),
+    );
+    const u = requireUnit(state, "her")!;
+    expect(ammoWeaponTotals(HER, u.ammoBins)[3]).toBe(18);
   });
 
   it("uses a deterministic tiebreak rng when none is supplied", () => {

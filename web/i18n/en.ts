@@ -562,6 +562,7 @@ export const en = {
   "res.physical.autoFall": "need {target}, falls automatically",
   "res.outOfAmmo": "{weapon} out of ammo, did not fire",
   "res.clusterRoll": "cluster roll 2D6 = {roll}",
+  "res.clusterMod": "cluster range mod {mod}",
   "res.hits": "hits: {groups} ({arc})",
   "res.armBlownOff": "; {cause} destroyed -> {arm} blown off",
   "res.immobilized": "; immobilized",

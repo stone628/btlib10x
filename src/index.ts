@@ -149,7 +149,13 @@ export {
   isBuildingTerrain,
   isCollapsed,
 } from "./rules/building";
-export { CLUSTER_COLUMNS, CLUSTER_TABLE, clusterHits, groupMissiles } from "./rules/cluster";
+export {
+  CLUSTER_COLUMNS,
+  CLUSTER_TABLE,
+  clusterHits,
+  groupMissiles,
+  modifiedClusterRoll,
+} from "./rules/cluster";
 export type {
   CaseKind,
   ComponentHitStatus as CoreComponentStatus,

@@ -310,6 +310,93 @@ describe("resolveWeaponAttack", () => {
   });
 });
 
+describe("HAG cluster range modifier (TW p.136)", () => {
+  // HAG 20: short 8 / medium 16 / long 24, minRange 2. TN at gunnery 4,
+  // standing, clear: short 4, long 8.
+  it("adds +2 to the cluster roll at short range", () => {
+    const rng = scriptedRng(
+      3,
+      3, // to-hit 6 >= TN 4
+      2,
+      2, // raw cluster 4 -> +2 -> 6 -> 12 hits on the 20 column
+      3,
+      4, // lot 1 -> CT (7)
+      3,
+      4, // lot 2 -> CT
+      3,
+      4, // remainder -> CT
+    );
+    const res = resolveWeaponAttack({
+      ...BASE,
+      rng,
+      distance: 5,
+      weapon: "HAG 20",
+      targetDamage: freshState(),
+    });
+    expect(res.hit).toBe(true);
+    expect(res.breakdown.rangeBracket).toBe("short");
+    expect(res.clusterRoll).toBe(4);
+    expect(res.clusterMod).toBe(2);
+    expect(res.groups.map((g) => g.damage)).toEqual([5, 5, 2]);
+    expect(rng.remaining()).toBe(0);
+  });
+
+  it("subtracts 2 from the cluster roll at long range", () => {
+    const rng = scriptedRng(
+      4,
+      4, // to-hit 8 >= TN 8
+      6,
+      6, // raw cluster 12 -> -2 -> 10 -> 16 hits on the 20 column
+      3,
+      4, // lot 1 -> CT
+      3,
+      4, // lot 2 -> CT
+      3,
+      4, // lot 3 -> CT
+      3,
+      4, // remainder -> CT
+    );
+    const res = resolveWeaponAttack({
+      ...BASE,
+      rng,
+      distance: 20,
+      weapon: "HAG 20",
+      targetDamage: freshState(),
+    });
+    expect(res.hit).toBe(true);
+    expect(res.breakdown.rangeBracket).toBe("long");
+    expect(res.clusterRoll).toBe(12);
+    expect(res.clusterMod).toBe(-2);
+    expect(res.groups.map((g) => g.damage)).toEqual([5, 5, 5, 1]);
+    expect(rng.remaining()).toBe(0);
+  });
+
+  it("leaves non-HAG cluster weapons unmodified (clusterMod null)", () => {
+    const rng = scriptedRng(
+      3,
+      4, // to-hit 7 >= TN 6 (medium)
+      2,
+      2, // raw cluster 4 -> 9 hits on the 20 column
+      3,
+      4, // lot 1 -> CT
+      3,
+      4, // remainder -> CT
+    );
+    const res = resolveWeaponAttack({
+      ...BASE,
+      rng,
+      distance: 10,
+      weapon: "LRM 20",
+      targetDamage: freshState(),
+    });
+    expect(res.hit).toBe(true);
+    expect(res.clusterRoll).toBe(4);
+    expect(res.clusterMod).toBeNull();
+    expect(res.groups.map((g) => g.damage)).toEqual([5, 4]);
+    expect(rng.remaining()).toBe(0);
+  });
+});
+
 describe("through-armor criticals (hit-location roll of 2)", () => {
   const def = mechDef("HBK-4G")!;
 

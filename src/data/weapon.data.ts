@@ -582,7 +582,7 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     missiles: 30,
     category: "BALLISTIC",
     heat: 6,
-    critExplosion: 10,
+    critExplosion: 15,
     clusterRangeMod: { short: 2, medium: 0, long: -2 },
   },
   {
@@ -595,7 +595,7 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     missiles: 40,
     category: "BALLISTIC",
     heat: 8,
-    critExplosion: 10,
+    critExplosion: 20,
     clusterRangeMod: { short: 2, medium: 0, long: -2 },
   },
   {

@@ -747,6 +747,10 @@ export function resolutionLines(r: AttackResolution): string[] {
   ];
   if (r.ammoExhausted === true) lines.push(i18n("res.outOfAmmo", { weapon: r.weapon }));
   if (r.clusterRoll !== null) lines.push(i18n("res.clusterRoll", { roll: r.clusterRoll }));
+  if (r.clusterMod !== null && r.clusterMod !== 0)
+    lines.push(
+      i18n("res.clusterMod", { mod: r.clusterMod > 0 ? `+${r.clusterMod}` : `${r.clusterMod}` }),
+    );
   if (r.hit && r.groups.length > 0) {
     lines.push(
       i18n("res.hits", {

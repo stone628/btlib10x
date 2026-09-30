@@ -10,11 +10,16 @@
 ## To Do
 
 - need snapshot keeping, capable of rollback N steps like ctrl-z
-- The Physical Attack Phase. advancePhase runs initiative → movement → weaponAttack → end, with the heat phase folded into the weaponAttack exit. TW inserts a physical attack phase between weapon fire and heat, carrying punch, kick, push, club, charge and Death From Above. None exists. This also strands the handActuator and shoulder crit slots, whose published effects are largely physical. (Physical-triggered PSRs — kicks, pushes, charges, DFAs — wait on this phase; see "Not viable" in `docs/CLI.md`.)
-- **Weapon to-hit audit (TW p.303-304, p.113-114, p.117-118)** — P0 done (see Done); remaining:
-  - P1: Apply HAG `clusterRangeMod` (`+2` short / `0` medium / `-2` long, clamp roll 2..12, TW p.136) in `resolveWeaponAttack`; fix `critExplosion` data 10/15/20 for HAG 20/30/40; confirm 5-point groupings.
-  - P1: Cluster-roll modifier pipeline (`src/rules/cluster.ts`, `src/rules/attack.ts`): Artemis IV `+2`, Narc pod `+2`, AMS `-4` (min 2, Streak-as-11, 1D6 vs single missile, 1 engagement/AMS/turn, 1 ammo + 1 heat each, TW p.129-130, p.138-139). ECM interaction stays in Later phases.
-  - P1: Rapid-fire heat/ammo `× shots` audit (TW p.103-104: `1/Sht` stored flat must multiply by `shots` at resolution in `game.ts`); rotary jam-clear rule (TW p.140: End Phase declare, next turn stand/walk only + no attacks, Gunnery+3 to clear) — jam is currently permanent.
+- **Physical attacks** — punch, kick, push, club are implemented
+  (`src/rules/physical.ts`: declare via `declarePhysicalAttacks`, resolve
+  after weapon damage inside `resolveAllAttacks`; arm/leg use conflicts
+  enforced; see "Implemented subset" in `docs/CLI.md`). Remaining: charge /
+  DFA movement-phase declarations, physical-attack critical hits, club
+  acquisition (blown-off limbs, trees, girders) and physical-weapon
+  equipment (hatchet, sword, …), domino effect / accidental falls from
+  above. (Physical-triggered PSRs — kicks, pushes, charges, DFAs — wait on
+  these; see "Not viable" in `docs/CLI.md`.)
+- **Weapon to-hit audit (TW p.303-304, p.113-114, p.117-118)** — P0/P1 done (see Done); remaining:
   - P2: GATOR `Other` modifiers: secondary target `+1` forward / `+2` side-rear (TW p.108), IndustrialMech `+1` (TW p.108); OS once-per-scenario + no-explode and PB same/adjacent-only legality gates (TW p.113-114); Flak `-2` gating (aerospace-scoped, TW p.113); H-weapon damage-as-heat option incl. Plasma Rifle `10 + 1D6` heat vs 'Mechs / `10+2D6` in 5-pt groups vs others, woods/building double, underwater ban (TW p.113, p.139-140); Gauss ammo-slot feed-wreck vs weapon-slot 20-pt blast + Heavy Gauss move+fire weight-class PSR (TW p.135-136); MGA / A-Pod / B-Pod one-shot behavior (TW p.130, p.137); missing catalog rows (IS ER Medium Laser, IS ER PPC, Rocket Launchers, Plasma Cannon, Light MG, iNarc launcher).
 
 ## In progress
@@ -26,6 +31,25 @@
 
 ## Done
 
+- **Weapon to-hit audit P1: HAG + rapid-fire (TW p.103-104, p.136)** —
+  `clusterRangeMod` (+2 short / 0 medium / -2 long) applies to the 2D6
+  cluster roll via `modifiedClusterRoll` (clamped 2..12), wired into the
+  missile branch of `resolveWeaponAttack`; the raw roll stays in
+  `clusterRoll` and the applied mod is exposed as `AttackResolution.clusterMod`
+  (web log prints `cluster range mod ±n`). HAG `critExplosion` data fixed
+  to 10/15/20; HAG 5-point groupings confirmed (1-damage missiles already
+  flow through the lots-of-5 path). `critExplosion` wiring (Gauss/HAG
+  weapon-crit blasts) remains a follow-up — the field still has no readers
+  in `src/rules/`. Rapid-fire audit: heat `(heat ?? 0) × shots`
+  (`game.ts`) and ammo `needed = shots` at declare + validate were already
+  correct, including spend-on-miss/jam and 1-shot-per-missile-volley;
+  covered by regression tests (Ultra AC/5 double-tap: 2 ammo at declare,
+  2 heat at resolve even on a jammed miss). Deferred per scope: rotary
+  jam-clear, Artemis/Narc/AMS cluster pipeline (see Later phases); observed
+  gap (not P1): no partial volleys — rapid-fire always fires max shots.
+  Tests: `tests/cluster.test.ts` (new), HAG short/long/unmodified cases in
+  `tests/attack.test.ts`, HAG data + rapid-fire declare/resolve cases in
+  `tests/data.test.ts`, `tests/depletion.test.ts`, `tests/heat.test.ts`.
 - **Weapon to-hit audit P0 (TW p.303-304)** — `WeaponDef` carries a generic
   `toHitMod?: number` (the To-Hit Mod column: `-2` pulse, `+1` MRM 10/20/30/40
   and Clan Heavy Large/Medium/Small Laser); `pulse: boolean` stays as the
@@ -281,6 +305,16 @@
   cover), rear hits, multi-target arcs, vehicles/infantry, basements,
   hull-down, full water-depth movement, buildings damage beyond CF collapse
 - Weapon systems (deferred, TW pp.129-143, pp.303-305):
+  - Cluster-roll modifier pipeline: Artemis IV FCS `+2` (needs FCS
+    equipment + ammo linkage; ECM-jammable, TW p.130), Narc pod `+2`
+    (needs pod-attach state on targets, TW p.138-139), AMS `-4` (min 2,
+    Streak-as-11, 1D6 vs single missile, 1 engagement/AMS/turn with 1 ammo
+    + 1 heat each, TW p.129-130). ECM interaction stays deferred with the
+    ECM bubble below.
+  - Rotary jam-clear (TW p.140): End Phase declare, next turn stand/walk
+    only + no weapon attacks, Gunnery+3 to clear. Jam stays permanent
+    until this lands; needs a clearable-jam marker (Ultra jam never
+    clears) plus movement/declaration gates.
   - Targeting Computer (`-1` DE/DB excl. flamer/MG; aimed-shot flow; bans; TW p.110, p.143).
   - TAG designation + TAG-guided ammo (TW p.142-143).
   - LRM indirect fire (`+1`, spotter move/LOS mods, spotter-fired `+1/+1`; TW p.111-112).

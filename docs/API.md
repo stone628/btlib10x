@@ -406,6 +406,8 @@ adjacent targets. `ToHitBreakdown` carries the individual mods,
 - `clusterHits(missiles, roll)` — full TW p. 116 table, weapon-size columns
   2–30 plus 40 (missiles and rapid-fire shots share it); `CLUSTER_COLUMNS`
   and `CLUSTER_TABLE` are the underlying data
+- `modifiedClusterRoll(roll, mod)` — HAG range mod (TW p.136: +2 short /
+  0 medium / -2 long), clamped to 2..12
 - `groupMissiles(total, lotSize)` — LRM lots of five
 - `PUNCH_LOCATION_TABLE`, `punchHitLocation(roll1d6)` — bipedal punch
   column (also reused for building-collapse damage)
@@ -550,7 +552,7 @@ returned application. It does **not** mutate the target; callers copy from
 `resolution.application.damage` and `resolution.crits[last]`.
 
 `AttackResolution` = `{ weapon; distance; breakdown; toHitRoll; hit; jammed;
-prone; propArm; clusterRoll; groups; application; arc; crits }` — `arc` is
+prone; propArm; clusterRoll; clusterMod; groups; application; arc; crits }` — `arc` is
 the firing arc the attack resolved against (drives the hit-location table
 and armor pool); `prone` marks shots fired while prone and `propArm` (null
 when standing or with no arm weapons) names the propped arm. Each `groups`

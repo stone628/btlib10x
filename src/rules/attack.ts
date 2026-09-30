@@ -6,7 +6,7 @@ import type { WeaponDef } from "../data/weapon.schema";
 import { weaponDefFor } from "../data/weapon.schema";
 import type { AmmoBins } from "./ammo";
 import type { Arc } from "./arcs";
-import { clusterHits, groupMissiles } from "./cluster";
+import { clusterHits, groupMissiles, modifiedClusterRoll } from "./cluster";
 import { type CriticalResolution, resolveCriticalHits } from "./critical";
 import { applyDamage, type DamageApplication, type UnitDamageState } from "./damage";
 import { toHitHeatModifier } from "./heat";
@@ -110,6 +110,10 @@ export interface AttackResolution {
    *  the attack auto-missed without rolling (no ammo spent, no heat). */
   readonly ammoExhausted?: boolean;
   readonly clusterRoll: number | null;
+  /** Range-dependent cluster-roll modifier actually applied (HAG +2 short /
+   *  -2 long, TW p.136); null when the weapon has none. `clusterRoll` stays
+   *  the raw 2D6 thrown. */
+  readonly clusterMod: number | null;
   readonly groups: readonly HitGroup[];
   readonly application: DamageApplication | null;
   /** Attack direction the attack resolved against (side of the target hit);
@@ -194,6 +198,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     propArm,
     ammoExhausted: false,
     clusterRoll: null as number | null,
+    clusterMod: null as number | null,
     groups: [] as HitGroup[],
     application: null as DamageApplication | null,
     crits: [] as CriticalResolution[],
@@ -226,7 +231,11 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     } else {
       const clusterRoll = roll2D6(input.rng);
       base.clusterRoll = clusterRoll;
-      hits = clusterHits(weapon.missiles, clusterRoll);
+      // HAG range mod (TW p.136): +2 short / 0 medium / -2 long on the
+      // 2D6 roll, clamped to 2..12. Other cluster weapons roll unmodified.
+      const mod = weapon.clusterRangeMod?.[breakdown.rangeBracket] ?? 0;
+      if (mod !== 0) base.clusterMod = mod;
+      hits = clusterHits(weapon.missiles, modifiedClusterRoll(clusterRoll, mod));
     }
     if (weapon.missileDamage === MISSILE_SINGLE_DAMAGE) {
       for (let i = 0; i < hits; i++) {

@@ -254,6 +254,19 @@ describe("weapon catalog", () => {
     expect(weaponDefFor({ weapon: "AC/20" }).toHitMod).toBeUndefined();
   });
 
+  it("encodes HAG range mods and crit explosions (TW p.136)", () => {
+    expect(weaponDefFor({ weapon: "HAG 20" }).critExplosion).toBe(10);
+    expect(weaponDefFor({ weapon: "HAG 30" }).critExplosion).toBe(15);
+    expect(weaponDefFor({ weapon: "HAG 40" }).critExplosion).toBe(20);
+    for (const name of ["HAG 20", "HAG 30", "HAG 40"]) {
+      expect(weaponDefFor({ weapon: name }).clusterRangeMod).toEqual({
+        short: 2,
+        medium: 0,
+        long: -2,
+      });
+    }
+  });
+
   it("round-trips every catalog entry through parseWeaponsData", () => {
     const parsed = parseWeaponsData(WEAPON_DATA);
     expect(parsed).toHaveLength(WEAPON_DATA.length);
