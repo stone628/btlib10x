@@ -1199,7 +1199,6 @@ function handleSessionGameEvent(
         e.unitId,
         i18n("log.heatWeapon", {
           id: e.unitId,
-          weapon: e.weapon,
           heat: e.heat,
           base: e.base,
           total: e.totalGenerated,
