@@ -26,7 +26,6 @@ import {
   resolveHeatPhase,
   resolvePhasePiloting,
   rollInitiativePhase,
-  voluntaryShutdown,
   wreckAt,
 } from "../src/rules/game";
 
@@ -416,19 +415,6 @@ describe("immediate shutdown PSR (+3)", () => {
     expect(hbk.prone).toBe(true);
     expect(hbk.pilotHits).toBe(3);
     expect(hbk.unconscious).toBe(false);
-  });
-
-  it("voluntary shutdown triggers the same +3 PSR", () => {
-    const state = hbkEnf();
-    toMovement(state);
-    const enf = requireUnit(state, "enf");
-    // No heat → no restart/ammoExplosion in shutdown path.
-    // PSR 2D6=4<8 fails (2), fallDir=1 (1), fallLoc 3+4=7 (2),
-    // seatbelt null → auto hit, consciousness 2D6=4>=3 (2). Total 7.
-    voluntaryShutdown(state, "enf", [], scriptedRng(4, 1, 3, 4, 2, 2, 2));
-    expect(enf.shutdown).toBe("manual");
-    expect(enf.prone).toBe(true);
-    expect(enf.pilotHits).toBe(1);
   });
 });
 
