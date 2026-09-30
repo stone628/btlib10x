@@ -77,7 +77,7 @@ import {
   fireSuggestionChunks,
   physicalResolutionLines,
   resolutionLines,
-} from "./session.weapon";
+} from "./session.attack";
 
 /** Full heat-scale status for one unit, driven by the `heat` CLI command. */
 export function heatStatusLines(unit: UnitState): Chunk {

@@ -12,6 +12,13 @@ import type { LocaleId } from "./i18n/index";
 import { i18n, setI18nDefaultLocale } from "./i18n/index";
 import { createRng } from "./rng";
 import {
+  initWeaponAttackContext,
+  onEnterWeaponAttack,
+  requireWeaponAttackActor,
+  type WeaponAttackContext,
+  weaponAttackContextInvalid,
+} from "./session.attack";
+import {
   initMovementContext,
   type MovementContext,
   movementContextInvalid,
@@ -20,14 +27,8 @@ import {
 } from "./session.move";
 import type { OverContext, SessionVictoryResult } from "./session.over";
 import type { SetupContext } from "./session.setup";
-import {
-  initWeaponAttackContext,
-  onEnterWeaponAttack,
-  requireWeaponAttackActor,
-  type WeaponAttackContext,
-  weaponAttackContextInvalid,
-} from "./session.weapon";
 
+export * from "./session.attack";
 /**
  * Public barrel for the session layer: everything below is implemented in
  * `session.common` / `session.move` / `session.over` / `session.setup` /
@@ -40,7 +41,6 @@ export * from "./session.common";
 export * from "./session.move";
 export * from "./session.over";
 export * from "./session.setup";
-export * from "./session.weapon";
 
 export type SessionState = "setup" | "battle" | "over";
 

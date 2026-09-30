@@ -1,5 +1,6 @@
 import type { Facing, UnitState } from "btlib10x";
 import { FACINGS, isShutdown, listMapNames, requireUnit, sameHex, VERSION } from "btlib10x";
+import type { ArmLocation, LegLocation } from "../src/core/types";
 import { buildLinesChunk, buildLinesChunkWith, type Chunk } from "./chunk";
 import type { MessageKey } from "./i18n/index";
 import { i18n, isLocale, localeList } from "./i18n/index";
@@ -588,7 +589,7 @@ const OVER_CMDS: Record<string, CmdDef> = {
 
 // ------------------------------------------------------------ helpers ----
 
-function parseArm(word: string | undefined): "leftArm" | "rightArm" | undefined {
+function parseArm(word: string | undefined): ArmLocation | undefined {
   if (word === undefined) return undefined;
   const w = word.toLowerCase();
   if (w === "left" || w === "l") return "leftArm";
@@ -596,7 +597,7 @@ function parseArm(word: string | undefined): "leftArm" | "rightArm" | undefined 
   throw new Error(i18n("err.badLimb", { limb: word }));
 }
 
-function parseLeg(word: string | undefined): "leftLeg" | "rightLeg" | undefined {
+function parseLeg(word: string | undefined): LegLocation | undefined {
   if (word === undefined) return undefined;
   const w = word.toLowerCase();
   if (w === "left" || w === "l") return "leftLeg";

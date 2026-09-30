@@ -29,9 +29,11 @@ export {
   terrainTargetMod,
 } from "./core/terrain";
 export type {
+  ArmLocation,
   Facing,
   HexCell,
   HexCoord,
+  LegLocation,
   Location,
   MoveMode,
   Rng,
