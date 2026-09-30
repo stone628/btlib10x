@@ -13,7 +13,7 @@ import {
   weaponCanFireIntoArc,
 } from "./arcs";
 import { countDestroyedSensor } from "./critical";
-import { canFireFromLocation } from "./damage";
+import { canFireFromLocation, isUnitLocationDestroyed } from "./damage";
 import { type BattleState, isImmobile, isUnitRemoved, partialCoverMod } from "./game";
 import { toHitHeatModifier } from "./heat";
 import { losClear, losWoodsPointsBetween } from "./los";
@@ -200,6 +200,14 @@ export function suggestFireTargets(
           return;
         }
         const baseDamage = unit.baseDamage ?? unit.damage;
+        if (
+          unit.prone &&
+          (isUnitLocationDestroyed(baseDamage, "leftArm") ||
+            isUnitLocationDestroyed(baseDamage, "rightArm"))
+        ) {
+          blockBoth("prone");
+          return;
+        }
         if (!canFireFromLocation(baseDamage, mount.location)) {
           blockBoth("destroyed");
           return;
