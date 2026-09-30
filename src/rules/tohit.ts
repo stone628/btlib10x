@@ -2,7 +2,7 @@ import { D2D6_MAX, D2D6_MIN } from "../core/dice";
 import { terrainTargetMod } from "../core/terrain";
 import type { MoveMode, TerrainType } from "../core/types";
 import type { WeaponDef } from "../data/weapon.schema";
-import { attackerMovementModifier, targetMovementModifier } from "./movement";
+import { attackerMovementModifier, TARGET_IMMOBILE_MOD, targetMovementModifier } from "./movement";
 
 export type RangeBracket = "short" | "medium" | "long";
 
@@ -120,15 +120,12 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
   }
 
   const attackerMod =
-    mods.attackerProne === true
-      ? PRONE_ATTACKER_MOD
-      : attackerMovementModifier(mods.attackerMovement);
+    attackerMovementModifier(mods.attackerMovement) +
+    (mods.attackerProne === true ? PRONE_ATTACKER_MOD : 0);
   const targetMod =
-    mods.targetImmobile === true
-      ? targetMovementModifier(mods.targetHexesMoved, mods.targetJumped, true)
-      : mods.targetProne === true
-        ? proneTargetModifier(mods.distance)
-        : targetMovementModifier(mods.targetHexesMoved, mods.targetJumped, undefined);
+    targetMovementModifier(mods.targetHexesMoved, mods.targetJumped, undefined) +
+    (mods.targetProne === true ? proneTargetModifier(mods.distance) : 0) +
+    (mods.targetImmobile === true ? TARGET_IMMOBILE_MOD : 0);
 
   const terrainMod =
     mods.interveningWoods + terrainTargetMod(mods.targetTerrain) + (mods.partialCoverMod ?? 0);
