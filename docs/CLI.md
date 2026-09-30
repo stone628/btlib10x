@@ -171,6 +171,8 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   Unit damage from a collapse is deferred with piloting.
 - **Hit location** — bipedal front / left side / right side / rear tables.
 - **Cluster hits** — missile 2/4/5/6/10/15/20 + shot columns 2/3/4.
+  HAG applies its range mod (+2 short / −2 long, clamped 2..12) to the
+  roll; 1-damage missiles (incl. HAG) group into 5-point lots.
   Streak launchers skip table: to-hit success lands full tube count, miss
   fires nothing (no ammo spent, no heat). Launchers share one ammo pool per
   weapon name; an earlier launcher may drain pool mid-resolution, and a later

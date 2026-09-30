@@ -428,6 +428,44 @@ describe("game integration: weapon heat", () => {
     expect(weaponHeatEvent!.base).toBe(0);
     expect(weaponHeatEvent!.totalGenerated).toBe(7);
   });
+
+  it("rapid-fire heat scales per shot: Ultra AC/5 double-tap adds 2 even on a miss (TW p.103-104)", () => {
+    // HER-5SA Ultra AC/5 (weaponIndex 3, 1-based, heat 1/shot): raw to-hit 2 jams and
+    // misses TN 6, but both fired shots still cost ammo (declared) and heat.
+    const units: UnitInit[] = [
+      {
+        id: "her",
+        model: "HER-5SA",
+        team: 0,
+        gunnery: 4,
+        piloting: 5,
+        position: { col: 2, row: 4 },
+        facing: "ne",
+      },
+      {
+        id: "enf",
+        model: "ENF-4R",
+        team: 1,
+        gunnery: 4,
+        piloting: 5,
+        position: { col: 3, row: 4 },
+        facing: "nw",
+      },
+    ];
+    const state = createTestBattle([], units, true);
+    startAttackTurn(state);
+    declareAttacks(state, "her", [{ weaponIndex: 3, targetId: "enf", rapidFire: true }], []);
+    const events: GameEvent[] = [];
+    resolveAllAttacks(state, scriptedRng(1, 1), events);
+    const her = requireUnit(state, "her");
+    expect(her.heat).toBe(0);
+    expect(her.heatPending).toBe(2);
+    const weaponHeatEvent = events.find(
+      (e): e is Extract<GameEvent, { kind: "heatWeapon" }> => e.kind === "heatWeapon",
+    );
+    expect(weaponHeatEvent?.heat).toBe(2);
+    expect(weaponHeatEvent?.totalGenerated).toBe(2);
+  });
 });
 
 describe("game integration: dissipation", () => {

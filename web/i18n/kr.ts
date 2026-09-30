@@ -546,6 +546,7 @@ export const kr: Catalog = {
   "res.physical.autoFall": "최소 {target} 필요, 자동으로 넘어짐",
   "res.outOfAmmo": "{weapon} 탄약 부족으로 발사 중지",
   "res.clusterRoll": "클러스터 굴림 2D6 = {roll}",
+  "res.clusterMod": "클러스터 사거리 보정 {mod}",
   "res.hits": "명중: {groups} ({arc})",
   "res.armBlownOff": "; {cause} 파괴 -> {arm} 절단",
   "res.immobilized": "; 이동 불능",

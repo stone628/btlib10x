@@ -63,6 +63,12 @@ export function clusterHits(missiles: number, roll2d6: number): number {
   return lookup(CLUSTER_TABLE, roll2d6, col);
 }
 
+/** HAG range-dependent cluster-roll modifier (TW p.136): +2 at short range,
+ *  -2 at long range, applied to the 2D6 roll with results clamped to 2..12. */
+export function modifiedClusterRoll(roll2d6: number, mod: number): number {
+  return Math.min(12, Math.max(2, roll2d6 + mod));
+}
+
 /** Split missiles into damage lots of `per` (LRM: one location per lot of 5). */
 export function groupMissiles(total: number, per: number): number[] {
   const groups: number[] = [];
