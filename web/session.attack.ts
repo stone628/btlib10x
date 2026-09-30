@@ -745,24 +745,24 @@ export function resolutionLines(r: AttackResolution): string[] {
       jam: r.jammed ? i18n("res.jamSuffix") : "",
     }),
   ];
-  if (r.ammoExhausted === true) lines.push(i18n("res.outOfAmmo", { weapon: r.weapon }));
-  if (r.clusterRoll !== null) lines.push(i18n("res.clusterRoll", { roll: r.clusterRoll }));
+  if (r.ammoExhausted === true) lines.push("  " + i18n("res.outOfAmmo", { weapon: r.weapon }));
+  if (r.clusterRoll !== null) lines.push("  " + i18n("res.clusterRoll", { roll: r.clusterRoll }));
   if (r.clusterMod !== null && r.clusterMod !== 0)
     lines.push(
-      i18n("res.clusterMod", { mod: r.clusterMod > 0 ? `+${r.clusterMod}` : `${r.clusterMod}` }),
+      "  " + i18n("res.clusterMod", { mod: r.clusterMod > 0 ? `+${r.clusterMod}` : `${r.clusterMod}` }),
     );
   if (r.hit && r.groups.length > 0) {
     lines.push(
-      i18n("res.hits", {
+      "  " + i18n("res.hits", {
         groups: r.groups.map((g) => formatHitGroup(g)).join(" "),
         arc: i18n(ARC_LABEL[r.arc]),
       }),
     );
     const detail = transferDetail(r);
-    if (detail) lines.push(`  ${detail}`);
+    if (detail) lines.push(`    ${detail}`);
   }
   for (const crit of r.crits) {
-    for (const line of critLines(crit)) lines.push(`  ${line}`);
+    for (const line of critLines(crit)) lines.push(`    ${line}`);
   }
   return lines;
 }
