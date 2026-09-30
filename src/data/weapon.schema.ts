@@ -42,6 +42,8 @@ export interface WeaponDef {
   readonly streak?: boolean;
   /** Heat points generated per shot (Total Warfare Weapons & Equipment tables). */
   readonly heat?: number;
+  /** TODO: explosion damage from critical hit, per TW p.135 */
+  readonly critExplosion?: number;
   /** Broad weapon class used for catalog grouping and UI categorization. */
   readonly category: WeaponCategory;
 }

@@ -210,6 +210,7 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     minRange: 2,
     category: "BALLISTIC",
     heat: 1,
+    critExplosion: 20,
   },
   {
     name: "Gauss Rifle",
@@ -220,6 +221,7 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     minRange: 2,
     category: "BALLISTIC",
     heat: 1,
+    critExplosion: 20,
   },
   {
     name: "CL LB 20-X AC",
@@ -270,6 +272,7 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     minRange: 3,
     category: "BALLISTIC",
     heat: 1,
+    critExplosion: 16,
   },
   {
     name: "Heavy Gauss Rifle",
@@ -280,6 +283,7 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     minRange: 4,
     category: "BALLISTIC",
     heat: 2,
+    critExplosion: 25,
   },
   {
     name: "LB 2-X AC",
@@ -546,6 +550,7 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     damage: 3,
     category: "BALLISTIC",
     heat: 1,
+    critExplosion: 3,
   },
   {
     name: "HAG 20",
@@ -557,8 +562,9 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     missiles: 20,
     category: "BALLISTIC",
     heat: 4,
+    critExplosion: 10,
     clusterRangeMod: { short: 2, medium: 0, long: -2 },
-   },
+  },
   {
     name: "HAG 30",
     short: 8,
@@ -569,6 +575,7 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     missiles: 30,
     category: "BALLISTIC",
     heat: 6,
+    critExplosion: 10,
     clusterRangeMod: { short: 2, medium: 0, long: -2 },
   },
   {
@@ -581,6 +588,7 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     missiles: 40,
     category: "BALLISTIC",
     heat: 8,
+    critExplosion: 10,
     clusterRangeMod: { short: 2, medium: 0, long: -2 },
   },
   {
