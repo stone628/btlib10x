@@ -47,7 +47,7 @@ function hbkVsEnf(): BattleState {
 function snapshotUnit(state: BattleState, id: string) {
   const u = state.units[id]!;
   return {
-    declaredAttacks: u.declaredAttacks,
+    declaredAttacks: u.declaredWeaponAttacks,
     firedTargetId: u.firedTargetId,
     ammoBins: u.ammoBins,
     actedThisPhase: state.actedThisPhase,

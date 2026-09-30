@@ -34,7 +34,8 @@ import type { HexCell, HexCoord, Location, WreckState } from "../core/types";
 import type { AmmoBins } from "./ammo";
 import type { BuildingState } from "./building";
 import type { UnitDamageState } from "./damage";
-import type { AttackDecl, BattleState, Phase, UnitState } from "./game";
+import type { BattleState, Phase, UnitState, AttackDecl as WeaponAttackDecl } from "./game";
+import type { PhysicalAttackDecl } from "./physical";
 
 /** Detached deep copy of a `BattleState`. Treat as immutable. */
 type BattleSnapshot = BattleState;
@@ -83,7 +84,11 @@ function cloneAmmoBins(bins: Readonly<AmmoBins>): AmmoBins {
   return out;
 }
 
-function cloneAttackDecl(decl: AttackDecl): AttackDecl {
+function cloneWeaponAttackDecl(decl: WeaponAttackDecl): WeaponAttackDecl {
+  return { ...decl };
+}
+
+function clonePhysicalAttackDecl(decl: PhysicalAttackDecl): PhysicalAttackDecl {
   return { ...decl };
 }
 
@@ -123,7 +128,8 @@ function cloneUnitState(unit: UnitState): UnitState {
     heat: unit.heat,
     heatPending: unit.heatPending,
     shutdown: unit.shutdown,
-    declaredAttacks: unit.declaredAttacks.map(cloneAttackDecl),
+    declaredWeaponAttacks: unit.declaredWeaponAttacks.map(cloneWeaponAttackDecl),
+    declaredPhysicalAttacks: unit.declaredPhysicalAttacks.map(clonePhysicalAttackDecl),
     firedTargetId: unit.firedTargetId,
     passedAttacks: unit.passedAttacks,
     destroyed: unit.destroyed,
@@ -281,7 +287,7 @@ export function loadUnitState(unit: UnitState, snapshot: UnitSnapshot): void {
   unit.heat = next.heat;
   unit.heatPending = next.heatPending;
   unit.shutdown = next.shutdown;
-  unit.declaredAttacks = next.declaredAttacks;
+  unit.declaredWeaponAttacks = next.declaredWeaponAttacks;
   unit.firedTargetId = next.firedTargetId;
   unit.passedAttacks = next.passedAttacks;
   unit.destroyed = next.destroyed;

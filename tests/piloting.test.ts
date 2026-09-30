@@ -955,7 +955,7 @@ describe("prone combat", () => {
     const hbk = requireUnit(state, "hbk");
     hbk.prone = true;
     declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], []);
-    expect(hbk.declaredAttacks).toHaveLength(1);
+    expect(hbk.declaredWeaponAttacks).toHaveLength(1);
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(1, 1), events);
     const res = events.find((e) => e.kind === "attackResolved") as

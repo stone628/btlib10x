@@ -673,7 +673,7 @@ describe("weapon attack phase", () => {
         continue;
       }
       declareAttacks(state, "hbk", [{ weaponIndex: c.weaponIndex, targetId: "enf" }], []);
-      expect(state.units.hbk!.declaredAttacks).toEqual([
+      expect(state.units.hbk!.declaredWeaponAttacks).toEqual([
         expect.objectContaining({
           weaponIndex: c.weaponIndex,
           targetId: "enf",
@@ -714,7 +714,7 @@ describe("weapon attack phase", () => {
       ).toThrow(/cannot fire into the leftSide arc/);
     }
     declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], []);
-    expect(state.units.hbk!.declaredAttacks[0]).toEqual(
+    expect(state.units.hbk!.declaredWeaponAttacks[0]).toEqual(
       expect.objectContaining({ weaponIndex: 1, arc: "leftSide" }),
     );
   });
@@ -745,7 +745,7 @@ describe("weapon attack phase", () => {
     ];
     const state = startAttackTurn(createTestBattle([], units, true));
     declareAttacks(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }], []);
-    const decl = state.units.hbk!.declaredAttacks[0]!;
+    const decl = state.units.hbk!.declaredWeaponAttacks[0]!;
     expect(decl.arc).toBe("front");
     expect(decl.attackDirection).toBe("rear");
     const rearBefore = requireUnit(state, "enf").damage.armorRear.centerTorso!;
@@ -789,7 +789,7 @@ describe("weapon attack phase", () => {
     ];
     const state = startAttackTurn(createTestBattle([], units, true));
     declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], []);
-    const decl = state.units.hbk!.declaredAttacks[0]!;
+    const decl = state.units.hbk!.declaredWeaponAttacks[0]!;
     expect(decl.arc).toBe("front");
     expect(decl.attackDirection).toBe("leftSide");
     // to-hit 12 (6,6) hits; location 4 (2,2) -> leftArm on the left-side table.
@@ -839,7 +839,7 @@ describe("weapon attack phase", () => {
       ],
       [],
     );
-    expect(state.units.as7!.declaredAttacks).toHaveLength(2);
+    expect(state.units.as7!.declaredWeaponAttacks).toHaveLength(2);
   });
 
   it("validates LOS, range, target count, and auto-miss aborts", () => {
@@ -999,7 +999,7 @@ describe("weapon attack phase", () => {
     advancePhase(state, []); // end -> initiative, turn 2
     expect(state.turn).toBe(2);
     expect(requireUnit(state, "hbk").moveMode).toBeNull();
-    expect(requireUnit(state, "hbk").declaredAttacks).toHaveLength(0);
+    expect(requireUnit(state, "hbk").declaredWeaponAttacks).toHaveLength(0);
 
     rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []);
     advancePhase(state, []);

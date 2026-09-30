@@ -13,6 +13,7 @@ import {
   type Facing,
   type HexCell,
   type HexCoord,
+  isArm,
   isFacing,
   isTorso,
   LOCATIONS,
@@ -106,6 +107,12 @@ import {
 } from "./los";
 import * as mv from "./movement";
 import { BACKWARD_LEVEL_CHANGE_MAX, FORWARD_LEVEL_CHANGE_MAX, JUMP_MP_PER_HEX } from "./movement";
+import {
+  type PhysicalAttackDecl,
+  type PhysicalResolution,
+  resolvePhysicalAttack,
+  validatePhysicalAttack,
+} from "./physical";
 import {
   buildingEntryModifier,
   consciousnessTarget,
@@ -268,7 +275,9 @@ export interface UnitState extends MechModelHolder {
    *  the next initiative roll) or "not" (online). Anything but "not" counts
    *  as shut down: cannot move, fire, or act as the next actor. */
   shutdown: ShutdownState;
-  declaredAttacks: AttackDecl[];
+  declaredWeaponAttacks: AttackDecl[];
+  /** Physical attack declarations (punch, kick, push, club) for this phase. */
+  declaredPhysicalAttacks: PhysicalAttackDecl[];
   firedTargetId: string | null;
   /** True if the unit explicitly passed on declaring attacks this phase. */
   passedAttacks: boolean;
@@ -314,6 +323,19 @@ export type GameEvent =
       readonly unitId: string;
       readonly targetId: string;
       readonly resolution: AttackResolution;
+    }
+  | {
+      readonly kind: "physicalAttacksDeclared";
+      readonly unitId: string;
+      readonly targetId: string;
+      readonly count: number;
+      readonly type: string;
+    }
+  | {
+      readonly kind: "physicalAttackResolved";
+      readonly unitId: string;
+      readonly targetId: string;
+      readonly resolution: PhysicalResolution;
     }
   | {
       readonly kind: "unitRemoved";
@@ -820,7 +842,8 @@ export function createBattle(
       heat: 0,
       heatPending: 0,
       shutdown: "not",
-      declaredAttacks: [],
+      declaredWeaponAttacks: [],
+      declaredPhysicalAttacks: [],
       firedTargetId: null,
       passedAttacks: false,
       destroyed: "not",
@@ -1559,14 +1582,16 @@ export function declareAttacks(
 ): void {
   requireCurrentActor(state, unitId, "weaponAttack");
   const unit = requireUnit(state, unitId);
-  if (unit.declaredAttacks.length > 0)
+  if (unit.declaredWeaponAttacks.length > 0)
     throw new Error(`${unitId} already declared attacks this turn`);
   const volley = validateAttacksImpl(state, unitId, decls, { twist: options.twist ?? null });
   const def = mechDefFor(unit);
+  const physicalConflict = physicalWeaponConflict(def, decls, unit.declaredPhysicalAttacks);
+  if (physicalConflict !== null) throw new Error(physicalConflict);
   // Consume non-streak per-bin ammo per decl; streak fires on hit and
   // resolves its own ammo in `resolveUnitAttacks`. RNG via ammo policy.
   for (const decl of decls) {
-    unit.declaredAttacks.push({
+    unit.declaredWeaponAttacks.push({
       ...decl,
       ...(volley.arcs[decl.weaponIndex] !== undefined
         ? { arc: volley.arcs[decl.weaponIndex] }
@@ -1596,6 +1621,95 @@ export function declareAttacks(
   });
 }
 
+/**
+ * Weapon / physical-attack interaction backstop (TW pp. 145, 147): a
+ * punching arm or kicking leg cannot fire its mounted weapons that turn,
+ * and a pushing / clubbing 'Mech fires no arm-mounted weapons at all.
+ * Returns a human-readable conflict, or null when the combination is
+ * legal. The web layer pre-checks the same rules for better messages;
+ * `declareAttacks` / `declarePhysicalAttacks` enforce them so out-of-order
+ * API calls cannot smuggle an illegal volley past.
+ */
+function physicalWeaponConflict(
+  def: ResolvedMechDef,
+  weaponDecls: readonly AttackDecl[],
+  physicalDecls: readonly PhysicalAttackDecl[],
+): string | null {
+  const punchedArms = new Set<string>();
+  const kickedLegs = new Set<string>();
+  let noArmWeapons = false;
+  for (const p of physicalDecls) {
+    if (p.type === "punch" && p.limb !== undefined) punchedArms.add(p.limb);
+    if (p.type === "kick" && p.limb !== undefined) kickedLegs.add(p.limb);
+    if (p.type === "push" || p.type === "club") noArmWeapons = true;
+  }
+  for (const w of weaponDecls) {
+    const loc = def.weapons[w.weaponIndex]?.location;
+    if (loc === undefined) continue;
+    if (punchedArms.has(loc)) return `punching ${loc} cannot fire its weapons`;
+    if (kickedLegs.has(loc)) return `kicking ${loc} cannot fire its weapons`;
+    if (noArmWeapons && isArm(loc)) return "pushing/clubbing 'Mech fires no arm-mounted weapons";
+  }
+  return null;
+}
+
+/**
+ * Declare physical attacks (punch, kick, push, club) for the current
+ * weapon-attack-phase actor. Weapons and physical attacks coexist in one
+ * turn (e.g. punch plus torso weapons); commit order is weapons first,
+ * then physical. Enforces the one-type-per-turn rule (TW p. 144) with the
+ * two-arm punch exception (one punch per arm, separate rolls), per-decl
+ * legality via `validatePhysicalAttack`, and the arm/leg weapon
+ * interactions above. Pushes the unit to `actedThisPhase` unless its
+ * weapon declaration already did, and emits `physicalAttacksDeclared`.
+ */
+export function declarePhysicalAttacks(
+  state: BattleState,
+  unitId: string,
+  decls: readonly PhysicalAttackDecl[],
+  sink: GameEvent[],
+  _rng: Rng = DEFAULT_RNG,
+): void {
+  requireCurrentActor(state, unitId, "weaponAttack");
+  const unit = requireUnit(state, unitId);
+  if (isUnitRemoved(unit)) throw new Error(`${unitId} is destroyed`);
+  if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot attack`);
+  if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot attack`);
+  if (decls.length === 0)
+    throw new Error("declarePhysicalAttacks requires at least one declaration");
+  if (unit.declaredPhysicalAttacks.length > 0)
+    throw new Error(`${unitId} already declared physical attacks this turn`);
+  const types = new Set(decls.map((d) => d.type));
+  if (types.size > 1)
+    throw new Error(`${unitId} may make only one type of physical attack per turn`);
+  const normalized: PhysicalAttackDecl[] = decls.map((d) => {
+    if (d.type === "punch" && d.limb === undefined) return { ...d, limb: "rightArm" as const };
+    if (d.type === "kick" && d.limb === undefined) return { ...d, limb: "rightLeg" as const };
+    return { ...d };
+  });
+  const punches = normalized.filter((d) => d.type === "punch");
+  if (punches.length > 2) throw new Error(`${unitId} may punch with at most two arms`);
+  const punchLimbs = punches.map((d) => d.limb);
+  if (new Set(punchLimbs).size !== punchLimbs.length)
+    throw new Error(`${unitId} may punch with each arm only once per turn`);
+  for (const decl of normalized) {
+    const result = validatePhysicalAttack(state, unitId, decl);
+    if (!result.ok) throw new Error(result.reason ?? "invalid physical attack");
+  }
+  const def = mechDefFor(unit);
+  const conflict = physicalWeaponConflict(def, unit.declaredWeaponAttacks, normalized);
+  if (conflict !== null) throw new Error(conflict);
+  for (const decl of normalized) unit.declaredPhysicalAttacks.push({ ...decl });
+  if (!state.actedThisPhase.includes(unitId)) state.actedThisPhase.push(unitId);
+  sink.push({
+    kind: "physicalAttacksDeclared",
+    unitId,
+    targetId: normalized[0]!.targetId,
+    count: normalized.length,
+    type: normalized[0]!.type,
+  });
+}
+
 function resolveUnitAttacks(
   state: BattleState,
   unit: UnitState,
@@ -1608,12 +1722,12 @@ function resolveUnitAttacks(
   const sensorMod = sensorAttackModifier(
     countDestroyedSensor(def, unit.damage, unit.critSlotsDestroyed),
   );
-  const pronePropArm = inferPronePropArm(def, unit.declaredAttacks, unit.prone);
+  const pronePropArm = inferPronePropArm(def, unit.declaredWeaponAttacks, unit.prone);
   let currentAmmoBins = { ...unit.ammoBins };
   const jammedWeapons: number[] = [];
   const resolutions: UnitAttackResolution[] = [];
 
-  for (const decl of unit.declaredAttacks) {
+  for (const decl of unit.declaredWeaponAttacks) {
     const mount = def.weapons[decl.weaponIndex]!;
     const weapon = weaponDefFor(mount);
     const target = requireUnit(state, decl.targetId);
@@ -2156,7 +2270,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     phaseStartCf[key] = building.cf;
   }
   for (const unit of Object.values(state.units)) {
-    if (unit.declaredAttacks.length === 0) continue;
+    if (unit.declaredWeaponAttacks.length === 0) continue;
     results.push(resolveUnitAttacks(state, unit, rng, baseDamage, phaseStartCf));
   }
 
@@ -2431,6 +2545,92 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     }
   }
 
+  // Sub-pass 2: Physical attacks (TW p. 37: physical attacks resolve after weapon attacks)
+  for (const unit of Object.values(state.units)) {
+    if (unit.declaredPhysicalAttacks.length === 0) continue;
+    for (const decl of unit.declaredPhysicalAttacks) {
+      const resolution = resolvePhysicalAttack(state, unit.id, decl, rng);
+      sink.push({
+        kind: "physicalAttackResolved",
+        unitId: unit.id,
+        targetId: decl.targetId,
+        resolution,
+      });
+
+      // Apply damage to target
+      if (resolution.hit && resolution.damageToTarget.length > 0) {
+        const target = requireUnit(state, decl.targetId);
+        for (const group of resolution.damageToTarget) {
+          const back = bearingExact(target.position, unit.position)!;
+          const dir = classifyArcWithBoundary(target.facing, back);
+          const attackDirection = defenderArcChoice(dir.arc, dir.altArc);
+          const app = applyDamage(target.damage, group.location, group.damage, attackDirection);
+          target.damage = app.after;
+        }
+      }
+
+      // Apply damage to attacker (e.g., kick miss PSR)
+      if (resolution.damageToAttacker.length > 0) {
+        for (const group of resolution.damageToAttacker) {
+          const app = applyDamage(unit.damage, group.location, group.damage, "front");
+          unit.damage = app.after;
+        }
+      }
+
+      // Handle displacement
+      if (resolution.targetDisplacedTo && !isUnitRemoved(requireUnit(state, decl.targetId))) {
+        const target = requireUnit(state, decl.targetId);
+        target.position = resolution.targetDisplacedTo;
+      }
+      if (resolution.attackerDisplacedTo && !isUnitRemoved(unit)) {
+        unit.position = resolution.attackerDisplacedTo;
+      }
+
+      // Handle falls
+      if (resolution.targetFalls && !isUnitRemoved(requireUnit(state, decl.targetId))) {
+        const target = requireUnit(state, decl.targetId);
+        applyFall(
+          state,
+          target,
+          rng,
+          { cause: "physicalAttack", seatbeltModifier: null, halved: false },
+          sink,
+        );
+      }
+      if (resolution.attackerFalls && !isUnitRemoved(unit)) {
+        applyFall(
+          state,
+          unit,
+          rng,
+          { cause: "physicalAttack", seatbeltModifier: null, halved: false },
+          sink,
+        );
+      }
+
+      // Pilot damage (TW p.41): head hits land 1 point per damaging
+      // grouping. Physical attacks roll no crits in this subset, so there
+      // are no ammo explosions to account for here.
+      if (resolution.hit) {
+        const target = requireUnit(state, decl.targetId);
+        if (!isUnitRemoved(target)) {
+          const headGroups = resolution.damageToTarget.filter(
+            (g) => g.location === "head" && g.damage >= 1,
+          ).length;
+          if (headGroups > 0)
+            applyPilotHits(state, target, headGroups * HEAD_HIT_PILOT_HITS, "headHit", rng, sink);
+        }
+      }
+    }
+  }
+
+  // Destruction from physical-attack damage, displacement falls, and pilot
+  // hits above lands before the end-of-phase piloting sweep.
+  for (const unit of Object.values(state.units)) {
+    if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
+      markUnitDestroyed(unit, destroyedReasonFor(unit.damage), sink);
+    }
+  }
+
   // End-of-phase piloting: falls from this phase's damage and crits.
   const before: PhaseSnapshots = { damage: baseDamage, crit: {} };
   for (const unit of Object.values(state.units)) {
@@ -2440,7 +2640,8 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
 
   // Clear declared attacks for all units
   for (const unit of Object.values(state.units)) {
-    unit.declaredAttacks = [];
+    unit.declaredWeaponAttacks = [];
+    unit.declaredPhysicalAttacks = [];
   }
 }
 
@@ -2497,7 +2698,7 @@ export function advancePhase(state: BattleState, sink: GameEvent[], rng: Rng = D
         unit.movesThisTurn = [];
         unit.jumpedThisTurn = false;
         unit.mpSpent = 0;
-        unit.declaredAttacks = [];
+        unit.declaredWeaponAttacks = [];
         unit.firedTargetId = null;
         unit.passedAttacks = false;
         // A successful voluntary startup comes online just before the next

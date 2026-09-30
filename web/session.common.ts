@@ -72,7 +72,12 @@ import {
 } from "./misc";
 import { createBoardRenderUnit, createEjectedBoardRenderUnits } from "./render";
 import { requireBattle, type Session, type SessionGameEvent, victoryBannerChunk } from "./session";
-import { critLines, fireSuggestionChunks, resolutionLines } from "./session.weapon";
+import {
+  critLines,
+  fireSuggestionChunks,
+  physicalResolutionLines,
+  resolutionLines,
+} from "./session.weapon";
 
 /** Full heat-scale status for one unit, driven by the `heat` CLI command. */
 export function heatStatusLines(unit: UnitState): Chunk {
@@ -1130,6 +1135,20 @@ function handleSessionGameEvent(
       break;
     case "attackResolved":
       idLines(e.unitId, `[${e.unitId} -> ${e.targetId}]`, ...resolutionLines(e.resolution));
+      break;
+    case "physicalAttacksDeclared":
+      idLines(
+        e.unitId,
+        i18n(e.count === 1 ? "log.physicalDeclaredOne" : "log.physicalDeclaredOther", {
+          id: e.unitId,
+          type: e.type,
+          target: e.targetId,
+          count: e.count,
+        }),
+      );
+      break;
+    case "physicalAttackResolved":
+      idLines(e.unitId, `[${e.unitId} -> ${e.targetId}]`, ...physicalResolutionLines(e.resolution));
       break;
     case "unitRemoved":
       switch (e.reason) {

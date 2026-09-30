@@ -322,12 +322,33 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   wrecks a leg/gyro or knocks the pilot out, which drops the 'Mech on the
   spot. Exiting a building hex requires no PSR.
 
+### Implemented subset: physical attacks (punch, kick, push, club)
+
+- **Declaration** — in the weapon attack phase alongside `fire`: `punch
+  <target> [left|right]` (default right; queue twice for both arms, one
+  roll each), `kick <target> [left|right]` (default right), `push
+  <target>`, `club <target>`. One type per turn (two-arm punch excepted).
+  A punching arm / kicking leg cannot fire its mounted weapons, and
+  push / club bars all arm-mounted weapons. `candidate` lists legal
+  physical options for adjacent enemies; `status` shows the queued
+  physical declarations.
+- **Resolution** — after all weapon attacks in `resolveAllAttacks`
+  (TW p. 37 order): punch damage 1/10 t on the Punch table, kick 1/5 t
+  on the Kick table, club 1/5 t on the standard table, push no damage
+  with target displacement + attacker advance. Kick forces a target PSR
+  (plus an attacker PSR on a miss); push forces both sides' PSRs. Head
+  hits injure the pilot as usual.
+- **Deferred** — charge / DFA (movement-phase declarations), club
+  acquisition (blown-off limbs, trees, girders), physical-weapon equipment
+  (hatchet, sword, …), critical hits from physical damage, domino effect /
+  accidental falls from above.
+
 ### Not yet implemented
 
-- **Physical attacks** — punch, kick, charge, DFA.
-- **Physical-attack PSR triggers** — kicks, pushes, charges, DFAs, and
-  missed kicks/charges force falls in TW, but without a physical attack
-  phase there is nothing to trigger them (see Not viable below).
+- **Charge / DFA physical attacks**.
+- **Physical-attack critical hits** — physical damage transfers armor /
+  structure and can destroy locations, but rolls no determining crits yet
+  (weapon-attack crits are fully implemented).
 - **Water depth movement** — level-change MP surcharge when entering water
   (the water-entry PSR itself is implemented above).
 - **Torso twist** — per-weapon facing override that shifts a unit's firing
@@ -361,17 +382,16 @@ These piloting-adjacent rules cannot be implemented without breaking limits
 stated elsewhere in this document or the codebase:
 
 - **Pavement skidding with displacement** (TW p.62) — a failed running skid
-  slides the 'Mech extra hexes before it falls. The engine has no
-  unit-displacement mechanic (nothing pushes or throws a 'Mech; cf.
-  "Physical attacks" above and the atomic commit boundary in AGENTS.md), so
-  only the fall itself could land, never the slide.
-- **Falls from displacement / above** (TW pp.151-152) — pushes, charges,
-  DFAs and accidental falls from above displace a unit across hexes or
-  levels before it falls. All falls here from combat PSRs, shutdowns,
-  stand-up attempts and building crashes happen in place (0 levels fallen);
-  only ground-movement falls across levels use the `levelsFallen` term
-  (lower-hex rule), since no rule in the subset displaces a unit. DFA's
-  2-level rear-column fall waits on the physical phase.
+  slides the 'Mech extra hexes before it falls. The engine's only
+  displacement mechanic is the push attack (cf. the atomic commit boundary
+  in AGENTS.md), so only the fall itself could land, never the slide.
+- **Falls from displacement / above** (TW pp.151-152) — charges, DFAs and
+  accidental falls from above displace a unit across hexes or levels
+  before it falls. All falls here from combat PSRs, shutdowns, stand-up
+  attempts and building crashes happen in place (0 levels fallen); only
+  ground-movement falls across levels use the `levelsFallen` term
+  (lower-hex rule), since push is the only displacing rule in the subset.
+  DFA's 2-level rear-column fall waits on the charge/DFA phase.
 - **One-legged hopping movement** (TW p.122: walk 1 MP, no run, jump with PSR
   each landing) — `effectiveMovement` caps a standing one-leg 'Mech at
   `walking: 1, running: 0`; jump MP unchanged. A prone one-leg 'Mech may

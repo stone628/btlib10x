@@ -59,7 +59,7 @@ describe("commitAtomic rollback", () => {
     expect(s.battle!.units[actor]!.prone).toBe(true);
     expect(s.battle!.units[actor]!.heat).toBe(heatBefore);
     expect(s.battle!.units[actor]!.mpSpent).toBe(0);
-    expect(s.battle!.units[actor]!.declaredAttacks ?? []).toEqual([]);
+    expect(s.battle!.units[actor]!.declaredWeaponAttacks ?? []).toEqual([]);
     // Session buffers preserved: declaration intact, actor still current.
     expect(s.move!.moveMode).toBe("standup");
     expect(s.move!.moveSteps).toHaveLength(1);
@@ -106,10 +106,10 @@ describe("commitAtomic rollback", () => {
     expect(rng.snapshot()).toBe(rngSnap);
     expect(rng.remaining()).toBe(13);
     expect(s.battle!.units[target]!.damage).toEqual(damageBefore);
-    expect(s.battle!.units[attacker]!.declaredAttacks).toEqual([]);
+    expect(s.battle!.units[attacker]!.declaredWeaponAttacks).toEqual([]);
     // First unit committed successfully before the scripted rng was
     // installed: its declarations predate the snapshot and survive.
-    expect(s.battle!.units[first]!.declaredAttacks).toHaveLength(2);
+    expect(s.battle!.units[first]!.declaredWeaponAttacks).toHaveLength(2);
     expect(s.attack!.actorId).toBe(attacker);
     expect(s.attack!.fireDecls).toHaveLength(2);
     expect(s.attack!.torsoTwist).toBe("front");
