@@ -411,25 +411,30 @@ export function physicalResolutionLines(r: PhysicalResolution): string[] {
   }
 
   if (r.targetPsr) {
-    const outcome =
-      r.targetPsr.roll === null
-        ? i18n(r.targetPsr.success ? "res.physical.autoStand" : "res.physical.autoFall")
-        : i18n(r.targetPsr.success ? "res.physical.stands" : "res.physical.falls", {
-            roll: r.targetPsr.roll,
-          });
-    lines.push(i18n("res.physical.targetPsr", { outcome }));
+    lines.push(i18n("res.physical.targetPsr", { outcome: physicalPsrOutcome(r.targetPsr) }));
   }
   if (r.attackerPsr) {
-    const outcome =
-      r.attackerPsr.roll === null
-        ? i18n(r.attackerPsr.success ? "res.physical.autoStand" : "res.physical.autoFall")
-        : i18n(r.attackerPsr.success ? "res.physical.stands" : "res.physical.falls", {
-            roll: r.attackerPsr.roll,
-          });
-    lines.push(i18n("res.physical.attackerPsr", { outcome }));
+    lines.push(i18n("res.physical.attackerPsr", { outcome: physicalPsrOutcome(r.attackerPsr) }));
   }
 
   return lines;
+}
+
+/** Render one physical-attack PSR outcome, always showing the target number. */
+function physicalPsrOutcome(psr: {
+  target: number;
+  roll: number | null;
+  success: boolean;
+}): string {
+  if (psr.roll === null) {
+    return i18n(psr.success ? "res.physical.autoStand" : "res.physical.autoFall", {
+      target: psr.target,
+    });
+  }
+  return i18n(psr.success ? "res.physical.stands" : "res.physical.falls", {
+    target: psr.target,
+    roll: psr.roll,
+  });
 }
 
 const TWIST: Readonly<Record<string, Arc>> = {
