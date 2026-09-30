@@ -35,6 +35,8 @@ export interface WeaponDef {
   readonly variableDamage?: readonly [number, number, number];
   readonly pulse?: boolean;
   readonly antiInfantry?: boolean;
+  /** TODO: apply cluster range mod if it exists */
+  readonly clusterRangeMod?: WeaponClusterRangeMod;
   readonly rapidFireShots?: number;
   /** Streak launcher: full tube count hits on success, no cluster roll. */
   readonly streak?: boolean;
@@ -42,6 +44,12 @@ export interface WeaponDef {
   readonly heat?: number;
   /** Broad weapon class used for catalog grouping and UI categorization. */
   readonly category: WeaponCategory;
+}
+
+export interface WeaponClusterRangeMod {
+  readonly short: number;
+  readonly medium: number;
+  readonly long: number;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

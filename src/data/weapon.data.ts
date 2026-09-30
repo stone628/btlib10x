@@ -557,7 +557,8 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     missiles: 20,
     category: "BALLISTIC",
     heat: 4,
-  },
+    clusterRangeMod: { short: 2, medium: 0, long: -2 },
+   },
   {
     name: "HAG 30",
     short: 8,
@@ -568,6 +569,7 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     missiles: 30,
     category: "BALLISTIC",
     heat: 6,
+    clusterRangeMod: { short: 2, medium: 0, long: -2 },
   },
   {
     name: "HAG 40",
@@ -579,6 +581,7 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     missiles: 40,
     category: "BALLISTIC",
     heat: 8,
+    clusterRangeMod: { short: 2, medium: 0, long: -2 },
   },
   {
     name: "CL Heavy Machine Gun",
