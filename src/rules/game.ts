@@ -383,7 +383,6 @@ export type GameEvent =
   | {
       readonly kind: "heatWeapon";
       readonly unitId: string;
-      readonly weapon: string;
       readonly heat: number;
       readonly base: number;
       readonly totalGenerated: number;
@@ -2365,7 +2364,6 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       sink.push({
         kind: "heatWeapon",
         unitId: attacker.id,
-        weapon: result.resolutions[0]?.resolution.weapon ?? "",
         heat: totalWeaponHeat,
         base: attacker.heat,
         totalGenerated: attacker.heatPending,

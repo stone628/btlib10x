@@ -425,7 +425,6 @@ describe("game integration: weapon heat", () => {
       (e): e is Extract<GameEvent, { kind: "heatWeapon" }> => e.kind === "heatWeapon",
     );
     expect(weaponHeatEvent).toBeDefined();
-    expect(weaponHeatEvent!.weapon).toBe("AC/20");
     expect(weaponHeatEvent!.base).toBe(0);
     expect(weaponHeatEvent!.totalGenerated).toBe(7);
   });
