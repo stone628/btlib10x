@@ -11,6 +11,13 @@
 
 - need snapshot keeping, capable of rollback N steps like ctrl-z
 - The Physical Attack Phase. advancePhase runs initiative → movement → weaponAttack → end, with the heat phase folded into the weaponAttack exit. TW inserts a physical attack phase between weapon fire and heat, carrying punch, kick, push, club, charge and Death From Above. None exists. This also strands the handActuator and shoulder crit slots, whose published effects are largely physical. (Physical-triggered PSRs — kicks, pushes, charges, DFAs — wait on this phase; see "Not viable" in `docs/CLI.md`.)
+- **Weapon to-hit audit (TW p.303-304, p.113-114, p.117-118)** — prioritized, no implementation yet:
+  - P0: Replace `pulse`-only `pulseMod` (`src/rules/tohit.ts`) with a generic `toHitMod?: number` on `WeaponDef`. Data: MRM 10/20/30/40 `+1`, Clan Heavy Large/Medium/Small Laser `+1`, LB-X cluster mode `-1` (data prep; full mode in Later phases), Pulse `-2`. Keep `pulse: boolean` only for Targeting Computer / aimed-shot eligibility (TW p.113, p.143).
+  - P0 bug: `parseWeapon` (`src/data/weapon.schema.ts`) allowlist drops `clusterRangeMod` and `critExplosion` — HAG/Gauss rows in `weapon.data.ts` validate away. Include both keys (plus any future weapon flags) and add a round-trip test.
+  - P1: Apply HAG `clusterRangeMod` (`+2` short / `0` medium / `-2` long, clamp roll 2..12, TW p.136) in `resolveWeaponAttack`; fix `critExplosion` data 10/15/20 for HAG 20/30/40; confirm 5-point groupings.
+  - P1: Cluster-roll modifier pipeline (`src/rules/cluster.ts`, `src/rules/attack.ts`): Artemis IV `+2`, Narc pod `+2`, AMS `-4` (min 2, Streak-as-11, 1D6 vs single missile, 1 engagement/AMS/turn, 1 ammo + 1 heat each, TW p.129-130, p.138-139). ECM interaction stays in Later phases.
+  - P1: Rapid-fire heat/ammo `× shots` audit (TW p.103-104: `1/Sht` stored flat must multiply by `shots` at resolution in `game.ts`); rotary jam-clear rule (TW p.140: End Phase declare, next turn stand/walk only + no attacks, Gunnery+3 to clear) — jam is currently permanent.
+  - P2: GATOR `Other` modifiers: secondary target `+1` forward / `+2` side-rear (TW p.108), IndustrialMech `+1` (TW p.108); OS once-per-scenario + no-explode and PB same/adjacent-only legality gates (TW p.113-114); Flak `-2` gating (aerospace-scoped, TW p.113); H-weapon damage-as-heat option incl. Plasma Rifle `10 + 1D6` heat vs 'Mechs / `10+2D6` in 5-pt groups vs others, woods/building double, underwater ban (TW p.113, p.139-140); Gauss ammo-slot feed-wreck vs weapon-slot 20-pt blast + Heavy Gauss move+fire weight-class PSR (TW p.135-136); MGA / A-Pod / B-Pod one-shot behavior (TW p.130, p.137); missing catalog rows (IS ER Medium Laser, IS ER PPC, Rocket Launchers, Plasma Cannon, Light MG, iNarc launcher).
 
 ## In progress
 
@@ -256,3 +263,12 @@
 - Full intro-rules expansion: heat, physicals, piloting/falling (incl. partial
   cover), rear hits, multi-target arcs, vehicles/infantry, basements,
   hull-down, full water-depth movement, buildings damage beyond CF collapse
+- Weapon systems (deferred, TW pp.129-143, pp.303-305):
+  - Targeting Computer (`-1` DE/DB excl. flamer/MG; aimed-shot flow; bans; TW p.110, p.143).
+  - TAG designation + TAG-guided ammo (TW p.142-143).
+  - LRM indirect fire (`+1`, spotter move/LOS mods, spotter-fired `+1/+1`; TW p.111-112).
+  - C3 / C3i networks (range from nearest networked unit; TW p.131-133).
+  - ECM bubble (6-hex, kills Artemis/Narc/C3/probe; TW p.134-135).
+  - Stealth Armor (`+1` med / `+2` long vs it, +10 heat/turn, ECM-linked; TW p.142).
+  - Switchable ammo: LB-X slug/cluster (TW p.120-121, p.141), ATM Std/ER/HE (TW p.138), MML LRM/SRM (TW p.138).
+  - Special munitions: Armor-Piercing, Precision, Flechette/Fragmentation, Infernos, Semi-Guided, Narc-equipped, Haywire/Nemesis/ECM/Explosive pods (TW p.140-142).
