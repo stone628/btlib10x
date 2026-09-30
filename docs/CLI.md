@@ -142,7 +142,7 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   depth 2+ (water2/water3) blocks firing into and out of the hex
   (`blocksTargeting`).
 - **To-hit (GATOR)** — gunnery + attacker movement + target movement + range
-  bracket + intervening terrain + pulse + minimum range penalty; auto-hit ≤
+  bracket + intervening terrain + weapon mod + minimum range penalty; auto-hit ≤
   2, auto-miss > 12. Target-terrain modifier is data-driven
   (`terrainTargetMod`): lightWoods/heavyWoods +1/+2. A shut-down 'Mech (or
   one with both legs destroyed) is immobile and applies a flat −4 target
@@ -190,7 +190,8 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   the target's firing arc, and the attack-resolution hit line names the
   attack direction it resolved against.
 - **Weapons** — ballistic / energy / missile with short/medium/long range
-  brackets, rapid-fire, pulse (−2 to-hit), per-bin ammo tracking, jam on
+  brackets, rapid-fire, weapon to-hit mods (−2 pulse, +1 MRM / Clan heavy
+  lasers), per-bin ammo tracking, jam on
   natural 2 (multi-shot), LRM lots-of-5 grouping. Ammo is depleted per
   crit slot ("bin") under a per-unit policy set with `ammo <policy>`:
   `exposed` arms → legs → side torsos → head → center torso (default),

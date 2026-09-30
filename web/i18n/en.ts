@@ -382,6 +382,7 @@ export const en = {
   "info.weaponDamage": "damage: {damage}",
   "info.weaponMissiles": "missiles: {count}",
   "info.weaponPulse": "pulse: -2 to-hit chance (easier to hit)",
+  "info.weaponToHitMod": "to-hit mod: {mod}",
   "info.weaponRapidFire": "rapid-fire: fires {shots} shots per turn",
   "info.weaponAntiInfantry": "anti-infantry: bonus damage vs infantry",
   "sheet.modelLine": "model: {name} {model} - {weightClass} {tonnage}t",

@@ -718,7 +718,7 @@ function gatorText(r: AttackResolution): string {
   if (b.terrainMod) parts.push(`terrain ${b.terrainMod}`);
   if (b.rangeMod) parts.push(`range ${b.rangeMod}`);
   if (b.minRangeMod) parts.push(`min ${b.minRangeMod}`);
-  if (b.pulseMod) parts.push(`pulse ${b.pulseMod}`);
+  if (b.weaponMod) parts.push(`weapon ${b.weaponMod}`);
   if (b.heatMod) parts.push(`heat ${b.heatMod}`);
   if (b.sensorMod) parts.push(`sensors ${b.sensorMod}`);
   if (b.actuatorMod) parts.push(`actuators ${b.actuatorMod}`);

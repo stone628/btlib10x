@@ -11,9 +11,7 @@
 
 - need snapshot keeping, capable of rollback N steps like ctrl-z
 - The Physical Attack Phase. advancePhase runs initiative → movement → weaponAttack → end, with the heat phase folded into the weaponAttack exit. TW inserts a physical attack phase between weapon fire and heat, carrying punch, kick, push, club, charge and Death From Above. None exists. This also strands the handActuator and shoulder crit slots, whose published effects are largely physical. (Physical-triggered PSRs — kicks, pushes, charges, DFAs — wait on this phase; see "Not viable" in `docs/CLI.md`.)
-- **Weapon to-hit audit (TW p.303-304, p.113-114, p.117-118)** — prioritized, no implementation yet:
-  - P0: Replace `pulse`-only `pulseMod` (`src/rules/tohit.ts`) with a generic `toHitMod?: number` on `WeaponDef`. Data: MRM 10/20/30/40 `+1`, Clan Heavy Large/Medium/Small Laser `+1`, LB-X cluster mode `-1` (data prep; full mode in Later phases), Pulse `-2`. Keep `pulse: boolean` only for Targeting Computer / aimed-shot eligibility (TW p.113, p.143).
-  - P0 bug: `parseWeapon` (`src/data/weapon.schema.ts`) allowlist drops `clusterRangeMod` and `critExplosion` — HAG/Gauss rows in `weapon.data.ts` validate away. Include both keys (plus any future weapon flags) and add a round-trip test.
+- **Weapon to-hit audit (TW p.303-304, p.113-114, p.117-118)** — P0 done (see Done); remaining:
   - P1: Apply HAG `clusterRangeMod` (`+2` short / `0` medium / `-2` long, clamp roll 2..12, TW p.136) in `resolveWeaponAttack`; fix `critExplosion` data 10/15/20 for HAG 20/30/40; confirm 5-point groupings.
   - P1: Cluster-roll modifier pipeline (`src/rules/cluster.ts`, `src/rules/attack.ts`): Artemis IV `+2`, Narc pod `+2`, AMS `-4` (min 2, Streak-as-11, 1D6 vs single missile, 1 engagement/AMS/turn, 1 ammo + 1 heat each, TW p.129-130, p.138-139). ECM interaction stays in Later phases.
   - P1: Rapid-fire heat/ammo `× shots` audit (TW p.103-104: `1/Sht` stored flat must multiply by `shots` at resolution in `game.ts`); rotary jam-clear rule (TW p.140: End Phase declare, next turn stand/walk only + no attacks, Gunnery+3 to clear) — jam is currently permanent.
@@ -28,6 +26,25 @@
 
 ## Done
 
+- **Weapon to-hit audit P0 (TW p.303-304)** — `WeaponDef` carries a generic
+  `toHitMod?: number` (the To-Hit Mod column: `-2` pulse, `+1` MRM 10/20/30/40
+  and Clan Heavy Large/Medium/Small Laser); `pulse: boolean` stays as the
+  P-code eligibility flag for the later Targeting Computer / aimed-shot
+  milestone. `computeToHit` resolves `ToHitBreakdown.weaponMod` from
+  `toHitMod` with a `-2` fallback for legacy pulse-only defs
+  (`weaponToHitModifier`); the old `pulseMod` field is renamed (web GATOR
+  line now prints `weapon ±n`, `info <weapon>` shows the mod for non-pulse
+  weapons). LB-X stays `0` in slug mode; its `-1` cluster-mode modifier
+  arrives with switchable ammo (Later phases). Validator fix in the same
+  pass: `parseWeapon` no longer drops `clusterRangeMod` / `critExplosion` /
+  `toHitMod` (all validated: mod integer `-5..5`, cluster mod per-bracket
+  integers, explosion non-negative int), accepts `0` range brackets for
+  `EQUIPMENT` (A-Pod 0/0/0, probes 0/0/N — the shipped catalog previously
+  failed its own validator), and the suite round-trips every catalog entry
+  plus targeted to-hit tests (`tests/data.test.ts`, `tests/tohit.test.ts`).
+  Known pre-existing issue left untouched: the `heatWeapon.weapon` web
+  typecheck (`web/session.common.ts:1202` vs `src/rules/game.ts`) —
+  reproduces on the clean tree.
 - **Heat phase enforcement (TW p.159 / p.160)** — heat scale 0-30 with
   movement heat, weapon heat, posture heat (stand-up, prone-turn), and
   engine-crit heat. Per TW p.159 the scale updates once at the heat

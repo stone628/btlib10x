@@ -2,10 +2,14 @@
  * Weapon catalog. Ranges are the maximum hex count for each bracket
  * (short/medium/long); a target beyond longRange is out of range. Effects
  * mirror the letter codes printed on record sheets:
- *   P = Pulse (-2 to-hit), V = Variable damage by bracket,
+ *   P = Pulse (eligibility flag; the -2 lives in `toHitMod`),
+ *   V = Variable damage by bracket,
  *   C = Cluster (rolls Cluster Hits Table), R = Rapid-fire multi-shot,
  *   S = Streak (all missiles hit on a successful to-hit roll, no cluster roll;
  *   a miss fires nothing: no ammo spent, no heat).
+ * The To-Hit Mod column (TW p.303-304) lives in `toHitMod`:
+ *   pulse -2, LB-X cluster -1 (cluster mode only, deferred), MRM +1,
+ *   Clan heavy lasers +1.
  */
 import { WEAPON_DATA } from "./weapon.data";
 
@@ -33,16 +37,23 @@ export interface WeaponDef {
   readonly minRange?: number;
   /** V-code damage values per bracket [short, medium, long]. */
   readonly variableDamage?: readonly [number, number, number];
+  /** P-code eligibility flag (Targeting Computer / aimed-shot rules, TW p.113, p.143).
+   *  The actual -2 lives in `toHitMod`; this flag stays so later milestones can
+   *  tell a pulse laser from any other -2 weapon. */
   readonly pulse?: boolean;
+  /** To-Hit Mod column (TW p.303-304): -2 pulse, +1 MRM / Clan heavy lasers.
+   *  LB-X stays 0 in slug mode; its -1 cluster-mode modifier arrives with the
+   *  switchable-ammo milestone (see Later phases in docs/TODO.md). */
+  readonly toHitMod?: number;
   readonly antiInfantry?: boolean;
-  /** TODO: apply cluster range mod if it exists */
+  /** HAG range-dependent cluster-roll modifier (TW p.136). */
   readonly clusterRangeMod?: WeaponClusterRangeMod;
   readonly rapidFireShots?: number;
   /** Streak launcher: full tube count hits on success, no cluster roll. */
   readonly streak?: boolean;
   /** Heat points generated per shot (Total Warfare Weapons & Equipment tables). */
   readonly heat?: number;
-  /** TODO: explosion damage from critical hit, per TW p.135 */
+  /** Explosion damage from a critical hit on the weapon itself (TW p.135-136). */
   readonly critExplosion?: number;
   /** Broad weapon class used for catalog grouping and UI categorization. */
   readonly category: WeaponCategory;
@@ -73,16 +84,24 @@ function parseWeapon(raw: unknown, label: string, errors: string[]): WeaponDef |
     errors.push(`${label}.name must be a non-empty string`);
   }
   let valid = true;
-  for (const field of ["short", "medium", "long"]) {
-    if (!isBoundedInt(raw[field])) {
-      errors.push(`${label}.${field} must be a positive integer`);
-      valid = false;
-    }
-  }
   const category = raw.category;
   if (typeof category !== "string" || !WEAPON_CATEGORIES.has(category as WeaponCategory)) {
     errors.push(`${label}.category must be one of MISSILE, BALLISTIC, ENERGY, EQUIPMENT`);
     valid = false;
+  }
+  // Ranged weapons need positive brackets; EQUIPMENT (probes, ECM, pods) may
+  // carry 0 brackets for "no ranged fire" (e.g. A-Pod 0/0/0, Active Probe 0/0/5).
+  const rangeOk =
+    category === "EQUIPMENT"
+      ? (v: unknown): v is number => typeof v === "number" && Number.isInteger(v) && v >= 0
+      : isBoundedInt;
+  for (const field of ["short", "medium", "long"]) {
+    if (!rangeOk(raw[field])) {
+      errors.push(
+        `${label}.${field} must be ${category === "EQUIPMENT" ? "a non-negative" : "a positive"} integer`,
+      );
+      valid = false;
+    }
   }
   const minRange = raw.minRange;
   if (minRange !== undefined && !isBoundedInt(minRange)) {
@@ -99,6 +118,37 @@ function parseWeapon(raw: unknown, label: string, errors: string[]): WeaponDef |
     errors.push(`${label}.streak must be a boolean`);
     valid = false;
   }
+  const toHitMod = raw.toHitMod;
+  if (
+    toHitMod !== undefined &&
+    (typeof toHitMod !== "number" || !Number.isInteger(toHitMod) || toHitMod < -5 || toHitMod > 5)
+  ) {
+    errors.push(`${label}.toHitMod must be an integer -5..5`);
+    valid = false;
+  }
+  const critExplosion = raw.critExplosion;
+  if (
+    critExplosion !== undefined &&
+    (typeof critExplosion !== "number" || !Number.isInteger(critExplosion) || critExplosion < 0)
+  ) {
+    errors.push(`${label}.critExplosion must be a non-negative integer`);
+    valid = false;
+  }
+  const clusterRangeMod = raw.clusterRangeMod;
+  if (clusterRangeMod !== undefined) {
+    if (!isRecord(clusterRangeMod)) {
+      errors.push(`${label}.clusterRangeMod must be an object`);
+      valid = false;
+    } else {
+      for (const field of ["short", "medium", "long"]) {
+        const v = clusterRangeMod[field];
+        if (typeof v !== "number" || !Number.isInteger(v)) {
+          errors.push(`${label}.clusterRangeMod.${field} must be an integer`);
+          valid = false;
+        }
+      }
+    }
+  }
   const out: Record<string, unknown> = {};
   for (const key of [
     "name",
@@ -110,11 +160,14 @@ function parseWeapon(raw: unknown, label: string, errors: string[]): WeaponDef |
     "missiles",
     "variableDamage",
     "pulse",
+    "toHitMod",
     "antiInfantry",
+    "clusterRangeMod",
     "rapidFireShots",
     "streak",
     "minRange",
     "heat",
+    "critExplosion",
     "category",
   ] as const) {
     const v = raw[key];

@@ -48,8 +48,8 @@ export interface ToHitBreakdown {
   readonly targetMod: number;
   readonly terrainMod: number;
   readonly rangeMod: number;
-  /** Pulse weapons: -2. */
-  readonly pulseMod: number;
+  /** Weapon To-Hit Mod column (TW p.303-304): -2 pulse, +1 MRM / Clan heavy lasers. */
+  readonly weaponMod: number;
   /** Closer-than-minimum-range penalty: (minRange - distance) + 1, else 0. */
   readonly minRangeMod: number;
   /** Heat Scale modifier from the attacker's current heat (+1..+4), else 0. */
@@ -88,8 +88,15 @@ const PRONE_TARGET_ADJACENT_MOD = -2;
 const PRONE_TARGET_DISTANT_MOD = 1;
 /** Max distance counting as adjacent for the prone-target modifier. */
 const PRONE_ADJACENT_MAX_DISTANCE = 1;
-/** To-hit bonus for pulse weapons. */
+/** To-hit bonus for pulse weapons without an explicit `toHitMod` (TW p.303). */
 const PULSE_MOD = -2;
+
+/** Weapon modifier: explicit `toHitMod`, falling back to -2 for legacy
+ *  pulse-only defs that predate the generic column. */
+export function weaponToHitModifier(weapon: WeaponDef): number {
+  if (weapon.toHitMod !== undefined) return weapon.toHitMod;
+  return weapon.pulse === true ? PULSE_MOD : 0;
+}
 
 /** Prone-target modifier by range (TW p.113): −2 adjacent, +1 otherwise. */
 export function proneTargetModifier(distance: number): number {
@@ -107,7 +114,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
       targetMod: 0,
       terrainMod: 0,
       rangeMod: 0,
-      pulseMod: 0,
+      weaponMod: 0,
       minRangeMod: 0,
       heatMod: 0,
       sensorMod: 0,
@@ -131,7 +138,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     mods.interveningWoods + terrainTargetMod(mods.targetTerrain) + (mods.partialCoverMod ?? 0);
 
   const rangeMod = RANGE_MOD[bracket];
-  const pulseMod = mods.weapon.pulse === true ? PULSE_MOD : 0;
+  const weaponMod = weaponToHitModifier(mods.weapon);
   const min =
     mods.weapon.minRange !== undefined && mods.distance <= mods.weapon.minRange
       ? mods.weapon.minRange - mods.distance + 1
@@ -146,7 +153,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     targetMod +
     terrainMod +
     rangeMod +
-    pulseMod +
+    weaponMod +
     min +
     heatMod +
     sensorMod +
@@ -158,7 +165,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     targetMod,
     terrainMod,
     rangeMod,
-    pulseMod,
+    weaponMod,
     minRangeMod: min,
     heatMod,
     sensorMod,
