@@ -69,7 +69,7 @@ export function ammoBinsFromCrits(lines) {
         .replace(/^IS |^CL /, "")
         .replace(/\s+CL$/, "")
         .trim();
-      name = CODE[stem] ?? CODE[normalizeCritWeaponToken(stem)] ?? null;
+      name = CODE[stem] ?? CODE[normalizeCritWeaponToken(stem).name] ?? null;
     } else {
       // Format 2: "IS Ammo <token>", e.g. "IS Ammo AC/20" or
       // "IS Machine Gun Ammo - Half".
@@ -84,6 +84,11 @@ export function ammoBinsFromCrits(lines) {
 function classifyCritLine(raw, errors, fileLabel) {
   const t = raw.trim();
   if (t === "" || t === "-Empty-") return { ok: true, slot: { kind: "empty" } };
+  // Physical-weapon equipment (Hatchet, TW p.146) is outside the engine's
+  // implemented subset (deferred per docs/TODO.md) and has no weapon-catalog
+  // entry. Emit an empty slot so the per-location slot count stays faithful;
+  // the weapon itself is not modeled.
+  if (t === "Hatchet") return { ok: true, slot: { kind: "empty" } };
   // "IS Ammo <token>" / "CL Ammo <token>" (e.g. "IS Ammo AC/20"). The
   // AMMO_TOKEN table is preferred (the trailing token is a known ammo
   // shorthand like "AC/20" or "Gauss"); CODE is consulted as a fallback so
@@ -92,7 +97,8 @@ function classifyCritLine(raw, errors, fileLabel) {
   if (m) {
     const tok = m[1].trim();
     const stripped = normalizeCritWeaponToken(tok);
-    const name = AMMO_TOKEN[tok] ?? AMMO_TOKEN[stripped] ?? CODE[tok] ?? CODE[stripped] ?? null;
+    const name =
+      AMMO_TOKEN[tok] ?? AMMO_TOKEN[stripped.name] ?? CODE[tok] ?? CODE[stripped.name] ?? null;
     if (name) return { ok: true, slot: { kind: "ammo", weapon: name } };
     errors.push(`Unmapped ammo crit-slot token ${JSON.stringify(t)} in ${fileLabel}`);
     return { ok: false };
@@ -106,7 +112,8 @@ function classifyCritLine(raw, errors, fileLabel) {
   if (m) {
     const stem = m[1];
     const stripped = normalizeCritWeaponToken(stem);
-    const name = AMMO_TOKEN[stem] ?? AMMO_TOKEN[stripped] ?? CODE[stem] ?? CODE[stripped] ?? null;
+    const name =
+      AMMO_TOKEN[stem] ?? AMMO_TOKEN[stripped.name] ?? CODE[stem] ?? CODE[stripped.name] ?? null;
     if (name) return { ok: true, slot: { kind: "ammo", weapon: name } };
     errors.push(`Unmapped ammo crit-slot token ${JSON.stringify(t)} in ${fileLabel}`);
     return { ok: false };

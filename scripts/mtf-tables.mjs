@@ -72,6 +72,8 @@ export const CODE = {
   ISSRM4: "SRM 4",
   ISSRM6: "SRM 6",
   ISGaussRifle: "Gauss Rifle",
+  ISLBXAC10: "LB 10-X AC",
+  ISMediumPulseLaser: "Medium Pulse Laser",
   // Clan compact codes.
   CLERMediumLaser: "CL ER Medium Laser",
   CLERLargeLaser: "CL ER Large Laser",
@@ -121,6 +123,13 @@ export const CODE = {
   "SRM-2": "SRM 2",
   "SRM-4": "SRM 4",
   "SRM-6": "SRM 6",
+  // Crit-slot ammo stems ("<stem> Ammo", including the trailing " CL" and
+  // "- Half" variants seen in the wild). Direct entries so the tech base
+  // resolves before the normalized fallback strips prefixes.
+  "ISLBXAC10 CL": "LB 10-X AC",
+  "CLLBXAC20 CL": "CL LB 20-X AC",
+  "IS Gauss": "Gauss Rifle",
+  "IS Machine Gun": "Machine Gun",
   // Clan ammo tokens.
   "CLLB-20 AC": "CL LB 20-X AC",
   "CLLB-10 AC": "CL LB 10-X AC",

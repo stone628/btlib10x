@@ -1,0 +1,373 @@
+import type { MechDef } from "../mech.schema";
+
+const def: MechDef = {
+  model: "HCT-5S",
+  name: "Hatchetman",
+  tonnage: 45,
+  weightClass: "Medium",
+  techBase: "Inner Sphere",
+  walking: 4,
+  running: 6,
+  jumping: 4,
+  armor: {
+    head: 9,
+    centerTorso: 27,
+    rightTorso: 22,
+    leftTorso: 22,
+    rightArm: 14,
+    leftArm: 14,
+    rightLeg: 22,
+    leftLeg: 22,
+    centerTorsoRear: 6,
+    rightTorsoRear: 6,
+    leftTorsoRear: 6,
+  },
+  weapons: [
+    {
+      weapon: "LB 10-X AC",
+      location: "rightTorso",
+      shots: 10,
+    },
+    {
+      weapon: "Medium Pulse Laser",
+      location: "leftTorso",
+    },
+    {
+      weapon: "Medium Pulse Laser",
+      location: "leftArm",
+    },
+    {
+      weapon: "Medium Pulse Laser",
+      location: "rightArm",
+    },
+  ],
+  critSlots: {
+    centerTorso: [
+      {
+        kind: "structure",
+        name: "engine",
+      },
+      {
+        kind: "structure",
+        name: "engine",
+      },
+      {
+        kind: "structure",
+        name: "engine",
+      },
+      {
+        kind: "structure",
+        name: "gyro",
+      },
+      {
+        kind: "structure",
+        name: "gyro",
+      },
+      {
+        kind: "structure",
+        name: "gyro",
+      },
+      {
+        kind: "structure",
+        name: "gyro",
+      },
+      {
+        kind: "structure",
+        name: "engine",
+      },
+      {
+        kind: "structure",
+        name: "engine",
+      },
+      {
+        kind: "structure",
+        name: "engine",
+      },
+      {
+        kind: "soak",
+        name: "ferroFibrous",
+      },
+      {
+        kind: "empty",
+      },
+    ],
+    leftTorso: [
+      {
+        kind: "structure",
+        name: "engine",
+      },
+      {
+        kind: "structure",
+        name: "engine",
+      },
+      {
+        kind: "structure",
+        name: "engine",
+      },
+      {
+        kind: "structure",
+        name: "heatSink",
+      },
+      {
+        kind: "weapon",
+        weapon: "Medium Pulse Laser",
+      },
+      {
+        kind: "soak",
+        name: "ferroFibrous",
+      },
+      {
+        kind: "soak",
+        name: "ferroFibrous",
+      },
+      {
+        kind: "soak",
+        name: "ferroFibrous",
+      },
+      {
+        kind: "soak",
+        name: "ferroFibrous",
+      },
+      {
+        kind: "soak",
+        name: "ferroFibrous",
+      },
+      {
+        kind: "soak",
+        name: "ferroFibrous",
+      },
+      {
+        kind: "soak",
+        name: "ferroFibrous",
+      },
+    ],
+    rightTorso: [
+      {
+        kind: "structure",
+        name: "engine",
+      },
+      {
+        kind: "structure",
+        name: "engine",
+      },
+      {
+        kind: "structure",
+        name: "engine",
+      },
+      {
+        kind: "structure",
+        name: "heatSink",
+      },
+      {
+        kind: "weapon",
+        weapon: "LB 10-X AC",
+      },
+      {
+        kind: "weapon",
+        weapon: "LB 10-X AC",
+      },
+      {
+        kind: "weapon",
+        weapon: "LB 10-X AC",
+      },
+      {
+        kind: "weapon",
+        weapon: "LB 10-X AC",
+      },
+      {
+        kind: "weapon",
+        weapon: "LB 10-X AC",
+      },
+      {
+        kind: "weapon",
+        weapon: "LB 10-X AC",
+      },
+      {
+        kind: "ammo",
+        weapon: "LB 10-X AC",
+      },
+      {
+        kind: "soak",
+        name: "case",
+      },
+    ],
+    leftArm: [
+      {
+        kind: "structure",
+        name: "shoulder",
+      },
+      {
+        kind: "structure",
+        name: "upperArmActuator",
+      },
+      {
+        kind: "structure",
+        name: "lowerArmActuator",
+      },
+      {
+        kind: "structure",
+        name: "handActuator",
+      },
+      {
+        kind: "weapon",
+        weapon: "Medium Pulse Laser",
+      },
+      {
+        kind: "soak",
+        name: "ferroFibrous",
+      },
+      {
+        kind: "soak",
+        name: "ferroFibrous",
+      },
+      {
+        kind: "soak",
+        name: "ferroFibrous",
+      },
+      {
+        kind: "empty",
+      },
+      {
+        kind: "empty",
+      },
+      {
+        kind: "empty",
+      },
+      {
+        kind: "empty",
+      },
+    ],
+    rightArm: [
+      {
+        kind: "structure",
+        name: "shoulder",
+      },
+      {
+        kind: "structure",
+        name: "upperArmActuator",
+      },
+      {
+        kind: "structure",
+        name: "lowerArmActuator",
+      },
+      {
+        kind: "structure",
+        name: "handActuator",
+      },
+      {
+        kind: "weapon",
+        weapon: "Medium Pulse Laser",
+      },
+      {
+        kind: "empty",
+      },
+      {
+        kind: "empty",
+      },
+      {
+        kind: "empty",
+      },
+      {
+        kind: "soak",
+        name: "ferroFibrous",
+      },
+      {
+        kind: "soak",
+        name: "ferroFibrous",
+      },
+      {
+        kind: "soak",
+        name: "ferroFibrous",
+      },
+      {
+        kind: "empty",
+      },
+    ],
+    leftLeg: [
+      {
+        kind: "structure",
+        name: "hip",
+      },
+      {
+        kind: "structure",
+        name: "upperLegActuator",
+      },
+      {
+        kind: "structure",
+        name: "lowerLegActuator",
+      },
+      {
+        kind: "structure",
+        name: "footActuator",
+      },
+      {
+        kind: "structure",
+        name: "jumpJet",
+      },
+      {
+        kind: "structure",
+        name: "jumpJet",
+      },
+    ],
+    rightLeg: [
+      {
+        kind: "structure",
+        name: "hip",
+      },
+      {
+        kind: "structure",
+        name: "upperLegActuator",
+      },
+      {
+        kind: "structure",
+        name: "lowerLegActuator",
+      },
+      {
+        kind: "structure",
+        name: "footActuator",
+      },
+      {
+        kind: "structure",
+        name: "jumpJet",
+      },
+      {
+        kind: "structure",
+        name: "jumpJet",
+      },
+    ],
+    head: [
+      {
+        kind: "structure",
+        name: "lifeSupport",
+      },
+      {
+        kind: "structure",
+        name: "sensors",
+      },
+      {
+        kind: "structure",
+        name: "cockpit",
+      },
+      {
+        kind: "structure",
+        name: "heatSink",
+      },
+      {
+        kind: "structure",
+        name: "sensors",
+      },
+      {
+        kind: "structure",
+        name: "lifeSupport",
+      },
+    ],
+  },
+  heatsink: {
+    type: "single",
+    count: 10,
+  },
+  source:
+    "docs/mtf/Hatchetman HCT-5S.mtf (TRO 3050 - Clan Invasion). Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount; crit slot table per location included.",
+} as const satisfies MechDef;
+
+export default def;
