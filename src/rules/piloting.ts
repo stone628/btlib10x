@@ -51,9 +51,10 @@ import type { ResolvedMechDef } from "../data/mech.schema";
 import type { Arc } from "./arcs";
 import { countDestroyedGyro, destroyedStructures, HIP } from "./critical";
 import { isUnitLocationDestroyed, type UnitDamageState } from "./damage";
+import type { UnitSkillRange } from "./game";
 
 /** Default pilot skill for `UnitInit`s that omit it (TW regular pilot). */
-export const DEFAULT_PILOTING = 5;
+export const DEFAULT_PILOTING: UnitSkillRange = 5;
 
 /** Pilot hits that kill the MechWarrior outright. */
 export const PILOT_HITS_DEAD = 6;

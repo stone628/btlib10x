@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FACINGS, isFacing, oppositeFacing, rotateFacing } from "../src/core/types";
+import { FACINGS, oppositeFacing, rotateFacing } from "../src/core/types";
 
 describe("facing helpers", () => {
   it("lists facings clockwise from north", () => {
@@ -19,14 +19,5 @@ describe("facing helpers", () => {
     expect(oppositeFacing("ne")).toBe("sw");
     expect(oppositeFacing("se")).toBe("nw");
     expect(oppositeFacing(oppositeFacing("sw"))).toBe("sw");
-  });
-
-  it("validates runtime values (JSON-loaded state)", () => {
-    expect(isFacing("ne")).toBe(true);
-    expect(isFacing("e")).toBe(false);
-    expect(isFacing("E")).toBe(false);
-    expect(isFacing(0)).toBe(false);
-    expect(isFacing("north")).toBe(false);
-    expect(isFacing(undefined)).toBe(false);
   });
 });

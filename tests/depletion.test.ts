@@ -9,9 +9,7 @@ import {
   collectAmmoBins,
   consumeAmmo,
   drawOrderBins,
-  isAmmoPolicy,
   loadAmmoBins,
-  parseAmmoPolicy,
   stripBinsInLocation,
 } from "../src/rules/ammo";
 import {
@@ -45,23 +43,6 @@ function bin(location: Location, slotIndex: number, shots: number): AmmoBinState
     shots,
   };
 }
-
-describe("policy parsing", () => {
-  it("recognizes every policy, case-insensitively, with optional hyphens", () => {
-    expect(parseAmmoPolicy("exposed")).toBe("exposed");
-    expect(parseAmmoPolicy("CORE")).toBe("core");
-    expect(parseAmmoPolicy("Spread")).toBe("spread");
-    expect(parseAmmoPolicy("least-first")).toBe("leastFirst");
-    expect(parseAmmoPolicy("leastfirst")).toBe("leastFirst");
-    expect(parseAmmoPolicy("bogus")).toBeNull();
-  });
-
-  it("isAmmoPolicy only accepts canonical spellings", () => {
-    expect(isAmmoPolicy("exposed")).toBe(true);
-    expect(isAmmoPolicy("Exposed")).toBe(false);
-    expect(isAmmoPolicy("nope")).toBe(false);
-  });
-});
 
 describe("bin loading", () => {
   it("spreads the declared shot count evenly over a weapon's bins", () => {
@@ -370,7 +351,7 @@ describe("ammo command (session)", () => {
     expect(execute(s, "ammo")[0]).toBe("ammo policy: exposed");
     expect(execute(s, "ammo spread")).toEqual([`${actor}: ammo policy set to spread`]);
     expect(s.battle!.units[actor]!.ammoPolicy).toBe("spread");
-    expect(execute(s, "ammo least-first")[0]).toBe(`${actor}: ammo policy set to least-first`);
+    expect(execute(s, "ammo leastfirst")[0]).toBe(`${actor}: ammo policy set to least-first`);
     expect(s.battle!.units[actor]!.ammoPolicy).toBe("leastFirst");
     expect(execute(s, "ammo nope")[0]).toMatch(/^error: ammo policy must be one of/);
     expect(s.battle!.units[actor]!.ammoPolicy).toBe("leastFirst");

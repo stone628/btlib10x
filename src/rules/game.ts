@@ -14,7 +14,6 @@ import {
   type HexCell,
   type HexCoord,
   isArm,
-  isFacing,
   isTorso,
   LOCATIONS,
   type Location,
@@ -136,14 +135,16 @@ import {
 } from "./piloting";
 import { computeToHit, DEFAULT_GUNNERY, type RangeBracket } from "./tohit";
 
+export type UnitSkillRange = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
 export interface UnitInit extends MechModelHolder {
   readonly id: string;
   model: string;
   team: number;
   /** Gunnery skill (TW regular = 4); defaults to {@link DEFAULT_GUNNERY}. */
-  gunnery: number;
+  gunnery: UnitSkillRange;
   /** Pilot skill (TW regular = 5); defaults to {@link DEFAULT_PILOTING}. */
-  piloting: number;
+  piloting: UnitSkillRange;
   position: HexCoord;
   facing: Facing;
 }
@@ -787,17 +788,10 @@ export function createBattle(
     if (seen.has(init.id)) throw new Error(`Duplicate unit id: ${init.id}`);
     seen.add(init.id);
     if (!mechDef(init.model)) throw new Error(`Unknown 'Mech model: ${init.model}`);
-    if (!isFacing(init.facing))
-      throw new Error(`Invalid facing for ${init.id}: ${String(init.facing)}`);
-    if (!Number.isInteger(init.gunnery) || init.gunnery < SKILL_MIN || init.gunnery > SKILL_MAX) {
-      throw new Error(`Gunnery for ${init.id} must be an integer 0..7`);
-    }
-    if (
-      !Number.isInteger(init.piloting) ||
-      init.piloting < SKILL_MIN ||
-      init.piloting > SKILL_MAX
-    ) {
-      throw new Error(`Piloting for ${init.id} must be an integer 0..7`);
+    if (Math.abs((init.gunnery as number) - (init.piloting as number)) > 2) {
+      throw new Error(
+        `Gunnery(${init.gunnery}), Piloting(${init.piloting}) for ${init.id} cannot differ by more than 2 points, TW p.273`,
+      );
     }
   }
 
@@ -949,7 +943,7 @@ export function damageBuildingAt(
 }
 
 export function rollInitiativePhase(state: BattleState, rng: Rng, sink: GameEvent[]): void {
-  sink.push(...initiativePhaseGen(state, rng))
+  sink.push(...initiativePhaseGen(state, rng));
 }
 
 export function* initiativePhaseGen(state: BattleState, rng: Rng): Generator<GameEvent> {
@@ -974,9 +968,6 @@ export const STAND_MP_COST = 2;
 /** MP cost of a voluntary drop to prone (TW p.49): shares the walk budget. */
 export const DROP_MP_COST = 1;
 
-/** Pilot skill bounds for gunnery and piloting (TW regular scale 0..7). */
-const SKILL_MIN = 0;
-const SKILL_MAX = 7;
 /** Max hexsides per facing-change step. */
 const TURN_FACINGS_MAX = 5;
 /** Minimum hexes entered for a jump declaration. */
@@ -3495,7 +3486,7 @@ export function gameLoop(
   throw new Error("phase driver exceeded 200 iterations");
 }
 
-function* battleLoopGen(state: BattleState, rng: Rng): Generator<GameEvent, boolean> {
+function* _battleLoopGen(state: BattleState, rng: Rng): Generator<GameEvent, boolean> {
   for (;;) {
     if (state.phase === "initiative") {
       yield* initiativePhaseGen(state, rng);
@@ -3503,7 +3494,6 @@ function* battleLoopGen(state: BattleState, rng: Rng): Generator<GameEvent, bool
     }
     if (state.phase === "end") {
       yield* advancePhaseGen(state, rng);
-      continue;
     }
   }
 }

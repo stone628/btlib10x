@@ -48,23 +48,13 @@ export interface AmmoBinState extends AmmoBin {
 /** Unit-level ammo state: every bin keyed by its `AmmoBinId`. */
 export type AmmoBins = Record<AmmoBinId, AmmoBinState>;
 
-export const AMMO_POLICIES = ["exposed", "core", "spread", "leastFirst"] as const;
+export const AMMO_POLICIES: AmmoPolicy[] = ["exposed", "core", "spread", "leastFirst"] as const;
 
 /** Per-unit ammo depletion policy. */
-export type AmmoPolicy = (typeof AMMO_POLICIES)[number];
+export type AmmoPolicy = "exposed" | "core" | "spread" | "leastFirst";
 
 export function isAmmoPolicy(value: unknown): value is AmmoPolicy {
   return typeof value === "string" && (AMMO_POLICIES as readonly string[]).includes(value);
-}
-
-/** Parse a CLI word into a policy. Case-insensitive; `least-first` and
- *  `leastfirst` are accepted for `leastFirst`. Null when unrecognized. */
-export function parseAmmoPolicy(word: string): AmmoPolicy | null {
-  const normalized = word.toLowerCase().replaceAll("-", "");
-  for (const policy of AMMO_POLICIES) {
-    if (normalized === policy.toLowerCase()) return policy;
-  }
-  return null;
 }
 
 /** Canonical bin id for a 1-based crit slot index in a location. */

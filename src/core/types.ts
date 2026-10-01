@@ -7,13 +7,9 @@ export type Facing = "n" | "ne" | "se" | "s" | "sw" | "nw";
 
 export const FACINGS: readonly Facing[] = ["n", "ne", "se", "s", "sw", "nw"];
 
-export function isFacing(value: unknown): value is Facing {
-  return typeof value === "string" && (FACINGS as readonly string[]).includes(value);
-}
-
-export function rotateFacing(facing: Facing, steps: number): Facing {
+export function rotateFacing(facing: Facing, clockwiseSteps: number): Facing {
   const n = FACINGS.length;
-  const idx = (((FACINGS.indexOf(facing) + steps) % n) + n) % n;
+  const idx = (((FACINGS.indexOf(facing) + clockwiseSteps) % n) + n) % n;
   return FACINGS[idx]!;
 }
 

@@ -7,13 +7,13 @@ import {
   ammoBinId,
   ammoExplosionAvoid,
   ammoExplosionAvoidWithThreshold,
-  type CoreComponentStatus,
+  type ComponentHitStatus,
   type CritSoakName,
   type CritStructureName,
   canFireFromLocation,
   collectAmmoBins,
+  componentHitStatus,
   consciousnessTarget,
-  coreComponentStatus,
   countDestroyedEngine,
   D2D6_MAX,
   type DestroyedReason,
@@ -301,7 +301,7 @@ interface SheetView {
   /** Per-unit live crit state for the crit chart; null when only design info exists. */
   readonly critLive: CritChartLive | null;
   /** Aggregate engine/gyro/sensors/life-support counts (destroyed/total); null when only design info exists. */
-  readonly critCounts: CoreComponentStatus | null;
+  readonly critCounts: ComponentHitStatus | null;
 }
 
 export function battleSheet(unit: UnitState, id: string): SheetView {
@@ -321,7 +321,7 @@ export function battleSheet(unit: UnitState, id: string): SheetView {
           : i18n("sheet.ammoExplosion", { heat: unit.heat, avoid, threshold }),
     });
   }
-  const ccStatus = coreComponentStatus(def, unit.damage, unit.critSlotsDestroyed);
+  const ccStatus = componentHitStatus(def, unit.damage, unit.critSlotsDestroyed);
   return {
     id: id,
     team: unit.team,
@@ -375,7 +375,7 @@ export function battleSheet(unit: UnitState, id: string): SheetView {
       ammoBins: unit.ammoBins,
       locationDestroyed: (loc) => (unit.baseDamage ?? unit.damage).internalStructure[loc] <= 0,
     },
-    critCounts: coreComponentStatus(def, unit.damage, unit.critSlotsDestroyed),
+    critCounts: componentHitStatus(def, unit.damage, unit.critSlotsDestroyed),
   };
 }
 
@@ -643,7 +643,7 @@ function critCountLine(comp: CritStructureName, hit: number, messageForHit: Mess
   });
 }
 
-function critCountLines(counts: CoreComponentStatus | null): string[] {
+function critCountLines(counts: ComponentHitStatus | null): string[] {
   const out: string[] = new Array<string>(7).fill("");
   if (counts !== null) {
     out[1] = critCountLine("engine", counts.engine, [
@@ -696,7 +696,7 @@ const GRID_THEME = {
 function critChartChunk(
   def: ResolvedMechDef,
   live: CritChartLive | null,
-  counts: CoreComponentStatus | null,
+  counts: ComponentHitStatus | null,
 ): Chunk {
   const { tnw, tn, tne, tw, tc, te, tsw, /*ts,*/ tse, th, tv } = GRID_THEME.LIGHT;
   const raLines = critCell(def, "rightArm", live);
@@ -892,7 +892,7 @@ export function sheetLinesShort(view: SheetView): string[] {
 }
 
 /** One-line summary of each crit-affected component (engine/gyro/sensors/life-support). */
-function critEffectLines(counts: CoreComponentStatus | null): string | null {
+function critEffectLines(counts: ComponentHitStatus | null): string | null {
   if (counts === null) return null;
   const out: string[] = [];
   if (counts.engine >= 1) {

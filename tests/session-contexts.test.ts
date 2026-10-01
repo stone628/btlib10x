@@ -137,7 +137,7 @@ describe("per-AppState context invariants", () => {
   it("setTorsoTwist throws when not in weaponAttack phase", () => {
     const s = started();
     expect(s.battle!.phase).toBe("movement");
-    expect(() => setTorsoTwist(s, "leftSide")).toThrow(/requires the weaponAttack phase/i);
+    expect(() => setTorsoTwist(s, "leftSide")).toThrow(/requires the attack phase/i);
   });
 
   it("fresh attack context always starts with torsoTwist: front", () => {

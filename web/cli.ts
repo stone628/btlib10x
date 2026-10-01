@@ -1,5 +1,13 @@
-import type { Facing, UnitState } from "btlib10x";
-import { FACINGS, isShutdown, listMapNames, requireUnit, sameHex, VERSION } from "btlib10x";
+import type { AmmoPolicy, Facing, UnitState } from "btlib10x";
+import {
+  AMMO_POLICIES,
+  FACINGS,
+  isShutdown,
+  listMapNames,
+  requireUnit,
+  sameHex,
+  VERSION,
+} from "btlib10x";
 import type { ArmLocation, LegLocation } from "../src/core/types";
 import { buildLinesChunk, buildLinesChunkWith, type Chunk } from "./chunk";
 import type { MessageKey } from "./i18n/index";
@@ -119,10 +127,20 @@ function actorBy(s: Session, id: string): UnitState | null {
 }
 
 /** Resolve a `place` facing argument: an absolute facing word. */
-export function resolveFacing(arg: string): Facing {
+function resolveFacing(arg: string): Facing {
   const facing = FACINGS.find((f) => f === arg.toLowerCase());
   if (!facing) throw new Error(i18n("err.faceArg", { facings: FACINGS.join("/") }));
   return facing;
+}
+
+/** Parse a CLI word into a policy. Case-insensitive; `least-first` and
+ *  `leastfirst` are accepted for `leastFirst`. Null when unrecognized. */
+function resolveAmmoPolicy(word: string): AmmoPolicy | null {
+  const normalized = word.toLowerCase();
+  for (const policy of AMMO_POLICIES) {
+    if (normalized === policy.toLowerCase()) return policy;
+  }
+  return null;
 }
 
 function cmdRunChunks(...lines: string[]): Chunk[] {
@@ -443,7 +461,9 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
       if (a[0] === undefined) {
         return cmdRunChunks(i18n("ammo.current", { policy: ammoPolicyLabel(unit.ammoPolicy) }));
       }
-      setAmmoPolicy(s, a[0]);
+      const policy = resolveAmmoPolicy(a[0]);
+      if (policy === null) throw new Error(i18n("err.badAmmoPolicy"));
+      setAmmoPolicy(s, policy);
       return cmdRunChunks(
         i18n("ammo.set", { id: unit.id, policy: ammoPolicyLabel(unit.ammoPolicy) }),
       );

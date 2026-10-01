@@ -22,9 +22,11 @@ for (const m of indexSrc.matchAll(blockRe)) {
   for (const raw of m[1].split(",")) {
     const tok = raw.trim();
     if (!tok) continue;
-    // strip `type ` prefix so `type Foo` collapses to `Foo`
+    // strip `type ` prefix so `type Foo` collapses to `Foo`, and take the
+    // exported name for `orig as alias` re-exports
     const cleaned = tok.replace(/^type\s+/, "").trim();
-    const id = cleaned.match(IDENT)?.[0];
+    const alias = cleaned.match(/^([A-Za-z_$][\w$]*)\s+as\s+([A-Za-z_$][\w$]*)$/);
+    const id = (alias?.[2] ?? cleaned).match(IDENT)?.[0];
     if (id) exports.add(id);
   }
 }

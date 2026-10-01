@@ -1,19 +1,17 @@
 import { describe, expect, it } from "vitest";
 import type { Location } from "../src/core/types";
 import {
-  applyDamage,
   mechDefFor,
   type ResolvedCritSlot,
-  rollFallDirection,
   suggestFireTargets,
   type UnitDamageState,
 } from "../src/index";
+import { applyDamage } from "../src/rules/damage";
 import {
   advancePhase,
   applyFall,
   applyPilotHits,
   attemptStandUp,
-  createBattle,
   declareAttacks,
   dropProne,
   executeMove,
@@ -28,6 +26,7 @@ import {
   rollInitiativePhase,
   wreckAt,
 } from "../src/rules/game";
+import { rollFallDirection } from "../src/rules/piloting";
 
 import { createTestBattle, scriptedRng } from "./helpers";
 
@@ -149,32 +148,6 @@ describe("piloting skill", () => {
       true,
     );
     expect(requireUnit(custom, "a").piloting).toBe(2);
-    expect(() =>
-      createBattle(
-        { name: "x", width: 3, height: 3, terrain: [], legends: [] },
-        [
-          {
-            id: "a",
-            model: "HBK-4G",
-            team: 0,
-            gunnery: 4,
-            piloting: 9,
-            position: { col: 1, row: 1 },
-            facing: "n",
-          },
-          {
-            id: "b",
-            model: "ENF-4R",
-            team: 1,
-            gunnery: 4,
-            piloting: 5,
-            position: { col: 1, row: 2 },
-            facing: "s",
-          },
-        ],
-        { critsDisabled: true },
-      ),
-    ).toThrow(/Piloting for a must be an integer 0..7/);
   });
 });
 

@@ -28,7 +28,6 @@ import {
   type PhysicalAttackDecl,
   type PhysicalAttackType,
   type PhysicalResolution,
-  parseAmmoPolicy,
   type RangeBracket,
   requireUnit,
   shoulderOf,
@@ -475,10 +474,8 @@ export function setTorsoTwist(s: Session, arc: Arc): Arc {
  * Set the acting unit's ammo-depletion policy. Affects the order its ammo
  * bins are drained by future shots (and which bin explodes on a crit).
  */
-export function setAmmoPolicy(s: Session, word: string): void {
+export function setAmmoPolicy(s: Session, policy: AmmoPolicy): void {
   const unit = requireWeaponAttackActor(s);
-  const policy: AmmoPolicy | null = parseAmmoPolicy(word);
-  if (policy === null) throw new Error(i18n("err.badAmmoPolicy"));
   unit.ammoPolicy = policy;
 }
 

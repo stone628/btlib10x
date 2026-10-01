@@ -6,22 +6,24 @@
 
 import {
   type BattleState,
-  computePhysicalToHit,
   createBattle,
   declarePhysicalAttacks,
   type GameEvent,
   type HexCoord,
-  kickHitLocation,
   mechDefFor,
   type PhysicalAttackDecl,
-  physicalDamage,
   type Rng,
-  resolveAllAttacks,
-  resolvePhysicalAttack,
   type UnitInit,
   validatePhysicalAttack,
 } from "btlib10x";
 import { describe, expect, it } from "vitest";
+import { resolveAllAttacks } from "../src/rules/game";
+import {
+  computePhysicalToHit,
+  kickHitLocation,
+  physicalDamage,
+  resolvePhysicalAttack,
+} from "../src/rules/physical";
 
 // ---------------------------------------------------------------------------
 // Helpers

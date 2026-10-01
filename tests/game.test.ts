@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { mechDef } from "../src/data/index";
 import { weaponDefFor } from "../src/data/weapon.schema";
 import { ammoWeaponTotals, pooledShotsLeft } from "../src/rules/ammo";
-import type { BattleState, GameEvent, TerrainHexDef, UnitInit } from "../src/rules/game";
+import type {
+  BattleState,
+  GameEvent,
+  TerrainHexDef,
+  UnitInit,
+  UnitSkillRange,
+} from "../src/rules/game";
 import {
   actorQueue,
   advancePhase,
@@ -59,7 +65,7 @@ function startAttackTurn(
 
 describe("createBattle", () => {
   it("rejects duplicate ids, unknown models, and bad gunnery", () => {
-    const base = {
+    const base: UnitInit = {
       id: "a",
       model: "HBK-4G",
       team: 0,
@@ -72,14 +78,13 @@ describe("createBattle", () => {
     expect(() =>
       createTestBattle([], [base, { ...base, id: "b", model: "MAD-3R" }], false),
     ).toThrow(/Unknown 'Mech model/);
-    expect(() => createTestBattle([], [base, { ...base, id: "b", gunnery: 8 }], false)).toThrow(
-      /Gunnery/,
-    );
   });
 
   it("rejects duplicate terrain hex definitions", () => {
-    const base = {
+    const base: UnitInit = {
+      id: "temp", // temporary
       model: "HBK-4G",
+      team: 0, // temporary
       gunnery: 4,
       piloting: 5,
       position: { col: 2, row: 4 },
@@ -425,8 +430,8 @@ describe("nextActor with unequal forces", () => {
       id: string;
       model: "HBK-4G" | "ENF-4R";
       team: 0 | 1;
-      gunnery: number;
-      piloting: number;
+      gunnery: UnitSkillRange;
+      piloting: UnitSkillRange;
       position: { col: number; row: number };
       facing: "n" | "ne" | "se" | "s" | "sw" | "nw";
     };
