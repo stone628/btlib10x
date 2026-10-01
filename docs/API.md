@@ -537,9 +537,9 @@ dropProne(state, unitId, sink: GameEvent[], rng?): void                // moveme
 ejectPilot(state, unitId, sink: GameEvent[]): void                      // movement phase only: removes the unit (removed = "pilotEjected") and spawns a level-2 wreck in its hex
 voluntaryShutdown(state, unitId, sink: GameEvent[]): void              // movement phase only: shuts down ("manual")
 attemptVoluntaryStartup(state, unitId, sink: GameEvent[], rng?): void  // startup attempt after a manual shutdown
-declareAttacks(state, unitId, decls, sink: GameEvent[], rng?): void    // weaponAttack phase only
-validateAttacks(state, unitId, decls, { twist? }?): void               // read-only gate check; throws on any rule violation without mutating state or emitting events. Returns the resolved volley metadata via `validateAttacksImpl`.
-declarePhysicalAttacks(state, unitId, decls: PhysicalAttackDecl[], sink: GameEvent[], rng?): void  // weaponAttack phase only: punch/kick/push/club, one type per turn (two-arm punch excepted); emits `physicalAttacksDeclared`
+declareAttacks(state, unitId, decls, physicalDecls, sink: GameEvent[], rng?): void    // weaponAttack phase only: one combined declaration per turn (weapons + punch/kick/push/club); emits a single merged `attacksDeclared`
+validateAttacks(state, unitId, decls, physicalDecls?, { twist? }?): void               // read-only gate check; throws on any rule violation without mutating state or emitting events. Returns the resolved volley metadata via `validateAttacksImpl`.
+declarePhysicalAttacks(state, unitId, decls: PhysicalAttackDecl[], sink: GameEvent[], rng?): void  // weaponAttack phase only: punch/kick/push/club, one type per turn (two-arm punch excepted); thin wrapper over `declareAttacks`, folds into `attacksDeclared`
 validatePhysicalAttack(state, unitId, decl: PhysicalAttackDecl): ValidationResult  // read-only single-decl check (adjacency, arc, level, actuators); consumed by `declarePhysicalAttacks` and the web `candidate` hints
 passMovement(state, unitId): void                                       // mark "passed" for the current activation
 wreckAt(state, hex): WreckState | undefined
@@ -640,7 +640,7 @@ type GameEvent =
   | { kind: "initiative"; rolls; winnerTeam }
   | { kind: "moveDeclared"; unitId; mode }
   | { kind: "moved"; unitId; from; to; facing; steps }
-  | { kind: "attacksDeclared"; unitId; decls }
+  | { kind: "attacksDeclared"; unitId; weapons: { targetId; count; distance; rangeBracket; rangeMod } | null; physical: { type; targetId }[] }
   | { kind: "attackResolved"; attackerId; targetId; resolution }
   | { kind: "unitDestroyed"; unitId; reason: DestroyedReason }
   | { kind: "unitRemoved"; unitId; reason: RemovalReason }

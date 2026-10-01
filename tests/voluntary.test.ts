@@ -77,9 +77,9 @@ describe("voluntary shutdown", () => {
     expect(requireUnit(state, "hbk").shutdown).toBe("manual");
     requireUnit(state, "hbk").shutdown = "starting";
     advancePhase(state, []); // movement -> weaponAttack
-    expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [])).toThrow(
-      /shut down|current actor/,
-    );
+    expect(() =>
+      declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []),
+    ).toThrow(/shut down|current actor/);
   });
 
   it("persists through the heat phase instead of auto-restarting", () => {

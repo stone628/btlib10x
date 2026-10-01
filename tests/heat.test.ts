@@ -414,7 +414,7 @@ describe("game integration: weapon heat", () => {
   it("AC/20 (heat 7) adds 7 to heatPending after attack (scale unchanged)", () => {
     const state = hbkVsEnf();
     startAttackTurn(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], []);
+    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], [], []);
     // 20+ damage PSR (needs 6: 3+3 succeeds, no fall).
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(6, 6, 3, 4, 3, 3), events);
@@ -454,7 +454,7 @@ describe("game integration: weapon heat", () => {
     ];
     const state = createTestBattle([], units, true);
     startAttackTurn(state);
-    declareAttacks(state, "her", [{ weaponIndex: 3, targetId: "enf", rapidFire: true }], []);
+    declareAttacks(state, "her", [{ weaponIndex: 3, targetId: "enf", rapidFire: true }], [], []);
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(1, 1), events);
     const her = requireUnit(state, "her");
@@ -631,7 +631,7 @@ describe("game integration: heatMod in to-hit", () => {
     const hbk = requireUnit(state, "hbk");
     hbk.heat = 13;
     startAttackTurn(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], []);
+    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []);
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(6, 6, 3, 4), events);
     const resolved = events.find((e) => e.kind === "attackResolved");
@@ -647,7 +647,7 @@ describe("game integration: immobile target modifier in to-hit", () => {
     const state = hbkVsEnf();
     if (!online) requireUnit(state, "enf").shutdown = "manual";
     startAttackTurn(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], []);
+    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []);
     const events: GameEvent[] = [];
     resolveAllAttacks(state, rng, events);
     const resolved = events.find((e) => e.kind === "attackResolved");
@@ -670,7 +670,7 @@ describe("game integration: target movement modifier counts total hexes", () => 
     const state = hbkVsEnf();
     requireUnit(state, "enf").movesThisTurn = [...moves];
     startAttackTurn(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], []);
+    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []);
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(6, 6, 3, 4), events);
     const resolved = events.find((e) => e.kind === "attackResolved");
@@ -712,7 +712,7 @@ describe("game integration: partial cover in to-hit", () => {
   function terrainModFor(type: TerrainType): number {
     const state = makeBattleWithTargetTerrain(type);
     startAttackTurn(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], []);
+    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []);
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(6, 6, 3, 4), events);
     const resolved = events.find((e) => e.kind === "attackResolved");
@@ -914,7 +914,7 @@ describe("Bug E: own heat deferred — weapon attack uses start-of-turn heat", (
     const hbk = requireUnit(state, "hbk");
     hbk.heat = 13; // to-hit +2
     startAttackTurn(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], []);
+    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []);
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(6, 6, 3, 4), events);
     const resolved = events.find(
@@ -947,7 +947,7 @@ describe("deferred event payload (base, heat, totalGenerated)", () => {
     const state = hbkVsEnf();
     hbk_setHeat(state, 8);
     startAttackTurn(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], []);
+    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], [], []);
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(6, 6, 3, 4, 3, 3), events);
     const w = events.find(

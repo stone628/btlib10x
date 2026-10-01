@@ -1122,30 +1122,33 @@ function handleSessionGameEvent(
         }),
       );
       break;
-    case "attacksDeclared":
-      idLines(
-        e.unitId,
-        i18n(e.count === 1 ? "log.attacksDeclaredOne" : "log.attacksDeclaredOther", {
-          id: e.unitId,
-          target: e.targetId,
-          count: e.count,
-          rangeCtx: `range ${e.distance} (${e.rangeBracket}, ${signedMod(e.rangeMod)})`,
-        }),
-      );
+    case "attacksDeclared": {
+      if (e.weapons !== null) {
+        idLines(
+          e.unitId,
+          i18n(e.weapons.count === 1 ? "log.attacksDeclaredOne" : "log.attacksDeclaredOther", {
+            id: e.unitId,
+            target: e.weapons.targetId,
+            count: e.weapons.count,
+            rangeCtx: `range ${e.weapons.distance} (${e.weapons.rangeBracket}, ${signedMod(e.weapons.rangeMod)})`,
+          }),
+        );
+      }
+      for (const p of e.physical) {
+        idLines(
+          e.unitId,
+          i18n("log.physicalDeclaredOne", {
+            id: e.unitId,
+            type: p.type,
+            target: p.targetId,
+            count: 1,
+          }),
+        );
+      }
       break;
+    }
     case "attackResolved":
       idLines(e.unitId, `[${e.unitId} -> ${e.targetId}]`, ...resolutionLines(e.resolution));
-      break;
-    case "physicalAttacksDeclared":
-      idLines(
-        e.unitId,
-        i18n(e.count === 1 ? "log.physicalDeclaredOne" : "log.physicalDeclaredOther", {
-          id: e.unitId,
-          type: e.type,
-          target: e.targetId,
-          count: e.count,
-        }),
-      );
       break;
     case "physicalAttackResolved":
       idLines(e.unitId, `[${e.unitId} -> ${e.targetId}]`, ...physicalResolutionLines(e.resolution));
