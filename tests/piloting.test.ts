@@ -156,7 +156,7 @@ describe("20+ damage PSR", () => {
     const state = hbkEnf();
     toAttack(state, scriptedRng(2, 2, 5, 5));
     // AC/20 to-hit 3+3, location 1+1 (CT), 20+ PSR 3+3 (needs 6: success).
-    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], []);
+    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], [], []);
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(3, 3, 1, 1, 3, 3), events);
     const enf = requireUnit(state, "enf");
@@ -176,7 +176,7 @@ describe("20+ damage PSR", () => {
     toAttack(state, scriptedRng(2, 2, 5, 5));
     // to-hit 3+3, CT 1+1, PSR 1+2 (fail), fall dir 2 (right, +1 facing),
     // fall loc 1+1 (rightTorso), seatbelt 3+3 (needs 6: success).
-    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], []);
+    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], [], []);
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(3, 3, 1, 1, 1, 2, 2, 1, 1, 3, 3), events);
     const enf = requireUnit(state, "enf");
@@ -904,6 +904,7 @@ describe("prone combat", () => {
           { weaponIndex: 2, targetId: "enf" },
         ],
         [],
+        [],
       ),
     ).toThrow(/both arms/);
   });
@@ -913,7 +914,7 @@ describe("prone combat", () => {
     toAttack(state, scriptedRng(2, 2, 5, 5));
     const hbk = requireUnit(state, "hbk");
     hbk.prone = true;
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], []);
+    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []);
     expect(hbk.declaredWeaponAttacks).toHaveLength(1);
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(1, 1), events);
@@ -968,9 +969,9 @@ describe("prone combat", () => {
     expect(blind.weapons).toHaveLength(0);
     expect(blind.blocked.length).toBeGreaterThan(0);
     for (const b of blind.blocked) expect(b.reason).toBe("noSensor");
-    expect(() => declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [])).toThrow(
-      /sensors/,
-    );
+    expect(() =>
+      declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []),
+    ).toThrow(/sensors/);
   });
 });
 
@@ -979,7 +980,7 @@ describe("pilot damage", () => {
     const state = hbkEnf();
     toAttack(state, scriptedRng(2, 2, 5, 5));
     // ML to-hit 3+3, location 6+6 (head), consciousness 2+2 (needs 3: awake).
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], []);
+    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []);
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(3, 3, 6, 6, 2, 2), events);
     expect(requireUnit(state, "enf").pilotHits).toBe(1);

@@ -64,7 +64,7 @@ function startAttackTurn(state: BattleState): BattleState {
 /** Rear-CT medium laser hit with crits enabled: exercises damage, crit,
  *  and heat mutation across the snapshot boundary. */
 function rearCtHit(state: BattleState): void {
-  declareAttacks(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }], []);
+  declareAttacks(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }], [], []);
   // to-hit 12 hits; location 7 -> CT rear (4 pool, 1 IS stripped -> crit);
   // padded dice cover determining + effect rolls.
   resolveAllAttacks(state, scriptedRng(6, 6, 3, 4, 3, 3, 3, 3, 3, 3, 3, 3), []);

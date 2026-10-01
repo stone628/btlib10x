@@ -4,26 +4,17 @@
  * damage calculation, and hit location rolls.
  */
 
-import {
-  type BattleState,
-  createBattle,
-  declarePhysicalAttacks,
-  type GameEvent,
-  type HexCoord,
-  mechDefFor,
-  type PhysicalAttackDecl,
-  type Rng,
-  type UnitInit,
-  validatePhysicalAttack,
-} from "btlib10x";
 import { describe, expect, it } from "vitest";
-import { resolveAllAttacks } from "../src/rules/game";
 import {
   computePhysicalToHit,
   kickHitLocation,
   physicalDamage,
   resolvePhysicalAttack,
+  validatePhysicalAttack,
+  type PhysicalAttackDecl,
 } from "../src/rules/physical";
+import { createBattle, declareAttacks, mechDefFor, type BattleState, type GameEvent, type HexCoord, type Rng, type UnitInit } from "../src";
+import { resolveAllAttacks, validateAttacksImpl } from "../src/rules/game";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -472,35 +463,38 @@ describe("declarePhysicalAttacks", () => {
     return battle;
   }
 
-  it("stores declarations and emits physicalAttacksDeclared", () => {
+  it("stores declarations and emits a merged attacksDeclared event", () => {
     const battle = attackPhaseBattle();
     const events: GameEvent[] = [];
-    declarePhysicalAttacks(
+    declareAttacks(
       battle,
       "a",
+      [],
       [{ type: "punch", targetId: "t", limb: "rightArm" }],
       events,
       HIGH_RNG,
     );
     expect(battle.units.a!.declaredPhysicalAttacks.length).toBe(1);
     expect(battle.actedThisPhase).toContain("a");
-    const declared = events.find((e) => e.kind === "physicalAttacksDeclared");
-    expect(declared).toBeDefined();
+    const declared = events.find((e) => e.kind === "attacksDeclared");
+    expect(declared?.weapons).toBeNull();
+    expect(declared?.physical).toEqual([{ type: "punch", targetId: "t" }]);
   });
 
   it("defaults a limbless punch to the right arm", () => {
     const battle = attackPhaseBattle();
     const events: GameEvent[] = [];
-    declarePhysicalAttacks(battle, "a", [{ type: "punch", targetId: "t" }], events, HIGH_RNG);
+    declareAttacks(battle, "a", [], [{ type: "punch", targetId: "t" }], events, HIGH_RNG);
     expect(battle.units.a!.declaredPhysicalAttacks[0]!.limb).toBe("rightArm");
   });
 
   it("allows a two-arm punch but rejects a repeated arm", () => {
     const battle = attackPhaseBattle();
     const events: GameEvent[] = [];
-    declarePhysicalAttacks(
+    declareAttacks(
       battle,
       "a",
+      [],
       [
         { type: "punch", targetId: "t", limb: "leftArm" },
         { type: "punch", targetId: "t", limb: "rightArm" },
@@ -512,9 +506,10 @@ describe("declarePhysicalAttacks", () => {
 
     const battle2 = attackPhaseBattle();
     expect(() =>
-      declarePhysicalAttacks(
+      declareAttacks(
         battle2,
         "a",
+        [],
         [
           { type: "punch", targetId: "t", limb: "rightArm" },
           { type: "punch", targetId: "t", limb: "rightArm" },
@@ -528,9 +523,10 @@ describe("declarePhysicalAttacks", () => {
   it("rejects mixing physical attack types in one turn", () => {
     const battle = attackPhaseBattle();
     expect(() =>
-      declarePhysicalAttacks(
+      declareAttacks(
         battle,
         "a",
+        [],
         [
           { type: "punch", targetId: "t", limb: "rightArm" },
           { type: "kick", targetId: "t", limb: "rightLeg" },
@@ -541,7 +537,7 @@ describe("declarePhysicalAttacks", () => {
     ).toThrow(/only one type/);
   });
 
-  it("rejects a punch when the punching arm's weapons already fired", () => {
+  it("rejects a second declaration once weapons were declared (one declare per turn)", () => {
     const battle = attackPhaseBattle();
     // HBK-4G mounts a right-arm weapon; declare it as a weapon attack first.
     const def = mechDefFor(battle.units.a!);
@@ -551,13 +547,239 @@ describe("declarePhysicalAttacks", () => {
     expect(Number.isInteger(rightArmIndex)).toBe(true);
     battle.units.a!.declaredWeaponAttacks.push({ weaponIndex: rightArmIndex, targetId: "t" });
     expect(() =>
-      declarePhysicalAttacks(
+      declareAttacks(
         battle,
         "a",
+        [],
+        [{ type: "punch", targetId: "t", limb: "rightArm" }],
+        [],
+        HIGH_RNG,
+      ),
+    ).toThrow(/already declared attacks/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Combined weapon + physical declaration (declareAttacks)
+// ---------------------------------------------------------------------------
+
+describe("declareAttacks with weapons and physicals", () => {
+  /** Attacker faces its target dead-on so torso weapons and punches are legal. */
+  function faceToFaceBattle(): BattleState {
+    const battle = makeBattle(
+      makeUnitInit("a", 1, { col: 5, row: 5 }, "se"),
+      makeUnitInit("t", 2, { col: 6, row: 5 }, "nw"),
+    );
+    battle.phase = "attack";
+    battle.initiativeWinnerTeam = 2;
+    battle.actorQueue = ["a", "t"];
+    battle.actedThisPhase = [];
+    return battle;
+  }
+
+  function armAndTorsoWeaponIndices(): { arm: number; torso: number } {
+    const battle = faceToFaceBattle();
+    const def = mechDefFor(battle.units.a!);
+    const arm = Number(
+      Object.keys(def.weapons).find((k) => def.weapons[Number(k)]?.location === "rightArm"),
+    );
+    const torso = Number(
+      Object.keys(def.weapons).find((k) => {
+        const loc = def.weapons[Number(k)]?.location;
+        return loc === "centerTorso" || loc === "leftTorso" || loc === "rightTorso";
+      }),
+    );
+    expect(Number.isInteger(arm)).toBe(true);
+    expect(Number.isInteger(torso)).toBe(true);
+    return { arm, torso };
+  }
+
+  it("commits a legal punch plus torso weapon atomically", () => {
+    const battle = faceToFaceBattle();
+    const { torso } = armAndTorsoWeaponIndices();
+    const events: GameEvent[] = [];
+    declareAttacks(
+      battle,
+      "a",
+      [{ weaponIndex: torso, targetId: "t" }],
+      [{ type: "punch", targetId: "t", limb: "rightArm" }],
+      events,
+      HIGH_RNG,
+    );
+    expect(battle.units.a!.declaredWeaponAttacks.length).toBe(1);
+    expect(battle.units.a!.declaredPhysicalAttacks.length).toBe(1);
+    expect(battle.units.a!.declaredPhysicalAttacks[0]!.limb).toBe("rightArm");
+    expect(battle.actedThisPhase).toEqual(["a"]);
+    const declared = events.find((e) => e.kind === "attacksDeclared");
+    expect(declared?.weapons?.targetId).toBe("t");
+    expect(declared?.weapons?.count).toBe(1);
+    expect(declared?.physical).toEqual([{ type: "punch", targetId: "t" }]);
+  });
+
+  it("rejects a punching arm's weapons in the same call with no partial state", () => {
+    const battle = faceToFaceBattle();
+    const { arm } = armAndTorsoWeaponIndices();
+    expect(() =>
+      declareAttacks(
+        battle,
+        "a",
+        [{ weaponIndex: arm, targetId: "t" }],
         [{ type: "punch", targetId: "t", limb: "rightArm" }],
         [],
         HIGH_RNG,
       ),
     ).toThrow(/cannot fire/);
+    expect(battle.units.a!.declaredWeaponAttacks).toEqual([]);
+    expect(battle.units.a!.declaredPhysicalAttacks).toEqual([]);
+    expect(battle.actedThisPhase).toEqual([]);
+  });
+
+  it("rejects arm weapons combined with push or club", () => {
+    const battle = faceToFaceBattle();
+    const { arm } = armAndTorsoWeaponIndices();
+    // Push needs the target directly ahead; faceToFace already is.
+    expect(() =>
+      declareAttacks(
+        battle,
+        "a",
+        [{ weaponIndex: arm, targetId: "t" }],
+        [{ type: "push", targetId: "t" }],
+        [],
+        HIGH_RNG,
+      ),
+    ).toThrow(/no arm-mounted weapons/);
+    expect(battle.units.a!.declaredWeaponAttacks).toEqual([]);
+    expect(battle.units.a!.declaredPhysicalAttacks).toEqual([]);
+  });
+
+  it("validateAttacksImpl checks the combined set", () => {
+    const battle = faceToFaceBattle();
+    const { arm, torso } = armAndTorsoWeaponIndices();
+    expect(() =>
+      validateAttacksImpl(
+        battle,
+        "a",
+        [{ weaponIndex: torso, targetId: "t" }],
+        [{ type: "punch", targetId: "t", limb: "rightArm" }],
+      ),
+    ).not.toThrow();
+    expect(() =>
+      validateAttacksImpl(
+        battle,
+        "a",
+        [{ weaponIndex: arm, targetId: "t" }],
+        [{ type: "punch", targetId: "t", limb: "rightArm" }],
+      ),
+    ).toThrow(/cannot fire/);
+  });
+
+  it("a second declaration of either kind is rejected (one declare per turn)", () => {
+    const battle = faceToFaceBattle();
+    const { torso } = armAndTorsoWeaponIndices();
+    declareAttacks(
+      battle,
+      "a",
+      [{ weaponIndex: torso, targetId: "t" }],
+      [{ type: "punch", targetId: "t", limb: "rightArm" }],
+      [],
+      HIGH_RNG,
+    );
+    // Re-arm the head-of-queue check: the actor-queue guard runs before
+    // the already-declared guards (pre-existing ordering).
+    battle.actedThisPhase = [];
+    expect(() =>
+      declareAttacks(battle, "a", [{ weaponIndex: torso, targetId: "t" }], [], [], HIGH_RNG),
+    ).toThrow(/already declared attacks/);
+    expect(() =>
+      declareAttacks(
+        battle,
+        "a",
+        [],
+        [{ type: "punch", targetId: "t", limb: "leftArm" }],
+        [],
+        HIGH_RNG,
+      ),
+    ).toThrow(/already declared attacks/);
+  });
+});
+
+describe("twist-aware physical arcs (TW pp. 98-99)", () => {
+  /** Attacker faces north; target sits on the northwest bearing (leftSide). */
+  function northVsNorthwest(): BattleState {
+    const battle = makeBattle(
+      makeUnitInit("a", 1, { col: 10, row: 10 }, "n"),
+      makeUnitInit("t", 2, { col: 9, row: 10 }, "s"),
+    );
+    battle.phase = "attack";
+    battle.initiativeWinnerTeam = 2;
+    battle.actorQueue = ["a", "t"];
+    battle.actedThisPhase = [];
+    return battle;
+  }
+
+  it("punch works untwisted but club needs a left twist into the front arc", () => {
+    const battle = northVsNorthwest();
+    expect(
+      validatePhysicalAttack(battle, "a", { type: "punch", targetId: "t", limb: "rightArm" }).ok,
+    ).toBe(true);
+    expect(validatePhysicalAttack(battle, "a", { type: "club", targetId: "t" }).ok).toBe(false);
+    expect(
+      validatePhysicalAttack(battle, "a", { type: "club", targetId: "t" }, "leftSide").ok,
+    ).toBe(true);
+    expect(
+      validatePhysicalAttack(
+        battle,
+        "a",
+        { type: "punch", targetId: "t", limb: "rightArm" },
+        "rightSide",
+      ).ok,
+    ).toBe(true);
+  });
+
+  it("a rear target becomes punchable with a twist", () => {
+    const battle = makeBattle(
+      makeUnitInit("a", 1, { col: 10, row: 10 }, "n"),
+      makeUnitInit("t", 2, { col: 10, row: 11 }, "n"),
+    );
+    battle.phase = "attack";
+    battle.initiativeWinnerTeam = 2;
+    battle.actorQueue = ["a", "t"];
+    battle.actedThisPhase = [];
+    expect(
+      validatePhysicalAttack(battle, "a", { type: "punch", targetId: "t", limb: "rightArm" }).ok,
+    ).toBe(false);
+    expect(
+      validatePhysicalAttack(
+        battle,
+        "a",
+        { type: "punch", targetId: "t", limb: "rightArm" },
+        "rightSide",
+      ).ok,
+    ).toBe(true);
+  });
+
+  it("kick ignores the twist (feet-based, TW p. 147)", () => {
+    // Rear target for a north-facing 'Mech: rejected with and without a
+    // twist, since kick classifies against the feet (validateKick never
+    // reads the twist).
+    const battle = makeBattle(
+      makeUnitInit("a", 1, { col: 10, row: 10 }, "n"),
+      makeUnitInit("t", 2, { col: 10, row: 11 }, "n"),
+    );
+    battle.phase = "attack";
+    battle.initiativeWinnerTeam = 2;
+    battle.actorQueue = ["a", "t"];
+    battle.actedThisPhase = [];
+    expect(
+      validatePhysicalAttack(battle, "a", { type: "kick", targetId: "t", limb: "rightLeg" }).ok,
+    ).toBe(false);
+    expect(
+      validatePhysicalAttack(
+        battle,
+        "a",
+        { type: "kick", targetId: "t", limb: "rightLeg" },
+        "leftSide",
+      ).ok,
+    ).toBe(false);
   });
 });

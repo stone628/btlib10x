@@ -8,7 +8,6 @@ import {
   type CriticalResolution,
   type DamageTransferStep,
   declareAttacks,
-  declarePhysicalAttacks,
   type FireBlockerReason,
   type FireSuggestion,
   type FireWeapon,
@@ -61,9 +60,11 @@ export interface AttackContext {
   physicalDecls: PhysicalAttackDecl[];
   /** Acting unit's torso twist (TW pp.105-106) for the current attack-phase
    *  declaration: starts at `"front"` on context allocation (new actor or
-   *  phase entry). Locked once any fire command is queued (see
-   *  {@link setTorsoTwist}). Session-owned because it is a UI declaration,
-   *  not persistent battle state. */
+   *  phase entry). Locked once any weapon attack is queued, or once a punch
+   *  or club is queued (twist governs their arcs, TW pp. 98–99) — kick and
+   *  push are feet-based and never lock it (see {@link setTorsoTwist}).
+   *  Session-owned because it is a UI declaration, not persistent battle
+   *  state. */
   torsoTwist: Arc;
   fireCandidate: FireSuggestion | null;
 }
@@ -184,10 +185,11 @@ export function queueWeaponAttacks(s: Session, targetId: string, weapons: number
       throw new Error(i18n("err.physical.noArmWeapons"));
     }
   }
-  validateAttacks(battle, unit.id, [...context.weaponDecls, ...decls], {
+  validateAttacks(battle, unit.id, [...context.weaponDecls, ...decls], context.physicalDecls, {
     twist: context.torsoTwist,
   });
   context.weaponDecls.push(...decls);
+  context.fireCandidate = null;
   return warnings;
 }
 
@@ -218,14 +220,9 @@ export function commitAttack(s: Session): SessionGameEvent[] {
   } else {
     commitAtomic(s, () => {
       const collected: GameEvent[] = [];
-      if (context.weaponDecls.length > 0) {
-        declareAttacks(battle, unitId, context.weaponDecls, collected, s.rng, {
-          twist: context.torsoTwist,
-        });
-      }
-      if (context.physicalDecls.length > 0) {
-        declarePhysicalAttacks(battle, unitId, context.physicalDecls, collected, s.rng);
-      }
+      declareAttacks(battle, unitId, context.weaponDecls, context.physicalDecls, collected, s.rng, {
+        twist: context.torsoTwist,
+      });
       clearContext(s);
       events.push(
         ...collected,
@@ -291,7 +288,7 @@ export function queuePhysicalAttack(
     throw new Error(i18n("err.physical.duplicate", { type }));
   }
 
-  const result = validatePhysicalAttack(battle, unit.id, decl);
+  const result = validatePhysicalAttack(battle, unit.id, decl, context.torsoTwist);
   if (!result.ok) {
     throw new Error(i18n("err.physical.invalid", { reason: result.reason ?? "invalid" }));
   }
@@ -315,6 +312,13 @@ export function queuePhysicalAttack(
     throw new Error(i18n("err.physical.noArmWeapons"));
   }
 
+  // Combined backstop: re-validate the full stacked context (weapons +
+  // physicals + twist) through the engine so queue order cannot smuggle an
+  // illegal combination past the per-command checks above.
+  validateAttacks(battle, unit.id, context.weaponDecls, [...context.physicalDecls, decl], {
+    twist: context.torsoTwist,
+  });
+
   const warnings: string[] = [];
   if (type === "punch" && resolvedLimb !== undefined) {
     warnings.push(i18n("warn.physical.armWeapons", { limb: resolvedLimb }));
@@ -327,6 +331,7 @@ export function queuePhysicalAttack(
   }
 
   context.physicalDecls.push(decl);
+  context.fireCandidate = null;
   return warnings;
 }
 
@@ -344,7 +349,7 @@ export function physicalAttackSuggestions(s: Session): PhysicalAttackSuggestion[
     // Check each attack type
     for (const type of ["punch", "kick", "push", "club"] as const) {
       const decl: PhysicalAttackDecl = { type, targetId };
-      const result = validatePhysicalAttack(battle, unit.id, decl);
+      const result = validatePhysicalAttack(battle, unit.id, decl, context.torsoTwist);
       if (result.ok) {
         suggestions.push({ type, targetId, attackDirection: result.attackDirection });
       }
@@ -456,12 +461,18 @@ export function parseTorsoTwist(direction: string): Arc {
 
 /**
  * Set the acting unit's torso twist (TW pp.105-106) for its current attack-phase
- * declaration. Locked once any fire command is queued — the user must
- * `cancel` first — and resets to `"front"` on phase entry or new actor.
+ * declaration. Locked once any weapon attack is queued, or once a punch or
+ * club is queued (the twist governs their attacker-side arcs, TW pp. 98–99)
+ * — kick and push are feet-based (TW pp. 147–149) and never lock it. The
+ * user must `cancel` first — and resets to `"front"` on phase entry or
+ * new actor.
  */
 export function setTorsoTwist(s: Session, arc: Arc): Arc {
   const { battle, context } = requireBattleAndContext(s);
-  if (context.weaponDecls.length > 0) {
+  const twistLocked =
+    context.weaponDecls.length > 0 ||
+    context.physicalDecls.some((d) => d.type === "punch" || d.type === "club");
+  if (twistLocked) {
     throw new Error(i18n("err.twist.locked"));
   }
   const prev = context.torsoTwist;
@@ -649,7 +660,7 @@ export function fireSuggestionChunks(s: Session): Chunk[] {
     if (!isAdjacent(actor.position, target.position)) continue;
     for (const type of ["punch", "kick", "push", "club"] as const) {
       const decl: PhysicalAttackDecl = { type, targetId };
-      if (validatePhysicalAttack(battle, actor.id, decl).ok) {
+      if (validatePhysicalAttack(battle, actor.id, decl, context.torsoTwist).ok) {
         physical.push(
           i18n("physicalSuggestion.line", {
             type,

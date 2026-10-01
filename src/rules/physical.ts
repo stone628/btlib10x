@@ -17,7 +17,12 @@ import type { HexCoord, Location, Rng } from "../core/types";
 import { mechDefFor } from "../data/index";
 import type { ResolvedMechDef } from "../data/mech.schema";
 import { countArmActuators } from "./actuators";
-import { type Arc, classifyArcWithBoundary, defenderArcChoice } from "./arcs";
+import {
+  type Arc,
+  classifyArcWithBoundary,
+  defenderArcChoice,
+  effectiveFacingForTwist,
+} from "./arcs";
 import { destroyedStructures } from "./critical";
 import { applyDamage, type DamageApplication, type UnitDamageState } from "./damage";
 import type { BattleState, UnitState } from "./game";
@@ -412,11 +417,18 @@ export interface ValidationResult {
  * Validate a physical attack declaration (TW pp. 144–151).
  * Checks adjacency, arc, level difference, actuator damage, and
  * interaction with weapon fire.
+ *
+ * `twist` is the attacker's torso twist (TW pp. 105–106, 98–99: the
+ * twist governs physical-attack arcs too). Punch and club attacker-side
+ * arcs classify against the twisted facing; kick and push are feet-based
+ * (TW pp. 147–149: kick uses the feet's forward arc, push/charge ignore
+ * the twist) and never read it.
  */
 export function validatePhysicalAttack(
   battle: BattleState,
   attackerId: string,
   decl: PhysicalAttackDecl,
+  twist?: Arc | null,
 ): ValidationResult {
   const attacker = battle.units[attackerId];
   if (!attacker) return { ok: false, reason: `Unknown unit ${attackerId}` };
@@ -451,13 +463,13 @@ export function validatePhysicalAttack(
   // Type-specific validation
   switch (decl.type) {
     case "punch":
-      return validatePunch(attacker, target, decl);
+      return validatePunch(attacker, target, decl, twist ?? null);
     case "kick":
       return validateKick(attacker, target, decl);
     case "push":
       return validatePush(attacker, target, decl);
     case "club":
-      return validateClub(attacker, target, decl);
+      return validateClub(attacker, target, decl, twist ?? null);
   }
 }
 
@@ -465,11 +477,13 @@ function validatePunch(
   attacker: UnitState,
   target: UnitState,
   decl: PhysicalAttackDecl,
+  twist: Arc | null,
 ): ValidationResult {
-  // Target must be in forward or side arc (TW p. 145)
+  // Target must be in forward or side arc (TW p. 145), read off the
+  // twisted torso facing (TW pp. 98–99).
   const b = bearingExact(attacker.position, target.position);
   if (b === null) return { ok: false, reason: "Same hex" };
-  const arc = classifyArcWithBoundary(attacker.facing, b);
+  const arc = classifyArcWithBoundary(effectiveFacingForTwist(attacker.facing, twist), b);
   if (arc.arc === "rear") {
     return { ok: false, reason: "Punch requires target in forward or side arc" };
   }
@@ -550,11 +564,13 @@ function validateClub(
   attacker: UnitState,
   target: UnitState,
   _decl: PhysicalAttackDecl,
+  twist: Arc | null,
 ): ValidationResult {
-  // Target must be in forward arc (TW p. 145)
+  // Target must be in forward arc (TW p. 145), read off the twisted torso
+  // facing (TW pp. 98–99).
   const b = bearingExact(attacker.position, target.position);
   if (b === null) return { ok: false, reason: "Same hex" };
-  const arc = classifyArcWithBoundary(attacker.facing, b);
+  const arc = classifyArcWithBoundary(effectiveFacingForTwist(attacker.facing, twist), b);
   if (arc.arc !== "front") {
     return { ok: false, reason: "Club requires target in forward arc" };
   }

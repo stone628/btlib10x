@@ -108,6 +108,7 @@ import * as mv from "./movement";
 import { BACKWARD_LEVEL_CHANGE_MAX, FORWARD_LEVEL_CHANGE_MAX, JUMP_MP_PER_HEX } from "./movement";
 import {
   type PhysicalAttackDecl,
+  type PhysicalAttackType,
   type PhysicalResolution,
   resolvePhysicalAttack,
   validatePhysicalAttack,
@@ -170,6 +171,23 @@ export interface WeaponAttackDecl {
 export type MoveStep =
   | { readonly kind: "enter"; readonly to: HexCoord }
   | { readonly kind: "turn"; readonly facings: number };
+
+/** Weapon half of a merged `attacksDeclared` event: the volley's shared
+ *  target, resolved range fields, and declaration count. */
+export interface DeclaredWeaponVolley {
+  readonly targetId: string;
+  readonly count: number;
+  readonly distance: number;
+  readonly rangeBracket: string;
+  readonly rangeMod: number;
+}
+
+/** Physical half of a merged `attacksDeclared` event: one entry per
+ *  declared physical attack (two-arm punches may name different targets). */
+export interface DeclaredPhysicalAttack {
+  readonly type: PhysicalAttackType;
+  readonly targetId: string;
+}
 
 /** Off-line status of a unit. `"not"` = online; any other value = shut down.
  *  `"manual"` persists until a voluntary startup roll succeeds, `"heat"`
@@ -313,24 +331,16 @@ export type GameEvent =
   | {
       readonly kind: "attacksDeclared";
       readonly unitId: string;
-      readonly targetId: string;
-      readonly count: number;
-      readonly distance: number;
-      readonly rangeBracket: string;
-      readonly rangeMod: number;
+      /** Weapon volley, or null when the declaration holds physicals only. */
+      readonly weapons: DeclaredWeaponVolley | null;
+      /** Declared physical attacks (possibly empty). */
+      readonly physical: readonly DeclaredPhysicalAttack[];
     }
   | {
       readonly kind: "attackResolved";
       readonly unitId: string;
       readonly targetId: string;
       readonly resolution: AttackResolution;
-    }
-  | {
-      readonly kind: "physicalAttacksDeclared";
-      readonly unitId: string;
-      readonly targetId: string;
-      readonly count: number;
-      readonly type: string;
     }
   | {
       readonly kind: "physicalAttackResolved";
@@ -1366,48 +1376,108 @@ export interface ValidatedAttackVolley {
   readonly attackRangeBracket: RangeBracket;
   readonly attackRangeMod: number;
   readonly arcs: Readonly<Record<number, Arc>>;
+  readonly normalized: PhysicalAttackDecl[];
+}
+
+/** Normalize physical attack limbs: a limbless punch defaults to the right
+ *  arm, a limbless kick to the right leg (TW lets the attacker pick; the
+ *  default keeps single-command declarations deterministic). Push and club
+ *  carry no limb. */
+function normalizePhysicalDecls(decls: readonly PhysicalAttackDecl[]): PhysicalAttackDecl[] {
+  return decls.map((d) => {
+    if (d.type === "punch" && d.limb === undefined) return { ...d, limb: "rightArm" as const };
+    if (d.type === "kick" && d.limb === undefined) return { ...d, limb: "rightLeg" as const };
+    return { ...d };
+  });
+}
+
+/**
+ * Enforce the one-type-per-turn rule (TW p. 144) with the two-arm punch
+ * exception (one punch per arm, separate rolls). Throws on violation.
+ */
+function checkPhysicalSetShape(unitId: string, normalized: readonly PhysicalAttackDecl[]): void {
+  const types = new Set(normalized.map((d) => d.type));
+  if (types.size > 1)
+    throw new Error(`${unitId} may make only one type of physical attack per turn`);
+  const punches = normalized.filter((d) => d.type === "punch");
+  if (punches.length > 2) throw new Error(`${unitId} may punch with at most two arms`);
+  const punchLimbs = punches.map((d) => d.limb);
+  if (new Set(punchLimbs).size !== punchLimbs.length)
+    throw new Error(`${unitId} may punch with each arm only once per turn`);
 }
 
 /** Validation core shared by `validateAttacks` and `declareAttacks`.
  *  Runs every gate `declareAttacks` enforces: unit status (removed /
  *  shutdown / unconscious), sensors, prone arm-prop, and per-decl checks
  *  (weapon bounds, dup, jammed / destroyed, location, rapid-fire, single
- *  target, target validity, arc, LOS, range, to-hit, ammo). On success
- *  returns the volley's resolved arc, attack direction, distance, and
- *  range bracket. Does NOT mutate state, consume RNG, or emit events.
- *  Phase and actor-queue are checked by `declareAttacks`, not here. */
+ *  target, target validity, arc, LOS, range, to-hit, ammo), plus the
+ *  physical set (one-type / two-punch shape, per-decl legality with the
+ *  twist-aware arcs of `validatePhysicalAttack`, and the weapon/physical
+ *  interaction backstop below). On success returns the volley's resolved
+ *  arc, attack direction, distance, and range bracket — or null when no
+ *  weapon attacks were passed. Does NOT mutate state, consume RNG, or
+ *  emit events. Phase and actor-queue are checked by `declareAttacks`,
+ *  not here. */
 export function validateAttacksImpl(
   state: BattleState,
   unitId: string,
-  decls: readonly WeaponAttackDecl[],
-  options: DeclareAttacksOptions,
+  weaponDecls: readonly WeaponAttackDecl[],
+  physicalDecls: readonly PhysicalAttackDecl[] = [],
+  options: DeclareAttacksOptions = {},
 ): ValidatedAttackVolley {
   const unit = requireUnit(state, unitId);
+  const wantWeapons = weaponDecls.length > 0;
+  const wantPhysical = physicalDecls.length > 0;
+  if (!wantWeapons && !wantPhysical)
+    throw new Error("declareAttacks requires at least one declaration");
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is destroyed`);
-  if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot fire`);
-  if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot fire`);
+  if (isShutdown(unit))
+    throw new Error(
+      wantWeapons
+        ? `${unitId} is shut down and cannot fire`
+        : `${unitId} is shut down and cannot attack`,
+    );
+  if (unit.unconscious)
+    throw new Error(
+      wantWeapons
+        ? `${unitId} is unconscious and cannot fire`
+        : `${unitId} is unconscious and cannot attack`,
+    );
   const def = mechDefFor(unit);
+  const twist = options.twist ?? null;
+  const normalizedPhysical = normalizePhysicalDecls(physicalDecls);
+  let targetId: string | null = null;
+  if (wantPhysical) {
+    checkPhysicalSetShape(unitId, normalizedPhysical);
+    for (const p of normalizedPhysical) {
+      const result = validatePhysicalAttack(state, unitId, p, twist);
+      if (!result.ok) throw new Error(result.reason ?? "invalid physical attack");
+      if (targetId === null) targetId = p.targetId;
+      else if (targetId !== p.targetId) {
+        throw new Error("A unit may only declare attacks against one target per turn");
+      }
+    }
+  }
   const sensorsOut = countDestroyedSensor(def, unit.damage, unit.critSlotsDestroyed);
-  if (sensorsBlind(sensorsOut)) {
+  if (wantWeapons && sensorsBlind(sensorsOut)) {
     throw new Error(`${unitId} cannot fire: sensors destroyed (no weapon attacks)`);
   }
   const sensorMod = sensorAttackModifier(sensorsOut);
   const effectiveFacing = effectiveFacingForTwist(unit.facing, options.twist ?? null);
-  if (unit.prone) {
+  if (wantWeapons && unit.prone) {
     if (
       isUnitLocationDestroyed(unit.baseDamage, "leftArm") ||
       isUnitLocationDestroyed(unit.baseDamage, "rightArm")
     ) {
       throw new Error(`${unitId} cannot fire while prone (need both arm location)`);
     }
-    const hasLeft = decls.some((d) => def.weapons[d.weaponIndex]?.location === "leftArm");
-    const hasRight = decls.some((d) => def.weapons[d.weaponIndex]?.location === "rightArm");
+    const hasLeft = weaponDecls.some((d) => def.weapons[d.weaponIndex]?.location === "leftArm");
+    const hasRight = weaponDecls.some((d) => def.weapons[d.weaponIndex]?.location === "rightArm");
     if (hasLeft && hasRight) {
       throw new Error(`${unitId} cannot fire while prone (volley uses both arms; prop one)`);
     }
   }
 
-  let targetId: string | null = null;
   let attackDirection: Arc | undefined;
   let attackDistance = 0;
   let attackRangeBracket: RangeBracket = "short";
@@ -1415,7 +1485,7 @@ export function validateAttacksImpl(
 
   const seenWeapons = new Set<number>();
   const arcs: Record<number, Arc> = {};
-  decls.forEach((decl, index) => {
+  weaponDecls.forEach((decl, index) => {
     const mount = def.weapons[decl.weaponIndex];
     if (!mount) throw new Error(`weaponIndex ${decl.weaponIndex} out of range for ${unitId}`);
     const weapon = weaponDefFor(mount);
@@ -1538,7 +1608,10 @@ export function validateAttacksImpl(
     }
   });
 
+  const conflict = physicalWeaponConflict(def, weaponDecls, normalizedPhysical);
+  if (conflict !== null) throw new Error(conflict);
   if (targetId === null) throw new Error("declareAttacks requires at least one declaration");
+
   return {
     targetId,
     attackDirection: attackDirection!,
@@ -1546,65 +1619,101 @@ export function validateAttacksImpl(
     attackRangeBracket,
     attackRangeMod,
     arcs,
+    normalized: normalizedPhysical,
   };
 }
 
 export function validateAttacks(
   state: BattleState,
   unitId: string,
-  decls: readonly WeaponAttackDecl[],
+  weaponDecls: readonly WeaponAttackDecl[],
+  physicalDecls: readonly PhysicalAttackDecl[] = [],
   options: DeclareAttacksOptions = {},
 ): void {
-  validateAttacksImpl(state, unitId, decls, options);
+  validateAttacksImpl(state, unitId, weaponDecls, physicalDecls, options);
 }
 
+/**
+ * Declare weapon and/or physical attacks for the current
+ * weapon-attack-phase actor in one atomic call — the unit's single
+ * attack declaration for the turn (a second call of either kind throws).
+ * Weapons and physical attacks coexist in one turn (e.g. punch plus torso
+ * weapons); commit order at resolution is weapons first, then physical.
+ * Validates the full combined set (including the arm/leg weapon
+ * interaction backstop) before mutating anything, so a throwing call
+ * leaves no partial declarations behind. Emits one merged
+ * `attacksDeclared` event carrying the weapon volley (null when the
+ * declaration holds physicals only) and the physical entries. At least
+ * one declaration of either kind is required.
+ */
 export function declareAttacks(
   state: BattleState,
   unitId: string,
-  decls: readonly WeaponAttackDecl[],
+  weaponDecls: readonly WeaponAttackDecl[] = [],
+  physicalDecls: readonly PhysicalAttackDecl[] = [],
   sink: GameEvent[],
   rng: Rng = DEFAULT_RNG,
   options: DeclareAttacksOptions = {},
 ): void {
   requireCurrentActor(state, unitId, "attack");
   const unit = requireUnit(state, unitId);
-  if (unit.declaredWeaponAttacks.length > 0)
+  const wantWeapons = weaponDecls.length > 0;
+  const wantPhysical = physicalDecls.length > 0;
+  if (!wantWeapons && !wantPhysical)
+    throw new Error("declareAttacks requires at least one declaration");
+  if (unit.declaredWeaponAttacks.length > 0 || unit.declaredPhysicalAttacks.length > 0)
     throw new Error(`${unitId} already declared attacks this turn`);
-  const volley = validateAttacksImpl(state, unitId, decls, options);
+  const volley = validateAttacksImpl(state, unitId, weaponDecls, physicalDecls, options);
   const def = mechDefFor(unit);
-  const physicalConflict = physicalWeaponConflict(def, decls, unit.declaredPhysicalAttacks);
-  if (physicalConflict !== null) throw new Error(physicalConflict);
   // Consume non-streak per-bin ammo per decl; streak fires on hit and
   // resolves its own ammo in `resolveUnitAttacks`. RNG via ammo policy.
-  for (const decl of decls) {
-    unit.declaredWeaponAttacks.push({
-      ...decl,
-      ...(volley.arcs[decl.weaponIndex] !== undefined
-        ? { arc: volley.arcs[decl.weaponIndex] }
-        : {}),
-      attackDirection: volley.attackDirection,
-    });
-    const mount = def.weapons[decl.weaponIndex];
-    if (!mount) continue;
-    const weapon = weaponDefFor(mount);
-    const rapidFire = decl.rapidFire ?? false;
-    const shots = rapidFire ? (weapon.rapidFireShots ?? 1) : 1;
-    const needed = weapon.missiles !== undefined ? 1 : shots;
-    if (binsForWeapon(def, decl.weaponIndex).length === 0) continue;
-    if (weapon.streak === true) continue;
-    unit.ammoBins = consumeAmmo(def, unit.ammoBins, decl.weaponIndex, needed, unit.ammoPolicy, rng);
+  if (wantWeapons) {
+    for (const decl of weaponDecls) {
+      unit.declaredWeaponAttacks.push({
+        ...decl,
+        ...(volley.arcs[decl.weaponIndex] !== undefined
+          ? { arc: volley.arcs[decl.weaponIndex] }
+          : {}),
+        attackDirection: volley.attackDirection,
+      });
+      const mount = def.weapons[decl.weaponIndex];
+      if (!mount) continue;
+      const weapon = weaponDefFor(mount);
+      const rapidFire = decl.rapidFire ?? false;
+      const shots = rapidFire ? (weapon.rapidFireShots ?? 1) : 1;
+      const needed = weapon.missiles !== undefined ? 1 : shots;
+      if (binsForWeapon(def, decl.weaponIndex).length === 0) continue;
+      if (weapon.streak === true) continue;
+      unit.ammoBins = consumeAmmo(
+        def,
+        unit.ammoBins,
+        decl.weaponIndex,
+        needed,
+        unit.ammoPolicy,
+        rng,
+      );
+    }
+    unit.firedTargetId = volley.targetId;
   }
-  unit.firedTargetId = volley.targetId;
-  state.actedThisPhase.push(unitId);
+  if (wantPhysical) {
+    for (const decl of volley.normalized) unit.declaredPhysicalAttacks.push({ ...decl });
+  }
   sink.push({
     kind: "attacksDeclared",
     unitId,
-    targetId: volley.targetId,
-    count: decls.length,
-    distance: volley.attackDistance,
-    rangeBracket: volley.attackRangeBracket,
-    rangeMod: volley.attackRangeMod,
+    weapons:
+      wantWeapons
+        ? {
+            targetId: volley.targetId,
+            count: weaponDecls.length,
+            distance: volley.attackDistance,
+            rangeBracket: volley.attackRangeBracket,
+            rangeMod: volley.attackRangeMod,
+          }
+        : null,
+    physical: volley.normalized.map((d) => ({ type: d.type, targetId: d.targetId })),
   });
+  if (!state.actedThisPhase.includes(unitId)) state.actedThisPhase.push(unitId);
 }
 
 /**
@@ -1613,8 +1722,7 @@ export function declareAttacks(
  * and a pushing / clubbing 'Mech fires no arm-mounted weapons at all.
  * Returns a human-readable conflict, or null when the combination is
  * legal. The web layer pre-checks the same rules for better messages;
- * `declareAttacks` / `declarePhysicalAttacks` enforce them so out-of-order
- * API calls cannot smuggle an illegal volley past.
+ * `declareAttacks` enforces them on the combined declaration set.
  */
 function physicalWeaponConflict(
   def: ResolvedMechDef,
@@ -1637,63 +1745,6 @@ function physicalWeaponConflict(
     if (noArmWeapons && isArm(loc)) return "pushing/clubbing 'Mech fires no arm-mounted weapons";
   }
   return null;
-}
-
-/**
- * Declare physical attacks (punch, kick, push, club) for the current
- * weapon-attack-phase actor. Weapons and physical attacks coexist in one
- * turn (e.g. punch plus torso weapons); commit order is weapons first,
- * then physical. Enforces the one-type-per-turn rule (TW p. 144) with the
- * two-arm punch exception (one punch per arm, separate rolls), per-decl
- * legality via `validatePhysicalAttack`, and the arm/leg weapon
- * interactions above. Pushes the unit to `actedThisPhase` unless its
- * weapon declaration already did, and emits `physicalAttacksDeclared`.
- */
-export function declarePhysicalAttacks(
-  state: BattleState,
-  unitId: string,
-  decls: readonly PhysicalAttackDecl[],
-  sink: GameEvent[],
-  _rng: Rng = DEFAULT_RNG,
-): void {
-  requireCurrentActor(state, unitId, "attack");
-  const unit = requireUnit(state, unitId);
-  if (isUnitRemoved(unit)) throw new Error(`${unitId} is destroyed`);
-  if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot attack`);
-  if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot attack`);
-  if (decls.length === 0)
-    throw new Error("declarePhysicalAttacks requires at least one declaration");
-  if (unit.declaredPhysicalAttacks.length > 0)
-    throw new Error(`${unitId} already declared physical attacks this turn`);
-  const types = new Set(decls.map((d) => d.type));
-  if (types.size > 1)
-    throw new Error(`${unitId} may make only one type of physical attack per turn`);
-  const normalized: PhysicalAttackDecl[] = decls.map((d) => {
-    if (d.type === "punch" && d.limb === undefined) return { ...d, limb: "rightArm" as const };
-    if (d.type === "kick" && d.limb === undefined) return { ...d, limb: "rightLeg" as const };
-    return { ...d };
-  });
-  const punches = normalized.filter((d) => d.type === "punch");
-  if (punches.length > 2) throw new Error(`${unitId} may punch with at most two arms`);
-  const punchLimbs = punches.map((d) => d.limb);
-  if (new Set(punchLimbs).size !== punchLimbs.length)
-    throw new Error(`${unitId} may punch with each arm only once per turn`);
-  for (const decl of normalized) {
-    const result = validatePhysicalAttack(state, unitId, decl);
-    if (!result.ok) throw new Error(result.reason ?? "invalid physical attack");
-  }
-  const def = mechDefFor(unit);
-  const conflict = physicalWeaponConflict(def, unit.declaredWeaponAttacks, normalized);
-  if (conflict !== null) throw new Error(conflict);
-  for (const decl of normalized) unit.declaredPhysicalAttacks.push({ ...decl });
-  if (!state.actedThisPhase.includes(unitId)) state.actedThisPhase.push(unitId);
-  sink.push({
-    kind: "physicalAttacksDeclared",
-    unitId,
-    targetId: normalized[0]!.targetId,
-    count: normalized.length,
-    type: normalized[0]!.type,
-  });
 }
 
 function resolveUnitAttacks(

@@ -59,7 +59,7 @@ describe("validateAttacks — gate coverage", () => {
   it("accepts a legal volley and returns the resolved metadata", () => {
     const state = hbkVsEnf();
     const before = snapshotUnit(state, "hbk");
-    const r = validateAttacksImpl(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }], {});
+    const r = validateAttacksImpl(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }], [], {})!;
     expect(r.targetId).toBe("enf");
     expect(typeof r.attackDirection).toBe("string");
     expect(r.attackDistance).toBe(1);
@@ -73,7 +73,7 @@ describe("validateAttacks — gate coverage", () => {
   it("throws on weaponIndex out of range", () => {
     const state = hbkVsEnf();
     expect(() =>
-      validateAttacksImpl(state, "hbk", [{ weaponIndex: 99, targetId: "enf" }], {}),
+      validateAttacksImpl(state, "hbk", [{ weaponIndex: 99, targetId: "enf" }], [], {}),
     ).toThrow(/weaponIndex 99 out of range/);
   });
 
@@ -87,6 +87,7 @@ describe("validateAttacks — gate coverage", () => {
           { weaponIndex: 2, targetId: "enf" },
           { weaponIndex: 2, targetId: "enf" },
         ],
+        [],
         {},
       ),
     ).toThrow(/may only be declared once per turn/);
@@ -127,9 +128,9 @@ describe("validateAttacks — gate coverage", () => {
       true,
     );
     startAttackTurn(state);
-    expect(() => validateAttacksImpl(state, "a", [{ weaponIndex: 1, targetId: "b" }], {})).toThrow(
-      /Target must belong to another team/,
-    );
+    expect(() =>
+      validateAttacksImpl(state, "a", [{ weaponIndex: 1, targetId: "b" }], [], {}),
+    ).toThrow(/Target must belong to another team/);
   });
 
   it("throws on multi-target volley", () => {
@@ -177,6 +178,7 @@ describe("validateAttacks — gate coverage", () => {
           { weaponIndex: 2, targetId: "enf1" },
           { weaponIndex: 1, targetId: "enf2" },
         ],
+        [],
         {},
       ),
     ).toThrow(/only declare attacks against one target/);
@@ -187,7 +189,7 @@ describe("validateAttacks — gate coverage", () => {
     // (3,4) lies in the rightSide arc — outside leftArm's firing arc.
     const state = hbkVsEnf();
     expect(() =>
-      validateAttacksImpl(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], {}),
+      validateAttacksImpl(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], {}),
     ).toThrow(/cannot fire into the rightSide arc/);
   });
 
@@ -227,8 +229,9 @@ describe("validateAttacks — gate coverage", () => {
         { weaponIndex: 1, targetId: "enf" },
         { weaponIndex: 2, targetId: "enf" },
       ],
+      [],
       {},
-    );
+    )!;
     expect(r.attackDistance).toBe(1);
     expect(r.arcs[1]).toBe("front");
     expect(r.arcs[2]).toBe("front");
@@ -265,20 +268,26 @@ describe("validateAttacks — gate coverage", () => {
     );
     startAttackTurn(state);
     expect(() =>
-      validateAttacksImpl(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], {}),
+      validateAttacksImpl(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], {}),
     ).toThrow(/exceeds long range/);
   });
 
   it("throws on rapid-fire without rapidFireShots", () => {
     const state = hbkVsEnf();
     expect(() =>
-      validateAttacksImpl(state, "hbk", [{ weaponIndex: 1, targetId: "enf", rapidFire: true }], {}),
+      validateAttacksImpl(
+        state,
+        "hbk",
+        [{ weaponIndex: 1, targetId: "enf", rapidFire: true }],
+        [],
+        {},
+      ),
     ).toThrow(/is not rapid-fire/);
   });
 
   it("throws on empty decls list", () => {
     const state = hbkVsEnf();
-    expect(() => validateAttacksImpl(state, "hbk", [], {})).toThrow(
+    expect(() => validateAttacksImpl(state, "hbk", [], [], {})).toThrow(
       /requires at least one declaration/,
     );
   });
@@ -286,7 +295,7 @@ describe("validateAttacks — gate coverage", () => {
   it("throws on unknown target", () => {
     const state = hbkVsEnf();
     expect(() =>
-      validateAttacksImpl(state, "hbk", [{ weaponIndex: 2, targetId: "ghost" }], {}),
+      validateAttacksImpl(state, "hbk", [{ weaponIndex: 2, targetId: "ghost" }], [], {}),
     ).toThrow();
   });
 
@@ -325,6 +334,7 @@ describe("validateAttacks — gate coverage", () => {
           { weaponIndex: 1, targetId: "enf" },
           { weaponIndex: 2, targetId: "enf" },
         ],
+        [],
         {},
       ),
     ).toThrow(/volley uses both arms/);
@@ -337,6 +347,7 @@ describe("validateAttacks — gate coverage", () => {
           { weaponIndex: 2, targetId: "enf" },
           { weaponIndex: 1, targetId: "enf" },
         ],
+        [],
         {},
       ),
     ).toThrow(/volley uses both arms/);
@@ -369,7 +380,7 @@ describe("validateAttacks — gate coverage", () => {
     );
     startAttackTurn(state);
     requireUnit(state, "hbk").prone = true;
-    const r = validateAttacksImpl(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], {});
+    const r = validateAttacksImpl(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], {})!;
     expect(r.targetId).toBe("enf");
   });
 
@@ -402,14 +413,14 @@ describe("validateAttacks — gate coverage", () => {
     rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []); // now initiative phase, team 0 wins
     // Phase is "initiative" — validateAttacks should still run.
     expect(() =>
-      validateAttacksImpl(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], {}),
+      validateAttacksImpl(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], {}),
     ).not.toThrow();
   });
 
   it("does not consume RNG — repeated calls with same input return same metadata", () => {
     const state = hbkVsEnf();
-    const a = validateAttacksImpl(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }], {});
-    const b = validateAttacksImpl(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }], {});
+    const a = validateAttacksImpl(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }], [], {});
+    const b = validateAttacksImpl(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }], [], {});
     expect(a).toEqual(b);
   });
 
@@ -419,7 +430,7 @@ describe("validateAttacks — gate coverage", () => {
     // weapon 1 (left arm, front-allowed) accepts.
     const state = hbkVsEnf();
     expect(() =>
-      validateAttacksImpl(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], {
+      validateAttacksImpl(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], {
         twist: "rightSide",
       }),
     ).not.toThrow();
