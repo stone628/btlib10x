@@ -328,7 +328,7 @@ export function nextAutoPlayCommand(s: Session): string | null {
       }
       const sugg = suggestFireTargets(st, actor.id);
       const declared = new Set(
-        (s.attack?.fireDecls ?? []).map((d: { weaponIndex: number }) => d.weaponIndex),
+        (s.attack?.weaponDecls ?? []).map((d: { weaponIndex: number }) => d.weaponIndex),
       );
       const variantWeapons = (t: FireTarget): FireWeapon[] =>
         t.weaponsIfPropLeft.length >= t.weaponsIfPropRight.length

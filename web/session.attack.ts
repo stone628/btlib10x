@@ -2,7 +2,6 @@ import {
   type AmmoPolicy,
   type Arc,
   type ArmLocation,
-  type AttackDecl,
   type AttackResolution,
   type BattleState,
   type CriticalEffect,
@@ -35,6 +34,7 @@ import {
   type TorsoLocationValue,
   validateAttacks,
   validatePhysicalAttack,
+  type AttackDecl as WeaponAttackDecl,
   weaponDefFor,
 } from "btlib10x";
 import {
@@ -55,9 +55,9 @@ import { actorOrderLines } from "./session.common";
  *  club — TW p.144 one-type-per-turn rule, two-arm punch excepted),
  *  `torsoTwist` (UI declaration, resets to `"front"` on allocation),
  *  `fireHintShownFor`, `fireCandidate`. */
-export interface WeaponAttackContext {
+export interface AttackContext {
   actorId: string;
-  fireDecls: AttackDecl[];
+  weaponDecls: WeaponAttackDecl[];
   physicalDecls: PhysicalAttackDecl[];
   /** Acting unit's torso twist (TW pp.105-106) for the current attack-phase
    *  declaration: starts at `"front"` on context allocation (new actor or
@@ -70,10 +70,10 @@ export interface WeaponAttackContext {
 
 /** Allocate a fresh attack context for `actorId`. `torsoTwist` starts at
  *  `"front"`; fire declarations and suggestion cache empty. */
-export function initWeaponAttackContext(s: Session, actorId: string): WeaponAttackContext {
-  const newContext: WeaponAttackContext = {
+export function initAttackContext(s: Session, actorId: string): AttackContext {
+  const newContext: AttackContext = {
     actorId,
-    fireDecls: [],
+    weaponDecls: [],
     physicalDecls: [],
     torsoTwist: "front",
     fireCandidate: null,
@@ -82,7 +82,7 @@ export function initWeaponAttackContext(s: Session, actorId: string): WeaponAtta
   return newContext;
 }
 
-export function weaponAttackContextInvalid(s: Session, actorId: string): boolean {
+export function attackContextInvalid(s: Session, actorId: string): boolean {
   return s.attack === null || s.attack.actorId !== actorId;
 }
 
@@ -90,7 +90,7 @@ export function weaponAttackContextInvalid(s: Session, actorId: string): boolean
  *  the weapon-attack phase. */
 function requireBattleAndContext(s: Session): {
   battle: BattleState;
-  context: WeaponAttackContext;
+  context: AttackContext;
 } {
   const battle = requireBattle(s);
   if (!s.attack || battle.phase !== "attack") {
@@ -99,7 +99,7 @@ function requireBattleAndContext(s: Session): {
   return { battle, context: s.attack };
 }
 
-export function requireWeaponAttackActor(s: Session) {
+export function requireAttackActor(s: Session) {
   const battle = requireBattle(s);
   if (!s.attack || battle.phase !== "attack") {
     throw new Error(i18n("err.wrongPhase", { phase: "attack" }));
@@ -111,7 +111,7 @@ function clearContext(s: Session) {
   s.attack = null;
 }
 
-export function queueWeaponFires(s: Session, targetId: string, weapons: number[]): string[] {
+export function queueWeaponAttacks(s: Session, targetId: string, weapons: number[]): string[] {
   const { battle, context } = requireBattleAndContext(s);
   const unit = requireUnit(battle, context.actorId);
   if (targetId === unit.id) throw new Error(i18n("err.selfTarget"));
@@ -119,13 +119,13 @@ export function queueWeaponFires(s: Session, targetId: string, weapons: number[]
   if (!target) throw new Error(i18n("err.unknownUnitId", { id: targetId }));
   if (target.team === unit.team) throw new Error(i18n("err.selfTarget"));
   if (isUnitRemoved(target)) throw new Error(i18n("err.targetRemoved", { id: target.id }));
-  const pending = context.fireDecls[0]?.targetId;
+  const pending = context.weaponDecls[0]?.targetId;
   if (pending !== undefined && pending !== targetId) {
     throw new Error(i18n("err.oneTarget", { target: pending }));
   }
   const def = mechDefFor(unit);
   const warnings: string[] = [];
-  const decls: AttackDecl[] = [];
+  const decls: WeaponAttackDecl[] = [];
   for (const weaponIndex of weapons) {
     const mount = def.weapons[weaponIndex];
     if (!mount) {
@@ -152,7 +152,7 @@ export function queueWeaponFires(s: Session, targetId: string, weapons: number[]
         }),
       );
     }
-    if (context.fireDecls.some((d) => d.weaponIndex === weaponIndex)) {
+    if (context.weaponDecls.some((d) => d.weaponIndex === weaponIndex)) {
       throw new Error(i18n("err.weaponRepeated", { weapon: weaponIndex }));
     }
     decls.push({ targetId, weaponIndex });
@@ -184,23 +184,25 @@ export function queueWeaponFires(s: Session, targetId: string, weapons: number[]
       throw new Error(i18n("err.physical.noArmWeapons"));
     }
   }
-  validateAttacks(battle, unit.id, [...context.fireDecls, ...decls], { twist: context.torsoTwist });
-  context.fireDecls.push(...decls);
+  validateAttacks(battle, unit.id, [...context.weaponDecls, ...decls], {
+    twist: context.torsoTwist,
+  });
+  context.weaponDecls.push(...decls);
   return warnings;
 }
 
-export function cancelWeaponFire(s: Session): void {
+export function cancelAttack(s: Session): void {
   const { context } = requireBattleAndContext(s);
-  context.fireDecls = [];
+  context.weaponDecls = [];
   context.physicalDecls = [];
 }
 
-export function commitWeaponFire(s: Session): SessionGameEvent[] {
+export function commitAttack(s: Session): SessionGameEvent[] {
   const { battle, context } = requireBattleAndContext(s);
   const actor = requireUnit(battle, context.actorId);
   const unitId = actor.id;
   const events: SessionGameEvent[] = [];
-  if (context.fireDecls.length === 0 && context.physicalDecls.length === 0) {
+  if (context.weaponDecls.length === 0 && context.physicalDecls.length === 0) {
     commitAtomic(s, () => {
       actor.passedAttacks = true;
       clearContext(s);
@@ -216,8 +218,8 @@ export function commitWeaponFire(s: Session): SessionGameEvent[] {
   } else {
     commitAtomic(s, () => {
       const collected: GameEvent[] = [];
-      if (context.fireDecls.length > 0) {
-        declareAttacks(battle, unitId, context.fireDecls, collected, s.rng, {
+      if (context.weaponDecls.length > 0) {
+        declareAttacks(battle, unitId, context.weaponDecls, collected, s.rng, {
           twist: context.torsoTwist,
         });
       }
@@ -298,7 +300,7 @@ export function queuePhysicalAttack(
   // leg used physically cannot fire, and push / club bars all arm weapons.
   const def = mechDefFor(unit);
   const queuedLocs = new Set(
-    context.fireDecls.flatMap((d) => {
+    context.weaponDecls.flatMap((d) => {
       const loc = def.weapons[d.weaponIndex]?.location;
       return loc !== undefined ? [loc] : [];
     }),
@@ -459,7 +461,7 @@ export function parseTorsoTwist(direction: string): Arc {
  */
 export function setTorsoTwist(s: Session, arc: Arc): Arc {
   const { battle, context } = requireBattleAndContext(s);
-  if (context.fireDecls.length > 0) {
+  if (context.weaponDecls.length > 0) {
     throw new Error(i18n("err.twist.locked"));
   }
   const prev = context.torsoTwist;
@@ -475,7 +477,7 @@ export function setTorsoTwist(s: Session, arc: Arc): Arc {
  * bins are drained by future shots (and which bin explodes on a crit).
  */
 export function setAmmoPolicy(s: Session, policy: AmmoPolicy): void {
-  const unit = requireWeaponAttackActor(s);
+  const unit = requireAttackActor(s);
   unit.ammoPolicy = policy;
 }
 
@@ -567,7 +569,7 @@ function blockedChunks(list: ReturnType<typeof blockedLines>): Chunk[] {
 
 function ensureFireCandidate(
   battle: BattleState,
-  context: WeaponAttackContext,
+  context: AttackContext,
   force: boolean = false,
 ): FireSuggestion {
   if (context.fireCandidate === null || force) {
@@ -671,7 +673,7 @@ export function attackStatusChunk(s: Session): Chunk {
   const actor = requireUnit(battle, context.actorId);
   const lines: string[] = [];
   lines.push(...actorOrderLines(s), i18n("attackStatus.header"));
-  const decls = context.fireDecls ?? [];
+  const decls = context.weaponDecls ?? [];
   const physical = context.physicalDecls ?? [];
   if (decls.length === 0 && physical.length === 0) {
     lines.push(i18n("attackStatus.none"));

@@ -18,10 +18,10 @@ import {
   ammoPolicyLabel,
   attackStatusChunk,
   boardChunk,
+  cancelAttack,
   cancelMovement,
-  cancelWeaponFire,
+  commitAttack,
   commitMovement,
-  commitWeaponFire,
   configLocale,
   declaredMovementModeChunk,
   declareMovementMode,
@@ -39,7 +39,7 @@ import {
   placeLanding,
   queuedMoveChunk,
   queuePhysicalAttack,
-  queueWeaponFires,
+  queueWeaponAttacks,
   reachableChunk,
   requireBattle,
   resetSession,
@@ -499,7 +499,7 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
       expectArgs(a, 2, "fire <targetId> <weapon> [<weapon> ...]");
       const targetId = a[0]!;
       const weapons = a.slice(1).map((w) => int(w, "weapon"));
-      const warnings = queueWeaponFires(s, targetId, weapons);
+      const warnings = queueWeaponAttacks(s, targetId, weapons);
       return cmdRunChunks(
         i18n("ok.fireQueuedBatch", { target: targetId, weapons: weapons.join(", ") }),
         ...warnings,
@@ -574,13 +574,13 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
   cancel: {
     helpKey: "cmd.cancelFire.help",
     run: (s) => {
-      cancelWeaponFire(s);
+      cancelAttack(s);
       return cmdRunChunks(i18n("ok.cancelled"));
     },
   },
   done: {
     helpKey: "cmd.doneFire.help",
-    run: (s) => handleSessionGameEvents(s, commitWeaponFire(s)),
+    run: (s) => handleSessionGameEvents(s, commitAttack(s)),
   },
   ...BATTLE_CMDS,
 };

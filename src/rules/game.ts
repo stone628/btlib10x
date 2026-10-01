@@ -149,7 +149,7 @@ export interface UnitInit extends MechModelHolder {
   facing: Facing;
 }
 
-export interface AttackDecl {
+export interface WeaponAttackDecl {
   readonly weaponIndex: number;
   readonly targetId: string;
   /** Request a rapid-fire (double-tap) volley; only valid on rapid-fire weapons. Defaults off. */
@@ -276,7 +276,7 @@ export interface UnitState extends MechModelHolder {
    *  the next initiative roll) or "not" (online). Anything but "not" counts
    *  as shut down: cannot move, fire, or act as the next actor. */
   shutdown: ShutdownState;
-  declaredWeaponAttacks: AttackDecl[];
+  declaredWeaponAttacks: WeaponAttackDecl[];
   /** Physical attack declarations (punch, kick, push, club) for this phase. */
   declaredPhysicalAttacks: PhysicalAttackDecl[];
   firedTargetId: string | null;
@@ -1332,7 +1332,7 @@ export function executeMove(
  */
 export function inferPronePropArm(
   def: ResolvedMechDef,
-  decls: readonly AttackDecl[],
+  decls: readonly WeaponAttackDecl[],
   prone: boolean,
 ): ArmLocation | null {
   if (!prone) return null;
@@ -1350,12 +1350,6 @@ export function inferPronePropArm(
 }
 
 export interface DeclareAttacksOptions {
-  /** Torso twist (TW pp.105-106): shifts the attacker's effective facing by one
-   *  hexside before classifying the firing arc. Defaults to untwisted. */
-  readonly twist?: Arc | null;
-}
-
-export interface ValidateAttacksOptions {
   /** Torso twist (TW pp.105-106): shifts the attacker's effective facing by one
    *  hexside before classifying the firing arc. Defaults to untwisted. */
   readonly twist?: Arc | null;
@@ -1385,8 +1379,8 @@ export interface ValidatedAttackVolley {
 export function validateAttacksImpl(
   state: BattleState,
   unitId: string,
-  decls: readonly AttackDecl[],
-  options: ValidateAttacksOptions,
+  decls: readonly WeaponAttackDecl[],
+  options: DeclareAttacksOptions,
 ): ValidatedAttackVolley {
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is destroyed`);
@@ -1558,8 +1552,8 @@ export function validateAttacksImpl(
 export function validateAttacks(
   state: BattleState,
   unitId: string,
-  decls: readonly AttackDecl[],
-  options: ValidateAttacksOptions = {},
+  decls: readonly WeaponAttackDecl[],
+  options: DeclareAttacksOptions = {},
 ): void {
   validateAttacksImpl(state, unitId, decls, options);
 }
@@ -1567,7 +1561,7 @@ export function validateAttacks(
 export function declareAttacks(
   state: BattleState,
   unitId: string,
-  decls: readonly AttackDecl[],
+  decls: readonly WeaponAttackDecl[],
   sink: GameEvent[],
   rng: Rng = DEFAULT_RNG,
   options: DeclareAttacksOptions = {},
@@ -1576,7 +1570,7 @@ export function declareAttacks(
   const unit = requireUnit(state, unitId);
   if (unit.declaredWeaponAttacks.length > 0)
     throw new Error(`${unitId} already declared attacks this turn`);
-  const volley = validateAttacksImpl(state, unitId, decls, { twist: options.twist ?? null });
+  const volley = validateAttacksImpl(state, unitId, decls, options);
   const def = mechDefFor(unit);
   const physicalConflict = physicalWeaponConflict(def, decls, unit.declaredPhysicalAttacks);
   if (physicalConflict !== null) throw new Error(physicalConflict);
@@ -1624,7 +1618,7 @@ export function declareAttacks(
  */
 function physicalWeaponConflict(
   def: ResolvedMechDef,
-  weaponDecls: readonly AttackDecl[],
+  weaponDecls: readonly WeaponAttackDecl[],
   physicalDecls: readonly PhysicalAttackDecl[],
 ): string | null {
   const punchedArms = new Set<string>();

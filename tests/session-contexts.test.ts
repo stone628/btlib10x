@@ -84,7 +84,7 @@ describe("per-AppState context invariants", () => {
     expect(s.attack).not.toBeNull();
     expect(s.over).toBeNull();
     expect(s.attack!.torsoTwist).toBe("front");
-    expect(s.attack!.fireDecls).toEqual([]);
+    expect(s.attack!.weaponDecls).toEqual([]);
   });
 
   it("over: move null, attack null, over populated with victory", () => {
