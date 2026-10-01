@@ -77,7 +77,7 @@ describe("commitAtomic rollback", () => {
   it("failed commitFire mid-resolution restores battle, rng, and session", () => {
     const { s } = started();
     burnMovePhase(s);
-    expect(s.battle!.phase).toBe("weaponAttack");
+    expect(s.battle!.phase).toBe("attack");
     const first = requireWeaponAttackActor(s).id;
     const firstTarget = first === "hunchy" ? "cicada" : "hunchy";
     // First unit declares + commits: rival still pending, so drive resolves

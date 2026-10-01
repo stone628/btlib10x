@@ -430,7 +430,7 @@ describe("physical attack integration", () => {
       makeUnitInit("t", 2, { col: 6, row: 5 }, "sw"),
     );
     // Move to weapon attack phase
-    battle.phase = "weaponAttack";
+    battle.phase = "attack";
     battle.actedThisPhase = [];
 
     // Declare a punch
@@ -463,7 +463,7 @@ describe("declarePhysicalAttacks", () => {
       makeUnitInit("a", 1, { col: 5, row: 5 }, "ne"),
       makeUnitInit("t", 2, { col: 6, row: 5 }, "sw"),
     );
-    battle.phase = "weaponAttack";
+    battle.phase = "attack";
     battle.initiativeWinnerTeam = 2; // target's team wins, so "a" acts first
     battle.actorQueue = ["a", "t"];
     battle.actedThisPhase = [];

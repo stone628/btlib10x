@@ -55,7 +55,7 @@ export function currentActor(s: Session): UnitState | null {
     case "movement":
       id = s.move?.actorId ?? null;
       break;
-    case "weaponAttack":
+    case "attack":
       id = s.attack?.actorId ?? null;
       break;
   }

@@ -720,7 +720,7 @@ type MoveStep =
 
 interface AttackDecl { weaponIndex: number; targetId: string; rapidFire?: boolean }
 
-type Phase = "initiative" | "movement" | "weaponAttack" | "end";
+type Phase = "initiative" | "movement" | "attack" | "end";
 
 interface BattleState extends HexGrid {
   turn; phase; initiativeWinnerTeam;

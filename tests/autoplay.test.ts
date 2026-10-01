@@ -87,7 +87,7 @@ describe("nextAutoPlayCommand (autoplay demo driver)", () => {
   it("omits weapons destroyed by a critical slot hit from the fire command", () => {
     const s = sessionAtWeaponAttack();
     resetAutoplayState(s);
-    expect(s.battle!.phase).toBe("weaponAttack");
+    expect(s.battle!.phase).toBe("attack");
 
     const actor = requireWeaponAttackActor(s);
     const def = mechDefFor(actor);
@@ -117,7 +117,7 @@ describe("nextAutoPlayCommand (autoplay demo driver)", () => {
   it("omits auto-miss weapons from the fire command", () => {
     const s = sessionAtWeaponAttack();
     resetAutoplayState(s);
-    expect(s.battle!.phase).toBe("weaponAttack");
+    expect(s.battle!.phase).toBe("attack");
 
     const actor = requireWeaponAttackActor(s);
     const enemyId = actor.id === "hunchy" ? "cicada" : "hunchy";
