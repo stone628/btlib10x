@@ -6,15 +6,24 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  type BattleState,
+  createBattle,
+  declareAttacks,
+  type GameEvent,
+  type HexCoord,
+  mechDefFor,
+  type Rng,
+  type UnitInit,
+} from "../src";
+import { resolveAllAttacks, validateAttacksImpl } from "../src/rules/game";
+import {
   computePhysicalToHit,
   kickHitLocation,
+  type PhysicalAttackDecl,
   physicalDamage,
   resolvePhysicalAttack,
   validatePhysicalAttack,
-  type PhysicalAttackDecl,
 } from "../src/rules/physical";
-import { createBattle, declareAttacks, mechDefFor, type BattleState, type GameEvent, type HexCoord, type Rng, type UnitInit } from "../src";
-import { resolveAllAttacks, validateAttacksImpl } from "../src/rules/game";
 
 // ---------------------------------------------------------------------------
 // Helpers

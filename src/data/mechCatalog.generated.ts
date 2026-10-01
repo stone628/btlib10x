@@ -14,6 +14,7 @@ import cda3maDef from "./mechs/cda-3ma";
 import enf4rDef from "./mechs/enf-4r";
 import grf1nDef from "./mechs/grf-1n";
 import hbk4gDef from "./mechs/hbk-4g";
+import hct5sDef from "./mechs/hct-5s";
 import her5saDef from "./mechs/her-5sa";
 import mcmkii2Def from "./mechs/mc-mkii-2";
 import twprimeDef from "./mechs/tw-prime";
@@ -28,6 +29,7 @@ const mechs: readonly [string, MechDef][] = [
   [enf4rDef.model, enf4rDef],
   [grf1nDef.model, grf1nDef],
   [hbk4gDef.model, hbk4gDef],
+  [hct5sDef.model, hct5sDef],
   [her5saDef.model, her5saDef],
   [mcmkii2Def.model, mcmkii2Def],
   [twprimeDef.model, twprimeDef],

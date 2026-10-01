@@ -1701,16 +1701,15 @@ export function declareAttacks(
   sink.push({
     kind: "attacksDeclared",
     unitId,
-    weapons:
-      wantWeapons
-        ? {
-            targetId: volley.targetId,
-            count: weaponDecls.length,
-            distance: volley.attackDistance,
-            rangeBracket: volley.attackRangeBracket,
-            rangeMod: volley.attackRangeMod,
-          }
-        : null,
+    weapons: wantWeapons
+      ? {
+          targetId: volley.targetId,
+          count: weaponDecls.length,
+          distance: volley.attackDistance,
+          rangeBracket: volley.attackRangeBracket,
+          rangeMod: volley.attackRangeMod,
+        }
+      : null,
     physical: volley.normalized.map((d) => ({ type: d.type, targetId: d.targetId })),
   });
   if (!state.actedThisPhase.includes(unitId)) state.actedThisPhase.push(unitId);
