@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  commitAttack,
   commitMovement,
-  commitWeaponFire,
   declareMovementMode,
   newSession,
+  requireAttackActor,
   requireMovementActor,
-  requireWeaponAttackActor,
   type Session,
 } from "../web/session";
 import { disableCritical, execute, scriptedRng } from "./helpers";
@@ -78,14 +78,14 @@ describe("commitAtomic rollback", () => {
     const { s } = started();
     burnMovePhase(s);
     expect(s.battle!.phase).toBe("attack");
-    const first = requireWeaponAttackActor(s).id;
+    const first = requireAttackActor(s).id;
     const firstTarget = first === "hunchy" ? "cicada" : "hunchy";
     // First unit declares + commits: rival still pending, so drive resolves
     // nothing and draws no rng.
     expect(run(s, `fire ${firstTarget} 1`)[0]).toContain("queued");
     expect(run(s, `fire ${firstTarget} 2`)[0]).toContain("queued");
     run(s, "done");
-    const attacker = requireWeaponAttackActor(s).id;
+    const attacker = requireAttackActor(s).id;
     const target = attacker === "hunchy" ? "cicada" : "hunchy";
     // Two ammo-free medium lasers (CLI weapon numbers are 1-based: HBK-4G
     // weapons 1+2 are the arm medium lasers): declaration draws no rng.
@@ -101,7 +101,7 @@ describe("commitAtomic rollback", () => {
     s.rng = rng;
     const rngSnap = rng.snapshot();
 
-    expect(() => commitWeaponFire(s)).toThrow(/RNG script exhausted/);
+    expect(() => commitAttack(s)).toThrow(/RNG script exhausted/);
 
     expect(rng.snapshot()).toBe(rngSnap);
     expect(rng.remaining()).toBe(13);
@@ -111,7 +111,7 @@ describe("commitAtomic rollback", () => {
     // installed: its declarations predate the snapshot and survive.
     expect(s.battle!.units[first]!.declaredWeaponAttacks).toHaveLength(2);
     expect(s.attack!.actorId).toBe(attacker);
-    expect(s.attack!.fireDecls).toHaveLength(2);
+    expect(s.attack!.weaponDecls).toHaveLength(2);
     expect(s.attack!.torsoTwist).toBe("front");
   });
 

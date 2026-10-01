@@ -11,7 +11,7 @@ import {
   commitMovement,
   declareMovementMode,
   newSession,
-  requireWeaponAttackActor,
+  requireAttackActor,
   type Session,
 } from "../web/session";
 import { disableCritical, execute, scriptedRng } from "./helpers";
@@ -89,7 +89,7 @@ describe("nextAutoPlayCommand (autoplay demo driver)", () => {
     resetAutoplayState(s);
     expect(s.battle!.phase).toBe("attack");
 
-    const actor = requireWeaponAttackActor(s);
+    const actor = requireAttackActor(s);
     const def = mechDefFor(actor);
     // Find a plain (non-ammo) weapon mount on the acting unit and mark it
     // destroyed, simulating a prior-turn critical-slot hit.
@@ -119,7 +119,7 @@ describe("nextAutoPlayCommand (autoplay demo driver)", () => {
     resetAutoplayState(s);
     expect(s.battle!.phase).toBe("attack");
 
-    const actor = requireWeaponAttackActor(s);
+    const actor = requireAttackActor(s);
     const enemyId = actor.id === "hunchy" ? "cicada" : "hunchy";
     const enemy = s.battle!.units[enemyId]!;
     // Push the enemy up the column (long range) with heavy movement (+6):

@@ -24,7 +24,7 @@ import {
   commitMovement,
   declareMovementMode,
   newSession,
-  requireWeaponAttackActor,
+  requireAttackActor,
   type Session,
 } from "../web/session";
 import { createTestBattle, disableCritical, execute, scriptedRng } from "./helpers";
@@ -347,7 +347,7 @@ describe("ammo command (session)", () => {
       commitMovement(s);
     }
     expect(s.battle!.phase).toBe("attack");
-    const actor = requireWeaponAttackActor(s).id;
+    const actor = requireAttackActor(s).id;
     expect(execute(s, "ammo")[0]).toBe("ammo policy: exposed");
     expect(execute(s, "ammo spread")).toEqual([`${actor}: ammo policy set to spread`]);
     expect(s.battle!.units[actor]!.ammoPolicy).toBe("spread");

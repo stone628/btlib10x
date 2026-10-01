@@ -13,13 +13,13 @@ import { en } from "../web/i18n/en";
 import type { LocaleId, MessageKey } from "../web/i18n/index";
 import { i18nIn, LOCALES } from "../web/i18n/index";
 import {
+  commitAttack,
   commitMovement,
-  commitWeaponFire,
   configLocale,
   declareMovementMode,
   newSession,
   placeLanding,
-  queueWeaponFires,
+  queueWeaponAttacks,
 } from "../web/session";
 import { bearing, currentActor, execute } from "./helpers";
 
@@ -108,9 +108,9 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
       if (weaponIndexList.length === 0) {
         faceEnemy = true;
       } else {
-        queueWeaponFires(s, enemy, weaponIndexList);
+        queueWeaponAttacks(s, enemy, weaponIndexList);
       }
-      commitWeaponFire(s);
+      commitAttack(s);
     }
   }
   if (s.state !== "over") throw new Error("battle did not finish");

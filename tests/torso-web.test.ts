@@ -4,7 +4,7 @@ import {
   commitMovement,
   declareMovementMode,
   newSession,
-  requireWeaponAttackActor,
+  requireAttackActor,
   type Session,
 } from "../web/session";
 import { disableCritical, execute } from "./helpers";
@@ -102,7 +102,7 @@ describe("torso command", () => {
     run(s, "fire cicada 2");
     expect(run(s, "torso left")[0]).toMatch(/^error:.*locked/);
     expect(run(s, "cancel")[0]).toMatch(/cancelled/);
-    expect(s.attack!.fireDecls).toEqual([]);
+    expect(s.attack!.weaponDecls).toEqual([]);
     expect(run(s, "torso left")[0]).toMatch(/torso twisted to/);
     expect(s.attack!.torsoTwist).toBe("leftSide");
   });
@@ -146,7 +146,7 @@ describe("torso command", () => {
     // Queue a fire so hunchy's turn ends and cicada becomes current.
     expect(run(s, "fire cicada 2")[0]).toContain("queued");
     run(s, "done");
-    expect(requireWeaponAttackActor(s).id).toBe("cicada");
+    expect(requireAttackActor(s).id).toBe("cicada");
     expect(s.attack!.torsoTwist).toBe("front");
     // Cicada's own twist should also start at "front".
     expect(s.attack!.torsoTwist).toBe("front");

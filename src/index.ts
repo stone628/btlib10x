@@ -120,7 +120,6 @@ export {
 } from "./rules/fireability";
 export type {
   ActorQueueActorView,
-  AttackDecl,
   BattleState,
   CreateBattleOptions,
   DestroyedReason,
@@ -137,6 +136,7 @@ export type {
   UnitInit,
   UnitSkillRange,
   UnitState,
+  WeaponAttackDecl as AttackDecl,
 } from "./rules/game";
 export {
   actorQueue,

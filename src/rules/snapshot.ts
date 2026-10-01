@@ -34,7 +34,7 @@ import type { HexCell, HexCoord, Location, WreckState } from "../core/types";
 import type { AmmoBins } from "./ammo";
 import type { BuildingState } from "./building";
 import type { UnitDamageState } from "./damage";
-import type { BattleState, Phase, UnitState, AttackDecl as WeaponAttackDecl } from "./game";
+import type { BattleState, Phase, UnitState, WeaponAttackDecl } from "./game";
 import type { PhysicalAttackDecl } from "./physical";
 
 /** Detached deep copy of a `BattleState`. Treat as immutable. */

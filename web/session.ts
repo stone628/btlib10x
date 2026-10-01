@@ -12,11 +12,11 @@ import type { LocaleId } from "./i18n/index";
 import { i18n, setI18nDefaultLocale } from "./i18n/index";
 import { createRng } from "./rng";
 import {
-  initWeaponAttackContext,
+  type AttackContext,
+  attackContextInvalid,
+  initAttackContext,
   onEnterWeaponAttack,
-  requireWeaponAttackActor,
-  type WeaponAttackContext,
-  weaponAttackContextInvalid,
+  requireAttackActor,
 } from "./session.attack";
 import {
   initMovementContext,
@@ -52,7 +52,7 @@ export interface Session {
   /** Eagerly populated by `drive()` on battle entry, nulled on phase exit. */
   move: MovementContext | null;
   /** Eagerly populated by `drive()` on attack-phase entry, nulled on exit. */
-  attack: WeaponAttackContext | null;
+  attack: AttackContext | null;
   /** Populated when `drive()` detects victory, cleared on next battle. */
   over: OverContext | null;
   battle: BattleState | null;
@@ -100,7 +100,7 @@ export function promptBody(s: Session): string {
           phase = i18n("prompt.subMove");
           break;
         case "attack":
-          actor = requireWeaponAttackActor(s);
+          actor = requireAttackActor(s);
           phase = i18n("prompt.subAttack");
           break;
       }
@@ -162,7 +162,7 @@ export function setSeed(s: Session, n: number): void {
 interface SessionCommitSnapshot {
   app: SessionState;
   move: MovementContext | null;
-  attack: WeaponAttackContext | null;
+  attack: AttackContext | null;
   over: OverContext | null;
 }
 
@@ -326,9 +326,9 @@ export function drive(s: Session): SessionGameEvent[] {
       initMovementContext(s, id);
       onEnterMovement(s, result);
     }
-    if (inWeaponAttack && weaponAttackContextInvalid(s, id)) {
+    if (inWeaponAttack && attackContextInvalid(s, id)) {
       ensureBattleContextsCleared(s);
-      initWeaponAttackContext(s, id);
+      initAttackContext(s, id);
       onEnterWeaponAttack(s, result);
     }
   }
