@@ -51,7 +51,7 @@ describe("torso command", () => {
   it("defaults the twist to front at attack-phase entry", () => {
     const s = freshSetup();
     burnMovePhase(s);
-    expect(s.battle!.phase).toBe("weaponAttack");
+    expect(s.battle!.phase).toBe("attack");
     expect(s.attack!.torsoTwist).toBe("front");
   });
 

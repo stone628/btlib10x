@@ -94,16 +94,16 @@ function requireBattleAndContext(s: Session): {
   context: WeaponAttackContext;
 } {
   const battle = requireBattle(s);
-  if (!s.attack || battle.phase !== "weaponAttack") {
-    throw new Error(i18n("err.wrongPhase", { phase: "weaponAttack" }));
+  if (!s.attack || battle.phase !== "attack") {
+    throw new Error(i18n("err.wrongPhase", { phase: "attack" }));
   }
   return { battle, context: s.attack };
 }
 
 export function requireWeaponAttackActor(s: Session) {
   const battle = requireBattle(s);
-  if (!s.attack || battle.phase !== "weaponAttack") {
-    throw new Error(i18n("err.wrongPhase", { phase: "weaponAttack" }));
+  if (!s.attack || battle.phase !== "attack") {
+    throw new Error(i18n("err.wrongPhase", { phase: "attack" }));
   }
   return requireUnit(battle, s.attack.actorId);
 }
@@ -745,18 +745,20 @@ export function resolutionLines(r: AttackResolution): string[] {
       jam: r.jammed ? i18n("res.jamSuffix") : "",
     }),
   ];
-  if (r.ammoExhausted === true) lines.push("  " + i18n("res.outOfAmmo", { weapon: r.weapon }));
-  if (r.clusterRoll !== null) lines.push("  " + i18n("res.clusterRoll", { roll: r.clusterRoll }));
+  if (r.ammoExhausted === true) lines.push(`  ${i18n("res.outOfAmmo", { weapon: r.weapon })}`);
+  if (r.clusterRoll !== null) lines.push(`  ${i18n("res.clusterRoll", { roll: r.clusterRoll })}`);
   if (r.clusterMod !== null && r.clusterMod !== 0)
     lines.push(
-      "  " + i18n("res.clusterMod", { mod: r.clusterMod > 0 ? `+${r.clusterMod}` : `${r.clusterMod}` }),
+      "  " +
+        i18n("res.clusterMod", { mod: r.clusterMod > 0 ? `+${r.clusterMod}` : `${r.clusterMod}` }),
     );
   if (r.hit && r.groups.length > 0) {
     lines.push(
-      "  " + i18n("res.hits", {
-        groups: r.groups.map((g) => formatHitGroup(g)).join(" "),
-        arc: i18n(ARC_LABEL[r.arc]),
-      }),
+      "  " +
+        i18n("res.hits", {
+          groups: r.groups.map((g) => formatHitGroup(g)).join(" "),
+          arc: i18n(ARC_LABEL[r.arc]),
+        }),
     );
     const detail = transferDetail(r);
     if (detail) lines.push(`    ${detail}`);

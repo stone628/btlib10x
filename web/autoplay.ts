@@ -322,8 +322,8 @@ export function nextAutoPlayCommand(s: Session): string | null {
       return returnFirstQueuedCommand();
     }
 
-    if (st.phase === "weaponAttack") {
-      if (lastBattlePhase !== "weaponAttack") {
+    if (st.phase === "attack") {
+      if (lastBattlePhase !== "attack") {
         queueNextCommand("status");
       }
       const sugg = suggestFireTargets(st, actor.id);

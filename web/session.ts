@@ -99,7 +99,7 @@ export function promptBody(s: Session): string {
           actor = requireMovementActor(s);
           phase = i18n("prompt.subMove");
           break;
-        case "weaponAttack":
+        case "attack":
           actor = requireWeaponAttackActor(s);
           phase = i18n("prompt.subAttack");
           break;
@@ -285,7 +285,7 @@ export function drive(s: Session): SessionGameEvent[] {
   const battle = requireBattle(s);
   const v: SessionVictoryResult[] = [];
   const collected: GameEvent[] = [];
-  const wasInWeaponAttack = battle.phase === "weaponAttack";
+  const wasInWeaponAttack = battle.phase === "attack";
   const r = gameLoop(
     battle,
     s.rng,
@@ -309,11 +309,11 @@ export function drive(s: Session): SessionGameEvent[] {
   s.state = "battle";
   const result: SessionGameEvent[] = [];
   const inMovement = battle.phase === "movement";
-  const inWeaponAttack = battle.phase === "weaponAttack";
+  const inWeaponAttack = battle.phase === "attack";
   if (wasInWeaponAttack && !inWeaponAttack) {
     result.push({ kind: "sessionPhase", phase: "weaponAttackResolution" });
     for (const e of collected) {
-      if (e.kind === "phase" && e.prevPhase === "weaponAttack") {
+      if (e.kind === "phase" && e.prevPhase === "attack") {
         result.push({ kind: "sessionPhaseDone", phase: "weaponAttackResolution" });
       }
       result.push(e);

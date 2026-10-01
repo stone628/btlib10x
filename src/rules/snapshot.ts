@@ -143,7 +143,7 @@ export function saveBattleState(state: BattleState): string {
 }
 
 /** Phases in TW turn order; used to validate parsed snapshots. */
-const PHASES: readonly Phase[] = ["initiative", "movement", "weaponAttack", "end"];
+const PHASES: readonly Phase[] = ["initiative", "movement", "attack", "end"];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

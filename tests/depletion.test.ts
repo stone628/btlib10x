@@ -365,7 +365,7 @@ describe("ammo command (session)", () => {
       declareMovementMode(s, "walk");
       commitMovement(s);
     }
-    expect(s.battle!.phase).toBe("weaponAttack");
+    expect(s.battle!.phase).toBe("attack");
     const actor = requireWeaponAttackActor(s).id;
     expect(execute(s, "ammo")[0]).toBe("ammo policy: exposed");
     expect(execute(s, "ammo spread")).toEqual([`${actor}: ammo policy set to spread`]);

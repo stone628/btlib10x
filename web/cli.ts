@@ -106,7 +106,7 @@ function currentActor(s: Session): UnitState | null {
       case "movement":
         if (s.move !== null) return requireUnit(s.battle, s.move.actorId);
         break;
-      case "weaponAttack":
+      case "attack":
         if (s.attack !== null) return requireUnit(s.battle, s.attack.actorId);
         break;
     }
@@ -613,7 +613,7 @@ function availableCmds(session: Session): Record<string, CmdDef> {
       return { ...GLOBAL_CMDS, ...SETUP_CMDS };
     case "battle": {
       const phase = session.battle?.phase;
-      if (phase === "weaponAttack") return { ...GLOBAL_CMDS, ...ATTACK_CMDS };
+      if (phase === "attack") return { ...GLOBAL_CMDS, ...ATTACK_CMDS };
       if (phase !== "movement") return { ...GLOBAL_CMDS, ...MOVE_CMDS };
       const actor = currentActor(session);
       const down = actor !== null && isShutdown(actor);
@@ -668,8 +668,8 @@ function commandList(session: Session): string[] {
       case "setup":
         return { cmds: SETUP_CMDS, phase: "setup" as const };
       case "battle": {
-        const phase = session.battle?.phase === "weaponAttack" ? "weaponAttack" : "movement";
-        return { cmds: phase === "weaponAttack" ? ATTACK_CMDS : MOVE_CMDS, phase };
+        const phase = session.battle?.phase === "attack" ? "attack" : "movement";
+        return { cmds: phase === "attack" ? ATTACK_CMDS : MOVE_CMDS, phase };
       }
       case "over":
         return { cmds: OVER_CMDS, phase: "over" as const };
@@ -710,7 +710,7 @@ const HINT_OVER: MessageKey = "hint.over";
 function stateHint(s: Session): string[] {
   const key =
     s.state === "battle"
-      ? s.battle?.phase === "weaponAttack"
+      ? s.battle?.phase === "attack"
         ? HINT_ATTACK
         : HINT_MOVE
       : s.state === "over"

@@ -79,7 +79,7 @@ describe("per-AppState context invariants", () => {
   it("battle + attack: move null, attack allocated with torsoTwist front, over null", () => {
     const s = started();
     burnMovePhase(s);
-    expect(s.battle!.phase).toBe("weaponAttack");
+    expect(s.battle!.phase).toBe("attack");
     expect(s.move).toBeNull();
     expect(s.attack).not.toBeNull();
     expect(s.over).toBeNull();
@@ -106,7 +106,7 @@ describe("per-AppState context invariants", () => {
     const s = started();
     const moveBefore = s.move;
     burnMovePhase(s);
-    expect(s.battle!.phase).toBe("weaponAttack");
+    expect(s.battle!.phase).toBe("attack");
     expect(s.move).toBeNull();
     expect(s.attack).not.toBeNull();
     expect(moveBefore).not.toBe(s.attack);
@@ -120,7 +120,7 @@ describe("per-AppState context invariants", () => {
     const firstAttackActor = s.attack!.actorId;
     // Pass-fire hands off to cicada's attack activation: same phase, new actor.
     run(s, "done");
-    expect(s.battle!.phase).toBe("weaponAttack");
+    expect(s.battle!.phase).toBe("attack");
     expect(s.attack).not.toBeNull();
     expect(firstAttackActor).not.toBe(s.attack!.actorId);
     expect(s.attack!.torsoTwist).toBe("front");
@@ -130,7 +130,7 @@ describe("per-AppState context invariants", () => {
   it("declareMode throws when not in movement phase", () => {
     const s = started();
     burnMovePhase(s);
-    expect(s.battle!.phase).toBe("weaponAttack");
+    expect(s.battle!.phase).toBe("attack");
     expect(() => declareMovementMode(s, "walk")).toThrow(/requires the movement phase/i);
   });
 
@@ -150,7 +150,7 @@ describe("per-AppState context invariants", () => {
     // Pass-fire on first attacker advances to next activation; twist should
     // reset whenever a fresh attack context is allocated.
     run(s, "done");
-    expect(s.battle!.phase).toBe("weaponAttack");
+    expect(s.battle!.phase).toBe("attack");
     expect(s.attack).not.toBeNull();
     // Either the same actor across rounds (fresh twist) or a different actor
     // (also fresh twist): in both cases torsoTwist must equal "front".

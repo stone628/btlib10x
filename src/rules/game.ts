@@ -198,7 +198,7 @@ export type PilotHitReason = "headHit" | "ammoExplosion" | "fall" | "shutdownFal
  *  removed but frame not destroyed (wreck left behind, like eject). */
 export type RemovalReason = "destroyed" | "pilotEjected" | "pilotKilled";
 export type RemovedState = "not" | RemovalReason;
-export type ActorPhase = "movement" | "weaponAttack";
+export type ActorPhase = "movement" | "attack";
 export type Phase = "initiative" | ActorPhase | "end";
 
 export type UnitFallReason =
@@ -728,15 +728,15 @@ export function wreckAt(state: BattleState, hex: HexCoord): WreckState | undefin
 /** Mark a unit as killed and removed, returning the paired events. The first
  *  kill wins: an already-removed unit (e.g. ejected or pilot-killed) is left
  *  untouched so the recorded reason stays the earliest cause. */
-function markUnitDestroyed(unit: UnitState, destroyed: DestroyedReason, sink: GameEvent[]): void {
+function markUnitDestroyed(unit: UnitState, reason: DestroyedReason, sink: GameEvent[]): void {
   if (isUnitRemoved(unit)) return;
-  unit.destroyed = destroyed;
+  unit.destroyed = reason;
   unit.removed = "destroyed";
   sink.push({
     kind: "unitRemoved",
     unitId: unit.id,
     reason: "destroyed",
-    destroyReason: destroyed,
+    destroyReason: reason,
   });
 }
 
@@ -949,22 +949,24 @@ export function damageBuildingAt(
 }
 
 export function rollInitiativePhase(state: BattleState, rng: Rng, sink: GameEvent[]): void {
+  sink.push(...initiativePhaseGen(state, rng))
+}
+
+export function* initiativePhaseGen(state: BattleState, rng: Rng): Generator<GameEvent> {
   requirePhase(state, "initiative");
   const teams = [...new Set(Object.values(state.units).map((u) => u.team))];
   const result = rollInitiative(teams, rng);
   state.initiativeWinnerTeam = result.winnerTeam;
-  state.phase = "movement";
   state.actorQueue = null;
-  sink.push(
-    { kind: "initiative", rolls: result.rolls, winnerTeam: result.winnerTeam },
-    {
-      kind: "phase",
-      prevTurn: state.turn,
-      prevPhase: "initiative",
-      turn: state.turn,
-      phase: "movement",
-    },
-  );
+  yield { kind: "initiative", rolls: result.rolls, winnerTeam: result.winnerTeam };
+  state.phase = "movement";
+  yield {
+    kind: "phase",
+    prevTurn: state.turn,
+    prevPhase: "initiative",
+    turn: state.turn,
+    phase: "movement",
+  };
 }
 
 /** MP cost of a stand-up attempt (TW p.50): shares the move budget. */
@@ -1579,7 +1581,7 @@ export function declareAttacks(
   rng: Rng = DEFAULT_RNG,
   options: DeclareAttacksOptions = {},
 ): void {
-  requireCurrentActor(state, unitId, "weaponAttack");
+  requireCurrentActor(state, unitId, "attack");
   const unit = requireUnit(state, unitId);
   if (unit.declaredWeaponAttacks.length > 0)
     throw new Error(`${unitId} already declared attacks this turn`);
@@ -1669,7 +1671,7 @@ export function declarePhysicalAttacks(
   sink: GameEvent[],
   _rng: Rng = DEFAULT_RNG,
 ): void {
-  requireCurrentActor(state, unitId, "weaponAttack");
+  requireCurrentActor(state, unitId, "attack");
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is destroyed`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot attack`);
@@ -2248,7 +2250,7 @@ export function resolvePhasePiloting(
  * fires its declared shots.
  */
 export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[]): void {
-  requirePhase(state, "weaponAttack");
+  requirePhase(state, "attack");
 
   // Phase 1: collect resolutions for ALL units with declared attacks
   // (ignore `removed` flag — TW simultaneity means even destroyed units fire)
@@ -2654,7 +2656,30 @@ function updatePhaseBaseValues(state: BattleState) {
   }
 }
 
+function processEndPhase(state: BattleState) {
+  state.turn += 1;
+  state.initiativeWinnerTeam = null;
+  state.phase = "initiative";
+  state.actedThisPhase = [];
+  for (const unit of Object.values(state.units)) {
+    unit.moveMode = null;
+    unit.movesThisTurn = [];
+    unit.jumpedThisTurn = false;
+    unit.mpSpent = 0;
+    unit.declaredWeaponAttacks = [];
+    unit.firedTargetId = null;
+    unit.passedAttacks = false;
+    // A successful voluntary startup comes online just before the next
+    // initiative roll.
+    if (unit.shutdown === "starting") unit.shutdown = "not";
+  }
+}
+
 export function advancePhase(state: BattleState, sink: GameEvent[], rng: Rng = DEFAULT_RNG): void {
+  sink.push(...advancePhaseGen(state, rng));
+}
+
+export function* advancePhaseGen(state: BattleState, rng: Rng): Generator<GameEvent> {
   const prevTurn = state.turn;
   const prevPhase = state.phase;
   state.actorQueue = null;
@@ -2669,12 +2694,13 @@ export function advancePhase(state: BattleState, sink: GameEvent[], rng: Rng = D
       break;
     }
     case "movement": {
-      state.phase = "weaponAttack";
+      state.phase = "attack";
       updatePhaseBaseValues(state);
       state.actedThisPhase = [];
       break;
     }
-    case "weaponAttack": {
+    case "attack": {
+      const sink: GameEvent[] = [];
       for (const unit of Object.values(state.units)) {
         if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
           markUnitDestroyed(unit, destroyedReasonFor(unit.damage), sink);
@@ -2683,30 +2709,15 @@ export function advancePhase(state: BattleState, sink: GameEvent[], rng: Rng = D
       // The end phase starts with heat resolution: engine crit heat,
       // shutdown/restart checks, heat ammo explosions, then dissipation.
       resolveHeatPhase(state, rng, sink);
+      yield* sink;
       state.phase = "end";
       break;
     }
-    case "end": {
-      state.turn += 1;
-      state.initiativeWinnerTeam = null;
-      state.phase = "initiative";
-      state.actedThisPhase = [];
-      for (const unit of Object.values(state.units)) {
-        unit.moveMode = null;
-        unit.movesThisTurn = [];
-        unit.jumpedThisTurn = false;
-        unit.mpSpent = 0;
-        unit.declaredWeaponAttacks = [];
-        unit.firedTargetId = null;
-        unit.passedAttacks = false;
-        // A successful voluntary startup comes online just before the next
-        // initiative roll.
-        if (unit.shutdown === "starting") unit.shutdown = "not";
-      }
+    case "end":
+      processEndPhase(state);
       break;
-    }
   }
-  sink.push({ kind: "phase", prevTurn, prevPhase, turn: state.turn, phase: state.phase });
+  yield { kind: "phase", prevTurn, prevPhase, turn: state.turn, phase: state.phase };
 }
 
 /**
@@ -3476,7 +3487,7 @@ export function gameLoop(
     }
     const id = nextActor(state);
     if (id !== null) return { actorId: id, stopped: false };
-    if (state.phase === "weaponAttack") {
+    if (state.phase === "attack") {
       resolveAllAttacks(state, rng, sink);
     }
     advancePhase(state, sink, rng);
@@ -3484,9 +3495,22 @@ export function gameLoop(
   throw new Error("phase driver exceeded 200 iterations");
 }
 
+function* battleLoopGen(state: BattleState, rng: Rng): Generator<GameEvent, boolean> {
+  for (;;) {
+    if (state.phase === "initiative") {
+      yield* initiativePhaseGen(state, rng);
+      continue;
+    }
+    if (state.phase === "end") {
+      yield* advancePhaseGen(state, rng);
+      continue;
+    }
+  }
+}
+
 /** Suggest which unit must act next (initiative loser alternates first). */
 export function nextActor(state: BattleState): string | null {
-  if (state.phase !== "movement" && state.phase !== "weaponAttack") return null;
+  if (state.phase !== "movement" && state.phase !== "attack") return null;
   if (state.initiativeWinnerTeam === null) return null;
   return pendingActors(state)[0] ?? null;
 }
@@ -3514,7 +3538,7 @@ function actorToQueueView(actor: UnitState, forcePriority?: boolean): ActorQueue
 /** Who already acted this phase, and the ordered queue of who must still act. */
 export function actorQueue(state: BattleState): ActorQueueView {
   if (
-    (state.phase !== "movement" && state.phase !== "weaponAttack") ||
+    (state.phase !== "movement" && state.phase !== "attack") ||
     state.initiativeWinnerTeam === null
   ) {
     return { initiative: state.initiativeWinnerTeam, acted: [], pending: [], removed: [] };
@@ -3545,7 +3569,7 @@ export function actorQueue(state: BattleState): ActorQueueView {
 /** Units still to act this phase, in activation order (cached per phase). */
 function pendingActors(state: BattleState): string[] {
   if (state.actorQueue === null) state.actorQueue = buildActorQueue(state);
-  const nominalOnly = state.phase === "weaponAttack";
+  const nominalOnly = state.phase === "attack";
   return state.actorQueue.filter((id) => {
     const unit = state.units[id];
     if (!unit || isUnitRemoved(unit)) return false;
