@@ -2,6 +2,7 @@ import { D2D6_MAX, D2D6_MIN } from "../core/dice";
 import { terrainTargetMod } from "../core/terrain";
 import type { MoveMode, TerrainType } from "../core/types";
 import type { WeaponDef } from "../data/weapon.schema";
+import type { UnitSkillRange } from "./game";
 import { attackerMovementModifier, TARGET_IMMOBILE_MOD, targetMovementModifier } from "./movement";
 
 export type RangeBracket = "short" | "medium" | "long";
@@ -79,7 +80,7 @@ const RANGE_MOD: Record<RangeBracket, number> = {
 };
 
 /** Default gunnery skill for `UnitInit`s that omit it (TW regular pilot). */
-export const DEFAULT_GUNNERY = 4;
+export const DEFAULT_GUNNERY: UnitSkillRange = 4;
 /** Attacker modifier while prone (TW p.113). */
 const PRONE_ATTACKER_MOD = 2;
 /** Target modifier while prone and adjacent (TW p.113). */

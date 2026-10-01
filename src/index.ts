@@ -1,33 +1,14 @@
-export {
-  D2D6_MAX,
-  D2D6_MIN,
-  roll2D6,
-  rollD6,
-} from "./core/dice";
+export { D2D6_MAX, roll2D6, rollD6 } from "./core/dice";
 export {
   type Bearing,
   bearingExact,
   hexDistance,
   isAdjacent,
-  lineHexes,
   neighbor,
-  neighbors,
   sameHex,
 } from "./core/hex";
 export type { HexGrid } from "./core/terrain";
-export {
-  blocksTargeting,
-  cellAt,
-  costToClimb,
-  costToEnter,
-  hasPartialCover,
-  MP_PER_FACING_CHANGE,
-  MP_PER_LEVEL_CLIMB,
-  MP_TO_ENTER_HEX,
-  screeningPoints,
-  terrainMoveCost,
-  terrainTargetMod,
-} from "./core/terrain";
+export { cellAt, MP_PER_FACING_CHANGE } from "./core/terrain";
 export type {
   ArmLocation,
   Facing,
@@ -45,26 +26,12 @@ export type {
 export {
   FACINGS,
   isArm,
-  isFacing,
-  isLeg,
-  isLimb,
-  isLocation,
-  isTerrainType,
   isTorso,
-  LOCATIONS,
   oppositeFacing,
   rotateFacing,
   shoulderOf,
-  TERRAIN_TYPES,
-  TORSO_LOCATIONS,
 } from "./core/types";
 export type { AmmoDef } from "./data/ammo.schema";
-export {
-  allAmmo as getAllAmmo,
-  ammoDefFor,
-  listAmmoWeapons,
-  shotsPerBinFor,
-} from "./data/ammo.schema";
 export {
   type AmmoNameHolder,
   allMapDefs,
@@ -72,13 +39,8 @@ export {
   listMapNames,
   type MapNameHolder,
   type MechModelHolder,
-  mapDef,
   mapDefFor,
-  mechDef,
   mechDefFor,
-  resolveMechDef,
-  validateMapDef,
-  validateMechDef,
 } from "./data/index";
 export type { MapDef } from "./data/map.schema";
 export type {
@@ -100,84 +62,40 @@ export type {
   WeaponMount,
 } from "./data/mech.schema";
 export type { TerrainDef } from "./data/terrain.schema";
-export { allTerrainDefs, terrainDef } from "./data/terrain.schema";
 export type { WeaponCategory, WeaponDef, WeaponNameHolder } from "./data/weapon.schema";
 export { allWeaponDefs, listWeaponNames, weaponDefFor } from "./data/weapon.schema";
 export type { ArmActuatorCounts } from "./rules/actuators";
-export {
-  ARM_ACTUATOR_WEAPON_MOD,
-  armWeaponToHitModifier,
-  countArmActuators,
-  SHOULDER_WEAPON_MOD,
-} from "./rules/actuators";
 export {
   AMMO_POLICIES,
   type AmmoBins,
   type AmmoPolicy,
   ammoBinId,
-  ammoWeaponTotals,
-  binsForWeapon,
-  binsForWeaponName,
   collectAmmoBins,
-  consumeAmmo,
-  consumeAmmoForName,
-  drawOrderBins,
-  isAmmoPolicy,
   loadAmmoBins,
-  parseAmmoPolicy,
-  pooledShotsLeft,
   pooledTotalsByWeaponName,
-  stripBinsInLocation,
 } from "./rules/ammo";
 export {
   type Arc,
-  classifyArc,
   classifyArcWithBoundary,
-  effectiveFacingForTwist,
   weaponCanFireIntoArc,
 } from "./rules/arcs";
 export type { AttackResolution, HitGroup, WeaponAttackInput } from "./rules/attack";
-export { resolveWeaponAttack } from "./rules/attack";
-export {
-  applyBuildingDamage,
-  buildingAt,
-  buildingTypeOf,
-  collapseToRubble,
-  createBuildingState,
-  DEFAULT_BUILDING_LEVELS,
-  initialCf,
-  isBuildingTerrain,
-  isCollapsed,
-} from "./rules/building";
-export {
-  CLUSTER_COLUMNS,
-  CLUSTER_TABLE,
-  clusterHits,
-  groupMissiles,
-  modifiedClusterRoll,
-} from "./rules/cluster";
+export { CLUSTER_COLUMNS, CLUSTER_TABLE } from "./rules/cluster";
 export type {
   CaseKind,
-  ComponentHitStatus as CoreComponentStatus,
+  ComponentHitStatus,
   CriticalEffect,
   CriticalResolution,
   CritSource,
   EffectiveMovement,
 } from "./rules/critical";
 export {
-  ammoDamagePerShot,
-  applyAmmoExplosion,
-  checkCASE,
-  componentHitStatus as coreComponentStatus,
+  componentHitStatus,
   countDestroyedEngine,
-  countDestroyedSensor,
   ENGINE_SLOTS_KILL,
   effectiveMovement,
-  resolveCriticalHits,
-  SENSORS,
 } from "./rules/critical";
 export {
-  applyDamage,
   canAttemptStandUp,
   canFireFromLocation,
   type DamageApplication,
@@ -187,20 +105,17 @@ export {
   destroyedLegs,
   isUnitDestroyed,
   isUnitImmobile,
-  isUnitLocationDestroyed,
   type LocationValue,
   type TorsoLocationValue,
   type UnitDamageState,
 } from "./rules/damage";
 export {
   bestFireTarget,
-  compareFireTargets,
   type FireBlocked,
   type FireBlockerReason,
   type FireSuggestion,
   type FireTarget,
   type FireWeapon,
-  fireTargetScore,
   suggestFireTargets,
 } from "./rules/fireability";
 export type {
@@ -220,179 +135,81 @@ export type {
   RemovedState,
   ShutdownState,
   UnitInit,
+  UnitSkillRange,
   UnitState,
 } from "./rules/game";
 export {
   actorQueue,
-  advancePhase,
-  applyFall,
-  applyPilotHits,
   attemptStandUp,
   attemptVoluntaryStartup,
-  collapseDamageTotal,
   createBattle,
-  DEFAULT_RNG,
   DROP_MP_COST,
-  damageBuildingAt,
   declareAttacks,
   declarePhysicalAttacks,
   dropProne,
   ejectPilot,
   executeMove,
   gameLoop,
-  inferPronePropArm,
   isImmobile,
   isNominal,
   isShutdown,
   isUnitAvailable,
   isUnitRemoved,
-  LIGHT_MECH_TONNAGE_MAX,
-  nextActor,
-  partialCoverMod,
   passMovement,
   requireUnit,
-  resolveAllAttacks,
-  resolveHeatPhase,
-  resolvePhasePiloting,
-  rollInitiativePhase,
   STAND_MP_COST,
   validateAttacks,
   voluntaryShutdown,
-  WRECK_COVER_BY_LEVEL,
-  WRECK_L2_ELEVATED_COVER_MOD,
-  WRECK_LEVEL,
   wreckAt,
-  wreckLevelFor,
 } from "./rules/game";
 export {
   AMMO_EXPLOSION_START_HEAT,
   ammoExplosionAvoid,
   ammoExplosionAvoidWithThreshold,
-  dhsCritWidth,
   effectiveMoveBudget,
-  engineHitHeat,
-  engineInternalSinks,
   HEAT_CAP,
   type HeatScaleEffects,
   heatDissipation,
   heatDissipationMax,
   heatScaleEffects,
-  heatSinksOperational,
   type LargestAmmoBin,
-  largestAmmoBin,
-  movementHeat,
   movementMpPenalty,
   movementMpPenaltyWithThreshold,
   shutdownAvoid,
-  shutdownAvoidWithThreshold,
   toHitHeatModifier,
   toHitHeatModifierWithThreshold,
 } from "./rules/heat";
-export {
-  HIT_LOCATION_TABLE,
-  hitLocation,
-  hitLocationForArc,
-  LEFT_SIDE_TABLE,
-  PUNCH_LOCATION_TABLE,
-  punchHitLocation,
-  RIGHT_SIDE_TABLE,
-} from "./rules/hitlocation";
+export { HIT_LOCATION_TABLE, LEFT_SIDE_TABLE, RIGHT_SIDE_TABLE } from "./rules/hitlocation";
 export type { InitiativeResult } from "./rules/initiative";
-export { rollInitiative } from "./rules/initiative";
+export { internalStructureForTonnage } from "./rules/internalStructure";
 export {
-  HEAD_STRUCTURE,
-  internalStructureForTonnage,
-  STANDARD_INTERNAL_STRUCTURE,
-} from "./rules/internalStructure";
-export {
-  interveningHexes,
-  interveningTerrains,
-  losBlocked,
-  losBlockedByBuilding,
-  losBlockedByElevation,
-  losBlockedByWater,
-  losBlockedByWreck,
-  losClear,
-  losWoodsPoints,
-  losWoodsPointsBetween,
-} from "./rules/los";
-export {
-  attackerMovementModifier,
-  BACKWARD_LEVEL_CHANGE_MAX,
-  canEndMoveInHex,
-  canPassThroughHex,
-  FORWARD_LEVEL_CHANGE_MAX,
-  facingChangeCost,
-  isBackwardStep,
-  isForwardStep,
-  JUMP_MP_PER_HEX,
   type MoveFragment,
   type MovePathStep,
-  maxMovePoints,
   type ReachabilityOptions,
   type RevealedLanding,
   reachableLandings,
-  TARGET_IMMOBILE_MOD,
-  TARGET_JUMP_BONUS,
-  targetMovementModifier,
 } from "./rules/movement";
 export {
-  CLUB_ATTACK_MOD,
-  CLUB_DAMAGE_PER_TONS,
-  computePhysicalToHit,
   type DamageGroup,
-  KICK_ATTACK_MOD,
-  KICK_DAMAGE_PER_TONS,
-  kickHitLocation,
-  PHYSICAL_MAX_TOHIT,
-  PHYSICAL_MIN_TOHIT,
   type PhysicalAttackDecl,
   type PhysicalAttackType,
   type PhysicalModifiers,
   type PhysicalResolution,
-  PUNCH_ATTACK_MOD,
-  PUNCH_DAMAGE_PER_TONS,
-  PUSH_ATTACK_MOD,
-  physicalDamage,
-  resolvePhysicalAttack,
   validatePhysicalAttack,
 } from "./rules/physical";
 export {
-  buildingEntryModifier,
   consciousnessTarget,
   DEFAULT_PILOTING,
-  FALL_CLUSTER_SIZE,
-  FALL_TONNAGE_DIVISOR,
   type FallDirection,
-  facingAfterFall,
-  fallingDamageGroups,
-  fallingDamageTotal,
   GYRO_DESTROYED_HITS,
   GYRO_HIT_MOD,
-  HIP_MOD,
-  LEG_ACTUATOR_MOD,
-  LEG_ACTUATORS,
-  LEG_DESTROYED_MOD,
-  PILOT_HITS_DEAD,
   type PreexistingDamage,
-  PSR_DAMAGE_THRESHOLD,
-  preexistingDamageModifier,
-  rollConsciousness,
-  rollFallDirection,
-  rollPilotingCheck,
   SENSOR_BLIND_HITS,
-  SENSOR_ONE_HIT_MOD,
-  sensorAttackModifier,
-  sensorsBlind,
-  waterEntryModifier,
 } from "./rules/piloting";
 export { loadBattleState, parseBattleState, saveBattleState } from "./rules/snapshot";
 export {
   type AttackModifiers,
-  computeToHit,
   DEFAULT_GUNNERY,
-  damageForBracket,
-  proneTargetModifier,
   type RangeBracket,
   type ToHitBreakdown,
 } from "./rules/tohit";

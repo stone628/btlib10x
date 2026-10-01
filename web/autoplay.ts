@@ -1,3 +1,4 @@
+import type { FireTarget, FireWeapon } from "btlib10x";
 import {
   bearingExact,
   bestFireTarget,
@@ -18,7 +19,6 @@ import {
   type UnitState,
   weaponCanFireIntoArc,
 } from "btlib10x";
-import type { FireTarget, FireWeapon } from "../src/index";
 import type { Session, SessionState } from "./session";
 // import type * as S from "./session";
 

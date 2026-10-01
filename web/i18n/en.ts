@@ -100,7 +100,7 @@ export const en = {
   "cmd.cancelMove.help": "clear mode and queued steps",
   "cmd.doneMove.help": "commit the declared move",
   "cmd.ammo.help": "show or set the acting unit's ammo depletion policy",
-  "cmd.ammo.arg.policy": "exposed | core | spread | least-first. omit to show the current policy",
+  "cmd.ammo.arg.policy": "exposed | core | spread | leastFirst. omit to show the current policy",
   "cmd.torso.help":
     "twist the acting unit's torso (TW pp.105-106). arms and front torso fire into the twisted arc",
   "cmd.torso.arg.direction":

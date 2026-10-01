@@ -97,7 +97,7 @@ export const kr: Catalog = {
   "cmd.cancelMove.help": "모드와 예약된 단계 지우기",
   "cmd.doneMove.help": "선언된 이동 확정",
   "cmd.ammo.help": "행동 유닛의 탄약 소진 정책 표시 또는 설정",
-  "cmd.ammo.arg.policy": "exposed | core | spread | least-first\n생략하면 현재 정책 표시",
+  "cmd.ammo.arg.policy": "exposed | core | spread | leastFirst\n생략하면 현재 정책 표시",
   "cmd.torso.help":
     "행동 유닛의 상체를 회전(TW pp.105-106). 회전 시 팔과 앞쪽 torso가 회전 방향의 아크로 사격 가능",
   "cmd.torso.arg.direction":
@@ -152,10 +152,10 @@ export const kr: Catalog = {
   "ok.twistAlready": "{id}: 이미 {dir}(으)로 회전 상태",
   "ammo.current": "탄약 정책: {policy}",
   "ammo.set": "{id}: 탄약 정책이 {policy}(으)로 설정되었습니다",
-  "ammo.policy.exposed": "노출 우선",
-  "ammo.policy.core": "코어 우선",
-  "ammo.policy.spread": "분산",
-  "ammo.policy.leastFirst": "최소 우선",
+  "ammo.policy.exposed": "노출 우선(exposed)",
+  "ammo.policy.core": "코어 우선(core)",
+  "ammo.policy.spread": "분산(spread)",
+  "ammo.policy.leastFirst": "최소 우선(leastFirst)",
   "ok.seedSet": "시드가 {seed}(으)로 설정되었습니다",
   "ok.resetDone": "=== 초기화 완료 ===",
   "ok.rematchDone": "=== 재경기 시작 ===",

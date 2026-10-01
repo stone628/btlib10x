@@ -10,6 +10,7 @@ import {
   mapDefFor,
   sameHex,
   type UnitInit,
+  type UnitSkillRange,
 } from "btlib10x";
 import { buildLinesChunk, type Chunk } from "./chunk";
 import { i18n } from "./i18n";
@@ -123,6 +124,10 @@ export function parseUnitProp(word: string): UnitProp {
   throw new Error(i18n("err.unknownProp", { name: word, list: UNIT_PROPS.join(", ") }));
 }
 
+function isUnitSkillRange(n: number): n is UnitSkillRange {
+  return n >= 0 && n <= 8;
+}
+
 export function setupSetUnitProp(
   context: SetupContext,
   id: string,
@@ -180,13 +185,13 @@ export function setupSetUnitProp(
     }
     case "gunnery": {
       const n = Number(raw);
-      if (!Number.isInteger(n) || n < 0 || n > 7) throw new Error(i18n("err.badGunnery"));
+      if (!Number.isInteger(n) || !isUnitSkillRange(n)) throw new Error(i18n("err.badGunnery"));
       unit.gunnery = n;
       return { prop, value: String(n) };
     }
     case "piloting": {
       const n = Number(raw);
-      if (!Number.isInteger(n) || n < 0 || n > 7) throw new Error(i18n("err.badPiloting"));
+      if (!Number.isInteger(n) || !isUnitSkillRange(n)) throw new Error(i18n("err.badPiloting"));
       unit.piloting = n;
       return { prop, value: String(n) };
     }
