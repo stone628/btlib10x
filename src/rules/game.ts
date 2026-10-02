@@ -70,6 +70,7 @@ import {
   HIP,
   markLocationCatastrophicallyDestroyed,
   resolveCriticalHits,
+  zeroLocationStructure,
 } from "./critical";
 import {
   applyDamage,
@@ -2447,7 +2448,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   for (const [targetId, crits] of Object.entries(targetCritsMap)) {
     if (crits.length === 0) continue;
     const target = requireUnit(state, targetId);
-    const currentDamage = targetDamageMap[targetId]!;
+    let currentDamage = targetDamageMap[targetId]!;
     // Clone the inner arrays so OR-merge below mutates a fresh copy, not
     // the unit's persistent table.
     const currentCritSlots: Record<Location, boolean[]> = {} as Record<Location, boolean[]>;
@@ -2458,6 +2459,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     let currentAmmoBins: AmmoBins = {
       ...(targetAmmoBinsMap[targetId] ?? target.ammoBins),
     };
+    const def = mechDefFor(target);
 
     for (const crit of crits) {
       // OR new destroyed flags into the accumulator. TW p. 124–125: crit
@@ -2480,10 +2482,36 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       // the spread already preserves earlier hits.
       currentAmmoBins = { ...currentAmmoBins, ...crit.ammoBins };
 
+      // Replay crit damage onto the accumulator. Each `crit.damage` was
+      // resolved from a pre-volley snapshot, so the full state cannot be
+      // copied — only the crit-added effects (ammo-explosion IS damage +
+      // blow-off / cockpit zeroing) are re-applied here. Weapon-group
+      // damage was already folded into `currentDamage` above.
+      for (const row of crit.rows) {
+        if (row.kind === "ammoExplosion") {
+          const app = applyAmmoExplosion(
+            currentDamage,
+            row.location,
+            row.damage,
+            checkCASE(def, row.location),
+          );
+          currentDamage = app.after;
+          // Mirror `markLocationCatastrophicallyDestroyed`: explosion
+          // destruction wipes remaining armor alongside IS.
+          for (const loc of app.newlyDestroyed) {
+            currentDamage.armor[loc] = 0;
+            if (isTorso(loc)) currentDamage.armorRear[loc] = 0;
+          }
+        } else if (row.kind === "headBlownOff" || row.kind === "cockpitDestroyed") {
+          zeroLocationStructure(currentDamage, "head");
+        } else if (row.kind === "legBlownOff") {
+          zeroLocationStructure(currentDamage, row.leg);
+        }
+      }
+
       // Merge newly destroyed / blown off arms from crit
       for (const arm of crit.blownOffArms) {
-        currentDamage.armor[arm] = 0;
-        currentDamage.internalStructure[arm] = 0;
+        zeroLocationStructure(currentDamage, arm);
       }
       if (crit.killedReason !== null && targetKilledReason[targetId] === undefined) {
         targetKilledReason[targetId] = crit.killedReason;
