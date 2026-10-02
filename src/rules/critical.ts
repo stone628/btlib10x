@@ -494,19 +494,19 @@ function runDetermining(
       // from `def.critSlots.head` and `state.destroyed.head`; only the
       // structural pools are wiped here. `critSlotsDestroyed[head]` flags
       // are NOT set to true en masse.
-      zeroLocationStructure(state, "head");
+      zeroLocationStructure(state.damage, "head");
       state.killedReason = "headBlownOff";
       state.rows.push({ kind: "headBlownOff", rolls: [det.roll] });
     } else if (isArm(source.location)) {
       // TW p.145: blown-off arm rides away intact ("may be picked up and
       // used as a club"). Salvage sees weapons, heat sinks, etc. as
       // salvageable on the severed limb — do not mass-mark slot flags.
-      zeroLocationStructure(state, source.location);
+      zeroLocationStructure(state.damage, source.location);
       state.blownOffArms.push(source.location);
       state.rows.push({ kind: "armBlownOff", arm: source.location, rolls: [det.roll] });
     } else if (isLeg(source.location)) {
       // Same as arm blow-off — leg rides away intact for club use.
-      zeroLocationStructure(state, source.location);
+      zeroLocationStructure(state.damage, source.location);
       state.rows.push({ kind: "legBlownOff", leg: source.location, rolls: [det.roll] });
     }
     state.depth -= 1;
@@ -686,7 +686,7 @@ function applySlotHit(
     // salvaged head components (sensors, life-support slots) ride away
     // on the head — leave `state.destroyed.head` flags intact for the
     // salvage reader.
-    zeroLocationStructure(state, "head");
+    zeroLocationStructure(state.damage, "head");
     state.killedReason = "cockpitDestroyed";
     state.rows.push({
       kind: "cockpitDestroyed",
@@ -730,10 +730,10 @@ function applySlotHit(
   });
 }
 
-function zeroLocationStructure(state: MutableCritState, loc: Location): void {
-  state.damage.armor[loc] = 0;
-  if (isTorso(loc)) state.damage.armorRear[loc] = 0;
-  state.damage.internalStructure[loc] = 0;
+export function zeroLocationStructure(damage: UnitDamageState, loc: Location): void {
+  damage.armor[loc] = 0;
+  if (isTorso(loc)) damage.armorRear[loc] = 0;
+  damage.internalStructure[loc] = 0;
 }
 
 /**

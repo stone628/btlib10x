@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { requireUnit, type UnitInit } from "../src";
 import { LOCATIONS, type Location } from "../src/core/types";
 import { mechDef } from "../src/data/index";
 import { ammoWeaponTotals, loadAmmoBins } from "../src/rules/ammo";
@@ -12,8 +13,15 @@ import {
   resolveCriticalHits,
 } from "../src/rules/critical";
 import type { UnitDamageState } from "../src/rules/damage";
+import {
+  advancePhase,
+  declareAttacks,
+  type GameEvent,
+  resolveAllAttacks,
+  rollInitiativePhase,
+} from "../src/rules/game";
 import { heatSinksOperational } from "../src/rules/heat";
-import { overrideAmmoBin, scriptedRng } from "./helpers";
+import { createTestBattle, overrideAmmoBin, scriptedRng } from "./helpers";
 
 /** Helper: returns an Rng whose first 2D6 sums to `sum` (1..12), then yields `tail`. */
 function detRoll(sum: number, ...tail: number[]): ReturnType<typeof scriptedRng> {
@@ -1219,5 +1227,70 @@ describe("ammo-explosion casualty: catastrophic mark", () => {
     expect(countDestroyedEngine(def, damage, destroyed)).toBe(totalEngineSlots);
     // CT rear pool wiped alongside front + IS.
     expect(damage.armorRear.centerTorso ?? 0).toBe(0);
+  });
+});
+
+/**
+ * Phase-merge regression (TW pp. 122–125): ammo-explosion critical damage
+ * must survive `resolveAllAttacks`. The per-weapon path folds
+ * `resolveCriticalHits().damage` into the application, but the phase merge
+ * rebuilds target damage from hit groups only — explosion IS damage and its
+ * transfer were discarded.
+ */
+describe("crit damage merge: ammo explosion survives resolveAllAttacks", () => {
+  it("replays explosion IS damage + transfer into the phase accumulator", () => {
+    const units: UnitInit[] = [
+      {
+        id: "atk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        piloting: 5,
+        position: { col: 3, row: 4 },
+        facing: "n",
+      },
+      {
+        id: "tgt",
+        model: "HBK-4G",
+        team: 1,
+        gunnery: 4,
+        piloting: 5,
+        position: { col: 3, row: 2 },
+        facing: "s",
+      },
+    ];
+    const state = createTestBattle([], units, false);
+    const tgt = requireUnit(state, "tgt");
+    // Strip LT armor so the Medium Laser hit reaches IS and triggers the
+    // determining roll.
+    tgt.damage.armor.leftTorso = 0;
+    tgt.damage.armorRear.leftTorso = 0;
+    tgt.prone = true; // skip end-of-phase piloting RNG
+    const isBefore = { ...tgt.damage.internalStructure };
+    expect(isBefore.leftTorso).toBeGreaterThan(5);
+    expect(mechDef("HBK-4G")).toBeDefined();
+
+    rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []);
+    advancePhase(state, []);
+    // Attacker Medium Laser (weaponIndex 1, 5 dmg) -> tgt.
+    declareAttacks(state, "atk", [{ weaponIndex: 1, targetId: "tgt" }], [], []);
+    const events: GameEvent[] = [];
+    // toHit 3+3, location 2+6=8 (leftTorso), determining 2+6=8 (1 crit),
+    // slot 1,1 (AC/20 ammo bin 1: 5 shots x 20 = 100 IS damage), then
+    // padding 3s for explosion cascades + consciousness rolls.
+    const rng = scriptedRng(3, 3, 2, 6, 2, 6, 1, 1, ...new Array(60).fill(3));
+    resolveAllAttacks(state, rng, events);
+
+    const after = requireUnit(state, "tgt").damage.internalStructure;
+    // 5 (laser) + 100 (explosion) >> LT IS: LT must be 0 and overflow must
+    // reach CT. Pre-fix, CT was untouched (explosion dropped).
+    expect(after.leftTorso).toBe(0);
+    expect(after.centerTorso).toBeLessThan(isBefore.centerTorso!);
+    // Sanity: an ammoExplosion row was actually produced.
+    const resolved = events.find((e) => e.kind === "attackResolved");
+    expect(resolved).toBeDefined();
+    const crits =
+      resolved !== undefined && resolved.kind === "attackResolved" ? resolved.resolution.crits : [];
+    expect(crits.flatMap((c) => c.rows).some((r) => r.kind === "ammoExplosion")).toBe(true);
   });
 });
