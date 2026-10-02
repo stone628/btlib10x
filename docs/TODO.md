@@ -41,8 +41,9 @@
   (web log prints `cluster range mod ±n`). HAG `critExplosion` data fixed
   to 10/15/20; HAG 5-point groupings confirmed (1-damage missiles already
   flow through the lots-of-5 path). `critExplosion` wiring (Gauss/HAG
-  weapon-crit blasts) remains a follow-up — the field still has no readers
-  in `src/rules/`. Rapid-fire audit: heat `(heat ?? 0) × shots`
+  weapon-crit blasts) rides inside `weaponDestroyed.explosion` — direct-to-IS
+  blast with CASE + cascade + 2 pilot hits, replayed in the phase merge.
+  Rapid-fire audit: heat `(heat ?? 0) × shots`
   (`game.ts`) and ammo `needed = shots` at declare + validate were already
   correct, including spend-on-miss/jam and 1-shot-per-missile-volley;
   covered by regression tests (Ultra AC/5 double-tap: 2 ammo at declare,

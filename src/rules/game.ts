@@ -59,6 +59,7 @@ import {
 } from "./building";
 import {
   applyAmmoExplosion,
+  type CriticalEffect,
   type CriticalResolution,
   checkCASE,
   countDestroyedEngine,
@@ -1000,6 +1001,14 @@ const LIFE_SUPPORT_HEAT_2HITS = 26;
 const HEAD_HIT_PILOT_HITS = 1;
 /** Pilot hits per ammo explosion. */
 const AMMO_BLAST_PILOT_HITS = 2;
+/** True when a crit row detonated a blast: an ammo explosion, or a
+ *  Gauss/HAG weapon-crit carrying `explosion` (TW p.135-136, handled like
+ *  an ammo explosion). Pilot hits, damage replay, and cascade accounting
+ *  all key off this predicate. */
+function isCritBlastRow(row: CriticalEffect): boolean {
+  if (row.kind === "ammoExplosion") return true;
+  return row.kind === "weaponDestroyed" && row.explosion !== undefined;
+}
 /** Pilot hits per failed seatbelt or fall. */
 const FALL_PILOT_HITS = 1;
 /** Seatbelt modifier when a leg is destroyed. */
@@ -2055,8 +2064,7 @@ function applyDamageGroups(
         unit.ammoBins = res.ammoBins;
         unit.damage = res.damage;
         for (const row of res.rows) {
-          if (row.kind === "ammoExplosion")
-            applyPilotHits(state, unit, 2, "ammoExplosion", rng, sink);
+          if (isCritBlastRow(row)) applyPilotHits(state, unit, 2, "ammoExplosion", rng, sink);
         }
         crits.push(res);
       }
@@ -2484,9 +2492,9 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
 
       // Replay crit damage onto the accumulator. Each `crit.damage` was
       // resolved from a pre-volley snapshot, so the full state cannot be
-      // copied — only the crit-added effects (ammo-explosion IS damage +
-      // blow-off / cockpit zeroing) are re-applied here. Weapon-group
-      // damage was already folded into `currentDamage` above.
+      // copied — only the crit-added effects (ammo / weapon-explosion IS
+      // damage + blow-off / cockpit zeroing) are re-applied here.
+      // Weapon-group damage was already folded into `currentDamage` above.
       for (const row of crit.rows) {
         if (row.kind === "ammoExplosion") {
           const app = applyAmmoExplosion(
@@ -2498,6 +2506,18 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
           currentDamage = app.after;
           // Mirror `markLocationCatastrophicallyDestroyed`: explosion
           // destruction wipes remaining armor alongside IS.
+          for (const loc of app.newlyDestroyed) {
+            currentDamage.armor[loc] = 0;
+            if (isTorso(loc)) currentDamage.armorRear[loc] = 0;
+          }
+        } else if (row.kind === "weaponDestroyed" && row.explosion !== undefined) {
+          const app = applyAmmoExplosion(
+            currentDamage,
+            row.location,
+            row.explosion.damage,
+            checkCASE(def, row.location),
+          );
+          currentDamage = app.after;
           for (const loc of app.newlyDestroyed) {
             currentDamage.armor[loc] = 0;
             if (isTorso(loc)) currentDamage.armorRear[loc] = 0;
@@ -2602,7 +2622,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   }
 
   // Pilot damage (TW p.41): a head hit lands 1 point per damaging grouping,
-  // an ammo explosion 2 points. Consciousness rolls run per point at once,
+  // an ammo/weapon explosion 2 points. Consciousness rolls run per point at once,
   // before any Piloting Skill Rolls (TW p.42 errata).
   for (const result of results) {
     for (const { targetId, resolution } of result.resolutions) {
@@ -2617,7 +2637,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       let ammoBlasts = 0;
       for (const crit of resolution.crits) {
         for (const row of crit.rows) {
-          if (row.kind === "ammoExplosion") ammoBlasts += 1;
+          if (isCritBlastRow(row)) ammoBlasts += 1;
         }
       }
       if (ammoBlasts > 0)

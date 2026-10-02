@@ -456,6 +456,67 @@ describe("weapon and ammo crit effects", () => {
     expect(def.armor.centerTorso).toBe(ctArmorBefore);
   });
 
+  it("gauss weapon crit detonates a 20-pt blast inside weaponDestroyed", () => {
+    // BZK-F3 rightTorso slots 3-9 are the Gauss Rifle mount (weaponIndex 0).
+    // TW p.135: a crit on the rifle itself causes a 20-pt ammo explosion in
+    // that location, applied direct to IS (armor bypassed) with a cascade.
+    const def = mechDef("BZK-F3")!;
+    const rtArmor = def.armor.rightTorso;
+    const res = resolveCriticalHits({
+      // det 8 -> 1 crit; (1,3) lands on slot 3 = Gauss Rifle.
+      rng: detRoll(8, 1, 3),
+      def,
+      source: { location: "rightTorso", damage: 5 },
+      critSlotsDestroyed: freshFlags(def),
+      destroyedWeapons: [],
+      damage: {
+        armor: { ...def.armor },
+        armorRear: { ...def.armorRear },
+        internalStructure: { ...def.internalStructure, rightTorso: 1000 },
+      },
+      ammoBins: loadAmmoBins(def),
+    });
+    expect(res.rows).toHaveLength(1);
+    const eff = res.rows[0]!;
+    expect(eff.kind).toBe("weaponDestroyed");
+    if (eff.kind === "weaponDestroyed") {
+      expect(eff.weaponName).toBe("Gauss Rifle");
+      expect(eff.slotIndex).toBe(3);
+      expect(eff.weaponIndex).toBe(1);
+      expect(eff.explosion?.damage).toBe(20);
+      expect(eff.explosion?.application.newlyDestroyed ?? []).toHaveLength(0);
+    }
+    expect(res.destroyedWeapons).toContain(1);
+    // Blast bypasses armor and hits IS directly.
+    expect(res.damage.armor.rightTorso).toBe(rtArmor);
+    expect(res.damage.internalStructure.rightTorso).toBe(980);
+    expect(res.killedReason).toBe(null);
+  });
+
+  it("second crit on a powered-down gauss mount soaks with no second blast", () => {
+    const def = mechDef("BZK-F3")!;
+    const destroyed = freshFlags(def);
+    destroyed.rightTorso[2] = true; // slot 3 already hit
+    const res = resolveCriticalHits({
+      // det 8 -> 1 crit; (1,4) lands on slot 4 = same Gauss mount.
+      rng: detRoll(8, 1, 4),
+      def,
+      source: { location: "rightTorso", damage: 5 },
+      critSlotsDestroyed: destroyed,
+      destroyedWeapons: [1],
+      damage: {
+        armor: { ...def.armor },
+        armorRear: { ...def.armorRear },
+        internalStructure: { ...def.internalStructure, rightTorso: 1000 },
+      },
+      ammoBins: loadAmmoBins(def),
+    });
+    expect(res.rows).toHaveLength(1);
+    expect(res.rows[0]!.kind).toBe("noEffect");
+    expect(res.damage.internalStructure.rightTorso).toBe(1000);
+    expect(res.killedReason).toBe(null);
+  });
+
   it("cockpit crit kills the 'Mech", () => {
     const def = mechDef("HBK-4G")!;
     // HBK head slot 3 = cockpit. Roll 8 -> one crit. Slot 3 (1D6 = 3).
@@ -1292,5 +1353,67 @@ describe("crit damage merge: ammo explosion survives resolveAllAttacks", () => {
     const crits =
       resolved !== undefined && resolved.kind === "attackResolved" ? resolved.resolution.crits : [];
     expect(crits.flatMap((c) => c.rows).some((r) => r.kind === "ammoExplosion")).toBe(true);
+  });
+
+  it("replays a gauss weapon blast into the phase accumulator + 2 pilot hits", () => {
+    // 90t Clan target survives its own 20-pt blast (arm IS 15, CASE vents
+    // the excess), so the phase pilot-hit sweep still sees a live unit.
+    const units: UnitInit[] = [
+      {
+        id: "atk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        piloting: 5,
+        position: { col: 3, row: 4 },
+        facing: "n",
+      },
+      {
+        id: "tgt",
+        model: "MC-MKII-2",
+        team: 1,
+        gunnery: 4,
+        piloting: 5,
+        position: { col: 3, row: 2 },
+        facing: "s",
+      },
+    ];
+    const state = createTestBattle([], units, false);
+    const tgt = requireUnit(state, "tgt");
+    // Strip right-arm armor so the 5-dmg Medium Laser reaches IS and triggers
+    // the determining roll on the CL Gauss mount (rightArm slots 3-8).
+    tgt.damage.armor.rightArm = 0;
+    tgt.prone = true; // skip end-of-phase piloting RNG
+    const isBefore = { ...tgt.damage.internalStructure };
+    const pilotBefore = tgt.pilotHits;
+    expect(isBefore.rightArm).toBeGreaterThan(5);
+
+    rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []);
+    advancePhase(state, []);
+    declareAttacks(state, "atk", [{ weaponIndex: 1, targetId: "tgt" }], [], []);
+    const events: GameEvent[] = [];
+    // toHit 3+3, location 1+2=3 (rightArm), determining 2+6=8 (1 crit),
+    // slot 1,3 (Gauss slot 3: 20-pt blast), cascade det 1+1=2 (none), then
+    // padding for the 2 consciousness rolls.
+    const rng = scriptedRng(3, 3, 1, 2, 2, 6, 1, 3, 1, 1, ...new Array(60).fill(3));
+    resolveAllAttacks(state, rng, events);
+
+    const resolved = events.find((e) => e.kind === "attackResolved");
+    expect(resolved).toBeDefined();
+    const crits =
+      resolved !== undefined && resolved.kind === "attackResolved" ? resolved.resolution.crits : [];
+    const blast = crits
+      .flatMap((c) => c.rows)
+      .find((r) => r.kind === "weaponDestroyed" && r.explosion !== undefined);
+    expect(blast).toBeDefined();
+    if (blast !== undefined && blast.kind === "weaponDestroyed") {
+      expect(blast.weaponName).toBe("CL Gauss Rifle");
+      expect(blast.explosion?.damage).toBe(20);
+    }
+    // 5 (laser) + 20 (blast) must land on the arm, and the pilot takes
+    // exactly the 2 blast hits.
+    const after = requireUnit(state, "tgt");
+    expect(after.damage.internalStructure.rightArm).toBeLessThan(isBefore.rightArm!);
+    expect(after.pilotHits - pilotBefore).toBe(2);
   });
 });

@@ -941,6 +941,14 @@ function formatCritEffect(eff: CriticalEffect): string {
     case "legBlownOff":
       return i18n("res.critLegBlownOff", { leg: SHORT_LOC[eff.leg] });
     case "weaponDestroyed":
+      if (eff.explosion !== undefined) {
+        return i18n("res.critWeaponExplosion", {
+          loc: SHORT_LOC[eff.location],
+          slot: String(eff.slotIndex),
+          weapon: eff.weaponName,
+          damage: String(eff.explosion.damage),
+        });
+      }
       return i18n("res.critWeaponDestroyed", {
         loc: SHORT_LOC[eff.location],
         slot: String(eff.slotIndex),
