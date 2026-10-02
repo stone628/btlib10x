@@ -713,11 +713,11 @@ describe("declareAttacks with weapons and physicals", () => {
 });
 
 describe("twist-aware physical arcs (TW pp. 98-99)", () => {
-  /** Attacker faces north; target sits on the northwest bearing (leftSide). */
-  function northVsNorthwest(): BattleState {
+  /** Attacker faces north; target sits in the adjacent southwest hex (leftSide template arc). */
+  function northVsSouthwest(): BattleState {
     const battle = makeBattle(
       makeUnitInit("a", 1, { col: 10, row: 10 }, "n"),
-      makeUnitInit("t", 2, { col: 9, row: 10 }, "s"),
+      makeUnitInit("t", 2, { col: 9, row: 11 }, "s"),
     );
     battle.phase = "attack";
     battle.initiativeWinnerTeam = 2;
@@ -727,7 +727,7 @@ describe("twist-aware physical arcs (TW pp. 98-99)", () => {
   }
 
   it("punch works untwisted but club needs a left twist into the front arc", () => {
-    const battle = northVsNorthwest();
+    const battle = northVsSouthwest();
     expect(
       validatePhysicalAttack(battle, "a", { type: "punch", targetId: "t", limb: "rightArm" }).ok,
     ).toBe(true);
@@ -735,6 +735,8 @@ describe("twist-aware physical arcs (TW pp. 98-99)", () => {
     expect(
       validatePhysicalAttack(battle, "a", { type: "club", targetId: "t" }, "leftSide").ok,
     ).toBe(true);
+    // Twisting away swings the side target behind the torso (rear arc),
+    // so even the punch no longer bears.
     expect(
       validatePhysicalAttack(
         battle,
@@ -742,7 +744,7 @@ describe("twist-aware physical arcs (TW pp. 98-99)", () => {
         { type: "punch", targetId: "t", limb: "rightArm" },
         "rightSide",
       ).ok,
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("a rear target becomes punchable with a twist", () => {

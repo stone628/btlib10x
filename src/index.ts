@@ -77,6 +77,7 @@ export {
 export {
   type Arc,
   classifyArcWithBoundary,
+  classifyFiringArc,
   weaponCanFireIntoArc,
 } from "./rules/arcs";
 export type { AttackResolution, HitGroup, WeaponAttackInput } from "./rules/attack";

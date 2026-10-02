@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { bearingExact, hexDistance, neighbor } from "../src/core/hex";
-import { classifyArcWithBoundary } from "../src/rules/arcs";
+import { neighbor } from "../src/core/hex";
+import { classifyFiringArc } from "../src/rules/arcs";
 import { bestFireTarget, suggestFireTargets } from "../src/rules/fireability";
 import type { BattleState, TerrainHexDef, UnitInit } from "../src/rules/game";
 import { advancePhase, rollInitiativePhase } from "../src/rules/game";
@@ -530,28 +530,14 @@ describe("suggestFireTargets", () => {
     expect(bestFireTarget(sugg)?.targetId).toBe("front");
   });
 
-  it("records per-weapon firing arc on boundary lines", () => {
+  it("records per-weapon firing arc in a side arc", () => {
+    // HBK at (5,5) facing n; ENF at the southeast-adjacent hex (6,5), solidly
+    // in the rightSide template arc (the p.105 template has no boundary
+    // hexes, so altArc stays null). No HBK weapon fires into rear, so only
+    // the matching right-arm Medium Laser (weapon 2) bears.
     const origin = { col: 5, row: 5 };
-    // Find hex along exact arc-boundary line with side/rear pair: no HBK
-    // weapon fires into rear, so matching side arm must record side arc
-    // (primary or alternate of pair).
-    let boundaryHex: { col: number; row: number } | null = null;
-    for (let col = 2; col <= 8 && boundaryHex === null; col++) {
-      for (let row = 2; row <= 8; row++) {
-        const hex = { col, row };
-        if (hex.col === origin.col && hex.row === origin.row) continue;
-        if (hexDistance(origin, hex) > 3) continue; // keep Medium Lasers in range
-        const b = bearingExact(origin, hex);
-        if (b === null || b.boundary === null) continue;
-        const cls = classifyArcWithBoundary("n", b);
-        const pair = [cls.arc, cls.altArc];
-        if (pair.includes("rear") && (pair.includes("leftSide") || pair.includes("rightSide"))) {
-          boundaryHex = hex;
-          break;
-        }
-      }
-    }
-    expect(boundaryHex).not.toBeNull();
+    const sideHex = { col: 6, row: 5 };
+    expect(classifyFiringArc(origin, sideHex, "n")).toBe("rightSide");
     const units: UnitInit[] = [
       {
         id: "hbk",
@@ -568,19 +554,17 @@ describe("suggestFireTargets", () => {
         team: 1,
         gunnery: 4,
         piloting: 5,
-        position: boundaryHex!,
+        position: sideHex,
         facing: "s",
       },
     ];
     const state = startAttackTurn(createTestBattle([], units, false));
     const sugg = suggestFireTargets(state, "hbk");
     const enf = sugg.targets.find((t) => t.targetId === "enf")!;
-    const pair = [enf.arc, enf.altArc];
-    expect(pair).toContain("rear");
-    const side = pair.includes("leftSide") ? "leftSide" : "rightSide";
+    expect(enf.arc).toBe("rightSide");
+    expect(enf.altArc).toBeNull();
     // Only matching side arm bears; rear impossible without rear mounts.
-    const sideArmIndex = side === "leftSide" ? 1 : 2;
-    expect(enf.weapons.map((w) => w.weaponIndex)).toEqual([sideArmIndex]);
-    expect(enf.weapons[0]!.arc).toBe(side);
+    expect(enf.weapons.map((w) => w.weaponIndex)).toEqual([2]);
+    expect(enf.weapons[0]!.arc).toBe("rightSide");
   });
 });

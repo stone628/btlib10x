@@ -183,12 +183,14 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   death immobilizes. Hits on already-destroyed locations transfer.
 - **Firing arc** — attacker-side arcs gate declarations per weapon mounting
   (TW p.105: head/legs/torso front-only, arms add their own side,
-  `rearFacing` torso mounts rear-only); the target-side attack direction
+  `rearFacing` torso mounts rear-only). The p.105 hex template assigns every
+  hex wholly to one arc (forward arc three hexes wide: facing ±1 included),
+  so firing has no boundary pairs; the target-side attack direction
   (TW p.119) picks the hit-location column (front/left/right share one
   per-arc table, rear shares the front column) and the armor pool (rear
-  torso pool for rear-direction torso hits). Exact arc-boundary lines admit
-  both arcs for firing; attack direction resolves to the defender's dominant
-  choice (front over side, never rear). The web fire-suggestion header shows
+  torso pool for rear-direction torso hits). Attack direction on an exact
+  boundary line resolves to the defender's dominant choice (front over side,
+  never rear). The web fire-suggestion header shows
   the target's firing arc, and the attack-resolution hit line names the
   attack direction it resolved against.
 - **Weapons** — ballistic / energy / missile with short/medium/long range

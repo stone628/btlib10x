@@ -22,6 +22,7 @@ import { countArmActuators } from "./actuators";
 import {
   type Arc,
   classifyArcWithBoundary,
+  classifyFiringArc,
   defenderArcChoice,
   effectiveFacingForTwist,
 } from "./arcs";
@@ -655,11 +656,14 @@ function validatePunch(
   twist: Arc | null,
 ): ValidationResult {
   // Target must be in forward or side arc (TW p. 145), read off the
-  // twisted torso facing (TW pp. 98–99).
-  const b = bearingExact(attacker.position, target.position);
-  if (b === null) return { ok: false, reason: "Same hex" };
-  const arc = classifyArcWithBoundary(effectiveFacingForTwist(attacker.facing, twist), b);
-  if (arc.arc === "rear") {
+  // twisted torso facing (TW pp. 98–99) via the p.105 template.
+  const arc = classifyFiringArc(
+    attacker.position,
+    target.position,
+    effectiveFacingForTwist(attacker.facing, twist),
+  );
+  if (arc === null) return { ok: false, reason: "Same hex" };
+  if (arc === "rear") {
     return { ok: false, reason: "Punch requires target in forward or side arc" };
   }
 
@@ -685,11 +689,11 @@ function validateKick(
   target: UnitState,
   _decl: PhysicalAttackDecl,
 ): ValidationResult {
-  // Target must be in one of three forward-arc hexes (TW p. 147)
-  const b = bearingExact(attacker.position, target.position);
-  if (b === null) return { ok: false, reason: "Same hex" };
-  const arc = classifyArcWithBoundary(attacker.facing, b);
-  if (arc.arc === "rear") {
+  // Target must be in one of three forward-arc hexes (TW p. 147), read off
+  // the p.105 template.
+  const kickArc = classifyFiringArc(attacker.position, target.position, attacker.facing);
+  if (kickArc === null) return { ok: false, reason: "Same hex" };
+  if (kickArc === "rear") {
     return { ok: false, reason: "Kick requires target in forward arc" };
   }
 
@@ -742,11 +746,14 @@ function validateClub(
   twist: Arc | null,
 ): ValidationResult {
   // Target must be in forward arc (TW p. 145), read off the twisted torso
-  // facing (TW pp. 98–99).
-  const b = bearingExact(attacker.position, target.position);
-  if (b === null) return { ok: false, reason: "Same hex" };
-  const arc = classifyArcWithBoundary(effectiveFacingForTwist(attacker.facing, twist), b);
-  if (arc.arc !== "front") {
+  // facing (TW pp. 98–99) via the p.105 template.
+  const clubArc = classifyFiringArc(
+    attacker.position,
+    target.position,
+    effectiveFacingForTwist(attacker.facing, twist),
+  );
+  if (clubArc === null) return { ok: false, reason: "Same hex" };
+  if (clubArc !== "front") {
     return { ok: false, reason: "Club requires target in forward arc" };
   }
 
@@ -811,12 +818,16 @@ function validateStrike(
   }
 
   // Arm arc (TW p.146): forward arc or the side arc matching the mounting
-  // arm, read off the twisted torso facing like punch/club (TW pp. 98–99).
-  const b = bearingExact(attacker.position, target.position);
-  if (b === null) return { ok: false, reason: "Same hex" };
-  const arc = classifyArcWithBoundary(effectiveFacingForTwist(attacker.facing, twist), b);
+  // arm, read off the twisted torso facing like punch/club (TW pp. 98–99)
+  // via the p.105 template.
+  const strikeArc = classifyFiringArc(
+    attacker.position,
+    target.position,
+    effectiveFacingForTwist(attacker.facing, twist),
+  );
+  if (strikeArc === null) return { ok: false, reason: "Same hex" };
   const side: Arc = arm === "leftArm" ? "leftSide" : "rightSide";
-  if (arc.arc !== "front" && arc.arc !== side && arc.altArc !== "front" && arc.altArc !== side) {
+  if (strikeArc !== "front" && strikeArc !== side) {
     return { ok: false, reason: "Strike requires target in forward or mounting-arm side arc" };
   }
 

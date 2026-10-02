@@ -42,6 +42,7 @@ import {
 import {
   type Arc,
   classifyArcWithBoundary,
+  classifyFiringArc,
   defenderArcChoice,
   effectiveFacingForTwist,
   weaponCanFireIntoArc,
@@ -158,9 +159,8 @@ export interface WeaponAttackDecl {
   /** Request a rapid-fire (double-tap) volley; only valid on rapid-fire weapons. Defaults off. */
   readonly rapidFire?: boolean;
   /** Firing arc of the target relative to the ATTACKER's facing, classified at
-   *  declaration time. Drives per-weapon fire legality (TW p.105 weapon
-   *  arcs). On an exact arc-boundary line this is one arc of the pair; the
-   *  legality check accepts the weapon when either arc of the pair allows it. */
+   *  declaration time. Drives per-weapon fire legality (TW p.105 hex
+   *  template; every hex falls wholly in one arc). */
   readonly arc?: Arc;
   /** Attack direction: the side of the TARGET the attack strikes (TW p.107),
    *  classified from the target's facing at declaration time. Drives the
@@ -1547,22 +1547,19 @@ export function validateAttacksImpl(
     if (target.team === unit.team) throw new Error("Target must belong to another team");
 
     const dist = hexDistance(unit.position, target.position);
-    const b = bearingExact(unit.position, target.position);
-    if (b === null) throw new Error("Attacker and target share a hex");
-    // Attacker-side firing arc (weapon legality, TW p.105). On an exact
-    // boundary line the target counts as lying in both arcs of the pair.
+    // Attacker-side firing arc (weapon legality, TW p.105 hex template).
     // Torso twist rotates the attacker's effective facing (see
     // `effectiveFacingForTwist`) before this classification so arm and
-    // front-torso weapons cover the twisted arc.
-    const fireArc = classifyArcWithBoundary(effectiveFacing, b);
-    arcs[decl.weaponIndex] = fireArc.arc;
+    // front-torso weapons cover the twisted arc. The template assigns every
+    // hex wholly to one arc (no boundary pairs).
+    const fireArc = classifyFiringArc(unit.position, target.position, effectiveFacing);
+    if (fireArc === null) throw new Error("Attacker and target share a hex");
+    arcs[decl.weaponIndex] = fireArc;
     const rearFacing = mount.rearFacing === true;
-    const inArc =
-      weaponCanFireIntoArc(mount.location, rearFacing, fireArc.arc) ||
-      (fireArc.altArc !== null && weaponCanFireIntoArc(mount.location, rearFacing, fireArc.altArc));
+    const inArc = weaponCanFireIntoArc(mount.location, rearFacing, fireArc);
     if (!inArc) {
       throw new Error(
-        `${mount.weapon} on ${unitId} cannot fire into the ${fireArc.arc} arc (target outside its firing arc)`,
+        `${mount.weapon} on ${unitId} cannot fire into the ${fireArc} arc (target outside its firing arc)`,
       );
     }
     // Target-side attack direction (TW p.119): which side of the target the
