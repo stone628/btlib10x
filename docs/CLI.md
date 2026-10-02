@@ -325,25 +325,32 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   wrecks a leg/gyro or knocks the pilot out, which drops the 'Mech on the
   spot. Exiting a building hex requires no PSR.
 
-### Implemented subset: physical attacks (punch, kick, push, club)
+### Implemented subset: physical attacks (punch, kick, push, club, strike)
 
 - **Declaration** — in the weapon attack phase alongside `fire`: `punch
   <target> [left|right]` (default right; queue twice for both arms, one
   roll each), `kick <target> [left|right]` (default right), `push
-  <target>`, `club <target>`. One type per turn (two-arm punch excepted).
-  A punching arm / kicking leg cannot fire its mounted weapons, and
+  <target>`, `club <target>`, `strike <target> [left|right]` (default: the
+  arm mounting the unit's physical weapon; required when both arms mount
+  one). One type per turn
+  (two-arm punch excepted; at most one strike even with two mounted).
+  A punching / striking arm or kicking leg cannot fire its mounted weapons, and
   push / club bars all arm-mounted weapons. `candidate` lists legal
   physical options for adjacent enemies; `status` shows the queued
   physical declarations.
 - **Resolution** — after all weapon attacks in `resolveAllAttacks`
   (TW p. 37 order): punch damage 1/10 t on the Punch table, kick 1/5 t
-  on the Kick table, club 1/5 t on the standard table, push no damage
-  with target displacement + attacker advance. Kick forces a target PSR
-  (plus an attacker PSR on a miss); push forces both sides' PSRs. Head
-  hits injure the pilot as usual.
+  on the Kick table, club 1/5 t on the standard table, strike per weapon
+  (hatchet 1/5 t, sword 1/10 t +1, blade 1/10 t) on the standard table,
+  push no damage with target displacement + attacker advance. Kick forces a
+  target PSR (plus an attacker PSR on a miss); push forces both sides' PSRs.
+  Head hits injure the pilot as usual. A crit on any slot of a mounted
+  physical weapon destroys it (the HCT-5S Hatchetman now ships its hatchet).
 - **Deferred** — charge / DFA (movement-phase declarations), club
-  acquisition (blown-off limbs, trees, girders), physical-weapon equipment
-  (hatchet, sword, …), critical hits from physical damage, domino effect /
+  acquisition (blown-off limbs, trees, girders), the remaining nine
+  physical-weapon types (industrial tools), TSM doubling, the optional
+  Punch/Kick-table election (+4) and level-difference auto-swap,
+  critical hits from physical damage, domino effect /
   accidental falls from above.
 
 ### Not yet implemented

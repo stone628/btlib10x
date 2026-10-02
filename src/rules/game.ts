@@ -110,7 +110,9 @@ import {
   type PhysicalAttackDecl,
   type PhysicalAttackType,
   type PhysicalResolution,
+  type PhysicalWeaponName,
   resolvePhysicalAttack,
+  resolveStrikeArm,
   validatePhysicalAttack,
 } from "./physical";
 import {
@@ -183,10 +185,12 @@ export interface DeclaredWeaponVolley {
 }
 
 /** Physical half of a merged `attacksDeclared` event: one entry per
- *  declared physical attack (two-arm punches may name different targets). */
+ *  declared physical attack (two-arm punches may name different targets;
+ *  strikes name the mounted physical weapon used). */
 export interface DeclaredPhysicalAttack {
   readonly type: PhysicalAttackType;
   readonly targetId: string;
+  readonly weapon?: PhysicalWeaponName;
 }
 
 /** Off-line status of a unit. `"not"` = online; any other value = shut down.
@@ -295,7 +299,7 @@ export interface UnitState extends MechModelHolder {
    *  as shut down: cannot move, fire, or act as the next actor. */
   shutdown: ShutdownState;
   declaredWeaponAttacks: WeaponAttackDecl[];
-  /** Physical attack declarations (punch, kick, push, club) for this phase. */
+  /** Physical attack declarations (punch, kick, push, club, strike) for this phase. */
   declaredPhysicalAttacks: PhysicalAttackDecl[];
   firedTargetId: string | null;
   /** True if the unit explicitly passed on declaring attacks this phase. */
@@ -1381,19 +1385,29 @@ export interface ValidatedAttackVolley {
 
 /** Normalize physical attack limbs: a limbless punch defaults to the right
  *  arm, a limbless kick to the right leg (TW lets the attacker pick; the
- *  default keeps single-command declarations deterministic). Push and club
- *  carry no limb. */
-function normalizePhysicalDecls(decls: readonly PhysicalAttackDecl[]): PhysicalAttackDecl[] {
+ *  default keeps single-command declarations deterministic). A limbless
+ *  strike defaults to its mounting arm (right when both mount it). Push
+ *  and club carry no limb. */
+function normalizePhysicalDecls(
+  def: ResolvedMechDef,
+  decls: readonly PhysicalAttackDecl[],
+): PhysicalAttackDecl[] {
   return decls.map((d) => {
     if (d.type === "punch" && d.limb === undefined) return { ...d, limb: "rightArm" as const };
     if (d.type === "kick" && d.limb === undefined) return { ...d, limb: "rightLeg" as const };
+    if (d.type === "strike" && d.limb === undefined && d.weapon !== undefined) {
+      const arm = resolveStrikeArm(def, d.weapon, undefined);
+      if (arm !== null) return { ...d, limb: arm };
+    }
     return { ...d };
   });
 }
 
 /**
  * Enforce the one-type-per-turn rule (TW p. 144) with the two-arm punch
- * exception (one punch per arm, separate rolls). Throws on violation.
+ * exception (one punch per arm, separate rolls). Strikes are physical
+ * weapon attacks: at most one per turn even with two mounted (TW p.144).
+ * Throws on violation.
  */
 function checkPhysicalSetShape(unitId: string, normalized: readonly PhysicalAttackDecl[]): void {
   const types = new Set(normalized.map((d) => d.type));
@@ -1404,6 +1418,9 @@ function checkPhysicalSetShape(unitId: string, normalized: readonly PhysicalAtta
   const punchLimbs = punches.map((d) => d.limb);
   if (new Set(punchLimbs).size !== punchLimbs.length)
     throw new Error(`${unitId} may punch with each arm only once per turn`);
+  const strikes = normalized.filter((d) => d.type === "strike");
+  if (strikes.length > 1)
+    throw new Error(`${unitId} may make only one physical weapon attack per turn`);
 }
 
 /** Validation core shared by `validateAttacks` and `declareAttacks`.
@@ -1445,7 +1462,7 @@ export function validateAttacksImpl(
     );
   const def = mechDefFor(unit);
   const twist = options.twist ?? null;
-  const normalizedPhysical = normalizePhysicalDecls(physicalDecls);
+  const normalizedPhysical = normalizePhysicalDecls(def, physicalDecls);
   let targetId: string | null = null;
   if (wantPhysical) {
     checkPhysicalSetShape(unitId, normalizedPhysical);
@@ -1489,6 +1506,11 @@ export function validateAttacksImpl(
     const mount = def.weapons[decl.weaponIndex];
     if (!mount) throw new Error(`weaponIndex ${decl.weaponIndex} out of range for ${unitId}`);
     const weapon = weaponDefFor(mount);
+    if (weapon.physicalWeapon === true) {
+      throw new Error(
+        `${mount.weapon} on ${unitId} is physical-weapon equipment: strike with it, do not fire it`,
+      );
+    }
 
     if (seenWeapons.has(decl.weaponIndex)) {
       throw new Error(`${mount.weapon} on ${unitId} may only be declared once per turn`);
@@ -1710,17 +1732,21 @@ export function declareAttacks(
           rangeMod: volley.attackRangeMod,
         }
       : null,
-    physical: volley.normalized.map((d) => ({ type: d.type, targetId: d.targetId })),
+    physical: volley.normalized.map((d) => ({
+      type: d.type,
+      targetId: d.targetId,
+      ...(d.weapon !== undefined ? { weapon: d.weapon as PhysicalWeaponName } : {}),
+    })),
   });
   if (!state.actedThisPhase.includes(unitId)) state.actedThisPhase.push(unitId);
 }
 
 /**
- * Weapon / physical-attack interaction backstop (TW pp. 145, 147): a
- * punching arm or kicking leg cannot fire its mounted weapons that turn,
- * and a pushing / clubbing 'Mech fires no arm-mounted weapons at all.
- * Returns a human-readable conflict, or null when the combination is
- * legal. The web layer pre-checks the same rules for better messages;
+ * Weapon / physical-attack interaction backstop (TW pp. 145–147): a
+ * punching or striking arm or kicking leg cannot fire its mounted weapons
+ * that turn, and a pushing / clubbing 'Mech fires no arm-mounted weapons
+ * at all. Returns a human-readable conflict, or null when the combination
+ * is legal. The web layer pre-checks the same rules for better messages;
  * `declareAttacks` enforces them on the combined declaration set.
  */
 function physicalWeaponConflict(
@@ -1730,16 +1756,22 @@ function physicalWeaponConflict(
 ): string | null {
   const punchedArms = new Set<string>();
   const kickedLegs = new Set<string>();
+  const struckArms = new Set<string>();
   let noArmWeapons = false;
   for (const p of physicalDecls) {
     if (p.type === "punch" && p.limb !== undefined) punchedArms.add(p.limb);
     if (p.type === "kick" && p.limb !== undefined) kickedLegs.add(p.limb);
+    if (p.type === "strike" && p.weapon !== undefined) {
+      const arm = resolveStrikeArm(def, p.weapon, p.limb);
+      if (arm !== null) struckArms.add(arm);
+    }
     if (p.type === "push" || p.type === "club") noArmWeapons = true;
   }
   for (const w of weaponDecls) {
     const loc = def.weapons[w.weaponIndex]?.location;
     if (loc === undefined) continue;
     if (punchedArms.has(loc)) return `punching ${loc} cannot fire its weapons`;
+    if (struckArms.has(loc)) return `striking ${loc} cannot fire its weapons`;
     if (kickedLegs.has(loc)) return `kicking ${loc} cannot fire its weapons`;
     if (noArmWeapons && isArm(loc)) return "pushing/clubbing 'Mech fires no arm-mounted weapons";
   }

@@ -15,7 +15,7 @@ export const en = {
   "hint.move":
     "you are in the movement phase - the prompt shows whose turn it is.\ndeclare a speed via 'mode', then queue a landing via 'place'; check MP costs with 'status'.\ncommit the move with 'done', or discard it with 'cancel'.",
   "hint.attack":
-    "you are in the weapon attack phase - the prompt shows who is firing.\nbrowse the acting unit's guns via 'weapons', then declare shots against one target via 'fire'.\nagainst an adjacent enemy you may also 'punch', 'kick', 'push', or 'club' (resolved after weapons).\nreview the declaration with 'status', resolve with 'done', or discard it with 'cancel'.",
+    "you are in the attack phase - the prompt shows who is firing.\nbrowse the acting unit's available options via 'candidate', then declare shots against one target via 'fire'.\nagainst an adjacent enemy you may also 'punch', 'kick', 'push', 'club', or 'strike' (resolved after weapons).\nreview the declaration with 'status', resolve with 'done', or discard it with 'cancel'.",
   "hint.over":
     "the battle is over.\nreplay the same roster and seed with 'rematch', or return to an empty setup with 'reset'.",
 
@@ -130,6 +130,11 @@ export const en = {
   "cmd.club.help":
     "queue a club attack against an adjacent enemy in the forward arc (TW p.145; club acquisition not yet tracked)",
   "cmd.club.arg.targetId": "enemy unit id in the forward arc",
+  "cmd.strike.help":
+    "queue a physical-weapon strike against an adjacent enemy (TW p.146) with the mounted hatchet, sword, or retractable blade",
+  "cmd.strike.arg.targetId": "enemy unit id in the forward or mounting-arm side arc",
+  "cmd.strike.arg.limb":
+    "striking arm: left|right (default: the mounting arm; required when both arms mount one)",
 
   // autoplay demo driver (hidden command, not listed in help)
   "autoPlay.started":
@@ -257,10 +262,15 @@ export const en = {
   "err.physical.oneType":
     "a 'Mech may make only one type of physical attack per turn (already queued a different type)",
   "err.physical.invalid": "physical attack rejected: {reason}",
+  "err.physical.noWeapon": "unit mounts no physical weapon",
+  "err.physical.noWeaponInArm": "no physical weapon mounted in {limb}",
+  "err.physical.pickArm": "unit mounts physical weapons in both arms — specify left or right",
   "err.physical.armConflict": "cannot fire {limb} weapons while punching with that arm",
+  "err.physical.strikeConflict": "cannot fire {limb} weapons while striking with that arm",
   "err.physical.legConflict": "cannot fire {limb} weapons while kicking with that leg",
   "err.physical.noArmWeapons": "cannot fire arm-mounted weapons while pushing or clubbing",
   "warn.physical.armWeapons": "note: {limb} weapons cannot fire while punching with that arm",
+  "warn.physical.strikeArmWeapons": "note: {limb} weapons cannot fire while striking with that arm",
   "warn.physical.legWeapons": "note: {limb} weapons cannot fire while kicking with that leg",
   "warn.physical.noArmWeapons": "note: arm-mounted weapons cannot fire while pushing or clubbing",
 
@@ -309,6 +319,7 @@ export const en = {
   "attackStatus.none": "  (no attacks queued)",
   "attackStatus.weapon": "  #{weaponIndex} {weaponName} -> {targetId}{suffix}",
   "attackStatus.physical": "  {type} ({limb}) -> {targetId}",
+  "attackStatus.physicalStrike": "  strike {weapon} ({limb}) -> {targetId}",
 
   // fire suggestion
   "fireSuggestion.header": "possible targets for {id}:",
@@ -352,6 +363,8 @@ export const en = {
   "physicalSuggestion.header": "physical attacks (adjacent only):",
   "physicalSuggestion.none": "(no adjacent enemy in a legal arc)",
   "physicalSuggestion.line": "{type} -> {target} (queue with '{type} {target}')",
+  "physicalSuggestion.strikeLine":
+    "strike {weapon} -> {target} (queue with 'strike {target} {limb}')",
 
   // record sheet / info
   "info.mechColModel": "MODEL",

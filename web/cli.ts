@@ -570,6 +570,24 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
       );
     },
   },
+  strike: {
+    helpKey: "cmd.strike.help",
+    usage: "strike <targetId> [left|right]",
+    argsDoc: [
+      ["targetId", "cmd.strike.arg.targetId"],
+      ["limb", "cmd.strike.arg.limb"],
+    ],
+    run: (s, a) => {
+      expectArgs(a, 1, "strike <targetId> [left|right]");
+      const targetId = a[0]!;
+      const limb = parseArm(a[1]);
+      const warnings = queuePhysicalAttack(s, "strike", targetId, limb);
+      return cmdRunChunks(
+        i18n("ok.physical.queued", { type: "strike", target: targetId }),
+        ...warnings,
+      );
+    },
+  },
   status: { helpKey: "cmd.statusAttack.help", run: (s) => [attackStatusChunk(s)] },
   cancel: {
     helpKey: "cmd.cancelFire.help",

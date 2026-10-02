@@ -177,6 +177,9 @@ export function suggestFireTargets(
       Object.entries(def.weapons).forEach(([key, mount]) => {
         const weaponIndex = Number(key);
         const weapon = weaponDefFor(mount);
+        // Physical-weapon equipment (TW p.146) never fires as a ranged
+        // weapon: it is used through strike declarations only.
+        if (weapon.physicalWeapon === true) return;
         const blockedEntry = (reason: FireBlockerReason): FireBlocked => ({
           weaponIndex,
           weapon: mount.weapon,

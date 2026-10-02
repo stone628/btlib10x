@@ -26,9 +26,13 @@ import {
   type PhysicalAttackDecl,
   type PhysicalAttackType,
   type PhysicalResolution,
+  type PhysicalWeaponName,
   type RangeBracket,
   requireUnit,
+  resolveStrikeArm,
+  resolveStrikeMount,
   shoulderOf,
+  strikeMounts,
   suggestFireTargets,
   type TorsoLocationValue,
   validateAttacks,
@@ -51,7 +55,7 @@ import { actorOrderLines } from "./session.common";
 /** Eagerly allocated by `drive()` on weapon-attack-phase entry, nulled when
  *  the phase exits or a new actor becomes current. Carries `fireDecls`
  *  (weapon volley, single target) plus `physicalDecls` (punch, kick, push,
- *  club — TW p.144 one-type-per-turn rule, two-arm punch excepted),
+ *  club, strike — TW p.144 one-type-per-turn rule, two-arm punch excepted),
  *  `torsoTwist` (UI declaration, resets to `"front"` on allocation),
  *  `fireHintShownFor`, `fireCandidate`. */
 export interface AttackContext {
@@ -60,9 +64,9 @@ export interface AttackContext {
   physicalDecls: PhysicalAttackDecl[];
   /** Acting unit's torso twist (TW pp.105-106) for the current attack-phase
    *  declaration: starts at `"front"` on context allocation (new actor or
-   *  phase entry). Locked once any weapon attack is queued, or once a punch
-   *  or club is queued (twist governs their arcs, TW pp. 98–99) — kick and
-   *  push are feet-based and never lock it (see {@link setTorsoTwist}).
+   *  phase entry). Locked once any weapon attack is queued, or once a punch,
+   *  club, or strike is queued (twist governs their arcs, TW pp. 98–99) —
+   *  kick and push are feet-based and never lock it (see {@link setTorsoTwist}).
    *  Session-owned because it is a UI declaration, not persistent battle
    *  state. */
   torsoTwist: Arc;
@@ -158,13 +162,20 @@ export function queueWeaponAttacks(s: Session, targetId: string, weapons: number
     }
     decls.push({ targetId, weaponIndex });
   }
-  // Physical-attack interaction (TW pp. 145, 147): a punching arm or
-  // kicking leg cannot fire its mounted weapons; a pushing / clubbing
-  // 'Mech fires no arm-mounted weapons at all.
+  // Physical-attack interaction (TW pp. 145–147): a punching or striking
+  // arm or kicking leg cannot fire its mounted weapons; a pushing /
+  // clubbing 'Mech fires no arm-mounted weapons at all.
   const punchedArms: ReadonlySet<Location> = new Set(
     context.physicalDecls.flatMap((d) =>
       d.type === "punch" && d.limb !== undefined ? [d.limb] : [],
     ),
+  );
+  const struckArms: ReadonlySet<Location> = new Set(
+    context.physicalDecls.flatMap((d) => {
+      if (d.type !== "strike" || d.weapon === undefined) return [];
+      const arm = resolveStrikeArm(def, d.weapon, d.limb);
+      return arm !== null ? [arm] : [];
+    }),
   );
   const kickedLegs: ReadonlySet<Location> = new Set(
     context.physicalDecls.flatMap((d) =>
@@ -177,6 +188,9 @@ export function queueWeaponAttacks(s: Session, targetId: string, weapons: number
     if (loc === undefined) continue;
     if (punchedArms.has(loc)) {
       throw new Error(i18n("err.physical.armConflict", { limb: loc }));
+    }
+    if (struckArms.has(loc)) {
+      throw new Error(i18n("err.physical.strikeConflict", { limb: loc }));
     }
     if (kickedLegs.has(loc)) {
       throw new Error(i18n("err.physical.legConflict", { limb: loc }));
@@ -239,12 +253,15 @@ export function commitAttack(s: Session): SessionGameEvent[] {
 }
 
 // ---------------------------------------------------------------------------
-// Physical attacks (punch, kick, push, club)
+// Physical attacks (punch, kick, push, club, strike)
 // ---------------------------------------------------------------------------
 
 /** Queue a physical attack declaration. Validates and appends to the
  *  attack context's physical list (kept separate from the weapon volley so
- *  physical targets stay independent of the single-target weapon rule). */
+ *  physical targets stay independent of the single-target weapon rule).
+ *  For strikes the limb selects the mount: omitted resolves to the sole
+ *  mounted physical weapon, and an explicitly named empty arm (or a unit
+ *  with no mounts, or mounts in both arms and no selection) is rejected. */
 export function queuePhysicalAttack(
   s: Session,
   type: PhysicalAttackType,
@@ -258,16 +275,41 @@ export function queuePhysicalAttack(
   if (!target) throw new Error(i18n("err.unknownUnitId", { id: targetId }));
   if (target.team === unit.team) throw new Error(i18n("err.selfTarget"));
   if (isUnitRemoved(target)) throw new Error(i18n("err.targetRemoved", { id: target.id }));
+  const def = mechDefFor(unit);
 
   // Default limb: right arm for punches, right leg for kicks (TW lets the
   // attacker pick; the CLI default keeps single-command declarations
   // deterministic, and actuator damage is usually symmetric early).
-  const resolvedLimb =
+  // Strikes resolve the striking arm and weapon from the mounts: an
+  // omitted arm means the sole mount, and anything else is an error.
+  let resolvedLimb =
     limb ?? (type === "punch" ? "rightArm" : type === "kick" ? "rightLeg" : undefined);
+  let strikeWeapon: PhysicalWeaponName | undefined;
+  if (type === "strike") {
+    // A non-arm limb can never select a mount; anything else resolves
+    // through the mounted pairs (sole mount, named arm, or an error).
+    const arm = limb === "leftArm" || limb === "rightArm" ? limb : undefined;
+    if (limb !== undefined && arm === undefined) {
+      throw new Error(i18n("err.physical.noWeaponInArm", { limb }));
+    }
+    const mounted = resolveStrikeMount(def, arm);
+    if (!mounted.ok) {
+      throw new Error(
+        mounted.reason === "ambiguous"
+          ? i18n("err.physical.pickArm")
+          : arm !== undefined
+            ? i18n("err.physical.noWeaponInArm", { limb: arm })
+            : i18n("err.physical.noWeapon"),
+      );
+    }
+    resolvedLimb = mounted.arm;
+    strikeWeapon = mounted.weapon;
+  }
   const decl: PhysicalAttackDecl = {
     type,
     targetId,
     ...(resolvedLimb !== undefined ? { limb: resolvedLimb } : {}),
+    ...(strikeWeapon !== undefined ? { weapon: strikeWeapon } : {}),
   };
 
   // One type of physical attack per turn (TW p. 144); two-arm punches are
@@ -295,7 +337,6 @@ export function queuePhysicalAttack(
 
   // Weapon interaction, mirrored against already-queued weapons: the arm /
   // leg used physically cannot fire, and push / club bars all arm weapons.
-  const def = mechDefFor(unit);
   const queuedLocs = new Set(
     context.weaponDecls.flatMap((d) => {
       const loc = def.weapons[d.weaponIndex]?.location;
@@ -304,6 +345,9 @@ export function queuePhysicalAttack(
   );
   if (type === "punch" && resolvedLimb !== undefined && queuedLocs.has(resolvedLimb)) {
     throw new Error(i18n("err.physical.armConflict", { limb: resolvedLimb }));
+  }
+  if (type === "strike" && resolvedLimb !== undefined && queuedLocs.has(resolvedLimb)) {
+    throw new Error(i18n("err.physical.strikeConflict", { limb: resolvedLimb }));
   }
   if (type === "kick" && resolvedLimb !== undefined && queuedLocs.has(resolvedLimb)) {
     throw new Error(i18n("err.physical.legConflict", { limb: resolvedLimb }));
@@ -322,6 +366,9 @@ export function queuePhysicalAttack(
   const warnings: string[] = [];
   if (type === "punch" && resolvedLimb !== undefined) {
     warnings.push(i18n("warn.physical.armWeapons", { limb: resolvedLimb }));
+  }
+  if (type === "strike" && resolvedLimb !== undefined) {
+    warnings.push(i18n("warn.physical.strikeArmWeapons", { limb: resolvedLimb }));
   }
   if (type === "kick" && resolvedLimb !== undefined) {
     warnings.push(i18n("warn.physical.legWeapons", { limb: resolvedLimb }));
@@ -354,15 +401,32 @@ export function physicalAttackSuggestions(s: Session): PhysicalAttackSuggestion[
         suggestions.push({ type, targetId, attackDirection: result.attackDirection });
       }
     }
+    // Strikes: one entry per mounted physical weapon and mounting arm.
+    const def = mechDefFor(unit);
+    for (const { arm, weapon } of strikeMounts(def)) {
+      const decl: PhysicalAttackDecl = { type: "strike", targetId, limb: arm, weapon };
+      const result = validatePhysicalAttack(battle, unit.id, decl, context.torsoTwist);
+      if (result.ok) {
+        suggestions.push({
+          type: "strike",
+          targetId,
+          attackDirection: result.attackDirection,
+          limb: arm,
+          weapon,
+        });
+      }
+    }
   }
 
   return suggestions;
 }
 
 export interface PhysicalAttackSuggestion {
-  readonly type: "punch" | "kick" | "push" | "club";
+  readonly type: "punch" | "kick" | "push" | "club" | "strike";
   readonly targetId: string;
   readonly attackDirection: Arc | undefined;
+  readonly limb?: ArmLocation | LegLocation;
+  readonly weapon?: PhysicalWeaponName;
 }
 
 /** Format physical attack resolution for display. */
@@ -376,9 +440,11 @@ export function physicalResolutionLines(r: PhysicalResolution): string[] {
         ? i18n("res.hit")
         : i18n("res.miss");
 
+  const label =
+    r.type === "strike" && r.weapon !== undefined ? `strike (${r.weapon.toLowerCase()})` : r.type;
   lines.push(
     i18n("res.physical.header", {
-      type: r.type,
+      type: label,
       attacker: r.attackerId,
       target: r.targetId,
     }),
@@ -461,17 +527,19 @@ export function parseTorsoTwist(direction: string): Arc {
 
 /**
  * Set the acting unit's torso twist (TW pp.105-106) for its current attack-phase
- * declaration. Locked once any weapon attack is queued, or once a punch or
- * club is queued (the twist governs their attacker-side arcs, TW pp. 98–99)
- * — kick and push are feet-based (TW pp. 147–149) and never lock it. The
- * user must `cancel` first — and resets to `"front"` on phase entry or
- * new actor.
+ * declaration. Locked once any weapon attack is queued, or once a punch,
+ * club, or strike is queued (the twist governs their attacker-side arcs,
+ * TW pp. 98–99) — kick and push are feet-based (TW pp. 147–149) and never
+ * lock it. The user must `cancel` first — and resets to `"front"` on phase
+ * entry or new actor.
  */
 export function setTorsoTwist(s: Session, arc: Arc): Arc {
   const { battle, context } = requireBattleAndContext(s);
   const twistLocked =
     context.weaponDecls.length > 0 ||
-    context.physicalDecls.some((d) => d.type === "punch" || d.type === "club");
+    context.physicalDecls.some(
+      (d) => d.type === "punch" || d.type === "club" || d.type === "strike",
+    );
   if (twistLocked) {
     throw new Error(i18n("err.twist.locked"));
   }
@@ -669,6 +737,19 @@ export function fireSuggestionChunks(s: Session): Chunk[] {
         );
       }
     }
+    const actorDef = mechDefFor(actor);
+    for (const { arm, weapon } of strikeMounts(actorDef)) {
+      const decl: PhysicalAttackDecl = { type: "strike", targetId, limb: arm, weapon };
+      if (validatePhysicalAttack(battle, actor.id, decl, context.torsoTwist).ok) {
+        physical.push(
+          i18n("physicalSuggestion.strikeLine", {
+            weapon: weapon.toLowerCase(),
+            target: targetId,
+            limb: arm === "leftArm" ? "left" : "right",
+          }),
+        );
+      }
+    }
   }
   chunks.push(buildLinesChunkWith("hint", i18n("physicalSuggestion.header")));
   if (physical.length === 0) {
@@ -706,13 +787,23 @@ export function attackStatusChunk(s: Session): Chunk {
       );
     }
     for (const decl of physical) {
-      lines.push(
-        i18n("attackStatus.physical", {
-          type: decl.type,
-          limb: decl.limb ?? "—",
-          targetId: decl.targetId,
-        }),
-      );
+      if (decl.type === "strike") {
+        lines.push(
+          i18n("attackStatus.physicalStrike", {
+            weapon: (decl.weapon ?? "strike").toLowerCase(),
+            limb: decl.limb ?? "—",
+            targetId: decl.targetId,
+          }),
+        );
+      } else {
+        lines.push(
+          i18n("attackStatus.physical", {
+            type: decl.type,
+            limb: decl.limb ?? "—",
+            targetId: decl.targetId,
+          }),
+        );
+      }
     }
   }
   return buildLinesChunk(...lines);

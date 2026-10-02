@@ -53,6 +53,10 @@ export interface WeaponDef {
   readonly streak?: boolean;
   /** Heat points generated per shot (Total Warfare Weapons & Equipment tables). */
   readonly heat?: number;
+  /** Melee equipment (TW p.146 physical weapons): mounted via crit slots and
+   *  used through physical-attack declarations, never fired as a ranged
+   *  weapon. Only Hatchet, Sword, and Retractable Blade are modeled. */
+  readonly physicalWeapon?: boolean;
   /** Explosion damage from a critical hit on the weapon itself (TW p.135-136). */
   readonly critExplosion?: number;
   /** Broad weapon class used for catalog grouping and UI categorization. */
@@ -118,6 +122,11 @@ function parseWeapon(raw: unknown, label: string, errors: string[]): WeaponDef |
     errors.push(`${label}.streak must be a boolean`);
     valid = false;
   }
+  const physicalWeapon = raw.physicalWeapon;
+  if (physicalWeapon !== undefined && typeof physicalWeapon !== "boolean") {
+    errors.push(`${label}.physicalWeapon must be a boolean`);
+    valid = false;
+  }
   const toHitMod = raw.toHitMod;
   if (
     toHitMod !== undefined &&
@@ -165,6 +174,7 @@ function parseWeapon(raw: unknown, label: string, errors: string[]): WeaponDef |
     "clusterRangeMod",
     "rapidFireShots",
     "streak",
+    "physicalWeapon",
     "minRange",
     "heat",
     "critExplosion",
