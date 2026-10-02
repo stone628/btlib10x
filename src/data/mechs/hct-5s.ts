@@ -40,6 +40,10 @@ const def: MechDef = {
       weapon: "Medium Pulse Laser",
       location: "rightArm",
     },
+    {
+      weapon: "Hatchet",
+      location: "rightArm",
+    },
   ],
   critSlots: {
     centerTorso: [
@@ -259,13 +263,16 @@ const def: MechDef = {
         weapon: "Medium Pulse Laser",
       },
       {
-        kind: "empty",
+        kind: "weapon",
+        weapon: "Hatchet",
       },
       {
-        kind: "empty",
+        kind: "weapon",
+        weapon: "Hatchet",
       },
       {
-        kind: "empty",
+        kind: "weapon",
+        weapon: "Hatchet",
       },
       {
         kind: "soak",

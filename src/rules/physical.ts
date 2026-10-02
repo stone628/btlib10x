@@ -13,9 +13,11 @@
 import { roll2D6, rollD6 } from "../core/dice";
 import { bearingExact, isAdjacent, neighbor } from "../core/hex";
 import { cellAt } from "../core/terrain";
-import type { HexCoord, Location, Rng } from "../core/types";
+import type { ArmLocation, HexCoord, Location, Rng } from "../core/types";
+import { isArm } from "../core/types";
 import { mechDefFor } from "../data/index";
 import type { ResolvedMechDef } from "../data/mech.schema";
+import { weaponDefFor } from "../data/weapon.schema";
 import { countArmActuators } from "./actuators";
 import {
   type Arc,
@@ -24,7 +26,12 @@ import {
   effectiveFacingForTwist,
 } from "./arcs";
 import { destroyedStructures } from "./critical";
-import { applyDamage, type DamageApplication, type UnitDamageState } from "./damage";
+import {
+  applyDamage,
+  canFireFromLocation,
+  type DamageApplication,
+  type UnitDamageState,
+} from "./damage";
 import type { BattleState, UnitState } from "./game";
 import { isUnitRemoved } from "./game";
 import { hitLocationForArc, punchHitLocation } from "./hitlocation";
@@ -34,19 +41,24 @@ import { preexistingDamageModifier, rollPilotingCheck } from "./piloting";
 // Types
 // ---------------------------------------------------------------------------
 
-export type PhysicalAttackType = "punch" | "kick" | "push" | "club";
+export type PhysicalAttackType = "punch" | "kick" | "push" | "club" | "strike";
+
+/** Melee equipment usable through a strike (TW p.146 subset). */
+export type PhysicalWeaponName = "Hatchet" | "Sword" | "Retractable Blade";
 
 export interface PhysicalAttackDecl {
   readonly type: PhysicalAttackType;
   readonly targetId: string;
-  /** For punch: which arm. For kick: which leg. */
+  /** For punch: which arm. For kick: which leg. For strike: mounting arm. */
   readonly limb?: "leftArm" | "rightArm" | "leftLeg" | "rightLeg";
+  /** For strike: which mounted physical weapon is used. */
+  readonly weapon?: PhysicalWeaponName;
 }
 
 export interface PhysicalModifiers {
   /** Base to-hit: piloting skill. */
   readonly base: number;
-  /** Attack-type modifier (punch +0, kick −2, push −1, club −1). */
+  /** Attack-type modifier (punch +0, kick −2, push −1, club −1, strike per weapon). */
   readonly attackMod: number;
   /** Attacker movement modifier (same as weapon attacks). */
   readonly attackerMoveMod: number;
@@ -71,6 +83,8 @@ export interface PhysicalResolution {
   readonly type: PhysicalAttackType;
   readonly attackerId: string;
   readonly targetId: string;
+  /** Mounted physical weapon used (strike only). */
+  readonly weapon?: PhysicalWeaponName;
   readonly toHit: number;
   readonly roll: number | null;
   readonly hit: boolean;
@@ -106,6 +120,30 @@ export const PUSH_ATTACK_MOD = -1;
 export const CLUB_ATTACK_MOD = -1;
 export const CLUB_DAMAGE_PER_TONS = 5;
 
+/** Physical weapons (TW p.146): per-weapon to-hit modifier and damage
+ *  formula `ceil(tonnage / damagePerTons) + damageBonus`. All three use the
+ *  standard hit-location table on the Arm arc (forward or mounting-arm side)
+ *  and are TSM-sensitive — TSM doubling is deferred with the TSM milestone
+ *  (no TSM equipment exists in the engine yet). The optional Punch/Kick
+ *  table election (+4) and the different-levels auto-swap (TW p.150) are
+ *  likewise deferred, matching punch/kick/club in this subset. */
+export interface PhysicalWeaponStats {
+  readonly toHitMod: number;
+  readonly damagePerTons: number;
+  readonly damageBonus: number;
+}
+
+export const PHYSICAL_WEAPONS: Readonly<Record<PhysicalWeaponName, PhysicalWeaponStats>> = {
+  Hatchet: { toHitMod: -1, damagePerTons: 5, damageBonus: 0 },
+  Sword: { toHitMod: -2, damagePerTons: 10, damageBonus: 1 },
+  "Retractable Blade": { toHitMod: -2, damagePerTons: 10, damageBonus: 0 },
+};
+
+/** Is `name` one of the three modeled physical weapons? */
+export function isPhysicalWeaponName(name: string): name is PhysicalWeaponName {
+  return name === "Hatchet" || name === "Sword" || name === "Retractable Blade";
+}
+
 /** Maximum to-hit: over 12 auto-miss (TW p. 144). */
 export const PHYSICAL_MAX_TOHIT = 12;
 /** Minimum to-hit: 2 or less auto-hit (TW p. 144). */
@@ -128,9 +166,10 @@ export function computePhysicalToHit(
   target: UnitState,
   type: PhysicalAttackType,
   limb: "leftArm" | "rightArm" | "leftLeg" | "rightLeg" | undefined,
+  weapon?: PhysicalWeaponName,
 ): PhysicalModifiers {
   const base = attacker.piloting;
-  const attackMod = attackTypeModifier(type);
+  const attackMod = attackTypeModifier(type, weapon);
 
   // Attacker movement modifier (same as weapon attacks)
   const attackerMoveMod = physicalAttackerMoveMod(attacker);
@@ -142,7 +181,7 @@ export function computePhysicalToHit(
   const terrainMod = physicalTerrainMod(battle, target);
 
   // Actuator damage modifier
-  const actuatorMod = physicalActuatorMod(attacker, type, limb);
+  const actuatorMod = physicalActuatorMod(attacker, type, limb, weapon);
 
   // Prone attacker modifier
   const proneMod = attacker.prone ? 2 : 0;
@@ -162,7 +201,7 @@ export function computePhysicalToHit(
   };
 }
 
-function attackTypeModifier(type: PhysicalAttackType): number {
+function attackTypeModifier(type: PhysicalAttackType, weapon?: PhysicalWeaponName): number {
   switch (type) {
     case "punch":
       return PUNCH_ATTACK_MOD;
@@ -172,6 +211,8 @@ function attackTypeModifier(type: PhysicalAttackType): number {
       return PUSH_ATTACK_MOD;
     case "club":
       return CLUB_ATTACK_MOD;
+    case "strike":
+      return weapon !== undefined ? (PHYSICAL_WEAPONS[weapon]?.toHitMod ?? 0) : 0;
   }
 }
 
@@ -231,16 +272,19 @@ function physicalTerrainMod(battle: BattleState, target: UnitState): number {
 }
 
 /**
- * Actuator damage modifier for physical attacks (TW p. 145, 147).
+ * Actuator damage modifier for physical attacks (TW pp. 145–147).
  * Punch: +2 per damaged upper/lower arm actuator, +1 if no hand.
  * Kick: +1 per damaged upper/lower leg actuator.
  * Push: +2 per damaged shoulder.
  * Club: +2 per damaged upper/lower arm actuator.
+ * Strike: like punch but in the mounting arm only; a damaged hand adds +1
+ *   except on the Retractable Blade (TW p.146, hand exception).
  */
 function physicalActuatorMod(
   attacker: UnitState,
   type: PhysicalAttackType,
   limb: "leftArm" | "rightArm" | "leftLeg" | "rightLeg" | undefined,
+  weapon?: PhysicalWeaponName,
 ): number {
   const def = mechDefFor(attacker);
   const damage = attacker.damage;
@@ -284,6 +328,14 @@ function physicalActuatorMod(
       }
       return mod;
     }
+    case "strike": {
+      const arm = resolveStrikeArm(def, weapon, limb);
+      if (arm === null) return 0;
+      const counts = countArmActuators(def, damage, destroyed, arm);
+      let mod = (counts.upper + counts.lower) * 2;
+      if (counts.hand > 0 && weapon !== "Retractable Blade") mod += 1;
+      return mod;
+    }
   }
 }
 
@@ -308,14 +360,115 @@ function countDestroyedStructure(
 }
 
 // ---------------------------------------------------------------------------
+// Physical-weapon mount helpers
+// ---------------------------------------------------------------------------
+
+/** Arms mounting `weapon` on `def` (physical weapons mount in arms, TW p.146). */
+export function strikeMountArms(
+  def: ResolvedMechDef,
+  weapon: PhysicalWeaponName | undefined,
+): ArmLocation[] {
+  if (weapon === undefined) return [];
+  const arms: ArmLocation[] = [];
+  for (const [key, mount] of Object.entries(def.weapons)) {
+    void key;
+    if (mount.weapon !== weapon) continue;
+    if (isArm(mount.location)) arms.push(mount.location);
+  }
+  return arms;
+}
+
+/**
+ * Resolve the mounting arm for a strike: the explicit `limb` when it is an
+ * arm mounting the weapon, else the unique mounting arm, else the right arm
+ * when it mounts the weapon, else the left. Returns null when no arm
+ * mounts the weapon (or `weapon` is undefined).
+ */
+export function resolveStrikeArm(
+  def: ResolvedMechDef,
+  weapon: PhysicalWeaponName | undefined,
+  limb: "leftArm" | "rightArm" | "leftLeg" | "rightLeg" | undefined,
+): ArmLocation | null {
+  if (weapon === undefined) return null;
+  const arms = strikeMountArms(def, weapon);
+  if (arms.length === 0) return null;
+  if (limb === "leftArm" || limb === "rightArm") {
+    return arms.includes(limb) ? limb : null;
+  }
+  if (arms.length === 1) return arms[0]!;
+  if (arms.includes("rightArm")) return "rightArm";
+  return arms[0]!;
+}
+
+/** Weapon-mount index of `weapon` in `arm`, or null when not mounted there. */
+export function strikeWeaponIndex(
+  def: ResolvedMechDef,
+  weapon: PhysicalWeaponName,
+  arm: ArmLocation,
+): number | null {
+  for (const [key, mount] of Object.entries(def.weapons)) {
+    if (mount.weapon === weapon && mount.location === arm) return Number(key);
+  }
+  return null;
+}
+
+/** Physical weapon mounted in `arm`, or null when the arm mounts none. */
+export function strikeWeaponInArm(
+  def: ResolvedMechDef,
+  arm: ArmLocation,
+): PhysicalWeaponName | null {
+  for (const name of ["Hatchet", "Sword", "Retractable Blade"] as const) {
+    if (strikeMountArms(def, name).includes(arm)) return name;
+  }
+  return null;
+}
+
+/** Every mounted (arm, physical weapon) pair on `def`. */
+export function strikeMounts(def: ResolvedMechDef): ReadonlyArray<{
+  readonly arm: ArmLocation;
+  readonly weapon: PhysicalWeaponName;
+}> {
+  const out: Array<{ arm: ArmLocation; weapon: PhysicalWeaponName }> = [];
+  for (const weapon of ["Hatchet", "Sword", "Retractable Blade"] as const) {
+    for (const arm of strikeMountArms(def, weapon)) out.push({ arm, weapon });
+  }
+  return out;
+}
+
+/** Outcome of resolving a strike declaration to a concrete mount. */
+export type StrikeMountResolution =
+  | { readonly ok: true; readonly arm: ArmLocation; readonly weapon: PhysicalWeaponName }
+  | { readonly ok: false; readonly reason: "none" | "ambiguous" };
+
+/**
+ * Resolve which mount a strike uses (TW p.146, one strike per turn): an
+ * explicit arm selects the weapon mounted there (`"none"` when it mounts
+ * nothing); an omitted arm resolves to the sole mount, `"none"` when the
+ * unit mounts no physical weapon, `"ambiguous"` when it mounts two or more.
+ */
+export function resolveStrikeMount(
+  def: ResolvedMechDef,
+  limb: ArmLocation | undefined,
+): StrikeMountResolution {
+  if (limb !== undefined) {
+    const weapon = strikeWeaponInArm(def, limb);
+    return weapon === null ? { ok: false, reason: "none" } : { ok: true, arm: limb, weapon };
+  }
+  const all = strikeMounts(def);
+  if (all.length === 1) return { ok: true, arm: all[0]!.arm, weapon: all[0]!.weapon };
+  return { ok: false, reason: all.length === 0 ? "none" : "ambiguous" };
+}
+
+// ---------------------------------------------------------------------------
 // Damage computation
 // ---------------------------------------------------------------------------
 
-/** Compute damage for a physical attack type (TW pp. 145, 147). */
+/** Compute damage for a physical attack type (TW pp. 145–147). */
 export function physicalDamage(
   type: PhysicalAttackType,
   attacker: UnitState,
   limb: "leftArm" | "rightArm" | "leftLeg" | "rightLeg" | undefined,
+  weapon?: PhysicalWeaponName,
 ): number {
   const tons = mechDefFor(attacker).tonnage;
 
@@ -353,6 +506,24 @@ export function physicalDamage(
       return 0;
     case "club":
       return Math.ceil(tons / CLUB_DAMAGE_PER_TONS);
+    case "strike": {
+      const stats = weapon !== undefined ? PHYSICAL_WEAPONS[weapon] : undefined;
+      if (stats === undefined) return 0;
+      let dmg = Math.ceil(tons / stats.damagePerTons) + stats.damageBonus;
+      const def = mechDefFor(attacker);
+      const arm = resolveStrikeArm(def, weapon, limb);
+      if (arm !== null) {
+        const counts = countArmActuators(def, attacker.damage, attacker.critSlotsDestroyed, arm);
+        // Halve for each damaged upper/lower actuator, cumulative (TW p.146
+        // "affected by actuator damage" on the damage axis, as for punches).
+        let divisor = 1;
+        if (counts.upper > 0) divisor *= 2;
+        if (counts.lower > 0) divisor *= 2;
+        dmg = Math.floor(dmg / divisor);
+        return Math.max(1, dmg);
+      }
+      return dmg;
+    }
   }
 }
 
@@ -365,6 +536,7 @@ export function physicalDamage(
  * Punch: 1D6 on Punch Location Table.
  * Kick: 1D6 on Kick Location Table.
  * Club: 1D6 on Standard Hit Location Table.
+ * Strike: 2D6 on Standard Hit Location Table (TW p.146).
  * Push: no damage, no location roll.
  */
 export function physicalHitLocation(
@@ -379,6 +551,7 @@ export function physicalHitLocation(
     case "kick":
       return kickHitLocation(roll, attackDirection);
     case "club":
+    case "strike":
       return hitLocationForArc(attackDirection, roll);
     case "push":
       return "centerTorso"; // unused
@@ -470,6 +643,8 @@ export function validatePhysicalAttack(
       return validatePush(attacker, target, decl);
     case "club":
       return validateClub(attacker, target, decl, twist ?? null);
+    case "strike":
+      return validateStrike(attacker, target, decl, twist ?? null);
   }
 }
 
@@ -597,6 +772,62 @@ function validateClub(
   return { ok: true, attackDirection };
 }
 
+function validateStrike(
+  attacker: UnitState,
+  target: UnitState,
+  decl: PhysicalAttackDecl,
+  twist: Arc | null,
+): ValidationResult {
+  const weapon = decl.weapon;
+  if (weapon === undefined || !isPhysicalWeaponName(weapon)) {
+    return { ok: false, reason: "Strike requires a physical weapon (hatchet, sword, blade)" };
+  }
+  // The catalog entry must exist (Hatchet / Sword / Retractable Blade ship
+  // as EQUIPMENT with physicalWeapon: true).
+  try {
+    weaponDefFor({ weapon });
+  } catch {
+    return { ok: false, reason: `Unknown physical weapon: ${weapon}` };
+  }
+  const def = mechDefFor(attacker);
+  const arm = resolveStrikeArm(def, weapon, decl.limb);
+  if (arm === null) {
+    return { ok: false, reason: `${attacker.id} does not mount a ${weapon.toLowerCase()}` };
+  }
+
+  // A critical hit on any slot of the equipment destroys it (TW p.146).
+  const weaponIndex = strikeWeaponIndex(def, weapon, arm);
+  if (weaponIndex !== null && attacker.destroyedWeapons.includes(weaponIndex)) {
+    return { ok: false, reason: `${weapon} in ${arm} is destroyed` };
+  }
+  if (!canFireFromLocation(attacker.baseDamage, arm)) {
+    return { ok: false, reason: `Cannot strike: ${arm} destroyed` };
+  }
+
+  // Shoulder must be undamaged in the striking arm (as for a punch).
+  const counts = countArmActuators(def, attacker.damage, attacker.critSlotsDestroyed, arm);
+  if (counts.shoulder > 0) {
+    return { ok: false, reason: `Cannot strike: ${arm} shoulder destroyed` };
+  }
+
+  // Arm arc (TW p.146): forward arc or the side arc matching the mounting
+  // arm, read off the twisted torso facing like punch/club (TW pp. 98–99).
+  const b = bearingExact(attacker.position, target.position);
+  if (b === null) return { ok: false, reason: "Same hex" };
+  const arc = classifyArcWithBoundary(effectiveFacingForTwist(attacker.facing, twist), b);
+  const side: Arc = arm === "leftArm" ? "leftSide" : "rightSide";
+  if (arc.arc !== "front" && arc.arc !== side && arc.altArc !== "front" && arc.altArc !== side) {
+    return { ok: false, reason: "Strike requires target in forward or mounting-arm side arc" };
+  }
+
+  // Compute attack direction for hit location
+  const back = bearingExact(target.position, attacker.position)!;
+  const dir = classifyArcWithBoundary(target.facing, back);
+  const attackDirection = defenderArcChoice(dir.arc, dir.altArc);
+
+  return { ok: true, attackDirection };
+}
+
 // ---------------------------------------------------------------------------
 // Resolution
 // ---------------------------------------------------------------------------
@@ -619,7 +850,7 @@ export function resolvePhysicalAttack(
   const notes: string[] = [];
 
   // Compute to-hit
-  const mods = computePhysicalToHit(battle, attacker, target, decl.type, decl.limb);
+  const mods = computePhysicalToHit(battle, attacker, target, decl.type, decl.limb, decl.weapon);
 
   // Auto-hit / auto-miss
   const autoHit = mods.total <= PHYSICAL_MIN_TOHIT;
@@ -635,7 +866,7 @@ export function resolvePhysicalAttack(
   const attackDirection = defenderArcChoice(dir.arc, dir.altArc);
 
   // Compute damage
-  const dmg = physicalDamage(decl.type, attacker, decl.limb);
+  const dmg = physicalDamage(decl.type, attacker, decl.limb, decl.weapon);
   const damageToTarget: DamageGroup[] = [];
   const damageToAttacker: DamageGroup[] = [];
 
@@ -708,6 +939,7 @@ export function resolvePhysicalAttack(
     type: decl.type,
     attackerId,
     targetId: decl.targetId,
+    ...(decl.type === "strike" && decl.weapon !== undefined ? { weapon: decl.weapon } : {}),
     toHit: mods.total,
     roll,
     hit,

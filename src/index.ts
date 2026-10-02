@@ -192,10 +192,20 @@ export {
 } from "./rules/movement";
 export {
   type DamageGroup,
+  isPhysicalWeaponName,
+  PHYSICAL_WEAPONS,
   type PhysicalAttackDecl,
   type PhysicalAttackType,
   type PhysicalModifiers,
   type PhysicalResolution,
+  type PhysicalWeaponName,
+  type PhysicalWeaponStats,
+  resolveStrikeArm,
+  resolveStrikeMount,
+  type StrikeMountResolution,
+  strikeMountArms,
+  strikeMounts,
+  strikeWeaponInArm,
   validatePhysicalAttack,
 } from "./rules/physical";
 export {

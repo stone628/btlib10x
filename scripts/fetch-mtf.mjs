@@ -143,7 +143,7 @@ for (const name of names) {
   if (!entry) {
     console.error(`no catalog entry for ${JSON.stringify(name)}`);
     for (const s of suggestions(name, entries)) {
-      console.error(`  did you mean: ${s.d}`);
+      console.error(`  did you mean: "${s.d}"`);
     }
     failed++;
     continue;

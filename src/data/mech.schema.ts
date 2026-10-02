@@ -23,9 +23,6 @@ export interface HeatSinkConfig {
   readonly count: number;
 }
 
-/** Torso locations that have a separate rear armor pool. */
-export type TorsoLocation = "centerTorso" | "rightTorso" | "leftTorso";
-
 /** Rear torso armor keys carried inside `armor` as informational metadata. */
 export type RearArmorKey = "centerTorsoRear" | "leftTorsoRear" | "rightTorsoRear";
 

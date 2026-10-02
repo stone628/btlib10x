@@ -483,6 +483,15 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     clusterRangeMod: { short: 2, medium: 0, long: -2 },
   },
   {
+    name: "Hatchet",
+    short: 0,
+    medium: 0,
+    long: 0,
+    category: "EQUIPMENT",
+    heat: 0,
+    physicalWeapon: true,
+  },
+  {
     name: "Heavy Gauss Rifle",
     short: 6,
     medium: 13,
@@ -763,6 +772,15 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     heat: 10,
   },
   {
+    name: "Retractable Blade",
+    short: 0,
+    medium: 0,
+    long: 0,
+    category: "EQUIPMENT",
+    heat: 0,
+    physicalWeapon: true,
+  },
+  {
     name: "Rotary AC/2",
     short: 6,
     medium: 12,
@@ -803,6 +821,15 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     variableDamage: [10, 8, 5],
     category: "ENERGY",
     heat: 10,
+  },
+  {
+    name: "Sword",
+    short: 0,
+    medium: 0,
+    long: 0,
+    category: "EQUIPMENT",
+    heat: 0,
+    physicalWeapon: true,
   },
   {
     name: "SRM 2",

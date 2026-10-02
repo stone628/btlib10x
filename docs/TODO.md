@@ -10,15 +10,17 @@
 ## To Do
 
 - need snapshot keeping, capable of rollback N steps like ctrl-z
-- **Physical attacks** — punch, kick, push, club are implemented
-  (`src/rules/physical.ts`: declare via `declarePhysicalAttacks`, resolve
+- **Physical attacks** — punch, kick, push, club, and physical-weapon
+  strikes (hatchet, sword, retractable blade) are implemented
+  (`src/rules/physical.ts`: declare via `declareAttacks`, resolve
   after weapon damage inside `resolveAllAttacks`; arm/leg use conflicts
   enforced; see "Implemented subset" in `docs/CLI.md`). Remaining: charge /
   DFA movement-phase declarations, physical-attack critical hits, club
-  acquisition (blown-off limbs, trees, girders) and physical-weapon
-  equipment (hatchet, sword, …), domino effect / accidental falls from
-  above. (Physical-triggered PSRs — kicks, pushes, charges, DFAs — wait on
-  these; see "Not viable" in `docs/CLI.md`.)
+  acquisition (blown-off limbs, trees, girders) and the nine industrial
+  physical-weapon types (backhoe, chainsaw, …), TSM doubling, the optional
+  Punch/Kick-table election and level-difference auto-swap, domino effect /
+  accidental falls from above. (Physical-triggered PSRs — kicks, pushes,
+  charges, DFAs — wait on these; see "Not viable" in `docs/CLI.md`.)
 - **Weapon to-hit audit (TW p.303-304, p.113-114, p.117-118)** — P0/P1 done (see Done); remaining:
   - P2: GATOR `Other` modifiers: secondary target `+1` forward / `+2` side-rear (TW p.108), IndustrialMech `+1` (TW p.108); OS once-per-scenario + no-explode and PB same/adjacent-only legality gates (TW p.113-114); Flak `-2` gating (aerospace-scoped, TW p.113); H-weapon damage-as-heat option incl. Plasma Rifle `10 + 1D6` heat vs 'Mechs / `10+2D6` in 5-pt groups vs others, woods/building double, underwater ban (TW p.113, p.139-140); Gauss ammo-slot feed-wreck vs weapon-slot 20-pt blast + Heavy Gauss move+fire weight-class PSR (TW p.135-136); MGA / A-Pod / B-Pod one-shot behavior (TW p.130, p.137); missing catalog rows (IS ER Medium Laser, IS ER PPC, Rocket Launchers, Plasma Cannon, Light MG, iNarc launcher).
 
