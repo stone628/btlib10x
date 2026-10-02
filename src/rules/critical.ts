@@ -28,7 +28,12 @@
  * Effects implemented in this subset:
  *   - weapon slot hit: that weapon is destroyed (multi-slot weapons:
  *     first hit disables the whole mount; further slot hits on the same
- *     component only "soak").
+ *     component only "soak"). Gauss-family / HAG weapons (`critExplosion`,
+ *     TW p.135-136) additionally detonate on the first hit: the payload
+ *     rides inside `weaponDestroyed.explosion`, applied directly to the
+ *     mount location's IS (armor bypassed, CASE-contained, cascade roll,
+ *     2 pilot hits) like an ammo explosion. Further slot hits on the
+ *     powered-down mount soak with no second blast.
  *   - ammo slot hit: explosion damage = per-shot damage value x remaining
  *     shots in that bin, applied directly to the bin's location's internal
  *     structure (the armor pool is bypassed). Only the hit bin detonates;
@@ -111,6 +116,13 @@ export type CriticalEffect =
       readonly transferred: boolean;
       readonly weaponIndex: number;
       readonly weaponName: string;
+      /** Gauss/HAG weapon-crit blast (TW p.135-136), handled like an ammo
+       *  explosion: damage is applied directly to this location's IS
+       *  (bypassing armor), with CASE containment and a cascade roll. */
+      readonly explosion?: {
+        readonly damage: number;
+        readonly application: DamageApplication;
+      };
     }
   | {
       readonly kind: "ammoExplosion";
@@ -556,6 +568,45 @@ function runDetermining(
 }
 
 /**
+ * Detonate a crit blast (ammo bin or explosive weapon) at `loc`: apply the
+ * damage directly to IS (armor bypassed, CASE-contained), record blown-off
+ * arms / kill, and cascade a fresh determining roll per newly-destroyed
+ * location (TW p.124-125). Mutates `state` and returns the application for
+ * the effect payload.
+ */
+function detonateCritBlast(
+  rng: Rng,
+  def: ResolvedMechDef,
+  loc: Location,
+  amount: number,
+  state: MutableCritState,
+): DamageApplication {
+  const app = applyAmmoExplosion(state.damage, loc, amount, checkCASE(def, loc));
+  state.damage = app.after;
+  if (app.killed) {
+    state.killedReason =
+      state.damage.internalStructure.head <= 0 ? "headDestroyed" : "centerTorsoDestroyed";
+  }
+  for (const arm of app.blownOffArms) {
+    state.blownOffArms.push(arm);
+  }
+  // Cascade a fresh determining roll for each location that lost IS
+  // during the explosion (the official rule: "Because an ammunition
+  // explosion damages the internal structure of the location where it
+  // explodes, a roll to determine critical hits is necessary"). Mark
+  // each freshly-destroyed location as catastrophic first so the
+  // cascade sees every slot as already destroyed and re-routes to the
+  // next inward location per TW p.124 (no crit check in a destroyed
+  // location unless an explosive slot is involved — and we just
+  // stripped the bins, so even that carve-out cannot fire).
+  for (const newlyLost of app.newlyDestroyed) {
+    markLocationCatastrophicallyDestroyed(state.damage, state.destroyed, state.ammoBins, newlyLost);
+    runDetermining(rng, def, { location: newlyLost, damage: amount }, state);
+  }
+  return app;
+}
+
+/**
  * Apply a single crit hit at `slotIndex` in `loc`. Dispatches on the slot's
  * component to produce the appropriate effect. Marks the slot destroyed and
  * mutates ammo / damage / destroyed-weapons / blownOffArms / killed.
@@ -580,18 +631,34 @@ function applySlotHit(
   if (slot.kind === "weapon") {
     // Disable the linked mount. First hit on any of a multi-slot weapon's
     // slots destroys the whole mount; further hits on this same mount are
-    // recorded as noEffect soaks.
+    // recorded as noEffect soaks (the rifle powers down: no second blast,
+    // TW p.135).
     if (!state.destroyedWeapons.includes(slot.weaponIndex)) {
       state.destroyedWeapons.push(slot.weaponIndex);
-      state.rows.push({
-        kind: "weaponDestroyed",
-        location: loc,
-        slotIndex,
-        rolls: rolls.slice(),
-        transferred,
-        weaponIndex: slot.weaponIndex,
-        weaponName: slot.weapon,
-      });
+      const blast = weaponDefFor(slot).critExplosion ?? 0;
+      if (blast > 0) {
+        const application = detonateCritBlast(rng, def, loc, blast, state);
+        state.rows.push({
+          kind: "weaponDestroyed",
+          location: loc,
+          slotIndex,
+          rolls: rolls.slice(),
+          transferred,
+          weaponIndex: slot.weaponIndex,
+          weaponName: slot.weapon,
+          explosion: { damage: blast, application },
+        });
+      } else {
+        state.rows.push({
+          kind: "weaponDestroyed",
+          location: loc,
+          slotIndex,
+          rolls: rolls.slice(),
+          transferred,
+          weaponIndex: slot.weaponIndex,
+          weaponName: slot.weapon,
+        });
+      }
     } else {
       state.rows.push({ kind: "noEffect", rolls: rolls.slice() });
     }
@@ -630,33 +697,7 @@ function applySlotHit(
     const damagePerShot = ammoDamagePerShot(slot);
     const amount = shotsRemaining * damagePerShot;
     if (amount > 0) {
-      const app = applyAmmoExplosion(state.damage, loc, amount, checkCASE(def, loc));
-      state.damage = app.after;
-      if (app.killed) {
-        state.killedReason =
-          state.damage.internalStructure.head <= 0 ? "headDestroyed" : "centerTorsoDestroyed";
-      }
-      for (const arm of app.blownOffArms) {
-        state.blownOffArms.push(arm);
-      }
-      // Cascade a fresh determining roll for each location that lost IS
-      // during the explosion (the official rule: "Because an ammunition
-      // explosion damages the internal structure of the location where it
-      // explodes, a roll to determine critical hits is necessary"). Mark
-      // each freshly-destroyed location as catastrophic first so the
-      // cascade sees every slot as already destroyed and re-routes to the
-      // next inward location per TW p.124 (no crit check in a destroyed
-      // location unless an explosive slot is involved — and we just
-      // stripped the bins, so even that carve-out cannot fire).
-      for (const newlyLost of app.newlyDestroyed) {
-        markLocationCatastrophicallyDestroyed(
-          state.damage,
-          state.destroyed,
-          state.ammoBins,
-          newlyLost,
-        );
-        runDetermining(rng, def, { location: newlyLost, damage: amount }, state);
-      }
+      const app = detonateCritBlast(rng, def, loc, amount, state);
       state.rows.push({
         kind: "ammoExplosion",
         location: loc,

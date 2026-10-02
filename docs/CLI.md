@@ -214,7 +214,12 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   log). Slot selection re-rolls on
   empty / soak / already-destroyed slots and the whole determining roll
   transfers inward when the source is exhausted (head and center torso
-  are terminal).   Effects implemented: weapon destroyed, ammo explosion
+  are terminal).   Effects implemented: weapon destroyed (Gauss-family / HAG
+  weapon crits detonate their `critExplosion` blast inside the same
+  `weaponDestroyed` event — 20-pt IS Gauss / 3-pt AP / 16-pt Light /
+  25-pt Heavy / 10-15-20-pt HAG, direct to IS with CASE + cascade + 2
+  pilot hits like an ammo explosion; further hits on the powered-down
+  mount soak), ammo explosion
   (an explosion detonates only the hit bin — its remaining shots ×
   per-shot damage applied directly to that bin location's internal
   structure, with a cascading critical roll on the drained IS; bins in a

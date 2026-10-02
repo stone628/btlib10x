@@ -592,6 +592,7 @@ export const en = {
   "res.critArmBlownOff": "; {arm} BLOWN OFF",
   "res.critLegBlownOff": "; {leg} BLOWN OFF — pilot taking fall damage",
   "res.critWeaponDestroyed": "{loc} #{slot} {weapon} destroyed",
+  "res.critWeaponExplosion": "{loc} #{slot} {weapon} destroyed — explodes for {damage} damage",
   "res.critAmmoExplosion": "{loc} #{slot} ammo {weapon} explodes for {damage} damage",
   "res.critCockpitDestroyed": "{loc} #{slot} cockpit destroyed — pilot killed",
   "res.critComponentDestroyed": "{loc} #{slot} {name} destroyed",
