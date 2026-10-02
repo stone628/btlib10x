@@ -79,27 +79,30 @@ import it from its source module when needed.
 
 ## Data
 
-Catalog data ships separately from the engine as pure JSON under `data/`.
-`btlib10x` holds the rules, schemas, validators, and lookup helpers backed
-by registries that start empty; `btlib10x/data` (built from `data/index.ts`)
-holds the raw tables (`WEAPON_DATA` from `data/weapons.json`, `AMMO_DATA`
-from `data/ammo.json`, `MECH_SRCS` from `data/mechs/*.json`, `MAP_SRCS` from
-`data/maps/*.json`). Load before use — weapons and ammo must load
-before mechs, because mech validation links crit slots against those
-catalogs:
+Weapons, ammo, and terrain live inside the engine as embedded tables
+(`src/data/weapons.data.ts`, `src/data/ammo.data.ts`, `src/data/terrain.data.ts`);
+their registries self-populate on first read (`ensureWeaponsRegistered` /
+`ensureAmmoRegistered`). 'Mechs and maps ship as one packed catalog,
+`data/btlib10x.jsonl`, built by `npm run pack` from the canonical sources
+(`data/mechs/*.json`, `data/maps/*.json`): line 0 is the manifest, the rest
+are compact wire lines addressed by absolute line number. Load once, then
+sheets decode and register on demand — heap cost is O(roster), not O(catalog):
 
 ```ts
-import { loadShippedData } from "btlib10x";
-import { AMMO_DATA, MAP_SRCS, MECH_SRCS, WEAPON_DATA } from "btlib10x/data";
-loadShippedData({ weapons: WEAPON_DATA, ammo: AMMO_DATA, mechs: MECH_SRCS, maps: MAP_SRCS });
+import { ensureMapRegistered, loadCatalog } from "btlib10x";
+const manifest = loadCatalog(await (await fetch("btlib10x.jsonl")).text());
+for (const m of manifest.maps) ensureMapRegistered(m.name); // maps are tiny; register all
+// mechs register lazily: `add <model>` decodes its line via ensureMechRegistered
 ```
 
 For custom data, pass your own bundle to `loadShippedData` (its
-`ShippedDataBundle` shape is `{ weapons, ammo, mechs, maps }`) or call the
-individual `registerWeapons` / `registerAmmo` / `registerMechs` /
-`registerMaps` loaders in the same order. Terrain stays inside the engine
-(`terrain.data.ts` is engine-internal: terrain rules need engine
-attention, so it is not part of the data bundle).
+`ShippedDataBundle` shape is `{ weapons?, ammo?, mechs, maps }` — the
+weapon/ammo overrides are optional and fall back to the embedded tables)
+or call the individual `registerWeapons` / `registerAmmo` / `registerMechs` /
+`registerMaps` loaders, with weapon/ammo overrides before mechs (mech
+validation links crit slots against those catalogs). Tests use
+`registerAllCatalog` to register the whole loaded catalog at once; the
+`catalogManifest` accessor exposes the parsed line-0 manifest.
 
 ### Weapon catalog (`data/weapon.schema.ts`)
 
@@ -127,31 +130,37 @@ interface WeaponDef {
 - `weaponDefFor(h: WeaponNameHolder): WeaponDef` (throws on unknown names)
 - `allWeaponDefs(): WeaponDef[]`
 - `listWeaponNames(): string[]`
+- `ensureWeaponsRegistered(): void` (rarely needed — reads self-populate)
 - `WeaponNameHolder` — minimal interface (`{ weapon: string }`) accepted by
   the `…For` lookup helpers
 - `WeaponCategory` — `"MISSILE" | "BALLISTIC" | "ENERGY"`
+
+The table itself is embedded (`WEAPON_DATA` in `src/data/weapons.data.ts`,
+the source of truth); `registerWeapons` replaces it wholesale.
 
 ### Ammo catalog (`data/ammo.schema.ts`)
 
 Engine-internal (source-module import only): `AmmoDef`, `AmmoNameHolder`,
 `ammoDefFor`,
-`allAmmo` (as `getAllAmmo`), `listAmmoWeapons`, `shotsPerBinFor`. The battle
+`allAmmo` (as `getAllAmmo`), `listAmmoWeapons`, `shotsPerBinFor`,
+`ensureAmmoRegistered`. The table itself is embedded (`AMMO_DATA` in
+`src/data/ammo.data.ts`, the source of truth). The battle
 engine resolves ammo bins itself; library consumers read per-mount shot counts
 via the sheet helpers, not the catalog directly.
 
 ### 'Mech definitions (`data/mech.schema.ts`, `data/index.ts`)
 
 The on-disk form is `MechDef` (written in `data/mechs/*.json`). Shipped
-sheets arrive raw via `MECH_SRCS` in `btlib10x/data` and are validated and
-resolved at load time; library consumers access them through the read-only
+sheets arrive packed in `data/btlib10x.jsonl` and decode on demand via the
+catalog loader; library consumers access them through the read-only
 lookups below. `resolveMechDef`, `validateMechDef`, and the raw `mechDef` /
 `mapDef` / `validateMapDef` ingestion helpers are engine-internal
 (source-module import only).
 
 ```ts
 interface MechDef {
-  model: string; name: string; tonnage: number;   // 10..100
-  weightClass: "Light" | "Medium" | "Heavy" | "Assault";
+  model: string; name: string; clanName?: string; tonnage: number;   // 10..100
+  weightClass: WeightClass;   // must equal weightClassForTonnage(tonnage)
   techBase: string;
   walking: number; running: number; jumping: number; // running === ceil(walking*1.5)
   armor: Readonly<LocationValue> &
@@ -162,6 +171,12 @@ interface MechDef {
   source: string;
 }
 ```
+
+`clanName` holds the MTF line-2 parenthesised Clan name (`Mad Cat
+(Timber Wolf)` → `name: "Mad Cat"`, `clanName: "Timber Wolf"`); it stays
+`undefined` when the parens are absent, even on Clan sheets. `WeightClass`
+is `"Light" | "Medium" | "Heavy" | "Assault"`, inferred from tonnage with
+`weightClassForTonnage` (≤35 Light, ≤55 Medium, ≤75 Heavy, else Assault).
 
 ```ts
 interface WeaponMount { weapon: string; location: Location; shots?: number }
@@ -192,8 +207,8 @@ and derives internal structure:
 
 ```ts
 interface ResolvedMechDef {
-  model: string; name: string; tonnage: number;
-  weightClass: ...; techBase: string;
+  model: string; name: string; clanName?: string; tonnage: number;
+  weightClass: WeightClass; techBase: string;
   walking: number; running: number; jumping: number;
   armor: ResolvedArmor;                                // front armor only
   armorRear: ResolvedRearArmor;                        // 3 torso rear values
@@ -213,6 +228,21 @@ interface ResolvedMechDef {
 - `allMechDefs(): ResolvedMechDef[]`
 - `MechModelHolder` — `{ model: string }` accepted by `…For` helpers
 - `RearArmorKey` — `"centerTorsoRear" | "leftTorsoRear" | "rightTorsoRear"`
+
+Packed wire (`src/data/mech.codec.ts`, `src/data/map.codec.ts`,
+`data/btlib10x.jsonl`): `encodeMechDef` / `encodeMapDef` pack a sheet to one
+short-key line, `decodeMechLine` / `decodeMapLine` expand it back (both wire
+version `1`: `WIRE_VERSION` / `MAP_WIRE_VERSION`). Sheet identity
+(`model`/`name`/`techBase`/`tonnage`, optional `clanName` — the
+`MechIdentity` shape) lives only in the line-0 manifest entry, never the
+wire line: `decodeMechLine` takes it as a second argument, so each sheet is
+single-sourced. `parseCatalogManifest` / `findMechEntry` / `findMapEntry`
+index the manifest (`CatalogManifest` with `MechManifestEntry` /
+`MapManifestEntry`: short keys `m`/`n`/`b`/`t`/`c?`/`l` plus the sheet's
+absolute file line — class is inferred, never stored). `loadCatalog` holds
+the text in memory; `ensureMechRegistered` / `ensureMapRegistered` decode and
+register one sheet on demand (throwing duplicates stay an error via
+`registerMech` / `registerMap`).
 
 Bundled sheets: AS7-D (Atlas), BSW-X1, BZK-F3, CDA-3MA (Cicada), ENF-4R
 (Enforcer), GRF-1N (Griffin), HBK-4G (Hunchback), HER-5SA (Hermes II),

@@ -14,7 +14,6 @@ import {
 } from "btlib10x";
 import { buildLinesChunk, type Chunk } from "./chunk";
 import { i18n } from "./i18n";
-import { lookupMech } from "./lookup";
 import { gunneryLabel, hexCoordStr, requireMechDef } from "./misc";
 import type { Session, SessionGameEvent } from "./session";
 import { drive } from "./session";
@@ -138,8 +137,7 @@ export function setupSetUnitProp(
   if (unit === undefined) throw new Error(i18n("err.unknownUnitId", { id }));
   switch (prop) {
     case "model": {
-      const m = lookupMech(raw);
-      if (m === undefined) throw new Error(i18n("err.unknownModel", { model: raw }));
+      const m = requireMechDef(raw);
       unit.model = m.model;
       return { prop, value: m.model };
     }

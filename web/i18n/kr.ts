@@ -5,6 +5,8 @@ export const kr: Catalog = {
   // app chrome
   "app.banner.title": "bt10x 터미널 v{version} - 배틀테크 토탈 워페어 규칙 서브셋",
   "app.banner.help": "명령어는 'help'를 입력하세요.",
+  "app.catalog.loading": "카탈로그 불러오는 중…",
+  "app.catalog.failed": "카탈로그를 불러오지 못했습니다: {error}",
   "err.prefix": "오류:",
 
   // per-state hints (multi-line)
@@ -354,11 +356,11 @@ export const kr: Catalog = {
     "강타 {weapon} -> {target} ('strike {target} {limb}' 명령으로 예약)",
 
   // record sheet / info
-  "info.mechColModel": "모델",
+  "info.mechColModel": "모델명",
   "info.mechColName": "이름",
   "info.mechColClass": "등급",
   "info.mechColTon": "톤수",
-  "info.mechColMove": "이동(걷기/달리기/점프)",
+  "info.mechColTechBase": "기술규격",
   "info.specsCol": "스펙",
   "info.armorStructureCol": "장갑 및 구조",
   "info.head": "{name} {model} — {weightClass} {tonnage}t ({techBase})",

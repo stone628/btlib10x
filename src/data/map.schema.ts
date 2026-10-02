@@ -25,15 +25,15 @@ export interface MapDef {
 
 /**
  * Battle-map lookup helpers backed by a registry that starts empty.
- * Map sources live in the `btlib10x/data` bundle; call `registerMaps`
- * (or `loadShippedData`) before using the lookups.
+ * Canonical map sources live in `data/maps/*.json` and ship packed in the
+ * unified catalog (`data/btlib10x.jsonl`); call `registerMaps`,
+ * `registerMap`, or the catalog loader before using the lookups.
  */
 let MAP_REGISTRY = new Map<string, MapDef>();
 
 /**
  * Validate raw map sources and load them into the lookup registry,
- * replacing any previous contents. The data bundle (`btlib10x/data`)
- * supplies the sources; the engine validates.
+ * replacing any previous contents.
  */
 export function registerMaps(srcs: readonly MapDefSrc[]): void {
   const next = new Map<string, MapDef>();
@@ -44,6 +44,20 @@ export function registerMaps(srcs: readonly MapDefSrc[]): void {
     next.set(src.name, loadMap(src));
   }
   MAP_REGISTRY = next;
+}
+
+/**
+ * Validate one raw map source and add it to the lookup registry, keeping
+ * any previously registered maps. Prefer this over `registerMaps` when only
+ * the roster's map is needed. Throws on a duplicate name.
+ */
+export function registerMap(src: MapDefSrc): MapDef {
+  if (MAP_REGISTRY.has(src.name)) {
+    throw new Error(`Duplicate map name ${JSON.stringify(src.name)}`);
+  }
+  const def = loadMap(src);
+  MAP_REGISTRY.set(def.name, def);
+  return def;
 }
 
 export interface MapNameHolder {

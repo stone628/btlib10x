@@ -33,6 +33,7 @@ export type TerrainType =
   | "hardenedBuilding";
 
 export const TERRAIN_TYPES: readonly TerrainType[] = [
+  // Order is wire-stable (indexes are stored in packed JSONL map lines) — append only.
   "clear",
   "lightWoods",
   "heavyWoods",

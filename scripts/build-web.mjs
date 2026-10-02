@@ -1,3 +1,4 @@
+import { copyFileSync } from "node:fs";
 import * as esbuild from "esbuild";
 import { buildStamp } from "./build-stamp.mjs";
 
@@ -7,6 +8,10 @@ const portArg = process.argv.find((a) => a.startsWith("--port="));
 const port = portArg ? Number(portArg.split("=")[1]) : 8012;
 
 const stamp = buildStamp();
+
+// The unified catalog ships as a static file beside the bundles; the app
+// fetches it once at boot (see web/main.ts).
+copyFileSync("data/btlib10x.jsonl", "web/btlib10x.jsonl");
 
 const coreCtx = await esbuild.context({
   entryPoints: ["src/index.ts"],
@@ -18,22 +23,13 @@ const coreCtx = await esbuild.context({
   logLevel: "info",
 });
 
-const dataCtx = await esbuild.context({
-  entryPoints: ["data/index.ts"],
-  outfile: "web/btlib10x.data.js",
-  bundle: true,
-  format: "esm",
-  target: "es2022",
-  logLevel: "info",
-});
-
 const appCtx = await esbuild.context({
   entryPoints: ["web/main.ts"],
   outfile: "web/app.js",
   bundle: true,
   format: "esm",
   target: "es2022",
-  external: ["btlib10x", "btlib10x/data"],
+  external: ["btlib10x"],
   loader: { ".txt": "text" },
   logLevel: "info",
 });
@@ -44,15 +40,12 @@ if (serve) {
 }
 if (watch) {
   await coreCtx.watch();
-  await dataCtx.watch();
   await appCtx.watch();
   console.log("watching for changes…");
 }
 if (!watch && !serve) {
   await coreCtx.rebuild();
-  await dataCtx.rebuild();
   await appCtx.rebuild();
   await coreCtx.dispose();
-  await dataCtx.dispose();
   await appCtx.dispose();
 }

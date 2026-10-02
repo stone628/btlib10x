@@ -442,8 +442,9 @@ stated elsewhere in this document or the codebase:
     web/rng.ts          mulberry32-seeded Rng
     web/render.ts       structured BoardModel / Span model + boardToText / boardToSpans
     scripts/build-web.mjs  esbuild bundles: src/index.ts → web/btlib10x.js (engine),
-                         data/index.ts → web/btlib10x.data.js (catalog data),
-                         web/main.ts → web/app.js (app; both bundles kept external)
+                         web/main.ts → web/app.js (app; engine kept external),
+                         and copies data/btlib10x.jsonl → web/btlib10x.jsonl (catalog,
+                         fetched once at boot)
 
 Import wrinkle: tsc-emitted `.json` imports are not loadable by browsers, so the
 app ships as an esbuild single-file bundle instead of consuming `dist/` directly.
@@ -452,13 +453,13 @@ Library sources stay untouched.
 ## Build, run, and ship
 
     npm install            # picks up esbuild devDependency
-    npm run build:web      # one-shot esbuild bundle → web/btlib10x.js + web/btlib10x.data.js + web/app.js
+    npm run build:web      # one-shot esbuild bundle → web/btlib10x.js + web/app.js (+ web/btlib10x.jsonl copy)
     npm run dev:web        # watch + serve: rebuilds on change, serves at http://127.0.0.1:8012/index.html
     # custom port:  node scripts/build-web.mjs --watch --serve --port=3000
     # open http://localhost:8012
 
 To publish the app's static output (not the npm package), run:
 
-    npm run dist:web       # copies web/{index.html,btlib10x.js,btlib10x.data.js,app.js,favicon.ico} → dist/web/
-    npm run dist:standalone  # one fully self-contained dist/standalone/bt10x.html
-    # (bundles engine + data + app into the HTML; copy that single file anywhere and open it in a browser)
+    npm run dist:web       # copies web/{index.html,btlib10x.js,btlib10x.jsonl,app.js,favicon.ico} → dist/web/
+    npm run dist:standalone  # dist/standalone/bt10x.html (+ btlib10x.jsonl alongside; the app fetches it at boot)
+    # (bundles engine + app into the HTML; copy both files anywhere and serve them over HTTP)

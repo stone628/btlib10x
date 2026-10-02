@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import WEAPON_DATA from "../data/weapons.json";
 import type { MechDef, ResolvedMechDef } from "../src/data/index";
 import { allMechDefs, mechDef, resolveMechDef, validateMechDef } from "../src/data/index";
 import { parseWeaponsData, weaponDefFor } from "../src/data/weapon.schema";
+import { WEAPON_DATA } from "../src/data/weapons.data";
 
 /** Strip engine-resolved fields to recover a MechDef (for testing). */
 function toMechDef(d: ResolvedMechDef): MechDef {

@@ -9,18 +9,18 @@ import {
 } from "../web/session";
 import { disableCritical, execute } from "./helpers";
 
-function run(s: Session, cmd: string): string[] {
+async function run(s: Session, cmd: string): Promise<string[]> {
   return execute(s, cmd);
 }
 
-function started(): Session {
+async function started(): Promise<{ s: Session; actor: string }> {
   const s = newSession(7);
-  expect(run(s, "map quickstart")[0]).toContain("15x16");
-  expect(run(s, "add hunchy HBK-4G 9 9 n")).toHaveLength(1);
-  expect(run(s, "add cicada HBK-4G 9 8 s")).toHaveLength(1);
-  run(s, "start");
+  expect((await run(s, "map quickstart"))[0]).toContain("15x16");
+  expect(await run(s, "add hunchy HBK-4G 9 9 n")).toHaveLength(1);
+  expect(await run(s, "add cicada HBK-4G 9 8 s")).toHaveLength(1);
+  expect((await run(s, "start"))[0]).toContain("BATTLE STARTED");
   disableCritical(s);
-  return s;
+  return { s, actor: requireMovementActor(s).id };
 }
 
 /** Drain the movement phase by walking in place until weapon phase opens.
@@ -36,7 +36,7 @@ function burnMovePhase(s: Session): void {
 }
 
 /** Drive a session to `app === "over"` by ejecting both units. Bounded. */
-function driveToOver(s: Session): void {
+async function driveToOver(s: Session): Promise<void> {
   let guard = 0;
   while (s.state === "battle") {
     if (++guard > 200) throw new Error("driveToOver did not finish");
@@ -51,13 +51,13 @@ function driveToOver(s: Session): void {
       }
     } else {
       // Pass through attack phase.
-      run(s, "done");
+      await run(s, "done");
     }
   }
 }
 
 describe("per-AppState context invariants", () => {
-  it("setup: all per-phase contexts are null, only setup populated", () => {
+  it("setup: all per-phase contexts are null, only setup populated", async () => {
     const s = newSession(42);
     expect(s.move).toBeNull();
     expect(s.attack).toBeNull();
@@ -66,8 +66,8 @@ describe("per-AppState context invariants", () => {
     expect(s.setup.roster).toEqual([]);
   });
 
-  it("battle + movement: move allocated, attack null, over null", () => {
-    const s = started();
+  it("battle + movement: move allocated, attack null, over null", async () => {
+    const { s } = await started();
     expect(s.state).toBe("battle");
     expect(s.battle!.phase).toBe("movement");
     expect(s.move).not.toBeNull();
@@ -76,8 +76,8 @@ describe("per-AppState context invariants", () => {
     expect(s.move!.actorId).toBe(requireMovementActor(s).id);
   });
 
-  it("battle + attack: move null, attack allocated with torsoTwist front, over null", () => {
-    const s = started();
+  it("battle + attack: move null, attack allocated with torsoTwist front, over null", async () => {
+    const { s } = await started();
     burnMovePhase(s);
     expect(s.battle!.phase).toBe("attack");
     expect(s.move).toBeNull();
@@ -87,14 +87,14 @@ describe("per-AppState context invariants", () => {
     expect(s.attack!.weaponDecls).toEqual([]);
   });
 
-  it("over: move null, attack null, over populated with victory", () => {
+  it("over: move null, attack null, over populated with victory", async () => {
     const s = newSession(42);
-    run(s, "map quickstart");
-    run(s, "add a HBK-4G 5 5 n");
-    run(s, "add b HBK-4G 6 5 s");
-    run(s, "start");
+    await run(s, "map quickstart");
+    await run(s, "add a HBK-4G 5 5 n");
+    await run(s, "add b HBK-4G 6 5 s");
+    await run(s, "start");
     disableCritical(s);
-    driveToOver(s);
+    await driveToOver(s);
     expect(s.state).toBe("over");
     expect(s.over).not.toBeNull();
     expect(s.move).toBeNull();
@@ -102,8 +102,8 @@ describe("per-AppState context invariants", () => {
     expect(s.over!.victory).toBeDefined();
   });
 
-  it("phase transition reallocates the active context; inactive side stays null", () => {
-    const s = started();
+  it("phase transition reallocates the active context; inactive side stays null", async () => {
+    const { s } = await started();
     const moveBefore = s.move;
     burnMovePhase(s);
     expect(s.battle!.phase).toBe("attack");
@@ -112,14 +112,14 @@ describe("per-AppState context invariants", () => {
     expect(moveBefore).not.toBe(s.attack);
   });
 
-  it("actor change inside the same phase reallocates the context", () => {
-    const s = started();
+  it("actor change inside the same phase reallocates the context", async () => {
+    const { s } = await started();
     const firstActor = s.move!.actorId;
     burnMovePhase(s);
     expect(s.attack).not.toBeNull();
     const firstAttackActor = s.attack!.actorId;
     // Pass-fire hands off to cicada's attack activation: same phase, new actor.
-    run(s, "done");
+    await run(s, "done");
     expect(s.battle!.phase).toBe("attack");
     expect(s.attack).not.toBeNull();
     expect(firstAttackActor).not.toBe(s.attack!.actorId);
@@ -127,29 +127,29 @@ describe("per-AppState context invariants", () => {
     expect(firstActor).not.toBe(s.attack!.actorId);
   });
 
-  it("declareMode throws when not in movement phase", () => {
-    const s = started();
+  it("declareMode throws when not in movement phase", async () => {
+    const { s } = await started();
     burnMovePhase(s);
     expect(s.battle!.phase).toBe("attack");
     expect(() => declareMovementMode(s, "walk")).toThrow(/requires the movement phase/i);
   });
 
-  it("setTorsoTwist throws when not in weaponAttack phase", () => {
-    const s = started();
+  it("setTorsoTwist throws when not in weaponAttack phase", async () => {
+    const { s } = await started();
     expect(s.battle!.phase).toBe("movement");
     expect(() => setTorsoTwist(s, "leftSide")).toThrow(/requires the attack phase/i);
   });
 
-  it("fresh attack context always starts with torsoTwist: front", () => {
-    const s = started();
+  it("fresh attack context always starts with torsoTwist: front", async () => {
+    const { s } = await started();
     burnMovePhase(s);
     const firstAttackActor = s.attack!.actorId;
     expect(s.attack!.torsoTwist).toBe("front");
-    run(s, "torso right");
+    await run(s, "torso right");
     expect(s.attack!.torsoTwist).toBe("rightSide");
     // Pass-fire on first attacker advances to next activation; twist should
     // reset whenever a fresh attack context is allocated.
-    run(s, "done");
+    await run(s, "done");
     expect(s.battle!.phase).toBe("attack");
     expect(s.attack).not.toBeNull();
     // Either the same actor across rounds (fresh twist) or a different actor
@@ -161,12 +161,12 @@ describe("per-AppState context invariants", () => {
     }
   });
 
-  it("commit rollback preserves the move context only", () => {
-    const s = started();
+  it("commit rollback preserves the move context only", async () => {
+    const { s } = await started();
     const actor = requireMovementActor(s).id;
-    run(s, "mode walk");
+    await run(s, "mode walk");
     s.move!.moveSteps = [{ kind: "enter", to: { col: 1, row: 1 } }];
-    const out = run(s, "done");
+    const out = await run(s, "done");
     expect(out[0]).toMatch(/^error:/);
     expect(s.move).not.toBeNull();
     expect(s.move!.actorId).toBe(actor);

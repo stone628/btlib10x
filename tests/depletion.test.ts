@@ -330,38 +330,40 @@ describe("declareAttacks (game level)", () => {
   });
 });
 
-function freshBrawl(): Session {
+async function freshBrawl(): Promise<Session> {
   const s = newSession(42);
-  execute(s, "map quickstart");
-  execute(s, "add hunchy HBK-4G 9 9 n");
-  execute(s, "add cicada CDA-3MA 9 8 s");
-  execute(s, "start");
+  await execute(s, "map quickstart");
+  await execute(s, "add hunchy HBK-4G 9 9 n");
+  await execute(s, "add cicada CDA-3MA 9 8 s");
+  await execute(s, "start");
   disableCritical(s);
   return s;
 }
 
 describe("ammo command (session)", () => {
-  it("shows the acting unit's policy, sets it, and rejects gibberish", () => {
-    const s = freshBrawl();
+  it("shows the acting unit's policy, sets it, and rejects gibberish", async () => {
+    const s = await freshBrawl();
     while (s.state === "battle" && s.battle!.phase === "movement") {
       declareMovementMode(s, "walk");
       commitMovement(s);
     }
     expect(s.battle!.phase).toBe("attack");
     const actor = requireAttackActor(s).id;
-    expect(execute(s, "ammo")[0]).toBe("ammo policy: exposed");
-    expect(execute(s, "ammo spread")).toEqual([`${actor}: ammo policy set to spread`]);
+    expect((await execute(s, "ammo"))[0]).toBe("ammo policy: exposed");
+    expect(await execute(s, "ammo spread")).toEqual([`${actor}: ammo policy set to spread`]);
     expect(s.battle!.units[actor]!.ammoPolicy).toBe("spread");
-    expect(execute(s, "ammo leastfirst")[0]).toBe(`${actor}: ammo policy set to least-first`);
+    expect((await execute(s, "ammo leastfirst"))[0]).toBe(
+      `${actor}: ammo policy set to least-first`,
+    );
     expect(s.battle!.units[actor]!.ammoPolicy).toBe("leastFirst");
-    expect(execute(s, "ammo nope")[0]).toMatch(/^error: ammo policy must be one of/);
+    expect((await execute(s, "ammo nope"))[0]).toMatch(/^error: ammo policy must be one of/);
     expect(s.battle!.units[actor]!.ammoPolicy).toBe("leastFirst");
   });
 
-  it("renders the policy line on the record sheet only for ammo-carrying units", () => {
-    const s = freshBrawl();
+  it("renders the policy line on the record sheet only for ammo-carrying units", async () => {
+    const s = await freshBrawl();
     s.battle!.units.hunchy!.ammoPolicy = "core";
-    expect(execute(s, "sheet hunchy").join("\n")).toContain("ammo status: policy(core");
-    expect(execute(s, "sheet cicada").join("\n")).not.toContain("ammo policy");
+    expect((await execute(s, "sheet hunchy")).join("\n")).toContain("ammo status: policy(core");
+    expect((await execute(s, "sheet cicada")).join("\n")).not.toContain("ammo policy");
   });
 });

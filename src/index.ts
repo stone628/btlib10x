@@ -33,20 +33,46 @@ export {
 } from "./core/types";
 export type { AmmoDef } from "./data/ammo.schema";
 export {
+  AMMO_DATA,
   type AmmoNameHolder,
   allMapDefs,
   allMechDefs,
+  type CatalogManifest,
+  catalogManifest,
+  decodeMapLine,
+  decodeMechLine,
+  encodeMapDef,
+  encodeMechDef,
+  ensureAmmoRegistered,
+  ensureMapRegistered,
+  ensureMechRegistered,
+  ensureWeaponsRegistered,
+  findMapEntry,
+  findMechEntry,
   listMapNames,
+  loadCatalog,
   loadShippedData,
+  MAP_WIRE_VERSION,
+  type MapManifestEntry,
   type MapNameHolder,
+  type MechIdentity,
+  type MechManifestEntry,
   type MechModelHolder,
   mapDefFor,
+  mechDef,
   mechDefFor,
+  parseCatalogManifest,
+  registerAllCatalog,
   registerAmmo,
+  registerMap,
   registerMaps,
+  registerMech,
   registerMechs,
   registerWeapons,
   type ShippedDataBundle,
+  WEAPON_DATA,
+  WIRE_VERSION,
+  weightClassForTonnage,
 } from "./data/index";
 export type { MapDef, MapDefSrc } from "./data/map.schema";
 export type {
@@ -66,6 +92,7 @@ export type {
   ResolvedMechDef,
   ResolvedRearArmor,
   WeaponMount,
+  WeightClass,
 } from "./data/mech.schema";
 export type { TerrainDef } from "./data/terrain.schema";
 export type { WeaponCategory, WeaponDef, WeaponNameHolder } from "./data/weapon.schema";

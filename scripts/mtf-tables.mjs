@@ -15,7 +15,8 @@
  *   - SOAK_TOKEN — crit-slot soak/armor-tech token → canonical soak name
  *   - ENGINE_CRIT_SLOTS — expected engine crit-slot counts (CT/LT/RT/total) per engine type
  *   - SOAK_CRIT_TOTALS — official soak-tech slot totals keyed by tech base
- *   - MODEL_CODE — mech name → model code prefix for non-trivial name generation
+ *   - MODEL_PREFIX_NAME — MTF line-2 name → { prefix, name } for Clan
+ *     model code generation
  */
 
 // ---------------------------------------------------------------------------
@@ -323,21 +324,19 @@ export const DHS_CRIT_SLOTS = {
 // ---------------------------------------------------------------------------
 
 /**
- * Mech name → model code prefix for non-trivial name generation.
+ * Mech name → model code prefix and canonical display name.
  *
- * When an MTF model line is a bare variant number (e.g. "2" for Mad Cat Mk
- * II), the importer needs to synthesise a full model code. This table maps
- * the `name` field to a prefix; the variant suffix from the MTF is appended
- * with a dash separator.
- *
- * Entries are only required for names whose abbreviation is ambiguous or
- * non-obvious. Trivial cases (e.g. "Wolverine" → "WVR") can be derived
- * from the existing model code in the MTF and don't need entries here.
+ * Clan MTF sheets do not carry a usable model code on line 3 (e.g. "Prime"
+ * or "2"), so the importer synthesises the catalog key as
+ * `<prefix>-<variant>` ("TW-Prime", "MC-MKII-2"). Keys are the full MTF
+ * line-2 strings; `name` is the canonical outer (Inner Sphere reporting)
+ * name stored in `MechDef.name` — the parenthesised Clan name goes to
+ * `MechDef.clanName` instead.
  *
  * Example: "Mad Cat Mk II" + variant "2" → "MC-MKII-2"
  */
-export const MODEL_CODE = {
-  "Mad Cat Mk II": "MC-MKII",
-  "Mad Cat (Timber Wolf)": "TW",
-  "Masakari (Warhawk)": "WHK",
+export const MODEL_PREFIX_NAME = {
+  "Mad Cat Mk II": { prefix: "MC-MKII", name: "Mad Cat Mk II" },
+  "Mad Cat (Timber Wolf)": { prefix: "TW", name: "Mad Cat" },
+  "Masakari (Warhawk)": { prefix: "WHK", name: "Masakari" },
 };

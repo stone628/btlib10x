@@ -1,9 +1,10 @@
+import type { MechManifestEntry } from "btlib10x";
 import {
   allMapDefs,
-  allMechDefs,
   allWeaponDefs,
   CLUSTER_COLUMNS,
   CLUSTER_TABLE,
+  catalogManifest,
   HEAT_CAP,
   HIT_LOCATION_TABLE,
   heatScaleEffects,
@@ -13,6 +14,7 @@ import {
   RIGHT_SIDE_TABLE,
   type WeaponCategory,
   type WeaponDef,
+  weightClassForTonnage,
 } from "btlib10x";
 import {
   buildBoardChunk,
@@ -146,7 +148,7 @@ export function listTables(): Chunk[] {
 }
 
 export function infoMechListChunk(): Chunk {
-  const list = allMechDefs().sort((a, b) => {
+  const list = [...catalogManifest().mechs].sort((a: MechManifestEntry, b: MechManifestEntry) => {
     if (a.tonnage !== b.tonnage) return a.tonnage - b.tonnage;
     return a.name.localeCompare(b.name);
   });
@@ -154,16 +156,20 @@ export function infoMechListChunk(): Chunk {
     i18n("info.mechColModel"),
     i18n("info.mechColName"),
     i18n("info.mechColClass"),
+    i18n("info.mechColTechBase"),
     i18n("info.mechColTon"),
-    i18n("info.mechColMove"),
   ];
-  const rows = list.map((d) => [
-    d.model,
-    d.name,
-    d.weightClass,
-    String(d.tonnage),
-    `${d.walking}/${d.running}/${d.jumping}`,
-  ]);
+  const rows = list.map((d: MechManifestEntry) => {
+    // Move ratings live in the registered sheets (sync registry is fully
+    // loaded); the manifest carries identity only.
+    return [
+      d.model,
+      d.clanName === undefined ? d.name : `${d.name} (${d.clanName})`,
+      weightClassForTonnage(d.tonnage),
+      d.techBase,
+      String(d.tonnage),
+    ];
+  });
   return buildHeaderTableChunkFromRows(header, rows);
 }
 

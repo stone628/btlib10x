@@ -9,22 +9,18 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    },
-    "./data": {
-      "types": "./dist/data-bundle/index.d.ts",
-      "default": "./dist/data-bundle/index.js"
     }
   },
   "files": [
     "dist",
-    "data"
+    "data/btlib10x.jsonl"
   ],
   "sideEffects": false,
   "scripts": {
-    "gen:mechs": "node scripts/gen-mech-catalog.mjs && biome check --write data/index.ts",
-    "mtf": "node scripts/mtf.mjs && npm run gen:mechs",
+    "pack": "node scripts/pack-catalog.mjs",
+    "mtf": "node scripts/mtf.mjs && npm run pack",
     "prebuild": "node -e \"import('node:fs').then((fs) => fs.rmSync('dist', { recursive: true, force: true }))\"",
-    "build": "tsc -b tsconfig.data.json",
+    "build": "tsc -b tsconfig.build.json",
     "build:web": "node scripts/build-web.mjs",
     "dist:web": "node scripts/build-web.mjs && node scripts/dist-web.mjs",
     "dist:standalone": "node scripts/standalone-web.mjs",
@@ -48,6 +44,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.10",
+    "@types/node": "^26.6.4",
     "esbuild": "^0.28.2",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
