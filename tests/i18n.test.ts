@@ -146,58 +146,60 @@ describe("i18n catalogs", () => {
 });
 
 describe("lang command", () => {
-  it("defaults to English and lists available locales", () => {
+  it("defaults to English and lists available locales", async () => {
     const s = newSession(7);
     expect(configLocale()).toBe("en");
-    expect(execute(s, "lang")).toEqual(["language: en", "available: en, kr"]);
+    expect(await execute(s, "lang")).toEqual(["language: en", "available: en, kr"]);
   });
 
-  it("switches output language for subsequent commands", () => {
+  it("switches output language for subsequent commands", async () => {
     const s = newSession(7);
-    expect(execute(s, "lang kr")).toEqual(["언어가 kr(으)로 설정되었습니다"]);
+    expect(await execute(s, "lang kr")).toEqual(["언어가 kr(으)로 설정되었습니다"]);
     expect(configLocale()).toBe("kr");
-    expect(execute(s, "status")[0]).toBe("맵: (없음)");
-    expect(execute(s, "help")[0]).toBe(i18nIn("kr", "hint.setup").split("\n")[0]);
+    expect((await execute(s, "status"))[0]).toBe("맵: (없음)");
+    expect((await execute(s, "help"))[0]).toBe(i18nIn("kr", "hint.setup").split("\n")[0]);
   });
 
-  it("rejects unknown locale codes with a localized error", () => {
+  it("rejects unknown locale codes with a localized error", async () => {
     const s = newSession(7);
-    execute(s, "lang kr");
-    expect(execute(s, "lang xx")).toEqual([`오류: 알 수 없는 언어 'xx' (사용 가능: en, kr)`]);
+    await execute(s, "lang kr");
+    expect(await execute(s, "lang xx")).toEqual([`오류: 알 수 없는 언어 'xx' (사용 가능: en, kr)`]);
   });
 
-  it("preserves the locale across reset and rematch", () => {
+  it("preserves the locale across reset and rematch", async () => {
     const s = newSession(7);
-    execute(s, "lang kr");
-    execute(s, "reset");
+    await execute(s, "lang kr");
+    await execute(s, "reset");
     expect(configLocale()).toBe("kr");
 
-    execute(s, "map beginner");
-    execute(s, "add a1 HBK-4G 2 2 s");
-    execute(s, "add b1 HBK-4G 2 4 n");
-    execute(s, "start");
+    await execute(s, "map beginner");
+    await execute(s, "add a1 HBK-4G 2 2 s");
+    await execute(s, "add b1 HBK-4G 2 4 n");
+    await execute(s, "start");
     autoPlay(s);
-    expect(execute(s, "rematch")[0]).toBe("=== 재경기 시작 ===");
+    expect((await execute(s, "rematch"))[0]).toBe("=== 재경기 시작 ===");
     expect(configLocale()).toBe("kr");
   });
 });
 
 describe("localized output smoke test", () => {
-  it("renders board placeholder and errors in Korean after switching", () => {
+  it("renders board placeholder and errors in Korean after switching", async () => {
     const s = newSession(7);
-    execute(s, "lang kr");
-    expect(execute(s, "board")).toEqual([i18nIn("kr", "board.noMap")]);
-    expect(execute(s, "bogus")).toEqual([`오류: 알 수 없는 명령 'bogus' ('help'를 입력해 보세요)`]);
-    expect(execute(s, "status")).toContain("(배치된 유닛 없음)");
+    await execute(s, "lang kr");
+    expect(await execute(s, "board")).toEqual([i18nIn("kr", "board.noMap")]);
+    expect(await execute(s, "bogus")).toEqual([
+      `오류: 알 수 없는 명령 'bogus' ('help'를 입력해 보세요)`,
+    ]);
+    expect((await execute(s, "status")).join("\n")).toContain("(배치된 유닛 없음)");
   });
 
-  it("keeps dense rule tokens (GATOR, locations) untranslated", () => {
+  it("keeps dense rule tokens (GATOR, locations) untranslated", async () => {
     const s = newSession(7);
-    execute(s, "lang kr");
-    execute(s, "map beginner");
-    execute(s, "add a1 HBK-4G 8 8");
-    execute(s, "add b1 HBK-4G 12 12");
-    execute(s, "start");
+    await execute(s, "lang kr");
+    await execute(s, "map beginner");
+    await execute(s, "add a1 HBK-4G 8 8");
+    await execute(s, "add b1 HBK-4G 12 12");
+    await execute(s, "start");
     if (s.battle === null) throw new Error("battle not started");
     // location abbreviations stay stable regardless of locale
     expect(Object.keys(en) as MessageKey[]).toContain("sheet.statusHeader");

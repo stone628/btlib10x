@@ -2,10 +2,12 @@ node_modules/
 dist/
 web/app.js
 web/btlib10x.js
-web/btlib10x.data.js
+web/btlib10x.jsonl
 *.tsbuildinfo
 .DS_Store
 tmp/
 .agents/
 .opencode.json
 
+web/btlib10x.jsonl
+data/btlib10x.jsonl

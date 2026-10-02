@@ -2,7 +2,7 @@
  * Merges `critSlots` from the MTF body-part sections into the existing
  * data/mechs/*.json files. This is a one-shot migration for the eight
  * hand-transcribed 'Mechs whose JSONs pre-date the crit-slot table; once
- * backfilled, `npm run gen:mechs` + `npm test` will validate the linkage
+ * backfilled, `npm run pack` + `npm test` will validate the linkage
  * against the weapons array via `validateMechDef`.
  *
  * Behavior:

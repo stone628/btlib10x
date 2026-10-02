@@ -1,6 +1,7 @@
 {
   "model": "WHK-Prime",
-  "name": "Masakari (Warhawk)",
+  "name": "Masakari",
+  "clanName": "Warhawk",
   "tonnage": 85,
   "weightClass": "Assault",
   "techBase": "Clan",

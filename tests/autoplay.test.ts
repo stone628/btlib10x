@@ -16,7 +16,7 @@ import {
 } from "../web/session";
 import { disableCritical, execute, scriptedRng } from "./helpers";
 
-function run(s: Session, cmd: string): string[] {
+async function run(s: Session, cmd: string): Promise<string[]> {
   return execute(s, cmd);
 }
 
@@ -25,12 +25,12 @@ function run(s: Session, cmd: string): string[] {
  * units have moved), returning the session. The current actor is whoever
  * acts next in the weapon attack phase.
  */
-function sessionAtWeaponAttack(): Session {
+async function sessionAtWeaponAttack(): Promise<Session> {
   const s = newSession(7);
-  run(s, "map quickstart");
-  run(s, "add hunchy HBK-4G 9 9 n");
-  run(s, "add cicada CDA-3MA 9 8 s");
-  run(s, "start");
+  await run(s, "map quickstart");
+  await run(s, "add hunchy HBK-4G 9 9 n");
+  await run(s, "add cicada CDA-3MA 9 8 s");
+  await run(s, "start");
   disableCritical(s);
   // Movement phase: both units move (walk), advancing to weapon attack.
   for (let i = 0; i < 2; i++) {
@@ -45,15 +45,15 @@ function sessionAtWeaponAttack(): Session {
 /** Build a fresh session at the start of movement phase 1 with `hunchy`
  *  (HBK-4G, walk 4) guaranteed to be the first mover. Per TW p.37 the loser
  *  of initiative moves first, so we force hunchy to LOSE (5 vs 12). */
-function sessionAtMovementStart(): Session {
+async function sessionAtMovementStart(): Promise<Session> {
   const s = newSession(7);
   // Hunchy rolls 5 (2+3), cicada rolls 12 (6+6). Loser-of-initiative moves
   // first, so hunchy becomes the first actor.
   s.rng = scriptedRng(2, 3, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6);
-  run(s, "map quickstart");
-  run(s, "add hunchy HBK-4G 9 9 n");
-  run(s, "add cicada CDA-3MA 9 8 s");
-  run(s, "start");
+  await run(s, "map quickstart");
+  await run(s, "add hunchy HBK-4G 9 9 n");
+  await run(s, "add cicada CDA-3MA 9 8 s");
+  await run(s, "start");
   disableCritical(s);
   expect(s.battle!.phase).toBe("movement");
   expect(s.move!.actorId).toBe("hunchy");
@@ -84,8 +84,8 @@ function makeImmobile(s: Session, id: string): void {
 }
 
 describe("nextAutoPlayCommand (autoplay demo driver)", () => {
-  it("omits weapons destroyed by a critical slot hit from the fire command", () => {
-    const s = sessionAtWeaponAttack();
+  it("omits weapons destroyed by a critical slot hit from the fire command", async () => {
+    const s = await sessionAtWeaponAttack();
     resetAutoplayState(s);
     expect(s.battle!.phase).toBe("attack");
 
@@ -114,8 +114,8 @@ describe("nextAutoPlayCommand (autoplay demo driver)", () => {
     expect(indexes).not.toContain(destroyedIndex);
   });
 
-  it("omits auto-miss weapons from the fire command", () => {
-    const s = sessionAtWeaponAttack();
+  it("omits auto-miss weapons from the fire command", async () => {
+    const s = await sessionAtWeaponAttack();
     resetAutoplayState(s);
     expect(s.battle!.phase).toBe("attack");
 
@@ -148,8 +148,8 @@ describe("nextAutoPlayCommand (autoplay demo driver)", () => {
 });
 
 describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
-  it("immobile + prone: emits `mode pronestill` (not the illegal `mode standup walk`)", () => {
-    const s = sessionAtMovementStart();
+  it("immobile + prone: emits `mode pronestill` (not the illegal `mode standup walk`)", async () => {
+    const s = await sessionAtMovementStart();
     const actorId = s.move!.actorId!;
     const actor = s.battle!.units[actorId]!;
     makeImmobile(s, actorId);
@@ -160,8 +160,8 @@ describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
     expect(cmd).toBe("mode pronestill");
   });
 
-  it("immobile + prone: applying the emitted mode commits without throwing", () => {
-    const s = sessionAtMovementStart();
+  it("immobile + prone: applying the emitted mode commits without throwing", async () => {
+    const s = await sessionAtMovementStart();
     const actorId = s.move!.actorId!;
     const actor = s.battle!.units[actorId]!;
     makeImmobile(s, actorId);
@@ -170,13 +170,13 @@ describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
     resetAutoplayState(s);
     const cmd = nextModeCommand(s);
     expect(cmd).toBe("mode pronestill");
-    const out = run(s, "mode pronestill");
+    const out = await run(s, "mode pronestill");
     expect(out[0]).not.toMatch(/^error:/);
     expect(() => commitMovement(s)).not.toThrow();
   });
 
-  it("one-leg + prone: attempts `mode standup walk` (canAttemptStandUp)", () => {
-    const s = sessionAtMovementStart();
+  it("one-leg + prone: attempts `mode standup walk` (canAttemptStandUp)", async () => {
+    const s = await sessionAtMovementStart();
     const actorId = s.move!.actorId!;
     const actor = s.battle!.units[actorId]!;
     destroyLeg(s, actorId);
@@ -188,8 +188,8 @@ describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
     expect(cmd).toBe("mode standup walk");
   });
 
-  it("one-leg + two-arms + prone: cannot stand, emits `mode pronestill` (TW p.50)", () => {
-    const s = sessionAtMovementStart();
+  it("one-leg + two-arms + prone: cannot stand, emits `mode pronestill` (TW p.50)", async () => {
+    const s = await sessionAtMovementStart();
     const actorId = s.move!.actorId!;
     const actor = s.battle!.units[actorId]!;
     destroyLeg(s, actorId);
@@ -203,8 +203,8 @@ describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
     expect(cmd).toBe("mode pronestill");
   });
 
-  it("one-leg + standing: emits `mode walk` (TW p.122: walk 1 MP)", () => {
-    const s = sessionAtMovementStart();
+  it("one-leg + standing: emits `mode walk` (TW p.122: walk 1 MP)", async () => {
+    const s = await sessionAtMovementStart();
     const actorId = s.move!.actorId!;
     destroyLeg(s, actorId);
 
@@ -213,8 +213,8 @@ describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
     expect(cmd).toBe("mode walk");
   });
 
-  it("mobile + prone + walk budget < STAND_MP_COST: emits `mode pronestill`", () => {
-    const s = sessionAtMovementStart();
+  it("mobile + prone + walk budget < STAND_MP_COST: emits `mode pronestill`", async () => {
+    const s = await sessionAtMovementStart();
     const actorId = s.move!.actorId!;
     const actor = s.battle!.units[actorId]!;
     actor.prone = true;
@@ -245,8 +245,8 @@ describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
     expect(cmd).toBe("mode pronestill");
   });
 
-  it("notprone + walk budget 0 (heat-shutdown walk MP): emits `mode standstill`", () => {
-    const s = sessionAtMovementStart();
+  it("notprone + walk budget 0 (heat-shutdown walk MP): emits `mode standstill`", async () => {
+    const s = await sessionAtMovementStart();
     const actorId = s.move!.actorId!;
     const actor = s.battle!.units[actorId]!;
     const def = mechDefFor(actor);
@@ -275,8 +275,8 @@ describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
     expect(cmd).toBe("mode standstill");
   });
 
-  it("mobile + prone + walk budget >= STAND_MP_COST: still emits `mode standup walk`", () => {
-    const s = sessionAtMovementStart();
+  it("mobile + prone + walk budget >= STAND_MP_COST: still emits `mode standup walk`", async () => {
+    const s = await sessionAtMovementStart();
     const actorId = s.move!.actorId!;
     const actor = s.battle!.units[actorId]!;
     actor.prone = true;
@@ -295,8 +295,8 @@ describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
     expect(cmd).toBe("mode standup walk");
   });
 
-  it("notprone + immobile (both legs and both arms): emits `mode standstill`", () => {
-    const s = sessionAtMovementStart();
+  it("notprone + immobile (both legs and both arms): emits `mode standstill`", async () => {
+    const s = await sessionAtMovementStart();
     const actorId = s.move!.actorId!;
     makeImmobile(s, actorId);
 

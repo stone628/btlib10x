@@ -10,18 +10,18 @@ import {
 } from "../web/session";
 import { disableCritical, execute, scriptedRng } from "./helpers";
 
-function run(s: Session, cmd: string): string[] {
+async function run(s: Session, cmd: string): Promise<string[]> {
   return execute(s, cmd);
 }
 
 /** Started quickstart battle; returns session plus acting-unit id. */
-function started(piloting?: number): { s: Session; actor: string } {
+async function started(piloting?: number): Promise<{ s: Session; actor: string }> {
   const s = newSession(7);
-  expect(run(s, "map quickstart")[0]).toContain("15x16");
+  expect((await run(s, "map quickstart"))[0]).toContain("15x16");
   const pilotArg = piloting === undefined ? "" : ` ${piloting}`;
-  expect(run(s, `add hunchy HBK-4G 9 9 n${pilotArg}`)).toHaveLength(1);
-  expect(run(s, `add cicada HBK-4G 9 8 s${pilotArg}`)).toHaveLength(1);
-  expect(run(s, "start")[0]).toContain("BATTLE STARTED");
+  expect(await run(s, `add hunchy HBK-4G 9 9 n${pilotArg}`)).toHaveLength(1);
+  expect(await run(s, `add cicada HBK-4G 9 8 s${pilotArg}`)).toHaveLength(1);
+  expect((await run(s, "start"))[0]).toContain("BATTLE STARTED");
   disableCritical(s);
   return { s, actor: requireMovementActor(s).id };
 }
@@ -35,10 +35,10 @@ function burnMovePhase(s: Session): void {
 }
 
 describe("commitAtomic rollback", () => {
-  it("failed standup+move restores battle, rng, and session buffers", () => {
-    const { s, actor } = started(4);
+  it("failed standup+move restores battle, rng, and session buffers", async () => {
+    const { s, actor } = await started(4);
     s.battle!.units[actor]!.prone = true;
-    run(s, "mode standup");
+    await run(s, "mode standup");
     expect(s.move!.moveMode).toBe("standup");
 
     const heatBefore = s.battle!.units[actor]!.heat;
@@ -74,23 +74,23 @@ describe("commitAtomic rollback", () => {
     expect(rng.remaining()).toBe(2);
   });
 
-  it("failed commitFire mid-resolution restores battle, rng, and session", () => {
-    const { s } = started();
+  it("failed commitFire mid-resolution restores battle, rng, and session", async () => {
+    const { s } = await started();
     burnMovePhase(s);
     expect(s.battle!.phase).toBe("attack");
     const first = requireAttackActor(s).id;
     const firstTarget = first === "hunchy" ? "cicada" : "hunchy";
     // First unit declares + commits: rival still pending, so drive resolves
     // nothing and draws no rng.
-    expect(run(s, `fire ${firstTarget} 1`)[0]).toContain("queued");
-    expect(run(s, `fire ${firstTarget} 2`)[0]).toContain("queued");
-    run(s, "done");
+    expect((await run(s, `fire ${firstTarget} 1`))[0]).toContain("queued");
+    expect((await run(s, `fire ${firstTarget} 2`))[0]).toContain("queued");
+    await run(s, "done");
     const attacker = requireAttackActor(s).id;
     const target = attacker === "hunchy" ? "cicada" : "hunchy";
     // Two ammo-free medium lasers (CLI weapon numbers are 1-based: HBK-4G
     // weapons 1+2 are the arm medium lasers): declaration draws no rng.
-    expect(run(s, `fire ${target} 1`)[0]).toContain("queued");
-    expect(run(s, `fire ${target} 2`)[0]).toContain("queued");
+    expect((await run(s, `fire ${target} 1`))[0]).toContain("queued");
+    expect((await run(s, `fire ${target} 2`))[0]).toContain("queued");
 
     const damageBefore = structuredClone(s.battle!.units[target]!.damage);
     // Per hitting laser: to-hit 2D6 + location 2D6. Script covers three full
@@ -115,8 +115,8 @@ describe("commitAtomic rollback", () => {
     expect(s.attack!.torsoTwist).toBe("front");
   });
 
-  it("successful commits return the live battle object", () => {
-    const { s } = started();
+  it("successful commits return the live battle object", async () => {
+    const { s } = await started();
     const actor = requireMovementActor(s).id;
     declareMovementMode(s, "walk");
     const res = commitMovement(s);

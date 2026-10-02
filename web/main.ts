@@ -1,4 +1,4 @@
-import { VERSION } from "btlib10x";
+import { ensureMapRegistered, loadCatalog, VERSION } from "btlib10x";
 import {
   AUTOPLAY_INTERVAL_MS,
   flushAutoPlayCommand,
@@ -119,7 +119,7 @@ function submitImpl(raw: string) {
   }
 }
 
-function submitEpilog() {
+function submitEpilog(): void {
   input.value = "";
   refreshPrompt();
   scrollToBottom();
@@ -138,7 +138,7 @@ function submitInput(raw: string) {
 
 // --- autoplay demo driver (hidden 'autoplay' command) ---
 
-let autoPlayTimer: number | null = null;
+let autoPlayTimer: ReturnType<typeof setInterval> | null = null;
 
 function stopAutoPlay(finished: boolean): void {
   if (autoPlayTimer === null) return;
@@ -233,4 +233,29 @@ appendChunk(
     i18n("app.banner.help"),
   ),
 );
-refreshPrompt();
+
+// The only async step: fetch the unified catalog once, then everything runs
+// synchronously from the in-memory store (sheets decode + register on demand).
+input.disabled = true;
+modeHint.textContent = i18n("app.catalog.loading");
+void fetch("btlib10x.jsonl")
+  .then(async (res) => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.text();
+  })
+  .then((text) => {
+    const manifest = loadCatalog(text);
+    for (const m of manifest.maps) ensureMapRegistered(m.name);
+    input.disabled = false;
+    input.focus();
+    refreshPrompt();
+  })
+  .catch((err: unknown) => {
+    appendChunk(
+      buildLinesChunkWith(
+        "banner",
+        i18n("app.catalog.failed", { error: err instanceof Error ? err.message : String(err) }),
+      ),
+    );
+    scrollToBottom();
+  });

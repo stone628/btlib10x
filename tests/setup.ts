@@ -1,18 +1,21 @@
 /**
- * Vitest setup: load the shipped catalog data into the engine registries.
- * Rule tests import `../src/*` directly, while the web layer (`../web/*`)
- * resolves `btlib10x` through package exports to `dist/` — both registries
- * need loading. Run `npm run build` first so `dist/` matches `src/`.
+ * Vitest setup: load the unified catalog (`data/btlib10x.jsonl`) into the
+ * engine registries. Rule tests import `../src/*` directly, while the web
+ * layer (`../web/*`) resolves `btlib10x` through package exports to `dist/`
+ * — both copies need loading. Run `npm run build` first so `dist/`
+ * matches `src/`.
+ *
+ * Tests register the whole catalog (unlike production, which registers on
+ * demand) so sheet-iteration assertions keep working unchanged.
  */
-import { loadShippedData } from "btlib10x";
-import * as distData from "btlib10x/data";
-import { AMMO_DATA, MAP_SRCS, MECH_SRCS, WEAPON_DATA } from "../data/index";
-import { loadShippedData as loadSrcCatalogs } from "../src/index";
+/// <reference types="node" />
+import { readFileSync } from "node:fs";
+import { loadCatalog as loadDistCatalog, registerAllCatalog as registerAllDist } from "btlib10x";
+import { loadCatalog as loadSrcCatalog, registerAllCatalog as registerAllSrc } from "../src/index";
 
-loadSrcCatalogs({ weapons: WEAPON_DATA, ammo: AMMO_DATA, mechs: MECH_SRCS, maps: MAP_SRCS });
-loadShippedData({
-  weapons: distData.WEAPON_DATA,
-  ammo: distData.AMMO_DATA,
-  mechs: distData.MECH_SRCS,
-  maps: distData.MAP_SRCS,
-});
+const TEXT = readFileSync(new URL("../data/btlib10x.jsonl", import.meta.url), "utf8");
+
+loadSrcCatalog(TEXT);
+registerAllSrc();
+loadDistCatalog(TEXT);
+registerAllDist();

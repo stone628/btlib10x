@@ -7,6 +7,8 @@ export const en = {
   // app chrome
   "app.banner.title": "bt10x terminal v{version} - BattleTech Total Warfare rules subset",
   "app.banner.help": "type 'help' for commands.",
+  "app.catalog.loading": "loading catalog…",
+  "app.catalog.failed": "catalog failed to load: {error}",
   "err.prefix": "error:",
 
   // per-state hints (multi-line)
@@ -367,11 +369,11 @@ export const en = {
     "strike {weapon} -> {target} (queue with 'strike {target} {limb}')",
 
   // record sheet / info
-  "info.mechColModel": "MODEL",
-  "info.mechColName": "NAME",
-  "info.mechColClass": "CLASS",
-  "info.mechColTon": "TONNAGE",
-  "info.mechColMove": "MOVE(Walk/Run/Jump)",
+  "info.mechColModel": "Model",
+  "info.mechColName": "Name",
+  "info.mechColClass": "Class",
+  "info.mechColTon": "Tonnage",
+  "info.mechColTechBase": "TechBase",
   "info.specsCol": "Specs",
   "info.armorStructureCol": "Armor & Structure",
   "info.head": "{name} {model} — {weightClass} {tonnage}t ({techBase})",

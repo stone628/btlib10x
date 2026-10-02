@@ -143,8 +143,9 @@ function columnsText(columns: readonly (readonly string[])[]): string[] {
 }
 
 /** Run one input line against the session; returns plain output lines. */
-export function execute(session: Session, raw: string): string[] {
-  return runChunks(session, raw).flatMap(chunkText);
+export async function execute(session: Session, raw: string): Promise<string[]> {
+  const chunks = await runChunks(session, raw);
+  return chunks.flatMap(chunkText);
 }
 
 export function overrideAmmoBin(

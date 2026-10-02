@@ -6,6 +6,7 @@ import type {
   TerrainType,
   WeaponCategory,
 } from "btlib10x";
+import { ensureMechRegistered } from "btlib10x";
 import { i18n, type MessageKey } from "./i18n";
 import { lookupMech } from "./lookup";
 
@@ -37,7 +38,7 @@ export function gunneryLabel(gunnery: number): string {
 }
 
 export function requireMechDef(model: string): ResolvedMechDef {
-  const def = lookupMech(model);
+  const def = lookupMech(model) ?? ensureMechRegistered(model);
   if (def === undefined) throw new Error(i18n("err.unknownModel", { model }));
   return def;
 }

@@ -55,7 +55,8 @@ export type CritSlot =
   | { readonly kind: "structure"; readonly name: string }
   | { readonly kind: "soak"; readonly name: CritSoakName };
 
-/** All structure component names recognized by the crit table. */
+/** All structure component names recognized by the crit table.
+ * Order is wire-stable (indexes are stored in packed JSONL lines) — append only. */
 export const CRIT_STRUCTURE_NAMES = [
   "cockpit",
   "sensors",
@@ -78,7 +79,8 @@ export const CRIT_STRUCTURE_NAMES = [
 
 export type CritStructureName = (typeof CRIT_STRUCTURE_NAMES)[number];
 
-/** All soak (armor-tech) component names recognized by the crit table. */
+/** All soak (armor-tech) component names recognized by the crit table.
+ * Order is wire-stable (indexes are stored in packed JSONL lines) — append only. */
 export const CRIT_SOAK_NAMES = ["endoSteel", "ferroFibrous", "case", "caseII"] as const;
 
 export type CritSoakName = (typeof CRIT_SOAK_NAMES)[number];
@@ -96,6 +98,17 @@ export const CRIT_SLOT_COUNTS: Readonly<Record<Location, number>> = {
   rightLeg: 6,
   leftLeg: 6,
 };
+
+/** Weight class label derived from tonnage (TW construction bands). */
+export type WeightClass = "Light" | "Medium" | "Heavy" | "Assault";
+
+/** Infer the weight class from tonnage; single source of truth for validator, manifest display, and packer. */
+export function weightClassForTonnage(tonnage: number): WeightClass {
+  if (tonnage <= 35) return "Light";
+  if (tonnage <= 55) return "Medium";
+  if (tonnage <= 75) return "Heavy";
+  return "Assault";
+}
 
 /**
  * A critical slot in the engine-facing layout: same as `CritSlot` but with the
@@ -141,6 +154,8 @@ export type ResolvedCritSlots = Readonly<Record<Location, readonly ResolvedCritS
 export interface MechDef {
   readonly model: string;
   readonly name: string;
+  /** Clan name from the MTF line-2 `(...)` part; undefined when absent (even for Clan sheets). */
+  readonly clanName?: string;
   readonly tonnage: number;
   readonly weightClass: "Light" | "Medium" | "Heavy" | "Assault";
   readonly techBase: string;
@@ -189,6 +204,8 @@ export type ResolvedRearArmor = Readonly<TorsoLocationValue>;
 export interface ResolvedMechDef {
   readonly model: string;
   readonly name: string;
+  /** Clan name when the source sheet carried one; otherwise undefined. */
+  readonly clanName?: string;
   readonly tonnage: number;
   readonly weightClass: "Light" | "Medium" | "Heavy" | "Assault";
   readonly techBase: string;
@@ -254,6 +271,7 @@ export function resolveMechDef(def: MechDef): ResolvedMechDef {
   return {
     model: def.model,
     name: def.name,
+    ...(def.clanName !== undefined && { clanName: def.clanName }),
     tonnage: def.tonnage,
     weightClass: def.weightClass,
     techBase: def.techBase,
@@ -419,6 +437,18 @@ export function validateMechDef(def: MechDef): MechDef {
   const { tonnage, walking, running, jumping, techBase } = def;
 
   if (tonnage < 10 || tonnage > 100) errors.push("tonnage must be 10..100");
+
+  if (
+    def.clanName !== undefined &&
+    (typeof def.clanName !== "string" || def.clanName.length === 0)
+  ) {
+    errors.push("clanName must be a non-empty string when present");
+  }
+  if (def.weightClass !== weightClassForTonnage(tonnage)) {
+    errors.push(
+      `weightClass must equal weightClassForTonnage(tonnage) = ${weightClassForTonnage(tonnage)}`,
+    );
+  }
 
   if (!Number.isInteger(walking) || walking <= 0) errors.push("walking must be a positive integer");
   if (running !== Math.ceil(walking * 1.5)) {
@@ -602,15 +632,15 @@ export function validateMechDef(def: MechDef): MechDef {
 
 /**
  * 'Mech lookup helpers backed by a registry that starts empty.
- * 'Mech sources live in the `btlib10x/data` bundle (`MECH_SRCS`); call
- * `registerMechs` (or `loadShippedData`) before using the lookups.
+ * 'Mech sources live in the unified catalog (`data/btlib10x.jsonl`); call
+ * `registerMechs`, `registerMech`, or the catalog ensure helpers before
+ * using the lookups.
  */
 const MECH_REGISTRY = new Map<string, ResolvedMechDef>();
 
 /**
  * Validate raw 'Mech definitions and load them into the lookup registry,
- * replacing any previous contents. The data bundle (`btlib10x/data`)
- * supplies the definitions; the engine validates and resolves.
+ * replacing any previous contents. The engine validates and resolves.
  *
  * Weapons and ammo must be registered first: mech validation links crit
  * slots against the weapon/ammo catalogs.
@@ -625,17 +655,42 @@ export function registerMechs(defs: readonly MechDef[]): void {
     if (listAmmoWeapons().length === 0) {
       throw new Error("Cannot register mechs before ammo: call registerAmmo first");
     }
-  }
-  const next = new Map<string, ResolvedMechDef>();
-  for (const def of defs) {
-    const resolved = resolveMechDef(validateMechDef(def));
-    if (next.has(resolved.model)) {
-      throw new Error(`Duplicate mech model ${JSON.stringify(resolved.model)}`);
+    const next = new Map<string, ResolvedMechDef>();
+    for (const def of defs) {
+      const resolved = resolveMechDef(validateMechDef(def));
+      if (next.has(resolved.model)) {
+        throw new Error(`Duplicate mech model ${JSON.stringify(resolved.model)}`);
+      }
+      next.set(resolved.model, resolved);
     }
-    next.set(resolved.model, resolved);
+    MECH_REGISTRY.clear();
+    for (const [model, resolved] of next) MECH_REGISTRY.set(model, resolved);
   }
-  MECH_REGISTRY.clear();
-  for (const [model, resolved] of next) MECH_REGISTRY.set(model, resolved);
+  // If defs is empty, preserve existing registry (allows additive loads).
+}
+
+/**
+ * Validate a raw 'Mech definition and add it to the lookup registry,
+ * keeping any previously registered definitions. Prefer this over
+ * `registerMechs` when only the battle roster (or one sheet) is needed —
+ * unregistered catalog entries cost no memory.
+ *
+ * Weapons and ammo must be registered first: mech validation links crit
+ * slots against the weapon/ammo catalogs. Throws on a duplicate model.
+ */
+export function registerMech(def: MechDef): ResolvedMechDef {
+  if (listWeaponNames().length === 0) {
+    throw new Error("Cannot register mechs before weapons: call registerWeapons first");
+  }
+  if (listAmmoWeapons().length === 0) {
+    throw new Error("Cannot register mechs before ammo: call registerAmmo first");
+  }
+  const resolved = resolveMechDef(validateMechDef(def));
+  if (MECH_REGISTRY.has(resolved.model)) {
+    throw new Error(`Duplicate mech model ${JSON.stringify(resolved.model)}`);
+  }
+  MECH_REGISTRY.set(resolved.model, resolved);
+  return resolved;
 }
 
 export interface MechModelHolder {
@@ -654,4 +709,8 @@ export function mechDef(model: string): ResolvedMechDef | undefined {
 
 export function allMechDefs(): ResolvedMechDef[] {
   return Array.from(MECH_REGISTRY.values());
+}
+
+export function purgeMechDefs() {
+  MECH_REGISTRY.clear();
 }

@@ -1,6 +1,7 @@
 {
   "model": "TW-Prime",
-  "name": "Mad Cat (Timber Wolf)",
+  "name": "Mad Cat",
+  "clanName": "Timber Wolf",
   "tonnage": 75,
   "weightClass": "Heavy",
   "techBase": "Clan",

@@ -1,6 +1,7 @@
 import type { AmmoPolicy, Facing, UnitState } from "btlib10x";
 import {
   AMMO_POLICIES,
+  ensureMapRegistered,
   FACINGS,
   isShutdown,
   listMapNames,
@@ -249,7 +250,7 @@ const SETUP_CMDS: Record<string, CmdDef> = {
     run: (s, a) => {
       expectArgs(a, 1, "map <name>");
       const name = a[0]!;
-      const m = lookupMap(name);
+      const m = lookupMap(name) ?? ensureMapRegistered(name);
       if (m === undefined) {
         throw new Error(i18n("err.unknownMap", { name, list: listMapNames().join(", ") }));
       }

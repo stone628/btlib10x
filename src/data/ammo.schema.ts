@@ -1,11 +1,13 @@
 /**
  * Ammo catalog schema and lookup helpers.
  *
- * Catalog data lives in the `btlib10x/data` bundle (`data/ammo.json`); this
- * module holds the schema, the validator, and the lookup helpers backed by a
- * registry that starts empty. Call `registerAmmo` (or `loadShippedData`)
- * before using the lookups.
+ * Catalog data lives in the engine (`ammo.data.ts`); this module holds the
+ * schema, the validator, and the lookup helpers backed by a registry that
+ * self-populates from the embedded table on first read. Call
+ * `registerAmmo` only to override the shipped table (e.g. in tests).
  */
+
+import { AMMO_DATA } from "./ammo.data";
 
 export interface AmmoDef {
   readonly weapon: string;
@@ -80,12 +82,16 @@ export function parseAmmoData(data: unknown): readonly AmmoDef[] {
   return parsed;
 }
 
-let AMMO: ReadonlyMap<string, AmmoDef> = new Map<string, AmmoDef>();
+let AMMO: ReadonlyMap<string, AmmoDef> | null = null;
+
+/** Populate the registry from the embedded table unless explicitly registered already. */
+export function ensureAmmoRegistered(): void {
+  if (AMMO === null) registerAmmo(AMMO_DATA);
+}
 
 /**
  * Validate raw ammo entries and load them into the lookup registry,
- * replacing any previous contents. The data bundle (`btlib10x/data`)
- * supplies the entries; the engine validates.
+ * replacing any previous contents (including the embedded table).
  */
 export function registerAmmo(defs: readonly AmmoDef[]): void {
   const parsed = parseAmmoData(defs);
@@ -93,7 +99,8 @@ export function registerAmmo(defs: readonly AmmoDef[]): void {
 }
 
 export function ammoDef(name: string): AmmoDef | undefined {
-  return AMMO.get(name);
+  ensureAmmoRegistered();
+  return AMMO!.get(name);
 }
 
 export interface AmmoNameHolder {
@@ -101,19 +108,23 @@ export interface AmmoNameHolder {
 }
 
 export function ammoDefFor(h: AmmoNameHolder): AmmoDef {
-  const def = AMMO.get(h.weapon);
+  ensureAmmoRegistered();
+  const def = AMMO!.get(h.weapon);
   if (!def) throw new Error(`Unknown ammo weapon: ${h.weapon}`);
   return def;
 }
 
 export function shotsPerBinFor(h: AmmoNameHolder): number | undefined {
-  return AMMO.get(h.weapon)?.shotsPerBin;
+  ensureAmmoRegistered();
+  return AMMO!.get(h.weapon)?.shotsPerBin;
 }
 
 export function allAmmo(): readonly AmmoDef[] {
-  return Array.from(AMMO.values());
+  ensureAmmoRegistered();
+  return Array.from(AMMO!.values());
 }
 
 export function listAmmoWeapons(): string[] {
-  return Array.from(AMMO.keys());
+  ensureAmmoRegistered();
+  return Array.from(AMMO!.keys());
 }

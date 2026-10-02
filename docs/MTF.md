@@ -23,9 +23,9 @@ Mad Cat Prime, Masakari Prime, Wolverine WVR-6R).
    npm run mtf
    ```
 
-   This runs `scripts/mtf.mjs` then regenerates the catalog. Each new `.mtf`
-   is written to `data/mechs/<model>.json`. The catalog generator
-   (`npm run gen:mechs`) auto-registers it into `MECH_SRCS` and validates it.
+   This runs `scripts/mtf.mjs` then repacks the catalog. Each new `.mtf`
+   is written to `data/mechs/<model>.json`. The pack step
+   (`npm run pack`) folds it into `data/btlib10x.jsonl` and validates it.
 
 3. Validate and lock it in:
 
@@ -66,9 +66,9 @@ Mad Cat Prime, Masakari Prime, Wolverine WVR-6R).
 - `scripts/mtf-tables.mjs` — MTF field/component token tables.
 - `scripts/backfill-crits.mjs` — merges `critSlots` from MTFs into existing
   hand-transcribed JSONs, leaving every other field byte-identical.
-- `scripts/gen-mech-catalog.mjs` — regenerates `data/index.ts`
-  from every `data/mechs/*.json` and `data/maps/*.json` (runs inside `npm run mtf`;
-  run `npm run gen:mechs` by hand after adding JSON by other means).
+- `scripts/pack-catalog.mjs` — packs every `data/mechs/*.json` and
+  `data/maps/*.json` into `data/btlib10x.jsonl` (runs inside `npm run mtf`;
+  run `npm run pack` by hand after adding JSON by other means).
 
 See `docs/API.md` → *'Mech definitions* for the resulting `MechDef` /
 `ResolvedMechDef` shapes.

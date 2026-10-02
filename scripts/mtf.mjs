@@ -7,7 +7,7 @@ import {
   validateCritConstruction,
   validateHeatSinks,
 } from "./mtf-crit.mjs";
-import { CODE, LOCATION, MODEL_CODE, SHOTS_PER_TON } from "./mtf-tables.mjs";
+import { CODE, LOCATION, MODEL_PREFIX_NAME, SHOTS_PER_TON } from "./mtf-tables.mjs";
 
 /**
  * Batch converts BattleTech .mtf (MechTech File) definitions into the library's
@@ -74,34 +74,61 @@ function mapWeapon(codeRaw) {
 function parseMtf(text, file) {
   const errors = [];
   const lines = text.split(/\r?\n/);
-  const name = lines[1]?.trim() ?? "";
-  let model = lines[2]?.trim() ?? "";
-  if (!name) errors.push(`missing name in ${file}`);
-  if (!model) errors.push(`missing model in ${file}`);
-  // The MTF `model` line is sometimes a short variant tag rather than a full
-  // model code: e.g. Mad Cat Mk II writes "2" or Timber Wolf Prime writes
-  // "Prime". When the name has a MODEL_CODE entry, synthesise a full model
-  // code from the prefix plus the variant suffix ("MC-MKII-2", "TWB-Prime").
-  // Skip only when the variant has no letters AND no MODEL_CODE entry — such
-  // identifiers can't be turned into a reasonable key on their own.
-  if (model && !/[A-Za-z]/.test(model) && !MODEL_CODE[name]) {
-    return {
-      def: null,
-      errors: [`variant ${JSON.stringify(model)} is not a model code; import this one manually`],
-    };
+  const rawName = lines[1]?.trim() ?? "";
+  const variant = lines[2]?.trim() ?? "";
+  if (!rawName) errors.push(`missing name in ${file}`);
+  if (!variant) errors.push(`missing model in ${file}`);
+  // Line 2 is `<NAME>` or `<NAME> (<CLANNAME>)` for Clan sheets
+  // ("Mad Cat (Timber Wolf)"). The parenthesised Clan name becomes the
+  // optional `clanName`; when the parens are absent `clanName` stays
+  // undefined even for Clan-techBase sheets.
+  let name = rawName;
+  let clanName;
+  const clanMatch = rawName.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+  if (clanMatch) {
+    name = clanMatch[1].trim();
+    clanName = clanMatch[2].trim() || undefined;
   }
-  if (model && MODEL_CODE[name] && !model.includes("-")) {
-    model = `${MODEL_CODE[name]}-${model}`;
-  }
-  // MTF model codes are emitted all-caps in the catalog so the registry key
-  // and the on-disk filename (`<model>.json`) are case-stable.
-  // model = model.toUpperCase();
 
   const fields = {};
   for (const line of lines) {
     const idx = line.indexOf(":");
     if (idx > 0) fields[line.slice(0, idx)] = line.slice(idx + 1).trim();
   }
+  const techBase = fields.TechBase ?? "Inner Sphere";
+
+  // Model codes: Inner Sphere sheets carry the full code on MTF line 3
+  // ("HBK-4G") and it is used verbatim. Clan sheets carry a bare variant
+  // ("Prime", "2"), so the catalog key is synthesised from
+  // MODEL_PREFIX_NAME (`<prefix>-<variant>`, e.g. "TW-Prime"); a missing
+  // table entry is a hard error, never a silent verbatim fallback.
+  let model = variant;
+  if (techBase === "Clan") {
+    const entry = MODEL_PREFIX_NAME[rawName] ?? MODEL_PREFIX_NAME[name];
+    if (!entry) {
+      return {
+        def: null,
+        errors: [
+          `missing MODEL_PREFIX_NAME entry for ${JSON.stringify(rawName)}; add it to scripts/mtf-tables.mjs`,
+        ],
+      };
+    }
+    if (!variant) {
+      return { def: null, errors: [`missing variant in ${file}`] };
+    }
+    model = `${entry.prefix}-${variant}`;
+    name = entry.name;
+  } else {
+    if (model && !/[A-Za-z]/.test(model)) {
+      return {
+        def: null,
+        errors: [`variant ${JSON.stringify(model)} is not a model code; import this one manually`],
+      };
+    }
+  }
+  // MTF model codes are emitted all-caps in the catalog so the registry key
+  // and the on-disk filename (`<model>.json`) are case-stable.
+  // model = model.toUpperCase();
 
   const tonnage = numberRegex(text, "Mass");
   const walking = numberRegex(text, "Walk MP");
@@ -258,6 +285,7 @@ function parseMtf(text, file) {
   const def = {
     model,
     name,
+    ...(clanName !== undefined && { clanName }),
     tonnage,
     weightClass: tonnage ? weightClass(tonnage) : "Assault",
     techBase: fields.TechBase ?? "Inner Sphere",
@@ -297,5 +325,5 @@ for (const file of files) {
   generated++;
 }
 console.log(
-  `\n${generated} generated, ${skipped} skipped. Run 'npm run gen:mechs && npm test' to validate.`,
+  `\n${generated} generated, ${skipped} skipped. Run 'npm run pack && npm test' to validate.`,
 );

@@ -11,11 +11,13 @@
  *   pulse -2, LB-X cluster -1 (cluster mode only, deferred), MRM +1,
  *   Clan heavy lasers +1.
  *
- * Catalog data lives in the `btlib10x/data` bundle (`data/weapons.json`); this
- * module holds the schema, the validator, and the lookup helpers backed by a
- * registry that starts empty. Call `registerWeapons` (or `loadShippedData`)
- * before using the lookups.
+ * Catalog data lives in the engine (`weapons.data.ts`); this module holds
+ * the schema, the validator, and the lookup helpers backed by a registry
+ * that self-populates from the embedded table on first read. Call
+ * `registerWeapons` only to override the shipped table (e.g. in tests).
  */
+
+import { WEAPON_DATA } from "./weapons.data";
 
 export type WeaponCategory = "MISSILE" | "BALLISTIC" | "ENERGY" | "EQUIPMENT";
 
@@ -223,12 +225,16 @@ export function parseWeaponsData(data: unknown): readonly WeaponDef[] {
   return parsed;
 }
 
-let WEAPONS: ReadonlyMap<string, WeaponDef> = new Map<string, WeaponDef>();
+let WEAPONS: ReadonlyMap<string, WeaponDef> | null = null;
+
+/** Populate the registry from the embedded table unless explicitly registered already. */
+export function ensureWeaponsRegistered(): void {
+  if (WEAPONS === null) registerWeapons(WEAPON_DATA);
+}
 
 /**
  * Validate raw weapon entries and load them into the lookup registry,
- * replacing any previous contents. The data bundle (`btlib10x/data`)
- * supplies the entries; the engine validates.
+ * replacing any previous contents (including the embedded table).
  */
 export function registerWeapons(defs: readonly WeaponDef[]): void {
   const parsed = parseWeaponsData(defs);
@@ -236,7 +242,8 @@ export function registerWeapons(defs: readonly WeaponDef[]): void {
 }
 
 export function weaponDef(name: string): WeaponDef | undefined {
-  return WEAPONS.get(name);
+  ensureWeaponsRegistered();
+  return WEAPONS!.get(name);
 }
 
 export interface WeaponNameHolder {
@@ -244,15 +251,18 @@ export interface WeaponNameHolder {
 }
 
 export function weaponDefFor(h: WeaponNameHolder): WeaponDef {
-  const def = WEAPONS.get(h.weapon);
+  ensureWeaponsRegistered();
+  const def = WEAPONS!.get(h.weapon);
   if (!def) throw new Error(`Unknown weapon: ${h.weapon}`);
   return def;
 }
 
 export function allWeaponDefs(): WeaponDef[] {
-  return Array.from(WEAPONS.values());
+  ensureWeaponsRegistered();
+  return Array.from(WEAPONS!.values());
 }
 
 export function listWeaponNames(): string[] {
-  return Array.from(WEAPONS.keys());
+  ensureWeaponsRegistered();
+  return Array.from(WEAPONS!.keys());
 }
