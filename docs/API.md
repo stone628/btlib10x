@@ -79,6 +79,28 @@ import it from its source module when needed.
 
 ## Data
 
+Catalog data ships separately from the engine as pure JSON under `data/`.
+`btlib10x` holds the rules, schemas, validators, and lookup helpers backed
+by registries that start empty; `btlib10x/data` (built from `data/index.ts`)
+holds the raw tables (`WEAPON_DATA` from `data/weapons.json`, `AMMO_DATA`
+from `data/ammo.json`, `MECH_SRCS` from `data/mechs/*.json`, `MAP_SRCS` from
+`data/maps/*.json`). Load before use — weapons and ammo must load
+before mechs, because mech validation links crit slots against those
+catalogs:
+
+```ts
+import { loadShippedData } from "btlib10x";
+import { AMMO_DATA, MAP_SRCS, MECH_SRCS, WEAPON_DATA } from "btlib10x/data";
+loadShippedData({ weapons: WEAPON_DATA, ammo: AMMO_DATA, mechs: MECH_SRCS, maps: MAP_SRCS });
+```
+
+For custom data, pass your own bundle to `loadShippedData` (its
+`ShippedDataBundle` shape is `{ weapons, ammo, mechs, maps }`) or call the
+individual `registerWeapons` / `registerAmmo` / `registerMechs` /
+`registerMaps` loaders in the same order. Terrain stays inside the engine
+(`terrain.data.ts` is engine-internal: terrain rules need engine
+attention, so it is not part of the data bundle).
+
 ### Weapon catalog (`data/weapon.schema.ts`)
 
 ```ts
@@ -119,11 +141,12 @@ via the sheet helpers, not the catalog directly.
 
 ### 'Mech definitions (`data/mech.schema.ts`, `data/index.ts`)
 
-The on-disk form is `MechDef` (written in `src/data/mechs/*.json`). Bundled
-sheets are resolved at build time; library consumers access them through the
-read-only lookups below. `resolveMechDef`, `validateMechDef`, and the raw
-`mechDef` / `mapDef` / `validateMapDef` ingestion helpers are
-engine-internal (source-module import only).
+The on-disk form is `MechDef` (written in `data/mechs/*.json`). Shipped
+sheets arrive raw via `MECH_SRCS` in `btlib10x/data` and are validated and
+resolved at load time; library consumers access them through the read-only
+lookups below. `resolveMechDef`, `validateMechDef`, and the raw `mechDef` /
+`mapDef` / `validateMapDef` ingestion helpers are engine-internal
+(source-module import only).
 
 ```ts
 interface MechDef {
@@ -211,6 +234,7 @@ interface MapDef {
 - `allMapDefs(): MapDef[]`
 - `listMapNames(): string[]`
 - `MapNameHolder` — `{ mapName: string | null }` accepted by `getMapDefFor`
+- `MapDefSrc` — the on-disk map shape (as written in `data/maps/*.json`)
 
 Bundled maps: `beginner`, `quickstart`, `test`, `testground`.
 

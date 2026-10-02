@@ -18,13 +18,22 @@ const coreCtx = await esbuild.context({
   logLevel: "info",
 });
 
+const dataCtx = await esbuild.context({
+  entryPoints: ["data/index.ts"],
+  outfile: "web/btlib10x.data.js",
+  bundle: true,
+  format: "esm",
+  target: "es2022",
+  logLevel: "info",
+});
+
 const appCtx = await esbuild.context({
   entryPoints: ["web/main.ts"],
   outfile: "web/app.js",
   bundle: true,
   format: "esm",
   target: "es2022",
-  external: ["btlib10x"],
+  external: ["btlib10x", "btlib10x/data"],
   loader: { ".txt": "text" },
   logLevel: "info",
 });
@@ -35,12 +44,15 @@ if (serve) {
 }
 if (watch) {
   await coreCtx.watch();
+  await dataCtx.watch();
   await appCtx.watch();
   console.log("watching for changes…");
 }
 if (!watch && !serve) {
   await coreCtx.rebuild();
+  await dataCtx.rebuild();
   await appCtx.rebuild();
   await coreCtx.dispose();
+  await dataCtx.dispose();
   await appCtx.dispose();
 }

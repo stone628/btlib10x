@@ -1,4 +1,11 @@
-import { AMMO_DATA } from "./ammo.data";
+/**
+ * Ammo catalog schema and lookup helpers.
+ *
+ * Catalog data lives in the `btlib10x/data` bundle (`data/ammo.json`); this
+ * module holds the schema, the validator, and the lookup helpers backed by a
+ * registry that starts empty. Call `registerAmmo` (or `loadShippedData`)
+ * before using the lookups.
+ */
 
 export interface AmmoDef {
   readonly weapon: string;
@@ -16,10 +23,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isBoundedInt(value: unknown): value is number {
-  return typeof value === "number" && Number.isInteger(value) && value > 0;
-}
-
 function parseAmmo(raw: unknown, label: string, errors: string[]): AmmoDef | null {
   if (!isRecord(raw)) {
     errors.push(`${label} must be an object`);
@@ -29,8 +32,12 @@ function parseAmmo(raw: unknown, label: string, errors: string[]): AmmoDef | nul
   if (typeof weapon !== "string" || weapon.length === 0) {
     errors.push(`${label}.weapon must be a non-empty string`);
   }
-  if (!isBoundedInt(raw.shotsPerBin)) {
-    errors.push(`${label}.shotsPerBin must be a positive integer`);
+  if (
+    typeof raw.shotsPerBin !== "number" ||
+    !Number.isInteger(raw.shotsPerBin) ||
+    raw.shotsPerBin < 0
+  ) {
+    errors.push(`${label}.shotsPerBin must be a non-negative integer`);
   }
   const explosiveRaw = raw.explosive;
   let explosive = true;
@@ -73,7 +80,17 @@ export function parseAmmoData(data: unknown): readonly AmmoDef[] {
   return parsed;
 }
 
-const AMMO: ReadonlyMap<string, AmmoDef> = new Map(AMMO_DATA.map((def) => [def.weapon, def]));
+let AMMO: ReadonlyMap<string, AmmoDef> = new Map<string, AmmoDef>();
+
+/**
+ * Validate raw ammo entries and load them into the lookup registry,
+ * replacing any previous contents. The data bundle (`btlib10x/data`)
+ * supplies the entries; the engine validates.
+ */
+export function registerAmmo(defs: readonly AmmoDef[]): void {
+  const parsed = parseAmmoData(defs);
+  AMMO = new Map<string, AmmoDef>(parsed.map((def) => [def.weapon, def]));
+}
 
 export function ammoDef(name: string): AmmoDef | undefined {
   return AMMO.get(name);

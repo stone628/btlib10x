@@ -24,8 +24,8 @@ Mad Cat Prime, Masakari Prime, Wolverine WVR-6R).
    ```
 
    This runs `scripts/mtf.mjs` then regenerates the catalog. Each new `.mtf`
-   is written to `src/data/mechs/<model>.json`. The catalog generator
-   (`npm run gen:mechs`) auto-registers it into `MECH_DEFS` and validates it.
+   is written to `data/mechs/<model>.json`. The catalog generator
+   (`npm run gen:mechs`) auto-registers it into `MECH_SRCS` and validates it.
 
 3. Validate and lock it in:
 
@@ -42,7 +42,7 @@ Mad Cat Prime, Masakari Prime, Wolverine WVR-6R).
   layout, etc.) is reported as a `SKIP` with the reasons; nothing is written
   for it.
 
-## Conventions (must match `src/data/mechs/*.json`)
+## Conventions (must match `data/mechs/*.json`)
 
 - **Flat armor per location**; torso values store the FRONT hit points under
   `armor.<location>`. Rear torso values are stored alongside under
@@ -60,15 +60,15 @@ Mad Cat Prime, Masakari Prime, Wolverine WVR-6R).
 ## Scripts
 
 - `scripts/mtf.mjs` — batch-converts `.mtf` → `MechDef` JSON into
-  `src/data/mechs/` (skips existing unless `--force`).
+  `data/mechs/` (skips existing unless `--force`).
 - `scripts/mtf-crit.mjs` — shared crit-slot parser + construction validation,
   also used by `scripts/backfill-crits.mjs`.
 - `scripts/mtf-tables.mjs` — MTF field/component token tables.
 - `scripts/backfill-crits.mjs` — merges `critSlots` from MTFs into existing
   hand-transcribed JSONs, leaving every other field byte-identical.
-- `scripts/gen-mech-catalog.mjs` — regenerates `src/data/mechCatalog.generated.ts`
-  from every `src/data/mechs/*.json` (runs inside `npm run mtf` and the
-  `build`/`typecheck`/`test` commands).
+- `scripts/gen-mech-catalog.mjs` — regenerates `data/index.ts`
+  from every `data/mechs/*.json` and `data/maps/*.json` (runs inside `npm run mtf`;
+  run `npm run gen:mechs` by hand after adding JSON by other means).
 
 See `docs/API.md` → *'Mech definitions* for the resulting `MechDef` /
 `ResolvedMechDef` shapes.

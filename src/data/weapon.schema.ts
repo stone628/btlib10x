@@ -10,8 +10,12 @@
  * The To-Hit Mod column (TW p.303-304) lives in `toHitMod`:
  *   pulse -2, LB-X cluster -1 (cluster mode only, deferred), MRM +1,
  *   Clan heavy lasers +1.
+ *
+ * Catalog data lives in the `btlib10x/data` bundle (`data/weapons.json`); this
+ * module holds the schema, the validator, and the lookup helpers backed by a
+ * registry that starts empty. Call `registerWeapons` (or `loadShippedData`)
+ * before using the lookups.
  */
-import { WEAPON_DATA } from "./weapon.data";
 
 export type WeaponCategory = "MISSILE" | "BALLISTIC" | "ENERGY" | "EQUIPMENT";
 
@@ -219,9 +223,17 @@ export function parseWeaponsData(data: unknown): readonly WeaponDef[] {
   return parsed;
 }
 
-const WEAPONS: Readonly<Map<string, WeaponDef>> = new Map<string, WeaponDef>(
-  WEAPON_DATA.map((def) => [def.name, def]),
-);
+let WEAPONS: ReadonlyMap<string, WeaponDef> = new Map<string, WeaponDef>();
+
+/**
+ * Validate raw weapon entries and load them into the lookup registry,
+ * replacing any previous contents. The data bundle (`btlib10x/data`)
+ * supplies the entries; the engine validates.
+ */
+export function registerWeapons(defs: readonly WeaponDef[]): void {
+  const parsed = parseWeaponsData(defs);
+  WEAPONS = new Map<string, WeaponDef>(parsed.map((def) => [def.name, def]));
+}
 
 export function weaponDef(name: string): WeaponDef | undefined {
   return WEAPONS.get(name);

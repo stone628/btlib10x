@@ -1,12 +1,12 @@
 /**
  * Merges `critSlots` from the MTF body-part sections into the existing
- * src/data/mechs/*.json files. This is a one-shot migration for the eight
+ * data/mechs/*.json files. This is a one-shot migration for the eight
  * hand-transcribed 'Mechs whose JSONs pre-date the crit-slot table; once
  * backfilled, `npm run gen:mechs` + `npm test` will validate the linkage
  * against the weapons array via `validateMechDef`.
  *
  * Behavior:
- *   - Reads each src/data/mechs/<id>.json.
+ *   - Reads each data/mechs/<id>.json.
  *   - Locates the matching MTF in docs/mtf/ by name (line 1 of the MTF must
  *     equal the JSON `name` field). This skips the `model` line, which is
  *     sometimes a non-alpha variant code that the converter rejects (e.g.
@@ -33,7 +33,7 @@ import { LOCATIONS } from "./mtf-tables.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const mtfDir = join(root, "docs", "mtf");
-const mechsDir = join(root, "src", "data", "mechs");
+const mechsDir = join(root, "data", "mechs");
 const dryRun = process.argv.includes("--dry-run");
 
 /** Map JSON name -> MTF file path. */

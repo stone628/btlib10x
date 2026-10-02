@@ -33,11 +33,11 @@ TypeScript library encapsulating BattleTech Total Warfare board game logic.
 - `npm test` — run test suite once (vitest)
 - `npm run test:watch` — watch mode
 - `npm run typecheck` — `tsc --noEmit`
-- `npm run lint` — Biome check (lint + format + import order) over `src/`, `tests/`, `scripts/`, `web/` (generated `web/app.js` excluded)
+- `npm run lint` — Biome check (lint + format + import order) over `src/`, `tests/`, `scripts/`, `web/`, `data/` (generated web bundles excluded; `data/**/*.json` untouched, generated `data/index.ts` is checked)
 - `npm run lint:fix` — same, applying safe+unsafe fixes (formatting, unused imports/params, literal keys)
 - `npm run build` — emit ESM + declarations to `dist/`
-- `npm run build:web` — esbuild-bundle `src/index.ts` → `web/btlib10x.js` (core) and `web/main.ts` → `web/app.js` (app; core kept external)
-- `npm run dev:web` — same but watch mode (rebuilds `web/btlib10x.js` + `web/app.js` on every source change)
+- `npm run build:web` — esbuild-bundle `src/index.ts` → `web/btlib10x.js` (engine), `data/index.ts` → `web/btlib10x.data.js` (catalog data), and `web/main.ts` → `web/app.js` (app; engine+data kept external)
+- `npm run dev:web` — same but watch mode (rebuilds `web/btlib10x.js` + `web/btlib10x.data.js` + `web/app.js` on every source change)
 
 **Stale-dist trap.** Anything importing `"btlib10x"` resolves through package `exports` to `dist/` — web sources typecheck against `dist/index.d.ts`, tests exercising `web/session.ts` run against `dist/index.js`, while rule tests import `src/` directly. After any engine change, run `npm run build` before lint/typecheck/test, or `web/` code and tests silently use a stale engine (real failure mode: identical `reachableLandings` inputs producing different move paths). `web/btlib10x.js` (the browser-runtime core bundle) rebuilds via `build:web`/`dev:web` and never reads `dist/`.
 
@@ -46,7 +46,8 @@ Run lint + typecheck + tests together before considering work done: `npm run lin
 ## Layout
 
 - `src/core/` — hex geometry (odd-q column-offset coords, flat-top hexes, cube-math line tracing), dice (injectable RNG), terrain, shared types
-- `src/data/` — weapon catalog, `MechDef` schema + hand-rolled validator, `mechs/*.json`
+- `src/data/` — engine side of catalogs: schemas, hand-rolled validators, lookup registries (`loadShippedData`); terrain data stays here (terrain rules need engine attention)
+- `data/` — pure-JSON catalog data, fully separate from the engine: `weapons.json`, `ammo.json`, `mechs/*.json`, `maps/*.json`, plus generated entry `index.ts` (see `docs/MTF.md`)
 - `src/rules/` — pure rule functions: movement, LOS, GATOR to-hit, hit location, cluster hits, damage, attack orchestration, battle state machine
 - `tests/` — vitest suites; several assert against worked examples printed in the PDFs
 - `web/` — single-page terminal emulator app over the core (see `docs/CLI.md`)

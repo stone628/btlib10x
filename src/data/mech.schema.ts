@@ -2,8 +2,8 @@ import type { Location } from "../core/types";
 import { isLocation, isTorso, LOCATIONS } from "../core/types";
 import type { LocationValue, TorsoLocationValue } from "../rules/damage";
 import { internalStructureForTonnage } from "../rules/internalStructure";
-import { ammoDef } from "./ammo.schema";
-import { type WeaponNameHolder, weaponDef } from "./weapon.schema";
+import { ammoDef, listAmmoWeapons } from "./ammo.schema";
+import { listWeaponNames, type WeaponNameHolder, weaponDef } from "./weapon.schema";
 
 /** Heat sink type: single = 1 heat/turn each, double = 2 heat/turn each. */
 export type HeatSinkType = "single" | "double";
@@ -133,7 +133,7 @@ export type ResolvedCritSlot =
 export type ResolvedCritSlots = Readonly<Record<Location, readonly ResolvedCritSlot[]>>;
 
 /**
- * Static definition of a bipedal BattleMech as written in `src/data/mechs/*.ts`,
+ * Static definition of a bipedal BattleMech as written in `data/mechs/*.json`,
  * faithful to the source record sheet / MTF: torso locations hold FRONT armor,
  * and rear torso armor is stored alongside under `centerTorsoRear` /
  * `leftTorsoRear` / `rightTorsoRear`. This is the on-disk (JSON) schema.
@@ -598,4 +598,60 @@ export function validateMechDef(def: MechDef): MechDef {
   }
 
   return def;
+}
+
+/**
+ * 'Mech lookup helpers backed by a registry that starts empty.
+ * 'Mech sources live in the `btlib10x/data` bundle (`MECH_SRCS`); call
+ * `registerMechs` (or `loadShippedData`) before using the lookups.
+ */
+const MECH_REGISTRY = new Map<string, ResolvedMechDef>();
+
+/**
+ * Validate raw 'Mech definitions and load them into the lookup registry,
+ * replacing any previous contents. The data bundle (`btlib10x/data`)
+ * supplies the definitions; the engine validates and resolves.
+ *
+ * Weapons and ammo must be registered first: mech validation links crit
+ * slots against the weapon/ammo catalogs.
+ */
+export function registerMechs(defs: readonly MechDef[]): void {
+  if (defs.length > 0) {
+    // Guard against loading mechs before their referenced catalogs — the
+    // per-slot "not a known weapon" errors would otherwise mislead.
+    if (listWeaponNames().length === 0) {
+      throw new Error("Cannot register mechs before weapons: call registerWeapons first");
+    }
+    if (listAmmoWeapons().length === 0) {
+      throw new Error("Cannot register mechs before ammo: call registerAmmo first");
+    }
+  }
+  const next = new Map<string, ResolvedMechDef>();
+  for (const def of defs) {
+    const resolved = resolveMechDef(validateMechDef(def));
+    if (next.has(resolved.model)) {
+      throw new Error(`Duplicate mech model ${JSON.stringify(resolved.model)}`);
+    }
+    next.set(resolved.model, resolved);
+  }
+  MECH_REGISTRY.clear();
+  for (const [model, resolved] of next) MECH_REGISTRY.set(model, resolved);
+}
+
+export interface MechModelHolder {
+  readonly model: string;
+}
+
+export function mechDefFor(h: MechModelHolder): ResolvedMechDef {
+  const def = MECH_REGISTRY.get(h.model);
+  if (!def) throw new Error(`Unknown mech: ${h.model}`);
+  return def;
+}
+
+export function mechDef(model: string): ResolvedMechDef | undefined {
+  return MECH_REGISTRY.get(model);
+}
+
+export function allMechDefs(): ResolvedMechDef[] {
+  return Array.from(MECH_REGISTRY.values());
 }
