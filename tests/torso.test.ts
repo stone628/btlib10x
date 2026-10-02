@@ -12,12 +12,12 @@ function startAttackTurn(state: BattleState): BattleState {
   return state;
 }
 
-function hbkFacingAt(targetBearing: "ne" | "n"): {
+function hbkFacingAt(targetBearing: "se" | "nw"): {
   units: UnitInit[];
   facing: "n" | "ne";
   enemy: { col: number; row: number };
 } {
-  if (targetBearing === "ne") {
+  if (targetBearing === "se") {
     return {
       units: [
         {
@@ -35,12 +35,12 @@ function hbkFacingAt(targetBearing: "ne" | "n"): {
           team: 1,
           gunnery: 4,
           piloting: 5,
-          position: { col: 3, row: 4 },
+          position: { col: 3, row: 5 },
           facing: "sw",
         },
       ],
       facing: "n",
-      enemy: { col: 3, row: 4 },
+      enemy: { col: 3, row: 5 },
     };
   }
   return {
@@ -60,12 +60,12 @@ function hbkFacingAt(targetBearing: "ne" | "n"): {
         team: 1,
         gunnery: 4,
         piloting: 5,
-        position: { col: 2, row: 3 },
+        position: { col: 1, row: 4 },
         facing: "sw",
       },
     ],
     facing: "ne",
-    enemy: { col: 2, row: 3 },
+    enemy: { col: 1, row: 4 },
   };
 }
 
@@ -122,7 +122,7 @@ describe("classifyArcWithBoundary on a twisted facing", () => {
 
 describe("suggestFireTargets with torso twist", () => {
   it("without twist only the right-arm weapon fires into the body's right side", () => {
-    const { units, facing } = hbkFacingAt("ne");
+    const { units, facing } = hbkFacingAt("se");
     expect(facing).toBe("n");
     const state = startAttackTurn(createTestBattle([], units, false));
     const sugg = suggestFireTargets(state, "hbk");
@@ -132,7 +132,7 @@ describe("suggestFireTargets with torso twist", () => {
   });
 
   it("with twist=right all four weapons fire (twisted front arc)", () => {
-    const { units } = hbkFacingAt("ne");
+    const { units } = hbkFacingAt("se");
     const state = startAttackTurn(createTestBattle([], units, false));
     const sugg = suggestFireTargets(state, "hbk", "rightSide");
     const enf = sugg.targets.find((t) => t.targetId === "enf")!;
@@ -141,7 +141,7 @@ describe("suggestFireTargets with torso twist", () => {
   });
 
   it("with twist=left on a left-bearing target lets every weapon fire", () => {
-    const { units, facing } = hbkFacingAt("n");
+    const { units, facing } = hbkFacingAt("nw");
     expect(facing).toBe("ne");
     const state = startAttackTurn(createTestBattle([], units, false));
     const baseSugg = suggestFireTargets(state, "hbk");
@@ -156,7 +156,7 @@ describe("suggestFireTargets with torso twist", () => {
   });
 
   it("omitting twist matches the untwisted call (back-compat)", () => {
-    const { units } = hbkFacingAt("ne");
+    const { units } = hbkFacingAt("se");
     const state = startAttackTurn(createTestBattle([], units, false));
     const base = suggestFireTargets(state, "hbk");
     const backCompat = suggestFireTargets(state, "hbk");
@@ -168,7 +168,7 @@ describe("suggestFireTargets with torso twist", () => {
 
 describe("declareAttacks with torso twist", () => {
   it("accepts a leftArm weapon when twist shifts the bearing into the front arc", () => {
-    const { units } = hbkFacingAt("ne");
+    const { units } = hbkFacingAt("se");
     const state = startAttackTurn(createTestBattle([], units, false));
     expect(() =>
       declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], [], scriptedRng(4), {
@@ -178,15 +178,18 @@ describe("declareAttacks with torso twist", () => {
   });
 
   it("rejects the same weapon without twist (target outside its firing arc)", () => {
-    const { units } = hbkFacingAt("ne");
+    const { units } = hbkFacingAt("se");
     const state = startAttackTurn(createTestBattle([], units, false));
     expect(() =>
       declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []),
     ).toThrow(/firing arc/);
   });
 
-  it("rejects the rightArm weapon when twist=right leaves the target in the left side", () => {
-    const { units, facing } = hbkFacingAt("n");
+  it("rejects the rightArm weapon when twist=right turns the target to the rear", () => {
+    // hbk faces ne with the target in its leftSide arc; twisting right
+    // (effective se) swings the side target behind the torso (rear arc),
+    // so the right-arm ML no longer bears.
+    const { units, facing } = hbkFacingAt("nw");
     expect(facing).toBe("ne");
     const state = startAttackTurn(createTestBattle([], units, false));
     expect(() =>
@@ -197,7 +200,7 @@ describe("declareAttacks with torso twist", () => {
   });
 
   it("omitting opts keeps untwisted behavior", () => {
-    const { units } = hbkFacingAt("ne");
+    const { units } = hbkFacingAt("se");
     const state = startAttackTurn(createTestBattle([], units, false));
     expect(() =>
       declareAttacks(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }], [], []),

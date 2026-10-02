@@ -1,17 +1,12 @@
 import { D2D6_MAX, D2D6_MIN } from "../core/dice";
-import { bearingExact, hexDistance } from "../core/hex";
+import { hexDistance } from "../core/hex";
 import { cellAt } from "../core/terrain";
 import type { Location } from "../core/types";
 import { mechDefFor } from "../data/index";
 import { weaponDefFor } from "../data/weapon.schema";
 import { armWeaponToHitModifier } from "./actuators";
 import { binsForWeaponName, pooledShotsLeft } from "./ammo";
-import {
-  type Arc,
-  classifyArcWithBoundary,
-  effectiveFacingForTwist,
-  weaponCanFireIntoArc,
-} from "./arcs";
+import { type Arc, classifyFiringArc, effectiveFacingForTwist, weaponCanFireIntoArc } from "./arcs";
 import { countDestroyedSensor } from "./critical";
 import { canFireFromLocation, isUnitLocationDestroyed } from "./damage";
 import { type BattleState, isImmobile, isUnitRemoved, partialCoverMod } from "./game";
@@ -64,8 +59,10 @@ export interface FireTarget {
    *  attacker and target share a hex (arc undefined, attack unsupported). */
   readonly arc: Arc | null;
   /** Alternate arc when the center-to-center line runs exactly along an
-   *  arc-boundary line; otherwise null. A weapon is legal when it can fire
-   *  into either arc of the pair. */
+   *  arc-boundary line; otherwise null. The TW p.105 firing template assigns
+   *  every hex wholly to one arc, so this is always null for firing arcs
+   *  (retained for API compatibility). A weapon is legal when it can fire
+   *  into the target's arc. */
   readonly altArc: Arc | null;
   /**
    * Fireable weapons when standing, else alias of the prop-right variant
@@ -163,10 +160,10 @@ export function suggestFireTargets(
     .filter((u) => u.team !== unit.team && !isUnitRemoved(u))
     .map((enemy) => {
       const distance = hexDistance(unit.position, enemy.position);
-      const b = bearingExact(unit.position, enemy.position);
-      const fireCls = b !== null ? classifyArcWithBoundary(effectiveFacing, b) : null;
-      const arc = fireCls?.arc ?? null;
-      const altArc = fireCls?.altArc ?? null;
+      // TW p.105 hex template: every hex falls wholly in one firing arc
+      // (null only when attacker and target share a hex).
+      const arc = classifyFiringArc(unit.position, enemy.position, effectiveFacing);
+      const altArc = null as Arc | null;
       const interveningWoods = losWoodsPointsBetween(state, unit.position, enemy.position);
 
       const weaponsIfPropLeft: FireWeapon[] = [];
@@ -230,23 +227,18 @@ export function suggestFireTargets(
         }
         // Same gate as `declareAttacks`: same-hex targets are unsupported,
         // and the weapon's mounting arc (TW p.105) must cover the target's
-        // firing arc (either arc of the pair on a boundary line).
-        if (fireCls === null || arc === null) {
+        // firing arc.
+        if (arc === null) {
           blockBoth("outOfArc");
           return;
         }
         const rearFacing = mount.rearFacing === true;
-        const primaryOk = weaponCanFireIntoArc(mount.location, rearFacing, fireCls.arc);
-        const altOk =
-          fireCls.altArc !== null &&
-          weaponCanFireIntoArc(mount.location, rearFacing, fireCls.altArc);
-        if (!primaryOk && !altOk) {
+        if (!weaponCanFireIntoArc(mount.location, rearFacing, arc)) {
           blockBoth("outOfArc");
           return;
         }
-        // Record arc weapon actually fires through: primary when legal,
-        // otherwise alternate of boundary pair.
-        const firingArc = primaryOk ? fireCls.arc : fireCls.altArc!;
+        // Record arc weapon actually fires through.
+        const firingArc = arc;
         // Same gate as `declareAttacks`: woods screening, water2/3 endpoints
         // (`losBlockedByWater`), elevation and intervening buildings
         // (`losBlockedByElevation`/`losBlockedByBuilding` fold into the ray).

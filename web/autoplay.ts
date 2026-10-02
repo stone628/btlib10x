@@ -1,9 +1,8 @@
 import type { FireTarget, FireWeapon } from "btlib10x";
 import {
-  bearingExact,
   bestFireTarget,
   canAttemptStandUp,
-  classifyArcWithBoundary,
+  classifyFiringArc,
   destroyedLegs,
   effectiveMoveBudget,
   effectiveMovement,
@@ -141,19 +140,14 @@ function queueFaceTarget(s: Session, actorId: string, targetId: string): boolean
   let best: { col: number; row: number; facing: string; score: number; pathLen: number } | null =
     null;
   for (const landing of candidate.revealed) {
-    const b = bearingExact(landing.hex, target.position);
-    if (b === null) continue;
-    const cls = classifyArcWithBoundary(landing.facing, b);
+    const arc = classifyFiringArc(landing.hex, target.position, landing.facing);
+    if (arc === null) continue;
     let score = 0;
     for (const weaponIndex of blocked) {
       const mount = def.weapons[weaponIndex];
       if (mount === undefined) continue;
       const rearFacing = mount.rearFacing === true;
-      if (
-        weaponCanFireIntoArc(mount.location, rearFacing, cls.arc) ||
-        (cls.altArc !== null && weaponCanFireIntoArc(mount.location, rearFacing, cls.altArc))
-      )
-        score++;
+      if (weaponCanFireIntoArc(mount.location, rearFacing, arc)) score++;
     }
     if (score === 0) continue;
     const sameHex =

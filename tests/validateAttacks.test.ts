@@ -185,9 +185,33 @@ describe("validateAttacks — gate coverage", () => {
   });
 
   it("throws on target outside firing arc", () => {
-    // hbk at (2,4) facing n; weapon 1 = left-arm medium laser. Target NE
-    // (3,4) lies in the rightSide arc — outside leftArm's firing arc.
-    const state = hbkVsEnf();
+    // hbk at (2,4) facing n; weapon 1 = left-arm medium laser. Target SE
+    // (3,5) lies in the rightSide template arc — outside leftArm's arc.
+    const state = createTestBattle(
+      [],
+      [
+        {
+          id: "hbk",
+          model: "HBK-4G",
+          team: 0,
+          gunnery: 4,
+          piloting: 5,
+          position: { col: 2, row: 4 },
+          facing: "n",
+        },
+        {
+          id: "enf",
+          model: "ENF-4R",
+          team: 1,
+          gunnery: 4,
+          piloting: 5,
+          position: { col: 3, row: 5 },
+          facing: "sw",
+        },
+      ],
+      true,
+    );
+    startAttackTurn(state);
     expect(() =>
       validateAttacksImpl(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], {}),
     ).toThrow(/cannot fire into the rightSide arc/);

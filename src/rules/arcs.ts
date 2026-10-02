@@ -1,15 +1,26 @@
 import type { Bearing } from "../core/hex";
-import { FACINGS, type Facing, type Location, oppositeFacing, rotateFacing } from "../core/types";
+import {
+  FACINGS,
+  type Facing,
+  type HexCoord,
+  type Location,
+  oppositeFacing,
+  rotateFacing,
+} from "../core/types";
 
 /** Firing arc of a target relative to a unit. */
 export type Arc = "front" | "rear" | "leftSide" | "rightSide";
 
 /**
- * Total Warfare firing-arc classification. The target's bearing is
- * measured as a clockwise offset from the unit's facing: offset 0 (front) and
- * offset 3 (rear) are one hexside wide, while the two side arcs each span two
- * hexsides. Side/left/right arcs drive the side hit-location tables; the rear
- * arc drives the rear armor pool.
+ * Hexside-sector classification (bearing offset from a facing). Offset 0
+ * (front) and offset 3 (rear) are one hexside wide, while the two side arcs
+ * each span two hexsides.
+ *
+ * Used for TW p.119 attack direction (which hexside of the target the attack
+ * crosses, locked in via the LOS choice). It is NOT the weapon firing-arc
+ * rule — firing arcs use the TW p.105 hex template (`classifyFiringArc`),
+ * whose forward arc is twice as wide. Side/left/right arcs drive the side
+ * hit-location tables; the rear arc drives the rear armor pool.
  */
 export function classifyArc(unitFacing: Facing, bearingToTarget: Facing): Arc {
   if (bearingToTarget === unitFacing) return "front";
@@ -21,6 +32,48 @@ export function classifyArc(unitFacing: Facing, bearingToTarget: Facing): Arc {
   return clockwise <= 2 ? "rightSide" : "leftSide";
 }
 
+/**
+ * TW p.105 weapon firing-arc template. Unlike attack direction (a
+ * center-to-center bearing sector), firing arcs are regions of the hex grid
+ * bounded by the two lines through the rear edge-center of the attacker's
+ * hex, parallel to the two diagonal hex axes 60° off the facing axis. Every
+ * hex falls wholly in one arc — there are no boundary hexes.
+ *
+ * Implementation: translate to cube-relative (dx, dy, dz), rotate so the
+ * facing reads as north (clockwise cube step `(x,y,z)->(-z,-x,-y)`, applied
+ * once per clockwise facing step to invert), then test the two half-integer
+ * boundaries `dz <= 0` and `dx+dz <= 0` (integer-safe form of the
+ * `0.5`-offset apex):
+ * front iff both hold; rear iff neither holds; otherwise the mixed side
+ * (north half = right, south half = left).
+ *
+ * Ground truth (attacker on 0509 facing north, radius <= 2): front =
+ * 0507/0407/0607/0308/0508/0708/0408/0608, left = 0309/0409/0310, right =
+ * 0709/0609/0710, rear = 0510/0410/0610/0511.
+ *
+ * Returns null when attacker and target share a hex (arc undefined).
+ */
+export function classifyFiringArc(from: HexCoord, to: HexCoord, facing: Facing): Arc | null {
+  if (from.col === to.col && from.row === to.row) return null;
+  const steps = FACINGS.indexOf(facing);
+  let dx = to.col - from.col;
+  let dz = to.row - (to.col + (to.col & 1)) / 2 - (from.row - (from.col + (from.col & 1)) / 2);
+  let dy = -dx - dz;
+  for (let i = 0; i < steps; i++) {
+    const nx = -dy;
+    const ny = -dz;
+    const nz = -dx;
+    dx = nx;
+    dy = ny;
+    dz = nz;
+  }
+  const forwardZ = dz <= 0;
+  const forwardY = dx + dz <= 0;
+  if (forwardZ && forwardY) return "front";
+  if (!forwardZ && !forwardY) return "rear";
+  return forwardZ ? "rightSide" : "leftSide";
+}
+
 /** Arc classification plus the alternate arc when the bearing lies exactly
  *  on an arc-boundary line (`altArc`); otherwise `altArc` is null. */
 export interface ArcClass {
@@ -28,8 +81,10 @@ export interface ArcClass {
   readonly altArc: Arc | null;
 }
 
-/** Classify a `Bearing`, carrying the boundary ambiguity through when the
- *  center-to-center line runs exactly along a sector edge. */
+/** Classify a `Bearing` into hexside sectors, carrying the boundary ambiguity
+ *  through when the center-to-center line runs exactly along a sector edge.
+ *  Used for TW p.119 attack direction; weapon firing arcs use the
+ *  boundary-free `classifyFiringArc` template instead. */
 export function classifyArcWithBoundary(unitFacing: Facing, b: Bearing): ArcClass {
   return {
     arc: classifyArc(unitFacing, b.facing),
@@ -66,9 +121,10 @@ export function defenderArcChoice(arc: Arc, altArc: Arc | null): Arc {
  * front-torso-mounted weapons fire into the front arc only; arm-mounted
  * weapons add their own side arc (right arm → right side); torso weapons
  * mounted rear-facing (`rearFacing` on the mount) fire into the rear arc
- * only. The arc input is the attacker's *effective* facing — call
- * `effectiveFacingForTwist` first when the 'Mech is twisting its torso, so
- * the side arms cover matches the twisted direction.
+ * only. The arc input is a TW p.105 template arc (`classifyFiringArc` of the
+ * attacker's *effective* facing — call `effectiveFacingForTwist` first when
+ * the 'Mech is twisting its torso, so the side arms cover matches the
+ * twisted direction.
  */
 export function weaponCanFireIntoArc(location: Location, rearFacing: boolean, arc: Arc): boolean {
   if (rearFacing) return arc === "rear";
@@ -89,8 +145,7 @@ export function weaponCanFireIntoArc(location: Location, rearFacing: boolean, ar
  * (TW pp.105-106): `left` rotates one hexside counter-clockwise (so the left arm
  * covers the left side of the twisted torso), `right` one hexside
  * clockwise, `front` is untwisted. Used to translate a session-side twist
- * state into an input for `classifyArcWithBoundary` /
- * `weaponCanFireIntoArc`.
+ * state into an input for `classifyFiringArc` / `weaponCanFireIntoArc`.
  */
 export function twistDelta(twist: Arc): -1 | 0 | 1 {
   switch (twist) {

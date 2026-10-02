@@ -228,13 +228,13 @@ describe("strike validation", () => {
   });
 
   it("rejects a strike from the wrong side arc", () => {
-    // Target on the northwest bearing = leftSide for a north-facing 'Mech;
-    // the hatchet sits in the right arm.
+    // Target in the adjacent southwest hex = leftSide template arc for a
+    // north-facing 'Mech; the hatchet sits in the right arm.
     const battle = createBattle(
       { name: "test", width: 20, height: 20, terrain: [], legends: [] },
       [
         makeUnitInit("a", 1, { col: 10, row: 10 }, "n"),
-        makeUnitInit("t", 2, { col: 9, row: 10 }, "s"),
+        makeUnitInit("t", 2, { col: 9, row: 11 }, "s"),
       ],
       { critsDisabled: true },
     );

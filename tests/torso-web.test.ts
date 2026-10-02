@@ -34,14 +34,14 @@ function burnMovePhase(s: Session): void {
   }
 }
 
-/** Place hunchy facing north, cicada at bearing "ne" (rightSide arc). */
+/** Place hunchy facing north, cicada in the southeast-adjacent hex (rightSide template arc). */
 function sideArcSetup(): Session {
   const s = newSession(42);
   expect(run(s, "map quickstart")[0]).toContain("15x16");
-  // hunchy at (9,9) facing n; cicada at (10,8) — bearing "ne" → hunchy's
-  // rightSide arc when twist is "front", and the front arc when twist=right.
+  // hunchy at (9,9) facing n; cicada at (10,9) — rightSide arc when twist
+  // is "front", and the front arc when twist=right.
   expect(run(s, "add hunchy HBK-4G 9 9 n")).toHaveLength(1);
-  expect(run(s, "add cicada CDA-3MA 10 8 s")).toHaveLength(1);
+  expect(run(s, "add cicada CDA-3MA 10 9 s")).toHaveLength(1);
   run(s, "start");
   disableCritical(s);
   return s;
