@@ -37,12 +37,18 @@ export {
   allMapDefs,
   allMechDefs,
   listMapNames,
+  loadShippedData,
   type MapNameHolder,
   type MechModelHolder,
   mapDefFor,
   mechDefFor,
+  registerAmmo,
+  registerMaps,
+  registerMechs,
+  registerWeapons,
+  type ShippedDataBundle,
 } from "./data/index";
-export type { MapDef } from "./data/map.schema";
+export type { MapDef, MapDefSrc } from "./data/map.schema";
 export type {
   CRIT_SLOT_COUNTS,
   CRIT_SOAK_NAMES,

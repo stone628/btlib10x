@@ -8,6 +8,8 @@
  */
 
 import { describe, expect, it } from "vitest";
+import hct5sJson from "../data/mechs/hct-5s.json";
+import WEAPON_DATA from "../data/weapons.json";
 import {
   type BattleState,
   createBattle,
@@ -20,9 +22,11 @@ import {
   type UnitInit,
 } from "../src";
 import { type MechDef, type ResolvedMechDef, resolveMechDef } from "../src/data/index";
-import hct5sRaw from "../src/data/mechs/hct-5s";
-import { WEAPON_DATA } from "../src/data/weapon.data";
 import { parseWeaponsData } from "../src/data/weapon.schema";
+
+/** Raw HCT-5S sheet as written in data/mechs/hct-5s.json. */
+const hct5sRaw = hct5sJson as unknown as MechDef;
+
 import { resolveAllAttacks, validateAttacksImpl } from "../src/rules/game";
 import {
   computePhysicalToHit,

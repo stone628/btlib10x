@@ -1,56 +1,45 @@
-import { MAP_DEFS, type MapDef } from "./map.schema";
-import type { ResolvedMechDef } from "./mech.schema";
-import { MECH_DEFS } from "./mechCatalog.generated";
+import { type AmmoDef, registerAmmo } from "./ammo.schema";
+import { type MapDefSrc, registerMaps } from "./map.schema";
+import { type MechDef, registerMechs } from "./mech.schema";
+import { registerWeapons, type WeaponDef } from "./weapon.schema";
 
-export interface MechModelHolder {
-  readonly model: string;
+/**
+ * Raw catalog bundle shape served by the `btlib10x/data` entry point
+ * (`data/index.ts`). The engine validates and loads it via
+ * `loadShippedData`; weapons and ammo must load before mechs because mech
+ * validation links crit slots against those catalogs.
+ */
+export interface ShippedDataBundle {
+  readonly weapons: readonly WeaponDef[];
+  readonly ammo: readonly AmmoDef[];
+  readonly mechs: readonly MechDef[];
+  readonly maps: readonly MapDefSrc[];
 }
 
-export function mechDefFor(h: MechModelHolder): ResolvedMechDef {
-  const def = MECH_DEFS.get(h.model);
-  if (!def) throw new Error(`Unknown mech: ${h.model}`);
-  return def;
-}
-
-export function mechDef(model: string): ResolvedMechDef | undefined {
-  return MECH_DEFS.get(model);
-}
-
-export { type AmmoNameHolder, ammoDefFor } from "./ammo.schema";
-export { type WeaponNameHolder, weaponDefFor } from "./weapon.schema";
-
-export function allMechDefs(): ResolvedMechDef[] {
-  return Array.from(MECH_DEFS.values());
-}
-
-export interface MapNameHolder {
-  readonly mapName: string | null;
-}
-
-export function mapDefFor(h: MapNameHolder): MapDef {
-  const key = h.mapName;
-  if (key === null) throw new Error("Unknown map: <none>");
-  const def = MAP_DEFS.get(key);
-  if (!def) throw new Error(`Unknown map: ${key}`);
-  return def;
-}
-
-export function mapDef(name: string): MapDef | undefined {
-  return MAP_DEFS.get(name);
-}
-
-export function allMapDefs(): MapDef[] {
-  return Array.from(MAP_DEFS.values());
-}
-
-export function listMapNames(): string[] {
-  return Array.from(MAP_DEFS.keys());
+/** Validate and load a raw catalog bundle into the lookup registries. */
+export function loadShippedData(bundle: ShippedDataBundle): void {
+  registerWeapons(bundle.weapons);
+  registerAmmo(bundle.ammo);
+  registerMechs(bundle.mechs);
+  registerMaps(bundle.maps);
 }
 
 export type { AmmoDef } from "./ammo.schema";
-export { allAmmo as getAllAmmo, listAmmoWeapons } from "./ammo.schema";
+export {
+  type AmmoNameHolder,
+  allAmmo as getAllAmmo,
+  ammoDefFor,
+  listAmmoWeapons,
+} from "./ammo.schema";
 export type { MapDef } from "./map.schema";
-export { validateMapDef } from "./map.schema";
+export {
+  allMapDefs,
+  listMapNames,
+  type MapNameHolder,
+  mapDef,
+  mapDefFor,
+  validateMapDef,
+} from "./map.schema";
 export type {
   CritSlot,
   CritSlots,
@@ -65,13 +54,18 @@ export type {
   WeaponMount,
 } from "./mech.schema";
 export {
+  allMechDefs,
   CRIT_SLOT_COUNTS,
   CRIT_SOAK_NAMES,
   CRIT_STRUCTURE_NAMES,
+  type MechModelHolder,
+  mechDef,
+  mechDefFor,
   resolveMechDef,
   validateMechDef,
 } from "./mech.schema";
 export type { TerrainDef } from "./terrain.schema";
 export { allTerrainDefs, terrainDef } from "./terrain.schema";
 export type { WeaponDef } from "./weapon.schema";
-export { listWeaponNames } from "./weapon.schema";
+export { listWeaponNames, type WeaponNameHolder, weaponDefFor } from "./weapon.schema";
+export { registerAmmo, registerMaps, registerMechs, registerWeapons };

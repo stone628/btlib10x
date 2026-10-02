@@ -1,0 +1,162 @@
+{
+  "name": "quickstart",
+  "width": 15,
+  "height": 16,
+  "terrain": [
+    {
+      "col": 4,
+      "row": 3,
+      "type": "heavyWoods"
+    },
+    {
+      "col": 12,
+      "row": 8,
+      "type": "heavyWoods"
+    },
+    {
+      "col": 14,
+      "row": 8,
+      "type": "heavyWoods"
+    },
+    {
+      "col": 4,
+      "row": 11,
+      "type": "heavyWoods"
+    },
+    {
+      "col": 5,
+      "row": 12,
+      "type": "heavyWoods"
+    },
+    {
+      "col": 5,
+      "row": 13,
+      "type": "heavyWoods"
+    },
+    {
+      "col": 7,
+      "row": 14,
+      "type": "heavyWoods"
+    },
+    {
+      "col": 8,
+      "row": 14,
+      "type": "heavyWoods"
+    },
+    {
+      "col": 5,
+      "row": 3,
+      "type": "lightWoods"
+    },
+    {
+      "col": 5,
+      "row": 4,
+      "type": "lightWoods"
+    },
+    {
+      "col": 6,
+      "row": 4,
+      "type": "lightWoods"
+    },
+    {
+      "col": 15,
+      "row": 7,
+      "type": "lightWoods"
+    },
+    {
+      "col": 15,
+      "row": 8,
+      "type": "lightWoods"
+    },
+    {
+      "col": 11,
+      "row": 8,
+      "type": "lightWoods"
+    },
+    {
+      "col": 12,
+      "row": 9,
+      "type": "lightWoods"
+    },
+    {
+      "col": 13,
+      "row": 8,
+      "type": "lightWoods"
+    },
+    {
+      "col": 13,
+      "row": 9,
+      "type": "lightWoods"
+    },
+    {
+      "col": 14,
+      "row": 9,
+      "type": "lightWoods"
+    },
+    {
+      "col": 2,
+      "row": 11,
+      "type": "lightWoods"
+    },
+    {
+      "col": 2,
+      "row": 12,
+      "type": "lightWoods"
+    },
+    {
+      "col": 3,
+      "row": 12,
+      "type": "lightWoods"
+    },
+    {
+      "col": 4,
+      "row": 12,
+      "type": "lightWoods"
+    },
+    {
+      "col": 6,
+      "row": 11,
+      "type": "lightWoods"
+    },
+    {
+      "col": 6,
+      "row": 12,
+      "type": "lightWoods"
+    },
+    {
+      "col": 6,
+      "row": 13,
+      "type": "lightWoods"
+    },
+    {
+      "col": 6,
+      "row": 14,
+      "type": "lightWoods"
+    },
+    {
+      "col": 7,
+      "row": 15,
+      "type": "lightWoods"
+    },
+    {
+      "col": 8,
+      "row": 13,
+      "type": "lightWoods"
+    },
+    {
+      "col": 9,
+      "row": 14,
+      "type": "lightWoods"
+    },
+    {
+      "col": 9,
+      "row": 15,
+      "type": "lightWoods"
+    },
+    {
+      "col": 10,
+      "row": 14,
+      "type": "lightWoods"
+    }
+  ]
+}

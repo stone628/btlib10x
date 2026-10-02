@@ -1,7 +1,17 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "files": {
-    "includes": ["src/**", "tests/**", "scripts/**", "web/**", "!web/app.js", "!web/btlib10x.js"]
+    "includes": [
+      "src/**",
+      "tests/**",
+      "scripts/**",
+      "web/**",
+      "data/**",
+      "!web/app.js",
+      "!web/btlib10x.js",
+      "!web/btlib10x.data.js",
+      "!data/**/*.json"
+    ]
   },
   "vcs": {
     "enabled": true,

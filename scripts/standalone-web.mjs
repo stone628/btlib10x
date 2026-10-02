@@ -11,7 +11,7 @@ const { outputFiles } = await esbuild.build({
   format: "esm",
   target: "es2022",
   minify: true,
-  alias: { btlib10x: "./src/index.ts" },
+  alias: { btlib10x: "./src/index.ts", "btlib10x/data": "./data/index.ts" },
   define: { __BTLIB_VERSION__: JSON.stringify(buildStamp()) },
   loader: { ".txt": "text" },
   write: false,

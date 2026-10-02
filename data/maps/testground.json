@@ -1,0 +1,1024 @@
+{
+  "name": "testground",
+  "width": 16,
+  "height": 26,
+  "terrain": [
+    {
+      "col": 1,
+      "row": 1,
+      "type": "pavement"
+    },
+    {
+      "col": 1,
+      "row": 2,
+      "type": "pavement"
+    },
+    {
+      "col": 1,
+      "row": 3,
+      "type": "pavement"
+    },
+    {
+      "col": 1,
+      "row": 4,
+      "type": "pavement"
+    },
+    {
+      "col": 1,
+      "row": 5,
+      "type": "pavement"
+    },
+    {
+      "col": 1,
+      "row": 10,
+      "type": "lightWoods"
+    },
+    {
+      "col": 1,
+      "row": 11,
+      "type": "lightWoods"
+    },
+    {
+      "col": 1,
+      "row": 20,
+      "type": "lightWoods"
+    },
+    {
+      "col": 1,
+      "row": 21,
+      "type": "lightWoods"
+    },
+    {
+      "col": 2,
+      "row": 5,
+      "type": "pavement"
+    },
+    {
+      "col": 2,
+      "row": 6,
+      "type": "pavement"
+    },
+    {
+      "col": 2,
+      "row": 7,
+      "type": "pavement"
+    },
+    {
+      "col": 2,
+      "row": 8,
+      "type": "pavement"
+    },
+    {
+      "col": 2,
+      "row": 9,
+      "type": "pavement"
+    },
+    {
+      "col": 2,
+      "row": 10,
+      "type": "pavement"
+    },
+    {
+      "col": 2,
+      "row": 11,
+      "type": "pavement"
+    },
+    {
+      "col": 2,
+      "row": 12,
+      "type": "pavement"
+    },
+    {
+      "col": 2,
+      "row": 13,
+      "type": "pavement"
+    },
+    {
+      "col": 3,
+      "row": 14,
+      "type": "pavement"
+    },
+    {
+      "col": 3,
+      "row": 15,
+      "type": "pavement"
+    },
+    {
+      "col": 3,
+      "row": 16,
+      "type": "pavement"
+    },
+    {
+      "col": 3,
+      "row": 17,
+      "type": "pavement"
+    },
+    {
+      "col": 3,
+      "row": 18,
+      "type": "pavement"
+    },
+    {
+      "col": 3,
+      "row": 19,
+      "type": "pavement"
+    },
+    {
+      "col": 3,
+      "row": 20,
+      "type": "pavement"
+    },
+    {
+      "col": 3,
+      "row": 21,
+      "type": "pavement"
+    },
+    {
+      "col": 3,
+      "row": 22,
+      "type": "pavement"
+    },
+    {
+      "col": 4,
+      "row": 7,
+      "type": "rough"
+    },
+    {
+      "col": 4,
+      "row": 8,
+      "type": "rough"
+    },
+    {
+      "col": 4,
+      "row": 19,
+      "type": "pavement"
+    },
+    {
+      "col": 4,
+      "row": 22,
+      "type": "pavement"
+    },
+    {
+      "col": 4,
+      "row": 23,
+      "type": "pavement"
+    },
+    {
+      "col": 4,
+      "row": 24,
+      "type": "pavement"
+    },
+    {
+      "col": 4,
+      "row": 25,
+      "type": "pavement"
+    },
+    {
+      "col": 4,
+      "row": 26,
+      "type": "pavement"
+    },
+    {
+      "col": 5,
+      "row": 1,
+      "type": "lightWoods"
+    },
+    {
+      "col": 5,
+      "row": 2,
+      "type": "lightWoods"
+    },
+    {
+      "col": 5,
+      "row": 3,
+      "type": "lightWoods"
+    },
+    {
+      "col": 5,
+      "row": 5,
+      "type": "lightWoods"
+    },
+    {
+      "col": 5,
+      "row": 6,
+      "type": "lightWoods"
+    },
+    {
+      "col": 5,
+      "row": 11,
+      "type": "water1"
+    },
+    {
+      "col": 5,
+      "row": 12,
+      "type": "water1"
+    },
+    {
+      "col": 5,
+      "row": 13,
+      "type": "water1"
+    },
+    {
+      "col": 5,
+      "row": 17,
+      "type": "water1"
+    },
+    {
+      "col": 5,
+      "row": 18,
+      "type": "water1"
+    },
+    {
+      "col": 5,
+      "row": 19,
+      "type": "pavement"
+    },
+    {
+      "col": 5,
+      "row": 20,
+      "type": "water1"
+    },
+    {
+      "col": 5,
+      "row": 21,
+      "type": "water1"
+    },
+    {
+      "col": 5,
+      "row": 22,
+      "type": "water1"
+    },
+    {
+      "col": 5,
+      "row": 23,
+      "type": "water1"
+    },
+    {
+      "col": 5,
+      "row": 24,
+      "type": "water1"
+    },
+    {
+      "col": 5,
+      "row": 25,
+      "type": "water1"
+    },
+    {
+      "col": 5,
+      "row": 26,
+      "type": "water1"
+    },
+    {
+      "col": 6,
+      "row": 2,
+      "type": "lightWoods"
+    },
+    {
+      "col": 6,
+      "row": 3,
+      "type": "lightWoods"
+    },
+    {
+      "col": 6,
+      "row": 4,
+      "type": "lightWoods"
+    },
+    {
+      "col": 6,
+      "row": 6,
+      "type": "lightWoods"
+    },
+    {
+      "col": 6,
+      "row": 7,
+      "type": "lightWoods"
+    },
+    {
+      "col": 6,
+      "row": 8,
+      "type": "water1"
+    },
+    {
+      "col": 6,
+      "row": 9,
+      "type": "water1"
+    },
+    {
+      "col": 6,
+      "row": 10,
+      "type": "water1"
+    },
+    {
+      "col": 6,
+      "row": 11,
+      "type": "water2"
+    },
+    {
+      "col": 6,
+      "row": 12,
+      "type": "water3"
+    },
+    {
+      "col": 6,
+      "row": 13,
+      "type": "water2"
+    },
+    {
+      "col": 6,
+      "row": 14,
+      "type": "water1"
+    },
+    {
+      "col": 6,
+      "row": 15,
+      "type": "water1"
+    },
+    {
+      "col": 6,
+      "row": 16,
+      "type": "water1"
+    },
+    {
+      "col": 6,
+      "row": 19,
+      "type": "pavement"
+    },
+    {
+      "col": 7,
+      "row": 1,
+      "type": "lightWoods"
+    },
+    {
+      "col": 7,
+      "row": 2,
+      "type": "lightWoods"
+    },
+    {
+      "col": 7,
+      "row": 4,
+      "type": "lightWoods"
+    },
+    {
+      "col": 7,
+      "row": 6,
+      "type": "lightWoods"
+    },
+    {
+      "col": 7,
+      "row": 11,
+      "type": "water1"
+    },
+    {
+      "col": 7,
+      "row": 12,
+      "type": "water2"
+    },
+    {
+      "col": 7,
+      "row": 13,
+      "type": "water1"
+    },
+    {
+      "col": 7,
+      "row": 19,
+      "type": "pavement"
+    },
+    {
+      "col": 7,
+      "row": 20,
+      "type": "lightBuilding"
+    },
+    {
+      "col": 7,
+      "row": 21,
+      "type": "mediumBuilding"
+    },
+    {
+      "col": 7,
+      "row": 24,
+      "type": "lightWoods"
+    },
+    {
+      "col": 7,
+      "row": 25,
+      "type": "lightWoods"
+    },
+    {
+      "col": 8,
+      "row": 2,
+      "type": "heavyWoods"
+    },
+    {
+      "col": 8,
+      "row": 3,
+      "type": "heavyWoods"
+    },
+    {
+      "col": 8,
+      "row": 6,
+      "type": "heavyWoods"
+    },
+    {
+      "col": 8,
+      "row": 7,
+      "type": "lightWoods"
+    },
+    {
+      "col": 8,
+      "row": 12,
+      "type": "water1"
+    },
+    {
+      "col": 8,
+      "row": 17,
+      "type": "lightBuilding"
+    },
+    {
+      "col": 8,
+      "row": 19,
+      "type": "pavement"
+    },
+    {
+      "col": 9,
+      "row": 1,
+      "type": "heavyWoods"
+    },
+    {
+      "col": 9,
+      "row": 2,
+      "type": "heavyWoods"
+    },
+    {
+      "col": 9,
+      "row": 5,
+      "type": "lightWoods"
+    },
+    {
+      "col": 9,
+      "row": 6,
+      "type": "lightWoods"
+    },
+    {
+      "col": 9,
+      "row": 9,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 9,
+      "row": 10,
+      "type": "clear",
+      "level": 2
+    },
+    {
+      "col": 9,
+      "row": 11,
+      "type": "clear",
+      "level": 2
+    },
+    {
+      "col": 9,
+      "row": 12,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 9,
+      "row": 15,
+      "type": "clear",
+      "level": 2
+    },
+    {
+      "col": 9,
+      "row": 17,
+      "type": "pavement"
+    },
+    {
+      "col": 9,
+      "row": 18,
+      "type": "pavement"
+    },
+    {
+      "col": 9,
+      "row": 19,
+      "type": "pavement"
+    },
+    {
+      "col": 9,
+      "row": 20,
+      "type": "pavement"
+    },
+    {
+      "col": 9,
+      "row": 21,
+      "type": "pavement"
+    },
+    {
+      "col": 9,
+      "row": 22,
+      "type": "pavement"
+    },
+    {
+      "col": 10,
+      "row": 2,
+      "type": "heavyWoods"
+    },
+    {
+      "col": 10,
+      "row": 3,
+      "type": "lightWoods"
+    },
+    {
+      "col": 10,
+      "row": 6,
+      "type": "lightWoods"
+    },
+    {
+      "col": 10,
+      "row": 7,
+      "type": "lightWoods"
+    },
+    {
+      "col": 10,
+      "row": 8,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 10,
+      "row": 9,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 10,
+      "row": 10,
+      "type": "clear",
+      "level": 2
+    },
+    {
+      "col": 10,
+      "row": 11,
+      "type": "clear",
+      "level": 2
+    },
+    {
+      "col": 10,
+      "row": 12,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 10,
+      "row": 13,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 10,
+      "row": 14,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 10,
+      "row": 15,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 10,
+      "row": 19,
+      "type": "pavement"
+    },
+    {
+      "col": 10,
+      "row": 21,
+      "type": "heavyBuilding"
+    },
+    {
+      "col": 10,
+      "row": 22,
+      "type": "rubble"
+    },
+    {
+      "col": 11,
+      "row": 1,
+      "type": "lightWoods"
+    },
+    {
+      "col": 11,
+      "row": 2,
+      "type": "lightWoods"
+    },
+    {
+      "col": 11,
+      "row": 5,
+      "type": "lightWoods"
+    },
+    {
+      "col": 11,
+      "row": 6,
+      "type": "lightWoods"
+    },
+    {
+      "col": 11,
+      "row": 8,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 11,
+      "row": 9,
+      "type": "clear",
+      "level": 2
+    },
+    {
+      "col": 11,
+      "row": 10,
+      "type": "clear",
+      "level": 3
+    },
+    {
+      "col": 11,
+      "row": 11,
+      "type": "clear",
+      "level": 3
+    },
+    {
+      "col": 11,
+      "row": 12,
+      "type": "clear",
+      "level": 2
+    },
+    {
+      "col": 11,
+      "row": 13,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 11,
+      "row": 17,
+      "type": "mediumBuilding"
+    },
+    {
+      "col": 11,
+      "row": 19,
+      "type": "pavement"
+    },
+    {
+      "col": 11,
+      "row": 21,
+      "type": "hardenedBuilding"
+    },
+    {
+      "col": 11,
+      "row": 22,
+      "type": "rubble"
+    },
+    {
+      "col": 12,
+      "row": 3,
+      "type": "lightWoods"
+    },
+    {
+      "col": 12,
+      "row": 6,
+      "type": "heavyWoods"
+    },
+    {
+      "col": 12,
+      "row": 8,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 12,
+      "row": 9,
+      "type": "clear",
+      "level": 2
+    },
+    {
+      "col": 12,
+      "row": 10,
+      "type": "clear",
+      "level": 3
+    },
+    {
+      "col": 12,
+      "row": 11,
+      "type": "clear",
+      "level": 3
+    },
+    {
+      "col": 12,
+      "row": 12,
+      "type": "clear",
+      "level": 2
+    },
+    {
+      "col": 12,
+      "row": 13,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 12,
+      "row": 19,
+      "type": "pavement"
+    },
+    {
+      "col": 12,
+      "row": 24,
+      "type": "rubble"
+    },
+    {
+      "col": 13,
+      "row": 5,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 13,
+      "row": 6,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 13,
+      "row": 7,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 13,
+      "row": 8,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 13,
+      "row": 9,
+      "type": "clear",
+      "level": 2
+    },
+    {
+      "col": 13,
+      "row": 10,
+      "type": "clear",
+      "level": 3
+    },
+    {
+      "col": 13,
+      "row": 11,
+      "type": "clear",
+      "level": 3
+    },
+    {
+      "col": 13,
+      "row": 12,
+      "type": "clear",
+      "level": 2
+    },
+    {
+      "col": 13,
+      "row": 13,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 13,
+      "row": 14,
+      "type": "rough"
+    },
+    {
+      "col": 13,
+      "row": 15,
+      "type": "rough"
+    },
+    {
+      "col": 13,
+      "row": 16,
+      "type": "rough"
+    },
+    {
+      "col": 13,
+      "row": 21,
+      "type": "rough"
+    },
+    {
+      "col": 13,
+      "row": 22,
+      "type": "rough"
+    },
+    {
+      "col": 14,
+      "row": 5,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 14,
+      "row": 6,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 14,
+      "row": 7,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 14,
+      "row": 8,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 14,
+      "row": 9,
+      "type": "clear",
+      "level": 2
+    },
+    {
+      "col": 14,
+      "row": 10,
+      "type": "clear",
+      "level": 3
+    },
+    {
+      "col": 14,
+      "row": 11,
+      "type": "clear",
+      "level": 3
+    },
+    {
+      "col": 14,
+      "row": 12,
+      "type": "clear",
+      "level": 2
+    },
+    {
+      "col": 14,
+      "row": 13,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 14,
+      "row": 14,
+      "type": "rough"
+    },
+    {
+      "col": 14,
+      "row": 15,
+      "type": "rough"
+    },
+    {
+      "col": 14,
+      "row": 16,
+      "type": "rough"
+    },
+    {
+      "col": 14,
+      "row": 17,
+      "type": "rough"
+    },
+    {
+      "col": 14,
+      "row": 18,
+      "type": "rough"
+    },
+    {
+      "col": 14,
+      "row": 25,
+      "type": "lightWoods"
+    },
+    {
+      "col": 14,
+      "row": 26,
+      "type": "lightWoods"
+    },
+    {
+      "col": 15,
+      "row": 5,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 15,
+      "row": 6,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 15,
+      "row": 7,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 15,
+      "row": 8,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 15,
+      "row": 9,
+      "type": "clear",
+      "level": 2
+    },
+    {
+      "col": 15,
+      "row": 10,
+      "type": "clear",
+      "level": 3
+    },
+    {
+      "col": 15,
+      "row": 11,
+      "type": "clear",
+      "level": 3
+    },
+    {
+      "col": 15,
+      "row": 14,
+      "type": "rough"
+    },
+    {
+      "col": 15,
+      "row": 15,
+      "type": "rough"
+    },
+    {
+      "col": 15,
+      "row": 16,
+      "type": "rough"
+    },
+    {
+      "col": 15,
+      "row": 17,
+      "type": "rough"
+    },
+    {
+      "col": 15,
+      "row": 18,
+      "type": "rough"
+    },
+    {
+      "col": 15,
+      "row": 19,
+      "type": "rough"
+    },
+    {
+      "col": 15,
+      "row": 20,
+      "type": "rough"
+    },
+    {
+      "col": 16,
+      "row": 5,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 16,
+      "row": 6,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 16,
+      "row": 7,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 16,
+      "row": 8,
+      "type": "clear",
+      "level": 1
+    },
+    {
+      "col": 16,
+      "row": 9,
+      "type": "clear",
+      "level": 2
+    },
+    {
+      "col": 16,
+      "row": 10,
+      "type": "clear",
+      "level": 3
+    },
+    {
+      "col": 16,
+      "row": 11,
+      "type": "clear",
+      "level": 3
+    }
+  ]
+}

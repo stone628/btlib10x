@@ -441,8 +441,9 @@ stated elsewhere in this document or the codebase:
     web/chunk.ts       structured output chunks: lines, board, columns, collapsible
     web/rng.ts          mulberry32-seeded Rng
     web/render.ts       structured BoardModel / Span model + boardToText / boardToSpans
-    scripts/build-web.mjs  esbuild bundles: src/index.ts → web/btlib10x.js (core),
-                         web/main.ts → web/app.js (app; btlib10x.js kept external)
+    scripts/build-web.mjs  esbuild bundles: src/index.ts → web/btlib10x.js (engine),
+                         data/index.ts → web/btlib10x.data.js (catalog data),
+                         web/main.ts → web/app.js (app; both bundles kept external)
 
 Import wrinkle: tsc-emitted `.json` imports are not loadable by browsers, so the
 app ships as an esbuild single-file bundle instead of consuming `dist/` directly.
@@ -451,13 +452,13 @@ Library sources stay untouched.
 ## Build, run, and ship
 
     npm install            # picks up esbuild devDependency
-    npm run build:web      # one-shot esbuild bundle → web/btlib10x.js + web/app.js
+    npm run build:web      # one-shot esbuild bundle → web/btlib10x.js + web/btlib10x.data.js + web/app.js
     npm run dev:web        # watch + serve: rebuilds on change, serves at http://127.0.0.1:8012/index.html
     # custom port:  node scripts/build-web.mjs --watch --serve --port=3000
     # open http://localhost:8012
 
 To publish the app's static output (not the npm package), run:
 
-    npm run dist:web       # copies web/{index.html,btlib10x.js,app.js,favicon.ico} → dist/web/
+    npm run dist:web       # copies web/{index.html,btlib10x.js,btlib10x.data.js,app.js,favicon.ico} → dist/web/
     npm run dist:standalone  # one fully self-contained dist/standalone/bt10x.html
-    # (bundles core + app into the HTML; copy that single file anywhere and open it in a browser)
+    # (bundles engine + data + app into the HTML; copy that single file anywhere and open it in a browser)

@@ -1,9 +1,5 @@
 import type { TerrainHexDef } from "../core/types";
 import { isTerrainType, TERRAIN_TYPES, type TerrainType } from "../core/types";
-import beginnerMap from "./maps/beginner";
-import quickstartMap from "./maps/quickstart";
-import testMap from "./maps/test";
-import testgroundMap from "./maps/testground";
 
 export interface MapDefSrc {
   readonly name: string;
@@ -27,12 +23,52 @@ export interface MapDef {
   readonly legends: readonly TerrainType[];
 }
 
-/** All battle maps shipped with the library, keyed by name; validated at load. */
-export const MAP_DEFS: Readonly<Map<string, MapDef>> = new Map<string, MapDef>(
-  [beginnerMap, quickstartMap, testMap, testgroundMap].map((m) => {
-    return [m.name, loadMap(m)];
-  }),
-);
+/**
+ * Battle-map lookup helpers backed by a registry that starts empty.
+ * Map sources live in the `btlib10x/data` bundle; call `registerMaps`
+ * (or `loadShippedData`) before using the lookups.
+ */
+let MAP_REGISTRY = new Map<string, MapDef>();
+
+/**
+ * Validate raw map sources and load them into the lookup registry,
+ * replacing any previous contents. The data bundle (`btlib10x/data`)
+ * supplies the sources; the engine validates.
+ */
+export function registerMaps(srcs: readonly MapDefSrc[]): void {
+  const next = new Map<string, MapDef>();
+  for (const src of srcs) {
+    if (next.has(src.name)) {
+      throw new Error(`Duplicate map name ${JSON.stringify(src.name)}`);
+    }
+    next.set(src.name, loadMap(src));
+  }
+  MAP_REGISTRY = next;
+}
+
+export interface MapNameHolder {
+  readonly mapName: string | null;
+}
+
+export function mapDefFor(h: MapNameHolder): MapDef {
+  const key = h.mapName;
+  if (key === null) throw new Error("Unknown map: <none>");
+  const def = MAP_REGISTRY.get(key);
+  if (!def) throw new Error(`Unknown map: ${key}`);
+  return def;
+}
+
+export function mapDef(name: string): MapDef | undefined {
+  return MAP_REGISTRY.get(name);
+}
+
+export function allMapDefs(): MapDef[] {
+  return Array.from(MAP_REGISTRY.values());
+}
+
+export function listMapNames(): string[] {
+  return Array.from(MAP_REGISTRY.keys());
+}
 
 function loadMap(src: MapDefSrc): MapDef {
   validateMapDef(src);

@@ -12,9 +12,9 @@ import { CODE, LOCATION, MODEL_CODE, SHOTS_PER_TON } from "./mtf-tables.mjs";
 /**
  * Batch converts BattleTech .mtf (MechTech File) definitions into the library's
  * MechDef JSON. Drop a .mtf into docs/mtf/ and run `npm run mtf`; the new 'Mech
- * is emitted to src/data/mechs/ and auto-registered by the catalog generator.
+ * is emitted to data/mechs/ and auto-registered by the catalog generator.
  *
- * Conventions (must match src/data/mechs/*.ts):
+ * Conventions (must match data/mechs/*.json):
  *   - Flat armor per location; torso values SUM the MTF front + rear boxes. The
  *     rear torso values are also stored inside `armor` as `centerTorsoRear` /
  *     `leftTorsoRear` / `rightTorsoRear` (metadata only; the flat damage model
@@ -33,9 +33,7 @@ import { CODE, LOCATION, MODEL_CODE, SHOTS_PER_TON } from "./mtf-tables.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const mtfDir = join(root, "docs", "mtf");
-const outDir = process.env.MTF_OUT_DIR
-  ? process.env.MTF_OUT_DIR
-  : join(root, "src", "data", "mechs");
+const outDir = process.env.MTF_OUT_DIR ? process.env.MTF_OUT_DIR : join(root, "data", "mechs");
 const force = process.argv.includes("--force");
 
 function weightClass(tonnage) {
@@ -288,19 +286,13 @@ for (const file of files) {
     for (const e of errors) console.error(`  - ${e}`);
     continue;
   }
-  const outFile = join(outDir, `${def.model.toLowerCase()}.ts`);
+  const outFile = join(outDir, `${def.model.toLowerCase()}.json`);
   if (existsSync(outFile) && !force) {
     console.log(`skip existing ${outFile.replace(`${root}/`, "")} (use --force to overwrite)`);
     skipped++;
     continue;
   }
-  const ts = `import type { MechDef } from "../mech.schema";
-
-const def: MechDef = ${JSON.stringify(def, null, 2)} as const satisfies MechDef;
-
-export default def;
-`;
-  writeFileSync(outFile, ts);
+  writeFileSync(outFile, `${JSON.stringify(def, null, 2)}\n`);
   console.log(`wrote ${outFile.replace(`${root}/`, "")}`);
   generated++;
 }

@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./data": {
+      "types": "./dist/data-bundle/index.d.ts",
+      "default": "./dist/data-bundle/index.js"
     }
   },
   "files": [
@@ -17,9 +21,10 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "gen:mechs": "node scripts/gen-mech-catalog.mjs && biome check --write src/data/mechCatalog.generated.ts",
+    "gen:mechs": "node scripts/gen-mech-catalog.mjs && biome check --write data/index.ts",
     "mtf": "node scripts/mtf.mjs && npm run gen:mechs",
-    "build": "tsc -p tsconfig.build.json",
+    "prebuild": "node -e \"import('node:fs').then((fs) => fs.rmSync('dist', { recursive: true, force: true }))\"",
+    "build": "tsc -b tsconfig.data.json",
     "build:web": "node scripts/build-web.mjs",
     "dist:web": "node scripts/build-web.mjs && node scripts/dist-web.mjs",
     "dist:standalone": "node scripts/standalone-web.mjs",
