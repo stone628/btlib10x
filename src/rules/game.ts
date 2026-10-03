@@ -281,6 +281,9 @@ export interface UnitState extends MechModelHolder {
   /** Weapon indices destroyed by a critical hit (in addition to destroyed
    *  locations, which the canFireFromLocation check already covers). */
   destroyedWeapons: number[];
+  /** Arm locations blown off by critical hits (TW p.124, 145). Tracked for
+   *  displacement/fall logic and salvage. */
+  blownOffArms: Location[];
   moveMode: MoveMode | null;
   movesThisTurn: ("forward" | "backward")[];
   jumpedThisTurn: boolean;
@@ -845,6 +848,7 @@ export function createBattle(
       jammedWeapons: [],
       critSlotsDestroyed: initCritDestroyed(def),
       destroyedWeapons: [],
+      blownOffArms: [],
       moveMode: null,
       movesThisTurn: [],
       jumpedThisTurn: false,
@@ -2664,6 +2668,9 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   }
 
   // Sub-pass 2: Physical attacks (TW p. 37: physical attacks resolve after weapon attacks)
+  // Collect physical attack crits per target for destruction sweep
+  const physicalAttackCrits: Record<string, CriticalResolution[]> = {};
+
   for (const unit of Object.values(state.units)) {
     if (unit.declaredPhysicalAttacks.length === 0) continue;
     for (const decl of unit.declaredPhysicalAttacks) {
@@ -2676,14 +2683,57 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       });
 
       // Apply damage to target
-      if (resolution.hit && resolution.damageToTarget.length > 0) {
-        const target = requireUnit(state, decl.targetId);
+      const target =
+        resolution.hit && resolution.damageToTarget.length > 0
+          ? requireUnit(state, decl.targetId)
+          : null;
+      if (target && resolution.hit && resolution.damageToTarget.length > 0) {
+        const targetDef = mechDefFor(target);
+        const targetCrits: CriticalResolution[] = [];
         for (const group of resolution.damageToTarget) {
           const back = bearingExact(target.position, unit.position)!;
           const dir = classifyArcWithBoundary(target.facing, back);
           const attackDirection = defenderArcChoice(dir.arc, dir.altArc);
           const app = applyDamage(target.damage, group.location, group.damage, attackDirection);
           target.damage = app.after;
+
+          // Critical hit resolution (TW p.123-124):
+          // - One determining roll per location that loses internal structure
+          // - One additional determining roll if hit-location roll was 2 (through-armor critical)
+          // Check if this group stripped IS at its original location
+          const strippedIS = app.steps.some(
+            (s) => s.location === group.location && s.pool === "structure" && s.damageApplied > 0,
+          );
+          const rollCount = (strippedIS ? 1 : 0) + (resolution.throughArmorCrit ? 1 : 0);
+          for (let rollIdx = 0; rollIdx < rollCount; rollIdx++) {
+            const tagThroughArmor = rollCount === 1 ? resolution.throughArmorCrit : rollIdx > 0;
+            const res = resolveCriticalHits({
+              rng,
+              def: targetDef,
+              source: { location: group.location, damage: group.damage },
+              throughArmor: tagThroughArmor,
+              critSlotsDestroyed: target.critSlotsDestroyed,
+              destroyedWeapons: target.destroyedWeapons,
+              damage: target.damage,
+              ammoBins: target.ammoBins,
+            });
+            target.critSlotsDestroyed = res.critSlotsDestroyed;
+            target.destroyedWeapons = res.destroyedWeapons;
+            target.ammoBins = res.ammoBins;
+            target.damage = res.damage;
+            // Track blown-off arms for displacement/fall logic
+            for (const arm of res.blownOffArms) {
+              if (!target.blownOffArms.includes(arm)) target.blownOffArms.push(arm);
+            }
+            targetCrits.push(res);
+          }
+        }
+        // Accumulate crits for this target (multiple attacks possible)
+        if (targetCrits.length > 0) {
+          physicalAttackCrits[target.id] = [
+            ...(physicalAttackCrits[target.id] ?? []),
+            ...targetCrits,
+          ];
         }
       }
 
@@ -2696,8 +2746,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       }
 
       // Handle displacement
-      if (resolution.targetDisplacedTo && !isUnitRemoved(requireUnit(state, decl.targetId))) {
-        const target = requireUnit(state, decl.targetId);
+      if (resolution.targetDisplacedTo && target && !isUnitRemoved(target)) {
         target.position = resolution.targetDisplacedTo;
       }
       if (resolution.attackerDisplacedTo && !isUnitRemoved(unit)) {
@@ -2705,8 +2754,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       }
 
       // Handle falls
-      if (resolution.targetFalls && !isUnitRemoved(requireUnit(state, decl.targetId))) {
-        const target = requireUnit(state, decl.targetId);
+      if (resolution.targetFalls && target && !isUnitRemoved(target)) {
         applyFall(
           state,
           target,
@@ -2726,18 +2774,17 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       }
 
       // Pilot damage (TW p.41): head hits land 1 point per damaging
-      // grouping. Physical attacks roll no crits in this subset, so there
-      // are no ammo explosions to account for here.
-      if (resolution.hit) {
-        const target = requireUnit(state, decl.targetId);
-        if (!isUnitRemoved(target)) {
-          const headGroups = resolution.damageToTarget.filter(
-            (g) => g.location === "head" && g.damage >= 1,
-          ).length;
-          if (headGroups > 0)
-            applyPilotHits(state, target, headGroups * HEAD_HIT_PILOT_HITS, "headHit", rng, sink);
-        }
+      // grouping. Physical attacks now roll crits per TW p.123-124.
+      if (resolution.hit && target && !isUnitRemoved(target)) {
+        const headGroups = resolution.damageToTarget.filter(
+          (g) => g.location === "head" && g.damage >= 1,
+        ).length;
+        if (headGroups > 0)
+          applyPilotHits(state, target, headGroups * HEAD_HIT_PILOT_HITS, "headHit", rng, sink);
       }
+
+      // Attach critical hits to resolution for event emission (note: resolution is immutable,
+      // so we can't mutate it directly; the event already fired above with the original resolution)
     }
   }
 
@@ -2745,7 +2792,8 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   // hits above lands before the end-of-phase piloting sweep.
   for (const unit of Object.values(state.units)) {
     if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
-      markUnitDestroyed(unit, destroyedReasonFor(unit.damage), sink);
+      const physCrits = physicalAttackCrits[unit.id];
+      markUnitDestroyed(unit, destroyedReasonFor(unit.damage, physCrits), sink);
     }
   }
 

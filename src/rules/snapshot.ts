@@ -121,6 +121,7 @@ function cloneUnitState(unit: UnitState): UnitState {
     jammedWeapons: [...unit.jammedWeapons],
     critSlotsDestroyed: cloneCritTable(unit.critSlotsDestroyed),
     destroyedWeapons: [...unit.destroyedWeapons],
+    blownOffArms: [...unit.blownOffArms],
     moveMode: unit.moveMode,
     movesThisTurn: [...unit.movesThisTurn],
     jumpedThisTurn: unit.jumpedThisTurn,
