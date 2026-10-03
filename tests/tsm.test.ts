@@ -18,7 +18,7 @@ import {
   type UnitInit,
 } from "../src";
 import type { Location } from "../src/core/types";
-import { catalogStrings, loadCatalog } from "../src/data/catalog";
+import { loadCatalog } from "../src/data/catalog";
 import { decodeMechLine, encodeMechDef } from "../src/data/mech.codec";
 import { effectiveMovement, TSM_WALK_BONUS } from "../src/rules/critical";
 import type { UnitDamageState } from "../src/rules/damage";
@@ -155,8 +155,8 @@ describe("myomer wire key y", () => {
 
   // Load catalog to get the string table for encoding/decoding
   const catalogText = readFileSync(new URL("../data/btlib10x.jsonl", import.meta.url), "utf8");
-  loadCatalog(catalogText);
-  const strings = catalogStrings();
+  const catalog = loadCatalog(catalogText);
+  const strings = catalog.strings;
 
   it("round-trips Standard as 1 and TSM as 2", () => {
     expect(stdRaw.myomer).toBe("Standard");

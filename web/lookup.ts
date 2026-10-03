@@ -9,34 +9,26 @@
  * entry point reaches the catalogs through this module.
  */
 import {
-  allMapDefs,
-  allMechDefs,
-  allWeaponDefs,
+  ensureMapRegistered,
+  ensureMechRegistered,
   type MapDef,
   type ResolvedMechDef,
+  WEAPON_DATA,
   type WeaponDef,
 } from "btlib10x";
 
 export function lookupMech(model: string): ResolvedMechDef | undefined {
-  const want = model.toLowerCase();
-  for (const d of allMechDefs()) {
-    if (d.model.toLowerCase() === want) return d;
-  }
-  return undefined;
+  return ensureMechRegistered(model);
 }
 
 export function lookupMap(name: string): MapDef | undefined {
-  const want = name.toLowerCase();
-  for (const m of allMapDefs()) {
-    if (m.name.toLowerCase() === want) return m;
-  }
-  return undefined;
+  return ensureMapRegistered(name);
 }
 
+const WEAPONS: ReadonlyMap<string, WeaponDef> = new Map<string, WeaponDef>(
+  WEAPON_DATA.map((def) => [def.name.toLowerCase(), def]),
+);
+
 export function lookupWeapon(name: string): WeaponDef | undefined {
-  const want = name.toLowerCase();
-  for (const w of allWeaponDefs()) {
-    if (w.name.toLowerCase() === want) return w;
-  }
-  return undefined;
+  return WEAPONS.get(name.toLowerCase());
 }

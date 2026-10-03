@@ -9,16 +9,12 @@ import {
 } from "../web/session";
 import { disableCritical, execute } from "./helpers";
 
-async function run(s: Session, cmd: string): Promise<string[]> {
-  return execute(s, cmd);
-}
-
-async function started(): Promise<{ s: Session; actor: string }> {
+function started(): { s: Session; actor: string } {
   const s = newSession(7);
-  expect((await run(s, "map quickstart"))[0]).toContain("15x16");
-  expect(await run(s, "add hunchy HBK-4G 9 9 n")).toHaveLength(1);
-  expect(await run(s, "add cicada HBK-4G 9 8 s")).toHaveLength(1);
-  expect((await run(s, "start"))[0]).toContain("BATTLE STARTED");
+  expect(execute(s, "map quickstart")[0]).toContain("15x16");
+  expect(execute(s, "add hunchy HBK-4G 9 9 n")).toHaveLength(1);
+  expect(execute(s, "add cicada HBK-4G 9 8 s")).toHaveLength(1);
+  expect(execute(s, "start")[0]).toContain("BATTLE STARTED");
   disableCritical(s);
   return { s, actor: requireMovementActor(s).id };
 }
@@ -36,7 +32,7 @@ function burnMovePhase(s: Session): void {
 }
 
 /** Drive a session to `app === "over"` by ejecting both units. Bounded. */
-async function driveToOver(s: Session): Promise<void> {
+function driveToOver(s: Session): void {
   let guard = 0;
   while (s.state === "battle") {
     if (++guard > 200) throw new Error("driveToOver did not finish");
@@ -51,7 +47,7 @@ async function driveToOver(s: Session): Promise<void> {
       }
     } else {
       // Pass through attack phase.
-      await run(s, "done");
+      execute(s, "done");
     }
   }
 }
@@ -89,10 +85,10 @@ describe("per-AppState context invariants", () => {
 
   it("over: move null, attack null, over populated with victory", async () => {
     const s = newSession(42);
-    await run(s, "map quickstart");
-    await run(s, "add a HBK-4G 5 5 n");
-    await run(s, "add b HBK-4G 6 5 s");
-    await run(s, "start");
+    execute(s, "map quickstart");
+    execute(s, "add a HBK-4G 5 5 n");
+    execute(s, "add b HBK-4G 6 5 s");
+    execute(s, "start");
     disableCritical(s);
     await driveToOver(s);
     expect(s.state).toBe("over");
@@ -119,7 +115,7 @@ describe("per-AppState context invariants", () => {
     expect(s.attack).not.toBeNull();
     const firstAttackActor = s.attack!.actorId;
     // Pass-fire hands off to cicada's attack activation: same phase, new actor.
-    await run(s, "done");
+    execute(s, "done");
     expect(s.battle!.phase).toBe("attack");
     expect(s.attack).not.toBeNull();
     expect(firstAttackActor).not.toBe(s.attack!.actorId);
@@ -145,11 +141,11 @@ describe("per-AppState context invariants", () => {
     burnMovePhase(s);
     const firstAttackActor = s.attack!.actorId;
     expect(s.attack!.torsoTwist).toBe("front");
-    await run(s, "torso right");
+    execute(s, "torso right");
     expect(s.attack!.torsoTwist).toBe("rightSide");
     // Pass-fire on first attacker advances to next activation; twist should
     // reset whenever a fresh attack context is allocated.
-    await run(s, "done");
+    execute(s, "done");
     expect(s.battle!.phase).toBe("attack");
     expect(s.attack).not.toBeNull();
     // Either the same actor across rounds (fresh twist) or a different actor
@@ -164,9 +160,9 @@ describe("per-AppState context invariants", () => {
   it("commit rollback preserves the move context only", async () => {
     const { s } = await started();
     const actor = requireMovementActor(s).id;
-    await run(s, "mode walk");
+    execute(s, "mode walk");
     s.move!.moveSteps = [{ kind: "enter", to: { col: 1, row: 1 } }];
-    const out = await run(s, "done");
+    const out = execute(s, "done");
     expect(out[0]).toMatch(/^error:/);
     expect(s.move).not.toBeNull();
     expect(s.move!.actorId).toBe(actor);

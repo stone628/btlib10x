@@ -1,10 +1,10 @@
 import type { MechManifestEntry } from "btlib10x";
 import {
-  allMapDefs,
   allWeaponDefs,
   CLUSTER_COLUMNS,
   CLUSTER_TABLE,
-  catalogManifest,
+  catalogMaps,
+  catalogMechs,
   HEAT_CAP,
   HIT_LOCATION_TABLE,
   heatScaleEffects,
@@ -148,7 +148,7 @@ export function listTables(): Chunk[] {
 }
 
 export function infoMechListChunk(): Chunk {
-  const list = [...catalogManifest().mechs].sort((a: MechManifestEntry, b: MechManifestEntry) => {
+  const list = [...catalogMechs()].sort((a: MechManifestEntry, b: MechManifestEntry) => {
     if (a.tonnage !== b.tonnage) return a.tonnage - b.tonnage;
     return a.name.localeCompare(b.name);
   });
@@ -174,11 +174,7 @@ export function infoMechListChunk(): Chunk {
 }
 
 export function infoMapListChunk(): Chunk {
-  return buildLinesChunk(
-    ...allMapDefs().map(
-      (m) => `${m.name}: ${m.width}x${m.height}, ${m.terrain.length} terrain hexes`,
-    ),
-  );
+  return buildLinesChunk(...catalogMaps().map((m) => `${m.name}: ${m.width}x${m.height}`));
 }
 
 function weaponDamageSummary(w: WeaponDef): string {

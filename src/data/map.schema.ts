@@ -76,7 +76,7 @@ export function mapDef(name: string): MapDef | undefined {
   return MAP_REGISTRY.get(name);
 }
 
-export function allMapDefs(): MapDef[] {
+export function registeredMapDefs(): MapDef[] {
   return Array.from(MAP_REGISTRY.values());
 }
 

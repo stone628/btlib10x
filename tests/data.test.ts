@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MechDef, ResolvedMechDef } from "../src/data/index";
-import { allMechDefs, mechDef, resolveMechDef, validateMechDef } from "../src/data/index";
+import { mechDef, registeredMechDefs, resolveMechDef, validateMechDef } from "../src/data/index";
 import { parseWeaponsData, weaponDefFor } from "../src/data/weapon.schema";
 import { WEAPON_DATA } from "../src/data/weapons.data";
 
@@ -12,15 +12,15 @@ function toMechDef(d: ResolvedMechDef): MechDef {
 
 describe("'Mech definitions", () => {
   it("ships more than one 'Mech and every model is registered", () => {
-    expect(allMechDefs().length).toBeGreaterThan(1);
-    for (const def of allMechDefs()) {
+    expect(registeredMechDefs().length).toBeGreaterThan(1);
+    for (const def of registeredMechDefs()) {
       expect(mechDef(def.model)).toBe(def);
       expect(def.model).not.toBe("");
     }
   });
 
   it("re-validates every bundled definition", () => {
-    for (const def of allMechDefs()) {
+    for (const def of registeredMechDefs()) {
       expect(() => validateMechDef(toMechDef(def))).not.toThrow();
     }
   });
@@ -183,7 +183,7 @@ describe("'Mech definitions", () => {
 
 describe("weapon catalog", () => {
   it("resolves every weapon referenced by a bundled 'Mech", () => {
-    for (const def of allMechDefs()) {
+    for (const def of registeredMechDefs()) {
       for (const mount of Object.values(def.weapons)) {
         expect(weaponDefFor(mount).name, `${def.model}: ${mount.weapon}`).toBe(mount.weapon);
       }
