@@ -5,6 +5,7 @@ import {
   allMapDefs,
   allMechDefs,
   type CatalogManifest,
+  type CatalogStringTable,
   decodeMapLine,
   decodeMechLine,
   ensureMapRegistered,
@@ -14,6 +15,7 @@ import {
   loadCatalog,
   mechDefFor,
   parseCatalogManifest,
+  parseCatalogStrings,
   registerAllCatalog,
   registerMap,
   registerMech,
@@ -22,6 +24,7 @@ import {
 import { purgeMechDefs } from "../src/data/mech.schema";
 
 const TEXT = readFileSync(new URL("../data/btlib10x.jsonl", import.meta.url), "utf8");
+const STRINGS: CatalogStringTable = parseCatalogStrings(JSON.parse(TEXT.split("\n")[0]!));
 const MANIFEST: CatalogManifest = loadCatalog(TEXT);
 const LINES = TEXT.split("\n");
 
@@ -36,7 +39,7 @@ describe("catalog manifest", () => {
     expect(MANIFEST.maps.length).toBeGreaterThan(0);
     const models = new Set<string>();
     for (const entry of MANIFEST.mechs) {
-      const def = decodeMechLine(mechLine(entry), entry);
+      const def = decodeMechLine(mechLine(entry), entry, STRINGS);
       expect(def.model).toBe(entry.model);
       expect(def.name).toBe(entry.name);
       expect(def.techBase).toBe(entry.techBase);
@@ -63,7 +66,7 @@ describe("catalog manifest", () => {
     const mechFiles = readdirSync(mechDir).filter((f) => f.endsWith(".json"));
     expect(mechFiles.length).toBe(MANIFEST.mechs.length);
     for (const entry of MANIFEST.mechs) {
-      const decoded = decodeMechLine(mechLine(entry), entry);
+      const decoded = decodeMechLine(mechLine(entry), entry, STRINGS);
       const file = mechFiles.find((f) => f.toLowerCase() === `${entry.model.toLowerCase()}.json`)!;
       expect(decoded, entry.model).toEqual(
         JSON.parse(readFileSync(new URL(file, mechDir), "utf8")),
@@ -99,8 +102,8 @@ describe("catalog manifest", () => {
       parseCatalogManifest({
         v: 1,
         mechs: [
-          { m: "X", n: "Y", b: 1, t: 50, l: 1 },
-          { m: "x", n: "Y", b: 2, t: 50, l: 2 },
+          { m: "X", n: "Y", b: 1, t: 50, l: 2 },
+          { m: "x", n: "Y", b: 2, t: 50, l: 3 },
         ],
         maps: [],
       }),
@@ -108,7 +111,7 @@ describe("catalog manifest", () => {
     expect(() =>
       parseCatalogManifest({
         v: 1,
-        mechs: [{ m: "X", n: "Y", b: 1, t: 50, c: "W", l: 1 }],
+        mechs: [{ m: "X", n: "Y", b: 1, t: 50, c: "W", l: 2 }],
         maps: [{ n: "M", w: 1, h: 1, l: 2 }],
       }),
     ).not.toThrow();
@@ -131,7 +134,9 @@ describe("catalog registration", () => {
     // Setup registered every sheet, so re-registering a decoded sheet must
     // throw as a duplicate — proving the lazy path decodes the same model.
     const entry = findMechEntry(MANIFEST, "as7-d")!;
-    expect(() => registerMech(decodeMechLine(mechLine(entry), entry))).toThrow(/duplicate/i);
+    expect(() => registerMech(decodeMechLine(mechLine(entry), entry, STRINGS))).toThrow(
+      /duplicate/i,
+    );
     expect(mechDefFor({ model: "AS7-D" }).name).toBe("Atlas");
   });
 
@@ -142,18 +147,18 @@ describe("catalog registration", () => {
 
   it("splits the Clan name out of the MTF line-2 parens", () => {
     const entry = findMechEntry(MANIFEST, "tw-prime")!;
-    const def = decodeMechLine(mechLine(entry), entry);
+    const def = decodeMechLine(mechLine(entry), entry, STRINGS);
     expect(def.name).toBe("Mad Cat");
     expect(def.clanName).toBe("Timber Wolf");
     const warhawkEntry = findMechEntry(MANIFEST, "whk-prime")!;
-    const warhawk = decodeMechLine(mechLine(warhawkEntry), warhawkEntry);
+    const warhawk = decodeMechLine(mechLine(warhawkEntry), warhawkEntry, STRINGS);
     expect(warhawk.name).toBe("Masakari");
     expect(warhawk.clanName).toBe("Warhawk");
   });
 
   it("leaves clanName undefined when the parens are absent, even for Clan sheets", () => {
     const entry = findMechEntry(MANIFEST, "mc-mkii-2")!;
-    expect(decodeMechLine(mechLine(entry), entry).clanName).toBeUndefined();
+    expect(decodeMechLine(mechLine(entry), entry, STRINGS).clanName).toBeUndefined();
   });
 
   it("keeps identity single-sourced: wire lines carry no model/name/techBase/tonnage", () => {

@@ -37,11 +37,13 @@ export {
 } from "./ammo.schema";
 export type {
   CatalogManifest,
+  CatalogStringTable,
   MapManifestEntry,
   MechManifestEntry,
 } from "./catalog";
 export {
   catalogManifest,
+  catalogStrings,
   decodeMapLine,
   decodeMechLine,
   ensureMapRegistered,
@@ -50,6 +52,7 @@ export {
   findMechEntry,
   loadCatalog,
   parseCatalogManifest,
+  parseCatalogStrings,
   registerAllCatalog,
 } from "./catalog";
 export { encodeMapDef, MAP_WIRE_VERSION } from "./map.codec";
@@ -63,7 +66,14 @@ export {
   registerMap,
   validateMapDef,
 } from "./map.schema";
-export { encodeMechDef, type MechIdentity, WIRE_VERSION } from "./mech.codec";
+export {
+  encodeMechDef,
+  internString,
+  type MechIdentity,
+  type MechStringTable,
+  resolveStringRef,
+  WIRE_VERSION,
+} from "./mech.codec";
 export type {
   CritSlot,
   CritSlots,

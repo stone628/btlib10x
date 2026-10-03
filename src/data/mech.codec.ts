@@ -16,14 +16,21 @@ import { CRIT_SOAK_NAMES, CRIT_STRUCTURE_NAMES, weightClassForTonnage } from "./
  * `weightClass` is omitted too (restored with `weightClassForTonnage`).
  * Myomer rides as numeric `y` (1 = Standard, 2 = Triple Strength Myomer);
  * absent `y` on old v1 lines decodes as Standard.
- * Open vocabularies (weapon names, `source`) stay verbatim strings;
- * tokenising them would couple the wire to catalog contents.
+ * Open vocabularies (chassis names, weapon names) are interned in the
+ * catalog string table (line 0 of the JSONL file, a bare JSON string
+ * array) and referenced on the wire as `"$<index>"`; the manifest `n` and
+ * every weapon-name occurrence (`p[].w`, weapon/ammo crit-slot `w`) use
+ * this form. Verbatim strings still decode (back-compat with pre-table
+ * v1 lines) but encoders always emit refs.
  *
  * `WIRE_VERSION` gates the format; `decodeMechLine` rejects anything else.
  * Table order below is wire-stable: `CRIT_STRUCTURE_NAMES` /
  * `CRIT_SOAK_NAMES` are append-only once packed lines exist.
  */
 export const WIRE_VERSION = 1;
+
+/** Shared string table: chassis names + weapon names, first-seen pack order. */
+export type MechStringTable = readonly string[];
 
 /** Location (and rear-armor) keys; codes are stored on the wire. */
 const LOC_CODES: Readonly<Record<Location | RearArmorKey, string>> = {
@@ -60,6 +67,33 @@ function fail(msg: string): never {
   throw new Error(`Invalid mech line: ${msg}`);
 }
 
+/** A `$<index>` reference into the catalog string table. */
+const REF_RE = /^\$(\d+)$/;
+
+/**
+ * Intern `value` in `strings` (first-seen order) and return its wire ref.
+ * `strings` is mutated: encoders thread one shared array across every
+ * sheet so indices are catalog-global.
+ */
+export function internString(strings: string[], value: string): string {
+  let idx = strings.indexOf(value);
+  if (idx < 0) {
+    idx = strings.length;
+    strings.push(value);
+  }
+  return `$${idx}`;
+}
+
+/** Resolve a wire string: `$<index>` via the table, anything else verbatim. */
+export function resolveStringRef(strings: MechStringTable, raw: string, what: string): string {
+  const m = REF_RE.exec(raw);
+  if (m === null) return raw;
+  const idx = Number(m[1]);
+  const value = strings[idx];
+  if (value === undefined) fail(`${what} reference ${raw} out of range`);
+  return value;
+}
+
 /** Identity half of a sheet: carried by the manifest entry, never the wire line. */
 export interface MechIdentity {
   readonly model: string;
@@ -69,14 +103,14 @@ export interface MechIdentity {
   readonly clanName?: string;
 }
 
-/** Encode a canonical `MechDef` into one minified JSONL line (identity omitted). Wire mirror lives in `scripts/pack-catalog.mjs`. */
-export function encodeMechDef(def: MechDef): string {
+/** Encode a canonical `MechDef` into one minified JSONL line (identity omitted). Weapon names are interned in `strings` (mutated first-seen) and emitted as `$<index>` refs. Wire mirror lives in `scripts/pack-catalog.mjs`. */
+export function encodeMechDef(def: MechDef, strings: string[] = []): string {
   const armor: Record<string, number> = {};
   for (const [key, value] of Object.entries(def.armor)) {
     armor[LOC_CODES[key as Location | RearArmorKey]] = value as number;
   }
   const weapons = def.weapons.map((m) => ({
-    w: m.weapon,
+    w: internString(strings, m.weapon),
     l: LOC_CODES[m.location],
     ...(m.shots !== undefined && { s: m.shots }),
     ...(m.rearFacing === true && { r: 1 }),
@@ -90,11 +124,11 @@ export function encodeMechDef(def: MechDef): string {
         case "weapon":
           return {
             k: KIND_IDS.weapon,
-            w: slot.weapon,
+            w: internString(strings, slot.weapon),
             ...(slot.rearFacing === true && { r: 1 }),
           };
         case "ammo":
-          return { k: KIND_IDS.ammo, w: slot.weapon };
+          return { k: KIND_IDS.ammo, w: internString(strings, slot.weapon) };
         case "structure":
           return {
             k: KIND_IDS.structure,
@@ -119,7 +153,6 @@ export function encodeMechDef(def: MechDef): string {
     c: critSlots,
     h: { t: def.heatsink.type === "double" ? 1 : 0, c: def.heatsink.count },
     y: MYOMER_IDS[def.myomer],
-    s: def.source,
   };
   return JSON.stringify(wire);
 }
@@ -127,10 +160,15 @@ export function encodeMechDef(def: MechDef): string {
 /**
  * Decode one packed wire line into a raw `MechDef`, combining it with the
  * manifest identity (the wire carries no `model`/`name`/`techBase`/
- * `tonnage`). Full rule validation happens in `registerMech` via
- * `validateMechDef`.
+ * `tonnage`). Weapon-name `$<index>` refs resolve against `strings` (the
+ * catalog line-0 table); verbatim names still decode. Full rule
+ * validation happens in `registerMech` via `validateMechDef`.
  */
-export function decodeMechLine(line: string, identity: MechIdentity): MechDef {
+export function decodeMechLine(
+  line: string,
+  identity: MechIdentity,
+  strings: MechStringTable = [],
+): MechDef {
   let parsed: unknown;
   try {
     parsed = JSON.parse(line) as unknown;
@@ -143,7 +181,7 @@ export function decodeMechLine(line: string, identity: MechIdentity): MechDef {
   const failUnless = (cond: boolean, msg: string): void => {
     if (!cond) fail(msg);
   };
-  const { w, r, j, a, p, c, h, s } = parsed;
+  const { w, r, j, a, p, c, h } = parsed;
   failUnless(Number.isInteger(w), "bad walking");
   failUnless(Number.isInteger(r), "bad running");
   failUnless(Number.isInteger(j), "bad jumping");
@@ -151,7 +189,7 @@ export function decodeMechLine(line: string, identity: MechIdentity): MechDef {
   failUnless(Array.isArray(p), "bad weapons");
   failUnless(isRecord(c), "bad critSlots");
   failUnless(isRecord(h), "bad heatsink");
-  failUnless(typeof s === "string", "missing source");
+  if ("s" in parsed) fail("stale source key");
   // `y` (myomer) is optional so v1 lines packed before myomer existed still
   // decode; missing means Standard.
   const yRaw = (parsed as Record<string, unknown>).y;
@@ -174,7 +212,7 @@ export function decodeMechLine(line: string, identity: MechIdentity): MechDef {
       "bad weapon shots",
     );
     return {
-      weapon: mount.w as string,
+      weapon: resolveStringRef(strings, mount.w as string, "weapon"),
       location: loc as Location,
       ...(mount.s !== undefined && { shots: mount.s as number }),
       ...(mount.r === 1 && { rearFacing: true as const }),
@@ -194,12 +232,15 @@ export function decodeMechLine(line: string, identity: MechIdentity): MechDef {
           failUnless(typeof slot.w === "string", "bad weapon slot");
           return {
             kind: "weapon" as const,
-            weapon: slot.w as string,
+            weapon: resolveStringRef(strings, slot.w as string, "weapon slot"),
             ...(slot.r === 1 && { rearFacing: true as const }),
           };
         case KIND_IDS.ammo:
           failUnless(typeof slot.w === "string", "bad ammo slot");
-          return { kind: "ammo" as const, weapon: slot.w as string };
+          return {
+            kind: "ammo" as const,
+            weapon: resolveStringRef(strings, slot.w as string, "ammo slot"),
+          };
         case KIND_IDS.structure: {
           const name = CRIT_STRUCTURE_NAMES[slot.n as number];
           failUnless(typeof name === "string", "bad structure slot");
@@ -238,6 +279,5 @@ export function decodeMechLine(line: string, identity: MechIdentity): MechDef {
     critSlots: critSlots as unknown as CritSlots,
     heatsink,
     myomer,
-    source: s as string,
   };
 }

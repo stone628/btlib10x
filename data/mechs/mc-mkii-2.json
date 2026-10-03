@@ -388,6 +388,5 @@
     "type": "double",
     "count": 13
   },
-  "myomer": "Standard",
-  "source": "docs/mtf/Mad Cat Mk II 2.mtf. Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount; crit slot table per location included."
+  "myomer": "Standard"
 }

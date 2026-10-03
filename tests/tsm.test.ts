@@ -18,6 +18,7 @@ import {
   type UnitInit,
 } from "../src";
 import type { Location } from "../src/core/types";
+import { catalogStrings, loadCatalog } from "../src/data/catalog";
 import { decodeMechLine, encodeMechDef } from "../src/data/mech.codec";
 import { effectiveMovement, TSM_WALK_BONUS } from "../src/rules/critical";
 import type { UnitDamageState } from "../src/rules/damage";
@@ -152,20 +153,27 @@ describe("myomer wire key y", () => {
     typeof encodeMechDef
   >[0];
 
+  // Load catalog to get the string table for encoding/decoding
+  const catalogText = readFileSync(new URL("../data/btlib10x.jsonl", import.meta.url), "utf8");
+  loadCatalog(catalogText);
+  const strings = catalogStrings();
+
   it("round-trips Standard as 1 and TSM as 2", () => {
     expect(stdRaw.myomer).toBe("Standard");
     expect(tsmRaw.myomer).toBe("Triple Strength Myomer");
-    expect((JSON.parse(encodeMechDef(stdRaw)) as { y: number }).y).toBe(1);
-    expect((JSON.parse(encodeMechDef(tsmRaw)) as { y: number }).y).toBe(2);
-    expect(decodeMechLine(encodeMechDef(stdRaw), id).myomer).toBe("Standard");
-    expect(decodeMechLine(encodeMechDef(tsmRaw), id).myomer).toBe("Triple Strength Myomer");
+    expect((JSON.parse(encodeMechDef(stdRaw, [])) as { y: number }).y).toBe(1);
+    expect((JSON.parse(encodeMechDef(tsmRaw, [])) as { y: number }).y).toBe(2);
+    expect(decodeMechLine(encodeMechDef(stdRaw, []), id, strings).myomer).toBe("Standard");
+    expect(decodeMechLine(encodeMechDef(tsmRaw, []), id, strings).myomer).toBe(
+      "Triple Strength Myomer",
+    );
   });
 
   it("defaults a missing y to Standard and rejects unknown ids", () => {
-    const wire = JSON.parse(encodeMechDef(stdRaw)) as Record<string, unknown>;
+    const wire = JSON.parse(encodeMechDef(stdRaw, [])) as Record<string, unknown>;
     delete wire.y;
-    expect(decodeMechLine(JSON.stringify(wire), id).myomer).toBe("Standard");
-    expect(() => decodeMechLine(JSON.stringify({ ...wire, y: 3 }), id)).toThrow(/myomer/);
+    expect(decodeMechLine(JSON.stringify(wire), id, strings).myomer).toBe("Standard");
+    expect(() => decodeMechLine(JSON.stringify({ ...wire, y: 3 }), id, strings)).toThrow(/myomer/);
   });
 });
 

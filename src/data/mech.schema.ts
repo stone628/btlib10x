@@ -185,7 +185,6 @@ export interface MechDef {
   readonly heatsink: HeatSinkConfig;
   /** Myomer type from the MTF `Myomer:` header (TW p.143). */
   readonly myomer: MyomerType;
-  readonly source: string;
 }
 
 export interface WeaponMount extends WeaponNameHolder {
@@ -242,7 +241,6 @@ export interface ResolvedMechDef {
   readonly heatsink: HeatSinkConfig;
   /** Myomer type (TW p.143); gates TSM movement and physical-damage bonuses. */
   readonly myomer: MyomerType;
-  readonly source: string;
 }
 
 /**
@@ -295,7 +293,6 @@ export function resolveMechDef(def: MechDef): ResolvedMechDef {
     critSlots,
     heatsink: def.heatsink,
     myomer: def.myomer,
-    source: def.source,
   };
 }
 
