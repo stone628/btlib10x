@@ -13,27 +13,15 @@ import { readFileSync } from "node:fs";
 // Also load into dist module (used by web tests via package exports)
 import {
   loadCatalog as loadCatalogDist,
-  registeredMapDefs as registeredMapDefsDist,
 } from "btlib10x";
 import { registerAllCatalog as registerAllCatalogDist } from "../dist/data/catalog.js";
-import { loadCatalog, registeredMapDefs } from "../src";
+import { loadCatalog } from "../src";
 import { registerAllCatalog } from "../src/data/catalog";
 
 const TEXT = readFileSync(new URL("../data/btlib10x.jsonl", import.meta.url), "utf8");
-const _catalog = loadCatalog(TEXT);
-registerAllCatalog();
 
+loadCatalog(TEXT);
+registerAllCatalog();
 // Load into dist module as well
 loadCatalogDist(TEXT);
 registerAllCatalogDist();
-
-console.log(
-  `registered map (src): ${registeredMapDefs()
-    .map((m) => m.name)
-    .join(",")}`,
-);
-console.log(
-  `registered map (dist): ${registeredMapDefsDist()
-    .map((m) => m.name)
-    .join(",")}`,
-);

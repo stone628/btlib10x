@@ -101,6 +101,8 @@ export interface PhysicalResolution {
   readonly attackerFalls: boolean;
   readonly targetFalls: boolean;
   readonly notes: string[];
+  /** True when the hit-location roll was 2 (through-armor critical, TW p.123). */
+  readonly throughArmorCrit: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -887,9 +889,12 @@ export function resolvePhysicalAttack(
   const damageToTarget: DamageGroup[] = [];
   const damageToAttacker: DamageGroup[] = [];
 
+  let throughArmorCrit = false;
   if (hit && dmg > 0) {
     // Roll hit location
     const locRoll = decl.type === "punch" || decl.type === "kick" ? rollD6(rng) : roll2D6(rng);
+    // Through-armor critical on hit-location roll of 2 (TW p.123)
+    throughArmorCrit = locRoll === 2;
     const location = physicalHitLocation(decl.type, target, attackDirection, locRoll);
     damageToTarget.push({ location, damage: dmg });
   }
@@ -971,6 +976,7 @@ export function resolvePhysicalAttack(
     attackerFalls,
     targetFalls,
     notes,
+    throughArmorCrit,
   };
 }
 
