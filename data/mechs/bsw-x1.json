@@ -373,5 +373,6 @@
     "type": "double",
     "count": 11
   },
+  "myomer": "Standard",
   "source": "docs/mtf/Bushwacker BSW-X1.mtf (TRO 3058 - Clan Invasion). Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount; crit slot table per location included."
 }

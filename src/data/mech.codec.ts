@@ -14,6 +14,8 @@ import { CRIT_SOAK_NAMES, CRIT_STRUCTURE_NAMES, weightClassForTonnage } from "./
  * the wire — the manifest entry already carries it, so `decodeMechLine`
  * takes it as a second argument and each sheet is single-sourced.
  * `weightClass` is omitted too (restored with `weightClassForTonnage`).
+ * Myomer rides as numeric `y` (1 = Standard, 2 = Triple Strength Myomer);
+ * absent `y` on old v1 lines decodes as Standard.
  * Open vocabularies (weapon names, `source`) stay verbatim strings;
  * tokenising them would couple the wire to catalog contents.
  *
@@ -44,6 +46,11 @@ const CODE_LOCS: Readonly<Record<string, Location | RearArmorKey>> = Object.from
 
 /** Slot-kind wire ids. */
 const KIND_IDS = { empty: 0, weapon: 1, ammo: 2, structure: 3, soak: 4 } as const;
+
+/** Myomer wire ids: 1 = Standard, 2 = Triple Strength Myomer. */
+const MYOMER_IDS = { Standard: 1, "Triple Strength Myomer": 2 } as const;
+
+const ID_MYOMERS = { 1: "Standard", 2: "Triple Strength Myomer" } as const;
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -111,6 +118,7 @@ export function encodeMechDef(def: MechDef): string {
     p: weapons,
     c: critSlots,
     h: { t: def.heatsink.type === "double" ? 1 : 0, c: def.heatsink.count },
+    y: MYOMER_IDS[def.myomer],
     s: def.source,
   };
   return JSON.stringify(wire);
@@ -144,6 +152,11 @@ export function decodeMechLine(line: string, identity: MechIdentity): MechDef {
   failUnless(isRecord(c), "bad critSlots");
   failUnless(isRecord(h), "bad heatsink");
   failUnless(typeof s === "string", "missing source");
+  // `y` (myomer) is optional so v1 lines packed before myomer existed still
+  // decode; missing means Standard.
+  const yRaw = (parsed as Record<string, unknown>).y;
+  failUnless(yRaw === undefined || yRaw === 1 || yRaw === 2, "bad myomer");
+  const myomer = ID_MYOMERS[(yRaw ?? 1) as 1 | 2];
 
   const armor: Record<string, number> = {};
   for (const [code, value] of Object.entries(a as Record<string, unknown>)) {
@@ -224,6 +237,7 @@ export function decodeMechLine(line: string, identity: MechIdentity): MechDef {
     weapons,
     critSlots: critSlots as unknown as CritSlots,
     heatsink,
+    myomer,
     source: s as string,
   };
 }

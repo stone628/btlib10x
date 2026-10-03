@@ -59,12 +59,19 @@ function splitWeaponLine(line) {
     codeRaw = codeRaw.replace(/\((R|F)\)\s*$/, "").trim();
   }
   const location = (parts[1] ?? "").trim();
+  // Some sheets put the facing on the location instead ("Center Torso (R)",
+  // e.g. CN9-YLW2); accept it there too.
+  const locFacing = location.match(/\((R|F)\)\s*$/);
+  if (locFacing) {
+    rearFacing = locFacing[1] === "R";
+  }
+  const cleanLocation = location.replace(/\s*\((R|F)\)\s*$/, "").trim();
   let explicitAmmo = null;
   if (parts[2]) {
     const m = parts[2].match(/^Ammo:(\d+)/);
     if (m) explicitAmmo = Number(m[1]);
   }
-  return { codeRaw, location, explicitAmmo, rearFacing };
+  return { codeRaw, location: cleanLocation, explicitAmmo, rearFacing };
 }
 
 function mapWeapon(codeRaw) {
@@ -125,6 +132,9 @@ function parseMtf(text, file) {
         errors: [`variant ${JSON.stringify(model)} is not a model code; import this one manually`],
       };
     }
+    // Variants may carry a quoted nickname suffix (e.g. CN9-YLW2's
+    // "CN9-YLW2 'Yen Lo Wang'"); the catalog key is the bare model code.
+    model = model.replace(/\s+['"].*$/, "").trim();
   }
   // MTF model codes are emitted all-caps in the catalog so the registry key
   // and the on-disk filename (`<model>.json`) are case-stable.
@@ -148,6 +158,11 @@ function parseMtf(text, file) {
   } else {
     errors.push("Heat Sinks header missing or malformed (expected 'N Single' or 'N Double')");
   }
+
+  // Myomer: "Standard" everywhere so far except Triple-Strength sheets
+  // (e.g. CN9-YLW2, "Myomer:Triple-Strength"). Canonical spelling matches
+  // the crit-slot token ("Triple Strength Myomer").
+  const myomer = /triple/i.test(fields.Myomer ?? "") ? "Triple Strength Myomer" : "Standard";
 
   // Flat armor; torso = front + rear summed. Rear torso values are also stored
   // alongside, keyed as `centerTorsoRear`/`leftTorsoRear`/`rightTorsoRear`
@@ -239,13 +254,29 @@ function parseMtf(text, file) {
     if (owner !== m) m.ammo = null;
   }
 
+  const critSlots = parseCritSlots(lines, errors, file);
+
+  // Physical-weapon mounts (Hatchet, TW p.146) are often absent from the
+  // weapons block (e.g. CN9-YLW2 lists only guns there) while their crit
+  // slots name the equipment. Synthesize one mount per crit-bearing arm so
+  // the slot linkage in `resolveMechDef` resolves (precedent: the
+  // hand-transcribed HCT-5S ships a Hatchet mount + slots).
+  for (const [loc, slots] of Object.entries(critSlots)) {
+    const hasHatchetCrit = slots.some(
+      (slot) => slot.kind === "weapon" && slot.weapon === "Hatchet",
+    );
+    if (!hasHatchetCrit) continue;
+    const hasHatchetMount = parsed.some((m) => m.weapon === "Hatchet" && m.location === loc);
+    if (!hasHatchetMount) {
+      parsed.push({ weapon: "Hatchet", location: loc, ammo: null, explicit: false });
+    }
+  }
+
   const weapons = parsed.map(({ weapon, location, ammo, rearFacing }) =>
     ammo !== null
       ? { weapon, location, shots: ammo, ...(rearFacing && { rearFacing: true }) }
       : { weapon, location, ...(rearFacing && { rearFacing: true }) },
   );
-
-  const critSlots = parseCritSlots(lines, errors, file);
 
   // Build rear-facing map from crit slots: (location, weapon) -> true if any slot is rear-facing
   const rearFacingFromCrits = new Map();
@@ -273,6 +304,7 @@ function parseMtf(text, file) {
     engineField: fields.Engine,
     structureField: fields.Structure,
     armorField: fields.Armor,
+    myomer,
     walking,
     tonnage,
     heatsink,
@@ -296,6 +328,7 @@ function parseMtf(text, file) {
     weapons,
     critSlots,
     heatsink,
+    myomer,
     source,
   };
 

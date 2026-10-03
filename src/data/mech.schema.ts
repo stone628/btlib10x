@@ -23,6 +23,12 @@ export interface HeatSinkConfig {
   readonly count: number;
 }
 
+/** Myomer (muscle) type from the MTF `Myomer:` header. Only Standard and
+ *  Triple-Strength Myomer (TW p.143) are modeled; Industrial TSM is deferred. */
+export type MyomerType = "Standard" | "Triple Strength Myomer";
+
+export const MYOMER_TYPES: readonly MyomerType[] = ["Standard", "Triple Strength Myomer"];
+
 /** Rear torso armor keys carried inside `armor` as informational metadata. */
 export type RearArmorKey = "centerTorsoRear" | "leftTorsoRear" | "rightTorsoRear";
 
@@ -81,7 +87,7 @@ export type CritStructureName = (typeof CRIT_STRUCTURE_NAMES)[number];
 
 /** All soak (armor-tech) component names recognized by the crit table.
  * Order is wire-stable (indexes are stored in packed JSONL lines) — append only. */
-export const CRIT_SOAK_NAMES = ["endoSteel", "ferroFibrous", "case", "caseII"] as const;
+export const CRIT_SOAK_NAMES = ["endoSteel", "ferroFibrous", "case", "caseII", "tsm"] as const;
 
 export type CritSoakName = (typeof CRIT_SOAK_NAMES)[number];
 
@@ -177,6 +183,8 @@ export interface MechDef {
   readonly critSlots: CritSlots;
   /** Heat sink type and total count (engine-mounted + external). */
   readonly heatsink: HeatSinkConfig;
+  /** Myomer type from the MTF `Myomer:` header (TW p.143). */
+  readonly myomer: MyomerType;
   readonly source: string;
 }
 
@@ -232,6 +240,8 @@ export interface ResolvedMechDef {
   readonly critSlots: ResolvedCritSlots;
   /** Heat sink type and total count (engine-mounted + external). */
   readonly heatsink: HeatSinkConfig;
+  /** Myomer type (TW p.143); gates TSM movement and physical-damage bonuses. */
+  readonly myomer: MyomerType;
   readonly source: string;
 }
 
@@ -284,6 +294,7 @@ export function resolveMechDef(def: MechDef): ResolvedMechDef {
     weapons,
     critSlots,
     heatsink: def.heatsink,
+    myomer: def.myomer,
     source: def.source,
   };
 }
@@ -619,6 +630,28 @@ export function validateMechDef(def: MechDef): MechDef {
     if (external !== expectedExternal) {
       errors.push(
         `heatsink.count ${heatsink.count} needs ${expectedExternal} external sink(s) (engine holds ${internal}); crit slots hold ${external}`,
+      );
+    }
+  }
+
+  // Myomer (TW p.143): Triple-Strength occupies exactly 6 crit slots;
+  // Standard 'Mechs carry none. TSM slots soak (re-roll, never critted).
+  {
+    if (!(MYOMER_TYPES as readonly string[]).includes(def.myomer)) {
+      errors.push(
+        `myomer ${JSON.stringify(def.myomer)} must be "Standard" or "Triple Strength Myomer"`,
+      );
+    }
+    let tsm = 0;
+    for (const loc of LOCATIONS) {
+      for (const slot of def.critSlots[loc]) {
+        if (slot.kind === "soak" && slot.name === "tsm") tsm += 1;
+      }
+    }
+    const expected = def.myomer === "Triple Strength Myomer" ? 6 : 0;
+    if (tsm !== expected) {
+      errors.push(
+        `myomer ${JSON.stringify(def.myomer)} needs ${expected} tsm crit slot(s); crit slots hold ${tsm}`,
       );
     }
   }

@@ -90,6 +90,7 @@ import {
   HEAT_CAP,
   heatDissipation,
   heatDissipationMax,
+  isTsmActive,
   largestAmmoBin,
   movementHeat,
   shutdownAvoid,
@@ -1116,7 +1117,12 @@ export function executeMove(
   const prechargedMP = options.spentMP ?? 0;
 
   const def = mechDefFor(unit);
-  const movement = effectiveMovement(def, unit.damage, unit.critSlotsDestroyed);
+  const movement = effectiveMovement(
+    def,
+    unit.damage,
+    unit.critSlotsDestroyed,
+    isTsmActive(def, unit.heat),
+  );
   const budget = effectiveMoveBudget(unit.moveMode, movement, unit.heat);
   const jumping = unit.moveMode === "jump";
   const proneTurn = unit.prone && unit.moveMode === "walk";
@@ -3338,7 +3344,7 @@ export function attemptStandUp(
   const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
   const budget = effectiveMoveBudget(
     "walk",
-    effectiveMovement(def, unit.damage, unit.critSlotsDestroyed),
+    effectiveMovement(def, unit.damage, unit.critSlotsDestroyed, isTsmActive(def, unit.heat)),
     unit.heat,
   );
   if (pre.gyroHits >= GYRO_DESTROYED_HITS)
@@ -3423,7 +3429,7 @@ export function dropProne(
   const def = mechDefFor(unit);
   const budget = effectiveMoveBudget(
     "walk",
-    effectiveMovement(def, unit.damage, unit.critSlotsDestroyed),
+    effectiveMovement(def, unit.damage, unit.critSlotsDestroyed, isTsmActive(def, unit.heat)),
     unit.heat,
   );
   if (budget < DROP_BUDGET_MIN) throw new Error(`${unitId} has no MP to drop prone`);

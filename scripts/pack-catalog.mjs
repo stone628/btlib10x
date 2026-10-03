@@ -64,7 +64,8 @@ const STRUCTURE_NAMES = [
   "targetingComputer",
   "hip",
 ];
-const SOAK_NAMES = ["endoSteel", "ferroFibrous", "case", "caseII"];
+const SOAK_NAMES = ["endoSteel", "ferroFibrous", "case", "caseII", "tsm"];
+const MYOMER_IDS = { Standard: 1, "Triple Strength Myomer": 2 };
 const TERRAIN_TYPES = [
   "clear",
   "lightWoods",
@@ -128,6 +129,7 @@ function encodeMechDef(def) {
     p: weapons,
     c: critSlots,
     h: { t: def.heatsink.type === "double" ? 1 : 0, c: def.heatsink.count },
+    y: MYOMER_IDS[def.myomer] ?? 1,
     s: def.source,
   });
 }

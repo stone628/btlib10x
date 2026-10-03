@@ -91,6 +91,10 @@ export const CODE = {
   // Un-prefixed forms (after stripping "IS "/"CL ").
   LBXAC10: "CL LB 10-X AC",
   LBXAC20: "CL LB 20-X AC",
+  // Physical-weapon equipment (Hatchet, TW p.146): modeled as a weapon mount
+  // with `physicalWeapon: true` in the catalog, linked from crit slots like
+  // any other weapon (precedent: HCT-5S ships a Hatchet mount + slots).
+  Hatchet: "Hatchet",
   // Un-prefixed "Gauss" crit-slot tokens ("CLGauss Ammo", "GaussRifle") are
   // Clan by convention; the IS Gauss Rifle is reached through the explicit
   // spaced "Gauss Rifle" form used in weapons blocks (see below).
@@ -275,6 +279,9 @@ export const SOAK_TOKEN = {
   "CL Endo Steel (IS)": "endoSteel",
   "IS Endo-Steel": "endoSteel",
   "Endo-Steel": "endoSteel",
+  // Triple-Strength Myomer (TW p.143): occupies 6 crit slots; critical hits
+  // on TSM slots have no effect (re-roll), so it soaks like armor tech.
+  "Triple Strength Myomer": "tsm",
   CASE: "case",
   ISCASE: "case",
   "IS CASE": "case",

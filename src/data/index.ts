@@ -70,6 +70,7 @@ export type {
   CritSoakName,
   CritStructureName,
   MechDef,
+  MyomerType,
   RearArmorKey,
   ResolvedArmor,
   ResolvedCritSlot,

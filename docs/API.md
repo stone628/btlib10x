@@ -168,6 +168,7 @@ interface MechDef {
   weapons: readonly WeaponMount[];
   critSlots: CritSlots;       // required; per-location table, see below
   heatsink: HeatSinkConfig;   // { type: "single"|"double"; count: number }
+  myomer: MyomerType;         // "Standard" | "Triple Strength Myomer" (TW p.143)
   source: string;
 }
 ```
@@ -190,7 +191,7 @@ type CritSlot =
   | { kind: "weapon"; weapon: string }
   | { kind: "ammo"; weapon: string }
   | { kind: "structure"; name: CritStructureName }
-  | { kind: "soak"; name: CritSoakName };         // endoSteel / ferroFibrous / case / caseII
+  | { kind: "soak"; name: CritSoakName };         // endoSteel / ferroFibrous / case / caseII / tsm
 
 type CritSlots = Readonly<Record<Location, readonly CritSlot[]>>;
 ```
@@ -200,7 +201,8 @@ Structure names (`CRIT_STRUCTURE_NAMES`): cockpit, sensors, lifeSupport,
 engine, gyro, heatSink, doubleHeatSink, jumpJet, shoulder, upperArmActuator,
 lowerArmActuator, handActuator, upperLegActuator, lowerLegActuator,
 footActuator, targetingComputer, hip. Soak names (`CRIT_SOAK_NAMES`):
-endoSteel, ferroFibrous, case, caseII.
+endoSteel, ferroFibrous, case, caseII, tsm (`tsm` = Triple-Strength Myomer,
+exactly 6 slots on TSM designs, TW p.143).
 
 The engine-facing resolution keeps front and rear armor as **separate pools**
 and derives internal structure:
@@ -216,6 +218,7 @@ interface ResolvedMechDef {
   weapons: Record<number, WeaponMount>;                // re-keyed 1..N (1-based)
   critSlots: ResolvedCritSlots;                        // weaponIndex-linked
   heatsink: HeatSinkConfig;
+  myomer: MyomerType;
   source: string;
 }
 ```
@@ -236,7 +239,9 @@ version `1`: `WIRE_VERSION` / `MAP_WIRE_VERSION`). Sheet identity
 (`model`/`name`/`techBase`/`tonnage`, optional `clanName` — the
 `MechIdentity` shape) lives only in the line-0 manifest entry, never the
 wire line: `decodeMechLine` takes it as a second argument, so each sheet is
-single-sourced. `parseCatalogManifest` / `findMechEntry` / `findMapEntry`
+single-sourced. Myomer rides the mech wire as numeric `y` (1 = Standard,
+2 = Triple Strength Myomer); a missing `y` on older v1 lines decodes as
+Standard. `parseCatalogManifest` / `findMechEntry` / `findMapEntry`
 index the manifest (`CatalogManifest` with `MechManifestEntry` /
 `MapManifestEntry`: short keys `m`/`n`/`b`/`t`/`c?`/`l` plus the sheet's
 absolute file line — class is inferred, never stored). `loadCatalog` holds
@@ -296,6 +301,9 @@ Heat is a public subsystem. Constants: `HEAT_CAP = 50`,
 - `ammoExplosionAvoidWithThreshold(heat): { avoid: number; threshold: number }`
 - `heatScaleEffects(heat): HeatScaleEffects`
 - `HeatScaleEffects`, `LargestAmmoBin` — return shapes
+- `TSM_ACTIVATION_HEAT = 9` — end-of-turn heat activating TSM (TW p.143)
+- `isTsmActive(def, endHeat): boolean` — true for Triple-Strength Myomer
+  designs at heat 9+; pass `unit.heat` (last turn's end value mid-turn)
 
 Engine-internal heat plumbing (source-module import only): `movementHeat`,
 `engineHitHeat`, `engineInternalSinks`, `dhsCritWidth`,
@@ -485,9 +493,12 @@ and inward transfer (head/CT terminal; excess lost).
 `destroyedWeapons` / `damage` / `blownOffArms` / `killed` / `ammoBins`.
 
 - `ENGINE_SLOTS_KILL = 3` — engine hits that destroy the unit
-- `effectiveMovement(def, critSlotsDestroyed): EffectiveMovement` — computes
-  walking/running/jumping after leg-actuator (−1 walk each), hip (halves
-  walking), and jump-jet (−1 jump each) crit damage.
+- `effectiveMovement(def, damage, critSlotsDestroyed, tsmActive?):
+  EffectiveMovement` — computes walking/running/jumping after leg-actuator
+  (−1 walk each), hip (halves walking), and jump-jet (−1 jump each) crit
+  damage. `tsmActive` (from `isTsmActive`) adds the TW p.143 +2 Walking MP
+  before damage (one-leg clamp still overrides); running recomputes from it.
+- `TSM_WALK_BONUS = 2` — TSM walking-MP bonus while active (TW p.143).
 - `countDestroyedEngine(def, damage, critSlotsDestroyed): number` — engine
   crit count for heat dissipation.
 - `componentHitStatus(def, damage, critSlotsDestroyed):

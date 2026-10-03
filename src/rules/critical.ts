@@ -840,6 +840,9 @@ export interface EffectiveMovement {
   readonly jumping: number;
 }
 
+/** TSM walking-MP bonus while active (TW p.143); running recomputes from it. */
+export const TSM_WALK_BONUS = 2;
+
 export function destroyedStructures(
   def: ResolvedMechDef,
   damage: UnitDamageState,
@@ -853,6 +856,7 @@ export function effectiveMovement(
   def: ResolvedMechDef,
   damage: UnitDamageState,
   critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+  tsmActive = false,
 ): EffectiveMovement {
   const legMovePenalty = (
     loc: "rightLeg" | "leftLeg",
@@ -879,7 +883,9 @@ export function effectiveMovement(
   // two hip damages lead to 0 MP
   const { movePenalty: mpl, jumpPenalty: jpl, hipHit: leftHip } = legMovePenalty("leftLeg");
   const { movePenalty: mpr, jumpPenalty: jpr, hipHit: rightHip } = legMovePenalty("rightLeg");
-  let walk = def.walking;
+  // TSM (TW p.143): +2 Walking MP on the base rating before damage; the
+  // one-leg clamp below still overrides all MP increases (TW p.122).
+  let walk = def.walking + (tsmActive ? TSM_WALK_BONUS : 0);
   if (leftHip && rightHip) {
     walk = 0;
   } else if (!leftHip && !rightHip) {
