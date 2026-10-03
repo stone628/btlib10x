@@ -371,5 +371,6 @@
     "type": "single",
     "count": 10
   },
+  "myomer": "Standard",
   "source": "docs/mtf/Hatchetman HCT-5S.mtf (TRO 3050 - Clan Invasion). Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount; crit slot table per location included."
 }

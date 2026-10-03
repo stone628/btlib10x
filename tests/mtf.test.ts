@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { ammoBinsFromCrits, validateCritConstruction } from "../scripts/mtf-crit.mjs";
+import {
+  ammoBinsFromCrits,
+  parseCritSlots,
+  validateCritConstruction,
+} from "../scripts/mtf-crit.mjs";
 
 type Slot =
   | { kind: "empty" }
@@ -190,6 +194,83 @@ describe("MTF crit construction validation", () => {
     );
     expect(errors.length).toBe(1);
     expect(errors[0]).toContain("compact engines");
+  });
+
+  it("maps Hatchet to a weapon slot and TSM to a tsm soak slot", () => {
+    const errors: string[] = [];
+    const slots = parseCritSlots(
+      ["Left Arm:", "Hatchet", "Triple Strength Myomer", ""],
+      errors,
+      "test.mtf",
+    );
+    expect(errors).toEqual([]);
+    expect(slots.leftArm!.slice(0, 2)).toEqual([
+      { kind: "weapon", weapon: "Hatchet" },
+      { kind: "soak", name: "tsm" },
+    ]);
+    expect(slots.leftArm!.length).toBe(12);
+  });
+
+  it("accepts 6 tsm slots when myomer is Triple Strength Myomer", () => {
+    const s = emptySlots();
+    engine(s, "centerTorso", 6);
+    soak(s, "leftArm", "tsm", 1);
+    soak(s, "rightArm", "tsm", 1);
+    soak(s, "leftTorso", "tsm", 1);
+    soak(s, "rightTorso", "tsm", 1);
+    soak(s, "leftLeg", "tsm", 1);
+    soak(s, "rightLeg", "tsm", 1);
+    const errors: string[] = [];
+    validateCritConstruction(
+      s,
+      {
+        techBase: "Inner Sphere",
+        engineField: "200 Fusion Engine",
+        structureField: "Standard",
+        armorField: "Standard",
+        myomer: "Triple Strength Myomer",
+      },
+      errors,
+    );
+    expect(errors).toEqual([]);
+  });
+
+  it("rejects tsm slots when myomer is Standard", () => {
+    const s = emptySlots();
+    engine(s, "centerTorso", 6);
+    soak(s, "leftArm", "tsm", 1);
+    const errors: string[] = [];
+    validateCritConstruction(
+      s,
+      {
+        techBase: "Inner Sphere",
+        engineField: "200 Fusion Engine",
+        structureField: "Standard",
+        armorField: "Standard",
+      },
+      errors,
+    );
+    expect(errors.length).toBe(1);
+    expect(errors[0]).toContain("Triple Strength Myomer");
+  });
+
+  it("rejects a TSM mech missing its 6 slots", () => {
+    const s = emptySlots();
+    engine(s, "centerTorso", 6);
+    const errors: string[] = [];
+    validateCritConstruction(
+      s,
+      {
+        techBase: "Inner Sphere",
+        engineField: "200 Fusion Engine",
+        structureField: "Standard",
+        armorField: "Standard",
+        myomer: "Triple Strength Myomer",
+      },
+      errors,
+    );
+    expect(errors.length).toBe(1);
+    expect(errors[0]).toContain("Triple Strength Myomer");
   });
 });
 

@@ -63,6 +63,7 @@ describe("'Mech definitions", () => {
       running: 8,
       jumping: 0,
       heatsink: { type: "single" as const, count: 10 },
+      myomer: "Standard",
       armor: {
         head: 9,
         centerTorso: 26,

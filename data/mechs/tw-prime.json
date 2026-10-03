@@ -386,5 +386,6 @@
     "type": "double",
     "count": 17
   },
+  "myomer": "Standard",
   "source": "docs/mtf/Mad Cat Prime.mtf (TRO 3050 - Succession Wars). Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount; crit slot table per location included."
 }

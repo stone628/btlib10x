@@ -8,6 +8,7 @@ import {
   effectiveMovement,
   isImmobile,
   isNominal,
+  isTsmActive,
   isUnitAvailable,
   isUnitImmobile,
   isUnitRemoved,
@@ -81,7 +82,12 @@ export function resetAutoplayState(s: Session): void {
 /** Post-heat walk budget for the actor; 0 when heat/structure deny walking. */
 function walkBudgetFor(actor: UnitState): number {
   const def = mechDefFor(actor);
-  const movement = effectiveMovement(def, actor.damage, actor.critSlotsDestroyed);
+  const movement = effectiveMovement(
+    def,
+    actor.damage,
+    actor.critSlotsDestroyed,
+    isTsmActive(def, actor.heat),
+  );
   return effectiveMoveBudget("walk", movement, actor.heat);
 }
 

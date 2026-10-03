@@ -85,6 +85,7 @@ export type {
   CritStructureName,
   HeatSinkConfig,
   MechDef,
+  MyomerType,
   RearArmorKey,
   ResolvedArmor,
   ResolvedCritSlot,
@@ -128,6 +129,7 @@ export {
   countDestroyedEngine,
   ENGINE_SLOTS_KILL,
   effectiveMovement,
+  TSM_WALK_BONUS,
 } from "./rules/critical";
 export {
   canAttemptStandUp,
@@ -207,10 +209,12 @@ export {
   heatDissipation,
   heatDissipationMax,
   heatScaleEffects,
+  isTsmActive,
   type LargestAmmoBin,
   movementMpPenalty,
   movementMpPenaltyWithThreshold,
   shutdownAvoid,
+  TSM_ACTIVATION_HEAT,
   toHitHeatModifier,
   toHitHeatModifierWithThreshold,
 } from "./rules/heat";

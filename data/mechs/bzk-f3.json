@@ -354,5 +354,6 @@
     "type": "single",
     "count": 10
   },
+  "myomer": "Standard",
   "source": "docs/mtf/Hollander BZK-F3.mtf (TRO 3055 - Clan Invasion). Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount; crit slot table per location included."
 }

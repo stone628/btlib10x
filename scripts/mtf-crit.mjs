@@ -84,11 +84,10 @@ export function ammoBinsFromCrits(lines) {
 function classifyCritLine(raw, errors, fileLabel) {
   const t = raw.trim();
   if (t === "" || t === "-Empty-") return { ok: true, slot: { kind: "empty" } };
-  // Physical-weapon equipment (Hatchet, TW p.146) is outside the engine's
-  // implemented subset (deferred per docs/TODO.md) and has no weapon-catalog
-  // entry. Emit an empty slot so the per-location slot count stays faithful;
-  // the weapon itself is not modeled.
-  if (t === "Hatchet") return { ok: true, slot: { kind: "empty" } };
+  // Physical-weapon equipment (Hatchet, TW p.146) links to a Hatchet weapon
+  // mount like any other weapon (precedent: HCT-5S). The importer synthesizes
+  // the mount from crits when the weapons block omits it (e.g. CN9-YLW2).
+  if (t === "Hatchet") return { ok: true, slot: { kind: "weapon", weapon: "Hatchet" } };
   // "IS Ammo <token>" / "CL Ammo <token>" (e.g. "IS Ammo AC/20"). The
   // AMMO_TOKEN table is preferred (the trailing token is a known ammo
   // shorthand like "AC/20" or "Gauss"); CODE is consulted as a fallback so
@@ -225,11 +224,13 @@ function engineRowFromField(engineField, techBase, errors) {
  *   - engineField    — raw `Engine:` line, e.g. "360 XL Fusion Engine"
  *   - structureField — raw `Structure:` line, e.g. "Endo Steel" | "Standard"
  *   - armorField     — raw `Armor:` line, e.g. "Ferro-Fibrous" | "Standard"
+ *   - myomer         — resolved myomer, "Standard" | "Triple Strength Myomer"
  */
 export function validateCritConstruction(slots, meta, errors) {
   const techBase = meta?.techBase ?? "";
   const structureField = meta?.structureField ?? "";
   const armorField = meta?.armorField ?? "";
+  const myomer = meta?.myomer ?? "Standard";
 
   // Count engine structure slots per engine location (and total).
   const engine = {
@@ -239,7 +240,7 @@ export function validateCritConstruction(slots, meta, errors) {
   };
   let engineTotal = 0;
   // Soak totals across all locations.
-  const soak = { endoSteel: 0, ferroFibrous: 0 };
+  const soak = { endoSteel: 0, ferroFibrous: 0, tsm: 0 };
 
   for (const loc of LOCATIONS) {
     for (const slot of slots[loc] ?? []) {
@@ -249,6 +250,7 @@ export function validateCritConstruction(slots, meta, errors) {
       } else if (slot.kind === "soak") {
         if (slot.name === "endoSteel") soak.endoSteel += 1;
         else if (slot.name === "ferroFibrous") soak.ferroFibrous += 1;
+        else if (slot.name === "tsm") soak.tsm += 1;
       }
     }
   }
@@ -291,6 +293,17 @@ export function validateCritConstruction(slots, meta, errors) {
         `Ferro-Fibrous crit slots: ${soak.ferroFibrous} counted, ${
           ferroExpected === undefined ? 0 : ferroExpected
         } expected`,
+      );
+    }
+  }
+
+  // Triple-Strength Myomer (TW p.143): occupies 6 crit slots when the Myomer:
+  // header declares it, none otherwise.
+  {
+    const tsmExpected = myomer === "Triple Strength Myomer" ? 6 : 0;
+    if (soak.tsm !== tsmExpected) {
+      errors.push(
+        `Triple Strength Myomer crit slots: ${soak.tsm} counted, ${tsmExpected} expected`,
       );
     }
   }

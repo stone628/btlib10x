@@ -35,6 +35,7 @@ import {
 } from "./damage";
 import type { BattleState, UnitState } from "./game";
 import { isUnitRemoved } from "./game";
+import { isTsmActive } from "./heat";
 import { hitLocationForArc, punchHitLocation } from "./hitlocation";
 import { preexistingDamageModifier, rollPilotingCheck } from "./piloting";
 
@@ -124,10 +125,10 @@ export const CLUB_DAMAGE_PER_TONS = 5;
 /** Physical weapons (TW p.146): per-weapon to-hit modifier and damage
  *  formula `ceil(tonnage / damagePerTons) + damageBonus`. All three use the
  *  standard hit-location table on the Arm arc (forward or mounting-arm side)
- *  and are TSM-sensitive — TSM doubling is deferred with the TSM milestone
- *  (no TSM equipment exists in the engine yet). The optional Punch/Kick
- *  table election (+4) and the different-levels auto-swap (TW p.150) are
- *  likewise deferred, matching punch/kick/club in this subset. */
+ *  and are TSM-sensitive (doubled while TSM is active, TW p.143/p.146). The
+ *  optional Punch/Kick table election (+4) and the different-levels
+ *  auto-swap (TW p.150) are deferred, matching punch/kick/club in this
+ *  subset. */
 export interface PhysicalWeaponStats {
   readonly toHitMod: number;
   readonly damagePerTons: number;
@@ -464,34 +465,40 @@ export function resolveStrikeMount(
 // Damage computation
 // ---------------------------------------------------------------------------
 
-/** Compute damage for a physical attack type (TW pp. 145–147). */
+/** Compute damage for a physical attack type (TW pp. 145–147).
+ *
+ * TSM (TW p.143) doubles punch, kick, club, and physical-weapon (hatchet,
+ * sword, retractable blade — all "Yes" in the TW p.146 table) damage while
+ * active, applied after the actuator halving below. Push deals no damage.
+ */
 export function physicalDamage(
   type: PhysicalAttackType,
   attacker: UnitState,
   limb: "leftArm" | "rightArm" | "leftLeg" | "rightLeg" | undefined,
   weapon?: PhysicalWeaponName,
 ): number {
-  const tons = mechDefFor(attacker).tonnage;
+  const def = mechDefFor(attacker);
+  const tons = def.tonnage;
+  const tsm = isTsmActive(def, attacker.heat);
+  const doubled = (dmg: number): number => (tsm ? dmg * 2 : dmg);
 
   switch (type) {
     case "punch": {
       let dmg = Math.ceil(tons / PUNCH_DAMAGE_PER_TONS);
       if (limb && (limb === "leftArm" || limb === "rightArm")) {
-        const def = mechDefFor(attacker);
         const counts = countArmActuators(def, attacker.damage, attacker.critSlotsDestroyed, limb);
         // Halve for each damaged upper/lower arm actuator, cumulative
         let divisor = 1;
         if (counts.upper > 0) divisor *= 2;
         if (counts.lower > 0) divisor *= 2;
         dmg = Math.floor(dmg / divisor);
-        return Math.max(1, dmg);
+        return Math.max(1, doubled(dmg));
       }
-      return dmg;
+      return doubled(dmg);
     }
     case "kick": {
       let dmg = Math.ceil(tons / KICK_DAMAGE_PER_TONS);
       if (limb && (limb === "leftLeg" || limb === "rightLeg")) {
-        const def = mechDefFor(attacker);
         const destroyed = attacker.critSlotsDestroyed;
         const damage = attacker.damage;
         let divisor = 1;
@@ -499,19 +506,18 @@ export function physicalDamage(
         if (structs.includes("upperLegActuator")) divisor *= 2;
         if (structs.includes("lowerLegActuator")) divisor *= 2;
         dmg = Math.floor(dmg / divisor);
-        return Math.max(1, dmg);
+        return Math.max(1, doubled(dmg));
       }
-      return dmg;
+      return doubled(dmg);
     }
     case "push":
       return 0;
     case "club":
-      return Math.ceil(tons / CLUB_DAMAGE_PER_TONS);
+      return doubled(Math.ceil(tons / CLUB_DAMAGE_PER_TONS));
     case "strike": {
       const stats = weapon !== undefined ? PHYSICAL_WEAPONS[weapon] : undefined;
       if (stats === undefined) return 0;
       let dmg = Math.ceil(tons / stats.damagePerTons) + stats.damageBonus;
-      const def = mechDefFor(attacker);
       const arm = resolveStrikeArm(def, weapon, limb);
       if (arm !== null) {
         const counts = countArmActuators(def, attacker.damage, attacker.critSlotsDestroyed, arm);
@@ -521,9 +527,9 @@ export function physicalDamage(
         if (counts.upper > 0) divisor *= 2;
         if (counts.lower > 0) divisor *= 2;
         dmg = Math.floor(dmg / divisor);
-        return Math.max(1, dmg);
+        return Math.max(1, doubled(dmg));
       }
-      return dmg;
+      return doubled(dmg);
     }
   }
 }

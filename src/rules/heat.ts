@@ -88,6 +88,20 @@ export function engineHitHeat(destroyedEngineSlots: number): number {
   return destroyedEngineSlots >= 2 ? ENGINE_HEAT_MULTI_HIT : ENGINE_HEAT_FIRST_HIT;
 }
 
+/** End-of-turn heat at which Triple-Strength Myomer activates (TW p.143). */
+export const TSM_ACTIVATION_HEAT = 9;
+
+/**
+ * True when TSM is active this turn: the 'Mech mounts Triple-Strength Myomer
+ * and the previous turn ended at heat 9+. Callers pass `unit.heat`, which
+ * still holds last turn's end value during the movement and weapon attack
+ * phases (this turn's heat accumulates in `heatPending` until the heat
+ * phase, TW p.159) — so mid-turn heat never activates TSM early.
+ */
+export function isTsmActive(def: ResolvedMechDef, endHeat: number): boolean {
+  return def.myomer === "Triple Strength Myomer" && endHeat >= TSM_ACTIVATION_HEAT;
+}
+
 /**
  * Operational heat sinks: engine-internal sinks (`floor(rating/25)`, never
  * destroyed by engine crits) plus one per intact external sink device — each

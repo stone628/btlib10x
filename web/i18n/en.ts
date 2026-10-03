@@ -470,6 +470,7 @@ export const en = {
   "critChart.soak.ferroFibrous": "Ferro-Fibrous",
   "critChart.soak.case": "CASE",
   "critChart.soak.caseII": "CASE II",
+  "critChart.soak.tsm": "TSM",
   "critChart.coreComponent": "{name}({hit}/{total}){effect}",
   "critChart.coreComponentEffect.engine1": "heat +5",
   "critChart.coreComponentEffect.engine2": "heat +10",

@@ -353,5 +353,6 @@
     "type": "double",
     "count": 10
   },
+  "myomer": "Standard",
   "source": "docs/mtf/Hermes II HER-5SA.mtf (TRO 3050 - Jihad). Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount; crit slot table per location included."
 }

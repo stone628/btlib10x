@@ -353,9 +353,12 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   target PSR (plus an attacker PSR on a miss); push forces both sides' PSRs.
   Head hits injure the pilot as usual. A crit on any slot of a mounted
   physical weapon destroys it (the HCT-5S Hatchetman now ships its hatchet).
+  Triple-Strength Myomer (TW p.143, e.g. the CN9-YLW2 Centurion): active the
+  turn after a turn ending at heat 9+ — +2 Walking MP (running recomputed,
+  jump unaffected) and doubled punch/kick/club/hatchet/sword/blade damage.
 - **Deferred** — charge / DFA (movement-phase declarations), club
   acquisition (blown-off limbs, trees, girders), the remaining nine
-  physical-weapon types (industrial tools), TSM doubling, the optional
+  physical-weapon types (industrial tools), the optional
   Punch/Kick-table election (+4) and level-difference auto-swap,
   critical hits from physical damage, domino effect /
   accidental falls from above.

@@ -25,6 +25,7 @@ declare module "*/mtf-crit.mjs" {
       engineField?: string;
       structureField?: string;
       armorField?: string;
+      myomer?: string;
     },
     errors: string[],
   ): void;

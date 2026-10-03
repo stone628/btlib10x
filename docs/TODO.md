@@ -14,10 +14,11 @@
   strikes (hatchet, sword, retractable blade) are implemented
   (`src/rules/physical.ts`: declare via `declareAttacks`, resolve
   after weapon damage inside `resolveAllAttacks`; arm/leg use conflicts
-  enforced; see "Implemented subset" in `docs/CLI.md`). Remaining: charge /
+  enforced; TSM doubling at heat 9+ implemented (TW p.143);
+  see "Implemented subset" in `docs/CLI.md`). Remaining: charge /
   DFA movement-phase declarations, physical-attack critical hits, club
   acquisition (blown-off limbs, trees, girders) and the nine industrial
-  physical-weapon types (backhoe, chainsaw, …), TSM doubling, the optional
+  physical-weapon types (backhoe, chainsaw, …), the optional
   Punch/Kick-table election and level-difference auto-swap, domino effect /
   accidental falls from above. (Physical-triggered PSRs — kicks, pushes,
   charges, DFAs — wait on these; see "Not viable" in `docs/CLI.md`.)
