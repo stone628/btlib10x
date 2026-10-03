@@ -88,7 +88,6 @@ describe("'Mech definitions", () => {
         rightLeg: new Array(6).fill({ kind: "empty" as const }),
         leftLeg: new Array(6).fill({ kind: "empty" as const }),
       },
-      source: "test",
     } satisfies MechDef;
     expect(() => validateMechDef(json)).not.toThrow();
     expect(json.armor.centerTorso).toBe(26);

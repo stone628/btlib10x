@@ -378,6 +378,5 @@
     "type": "single",
     "count": 20
   },
-  "myomer": "Standard",
-  "source": "docs/mtf/Atlas AS7-D.mtf (TRO 3039 - Star League). Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount; crit slot table per location included."
+  "myomer": "Standard"
 }

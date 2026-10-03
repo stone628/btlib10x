@@ -312,8 +312,6 @@ function parseMtf(text, file) {
   validateCritConstruction(critSlots, critMeta, errors);
   validateHeatSinks(critSlots, critMeta, errors);
 
-  const source = `docs/mtf/${file}${fields.Source ? ` (${fields.Source})` : ""}. Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount; crit slot table per location included.`;
-
   const def = {
     model,
     name,
@@ -329,7 +327,6 @@ function parseMtf(text, file) {
     critSlots,
     heatsink,
     myomer,
-    source,
   };
 
   return { def, errors };

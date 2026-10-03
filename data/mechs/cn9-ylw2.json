@@ -357,6 +357,5 @@
     "type": "single",
     "count": 10
   },
-  "myomer": "Triple Strength Myomer",
-  "source": "docs/mtf/Centurion CN9-YLW2.mtf (TRO 3050 - Clan Invasion). Armor stores front values; rear torso armor kept as 'centerTorsoRear' etc.; shared ammo written on one mount; crit slot table per location included."
+  "myomer": "Triple Strength Myomer"
 }
