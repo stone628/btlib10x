@@ -245,7 +245,11 @@ void fetch("btlib10x.jsonl")
   })
   .then((text) => {
     const manifest = loadCatalog(text);
-    for (const m of manifest.maps) ensureMapRegistered(m.name);
+    console.log("loaded");
+    for (const m of manifest.maps) {
+      ensureMapRegistered(m.name);
+      console.log(`ensured map ${m.name}`);
+    }
     input.disabled = false;
     input.focus();
     refreshPrompt();

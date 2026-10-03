@@ -2,21 +2,23 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
-  allMapDefs,
-  allMechDefs,
-  type CatalogManifest,
-  type CatalogStringTable,
   decodeMapLine,
   decodeMechLine,
-  ensureMapRegistered,
-  ensureMechRegistered,
   findMapEntry,
   findMechEntry,
-  loadCatalog,
-  mechDefFor,
   parseCatalogManifest,
   parseCatalogStrings,
   registerAllCatalog,
+} from "../src/data/catalog";
+import {
+  type CatalogManifest,
+  type CatalogStringTable,
+  ensureMapRegistered,
+  ensureMechRegistered,
+  loadCatalog,
+  mechDefFor,
+  registeredMapDefs,
+  registeredMechDefs,
   registerMap,
   registerMech,
   weightClassForTonnage,
@@ -86,11 +88,11 @@ describe("catalog manifest", () => {
 
   it("finds entries (mechs case-insensitively) and misses unknown names", () => {
     const first = MANIFEST.mechs[0]!;
-    expect(findMechEntry(MANIFEST, first.model.toLowerCase())?.model).toBe(first.model);
-    expect(findMechEntry(MANIFEST, "no-such-mech")).toBeUndefined();
+    expect(findMechEntry(first.model.toLowerCase())?.model).toBe(first.model);
+    expect(findMechEntry("no-such-mech")).toBeUndefined();
     const map = MANIFEST.maps[0]!;
-    expect(findMapEntry(MANIFEST, map.name)?.name).toBe(map.name);
-    expect(findMapEntry(MANIFEST, "no-such-map")).toBeUndefined();
+    expect(findMapEntry(map.name)?.name).toBe(map.name);
+    expect(findMapEntry("no-such-map")).toBeUndefined();
   });
 
   it("rejects malformed manifests", () => {
@@ -133,7 +135,7 @@ describe("catalog registration", () => {
   it("decodes the identical model the registry already holds", () => {
     // Setup registered every sheet, so re-registering a decoded sheet must
     // throw as a duplicate — proving the lazy path decodes the same model.
-    const entry = findMechEntry(MANIFEST, "as7-d")!;
+    const entry = findMechEntry("as7-d")!;
     expect(() => registerMech(decodeMechLine(mechLine(entry), entry, STRINGS))).toThrow(
       /duplicate/i,
     );
@@ -141,23 +143,23 @@ describe("catalog registration", () => {
   });
 
   it("registers one decoded map on demand", () => {
-    const entry = findMapEntry(MANIFEST, "quickstart")!;
+    const entry = findMapEntry("quickstart")!;
     expect(() => registerMap(decodeMapLine(LINES[entry.line]!))).toThrow(/duplicate/i);
   });
 
   it("splits the Clan name out of the MTF line-2 parens", () => {
-    const entry = findMechEntry(MANIFEST, "tw-prime")!;
+    const entry = findMechEntry("tw-prime")!;
     const def = decodeMechLine(mechLine(entry), entry, STRINGS);
     expect(def.name).toBe("Mad Cat");
     expect(def.clanName).toBe("Timber Wolf");
-    const warhawkEntry = findMechEntry(MANIFEST, "whk-prime")!;
+    const warhawkEntry = findMechEntry("whk-prime")!;
     const warhawk = decodeMechLine(mechLine(warhawkEntry), warhawkEntry, STRINGS);
     expect(warhawk.name).toBe("Masakari");
     expect(warhawk.clanName).toBe("Warhawk");
   });
 
   it("leaves clanName undefined when the parens are absent, even for Clan sheets", () => {
-    const entry = findMechEntry(MANIFEST, "mc-mkii-2")!;
+    const entry = findMechEntry("mc-mkii-2")!;
     expect(decodeMechLine(mechLine(entry), entry, STRINGS).clanName).toBeUndefined();
   });
 
@@ -175,18 +177,18 @@ describe("catalog registration", () => {
     // and restore afterwards — keeps this file order-independent).
     purgeMechDefs();
     try {
-      expect(allMechDefs()).toHaveLength(0);
+      expect(registeredMechDefs()).toHaveLength(0);
       const def = ensureMechRegistered("hbk-4g");
       expect(def?.model).toBe("HBK-4G");
-      expect(allMechDefs()).toHaveLength(1);
+      expect(registeredMechDefs()).toHaveLength(1);
       expect(ensureMechRegistered("HBK-4G")).toBe(def);
-      expect(allMechDefs()).toHaveLength(1);
+      expect(registeredMechDefs()).toHaveLength(1);
       expect(ensureMechRegistered("no-such-mech")).toBeUndefined();
       expect(ensureMapRegistered("no-such-map")).toBeUndefined();
     } finally {
       registerAllCatalog();
     }
-    expect(allMechDefs().length).toBe(MANIFEST.mechs.length);
-    expect(allMapDefs().length).toBe(MANIFEST.maps.length);
+    expect(registeredMechDefs().length).toBe(MANIFEST.mechs.length);
+    expect(registeredMapDefs().length).toBe(MANIFEST.maps.length);
   });
 });

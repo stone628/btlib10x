@@ -513,12 +513,12 @@ describe("resolveStrikeMount", () => {
 
 describe("strike command", () => {
   /** Hatchetman (a) facing an enemy (t) on quickstart, advanced to a's attack activation. */
-  async function hatchetSetup(): Promise<{ s: Session; enemy: string }> {
+  function hatchetSetup(): { s: Session; enemy: string } {
     const s = newSession(42);
-    await execute(s, "map quickstart");
-    await execute(s, "add a HCT-5S 9 9 n");
-    await execute(s, "add t HBK-4G 9 8 s");
-    await execute(s, "start");
+    execute(s, "map quickstart");
+    execute(s, "add a HCT-5S 9 9 n");
+    execute(s, "add t HBK-4G 9 8 s");
+    execute(s, "start");
     disableCritical(s);
     while (s.state === "battle" && s.battle!.phase === "movement") {
       declareMovementMode(s, "walk");
@@ -532,37 +532,35 @@ describe("strike command", () => {
     return { s, enemy: "t" };
   }
 
-  it("queues a bare strike on the sole mount", async () => {
-    const { s, enemy } = await hatchetSetup();
+  it("queues a bare strike on the sole mount", () => {
+    const { s, enemy } = hatchetSetup();
     queuePhysicalAttack(s, "strike", enemy);
     expect(s.attack!.physicalDecls).toEqual([
       { type: "strike", targetId: enemy, limb: "rightArm", weapon: "Hatchet" },
     ]);
   });
 
-  it("rejects an empty arm with a mount hint", async () => {
-    const { s, enemy } = await hatchetSetup();
+  it("rejects an empty arm with a mount hint", () => {
+    const { s, enemy } = hatchetSetup();
     expect(() => queuePhysicalAttack(s, "strike", enemy, "leftArm")).toThrow(
       /no physical weapon mounted in leftArm/,
     );
     expect(s.attack!.physicalDecls).toEqual([]);
   });
 
-  it("runs the CLI bare form through status and done", async () => {
-    const { s, enemy } = await hatchetSetup();
-    expect((await execute(s, `strike ${enemy}`))[0]).toBe(`queued strike -> ${enemy}`);
-    expect((await execute(s, "status")).join("\n")).toContain(
-      `strike hatchet (rightArm) -> ${enemy}`,
-    );
-    for (const line of await execute(s, "done")) expect(line).not.toMatch(/^error:/);
+  it("runs the CLI bare form through status and done", () => {
+    const { s, enemy } = hatchetSetup();
+    expect(execute(s, `strike ${enemy}`)[0]).toBe(`queued strike -> ${enemy}`);
+    expect(execute(s, "status").join("\n")).toContain(`strike hatchet (rightArm) -> ${enemy}`);
+    for (const line of execute(s, "done")) expect(line).not.toMatch(/^error:/);
   });
 
-  it("rejects the CLI form on a unit with no mounts", async () => {
-    const { s, enemy } = await hatchetSetup();
+  it("rejects the CLI form on a unit with no mounts", () => {
+    const { s, enemy } = hatchetSetup();
     // Retarget the duel: the armless unit is the enemy HBK-4G here, so drive
     // to its activation by passing on the hatchet unit first.
     commitAttack(s);
     expect(s.attack!.actorId).toBe(enemy);
-    expect((await execute(s, "strike a"))[0]).toMatch(/^error: unit mounts no physical weapon$/);
+    expect(execute(s, "strike a")[0]).toMatch(/^error: unit mounts no physical weapon$/);
   });
 });

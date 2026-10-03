@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { allAmmo, ammoDefFor, listAmmoWeapons, shotsPerBinFor } from "../src/data/ammo.schema";
 import type { MechDef, ResolvedMechDef } from "../src/data/index";
-import { allMechDefs, mechDef, validateMechDef } from "../src/data/index";
+import { mechDef, registeredMechDefs, validateMechDef } from "../src/data/index";
 import { weaponDefFor } from "../src/data/weapon.schema";
 
 function toMechDef(d: ResolvedMechDef): MechDef {
@@ -44,7 +44,7 @@ describe("ammo catalog", () => {
 
 describe("ammo validation in MechDef", () => {
   it("re-validates every bundled definition with the ammo rule", () => {
-    for (const def of allMechDefs()) {
+    for (const def of registeredMechDefs()) {
       expect(() => validateMechDef(toMechDef(def))).not.toThrow();
     }
   });

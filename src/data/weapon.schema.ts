@@ -225,25 +225,12 @@ export function parseWeaponsData(data: unknown): readonly WeaponDef[] {
   return parsed;
 }
 
-let WEAPONS: ReadonlyMap<string, WeaponDef> | null = null;
-
-/** Populate the registry from the embedded table unless explicitly registered already. */
-export function ensureWeaponsRegistered(): void {
-  if (WEAPONS === null) registerWeapons(WEAPON_DATA);
-}
-
-/**
- * Validate raw weapon entries and load them into the lookup registry,
- * replacing any previous contents (including the embedded table).
- */
-export function registerWeapons(defs: readonly WeaponDef[]): void {
-  const parsed = parseWeaponsData(defs);
-  WEAPONS = new Map<string, WeaponDef>(parsed.map((def) => [def.name, def]));
-}
+const WEAPONS: ReadonlyMap<string, WeaponDef> = new Map<string, WeaponDef>(
+  WEAPON_DATA.map((def) => [def.name, def]),
+);
 
 export function weaponDef(name: string): WeaponDef | undefined {
-  ensureWeaponsRegistered();
-  return WEAPONS!.get(name);
+  return WEAPONS.get(name);
 }
 
 export interface WeaponNameHolder {
@@ -251,18 +238,15 @@ export interface WeaponNameHolder {
 }
 
 export function weaponDefFor(h: WeaponNameHolder): WeaponDef {
-  ensureWeaponsRegistered();
-  const def = WEAPONS!.get(h.weapon);
+  const def = WEAPONS.get(h.weapon);
   if (!def) throw new Error(`Unknown weapon: ${h.weapon}`);
   return def;
 }
 
-export function allWeaponDefs(): WeaponDef[] {
-  ensureWeaponsRegistered();
-  return Array.from(WEAPONS!.values());
+export function allWeaponDefs(): readonly WeaponDef[] {
+  return WEAPON_DATA;
 }
 
 export function listWeaponNames(): string[] {
-  ensureWeaponsRegistered();
-  return Array.from(WEAPONS!.keys());
+  return Array.from(WEAPONS.keys());
 }

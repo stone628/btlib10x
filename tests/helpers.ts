@@ -143,8 +143,8 @@ function columnsText(columns: readonly (readonly string[])[]): string[] {
 }
 
 /** Run one input line against the session; returns plain output lines. */
-export async function execute(session: Session, raw: string): Promise<string[]> {
-  const chunks = await runChunks(session, raw);
+export function execute(session: Session, raw: string): string[] {
+  const chunks = runChunks(session, raw);
   return chunks.flatMap(chunkText);
 }
 

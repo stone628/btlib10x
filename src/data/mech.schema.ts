@@ -2,8 +2,8 @@ import type { Location } from "../core/types";
 import { isLocation, isTorso, LOCATIONS } from "../core/types";
 import type { LocationValue, TorsoLocationValue } from "../rules/damage";
 import { internalStructureForTonnage } from "../rules/internalStructure";
-import { ammoDef, listAmmoWeapons } from "./ammo.schema";
-import { listWeaponNames, type WeaponNameHolder, weaponDef } from "./weapon.schema";
+import { ammoDef } from "./ammo.schema";
+import { type WeaponNameHolder, weaponDef } from "./weapon.schema";
 
 /** Heat sink type: single = 1 heat/turn each, double = 2 heat/turn each. */
 export type HeatSinkType = "single" | "double";
@@ -94,7 +94,7 @@ export type CritSoakName = (typeof CRIT_SOAK_NAMES)[number];
 export type CritSlots = Readonly<Record<Location, readonly CritSlot[]>>;
 
 /** Per-location critical slot counts from the official record sheet. */
-export const CRIT_SLOT_COUNTS: Readonly<Record<Location, number>> = {
+export const CRIT_SLOT_COUNTS: Readonly<LocationValue> = {
   head: 6,
   centerTorso: 12,
   rightTorso: 12,
@@ -467,16 +467,7 @@ export function validateMechDef(def: MechDef): MechDef {
   if (!Number.isInteger(jumping) || jumping < 0)
     errors.push("jumping must be a non-negative integer");
 
-  for (const loc of [
-    "head",
-    "centerTorso",
-    "rightTorso",
-    "leftTorso",
-    "rightArm",
-    "leftArm",
-    "rightLeg",
-    "leftLeg",
-  ] as const) {
+  for (const loc of LOCATIONS) {
     const v = def.armor[loc];
     if (!Number.isInteger(v) || v < 0) {
       errors.push(`armor.${loc} must be a non-negative integer`);
@@ -677,14 +668,6 @@ const MECH_REGISTRY = new Map<string, ResolvedMechDef>();
  */
 export function registerMechs(defs: readonly MechDef[]): void {
   if (defs.length > 0) {
-    // Guard against loading mechs before their referenced catalogs — the
-    // per-slot "not a known weapon" errors would otherwise mislead.
-    if (listWeaponNames().length === 0) {
-      throw new Error("Cannot register mechs before weapons: call registerWeapons first");
-    }
-    if (listAmmoWeapons().length === 0) {
-      throw new Error("Cannot register mechs before ammo: call registerAmmo first");
-    }
     const next = new Map<string, ResolvedMechDef>();
     for (const def of defs) {
       const resolved = resolveMechDef(validateMechDef(def));
@@ -709,12 +692,6 @@ export function registerMechs(defs: readonly MechDef[]): void {
  * slots against the weapon/ammo catalogs. Throws on a duplicate model.
  */
 export function registerMech(def: MechDef): ResolvedMechDef {
-  if (listWeaponNames().length === 0) {
-    throw new Error("Cannot register mechs before weapons: call registerWeapons first");
-  }
-  if (listAmmoWeapons().length === 0) {
-    throw new Error("Cannot register mechs before ammo: call registerAmmo first");
-  }
   const resolved = resolveMechDef(validateMechDef(def));
   if (MECH_REGISTRY.has(resolved.model)) {
     throw new Error(`Duplicate mech model ${JSON.stringify(resolved.model)}`);
@@ -737,7 +714,7 @@ export function mechDef(model: string): ResolvedMechDef | undefined {
   return MECH_REGISTRY.get(model);
 }
 
-export function allMechDefs(): ResolvedMechDef[] {
+export function registeredMechDefs(): ResolvedMechDef[] {
   return Array.from(MECH_REGISTRY.values());
 }
 

@@ -5,23 +5,16 @@ import { executeMove, requireUnit, rollInitiativePhase } from "../src/rules/game
 import { budgetFor, newSession, requireMovementActor, type Session } from "../web/session";
 import { createTestBattle, disableCritical, execute, scriptedRng } from "./helpers";
 
-async function run(s: Session, cmd: string): Promise<string[]> {
-  return execute(s, cmd);
-}
-
 /** Started quickstart battle; returns session plus acting-unit id. */
-async function started(
-  piloting?: number,
-  model = "HBK-4G",
-): Promise<{ s: Session; actor: string }> {
+function started(piloting?: number, model = "HBK-4G"): { s: Session; actor: string } {
   const s = newSession(7);
-  expect((await run(s, "map quickstart"))[0]).toContain("15x16");
+  expect(execute(s, "map quickstart")[0]).toContain("15x16");
   const pilotArg = piloting === undefined ? "" : ` ${piloting}`;
   // NB: facing token before piloting per `add` arg parsing. Both units share
   // model + piloting so either initiative winner can run the script.
-  expect(await run(s, `add hunchy ${model} 9 9 n${pilotArg}`)).toHaveLength(1);
-  expect(await run(s, `add cicada ${model} 9 8 s${pilotArg}`)).toHaveLength(1);
-  expect((await run(s, "start"))[0]).toContain("BATTLE STARTED");
+  expect(execute(s, `add hunchy ${model} 9 9 n${pilotArg}`)).toHaveLength(1);
+  expect(execute(s, `add cicada ${model} 9 8 s${pilotArg}`)).toHaveLength(1);
+  expect(execute(s, "start")[0]).toContain("BATTLE STARTED");
   disableCritical(s);
   return { s, actor: requireMovementActor(s).id };
 }
@@ -47,12 +40,12 @@ function steppedLanding(s: Session): { col: number; row: number; facing: string;
 describe("posture-change then move", () => {
   it("mode drop/crawl are gone; bare mode standup defaults to standstill", async () => {
     const { s } = await started();
-    expect((await run(s, "mode drop"))[0]).toMatch(/^error:/);
-    expect((await run(s, "mode crawl"))[0]).toMatch(/^error:/);
-    expect((await run(s, "mode crawl"))[0]).toMatch(/valid modes:/);
+    expect(execute(s, "mode drop")[0]).toMatch(/^error:/);
+    expect(execute(s, "mode crawl")[0]).toMatch(/^error:/);
+    expect(execute(s, "mode crawl")[0]).toMatch(/valid modes:/);
     forceProne(s, requireMovementActor(s).id);
-    expect((await run(s, "mode standup foo"))[0]).toMatch(/^error:/);
-    expect((await run(s, "mode walk"))[0]).toMatch(/valid modes:/);
+    expect(execute(s, "mode standup foo")[0]).toMatch(/^error:/);
+    expect(execute(s, "mode walk")[0]).toMatch(/valid modes:/);
   });
 
   it("bare mode standup + done stands in place with no candidate map", async () => {
@@ -61,12 +54,12 @@ describe("posture-change then move", () => {
     forceProne(s, actor);
     const from = { ...s.battle!.units[actor]!.position };
     const facing = s.battle!.units[actor]!.facing;
-    await run(s, "mode standup");
+    execute(s, "mode standup");
     expect(s.move!.moveMode).toBe("standup");
     expect(s.move!.postureMove).toBe("standStill");
     expect(s.move!.moveCandidate?.revealed).toStrictEqual([] as RevealedLanding[]);
-    expect((await run(s, "place 9 9 n"))[0]).toMatch(/^error:/);
-    await run(s, "done");
+    expect(execute(s, "place 9 9 n")[0]).toMatch(/^error:/);
+    execute(s, "done");
     const unit = s.battle!.units[actor]!;
     expect(unit.prone).toBe(false);
     expect(unit.position).toEqual(from);
@@ -77,7 +70,7 @@ describe("posture-change then move", () => {
 
   it("bare mode prone defaults to turn; prone turn + place turns sharing one walk budget", async () => {
     const { s, actor } = await started();
-    await run(s, "mode prone");
+    execute(s, "mode prone");
     expect(s.move!.moveMode).toBe("prone");
     expect(s.move!.postureMove).toBe("walk");
     expect(s.move!.moveCandidate).not.toBeNull();
@@ -89,9 +82,9 @@ describe("posture-change then move", () => {
     const landing = s.move!.moveCandidate!.revealed.find((l) => l.facing !== before.facing)!;
     expect(landing).toBeDefined();
     const spent = landing.path[landing.path.length - 1]!.totalMp;
-    await run(s, `place ${landing.hex.col} ${landing.hex.row} ${landing.facing}`);
+    execute(s, `place ${landing.hex.col} ${landing.hex.row} ${landing.facing}`);
     const heatBefore = s.battle!.units[actor]!.heat;
-    await run(s, "done");
+    execute(s, "done");
     const unit = s.battle!.units[actor]!;
     expect(unit.prone).toBe(true);
     expect(unit.position).toEqual(before.position);
@@ -104,13 +97,13 @@ describe("posture-change then move", () => {
 
   it("mode prone pronestill drops in place with no candidate map", async () => {
     const { s, actor } = await started();
-    await run(s, "mode prone pronestill");
+    execute(s, "mode prone pronestill");
     expect(s.move!.moveMode).toBe("prone");
     expect(s.move!.postureMove).toBe("standStill");
     expect(s.move!.moveCandidate?.revealed).toStrictEqual([] as RevealedLanding[]);
-    expect((await run(s, `place 9 9 n`))[0]).toMatch(/^error:/);
+    expect(execute(s, `place 9 9 n`)[0]).toMatch(/^error:/);
     const heatBefore = s.battle!.units[actor]!.heat;
-    await run(s, "done");
+    execute(s, "done");
     const unit = s.battle!.units[actor]!;
     expect(unit.prone).toBe(true);
     expect(unit.mpSpent).toBe(1);
@@ -121,15 +114,15 @@ describe("posture-change then move", () => {
     const { s, actor } = await started();
     forceProne(s, actor);
     const before = s.battle!.units[actor]!;
-    await run(s, "mode turn");
+    execute(s, "mode turn");
     expect(s.move!.moveMode).toBe("turn");
     expect(s.move!.moveCandidate).not.toBeNull();
     const landing = s.move!.moveCandidate!.revealed.find((l) => l.facing !== before.facing)!;
     expect(landing).toBeDefined();
     expect(landing.hex).toEqual(before.position);
-    await run(s, `place ${landing.hex.col} ${landing.hex.row} ${landing.facing}`);
+    execute(s, `place ${landing.hex.col} ${landing.hex.row} ${landing.facing}`);
     const heatBefore = s.battle!.units[actor]!.heat;
-    await run(s, "done");
+    execute(s, "done");
     const unit = s.battle!.units[actor]!;
     expect(unit.prone).toBe(true);
     expect(unit.position).toEqual(before.position);
@@ -142,12 +135,12 @@ describe("posture-change then move", () => {
   it("prone mode pronestill holds with no heat and no candidate", async () => {
     const { s, actor } = await started();
     forceProne(s, actor);
-    await run(s, "mode pronestill");
+    execute(s, "mode pronestill");
     expect(s.move!.moveMode).toBe("pronestill");
     expect(s.move!.moveCandidate?.revealed).toStrictEqual([] as RevealedLanding[]);
-    expect((await run(s, "place 9 9 n"))[0]).toMatch(/^error:/);
+    expect(execute(s, "place 9 9 n")[0]).toMatch(/^error:/);
     const heatBefore = s.battle!.units[actor]!.heat;
-    await run(s, "done");
+    execute(s, "done");
     const unit = s.battle!.units[actor]!;
     expect(unit.prone).toBe(true);
     expect(unit.heat).toBe(heatBefore);
@@ -155,15 +148,15 @@ describe("posture-change then move", () => {
 
   it("standing mode turn/pronestill are rejected with the valid-modes hint", async () => {
     const { s } = await started();
-    expect((await run(s, "mode turn"))[0]).toMatch(/valid modes:/);
-    expect((await run(s, "mode pronestill"))[0]).toMatch(/valid modes:/);
+    expect(execute(s, "mode turn")[0]).toMatch(/valid modes:/);
+    expect(execute(s, "mode pronestill")[0]).toMatch(/valid modes:/);
   });
 
   it("mode prone + done without place just drops in place", async () => {
     const { s, actor } = await started();
     const from = { ...s.battle!.units[actor]!.position };
-    await run(s, "mode prone");
-    await run(s, "done");
+    execute(s, "mode prone");
+    execute(s, "done");
     const unit = s.battle!.units[actor]!;
     expect(unit.prone).toBe(true);
     expect(unit.position).toEqual(from);
@@ -174,34 +167,34 @@ describe("posture-change then move", () => {
     const { s, actor } = await started();
     const before = s.battle!.units[actor]!;
     const from = { ...before.position };
-    await run(s, "mode prone");
+    execute(s, "mode prone");
     const landing = s.move!.moveCandidate!.revealed.find(
       (l) => l.hex.col === from.col && l.hex.row === from.row && l.facing !== before.facing,
     )!;
     expect(landing).toBeDefined();
     const spent = landing.path[landing.path.length - 1]!.totalMp;
-    await run(s, `place ${landing.hex.col} ${landing.hex.row} ${landing.facing}`);
-    await run(s, "done");
+    execute(s, `place ${landing.hex.col} ${landing.hex.row} ${landing.facing}`);
+    execute(s, "done");
     const unit = s.battle!.units[actor]!;
     expect(unit.prone).toBe(true);
     expect(unit.position).toEqual(from);
     expect(unit.facing).toBe(landing.facing);
     expect(unit.mpSpent).toBe(1 + spent); // drop 1 + turn fragments
-    expect((await run(s, "turn left"))[0]).toMatch(/^error:/);
+    expect(execute(s, "turn left")[0]).toMatch(/^error:/);
   });
 
   it("mode standup walk + place stands then moves (stand 2 + steps)", async () => {
     // Piloting 0 → PSR target 0 → auto-success, no RNG drawn.
     const { s, actor } = await started(0);
     forceProne(s, actor);
-    await run(s, "mode standup walk");
+    execute(s, "mode standup walk");
     expect(s.move!.moveMode).toBe("standup");
     expect(s.move!.postureMove).toBe("walk");
     expect(s.move!.moveCandidate).not.toBeNull();
     const target = steppedLanding(s);
-    await run(s, `place ${target.col} ${target.row} ${target.facing}`);
+    execute(s, `place ${target.col} ${target.row} ${target.facing}`);
     s.rng = scriptedRng(...Array.from({ length: 40 }, () => 6));
-    await run(s, "done");
+    execute(s, "done");
     const unit = s.battle!.units[actor]!;
     expect(unit.prone).toBe(false);
     expect(unit.position).toEqual({ col: target.col, row: target.row });
@@ -212,13 +205,13 @@ describe("posture-change then move", () => {
   it("mode standup jump + place stands then jumps", async () => {
     const { s, actor } = await started(0, "GRF-1N");
     forceProne(s, actor);
-    await run(s, "mode standup jump");
+    execute(s, "mode standup jump");
     expect(s.move!.postureMove).toBe("jump");
     expect(s.move!.moveCandidate).not.toBeNull();
     const target = steppedLanding(s);
-    await run(s, `place ${target.col} ${target.row} ${target.facing}`);
+    execute(s, `place ${target.col} ${target.row} ${target.facing}`);
     s.rng = scriptedRng(...Array.from({ length: 40 }, () => 6));
-    await run(s, "done");
+    execute(s, "done");
     const unit = s.battle!.units[actor]!;
     expect(unit.prone).toBe(false);
     expect(unit.position).toEqual({ col: target.col, row: target.row });
@@ -231,13 +224,13 @@ describe("posture-change then move", () => {
     const { s, actor } = await started(4);
     forceProne(s, actor);
     const from = { ...s.battle!.units[actor]!.position };
-    await run(s, "mode standup walk");
+    execute(s, "mode standup walk");
     const target = steppedLanding(s);
-    await run(s, `place ${target.col} ${target.row} ${target.facing}`);
+    execute(s, `place ${target.col} ${target.row} ${target.facing}`);
     expect(s.move!.moveSteps.length).toBeGreaterThan(0);
     // Natural 2 on the PSR always fails; over-provision fall dice.
     s.rng = scriptedRng(1, 1, ...Array.from({ length: 30 }, () => 3));
-    await run(s, "done");
+    execute(s, "done");
     const unit = s.battle!.units[actor]!;
     expect(unit.prone).toBe(true);
     expect(unit.position).toEqual(from);
@@ -249,7 +242,7 @@ describe("posture-change then move", () => {
   it("candidate landings fit the shared (reduced) budget", async () => {
     const { s, actor } = await started(0);
     forceProne(s, actor);
-    await run(s, "mode standup walk");
+    execute(s, "mode standup walk");
     const budget = budgetFor(requireMovementActor(s), s.move!);
     for (const landing of s.move!.moveCandidate!.revealed) {
       const last = landing.path[landing.path.length - 1];
@@ -261,7 +254,7 @@ describe("posture-change then move", () => {
     const { s, actor } = await started(0);
     forceProne(s, actor);
     const from = { ...s.battle!.units[actor]!.position };
-    await run(s, "mode standup walk");
+    execute(s, "mode standup walk");
     const revealed = s.move!.moveCandidate!.revealed;
     const startEntries = revealed.filter(
       (l: { hex: { col: number; row: number } }) =>
@@ -283,12 +276,12 @@ describe("posture-change then move", () => {
     // Pick a non-unit facing — otherwise it's the stay-in-place pick (no
     // facing change) and `moveFinalFacing` stays null.
     const freeFacing = unitFacing === "n" ? "s" : "n";
-    await run(s, "mode standup walk");
-    await run(s, `place ${from.col} ${from.row} ${freeFacing}`);
+    execute(s, "mode standup walk");
+    execute(s, `place ${from.col} ${from.row} ${freeFacing}`);
     expect(s.move!.moveSteps).toEqual([]);
     expect(s.move!.moveFinalFacing).toBe(freeFacing);
     s.rng = scriptedRng(...Array.from({ length: 40 }, () => 6));
-    await run(s, "done");
+    execute(s, "done");
     const unit = s.battle!.units[actor]!;
     expect(unit.prone).toBe(false);
     expect(unit.position).toEqual(from);
