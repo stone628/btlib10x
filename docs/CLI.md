@@ -10,7 +10,7 @@ terminal emulator UI. Vanilla TypeScript + DOM only; zero runtime dependencies
 
 - `game_state`: `setup` | `turn` | `over`
 - `sub_state` (only during `turn`): `(N):move(team T, mech ID)` during engine
-  phase `movement`, `(N):attack(team T, mech ID)` during `weaponAttack` —
+  phase `movement`, `(N):attack(team T, mech ID)` during `attack` —
   N is the turn number; team and id come from `nextActor(state)`.
 - Phases auto-advance when every living unit has acted. After attacks resolve,
   `drive()` in `web/session.ts` feeds `checkSessionVictory` as stopper into
@@ -50,6 +50,9 @@ Examples:
 | `info mech` | list available 'Mechs |
 | `info mech <model>` | sheet summary: walk/run/jump ratings, weapons, and the 3-row critical slot chart (right arm / head / left arm, right / center / left torso, right / left leg); web CLI renders the chart as a mouse-click-collapsible block |
 | `info map` | list available maps |
+| `info weapon [name]` | list weapons, or show one weapon's stats |
+| `table [cluster\|hitloc\|crit\|heat]` | print a reference table (no argument lists them) |
+| `seed <n>` | set the dice seed |
 | `info map <name>` | map info: width×height, terrain types and counts, elevation counts, ASCII map with terrain glyphs |
 | `reset` | wipe everything back to empty setup |
 | `ver` | show the built library version (`YYMMDD-<git hash>` stamp of the bundled commit) |
@@ -59,7 +62,7 @@ Examples:
 
 | command | effect |
 |---|---|
-| `map <name>` | load a bundled map as terrain (`beginner`, `quickstart`, `test`) |
+| `map <name>` | load a bundled map as terrain (`beginner`, `quickstart`, `test`, `testground`) |
 | `add <id> <model> <col> <row> [facing]` | place unit (team auto-assigned to smallest team; default gunnery `4`, piloting `5`, facing `n`) |
 | `set <id> <prop> <value>` | edit a property on a unit already on the roster (`model`, `team`, `col`, `row`, `facing`, `gunnery`, `piloting`; cannot modify `id`) |
 | `rm <id>` | remove placed unit |
@@ -82,6 +85,8 @@ The prompt names the acting unit; commands act on that 'Mech.
 | `mode eject` | declare a pilot ejection (any non-removed unit, including a shut-down one). `place` stays unavailable; `done` commits it — the unit is marked removed (`pilotEjected`) and its hex becomes a permanent level-2 wreck. `cancel` resets the declaration |
 | `place <col> <row> <facing>` | place the 'Mech at a final hex + facing in one step; `col row` are 1-based, `facing` is an absolute word (`n\|ne\|se\|s\|sw\|nw`). The (hex, facing) must be a reachable landing shown by `mode` (validated against the movement candidate); replaces any previously queued steps. Jump landing facing is chosen freely, so any facing at a reachable hex is legal for `jump` |
 | `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [J](jam) / [-](destroyed) / per-bin ammo `(n left)` markers); without id: brief unit list (id, model, position+facing) grouped by team |
+| `heat [id]` | heat scale status of a unit (default: the acting unit); also available in the attack phase |
+| `candidate` | re-show the queued move and the reachable-hex map for the declared mode |
 | `status` | queued move steps with running MP cost per step |
 | `cancel` | clear mode + steps |
 | `done` | commit posture-change first, then move only on success (`attemptStandUp`/`dropProne` then `executeMove` in one atomic commit; failed stand discards queued `place`); prints path + MP spent (posture cost folded in) and full budget |
@@ -97,8 +102,12 @@ pass), plus `cancel`, `sheet`, `status`, `heat` and the globals.
 | command | effect |
 |---|---|
 | `ammo [policy]` | show (no argument) or set the acting unit's ammo depletion policy: `exposed` (default), `core`, `spread`, `least-first` (case-insensitive, hyphens optional). The policy picks which bin of a weapon takes the next shot; ties are broken at random |
+| `torso <front\|left\|right>` | twist the acting unit's torso one hexside (TW pp.105-106): arm and front-torso weapons fire into the twisted arc; locked once a `fire` is queued |
+| `candidate` | show possible targets with available weapons |
 | `fire <targetId> <weapon> [<weapon> ...]` | queue weapon declarations using 1-based weapon numbers (target first; declare several weapons at once, all against the one shared target; rapid-fire SRM/LRM fire a full volley — no `shots` argument). A prone attacker fires at +2, cannot fire leg-mounted weapons, and must draw the whole volley from one prop side (left-arm and right-arm weapons cannot mix — the suggestion shows both prop-left and prop-right sets; firing an arm set props the other arm) |
 | `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [J](jam) / [-](destroyed) / per-bin ammo `(n left)` markers); without id: brief unit list (id, model, position+facing) grouped by team |
+| `punch` / `kick` / `push` / `club` / `strike` / `pickup` / `drop` | physical attacks and club handling, see "Implemented subset: physical attacks" below |
+| `heat [id]` | heat scale status |
 | `status` | queued attack declarations |
 | `cancel` | clear declarations |
 | `done` | `declareAttacks` + `resolveAllAttacks` (simultaneous — every unit's declared shots resolve, even units killed that phase); prints per-weapon GATOR to-hit line, dice, cluster hits, damage by location |
@@ -119,14 +128,14 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
 
 ### Implemented
 
-- **Units** — bipedal 'Mechs only (ten record-sheet 'Mechs in `data/mechs/`:
-  AS7-D, CDA-3MA, ENF-4R, GRF-1N, HBK-4G, HER-5SA, MC-MKII-2, TW-Prime,
-  WHK-Prime, WVR-6R; see `docs/MTF.md` to add more).
+- **Units** — bipedal 'Mechs only (fourteen record-sheet 'Mechs in `data/mechs/`:
+  AS7-D, BSW-X1, BZK-F3, CDA-3MA, CN9-YLW2, ENF-4R, GRF-1N, HBK-4G, HCT-5S,
+  HER-5SA, MC-MKII-2, TW-Prime, WHK-Prime, WVR-6R; see `docs/MTF.md` to add more).
   Front and rear armor are separate pools; internal structure is derived from
   tonnage on the standard TW table.
 - **Movement** — walk, run, jump, standstill. MP costs include the base 1 MP
   to enter a hex plus a terrain surcharge (data-driven from
-  `src/data/terrain.json`; e.g. lightWoods +1, heavyWoods +2, rough/rubble +1,
+  `src/data/terrain.data.ts`; e.g. lightWoods +1, heavyWoods +2, rough/rubble +1,
   water2/3 +3, buildings +1/+2/+3/+4, pavement +0), +1 MP per
   level of elevation changed (up or down), and 1 MP per
   hexside of facing change. Ground moves step straight ahead or back; run
@@ -139,10 +148,11 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
 - **Line of sight** — intervening-hex line trace; light/heavy woods points
   (1/2) accumulate along the line and ≥ 3 points block. A real-valued
   "ray height" is drawn between attacker and target LOS levels (hex
-  level + 1 for a bipedal 'Mech); an intervening hex blocks when its own
-  LOS level meets or exceeds the ray's height at the hex's center. Water
+  level + 2 for a bipedal 'Mech); an intervening hex blocks when its own
+  LOS level strictly exceeds the ray's height at the hex's center. Water
   depth 2+ (water2/water3) blocks firing into and out of the hex
-  (`blocksTargeting`).
+  (`blocksTargeting`), and so does depth 1+ water for a prone 'Mech
+  (TW p.102).
 - **To-hit (GATOR)** — gunnery + attacker movement + target movement + range
   bracket + intervening terrain + weapon mod + minimum range penalty; auto-hit ≤
   2, auto-miss > 12. Target-terrain modifier is data-driven
@@ -157,10 +167,13 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   +2 to-hit while the attacker's ground level is below the wreck's top
   (hex level + 2); the larger of the terrain and wreck values applies, and
   the leg-strike miss rule holds under either.
-  A downhill attacker (higher ground level) negates the target's cover.
+  Depth-1 water cover applies even when the attacker is higher (the water
+  surrounds the 'Mech); building cover is negated by a downhill attacker.
+  An adjacent higher hex between attacker and target also grants partial
+  cover (TW p.102).
 - **Terrain catalog** — 13 core-rulebook terrain types (`clear`, lightWoods,
   heavyWoods, rough, rubble, pavement, water1, water2, water3, and four
-  building classes) defined in `src/data/terrain.json` and validated by
+  building classes) defined in `src/data/terrain.data.ts` and validated by
   `terrain.schema.ts`. Move surcharge, screening value, target modifier,
   partial-cover flag, and targeting-restriction flag all live in the catalog.
 - **Buildings** — building hexes carry a structural factor (CF) initialized
@@ -170,7 +183,8 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   when CF reaches 0 the hex collapses to rubble and a `buildingCollapsed`
   event fires. Collapse damage is ceil(CF/10 x (1 + levels above)) in
   5-point punch-table groups, plus standard falling damage above Level 0.
-  Unit damage from a collapse is deferred with piloting.
+  Units inside a collapsing hex take collapse damage (`collapseDamage`
+  event).
 - **Hit location** — bipedal front / left side / right side / rear tables.
 - **Cluster hits** — missile 2/4/5/6/10/15/20 + shot columns 2/3/4.
   HAG applies its range mod (+2 short / −2 long, clamped 2..12) to the
@@ -236,7 +250,7 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   weapon effect). Engine / gyro / sensor / life-support / heat-sink
   slots take and absorb crits in the slot table; destroyed engine slots
   feed the heat system below.
-- **Heat** — heat scale 0-30 with movement heat, weapon heat, posture heat
+- **Heat** — heat scale 0-30 (the stored value is capped at 50) with movement heat, weapon heat, posture heat
   (stand-up, prone-turn), and engine-crit heat. Per TW p.159 the scale
   updates once at the heat phase: own heat generated during the movement
   and weapon attack phases accumulates into `unit.heatPending` (does not
@@ -260,6 +274,9 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   or 2 crits (Clan) per device. Destroyed sink crits reduce dissipation
   (a DHS retires per whole device); destroyed engine slots add +5/+10 heat
   per turn but never retire internal sinks (strict Total Warfare).
+  Standing in water adds dissipation (TW p.159): each submerged sink removes
+  1 more heat (2 for a double), capped at 6 — all sinks count at depth 2+ or
+  prone in depth 1+, only leg sinks when standing in depth 1.
 - **Voluntary shutdown / startup** — `mode shutdown` + `done` sends an
   online unit off-line (`manual`); it persists (no end-phase auto-restart)
   until a voluntary startup succeeds. `mode startup` + `done` rolls 2D6
@@ -269,7 +286,7 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
 - **Pilot ejection / wrecks** — `mode eject` + `done` marks the unit
   removed (`removed = "pilotEjected"`; destroyed stays `"not"`; counts toward
   victory; skipped by the actor queue and by occupancy checks) and spawns a
-  **level-2 wreck** in its hex. A
+  wreck in its hex (level 2; level 1 for light or prone 'Mechs, see below). A
   wreck is permanent and blocks the hex entirely: no ground or jump
   movement may enter or land on it, LOS is blocked when the wreck lies
   strictly between the endpoints (independent of elevation), and a target
@@ -337,6 +354,18 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   wrecks a leg/gyro or knocks the pilot out, which drops the 'Mech on the
   spot. Exiting a building hex requires no PSR.
 
+- **Torso twist** — `torso <front|left|right>` twists the acting unit one
+  hexside for the attack phase (TW pp.105-106): arm and front-torso weapons
+  fire as if the 'Mech faced the twisted direction. Physical attacks respect
+  it (punch/club/strike follow the twist; kick and push are feet-based).
+- **Water** — water hexes have a surface at the hex level and a bed `depth`
+  levels below. Depth-change MP is charged per level of bed difference, 'Mechs
+  cannot run into water (Minimum Movement excepted, TW p.53), jump limits
+  apply (no jumping from depth 2+, only non-leg jets at depth 1, a jump
+  landing in water rolls the entry PSR and tumbles `depth` levels on
+  failure), and prone 'Mechs in depth 1+ water are out of LOS. Hull breach,
+  underwater weapons and the underwater LOS table are not implemented.
+
 ### Implemented subset: physical attacks (punch, kick, push, club, strike)
 
 - **Declaration** — in the weapon attack phase alongside `fire`: `punch
@@ -389,23 +418,13 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   The `board` map marks hexes holding a ground club token with `!`.
 - **Deferred** — charge / DFA (movement-phase declarations), the remaining nine
   physical-weapon types (industrial tools), the optional
-  Punch/Kick-table election (+4) and level-difference auto-swap,
-  critical hits from physical damage, domino effect /
-  accidental falls from above.
+  Punch/Kick-table election (+4), domino effect / accidental falls from
+  above. (The level-difference table auto-swap and through-armor / structure
+  critical hits from physical damage are implemented.)
 
 ### Not yet implemented
 
 - **Charge / DFA physical attacks**.
-- **Physical-attack critical hits** — physical damage transfers armor /
-  structure and can destroy locations, but rolls no determining crits yet
-  (weapon-attack crits are fully implemented).
-- **Water jumping (TW p.53)** — implemented: no jumping from depth 2+, only
-  non-leg jets at depth 1, and a jump landing in water rolls the entry PSR and
-  on failure tumbles `depth` levels (damage halved). **Prone in depth 1+
-  water** blocks LOS. Still open: underwater weapons/hull breach.
-- **Torso twist** — per-weapon facing override that shifts a unit's firing
-  arcs during the attack phase (currently only the positional facing is
-  used).
 - **Building structural damage beyond CF** — basements / multi-floor
   interiors, structural-factor transfer between levels.
 - **Wreck destruction** — wrecks are permanent obstacles; clearing,
@@ -479,11 +498,16 @@ stated elsewhere in this document or the codebase:
                          drive() phase-advance wrapper around engine gameLoop()
     web/session.common.ts  shared formatters: heat, board, info, sheet, crit chart, log events
     web/session.move.ts    movement phase: mode parsing, reachable map, place/cancel/done commit
-    web/session.weapon.ts  weapon-attack phase: fire queue, validation, torso twist, ammo policy, resolve
+    web/session.attack.ts  attack phase: fire/physical queues, validation, torso twist, ammo policy, resolve
     web/session.setup.ts   setup phase: map, add/set/rm units, status, start
     web/session.over.ts    over state: rematch, status
     web/chunk.ts       structured output chunks: lines, board, columns, collapsible
     web/rng.ts          mulberry32-seeded Rng
+    web/autoplay.ts    hidden `autoplay` demo driver
+    web/lookup.ts      tolerant (case-insensitive) catalog lookups
+    web/table.ts       reference-table renderers (`table` command)
+    web/misc.ts        shared label helpers (facing, posture, weapon category)
+    web/i18n/          string catalogs (`en` canonical, `kr`)
     web/render.ts       structured BoardModel / Span model + boardToText / boardToSpans
     scripts/build-web.mjs  esbuild bundles: src/index.ts → web/btlib10x.js (engine),
                          web/main.ts → web/app.js (app; engine kept external),

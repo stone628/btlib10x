@@ -85,14 +85,25 @@ Right side (`RIGHT_SIDE_TABLE`):
 
 ## Firing Arc
 
-Total Warfare arc classification (`src/rules/arcs.ts`, `classifyArc`),
-measured as a **clockwise offset** from a unit's facing hexside. Front (0) and
-rear (3) are one hexside wide; each side arc spans two hexsides. The engine
-currently only fires into the **front** arc (side/rear firing is not yet
-implemented), but all arcs drive hit-location selection and the rear armor
-pool.
+Total Warfare arc classification (`src/rules/arcs.ts`). Two classifiers share
+the four arcs (front / rightSide / rear / leftSide):
 
-| Offset from facing | Arc | Hit-location table | Armor pool |
+- **Attacker side** — `classifyFiringArc` applies the TW p.105 hex template:
+  every hex around the attacker falls wholly in one arc (the forward arc is
+  three hexes wide, facing ±1 included), so firing has no boundary pairs. A
+  weapon may fire into an arc only if its mounting allows it
+  (`weaponCanFireIntoArc`): head, legs and front-torso weapons fire front
+  only, arm weapons add their own side, `rearFacing` torso weapons fire rear
+  only. A torso twist shifts the effective facing one hexside
+  (`effectiveFacingForTwist`).
+- **Target side** — `classifyArcWithBoundary` classifies from the bearing to
+  the attacker as a clockwise offset from the *target's* facing (the attack
+  direction, TW p.119). On an exact boundary line the defender's dominant
+  choice wins (front over side, never rear).
+
+The attack direction picks the hit-location column and the armor pool:
+
+| Offset from target facing | Arc | Hit-location table | Armor pool |
 | --- | --- | --- | --- |
 | 0 | front | Front / Rear | front |
 | 1–2 | rightSide | Right side | front |

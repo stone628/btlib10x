@@ -44,7 +44,7 @@
   - Water LOS eye height: a 'Mech in water stands on the bed (`level - depth`),
     so its LOS/cover levels should use `groundLevel` rather than the surface.
 
-- Later in classic expansion: physicals, basements,
+- Later in classic expansion: basements,
   hull-down, pavement skid (vehicle-specific;
   skid displacement is not viable without a displacement mechanic — see
   `docs/CLI.md`)
@@ -290,7 +290,7 @@
 ## Verify later
 
 - LOS edge-graze defender tie-break (v1 uses deterministic cube rounding)
-- Elevation "thrown from height" / falling damage rules (v1 implements LOS + movement + to-hit only)
+- Falls from displacement / above (charge, DFA, domino): falls across levels already use the `levelsFallen` term for ground moves; the displacement-driven cases wait on the charge/DFA phase
 
 ## Later phases
 
@@ -322,9 +322,9 @@
   fix is a sentinel-bypass in the strip pass for blow-off-only locations.
 - separate web cli framework to be used at another project
 - Dev-only sarna.net scraper starting at https://www.sarna.net/wiki/BattleMech normalizing into MechDef JSON (Node OK here; library stays browser-first)
-- Full intro-rules expansion: heat, physicals, piloting/falling (incl. partial
-  cover), rear hits, multi-target arcs, vehicles/infantry, basements,
-  hull-down, buildings damage beyond CF collapse
+- Full intro-rules expansion: charge/DFA, multi-target arcs,
+  vehicles/infantry, basements, hull-down, buildings damage beyond CF
+  collapse
 - Weapon systems (deferred, TW pp.129-143, pp.303-305):
   - Cluster-roll modifier pipeline: Artemis IV FCS `+2` (needs FCS
     equipment + ammo linkage; ECM-jammable, TW p.130), Narc pod `+2`

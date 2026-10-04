@@ -46,6 +46,7 @@ source module.
 
 ### Hex geometry (`core/hex.ts`)
 
+- `hexKey(hex): string` — `"col,row"` key used by `buildings`, `wrecks` and `clubs`
 - `neighbor(hex, facing): HexCoord`,
   `isAdjacent(a, b)`
 - `hexDistance(a, b): number`, `sameHex(a, b): boolean`
@@ -55,7 +56,7 @@ source module.
 
 ### Locations (`core/locations.ts` — re-exported via `core/types.ts`)
 
-- `isArm(loc)`, `isTorso(loc)` — boolean predicates
+- `isArm(loc)`, `isLimb(loc)`, `isTorso(loc)` — boolean predicates
 - `shoulderOf(loc)` — side-torso that backs an arm location
 - `ArmLocation`, `LegLocation`, `TorsoLocation` — location sub-types
 
@@ -63,26 +64,29 @@ source module.
 
 Terrain properties (move surcharge, screening value, target to-hit modifier,
 partial-cover and targeting-restriction flags) are data-driven from the
-catalog in `src/data/terrain.json` (`TerrainDef` in `terrain.schema.ts`).
+catalog in `src/data/terrain.data.ts` (`TerrainDef` in `terrain.schema.ts`).
 The package root exposes only the grid lookup plus the facing-change cost:
 
-- `cellAt(grid, hex): HexCell | undefined` — grid cell lookup
+- `cellAt(grid, hex): HexCell` — grid cell lookup
+- `waterDepth(terrain): number` — water depth of a terrain type (0 for dry
+  land, 1–3 for water1/2/3)
 - `MP_PER_FACING_CHANGE = 1`
 - `HexGrid` — the typed grid shape consumed by `cellAt` and battle state
 
 The rest of the terrain catalog (`terrainDef`, `allTerrainDefs`,
 `terrainMoveCost`, `costToEnter`, `screeningPoints`, `terrainTargetMod`,
-`hasPartialCover`, `blocksTargeting`, `costToClimb`) is engine-internal:
+`hasPartialCover`, `blocksTargeting`, `costToClimb`, `groundLevel` — a hex's
+level minus its water depth, i.e. the bed a ground unit stands on) is
+engine-internal:
 import it from its source module when needed.
 
-`TerrainDef` type: `{ moveCost, screeningValue, terrainMod, partialCover?, blocksTargeting? }`
+`TerrainDef` type: `{ moveCost, screeningValue, terrainMod, partialCover?, blocksTargeting?, waterDepth? }`
 
 ## Data
 
 Weapons, ammo, and terrain live inside the engine as embedded tables
 (`src/data/weapons.data.ts`, `src/data/ammo.data.ts`, `src/data/terrain.data.ts`);
-their registries self-populate on first read (`ensureWeaponsRegistered` /
-`ensureAmmoRegistered`). 'Mechs and maps ship as one packed catalog,
+their registries self-populate on first read. 'Mechs and maps ship as one packed catalog,
 `data/btlib10x.jsonl`, built by `npm run pack` from the canonical sources
 (`data/mechs/*.json`, `data/maps/*.json`): line 0 is the manifest, the rest
 are compact wire lines addressed by absolute line number. Load once, then
@@ -95,14 +99,14 @@ for (const m of manifest.maps) ensureMapRegistered(m.name); // maps are tiny; re
 // mechs register lazily: `add <model>` decodes its line via ensureMechRegistered
 ```
 
-For custom data, pass your own bundle to `loadShippedData` (its
-`ShippedDataBundle` shape is `{ weapons?, ammo?, mechs, maps }` — the
-weapon/ammo overrides are optional and fall back to the embedded tables)
-or call the individual `registerWeapons` / `registerAmmo` / `registerMechs` /
-`registerMaps` loaders, with weapon/ammo overrides before mechs (mech
-validation links crit slots against those catalogs). Tests use
-`registerAllCatalog` to register the whole loaded catalog at once; the
-`catalogManifest` accessor exposes the parsed line-0 manifest.
+For custom data, call the individual `registerMech` / `registerMechs` /
+`registerMap` / `registerMaps` loaders (the weapon/ammo tables can be
+overridden with `registerWeapons` / `registerAmmo` from their source modules,
+before mechs — mech validation links crit slots against those catalogs).
+`catalogMechs()` / `catalogMaps()` list the loaded catalog's manifest entries
+and `registeredMechDefs()` / `registeredMapDefs()` list what is currently
+registered. Tests use `registerAllCatalog` (source module) to register the
+whole loaded catalog at once.
 
 ### Weapon catalog (`data/weapon.schema.ts`)
 
@@ -121,19 +125,21 @@ interface WeaponDef {
   readonly toHitMod?: number;     // To-Hit Mod column: -2 pulse, +1 MRM / Clan heavy lasers
   readonly antiInfantry?: boolean;
   readonly rapidFireShots?: number; // R-code max shots
+  readonly clusterRangeMod?: WeaponClusterRangeMod; // per-bracket cluster-roll mod (HAG)
   readonly streak?: boolean;      // SRM-Streak: full tube on success, no cluster roll
   readonly heat?: number;         // heat generated per shot
-  readonly category: WeaponCategory; // "MISSILE" | "BALLISTIC" | "ENERGY"
+  readonly physicalWeapon?: boolean; // hatchet / sword / retractable blade (strike attacks)
+  readonly critExplosion?: number; // Gauss-family / HAG weapon-crit blast damage
+  readonly category: WeaponCategory; // "MISSILE" | "BALLISTIC" | "ENERGY" | "EQUIPMENT"
 }
 ```
 
 - `weaponDefFor(h: WeaponNameHolder): WeaponDef` (throws on unknown names)
 - `allWeaponDefs(): WeaponDef[]`
 - `listWeaponNames(): string[]`
-- `ensureWeaponsRegistered(): void` (rarely needed — reads self-populate)
 - `WeaponNameHolder` — minimal interface (`{ weapon: string }`) accepted by
   the `…For` lookup helpers
-- `WeaponCategory` — `"MISSILE" | "BALLISTIC" | "ENERGY"`
+- `WeaponCategory` — `"MISSILE" | "BALLISTIC" | "ENERGY" | "EQUIPMENT"`
 
 The table itself is embedded (`WEAPON_DATA` in `src/data/weapons.data.ts`,
 the source of truth); `registerWeapons` replaces it wholesale.
@@ -142,8 +148,7 @@ the source of truth); `registerWeapons` replaces it wholesale.
 
 Engine-internal (source-module import only): `AmmoDef`, `AmmoNameHolder`,
 `ammoDefFor`,
-`allAmmo` (as `getAllAmmo`), `listAmmoWeapons`, `shotsPerBinFor`,
-`ensureAmmoRegistered`. The table itself is embedded (`AMMO_DATA` in
+`allAmmo`, `listAmmoWeapons`, `shotsPerBinFor`. The table itself is embedded (`AMMO_DATA` in
 `src/data/ammo.data.ts`, the source of truth). The battle
 engine resolves ammo bins itself; library consumers read per-mount shot counts
 via the sheet helpers, not the catalog directly.
@@ -228,7 +233,8 @@ interface ResolvedMechDef {
 (DHS) a `group` of sibling slot indices so one hit destroys the whole DHS.
 
 - `mechDefFor(h: MechModelHolder): ResolvedMechDef` (throws on unknown)
-- `allMechDefs(): ResolvedMechDef[]`
+- `mechDef(model: string): ResolvedMechDef | undefined` — lookup by exact model
+- `registeredMechDefs(): ResolvedMechDef[]`
 - `MechModelHolder` — `{ model: string }` accepted by `…For` helpers
 - `RearArmorKey` — `"centerTorsoRear" | "leftTorsoRear" | "rightTorsoRear"`
 
@@ -249,10 +255,10 @@ the text in memory; `ensureMechRegistered` / `ensureMapRegistered` decode and
 register one sheet on demand (throwing duplicates stay an error via
 `registerMech` / `registerMap`).
 
-Bundled sheets: AS7-D (Atlas), BSW-X1, BZK-F3, CDA-3MA (Cicada), ENF-4R
-(Enforcer), GRF-1N (Griffin), HBK-4G (Hunchback), HER-5SA (Hermes II),
-MC-MKII-2 (Mad Cat Mk II), TW-Prime (Mad Cat), WHK-Prime (Masakari),
-WVR-6R (Wolverine). See `docs/MTF.md` to add more.
+Bundled sheets: AS7-D (Atlas), BSW-X1, BZK-F3, CDA-3MA (Cicada), CN9-YLW2
+(Centurion), ENF-4R (Enforcer), GRF-1N (Griffin), HBK-4G (Hunchback),
+HCT-5S (Hatchetman), HER-5SA (Hermes II), MC-MKII-2 (Mad Cat Mk II),
+TW-Prime (Mad Cat), WHK-Prime (Masakari), WVR-6R (Wolverine). See `docs/MTF.md` to add more.
 
 ### Battle maps (`data/map.schema.ts`, `data/index.ts`)
 
@@ -262,19 +268,20 @@ interface MapDef {
   width: number;    // cols 1..width (rulebook mapsheet labels)
   height: number;   // rows 1..height
   terrain: TerrainHexDef[];  // non-clear hexes only (level optional)
+  legends: TerrainType[];    // terrain types shown in the map legend
 }
 ```
 
 - `mapDefFor(h: MapNameHolder): MapDef` (throws on unknown)
-- `allMapDefs(): MapDef[]`
+- `registeredMapDefs(): MapDef[]`
 - `listMapNames(): string[]`
-- `MapNameHolder` — `{ mapName: string | null }` accepted by `getMapDefFor`
+- `MapNameHolder` — `{ mapName: string | null }` accepted by `mapDefFor`
 - `MapDefSrc` — the on-disk map shape (as written in `data/maps/*.json`)
 
 Bundled maps: `beginner`, `quickstart`, `test`, `testground`.
 
-Map coordinates are already 1-based and match the engine directly, so there
-is **no** `toEngineTerrain` conversion function anymore.
+Map coordinates are already 1-based and match the engine directly, so no
+coordinate conversion is needed.
 
 ## Rules
 
@@ -290,7 +297,7 @@ Heat is a public subsystem. Constants: `HEAT_CAP = 50`,
 `AMMO_EXPLOSION_START_HEAT = 19`. Helpers:
 
 - `effectiveMoveBudget(mode, movement, heat): number`
-- `heatDissipation(def, critSlotsDestroyed): number`
+- `heatDissipation(def, damage, critSlotsDestroyed): number` — dry dissipation
 - `heatDissipationMax(def): number`
 - `toHitHeatModifier(heat): number`
 - `toHitHeatModifierWithThreshold(heat): { toHit: number; threshold: number }`
@@ -304,6 +311,10 @@ Heat is a public subsystem. Constants: `HEAT_CAP = 50`,
 - `TSM_ACTIVATION_HEAT = 9` — end-of-turn heat activating TSM (TW p.143)
 - `isTsmActive(def, endHeat): boolean` — true for Triple-Strength Myomer
   designs at heat 9+; pass `unit.heat` (last turn's end value mid-turn)
+
+Water cooling (TW p.159) is `waterHeatBonus(def, damage, critSlotsDestroyed,
+depth, prone)` in `rules/heat.ts` (engine-internal; the heat phase adds it to
+`heatDissipation`).
 
 Engine-internal heat plumbing (source-module import only): `movementHeat`,
 `engineHitHeat`, `engineInternalSinks`, `dhsCritWidth`,
@@ -337,8 +348,10 @@ budget until the heat phase runs.
 - `reachableLandings(start, startFacing, options): RevealedLanding[]` —
   enumerates every (hex, facing) reachable within the mode's MP budget, each
   with a movement `path` (`F` forward / `B` back / `R`/`L` turn). Ground
-  charges 1 MP per turn and 1+terrain+1-per-level-changed per step (jump
-  treats turns as free and ignores elevation). `ReachabilityOptions` includes
+  charges 1 MP per turn and 1+terrain+1-per-level-changed per step, where
+  levels are measured at a water hex's bed (hex level − depth); running
+  cannot enter water except by Minimum Movement (TW p.53, p.57). Jump
+  treats turns as free and ignores elevation. `ReachabilityOptions` includes
   `wreckAt?: (hex) => boolean`: hexes holding a wreck are excluded from
   landings and cannot be passed through.
 
@@ -357,7 +370,8 @@ engine-internal (source-module import only).
 Engine-internal (source-module import only): `interveningHexes`,
 `interveningTerrains`, `losWoodsPoints`, `losBlocked`,
 `losWoodsPointsBetween`, `losBlockedByWater`, `losBlockedByElevation`,
-`losBlockedByBuilding`, `losBlockedByWreck`, `losClear`. The engine checks LOS
+`losBlockedByBuilding`, `losBlockedByWreck`, `losClear` (depth 2+ water, and depth 1+ water for a
+prone 'Mech, block LOS at the endpoints). The engine checks LOS
 during declaration validation; library consumers observe the outcome through
 `suggestFireTargets` block reasons (`noLos`) and `validateAttacks` errors.
 
@@ -385,6 +399,8 @@ plus standard falling damage above Level 0 (TW pp. 176-177).
 - `Arc` — `"front" | "rear" | "leftSide" | "rightSide"`
 - `classifyArcWithBoundary(facing, bearingToTarget): Arc` — boundary-aware
   variant used by the engine
+- `classifyFiringArc(from, to, facing): Arc | null` — the TW p.105 hex
+  template: which arc of `from` (facing `facing`) the hex `to` falls in
 - `weaponCanFireIntoArc(weapon, arc): boolean` — arc eligibility for a
   weapon mount
 
@@ -421,13 +437,25 @@ from their source modules when needed.
 
 ### Physical attacks (`rules/physical.ts`, TW pp. 144-147)
 
-Punch, kick, push, and club (charge/DFA deferred), declared via
-`declarePhysicalAttacks` and gated by `validatePhysicalAttack` (see the
-state-machine section). `PhysicalAttackType` is `"punch" | "kick" | "push" |
-"club"`; `PhysicalAttackDecl` carries `{ type, targetId, limb? }`;
+Punch, kick, push, club, and physical-weapon strikes (charge/DFA deferred),
+declared through `declareAttacks` and gated by `validatePhysicalAttack` (see
+the state-machine section). `PhysicalAttackType` is `"punch" | "kick" |
+"push" | "club" | "strike"`; `PhysicalAttackDecl` carries `{ type, targetId,
+limb?, weapon? }`; `PHYSICAL_WEAPONS` / `PhysicalWeaponStats` /
+`PhysicalWeaponName` / `isPhysicalWeaponName` describe the hatchet / sword /
+retractable blade table, and `strikeMounts` / `strikeMountArms` /
+`strikeWeaponInArm` / `resolveStrikeMount` / `resolveStrikeArm` /
+`StrikeMountResolution` find the mount a strike swings;
 `PhysicalModifiers` is the to-hit breakdown; `PhysicalResolution` carries the
 roll, `DamageGroup` hits (`{ location, damage }`), push displacement hexes,
 and kick/push PSR outcomes. `DamageGroup` is the per-group shape.
+
+Club handling (TW p.146): `HeldClub`, `ClubKind` (`"limb" | "tree" |
+"girder"`), `ClubGroundToken`, `SeveredLimb`, `ClubPickupDecl`,
+`GIRDER_SEARCH_TARGET`, `clubTokensInHex(state, hex)`,
+`pickupSourceInHex(state, hex)`, `salvageableSeveredLimbs(unit)`,
+`validatePickup(state, unitId, decl?)` and `declarePickup(state, unitId, decl,
+sink)` (an exclusive, attack-phase pickup declaration).
 
 The numeric tuning constants (`PUNCH_ATTACK_MOD`, `KICK_ATTACK_MOD`,
 `PUSH_ATTACK_MOD`, `CLUB_ATTACK_MOD`, `PUNCH_DAMAGE_PER_TONS`,
@@ -491,14 +519,16 @@ and inward transfer (head/CT terminal; excess lost).
 `CriticalResolution` exposes `rows` (the individual `CriticalEffect`s),
 `determiningRoll`, `throughArmor` (true when the roll came from a hit-location
 2 with armor unbreached), and the resulting `critSlotsDestroyed` /
-`destroyedWeapons` / `damage` / `blownOffArms` / `killed` / `ammoBins`.
+`destroyedWeapons` / `damage` / `killed` / `ammoBins`.
 
 - `ENGINE_SLOTS_KILL = 3` — engine hits that destroy the unit
-- `effectiveMovement(def, damage, critSlotsDestroyed, tsmActive?):
+- `effectiveMovement(def, damage, critSlotsDestroyed, tsmActive?, waterDepth?):
   EffectiveMovement` — computes walking/running/jumping after leg-actuator
   (−1 walk each), hip (halves walking), and jump-jet (−1 jump each) crit
   damage. `tsmActive` (from `isTsmActive`) adds the TW p.143 +2 Walking MP
   before damage (one-leg clamp still overrides); running recomputes from it.
+  `waterDepth` applies TW p.53: no jumping from depth 2+, only non-leg jump
+  jets at depth 1.
 - `TSM_WALK_BONUS = 2` — TSM walking-MP bonus while active (TW p.143).
 - `countDestroyedEngine(def, damage, critSlotsDestroyed): number` — engine
   crit count for heat dissipation.
@@ -528,7 +558,7 @@ is the per-group shape.
 
 ### Fireability (`rules/fireability.ts`)
 
-- `suggestFireTargets(state, unitId): FireSuggestion` — for every enemy,
+- `suggestFireTargets(state, unitId, twist?): FireSuggestion` — for every enemy,
   lists the weapons that could reach it (arc, LOS, range, ammo, not
   jammed/destroyed, not auto-missing, not leg-blocked while prone) with their
   computed TN and expected damage, plus per-weapon block reasons
@@ -548,7 +578,8 @@ is the per-group shape.
 
 ### Piloting (`rules/piloting.ts`)
 
-`DEFAULT_PILOTING = 5`, `GYRO_HIT_MOD = 3`, `GYRO_DESTROYED_HITS = 2`,
+`PilotingCheckReason` tags why a PSR was rolled (carried on `pilotingCheck`
+events). `DEFAULT_PILOTING = 5`, `GYRO_HIT_MOD = 3`, `GYRO_DESTROYED_HITS = 2`,
 `SENSOR_BLIND_HITS = 2`, and `consciousnessTarget(hits): number | null`
 (pilot-hit consciousness TN; `null` = dead). `FallDirection` and
 `PreexistingDamage` are the related shapes.
@@ -571,7 +602,6 @@ Bin identity + depletion helpers for custom UIs:
 - `collectAmmoBins(def): AmmoBin[]` — every bin in the resolved def
 - `loadAmmoBins(def): AmmoBins` — initial shot counts
 - `pooledTotalsByWeaponName(def, bins): Readonly<Record<string, number>>`
-- `parseAmmoPolicy(word)`
 
 The draw-order/consumption internals (`AMMO_POLICIES`, `isAmmoPolicy`,
 `ammoWeaponTotals`, `binsForWeapon`, `binsForWeaponName`, `pooledShotsLeft`,
@@ -582,7 +612,7 @@ are engine-internal (source-module import only).
 
 The engine is **in-place and `void`-returning**: rule functions mutate the
 `BattleState` you pass directly and return `void` (read-only queries like
-`nextActor` / `actorQueue` / `getUnit` return values without
+`nextActor` / `actorQueue` return values without
 touching combat state; `nextActor` and `actorQueue` lazily fill the cached
 activation order on first use each phase). The engine never decides
 winner: `gameLoop(state, rng, stopper)` advances transient phases until
@@ -603,10 +633,10 @@ dropProne(state, unitId, sink: GameEvent[], rng?): void                // moveme
 ejectPilot(state, unitId, sink: GameEvent[]): void                      // movement phase only: removes the unit (removed = "pilotEjected") and spawns a level-2 wreck in its hex
 voluntaryShutdown(state, unitId, sink: GameEvent[]): void              // movement phase only: shuts down ("manual")
 attemptVoluntaryStartup(state, unitId, sink: GameEvent[], rng?): void  // startup attempt after a manual shutdown
-declareAttacks(state, unitId, decls, physicalDecls, sink: GameEvent[], rng?): void    // weaponAttack phase only: one combined declaration per turn (weapons + punch/kick/push/club); emits a single merged `attacksDeclared`
-validateAttacks(state, unitId, decls, physicalDecls?, { twist? }?): void               // read-only gate check; throws on any rule violation without mutating state or emitting events. Returns the resolved volley metadata via `validateAttacksImpl`.
-declarePhysicalAttacks(state, unitId, decls: PhysicalAttackDecl[], sink: GameEvent[], rng?): void  // weaponAttack phase only: punch/kick/push/club, one type per turn (two-arm punch excepted); thin wrapper over `declareAttacks`, folds into `attacksDeclared`
-validatePhysicalAttack(state, unitId, decl: PhysicalAttackDecl): ValidationResult  // read-only single-decl check (adjacency, arc, level, actuators); consumed by `declarePhysicalAttacks` and the web `candidate` hints
+declareAttacks(state, unitId, weaponDecls, physicalDecls, sink: GameEvent[], rng?, options?): void  // attack phase only: one combined declaration per turn (weapons + punch/kick/push/club/strike); emits a single merged `attacksDeclared`
+validateAttacks(state, unitId, weaponDecls, physicalDecls?, options?): void            // read-only gate check; throws on any rule violation without mutating state or emitting events. Options carry the torso `twist`. Returns the resolved volley metadata via `validateAttacksImpl`.
+declarePickup(state, unitId, decl, sink: GameEvent[]): void             // attack phase only: exclusive club pickup (see Physical attacks)
+validatePhysicalAttack(state, unitId, decl: PhysicalAttackDecl, twist?, dropped?): ValidationResult  // read-only single-decl check (adjacency, arc, level, actuators); consumed by `declareAttacks` and the web `candidate` hints
 passMovement(state, unitId): void                                       // mark "passed" for the current activation
 wreckAt(state, hex): WreckState | undefined
 nextActor / actorQueue / gameLoop / requireUnit — see below
@@ -622,32 +652,32 @@ engine-internal (source-module import only). Drive the game with `gameLoop`
 below and read outcomes from events.
 
 ```ts
-actorQueue(state): { acted: string[]; pending: string[] }  // activation order view
-gameLoop(state, rng, stopper: GameLoopStopper, sink: GameEvent[]): GameLoopResult  // transient phases until actor acts or stopper(state) true; GameLoopResult.events aliases sink
+actorQueue(state): ActorQueueView   // { initiative, acted, pending, removed } activation order view
+gameLoop(state, rng, stopper: GameLoopStopper, sink: GameEvent[]): GameLoopResult  // transient phases until actor acts or stopper(state) true
 requireUnit(state, unitId): UnitState
 ```
 
 `GameLoopStopper = (state: BattleState) => boolean` — caller owns
-stop condition. Engine returns `{ actorId; stopped; events }` with no
-winner field. See `web/session.ts` `drive()` feeding
+stop condition. Engine returns `{ actorId; stopped }` with no winner field
+(events go to the `sink` you pass). See `web/session.ts` `drive()` feeding
 `checkSessionVictory` as stopper; tests use `checkVictory` helper in
 `tests/helpers.ts` same role.
 
 ```ts
 interface CreateBattleOptions {
-  terrain: TerrainHexDef[];           // non-clear hexes, optional level; pass [] for a clear board
-  width: number; height: number;      // board size in engine coords (must cover every unit/terrain hex)
   critsDisabled: boolean;             // suppress crit resolution
 }
+// The board comes from `map: MapDef` ({ name, width, height, terrain, legends });
+// width/height must cover every unit and terrain hex.
 ```
 
 Predicates on unit state:
 
-- `isNominal(state, unitId)` — alive, not destroyed/removed, not shutdown
-- `isShutdown(state, unitId)`, `isImmobile(state, unitId)` — same
-  `BattleState` view, narrower statuses
-- `isUnitAvailable(state, unitId)` — alive and can act this phase
-- `isUnitRemoved(state, unitId)` — true when `removed !== "not"`
+- `isNominal(unit)` — not shut down
+- `isShutdown(unit)`, `isImmobile(unit)` — narrower statuses (immobile also
+  covers unconscious pilots and units with no legs and no arms)
+- `isUnitAvailable(unit)` — not removed from play
+- `isUnitRemoved(unit)` — true when `removed !== "not"`
 
 Constants:
 
@@ -657,13 +687,13 @@ Constants:
 Key types:
 
 ```ts
-interface UnitInit { id; model; team; gunnery; piloting?; position: Hex; facing: Facing }
+interface UnitInit { id; model; team; gunnery: UnitSkillRange; piloting: UnitSkillRange; position: HexCoord; facing: Facing }  // skills 0..7, gunnery/piloting within 2 of each other (TW p.273)
 
 type MoveStep =
-  | { kind: "enter"; to: Hex }      // forward/backward (ground) or adjacent hop (jump)
+  | { kind: "enter"; to: HexCoord }      // forward/backward (ground) or adjacent hop (jump)
   | { kind: "turn"; facings: number };
 
-interface AttackDecl { weaponIndex: number; targetId: string; rapidFire?: boolean }
+interface WeaponAttackDecl { weaponIndex: number; targetId: string; rapidFire?: boolean; arc?: Arc; attackDirection?: Arc }
 
 type Phase = "initiative" | "movement" | "attack" | "end";
 
@@ -675,29 +705,35 @@ interface BattleState extends HexGrid {
   critsDisabled: boolean;
   actedThisPhase: string[];
   buildings: Record<string, BuildingState>;  // { cf; type } keyed "col,row"; building hexes only
-  wrecks: Record<string, WreckState>;  // { unitId; level: 2 } keyed "col,row"; ejected-'Mech obstacles
+  wrecks: Record<string, WreckState>;  // { unitId; level: 1 | 2 } keyed "col,row"; ejected/pilot-killed obstacles
+  clubs: Record<string, ClubGroundToken[]>;  // ground club tokens keyed "col,row"
+  actorQueue: string[] | null;        // cached activation order for the phase
 }
 
 interface UnitState {
-  id; model; team; gunnery; position; facing;
+  id; model; team; gunnery; piloting; pilotHits; unconscious; prone;
+  heat; heatPending;                  // scale value (last turn's end) + this turn's own heat
+  position; facing;
   damage: UnitDamageState;            // updated as soon as damage lands
   baseDamage: UnitDamageState;  // snapshot for weapon usability this phase
   ammoBins: AmmoBins;                 // per ammo-bin object, keyed "location:slotIndex"
   jammedWeapons: number[];
   critSlotsDestroyed: Record<Location, boolean[]>;
   destroyedWeapons: number[];
+  blownOffLimbs: SeveredLimb[]; club: HeldClub | null;   // severed limbs / held club
+  ammoPolicy: AmmoPolicy;
   moveMode; movesThisTurn; jumpedThisTurn; mpSpent;
-  declaredAttacks; firedTargetId; passedAttacks;
+  declaredWeaponAttacks; declaredPhysicalAttacks; declaredPickup; firedTargetId; passedAttacks;
   destroyed: DestroyedState;          // "not" | "headDestroyed" | "centerTorsoDestroyed" | "cockpitDestroyed" | "headBlownOff" | "engineDestroyed"
   removed: RemovedState;              // "not" | "destroyed" | "pilotEjected" | "pilotKilled"
-  shutdown: ShutdownState;            // "running" | "shutDown" (manual) | "shutDownAuto"
+  shutdown: ShutdownState;            // "not" | "manual" | "heat" | "starting"
 }
 
 type DestroyedReason = "headDestroyed" | "centerTorsoDestroyed" | "cockpitDestroyed" | "headBlownOff" | "engineDestroyed";
 type DestroyedState = "not" | DestroyedReason;
 type RemovalReason = "destroyed" | "pilotEjected" | "pilotKilled";
 type RemovedState = "not" | RemovalReason;
-type ShutdownState = "running" | "shutDown" | "shutDownAuto";
+type ShutdownState = "not" | "manual" | "heat" | "starting";
 type PilotHitReason = "headHit" | "ammoExplosion" | "fall" | "shutdownFall" | "lifeSupport"; // pilot-damage cause tag
 
 type GameEvent =
@@ -705,11 +741,12 @@ type GameEvent =
   | { kind: "phase"; phase }
   | { kind: "initiative"; rolls; winnerTeam }
   | { kind: "moveDeclared"; unitId; mode }
-  | { kind: "moved"; unitId; from; to; facing; steps }
-  | { kind: "attacksDeclared"; unitId; weapons: { targetId; count; distance; rangeBracket; rangeMod } | null; physical: { type; targetId }[] }
-  | { kind: "attackResolved"; attackerId; targetId; resolution }
-  | { kind: "unitDestroyed"; unitId; reason: DestroyedReason }
-  | { kind: "unitRemoved"; unitId; reason: RemovalReason }
+  | { kind: "moved"; unitId; mode; prevMode; position; facing; mpSpent; mpBudget }
+  | { kind: "attacksDeclared"; unitId; weapons: DeclaredWeaponVolley | null; physical: DeclaredPhysicalAttack[] }
+  | { kind: "attackResolved"; unitId; targetId; resolution: AttackResolution }
+  | { kind: "physicalAttackResolved"; unitId; targetId; resolution: PhysicalResolution }
+  | { kind: "unitRemoved"; unitId; reason: RemovalReason; destroyReason?: DestroyedReason | null }
+  | { kind: "unitFell"; unitId; cause: UnitFallCause; levelsFallen; totalDamage; ... }
   | { kind: "buildingCollapsed"; hex; cf }
   | ... ;                              // see src/rules/game.ts for the full union
 
@@ -724,19 +761,21 @@ Rules encoded by the state machine:
 
 - **Damage deferral**: units keep fighting during the weapon attack phase even
   if destroyed mid-phase; kills are committed when advancing
-  `weaponAttack -> end` (`destroyed`/`removed` set to the reason, e.g.
-  `"centerTorsoDestroyed"` / `"destroyed"`; paired `unitDestroyed` +
-  `unitRemoved` events returned). A pilot kill or eject sets only
+  `attack -> end` (`destroyed` is set to the reason, e.g.
+  `"centerTorsoDestroyed"`, and `removed` to `"destroyed"`; one
+  `unitRemoved` event carries `destroyReason`). A pilot kill or eject sets only
   `removed` (`"pilotKilled"` / `"pilotEjected"`), leaving `destroyed = "not"`.
 - **Weapon usability** is judged against `baseDamage`.
 - **Ammo** is deducted at declaration time; jams persist for the rest of the game.
 - **Declaration validation**: weapon indexes are 1-based; one target per turn,
-  front arc, unblocked LOS (woods + elevation), range check, rapid-fire limits
+  per-weapon mounting arc (TW p.105, torso twist applied), unblocked LOS
+  (woods + elevation + water + wrecks), range check, rapid-fire limits
   (`rapidFire: true` only on R weapons), TN > 12 must be aborted (throws), one
   declaration per weapon per turn, destroyed/jammed weapons rejected.
 - **Movement validation**: MP budget per mode (including crit-affected
-  effective ratings), terrain costs, +1 MP per level changed up or down,
-  forward steps capped at 2 levels per hex, backward steps may not change
+  effective ratings), terrain costs, +1 MP per level changed up or down
+  (water measured at its bed), no running into water (Minimum Movement
+  excepted), jump limits in water (TW p.53), forward steps capped at 2 levels per hex, backward steps may not change
   level, backward steps banned while running, turn costs 1 MP/hexside, stacking
   (pass-through friendly-only, never end on another 'Mech); jumping may pass
   over any unit, lands only on empty hexes, and picks its landing facing freely.
@@ -767,7 +806,7 @@ build has no injection and resolves to `"dev"`.
 Board and 'Mech-sheet rendering is **web-layer code, not part of the package
 root API** (the package root — `src/index.ts` — exposes no render functions).
 The renderer lives in `web/render.ts`, `web/renderer.text.ts`, and
-`web/format.ts`, and is documented in `docs/CLI.md` (see the `board`, `mode`,
+`web/misc.ts`, and is documented in `docs/CLI.md` (see the `board`, `mode`,
 `info map`, and `sheet` commands).
 
 Key model: `web/render.ts` exposes a small facade over `web/renderer.text.ts`
@@ -778,10 +817,9 @@ including `BoardModel.elevations` and team-colored `idStyles`) either from a
 `MapDef` (`mapModel(...)`), or from structured render info via
 `createBoardModel(info)`; `boardToText(model)` returns the flat ASCII form and
 `boardToSpans(model)` returns styled span runs. Commands produce board chunks
-from a `BoardRenderInfo` (`{ map, units, reachables, reachableTeam }`) rather
+from a `BoardRenderInfo` (`{ map, units, reachable, clubHexes }`) rather
 than a pre-built model; reachable-hex clipping for the movement `mode` command
-happens inside `createBoardModel` and the info is supplied by `reachableInfo`
-in `web/format.ts`. The web terminal renders spans inside a `.board` container
+happens inside `createBoardModel`. The web terminal renders spans inside a `.board` container
 whose font family, size and line spacing come from the CSS variables
 `--font-board` / `--board-fs` / `--board-lh`; each terrain's color scheme is
 its own set of variables (`--t-lightWoods`, `--t-heavyWoods`,
