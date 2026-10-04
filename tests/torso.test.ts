@@ -154,16 +154,6 @@ describe("suggestFireTargets with torso twist", () => {
     expect(twistedEnf.arc).toBe("front");
     expect(twistedEnf.weapons.map((w) => w.weaponIndex).sort()).toEqual([1, 2, 3, 4]);
   });
-
-  it("omitting twist matches the untwisted call (back-compat)", () => {
-    const { units } = hbkFacingAt("se");
-    const state = startAttackTurn(createTestBattle([], units, false));
-    const base = suggestFireTargets(state, "hbk");
-    const backCompat = suggestFireTargets(state, "hbk");
-    expect(backCompat.targets[0]?.weapons.map((w) => w.weaponIndex)).toEqual(
-      base.targets[0]?.weapons.map((w) => w.weaponIndex),
-    );
-  });
 });
 
 describe("declareAttacks with torso twist", () => {

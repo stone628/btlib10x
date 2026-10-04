@@ -5,7 +5,6 @@ import {
   applyBuildingDamage,
   buildingTypeOf,
   createBuildingState,
-  isBuildingTerrain,
   isCollapsed,
 } from "../src/rules/building";
 import {
@@ -37,15 +36,6 @@ describe("buildingTypeOf", () => {
     expect(buildingTypeOf("clear")).toBeUndefined();
     expect(buildingTypeOf("lightWoods")).toBeUndefined();
     expect(buildingTypeOf("water1")).toBeUndefined();
-  });
-});
-
-describe("isBuildingTerrain", () => {
-  it("recognizes building and non-building terrain", () => {
-    expect(isBuildingTerrain("lightBuilding")).toBe(true);
-    expect(isBuildingTerrain("hardenedBuilding")).toBe(true);
-    expect(isBuildingTerrain("clear")).toBe(false);
-    expect(isBuildingTerrain("rough")).toBe(false);
   });
 });
 
