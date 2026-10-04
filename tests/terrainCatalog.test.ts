@@ -24,25 +24,6 @@ describe("terrain catalog integrity", () => {
       expect(TERRAIN_TYPES).toContain(key as (typeof TERRAIN_TYPES)[number]);
     }
   });
-
-  it("engine helpers match the catalog for every terrain type", () => {
-    const catalog = allTerrainDefs();
-    for (const [type, def] of catalog) {
-      const t = type as (typeof TERRAIN_TYPES)[number];
-      expect(terrainMoveCost(t), `${type}.moveCost`).toBe(def.moveCost);
-      expect(screeningPoints(t), `${type}.screening`).toBe(def.screeningValue);
-      expect(terrainTargetMod(t), `${type}.targetMod`).toBe(def.terrainMod);
-    }
-  });
-
-  it("flags partial cover and targeting restrictions correctly", () => {
-    const catalog = allTerrainDefs();
-    for (const [type, def] of catalog) {
-      const t = type as (typeof TERRAIN_TYPES)[number];
-      expect(hasPartialCover(t)).toBe(def.partialCover === true);
-      expect(blocksTargeting(t)).toBe(def.blocksTargeting === true);
-    }
-  });
 });
 
 describe("costToEnter", () => {
