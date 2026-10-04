@@ -11,9 +11,7 @@
 /// <reference types="node" />
 import { readFileSync } from "node:fs";
 // Also load into dist module (used by web tests via package exports)
-import {
-  loadCatalog as loadCatalogDist,
-} from "btlib10x";
+import { loadCatalog as loadCatalogDist } from "btlib10x";
 import { registerAllCatalog as registerAllCatalogDist } from "../dist/data/catalog.js";
 import { loadCatalog } from "../src";
 import { registerAllCatalog } from "../src/data/catalog";

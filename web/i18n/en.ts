@@ -570,6 +570,14 @@ export const en = {
   "res.physical.attackerDamage": "self-damage: {groups}",
   "res.physical.targetDisplaced": "target displaced to ({col},{row})",
   "res.physical.attackerDisplaced": "attacker advances to ({col},{row})",
+  "res.physical.redirected":
+    "target displaced — redirected from {from} to {target} at +1 (TW p.144)",
+  "res.physical.displacedMiss":
+    "target {target} displaced before the blow — no valid target, auto-miss (TW p.144)",
+  "res.physical.attackerDown":
+    "attacker {attacker} unable to attack (destroyed/unconscious/shut down) — auto-miss",
+  "res.physical.targetDown": "target {target} destroyed or removed before the melee — auto-miss",
+  "res.physical.noLongerLegal": "no longer legal ({reason}) — auto-miss",
   "res.physical.targetPsr": "target PSR: {outcome}",
   "res.physical.attackerPsr": "attacker PSR: {outcome}",
   "res.physical.stands": "need {target}, 2D6 = {roll} stands",

@@ -212,19 +212,20 @@ describe("kick", () => {
     expect(result.reason).toContain("forward arc");
   });
 
-  it("target makes PSR on hit", () => {
+  it("defers the target PSR to the end-of-phase sweep", () => {
     const battle = makeBattle(
       makeUnitInit("a", 1, { col: 5, row: 5 }, "ne"),
       makeUnitInit("t", 2, { col: 6, row: 5 }, "sw"),
     );
     const decl: PhysicalAttackDecl = { type: "kick", targetId: "t", limb: "rightLeg" };
     const resolution = resolvePhysicalAttack(battle, "a", decl, HIGH_RNG);
-    expect(resolution.targetPsr).not.toBeNull();
-    // Undamaged target: piloting 5 + 0 preexisting = target 5.
-    expect(resolution.targetPsr!.target).toBe(5);
+    // No dice drawn for the PSR here (TW pp.59,147): the sweep rolls it.
+    expect(resolution.targetPsr).toBeNull();
+    expect(resolution.targetFalls).toBe(false);
+    expect(resolution.kickTargetPsrPending).toBe(true);
   });
 
-  it("attacker makes PSR on miss", () => {
+  it("defers the attacker PSR on a miss", () => {
     const battle = makeBattle(
       makeUnitInit("a", 1, { col: 5, row: 5 }, "ne"),
       makeUnitInit("t", 2, { col: 6, row: 5 }, "sw"),
@@ -233,19 +234,20 @@ describe("kick", () => {
     const resolution = resolvePhysicalAttack(battle, "a", decl, LOW_RNG);
     // With piloting 5 and kick mod -2, TN = 3. Rolling 2 (1+1) misses.
     expect(resolution.hit).toBe(false);
-    expect(resolution.attackerPsr).not.toBeNull();
-    expect(resolution.attackerPsr!.target).toBe(5);
+    expect(resolution.attackerPsr).toBeNull();
+    expect(resolution.attackerFalls).toBe(false);
+    expect(resolution.kickAttackerPsrPending).toBe(true);
   });
 
-  it("adds the target's preexisting damage to its PSR target", () => {
+  it("marks the target PSR pending (preexisting damage applies at sweep time)", () => {
     const battle = makeBattle(
       makeUnitInit("a", 1, { col: 5, row: 5 }, "ne"),
       makeUnitInit("t", 2, { col: 6, row: 5 }, "sw"),
     );
-    battle.units.t!.critSlotsDestroyed.leftLeg![1] = true; // upperLegActuator: +1
+    battle.units.t!.critSlotsDestroyed.leftLeg![1] = true; // upperLegActuator: +1 at sweep
     const decl: PhysicalAttackDecl = { type: "kick", targetId: "t", limb: "rightLeg" };
     const resolution = resolvePhysicalAttack(battle, "a", decl, HIGH_RNG);
-    expect(resolution.targetPsr!.target).toBe(6);
+    expect(resolution.kickTargetPsrPending).toBe(true);
   });
 
   it("skips the target PSR when the target is prone", () => {
@@ -259,7 +261,7 @@ describe("kick", () => {
     // Damage still lands, but prone 'Mechs ignore fall-avoidance PSRs.
     expect(resolution.hit).toBe(true);
     expect(resolution.damageToTarget.length).toBe(1);
-    expect(resolution.targetPsr).toBeNull();
+    expect(resolution.kickTargetPsrPending).not.toBe(true);
     expect(resolution.targetFalls).toBe(false);
   });
 });

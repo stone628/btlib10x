@@ -103,6 +103,16 @@ export interface PhysicalResolution {
   readonly notes: string[];
   /** True when the hit-location roll was 2 (through-armor critical, TW p.123). */
   readonly throughArmorCrit: boolean;
+  /** Extra to-hit applied for a displacement redirect (TW p.144, +1). */
+  readonly displacementPenalty?: number;
+  /** Original target before a displacement redirect (TW p.144). */
+  readonly redirectedFrom?: string;
+  /** Why the attack never rolled (displaced | attackerDown | targetDown | invalid:<reason>). */
+  readonly missReason?: string;
+  /** Kick target PSR deferred to the end-of-phase sweep (TW pp.59,147). */
+  readonly kickTargetPsrPending?: boolean;
+  /** Kick attacker PSR on a miss, deferred to the end-of-phase sweep. */
+  readonly kickAttackerPsrPending?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -855,12 +865,20 @@ function validateStrike(
  * Resolve a single physical attack (TW pp. 144–151).
  * Pure function: does not mutate state. Returns the resolution with
  * damage groups, displacement, and PSR results.
+ *
+ * Kick PSRs are NOT rolled here: both the kicked target's check and the
+ * missed-kick attacker's check defer to the end-of-phase sweep (TW pp. 59,
+ * 147) and come back as `kickTargetPsrPending` / `kickAttackerPsrPending`
+ * for the caller to roll after all physical damage lands. Push PSRs stay
+ * immediate: displacement (and its PSRs) resolves immediately after the
+ * causing action (TW p.151).
  */
 export function resolvePhysicalAttack(
   battle: BattleState,
   attackerId: string,
   decl: PhysicalAttackDecl,
   rng: Rng,
+  extraToHit = 0,
 ): PhysicalResolution {
   const attacker = battle.units[attackerId]!;
   const target = battle.units[decl.targetId]!;
@@ -868,16 +886,17 @@ export function resolvePhysicalAttack(
 
   const notes: string[] = [];
 
-  // Compute to-hit
+  // Compute to-hit (extraToHit carries the TW p.144 displacement redirect +1).
   const mods = computePhysicalToHit(battle, attacker, target, decl.type, decl.limb, decl.weapon);
+  const total = mods.total + extraToHit;
 
   // Auto-hit / auto-miss
-  const autoHit = mods.total <= PHYSICAL_MIN_TOHIT;
-  const autoMiss = mods.total > PHYSICAL_MAX_TOHIT;
+  const autoHit = total <= PHYSICAL_MIN_TOHIT;
+  const autoMiss = total > PHYSICAL_MAX_TOHIT;
 
   // Roll to-hit
   const roll = autoHit || autoMiss ? null : roll2D6(rng);
-  const hit = autoHit || (roll !== null && roll >= mods.total);
+  const hit = autoHit || (roll !== null && roll >= total);
 
   // Compute attack direction for hit location
   const back = bearingExact(target.position, attacker.position)!;
@@ -907,6 +926,8 @@ export function resolvePhysicalAttack(
   let attackerPsr: { target: number; roll: number | null; success: boolean } | null = null;
   let attackerFalls = false;
   let targetFalls = false;
+  let kickTargetPsrPending = false;
+  let kickAttackerPsrPending = false;
 
   /**
    * Roll one physical-attack PSR for `unit`, applying its own preexisting
@@ -941,20 +962,12 @@ export function resolvePhysicalAttack(
   }
 
   if (decl.type === "kick") {
-    // Target must make PSR regardless of hit/miss (TW p. 147), unless it
-    // is prone: prone 'Mechs ignore PSRs to avoid falls (TW p.151).
-    if (!target.prone) {
-      const targetPsrResult = rollPhysicalPsr(rng, target);
-      targetPsr = targetPsrResult;
-      if (!targetPsrResult.success) targetFalls = true;
-    }
-
-    // Attacker makes PSR on miss (TW p. 147)
-    if (!hit) {
-      const attackerPsrResult = rollPhysicalPsr(rng, attacker);
-      attackerPsr = attackerPsrResult;
-      if (!attackerPsrResult.success) attackerFalls = true;
-    }
+    // Deferred to the end-of-phase sweep (TW pp. 59,147): the kicked target
+    // rolls regardless of hit/miss (unless prone, which ignores
+    // fall-avoidance PSRs per TW p.151), and the attacker rolls on a miss.
+    // No dice are drawn here so RNG order matches the deferred rolls.
+    kickTargetPsrPending = !target.prone;
+    kickAttackerPsrPending = !hit;
   }
 
   return {
@@ -962,7 +975,7 @@ export function resolvePhysicalAttack(
     attackerId,
     targetId: decl.targetId,
     ...(decl.type === "strike" && decl.weapon !== undefined ? { weapon: decl.weapon } : {}),
-    toHit: mods.total,
+    toHit: total,
     roll,
     hit,
     autoHit,
@@ -977,6 +990,9 @@ export function resolvePhysicalAttack(
     targetFalls,
     notes,
     throughArmorCrit,
+    ...(extraToHit !== 0 ? { displacementPenalty: extraToHit } : {}),
+    ...(kickTargetPsrPending ? { kickTargetPsrPending } : {}),
+    ...(kickAttackerPsrPending ? { kickAttackerPsrPending } : {}),
   };
 }
 

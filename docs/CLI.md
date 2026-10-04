@@ -345,17 +345,26 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   push / club bars all arm-mounted weapons. `candidate` lists legal
   physical options for adjacent enemies; `status` shows the queued
   physical declarations.
-- **Resolution** — after all weapon attacks in `resolveAllAttacks`
-  (TW p. 37 order): punch damage 1/10 t on the Punch table, kick 1/5 t
+- **Resolution** — weapons resolve first in `resolveAllAttacks`,
+  then a weapon PSR sweep (falls, consciousness, kills) lands before any
+  melee (TW pp. 37-38, 59, 61: a weapon-phase fall starts the melee prone),
+  then physical attacks resolve against post-weapon state with re-validation
+  (destroyed/unconscious/shut-down attackers skip; displaced targets redirect
+  at +1 onto an enemy holding the declared hex or auto-miss with no valid
+  target, TW p.144 — both reported in the CLI), then a physical sweep rolls
+  the 20-point trigger per sub-pass (weapon and physical damage never pool)
+  plus deferred kick PSRs: punch damage 1/10 t on the Punch table, kick 1/5 t
   on the Kick table, club 1/5 t on the standard table, strike per weapon
   (hatchet 1/5 t, sword 1/10 t +1, blade 1/10 t) on the standard table,
-  push no damage with target displacement + attacker advance. Kick forces a
-  target PSR (plus an attacker PSR on a miss); push forces both sides' PSRs.
+  push no damage with target displacement + attacker advance (immediate PSRs,
+  TW p.151). Kick target/attacker-miss PSRs defer to the sweep; push forces both sides' PSRs.
   Head hits injure the pilot as usual. A crit on any slot of a mounted
   physical weapon destroys it (the HCT-5S Hatchetman now ships its hatchet).
   Triple-Strength Myomer (TW p.143, e.g. the CN9-YLW2 Centurion): active the
   turn after a turn ending at heat 9+ — +2 Walking MP (running recomputed,
   jump unaffected) and doubled punch/kick/club/hatchet/sword/blade damage.
+  Declarations stay merged (weapons + physicals in one attack activation) for
+  playability — TW declares physicals in their own phase.
 - **Deferred** — charge / DFA (movement-phase declarations), club
   acquisition (blown-off limbs, trees, girders), the remaining nine
   physical-weapon types (industrial tools), the optional

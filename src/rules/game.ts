@@ -2239,6 +2239,7 @@ export function resolvePhasePiloting(
   rng: Rng,
   before: PhaseSnapshots,
   sink: GameEvent[],
+  extraTriggers?: Readonly<Record<string, ReadonlyArray<{ reason: string; modifier: number }>>>,
 ): void {
   for (const unit of Object.values(state.units)) {
     if (isUnitRemoved(unit) || unit.prone) continue;
@@ -2260,6 +2261,9 @@ export function resolvePhasePiloting(
     const gyroNow = countDestroyedGyro(def, unit.damage, unit.critSlotsDestroyed);
     if (gyroNow < GYRO_DESTROYED_HITS && gyroBefore < 1 && gyroNow >= 1) {
       triggers.push({ reason: "gyro", modifier: GYRO_HIT_MOD });
+    }
+    for (const extra of extraTriggers?.[unit.id] ?? []) {
+      triggers.push({ reason: extra.reason, modifier: extra.modifier });
     }
     let autoFall: { cause: string; seatbelt: number | null } | null = null;
     const legDestroyed =
@@ -2667,35 +2671,222 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     }
   }
 
+  // End-of-weapon sub-pass piloting (TW pp.59,61): weapon-caused rolls land
+  // before any melee resolves, so a weapon-phase fall starts the melee prone
+  // and a weapon-phase kill never swings a declared melee blow. Declarations
+  // stay merged for playability (one attack activation per unit per turn);
+  // only the resolution is split into weapon-then-physical sub-passes.
+  const weaponBefore: PhaseSnapshots = { damage: baseDamage, crit: {} };
+  for (const unit of Object.values(state.units)) {
+    weaponBefore.crit[unit.id] = unit.baseCritSlotsDestroyed;
+  }
+  resolvePhasePiloting(state, rng, weaponBefore, sink);
+  for (const unit of Object.values(state.units)) {
+    if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
+      markUnitDestroyed(unit, destroyedReasonFor(unit.damage), sink);
+    }
+  }
+
+  // Post-weapon snapshot: the physical 20-point trigger measures only
+  // physical-sub-pass damage (TW p.60 "in one phase" per phase), and weapon
+  // fall damage never re-triggers the sweep.
+  const postWeaponDamage: Record<string, UnitDamageState> = {};
+  const postWeaponCrit: Record<string, Record<Location, boolean[]>> = {};
+  for (const unit of Object.values(state.units)) {
+    postWeaponDamage[unit.id] = {
+      armor: { ...unit.damage.armor },
+      armorRear: { ...unit.damage.armorRear },
+      internalStructure: { ...unit.damage.internalStructure },
+    };
+    postWeaponCrit[unit.id] = cloneCritDestroyed(unit.critSlotsDestroyed);
+  }
+
   // Sub-pass 2: Physical attacks (TW p. 37: physical attacks resolve after weapon attacks)
   // Collect physical attack crits per target for destruction sweep
   const physicalAttackCrits: Record<string, CriticalResolution[]> = {};
-
+  // Kick PSRs deferred here for the end-of-physical sweep (TW pp.59,147).
+  const kickExtras: Record<string, Array<{ reason: string; modifier: number }>> = {};
+  const queueKickPsr = (unitId: string, reason: string): void => {
+    const list = kickExtras[unitId];
+    if (list === undefined) kickExtras[unitId] = [{ reason, modifier: 0 }];
+    else list.push({ reason, modifier: 0 });
+  };
+  // Declared hexes at melee start (the weapon sub-pass never displaces, so
+  // these are the declaration-time hexes TW p.144 reasons about).
+  const declaredPositions: Record<string, HexCoord> = {};
   for (const unit of Object.values(state.units)) {
-    if (unit.declaredPhysicalAttacks.length === 0) continue;
+    declaredPositions[unit.id] = { ...unit.position };
+  }
+  const missResolution = (
+    type: PhysicalAttackDecl["type"],
+    attackerId: string,
+    targetId: string,
+    missReason: string,
+    note: string,
+  ): PhysicalResolution => ({
+    type,
+    attackerId,
+    targetId,
+    toHit: 13,
+    roll: null,
+    hit: false,
+    autoHit: false,
+    autoMiss: true,
+    damageToTarget: [],
+    damageToAttacker: [],
+    targetDisplacedTo: null,
+    attackerDisplacedTo: null,
+    targetPsr: null,
+    attackerPsr: null,
+    attackerFalls: false,
+    targetFalls: false,
+    notes: [note],
+    throughArmorCrit: false,
+    missReason,
+  });
+  // TW p.144 displacement order: the lower-initiative (losing) team's melee
+  // resolves first; same-team order follows declaration order (stable sort).
+  const physicalOrder = Object.values(state.units)
+    .filter((u) => u.declaredPhysicalAttacks.length > 0)
+    .sort((a, b) => {
+      const aWinner = state.initiativeWinnerTeam !== null && a.team === state.initiativeWinnerTeam;
+      const bWinner = state.initiativeWinnerTeam !== null && b.team === state.initiativeWinnerTeam;
+      return Number(aWinner) - Number(bWinner);
+    });
+
+  for (const unit of physicalOrder) {
     for (const decl of unit.declaredPhysicalAttacks) {
-      const resolution = resolvePhysicalAttack(state, unit.id, decl, rng);
+      const attacker = requireUnit(state, unit.id);
+      const target = state.units[decl.targetId];
+      if (isUnitRemoved(attacker) || attacker.unconscious || isShutdown(attacker)) {
+        const resolution = missResolution(
+          decl.type,
+          attacker.id,
+          decl.targetId,
+          "attackerDown",
+          `attacker unable to attack (destroyed/unconscious/shut down) — auto-miss`,
+        );
+        sink.push({
+          kind: "physicalAttackResolved",
+          unitId: attacker.id,
+          targetId: decl.targetId,
+          resolution,
+        });
+        continue;
+      }
+      if (target === undefined || isUnitRemoved(target)) {
+        const resolution = missResolution(
+          decl.type,
+          attacker.id,
+          decl.targetId,
+          "targetDown",
+          `target destroyed or removed before the melee — auto-miss`,
+        );
+        sink.push({
+          kind: "physicalAttackResolved",
+          unitId: attacker.id,
+          targetId: decl.targetId,
+          resolution,
+        });
+        continue;
+      }
+      // TW p.144 comes before legality: a target displaced before its
+      // attacker's melee resolves no longer stands in the aimed hex.
+      // Resolve against whoever now holds that hex (+1) or auto-miss with
+      // no valid target — even if the displaced unit itself is still in
+      // reach, the blow was aimed at its declared hex.
+      const declaredHex = declaredPositions[target.id];
+      let effectiveDecl = decl;
+      let redirectNote: string | null = null;
+      let redirectPenalty = 0;
+      let redirectFrom: string | null = null;
+      if (declaredHex !== undefined && !sameHex(declaredHex, target.position)) {
+        const occupant = occupantAt(state, declaredHex, attacker.id);
+        const valid =
+          occupant !== undefined &&
+          !isUnitRemoved(occupant) &&
+          occupant.id !== target.id &&
+          occupant.team !== attacker.team &&
+          validatePhysicalAttack(state, attacker.id, { ...decl, targetId: occupant.id }).ok;
+        if (occupant !== undefined && valid) {
+          redirectFrom = target.id;
+          effectiveDecl = { ...decl, targetId: occupant.id };
+          redirectPenalty = 1;
+          redirectNote = `target ${target.id} displaced — redirected to ${occupant.id} at +1 (TW p.144)`;
+        } else {
+          const resolution = missResolution(
+            decl.type,
+            attacker.id,
+            decl.targetId,
+            "displaced",
+            `target ${target.id} displaced before the blow — no valid target, auto-miss (TW p.144)`,
+          );
+          sink.push({
+            kind: "physicalAttackResolved",
+            unitId: attacker.id,
+            targetId: decl.targetId,
+            resolution,
+          });
+          continue;
+        }
+      } else {
+        // Re-validate against post-weapon state when the target held its
+        // hex: a weapon-phase fall leaves the attacker prone (validate
+        // rejects prone attackers) and falls may have broken arcs
+        // (TW pp.144,151).
+        const check = validatePhysicalAttack(state, attacker.id, decl);
+        if (!check.ok) {
+          const resolution = missResolution(
+            decl.type,
+            attacker.id,
+            decl.targetId,
+            `invalid:${check.reason ?? "illegal"}`,
+            `no longer legal (${check.reason ?? "illegal"}) — auto-miss`,
+          );
+          sink.push({
+            kind: "physicalAttackResolved",
+            unitId: attacker.id,
+            targetId: decl.targetId,
+            resolution,
+          });
+          continue;
+        }
+      }
+      let resolution = resolvePhysicalAttack(
+        state,
+        attacker.id,
+        effectiveDecl,
+        rng,
+        redirectPenalty,
+      );
+      if (redirectFrom !== null && redirectNote !== null) {
+        resolution = {
+          ...resolution,
+          redirectedFrom: redirectFrom,
+          notes: [...resolution.notes, redirectNote],
+        };
+      }
       sink.push({
         kind: "physicalAttackResolved",
-        unitId: unit.id,
-        targetId: decl.targetId,
+        unitId: attacker.id,
+        targetId: effectiveDecl.targetId,
         resolution,
       });
 
-      // Apply damage to target
-      const target =
+      // Apply damage to the effective target (redirect-aware).
+      const hitTarget =
         resolution.hit && resolution.damageToTarget.length > 0
-          ? requireUnit(state, decl.targetId)
+          ? requireUnit(state, effectiveDecl.targetId)
           : null;
-      if (target && resolution.hit && resolution.damageToTarget.length > 0) {
-        const targetDef = mechDefFor(target);
+      if (hitTarget && resolution.hit && resolution.damageToTarget.length > 0) {
+        const targetDef = mechDefFor(hitTarget);
         const targetCrits: CriticalResolution[] = [];
         for (const group of resolution.damageToTarget) {
-          const back = bearingExact(target.position, unit.position)!;
-          const dir = classifyArcWithBoundary(target.facing, back);
+          const back = bearingExact(hitTarget.position, attacker.position)!;
+          const dir = classifyArcWithBoundary(hitTarget.facing, back);
           const attackDirection = defenderArcChoice(dir.arc, dir.altArc);
-          const app = applyDamage(target.damage, group.location, group.damage, attackDirection);
-          target.damage = app.after;
+          const app = applyDamage(hitTarget.damage, group.location, group.damage, attackDirection);
+          hitTarget.damage = app.after;
 
           // Critical hit resolution (TW p.123-124):
           // - One determining roll per location that loses internal structure
@@ -2712,26 +2903,26 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
               def: targetDef,
               source: { location: group.location, damage: group.damage },
               throughArmor: tagThroughArmor,
-              critSlotsDestroyed: target.critSlotsDestroyed,
-              destroyedWeapons: target.destroyedWeapons,
-              damage: target.damage,
-              ammoBins: target.ammoBins,
+              critSlotsDestroyed: hitTarget.critSlotsDestroyed,
+              destroyedWeapons: hitTarget.destroyedWeapons,
+              damage: hitTarget.damage,
+              ammoBins: hitTarget.ammoBins,
             });
-            target.critSlotsDestroyed = res.critSlotsDestroyed;
-            target.destroyedWeapons = res.destroyedWeapons;
-            target.ammoBins = res.ammoBins;
-            target.damage = res.damage;
+            hitTarget.critSlotsDestroyed = res.critSlotsDestroyed;
+            hitTarget.destroyedWeapons = res.destroyedWeapons;
+            hitTarget.ammoBins = res.ammoBins;
+            hitTarget.damage = res.damage;
             // Track blown-off arms for displacement/fall logic
             for (const arm of res.blownOffArms) {
-              if (!target.blownOffArms.includes(arm)) target.blownOffArms.push(arm);
+              if (!hitTarget.blownOffArms.includes(arm)) hitTarget.blownOffArms.push(arm);
             }
             targetCrits.push(res);
           }
         }
         // Accumulate crits for this target (multiple attacks possible)
         if (targetCrits.length > 0) {
-          physicalAttackCrits[target.id] = [
-            ...(physicalAttackCrits[target.id] ?? []),
+          physicalAttackCrits[hitTarget.id] = [
+            ...(physicalAttackCrits[hitTarget.id] ?? []),
             ...targetCrits,
           ];
         }
@@ -2740,47 +2931,57 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       // Apply damage to attacker (e.g., kick miss PSR)
       if (resolution.damageToAttacker.length > 0) {
         for (const group of resolution.damageToAttacker) {
-          const app = applyDamage(unit.damage, group.location, group.damage, "front");
-          unit.damage = app.after;
+          const app = applyDamage(attacker.damage, group.location, group.damage, "front");
+          attacker.damage = app.after;
         }
       }
 
-      // Handle displacement
-      if (resolution.targetDisplacedTo && target && !isUnitRemoved(target)) {
+      // Handle displacement (push only in this subset; immediate per TW p.151).
+      if (resolution.targetDisplacedTo && hitTarget && !isUnitRemoved(hitTarget)) {
+        hitTarget.position = resolution.targetDisplacedTo;
+      } else if (resolution.targetDisplacedTo && !isUnitRemoved(target)) {
         target.position = resolution.targetDisplacedTo;
       }
-      if (resolution.attackerDisplacedTo && !isUnitRemoved(unit)) {
-        unit.position = resolution.attackerDisplacedTo;
+      if (resolution.attackerDisplacedTo && !isUnitRemoved(attacker)) {
+        attacker.position = resolution.attackerDisplacedTo;
       }
 
-      // Handle falls
-      if (resolution.targetFalls && target && !isUnitRemoved(target)) {
+      // Handle immediate falls (push PSRs only — kick defers to the sweep).
+      const fallTarget = hitTarget ?? target;
+      if (resolution.targetFalls && fallTarget && !isUnitRemoved(fallTarget)) {
         applyFall(
           state,
-          target,
+          fallTarget,
           rng,
           { cause: "physicalAttack", seatbeltModifier: null, halved: false },
           sink,
         );
       }
-      if (resolution.attackerFalls && !isUnitRemoved(unit)) {
+      if (resolution.attackerFalls && !isUnitRemoved(attacker)) {
         applyFall(
           state,
-          unit,
+          attacker,
           rng,
           { cause: "physicalAttack", seatbeltModifier: null, halved: false },
           sink,
         );
+      }
+      // Kick PSRs defer to the end-of-physical sweep (TW pp.59,147).
+      if (resolution.kickTargetPsrPending && fallTarget && !isUnitRemoved(fallTarget)) {
+        queueKickPsr(fallTarget.id, "kick");
+      }
+      if (resolution.kickAttackerPsrPending && !isUnitRemoved(attacker)) {
+        queueKickPsr(attacker.id, "kickMiss");
       }
 
       // Pilot damage (TW p.41): head hits land 1 point per damaging
       // grouping. Physical attacks now roll crits per TW p.123-124.
-      if (resolution.hit && target && !isUnitRemoved(target)) {
+      if (resolution.hit && hitTarget && !isUnitRemoved(hitTarget)) {
         const headGroups = resolution.damageToTarget.filter(
           (g) => g.location === "head" && g.damage >= 1,
         ).length;
         if (headGroups > 0)
-          applyPilotHits(state, target, headGroups * HEAD_HIT_PILOT_HITS, "headHit", rng, sink);
+          applyPilotHits(state, hitTarget, headGroups * HEAD_HIT_PILOT_HITS, "headHit", rng, sink);
       }
 
       // Attach critical hits to resolution for event emission (note: resolution is immutable,
@@ -2797,12 +2998,11 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     }
   }
 
-  // End-of-phase piloting: falls from this phase's damage and crits.
-  const before: PhaseSnapshots = { damage: baseDamage, crit: {} };
-  for (const unit of Object.values(state.units)) {
-    before.crit[unit.id] = unit.baseCritSlotsDestroyed;
-  }
-  resolvePhasePiloting(state, rng, before, sink);
+  // End-of-physical sweep: physical-sub-pass damage/crits plus deferred kick
+  // PSRs (TW pp.59-60,147). The 20-point trigger measures only post-weapon
+  // damage, so weapon and physical phases never pool into one roll.
+  const physicalBefore: PhaseSnapshots = { damage: postWeaponDamage, crit: postWeaponCrit };
+  resolvePhasePiloting(state, rng, physicalBefore, sink, kickExtras);
 
   // Clear declared attacks for all units
   for (const unit of Object.values(state.units)) {
