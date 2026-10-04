@@ -24,7 +24,7 @@ import { LOCATIONS, type Location, type MoveMode, type Rng } from "../core/types
 import { ammoDefFor } from "../data/ammo.schema";
 import type { ResolvedMechDef } from "../data/mech.schema";
 import { type AmmoBinId, type AmmoBins, collectAmmoBins } from "./ammo";
-import { ammoDamagePerShot, type EffectiveMovement } from "./critical";
+import { ammoDamagePerShot, RUN_WALK_DENOMINATOR, RUN_WALK_NUMERATOR, type EffectiveMovement } from "./critical";
 import { isUnitLocationDestroyed, type UnitDamageState } from "./damage";
 import { maxMovePoints } from "./movement";
 
@@ -211,8 +211,12 @@ export function effectiveMoveBudget(
   movement: EffectiveMovement,
   heat: number,
 ): number {
-  const base = maxMovePoints(mode, movement.walking, movement.running, movement.jumping);
-  return Math.max(0, base - movementMpPenalty(heat));
+  if (mode === "jump") return movement.jumping; // p. 159: never reduced by heat
+  const walking = Math.max(0, movement.walking - movementMpPenalty(heat));
+  const running = movement.running === 0
+    ? 0  // a lost leg: no running (effectiveMovement)
+    : Math.ceil(walking * RUN_WALK_NUMERATOR / RUN_WALK_DENOMINATOR); // p. 159: recompute from new Walking MP
+  return maxMovePoints(mode, walking, running, movement.jumping);
 }
 
 /** Shutdown avoidance number at the current heat, or null when no shutdown risk. */
