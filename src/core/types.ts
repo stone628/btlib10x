@@ -106,7 +106,8 @@ export type SideTorsoLocation = "rightTorso" | "leftTorso";
 export type TorsoLocation = SideTorsoLocation | "centerTorso";
 export type ArmLocation = "rightArm" | "leftArm";
 export type LegLocation = "rightLeg" | "leftLeg";
-export type Location = "head" | TorsoLocation | ArmLocation | LegLocation;
+export type LimbLocation = ArmLocation | LegLocation;
+export type Location = "head" | TorsoLocation | LimbLocation;
 export const LOCATIONS: readonly Location[] = [
   "head",
   "centerTorso",

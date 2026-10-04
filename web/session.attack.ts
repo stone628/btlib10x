@@ -4,6 +4,8 @@ import {
   type ArmLocation,
   type AttackResolution,
   type BattleState,
+  type ClubKind,
+  type ClubPickupDecl,
   type CriticalEffect,
   type CriticalResolution,
   type DamageTransferStep,
@@ -37,6 +39,7 @@ import {
   type TorsoLocationValue,
   validateAttacks,
   validatePhysicalAttack,
+  validatePickup,
   type AttackDecl as WeaponAttackDecl,
   weaponDefFor,
 } from "btlib10x";
@@ -56,12 +59,15 @@ import { actorOrderLines } from "./session.common";
  *  the phase exits or a new actor becomes current. Carries `fireDecls`
  *  (weapon volley, single target) plus `physicalDecls` (punch, kick, push,
  *  club, strike — TW p.144 one-type-per-turn rule, two-arm punch excepted),
- *  `torsoTwist` (UI declaration, resets to `"front"` on allocation),
- *  `fireHintShownFor`, `fireCandidate`. */
+ *  `pickupDecl` (exclusive club acquisition, TW p.146), `dropClub` (first act
+ *  of a declaration, frees hands for the rest), `torsoTwist` (UI declaration,
+ *  resets to `"front"` on allocation), `fireHintShownFor`, `fireCandidate`. */
 export interface AttackContext {
   actorId: string;
   weaponDecls: WeaponAttackDecl[];
   physicalDecls: PhysicalAttackDecl[];
+  pickupDecl: ClubPickupDecl | null;
+  dropClub: boolean;
   /** Acting unit's torso twist (TW pp.105-106) for the current attack-phase
    *  declaration: starts at `"front"` on context allocation (new actor or
    *  phase entry). Locked once any weapon attack is queued, or once a punch,
@@ -80,6 +86,8 @@ export function initAttackContext(s: Session, actorId: string): AttackContext {
     actorId,
     weaponDecls: [],
     physicalDecls: [],
+    pickupDecl: null,
+    dropClub: false,
     torsoTwist: "front",
     fireCandidate: null,
   };
@@ -124,6 +132,9 @@ export function queueWeaponAttacks(s: Session, targetId: string, weapons: number
   if (!target) throw new Error(i18n("err.unknownUnitId", { id: targetId }));
   if (target.team === unit.team) throw new Error(i18n("err.selfTarget"));
   if (isUnitRemoved(target)) throw new Error(i18n("err.targetRemoved", { id: target.id }));
+  // Pickup is exclusive with everything (TW p.146): no weapon or physical
+  // attacks allowed on the pickup turn.
+  if (context.pickupDecl !== null) throw new Error(i18n("err.pickup.exclusive"));
   const pending = context.weaponDecls[0]?.targetId;
   if (pending !== undefined && pending !== targetId) {
     throw new Error(i18n("err.oneTarget", { target: pending }));
@@ -277,6 +288,9 @@ export function queuePhysicalAttack(
   if (isUnitRemoved(target)) throw new Error(i18n("err.targetRemoved", { id: target.id }));
   const def = mechDefFor(unit);
 
+  // Pickup is exclusive with everything (TW p.146).
+  if (context.pickupDecl !== null) throw new Error(i18n("err.pickup.exclusive"));
+
   // Default limb: right arm for punches, right leg for kicks (TW lets the
   // attacker pick; the CLI default keeps single-command declarations
   // deterministic, and actuator damage is usually symmetric early).
@@ -361,6 +375,7 @@ export function queuePhysicalAttack(
   // illegal combination past the per-command checks above.
   validateAttacks(battle, unit.id, context.weaponDecls, [...context.physicalDecls, decl], {
     twist: context.torsoTwist,
+    dropClub: context.dropClub,
   });
 
   const warnings: string[] = [];
@@ -380,6 +395,50 @@ export function queuePhysicalAttack(
   context.physicalDecls.push(decl);
   context.fireCandidate = null;
   return warnings;
+}
+
+/** Queue a club pickup declaration (TW p.146). Exclusive with all weapon
+ *  and physical declarations — the pickup turn allows no attacks at all. */
+export function queuePickup(s: Session, source?: ClubKind): string[] {
+  const { battle, context } = requireBattleAndContext(s);
+  const unit = requireUnit(battle, context.actorId);
+  const _def = mechDefFor(unit);
+
+  // Pickup is exclusive with everything (TW p.146).
+  if (
+    context.weaponDecls.length > 0 ||
+    context.physicalDecls.length > 0 ||
+    context.pickupDecl !== null
+  ) {
+    throw new Error(i18n("err.pickup.exclusive"));
+  }
+  if (context.dropClub) throw new Error(i18n("err.pickup.exclusive"));
+  if (unit.club !== null)
+    throw new Error(i18n("err.pickup.invalid", { reason: "already holds a club" }));
+
+  // Validate the source against the engine (checks hex environment, etc.)
+  const result = validatePickup(battle, unit.id, source !== undefined ? { source } : {});
+  if (!result.ok) throw new Error(i18n("err.pickup.invalid", { reason: result.reason }));
+
+  context.pickupDecl = { source: result.source };
+  context.fireCandidate = null;
+  return [i18n("ok.pickup.queued", { source: result.source })];
+}
+
+/** Queue a club drop at the start of this declaration. Hands are freed
+ *  for the rest of the declaration (arm weapons, punch, strike, push).
+ *  A dropped limb stays in the hex; trees and girders vanish. */
+export function queueDrop(s: Session): string[] {
+  const { battle, context } = requireBattleAndContext(s);
+  const unit = requireUnit(battle, context.actorId);
+
+  if (unit.club === null) throw new Error(i18n("err.drop.noClub"));
+  if (context.dropClub) throw new Error(i18n("err.drop.duplicate"));
+  // A drop with nothing else is a pass turn that just drops the club;
+  // if combined with attacks, hands are freed for them.
+  context.dropClub = true;
+  context.fireCandidate = null;
+  return [i18n("ok.drop.queued", { kind: unit.club.kind })];
 }
 
 /** Get physical attack suggestions for the current actor. */
@@ -826,6 +885,13 @@ export function attackStatusChunk(s: Session): Chunk {
           }),
         );
       }
+    }
+    // Pickup / drop display
+    if (context.pickupDecl !== null) {
+      lines.push(i18n("attackStatus.pickup", { source: context.pickupDecl.source ?? "auto" }));
+    }
+    if (context.dropClub) {
+      lines.push(i18n("attackStatus.drop"));
     }
   }
   return buildLinesChunk(...lines);

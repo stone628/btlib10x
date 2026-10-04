@@ -613,12 +613,17 @@ export interface ValidationResult {
  * arcs classify against the twisted facing; kick and push are feet-based
  * (TW pp. 147–149: kick uses the feet's forward arc, push/charge ignore
  * the twist) and never read it.
+ *
+ * `dropped` counts as empty-handed: a declaration that drops the held club
+ * first validates as if the hands were already free (so a drop-first club
+ * correctly fails the possession gate, while drop-first punch passes it).
  */
 export function validatePhysicalAttack(
   battle: BattleState,
   attackerId: string,
   decl: PhysicalAttackDecl,
   twist?: Arc | null,
+  dropped = false,
 ): ValidationResult {
   const attacker = battle.units[attackerId];
   if (!attacker) return { ok: false, reason: `Unknown unit ${attackerId}` };
@@ -672,15 +677,15 @@ export function validatePhysicalAttack(
   // Type-specific validation
   switch (decl.type) {
     case "punch":
-      return validatePunch(attacker, target, decl, twist ?? null);
+      return validatePunch(attacker, target, decl, twist ?? null, dropped);
     case "kick":
       return validateKick(attacker, target, decl);
     case "push":
-      return validatePush(attacker, target, decl);
+      return validatePush(attacker, target, decl, dropped);
     case "club":
-      return validateClub(attacker, target, decl, twist ?? null);
+      return validateClub(attacker, target, decl, twist ?? null, dropped);
     case "strike":
-      return validateStrike(attacker, target, decl, twist ?? null);
+      return validateStrike(attacker, target, decl, twist ?? null, dropped);
   }
 }
 
@@ -729,7 +734,13 @@ function validatePunch(
   target: UnitState,
   decl: PhysicalAttackDecl,
   twist: Arc | null,
+  dropped: boolean,
 ): ValidationResult {
+  // Carrying a club occupies both hands (TW p.146): no punching until it
+  // is dropped first.
+  if (!dropped && attacker.club !== null) {
+    return { ok: false, reason: "Cannot punch: hands occupied by club (drop it first)" };
+  }
   // Target must be in forward or side arc (TW p. 145), read off the
   // twisted torso facing (TW pp. 98–99) via the p.105 template.
   const arc = classifyFiringArc(
@@ -806,7 +817,12 @@ function validatePush(
   attacker: UnitState,
   target: UnitState,
   _decl: PhysicalAttackDecl,
+  dropped: boolean,
 ): ValidationResult {
+  // A push uses both arms (TW p. 147): no pushing while carrying a club.
+  if (!dropped && attacker.club !== null) {
+    return { ok: false, reason: "Cannot push: hands occupied by club (drop it first)" };
+  }
   // Target must be in hex directly in front (TW p. 147)
   const frontHex = neighbor(attacker.position, attacker.facing);
   if (frontHex.col !== target.position.col || frontHex.row !== target.position.row) {
@@ -831,7 +847,13 @@ function validateClub(
   target: UnitState,
   _decl: PhysicalAttackDecl,
   twist: Arc | null,
+  dropped: boolean,
 ): ValidationResult {
+  // A club attack requires a held club (TW p. 145). A declaration that
+  // drops first counts as empty-handed, so it always fails here.
+  if (dropped || attacker.club === null) {
+    return { ok: false, reason: "Cannot club: unit holds no club (pick one up first)" };
+  }
   // Target must be in forward arc (TW p. 145), read off the twisted torso
   // facing (TW pp. 98–99) via the p.105 template.
   const clubArc = classifyFiringArc(
@@ -871,7 +893,13 @@ function validateStrike(
   target: UnitState,
   decl: PhysicalAttackDecl,
   twist: Arc | null,
+  dropped: boolean,
 ): ValidationResult {
+  // A strike needs its mounting hand free (TW p.146): no striking while
+  // carrying a club.
+  if (!dropped && attacker.club !== null) {
+    return { ok: false, reason: "Cannot strike: hands occupied by club (drop it first)" };
+  }
   const weapon = decl.weapon;
   if (weapon === undefined || !isPhysicalWeaponName(weapon)) {
     return { ok: false, reason: "Strike requires a physical weapon (hatchet, sword, blade)" };

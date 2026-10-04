@@ -1,4 +1,4 @@
-import type { AmmoPolicy, Facing, UnitState } from "btlib10x";
+import type { AmmoPolicy, ClubKind, Facing, UnitState } from "btlib10x";
 import {
   AMMO_POLICIES,
   ensureMapRegistered,
@@ -38,8 +38,10 @@ import {
   parseTorsoTwist,
   parseUnitProp,
   placeLanding,
+  queueDrop,
   queuedMoveChunk,
   queuePhysicalAttack,
+  queuePickup,
   queueWeaponAttacks,
   reachableChunk,
   requireBattle,
@@ -587,6 +589,26 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
         i18n("ok.physical.queued", { type: "strike", target: targetId }),
         ...warnings,
       );
+    },
+  },
+  pickup: {
+    helpKey: "cmd.pickup.help",
+    usage: "pickup [limb|tree|girder]",
+    argsDoc: [["source", "cmd.pickup.arg.source"]],
+    run: (s, a) => {
+      const source = a[0]?.toLowerCase() as ClubKind | undefined;
+      if (source !== undefined && !["limb", "tree", "girder"].includes(source)) {
+        throw new Error(i18n("err.pickup.badSource", { source }));
+      }
+      const warnings = queuePickup(s, source);
+      return cmdRunChunks(i18n("ok.pickup.queued", { source: source ?? "auto" }), ...warnings);
+    },
+  },
+  drop: {
+    helpKey: "cmd.drop.help",
+    run: (s) => {
+      const warnings = queueDrop(s);
+      return cmdRunChunks(i18n("ok.drop.queued", { kind: "club" }), ...warnings);
     },
   },
   status: { helpKey: "cmd.statusAttack.help", run: (s) => [attackStatusChunk(s)] },

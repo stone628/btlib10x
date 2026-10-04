@@ -14,7 +14,9 @@ import {
   type HexCell,
   type HexCoord,
   isArm,
+  isLeg,
   isTorso,
+  isWoodsTerrain,
   LOCATIONS,
   type Location,
   type MoveMode,
@@ -22,6 +24,7 @@ import {
   rotateFacing,
   type TerrainHexDef,
   type WreckState,
+  type LimbLocation,
 } from "../core/types";
 import { type MapDef, type MechModelHolder, mechDef, mechDefFor } from "../data/index";
 import type { ResolvedMechDef } from "../data/mech.schema";
@@ -51,6 +54,7 @@ import { type AttackResolution, PARTIAL_COVER_TERRAIN_MOD, resolveWeaponAttack }
 import {
   applyBuildingDamage,
   type BuildingState,
+  type BuildingType,
   buildingTypeOf,
   collapseToRubble,
   createBuildingState,
@@ -214,6 +218,39 @@ export type DestroyedReason =
   | "engineDestroyed";
 export type DestroyedState = "not" | DestroyedReason;
 
+/** Club source / held-club kind (TW p.146): a severed limb, an uprooted
+ *  tree, or a girder pried from rubble. */
+export type ClubKind = "limb" | "tree" | "girder";
+
+/** A club carried by a unit. A limb club records which severed limb it is;
+ *  trees and girders carry no per-item identity (trees are consumed on a
+ *  successful hit, girders are reusable indefinitely). */
+export type HeldClub =
+  | { readonly kind: "limb"; readonly limb: LimbLocation }
+  | { readonly kind: "tree" }
+  | { readonly kind: "girder" };
+
+/** Pickup declaration: which source to take. Omitted resolves by precedence
+ *  (limb token, then terrain source) at declaration time. */
+export interface ClubPickupDecl {
+  readonly source?: ClubKind;
+}
+
+/** A severed limb lying in a hex, available for pickup (TW p.146). Trees
+ *  and girders are sourced from the terrain itself and leave no token. */
+export interface ClubGroundToken {
+  readonly limb: Location;
+}
+
+/** Girder-search target numbers by rubble origin (TW p.146): 7+ from
+ *  medium rubble, 6+ from heavy, 5+ from hardened. Light rubble yields no
+ *  girders. */
+export const GIRDER_SEARCH_TARGET: Readonly<Record<string, number>> = {
+  medium: 7,
+  heavy: 6,
+  hardened: 5,
+};
+
 /** Why the pilot took damage. Drives the `pilotDamaged` event `reason`
  *  field and the `applyPilotHits` parameter; both stay typed so web and
  *  tests can pattern-match exhaustively. */
@@ -319,6 +356,17 @@ export interface UnitState extends MechModelHolder {
   /** Arm locations blown off by critical hits (TW p.124, 145). Tracked for
    *  displacement/fall logic and salvage. */
   blownOffArms: Location[];
+  /** Leg locations blown off by critical hits (TW p.124). Tracked alongside
+   *  arms so a severed leg can be left in the hex as a club (TW p.146). */
+  blownOffLegs: Location[];
+  /** Club currently carried (TW p.146). While held, both hands are occupied:
+   *  punch, strike, and push declarations plus arm-mounted weapon fire are
+   *  rejected until the club is dropped or consumed. */
+  club: HeldClub | null;
+  /** Pickup declaration for this attack phase (TW p.146). Exclusive with
+   *  every weapon and physical declaration: the pickup turn allows no
+   *  attacks at all. Acquisition resolves in the physical sub-pass. */
+  declaredPickup: ClubPickupDecl | null;
   moveMode: MoveMode | null;
   movesThisTurn: ("forward" | "backward")[];
   jumpedThisTurn: boolean;
@@ -392,6 +440,45 @@ export type GameEvent =
       readonly unitId: string;
       readonly targetId: string;
       readonly resolution: PhysicalResolution;
+    }
+  | {
+      /** Club pickup declared (TW p.146): exclusive with every weapon and
+       *  physical declaration — the pickup turn allows no attacks at all.
+       *  `source` is resolved at declaration time (limb > terrain). */
+      readonly kind: "pickupDeclared";
+      readonly unitId: string;
+      readonly source: ClubKind;
+    }
+  | {
+      /** Club pickup resolved in the physical sub-pass. Limb/tree success
+       *  sets the unit's held club; girder success needs `roll >= required`
+       *  (7+/6+/5+ by rubble origin, TW p.146). `reason` explains failures
+       *  (`noSource` | `attackerDown`). */
+      readonly kind: "clubPickedUp";
+      readonly unitId: string;
+      readonly success: boolean;
+      readonly clubKind?: ClubKind;
+      readonly roll?: number;
+      readonly required?: number;
+      readonly reason?: string;
+    }
+  | {
+      /** Held club dropped as the first act of an attack declaration: hands
+       *  are free for the rest of the declaration. A dropped limb returns
+       *  to the hex (`returned: true`); trees and girders vanish. */
+      readonly kind: "clubDropped";
+      readonly unitId: string;
+      readonly clubKind: ClubKind;
+      readonly col: number;
+      readonly row: number;
+      readonly returned: boolean;
+    }
+  | {
+      /** Uprooted tree consumed by a successful club hit (TW p.146: good
+       *  for one successful club attack only). Limb/girder clubs persist. */
+      readonly kind: "clubConsumed";
+      readonly unitId: string;
+      readonly clubKind: ClubKind;
     }
   | {
       readonly kind: "unitRemoved";
@@ -596,6 +683,13 @@ export interface BattleState extends HexGrid {
   actorQueue: string[] | null;
   /** Building state keyed by hex `"col,row"`; only building hexes present. */
   buildings: Record<string, BuildingState>;
+  /** Severed limbs lying in hexes, keyed by `"col,row"` (TW p.146). A
+   *  blown-off arm or leg stays where it was lost until picked up. */
+  clubs: Record<string, ClubGroundToken[]>;
+  /** Building sub-type a rubble hex collapsed from, keyed by `"col,row"`.
+   *  Drives girder-search eligibility (TW p.146: medium/heavy/hardened
+   *  only). Hexes that started as rubble have no entry and yield nothing. */
+  rubbleOrigin: Record<string, BuildingType>;
   /** 'Mech wrecks left by ejected pilots, keyed by hex `"col,row"`. Each is a
    *  permanent level-2 obstacle: hex is blocked to all movement, LOS crossing
    *  the hex is blocked, and an adjacent target gains +2 partial cover. */
@@ -887,6 +981,9 @@ export function createBattle(
       critSlotsDestroyed: initCritDestroyed(def),
       destroyedWeapons: [],
       blownOffArms: [],
+      blownOffLegs: [],
+      club: null,
+      declaredPickup: null,
       moveMode: null,
       movesThisTurn: [],
       jumpedThisTurn: false,
@@ -943,6 +1040,8 @@ export function createBattle(
     actorQueue: null,
     buildings,
     wrecks: {},
+    clubs: {},
+    rubbleOrigin: {},
   };
 }
 
@@ -985,6 +1084,9 @@ export function damageBuildingAt(
   if (isCollapsed(state.buildings[key]!)) {
     const rubble = collapseToRubble(state.cells[hex.col - 1 + (hex.row - 1) * state.width]!);
     if (rubble !== null) setCell(state, hex, rubble);
+    // Remember what the rubble was: girder searches (TW p.146) only work
+    // rubbled medium/heavy/hardened buildings.
+    state.rubbleOrigin[key] = building.type;
     delete state.buildings[key];
     sink.push({ kind: "buildingCollapsed", col: hex.col, row: hex.row });
     return { col: hex.col, row: hex.row, damage, preCf, cf: 0, collapsed: true, occupants };
@@ -999,6 +1101,87 @@ export function damageBuildingAt(
     collapsed: false,
     occupants: [],
   };
+}
+
+/**
+ * Record severed limbs on `unit` (deduped into `blownOffArms` /
+ * `blownOffLegs`) and leave one ground token per limb in the unit's
+ * current hex (TW p.146: a blown-off arm or leg stays where it was lost).
+ * Non-limb locations are ignored. Deposit is idempotent per (unit, limb):
+ * the record arrays guard against double tokens when several damage
+ * applications report the same severing.
+ */
+export function recordSeveredLimbs(
+  state: BattleState,
+  unit: UnitState,
+  limbs: readonly Location[],
+): void {
+  for (const limb of limbs) {
+    if (isArm(limb)) {
+      if (unit.blownOffArms.includes(limb)) continue;
+      unit.blownOffArms.push(limb);
+    } else if (isLeg(limb)) {
+      if (unit.blownOffLegs.includes(limb)) continue;
+      unit.blownOffLegs.push(limb);
+    } else {
+      continue;
+    }
+    const key = `${unit.position.col},${unit.position.row}`;
+    state.clubs[key] = [...(state.clubs[key] ?? []), { limb }];
+  }
+}
+
+/**
+ * Record every severed limb carried by crit rows: blown-off arms (also
+ * present on `res.blownOffArms`) plus blown-off legs (rows only). Leaves
+ * the matching ground tokens in the victim's hex.
+ */
+function recordCritSeveredLimbs(
+  state: BattleState,
+  unit: UnitState,
+  crits: readonly CriticalResolution[],
+): void {
+  for (const crit of crits) {
+    const limbs: Location[] = [...crit.blownOffArms];
+    for (const row of crit.rows) {
+      if (row.kind === "legBlownOff") limbs.push(row.leg);
+    }
+    recordSeveredLimbs(state, unit, limbs);
+  }
+}
+
+/**
+ * Resolve which club source `unit` would pick up in its current hex (TW
+ * p.146): an explicitly requested source when available, else precedence
+ * limb token, then terrain (wooded hex tree, eligible rubble girder).
+ * Returns null when the hex offers nothing (or not the requested kind).
+ */
+export function pickupSourceInHex(state: BattleState, unit: UnitState): ClubKind | null {
+  return pickupSourceInHexAs(state, unit, undefined);
+}
+
+function pickupSourceInHexAs(
+  state: BattleState,
+  unit: UnitState,
+  want: ClubKind | undefined,
+): ClubKind | null {
+  const key = `${unit.position.col},${unit.position.row}`;
+  const cell = cellAt(state, unit.position);
+  const hasLimb = (state.clubs[key] ?? []).length > 0;
+  const hasTree = isWoodsTerrain(cell.terrain);
+  const origin = state.rubbleOrigin[key];
+  const hasGirder =
+    cell.terrain === "rubble" &&
+    (origin === "medium" || origin === "heavy" || origin === "hardened");
+  if (want !== undefined) {
+    if (want === "limb") return hasLimb ? "limb" : null;
+    if (want === "tree") return hasTree ? "tree" : null;
+    return hasGirder ? "girder" : null;
+  }
+  if (hasLimb) return "limb";
+  if (hasTree) return "tree";
+  if (hasGirder) return "girder";
+  return null;
 }
 
 export function rollInitiativePhase(state: BattleState, rng: Rng, sink: GameEvent[]): void {
@@ -1464,6 +1647,11 @@ export interface DeclareAttacksOptions {
   /** Torso twist (TW pp.105-106): shifts the attacker's effective facing by one
    *  hexside before classifying the firing arc. Defaults to untwisted. */
   readonly twist?: Arc | null;
+  /** Drop the held club first: hands are free for the rest of this
+   *  declaration, so arm-mounted weapons, punch, strike, and push validate
+   *  normally. A dropped limb returns to the hex; trees/girders vanish.
+   *  Requires holding a club. */
+  readonly dropClub?: boolean;
 }
 
 /** Per-weapon resolved arc plus volley-wide direction/range fields.
@@ -1559,12 +1747,19 @@ export function validateAttacksImpl(
     );
   const def = mechDefFor(unit);
   const twist = options.twist ?? null;
+  const dropping = options.dropClub === true;
+  if (dropping && unit.club === null) {
+    throw new Error(`${unitId} holds no club to drop`);
+  }
+  // Carrying a club occupies both hands (TW p.146): punch, strike, push,
+  // and arm-mounted weapon fire are barred until it is dropped first.
+  const handsOccupied = unit.club !== null && !dropping;
   const normalizedPhysical = normalizePhysicalDecls(def, physicalDecls);
   let targetId: string | null = null;
   if (wantPhysical) {
     checkPhysicalSetShape(unitId, normalizedPhysical);
     for (const p of normalizedPhysical) {
-      const result = validatePhysicalAttack(state, unitId, p, twist);
+      const result = validatePhysicalAttack(state, unitId, p, twist, dropping);
       if (!result.ok) throw new Error(result.reason ?? "invalid physical attack");
       if (targetId === null) targetId = p.targetId;
       else if (targetId !== p.targetId) {
@@ -1623,6 +1818,11 @@ export function validateAttacksImpl(
     if (!canFireFromLocation(unit.baseDamage, mount.location)) {
       throw new Error(
         `${mount.weapon} location (${mount.location}) is destroyed or its support torso is gone`,
+      );
+    }
+    if (handsOccupied && isArm(mount.location)) {
+      throw new Error(
+        `${mount.weapon} on ${unitId} cannot fire: hands occupied by club (drop it first)`,
       );
     }
     if (unit.prone && (mount.location === "rightLeg" || mount.location === "leftLeg")) {
@@ -1760,7 +1960,8 @@ export function validateAttacks(
  * leaves no partial declarations behind. Emits one merged
  * `attacksDeclared` event carrying the weapon volley (null when the
  * declaration holds physicals only) and the physical entries. At least
- * one declaration of either kind is required.
+ * one declaration of either kind is required — except a lone `dropClub`,
+ * which spends the activation shedding the club and attacking nothing.
  */
 export function declareAttacks(
   state: BattleState,
@@ -1775,12 +1976,35 @@ export function declareAttacks(
   const unit = requireUnit(state, unitId);
   const wantWeapons = weaponDecls.length > 0;
   const wantPhysical = physicalDecls.length > 0;
-  if (!wantWeapons && !wantPhysical)
-    throw new Error("declareAttacks requires at least one declaration");
-  if (unit.declaredWeaponAttacks.length > 0 || unit.declaredPhysicalAttacks.length > 0)
+  if (!wantWeapons && !wantPhysical) {
+    // Drop-only declaration: the unit spends its activation shedding the
+    // club and attacks nothing this turn.
+    if (options.dropClub !== true)
+      throw new Error("declareAttacks requires at least one declaration");
+    if (isUnitRemoved(unit)) throw new Error(`${unitId} is destroyed`);
+    if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot attack`);
+    if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot attack`);
+    if (unit.club === null) throw new Error(`${unitId} holds no club to drop`);
+    applyClubDrop(state, unit, sink);
+    sink.push({ kind: "attacksDeclared", unitId, weapons: null, physical: [] });
+    if (!state.actedThisPhase.includes(unitId)) state.actedThisPhase.push(unitId);
+    return;
+  }
+  if (
+    unit.declaredWeaponAttacks.length > 0 ||
+    unit.declaredPhysicalAttacks.length > 0 ||
+    unit.declaredPickup !== null
+  )
     throw new Error(`${unitId} already declared attacks this turn`);
   const volley = validateAttacksImpl(state, unitId, weaponDecls, physicalDecls, options);
   const def = mechDefFor(unit);
+  // Drop rides first in the declaration: hands are free for everything
+  // queued below (validated as such above). A dropped limb returns to the
+  // hex immediately, visible to later declarers; trees/girders vanish.
+  if (options.dropClub === true) {
+    if (unit.club === null) throw new Error(`${unitId} holds no club to drop`);
+    applyClubDrop(state, unit, sink);
+  }
   // Consume non-streak per-bin ammo per decl; streak fires on hit and
   // resolves its own ammo in `resolveUnitAttacks`. RNG via ammo policy.
   if (wantWeapons) {
@@ -1833,6 +2057,162 @@ export function declareAttacks(
     })),
   });
   if (!state.actedThisPhase.includes(unitId)) state.actedThisPhase.push(unitId);
+}
+
+/**
+ * Validate a club pickup declaration (TW p.146). Checks unit status (no
+ * prior declaration of any kind this turn — pickup is exclusive with every
+ * weapon and physical attack), empty hands, and that the unit's hex offers
+ * the requested source (or any source when omitted, by precedence).
+ * Pure: no state change, no RNG. Returns the resolved source.
+ */
+export function validatePickup(
+  state: BattleState,
+  unitId: string,
+  decl: ClubPickupDecl = {},
+): { ok: true; source: ClubKind } | { ok: false; reason: string } {
+  const unit = requireUnit(state, unitId);
+  if (isUnitRemoved(unit)) return { ok: false, reason: `${unitId} is removed from play` };
+  if (isShutdown(unit)) return { ok: false, reason: `${unitId} is shut down and cannot pick up` };
+  if (unit.unconscious) return { ok: false, reason: `${unitId} is unconscious and cannot pick up` };
+  if (
+    unit.declaredWeaponAttacks.length > 0 ||
+    unit.declaredPhysicalAttacks.length > 0 ||
+    unit.declaredPickup !== null
+  ) {
+    return { ok: false, reason: `${unitId} already declared attacks this turn` };
+  }
+  if (unit.club !== null) {
+    return { ok: false, reason: `${unitId} already holds a club (drop it first)` };
+  }
+  const source = pickupSourceInHexAs(state, unit, decl.source);
+  if (source === null) {
+    return decl.source !== undefined
+      ? { ok: false, reason: `no ${decl.source} club available in this hex` }
+      : { ok: false, reason: "no club available in this hex (no limb, woods, or girder rubble)" };
+  }
+  return { ok: true, source };
+}
+
+/**
+ * Declare a club pickup for the current attack-phase actor (TW p.146).
+ * Exclusive with every weapon and physical declaration: the pickup turn
+ * allows no attacks at all. The environment is checked now; acquisition
+ * itself resolves in the physical sub-pass of `resolveAllAttacks`.
+ * Emits `pickupDeclared` and marks the actor done for the phase.
+ */
+export function declarePickup(
+  state: BattleState,
+  unitId: string,
+  decl: ClubPickupDecl,
+  sink: GameEvent[],
+): void {
+  requireCurrentActor(state, unitId, "attack");
+  const result = validatePickup(state, unitId, decl);
+  if (!result.ok) throw new Error(result.reason);
+  const unit = requireUnit(state, unitId);
+  unit.declaredPickup = { source: result.source };
+  sink.push({ kind: "pickupDeclared", unitId, source: result.source });
+  if (!state.actedThisPhase.includes(unitId)) state.actedThisPhase.push(unitId);
+}
+
+/**
+ * Resolve one declared pickup in the physical sub-pass (TW p.146). The
+ * declaration-time environment is re-checked against the unit's current
+ * hex: displacement, falls, or kills since declaration can void it. Limb
+ * and tree acquisition are automatic; girders need 2D6 against 7+/6+/5+
+ * by rubble origin. Emits `clubPickedUp` in all cases.
+ */
+function resolveClubPickup(
+  state: BattleState,
+  unit: UnitState,
+  decl: ClubPickupDecl,
+  rng: Rng,
+  sink: GameEvent[],
+): void {
+  const fail = (reason: string): void => {
+    sink.push({ kind: "clubPickedUp", unitId: unit.id, success: false, reason });
+  };
+  if (isUnitRemoved(unit) || unit.unconscious || isShutdown(unit)) {
+    fail("attackerDown");
+    return;
+  }
+  const source = pickupSourceInHexAs(state, unit, decl.source);
+  if (source === null) {
+    fail("noSource");
+    return;
+  }
+  if (source === "limb") {
+    const key = `${unit.position.col},${unit.position.row}`;
+    const tokens = state.clubs[key] ?? [];
+    const token = tokens[0];
+    if (token === undefined) {
+      fail("noSource");
+      return;
+    }
+    state.clubs[key] = tokens.slice(1);
+    unit.club = { kind: "limb", limb: token.limb };
+    sink.push({ kind: "clubPickedUp", unitId: unit.id, success: true, clubKind: "limb" });
+    return;
+  }
+  if (source === "tree") {
+    unit.club = { kind: "tree" };
+    sink.push({ kind: "clubPickedUp", unitId: unit.id, success: true, clubKind: "tree" });
+    return;
+  }
+  const key = `${unit.position.col},${unit.position.row}`;
+  const required = GIRDER_SEARCH_TARGET[state.rubbleOrigin[key] ?? ""] ?? null;
+  if (required === null) {
+    fail("noSource");
+    return;
+  }
+  const roll = roll2D6(rng);
+  if (roll >= required) {
+    unit.club = { kind: "girder" };
+    sink.push({
+      kind: "clubPickedUp",
+      unitId: unit.id,
+      success: true,
+      clubKind: "girder",
+      roll,
+      required,
+    });
+  } else {
+    sink.push({
+      kind: "clubPickedUp",
+      unitId: unit.id,
+      success: false,
+      clubKind: "girder",
+      roll,
+      required,
+      reason: "searchFailed",
+    });
+  }
+}
+
+/**
+ * Apply a declared club drop: clear the held club, return a dropped limb
+ * to the hex (visible to later declarers), and emit `clubDropped`. Trees
+ * and girders vanish. Caller guarantees `unit.club !== null`.
+ */
+function applyClubDrop(state: BattleState, unit: UnitState, sink: GameEvent[]): void {
+  const held = unit.club;
+  if (held === null) throw new Error(`${unit.id} holds no club to drop`);
+  unit.club = null;
+  let returned = false;
+  if (held.kind === "limb") {
+    const key = `${unit.position.col},${unit.position.row}`;
+    state.clubs[key] = [...(state.clubs[key] ?? []), { limb: held.limb }];
+    returned = true;
+  }
+  sink.push({
+    kind: "clubDropped",
+    unitId: unit.id,
+    clubKind: held.kind,
+    col: unit.position.col,
+    row: unit.position.row,
+    returned,
+  });
 }
 
 /**
@@ -2157,6 +2537,9 @@ function applyDamageGroups(
       }
     }
   }
+  // Severed limbs stay where they were lost (TW p.146): record blow-offs
+  // from fall/crash/collapse crits and leave the matching ground tokens.
+  recordCritSeveredLimbs(state, unit, crits);
   for (const loc of LOCATIONS) {
     if ((unit.damage.internalStructure[loc] ?? 0) <= 0) {
       stripBinsInLocation(unit.ammoBins, loc);
@@ -2470,12 +2853,17 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       // (TW p.38: all weapon attack damage applied at end of phase).
       if (resolution.application !== null && resolution.groups.length > 0) {
         let currentDamage = targetDamageMap[targetId];
+        // Limbs sheared off by torso destruction (damage transfer) stay in
+        // the hex as clubs (TW p.146); collected here, recorded below.
+        const sheared: Location[] = [];
         for (const group of resolution.groups) {
           // Apply each hit group with the attack's arc (determines armor pool)
           const app = applyDamage(currentDamage, group.location, group.damage, resolution.arc);
           currentDamage = app.after;
+          sheared.push(...app.blownOffArms);
         }
         targetDamageMap[targetId] = currentDamage;
+        recordSeveredLimbs(state, target, sheared);
       }
 
       // Collect crits for later sequential application
@@ -2622,6 +3010,8 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         targetKilledReason[targetId] = crit.killedReason;
       }
     }
+    // Crit blow-offs leave their limbs in the target's hex (TW p.146).
+    recordCritSeveredLimbs(state, target, crits);
 
     targetDamageMap[targetId] = currentDamage;
     targetCritsMap[targetId] = []; // consumed
@@ -2822,7 +3212,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   // (TW p.147) so the counterpart's declaration is skipped on its own turn.
   const mutualPushConsumed = new Set<string>();
   const physicalOrder = Object.values(state.units)
-    .filter((u) => u.declaredPhysicalAttacks.length > 0)
+    .filter((u) => u.declaredPhysicalAttacks.length > 0 || u.declaredPickup !== null)
     .sort((a, b) => {
       const aWinner = state.initiativeWinnerTeam !== null && a.team === state.initiativeWinnerTeam;
       const bWinner = state.initiativeWinnerTeam !== null && b.team === state.initiativeWinnerTeam;
@@ -2830,6 +3220,13 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     });
 
   for (const unit of physicalOrder) {
+    // Pickup declarations resolve here, in initiative order with the melee
+    // (TW p.146): the declaration-time environment is re-checked against
+    // the unit's current hex inside `resolveClubPickup`.
+    if (unit.declaredPickup !== null) {
+      resolveClubPickup(state, requireUnit(state, unit.id), unit.declaredPickup, rng, sink);
+      continue;
+    }
     for (const decl of unit.declaredPhysicalAttacks) {
       if (mutualPushConsumed.has(unit.id)) continue;
       const attacker = requireUnit(state, unit.id);
@@ -3047,12 +3444,14 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       if (hitTarget && resolution.hit && resolution.damageToTarget.length > 0) {
         const targetDef = mechDefFor(hitTarget);
         const targetCrits: CriticalResolution[] = [];
+        const sheared: Location[] = [];
         for (const group of resolution.damageToTarget) {
           const back = bearingExact(hitTarget.position, attacker.position)!;
           const dir = classifyArcWithBoundary(hitTarget.facing, back);
           const attackDirection = defenderArcChoice(dir.arc, dir.altArc);
           const app = applyDamage(hitTarget.damage, group.location, group.damage, attackDirection);
           hitTarget.damage = app.after;
+          sheared.push(...app.blownOffArms);
 
           // Critical hit resolution (TW p.123-124):
           // - One determining roll per location that loses internal structure
@@ -3092,6 +3491,9 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
             ...targetCrits,
           ];
         }
+        // Severed limbs stay where they were lost (TW p.146).
+        recordSeveredLimbs(state, hitTarget, sheared);
+        recordCritSeveredLimbs(state, hitTarget, targetCrits);
       }
 
       // Apply damage to attacker (e.g., kick miss PSR)
@@ -3161,6 +3563,13 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
           applyPilotHits(state, hitTarget, headGroups * HEAD_HIT_PILOT_HITS, "headHit", rng, sink);
       }
 
+      // Uprooted trees are good for one successful club attack only (TW
+      // p.146); limb and girder clubs persist.
+      if (resolution.hit && decl.type === "club" && attacker.club?.kind === "tree") {
+        attacker.club = null;
+        sink.push({ kind: "clubConsumed", unitId: attacker.id, clubKind: "tree" });
+      }
+
       // Attach critical hits to resolution for event emission (note: resolution is immutable,
       // so we can't mutate it directly; the event already fired above with the original resolution)
     }
@@ -3185,6 +3594,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   for (const unit of Object.values(state.units)) {
     unit.declaredWeaponAttacks = [];
     unit.declaredPhysicalAttacks = [];
+    unit.declaredPickup = null;
   }
 }
 
@@ -3212,6 +3622,7 @@ function processEndPhase(state: BattleState) {
     unit.declaredWeaponAttacks = [];
     unit.firedTargetId = null;
     unit.passedAttacks = false;
+    unit.declaredPickup = null;
     // A successful voluntary startup comes online just before the next
     // initiative roll.
     if (unit.shutdown === "starting") unit.shutdown = "not";
@@ -3475,6 +3886,8 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
               checkCASE(def, bin.location),
             );
             unit.damage = application.after;
+            // A blast that shears off a limb leaves it in the hex (TW p.146).
+            recordSeveredLimbs(state, unit, application.blownOffArms);
             // Mark every freshly-zeroed location as catastrophic so
             // counters (`countDestroyedEngine`, `heatSinksOperational`,
             // `effectiveMovement`) report truthful destruction state for

@@ -1513,6 +1513,38 @@ function handleSessionGameEvent(
         idLines(e.unitId, ...lines);
       }
       break;
+    case "pickupDeclared":
+      idLines(e.unitId, i18n("log.pickupDeclared", { id: e.unitId, source: e.source }));
+      break;
+    case "clubPickedUp":
+      if (e.success) {
+        idLines(e.unitId, i18n("log.clubPickedUp", { id: e.unitId, kind: e.clubKind ?? "club" }));
+      } else if (e.roll !== undefined && e.required !== undefined) {
+        idLines(
+          e.unitId,
+          i18n("log.girderSearchFailed", {
+            id: e.unitId,
+            roll: e.roll,
+            required: e.required,
+          }),
+        );
+      } else {
+        idLines(e.unitId, i18n("log.clubPickupFailed", { id: e.unitId, reason: e.reason ?? "—" }));
+      }
+      break;
+    case "clubDropped":
+      idLines(
+        e.unitId,
+        i18n(e.returned ? "log.clubDroppedReturned" : "log.clubDropped", {
+          id: e.unitId,
+          kind: e.clubKind,
+          hex: `${e.col},${e.row}`,
+        }),
+      );
+      break;
+    case "clubConsumed":
+      idLines(e.unitId, i18n("log.clubConsumed", { id: e.unitId, kind: e.clubKind }));
+      break;
     case "sessionMoveActor":
       idLines(
         e.actorId,
