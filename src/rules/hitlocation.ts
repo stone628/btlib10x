@@ -52,8 +52,9 @@ export function hitLocation(roll2d6: number): Location {
   return loc;
 }
 
-/** Bipedal 'Mech punch location table, Front/Rear column (TW p. 145).
- *  Used for collapse damage on 'Mechs inside a building (TW p. 176). */
+/** Bipedal 'Mech Punch Location Table, Front/Rear column (TW p. 145).
+ *  Also used alone for collapse damage on 'Mechs inside a building, which
+ *  always rolls the Front column (TW p. 176). */
 export const PUNCH_LOCATION_TABLE: Readonly<Record<number, Location>> = {
   1: "leftArm",
   2: "leftTorso",
@@ -63,8 +64,46 @@ export const PUNCH_LOCATION_TABLE: Readonly<Record<number, Location>> = {
   6: "head",
 };
 
+/** Bipedal 'Mech Punch Location Table, Left Side column (TW p. 145). */
+export const PUNCH_LEFT_SIDE_TABLE: Readonly<Record<number, Location>> = {
+  1: "leftTorso",
+  2: "leftTorso",
+  3: "centerTorso",
+  4: "leftArm",
+  5: "leftArm",
+  6: "head",
+};
+
+/** Bipedal 'Mech Punch Location Table, Right Side column (TW p. 145). */
+export const PUNCH_RIGHT_SIDE_TABLE: Readonly<Record<number, Location>> = {
+  1: "rightTorso",
+  2: "rightTorso",
+  3: "centerTorso",
+  4: "rightArm",
+  5: "rightArm",
+  6: "head",
+};
+
+/** Front/Rear column of the Punch Location Table (building collapse, TW p. 176). */
 export function punchHitLocation(roll1d6: number): Location {
   const loc = PUNCH_LOCATION_TABLE[roll1d6];
+  if (loc === undefined) throw new Error(`Punch location roll out of range: ${roll1d6}`);
+  return loc;
+}
+
+const ARC_PUNCH_TABLE: Record<Arc, Readonly<Record<number, Location>>> = {
+  front: PUNCH_LOCATION_TABLE,
+  rear: PUNCH_LOCATION_TABLE,
+  leftSide: PUNCH_LEFT_SIDE_TABLE,
+  rightSide: PUNCH_RIGHT_SIDE_TABLE,
+};
+
+/**
+ * Punch Location Table (TW p. 145) column chosen by attack direction:
+ * front and rear share the Front/Rear column, side attacks use their own.
+ */
+export function punchHitLocationForArc(arc: Arc, roll1d6: number): Location {
+  const loc = ARC_PUNCH_TABLE[arc][roll1d6];
   if (loc === undefined) throw new Error(`Punch location roll out of range: ${roll1d6}`);
   return loc;
 }
