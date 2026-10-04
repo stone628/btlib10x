@@ -58,19 +58,17 @@ export function isWoodsTerrain(value: TerrainType): boolean {
   return value === "lightWoods" || value === "heavyWoods";
 }
 
-/** A single non-clear terrain hex on the board (map data and battle setup). */
-export interface TerrainHexDef {
-  readonly col: number;
-  readonly row: number;
-  readonly type: TerrainType;
-  /** Ground elevation in levels. Default 0. */
-  readonly level?: number;
-}
-
 /** A coordinate on the hex grid (1-based column and row). */
 export interface HexCoord {
   readonly col: number;
   readonly row: number;
+}
+
+/** A single non-clear terrain hex on the board (map data and battle setup). */
+export interface TerrainHexDef extends HexCoord {
+  readonly type: TerrainType;
+  /** Ground elevation in levels. Default 0. */
+  readonly level?: number;
 }
 
 export function hexKey(hex: HexCoord): string {

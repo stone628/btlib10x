@@ -82,6 +82,13 @@ export const LEG_ACTUATORS: ReadonlySet<string> = new Set([
   "footActuator",
 ]);
 
+/** Outcome of one Piloting Skill Roll; `roll` is null when it was automatic. */
+export interface PilotingRollResult {
+  readonly target: number;
+  readonly roll: number | null;
+  readonly success: boolean;
+}
+
 /**
  * Roll a Piloting Skill Roll against `piloting + modifier`. Returns the roll
  * outcome; a `null` roll means the outcome was automatic (no dice drawn).
@@ -92,7 +99,7 @@ export function rollPilotingCheck(
   rng: Rng,
   piloting: number,
   modifier: number,
-): { target: number; roll: number | null; success: boolean } {
+): PilotingRollResult {
   const target = piloting + modifier;
   if (target <= D2D6_MIN) return { target, roll: null, success: true };
   if (target > D2D6_MAX) return { target, roll: null, success: false };

@@ -14,6 +14,7 @@ import {
   type FireSuggestion,
   type FireWeapon,
   type GameEvent,
+  type HitGroup,
   hexDistance,
   isAdjacent,
   isArm,
@@ -30,6 +31,7 @@ import {
   type PhysicalAttackType,
   type PhysicalResolution,
   type PhysicalWeaponName,
+  type PilotingRollResult,
   type RangeBracket,
   requireUnit,
   resolveStrikeArm,
@@ -583,11 +585,7 @@ export function physicalResolutionLines(r: PhysicalResolution): string[] {
 }
 
 /** Render one physical-attack PSR outcome, always showing the target number. */
-function physicalPsrOutcome(psr: {
-  target: number;
-  roll: number | null;
-  success: boolean;
-}): string {
+function physicalPsrOutcome(psr: PilotingRollResult): string {
   if (psr.roll === null) {
     return i18n(psr.success ? "res.physical.autoStand" : "res.physical.autoFall", {
       target: psr.target,
@@ -966,7 +964,7 @@ export function resolutionLines(r: AttackResolution): string[] {
 }
 
 /** One damage group label, tagged when the hit location rolled a through-armor 2. */
-function formatHitGroup(g: { location: Location; damage: number; throughArmor?: boolean }): string {
+function formatHitGroup(g: HitGroup): string {
   const base = `${SHORT_LOC[g.location]}(${g.damage})`;
   return g.throughArmor === true ? `${base} [${i18n("res.throughArmorTag")}]` : base;
 }

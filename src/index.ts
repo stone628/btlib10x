@@ -254,6 +254,7 @@ export {
   type FallDirection,
   GYRO_DESTROYED_HITS,
   GYRO_HIT_MOD,
+  type PilotingRollResult,
   type PreexistingDamage,
   SENSOR_BLIND_HITS,
 } from "./rules/piloting";
