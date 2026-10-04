@@ -87,4 +87,6 @@ export interface BoardRenderInfo {
   readonly map: MapDef;
   readonly units: BoardRenderUnit[] | null;
   readonly reachable: BoardRenderReachableInfo | null;
+  /** `"col,row"` keys of hexes holding a ground club token. */
+  readonly clubHexes: readonly string[] | null;
 }

@@ -12,6 +12,7 @@
   --tb-heavyWoods: var(--cb-dim);
   --t-rough: #cbb98a;
   --t-rubble: #a08a6a;
+  --club: #e5c07b;
   --t-pavement: #8a8a9a;
   --t-water1: #5a9ad8;
   --t-water2: #4a8ac8;
@@ -177,6 +178,10 @@ body {
 }
 .t-rubble {
   color: var(--t-rubble);
+}
+.t-club {
+  color: var(--club);
+  font-weight: bold;
 }
 .t-pavement {
   color: var(--t-pavement);

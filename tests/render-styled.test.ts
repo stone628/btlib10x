@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { hexKey } from "../src/core/types";
 import { type MapDef, mapDef } from "../src/data/index";
 import type { UnitInit } from "../src/rules/game";
 import type { BoardModel, Canvas, CharStyle, Span } from "../web/renderer.text";
@@ -8,6 +9,8 @@ import {
   boardToChars,
   boardToSpans,
   boardToText,
+  CLUB_MARKER,
+  createBoardModel,
   eachHex,
   FACING_GLYPH,
   makeCanvas,
@@ -207,6 +210,7 @@ describe("styled board model", () => {
       elevations: {},
       styles: {},
       idStyles: {},
+      clubs: {},
     };
     const spans = boardToSpans(model).flat();
     // The n edge of 1,1 is tinted, riding on the actor's facing glyph.
@@ -342,6 +346,7 @@ describe("applyEdgeStyles layer", () => {
       },
       styles: {},
       idStyles: {},
+      clubs: {},
     };
     const canvas: Canvas = makeCanvas(model);
     for (const hex of eachHex(model)) applyEdgeStyles(canvas, hex);
@@ -357,5 +362,30 @@ describe("applyEdgeStyles layer", () => {
     // The pass is style-only: characters are never rewritten.
     expect(canvas.rows[0]![3]).toBe(" ");
     expect(canvas.rows[6]![10]).toBe(" ");
+  });
+});
+
+describe("club marker style", () => {
+  it("carries t-club and keeps span text equal to flat text", () => {
+    const map: MapDef = {
+      name: "club",
+      width: 1,
+      height: 1,
+      terrain: [{ col: 1, row: 1, type: "lightWoods" }],
+      legends: ["lightWoods"],
+    };
+    const model = createBoardModel({
+      map,
+      units: null,
+      reachable: null,
+      clubHexes: [hexKey({ col: 1, row: 1 })],
+    });
+    const lines = boardToSpans(model);
+    expect(lines.map(spansText).join("\n")).toBe(boardToText(model));
+    const spans = lines.flat();
+    const club = spans.find((sp) => sp.text === CLUB_MARKER);
+    expect(club?.style?.cls).toBe("t-club");
+    const mark = spans.find((sp) => sp.text.includes("w"));
+    expect(mark?.style?.cls).toBe("t-lightWoods");
   });
 });

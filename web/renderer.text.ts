@@ -57,6 +57,8 @@ export interface BoardModel {
   readonly styles: Readonly<Record<string, CharStyle>>;
   /** Style for just the occupant id inside `( )` (e.g. {@link TEAM_STYLES}). */
   readonly idStyles: Readonly<Record<string, CharStyle>>;
+  /** Hexes holding at least one ground club token; drawn as {@link CLUB_MARKER}. */
+  readonly clubs: Readonly<Record<string, true>>;
 }
 
 // ---- board render info (types owned by render.ts) ----
@@ -118,8 +120,17 @@ export const TEAM_STYLES: readonly CharStyle[] = [{ fg: "cyan" }, { fg: "magenta
 /** Belly marker drawn in a reachable hex on the reachable map. */
 export const REACHABLE_MARKER = "<>";
 
-/** Localised board legend text (e.g. `"legend: w(light woods)  W(heavy woods)"`). */
-export function boardLegendText(map: MapDef): string[] {
+/** Bottom-row glyph (left of the terrain mark) in a hex holding a ground club. */
+export const CLUB_MARKER = "!";
+
+/** Style of the {@link CLUB_MARKER}; ignores terrain/team tints to stay visible. */
+const CLUB_STYLE: CharStyle = { cls: "t-club", bold: true };
+
+/**
+ * Localised board legend text (e.g. `"legend: w(light woods)  W(heavy woods)"`).
+ * `withClubs` appends the club marker entry.
+ */
+export function boardLegendText(map: MapDef, withClubs = false): string[] {
   const header = i18n("board.legend");
   const headerLen = compensatedLength(header);
   const widthMax = COL_STRIDE * map.width;
@@ -128,8 +139,11 @@ export function boardLegendText(map: MapDef): string[] {
   const lines: string[] = [];
   const delimiter = " ";
   const delimiterLen = delimiter.length;
-  for (const l of map.legends) {
-    const lt = `'${TERRAIN_GLYPHS[l]}'(${i18n(`terrain.${l}` as MessageKey)})`;
+  const entries = map.legends.map(
+    (l) => `'${TERRAIN_GLYPHS[l]}'(${i18n(`terrain.${l}` as MessageKey)})`,
+  );
+  if (withClubs) entries.push(`'${CLUB_MARKER}'(${i18n("board.legendClub")})`);
+  for (const lt of entries) {
     const ltLen = compensatedLength(lt);
     if (width >= widthMax - ltLen) {
       lines.push(legends.join(delimiter));
@@ -298,6 +312,7 @@ interface HexContext {
   readonly mark: string | undefined;
   readonly elevation: number;
   readonly facing: Facing | undefined;
+  readonly club: boolean;
   readonly idStyle: CharStyle | undefined;
   readonly style: CharStyle | null;
   readonly edgeStyles: Readonly<Record<string, CharStyle>>;
@@ -324,6 +339,7 @@ export function* eachHex(model: BoardModel): Generator<HexContext, void, undefin
         mark: model.marks[key],
         elevation: model.elevations[key] ?? 0,
         facing: model.facings[key],
+        club: model.clubs[key] === true,
         idStyle: model.idStyles[key],
         style: model.styles[key] ?? null,
         edgeStyles: model.edgeStyles,
@@ -348,6 +364,7 @@ function drawCanvas(model: BoardModel): Canvas {
     drawUnitIds(canvas, hex);
     drawTerrainMarks(canvas, hex);
     drawElevationDigits(canvas, hex);
+    drawClubMarks(canvas, hex);
     drawFacingArrows(canvas, hex);
     applyEdgeStyles(canvas, hex);
   }
@@ -399,7 +416,13 @@ function drawElevationDigits(canvas: Canvas, hex: HexContext): void {
   stampInto(canvas, x + 4, y + 3, String(elevation), style);
 }
 
-/** Layer 5 — one hex's facing arrow overwriting its wall or edge glyph. */
+/** Layer 5 — one hex's club marker in the free bottom-left interior slot. */
+function drawClubMarks(canvas: Canvas, hex: HexContext): void {
+  if (!hex.club) return;
+  stampInto(canvas, hex.x + 2, hex.y + 3, CLUB_MARKER, CLUB_STYLE);
+}
+
+/** Layer 6 — one hex's facing arrow overwriting its wall or edge glyph. */
 function drawFacingArrows(canvas: Canvas, hex: HexContext): void {
   const { x, y, facing, idStyle, style } = hex;
   if (facing === undefined) return;
@@ -408,7 +431,7 @@ function drawFacingArrows(canvas: Canvas, hex: HexContext): void {
   setChar(canvas, p.x, p.y, glyph, idStyle ?? style);
 }
 
-/** Layer 6 — one hex's edge tinting: style-only pass over its hexside vertices. */
+/** Layer 7 — one hex's edge tinting: style-only pass over its hexside vertices. */
 export function applyEdgeStyles(canvas: Canvas, hex: HexContext): void {
   const { x, y, key } = hex;
   for (const facing of FACINGS) {
@@ -618,6 +641,7 @@ export function mapModel(
     edgeStyles: {},
     styles: styles === undefined ? deriveMapStyles(map.terrain) : styles,
     idStyles: {},
+    clubs: {},
   };
 }
 
@@ -678,6 +702,7 @@ export function battleModel(
     edgeStyles: {},
     styles: styles ?? deriveTerrainStyles(state),
     idStyles: autoCells,
+    clubs: {},
   };
 }
 
@@ -698,6 +723,8 @@ export function createBoardModel(info: BoardRenderInfo): BoardModel {
   const cells = { ...base.cells };
   const facings: Record<string, Facing> = {};
   const idStyles: Record<string, CharStyle> = {};
+  const clubs: Record<string, true> = {};
+  for (const key of info.clubHexes ?? []) clubs[key] = true;
   if (info.units !== null) {
     for (const unit of info.units) {
       const key = `${unit.position.col},${unit.position.row}`;
@@ -721,6 +748,7 @@ export function createBoardModel(info: BoardRenderInfo): BoardModel {
       edgeStyles: base.edgeStyles,
       styles: base.styles,
       idStyles,
+      clubs,
     };
   }
 
@@ -762,21 +790,22 @@ export function createBoardModel(info: BoardRenderInfo): BoardModel {
     edgeStyles,
     styles: base.styles,
     idStyles,
+    clubs,
   };
 }
 
 // ---- board renderers (DOM) ----
 
-function renderLegend(map: MapDef, el: Element): void {
+function renderLegend(map: MapDef, el: Element, withClubs: boolean): void {
   const legendDiv = document.createElement("div");
   legendDiv.className = "board-legend";
-  legendDiv.textContent = boardLegendText(map).join("\n");
+  legendDiv.textContent = boardLegendText(map, withClubs).join("\n");
   el.appendChild(legendDiv);
 }
 
 /** CSS Grid renderer: one `<span>` per character, bold isolated to single cells. */
 export const cssGridRenderer: BoardRenderer = (info, el) => {
-  renderLegend(info.map, el);
+  renderLegend(info.map, el, (info.clubHexes?.length ?? 0) > 0);
   const grid = document.createElement("div");
   grid.className = "board-grid";
   const lines = boardToChars(createBoardModel(info));
@@ -800,7 +829,7 @@ export const cssGridRenderer: BoardRenderer = (info, el) => {
 
 /** Text renderer: flat text inside a `<div>`. */
 export const textRenderer: BoardRenderer = (info, el) => {
-  renderLegend(info.map, el);
+  renderLegend(info.map, el, (info.clubHexes?.length ?? 0) > 0);
   const board = document.createElement("div");
   board.className = "board";
   const lines = boardToText(createBoardModel(info)).split("\n");

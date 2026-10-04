@@ -47,7 +47,7 @@ import {
   createEjectedBoardRenderUnits,
 } from "./render";
 import { commitAtomic, drive, requireBattle, type Session, type SessionGameEvent } from "./session";
-import { actorOrderLines } from "./session.common";
+import { actorOrderLines, clubHexKeys } from "./session.common";
 
 const MOVE_MODES: Readonly<Record<string, MoveMode>> = {
   standstill: "standStill",
@@ -861,7 +861,7 @@ export function reachableChunk(
     .map((u) => createBoardRenderUnit(u));
   const ejectedUnits = createEjectedBoardRenderUnits(battleUnits, battle.wrecks);
   if (ejectedUnits.length > 0) units.push(...ejectedUnits);
-  return buildBoardChunk({ map, units, reachable: info });
+  return buildBoardChunk({ map, units, reachable: info, clubHexes: clubHexKeys(battle) });
 }
 
 /** Display mode for previews: prone/standup carry their sub-mode arg. */

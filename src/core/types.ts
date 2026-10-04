@@ -73,6 +73,10 @@ export interface HexCoord {
   readonly row: number;
 }
 
+export function hexKey(hex: HexCoord): string {
+  return `${hex.col},${hex.row}`;
+}
+
 /** Terrain and elevation data for a single hex cell. */
 export interface HexCell {
   readonly terrain: TerrainType;

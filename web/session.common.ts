@@ -7,6 +7,7 @@ import {
   ammoBinId,
   ammoExplosionAvoid,
   ammoExplosionAvoidWithThreshold,
+  type BattleState,
   type ComponentHitStatus,
   type CritSoakName,
   type CritStructureName,
@@ -24,6 +25,7 @@ import {
   HEAT_CAP,
   heatDissipation,
   heatDissipationMax,
+  hexKey,
   internalStructureForTonnage,
   isTorso,
   isUnitAvailable,
@@ -62,16 +64,7 @@ import {
 } from "./chunk";
 import { compensatedLength, i18n, type MessageKey } from "./i18n";
 import { lookupMech } from "./lookup";
-import {
-  F,
-  gunneryLabel,
-  hexCoordStr,
-  PRN,
-  requireMechDef,
-  SHORT_LOC,
-  signedMod,
-  TRN,
-} from "./misc";
+import { F, gunneryLabel, PRN, requireMechDef, SHORT_LOC, signedMod, TRN } from "./misc";
 import { createBoardRenderUnit, createEjectedBoardRenderUnits } from "./render";
 import { requireBattle, type Session, type SessionGameEvent, victoryBannerChunk } from "./session";
 import {
@@ -111,6 +104,13 @@ function heatStateLabel(shutdown: ShutdownState): string {
   return i18n("heat.stateDown");
 }
 
+/** `"col,row"` keys of hexes holding at least one ground club token. */
+export function clubHexKeys(battle: BattleState): string[] {
+  return Object.entries(battle.clubs)
+    .filter(([, tokens]) => tokens.length > 0)
+    .map(([key]) => key);
+}
+
 /** `board` output: styled grid chunks, or a plain hint when nothing exists. */
 export function boardChunk(s: Session): Chunk {
   const mapName = s.setup.mapName;
@@ -123,12 +123,13 @@ export function boardChunk(s: Session): Chunk {
       .map((u) => createBoardRenderUnit(u));
     const ejectedUnits = createEjectedBoardRenderUnits(battleUnits, s.battle.wrecks);
     if (ejectedUnits.length > 0) units.push(...ejectedUnits);
-    return buildBoardChunk({ map, units, reachable: null });
+    return buildBoardChunk({ map, units, reachable: null, clubHexes: clubHexKeys(s.battle) });
   }
   return buildBoardChunk({
     map,
     units: s.setup.roster.map((u) => createBoardRenderUnit(u)),
     reachable: null,
+    clubHexes: null,
   });
 }
 
@@ -342,7 +343,7 @@ export function battleSheet(unit: UnitState, id: string): SheetView {
     removed: unit.removed,
     destroyed: unit.destroyed,
     positionLine: i18n("sheet.at", {
-      pos: hexCoordStr(unit.position),
+      pos: hexKey(unit.position),
       facing: F(unit.facing),
       posture: PRN(unit.prone),
     }),
@@ -847,9 +848,7 @@ export function unitBriefList(s: Session): Chunk {
       // Engine guarantee: `unit.model` was validated by `createBattle`.
       const def = mechDefFor(unit);
       const flags = `${unit.prone ? " PRONE" : ""}${unit.unconscious ? " UNCONSCIOUS" : ""}`;
-      lines.push(
-        `  ${uid}  ${def.model}  ${hexCoordStr(unit.position)} facing ${unit.facing}${flags}`,
-      );
+      lines.push(`  ${uid}  ${def.model}  ${hexKey(unit.position)} facing ${unit.facing}${flags}`);
       const view = battleSheet(unit, uid);
       lines.push(...mechStatusLines(view).map((l) => `    ${l}`));
     }
@@ -1176,7 +1175,7 @@ function handleSessionGameEvent(
         i18n("log.moved", {
           id: e.unitId,
           mode: e.mode,
-          pos: hexCoordStr(e.position),
+          pos: hexKey(e.position),
           facing: e.facing,
           mp: e.mpSpent,
           budget: e.mpBudget,
@@ -1550,7 +1549,7 @@ function handleSessionGameEvent(
         e.actorId,
         i18n("log.moveActor", {
           id: e.actorId,
-          pos: hexCoordStr(e.position),
+          pos: hexKey(e.position),
           facing: F(e.facing),
           posture: PRN(e.prone),
           terrain: TRN(e.terrain),

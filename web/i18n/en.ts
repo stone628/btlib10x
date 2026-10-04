@@ -24,6 +24,7 @@ export const en = {
   // board
   "board.noMap": "no battlefield yet - load one via 'map'; 'info map' lists the choices.",
   "board.legend": "legend:",
+  "board.legendClub": "club on ground",
 
   // lang command
   "lang.current": "language: {locale}",

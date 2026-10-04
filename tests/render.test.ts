@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { MapDef } from "../src/index";
+import { hexKey, type MapDef } from "../src/index";
 import type { BattleState, createBattle, TerrainHexDef, UnitInit } from "../src/rules/game";
 import type { BoardModel } from "../web/renderer.text";
 import {
   battleModel,
   boardToText,
+  CLUB_MARKER,
+  createBoardModel,
   FACING_GLYPH,
   GRID_GLYPHS,
   renderMap,
@@ -372,6 +374,7 @@ describe("map renderer", () => {
       edgeStyles: {},
       styles: {},
       idStyles: {},
+      clubs: {},
     };
     const out = boardToText(model);
     // In-crop hexes are drawn.
@@ -381,5 +384,31 @@ describe("map renderer", () => {
     expect(out).not.toContain("0909");
     // Full-coordinate labels outside the crop are absent too.
     expect(out).not.toContain("0101");
+  });
+});
+
+describe("club marker", () => {
+  const clubMap: MapDef = {
+    name: "club",
+    width: 2,
+    height: 1,
+    terrain: [{ col: 1, row: 1, type: "lightWoods" }],
+    legends: ["lightWoods"],
+  };
+  const hexesWithClub = (hexes: string[]): string =>
+    boardToText(createBoardModel({ map: clubMap, units: null, reachable: null, clubHexes: hexes }));
+
+  it("stamps the marker left of the terrain mark and the bare level digit", () => {
+    const out = hexesWithClub([hexKey({ col: 1, row: 1 }), hexKey({ col: 2, row: 1 })]);
+    expect(out).toContain(`${GRID_GLYPHS.edgeSW}${CLUB_MARKER}w0 ${GRID_GLYPHS.edgeSE}`);
+    expect(out).toContain(`${GRID_GLYPHS.edgeSW}${CLUB_MARKER} 0 ${GRID_GLYPHS.edgeSE}`);
+  });
+
+  it("renders byte-identical output when no hex holds a club", () => {
+    const plain = boardToText(
+      createBoardModel({ map: clubMap, units: null, reachable: null, clubHexes: null }),
+    );
+    expect(hexesWithClub([])).toBe(plain);
+    expect(plain).not.toContain(CLUB_MARKER);
   });
 });
