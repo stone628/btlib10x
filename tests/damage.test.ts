@@ -82,7 +82,7 @@ describe("layered damage resolution", () => {
     const s = mk({ armor: { leftTorso: 0, leftArm: 10 }, is: { leftTorso: 8, leftArm: 9 } });
     const app = applyDamage(s, "leftTorso", 8);
     expect(app.newlyDestroyed).toContain("leftTorso");
-    expect(app.blownOffArms).toEqual(["leftArm"]);
+    expect(app.blownOffLimbs).toEqual(["leftArm"]);
     expect(app.after.internalStructure.leftArm).toBe(0);
     expect(app.after.armor.leftArm).toBe(0);
     expect(canFireFromLocation(app.after, "leftArm")).toBe(false);

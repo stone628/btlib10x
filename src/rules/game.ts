@@ -17,6 +17,7 @@ import {
   isLeg,
   isTorso,
   isWoodsTerrain,
+  type LimbLocation,
   LOCATIONS,
   type Location,
   type MoveMode,
@@ -24,7 +25,6 @@ import {
   rotateFacing,
   type TerrainHexDef,
   type WreckState,
-  type LimbLocation,
 } from "../core/types";
 import { type MapDef, type MechModelHolder, mechDef, mechDefFor } from "../data/index";
 import type { ResolvedMechDef } from "../data/mech.schema";
@@ -239,7 +239,7 @@ export interface ClubPickupDecl {
 /** A severed limb lying in a hex, available for pickup (TW p.146). Trees
  *  and girders are sourced from the terrain itself and leave no token. */
 export interface ClubGroundToken {
-  readonly limb: Location;
+  readonly limb: LimbLocation;
 }
 
 /** Girder-search target numbers by rubble origin (TW p.146): 7+ from
@@ -1114,7 +1114,7 @@ export function damageBuildingAt(
 export function recordSeveredLimbs(
   state: BattleState,
   unit: UnitState,
-  limbs: readonly Location[],
+  limbs: readonly LimbLocation[],
 ): void {
   for (const limb of limbs) {
     if (isArm(limb)) {
@@ -1132,9 +1132,8 @@ export function recordSeveredLimbs(
 }
 
 /**
- * Record every severed limb carried by crit rows: blown-off arms (also
- * present on `res.blownOffArms`) plus blown-off legs (rows only). Leaves
- * the matching ground tokens in the victim's hex.
+ * Record every severed limb (`blownOffLimbs`) carried by crit resolutions.
+ * Leaves the matching ground tokens in the victim's hex.
  */
 function recordCritSeveredLimbs(
   state: BattleState,
@@ -1142,11 +1141,7 @@ function recordCritSeveredLimbs(
   crits: readonly CriticalResolution[],
 ): void {
   for (const crit of crits) {
-    const limbs: Location[] = [...crit.blownOffArms];
-    for (const row of crit.rows) {
-      if (row.kind === "legBlownOff") limbs.push(row.leg);
-    }
-    recordSeveredLimbs(state, unit, limbs);
+    recordSeveredLimbs(state, unit, crit.blownOffLimbs);
   }
 }
 
@@ -2855,12 +2850,12 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         let currentDamage = targetDamageMap[targetId];
         // Limbs sheared off by torso destruction (damage transfer) stay in
         // the hex as clubs (TW p.146); collected here, recorded below.
-        const sheared: Location[] = [];
+        const sheared: LimbLocation[] = [];
         for (const group of resolution.groups) {
           // Apply each hit group with the attack's arc (determines armor pool)
           const app = applyDamage(currentDamage, group.location, group.damage, resolution.arc);
           currentDamage = app.after;
-          sheared.push(...app.blownOffArms);
+          sheared.push(...app.blownOffLimbs);
         }
         targetDamageMap[targetId] = currentDamage;
         recordSeveredLimbs(state, target, sheared);
@@ -2997,13 +2992,13 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
           }
         } else if (row.kind === "headBlownOff" || row.kind === "cockpitDestroyed") {
           zeroLocationStructure(currentDamage, "head");
-        } else if (row.kind === "legBlownOff") {
-          zeroLocationStructure(currentDamage, row.leg);
+        } else if (row.kind === "limbBlownOff") {
+          zeroLocationStructure(currentDamage, row.limb);
         }
       }
 
       // Merge newly destroyed / blown off arms from crit
-      for (const arm of crit.blownOffArms) {
+      for (const arm of crit.blownOffLimbs) {
         zeroLocationStructure(currentDamage, arm);
       }
       if (crit.killedReason !== null && targetKilledReason[targetId] === undefined) {
@@ -3444,14 +3439,14 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       if (hitTarget && resolution.hit && resolution.damageToTarget.length > 0) {
         const targetDef = mechDefFor(hitTarget);
         const targetCrits: CriticalResolution[] = [];
-        const sheared: Location[] = [];
+        const sheared: LimbLocation[] = [];
         for (const group of resolution.damageToTarget) {
           const back = bearingExact(hitTarget.position, attacker.position)!;
           const dir = classifyArcWithBoundary(hitTarget.facing, back);
           const attackDirection = defenderArcChoice(dir.arc, dir.altArc);
           const app = applyDamage(hitTarget.damage, group.location, group.damage, attackDirection);
           hitTarget.damage = app.after;
-          sheared.push(...app.blownOffArms);
+          sheared.push(...app.blownOffLimbs);
 
           // Critical hit resolution (TW p.123-124):
           // - One determining roll per location that loses internal structure
@@ -3477,10 +3472,6 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
             hitTarget.destroyedWeapons = res.destroyedWeapons;
             hitTarget.ammoBins = res.ammoBins;
             hitTarget.damage = res.damage;
-            // Track blown-off arms for displacement/fall logic
-            for (const arm of res.blownOffArms) {
-              if (!hitTarget.blownOffArms.includes(arm)) hitTarget.blownOffArms.push(arm);
-            }
             targetCrits.push(res);
           }
         }
@@ -3887,7 +3878,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
             );
             unit.damage = application.after;
             // A blast that shears off a limb leaves it in the hex (TW p.146).
-            recordSeveredLimbs(state, unit, application.blownOffArms);
+            recordSeveredLimbs(state, unit, application.blownOffLimbs);
             // Mark every freshly-zeroed location as catastrophic so
             // counters (`countDestroyedEngine`, `heatSinksOperational`,
             // `effectiveMovement`) report truthful destruction state for

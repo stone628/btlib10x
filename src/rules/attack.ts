@@ -1,6 +1,13 @@
 import { roll2D6 } from "../core/dice";
 import { hasPartialCover } from "../core/terrain";
-import type { ArmLocation, Location, MoveMode, Rng, TerrainType } from "../core/types";
+import type {
+  ArmLocation,
+  LimbLocation,
+  Location,
+  MoveMode,
+  Rng,
+  TerrainType,
+} from "../core/types";
 import type { ResolvedMechDef } from "../data/mech.schema";
 import type { WeaponDef } from "../data/weapon.schema";
 import { weaponDefFor } from "../data/weapon.schema";
@@ -312,7 +319,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
             before: application.before,
             steps: [...application.steps, ...app.steps],
             newlyDestroyed: [...application.newlyDestroyed, ...app.newlyDestroyed],
-            blownOffArms: [...application.blownOffArms, ...app.blownOffArms],
+            blownOffLimbs: [...application.blownOffLimbs, ...app.blownOffLimbs],
             killed: application.killed || app.killed,
           };
 
@@ -355,7 +362,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
         application = {
           ...application,
           after: res.damage,
-          blownOffArms: mergeUnique(application.blownOffArms, res.blownOffArms),
+          blownOffLimbs: mergeUniqueLimb(application.blownOffLimbs, res.blownOffLimbs),
           killed: application.killed || res.killedReason !== null,
         };
       }
@@ -389,8 +396,8 @@ function cloneDestroyed(src: Record<Location, boolean[]>): Record<Location, bool
   return out;
 }
 
-function mergeUnique(a: readonly Location[], b: readonly Location[]): Location[] {
-  const out: Location[] = [...a];
+function mergeUniqueLimb(a: readonly LimbLocation[], b: readonly LimbLocation[]): LimbLocation[] {
+  const out: LimbLocation[] = [...a];
   for (const x of b) if (!out.includes(x)) out.push(x);
   return out;
 }

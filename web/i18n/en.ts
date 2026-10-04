@@ -637,7 +637,7 @@ export const en = {
   "res.clusterRoll": "cluster roll 2D6 = {roll}",
   "res.clusterMod": "cluster range mod {mod}",
   "res.hits": "hits: {groups} ({arc})",
-  "res.armBlownOff": "; {cause} destroyed -> {arm} blown off",
+  "res.limbBlownOff": "; {cause} destroyed -> {limb} blown off",
   "res.immobilized": "; immobilized",
   "res.killed": "; killed",
   "res.destroyedTail": "; destroyed {locs}",

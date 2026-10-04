@@ -149,7 +149,7 @@ export function isLeg(loc: Location): loc is LegLocation {
   return loc === "rightLeg" || loc === "leftLeg";
 }
 
-export function isLimb(loc: Location): loc is ArmLocation | LegLocation {
+export function isLimb(loc: Location): loc is LimbLocation {
   return isArm(loc) || isLeg(loc);
 }
 
@@ -157,7 +157,7 @@ export function isSideTorso(loc: Location): loc is SideTorsoLocation {
   return loc === "rightTorso" || loc === "leftTorso";
 }
 
-export function shoulderOf(loc: ArmLocation | LegLocation): SideTorsoLocation {
+export function shoulderOf(loc: LimbLocation): SideTorsoLocation {
   return loc === "rightArm" || loc === "rightLeg" ? "rightTorso" : "leftTorso";
 }
 

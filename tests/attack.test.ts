@@ -437,6 +437,24 @@ describe("through-armor criticals (hit-location roll of 2)", () => {
     expect(rng.remaining()).toBe(0);
   });
 
+  it("merges a crit-severed leg into the aggregate application", () => {
+    const state = freshState();
+    state.armor.rightLeg = 0;
+    const rng = scriptedRng(
+      2,
+      3, // to-hit 5 >= TN 4
+      2,
+      3, // location 5 -> rightLeg
+      6,
+      6, // determining 12 -> leg blown off
+    );
+    const res = resolveWeaponAttack({ ...critInput(rng), targetDamage: state });
+    expect(res.groups[0]!.location).toBe("rightLeg");
+    expect(res.crits[0]!.blownOffLimbs).toEqual(["rightLeg"]);
+    expect(res.application?.blownOffLimbs).toEqual(["rightLeg"]);
+    expect(res.application?.after.internalStructure.rightLeg).toBe(0);
+  });
+
   it("applies to the near torso on side columns (rightSide roll of 2)", () => {
     const rng = scriptedRng(
       2,

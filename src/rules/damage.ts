@@ -1,4 +1,4 @@
-import type { Location, TorsoLocation } from "../core/types";
+import type { LimbLocation, Location, TorsoLocation } from "../core/types";
 import {
   armFor,
   damageTransferTo,
@@ -45,8 +45,10 @@ export interface DamageApplication {
   readonly steps: readonly DamageTransferStep[];
   /** Locations whose internal structure reached 0 during this application. */
   readonly newlyDestroyed: readonly Location[];
-  /** Arms blown off because their shoulder torso's structure was destroyed. */
-  readonly blownOffArms: readonly Location[];
+  /** Limbs blown off. `applyDamage` yields arms only (side-torso destruction,
+   *  TW p.121; the leg is unharmed). Callers that merge crit results (attack.ts)
+   *  may also add legs (TW p.124: 12 on a leg determination). */
+  readonly blownOffLimbs: readonly LimbLocation[];
   readonly killed: boolean;
 }
 
@@ -100,7 +102,7 @@ export function applyDamage(
   const next = clone(damage);
   const steps: DamageTransferStep[] = [];
   const newlyDestroyed: Location[] = [];
-  const blownOffArms: Location[] = [];
+  const blownOffLimbs: LimbLocation[] = [];
   const caseKind = options?.caseKind;
   const bypassArmor = options?.bypassArmor;
   let killed = false;
@@ -157,7 +159,7 @@ export function applyDamage(
           next.internalStructure[arm] = 0;
           next.armor[arm] = 0;
           newlyDestroyed.push(arm);
-          blownOffArms.push(arm);
+          blownOffLimbs.push(arm);
         }
       }
       if (remaining > 0 && !killed) {
@@ -179,7 +181,7 @@ export function applyDamage(
     before: damage as UnitDamageState,
     steps,
     newlyDestroyed,
-    blownOffArms,
+    blownOffLimbs,
     killed,
   };
 }
