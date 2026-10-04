@@ -192,9 +192,9 @@ export function modeSyntaxFor(unit: UnitState | null): string {
     const sep = standupModes ? "|" : "";
     return `turn|pronestill${sep}${standupModes}|shutdown|eject`;
   }
-  // Standing one-leg 'Mech: walk 1 MP, jump allowed, no run.
+  // Standing one-leg 'Mech: walk 1 MP, jump allowed; run only as minimum movement (TW p.49).
   if (legs === 1) {
-    return "standstill|walk|jump|prone [turn|pronestill]|shutdown|eject";
+    return "standstill|walk|run|jump|prone [turn|pronestill]|shutdown|eject";
   }
   return "standstill|walk|run|jump|prone [turn|pronestill]|shutdown|eject";
 }
@@ -356,9 +356,8 @@ export function declareMovementMode(
   if (isUnitImmobile(unit.damage) && mode !== "standStill") {
     throw new Error(i18n("err.immobileStandstill", { id: unit.id, modes: modeSyntaxFor(unit) }));
   }
-  if (mode === "run" && destroyedLegs(unit.damage) >= 1) {
-    throw new Error(i18n("err.oneLegNoRun", { id: unit.id, modes: modeSyntaxFor(unit) }));
-  }
+  // One-leg 'Mech: run is legal only as TW p.49 minimum movement (a single
+  // forward hex); the reachable map and the engine enforce that shape.
   // Engine call is deferred to commit (mode walk/run/jump/standstill executeMove).
   context.moveMode = mode;
   context.postureMove = null;

@@ -1415,7 +1415,14 @@ export function executeMove(
     throw new Error(`${unitId} has no intact legs and arms and can only stand still`);
   }
   // TW p.122: a one-leg-destroyed 'Mech cannot run (running MP is 0).
-  if (mode === "run" && destroyedLegs(unit.damage) >= 1) {
+  // TW p.49: minimum movement (one forward hex, nothing else) is still legal.
+  const minMoveShape =
+    mode === "run" &&
+    !unit.prone &&
+    steps.length === 1 &&
+    steps[0]!.kind === "enter" &&
+    mv.isForwardStep(unit.position, steps[0]!.to, unit.facing);
+  if (mode === "run" && destroyedLegs(unit.damage) >= 1 && !minMoveShape) {
     throw new Error(`${unitId} has a destroyed leg and cannot run`);
   }
   // Prone units may only stand still or walk turn-only steps. Combined check:
@@ -1443,6 +1450,11 @@ export function executeMove(
   const budget = effectiveMoveBudget(unit.moveMode, movement, unit.heat);
   const jumping = unit.moveMode === "jump";
   const proneTurn = unit.prone && unit.moveMode === "walk";
+  // TW p.49 minimum movement: a unit with >= 1 MP always affords the single
+  // hex straight ahead; the charge is capped at what it has (at least 1).
+  const minMove =
+    minMoveShape && effectiveMoveBudget("walk", movement, unit.heat) >= mv.MIN_MOVEMENT_MP;
+  const minMoveCap = Math.max(budget, mv.MIN_MOVEMENT_MP);
 
   let cursor: HexCoord = unit.position;
   let facing: Facing = unit.facing;
@@ -1528,7 +1540,8 @@ export function executeMove(
     cursor = to;
   }
 
-  if (spent > budget) {
+  if (minMove) spent = Math.min(spent, minMoveCap);
+  if (spent > budget && !minMove) {
     throw new Error(`Move costs ${spent} MP but ${unit.moveMode} budget is ${budget}`);
   }
   if (jumping && directions.length < JUMP_MIN_HEXES) {
@@ -1609,6 +1622,7 @@ export function executeMove(
         costToClimb(cellAt(state, from).level, cellAt(state, to).level);
       curDirs.push(forward ? "forward" : "backward");
     }
+    if (minMove) curSpent = Math.min(curSpent, minMoveCap);
     cur = to;
     // Terrain-entry PSRs (TW p.60): ground checks every entered hex, jump
     // only its landing. A fall, crash-kill, or shutdown ends the move here,
