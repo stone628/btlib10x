@@ -26,6 +26,7 @@ import {
   defenderArcChoice,
   effectiveFacingForTwist,
 } from "./arcs";
+import { isBuildingTerrain } from "./building";
 import { destroyedStructures } from "./critical";
 import {
   applyDamage,
@@ -143,9 +144,8 @@ export const CLUB_DAMAGE_PER_TONS = 5;
  *  formula `ceil(tonnage / damagePerTons) + damageBonus`. All three use the
  *  standard hit-location table on the Arm arc (forward or mounting-arm side)
  *  and are TSM-sensitive (doubled while TSM is active, TW p.143/p.146). The
- *  optional Punch/Kick table election (+4) and the different-levels
- *  auto-swap (TW p.150) are deferred, matching punch/kick/club in this
- *  subset. */
+ *  optional Punch/Kick table election (+4) is deferred; the different-levels
+ *  auto-swap (TW p.150) is implemented via `physicalLocationTable`. */
 export interface PhysicalWeaponStats {
   readonly toHitMod: number;
   readonly damagePerTons: number;
@@ -515,30 +515,67 @@ export function physicalDamage(
 // ---------------------------------------------------------------------------
 
 /**
- * Roll hit location for a physical attack (TW pp. 145, 147).
+ * Roll hit location for a physical attack (TW pp. 145–147, 150–151).
  * Punch: 1D6 on Punch Location Table.
  * Kick: 1D6 on Kick Location Table.
  * Club: 1D6 on Standard Hit Location Table.
  * Strike: 2D6 on Standard Hit Location Table (TW p.146).
  * Push: no damage, no location roll.
+ *
+ * `levelDelta` is target level minus attacker level (0 when omitted for
+ * backward compatibility). The Different Levels Table auto-swap (TW p.150)
+ * and the prone-higher exception (TW p.151) select the effective table via
+ * `physicalLocationTable`.
  */
 export function physicalHitLocation(
   type: PhysicalAttackType,
-  _target: UnitState,
+  target: UnitState,
   attackDirection: Arc,
   roll: number,
+  levelDelta = 0,
 ): Location {
-  switch (type) {
+  if (type === "push") return "centerTorso"; // unused
+  switch (physicalLocationTable(type, levelDelta, target.prone)) {
     case "punch":
       return punchHitLocation(roll);
     case "kick":
       return kickHitLocation(roll, attackDirection);
-    case "club":
-    case "strike":
+    case "standard":
       return hitLocationForArc(attackDirection, roll);
-    case "push":
-      return "centerTorso"; // unused
   }
+}
+
+/**
+ * Effective hit-location table for a physical attack (TW pp. 150–151).
+ * Returns which family to roll: the Punch table (1D6), the Kick table
+ * (1D6), or the standard table (2D6).
+ *
+ * - Same level: default tables (punch→punch, kick→kick, club/strike→standard).
+ * - Standing target one level higher: punch/club/strike use the Kick Table.
+ * - Standing target one level lower: kick/club/strike use the Punch Table.
+ * - Prone target one level higher: punch uses the standard 'Mech Hit
+ *   Location Table (TW p.151); club/strike already use it.
+ * - Prone target one level lower: no attack is legal (gated in validation).
+ */
+export function physicalLocationTable(
+  type: PhysicalAttackType,
+  levelDelta: number,
+  targetProne: boolean,
+): "punch" | "kick" | "standard" {
+  if (type === "push") return "standard";
+  if (type === "punch") {
+    if (targetProne && levelDelta === 1) return "standard";
+    if (!targetProne && levelDelta === 1) return "kick";
+    return "punch";
+  }
+  if (type === "kick") {
+    if (!targetProne && levelDelta === -1) return "punch";
+    return "kick";
+  }
+  // club / strike
+  if (!targetProne && levelDelta === 1) return "kick";
+  if (!targetProne && levelDelta === -1) return "punch";
+  return "standard";
 }
 
 /** Bipedal 'Mech kick location table (TW p. 147). */
@@ -570,9 +607,10 @@ export interface ValidationResult {
 }
 
 /**
- * Validate a physical attack declaration (TW pp. 144–151).
- * Checks adjacency, arc, level difference, actuator damage, and
- * interaction with weapon fire.
+ * Validate a physical attack declaration (TW pp. 144–151, 171, 175).
+ * Checks adjacency, building-hex exclusion, level difference (Different
+ * Levels Table, TW p.150), prone-target restrictions (TW p.151), arc,
+ * actuator damage, and interaction with weapon fire.
  *
  * `twist` is the attacker's torso twist (TW pp. 105–106, 98–99: the
  * twist governs physical-attack arcs too). Punch and club attacker-side
@@ -601,12 +639,31 @@ export function validatePhysicalAttack(
     return { ok: false, reason: "Physical attack requires adjacency" };
   }
 
-  // Level difference (TW p. 150)
   const attackerCell = cellAt(battle, attacker.position);
   const targetCell = cellAt(battle, target.position);
-  const levelDiff = Math.abs(attackerCell.level - targetCell.level);
-  if (levelDiff > 1) {
+
+  // Building-hex exclusion (TW pp. 171, 175): no physical attack from
+  // outside a building hex against a target inside one. The same
+  // multi-hex building exception (adjacent, same level, same building)
+  // is out of implementation scope — multi-hex building identity is not
+  // tracked — so every outside->inside attack is rejected.
+  if (isBuildingTerrain(targetCell.terrain) && !isBuildingTerrain(attackerCell.terrain)) {
+    return {
+      ok: false,
+      reason: "Cannot make a physical attack from outside against a target inside a building hex",
+    };
+  }
+
+  // Level difference (TW p. 150)
+  const levelDelta = targetCell.level - attackerCell.level;
+  if (Math.abs(levelDelta) > 1) {
     return { ok: false, reason: "Level difference too great for physical attack" };
+  }
+
+  // Different Levels Table (TW p.150) + prone-target restrictions (TW p.151).
+  const levelGate = checkPhysicalLevelGate(decl.type, target.prone, levelDelta);
+  if (levelGate !== null) {
+    return { ok: false, reason: levelGate };
   }
 
   // Prone restrictions (TW p. 151)
@@ -629,6 +686,46 @@ export function validatePhysicalAttack(
     case "strike":
       return validateStrike(attacker, target, decl, twist ?? null);
   }
+}
+
+/**
+ * Different Levels Table gate (TW p.150) combined with the prone-target
+ * restrictions (TW p.151). Returns null when `type` is legal at this
+ * `levelDelta` (target level minus attacker level), else the rejection
+ * reason. Same-level attacks defer to the per-type arc/prone checks;
+ * prone same-level allows only kicks (DFA and vehicle charges are out of
+ * scope), prone one level higher additionally allows punch/club/strike
+ * (TW p.151), and prone one level lower allows nothing.
+ */
+function checkPhysicalLevelGate(
+  type: PhysicalAttackType,
+  targetProne: boolean,
+  levelDelta: number,
+): string | null {
+  if (targetProne) {
+    if (levelDelta === 0) {
+      return type === "kick" ? null : "Only kicks may target a prone 'Mech on the same level";
+    }
+    if (levelDelta === 1) {
+      return type === "punch" || type === "club" || type === "strike"
+        ? null
+        : "Only punch, club and physical weapon attacks may target a prone 'Mech one level higher";
+    }
+    // Prone target one level lower: none (TW p.150).
+    return "No physical attack may target a prone 'Mech one level lower";
+  }
+  if (levelDelta === 0) return null;
+  if (levelDelta === 1) {
+    // Standing target one level higher: punch and club (+physical weapon);
+    // kick and push are illegal.
+    return type === "punch" || type === "club" || type === "strike"
+      ? null
+      : "This physical attack cannot target a 'Mech one level higher";
+  }
+  // Standing target one level lower: kick and club (+physical weapon).
+  return type === "kick" || type === "club" || type === "strike"
+    ? null
+    : "This physical attack cannot target a 'Mech one level lower";
 }
 
 function validatePunch(
@@ -658,6 +755,17 @@ function validatePunch(
     }
   }
 
+  // A target in the right or left arc may only be punched by the
+  // corresponding arm (TW p. 145). `limb` names the punching arm; a
+  // missing limb carries no arm information and skips this check (game
+  // flow normalizes it to the right arm before validation).
+  if (arc === "leftSide" && decl.limb === "rightArm") {
+    return { ok: false, reason: "A target in the left arc may only be punched by the left arm" };
+  }
+  if (arc === "rightSide" && decl.limb === "leftArm") {
+    return { ok: false, reason: "A target in the right arc may only be punched by the right arm" };
+  }
+
   // Compute attack direction for hit location
   const back = bearingExact(target.position, attacker.position)!;
   const dir = classifyArcWithBoundary(target.facing, back);
@@ -672,10 +780,11 @@ function validateKick(
   _decl: PhysicalAttackDecl,
 ): ValidationResult {
   // Target must be in one of three forward-arc hexes (TW p. 147), read off
-  // the p.105 template.
+  // the p.105 template. Adjacent `front` is exactly those three hexes, so
+  // side and rear arcs are both rejected.
   const kickArc = classifyFiringArc(attacker.position, target.position, attacker.facing);
   if (kickArc === null) return { ok: false, reason: "Same hex" };
-  if (kickArc === "rear") {
+  if (kickArc !== "front") {
     return { ok: false, reason: "Kick requires target in forward arc" };
   }
 
@@ -875,11 +984,16 @@ export function resolvePhysicalAttack(
 
   let throughArmorCrit = false;
   if (hit && dmg > 0) {
-    // Roll hit location
-    const locRoll = decl.type === "punch" || decl.type === "kick" ? rollD6(rng) : roll2D6(rng);
+    // Different-levels table swap (TW p.150) and prone-higher exception
+    // (TW p.151): the effective table selects the dice (punch/kick 1D6,
+    // standard 2D6). No +4 election modifier on auto-swaps (TW p.146).
+    const levelDelta =
+      cellAt(battle, target.position).level - cellAt(battle, attacker.position).level;
+    const table = physicalLocationTable(decl.type, levelDelta, target.prone);
+    const locRoll = table === "standard" ? roll2D6(rng) : rollD6(rng);
     // Through-armor critical on hit-location roll of 2 (TW p.123)
     throughArmorCrit = locRoll === 2;
-    const location = physicalHitLocation(decl.type, target, attackDirection, locRoll);
+    const location = physicalHitLocation(decl.type, target, attackDirection, locRoll, levelDelta);
     damageToTarget.push({ location, damage: dmg });
   }
 
