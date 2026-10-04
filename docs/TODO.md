@@ -9,26 +9,43 @@
 
 ## To Do
 
-- need snapshot keeping, capable of rollback N steps like ctrl-z
-- **Physical attacks** — punch, kick, push, club, and physical-weapon
-  strikes (hatchet, sword, retractable blade) are implemented
-  (`src/rules/physical.ts`: declare via `declareAttacks`, resolve
-  after weapon damage inside `resolveAllAttacks`; arm/leg use conflicts
-  enforced; TSM doubling at heat 9+ implemented (TW p.143);
-  see "Implemented subset" in `docs/CLI.md`). Remaining: charge /
-  DFA movement-phase declarations, physical-attack critical hits, club
-  acquisition (blown-off limbs, trees, girders) and the nine industrial
-  physical-weapon types (backhoe, chainsaw, …), the optional
-  Punch/Kick-table election and level-difference auto-swap, domino effect /
-  accidental falls from above. (Physical-triggered PSRs — kicks, pushes,
-  charges, DFAs — wait on these; see "Not viable" in `docs/CLI.md`.)
-- **Weapon to-hit audit (TW p.303-304, p.113-114, p.117-118)** — P0/P1 done (see Done); remaining:
-  - P2: GATOR `Other` modifiers: secondary target `+1` forward / `+2` side-rear (TW p.108), IndustrialMech `+1` (TW p.108); OS once-per-scenario + no-explode and PB same/adjacent-only legality gates (TW p.113-114); Flak `-2` gating (aerospace-scoped, TW p.113); H-weapon damage-as-heat option incl. Plasma Rifle `10 + 1D6` heat vs 'Mechs / `10+2D6` in 5-pt groups vs others, woods/building double, underwater ban (TW p.113, p.139-140); Gauss ammo-slot feed-wreck vs weapon-slot 20-pt blast + Heavy Gauss move+fire weight-class PSR (TW p.135-136); MGA / A-Pod / B-Pod one-shot behavior (TW p.130, p.137); missing catalog rows (IS ER Medium Laser, IS ER PPC, Rocket Launchers, Plasma Cannon, Light MG, iNarc launcher).
+- **Undo / rollback** — the engine already saves and restores a `BattleState`
+  (`saveBattleState` / `loadBattleState`, `src/rules/snapshot.ts`); still
+  missing is a session-level history stack and a command to roll back N steps
+  like ctrl-z.
+- **Physical attacks** — punch, kick, push, club (incl. club acquisition) and
+  physical-weapon strikes are implemented (see "Implemented subset" in
+  `docs/CLI.md`). Remaining: charge / DFA movement-phase declarations, the
+  nine industrial physical-weapon types (backhoe, chainsaw, …), the optional
+  Punch/Kick-table election (+4), domino effect / accidental falls from above.
+  (Physical-triggered PSRs — kicks, pushes, charges, DFAs — wait on these; see
+  "Not viable" in `docs/CLI.md`.)
+- **Weapon to-hit audit (TW p.303-304, p.113-114, p.117-118)** — P0/P1 done (see Done); remaining P2:
+  - GATOR `Other` modifiers: secondary target `+1` forward / `+2` side-rear (TW p.108), IndustrialMech `+1` (TW p.108).
+  - OS once-per-scenario + no-explode and PB same/adjacent-only legality gates (TW p.113-114); Flak `-2` gating (aerospace-scoped, TW p.113).
+  - H-weapon damage-as-heat option incl. Plasma Rifle `10 + 1D6` heat vs 'Mechs / `10+2D6` in 5-pt groups vs others, woods/building double, underwater ban (TW p.113, p.139-140); the Plasma Rifle catalog row exists, the heat-damage behavior does not.
+  - Heavy Gauss move+fire weight-class PSR (TW p.135-136); MGA / A-Pod / B-Pod one-shot behavior (TW p.130, p.137).
+  - Missing catalog rows: Rocket Launchers, Plasma Cannon, iNarc launcher.
 
 ## In progress
 
+- Water combat (TW pp.108-109, 121, 144), deferred:
+  - Hull breach: underwater damage rolls 2D6, 10+ floods the location (all
+    components nonfunctional; breached head destroys the 'Mech; flooded side
+    torso disables its arm); a location with armor gone is automatically
+    breached (TW p.121).
+  - Underwater weapons: only lasers/PPCs fire underwater, using the Underwater
+    Range Table; plasma and ammo weapons are barred (TW pp.108-109).
+  - Underwater LOS/attack matrix (TW p.108): depth 1 standing 'Mechs fire leg
+    weapons at underwater targets; submerged-vs-surface is blocked except as
+    the table allows (today water2/3 and prone-in-water1 endpoints just block).
+  - Physical attacks in water: damage halved on an underwater location, depth
+    1 restrictions (TW p.144).
+  - Water LOS eye height: a 'Mech in water stands on the bed (`level - depth`),
+    so its LOS/cover levels should use `groundLevel` rather than the surface.
+
 - Later in classic expansion: physicals, basements,
-  hull-down, water depth movement-cost change, pavement skid (vehicle-specific;
+  hull-down, pavement skid (vehicle-specific;
   skid displacement is not viable without a displacement mechanic — see
   `docs/CLI.md`)
 
@@ -307,7 +324,7 @@
 - Dev-only sarna.net scraper starting at https://www.sarna.net/wiki/BattleMech normalizing into MechDef JSON (Node OK here; library stays browser-first)
 - Full intro-rules expansion: heat, physicals, piloting/falling (incl. partial
   cover), rear hits, multi-target arcs, vehicles/infantry, basements,
-  hull-down, full water-depth movement, buildings damage beyond CF collapse
+  hull-down, buildings damage beyond CF collapse
 - Weapon systems (deferred, TW pp.129-143, pp.303-305):
   - Cluster-roll modifier pipeline: Artemis IV FCS `+2` (needs FCS
     equipment + ammo linkage; ECM-jammable, TW p.130), Narc pod `+2`

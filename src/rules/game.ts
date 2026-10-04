@@ -4,6 +4,7 @@ import {
   cellAt,
   costToClimb,
   costToEnter,
+  groundLevel,
   type HexGrid,
   hasPartialCover,
   setCell,
@@ -1509,8 +1510,8 @@ export function executeMove(
       if (unit.moveMode === "run" && !minMove && waterDepth(cellAt(state, to).terrain) > 0) {
         throw new Error(`Running 'Mechs cannot enter water (${fmtHex(to)})`);
       }
-      const fromLevel = cellAt(state, cursor).level;
-      const toLevel = cellAt(state, to).level;
+      const fromLevel = groundLevel(state, cursor);
+      const toLevel = groundLevel(state, to);
       const delta = toLevel - fromLevel;
       const illegalChange = forward
         ? Math.abs(delta) > FORWARD_LEVEL_CHANGE_MAX
@@ -1523,11 +1524,7 @@ export function executeMove(
             : `Walking backward cannot change level (${fmtHex(to)} is ${slope})`,
         );
       }
-      {
-        const fromLevel = cellAt(state, cursor).level;
-        const toLevel = cellAt(state, to).level;
-        spent += costToEnter(cellAt(state, to).terrain) + costToClimb(fromLevel, toLevel);
-      }
+      spent += costToEnter(cellAt(state, to).terrain) + costToClimb(fromLevel, toLevel);
       directions.push(forward ? "forward" : "backward");
     }
 
@@ -1628,7 +1625,7 @@ export function executeMove(
       const forward = mv.isForwardStep(from, to, curFacing);
       curSpent +=
         costToEnter(cellAt(state, to).terrain) +
-        costToClimb(cellAt(state, from).level, cellAt(state, to).level);
+        costToClimb(groundLevel(state, from), groundLevel(state, to));
       curDirs.push(forward ? "forward" : "backward");
     }
     if (minMove) curSpent = Math.min(curSpent, minMoveCap);
@@ -2699,6 +2696,12 @@ export interface FallOptions {
   readonly seatbeltModifier: number | null;
   /** Halve the falling damage, rounding down (fall underwater, depth 2+). */
   readonly halved: boolean;
+  /**
+   * Water depth a 'Mech above the surface falls through to the bed (TW
+   * p.57): damage is two halved packets, surface impact (`levelsFallen`)
+   * plus bottom impact (this depth), each rounded down. Overrides `halved`.
+   */
+  readonly bottomDepth?: number;
   /** Underlying-terrain levels fallen (TW p.68): hex fell into minus hex
    *  the fall began from. Defaults to 0 (same-hex fall); callers that fall
    *  while moving across levels pass the drop. Jump-phase falls stay 0
@@ -2763,7 +2766,12 @@ export function applyFall(
 
   const levels = opts.levelsFallen ?? 0;
   let total = fallingDamageTotal(def.tonnage, levels);
-  if (opts.halved) total = Math.floor(total / 2);
+  if (opts.bottomDepth !== undefined && opts.bottomDepth > 0) {
+    total =
+      Math.floor(total / 2) + Math.floor(fallingDamageTotal(def.tonnage, opts.bottomDepth) / 2);
+  } else if (opts.halved) {
+    total = Math.floor(total / 2);
+  }
   const groups: Array<{ location: Location; damage: number }> = [];
   for (const amount of fallingDamageGroups(total)) {
     groups.push({ location: hitLocationForArc(dir.column, roll2D6(rng)), damage: amount });
@@ -4169,6 +4177,15 @@ function movementTerrainPsr(
   ): HexCoord | null => {
     const modifier = trigger + preModifier;
     const { lower, levels } = lowerLanding(hex);
+    // Walking in from above the surface (TW p.57): surface + bottom packets.
+    const bottom =
+      ground &&
+      cause.kind === "terrain" &&
+      cause.terrain === "water" &&
+      waterDepth(cellAt(state, from).terrain) < 2
+        ? waterDepth(cellAt(state, to).terrain)
+        : 0;
+    const bottomOpt = bottom > 0 ? { bottomDepth: bottom } : {};
     if (isShutdown(unit) || unit.unconscious) {
       const terrain = cellAt(state, lower).terrain;
       applyFall(
@@ -4181,6 +4198,7 @@ function movementTerrainPsr(
           seatbeltModifier: null,
           halved: waterHalvesFall(terrain, ground),
           levelsFallen: levels,
+          ...bottomOpt,
         },
         sink,
       );
@@ -4199,6 +4217,7 @@ function movementTerrainPsr(
         seatbeltModifier: modifier + Math.max(0, levels - 1),
         halved: waterHalvesFall(terrain, ground),
         levelsFallen: levels,
+        ...bottomOpt,
       },
       sink,
     );

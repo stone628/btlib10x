@@ -3,6 +3,7 @@ import {
   cellAt,
   costToClimb,
   costToEnter,
+  groundLevel,
   type HexGrid,
   MP_PER_FACING_CHANGE,
   waterDepth,
@@ -225,7 +226,8 @@ export function reachableLandings(
     if (jumping) return JUMP_MP_PER_HEX;
     const cellTo = cellAt(options.grid, to);
     return (
-      costToEnter(cellTo.terrain) + costToClimb(cellAt(options.grid, from).level, cellTo.level)
+      costToEnter(cellTo.terrain) +
+      costToClimb(groundLevel(options.grid, from), groundLevel(options.grid, to))
     );
   };
 
@@ -257,9 +259,10 @@ export function reachableLandings(
     prevTotal: number,
   ): MovePathStep => {
     const cellTo = cellAt(options.grid, to);
-    const cellFrom = cellAt(options.grid, from);
-    const climbLevels = jumping ? 0 : cellTo.level - cellFrom.level;
-    const climbCost = jumping ? 0 : costToClimb(cellFrom.level, cellTo.level);
+    const fromGround = groundLevel(options.grid, from);
+    const toGround = groundLevel(options.grid, to);
+    const climbLevels = jumping ? 0 : toGround - fromGround;
+    const climbCost = jumping ? 0 : costToClimb(fromGround, toGround);
     const terrain = cellTo.terrain;
     const terrainSurcharge = jumping ? 0 : costToEnter(terrain) - 1;
     return {
@@ -307,7 +310,7 @@ export function reachableLandings(
     if (jumping) return true;
     // TW p.53: running units cannot enter water; Minimum Movement (p.57) can.
     if (running && !minMove && waterDepth(cellAt(options.grid, hex).terrain) > 0) return false;
-    const delta = cellAt(options.grid, hex).level - cellAt(options.grid, from).level;
+    const delta = groundLevel(options.grid, hex) - groundLevel(options.grid, from);
     if (backward ? delta !== BACKWARD_LEVEL_CHANGE_MAX : Math.abs(delta) > FORWARD_LEVEL_CHANGE_MAX)
       return false;
     const occ = options.occupantTeam(hex);

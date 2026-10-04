@@ -118,7 +118,11 @@ clusters on the rolled column; levels fallen measure underlying terrain
 (hex fell into minus hex the fall began from — a fall across levels drops
 into the lower hex; jump-phase falls count 0 levels per errata). A fall
 underwater (depth 2+) halves the total, rounding down (TW errata, p.57 —
-an explicit exception to the usual round-up convention). The pilot then
+an explicit exception to the usual round-up convention). A 'Mech walking
+into water from above the surface takes two halved packets instead (TW p.57):
+surface impact `ceil(t/10) × (levels fallen + 1) / 2` plus bottom impact
+`ceil(t/10) × (depth + 1) / 2`, each rounded down; a jump landing in water
+falls `depth` levels, halved (TW p.53). The pilot then
 rolls a seatbelt PSR (failed roll's modifiers, +5 off a destroyed leg, +6
 off a destroyed gyro, +1 per level above 1 fallen) or takes 1 hit.
 

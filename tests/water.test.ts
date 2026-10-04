@@ -122,3 +122,68 @@ describe("prone 'Mech in depth 1 water blocks LOS (TW p.102)", () => {
     expect(losClear(state, to, from, state.wrecks, { from: true })).toBe(false);
   });
 });
+
+describe("water depth-change movement (TW p.48-49)", () => {
+  const moveEnf = (type: "water1" | "water2" | "water3", mode: "walk" = "walk") => {
+    const state = battle([{ col: 2, row: 3, type, level: 0 }]);
+    const events: GameEvent[] = [];
+    executeMove(state, "enf", mode, [{ kind: "enter", to: { col: 2, row: 3 } }], events, {
+      rng: scriptedRng(6, 6, 6, 6, 6, 6),
+    });
+    return events.find((e) => e.kind === "moved");
+  };
+
+  it("entering depth 1 costs 1 + 1 (water) + 1 level = 3 MP", () => {
+    expect(moveEnf("water1")).toMatchObject({ mpSpent: 3 });
+  });
+
+  it("depth 2 costs 1 + 3 + 2 levels = 6 MP (over a 5 MP walk budget)", () => {
+    const state = battle([{ col: 2, row: 3, type: "water2", level: 0 }]);
+    expect(() =>
+      executeMove(state, "enf", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], []),
+    ).toThrow(/budget/);
+  });
+
+  it("depth 3 cannot be entered from the surface (3 levels > 2)", () => {
+    const state = battle([{ col: 2, row: 3, type: "water3", level: 0 }]);
+    expect(() =>
+      executeMove(state, "enf", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], []),
+    ).toThrow(/at most 2 levels/);
+  });
+
+  it("wading from depth 2 to depth 3 changes one level", () => {
+    const state = battle([
+      { col: 2, row: 2, type: "water2", level: 0 },
+      { col: 2, row: 3, type: "water3", level: 0 },
+    ]);
+    const base = {
+      walking: 5,
+      running: 8,
+      jumping: 0,
+      prone: false,
+      grid: state,
+      team: 0,
+      occupantTeam: () => undefined,
+      mode: "walk" as const,
+    };
+    const landing = reachableLandings({ col: 2, row: 2 }, "s", base).find(
+      (l) => l.hex.col === 2 && l.hex.row === 3,
+    );
+    expect(landing?.path.at(-1)).toMatchObject({ climbLevels: 1, climbCost: 1 });
+  });
+});
+
+describe("fall into water (TW p.57)", () => {
+  it("walking in from above the surface takes surface + bottom packets", () => {
+    const state = battle([{ col: 2, row: 3, type: "water1", level: 0 }]);
+    const events: GameEvent[] = [];
+    // PSR 1+2 fails (needs 4); fall dir; location rolls; seatbelt.
+    executeMove(state, "enf", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], events, {
+      rng: scriptedRng(1, 2, 1, 3, 3, 3, 3, 3, 3),
+    });
+    // ENF-4R 50 t: floor(5 x 1 / 2) + floor(5 x 2 / 2) = 2 + 5 = 7.
+    expect(events).toContainEqual(
+      expect.objectContaining({ kind: "unitFell", unitId: "enf", totalDamage: 7 }),
+    );
+  });
+});

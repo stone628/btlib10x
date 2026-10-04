@@ -70,3 +70,13 @@ export function blocksTargeting(terrain: TerrainType): boolean {
 export function waterDepth(terrain: TerrainType): number {
   return terrainDef(terrain).waterDepth ?? 0;
 }
+
+/**
+ * Level a ground unit stands at in `hex`: the hex level, minus water depth
+ * (a water hex has a surface at its level and a bed `depth` levels below,
+ * TW p.32). Movement level changes (TW p.48-49) measure these.
+ */
+export function groundLevel(grid: HexGrid, hex: HexCoord): number {
+  const cell = cellAt(grid, hex);
+  return cell.level - waterDepth(cell.terrain);
+}

@@ -22,7 +22,11 @@ TypeScript library encapsulating BattleTech Total Warfare board game logic.
   targeting-restriction flags). Water depth 2+ (water2/water3) blocks LOS
   in/out; water1 grants partial cover. Buildings carry a structural
   factor and collapse to rubble when depleted. Still deferred: basements,
-  hull-down, multi-floor interiors, and water depth-change movement cost.
+  hull-down, multi-floor interiors, hull breach and underwater weapons.
+  Water movement is modeled: a water hex has a surface at its level and a
+  bed `depth` levels below, level changes cost 1 MP per level (max 2 per
+  hex), running into water is banned (Minimum Movement excepted), and jumps
+  obey TW p.53.
 - Damage model: each location holds a flat armor HP number; overflow transfers inward **only after** a location's armor is fully depleted (no per-dot tracking).
 - Partial cover (TW): a target in a water1/building hex with the attacker not
   higher gains +1 to-hit and leg hit-location rolls strike the cover (dealt
