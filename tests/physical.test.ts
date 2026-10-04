@@ -453,6 +453,7 @@ describe("club", () => {
       makeUnitInit("a", 1, { col: 5, row: 5 }, "n"),
       makeUnitInit("t", 2, { col: 5, row: 6 }, "s"), // behind (south)
     );
+    battle.units.a!.club = { kind: "limb", limb: "rightArm" };
     const decl: PhysicalAttackDecl = { type: "club", targetId: "t" };
     const result = validatePhysicalAttack(battle, "a", decl);
     expect(result.ok).toBe(false);
@@ -465,6 +466,7 @@ describe("club", () => {
       makeUnitInit("t", 2, { col: 6, row: 4 }, "sw"), // directly ahead (NE)
     );
     const attacker = battle.units.a!;
+    attacker.club = { kind: "limb", limb: "rightArm" };
     attacker.critSlotsDestroyed.leftArm![0] = true; // left shoulder
     const decl: PhysicalAttackDecl = { type: "club", targetId: "t" };
     const result = validatePhysicalAttack(battle, "a", decl);
@@ -478,6 +480,7 @@ describe("club", () => {
       makeUnitInit("t", 2, { col: 6, row: 4 }, "sw"), // directly ahead (NE)
     );
     const attacker = battle.units.a!;
+    attacker.club = { kind: "limb", limb: "rightArm" };
     attacker.critSlotsDestroyed.rightArm![3] = true; // hand actuator
     const decl: PhysicalAttackDecl = { type: "club", targetId: "t" };
     const result = validatePhysicalAttack(battle, "a", decl);
@@ -922,14 +925,18 @@ describe("twist-aware physical arcs (TW pp. 98-99)", () => {
   it("punch works untwisted but club needs a left twist into the front arc", () => {
     const battle = northVsSouthwest();
     // Southwest of a north-facing 'Mech is the leftSide template arc: only
-    // the left arm may punch there (TW p.145).
+    // the left arm may punch there (TW p.145). No club carried → punches valid.
     expect(
       validatePhysicalAttack(battle, "a", { type: "punch", targetId: "t", limb: "leftArm" }).ok,
     ).toBe(true);
     expect(
       validatePhysicalAttack(battle, "a", { type: "punch", targetId: "t", limb: "rightArm" }).ok,
     ).toBe(false);
+    // Club needs held club. Add one and test twist/arc logic.
+    battle.units.a!.club = { kind: "limb", limb: "rightArm" };
+    // Club without twist: target in leftSide arc → false
     expect(validatePhysicalAttack(battle, "a", { type: "club", targetId: "t" }).ok).toBe(false);
+    // Club with leftSide twist: target now in front arc → true
     expect(
       validatePhysicalAttack(battle, "a", { type: "club", targetId: "t" }, "leftSide").ok,
     ).toBe(true);
@@ -1117,6 +1124,7 @@ describe("physical attack critical hits", () => {
       makeUnitInit("a", 1, { col: 5, row: 5 }, "ne"),
       makeUnitInit("t", 2, { col: 6, row: 5 }, "sw"),
     );
+    battle.units.a!.club = { kind: "limb", limb: "rightArm" };
     const resolution = resolvePhysicalAttack(battle, "a", { type: "club", targetId: "t" }, rng);
 
     expect(resolution.hit).toBe(true);
@@ -1265,20 +1273,28 @@ describe("physical legality (TW pp. 145-151, 171)", () => {
     const higher = makeTerrainBattle({ col: 5, row: 5 }, "ne", { col: 6, row: 5 }, [
       { col: 6, row: 5, type: "clear", level: 1 },
     ]);
+    // Punch: no club carried → valid
     expect(
       validatePhysicalAttack(higher, "a", { type: "punch", targetId: "t", limb: "rightArm" }).ok,
     ).toBe(true);
+    // Club: needs held club
+    higher.units.a!.club = { kind: "limb", limb: "rightArm" };
     expect(validatePhysicalAttack(higher, "a", { type: "club", targetId: "t" }).ok).toBe(true);
+    // Kick denied vs standing higher
     expect(
       validatePhysicalAttack(higher, "a", { type: "kick", targetId: "t", limb: "rightLeg" }).ok,
     ).toBe(false);
 
+    // Standing target one level lower: kick and club allowed, punch denied
     const lower = makeTerrainBattle({ col: 5, row: 5 }, "ne", { col: 6, row: 5 }, [
       { col: 5, row: 5, type: "clear", level: 1 },
     ]);
+    // Kick: no club needed → valid
     expect(
       validatePhysicalAttack(lower, "a", { type: "kick", targetId: "t", limb: "rightLeg" }).ok,
     ).toBe(true);
+    // Club: needs held club
+    lower.units.a!.club = { kind: "limb", limb: "rightArm" };
     expect(validatePhysicalAttack(lower, "a", { type: "club", targetId: "t" }).ok).toBe(true);
     expect(
       validatePhysicalAttack(lower, "a", { type: "punch", targetId: "t", limb: "rightArm" }).ok,
@@ -1307,20 +1323,27 @@ describe("physical legality (TW pp. 145-151, 171)", () => {
     expect(
       validatePhysicalAttack(same, "a", { type: "punch", targetId: "t", limb: "rightArm" }).ok,
     ).toBe(false);
+    // Club requires held club (not provided) → false
     expect(validatePhysicalAttack(same, "a", { type: "club", targetId: "t" }).ok).toBe(false);
 
+    // Prone target one level higher: punch and club allowed, kick denied
     const higher = makeTerrainBattle({ col: 5, row: 5 }, "ne", { col: 6, row: 5 }, [
       { col: 6, row: 5, type: "clear", level: 1 },
     ]);
     higher.units.t!.prone = true;
+    // Punch: no club carried → valid
     expect(
       validatePhysicalAttack(higher, "a", { type: "punch", targetId: "t", limb: "rightArm" }).ok,
     ).toBe(true);
+    // Club: needs held club
+    higher.units.a!.club = { kind: "limb", limb: "rightArm" };
     expect(validatePhysicalAttack(higher, "a", { type: "club", targetId: "t" }).ok).toBe(true);
+    // Kick denied vs prone higher
     expect(
       validatePhysicalAttack(higher, "a", { type: "kick", targetId: "t", limb: "rightLeg" }).ok,
     ).toBe(false);
 
+    // Prone target one level lower: nothing allowed
     const lower = makeTerrainBattle({ col: 5, row: 5 }, "ne", { col: 6, row: 5 }, [
       { col: 5, row: 5, type: "clear", level: 1 },
     ]);
@@ -1482,10 +1505,10 @@ describe("physical hit-location columns", () => {
       bearingExact(target.position, attacker.position)!,
     );
     const arc = defenderArcChoice(dir.arc, dir.altArc);
-    let calls = 0;
+    let _calls = 0;
     const rng: Rng = {
       d6: () => {
-        calls++;
+        _calls++;
         return 6;
       },
       snapshot: () => "",

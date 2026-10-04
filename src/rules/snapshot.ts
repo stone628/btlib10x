@@ -32,9 +32,17 @@
 
 import type { HexCell, HexCoord, Location, WreckState } from "../core/types";
 import type { AmmoBins } from "./ammo";
-import type { BuildingState } from "./building";
+import type { BuildingState, BuildingType } from "./building";
 import type { UnitDamageState } from "./damage";
-import type { BattleState, Phase, UnitState, WeaponAttackDecl } from "./game";
+import type {
+  BattleState,
+  ClubGroundToken,
+  ClubPickupDecl,
+  HeldClub,
+  Phase,
+  UnitState,
+  WeaponAttackDecl,
+} from "./game";
 import type { PhysicalAttackDecl } from "./physical";
 
 /** Detached deep copy of a `BattleState`. Treat as immutable. */
@@ -92,6 +100,18 @@ function clonePhysicalAttackDecl(decl: PhysicalAttackDecl): PhysicalAttackDecl {
   return { ...decl };
 }
 
+function cloneHeldClub(club: HeldClub | null): HeldClub | null {
+  return club === null ? null : { ...club };
+}
+
+function clonePickupDecl(decl: ClubPickupDecl | null): ClubPickupDecl | null {
+  return decl === null ? null : { ...decl };
+}
+
+function cloneGroundTokens(tokens: readonly ClubGroundToken[]): ClubGroundToken[] {
+  return tokens.map((t) => ({ ...t }));
+}
+
 function cloneBuildingState(building: BuildingState): BuildingState {
   return { cf: building.cf, type: building.type };
 }
@@ -122,6 +142,9 @@ function cloneUnitState(unit: UnitState): UnitState {
     critSlotsDestroyed: cloneCritTable(unit.critSlotsDestroyed),
     destroyedWeapons: [...unit.destroyedWeapons],
     blownOffArms: [...unit.blownOffArms],
+    blownOffLegs: [...unit.blownOffLegs],
+    club: cloneHeldClub(unit.club),
+    declaredPickup: clonePickupDecl(unit.declaredPickup),
     moveMode: unit.moveMode,
     movesThisTurn: [...unit.movesThisTurn],
     jumpedThisTurn: unit.jumpedThisTurn,
@@ -169,7 +192,9 @@ function isBattleSnapshotObject(value: unknown): value is BattleSnapshot {
     (value.actorQueue === null || Array.isArray(value.actorQueue)) &&
     !("events" in value) &&
     isRecord(value.buildings) &&
-    isRecord(value.wrecks)
+    isRecord(value.wrecks) &&
+    isRecord(value.clubs) &&
+    isRecord(value.rubbleOrigin)
   );
 }
 
@@ -212,6 +237,10 @@ function cloneBattleState(state: BattleState): BattleSnapshot {
   for (const [key, wreck] of Object.entries(state.wrecks)) {
     wrecks[key] = cloneWreckState(wreck);
   }
+  const clubs: Record<string, ClubGroundToken[]> = {};
+  for (const [key, tokens] of Object.entries(state.clubs)) {
+    clubs[key] = cloneGroundTokens(tokens);
+  }
   return {
     turn: state.turn,
     phase: state.phase,
@@ -225,6 +254,8 @@ function cloneBattleState(state: BattleState): BattleSnapshot {
     actorQueue: state.actorQueue === null ? null : [...state.actorQueue],
     buildings,
     wrecks,
+    clubs,
+    rubbleOrigin: { ...state.rubbleOrigin },
   };
 }
 
@@ -255,6 +286,14 @@ function loadClonedBattleState(state: BattleState, snapshot: BattleSnapshot): vo
   for (const [key, wreck] of Object.entries(snapshot.wrecks)) {
     state.wrecks[key] = cloneWreckState(wreck);
   }
+  for (const key of Object.keys(state.clubs)) delete state.clubs[key];
+  for (const [key, tokens] of Object.entries(snapshot.clubs)) {
+    state.clubs[key] = cloneGroundTokens(tokens);
+  }
+  for (const key of Object.keys(state.rubbleOrigin)) delete state.rubbleOrigin[key];
+  for (const [key, origin] of Object.entries(snapshot.rubbleOrigin)) {
+    state.rubbleOrigin[key] = origin as BuildingType;
+  }
 }
 
 /** Detached deep copy of one unit. Treat result as immutable. */
@@ -281,6 +320,10 @@ export function loadUnitState(unit: UnitState, snapshot: UnitSnapshot): void {
   unit.jammedWeapons = next.jammedWeapons;
   unit.critSlotsDestroyed = next.critSlotsDestroyed;
   unit.destroyedWeapons = next.destroyedWeapons;
+  unit.blownOffArms = [...next.blownOffArms];
+  unit.blownOffLegs = [...next.blownOffLegs];
+  unit.club = cloneHeldClub(next.club);
+  unit.declaredPickup = clonePickupDecl(next.declaredPickup);
   unit.moveMode = next.moveMode;
   unit.movesThisTurn = next.movesThisTurn;
   unit.jumpedThisTurn = next.jumpedThisTurn;
@@ -289,6 +332,7 @@ export function loadUnitState(unit: UnitState, snapshot: UnitSnapshot): void {
   unit.heatPending = next.heatPending;
   unit.shutdown = next.shutdown;
   unit.declaredWeaponAttacks = next.declaredWeaponAttacks;
+  unit.declaredPhysicalAttacks = next.declaredPhysicalAttacks.map((d) => ({ ...d }));
   unit.firedTargetId = next.firedTargetId;
   unit.passedAttacks = next.passedAttacks;
   unit.destroyed = next.destroyed;

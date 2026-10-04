@@ -130,8 +130,14 @@ export const en = {
     "queue a push against the enemy in the hex directly ahead (TW p.147): no damage, displaces the target",
   "cmd.push.arg.targetId": "enemy unit id in the hex directly ahead",
   "cmd.club.help":
-    "queue a club attack against an adjacent enemy in the forward arc (TW p.145; club acquisition not yet tracked)",
+    "queue a club attack against an adjacent enemy in the forward arc (TW p.145; requires a held club — see 'pickup')",
   "cmd.club.arg.targetId": "enemy unit id in the forward arc",
+  "cmd.pickup.help":
+    "declare picking up a club from this hex (TW p.146): severed limb, uprooted tree in woods, or girder from rubble. Exclusive — no attacks this turn; the club lands in the physical sub-pass",
+  "cmd.pickup.arg.source":
+    "club source: limb|tree|girder (default: limb token first, then terrain source)",
+  "cmd.drop.help":
+    "drop the held club first in this declaration, freeing the hands for arm weapons, punch, strike, or push below (a dropped limb stays in the hex)",
   "cmd.strike.help":
     "queue a physical-weapon strike against an adjacent enemy (TW p.146) with the mounted hatchet, sword, or retractable blade",
   "cmd.strike.arg.targetId": "enemy unit id in the forward or mounting-arm side arc",
@@ -160,6 +166,8 @@ export const en = {
   "ok.cancelled": "cancelled",
   "ok.fireQueuedBatch": "queued {target} <- weapons {weapons}",
   "ok.physical.queued": "queued {type} -> {target}",
+  "ok.pickup.queued": "queued pickup ({source}) — no attacks this turn",
+  "ok.drop.queued": "queued drop ({kind}) — hands free for the rest of the declaration",
   "ok.twistSet": "{id}: torso twisted to {dir}",
   "ok.twistAlready": "{id}: torso is already facing {dir}",
   "ammo.current": "ammo policy: {policy}",
@@ -271,6 +279,12 @@ export const en = {
   "err.physical.strikeConflict": "cannot fire {limb} weapons while striking with that arm",
   "err.physical.legConflict": "cannot fire {limb} weapons while kicking with that leg",
   "err.physical.noArmWeapons": "cannot fire arm-mounted weapons while pushing or clubbing",
+  "err.pickup.exclusive": "pickup allows no weapon or physical attacks this turn",
+  "err.pickup.duplicate": "pickup already queued",
+  "err.pickup.badSource": "unknown club source '{source}' (limb, tree, or girder)",
+  "err.pickup.invalid": "pickup rejected: {reason}",
+  "err.drop.duplicate": "drop already queued",
+  "err.drop.noClub": "unit holds no club to drop",
   "warn.physical.armWeapons": "note: {limb} weapons cannot fire while punching with that arm",
   "warn.physical.strikeArmWeapons": "note: {limb} weapons cannot fire while striking with that arm",
   "warn.physical.legWeapons": "note: {limb} weapons cannot fire while kicking with that leg",
@@ -322,6 +336,8 @@ export const en = {
   "attackStatus.weapon": "  #{weaponIndex} {weaponName} -> {targetId}{suffix}",
   "attackStatus.physical": "  {type} ({limb}) -> {targetId}",
   "attackStatus.physicalStrike": "  strike {weapon} ({limb}) -> {targetId}",
+  "attackStatus.pickup": "  pickup ({source}) — no attacks this turn",
+  "attackStatus.drop": "  drop club first — hands free below",
 
   // fire suggestion
   "fireSuggestion.header": "possible targets for {id}:",
@@ -509,6 +525,13 @@ export const en = {
   "log.buildingCollapsed": "Building at {hex} collapses to rubble",
   "log.buildingDamaged": "Building at {hex} takes {damage} structural damage (CF {cf})",
   "log.collapseDamage": "[{id}] takes {damage} damage to {loc} from building collapse at {hex}",
+  "log.pickupDeclared": "[{id}] reaches for a {source} club (no attacks this turn)",
+  "log.clubPickedUp": "[{id}] picks up a {kind} club",
+  "log.girderSearchFailed": "[{id}] searches the rubble (2D6 = {roll} < {required}) — no girder",
+  "log.clubPickupFailed": "[{id}] fails to pick up a club ({reason})",
+  "log.clubDropped": "[{id}] drops its {kind} club at {hex}",
+  "log.clubDroppedReturned": "[{id}] drops its {kind} club at {hex} — the limb stays in the hex",
+  "log.clubConsumed": "[{id}]'s {kind} club breaks on the hit",
   "log.heatMove": "[{id}] generates {heat} movement heat (base {base}, turn generated {total})",
   "log.heatWeapon": "[{id}] generates {heat} weapon heat (base {base}, turn generated {total})",
   "log.heatEngineCrit":
