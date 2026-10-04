@@ -400,7 +400,7 @@ export function queuePhysicalAttack(
 
 /** Queue a club pickup declaration (TW p.146). Exclusive with all weapon
  *  and physical declarations — the pickup turn allows no attacks at all. */
-export function queuePickup(s: Session, source?: ClubKind): string[] {
+export function queuePickup(s: Session, source?: ClubKind, tokenIndex?: number): string[] {
   const { battle, context } = requireBattleAndContext(s);
   const unit = requireUnit(battle, context.actorId);
   const _def = mechDefFor(unit);
@@ -418,17 +418,23 @@ export function queuePickup(s: Session, source?: ClubKind): string[] {
     throw new Error(i18n("err.pickup.invalid", { reason: "already holds a club" }));
 
   // Validate the source against the engine (checks hex environment, etc.)
-  const result = validatePickup(battle, unit.id, source !== undefined ? { source } : {});
+  const result = validatePickup(battle, unit.id, {
+    ...(source !== undefined ? { source } : {}),
+    ...(tokenIndex !== undefined ? { tokenIndex } : {}),
+  });
   if (!result.ok) throw new Error(i18n("err.pickup.invalid", { reason: result.reason }));
 
-  context.pickupDecl = { source: result.source };
+  context.pickupDecl =
+    result.token === undefined
+      ? { source: result.source }
+      : { source: result.source, token: result.token };
   context.fireCandidate = null;
   return [i18n("ok.pickup.queued", { source: result.source })];
 }
 
 /** Queue a club drop at the start of this declaration. Hands are freed
  *  for the rest of the declaration (arm weapons, punch, strike, push).
- *  A dropped limb stays in the hex; trees and girders vanish. */
+ *  The dropped club stays intact in the hex. */
 export function queueDrop(s: Session): string[] {
   const { battle, context } = requireBattleAndContext(s);
   const unit = requireUnit(battle, context.actorId);

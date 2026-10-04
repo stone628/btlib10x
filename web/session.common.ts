@@ -1535,7 +1535,7 @@ function handleSessionGameEvent(
     case "clubDropped":
       idLines(
         e.unitId,
-        i18n(e.returned ? "log.clubDroppedReturned" : "log.clubDropped", {
+        i18n(e.cause !== undefined ? "log.clubReleased" : "log.clubDroppedReturned", {
           id: e.unitId,
           kind: e.clubKind,
           hex: `${e.col},${e.row}`,
