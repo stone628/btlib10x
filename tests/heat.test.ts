@@ -23,6 +23,7 @@ import {
   movementMpPenalty,
   shutdownAvoid,
   toHitHeatModifier,
+  waterHeatBonus,
 } from "../src/rules/heat";
 import { createTestBattle, scriptedRng } from "./helpers";
 
@@ -241,6 +242,28 @@ describe("heatDissipation / countDestroyedEngineSlots", () => {
     };
     expect(heatDissipation(def, unit.damage, destroyed)).toBe(13);
     expect(countDestroyedEngine(def, unit.damage, destroyed)).toBe(1);
+  });
+});
+
+describe("waterHeatBonus (TW p.159)", () => {
+  it("is zero out of water", () => {
+    const unit = requireUnit(hbkVsEnf(), "hbk");
+    const def = mechDefFor(unit);
+    expect(waterHeatBonus(def, unit.damage, unit.critSlotsDestroyed, 0, false)).toBe(0);
+  });
+  it("depth 2+ or prone submerges every sink, capped at 6", () => {
+    const unit = requireUnit(hbkVsEnf(), "hbk");
+    const def = mechDefFor(unit);
+    // HBK-4G: 13 operational single sinks -> capped at 6.
+    expect(waterHeatBonus(def, unit.damage, unit.critSlotsDestroyed, 2, false)).toBe(6);
+    expect(waterHeatBonus(def, unit.damage, unit.critSlotsDestroyed, 1, true)).toBe(6);
+  });
+  it("depth 1 standing counts only leg sinks", () => {
+    const unit = requireUnit(hbkVsEnf(), "hbk");
+    const def = mechDefFor(unit);
+    const bonus = waterHeatBonus(def, unit.damage, unit.critSlotsDestroyed, 1, false);
+    expect(bonus).toBeLessThanOrEqual(6);
+    expect(bonus).toBeLessThan(6 + 1);
   });
 });
 

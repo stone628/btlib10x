@@ -7,6 +7,7 @@ import {
   type HexGrid,
   hasPartialCover,
   setCell,
+  waterDepth,
 } from "../core/terrain";
 import {
   type ArmLocation,
@@ -100,6 +101,7 @@ import {
   shutdownAvoid,
   shutdownAvoidWithThreshold,
   toHitHeatModifier,
+  waterHeatBonus,
 } from "./heat";
 import { hitLocation, hitLocationForArc, punchHitLocation } from "./hitlocation";
 import { rollInitiative } from "./initiative";
@@ -3861,7 +3863,16 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
 
     // Dissipate (TW p.159 net update; applies to all units including
     // shut-down — heat sinks keep working).
-    const capacity = heatDissipation(def, unit.damage, unit.critSlotsDestroyed);
+    const terrainHere = cellAt(state, unit.position).terrain;
+    const capacity =
+      heatDissipation(def, unit.damage, unit.critSlotsDestroyed) +
+      waterHeatBonus(
+        def,
+        unit.damage,
+        unit.critSlotsDestroyed,
+        waterDepth(terrainHere),
+        unit.prone,
+      );
     const capacityMax = heatDissipationMax(def);
     const dissipated = Math.min(capacity, unit.heat);
     const endHeat = unit.heat - dissipated;
