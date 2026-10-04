@@ -482,6 +482,108 @@ describe("club", () => {
 });
 
 // ---------------------------------------------------------------------------
+// To-hit modifiers (Attack Modifiers Table, TW pp. 117–118)
+// ---------------------------------------------------------------------------
+
+describe("physical to-hit modifiers", () => {
+  function adjacentPair(
+    terrain: {
+      col: number;
+      row: number;
+      type: "clear" | "lightWoods" | "rubble" | "water1";
+    }[] = [],
+  ): BattleState {
+    return createBattle(
+      {
+        name: "test",
+        width: 20,
+        height: 20,
+        terrain: terrain.map((t) => ({ col: t.col, row: t.row, type: t.type })),
+        legends: [],
+      },
+      [
+        makeUnitInit("a", 1, { col: 5, row: 5 }, "ne"),
+        makeUnitInit("t", 2, { col: 6, row: 5 }, "sw"),
+      ],
+    );
+  }
+
+  function punchMods(battle: BattleState) {
+    return computePhysicalToHit(battle, battle.units.a!, battle.units.t!, "punch", "rightArm");
+  }
+
+  function fillMoves(battle: BattleState, hexes: number) {
+    battle.units.t!.movesThisTurn = new Array<"forward" | "backward">(hexes).fill("forward");
+  }
+
+  it("attacker prone is cumulative with movement (run + prone = +4)", () => {
+    const battle = adjacentPair();
+    battle.units.a!.moveMode = "run";
+    battle.units.a!.prone = true;
+    const mods = punchMods(battle);
+    expect(mods.attackerMoveMod).toBe(2);
+    expect(mods.proneMod).toBe(2);
+    expect(mods.total).toBe(5 + 0 + 2 + 0 + 0 + 0 + 2);
+  });
+
+  it("target prone is cumulative with the movement band (adjacent −2)", () => {
+    const battle = adjacentPair();
+    fillMoves(battle, 5); // +2 band
+    battle.units.t!.prone = true;
+    expect(punchMods(battle).targetMoveMod).toBe(0);
+  });
+
+  it("immobile target applies −4 cumulatively", () => {
+    const battle = adjacentPair();
+    battle.units.t!.unconscious = true;
+    expect(punchMods(battle).targetMoveMod).toBe(-4);
+  });
+
+  it("jumped target adds +1", () => {
+    const battle = adjacentPair();
+    battle.units.t!.jumpedThisTurn = true;
+    expect(punchMods(battle).targetMoveMod).toBe(1);
+  });
+
+  it("extended movement bands reach +5/+6 like weapon attacks", () => {
+    const battle20 = adjacentPair();
+    fillMoves(battle20, 20);
+    expect(punchMods(battle20).targetMoveMod).toBe(5);
+    const battle26 = adjacentPair();
+    fillMoves(battle26, 26);
+    expect(punchMods(battle26).targetMoveMod).toBe(6);
+  });
+
+  it("target in light woods applies +1 terrain", () => {
+    const battle = adjacentPair([{ col: 6, row: 5, type: "lightWoods" }]);
+    expect(punchMods(battle).terrainMod).toBe(1);
+  });
+
+  it("target in water1 applies +1 partial cover", () => {
+    const battle = adjacentPair([{ col: 6, row: 5, type: "water1" }]);
+    expect(punchMods(battle).terrainMod).toBe(1);
+  });
+
+  it("rubble grants no to-hit modifier", () => {
+    const battle = adjacentPair([{ col: 6, row: 5, type: "rubble" }]);
+    expect(punchMods(battle).terrainMod).toBe(0);
+  });
+
+  it("kick leg actuators: +2 per upper/lower, +1 per foot", () => {
+    const upper = adjacentPair();
+    upper.units.a!.critSlotsDestroyed.rightLeg![1] = true; // upperLegActuator
+    expect(
+      computePhysicalToHit(upper, upper.units.a!, upper.units.t!, "kick", "rightLeg").actuatorMod,
+    ).toBe(2);
+    const foot = adjacentPair();
+    foot.units.a!.critSlotsDestroyed.rightLeg![3] = true; // footActuator
+    expect(
+      computePhysicalToHit(foot, foot.units.a!, foot.units.t!, "kick", "rightLeg").actuatorMod,
+    ).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Hit location tables
 // ---------------------------------------------------------------------------
 

@@ -11,8 +11,8 @@
  */
 
 import { roll2D6, rollD6 } from "../core/dice";
-import { bearingExact, isAdjacent, neighbor } from "../core/hex";
-import { cellAt } from "../core/terrain";
+import { bearingExact, hexDistance, isAdjacent, neighbor } from "../core/hex";
+import { cellAt, terrainTargetMod } from "../core/terrain";
 import type { ArmLocation, HexCoord, Location, Rng } from "../core/types";
 import { isArm } from "../core/types";
 import { mechDefFor } from "../data/index";
@@ -34,10 +34,13 @@ import {
   type UnitDamageState,
 } from "./damage";
 import type { BattleState, UnitState } from "./game";
-import { isUnitRemoved } from "./game";
+import { isImmobile, isUnitRemoved, partialCoverMod } from "./game";
 import { isTsmActive } from "./heat";
 import { hitLocationForArc, punchHitLocation } from "./hitlocation";
+import { losWoodsPointsBetween } from "./los";
+import { attackerMovementModifier, TARGET_IMMOBILE_MOD, targetMovementModifier } from "./movement";
 import { preexistingDamageModifier, rollPilotingCheck } from "./piloting";
+import { PRONE_ATTACKER_MOD, proneTargetModifier } from "./tohit";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -62,15 +65,17 @@ export interface PhysicalModifiers {
   readonly base: number;
   /** Attack-type modifier (punch +0, kick −2, push −1, club −1, strike per weapon). */
   readonly attackMod: number;
-  /** Attacker movement modifier (same as weapon attacks). */
+  /** Attacker movement modifier (same band as weapon attacks). */
   readonly attackerMoveMod: number;
-  /** Target movement modifier. */
+  /** Target movement modifier: hex band + jump extra, folding prone
+   *  (−2 adjacent/+1 otherwise) and immobile (−4) cumulatively. */
   readonly targetMoveMod: number;
-  /** Terrain modifier on target. */
+  /** Terrain modifier on target: target-hex woods + intervening woods
+   *  + partial cover (same as weapon attacks). */
   readonly terrainMod: number;
   /** Actuator damage modifier on attacker. */
   readonly actuatorMod: number;
-  /** Prone attacker modifier. */
+  /** Prone attacker modifier (+2, cumulative with movement). */
   readonly proneMod: number;
   /** Total to-hit number. */
   readonly total: number;
@@ -172,7 +177,9 @@ export const PHYSICAL_MIN_TOHIT = 2;
  *
  * Base = piloting skill. Add attack-type modifier + all standard
  * weapon-attack modifiers (attacker movement, target movement, actuator
- * damage, terrain) except heat and sensor modifiers.
+ * damage, terrain) except heat and sensor modifiers. Attacker movement,
+ * target movement, and terrain reuse the weapon-attack helpers so both
+ * paths follow the Attack Modifiers Table (TW pp. 117–118) cumulatively.
  */
 export function computePhysicalToHit(
   battle: BattleState,
@@ -185,20 +192,31 @@ export function computePhysicalToHit(
   const base = attacker.piloting;
   const attackMod = attackTypeModifier(type, weapon);
 
-  // Attacker movement modifier (same as weapon attacks)
-  const attackerMoveMod = physicalAttackerMoveMod(attacker);
+  // Attacker movement (TW pp. 113, 117–118): same band as weapon attacks,
+  // plus +2 when prone — cumulative (ran then dropped prone is +4).
+  const attackerMoveMod = attackerMovementModifier(attacker.moveMode ?? "standStill");
 
-  // Target movement modifier
-  const targetMoveMod = physicalTargetMoveMod(target);
+  // Target movement (TW pp. 109, 113, 117–118): full hex band + jump extra,
+  // plus prone (−2 adjacent, +1 otherwise) and immobile (−4) — cumulative.
+  const distance = hexDistance(attacker.position, target.position);
+  const targetMoveMod =
+    targetMovementModifier(target.movesThisTurn.length, target.jumpedThisTurn, undefined) +
+    (target.prone ? proneTargetModifier(distance) : 0) +
+    (isImmobile(target) ? TARGET_IMMOBILE_MOD : 0);
 
-  // Terrain modifier on target hex
-  const terrainMod = physicalTerrainMod(battle, target);
+  // Terrain (TW pp. 107–108, 117–118): target-hex woods + intervening woods
+  // + partial cover — same as weapon attacks.
+  const targetTerrain = cellAt(battle, target.position).terrain;
+  const terrainMod =
+    terrainTargetMod(targetTerrain) +
+    losWoodsPointsBetween(battle, attacker.position, target.position) +
+    partialCoverMod(battle, attacker, target);
 
   // Actuator damage modifier
   const actuatorMod = physicalActuatorMod(attacker, type, limb, weapon);
 
-  // Prone attacker modifier
-  const proneMod = attacker.prone ? 2 : 0;
+  // Prone attacker modifier (TW p. 113), cumulative with movement above.
+  const proneMod = attacker.prone ? PRONE_ATTACKER_MOD : 0;
 
   const total =
     base + attackMod + attackerMoveMod + targetMoveMod + terrainMod + actuatorMod + proneMod;
@@ -231,64 +249,9 @@ function attackTypeModifier(type: PhysicalAttackType, weapon?: PhysicalWeaponNam
 }
 
 /**
- * Attacker movement modifier for physical attacks (TW p. 113).
- * Same as weapon attacks: standStill 0, walk +1, run +2, jump +3, prone +2.
- */
-function physicalAttackerMoveMod(attacker: UnitState): number {
-  if (attacker.prone) return 2;
-  switch (attacker.moveMode) {
-    case "standStill":
-      return 0;
-    case "walk":
-      return 1;
-    case "run":
-      return 2;
-    case "jump":
-      return 3;
-    default:
-      return 0;
-  }
-}
-
-/**
- * Target movement modifier for physical attacks (TW p. 109).
- * Same band as weapon attacks.
- */
-function physicalTargetMoveMod(target: UnitState): number {
-  if (target.prone) return -2;
-  const hexes = target.movesThisTurn.length;
-  if (hexes === 0) return 0;
-  if (hexes <= 2) return 0;
-  if (hexes <= 4) return 1;
-  if (hexes <= 6) return 2;
-  if (hexes <= 9) return 3;
-  return 4;
-}
-
-/**
- * Terrain modifier for physical attacks (TW p. 112).
- * Light woods +1, heavy woods +2, rubble +1, rough +1.
- */
-function physicalTerrainMod(battle: BattleState, target: UnitState): number {
-  const cell = cellAt(battle, target.position);
-  switch (cell.terrain) {
-    case "lightWoods":
-      return 1;
-    case "heavyWoods":
-      return 2;
-    case "rubble":
-      return 1;
-    case "rough":
-      return 1;
-    default:
-      return 0;
-  }
-}
-
-/**
  * Actuator damage modifier for physical attacks (TW pp. 145–147).
  * Punch: +2 per damaged upper/lower arm actuator, +1 if no hand.
- * Kick: +1 per damaged upper/lower leg actuator.
+ * Kick: +2 per damaged upper/lower leg actuator, +1 per damaged foot.
  * Push: +2 per damaged shoulder.
  * Club: +2 per damaged upper/lower arm actuator.
  * Strike: like punch but in the mounting arm only; a damaged hand adds +1
@@ -317,11 +280,12 @@ function physicalActuatorMod(
     case "kick": {
       if (!limb) return 0;
       if (limb !== "leftLeg" && limb !== "rightLeg") return 0;
-      // Leg actuators: upperLegActuator, lowerLegActuator, footActuator
+      // Leg actuators: +2 per damaged upper/lower (TW p.117–118
+      // physical-only row), +1 per damaged foot.
       let mod = 0;
       const structs = destroyedStructuresIn(limb, def, damage, destroyed);
-      if (structs.includes("upperLegActuator")) mod += 1;
-      if (structs.includes("lowerLegActuator")) mod += 1;
+      if (structs.includes("upperLegActuator")) mod += 2;
+      if (structs.includes("lowerLegActuator")) mod += 2;
       if (structs.includes("footActuator")) mod += 1;
       return mod;
     }
