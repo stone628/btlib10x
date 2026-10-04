@@ -2,7 +2,9 @@ import {
   type BattleState,
   FACINGS,
   type Facing,
+  type HexCoord,
   type HexGrid,
+  hexKey,
   isUnitRemoved,
   type MapDef,
   type TerrainHexDef,
@@ -242,8 +244,8 @@ function fitCell(text: string, width: number): string {
 }
 
 /** 1-based `XXYY` coordinate label (two fixed digit pairs). */
-function coordLabel(col: number, row: number): string {
-  return `${String(col).padStart(2, "0")}${String(row).padStart(2, "0")}`;
+function coordLabel(coord: HexCoord): string {
+  return `${String(coord.col).padStart(2, "0")}${String(coord.row).padStart(2, "0")}`;
 }
 
 /** Canvas of painted characters plus per-cell style hints. */
@@ -303,8 +305,7 @@ function stampEdge(canvas: Canvas, x: number, y: number, ch: EdgeGlyph): void {
 
 /** Paint-position context for one hex within the model's crop. */
 interface HexContext {
-  readonly col: number;
-  readonly row: number;
+  readonly coord: HexCoord;
   readonly x: number;
   readonly y: number;
   readonly key: string;
@@ -328,10 +329,10 @@ export function* eachHex(model: BoardModel): Generator<HexContext, void, undefin
     for (let row = model.anchorRow; row <= rows; row++) {
       const x = (col - model.anchorCol) * COL_STRIDE;
       const y = baseY + (row - model.anchorRow) * ROW_STRIDE;
-      const key = `${col},${row}`;
+      const coord: HexCoord = { col, row };
+      const key = hexKey(coord);
       yield {
-        col,
-        row,
+        coord,
         x,
         y,
         key,
@@ -373,13 +374,13 @@ function drawCanvas(model: BoardModel): Canvas {
 
 /** Layer 1 — one hex's walls, coordinate labels, and shared/outer edges. */
 function drawHexGrid(canvas: Canvas, hex: HexContext): void {
-  const { col, row, x, y, style, lastRow } = hex;
+  const { coord, x, y, style, lastRow } = hex;
   stampEdge(canvas, x, y, GRID_GLYPHS.edgeTop);
   stampInto(
     canvas,
     x + 1,
     y + 1,
-    `${GRID_GLYPHS.edgeNW}${coordLabel(col, row)}${GRID_GLYPHS.edgeNE}`,
+    `${GRID_GLYPHS.edgeNW}${coordLabel(coord)}${GRID_GLYPHS.edgeNE}`,
     style,
   );
   stampInto(
@@ -592,9 +593,9 @@ function deriveElevations(grid: HexGrid): Record<string, number> {
  */
 function deriveMapMarks(terrain: readonly TerrainHexDef[]): Record<string, string> {
   const m: Record<string, string> = {};
-  for (const { col, row, type } of terrain) {
-    const glyph = TERRAIN_GLYPHS[type];
-    if (glyph !== undefined) m[`${col},${row}`] = glyph;
+  for (const t of terrain) {
+    const glyph = TERRAIN_GLYPHS[t.type];
+    if (glyph !== undefined) m[hexKey(t)] = glyph;
   }
   return m;
 }
@@ -605,9 +606,9 @@ function deriveMapMarks(terrain: readonly TerrainHexDef[]): Record<string, strin
  */
 function deriveMapStyles(terrain: readonly TerrainHexDef[]): Record<string, CharStyle> {
   const m: Record<string, CharStyle> = {};
-  for (const { col, row, type } of terrain) {
-    const st = TERRAIN_STYLES[type];
-    if (st !== undefined) m[`${col},${row}`] = st;
+  for (const t of terrain) {
+    const st = TERRAIN_STYLES[t.type];
+    if (st !== undefined) m[hexKey(t)] = st;
   }
   return m;
 }
@@ -675,7 +676,7 @@ export function battleModel(
   if (overlay !== undefined) Object.assign(cells, overlay);
   for (const unit of Object.values(state.units)) {
     if (isUnitRemoved(unit)) continue;
-    const key = `${unit.position.col},${unit.position.row}`;
+    const key = hexKey(unit.position);
     cells[key] = unit.id;
     facings[key] = unit.facing;
   }
@@ -685,7 +686,7 @@ export function battleModel(
   if (styles === undefined) {
     for (const unit of Object.values(state.units)) {
       if (isUnitRemoved(unit)) continue;
-      const key = `${unit.position.col},${unit.position.row}`;
+      const key = hexKey(unit.position);
       const team = TEAM_STYLES[unit.team];
       if (team !== undefined) autoCells[key] = team;
     }
@@ -727,7 +728,7 @@ export function createBoardModel(info: BoardRenderInfo): BoardModel {
   for (const key of info.clubHexes ?? []) clubs[key] = true;
   if (info.units !== null) {
     for (const unit of info.units) {
-      const key = `${unit.position.col},${unit.position.row}`;
+      const key = hexKey(unit.position);
       cells[key] = unit.ejected ? `-${unit.id}` : unit.id;
       facings[key] = unit.facing;
       const team = TEAM_STYLES[unit.team];
@@ -770,7 +771,7 @@ export function createBoardModel(info: BoardRenderInfo): BoardModel {
   const edgeStyles: Record<string, CharStyle> = {};
   const team = TEAM_STYLES[info.reachable.team]!;
   for (const l of info.reachable.revealed) {
-    const key = `${l.hex.col},${l.hex.row}`;
+    const key = hexKey(l.hex);
     edgeStyles[`${key}:${l.facing}`] = team;
     if (cells[key] === undefined) {
       cells[key] = REACHABLE_MARKER;

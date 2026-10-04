@@ -29,6 +29,7 @@ export {
   isArm,
   isLimb,
   isTorso,
+  msgHex,
   oppositeFacing,
   rotateFacing,
   shoulderOf,

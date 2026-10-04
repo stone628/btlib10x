@@ -6,7 +6,13 @@ import {
   screeningPoints,
   waterDepth,
 } from "../core/terrain";
-import { type HexCoord, isWoodsTerrain, type TerrainType, type WreckState } from "../core/types";
+import {
+  type HexCoord,
+  hexKey,
+  isWoodsTerrain,
+  type TerrainType,
+  type WreckState,
+} from "../core/types";
 import { buildingTypeOf } from "./building";
 
 /**
@@ -164,7 +170,7 @@ export function losBlockedByWreck(
 ): boolean {
   if (wrecks === undefined) return false;
   for (const h of interveningHexes(from, to)) {
-    const w = wrecks[`${h.col},${h.row}`];
+    const w = wrecks[hexKey(h)];
     if (w !== undefined && w.level >= 2) return true;
   }
   return false;
