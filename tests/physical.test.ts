@@ -21,6 +21,7 @@ import {
   kickHitLocation,
   type PhysicalAttackDecl,
   physicalDamage,
+  resolveMutualPush,
   resolvePhysicalAttack,
   validatePhysicalAttack,
 } from "../src/rules/physical";
@@ -225,7 +226,7 @@ describe("kick", () => {
     expect(resolution.kickTargetPsrPending).toBe(true);
   });
 
-  it("defers the attacker PSR on a miss", () => {
+  it("defers the attacker PSR on a miss (and no target PSR on a miss)", () => {
     const battle = makeBattle(
       makeUnitInit("a", 1, { col: 5, row: 5 }, "ne"),
       makeUnitInit("t", 2, { col: 6, row: 5 }, "sw"),
@@ -237,6 +238,8 @@ describe("kick", () => {
     expect(resolution.attackerPsr).toBeNull();
     expect(resolution.attackerFalls).toBe(false);
     expect(resolution.kickAttackerPsrPending).toBe(true);
+    // TW p.147: a missed kick was never a kick — the target rolls nothing.
+    expect(resolution.kickTargetPsrPending).not.toBe(true);
   });
 
   it("marks the target PSR pending (preexisting damage applies at sweep time)", () => {
@@ -314,7 +317,7 @@ describe("push", () => {
     expect(result.reason).toContain("prone");
   });
 
-  it("displaces target and advances attacker on hit", () => {
+  it("displaces target and advances attacker on hit (defender-only PSR)", () => {
     const battle = makeBattle(
       makeUnitInit("a", 1, { col: 5, row: 5 }, "ne"),
       makeUnitInit("t", 2, { col: 6, row: 4 }, "sw"), // NE front hex
@@ -326,9 +329,91 @@ describe("push", () => {
     expect(resolution.attackerDisplacedTo).not.toBeNull();
     // Attacker moves into target's old hex
     expect(resolution.attackerDisplacedTo).toEqual({ col: 6, row: 4 });
-    // Both sides roll PSRs against their own piloting (5 + 0 preexisting).
+    // Only the defender rolls (TW p.147); the attacker never rolls on a
+    // normal single push.
     expect(resolution.targetPsr!.target).toBe(5);
-    expect(resolution.attackerPsr!.target).toBe(5);
+    expect(resolution.attackerPsr).toBeNull();
+    expect(resolution.attackerFalls).toBe(false);
+  });
+
+  it("rolls no PSR on a missed push", () => {
+    const battle = makeBattle(
+      makeUnitInit("a", 1, { col: 5, row: 5 }, "ne"),
+      makeUnitInit("t", 2, { col: 6, row: 4 }, "sw"), // NE front hex
+    );
+    const decl: PhysicalAttackDecl = { type: "push", targetId: "t" };
+    const resolution = resolvePhysicalAttack(battle, "a", decl, LOW_RNG);
+    expect(resolution.hit).toBe(false);
+    expect(resolution.targetPsr).toBeNull();
+    expect(resolution.attackerPsr).toBeNull();
+    expect(resolution.targetDisplacedTo).toBeNull();
+    expect(resolution.attackerDisplacedTo).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Mutual push (TW p.147)
+// ---------------------------------------------------------------------------
+
+describe("mutual push", () => {
+  /** Face-to-face pair: each stands in the hex directly ahead of the other. */
+  function faceToFace(): BattleState {
+    return makeBattle(
+      makeUnitInit("a", 1, { col: 5, row: 5 }, "ne"),
+      makeUnitInit("t", 2, { col: 6, row: 4 }, "sw"),
+    );
+  }
+
+  /** Scripted d6 sequence for resolveMutualPush dice order. */
+  function seqRng(values: number[]): Rng {
+    let i = 0;
+    return {
+      d6: () => values[i++ % values.length]!,
+      snapshot: () => "",
+      load: () => {},
+    };
+  }
+
+  it("both succeed: neither moves and both roll (defender-only each)", () => {
+    const battle = faceToFace();
+    expect(validatePhysicalAttack(battle, "a", { type: "push", targetId: "t" }).ok).toBe(true);
+    expect(validatePhysicalAttack(battle, "t", { type: "push", targetId: "a" }).ok).toBe(true);
+    const [resA, resB] = resolveMutualPush(battle, "a", "t", HIGH_RNG);
+    expect(resA.hit).toBe(true);
+    expect(resB.hit).toBe(true);
+    expect(resA.targetDisplacedTo).toBeNull();
+    expect(resA.attackerDisplacedTo).toBeNull();
+    expect(resB.targetDisplacedTo).toBeNull();
+    expect(resB.attackerDisplacedTo).toBeNull();
+    // Each resolution carries its defender's PSR; attackers never roll.
+    expect(resA.targetPsr).not.toBeNull();
+    expect(resB.targetPsr).not.toBeNull();
+    expect(resA.attackerPsr).toBeNull();
+    expect(resB.attackerPsr).toBeNull();
+  });
+
+  it("both miss: nothing happens and nobody rolls", () => {
+    const battle = faceToFace();
+    const [resA, resB] = resolveMutualPush(battle, "a", "t", LOW_RNG);
+    expect(resA.hit).toBe(false);
+    expect(resB.hit).toBe(false);
+    expect(resA.targetPsr).toBeNull();
+    expect(resB.targetPsr).toBeNull();
+    expect(resA.targetDisplacedTo).toBeNull();
+    expect(resB.targetDisplacedTo).toBeNull();
+  });
+
+  it("one succeeds: resolved normally with displacement + defender PSR", () => {
+    const battle = faceToFace();
+    // A to-hit 12 (hit), B to-hit 2 (miss), then B's defender PSR 12 (pass).
+    const [resA, resB] = resolveMutualPush(battle, "a", "t", seqRng([6, 6, 1, 1, 6, 6]));
+    expect(resA.hit).toBe(true);
+    expect(resB.hit).toBe(false);
+    expect(resA.targetDisplacedTo).not.toBeNull();
+    expect(resA.attackerDisplacedTo).toEqual({ col: 6, row: 4 });
+    expect(resA.targetPsr).not.toBeNull();
+    expect(resA.attackerPsr).toBeNull();
+    expect(resB.targetPsr).toBeNull();
   });
 });
 

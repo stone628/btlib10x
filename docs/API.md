@@ -433,7 +433,8 @@ The numeric tuning constants (`PUNCH_ATTACK_MOD`, `KICK_ATTACK_MOD`,
 `PUSH_ATTACK_MOD`, `CLUB_ATTACK_MOD`, `PUNCH_DAMAGE_PER_TONS`,
 `KICK_DAMAGE_PER_TONS`, `CLUB_DAMAGE_PER_TONS`, `PHYSICAL_MIN_TOHIT`,
 `PHYSICAL_MAX_TOHIT`) and the resolvers (`computePhysicalToHit`,
-`physicalDamage`, `kickHitLocation`, `resolvePhysicalAttack`) are
+`physicalDamage`, `kickHitLocation`, `resolvePhysicalAttack`,
+`resolveMutualPush`) are
 engine-internal (source-module import only), as are the arm-actuator helpers
 (`ARM_ACTUATOR_WEAPON_MOD`, `SHOULDER_WEAPON_MOD`, `armWeaponToHitModifier`,
 `countArmActuators`, `ArmActuatorCounts`).
