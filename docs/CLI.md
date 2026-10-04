@@ -372,8 +372,16 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   jump unaffected) and doubled punch/kick/club/hatchet/sword/blade damage.
   Declarations stay merged (weapons + physicals in one attack activation) for
   playability — TW declares physicals in their own phase.
-- **Deferred** — charge / DFA (movement-phase declarations), club
-  acquisition (blown-off limbs, trees, girders), the remaining nine
+- **Club acquisition** — `pickup [limb|tree|girder] [n]` takes a severed
+  limb, dropped club, uprooted tree (woods) or girder (rubble 2D6 7+/6+/5+)
+  and is exclusive with every attack that turn (TW p.146); no PSR, MP or heat.
+  A lone token in the hex is taken automatically; with several, pick one by
+  number or the command errors. `drop` leaves the club intact in the hex
+  (any kind), where any 'Mech may re-take it with no roll. A fall, a drop to
+  prone, or leaving play also drops the club in the hex (TW silent; house
+  ruling). A severed limb that is ever picked up loses its `salvageable`
+  flag (`blownOffLimbs`; house rule, `salvageableSeveredLimbs`).
+- **Deferred** — charge / DFA (movement-phase declarations), the remaining nine
   physical-weapon types (industrial tools), the optional
   Punch/Kick-table election (+4) and level-difference auto-swap,
   critical hits from physical damage, domino effect /

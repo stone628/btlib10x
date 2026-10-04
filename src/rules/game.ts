@@ -14,7 +14,6 @@ import {
   type HexCell,
   type HexCoord,
   isArm,
-  isLeg,
   isTorso,
   isWoodsTerrain,
   type LimbLocation,
@@ -226,20 +225,34 @@ export type ClubKind = "limb" | "tree" | "girder";
  *  trees and girders carry no per-item identity (trees are consumed on a
  *  successful hit, girders are reusable indefinitely). */
 export type HeldClub =
-  | { readonly kind: "limb"; readonly limb: LimbLocation }
+  | { readonly kind: "limb"; readonly limb: LimbLocation; readonly ownerId: string }
   | { readonly kind: "tree" }
   | { readonly kind: "girder" };
 
-/** Pickup declaration: which source to take. Omitted resolves by precedence
- *  (limb token, then terrain source) at declaration time. */
+/** Pickup declaration: which source to take. Omitted resolves at
+ *  declaration time: the hex's single club token, else terrain (tree, then
+ *  girder). `tokenIndex` picks one of several tokens in the hex; `token`
+ *  is the resolved token (set by `validatePickup`, never by callers). */
 export interface ClubPickupDecl {
   readonly source?: ClubKind;
+  readonly tokenIndex?: number;
+  readonly token?: ClubGroundToken;
 }
 
-/** A severed limb lying in a hex, available for pickup (TW p.146). Trees
- *  and girders are sourced from the terrain itself and leave no token. */
-export interface ClubGroundToken {
+/** A club lying in a hex, available for pickup (TW p.146): a severed limb
+ *  (owner recorded so a pickup can void its salvage), or a dropped tree /
+ *  girder, which stays intact and is re-taken without a roll. Fresh trees
+ *  and girders still in terrain leave no token. */
+export type ClubGroundToken =
+  | { readonly kind: "limb"; readonly limb: LimbLocation; readonly ownerId: string }
+  | { readonly kind: "tree" }
+  | { readonly kind: "girder" };
+
+/** A severed arm or leg. `salvageable` starts true and drops to false the
+ *  first time the limb is picked up (house rule; TW has no salvage values). */
+export interface SeveredLimb {
   readonly limb: LimbLocation;
+  salvageable: boolean;
 }
 
 /** Girder-search target numbers by rubble origin (TW p.146): 7+ from
@@ -353,12 +366,9 @@ export interface UnitState extends MechModelHolder {
   /** Weapon indices destroyed by a critical hit (in addition to destroyed
    *  locations, which the canFireFromLocation check already covers). */
   destroyedWeapons: number[];
-  /** Arm locations blown off by critical hits (TW p.124, 145). Tracked for
-   *  displacement/fall logic and salvage. */
-  blownOffArms: Location[];
-  /** Leg locations blown off by critical hits (TW p.124). Tracked alongside
-   *  arms so a severed leg can be left in the hex as a club (TW p.146). */
-  blownOffLegs: Location[];
+  /** Arms and legs blown off by critical hits (TW p.124, 145), with their
+   *  salvage flag. A severed limb can be picked up as a club (TW p.146). */
+  blownOffLimbs: SeveredLimb[];
   /** Club currently carried (TW p.146). While held, both hands are occupied:
    *  punch, strike, and push declarations plus arm-mounted weapon fire are
    *  rejected until the club is dropped or consumed. */
@@ -464,14 +474,16 @@ export type GameEvent =
     }
   | {
       /** Held club dropped as the first act of an attack declaration: hands
-       *  are free for the rest of the declaration. A dropped limb returns
-       *  to the hex (`returned: true`); trees and girders vanish. */
+       *  are free for the rest of the declaration. Every kind stays intact
+       *  in the hex as a token (`returned: true`). `cause` marks
+       *  involuntary drops (fall, or the holder leaving play). */
       readonly kind: "clubDropped";
       readonly unitId: string;
       readonly clubKind: ClubKind;
       readonly col: number;
       readonly row: number;
       readonly returned: boolean;
+      readonly cause?: "fall" | "removed";
     }
   | {
       /** Uprooted tree consumed by a successful club hit (TW p.146: good
@@ -881,8 +893,14 @@ export function wreckAt(state: BattleState, hex: HexCoord): WreckState | undefin
 /** Mark a unit as killed and removed, returning the paired events. The first
  *  kill wins: an already-removed unit (e.g. ejected or pilot-killed) is left
  *  untouched so the recorded reason stays the earliest cause. */
-function markUnitDestroyed(unit: UnitState, reason: DestroyedReason, sink: GameEvent[]): void {
+function markUnitDestroyed(
+  state: BattleState,
+  unit: UnitState,
+  reason: DestroyedReason,
+  sink: GameEvent[],
+): void {
   if (isUnitRemoved(unit)) return;
+  releaseClub(state, unit, "removed", sink);
   unit.destroyed = reason;
   unit.removed = "destroyed";
   sink.push({
@@ -901,6 +919,7 @@ function markUnitDestroyed(unit: UnitState, reason: DestroyedReason, sink: GameE
  *  with reason "pilotKilled". */
 function removePilotKilled(state: BattleState, unit: UnitState, sink: GameEvent[]): void {
   if (isUnitRemoved(unit)) return;
+  releaseClub(state, unit, "removed", sink);
   unit.removed = "pilotKilled";
   state.wrecks[`${unit.position.col},${unit.position.row}`] = {
     unitId: unit.id,
@@ -980,8 +999,7 @@ export function createBattle(
       jammedWeapons: [],
       critSlotsDestroyed: initCritDestroyed(def),
       destroyedWeapons: [],
-      blownOffArms: [],
-      blownOffLegs: [],
+      blownOffLimbs: [],
       club: null,
       declaredPickup: null,
       moveMode: null,
@@ -1104,12 +1122,11 @@ export function damageBuildingAt(
 }
 
 /**
- * Record severed limbs on `unit` (deduped into `blownOffArms` /
- * `blownOffLegs`) and leave one ground token per limb in the unit's
- * current hex (TW p.146: a blown-off arm or leg stays where it was lost).
- * Non-limb locations are ignored. Deposit is idempotent per (unit, limb):
- * the record arrays guard against double tokens when several damage
- * applications report the same severing.
+ * Record severed limbs on `unit` (deduped into `blownOffLimbs`) and leave
+ * one ground token per limb in the unit's current hex (TW p.146: a
+ * blown-off arm or leg stays where it was lost). Deposit is idempotent per
+ * (unit, limb): the record guards against double tokens when several
+ * damage applications report the same severing.
  */
 export function recordSeveredLimbs(
   state: BattleState,
@@ -1117,17 +1134,10 @@ export function recordSeveredLimbs(
   limbs: readonly LimbLocation[],
 ): void {
   for (const limb of limbs) {
-    if (isArm(limb)) {
-      if (unit.blownOffArms.includes(limb)) continue;
-      unit.blownOffArms.push(limb);
-    } else if (isLeg(limb)) {
-      if (unit.blownOffLegs.includes(limb)) continue;
-      unit.blownOffLegs.push(limb);
-    } else {
-      continue;
-    }
+    if (unit.blownOffLimbs.some((l) => l.limb === limb)) continue;
+    unit.blownOffLimbs.push({ limb, salvageable: true });
     const key = `${unit.position.col},${unit.position.row}`;
-    state.clubs[key] = [...(state.clubs[key] ?? []), { limb }];
+    state.clubs[key] = [...(state.clubs[key] ?? []), { kind: "limb", limb, ownerId: unit.id }];
   }
 }
 
@@ -1145,38 +1155,81 @@ function recordCritSeveredLimbs(
   }
 }
 
-/**
- * Resolve which club source `unit` would pick up in its current hex (TW
- * p.146): an explicitly requested source when available, else precedence
- * limb token, then terrain (wooded hex tree, eligible rubble girder).
- * Returns null when the hex offers nothing (or not the requested kind).
- */
-export function pickupSourceInHex(state: BattleState, unit: UnitState): ClubKind | null {
-  return pickupSourceInHexAs(state, unit, undefined);
+function hexKey(hex: HexCoord): string {
+  return `${hex.col},${hex.row}`;
 }
 
-function pickupSourceInHexAs(
-  state: BattleState,
-  unit: UnitState,
-  want: ClubKind | undefined,
-): ClubKind | null {
-  const key = `${unit.position.col},${unit.position.row}`;
+/** Club tokens lying in `unit`'s hex (all kinds), in deposit order. */
+export function clubTokensInHex(state: BattleState, unit: UnitState): readonly ClubGroundToken[] {
+  return state.clubs[hexKey(unit.position)] ?? [];
+}
+
+function describeToken(token: ClubGroundToken): string {
+  return token.kind === "limb" ? `limb ${token.limb} of ${token.ownerId}` : token.kind;
+}
+
+function sameToken(a: ClubGroundToken, b: ClubGroundToken): boolean {
+  if (a.kind !== b.kind) return false;
+  return a.kind !== "limb" || (b.kind === "limb" && a.limb === b.limb && a.ownerId === b.ownerId);
+}
+
+type PickupChoice =
+  | { ok: true; source: ClubKind; token?: ClubGroundToken }
+  | { ok: false; reason: string };
+
+/**
+ * Resolve which club `unit` would pick up in its current hex (TW p.146).
+ * Tokens (severed limbs, dropped trees/girders) come first; with exactly one
+ * matching token it is taken, with several the caller must pick one by
+ * `tokenIndex` (index into the hex's token list) or the pick is an error.
+ * With no matching token the terrain fallback applies: a tree in a wooded
+ * hex, else a girder in eligible rubble (or the explicitly requested one).
+ */
+function choosePickup(state: BattleState, unit: UnitState, decl: ClubPickupDecl): PickupChoice {
+  const tokens = clubTokensInHex(state, unit);
+  const matching = tokens
+    .map((token, index) => ({ token, index }))
+    .filter((t) => decl.source === undefined || t.token.kind === decl.source);
+  if (decl.tokenIndex !== undefined) {
+    const picked = tokens[decl.tokenIndex - 1];
+    if (picked === undefined || (decl.source !== undefined && picked.kind !== decl.source)) {
+      return { ok: false, reason: `no club token ${decl.tokenIndex} in this hex` };
+    }
+    return { ok: true, source: picked.kind, token: picked };
+  }
+  if (matching.length > 1) {
+    const list = matching.map((t) => `${t.index + 1}: ${describeToken(t.token)}`).join(", ");
+    return { ok: false, reason: `several clubs lie in this hex (${list}); choose one by number` };
+  }
+  const only = matching[0];
+  if (only !== undefined) return { ok: true, source: only.token.kind, token: only.token };
+
   const cell = cellAt(state, unit.position);
-  const hasLimb = (state.clubs[key] ?? []).length > 0;
   const hasTree = isWoodsTerrain(cell.terrain);
-  const origin = state.rubbleOrigin[key];
+  const origin = state.rubbleOrigin[hexKey(unit.position)];
   const hasGirder =
     cell.terrain === "rubble" &&
     (origin === "medium" || origin === "heavy" || origin === "hardened");
-  if (want !== undefined) {
-    if (want === "limb") return hasLimb ? "limb" : null;
-    if (want === "tree") return hasTree ? "tree" : null;
-    return hasGirder ? "girder" : null;
+  if (decl.source === "limb") return { ok: false, reason: "no limb club available in this hex" };
+  if ((decl.source === undefined || decl.source === "tree") && hasTree) {
+    return { ok: true, source: "tree" };
   }
-  if (hasLimb) return "limb";
-  if (hasTree) return "tree";
-  if (hasGirder) return "girder";
-  return null;
+  if ((decl.source === undefined || decl.source === "girder") && hasGirder) {
+    return { ok: true, source: "girder" };
+  }
+  return decl.source !== undefined
+    ? { ok: false, reason: `no ${decl.source} club available in this hex` }
+    : { ok: false, reason: "no club available in this hex (no limb, woods, or girder rubble)" };
+}
+
+/**
+ * Resolve which club source `unit` would pick up in its current hex (TW
+ * p.146); see `choosePickup`. Returns null when the hex offers nothing or
+ * the choice is ambiguous.
+ */
+export function pickupSourceInHex(state: BattleState, unit: UnitState): ClubKind | null {
+  const choice = choosePickup(state, unit, {});
+  return choice.ok ? choice.source : null;
 }
 
 export function rollInitiativePhase(state: BattleState, rng: Rng, sink: GameEvent[]): void {
@@ -1994,8 +2047,8 @@ export function declareAttacks(
   const volley = validateAttacksImpl(state, unitId, weaponDecls, physicalDecls, options);
   const def = mechDefFor(unit);
   // Drop rides first in the declaration: hands are free for everything
-  // queued below (validated as such above). A dropped limb returns to the
-  // hex immediately, visible to later declarers; trees/girders vanish.
+  // queued below (validated as such above). The club stays intact in the
+  // hex immediately, visible to later declarers.
   if (options.dropClub === true) {
     if (unit.club === null) throw new Error(`${unitId} holds no club to drop`);
     applyClubDrop(state, unit, sink);
@@ -2065,7 +2118,7 @@ export function validatePickup(
   state: BattleState,
   unitId: string,
   decl: ClubPickupDecl = {},
-): { ok: true; source: ClubKind } | { ok: false; reason: string } {
+): { ok: true; source: ClubKind; token?: ClubGroundToken } | { ok: false; reason: string } {
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) return { ok: false, reason: `${unitId} is removed from play` };
   if (isShutdown(unit)) return { ok: false, reason: `${unitId} is shut down and cannot pick up` };
@@ -2080,13 +2133,11 @@ export function validatePickup(
   if (unit.club !== null) {
     return { ok: false, reason: `${unitId} already holds a club (drop it first)` };
   }
-  const source = pickupSourceInHexAs(state, unit, decl.source);
-  if (source === null) {
-    return decl.source !== undefined
-      ? { ok: false, reason: `no ${decl.source} club available in this hex` }
-      : { ok: false, reason: "no club available in this hex (no limb, woods, or girder rubble)" };
-  }
-  return { ok: true, source };
+  const choice = choosePickup(state, unit, decl);
+  if (!choice.ok) return choice;
+  return choice.token === undefined
+    ? { ok: true, source: choice.source }
+    : { ok: true, source: choice.source, token: choice.token };
 }
 
 /**
@@ -2106,7 +2157,10 @@ export function declarePickup(
   const result = validatePickup(state, unitId, decl);
   if (!result.ok) throw new Error(result.reason);
   const unit = requireUnit(state, unitId);
-  unit.declaredPickup = { source: result.source };
+  unit.declaredPickup =
+    result.token === undefined
+      ? { source: result.source }
+      : { source: result.source, token: result.token };
   sink.push({ kind: "pickupDeclared", unitId, source: result.source });
   if (!state.actedThisPhase.includes(unitId)) state.actedThisPhase.push(unitId);
 }
@@ -2132,30 +2186,44 @@ function resolveClubPickup(
     fail("attackerDown");
     return;
   }
-  const source = pickupSourceInHexAs(state, unit, decl.source);
-  if (source === null) {
-    fail("noSource");
-    return;
-  }
-  if (source === "limb") {
-    const key = `${unit.position.col},${unit.position.row}`;
-    const tokens = state.clubs[key] ?? [];
-    const token = tokens[0];
+  const tokens = clubTokensInHex(state, unit);
+  // A declared token must still lie here (another unit may have taken it);
+  // otherwise re-resolve from the hex as declared.
+  let token: ClubGroundToken | undefined;
+  if (decl.token !== undefined) {
+    token = tokens.find((t) => sameToken(t, decl.token as ClubGroundToken));
     if (token === undefined) {
       fail("noSource");
       return;
     }
-    state.clubs[key] = tokens.slice(1);
-    unit.club = { kind: "limb", limb: token.limb };
-    sink.push({ kind: "clubPickedUp", unitId: unit.id, success: true, clubKind: "limb" });
+  }
+  const choice =
+    token !== undefined
+      ? { ok: true as const, source: token.kind, token }
+      : choosePickup(state, unit, decl.source === undefined ? {} : { source: decl.source });
+  if (!choice.ok) {
+    fail("noSource");
     return;
   }
-  if (source === "tree") {
+  const key = hexKey(unit.position);
+  if (choice.token !== undefined) {
+    const picked = choice.token;
+    const at = tokens.findIndex((t) => sameToken(t, picked));
+    state.clubs[key] = tokens.filter((_, i) => i !== at);
+    if (picked.kind === "limb") {
+      unit.club = { kind: "limb", limb: picked.limb, ownerId: picked.ownerId };
+      voidLimbSalvage(state, picked);
+    } else {
+      unit.club = { kind: picked.kind };
+    }
+    sink.push({ kind: "clubPickedUp", unitId: unit.id, success: true, clubKind: picked.kind });
+    return;
+  }
+  if (choice.source === "tree") {
     unit.club = { kind: "tree" };
     sink.push({ kind: "clubPickedUp", unitId: unit.id, success: true, clubKind: "tree" });
     return;
   }
-  const key = `${unit.position.col},${unit.position.row}`;
   const required = GIRDER_SEARCH_TARGET[state.rubbleOrigin[key] ?? ""] ?? null;
   if (required === null) {
     fail("noSource");
@@ -2185,29 +2253,75 @@ function resolveClubPickup(
   }
 }
 
+/** Mark a picked-up severed limb as no longer salvageable (house rule). */
+function voidLimbSalvage(state: BattleState, token: ClubGroundToken & { kind: "limb" }): void {
+  const owner = state.units[token.ownerId];
+  if (owner === undefined) return;
+  for (const entry of owner.blownOffLimbs) if (entry.limb === token.limb) entry.salvageable = false;
+}
+
 /**
- * Apply a declared club drop: clear the held club, return a dropped limb
- * to the hex (visible to later declarers), and emit `clubDropped`. Trees
- * and girders vanish. Caller guarantees `unit.club !== null`.
+ * Severed limbs of `unitId` still worth salvaging: never picked up (the
+ * `salvageable` flag in `blownOffLimbs`) and holding at
+ * least one weapon crit slot that survived. A slot counts as destroyed
+ * when its flag is set OR its location is destroyed — plain-damage
+ * destruction leaves slot flags unset by design, but blow-off preserves them.
+ * Blow-off itself does not destroy the limb's contents (TW p.145).
  */
-function applyClubDrop(state: BattleState, unit: UnitState, sink: GameEvent[]): void {
+export function salvageableSeveredLimbs(state: BattleState, unitId: string): LimbLocation[] {
+  const unit = requireUnit(state, unitId);
+  const def = mechDefFor(unit);
+  const out: LimbLocation[] = [];
+  for (const { limb, salvageable } of unit.blownOffLimbs) {
+    if (!salvageable) continue;
+    const slots = def.critSlots[limb];
+    const flags = unit.critSlotsDestroyed[limb];
+    if (slots.some((slot, i) => slot.kind === "weapon" && flags[i] !== true)) out.push(limb);
+  }
+  return out;
+}
+
+/**
+ * Apply a club drop: clear the held club, leave it intact as a token in the
+ * hex (any kind; a later pickup of a token is automatic), and emit
+ * `clubDropped`. Caller guarantees `unit.club !== null`. `cause` marks
+ * involuntary drops (a fall, or the holder leaving play).
+ */
+function applyClubDrop(
+  state: BattleState,
+  unit: UnitState,
+  sink: GameEvent[],
+  cause?: "fall" | "removed",
+): void {
   const held = unit.club;
   if (held === null) throw new Error(`${unit.id} holds no club to drop`);
   unit.club = null;
-  let returned = false;
-  if (held.kind === "limb") {
-    const key = `${unit.position.col},${unit.position.row}`;
-    state.clubs[key] = [...(state.clubs[key] ?? []), { limb: held.limb }];
-    returned = true;
-  }
+  const key = hexKey(unit.position);
+  const token: ClubGroundToken =
+    held.kind === "limb"
+      ? { kind: "limb", limb: held.limb, ownerId: held.ownerId }
+      : { kind: held.kind };
+  state.clubs[key] = [...(state.clubs[key] ?? []), token];
   sink.push({
     kind: "clubDropped",
     unitId: unit.id,
     clubKind: held.kind,
     col: unit.position.col,
     row: unit.position.row,
-    returned,
+    returned: true,
+    ...(cause === undefined ? {} : { cause }),
   });
+}
+
+/** Involuntary release (TW silent): a unit that falls, drops prone, or
+ *  leaves play lets go of its club in the hex where it ends up. */
+function releaseClub(
+  state: BattleState,
+  unit: UnitState,
+  cause: "fall" | "removed",
+  sink: GameEvent[],
+): void {
+  if (unit.club !== null) applyClubDrop(state, unit, sink, cause);
 }
 
 /**
@@ -2544,7 +2658,7 @@ function applyDamageGroups(
     isUnitAvailable(unit) &&
     (isUnitDestroyed(unit.damage) || crits.some((c) => c.killedReason !== null))
   ) {
-    markUnitDestroyed(unit, destroyedReasonFor(unit.damage, crits), sink);
+    markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage, crits), sink);
   }
   return crits;
 }
@@ -2620,6 +2734,7 @@ export function applyFall(
   const dir = rollFallDirection(rng);
   unit.facing = facingAfterFall(unit.facing, dir.shift);
   unit.prone = true;
+  releaseClub(state, unit, "fall", sink);
 
   const levels = opts.levelsFallen ?? 0;
   let total = fallingDamageTotal(def.tonnage, levels);
@@ -2668,7 +2783,7 @@ export function applyFall(
     if (!r.success) applyPilotHits(state, unit, FALL_PILOT_HITS, "fall", rng, sink);
   }
   if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
-    markUnitDestroyed(unit, destroyedReasonFor(unit.damage), sink);
+    markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), sink);
   }
 }
 
@@ -3088,7 +3203,12 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       isUnitAvailable(unit) &&
       (isUnitDestroyed(unit.damage) || targetKilledReason[unit.id] !== undefined)
     ) {
-      markUnitDestroyed(unit, targetKilledReason[unit.id] ?? destroyedReasonFor(unit.damage), sink);
+      markUnitDestroyed(
+        state,
+        unit,
+        targetKilledReason[unit.id] ?? destroyedReasonFor(unit.damage),
+        sink,
+      );
     }
   }
 
@@ -3124,7 +3244,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   }
   for (const unit of Object.values(state.units)) {
     if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
-      markUnitDestroyed(unit, destroyedReasonFor(unit.damage), sink);
+      markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), sink);
     }
   }
 
@@ -3140,7 +3260,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   resolvePhasePiloting(state, rng, weaponBefore, sink);
   for (const unit of Object.values(state.units)) {
     if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
-      markUnitDestroyed(unit, destroyedReasonFor(unit.damage), sink);
+      markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), sink);
     }
   }
 
@@ -3571,7 +3691,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   for (const unit of Object.values(state.units)) {
     if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
       const physCrits = physicalAttackCrits[unit.id];
-      markUnitDestroyed(unit, destroyedReasonFor(unit.damage, physCrits), sink);
+      markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage, physCrits), sink);
     }
   }
 
@@ -3648,7 +3768,7 @@ export function* advancePhaseGen(state: BattleState, rng: Rng): Generator<GameEv
       const sink: GameEvent[] = [];
       for (const unit of Object.values(state.units)) {
         if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
-          markUnitDestroyed(unit, destroyedReasonFor(unit.damage), sink);
+          markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), sink);
         }
       }
       // The end phase starts with heat resolution: engine crit heat,
@@ -3915,7 +4035,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
             // "pilotKilled" rather than the explosion's structural kill.
             applyPilotHits(state, unit, AMMO_BLAST_PILOT_HITS, "ammoExplosion", rng, sink);
             if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
-              markUnitDestroyed(unit, destroyedReasonFor(unit.damage), sink);
+              markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), sink);
             }
           }
         }
@@ -4250,6 +4370,7 @@ export function dropProne(
   unit.jumpedThisTurn = false;
   unit.mpSpent = DROP_MP_COST;
   unit.prone = true;
+  releaseClub(state, unit, "fall", sink);
   state.actedThisPhase.push(unitId);
   // TW p.49: dropping to the ground causes no falling damage. The unitFell
   // marker is kept (zero damage, no groups, no crits) so the posture change
@@ -4291,6 +4412,7 @@ export function ejectPilot(state: BattleState, unitId: string, sink: GameEvent[]
   requirePhase(state, "movement");
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
+  releaseClub(state, unit, "removed", sink);
   unit.removed = "pilotEjected";
   state.wrecks[`${unit.position.col},${unit.position.row}`] = {
     unitId,

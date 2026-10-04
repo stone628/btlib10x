@@ -141,8 +141,7 @@ function cloneUnitState(unit: UnitState): UnitState {
     jammedWeapons: [...unit.jammedWeapons],
     critSlotsDestroyed: cloneCritTable(unit.critSlotsDestroyed),
     destroyedWeapons: [...unit.destroyedWeapons],
-    blownOffArms: [...unit.blownOffArms],
-    blownOffLegs: [...unit.blownOffLegs],
+    blownOffLimbs: unit.blownOffLimbs.map((l) => ({ ...l })),
     club: cloneHeldClub(unit.club),
     declaredPickup: clonePickupDecl(unit.declaredPickup),
     moveMode: unit.moveMode,
@@ -320,8 +319,7 @@ export function loadUnitState(unit: UnitState, snapshot: UnitSnapshot): void {
   unit.jammedWeapons = next.jammedWeapons;
   unit.critSlotsDestroyed = next.critSlotsDestroyed;
   unit.destroyedWeapons = next.destroyedWeapons;
-  unit.blownOffArms = [...next.blownOffArms];
-  unit.blownOffLegs = [...next.blownOffLegs];
+  unit.blownOffLimbs = next.blownOffLimbs.map((l) => ({ ...l }));
   unit.club = cloneHeldClub(next.club);
   unit.declaredPickup = clonePickupDecl(next.declaredPickup);
   unit.moveMode = next.moveMode;

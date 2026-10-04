@@ -593,14 +593,17 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
   },
   pickup: {
     helpKey: "cmd.pickup.help",
-    usage: "pickup [limb|tree|girder]",
+    usage: "pickup [limb|tree|girder] [n]",
     argsDoc: [["source", "cmd.pickup.arg.source"]],
     run: (s, a) => {
       const source = a[0]?.toLowerCase() as ClubKind | undefined;
       if (source !== undefined && !["limb", "tree", "girder"].includes(source)) {
         throw new Error(i18n("err.pickup.badSource", { source }));
       }
-      const warnings = queuePickup(s, source);
+      const n = a[1] === undefined ? undefined : Number.parseInt(a[1], 10);
+      if (n !== undefined && !(n >= 1))
+        throw new Error(i18n("err.pickup.badSource", { source: a[1] ?? "" }));
+      const warnings = queuePickup(s, source, n);
       return cmdRunChunks(i18n("ok.pickup.queued", { source: source ?? "auto" }), ...warnings);
     },
   },

@@ -129,10 +129,11 @@ export const kr: Catalog = {
     "전방 아크의 인접한 적에 곤봉 공격 예약 (TW p.145; 곤봉 소지 필요 — 'pickup' 참조)",
   "cmd.club.arg.targetId": "전방 아크에 있는 적 유닛 id",
   "cmd.pickup.help":
-    "현재 육각에서 곤봉 획득 선언 (TW p.146): 절단된 사지, 삼림 육각의 나무, 잔해의 거더. 단독 선언 — 이번 턴 공격 불가; 물리 하위 단계에서 획득",
-  "cmd.pickup.arg.source": "곤봉 출처: limb|tree|girder (기본: 사지 토큰 우선, 다음 지형 출처)",
+    "현재 육각에서 곤봉 획득 선언 (TW p.146): 절단된 사지, 버려진 곤봉, 삼림 육각의 나무, 잔해의 거더. 단독 선언 — 이번 턴 공격 불가; 물리 하위 단계에서 획득",
+  "cmd.pickup.arg.source":
+    "곤봉 출처: limb|tree|girder; 육각에 곤봉이 여러 개면 토큰 번호 (기본: 유일한 토큰, 없으면 지형 출처)",
   "cmd.drop.help":
-    "선언 맨 앞에 곤봉 버리기를 배치하여 팔 무기, 펀치, 강타, 밀기에 손을 비움 (버린 사지는 육각에 남음)",
+    "선언 맨 앞에 곤봉 버리기를 배치하여 팔 무기, 펀치, 강타, 밀기에 손을 비움 (버린 곤봉은 온전한 채 육각에 남음)",
   "cmd.strike.help": "인접한 적에 물리 무기 강타 예약 (TW p.146): 장착된 해쳇/소드/블레이드로 공격",
   "cmd.strike.arg.targetId": "전방 또는 장착 팔 측면 아크에 있는 적 유닛 id",
   "cmd.strike.arg.limb": "강타하는 팔: left|right (기본: 무기를 장착한 팔; 양팔 장착 시 필수)",
@@ -516,7 +517,8 @@ export const kr: Catalog = {
   "log.girderSearchFailed": "[{id}] 잔해 탐색 (2D6 = {roll} < {required}) — 거더 없음",
   "log.clubPickupFailed": "[{id}] 곤봉 획득 실패 ({reason})",
   "log.clubDropped": "[{id}] {hex}에 {kind} 곤봉 버림",
-  "log.clubDroppedReturned": "[{id}] {hex}에 {kind} 곤봉 버림 — 사지가 육각에 남음",
+  "log.clubDroppedReturned": "[{id}] {hex}에 {kind} 곤봉 버림 — 육각에 남음",
+  "log.clubReleased": "[{id}] {hex}에서 {kind} 곤봉을 놓침 — 육각에 남음",
   "log.clubConsumed": "[{id}]의 {kind} 곤봉이 명중으로 파괴됨",
   "log.heatMove": "[{id}] 이동 발열 {heat} 발생 (기본 {base}, 턴 누적 {total})",
   "log.heatWeapon": "[{id}] 무기 발열 {heat} 발생 (기본 {base}, 턴 누적 {total})",
