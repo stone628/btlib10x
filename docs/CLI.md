@@ -394,6 +394,10 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
 - **Physical-attack critical hits** — physical damage transfers armor /
   structure and can destroy locations, but rolls no determining crits yet
   (weapon-attack crits are fully implemented).
+- **Water jumping (TW p.53)** — implemented: no jumping from depth 2+, only
+  non-leg jets at depth 1, and a jump landing in water rolls the entry PSR and
+  on failure tumbles `depth` levels (damage halved). **Prone in depth 1+
+  water** blocks LOS. Still open: underwater weapons/hull breach.
 - **Water depth movement** — level-change MP surcharge when entering water
   (the water-entry PSR itself is implemented above).
 - **Torso twist** — per-weapon facing override that shifts a unit's firing
@@ -444,7 +448,8 @@ stated elsewhere in this document or the codebase:
   the unit's run budget (at least 1). Only that one forward hex is offered
   when the normal run budget cannot afford it. A one-leg 'Mech may `run` for
   this single hex only. Water entry via minimum movement is not modeled
-  (the engine has no run-vs-water ban).
+  (the one run that may enter water; TW p.53 otherwise forbids running into
+  depth 1+ water, which the engine enforces).
 - **One-legged hopping movement** (TW p.122: walk 1 MP, no run except minimum movement, jump with PSR
   each landing) — `effectiveMovement` caps a standing one-leg 'Mech at
   `walking: 1, running: 0`; jump MP unchanged. A prone one-leg 'Mech may

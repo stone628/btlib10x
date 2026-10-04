@@ -84,7 +84,7 @@
 
 import { roll2D6, rollD6 } from "../core/dice";
 import type { LimbLocation, Location, Rng } from "../core/types";
-import { damageTransferTo, isLimb, isTorso, TORSO_LOCATIONS } from "../core/types";
+import { damageTransferTo, isLimb, isTorso, LOCATIONS, TORSO_LOCATIONS } from "../core/types";
 import { type AmmoNameHolder, ammoDefFor } from "../data/ammo.schema";
 import type { ResolvedCritSlot, ResolvedMechDef } from "../data/mech.schema";
 import { CRIT_SLOT_COUNTS } from "../data/mech.schema";
@@ -810,6 +810,27 @@ function cloneDestroyed(src: Record<Location, boolean[]>): Record<Location, bool
   return out;
 }
 
+/** Intact jump jets mounted outside the legs (TW p.53: depth 1 water). */
+function intactNonLegJumpJets(
+  def: ResolvedMechDef,
+  damage: UnitDamageState,
+  destroyed: Readonly<Record<Location, readonly boolean[]>>,
+): number {
+  let n = 0;
+  for (const loc of LOCATIONS) {
+    if (loc === "leftLeg" || loc === "rightLeg") continue;
+    if (isUnitLocationDestroyed(damage, loc)) continue;
+    const layout = def.critSlots[loc];
+    for (let i = 0; i < layout.length; i++) {
+      const slot = layout[i];
+      if (slot?.kind === "structure" && slot.name === JUMPJET && !(destroyed[loc]?.[i] ?? false)) {
+        n += 1;
+      }
+    }
+  }
+  return n;
+}
+
 /**
  * Effective movement ratings derived from a unit's crit state. Leg
  * actuators (upper/lower/foot) and hip reduce walking MP; jump jets reduce
@@ -848,6 +869,7 @@ export function effectiveMovement(
   damage: UnitDamageState,
   critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
   tsmActive = false,
+  waterDepth = 0,
 ): EffectiveMovement {
   const legMovePenalty = (
     loc: "rightLeg" | "leftLeg",
@@ -903,6 +925,12 @@ export function effectiveMovement(
   // regardless of posture: a prone one-leg unit's walking budget is the MP
   // it will have once it stands, used for the stand attempt and prone-turn
   // costs alike.
+  // Water (TW p.53): no jumping from depth 2+; at depth 1 only non-leg jets fire.
+  if (waterDepth >= 2) {
+    jump = 0;
+  } else if (waterDepth === 1) {
+    jump = Math.min(jump, intactNonLegJumpJets(def, damage, critSlotsDestroyed));
+  }
   const legsGone = destroyedLegs(damage);
   if (legsGone >= 2) {
     walk = 0;

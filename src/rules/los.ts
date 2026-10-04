@@ -1,5 +1,11 @@
 import { hexDistance, lineHexes } from "../core/hex";
-import { blocksTargeting, cellAt, type HexGrid, screeningPoints } from "../core/terrain";
+import {
+  blocksTargeting,
+  cellAt,
+  type HexGrid,
+  screeningPoints,
+  waterDepth,
+} from "../core/terrain";
 import { type HexCoord, isWoodsTerrain, type TerrainType, type WreckState } from "../core/types";
 import { buildingTypeOf } from "./building";
 
@@ -44,8 +50,24 @@ export function interveningTerrains(grid: HexGrid, from: HexCoord, to: HexCoord)
  * Water depth 2+ blocks LOS: units cannot fire into or out of a water2/water3
  * hex. This is checked at the endpoint hexes (attacker or target position).
  */
-export function losBlockedByWater(grid: HexGrid, from: HexCoord, to: HexCoord): boolean {
-  return blocksTargeting(cellAt(grid, from).terrain) || blocksTargeting(cellAt(grid, to).terrain);
+export function losBlockedByWater(
+  grid: HexGrid,
+  from: HexCoord,
+  to: HexCoord,
+  prone?: ProneEnds,
+): boolean {
+  const submerged = (hex: HexCoord, isProne: boolean | undefined): boolean => {
+    const terrain = cellAt(grid, hex).terrain;
+    // A prone 'Mech is completely submerged in depth 1+ water (TW p.102).
+    return blocksTargeting(terrain) || (isProne === true && waterDepth(terrain) >= 1);
+  };
+  return submerged(from, prone?.from) || submerged(to, prone?.to);
+}
+
+/** Posture of the two LOS endpoints (only prone matters for water LOS). */
+export interface ProneEnds {
+  readonly from?: boolean;
+  readonly to?: boolean;
 }
 
 /**
@@ -118,9 +140,10 @@ export function losClear(
   from: HexCoord,
   to: HexCoord,
   wrecks?: Readonly<Record<string, WreckState>>,
+  prone?: ProneEnds,
 ): boolean {
   if (losBlocked(losWoodsPointsBetween(grid, from, to))) return false;
-  if (losBlockedByWater(grid, from, to)) return false;
+  if (losBlockedByWater(grid, from, to, prone)) return false;
   if (losBlockedByElevation(grid, from, to)) return false;
   if (losBlockedByWreck(from, to, wrecks)) return false;
   return true;
