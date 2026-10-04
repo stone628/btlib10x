@@ -28,6 +28,9 @@ export function maxMovePoints(
   }
 }
 
+/** TW p.49: MP charged by a minimum-movement step when the unit has no run budget left. */
+export const MIN_MOVEMENT_MP = 1;
+
 /** Attacker movement to-hit modifiers by locomotion (TW GATOR steps). */
 const ATTACKER_MOVE_MOD_STAND = 0;
 const ATTACKER_MOVE_MOD_WALK = 1;
@@ -203,7 +206,12 @@ export function reachableLandings(
       return FACINGS.map((f) => ({ hex: start, facing: f, path: [] }));
     }
   }
-  if (budget <= 0 || options.mode === "standStill") return [];
+  // TW p.49 minimum movement: a unit with >= 1 MP may always enter the hex
+  // directly ahead as its only expenditure, counted as running. It matters
+  // only when the run budget cannot already afford that hex.
+  const minMoveEligible =
+    options.mode === "run" && !options.prone && !options.standup && options.walking >= 1;
+  if ((budget <= 0 && !minMoveEligible) || options.mode === "standStill") return [];
 
   const jumping = options.mode === "jump";
   const proneTurn = options.prone && options.mode === "walk";
@@ -358,6 +366,17 @@ export function reachableLandings(
   }
 
   const results: RevealedLanding[] = [];
+  if (minMoveEligible) {
+    const forward = neighbor(start, startFacing);
+    if (canEnter(start, forward, false) && canLand(forward)) {
+      const base = stepCost(start, forward);
+      if (base > budget) {
+        const charged = Math.min(base, Math.max(budget, MIN_MOVEMENT_MP));
+        const step = makeStep(start, forward, stepFragment(), charged, 0);
+        results.push({ hex: forward, facing: startFacing, path: [step] });
+      }
+    }
+  }
   for (const [key, cost] of dist) {
     if (cost > budget) continue;
     const sep = key.lastIndexOf("|");

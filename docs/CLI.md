@@ -437,7 +437,15 @@ stated elsewhere in this document or the codebase:
   ground-movement falls across levels use the `levelsFallen` term
   (lower-hex rule), since push is the only displacing rule in the subset.
   DFA's 2-level rear-column fall waits on the charge/DFA phase.
-- **One-legged hopping movement** (TW p.122: walk 1 MP, no run, jump with PSR
+- **Minimum movement** (TW p.49) — a standing unit with at least 1 MP may
+  always enter the single hex directly ahead, whatever the terrain/climb
+  cost, as its only expenditure (no facing change). Declared as `mode run`
+  (it counts as running: run heat, running PSRs); the charge is capped at
+  the unit's run budget (at least 1). Only that one forward hex is offered
+  when the normal run budget cannot afford it. A one-leg 'Mech may `run` for
+  this single hex only. Water entry via minimum movement is not modeled
+  (the engine has no run-vs-water ban).
+- **One-legged hopping movement** (TW p.122: walk 1 MP, no run except minimum movement, jump with PSR
   each landing) — `effectiveMovement` caps a standing one-leg 'Mech at
   `walking: 1, running: 0`; jump MP unchanged. A prone one-leg 'Mech may
   turn 1 hexside/turn. Standing attempt at +5 PSR (consumes the 1-MP walk
