@@ -133,7 +133,9 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   cannot move backward; forward steps may change level by at most 2 per hex
   and backward steps cannot change level at all. Jump steps into any adjacent
   hex at 1 MP per step, with the landing facing chosen freely; jump ignores
-  elevation. Water depth-change movement cost is deferred (see below).
+  elevation. Water hexes are measured at their bed (hex level minus depth,
+  TW p.32), so entering water costs 1 MP per level of depth on top of the
+  water surcharge (depth 3 cannot be entered from the surface: 3 levels > 2).
 - **Line of sight** — intervening-hex line trace; light/heavy woods points
   (1/2) accumulate along the line and ≥ 3 points block. A real-valued
   "ray height" is drawn between attacker and target LOS levels (hex
@@ -292,7 +294,10 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
    on the fall column (halved rounding down underwater at depth 2+ per TW
    errata), with normal crit rolls; levels fallen measure underlying
    terrain (hex fell into minus hex the fall began from — a fall across
-   levels drops into the lower hex; jump-phase falls count 0 levels), and
+   levels drops into the lower hex; jump-phase falls count 0 levels; a 'Mech
+   walking into water from above the surface takes two packets, TW p.57:
+   surface impact `ceil(t/10) × (levels+1) / 2` plus bottom impact
+   `ceil(t/10) × (depth+1) / 2`, each rounded down), and
    the pilot then
   makes a seatbelt PSR (+5 off a destroyed leg, +6 off a destroyed gyro, or
   the failed roll's modifiers, plus +1 per level above 1 fallen) or takes
@@ -398,8 +403,6 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   non-leg jets at depth 1, and a jump landing in water rolls the entry PSR and
   on failure tumbles `depth` levels (damage halved). **Prone in depth 1+
   water** blocks LOS. Still open: underwater weapons/hull breach.
-- **Water depth movement** — level-change MP surcharge when entering water
-  (the water-entry PSR itself is implemented above).
 - **Torso twist** — per-weapon facing override that shifts a unit's firing
   arcs during the attack phase (currently only the positional facing is
   used).
@@ -447,9 +450,8 @@ stated elsewhere in this document or the codebase:
   (it counts as running: run heat, running PSRs); the charge is capped at
   the unit's run budget (at least 1). Only that one forward hex is offered
   when the normal run budget cannot afford it. A one-leg 'Mech may `run` for
-  this single hex only. Water entry via minimum movement is not modeled
-  (the one run that may enter water; TW p.53 otherwise forbids running into
-  depth 1+ water, which the engine enforces).
+  this single hex only. It is also the one run that may enter water (TW p.53
+  otherwise forbids running into depth 1+ water, which the engine enforces).
 - **One-legged hopping movement** (TW p.122: walk 1 MP, no run except minimum movement, jump with PSR
   each landing) — `effectiveMovement` caps a standing one-leg 'Mech at
   `walking: 1, running: 0`; jump MP unchanged. A prone one-leg 'Mech may
@@ -459,9 +461,10 @@ stated elsewhere in this document or the codebase:
   the auto-pilot-damage shortcut.
 - **Four-legged / vehicle PSR rows** (quads, skidding vehicles,
   sideslipping VTOLs) — bipedal 'Mechs only (top of this section).
-- **Drowning / underwater life-support pressure** — water blocks targeting
-  at depth 2+ and halves falls, but breath-holding and hull-breach pressure
-  belong to the deferred water-depth movement rules.
+- **Hull breach / underwater combat** — TW has no drowning rule; submerged
+  'Mechs risk hull breach instead (TW p.121). Water blocks targeting at depth
+  2+ and halves falls, but breaches, underwater weapons and ranges, and the
+  underwater LOS table (TW pp.108-109) are not implemented (see `docs/TODO.md`).
 
 ### Verify-later
 
