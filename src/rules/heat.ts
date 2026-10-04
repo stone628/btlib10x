@@ -24,7 +24,12 @@ import { LOCATIONS, type Location, type MoveMode, type Rng } from "../core/types
 import { ammoDefFor } from "../data/ammo.schema";
 import type { ResolvedMechDef } from "../data/mech.schema";
 import { type AmmoBinId, type AmmoBins, collectAmmoBins } from "./ammo";
-import { ammoDamagePerShot, RUN_WALK_DENOMINATOR, RUN_WALK_NUMERATOR, type EffectiveMovement } from "./critical";
+import {
+  ammoDamagePerShot,
+  type EffectiveMovement,
+  RUN_WALK_DENOMINATOR,
+  RUN_WALK_NUMERATOR,
+} from "./critical";
 import { isUnitLocationDestroyed, type UnitDamageState } from "./damage";
 import { maxMovePoints } from "./movement";
 
@@ -115,29 +120,67 @@ export function heatSinksOperational(
   damage: UnitDamageState,
   critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
 ): number {
-  const internal = engineInternalSinks(def);
+  const external = LOCATIONS.reduce(
+    (n, loc) => n + externalSinksIn(def, damage, critSlotsDestroyed, loc),
+    0,
+  );
+  return Math.min(def.heatsink.count, engineInternalSinks(def) + external);
+}
+
+/** Intact external sink devices in one location (a DHS group counts once). */
+function externalSinksIn(
+  def: ResolvedMechDef,
+  damage: UnitDamageState,
+  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+  loc: Location,
+): number {
+  if (isUnitLocationDestroyed(damage, loc)) return 0;
   const width = dhsCritWidth(def);
+  const layout = def.critSlots[loc];
+  const destroyed = critSlotsDestroyed[loc];
   let external = 0;
-  for (const loc of LOCATIONS) {
-    const layout = def.critSlots[loc];
-    const destroyed = critSlotsDestroyed[loc];
-    const locDead = isUnitLocationDestroyed(damage, loc);
-    for (let i = 0; i < layout.length; i++) {
-      const slot = layout[i];
-      if (slot?.kind !== "structure") continue;
-      if (slot.name === "heatSink") {
-        if (!locDead && !(destroyed?.[i] ?? false)) external += 1;
-      } else if (slot.name === "doubleHeatSink") {
-        // Count a DHS device once (via its first slot); the whole group is
-        // destroyed together by a single critical hit.
-        const group = slot.group;
-        if (group[0] !== i + 1) continue;
-        const anyDestroyed = locDead || group.some((j) => destroyed?.[j - 1] ?? false);
-        if (!anyDestroyed) external += Math.floor(group.length / width);
+  for (let i = 0; i < layout.length; i++) {
+    const slot = layout[i];
+    if (slot?.kind !== "structure") continue;
+    if (slot.name === "heatSink") {
+      if (!(destroyed?.[i] ?? false)) external += 1;
+    } else if (slot.name === "doubleHeatSink") {
+      // Count a DHS device once (via its first slot); the whole group is
+      // destroyed together by a single critical hit.
+      const group = slot.group;
+      if (group[0] !== i + 1) continue;
+      if (!group.some((j) => destroyed?.[j - 1] ?? false)) {
+        external += Math.floor(group.length / width);
       }
     }
   }
-  return Math.min(def.heatsink.count, internal + external);
+  return external;
+}
+
+/** Cap on the extra heat dissipated underwater per turn (TW p. 159). */
+export const WATER_HEAT_BONUS_CAP = 6;
+
+/**
+ * Extra dissipation from standing in water (TW p. 159): each operational
+ * sink that is underwater dissipates one more heat (single) or two more
+ * (double), capped at 6. A 'Mech standing in depth 1 water has only its leg
+ * sinks submerged; depth 2+, or prone in depth 1+, submerges every sink.
+ */
+export function waterHeatBonus(
+  def: ResolvedMechDef,
+  damage: UnitDamageState,
+  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+  depth: number,
+  prone: boolean,
+): number {
+  if (depth <= 0) return 0;
+  const sinks =
+    depth >= 2 || prone
+      ? heatSinksOperational(def, damage, critSlotsDestroyed)
+      : externalSinksIn(def, damage, critSlotsDestroyed, "leftLeg") +
+        externalSinksIn(def, damage, critSlotsDestroyed, "rightLeg");
+  const rate = def.heatsink.type === "double" ? DOUBLE_SINK_RATE : 1;
+  return Math.min(WATER_HEAT_BONUS_CAP, sinks * rate);
 }
 
 /**
@@ -213,9 +256,10 @@ export function effectiveMoveBudget(
 ): number {
   if (mode === "jump") return movement.jumping; // p. 159: never reduced by heat
   const walking = Math.max(0, movement.walking - movementMpPenalty(heat));
-  const running = movement.running === 0
-    ? 0  // a lost leg: no running (effectiveMovement)
-    : Math.ceil(walking * RUN_WALK_NUMERATOR / RUN_WALK_DENOMINATOR); // p. 159: recompute from new Walking MP
+  const running =
+    movement.running === 0
+      ? 0 // a lost leg: no running (effectiveMovement)
+      : Math.ceil((walking * RUN_WALK_NUMERATOR) / RUN_WALK_DENOMINATOR); // p. 159: recompute from new Walking MP
   return maxMovePoints(mode, walking, running, movement.jumping);
 }
 
