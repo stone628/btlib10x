@@ -552,6 +552,12 @@ export const kr: Catalog = {
   "res.physical.attackerDamage": "자해: {groups}",
   "res.physical.targetDisplaced": "목표가 ({col},{row})으로 밀려남",
   "res.physical.attackerDisplaced": "공격자가 ({col},{row})으로 전진",
+  "res.physical.redirected": "목표가 밀려남 — {from}에서 {target}(으)로 +1에 명중 굴림 (TW p.144)",
+  "res.physical.displacedMiss":
+    "목표 {target}가 타격 전 밀려남 — 유효 목표 없음, 자동 빗나감 (TW p.144)",
+  "res.physical.attackerDown": "공격자 {attacker}가 공격 불가(격파/의식불명/정지) — 자동 빗나감",
+  "res.physical.targetDown": "목표 {target}가 격투 전 파괴/제거됨 — 자동 빗나감",
+  "res.physical.noLongerLegal": "더 이상 유효하지 않음({reason}) — 자동 빗나감",
   "res.physical.targetPsr": "목표 조종 판정: {outcome}",
   "res.physical.attackerPsr": "공격자 조종 판정: {outcome}",
   "res.physical.stands": "최소 {target} 필요, 2D6 = {roll} 버팀",

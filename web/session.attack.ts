@@ -484,6 +484,28 @@ export function physicalResolutionLines(r: PhysicalResolution): string[] {
     );
   }
 
+  if (r.redirectedFrom !== undefined) {
+    lines.push(
+      i18n("res.physical.redirected", {
+        from: r.redirectedFrom,
+        target: r.targetId,
+      }),
+    );
+  }
+  if (r.missReason === "displaced") {
+    lines.push(i18n("res.physical.displacedMiss", { target: r.targetId }));
+  } else if (r.missReason === "attackerDown") {
+    lines.push(i18n("res.physical.attackerDown", { attacker: r.attackerId }));
+  } else if (r.missReason === "targetDown") {
+    lines.push(i18n("res.physical.targetDown", { target: r.targetId }));
+  } else if (r.missReason?.startsWith("invalid:")) {
+    lines.push(
+      i18n("res.physical.noLongerLegal", {
+        reason: r.missReason.slice("invalid:".length),
+      }),
+    );
+  }
+
   if (r.targetPsr) {
     lines.push(i18n("res.physical.targetPsr", { outcome: physicalPsrOutcome(r.targetPsr) }));
   }
