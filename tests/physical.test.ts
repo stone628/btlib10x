@@ -21,6 +21,8 @@ import {
   kickHitLocation,
   type PhysicalAttackDecl,
   physicalDamage,
+  physicalHitLocation,
+  physicalLocationTable,
   resolveMutualPush,
   resolvePhysicalAttack,
   validatePhysicalAttack,
@@ -916,9 +918,14 @@ describe("twist-aware physical arcs (TW pp. 98-99)", () => {
 
   it("punch works untwisted but club needs a left twist into the front arc", () => {
     const battle = northVsSouthwest();
+    // Southwest of a north-facing 'Mech is the leftSide template arc: only
+    // the left arm may punch there (TW p.145).
+    expect(
+      validatePhysicalAttack(battle, "a", { type: "punch", targetId: "t", limb: "leftArm" }).ok,
+    ).toBe(true);
     expect(
       validatePhysicalAttack(battle, "a", { type: "punch", targetId: "t", limb: "rightArm" }).ok,
-    ).toBe(true);
+    ).toBe(false);
     expect(validatePhysicalAttack(battle, "a", { type: "club", targetId: "t" }).ok).toBe(false);
     expect(
       validatePhysicalAttack(battle, "a", { type: "club", targetId: "t" }, "leftSide").ok,
@@ -1179,5 +1186,163 @@ describe("physical attack critical hits", () => {
       // The target's crit state should have been updated
       // Critical resolution ran and may have destroyed slots
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Physical legality: arcs, prone targets, level differences, buildings
+// (TW pp. 145, 147, 150–151, 171, 175)
+// ---------------------------------------------------------------------------
+
+describe("physical legality (TW pp. 145-151, 171)", () => {
+  /** Battle with explicit terrain hexes (levels/buildings). */
+  function makeTerrainBattle(
+    attackerHex: HexCoord,
+    attackerFacing: "n" | "ne" | "se" | "s" | "sw" | "nw",
+    targetHex: HexCoord,
+    terrain: { col: number; row: number; type: "clear" | "mediumBuilding"; level?: number }[],
+  ): BattleState {
+    return createBattle({ name: "test", width: 20, height: 20, terrain, legends: [] }, [
+      makeUnitInit("a", 1, attackerHex, attackerFacing),
+      makeUnitInit("t", 2, targetHex, "sw"),
+    ]);
+  }
+
+  it("kick rejects side arcs (only the three forward hexes)", () => {
+    // Attacker faces north at (10,10); (9,11) is the adjacent southwest
+    // hex — a side template arc, not the feet's forward arc.
+    const battle = makeBattle(
+      makeUnitInit("a", 1, { col: 10, row: 10 }, "n"),
+      makeUnitInit("t", 2, { col: 9, row: 11 }, "s"),
+    );
+    const decl: PhysicalAttackDecl = { type: "kick", targetId: "t", limb: "rightLeg" };
+    const result = validatePhysicalAttack(battle, "a", decl);
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain("forward arc");
+  });
+
+  it("punch enforces the corresponding arm in side arcs", () => {
+    const battle = makeBattle(
+      makeUnitInit("a", 1, { col: 10, row: 10 }, "n"),
+      makeUnitInit("t", 2, { col: 9, row: 11 }, "s"),
+    );
+    expect(
+      validatePhysicalAttack(battle, "a", { type: "punch", targetId: "t", limb: "leftArm" }).ok,
+    ).toBe(true);
+    const cross = validatePhysicalAttack(battle, "a", {
+      type: "punch",
+      targetId: "t",
+      limb: "rightArm",
+    });
+    expect(cross.ok).toBe(false);
+    expect(cross.reason).toContain("only be punched by");
+  });
+
+  it("Different Levels Table: standing target one level higher/lower", () => {
+    // Attacker (5,5) facing ne, target (6,5): punchable arc with rightArm.
+    const higher = makeTerrainBattle({ col: 5, row: 5 }, "ne", { col: 6, row: 5 }, [
+      { col: 6, row: 5, type: "clear", level: 1 },
+    ]);
+    expect(
+      validatePhysicalAttack(higher, "a", { type: "punch", targetId: "t", limb: "rightArm" }).ok,
+    ).toBe(true);
+    expect(validatePhysicalAttack(higher, "a", { type: "club", targetId: "t" }).ok).toBe(true);
+    expect(
+      validatePhysicalAttack(higher, "a", { type: "kick", targetId: "t", limb: "rightLeg" }).ok,
+    ).toBe(false);
+
+    const lower = makeTerrainBattle({ col: 5, row: 5 }, "ne", { col: 6, row: 5 }, [
+      { col: 5, row: 5, type: "clear", level: 1 },
+    ]);
+    expect(
+      validatePhysicalAttack(lower, "a", { type: "kick", targetId: "t", limb: "rightLeg" }).ok,
+    ).toBe(true);
+    expect(validatePhysicalAttack(lower, "a", { type: "club", targetId: "t" }).ok).toBe(true);
+    expect(
+      validatePhysicalAttack(lower, "a", { type: "punch", targetId: "t", limb: "rightArm" }).ok,
+    ).toBe(false);
+  });
+
+  it("push requires the same level", () => {
+    const higher = makeTerrainBattle({ col: 5, row: 5 }, "ne", { col: 6, row: 4 }, [
+      { col: 6, row: 4, type: "clear", level: 1 },
+    ]);
+    // (6,4) is directly ahead (NE) so the arc passes; the level blocks it.
+    const result = validatePhysicalAttack(higher, "a", { type: "push", targetId: "t" });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain("one level higher");
+  });
+
+  it("prone targets: kicks only same-level, punch/club only one level higher, none lower", () => {
+    const same = makeBattle(
+      makeUnitInit("a", 1, { col: 5, row: 5 }, "ne"),
+      makeUnitInit("t", 2, { col: 6, row: 5 }, "sw"),
+    );
+    same.units.t!.prone = true;
+    expect(
+      validatePhysicalAttack(same, "a", { type: "kick", targetId: "t", limb: "rightLeg" }).ok,
+    ).toBe(true);
+    expect(
+      validatePhysicalAttack(same, "a", { type: "punch", targetId: "t", limb: "rightArm" }).ok,
+    ).toBe(false);
+    expect(validatePhysicalAttack(same, "a", { type: "club", targetId: "t" }).ok).toBe(false);
+
+    const higher = makeTerrainBattle({ col: 5, row: 5 }, "ne", { col: 6, row: 5 }, [
+      { col: 6, row: 5, type: "clear", level: 1 },
+    ]);
+    higher.units.t!.prone = true;
+    expect(
+      validatePhysicalAttack(higher, "a", { type: "punch", targetId: "t", limb: "rightArm" }).ok,
+    ).toBe(true);
+    expect(validatePhysicalAttack(higher, "a", { type: "club", targetId: "t" }).ok).toBe(true);
+    expect(
+      validatePhysicalAttack(higher, "a", { type: "kick", targetId: "t", limb: "rightLeg" }).ok,
+    ).toBe(false);
+
+    const lower = makeTerrainBattle({ col: 5, row: 5 }, "ne", { col: 6, row: 5 }, [
+      { col: 5, row: 5, type: "clear", level: 1 },
+    ]);
+    lower.units.t!.prone = true;
+    expect(
+      validatePhysicalAttack(lower, "a", { type: "kick", targetId: "t", limb: "rightLeg" }).ok,
+    ).toBe(false);
+    expect(
+      validatePhysicalAttack(lower, "a", { type: "punch", targetId: "t", limb: "rightArm" }).ok,
+    ).toBe(false);
+  });
+
+  it("rejects outside->inside building-hex attacks", () => {
+    const battle = makeTerrainBattle({ col: 5, row: 5 }, "ne", { col: 6, row: 5 }, [
+      { col: 6, row: 5, type: "mediumBuilding", level: 0 },
+    ]);
+    const result = validatePhysicalAttack(battle, "a", {
+      type: "punch",
+      targetId: "t",
+      limb: "rightArm",
+    });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain("building");
+  });
+
+  it("selects the level-swap hit-location tables (TW p.150) and prone-higher standard (TW p.151)", () => {
+    expect(physicalLocationTable("punch", 1, false)).toBe("kick");
+    expect(physicalLocationTable("kick", -1, false)).toBe("punch");
+    expect(physicalLocationTable("club", 1, false)).toBe("kick");
+    expect(physicalLocationTable("club", -1, false)).toBe("punch");
+    expect(physicalLocationTable("strike", 1, false)).toBe("kick");
+    expect(physicalLocationTable("strike", -1, false)).toBe("punch");
+    expect(physicalLocationTable("punch", 1, true)).toBe("standard");
+    expect(physicalLocationTable("punch", 0, false)).toBe("punch");
+    expect(physicalLocationTable("kick", 0, false)).toBe("kick");
+    expect(physicalLocationTable("club", 0, false)).toBe("standard");
+
+    // Punch one level up rolls on the kick table (1D6).
+    const battle = makeBattle(
+      makeUnitInit("a", 1, { col: 5, row: 5 }, "ne"),
+      makeUnitInit("t", 2, { col: 6, row: 5 }, "sw"),
+    );
+    const target = battle.units.t!;
+    expect(physicalHitLocation("punch", target, "front", 1, 1)).toBe("rightLeg");
+    expect(physicalHitLocation("punch", target, "front", 1, 0)).toBe("leftArm");
   });
 });
