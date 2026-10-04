@@ -285,9 +285,9 @@ const SLOT_REROLL_CAP = 50;
 /** Destroyed engine slots that kill the 'Mech (TW p.125). */
 export const ENGINE_SLOTS_KILL = 3;
 /** Running MP numerator over walking MP (run = ceil(walk * 3 / 2)). */
-const RUN_WALK_NUMERATOR = 3;
+export const RUN_WALK_NUMERATOR = 3;
 /** Running MP denominator over walking MP. */
-const RUN_WALK_DENOMINATOR = 2;
+export const RUN_WALK_DENOMINATOR = 2;
 
 /**
  * Roll a 1-based slot number for the given location, using the official

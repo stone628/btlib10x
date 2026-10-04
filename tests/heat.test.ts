@@ -218,7 +218,7 @@ describe("effectiveMoveBudget", () => {
   it("subtracts MP penalty", () => {
     const def = mechDef("HBK-4G")!;
     const move = { walking: def.walking, running: def.running, jumping: def.jumping };
-    expect(effectiveMoveBudget("run", move, 10)).toBe(def.running - 2);
+    expect(effectiveMoveBudget("run", move, 10)).toBe(def.running - 3);
     expect(effectiveMoveBudget("walk", move, 25)).toBe(0);
   });
 });
@@ -405,7 +405,7 @@ describe("game integration: movement heat", () => {
     const moved = events.find((e) => e.kind === "moved" && e.unitId === "hbk");
     expect(moved).toBeDefined();
     expect((moved as Extract<GameEvent, { kind: "moved" }>).mpBudget).toBe(
-      mechDef("HBK-4G")!.running - 2,
+      mechDef("HBK-4G")!.running - 3,
     );
   });
 });
