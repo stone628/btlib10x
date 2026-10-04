@@ -23,6 +23,7 @@ import {
   LOCATIONS,
   type Location,
   type MoveMode,
+  msgHex,
   type Rng,
   rotateFacing,
   type TerrainHexDef,
@@ -873,11 +874,6 @@ export function partialCoverMod(
   return Math.max(terrain, wreck);
 }
 
-/** Error messages show 1-based coordinates; positions are stored 1-based. */
-function fmtHex(hex: HexCoord): string {
-  return `${hex.col},${hex.row}`;
-}
-
 function requirePhase(state: BattleState, phase: Phase): void {
   if (state.phase !== phase) {
     throw new Error(`Expected phase ${phase}, but battle is in ${state.phase}`);
@@ -894,7 +890,7 @@ function occupantAt(state: BattleState, hex: HexCoord, excludeId?: string): Unit
 
 /** Wreck occupying a hex, or undefined when the hex is clear of wrecks. */
 export function wreckAt(state: BattleState, hex: HexCoord): WreckState | undefined {
-  return state.wrecks[`${hex.col},${hex.row}`];
+  return state.wrecks[hexKey(hex)];
 }
 
 /** Mark a unit as killed and removed, returning the paired events. The first
@@ -928,7 +924,7 @@ function removePilotKilled(state: BattleState, unit: UnitState, sink: GameEvent[
   if (isUnitRemoved(unit)) return;
   releaseClub(state, unit, "removed", sink);
   unit.removed = "pilotKilled";
-  state.wrecks[`${unit.position.col},${unit.position.row}`] = {
+  state.wrecks[hexKey(unit.position)] = {
     unitId: unit.id,
     level: wreckLevelFor(state, unit),
   };
@@ -1042,7 +1038,7 @@ export function createBattle(
   const buildings: Record<string, BuildingState> = {};
   for (const t of map.terrain) {
     const key = hexKey(t);
-    if (terrainSeen.has(key)) throw new Error(`Duplicate terrain definition for hex ${fmtHex(t)}`);
+    if (terrainSeen.has(key)) throw new Error(`Duplicate terrain definition for hex ${msgHex(t)}`);
     terrainSeen.add(key);
     cells[t.col - 1 + (t.row - 1) * width] = { terrain: t.type, level: t.level ?? 0 };
     const bt = buildingTypeOf(t.type);
@@ -1096,7 +1092,7 @@ export function damageBuildingAt(
   damage: number,
   sink: GameEvent[],
 ): BuildingDamageResult | null {
-  const key = `${hex.col},${hex.row}`;
+  const key = hexKey(hex);
   const building = state.buildings[key];
   if (building === undefined) return null;
   const preCf = building.cf;
@@ -1142,7 +1138,7 @@ export function recordSeveredLimbs(
   for (const limb of limbs) {
     if (unit.blownOffLimbs.some((l) => l.limb === limb)) continue;
     unit.blownOffLimbs.push({ limb, salvageable: true });
-    const key = `${unit.position.col},${unit.position.row}`;
+    const key = hexKey(unit.position);
     state.clubs[key] = [...(state.clubs[key] ?? []), { kind: "limb", limb, ownerId: unit.id }];
   }
 }
@@ -1509,7 +1505,7 @@ export function executeMove(
       // TW p.53: running 'Mechs cannot enter depth 1+ water; Minimum Movement
       // (TW p.57) is the one exception.
       if (unit.moveMode === "run" && !minMove && waterDepth(cellAt(state, to).terrain) > 0) {
-        throw new Error(`Running 'Mechs cannot enter water (${fmtHex(to)})`);
+        throw new Error(`Running 'Mechs cannot enter water (${msgHex(to)})`);
       }
       const fromLevel = groundLevel(state, cursor);
       const toLevel = groundLevel(state, to);
@@ -1521,8 +1517,8 @@ export function executeMove(
         const slope = delta > 0 ? `${delta} levels higher` : `${-delta} levels lower`;
         throw new Error(
           forward
-            ? `Ground moves can change at most 2 levels per hex (${fmtHex(to)} is ${slope})`
-            : `Walking backward cannot change level (${fmtHex(to)} is ${slope})`,
+            ? `Ground moves can change at most 2 levels per hex (${msgHex(to)} is ${slope})`
+            : `Walking backward cannot change level (${msgHex(to)} is ${slope})`,
         );
       }
       spent += costToEnter(cellAt(state, to).terrain) + costToClimb(fromLevel, toLevel);
@@ -1531,16 +1527,16 @@ export function executeMove(
 
     const wreck = wreckAt(state, to);
     if (wreck !== undefined) {
-      throw new Error(`Cannot enter ${fmtHex(to)}: blocked by ${wreck.unitId}'s wreck`);
+      throw new Error(`Cannot enter ${msgHex(to)}: blocked by ${wreck.unitId}'s wreck`);
     }
 
     const occupant = occupantAt(state, to, unitId);
     if (occupant !== undefined) {
       if (isFinalStep) {
-        throw new Error(`Cannot end movement in ${fmtHex(to)}: occupied by ${occupant.id}`);
+        throw new Error(`Cannot end movement in ${msgHex(to)}: occupied by ${occupant.id}`);
       }
       if (!jumping && occupant.team !== unit.team) {
-        throw new Error(`Cannot move through enemy ${occupant.id} at ${fmtHex(to)}`);
+        throw new Error(`Cannot move through enemy ${occupant.id} at ${msgHex(to)}`);
       }
     }
 
@@ -2495,8 +2491,7 @@ function resolveUnitAttacks(
     let buildingDamage = 0;
     if (resolution.hit && resolution.groups.length > 0) {
       const toll = Math.ceil(
-        (phaseStartCf[`${target.position.col},${target.position.row}`] ?? 0) /
-          BUILDING_ABSORB_DIVISOR,
+        (phaseStartCf[hexKey(target.position)] ?? 0) / BUILDING_ABSORB_DIVISOR,
       );
       buildingDamage = toll * resolution.groups.length;
     }
@@ -3016,7 +3011,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       // Defer building damage: accumulate the toll per hex, applied after
       // all weapons fire completes (TW p. 171).
       if (buildingDamage > 0) {
-        const key = `${target.position.col},${target.position.row}`;
+        const key = hexKey(target.position);
         const entry = buildingDamageByHex[key];
         if (entry === undefined) {
           buildingDamageByHex[key] = {
@@ -4261,7 +4256,7 @@ function movementTerrainPsr(
     }
     const r = pushPilotingCheck(sink, unit, "building", building, preModifier, rng, { ...to });
     if (!r.success) {
-      const cf = state.buildings[`${to.col},${to.row}`]?.cf ?? 0;
+      const cf = state.buildings[hexKey(to)]?.cf ?? 0;
       const total = Math.ceil(cf / BUILDING_CRASH_DIVISOR);
       const groups: DamageGroup[] = [];
       for (const amount of fallingDamageGroups(total)) {
@@ -4477,7 +4472,7 @@ export function ejectPilot(state: BattleState, unitId: string, sink: GameEvent[]
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
   releaseClub(state, unit, "removed", sink);
   unit.removed = "pilotEjected";
-  state.wrecks[`${unit.position.col},${unit.position.row}`] = {
+  state.wrecks[hexKey(unit.position)] = {
     unitId,
     level: wreckLevelFor(state, unit),
   };

@@ -1,5 +1,5 @@
 import type { TerrainHexDef } from "../core/types";
-import { isTerrainType, TERRAIN_TYPES, type TerrainType } from "../core/types";
+import { hexKey, isTerrainType, TERRAIN_TYPES, type TerrainType } from "../core/types";
 
 export interface MapDefSrc {
   readonly name: string;
@@ -130,7 +130,7 @@ export function validateMapDef(def: MapDefSrc): void {
       if (entry.row < 1 || entry.row > height) {
         errors.push(`${label}.row ${entry.row} outside board bounds 1..${height}`);
       }
-      const key = `${entry.col},${entry.row}`;
+      const key = hexKey(entry);
       if (seen.has(key)) {
         errors.push(`${label} duplicates hex ${key}`);
       } else {

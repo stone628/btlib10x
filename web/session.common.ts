@@ -39,6 +39,7 @@ import {
   mechDefFor,
   movementMpPenalty,
   movementMpPenaltyWithThreshold,
+  msgHex,
   type PilotingCheckReason,
   pooledTotalsByWeaponName,
   type RemovalReason,
@@ -1025,7 +1026,7 @@ function psrReasonDetail(reason: PilotingCheckReason): string {
 }
 
 function hexLabel(hex: HexCoord | undefined): string {
-  return hex === undefined ? "-" : `${hex.col},${hex.row}`;
+  return hex === undefined ? "-" : msgHex(hex);
 }
 
 function fallCauseLabel(cause: UnitFallCause): string {
@@ -1226,12 +1227,12 @@ function handleSessionGameEvent(
       idLines(e.unitId, i18n("log.destroyed", { id: e.unitId, destroyed: e.destroyReason! }));
       break;
     case "buildingCollapsed":
-      lines(i18n("log.buildingCollapsed", { hex: `${e.col},${e.row}` }));
+      lines(i18n("log.buildingCollapsed", { hex: msgHex(e) }));
       break;
     case "buildingDamaged":
       lines(
         i18n("log.buildingDamaged", {
-          hex: `${e.col},${e.row}`,
+          hex: msgHex(e),
           damage: e.damage,
           cf: e.cf,
         }),
@@ -1241,7 +1242,7 @@ function handleSessionGameEvent(
       lines(
         i18n("log.collapseDamage", {
           id: e.unitId,
-          hex: `${e.col},${e.row}`,
+          hex: msgHex(e),
           loc: SHORT_LOC[e.location],
           damage: e.damage,
         }),
@@ -1502,7 +1503,7 @@ function handleSessionGameEvent(
         const lines = [
           i18n("log.buildingCrash", {
             id: e.unitId,
-            hex: `${e.col},${e.row}`,
+            hex: msgHex(e),
             groups: e.groups.map((g) => `${SHORT_LOC[g.location]}(${g.damage})`).join(" "),
             damage: e.totalDamage,
           }),
@@ -1538,7 +1539,7 @@ function handleSessionGameEvent(
         i18n(e.cause !== undefined ? "log.clubReleased" : "log.clubDroppedReturned", {
           id: e.unitId,
           kind: e.clubKind,
-          hex: `${e.col},${e.row}`,
+          hex: msgHex(e),
         }),
       );
       break;

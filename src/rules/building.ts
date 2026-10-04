@@ -1,5 +1,5 @@
 import { cellAt, type HexGrid } from "../core/terrain";
-import type { HexCell, HexCoord, TerrainType } from "../core/types";
+import { type HexCell, type HexCoord, hexKey, type TerrainType } from "../core/types";
 
 /** Building types recognized by the core rulebook. */
 export type BuildingType = "light" | "medium" | "heavy" | "hardened";
@@ -80,7 +80,7 @@ export function buildingAt(
   const terrain = cellAt(grid, hex).terrain;
   const bt = buildingTypeOf(terrain);
   if (bt === undefined) return undefined;
-  const key = `${hex.col},${hex.row}`;
+  const key = hexKey(hex);
   return buildings.get(key);
 }
 

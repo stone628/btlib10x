@@ -75,6 +75,11 @@ export function hexKey(hex: HexCoord): string {
   return `${hex.col},${hex.row}`;
 }
 
+/** Error messages show 1-based coordinates; positions are stored 1-based. */
+export function msgHex(hex: HexCoord): string {
+  return `${hex.col},${hex.row}`;
+}
+
 /** Terrain and elevation data for a single hex cell. */
 export interface HexCell {
   readonly terrain: TerrainType;
