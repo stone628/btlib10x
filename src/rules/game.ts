@@ -13,6 +13,7 @@ import {
   type Facing,
   type HexCell,
   type HexCoord,
+  hexKey,
   isArm,
   isTorso,
   isWoodsTerrain,
@@ -1153,10 +1154,6 @@ function recordCritSeveredLimbs(
   for (const crit of crits) {
     recordSeveredLimbs(state, unit, crit.blownOffLimbs);
   }
-}
-
-function hexKey(hex: HexCoord): string {
-  return `${hex.col},${hex.row}`;
 }
 
 /** Club tokens lying in `unit`'s hex (all kinds), in deposit order. */

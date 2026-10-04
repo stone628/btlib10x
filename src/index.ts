@@ -25,6 +25,7 @@ export type {
 } from "./core/types";
 export {
   FACINGS,
+  hexKey,
   isArm,
   isLimb,
   isTorso,

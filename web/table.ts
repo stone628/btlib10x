@@ -254,6 +254,6 @@ export function infoMapChunks(name: string): Chunk[] {
   }
   return [
     buildLinesChunk(i18n("info.mapHead", { name, w: map.width, h: map.height })),
-    buildBoardChunk({ map, units: null, reachable: null }),
+    buildBoardChunk({ map, units: null, reachable: null, clubHexes: null }),
   ];
 }

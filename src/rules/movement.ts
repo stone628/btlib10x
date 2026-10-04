@@ -7,7 +7,7 @@ import {
   MP_PER_FACING_CHANGE,
 } from "../core/terrain";
 import type { Facing, HexCoord, MoveMode, TerrainType } from "../core/types";
-import { FACINGS, oppositeFacing, rotateFacing } from "../core/types";
+import { FACINGS, hexKey, oppositeFacing, rotateFacing } from "../core/types";
 
 export function maxMovePoints(
   mode: MoveMode,
@@ -117,10 +117,6 @@ export function isBackwardStep(from: HexCoord, to: HexCoord, facing: Facing): bo
 export function isForwardStep(from: HexCoord, to: HexCoord, facing: Facing): boolean {
   const ahead = neighbor(from, facing);
   return ahead.col === to.col && ahead.row === to.row;
-}
-
-export function hexKey(hex: HexCoord): string {
-  return `${hex.col},${hex.row}`;
 }
 
 /** A single movement fragment in a reachability path. */

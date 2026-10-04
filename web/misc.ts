@@ -1,11 +1,4 @@
-import type {
-  Facing,
-  HexCoord,
-  Location,
-  ResolvedMechDef,
-  TerrainType,
-  WeaponCategory,
-} from "btlib10x";
+import type { Facing, Location, ResolvedMechDef, TerrainType, WeaponCategory } from "btlib10x";
 import { ensureMechRegistered } from "btlib10x";
 import { i18n, type MessageKey } from "./i18n";
 import { lookupMech } from "./lookup";
@@ -41,11 +34,6 @@ export function requireMechDef(model: string): ResolvedMechDef {
   const def = lookupMech(model) ?? ensureMechRegistered(model);
   if (def === undefined) throw new Error(i18n("err.unknownModel", { model }));
   return def;
-}
-
-/** Display coordinates are 1-based (the internal value itself). */
-export function hexCoordStr(hex: HexCoord): string {
-  return `${hex.col},${hex.row}`;
 }
 
 export const F = (f: Facing): string => i18n(`sheet.facing.${f}` as MessageKey);

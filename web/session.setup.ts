@@ -5,6 +5,7 @@ import {
   FACINGS,
   type Facing,
   type HexCoord,
+  hexKey,
   type MapDef,
   type MapNameHolder,
   mapDefFor,
@@ -14,7 +15,7 @@ import {
 } from "btlib10x";
 import { buildLinesChunk, type Chunk } from "./chunk";
 import { i18n } from "./i18n";
-import { gunneryLabel, hexCoordStr, requireMechDef } from "./misc";
+import { gunneryLabel, requireMechDef } from "./misc";
 import type { Session, SessionGameEvent } from "./session";
 import { drive } from "./session";
 
@@ -216,7 +217,7 @@ export function setupStatus(setup: SetupContext): Chunk {
           model: u.model,
           name: def.name,
           gunnery: gunneryLabel(u.gunnery),
-          pos: hexCoordStr(u.position),
+          pos: hexKey(u.position),
           facing: u.facing,
         }),
       );
