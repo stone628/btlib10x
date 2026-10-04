@@ -866,12 +866,13 @@ function validateStrike(
  * Pure function: does not mutate state. Returns the resolution with
  * damage groups, displacement, and PSR results.
  *
- * Kick PSRs are NOT rolled here: both the kicked target's check and the
+ * Kick PSRs are NOT rolled here: the kicked target's check on a hit and the
  * missed-kick attacker's check defer to the end-of-phase sweep (TW pp. 59,
  * 147) and come back as `kickTargetPsrPending` / `kickAttackerPsrPending`
  * for the caller to roll after all physical damage lands. Push PSRs stay
- * immediate: displacement (and its PSRs) resolves immediately after the
- * causing action (TW p.151).
+ * immediate: displacement (and its defender-only PSR) resolves immediately
+ * after the causing action (TW pp. 147, 151). Mutual pushes resolve via
+ * `resolveMutualPush`, not here.
  */
 export function resolvePhysicalAttack(
   battle: BattleState,
@@ -923,8 +924,8 @@ export function resolvePhysicalAttack(
   let targetDisplacedTo: HexCoord | null = null;
   let attackerDisplacedTo: HexCoord | null = null;
   let targetPsr: { target: number; roll: number | null; success: boolean } | null = null;
-  let attackerPsr: { target: number; roll: number | null; success: boolean } | null = null;
-  let attackerFalls = false;
+  const attackerPsr: { target: number; roll: number | null; success: boolean } | null = null;
+  const attackerFalls = false;
   let targetFalls = false;
   let kickTargetPsrPending = false;
   let kickAttackerPsrPending = false;
@@ -944,29 +945,28 @@ export function resolvePhysicalAttack(
 
   if (decl.type === "push") {
     if (hit) {
-      // Target moves one hex in push direction, attacker advances (TW p. 147)
+      // Target moves one hex in push direction, attacker advances (TW p. 147).
+      // Only the defender rolls (TW p. 147: "the defender must make a
+      // Piloting Skill Roll or fall"). Mutual pushes — where both succeed —
+      // are the sole exception and resolve via `resolveMutualPush`.
       const pushDir = attacker.facing;
       const targetNewHex = neighbor(target.position, pushDir);
       targetDisplacedTo = targetNewHex;
       attackerDisplacedTo = { ...target.position };
 
-      // Both make PSR (TW p. 147)
       const targetPsrResult = rollPhysicalPsr(rng, target);
       targetPsr = targetPsrResult;
       if (!targetPsrResult.success) targetFalls = true;
-
-      const attackerPsrResult = rollPhysicalPsr(rng, attacker);
-      attackerPsr = attackerPsrResult;
-      if (!attackerPsrResult.success) attackerFalls = true;
     }
   }
 
   if (decl.type === "kick") {
-    // Deferred to the end-of-phase sweep (TW pp. 59,147): the kicked target
-    // rolls regardless of hit/miss (unless prone, which ignores
-    // fall-avoidance PSRs per TW p.151), and the attacker rolls on a miss.
-    // No dice are drawn here so RNG order matches the deferred rolls.
-    kickTargetPsrPending = !target.prone;
+    // Deferred to the end-of-phase sweep (TW pp. 59,147): on a hit the
+    // kicked target rolls (unless prone, which ignores fall-avoidance PSRs
+    // per TW p.151); on a miss only the attacker rolls. A missed kick never
+    // forces a PSR on the target. No dice are drawn here so RNG order
+    // matches the deferred rolls.
+    kickTargetPsrPending = hit && !target.prone;
     kickAttackerPsrPending = !hit;
   }
 
@@ -994,6 +994,225 @@ export function resolvePhysicalAttack(
     ...(kickTargetPsrPending ? { kickTargetPsrPending } : {}),
     ...(kickAttackerPsrPending ? { kickAttackerPsrPending } : {}),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Mutual push (TW p. 147)
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve two 'Mechs pushing each other (TW p. 147: "If two 'Mechs push
+ * each other, resolve both: both fail = nothing; both succeed = neither
+ * moves and both make Piloting Skill Rolls or fall; one succeeds = resolve
+ * normally").
+ *
+ * The caller guarantees `attackerAId` declared a push against `attackerBId`
+ * and vice versa, both still stand in their declared hexes, and both pushes
+ * are still legal. Dice order is fixed: A's to-hit, B's to-hit, then the
+ * defender PSR(s) — B's first (defender of A's blow), then A's.
+ * Displacements and PSRs are immediate (TW p. 151), matching the single
+ * push path in `resolvePhysicalAttack`.
+ */
+export function resolveMutualPush(
+  battle: BattleState,
+  attackerAId: string,
+  attackerBId: string,
+  rng: Rng,
+): [PhysicalResolution, PhysicalResolution] {
+  const unitA = battle.units[attackerAId]!;
+  const unitB = battle.units[attackerBId]!;
+
+  function toHitFor(
+    attacker: UnitState,
+    target: UnitState,
+  ): { total: number; autoHit: boolean; autoMiss: boolean } {
+    const mods = computePhysicalToHit(battle, attacker, target, "push", undefined);
+    return {
+      total: mods.total,
+      autoHit: mods.total <= PHYSICAL_MIN_TOHIT,
+      autoMiss: mods.total > PHYSICAL_MAX_TOHIT,
+    };
+  }
+
+  function rollToHit(
+    total: number,
+    autoHit: boolean,
+    autoMiss: boolean,
+  ): { roll: number | null; hit: boolean } {
+    const roll = autoHit || autoMiss ? null : roll2D6(rng);
+    return { roll, hit: autoHit || (roll !== null && roll >= total) };
+  }
+
+  function rollDefenderPsr(unit: UnitState): {
+    target: number;
+    roll: number | null;
+    success: boolean;
+  } {
+    const def = mechDefFor(unit);
+    const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
+    return rollPilotingCheck(rng, unit.piloting, pre.modifier);
+  }
+
+  function missResolution(
+    attackerId: string,
+    targetId: string,
+    toHit: number,
+    roll: number | null,
+    autoHit: boolean,
+    autoMiss: boolean,
+    note: string,
+  ): PhysicalResolution {
+    return {
+      type: "push",
+      attackerId,
+      targetId,
+      toHit,
+      roll,
+      hit: false,
+      autoHit,
+      autoMiss,
+      damageToTarget: [],
+      damageToAttacker: [],
+      targetDisplacedTo: null,
+      attackerDisplacedTo: null,
+      targetPsr: null,
+      attackerPsr: null,
+      attackerFalls: false,
+      targetFalls: false,
+      notes: [note],
+      throughArmorCrit: false,
+    };
+  }
+
+  const a = toHitFor(unitA, unitB);
+  const b = toHitFor(unitB, unitA);
+  const ra = rollToHit(a.total, a.autoHit, a.autoMiss);
+  const rb = rollToHit(b.total, b.autoHit, b.autoMiss);
+
+  if (!ra.hit && !rb.hit) {
+    const note = "mutual push: both miss — nothing happens (TW p.147)";
+    return [
+      missResolution(attackerAId, attackerBId, a.total, ra.roll, a.autoHit, a.autoMiss, note),
+      missResolution(attackerBId, attackerAId, b.total, rb.roll, b.autoHit, b.autoMiss, note),
+    ];
+  }
+
+  if (ra.hit && !rb.hit) {
+    const targetNewHex = neighbor(unitB.position, unitA.facing);
+    const psr = rollDefenderPsr(unitB);
+    const hitRes: PhysicalResolution = {
+      type: "push",
+      attackerId: attackerAId,
+      targetId: attackerBId,
+      toHit: a.total,
+      roll: ra.roll,
+      hit: true,
+      autoHit: a.autoHit,
+      autoMiss: a.autoMiss,
+      damageToTarget: [],
+      damageToAttacker: [],
+      targetDisplacedTo: targetNewHex,
+      attackerDisplacedTo: { ...unitB.position },
+      targetPsr: psr,
+      attackerPsr: null,
+      attackerFalls: false,
+      targetFalls: !psr.success,
+      notes: ["mutual push: only the first blow lands — resolved normally (TW p.147)"],
+      throughArmorCrit: false,
+    };
+    const missRes = missResolution(
+      attackerBId,
+      attackerAId,
+      b.total,
+      rb.roll,
+      b.autoHit,
+      b.autoMiss,
+      "mutual push: blow misses — resolved normally (TW p.147)",
+    );
+    return [hitRes, missRes];
+  }
+
+  if (!ra.hit && rb.hit) {
+    const targetNewHex = neighbor(unitA.position, unitB.facing);
+    const psr = rollDefenderPsr(unitA);
+    const missRes = missResolution(
+      attackerAId,
+      attackerBId,
+      a.total,
+      ra.roll,
+      a.autoHit,
+      a.autoMiss,
+      "mutual push: blow misses — resolved normally (TW p.147)",
+    );
+    const hitRes: PhysicalResolution = {
+      type: "push",
+      attackerId: attackerBId,
+      targetId: attackerAId,
+      toHit: b.total,
+      roll: rb.roll,
+      hit: true,
+      autoHit: b.autoHit,
+      autoMiss: b.autoMiss,
+      damageToTarget: [],
+      damageToAttacker: [],
+      targetDisplacedTo: targetNewHex,
+      attackerDisplacedTo: { ...unitA.position },
+      targetPsr: psr,
+      attackerPsr: null,
+      attackerFalls: false,
+      targetFalls: !psr.success,
+      notes: ["mutual push: only the second blow lands — resolved normally (TW p.147)"],
+      throughArmorCrit: false,
+    };
+    return [missRes, hitRes];
+  }
+
+  // Both succeed: neither moves and both roll (TW p.147). B's PSR first
+  // (defender of A's blow), then A's.
+  const psrB = rollDefenderPsr(unitB);
+  const psrA = rollDefenderPsr(unitA);
+  const note = "mutual push: both succeed — neither moves and both roll (TW p.147)";
+  const resA: PhysicalResolution = {
+    type: "push",
+    attackerId: attackerAId,
+    targetId: attackerBId,
+    toHit: a.total,
+    roll: ra.roll,
+    hit: true,
+    autoHit: a.autoHit,
+    autoMiss: a.autoMiss,
+    damageToTarget: [],
+    damageToAttacker: [],
+    targetDisplacedTo: null,
+    attackerDisplacedTo: null,
+    targetPsr: psrB,
+    attackerPsr: null,
+    attackerFalls: false,
+    targetFalls: !psrB.success,
+    notes: [note],
+    throughArmorCrit: false,
+  };
+  const resB: PhysicalResolution = {
+    type: "push",
+    attackerId: attackerBId,
+    targetId: attackerAId,
+    toHit: b.total,
+    roll: rb.roll,
+    hit: true,
+    autoHit: b.autoHit,
+    autoMiss: b.autoMiss,
+    damageToTarget: [],
+    damageToAttacker: [],
+    targetDisplacedTo: null,
+    attackerDisplacedTo: null,
+    targetPsr: psrA,
+    attackerPsr: null,
+    attackerFalls: false,
+    targetFalls: !psrA.success,
+    notes: [note],
+    throughArmorCrit: false,
+  };
+  return [resA, resB];
 }
 
 // ---------------------------------------------------------------------------

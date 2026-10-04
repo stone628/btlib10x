@@ -179,6 +179,33 @@ describe("displaced targets (TW p.144)", () => {
   });
 });
 
+describe("mutual push (TW p.147)", () => {
+  it("both succeed: neither moves and both roll defender-only PSRs", () => {
+    const state = faceToFace();
+    state.phase = "attack";
+    state.units.hbk!.declaredPhysicalAttacks.push({ type: "push", targetId: "enf" });
+    state.units.enf!.declaredPhysicalAttacks.push({ type: "push", targetId: "hbk" });
+    const events: GameEvent[] = [];
+    resolveAllAttacks(state, HIGH_RNG, events);
+
+    const pushes = events.filter(
+      (e): e is Extract<GameEvent, { kind: "physicalAttackResolved" }> =>
+        e.kind === "physicalAttackResolved",
+    );
+    expect(pushes).toHaveLength(2);
+    for (const p of pushes) {
+      expect(p.resolution.hit).toBe(true);
+      expect(p.resolution.targetPsr).not.toBeNull();
+      expect(p.resolution.attackerPsr).toBeNull();
+      expect(p.resolution.targetDisplacedTo).toBeNull();
+      expect(p.resolution.attackerDisplacedTo).toBeNull();
+    }
+    // Neither 'Mech moves on a mutual both-succeed.
+    expect(requireUnit(state, "hbk").position).toEqual({ col: 2, row: 2 });
+    expect(requireUnit(state, "enf").position).toEqual({ col: 2, row: 3 });
+  });
+});
+
 describe("per-sub-phase 20-point accounting", () => {
   it("two sub-threshold lots never pool into one roll", () => {
     const state = faceToFace();

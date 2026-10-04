@@ -115,6 +115,7 @@ import {
   type PhysicalAttackType,
   type PhysicalResolution,
   type PhysicalWeaponName,
+  resolveMutualPush,
   resolvePhysicalAttack,
   resolveStrikeArm,
   validatePhysicalAttack,
@@ -2817,6 +2818,9 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   });
   // TW p.144 displacement order: the lower-initiative (losing) team's melee
   // resolves first; same-team order follows declaration order (stable sort).
+  // `mutualPushConsumed` tracks mutual-push pairs resolved simultaneously
+  // (TW p.147) so the counterpart's declaration is skipped on its own turn.
+  const mutualPushConsumed = new Set<string>();
   const physicalOrder = Object.values(state.units)
     .filter((u) => u.declaredPhysicalAttacks.length > 0)
     .sort((a, b) => {
@@ -2827,6 +2831,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
 
   for (const unit of physicalOrder) {
     for (const decl of unit.declaredPhysicalAttacks) {
+      if (mutualPushConsumed.has(unit.id)) continue;
       const attacker = requireUnit(state, unit.id);
       const target = state.units[decl.targetId];
       if (isUnitRemoved(attacker) || attacker.unconscious || isShutdown(attacker)) {
@@ -2860,6 +2865,96 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
           resolution,
         });
         continue;
+      }
+      // TW p.147 mutual push: two 'Mechs pushing each other resolve both
+      // blows simultaneously (both fail = nothing; both succeed = neither
+      // moves and both roll; one succeeds = resolve normally). Only when
+      // both still stand in their declared hexes and both pushes are still
+      // legal — otherwise fall through to sequential resolution (displacement
+      // redirect / validity misses below).
+      if (decl.type === "push") {
+        const counterpart = state.units[decl.targetId];
+        const counterpartDecl = counterpart?.declaredPhysicalAttacks.find(
+          (d) => d.type === "push" && d.targetId === unit.id,
+        );
+        if (
+          counterpart !== undefined &&
+          counterpartDecl !== undefined &&
+          !mutualPushConsumed.has(counterpart.id) &&
+          !isUnitRemoved(counterpart) &&
+          !counterpart.unconscious &&
+          !isShutdown(counterpart)
+        ) {
+          const declaredA = declaredPositions[unit.id];
+          const declaredB = declaredPositions[counterpart.id];
+          const bothInPlace =
+            declaredA !== undefined &&
+            declaredB !== undefined &&
+            sameHex(declaredA, attacker.position) &&
+            sameHex(declaredB, counterpart.position);
+          if (
+            bothInPlace &&
+            validatePhysicalAttack(state, attacker.id, decl).ok &&
+            validatePhysicalAttack(state, counterpart.id, counterpartDecl).ok
+          ) {
+            const [resA, resB] = resolveMutualPush(state, attacker.id, counterpart.id, rng);
+            sink.push({
+              kind: "physicalAttackResolved",
+              unitId: attacker.id,
+              targetId: counterpart.id,
+              resolution: resA,
+            });
+            sink.push({
+              kind: "physicalAttackResolved",
+              unitId: counterpart.id,
+              targetId: attacker.id,
+              resolution: resB,
+            });
+            if (resA.targetDisplacedTo && !isUnitRemoved(counterpart)) {
+              counterpart.position = resA.targetDisplacedTo;
+            }
+            if (resA.attackerDisplacedTo && !isUnitRemoved(attacker)) {
+              attacker.position = resA.attackerDisplacedTo;
+            }
+            if (resB.targetDisplacedTo && !isUnitRemoved(attacker)) {
+              attacker.position = resB.targetDisplacedTo;
+            }
+            if (resB.attackerDisplacedTo && !isUnitRemoved(counterpart)) {
+              counterpart.position = resB.attackerDisplacedTo;
+            }
+            if (resA.targetFalls && !isUnitRemoved(counterpart)) {
+              applyFall(
+                state,
+                counterpart,
+                rng,
+                {
+                  cause: { kind: "physicalAttack" },
+                  hex: { ...counterpart.position },
+                  seatbeltModifier: null,
+                  halved: false,
+                },
+                sink,
+              );
+            }
+            if (resB.targetFalls && !isUnitRemoved(attacker)) {
+              applyFall(
+                state,
+                attacker,
+                rng,
+                {
+                  cause: { kind: "physicalAttack" },
+                  hex: { ...attacker.position },
+                  seatbeltModifier: null,
+                  halved: false,
+                },
+                sink,
+              );
+            }
+            mutualPushConsumed.add(attacker.id);
+            mutualPushConsumed.add(counterpart.id);
+            continue;
+          }
+        }
       }
       // TW p.144 comes before legality: a target displaced before its
       // attacker's melee resolves no longer stands in the aimed hex.
@@ -3017,7 +3112,8 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         attacker.position = resolution.attackerDisplacedTo;
       }
 
-      // Handle immediate falls (push PSRs only — kick defers to the sweep).
+      // Handle immediate falls (push defender PSR only — kick defers to
+      // the sweep; mutual pushes resolve above with one defender PSR each).
       const fallTarget = hitTarget ?? target;
       if (resolution.targetFalls && fallTarget && !isUnitRemoved(fallTarget)) {
         applyFall(

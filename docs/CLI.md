@@ -356,8 +356,11 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   plus deferred kick PSRs: punch damage 1/10 t on the Punch table, kick 1/5 t
   on the Kick table, club 1/5 t on the standard table, strike per weapon
   (hatchet 1/5 t, sword 1/10 t +1, blade 1/10 t) on the standard table,
-  push no damage with target displacement + attacker advance (immediate PSRs,
-  TW p.151). Kick target/attacker-miss PSRs defer to the sweep; push forces both sides' PSRs.
+  push no damage with target displacement + attacker advance (immediate
+  defender PSR, TW pp.147, 151; mutual pushes resolve simultaneously —
+  both fail = nothing, both succeed = neither moves and both roll,
+  one succeeds = resolve normally). Kick PSRs defer to the sweep (kicked
+  target on a hit, attacker on a miss).
   Head hits injure the pilot as usual. A crit on any slot of a mounted
   physical weapon destroys it (the HCT-5S Hatchetman now ships its hatchet).
   Triple-Strength Myomer (TW p.143, e.g. the CN9-YLW2 Centurion): active the
