@@ -26,6 +26,7 @@ export type {
 export {
   FACINGS,
   isArm,
+  isLimb,
   isTorso,
   oppositeFacing,
   rotateFacing,

@@ -3,6 +3,7 @@ import { LOCATIONS } from "../src/core/types";
 import { resolveWeaponAttack } from "../src/rules/attack";
 import type { LocationValue, TorsoLocationValue, UnitDamageState } from "../src/rules/damage";
 import { transferDetail } from "../web/session";
+import { formatCritEffect } from "../web/session.attack";
 import { scriptedRng } from "./helpers";
 
 function freshState(hp = 10): UnitDamageState {
@@ -127,5 +128,14 @@ describe("transferDetail", () => {
     const text = transferDetail(res) ?? "";
     expect(text).toMatch(/RTR 5->2\b/);
     expect(text).not.toMatch(/RT[AFI]/);
+  });
+});
+
+describe("formatCritEffect limb blow-off", () => {
+  it("fills the placeholder for leg and arm blow-offs", () => {
+    const leg = formatCritEffect({ kind: "limbBlownOff", limb: "leftLeg", rolls: [12] });
+    const arm = formatCritEffect({ kind: "limbBlownOff", limb: "leftArm", rolls: [12] });
+    expect(leg).not.toMatch(/[{}]/);
+    expect(arm).not.toMatch(/[{}]/);
   });
 });

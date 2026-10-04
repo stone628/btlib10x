@@ -65,6 +65,13 @@ Run lint + typecheck + tests together before considering work done: `npm run lin
 - Board styling travels as structured spans beside the text (`render.ts` models + `boardToSpans`), never inline escape codes; the web layer maps styles to CSS classes (palette vars in `web/index.html`). Flat-text renderers stay byte-identical to their historic output.
 - Mech data lives in `data/mechs/*.json` (copied into published package); new 'Mechs must pass `validateMechDef`.
 
+## Rules reference
+
+For any BattleTech rules question or TW-compliance check, use the `battletech-rules`
+skill in `.agents/skills/battletech-rules/`: read its `SKILL.md`, then only the one routed
+`references/` file. Do **not** read `TW_RULEBOOK.md` at the repo root (437 KB, ~115k
+tokens). Cite pages as `TW p. N` (printed page = PDF page − 1).
+
 ## Roadmap
 
 See `docs/TODO.md`. Later: sarna.net scraping (dev-only), full-intro rules expansion.

@@ -83,8 +83,8 @@
  */
 
 import { roll2D6, rollD6 } from "../core/dice";
-import type { Location, Rng } from "../core/types";
-import { damageTransferTo, isArm, isLeg, isLimb, isTorso, TORSO_LOCATIONS } from "../core/types";
+import type { LimbLocation, Location, Rng } from "../core/types";
+import { damageTransferTo, isLimb, isTorso, TORSO_LOCATIONS } from "../core/types";
 import { type AmmoNameHolder, ammoDefFor } from "../data/ammo.schema";
 import type { ResolvedCritSlot, ResolvedMechDef } from "../data/mech.schema";
 import { CRIT_SLOT_COUNTS } from "../data/mech.schema";
@@ -154,13 +154,8 @@ export type CriticalEffect =
       readonly rolls: readonly number[];
     }
   | {
-      readonly kind: "armBlownOff";
-      readonly arm: Location;
-      readonly rolls: readonly number[];
-    }
-  | {
-      readonly kind: "legBlownOff";
-      readonly leg: Location;
+      readonly kind: "limbBlownOff";
+      readonly limb: LimbLocation;
       readonly rolls: readonly number[];
     }
   | {
@@ -208,7 +203,7 @@ export interface CriticalResolution {
   readonly damage: UnitDamageState;
   /** Limbs blown off (after this determining's effects, in addition to those
    *  present in the input state). */
-  readonly blownOffArms: readonly Location[];
+  readonly blownOffLimbs: readonly LimbLocation[];
   /** Reason the unit is killed by these crits (null when it survives): head
    *  or CT IS to 0, cockpit destroyed, head blown off, or three engine
    *  crits. See `DestroyedReason`. */
@@ -399,7 +394,7 @@ export function applyAmmoExplosion(
       before: state as UnitDamageState,
       steps: [],
       newlyDestroyed: [],
-      blownOffArms: [],
+      blownOffLimbs: [],
       killed: false,
     };
   }
@@ -432,7 +427,7 @@ interface MutableCritState {
   damage: UnitDamageState;
   ammoBins: AmmoBins;
   rows: CriticalEffect[];
-  blownOffArms: Location[];
+  blownOffLimbs: LimbLocation[];
   killedReason: DestroyedReason | null;
   /** Guard against pathological recursion in ammo-explosion cascades. */
   depth: number;
@@ -451,7 +446,7 @@ export function resolveCriticalHits(input: ResolveCriticalsInput): CriticalResol
     },
     ammoBins: { ...input.ammoBins },
     rows: [],
-    blownOffArms: [],
+    blownOffLimbs: [],
     killedReason: null,
     depth: 0,
   };
@@ -468,7 +463,7 @@ export function resolveCriticalHits(input: ResolveCriticalsInput): CriticalResol
     critSlotsDestroyed: state.destroyed,
     destroyedWeapons: state.destroyedWeapons,
     damage: state.damage,
-    blownOffArms: state.blownOffArms,
+    blownOffLimbs: state.blownOffLimbs,
     killedReason: state.killedReason,
     ammoBins: state.ammoBins,
   };
@@ -509,17 +504,13 @@ function runDetermining(
       zeroLocationStructure(state.damage, "head");
       state.killedReason = "headBlownOff";
       state.rows.push({ kind: "headBlownOff", rolls: [det.roll] });
-    } else if (isArm(source.location)) {
+    } else if (isLimb(source.location)) {
       // TW p.145: blown-off arm rides away intact ("may be picked up and
       // used as a club"). Salvage sees weapons, heat sinks, etc. as
       // salvageable on the severed limb — do not mass-mark slot flags.
       zeroLocationStructure(state.damage, source.location);
-      state.blownOffArms.push(source.location);
-      state.rows.push({ kind: "armBlownOff", arm: source.location, rolls: [det.roll] });
-    } else if (isLeg(source.location)) {
-      // Same as arm blow-off — leg rides away intact for club use.
-      zeroLocationStructure(state.damage, source.location);
-      state.rows.push({ kind: "legBlownOff", leg: source.location, rolls: [det.roll] });
+      state.blownOffLimbs.push(source.location);
+      state.rows.push({ kind: "limbBlownOff", limb: source.location, rolls: [det.roll] });
     }
     state.depth -= 1;
     return det.roll;
@@ -587,8 +578,8 @@ function detonateCritBlast(
     state.killedReason =
       state.damage.internalStructure.head <= 0 ? "headDestroyed" : "centerTorsoDestroyed";
   }
-  for (const arm of app.blownOffArms) {
-    state.blownOffArms.push(arm);
+  for (const arm of app.blownOffLimbs) {
+    state.blownOffLimbs.push(arm);
   }
   // Cascade a fresh determining roll for each location that lost IS
   // during the explosion (the official rule: "Because an ammunition
@@ -609,7 +600,7 @@ function detonateCritBlast(
 /**
  * Apply a single crit hit at `slotIndex` in `loc`. Dispatches on the slot's
  * component to produce the appropriate effect. Marks the slot destroyed and
- * mutates ammo / damage / destroyed-weapons / blownOffArms / killed.
+ * mutates ammo / damage / destroyed-weapons / blownOffLimbs / killed.
  */
 function applySlotHit(
   rng: Rng,

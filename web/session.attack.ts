@@ -17,6 +17,7 @@ import {
   hexDistance,
   isAdjacent,
   isArm,
+  isLimb,
   isTorso,
   isUnitDestroyed,
   isUnitImmobile,
@@ -1004,12 +1005,13 @@ export function transferDetail(r: AttackResolution): string | null {
     );
   }
   let text = bits.join(", ");
-  for (const arm of app.blownOffArms) {
-    if (!isArm(arm)) continue;
-    const cause = shoulderOf(arm);
-    text += i18n("res.armBlownOff", { cause: SHORT_LOC[cause], arm: SHORT_LOC[arm] });
+  for (const limb of app.blownOffLimbs) {
+    const cause = shoulderOf(limb);
+    text += i18n("res.limbBlownOff", { cause: SHORT_LOC[cause], limb: SHORT_LOC[limb] });
   }
-  const otherDestroyed = app.newlyDestroyed.filter((loc) => !app.blownOffArms.includes(loc));
+  const otherDestroyed = app.newlyDestroyed.filter(
+    (loc) => !isLimb(loc) || !app.blownOffLimbs.includes(loc),
+  );
   if (otherDestroyed.length > 0) {
     text += i18n("res.destroyedTail", {
       locs: otherDestroyed.map((l) => SHORT_LOC[l]).join(", "),
@@ -1020,14 +1022,14 @@ export function transferDetail(r: AttackResolution): string | null {
   return text;
 }
 
-function formatCritEffect(eff: CriticalEffect): string {
+export function formatCritEffect(eff: CriticalEffect): string {
   switch (eff.kind) {
     case "headBlownOff":
       return i18n("res.critHeadBlownOff");
-    case "armBlownOff":
-      return i18n("res.critArmBlownOff", { arm: SHORT_LOC[eff.arm] });
-    case "legBlownOff":
-      return i18n("res.critLegBlownOff", { leg: SHORT_LOC[eff.leg] });
+    case "limbBlownOff":
+      return isArm(eff.limb)
+        ? i18n("res.critArmBlownOff", { arm: SHORT_LOC[eff.limb] })
+        : i18n("res.critLegBlownOff", { leg: SHORT_LOC[eff.limb] });
     case "weaponDestroyed":
       if (eff.explosion !== undefined) {
         return i18n("res.critWeaponExplosion", {

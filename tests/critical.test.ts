@@ -147,7 +147,7 @@ describe("limb / head blow-off on 12", () => {
       damage,
       ammoBins: loadAmmoBins(def),
     });
-    expect(res.blownOffArms).toContain("leftArm");
+    expect(res.blownOffLimbs).toContain("leftArm");
     expect(res.damage.internalStructure.leftArm).toBe(0);
     expect(res.damage.armor.leftArm).toBe(0);
   });
@@ -164,7 +164,7 @@ describe("limb / head blow-off on 12", () => {
     });
     expect(res.damage.internalStructure.leftLeg).toBe(0);
     expect(res.damage.armor.leftLeg).toBe(0);
-    expect(res.rows.some((r) => r.kind === "legBlownOff")).toBe(true);
+    expect(res.rows.some((r) => r.kind === "limbBlownOff")).toBe(true);
   });
 
   it("12 on torso yields three crits (no blow-off)", () => {
@@ -832,7 +832,7 @@ describe("CASE", () => {
   it("CASE: blowing out a side torso also removes its arm, CT still safe", () => {
     const s = state();
     const app = applyAmmoExplosion(s, "leftTorso", 1000, "case");
-    expect(app.blownOffArms).toContain("leftArm");
+    expect(app.blownOffLimbs).toContain("leftArm");
     expect(app.after.internalStructure.leftArm).toBe(0);
     expect(app.killed).toBe(false);
     expect(app.after.internalStructure.centerTorso).toBeGreaterThan(0);
@@ -1082,7 +1082,7 @@ describe("blow-off and cockpit kill: salvage-friendly slot preservation", () => 
     });
 
     expect(res.determiningRoll).toBe(12);
-    expect(res.blownOffArms).toContain("leftArm");
+    expect(res.blownOffLimbs).toContain("leftArm");
     expect(res.damage.internalStructure.leftArm).toBe(0);
     expect(res.damage.armor.leftArm).toBe(0);
     // Slot flags preserved — every flag equals pre-resolution state.
@@ -1111,7 +1111,7 @@ describe("blow-off and cockpit kill: salvage-friendly slot preservation", () => 
       ammoBins: loadAmmoBins(def),
     });
 
-    expect(res.rows.some((r) => r.kind === "legBlownOff")).toBe(true);
+    expect(res.rows.some((r) => r.kind === "limbBlownOff")).toBe(true);
     expect(res.damage.internalStructure.rightLeg).toBe(0);
     expect(res.critSlotsDestroyed.rightLeg).toEqual(flagsBefore);
   });
