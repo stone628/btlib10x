@@ -85,6 +85,7 @@ import {
   applyDamage,
   canAttemptStandUp,
   canFireFromLocation,
+  type DamageTransferStep,
   destroyedLegs,
   isUnitDestroyed,
   isUnitImmobile,
@@ -886,6 +887,14 @@ function occupantAt(state: BattleState, hex: HexCoord, excludeId?: string): Unit
     if (sameHex(unit.position, hex)) return unit;
   }
   return undefined;
+}
+
+function cloneDamage(damage: UnitDamageState): UnitDamageState {
+  return {
+    armor: { ...damage.armor },
+    armorRear: { ...damage.armorRear },
+    internalStructure: { ...damage.internalStructure },
+  };
 }
 
 /** Wreck occupying a hex, or undefined when the hex is clear of wrecks. */
@@ -2969,10 +2978,13 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
    *  blow-off); drives `markUnitDestroyed` when the damage state alone
    *  wouldn't show a kill (the engine-crit case). */
   const targetKilledReason: Record<string, DestroyedReason> = {};
+  /** `targetId:limb` pairs already reported as blown off this phase. */
+  const reportedLimbs = new Set<string>();
 
   for (const result of results) {
     for (const { targetId, resolution, buildingDamage } of result.resolutions) {
       const target = requireUnit(state, targetId);
+      let reported = resolution;
 
       // Initialize target accumulators from current state (not baseDamage —
       // we want sequential crit application within the same target)
@@ -2992,17 +3004,43 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       // (TW p.38: all weapon attack damage applied at end of phase).
       if (resolution.application !== null && resolution.groups.length > 0) {
         let currentDamage = targetDamageMap[targetId];
+        const before = cloneDamage(currentDamage);
         // Limbs sheared off by torso destruction (damage transfer) stay in
         // the hex as clubs (TW p.146); collected here, recorded below.
         const sheared: LimbLocation[] = [];
+        const steps: DamageTransferStep[] = [];
+        const newlyDestroyed: Location[] = [];
+        let killed = false;
         for (const group of resolution.groups) {
           // Apply each hit group with the attack's arc (determines armor pool)
           const app = applyDamage(currentDamage, group.location, group.damage, resolution.arc);
           currentDamage = app.after;
           sheared.push(...app.blownOffLimbs);
+          steps.push(...app.steps);
+          newlyDestroyed.push(...app.newlyDestroyed);
+          killed ||= app.killed;
         }
         targetDamageMap[targetId] = currentDamage;
         recordSeveredLimbs(state, target, sheared);
+        // The resolution's own application ran against the phase-start
+        // snapshot, so it misses damage that earlier weapons already dealt
+        // (structure loss, blown-off limbs, kills). Report the accumulated
+        // application instead; crit-added limbs it carries are kept.
+        const critLimbs = resolution.application.blownOffLimbs.filter(
+          (l) => !sheared.includes(l) && !reportedLimbs.has(`${targetId}:${l}`),
+        );
+        for (const l of [...sheared, ...critLimbs]) reportedLimbs.add(`${targetId}:${l}`);
+        reported = {
+          ...resolution,
+          application: {
+            before,
+            after: cloneDamage(currentDamage),
+            steps,
+            newlyDestroyed,
+            blownOffLimbs: [...sheared, ...critLimbs],
+            killed: killed || resolution.application.killed,
+          },
+        };
       }
 
       // Collect crits for later sequential application
@@ -3031,7 +3069,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         kind: "attackResolved",
         unitId: result.unitId,
         targetId,
-        resolution,
+        resolution: reported,
       });
     }
 
