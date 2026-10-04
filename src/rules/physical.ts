@@ -40,7 +40,7 @@ import { isTsmActive } from "./heat";
 import { hitLocationForArc, punchHitLocationForArc } from "./hitlocation";
 import { losWoodsPointsBetween } from "./los";
 import { attackerMovementModifier, TARGET_IMMOBILE_MOD, targetMovementModifier } from "./movement";
-import { preexistingDamageModifier, rollPilotingCheck } from "./piloting";
+import { type PilotingRollResult, preexistingDamageModifier, rollPilotingCheck } from "./piloting";
 import { PRONE_ATTACKER_MOD, proneTargetModifier } from "./tohit";
 
 // ---------------------------------------------------------------------------
@@ -102,8 +102,8 @@ export interface PhysicalResolution {
   readonly damageToAttacker: DamageGroup[];
   readonly targetDisplacedTo: HexCoord | null;
   readonly attackerDisplacedTo: HexCoord | null;
-  readonly targetPsr: { target: number; roll: number | null; success: boolean } | null;
-  readonly attackerPsr: { target: number; roll: number | null; success: boolean } | null;
+  readonly targetPsr: PilotingRollResult | null;
+  readonly attackerPsr: PilotingRollResult | null;
   readonly attackerFalls: boolean;
   readonly targetFalls: boolean;
   readonly notes: string[];
@@ -1027,8 +1027,8 @@ export function resolvePhysicalAttack(
   // applies to every PSR, evaluated against each side's own damage state.
   let targetDisplacedTo: HexCoord | null = null;
   let attackerDisplacedTo: HexCoord | null = null;
-  let targetPsr: { target: number; roll: number | null; success: boolean } | null = null;
-  const attackerPsr: { target: number; roll: number | null; success: boolean } | null = null;
+  let targetPsr: PilotingRollResult | null = null;
+  const attackerPsr: PilotingRollResult | null = null;
   const attackerFalls = false;
   let targetFalls = false;
   let kickTargetPsrPending = false;
@@ -1038,10 +1038,7 @@ export function resolvePhysicalAttack(
    * Roll one physical-attack PSR for `unit`, applying its own preexisting
    * damage (TW p.60). Pure dice wrapper so push/kick call sites stay flat.
    */
-  function rollPhysicalPsr(
-    rollRng: Rng,
-    unit: UnitState,
-  ): { target: number; roll: number | null; success: boolean } {
+  function rollPhysicalPsr(rollRng: Rng, unit: UnitState): PilotingRollResult {
     const def = mechDefFor(unit);
     const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
     return rollPilotingCheck(rollRng, unit.piloting, pre.modifier);

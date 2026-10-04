@@ -23,6 +23,7 @@ import {
   GYRO_DESTROYED_HITS,
   GYRO_HIT_MOD,
   HEAT_CAP,
+  type HexCoord,
   heatDissipation,
   heatDissipationMax,
   hexKey,
@@ -1023,7 +1024,7 @@ function psrReasonDetail(reason: PilotingCheckReason): string {
   return i18n(PSR_REASON_KEY[reason]);
 }
 
-function hexLabel(hex: { readonly col: number; readonly row: number } | undefined): string {
+function hexLabel(hex: HexCoord | undefined): string {
   return hex === undefined ? "-" : `${hex.col},${hex.row}`;
 }
 

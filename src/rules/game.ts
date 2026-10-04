@@ -119,6 +119,7 @@ import {
 import * as mv from "./movement";
 import { BACKWARD_LEVEL_CHANGE_MAX, FORWARD_LEVEL_CHANGE_MAX, JUMP_MP_PER_HEX } from "./movement";
 import {
+  type DamageGroup,
   type PhysicalAttackDecl,
   type PhysicalAttackType,
   type PhysicalResolution,
@@ -140,6 +141,7 @@ import {
   HIP_MOD,
   LEG_ACTUATOR_MOD,
   LEG_ACTUATORS,
+  type PilotingRollResult,
   PSR_DAMAGE_THRESHOLD,
   preexistingDamageModifier,
   rollConsciousness,
@@ -640,7 +642,7 @@ export type GameEvent =
       readonly column: Arc;
       /** Underlying-terrain levels fallen (0 for a same-hex fall). */
       readonly levelsFallen: number;
-      readonly groups: ReadonlyArray<{ readonly location: Location; readonly damage: number }>;
+      readonly groups: readonly DamageGroup[];
       readonly totalDamage: number;
       readonly crits: readonly CriticalResolution[];
     }
@@ -668,7 +670,7 @@ export type GameEvent =
       readonly unitId: string;
       readonly col: number;
       readonly row: number;
-      readonly groups: ReadonlyArray<{ readonly location: Location; readonly damage: number }>;
+      readonly groups: readonly DamageGroup[];
       readonly totalDamage: number;
       readonly crits: readonly CriticalResolution[];
     };
@@ -872,7 +874,7 @@ export function partialCoverMod(
 }
 
 /** Error messages show 1-based coordinates; positions are stored 1-based. */
-function fmtHex(hex: { col: number; row: number }): string {
+function fmtHex(hex: HexCoord): string {
   return `${hex.col},${hex.row}`;
 }
 
@@ -1038,13 +1040,12 @@ export function createBattle(
   });
   const terrainSeen = new Set<string>();
   const buildings: Record<string, BuildingState> = {};
-  for (const { col, row, type, level } of map.terrain) {
-    const key = `${col},${row}`;
-    if (terrainSeen.has(key))
-      throw new Error(`Duplicate terrain definition for hex ${fmtHex({ col, row })}`);
+  for (const t of map.terrain) {
+    const key = hexKey(t);
+    if (terrainSeen.has(key)) throw new Error(`Duplicate terrain definition for hex ${fmtHex(t)}`);
     terrainSeen.add(key);
-    cells[col - 1 + (row - 1) * width] = { terrain: type, level: level ?? 0 };
-    const bt = buildingTypeOf(type);
+    cells[t.col - 1 + (t.row - 1) * width] = { terrain: t.type, level: t.level ?? 0 };
+    const bt = buildingTypeOf(t.type);
     if (bt !== undefined) buildings[key] = createBuildingState(bt);
   }
 
@@ -1328,7 +1329,7 @@ function pushPilotingCheck(
   preexistingModifier: number,
   rng: Rng,
   hex?: HexCoord,
-): { target: number; roll: number | null; success: boolean } {
+): PilotingRollResult {
   const r = rollPilotingCheck(rng, unit.piloting, triggerModifier + preexistingModifier);
   if (hex === undefined) {
     sink.push({
@@ -2634,7 +2635,7 @@ function applyDamageGroups(
   state: BattleState,
   unit: UnitState,
   rng: Rng,
-  groups: ReadonlyArray<{ location: Location; damage: number }>,
+  groups: readonly DamageGroup[],
   arc: Arc,
   sink: GameEvent[],
 ): CriticalResolution[] {
@@ -2772,7 +2773,7 @@ export function applyFall(
   } else if (opts.halved) {
     total = Math.floor(total / 2);
   }
-  const groups: Array<{ location: Location; damage: number }> = [];
+  const groups: DamageGroup[] = [];
   for (const amount of fallingDamageGroups(total)) {
     groups.push({ location: hitLocationForArc(dir.column, roll2D6(rng)), damage: amount });
   }
@@ -3194,7 +3195,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     for (const unitId of outcome.occupants) {
       const unit = requireUnit(state, unitId);
       if (isUnitRemoved(unit)) continue;
-      const groups: Array<{ location: Location; damage: number }> = [];
+      const groups: DamageGroup[] = [];
       for (const amount of fallingDamageGroups(total)) {
         groups.push({ location: punchHitLocation(rollD6(rng)), damage: amount });
       }
@@ -4262,7 +4263,7 @@ function movementTerrainPsr(
     if (!r.success) {
       const cf = state.buildings[`${to.col},${to.row}`]?.cf ?? 0;
       const total = Math.ceil(cf / BUILDING_CRASH_DIVISOR);
-      const groups: Array<{ location: Location; damage: number }> = [];
+      const groups: DamageGroup[] = [];
       for (const amount of fallingDamageGroups(total)) {
         groups.push({ location: hitLocation(roll2D6(rng)), damage: amount });
       }
