@@ -5,6 +5,7 @@ import {
   costToEnter,
   type HexGrid,
   MP_PER_FACING_CHANGE,
+  waterDepth,
 } from "../core/terrain";
 import type { Facing, HexCoord, MoveMode, TerrainType } from "../core/types";
 import { FACINGS, hexKey, oppositeFacing, rotateFacing } from "../core/types";
@@ -300,10 +301,12 @@ export function reachableLandings(
   const inBounds = (hex: HexCoord): boolean =>
     hex.col >= 1 && hex.col <= width && hex.row >= 1 && hex.row <= height;
 
-  const canEnter = (from: HexCoord, hex: HexCoord, backward: boolean): boolean => {
+  const canEnter = (from: HexCoord, hex: HexCoord, backward: boolean, minMove = false): boolean => {
     if (!inBounds(hex)) return false;
     if (options.wreckAt?.(hex)) return false;
     if (jumping) return true;
+    // TW p.53: running units cannot enter water; Minimum Movement (p.57) can.
+    if (running && !minMove && waterDepth(cellAt(options.grid, hex).terrain) > 0) return false;
     const delta = cellAt(options.grid, hex).level - cellAt(options.grid, from).level;
     if (backward ? delta !== BACKWARD_LEVEL_CHANGE_MAX : Math.abs(delta) > FORWARD_LEVEL_CHANGE_MAX)
       return false;
@@ -368,9 +371,9 @@ export function reachableLandings(
   const results: RevealedLanding[] = [];
   if (minMoveEligible) {
     const forward = neighbor(start, startFacing);
-    if (canEnter(start, forward, false) && canLand(forward)) {
+    if (canEnter(start, forward, false, true) && canLand(forward)) {
       const base = stepCost(start, forward);
-      if (base > budget) {
+      if (base > budget || waterDepth(cellAt(options.grid, forward).terrain) > 0) {
         const charged = Math.min(base, Math.max(budget, MIN_MOVEMENT_MP));
         const step = makeStep(start, forward, stepFragment(), charged, 0);
         results.push({ hex: forward, facing: startFacing, path: [step] });

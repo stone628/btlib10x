@@ -25,6 +25,7 @@ import {
   type Rng,
   rotateFacing,
   type TerrainHexDef,
+  type TerrainType,
   type WreckState,
 } from "../core/types";
 import { type MapDef, type MechModelHolder, mechDef, mechDefFor } from "../data/index";
@@ -1448,6 +1449,7 @@ export function executeMove(
     unit.damage,
     unit.critSlotsDestroyed,
     isTsmActive(def, unit.heat),
+    waterDepth(cellAt(state, unit.position).terrain),
   );
   const budget = effectiveMoveBudget(unit.moveMode, movement, unit.heat);
   const jumping = unit.moveMode === "jump";
@@ -1501,6 +1503,11 @@ export function executeMove(
       }
       if (backward && unit.moveMode === "run") {
         throw new Error("Running 'Mechs cannot move backward");
+      }
+      // TW p.53: running 'Mechs cannot enter depth 1+ water; Minimum Movement
+      // (TW p.57) is the one exception.
+      if (unit.moveMode === "run" && !minMove && waterDepth(cellAt(state, to).terrain) > 0) {
+        throw new Error(`Running 'Mechs cannot enter water (${fmtHex(to)})`);
       }
       const fromLevel = cellAt(state, cursor).level;
       const toLevel = cellAt(state, to).level;
@@ -1929,7 +1936,12 @@ export function validateAttacksImpl(
     }
 
     const woodsPoints = losWoodsPointsBetween(state, unit.position, target.position);
-    if (!losClear(state, unit.position, target.position, state.wrecks)) {
+    if (
+      !losClear(state, unit.position, target.position, state.wrecks, {
+        from: unit.prone,
+        to: target.prone,
+      })
+    ) {
       if (losBlockedByBuilding(state, unit.position, target.position)) {
         throw new Error("Line of sight is blocked by intervening building");
       }
@@ -4107,6 +4119,13 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
   resolvePhasePiloting(state, rng, before, sink);
 }
 
+/** Falls underwater halve damage: any depth 2+, plus a jump landing that
+ *  tumbles to the bottom of depth 1 water (TW p.53). */
+function waterHalvesFall(terrain: TerrainType, ground: boolean): boolean {
+  const depth = waterDepth(terrain);
+  return depth >= 2 || (!ground && depth >= 1);
+}
+
 /**
  * Movement terrain PSRs for one entered hex (TW p.60, p.167): entering water
  * (depth 1: -1, depth 2: +0, depth 3+: +1), rubble (+0), or a building hex
@@ -4134,7 +4153,9 @@ function movementTerrainPsr(
     unit.prone || isUnitRemoved(unit) || isShutdown(unit) || unit.unconscious;
   /** Lower hex of the step plus levels fallen into it (jump: landing, 0). */
   const lowerLanding = (hex: HexCoord): { lower: HexCoord; levels: number } => {
-    if (!ground) return { lower: hex, levels: 0 };
+    // Jump landing: 0 levels per errata, except tumbling to the bottom of
+    // water, which falls `depth` levels (TW p.53).
+    if (!ground) return { lower: hex, levels: waterDepth(cellAt(state, hex).terrain) };
     const fromLevel = cellAt(state, from).level;
     const toLevel = cellAt(state, to).level;
     const lower = toLevel <= fromLevel ? to : from;
@@ -4158,7 +4179,7 @@ function movementTerrainPsr(
           cause,
           hex: { ...lower },
           seatbeltModifier: null,
-          halved: terrain === "water2" || terrain === "water3",
+          halved: waterHalvesFall(terrain, ground),
           levelsFallen: levels,
         },
         sink,
@@ -4176,7 +4197,7 @@ function movementTerrainPsr(
         cause,
         hex: { ...lower },
         seatbeltModifier: modifier + Math.max(0, levels - 1),
-        halved: terrain === "water2" || terrain === "water3",
+        halved: waterHalvesFall(terrain, ground),
         levelsFallen: levels,
       },
       sink,

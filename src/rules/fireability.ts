@@ -242,7 +242,12 @@ export function suggestFireTargets(
         // Same gate as `declareAttacks`: woods screening, water2/3 endpoints
         // (`losBlockedByWater`), elevation and intervening buildings
         // (`losBlockedByElevation`/`losBlockedByBuilding` fold into the ray).
-        if (!losClear(state, unit.position, enemy.position, state.wrecks)) {
+        if (
+          !losClear(state, unit.position, enemy.position, state.wrecks, {
+            from: unit.prone,
+            to: enemy.prone,
+          })
+        ) {
           blockBoth("noLos");
           return;
         }

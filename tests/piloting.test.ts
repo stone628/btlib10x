@@ -1327,7 +1327,7 @@ describe("movement terrain PSRs", () => {
     );
   });
 
-  it("a jump-landing fall counts 0 levels per errata", () => {
+  it("a jump-landing fall into water1 falls depth levels, halved (TW p.53)", () => {
     const state = createTestBattle(
       [
         { col: 2, row: 2, type: "clear", level: 2 },
@@ -1357,7 +1357,8 @@ describe("movement terrain PSRs", () => {
     );
     toMovement(state, scriptedRng(2, 2, 5, 5));
     // Water1 PSR needs 4 (5-1): 1+2 fails; dir 1 (front), loc 3+3 (CT) for
-    // ceil(50/10) x (0+1) = 5 damage; seatbelt needs 4: 3+3 succeeds.
+    // jump landing tumbles to the bottom (TW p.53): depth 1 level fallen,
+    // ceil(50/10) x (1+1) = 10 halved to 5; seatbelt needs 4: 3+3 succeeds.
     const events: GameEvent[] = [];
     executeMove(state, "enf", "jump", [{ kind: "enter", to: { col: 2, row: 3 } }], events, {
       rng: scriptedRng(1, 2, 1, 3, 3, 3, 3),
@@ -1370,7 +1371,7 @@ describe("movement terrain PSRs", () => {
       expect.objectContaining({
         kind: "unitFell",
         unitId: "enf",
-        levelsFallen: 0,
+        levelsFallen: 1,
         totalDamage: 5,
       }),
     );

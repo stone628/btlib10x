@@ -8,7 +8,7 @@ export {
   sameHex,
 } from "./core/hex";
 export type { HexGrid } from "./core/terrain";
-export { cellAt, MP_PER_FACING_CHANGE } from "./core/terrain";
+export { cellAt, MP_PER_FACING_CHANGE, waterDepth } from "./core/terrain";
 export type {
   ArmLocation,
   Facing,

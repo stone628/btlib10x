@@ -36,6 +36,7 @@ import {
   STAND_MP_COST,
   type UnitState,
   voluntaryShutdown,
+  waterDepth,
   wreckAt,
 } from "btlib10x";
 import { buildBoardChunk, buildLinesChunk, type Chunk } from "./chunk";
@@ -684,6 +685,7 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo {
     actor.damage,
     actor.critSlotsDestroyed,
     isTsmActive(def, actor.heat),
+    waterDepth(cellAt(s.battle!, actor.position).terrain),
   );
   const heatPenalty = movementMpPenalty(actor.heat);
   // Posture-change modes share one budget: candidate assumes posture succeeds.
