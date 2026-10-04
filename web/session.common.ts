@@ -36,6 +36,7 @@ import {
   mechDefFor,
   movementMpPenalty,
   movementMpPenaltyWithThreshold,
+  type PilotingCheckReason,
   pooledTotalsByWeaponName,
   type RemovalReason,
   type RemovedState,
@@ -47,6 +48,7 @@ import {
   toHitHeatModifier,
   toHitHeatModifierWithThreshold,
   type UnitDamageState,
+  type UnitFallCause,
   type UnitState,
   weaponDefFor,
 } from "btlib10x";
@@ -999,6 +1001,64 @@ export function actorOrderLines(s: Session): string[] {
 
 const _UNIT_ID_PREFIX_REGEX = /^\[[^\]]+\] /;
 
+const PSR_REASON_KEY: Record<PilotingCheckReason, MessageKey> = {
+  damage20: "log.psrReason.damage20",
+  legActuator: "log.psrReason.legActuator",
+  hip: "log.psrReason.hip",
+  gyro: "log.psrReason.gyro",
+  runDamaged: "log.psrReason.runDamaged",
+  jumpDamaged: "log.psrReason.jumpDamaged",
+  shutdown: "log.psrReason.shutdown",
+  seatbelt: "log.psrReason.seatbelt",
+  standUp: "log.psrReason.standUp",
+  rubble: "log.psrReason.rubble",
+  water1: "log.psrReason.water1",
+  water2: "log.psrReason.water2",
+  water3: "log.psrReason.water3",
+  building: "log.psrReason.building",
+  kick: "log.psrReason.kick",
+  kickMiss: "log.psrReason.kickMiss",
+};
+
+function psrReasonDetail(reason: PilotingCheckReason): string {
+  return i18n(PSR_REASON_KEY[reason]);
+}
+
+function hexLabel(hex: { readonly col: number; readonly row: number } | undefined): string {
+  return hex === undefined ? "-" : `${hex.col},${hex.row}`;
+}
+
+function fallCauseLabel(cause: UnitFallCause): string {
+  switch (cause.kind) {
+    case "failedPsr":
+      return i18n("log.fallCause.failedPsr", { reason: psrReasonDetail(cause.reason) });
+    case "legDestroyed":
+      return i18n("log.fallCause.legDestroyed");
+    case "gyroDestroyed":
+      return i18n("log.fallCause.gyroDestroyed");
+    case "shutdown":
+      return i18n("log.fallCause.shutdown");
+    case "terrain":
+      return i18n(
+        cause.terrain === "rubble"
+          ? "log.fallCause.terrain.rubble"
+          : cause.terrain === "water"
+            ? "log.fallCause.terrain.water"
+            : "log.fallCause.terrain.building",
+      );
+    case "buildingCollapse":
+      return i18n("log.fallCause.buildingCollapse");
+    case "physicalAttack":
+      return i18n("log.fallCause.physicalAttack");
+    case "voluntaryDrop":
+      return i18n("log.fallCause.voluntaryDrop");
+    default: {
+      const _exhaustive: never = cause;
+      return _exhaustive;
+    }
+  }
+}
+
 export function handleSessionGameEvents(s: Session, events: SessionGameEvent[]): Chunk[] {
   const result: Chunk[] = [];
   const linesBuf: string[] = [];
@@ -1371,13 +1431,20 @@ function handleSessionGameEvent(
       break;
     case "pilotingCheck":
       {
+        const modifier = e.triggerModifier + e.preexistingModifier;
+        const target = e.basePiloting + modifier;
         const verdict = e.success ? i18n("log.psrSuccess") : i18n("log.psrFail");
         idLines(
           e.unitId,
           i18n("log.pilotingCheck", {
             id: e.unitId,
-            reason: e.reason,
-            target: e.target,
+            detail: psrReasonDetail(e.reason),
+            base: e.basePiloting,
+            trigger: e.triggerModifier,
+            pre: e.preexistingModifier,
+            modifier,
+            target,
+            hex: hexLabel(e.hex),
             roll: e.roll === null ? i18n("log.psrAuto") : String(e.roll),
             verdict,
           }),
@@ -1389,11 +1456,12 @@ function handleSessionGameEvent(
         const lines = [
           i18n("log.unitFell", {
             id: e.unitId,
-            cause: e.cause,
+            cause: fallCauseLabel(e.cause),
             facing: e.facingAfter,
             groups: e.groups.map((g) => `${SHORT_LOC[g.location]}(${g.damage})`).join(" "),
             damage: e.totalDamage,
             levels: e.levelsFallen,
+            hex: hexLabel(e.hex),
           }),
         ];
         for (const crit of e.crits) {

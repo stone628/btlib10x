@@ -409,7 +409,9 @@ describe("battle building integration", () => {
 
     expect(battle.buildings["3,3"]).toBeUndefined();
     expect(events).toContainEqual({ kind: "buildingCollapsed", col: 3, row: 3 });
-    expect(events.some((e) => e.kind === "unitFell" && e.cause === "buildingCollapse")).toBe(true);
+    expect(events.some((e) => e.kind === "unitFell" && e.cause.kind === "buildingCollapse")).toBe(
+      true,
+    );
     // 20 attack + 1 collapse + 15 falling (50t, 2 levels + 1).
     expect(poolTotal(battle.units.b!)).toBe(totalBefore - 36);
   });

@@ -236,6 +236,40 @@ export type UnitFallReason =
   | "building"
   | "voluntaryDrop";
 
+/** Trigger for one Piloting Skill Roll (TW p.59-60). Typed so the web log
+ *  can render a per-situation message from the event instead of parsing a
+ *  free-form string. */
+export type PilotingCheckReason =
+  | "damage20"
+  | "legActuator"
+  | "hip"
+  | "gyro"
+  | "runDamaged"
+  | "jumpDamaged"
+  | "shutdown"
+  | "seatbelt"
+  | "standUp"
+  | "rubble"
+  | "water1"
+  | "water2"
+  | "water3"
+  | "building"
+  | "kick"
+  | "kickMiss";
+
+/** Why a 'Mech fell (TW p.68). `failedPsr` carries the PSR trigger that
+ *  failed; `terrain` covers automatic falls while entering terrain
+ *  (shut-down/unconscious) plus failed terrain-entry falls. */
+export type UnitFallCause =
+  | { readonly kind: "failedPsr"; readonly reason: PilotingCheckReason }
+  | { readonly kind: "legDestroyed" }
+  | { readonly kind: "gyroDestroyed" }
+  | { readonly kind: "shutdown" }
+  | { readonly kind: "terrain"; readonly terrain: "rubble" | "water" | "building" }
+  | { readonly kind: "buildingCollapse" }
+  | { readonly kind: "physicalAttack" }
+  | { readonly kind: "voluntaryDrop" };
+
 /** Deterministic rng for ammo draws when the caller omits one: ties resolve
  *  to the first bin and the order is stable run to run. */
 export const DEFAULT_RNG: Rng = {
@@ -468,30 +502,33 @@ export type GameEvent =
     }
   | {
       /** One Piloting Skill Roll (TW p.59). `roll` is null when the outcome
-       *  was automatic (target <= 2 auto-success, target > 12 auto-fall). */
+       *  was automatic (target <= 2 auto-success, target > 12 auto-fall).
+       *  The UI derives `modifier = triggerModifier + preexistingModifier`
+       *  and `target = basePiloting + modifier` from these components. */
       readonly kind: "pilotingCheck";
       readonly unitId: string;
-      /** Trigger code: damage20 | legActuator | hip | gyro | standUp |
-       *  rubble | water1 | water2 | water3 | building | seatbelt |
-       *  shutdown | runDamaged | jumpDamaged. */
-      readonly reason: string;
-      readonly modifier: number;
-      readonly target: number;
+      readonly reason: PilotingCheckReason;
+      readonly basePiloting: number;
+      readonly triggerModifier: number;
+      readonly preexistingModifier: number;
       readonly roll: number | null;
       readonly success: boolean;
+      /** Hex the roll is about (terrain entry, fall site, stand-up spot). */
+      readonly hex?: HexCoord;
     }
   | {
       /** The 'Mech falls (TW p.68): facing rotates per the Facing After
        *  Fall roll and the damage clusters land on that column. `crits`
        *  holds the determining resolutions the fall damage triggered.
-       *  A voluntary drop reuses this shape with `cause: "voluntaryDrop"`:
+       *  A voluntary drop reuses this shape with
+       *  `cause: { kind: "voluntaryDrop" }`:
        *  facing stays put, so `fallRoll` is null, and TW p.49 causes no
        *  falling damage, so `groups`/`crits` are empty with `totalDamage` 0. */
       readonly kind: "unitFell";
       readonly unitId: string;
-      /** failedPsr:<reason> | legDestroyed | gyroDestroyed | shutdown |
-       *  rubble | water | building | voluntaryDrop. */
-      readonly cause: string;
+      readonly cause: UnitFallCause;
+      /** Hex the 'Mech fell in (or onto, for multi-level falls). */
+      readonly hex?: HexCoord;
       readonly facingAfter: Facing;
       /** Facing After Fall roll, or null when no facing roll happened. */
       readonly fallRoll: number | null;
@@ -1025,6 +1062,9 @@ const PHASE_DAMAGE_PSR_MOD = 1;
 /** PSR modifier when a reactor shuts down (TW p.60). Rolled immediately;
  *  only *other* PSRs required while the 'Mech is down fail automatically. */
 const SHUTDOWN_PSR_MOD = 3;
+/** Seatbelt PSR carries the failed fall's combined modifier as its trigger;
+ *  it has no separate preexisting component. */
+const SEATBELT_PRE_MOD = 0;
 /** Divisor for building-crash damage: ceil(remaining CF / 10). */
 const BUILDING_CRASH_DIVISOR = 10;
 /** Per-attack CF toll divisor for units inside buildings (TW p. 171):
@@ -1038,6 +1078,50 @@ const BUILDING_ABSORB_DIVISOR = 10;
  */
 export function collapseDamageTotal(preCf: number, levelsAbove: number): number {
   return Math.ceil((preCf / BUILDING_ABSORB_DIVISOR) * (1 + levelsAbove));
+}
+
+/**
+ * Emit one `pilotingCheck` event carrying the PSR components. The UI
+ * derives `modifier = triggerModifier + preexistingModifier` and
+ * `target = basePiloting + modifier`; the roll outcome uses the same
+ * values via `rollPilotingCheck`, so the log math always matches the
+ * game logic.
+ */
+function pushPilotingCheck(
+  sink: GameEvent[],
+  unit: UnitState,
+  reason: PilotingCheckReason,
+  triggerModifier: number,
+  preexistingModifier: number,
+  rng: Rng,
+  hex?: HexCoord,
+): { target: number; roll: number | null; success: boolean } {
+  const r = rollPilotingCheck(rng, unit.piloting, triggerModifier + preexistingModifier);
+  if (hex === undefined) {
+    sink.push({
+      kind: "pilotingCheck",
+      unitId: unit.id,
+      reason,
+      basePiloting: unit.piloting,
+      triggerModifier,
+      preexistingModifier,
+      roll: r.roll,
+      success: r.success,
+    });
+  } else {
+    sink.push({
+      kind: "pilotingCheck",
+      unitId: unit.id,
+      reason,
+      basePiloting: unit.piloting,
+      triggerModifier,
+      preexistingModifier,
+      roll: r.roll,
+      success: r.success,
+      hex: { ...hex },
+    });
+  }
+  return r;
 }
 /** Default wreck height in levels for a standing non-light 'Mech (TW).
  *  L1 wrecks are produced for light 'Mechs and for prone units via
@@ -1330,17 +1414,8 @@ export function executeMove(
     const strained =
       mode === "run" ? hipHits > 0 || gyroHits > 0 : mode === "jump" ? pre.modifier > 0 : false;
     if (strained) {
-      const reason = mode === "run" ? "runDamaged" : "jumpDamaged";
-      const r = rollPilotingCheck(rng, unit.piloting, pre.modifier);
-      sink.push({
-        kind: "pilotingCheck",
-        unitId,
-        reason,
-        modifier: pre.modifier,
-        target: r.target,
-        roll: r.roll,
-        success: r.success,
-      });
+      const reason: PilotingCheckReason = mode === "run" ? "runDamaged" : "jumpDamaged";
+      const r = pushPilotingCheck(sink, unit, reason, 0, pre.modifier, rng, { ...cursor });
       if (!r.success) {
         const terrain = cellAt(state, cursor).terrain;
         applyFall(
@@ -1348,7 +1423,8 @@ export function executeMove(
           unit,
           rng,
           {
-            cause: `failedPsr:${reason}`,
+            cause: { kind: "failedPsr", reason },
+            hex: { ...cursor },
             seatbeltModifier: pre.modifier,
             halved: terrain === "water2" || terrain === "water3",
           },
@@ -2094,8 +2170,9 @@ function applyDamageGroups(
   return crits;
 }
 export interface FallOptions {
-  /** failedPsr:<reason> | legDestroyed | gyroDestroyed | water | rubble | building. */
-  readonly cause: string;
+  readonly cause: UnitFallCause;
+  /** Hex the 'Mech fell in (or onto). Copied onto the `unitFell` event. */
+  readonly hex?: HexCoord;
   /**
    * Seatbelt-check modifier (same modifiers as the failed PSR; +5 for an
    * automatic fall off a destroyed leg, +6 off a destroyed gyro). `null`
@@ -2124,19 +2201,22 @@ function shutdownFallCheck(state: BattleState, unit: UnitState, rng: Rng, sink: 
   if (isUnitRemoved(unit) || unit.prone) return;
   const def = mechDefFor(unit);
   const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
-  const modifier = SHUTDOWN_PSR_MOD + pre.modifier;
-  const r = rollPilotingCheck(rng, unit.piloting, modifier);
-  sink.push({
-    kind: "pilotingCheck",
-    unitId: unit.id,
-    reason: "shutdown",
-    modifier,
-    target: r.target,
-    roll: r.roll,
-    success: r.success,
+  const r = pushPilotingCheck(sink, unit, "shutdown", SHUTDOWN_PSR_MOD, pre.modifier, rng, {
+    ...unit.position,
   });
   if (!r.success) {
-    applyFall(state, unit, rng, { cause: "shutdown", seatbeltModifier: null, halved: false }, sink);
+    applyFall(
+      state,
+      unit,
+      rng,
+      {
+        cause: { kind: "shutdown" },
+        hex: { ...unit.position },
+        seatbeltModifier: null,
+        halved: false,
+      },
+      sink,
+    );
   }
 }
 
@@ -2181,6 +2261,7 @@ export function applyFall(
     kind: "unitFell",
     unitId: unit.id,
     cause: opts.cause,
+    ...(opts.hex === undefined ? {} : { hex: { ...opts.hex } }),
     facingAfter: unit.facing,
     fallRoll: dir.roll,
     column: dir.column,
@@ -2204,16 +2285,7 @@ export function applyFall(
       sink,
     );
   } else {
-    const r = rollPilotingCheck(rng, unit.piloting, modifier);
-    sink.push({
-      kind: "pilotingCheck",
-      unitId: unit.id,
-      reason: "seatbelt",
-      modifier,
-      target: r.target,
-      roll: r.roll,
-      success: r.success,
-    });
+    const r = pushPilotingCheck(sink, unit, "seatbelt", modifier, SEATBELT_PRE_MOD, rng, opts.hex);
     if (!r.success) applyPilotHits(state, unit, FALL_PILOT_HITS, "fall", rng, sink);
   }
   if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
@@ -2239,7 +2311,9 @@ export function resolvePhasePiloting(
   rng: Rng,
   before: PhaseSnapshots,
   sink: GameEvent[],
-  extraTriggers?: Readonly<Record<string, ReadonlyArray<{ reason: string; modifier: number }>>>,
+  extraTriggers?: Readonly<
+    Record<string, ReadonlyArray<{ reason: PilotingCheckReason; modifier: number }>>
+  >,
 ): void {
   for (const unit of Object.values(state.units)) {
     if (isUnitRemoved(unit) || unit.prone) continue;
@@ -2248,7 +2322,7 @@ export function resolvePhasePiloting(
     const critBefore = before.crit[unit.id] ?? unit.critSlotsDestroyed;
     const pre = preexistingDamageModifier(def, dmgBefore, critBefore);
 
-    const triggers: Array<{ reason: string; modifier: number }> = [];
+    const triggers: Array<{ reason: PilotingCheckReason; modifier: number }> = [];
     if (damageTaken(dmgBefore, unit.damage) >= PSR_DAMAGE_THRESHOLD) {
       triggers.push({ reason: "damage20", modifier: PHASE_DAMAGE_PSR_MOD });
     }
@@ -2265,13 +2339,14 @@ export function resolvePhasePiloting(
     for (const extra of extraTriggers?.[unit.id] ?? []) {
       triggers.push({ reason: extra.reason, modifier: extra.modifier });
     }
-    let autoFall: { cause: string; seatbelt: number | null } | null = null;
+    let autoFall: { cause: UnitFallCause; seatbelt: number | null } | null = null;
     const legDestroyed =
       (legGone(unit.damage, "rightLeg") && !legGone(dmgBefore, "rightLeg")) ||
       (legGone(unit.damage, "leftLeg") && !legGone(dmgBefore, "leftLeg"));
-    if (legDestroyed) autoFall = { cause: "legDestroyed", seatbelt: SEATBELT_LEG_DESTROYED };
+    if (legDestroyed)
+      autoFall = { cause: { kind: "legDestroyed" }, seatbelt: SEATBELT_LEG_DESTROYED };
     else if (gyroNow >= GYRO_DESTROYED_HITS && gyroBefore < GYRO_DESTROYED_HITS)
-      autoFall = { cause: "gyroDestroyed", seatbelt: SEATBELT_GYRO_DESTROYED };
+      autoFall = { cause: { kind: "gyroDestroyed" }, seatbelt: SEATBELT_GYRO_DESTROYED };
 
     let fell = false;
     for (const t of triggers) {
@@ -2279,18 +2354,11 @@ export function resolvePhasePiloting(
       if (isShutdown(unit) || unit.unconscious) {
         // TW p.60: a PSR required of a shut-down 'Mech falls it automatically
         // (and the pilot takes the hit automatically).
-        autoFall = { cause: `failedPsr:${t.reason}`, seatbelt: null };
+        autoFall = { cause: { kind: "failedPsr", reason: t.reason }, seatbelt: null };
         break;
       }
-      const r = rollPilotingCheck(rng, unit.piloting, modifier);
-      sink.push({
-        kind: "pilotingCheck",
-        unitId: unit.id,
-        reason: t.reason,
-        modifier,
-        target: r.target,
-        roll: r.roll,
-        success: r.success,
+      const r = pushPilotingCheck(sink, unit, t.reason, t.modifier, pre.modifier, rng, {
+        ...unit.position,
       });
       if (!r.success) {
         const terrain = cellAt(state, unit.position).terrain;
@@ -2300,7 +2368,8 @@ export function resolvePhasePiloting(
           unit,
           rng,
           {
-            cause: `failedPsr:${t.reason}`,
+            cause: { kind: "failedPsr", reason: t.reason },
+            hex: { ...unit.position },
             seatbeltModifier: modifier,
             halved,
           },
@@ -2319,6 +2388,7 @@ export function resolvePhasePiloting(
         rng,
         {
           cause: autoFall.cause,
+          hex: { ...unit.position },
           seatbeltModifier: autoFall.seatbelt,
           halved,
         },
@@ -2614,7 +2684,8 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
           unit,
           rng,
           {
-            cause: "buildingCollapse",
+            cause: { kind: "buildingCollapse" },
+            hex: { col: outcome.col, row: outcome.row },
             seatbeltModifier: null,
             halved: false,
             levelsFallen: groundLevel,
@@ -2705,8 +2776,8 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   // Collect physical attack crits per target for destruction sweep
   const physicalAttackCrits: Record<string, CriticalResolution[]> = {};
   // Kick PSRs deferred here for the end-of-physical sweep (TW pp.59,147).
-  const kickExtras: Record<string, Array<{ reason: string; modifier: number }>> = {};
-  const queueKickPsr = (unitId: string, reason: string): void => {
+  const kickExtras: Record<string, Array<{ reason: PilotingCheckReason; modifier: number }>> = {};
+  const queueKickPsr = (unitId: string, reason: PilotingCheckReason): void => {
     const list = kickExtras[unitId];
     if (list === undefined) kickExtras[unitId] = [{ reason, modifier: 0 }];
     else list.push({ reason, modifier: 0 });
@@ -2953,7 +3024,12 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
           state,
           fallTarget,
           rng,
-          { cause: "physicalAttack", seatbeltModifier: null, halved: false },
+          {
+            cause: { kind: "physicalAttack" },
+            hex: { ...fallTarget.position },
+            seatbeltModifier: null,
+            halved: false,
+          },
           sink,
         );
       }
@@ -2962,7 +3038,12 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
           state,
           attacker,
           rng,
-          { cause: "physicalAttack", seatbeltModifier: null, halved: false },
+          {
+            cause: { kind: "physicalAttack" },
+            hex: { ...attacker.position },
+            seatbeltModifier: null,
+            halved: false,
+          },
           sink,
         );
       }
@@ -3418,9 +3499,9 @@ function movementTerrainPsr(
     return { lower, levels: Math.max(0, fromLevel - cellAt(state, lower).level) };
   };
   const rollFall = (
-    reason: string,
+    reason: PilotingCheckReason,
     trigger: number,
-    cause: string,
+    cause: UnitFallCause,
     hex: HexCoord,
   ): HexCoord | null => {
     const modifier = trigger + preModifier;
@@ -3433,6 +3514,7 @@ function movementTerrainPsr(
         rng,
         {
           cause,
+          hex: { ...lower },
           seatbeltModifier: null,
           halved: terrain === "water2" || terrain === "water3",
           levelsFallen: levels,
@@ -3441,16 +3523,7 @@ function movementTerrainPsr(
       );
       return lower;
     }
-    const r = rollPilotingCheck(rng, unit.piloting, modifier);
-    sink.push({
-      kind: "pilotingCheck",
-      unitId: unit.id,
-      reason,
-      modifier,
-      target: r.target,
-      roll: r.roll,
-      success: r.success,
-    });
+    const r = pushPilotingCheck(sink, unit, reason, trigger, preModifier, rng, { ...hex });
     if (r.success) return null;
     const terrain = cellAt(state, lower).terrain;
     applyFall(
@@ -3459,6 +3532,7 @@ function movementTerrainPsr(
       rng,
       {
         cause,
+        hex: { ...lower },
         seatbeltModifier: modifier + Math.max(0, levels - 1),
         halved: terrain === "water2" || terrain === "water3",
         levelsFallen: levels,
@@ -3470,13 +3544,14 @@ function movementTerrainPsr(
   const entering = cellAt(state, to).terrain;
   const water = waterEntryModifier(entering);
   if (water !== null) {
-    const reason = entering === "water1" ? "water1" : entering === "water2" ? "water2" : "water3";
-    const fellAt = rollFall(reason, water, "water", to);
+    const reason: PilotingCheckReason =
+      entering === "water1" ? "water1" : entering === "water2" ? "water2" : "water3";
+    const fellAt = rollFall(reason, water, { kind: "terrain", terrain: "water" }, to);
     if (fellAt !== null) return fellAt;
     if (stop()) return to;
   }
   if (entering === "rubble") {
-    const fellAt = rollFall("rubble", 0, "rubble", to);
+    const fellAt = rollFall("rubble", 0, { kind: "terrain", terrain: "rubble" }, to);
     if (fellAt !== null) return fellAt;
     if (stop()) return to;
   }
@@ -3486,27 +3561,22 @@ function movementTerrainPsr(
     const legWasGoneR = legGone(unit.damage, "rightLeg");
     const legWasGoneL = legGone(unit.damage, "leftLeg");
     const gyroWasGone = countDestroyedGyro(def, unit.damage, unit.critSlotsDestroyed);
-    const modifier = building + preModifier;
     if (isShutdown(unit) || unit.unconscious) {
       applyFall(
         state,
         unit,
         rng,
-        { cause: "building", seatbeltModifier: null, halved: false },
+        {
+          cause: { kind: "terrain", terrain: "building" },
+          hex: { ...to },
+          seatbeltModifier: null,
+          halved: false,
+        },
         sink,
       );
       return to;
     }
-    const r = rollPilotingCheck(rng, unit.piloting, modifier);
-    sink.push({
-      kind: "pilotingCheck",
-      unitId: unit.id,
-      reason: "building",
-      modifier,
-      target: r.target,
-      roll: r.roll,
-      success: r.success,
-    });
+    const r = pushPilotingCheck(sink, unit, "building", building, preModifier, rng, { ...to });
     if (!r.success) {
       const cf = state.buildings[`${to.col},${to.row}`]?.cf ?? 0;
       const total = Math.ceil(cf / BUILDING_CRASH_DIVISOR);
@@ -3541,7 +3611,8 @@ function movementTerrainPsr(
             unit,
             rng,
             {
-              cause: "building",
+              cause: { kind: "terrain", terrain: "building" },
+              hex: { ...to },
               seatbeltModifier: down
                 ? null
                 : gyroFell
@@ -3615,16 +3686,7 @@ export function attemptStandUp(
     base: unit.heat,
     totalGenerated: unit.heatPending,
   });
-  const r = rollPilotingCheck(rng, unit.piloting, pre.modifier);
-  sink.push({
-    kind: "pilotingCheck",
-    unitId,
-    reason: "standUp",
-    modifier: pre.modifier,
-    target: r.target,
-    roll: r.roll,
-    success: r.success,
-  });
+  const r = pushPilotingCheck(sink, unit, "standUp", 0, pre.modifier, rng, { ...unit.position });
   if (r.success) {
     unit.prone = false;
     sink.push({
@@ -3646,7 +3708,8 @@ export function attemptStandUp(
     unit,
     rng,
     {
-      cause: "failedPsr:standUp",
+      cause: { kind: "failedPsr", reason: "standUp" },
+      hex: { ...unit.position },
       seatbeltModifier: pre.modifier,
       halved: terrain === "water2" || terrain === "water3",
       allowProne: true,
@@ -3695,7 +3758,8 @@ export function dropProne(
     {
       kind: "unitFell",
       unitId,
-      cause: "voluntaryDrop",
+      cause: { kind: "voluntaryDrop" },
+      hex: { ...unit.position },
       facingAfter: unit.facing,
       fallRoll: null,
       column: "front",

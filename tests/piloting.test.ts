@@ -184,7 +184,11 @@ describe("20+ damage PSR", () => {
     expect(enf.facing).toBe("ne"); // n rotated +1 hexside
     expect(enf.pilotHits).toBe(0);
     expect(events).toContainEqual(
-      expect.objectContaining({ kind: "unitFell", unitId: "enf", cause: "failedPsr:damage20" }),
+      expect.objectContaining({
+        kind: "unitFell",
+        unitId: "enf",
+        cause: { kind: "failedPsr", reason: "damage20" },
+      }),
     );
   });
 });
@@ -204,15 +208,16 @@ describe("leg destruction", () => {
     expect(enf.facing).toBe("n");
     expect(enf.pilotHits).toBe(1);
     expect(events).toContainEqual(
-      expect.objectContaining({ kind: "unitFell", unitId: "enf", cause: "legDestroyed" }),
+      expect.objectContaining({ kind: "unitFell", unitId: "enf", cause: { kind: "legDestroyed" } }),
     );
     expect(events).toContainEqual(
       expect.objectContaining({
         kind: "pilotingCheck",
         unitId: "enf",
         reason: "seatbelt",
-        modifier: 5,
-        target: 10,
+        basePiloting: 5,
+        triggerModifier: 5,
+        preexistingModifier: 0,
       }),
     );
     expect(events).toContainEqual(
@@ -273,8 +278,9 @@ describe("gyro crits", () => {
         kind: "pilotingCheck",
         unitId: "enf",
         reason: "gyro",
-        modifier: 3,
-        target: 8,
+        basePiloting: 5,
+        triggerModifier: 3,
+        preexistingModifier: 0,
         success: true,
       }),
     );
@@ -292,14 +298,20 @@ describe("gyro crits", () => {
     resolvePhasePiloting(state, scriptedRng(1, 3, 4, 5, 6), before, events);
     expect(enf.prone).toBe(true);
     expect(events).toContainEqual(
-      expect.objectContaining({ kind: "unitFell", unitId: "enf", cause: "gyroDestroyed" }),
+      expect.objectContaining({
+        kind: "unitFell",
+        unitId: "enf",
+        cause: { kind: "gyroDestroyed" },
+      }),
     );
     expect(events).toContainEqual(
       expect.objectContaining({
         kind: "pilotingCheck",
         unitId: "enf",
         reason: "seatbelt",
-        modifier: 6,
+        basePiloting: 5,
+        triggerModifier: 6,
+        preexistingModifier: 0,
       }),
     );
   });
@@ -322,8 +334,9 @@ describe("actuator crits", () => {
         kind: "pilotingCheck",
         unitId: "enf",
         reason: "hip",
-        modifier: 2,
-        target: 7,
+        basePiloting: 5,
+        triggerModifier: 2,
+        preexistingModifier: 0,
         success: true,
       }),
     );
@@ -762,7 +775,7 @@ describe("going prone voluntarily", () => {
       expect.objectContaining({
         kind: "unitFell",
         unitId: "enf",
-        cause: "voluntaryDrop",
+        cause: { kind: "voluntaryDrop" },
         column: "front",
         totalDamage: 0,
         groups: [],
@@ -1258,7 +1271,13 @@ describe("movement terrain PSRs", () => {
       }),
     );
     expect(events).toContainEqual(
-      expect.objectContaining({ kind: "pilotingCheck", reason: "seatbelt", target: 6 }),
+      expect.objectContaining({
+        kind: "pilotingCheck",
+        reason: "seatbelt",
+        basePiloting: 5,
+        triggerModifier: 1,
+        preexistingModifier: 0,
+      }),
     );
   });
 
@@ -1369,7 +1388,7 @@ describe("applyFall", () => {
       enf,
       scriptedRng(),
       {
-        cause: "water",
+        cause: { kind: "terrain", terrain: "water" },
         seatbeltModifier: 0,
         halved: false,
       },
@@ -1389,7 +1408,7 @@ describe("applyFall", () => {
       enf,
       scriptedRng(1, 3, 3, 3, 3),
       {
-        cause: "water",
+        cause: { kind: "terrain", terrain: "water" },
         seatbeltModifier: 0,
         halved: true,
       },
@@ -1416,7 +1435,7 @@ describe("applyFall", () => {
       enf,
       scriptedRng(1, 3, 3, 3, 3, 3, 3, 3, 4),
       {
-        cause: "failedPsr:rubble",
+        cause: { kind: "failedPsr", reason: "rubble" },
         seatbeltModifier: 1,
         halved: false,
         levelsFallen: 2,
