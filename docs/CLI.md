@@ -355,7 +355,11 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   the 20-point trigger per sub-pass (weapon and physical damage never pool)
   plus deferred kick PSRs: punch damage 1/10 t on the Punch table, kick 1/5 t
   on the Kick table, club 1/5 t on the standard table, strike per weapon
-  (hatchet 1/5 t, sword 1/10 t +1, blade 1/10 t) on the standard table,
+  (hatchet 1/5 t, sword 1/10 t +1, blade 1/10 t) on the standard table
+  (every table read on the attack-direction column — Left Side, Front/Rear
+  or Right Side, TW pp.145, 147; any attack on a prone 'Mech rolls 2D6 on
+  the standard table, TW p.151; a through-armor critical only on a 2 rolled
+  on the 2D6 standard table, TW p.121),
   push no damage with target displacement + attacker advance (immediate
   defender PSR, TW pp.147, 151; mutual pushes resolve simultaneously —
   both fail = nothing, both succeed = neither moves and both roll,

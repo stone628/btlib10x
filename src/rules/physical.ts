@@ -37,7 +37,7 @@ import {
 import type { BattleState, UnitState } from "./game";
 import { isImmobile, isUnitRemoved, partialCoverMod } from "./game";
 import { isTsmActive } from "./heat";
-import { hitLocationForArc, punchHitLocation } from "./hitlocation";
+import { hitLocationForArc, punchHitLocationForArc } from "./hitlocation";
 import { losWoodsPointsBetween } from "./los";
 import { attackerMovementModifier, TARGET_IMMOBILE_MOD, targetMovementModifier } from "./movement";
 import { preexistingDamageModifier, rollPilotingCheck } from "./piloting";
@@ -516,11 +516,13 @@ export function physicalDamage(
 
 /**
  * Roll hit location for a physical attack (TW pp. 145–147, 150–151).
- * Punch: 1D6 on Punch Location Table.
- * Kick: 1D6 on Kick Location Table.
- * Club: 1D6 on Standard Hit Location Table.
- * Strike: 2D6 on Standard Hit Location Table (TW p.146).
+ * Punch: 1D6 on the Punch Location Table (TW p.145).
+ * Kick: 1D6 on the Kick Location Table (TW p.147).
+ * Club / strike: 2D6 on the 'Mech Hit Location Table (TW pp.145–146).
  * Push: no damage, no location roll.
+ * Every table reads the column matching the attack direction (left side,
+ * front/rear, right side). Against a prone target every attack rolls 2D6 on
+ * the 'Mech Hit Location Table (TW p.151).
  *
  * `levelDelta` is target level minus attacker level (0 when omitted for
  * backward compatibility). The Different Levels Table auto-swap (TW p.150)
@@ -537,7 +539,7 @@ export function physicalHitLocation(
   if (type === "push") return "centerTorso"; // unused
   switch (physicalLocationTable(type, levelDelta, target.prone)) {
     case "punch":
-      return punchHitLocation(roll);
+      return punchHitLocationForArc(attackDirection, roll);
     case "kick":
       return kickHitLocation(roll, attackDirection);
     case "standard":
@@ -550,31 +552,25 @@ export function physicalHitLocation(
  * Returns which family to roll: the Punch table (1D6), the Kick table
  * (1D6), or the standard table (2D6).
  *
+ * - Prone target: every legal attack (kick at the same level; punch, club,
+ *   strike one level higher) uses the 'Mech Hit Location Table — "use the
+ *   appropriate column of the 'Mech Hit Location Table" (TW p.151). A prone
+ *   target one level lower cannot be attacked (gated in validation).
  * - Same level: default tables (punch→punch, kick→kick, club/strike→standard).
  * - Standing target one level higher: punch/club/strike use the Kick Table.
  * - Standing target one level lower: kick/club/strike use the Punch Table.
- * - Prone target one level higher: punch uses the standard 'Mech Hit
- *   Location Table (TW p.151); club/strike already use it.
- * - Prone target one level lower: no attack is legal (gated in validation).
  */
 export function physicalLocationTable(
   type: PhysicalAttackType,
   levelDelta: number,
   targetProne: boolean,
 ): "punch" | "kick" | "standard" {
-  if (type === "push") return "standard";
-  if (type === "punch") {
-    if (targetProne && levelDelta === 1) return "standard";
-    if (!targetProne && levelDelta === 1) return "kick";
-    return "punch";
-  }
-  if (type === "kick") {
-    if (!targetProne && levelDelta === -1) return "punch";
-    return "kick";
-  }
+  if (type === "push" || targetProne) return "standard";
+  if (type === "punch") return levelDelta === 1 ? "kick" : "punch";
+  if (type === "kick") return levelDelta === -1 ? "punch" : "kick";
   // club / strike
-  if (!targetProne && levelDelta === 1) return "kick";
-  if (!targetProne && levelDelta === -1) return "punch";
+  if (levelDelta === 1) return "kick";
+  if (levelDelta === -1) return "punch";
   return "standard";
 }
 
@@ -991,8 +987,10 @@ export function resolvePhysicalAttack(
       cellAt(battle, target.position).level - cellAt(battle, attacker.position).level;
     const table = physicalLocationTable(decl.type, levelDelta, target.prone);
     const locRoll = table === "standard" ? roll2D6(rng) : rollD6(rng);
-    // Through-armor critical on hit-location roll of 2 (TW p.123)
-    throughArmorCrit = locRoll === 2;
+    // Through-armor critical on a 2 rolled on the 2D6 'Mech Hit Location
+    // Table only (TW p.121 footnote, p.124); a 1D6 Punch/Kick roll of 2 is
+    // just a location.
+    throughArmorCrit = table === "standard" && locRoll === 2;
     const location = physicalHitLocation(decl.type, target, attackDirection, locRoll, levelDelta);
     damageToTarget.push({ location, damage: dmg });
   }

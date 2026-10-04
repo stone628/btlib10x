@@ -15,7 +15,10 @@ import {
   type Rng,
   type UnitInit,
 } from "../src";
+import { bearingExact } from "../src/core/hex";
+import { classifyArcWithBoundary, defenderArcChoice } from "../src/rules/arcs";
 import { resolveAllAttacks, validateAttacksImpl } from "../src/rules/game";
+import { hitLocationForArc, punchHitLocationForArc } from "../src/rules/hitlocation";
 import {
   computePhysicalToHit,
   kickHitLocation,
@@ -1087,7 +1090,7 @@ describe("physical attack critical hits", () => {
     expect(resolution.throughArmorCrit).toBe(false);
   });
 
-  it("kick with hit-location roll 2 triggers through-armor critical", () => {
+  it("kick 1D6 hit-location roll of 2 is not a through-armor critical (TW p.121)", () => {
     const battle = makeBattle(
       makeUnitInit("a", 1, { col: 5, row: 5 }, "ne"),
       makeUnitInit("t", 2, { col: 6, row: 5 }, "sw"),
@@ -1096,21 +1099,40 @@ describe("physical attack critical hits", () => {
     const resolution = resolvePhysicalAttack(battle, "a", decl, THROUGH_ARMOR_RNG);
 
     expect(resolution.hit).toBe(true);
+    expect(resolution.throughArmorCrit).toBe(false);
+  });
+
+  it("club 2D6 hit-location roll of 2 triggers through-armor critical", () => {
+    // Calls 1-2: to-hit 4+4 = 8 (hit); calls 3-4: location 1+1 = 2.
+    let callCount = 0;
+    const rng: Rng = {
+      d6() {
+        callCount++;
+        return callCount === 3 || callCount === 4 ? 1 : 4;
+      },
+      snapshot: () => "",
+      load: () => {},
+    };
+    const battle = makeBattle(
+      makeUnitInit("a", 1, { col: 5, row: 5 }, "ne"),
+      makeUnitInit("t", 2, { col: 6, row: 5 }, "sw"),
+    );
+    const resolution = resolvePhysicalAttack(battle, "a", { type: "club", targetId: "t" }, rng);
+
+    expect(resolution.hit).toBe(true);
     expect(resolution.throughArmorCrit).toBe(true);
   });
 
-  it("punch stripping IS AND hit-location 2 triggers two determining rolls", () => {
+  it("punch 1D6 hit-location roll of 2 is not a through-armor critical (TW p.121)", () => {
     // RNG that returns:
     // - Calls 1-2: to-hit 2D6 = 8 (hit)
-    // - Call 3: hit location = 2 (through-armor)
-    // - Calls 4-5: determining roll 1 = 8 (1 crit)
-    // - Calls 6-7: determining roll 2 = 8 (1 crit)
+    // - Call 3: punch location 1D6 = 2 (a location only, no crit chance)
     const TWO_ROLLS_RNG: Rng = (() => {
       let callCount = 0;
       return {
         d6() {
           callCount++;
-          if (callCount === 3) return 2; // hit location = 2
+          if (callCount === 3) return 2; // punch location = 2
           return 4; // all other rolls = 4 (8 on 2D6)
         },
         snapshot: () => "",
@@ -1123,7 +1145,7 @@ describe("physical attack critical hits", () => {
     const resolution = resolvePhysicalAttack(battle, "a", decl, TWO_ROLLS_RNG);
 
     expect(resolution.hit).toBe(true);
-    expect(resolution.throughArmorCrit).toBe(true);
+    expect(resolution.throughArmorCrit).toBe(false);
   });
 
   it("critical hit destroys weapon in hit location", () => {
@@ -1335,6 +1357,10 @@ describe("physical legality (TW pp. 145-151, 171)", () => {
     expect(physicalLocationTable("punch", 0, false)).toBe("punch");
     expect(physicalLocationTable("kick", 0, false)).toBe("kick");
     expect(physicalLocationTable("club", 0, false)).toBe("standard");
+    // Any attack on a prone 'Mech uses the 'Mech Hit Location Table (TW p.151).
+    expect(physicalLocationTable("kick", 0, true)).toBe("standard");
+    expect(physicalLocationTable("club", 1, true)).toBe("standard");
+    expect(physicalLocationTable("strike", 1, true)).toBe("standard");
 
     // Punch one level up rolls on the kick table (1D6).
     const battle = makeBattle(
@@ -1344,5 +1370,154 @@ describe("physical legality (TW pp. 145-151, 171)", () => {
     const target = battle.units.t!;
     expect(physicalHitLocation("punch", target, "front", 1, 1)).toBe("rightLeg");
     expect(physicalHitLocation("punch", target, "front", 1, 0)).toBe("leftArm");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Physical hit-location columns and prone targets (TW pp. 145, 147, 150–151)
+// ---------------------------------------------------------------------------
+
+describe("physical hit-location columns", () => {
+  it("Punch Location Table has Left Side, Front/Rear and Right Side columns (TW p.145)", () => {
+    const col = (arc: "leftSide" | "front" | "rear" | "rightSide") =>
+      [1, 2, 3, 4, 5, 6].map((r) => punchHitLocationForArc(arc, r));
+    expect(col("leftSide")).toEqual([
+      "leftTorso",
+      "leftTorso",
+      "centerTorso",
+      "leftArm",
+      "leftArm",
+      "head",
+    ]);
+    expect(col("front")).toEqual([
+      "leftArm",
+      "leftTorso",
+      "centerTorso",
+      "rightTorso",
+      "rightArm",
+      "head",
+    ]);
+    expect(col("rear")).toEqual(col("front"));
+    expect(col("rightSide")).toEqual([
+      "rightTorso",
+      "rightTorso",
+      "centerTorso",
+      "rightArm",
+      "rightArm",
+      "head",
+    ]);
+  });
+
+  it("a punch from a side never strikes the far side's arm or torso", () => {
+    const battle = makeBattle(
+      makeUnitInit("a", 1, { col: 5, row: 5 }, "ne"),
+      makeUnitInit("t", 2, { col: 6, row: 5 }, "sw"),
+    );
+    const target = battle.units.t!;
+    for (let r = 1; r <= 6; r++) {
+      const left = physicalHitLocation("punch", target, "leftSide", r);
+      expect(["leftTorso", "centerTorso", "leftArm", "head"]).toContain(left);
+      const right = physicalHitLocation("punch", target, "rightSide", r);
+      expect(["rightTorso", "centerTorso", "rightArm", "head"]).toContain(right);
+    }
+  });
+
+  it("resolved punches read the column of the attack direction", () => {
+    const facings = ["n", "ne", "se", "s", "sw", "nw"] as const;
+    const seen = new Set<string>();
+    for (const facing of facings) {
+      const battle = makeBattle(
+        makeUnitInit("a", 1, { col: 5, row: 5 }, "ne"),
+        makeUnitInit("t", 2, { col: 6, row: 5 }, facing),
+      );
+      const attacker = battle.units.a!;
+      const target = battle.units.t!;
+      const dir = classifyArcWithBoundary(
+        target.facing,
+        bearingExact(target.position, attacker.position)!,
+      );
+      const arc = defenderArcChoice(dir.arc, dir.altArc);
+      // RNG_4-style: to-hit 8 hits, punch location 1D6 = 4.
+      const rng: Rng = { d6: () => 4, snapshot: () => "", load: () => {} };
+      const res = resolvePhysicalAttack(
+        battle,
+        "a",
+        { type: "punch", targetId: "t", limb: "rightArm" },
+        rng,
+      );
+      expect(res.hit).toBe(true);
+      expect(res.damageToTarget[0]!.location).toBe(punchHitLocationForArc(arc, 4));
+      seen.add(res.damageToTarget[0]!.location);
+    }
+    // Front/Rear 4 = RT, Left Side 4 = LA, Right Side 4 = RA.
+    expect(seen.has("leftArm")).toBe(true);
+    expect(seen.has("rightArm")).toBe(true);
+  });
+
+  it("a kick one level down rolls the matching Punch table column (TW p.150)", () => {
+    const battle = makeBattle(
+      makeUnitInit("a", 1, { col: 5, row: 5 }, "ne"),
+      makeUnitInit("t", 2, { col: 6, row: 5 }, "sw"),
+    );
+    const target = battle.units.t!;
+    expect(physicalHitLocation("kick", target, "leftSide", 4, -1)).toBe("leftArm");
+    expect(physicalHitLocation("kick", target, "rightSide", 1, -1)).toBe("rightTorso");
+    expect(physicalHitLocation("kick", target, "front", 5, -1)).toBe("rightArm");
+  });
+
+  it("a kick at a prone 'Mech rolls 2D6 on the 'Mech Hit Location Table (TW p.151)", () => {
+    const battle = makeBattle(
+      makeUnitInit("a", 1, { col: 5, row: 5 }, "ne"),
+      makeUnitInit("t", 2, { col: 6, row: 5 }, "sw"),
+    );
+    const target = battle.units.t!;
+    target.prone = true;
+    // Standard table, not the leg-only Kick table.
+    expect(physicalHitLocation("kick", target, "front", 12)).toBe("head");
+    expect(physicalHitLocation("kick", target, "leftSide", 8)).toBe("centerTorso");
+
+    const attacker = battle.units.a!;
+    const dir = classifyArcWithBoundary(
+      target.facing,
+      bearingExact(target.position, attacker.position)!,
+    );
+    const arc = defenderArcChoice(dir.arc, dir.altArc);
+    let calls = 0;
+    const rng: Rng = {
+      d6: () => {
+        calls++;
+        return 6;
+      },
+      snapshot: () => "",
+      load: () => {},
+    };
+    const res = resolvePhysicalAttack(
+      battle,
+      "a",
+      { type: "kick", targetId: "t", limb: "rightLeg" },
+      rng,
+    );
+    expect(res.hit).toBe(true);
+    expect(res.damageToTarget[0]!.location).toBe(hitLocationForArc(arc, 12));
+    expect(res.damageToTarget[0]!.location).toBe("head");
+  });
+
+  it("a prone 'Mech kicked with a 2D6 location roll of 2 takes a through-armor critical", () => {
+    const battle = makeBattle(
+      makeUnitInit("a", 1, { col: 5, row: 5 }, "ne"),
+      makeUnitInit("t", 2, { col: 6, row: 5 }, "sw"),
+    );
+    battle.units.t!.prone = true;
+    // Kick vs adjacent prone: piloting 5, kick −2, prone −2 → auto-hit, so
+    // the only dice rolled are the 2D6 location (1+1 = 2).
+    const rng: Rng = { d6: () => 1, snapshot: () => "", load: () => {} };
+    const res = resolvePhysicalAttack(
+      battle,
+      "a",
+      { type: "kick", targetId: "t", limb: "rightLeg" },
+      rng,
+    );
+    expect(res.hit).toBe(true);
+    expect(res.throughArmorCrit).toBe(true);
   });
 });
