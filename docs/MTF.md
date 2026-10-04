@@ -9,8 +9,9 @@ the catalog generator — no hand-wiring needed.
 
 The `.mtf` files are exported from **flechs.net** record sheets
 (`https://sheets.flechs.net/`). Drop each exported `.mtf` into `docs/mtf/`
-alongside the existing ones (Atlas AS7-D, Cicada CDA-3MA, Enforcer ENF-4R,
-Griffin GRF-1N, Hermes II HER-5SA, Hunchback HBK-4G, Mad Cat Mk II 2,
+alongside the existing ones (Atlas AS7-D, Bushwacker BSW-X1, Centurion
+CN9-YLW2, Cicada CDA-3MA, Enforcer ENF-4R, Griffin GRF-1N, Hatchetman HCT-5S,
+Hermes II HER-5SA, Hollander BZK-F3, Hunchback HBK-4G, Mad Cat Mk II 2,
 Mad Cat Prime, Masakari Prime, Wolverine WVR-6R).
 
 ## Workflow
@@ -46,9 +47,9 @@ Mad Cat Prime, Masakari Prime, Wolverine WVR-6R).
 
 - **Flat armor per location**; torso values store the FRONT hit points under
   `armor.<location>`. Rear torso values are stored alongside under
-  `centerTorsoRear` / `leftTorsoRear` / `rightTorsoRear` (informational
-  metadata; the flat damage model reads the eight front locations). The
-  engine-facing `resolveMechDef` keeps front + rear as separate pools.
+  `centerTorsoRear` / `leftTorsoRear` / `rightTorsoRear`. The
+  engine-facing `resolveMechDef` keeps front + rear as separate pools, and
+  attacks from the rear arc drain the rear pool.
 - **Clan weapons** use the catalog's `CL ` prefix, e.g. `CL Gauss Rifle`.
 - **Ammo is per-mount in the schema.** A shared bin of N shots is written onto
   the single mount that carries an explicit `, Ammo:N`; sibling launchers omit
@@ -59,6 +60,9 @@ Mad Cat Prime, Masakari Prime, Wolverine WVR-6R).
 
 ## Scripts
 
+- `scripts/fetch-mtf.mjs` — dev-only downloader: fetches an MTF by designation
+  from the Flechs Sheets catalog into `tmp/` (e.g. `node scripts/fetch-mtf.mjs
+  "Atlas AS7-D"`); copy the result into `docs/mtf/` to convert it.
 - `scripts/mtf.mjs` — batch-converts `.mtf` → `MechDef` JSON into
   `data/mechs/` (skips existing unless `--force`).
 - `scripts/mtf-crit.mjs` — shared crit-slot parser + construction validation,

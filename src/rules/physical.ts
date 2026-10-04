@@ -1,10 +1,10 @@
 /**
  * Physical attack rules (BattleTech Total Warfare, pp. 144–153).
  *
- * Implements punch, kick, push, and club attacks. Charge and DFA are
- * deferred to a future phase. Club acquisition (blown-off limbs, trees)
- * is also deferred — the club attack itself is implemented but requires
- * the attacker to have a club (tracked via `hasClub` on UnitState).
+ * Implements punch, kick, push, club, and physical-weapon (strike) attacks.
+ * Charge and DFA are deferred to a future phase. A club attack requires the
+ * attacker to hold a club (`UnitState.club`), acquired through the pickup
+ * rules in `game.ts` (severed limbs, trees, girders).
  *
  * Physical attacks are declared in the weapon attack phase and resolved
  * after all weapon attacks (TW p. 37 phase order within the unified phase).
