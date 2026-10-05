@@ -1,7 +1,7 @@
 {
-  "model": "HNT-N",
-  "name": "Nobori-nin",
-  "clanName": "Huntsman",
+  "model": "NVA-D",
+  "name": "Black Hawk",
+  "clanName": "Nova",
   "tonnage": 50,
   "weightClass": "Medium",
   "techBase": "Clan",
@@ -10,33 +10,27 @@
   "jumping": 5,
   "armor": {
     "head": 9,
-    "centerTorso": 32,
+    "centerTorso": 31,
     "rightTorso": 24,
     "leftTorso": 24,
     "rightArm": 16,
     "leftArm": 16,
-    "rightLeg": 24,
-    "leftLeg": 24,
-    "centerTorsoRear": 7,
-    "rightTorsoRear": 6,
-    "leftTorsoRear": 6
+    "rightLeg": 20,
+    "leftLeg": 20,
+    "centerTorsoRear": 8,
+    "rightTorsoRear": 8,
+    "leftTorsoRear": 8
   },
   "weapons": [
     {
-      "weapon": "ATM 6",
-      "location": "leftArm"
+      "weapon": "CL LB 5-X AC",
+      "location": "leftArm",
+      "shots": 40
     },
     {
-      "weapon": "CL ER Large Laser",
-      "location": "leftArm"
-    },
-    {
-      "weapon": "CL ER PPC",
-      "location": "rightArm"
-    },
-    {
-      "weapon": "CL Heavy Medium Laser",
-      "location": "rightArm"
+      "weapon": "CL LRM 20",
+      "location": "rightArm",
+      "shots": 12
     }
   ],
   "critSlots": {
@@ -86,8 +80,7 @@
         "name": "jumpJet"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
       }
     ],
     "leftTorso": [
@@ -101,7 +94,11 @@
       },
       {
         "kind": "structure",
-        "name": "jumpJet"
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
       },
       {
         "kind": "structure",
@@ -112,32 +109,22 @@
         "name": "doubleHeatSink"
       },
       {
-        "kind": "ammo",
-        "weapon": "ATM 6"
+        "kind": "empty"
       },
       {
-        "kind": "ammo",
-        "weapon": "ATM 6"
+        "kind": "empty"
       },
       {
-        "kind": "ammo",
-        "weapon": "ATM 6"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
-      },
-      {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "empty"
       }
     ],
     "rightTorso": [
@@ -151,31 +138,28 @@
       },
       {
         "kind": "structure",
-        "name": "jumpJet"
+        "name": "doubleHeatSink"
       },
       {
         "kind": "structure",
-        "name": "targetingComputer"
+        "name": "doubleHeatSink"
       },
       {
         "kind": "structure",
-        "name": "targetingComputer"
+        "name": "doubleHeatSink"
       },
       {
         "kind": "structure",
-        "name": "targetingComputer"
+        "name": "doubleHeatSink"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "empty"
       },
       {
         "kind": "empty"
@@ -197,44 +181,40 @@
         "name": "upperArmActuator"
       },
       {
-        "kind": "structure",
-        "name": "lowerArmActuator"
-      },
-      {
-        "kind": "structure",
-        "name": "doubleHeatSink"
-      },
-      {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "weapon",
+        "weapon": "CL LB 5-X AC"
       },
       {
         "kind": "weapon",
-        "weapon": "ATM 6"
+        "weapon": "CL LB 5-X AC"
       },
       {
         "kind": "weapon",
-        "weapon": "ATM 6"
+        "weapon": "CL LB 5-X AC"
       },
       {
         "kind": "weapon",
-        "weapon": "ATM 6"
+        "weapon": "CL LB 5-X AC"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL ER Large Laser"
+        "kind": "ammo",
+        "weapon": "CL LB 5-X AC"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "ammo",
+        "weapon": "CL LB 5-X AC"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
       }
     ],
     "rightArm": [
@@ -248,35 +228,35 @@
       },
       {
         "kind": "structure",
-        "name": "doubleHeatSink"
+        "name": "lowerArmActuator"
       },
       {
         "kind": "structure",
-        "name": "doubleHeatSink"
+        "name": "handActuator"
       },
       {
         "kind": "weapon",
-        "weapon": "CL ER PPC"
+        "weapon": "CL LRM 20"
       },
       {
         "kind": "weapon",
-        "weapon": "CL ER PPC"
+        "weapon": "CL LRM 20"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Heavy Medium Laser"
+        "weapon": "CL LRM 20"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Heavy Medium Laser"
+        "weapon": "CL LRM 20"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "ammo",
+        "weapon": "CL LRM 20"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "ammo",
+        "weapon": "CL LRM 20"
       },
       {
         "kind": "empty"
@@ -307,7 +287,8 @@
         "name": "jumpJet"
       },
       {
-        "kind": "empty"
+        "kind": "structure",
+        "name": "jumpJet"
       }
     ],
     "rightLeg": [
@@ -332,7 +313,8 @@
         "name": "jumpJet"
       },
       {
-        "kind": "empty"
+        "kind": "structure",
+        "name": "jumpJet"
       }
     ],
     "head": [
@@ -349,8 +331,7 @@
         "name": "cockpit"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "empty"
       },
       {
         "kind": "structure",
@@ -364,7 +345,7 @@
   },
   "heatsink": {
     "type": "double",
-    "count": 13
+    "count": 14
   },
   "myomer": "Standard"
 }

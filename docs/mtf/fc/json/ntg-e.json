@@ -1,5 +1,5 @@
 {
-  "model": "NGR-A",
+  "model": "NTG-E",
   "name": "Night Gyr",
   "tonnage": 75,
   "weightClass": "Heavy",
@@ -22,33 +22,44 @@
   },
   "weapons": [
     {
-      "weapon": "CL Ultra AC/20",
+      "weapon": "CL Large Pulse Laser",
       "location": "rightArm"
-    },
-    {
-      "weapon": "CL Streak SRM 6",
-      "location": "leftTorso"
-    },
-    {
-      "weapon": "CL Streak SRM 6",
-      "location": "rightTorso",
-      "shots": 15
-    },
-    {
-      "weapon": "CL Medium Pulse Laser",
-      "location": "leftArm"
-    },
-    {
-      "weapon": "CL Medium Pulse Laser",
-      "location": "leftArm"
-    },
-    {
-      "weapon": "CL Medium Pulse Laser",
-      "location": "head"
     },
     {
       "weapon": "CL Large Pulse Laser",
       "location": "leftArm"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "centerTorso"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "centerTorso"
+    },
+    {
+      "weapon": "CL SRM 6",
+      "location": "head"
+    },
+    {
+      "weapon": "ATM 6",
+      "location": "leftTorso"
     }
   ],
   "critSlots": {
@@ -94,12 +105,12 @@
         "name": "engine"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "weapon",
+        "weapon": "CL Medium Pulse Laser"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "weapon",
+        "weapon": "CL Medium Pulse Laser"
       }
     ],
     "leftTorso": [
@@ -112,24 +123,24 @@
         "name": "engine"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
-      },
-      {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "weapon",
+        "weapon": "ATM 6"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Streak SRM 6"
+        "weapon": "ATM 6"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Streak SRM 6"
+        "weapon": "ATM 6"
       },
       {
         "kind": "ammo",
-        "weapon": "CL Streak SRM 6"
+        "weapon": "ATM 6"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "ATM 6"
       },
       {
         "kind": "soak",
@@ -162,24 +173,24 @@
         "name": "engine"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL Streak SRM 6"
+        "kind": "structure",
+        "name": "doubleHeatSink"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL Streak SRM 6"
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
       },
       {
         "kind": "ammo",
-        "weapon": "CL Ultra AC/20"
-      },
-      {
-        "kind": "ammo",
-        "weapon": "CL Ultra AC/20"
-      },
-      {
-        "kind": "ammo",
-        "weapon": "CL Ultra AC/20"
+        "weapon": "CL SRM 6"
       },
       {
         "kind": "soak",
@@ -262,36 +273,36 @@
         "name": "upperArmActuator"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL Ultra AC/20"
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Ultra AC/20"
+        "weapon": "CL Large Pulse Laser"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Ultra AC/20"
+        "weapon": "CL Large Pulse Laser"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Ultra AC/20"
+        "weapon": "CL Medium Pulse Laser"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Ultra AC/20"
-      },
-      {
-        "kind": "weapon",
-        "weapon": "CL Ultra AC/20"
-      },
-      {
-        "kind": "weapon",
-        "weapon": "CL Ultra AC/20"
-      },
-      {
-        "kind": "weapon",
-        "weapon": "CL Ultra AC/20"
+        "weapon": "CL Medium Pulse Laser"
       },
       {
         "kind": "soak",
@@ -369,7 +380,7 @@
       },
       {
         "kind": "weapon",
-        "weapon": "CL Medium Pulse Laser"
+        "weapon": "CL SRM 6"
       },
       {
         "kind": "structure",
@@ -383,7 +394,7 @@
   },
   "heatsink": {
     "type": "double",
-    "count": 16
+    "count": 18
   },
   "myomer": "Standard"
 }
