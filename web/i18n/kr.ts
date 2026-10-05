@@ -475,6 +475,7 @@ export const kr: Catalog = {
   "critChart.soak.case": "CASE",
   "critChart.soak.caseII": "CASE II",
   "critChart.soak.tsm": "TSM",
+  "critChart.soak.equipment": "Equipment",
   "critChart.coreComponent": "{name}({hit}/{total}){effect}",
   "critChart.coreComponentEffect.engine1": "발열 +5",
   "critChart.coreComponentEffect.engine2": "발열 +10",

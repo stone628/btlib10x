@@ -583,6 +583,7 @@ const CRIT_SOAK_KEY: Readonly<Record<CritSoakName, MessageKey>> = {
   case: "critChart.soak.case",
   caseII: "critChart.soak.caseII",
   tsm: "critChart.soak.tsm",
+  equipment: "critChart.soak.equipment",
 };
 
 /** One slot line: dice number + component label, plus live markers. */

@@ -1,0 +1,401 @@
+{
+  "model": "ANH-1X",
+  "name": "Annihilator",
+  "tonnage": 100,
+  "weightClass": "Assault",
+  "techBase": "Inner Sphere",
+  "walking": 2,
+  "running": 3,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 61,
+    "rightTorso": 42,
+    "leftTorso": 42,
+    "rightArm": 34,
+    "leftArm": 34,
+    "rightLeg": 41,
+    "leftLeg": 41,
+    "centerTorsoRear": 15,
+    "rightTorsoRear": 10,
+    "leftTorsoRear": 10
+  },
+  "weapons": [
+    {
+      "weapon": "LB 10-X AC",
+      "location": "rightTorso",
+      "shots": 60
+    },
+    {
+      "weapon": "LB 10-X AC",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "LB 10-X AC",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "LB 10-X AC",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "centerTorso"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "centerTorso"
+    },
+    {
+      "weapon": "Small Laser",
+      "location": "head"
+    },
+    {
+      "weapon": "Small Pulse Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "Small Pulse Laser",
+      "location": "leftArm"
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Laser"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "soak",
+        "name": "case"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "soak",
+        "name": "case"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Small Pulse Laser"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "LB 10-X AC"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Small Pulse Laser"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "LB 10-X AC"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Small Laser"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 10
+  },
+  "myomer": "Standard"
+}

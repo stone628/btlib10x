@@ -62,7 +62,15 @@ Mad Cat Prime, Masakari Prime, Wolverine WVR-6R).
 
 - `scripts/fetch-mtf.mjs` — dev-only downloader: fetches an MTF by designation
   from the Flechs Sheets catalog into `tmp/` (e.g. `node scripts/fetch-mtf.mjs
-  "Atlas AS7-D"`); copy the result into `docs/mtf/` to convert it.
+  "Atlas AS7-D"`); copy the result into `docs/mtf/` to convert it. Downloads
+  are throttled to ≥5 s apart (also across runs, via `tmp/mtf/.last-download`).
+  A query that isn't an exact name downloads only if it has exactly one match;
+  otherwise the available names are printed (`--list` never downloads).
+  `--roster [file]` downloads every roster entry that isn't `"N/A"` into
+  `docs/mtf/sw/mtf/` (any other roster: beside that roster file),
+  skipping files already present.
+- `scripts/mtf-catalog.mjs` — shared manifest cache/lookup helpers for
+  `fetch-mtf.mjs`.
 - `scripts/mtf.mjs` — batch-converts `.mtf` → `MechDef` JSON into
   `data/mechs/` (skips existing unless `--force`).
 - `scripts/mtf-crit.mjs` — shared crit-slot parser + construction validation,

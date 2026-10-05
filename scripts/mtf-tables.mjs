@@ -140,7 +140,60 @@ export const CODE = {
   "CLLB-10 AC": "CL LB 10-X AC",
   "LB-20 AC": "LB 20-X AC",
   "LB-10 AC": "LB 10-X AC",
+  // Plain catalog names that sheets emit un-prefixed (Inner Sphere unless the
+  // catalog name itself carries "CL ").
+  "Medium Pulse Laser": "Medium Pulse Laser",
+  "ER PPC": "ER PPC",
+  "ER Medium Laser": "ER Medium Laser",
+  "ER Small Laser": "ER Small Laser",
+  "Streak SRM 2": "Streak SRM 2",
+  "Streak SRM 4": "Streak SRM 4",
+  "Streak SRM 6": "Streak SRM 6",
+  "LB 10-X AC": "LB 10-X AC",
+  "LB 20-X AC": "LB 20-X AC",
+  "Anti-Missile System": "Anti-Missile System",
+  AMS: "Anti-Missile System",
+  ISAMS: "Anti-Missile System",
+  ISMG: "Machine Gun",
+  TAG: "TAG",
+  // Additional IS compact codes.
+  ISERPPC: "ER PPC",
+  ISERLargeLaser: "ER Large Laser",
+  ISERMediumLaser: "ER Medium Laser",
+  ISERSmallLaser: "ER Small Laser",
+  ISStreakSRM2: "Streak SRM 2",
+  ISStreakSRM4: "Streak SRM 4",
+  ISStreakSRM6: "Streak SRM 6",
+  "ISMachine Gun": "Machine Gun",
+  ISAntiMissileSystem: "Anti-Missile System",
+  ISTAG: "TAG",
+  // MegaMek's alias for the PPC.
+  "Particle Cannon": "PPC",
 };
+
+/**
+ * Equipment with no engine representation (no catalog entry, no rules
+ * effect). Weapons-block lines naming these are dropped; crit slots naming
+ * them become inert `soak` slots (`equipment`) that occupy space but re-roll
+ * on a critical hit. Keys are crit/weapon tokens, matched after stripping
+ * facing/parenthetical suffixes.
+ */
+export const INERT_EQUIPMENT = new Set([
+  "ISGuardianECM",
+  "ISGuardianECMSuite",
+  "ISBeagleActiveProbe",
+  "BeagleActiveProbe",
+  "ISArtemisIV",
+  "ISMASC",
+  "Supercharger",
+  "Mek Null Signature System",
+  "Chameleon Light Polarization Shield",
+  "Chameleon Light Polarization Field",
+  "ISCollapsibleCommandModule",
+  "ISElectronicWarfareEquipment",
+  "ISLaserInsulator",
+  "RemoteSensorDispenser",
+]);
 
 /**
  * Crit-slot ammo token strings → catalog weapon names. Subset of CODE
@@ -159,6 +212,15 @@ export const AMMO_TOKEN = {
   "SRM-4": "SRM 4",
   "SRM-6": "SRM 6",
   "Machine Gun": "Machine Gun",
+  MG: "Machine Gun",
+  AMS: "Anti-Missile System",
+  "Streak SRM 2": "Streak SRM 2",
+  "Streak SRM 4": "Streak SRM 4",
+  "Streak SRM 6": "Streak SRM 6",
+  "LB 10-X AC": "LB 10-X AC",
+  "LB 10-X Cluster": "LB 10-X AC",
+  "LB 20-X AC": "LB 20-X AC",
+  "LB 20-X Cluster": "LB 20-X AC",
   Gauss: "Gauss Rifle",
   "Gauss Rifle": "Gauss Rifle",
   CLGauss: "CL Gauss Rifle",
@@ -193,6 +255,10 @@ export const SHOTS_PER_TON = {
   "CL Gauss Rifle": 16,
   "LB 10-X AC": 10,
   "LB 20-X AC": 5,
+  "Anti-Missile System": 12,
+  "Streak SRM 2": 50,
+  "Streak SRM 4": 25,
+  "Streak SRM 6": 15,
   "CL LB 10-X AC": 10,
   "CL LB 20-X AC": 5,
 };
@@ -258,6 +324,13 @@ export const STRUCTURE_TOKEN = {
   Gyro: "gyro",
   "Heat Sink": "heatSink",
   "ISDouble Heat Sink": "doubleHeatSink",
+  ISDoubleHeatSink: "doubleHeatSink",
+  ISDoubleHeatSinkPrototype: "doubleHeatSink",
+  CLDoubleHeatSink: "doubleHeatSink",
+  ISPrototypeJumpJet: "jumpJet",
+  ISPrototypeImprovedJumpJet: "jumpJet",
+  ISImprovedJumpJet: "jumpJet",
+  ISJumpJet: "jumpJet",
   "CLDouble Heat Sink": "doubleHeatSink",
   "Double Heat Sink": "doubleHeatSink",
   "Jump Jet": "jumpJet",

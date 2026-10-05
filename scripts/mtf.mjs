@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -7,7 +7,13 @@ import {
   validateCritConstruction,
   validateHeatSinks,
 } from "./mtf-crit.mjs";
-import { CODE, LOCATION, MODEL_PREFIX_NAME, SHOTS_PER_TON } from "./mtf-tables.mjs";
+import {
+  CODE,
+  INERT_EQUIPMENT,
+  LOCATION,
+  MODEL_PREFIX_NAME,
+  SHOTS_PER_TON,
+} from "./mtf-tables.mjs";
 
 /**
  * Batch converts BattleTech .mtf (MechTech File) definitions into the library's
@@ -32,7 +38,7 @@ import { CODE, LOCATION, MODEL_PREFIX_NAME, SHOTS_PER_TON } from "./mtf-tables.m
  */
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const mtfDir = join(root, "docs", "mtf");
+const mtfDir = process.env.MTF_IN_DIR ? process.env.MTF_IN_DIR : join(root, "docs", "mtf");
 const outDir = process.env.MTF_OUT_DIR ? process.env.MTF_OUT_DIR : join(root, "data", "mechs");
 const force = process.argv.includes("--force");
 
@@ -44,7 +50,7 @@ function weightClass(tonnage) {
 }
 
 function numberRegex(text, label) {
-  const m = text.match(new RegExp(`^${label}:(\\d+)`, "m"));
+  const m = text.match(new RegExp(`^${label}:\\s*(\\d+)`, "im"));
   return m ? Number(m[1]) : null;
 }
 
@@ -81,8 +87,17 @@ function mapWeapon(codeRaw) {
 function parseMtf(text, file) {
   const errors = [];
   const lines = text.split(/\r?\n/);
-  const rawName = lines[1]?.trim() ?? "";
-  const variant = lines[2]?.trim() ?? "";
+  // Two sheet layouts exist: the classic positional one (name on line 2,
+  // model on line 3) and the newer keyed one ("chassis:" / "model:" with
+  // lowercase headers throughout).
+  const keyed = /^chassis:/im.test(text);
+  const keyedField = (key) =>
+    lines
+      .find((l) => l.toLowerCase().startsWith(`${key}:`))
+      ?.slice(key.length + 1)
+      .trim() ?? "";
+  const rawName = keyed ? keyedField("chassis") : (lines[1]?.trim() ?? "");
+  const variant = keyed ? keyedField("model") : (lines[2]?.trim() ?? "");
   if (!rawName) errors.push(`missing name in ${file}`);
   if (!variant) errors.push(`missing model in ${file}`);
   // Line 2 is `<NAME>` or `<NAME> (<CLANNAME>)` for Clan sheets
@@ -97,10 +112,34 @@ function parseMtf(text, file) {
     clanName = clanMatch[2].trim() || undefined;
   }
 
+  // Header keys are matched case-insensitively; known keys are canonicalised
+  // so the lookups below can use the classic spelling.
+  const CANON = Object.fromEntries(
+    [
+      "TechBase",
+      "Myomer",
+      "Engine",
+      "Structure",
+      "Armor",
+      "HD Armor",
+      "CT Armor",
+      "RT Armor",
+      "LT Armor",
+      "RA Armor",
+      "LA Armor",
+      "LL Armor",
+      "RL Armor",
+      "RTC Armor",
+      "RTR Armor",
+      "RTL Armor",
+    ].map((k) => [k.toLowerCase(), k]),
+  );
   const fields = {};
   for (const line of lines) {
     const idx = line.indexOf(":");
-    if (idx > 0) fields[line.slice(0, idx)] = line.slice(idx + 1).trim();
+    if (idx <= 0) continue;
+    const key = line.slice(0, idx);
+    fields[CANON[key.toLowerCase()] ?? key] = line.slice(idx + 1).trim();
   }
   const techBase = fields.TechBase ?? "Inner Sphere";
 
@@ -148,7 +187,7 @@ function parseMtf(text, file) {
   // count including engine-mounted sinks). Classic construction rule: an
   // engine mounts floor(walking * tonnage / 25) sinks internally; the rest
   // occupy crit slots.
-  const heatsinkMatch = /^Heat Sinks:\s*(\d+)\s+(Single|Double)\s*$/m.exec(text);
+  const heatsinkMatch = /^Heat Sinks:\s*(\d+)\s+(?:IS\s+|Clan\s+)?(Single|Double)\s*$/im.exec(text);
   let heatsink = null;
   if (heatsinkMatch) {
     heatsink = {
@@ -220,6 +259,7 @@ function parseMtf(text, file) {
   const bins = ammoBinsFromCrits(lines);
   const parsed = block
     .map(splitWeaponLine)
+    .filter(({ codeRaw }) => !INERT_EQUIPMENT.has(codeRaw))
     .map(({ codeRaw, location, explicitAmmo, rearFacing }) => {
       const weapon = mapWeapon(codeRaw);
       if (!weapon) {
@@ -337,8 +377,17 @@ const files = readdirSync(mtfDir)
   .sort();
 let generated = 0;
 let skipped = 0;
+mkdirSync(outDir, { recursive: true });
+let nonBiped = 0;
 for (const file of files) {
-  const { def, errors } = parseMtf(readFileSync(join(mtfDir, file), "utf8"), file);
+  const text = readFileSync(join(mtfDir, file), "utf8");
+  // Bipedal 'Mechs only: LAM / Quad / Tripod sheets are out of scope.
+  const config = /^Config:\s*(.*?)\s*$/m.exec(text)?.[1];
+  if (config !== undefined && !/^Biped/i.test(config)) {
+    nonBiped++;
+    continue;
+  }
+  const { def, errors } = parseMtf(text, file);
   if (def === null || errors.length > 0) {
     console.error(`SKIP ${file}:`);
     for (const e of errors) console.error(`  - ${e}`);
@@ -355,5 +404,5 @@ for (const file of files) {
   generated++;
 }
 console.log(
-  `\n${generated} generated, ${skipped} skipped. Run 'npm run pack && npm test' to validate.`,
+  `\n${generated} generated, ${skipped} skipped, ${nonBiped} non-biped ignored. Run 'npm run pack && npm test' to validate.`,
 );

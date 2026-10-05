@@ -8,11 +8,16 @@
  *   node scripts/fetch-mtf.mjs "Atlas AS7-D"
  *   node scripts/fetch-mtf.mjs "Atlas AS7-D" "Locust LCT-1V" --dir tmp/mtf
  *   node scripts/fetch-mtf.mjs "Atlas AS7-D" --out tmp/mtf/atlas.mtf
- *   node scripts/fetch-mtf.mjs "Atlas" --list
+ *   node scripts/fetch-mtf.mjs "AS7-D" --list
+ *   node scripts/fetch-mtf.mjs --roster [docs/mtf/sw/roster.json]
  *
- * Lookup mirrors the app's CatalogRepository: exact match on the manifest's
- * d/a/dd attributes, plus a Mech<->Mek spelling fallback, then a
- * case-insensitive pass. Files land under tmp/ (gitignored) by default.
+ * Lookup: exact match on the manifest's d/a/dd attributes (Mech<->Mek
+ * fallback, case-insensitive), else a single token-AND match. When the query
+ * is ambiguous or unknown nothing is downloaded and the available names are
+ * printed. Files land under tmp/mtf (gitignored) by default.
+ *
+ * Politeness: actual MTF downloads are at least 5 s apart, also across
+ * separate invocations (last download time kept in tmp/mtf/.last-download).
  *
  * The unit-list manifest is cached at tmp/mtf/unitList.xml and reused on
  * later runs; delete it (or pass --refresh) to re-fetch.
@@ -20,32 +25,38 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { bestMatch, loadManifest, MEK_DIR, root } from "./mtf-catalog.mjs";
 
-const BASE = "https://helm-kore-fragment.s3.amazonaws.com/";
-const MANIFEST_URL = `${BASE}unitList.xml`;
-const MEK_DIR = `${BASE}mtf/meks/`;
-
-const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const MIN_GAP_MS = 5000;
+const stampFile = join(root, "tmp", "mtf", ".last-download");
+const defaultRoster = join(root, "docs", "mtf", "sw", "roster.json");
+const rosterDir = join(root, "docs", "mtf", "sw", "mtf");
 
 function usage() {
   return [
     `usage: node scripts/fetch-mtf.mjs "<designation>" [...] [options]`,
+    `       node scripts/fetch-mtf.mjs --roster [roster.json] [options]`,
     ``,
-    `  <designation>  unit name as shown in Flechs Sheets, e.g. "Atlas AS7-D"`,
-    `  --dir <path>   output directory (default: tmp/mtf, relative to repo root)`,
-    `  --out <path>   output file (single designation only)`,
-    `  --list         list manifest matches without downloading`,
-    `  --refresh      re-fetch the manifest even when the cache exists`,
+    `  <designation>     unit name as shown in Flechs Sheets, e.g. "Atlas AS7-D"`,
+    `  --dir <path>      output directory (default: tmp/mtf; roster: beside it)`,
+    `  --out <path>      output file (single designation only)`,
+    `  --list            list manifest matches without downloading`,
+    `  --roster [file]   download every roster entry whose mtf is not "N/A"`,
+    `                    (default: docs/mtf/sw/roster.json); files go beside the roster`,
+    `                    (sw: docs/mtf/sw/mtf); existing files skipped`,
+    `  --refresh         re-fetch the manifest even when the cache exists`,
+    ``,
+    `downloads are throttled to one per ${MIN_GAP_MS / 1000}s`,
   ].join("\n");
 }
 
 function parseArgs(argv) {
   const names = [];
-  let dir = join(root, "tmp", "mtf");
+  let dir = null;
   let out = null;
   let list = false;
   let refresh = false;
+  let roster = null;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--dir") {
@@ -56,6 +67,9 @@ function parseArgs(argv) {
       list = true;
     } else if (a === "--refresh") {
       refresh = true;
+    } else if (a === "--roster") {
+      const next = argv[i + 1];
+      roster = next && !next.startsWith("--") ? resolve(root, argv[++i] ?? "") : defaultRoster;
     } else if (a === "--help" || a === "-h") {
       console.log(usage());
       process.exit(0);
@@ -66,53 +80,41 @@ function parseArgs(argv) {
       names.push(a);
     }
   }
-  return { names, dir, out, list, refresh };
+  return { names, dir, out, list, refresh, roster };
 }
 
-/** Minimal manifest parse: collects {d,a,dd,f} from each <u .../> entry. */
-function parseManifest(xml) {
-  const entries = [];
-  for (const m of xml.matchAll(/<u\s+([^>]*?)\/>/g)) {
-    const attrs = {};
-    for (const am of m[1].matchAll(/(\w+)="([^"]*)"/g)) {
-      attrs[am[1]] = am[2];
-    }
-    if (attrs.f) entries.push(attrs);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** Wait until >= MIN_GAP_MS since the previous download, then stamp now. */
+async function throttle() {
+  let last = 0;
+  try {
+    last = Number(readFileSync(stampFile, "utf8")) || 0;
+  } catch {}
+  const wait = last + MIN_GAP_MS - Date.now();
+  if (wait > 0) await sleep(wait);
+  mkdirSync(dirname(stampFile), { recursive: true });
+  writeFileSync(stampFile, String(Date.now()));
+}
+
+/** Download manifest file `f` to `outPath`; returns an error string or null. */
+async function download(f, display, outPath) {
+  const url = MEK_DIR + f.split("/").map(encodeURIComponent).join("/");
+  await throttle();
+  const res = await fetch(url);
+  if (!res.ok) return `failed to fetch ${display} (${url}): ${res.status}`;
+  const text = await res.text();
+  if (!/^(Version|generator|chassis):/.test(text)) {
+    return `unexpected content for ${display} (first line: ${text.split("\n")[0]})`;
   }
-  return entries;
+  mkdirSync(dirname(outPath), { recursive: true });
+  writeFileSync(outPath, text);
+  console.log(`wrote ${outPath.replace(`${root}/`, "")} (${display})`);
+  return null;
 }
 
-function spellingVariants(q) {
-  return [
-    q,
-    q.replace(/Mech/g, "Mek").replace(/mech/g, "mek"),
-    q.replace(/Mek/g, "Mech").replace(/mek/g, "mech"),
-  ];
-}
-
-function entryNames(e) {
-  return [e.d, e.a, e.dd].filter(Boolean);
-}
-
-function findEntry(query, entries) {
-  for (const v of spellingVariants(query)) {
-    const hit = entries.find((e) => entryNames(e).includes(v));
-    if (hit) return hit;
-  }
-  const lower = new Map();
-  for (const v of spellingVariants(query)) lower.set(v.toLowerCase(), true);
-  return entries.find((e) => entryNames(e).some((n) => lower.has(n.toLowerCase()))) ?? null;
-}
-
-function suggestions(query, entries, limit = 10) {
-  const q = query.toLowerCase();
-  return entries
-    .filter((e) => entryNames(e).some((n) => n.toLowerCase().includes(q)))
-    .slice(0, limit);
-}
-
-const { names, dir, out, list, refresh } = parseArgs(process.argv.slice(2));
-if (names.length === 0) {
+const { names, dir, out, list, refresh, roster } = parseArgs(process.argv.slice(2));
+if (names.length === 0 && !roster) {
   console.error(usage());
   process.exit(1);
 }
@@ -121,54 +123,53 @@ if (out && names.length > 1) {
   process.exit(1);
 }
 
-const manifestCache = join(root, "tmp", "mtf", "unitList.xml");
-let manifestXml;
-if (!refresh && existsSync(manifestCache)) {
-  manifestXml = readFileSync(manifestCache, "utf8");
-} else {
-  const manifestRes = await fetch(MANIFEST_URL);
-  if (!manifestRes.ok) {
-    console.error(`failed to fetch manifest ${MANIFEST_URL}: ${manifestRes.status}`);
-    process.exit(1);
-  }
-  manifestXml = await manifestRes.text();
-  mkdirSync(dirname(manifestCache), { recursive: true });
-  writeFileSync(manifestCache, manifestXml);
-}
-const entries = parseManifest(manifestXml);
-
 let failed = 0;
-for (const name of names) {
-  const entry = findEntry(name, entries);
-  if (!entry) {
-    console.error(`no catalog entry for ${JSON.stringify(name)}`);
-    for (const s of suggestions(name, entries)) {
-      console.error(`  did you mean: "${s.d}"`);
+
+if (roster) {
+  const items = JSON.parse(readFileSync(roster, "utf8")).filter((r) => r.mtf !== "N/A");
+  const outDir = dir ?? (roster === defaultRoster ? rosterDir : dirname(roster));
+  const files = [...new Set(items.map((r) => r.mtf))];
+  let n = 0;
+  for (const f of files) {
+    n++;
+    const outPath = join(outDir, f);
+    if (existsSync(outPath)) continue;
+    process.stdout.write(`[${n}/${files.length}] `);
+    const err = await download(f, f, outPath);
+    if (err) {
+      console.error(err);
+      failed++;
     }
+  }
+  console.log(`roster done: ${files.length} files, ${failed} failed`);
+  process.exit(failed > 0 ? 1 : 0);
+}
+
+const entries = await loadManifest({ refresh });
+for (const name of names) {
+  const m = bestMatch(name, entries);
+  if (!m.entry) {
+    console.error(`no unique catalog entry for ${JSON.stringify(name)}`);
+    const c = m.candidates;
+    if (c.length === 0) console.error("  (no candidates)");
+    for (const s of c.slice(0, 10)) console.error(`  available: "${s.d}"`);
+    if (c.length > 10) console.error(`  ... and ${c.length - 10} more`);
     failed++;
     continue;
   }
-  const display = entry.d ?? name;
+  const display = m.entry.d ?? name;
   if (list) {
-    console.log(`${display} -> ${entry.f}`);
+    console.log(`${display} -> ${m.entry.f}`);
     continue;
   }
-  const url = MEK_DIR + entry.f.split("/").map(encodeURIComponent).join("/");
-  const res = await fetch(url);
-  if (!res.ok) {
-    console.error(`failed to fetch ${display} (${url}): ${res.status}`);
+  const err = await download(
+    m.entry.f,
+    display,
+    out ?? join(dir ?? join(root, "tmp", "mtf"), m.entry.f),
+  );
+  if (err) {
+    console.error(err);
     failed++;
-    continue;
   }
-  const text = await res.text();
-  if (!text.startsWith("Version:")) {
-    console.error(`unexpected content for ${display} (first line: ${text.split("\n")[0]})`);
-    failed++;
-    continue;
-  }
-  const outPath = out ?? join(dir, entry.f);
-  mkdirSync(dirname(outPath), { recursive: true });
-  writeFileSync(outPath, text);
-  console.log(`wrote ${outPath.replace(`${root}/`, "")} (${display})`);
 }
 if (failed > 0) process.exit(1);

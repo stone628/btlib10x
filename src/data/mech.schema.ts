@@ -52,7 +52,8 @@ const REAR_ARMOR_KEYS: readonly RearArmorKey[] = [
  *     upperLegActuator, lowerLegActuator, footActuator, hip).
  *   - soak: occupies a slot but cannot take a critical hit (endo steel, CASE,
  *     ferro-fibrous, etc.) — the slot re-rolls during selection. `name` names
- *     the specific armor-tech component occupying the slot.
+ *     the specific armor-tech component occupying the slot (`equipment` is an
+ *     inert catch-all for gear the engine does not model, e.g. ECM or MASC).
  */
 export type CritSlot =
   | { readonly kind: "empty" }
@@ -87,7 +88,14 @@ export type CritStructureName = (typeof CRIT_STRUCTURE_NAMES)[number];
 
 /** All soak (armor-tech) component names recognized by the crit table.
  * Order is wire-stable (indexes are stored in packed JSONL lines) — append only. */
-export const CRIT_SOAK_NAMES = ["endoSteel", "ferroFibrous", "case", "caseII", "tsm"] as const;
+export const CRIT_SOAK_NAMES = [
+  "endoSteel",
+  "ferroFibrous",
+  "case",
+  "caseII",
+  "tsm",
+  "equipment",
+] as const;
 
 export type CritSoakName = (typeof CRIT_SOAK_NAMES)[number];
 
@@ -193,7 +201,7 @@ export interface WeaponMount extends WeaponNameHolder {
   /** Shots available; omit for weapons without ammunition. */
   readonly shots?: number;
   /** True when the weapon is mounted rear-facing (MTF `(R)` notation, torso
-   *  locations only on a biped). Rear-facing weapons fire into the rear arc
+   *  and head locations only on a biped). Rear-facing weapons fire into the rear arc
    *  instead of the front arc (TW p.105). Default false. */
   readonly rearFacing?: boolean;
 }
@@ -488,8 +496,8 @@ export function validateMechDef(def: MechDef): MechDef {
     if (!isLocation(w.location)) {
       errors.push(`weapon.location ${JSON.stringify(w.location)} is not a valid location`);
     }
-    if (w.rearFacing === true && !isTorso(w.location)) {
-      errors.push(`weapon.rearFacing is only valid on torso mounts, got ${w.location}`);
+    if (w.rearFacing === true && !isTorso(w.location) && w.location !== "head") {
+      errors.push(`weapon.rearFacing is only valid on torso or head mounts, got ${w.location}`);
     }
     if (w.shots !== undefined) {
       if (!Number.isInteger(w.shots) || w.shots <= 0) {
