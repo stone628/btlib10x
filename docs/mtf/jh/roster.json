@@ -1,0 +1,10260 @@
+[
+  {
+    "mtf": "Osprey OSP-15.mtf",
+    "chassis": "Osprey",
+    "model": "OSP-15",
+    "bv": 1564,
+    "intro": 2738,
+    "tags": [
+      "lostech",
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "TR:J"
+    ],
+    "id": "00KTZWMNXE"
+  },
+  {
+    "mtf": "Falcon FLC-5P.mtf",
+    "chassis": "Falcon",
+    "model": "FLC-5P",
+    "bv": 945,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "01VYTBXB57"
+  },
+  {
+    "mtf": "Goliath GOL-5D.mtf",
+    "chassis": "Goliath",
+    "model": "GOL-5D",
+    "bv": 1975,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:J"
+    ],
+    "id": "023VV3B52D"
+  },
+  {
+    "mtf": "Ostscout OTT-10CS.mtf",
+    "chassis": "Ostscout",
+    "model": "OTT-10CS",
+    "bv": 862,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "05QXDZF44E"
+  },
+  {
+    "mtf": "Daimyo DMO-1K2 Al-Shahab.mtf",
+    "chassis": "Daimyo",
+    "model": "DMO-1K2 (al-Shahab)",
+    "bv": 1332,
+    "intro": 3066,
+    "tags": [
+      "xtro",
+      "named"
+    ],
+    "sources": [
+      "XTR:Pirates"
+    ],
+    "id": "06YZX4WNH8"
+  },
+  {
+    "mtf": "Prowler PWR-1X1.mtf",
+    "chassis": "Prowler",
+    "model": "PWR-1X1",
+    "bv": 1922,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "07Z2D93Z6F"
+  },
+  {
+    "mtf": "Warlord BLR-2D.mtf",
+    "chassis": "Warlord",
+    "model": "BLR-2D",
+    "bv": 2041,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "0865BF25J2"
+  },
+  {
+    "mtf": "Catapult CPLT-K4.mtf",
+    "chassis": "Catapult",
+    "model": "CPLT-K4",
+    "bv": 1880,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "08J1767N06"
+  },
+  {
+    "mtf": "Crimson Hawk.mtf",
+    "chassis": "Crimson Hawk",
+    "model": "",
+    "bv": 1285,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:DA"
+    ],
+    "id": "09MHBN3HEC"
+  },
+  {
+    "mtf": "Galahad (Glass Spider) 3.mtf",
+    "chassis": "Galahad (Glass Spider)",
+    "model": "3",
+    "bv": 2508,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "0B4GC5M31C"
+  },
+  {
+    "mtf": "Atlas AS7-Dr.mtf",
+    "chassis": "Atlas",
+    "model": "AS7-Dr",
+    "bv": 2101,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "TR:DA"
+    ],
+    "id": "0BD9MY2YWM"
+  },
+  {
+    "mtf": "Gladiator GLD-1R.mtf",
+    "chassis": "Gladiator",
+    "model": "GLD-1R (Keller)",
+    "bv": 1517,
+    "intro": 3071,
+    "tags": [
+      "tro",
+      "named"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:SW"
+    ],
+    "id": "0CG2GEP9VY"
+  },
+  {
+    "mtf": "Quickdraw QKD-8K.mtf",
+    "chassis": "Quickdraw",
+    "model": "QKD-8K",
+    "bv": 1583,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "0DX23K8QSE"
+  },
+  {
+    "mtf": "Raven RVN-SS.mtf",
+    "chassis": "Raven",
+    "model": "RVN-SS \"Shattered Raven\"",
+    "bv": 904,
+    "intro": 3069,
+    "tags": [
+      "tro",
+      "named"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "0E64KJXY2C"
+  },
+  {
+    "mtf": "Goliath GOL-2H.mtf",
+    "chassis": "Goliath",
+    "model": "GOL-2H",
+    "bv": 1583,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:J"
+    ],
+    "id": "0F2XYJMFD1"
+  },
+  {
+    "mtf": "Mauler MAL-2D.mtf",
+    "chassis": "Mauler",
+    "model": "MAL-2D",
+    "bv": 1737,
+    "intro": 3065,
+    "tags": [],
+    "sources": [
+      "Shrap15"
+    ],
+    "id": "0FPEAMNX4P"
+  },
+  {
+    "mtf": "Stealth STH-3S.mtf",
+    "chassis": "Stealth",
+    "model": "STH-3S",
+    "bv": 1577,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:J"
+    ],
+    "id": "0HP9BE05BX"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Black Knight",
+    "model": "BL-X-KNT “Red Reaper”",
+    "bv": 1858,
+    "intro": 3069,
+    "tags": [
+      "xtro",
+      "named"
+    ],
+    "sources": [
+      "XTR:Most Wanted"
+    ],
+    "id": "0J8ZE837Y6"
+  },
+  {
+    "mtf": "Thunderbolt TDR-9M.mtf",
+    "chassis": "Thunderbolt",
+    "model": "TDR-9M",
+    "bv": 1648,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:CI"
+    ],
+    "id": "0JDDNMJXXN"
+  },
+  {
+    "mtf": "Kodiak 3.mtf",
+    "chassis": "Kodiak",
+    "model": "3",
+    "bv": 2615,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:CI"
+    ],
+    "id": "0KW9HVX2TZ"
+  },
+  {
+    "mtf": "Marauder II MAD-4H.mtf",
+    "chassis": "Marauder II",
+    "model": "MAD-4H",
+    "bv": 2180,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:CI"
+    ],
+    "id": "0P789SFX1H"
+  },
+  {
+    "mtf": "Phoenix PX-1R.mtf",
+    "chassis": "Phoenix",
+    "model": "PX-1R",
+    "bv": 917,
+    "intro": 2474,
+    "tags": [
+      "lostech",
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Primitives V"
+    ],
+    "id": "0PMXR1FCMX"
+  },
+  {
+    "mtf": "Ostwar OWR-2M.mtf",
+    "chassis": "Ostwar",
+    "model": "OWR-2M",
+    "bv": 1205,
+    "intro": 2470,
+    "tags": [
+      "lostech",
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Primitives I"
+    ],
+    "id": "0PYC5XD4C6"
+  },
+  {
+    "mtf": "Wolverine WVR-8D.mtf",
+    "chassis": "Wolverine",
+    "model": "WVR-8D",
+    "bv": 1547,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:CI"
+    ],
+    "id": "0TQE4K9B0Z"
+  },
+  {
+    "mtf": "Gurkha GUR-4G.mtf",
+    "chassis": "Gurkha",
+    "model": "GUR-4G",
+    "bv": 908,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067",
+      "TR:J"
+    ],
+    "id": "0W881AZTAJ"
+  },
+  {
+    "mtf": "Ocelot 2.mtf",
+    "chassis": "Ocelot",
+    "model": "2",
+    "bv": 1734,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "0Y7FZ7ZVHA"
+  },
+  {
+    "mtf": "Snake SNK-2B.mtf",
+    "chassis": "Snake",
+    "model": "SNK-2B",
+    "bv": 1081,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:J"
+    ],
+    "id": "10GYW3HD7F"
+  },
+  {
+    "mtf": "Tessen TSN-1Cr.mtf",
+    "chassis": "Tessen",
+    "model": "TSN-1Cr",
+    "bv": 1241,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085"
+    ],
+    "id": "130BMBP3FB"
+  },
+  {
+    "mtf": "Goliath GOL-5W.mtf",
+    "chassis": "Goliath",
+    "model": "GOL-5W",
+    "bv": 2006,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "13VJ6M6ZNY"
+  },
+  {
+    "mtf": "Battle Hawk BH-K306.mtf",
+    "chassis": "Battle Hawk",
+    "model": "BH-K306",
+    "bv": 926,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:CI"
+    ],
+    "id": "19GT9A4AA9"
+  },
+  {
+    "mtf": "Thug THG-12K.mtf",
+    "chassis": "Thug",
+    "model": "THG-12K",
+    "bv": 1824,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "19SSX8C8WN"
+  },
+  {
+    "mtf": "Rifleman RFL-6D.mtf",
+    "chassis": "Rifleman",
+    "model": "RFL-6D",
+    "bv": 1274,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "1B2JGT7WN0"
+  },
+  {
+    "mtf": "Legacy LGC-01.mtf",
+    "chassis": "Legacy",
+    "model": "LGC-01",
+    "bv": 1967,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067",
+      "TR:J"
+    ],
+    "id": "1BTDAAG73A"
+  },
+  {
+    "mtf": "Rifleman RFL-3Cr.mtf",
+    "chassis": "Rifleman",
+    "model": "RFL-3Cr",
+    "bv": 1129,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "RGv1",
+      "RG08"
+    ],
+    "id": "1C1BGP66NA"
+  },
+  {
+    "mtf": "Akuma AKU-2X.mtf",
+    "chassis": "Akuma",
+    "model": "AKU-2X",
+    "bv": 2122,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:CI"
+    ],
+    "id": "1DWVM65TKS"
+  },
+  {
+    "mtf": "Marauder MAD-9M2.mtf",
+    "chassis": "Marauder",
+    "model": "MAD-9M2",
+    "bv": 1875,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "1FXWD7QKKS"
+  },
+  {
+    "mtf": "Ostsol OTL-7M.mtf",
+    "chassis": "Ostsol",
+    "model": "OTL-7M",
+    "bv": 1581,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:J"
+    ],
+    "id": "1GE30QV6PD"
+  },
+  {
+    "mtf": "Crusader CRD-7L.mtf",
+    "chassis": "Crusader",
+    "model": "CRD-7L",
+    "bv": 1749,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:PP"
+    ],
+    "id": "1J2JRHB1Q8"
+  },
+  {
+    "mtf": "Hammerhands HMH-3D.mtf",
+    "chassis": "Hammerhands",
+    "model": "HMH-3D",
+    "bv": 1381,
+    "intro": 2475,
+    "tags": [
+      "lostech",
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:SW"
+    ],
+    "id": "1JNM7DP9FE"
+  },
+  {
+    "mtf": "Peregrine (Horned Owl) 4.mtf",
+    "chassis": "Peregrine (Horned Owl)",
+    "model": "4",
+    "bv": 1198,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "1M47TPEFD3"
+  },
+  {
+    "mtf": "Toyama TYM-1B.mtf",
+    "chassis": "Toyama",
+    "model": "TYM-1B",
+    "bv": 1788,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060",
+      "BattleCorps"
+    ],
+    "id": "1NE5ZV0R8J"
+  },
+  {
+    "mtf": "War Dog WR-DG-03FC.mtf",
+    "chassis": "War Dog",
+    "model": "WR-DG-03FC",
+    "bv": 1962,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:CI"
+    ],
+    "id": "1PRS1H2NK5"
+  },
+  {
+    "mtf": "Warhammer IIC 5.mtf",
+    "chassis": "Warhammer IIC",
+    "model": "5",
+    "bv": 2185,
+    "intro": 3070,
+    "tags": [],
+    "sources": [
+      "BattleCorps"
+    ],
+    "id": "1S8AYTRP7W"
+  },
+  {
+    "mtf": "Ostsol OTL-8M.mtf",
+    "chassis": "Ostsol",
+    "model": "OTL-8M",
+    "bv": 1733,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:J"
+    ],
+    "id": "1THRE3QW6K"
+  },
+  {
+    "mtf": "Avatar AV1-OH.mtf",
+    "chassis": "Avatar",
+    "model": "AV1-OH",
+    "bv": 1604,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:CI"
+    ],
+    "id": "1VF8JS5W9C"
+  },
+  {
+    "mtf": "Raven RVN-SR.mtf",
+    "chassis": "Raven",
+    "model": "RVN-SR \"Shattered Raven\"",
+    "bv": 601,
+    "intro": 3068,
+    "tags": [
+      "tro",
+      "named"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "1WZ9AKEJXE"
+  },
+  {
+    "mtf": "Pillager PLG-4Z.mtf",
+    "chassis": "Pillager",
+    "model": "PLG-4Z",
+    "bv": 2868,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:SW"
+    ],
+    "id": "1XPX0V6Y2A"
+  },
+  {
+    "mtf": "Commando COM-7S2 Freyr.mtf",
+    "chassis": "Commando",
+    "model": "COM-7S2 (Freyr)",
+    "bv": 1105,
+    "intro": 3070,
+    "tags": [
+      "xtro",
+      "named"
+    ],
+    "sources": [
+      "XTR:Pirates"
+    ],
+    "id": "1ZCVWXFRHE"
+  },
+  {
+    "mtf": "Vindicator VND-6L.mtf",
+    "chassis": "Vindicator",
+    "model": "VND-6L",
+    "bv": 1739,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "20YGCK5K54"
+  },
+  {
+    "mtf": "Thor (Summoner) HH.mtf",
+    "chassis": "Thor (Summoner)",
+    "model": "HH",
+    "bv": 2490,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:CI"
+    ],
+    "id": "211MP36QG0"
+  },
+  {
+    "mtf": "Icarus ICR-1X.mtf",
+    "chassis": "Icarus",
+    "model": "ICR-1X",
+    "bv": 700,
+    "intro": 2470,
+    "tags": [
+      "lostech",
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Primitives II"
+    ],
+    "id": "21H232WS1D"
+  },
+  {
+    "mtf": "Patriot PKM-2C.mtf",
+    "chassis": "Patriot",
+    "model": "PKM-2C",
+    "bv": 1613,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075"
+    ],
+    "id": "21Y7G4HSQ8"
+  },
+  {
+    "mtf": "Tempest TMP-3M2_Storm_Tempest.mtf",
+    "chassis": "Tempest",
+    "model": "TMP-3M2 \"Storm Tempest\"",
+    "bv": 1642,
+    "intro": 3067,
+    "tags": [
+      "tro",
+      "named"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:J"
+    ],
+    "id": "22325TNETX"
+  },
+  {
+    "mtf": "Griffin GRF-6S.mtf",
+    "chassis": "Griffin",
+    "model": "GRF-6S (Francine II)",
+    "bv": 2249,
+    "intro": 3071,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "SB:W&B"
+    ],
+    "id": "284ENTSSTY"
+  },
+  {
+    "mtf": "Panther PNT-12A.mtf",
+    "chassis": "Panther",
+    "model": "PNT-12A",
+    "bv": 982,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "29NBXXJQZY"
+  },
+  {
+    "mtf": "Seraph C-SRP-O Invictus.mtf",
+    "chassis": "Seraph",
+    "model": "C-SRP-O Invictus",
+    "bv": 1794,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "2AVPWESQGF"
+  },
+  {
+    "mtf": "Wasp WSP-1.mtf",
+    "chassis": "Wasp",
+    "model": "WSP-1",
+    "bv": 314,
+    "intro": 2464,
+    "tags": [
+      "lostech",
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Primitives II"
+    ],
+    "id": "2B1KW8PK81"
+  },
+  {
+    "mtf": "Eisenfaust EFT-4J.mtf",
+    "chassis": "Eisenfaust",
+    "model": "EFT-4J",
+    "bv": 977,
+    "intro": 2515,
+    "tags": [
+      "lostech",
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "TR:J"
+    ],
+    "id": "2BR0VYT7PH"
+  },
+  {
+    "mtf": "Emperor EMP-6L.mtf",
+    "chassis": "Emperor",
+    "model": "EMP-6L",
+    "bv": 2681,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:SW"
+    ],
+    "id": "2C9037GBSW"
+  },
+  {
+    "mtf": "Thunder THR-3L.mtf",
+    "chassis": "Thunder",
+    "model": "THR-3L",
+    "bv": 1904,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:J"
+    ],
+    "id": "2CRFG864NC"
+  },
+  {
+    "mtf": "Sunder SD1-OE.mtf",
+    "chassis": "Sunder",
+    "model": "SD1-OE",
+    "bv": 1876,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:CI"
+    ],
+    "id": "2CXH0SWX1D"
+  },
+  {
+    "mtf": "Warhammer WHM-9D.mtf",
+    "chassis": "Warhammer",
+    "model": "WHM-9D",
+    "bv": 2152,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:CI"
+    ],
+    "id": "2DCSHB9E9G"
+  },
+  {
+    "mtf": "Archer ARC-7S.mtf",
+    "chassis": "Archer",
+    "model": "ARC-7S",
+    "bv": 1658,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "2EKVRZ6N97"
+  },
+  {
+    "mtf": "Flashman FLS-9M.mtf",
+    "chassis": "Flashman",
+    "model": "FLS-9M",
+    "bv": 1895,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "2FQDE9DPXC"
+  },
+  {
+    "mtf": "Pouncer F.mtf",
+    "chassis": "Pouncer",
+    "model": "F",
+    "bv": 1308,
+    "intro": 3069,
+    "tags": [],
+    "sources": [
+      "RG25"
+    ],
+    "id": "2FR0VZKADX"
+  },
+  {
+    "mtf": "Rifleman RFL-8D.mtf",
+    "chassis": "Rifleman",
+    "model": "RFL-8D",
+    "bv": 1777,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:CI"
+    ],
+    "id": "2GXCBMP5R3"
+  },
+  {
+    "mtf": "Grendel (Mongrel) H.mtf",
+    "chassis": "Grendel (Mongrel)",
+    "model": "H",
+    "bv": 1965,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:CI"
+    ],
+    "id": "2J924BPVV2"
+  },
+  {
+    "mtf": "Jupiter 2.mtf",
+    "chassis": "Jupiter",
+    "model": "2",
+    "bv": 3278,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:DA"
+    ],
+    "id": "2M2S79PJMA"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Cougar-XR",
+    "model": "",
+    "bv": 1783,
+    "intro": 3070,
+    "tags": [
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Clans"
+    ],
+    "id": "2MHDT2KGC0"
+  },
+  {
+    "mtf": "Kabuto KBO-7B.mtf",
+    "chassis": "Kabuto",
+    "model": "KBO-7B",
+    "bv": 635,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060",
+      "TR:J"
+    ],
+    "id": "2MKDW3QQ8B"
+  },
+  {
+    "mtf": "Hachiwara HCA-3T.mtf",
+    "chassis": "Hachiwara",
+    "model": "HCA-3T",
+    "bv": 1651,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "2N24B4ER7Q"
+  },
+  {
+    "mtf": "Beowulf BEO-X-7a.mtf",
+    "chassis": "Beowulf",
+    "model": "BEO-X-7A",
+    "bv": 1473,
+    "intro": 3068,
+    "tags": [
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Comstar"
+    ],
+    "id": "2N9EF0REM4"
+  },
+  {
+    "mtf": "Cataphract CTF-4L.mtf",
+    "chassis": "Cataphract",
+    "model": "CTF-4L",
+    "bv": 2002,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "2NGX41DVP8"
+  },
+  {
+    "mtf": "Legacy LGC-03.mtf",
+    "chassis": "Legacy",
+    "model": "LGC-03",
+    "bv": 2121,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:J"
+    ],
+    "id": "2Q4DP8PHCP"
+  },
+  {
+    "mtf": "Spatha SP2-X Warlord.mtf",
+    "chassis": "Spatha",
+    "model": "SP2-X \"Warlord\"",
+    "bv": 1973,
+    "intro": 3069,
+    "tags": [
+      "xtro",
+      "named"
+    ],
+    "sources": [
+      "XTR:Gladiators"
+    ],
+    "id": "2RJJZFDA5P"
+  },
+  {
+    "mtf": "King Crab KGC-007.mtf",
+    "chassis": "King Crab",
+    "model": "KGC-007",
+    "bv": 2523,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "2RTKDGVZY3"
+  },
+  {
+    "mtf": "Great Turtle GTR-1.mtf",
+    "chassis": "Great Turtle",
+    "model": "GTR-1",
+    "bv": 3152,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "2WAPF91152"
+  },
+  {
+    "mtf": "Eyleuka EYL-4A.mtf",
+    "chassis": "Eyleuka",
+    "model": "EYL-4A",
+    "bv": 1571,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075"
+    ],
+    "id": "2XJ2Y28XA7"
+  },
+  {
+    "mtf": "Firestarter FS9-OH.mtf",
+    "chassis": "Firestarter",
+    "model": "FS9-OH",
+    "bv": 1119,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:CI"
+    ],
+    "id": "2YKWEPNSXS"
+  },
+  {
+    "mtf": "Locust LCT-6M.mtf",
+    "chassis": "Locust",
+    "model": "LCT-6M",
+    "bv": 956,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "30N3KJS1GY"
+  },
+  {
+    "mtf": "Shadow Hawk SHD-11CS.mtf",
+    "chassis": "Shadow Hawk",
+    "model": "SHD-11CS",
+    "bv": 1700,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "TR:J"
+    ],
+    "id": "317NX052HE"
+  },
+  {
+    "mtf": "BattleMaster BLR-10S.mtf",
+    "chassis": "BattleMaster",
+    "model": "BLR-10S",
+    "bv": 1927,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085"
+    ],
+    "id": "317YE676V6"
+  },
+  {
+    "mtf": "Viper (Black Python) 4.mtf",
+    "chassis": "Viper (Black Python)",
+    "model": "4",
+    "bv": 2594,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "31AYNTAJCV"
+  },
+  {
+    "mtf": "Penetrator PTR-6T.mtf",
+    "chassis": "Penetrator",
+    "model": "PTR-6T",
+    "bv": 1994,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:CI"
+    ],
+    "id": "31P1YYX474"
+  },
+  {
+    "mtf": "Kyudo KY2-D-01.mtf",
+    "chassis": "Kyudo",
+    "model": "KY2-D-01",
+    "bv": 748,
+    "intro": 2443,
+    "tags": [
+      "lostech",
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Primitives I"
+    ],
+    "id": "3395KEGDY4"
+  },
+  {
+    "mtf": "Wolf Trap (Tora) WFT-2.mtf",
+    "chassis": "Wolf Trap (Tora)",
+    "model": "WFT-2",
+    "bv": 1227,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "34K8FSDWXB"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Masakari (Warhawk)",
+    "model": "(Tara)",
+    "bv": 3428,
+    "intro": 3067,
+    "tags": [
+      "named"
+    ],
+    "sources": [],
+    "id": "35J0ZJSFDE"
+  },
+  {
+    "mtf": "Masakari (Warhawk) E.mtf",
+    "chassis": "Masakari (Warhawk)",
+    "model": "E",
+    "bv": 2895,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "35WPZ2D5XF"
+  },
+  {
+    "mtf": "Mad Cat Mk II 2.mtf",
+    "chassis": "Mad Cat Mk II",
+    "model": "2",
+    "bv": 2822,
+    "intro": 3069,
+    "tags": [
+      "tro",
+      "engine"
+    ],
+    "sources": [
+      "TR:J"
+    ],
+    "id": "36JF3Z6GHQ"
+  },
+  {
+    "mtf": "Stinger STG-6S.mtf",
+    "chassis": "Stinger",
+    "model": "STG-6S",
+    "bv": 478,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "37M18Y92W2"
+  },
+  {
+    "mtf": "Grasshopper GHR-7K.mtf",
+    "chassis": "Grasshopper",
+    "model": "GHR-7K",
+    "bv": 1806,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "38Y0FEB3X1"
+  },
+  {
+    "mtf": "Sasquatch SQS-TH-002.mtf",
+    "chassis": "Sasquatch",
+    "model": "SQS-TH-002",
+    "bv": 1993,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "3C3HNGK4W1"
+  },
+  {
+    "mtf": "Seraph C-SRP-O Havalah.mtf",
+    "chassis": "Seraph",
+    "model": "C-SRP-O (Havalah)",
+    "bv": 1927,
+    "intro": 3071,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "SB:W&B"
+    ],
+    "id": "3C89Z63BQZ"
+  },
+  {
+    "mtf": "Grand Crusader II GRN-D-04.mtf",
+    "chassis": "Grand Crusader II",
+    "model": "GRN-D-04",
+    "bv": 2292,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:J"
+    ],
+    "id": "3CT77X2DDC"
+  },
+  {
+    "mtf": "Victor VTR-9K2 St. James.mtf",
+    "chassis": "Victor",
+    "model": "VTR-9K2 (St. James)",
+    "bv": 2006,
+    "intro": 3069,
+    "tags": [
+      "xtro",
+      "named"
+    ],
+    "sources": [
+      "XTR:Pirates"
+    ],
+    "id": "3GGZBHSBH4"
+  },
+  {
+    "mtf": "Koshi (Mist Lynx) G.mtf",
+    "chassis": "Koshi (Mist Lynx)",
+    "model": "G",
+    "bv": 834,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "3H4BNXS24C"
+  },
+  {
+    "mtf": "Wolfhound WLF-4WA.mtf",
+    "chassis": "Wolfhound",
+    "model": "WLF-4WA",
+    "bv": 1050,
+    "intro": 3071,
+    "tags": [],
+    "sources": [
+      "SB:W&B"
+    ],
+    "id": "3JH1FQ5087"
+  },
+  {
+    "mtf": "Grigori C-GRG-OD Luminos.mtf",
+    "chassis": "Grigori",
+    "model": "C-GRG-OD Luminos",
+    "bv": 1568,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "3K62FSRSSE"
+  },
+  {
+    "mtf": "Highlander HGN-738.mtf",
+    "chassis": "Highlander",
+    "model": "HGN-738",
+    "bv": 2413,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "3K7KPYYX6H"
+  },
+  {
+    "mtf": "Koschei KSC-4L.mtf",
+    "chassis": "Koschei",
+    "model": "KSC-4L",
+    "bv": 1503,
+    "intro": 2723,
+    "tags": [
+      "lostech",
+      "tro"
+    ],
+    "sources": [
+      "TR:3075"
+    ],
+    "id": "3MJ7S5QM3E"
+  },
+  {
+    "mtf": "Axman AXM-4D.mtf",
+    "chassis": "Axman",
+    "model": "AXM-4D",
+    "bv": 1222,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "3N6TMJA9K6"
+  },
+  {
+    "mtf": "Ti Ts'ang TSG-9C.mtf",
+    "chassis": "Ti Ts'ang",
+    "model": "TSG-9C",
+    "bv": 1989,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060",
+      "TR:J"
+    ],
+    "id": "3QYH5K4PQK"
+  },
+  {
+    "mtf": "Jackal JA-KL-55.mtf",
+    "chassis": "Jackal",
+    "model": "JA-KL-55",
+    "bv": 1034,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "3TWSMYYWPA"
+  },
+  {
+    "mtf": "Guillotine GLT-6WB2.mtf",
+    "chassis": "Guillotine",
+    "model": "GLT-6WB2",
+    "bv": 1635,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "3Y7WD4YZZS"
+  },
+  {
+    "mtf": "Bombardier BMB-05A.mtf",
+    "chassis": "Bombardier",
+    "model": "BMB-05A",
+    "bv": 1440,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "412NNPBXYA"
+  },
+  {
+    "mtf": "Guillotine IIC 2.mtf",
+    "chassis": "Guillotine IIC",
+    "model": "2",
+    "bv": 2721,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "42FR3XFQZY"
+  },
+  {
+    "mtf": "Flashfire FLS-P5.mtf",
+    "chassis": "Flashfire",
+    "model": "FLS-P5",
+    "bv": 654,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "43ENW68P22"
+  },
+  {
+    "mtf": "Jenner JR7-C3.mtf",
+    "chassis": "Jenner",
+    "model": "JR7-C3",
+    "bv": 1069,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "44VGXPXTTR"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Phoenix",
+    "model": "PX-1KC",
+    "bv": 766,
+    "intro": 3065,
+    "tags": [],
+    "sources": [
+      "TtS:Kaumberg"
+    ],
+    "id": "46XFEHF779"
+  },
+  {
+    "mtf": "Man O' War (Gargoyle) M.mtf",
+    "chassis": "Man O' War (Gargoyle)",
+    "model": "M",
+    "bv": 2182,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:CI"
+    ],
+    "id": "4CK5DPZ36Z"
+  },
+  {
+    "mtf": "Wasp WSP-4W.mtf",
+    "chassis": "Wasp",
+    "model": "WSP-4W",
+    "bv": 551,
+    "intro": 3065,
+    "tags": [],
+    "sources": [
+      "RG04",
+      "RGv1"
+    ],
+    "id": "4E45T22D8K"
+  },
+  {
+    "mtf": "Charger CGR-2A2.mtf",
+    "chassis": "Charger",
+    "model": "CGR-2A2",
+    "bv": 1109,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "4F2015WKMN"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Phoenix",
+    "model": "PX-1KT",
+    "bv": 857,
+    "intro": 3070,
+    "tags": [],
+    "sources": [
+      "TtS:Kaumberg"
+    ],
+    "id": "4FEW6AD9BQ"
+  },
+  {
+    "mtf": "Cestus CTS-7A.mtf",
+    "chassis": "Cestus",
+    "model": "CTS-7A",
+    "bv": 1519,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U"
+    ],
+    "id": "4GNRMHPKWY"
+  },
+  {
+    "mtf": "Grigori C-GRG-OB Infernus.mtf",
+    "chassis": "Grigori",
+    "model": "C-GRG-OB Infernus",
+    "bv": 1408,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "4K699BRNPJ"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Assassin",
+    "model": "\"Servitor\"",
+    "bv": 1019,
+    "intro": 3066,
+    "tags": [
+      "tro",
+      "named"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "4MW8P0P33Z"
+  },
+  {
+    "mtf": "Aquagladius AQS-4.mtf",
+    "chassis": "Aquagladius",
+    "model": "AQS-4",
+    "bv": 1486,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "4P7BZW80YB"
+  },
+  {
+    "mtf": "Awesome AWS-10KM.mtf",
+    "chassis": "Awesome",
+    "model": "AWS-10KM",
+    "bv": 1961,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "4QK5SV2SRA"
+  },
+  {
+    "mtf": "Nexus II NXS2-B.mtf",
+    "chassis": "Nexus II",
+    "model": "NXS2-B",
+    "bv": 717,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:J"
+    ],
+    "id": "4SE5H1NBWV"
+  },
+  {
+    "mtf": "Cougar G.mtf",
+    "chassis": "Cougar",
+    "model": "G",
+    "bv": 1453,
+    "intro": 3071,
+    "tags": [],
+    "sources": [
+      "RG19"
+    ],
+    "id": "4T05DG9MM9"
+  },
+  {
+    "mtf": "Great Turtle GTR-2.mtf",
+    "chassis": "Great Turtle",
+    "model": "GTR-2",
+    "bv": 2355,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "4WCWNYC0AM"
+  },
+  {
+    "mtf": "Firestarter FS9-C.mtf",
+    "chassis": "Firestarter",
+    "model": "FS9-C",
+    "bv": 940,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "4XCY50Q1V4"
+  },
+  {
+    "mtf": "Chameleon Q-'Mech CLN-7VQ.mtf",
+    "chassis": "Chameleon",
+    "model": "CLN-7VQ \"Q-'Mech\"",
+    "bv": 2105,
+    "intro": 3071,
+    "tags": [
+      "xtro",
+      "named"
+    ],
+    "sources": [
+      "XTR:Phantoms"
+    ],
+    "id": "52FER5RWDC"
+  },
+  {
+    "mtf": "Jackrabbit JKR-9R.mtf",
+    "chassis": "Jackrabbit",
+    "model": "JKR-9R \"Joker\"",
+    "bv": 614,
+    "intro": 2768,
+    "tags": [
+      "lostech",
+      "tro",
+      "named"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "52H2B10G66"
+  },
+  {
+    "mtf": "Warhammer IIC 6.mtf",
+    "chassis": "Warhammer IIC",
+    "model": "6",
+    "bv": 2661,
+    "intro": 3071,
+    "tags": [],
+    "sources": [
+      "BattleCorps"
+    ],
+    "id": "53GEMP0PGP"
+  },
+  {
+    "mtf": "Longbow LGB-0H.mtf",
+    "chassis": "Longbow",
+    "model": "LGB-0H",
+    "bv": 1813,
+    "intro": 3065,
+    "tags": [],
+    "sources": [
+      "RG20",
+      "RGv1"
+    ],
+    "id": "541AE8XJ9M"
+  },
+  {
+    "mtf": "Thug THG-12E.mtf",
+    "chassis": "Thug",
+    "model": "THG-12E",
+    "bv": 1751,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "5468WB0P5V"
+  },
+  {
+    "mtf": "Black Hawk-KU BHKU-OF.mtf",
+    "chassis": "Black Hawk-KU",
+    "model": "BHKU-OF",
+    "bv": 1759,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:CI"
+    ],
+    "id": "54ZKF0HXA3"
+  },
+  {
+    "mtf": "Victor VTR-10D.mtf",
+    "chassis": "Victor",
+    "model": "VTR-10D",
+    "bv": 1894,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "56JXFC4PP3"
+  },
+  {
+    "mtf": "Men Shen MS1-O.mtf",
+    "chassis": "Men Shen",
+    "model": "MS1-O (Li)",
+    "bv": 1550,
+    "intro": 3068,
+    "tags": [
+      "named"
+    ],
+    "sources": [],
+    "id": "57QZWEEHEZ"
+  },
+  {
+    "mtf": "Viper (Black Python) 3.mtf",
+    "chassis": "Viper (Black Python)",
+    "model": "3",
+    "bv": 2421,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "5922J5MY41"
+  },
+  {
+    "mtf": "Yu Huang Y-H9GC.mtf",
+    "chassis": "Yu Huang",
+    "model": "Y-H9GC",
+    "bv": 2017,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "59XH676XMG"
+  },
+  {
+    "mtf": "Sirocco SRC-6C.mtf",
+    "chassis": "Sirocco",
+    "model": "SRC-6C",
+    "bv": 2202,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "5BPRM011PX"
+  },
+  {
+    "mtf": "Scorpion SCP-12K.mtf",
+    "chassis": "Scorpion",
+    "model": "SCP-12K",
+    "bv": 1260,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "5BW290910G"
+  },
+  {
+    "mtf": "Perseus P1W.mtf",
+    "chassis": "Perseus",
+    "model": "P1W",
+    "bv": 1864,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:J"
+    ],
+    "id": "5EJGT65XMP"
+  },
+  {
+    "mtf": "Templar TLR1-OF.mtf",
+    "chassis": "Templar",
+    "model": "TLR1-OF",
+    "bv": 2029,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:J"
+    ],
+    "id": "5FTHSCZH5B"
+  },
+  {
+    "mtf": "Pack Hunter 2.mtf",
+    "chassis": "Pack Hunter",
+    "model": "2",
+    "bv": 1598,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "5G71XPA4JP"
+  },
+  {
+    "mtf": "Koschei KSC-5MC.mtf",
+    "chassis": "Koschei",
+    "model": "KSC-5MC",
+    "bv": 1764,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075"
+    ],
+    "id": "5GT1BF3JJM"
+  },
+  {
+    "mtf": "Huron Warrior HUR-WO-R4O.mtf",
+    "chassis": "Huron Warrior",
+    "model": "HUR-WO-R4O",
+    "bv": 1585,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:CI"
+    ],
+    "id": "5MRQKAKDRY"
+  },
+  {
+    "mtf": "Archer ARC-6S.mtf",
+    "chassis": "Archer",
+    "model": "ARC-6S",
+    "bv": 1694,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:CI"
+    ],
+    "id": "5MXR38SY1H"
+  },
+  {
+    "mtf": "Mad Cat (Timber Wolf) F.mtf",
+    "chassis": "Mad Cat (Timber Wolf)",
+    "model": "F",
+    "bv": 2764,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "5NBM5EH6H0"
+  },
+  {
+    "mtf": "No-Dachi NDA-2KC.mtf",
+    "chassis": "No-Dachi",
+    "model": "NDA-2KC",
+    "bv": 1705,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "TR:CI"
+    ],
+    "id": "5NEWE3JSZ3"
+  },
+  {
+    "mtf": "Wolverine WVR-8K.mtf",
+    "chassis": "Wolverine",
+    "model": "WVR-8K",
+    "bv": 1576,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:CI"
+    ],
+    "id": "5NXCXGHWJ6"
+  },
+  {
+    "mtf": "Clint CLNT-3-3T.mtf",
+    "chassis": "Clint",
+    "model": "CLNT-3-3T",
+    "bv": 901,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "5PB9GP4F19"
+  },
+  {
+    "mtf": "Salamander PPR-7S.mtf",
+    "chassis": "Salamander",
+    "model": "PPR-7S",
+    "bv": 2023,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:J"
+    ],
+    "id": "5REHEAJ25R"
+  },
+  {
+    "mtf": "Phoenix Hawk PXH-4L.mtf",
+    "chassis": "Phoenix Hawk",
+    "model": "PXH-4L",
+    "bv": 1282,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:PP",
+      "TR:CI"
+    ],
+    "id": "5X8MMGCGD0"
+  },
+  {
+    "mtf": "Man O' War (Gargoyle) G.mtf",
+    "chassis": "Man O' War (Gargoyle)",
+    "model": "G",
+    "bv": 2156,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:CI"
+    ],
+    "id": "5YDJ6QFGBB"
+  },
+  {
+    "mtf": "Longbow LGB-14C.mtf",
+    "chassis": "Longbow",
+    "model": "LGB-14C",
+    "bv": 1421,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "5YZ8KDFFEH"
+  },
+  {
+    "mtf": "Grigori C-GRG-O Invictus.mtf",
+    "chassis": "Grigori",
+    "model": "C-GRG-O Invictus",
+    "bv": 1245,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "62MNRT8GMX"
+  },
+  {
+    "mtf": "Bloodhound B2-HND.mtf",
+    "chassis": "Bloodhound",
+    "model": "B2-HND",
+    "bv": 1363,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "65HGZSPG7Q"
+  },
+  {
+    "mtf": "Mantis MTS-L.mtf",
+    "chassis": "Mantis",
+    "model": "MTS-L",
+    "bv": 1176,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "666RP93W7A"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Trooper",
+    "model": "TP-1R",
+    "bv": 236,
+    "intro": 2475,
+    "tags": [
+      "lostech",
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Primitives V"
+    ],
+    "id": "669Z3PGC5W"
+  },
+  {
+    "mtf": "Titan II TI-2P.mtf",
+    "chassis": "Titan II",
+    "model": "TI-2P",
+    "bv": 2143,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "67SPZR8HQ8"
+  },
+  {
+    "mtf": "Archer ARC-9K.mtf",
+    "chassis": "Archer",
+    "model": "ARC-9K",
+    "bv": 1391,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "6AP1ZMZJH0"
+  },
+  {
+    "mtf": "Ostscout OTT-9CS.mtf",
+    "chassis": "Ostscout",
+    "model": "OTT-9CS",
+    "bv": 930,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:PP"
+    ],
+    "id": "6AV3W2TAWE"
+  },
+  {
+    "mtf": "Hankyu (Arctic Cheetah) E.mtf",
+    "chassis": "Hankyu (Arctic Cheetah)",
+    "model": "E",
+    "bv": 1084,
+    "intro": 3071,
+    "tags": [],
+    "sources": [
+      "RG21"
+    ],
+    "id": "6C0VPK37XX"
+  },
+  {
+    "mtf": "Catapult CPLT-C6.mtf",
+    "chassis": "Catapult",
+    "model": "CPLT-C6",
+    "bv": 1874,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "6F14953HN8"
+  },
+  {
+    "mtf": "Archangel C-ANG-OB Infernus.mtf",
+    "chassis": "Archangel",
+    "model": "C-ANG-OB Infernus",
+    "bv": 2069,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "6H4SK8PNGB"
+  },
+  {
+    "mtf": "Marauder MAD-9M.mtf",
+    "chassis": "Marauder",
+    "model": "MAD-9M",
+    "bv": 1704,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "TR:CI"
+    ],
+    "id": "6JV2HANP8N"
+  },
+  {
+    "mtf": "Uziel UZL-3S.mtf",
+    "chassis": "Uziel",
+    "model": "UZL-3S",
+    "bv": 1189,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067",
+      "TR:J"
+    ],
+    "id": "6K4B1S1YY1"
+  },
+  {
+    "mtf": "Brigand LDT-X1.mtf",
+    "chassis": "Brigand",
+    "model": "LDT-X1",
+    "bv": 937,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "6MXSXM9J6M"
+  },
+  {
+    "mtf": "Lightray LGH-4Y.mtf",
+    "chassis": "Lightray",
+    "model": "LGH-4Y",
+    "bv": 1379,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067",
+      "TR:J"
+    ],
+    "id": "6RE6YSA18Z"
+  },
+  {
+    "mtf": "Vulture (Mad Dog) F.mtf",
+    "chassis": "Vulture (Mad Dog)",
+    "model": "F",
+    "bv": 2300,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "6S02PMJ66F"
+  },
+  {
+    "mtf": "Thug THG-13K.mtf",
+    "chassis": "Thug",
+    "model": "THG-13K",
+    "bv": 2086,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "6TVF51XHE0"
+  },
+  {
+    "mtf": "Bombardier BMB-14K.mtf",
+    "chassis": "Bombardier",
+    "model": "BMB-14K",
+    "bv": 1249,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "6V4W4MH2PK"
+  },
+  {
+    "mtf": "Spider SDR-7KC.mtf",
+    "chassis": "Spider",
+    "model": "SDR-7KC",
+    "bv": 732,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "6VNFE6DWVZ"
+  },
+  {
+    "mtf": "Scorpion SCP-12S.mtf",
+    "chassis": "Scorpion",
+    "model": "SCP-12S",
+    "bv": 1109,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:J"
+    ],
+    "id": "6WD1TTY5DF"
+  },
+  {
+    "mtf": "Icestorm 2.mtf",
+    "chassis": "Icestorm",
+    "model": "2",
+    "bv": 868,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "6WEFFEVHZ0"
+  },
+  {
+    "mtf": "Victor VTR-11D.mtf",
+    "chassis": "Victor",
+    "model": "VTR-11D",
+    "bv": 2021,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "6YFQGEJY3E"
+  },
+  {
+    "mtf": "Solitaire.mtf",
+    "chassis": "Solitaire",
+    "model": "",
+    "bv": 1284,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067",
+      "TR:J"
+    ],
+    "id": "7393VHKMZY"
+  },
+  {
+    "mtf": "Malak C-MK-O Invictus.mtf",
+    "chassis": "Malak",
+    "model": "C-MK-O Invictus",
+    "bv": 792,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "743GHKTR2K"
+  },
+  {
+    "mtf": "Pinion.mtf",
+    "chassis": "Pinion",
+    "model": "",
+    "bv": 1646,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "789J1MBT67"
+  },
+  {
+    "mtf": "Wight WGT-1LAWSC.mtf",
+    "chassis": "Wight",
+    "model": "WGT-1LAW/SC",
+    "bv": 1142,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "78FC6X3VZR"
+  },
+  {
+    "mtf": "Baboon (Howler) 3.mtf",
+    "chassis": "Baboon (Howler)",
+    "model": "3 \"Devil\"",
+    "bv": 1277,
+    "intro": 3066,
+    "tags": [
+      "tro",
+      "named"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "7AA371V3FZ"
+  },
+  {
+    "mtf": "Colossus CLS-4S.mtf",
+    "chassis": "Colossus",
+    "model": "CLS-4S",
+    "bv": 2392,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "7AS3VPWVW8"
+  },
+  {
+    "mtf": "Grand Dragon DRG-7K.mtf",
+    "chassis": "Grand Dragon",
+    "model": "DRG-7K (Mark)",
+    "bv": 1817,
+    "intro": 3067,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "SB:S&D"
+    ],
+    "id": "7DNBX4463J"
+  },
+  {
+    "mtf": "Crusader CRD-7W.mtf",
+    "chassis": "Crusader",
+    "model": "CRD-7W",
+    "bv": 1221,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "7KT4YKXJ47"
+  },
+  {
+    "mtf": "Vanquisher VQR-2B.mtf",
+    "chassis": "Vanquisher",
+    "model": "VQR-2B",
+    "bv": 2073,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067",
+      "TR:J"
+    ],
+    "id": "7PK3C0W0G7"
+  },
+  {
+    "mtf": "Locust LCT-5T.mtf",
+    "chassis": "Locust",
+    "model": "LCT-5T",
+    "bv": 520,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "7PYT9GYQD8"
+  },
+  {
+    "mtf": "Locust LCT-5M.mtf",
+    "chassis": "Locust",
+    "model": "LCT-5M",
+    "bv": 719,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:CI"
+    ],
+    "id": "7R2XVW75G5"
+  },
+  {
+    "mtf": "Akuma AKU-1XJ.mtf",
+    "chassis": "Akuma",
+    "model": "AKU-1XJ",
+    "bv": 2203,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067",
+      "TR:CI"
+    ],
+    "id": "7S8F3P2HWQ"
+  },
+  {
+    "mtf": "Templar TLR1-OG.mtf",
+    "chassis": "Templar",
+    "model": "TLR1-OG",
+    "bv": 1632,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:J"
+    ],
+    "id": "7W6JVDDTBM"
+  },
+  {
+    "mtf": "Lightray LGH-5W.mtf",
+    "chassis": "Lightray",
+    "model": "LGH-5W",
+    "bv": 1674,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067",
+      "TR:J"
+    ],
+    "id": "7WZJSXTER9"
+  },
+  {
+    "mtf": "Emperor EMP-6M.mtf",
+    "chassis": "Emperor",
+    "model": "EMP-6M",
+    "bv": 2090,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:SW"
+    ],
+    "id": "7XEN3Y6CN2"
+  },
+  {
+    "mtf": "Dragon Fire DGR-6FC.mtf",
+    "chassis": "Dragon Fire",
+    "model": "DGR-6FC",
+    "bv": 1858,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:CI"
+    ],
+    "id": "7XPPN0HFK3"
+  },
+  {
+    "mtf": "Emperor EMP-6S.mtf",
+    "chassis": "Emperor",
+    "model": "EMP-6S",
+    "bv": 2065,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:SW"
+    ],
+    "id": "807HYRKES6"
+  },
+  {
+    "mtf": "Catapult CPLT-C5A.mtf",
+    "chassis": "Catapult",
+    "model": "CPLT-C5A",
+    "bv": 1772,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085"
+    ],
+    "id": "810GH2H0Q1"
+  },
+  {
+    "mtf": "Warhammer WHM-4L.mtf",
+    "chassis": "Warhammer",
+    "model": "WHM-4L",
+    "bv": 1743,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:CI"
+    ],
+    "id": "813WMG6NS3"
+  },
+  {
+    "mtf": "Ostsol OTL-8D.mtf",
+    "chassis": "Ostsol",
+    "model": "OTL-8D",
+    "bv": 1462,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "82D6SGG39D"
+  },
+  {
+    "mtf": "Zeus X ZEU-9WD.mtf",
+    "chassis": "Zeus-X",
+    "model": "ZEU-9WD",
+    "bv": 1716,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "896QX39B8V"
+  },
+  {
+    "mtf": "Shogun SHG-2H.mtf",
+    "chassis": "Shogun",
+    "model": "SHG-2H",
+    "bv": 2087,
+    "intro": 2777,
+    "tags": [
+      "lostech"
+    ],
+    "sources": [
+      "His:OK"
+    ],
+    "id": "8BAAV8VDQA"
+  },
+  {
+    "mtf": "Vanquisher VQR-7V.mtf",
+    "chassis": "Vanquisher",
+    "model": "VQR-7V",
+    "bv": 2420,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:J"
+    ],
+    "id": "8C5CRZKSKJ"
+  },
+  {
+    "mtf": "Enforcer III ENF-6H.mtf",
+    "chassis": "Enforcer III",
+    "model": "ENF-6H",
+    "bv": 1603,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "8HXSZEMMTT"
+  },
+  {
+    "mtf": "Trebuchet TBT-8B.mtf",
+    "chassis": "Trebuchet",
+    "model": "TBT-8B",
+    "bv": 1314,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "8HZRBT4RXK"
+  },
+  {
+    "mtf": "Cauldron-Born (Ebon Jaguar) E.mtf",
+    "chassis": "Cauldron-Born (Ebon Jaguar)",
+    "model": "E",
+    "bv": 2391,
+    "intro": 3069,
+    "tags": [],
+    "sources": [
+      "RG16"
+    ],
+    "id": "8JQ4582JMP"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Marauder II",
+    "model": "(Bounty Hunter)",
+    "bv": 3767,
+    "intro": 3064,
+    "tags": [
+      "tro",
+      "named"
+    ],
+    "sources": [
+      "BD:BH",
+      "TR:CI"
+    ],
+    "id": "8MXF7Z82YK"
+  },
+  {
+    "mtf": "Victor VTR-10L.mtf",
+    "chassis": "Victor",
+    "model": "VTR-10L",
+    "bv": 2279,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "8NC9GCWK6D"
+  },
+  {
+    "mtf": "Blood Asp F.mtf",
+    "chassis": "Star Adder (Blood Asp)",
+    "model": "F",
+    "bv": 2908,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060",
+      "RG32"
+    ],
+    "id": "8SR3AP69B5"
+  },
+  {
+    "mtf": "Vanquisher VQR-5V.mtf",
+    "chassis": "Vanquisher",
+    "model": "VQR-5V",
+    "bv": 2332,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:J"
+    ],
+    "id": "8TDC5DZFPT"
+  },
+  {
+    "mtf": "Deva C-DVA-OD Luminos.mtf",
+    "chassis": "Deva",
+    "model": "C-DVA-OD Luminos",
+    "bv": 1711,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "8VH4YQET5F"
+  },
+  {
+    "mtf": "Lightray LGH-4W.mtf",
+    "chassis": "Lightray",
+    "model": "LGH-4W",
+    "bv": 1450,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067",
+      "TR:J"
+    ],
+    "id": "8W102WV23H"
+  },
+  {
+    "mtf": "Wolf Trap (Tora) WFT-B.mtf",
+    "chassis": "Wolf Trap (Tora)",
+    "model": "WFT-B",
+    "bv": 1021,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "8X38ARARKH"
+  },
+  {
+    "mtf": "Xanthos XNT-2O.mtf",
+    "chassis": "Xanthos",
+    "model": "XNT-2O",
+    "bv": 1300,
+    "intro": 2564,
+    "tags": [
+      "lostech",
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Primitives IV"
+    ],
+    "id": "8Y4NSB7FQR"
+  },
+  {
+    "mtf": "Silver Fox SVR-5X.mtf",
+    "chassis": "Silver Fox",
+    "model": "SVR-5X",
+    "bv": 1432,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "8YTW3RYGFH"
+  },
+  {
+    "mtf": "Archangel C-ANG-O Invictus.mtf",
+    "chassis": "Archangel",
+    "model": "C-ANG-O Invictus",
+    "bv": 2237,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "90JRPYCQVY"
+  },
+  {
+    "mtf": "Galahad GLH-3D.mtf",
+    "chassis": "Galahad",
+    "model": "GLH-3D",
+    "bv": 1268,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "92978XRQXJ"
+  },
+  {
+    "mtf": "Cudgel CDG-2B.mtf",
+    "chassis": "Cudgel",
+    "model": "CDG-2B",
+    "bv": 1762,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "957TE8WC7F"
+  },
+  {
+    "mtf": "Galahad GLH-2D.mtf",
+    "chassis": "Galahad",
+    "model": "GLH-2D",
+    "bv": 1648,
+    "intro": 2594,
+    "tags": [
+      "lostech",
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "96A7CQSAT8"
+  },
+  {
+    "mtf": "Raijin II RJN-200-C.mtf",
+    "chassis": "Raijin II",
+    "model": "RJN-200-C",
+    "bv": 1754,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:J"
+    ],
+    "id": "96GN23MN91"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Phoenix",
+    "model": "PX-1KL",
+    "bv": 930,
+    "intro": 3070,
+    "tags": [],
+    "sources": [
+      "TtS:Kaumberg"
+    ],
+    "id": "9ACYFYAAHT"
+  },
+  {
+    "mtf": "Seraph C-SRP-OC Comminus.mtf",
+    "chassis": "Seraph",
+    "model": "C-SRP-OC Comminus",
+    "bv": 2136,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "9B2CF4Y1N7"
+  },
+  {
+    "mtf": "Whitworth WTH-K.mtf",
+    "chassis": "Whitworth",
+    "model": "WTH-K",
+    "bv": 958,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "9DSP0CSYR3"
+  },
+  {
+    "mtf": "Goliath GOL-6H.mtf",
+    "chassis": "Goliath",
+    "model": "GOL-6H",
+    "bv": 1676,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085"
+    ],
+    "id": "9DXMBQJMNE"
+  },
+  {
+    "mtf": "Hellhound (Conjurer) 4.mtf",
+    "chassis": "Hellhound (Conjurer)",
+    "model": "4",
+    "bv": 2164,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "9EBC0B0HH3"
+  },
+  {
+    "mtf": "Crimson Langur E.mtf",
+    "chassis": "Crimson Langur",
+    "model": "E",
+    "bv": 2051,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "9EYMB90659"
+  },
+  {
+    "mtf": "Nobori-nin (Huntsman) E.mtf",
+    "chassis": "Nobori-nin (Huntsman)",
+    "model": "E",
+    "bv": 2104,
+    "intro": 3070,
+    "tags": [],
+    "sources": [
+      "RG12"
+    ],
+    "id": "9GYX63GC7F"
+  },
+  {
+    "mtf": "Icarus II ICR-1S.mtf",
+    "chassis": "Icarus II",
+    "model": "ICR-1S",
+    "bv": 869,
+    "intro": 2518,
+    "tags": [
+      "lostech",
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:SW"
+    ],
+    "id": "9HC2B4N6MD"
+  },
+  {
+    "mtf": "Preta C-PRT-OB Infernus.mtf",
+    "chassis": "Preta",
+    "model": "C-PRT-OB Infernus",
+    "bv": 1338,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "9HDZQM1F8X"
+  },
+  {
+    "mtf": "Commando COM-4H.mtf",
+    "chassis": "Commando",
+    "model": "COM-4H",
+    "bv": 691,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "9K2XBR8E50"
+  },
+  {
+    "mtf": "Raijin II RJN-200-B.mtf",
+    "chassis": "Raijin II",
+    "model": "RJN-200-B",
+    "bv": 1439,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:J"
+    ],
+    "id": "9MC7EA0DQA"
+  },
+  {
+    "mtf": "Colossus CLS-5S.mtf",
+    "chassis": "Colossus",
+    "model": "CLS-5S",
+    "bv": 2647,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "9N9V3PG0S3"
+  },
+  {
+    "mtf": "Jenner JR7-K.mtf",
+    "chassis": "Jenner",
+    "model": "JR7-K (Grace II)",
+    "bv": 787,
+    "intro": 3067,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "SB:S&D"
+    ],
+    "id": "9PR0W24CWM"
+  },
+  {
+    "mtf": "Warhammer WHM-8D.mtf",
+    "chassis": "Warhammer",
+    "model": "WHM-8D",
+    "bv": 1744,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:CI"
+    ],
+    "id": "9R3351QTAR"
+  },
+  {
+    "mtf": "Emperor EMP-6A.mtf",
+    "chassis": "Emperor",
+    "model": "EMP-6A (Nerran)",
+    "bv": 2247,
+    "intro": 3064,
+    "tags": [
+      "named"
+    ],
+    "sources": [],
+    "id": "9T04N6B874"
+  },
+  {
+    "mtf": "King Crab KGC-008.mtf",
+    "chassis": "King Crab",
+    "model": "KGC-008",
+    "bv": 2369,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "9T6MAHQWXY"
+  },
+  {
+    "mtf": "Phoenix Hawk PXH-7K.mtf",
+    "chassis": "Phoenix Hawk",
+    "model": "PXH-7K",
+    "bv": 1241,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "9TNFREQABG"
+  },
+  {
+    "mtf": "Flashman FLS-9B.mtf",
+    "chassis": "Flashman",
+    "model": "FLS-9B",
+    "bv": 1600,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "9V49T9Z1TH"
+  },
+  {
+    "mtf": "Kraken (Bane) 4.mtf",
+    "chassis": "Kraken (Bane)",
+    "model": "4",
+    "bv": 2709,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "9VZTGYMFXW"
+  },
+  {
+    "mtf": "Rifleman IIC 6.mtf",
+    "chassis": "Rifleman IIC",
+    "model": "6",
+    "bv": 2251,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "9YP1TPJ4CR"
+  },
+  {
+    "mtf": "Malak C-MK-OC Comminus.mtf",
+    "chassis": "Malak",
+    "model": "C-MK-OC Comminus",
+    "bv": 944,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "9Z07QN1WMP"
+  },
+  {
+    "mtf": "Canis 2.mtf",
+    "chassis": "Canis",
+    "model": "2",
+    "bv": 2822,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "A03CMDG59Z"
+  },
+  {
+    "mtf": "Thorn THE-N2.mtf",
+    "chassis": "Thorn",
+    "model": "THE-N2",
+    "bv": 410,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "A0N6RG33C8"
+  },
+  {
+    "mtf": "Valkyrie VLK-QD1.mtf",
+    "chassis": "Valkyrie",
+    "model": "VLK-QD1",
+    "bv": 878,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:PP",
+      "TR:CI"
+    ],
+    "id": "A1AXQ0VYV0"
+  },
+  {
+    "mtf": "Marauder IIC 4.mtf",
+    "chassis": "Marauder IIC",
+    "model": "4",
+    "bv": 3447,
+    "intro": 3070,
+    "tags": [],
+    "sources": [
+      "BattleCorps"
+    ],
+    "id": "A3DFQYZ5B0"
+  },
+  {
+    "mtf": "Shogun SHG-2F.mtf",
+    "chassis": "Shogun",
+    "model": "SHG-2F (Trisha)",
+    "bv": 1733,
+    "intro": 3071,
+    "tags": [
+      "tro",
+      "named"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "A7H45YBR8J"
+  },
+  {
+    "mtf": "Lineholder KW2-LHW.mtf",
+    "chassis": "Lineholder",
+    "model": "KW2-LHW",
+    "bv": 1484,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U"
+    ],
+    "id": "A9ZGR0DMSE"
+  },
+  {
+    "mtf": "Razorback RZK-9T.mtf",
+    "chassis": "Razorback",
+    "model": "RZK-9T",
+    "bv": 1149,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "AAB6N7ZSMR"
+  },
+  {
+    "mtf": "Bandersnatch BNDR-01B.mtf",
+    "chassis": "Bandersnatch",
+    "model": "BNDR-01B",
+    "bv": 1630,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:J"
+    ],
+    "id": "AAWK8R17N3"
+  },
+  {
+    "mtf": "Hermes II HER-5SA.mtf",
+    "chassis": "Hermes II",
+    "model": "HER-5SA",
+    "bv": 924,
+    "intro": 3068,
+    "tags": [
+      "tro",
+      "engine"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "ABR31R95A9"
+  },
+  {
+    "mtf": "Locust LCT-5V.mtf",
+    "chassis": "Locust",
+    "model": "LCT-5V",
+    "bv": 665,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "TR:CI"
+    ],
+    "id": "AC6P79RB7G"
+  },
+  {
+    "mtf": "Phoenix Hawk PXH-3PL.mtf",
+    "chassis": "Phoenix Hawk",
+    "model": "PXH-3PL",
+    "bv": 1244,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:PP",
+      "TR:CI"
+    ],
+    "id": "ACHPMDT2WV"
+  },
+  {
+    "mtf": "Warhammer WHM-9S.mtf",
+    "chassis": "Warhammer",
+    "model": "WHM-9S",
+    "bv": 1653,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:CI"
+    ],
+    "id": "ADZNNX63BF"
+  },
+  {
+    "mtf": "Komodo KIM-3C.mtf",
+    "chassis": "Komodo",
+    "model": "KIM-3C",
+    "bv": 1371,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:J"
+    ],
+    "id": "AMYTB2F6YB"
+  },
+  {
+    "mtf": "BattleMaster BLR-5M.mtf",
+    "chassis": "BattleMaster",
+    "model": "BLR-5M",
+    "bv": 1766,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:CI"
+    ],
+    "id": "APH8V6PKVW"
+  },
+  {
+    "mtf": "Merlin MLN-1C.mtf",
+    "chassis": "Merlin",
+    "model": "MLN-1C",
+    "bv": 1267,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:SW"
+    ],
+    "id": "AVJRC5QGJR"
+  },
+  {
+    "mtf": "Centurion CN9-D4D.mtf",
+    "chassis": "Centurion",
+    "model": "CN9-D4D",
+    "bv": 1369,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "AVW0JBPA80"
+  },
+  {
+    "mtf": "Thunder Stallion 3.mtf",
+    "chassis": "Thunder Stallion",
+    "model": "3",
+    "bv": 2631,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "AXQV0CWMH0"
+  },
+  {
+    "mtf": "Blackjack BJ-4.mtf",
+    "chassis": "Blackjack",
+    "model": "BJ-4",
+    "bv": 1063,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "AXSVPMNCCC"
+  },
+  {
+    "mtf": "Anvil ANV-5Q.mtf",
+    "chassis": "Anvil",
+    "model": "ANV-5Q",
+    "bv": 1336,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:CI"
+    ],
+    "id": "AYD4QRDC0K"
+  },
+  {
+    "mtf": "Grand Crusader II GRN-D-03.mtf",
+    "chassis": "Grand Crusader II",
+    "model": "GRN-D-03",
+    "bv": 2276,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:J"
+    ],
+    "id": "AYD79CWFGD"
+  },
+  {
+    "mtf": "Vixen (Incubus) 5.mtf",
+    "chassis": "Vixen (Incubus)",
+    "model": "5",
+    "bv": 1364,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "AZ37ZAQRFY"
+  },
+  {
+    "mtf": "Morpheus MRP-3W.mtf",
+    "chassis": "Morpheus",
+    "model": "MRP-3W",
+    "bv": 1299,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "B07S8J96N8"
+  },
+  {
+    "mtf": "Thug THG-11E.mtf",
+    "chassis": "Thug",
+    "model": "THG-11E (Reich)",
+    "bv": 2612,
+    "intro": 3065,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "MSII"
+    ],
+    "id": "B0ZZMJFZ9C"
+  },
+  {
+    "mtf": "Spector SPR-ST.mtf",
+    "chassis": "Spector",
+    "model": "SPR-ST",
+    "bv": 1438,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:SW"
+    ],
+    "id": "B2GCKZ29Z7"
+  },
+  {
+    "mtf": "Spider SDR-7K2.mtf",
+    "chassis": "Spider",
+    "model": "SDR-7K2",
+    "bv": 884,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "B2GR91F8RV"
+  },
+  {
+    "mtf": "O-Bakemono OBK-M11.mtf",
+    "chassis": "O-Bakemono",
+    "model": "OBK-M11",
+    "bv": 1793,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:CI"
+    ],
+    "id": "B40CGSPZ35"
+  },
+  {
+    "mtf": "Marauder MAD-9S.mtf",
+    "chassis": "Marauder",
+    "model": "MAD-9S",
+    "bv": 1786,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "TR:CI"
+    ],
+    "id": "B6AX38XAPW"
+  },
+  {
+    "mtf": "White Flame WHF-3B.mtf",
+    "chassis": "White Flame",
+    "model": "WHF-3B",
+    "bv": 1637,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067",
+      "TR:J"
+    ],
+    "id": "B838ZYJX5P"
+  },
+  {
+    "mtf": "Black Hawk (Nova) F.mtf",
+    "chassis": "Black Hawk (Nova)",
+    "model": "F",
+    "bv": 1976,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "BC9DK38BMR"
+  },
+  {
+    "mtf": "Wasp WSP-3L.mtf",
+    "chassis": "Wasp",
+    "model": "WSP-3L",
+    "bv": 534,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:PP",
+      "TR:CI"
+    ],
+    "id": "BCJJ6X43DS"
+  },
+  {
+    "mtf": "Griffin GRF-6S.mtf",
+    "chassis": "Griffin",
+    "model": "GRF-6S",
+    "bv": 1781,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:J"
+    ],
+    "id": "BCWDQ664T8"
+  },
+  {
+    "mtf": "Awesome AWS-9Q.mtf",
+    "chassis": "Awesome",
+    "model": "AWS-9Q (Klatt)",
+    "bv": 1805,
+    "intro": 3071,
+    "tags": [
+      "tro",
+      "named"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "BE9T38VGW8"
+  },
+  {
+    "mtf": "Hachiwara HCA-4U.mtf",
+    "chassis": "Hachiwara",
+    "model": "HCA-4U",
+    "bv": 1791,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "BEWFRNF565"
+  },
+  {
+    "mtf": "Spector SPR-5S.mtf",
+    "chassis": "Spector",
+    "model": "SPR-5S",
+    "bv": 1155,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:SW"
+    ],
+    "id": "BG6M5RX3EW"
+  },
+  {
+    "mtf": "Hachiwara HCA-6P.mtf",
+    "chassis": "Hachiwara",
+    "model": "HCA-6P",
+    "bv": 2385,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "BH4GCWP4N4"
+  },
+  {
+    "mtf": "Burrock.mtf",
+    "chassis": "Burrock",
+    "model": "",
+    "bv": 2230,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "BMD5JASHWX"
+  },
+  {
+    "mtf": "Grasshopper GHR-6K.mtf",
+    "chassis": "Grasshopper",
+    "model": "GHR-6K",
+    "bv": 1597,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "BN3GEJRC84"
+  },
+  {
+    "mtf": "Shadow Hawk SHD-7CS.mtf",
+    "chassis": "Shadow Hawk",
+    "model": "SHD-7CS",
+    "bv": 1496,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:PP"
+    ],
+    "id": "BN4DSSZV1B"
+  },
+  {
+    "mtf": "Hellion D.mtf",
+    "chassis": "Hellion",
+    "model": "D",
+    "bv": 1761,
+    "intro": 3068,
+    "tags": [],
+    "sources": [
+      "RG20"
+    ],
+    "id": "BN69ETCBKX"
+  },
+  {
+    "mtf": "Phoenix Hawk PXH-7S.mtf",
+    "chassis": "Phoenix Hawk",
+    "model": "PXH-7S",
+    "bv": 1496,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:PP",
+      "TR:CI"
+    ],
+    "id": "BNGJY5Y4QP"
+  },
+  {
+    "mtf": "Deva C-DVA-OA Dominus.mtf",
+    "chassis": "Deva",
+    "model": "C-DVA-OA Dominus",
+    "bv": 1727,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "BPHAYWTZ28"
+  },
+  {
+    "mtf": "Deva C-DVA-O Invictus.mtf",
+    "chassis": "Deva",
+    "model": "C-DVA-O Invictus",
+    "bv": 1584,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "BQ20DX53Y8"
+  },
+  {
+    "mtf": "Koschei KSC-5I.mtf",
+    "chassis": "Koschei",
+    "model": "KSC-5I",
+    "bv": 1961,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075"
+    ],
+    "id": "BQT7WHZWFA"
+  },
+  {
+    "mtf": "King Crab KGC-005r.mtf",
+    "chassis": "King Crab",
+    "model": "KGC-005r",
+    "bv": 2335,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085"
+    ],
+    "id": "BT47F0SKTK"
+  },
+  {
+    "mtf": "Daikyu DAI-01.mtf",
+    "chassis": "Daikyu",
+    "model": "DAI-01 (Tabitha)",
+    "bv": 1804,
+    "intro": 3064,
+    "tags": [
+      "named"
+    ],
+    "sources": [],
+    "id": "BVVGD3AFDW"
+  },
+  {
+    "mtf": "Bloodhound B1-HND.mtf",
+    "chassis": "Bloodhound",
+    "model": "B1-HND",
+    "bv": 1248,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "BZXTGA7346"
+  },
+  {
+    "mtf": "Cudgel CDG-2A.mtf",
+    "chassis": "Cudgel",
+    "model": "CDG-2A",
+    "bv": 1750,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "BZYPKJXA2T"
+  },
+  {
+    "mtf": "Hellion E.mtf",
+    "chassis": "Hellion",
+    "model": "E",
+    "bv": 1292,
+    "intro": 3070,
+    "tags": [],
+    "sources": [
+      "RG20"
+    ],
+    "id": "C26PVB7GZD"
+  },
+  {
+    "mtf": "JagerMech JM7-G.mtf",
+    "chassis": "JagerMech",
+    "model": "JM7-G",
+    "bv": 1275,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "C2EAH78NCG"
+  },
+  {
+    "mtf": "Ryoken (Stormcrow) G.mtf",
+    "chassis": "Ryoken (Stormcrow)",
+    "model": "G",
+    "bv": 2152,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "C5JX56VFPG"
+  },
+  {
+    "mtf": "Commando COM-7S.mtf",
+    "chassis": "Commando",
+    "model": "COM-7S",
+    "bv": 658,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "CAQ53VDMKN"
+  },
+  {
+    "mtf": "Eyleuka EYL-35A.mtf",
+    "chassis": "Eyleuka",
+    "model": "EYL-35A",
+    "bv": 1484,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075"
+    ],
+    "id": "CAZZQVTYRM"
+  },
+  {
+    "mtf": "Peregrine (Horned Owl) 5.mtf",
+    "chassis": "Peregrine (Horned Owl)",
+    "model": "5",
+    "bv": 1523,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "CF53MFDXYC"
+  },
+  {
+    "mtf": "Grand Dragon DRG-9KC.mtf",
+    "chassis": "Grand Dragon",
+    "model": "DRG-9KC",
+    "bv": 1147,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "CFT3MW61MR"
+  },
+  {
+    "mtf": "Deva C-DVA-OB Infernus.mtf",
+    "chassis": "Deva",
+    "model": "C-DVA-OB Infernus",
+    "bv": 1713,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "CGKDSQEECQ"
+  },
+  {
+    "mtf": "Yu Huang Y-H9GB.mtf",
+    "chassis": "Yu Huang",
+    "model": "Y-H9GB",
+    "bv": 2039,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "CGPAXC7SQR"
+  },
+  {
+    "mtf": "Marauder MAD-5R.mtf",
+    "chassis": "Marauder",
+    "model": "MAD-5R",
+    "bv": 1877,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "TR:CI"
+    ],
+    "id": "CHBG0NJMPS"
+  },
+  {
+    "mtf": "Behemoth (Stone Rhino) 3.mtf",
+    "chassis": "Behemoth (Stone Rhino)",
+    "model": "3",
+    "bv": 3072,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "CK37HKZJRK"
+  },
+  {
+    "mtf": "Hunchback HBK-5P.mtf",
+    "chassis": "Hunchback",
+    "model": "HBK-5P",
+    "bv": 1340,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "CMSJA5MYXT"
+  },
+  {
+    "mtf": "Hunchback C.mtf",
+    "chassis": "Hunchback",
+    "model": "C",
+    "bv": 1893,
+    "intro": 3065,
+    "tags": [],
+    "sources": [
+      "RG21"
+    ],
+    "id": "CQ4DPZB7EZ"
+  },
+  {
+    "mtf": "Nightsky NGS-6T.mtf",
+    "chassis": "Nightsky",
+    "model": "NGS-6T",
+    "bv": 1462,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:CI"
+    ],
+    "id": "CR54XNR5P2"
+  },
+  {
+    "mtf": "Wolverine WVR-9D.mtf",
+    "chassis": "Wolverine",
+    "model": "WVR-9D",
+    "bv": 1369,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:CI"
+    ],
+    "id": "CTKHS92AKY"
+  },
+  {
+    "mtf": "Thor (Summoner) Q.mtf",
+    "chassis": "Thor (Summoner)",
+    "model": "Q",
+    "bv": 2479,
+    "intro": 3069,
+    "tags": [],
+    "sources": [
+      "RG03"
+    ],
+    "id": "CTPJEAZ84J"
+  },
+  {
+    "mtf": "Yeoman YMN-10-OR.mtf",
+    "chassis": "Yeoman",
+    "model": "YMN-10-OR",
+    "bv": 1319,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "CWRXDAYBP1"
+  },
+  {
+    "mtf": "Crimson Langur Prime.mtf",
+    "chassis": "Crimson Langur",
+    "model": "Prime",
+    "bv": 1952,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "CX726Q4PCS"
+  },
+  {
+    "mtf": "Banshee BNC-9S.mtf",
+    "chassis": "Banshee",
+    "model": "BNC-9S",
+    "bv": 2496,
+    "intro": 3071,
+    "tags": [],
+    "sources": [
+      "BattleCorps"
+    ],
+    "id": "CXY8ZTJF5Z"
+  },
+  {
+    "mtf": "Thunderbolt TDR-10SE.mtf",
+    "chassis": "Thunderbolt",
+    "model": "TDR-10SE",
+    "bv": 2008,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:CI"
+    ],
+    "id": "CZQDA7HGQE"
+  },
+  {
+    "mtf": "Prowler PWR-1X.mtf",
+    "chassis": "Prowler",
+    "model": "PWR-1X",
+    "bv": 2019,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "D2K7497B20"
+  },
+  {
+    "mtf": "Gurkha GUR-6G.mtf",
+    "chassis": "Gurkha",
+    "model": "GUR-6G",
+    "bv": 1134,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:J"
+    ],
+    "id": "D37GPQH115"
+  },
+  {
+    "mtf": "Bombard BMB-1X.mtf",
+    "chassis": "Bombard",
+    "model": "BMB-1X",
+    "bv": 1652,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "D396AB63WB"
+  },
+  {
+    "mtf": "Whitworth WTH-2A.mtf",
+    "chassis": "Whitworth",
+    "model": "WTH-2A",
+    "bv": 1055,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "D3CHCR2Z92"
+  },
+  {
+    "mtf": "Griffin GRF-5L.mtf",
+    "chassis": "Griffin",
+    "model": "GRF-5L",
+    "bv": 1742,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "D44T9DPM86"
+  },
+  {
+    "mtf": "Guillotine GLT-6WB.mtf",
+    "chassis": "Guillotine",
+    "model": "GLT-6WB",
+    "bv": 1672,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "D4CD48XX86"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Mauler",
+    "model": "MAL-4X “Todesbote”",
+    "bv": 1904,
+    "intro": 3070,
+    "tags": [
+      "xtro",
+      "named"
+    ],
+    "sources": [
+      "XTR:Most Wanted"
+    ],
+    "id": "D642KYMBCJ"
+  },
+  {
+    "mtf": "Javelin JVN-11F.mtf",
+    "chassis": "Javelin",
+    "model": "JVN-11F",
+    "bv": 827,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "D799H68WZ8"
+  },
+  {
+    "mtf": "Phoenix Hawk IIC 5.mtf",
+    "chassis": "Phoenix Hawk IIC",
+    "model": "5",
+    "bv": 2350,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "D913T5PNKQ"
+  },
+  {
+    "mtf": "Vanquisher VQR-7U.mtf",
+    "chassis": "Vanquisher",
+    "model": "VQR-7U",
+    "bv": 2144,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:J"
+    ],
+    "id": "DAW3YRMCWP"
+  },
+  {
+    "mtf": "Shadow Hawk IIC 5.mtf",
+    "chassis": "Shadow Hawk IIC",
+    "model": "5",
+    "bv": 1614,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "DBTMN1KV29"
+  },
+  {
+    "mtf": "Locust IIC 4.mtf",
+    "chassis": "Locust IIC",
+    "model": "4",
+    "bv": 795,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:PP"
+    ],
+    "id": "DDK3PTB5CX"
+  },
+  {
+    "mtf": "Marauder MAD-7D.mtf",
+    "chassis": "Marauder",
+    "model": "MAD-7D",
+    "bv": 1986,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "TR:CI"
+    ],
+    "id": "DE0VE9G317"
+  },
+  {
+    "mtf": "Gladiator GLD-1R.mtf",
+    "chassis": "Gladiator",
+    "model": "GLD-1R",
+    "bv": 1027,
+    "intro": 2468,
+    "tags": [
+      "lostech",
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Primitives II"
+    ],
+    "id": "DEVRV7EXMS"
+  },
+  {
+    "mtf": "Phoenix Hawk PXH-6D.mtf",
+    "chassis": "Phoenix Hawk",
+    "model": "PXH-6D",
+    "bv": 1665,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:PP",
+      "TR:CI"
+    ],
+    "id": "DFTJM43C3E"
+  },
+  {
+    "mtf": "Stinger STG-3P.mtf",
+    "chassis": "Stinger",
+    "model": "STG-3P",
+    "bv": 489,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085"
+    ],
+    "id": "DFVDCXR9W0"
+  },
+  {
+    "mtf": "BattleMaster C.mtf",
+    "chassis": "BattleMaster",
+    "model": "C",
+    "bv": 3025,
+    "intro": 3070,
+    "tags": [],
+    "sources": [
+      "BattleCorps"
+    ],
+    "id": "DHB6H41F14"
+  },
+  {
+    "mtf": "Seraph C-SRP-OB Infernus.mtf",
+    "chassis": "Seraph",
+    "model": "C-SRP-OB Infernus",
+    "bv": 2181,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "DMPF83P9PE"
+  },
+  {
+    "mtf": "Clint CLNT-2-3UL.mtf",
+    "chassis": "Clint",
+    "model": "CLNT-2-3UL",
+    "bv": 1245,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "DPW2HEAZGA"
+  },
+  {
+    "mtf": "Whitworth WTH-1H.mtf",
+    "chassis": "Whitworth",
+    "model": "WTH-1H",
+    "bv": 993,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "DTQTQTYDCQ"
+  },
+  {
+    "mtf": "Anvil ANV-3R.mtf",
+    "chassis": "Anvil",
+    "model": "ANV-3R",
+    "bv": 1496,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:CI"
+    ],
+    "id": "DZBRD8PNAX"
+  },
+  {
+    "mtf": "Lightray LGH-7W.mtf",
+    "chassis": "Lightray",
+    "model": "LGH-7W",
+    "bv": 1352,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:J"
+    ],
+    "id": "E0DP2YEJS7"
+  },
+  {
+    "mtf": "Nightstar NSR-9SS.mtf",
+    "chassis": "Nightstar",
+    "model": "NSR-9SS",
+    "bv": 2145,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:SW"
+    ],
+    "id": "E1YTJ26K9C"
+  },
+  {
+    "mtf": "Toro TR-A-1.mtf",
+    "chassis": "Toro",
+    "model": "TR-A-1",
+    "bv": 671,
+    "intro": 2481,
+    "tags": [
+      "lostech",
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Primitives IV"
+    ],
+    "id": "E2PYTJNAT3"
+  },
+  {
+    "mtf": "Griffin IIC 5.mtf",
+    "chassis": "Griffin IIC",
+    "model": "5",
+    "bv": 1344,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "E4DY6JFJHP"
+  },
+  {
+    "mtf": "Bandersnatch BNDR-01Ar.mtf",
+    "chassis": "Bandersnatch",
+    "model": "BNDR-01Ar",
+    "bv": 1522,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085"
+    ],
+    "id": "E58MW5T8R3"
+  },
+  {
+    "mtf": "Vulcan VT-6M.mtf",
+    "chassis": "Vulcan",
+    "model": "VT-6M",
+    "bv": 959,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "E5ZK4E0D8C"
+  },
+  {
+    "mtf": "Spatha SP1-X.mtf",
+    "chassis": "Spatha",
+    "model": "SP1-X",
+    "bv": 2222,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "E6GG968AZT"
+  },
+  {
+    "mtf": "Grigori C-GRG-OA Dominus.mtf",
+    "chassis": "Grigori",
+    "model": "C-GRG-OA Dominus",
+    "bv": 1536,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "E9DM4D8GPR"
+  },
+  {
+    "mtf": "O-Bakemono OBK-M12.mtf",
+    "chassis": "O-Bakemono",
+    "model": "OBK-M12",
+    "bv": 1732,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:CI"
+    ],
+    "id": "EE1DXWYN44"
+  },
+  {
+    "mtf": "Loki (Hellbringer) D.mtf",
+    "chassis": "Loki (Hellbringer)",
+    "model": "D",
+    "bv": 2140,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:CI"
+    ],
+    "id": "EEMTN6ZBGG"
+  },
+  {
+    "mtf": "Shadow Hawk SHD-1R.mtf",
+    "chassis": "Shadow Hawk",
+    "model": "SHD-1R",
+    "bv": 851,
+    "intro": 2467,
+    "tags": [
+      "lostech",
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Primitives I"
+    ],
+    "id": "EENETMDWPD"
+  },
+  {
+    "mtf": "Aquagladius AQS-3.mtf",
+    "chassis": "Aquagladius",
+    "model": "AQS-3",
+    "bv": 834,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "EEZB1E9CM0"
+  },
+  {
+    "mtf": "Mercury MCY-104.mtf",
+    "chassis": "Mercury",
+    "model": "MCY-104",
+    "bv": 683,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "EGFV7PB7XA"
+  },
+  {
+    "mtf": "Shadow Hawk SHD-9D.mtf",
+    "chassis": "Shadow Hawk",
+    "model": "SHD-9D",
+    "bv": 1313,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "TR:J"
+    ],
+    "id": "EHP1DDF0FK"
+  },
+  {
+    "mtf": "Preta C-PRT-O Kendali.mtf",
+    "chassis": "Preta",
+    "model": "C-PRT-O (Kendali)",
+    "bv": 999,
+    "intro": 3071,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "SB:W&B"
+    ],
+    "id": "EK95JDP102"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Hyena",
+    "model": "HYN-KTO",
+    "bv": 933,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3039",
+      "TR:3075"
+    ],
+    "id": "EKT3QAWK31"
+  },
+  {
+    "mtf": "Hermes HER-4WB.mtf",
+    "chassis": "Hermes",
+    "model": "HER-4WB",
+    "bv": 1042,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "EMEGJZXG19"
+  },
+  {
+    "mtf": "Wight WGT-2SC.mtf",
+    "chassis": "Wight",
+    "model": "WGT-2SC",
+    "bv": 1093,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "EMGF0FYHN4"
+  },
+  {
+    "mtf": "Grigori C-GRG-O Rufus.mtf",
+    "chassis": "Grigori",
+    "model": "C-GRG-O (Rufus)",
+    "bv": 1422,
+    "intro": 3071,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "SB:W&B"
+    ],
+    "id": "ENME1RH1XF"
+  },
+  {
+    "mtf": "Locust LCT-1V2.mtf",
+    "chassis": "Locust",
+    "model": "LCT-1V2",
+    "bv": 568,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:CI"
+    ],
+    "id": "ENQ4F082AG"
+  },
+  {
+    "mtf": "Juggernaut JG-R9T3.mtf",
+    "chassis": "Juggernaut",
+    "model": "JG-R9T3",
+    "bv": 1959,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "ERKHG1XXSS"
+  },
+  {
+    "mtf": "Pillager PLG-5Z.mtf",
+    "chassis": "Pillager",
+    "model": "PLG-5Z",
+    "bv": 2939,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:SW"
+    ],
+    "id": "EVFB1TFBJC"
+  },
+  {
+    "mtf": "Gladiator (Executioner) P.mtf",
+    "chassis": "Gladiator (Executioner)",
+    "model": "P",
+    "bv": 3052,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "EZVX9Z9WH3"
+  },
+  {
+    "mtf": "Avatar AV1-OF.mtf",
+    "chassis": "Avatar",
+    "model": "AV1-OF",
+    "bv": 1667,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:CI"
+    ],
+    "id": "F3PN6V6Q4D"
+  },
+  {
+    "mtf": "Volkh VKH-7.mtf",
+    "chassis": "Volkh",
+    "model": "VKH-7",
+    "bv": 1578,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "F3ZBPDG9NM"
+  },
+  {
+    "mtf": "Phoenix Hawk PXH-1c.mtf",
+    "chassis": "Phoenix Hawk",
+    "model": "PXH-1c \"Special\"",
+    "bv": 1443,
+    "intro": 2765,
+    "tags": [
+      "lostech",
+      "tro",
+      "named"
+    ],
+    "sources": [
+      "TR:3075"
+    ],
+    "id": "F4MQMG906K"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Mad Cat (Timber Wolf)",
+    "model": "(Bounty Hunter 2)",
+    "bv": 2799,
+    "intro": 3068,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "BD:BH"
+    ],
+    "id": "F4SNTNAJWX"
+  },
+  {
+    "mtf": "Venom SDR-9KC.mtf",
+    "chassis": "Venom",
+    "model": "SDR-9KC",
+    "bv": 939,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:CI"
+    ],
+    "id": "F572A4Q25T"
+  },
+  {
+    "mtf": "Dasher (Fire Moth) K.mtf",
+    "chassis": "Dasher (Fire Moth)",
+    "model": "K",
+    "bv": 884,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "F8AF0YDM76"
+  },
+  {
+    "mtf": "Pinion 3.mtf",
+    "chassis": "Pinion",
+    "model": "3",
+    "bv": 1611,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "F912DDY9A6"
+  },
+  {
+    "mtf": "Preta C-PRT-OA Dominus.mtf",
+    "chassis": "Preta",
+    "model": "C-PRT-OA Dominus",
+    "bv": 1302,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "FBTBCGV8WT"
+  },
+  {
+    "mtf": "Excalibur EXC-D1.mtf",
+    "chassis": "Excalibur",
+    "model": "EXC-D1",
+    "bv": 1949,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:SW"
+    ],
+    "id": "FF7G98CXMF"
+  },
+  {
+    "mtf": "Zeus X ZEU-9WD.mtf",
+    "chassis": "Zeus-X",
+    "model": "ZEU-9WD (Stacy)",
+    "bv": 1921,
+    "intro": 3070,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "SB:W&B"
+    ],
+    "id": "FFYDR30MP9"
+  },
+  {
+    "mtf": "Hauptmann HA1-OD.mtf",
+    "chassis": "Hauptmann",
+    "model": "HA1-OD",
+    "bv": 2359,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060",
+      "TR:J"
+    ],
+    "id": "FGN0XG1APP"
+  },
+  {
+    "mtf": "Battle Cobra BTL-C-2OF.mtf",
+    "chassis": "Battle Cobra",
+    "model": "BTL-C-2OF",
+    "bv": 1300,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "Shrap11"
+    ],
+    "id": "FJWD0VDVM5"
+  },
+  {
+    "mtf": "Marauder II C.mtf",
+    "chassis": "Marauder II",
+    "model": "C",
+    "bv": 2916,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:CI"
+    ],
+    "id": "FKHCCNZKCZ"
+  },
+  {
+    "mtf": "Emperor EMP-6D.mtf",
+    "chassis": "Emperor",
+    "model": "EMP-6D",
+    "bv": 2382,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:SW"
+    ],
+    "id": "FMAKAXXVCF"
+  },
+  {
+    "mtf": "Paladin PAL-3.mtf",
+    "chassis": "Paladin",
+    "model": "PAL-3",
+    "bv": 1370,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "FN2XHJH232"
+  },
+  {
+    "mtf": "Dervish DV-8D2 Lightbringer.mtf",
+    "chassis": "Dervish",
+    "model": "DV-8D2 \"Lightbringer\"",
+    "bv": 1717,
+    "intro": 3071,
+    "tags": [
+      "xtro",
+      "named"
+    ],
+    "sources": [
+      "XTR:Pirates"
+    ],
+    "id": "FNVEECCQV0"
+  },
+  {
+    "mtf": "Griffin GRF-6CS.mtf",
+    "chassis": "Griffin",
+    "model": "GRF-6CS",
+    "bv": 1695,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:J"
+    ],
+    "id": "FP4GM2XSZY"
+  },
+  {
+    "mtf": "Wolfhound WLF-3S.mtf",
+    "chassis": "Wolfhound",
+    "model": "WLF-3S",
+    "bv": 1176,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "FRSF1PKQP4"
+  },
+  {
+    "mtf": "Daedalus DAD-4A.mtf",
+    "chassis": "Daedalus",
+    "model": "DAD-4A",
+    "bv": 1466,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "FSECHGNWNG"
+  },
+  {
+    "mtf": "Piranha 2.mtf",
+    "chassis": "Piranha",
+    "model": "2",
+    "bv": 853,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:CI"
+    ],
+    "id": "FV139M8FFP"
+  },
+  {
+    "mtf": "Hellhound (Conjurer) 5.mtf",
+    "chassis": "Hellhound (Conjurer)",
+    "model": "5",
+    "bv": 1722,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "FW6R3RP1ZY"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Sha Yu",
+    "model": "(Bulldog)",
+    "bv": 1379,
+    "intro": 3068,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "BD:YZ"
+    ],
+    "id": "FXK82KNXWW"
+  },
+  {
+    "mtf": "Albatross ALB-5W.mtf",
+    "chassis": "Albatross",
+    "model": "ALB-5W",
+    "bv": 2370,
+    "intro": 3070,
+    "tags": [],
+    "sources": [
+      "Shrap13"
+    ],
+    "id": "G0G05VX62E"
+  },
+  {
+    "mtf": "Stinger STG-5T.mtf",
+    "chassis": "Stinger",
+    "model": "STG-5T",
+    "bv": 341,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "G0HHHNKN1E"
+  },
+  {
+    "mtf": "Rakshasa MDG-2A.mtf",
+    "chassis": "Rakshasa",
+    "model": "MDG-2A",
+    "bv": 1766,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "G28DBZ4RE8"
+  },
+  {
+    "mtf": "Eyleuka EYL-45A.mtf",
+    "chassis": "Eyleuka",
+    "model": "EYL-45A",
+    "bv": 1387,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075"
+    ],
+    "id": "G3QKGHB9KC"
+  },
+  {
+    "mtf": "Caesar CES-4S.mtf",
+    "chassis": "Caesar",
+    "model": "CES-4S",
+    "bv": 1739,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "G3YSV5NHNQ"
+  },
+  {
+    "mtf": "Daedalus DAD-4B.mtf",
+    "chassis": "Daedalus",
+    "model": "DAD-4B",
+    "bv": 1431,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "G63BZGJWQW"
+  },
+  {
+    "mtf": "Ostroc OSR-4L.mtf",
+    "chassis": "Ostroc",
+    "model": "OSR-4L",
+    "bv": 1778,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:J"
+    ],
+    "id": "G6C47K8Y1R"
+  },
+  {
+    "mtf": "Jinggau JN-G7L.mtf",
+    "chassis": "Jinggau",
+    "model": "JN-G7L",
+    "bv": 2137,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "G6DFX6YWN5"
+  },
+  {
+    "mtf": "Bear Cub 3.mtf",
+    "chassis": "Bear Cub",
+    "model": "3",
+    "bv": 1086,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075"
+    ],
+    "id": "G6QBKPXX0Y"
+  },
+  {
+    "mtf": "Griffin GRF-5M.mtf",
+    "chassis": "Griffin",
+    "model": "GRF-5M",
+    "bv": 1224,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:J"
+    ],
+    "id": "G7832KCK9W"
+  },
+  {
+    "mtf": "Quickdraw QKD-5Mr.mtf",
+    "chassis": "Quickdraw",
+    "model": "QKD-5Mr",
+    "bv": 1471,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085"
+    ],
+    "id": "G7Y2511RGG"
+  },
+  {
+    "mtf": "Goliath GOL-3S.mtf",
+    "chassis": "Goliath",
+    "model": "GOL-3S",
+    "bv": 1792,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:J"
+    ],
+    "id": "G876Y0C6J1"
+  },
+  {
+    "mtf": "Valkyrie VLK-QD3.mtf",
+    "chassis": "Valkyrie",
+    "model": "VLK-QD3",
+    "bv": 882,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:PP",
+      "TR:CI"
+    ],
+    "id": "GDQ2DGRGSS"
+  },
+  {
+    "mtf": "Flea FLE-19.mtf",
+    "chassis": "Flea",
+    "model": "FLE-19",
+    "bv": 381,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "GF6JSMVWT7"
+  },
+  {
+    "mtf": "Wraith TR3.mtf",
+    "chassis": "Wraith",
+    "model": "TR3",
+    "bv": 1310,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:CI"
+    ],
+    "id": "GH4H0NCMZM"
+  },
+  {
+    "mtf": "Preta C-PRT-OC Comminus.mtf",
+    "chassis": "Preta",
+    "model": "C-PRT-OC Comminus",
+    "bv": 1187,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "GJ6FPG492D"
+  },
+  {
+    "mtf": "Dragonfly (Viper) F.mtf",
+    "chassis": "Dragonfly (Viper)",
+    "model": "F",
+    "bv": 1689,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "GK3BF99XQF"
+  },
+  {
+    "mtf": "Clint CLNT-6S.mtf",
+    "chassis": "Clint",
+    "model": "CLNT-6S",
+    "bv": 1334,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "GK64R0VT09"
+  },
+  {
+    "mtf": "Crab CRB-45.mtf",
+    "chassis": "Crab",
+    "model": "CRB-45",
+    "bv": 1342,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "GP95E2Z743"
+  },
+  {
+    "mtf": "Thunderbolt TDR-17S.mtf",
+    "chassis": "Thunderbolt",
+    "model": "TDR-17S",
+    "bv": 1803,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "GPHKB77G5B"
+  },
+  {
+    "mtf": "Caesar CES-4R.mtf",
+    "chassis": "Caesar",
+    "model": "CES-4R",
+    "bv": 2024,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "GS7YPTHSTT"
+  },
+  {
+    "mtf": "Mad Cat (Timber Wolf) M.mtf",
+    "chassis": "Mad Cat (Timber Wolf)",
+    "model": "M",
+    "bv": 2741,
+    "intro": 3068,
+    "tags": [],
+    "sources": [
+      "RG05"
+    ],
+    "id": "GTXJDQ69V4"
+  },
+  {
+    "mtf": "Supernova 3.mtf",
+    "chassis": "Supernova",
+    "model": "3",
+    "bv": 3448,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:CI"
+    ],
+    "id": "H0KK69C4JW"
+  },
+  {
+    "mtf": "Warhammer WHM-8M.mtf",
+    "chassis": "Warhammer",
+    "model": "WHM-8M",
+    "bv": 1631,
+    "intro": 3069,
+    "tags": [],
+    "sources": [
+      "BattleCorps"
+    ],
+    "id": "H0Y9Z18D76"
+  },
+  {
+    "mtf": "Wolverine II WVR-7H.mtf",
+    "chassis": "Wolverine II",
+    "model": "WVR-7H",
+    "bv": 1301,
+    "intro": 2770,
+    "tags": [
+      "lostech",
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "His:OK"
+    ],
+    "id": "H270ZXSY6W"
+  },
+  {
+    "mtf": "Malak C-MK-O Mi.mtf",
+    "chassis": "Malak",
+    "model": "C-MK-O (Mi)",
+    "bv": 758,
+    "intro": 3071,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "SB:W&B"
+    ],
+    "id": "H2G15QD1MM"
+  },
+  {
+    "mtf": "Brigand LDT-X2.mtf",
+    "chassis": "Brigand",
+    "model": "LDT-X2",
+    "bv": 764,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "H3YYP5JYTM"
+  },
+  {
+    "mtf": "BattleMaster BLR-4S.mtf",
+    "chassis": "BattleMaster",
+    "model": "BLR-4S (Calvin)",
+    "bv": 2029,
+    "intro": 3070,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "SB:W&B"
+    ],
+    "id": "H4J987SZWJ"
+  },
+  {
+    "mtf": "Valiant V4-LNT-K7.mtf",
+    "chassis": "Valiant",
+    "model": "V4-LNT-K7",
+    "bv": 894,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "H6DNQG9FAK"
+  },
+  {
+    "mtf": "Ostsol OTL-6D.mtf",
+    "chassis": "Ostsol",
+    "model": "OTL-6D",
+    "bv": 1880,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:J"
+    ],
+    "id": "H6S1VCW2F8"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Deva",
+    "model": "C-DVA-O (Achillius)",
+    "bv": 1595,
+    "intro": 3071,
+    "tags": [
+      "named"
+    ],
+    "sources": [],
+    "id": "H8175AP977"
+  },
+  {
+    "mtf": "Strider SR1-OG.mtf",
+    "chassis": "Strider",
+    "model": "SR1-OG",
+    "bv": 883,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:CI"
+    ],
+    "id": "H8PPAZH3CJ"
+  },
+  {
+    "mtf": "Mackie MSK-6S.mtf",
+    "chassis": "Mackie",
+    "model": "MSK-6S",
+    "bv": 1461,
+    "intro": 2443,
+    "tags": [
+      "lostech",
+      "tro"
+    ],
+    "sources": [
+      "TR:3075"
+    ],
+    "id": "HBCMEWPD4J"
+  },
+  {
+    "mtf": "Turkina E.mtf",
+    "chassis": "Turkina",
+    "model": "E",
+    "bv": 3147,
+    "intro": 3070,
+    "tags": [],
+    "sources": [
+      "RG16"
+    ],
+    "id": "HDFYF719W7"
+  },
+  {
+    "mtf": "Helepolis HEP-1H.mtf",
+    "chassis": "Helepolis",
+    "model": "HEP-1H",
+    "bv": 1063,
+    "intro": 2460,
+    "tags": [
+      "lostech",
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Primitives I"
+    ],
+    "id": "HDXY85XF0A"
+  },
+  {
+    "mtf": "Falcon FLC-6C.mtf",
+    "chassis": "Falcon",
+    "model": "FLC-6C",
+    "bv": 1290,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "HG2Y9DJ57V"
+  },
+  {
+    "mtf": "Shadow Hawk IIC 10.mtf",
+    "chassis": "Shadow Hawk IIC",
+    "model": "10",
+    "bv": 1760,
+    "intro": 3068,
+    "tags": [],
+    "sources": [
+      "RG20",
+      "RGv1"
+    ],
+    "id": "HK2AN89J0F"
+  },
+  {
+    "mtf": "Shugenja SJA-8H.mtf",
+    "chassis": "Shugenja",
+    "model": "SJA-8H",
+    "bv": 1691,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "HKN4WC737F"
+  },
+  {
+    "mtf": "Wyvern WVE-10N.mtf",
+    "chassis": "Wyvern",
+    "model": "WVE-10N",
+    "bv": 1199,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "HM9CWKD764"
+  },
+  {
+    "mtf": "Arctic Wolf J.mtf",
+    "chassis": "Arctic Wolf",
+    "model": "J",
+    "bv": 1786,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "HMMERRCKEQ"
+  },
+  {
+    "mtf": "Verfolger VR6-C.mtf",
+    "chassis": "Verfolger",
+    "model": "VR6-C",
+    "bv": 1584,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "HNSAVRJVDV"
+  },
+  {
+    "mtf": "Rabid Coyote.mtf",
+    "chassis": "Rabid Coyote",
+    "model": "",
+    "bv": 2081,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "HPYFEYRYWS"
+  },
+  {
+    "mtf": "Ostscout OTT-9S.mtf",
+    "chassis": "Ostscout",
+    "model": "OTT-9S",
+    "bv": 855,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:PP"
+    ],
+    "id": "HQX8JAN693"
+  },
+  {
+    "mtf": "Templar TLR1-O.mtf",
+    "chassis": "Templar",
+    "model": "TLR1-O (Grayson)",
+    "bv": 1868,
+    "intro": 3065,
+    "tags": [
+      "tro",
+      "named"
+    ],
+    "sources": [
+      "TR:3067",
+      "TR:J"
+    ],
+    "id": "HR2P8JD34V"
+  },
+  {
+    "mtf": "Archer ARC-6W.mtf",
+    "chassis": "Archer",
+    "model": "ARC-6W",
+    "bv": 1405,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:CI"
+    ],
+    "id": "HRX1V1J0A0"
+  },
+  {
+    "mtf": "Commando COM-7B.mtf",
+    "chassis": "Commando",
+    "model": "COM-7B",
+    "bv": 602,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "HT73734N5W"
+  },
+  {
+    "mtf": "Ostroc OSR-4C.mtf",
+    "chassis": "Ostroc",
+    "model": "OSR-4C",
+    "bv": 1325,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:J"
+    ],
+    "id": "HTW3WFHAD2"
+  },
+  {
+    "mtf": "Sasquatch SQS-TH-003.mtf",
+    "chassis": "Sasquatch",
+    "model": "SQS-TH-003",
+    "bv": 1667,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "HVGJ7DDGFM"
+  },
+  {
+    "mtf": "Kodiak 4.mtf",
+    "chassis": "Kodiak",
+    "model": "4",
+    "bv": 2728,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:CI"
+    ],
+    "id": "HVQTQGCEQF"
+  },
+  {
+    "mtf": "Jackrabbit JKR-8T.mtf",
+    "chassis": "Jackrabbit",
+    "model": "JKR-8T",
+    "bv": 414,
+    "intro": 2765,
+    "tags": [
+      "lostech",
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "HY8H7PAXMX"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Uller (Kit Fox)",
+    "model": "(Rood)",
+    "bv": 0,
+    "intro": 3071,
+    "tags": [
+      "named"
+    ],
+    "sources": [],
+    "id": "HYT4C6BZN7"
+  },
+  {
+    "mtf": "Emperor EMP-7L.mtf",
+    "chassis": "Emperor",
+    "model": "EMP-7L",
+    "bv": 2179,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:SW"
+    ],
+    "id": "HYYYZ19Q4S"
+  },
+  {
+    "mtf": "Gallowglas GAL-2GLSA.mtf",
+    "chassis": "Gallowglas",
+    "model": "GAL-2GLSA",
+    "bv": 1771,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "TR:CI"
+    ],
+    "id": "J2WJE9PNDR"
+  },
+  {
+    "mtf": "Battle Cobra BTL-C-2OD.mtf",
+    "chassis": "Battle Cobra",
+    "model": "BTL-C-2OD",
+    "bv": 1221,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "Shrap11"
+    ],
+    "id": "J4WD6V7P3F"
+  },
+  {
+    "mtf": "Valkyrie VLK-QS5.mtf",
+    "chassis": "Valkyrie",
+    "model": "VLK-QS5",
+    "bv": 774,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "J5A9Y5M9WD"
+  },
+  {
+    "mtf": "Anubis ABS-3R.mtf",
+    "chassis": "Anubis",
+    "model": "ABS-3R",
+    "bv": 970,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "J6CZ2C4DJD"
+  },
+  {
+    "mtf": "Sha Yu SYU-4B.mtf",
+    "chassis": "Sha Yu",
+    "model": "SYU-4B",
+    "bv": 1267,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067",
+      "TR:J"
+    ],
+    "id": "J6G3FV03H3"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Duan Gung",
+    "model": "(Vaughn)",
+    "bv": 851,
+    "intro": 3068,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "BD:YZ"
+    ],
+    "id": "J6HXFVFK22"
+  },
+  {
+    "mtf": "Longshot LNG-3C.mtf",
+    "chassis": "Longshot",
+    "model": "LNG-3C",
+    "bv": 971,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "J74B587JBM"
+  },
+  {
+    "mtf": "Berserker BRZ-C3.mtf",
+    "chassis": "Berserker",
+    "model": "BRZ-C3",
+    "bv": 2354,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:CI"
+    ],
+    "id": "J764KFPK1X"
+  },
+  {
+    "mtf": "Marauder MAD-5T.mtf",
+    "chassis": "Marauder",
+    "model": "MAD-5T",
+    "bv": 1750,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "TR:CI"
+    ],
+    "id": "JC44QXPNT2"
+  },
+  {
+    "mtf": "Paladin PAL-2.mtf",
+    "chassis": "Paladin",
+    "model": "PAL-2",
+    "bv": 1617,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "JCW1BXTJZ0"
+  },
+  {
+    "mtf": "Dervish DV-1S.mtf",
+    "chassis": "Dervish",
+    "model": "DV-1S",
+    "bv": 864,
+    "intro": 2520,
+    "tags": [
+      "lostech",
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Primitives III"
+    ],
+    "id": "JHS4DHZXP8"
+  },
+  {
+    "mtf": "Griffin GRF-6S.mtf",
+    "chassis": "Griffin",
+    "model": "GRF-6S (Francine)",
+    "bv": 1778,
+    "intro": 3070,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "SB:W&B"
+    ],
+    "id": "JJDKSA56CR"
+  },
+  {
+    "mtf": "Raijin II RJN-200-A.mtf",
+    "chassis": "Raijin II",
+    "model": "RJN-200-A",
+    "bv": 1763,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:J"
+    ],
+    "id": "JMH49A9AQK"
+  },
+  {
+    "mtf": "Mercury MCY-102.mtf",
+    "chassis": "Mercury",
+    "model": "MCY-102",
+    "bv": 510,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "JQ1J1A4CW2"
+  },
+  {
+    "mtf": "Hector HOR-1B.mtf",
+    "chassis": "Hector",
+    "model": "HOR-1B",
+    "bv": 949,
+    "intro": 2471,
+    "tags": [
+      "lostech"
+    ],
+    "sources": [
+      "ED:AoW"
+    ],
+    "id": "JXPHTW1WCN"
+  },
+  {
+    "mtf": "Sunder SD1-O.mtf",
+    "chassis": "Sunder",
+    "model": "SD1-O (Samual)",
+    "bv": 1593,
+    "intro": 3066,
+    "tags": [
+      "tro",
+      "named"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:CI"
+    ],
+    "id": "K2HBX0W3TA"
+  },
+  {
+    "mtf": "Hellspawn HSN-8E.mtf",
+    "chassis": "Hellspawn",
+    "model": "HSN-8E",
+    "bv": 1341,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067",
+      "TR:J"
+    ],
+    "id": "K2KEXNBA34"
+  },
+  {
+    "mtf": "Shootist ST-9C.mtf",
+    "chassis": "Shootist",
+    "model": "ST-9C",
+    "bv": 1727,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:SW"
+    ],
+    "id": "K31ACAH6VV"
+  },
+  {
+    "mtf": "Stinger STG-6L.mtf",
+    "chassis": "Stinger",
+    "model": "STG-6L",
+    "bv": 680,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:PP",
+      "TR:CI"
+    ],
+    "id": "K3ZTAPEZ50"
+  },
+  {
+    "mtf": "JagerMech JM6-DDa.mtf",
+    "chassis": "JagerMech",
+    "model": "JM6-DDa",
+    "bv": 911,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "K43KA0RSSH"
+  },
+  {
+    "mtf": "Mauler MAL-1KX.mtf",
+    "chassis": "Mauler",
+    "model": "MAL-1KX",
+    "bv": 1678,
+    "intro": 3068,
+    "tags": [],
+    "sources": [
+      "Shrap15"
+    ],
+    "id": "K4V5KJH87B"
+  },
+  {
+    "mtf": "Black Watch BKW-9R.mtf",
+    "chassis": "Black Watch",
+    "model": "BKW-9R",
+    "bv": 2144,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "K502Q9B7MK"
+  },
+  {
+    "mtf": "Marauder II MAD-5W.mtf",
+    "chassis": "Marauder II",
+    "model": "MAD-5W",
+    "bv": 2383,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "TR:CI"
+    ],
+    "id": "K5GAEHZE41"
+  },
+  {
+    "mtf": "Initiate INI-04.mtf",
+    "chassis": "Initiate",
+    "model": "INI-04",
+    "bv": 901,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060",
+      "TR:J"
+    ],
+    "id": "K5T9TBS62T"
+  },
+  {
+    "mtf": "Lao Hu LHU-3C.mtf",
+    "chassis": "Lao Hu",
+    "model": "LHU-3C",
+    "bv": 1878,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067",
+      "TR:J"
+    ],
+    "id": "K6WWB4RRJ3"
+  },
+  {
+    "mtf": "Crusader CRD-8S.mtf",
+    "chassis": "Crusader",
+    "model": "CRD-8S",
+    "bv": 1698,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:PP"
+    ],
+    "id": "K73CK5DNHG"
+  },
+  {
+    "mtf": "Hellhound (Conjurer) 3.mtf",
+    "chassis": "Hellhound (Conjurer)",
+    "model": "3",
+    "bv": 1764,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "K9MZRF085J"
+  },
+  {
+    "mtf": "Savage Coyote C.mtf",
+    "chassis": "Savage Coyote",
+    "model": "C",
+    "bv": 3189,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067",
+      "TR:J"
+    ],
+    "id": "KB8N18XNZT"
+  },
+  {
+    "mtf": "Malak C-MK-OA Dominus.mtf",
+    "chassis": "Malak",
+    "model": "C-MK-OA Dominus",
+    "bv": 823,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "KBEZHCDZ8C"
+  },
+  {
+    "mtf": "Trebuchet TBT-3C.mtf",
+    "chassis": "Trebuchet",
+    "model": "TBT-3C",
+    "bv": 1342,
+    "intro": 2780,
+    "tags": [
+      "lostech",
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "KDP0XMTVV4"
+  },
+  {
+    "mtf": "Spartan SPT-N3.mtf",
+    "chassis": "Spartan",
+    "model": "SPT-N3",
+    "bv": 1631,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U"
+    ],
+    "id": "KDRGA6GNNB"
+  },
+  {
+    "mtf": "Hitman HM-1r.mtf",
+    "chassis": "Hitman",
+    "model": "HM-1r",
+    "bv": 938,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085"
+    ],
+    "id": "KE0BH7YYE2"
+  },
+  {
+    "mtf": "Firestarter FS9-B.mtf",
+    "chassis": "Firestarter",
+    "model": "FS9-B",
+    "bv": 668,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "KFPKQZRKBH"
+  },
+  {
+    "mtf": "Cataphract CTF-5MOC Naomi.mtf",
+    "chassis": "Cataphract",
+    "model": "CTF-5MOC (Naomi)",
+    "bv": 2028,
+    "intro": 3067,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "JTP:Sian"
+    ],
+    "id": "KH3M1FXRZ9"
+  },
+  {
+    "mtf": "Cougar F.mtf",
+    "chassis": "Cougar",
+    "model": "F",
+    "bv": 1401,
+    "intro": 3071,
+    "tags": [],
+    "sources": [
+      "RG19"
+    ],
+    "id": "KJPM44SW34"
+  },
+  {
+    "mtf": "Crockett CRK-5005-1.mtf",
+    "chassis": "Crockett",
+    "model": "CRK-5005-1",
+    "bv": 1908,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "KM1C4TPG48"
+  },
+  {
+    "mtf": "Archer ARC-8M.mtf",
+    "chassis": "Archer",
+    "model": "ARC-8M",
+    "bv": 1759,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:CI"
+    ],
+    "id": "KNM1XHEH0X"
+  },
+  {
+    "mtf": "Rifleman RFL-7M.mtf",
+    "chassis": "Rifleman",
+    "model": "RFL-7M",
+    "bv": 1521,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:CI"
+    ],
+    "id": "KPMXJAVZ0J"
+  },
+  {
+    "mtf": "Marauder MAD-6L.mtf",
+    "chassis": "Marauder",
+    "model": "MAD-6L",
+    "bv": 2322,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "KQ6XQKQAK8"
+  },
+  {
+    "mtf": "Gladiator (Executioner) K.mtf",
+    "chassis": "Gladiator (Executioner)",
+    "model": "K",
+    "bv": 3125,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "KR5WMWCT30"
+  },
+  {
+    "mtf": "Uller (Kit Fox) F.mtf",
+    "chassis": "Uller (Kit Fox)",
+    "model": "F",
+    "bv": 1219,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "KVGVP0S9WV"
+  },
+  {
+    "mtf": "Archangel C-ANG-OD Luminos.mtf",
+    "chassis": "Archangel",
+    "model": "C-ANG-OD Luminos",
+    "bv": 2105,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "KVM28CTWJH"
+  },
+  {
+    "mtf": "UrbanMech IIC 2.mtf",
+    "chassis": "UrbanMech IIC",
+    "model": "2",
+    "bv": 855,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "KY36V2BQ3Y"
+  },
+  {
+    "mtf": "Kingfisher F.mtf",
+    "chassis": "Kingfisher",
+    "model": "F",
+    "bv": 2568,
+    "intro": 3069,
+    "tags": [],
+    "sources": [
+      "RG18"
+    ],
+    "id": "KZT7TAKR98"
+  },
+  {
+    "mtf": "Brigand LDT-1.mtf",
+    "chassis": "Brigand",
+    "model": "LDT-1",
+    "bv": 771,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "M06NGTWKDV"
+  },
+  {
+    "mtf": "Mauler MAL-1K.mtf",
+    "chassis": "Mauler",
+    "model": "MAL-1K",
+    "bv": 1622,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "M1E4SYZC0H"
+  },
+  {
+    "mtf": "Cyclops CP-11-B.mtf",
+    "chassis": "Cyclops",
+    "model": "CP-11-B",
+    "bv": 2145,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085"
+    ],
+    "id": "M1TNRWP0CP"
+  },
+  {
+    "mtf": "Burrock 2.mtf",
+    "chassis": "Burrock",
+    "model": "2",
+    "bv": 2864,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "M78GWKK2S8"
+  },
+  {
+    "mtf": "Firestarter FS9-P.mtf",
+    "chassis": "Firestarter",
+    "model": "FS9-P",
+    "bv": 775,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "M8Q8Q4E7SB"
+  },
+  {
+    "mtf": "Nova Cat E.mtf",
+    "chassis": "Nova Cat",
+    "model": "E",
+    "bv": 2191,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060",
+      "RG23"
+    ],
+    "id": "MB4MDDMTDX"
+  },
+  {
+    "mtf": "Scorpion SCP-12C.mtf",
+    "chassis": "Scorpion",
+    "model": "SCP-12C",
+    "bv": 1259,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:J"
+    ],
+    "id": "MCF7EZFEJ1"
+  },
+  {
+    "mtf": "Hunchback HBK-5SS.mtf",
+    "chassis": "Hunchback",
+    "model": "HBK-5SS",
+    "bv": 1342,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "MCJJZGWDDX"
+  },
+  {
+    "mtf": "Cerberus MR-6B.mtf",
+    "chassis": "Cerberus",
+    "model": "MR-6B",
+    "bv": 2128,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:CI"
+    ],
+    "id": "MDEQKDRYQR"
+  },
+  {
+    "mtf": "Grendel (Mongrel) F.mtf",
+    "chassis": "Grendel (Mongrel)",
+    "model": "F",
+    "bv": 1997,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:CI",
+      "RG02"
+    ],
+    "id": "MDTTKAPMJM"
+  },
+  {
+    "mtf": "Javelin JVN-11D.mtf",
+    "chassis": "Javelin",
+    "model": "JVN-11D (Farrell)",
+    "bv": 1155,
+    "intro": 3068,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "BD:BH"
+    ],
+    "id": "MDXF6H050Z"
+  },
+  {
+    "mtf": "Dragon Fire DGR-6FC2 (Gregory).mtf",
+    "chassis": "Dragon Fire",
+    "model": "DGR-6FC2 (Gregory)",
+    "bv": 2230,
+    "intro": 3067,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "JTP:Tharkad"
+    ],
+    "id": "MFF5ZXANBM"
+  },
+  {
+    "mtf": "Enforcer III ENF-6Ma.mtf",
+    "chassis": "Enforcer III",
+    "model": "ENF-6Ma",
+    "bv": 1275,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:CI"
+    ],
+    "id": "MKV3S4C91K"
+  },
+  {
+    "mtf": "Rifleman RFL-9T.mtf",
+    "chassis": "Rifleman",
+    "model": "RFL-9T",
+    "bv": 1503,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "MNYNH2E6PA"
+  },
+  {
+    "mtf": "Snake SNK-2Br.mtf",
+    "chassis": "Snake",
+    "model": "SNK-2Br",
+    "bv": 1577,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085"
+    ],
+    "id": "MQRCJPDM75"
+  },
+  {
+    "mtf": "Supernova 4.mtf",
+    "chassis": "Supernova",
+    "model": "4",
+    "bv": 3158,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:CI"
+    ],
+    "id": "MQSF57CS6B"
+  },
+  {
+    "mtf": "Gallowglas GAL-4GLS.mtf",
+    "chassis": "Gallowglas",
+    "model": "GAL-4GLS",
+    "bv": 1944,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:CI"
+    ],
+    "id": "MRPBS1H1FZ"
+  },
+  {
+    "mtf": "Stinger STG-5R.mtf",
+    "chassis": "Stinger",
+    "model": "STG-5R",
+    "bv": 492,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:PP",
+      "TR:CI"
+    ],
+    "id": "MSM9GK8WF8"
+  },
+  {
+    "mtf": "Zeus X ZEU-X2.mtf",
+    "chassis": "Zeus-X",
+    "model": "ZEU-X2",
+    "bv": 1915,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3145:LC",
+      "TR:DA"
+    ],
+    "id": "MV1JRD8K0K"
+  },
+  {
+    "mtf": "Pack Hunter 3.mtf",
+    "chassis": "Pack Hunter",
+    "model": "3",
+    "bv": 1747,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "MVD2WT6TED"
+  },
+  {
+    "mtf": "Hunchback HBK-7X-4.mtf",
+    "chassis": "Hunchback",
+    "model": "HBK-7X-4",
+    "bv": 1208,
+    "intro": 3065,
+    "tags": [
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Corps"
+    ],
+    "id": "MVNRG1WF8X"
+  },
+  {
+    "mtf": "Daishi (Dire Wolf) D.mtf",
+    "chassis": "Daishi (Dire Wolf)",
+    "model": "D",
+    "bv": 3403,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "MW2GJZ3225"
+  },
+  {
+    "mtf": "Spirit 2.mtf",
+    "chassis": "Spirit",
+    "model": "2",
+    "bv": 1773,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "MWDHXGM2PF"
+  },
+  {
+    "mtf": "Goshawk (Vapor Eagle) 4.mtf",
+    "chassis": "Goshawk (Vapor Eagle)",
+    "model": "4",
+    "bv": 2069,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "MWKAEWN3Z5"
+  },
+  {
+    "mtf": "Fire Scorpion 3.mtf",
+    "chassis": "Fire Scorpion",
+    "model": "3",
+    "bv": 1904,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "MXGMRBDVXM"
+  },
+  {
+    "mtf": "Rifleman IIC 5.mtf",
+    "chassis": "Rifleman IIC",
+    "model": "5",
+    "bv": 2343,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "MXK8MM170G"
+  },
+  {
+    "mtf": "Centurion CN9-D9.mtf",
+    "chassis": "Centurion",
+    "model": "CN9-D9",
+    "bv": 1638,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "MXY80FGKKC"
+  },
+  {
+    "mtf": "Firebee FRB-1E(WAM-B).mtf",
+    "chassis": "Firebee",
+    "model": "FRB-1E (WAM-B)",
+    "bv": 514,
+    "intro": 2483,
+    "tags": [
+      "lostech",
+      "xtro",
+      "named"
+    ],
+    "sources": [
+      "XTR:Primitives III"
+    ],
+    "id": "N1Q57NPD1H"
+  },
+  {
+    "mtf": "Battle Cobra BTL-C-2OE.mtf",
+    "chassis": "Battle Cobra",
+    "model": "BTL-C-2OE",
+    "bv": 840,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "Shrap11"
+    ],
+    "id": "N309329KGQ"
+  },
+  {
+    "mtf": "Awesome AWS-10KM.mtf",
+    "chassis": "Awesome",
+    "model": "AWS-10KM (Cameron)",
+    "bv": 2466,
+    "intro": 3070,
+    "tags": [
+      "tro",
+      "named"
+    ],
+    "sources": [
+      "TR:3050",
+      "Total Chaos"
+    ],
+    "id": "N3RBXRJH42"
+  },
+  {
+    "mtf": "Koschei KSC-4I.mtf",
+    "chassis": "Koschei",
+    "model": "KSC-4I",
+    "bv": 1516,
+    "intro": 2719,
+    "tags": [
+      "lostech",
+      "tro"
+    ],
+    "sources": [
+      "TR:3075"
+    ],
+    "id": "N471PMDCS8"
+  },
+  {
+    "mtf": "Phoenix Hawk PXH-4L.mtf",
+    "chassis": "Phoenix Hawk",
+    "model": "PXH-4L (Sante)",
+    "bv": 1442,
+    "intro": 3068,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "BD:BH"
+    ],
+    "id": "N4E94TK12T"
+  },
+  {
+    "mtf": "Fafnir FNR-4A Peter.mtf",
+    "chassis": "Fafnir",
+    "model": "FNR-4A (Peter)",
+    "bv": 2458,
+    "intro": 3068,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "JTP:Tharkad"
+    ],
+    "id": "N758CJP1CA"
+  },
+  {
+    "mtf": "Marauder MAD-7D.mtf",
+    "chassis": "Marauder",
+    "model": "MAD-7D (Von Staskov)",
+    "bv": 2150,
+    "intro": 3070,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "OTP:FR"
+    ],
+    "id": "NACVVDTHYZ"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Highlander",
+    "model": "HGN-734r",
+    "bv": 0,
+    "intro": 3065,
+    "tags": [],
+    "sources": [],
+    "id": "NADFKCMFDQ"
+  },
+  {
+    "mtf": "Wolfhound WLF-4W.mtf",
+    "chassis": "Wolfhound",
+    "model": "WLF-4W",
+    "bv": 1090,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "NC0TM7XETR"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Pouncer",
+    "model": "(Oren)",
+    "bv": 0,
+    "intro": 3064,
+    "tags": [
+      "named"
+    ],
+    "sources": [],
+    "id": "NDQ7RWN2A1"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Grand Titan",
+    "model": "T-IT-N16M (Al-Hawad)",
+    "bv": 0,
+    "intro": 3068,
+    "tags": [
+      "named"
+    ],
+    "sources": [],
+    "id": "NDR2J6TME5"
+  },
+  {
+    "mtf": "Grasshopper GHR-7K.mtf",
+    "chassis": "Grasshopper",
+    "model": "GHR-7K \"Gravedigger\"",
+    "bv": 2084,
+    "intro": 3071,
+    "tags": [
+      "tro",
+      "named"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "NESSPXGQ9X"
+  },
+  {
+    "mtf": "Stealth STH-1D.mtf",
+    "chassis": "Stealth",
+    "model": "STH-1D (Anna)",
+    "bv": 1540,
+    "intro": 3065,
+    "tags": [
+      "named"
+    ],
+    "sources": [],
+    "id": "NHH38AER70"
+  },
+  {
+    "mtf": "Spider SDR-7K.mtf",
+    "chassis": "Spider",
+    "model": "SDR-7K",
+    "bv": 752,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "NHKP1QGW60"
+  },
+  {
+    "mtf": "Thunderbolt TDR-11SE.mtf",
+    "chassis": "Thunderbolt",
+    "model": "TDR-11SE",
+    "bv": 1754,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "NHM9NCA1J0"
+  },
+  {
+    "mtf": "Rifleman IIC 4.mtf",
+    "chassis": "Rifleman IIC",
+    "model": "4",
+    "bv": 2140,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:PP"
+    ],
+    "id": "NKTCJ84P39"
+  },
+  {
+    "mtf": "BattleAxe BKX-1X.mtf",
+    "chassis": "BattleAxe",
+    "model": "BKX-1X",
+    "bv": 1079,
+    "intro": 2459,
+    "tags": [
+      "lostech",
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Primitives II"
+    ],
+    "id": "NMCYFYRP0D"
+  },
+  {
+    "mtf": "Archangel C-ANG-OC Comminus.mtf",
+    "chassis": "Archangel",
+    "model": "C-ANG-OC Comminus",
+    "bv": 2014,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "NMKQBM97B7"
+  },
+  {
+    "mtf": "Ninja-To NJT-3.mtf",
+    "chassis": "Ninja-To",
+    "model": "NJT-3",
+    "bv": 1605,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "NRPT1ZJSAH"
+  },
+  {
+    "mtf": "Black Hawk-KU BHKU-O.mtf",
+    "chassis": "Black Hawk-KU",
+    "model": "BHKU-O (Albert)",
+    "bv": 2377,
+    "intro": 3070,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "JTP:Luthien",
+      "SB:S&D"
+    ],
+    "id": "NTNSAJB321"
+  },
+  {
+    "mtf": "Phoenix Hawk PXH-3D.mtf",
+    "chassis": "Phoenix Hawk",
+    "model": "PXH-3D (Jiemin)",
+    "bv": 1322,
+    "intro": 3065,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "OTP:FR"
+    ],
+    "id": "NV8H03RXTQ"
+  },
+  {
+    "mtf": "Dragonfly (Viper) I.mtf",
+    "chassis": "Dragonfly (Viper)",
+    "model": "I",
+    "bv": 1580,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "NVJPN17KPR"
+  },
+  {
+    "mtf": "Bear Cub.mtf",
+    "chassis": "Bear Cub",
+    "model": "",
+    "bv": 1052,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075"
+    ],
+    "id": "NYKVDT1WAE"
+  },
+  {
+    "mtf": "Marauder II MAD-4K.mtf",
+    "chassis": "Marauder II",
+    "model": "MAD-4K",
+    "bv": 2626,
+    "intro": 3070,
+    "tags": [],
+    "sources": [
+      "BattleCorps"
+    ],
+    "id": "P0K26DK5ZF"
+  },
+  {
+    "mtf": "BattleMaster BLR-1Gc.mtf",
+    "chassis": "BattleMaster",
+    "model": "BLR-1Gc",
+    "bv": 1577,
+    "intro": 2763,
+    "tags": [
+      "lostech",
+      "tro"
+    ],
+    "sources": [
+      "TR:3075"
+    ],
+    "id": "P4HH6079WT"
+  },
+  {
+    "mtf": "Gurkha GUR-8G.mtf",
+    "chassis": "Gurkha",
+    "model": "GUR-8G",
+    "bv": 1241,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:J"
+    ],
+    "id": "P6HMVE3R9X"
+  },
+  {
+    "mtf": "Crimson Langur B.mtf",
+    "chassis": "Crimson Langur",
+    "model": "B",
+    "bv": 2210,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "P6XHF3CRC6"
+  },
+  {
+    "mtf": "Malak C-MK-OD Luminos.mtf",
+    "chassis": "Malak",
+    "model": "C-MK-OD Luminos",
+    "bv": 1055,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "P8FYDC0HPV"
+  },
+  {
+    "mtf": "Zeus ZEU-10WB.mtf",
+    "chassis": "Zeus",
+    "model": "ZEU-10WB",
+    "bv": 2075,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "P8YFH6F56W"
+  },
+  {
+    "mtf": "Longbow LGB-8V.mtf",
+    "chassis": "Longbow",
+    "model": "LGB-8V",
+    "bv": 1808,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085"
+    ],
+    "id": "PFKGEVKQ6Q"
+  },
+  {
+    "mtf": "Dervish DV-9D.mtf",
+    "chassis": "Dervish",
+    "model": "DV-9D",
+    "bv": 1518,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "PGQXS8656Z"
+  },
+  {
+    "mtf": "Cataphract CTF-5D.mtf",
+    "chassis": "Cataphract",
+    "model": "CTF-5D",
+    "bv": 1742,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "PGW8QXNTX5"
+  },
+  {
+    "mtf": "Caesar CES-3S.mtf",
+    "chassis": "Caesar",
+    "model": "CES-3S",
+    "bv": 1909,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "PPKMK67HJ9"
+  },
+  {
+    "mtf": "Ocelot.mtf",
+    "chassis": "Ocelot",
+    "model": "",
+    "bv": 1439,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "PSQB7443DW"
+  },
+  {
+    "mtf": "Ymir BWP-X1.mtf",
+    "chassis": "Ymir",
+    "model": "BWP-X1",
+    "bv": 1194,
+    "intro": 2462,
+    "tags": [
+      "lostech"
+    ],
+    "sources": [],
+    "id": "PT1XQQ981G"
+  },
+  {
+    "mtf": "Templar TLR1-OE.mtf",
+    "chassis": "Templar",
+    "model": "TLR1-OE",
+    "bv": 1865,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:J"
+    ],
+    "id": "PT5EQVX4PM"
+  },
+  {
+    "mtf": "Lightray LGH-6W.mtf",
+    "chassis": "Lightray",
+    "model": "LGH-6W",
+    "bv": 1554,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "SB:W&B",
+      "TR:J"
+    ],
+    "id": "PVEVSNX2M1"
+  },
+  {
+    "mtf": "Assassin ASN-30.mtf",
+    "chassis": "Assassin",
+    "model": "ASN-30 (Alice)",
+    "bv": 1507,
+    "intro": 3066,
+    "tags": [
+      "named"
+    ],
+    "sources": [],
+    "id": "PVR9433VPK"
+  },
+  {
+    "mtf": "Razorback RZK-10T.mtf",
+    "chassis": "Razorback",
+    "model": "RZK-10T",
+    "bv": 1172,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "PXR68NMFTV"
+  },
+  {
+    "mtf": "Porcupine PRC-2N.mtf",
+    "chassis": "Porcupine",
+    "model": "PRC-2N",
+    "bv": 901,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "PZRKKGN5K2"
+  },
+  {
+    "mtf": "Warhammer WHM-7A.mtf",
+    "chassis": "Warhammer",
+    "model": "WHM-7A",
+    "bv": 1679,
+    "intro": 2761,
+    "tags": [
+      "lostech"
+    ],
+    "sources": [
+      "RG07",
+      "RGv1"
+    ],
+    "id": "Q18VJ9QE1H"
+  },
+  {
+    "mtf": "Fafnir FNR-5B.mtf",
+    "chassis": "Fafnir",
+    "model": "FNR-5B",
+    "bv": 2625,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067",
+      "TR:J"
+    ],
+    "id": "Q41C743BYN"
+  },
+  {
+    "mtf": "Wasp WSP-3S.mtf",
+    "chassis": "Wasp",
+    "model": "WSP-3S",
+    "bv": 595,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:PP",
+      "TR:CI"
+    ],
+    "id": "Q77DF724KD"
+  },
+  {
+    "mtf": "Xanthos XNT-4O.mtf",
+    "chassis": "Xanthos",
+    "model": "XNT-4O",
+    "bv": 2548,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:DA"
+    ],
+    "id": "Q8M8SCSPMA"
+  },
+  {
+    "mtf": "Hercules HRC-LS-9000.mtf",
+    "chassis": "Hercules",
+    "model": "HRC-LS-9000 (Julius)",
+    "bv": 1644,
+    "intro": 3065,
+    "tags": [
+      "named"
+    ],
+    "sources": [],
+    "id": "Q9KMZ483KA"
+  },
+  {
+    "mtf": "Wolverine WVR-8C.mtf",
+    "chassis": "Wolverine",
+    "model": "WVR-8C",
+    "bv": 1447,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:CI"
+    ],
+    "id": "QFHFR2HFES"
+  },
+  {
+    "mtf": "Hellfire 2.mtf",
+    "chassis": "Hellfire",
+    "model": "2",
+    "bv": 2370,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067",
+      "TR:J"
+    ],
+    "id": "QGBVSW5CQD"
+  },
+  {
+    "mtf": "Centurion CN9-Da.mtf",
+    "chassis": "Centurion",
+    "model": "CN9-Da",
+    "bv": 1035,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "QH178B01F4"
+  },
+  {
+    "mtf": "Grim Reaper GRM-R-PR30.mtf",
+    "chassis": "Grim Reaper",
+    "model": "GRM-R-PR30",
+    "bv": 1673,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:J"
+    ],
+    "id": "QJT1GHW3RQ"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Kodiak",
+    "model": "(Cale)",
+    "bv": 2535,
+    "intro": 3068,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "JTP:Dieron"
+    ],
+    "id": "QMN3G7KC6Y"
+  },
+  {
+    "mtf": "Daikyu DAI-03.mtf",
+    "chassis": "Daikyu",
+    "model": "DAI-03",
+    "bv": 1692,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "QNQKPZKNZD"
+  },
+  {
+    "mtf": "Excalibur EXC-CS.mtf",
+    "chassis": "Excalibur",
+    "model": "EXC-CS",
+    "bv": 2174,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:SW"
+    ],
+    "id": "QVNT187C84"
+  },
+  {
+    "mtf": "Hellspawn HSN-9F.mtf",
+    "chassis": "Hellspawn",
+    "model": "HSN-9F",
+    "bv": 1118,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067",
+      "TR:J"
+    ],
+    "id": "QVP9EAAYSA"
+  },
+  {
+    "mtf": "Firebee FRB-3E.mtf",
+    "chassis": "Firebee",
+    "model": "FRB-3E",
+    "bv": 1067,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:SW"
+    ],
+    "id": "QWFSV9NMY6"
+  },
+  {
+    "mtf": "Charger CGR-KMZ.mtf",
+    "chassis": "Charger",
+    "model": "CGR-KMZ",
+    "bv": 1781,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "QXXXDNBXYB"
+  },
+  {
+    "mtf": "Jenner JR7-C2.mtf",
+    "chassis": "Jenner",
+    "model": "JR7-C2",
+    "bv": 769,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "R0RD54TB95"
+  },
+  {
+    "mtf": "Arctic Wolf A.mtf",
+    "chassis": "Arctic Wolf",
+    "model": "A",
+    "bv": 1587,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "R22QJCPJ1Y"
+  },
+  {
+    "mtf": "Crossbow CRS-9A.mtf",
+    "chassis": "Crossbow",
+    "model": "CRS-9A",
+    "bv": 1583,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "R2C9S7RGE1"
+  },
+  {
+    "mtf": "Uziel UZL-2S.mtf",
+    "chassis": "Uziel",
+    "model": "UZL-2S (Jacob II)",
+    "bv": 1271,
+    "intro": 3071,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "SB:W&B"
+    ],
+    "id": "R2JMW1PC4M"
+  },
+  {
+    "mtf": "Assassin ASN-99.mtf",
+    "chassis": "Assassin",
+    "model": "ASN-99",
+    "bv": 1116,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "R2S2B7EKZW"
+  },
+  {
+    "mtf": "Annihilator ANH-4A.mtf",
+    "chassis": "Annihilator",
+    "model": "ANH-4A",
+    "bv": 1726,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "R3NDX8QSNX"
+  },
+  {
+    "mtf": "Thunderbolt TDR-7SE.mtf",
+    "chassis": "Thunderbolt",
+    "model": "TDR-7SE",
+    "bv": 1809,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:CI"
+    ],
+    "id": "R40AY3WRBP"
+  },
+  {
+    "mtf": "Phoenix Hawk IIC 4.mtf",
+    "chassis": "Phoenix Hawk IIC",
+    "model": "4",
+    "bv": 2483,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:J"
+    ],
+    "id": "RDSQHTYMCS"
+  },
+  {
+    "mtf": "Ti Ts'ang TSG-9H.mtf",
+    "chassis": "Ti Ts'ang",
+    "model": "TSG-9H (Jason)",
+    "bv": 1641,
+    "intro": 3068,
+    "tags": [
+      "named"
+    ],
+    "sources": [],
+    "id": "RDT5CHZWFS"
+  },
+  {
+    "mtf": "Piranha 3.mtf",
+    "chassis": "Piranha",
+    "model": "3",
+    "bv": 1142,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:CI"
+    ],
+    "id": "RF5PYCP59P"
+  },
+  {
+    "mtf": "Crimson Langur D.mtf",
+    "chassis": "Crimson Langur",
+    "model": "D",
+    "bv": 1867,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "RFDR53TRS2"
+  },
+  {
+    "mtf": "Catapult CPLT-H2.mtf",
+    "chassis": "Catapult",
+    "model": "CPLT-H2",
+    "bv": 1473,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "RJ5CAXFRQP"
+  },
+  {
+    "mtf": "Seraph C-SRP-OD Luminos.mtf",
+    "chassis": "Seraph",
+    "model": "C-SRP-OD Luminos",
+    "bv": 2291,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "RJRAYHHQH5"
+  },
+  {
+    "mtf": "Deva C-DVA-OC Comminus.mtf",
+    "chassis": "Deva",
+    "model": "C-DVA-OC Comminus",
+    "bv": 1743,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "RK8PM1P2MC"
+  },
+  {
+    "mtf": "Rabid Coyote 2.mtf",
+    "chassis": "Rabid Coyote",
+    "model": "2",
+    "bv": 2083,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "RPF84GXS08"
+  },
+  {
+    "mtf": "Grigori C-GRG-OC Comminus.mtf",
+    "chassis": "Grigori",
+    "model": "C-GRG-OC Comminus",
+    "bv": 1438,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "RST0SE8M1Q"
+  },
+  {
+    "mtf": "Pinion 2.mtf",
+    "chassis": "Pinion",
+    "model": "2",
+    "bv": 1657,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "RW3SR5ZGJ4"
+  },
+  {
+    "mtf": "Mackie MSK-5S.mtf",
+    "chassis": "Mackie",
+    "model": "MSK-5S",
+    "bv": 1436,
+    "intro": 2439,
+    "tags": [
+      "lostech",
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Primitives I"
+    ],
+    "id": "RW9KN46D12"
+  },
+  {
+    "mtf": "Osiris OSR-4D.mtf",
+    "chassis": "Osiris",
+    "model": "OSR-4D",
+    "bv": 1230,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067",
+      "TR:J"
+    ],
+    "id": "RXQRTVP37E"
+  },
+  {
+    "mtf": "Legionnaire LGN-1X.mtf",
+    "chassis": "Legionnaire",
+    "model": "LGN-1X",
+    "bv": 1322,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "RYNF3WATAH"
+  },
+  {
+    "mtf": "Tarantula ZPH-4A.mtf",
+    "chassis": "Tarantula",
+    "model": "ZPH-4A",
+    "bv": 967,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "RYZ1TFMMED"
+  },
+  {
+    "mtf": "Victor VTR-Cr.mtf",
+    "chassis": "Victor",
+    "model": "VTR-Cr",
+    "bv": 1465,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085"
+    ],
+    "id": "S0B52N3EJC"
+  },
+  {
+    "mtf": "Phantom F.mtf",
+    "chassis": "Phantom",
+    "model": "F",
+    "bv": 1375,
+    "intro": 3068,
+    "tags": [],
+    "sources": [
+      "RG27"
+    ],
+    "id": "S2BKFMXTEH"
+  },
+  {
+    "mtf": "Archer ARC-1A.mtf",
+    "chassis": "Archer",
+    "model": "ARC-1A",
+    "bv": 1269,
+    "intro": 2458,
+    "tags": [
+      "lostech",
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Primitives V"
+    ],
+    "id": "S40CKKAFEF"
+  },
+  {
+    "mtf": "Pack Hunter 4.mtf",
+    "chassis": "Pack Hunter",
+    "model": "4",
+    "bv": 1257,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "S4VC71THM5"
+  },
+  {
+    "mtf": "Puma (Adder) J.mtf",
+    "chassis": "Puma (Adder)",
+    "model": "J",
+    "bv": 1222,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "S521BPNNTZ"
+  },
+  {
+    "mtf": "Hatchetman HCT-5DD.mtf",
+    "chassis": "Hatchetman",
+    "model": "HCT-5DD",
+    "bv": 1112,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "S5S438H3SY"
+  },
+  {
+    "mtf": "Pillager PLG-5L.mtf",
+    "chassis": "Pillager",
+    "model": "PLG-5L",
+    "bv": 2656,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:SW"
+    ],
+    "id": "S88NQ61FK6"
+  },
+  {
+    "mtf": "Marauder IIC 3.mtf",
+    "chassis": "Marauder IIC",
+    "model": "3",
+    "bv": 2445,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:CI"
+    ],
+    "id": "S928J772EX"
+  },
+  {
+    "mtf": "Hunchback HBK-5H.mtf",
+    "chassis": "Hunchback",
+    "model": "HBK-5H",
+    "bv": 1097,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "S9Y5HGJKFZ"
+  },
+  {
+    "mtf": "Koto KTO-4A.mtf",
+    "chassis": "Koto",
+    "model": "KTO-4A",
+    "bv": 1073,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "SAFVX14HX2"
+  },
+  {
+    "mtf": "Preta C-PRT-O Invictus.mtf",
+    "chassis": "Preta",
+    "model": "C-PRT-O Invictus",
+    "bv": 1067,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "SBEK08VKN7"
+  },
+  {
+    "mtf": "Raptor RTX1-OG.mtf",
+    "chassis": "Raptor",
+    "model": "RTX1-OG",
+    "bv": 857,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:CI"
+    ],
+    "id": "SCJBSBN0JV"
+  },
+  {
+    "mtf": "Firefly FFL-4D.mtf",
+    "chassis": "Firefly",
+    "model": "FFL-4D",
+    "bv": 897,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "SCYY2391RK"
+  },
+  {
+    "mtf": "Shadow Hawk SHD-5D.mtf",
+    "chassis": "Shadow Hawk",
+    "model": "SHD-5D (Sandy)",
+    "bv": 1517,
+    "intro": 3068,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "BD:BH"
+    ],
+    "id": "SFJ71PRY27"
+  },
+  {
+    "mtf": "Shadow Hawk IIC 6.mtf",
+    "chassis": "Shadow Hawk IIC",
+    "model": "6",
+    "bv": 1907,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "SQZTWGEWZV"
+  },
+  {
+    "mtf": "JagerMech JM6-H.mtf",
+    "chassis": "JagerMech",
+    "model": "JM6-H",
+    "bv": 1348,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "SR0F7E36JV"
+  },
+  {
+    "mtf": "Goliath GOL-4S.mtf",
+    "chassis": "Goliath",
+    "model": "GOL-4S",
+    "bv": 1912,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:J"
+    ],
+    "id": "SZD8ZJB3E9"
+  },
+  {
+    "mtf": "Hussar HSR-950-D.mtf",
+    "chassis": "Hussar",
+    "model": "HSR-950-D",
+    "bv": 1131,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "T2X9NQ131W"
+  },
+  {
+    "mtf": "White Flame WHF-3C.mtf",
+    "chassis": "White Flame",
+    "model": "WHF-3C",
+    "bv": 1826,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:J"
+    ],
+    "id": "T383VMN21X"
+  },
+  {
+    "mtf": "Rifleman RFL-1N.mtf",
+    "chassis": "Rifleman",
+    "model": "RFL-1N",
+    "bv": 931,
+    "intro": 2504,
+    "tags": [
+      "lostech",
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Primitives IV"
+    ],
+    "id": "T3XZGZM2DF"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Snake",
+    "model": "(Arthur)",
+    "bv": 1477,
+    "intro": 3068,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "BD:YZ"
+    ],
+    "id": "T51J4NJ99B"
+  },
+  {
+    "mtf": "Galahad GLH-3D.mtf",
+    "chassis": "Galahad",
+    "model": "GLH-3D (Laodices)",
+    "bv": 1549,
+    "intro": 3070,
+    "tags": [
+      "tro",
+      "named"
+    ],
+    "sources": [
+      "JTP:Hesperus II",
+      "TR:J"
+    ],
+    "id": "T7CJEV64ZA"
+  },
+  {
+    "mtf": "Grim Reaper GRM-R-PR31.mtf",
+    "chassis": "Grim Reaper",
+    "model": "GRM-R-PR31",
+    "bv": 1655,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:J"
+    ],
+    "id": "T827VEDNWY"
+  },
+  {
+    "mtf": "Phoenix Hawk IIC 6.mtf",
+    "chassis": "Phoenix Hawk IIC",
+    "model": "6",
+    "bv": 2490,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "TB097AGP1X"
+  },
+  {
+    "mtf": "Gallowglas GAL-3GLS.mtf",
+    "chassis": "Gallowglas",
+    "model": "GAL-3GLS",
+    "bv": 2291,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:CI"
+    ],
+    "id": "TEW7GHZ78B"
+  },
+  {
+    "mtf": "Komodo KIM-2C.mtf",
+    "chassis": "Komodo",
+    "model": "KIM-2C",
+    "bv": 1533,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:J"
+    ],
+    "id": "TFC7H1S58T"
+  },
+  {
+    "mtf": "Archer ARC-7L.mtf",
+    "chassis": "Archer",
+    "model": "ARC-7L",
+    "bv": 1881,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:CI"
+    ],
+    "id": "TFPKBP7FZQ"
+  },
+  {
+    "mtf": "Hachiwara HCA-4T.mtf",
+    "chassis": "Hachiwara",
+    "model": "HCA-4T",
+    "bv": 1731,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "TFPKCYKWAB"
+  },
+  {
+    "mtf": "Sha Yu SYU-6B.mtf",
+    "chassis": "Sha Yu",
+    "model": "SYU-6B",
+    "bv": 1422,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:J"
+    ],
+    "id": "TG4QRXAFRT"
+  },
+  {
+    "mtf": "Firefly FFL-4DA.mtf",
+    "chassis": "Firefly",
+    "model": "FFL-4DA",
+    "bv": 921,
+    "intro": 3067,
+    "tags": [],
+    "sources": [
+      "SB:W&B"
+    ],
+    "id": "TGKQV9VXWZ"
+  },
+  {
+    "mtf": "Thunder Hawk TDK-7S.mtf",
+    "chassis": "Thunder Hawk",
+    "model": "TDK-7S",
+    "bv": 2440,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:SW"
+    ],
+    "id": "TH87NVKY7D"
+  },
+  {
+    "mtf": "Ryoken (Stormcrow) F.mtf",
+    "chassis": "Ryoken (Stormcrow)",
+    "model": "F",
+    "bv": 2227,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "TJK50E0MET"
+  },
+  {
+    "mtf": "Hunchback HBK-5SG.mtf",
+    "chassis": "Hunchback",
+    "model": "HBK-5SG",
+    "bv": 1577,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "TMA2FTM04M"
+  },
+  {
+    "mtf": "Jinggau JN-G8BX Rush.mtf",
+    "chassis": "Jinggau",
+    "model": "JN-G8BX (Rush)",
+    "bv": 1337,
+    "intro": 3070,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "JTP:Sian"
+    ],
+    "id": "TQ3KMTTY8Q"
+  },
+  {
+    "mtf": "Nightsky NGS-6S.mtf",
+    "chassis": "Nightsky",
+    "model": "NGS-6S",
+    "bv": 1474,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:CI"
+    ],
+    "id": "TQQSQCKE22"
+  },
+  {
+    "mtf": "Seraph C-SRP-OA Dominus.mtf",
+    "chassis": "Seraph",
+    "model": "C-SRP-OA Dominus",
+    "bv": 2338,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "TS5ZVRX99Y"
+  },
+  {
+    "mtf": "Annihilator ANH-3A.mtf",
+    "chassis": "Annihilator",
+    "model": "ANH-3A",
+    "bv": 1712,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "TTJFMVEBD3"
+  },
+  {
+    "mtf": "Arctic Fox AF1E.mtf",
+    "chassis": "Arctic Fox",
+    "model": "AF1E",
+    "bv": 1094,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "TV65PPW0WW"
+  },
+  {
+    "mtf": "Warlord BLR-2G.mtf",
+    "chassis": "Warlord",
+    "model": "BLR-2G",
+    "bv": 2033,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "TVFRBWPXKK"
+  },
+  {
+    "mtf": "Shadow Hawk SHD-5D.mtf",
+    "chassis": "Shadow Hawk",
+    "model": "SHD-5D",
+    "bv": 1684,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:PP"
+    ],
+    "id": "TW73DBNZDH"
+  },
+  {
+    "mtf": "Cataphract CTF-3LL.mtf",
+    "chassis": "Cataphract",
+    "model": "CTF-3LL",
+    "bv": 1664,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "TXMJE7W8C3"
+  },
+  {
+    "mtf": "Enfield END-6S.mtf",
+    "chassis": "Enfield",
+    "model": "END-6S",
+    "bv": 1413,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U"
+    ],
+    "id": "V0M6JYRSXZ"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Dasher (Fire Moth)",
+    "model": "(Aletha)",
+    "bv": 1388,
+    "intro": 3068,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "JTP:Dieron"
+    ],
+    "id": "V23BMFAJNQ"
+  },
+  {
+    "mtf": "Merlin MLN-1B.mtf",
+    "chassis": "Merlin",
+    "model": "MLN-1B (Porter)",
+    "bv": 1233,
+    "intro": 3064,
+    "tags": [
+      "named"
+    ],
+    "sources": [],
+    "id": "V4BM0HSSJK"
+  },
+  {
+    "mtf": "Ostroc OSR-5W.mtf",
+    "chassis": "Ostroc",
+    "model": "OSR-5W",
+    "bv": 1655,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085"
+    ],
+    "id": "V5HRKHJGDB"
+  },
+  {
+    "mtf": "Dragonfly (Viper) G.mtf",
+    "chassis": "Dragonfly (Viper)",
+    "model": "G",
+    "bv": 1574,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "V5RNW8DH4W"
+  },
+  {
+    "mtf": "Nova Cat F.mtf",
+    "chassis": "Nova Cat",
+    "model": "F",
+    "bv": 2706,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060",
+      "RG23"
+    ],
+    "id": "V8APXBSMY8"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Sarissa",
+    "model": "MN1-K",
+    "bv": 0,
+    "intro": 2479,
+    "tags": [
+      "lostech"
+    ],
+    "sources": [],
+    "id": "VB60GT2ZY4"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Ti Ts'ang",
+    "model": "\"China Doll\"",
+    "bv": 1739,
+    "intro": 3067,
+    "tags": [
+      "named"
+    ],
+    "sources": [],
+    "id": "VD8KZA7VGY"
+  },
+  {
+    "mtf": "Griffin GRF-5K.mtf",
+    "chassis": "Griffin",
+    "model": "GRF-5K",
+    "bv": 1390,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "VEKA483H1J"
+  },
+  {
+    "mtf": "Lancelot LNC25-08.mtf",
+    "chassis": "Lancelot",
+    "model": "LNC25-08",
+    "bv": 1162,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "VFNADZSYS1"
+  },
+  {
+    "mtf": "Rifleman RFL-8X.mtf",
+    "chassis": "Rifleman",
+    "model": "RFL-8X",
+    "bv": 1798,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085"
+    ],
+    "id": "VFTY364EN4"
+  },
+  {
+    "mtf": "Hatchetman HCT-6S.mtf",
+    "chassis": "Hatchetman",
+    "model": "HCT-6S",
+    "bv": 1174,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "VJ6SMS38X0"
+  },
+  {
+    "mtf": "Hussar HSR-900-D.mtf",
+    "chassis": "Hussar",
+    "model": "HSR-900-D",
+    "bv": 551,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "VJZYQMENFV"
+  },
+  {
+    "mtf": "Nexus II NXS2-A.mtf",
+    "chassis": "Nexus II",
+    "model": "NXS2-A",
+    "bv": 702,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U",
+      "TR:J"
+    ],
+    "id": "VNT43DN4J6"
+  },
+  {
+    "mtf": "Bear Cub 2.mtf",
+    "chassis": "Bear Cub",
+    "model": "2",
+    "bv": 988,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075"
+    ],
+    "id": "VRMMTWMP93"
+  },
+  {
+    "mtf": "Lao Hu LHU-3L.mtf",
+    "chassis": "Lao Hu",
+    "model": "LHU-3L",
+    "bv": 1995,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:J"
+    ],
+    "id": "VRP2JA4AJY"
+  },
+  {
+    "mtf": "Jupiter.mtf",
+    "chassis": "Jupiter",
+    "model": "",
+    "bv": 2784,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:DA"
+    ],
+    "id": "VZ7F8TD2PJ"
+  },
+  {
+    "mtf": "Wolverine WVR-1R.mtf",
+    "chassis": "Wolverine",
+    "model": "WVR-1R",
+    "bv": 885,
+    "intro": 2471,
+    "tags": [
+      "lostech",
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Primitives V"
+    ],
+    "id": "W0CB88YG29"
+  },
+  {
+    "mtf": "Longshot LNG-4.mtf",
+    "chassis": "Longshot",
+    "model": "LNG-4",
+    "bv": 1086,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "W0DAZCTCZC"
+  },
+  {
+    "mtf": "Malak C-MK-OB Infernus.mtf",
+    "chassis": "Malak",
+    "model": "C-MK-OB Infernus",
+    "bv": 1047,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "W1M7KG7NT4"
+  },
+  {
+    "mtf": "BattleMaster BLR-M3.mtf",
+    "chassis": "BattleMaster",
+    "model": "BLR-M3",
+    "bv": 1674,
+    "intro": 3070,
+    "tags": [],
+    "sources": [
+      "BattleCorps"
+    ],
+    "id": "W1S7QTP2DT"
+  },
+  {
+    "mtf": "Panther PNT-16K.mtf",
+    "chassis": "Panther",
+    "model": "PNT-16K",
+    "bv": 988,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "W2XTK0CKDJ"
+  },
+  {
+    "mtf": "Lineholder KW1-LH8.mtf",
+    "chassis": "Lineholder",
+    "model": "KW1-LH8 \"Linebreaker\"",
+    "bv": 1330,
+    "intro": 3065,
+    "tags": [
+      "tro",
+      "named"
+    ],
+    "sources": [
+      "TR:3058U"
+    ],
+    "id": "W3G6WRXZ2R"
+  },
+  {
+    "mtf": "Templar TLR1-O.mtf",
+    "chassis": "Templar",
+    "model": "TLR1-O (Tancred)",
+    "bv": 2273,
+    "intro": 3067,
+    "tags": [
+      "tro",
+      "named"
+    ],
+    "sources": [
+      "TR:3067",
+      "TR:J"
+    ],
+    "id": "W3GK9K4J8G"
+  },
+  {
+    "mtf": "Wight WGT-1LAWSC3.mtf",
+    "chassis": "Wight",
+    "model": "WGT-1LAW/SC3",
+    "bv": 1057,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "W40052CABJ"
+  },
+  {
+    "mtf": "Crossbow D.mtf",
+    "chassis": "Crossbow",
+    "model": "D",
+    "bv": 1154,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:CI"
+    ],
+    "id": "W4M8MCZT1B"
+  },
+  {
+    "mtf": "Marauder II MAD-4S.mtf",
+    "chassis": "Marauder II",
+    "model": "MAD-4S",
+    "bv": 2623,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:CI"
+    ],
+    "id": "W4S0F3ZABR"
+  },
+  {
+    "mtf": "Marauder MAD-9W.mtf",
+    "chassis": "Marauder",
+    "model": "MAD-9W",
+    "bv": 1788,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "TR:CI"
+    ],
+    "id": "W84VJAV7P5"
+  },
+  {
+    "mtf": "Gallowglas GAL-4GLSA.mtf",
+    "chassis": "Gallowglas",
+    "model": "GAL-4GLSA",
+    "bv": 2017,
+    "intro": 3067,
+    "tags": [],
+    "sources": [
+      "SB:W&B"
+    ],
+    "id": "W8XZ8F2P2S"
+  },
+  {
+    "mtf": "Hammerhands HMH-5D.mtf",
+    "chassis": "Hammerhands",
+    "model": "HMH-5D",
+    "bv": 1496,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:SW"
+    ],
+    "id": "W92A46K93H"
+  },
+  {
+    "mtf": "Morpheus MRP-3T.mtf",
+    "chassis": "Morpheus",
+    "model": "MRP-3T",
+    "bv": 1925,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "W93W9R72G3"
+  },
+  {
+    "mtf": "Stalker STK-8S.mtf",
+    "chassis": "Stalker",
+    "model": "STK-8S",
+    "bv": 2020,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "WCSMVS970G"
+  },
+  {
+    "mtf": "Longbow LGB-13NAIS.mtf",
+    "chassis": "Longbow",
+    "model": "LGB-13NAIS",
+    "bv": 1804,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "WDFPPF30G3"
+  },
+  {
+    "mtf": "Fenris (Ice Ferret) L.mtf",
+    "chassis": "Fenris (Ice Ferret)",
+    "model": "L",
+    "bv": 1380,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:CI"
+    ],
+    "id": "WE1XVFYGGP"
+  },
+  {
+    "mtf": "Whitworth WTH-3.mtf",
+    "chassis": "Whitworth",
+    "model": "WTH-3",
+    "bv": 882,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "WEVF6FVTDE"
+  },
+  {
+    "mtf": "Highlander HGN-641-X-2.mtf",
+    "chassis": "Highlander",
+    "model": "HGN-641-X-2",
+    "bv": 2185,
+    "intro": 3070,
+    "tags": [
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Comstar"
+    ],
+    "id": "WEVNJT916E"
+  },
+  {
+    "mtf": "Commando COM-1A.mtf",
+    "chassis": "Commando",
+    "model": "COM-1A",
+    "bv": 475,
+    "intro": 2463,
+    "tags": [
+      "lostech",
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Primitives I"
+    ],
+    "id": "WHZND3AG7D"
+  },
+  {
+    "mtf": "Strider SR1-OX.mtf",
+    "chassis": "Strider",
+    "model": "SR1-OX",
+    "bv": 889,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:CI"
+    ],
+    "id": "WJG7QBF1DW"
+  },
+  {
+    "mtf": "Hatamoto-Chi HTM-28Tr.mtf",
+    "chassis": "Hatamoto-Chi",
+    "model": "HTM-28Tr",
+    "bv": 2034,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085"
+    ],
+    "id": "WNY383EVB0"
+  },
+  {
+    "mtf": "Great Wyrm 2.mtf",
+    "chassis": "Great Wyrm",
+    "model": "2",
+    "bv": 1667,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "WVATMPN11F"
+  },
+  {
+    "mtf": "Thor (Summoner) G.mtf",
+    "chassis": "Thor (Summoner)",
+    "model": "G",
+    "bv": 2452,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:CI"
+    ],
+    "id": "WVCV1S96GM"
+  },
+  {
+    "mtf": "Panther PNT-14S.mtf",
+    "chassis": "Panther",
+    "model": "PNT-14S",
+    "bv": 825,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "WXRZWWFWE3"
+  },
+  {
+    "mtf": "BattleMaster BLR-4S.mtf",
+    "chassis": "BattleMaster",
+    "model": "BLR-4S (Calvin II)",
+    "bv": 2274,
+    "intro": 3071,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "SB:W&B"
+    ],
+    "id": "WXVWQ9P8TE"
+  },
+  {
+    "mtf": "Linebacker F.mtf",
+    "chassis": "Linebacker",
+    "model": "F",
+    "bv": 1928,
+    "intro": 3068,
+    "tags": [],
+    "sources": [
+      "RG06"
+    ],
+    "id": "WYBMYPRB2R"
+  },
+  {
+    "mtf": "Duan Gung D9-G10.mtf",
+    "chassis": "Duan Gung",
+    "model": "D9-G10",
+    "bv": 886,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "WZN40GRDCD"
+  },
+  {
+    "mtf": "Matador 2.mtf",
+    "chassis": "Matador",
+    "model": "2",
+    "bv": 1728,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "X24DG05FT5"
+  },
+  {
+    "mtf": "Blood Kite 2.mtf",
+    "chassis": "Blood Kite",
+    "model": "2",
+    "bv": 3122,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "X3F30VMDXX"
+  },
+  {
+    "mtf": "Cicada CDA-3MA.mtf",
+    "chassis": "Cicada",
+    "model": "CDA-3MA",
+    "bv": 1158,
+    "intro": 3068,
+    "tags": [
+      "tro",
+      "engine"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "X4B0W6RPE0"
+  },
+  {
+    "mtf": "Arctic Wolf Prime.mtf",
+    "chassis": "Arctic Wolf",
+    "model": "Prime",
+    "bv": 1641,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "X9H7YE0H6N"
+  },
+  {
+    "mtf": "Thunderbolt TDR-1C.mtf",
+    "chassis": "Thunderbolt",
+    "model": "TDR-1C",
+    "bv": 1237,
+    "intro": 2491,
+    "tags": [
+      "lostech",
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Primitives III"
+    ],
+    "id": "XAMFDMKK68"
+  },
+  {
+    "mtf": "Longbow LGB-13C.mtf",
+    "chassis": "Longbow",
+    "model": "LGB-13C",
+    "bv": 1397,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "XC5WYC05N4"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Hellhound II-P (Hellcat-P)",
+    "model": "",
+    "bv": 1777,
+    "intro": 3065,
+    "tags": [],
+    "sources": [
+      "RG30"
+    ],
+    "id": "XCRTBV58RB"
+  },
+  {
+    "mtf": "Copperhead CPR-HD-003.mtf",
+    "chassis": "Copperhead",
+    "model": "CPR-HD-003",
+    "bv": 1117,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "XDZAZNFENJ"
+  },
+  {
+    "mtf": "UrbanMech UM-R68.mtf",
+    "chassis": "UrbanMech",
+    "model": "UM-R68",
+    "bv": 561,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "XHE9HMV407"
+  },
+  {
+    "mtf": "Atlas AS7-S3-DC.mtf",
+    "chassis": "Atlas",
+    "model": "AS7-S3-DC",
+    "bv": 2276,
+    "intro": 3064,
+    "tags": [],
+    "sources": [
+      "RG24",
+      "RGv1"
+    ],
+    "id": "XHJX4WJ3TR"
+  },
+  {
+    "mtf": "Wasp WSP-7MAF.mtf",
+    "chassis": "Wasp",
+    "model": "WSP-7MAF",
+    "bv": 488,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085",
+      "BattleCorps"
+    ],
+    "id": "XJ9T6Q3TKG"
+  },
+  {
+    "mtf": "UrbanMech UM-R70.mtf",
+    "chassis": "UrbanMech",
+    "model": "UM-R70",
+    "bv": 724,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "XM70422FFX"
+  },
+  {
+    "mtf": "Vulcan VT-6C.mtf",
+    "chassis": "Vulcan",
+    "model": "VT-6C",
+    "bv": 959,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "XRGCAJVDEJ"
+  },
+  {
+    "mtf": "Shadow Cat J.mtf",
+    "chassis": "Shadow Cat",
+    "model": "J",
+    "bv": 1802,
+    "intro": 3071,
+    "tags": [],
+    "sources": [
+      "RG09"
+    ],
+    "id": "Y0RV4FSHQ4"
+  },
+  {
+    "mtf": "Cicada CDA-3P.mtf",
+    "chassis": "Cicada",
+    "model": "CDA-3P",
+    "bv": 1502,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "Y1QEJZ9PZ8"
+  },
+  {
+    "mtf": "Legacy LGC-02.mtf",
+    "chassis": "Legacy",
+    "model": "LGC-02",
+    "bv": 2033,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067",
+      "TR:J"
+    ],
+    "id": "Y2BTYQAG7P"
+  },
+  {
+    "mtf": "N/A",
+    "chassis": "Morpheus",
+    "model": "\"L'Morte II\"",
+    "bv": 0,
+    "intro": 3067,
+    "tags": [
+      "named"
+    ],
+    "sources": [],
+    "id": "Y59RDWKY7B"
+  },
+  {
+    "mtf": "Silver Fox SVR-5Y.mtf",
+    "chassis": "Silver Fox",
+    "model": "SVR-5Y",
+    "bv": 1316,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "Y6KZ8A3EYZ"
+  },
+  {
+    "mtf": "Marauder IIC 5.mtf",
+    "chassis": "Marauder IIC",
+    "model": "5",
+    "bv": 2386,
+    "intro": 3070,
+    "tags": [],
+    "sources": [
+      "BattleCorps"
+    ],
+    "id": "Y6NG4D1GYK"
+  },
+  {
+    "mtf": "Vulture (Mad Dog) E.mtf",
+    "chassis": "Vulture (Mad Dog)",
+    "model": "E",
+    "bv": 2031,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "Y6YRYVZGGT"
+  },
+  {
+    "mtf": "Phoenix Hawk PXH-7CS.mtf",
+    "chassis": "Phoenix Hawk",
+    "model": "PXH-7CS",
+    "bv": 1281,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:PP",
+      "TR:CI"
+    ],
+    "id": "Y7ZNA3ANWC"
+  },
+  {
+    "mtf": "Nobori-nin (Huntsman) N.mtf",
+    "chassis": "Nobori-nin (Huntsman)",
+    "model": "N",
+    "bv": 2556,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3058U",
+      "TR:CI"
+    ],
+    "id": "Y8G47WEBRP"
+  },
+  {
+    "mtf": "Sentinel STN-C.mtf",
+    "chassis": "Sentinel",
+    "model": "STN-C",
+    "bv": 689,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "Y9PTHJ4Y53"
+  },
+  {
+    "mtf": "Marauder MAD-5L.mtf",
+    "chassis": "Marauder",
+    "model": "MAD-5L",
+    "bv": 2244,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:CI"
+    ],
+    "id": "YAH67S2D5Z"
+  },
+  {
+    "mtf": "BattleMaster BLR-K3.mtf",
+    "chassis": "BattleMaster",
+    "model": "BLR-K3",
+    "bv": 1851,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:CI"
+    ],
+    "id": "YB4FH1D2PQ"
+  },
+  {
+    "mtf": "Wyvern IIC 2.mtf",
+    "chassis": "Wyvern IIC",
+    "model": "2",
+    "bv": 1537,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060"
+    ],
+    "id": "YBESE24PQH"
+  },
+  {
+    "mtf": "Chimera CMA-2k.mtf",
+    "chassis": "Chimera",
+    "model": "CMA-2K",
+    "bv": 1528,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:J"
+    ],
+    "id": "YBKQH8G6VA"
+  },
+  {
+    "mtf": "Anubis ABS-3T.mtf",
+    "chassis": "Anubis",
+    "model": "ABS-3T",
+    "bv": 1150,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "YC3BQYXWFH"
+  },
+  {
+    "mtf": "Vixen (Incubus) 4.mtf",
+    "chassis": "Vixen (Incubus)",
+    "model": "4",
+    "bv": 1581,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "YE8YDJEJ67"
+  },
+  {
+    "mtf": "Shadow Hawk SHD-7M.mtf",
+    "chassis": "Shadow Hawk",
+    "model": "SHD-7M",
+    "bv": 1447,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:PP"
+    ],
+    "id": "YHVB1D16ZM"
+  },
+  {
+    "mtf": "Red Shift RDS-3A.mtf",
+    "chassis": "Red Shift",
+    "model": "RDS-3A",
+    "bv": 869,
+    "intro": 3068,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:J"
+    ],
+    "id": "YKF0X0D1QY"
+  },
+  {
+    "mtf": "Archangel C-ANG-OA Dominus.mtf",
+    "chassis": "Archangel",
+    "model": "C-ANG-OA Dominus",
+    "bv": 2134,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "YPQCCKQZWK"
+  },
+  {
+    "mtf": "Katana (Crockett) CRK-5003-CJ.mtf",
+    "chassis": "Katana (Crockett)",
+    "model": "CRK-5003-CJ",
+    "bv": 1844,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "YS4HX5XF51"
+  },
+  {
+    "mtf": "Banshee BNC-8S.mtf",
+    "chassis": "Banshee",
+    "model": "BNC-8S",
+    "bv": 2408,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "YT1Y0HEHGV"
+  },
+  {
+    "mtf": "Ostsol OTL-5D.mtf",
+    "chassis": "Ostsol",
+    "model": "OTL-5D",
+    "bv": 1333,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:J"
+    ],
+    "id": "YT230YW2BE"
+  },
+  {
+    "mtf": "Dasher (Fire Moth) F.mtf",
+    "chassis": "Dasher (Fire Moth)",
+    "model": "F",
+    "bv": 1461,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:CI"
+    ],
+    "id": "YV460HNPR3"
+  },
+  {
+    "mtf": "Axman AXM-3Sr.mtf",
+    "chassis": "Axman",
+    "model": "AXM-3Sr",
+    "bv": 1734,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085"
+    ],
+    "id": "YW5D6CVZGQ"
+  },
+  {
+    "mtf": "Lancelot LNC25-06.mtf",
+    "chassis": "Lancelot",
+    "model": "LNC25-06",
+    "bv": 1661,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "YWZ03WDBVG"
+  },
+  {
+    "mtf": "BattleMaster BLR-CM.mtf",
+    "chassis": "BattleMaster",
+    "model": "BLR-CM",
+    "bv": 1883,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:CI"
+    ],
+    "id": "YY10DH81QG"
+  },
+  {
+    "mtf": "Copperhead CPR-HD-004.mtf",
+    "chassis": "Copperhead",
+    "model": "CPR-HD-004",
+    "bv": 1151,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "YYPN23Y7WG"
+  },
+  {
+    "mtf": "Buccaneer BCN-5W.mtf",
+    "chassis": "Buccaneer",
+    "model": "BCN-5W",
+    "bv": 1393,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060",
+      "BattleCorps"
+    ],
+    "id": "YZXB3MN9WM"
+  },
+  {
+    "mtf": "Sentinel STN-5WB.mtf",
+    "chassis": "Sentinel",
+    "model": "STN-5WB",
+    "bv": 999,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "Z1BFVJZMHV"
+  },
+  {
+    "mtf": "Bellerophon BEL-1X.mtf",
+    "chassis": "Bellerophon",
+    "model": "BEL-1X",
+    "bv": 957,
+    "intro": 2442,
+    "tags": [
+      "lostech",
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Primitives III"
+    ],
+    "id": "Z1HXBJZJTM"
+  },
+  {
+    "mtf": "Night Gyr F.mtf",
+    "chassis": "Night Gyr",
+    "model": "F",
+    "bv": 2958,
+    "intro": 3069,
+    "tags": [],
+    "sources": [
+      "RG22"
+    ],
+    "id": "Z2S85T41J2"
+  },
+  {
+    "mtf": "Argus AGS-5D.mtf",
+    "chassis": "Argus",
+    "model": "AGS-5D",
+    "bv": 2065,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:CI"
+    ],
+    "id": "Z41RV81Z13"
+  },
+  {
+    "mtf": "Uziel UZL-2S.mtf",
+    "chassis": "Uziel",
+    "model": "UZL-2S (Jacob)",
+    "bv": 1513,
+    "intro": 3070,
+    "tags": [
+      "named"
+    ],
+    "sources": [
+      "SB:W&B"
+    ],
+    "id": "Z4Z55HTVCJ"
+  },
+  {
+    "mtf": "Cyclops CP-11-H.mtf",
+    "chassis": "Cyclops",
+    "model": "CP-11-H",
+    "bv": 1525,
+    "intro": 3064,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "Z5GWFEABRD"
+  },
+  {
+    "mtf": "Thunderbolt TDR-9NAIS.mtf",
+    "chassis": "Thunderbolt",
+    "model": "TDR-9NAIS",
+    "bv": 1864,
+    "intro": 3067,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085S",
+      "TR:PP"
+    ],
+    "id": "Z7HY4PD3RR"
+  },
+  {
+    "mtf": "Emperor EMP-1A.mtf",
+    "chassis": "Emperor",
+    "model": "EMP-1A",
+    "bv": 1453,
+    "intro": 2442,
+    "tags": [
+      "lostech",
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Primitives IV"
+    ],
+    "id": "Z7K50C4XYV"
+  },
+  {
+    "mtf": "Crimson Langur A.mtf",
+    "chassis": "Crimson Langur",
+    "model": "A",
+    "bv": 2003,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "Z85SCYXBGD"
+  },
+  {
+    "mtf": "Griffin GRF-1A.mtf",
+    "chassis": "Griffin",
+    "model": "GRF-1A",
+    "bv": 1024,
+    "intro": 2465,
+    "tags": [
+      "lostech",
+      "xtro"
+    ],
+    "sources": [
+      "XTR:Primitives IV"
+    ],
+    "id": "ZB6N6J056S"
+  },
+  {
+    "mtf": "Flea FLE-20.mtf",
+    "chassis": "Flea",
+    "model": "FLE-20",
+    "bv": 791,
+    "intro": 3071,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3050",
+      "TR:3050U"
+    ],
+    "id": "ZEECHJ2935"
+  },
+  {
+    "mtf": "Men Shen MS1-OE.mtf",
+    "chassis": "Men Shen",
+    "model": "MS1-OE",
+    "bv": 1625,
+    "intro": 3070,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3060",
+      "TR:J"
+    ],
+    "id": "ZEWFBYZ7G0"
+  },
+  {
+    "mtf": "Loki (Hellbringer) E.mtf",
+    "chassis": "Loki (Hellbringer)",
+    "model": "E",
+    "bv": 2304,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:CI"
+    ],
+    "id": "ZFXX3444AH"
+  },
+  {
+    "mtf": "Naginata NG-C3C.mtf",
+    "chassis": "Naginata",
+    "model": "NG-C3C",
+    "bv": 2131,
+    "intro": 3066,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3055U"
+    ],
+    "id": "ZKR9GK9BW1"
+  },
+  {
+    "mtf": "Preta C-PRT-OD Luminos.mtf",
+    "chassis": "Preta",
+    "model": "C-PRT-OD Luminos",
+    "bv": 1158,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:J"
+    ],
+    "id": "ZKZH44A7HR"
+  },
+  {
+    "mtf": "BattleAxe BKX-7K.mtf",
+    "chassis": "BattleAxe",
+    "model": "BKX-7K",
+    "bv": 1329,
+    "intro": 2475,
+    "tags": [
+      "lostech",
+      "tro"
+    ],
+    "sources": [
+      "TR:3075",
+      "TR:SW"
+    ],
+    "id": "ZPBA0WDHP6"
+  },
+  {
+    "mtf": "Phoenix Hawk PXH-5L.mtf",
+    "chassis": "Phoenix Hawk",
+    "model": "PXH-5L",
+    "bv": 1530,
+    "intro": 3069,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3085"
+    ],
+    "id": "ZSDJGMC827"
+  },
+  {
+    "mtf": "Crimson Langur C.mtf",
+    "chassis": "Crimson Langur",
+    "model": "C",
+    "bv": 1437,
+    "intro": 3065,
+    "tags": [
+      "tro"
+    ],
+    "sources": [
+      "TR:3067"
+    ],
+    "id": "ZYBFXZ7YN8"
+  }
+]
