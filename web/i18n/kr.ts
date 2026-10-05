@@ -625,11 +625,11 @@ export const kr: Catalog = {
   "res.killed": "; 격파",
   "res.destroyedTail": "; 파괴됨 {locs}",
 
-  "res.critHeader": "크리티컬 굴림 2D6 = {roll} ({count})",
-  "res.critNone": "크리티컬 없음",
-  "res.critOne": "크리티컬 1회",
-  "res.critTwo": "크리티컬 2회",
-  "res.critThree": "크리티컬 3회",
+  "res.critHeader": "{loc} 크리티컬 굴림 2D6 = {roll} ({count})",
+  "res.critNone": "크리티컬 없음(<=7)",
+  "res.critOne": "크리티컬 1회(8,9)",
+  "res.critTwo": "크리티컬 2회(10,11)",
+  "res.critThree": "크리티컬 3회(=12)",
   "res.critHeadBlownOff": "; 머리 절단 — 격파",
   "res.critArmBlownOff": "; {arm} 절단",
   "res.critLegBlownOff": "; {leg} 절단 — 파일럿 낙하 피해",
@@ -641,7 +641,7 @@ export const kr: Catalog = {
   "res.critEngineDestroyed": "{loc} #{slot} 엔진 파괴 — 메크 격파",
   "res.critNoEffect": "{loc} 재굴림 — 남은 크리티컬 가능 슬롯 없음",
   "res.critTransferred": " ({from}에서 이전)",
-  "res.throughArmorTag": "관통 크리티컬",
+  "res.throughArmorTag": "관통",
   "res.critCluster": "폭발이 {loc}에서 새로운 결정 굴림을 유발",
 
   // phase prompt
