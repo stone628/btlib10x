@@ -1,0 +1,388 @@
+{
+  "model": "VTR-10S",
+  "name": "Victor",
+  "tonnage": 80,
+  "weightClass": "Assault",
+  "techBase": "Inner Sphere",
+  "walking": 4,
+  "running": 6,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 43,
+    "rightTorso": 32,
+    "leftTorso": 32,
+    "rightArm": 20,
+    "leftArm": 20,
+    "rightLeg": 26,
+    "leftLeg": 26,
+    "centerTorsoRear": 10,
+    "rightTorsoRear": 7,
+    "leftTorsoRear": 7
+  },
+  "weapons": [
+    {
+      "weapon": "ER Medium Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "ER Medium Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "Heavy Gauss Rifle",
+      "location": "rightTorso",
+      "shots": 12
+    },
+    {
+      "weapon": "Gauss Rifle",
+      "location": "rightArm",
+      "shots": 16
+    },
+    {
+      "weapon": "SRM 4",
+      "location": "leftTorso",
+      "shots": 25
+    },
+    {
+      "weapon": "Anti-Missile System",
+      "location": "leftTorso",
+      "shots": 12
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Heavy Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Heavy Gauss Rifle"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "SRM 4"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Anti-Missile System"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Anti-Missile System"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "SRM 4"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Heavy Gauss Rifle"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Heavy Gauss Rifle"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Heavy Gauss Rifle"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Heavy Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Heavy Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Heavy Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Heavy Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Heavy Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Heavy Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Heavy Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Heavy Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Heavy Gauss Rifle"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ER Medium Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ER Medium Laser"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Gauss Rifle"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 10
+  },
+  "myomer": "Standard"
+}

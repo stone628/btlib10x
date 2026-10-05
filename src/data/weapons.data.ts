@@ -121,6 +121,17 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     category: "EQUIPMENT",
     heat: 0,
   },
+  // Source: BattleTechWiki (Sarna) "Binary Laser Cannon", not the TW rulebook.
+  // Inner Sphere only; 9 tons, 4 critical slots.
+  {
+    name: "Binary Laser Cannon",
+    short: 5,
+    medium: 10,
+    long: 15,
+    damage: 12,
+    category: "ENERGY",
+    heat: 16,
+  },
   {
     name: "CL Active Probe",
     short: 0,
@@ -610,6 +621,9 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     heat: 0,
     physicalWeapon: true,
   },
+  // Source: BattleTechWiki (Sarna) "Heavy Gauss Rifle", not the TW rulebook.
+  // 18 tons, 11 critical slots, 4 shots/ton; a 25-point explosion (contained
+  // by CASE) when the capacitors are hit.
   {
     name: "Heavy Gauss Rifle",
     short: 6,
@@ -717,6 +731,8 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     category: "BALLISTIC",
     heat: 1,
   },
+  // Source: BattleTechWiki (Sarna) "Light Gauss Rifle", not the TW rulebook.
+  // 5 critical slots, 16 shots/ton.
   {
     name: "Light Gauss Rifle",
     short: 8,
