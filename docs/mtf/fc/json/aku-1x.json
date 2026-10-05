@@ -1,0 +1,392 @@
+{
+  "model": "AKU-1X",
+  "name": "Akuma",
+  "tonnage": 90,
+  "weightClass": "Assault",
+  "techBase": "Inner Sphere",
+  "walking": 3,
+  "running": 5,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 58,
+    "rightTorso": 38,
+    "leftTorso": 38,
+    "rightArm": 30,
+    "leftArm": 30,
+    "rightLeg": 38,
+    "leftLeg": 38,
+    "centerTorsoRear": 15,
+    "rightTorsoRear": 10,
+    "leftTorsoRear": 10
+  },
+  "weapons": [
+    {
+      "weapon": "ER PPC",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "Medium Pulse Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "Streak SRM 4",
+      "location": "leftArm",
+      "shots": 25
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "MRM 30",
+      "location": "leftTorso",
+      "shots": 16
+    },
+    {
+      "weapon": "Streak SRM 6",
+      "location": "centerTorso",
+      "shots": 15
+    },
+    {
+      "weapon": "LB 10-X AC",
+      "location": "rightTorso",
+      "shots": 20
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Streak SRM 6"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Streak SRM 6"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "weapon",
+        "weapon": "MRM 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "MRM 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "MRM 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "MRM 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "MRM 30"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "MRM 30"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "MRM 30"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Streak SRM 6"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ER PPC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ER PPC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ER PPC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Pulse Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Streak SRM 4"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Streak SRM 4"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "handActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Laser"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 13
+  },
+  "myomer": "Standard"
+}

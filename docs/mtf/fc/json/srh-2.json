@@ -1,0 +1,421 @@
+{
+  "model": "SRH-2",
+  "name": "Behemoth",
+  "clanName": "Stone Rhino",
+  "tonnage": 100,
+  "weightClass": "Assault",
+  "techBase": "Clan",
+  "walking": 3,
+  "running": 5,
+  "jumping": 3,
+  "armor": {
+    "head": 9,
+    "centerTorso": 59,
+    "rightTorso": 42,
+    "leftTorso": 42,
+    "rightArm": 34,
+    "leftArm": 34,
+    "rightLeg": 42,
+    "leftLeg": 42,
+    "centerTorsoRear": 15,
+    "rightTorsoRear": 10,
+    "leftTorsoRear": 10
+  },
+  "weapons": [
+    {
+      "weapon": "CL Heavy Large Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Heavy Medium Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Heavy Small Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Heavy Large Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Heavy Medium Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Heavy Small Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Gauss Rifle",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL Heavy Medium Laser",
+      "location": "leftTorso",
+      "rearFacing": true
+    },
+    {
+      "weapon": "CL Gauss Rifle",
+      "location": "rightTorso",
+      "shots": 64
+    },
+    {
+      "weapon": "CL Heavy Medium Laser",
+      "location": "rightTorso",
+      "rearFacing": true
+    },
+    {
+      "weapon": "Anti-Missile System",
+      "location": "head",
+      "shots": 12
+    },
+    {
+      "weapon": "A-Pod",
+      "location": "leftLeg"
+    },
+    {
+      "weapon": "A-Pod",
+      "location": "rightLeg"
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Anti-Missile System"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Heavy Medium Laser",
+        "rearFacing": true
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Heavy Medium Laser",
+        "rearFacing": true
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Gauss Rifle"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Heavy Medium Laser",
+        "rearFacing": true
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Heavy Medium Laser",
+        "rearFacing": true
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Gauss Rifle"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Heavy Large Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Heavy Large Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Heavy Large Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Heavy Medium Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Heavy Medium Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Heavy Small Laser"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Heavy Large Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Heavy Large Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Heavy Large Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Heavy Medium Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Heavy Medium Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Heavy Small Laser"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "A-Pod"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "A-Pod"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Anti-Missile System"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 16
+  },
+  "myomer": "Standard"
+}

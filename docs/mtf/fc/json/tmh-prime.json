@@ -1,0 +1,394 @@
+{
+  "model": "TMH-Prime",
+  "name": "Tomahawk",
+  "tonnage": 100,
+  "weightClass": "Assault",
+  "techBase": "Clan",
+  "walking": 3,
+  "running": 5,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 61,
+    "rightTorso": 42,
+    "leftTorso": 42,
+    "rightArm": 34,
+    "leftArm": 34,
+    "rightLeg": 41,
+    "leftLeg": 41,
+    "centerTorsoRear": 15,
+    "rightTorsoRear": 10,
+    "leftTorsoRear": 10
+  },
+  "weapons": [
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL ER Large Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL ER Large Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Streak SRM 4",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL Streak SRM 4",
+      "location": "leftTorso",
+      "shots": 25
+    },
+    {
+      "weapon": "Anti-Missile System",
+      "location": "leftTorso",
+      "shots": 12
+    },
+    {
+      "weapon": "CL Gauss Rifle",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Gauss Rifle",
+      "location": "rightArm",
+      "shots": 64
+    },
+    {
+      "weapon": "CL ECM Suite",
+      "location": "head"
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Streak SRM 4"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Medium Pulse Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Anti-Missile System"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Anti-Missile System"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Streak SRM 4"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Medium Pulse Laser"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Streak SRM 4"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Large Laser"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Large Laser"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ECM Suite"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 18
+  },
+  "myomer": "Standard"
+}

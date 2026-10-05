@@ -1,0 +1,386 @@
+{
+  "model": "NVC-B",
+  "name": "Nova Cat",
+  "tonnage": 70,
+  "weightClass": "Heavy",
+  "techBase": "Clan",
+  "walking": 4,
+  "running": 6,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 43,
+    "rightTorso": 30,
+    "leftTorso": 30,
+    "rightArm": 22,
+    "leftArm": 22,
+    "rightLeg": 30,
+    "leftLeg": 30,
+    "centerTorsoRear": 8,
+    "rightTorsoRear": 7,
+    "leftTorsoRear": 7
+  },
+  "weapons": [
+    {
+      "weapon": "CL LRM 15",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL LRM 15",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL LRM 15",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL LRM 15",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL LRM 15",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL LRM 15",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL ER Medium Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL ER Medium Laser",
+      "location": "rightTorso"
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Medium Laser"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL LRM 15"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL LRM 15"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL LRM 15"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL LRM 15"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL LRM 15"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Medium Laser"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL LRM 15"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL LRM 15"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL LRM 15"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL LRM 15"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL LRM 15"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LRM 15"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LRM 15"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LRM 15"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LRM 15"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LRM 15"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LRM 15"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LRM 15"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LRM 15"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LRM 15"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LRM 15"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LRM 15"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LRM 15"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 16
+  },
+  "myomer": "Standard"
+}

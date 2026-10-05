@@ -1,0 +1,383 @@
+{
+  "model": "SNV-2",
+  "name": "Supernova",
+  "tonnage": 90,
+  "weightClass": "Assault",
+  "techBase": "Clan",
+  "walking": 3,
+  "running": 5,
+  "jumping": 3,
+  "armor": {
+    "head": 9,
+    "centerTorso": 55,
+    "rightTorso": 38,
+    "leftTorso": 38,
+    "rightArm": 30,
+    "leftArm": 30,
+    "rightLeg": 36,
+    "leftLeg": 36,
+    "centerTorsoRear": 10,
+    "rightTorsoRear": 8,
+    "leftTorsoRear": 8
+  },
+  "weapons": [
+    {
+      "weapon": "CL ER Large Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL ER Large Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "ATM 9",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "ATM 9",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "ATM 9",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "ATM 9",
+      "location": "rightTorso"
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "structure",
+        "name": "targetingComputer"
+      },
+      {
+        "kind": "structure",
+        "name": "targetingComputer"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Large Laser"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Large Laser"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "ATM 9"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "ATM 9"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 16
+  },
+  "myomer": "Standard"
+}

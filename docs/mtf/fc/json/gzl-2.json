@@ -1,0 +1,381 @@
+{
+  "model": "GZL-2",
+  "name": "Grizzly",
+  "tonnage": 70,
+  "weightClass": "Heavy",
+  "techBase": "Clan",
+  "walking": 4,
+  "running": 6,
+  "jumping": 4,
+  "armor": {
+    "head": 9,
+    "centerTorso": 41,
+    "rightTorso": 30,
+    "leftTorso": 30,
+    "rightArm": 22,
+    "leftArm": 22,
+    "rightLeg": 27,
+    "leftLeg": 27,
+    "centerTorsoRear": 10,
+    "rightTorsoRear": 7,
+    "leftTorsoRear": 7
+  },
+  "weapons": [
+    {
+      "weapon": "CL Gauss Rifle",
+      "location": "rightArm",
+      "shots": 32
+    },
+    {
+      "weapon": "ATM 9",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL ER Large Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL ER Micro Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL ER Micro Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL ER Micro Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL ER Micro Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL ER Micro Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL ER Micro Laser",
+      "location": "rightTorso"
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "weapon",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "ATM 9"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Micro Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Micro Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Micro Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Micro Laser"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Large Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Micro Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Micro Laser"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "handActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Gauss Rifle"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 11
+  },
+  "myomer": "Standard"
+}
