@@ -1,0 +1,367 @@
+{
+  "model": "COM-7Y2",
+  "name": "Commando",
+  "tonnage": 25,
+  "weightClass": "Light",
+  "techBase": "Inner Sphere",
+  "walking": 6,
+  "running": 9,
+  "jumping": 0,
+  "armor": {
+    "head": 8,
+    "centerTorso": 14,
+    "rightTorso": 11,
+    "leftTorso": 11,
+    "rightArm": 7,
+    "leftArm": 7,
+    "rightLeg": 11,
+    "leftLeg": 11,
+    "centerTorsoRear": 4,
+    "rightTorsoRear": 3,
+    "leftTorsoRear": 3
+  },
+  "weapons": [
+    {
+      "weapon": "Small Laser",
+      "location": "leftLeg"
+    },
+    {
+      "weapon": "Small Laser",
+      "location": "leftLeg"
+    },
+    {
+      "weapon": "Small Laser",
+      "location": "rightLeg"
+    },
+    {
+      "weapon": "Small Laser",
+      "location": "rightLeg"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "Small Laser",
+      "location": "centerTorso"
+    },
+    {
+      "weapon": "Small Laser",
+      "location": "centerTorso"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "head"
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Small Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Small Laser"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "heatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "heatSink"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "heatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "heatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Laser"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "handActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Laser"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "handActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Laser"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Small Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Small Laser"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Small Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Small Laser"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Laser"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "single",
+    "count": 10
+  },
+  "myomer": "Standard"
+}

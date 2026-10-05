@@ -1,0 +1,367 @@
+{
+  "model": "TRC-4B",
+  "name": "Chameleon",
+  "tonnage": 50,
+  "weightClass": "Medium",
+  "techBase": "Inner Sphere",
+  "walking": 6,
+  "running": 9,
+  "jumping": 6,
+  "armor": {
+    "head": 9,
+    "centerTorso": 19,
+    "rightTorso": 12,
+    "leftTorso": 12,
+    "rightArm": 10,
+    "leftArm": 10,
+    "rightLeg": 12,
+    "leftLeg": 12,
+    "centerTorsoRear": 3,
+    "rightTorsoRear": 2,
+    "leftTorsoRear": 2
+  },
+  "weapons": [
+    {
+      "weapon": "Large Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "Small Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "Small Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "Small Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "Small Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "Machine Gun",
+      "location": "centerTorso"
+    },
+    {
+      "weapon": "Machine Gun",
+      "location": "centerTorso",
+      "shots": 200
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Machine Gun"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Machine Gun"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Small Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Small Laser"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Machine Gun"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Small Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Small Laser"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "handActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Laser"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "handActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Large Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Large Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Laser"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "single",
+    "count": 10
+  },
+  "myomer": "Standard"
+}

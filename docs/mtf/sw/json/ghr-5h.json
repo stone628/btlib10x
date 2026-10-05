@@ -1,0 +1,361 @@
+{
+  "model": "GHR-5H",
+  "name": "Grasshopper",
+  "tonnage": 70,
+  "weightClass": "Heavy",
+  "techBase": "Inner Sphere",
+  "walking": 4,
+  "running": 6,
+  "jumping": 4,
+  "armor": {
+    "head": 9,
+    "centerTorso": 43,
+    "rightTorso": 30,
+    "leftTorso": 30,
+    "rightArm": 22,
+    "leftArm": 22,
+    "rightLeg": 26,
+    "leftLeg": 26,
+    "centerTorsoRear": 13,
+    "rightTorsoRear": 10,
+    "leftTorsoRear": 10
+  },
+  "weapons": [
+    {
+      "weapon": "Large Laser",
+      "location": "centerTorso"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "LRM 5",
+      "location": "head",
+      "shots": 24
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Large Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Large Laser"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "heatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "heatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "heatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "heatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "heatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Laser"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "heatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "heatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "heatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "heatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Laser"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "LRM 5"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "handActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "heatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Laser"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "handActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "heatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Laser"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LRM 5"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "single",
+    "count": 22
+  },
+  "myomer": "Standard"
+}

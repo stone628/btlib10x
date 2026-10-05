@@ -1,0 +1,397 @@
+{
+  "model": "CRK-5003-1b",
+  "name": "Crockett",
+  "tonnage": 85,
+  "weightClass": "Assault",
+  "techBase": "Inner Sphere",
+  "walking": 3,
+  "running": 5,
+  "jumping": 3,
+  "armor": {
+    "head": 9,
+    "centerTorso": 54,
+    "rightTorso": 36,
+    "leftTorso": 36,
+    "rightArm": 28,
+    "leftArm": 28,
+    "rightLeg": 36,
+    "leftLeg": 36,
+    "centerTorsoRear": 19,
+    "rightTorsoRear": 11,
+    "leftTorsoRear": 11
+  },
+  "weapons": [
+    {
+      "weapon": "ER Large Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "ER Large Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "Gauss Rifle",
+      "location": "leftTorso",
+      "shots": 16
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "Medium Pulse Laser",
+      "location": "centerTorso"
+    },
+    {
+      "weapon": "Medium Pulse Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "Medium Pulse Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "Medium Pulse Laser",
+      "location": "head"
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Pulse Laser"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Gauss Rifle"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ER Large Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ER Large Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Pulse Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Laser"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ER Large Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ER Large Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Pulse Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Laser"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Pulse Laser"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 15
+  },
+  "myomer": "Standard"
+}

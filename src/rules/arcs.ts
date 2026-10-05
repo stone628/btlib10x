@@ -119,7 +119,7 @@ export function defenderArcChoice(arc: Arc, altArc: Arc | null): Arc {
 /**
  * Per-weapon firing arcs for a biped 'Mech (TW p.105). Head-, leg- and
  * front-torso-mounted weapons fire into the front arc only; arm-mounted
- * weapons add their own side arc (right arm → right side); torso weapons
+ * weapons add their own side arc (right arm → right side); torso and head weapons
  * mounted rear-facing (`rearFacing` on the mount) fire into the rear arc
  * only. The arc input is a TW p.105 template arc (`classifyFiringArc` of the
  * attacker's *effective* facing — call `effectiveFacingForTwist` first when

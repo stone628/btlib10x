@@ -1,0 +1,372 @@
+{
+  "model": "RF2-A",
+  "name": "Rifleman III",
+  "tonnage": 90,
+  "weightClass": "Assault",
+  "techBase": "Inner Sphere",
+  "walking": 2,
+  "running": 3,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 39,
+    "rightTorso": 26,
+    "leftTorso": 26,
+    "rightArm": 16,
+    "leftArm": 16,
+    "rightLeg": 18,
+    "leftLeg": 18,
+    "centerTorsoRear": 8,
+    "rightTorsoRear": 6,
+    "leftTorsoRear": 6
+  },
+  "weapons": [
+    {
+      "weapon": "Gauss Rifle",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "Gauss Rifle",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "Gauss Rifle",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "Gauss Rifle",
+      "location": "leftArm",
+      "shots": 16
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "heatSink"
+      },
+      {
+        "kind": "soak",
+        "name": "equipment"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "heatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "soak",
+        "name": "equipment"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "heatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "soak",
+        "name": "equipment"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "soak",
+        "name": "equipment"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "soak",
+        "name": "equipment"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "equipment"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "equipment"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "single",
+    "count": 10
+  },
+  "myomer": "Standard"
+}

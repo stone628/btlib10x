@@ -16,6 +16,7 @@ import {
   CRIT_SLOT_COUNTS,
   DHS_CRIT_SLOTS,
   ENGINE_CRIT_SLOTS,
+  INERT_EQUIPMENT,
   LOCATIONS,
   SOAK_CRIT_TOTALS,
   SOAK_TOKEN,
@@ -36,12 +37,21 @@ const BODY_PART_HEADERS = [
   ["Head", "head"],
 ];
 
+/** Token with trailing facing / variant parentheticals removed ("(R)", "(Split)"). */
+function baseToken(t) {
+  let out = t.trim();
+  for (;;) {
+    const next = out.replace(/\s*\([^()]*\)\s*$/, "");
+    if (next === out) return out;
+    out = next;
+  }
+}
+
 function normalizeCritWeaponToken(t) {
   const facingMatch = t.match(/\((R|F)\)\s*$/i);
   const rearFacing = facingMatch ? facingMatch[1].toUpperCase() === "R" : false;
   return {
-    name: t
-      .replace(/\s*\((R|F)\)\s*$/i, "")
+    name: baseToken(t)
       .replace(/^(IS|CL)[\s_-]?/i, "")
       .replace(/\s+CL$/, "")
       .trim(),
@@ -55,28 +65,42 @@ function normalizeCritWeaponToken(t) {
  * 0.5 tons. The caller multiplies by `SHOTS_PER_TON[weapon]` to get shot count
  * for the weapons-block `shots` field. Unmapped ammo-shaped lines are skipped
  * silently — `parseCritSlots` is the strict gate for unknown crit tokens. */
+/**
+ * Resolve an ammo crit line. Returns null when the line is not ammo-shaped,
+ * else `{ weapon, half }` where `weapon` is the catalog name or null when the
+ * ammo is unmapped. Handles "<code> Ammo", "IS Ammo <token>", "- Half" /
+ * "- Full" suffixes, "(200)" shot-count notes and "Artemis-/Narc-capable"
+ * variants (the munition type does not change the catalog ammo).
+ */
+function resolveAmmoLine(raw) {
+  const t = raw.trim();
+  const half = /-\s*Half\s*$/i.test(t);
+  const s = baseToken(
+    t
+      .replace(/\s*-\s*(Half|Full)\s*$/i, "")
+      .replace(/\s+(?:Artemis|Narc)-capable\s*$/i, "")
+      .trim(),
+  );
+  let tok = null;
+  let m = /^(?:IS|CL)\s+Ammo\s+(.+)$/.exec(s);
+  if (m) tok = m[1].trim();
+  else {
+    m = /^(.+?)\s+Ammo$/.exec(s);
+    if (m) tok = m[1].trim();
+  }
+  if (tok === null) return null;
+  const stripped = normalizeCritWeaponToken(tok).name;
+  // Exact token first so Clan compact codes ("CLMG") win over the bare IS
+  // stem ("MG") left after prefix stripping.
+  const weapon = AMMO_TOKEN[tok] ?? CODE[tok] ?? AMMO_TOKEN[stripped] ?? CODE[stripped] ?? null;
+  return { weapon, half };
+}
+
 export function ammoBinsFromCrits(lines) {
   const bins = new Map();
   for (const line of lines) {
-    const t = line.trim();
-    let name = null;
-    const half = /-\s*Half\s*$/.test(t);
-    // Format 1: "<code> Ammo" (Clan/compact), e.g. "CLStreakSRM4 Ammo" or
-    // "IS Machine Gun Ammo - Half".
-    let m = /^(.+?)\s+Ammo(?:\s*-\s*Half)?\s*$/.exec(t);
-    if (m) {
-      const stem = m[1]
-        .replace(/^IS |^CL /, "")
-        .replace(/\s+CL$/, "")
-        .trim();
-      name = CODE[stem] ?? CODE[normalizeCritWeaponToken(stem).name] ?? null;
-    } else {
-      // Format 2: "IS Ammo <token>", e.g. "IS Ammo AC/20" or
-      // "IS Machine Gun Ammo - Half".
-      m = /^IS Ammo\s+(.+?)(?:\s*-\s*Half)?\s*$/.exec(t);
-      if (m) name = AMMO_TOKEN[m[1].trim()] ?? null;
-    }
-    if (name) bins.set(name, (bins.get(name) ?? 0) + (half ? 0.5 : 1));
+    const res = resolveAmmoLine(line);
+    if (res?.weapon) bins.set(res.weapon, (bins.get(res.weapon) ?? 0) + (res.half ? 0.5 : 1));
   }
   return bins;
 }
@@ -88,32 +112,9 @@ function classifyCritLine(raw, errors, fileLabel) {
   // mount like any other weapon (precedent: HCT-5S). The importer synthesizes
   // the mount from crits when the weapons block omits it (e.g. CN9-YLW2).
   if (t === "Hatchet") return { ok: true, slot: { kind: "weapon", weapon: "Hatchet" } };
-  // "IS Ammo <token>" / "CL Ammo <token>" (e.g. "IS Ammo AC/20"). The
-  // AMMO_TOKEN table is preferred (the trailing token is a known ammo
-  // shorthand like "AC/20" or "Gauss"); CODE is consulted as a fallback so
-  // catalog-named ammo (e.g. "IS Ammo LRM 5") also resolves.
-  let m = /^(?:IS|CL)\s+Ammo\s+(.+?)(?:\s*(?:\(.+?\))|(?:\s*-\s*Half))?\s*$/.exec(t);
-  if (m) {
-    const tok = m[1].trim();
-    const stripped = normalizeCritWeaponToken(tok);
-    const name =
-      AMMO_TOKEN[tok] ?? AMMO_TOKEN[stripped.name] ?? CODE[tok] ?? CODE[stripped.name] ?? null;
-    if (name) return { ok: true, slot: { kind: "ammo", weapon: name } };
-    errors.push(`Unmapped ammo crit-slot token ${JSON.stringify(t)} in ${fileLabel}`);
-    return { ok: false };
-  }
-  // "<code> Ammo" (compact codes), e.g. "CLMG Ammo", "IS Gauss Ammo", and
-  // "IS Ammo AC/20"-style ammo that already matched the first regex and
-  // reached this fallback. The stem may carry an IS/CL prefix that the
-  // normalized lookup strips; AMMO_TOKEN is consulted first for ammo
-  // shorthands, CODE as the catalog-name fallback.
-  m = /^(.+?)\s+Ammo(?:\s*(?:\(.+?\))|(?:\s*-\s*Half))?\s*$/.exec(t);
-  if (m) {
-    const stem = m[1];
-    const stripped = normalizeCritWeaponToken(stem);
-    const name =
-      AMMO_TOKEN[stem] ?? AMMO_TOKEN[stripped.name] ?? CODE[stem] ?? CODE[stripped.name] ?? null;
-    if (name) return { ok: true, slot: { kind: "ammo", weapon: name } };
+  const ammo = resolveAmmoLine(t);
+  if (ammo !== null) {
+    if (ammo.weapon) return { ok: true, slot: { kind: "ammo", weapon: ammo.weapon } };
     errors.push(`Unmapped ammo crit-slot token ${JSON.stringify(t)} in ${fileLabel}`);
     return { ok: false };
   }
@@ -124,7 +125,14 @@ function classifyCritLine(raw, errors, fileLabel) {
     return { ok: true, slot: { kind: "soak", name: SOAK_TOKEN[t] } };
   }
   const stripped = normalizeCritWeaponToken(t);
-  const name = CODE[t] ?? CODE[stripped.name] ?? null;
+  const base = baseToken(t);
+  if (INERT_EQUIPMENT.has(t) || INERT_EQUIPMENT.has(base)) {
+    return { ok: true, slot: { kind: "soak", name: "equipment" } };
+  }
+  if (STRUCTURE_TOKEN[base]) {
+    return { ok: true, slot: { kind: "structure", name: STRUCTURE_TOKEN[base] } };
+  }
+  const name = CODE[t] ?? CODE[base] ?? CODE[stripped.name] ?? null;
   if (name)
     return {
       ok: true,

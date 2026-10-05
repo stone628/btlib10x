@@ -1,0 +1,382 @@
+{
+  "model": "RFL-3N-2",
+  "name": "Rifleman II",
+  "tonnage": 80,
+  "weightClass": "Assault",
+  "techBase": "Inner Sphere",
+  "walking": 4,
+  "running": 6,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 39,
+    "rightTorso": 26,
+    "leftTorso": 26,
+    "rightArm": 20,
+    "leftArm": 20,
+    "rightLeg": 26,
+    "leftLeg": 26,
+    "centerTorsoRear": 10,
+    "rightTorsoRear": 6,
+    "leftTorsoRear": 6
+  },
+  "weapons": [
+    {
+      "weapon": "Large Pulse Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "Large Pulse Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "LB 10-X AC",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "LB 10-X AC",
+      "location": "rightArm",
+      "shots": 20
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "LB 10-X AC"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Laser"
+      },
+      {
+        "kind": "soak",
+        "name": "equipment"
+      },
+      {
+        "kind": "soak",
+        "name": "equipment"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Medium Laser"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Large Pulse Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Large Pulse Laser"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Large Pulse Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Large Pulse Laser"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 14
+  },
+  "myomer": "Standard"
+}

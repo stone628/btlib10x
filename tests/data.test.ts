@@ -138,7 +138,13 @@ describe("'Mech definitions", () => {
           { weapon: "Medium Laser", location: "leftArm", rearFacing: true },
         ],
       } as MechDef),
-    ).toThrow(/only valid on torso mounts/);
+    ).toThrow(/only valid on torso or head mounts/);
+    expect(() =>
+      validateMechDef({
+        ...base,
+        weapons: [...base.weapons, { weapon: "Medium Laser", location: "head", rearFacing: true }],
+      } as MechDef),
+    ).not.toThrow();
     expect(() =>
       validateMechDef({
         ...base,
