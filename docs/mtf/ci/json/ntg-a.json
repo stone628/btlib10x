@@ -1,5 +1,5 @@
 {
-  "model": "NGR-B",
+  "model": "NTG-A",
   "name": "Night Gyr",
   "tonnage": 75,
   "weightClass": "Heavy",
@@ -22,21 +22,33 @@
   },
   "weapons": [
     {
-      "weapon": "CL LB 2-X AC",
-      "location": "leftTorso"
-    },
-    {
-      "weapon": "CL LB 2-X AC",
-      "location": "rightTorso"
-    },
-    {
-      "weapon": "CL Gauss Rifle",
+      "weapon": "CL Ultra AC/20",
       "location": "rightArm"
     },
     {
-      "weapon": "CL Gauss Rifle",
-      "location": "leftArm",
-      "shots": 48
+      "weapon": "CL Streak SRM 6",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL Streak SRM 6",
+      "location": "rightTorso",
+      "shots": 15
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "head"
+    },
+    {
+      "weapon": "CL Large Pulse Laser",
+      "location": "leftArm"
     }
   ],
   "critSlots": {
@@ -82,10 +94,12 @@
         "name": "engine"
       },
       {
-        "kind": "empty"
+        "kind": "structure",
+        "name": "doubleHeatSink"
       },
       {
-        "kind": "empty"
+        "kind": "structure",
+        "name": "doubleHeatSink"
       }
     ],
     "leftTorso": [
@@ -98,24 +112,24 @@
         "name": "engine"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL LB 2-X AC"
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
       },
       {
         "kind": "weapon",
-        "weapon": "CL LB 2-X AC"
+        "weapon": "CL Streak SRM 6"
       },
       {
         "kind": "weapon",
-        "weapon": "CL LB 2-X AC"
+        "weapon": "CL Streak SRM 6"
       },
       {
         "kind": "ammo",
-        "weapon": "CL LB 2-X AC"
-      },
-      {
-        "kind": "ammo",
-        "weapon": "CL Gauss Rifle"
+        "weapon": "CL Streak SRM 6"
       },
       {
         "kind": "soak",
@@ -149,23 +163,23 @@
       },
       {
         "kind": "weapon",
-        "weapon": "CL LB 2-X AC"
+        "weapon": "CL Streak SRM 6"
       },
       {
         "kind": "weapon",
-        "weapon": "CL LB 2-X AC"
-      },
-      {
-        "kind": "weapon",
-        "weapon": "CL LB 2-X AC"
+        "weapon": "CL Streak SRM 6"
       },
       {
         "kind": "ammo",
-        "weapon": "CL Gauss Rifle"
+        "weapon": "CL Ultra AC/20"
       },
       {
         "kind": "ammo",
-        "weapon": "CL Gauss Rifle"
+        "weapon": "CL Ultra AC/20"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Ultra AC/20"
       },
       {
         "kind": "soak",
@@ -198,28 +212,36 @@
         "name": "upperArmActuator"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL Gauss Rifle"
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Gauss Rifle"
+        "weapon": "CL Large Pulse Laser"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Gauss Rifle"
+        "weapon": "CL Large Pulse Laser"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Gauss Rifle"
+        "weapon": "CL Medium Pulse Laser"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Gauss Rifle"
-      },
-      {
-        "kind": "weapon",
-        "weapon": "CL Gauss Rifle"
+        "weapon": "CL Medium Pulse Laser"
       },
       {
         "kind": "soak",
@@ -228,12 +250,6 @@
       {
         "kind": "soak",
         "name": "ferroFibrous"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
       }
     ],
     "rightArm": [
@@ -247,27 +263,35 @@
       },
       {
         "kind": "weapon",
-        "weapon": "CL Gauss Rifle"
+        "weapon": "CL Ultra AC/20"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Gauss Rifle"
+        "weapon": "CL Ultra AC/20"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Gauss Rifle"
+        "weapon": "CL Ultra AC/20"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Gauss Rifle"
+        "weapon": "CL Ultra AC/20"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Gauss Rifle"
+        "weapon": "CL Ultra AC/20"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Gauss Rifle"
+        "weapon": "CL Ultra AC/20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/20"
       },
       {
         "kind": "soak",
@@ -276,12 +300,6 @@
       {
         "kind": "soak",
         "name": "endoSteel"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
       }
     ],
     "leftLeg": [
@@ -350,7 +368,8 @@
         "name": "cockpit"
       },
       {
-        "kind": "empty"
+        "kind": "weapon",
+        "weapon": "CL Medium Pulse Laser"
       },
       {
         "kind": "structure",
@@ -364,7 +383,7 @@
   },
   "heatsink": {
     "type": "double",
-    "count": 12
+    "count": 16
   },
   "myomer": "Standard"
 }

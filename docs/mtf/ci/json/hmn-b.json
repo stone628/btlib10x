@@ -1,7 +1,7 @@
 {
-  "model": "NOV-H",
-  "name": "Black Hawk",
-  "clanName": "Nova",
+  "model": "HMN-B",
+  "name": "Nobori-nin",
+  "clanName": "Huntsman",
   "tonnage": 50,
   "weightClass": "Medium",
   "techBase": "Clan",
@@ -10,57 +10,43 @@
   "jumping": 5,
   "armor": {
     "head": 9,
-    "centerTorso": 31,
+    "centerTorso": 32,
     "rightTorso": 24,
     "leftTorso": 24,
     "rightArm": 16,
     "leftArm": 16,
-    "rightLeg": 20,
-    "leftLeg": 20,
-    "centerTorsoRear": 8,
-    "rightTorsoRear": 8,
-    "leftTorsoRear": 8
+    "rightLeg": 24,
+    "leftLeg": 24,
+    "centerTorsoRear": 7,
+    "rightTorsoRear": 6,
+    "leftTorsoRear": 6
   },
   "weapons": [
     {
-      "weapon": "CL Heavy Medium Laser",
-      "location": "leftArm"
+      "weapon": "CL LB 10-X AC",
+      "location": "leftArm",
+      "shots": 20
     },
     {
-      "weapon": "CL Heavy Medium Laser",
-      "location": "leftArm"
-    },
-    {
-      "weapon": "CL Heavy Medium Laser",
-      "location": "leftArm"
-    },
-    {
-      "weapon": "CL Heavy Medium Laser",
-      "location": "leftArm"
-    },
-    {
-      "weapon": "CL Heavy Medium Laser",
+      "weapon": "CL ER PPC",
       "location": "rightArm"
     },
     {
-      "weapon": "CL Heavy Medium Laser",
+      "weapon": "CL Medium Pulse Laser",
       "location": "rightArm"
     },
     {
-      "weapon": "CL Heavy Medium Laser",
+      "weapon": "CL Medium Pulse Laser",
       "location": "rightArm"
     },
     {
-      "weapon": "CL Heavy Medium Laser",
-      "location": "rightArm"
+      "weapon": "CL Machine Gun",
+      "location": "rightTorso"
     },
     {
-      "weapon": "CL Heavy Medium Laser",
-      "location": "rightArm"
-    },
-    {
-      "weapon": "CL Heavy Medium Laser",
-      "location": "leftArm"
+      "weapon": "CL Machine Gun",
+      "location": "rightTorso",
+      "shots": 200
     }
   ],
   "critSlots": {
@@ -110,7 +96,8 @@
         "name": "jumpJet"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "endoSteel"
       }
     ],
     "leftTorso": [
@@ -124,43 +111,40 @@
       },
       {
         "kind": "structure",
-        "name": "doubleHeatSink"
+        "name": "jumpJet"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "ammo",
+        "weapon": "CL LB 10-X AC"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "ammo",
+        "weapon": "CL LB 10-X AC"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "soak",
+        "name": "ferroFibrous"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "soak",
+        "name": "ferroFibrous"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "soak",
+        "name": "ferroFibrous"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "empty"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "empty"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "empty"
       }
     ],
     "rightTorso": [
@@ -174,43 +158,40 @@
       },
       {
         "kind": "structure",
-        "name": "doubleHeatSink"
+        "name": "jumpJet"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "weapon",
+        "weapon": "CL Machine Gun"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "weapon",
+        "weapon": "CL Machine Gun"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "ammo",
+        "weapon": "CL Machine Gun"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "soak",
+        "name": "ferroFibrous"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "soak",
+        "name": "ferroFibrous"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "empty"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "empty"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "empty"
       }
     ],
     "leftArm": [
@@ -224,43 +205,41 @@
       },
       {
         "kind": "weapon",
-        "weapon": "CL Heavy Medium Laser"
+        "weapon": "CL LB 10-X AC"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Heavy Medium Laser"
+        "weapon": "CL LB 10-X AC"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Heavy Medium Laser"
+        "weapon": "CL LB 10-X AC"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Heavy Medium Laser"
+        "weapon": "CL LB 10-X AC"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Heavy Medium Laser"
+        "weapon": "CL LB 10-X AC"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL Heavy Medium Laser"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL Heavy Medium Laser"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL Heavy Medium Laser"
+        "kind": "soak",
+        "name": "ferroFibrous"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL Heavy Medium Laser"
+        "kind": "empty"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL Heavy Medium Laser"
+        "kind": "empty"
       }
     ],
     "rightArm": [
@@ -274,43 +253,39 @@
       },
       {
         "kind": "weapon",
-        "weapon": "CL Heavy Medium Laser"
+        "weapon": "CL ER PPC"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Heavy Medium Laser"
+        "weapon": "CL ER PPC"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Heavy Medium Laser"
+        "weapon": "CL Medium Pulse Laser"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Heavy Medium Laser"
+        "weapon": "CL Medium Pulse Laser"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL Heavy Medium Laser"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL Heavy Medium Laser"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL Heavy Medium Laser"
+        "kind": "empty"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL Heavy Medium Laser"
+        "kind": "empty"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL Heavy Medium Laser"
+        "kind": "empty"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL Heavy Medium Laser"
+        "kind": "empty"
       }
     ],
     "leftLeg": [
@@ -335,8 +310,7 @@
         "name": "jumpJet"
       },
       {
-        "kind": "structure",
-        "name": "jumpJet"
+        "kind": "empty"
       }
     ],
     "rightLeg": [
@@ -361,8 +335,7 @@
         "name": "jumpJet"
       },
       {
-        "kind": "structure",
-        "name": "jumpJet"
+        "kind": "empty"
       }
     ],
     "head": [
@@ -379,7 +352,8 @@
         "name": "cockpit"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "ferroFibrous"
       },
       {
         "kind": "structure",
@@ -393,7 +367,7 @@
   },
   "heatsink": {
     "type": "double",
-    "count": 20
+    "count": 10
   },
   "myomer": "Standard"
 }

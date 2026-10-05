@@ -1,50 +1,52 @@
 {
-  "model": "NGR-D",
-  "name": "Night Gyr",
-  "tonnage": 75,
-  "weightClass": "Heavy",
+  "model": "NVA-S",
+  "name": "Black Hawk",
+  "clanName": "Nova",
+  "tonnage": 50,
+  "weightClass": "Medium",
   "techBase": "Clan",
-  "walking": 4,
-  "running": 6,
-  "jumping": 4,
+  "walking": 5,
+  "running": 8,
+  "jumping": 5,
   "armor": {
     "head": 9,
-    "centerTorso": 43,
-    "rightTorso": 32,
-    "leftTorso": 32,
-    "rightArm": 24,
-    "leftArm": 24,
-    "rightLeg": 28,
-    "leftLeg": 28,
-    "centerTorsoRear": 10,
-    "rightTorsoRear": 10,
-    "leftTorsoRear": 10
+    "centerTorso": 31,
+    "rightTorso": 24,
+    "leftTorso": 24,
+    "rightArm": 16,
+    "leftArm": 16,
+    "rightLeg": 20,
+    "leftLeg": 20,
+    "centerTorsoRear": 8,
+    "rightTorsoRear": 8,
+    "leftTorsoRear": 8
   },
   "weapons": [
     {
-      "weapon": "CL LRM 20",
+      "weapon": "CL Medium Pulse Laser",
       "location": "leftArm"
     },
     {
-      "weapon": "CL LRM 20",
-      "location": "leftTorso"
-    },
-    {
-      "weapon": "CL LRM 20",
-      "location": "rightTorso"
-    },
-    {
-      "weapon": "CL LRM 20",
-      "location": "rightArm",
-      "shots": 72
-    },
-    {
-      "weapon": "CL Large Pulse Laser",
-      "location": "centerTorso"
-    },
-    {
       "weapon": "CL Medium Pulse Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Active Probe",
       "location": "head"
+    },
+    {
+      "weapon": "Anti-Missile System",
+      "location": "centerTorso",
+      "shots": 24
+    },
+    {
+      "weapon": "CL Machine Gun",
+      "location": "rightTorso",
+      "shots": 100
+    },
+    {
+      "weapon": "CL Machine Gun",
+      "location": "leftTorso"
     }
   ],
   "critSlots": {
@@ -90,12 +92,12 @@
         "name": "engine"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL Large Pulse Laser"
+        "kind": "structure",
+        "name": "jumpJet"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Large Pulse Laser"
+        "weapon": "Anti-Missile System"
       }
     ],
     "leftTorso": [
@@ -108,44 +110,41 @@
         "name": "engine"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL LRM 20"
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
       },
       {
         "kind": "weapon",
-        "weapon": "CL LRM 20"
+        "weapon": "CL Machine Gun"
       },
       {
         "kind": "weapon",
-        "weapon": "CL LRM 20"
+        "weapon": "CL Machine Gun"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL LRM 20"
+        "kind": "ammo",
+        "weapon": "CL Machine Gun"
       },
       {
-        "kind": "soak",
-        "name": "equipment"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
-      },
-      {
-        "kind": "soak",
-        "name": "endoSteel"
-      },
-      {
-        "kind": "soak",
-        "name": "endoSteel"
-      },
-      {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
       }
     ],
     "rightTorso": [
@@ -158,44 +157,41 @@
         "name": "engine"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL LRM 20"
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
       },
       {
         "kind": "weapon",
-        "weapon": "CL LRM 20"
+        "weapon": "CL Machine Gun"
       },
       {
         "kind": "weapon",
-        "weapon": "CL LRM 20"
+        "weapon": "CL Machine Gun"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL LRM 20"
+        "kind": "ammo",
+        "weapon": "Anti-Missile System"
       },
       {
-        "kind": "soak",
-        "name": "equipment"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
-      },
-      {
-        "kind": "soak",
-        "name": "ferroFibrous"
-      },
-      {
-        "kind": "soak",
-        "name": "ferroFibrous"
-      },
-      {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "empty"
       }
     ],
     "leftArm": [
@@ -208,44 +204,39 @@
         "name": "upperArmActuator"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL LRM 20"
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "handActuator"
       },
       {
         "kind": "weapon",
-        "weapon": "CL LRM 20"
+        "weapon": "CL Medium Pulse Laser"
       },
       {
         "kind": "weapon",
-        "weapon": "CL LRM 20"
+        "weapon": "CL Medium Pulse Laser"
       },
       {
         "kind": "weapon",
-        "weapon": "CL LRM 20"
+        "weapon": "CL Medium Pulse Laser"
       },
       {
-        "kind": "soak",
-        "name": "equipment"
+        "kind": "empty"
       },
       {
-        "kind": "ammo",
-        "weapon": "CL LRM 20"
+        "kind": "empty"
       },
       {
-        "kind": "ammo",
-        "weapon": "CL LRM 20"
+        "kind": "empty"
       },
       {
-        "kind": "ammo",
-        "weapon": "CL LRM 20"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
-      },
-      {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "empty"
       }
     ],
     "rightArm": [
@@ -258,44 +249,39 @@
         "name": "upperArmActuator"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL LRM 20"
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "handActuator"
       },
       {
         "kind": "weapon",
-        "weapon": "CL LRM 20"
+        "weapon": "CL Medium Pulse Laser"
       },
       {
         "kind": "weapon",
-        "weapon": "CL LRM 20"
+        "weapon": "CL Medium Pulse Laser"
       },
       {
         "kind": "weapon",
-        "weapon": "CL LRM 20"
+        "weapon": "CL Medium Pulse Laser"
       },
       {
-        "kind": "soak",
-        "name": "equipment"
+        "kind": "empty"
       },
       {
-        "kind": "ammo",
-        "weapon": "CL LRM 20"
+        "kind": "empty"
       },
       {
-        "kind": "ammo",
-        "weapon": "CL LRM 20"
+        "kind": "empty"
       },
       {
-        "kind": "ammo",
-        "weapon": "CL LRM 20"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
-      },
-      {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
       }
     ],
     "leftLeg": [
@@ -365,7 +351,7 @@
       },
       {
         "kind": "weapon",
-        "weapon": "CL Medium Pulse Laser"
+        "weapon": "CL Active Probe"
       },
       {
         "kind": "structure",
@@ -379,7 +365,7 @@
   },
   "heatsink": {
     "type": "double",
-    "count": 12
+    "count": 14
   },
   "myomer": "Standard"
 }

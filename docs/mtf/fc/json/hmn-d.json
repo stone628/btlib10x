@@ -1,5 +1,5 @@
 {
-  "model": "HNT-A",
+  "model": "HMN-D",
   "name": "Nobori-nin",
   "clanName": "Huntsman",
   "tonnage": 50,
@@ -23,20 +23,24 @@
   },
   "weapons": [
     {
-      "weapon": "CL Large Pulse Laser",
+      "weapon": "CL Ultra AC/10",
       "location": "leftArm"
     },
     {
-      "weapon": "CL LRM 10",
-      "location": "leftArm"
-    },
-    {
-      "weapon": "CL Large Pulse Laser",
+      "weapon": "ATM 6",
       "location": "rightArm"
     },
     {
-      "weapon": "CL LB 2-X AC",
-      "location": "rightArm"
+      "weapon": "CL Medium Pulse Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL Small Pulse Laser",
+      "location": "rightTorso"
     }
   ],
   "critSlots": {
@@ -101,19 +105,7 @@
       },
       {
         "kind": "structure",
-        "name": "doubleHeatSink"
-      },
-      {
-        "kind": "structure",
-        "name": "doubleHeatSink"
-      },
-      {
-        "kind": "structure",
         "name": "jumpJet"
-      },
-      {
-        "kind": "ammo",
-        "weapon": "CL LRM 10"
       },
       {
         "kind": "soak",
@@ -136,6 +128,15 @@
       },
       {
         "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
       }
     ],
     "rightTorso": [
@@ -149,19 +150,19 @@
       },
       {
         "kind": "structure",
-        "name": "doubleHeatSink"
-      },
-      {
-        "kind": "structure",
-        "name": "doubleHeatSink"
-      },
-      {
-        "kind": "structure",
         "name": "jumpJet"
       },
       {
-        "kind": "ammo",
-        "weapon": "CL LB 2-X AC"
+        "kind": "weapon",
+        "weapon": "CL Medium Pulse Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Medium Pulse Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Small Pulse Laser"
       },
       {
         "kind": "soak",
@@ -195,20 +196,28 @@
         "name": "upperArmActuator"
       },
       {
-        "kind": "structure",
-        "name": "lowerArmActuator"
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/10"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Large Pulse Laser"
+        "weapon": "CL Ultra AC/10"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Large Pulse Laser"
+        "weapon": "CL Ultra AC/10"
       },
       {
         "kind": "weapon",
-        "weapon": "CL LRM 10"
+        "weapon": "CL Ultra AC/10"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Ultra AC/10"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Ultra AC/10"
       },
       {
         "kind": "soak",
@@ -224,12 +233,6 @@
       },
       {
         "kind": "empty"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
       }
     ],
     "rightArm": [
@@ -242,24 +245,36 @@
         "name": "upperArmActuator"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL Large Pulse Laser"
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "handActuator"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Large Pulse Laser"
+        "weapon": "ATM 6"
       },
       {
         "kind": "weapon",
-        "weapon": "CL LB 2-X AC"
+        "weapon": "ATM 6"
       },
       {
         "kind": "weapon",
-        "weapon": "CL LB 2-X AC"
+        "weapon": "ATM 6"
       },
       {
-        "kind": "weapon",
-        "weapon": "CL LB 2-X AC"
+        "kind": "ammo",
+        "weapon": "ATM 6"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "ATM 6"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "ATM 6"
       },
       {
         "kind": "soak",
@@ -268,15 +283,6 @@
       {
         "kind": "soak",
         "name": "endoSteel"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
       }
     ],
     "leftLeg": [
@@ -358,7 +364,7 @@
   },
   "heatsink": {
     "type": "double",
-    "count": 12
+    "count": 10
   },
   "myomer": "Standard"
 }

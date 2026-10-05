@@ -1,52 +1,42 @@
 {
-  "model": "HNT-B",
-  "name": "Nobori-nin",
-  "clanName": "Huntsman",
-  "tonnage": 50,
-  "weightClass": "Medium",
+  "model": "NTG-B",
+  "name": "Night Gyr",
+  "tonnage": 75,
+  "weightClass": "Heavy",
   "techBase": "Clan",
-  "walking": 5,
-  "running": 8,
-  "jumping": 5,
+  "walking": 4,
+  "running": 6,
+  "jumping": 4,
   "armor": {
     "head": 9,
-    "centerTorso": 32,
-    "rightTorso": 24,
-    "leftTorso": 24,
-    "rightArm": 16,
-    "leftArm": 16,
-    "rightLeg": 24,
-    "leftLeg": 24,
-    "centerTorsoRear": 7,
-    "rightTorsoRear": 6,
-    "leftTorsoRear": 6
+    "centerTorso": 43,
+    "rightTorso": 32,
+    "leftTorso": 32,
+    "rightArm": 24,
+    "leftArm": 24,
+    "rightLeg": 28,
+    "leftLeg": 28,
+    "centerTorsoRear": 10,
+    "rightTorsoRear": 10,
+    "leftTorsoRear": 10
   },
   "weapons": [
     {
-      "weapon": "CL LB 10-X AC",
-      "location": "leftArm",
-      "shots": 20
+      "weapon": "CL LB 2-X AC",
+      "location": "leftTorso"
     },
     {
-      "weapon": "CL ER PPC",
-      "location": "rightArm"
-    },
-    {
-      "weapon": "CL Medium Pulse Laser",
-      "location": "rightArm"
-    },
-    {
-      "weapon": "CL Medium Pulse Laser",
-      "location": "rightArm"
-    },
-    {
-      "weapon": "CL Machine Gun",
+      "weapon": "CL LB 2-X AC",
       "location": "rightTorso"
     },
     {
-      "weapon": "CL Machine Gun",
-      "location": "rightTorso",
-      "shots": 200
+      "weapon": "CL Gauss Rifle",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Gauss Rifle",
+      "location": "leftArm",
+      "shots": 48
     }
   ],
   "critSlots": {
@@ -92,12 +82,10 @@
         "name": "engine"
       },
       {
-        "kind": "structure",
-        "name": "jumpJet"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
       }
     ],
     "leftTorso": [
@@ -110,16 +98,24 @@
         "name": "engine"
       },
       {
-        "kind": "structure",
-        "name": "jumpJet"
+        "kind": "weapon",
+        "weapon": "CL LB 2-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 2-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 2-X AC"
       },
       {
         "kind": "ammo",
-        "weapon": "CL LB 10-X AC"
+        "weapon": "CL LB 2-X AC"
       },
       {
         "kind": "ammo",
-        "weapon": "CL LB 10-X AC"
+        "weapon": "CL Gauss Rifle"
       },
       {
         "kind": "soak",
@@ -127,24 +123,19 @@
       },
       {
         "kind": "soak",
-        "name": "ferroFibrous"
+        "name": "endoSteel"
       },
       {
         "kind": "soak",
-        "name": "ferroFibrous"
+        "name": "endoSteel"
       },
       {
         "kind": "soak",
-        "name": "ferroFibrous"
+        "name": "endoSteel"
       },
       {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "endoSteel"
       }
     ],
     "rightTorso": [
@@ -157,24 +148,28 @@
         "name": "engine"
       },
       {
-        "kind": "structure",
-        "name": "jumpJet"
+        "kind": "weapon",
+        "weapon": "CL LB 2-X AC"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Machine Gun"
+        "weapon": "CL LB 2-X AC"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Machine Gun"
+        "weapon": "CL LB 2-X AC"
       },
       {
         "kind": "ammo",
-        "weapon": "CL Machine Gun"
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Gauss Rifle"
       },
       {
         "kind": "soak",
-        "name": "endoSteel"
+        "name": "ferroFibrous"
       },
       {
         "kind": "soak",
@@ -185,13 +180,12 @@
         "name": "ferroFibrous"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "ferroFibrous"
       },
       {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "ferroFibrous"
       }
     ],
     "leftArm": [
@@ -205,31 +199,31 @@
       },
       {
         "kind": "weapon",
-        "weapon": "CL LB 10-X AC"
+        "weapon": "CL Gauss Rifle"
       },
       {
         "kind": "weapon",
-        "weapon": "CL LB 10-X AC"
+        "weapon": "CL Gauss Rifle"
       },
       {
         "kind": "weapon",
-        "weapon": "CL LB 10-X AC"
+        "weapon": "CL Gauss Rifle"
       },
       {
         "kind": "weapon",
-        "weapon": "CL LB 10-X AC"
+        "weapon": "CL Gauss Rifle"
       },
       {
         "kind": "weapon",
-        "weapon": "CL LB 10-X AC"
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
       },
       {
         "kind": "soak",
-        "name": "endoSteel"
-      },
-      {
-        "kind": "soak",
-        "name": "endoSteel"
+        "name": "ferroFibrous"
       },
       {
         "kind": "soak",
@@ -253,19 +247,27 @@
       },
       {
         "kind": "weapon",
-        "weapon": "CL ER PPC"
+        "weapon": "CL Gauss Rifle"
       },
       {
         "kind": "weapon",
-        "weapon": "CL ER PPC"
+        "weapon": "CL Gauss Rifle"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Medium Pulse Laser"
+        "weapon": "CL Gauss Rifle"
       },
       {
         "kind": "weapon",
-        "weapon": "CL Medium Pulse Laser"
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Gauss Rifle"
       },
       {
         "kind": "soak",
@@ -274,12 +276,6 @@
       {
         "kind": "soak",
         "name": "endoSteel"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
       },
       {
         "kind": "empty"
@@ -310,7 +306,8 @@
         "name": "jumpJet"
       },
       {
-        "kind": "empty"
+        "kind": "structure",
+        "name": "jumpJet"
       }
     ],
     "rightLeg": [
@@ -335,7 +332,8 @@
         "name": "jumpJet"
       },
       {
-        "kind": "empty"
+        "kind": "structure",
+        "name": "jumpJet"
       }
     ],
     "head": [
@@ -352,8 +350,7 @@
         "name": "cockpit"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "empty"
       },
       {
         "kind": "structure",
@@ -367,7 +364,7 @@
   },
   "heatsink": {
     "type": "double",
-    "count": 10
+    "count": 12
   },
   "myomer": "Standard"
 }
