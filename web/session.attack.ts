@@ -965,8 +965,11 @@ export function resolutionLines(r: AttackResolution): string[] {
 
 /** One damage group label, tagged when the hit location rolled a through-armor 2. */
 function formatHitGroup(g: HitGroup): string {
-  const base = `${SHORT_LOC[g.location]}(${g.damage})`;
-  return g.throughArmor === true ? `${base} [${i18n("res.throughArmorTag")}]` : base;
+  // const base = `${SHORT_LOC[g.location]}(${g.damage})`;
+  // return g.throughArmor === true ? `${base} [${i18n("res.throughArmorTag")}]` : base;
+  return g.throughArmor === true
+    ? `>>${SHORT_LOC[g.location]}<<(${g.damage})`
+    : `${SHORT_LOC[g.location]}(${g.damage})`;
 }
 
 /** Pretty-print one CriticalResolution into one or more terminal lines. */
@@ -981,8 +984,9 @@ export function critLines(c: CriticalResolution): string[] {
           : "res.critThree";
   const lines: string[] = [
     i18n("res.critHeader", {
+      loc: `${SHORT_LOC[c.source.location]}${c.throughArmor ? ` ${i18n("res.throughArmorTag")}` : ""}`,
       roll: String(c.determiningRoll),
-      count: `${i18n(headerKey)}${c.throughArmor ? ` [${i18n("res.throughArmorTag")}]` : ""}`,
+      count: i18n(headerKey),
     }),
   ];
   for (const eff of c.rows) lines.push(`  ${formatCritEffect(eff)}`);

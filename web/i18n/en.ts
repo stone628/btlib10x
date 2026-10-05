@@ -645,11 +645,11 @@ export const en = {
   "res.destroyedTail": "; destroyed {locs}",
 
   // critical hit table
-  "res.critHeader": "crit roll 2D6 = {roll} ({count})",
-  "res.critNone": "no critical hit",
-  "res.critOne": "1 critical hit",
-  "res.critTwo": "2 critical hits",
-  "res.critThree": "3 critical hits",
+  "res.critHeader": "{loc} crit roll 2D6 = {roll} ({count})",
+  "res.critNone": "no critical hit(<=7)",
+  "res.critOne": "1 critical hit(8,9)",
+  "res.critTwo": "2 critical hits(10,11)",
+  "res.critThree": "3 critical hits(12)",
   "res.critHeadBlownOff": "; HEAD BLOWN OFF — 'Mech destroyed",
   "res.critArmBlownOff": "; {arm} BLOWN OFF",
   "res.critLegBlownOff": "; {leg} BLOWN OFF — pilot taking fall damage",
