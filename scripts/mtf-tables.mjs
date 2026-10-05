@@ -355,6 +355,7 @@ export const SOAK_TOKEN = {
   // Triple-Strength Myomer (TW p.143): occupies 6 crit slots; critical hits
   // on TSM slots have no effect (re-roll), so it soaks like armor tech.
   "Triple Strength Myomer": "tsm",
+  TSM: "tsm",
   CASE: "case",
   ISCASE: "case",
   "IS CASE": "case",
