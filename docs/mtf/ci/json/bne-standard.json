@@ -1,0 +1,400 @@
+{
+  "model": "BNE-Standard",
+  "name": "Kraken",
+  "clanName": "Bane",
+  "tonnage": 100,
+  "weightClass": "Assault",
+  "techBase": "Clan",
+  "walking": 3,
+  "running": 5,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 59,
+    "rightTorso": 42,
+    "leftTorso": 42,
+    "rightArm": 34,
+    "leftArm": 34,
+    "rightLeg": 42,
+    "leftLeg": 42,
+    "centerTorsoRear": 13,
+    "rightTorsoRear": 10,
+    "leftTorsoRear": 10
+  },
+  "weapons": [
+    {
+      "weapon": "CL Ultra AC/2",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Ultra AC/2",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Ultra AC/2",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Ultra AC/2",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Ultra AC/2",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Ultra AC/2",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Ultra AC/2",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Ultra AC/2",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Ultra AC/2",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Ultra AC/2",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Machine Gun",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL Machine Gun",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL Machine Gun",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL Machine Gun",
+      "location": "rightTorso",
+      "shots": 100
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Ultra AC/2"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Ultra AC/2"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Machine Gun"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Machine Gun"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Machine Gun"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Machine Gun"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Machine Gun"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Ultra AC/2"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Ultra AC/2"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/2"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/2"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/2"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/2"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/2"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/2"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/2"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/2"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/2"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/2"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/2"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/2"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/2"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/2"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/2"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/2"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/2"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/2"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/2"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/2"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 10
+  },
+  "myomer": "Standard"
+}

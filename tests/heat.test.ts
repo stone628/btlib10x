@@ -277,7 +277,7 @@ describe("heatDissipation: engine sink capacity + double heat sinks", () => {
     ["WVR-6R", 12], // 275 engine: 11 internal + 1 single
     ["GRF-1N", 12], // 275 engine: 11 internal + 1 single
     ["WHK-Prime", 40], // 340 engine: 13 internal + 7 double devices, x2 each
-    ["TW-Prime", 34], // 375 engine: 15 internal + 2 double devices, x2 each
+    ["TBR-Prime", 34], // 375 engine: 15 internal + 2 double devices, x2 each
     ["MC-MKII-2", 26], // 360 engine: 13 of 14 capacity, all double
     ["CDA-3MA", 20], // 320 engine: 10 of 12 capacity, all double
     ["HER-5SA", 20], // 240 engine: 9 internal + 1 IS double device

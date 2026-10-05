@@ -14,6 +14,7 @@ import {
   AMMO_TOKEN,
   CODE,
   CRIT_SLOT_COUNTS,
+  catalogWeapon,
   DHS_CRIT_SLOTS,
   ENGINE_CRIT_SLOTS,
   INERT_EQUIPMENT,
@@ -72,47 +73,60 @@ function normalizeCritWeaponToken(t) {
  * "- Full" suffixes, "(200)" shot-count notes and "Artemis-/Narc-capable"
  * variants (the munition type does not change the catalog ammo).
  */
-function resolveAmmoLine(raw) {
+function resolveAmmoLine(raw, clan = false) {
   const t = raw.trim();
-  const half = /-\s*Half\s*$/i.test(t);
-  const s = baseToken(
-    t
-      .replace(/\s*-\s*(Half|Full)\s*$/i, "")
+  const half = /-\s*Half\b/i.test(t);
+  // Peel trailing decorations (omnipod / variant parentheticals, "- Half",
+  // "- Full", "Artemis-/Narc-capable") until the line is stable.
+  let s = t;
+  for (;;) {
+    const next = s
+      .replace(/\s*\([^()]*\)\s*$/, "")
+      .replace(/\s*-\s*(?:Half|Full)\s*$/i, "")
       .replace(/\s+(?:Artemis|Narc)-capable\s*$/i, "")
-      .trim(),
-  );
+      .replace(/\s+(?:HE|ER)$/, "")
+      .trim();
+    if (next === s) break;
+    s = next;
+  }
   let tok = null;
-  let m = /^(?:IS|CL)\s+Ammo\s+(.+)$/.exec(s);
+  let m = /^(?:IS|CL|Clan)\s+Ammo\s+(.+)$/.exec(s);
   if (m) tok = m[1].trim();
   else {
     m = /^(.+?)\s+Ammo$/.exec(s);
     if (m) tok = m[1].trim();
   }
   if (tok === null) return null;
+  // "Clan Ammo X" / "Clan X Ammo" name the tech base explicitly.
+  const explicitClan = /^(?:CL|Clan)\b/i.test(s) ? true : /^IS\b/i.test(s) ? false : clan;
   const stripped = normalizeCritWeaponToken(tok).name;
   // Exact token first so Clan compact codes ("CLMG") win over the bare IS
-  // stem ("MG") left after prefix stripping.
-  const weapon = AMMO_TOKEN[tok] ?? CODE[tok] ?? AMMO_TOKEN[stripped] ?? CODE[stripped] ?? null;
+  // stem ("MG") left after prefix stripping. On Clan sheets the catalog
+  // lookup runs first so unprefixed names resolve to the Clan weapon.
+  const legacy = () =>
+    AMMO_TOKEN[tok] ?? CODE[tok] ?? AMMO_TOKEN[stripped] ?? CODE[stripped] ?? null;
+  const fromCatalog = () => catalogWeapon(tok, explicitClan);
+  const weapon = explicitClan ? (fromCatalog() ?? legacy()) : (legacy() ?? fromCatalog());
   return { weapon, half };
 }
 
-export function ammoBinsFromCrits(lines) {
+export function ammoBinsFromCrits(lines, techBase) {
   const bins = new Map();
   for (const line of lines) {
-    const res = resolveAmmoLine(line);
+    const res = resolveAmmoLine(line, techBase === "Clan");
     if (res?.weapon) bins.set(res.weapon, (bins.get(res.weapon) ?? 0) + (res.half ? 0.5 : 1));
   }
   return bins;
 }
 
-function classifyCritLine(raw, errors, fileLabel) {
+function classifyCritLine(raw, errors, fileLabel, clan) {
   const t = raw.trim();
   if (t === "" || t === "-Empty-") return { ok: true, slot: { kind: "empty" } };
   // Physical-weapon equipment (Hatchet, TW p.146) links to a Hatchet weapon
   // mount like any other weapon (precedent: HCT-5S). The importer synthesizes
   // the mount from crits when the weapons block omits it (e.g. CN9-YLW2).
   if (t === "Hatchet") return { ok: true, slot: { kind: "weapon", weapon: "Hatchet" } };
-  const ammo = resolveAmmoLine(t);
+  const ammo = resolveAmmoLine(t, clan);
   if (ammo !== null) {
     if (ammo.weapon) return { ok: true, slot: { kind: "ammo", weapon: ammo.weapon } };
     errors.push(`Unmapped ammo crit-slot token ${JSON.stringify(t)} in ${fileLabel}`);
@@ -132,7 +146,10 @@ function classifyCritLine(raw, errors, fileLabel) {
   if (STRUCTURE_TOKEN[base]) {
     return { ok: true, slot: { kind: "structure", name: STRUCTURE_TOKEN[base] } };
   }
-  const name = CODE[t] ?? CODE[base] ?? CODE[stripped.name] ?? null;
+  const legacy = CODE[t] ?? CODE[base] ?? CODE[stripped.name] ?? null;
+  const name = clan
+    ? (catalogWeapon(base, true) ?? legacy)
+    : (legacy ?? catalogWeapon(base, false));
   if (name)
     return {
       ok: true,
@@ -142,7 +159,8 @@ function classifyCritLine(raw, errors, fileLabel) {
   return { ok: false };
 }
 
-export function parseCritSlots(lines, errors, fileLabel) {
+export function parseCritSlots(lines, errors, fileLabel, techBase) {
+  const clan = techBase === "Clan";
   const out = {};
   for (const [, loc] of BODY_PART_HEADERS) out[loc] = [];
 
@@ -183,7 +201,7 @@ export function parseCritSlots(lines, errors, fileLabel) {
         slots.push({ kind: "empty" });
         continue;
       }
-      const res = classifyCritLine(t, errors, fileLabel);
+      const res = classifyCritLine(t, errors, fileLabel, clan);
       if (res.ok) slots.push(res.slot);
     }
   }

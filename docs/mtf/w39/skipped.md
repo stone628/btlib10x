@@ -19,8 +19,9 @@ Errors:
 
 Why:
 
-- Equipment has no entry in the engine weapon catalog (`src/data/weapons.data.ts`); mapping it to a different weapon would give wrong stats.
+- Weapon or equipment has no entry in the engine catalog / crit vocabulary (`src/data/weapons.data.ts`); mapping it to a different weapon would give wrong stats.
 - Prototype Endo Steel is not a recognised soak token and occupies a different slot count than the 14 the construction check expects.
+- Mixed-tech sheet: construction validation derives slot counts (Endo/Ferro/engine/double heat sinks) from a single tech base and has no Mixed-tech support.
 - Heat sink header type disagrees with the sink crit slots (e.g. `Single` header with `ISDoubleHeatSinkPrototype` slots); the engine validator rejects mixed sinks.
 
 ## Ignored: out of scope (1)

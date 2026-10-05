@@ -9,7 +9,7 @@ import { suggestFireTargets } from "../src/rules/fireability";
 import { computeToHit } from "../src/rules/tohit";
 import { createTestBattle, scriptedRng } from "./helpers";
 
-function freshFlags(def = mechDef("TW-Prime")!) {
+function freshFlags(def = mechDef("TBR-Prime")!) {
   const out: Record<Location, boolean[]> = {} as Record<Location, boolean[]>;
   for (const loc of Object.keys(def.critSlots) as Location[]) {
     out[loc] = new Array(def.critSlots[loc].length).fill(false);
@@ -17,7 +17,7 @@ function freshFlags(def = mechDef("TW-Prime")!) {
   return out;
 }
 
-function freshDamage(def = mechDef("TW-Prime")!): UnitDamageState {
+function freshDamage(def = mechDef("TBR-Prime")!): UnitDamageState {
   return {
     armor: { ...def.armor },
     armorRear: { ...def.armorRear },
@@ -39,7 +39,7 @@ function destroyNamed(
 }
 
 describe("arm actuator weapon modifiers (TW p.125)", () => {
-  const def = mechDef("TW-Prime")!;
+  const def = mechDef("TBR-Prime")!;
 
   it("intact arms and non-arm mounts score 0", () => {
     const flags = freshFlags(def);
@@ -138,7 +138,7 @@ describe("arm actuator weapon modifiers (TW p.125)", () => {
       [
         {
           id: "a",
-          model: "TW-Prime",
+          model: "TBR-Prime",
           team: 0,
           gunnery: 4,
           piloting: 5,
@@ -160,7 +160,7 @@ describe("arm actuator weapon modifiers (TW p.125)", () => {
     const tnBefore = suggestFireTargets(state, "a").targets.find((t) => t.targetId === "b");
     const armTnBefore = tnBefore!.weaponsIfPropLeft.find((w) => w.location === "leftArm")!.tn;
     const attacker = state.units.a!;
-    const atkDef = mechDef("TW-Prime")!;
+    const atkDef = mechDef("TBR-Prime")!;
     atkDef.critSlots.leftArm.forEach((slot, i) => {
       if (slot.kind === "structure" && slot.name === "shoulder") {
         attacker.critSlotsDestroyed.leftArm[i] = true;

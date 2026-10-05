@@ -57,7 +57,7 @@ Errors:
 
 Why:
 
-- Equipment has no entry in the engine weapon catalog (`src/data/weapons.data.ts`); mapping it to a different weapon would give wrong stats.
+- Weapon or equipment has no entry in the engine catalog / crit vocabulary (`src/data/weapons.data.ts`); mapping it to a different weapon would give wrong stats.
 
 ### Helepolis HEP-3H.mtf
 
@@ -69,7 +69,7 @@ Errors:
 
 Why:
 
-- Equipment has no entry in the engine weapon catalog (`src/data/weapons.data.ts`); mapping it to a different weapon would give wrong stats.
+- Weapon or equipment has no entry in the engine catalog / crit vocabulary (`src/data/weapons.data.ts`); mapping it to a different weapon would give wrong stats.
 
 ### Kintaro KTO-19.mtf
 
@@ -81,7 +81,7 @@ Errors:
 
 Why:
 
-- Equipment has no entry in the engine weapon catalog (`src/data/weapons.data.ts`); mapping it to a different weapon would give wrong stats.
+- Weapon or equipment has no entry in the engine catalog / crit vocabulary (`src/data/weapons.data.ts`); mapping it to a different weapon would give wrong stats.
 
 ### Kintaro KTO-19b.mtf
 
@@ -93,7 +93,7 @@ Errors:
 
 Why:
 
-- Equipment has no entry in the engine weapon catalog (`src/data/weapons.data.ts`); mapping it to a different weapon would give wrong stats.
+- Weapon or equipment has no entry in the engine catalog / crit vocabulary (`src/data/weapons.data.ts`); mapping it to a different weapon would give wrong stats.
 
 ### Longbow LGB-0C.mtf
 
@@ -116,7 +116,7 @@ Errors:
 
 Why:
 
-- Equipment has no entry in the engine weapon catalog (`src/data/weapons.data.ts`); mapping it to a different weapon would give wrong stats.
+- Weapon or equipment has no entry in the engine catalog / crit vocabulary (`src/data/weapons.data.ts`); mapping it to a different weapon would give wrong stats.
 - Sheet's Walk MP × Mass implies a different engine-mounted heat sink count than its Heat Sinks header and crit slots; `validateMechDef` applies the same rule.
 
 ### Shadow Hawk SHD-3H2.mtf
@@ -128,7 +128,7 @@ Errors:
 
 Why:
 
-- Equipment has no entry in the engine weapon catalog (`src/data/weapons.data.ts`); mapping it to a different weapon would give wrong stats.
+- Weapon or equipment has no entry in the engine catalog / crit vocabulary (`src/data/weapons.data.ts`); mapping it to a different weapon would give wrong stats.
 
 ### Stag II ST-24G.mtf
 
@@ -139,7 +139,7 @@ Errors:
 
 Why:
 
-- Equipment has no entry in the engine weapon catalog (`src/data/weapons.data.ts`); mapping it to a different weapon would give wrong stats.
+- Weapon or equipment has no entry in the engine catalog / crit vocabulary (`src/data/weapons.data.ts`); mapping it to a different weapon would give wrong stats.
 
 ### Super Griffin GRF-2N-X.mtf
 
@@ -170,7 +170,7 @@ Errors:
 
 Why:
 
-- Equipment has no entry in the engine weapon catalog (`src/data/weapons.data.ts`); mapping it to a different weapon would give wrong stats.
+- Weapon or equipment has no entry in the engine catalog / crit vocabulary (`src/data/weapons.data.ts`); mapping it to a different weapon would give wrong stats.
 
 ### Wolverine WVR-3R.mtf
 
@@ -191,7 +191,7 @@ Errors:
 
 Why:
 
-- Equipment has no entry in the engine weapon catalog (`src/data/weapons.data.ts`); mapping it to a different weapon would give wrong stats.
+- Weapon or equipment has no entry in the engine catalog / crit vocabulary (`src/data/weapons.data.ts`); mapping it to a different weapon would give wrong stats.
 
 ### Zeus ZEU-6Y.mtf
 
@@ -202,7 +202,7 @@ Errors:
 
 Why:
 
-- Equipment has no entry in the engine weapon catalog (`src/data/weapons.data.ts`); mapping it to a different weapon would give wrong stats.
+- Weapon or equipment has no entry in the engine catalog / crit vocabulary (`src/data/weapons.data.ts`); mapping it to a different weapon would give wrong stats.
 
 ## Ignored: out of scope (18)
 

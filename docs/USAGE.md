@@ -80,7 +80,7 @@ with `mechDef(model)` or `mechDefFor({ model })`, list the registered ones with
 `registeredMechDefs()` and every catalog entry with `catalogMechs()`. Bundled:
 AS7-D (Atlas), BSW-X1, BZK-F3, CDA-3MA (Cicada), CN9-YLW2 (Centurion),
 ENF-4R (Enforcer), GRF-1N (Griffin), HBK-4G (Hunchback), HCT-5S (Hatchetman),
-HER-5SA (Hermes II), MC-MKII-2 (Mad Cat Mk II), TW-Prime (Mad Cat),
+HER-5SA (Hermes II), MC-MKII-2 (Mad Cat Mk II), TBR-Prime (Mad Cat),
 WHK-Prime (Masakari), WVR-6R (Wolverine).
 
 ```ts

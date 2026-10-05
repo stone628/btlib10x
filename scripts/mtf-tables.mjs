@@ -19,6 +19,10 @@
  *     model code generation
  */
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 // ---------------------------------------------------------------------------
 // Weapon code mapping
 // ---------------------------------------------------------------------------
@@ -190,6 +194,12 @@ export const INERT_EQUIPMENT = new Set([
   "Chameleon Light Polarization Shield",
   "Chameleon Light Polarization Field",
   "ISCollapsibleCommandModule",
+  "CLMASC",
+  "CLArtemisIV",
+  "ISC3SlaveUnit",
+  "ISC3MasterUnit",
+  "ISC3MasterComputer",
+  "C3 Master with TAG",
   "ISElectronicWarfareEquipment",
   "ISLaserInsulator",
   "RemoteSensorDispenser",
@@ -343,12 +353,15 @@ export const STRUCTURE_TOKEN = {
   "Lower Leg Actuator": "lowerLegActuator",
   "Foot Actuator": "footActuator",
   "CLTargeting Computer": "targetingComputer",
+  "ISTargeting Computer": "targetingComputer",
 };
 
 export const SOAK_TOKEN = {
   "Endo Steel": "endoSteel",
   "IS Endo Steel": "endoSteel",
   "CL Endo Steel": "endoSteel",
+  "Clan Endo Steel": "endoSteel",
+  "Clan Endo-Steel": "endoSteel",
   "CL Endo Steel (IS)": "endoSteel",
   "IS Endo-Steel": "endoSteel",
   "Endo-Steel": "endoSteel",
@@ -363,6 +376,7 @@ export const SOAK_TOKEN = {
   "Ferro-Fibrous": "ferroFibrous",
   "IS Ferro-Fibrous": "ferroFibrous",
   "CL Ferro-Fibrous": "ferroFibrous",
+  "Clan Ferro-Fibrous": "ferroFibrous",
   "Ferro-Fibrous (CL)": "ferroFibrous",
 };
 
@@ -409,15 +423,205 @@ export const DHS_CRIT_SLOTS = {
  *
  * Clan MTF sheets do not carry a usable model code on line 3 (e.g. "Prime"
  * or "2"), so the importer synthesises the catalog key as
- * `<prefix>-<variant>` ("TW-Prime", "MC-MKII-2"). Keys are the full MTF
+ * `<prefix>-<variant>` ("TBR-Prime", "MC-MKII-2"). Keys are the full MTF
  * line-2 strings; `name` is the canonical outer (Inner Sphere reporting)
  * name stored in `MechDef.name` — the parenthesised Clan name goes to
  * `MechDef.clanName` instead.
  *
  * Example: "Mad Cat Mk II" + variant "2" → "MC-MKII-2"
+ *
+ * No canonical prefixes exist (lore names Clan configurations only by
+ * "Prime" / letter / number); codes follow MechWarrior Online conventions.
  */
 export const MODEL_PREFIX_NAME = {
   "Mad Cat Mk II": { prefix: "MC-MKII", name: "Mad Cat Mk II" },
-  "Mad Cat (Timber Wolf)": { prefix: "TW", name: "Mad Cat" },
+  "Mad Cat (Timber Wolf)": { prefix: "TBR", name: "Mad Cat" },
   "Masakari (Warhawk)": { prefix: "WHK", name: "Masakari" },
+  Archer: { prefix: "ARC", name: "Archer" },
+  Locust: { prefix: "LCT", name: "Locust" },
+  Rifleman: { prefix: "RFL", name: "Rifleman" },
+  Victor: { prefix: "VTR", name: "Victor" },
+  Marauder: { prefix: "MAD", name: "Marauder" },
+  Annihilator: { prefix: "ANH", name: "Annihilator" },
+  Atlas: { prefix: "AS7", name: "Atlas" },
+  "Baboon (Howler)": { prefix: "HWL", name: "Baboon" },
+  "Battle Cobra": { prefix: "BCB", name: "Battle Cobra" },
+  "Behemoth (Stone Rhino)": { prefix: "SRH", name: "Behemoth" },
+  "Black Hawk (Nova)": { prefix: "NOV", name: "Black Hawk" },
+  "Black Lanner": { prefix: "BLN", name: "Black Lanner" },
+  "Blood Kite": { prefix: "BKT", name: "Blood Kite" },
+  Bowman: { prefix: "BWM", name: "Bowman" },
+  "Cauldron-Born (Ebon Jaguar)": { prefix: "EBJ", name: "Cauldron-Born" },
+  Champion: { prefix: "CHP", name: "Champion" },
+  "Clint IIC": { prefix: "CLNT-IIC", name: "Clint IIC" },
+  "Commando IIC": { prefix: "COM-IIC", name: "Commando IIC" },
+  Corvis: { prefix: "CRV", name: "Corvis" },
+  Coyotl: { prefix: "COY", name: "Coyotl" },
+  Crossbow: { prefix: "XBW", name: "Crossbow" },
+  "Daishi (Dire Wolf)": { prefix: "DWF", name: "Daishi" },
+  "Dasher (Fire Moth)": { prefix: "FMT", name: "Dasher" },
+  Devil: { prefix: "DVL", name: "Devil" },
+  "Dragonfly (Viper)": { prefix: "VPR", name: "Dragonfly" },
+  "Drift Shag": { prefix: "DSG", name: "Drift Shag" },
+  "Fenris (Ice Ferret)": { prefix: "IFR", name: "Fenris" },
+  "Fire Falcon": { prefix: "FFC", name: "Fire Falcon" },
+  Firefly: { prefix: "FFL", name: "Firefly" },
+  Fox: { prefix: "FOX", name: "Fox" },
+  "Galahad (Glass Spider)": { prefix: "GSP", name: "Galahad" },
+  Gallowglas: { prefix: "GLG", name: "Gallowglas" },
+  "Gladiator (Executioner)": { prefix: "EXE", name: "Gladiator" },
+  "Gladiator-B (Executioner-B)": { prefix: "EXB", name: "Gladiator-B" },
+  "Goshawk (Vapor Eagle)": { prefix: "VEG", name: "Goshawk" },
+  "Great Wyrm": { prefix: "GWY", name: "Great Wyrm" },
+  "Grendel (Mongrel)": { prefix: "MGL", name: "Grendel" },
+  "Griffin IIC": { prefix: "GRF-IIC", name: "Griffin IIC" },
+  Grizzly: { prefix: "GZL", name: "Grizzly" },
+  "Guillotine IIC": { prefix: "GLT-IIC", name: "Guillotine IIC" },
+  "Hankyu (Arctic Cheetah)": { prefix: "ACH", name: "Hankyu" },
+  "Hellhound (Conjurer)": { prefix: "CNJ", name: "Hellhound" },
+  "Highlander IIC": { prefix: "HGN-IIC", name: "Highlander IIC" },
+  Hoplite: { prefix: "HOP", name: "Hoplite" },
+  "Hunchback IIC": { prefix: "HBK-IIC", name: "Hunchback IIC" },
+  Icestorm: { prefix: "ICS", name: "Icestorm" },
+  Imp: { prefix: "IMP", name: "Imp" },
+  "Iron Cheetah": { prefix: "ICH", name: "Iron Cheetah" },
+  "Jenner IIC": { prefix: "JR7-IIC", name: "Jenner IIC" },
+  Kingfisher: { prefix: "KGF", name: "Kingfisher" },
+  Kodiak: { prefix: "KDK", name: "Kodiak" },
+  "Koshi (Mist Lynx)": { prefix: "MLX", name: "Koshi" },
+  "Kraken (Bane)": { prefix: "BNE", name: "Kraken" },
+  Lancelot: { prefix: "LNC", name: "Lancelot" },
+  Linebacker: { prefix: "LBK", name: "Linebacker" },
+  "Locust IIC": { prefix: "LCT-IIC", name: "Locust IIC" },
+  "Loki (Hellbringer)": { prefix: "HBR", name: "Loki" },
+  Lupus: { prefix: "LPS", name: "Lupus" },
+  Lynx: { prefix: "LNX", name: "Lynx" },
+  "Man O' War (Gargoyle)": { prefix: "GAR", name: "Man O' War" },
+  Mandrill: { prefix: "MDR", name: "Mandrill" },
+  "Marauder IIC": { prefix: "MAD-IIC", name: "Marauder IIC" },
+  Masauwu: { prefix: "MSW", name: "Masauwu" },
+  Matador: { prefix: "MTD", name: "Matador" },
+  Minsk: { prefix: "MNK", name: "Minsk" },
+  Mongoose: { prefix: "MON", name: "Mongoose" },
+  "Naga II": { prefix: "NGA-II", name: "Naga II" },
+  Naga: { prefix: "NGA", name: "Naga" },
+  Naja: { prefix: "NJA", name: "Naja" },
+  "Night Chanter": { prefix: "NCH", name: "Night Chanter" },
+  "Night Gyr": { prefix: "NGR", name: "Night Gyr" },
+  "Nobori-nin (Huntsman)": { prefix: "HNT", name: "Nobori-nin" },
+  "Omni-Corvis": { prefix: "OCR", name: "Omni-Corvis" },
+  "Orion IIC": { prefix: "ON1-IIC", name: "Orion IIC" },
+  "Peregrine (Horned Owl)": { prefix: "HOW", name: "Peregrine" },
+  Phantom: { prefix: "PNT", name: "Phantom" },
+  "Phoenix Hawk IIC": { prefix: "PXH-IIC", name: "Phoenix Hawk IIC" },
+  "Phoenix Hawk": { prefix: "PXH", name: "Phoenix Hawk" },
+  Piranha: { prefix: "PRH", name: "Piranha" },
+  Pouncer: { prefix: "PNC", name: "Pouncer" },
+  Pulverizer: { prefix: "PLV", name: "Pulverizer" },
+  "Puma (Adder)": { prefix: "ADR", name: "Puma" },
+  "Rifleman IIC": { prefix: "RFL-IIC", name: "Rifleman IIC" },
+  "Roadrunner (Emerald Harrier)": { prefix: "EHR", name: "Roadrunner" },
+  "Ryoken (Stormcrow)": { prefix: "SCR", name: "Ryoken" },
+  "Shadow Cat": { prefix: "SHC", name: "Shadow Cat" },
+  "Shadow Hawk IIC": { prefix: "SHD-IIC", name: "Shadow Hawk IIC" },
+  Shogun: { prefix: "SHG", name: "Shogun" },
+  Spartan: { prefix: "SPT", name: "Spartan" },
+  "Spirit Walker": { prefix: "SPW", name: "Spirit Walker" },
+  Stinger: { prefix: "STG", name: "Stinger" },
+  "Stooping Hawk": { prefix: "STH", name: "Stooping Hawk" },
+  "Storm Giant": { prefix: "SGT", name: "Storm Giant" },
+  "Sun Bear": { prefix: "SNB", name: "Sun Bear" },
+  Supernova: { prefix: "SNV", name: "Supernova" },
+  "Thor (Summoner)": { prefix: "SMN", name: "Thor" },
+  Thresher: { prefix: "THR", name: "Thresher" },
+  Thunderbolt: { prefix: "TDR", name: "Thunderbolt" },
+  Turkina: { prefix: "TKN", name: "Turkina" },
+  "Uller (Kit Fox)": { prefix: "KFX", name: "Uller" },
+  "UrbanMech IIC": { prefix: "UM-IIC", name: "UrbanMech IIC" },
+  "Viper (Black Python)": { prefix: "BPY", name: "Viper" },
+  Viper: { prefix: "VIP", name: "Viper" },
+  "Vision Quest": { prefix: "VQS", name: "Vision Quest" },
+  "Vixen (Incubus)": { prefix: "INC", name: "Vixen" },
+  "Vulture (Mad Dog)": { prefix: "MDD", name: "Vulture" },
+  Wakazashi: { prefix: "WKZ", name: "Wakazashi" },
+  "Warhammer IIC": { prefix: "WHM-IIC", name: "Warhammer IIC" },
+  Warhammer: { prefix: "WHM", name: "Warhammer" },
+  Woodsman: { prefix: "WDS", name: "Woodsman" },
+  "Wyvern IIC": { prefix: "WVE-IIC", name: "Wyvern IIC" },
 };
+
+// ---------------------------------------------------------------------------
+// Catalog-aware weapon resolution
+// ---------------------------------------------------------------------------
+
+const dataDir = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "data");
+const catalogNames = [
+  ...readFileSync(join(dataDir, "weapons.data.ts"), "utf8").matchAll(/^\s+name: "([^"]+)",/gm),
+].map((m) => m[1]);
+
+function squash(text) {
+  return text.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/** Catalog weapon names keyed by their squashed form ("CL ER PPC" -> "clerppc"). */
+const CATALOG_INDEX = new Map(catalogNames.map((n) => [squash(n), n]));
+
+/** MTF spellings that squash differently from the catalog name. */
+const STEM_ALIAS = {
+  gauss: "gaussrifle",
+  mg: "machinegun",
+  antipersonnelpod: "apod",
+  narcbeacon: "narcmissilebeacon",
+  narcpods: "narcmissilebeacon",
+};
+
+/** Equipment whose Clan and IS versions are the same catalog entry. */
+const TECH_AGNOSTIC = new Set(["antimissilesystem", "apod"]);
+
+/**
+ * Resolve an MTF weapon / ammo token to a catalog weapon name by squashing it
+ * (case, spacing, punctuation, "IS"/"CL"/"Clan" prefix, trailing
+ * "(omnipod)"/"(R)"-style parentheticals and "Cluster" LB-X ammo) and looking
+ * the stem up in the catalog. An explicit prefix selects the tech base; an
+ * unprefixed token follows `clan` (the sheet's tech base). The Clan and IS
+ * entries are never substituted for one another except for the tech-agnostic
+ * equipment above. Returns null when the catalog has no such weapon.
+ */
+export function catalogWeapon(token, clan = false) {
+  let t = token.trim();
+  for (;;) {
+    const next = t.replace(/\s*\([^()]*\)\s*$/, "");
+    if (next === t) break;
+    t = next;
+  }
+  let x = squash(t.replace(/\s+CL$/, "").replace(/^Clan\s+/i, "CL"));
+  let tech = clan ? "cl" : "is";
+  const prefix = /^(cl|is)(?=[a-z0-9])/.exec(x);
+  if (prefix) {
+    tech = prefix[1];
+    x = x.slice(2);
+  }
+  x = x
+    .replace(/^lbxac(\d+)$/, "lb$1xac")
+    .replace(/^lb(\d+)xcluster$/, "lb$1xac")
+    .replace(/^lb(\d+)xac$/, "lb$1xac");
+  x = STEM_ALIAS[x] ?? x;
+  if (tech === "cl") {
+    const hit = CATALOG_INDEX.get(`cl${x}`);
+    if (hit) return hit;
+    return TECH_AGNOSTIC.has(x) || /^atm\d+$/.test(x) ? (CATALOG_INDEX.get(x) ?? null) : null;
+  }
+  return CATALOG_INDEX.get(x) ?? null;
+}
+
+/**
+ * Catalog weapons in the EQUIPMENT category (probes, ECM, AMS, TAG, pods).
+ * Sheets often list these only in the crit slots, not in the weapons block.
+ */
+export const EQUIPMENT_WEAPONS = new Set(
+  [
+    ...readFileSync(join(dataDir, "weapons.data.ts"), "utf8").matchAll(
+      /name: "([^"]+)"[^}]*?category: "EQUIPMENT"/g,
+    ),
+  ].map((m) => m[1]),
+);
