@@ -1,0 +1,376 @@
+{
+  "model": "OTL-7M",
+  "name": "Ostsol",
+  "tonnage": 60,
+  "weightClass": "Heavy",
+  "techBase": "Inner Sphere",
+  "walking": 5,
+  "running": 8,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 31,
+    "rightTorso": 26,
+    "leftTorso": 26,
+    "rightArm": 18,
+    "leftArm": 18,
+    "rightLeg": 20,
+    "leftLeg": 20,
+    "centerTorsoRear": 7,
+    "rightTorsoRear": 6,
+    "leftTorsoRear": 6
+  },
+  "weapons": [
+    {
+      "weapon": "Light Gauss Rifle",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "ER Medium Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "ER Medium Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "Light Gauss Rifle",
+      "location": "rightTorso",
+      "shots": 32
+    },
+    {
+      "weapon": "ER Medium Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "ER Medium Laser",
+      "location": "rightTorso"
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ER Medium Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ER Medium Laser"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "soak",
+        "name": "case"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ER Medium Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ER Medium Laser"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "soak",
+        "name": "case"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "handActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "handActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 10
+  },
+  "myomer": "Standard"
+}

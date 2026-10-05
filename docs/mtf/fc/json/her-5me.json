@@ -1,0 +1,341 @@
+{
+  "model": "HER-5ME",
+  "name": "Hermes II",
+  "tonnage": 40,
+  "weightClass": "Medium",
+  "techBase": "Inner Sphere",
+  "walking": 6,
+  "running": 9,
+  "jumping": 0,
+  "armor": {
+    "head": 8,
+    "centerTorso": 18,
+    "rightTorso": 16,
+    "leftTorso": 16,
+    "rightArm": 9,
+    "leftArm": 9,
+    "rightLeg": 14,
+    "leftLeg": 14,
+    "centerTorsoRear": 4,
+    "rightTorsoRear": 4,
+    "leftTorsoRear": 4
+  },
+  "weapons": [
+    {
+      "weapon": "Light Gauss Rifle",
+      "location": "rightTorso",
+      "shots": 32
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "handActuator"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 10
+  },
+  "myomer": "Standard"
+}

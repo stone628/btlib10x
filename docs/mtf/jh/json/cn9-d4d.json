@@ -1,0 +1,374 @@
+{
+  "model": "CN9-D4D",
+  "name": "Centurion",
+  "tonnage": 50,
+  "weightClass": "Medium",
+  "techBase": "Inner Sphere",
+  "walking": 5,
+  "running": 8,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 26,
+    "rightTorso": 20,
+    "leftTorso": 20,
+    "rightArm": 14,
+    "leftArm": 14,
+    "rightLeg": 20,
+    "leftLeg": 20,
+    "centerTorsoRear": 6,
+    "rightTorsoRear": 5,
+    "leftTorsoRear": 5
+  },
+  "weapons": [
+    {
+      "weapon": "Light Gauss Rifle",
+      "location": "rightArm",
+      "shots": 16
+    },
+    {
+      "weapon": "ER Medium Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "LRM 15",
+      "location": "leftTorso",
+      "shots": 16
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LRM 15"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LRM 15"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LRM 15"
+      },
+      {
+        "kind": "soak",
+        "name": "equipment"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "LRM 15"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "LRM 15"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ER Medium Laser"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "equipment"
+      },
+      {
+        "kind": "soak",
+        "name": "equipment"
+      },
+      {
+        "kind": "soak",
+        "name": "equipment"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "single",
+    "count": 10
+  },
+  "myomer": "Standard"
+}

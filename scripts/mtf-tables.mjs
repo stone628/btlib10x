@@ -262,6 +262,8 @@ export const SHOTS_PER_TON = {
   "CL LRM 20": 12,
   "CL Machine Gun": 200,
   "Gauss Rifle": 8,
+  "Light Gauss Rifle": 16,
+  "Heavy Gauss Rifle": 4,
   "CL Gauss Rifle": 16,
   "LB 10-X AC": 10,
   "LB 20-X AC": 5,
@@ -601,6 +603,12 @@ const CATALOG_INDEX = new Map(catalogNames.map((n) => [squash(n), n]));
 /** MTF spellings that squash differently from the catalog name. */
 const STEM_ALIAS = {
   gauss: "gaussrifle",
+  lightgauss: "lightgaussrifle",
+  heavygauss: "heavygaussrifle",
+  // Sheets spell the Binary Laser Cannon as "Blazer Cannon" or "Binary Laser
+  // (Blazer) Cannon".
+  blazercannon: "binarylasercannon",
+  binarylaserblazercannon: "binarylasercannon",
   mg: "machinegun",
   antipersonnelpod: "apod",
   narcbeacon: "narcmissilebeacon",

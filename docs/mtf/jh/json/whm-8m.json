@@ -1,0 +1,364 @@
+{
+  "model": "WHM-8M",
+  "name": "Warhammer",
+  "tonnage": 70,
+  "weightClass": "Heavy",
+  "techBase": "Inner Sphere",
+  "walking": 4,
+  "running": 6,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 39,
+    "rightTorso": 28,
+    "leftTorso": 28,
+    "rightArm": 22,
+    "leftArm": 22,
+    "rightLeg": 30,
+    "leftLeg": 30,
+    "centerTorsoRear": 10,
+    "rightTorsoRear": 7,
+    "leftTorsoRear": 7
+  },
+  "weapons": [
+    {
+      "weapon": "ER PPC",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "ER PPC",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "ER Medium Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "Light Gauss Rifle",
+      "location": "rightTorso",
+      "shots": 16
+    },
+    {
+      "weapon": "ER Medium Laser",
+      "location": "rightTorso"
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ER Medium Laser"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ER Medium Laser"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Light Gauss Rifle"
+      },
+      {
+        "kind": "soak",
+        "name": "case"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ER PPC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ER PPC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ER PPC"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ER PPC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ER PPC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ER PPC"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 12
+  },
+  "myomer": "Standard"
+}
