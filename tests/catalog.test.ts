@@ -148,7 +148,7 @@ describe("catalog registration", () => {
   });
 
   it("splits the Clan name out of the MTF line-2 parens", () => {
-    const entry = findMechEntry("tw-prime")!;
+    const entry = findMechEntry("tbr-prime")!;
     const def = decodeMechLine(mechLine(entry), entry, STRINGS);
     expect(def.name).toBe("Mad Cat");
     expect(def.clanName).toBe("Timber Wolf");

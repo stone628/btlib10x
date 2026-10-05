@@ -744,7 +744,7 @@ describe("DHS grouping", () => {
 
 describe("CASE", () => {
   const state = (): UnitDamageState => {
-    const def = mechDef("TW-Prime")!;
+    const def = mechDef("TBR-Prime")!;
     return {
       armor: { ...def.armor, leftTorso: 0 },
       armorRear: { ...def.armorRear },
@@ -753,7 +753,7 @@ describe("CASE", () => {
   };
 
   it("hasCase detects implicit Clan protection on all locations", () => {
-    const tw = mechDef("TW-Prime")!;
+    const tw = mechDef("TBR-Prime")!;
     expect(tw.techBase).toBe("Clan");
     for (const loc of LOCATIONS) {
       expect(checkCASE(tw, loc)).toBe("case");
@@ -839,7 +839,7 @@ describe("CASE", () => {
   });
 
   it("explosion bypasses armor without stripping it", () => {
-    const def = mechDef("TW-Prime")!;
+    const def = mechDef("TBR-Prime")!;
     const s: UnitDamageState = {
       armor: { ...def.armor, leftTorso: 10 },
       armorRear: { ...def.armorRear },

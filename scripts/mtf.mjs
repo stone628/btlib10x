@@ -9,6 +9,8 @@ import {
 } from "./mtf-crit.mjs";
 import {
   CODE,
+  catalogWeapon,
+  EQUIPMENT_WEAPONS,
   INERT_EQUIPMENT,
   LOCATION,
   MODEL_PREFIX_NAME,
@@ -80,8 +82,12 @@ function splitWeaponLine(line) {
   return { codeRaw, location: cleanLocation, explicitAmmo, rearFacing };
 }
 
-function mapWeapon(codeRaw) {
-  return CODE[codeRaw] ?? null;
+function mapWeapon(codeRaw, clan) {
+  // Clan sheets prefer the catalog lookup so unprefixed names ("ER PPC",
+  // "Ultra AC/10") resolve to the Clan weapon; IS sheets keep the legacy table first.
+  return clan
+    ? (catalogWeapon(codeRaw, true) ?? CODE[codeRaw] ?? null)
+    : (CODE[codeRaw] ?? catalogWeapon(codeRaw, false));
 }
 
 function parseMtf(text, file) {
@@ -146,7 +152,7 @@ function parseMtf(text, file) {
   // Model codes: Inner Sphere sheets carry the full code on MTF line 3
   // ("HBK-4G") and it is used verbatim. Clan sheets carry a bare variant
   // ("Prime", "2"), so the catalog key is synthesised from
-  // MODEL_PREFIX_NAME (`<prefix>-<variant>`, e.g. "TW-Prime"); a missing
+  // MODEL_PREFIX_NAME (`<prefix>-<variant>`, e.g. "TBR-Prime"); a missing
   // table entry is a hard error, never a silent verbatim fallback.
   let model = variant;
   if (techBase === "Clan") {
@@ -162,9 +168,22 @@ function parseMtf(text, file) {
     if (!variant) {
       return { def: null, errors: [`missing variant in ${file}`] };
     }
-    model = `${entry.prefix}-${variant}`;
+    // Variants may be parenthesised ("(Standard)") or spaced ("C 2"); fold
+    // them into a single token for the catalog key.
+    const variantKey = variant.replace(/[()]/g, "").trim().replace(/\s+/g, "-");
+    model = `${entry.prefix}-${variantKey}`;
     name = entry.name;
   } else {
+    // Inner Sphere sheets must carry a distinct model code on line 3 (it is the
+    // catalog key). A bare variant ("C", "Prime") is reported, never guessed.
+    if (model && !/[0-9-]/.test(model.replace(/\s+['"].*$/, ""))) {
+      return {
+        def: null,
+        errors: [
+          `Inner Sphere sheet has no distinct model string (variant ${JSON.stringify(model)}); needs manual import`,
+        ],
+      };
+    }
     if (model && !/[A-Za-z]/.test(model)) {
       return {
         def: null,
@@ -256,12 +275,12 @@ function parseMtf(text, file) {
     }
   }
 
-  const bins = ammoBinsFromCrits(lines);
+  const bins = ammoBinsFromCrits(lines, techBase);
   const parsed = block
     .map(splitWeaponLine)
     .filter(({ codeRaw }) => !INERT_EQUIPMENT.has(codeRaw))
     .map(({ codeRaw, location, explicitAmmo, rearFacing }) => {
-      const weapon = mapWeapon(codeRaw);
+      const weapon = mapWeapon(codeRaw, techBase === "Clan");
       if (!weapon) {
         errors.push(`Unmapped weapon code ${JSON.stringify(codeRaw)}`);
         return null;
@@ -294,21 +313,21 @@ function parseMtf(text, file) {
     if (owner !== m) m.ammo = null;
   }
 
-  const critSlots = parseCritSlots(lines, errors, file);
+  const critSlots = parseCritSlots(lines, errors, file, techBase);
 
-  // Physical-weapon mounts (Hatchet, TW p.146) are often absent from the
-  // weapons block (e.g. CN9-YLW2 lists only guns there) while their crit
-  // slots name the equipment. Synthesize one mount per crit-bearing arm so
-  // the slot linkage in `resolveMechDef` resolves (precedent: the
-  // hand-transcribed HCT-5S ships a Hatchet mount + slots).
+  // Mounts that sheets omit from the weapons block but name in crit slots:
+  // physical weapons (Hatchet, TW p.146; e.g. CN9-YLW2 lists only guns there)
+  // and EQUIPMENT-category gear (Active Probe, ECM, AMS, TAG, pods). One mount
+  // is synthesised per crit-bearing location so the slot linkage in
+  // `resolveMechDef` resolves (precedent: the hand-transcribed HCT-5S).
   for (const [loc, slots] of Object.entries(critSlots)) {
-    const hasHatchetCrit = slots.some(
-      (slot) => slot.kind === "weapon" && slot.weapon === "Hatchet",
-    );
-    if (!hasHatchetCrit) continue;
-    const hasHatchetMount = parsed.some((m) => m.weapon === "Hatchet" && m.location === loc);
-    if (!hasHatchetMount) {
-      parsed.push({ weapon: "Hatchet", location: loc, ammo: null, explicit: false });
+    for (const slot of slots) {
+      if (slot.kind !== "weapon") continue;
+      if (slot.weapon !== "Hatchet" && !EQUIPMENT_WEAPONS.has(slot.weapon)) continue;
+      const hasMount = parsed.some((m) => m.weapon === slot.weapon && m.location === loc);
+      if (!hasMount) {
+        parsed.push({ weapon: slot.weapon, location: loc, ammo: null, explicit: false });
+      }
     }
   }
 
@@ -337,6 +356,19 @@ function parseMtf(text, file) {
       mount.rearFacing = true;
     }
     mountCursors.set(key, cursor + 1);
+  }
+
+  // Mirrors the engine rule (validateMechDef): rear-facing mounts are only
+  // supported on torso and head locations.
+  for (const mount of weapons) {
+    if (
+      mount.rearFacing === true &&
+      !["head", "centerTorso", "leftTorso", "rightTorso"].includes(mount.location)
+    ) {
+      errors.push(
+        `rear-facing ${mount.weapon} in ${mount.location}: rear-facing is only supported on torso and head mounts`,
+      );
+    }
   }
 
   const critMeta = {
@@ -379,6 +411,7 @@ let generated = 0;
 let skipped = 0;
 mkdirSync(outDir, { recursive: true });
 let nonBiped = 0;
+const written = new Map();
 for (const file of files) {
   const text = readFileSync(join(mtfDir, file), "utf8");
   // Bipedal 'Mechs only: LAM / Quad / Tripod sheets are out of scope.
@@ -394,6 +427,13 @@ for (const file of files) {
     continue;
   }
   const outFile = join(outDir, `${def.model.toLowerCase()}.json`);
+  const owner = written.get(outFile);
+  if (owner !== undefined) {
+    console.error(`SKIP ${file}:`);
+    console.error(`  - duplicate model code ${def.model} (already produced by ${owner})`);
+    continue;
+  }
+  written.set(outFile, file);
   if (existsSync(outFile) && !force) {
     console.log(`skip existing ${outFile.replace(`${root}/`, "")} (use --force to overwrite)`);
     skipped++;

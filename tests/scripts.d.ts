@@ -16,7 +16,12 @@ declare module "*/mtf-crit.mjs" {
     >
   >;
 
-  export function parseCritSlots(lines: string[], errors: string[], fileLabel: string): CritSlotMap;
+  export function parseCritSlots(
+    lines: string[],
+    errors: string[],
+    fileLabel: string,
+    techBase?: string,
+  ): CritSlotMap;
 
   export function validateCritConstruction(
     slots: CritSlotMap,
@@ -32,5 +37,5 @@ declare module "*/mtf-crit.mjs" {
 
   /** Per-catalog-weapon ammo tonnage tally. Full-ton crits add 1, "- Half"
    * suffixed crits add 0.5. Caller multiplies by SHOTS_PER_TON to get shots. */
-  export function ammoBinsFromCrits(lines: string[]): Map<string, number>;
+  export function ammoBinsFromCrits(lines: string[], techBase?: string): Map<string, number>;
 }

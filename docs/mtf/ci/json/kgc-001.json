@@ -1,0 +1,387 @@
+{
+  "model": "KGC-001",
+  "name": "King Crab",
+  "tonnage": 100,
+  "weightClass": "Assault",
+  "techBase": "Inner Sphere",
+  "walking": 3,
+  "running": 5,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 58,
+    "rightTorso": 40,
+    "leftTorso": 40,
+    "rightArm": 34,
+    "leftArm": 34,
+    "rightLeg": 40,
+    "leftLeg": 40,
+    "centerTorsoRear": 15,
+    "rightTorsoRear": 10,
+    "leftTorsoRear": 10
+  },
+  "weapons": [
+    {
+      "weapon": "LRM 15",
+      "location": "leftTorso",
+      "shots": 8
+    },
+    {
+      "weapon": "Large Pulse Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "Gauss Rifle",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "Gauss Rifle",
+      "location": "rightArm",
+      "shots": 32
+    },
+    {
+      "weapon": "Streak SRM 2",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "Streak SRM 2",
+      "location": "rightTorso",
+      "shots": 100
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LRM 15"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LRM 15"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "LRM 15"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Streak SRM 2"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "LRM 15"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Streak SRM 2"
+      },
+      {
+        "kind": "soak",
+        "name": "case"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Large Pulse Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Large Pulse Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Streak SRM 2"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Streak SRM 2"
+      },
+      {
+        "kind": "soak",
+        "name": "case"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Gauss Rifle"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "heatSink"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "single",
+    "count": 13
+  },
+  "myomer": "Standard"
+}

@@ -130,7 +130,7 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
 
 - **Units** — bipedal 'Mechs only (fourteen record-sheet 'Mechs in `data/mechs/`:
   AS7-D, BSW-X1, BZK-F3, CDA-3MA, CN9-YLW2, ENF-4R, GRF-1N, HBK-4G, HCT-5S,
-  HER-5SA, MC-MKII-2, TW-Prime, WHK-Prime, WVR-6R; see `docs/MTF.md` to add more).
+  HER-5SA, MC-MKII-2, TBR-Prime, WHK-Prime, WVR-6R; see `docs/MTF.md` to add more).
   Front and rear armor are separate pools; internal structure is derived from
   tonnage on the standard TW table.
 - **Movement** — walk, run, jump, standstill. MP costs include the base 1 MP
