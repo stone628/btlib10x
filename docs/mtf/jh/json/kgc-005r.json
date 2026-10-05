@@ -1,0 +1,378 @@
+{
+  "model": "KGC-005r",
+  "name": "King Crab",
+  "tonnage": 100,
+  "weightClass": "Assault",
+  "techBase": "Inner Sphere",
+  "walking": 3,
+  "running": 5,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 55,
+    "rightTorso": 40,
+    "leftTorso": 40,
+    "rightArm": 34,
+    "leftArm": 34,
+    "rightLeg": 38,
+    "leftLeg": 38,
+    "centerTorsoRear": 15,
+    "rightTorsoRear": 10,
+    "leftTorsoRear": 10
+  },
+  "weapons": [
+    {
+      "weapon": "LB 20-X AC",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "LB 20-X AC",
+      "location": "rightTorso",
+      "shots": 30
+    },
+    {
+      "weapon": "Streak SRM 4",
+      "location": "leftTorso",
+      "shots": 25
+    },
+    {
+      "weapon": "Heavy PPC",
+      "location": "rightTorso"
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "soak",
+        "name": "equipment"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Streak SRM 4"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Streak SRM 4"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "LB 20-X AC"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "LB 20-X AC"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "LB 20-X AC"
+      },
+      {
+        "kind": "soak",
+        "name": "case"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Heavy PPC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Heavy PPC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Heavy PPC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Heavy PPC"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "LB 20-X AC"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "LB 20-X AC"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "LB 20-X AC"
+      },
+      {
+        "kind": "soak",
+        "name": "case"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 12
+  },
+  "myomer": "Standard"
+}
