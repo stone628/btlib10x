@@ -214,6 +214,7 @@ function buildMountInfos(
       shotsSharedWith: sharedWith,
       jammed: st.jammed,
       destroyed: st.destroyed,
+      rearFacing: mount.rearFacing === true,
     };
   });
 }
@@ -241,7 +242,8 @@ function weaponMountLines(mounts: readonly WeaponMountInfo[]): string[] {
     const medium = `M${w.medium}`.padStart(3);
     const long = `L${w.long}`.padStart(3);
     const heat = `H${w.heat ?? 0}`.padStart(3);
-    return `${index} ${name} [${SHORT_LOC[mount.location]}] ${min}${short}/${medium}/${long} ${heat}${flags.length ? ` ${flags.join(" ")}` : ""}`;
+    const loc = `[${SHORT_LOC[mount.location]}${mount.rearFacing?"R":""}]`.padEnd(5);
+    return `${index} ${name} ${loc} ${min}${short}/${medium}/${long} ${heat}${flags.length ? ` ${flags.join(" ")}` : ""}`;
   });
 }
 
@@ -261,6 +263,7 @@ export type WeaponMountInfo = {
   readonly shotsSharedWith: number | null;
   readonly jammed: boolean;
   readonly destroyed: boolean;
+  readonly rearFacing: boolean;
 };
 
 interface SheetView {
