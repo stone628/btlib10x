@@ -432,6 +432,9 @@ export const DHS_CRIT_SLOTS = {
  *
  * Example: "Mad Cat Mk II" + variant "2" → "MC-MKII-2"
  *
+ * Sheets without a variant id: Clan OmniMechs use "Prime" ("TBR-Prime");
+ * Clan BattleMechs (standard or IIC) use the bare prefix ("CLNT-IIC").
+ *
  * No canonical prefixes exist (lore names Clan configurations only by
  * "Prime" / letter / number); codes follow MechWarrior Online conventions.
  */
