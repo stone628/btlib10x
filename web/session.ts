@@ -318,6 +318,8 @@ export function drive(s: Session): SessionGameEvent[] {
       }
       result.push(e);
     }
+  } else {
+    result.push(...collected);
   }
   const id = r.actorId;
   if (id !== null) {
