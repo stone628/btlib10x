@@ -6,6 +6,8 @@ import type { MapDefSrc } from "./map.schema";
  * (`data/btlib10x.jsonl`), symmetric with `mech.codec.ts`: short keys and a
  * terrain-type int enum over the closed `TERRAIN_TYPES` vocabulary.
  * `WIRE_VERSION` stays 1 alongside the mech wire (nothing ever deployed).
+ * Identity (`name`/`width`/`height`) is NOT on the wire — the manifest entry
+ * already carries it, so `decodeMapLine` takes it as a second argument.
  */
 export const MAP_WIRE_VERSION = 1;
 
@@ -21,9 +23,6 @@ function fail(msg: string): never {
 export function encodeMapDef(src: MapDefSrc): string {
   return JSON.stringify({
     v: MAP_WIRE_VERSION,
-    n: src.name,
-    w: src.width,
-    h: src.height,
     t: src.terrain.map((hex) => ({
       c: hex.col,
       r: hex.row,
@@ -33,8 +32,15 @@ export function encodeMapDef(src: MapDefSrc): string {
   });
 }
 
-/** Decode one packed map line into a raw `MapDefSrc`. Full validation happens in `registerMap(s)` via `validateMapDef`. */
-export function decodeMapLine(line: string): MapDefSrc {
+/** Identity half of a map: carried by the manifest entry, never the wire line. */
+export interface MapIdentity {
+  readonly name: string;
+  readonly width: number;
+  readonly height: number;
+}
+
+/** Decode one packed map line into a raw `MapDefSrc`, combining it with the manifest identity. Full validation happens in `registerMap(s)` via `validateMapDef`. */
+export function decodeMapLine(line: string, identity: MapIdentity): MapDefSrc {
   let parsed: unknown;
   try {
     parsed = JSON.parse(line) as unknown;
@@ -47,10 +53,7 @@ export function decodeMapLine(line: string): MapDefSrc {
   const failUnless = (cond: boolean, msg: string): void => {
     if (!cond) fail(msg);
   };
-  const { n, w, h, t } = parsed;
-  failUnless(typeof n === "string" && n.length > 0, "missing name");
-  failUnless(Number.isInteger(w) && (w as number) > 0, "bad width");
-  failUnless(Number.isInteger(h) && (h as number) > 0, "bad height");
+  const { t } = parsed;
   failUnless(Array.isArray(t), "bad terrain");
   const terrain = (t as readonly unknown[]).map((raw) => {
     failUnless(isRecord(raw), "bad terrain hex");
@@ -69,5 +72,5 @@ export function decodeMapLine(line: string): MapDefSrc {
       ...(hex.l !== undefined && { level: hex.l as number }),
     };
   });
-  return { name: n as string, width: w as number, height: h as number, terrain };
+  return { name: identity.name, width: identity.width, height: identity.height, terrain };
 }

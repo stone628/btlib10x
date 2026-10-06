@@ -16,7 +16,7 @@ import { mechDef, registerMech, registerMechs } from "./mech.schema";
  * (`model`/`name`/`techBase`/`tonnage`) lives only in the manifest entry —
  * the wire line carries the crunch, and each sheet is single-sourced.
  * Chassis `name`s (manifest `n`) and weapon names (wire `w`) are
- * `$<index>` refs into the line-0 table. Weight class is never stored —
+ * numeric indices into the line-0 table. Weight class is never stored —
  * infer it with `weightClassForTonnage`.
  */
 export interface MechManifestEntry extends MechIdentity {
@@ -68,8 +68,8 @@ export function parseCatalogStrings(raw: unknown): CatalogStringTable {
 
 /**
  * Validate an untrusted catalog manifest payload (parsed JSONL line 1) and
- * return it typed, resolving chassis-name `$<index>` refs against
- * `strings`. Verbatim names still parse. Throws on any shape mismatch.
+ * return it typed, resolving chassis-name numeric indices against
+ * `strings`. Throws on any shape mismatch.
  */
 export function parseCatalogManifest(
   raw: unknown,
@@ -90,8 +90,8 @@ export function parseCatalogManifest(
     const { m: model, n: rawName, b: techBase, t: tonnage, c: clanName, l: line } = raw;
     if (typeof model !== "string" || model.length === 0)
       throw new Error(`Invalid catalog manifest: ${label}.model must be a non-empty string`);
-    if (typeof rawName !== "string" || rawName.length === 0)
-      throw new Error(`Invalid catalog manifest: ${label}.name must be a non-empty string`);
+    if (typeof rawName !== "number")
+      throw new Error(`Invalid catalog manifest: ${label}.name must be a string-table index`);
     const name = resolveStringRef(strings, rawName, `${label}.name`);
     if (typeof techBase !== "number" || (techBase as number) === 0)
       throw new Error(`Invalid catalog manifest: ${label}.techBase must be 1 or 2`);
@@ -238,7 +238,7 @@ export function ensureMapRegistered(name: string): MapDef | undefined {
   if (known !== undefined) return known;
   const entry = LOWER_ID_TO_MAP.get(name.toLowerCase());
   if (entry === undefined) return undefined;
-  return registerMap(decodeMapLine(catalogLine(entry.line)));
+  return registerMap(decodeMapLine(catalogLine(entry.line), entry));
 }
 
 /**
@@ -252,6 +252,6 @@ export function registerAllCatalog(): void {
     ),
   );
   registerMaps(
-    Array.from(ID_TO_MAP.values()).map((entry) => decodeMapLine(catalogLine(entry.line))),
+    Array.from(ID_TO_MAP.values()).map((entry) => decodeMapLine(catalogLine(entry.line), entry)),
   );
 }

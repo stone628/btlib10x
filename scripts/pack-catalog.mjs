@@ -15,8 +15,8 @@ const outFile = join(root, "data", "btlib10x.jsonl");
  * first-seen pack order (mech manifest order, then weapons in p[], then
  * crit slots in LOCATIONS order).
  * Line 1: manifest `{v, mechs, maps}` with absolute file line numbers
- * (mech `n` is `"$<index>"` ref into string table; `l >= 2`).
- * Lines 2+: compact wire lines — weapon names are `"$<index>"` refs; no `s` field.
+ * (mech `n` is a numeric index into the string table; `l >= 2`).
+ * Lines 2+: compact wire lines (maps carry only `t`; name/size live in the manifest) — weapon names are numeric string-table indices; no `s` field.
  *
  * Weight class is inferred with `weightClassForTonnage`, never stored.
  * Run via `npm run pack`; web/test/dev load it with `loadCatalog`.
@@ -102,7 +102,7 @@ function intern(value) {
     strings.push(value);
     stringIndex.set(value, idx);
   }
-  return `$${idx}`;
+  return idx;
 }
 
 function encodeMechDef(def) {
@@ -155,9 +155,6 @@ function encodeMechDef(def) {
 function encodeMapDef(src) {
   return JSON.stringify({
     v: 1,
-    n: src.name,
-    w: src.width,
-    h: src.height,
     t: src.terrain.map((hex) => ({
       c: hex.col,
       r: hex.row,
