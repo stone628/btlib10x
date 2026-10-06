@@ -7,6 +7,7 @@ web/btlib10x.jsonl
 .DS_Store
 tmp/
 .agents/
+.claude/
 .opencode.json
 
 web/btlib10x.jsonl
