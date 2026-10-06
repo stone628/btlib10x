@@ -1,4 +1,4 @@
-export { D2D6_MAX, roll2D6, rollD6 } from "./core/dice";
+export { D2D6_IMPOSSIBLE, D2D6_MAX, roll2D6, rollD6 } from "./core/dice";
 export {
   type Bearing,
   bearingExact,

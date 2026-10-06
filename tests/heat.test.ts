@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { UnitDamageState } from "../src";
+import { D2D6_IMPOSSIBLE } from "../src/core/dice";
 import { LOCATIONS, type Location, type TerrainType } from "../src/core/types";
 import { mechDef, mechDefFor } from "../src/data/index";
 import { countDestroyedEngine } from "../src/rules/critical";
@@ -155,7 +156,7 @@ describe("shutdownAvoid", () => {
     expect(shutdownAvoid(29)).toBe(10);
   });
   it("null at 30+ (auto)", () => {
-    expect(shutdownAvoid(30)).toBe(12);
+    expect(shutdownAvoid(30)).toBe(D2D6_IMPOSSIBLE);
   });
 });
 
@@ -515,7 +516,7 @@ describe("game integration: shutdown", () => {
         (e) =>
           e.kind === "shutdownCheck" &&
           e.unitId === "hbk" &&
-          !e.avoided &&
+          e.result !== "avoid" &&
           !e.manual &&
           e.avoid >= 12,
       ),
@@ -540,7 +541,7 @@ describe("game integration: shutdown", () => {
     expect(
       events.some(
         (e): e is Extract<GameEvent, { kind: "shutdownCheck" }> =>
-          e.kind === "shutdownCheck" && e.unitId === "hbk" && !e.avoided,
+          e.kind === "shutdownCheck" && e.unitId === "hbk" && e.result !== "avoid",
       ),
     ).toBe(true);
   });
@@ -554,9 +555,9 @@ describe("game integration: shutdown", () => {
     const events: GameEvent[] = [];
     advancePhase(state, events, scriptedRng(6, 6, 6, 6));
     expect(hbk.shutdown).toBe("not");
-    expect(events.some((e) => e.kind === "shutdownCheck" && e.unitId === "hbk" && e.avoided)).toBe(
-      true,
-    );
+    expect(
+      events.some((e) => e.kind === "shutdownCheck" && e.unitId === "hbk" && e.result === "avoid"),
+    ).toBe(true);
   });
 
   it("skips shutdown unit in nextActor", () => {
@@ -576,9 +577,9 @@ describe("game integration: shutdown", () => {
     const events: GameEvent[] = [];
     advancePhase(state, events, scriptedRng(3, 3, 3, 1));
     expect(hbk.shutdown).toBe("not");
-    expect(events.some((e) => e.kind === "restartCheck" && e.unitId === "hbk" && e.success)).toBe(
-      true,
-    );
+    expect(
+      events.some((e) => e.kind === "restartCheck" && e.unitId === "hbk" && e.result === "success"),
+    ).toBe(true);
   });
 
   it("does not auto-restart a manual shutdown", () => {
@@ -590,9 +591,9 @@ describe("game integration: shutdown", () => {
     const events: GameEvent[] = [];
     advancePhase(state, events, scriptedRng(3, 3, 3, 1));
     expect(hbk.shutdown).toBe("manual");
-    expect(events.some((e) => e.kind === "restartCheck" && e.unitId === "hbk" && e.success)).toBe(
-      false,
-    );
+    expect(
+      events.some((e) => e.kind === "restartCheck" && e.unitId === "hbk" && e.result === "success"),
+    ).toBe(false);
   });
 
   it("leaves a starting unit untouched and brings it online at the next initiative", () => {
@@ -606,6 +607,92 @@ describe("game integration: shutdown", () => {
     // weaponAttack -> end already ran; advance again: end -> initiative (turn 2).
     advancePhase(state, [], scriptedRng(3, 3, 3, 1));
     expect(hbk.shutdown).toBe("not");
+  });
+
+  it("never restarts at heat 30+, even on a natural 12", () => {
+    const state = hbkVsEnf();
+    const hbk = requireUnit(state, "hbk");
+    hbk.shutdown = "heat";
+    // Post-dissipation: 43 - 13 sinks = 30 endHeat.
+    hbk.heat = 43;
+    startAttackTurn(state);
+    const events: GameEvent[] = [];
+    advancePhase(state, events, scriptedRng(6, 6, 6, 6, 6, 6));
+    expect(hbk.shutdown).toBe("heat");
+    const restart = events.find(
+      (e): e is Extract<GameEvent, { kind: "restartCheck" }> =>
+        e.kind === "restartCheck" && e.unitId === "hbk",
+    );
+    expect(restart).toMatchObject({ result: "heat", roll: 0 });
+  });
+
+  it("still rolls the restart just below 30 heat", () => {
+    const state = hbkVsEnf();
+    const hbk = requireUnit(state, "hbk");
+    hbk.shutdown = "heat";
+    // Post-dissipation: 42 - 13 = 29 endHeat (avoid 10).
+    hbk.heat = 42;
+    startAttackTurn(state);
+    const events: GameEvent[] = [];
+    advancePhase(state, events, scriptedRng(5, 5, 6, 6, 6, 6));
+    expect(hbk.shutdown).toBe("not");
+    const restart = events.find(
+      (e): e is Extract<GameEvent, { kind: "restartCheck" }> =>
+        e.kind === "restartCheck" && e.unitId === "hbk",
+    );
+    expect(restart).toMatchObject({ result: "success", roll: 10, avoid: 10 });
+  });
+
+  it("gives an unconscious pilot no avoid roll: automatic shutdown plus the +3 PSR", () => {
+    const state = hbkVsEnf();
+    const hbk = requireUnit(state, "hbk");
+    hbk.unconscious = true;
+    hbk.unconsciousSinceTurn = state.turn;
+    // Post-dissipation: 31 - 13 = 18 endHeat (avoid 6); a 12 would have passed.
+    hbk.heat = 31;
+    startAttackTurn(state);
+    const events: GameEvent[] = [];
+    advancePhase(state, events, scriptedRng(6, 6, 6, 6, 6, 6, 6));
+    expect(hbk.shutdown).toBe("heat");
+    const check = events.find(
+      (e): e is Extract<GameEvent, { kind: "shutdownCheck" }> =>
+        e.kind === "shutdownCheck" && e.unitId === "hbk",
+    );
+    expect(check).toMatchObject({ result: "unconscious", roll: 0, avoid: 6 });
+    expect(
+      events.some(
+        (e) => e.kind === "pilotingCheck" && e.unitId === "hbk" && e.reason === "shutdown",
+      ),
+    ).toBe(true);
+  });
+
+  it("blocks an unconscious pilot's heat restart at 14+ but restarts automatically below 14", () => {
+    const blocked = hbkVsEnf();
+    const hbk = requireUnit(blocked, "hbk");
+    hbk.unconscious = true;
+    hbk.unconsciousSinceTurn = blocked.turn;
+    hbk.shutdown = "heat";
+    // Post-dissipation: 31 - 13 = 18 endHeat (avoid 6).
+    hbk.heat = 31;
+    startAttackTurn(blocked);
+    const events: GameEvent[] = [];
+    advancePhase(blocked, events, scriptedRng(6, 6, 6, 6, 6, 6));
+    expect(hbk.shutdown).toBe("heat");
+    expect(
+      events.some(
+        (e) => e.kind === "restartCheck" && e.unitId === "hbk" && e.result === "unconscious",
+      ),
+    ).toBe(true);
+
+    const auto = hbkVsEnf();
+    const hbk2 = requireUnit(auto, "hbk");
+    hbk2.unconscious = true;
+    hbk2.unconsciousSinceTurn = auto.turn;
+    hbk2.shutdown = "heat";
+    hbk2.heat = 10;
+    startAttackTurn(auto);
+    advancePhase(auto, [], scriptedRng(6, 6, 6, 6));
+    expect(hbk2.shutdown).toBe("not");
   });
 });
 
@@ -845,7 +932,7 @@ describe("Bug B: auto-restart uses post-dissipation heat, not peak", () => {
       (e): e is Extract<GameEvent, { kind: "restartCheck" }> =>
         e.kind === "restartCheck" && e.unitId === "hbk",
     );
-    expect(restart?.success).toBe(true);
+    expect(restart?.result === "success").toBe(true);
     expect(restart?.roll).toBe(0);
   });
 });
@@ -864,7 +951,7 @@ describe("Bug C: involuntary shutdown rolls use roll >= avoid for success", () =
     expect(
       events.some(
         (e): e is Extract<GameEvent, { kind: "shutdownCheck" }> =>
-          e.kind === "shutdownCheck" && e.unitId === "hbk" && e.avoided,
+          e.kind === "shutdownCheck" && e.unitId === "hbk" && e.result === "avoid",
       ),
     ).toBe(true);
   });

@@ -251,17 +251,19 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   weapon effect). Engine / gyro / sensor / life-support / heat-sink
   slots take and absorb crits in the slot table; destroyed engine slots
   feed the heat system below.
-- **Heat** — heat scale 0-30 (the stored value is capped at 50) with movement heat, weapon heat, posture heat
+- **Heat** — heat scale 0-30 (the stored value is never clamped; the excess above 30 is the Heat Overflow box) with movement heat, weapon heat, posture heat
   (stand-up, prone-turn), and engine-crit heat. Per TW p.159 the scale
   updates once at the heat phase: own heat generated during the movement
   and weapon attack phases accumulates into `unit.heatPending` (does not
   touch the scale mid-turn — weapon to-hit this turn reads the previous
   turn's end value), then lands on the scale, dissipation subtracts, and
   the result is the new `unit.heat`. Shutdown/restart and ammo-explosion
-  checks read `max(startHeat, endHeat)` — the worst the scale reached at
-  any discrete read; peak within the heat phase has no separate meaning.
-  Heat-caused shutdown auto-fires at 30+ (initial only; restart at 30+ is
-  a roll — roll 12 succeeds). 2D6 avoidance runs at 14, 18, 22, 26 with
+  checks read the post-dissipation end heat (`endHeat`) only.
+  Heat-caused shutdown auto-fires at 30+ and no restart is possible while
+  heat stays at 30+ (TW p.159-160; `shutdownAvoid(30)` is the unreachable
+  `D2D6_IMPOSSIBLE`, and a blocked restart rolls no dice). A pilot who is
+  unconscious cannot override a shutdown (automatic, +3 PSR as usual) and
+  cannot attempt a restart at 14+; below 14 the restart is automatic. 2D6 avoidance runs at 14, 18, 22, 26 with
   `roll >= avoid` for success (matches the voluntary startup convention);
   automatic restart once dissipation drops the unit below 14. Heat ammo
   explosion checks at 19, 23, 28 with `roll >= avoid` for avoided.
@@ -283,6 +285,8 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   until a voluntary startup succeeds. `mode startup` + `done` rolls 2D6
   against the shutdown avoidance: success → `starting` (still off-line,
   online just before the next initiative roll), failure → stays off-line.
+  Startup at 30+ heat is blocked (no roll), and so is startup at 14+ for an
+  unconscious pilot.
   Shut-down units act first in the movement phase regardless of initiative.
 - **Pilot ejection / wrecks** — `mode eject` + `done` marks the unit
   removed (`removed = "pilotEjected"`; destroyed stays `"not"`; counts toward
@@ -298,7 +302,7 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   (+1), each destroyed leg/foot actuator (+1), each destroyed hip (+2), and
   a first gyro hit (+3); a destroyed gyro or leg drops the 'Mech
   automatically, as does any required PSR on a shut-down or unconscious
-  unit. A reactor shutdown (heat or voluntary) forces an immediate +3 PSR;
+  unit. An involuntary (heat) reactor shutdown forces an immediate +3 PSR; a voluntary one forces none (TW p.160);
   running with a damaged hip/gyro or jumping with damaged gyro/leg/foot/hip
   actuators (or a destroyed leg) forces a PSR with preexisting-damage
   modifiers at the end of the move. Preexisting damage modifies every PSR (+1 per destroyed leg/foot

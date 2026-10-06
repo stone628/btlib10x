@@ -19,7 +19,7 @@
  * destroy heat sinks (strict Total Warfare).
  */
 
-import { D2D6_MAX, diceIndex } from "../core/dice";
+import { D2D6_IMPOSSIBLE, D2D6_MAX, diceIndex } from "../core/dice";
 import { LOCATIONS, type Location, type MoveMode, type Rng } from "../core/types";
 import { ammoDefFor } from "../data/ammo.schema";
 import type { ResolvedMechDef } from "../data/mech.schema";
@@ -273,7 +273,7 @@ export function shutdownAvoid(heat: number): number {
 
 /** Heat thresholds (14 / 18 / 22 / 26 / 30) mapping to shutdown avoidance numbers. */
 const HEAT_SHUTDOWN_STEPS: ReadonlyArray<readonly [threshold: number, avoid: number]> = [
-  [30, 12],
+  [30, D2D6_IMPOSSIBLE], // p. 160: cannot be avoided (and no restart) at 30+
   [26, 10],
   [22, 8],
   [18, 6],
@@ -326,8 +326,8 @@ export function heatScaleEffects(heat: number): HeatScaleEffects {
   let shutdown: HeatScaleEffects["shutdown"] = null;
   {
     const { avoid, threshold } = shutdownAvoidWithThreshold(heat);
-    if (avoid >= D2D6_MAX) {
-      // max 2D6 == 12, always
+    if (avoid > D2D6_MAX) {
+      // no 2D6 roll can reach it
       shutdown = "auto";
     } else if (avoid > 0) {
       shutdown = { threshold, avoid };

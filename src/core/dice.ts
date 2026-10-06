@@ -4,6 +4,8 @@ import type { Rng } from "./types";
 export const D2D6_MIN = 2;
 /** Maximum 2D6 total (boxcars); also the auto-fail ceiling for TN checks. */
 export const D2D6_MAX = 12;
+/** Smallest avoid number a `roll >= avoid` check can never reach. */
+export const D2D6_IMPOSSIBLE = D2D6_MAX + 1;
 
 export function rollD6(rng: Rng): number {
   return rng.d6();

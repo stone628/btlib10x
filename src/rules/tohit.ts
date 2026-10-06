@@ -14,7 +14,8 @@ export interface AttackModifiers {
   readonly targetJumped: boolean;
   readonly targetTerrain: TerrainType;
   /** True when the target cannot move (shut down or both legs destroyed):
-   *  grants a flat −4 target modifier instead of the hex-based band. */
+   *  grants a −4 target modifier, added to the hex-based band (which is 0
+   *  for a unit that cannot have moved this turn). */
   readonly targetImmobile?: boolean;
   /** True when the target is prone (but not immobile): −2 from an adjacent
    *  hex, +1 from every other hex (TW p.113). */

@@ -304,7 +304,7 @@ p. 159, never clamped), `AMMO_EXPLOSION_START_HEAT = 19`. Helpers:
 - `toHitHeatModifierWithThreshold(heat): { toHit: number; threshold: number }`
 - `movementMpPenalty(heat): number`
 - `movementMpPenaltyWithThreshold(heat): { penalty: number; threshold: number }`
-- `shutdownAvoid(heat): number`
+- `shutdownAvoid(heat): number` — 0 when safe; `D2D6_IMPOSSIBLE` (13, unreachable) at 30+
 - `ammoExplosionAvoid(heat): number`
 - `ammoExplosionAvoidWithThreshold(heat): { avoid: number; threshold: number }`
 - `heatScaleEffects(heat): HeatScaleEffects`

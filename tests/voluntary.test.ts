@@ -41,7 +41,7 @@ describe("voluntary shutdown", () => {
     expect(state.actedThisPhase).toContain("hbk");
     expect(
       events.some(
-        (e) => e.kind === "shutdownCheck" && e.unitId === "hbk" && e.manual && !e.avoided,
+        (e) => e.kind === "shutdownCheck" && e.unitId === "hbk" && e.manual && e.result !== "avoid",
       ),
     ).toBe(true);
   });
@@ -88,7 +88,10 @@ describe("voluntary startup", () => {
     attemptVoluntaryStartup(state, "hbk", events, scriptedRng());
     expect(hbk.shutdown).toBe("starting");
     expect(
-      events.some((e) => e.kind === "restartCheck" && e.unitId === "hbk" && e.success && e.manual),
+      events.some(
+        (e) =>
+          e.kind === "restartCheck" && e.unitId === "hbk" && e.result === "success" && e.manual,
+      ),
     ).toBe(true);
     expect(state.actedThisPhase).toContain("hbk");
   });
@@ -102,9 +105,43 @@ describe("voluntary startup", () => {
     attemptVoluntaryStartup(state, "hbk", events, scriptedRng(2, 1)); // 2D6 = 3 < 6
     expect(hbk.shutdown).toBe("manual");
     expect(
-      events.some((e) => e.kind === "restartCheck" && e.unitId === "hbk" && !e.success && e.manual),
+      events.some(
+        (e) =>
+          e.kind === "restartCheck" && e.unitId === "hbk" && e.result !== "success" && e.manual,
+      ),
     ).toBe(true);
     expect(state.actedThisPhase).toContain("hbk");
+  });
+
+  it("cannot start up at heat 30+, even with a perfect roll, and rolls nothing", () => {
+    const state = startMovementTurn(hbkVsEnf());
+    const hbk = requireUnit(state, "hbk");
+    hbk.heat = 30;
+    voluntaryShutdown(state, "hbk", []);
+    const events: GameEvent[] = [];
+    attemptVoluntaryStartup(state, "hbk", events, scriptedRng(6, 6));
+    expect(hbk.shutdown).toBe("manual");
+    expect(events).toMatchObject([{ kind: "restartCheck", result: "heat", manual: true, roll: 0 }]);
+    expect(state.actedThisPhase).toContain("hbk");
+  });
+
+  it("blocks an unconscious pilot's startup at heat 14+ but not below 14", () => {
+    const state = startMovementTurn(hbkVsEnf());
+    const hbk = requireUnit(state, "hbk");
+    hbk.unconscious = true;
+    hbk.heat = 18;
+    voluntaryShutdown(state, "hbk", []);
+    const events: GameEvent[] = [];
+    attemptVoluntaryStartup(state, "hbk", events, scriptedRng(6, 6));
+    expect(hbk.shutdown).toBe("manual");
+    expect(events).toMatchObject([{ kind: "restartCheck", result: "unconscious" }]);
+
+    const low = startMovementTurn(hbkVsEnf());
+    const hbk2 = requireUnit(low, "hbk");
+    hbk2.unconscious = true;
+    voluntaryShutdown(low, "hbk", []);
+    attemptVoluntaryStartup(low, "hbk", [], scriptedRng());
+    expect(hbk2.shutdown).toBe("starting");
   });
 
   it("rejects an online unit and a pending startup", () => {

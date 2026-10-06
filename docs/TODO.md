@@ -100,10 +100,10 @@
   weapon to-hit this turn reads the previous turn's end value), then lands
   on the scale, dissipation subtracts, and the result is the new
   `unit.heat`. Shutdown/restart and ammo-explosion checks read
-  `max(startHeat, endHeat)` — the worst the scale reached at any discrete
-  read; peak within the heat phase has no separate meaning. Heat-caused
-  shutdown auto-fires at 30+ (initial only; restart at 30+ is a roll —
-  roll 12 succeeds). 2D6 avoidance runs at 14, 18, 22, 26 with
+  the post-dissipation `endHeat` only. Heat-caused
+  shutdown auto-fires at 30+ and restart is impossible while heat stays at
+  30+ (TW p.159-160); an unconscious pilot cannot override a shutdown or
+  attempt a restart at 14+. 2D6 avoidance runs at 14, 18, 22, 26 with
   `roll >= avoid` for success (matches the voluntary startup convention);
   automatic restart once dissipation drops the unit below 14. Heat ammo
   explosion checks at 19, 23, 28 with `roll >= avoid` for avoided.
@@ -118,7 +118,7 @@
   (a DHS retires per whole device); destroyed engine slots add +5/+10 heat
   per turn but never retire internal sinks (strict Total Warfare).
 - **Shutdown +3 PSR, run/jump damaged PSRs, building-crash auto-falls** —
-  reactor shutdown (heat or voluntary) forces an immediate +3 PSR
+  involuntary (heat) reactor shutdown forces an immediate +3 PSR (voluntary forces none, TW p.160)
   (`shutdownFallCheck`; only *other* PSRs while down fail automatically);
   running with damaged hip/gyro or jumping with damaged actuators forces
   an end-of-move PSR at preexisting modifiers; a building crash that
