@@ -45,7 +45,8 @@
  */
 
 import { D2D6_MAX, D2D6_MIN, roll2D6, rollD6 } from "../core/dice";
-import type { Facing, Location, Rng } from "../core/types";
+import { ejectionLandingMod } from "../core/terrain";
+import type { Facing, Location, Rng, TerrainType } from "../core/types";
 import { rotateFacing } from "../core/types";
 import type { ResolvedMechDef } from "../data/mech.schema";
 import type { Arc } from "./arcs";
@@ -60,9 +61,38 @@ export const DEFAULT_PILOTING: UnitSkillRange = 5;
  *  `UnitInit.pilotHitMax` overrides it per pilot (tough / weak pilots). */
 export const DEFAULT_PILOT_HIT_MAX = 6;
 
-/** Ejection PSR base modifier (Tactical Operations). The Ejection Modifiers
- *  Table values are not wired in yet; only the pilot's skill applies. */
+/** Ejection PSR base modifier (Tactical Operations); the Ejection Modifiers
+ *  Table terms are summed on top by `ejectionModifier`. */
 export const EJECTION_BASE_MODIFIER = 0;
+
+/** Ejection Modifiers Table (TO p.165) situational terms. */
+export const EJECTION_PRONE_MOD = 5;
+export const EJECTION_UNCONSCIOUS_MOD = 3;
+export const EJECTION_AUTO_MOD = 1;
+
+export interface EjectionModifierInput {
+  readonly landingTerrain: TerrainType;
+  readonly landingLevel: number;
+  readonly prone: boolean;
+  readonly unconscious: boolean;
+  /** Head internal structure points already lost (+1 each). */
+  readonly headStructureDamage: number;
+  /** True for automatic ejection (+1). */
+  readonly auto: boolean;
+}
+
+/** Total Ejection Modifiers Table modifier (TO p.165). Planetary conditions
+ *  are not modeled. */
+export function ejectionModifier(input: EjectionModifierInput): number {
+  return (
+    EJECTION_BASE_MODIFIER +
+    ejectionLandingMod(input.landingTerrain, input.landingLevel) +
+    (input.prone ? EJECTION_PRONE_MOD : 0) +
+    (input.unconscious ? EJECTION_UNCONSCIOUS_MOD : 0) +
+    Math.max(0, input.headStructureDamage) +
+    (input.auto ? EJECTION_AUTO_MOD : 0)
+  );
+}
 
 /** Pilot hits from a failed ejection PSR: floor(margin of failure / 2). */
 export function ejectionDamage(r: PilotingRollResult): number {

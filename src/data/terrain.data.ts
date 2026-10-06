@@ -5,48 +5,79 @@ export const TERRAIN_DATA: ReadonlyMap<TerrainType, TerrainDef> = new Map<Terrai
   TERRAIN_TYPES.map((t) => [t, terrainData(t)]),
 );
 
+function buildSimpleTerrain(
+  moveCost: number,
+  screeningValue: number,
+  terrainMod: number,
+  ejectLandMod: number,
+): TerrainDef {
+  return {
+    moveCost,
+    screeningValue,
+    terrainMod,
+    partialCover: false,
+    blocksTargeting: false,
+    waterDepth: 0,
+    ejectLandMod: (_) => ejectLandMod,
+  };
+}
+
+function buildWaterTerrain(
+  moveCost: number,
+  waterDepth: number,
+  blocksTargeting: boolean,
+): TerrainDef {
+  return {
+    moveCost,
+    screeningValue: 0,
+    terrainMod: 0,
+    partialCover: true,
+    blocksTargeting,
+    waterDepth,
+    ejectLandMod: (_) => -1,
+  };
+}
+
+function buildBuildingTerrain(moveCost: number): TerrainDef {
+  return {
+    moveCost,
+    screeningValue: 0,
+    terrainMod: 0,
+    partialCover: true,
+    blocksTargeting: false,
+    waterDepth: 0,
+    ejectLandMod: (level) => level,
+  };
+}
+
 function terrainData(type: TerrainType): TerrainDef {
   switch (type) {
     case "clear":
-      return { moveCost: 0, screeningValue: 0, terrainMod: 0 };
+      return buildSimpleTerrain(0, 0, 0, -2);
     case "lightWoods":
-      return { moveCost: 1, screeningValue: 1, terrainMod: 1 };
+      return buildSimpleTerrain(1, 1, 1, 2);
     case "heavyWoods":
-      return { moveCost: 2, screeningValue: 2, terrainMod: 2 };
+      return buildSimpleTerrain(2, 2, 2, 3);
     case "rough":
-      return { moveCost: 1, screeningValue: 0, terrainMod: 0 };
+      return buildSimpleTerrain(1, 0, 0, 0);
     case "rubble":
-      return { moveCost: 1, screeningValue: 0, terrainMod: 0 };
+      return buildSimpleTerrain(1, 0, 0, 0);
     case "pavement":
-      return { moveCost: 0, screeningValue: 0, terrainMod: 0 };
+      return buildSimpleTerrain(0, 0, 0, -2);
     case "water1":
-      return { moveCost: 1, screeningValue: 0, terrainMod: 0, partialCover: true, waterDepth: 1 };
+      return buildWaterTerrain(1, 1, false);
     case "water2":
-      return {
-        moveCost: 3,
-        screeningValue: 0,
-        terrainMod: 0,
-        partialCover: true,
-        waterDepth: 2,
-        blocksTargeting: true,
-      };
+      return buildWaterTerrain(3, 2, true);
     case "water3":
-      return {
-        moveCost: 3,
-        screeningValue: 0,
-        terrainMod: 0,
-        partialCover: true,
-        waterDepth: 3,
-        blocksTargeting: true,
-      };
+      return buildWaterTerrain(3, 3, true);
     case "lightBuilding":
-      return { moveCost: 1, screeningValue: 0, terrainMod: 0, partialCover: true };
+      return buildBuildingTerrain(1);
     case "mediumBuilding":
-      return { moveCost: 2, screeningValue: 0, terrainMod: 0, partialCover: true };
+      return buildBuildingTerrain(2);
     case "heavyBuilding":
-      return { moveCost: 3, screeningValue: 0, terrainMod: 0, partialCover: true };
+      return buildBuildingTerrain(3);
     case "hardenedBuilding":
-      return { moveCost: 4, screeningValue: 0, terrainMod: 0, partialCover: true };
+      return buildBuildingTerrain(4);
     default: {
       const unreachable: never = type;
       throw new Error(unreachable);

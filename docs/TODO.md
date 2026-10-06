@@ -189,7 +189,7 @@
   `declareAttacks`, `resolveWeaponAttack`, and `suggestFireTargets`. `water1`
   `terrainMod` changed −1 → 0 (TW: depth-1 water grants cover, not an easy-hit
   bonus). Cover-hit building-CF damage deferred.
-- **Pilot ejection / wrecks** — `ejectPilot` (movement phase only; rolls an ejection PSR, TO extension, see CLI.md) marks a
+- **Pilot ejection / wrecks** — `ejectPilot` (movement phase only; rolls an ejection PSR with the TO p.165 modifiers; head destruction and CT ammo blasts auto-eject, see CLI.md) marks a
   unit removed (`removed = "pilotEjected"`, destroyed stays `"not"`; counts
   toward victory; skipped by the actor
   queue and occupancy checks) and spawns a permanent wreck

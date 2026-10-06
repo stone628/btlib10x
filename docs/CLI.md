@@ -344,16 +344,20 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   the unit cannot act and counts as immobile until it wakes in a later end
   phase; `pilotHitMax` (default 6) total hits kills the pilot and removes the unit
    (`removed = "pilotKilled"`, destroyed stays `"not"`), leaving a level-2
-   wreck like an eject. Head / cockpit destruction kills the pilot outright
-   (TW p.128); any other destruction (engine, center torso) leaves the pilot
+   wreck like an eject. A cockpit-slot crit kills the pilot outright
+   (TW p.128); head destruction / blow-off instead auto-ejects (see below); any other destruction (engine, center torso) leaves the pilot
    alive inside while hits < `pilotHitMax`.
    The `sheet` shows a pilot block (status, HP boxes, consciousness targets).
    **Ejection / auto-eject are Tactical Operations extensions, not TW:** manual
    eject (`mode eject`) and auto-eject (always on: an ammo / Gauss explosion that
-   destroys the center torso, directly or by transfer) roll a PSR; failure deals
+   destroys the center torso, directly or by transfer; or destruction / blow-off of the
+   head, which first raises pilot hits to `pilotHitMax - 1`, TO p.165) roll a PSR; failure deals
    floor(margin of failure / 2) pilot hits (`pilotDamaged`, reason `ejection`).
    The pilot keeps `pilotHits`; status stays `ejected` even if those hits reach the max.
-   The Ejection Modifiers Table values are not implemented yet (base PSR only).
+   The PSR carries the Ejection Modifiers Table (TO p.165): landing hex behind the 'Mech
+   (clear/pavement -2, water -1, rough/rubble 0, light woods +2, heavy woods +3, +1 per
+   building level), prone +5, unconscious +3, +1 per head IS point lost, +1 for auto-eject.
+   Planetary conditions and the submerged-cockpit ban are not modeled.
 - **Movement-entry PSRs** — entering rubble (+0) or water (depth 1: −1,
   depth 2: +0, depth 3+: +1) and entering a building hex (light +0 /
   medium +1 / heavy +2 / hardened +5) forces a PSR (plus preexisting
