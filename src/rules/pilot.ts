@@ -26,8 +26,6 @@ export interface PilotRecord {
   readonly hp: number;
   /** Consciousness target for the next hit; null when that hit (or the last) kills. */
   readonly nextTarget: number | null;
-  /** Consciousness target after hit 1..hitMax (null = dead), for the sheet row. */
-  readonly targets: readonly (number | null)[];
   readonly status: PilotStatus;
 }
 
@@ -38,10 +36,6 @@ export function pilotStatus(unit: UnitState): PilotStatus {
 }
 
 export function pilotRecord(unit: UnitState): PilotRecord {
-  const targets: (number | null)[] = [];
-  for (let h = 1; h <= unit.pilotHitMax; h++) {
-    targets.push(consciousnessTarget(h, unit.pilotHitMax));
-  }
   const nextHit = unit.pilotHits + 1;
   return {
     gunnery: unit.gunnery,
@@ -50,7 +44,6 @@ export function pilotRecord(unit: UnitState): PilotRecord {
     hitMax: unit.pilotHitMax,
     hp: Math.max(0, unit.pilotHitMax - unit.pilotHits),
     nextTarget: nextHit > unit.pilotHitMax ? null : consciousnessTarget(nextHit, unit.pilotHitMax),
-    targets,
     status: pilotStatus(unit),
   };
 }
