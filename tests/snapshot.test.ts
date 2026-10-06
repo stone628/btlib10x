@@ -10,6 +10,7 @@ import {
 import type { BattleState, GameEvent, UnitInit } from "../src/rules/game";
 import {
   advancePhase,
+  buildUnitInit,
   damageBuildingAt,
   resolveAllAttacks,
   rollInitiativePhase,
@@ -32,24 +33,8 @@ import { createTestBattle, scriptedRng } from "./helpers";
 
 function hbkEnf(critsDisabled: boolean): BattleState {
   const units: UnitInit[] = [
-    {
-      id: "hbk",
-      model: "HBK-4G",
-      team: 0,
-      gunnery: 4,
-      piloting: 5,
-      position: { col: 2, row: 4 },
-      facing: "se",
-    },
-    {
-      id: "enf",
-      model: "ENF-4R",
-      team: 1,
-      gunnery: 4,
-      piloting: 5,
-      position: { col: 3, row: 5 },
-      facing: "se",
-    },
+    buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
+    buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 5 }, "se"),
   ];
   return createTestBattle([], units, critsDisabled);
 }
@@ -234,24 +219,8 @@ describe("snapshot", () => {
 
   it("buildings/wrecks granularity restores collapse", () => {
     const units: UnitInit[] = [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 4 },
-        facing: "se",
-      },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 5 },
-        facing: "se",
-      },
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
+      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 5 }, "se"),
     ];
     const state = createTestBattle([{ col: 3, row: 5, type: "lightBuilding" }], units, false);
     const buildingsSnap = saveBuildings(state.buildings);

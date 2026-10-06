@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { neighbor } from "../src/core/hex";
 import type { HexCell } from "../src/core/types";
 import type { BattleState, GameEvent, UnitInit } from "../src/rules/game";
-import { executeMove, requireUnit, rollInitiativePhase } from "../src/rules/game";
+import { buildUnitInit, executeMove, requireUnit, rollInitiativePhase } from "../src/rules/game";
 import { reachableLandings } from "../src/rules/movement";
 import { createTestBattle, scriptedRng } from "./helpers";
 
@@ -15,16 +15,8 @@ const ahead = neighbor(startHex, "n");
 /** HBK-4G (walk 4) alone-ish on a board with heavy woods (3 MP) straight ahead. */
 function woodsBattle(): BattleState {
   const units: UnitInit[] = [
-    { id: "a", model: "HBK-4G", team: 0, gunnery: 4, piloting: 5, position: startHex, facing: "n" },
-    {
-      id: "b",
-      model: "ENF-4R",
-      team: 1,
-      gunnery: 4,
-      piloting: 5,
-      position: { col: 6, row: 6 },
-      facing: "n",
-    },
+    buildUnitInit("a", "HBK-4G", 0, startHex, "n"),
+    buildUnitInit("b", "ENF-4R", 1, { col: 6, row: 6 }, "n"),
   ];
   const state = createTestBattle(
     [{ col: ahead.col, row: ahead.row, type: "heavyWoods" }],

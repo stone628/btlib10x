@@ -1,11 +1,11 @@
 import {
+  buildUnitInit,
   createBattle,
-  DEFAULT_GUNNERY,
-  DEFAULT_PILOTING,
   FACINGS,
   type Facing,
   type HexCoord,
   hexKey,
+  isValidPilotHitMax,
   type MapDef,
   type MapNameHolder,
   mapDefFor,
@@ -94,19 +94,19 @@ export function setupAddUnit(
     }
   }
   const team = setupPickTeam(context.roster);
-  context.roster.push({
-    id,
-    model: m.model,
-    team,
-    gunnery: DEFAULT_GUNNERY,
-    piloting: DEFAULT_PILOTING,
-    position,
-    facing,
-  });
+  context.roster.push(buildUnitInit(id, m.model, team, position, facing));
   return { model: m.model, team };
 }
 
-export type UnitProp = "model" | "team" | "col" | "row" | "facing" | "gunnery" | "piloting";
+export type UnitProp =
+  | "model"
+  | "team"
+  | "col"
+  | "row"
+  | "facing"
+  | "gunnery"
+  | "piloting"
+  | "pilotHitMax";
 
 export const UNIT_PROPS: ReadonlyArray<UnitProp> = [
   "model",
@@ -116,6 +116,7 @@ export const UNIT_PROPS: ReadonlyArray<UnitProp> = [
   "facing",
   "gunnery",
   "piloting",
+  "pilotHitMax",
 ];
 
 export function parseUnitProp(word: string): UnitProp {
@@ -192,6 +193,12 @@ export function setupSetUnitProp(
       const n = Number(raw);
       if (!Number.isInteger(n) || !isUnitSkillRange(n)) throw new Error(i18n("err.badPiloting"));
       unit.piloting = n;
+      return { prop, value: String(n) };
+    }
+    case "pilotHitMax": {
+      const n = Number(raw);
+      if (!isValidPilotHitMax(n)) throw new Error(i18n("err.badPilotHitMax"));
+      unit.pilotHitMax = n;
       return { prop, value: String(n) };
     }
   }

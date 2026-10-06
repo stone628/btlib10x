@@ -9,6 +9,7 @@ import type { HexCoord } from "../src/core/types";
 import type { BattleState, UnitInit } from "../src/rules/game";
 import {
   advancePhase,
+  buildUnitInit,
   declareAttacks,
   type GameEvent,
   requireUnit,
@@ -31,7 +32,7 @@ function unit(
   pos: HexCoord,
   facing: "n" | "ne" | "se" | "s" | "sw" | "nw",
 ): UnitInit {
-  return { id, model: "HBK-4G", team, gunnery: 4, piloting: 5, position: pos, facing };
+  return buildUnitInit(id, "HBK-4G", team, pos, facing);
 }
 
 /** hbk (team 0) at (2,2)/s facing enf (team 1) at (2,3)/n, attack phase. */

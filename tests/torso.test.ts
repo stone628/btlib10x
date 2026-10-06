@@ -3,7 +3,12 @@ import { rotateFacing } from "../src/core/types";
 import { classifyArcWithBoundary, effectiveFacingForTwist, twistDelta } from "../src/rules/arcs";
 import { suggestFireTargets } from "../src/rules/fireability";
 import type { BattleState, UnitInit } from "../src/rules/game";
-import { advancePhase, declareAttacks, rollInitiativePhase } from "../src/rules/game";
+import {
+  advancePhase,
+  buildUnitInit,
+  declareAttacks,
+  rollInitiativePhase,
+} from "../src/rules/game";
 import { createTestBattle, scriptedRng } from "./helpers";
 
 function startAttackTurn(state: BattleState): BattleState {
@@ -20,24 +25,8 @@ function hbkFacingAt(targetBearing: "se" | "nw"): {
   if (targetBearing === "se") {
     return {
       units: [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 4 },
-          facing: "n",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 3, row: 5 },
-          facing: "sw",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "n"),
+        buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 5 }, "sw"),
       ],
       facing: "n",
       enemy: { col: 3, row: 5 },
@@ -45,24 +34,8 @@ function hbkFacingAt(targetBearing: "se" | "nw"): {
   }
   return {
     units: [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 4 },
-        facing: "ne",
-      },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 1, row: 4 },
-        facing: "sw",
-      },
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "ne"),
+      buildUnitInit("enf", "ENF-4R", 1, { col: 1, row: 4 }, "sw"),
     ],
     facing: "ne",
     enemy: { col: 1, row: 4 },

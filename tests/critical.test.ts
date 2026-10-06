@@ -15,6 +15,7 @@ import {
 import type { UnitDamageState } from "../src/rules/damage";
 import {
   advancePhase,
+  buildUnitInit,
   declareAttacks,
   type GameEvent,
   resolveAllAttacks,
@@ -1301,24 +1302,8 @@ describe("ammo-explosion casualty: catastrophic mark", () => {
 describe("crit damage merge: ammo explosion survives resolveAllAttacks", () => {
   it("replays explosion IS damage + transfer into the phase accumulator", () => {
     const units: UnitInit[] = [
-      {
-        id: "atk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 4 },
-        facing: "n",
-      },
-      {
-        id: "tgt",
-        model: "HBK-4G",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 2 },
-        facing: "s",
-      },
+      buildUnitInit("atk", "HBK-4G", 0, { col: 3, row: 4 }, "n"),
+      buildUnitInit("tgt", "HBK-4G", 1, { col: 3, row: 2 }, "s"),
     ];
     const state = createTestBattle([], units, false);
     const tgt = requireUnit(state, "tgt");
@@ -1359,24 +1344,8 @@ describe("crit damage merge: ammo explosion survives resolveAllAttacks", () => {
     // 90t Clan target survives its own 20-pt blast (arm IS 15, CASE vents
     // the excess), so the phase pilot-hit sweep still sees a live unit.
     const units: UnitInit[] = [
-      {
-        id: "atk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 4 },
-        facing: "n",
-      },
-      {
-        id: "tgt",
-        model: "MC-MKII-2",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 2 },
-        facing: "s",
-      },
+      buildUnitInit("atk", "HBK-4G", 0, { col: 3, row: 4 }, "n"),
+      buildUnitInit("tgt", "MC-MKII-2", 1, { col: 3, row: 2 }, "s"),
     ];
     const state = createTestBattle([], units, false);
     const tgt = requireUnit(state, "tgt");

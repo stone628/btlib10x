@@ -7,7 +7,7 @@
 import { describe, expect, it } from "vitest";
 import type { HexCoord } from "../src/core/types";
 import type { BattleState, GameEvent, UnitInit } from "../src/rules/game";
-import { requireUnit, resolveAllAttacks } from "../src/rules/game";
+import { buildUnitInit, requireUnit, resolveAllAttacks } from "../src/rules/game";
 import { physicalResolutionLines } from "../web/session.attack";
 import { createTestBattle, scriptedRng } from "./helpers";
 
@@ -17,7 +17,7 @@ function unit(
   pos: HexCoord,
   facing: "n" | "ne" | "se" | "s" | "sw" | "nw",
 ): UnitInit {
-  return { id, model: "HBK-4G", team, gunnery: 4, piloting: 5, position: pos, facing };
+  return buildUnitInit(id, "HBK-4G", team, pos, facing);
 }
 
 /** hbk (team 0) at (2,2)/s facing enf (team 1) at (2,3)/n, crits enabled. */

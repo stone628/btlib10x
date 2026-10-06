@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { hexKey } from "../src/core/types";
 import { type MapDef, mapDef } from "../src/data/index";
 import type { UnitInit } from "../src/rules/game";
+import { buildUnitInit } from "../src/rules/game";
 import type { BoardModel, Canvas, CharStyle, Span } from "../web/renderer.text";
 import {
   applyEdgeStyles,
@@ -38,24 +39,8 @@ describe("styled board model", () => {
 
   it("span text reproduces the flat rendering exactly (battles)", () => {
     const units: UnitInit[] = [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 4 },
-        facing: "n",
-      },
-      {
-        id: "grf",
-        model: "GRF-1N",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 5, row: 3 },
-        facing: "s",
-      },
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 3, row: 4 }, "n"),
+      buildUnitInit("grf", "GRF-1N", 1, { col: 5, row: 3 }, "s"),
     ];
     const state = createTestBattle([{ col: 2, row: 2, type: "heavyWoods" }], units, false);
     const flat = boardToText(battleModel(state));
@@ -65,24 +50,8 @@ describe("styled board model", () => {
 
   it("merges adjacent same-style runs and splits at style boundaries", () => {
     const units: UnitInit[] = [
-      {
-        id: "ab",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 2 },
-        facing: "n",
-      },
-      {
-        id: "cd",
-        model: "GRF-1N",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 2 },
-        facing: "s",
-      },
+      buildUnitInit("ab", "HBK-4G", 0, { col: 2, row: 2 }, "n"),
+      buildUnitInit("cd", "GRF-1N", 1, { col: 3, row: 2 }, "s"),
     ];
     const state = createTestBattle([], units, false);
     const lines = boardToSpans(battleModel(state));
@@ -101,24 +70,8 @@ describe("styled board model", () => {
 
   it("tints terrain glyphs and unit ids per semantic defaults", () => {
     const units: UnitInit[] = [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 2 },
-        facing: "n",
-      },
-      {
-        id: "far",
-        model: "GRF-1N",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 11, row: 11 },
-        facing: "s",
-      },
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 2 }, "n"),
+      buildUnitInit("far", "GRF-1N", 1, { col: 11, row: 11 }, "s"),
     ];
     const state = createTestBattle([{ col: 3, row: 3, type: "lightWoods" }], units, false);
     const model = battleModel(state);
@@ -152,24 +105,8 @@ describe("styled board model", () => {
 
   it("keeps terrain tint on grid rows under an occupying unit", () => {
     const units: UnitInit[] = [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 2 },
-        facing: "ne",
-      },
-      {
-        id: "far",
-        model: "GRF-1N",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 11, row: 11 },
-        facing: "s",
-      },
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 3, row: 2 }, "ne"),
+      buildUnitInit("far", "GRF-1N", 1, { col: 11, row: 11 }, "s"),
     ];
     const state = createTestBattle([{ col: 3, row: 2, type: "lightWoods" }], units, false);
     const model = battleModel(state);
@@ -224,24 +161,8 @@ describe("styled board model", () => {
 
   it("explicit styles replace automatic ones entirely", () => {
     const units: UnitInit[] = [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 2 },
-        facing: "n",
-      },
-      {
-        id: "far",
-        model: "GRF-1N",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 11, row: 11 },
-        facing: "s",
-      },
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 2 }, "n"),
+      buildUnitInit("far", "GRF-1N", 1, { col: 11, row: 11 }, "s"),
     ];
     const state = createTestBattle([{ col: 3, row: 2, type: "lightWoods" }], units, false);
     const override: Record<string, CharStyle> = {
@@ -277,24 +198,8 @@ describe("styled board model", () => {
 
   it("boardToChars preserves styles from boardToSpans", () => {
     const units: UnitInit[] = [
-      {
-        id: "a",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 2 },
-        facing: "n",
-      },
-      {
-        id: "b",
-        model: "CDA-3MA",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 4, row: 2 },
-        facing: "s",
-      },
+      buildUnitInit("a", "HBK-4G", 0, { col: 2, row: 2 }, "n"),
+      buildUnitInit("b", "CDA-3MA", 1, { col: 4, row: 2 }, "s"),
     ];
     const state = createTestBattle([{ col: 2, row: 2, type: "heavyWoods" }], units, false);
     const spans = boardToSpans(battleModel(state));

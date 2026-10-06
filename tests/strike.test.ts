@@ -27,7 +27,7 @@ import { WEAPON_DATA } from "../src/data/weapons.data";
 /** Raw HCT-5S sheet as written in data/mechs/hct-5s.json. */
 const hct5sRaw = hct5sJson as unknown as MechDef;
 
-import { resolveAllAttacks, validateAttacksImpl } from "../src/rules/game";
+import { buildUnitInit, resolveAllAttacks, validateAttacksImpl } from "../src/rules/game";
 import {
   computePhysicalToHit,
   isPhysicalWeaponName,
@@ -58,15 +58,7 @@ function makeUnitInit(
   facing: "n" | "ne" | "se" | "s" | "sw" | "nw" = "se",
   model = "HCT-5S",
 ): UnitInit {
-  return {
-    id,
-    model,
-    team,
-    position: hex,
-    facing,
-    gunnery: 4,
-    piloting: 5,
-  };
+  return buildUnitInit(id, model, team, hex, facing);
 }
 
 /** Attacker faces its target dead-on (front arc for any arm). */

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { neighbor } from "../src/core/hex";
 import type { RevealedLanding } from "../src/index";
-import { executeMove, requireUnit, rollInitiativePhase } from "../src/rules/game";
+import { buildUnitInit, executeMove, requireUnit, rollInitiativePhase } from "../src/rules/game";
 import { budgetFor, newSession, requireMovementActor, type Session } from "../web/session";
 import { createTestBattle, disableCritical, execute, scriptedRng } from "./helpers";
 
@@ -296,24 +296,8 @@ describe("engine prone turn", () => {
     const state = createTestBattle(
       [],
       [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 3, row: 3 },
-          facing: "n",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 5, row: 5 },
-          facing: "s",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 3, row: 3 }, "n"),
+        buildUnitInit("enf", "ENF-4R", 1, { col: 5, row: 5 }, "s"),
       ],
       true,
     );

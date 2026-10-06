@@ -6,6 +6,7 @@ import { countDestroyedEngine } from "../src/rules/critical";
 import type { BattleState, GameEvent, UnitInit } from "../src/rules/game";
 import {
   advancePhase,
+  buildUnitInit,
   declareAttacks,
   executeMove,
   nextActor,
@@ -29,48 +30,16 @@ import { createTestBattle, scriptedRng } from "./helpers";
 
 function hbkVsEnf(): BattleState {
   const units: UnitInit[] = [
-    {
-      id: "hbk",
-      model: "HBK-4G",
-      team: 0,
-      gunnery: 4,
-      piloting: 5,
-      position: { col: 2, row: 4 },
-      facing: "se",
-    },
-    {
-      id: "enf",
-      model: "ENF-4R",
-      team: 1,
-      gunnery: 4,
-      piloting: 5,
-      position: { col: 4, row: 5 },
-      facing: "nw",
-    },
+    buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
+    buildUnitInit("enf", "ENF-4R", 1, { col: 4, row: 5 }, "nw"),
   ];
   return createTestBattle([], units, true);
 }
 
 function bzkVsEnf(): BattleState {
   const units: UnitInit[] = [
-    {
-      id: "bzk",
-      model: "BZK-F3",
-      team: 0,
-      gunnery: 4,
-      piloting: 5,
-      position: { col: 2, row: 4 },
-      facing: "se",
-    },
-    {
-      id: "enf",
-      model: "ENF-4R",
-      team: 1,
-      gunnery: 4,
-      piloting: 5,
-      position: { col: 4, row: 5 },
-      facing: "nw",
-    },
+    buildUnitInit("bzk", "BZK-F3", 0, { col: 2, row: 4 }, "se"),
+    buildUnitInit("enf", "ENF-4R", 1, { col: 4, row: 5 }, "nw"),
   ];
   return createTestBattle([], units, true);
 }
@@ -344,24 +313,8 @@ describe("largestAmmoBin", () => {
     const state = createTestBattle(
       [],
       [
-        {
-          id: "wvr",
-          model: "WVR-6R",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 4 },
-          facing: "n",
-        },
-        {
-          id: "dummy",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 6, row: 6 },
-          facing: "nw",
-        },
+        buildUnitInit("wvr", "WVR-6R", 0, { col: 2, row: 4 }, "n"),
+        buildUnitInit("dummy", "ENF-4R", 1, { col: 6, row: 6 }, "nw"),
       ],
       true,
     );
@@ -456,24 +409,8 @@ describe("game integration: weapon heat", () => {
     // HER-5SA Ultra AC/5 (weaponIndex 3, 1-based, heat 1/shot): raw to-hit 2 jams and
     // misses TN 6, but both fired shots still cost ammo (declared) and heat.
     const units: UnitInit[] = [
-      {
-        id: "her",
-        model: "HER-5SA",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 4 },
-        facing: "ne",
-      },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 4 },
-        facing: "nw",
-      },
+      buildUnitInit("her", "HER-5SA", 0, { col: 2, row: 4 }, "ne"),
+      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 4 }, "nw"),
     ];
     const state = createTestBattle([], units, true);
     startAttackTurn(state);
@@ -734,24 +671,8 @@ describe("game integration: target movement modifier counts total hexes", () => 
 describe("game integration: partial cover in to-hit", () => {
   function makeBattleWithTargetTerrain(type: TerrainType): BattleState {
     const units: UnitInit[] = [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 4 },
-        facing: "se",
-      },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 5, row: 4 },
-        facing: "nw",
-      },
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
+      buildUnitInit("enf", "ENF-4R", 1, { col: 5, row: 4 }, "nw"),
     ];
     return createTestBattle([{ col: 5, row: 4, type }], units, true);
   }
@@ -806,9 +727,10 @@ describe("game integration: heat ammo explosion", () => {
     // CT, pilot stays awake at 3+3=6 >= 3); ammo avoid 3+1=4 < 8 fails; +1
     // die for the `largestAmmoBin` tiebreak between the two equal AC/20
     // bins; TW p.160 then forces 2 pilot hits + Consciousness Roll per hit,
-    // both rolls 6,6 -> 12 (targets 5 then 7, pilot stays awake).
+    // both rolls 6,6 -> 12 (targets 5 then 7, pilot stays awake). The blast
+    // destroys the CT, so auto-eject first rolls an ejection PSR (6,6 passes).
     const events: GameEvent[] = [];
-    advancePhase(state, events, scriptedRng(1, 1, 1, 3, 4, 3, 3, 3, 1, 6, 6, 6, 6, 6));
+    advancePhase(state, events, scriptedRng(1, 1, 1, 3, 4, 3, 3, 3, 1, 6, 6, 6, 6, 6, 6, 6));
     expect(hbk.prone).toBe(true);
     expect(
       events.some(
@@ -840,6 +762,7 @@ describe("game integration: heat ammo explosion", () => {
     expect(consciousness.length).toBeGreaterThanOrEqual(3);
     expect(hbk.pilotHits).toBe(3);
     expect(hbk.unconscious).toBe(false);
+    expect(hbk.removed).toBe("pilotEjected");
   });
 
   it("gauss-only unit does not detonate from heat (inert ammo)", () => {

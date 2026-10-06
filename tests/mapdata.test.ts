@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { listMapNames, mapDef } from "../src/data/index";
 import { type MapDef, type MapDefSrc, validateMapDef } from "../src/data/map.schema";
 import type { UnitInit } from "../src/rules/game";
+import { buildUnitInit } from "../src/rules/game";
 import { createTestBattle } from "./helpers";
 
 const valid: MapDefSrc = {
@@ -126,24 +127,8 @@ describe("bundled maps", () => {
     expect(mapDef("beginner")!.terrain[0]).toEqual({ col: 2, row: 5, type: "heavyWoods" });
     const quickstart = mapDef("quickstart")!;
     const units: UnitInit[] = [
-      {
-        id: "a",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 4 },
-        facing: "se",
-      },
-      {
-        id: "b",
-        model: "GRF-1N",
-        team: 1,
-        gunnery: 3,
-        piloting: 5,
-        position: { col: 10, row: 8 },
-        facing: "nw",
-      },
+      buildUnitInit("a", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
+      buildUnitInit("b", "GRF-1N", 1, { col: 10, row: 8 }, "nw", 3),
     ];
     expect(() =>
       createTestBattle(quickstart.terrain, units, false, quickstart.width, quickstart.height),

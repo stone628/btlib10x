@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { hexKey, type MapDef } from "../src/index";
 import type { BattleState, createBattle, TerrainHexDef, UnitInit } from "../src/rules/game";
+import { buildUnitInit } from "../src/rules/game";
 import type { BoardModel } from "../web/renderer.text";
 import {
   battleModel,
@@ -31,16 +32,8 @@ describe("console renderer", () => {
     position: { col: number; row: number };
   }): ReturnType<typeof createBattle> {
     const units: UnitInit[] = [
-      { ...primary, team: 0, gunnery: 4, piloting: 5, facing: "n" },
-      {
-        id: "far",
-        model: "GRF-1N",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: farAway,
-        facing: "s",
-      },
+      buildUnitInit(primary.id, primary.model, 0, primary.position, "n"),
+      buildUnitInit("far", "GRF-1N", 1, farAway, "s"),
     ];
     return createTestBattle([], units, false);
   }
@@ -54,24 +47,8 @@ describe("console renderer", () => {
 
   it("staggers even columns down half a hex", () => {
     const units: UnitInit[] = [
-      {
-        id: "wvr",
-        model: "WVR-6R",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 1 },
-        facing: "n",
-      },
-      {
-        id: "grf",
-        model: "GRF-1N",
-        team: 1,
-        gunnery: 3,
-        piloting: 5,
-        position: { col: 4, row: 1 },
-        facing: "s",
-      },
+      buildUnitInit("wvr", "WVR-6R", 0, { col: 3, row: 1 }, "n"),
+      buildUnitInit("grf", "GRF-1N", 1, { col: 4, row: 1 }, "s", 3),
     ];
     const state = createTestBattle([], units, false, 4, 2);
     const lines = renderBattle(state).split("\n");
@@ -95,24 +72,8 @@ describe("console renderer", () => {
 
   it("clips long ids and centers short ones in the 6-char belly", () => {
     const units: UnitInit[] = [
-      {
-        id: "wolverine",
-        model: "WVR-6R",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 3 },
-        facing: "n",
-      },
-      {
-        id: "ab",
-        model: "GRF-1N",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 4, row: 3 },
-        facing: "s",
-      },
+      buildUnitInit("wolverine", "WVR-6R", 0, { col: 3, row: 3 }, "n"),
+      buildUnitInit("ab", "GRF-1N", 1, { col: 4, row: 3 }, "s"),
     ];
     const state = createTestBattle([], units, false);
     const out = renderBattle(state);
@@ -123,24 +84,8 @@ describe("console renderer", () => {
 
   it("caps outer edges with _ and overline, sharing ==== below", () => {
     const units: UnitInit[] = [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 4, row: 3 },
-        facing: "n",
-      },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 4, row: 4 },
-        facing: "s",
-      },
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 4, row: 3 }, "n"),
+      buildUnitInit("enf", "ENF-4R", 0, { col: 4, row: 4 }, "s"),
     ];
     const state = createTestBattle([], units, false, 4, 4);
     const lines = renderBattle(state).split("\n");
@@ -174,24 +119,8 @@ describe("console renderer", () => {
   it("helper sizes board to cover unit and terrain extents (engine no longer derives)", () => {
     const terrain: TerrainHexDef[] = [{ col: 11, row: 9, type: "lightWoods" }];
     const units: UnitInit[] = [
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 3 },
-        facing: "n",
-      },
-      {
-        id: "wvr",
-        model: "WVR-6R",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 4 },
-        facing: "s",
-      },
+      buildUnitInit("enf", "ENF-4R", 0, { col: 3, row: 3 }, "n"),
+      buildUnitInit("wvr", "WVR-6R", 1, { col: 3, row: 4 }, "s"),
     ];
     const state = createTestBattle(terrain, units, false);
     const out = renderBattle(state);
@@ -215,60 +144,12 @@ describe("console renderer", () => {
 
   it("marks mech facing at the matching hexside vertex", () => {
     const units: UnitInit[] = [
-      {
-        id: "a",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 2 },
-        facing: "n",
-      },
-      {
-        id: "b",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 3 },
-        facing: "s",
-      },
-      {
-        id: "c",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 2 },
-        facing: "ne",
-      },
-      {
-        id: "d",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 3 },
-        facing: "sw",
-      },
-      {
-        id: "e",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 4, row: 2 },
-        facing: "nw",
-      },
-      {
-        id: "f",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 4, row: 3 },
-        facing: "se",
-      },
+      buildUnitInit("a", "HBK-4G", 0, { col: 2, row: 2 }, "n"),
+      buildUnitInit("b", "HBK-4G", 0, { col: 2, row: 3 }, "s"),
+      buildUnitInit("c", "HBK-4G", 0, { col: 3, row: 2 }, "ne"),
+      buildUnitInit("d", "HBK-4G", 0, { col: 3, row: 3 }, "sw"),
+      buildUnitInit("e", "HBK-4G", 0, { col: 4, row: 2 }, "nw"),
+      buildUnitInit("f", "HBK-4G", 0, { col: 4, row: 3 }, "se"),
     ];
     const state = createTestBattle([], units, false);
     const out = renderBattle(state);
@@ -305,24 +186,8 @@ describe("map renderer", () => {
 
   it("keeps unit ids in the center cell while terrain marks sit at the bottom", () => {
     const units: UnitInit[] = [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 4 },
-        facing: "n",
-      },
-      {
-        id: "far",
-        model: "GRF-1N",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 11, row: 11 },
-        facing: "s",
-      },
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 3, row: 4 }, "n"),
+      buildUnitInit("far", "GRF-1N", 1, { col: 11, row: 11 }, "s"),
     ];
     const state = createTestBattle([], units, false);
     const out = renderBattle(state, undefined, { "4,1": "W" });
@@ -332,24 +197,8 @@ describe("map renderer", () => {
 
   it("draws battle terrain via the marks layer", () => {
     const units: UnitInit[] = [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 3 },
-        facing: "n",
-      },
-      {
-        id: "far",
-        model: "GRF-1N",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 11, row: 11 },
-        facing: "s",
-      },
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 3, row: 3 }, "n"),
+      buildUnitInit("far", "GRF-1N", 1, { col: 11, row: 11 }, "s"),
     ];
     const state = createTestBattle([{ col: 1, row: 1, type: "lightWoods" }], units, false);
     const out = renderBattle(state, undefined, { "1,1": "w" });

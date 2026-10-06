@@ -584,8 +584,19 @@ is the per-group shape.
 
 `PilotingCheckReason` tags why a PSR was rolled (carried on `pilotingCheck`
 events). `DEFAULT_PILOTING = 5`, `GYRO_HIT_MOD = 3`, `GYRO_DESTROYED_HITS = 2`,
-`SENSOR_BLIND_HITS = 2`, and `consciousnessTarget(hits): number | null`
-(pilot-hit consciousness TN; `null` = dead). `FallDirection` and
+`SENSOR_BLIND_HITS = 2`, `DEFAULT_PILOT_HIT_MAX = 6`, and
+`consciousnessTarget(hits, hitMax = 6): number | null` (pilot-hit consciousness
+TN; `null` once `hits >= hitMax`; the TW table is scaled to `hitMax`: 5 → 3,5,10,11,
+6 → 3,5,7,10,11, 7 → 3,5,7,7,10,11). `isValidPilotHitMax`, `EJECTION_BASE_MODIFIER`
+and `ejectionDamage(roll)` (floor(margin of failure / 2)) support ejection.
+
+### Pilot (`rules/pilot.ts`)
+
+`pilotStatus(unit): "active" | "unconscious" | "ejected" | "dead"` is the pilot's
+relation to the 'Mech, derived from `pilotHits`/`pilotHitMax`/`unconscious`/`removed`
+(`ejected` wins even when ejection damage reached the hit max; `dead` = died inside).
+`pilotRecord(unit)` returns `{ gunnery, piloting, hits, hitMax, hp, nextTarget, targets, status }`
+for record-sheet display (`hp = hitMax - hits`). `FallDirection` and
 `PreexistingDamage` are the related shapes.
 
 The PSR/fall machinery (`rollPilotingCheck`, `preexistingDamageModifier`,
@@ -634,7 +645,7 @@ createBattle(map: MapDef, units: UnitInit[], options?: CreateBattleOptions): Bat
 executeMove(state, unitId, mode, steps, sink: GameEvent[], { finalFacing, rng }?): void  // declares mode + walks steps in one call
 attemptStandUp(state, unitId, sink: GameEvent[], rng?): void            // movement phase only: prone unit tries to rise (one attempt per activation)
 dropProne(state, unitId, sink: GameEvent[], rng?): void                // movement phase only: go prone voluntarily (1 MP, no heat, no roll, no damage; refused after jumping)
-ejectPilot(state, unitId, sink: GameEvent[]): void                      // movement phase only: removes the unit (removed = "pilotEjected") and spawns a level-2 wreck in its hex
+ejectPilot(state, unitId, rng, sink: GameEvent[]): void                // movement phase only (Tactical Operations extension): ejection PSR (failure = floor(MoF/2) pilot hits, `pilotDamaged` reason "ejection"), then removes the unit (removed = "pilotEjected") and spawns a wreck; pilotHits retained
 voluntaryShutdown(state, unitId, sink: GameEvent[]): void              // movement phase only: shuts down ("manual")
 attemptVoluntaryStartup(state, unitId, sink: GameEvent[], rng?): void  // startup attempt after a manual shutdown
 declareAttacks(state, unitId, weaponDecls, physicalDecls, sink: GameEvent[], rng?, options?): void  // attack phase only: one combined declaration per turn (weapons + punch/kick/push/club/strike); emits a single merged `attacksDeclared`
@@ -691,7 +702,7 @@ Constants:
 Key types:
 
 ```ts
-interface UnitInit { id; model; team; gunnery: UnitSkillRange; piloting: UnitSkillRange; position: HexCoord; facing: Facing }  // skills 0..7, gunnery/piloting within 2 of each other (TW p.273)
+interface UnitInit { id; model; team; gunnery: UnitSkillRange; piloting: UnitSkillRange; pilotHitMax?: number; position: HexCoord; facing: Facing }  // pilotHitMax integer >= 1 (default 6); skills 0..7, gunnery/piloting within 2 of each other (TW p.273)
 
 type MoveStep =
   | { kind: "enter"; to: HexCoord }      // forward/backward (ground) or adjacent hop (jump)
@@ -715,7 +726,7 @@ interface BattleState extends HexGrid {
 }
 
 interface UnitState {
-  id; model; team; gunnery; piloting; pilotHits; unconscious; prone;
+  id; model; team; gunnery; piloting; pilotHits; pilotHitMax; unconscious; prone;
   heat; heatPending;                  // scale value (last turn's end) + this turn's own heat
   position; facing;
   damage: UnitDamageState;            // updated as soon as damage lands

@@ -12,6 +12,7 @@ import {
   applyFall,
   applyPilotHits,
   attemptStandUp,
+  buildUnitInit,
   declareAttacks,
   dropProne,
   executeMove,
@@ -34,24 +35,8 @@ function hbkEnf(critsDisabled = true) {
   return createTestBattle(
     [],
     [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 2 },
-        facing: "s",
-      },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 3 },
-        facing: "n",
-      },
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 2 }, "s"),
+      buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 3 }, "n"),
     ],
     critsDisabled,
   );
@@ -126,24 +111,8 @@ describe("piloting skill", () => {
     const custom = createTestBattle(
       [],
       [
-        {
-          id: "a",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 2,
-          position: { col: 1, row: 1 },
-          facing: "n",
-        },
-        {
-          id: "b",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 1, row: 2 },
-          facing: "s",
-        },
+        buildUnitInit("a", "HBK-4G", 0, { col: 1, row: 1 }, "n", 4, 2),
+        buildUnitInit("b", "ENF-4R", 1, { col: 1, row: 2 }, "s"),
       ],
       true,
     );
@@ -389,15 +358,15 @@ describe("immediate shutdown PSR (+3)", () => {
     const hbk = requireUnit(state, "hbk");
     // Post-dissipation: 43 - 13 = 30 endHeat (auto shutdown + ammo avoid 8).
     hbk.heat = 43;
-    // resolveHeatPhase: 14 dice (traced via debug):
+    // resolveHeatPhase: 16 dice (traced via debug):
     //   auto shutdown (no roll); PSR 1+1=2 < 8 fails -> fall:
     //     fallDir=1 (1), fallLoc 3+4=7 (2), consciousness 3+3=6 >= 3 pass (2);
     //   `largestAmmoBin` tiebreak on two equal AC/20 bins (1);
-    //   ammo avoid 3+1=4 < 8 explodes;
+    //   ammo avoid 3+1=4 < 8 explodes; CT destroyed -> auto-eject PSR (6+6 passes);
     //   TW p.160 pilot damage: 2 hits, each forces a Consciousness Roll;
     //   6+6=12 >= 5 (target @ pilotHits=2) and 6+6=12 >= 7 (target @ pilotHits=3).
     startAttackTurn(state);
-    advancePhase(state, [], scriptedRng(1, 1, 1, 3, 4, 3, 3, 3, 1, 6, 6, 6, 6, 6));
+    advancePhase(state, [], scriptedRng(1, 1, 1, 3, 4, 3, 3, 3, 1, 6, 6, 6, 6, 6, 6, 6));
     expect(hbk.prone).toBe(true);
     expect(hbk.pilotHits).toBe(3);
     expect(hbk.unconscious).toBe(false);
@@ -411,24 +380,8 @@ describe("run-damaged PSR", () => {
     const state = createTestBattle(
       [],
       [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 8, row: 8 },
-          facing: "s",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 4 },
-          facing: "n",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 8, row: 8 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 4 }, "n"),
       ],
       true,
     );
@@ -462,24 +415,8 @@ describe("run-damaged PSR", () => {
     const state = createTestBattle(
       [],
       [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 8, row: 8 },
-          facing: "s",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 4 },
-          facing: "n",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 8, row: 8 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 4 }, "n"),
       ],
       true,
     );
@@ -503,24 +440,8 @@ describe("jump-damaged PSR", () => {
     const state = createTestBattle(
       [],
       [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 8, row: 8 },
-          facing: "s",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 4 },
-          facing: "n",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 8, row: 8 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 4 }, "n"),
       ],
       true,
     );
@@ -546,24 +467,8 @@ describe("jump-damaged PSR", () => {
     const state = createTestBattle(
       [],
       [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 8, row: 8 },
-          facing: "s",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 4 },
-          facing: "n",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 8, row: 8 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 4 }, "n"),
       ],
       true,
     );
@@ -587,24 +492,8 @@ describe("building crash auto-fall", () => {
     const state = createTestBattle(
       [{ col: 2, row: 3, type: "heavyBuilding" }],
       [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 8, row: 8 },
-          facing: "s",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 4 },
-          facing: "n",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 8, row: 8 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 4 }, "n"),
       ],
       true,
     );
@@ -628,24 +517,8 @@ describe("building crash auto-fall", () => {
     const state = createTestBattle(
       [{ col: 2, row: 3, type: "heavyBuilding" }],
       [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 8, row: 8 },
-          facing: "s",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 4 },
-          facing: "n",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 8, row: 8 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 4 }, "n"),
       ],
       true,
     );
@@ -669,24 +542,8 @@ describe("building crash auto-fall", () => {
     const state = createTestBattle(
       [{ col: 2, row: 3, type: "heavyBuilding" }],
       [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 8, row: 8 },
-          facing: "s",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 4 },
-          facing: "n",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 8, row: 8 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 4 }, "n"),
       ],
       true,
     );
@@ -798,24 +655,8 @@ describe("going prone voluntarily", () => {
     const state = createTestBattle(
       [{ col: 2, row: 3, type: "water2" }],
       [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 2 },
-          facing: "s",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 3 },
-          facing: "n",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 2 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 3 }, "n"),
       ],
       true,
     );
@@ -1074,24 +915,8 @@ describe("movement terrain PSRs", () => {
     const state = createTestBattle(
       [{ col: 2, row: 3, type: "rubble" }],
       [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 2 },
-          facing: "s",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 3, row: 3 },
-          facing: "n",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 2 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 3 }, "n"),
       ],
       true,
     );
@@ -1109,24 +934,8 @@ describe("movement terrain PSRs", () => {
     const state = createTestBattle(
       [{ col: 2, row: 3, type: "water1" }],
       [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 2 },
-          facing: "s",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 3, row: 3 },
-          facing: "n",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 2 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 3 }, "n"),
       ],
       true,
     );
@@ -1147,24 +956,8 @@ describe("movement terrain PSRs", () => {
         { col: 2, row: 4, type: "clear" },
       ],
       [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 3 },
-          facing: "s",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 8, row: 8 },
-          facing: "n",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 3 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 1, { col: 8, row: 8 }, "n"),
       ],
       true,
     );
@@ -1188,24 +981,8 @@ describe("movement terrain PSRs", () => {
     const state = createTestBattle(
       [{ col: 2, row: 3, type: "lightBuilding" }],
       [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 2 },
-          facing: "s",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 3, row: 3 },
-          facing: "n",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 2 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 3 }, "n"),
       ],
       true,
     );
@@ -1229,24 +1006,8 @@ describe("movement terrain PSRs", () => {
         { col: 2, row: 3, type: "rubble", level: 0 },
       ],
       [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 2 },
-          facing: "s",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 3, row: 3 },
-          facing: "n",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 2 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 3 }, "n"),
       ],
       true,
     );
@@ -1285,24 +1046,8 @@ describe("movement terrain PSRs", () => {
     const state = createTestBattle(
       [{ col: 2, row: 3, type: "rubble", level: 2 }],
       [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 2 },
-          facing: "s",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 3, row: 3 },
-          facing: "n",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 2 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 3 }, "n"),
       ],
       true,
     );
@@ -1334,24 +1079,8 @@ describe("movement terrain PSRs", () => {
         { col: 2, row: 3, type: "water1", level: 0 },
       ],
       [
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 2 },
-          facing: "s",
-        },
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 1, row: 1 },
-          facing: "s",
-        },
+        buildUnitInit("enf", "ENF-4R", 0, { col: 2, row: 2 }, "s"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 1, row: 1 }, "s"),
       ],
       true,
     );

@@ -3,6 +3,7 @@ import { mechDef } from "../src/data/index";
 import type { BattleState, GameEvent, UnitInit } from "../src/rules/game";
 import {
   advancePhase,
+  buildUnitInit,
   declareAttacks,
   executeMove,
   nextActor,
@@ -23,24 +24,8 @@ import { checkVictory, createTestBattle, scriptedRng } from "./helpers";
  */
 function setup(): BattleState {
   const units: UnitInit[] = [
-    {
-      id: "wvr",
-      model: "WVR-6R",
-      team: 0,
-      gunnery: 4,
-      piloting: 5,
-      position: { col: 3, row: 5 },
-      facing: "se",
-    },
-    {
-      id: "grf",
-      model: "GRF-1N",
-      team: 1,
-      gunnery: 3,
-      piloting: 5,
-      position: { col: 11, row: 8 },
-      facing: "nw",
-    },
+    buildUnitInit("wvr", "WVR-6R", 0, { col: 3, row: 5 }, "se"),
+    buildUnitInit("grf", "GRF-1N", 1, { col: 11, row: 8 }, "nw", 3),
   ];
   return createTestBattle([{ col: 7, row: 7, type: "lightWoods" }], units, true);
 }

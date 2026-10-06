@@ -9,6 +9,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   type BattleState,
+  buildUnitInit,
   createBattle,
   type HexCoord,
   isTsmActive,
@@ -48,7 +49,7 @@ function makeUnitInit(
   model: string,
   facing: "n" | "ne" | "se" | "s" | "sw" | "nw" = "n",
 ): UnitInit {
-  return { id, model, team, position: hex, facing, gunnery: 4, piloting: 5 };
+  return buildUnitInit(id, model, team, hex, facing);
 }
 
 function makeBattle(attacker: UnitInit, target: UnitInit): BattleState {

@@ -17,7 +17,7 @@ import {
 } from "../src";
 import { bearingExact } from "../src/core/hex";
 import { classifyArcWithBoundary, defenderArcChoice } from "../src/rules/arcs";
-import { resolveAllAttacks, validateAttacksImpl } from "../src/rules/game";
+import { buildUnitInit, resolveAllAttacks, validateAttacksImpl } from "../src/rules/game";
 import { hitLocationForArc, punchHitLocationForArc } from "../src/rules/hitlocation";
 import {
   computePhysicalToHit,
@@ -41,15 +41,7 @@ function makeUnitInit(
   hex: HexCoord,
   facing: "n" | "ne" | "se" | "s" | "sw" | "nw" = "n",
 ): UnitInit {
-  return {
-    id,
-    model: "HBK-4G",
-    team,
-    position: hex,
-    facing,
-    gunnery: 4,
-    piloting: 5,
-  };
+  return buildUnitInit(id, "HBK-4G", team, hex, facing);
 }
 
 function makeBattle(attacker: UnitInit, target: UnitInit): BattleState {
