@@ -23,6 +23,7 @@ import {
   registerMech,
   weightClassForTonnage,
 } from "../src/data/index";
+import { resolveStringRef } from "../src/data/mech.codec";
 import { purgeMechDefs } from "../src/data/mech.schema";
 
 const TEXT = readFileSync(new URL("../data/btlib10x.jsonl", import.meta.url), "utf8");
@@ -52,7 +53,7 @@ describe("catalog manifest", () => {
     expect(models.size).toBe(MANIFEST.mechs.length);
     const names = new Set<string>();
     for (const entry of MANIFEST.maps) {
-      const src = decodeMapLine(LINES[entry.line]!);
+      const src = decodeMapLine(LINES[entry.line]!, entry);
       expect(src.name).toBe(entry.name);
       expect(src.width).toBe(entry.width);
       expect(src.height).toBe(entry.height);
@@ -78,7 +79,7 @@ describe("catalog manifest", () => {
     const mapFiles = readdirSync(mapDir).filter((f) => f.endsWith(".json"));
     expect(mapFiles.length).toBe(MANIFEST.maps.length);
     for (const entry of MANIFEST.maps) {
-      const decoded = decodeMapLine(LINES[entry.line]!);
+      const decoded = decodeMapLine(LINES[entry.line]!, entry);
       const file = mapFiles.find(
         (f) => JSON.parse(readFileSync(new URL(f, mapDir), "utf8")).name === entry.name,
       )!;
@@ -101,33 +102,43 @@ describe("catalog manifest", () => {
     expect(() => parseCatalogManifest({ v: 1, mechs: [], maps: [] })).not.toThrow();
     expect(() => parseCatalogManifest({ v: 1, mechs: [{ m: "X" }], maps: [] })).toThrow();
     expect(() =>
-      parseCatalogManifest({
-        v: 1,
-        mechs: [
-          { m: "X", n: "Y", b: 1, t: 50, l: 2 },
-          { m: "x", n: "Y", b: 2, t: 50, l: 3 },
-        ],
-        maps: [],
-      }),
+      parseCatalogManifest(
+        {
+          v: 1,
+          mechs: [
+            { m: "X", n: 0, b: 1, t: 50, l: 2 },
+            { m: "x", n: 0, b: 2, t: 50, l: 3 },
+          ],
+          maps: [],
+        },
+        ["Y"],
+      ),
     ).toThrow(/duplicate/i);
     expect(() =>
-      parseCatalogManifest({
-        v: 1,
-        mechs: [{ m: "X", n: "Y", b: 1, t: 50, c: "W", l: 2 }],
-        maps: [{ n: "M", w: 1, h: 1, l: 2 }],
-      }),
+      parseCatalogManifest(
+        {
+          v: 1,
+          mechs: [{ m: "X", n: 0, b: 1, t: 50, c: "W", l: 2 }],
+          maps: [{ n: "M", w: 1, h: 1, l: 2 }],
+        },
+        ["Y"],
+      ),
     ).not.toThrow();
   });
 
   it("rejects malformed lines", () => {
+    const MAP_ID = { name: "M", width: 1, height: 1 };
     const id = { model: "X", name: "Y", techBase: "Inner Sphere", tonnage: 50 };
     expect(() => decodeMechLine("not json", id)).toThrow();
     expect(() => decodeMechLine("[1,2]", id)).toThrow();
     expect(() => decodeMechLine('{"w":1}', id)).toThrow();
     expect(() => decodeMechLine('{"v":2,"w":1}', id)).toThrow();
     expect(() => decodeMechLine('{"v":1,"w":1}', id)).toThrow(/running/);
-    expect(() => decodeMapLine("not json")).toThrow();
-    expect(() => decodeMapLine('{"v":1,"m":"X"}')).toThrow();
+    expect(() => decodeMapLine("not json", MAP_ID)).toThrow();
+    expect(resolveStringRef(["A", "B"], 1, "x")).toBe("B");
+    expect(() => resolveStringRef(["A"], "$0", "x")).toThrow(/bad x reference/);
+    expect(() => resolveStringRef(["A"], 5, "x")).toThrow(/out of range/);
+    expect(() => decodeMapLine('{"v":1}', MAP_ID)).toThrow();
   });
 });
 
@@ -144,7 +155,7 @@ describe("catalog registration", () => {
 
   it("registers one decoded map on demand", () => {
     const entry = findMapEntry("quickstart")!;
-    expect(() => registerMap(decodeMapLine(LINES[entry.line]!))).toThrow(/duplicate/i);
+    expect(() => registerMap(decodeMapLine(LINES[entry.line]!, entry))).toThrow(/duplicate/i);
   });
 
   it("splits the Clan name out of the MTF line-2 parens", () => {
