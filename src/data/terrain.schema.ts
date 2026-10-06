@@ -14,10 +14,14 @@ export interface TerrainDef {
   /** To-hit modifier when the target is inside this terrain hex. */
   readonly terrainMod: number;
   /** When true, units inside this terrain receive partial cover (+3 to-hit). */
-  readonly partialCover?: boolean;
+  readonly partialCover: boolean;
   /** When true, units cannot fire into or out of this terrain hex. */
-  readonly blocksTargeting?: boolean;
-  readonly waterDepth?: number;
+  readonly blocksTargeting: boolean;
+  readonly waterDepth: number;
+  /** Ejection Modifiers Table landing-terrain term (TO p.165) for the hex
+   *  behind the 'Mech: clear/pavement -2, water -1, rough/rubble 0, light woods
+   *  +2, heavy woods +3, +1 per level of building. */
+  readonly ejectLandMod: (level: number) => number;
 }
 
 export function terrainDef(type: TerrainType): TerrainDef {

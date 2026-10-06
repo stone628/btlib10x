@@ -587,7 +587,8 @@ events). `DEFAULT_PILOTING = 5`, `GYRO_HIT_MOD = 3`, `GYRO_DESTROYED_HITS = 2`,
 `SENSOR_BLIND_HITS = 2`, `DEFAULT_PILOT_HIT_MAX = 6`, and
 `consciousnessTarget(hits, hitMax = 6): number | null` (pilot-hit consciousness
 TN; `null` once `hits >= hitMax`; the TW table is scaled to `hitMax`: 5 → 3,5,10,11,
-6 → 3,5,7,10,11, 7 → 3,5,7,7,10,11). `isValidPilotHitMax`, `EJECTION_BASE_MODIFIER`
+6 → 3,5,7,10,11, 7 → 3,5,7,7,10,11). `isValidPilotHitMax`, `EJECTION_BASE_MODIFIER`,
+`ejectionModifier(input)` / `ejectionLandingModifier(terrain, level)` (TO p.165 table)
 and `ejectionDamage(roll)` (floor(margin of failure / 2)) support ejection.
 
 ### Pilot (`rules/pilot.ts`)

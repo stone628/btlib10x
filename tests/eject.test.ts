@@ -3,6 +3,7 @@ import { neighbor } from "../src/core/hex";
 import { resolveWeaponAttack } from "../src/rules/attack";
 import type { BattleState, GameEvent, TerrainHexDef, UnitInit } from "../src/rules/game";
 import {
+  advancePhase,
   buildUnitInit,
   ejectPilot,
   executeMove,
@@ -14,6 +15,7 @@ import {
 } from "../src/rules/game";
 import { losClear } from "../src/rules/los";
 import { reachableLandings } from "../src/rules/movement";
+import { ejectionModifier } from "../src/rules/piloting";
 import { checkVictory, createTestBattle, scriptedRng } from "./helpers";
 
 function hbkVsEnf(): BattleState {
@@ -284,5 +286,79 @@ describe("eject", () => {
     const open = resolveWeaponAttack({ ...base, rng: scriptedRng(6, 6, 2, 3) });
     expect(open.groups).toHaveLength(1);
     expect(open.groups[0]!.location).toBe("rightLeg");
+  });
+});
+
+function zeroHead(state: BattleState, id: string): void {
+  const unit = requireUnit(state, id);
+  unit.damage = {
+    ...unit.damage,
+    internalStructure: { ...unit.damage.internalStructure, head: 0 },
+  };
+}
+
+function sweepHeadLoss(preHits: number, extra: Partial<UnitInit> = {}) {
+  const units: UnitInit[] = [
+    { ...buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"), ...extra },
+    buildUnitInit("enf", "ENF-4R", 1, { col: 5, row: 4 }, "nw"),
+  ];
+  const state = createTestBattle([], units, true);
+  startMovementTurn(state);
+  advancePhase(state, []); // movement -> attack
+  requireUnit(state, "hbk").pilotHits = preHits;
+  zeroHead(state, "hbk");
+  const events: GameEvent[] = [];
+  advancePhase(state, events, scriptedRng(6, 6, 6, 6)); // attack sweep
+  return { state, events, hbk: requireUnit(state, "hbk") };
+}
+
+describe("auto-eject on head destruction (TO p.165)", () => {
+  it("ejects instead of killing; pilot hits raised to pilotHitMax - 1", () => {
+    for (const pre of [0, 3]) {
+      const { hbk, events } = sweepHeadLoss(pre);
+      expect(hbk.removed).toBe("pilotEjected");
+      expect(hbk.destroyed).toBe("not");
+      expect(hbk.pilotHits).toBe(5);
+      expect(events.some((e) => e.kind === "unitRemoved" && e.reason === "pilotEjected")).toBe(
+        true,
+      );
+    }
+  });
+
+  it("scales with a custom pilotHitMax", () => {
+    const { hbk } = sweepHeadLoss(0, { pilotHitMax: 4 });
+    expect(hbk.removed).toBe("pilotEjected");
+    expect(hbk.pilotHits).toBe(3);
+  });
+
+  it("rolls the ejection PSR with head damage +3, auto +1, clear landing -2", () => {
+    const { events } = sweepHeadLoss(0);
+    const psr = events.find((e) => e.kind === "pilotingCheck" && e.reason === "ejection");
+    expect(psr).toMatchObject({ triggerModifier: 2 });
+  });
+});
+
+describe("ejectionModifier (TO p.165)", () => {
+  const base = {
+    landingTerrain: "clear",
+    landingLevel: 0,
+    prone: false,
+    unconscious: false,
+    headStructureDamage: 0,
+    auto: false,
+  } as const;
+  it("sums the table terms", () => {
+    expect(ejectionModifier(base)).toBe(-2);
+    expect(ejectionModifier({ ...base, landingTerrain: "water1" })).toBe(-1);
+    expect(ejectionModifier({ ...base, landingTerrain: "rubble" })).toBe(0);
+    expect(ejectionModifier({ ...base, landingTerrain: "lightWoods" })).toBe(2);
+    expect(ejectionModifier({ ...base, landingTerrain: "heavyWoods" })).toBe(3);
+    expect(ejectionModifier({ ...base, landingTerrain: "mediumBuilding", landingLevel: 2 })).toBe(
+      2,
+    );
+    expect(ejectionModifier({ ...base, prone: true })).toBe(3);
+    expect(ejectionModifier({ ...base, unconscious: true })).toBe(1);
+    expect(ejectionModifier({ ...base, headStructureDamage: 2 })).toBe(0);
+    expect(ejectionModifier({ ...base, auto: true })).toBe(-1);
   });
 });

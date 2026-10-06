@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { BattleState, GameEvent, UnitInit } from "../src/rules/game";
+import type { BattleState, GameEvent, UnitInit, UnitState } from "../src/rules/game";
 import {
   buildUnitInit,
   createBattle,
@@ -20,6 +20,11 @@ function battle(hbkExtra: Partial<UnitInit> = {}): BattleState {
   const state = createTestBattle([], units, true);
   rollInitiativePhase(state, scriptedRng(3, 3, 3, 1), []);
   return state;
+}
+
+function hurtHead(unit: UnitState, points: number): void {
+  const is = unit.damage.internalStructure;
+  unit.damage = { ...unit.damage, internalStructure: { ...is, head: is.head - points } };
 }
 
 describe("consciousnessTarget scaling", () => {
@@ -117,7 +122,9 @@ describe("ejection PSR", () => {
     const state = battle();
     const hbk = requireUnit(state, "hbk");
     const events: GameEvent[] = [];
-    // roll 1+1 = 2 vs target 5: margin 3 -> 1 hit; consciousness 6+6 passes.
+    hurtHead(hbk, 1);
+    // target 5 -2 (clear landing) +1 (head IS damage) = 4; roll 1+1 = 2:
+    // margin 2 -> 1 hit; consciousness 6+6 passes.
     ejectPilot(state, "hbk", scriptedRng(1, 1, 6, 6), events);
     const hits = events.filter((e) => e.kind === "pilotDamaged");
     expect(hits).toHaveLength(1);
@@ -129,7 +136,8 @@ describe("ejection PSR", () => {
   it("failure by 1 deals no pilot hit", () => {
     const state = battle();
     const events: GameEvent[] = [];
-    ejectPilot(state, "hbk", scriptedRng(2, 2), events);
+    // target 5 -2 (clear landing) = 3; roll 2 fails by 1.
+    ejectPilot(state, "hbk", scriptedRng(1, 1), events);
     expect(requireUnit(state, "hbk").pilotHits).toBe(0);
     expect(events.some((e) => e.kind === "pilotDamaged")).toBe(false);
   });
@@ -137,6 +145,7 @@ describe("ejection PSR", () => {
   it("pilot killed by ejection damage still reads as ejected with HP 0", () => {
     const state = battle({ pilotHitMax: 1 });
     const hbk = requireUnit(state, "hbk");
+    hurtHead(hbk, 1);
     ejectPilot(state, "hbk", scriptedRng(1, 1), []);
     expect(hbk.removed).toBe("pilotEjected");
     expect(pilotStatus(hbk)).toBe("ejected");

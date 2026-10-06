@@ -1,5 +1,5 @@
 import { D2D6_MAX, roll2D6, rollD6 } from "../core/dice";
-import { bearingExact, hexDistance, isAdjacent, sameHex } from "../core/hex";
+import { bearingExact, hexDistance, isAdjacent, neighbor, sameHex } from "../core/hex";
 import {
   cellAt,
   costToClimb,
@@ -24,6 +24,7 @@ import {
   type Location,
   type MoveMode,
   msgHex,
+  oppositeFacing,
   type Rng,
   rotateFacing,
   type TerrainHexDef,
@@ -110,6 +111,7 @@ import {
 } from "./heat";
 import { hitLocation, hitLocationForArc, punchHitLocation } from "./hitlocation";
 import { rollInitiative } from "./initiative";
+import { internalStructureForTonnage } from "./internalStructure";
 import {
   interveningHexes,
   interveningTerrains,
@@ -137,8 +139,8 @@ import {
   consciousnessTarget,
   DEFAULT_PILOT_HIT_MAX,
   DEFAULT_PILOTING,
-  EJECTION_BASE_MODIFIER,
   ejectionDamage,
+  ejectionModifier,
   facingAfterFall,
   fallingDamageGroups,
   fallingDamageTotal,
@@ -182,20 +184,20 @@ export function buildUnitInit(
   model: string,
   team: number,
   position: HexCoord,
-  facing?: Facing,
-  gunnery?: UnitSkillRange,
-  piloting?: UnitSkillRange,
-  pilotHitMax?: number,
+  facing: Facing = "n",
+  gunnery: UnitSkillRange = DEFAULT_GUNNERY,
+  piloting: UnitSkillRange = DEFAULT_PILOTING,
+  pilotHitMax: number = DEFAULT_PILOT_HIT_MAX,
 ): UnitInit {
   return {
     id,
     model,
     team,
     position,
-    facing: facing ?? "n",
-    gunnery: gunnery ?? DEFAULT_GUNNERY,
-    piloting: piloting ?? DEFAULT_PILOTING,
-    pilotHitMax: pilotHitMax ?? DEFAULT_PILOT_HIT_MAX,
+    facing,
+    gunnery,
+    piloting,
+    pilotHitMax,
   };
 }
 
@@ -951,15 +953,22 @@ function markUnitDestroyed(
   state: BattleState,
   unit: UnitState,
   reason: DestroyedReason,
+  rng: Rng,
   sink: GameEvent[],
 ): void {
   if (isUnitRemoved(unit)) return;
+  // TO p.165: head destruction auto-ejects the pilot (cockpit crits still kill).
+  if (reason === "headDestroyed" || reason === "headBlownOff") {
+    unit.pilotHits = Math.max(unit.pilotHits, unit.pilotHitMax - 1);
+    resolveEjection(state, unit, rng, sink, "auto");
+    return;
+  }
   releaseClub(state, unit, "removed", sink);
   unit.destroyed = reason;
   unit.removed = "destroyed";
-  // TW p.128: the MechWarrior dies on loss of the head or cockpit; any other
+  // TW p.128: the MechWarrior dies on loss of the cockpit; any other
   // destruction (engine, center torso) leaves the pilot alive inside.
-  if (reason === "headDestroyed" || reason === "headBlownOff" || reason === "cockpitDestroyed") {
+  if (reason === "cockpitDestroyed") {
     unit.pilotHits = Math.max(unit.pilotHits, unit.pilotHitMax);
   }
   sink.push({
@@ -1365,6 +1374,12 @@ function autoEjectOnCenterTorsoBlast(
   if (!applications.some((a) => a?.newlyDestroyed.includes("centerTorso"))) return false;
   resolveEjection(state, unit, rng, sink, "auto");
   return true;
+}
+
+/** True when the pilot ejected because the head was destroyed: the blow that
+ *  destroyed it is already folded into the raised pilot hits (TO p.165). */
+function headLossEjected(unit: UnitState): boolean {
+  return unit.removed === "pilotEjected" && unit.damage.internalStructure.head <= 0;
 }
 
 /** Pilot hits per failed seatbelt or fall. */
@@ -2769,7 +2784,7 @@ function applyDamageGroups(
     isUnitAvailable(unit) &&
     (isUnitDestroyed(unit.damage) || crits.some((c) => c.killedReason !== null))
   ) {
-    markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage, crits), sink);
+    markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage, crits), rng, sink);
   }
   return crits;
 }
@@ -2905,7 +2920,7 @@ export function applyFall(
     if (!r.success) applyPilotHits(state, unit, FALL_PILOT_HITS, "fall", rng, sink);
   }
   if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
-    markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), sink);
+    markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), rng, sink);
   }
 }
 
@@ -3402,6 +3417,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         state,
         unit,
         targetKilledReason[unit.id] ?? destroyedReasonFor(unit.damage),
+        rng,
         sink,
       );
     }
@@ -3418,7 +3434,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       const headGroups = resolution.groups.filter(
         (g) => g.location === "head" && g.damage >= 1,
       ).length;
-      if (headGroups > 0)
+      if (headGroups > 0 && !headLossEjected(target))
         applyPilotHits(state, target, headGroups * HEAD_HIT_PILOT_HITS, "headHit", rng, sink);
       let ammoBlasts = 0;
       for (const crit of resolution.crits) {
@@ -3439,7 +3455,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   }
   for (const unit of Object.values(state.units)) {
     if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
-      markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), sink);
+      markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), rng, sink);
     }
   }
 
@@ -3455,7 +3471,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   resolvePhasePiloting(state, rng, weaponBefore, sink);
   for (const unit of Object.values(state.units)) {
     if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
-      markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), sink);
+      markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), rng, sink);
     }
   }
 
@@ -3902,7 +3918,9 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         const headGroups = resolution.damageToTarget.filter(
           (g) => g.location === "head" && g.damage >= 1,
         ).length;
-        if (headGroups > 0)
+        // A destroyed head is resolved by the destruction sweep below (auto-eject
+        // or cockpit kill), not by an extra head-hit tally.
+        if (headGroups > 0 && hitTarget.damage.internalStructure.head > 0)
           applyPilotHits(state, hitTarget, headGroups * HEAD_HIT_PILOT_HITS, "headHit", rng, sink);
       }
 
@@ -3920,7 +3938,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   for (const unit of Object.values(state.units)) {
     if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
       const physCrits = physicalAttackCrits[unit.id];
-      markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage, physCrits), sink);
+      markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage, physCrits), rng, sink);
     }
   }
 
@@ -3997,7 +4015,7 @@ export function* advancePhaseGen(state: BattleState, rng: Rng): Generator<GameEv
       const sink: GameEvent[] = [];
       for (const unit of Object.values(state.units)) {
         if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
-          markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), sink);
+          markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), rng, sink);
         }
       }
       // The end phase starts with heat resolution: engine crit heat,
@@ -4277,7 +4295,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
             // "pilotKilled" rather than the explosion's structural kill.
             applyPilotHits(state, unit, AMMO_BLAST_PILOT_HITS, "ammoExplosion", rng, sink);
             if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
-              markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), sink);
+              markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), rng, sink);
             }
           }
         }
@@ -4665,7 +4683,7 @@ export function dropProne(
 }
 
 /** Tactical Operations ejection: the pilot rolls a Piloting Skill Roll
- *  (`EJECTION_BASE_MODIFIER` until the Ejection Modifiers Table is wired in).
+ *  (Ejection Modifiers Table via `ejectionModifier`).
  *  A failure deals floor(margin of failure / 2) pilot hits with the usual
  *  consciousness rolls. Either way the pilot leaves the 'Mech (`removed =
  *  "pilotEjected"`, even if the failure damage reaches `pilotHitMax`; the sheet
@@ -4678,7 +4696,17 @@ function resolveEjection(
   cause: "manual" | "auto",
 ): void {
   if (isUnitRemoved(unit)) return;
-  const r = pushPilotingCheck(sink, unit, "ejection", EJECTION_BASE_MODIFIER, 0, rng);
+  const landing = cellAt(state, neighbor(unit.position, oppositeFacing(unit.facing)));
+  const modifier = ejectionModifier({
+    landingTerrain: landing.terrain,
+    landingLevel: landing.level,
+    prone: unit.prone,
+    unconscious: unit.unconscious,
+    headStructureDamage:
+      internalStructureForTonnage(unitTonnage(unit)).head - unit.damage.internalStructure.head,
+    auto: cause === "auto",
+  });
+  const r = pushPilotingCheck(sink, unit, "ejection", modifier, 0, rng);
   releaseClub(state, unit, "removed", sink);
   unit.removed = "pilotEjected";
   state.wrecks[hexKey(unit.position)] = {
