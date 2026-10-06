@@ -78,7 +78,7 @@ describe("weapon sweep lands before the melee", () => {
     expect(melee.resolution.damageToTarget).toEqual([]);
     expect(melee.resolution.missReason).toMatch(/^invalid:/);
     // hbk untouched by the cancelled punch.
-    expect(requireUnit(state, "hbk").damage.armor.centerTorso).toBe(31);
+    expect(requireUnit(state, "hbk").damage.armor.centerTorso).toBe(26);
   });
 
   it("a unit destroyed by weapons still fires but never swings its melee", () => {
@@ -105,7 +105,7 @@ describe("weapon sweep lands before the melee", () => {
     if (melee?.kind !== "physicalAttackResolved") throw new Error("unreachable");
     expect(melee.resolution.missReason).toBe("attackerDown");
     expect(melee.resolution.hit).toBe(false);
-    expect(requireUnit(state, "hbk").damage.armor.centerTorso).toBe(31);
+    expect(requireUnit(state, "hbk").damage.armor.centerTorso).toBe(26);
   });
 });
 

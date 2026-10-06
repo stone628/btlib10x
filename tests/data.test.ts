@@ -32,15 +32,15 @@ describe("'Mech definitions", () => {
     expect(hbk.walking).toBe(4);
     expect(hbk.running).toBe(6);
     expect(hbk.jumping).toBe(0);
-    expect(hbk.armor.centerTorso).toBe(31);
+    expect(hbk.armor.centerTorso).toBe(26);
     expect(hbk.armor.head).toBe(9);
     expect(Object.values(hbk.weapons).map((w) => w.weapon)).toContain("AC/20");
   });
 
   it("spot-checks remaining sheets", () => {
-    expect(mechDef("ENF-4R")!.armor.centerTorso).toBe(27);
+    expect(mechDef("ENF-4R")!.armor.centerTorso).toBe(23);
     expect(mechDef("GRF-1N")!.jumping).toBe(5);
-    expect(mechDef("GRF-1N")!.armor.centerTorso).toBe(27);
+    expect(mechDef("GRF-1N")!.armor.centerTorso).toBe(20);
     expect(mechDef("CDA-3MA")!.walking).toBe(8);
     expect(mechDef("HER-5SA")!.running).toBe(9);
     const wvr = mechDef("WVR-6R")!;
@@ -52,7 +52,7 @@ describe("'Mech definitions", () => {
     expect(Object.values(atlas.weapons).find((w) => w.weapon === "LRM 20")?.shots).toBe(12);
   });
 
-  it("keeps MTF armor fidelity (front + rear) in JSON and splits it on resolve", () => {
+  it("keeps MTF armor fidelity (front-only) in JSON and splits it on resolve", () => {
     const json = {
       model: "TEST",
       name: "Test",

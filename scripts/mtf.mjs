@@ -23,10 +23,11 @@ import {
  * is emitted to data/mechs/ and auto-registered by the catalog generator.
  *
  * Conventions (must match data/mechs/*.json):
- *   - Flat armor per location; torso values SUM the MTF front + rear boxes. The
- *     rear torso values are also stored inside `armor` as `centerTorsoRear` /
- *     `leftTorsoRear` / `rightTorsoRear` (metadata only; the flat damage model
- *     reads the eight front locations).
+ *   - Flat armor per location; torso values store the FRONT hit points only
+ *     (MTF `CT/RT/LT Armor`). The rear torso values (`RTC/RTR/RTL Armor`)
+ *     are stored separately inside `armor` as `centerTorsoRear` /
+ *     `leftTorsoRear` / `rightTorsoRear` (metadata for the rear damage pool;
+ *     the engine's `armor` front pool never includes them).
  *   - Clan weapons use the catalog's "CL " prefix (e.g. CL Gauss Rifle).
  *   - Ammo is per-mount in the schema: a shared bin of N shots is written onto
  *     the single mount that carries an explicit `, Ammo:N`, else the first
@@ -222,9 +223,10 @@ function parseMtf(text, file) {
   // the crit-slot token ("Triple Strength Myomer").
   const myomer = /triple/i.test(fields.Myomer ?? "") ? "Triple Strength Myomer" : "Standard";
 
-  // Flat armor; torso = front + rear summed. Rear torso values are also stored
-  // alongside, keyed as `centerTorsoRear`/`leftTorsoRear`/`rightTorsoRear`
-  // metadata (not used by the flat damage model).
+  // Flat armor; torso = FRONT only (MTF `CT/RT/LT Armor`). Rear torso values
+  // (`RTC/RTR/RTL Armor`) are stored separately as `centerTorsoRear` /
+  // `leftTorsoRear` / `rightTorsoRear` for the rear damage pool — never summed
+  // into the front pool (TW pp.122-123: front and rear are separate pools).
   const armorTags = {
     "HD Armor": "head",
     "CT Armor": "centerTorso",
@@ -234,9 +236,6 @@ function parseMtf(text, file) {
     "LA Armor": "leftArm",
     "LL Armor": "rightLeg",
     "RL Armor": "leftLeg",
-    "RTC Armor": "centerTorso",
-    "RTR Armor": "rightTorso",
-    "RTL Armor": "leftTorso",
   };
   const rearKeys = {
     "RTC Armor": "centerTorsoRear",
