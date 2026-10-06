@@ -118,19 +118,19 @@ describe("example battle: Wolverine vs Griffin", () => {
     declareAttacks(state, "grf", [{ weaponIndex: 2, targetId: "wvr" }], [], []);
     resolveAllAttacks(state, scriptedRng(1, 3), []); // miss
 
-    // ---- Turns 2..10: both stand still, Wolverine plinks the CT for 5 each.
-    // Griffin front CT is 27 -> 6 hits reach 0 armor, then 18 IS needs 4 more
-    // hits (3 to drop to 5, final hit to destroy).
+    // ---- Turns 2..9: both stand still, Wolverine plinks the CT for 5 each.
+    // Griffin front CT is 20 -> 4 hits reach 0 armor, then 18 IS needs 4 more
+    // hits (3 to drop to 3, final hit to destroy).
     const ctFront = mechDef("GRF-1N")!.armor.centerTorso;
     expect(grfCt()).toBe(ctFront);
-    for (let t = 2; t <= 10; t++) {
+    for (let t = 2; t <= 9; t++) {
       advancePhase(state, []); // weaponAttack -> end
       advancePhase(state, []); // end -> initiative
       expect(state.turn).toBe(t);
 
       rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []); // wvr loses, moves first
       advancePhase(state, []); // -> weaponAttack (both skip moving)
-      if (t < 10) {
+      if (t < 9) {
         declareAttacks(state, "wvr", [{ weaponIndex: 1, targetId: "grf" }], [], []);
         // 12 hits TN 9; location 7 -> center torso.
         resolveAllAttacks(state, scriptedRng(6, 6, 3, 4), []);
@@ -138,7 +138,7 @@ describe("example battle: Wolverine vs Griffin", () => {
         expect(grfCt()).toBe(Math.max(ctFront - 5 * hitsDone, 0));
         expect(requireUnit(state, "grf").destroyed).toBe("not");
       } else {
-        // Final blow: front armor gone, CT IS 5, damage 5 -> structure destroyed.
+        // Final blow: front armor gone, CT IS 3, damage 5 -> structure destroyed.
         declareAttacks(state, "wvr", [{ weaponIndex: 1, targetId: "grf" }], [], []);
         const finalEvents: GameEvent[] = [];
         resolveAllAttacks(state, scriptedRng(6, 6, 3, 4), finalEvents);

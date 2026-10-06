@@ -995,14 +995,14 @@ describe("weapon attack phase", () => {
   it("resolves scripted attacks immediately and commits kills only at end of phase", () => {
     const state = startAttackTurn(hbkVsEnf());
     declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], [], []);
-    // Turn 1: AC/20 (20 dmg) hits CT (roll 5) -> CT 27 - 20 = 7 left.
+    // Turn 1: AC/20 (20 dmg) hits CT (roll 5) -> CT 23 - 20 = 3 left.
     // 20+ damage PSR (needs 6: 3+3 succeeds, no fall).
     resolveAllAttacks(state, scriptedRng(2, 3, 3, 4, 3, 3), []);
-    expect(requireUnit(state, "enf").damage.armor.centerTorso).toBe(7);
+    expect(requireUnit(state, "enf").damage.armor.centerTorso).toBe(3);
     expect(requireUnit(state, "enf").destroyed).toBe("not");
 
     advancePhase(state, []); // weaponAttack -> end
-    expect(requireUnit(state, "enf").destroyed).toBe("not"); // survived with 7 CT
+    expect(requireUnit(state, "enf").destroyed).toBe("not"); // survived with 3 CT
 
     advancePhase(state, []); // end -> initiative, turn 2
     expect(state.turn).toBe(2);
@@ -1012,19 +1012,11 @@ describe("weapon attack phase", () => {
     rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []);
     advancePhase(state, []);
     declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], [], []);
-    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4, 3, 3), []); // hit CT again
-    expect(requireUnit(state, "enf").damage.armor.centerTorso).toBe(0);
-    expect(requireUnit(state, "enf").destroyed).toBe("not"); // CT IS still up (16-13=3)
-
-    advancePhase(state, []); // weaponAttack -> end
-    advancePhase(state, []); // end -> initiative, turn 3
-    expect(state.turn).toBe(3);
-    rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []);
-    advancePhase(state, []);
-    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], [], []);
     const events: GameEvent[] = [];
-    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4), events); // CT IS gone
-    expect(requireUnit(state, "enf").destroyed).toBe("centerTorsoDestroyed"); // killed immediately
+    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4, 3, 3), events); // hit CT again
+    expect(requireUnit(state, "enf").damage.armor.centerTorso).toBe(0);
+    // 3 armor absorbs 3, remaining 17 hits CT IS 16 -> destroyed (killed immediately).
+    expect(requireUnit(state, "enf").destroyed).toBe("centerTorsoDestroyed");
     expect(requireUnit(state, "enf").removed).toBe("destroyed");
     expect(events.some((e) => e.kind === "unitRemoved")).toBe(true);
 
@@ -1059,7 +1051,7 @@ describe("weapon attack phase", () => {
     expect(
       events.some((e) => e.kind === "attackResolved" && e.unitId === "enf" && e.targetId === "hbk"),
     ).toBe(true);
-    expect(hbkCt()).toBe(31 - 10);
+    expect(hbkCt()).toBe(26 - 10);
   });
 
   it("jams Ultra AC/5 double taps on a natural 2 and tracks the jam", () => {
@@ -1277,8 +1269,8 @@ describe("streak missiles", () => {
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(3, 3, 3, 4, 3, 3, 3, 4), events);
     const enf = requireUnit(state, "enf");
-    // ENF-4R CT armor is 27. Two MLs (5 dmg each) hitting CT = 10 damage -> 17
-    expect(enf.damage.armor.centerTorso).toBe(17);
+    // ENF-4R CT armor is 23. Two MLs (5 dmg each) hitting CT = 10 damage -> 13
+    expect(enf.damage.armor.centerTorso).toBe(13);
     // Two attackResolved events
     const attacks = events.filter((e) => e.kind === "attackResolved");
     expect(attacks).toHaveLength(2);

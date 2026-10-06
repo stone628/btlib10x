@@ -9,9 +9,9 @@
   "jumping": 4,
   "armor": {
     "head": 9,
-    "centerTorso": 45,
-    "rightTorso": 36,
-    "leftTorso": 36,
+    "centerTorso": 33,
+    "rightTorso": 28,
+    "leftTorso": 28,
     "rightArm": 25,
     "leftArm": 25,
     "rightLeg": 32,
