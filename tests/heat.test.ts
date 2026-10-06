@@ -514,6 +514,30 @@ describe("game integration: dissipation", () => {
     expect(dissipEvent!.endHeat).toBe(7);
     expect(dissipEvent!.netChange).toBe(-13);
   });
+
+  it("does not clamp heat before dissipation (TW p. 159 overflow is unbounded)", () => {
+    const state = hbkVsEnf();
+    const hbk = requireUnit(state, "hbk");
+    hbk.heat = 45;
+    startAttackTurn(state);
+    // 45 + 20 generated - 13 sinks = 52 endHeat. The old
+    // Math.min(HEAT_CAP) clamp produced 40 here by discarding 15 heat
+    // before the sinks dissipated.
+    hbk.heatPending = 20;
+    const events: GameEvent[] = [];
+    advancePhase(state, events, scriptedRng(6, 6, 6, 6, 6));
+    expect(hbk.heat).toBe(52);
+    const dissipEvent = events.find(
+      (e): e is Extract<GameEvent, { kind: "heatDissipated" }> =>
+        e.kind === "heatDissipated" && e.unitId === "hbk",
+    );
+    expect(dissipEvent).toBeDefined();
+    expect(dissipEvent!.dissip).toBe(13);
+    expect(dissipEvent!.startHeat).toBe(45);
+    expect(dissipEvent!.totalGenerated).toBe(20);
+    expect(dissipEvent!.endHeat).toBe(52);
+    expect(dissipEvent!.netChange).toBe(7);
+  });
 });
 
 describe("game integration: engine crit heat", () => {

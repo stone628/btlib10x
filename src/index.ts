@@ -207,7 +207,7 @@ export {
   ammoExplosionAvoid,
   ammoExplosionAvoidWithThreshold,
   effectiveMoveBudget,
-  HEAT_CAP,
+  HEAT_SCALE_MAX,
   type HeatScaleEffects,
   heatDissipation,
   heatDissipationMax,

@@ -5,7 +5,6 @@ import {
   CLUSTER_TABLE,
   catalogMaps,
   catalogMechs,
-  HEAT_CAP,
   HIT_LOCATION_TABLE,
   heatScaleEffects,
   LEFT_SIDE_TABLE,
@@ -108,7 +107,8 @@ export function renderHeatScaleTable(): Chunk[] {
   let prevKey: string | null = null;
   let prevCells: string[] | null = null;
   const pushRow = (start: number, end: number, cells: string[]): void => {
-    const label = start === end ? `${start}` : `${start}–${end}`;
+    const label =
+      start === end ? (start === HEAT_TABLE_MAX ? `${start}+` : `${start}`) : `${start}–${end}`;
     rows.push([label, ...cells]);
   };
   for (let heat = 0; heat <= HEAT_TABLE_MAX; heat++) {
@@ -131,7 +131,7 @@ export function renderHeatScaleTable(): Chunk[] {
     prevKey = key;
     prevCells = [toHit, mp, shutdown, ammo];
   }
-  if (prevCells !== null) pushRow(rangeStart, HEAT_CAP, prevCells);
+  if (prevCells !== null) pushRow(rangeStart, HEAT_TABLE_MAX, prevCells);
   return [buildLinesChunk(i18n("table.heat.title")), buildHeaderTableChunkFromRows(header, rows)];
 }
 
