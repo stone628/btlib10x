@@ -613,13 +613,29 @@ function deriveMapStyles(terrain: readonly TerrainHexDef[]): Record<string, Char
   return m;
 }
 
+/**
+ * Derive non-zero elevation entries keyed by `"col,row"` from
+ * {@link TerrainHexDef} entries (map display). Hexes without an explicit
+ * `level` default to 0 and are omitted.
+ */
+function deriveMapElevations(terrain: readonly TerrainHexDef[]): Record<string, number> {
+  const m: Record<string, number> = {};
+  for (const t of terrain) {
+    const level = t.level ?? 0;
+    if (level !== 0) m[hexKey(t)] = level;
+  }
+  return m;
+}
+
 // ---- model builders ----
 
 /**
  * Structured static map sheet: terrain hexes draw their
  * {@link TERRAIN_GLYPHS} marker at the bottom center of the hex (`\ w /`),
  * tinted via {@link TERRAIN_STYLES}. Pass `styles` to override tinting.
- * Pass `elevations` to render non-zero ground levels on the map.
+ * Pass `elevations` to override the ground levels derived from
+ * `map.terrain` (non-zero levels render beside the terrain mark, or as a
+ * bare digit on clear hexes).
  */
 export function mapModel(
   map: MapDef,
@@ -628,7 +644,7 @@ export function mapModel(
 ): BoardModel {
   const filteredElevations =
     elevations === undefined
-      ? {}
+      ? deriveMapElevations(map.terrain)
       : Object.fromEntries(Object.entries(elevations).filter(([, v]) => v !== 0));
   return {
     cols: Math.max(1, map.width),
