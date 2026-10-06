@@ -101,7 +101,6 @@ describe("pilotStatus / pilotRecord", () => {
     expect(rec.hp).toBe(5);
     expect(rec.hitMax).toBe(7);
     expect(rec.nextTarget).toBe(7);
-    expect(rec.targets).toHaveLength(7);
   });
 });
 

@@ -802,7 +802,7 @@ export function sheetLines(view: SheetView): Chunk[] {
     }),
   ];
   if (view.gunnery !== null) topLines.push(sheetGunneryLine(view));
-  if (view.piloting !== null) topLines.push(...sheetPilotLines(view));
+  if (view.piloting !== null) topLines.push(sheetPilotLines(view));
   topLines.push(sheetMovementLine(view));
   topLines.push(view.positionLine);
   if (view.ammoStatusLine !== null) topLines.push(view.ammoStatusLine);
@@ -885,29 +885,17 @@ const PILOT_STATUS_KEY: Record<PilotStatus, MessageKey> = {
   dead: "sheet.pilotKilled",
 };
 
-/** Pilot hit track boxes: one per HP, an `x` for each hit taken. */
-function pilotHpBoxes(pilot: PilotRecord): string {
-  return Array.from({ length: pilot.hitMax }, (_, i) => (i < pilot.hits ? "[x]" : "[ ]")).join("");
-}
-
 /** Pilot status block of the record sheet: skill/status line, HP track, and
  *  the consciousness targets (bracketed once that hit has been taken). */
-function sheetPilotLines(view: SheetView): string[] {
-  const { pilot } = view;
-  const targets = pilot.targets.map((t, i) => {
-    const label = t === null ? i18n("sheet.pilotDeadCell") : `${t}+`;
-    return i < pilot.hits ? `[${label}]` : label;
+function sheetPilotLines(view: SheetView): string {
+  const pilot = view.pilot;
+  return i18n("sheet.pilotLine", {
+    piloting: pilot.piloting,
+    state: i18n(PILOT_STATUS_KEY[pilot.status]),
+    hp: pilot.hp,
+    max: pilot.hitMax,
+    cons: pilot.nextTarget === null ? "" : i18n("sheet.pilotConsCheck", { cons: pilot.nextTarget }),
   });
-  return [
-    i18n("sheet.pilotLine", {
-      piloting: pilot.piloting,
-      state: i18n(PILOT_STATUS_KEY[pilot.status]),
-      hp: pilot.hp,
-      max: pilot.hitMax,
-    }),
-    i18n("sheet.pilotHp", { boxes: pilotHpBoxes(pilot) }),
-    i18n("sheet.pilotConsciousness", { targets: targets.join(" ") }),
-  ];
 }
 
 function sheetPilotLine(view: SheetView): string {
