@@ -91,9 +91,9 @@ export function heatStatusLines(unit: UnitState): Chunk {
   ];
   if (toHit > 0) lines.push(i18n("heat.toHit", { mod: toHit }));
   if (mpPenalty > 0) lines.push(i18n("heat.mp", { penalty: mpPenalty }));
-  if (shutdown === null) lines.push(i18n("heat.shutdownSafe"));
+  if (shutdown === 0) lines.push(i18n("heat.shutdownSafe"));
   else lines.push(i18n("heat.shutdown", { avoid: shutdown }));
-  if (ammo === null) lines.push(i18n("heat.ammoSafe"));
+  if (ammo === 0) lines.push(i18n("heat.ammoSafe"));
   else lines.push(i18n("heat.ammo", { avoid: ammo }));
   lines.push(heatStateLabel(unit.shutdown));
   if (unit.heat >= 30) lines.push(i18n("heat.shutdownAuto"));
