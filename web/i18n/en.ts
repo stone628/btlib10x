@@ -245,7 +245,8 @@ export const en = {
   "err.place.noCandidate":
     "No movement candidate — declare a move mode first. valid modes: {modes}",
   "err.place.unreachable": "Hex ({col},{row}) is not reachable in the declared mode",
-  "err.place.facing": "Hex ({col},{row}) is reachable but not while facing {facing}",
+  "err.place.facing":
+    "Hex ({col},{row}) is reachable but not while facing {facing} but facing {rfacing}",
   "err.faceArg": "place expects an absolute facing ({facings})",
   "err.needsActor": "Command requires an acting unit",
   "err.unknownUnitId": "Unknown unit id: {id}",

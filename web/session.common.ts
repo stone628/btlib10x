@@ -221,8 +221,10 @@ function buildMountInfos(
 
 function weaponMountLines(mounts: readonly WeaponMountInfo[]): string[] {
   let nameWidth = 0;
+  let locPadEnd = 4;
   for (const m of mounts) {
     if (m.weapon.length > nameWidth) nameWidth = m.weapon.length;
+    if (m.rearFacing === true) locPadEnd = 5;
   }
   return mounts.map((mount, i) => {
     const w = weaponDefFor(mount);
@@ -242,7 +244,7 @@ function weaponMountLines(mounts: readonly WeaponMountInfo[]): string[] {
     const medium = `M${w.medium}`.padStart(3);
     const long = `L${w.long}`.padStart(3);
     const heat = `H${w.heat ?? 0}`.padStart(3);
-    const loc = `[${SHORT_LOC[mount.location]}${mount.rearFacing?"R":""}]`.padEnd(5);
+    const loc = `[${SHORT_LOC[mount.location]}${mount.rearFacing ? "R" : ""}]`.padEnd(locPadEnd);
     return `${index} ${name} ${loc} ${min}${short}/${medium}/${long} ${heat}${flags.length ? ` ${flags.join(" ")}` : ""}`;
   });
 }

@@ -430,7 +430,11 @@ const MOVE_CMDS: Record<string, CmdDef> = {
         if (!hexReachable) {
           throw new Error(i18n("err.place.unreachable", { col: hex.col, row: hex.row }));
         }
-        throw new Error(i18n("err.place.facing", { col: hex.col, row: hex.row, facing }));
+        const rfacing = mc.revealed
+          .filter((l) => sameHex(l.hex, hex))
+          .map((l) => l.facing)
+          .join("|");
+        throw new Error(i18n("err.place.facing", { col: hex.col, row: hex.row, facing, rfacing }));
       }
       placeLanding(s, landing);
       return [stepResultChunk(s, landing)];

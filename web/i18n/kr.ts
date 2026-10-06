@@ -236,7 +236,8 @@ export const kr: Catalog = {
   "err.standStillNoEnter": "제자리 대기(standStill)에서는 육각에 진입할 수 없습니다",
   "err.place.noCandidate": "이동 후보가 없습니다 — 먼저 이동 모드 선언. 유효 모드: {modes}",
   "err.place.unreachable": "육각 ({col},{row}) 는 선언된 모드로 도달할 수 없습니다",
-  "err.place.facing": "육각 ({col},{row}) 는 도달 가능하지만 {facing} 방향으로는 불가",
+  "err.place.facing":
+    "육각 ({col},{row}) 는 도달 가능하지만 {facing} 방향 불가, {rfacing} 방향 가능",
   "err.faceArg": "place는 절대 방향({facings})을 기대합니다",
   "err.needsActor": "이 명령에는 행동 유닛이 필요합니다",
   "err.unknownUnitId": "알 수 없는 유닛 id: {id}",
