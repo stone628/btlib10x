@@ -1,0 +1,364 @@
+{
+  "model": "KFX-B",
+  "name": "Uller",
+  "clanName": "Kit Fox",
+  "tonnage": 30,
+  "weightClass": "Light",
+  "techBase": "Clan",
+  "walking": 6,
+  "running": 9,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 9,
+    "rightTorso": 8,
+    "leftTorso": 8,
+    "rightArm": 7,
+    "leftArm": 7,
+    "rightLeg": 8,
+    "leftLeg": 8,
+    "centerTorsoRear": 4,
+    "rightTorsoRear": 4,
+    "leftTorsoRear": 4
+  },
+  "weapons": [
+    {
+      "weapon": "CL ER Medium Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL ER Small Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Ultra AC/10",
+      "location": "rightArm",
+      "shots": 20
+    },
+    {
+      "weapon": "CL SRM 6",
+      "location": "rightArm",
+      "shots": 15
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Ultra AC/10"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Ultra AC/10"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "handActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Medium Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Small Laser"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/10"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/10"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/10"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/10"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL SRM 6"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL SRM 6"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 10
+  },
+  "myomer": "Standard"
+}

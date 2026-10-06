@@ -95,6 +95,11 @@ function resolveAmmoLine(raw, clan = false) {
   else {
     m = /^(.+?)\s+Ammo$/.exec(s);
     if (m) tok = m[1].trim();
+    else {
+      // Compact "<IS|CL><stem>Ammo" form ("ISPlasmaRifleAmmo").
+      m = /^((?:IS|CL)[A-Za-z0-9]+?)Ammo$/.exec(s);
+      if (m) tok = m[1];
+    }
   }
   if (tok === null) return null;
   // "Clan Ammo X" / "Clan X Ammo" name the tech base explicitly.

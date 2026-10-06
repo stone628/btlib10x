@@ -1,0 +1,386 @@
+{
+  "model": "TMH-C",
+  "name": "Tomahawk",
+  "tonnage": 100,
+  "weightClass": "Assault",
+  "techBase": "Clan",
+  "walking": 3,
+  "running": 5,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 46,
+    "rightTorso": 32,
+    "leftTorso": 32,
+    "rightArm": 34,
+    "leftArm": 34,
+    "rightLeg": 41,
+    "leftLeg": 41,
+    "centerTorsoRear": 15,
+    "rightTorsoRear": 10,
+    "leftTorsoRear": 10
+  },
+  "weapons": [
+    {
+      "weapon": "CL ER Small Laser",
+      "location": "head"
+    },
+    {
+      "weapon": "ATM 12",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "ATM 12",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL Large Pulse Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Large Pulse Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Large Pulse Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Large Pulse Laser",
+      "location": "rightArm"
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 12"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 12"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 12"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 12"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 12"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "ATM 12"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "ATM 12"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 12"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 12"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 12"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 12"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 12"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "ATM 12"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "ATM 12"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Large Pulse Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Large Pulse Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Large Pulse Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Large Pulse Laser"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Large Pulse Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Large Pulse Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Large Pulse Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Large Pulse Laser"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Small Laser"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 23
+  },
+  "myomer": "Standard"
+}

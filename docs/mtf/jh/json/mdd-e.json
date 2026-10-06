@@ -1,0 +1,347 @@
+{
+  "model": "MDD-E",
+  "name": "Vulture",
+  "clanName": "Mad Dog",
+  "tonnage": 60,
+  "weightClass": "Heavy",
+  "techBase": "Clan",
+  "walking": 5,
+  "running": 8,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 23,
+    "rightTorso": 16,
+    "leftTorso": 16,
+    "rightArm": 16,
+    "leftArm": 16,
+    "rightLeg": 23,
+    "leftLeg": 23,
+    "centerTorsoRear": 7,
+    "rightTorsoRear": 7,
+    "leftTorsoRear": 7
+  },
+  "weapons": [
+    {
+      "weapon": "HAG 30",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "HAG 30",
+      "location": "rightArm"
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 12
+  },
+  "myomer": "Standard"
+}

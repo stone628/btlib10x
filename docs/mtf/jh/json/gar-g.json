@@ -1,0 +1,355 @@
+{
+  "model": "GAR-G",
+  "name": "Man O' War",
+  "clanName": "Gargoyle",
+  "tonnage": 80,
+  "weightClass": "Assault",
+  "techBase": "Clan",
+  "walking": 5,
+  "running": 8,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 30,
+    "rightTorso": 24,
+    "leftTorso": 24,
+    "rightArm": 23,
+    "leftArm": 23,
+    "rightLeg": 24,
+    "leftLeg": 24,
+    "centerTorsoRear": 10,
+    "rightTorsoRear": 10,
+    "leftTorsoRear": 10
+  },
+  "weapons": [
+    {
+      "weapon": "CL ER Medium Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL LB 20-X AC",
+      "location": "rightArm",
+      "shots": 15
+    },
+    {
+      "weapon": "AP Gauss Rifle",
+      "location": "leftArm",
+      "shots": 40
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Medium Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Medium Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Medium Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Medium Laser"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "AP Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "AP Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "AP Gauss Rifle"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "AP Gauss Rifle"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 20-X AC"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 16
+  },
+  "myomer": "Standard"
+}

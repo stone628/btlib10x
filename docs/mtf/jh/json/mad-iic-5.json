@@ -1,0 +1,372 @@
+{
+  "model": "MAD-IIC-5",
+  "name": "Marauder IIC",
+  "tonnage": 85,
+  "weightClass": "Assault",
+  "techBase": "Clan",
+  "walking": 4,
+  "running": 6,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 34,
+    "rightTorso": 22,
+    "leftTorso": 22,
+    "rightArm": 23,
+    "leftArm": 23,
+    "rightLeg": 30,
+    "leftLeg": 30,
+    "centerTorsoRear": 11,
+    "rightTorsoRear": 8,
+    "leftTorsoRear": 8
+  },
+  "weapons": [
+    {
+      "weapon": "CL ER PPC",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "AP Gauss Rifle",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL ER PPC",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "AP Gauss Rifle",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "HAG 20",
+      "location": "leftTorso"
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "weapon",
+        "weapon": "HAG 20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 20"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 20"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 20"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "AP Gauss Rifle"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER PPC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER PPC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "AP Gauss Rifle"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER PPC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER PPC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "AP Gauss Rifle"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 19
+  },
+  "myomer": "Standard"
+}

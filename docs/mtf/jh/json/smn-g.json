@@ -1,0 +1,367 @@
+{
+  "model": "SMN-G",
+  "name": "Thor",
+  "clanName": "Summoner",
+  "tonnage": 70,
+  "weightClass": "Heavy",
+  "techBase": "Clan",
+  "walking": 5,
+  "running": 8,
+  "jumping": 5,
+  "armor": {
+    "head": 9,
+    "centerTorso": 27,
+    "rightTorso": 22,
+    "leftTorso": 22,
+    "rightArm": 17,
+    "leftArm": 17,
+    "rightLeg": 23,
+    "leftLeg": 23,
+    "centerTorsoRear": 8,
+    "rightTorsoRear": 7,
+    "leftTorsoRear": 7
+  },
+  "weapons": [
+    {
+      "weapon": "CL ER Large Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Heavy Small Laser",
+      "location": "centerTorso"
+    },
+    {
+      "weapon": "CL ER PPC",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL SRM 4",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL SRM 4",
+      "location": "rightTorso"
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Heavy Small Laser"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL SRM 4"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL SRM 4"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL SRM 4"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL SRM 4"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL SRM 4"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL SRM 4"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL SRM 4"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL SRM 4"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Large Laser"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER PPC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER PPC"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 18
+  },
+  "myomer": "Standard"
+}

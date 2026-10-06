@@ -9,6 +9,8 @@
 
 ## To Do
 
+- heat related weapons
+- physical attack attachment: spikes, shields
 - **Undo / rollback** — the engine already saves and restores a `BattleState`
   (`saveBattleState` / `loadBattleState`, `src/rules/snapshot.ts`); still
   missing is a session-level history stack and a command to roll back N steps

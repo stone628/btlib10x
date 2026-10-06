@@ -184,6 +184,17 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     heat: 15,
     category: "ENERGY",
   },
+  // Source: BattleTechWiki (Sarna) "ER Small Laser", not the TW rulebook.
+  // Clan version: 5 damage, 0.5 tons, 1 critical slot.
+  {
+    name: "CL ER Small Laser",
+    short: 2,
+    medium: 4,
+    long: 6,
+    damage: 5,
+    category: "ENERGY",
+    heat: 2,
+  },
   {
     name: "CL Gauss Rifle",
     short: 7,
@@ -245,6 +256,17 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     toHitMod: -2,
     category: "ENERGY",
     heat: 10,
+  },
+  // Source: BattleTechWiki (Sarna) "Laser Anti-Missile System", not the TW
+  // rulebook. Clan: 1 ton, 1 slot, 5 heat. The engine has no anti-missile
+  // rules yet, so LAMS (like AMS) is carried as inert equipment.
+  {
+    name: "CL Laser Anti-Missile System",
+    short: 0,
+    medium: 0,
+    long: 0,
+    category: "EQUIPMENT",
+    heat: 5,
   },
   {
     name: "CL LB 2-X AC",
@@ -674,6 +696,16 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     toHitMod: -2,
     category: "ENERGY",
     heat: 10,
+  },
+  // Source: BattleTechWiki (Sarna) "Laser Anti-Missile System", not the TW
+  // rulebook. Inner Sphere: 1.5 tons, 2 slots, 7 heat; inert like AMS.
+  {
+    name: "Laser Anti-Missile System",
+    short: 0,
+    medium: 0,
+    long: 0,
+    category: "EQUIPMENT",
+    heat: 7,
   },
   {
     name: "LB 2-X AC",

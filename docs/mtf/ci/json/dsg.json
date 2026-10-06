@@ -1,0 +1,366 @@
+{
+  "model": "DSG",
+  "name": "Drift Shag",
+  "tonnage": 30,
+  "weightClass": "Light",
+  "techBase": "Clan",
+  "walking": 7,
+  "running": 11,
+  "jumping": 6,
+  "armor": {
+    "head": 9,
+    "centerTorso": 14,
+    "rightTorso": 12,
+    "leftTorso": 12,
+    "rightArm": 9,
+    "leftArm": 9,
+    "rightLeg": 12,
+    "leftLeg": 12,
+    "centerTorsoRear": 3,
+    "rightTorsoRear": 2,
+    "leftTorsoRear": 2
+  },
+  "weapons": [
+    {
+      "weapon": "CL ER Small Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL ER Small Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL ER Small Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL ER Small Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL ER Large Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "rightTorso"
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Medium Pulse Laser"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "handActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Small Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Small Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Small Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Small Laser"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "handActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Large Laser"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 11
+  },
+  "myomer": "Standard"
+}

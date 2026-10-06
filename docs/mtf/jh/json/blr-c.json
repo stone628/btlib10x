@@ -1,0 +1,389 @@
+{
+  "model": "BLR-C",
+  "name": "BattleMaster",
+  "tonnage": 85,
+  "weightClass": "Assault",
+  "techBase": "Clan",
+  "walking": 4,
+  "running": 6,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 40,
+    "rightTorso": 27,
+    "leftTorso": 27,
+    "rightArm": 28,
+    "leftArm": 28,
+    "rightLeg": 36,
+    "leftLeg": 36,
+    "centerTorsoRear": 14,
+    "rightTorsoRear": 9,
+    "leftTorsoRear": 9
+  },
+  "weapons": [
+    {
+      "weapon": "HAG 30",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "ATM 6",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL ER Medium Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL ER Medium Laser",
+      "location": "rightTorso"
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 30"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 6"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 6"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "ATM 6"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Medium Pulse Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Medium Pulse Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Medium Laser"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "ATM 6"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "ATM 6"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "ATM 6"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Medium Pulse Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Medium Pulse Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Medium Laser"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "structure",
+        "name": "targetingComputer"
+      },
+      {
+        "kind": "structure",
+        "name": "targetingComputer"
+      },
+      {
+        "kind": "structure",
+        "name": "targetingComputer"
+      },
+      {
+        "kind": "structure",
+        "name": "targetingComputer"
+      },
+      {
+        "kind": "structure",
+        "name": "targetingComputer"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "handActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "handActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 15
+  },
+  "myomer": "Standard"
+}

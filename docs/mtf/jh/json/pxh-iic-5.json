@@ -1,0 +1,381 @@
+{
+  "model": "PXH-IIC-5",
+  "name": "Phoenix Hawk IIC",
+  "tonnage": 80,
+  "weightClass": "Assault",
+  "techBase": "Clan",
+  "walking": 5,
+  "running": 8,
+  "jumping": 5,
+  "armor": {
+    "head": 9,
+    "centerTorso": 26,
+    "rightTorso": 20,
+    "leftTorso": 20,
+    "rightArm": 20,
+    "leftArm": 20,
+    "rightLeg": 26,
+    "leftLeg": 26,
+    "centerTorsoRear": 14,
+    "rightTorsoRear": 10,
+    "leftTorsoRear": 10
+  },
+  "weapons": [
+    {
+      "weapon": "AP Gauss Rifle",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "AP Gauss Rifle",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "AP Gauss Rifle",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "AP Gauss Rifle",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "HAG 20",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "HAG 20",
+      "location": "rightTorso"
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "AP Gauss Rifle"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 20"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 20"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 20"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 20"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 20"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 20"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "handActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "AP Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "AP Gauss Rifle"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "handActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "AP Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "AP Gauss Rifle"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 10
+  },
+  "myomer": "Standard"
+}
