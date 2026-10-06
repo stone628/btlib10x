@@ -85,6 +85,7 @@ import {
   applyDamage,
   canAttemptStandUp,
   canFireFromLocation,
+  type DamageApplication,
   type DamageTransferStep,
   destroyedLegs,
   isUnitDestroyed,
@@ -3406,6 +3407,9 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     autoMiss: true,
     damageToTarget: [],
     damageToAttacker: [],
+    application: null,
+    attackerApplication: null,
+    crits: [],
     targetDisplacedTo: null,
     attackerDisplacedTo: null,
     targetPsr: null,
@@ -3639,21 +3643,18 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
           notes: [...resolution.notes, redirectNote],
         };
       }
-      sink.push({
-        kind: "physicalAttackResolved",
-        unitId: attacker.id,
-        targetId: effectiveDecl.targetId,
-        resolution,
-      });
-
-      // Apply damage to the effective target (redirect-aware).
+      // Apply damage to the effective target (redirect-aware), merging
+      // per-group applications like the weapon path (attack.ts) so the
+      // emitted resolution carries the armor-change detail and crits.
       const hitTarget =
         resolution.hit && resolution.damageToTarget.length > 0
           ? requireUnit(state, effectiveDecl.targetId)
           : null;
+      let targetApplication: DamageApplication | null = null;
+      let attackerApplication: DamageApplication | null = null;
+      const targetCrits: CriticalResolution[] = [];
       if (hitTarget && resolution.hit && resolution.damageToTarget.length > 0) {
         const targetDef = mechDefFor(hitTarget);
-        const targetCrits: CriticalResolution[] = [];
         const sheared: LimbLocation[] = [];
         for (const group of resolution.damageToTarget) {
           const back = bearingExact(hitTarget.position, attacker.position)!;
@@ -3661,6 +3662,17 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
           const attackDirection = defenderArcChoice(dir.arc, dir.altArc);
           const app = applyDamage(hitTarget.damage, group.location, group.damage, attackDirection);
           hitTarget.damage = app.after;
+          targetApplication =
+            targetApplication === null
+              ? app
+              : {
+                  after: app.after,
+                  before: targetApplication.before,
+                  steps: [...targetApplication.steps, ...app.steps],
+                  newlyDestroyed: [...targetApplication.newlyDestroyed, ...app.newlyDestroyed],
+                  blownOffLimbs: [...targetApplication.blownOffLimbs, ...app.blownOffLimbs],
+                  killed: targetApplication.killed || app.killed,
+                };
           sheared.push(...app.blownOffLimbs);
 
           // Critical hit resolution (TW p.123-124):
@@ -3707,8 +3719,34 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         for (const group of resolution.damageToAttacker) {
           const app = applyDamage(attacker.damage, group.location, group.damage, "front");
           attacker.damage = app.after;
+          attackerApplication =
+            attackerApplication === null
+              ? app
+              : {
+                  after: app.after,
+                  before: attackerApplication.before,
+                  steps: [...attackerApplication.steps, ...app.steps],
+                  newlyDestroyed: [...attackerApplication.newlyDestroyed, ...app.newlyDestroyed],
+                  blownOffLimbs: [...attackerApplication.blownOffLimbs, ...app.blownOffLimbs],
+                  killed: attackerApplication.killed || app.killed,
+                };
         }
       }
+
+      // Emit the event after damage resolution so the log can render the
+      // armor-change detail and crits, like weapon `attackResolved`.
+      resolution = {
+        ...resolution,
+        application: targetApplication,
+        attackerApplication,
+        crits: targetCrits,
+      };
+      sink.push({
+        kind: "physicalAttackResolved",
+        unitId: attacker.id,
+        targetId: effectiveDecl.targetId,
+        resolution,
+      });
 
       // Handle displacement (push only in this subset; immediate per TW p.151).
       if (resolution.targetDisplacedTo && hitTarget && !isUnitRemoved(hitTarget)) {
@@ -3775,9 +3813,6 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         attacker.club = null;
         sink.push({ kind: "clubConsumed", unitId: attacker.id, clubKind: "tree" });
       }
-
-      // Attach critical hits to resolution for event emission (note: resolution is immutable,
-      // so we can't mutate it directly; the event already fired above with the original resolution)
     }
   }
 

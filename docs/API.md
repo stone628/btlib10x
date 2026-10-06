@@ -449,7 +449,9 @@ retractable blade table, and `strikeMounts` / `strikeMountArms` /
 `strikeWeaponInArm` / `resolveStrikeMount` / `resolveStrikeArm` /
 `StrikeMountResolution` find the mount a strike swings;
 `PhysicalModifiers` is the to-hit breakdown; `PhysicalResolution` carries the
-roll, `DamageGroup` hits (`{ location, damage }`), push displacement hexes,
+roll, `DamageGroup` hits (`{ location, damage }`), the merged target /
+self-damage `DamageApplication`s (armor-change detail via `blastDetail`) and
+weapon-style `crits` (rendered with `critLines`), push displacement hexes,
 and kick/push PSR outcomes. `DamageGroup` is the per-group shape.
 
 Club handling (TW p.146): `HeldClub`, `ClubKind` (`"limb" | "tree" |

@@ -27,7 +27,7 @@ import {
   effectiveFacingForTwist,
 } from "./arcs";
 import { isBuildingTerrain } from "./building";
-import { destroyedStructures } from "./critical";
+import { type CriticalResolution, destroyedStructures } from "./critical";
 import {
   applyDamage,
   canFireFromLocation,
@@ -101,6 +101,14 @@ export interface PhysicalResolution {
   readonly autoMiss: boolean;
   readonly damageToTarget: DamageGroup[];
   readonly damageToAttacker: DamageGroup[];
+  /** Merged damage application for `damageToTarget` — drives the armor-change
+   *  detail line (`blastDetail`), same shape as weapon `application`. */
+  readonly application: DamageApplication | null;
+  /** Merged damage application for `damageToAttacker` (self-damage detail). */
+  readonly attackerApplication: DamageApplication | null;
+  /** Critical resolutions triggered by the target damage, rendered with the
+   *  same `critLines` formatter as weapon `crits`. */
+  readonly crits: readonly CriticalResolution[];
   readonly targetDisplacedTo: HexCoord | null;
   readonly attackerDisplacedTo: HexCoord | null;
   readonly targetPsr: PilotingRollResult | null;
@@ -1092,6 +1100,9 @@ export function resolvePhysicalAttack(
     autoMiss,
     damageToTarget,
     damageToAttacker,
+    application: null,
+    attackerApplication: null,
+    crits: [],
     targetDisplacedTo,
     attackerDisplacedTo,
     targetPsr,
@@ -1183,6 +1194,9 @@ export function resolveMutualPush(
       autoMiss,
       damageToTarget: [],
       damageToAttacker: [],
+      application: null,
+      attackerApplication: null,
+      crits: [],
       targetDisplacedTo: null,
       attackerDisplacedTo: null,
       targetPsr: null,
@@ -1221,6 +1235,9 @@ export function resolveMutualPush(
       autoMiss: a.autoMiss,
       damageToTarget: [],
       damageToAttacker: [],
+      application: null,
+      attackerApplication: null,
+      crits: [],
       targetDisplacedTo: targetNewHex,
       attackerDisplacedTo: { ...unitB.position },
       targetPsr: psr,
@@ -1265,6 +1282,9 @@ export function resolveMutualPush(
       autoMiss: b.autoMiss,
       damageToTarget: [],
       damageToAttacker: [],
+      application: null,
+      attackerApplication: null,
+      crits: [],
       targetDisplacedTo: targetNewHex,
       attackerDisplacedTo: { ...unitA.position },
       targetPsr: psr,
@@ -1293,6 +1313,9 @@ export function resolveMutualPush(
     autoMiss: a.autoMiss,
     damageToTarget: [],
     damageToAttacker: [],
+    application: null,
+    attackerApplication: null,
+    crits: [],
     targetDisplacedTo: null,
     attackerDisplacedTo: null,
     targetPsr: psrB,
@@ -1313,6 +1336,9 @@ export function resolveMutualPush(
     autoMiss: b.autoMiss,
     damageToTarget: [],
     damageToAttacker: [],
+    application: null,
+    attackerApplication: null,
+    crits: [],
     targetDisplacedTo: null,
     attackerDisplacedTo: null,
     targetPsr: psrA,

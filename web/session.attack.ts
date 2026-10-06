@@ -529,11 +529,23 @@ export function physicalResolutionLines(r: PhysicalResolution): string[] {
   if (r.hit && r.damageToTarget.length > 0) {
     const dmgStr = r.damageToTarget.map((g) => `${SHORT_LOC[g.location]}(${g.damage})`).join(" ");
     lines.push(i18n("res.physical.targetDamage", { groups: dmgStr }));
+    if (r.application !== null) {
+      const detail = blastDetail(r.application);
+      if (detail) lines.push(`  ${detail}`);
+    }
   }
 
   if (r.damageToAttacker.length > 0) {
     const dmgStr = r.damageToAttacker.map((g) => `${SHORT_LOC[g.location]}(${g.damage})`).join(" ");
     lines.push(i18n("res.physical.attackerDamage", { groups: dmgStr }));
+    if (r.attackerApplication !== null) {
+      const detail = blastDetail(r.attackerApplication);
+      if (detail) lines.push(`  ${detail}`);
+    }
+  }
+
+  for (const crit of r.crits) {
+    for (const line of critLines(crit)) lines.push(`  ${line}`);
   }
 
   if (r.targetDisplacedTo) {
