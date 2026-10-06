@@ -71,9 +71,10 @@ export interface PhysicalModifiers {
   /** Target movement modifier: hex band + jump extra, folding prone
    *  (−2 adjacent/+1 otherwise) and immobile (−4) cumulatively. */
   readonly targetMoveMod: number;
-  /** Terrain modifier on target: target-hex woods + intervening woods
-   *  + partial cover (same as weapon attacks). */
+  /** Terrain modifier on target: target-hex woods + intervening woods. */
   readonly terrainMod: number;
+  /** Partial-cover modifier (TW p.102): same source as weapon attacks. */
+  readonly coverMod: number;
   /** Actuator damage modifier on attacker. */
   readonly actuatorMod: number;
   /** Prone attacker modifier (+2, cumulative with movement). */
@@ -204,13 +205,13 @@ export function computePhysicalToHit(
     (target.prone ? proneTargetModifier(distance) : 0) +
     (isImmobile(target) ? TARGET_IMMOBILE_MOD : 0);
 
-  // Terrain (TW pp. 107–108, 117–118): target-hex woods + intervening woods
-  // + partial cover — same as weapon attacks.
+  // Terrain (TW pp. 107–108, 117–118): target-hex woods + intervening woods.
+  // Partial cover (TW p.102) is a separate term — same as weapon attacks.
   const targetTerrain = cellAt(battle, target.position).terrain;
   const terrainMod =
     terrainTargetMod(targetTerrain) +
-    losWoodsPointsBetween(battle, attacker.position, target.position) +
-    partialCoverMod(battle, attacker, target);
+    losWoodsPointsBetween(battle, attacker.position, target.position);
+  const coverMod = partialCoverMod(battle, attacker, target);
 
   // Actuator damage modifier
   const actuatorMod = physicalActuatorMod(attacker, type, limb, weapon);
@@ -219,7 +220,14 @@ export function computePhysicalToHit(
   const proneMod = attacker.prone ? PRONE_ATTACKER_MOD : 0;
 
   const total =
-    base + attackMod + attackerMoveMod + targetMoveMod + terrainMod + actuatorMod + proneMod;
+    base +
+    attackMod +
+    attackerMoveMod +
+    targetMoveMod +
+    terrainMod +
+    coverMod +
+    actuatorMod +
+    proneMod;
 
   return {
     base,
@@ -227,6 +235,7 @@ export function computePhysicalToHit(
     attackerMoveMod,
     targetMoveMod,
     terrainMod,
+    coverMod,
     actuatorMod,
     proneMod,
     total,

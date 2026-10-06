@@ -182,8 +182,8 @@
   matters enough to justify the 1-point cap.
 - **Partial cover (TW)** — a target standing in a water1 or building hex is in
   partial cover when the attacker's ground level is not higher than the
-  target's: +1 to-hit (folded into `terrainMod` via new `targetPartialCover?`
-  on `AttackModifiers`), and a standard hit-location roll that lands on a leg
+  target's: +1 to-hit (separate `coverMod` on `ToHitBreakdown`, alongside
+  woods-only `terrainMod`), and a standard hit-location roll that lands on a leg
   strikes the cover instead (no damage to the target). Derived from
   `hasPartialCover(targetTerrain) && attackerLevel <= targetLevel` in
   `declareAttacks`, `resolveWeaponAttack`, and `suggestFireTargets`. `water1`

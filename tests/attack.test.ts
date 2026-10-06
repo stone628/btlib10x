@@ -271,7 +271,8 @@ describe("resolveWeaponAttack", () => {
       targetDamage: freshState(),
     });
     expect(res.hit).toBe(true);
-    expect(res.breakdown.terrainMod).toBe(1);
+    expect(res.breakdown.terrainMod).toBe(0);
+    expect(res.breakdown.coverMod).toBe(1);
     expect(res.groups).toHaveLength(0);
     expect(res.application).toBeNull();
     expect(rng.remaining()).toBe(0);
@@ -287,7 +288,8 @@ describe("resolveWeaponAttack", () => {
       targetDamage: freshState(),
     });
     expect(res.hit).toBe(true);
-    expect(res.breakdown.terrainMod).toBe(1);
+    expect(res.breakdown.terrainMod).toBe(0);
+    expect(res.breakdown.coverMod).toBe(1);
     expect(res.groups).toEqual([{ location: "centerTorso", damage: 3, throughArmor: false }]);
   });
 
@@ -303,7 +305,8 @@ describe("resolveWeaponAttack", () => {
       targetDamage: freshState(),
     });
     expect(res.hit).toBe(true);
-    expect(res.breakdown.terrainMod).toBe(1);
+    expect(res.breakdown.terrainMod).toBe(0);
+    expect(res.breakdown.coverMod).toBe(1);
     expect(res.groups).toHaveLength(0);
     expect(res.application).toBeNull();
     expect(rng.remaining()).toBe(0);

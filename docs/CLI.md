@@ -161,7 +161,8 @@ simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
   modifier instead of a movement band.
   **Partial cover (TW)** — a target standing in a water1 or building hex is
   in partial cover while the attacker's ground level is not higher than the
-  target's: +1 to-hit (folded into `terrainMod`) and a hit-location roll
+  target's: +1 to-hit (separate `coverMod` breakdown field, printed as
+  `cover +1`) and a hit-location roll
   that lands on a leg strikes the cover instead (no damage to the target).
   A target adjacent to a level-2 'Mech wreck is in partial cover for
   +2 to-hit while the attacker's ground level is below the wreck's top

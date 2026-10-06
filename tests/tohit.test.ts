@@ -145,7 +145,7 @@ describe("GATOR to-hit calculation", () => {
     expect(immobile.total).toBe(online.total - 4);
   });
 
-  it("partial-cover target adds +1 terrain modifier", () => {
+  it("partial-cover target adds +1 cover modifier, separate from terrain", () => {
     const base = {
       gunnery: 4,
       attackerMovement: "standStill" as const,
@@ -158,9 +158,28 @@ describe("GATOR to-hit calculation", () => {
     };
     const plain = computeToHit(base);
     expect(plain.terrainMod).toBe(0);
+    expect(plain.coverMod).toBe(0);
     const covered = computeToHit({ ...base, partialCoverMod: 1 });
-    expect(covered.terrainMod).toBe(1);
+    expect(covered.terrainMod).toBe(0);
+    expect(covered.coverMod).toBe(1);
     expect(covered.total).toBe(plain.total + 1);
+  });
+
+  it("woods and cover stack as separate terms", () => {
+    const base = {
+      gunnery: 4,
+      attackerMovement: "standStill" as const,
+      targetHexesMoved: 0,
+      targetJumped: false,
+      targetTerrain: "lightWoods" as const,
+      interveningWoods: 1,
+      distance: 1,
+      weapon: weaponDefFor({ weapon: "Small Laser" }),
+    };
+    const bd = computeToHit({ ...base, partialCoverMod: 1 });
+    expect(bd.terrainMod).toBe(2);
+    expect(bd.coverMod).toBe(1);
+    expect(bd.total).toBe(4 + 2 + 1);
   });
 
   it("flags auto-hit <= 2 and auto-miss > 12", () => {

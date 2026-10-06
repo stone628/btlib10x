@@ -565,16 +565,19 @@ describe("physical to-hit modifiers", () => {
   it("target in light woods applies +1 terrain", () => {
     const battle = adjacentPair([{ col: 6, row: 5, type: "lightWoods" }]);
     expect(punchMods(battle).terrainMod).toBe(1);
+    expect(punchMods(battle).coverMod).toBe(0);
   });
 
-  it("target in water1 applies +1 partial cover", () => {
+  it("target in water1 applies +1 cover, not terrain", () => {
     const battle = adjacentPair([{ col: 6, row: 5, type: "water1" }]);
-    expect(punchMods(battle).terrainMod).toBe(1);
+    expect(punchMods(battle).terrainMod).toBe(0);
+    expect(punchMods(battle).coverMod).toBe(1);
   });
 
   it("rubble grants no to-hit modifier", () => {
     const battle = adjacentPair([{ col: 6, row: 5, type: "rubble" }]);
     expect(punchMods(battle).terrainMod).toBe(0);
+    expect(punchMods(battle).coverMod).toBe(0);
   });
 
   it("kick leg actuators: +2 per upper/lower, +1 per foot", () => {
