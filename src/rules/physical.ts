@@ -976,6 +976,16 @@ function validateStrike(
 // ---------------------------------------------------------------------------
 
 /**
+ * Roll one physical-attack PSR for `unit`, applying its own preexisting
+ * damage (TW p.60). Pure dice wrapper so push/kick call sites stay flat.
+ */
+function rollPhysicalPsr(rollRng: Rng, unit: UnitState): PilotingRollResult {
+  const def = mechDefFor(unit);
+  const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
+  return rollPilotingCheck(rollRng, unit.piloting, pre.modifier);
+}
+
+/**
  * Resolve a single physical attack (TW pp. 144–151).
  * Pure function: does not mutate state. Returns the resolution with
  * damage groups, displacement, and PSR results.
@@ -1051,16 +1061,6 @@ export function resolvePhysicalAttack(
   let kickTargetPsrPending = false;
   let kickAttackerPsrPending = false;
 
-  /**
-   * Roll one physical-attack PSR for `unit`, applying its own preexisting
-   * damage (TW p.60). Pure dice wrapper so push/kick call sites stay flat.
-   */
-  function rollPhysicalPsr(rollRng: Rng, unit: UnitState): PilotingRollResult {
-    const def = mechDefFor(unit);
-    const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
-    return rollPilotingCheck(rollRng, unit.piloting, pre.modifier);
-  }
-
   if (decl.type === "push") {
     if (hit) {
       // Target moves one hex in push direction, attacker advances (TW p. 147).
@@ -1085,7 +1085,7 @@ export function resolvePhysicalAttack(
     // forces a PSR on the target. No dice are drawn here so RNG order
     // matches the deferred rolls.
     kickTargetPsrPending = hit && !target.prone;
-    kickAttackerPsrPending = !hit;
+    kickAttackerPsrPending = !hit && !autoMiss;
   }
 
   return {

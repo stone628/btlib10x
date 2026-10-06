@@ -17,6 +17,7 @@ import {
   type HexCoord,
   hexKey,
   isArm,
+  isLeg,
   isTorso,
   isWoodsTerrain,
   type LimbLocation,
@@ -2023,7 +2024,12 @@ export function validateAttacksImpl(
     // `effectiveFacingForTwist`) before this classification so arm and
     // front-torso weapons cover the twisted arc. The template assigns every
     // hex wholly to one arc (no boundary pairs).
-    const fireArc = classifyFiringArc(unit.position, target.position, effectiveFacing);
+    // leg mounted weapon follows unit facing
+    const fireArc = classifyFiringArc(
+      unit.position,
+      target.position,
+      isLeg(mount.location) ? unit.facing : effectiveFacing,
+    );
     if (fireArc === null) throw new Error("Attacker and target share a hex");
     arcs[decl.weaponIndex] = fireArc;
     const rearFacing = mount.rearFacing === true;
