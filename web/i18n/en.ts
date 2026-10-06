@@ -560,7 +560,7 @@ export const en = {
   "log.heatAmmoExplosion":
     "  {shots} shots exploded, total {damage} damage({shots} shots x {damagePerShot} per shot)",
   "log.pilotingCheck":
-    "[{id}] PSR {detail}: pilot {base} + trigger {trigger} + preexisting {pre} = {modifier}, need {target} at {hex}, 2D6 = {roll} -> {verdict}",
+    "[{id}] PSR {detail}: need target {target}=pilot({base})+trigger({trigger})+preexisting({pre}) on ({hex}), 2D6 = {roll} -> {verdict}",
   "log.psrSuccess": "SUCCESS",
   "log.psrFail": "FAIL",
   "log.psrAuto": "auto",

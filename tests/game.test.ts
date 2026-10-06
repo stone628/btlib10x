@@ -19,8 +19,8 @@ import {
   resolveAllAttacks,
   rollInitiativePhase,
 } from "../src/rules/game";
-import { resolutionLines } from "../web/session";
-import { checkVictory, createTestBattle, scriptedRng } from "./helpers";
+import { critLines, resolutionLines } from "../web/session";
+import { checkVictory, createTestBattle, overrideAmmoBin, scriptedRng } from "./helpers";
 
 function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
   const units: UnitInit[] = [
@@ -1274,6 +1274,85 @@ describe("streak missiles", () => {
     // Two attackResolved events
     const attacks = events.filter((e) => e.kind === "attackResolved");
     expect(attacks).toHaveLength(2);
+  });
+
+  it("logs the ammo-blast chain and chains the next shot's snapshot past the blast", () => {
+    // Attacker HBK-4G fires AC/20 then a Medium Laser at a second HBK-4G.
+    // The AC/20 pens the left torso and detonates its slot-1 bin (trimmed
+    // to a single shot: 20 blast damage straight to IS, TW p.125); the
+    // follow-up laser must see the post-blast CT, not the phase-start CT.
+    const units: UnitInit[] = [
+      {
+        id: "hbk",
+        model: "HBK-4G",
+        team: 0,
+        gunnery: 4,
+        piloting: 5,
+        position: { col: 2, row: 4 },
+        facing: "se",
+      },
+      {
+        id: "tgt",
+        model: "HBK-4G",
+        team: 1,
+        gunnery: 4,
+        piloting: 5,
+        position: { col: 3, row: 5 },
+        facing: "nw",
+      },
+    ];
+    const state = startAttackTurn(createTestBattle([], units, false));
+    const target = requireUnit(state, "tgt");
+    // HBK-4G: LT armor 20 / IS 12, CT armor 26 / IS 16. Pre-crack LT armor
+    // so the AC/20 (20 dmg) reaches IS without destroying the location
+    // itself, and trim the hit bin to one shot (blast 20, no CT kill).
+    target.damage.armor.leftTorso = 15;
+    overrideAmmoBin(target.ammoBins, "leftTorso", 1, 1);
+    declareAttacks(
+      state,
+      "hbk",
+      [
+        { weaponIndex: 4, targetId: "tgt" }, // AC/20
+        { weaponIndex: 2, targetId: "tgt" }, // rightArm ML
+      ],
+      [],
+      [],
+    );
+    // AC/20: to-hit 6, loc 8 -> LT, determining 8 -> 1 crit, slot (1,1) ->
+    // LT slot 1 (ammo); blast cascades roll 2 (no crit) twice. ML: to-hit
+    // 6, loc 7 -> CT. Filler 3s cover pilot/consciousness/PSR dice.
+    const rng = scriptedRng(3, 3, 4, 4, 4, 4, 1, 1, 1, 1, 1, 1, 3, 3, 3, 4, ...Array(60).fill(3));
+    const events: GameEvent[] = [];
+    resolveAllAttacks(state, rng, events);
+    const attacks = events.filter((e) => e.kind === "attackResolved");
+    expect(attacks).toHaveLength(2);
+    const first = attacks[0]!;
+    const second = attacks[1]!;
+    if (first.kind !== "attackResolved" || second.kind !== "attackResolved")
+      throw new Error("bad events");
+
+    // The blast row carries its own IS-direct location chain.
+    const blasts = first.resolution.crits
+      .flatMap((c) => c.rows)
+      .filter((r) => r.kind === "ammoExplosion");
+    expect(blasts).toHaveLength(1);
+    const blast = blasts[0]!;
+    if (blast.kind !== "ammoExplosion") throw new Error("bad row");
+    expect(blast.damage).toBe(20);
+    expect(blast.application.steps.map((s) => s.location)).toEqual(["leftTorso", "centerTorso"]);
+    expect(blast.application.steps.every((s) => s.pool === "structure")).toBe(true);
+    const critText = first.resolution.crits.flatMap((c) => critLines(c)).join("\n");
+    expect(critText).toMatch(/LTI/);
+    expect(critText).toMatch(/CTI/);
+
+    // AC/20: 15 armor + 5 IS (LT IS 12 -> 7); blast 20: LT IS 7 -> 0,
+    // overflow 13 -> CT IS 16 -> 3, armor untouched. The laser's `before`
+    // must reflect that, and its 5 damage then lands on CT armor 26 -> 21.
+    const before = second.resolution.application?.before;
+    expect(before?.internalStructure.leftTorso).toBe(0);
+    expect(before?.internalStructure.centerTorso).toBe(3);
+    expect(before?.armor.centerTorso).toBe(26);
+    expect(requireUnit(state, "tgt").damage.armor.centerTorso).toBe(21);
   });
 });
 
