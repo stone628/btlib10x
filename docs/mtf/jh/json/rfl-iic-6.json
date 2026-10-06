@@ -1,0 +1,378 @@
+{
+  "model": "RFL-IIC-6",
+  "name": "Rifleman IIC",
+  "tonnage": 65,
+  "weightClass": "Heavy",
+  "techBase": "Clan",
+  "walking": 3,
+  "running": 5,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 30,
+    "rightTorso": 20,
+    "leftTorso": 20,
+    "rightArm": 20,
+    "leftArm": 20,
+    "rightLeg": 30,
+    "leftLeg": 30,
+    "centerTorsoRear": 12,
+    "rightTorsoRear": 10,
+    "leftTorsoRear": 10
+  },
+  "weapons": [
+    {
+      "weapon": "HAG 30",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "Anti-Missile System",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "HAG 30",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "Anti-Missile System",
+      "location": "rightArm",
+      "shots": 24
+    },
+    {
+      "weapon": "CL Active Probe",
+      "location": "centerTorso"
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Active Probe"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "ammo",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Anti-Missile System"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Anti-Missile System"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 30"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "Anti-Missile System"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "Anti-Missile System"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 10
+  },
+  "myomer": "Standard"
+}

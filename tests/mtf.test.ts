@@ -296,6 +296,11 @@ describe("ammoBinsFromCrits", () => {
     expect(bins.get("CL Machine Gun")).toBe(1);
   });
 
+  it('resolves the compact "<IS|CL><stem>Ammo" form', () => {
+    const bins = ammoBinsFromCrits(["ISPlasmaRifleAmmo"]);
+    expect(bins.get("Plasma Rifle")).toBe(1);
+  });
+
   it("sums multiple half-ton bins for the same weapon", () => {
     const bins = ammoBinsFromCrits(["IS Machine Gun Ammo - Half", "IS Machine Gun Ammo - Half"]);
     expect(bins.get("Machine Gun")).toBe(1);
@@ -319,5 +324,36 @@ describe("ammoBinsFromCrits", () => {
     const weapon = "Machine Gun";
     const shots = (bins.get(weapon) ?? 0) * (SHOTS_PER_TON[weapon] ?? 0);
     expect(shots).toBe(100);
+  });
+});
+
+describe("parseCritSlots: catalog token aliases", () => {
+  const classify = (token: string, techBase = "Clan") => {
+    const errors: string[] = [];
+    const lines = ["Left Arm:", token, ...Array(11).fill("-Empty-")];
+    const slots = parseCritSlots(lines, errors, "t.mtf", techBase);
+    return { slot: slots.leftArm?.[0], errors };
+  };
+
+  it.each([
+    ["CLHAG20", "HAG 20"],
+    ["CLAPGaussRifle", "AP Gauss Rifle"],
+    ["CLHeavyMG", "CL Heavy Machine Gun"],
+    ["CLERSmallLaser (OMNIPOD)", "CL ER Small Laser"],
+    ["CLLaserAntiMissileSystem", "CL Laser Anti-Missile System"],
+    ["ISLAC5", "Light AC/5"],
+    ["ISBPod", "B-Pods"],
+    ["ISLBXAC10", "LB 10-X AC"],
+    ["ISLBXAC20", "LB 20-X AC"],
+    ["ISLBXAC20 (Split)", "LB 20-X AC"],
+    ["CLLBXAC20", "CL LB 20-X AC"],
+  ])("maps %s to the catalog weapon %s", (token, weapon) => {
+    const { slot, errors } = classify(token, token.startsWith("IS") ? "Inner Sphere" : "Clan");
+    expect(errors).toEqual([]);
+    expect(slot).toEqual({ kind: "weapon", weapon });
+  });
+
+  it("maps Improved Jump Jet spellings to the jump-jet structure slot", () => {
+    expect(classify("Improved Jump Jet").slot).toEqual({ kind: "structure", name: "jumpJet" });
   });
 });

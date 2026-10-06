@@ -92,9 +92,6 @@ export const CODE = {
   CLLRM20: "CL LRM 20",
   CLLBXAC10: "CL LB 10-X AC",
   CLLBXAC20: "CL LB 20-X AC",
-  // Un-prefixed forms (after stripping "IS "/"CL ").
-  LBXAC10: "CL LB 10-X AC",
-  LBXAC20: "CL LB 20-X AC",
   // Physical-weapon equipment (Hatchet, TW p.146): modeled as a weapon mount
   // with `physicalWeapon: true` in the catalog, linked from crit slots like
   // any other weapon (precedent: HCT-5S ships a Hatchet mount + slots).
@@ -262,6 +259,7 @@ export const SHOTS_PER_TON = {
   "CL LRM 20": 12,
   "CL Machine Gun": 200,
   "Gauss Rifle": 8,
+  "Plasma Rifle": 10,
   "Light Gauss Rifle": 16,
   "Heavy Gauss Rifle": 4,
   "CL Gauss Rifle": 16,
@@ -346,6 +344,11 @@ export const STRUCTURE_TOKEN = {
   "CLDouble Heat Sink": "doubleHeatSink",
   "Double Heat Sink": "doubleHeatSink",
   "Jump Jet": "jumpJet",
+  JumpJet: "jumpJet",
+  "Improved Jump Jet": "jumpJet",
+  "ImprovedJump Jet": "jumpJet",
+  "IS Improved Jump Jet": "jumpJet",
+  "Clan Improved Jump Jet": "jumpJet",
   Shoulder: "shoulder",
   "Upper Arm Actuator": "upperArmActuator",
   "Lower Arm Actuator": "lowerArmActuator",
@@ -373,6 +376,7 @@ export const SOAK_TOKEN = {
   TSM: "tsm",
   CASE: "case",
   ISCASE: "case",
+  ISCASEII: "case",
   "IS CASE": "case",
   "CL CASE": "case",
   "Ferro-Fibrous": "ferroFibrous",
@@ -616,10 +620,25 @@ const STEM_ALIAS = {
   antipersonnelpod: "apod",
   narcbeacon: "narcmissilebeacon",
   narcpods: "narcmissilebeacon",
+  heavymg: "heavymachinegun",
+  lightmg: "lightmachinegun",
+  lac2: "lightac2",
+  lac5: "lightac5",
+  lightautocannon2: "lightac2",
+  lightautocannon5: "lightac5",
+  bpod: "bpods",
 };
 
 /** Equipment whose Clan and IS versions are the same catalog entry. */
-const TECH_AGNOSTIC = new Set(["antimissilesystem", "apod"]);
+const TECH_AGNOSTIC = new Set([
+  "antimissilesystem",
+  "apod",
+  // Clan-only weapons: the catalog stores them without a "CL " prefix.
+  "hag20",
+  "hag30",
+  "hag40",
+  "apgaussrifle",
+]);
 
 /**
  * Resolve an MTF weapon / ammo token to a catalog weapon name by squashing it

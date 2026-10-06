@@ -1,0 +1,384 @@
+{
+  "model": "EXB-A",
+  "name": "Gladiator-B",
+  "clanName": "Executioner-B",
+  "tonnage": 95,
+  "weightClass": "Assault",
+  "techBase": "Clan",
+  "walking": 3,
+  "running": 5,
+  "jumping": 2,
+  "armor": {
+    "head": 9,
+    "centerTorso": 38,
+    "rightTorso": 24,
+    "leftTorso": 24,
+    "rightArm": 32,
+    "leftArm": 32,
+    "rightLeg": 40,
+    "leftLeg": 40,
+    "centerTorsoRear": 9,
+    "rightTorsoRear": 10,
+    "leftTorsoRear": 10
+  },
+  "weapons": [
+    {
+      "weapon": "CL LB 10-X AC",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL LB 10-X AC",
+      "location": "leftArm",
+      "shots": 20
+    },
+    {
+      "weapon": "CL Ultra AC/10",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Ultra AC/10",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL ER Small Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL ER Small Laser",
+      "location": "rightTorso"
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Ultra AC/10"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Ultra AC/10"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL LB 10-X AC"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL LB 10-X AC"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Small Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Small Laser"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Ultra AC/10"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Ultra AC/10"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/10"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/10"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/10"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/10"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 10-X AC"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/10"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/10"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/10"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Ultra AC/10"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 10-X AC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL LB 10-X AC"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "soak",
+        "name": "ferroFibrous"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 16
+  },
+  "myomer": "Standard"
+}

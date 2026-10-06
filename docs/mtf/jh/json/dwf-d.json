@@ -1,0 +1,381 @@
+{
+  "model": "DWF-D",
+  "name": "Daishi",
+  "clanName": "Dire Wolf",
+  "tonnage": 100,
+  "weightClass": "Assault",
+  "techBase": "Clan",
+  "walking": 3,
+  "running": 5,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 47,
+    "rightTorso": 32,
+    "leftTorso": 32,
+    "rightArm": 34,
+    "leftArm": 34,
+    "rightLeg": 41,
+    "leftLeg": 41,
+    "centerTorsoRear": 14,
+    "rightTorsoRear": 10,
+    "leftTorsoRear": 10
+  },
+  "weapons": [
+    {
+      "weapon": "CL ER Small Laser",
+      "location": "head"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "centerTorso"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "centerTorso"
+    },
+    {
+      "weapon": "HAG 40",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "HAG 40",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Streak SRM 6",
+      "location": "leftTorso",
+      "shots": 15
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Medium Pulse Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Medium Pulse Laser"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Streak SRM 6"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Streak SRM 6"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Streak SRM 6"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 40"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 40"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 40"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "HAG 40"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER Small Laser"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 15
+  },
+  "myomer": "Standard"
+}

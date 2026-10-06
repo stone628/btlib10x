@@ -53,7 +53,7 @@ Errors:
 
   - Unmapped weapon code "Sniper"
   - Unmapped crit-slot token "ISSniper" (×20)
-  - Unmapped crit-slot token "ISSniperAmmo" (×2)
+  - Unmapped ammo crit-slot token "ISSniperAmmo" (×2)
 
 Why:
 
@@ -65,7 +65,7 @@ Errors:
 
   - Unmapped weapon code "Sniper"
   - Unmapped crit-slot token "ISSniper" (×20)
-  - Unmapped crit-slot token "ISSniperAmmo" (×2)
+  - Unmapped ammo crit-slot token "ISSniperAmmo" (×2)
 
 Why:
 
