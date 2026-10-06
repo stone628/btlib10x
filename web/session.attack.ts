@@ -8,6 +8,7 @@ import {
   type ClubPickupDecl,
   type CriticalEffect,
   type CriticalResolution,
+  type DamageApplication,
   type DamageTransferStep,
   declareAttacks,
   type FireBlockerReason,
@@ -990,13 +991,36 @@ export function critLines(c: CriticalResolution): string[] {
       count: i18n(headerKey),
     }),
   ];
-  for (const eff of c.rows) lines.push(`  ${formatCritEffect(eff)}`);
+  for (const eff of c.rows) {
+    lines.push(`  ${formatCritEffect(eff)}`);
+    // Ammo / weapon-explosion blasts carry their own damage application
+    // (TW p.125: straight to IS, overflow inward): render its location
+    // chain like a weapon hit's, so the blast path is never invisible.
+    const blast =
+      eff.kind === "ammoExplosion"
+        ? eff.application
+        : eff.kind === "weaponDestroyed"
+          ? eff.explosion?.application
+          : undefined;
+    if (blast !== undefined) {
+      const detail = blastDetail(blast);
+      if (detail) lines.push(`    ${detail}`);
+    }
+  }
   return lines;
 }
 
 export function transferDetail(r: AttackResolution): string | null {
   const app = r.application;
-  if (!app || app.steps.length === 0) return null;
+  if (!app) return null;
+  return blastDetail(app);
+}
+
+/** Render one damage application's location chain (`LTI 20->0*, …`).
+ *  Shared by weapon hits (`transferDetail`) and crit-blast rows, which
+ *  both carry a `DamageApplication` with per-pool `steps`. */
+export function blastDetail(app: DamageApplication): string | null {
+  if (app.steps.length === 0) return null;
   const wasImmobile = isUnitImmobile(app.before);
   const wasDestroyed = isUnitDestroyed(app.before);
   const run = {
