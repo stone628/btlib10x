@@ -106,7 +106,9 @@ function parseMtf(text, file) {
   const rawName = keyed ? keyedField("chassis") : (lines[1]?.trim() ?? "");
   const variant = keyed ? keyedField("model") : (lines[2]?.trim() ?? "");
   if (!rawName) errors.push(`missing name in ${file}`);
-  if (!variant) errors.push(`missing model in ${file}`);
+  // A missing model is tolerated only for Clan sheets (see the policy below).
+  const clanSheet = /^TechBase:\s*Clan/im.test(text);
+  if (!variant && !clanSheet) errors.push(`missing model in ${file}`);
   // Line 2 is `<NAME>` or `<NAME> (<CLANNAME>)` for Clan sheets
   // ("Mad Cat (Timber Wolf)"). The parenthesised Clan name becomes the
   // optional `clanName`; when the parens are absent `clanName` stays
@@ -166,13 +168,17 @@ function parseMtf(text, file) {
         ],
       };
     }
-    if (!variant) {
-      return { def: null, errors: [`missing variant in ${file}`] };
-    }
     // Variants may be parenthesised ("(Standard)") or spaced ("C 2"); fold
-    // them into a single token for the catalog key.
-    const variantKey = variant.replace(/[()]/g, "").trim().replace(/\s+/g, "-");
-    model = `${entry.prefix}-${variantKey}`;
+    // them into a single token for the catalog key. Policy when the sheet has
+    // no variant id: Clan OmniMechs become "<prefix>-Prime"; Clan BattleMechs
+    // (standard or IIC) keep the bare "<prefix>".
+    const isOmni = /^Biped Omni/i.test(fields.Config ?? "");
+    const variantKey = variant
+      ? variant.replace(/[()]/g, "").trim().replace(/\s+/g, "-")
+      : isOmni
+        ? "Prime"
+        : "";
+    model = variantKey ? `${entry.prefix}-${variantKey}` : entry.prefix;
     name = entry.name;
   } else {
     // Inner Sphere sheets must carry a distinct model code on line 3 (it is the
