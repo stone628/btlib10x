@@ -768,16 +768,30 @@ describe("game integration: partial cover in to-hit", () => {
       .terrainMod;
   }
 
+  function coverModFor(type: TerrainType): number {
+    const state = makeBattleWithTargetTerrain(type);
+    startAttackTurn(state);
+    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []);
+    const events: GameEvent[] = [];
+    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4), events);
+    const resolved = events.find((e) => e.kind === "attackResolved");
+    expect(resolved).toBeDefined();
+    return (resolved as Extract<GameEvent, { kind: "attackResolved" }>).resolution.breakdown
+      .coverMod;
+  }
+
   it("target in clear: terrainMod 0", () => {
     expect(terrainModFor("clear")).toBe(0);
   });
 
-  it("target in water1: terrainMod 1 (partial cover)", () => {
-    expect(terrainModFor("water1")).toBe(1);
+  it("target in water1: coverMod 1 (partial cover), terrainMod 0", () => {
+    expect(terrainModFor("water1")).toBe(0);
+    expect(coverModFor("water1")).toBe(1);
   });
 
-  it("target in building hex: terrainMod 1 (partial cover)", () => {
-    expect(terrainModFor("mediumBuilding")).toBe(1);
+  it("target in building hex: coverMod 1 (partial cover), terrainMod 0", () => {
+    expect(terrainModFor("mediumBuilding")).toBe(0);
+    expect(coverModFor("mediumBuilding")).toBe(1);
   });
 });
 

@@ -47,7 +47,13 @@ export interface ToHitBreakdown {
   readonly gunnery: number;
   readonly attackerMod: number;
   readonly targetMod: number;
+  /** Woods only: target-hex woods + intervening woods points. */
   readonly terrainMod: number;
+  /** Partial-cover modifier (TW p.102): +1 terrain/wreck cover, +2 L2 wreck.
+   *  Kept separate from `terrainMod` so the GATOR line can print `cover +1`.
+   *  Leg hit-location rolls strike the cover instead (see `hitLocationPlaced`
+   *  in `src/rules/attack.ts`). */
+  readonly coverMod: number;
   readonly rangeMod: number;
   /** Weapon To-Hit Mod column (TW p.303-304): -2 pulse, +1 MRM / Clan heavy lasers. */
   readonly weaponMod: number;
@@ -114,6 +120,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
       attackerMod: 0,
       targetMod: 0,
       terrainMod: 0,
+      coverMod: 0,
       rangeMod: 0,
       weaponMod: 0,
       minRangeMod: 0,
@@ -135,8 +142,8 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     (mods.targetProne === true ? proneTargetModifier(mods.distance) : 0) +
     (mods.targetImmobile === true ? TARGET_IMMOBILE_MOD : 0);
 
-  const terrainMod =
-    mods.interveningWoods + terrainTargetMod(mods.targetTerrain) + (mods.partialCoverMod ?? 0);
+  const terrainMod = mods.interveningWoods + terrainTargetMod(mods.targetTerrain);
+  const coverMod = mods.partialCoverMod ?? 0;
 
   const rangeMod = RANGE_MOD[bracket];
   const weaponMod = weaponToHitModifier(mods.weapon);
@@ -153,6 +160,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     attackerMod +
     targetMod +
     terrainMod +
+    coverMod +
     rangeMod +
     weaponMod +
     min +
@@ -165,6 +173,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     attackerMod,
     targetMod,
     terrainMod,
+    coverMod,
     rangeMod,
     weaponMod,
     minRangeMod: min,

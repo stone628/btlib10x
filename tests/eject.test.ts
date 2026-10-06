@@ -489,7 +489,8 @@ describe("eject", () => {
       rng: scriptedRng(6, 6, 2, 3),
       partialCoverMod: 2,
     });
-    expect(covered.breakdown.terrainMod).toBe(2);
+    expect(covered.breakdown.terrainMod).toBe(0);
+    expect(covered.breakdown.coverMod).toBe(2);
     expect(covered.breakdown.total).toBe(2);
     expect(covered.hit).toBe(true);
     expect(covered.groups).toHaveLength(0);

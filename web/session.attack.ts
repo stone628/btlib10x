@@ -902,20 +902,21 @@ export function attackStatusChunk(s: Session): Chunk {
   return buildLinesChunk(...lines);
 }
 
-/** Labeled GATOR breakdown: "gunnery 4 + move 1 + terrain 1 + range 2". */
+/** Labeled GATOR breakdown with partial cover split out (TW p.102). */
 function gatorText(r: AttackResolution): string {
   if (r.breakdown.outOfRange) return i18n("res.outOfRange");
   const b = r.breakdown;
-  const parts = [`gunnery ${b.gunnery}`];
-  if (b.attackerMod) parts.push(`move ${b.attackerMod}`);
-  if (b.targetMod) parts.push(`target ${b.targetMod}`);
-  if (b.terrainMod) parts.push(`terrain ${b.terrainMod}`);
-  if (b.rangeMod) parts.push(`range ${b.rangeMod}`);
-  if (b.minRangeMod) parts.push(`min ${b.minRangeMod}`);
-  if (b.weaponMod) parts.push(`weapon ${b.weaponMod}`);
-  if (b.heatMod) parts.push(`heat ${b.heatMod}`);
-  if (b.sensorMod) parts.push(`sensors ${b.sensorMod}`);
-  if (b.actuatorMod) parts.push(`actuators ${b.actuatorMod}`);
+  const parts = [`${i18n("res.gator.gunnery")} ${b.gunnery}`];
+  if (b.attackerMod) parts.push(`${i18n("res.gator.move")} ${b.attackerMod}`);
+  if (b.targetMod) parts.push(`${i18n("res.gator.target")} ${b.targetMod}`);
+  if (b.terrainMod) parts.push(`${i18n("res.gator.terrain")} ${b.terrainMod}`);
+  if (b.coverMod) parts.push(`${i18n("res.gator.cover")} ${b.coverMod}`);
+  if (b.rangeMod) parts.push(`${i18n("res.gator.range")} ${b.rangeMod}`);
+  if (b.minRangeMod) parts.push(`${i18n("res.gator.min")} ${b.minRangeMod}`);
+  if (b.weaponMod) parts.push(`${i18n("res.gator.weapon")} ${b.weaponMod}`);
+  if (b.heatMod) parts.push(`${i18n("res.gator.heat")} ${b.heatMod}`);
+  if (b.sensorMod) parts.push(`${i18n("res.gator.sensors")} ${b.sensorMod}`);
+  if (b.actuatorMod) parts.push(`${i18n("res.gator.actuators")} ${b.actuatorMod}`);
   const total = b.automatic === "hit" ? i18n("res.needAuto") : String(b.total);
   return `${i18n("res.need", { total })} (${parts.join(" + ")})`;
 }
