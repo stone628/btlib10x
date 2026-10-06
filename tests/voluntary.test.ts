@@ -3,6 +3,7 @@ import type { BattleState, GameEvent, UnitInit } from "../src/rules/game";
 import {
   advancePhase,
   attemptVoluntaryStartup,
+  buildUnitInit,
   declareAttacks,
   executeMove,
   nextActor,
@@ -15,24 +16,8 @@ import { createTestBattle, scriptedRng } from "./helpers";
 
 function hbkVsEnf(): BattleState {
   const units: UnitInit[] = [
-    {
-      id: "hbk",
-      model: "HBK-4G",
-      team: 0,
-      gunnery: 4,
-      piloting: 5,
-      position: { col: 2, row: 4 },
-      facing: "se",
-    },
-    {
-      id: "enf",
-      model: "ENF-4R",
-      team: 1,
-      gunnery: 4,
-      piloting: 5,
-      position: { col: 5, row: 4 },
-      facing: "nw",
-    },
+    buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
+    buildUnitInit("enf", "ENF-4R", 1, { col: 5, row: 4 }, "nw"),
   ];
   return createTestBattle([], units, true);
 }

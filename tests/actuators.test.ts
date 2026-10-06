@@ -6,6 +6,7 @@ import { armWeaponToHitModifier, countArmActuators } from "../src/rules/actuator
 import { resolveWeaponAttack } from "../src/rules/attack";
 import type { UnitDamageState } from "../src/rules/damage";
 import { suggestFireTargets } from "../src/rules/fireability";
+import { buildUnitInit } from "../src/rules/game";
 import { computeToHit } from "../src/rules/tohit";
 import { createTestBattle, scriptedRng } from "./helpers";
 
@@ -136,24 +137,8 @@ describe("arm actuator weapon modifiers (TW p.125)", () => {
     const state = createTestBattle(
       [],
       [
-        {
-          id: "a",
-          model: "TBR-Prime",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 1, row: 1 },
-          facing: "s",
-        },
-        {
-          id: "b",
-          model: "HBK-4G",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 1, row: 2 },
-          facing: "n",
-        },
+        buildUnitInit("a", "TBR-Prime", 0, { col: 1, row: 1 }, "s"),
+        buildUnitInit("b", "HBK-4G", 1, { col: 1, row: 2 }, "n"),
       ],
       true,
     );

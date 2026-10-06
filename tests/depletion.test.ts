@@ -14,6 +14,7 @@ import {
 } from "../src/rules/ammo";
 import {
   advancePhase,
+  buildUnitInit,
   type createBattle,
   declareAttacks,
   requireUnit,
@@ -243,24 +244,8 @@ describe("consumeAmmo", () => {
 
 function hbkBattle(): ReturnType<typeof createBattle> {
   const units: UnitInit[] = [
-    {
-      id: "hbk",
-      model: "HBK-4G",
-      team: 0,
-      gunnery: 4,
-      piloting: 5,
-      position: { col: 2, row: 4 },
-      facing: "ne",
-    },
-    {
-      id: "enf",
-      model: "ENF-4R",
-      team: 1,
-      gunnery: 4,
-      piloting: 5,
-      position: { col: 3, row: 4 },
-      facing: "nw",
-    },
+    buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "ne"),
+    buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 4 }, "nw"),
   ];
   return createTestBattle([], units, true);
 }
@@ -284,24 +269,8 @@ describe("declareAttacks (game level)", () => {
   it("drains one shot per rapid-fire round declared (TW p.103-104)", () => {
     // HER-5SA Ultra AC/5 (weaponIndex 3, 1-based): 20 shots loaded; a double-tap declares 2.
     const units: UnitInit[] = [
-      {
-        id: "her",
-        model: "HER-5SA",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 4 },
-        facing: "ne",
-      },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 4 },
-        facing: "nw",
-      },
+      buildUnitInit("her", "HER-5SA", 0, { col: 2, row: 4 }, "ne"),
+      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 4 }, "nw"),
     ];
     const state = createTestBattle([], units, true);
     attackPhase(state);

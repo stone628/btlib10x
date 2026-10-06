@@ -128,6 +128,7 @@ function cloneUnitState(unit: UnitState): UnitState {
     gunnery: unit.gunnery,
     piloting: unit.piloting,
     pilotHits: unit.pilotHits,
+    pilotHitMax: unit.pilotHitMax,
     unconscious: unit.unconscious,
     unconsciousSinceTurn: unit.unconsciousSinceTurn,
     prone: unit.prone,
@@ -306,6 +307,7 @@ export function loadUnitState(unit: UnitState, snapshot: UnitSnapshot): void {
   unit.gunnery = next.gunnery;
   unit.piloting = next.piloting;
   unit.pilotHits = next.pilotHits;
+  unit.pilotHitMax = next.pilotHitMax;
   unit.unconscious = next.unconscious;
   unit.unconsciousSinceTurn = next.unconsciousSinceTurn;
   unit.prone = next.prone;

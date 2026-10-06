@@ -177,6 +177,7 @@ export {
   actorQueue,
   attemptStandUp,
   attemptVoluntaryStartup,
+  buildUnitInit,
   clubTokensInHex,
   createBattle,
   DROP_MP_COST,
@@ -249,12 +250,17 @@ export {
   strikeWeaponInArm,
   validatePhysicalAttack,
 } from "./rules/physical";
+export { type PilotRecord, type PilotStatus, pilotRecord, pilotStatus } from "./rules/pilot";
 export {
   consciousnessTarget,
+  DEFAULT_PILOT_HIT_MAX,
   DEFAULT_PILOTING,
+  EJECTION_BASE_MODIFIER,
+  ejectionDamage,
   type FallDirection,
   GYRO_DESTROYED_HITS,
   GYRO_HIT_MOD,
+  isValidPilotHitMax,
   type PilotingRollResult,
   type PreexistingDamage,
   SENSOR_BLIND_HITS,

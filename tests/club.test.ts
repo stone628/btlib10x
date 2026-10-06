@@ -8,6 +8,7 @@ import { type BattleState, createBattle, type GameEvent, mechDefFor, type Rng } 
 import type { LimbLocation } from "../src/core/types";
 import {
   applyFall,
+  buildUnitInit,
   clubTokensInHex,
   declarePickup,
   recordSeveredLimbs,
@@ -37,33 +38,9 @@ function attackPhase(terrain: Array<{ col: number; row: number; terrain: string 
       legends: [],
     },
     [
-      {
-        id: "a",
-        model: "HBK-4G",
-        team: 1,
-        position: { col: 5, row: 5 },
-        facing: "n",
-        gunnery: 4,
-        piloting: 5,
-      },
-      {
-        id: "b",
-        model: "HBK-4G",
-        team: 2,
-        position: { col: 5, row: 5 },
-        facing: "n",
-        gunnery: 4,
-        piloting: 5,
-      },
-      {
-        id: "far",
-        model: "HBK-4G",
-        team: 2,
-        position: { col: 1, row: 1 },
-        facing: "n",
-        gunnery: 4,
-        piloting: 5,
-      },
+      buildUnitInit("a", "HBK-4G", 1, { col: 5, row: 5 }, "n"),
+      buildUnitInit("b", "HBK-4G", 2, { col: 5, row: 5 }, "n"),
+      buildUnitInit("far", "HBK-4G", 2, { col: 1, row: 1 }, "n"),
     ],
   );
   battle.phase = "attack";

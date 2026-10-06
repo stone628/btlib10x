@@ -2,16 +2,11 @@ import { describe, expect, it } from "vitest";
 import { mechDef } from "../src/data/index";
 import { weaponDefFor } from "../src/data/weapon.schema";
 import { ammoWeaponTotals, pooledShotsLeft } from "../src/rules/ammo";
-import type {
-  BattleState,
-  GameEvent,
-  TerrainHexDef,
-  UnitInit,
-  UnitSkillRange,
-} from "../src/rules/game";
+import type { BattleState, GameEvent, TerrainHexDef, UnitInit } from "../src/rules/game";
 import {
   actorQueue,
   advancePhase,
+  buildUnitInit,
   declareAttacks,
   executeMove,
   nextActor,
@@ -24,24 +19,8 @@ import { checkVictory, createTestBattle, overrideAmmoBin, scriptedRng } from "./
 
 function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
   const units: UnitInit[] = [
-    {
-      id: "hbk",
-      model: "HBK-4G",
-      team: 0,
-      gunnery: 4,
-      piloting: 5,
-      position: { col: 2, row: 4 },
-      facing: "se",
-    },
-    {
-      id: "enf",
-      model: "ENF-4R",
-      team: 1,
-      gunnery: 4,
-      piloting: 5,
-      position: { col: 3, row: 5 },
-      facing: "nw",
-    },
+    buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
+    buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 5 }, "nw"),
   ];
   return createTestBattle(terrain, units, true);
 }
@@ -65,15 +44,7 @@ function startAttackTurn(
 
 describe("createBattle", () => {
   it("rejects duplicate ids, unknown models, and bad gunnery", () => {
-    const base: UnitInit = {
-      id: "a",
-      model: "HBK-4G",
-      team: 0,
-      gunnery: 4,
-      piloting: 5,
-      position: { col: 2, row: 2 },
-      facing: "n" as const,
-    };
+    const base: UnitInit = buildUnitInit("a", "HBK-4G", 0, { col: 2, row: 2 }, "n" as const);
     expect(() => createTestBattle([], [base, base], false)).toThrow(/Duplicate unit id/);
     expect(() =>
       createTestBattle([], [base, { ...base, id: "b", model: "MAD-3R" }], false),
@@ -81,15 +52,13 @@ describe("createBattle", () => {
   });
 
   it("rejects duplicate terrain hex definitions", () => {
-    const base: UnitInit = {
-      id: "temp", // temporary
-      model: "HBK-4G",
-      team: 0, // temporary
-      gunnery: 4,
-      piloting: 5,
-      position: { col: 2, row: 4 },
-      facing: "se" as const,
-    };
+    const base: UnitInit = /* temporary */ /* temporary */ buildUnitInit(
+      "temp",
+      "HBK-4G",
+      0,
+      { col: 2, row: 4 },
+      "se" as const,
+    );
     const units: UnitInit[] = [
       { ...base, id: "a", team: 0 },
       { ...base, id: "b", team: 1 },
@@ -126,24 +95,8 @@ describe("movement phase", () => {
 
   it("charges MP for terrain and facing changes within budget", () => {
     const units: UnitInit[] = [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 4 },
-        facing: "se",
-      },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 11, row: 11 },
-        facing: "nw",
-      },
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
+      buildUnitInit("enf", "ENF-4R", 1, { col: 11, row: 11 }, "nw"),
     ];
     const setup = createTestBattle([{ col: 3, row: 5, type: "lightWoods" }], units, true);
     const state = startMovementTurn(setup);
@@ -265,24 +218,8 @@ describe("movement phase", () => {
 
   it("re-evaluates forward/backward relative to facing after each turn", () => {
     const units: UnitInit[] = [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 4 },
-        facing: "se",
-      },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 11, row: 11 },
-        facing: "nw",
-      },
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
+      buildUnitInit("enf", "ENF-4R", 1, { col: 11, row: 11 }, "nw"),
     ];
     const setup = createTestBattle([], units, true);
     const state = startMovementTurn(setup);
@@ -305,24 +242,8 @@ describe("movement phase", () => {
 
   it("rejects ending in an occupied hex but allows friendly pass-through", () => {
     const units: UnitInit[] = [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 4 },
-        facing: "se",
-      },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 5 },
-        facing: "nw",
-      },
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
+      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 5 }, "nw"),
     ];
     const setup = createTestBattle([], units, true);
     const state = startMovementTurn(setup);
@@ -333,24 +254,8 @@ describe("movement phase", () => {
 
   it("rejects moves exceeding the mode budget", () => {
     const units: UnitInit[] = [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 4 },
-        facing: "se",
-      },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 11, row: 11 },
-        facing: "nw",
-      },
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
+      buildUnitInit("enf", "ENF-4R", 1, { col: 11, row: 11 }, "nw"),
     ];
     const setup = createTestBattle([], units, true);
     const state = startMovementTurn(setup);
@@ -385,24 +290,8 @@ describe("movement phase", () => {
 
   it("jumping pays 1 MP per hex entered and may pass over enemies", () => {
     const units: UnitInit[] = [
-      {
-        id: "grf",
-        model: "GRF-1N",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 4 },
-        facing: "se",
-      },
-      {
-        id: "wvr",
-        model: "WVR-6R",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 4 },
-        facing: "nw",
-      },
+      buildUnitInit("grf", "GRF-1N", 0, { col: 2, row: 4 }, "se"),
+      buildUnitInit("wvr", "WVR-6R", 1, { col: 3, row: 4 }, "nw"),
     ];
     const setup = createTestBattle([], units, false);
     const state = startMovementTurn(setup);
@@ -426,37 +315,14 @@ describe("movement phase", () => {
 
 describe("nextActor with unequal forces", () => {
   function fourVsTwo(teamOfFour: 0 | 1): BattleState {
-    type Entry = {
-      id: string;
-      model: "HBK-4G" | "ENF-4R";
-      team: 0 | 1;
-      gunnery: UnitSkillRange;
-      piloting: UnitSkillRange;
-      position: { col: number; row: number };
-      facing: "n" | "ne" | "se" | "s" | "sw" | "nw";
-    };
-    const units: Entry[] = [];
+    const units: UnitInit[] = [];
     for (let i = 0; i < 4; i++) {
-      units.push({
-        id: `a${i}`,
-        model: "HBK-4G",
-        team: teamOfFour,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: i, row: 0 },
-        facing: "ne",
-      });
+      units.push(buildUnitInit(`a${i}`, "HBK-4G", teamOfFour, { col: i, row: 0 }, "ne"));
     }
     for (let i = 0; i < 2; i++) {
-      units.push({
-        id: `b${i}`,
-        model: "ENF-4R",
-        team: (1 - teamOfFour) as 0 | 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 5 + i, row: 0 },
-        facing: "sw",
-      });
+      units.push(
+        buildUnitInit(`b${i}`, "ENF-4R", (1 - teamOfFour) as 0 | 1, { col: 5 + i, row: 0 }, "sw"),
+      );
     }
     return createTestBattle([], units, true);
   }
@@ -516,26 +382,10 @@ describe("actorQueue", () => {
   function fourVsTwoState(): BattleState {
     const units: UnitInit[] = [];
     for (let i = 0; i < 4; i++) {
-      units.push({
-        id: `a${i}`,
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: i, row: 0 },
-        facing: "ne",
-      });
+      units.push(buildUnitInit(`a${i}`, "HBK-4G", 0, { col: i, row: 0 }, "ne"));
     }
     for (let i = 0; i < 2; i++) {
-      units.push({
-        id: `b${i}`,
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 5 + i, row: 0 },
-        facing: "sw",
-      });
+      units.push(buildUnitInit(`b${i}`, "ENF-4R", 1, { col: 5 + i, row: 0 }, "sw"));
     }
     return startMovementTurn(createTestBattle([], units, true), scriptedRng(1, 1, 3, 3));
   }
@@ -648,24 +498,8 @@ describe("weapon attack phase", () => {
     ];
     for (const c of cases) {
       const units: UnitInit[] = [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 4 },
-          facing: c.facing as UnitInit["facing"],
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: c.targetPos,
-          facing: "nw",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, c.facing as UnitInit["facing"]),
+        buildUnitInit("enf", "ENF-4R", 1, c.targetPos, "nw"),
       ];
       const state = startAttackTurn(createTestBattle([], units, true));
       if (c.weaponIndex === 0) {
@@ -693,24 +527,8 @@ describe("weapon attack phase", () => {
     // Target due south of a nw-facing attacker -> left side arc: the
     // right-arm ML, head SL and right-torso AC/20 may not fire.
     const units: UnitInit[] = [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 4 },
-        facing: "nw",
-      },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 5 },
-        facing: "nw",
-      },
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "nw"),
+      buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 5 }, "nw"),
     ];
     const state = startAttackTurn(createTestBattle([], units, true));
     for (const wi of [2, 3, 4]) {
@@ -729,24 +547,14 @@ describe("weapon attack phase", () => {
     // the target's rear arc: hits roll on the front/rear column and drain
     // the rear torso armor pool.
     const units: UnitInit[] = [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 4 },
-        facing: "se",
-      },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 5 },
-        facing: "se", // facing away from the attacker
-      },
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
+      /* facing away from the attacker */ buildUnitInit(
+        "enf",
+        "ENF-4R",
+        1,
+        { col: 3, row: 5 },
+        "se",
+      ),
     ];
     const state = startAttackTurn(createTestBattle([], units, true));
     declareAttacks(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }], [], []);
@@ -773,24 +581,14 @@ describe("weapon attack phase", () => {
     // Attacker in the target's LEFT side: location roll 4 -> left arm on the
     // left-side column (front column would give right arm).
     const units: UnitInit[] = [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 4 },
-        facing: "se",
-      },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 5 },
-        facing: "ne", // attacker lies in its left side arc
-      },
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
+      /* attacker lies in its left side arc */ buildUnitInit(
+        "enf",
+        "ENF-4R",
+        1,
+        { col: 3, row: 5 },
+        "ne",
+      ),
     ];
     const state = startAttackTurn(createTestBattle([], units, true));
     declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []);
@@ -810,24 +608,8 @@ describe("weapon attack phase", () => {
 
   it("lets rear-facing torso weapons fire into the rear arc only (AS7-D)", () => {
     const units: UnitInit[] = [
-      {
-        id: "as7",
-        model: "AS7-D",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 4 },
-        facing: "nw", // target sits in the rear arc
-      },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 5 },
-        facing: "nw",
-      },
+      /* target sits in the rear arc */ buildUnitInit("as7", "AS7-D", 0, { col: 2, row: 4 }, "nw"),
+      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 5 }, "nw"),
     ];
     const state = startAttackTurn(createTestBattle([], units, true));
     // Front-firing weapons reject the rear-arc target.
@@ -861,24 +643,8 @@ describe("weapon attack phase", () => {
     );
     // Move units apart so intervening hexes exist.
     units = [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 4 },
-        facing: "se",
-      },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 5, row: 4 },
-        facing: "nw",
-      },
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
+      buildUnitInit("enf", "ENF-4R", 1, { col: 5, row: 4 }, "nw"),
     ];
     state = createTestBattle(
       [
@@ -896,24 +662,8 @@ describe("weapon attack phase", () => {
     // Out of range.
     const ac20 = weaponDefFor({ weapon: "AC/20" });
     units = [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 4 },
-        facing: "se",
-      },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: ac20.long + 3, row: 2 },
-        facing: "nw",
-      },
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
+      buildUnitInit("enf", "ENF-4R", 1, { col: ac20.long + 3, row: 2 }, "nw"),
     ];
     state = createTestBattle([], units, true);
     state = startAttackTurn(state);
@@ -923,24 +673,8 @@ describe("weapon attack phase", () => {
 
     // Modified TN > 12 must be aborted at declaration.
     units = [
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 0,
-        gunnery: 7,
-        piloting: 5,
-        position: { col: 2, row: 4 },
-        facing: "se",
-      },
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 11, row: 4 },
-        facing: "nw",
-      },
+      buildUnitInit("enf", "ENF-4R", 0, { col: 2, row: 4 }, "se", 7),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 11, row: 4 }, "nw"),
     ];
     state = createTestBattle(
       [
@@ -1056,24 +790,8 @@ describe("weapon attack phase", () => {
 
   it("jams Ultra AC/5 double taps on a natural 2 and tracks the jam", () => {
     const units: UnitInit[] = [
-      {
-        id: "her",
-        model: "HER-5SA",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 4 },
-        facing: "ne",
-      },
-      {
-        id: "cda",
-        model: "CDA-3MA",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 4 },
-        facing: "nw",
-      },
+      buildUnitInit("her", "HER-5SA", 0, { col: 2, row: 4 }, "ne"),
+      buildUnitInit("cda", "CDA-3MA", 1, { col: 3, row: 4 }, "nw"),
     ];
     const setup = createTestBattle([], units, true);
     const state = startAttackTurn(setup);
@@ -1089,25 +807,14 @@ describe("weapon attack phase", () => {
 
   it("fires a single shot by default and a double-tap only when rapidFire is set on an Ultra AC/5", () => {
     const units: UnitInit[] = [
-      {
-        id: "her",
-        model: "HER-5SA",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 4 },
-        facing: "ne",
-      },
-      {
-        id: "cda",
-        model: "CDA-3MA",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 5, row: 4 },
-        // Faces the attacker so the attack direction is front (location 7 -> CT).
-        facing: "sw",
-      },
+      buildUnitInit("her", "HER-5SA", 0, { col: 2, row: 4 }, "ne"),
+      /* Faces the attacker so the attack direction is front (location 7 -> CT). */ buildUnitInit(
+        "cda",
+        "CDA-3MA",
+        1,
+        { col: 5, row: 4 },
+        "sw",
+      ),
     ];
     const setup = () => createTestBattle([], units, true);
 
@@ -1143,24 +850,8 @@ describe("weapon attack phase", () => {
 
 describe("streak missiles", () => {
   const streakUnits: UnitInit[] = [
-    {
-      id: "mc",
-      model: "MC-MKII-2",
-      team: 0,
-      gunnery: 4,
-      piloting: 5,
-      position: { col: 2, row: 4 },
-      facing: "ne",
-    },
-    {
-      id: "enf",
-      model: "ENF-4R",
-      team: 1,
-      gunnery: 4,
-      piloting: 5,
-      position: { col: 3, row: 4 },
-      facing: "nw",
-    },
+    buildUnitInit("mc", "MC-MKII-2", 0, { col: 2, row: 4 }, "ne"),
+    buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 4 }, "nw"),
   ];
   const streakSetup = () => startAttackTurn(createTestBattle([], streakUnits, true));
 
@@ -1282,24 +973,8 @@ describe("streak missiles", () => {
     // to a single shot: 20 blast damage straight to IS, TW p.125); the
     // follow-up laser must see the post-blast CT, not the phase-start CT.
     const units: UnitInit[] = [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 4 },
-        facing: "se",
-      },
-      {
-        id: "tgt",
-        model: "HBK-4G",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 5 },
-        facing: "nw",
-      },
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
+      buildUnitInit("tgt", "HBK-4G", 1, { col: 3, row: 5 }, "nw"),
     ];
     const state = startAttackTurn(createTestBattle([], units, false));
     const target = requireUnit(state, "tgt");
@@ -1456,24 +1131,8 @@ describe("weapon-volley crit accumulation (TW p. 38 simultaneity)", () => {
 
   function hbkVsEnfCrits(): BattleState {
     const units: UnitInit[] = [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 4 },
-        facing: "se",
-      },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 5 },
-        facing: "nw",
-      },
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
+      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 5 }, "nw"),
     ];
     return createTestBattle([], units, false);
   }

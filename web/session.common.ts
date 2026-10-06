@@ -14,7 +14,6 @@ import {
   canFireFromLocation,
   collectAmmoBins,
   componentHitStatus,
-  consciousnessTarget,
   countDestroyedEngine,
   D2D6_MAX,
   type DestroyedReason,
@@ -41,6 +40,9 @@ import {
   movementMpPenaltyWithThreshold,
   msgHex,
   type PilotingCheckReason,
+  type PilotRecord,
+  type PilotStatus,
+  pilotRecord,
   pooledTotalsByWeaponName,
   type RemovalReason,
   type RemovedState,
@@ -277,7 +279,7 @@ interface SheetView {
   readonly tonnage: number;
   readonly gunnery: number | null;
   readonly piloting: number | null;
-  readonly pilotHits: number;
+  readonly pilot: PilotRecord;
   readonly prone: boolean;
   readonly unconscious: boolean;
   readonly walking: number;
@@ -341,7 +343,7 @@ export function battleSheet(unit: UnitState, id: string): SheetView {
     tonnage: def.tonnage,
     gunnery: unit.gunnery,
     piloting: unit.piloting,
-    pilotHits: unit.pilotHits,
+    pilot: pilotRecord(unit),
     prone: unit.prone,
     unconscious: unit.unconscious,
     walking: def.walking,
@@ -800,7 +802,7 @@ export function sheetLines(view: SheetView): Chunk[] {
     }),
   ];
   if (view.gunnery !== null) topLines.push(sheetGunneryLine(view));
-  if (view.piloting !== null) topLines.push(sheetPilotLine(view));
+  if (view.piloting !== null) topLines.push(...sheetPilotLines(view));
   topLines.push(sheetMovementLine(view));
   topLines.push(view.positionLine);
   if (view.ammoStatusLine !== null) topLines.push(view.ammoStatusLine);
@@ -876,14 +878,44 @@ function sheetGunneryLine(view: SheetView): string {
     : i18n("sheet.gunneryLine", { gunnery: gunneryLabel(gunnery) });
 }
 
+const PILOT_STATUS_KEY: Record<PilotStatus, MessageKey> = {
+  active: "sheet.pilotOk",
+  unconscious: "sheet.pilotOut",
+  ejected: "sheet.pilotEjected",
+  dead: "sheet.pilotKilled",
+};
+
+/** Pilot hit track boxes: one per HP, an `x` for each hit taken. */
+function pilotHpBoxes(pilot: PilotRecord): string {
+  return Array.from({ length: pilot.hitMax }, (_, i) => (i < pilot.hits ? "[x]" : "[ ]")).join("");
+}
+
+/** Pilot status block of the record sheet: skill/status line, HP track, and
+ *  the consciousness targets (bracketed once that hit has been taken). */
+function sheetPilotLines(view: SheetView): string[] {
+  const { pilot } = view;
+  const targets = pilot.targets.map((t, i) => {
+    const label = t === null ? i18n("sheet.pilotDeadCell") : `${t}+`;
+    return i < pilot.hits ? `[${label}]` : label;
+  });
+  return [
+    i18n("sheet.pilotLine", {
+      piloting: pilot.piloting,
+      state: i18n(PILOT_STATUS_KEY[pilot.status]),
+      hp: pilot.hp,
+      max: pilot.hitMax,
+    }),
+    i18n("sheet.pilotHp", { boxes: pilotHpBoxes(pilot) }),
+    i18n("sheet.pilotConsciousness", { targets: targets.join(" ") }),
+  ];
+}
+
 function sheetPilotLine(view: SheetView): string {
-  const killed = consciousnessTarget(view.pilotHits) === null;
   return i18n("sheet.pilotLine", {
-    piloting: view.piloting!,
-    hits: view.pilotHits,
-    state: i18n(
-      killed ? "sheet.pilotKilled" : view.unconscious ? "sheet.pilotOut" : "sheet.pilotOk",
-    ),
+    piloting: view.pilot.piloting,
+    state: i18n(PILOT_STATUS_KEY[view.pilot.status]),
+    hp: view.pilot.hp,
+    max: view.pilot.hitMax,
   });
 }
 
@@ -1025,6 +1057,7 @@ const PSR_REASON_KEY: Record<PilotingCheckReason, MessageKey> = {
   building: "log.psrReason.building",
   kick: "log.psrReason.kick",
   kickMiss: "log.psrReason.kickMiss",
+  ejection: "log.psrReason.ejection",
 };
 
 function psrReasonDetail(reason: PilotingCheckReason): string {

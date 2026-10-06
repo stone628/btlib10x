@@ -134,13 +134,17 @@ import {
 import {
   buildingEntryModifier,
   consciousnessTarget,
+  DEFAULT_PILOT_HIT_MAX,
   DEFAULT_PILOTING,
+  EJECTION_BASE_MODIFIER,
+  ejectionDamage,
   facingAfterFall,
   fallingDamageGroups,
   fallingDamageTotal,
   GYRO_DESTROYED_HITS,
   GYRO_HIT_MOD,
   HIP_MOD,
+  isValidPilotHitMax,
   LEG_ACTUATOR_MOD,
   LEG_ACTUATORS,
   type PilotingRollResult,
@@ -165,8 +169,33 @@ export interface UnitInit extends MechModelHolder {
   gunnery: UnitSkillRange;
   /** Pilot skill (TW regular = 5); defaults to {@link DEFAULT_PILOTING}. */
   piloting: UnitSkillRange;
+  /** Pilot hit capacity (integer >= 1); the pilot dies when hits reach it.
+   *  Defaults to {@link DEFAULT_PILOT_HIT_MAX} (6). */
+  pilotHitMax: number;
   position: HexCoord;
   facing: Facing;
+}
+
+export function buildUnitInit(
+  id: string,
+  model: string,
+  team: number,
+  position: HexCoord,
+  facing?: Facing,
+  gunnery?: UnitSkillRange,
+  piloting?: UnitSkillRange,
+  pilotHitMax?: number,
+): UnitInit {
+  return {
+    id,
+    model,
+    team,
+    position,
+    facing: facing ?? "n",
+    gunnery: gunnery ?? DEFAULT_GUNNERY,
+    piloting: piloting ?? DEFAULT_PILOTING,
+    pilotHitMax: pilotHitMax ?? DEFAULT_PILOT_HIT_MAX,
+  };
 }
 
 export interface WeaponAttackDecl {
@@ -276,7 +305,13 @@ export const GIRDER_SEARCH_TARGET: Readonly<Record<string, number>> = {
 /** Why the pilot took damage. Drives the `pilotDamaged` event `reason`
  *  field and the `applyPilotHits` parameter; both stay typed so web and
  *  tests can pattern-match exhaustively. */
-export type PilotHitReason = "headHit" | "ammoExplosion" | "fall" | "shutdownFall" | "lifeSupport";
+export type PilotHitReason =
+  | "headHit"
+  | "ammoExplosion"
+  | "fall"
+  | "shutdownFall"
+  | "lifeSupport"
+  | "ejection";
 
 /** Removal from play: "not" = on the board. "destroyed" = unit killed
  *  (paired with a DestroyedState reason). "pilotEjected" = pilot left
@@ -315,7 +350,8 @@ export type PilotingCheckReason =
   | "water3"
   | "building"
   | "kick"
-  | "kickMiss";
+  | "kickMiss"
+  | "ejection";
 
 /** Why a 'Mech fell (TW p.68). `failedPsr` carries the PSR trigger that
  *  failed; `terrain` covers automatic falls while entering terrain
@@ -347,8 +383,10 @@ export interface UnitState extends MechModelHolder {
   gunnery: number;
   /** Piloting skill (TW regular = 5); drives every Piloting Skill Roll. */
   piloting: number;
-  /** Pilot hits taken (0..6; 6 kills the pilot and destroys the unit). */
+  /** Pilot hits taken (0..pilotHitMax; reaching it kills the pilot). */
   pilotHits: number;
+  /** Pilot hit capacity (default 6). Remaining HP = pilotHitMax - pilotHits. */
+  pilotHitMax: number;
   /** True once the pilot fails a consciousness roll; the unit cannot act
    *  and counts as immobile until it wakes in a later end phase. */
   unconscious: boolean;
@@ -655,6 +693,8 @@ export type GameEvent =
       readonly reason: PilotHitReason;
       readonly hits: number;
       readonly totalHits: number;
+      /** Pilot HP left after this hit (pilotHitMax - totalHits, floored at 0). */
+      readonly hpRemaining: number;
     }
   | {
       readonly kind: "consciousnessCheck";
@@ -916,6 +956,11 @@ function markUnitDestroyed(
   releaseClub(state, unit, "removed", sink);
   unit.destroyed = reason;
   unit.removed = "destroyed";
+  // TW p.128: the MechWarrior dies on loss of the head or cockpit; any other
+  // destruction (engine, center torso) leaves the pilot alive inside.
+  if (reason === "headDestroyed" || reason === "headBlownOff" || reason === "cockpitDestroyed") {
+    unit.pilotHits = Math.max(unit.pilotHits, unit.pilotHitMax);
+  }
   sink.push({
     kind: "unitRemoved",
     unitId: unit.id,
@@ -977,6 +1022,9 @@ export function createBattle(
         `Gunnery(${init.gunnery}), Piloting(${init.piloting}) for ${init.id} cannot differ by more than 2 points, TW p.273`,
       );
     }
+    if (!isValidPilotHitMax(init.pilotHitMax)) {
+      throw new Error(`pilotHitMax(${init.pilotHitMax}) for ${init.id} must be an integer >= 1`);
+    }
   }
 
   const unitStates: Record<string, UnitState> = {};
@@ -995,6 +1043,7 @@ export function createBattle(
       gunnery: init.gunnery,
       piloting: init.piloting,
       pilotHits: 0,
+      pilotHitMax: init.pilotHitMax ?? DEFAULT_PILOT_HIT_MAX,
       unconscious: false,
       unconsciousSinceTurn: null,
       prone: false,
@@ -1291,6 +1340,32 @@ function isCritBlastRow(row: CriticalEffect): boolean {
   if (row.kind === "ammoExplosion") return true;
   return row.kind === "weaponDestroyed" && row.explosion !== undefined;
 }
+/** The damage application of a blast row (ammo explosion, or Gauss/HAG
+ *  weapon-crit explosion), or undefined for any other row. */
+function blastApplication(row: CriticalEffect): DamageApplication | undefined {
+  if (row.kind === "ammoExplosion") return row.application;
+  if (row.kind === "weaponDestroyed") return row.explosion?.application;
+  return undefined;
+}
+
+/** Auto-eject (Tactical Operations): an ammo/weapon explosion that destroys
+ *  the center torso (directly or via transfer) ejects the pilot before the
+ *  damage resolves. The ejection PSR may still injure the pilot; the blast's own
+ *  pilot hits are applied by the caller afterwards. Any other destruction
+ *  leaves the pilot inside the 'Mech. Returns true when the pilot ejected. */
+function autoEjectOnCenterTorsoBlast(
+  state: BattleState,
+  unit: UnitState,
+  applications: readonly (DamageApplication | undefined)[],
+  rng: Rng,
+  sink: GameEvent[],
+): boolean {
+  if (isUnitRemoved(unit)) return false;
+  if (!applications.some((a) => a?.newlyDestroyed.includes("centerTorso"))) return false;
+  resolveEjection(state, unit, rng, sink, "auto");
+  return true;
+}
+
 /** Pilot hits per failed seatbelt or fall. */
 const FALL_PILOT_HITS = 1;
 /** Seatbelt modifier when a leg is destroyed. */
@@ -2597,7 +2672,9 @@ export function applyPilotHits(
   sink: GameEvent[],
 ): void {
   for (let i = 0; i < hits; i++) {
-    if (isUnitRemoved(unit)) return;
+    // An ejected pilot still accrues hits (ejection damage, the triggering
+    // blast); every other removal ends pilot bookkeeping.
+    if (isUnitRemoved(unit) && unit.removed !== "pilotEjected") return;
     unit.pilotHits += 1;
     sink.push({
       kind: "pilotDamaged",
@@ -2605,8 +2682,9 @@ export function applyPilotHits(
       reason,
       hits: 1,
       totalHits: unit.pilotHits,
+      hpRemaining: Math.max(0, unit.pilotHitMax - unit.pilotHits),
     });
-    const target = consciousnessTarget(unit.pilotHits);
+    const target = consciousnessTarget(unit.pilotHits, unit.pilotHitMax);
     if (target === null) {
       removePilotKilled(state, unit, sink);
       return;
@@ -2667,6 +2745,7 @@ function applyDamageGroups(
         unit.destroyedWeapons = res.destroyedWeapons;
         unit.ammoBins = res.ammoBins;
         unit.damage = res.damage;
+        autoEjectOnCenterTorsoBlast(state, unit, res.rows.map(blastApplication), rng, sink);
         for (const row of res.rows) {
           if (isCritBlastRow(row)) applyPilotHits(state, unit, 2, "ammoExplosion", rng, sink);
         }
@@ -3293,6 +3372,22 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     }
   }
 
+  // Auto-eject (TO): a blast that destroyed the center torso ejects the pilot
+  // before the unit is marked destroyed, so the 'Mech leaves play as ejected.
+  for (const result of results) {
+    for (const { targetId, resolution } of result.resolutions) {
+      if (!resolution.hit) continue;
+      const target = requireUnit(state, targetId);
+      autoEjectOnCenterTorsoBlast(
+        state,
+        target,
+        resolution.crits.flatMap((c) => c.rows.map(blastApplication)),
+        rng,
+        sink,
+      );
+    }
+  }
+
   // Check destruction and mark units
   for (const unit of Object.values(state.units)) {
     if (
@@ -3315,7 +3410,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     for (const { targetId, resolution } of result.resolutions) {
       if (!resolution.hit) continue;
       const target = requireUnit(state, targetId);
-      if (isUnitRemoved(target)) continue;
+      if (isUnitRemoved(target) && target.removed !== "pilotEjected") continue;
       const headGroups = resolution.groups.filter(
         (g) => g.location === "head" && g.damage >= 1,
       ).length;
@@ -4171,6 +4266,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
               damagePerShot: bin.damagePerShot,
               avoided: false,
             });
+            autoEjectOnCenterTorsoBlast(state, unit, [application], rng, sink);
             // TW p.160: ammo explosion auto-deals 2 pilot hits and a
             // Consciousness Roll per hit. Apply before the destroyed check
             // so a pilot killed by the explosion is recorded with reason
@@ -4203,7 +4299,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
       unit.unconsciousSinceTurn !== null &&
       unit.unconsciousSinceTurn < state.turn
     ) {
-      const target = consciousnessTarget(unit.pilotHits);
+      const target = consciousnessTarget(unit.pilotHits, unit.pilotHitMax);
       if (target !== null) {
         const { roll, success } = rollConsciousness(rng, target);
         if (success) {
@@ -4564,24 +4660,46 @@ export function dropProne(
   );
 }
 
-/** Pilot eject, resolved during the movement phase: the pilot abandons the
- *  'Mech, the unit leaves the battle (counted against victory like a wrecked
- *  hull), and a permanent wreck occupies its hex. Available to any unit
- *  still on the board — including shut-down and immobile ones.
- *  Wreck level is decided by `wreckLevelFor` (TO rule: light chassis or
- *  prone posture reduce it to level 1). */
-export function ejectPilot(state: BattleState, unitId: string, sink: GameEvent[]): void {
-  requirePhase(state, "movement");
-  const unit = requireUnit(state, unitId);
-  if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
+/** Tactical Operations ejection: the pilot rolls a Piloting Skill Roll
+ *  (`EJECTION_BASE_MODIFIER` until the Ejection Modifiers Table is wired in).
+ *  A failure deals floor(margin of failure / 2) pilot hits with the usual
+ *  consciousness rolls. Either way the pilot leaves the 'Mech (`removed =
+ *  "pilotEjected"`, even if the failure damage reaches `pilotHitMax`; the sheet
+ *  then shows HP 0) and a wreck stays behind. `pilotHits` is retained. */
+function resolveEjection(
+  state: BattleState,
+  unit: UnitState,
+  rng: Rng,
+  sink: GameEvent[],
+  cause: "manual" | "auto",
+): void {
+  if (isUnitRemoved(unit)) return;
+  const r = pushPilotingCheck(sink, unit, "ejection", EJECTION_BASE_MODIFIER, 0, rng);
   releaseClub(state, unit, "removed", sink);
   unit.removed = "pilotEjected";
   state.wrecks[hexKey(unit.position)] = {
-    unitId,
+    unitId: unit.id,
     level: wreckLevelFor(state, unit),
   };
-  state.actedThisPhase.push(unitId);
-  sink.push({ kind: "unitRemoved", unitId, reason: "pilotEjected" });
+  sink.push({ kind: "unitRemoved", unitId: unit.id, reason: "pilotEjected" });
+  if (!r.success) {
+    const damage = ejectionDamage(r);
+    if (damage > 0) applyPilotHits(state, unit, damage, "ejection", rng, sink);
+  }
+  if (cause === "manual") state.actedThisPhase.push(unit.id);
+}
+
+/** Pilot eject, resolved during the movement phase: the pilot abandons the
+ *  'Mech after an ejection PSR (see `resolveEjection`), the unit leaves the
+ *  battle (counted against victory like a wrecked hull), and a permanent wreck
+ *  occupies its hex. Available to any unit still on the board — including
+ *  shut-down and immobile ones. Wreck level is decided by `wreckLevelFor`
+ *  (TO rule: light chassis or prone posture reduce it to level 1). */
+export function ejectPilot(state: BattleState, unitId: string, rng: Rng, sink: GameEvent[]): void {
+  requirePhase(state, "movement");
+  const unit = requireUnit(state, unitId);
+  if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
+  resolveEjection(state, unit, rng, sink, "manual");
 }
 
 /** Voluntary shutdown declaration, resolved during the movement phase: the

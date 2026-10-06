@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { BattleState } from "../src/rules/game";
 import {
   advancePhase,
+  buildUnitInit,
   requireUnit,
   rollInitiativePhase,
   validateAttacksImpl,
@@ -20,24 +21,8 @@ function hbkVsEnf(): BattleState {
   const state = createTestBattle(
     [],
     [
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 4 },
-        facing: "n",
-      },
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 3, row: 4 },
-        facing: "sw",
-      },
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "n"),
+      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 4 }, "sw"),
     ],
     true,
   );
@@ -97,33 +82,9 @@ describe("validateAttacks — gate coverage", () => {
     const state = createTestBattle(
       [],
       [
-        {
-          id: "a",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 4 },
-          facing: "n",
-        },
-        {
-          id: "b",
-          model: "ENF-4R",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 3, row: 4 },
-          facing: "sw",
-        },
-        {
-          id: "c",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 5, row: 4 },
-          facing: "sw",
-        },
+        buildUnitInit("a", "HBK-4G", 0, { col: 2, row: 4 }, "n"),
+        buildUnitInit("b", "ENF-4R", 0, { col: 3, row: 4 }, "sw"),
+        buildUnitInit("c", "ENF-4R", 1, { col: 5, row: 4 }, "sw"),
       ],
       true,
     );
@@ -137,33 +98,9 @@ describe("validateAttacks — gate coverage", () => {
     const state = createTestBattle(
       [],
       [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 4 },
-          facing: "n",
-        },
-        {
-          id: "enf1",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 3, row: 4 },
-          facing: "sw",
-        },
-        {
-          id: "enf2",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 4, row: 4 },
-          facing: "sw",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "n"),
+        buildUnitInit("enf1", "ENF-4R", 1, { col: 3, row: 4 }, "sw"),
+        buildUnitInit("enf2", "ENF-4R", 1, { col: 4, row: 4 }, "sw"),
       ],
       true,
     );
@@ -190,24 +127,8 @@ describe("validateAttacks — gate coverage", () => {
     const state = createTestBattle(
       [],
       [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 4 },
-          facing: "n",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 3, row: 5 },
-          facing: "sw",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "n"),
+        buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 5 }, "sw"),
       ],
       true,
     );
@@ -224,24 +145,8 @@ describe("validateAttacks — gate coverage", () => {
     const state = createTestBattle(
       [],
       [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 4 },
-          facing: "n",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 3 },
-          facing: "s",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "n"),
+        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 3 }, "s"),
       ],
       true,
     );
@@ -267,24 +172,8 @@ describe("validateAttacks — gate coverage", () => {
     const state = createTestBattle(
       [],
       [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 5, row: 15 },
-          facing: "n",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 5, row: 5 },
-          facing: "s",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 5, row: 15 }, "n"),
+        buildUnitInit("enf", "ENF-4R", 1, { col: 5, row: 5 }, "s"),
       ],
       true,
       7,
@@ -327,24 +216,8 @@ describe("validateAttacks — gate coverage", () => {
     const state = createTestBattle(
       [],
       [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 4 },
-          facing: "n",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 3 },
-          facing: "s",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "n"),
+        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 3 }, "s"),
       ],
       true,
     );
@@ -381,24 +254,8 @@ describe("validateAttacks — gate coverage", () => {
     const state = createTestBattle(
       [],
       [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 4 },
-          facing: "n",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 3 },
-          facing: "s",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "n"),
+        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 3 }, "s"),
       ],
       true,
     );
@@ -413,24 +270,8 @@ describe("validateAttacks — gate coverage", () => {
     const state = createTestBattle(
       [],
       [
-        {
-          id: "hbk",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 4 },
-          facing: "n",
-        },
-        {
-          id: "enf",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 3 },
-          facing: "s",
-        },
+        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "n"),
+        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 3 }, "s"),
       ],
       true,
     );

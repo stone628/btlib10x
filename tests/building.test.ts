@@ -10,6 +10,7 @@ import {
 import {
   advancePhase,
   type BattleState,
+  buildUnitInit,
   collapseDamageTotal,
   damageBuildingAt,
   declareAttacks,
@@ -91,24 +92,8 @@ describe("water LOS blocking", () => {
 
 function battleWithBuilding(): BattleState {
   const units: UnitInit[] = [
-    {
-      id: "a",
-      model: "HBK-4G",
-      team: 0,
-      gunnery: 4,
-      piloting: 5,
-      position: { col: 2, row: 3 },
-      facing: "se",
-    },
-    {
-      id: "b",
-      model: "ENF-4R",
-      team: 1,
-      gunnery: 4,
-      piloting: 5,
-      position: { col: 2, row: 1 },
-      facing: "sw",
-    },
+    buildUnitInit("a", "HBK-4G", 0, { col: 2, row: 3 }, "se"),
+    buildUnitInit("b", "ENF-4R", 1, { col: 2, row: 1 }, "sw"),
   ];
   const terrain: readonly TerrainHexDef[] = [{ col: 3, row: 3, type: "lightBuilding" }];
   return createTestBattle(terrain, units, true);
@@ -160,24 +145,8 @@ describe("battle building integration", () => {
     const battle: BattleState = createTestBattle(
       [{ col: 3, row: 3, type: "mediumBuilding" }],
       [
-        {
-          id: "a",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 3 },
-          facing: "ne",
-        },
-        {
-          id: "b",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 3, row: 3 },
-          facing: "sw",
-        },
+        buildUnitInit("a", "HBK-4G", 0, { col: 2, row: 3 }, "ne"),
+        buildUnitInit("b", "ENF-4R", 1, { col: 3, row: 3 }, "sw"),
       ],
       true,
     );
@@ -211,42 +180,10 @@ describe("battle building integration", () => {
     const battle: BattleState = createTestBattle(
       [{ col: 3, row: 3, type: "lightBuilding" }],
       [
-        {
-          id: "a",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 3 },
-          facing: "ne",
-        },
-        {
-          id: "c",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 4, row: 3 },
-          facing: "nw",
-        },
-        {
-          id: "b",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 3, row: 3 },
-          facing: "sw",
-        },
-        {
-          id: "d",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 3, row: 3 },
-          facing: "ne",
-        },
+        buildUnitInit("a", "HBK-4G", 0, { col: 2, row: 3 }, "ne"),
+        buildUnitInit("c", "HBK-4G", 0, { col: 4, row: 3 }, "nw"),
+        buildUnitInit("b", "ENF-4R", 1, { col: 3, row: 3 }, "sw"),
+        buildUnitInit("d", "ENF-4R", 1, { col: 3, row: 3 }, "ne"),
       ],
       true,
     );
@@ -283,24 +220,8 @@ describe("battle building integration", () => {
     const battle: BattleState = createTestBattle(
       [{ col: 3, row: 3, type: "lightBuilding" }],
       [
-        {
-          id: "a",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 3 },
-          facing: "ne",
-        },
-        {
-          id: "b",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 3, row: 3 },
-          facing: "sw",
-        },
+        buildUnitInit("a", "HBK-4G", 0, { col: 2, row: 3 }, "ne"),
+        buildUnitInit("b", "ENF-4R", 1, { col: 3, row: 3 }, "sw"),
       ],
       true,
     );
@@ -335,24 +256,8 @@ describe("battle building integration", () => {
     const battle: BattleState = createTestBattle(
       [{ col: 3, row: 3, type: "lightBuilding", level: 2 }],
       [
-        {
-          id: "a",
-          model: "HBK-4G",
-          team: 0,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 2, row: 3 },
-          facing: "ne",
-        },
-        {
-          id: "b",
-          model: "ENF-4R",
-          team: 1,
-          gunnery: 4,
-          piloting: 5,
-          position: { col: 3, row: 3 },
-          facing: "sw",
-        },
+        buildUnitInit("a", "HBK-4G", 0, { col: 2, row: 3 }, "ne"),
+        buildUnitInit("b", "ENF-4R", 1, { col: 3, row: 3 }, "sw"),
       ],
       true,
     );

@@ -598,7 +598,7 @@ export function commitMovement(s: Session): SessionGameEvent[] {
     } else if (context.moveMode === "startup") {
       attemptVoluntaryStartup(battle, unitId, collected, s.rng);
     } else if (context.moveMode === "eject") {
-      ejectPilot(battle, unitId, collected);
+      ejectPilot(battle, unitId, s.rng, collected);
     } else if (isShutdown(unit) || unit.unconscious) {
       // Down unit committing any other movement mode: hold position and
       // pass (startup/shutdown/eject handled above; nothing else is legal

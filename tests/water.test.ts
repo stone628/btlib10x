@@ -3,7 +3,7 @@ import { cellAt } from "../src/core/terrain";
 import { mechDefFor } from "../src/data/index";
 import { effectiveMovement } from "../src/rules/critical";
 import type { GameEvent } from "../src/rules/game";
-import { executeMove, requireUnit, rollInitiativePhase } from "../src/rules/game";
+import { buildUnitInit, executeMove, requireUnit, rollInitiativePhase } from "../src/rules/game";
 import { losClear } from "../src/rules/los";
 import { reachableLandings } from "../src/rules/movement";
 import { createTestBattle, scriptedRng } from "./helpers";
@@ -12,24 +12,8 @@ function battle(terrain: Parameters<typeof createTestBattle>[0], startType?: str
   const state = createTestBattle(
     terrain,
     [
-      {
-        id: "enf",
-        model: "ENF-4R",
-        team: 0,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 2, row: 2 },
-        facing: "s",
-      },
-      {
-        id: "hbk",
-        model: "HBK-4G",
-        team: 1,
-        gunnery: 4,
-        piloting: 5,
-        position: { col: 1, row: 1 },
-        facing: "s",
-      },
+      buildUnitInit("enf", "ENF-4R", 0, { col: 2, row: 2 }, "s"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 1, row: 1 }, "s"),
     ],
     true,
   );

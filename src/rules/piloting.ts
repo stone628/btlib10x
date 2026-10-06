@@ -56,8 +56,24 @@ import type { UnitSkillRange } from "./game";
 /** Default pilot skill for `UnitInit`s that omit it (TW regular pilot). */
 export const DEFAULT_PILOTING: UnitSkillRange = 5;
 
-/** Pilot hits that kill the MechWarrior outright. */
-export const PILOT_HITS_DEAD = 6;
+/** Default pilot hit capacity (TW p.41-42): the sixth hit kills the MechWarrior.
+ *  `UnitInit.pilotHitMax` overrides it per pilot (tough / weak pilots). */
+export const DEFAULT_PILOT_HIT_MAX = 6;
+
+/** Ejection PSR base modifier (Tactical Operations). The Ejection Modifiers
+ *  Table values are not wired in yet; only the pilot's skill applies. */
+export const EJECTION_BASE_MODIFIER = 0;
+
+/** Pilot hits from a failed ejection PSR: floor(margin of failure / 2). */
+export function ejectionDamage(r: PilotingRollResult): number {
+  if (r.success) return 0;
+  return Math.floor((r.target - (r.roll ?? D2D6_MIN)) / 2);
+}
+
+/** True for a legal `pilotHitMax`: an integer >= 1. */
+export function isValidPilotHitMax(value: number): boolean {
+  return Number.isInteger(value) && value >= 1;
+}
 
 /** Damage in a single phase that forces a PSR (TW p.60). */
 export const PSR_DAMAGE_THRESHOLD = 20;
@@ -162,24 +178,29 @@ export function preexistingDamageModifier(
 }
 
 /**
- * Consciousness target numbers by pilot hits (TW p.42). Six hits kills
- * the pilot (see PILOT_HITS_DEAD).
+ * Consciousness target numbers by pilot hits for the default six-hit pilot
+ * (TW p.42); the sixth hit kills the pilot (see DEFAULT_PILOT_HIT_MAX).
  */
-const CONSCIOUSNESS_TARGETS: Readonly<Record<number, number>> = {
-  0: 0,
-  1: 3,
-  2: 5,
-  3: 7,
-  4: 10,
-  5: 11,
-};
+const CONSCIOUSNESS_TARGETS: readonly number[] = [0, 3, 5, 7, 10, 11];
 
 /** Tonnage divisor for falling-damage totals: ceil(tonnage / 10). */
 export const FALL_TONNAGE_DIVISOR = 10;
 /** Falling damage lands in clusters of this size (last group takes remnant). */
 export const FALL_CLUSTER_SIZE = 5;
-export function consciousnessTarget(hits: number): number | null {
-  return CONSCIOUSNESS_TARGETS[hits] ?? null;
+/**
+ * Consciousness target for a pilot with `hits` taken out of `hitMax`.
+ * `null` once `hits >= hitMax` (pilot dead). The TW six-hit table is scaled to
+ * `hitMax`: step = clamp(round(hits * 6 / hitMax), 1, 5). hitMax 6 is the
+ * printed table; 5 gives 3,5,10,11; 7 gives 3,5,7,7,10,11. Zero hits needs no roll.
+ */
+export function consciousnessTarget(
+  hits: number,
+  hitMax: number = DEFAULT_PILOT_HIT_MAX,
+): number | null {
+  if (hits >= hitMax) return null;
+  if (hits <= 0) return 0;
+  const step = Math.min(5, Math.max(1, Math.round((hits * DEFAULT_PILOT_HIT_MAX) / hitMax)));
+  return CONSCIOUSNESS_TARGETS[step] ?? null;
 }
 
 /** Roll one consciousness check: 2D6 >= target keeps the pilot awake. */
