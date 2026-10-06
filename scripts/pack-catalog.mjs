@@ -1,11 +1,18 @@
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const mechsDir = join(root, "data", "mechs");
-const mapsDir = join(root, "data", "maps");
-const outFile = join(root, "data", "btlib10x.jsonl");
+// Optional overrides: `--mechs <dir> --maps <dir|none> --out <file>`.
+const args = process.argv.slice(2);
+const opt = (name, fallback) => {
+  const i = args.indexOf(`--${name}`);
+  return i >= 0 && args[i + 1] !== undefined ? resolve(args[i + 1]) : fallback;
+};
+const mechsDir = opt("mechs", join(root, "data", "mechs"));
+const noMaps = args[args.indexOf("--maps") + 1] === "none";
+const mapsDir = opt("maps", join(root, "data", "maps"));
+const outFile = opt("out", join(root, "data", "btlib10x.jsonl"));
 
 /**
  * Packs the canonical `data/mechs/*.json` sheets and `data/maps/*.json`
@@ -14,6 +21,7 @@ const outFile = join(root, "data", "btlib10x.jsonl");
  * Line 0: string table (bare JSON array) — chassis names + weapon names in
  * first-seen pack order (mech manifest order, then weapons in p[], then
  * crit slots in LOCATIONS order).
+ * Lines 1+ are relaxed JSON (unquoted identifier keys; see src/data/relaxed-json.ts).
  * Line 1: manifest `{v, mechs, maps}` with absolute file line numbers
  * (mech `n` is a numeric index into the string table; `l >= 2`).
  * Lines 2+: compact wire lines (maps carry only `t`; name/size live in the manifest) — weapon names are numeric string-table indices; no `s` field.
@@ -69,7 +77,7 @@ const STRUCTURE_NAMES = [
   "targetingComputer",
   "hip",
 ];
-const SOAK_NAMES = ["endoSteel", "ferroFibrous", "case", "caseII", "tsm"];
+const SOAK_NAMES = ["endoSteel", "ferroFibrous", "case", "caseII", "tsm", "equipment"];
 const MYOMER_IDS = { Standard: 1, "Triple Strength Myomer": 2 };
 const TERRAIN_TYPES = [
   "clear",
@@ -91,6 +99,23 @@ const TECHBASE_CODES = {
   Clan: 2,
 };
 
+// Relaxed JSON: mirror of src/data/relaxed-json.ts `encodeRelaxed` (identifier
+// keys unquoted). Mech/map wire lines and the manifest use it; line 0 (a bare
+// string array) is plain JSON.
+const IDENT_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+function encodeRelaxed(value) {
+  if (Array.isArray(value)) return `[${value.map(encodeRelaxed).join(",")}]`;
+  if (typeof value === "object" && value !== null) {
+    const parts = [];
+    for (const [k, v] of Object.entries(value)) {
+      if (v === undefined) continue;
+      parts.push(`${IDENT_RE.test(k) ? k : JSON.stringify(k)}:${encodeRelaxed(v)}`);
+    }
+    return `{${parts.join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
 // String interning (first-seen order)
 const strings = [];
 const stringIndex = new Map();
@@ -102,6 +127,12 @@ function intern(value) {
     strings.push(value);
     stringIndex.set(value, idx);
   }
+  return idx;
+}
+
+function nameIndex(table, name) {
+  const idx = table.indexOf(name);
+  if (idx < 0) throw new Error(`pack-catalog: unknown slot name ${JSON.stringify(name)}`);
   return idx;
 }
 
@@ -131,15 +162,15 @@ function encodeMechDef(def) {
         case "ammo":
           return { k: KIND_IDS.ammo, w: intern(slot.weapon) };
         case "structure":
-          return { k: KIND_IDS.structure, n: STRUCTURE_NAMES.indexOf(slot.name) };
+          return { k: KIND_IDS.structure, n: nameIndex(STRUCTURE_NAMES, slot.name) };
         case "soak":
-          return { k: KIND_IDS.soak, n: SOAK_NAMES.indexOf(slot.name) };
+          return { k: KIND_IDS.soak, n: nameIndex(SOAK_NAMES, slot.name) };
         default:
           throw new Error(`pack-catalog: unknown slot kind ${JSON.stringify(slot.kind)}`);
       }
     });
   }
-  return JSON.stringify({
+  return encodeRelaxed({
     v: 1,
     w: def.walking,
     r: def.running,
@@ -153,7 +184,7 @@ function encodeMechDef(def) {
 }
 
 function encodeMapDef(src) {
-  return JSON.stringify({
+  return encodeRelaxed({
     v: 1,
     t: src.terrain.map((hex) => ({
       c: hex.col,
@@ -167,9 +198,7 @@ function encodeMapDef(src) {
 const mechFiles = readdirSync(mechsDir)
   .filter((f) => f.endsWith(".json"))
   .sort();
-const mapFiles = readdirSync(mapsDir)
-  .filter((f) => f.endsWith(".json"))
-  .sort();
+const mapFiles = (noMaps ? [] : readdirSync(mapsDir)).filter((f) => f.endsWith(".json")).sort();
 
 const wireLines = [];
 const mechEntries = [];
@@ -235,7 +264,7 @@ for (const file of mapFiles) {
 
 // Build output: string table (line 0), manifest (line 1), wire lines (2+)
 const stringTableLine = JSON.stringify(strings);
-const manifestLine = JSON.stringify({ v: 1, mechs: mechEntries, maps: mapEntries });
+const manifestLine = encodeRelaxed({ v: 1, mechs: mechEntries, maps: mapEntries });
 const output = `${stringTableLine}\n${manifestLine}\n${wireLines.join("\n")}\n`;
 
 writeFileSync(outFile, output);

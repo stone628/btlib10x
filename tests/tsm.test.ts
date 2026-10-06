@@ -21,6 +21,7 @@ import {
 import type { Location } from "../src/core/types";
 import { loadCatalog } from "../src/data/catalog";
 import { decodeMechLine, encodeMechDef } from "../src/data/mech.codec";
+import { decodeRelaxed } from "../src/data/relaxed-json";
 import { effectiveMovement, TSM_WALK_BONUS } from "../src/rules/critical";
 import type { UnitDamageState } from "../src/rules/damage";
 import { physicalDamage, resolvePhysicalAttack } from "../src/rules/physical";
@@ -162,8 +163,8 @@ describe("myomer wire key y", () => {
   it("round-trips Standard as 1 and TSM as 2", () => {
     expect(stdRaw.myomer).toBe("Standard");
     expect(tsmRaw.myomer).toBe("Triple Strength Myomer");
-    expect((JSON.parse(encodeMechDef(stdRaw, [])) as { y: number }).y).toBe(1);
-    expect((JSON.parse(encodeMechDef(tsmRaw, [])) as { y: number }).y).toBe(2);
+    expect((decodeRelaxed(encodeMechDef(stdRaw, [])) as { y: number }).y).toBe(1);
+    expect((decodeRelaxed(encodeMechDef(tsmRaw, [])) as { y: number }).y).toBe(2);
     expect(decodeMechLine(encodeMechDef(stdRaw, []), id, strings).myomer).toBe("Standard");
     expect(decodeMechLine(encodeMechDef(tsmRaw, []), id, strings).myomer).toBe(
       "Triple Strength Myomer",
@@ -171,7 +172,7 @@ describe("myomer wire key y", () => {
   });
 
   it("defaults a missing y to Standard and rejects unknown ids", () => {
-    const wire = JSON.parse(encodeMechDef(stdRaw, [])) as Record<string, unknown>;
+    const wire = decodeRelaxed(encodeMechDef(stdRaw, [])) as Record<string, unknown>;
     delete wire.y;
     expect(decodeMechLine(JSON.stringify(wire), id, strings).myomer).toBe("Standard");
     expect(() => decodeMechLine(JSON.stringify({ ...wire, y: 3 }), id, strings)).toThrow(/myomer/);

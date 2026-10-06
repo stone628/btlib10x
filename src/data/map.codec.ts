@@ -1,5 +1,6 @@
 import { TERRAIN_TYPES, type TerrainType } from "../core/types";
 import type { MapDefSrc } from "./map.schema";
+import { decodeRelaxed, encodeRelaxed } from "./relaxed-json";
 
 /**
  * Compact wire form of `MapDefSrc` for the unified catalog
@@ -21,7 +22,7 @@ function fail(msg: string): never {
 
 /** Encode a canonical map source into one minified JSONL line. Wire mirror lives in `scripts/pack-catalog.mjs`. */
 export function encodeMapDef(src: MapDefSrc): string {
-  return JSON.stringify({
+  return encodeRelaxed({
     v: MAP_WIRE_VERSION,
     t: src.terrain.map((hex) => ({
       c: hex.col,
@@ -43,7 +44,7 @@ export interface MapIdentity {
 export function decodeMapLine(line: string, identity: MapIdentity): MapDefSrc {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(line) as unknown;
+    parsed = decodeRelaxed(line);
   } catch {
     throw new Error("Invalid map line: not JSON");
   }
