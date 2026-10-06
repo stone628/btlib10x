@@ -52,6 +52,7 @@ import {
   classifyFiringArc,
   defenderArcChoice,
   effectiveFacingForTwist,
+  twistDelta,
   weaponCanFireIntoArc,
 } from "./arcs";
 import { type AttackResolution, PARTIAL_COVER_TERRAIN_MOD, resolveWeaponAttack } from "./attack";
@@ -1920,6 +1921,9 @@ export function validateAttacksImpl(
   }
   const sensorMod = sensorAttackModifier(sensorsOut);
   const effectiveFacing = effectiveFacingForTwist(unit.facing, options.twist ?? null);
+  if (unit.prone && twistDelta(options.twist ?? "front") !== 0) {
+    throw new Error(`${unitId} cannot twist torso while prone`);
+  }
   if (wantWeapons && unit.prone) {
     if (
       isUnitLocationDestroyed(unit.baseDamage, "leftArm") ||
