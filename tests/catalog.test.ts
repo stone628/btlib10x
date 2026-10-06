@@ -25,6 +25,7 @@ import {
 } from "../src/data/index";
 import { resolveStringRef } from "../src/data/mech.codec";
 import { purgeMechDefs } from "../src/data/mech.schema";
+import { decodeRelaxed, encodeRelaxed } from "../src/data/relaxed-json";
 
 const TEXT = readFileSync(new URL("../data/btlib10x.jsonl", import.meta.url), "utf8");
 const STRINGS: CatalogStringTable = parseCatalogStrings(JSON.parse(TEXT.split("\n")[0]!));
@@ -176,7 +177,7 @@ describe("catalog registration", () => {
 
   it("keeps identity single-sourced: wire lines carry no model/name/techBase/tonnage", () => {
     for (const entry of MANIFEST.mechs) {
-      const wire = JSON.parse(mechLine(entry)) as Record<string, unknown>;
+      const wire = decodeRelaxed(mechLine(entry)) as Record<string, unknown>;
       for (const key of ["m", "n", "t", "b", "model", "name", "tonnage", "techBase"]) {
         expect(wire, `${entry.model}.${key}`).not.toHaveProperty(key);
       }
@@ -201,5 +202,31 @@ describe("catalog registration", () => {
     }
     expect(registeredMechDefs().length).toBe(MANIFEST.mechs.length);
     expect(registeredMapDefs().length).toBe(MANIFEST.maps.length);
+  });
+});
+
+describe("relaxed json", () => {
+  it("drops key quotes and still parses plain JSON", () => {
+    expect(encodeRelaxed({ a: 1, b: "asdf" })).toBe('{a:1,b:"asdf"}');
+    expect(encodeRelaxed({ "a-b": [1, { c: null }], d: true })).toBe('{"a-b":[1,{c:null}],d:true}');
+    expect(decodeRelaxed('{a:1,b:"asdf"}')).toEqual({ a: 1, b: "asdf" });
+    expect(decodeRelaxed(' { "a" : [ 1 , -2.5e1 ] , b : { } } ')).toEqual({ a: [1, -25], b: {} });
+    expect(decodeRelaxed('{s:"x:\\"y\\",z"}')).toEqual({ s: 'x:"y",z' });
+  });
+
+  it("rejects malformed input", () => {
+    for (const bad of ["", "{a:}", "{a:1", "[1,", '{a:"x}', "{1:2}", "{a:1} x", "nope"]) {
+      expect(() => decodeRelaxed(bad), bad).toThrow(/relaxed JSON/);
+    }
+  });
+
+  it("stores every mech and map line as relaxed JSON", () => {
+    for (const entry of [...MANIFEST.mechs, ...MANIFEST.maps]) {
+      const line = LINES[entry.line]!;
+      const value = decodeRelaxed(line);
+      expect(encodeRelaxed(value)).toBe(line);
+      expect(line.length).toBeLessThan(JSON.stringify(value).length);
+      expect(line).not.toMatch(/"[A-Za-z]+":/);
+    }
   });
 });

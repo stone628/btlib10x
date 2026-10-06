@@ -4,6 +4,7 @@ import { mapDef, registerMap, registerMaps } from "./map.schema";
 import { decodeMechLine, type MechIdentity, resolveStringRef } from "./mech.codec";
 import type { ResolvedMechDef } from "./mech.schema";
 import { mechDef, registerMech, registerMechs } from "./mech.schema";
+import { decodeRelaxed } from "./relaxed-json";
 
 /**
  * Unified catalog (`data/btlib10x.jsonl`): line 0 is the string table (a
@@ -164,7 +165,7 @@ export function loadCatalog(text: string): CatalogManifest {
   if (first === undefined || second === undefined)
     throw new Error("Invalid catalog: missing lines");
   const strings = parseCatalogStrings(JSON.parse(first));
-  const manifest = parseCatalogManifest(JSON.parse(second), strings);
+  const manifest = parseCatalogManifest(decodeRelaxed(second), strings);
   for (const entry of [...manifest.mechs, ...manifest.maps]) {
     if (entry.line >= lines.length) {
       throw new Error(`Invalid catalog: entry line ${entry.line} out of range`);

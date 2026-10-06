@@ -2,11 +2,13 @@ import type { Location } from "../core/types";
 import { LOCATIONS } from "../core/types";
 import type { CritSlots, HeatSinkConfig, MechDef, RearArmorKey } from "./mech.schema";
 import { CRIT_SOAK_NAMES, CRIT_STRUCTURE_NAMES, weightClassForTonnage } from "./mech.schema";
+import { decodeRelaxed, encodeRelaxed } from "./relaxed-json";
 
 /**
  * Compact wire form of a `MechDef` body for the packed catalog
  * (`data/btlib10x.jsonl`).
  *
+ * Lines are relaxed JSON (`relaxed-json.ts`: unquoted identifier keys).
  * Short keys regardless of transport compression: object keys shrink to 1-2
  * chars and closed vocabularies (slot kinds, structure/soak names,
  * heat-sink type, locations) become small ints. Identity
@@ -148,7 +150,7 @@ export function encodeMechDef(def: MechDef, strings: string[] = []): string {
     h: { t: def.heatsink.type === "double" ? 1 : 0, c: def.heatsink.count },
     y: MYOMER_IDS[def.myomer],
   };
-  return JSON.stringify(wire);
+  return encodeRelaxed(wire);
 }
 
 /**
@@ -165,7 +167,7 @@ export function decodeMechLine(
 ): MechDef {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(line) as unknown;
+    parsed = decodeRelaxed(line);
   } catch {
     throw new Error("Invalid mech line: not JSON");
   }
