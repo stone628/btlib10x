@@ -536,6 +536,10 @@ export const kr: Catalog = {
   "log.shutdown":
     "[{id}] *** 셧다운 (발열 {heat} >= {threshold}) 회피 실패(2D6 = {roll} < {avoid}) ***",
   "log.shutdownAuto": "[{id}] *** 자동 셧다운 (발열 {heat} >= {threshold}) ***",
+  "log.shutdownUnconscious":
+    "[{id}] *** 셧다운 (발열 {heat} >= {threshold}) 파일럿 의식불명으로 회피 불가 ***",
+  "log.restartBlockedHeat": "[{id}] 재기동 불가: 발열 {heat}이(가) 30 미만으로 내려가야 함",
+  "log.restartBlockedUnconscious": "[{id}] 재기동 불가: 파일럿 의식불명 (발열 {heat} >= 14)",
   "log.shutdownAvoided":
     "[{id}] 셧다운 회피 (발열 {heat} >= {threshold}) 회피 성공(2D6 = {roll} >= {avoid})",
   "log.restarted": "[{id}] 재기동됨 (발열 {heat} < {threshold}) 회피 성공(2D6 = {roll} > {avoid})",
@@ -701,7 +705,7 @@ export const kr: Catalog = {
   "table.heat.col.mp": "MP 페널티",
   "table.heat.col.shutdown": "셧다운",
   "table.heat.col.ammo": "탄약 유폭",
-  "table.heat.shutdownAuto": "자동 (12)",
+  "table.heat.shutdownAuto": "자동",
   "table.heat.shutdownSafe": "—",
   "table.heat.ammoSafe": "—",
 

@@ -324,6 +324,8 @@ export type RemovalReason = "destroyed" | "pilotEjected" | "pilotKilled";
 export type RemovedState = "not" | RemovalReason;
 export type ActorPhase = "movement" | "attack";
 export type Phase = "initiative" | ActorPhase | "end";
+export type ShutdownCheckResult = "heat" | "shutdown" | "unconscious" | "manual" | "avoid";
+export type RestartCheckResult = "success" | "fail" | "heat" | "unconscious";
 
 export type UnitFallReason =
   | "legDestroyed"
@@ -619,8 +621,11 @@ export type GameEvent =
   | {
       readonly kind: "shutdownCheck";
       readonly unitId: string;
-      readonly avoided: boolean;
+      readonly result: ShutdownCheckResult;
+      // readonly avoided: boolean;
       readonly manual: boolean;
+      /** Unconscious pilot: no avoid roll was allowed (TW p.160). */
+      // readonly unconscious?: boolean;
       readonly roll: number;
       readonly heat: number;
       readonly avoid: number;
@@ -629,8 +634,11 @@ export type GameEvent =
   | {
       readonly kind: "restartCheck";
       readonly unitId: string;
-      readonly success: boolean;
+      // readonly success: boolean;
+      readonly result: RestartCheckResult;
       readonly manual: boolean;
+      /** Set when no roll was allowed: heat 30+ or an unconscious pilot. */
+      // readonly blocked?: "heat" | "unconscious";
       readonly roll: number;
       readonly heat: number;
       readonly avoid: number;
@@ -4133,7 +4141,6 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
     // next initiative roll).
     if (unit.shutdown !== "manual" && unit.shutdown !== "starting") {
       const { avoid, threshold } = shutdownAvoidWithThreshold(endHeat);
-
       if (unit.shutdown === "heat") {
         // Already heat-shut-down: restart path.
         if (avoid === 0) {
@@ -4141,11 +4148,35 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
           sink.push({
             kind: "restartCheck",
             unitId: unit.id,
-            success: true,
+            result: "success",
             manual: false,
             roll: 0,
             heat: endHeat,
             avoid: 0,
+            threshold,
+          });
+        } else if (avoid > D2D6_MAX) {
+          // p.159-160: no restart at 30+ heat
+          sink.push({
+            kind: "restartCheck",
+            unitId: unit.id,
+            result: "heat",
+            manual: false,
+            roll: 0,
+            heat: endHeat,
+            avoid,
+            threshold,
+          });
+        } else if (unit.unconscious) {
+          // an unconscious pilot cannot attempt one (only the below-14 automatic restart works).
+          sink.push({
+            kind: "restartCheck",
+            unitId: unit.id,
+            result: "unconscious",
+            manual: false,
+            roll: 0,
+            heat: endHeat,
+            avoid,
             threshold,
           });
         } else {
@@ -4155,7 +4186,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
             sink.push({
               kind: "restartCheck",
               unitId: unit.id,
-              success: true,
+              result: "success",
               manual: false,
               roll,
               heat: endHeat,
@@ -4166,7 +4197,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
             sink.push({
               kind: "restartCheck",
               unitId: unit.id,
-              success: false,
+              result: "fail",
               manual: false,
               roll,
               heat: endHeat,
@@ -4177,14 +4208,27 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
         }
       } else if (avoid > 0) {
         // Online unit — initial check.
-        if (avoid >= D2D6_MAX) {
-          // 30+ heat: auto-shutdown (TW p.160 "Shutdown cannot be avoided
-          // at 30+ heat").
+        if (avoid > D2D6_MAX) {
+          // 30+ heat: auto-shutdown (TW p.160 "Shutdown cannot be avoided at 30+ heat")
           unit.shutdown = "heat";
           sink.push({
             kind: "shutdownCheck",
             unitId: unit.id,
-            avoided: false,
+            result: "heat",
+            manual: false,
+            roll: 0,
+            heat: endHeat,
+            avoid,
+            threshold,
+          });
+          shutdownFallCheck(state, unit, rng, sink);
+        } else if (unit.unconscious) {
+          // an unconscious pilot cannot override it either.
+          unit.shutdown = "heat";
+          sink.push({
+            kind: "shutdownCheck",
+            unitId: unit.id,
+            result: "unconscious",
             manual: false,
             roll: 0,
             heat: endHeat,
@@ -4198,7 +4242,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
             sink.push({
               kind: "shutdownCheck",
               unitId: unit.id,
-              avoided: true,
+              result: "avoid",
               manual: false,
               roll,
               heat: endHeat,
@@ -4210,7 +4254,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
             sink.push({
               kind: "shutdownCheck",
               unitId: unit.id,
-              avoided: false,
+              result: "shutdown",
               manual: false,
               roll,
               heat: endHeat,
@@ -4736,9 +4780,8 @@ export function ejectPilot(state: BattleState, unitId: string, rng: Rng, sink: G
 
 /** Voluntary shutdown declaration, resolved during the movement phase: the
  *  unit goes off-line ("manual") immediately and stays down until a
- *  successful voluntary startup. The shutdown itself forces the immediate
- *  +3 PSR like any reactor shutdown (TW p.60). Marks the unit as having
- *  acted. */
+ *  successful voluntary startup. Unlike an involuntary shutdown it forces no
+ *  PSR (TW p.160). Marks the unit as having acted. */
 export function voluntaryShutdown(state: BattleState, unitId: string, sink: GameEvent[]): void {
   requirePhase(state, "movement");
   const unit = requireUnit(state, unitId);
@@ -4749,7 +4792,7 @@ export function voluntaryShutdown(state: BattleState, unitId: string, sink: Game
   sink.push({
     kind: "shutdownCheck",
     unitId,
-    avoided: false,
+    result: "manual",
     manual: true,
     roll: 0,
     heat: unit.heat,
@@ -4776,14 +4819,42 @@ export function attemptVoluntaryStartup(
   if (unit.shutdown === "starting") throw new Error(`${unitId} is already starting up`);
   const heat = unit.heat;
   const avoid = shutdownAvoid(heat);
-  const roll = avoid === 0 ? 0 : roll2D6(rng);
   state.actedThisPhase.push(unitId);
+  if (avoid > D2D6_MAX) {
+    // No roll: heat 30+ blocks restart
+    sink.push({
+      kind: "restartCheck",
+      unitId,
+      result: "heat",
+      manual: true,
+      roll: 0,
+      heat,
+      avoid,
+      threshold: 0,
+    });
+    return;
+  }
+  if (avoid > 0 && unit.unconscious) {
+    // an unconscious pilot cannot attempt one.
+    sink.push({
+      kind: "restartCheck",
+      unitId,
+      result: "unconscious",
+      manual: true,
+      roll: 0,
+      heat,
+      avoid,
+      threshold: 0,
+    });
+    return;
+  }
+  const roll = avoid === 0 ? 0 : roll2D6(rng);
   if (roll >= avoid) {
     unit.shutdown = "starting";
     sink.push({
       kind: "restartCheck",
       unitId,
-      success: true,
+      result: "success",
       manual: true,
       roll,
       heat,
@@ -4794,7 +4865,7 @@ export function attemptVoluntaryStartup(
     sink.push({
       kind: "restartCheck",
       unitId,
-      success: false,
+      result: "fail",
       manual: true,
       roll,
       heat,
@@ -4894,7 +4965,7 @@ function actorToQueueView(actor: UnitState, forcePriority?: boolean): ActorQueue
   return {
     id: actor.id,
     team: actor.team,
-    hasPriority: forcePriority ?? (actor.shutdown === "manual" || actor.shutdown === "heat"),
+    hasPriority: forcePriority ?? isShutdown(actor),
   };
 }
 

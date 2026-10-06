@@ -1340,7 +1340,7 @@ function handleSessionGameEvent(
         idLines(e.unitId, i18n("log.shutdownManual", { id: e.unitId }));
         break;
       }
-      if (e.avoided) {
+      if (e.result === "avoid") {
         idLines(
           e.unitId,
           i18n("log.shutdownAvoided", {
@@ -1353,7 +1353,14 @@ function handleSessionGameEvent(
         );
         break;
       }
-      if (e.avoid >= D2D6_MAX) {
+      if (e.result === "unconscious") {
+        idLines(
+          e.unitId,
+          i18n("log.shutdownUnconscious", { id: e.unitId, heat: e.heat, threshold: e.threshold }),
+        );
+        break;
+      }
+      if (e.avoid > D2D6_MAX) {
         idLines(
           e.unitId,
           i18n("log.shutdownAuto", { id: e.unitId, heat: e.heat, threshold: e.threshold }),
@@ -1372,64 +1379,65 @@ function handleSessionGameEvent(
       );
       break;
     case "restartCheck":
-      if (e.manual && e.success) {
-        idLines(
-          e.unitId,
-          i18n("log.startupSuccess", {
-            id: e.unitId,
-            roll: e.roll,
-            heat: e.heat,
-            avoid: e.avoid,
-          }),
-        );
-        break;
+      switch (e.result) {
+        case "heat":
+          idLines(e.unitId, i18n("log.restartBlockedHeat", { id: e.unitId, heat: e.heat }));
+          break;
+        case "unconscious":
+          idLines(e.unitId, i18n("log.restartBlockedUnconscious", { id: e.unitId, heat: e.heat }));
+          break;
+        case "fail":
+          if (e.manual) {
+            idLines(
+              e.unitId,
+              i18n("log.startupFailed", {
+                id: e.unitId,
+                roll: e.roll,
+                heat: e.heat,
+                avoid: e.avoid,
+              }),
+            );
+          } else {
+            idLines(
+              e.unitId,
+              i18n("log.restartFailed", {
+                id: e.unitId,
+                roll: e.roll,
+                heat: e.heat,
+                avoid: e.avoid,
+                threshold: e.threshold,
+              }),
+            );
+          }
+          break;
+        case "success":
+          if (e.manual) {
+            idLines(
+              e.unitId,
+              i18n("log.startupSuccess", {
+                id: e.unitId,
+                roll: e.roll,
+                heat: e.heat,
+                avoid: e.avoid,
+              }),
+            );
+          } else {
+            idLines(
+              e.unitId,
+              i18n("log.startupFailed", {
+                id: e.unitId,
+                roll: e.roll,
+                heat: e.heat,
+                avoid: e.avoid,
+              }),
+            );
+          }
+          break;
+        default: {
+          const unreachable: never = e;
+          throw new Error(unreachable);
+        }
       }
-      if (e.manual) {
-        idLines(
-          e.unitId,
-          i18n("log.startupFailed", {
-            id: e.unitId,
-            roll: e.roll,
-            heat: e.heat,
-            avoid: e.avoid,
-          }),
-        );
-        break;
-      }
-      if (e.success && e.avoid === 0) {
-        idLines(
-          e.unitId,
-          i18n("log.restartedNoCheck", {
-            id: e.unitId,
-            heat: e.heat,
-            threshold: e.threshold,
-          }),
-        );
-        break;
-      }
-      if (e.success) {
-        idLines(
-          e.unitId,
-          i18n("log.restarted", {
-            id: e.unitId,
-            roll: e.roll,
-            heat: e.heat,
-            avoid: e.avoid,
-            threshold: e.threshold,
-          }),
-        );
-        break;
-      }
-      idLines(
-        e.unitId,
-        i18n("log.restartFailed", {
-          id: e.unitId,
-          roll: e.roll,
-          heat: e.heat,
-          avoid: e.avoid,
-          threshold: e.threshold,
-        }),
-      );
       break;
     case "ammoExplosionCheck":
       if (e.avoided) {

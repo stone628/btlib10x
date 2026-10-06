@@ -551,6 +551,11 @@ export const en = {
   "log.shutdown":
     "[{id}] *** SHUT DOWN (heat {heat} >= {threshold}) avoid fail (2D6 = {roll} < {avoid}) ***",
   "log.shutdownAuto": "[{id}] *** AUTO SHUTDOWN (heat {heat} >= {threshold}) ***",
+  "log.shutdownUnconscious":
+    "[{id}] *** SHUT DOWN (heat {heat} >= {threshold}) unconscious pilot cannot override ***",
+  "log.restartBlockedHeat": "[{id}] cannot restart: heat {heat} must fall below 30",
+  "log.restartBlockedUnconscious":
+    "[{id}] cannot restart: pilot unconscious (heat {heat} is 14 or above)",
   "log.shutdownAvoided":
     "[{id}] avoids shutdown (heat {heat} >= {threshold}) avoid success(2D6 = {roll} >= {avoid})",
   "log.restarted":
@@ -722,7 +727,7 @@ export const en = {
   "table.heat.col.mp": "MP Penalty",
   "table.heat.col.shutdown": "Shutdown",
   "table.heat.col.ammo": "Ammo Explode",
-  "table.heat.shutdownAuto": "auto (12)",
+  "table.heat.shutdownAuto": "auto",
   "table.heat.shutdownSafe": "—",
   "table.heat.ammoSafe": "—",
 
