@@ -33,7 +33,10 @@ import {
 import { isUnitLocationDestroyed, type UnitDamageState } from "./damage";
 import { maxMovePoints } from "./movement";
 
-export const HEAT_CAP = 50;
+/** Top of the printed Heat Scale (TW p. 159 record sheet: 0 to 30).
+ *  Heat above 30 is tracked unbounded in the Heat Overflow box — never clamped —
+ *  and must be dissipated before the scale can drop below 30. */
+export const HEAT_SCALE_MAX = 30;
 
 /** Engine rating divisor per internal sink. */
 const ENGINE_RATING_PER_SINK = 25;

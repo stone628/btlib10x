@@ -293,8 +293,9 @@ consumers observe the winner through the `initiative` event and `actorQueue`.
 
 ### Heat (`rules/heat.ts`)
 
-Heat is a public subsystem. Constants: `HEAT_CAP = 50`,
-`AMMO_EXPLOSION_START_HEAT = 19`. Helpers:
+Heat is a public subsystem. Constants: `HEAT_SCALE_MAX = 30` (top of the
+printed scale; heat above 30 tracks unbounded in the overflow box per TW
+p. 159, never clamped), `AMMO_EXPLOSION_START_HEAT = 19`. Helpers:
 
 - `effectiveMoveBudget(mode, movement, heat): number`
 - `heatDissipation(def, damage, critSlotsDestroyed): number` — dry dissipation
@@ -325,10 +326,11 @@ Engine-internal heat plumbing (source-module import only): `movementHeat`,
 Per TW p.159, the heat scale updates once at the heat phase: own heat
 (movement + weapon + posture + engine crit, summed into `unit.heatPending`
 during their producing phases) lands on the scale, dissipation subtracts,
-and the result is the new `unit.heat`. The shutdown/restart and ammo-
-explosion checks then read `max(startHeat, endHeat)` (the worst the scale
-reached between phase entry and phase exit). Peak within the heat phase
-has no separate meaning.
+and the result is the new `unit.heat`. There is no upper clamp: heat above
+30 persists in the overflow box and dissipates over later turns. The
+shutdown/restart and ammo-explosion checks then read `endHeat`
+(the post-dissipation Heat Scale per TW p.159 net update). Peak within
+the heat phase has no separate meaning.
 
 Engine crit heat is skipped for any non-online unit (`shutdown !== "not"`)
 per TW p.160: *"even engine criticals generate no extra heat while shut

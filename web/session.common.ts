@@ -22,7 +22,7 @@ import {
   ENGINE_SLOTS_KILL,
   GYRO_DESTROYED_HITS,
   GYRO_HIT_MOD,
-  HEAT_CAP,
+  HEAT_SCALE_MAX,
   type HexCoord,
   heatDissipation,
   heatDissipationMax,
@@ -493,7 +493,7 @@ function armorDiagramSheet(view: SheetView): string[] {
   const pRT = p(RT);
   const statusHeader = shutdownHeader(view).padEnd(CT);
   const heatHeader = "[HEAT]".padStart(CT);
-  const heat = cell(view.heat, HEAT_CAP, " ").padStart(CT);
+  const heat = cell(view.heat, HEAT_SCALE_MAX, " ").padStart(CT);
   const dissip = cell(-view.dissipCurr, view.dissipMax, " ").padStart(CT);
   const el = engineLifeSupport(view).padEnd(CT);
   const gs = gyroSensors(view).padEnd(CT);
@@ -943,7 +943,7 @@ function mechStatusLines(view: SheetView): string[] {
         ? i18n("sheet.statusStarting")
         : i18n("sheet.statusShutdown");
   const lines: string[] = [
-    i18n("sheet.statusHeader", { status, currHeat: view.heat, maxHeat: HEAT_CAP }),
+    i18n("sheet.statusHeader", { status, currHeat: view.heat, maxHeat: HEAT_SCALE_MAX }),
     `  ${durabilityFrag(view, "head")} ${durabilityFrag(view, "leftTorso")} ${durabilityFrag(view, "centerTorso")} ${durabilityFrag(view, "rightTorso")}`,
     `  ${durabilityFrag(view, "leftArm")} ${durabilityFrag(view, "rightArm")} ${durabilityFrag(view, "leftLeg")} ${durabilityFrag(view, "rightLeg")}`,
   ];

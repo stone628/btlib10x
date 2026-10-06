@@ -96,7 +96,6 @@ import {
   ammoExplosionAvoidWithThreshold,
   effectiveMoveBudget,
   engineHitHeat,
-  HEAT_CAP,
   heatDissipation,
   heatDissipationMax,
   isTsmActive,
@@ -390,7 +389,8 @@ export interface UnitState extends MechModelHolder {
   movesThisTurn: ("forward" | "backward")[];
   jumpedThisTurn: boolean;
   mpSpent: number;
-  /** Current heat scale value, capped at {@link HEAT_CAP}. Movement and
+  /** Current heat scale value (TW p. 159: 0-30 scale plus unbounded
+   *  overflow above 30). Movement and
    *  weapon heat accumulate during the turn; dissipation runs in the end
    *  phase. */
   heat: number;
@@ -3902,7 +3902,10 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
       : 0;
     const totalGenerated = heatPending + engineHeat;
     if (totalGenerated > 0) {
-      unit.heat = Math.min(HEAT_CAP, unit.heat + totalGenerated);
+      // TW p. 159: no upper clamp — heat above 30 tracks unbounded in the
+      // overflow box and dissipates over later turns. Clamping here would
+      // discard heat before the sinks below ever see it.
+      unit.heat = unit.heat + totalGenerated;
       if (engineHeat > 0) {
         sink.push({
           kind: "heatEngineCrit",
