@@ -170,14 +170,17 @@ function parseMtf(text, file) {
     }
     // Variants may be parenthesised ("(Standard)") or spaced ("C 2"); fold
     // them into a single token for the catalog key. Policy when the sheet has
-    // no variant id: Clan OmniMechs become "<prefix>-Prime"; Clan BattleMechs
+    // no variant id (empty or "(Standard)"): Clan OmniMechs become "<prefix>-Prime"; Clan BattleMechs
     // (standard or IIC) keep the bare "<prefix>".
     const isOmni = /^Biped Omni/i.test(fields.Config ?? "");
-    const variantKey = variant
-      ? variant.replace(/[()]/g, "").trim().replace(/\s+/g, "-")
-      : isOmni
-        ? "Prime"
-        : "";
+    // "(Standard)" is the sheets' placeholder for "no variant id".
+    const bareVariant = variant.replace(/[()]/g, "").trim();
+    const variantKey =
+      bareVariant && !/^standard$/i.test(bareVariant)
+        ? bareVariant.replace(/\s+/g, "-")
+        : isOmni
+          ? "Prime"
+          : "";
     model = variantKey ? `${entry.prefix}-${variantKey}` : entry.prefix;
     name = entry.name;
   } else {
@@ -416,6 +419,7 @@ let generated = 0;
 let skipped = 0;
 mkdirSync(outDir, { recursive: true });
 let nonBiped = 0;
+let mixed = 0;
 const written = new Map();
 for (const file of files) {
   const text = readFileSync(join(mtfDir, file), "utf8");
@@ -423,6 +427,11 @@ for (const file of files) {
   const config = /^Config:\s*(.*?)\s*$/m.exec(text)?.[1];
   if (config !== undefined && !/^Biped/i.test(config)) {
     nonBiped++;
+    continue;
+  }
+  // Mixed tech base sheets are not supported yet.
+  if (/^techbase:\s*Mixed/im.test(text)) {
+    mixed++;
     continue;
   }
   const { def, errors } = parseMtf(text, file);
@@ -449,5 +458,5 @@ for (const file of files) {
   generated++;
 }
 console.log(
-  `\n${generated} generated, ${skipped} skipped, ${nonBiped} non-biped ignored. Run 'npm run pack && npm test' to validate.`,
+  `\n${generated} generated, ${skipped} skipped, ${nonBiped} non-biped and ${mixed} mixed-tech ignored. Run 'npm run pack && npm test' to validate.`,
 );
