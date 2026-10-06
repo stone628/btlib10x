@@ -184,7 +184,7 @@ Why:
 
 ## Ignored: out of scope (18)
 
-The engine supports bipedal 'Mechs only; the converter skips these without attempting them.
+The engine supports bipedal 'Mechs with a single tech base only; the converter skips these without attempting them.
 
 | File | Config | Reason |
 |---|---|---|
