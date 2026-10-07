@@ -139,6 +139,9 @@ export interface AttackResolution {
   /** Damage the building hex soaked from the groupings (TW p.171); this is
    *  what its CF loses. Absent when the target is not in a building. */
   readonly buildingAbsorbed?: number;
+  /** Damage of leg hits that struck the partial cover instead of the target
+   *  (TW p.102); the caller charges it to the cover when that is a building. */
+  readonly coverDamage?: number;
   readonly application: DamageApplication | null;
   /** Attack direction the attack resolved against (side of the target hit);
    *  drove the hit-location table and armor pool. Defaults to front when the
@@ -246,6 +249,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
   base.hit = breakdown.automatic !== null ? breakdown.automatic === "hit" : roll >= breakdown.total;
   if (!base.hit) return base;
 
+  let coverDamage = 0;
   if (weapon.missiles !== undefined && weapon.missileDamage !== undefined) {
     // Streak launchers: to-hit success means full tube count hits; no
     // cluster roll, no extra RNG consumed. Miss path already returned above,
@@ -265,7 +269,10 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     if (weapon.missileDamage === MISSILE_SINGLE_DAMAGE) {
       for (let i = 0; i < hits; i++) {
         const placed = hitLocationPlaced(input.rng, partialCover, arc);
-        if (placed === null) continue;
+        if (placed === null) {
+          coverDamage += weapon.missileDamage;
+          continue;
+        }
         base.groups.push({
           location: placed.location,
           damage: weapon.missileDamage,
@@ -275,7 +282,10 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     } else {
       for (const lot of groupMissiles(hits, MISSILE_LOT_SIZE)) {
         const placed = hitLocationPlaced(input.rng, partialCover, arc);
-        if (placed === null) continue;
+        if (placed === null) {
+          coverDamage += lot * weapon.missileDamage;
+          continue;
+        }
         base.groups.push({
           location: placed.location,
           damage: lot * weapon.missileDamage,
@@ -289,7 +299,10 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     const hits = clusterHits(shots, clusterRoll);
     for (let i = 0; i < hits; i++) {
       const placed = hitLocationPlaced(input.rng, partialCover, arc);
-      if (placed === null) continue;
+      if (placed === null) {
+        coverDamage += damageForBracket(weapon, breakdown.rangeBracket);
+        continue;
+      }
       base.groups.push({
         location: placed.location,
         damage: damageForBracket(weapon, breakdown.rangeBracket),
@@ -304,8 +317,11 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
         damage: damageForBracket(weapon, breakdown.rangeBracket),
         throughArmor: placed.throughArmor,
       });
+    } else {
+      coverDamage += damageForBracket(weapon, breakdown.rangeBracket);
     }
   }
+  if (coverDamage > 0) (base as { coverDamage?: number }).coverDamage = coverDamage;
 
   // TW p.171: each grouping loses the hex's absorption before it reaches the
   // unit; the building is charged only what it actually absorbed. A grouping

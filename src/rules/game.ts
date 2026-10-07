@@ -741,6 +741,8 @@ interface UnitAttackResolution {
   readonly resolution: AttackResolution;
   readonly weaponHeat: number;
   readonly buildingDamage: number;
+  /** Leg hits that struck a building serving as partial cover (TW p.102). */
+  readonly coverBuilding?: { readonly hex: HexCoord; readonly damage: number };
 }
 
 export interface UnitAttackResult {
@@ -871,12 +873,31 @@ export function partialCoverMod(
   attacker: UnitState,
   target: UnitState,
 ): number {
+  return partialCoverDetail(state, attacker, target).mod;
+}
+
+/** The building hex providing the terrain partial cover to `target`, if the
+ *  cover is a building (TW p.102: leg hits strike it and damage it). */
+export function partialCoverBuildingHex(
+  state: BattleState,
+  attacker: UnitState,
+  target: UnitState,
+): HexCoord | undefined {
+  return partialCoverDetail(state, attacker, target).buildingHex;
+}
+
+function partialCoverDetail(
+  state: BattleState,
+  attacker: UnitState,
+  target: UnitState,
+): { mod: number; buildingHex?: HexCoord } {
   const targetTerrain = cellAt(state, target.position).terrain;
   const attackerLevel = cellAt(state, attacker.position).level;
   const targetLevel = cellAt(state, target.position).level;
   const targetStandingGround = !target.prone && isNominal(target) && !target.unconscious;
 
   let terrain = 0;
+  let buildingHex: HexCoord | undefined;
   if (targetStandingGround) {
     if (targetTerrain === "water1") {
       // TW p.102: water1 surrounds the 'Mech, applies even when attacker higher.
@@ -898,6 +919,7 @@ export function partialCoverMod(
               buildingTypeOf(cell.terrain) !== undefined ? cell.level + 2 : cell.level;
             if (effectiveLevel >= targetLevel + 1) {
               terrain = PARTIAL_COVER_TERRAIN_MOD;
+              if (buildingTypeOf(cell.terrain) !== undefined) buildingHex = { ...h };
               break coverSides;
             }
           }
@@ -932,7 +954,8 @@ export function partialCoverMod(
       wreck = Math.max(wreck, WRECK_L2_ELEVATED_COVER_MOD);
     }
   }
-  return Math.max(terrain, wreck);
+  const mod = Math.max(terrain, wreck);
+  return buildingHex !== undefined && terrain >= wreck ? { mod, buildingHex } : { mod };
 }
 
 function requirePhase(state: BattleState, phase: Phase): void {
@@ -2704,12 +2727,19 @@ function resolveUnitAttacks(
     // (absorbed inside `resolveWeaponAttack`); the building is charged what
     // it actually absorbed.
     const buildingDamage = resolution.buildingAbsorbed ?? 0;
+    const coverHex =
+      resolution.coverDamage !== undefined
+        ? partialCoverBuildingHex(state, unit, target)
+        : undefined;
 
     resolutions.push({
       targetId: target.id,
       resolution,
       weaponHeat,
       buildingDamage,
+      ...(coverHex !== undefined && resolution.coverDamage !== undefined
+        ? { coverBuilding: { hex: coverHex, damage: resolution.coverDamage } }
+        : {}),
     });
 
     if (resolution.jammed && !jammedWeapons.includes(decl.weaponIndex)) {
@@ -3204,7 +3234,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   const targetCritsForLimbs: Record<string, CriticalResolution[]> = {};
 
   for (const result of results) {
-    for (const { targetId, resolution, buildingDamage } of result.resolutions) {
+    for (const { targetId, resolution, buildingDamage, coverBuilding } of result.resolutions) {
       const target = requireUnit(state, targetId);
       let reported = resolution;
 
@@ -3373,6 +3403,16 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       if (resolution.crits.length > 0) {
         targetCritsForLimbs[targetId]!.push(...resolution.crits);
         reported = { ...reported, crits: enrichedCrits };
+      }
+
+      // A leg hit stopped by building cover damages that building (TW p.102).
+      if (coverBuilding !== undefined) {
+        const key = hexKey(coverBuilding.hex);
+        const entry = buildingDamageByHex[key];
+        buildingDamageByHex[key] = {
+          hex: { ...coverBuilding.hex },
+          damage: (entry?.damage ?? 0) + coverBuilding.damage,
+        };
       }
 
       // Defer building damage: accumulate the toll per hex, applied after
