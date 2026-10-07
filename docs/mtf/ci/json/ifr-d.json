@@ -38,6 +38,10 @@
     {
       "weapon": "CL Medium Pulse Laser",
       "location": "rightArm"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "rightArm"
     }
   ],
   "critSlots": {

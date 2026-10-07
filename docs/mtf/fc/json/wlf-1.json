@@ -32,8 +32,7 @@
     },
     {
       "weapon": "Medium Laser",
-      "location": "centerTorso",
-      "rearFacing": true
+      "location": "centerTorso"
     },
     {
       "weapon": "Medium Laser",

@@ -34,6 +34,10 @@
       "location": "leftArm"
     },
     {
+      "weapon": "ER Medium Laser",
+      "location": "leftArm"
+    },
+    {
       "weapon": "Gauss Rifle",
       "location": "rightTorso",
       "shots": 32

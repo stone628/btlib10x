@@ -36,6 +36,10 @@
       "location": "leftTorso"
     },
     {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "leftTorso"
+    },
+    {
       "weapon": "CL ER Medium Laser",
       "location": "centerTorso"
     }

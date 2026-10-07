@@ -28,6 +28,22 @@
     },
     {
       "weapon": "CL Medium Pulse Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
       "location": "rightArm"
     },
     {
@@ -43,6 +59,14 @@
       "weapon": "CL Machine Gun",
       "location": "rightTorso",
       "shots": 100
+    },
+    {
+      "weapon": "CL Machine Gun",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL Machine Gun",
+      "location": "leftTorso"
     },
     {
       "weapon": "CL Machine Gun",

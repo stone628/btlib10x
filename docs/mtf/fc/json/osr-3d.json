@@ -26,6 +26,10 @@
       "location": "rightArm"
     },
     {
+      "weapon": "ER Medium Laser",
+      "location": "rightArm"
+    },
+    {
       "weapon": "SRM 6",
       "location": "leftArm",
       "shots": 15
@@ -38,6 +42,10 @@
       "weapon": "Machine Gun",
       "location": "leftTorso",
       "shots": 100
+    },
+    {
+      "weapon": "ER Medium Laser",
+      "location": "centerTorso"
     },
     {
       "weapon": "ER Medium Laser",

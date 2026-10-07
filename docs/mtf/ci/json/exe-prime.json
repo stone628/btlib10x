@@ -32,9 +32,17 @@
       "location": "rightArm"
     },
     {
+      "weapon": "CL ER Large Laser",
+      "location": "rightArm"
+    },
+    {
       "weapon": "CL Machine Gun",
       "location": "rightTorso",
       "shots": 200
+    },
+    {
+      "weapon": "CL Machine Gun",
+      "location": "rightTorso"
     }
   ],
   "critSlots": {

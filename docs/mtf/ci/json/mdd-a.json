@@ -32,6 +32,14 @@
       "location": "leftTorso"
     },
     {
+      "weapon": "CL SRM 6",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL SRM 6",
+      "location": "leftTorso"
+    },
+    {
       "weapon": "CL ER PPC",
       "location": "rightArm"
     },
@@ -39,6 +47,14 @@
       "weapon": "CL SRM 6",
       "location": "rightTorso",
       "shots": 60
+    },
+    {
+      "weapon": "CL SRM 6",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL SRM 6",
+      "location": "rightTorso"
     }
   ],
   "critSlots": {

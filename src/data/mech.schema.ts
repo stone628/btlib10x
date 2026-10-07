@@ -320,7 +320,8 @@ export function resolveMechDef(def: MechDef): ResolvedMechDef {
  * fall back to any mount of the weapon, loaded at the ammo table's per-bin
  * capacity. Two *separate* mounts of the same weapon in the same location
  * (e.g. two Medium Lasers in Atlas's CT) get independent linking — slot 11
- * destroys ML #1, slot 12 destroys ML #2.
+ * destroys ML #1, slot 12 destroys ML #2; multi-slot copies link in
+ * contiguous runs (two LRM 15s: slots 1-3 launcher #1, 4-6 launcher #2).
  */
 function resolveLocationCrits(
   rawSlots: readonly CritSlot[],
@@ -342,6 +343,14 @@ function resolveLocationCrits(
   }
   for (const arr of localByName.values()) arr.sort((a, b) => a - b);
   const localCursors = new Map<string, number>();
+  // Crit slots per mount: copies of one weapon share a slot size, so the
+  // slots of a weapon in this location split into one contiguous run per
+  // mount (two LRM 15s: slots 1-3 are launcher #1, slots 4-6 launcher #2).
+  const localSlotCounts = new Map<string, number>();
+  for (const slot of rawSlots) {
+    if (slot.kind !== "weapon") continue;
+    localSlotCounts.set(slot.weapon, (localSlotCounts.get(slot.weapon) ?? 0) + 1);
+  }
 
   // Ammo-bearing mounts, by weapon name, in ascending index order.
   const ammoBearingByName: Map<string, number[]> = new Map();
@@ -369,7 +378,13 @@ function resolveLocationCrits(
       );
     }
     const cursor = localCursors.get(weaponName) ?? 0;
-    const idx = arr[cursor % arr.length]!;
+    const run = (localSlotCounts.get(weaponName) ?? 0) / arr.length;
+    // Fall back to one slot per mount when the slot count does not divide
+    // evenly (a sheet whose mounts and slots disagree).
+    const idx =
+      Number.isInteger(run) && run >= 1
+        ? arr[Math.floor(cursor / run) % arr.length]!
+        : arr[cursor % arr.length]!;
     localCursors.set(weaponName, cursor + 1);
     return idx;
   };

@@ -27,9 +27,25 @@
       "location": "leftArm"
     },
     {
+      "weapon": "CL ER Medium Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL ER Medium Laser",
+      "location": "leftArm"
+    },
+    {
       "weapon": "AP Gauss Rifle",
       "location": "rightArm",
       "shots": 40
+    },
+    {
+      "weapon": "AP Gauss Rifle",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "AP Gauss Rifle",
+      "location": "rightArm"
     },
     {
       "weapon": "CL Active Probe",

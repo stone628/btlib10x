@@ -37,6 +37,10 @@
       "shots": 200
     },
     {
+      "weapon": "CL Machine Gun",
+      "location": "leftTorso"
+    },
+    {
       "weapon": "CL ER Small Laser",
       "location": "rightTorso"
     }

@@ -41,6 +41,11 @@
       "rearFacing": true
     },
     {
+      "weapon": "Medium Pulse Laser",
+      "location": "centerTorso",
+      "rearFacing": true
+    },
+    {
       "weapon": "Anti-Missile System",
       "location": "leftArm",
       "shots": 12

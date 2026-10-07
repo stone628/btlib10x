@@ -39,6 +39,10 @@
       "location": "leftTorso"
     },
     {
+      "weapon": "CL ER PPC",
+      "location": "leftTorso"
+    },
+    {
       "weapon": "CL Light Active Probe",
       "location": "head"
     }

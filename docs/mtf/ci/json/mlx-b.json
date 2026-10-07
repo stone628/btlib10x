@@ -31,9 +31,17 @@
       "location": "leftArm"
     },
     {
+      "weapon": "CL ER Medium Laser",
+      "location": "leftArm"
+    },
+    {
       "weapon": "CL SRM 6",
       "location": "rightArm",
       "shots": 30
+    },
+    {
+      "weapon": "CL SRM 6",
+      "location": "rightArm"
     },
     {
       "weapon": "CL ER Small Laser",

@@ -35,6 +35,10 @@
       "location": "rightArm"
     },
     {
+      "weapon": "Small Laser",
+      "location": "rightArm"
+    },
+    {
       "weapon": "SRM 6",
       "location": "rightTorso",
       "shots": 15

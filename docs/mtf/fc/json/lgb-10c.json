@@ -41,8 +41,7 @@
     },
     {
       "weapon": "ER Medium Laser",
-      "location": "leftTorso",
-      "rearFacing": true
+      "location": "leftTorso"
     },
     {
       "weapon": "ER Medium Laser",
@@ -51,8 +50,7 @@
     },
     {
       "weapon": "ER Medium Laser",
-      "location": "rightTorso",
-      "rearFacing": true
+      "location": "rightTorso"
     },
     {
       "weapon": "ER Medium Laser",

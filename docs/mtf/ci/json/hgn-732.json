@@ -26,6 +26,10 @@
       "location": "rightTorso"
     },
     {
+      "weapon": "Medium Laser",
+      "location": "rightTorso"
+    },
+    {
       "weapon": "SRM 6",
       "location": "leftArm",
       "shots": 30

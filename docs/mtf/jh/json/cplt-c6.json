@@ -27,6 +27,14 @@
       "shots": 60
     },
     {
+      "weapon": "Plasma Rifle",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "ER Medium Laser",
+      "location": "centerTorso"
+    },
+    {
       "weapon": "ER Medium Laser",
       "location": "centerTorso"
     }

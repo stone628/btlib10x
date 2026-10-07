@@ -32,7 +32,19 @@
     },
     {
       "weapon": "CL Heavy Medium Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Heavy Medium Laser",
       "location": "rightTorso"
+    },
+    {
+      "weapon": "CL Heavy Medium Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL Heavy Medium Laser",
+      "location": "leftTorso"
     },
     {
       "weapon": "CL Heavy Medium Laser",

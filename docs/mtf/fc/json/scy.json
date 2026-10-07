@@ -40,6 +40,10 @@
       "location": "leftTorso"
     },
     {
+      "weapon": "CL ER Medium Laser",
+      "location": "leftTorso"
+    },
+    {
       "weapon": "CL ER Large Laser",
       "location": "head"
     }

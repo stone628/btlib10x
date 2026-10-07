@@ -44,8 +44,16 @@
     },
     {
       "weapon": "AC/2",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "AC/2",
       "location": "rightTorso",
       "shots": 90
+    },
+    {
+      "weapon": "AC/2",
+      "location": "rightTorso"
     }
   ],
   "critSlots": {

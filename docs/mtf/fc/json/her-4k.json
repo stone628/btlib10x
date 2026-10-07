@@ -27,11 +27,23 @@
     },
     {
       "weapon": "ER Medium Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "ER Medium Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "ER Medium Laser",
       "location": "leftArm"
     },
     {
       "weapon": "ER Small Laser",
       "location": "rightTorso"
+    },
+    {
+      "weapon": "ER Medium Laser",
+      "location": "centerTorso"
     },
     {
       "weapon": "ER Medium Laser",

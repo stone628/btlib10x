@@ -1,9 +1,12 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { parseMtf } from "../scripts/mtf.mjs";
 import {
   ammoBinsFromCrits,
   parseCritSlots,
   validateCritConstruction,
 } from "../scripts/mtf-crit.mjs";
+import { type MechDef, resolveMechDef, validateMechDef } from "../src/data/index";
 
 type Slot =
   | { kind: "empty" }
@@ -355,5 +358,72 @@ describe("parseCritSlots: catalog token aliases", () => {
 
   it("maps Improved Jump Jet spellings to the jump-jet structure slot", () => {
     expect(classify("Improved Jump Jet").slot).toEqual({ kind: "structure", name: "jumpJet" });
+  });
+});
+
+describe("parseMtf: repeated weapons in one location", () => {
+  const convert = (sheet: string) => {
+    const file = `docs/mtf/sw/mtf/${sheet}.mtf`;
+    const { def, errors } = parseMtf(readFileSync(file, "utf8"), file);
+    expect(errors).toEqual([]);
+    return def!;
+  };
+  const mounts = (def: ReturnType<typeof convert>, location: string, weapon: string) =>
+    def.weapons.filter((w) => w.location === location && w.weapon === weapon);
+
+  it('expands a quantity line ("2 ISMediumLaser, Left Torso") into separate mounts', () => {
+    // CHP-1N: 2 ML in LT and 2 SL in CT, each one crit slot.
+    const def = convert("Champion CHP-1N");
+    expect(mounts(def, "leftTorso", "Medium Laser")).toHaveLength(2);
+    expect(mounts(def, "centerTorso", "Small Laser")).toHaveLength(2);
+    expect(def.weapons).toHaveLength(6);
+    const resolved = resolveMechDef(validateMechDef(def as unknown as MechDef));
+    const ctLinks = resolved.critSlots.centerTorso
+      .filter((s) => s.kind === "weapon")
+      .map((s) => (s as { weaponIndex: number }).weaponIndex);
+    expect(new Set(ctLinks).size).toBe(2);
+  });
+
+  it("gives an expanded line's ammo to one mount only", () => {
+    // RMP-5G: "3 ISStreakSRM2, Left Torso, Ammo:50".
+    const def = convert("Rampage RMP-5G");
+    expect(mounts(def, "leftTorso", "Streak SRM 2").map((m) => m.shots)).toEqual([
+      50,
+      undefined,
+      undefined,
+    ]);
+  });
+
+  it("marks only the rear-facing copy when front and rear copies share a location", () => {
+    // BLR-1G: 3 ML per side torso, crit slots "Medium Laser" x2 + "Medium Laser (R)".
+    const def = convert("BattleMaster BLR-1G");
+    for (const loc of ["leftTorso", "rightTorso"]) {
+      expect(mounts(def, loc, "Medium Laser").map((m) => m.rearFacing === true)).toEqual([
+        false,
+        false,
+        true,
+      ]);
+    }
+    // FS9-A: CT "Flamer" + "Flamer (R)".
+    const fs9 = convert("Firestarter FS9-A");
+    expect(mounts(fs9, "centerTorso", "Flamer").map((m) => m.rearFacing === true)).toEqual([
+      false,
+      true,
+    ]);
+  });
+
+  it("links each multi-slot copy to a contiguous run of crit slots", () => {
+    // HBK-4J: 2 LRM 10 in RT (2 slots each). A hit on slots 1 and 2 must
+    // land on the same launcher, not destroy both.
+    const def = convert("Hunchback HBK-4J");
+    expect(mounts(def, "rightTorso", "LRM 10")).toHaveLength(2);
+    const resolved = resolveMechDef(validateMechDef(def as unknown as MechDef));
+    const links = resolved.critSlots.rightTorso
+      .filter((s) => s.kind === "weapon" && s.weapon === "LRM 10")
+      .map((s) => (s as { weaponIndex: number }).weaponIndex);
+    expect(links).toHaveLength(4);
+    expect(links[0]).toBe(links[1]);
+    expect(links[2]).toBe(links[3]);
+    expect(links[0]).not.toBe(links[2]);
   });
 });

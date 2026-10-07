@@ -32,6 +32,10 @@
       "shots": 100
     },
     {
+      "weapon": "CL SRM 2",
+      "location": "leftTorso"
+    },
+    {
       "weapon": "CL LRM 20",
       "location": "rightArm",
       "shots": 36

@@ -36,8 +36,16 @@
       "shots": 30
     },
     {
+      "weapon": "CL Streak SRM 6",
+      "location": "rightTorso"
+    },
+    {
       "weapon": "CL ER PPC",
       "location": "rightTorso"
+    },
+    {
+      "weapon": "CL Streak SRM 6",
+      "location": "leftTorso"
     },
     {
       "weapon": "CL Streak SRM 6",

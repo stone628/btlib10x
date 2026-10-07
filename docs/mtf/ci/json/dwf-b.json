@@ -31,8 +31,20 @@
       "location": "leftArm"
     },
     {
+      "weapon": "CL ER PPC",
+      "location": "leftArm"
+    },
+    {
       "weapon": "CL Medium Pulse Laser",
       "location": "leftArm"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Ultra AC/2",
+      "location": "leftTorso"
     },
     {
       "weapon": "CL Ultra AC/2",
@@ -47,6 +59,10 @@
       "weapon": "CL Ultra AC/2",
       "location": "rightTorso",
       "shots": 90
+    },
+    {
+      "weapon": "CL Ultra AC/2",
+      "location": "rightTorso"
     }
   ],
   "critSlots": {

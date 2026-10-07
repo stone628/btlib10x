@@ -31,6 +31,14 @@
       "shots": 50
     },
     {
+      "weapon": "SRM 2",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "ER Medium Laser",
+      "location": "leftTorso"
+    },
+    {
       "weapon": "ER Medium Laser",
       "location": "leftTorso"
     },

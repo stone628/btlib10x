@@ -26,6 +26,10 @@
       "location": "leftArm"
     },
     {
+      "weapon": "Light PPC",
+      "location": "leftArm"
+    },
+    {
       "weapon": "Snub-Nose PPC",
       "location": "rightTorso"
     },

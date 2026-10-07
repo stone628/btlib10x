@@ -26,9 +26,17 @@
       "location": "rightArm"
     },
     {
+      "weapon": "Medium Laser",
+      "location": "rightArm"
+    },
+    {
       "weapon": "LRM 15",
       "location": "leftArm",
       "shots": 24
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "leftArm"
     },
     {
       "weapon": "Medium Laser",

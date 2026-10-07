@@ -34,6 +34,14 @@
       "weapon": "LRM 5",
       "location": "leftTorso",
       "shots": 72
+    },
+    {
+      "weapon": "LRM 5",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "LRM 5",
+      "location": "leftTorso"
     }
   ],
   "critSlots": {

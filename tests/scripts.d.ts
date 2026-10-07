@@ -39,3 +39,21 @@ declare module "*/mtf-crit.mjs" {
    * suffixed crits add 0.5. Caller multiplies by SHOTS_PER_TON to get shots. */
   export function ammoBinsFromCrits(lines: string[], techBase?: string): Map<string, number>;
 }
+
+declare module "*/mtf.mjs" {
+  export function parseMtf(
+    text: string,
+    file: string,
+  ): {
+    def: {
+      weapons: Array<{
+        weapon: string;
+        location: string;
+        shots?: number;
+        rearFacing?: boolean;
+      }>;
+      [key: string]: unknown;
+    } | null;
+    errors: string[];
+  };
+}

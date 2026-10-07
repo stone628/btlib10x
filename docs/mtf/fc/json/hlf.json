@@ -52,6 +52,10 @@
     },
     {
       "weapon": "CL LRM 10",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL LRM 10",
       "location": "leftTorso"
     },
     {

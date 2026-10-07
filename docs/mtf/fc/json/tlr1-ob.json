@@ -27,8 +27,20 @@
       "shots": 135
     },
     {
+      "weapon": "Rotary AC/2",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "Rotary AC/2",
+      "location": "rightArm"
+    },
+    {
       "weapon": "ER PPC",
       "location": "leftArm"
+    },
+    {
+      "weapon": "ER Medium Laser",
+      "location": "centerTorso"
     },
     {
       "weapon": "ER Medium Laser",

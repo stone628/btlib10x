@@ -31,7 +31,15 @@
       "shots": 200
     },
     {
+      "weapon": "Machine Gun",
+      "location": "rightArm"
+    },
+    {
       "weapon": "Large Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "Machine Gun",
       "location": "leftArm"
     },
     {

@@ -54,6 +54,14 @@
       "shots": 50
     },
     {
+      "weapon": "Streak SRM 2",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "Streak SRM 2",
+      "location": "leftTorso"
+    },
+    {
       "weapon": "Large Pulse Laser",
       "location": "centerTorso"
     }

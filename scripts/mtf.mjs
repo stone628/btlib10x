@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   ammoBinsFromCrits,
   parseCritSlots,
@@ -57,9 +57,13 @@ function numberRegex(text, label) {
   return m ? Number(m[1]) : null;
 }
 
-/** Normalize an MTF weapon line into {code, location, explicitAmmo, rearFacing}. */
+/** Normalize an MTF weapon line into {code, location, explicitAmmo, rearFacing, count}.
+ * Newer sheets prefix a quantity ("2 ISMediumLaser, Left Torso"): that line
+ * stands for `count` separate mounts in the location. */
 function splitWeaponLine(line) {
   const parts = line.split(",").map((s) => s.trim());
+  const countMatch = (parts[0] ?? "").match(/^(\d+)\s+/);
+  const count = countMatch ? Number(countMatch[1]) : 1;
   let codeRaw = (parts[0] ?? "").replace(/^\d+\s+/, "").trim();
   let rearFacing = false;
   const facingMatch = codeRaw.match(/\((R|F)\)\s*$/);
@@ -80,7 +84,7 @@ function splitWeaponLine(line) {
     const m = parts[2].match(/^Ammo:(\d+)/);
     if (m) explicitAmmo = Number(m[1]);
   }
-  return { codeRaw, location: cleanLocation, explicitAmmo, rearFacing };
+  return { codeRaw, location: cleanLocation, explicitAmmo, rearFacing, count };
 }
 
 function mapWeapon(codeRaw, clan) {
@@ -287,25 +291,32 @@ function parseMtf(text, file) {
   const parsed = block
     .map(splitWeaponLine)
     .filter(({ codeRaw }) => !INERT_EQUIPMENT.has(codeRaw))
-    .map(({ codeRaw, location, explicitAmmo, rearFacing }) => {
+    .flatMap(({ codeRaw, location, explicitAmmo, rearFacing, count }) => {
       const weapon = mapWeapon(codeRaw, techBase === "Clan");
       if (!weapon) {
         errors.push(`Unmapped weapon code ${JSON.stringify(codeRaw)}`);
-        return null;
+        return [];
       }
       const loc = LOCATION[location];
       if (!loc) {
         errors.push(`Unmapped location ${JSON.stringify(location)} (${codeRaw})`);
-        return null;
+        return [];
       }
       // Ammo per mount: explicit `, Ammo:N` wins; else crit bins x shots/ton.
       let ammo = explicitAmmo;
       if (ammo === null && SHOTS_PER_TON[weapon] && (bins.get(weapon) ?? 0) > 0) {
         ammo = bins.get(weapon) * SHOTS_PER_TON[weapon];
       }
-      return { weapon, location: loc, ammo, explicit: explicitAmmo !== null, rearFacing };
-    })
-    .filter((m) => m !== null);
+      // A quantity line expands to `count` mounts; the line's ammo belongs to
+      // the first of them (the shared-bin pass below nulls the siblings).
+      return Array.from({ length: count }, (_, i) => ({
+        weapon,
+        location: loc,
+        ammo: i === 0 ? ammo : null,
+        explicit: i === 0 && explicitAmmo !== null,
+        rearFacing,
+      }));
+    });
 
   // Shared bins: keep one `shots` per weapon (the explicit mount, else the
   // first), null the rest. Omit ammo entirely when a weapon has no ammo data.
@@ -345,25 +356,40 @@ function parseMtf(text, file) {
       : { weapon, location, ...(rearFacing && { rearFacing: true }) },
   );
 
-  // Build rear-facing map from crit slots: (location, weapon) -> true if any slot is rear-facing
-  const rearFacingFromCrits = new Map();
+  // Facing from crit slots, per mount: the crit slots of one weapon type in a
+  // location are split into one equal run per mount (all copies share a slot
+  // size), and the k-th mount takes the facing of the k-th run. A rear-facing
+  // ML next to two forward MLs (BLR-1G) thus marks one mount, not all three.
+  // Sheets that flag facing only on the weapons line keep that flag when the
+  // crits carry no facing for the weapon.
+  const critFacings = new Map();
   for (const [loc, slots] of Object.entries(critSlots)) {
     for (const slot of slots) {
-      if (slot.kind === "weapon" && slot.rearFacing) {
-        rearFacingFromCrits.set(`${loc}:${slot.weapon}`, true);
-      }
+      if (slot.kind !== "weapon") continue;
+      const key = `${loc}:${slot.weapon}`;
+      const arr = critFacings.get(key) ?? [];
+      arr.push(slot.rearFacing === true);
+      critFacings.set(key, arr);
     }
   }
-
-  // Apply rear-facing from crit slots to weapon mounts (by location + weapon, in order)
-  const mountCursors = new Map();
+  const mountsByKey = new Map();
   for (const mount of weapons) {
     const key = `${mount.location}:${mount.weapon}`;
-    const cursor = mountCursors.get(key) ?? 0;
-    if (rearFacingFromCrits.get(key) === true) {
-      mount.rearFacing = true;
-    }
-    mountCursors.set(key, cursor + 1);
+    const arr = mountsByKey.get(key) ?? [];
+    arr.push(mount);
+    mountsByKey.set(key, arr);
+  }
+  for (const [key, mounts] of mountsByKey) {
+    const facings = critFacings.get(key);
+    if (!facings?.includes(true)) continue;
+    const run = facings.length / mounts.length;
+    mounts.forEach((mount, k) => {
+      const rear = Number.isInteger(run)
+        ? facings.slice(k * run, (k + 1) * run).includes(true)
+        : (facings[k] ?? false);
+      if (rear) mount.rearFacing = true;
+      else delete mount.rearFacing;
+    });
   }
 
   // Mirrors the engine rule (validateMechDef): rear-facing mounts are only
@@ -412,51 +438,57 @@ function parseMtf(text, file) {
   return { def, errors };
 }
 
-const files = readdirSync(mtfDir)
-  .filter((f) => f.endsWith(".mtf"))
-  .sort();
-let generated = 0;
-let skipped = 0;
-mkdirSync(outDir, { recursive: true });
-let nonBiped = 0;
-let mixed = 0;
-const written = new Map();
-for (const file of files) {
-  const text = readFileSync(join(mtfDir, file), "utf8");
-  // Bipedal 'Mechs only: LAM / Quad / Tripod sheets are out of scope.
-  const config = /^Config:\s*(.*?)\s*$/m.exec(text)?.[1];
-  if (config !== undefined && !/^Biped/i.test(config)) {
-    nonBiped++;
-    continue;
+export { parseMtf };
+
+function main() {
+  const files = readdirSync(mtfDir)
+    .filter((f) => f.endsWith(".mtf"))
+    .sort();
+  let generated = 0;
+  let skipped = 0;
+  mkdirSync(outDir, { recursive: true });
+  let nonBiped = 0;
+  let mixed = 0;
+  const written = new Map();
+  for (const file of files) {
+    const text = readFileSync(join(mtfDir, file), "utf8");
+    // Bipedal 'Mechs only: LAM / Quad / Tripod sheets are out of scope.
+    const config = /^Config:\s*(.*?)\s*$/m.exec(text)?.[1];
+    if (config !== undefined && !/^Biped/i.test(config)) {
+      nonBiped++;
+      continue;
+    }
+    // Mixed tech base sheets are not supported yet.
+    if (/^techbase:\s*Mixed/im.test(text)) {
+      mixed++;
+      continue;
+    }
+    const { def, errors } = parseMtf(text, file);
+    if (def === null || errors.length > 0) {
+      console.error(`SKIP ${file}:`);
+      for (const e of errors) console.error(`  - ${e}`);
+      continue;
+    }
+    const outFile = join(outDir, `${def.model.toLowerCase()}.json`);
+    const owner = written.get(outFile);
+    if (owner !== undefined) {
+      console.error(`SKIP ${file}:`);
+      console.error(`  - duplicate model code ${def.model} (already produced by ${owner})`);
+      continue;
+    }
+    written.set(outFile, file);
+    if (existsSync(outFile) && !force) {
+      console.log(`skip existing ${outFile.replace(`${root}/`, "")} (use --force to overwrite)`);
+      skipped++;
+      continue;
+    }
+    writeFileSync(outFile, `${JSON.stringify(def, null, 2)}\n`);
+    console.log(`wrote ${outFile.replace(`${root}/`, "")}`);
+    generated++;
   }
-  // Mixed tech base sheets are not supported yet.
-  if (/^techbase:\s*Mixed/im.test(text)) {
-    mixed++;
-    continue;
-  }
-  const { def, errors } = parseMtf(text, file);
-  if (def === null || errors.length > 0) {
-    console.error(`SKIP ${file}:`);
-    for (const e of errors) console.error(`  - ${e}`);
-    continue;
-  }
-  const outFile = join(outDir, `${def.model.toLowerCase()}.json`);
-  const owner = written.get(outFile);
-  if (owner !== undefined) {
-    console.error(`SKIP ${file}:`);
-    console.error(`  - duplicate model code ${def.model} (already produced by ${owner})`);
-    continue;
-  }
-  written.set(outFile, file);
-  if (existsSync(outFile) && !force) {
-    console.log(`skip existing ${outFile.replace(`${root}/`, "")} (use --force to overwrite)`);
-    skipped++;
-    continue;
-  }
-  writeFileSync(outFile, `${JSON.stringify(def, null, 2)}\n`);
-  console.log(`wrote ${outFile.replace(`${root}/`, "")}`);
-  generated++;
+  console.log(
+    `\n${generated} generated, ${skipped} skipped, ${nonBiped} non-biped and ${mixed} mixed-tech ignored. Run 'npm run pack && npm test' to validate.`,
+  );
 }
-console.log(
-  `\n${generated} generated, ${skipped} skipped, ${nonBiped} non-biped and ${mixed} mixed-tech ignored. Run 'npm run pack && npm test' to validate.`,
-);
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

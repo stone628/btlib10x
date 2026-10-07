@@ -35,13 +35,11 @@
     },
     {
       "weapon": "CL ER Medium Laser",
-      "location": "leftTorso",
-      "rearFacing": true
+      "location": "leftTorso"
     },
     {
       "weapon": "CL ER Medium Laser",
-      "location": "leftTorso",
-      "rearFacing": true
+      "location": "leftTorso"
     },
     {
       "weapon": "CL ER Medium Laser",
@@ -50,8 +48,7 @@
     },
     {
       "weapon": "CL Machine Gun",
-      "location": "rightTorso",
-      "rearFacing": true
+      "location": "rightTorso"
     },
     {
       "weapon": "CL Machine Gun",

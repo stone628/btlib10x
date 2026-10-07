@@ -31,6 +31,10 @@
       "location": "leftArm"
     },
     {
+      "weapon": "CL ER Large Laser",
+      "location": "leftArm"
+    },
+    {
       "weapon": "CL Narc Missile Beacon",
       "location": "leftTorso",
       "shots": 6
@@ -49,6 +53,10 @@
       "weapon": "CL Machine Gun",
       "location": "rightTorso",
       "shots": 200
+    },
+    {
+      "weapon": "CL Machine Gun",
+      "location": "rightTorso"
     },
     {
       "weapon": "CL Active Probe",

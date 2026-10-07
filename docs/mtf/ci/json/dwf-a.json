@@ -33,6 +33,18 @@
       "shots": 30
     },
     {
+      "weapon": "CL Streak SRM 6",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL Large Pulse Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Large Pulse Laser",
+      "location": "rightArm"
+    },
+    {
       "weapon": "CL Large Pulse Laser",
       "location": "rightArm"
     },

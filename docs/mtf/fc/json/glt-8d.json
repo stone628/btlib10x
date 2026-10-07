@@ -26,6 +26,10 @@
       "location": "rightArm"
     },
     {
+      "weapon": "ER Medium Laser",
+      "location": "rightArm"
+    },
+    {
       "weapon": "ER Large Laser",
       "location": "leftArm"
     },

@@ -28,6 +28,14 @@
     },
     {
       "weapon": "LRM 5",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "LRM 5",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "LRM 5",
       "location": "leftTorso"
     }
   ],

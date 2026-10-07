@@ -36,6 +36,10 @@
       "shots": 100
     },
     {
+      "weapon": "CL Machine Gun",
+      "location": "rightArm"
+    },
+    {
       "weapon": "A-Pod",
       "location": "rightLeg"
     },

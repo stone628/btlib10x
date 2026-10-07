@@ -37,9 +37,17 @@
       "location": "rightArm"
     },
     {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "rightArm"
+    },
+    {
       "weapon": "CL Machine Gun",
       "location": "rightTorso",
       "shots": 100
+    },
+    {
+      "weapon": "CL Machine Gun",
+      "location": "rightTorso"
     }
   ],
   "critSlots": {

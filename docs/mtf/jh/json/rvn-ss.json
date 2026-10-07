@@ -27,6 +27,14 @@
     },
     {
       "weapon": "Medium Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "Medium Laser",
       "location": "leftArm"
     },
     {

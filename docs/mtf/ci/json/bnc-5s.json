@@ -31,6 +31,10 @@
       "location": "rightTorso"
     },
     {
+      "weapon": "ER PPC",
+      "location": "rightTorso"
+    },
+    {
       "weapon": "SRM 6",
       "location": "rightArm",
       "shots": 15
@@ -44,6 +48,10 @@
       "weapon": "Medium Laser",
       "location": "rightTorso",
       "rearFacing": true
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "leftArm"
     },
     {
       "weapon": "Medium Laser",
