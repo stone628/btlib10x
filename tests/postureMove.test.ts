@@ -202,22 +202,22 @@ describe("posture-change then move", () => {
     expect(unit.mpSpent).toBe(2 + target.spent);
   });
 
-  it("mode standup jump + place stands then jumps", async () => {
+  it("mode standup jump is rejected: a 'Mech that stood cannot jump (TW p.49)", async () => {
     const { s, actor } = await started(0, "GRF-1N");
     forceProne(s, actor);
-    execute(s, "mode standup jump");
-    expect(s.move!.postureMove).toBe("jump");
-    expect(s.move!.moveCandidate).not.toBeNull();
+    expect(execute(s, "mode standup jump")[0]).toMatch(/^error:/);
+    expect(s.battle!.units[actor]!.prone).toBe(true);
+  });
+
+  it("standing up to walk charges the stand heat plus the walk heat (HEAT-03)", async () => {
+    const { s, actor } = await started(0);
+    forceProne(s, actor);
+    execute(s, "mode standup walk");
     const target = steppedLanding(s);
     execute(s, `place ${target.col} ${target.row} ${target.facing}`);
     s.rng = scriptedRng(...Array.from({ length: 40 }, () => 6));
     execute(s, "done");
-    const unit = s.battle!.units[actor]!;
-    expect(unit.prone).toBe(false);
-    expect(unit.position).toEqual({ col: target.col, row: target.row });
-    expect(unit.facing).toBe(target.facing);
-    expect(unit.moveMode).toBe("jump");
-    expect(unit.mpSpent).toBe(2 + target.spent);
+    expect(s.battle!.units[actor]!.heatPending).toBe(2);
   });
 
   it("failed standup discards the queued place and ends the activation", async () => {

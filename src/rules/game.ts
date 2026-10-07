@@ -1522,6 +1522,9 @@ export interface ExecuteMoveOptions {
    *  skips the head-of-queue guard and the redundant `actedThisPhase`
    *  push, so the activation marks exactly once. */
   readonly spentMP?: number;
+  /** The mode's movement heat was already charged by the preceding stand-up
+   *  (TW p.159: heat follows the declared mode), so skip it here. */
+  readonly modeHeatPaid?: boolean;
 }
 
 export function executeMove(
@@ -1557,6 +1560,10 @@ export function executeMove(
   // reject run/jump outright; reject walk with any hex-enter step.
   if (unit.prone && mode !== "standStill" && mode !== "walk") {
     throw new Error(`${unitId} is prone: stand up, turn, or pronestill`);
+  }
+  // TW p.49: standing up (or dropping) uses the turn's movement; no jump after.
+  if (mode === "jump" && options.spentMP !== undefined) {
+    throw new Error(`${unitId} stood up or dropped prone this turn and cannot jump`);
   }
   if (unit.prone && mode === "walk" && steps.some((s) => s.kind === "enter")) {
     throw new Error(`${unitId} is prone: turn or pronestill only (no hex enters)`);
@@ -1670,12 +1677,27 @@ export function executeMove(
     cursor = to;
   }
 
+  // TW p.125 Gyro: a prone 'Mech with a destroyed gyro may change facing one
+  // hexside per turn.
+  if (
+    proneTurn &&
+    spent > 1 &&
+    countDestroyedGyro(def, unit.damage, unit.critSlotsDestroyed) >= GYRO_DESTROYED_HITS
+  ) {
+    throw new Error(`${unitId} has a destroyed gyro: one hexside facing change per turn`);
+  }
   if (minMove) spent = Math.min(spent, minMoveCap);
   if (spent > budget && !minMove) {
     throw new Error(`Move costs ${spent} MP but ${unit.moveMode} budget is ${budget}`);
   }
   if (jumping && directions.length < JUMP_MIN_HEXES) {
     throw new Error("Jump needs at least 1 hex move");
+  }
+  if (
+    jumping &&
+    directions.length !== Math.max(JUMP_MIN_HEXES, hexDistance(unit.position, cursor))
+  ) {
+    throw new Error("A jump follows a shortest path to its landing hex");
   }
   if (
     steps.length > 0 &&
@@ -1713,7 +1735,7 @@ export function executeMove(
       mpSpent: mp + prechargedMP,
       mpBudget: budget,
     });
-    const moveHeat = movementHeat(mode, mp);
+    const moveHeat = options.modeHeatPaid === true ? 0 : movementHeat(mode, mp);
     if (moveHeat > 0) {
       // Deferred own heat: accumulate into heatPending; the scale only
       // updates at the heat phase (TW p.159).
@@ -3061,15 +3083,19 @@ export function resolvePhasePiloting(
       autoFall = { cause: { kind: "gyroDestroyed" }, seatbelt: SEATBELT_GYRO_DESTROYED };
 
     let fell = false;
-    for (const t of triggers) {
-      const modifier = t.modifier + pre.modifier;
+    // TW p.59: every PSR triggered this phase carries the combined modifiers
+    // of all the triggers, and an automatic fall (destroyed leg or gyro)
+    // takes the place of the rolls altogether.
+    const phaseModifier = triggers.reduce((sum, t) => sum + t.modifier, 0);
+    for (const t of autoFall === null ? triggers : []) {
+      const modifier = phaseModifier + pre.modifier;
       if (isShutdown(unit) || unit.unconscious) {
         // TW p.60: a PSR required of a shut-down 'Mech falls it automatically
         // (and the pilot takes the hit automatically).
         autoFall = { cause: { kind: "failedPsr", reason: t.reason }, seatbelt: null };
         break;
       }
-      const r = pushPilotingCheck(sink, unit, t.reason, t.modifier, pre.modifier, rng, {
+      const r = pushPilotingCheck(sink, unit, t.reason, phaseModifier, pre.modifier, rng, {
         ...unit.position,
       });
       if (!r.success) {
@@ -4672,6 +4698,8 @@ function movementTerrainPsr(
         : 0;
     const bottomOpt = bottom > 0 ? { bottomDepth: bottom } : {};
     if (isShutdown(unit) || unit.unconscious) {
+      // The fall (and anything it leaves behind) happens where the 'Mech lands.
+      unit.position = { ...lower };
       const terrain = cellAt(state, lower).terrain;
       applyFall(
         state,
@@ -4691,6 +4719,7 @@ function movementTerrainPsr(
     }
     const r = pushPilotingCheck(sink, unit, reason, trigger, preModifier, rng, { ...hex });
     if (r.success) return null;
+    unit.position = { ...lower };
     const terrain = cellAt(state, lower).terrain;
     applyFall(
       state,
@@ -4725,6 +4754,7 @@ function movementTerrainPsr(
   const building = buildingEntryModifier(entering);
   const def = mechDefFor(unit);
   if (building !== null) {
+    unit.position = { ...to };
     const legWasGoneR = legGone(unit.damage, "rightLeg");
     const legWasGoneL = legGone(unit.damage, "leftLeg");
     const gyroWasGone = countDestroyedGyro(def, unit.damage, unit.critSlotsDestroyed);
@@ -4820,6 +4850,7 @@ export function attemptStandUp(
   unitId: string,
   sink: GameEvent[],
   rng: Rng = DEFAULT_RNG,
+  locomotion: MoveMode = "walk",
 ): number {
   requirePhase(state, "movement");
   const unit = requireUnit(state, unitId);
@@ -4847,11 +4878,13 @@ export function attemptStandUp(
   unit.jumpedThisTurn = false;
   unit.mpSpent = standCost;
   state.actedThisPhase.push(unitId);
-  unit.heatPending += POSTURE_MOVE_HEAT;
+  // The stand costs 1 heat on top of the declared mode's own heat (TW p.159).
+  const standHeat = POSTURE_MOVE_HEAT + (locomotion === "run" ? 2 : locomotion === "walk" ? 1 : 0);
+  unit.heatPending += standHeat;
   sink.push({
     kind: "heatMove",
     unitId,
-    heat: POSTURE_MOVE_HEAT,
+    heat: standHeat,
     base: unit.heat,
     totalGenerated: unit.heatPending,
   });

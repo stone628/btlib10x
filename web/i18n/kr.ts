@@ -89,7 +89,7 @@ export const kr: Catalog = {
     "엎드린 상태에서 제자리 방향 전환 — 방향당 1 MP, 걷기 예산 내에서 여러 번 가능, +1 열. 'done'으로 확정",
   "cmd.mode.arg.pronestill": "엎드린 채 대기 — MP 소비 없음. 'done'으로 확정",
   "cmd.mode.arg.standup":
-    "엎드린 상태에서 일어난 뒤 서브 모드로 이동 — 'standup [walk|run|jump|standstill]'.\n서브 모드는 일어서기 2MP를 포함해서 하나의 MP 풀 공유 (기본 standstill)\n'done'으로 확정시 성공 여부 결정. 실패시 place를 통한 예약 이동 무시",
+    "엎드린 상태에서 일어난 뒤 서브 모드로 이동 — 'standup [walk|run|standstill]'.\n서브 모드는 일어서기 2MP를 포함해서 하나의 MP 풀 공유 (기본 standstill)\n'done'으로 확정시 성공 여부 결정. 실패시 place를 통한 예약 이동 무시",
   "cmd.mode.arg.shutdown": "자발적 셧다운 시도. 'done'으로 확정",
   "cmd.mode.arg.startup": "시동 시도. 'done'으로 확정시 성공 여부 결정",
   "cmd.mode.arg.eject": "메크 버리기 — 파일럿 탈출. 해당 좌표는 레벨-2 잔해가 됨. 'done'으로 확정",
@@ -208,7 +208,7 @@ export const kr: Catalog = {
   "err.badModeWord": "알 수 없는 이동 모드 — 유효 모드: {modes}",
   "err.standupRequiresProne":
     "{id}는 엎드린 상태가 아님 — mode standup은 엎드린 유닛 필요. 유효 모드: {modes}",
-  "err.standupNeedsMode": "mode standup 인자는 walk|run|jump|standstill만 가능 (기본 standstill)",
+  "err.standupNeedsMode": "mode standup 인자는 walk|run|standstill만 가능 (기본 standstill)",
   "err.proneRequiresStanding": "{id}는 이미 엎드린 상태임. 유효 모드: {modes}",
   "err.proneNeedsMode": "mode prone 인자는 turn|pronestill만 가능 (기본 turn). 유효 모드: {modes}",
   "err.turnRequiresProne":

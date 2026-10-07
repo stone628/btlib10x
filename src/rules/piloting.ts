@@ -195,11 +195,14 @@ export function preexistingDamageModifier(
       modifier += LEG_DESTROYED_MOD;
       continue;
     }
-    for (const n of destroyedStructures(def, damage, destroyed, leg)) {
-      if (n === HIP) {
-        modifier += HIP_MOD;
-        continue;
-      }
+    // TW p.60 note 5: a destroyed hip replaces every other critical
+    // modifier on that leg.
+    const legCrits = destroyedStructures(def, damage, destroyed, leg);
+    if (legCrits.includes(HIP)) {
+      modifier += HIP_MOD;
+      continue;
+    }
+    for (const n of legCrits) {
       if (LEG_ACTUATORS.has(n)) modifier += LEG_ACTUATOR_MOD;
     }
   }

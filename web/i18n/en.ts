@@ -92,7 +92,7 @@ export const en = {
     "turn in place while prone — 1 MP per hexside, multiple turns within the walk budget, +1 heat. committed by 'done'",
   "cmd.mode.arg.pronestill": "stay prone — no movement points spent. committed by 'done'",
   "cmd.mode.arg.standup":
-    "rise from prone then move with a sub-mode — 'standup [walk|run|jump|standstill]'\nsub-mode shares one MP pool (default standstill) including stand costs 2 MP.\ncommitted by 'done', stand check will follow.\nfailed stand discards the queued placement.",
+    "rise from prone then move with a sub-mode — 'standup [walk|run|standstill]'\nsub-mode shares one MP pool (default standstill) including stand costs 2 MP.\ncommitted by 'done', stand check will follow.\nfailed stand discards the queued placement.",
   "cmd.mode.arg.shutdown": "voluntary shutdown attempt. committed by 'done'",
   "cmd.mode.arg.startup": "startup attempt. committed by 'done', startup check will follow",
   "cmd.mode.arg.eject":
@@ -216,7 +216,7 @@ export const en = {
   "err.badModeWord": "unknown move mode — valid modes: {modes}",
   "err.standupRequiresProne":
     "{id} is not prone — mode standup needs a prone unit. valid modes: {modes}",
-  "err.standupNeedsMode": "mode standup takes only walk|run|jump|standstill (default standstill)",
+  "err.standupNeedsMode": "mode standup takes only walk|run|standstill (default standstill)",
   "err.proneRequiresStanding": "{id} is already prone. valid modes: {modes}",
   "err.proneNeedsMode":
     "mode prone takes only turn|pronestill (default turn). valid modes: {modes}",
