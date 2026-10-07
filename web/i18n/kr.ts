@@ -576,6 +576,8 @@ export const kr: Catalog = {
   "log.psrReason.kick": "발차기 피격",
   "log.psrReason.kickMiss": "발차기 빗나감",
   "log.psrReason.domino": "도미노 효과",
+  "log.accidentalFallHit": "[{id}] {target} 위로 추락 ({tn}+ 필요, 굴림 {roll}): 피해 {damage}",
+  "log.accidentalFallMiss": "[{id}] {target} 쪽으로 추락했으나 빗나감 ({tn}+ 필요, 굴림 {roll})",
   "log.unitDisplaced": "[{id}] ({fromCol},{fromRow})에서 ({toCol},{toRow})로 밀려남 (도미노 효과)",
   "log.psrReason.ejection": "탈출(실패 시 조종사 부상)",
   "log.fallCause.failedPsr": "{reason} 판정 실패",

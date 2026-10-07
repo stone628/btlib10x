@@ -172,4 +172,56 @@ describe("domino effect on a movement fall (MOV-09)", () => {
     const all = Object.values(state.units).map((u) => `${u.position.col},${u.position.row}`);
     expect(new Set(all).size).toBe(all.length);
   });
+
+  describe("accidental fall from above (TW p.152)", () => {
+    function highBattle() {
+      const state = createTestBattle(
+        [
+          { col: 5, row: 9, type: "clear", level: 2 },
+          { col: 5, row: 8, type: "rubble", level: 0 },
+        ],
+        [
+          buildUnitInit("a", "HBK-4G", 0, { col: 5, row: 9 }, "n"),
+          buildUnitInit("c", "HBK-4G", 0, { col: 5, row: 8 }, "n"),
+          buildUnitInit("b", "HBK-4G", 1, { col: 1, row: 1 }, "s"),
+        ],
+        true,
+        9,
+        10,
+      );
+      state.phase = "movement";
+      state.initiativeWinnerTeam = 0;
+      state.actorQueue = ["a", "c", "b"];
+      state.actedThisPhase = [];
+      return state;
+    }
+    // rubble PSR fails (1,1); fall facing; three damage groups; seatbelt.
+    const fall = [1, 1, 1, 3, 4, 3, 4, 3, 4, 6, 6];
+    const step = [
+      { kind: "enter" as const, to: { col: 5, row: 8 } },
+      { kind: "enter" as const, to: { col: 5, row: 7 } },
+    ];
+
+    it("a miss lands the faller back in the hex it fell from", () => {
+      const state = highBattle();
+      const events: GameEvent[] = [];
+      executeMove(state, "a", "run", step, events, {
+        rng: scriptedRng(...fall, 1, 1, 6, 6, 6, 6, 6, 6),
+      });
+      expect(events).toContainEqual(expect.objectContaining({ kind: "accidentalFall", hit: false }));
+      expect(requireUnit(state, "a").position).toEqual({ col: 5, row: 9 });
+      expect(requireUnit(state, "c").position).toEqual({ col: 5, row: 8 });
+    });
+
+    it("a hit damages the occupant and pushes it one hex away", () => {
+      const state = highBattle();
+      const events: GameEvent[] = [];
+      executeMove(state, "a", "run", step, events, {
+        rng: scriptedRng(...fall, 6, 6, 3, 3, 6, 6, 6, 6, 6, 6),
+      });
+      expect(events).toContainEqual(expect.objectContaining({ kind: "accidentalFall", hit: true }));
+      expect(requireUnit(state, "a").position).toEqual({ col: 5, row: 8 });
+      expect(requireUnit(state, "c").position).toEqual({ col: 5, row: 7 });
+    });
+  });
 });

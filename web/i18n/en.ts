@@ -594,6 +594,8 @@ export const en = {
   "log.psrReason.kick": "kicked",
   "log.psrReason.kickMiss": "missed kick",
   "log.psrReason.domino": "domino effect",
+  "log.accidentalFallHit": "[{id}] falls onto {target} (needs {tn}+, rolled {roll}): {damage} damage",
+  "log.accidentalFallMiss": "[{id}] falls toward {target} but misses (needs {tn}+, rolled {roll})",
   "log.unitDisplaced": "[{id}] is shoved from ({fromCol},{fromRow}) to ({toCol},{toRow}) (domino effect)",
   "log.psrReason.ejection": "ejecting (failure injures the pilot)",
   "log.fallCause.failedPsr": "failed {reason} PSR",

@@ -1551,6 +1551,18 @@ function handleSessionGameEvent(
         idLines(e.unitId, ...lines);
       }
       break;
+    case "accidentalFall":
+      idLines(
+        e.unitId,
+        i18n(e.hit ? "log.accidentalFallHit" : "log.accidentalFallMiss", {
+          id: e.unitId,
+          target: e.targetId,
+          tn: e.toHit,
+          roll: e.roll,
+          damage: e.damage,
+        }),
+      );
+      break;
     case "unitDisplaced":
       idLines(
         e.unitId,

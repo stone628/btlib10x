@@ -8,6 +8,7 @@ import {
   type HexGrid,
   hasPartialCover,
   setCell,
+  terrainTargetMod,
   waterDepth,
 } from "../core/terrain";
 import {
@@ -519,6 +520,16 @@ export type GameEvent =
       readonly kind: "pickupDeclared";
       readonly unitId: string;
       readonly source: ClubKind;
+    }
+  | {
+      /** A unit fell two or more levels onto an occupied hex (TW p.152). */
+      readonly kind: "accidentalFall";
+      readonly unitId: string;
+      readonly targetId: string;
+      readonly toHit: number;
+      readonly roll: number;
+      readonly hit: boolean;
+      readonly damage: number;
     }
   | {
       /** A unit shoved one hex by the domino effect (TW p.152). */
@@ -4728,6 +4739,10 @@ function dominoPossible(state: BattleState, victim: UnitState, dir: Facing, dept
   return next === undefined || dominoPossible(state, next, dir, depth + 1);
 }
 const DOMINO_CHAIN_MAX = 6;
+/** Base to-hit of an Accidental Fall From Above (TW p.152). */
+const ACCIDENTAL_FALL_BASE_TN = 7;
+/** Piloting modifier of a unit struck by an accidental fall (as a DFA target). */
+const ACCIDENTAL_FALL_TARGET_PSR = 2;
 
 /**
  * Domino effect (TW p.152): a unit that falls into an occupied hex shoves the
@@ -4742,6 +4757,7 @@ function displaceWithDomino(
   dir: Facing,
   rng: Rng,
   sink: GameEvent[],
+  psrMod = 0,
 ): void {
   const dest = neighbor(victim.position, dir);
   const next = occupantAt(state, dest, victim.id);
@@ -4768,7 +4784,7 @@ function displaceWithDomino(
     falls =
       isShutdown(victim) ||
       victim.unconscious ||
-      !pushPilotingCheck(sink, victim, "domino", 0, pre, rng, { ...dest }).success;
+      !pushPilotingCheck(sink, victim, "domino", psrMod, pre, rng, { ...dest }).success;
   }
   if (!falls) return;
   const terrain = cellAt(state, dest).terrain;
@@ -4780,7 +4796,7 @@ function displaceWithDomino(
       cause: { kind: "failedPsr", reason: "domino" },
       hex: { ...dest },
       seatbeltModifier:
-        isShutdown(victim) || victim.unconscious ? null : pre + Math.max(0, levels - 1),
+        isShutdown(victim) || victim.unconscious ? null : pre + psrMod + Math.max(0, levels - 1),
       halved: terrain === "water2" || terrain === "water3",
       ...(levels > 0 ? { levelsFallen: levels } : {}),
     },
@@ -4818,7 +4834,50 @@ function movementTerrainPsr(
     const occupant = occupantAt(state, lower, unit.id);
     if (occupant === undefined) return lower;
     const dir = FACINGS.find((f) => sameHex(neighbor(from, f), to));
-    if (dir !== undefined && sameHex(lower, to) && dominoPossible(state, occupant, dir)) {
+    const shoveable =
+      dir !== undefined && sameHex(lower, to) && dominoPossible(state, occupant, dir);
+    // Accidental Falls From Above (TW p.152): two or more levels down onto
+    // the occupant; a hit damages it like a DFA, a miss lands the faller in
+    // the hex it fell from.
+    const drop = ground ? groundLevel(state, from) - groundLevel(state, lower) : 0;
+    if (drop >= 2) {
+      const tn =
+        ACCIDENTAL_FALL_BASE_TN +
+        mv.targetMovementModifier(occupant.movesThisTurn.length, occupant.jumpedThisTurn, undefined) +
+        terrainTargetMod(cellAt(state, lower).terrain);
+      const roll = roll2D6(rng);
+      const hit = roll >= tn;
+      const total = Math.ceil(unitTonnage(unit) / 10) * drop;
+      sink.push({
+        kind: "accidentalFall",
+        unitId: unit.id,
+        targetId: occupant.id,
+        toHit: tn,
+        roll,
+        hit,
+        damage: hit ? total : 0,
+      });
+      if (!hit) {
+        unit.position = { ...from };
+        return { ...from };
+      }
+      const groups: DamageGroup[] = fallingDamageGroups(total).map((amount) => ({
+        location: punchHitLocation(rollD6(rng)),
+        damage: amount,
+      }));
+      applyDamageGroups(state, occupant, rng, groups, "front", sink);
+      if (!isUnitRemoved(occupant)) {
+        if (shoveable && dir !== undefined) {
+          // A hit target is pushed one hex directly away and rolls at +2.
+          displaceWithDomino(state, occupant, dir, rng, sink, ACCIDENTAL_FALL_TARGET_PSR);
+        } else {
+          unit.position = { ...from };
+          return { ...from };
+        }
+      }
+      return lower;
+    }
+    if (shoveable && dir !== undefined) {
       displaceWithDomino(state, occupant, dir, rng, sink);
       return lower;
     }
