@@ -4875,11 +4875,16 @@ export function attemptStandUp(
   // TW p.50: a prone 'Mech with only 1 MP (e.g. a one-leg 'Mech) may still
   // attempt to stand, but the stand cost is whatever walking budget they
   // have. Charge the actual budget so the move still resolves.
-  const standCost = Math.min(STAND_MP_COST, budget);
+  // TW p.50: a failed attempt may be repeated while MP remain; each attempt
+  // draws on what the earlier ones left of the walking pool.
+  const priorSpent = unit.mpSpent;
+  const remaining = Math.max(0, budget - priorSpent);
+  if (remaining < 1) throw new Error(`${unitId} has no MP left to stand up`);
+  const standCost = Math.min(STAND_MP_COST, remaining);
   unit.moveMode = "walk";
   unit.movesThisTurn = [];
   unit.jumpedThisTurn = false;
-  unit.mpSpent = standCost;
+  unit.mpSpent = priorSpent + standCost;
   state.actedThisPhase.push(unitId);
   // The stand costs 1 heat on top of the declared mode's own heat (TW p.159).
   const standHeat = POSTURE_MOVE_HEAT + (locomotion === "run" ? 2 : locomotion === "walk" ? 1 : 0);
@@ -4901,10 +4906,10 @@ export function attemptStandUp(
       prevMode: "prone",
       position: { ...unit.position },
       facing: unit.facing,
-      mpSpent: standCost,
+      mpSpent: unit.mpSpent,
       mpBudget: budget,
     });
-    return standCost;
+    return unit.mpSpent;
   }
   // Failed stand: the 'Mech crashes back down (TW p.50) for fresh fall damage.
   const terrain = cellAt(state, unit.position).terrain;
@@ -4921,7 +4926,17 @@ export function attemptStandUp(
     },
     sink,
   );
-  return standCost;
+  // A failed stand with another full attempt affordable (and both legs
+  // intact) leaves the unit active so it may try again (TW p.50).
+  if (
+    !isUnitRemoved(unit) &&
+    destroyedLegs(unit.damage) === 0 &&
+    budget - unit.mpSpent >= STAND_MP_COST
+  ) {
+    const at = state.actedThisPhase.lastIndexOf(unitId);
+    if (at >= 0) state.actedThisPhase.splice(at, 1);
+  }
+  return unit.mpSpent;
 }
 
 /**
