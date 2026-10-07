@@ -466,6 +466,7 @@ export const en = {
   "sheet.remove.cockpitDestroyed": "cockpit destroyed",
   "sheet.remove.hdBlownOff": "HD blown off",
   "sheet.remove.engineDestroyed": "engine destroyed",
+  "sheet.remove.displacedOffBoard": "pushed off the map",
 
   // critical slot chart
   "critChart.summary": "critical slots",

@@ -452,6 +452,7 @@ export const kr: Catalog = {
   "sheet.remove.cockpitDestroyed": "조종석 파괴",
   "sheet.remove.hdBlownOff": "HD 폭발",
   "sheet.remove.engineDestroyed": "엔진 파괴",
+  "sheet.remove.displacedOffBoard": "맵 밖으로 밀려남",
 
   "critChart.summary": "critical slots",
   "critChart.empty": "-",

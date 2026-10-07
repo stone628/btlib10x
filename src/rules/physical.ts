@@ -10,15 +10,15 @@
  * after all weapon attacks (TW p. 37 phase order within the unified phase).
  */
 
-import { roll2D6, rollD6 } from "../core/dice";
+import { D2D6_IMPOSSIBLE, roll2D6, rollD6 } from "../core/dice";
 import { bearingExact, hexDistance, isAdjacent, neighbor } from "../core/hex";
-import { cellAt, terrainTargetMod } from "../core/terrain";
+import { cellAt, groundLevel, terrainTargetMod } from "../core/terrain";
 import type { ArmLocation, HexCoord, Location, Rng } from "../core/types";
 import { isArm } from "../core/types";
 import { mechDefFor } from "../data/index";
 import type { ResolvedMechDef } from "../data/mech.schema";
 import { weaponDefFor } from "../data/weapon.schema";
-import { countArmActuators } from "./actuators";
+import { absentArmActuators, countArmActuators } from "./actuators";
 import {
   type Arc,
   classifyArcWithBoundary,
@@ -35,11 +35,23 @@ import {
   type UnitDamageState,
 } from "./damage";
 import type { BattleState, UnitState } from "./game";
-import { isImmobile, isUnitRemoved, partialCoverMod } from "./game";
+import {
+  isImmobile,
+  isShutdown,
+  isUnitRemoved,
+  occupantAt,
+  partialCoverMod,
+  wreckAt,
+} from "./game";
 import { isTsmActive } from "./heat";
 import { hitLocationForArc, punchHitLocationForArc } from "./hitlocation";
 import { losWoodsPointsBetween } from "./los";
-import { attackerMovementModifier, TARGET_IMMOBILE_MOD, targetMovementModifier } from "./movement";
+import {
+  attackerMovementModifier,
+  FORWARD_LEVEL_CHANGE_MAX,
+  TARGET_IMMOBILE_MOD,
+  targetMovementModifier,
+} from "./movement";
 import { type PilotingRollResult, preexistingDamageModifier, rollPilotingCheck } from "./piloting";
 import { PRONE_ATTACKER_MOD, proneTargetModifier } from "./tohit";
 
@@ -59,6 +71,9 @@ export interface PhysicalAttackDecl {
   readonly limb?: "leftArm" | "rightArm" | "leftLeg" | "rightLeg";
   /** For strike: which mounted physical weapon is used. */
   readonly weapon?: PhysicalWeaponName;
+  /** Torso twist the attacker declared with (TW pp.37-38): holds through the
+   *  physical sub-pass, which re-checks arcs against it. */
+  readonly twist?: Arc;
 }
 
 export interface PhysicalModifiers {
@@ -128,6 +143,9 @@ export interface PhysicalResolution {
   readonly kickTargetPsrPending?: boolean;
   /** Kick attacker PSR on a miss, deferred to the end-of-phase sweep. */
   readonly kickAttackerPsrPending?: boolean;
+  /** Levels the pushed target drops off a cliff (more than two levels down,
+   *  TW p.147): the fall is automatic and carries that many levels. */
+  readonly displacementLevels?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -289,9 +307,10 @@ function physicalActuatorMod(
       if (!limb) return 0;
       if (limb !== "leftArm" && limb !== "rightArm") return 0;
       const counts = countArmActuators(def, damage, destroyed, limb);
+      const absent = absentArmActuators(def, limb);
       let mod = 0;
-      mod += (counts.upper + counts.lower) * 2;
-      if (counts.hand > 0) mod += 1;
+      mod += (counts.upper + counts.lower + absent.upper + absent.lower) * 2;
+      if (counts.hand > 0 || absent.hand > 0) mod += 1;
       return mod;
     }
     case "kick": {
@@ -480,10 +499,11 @@ export function physicalDamage(
       let dmg = Math.ceil(tons / PUNCH_DAMAGE_PER_TONS);
       if (limb && (limb === "leftArm" || limb === "rightArm")) {
         const counts = countArmActuators(def, attacker.damage, attacker.critSlotsDestroyed, limb);
-        // Halve for each damaged upper/lower arm actuator, cumulative
+        const absent = absentArmActuators(def, limb);
+        // Halve for each damaged or absent upper/lower arm actuator, cumulative
         let divisor = 1;
-        if (counts.upper > 0) divisor *= 2;
-        if (counts.lower > 0) divisor *= 2;
+        if (counts.upper > 0 || absent.upper > 0) divisor *= 2;
+        if (counts.lower > 0 || absent.lower > 0) divisor *= 2;
         dmg = Math.floor(dmg / divisor);
         return Math.max(1, doubled(dmg));
       }
@@ -673,7 +693,8 @@ export function validatePhysicalAttack(
   }
 
   // Level difference (TW p. 150)
-  const levelDelta = targetCell.level - attackerCell.level;
+  // Levels are measured from the bottom of the hex a 'Mech stands on (TW p.150).
+  const levelDelta = groundLevel(battle, target.position) - groundLevel(battle, attacker.position);
   if (Math.abs(levelDelta) > 1) {
     return { ok: false, reason: "Level difference too great for physical attack" };
   }
@@ -895,6 +916,9 @@ function validateClub(
     if (counts.hand > 0) {
       return { ok: false, reason: `Cannot club: ${arm} hand actuator destroyed` };
     }
+    if (absentArmActuators(def, arm).hand > 0) {
+      return { ok: false, reason: `Cannot club: ${arm} has no hand actuator` };
+    }
   }
 
   // Compute attack direction
@@ -980,9 +1004,42 @@ function validateStrike(
  * damage (TW p.60). Pure dice wrapper so push/kick call sites stay flat.
  */
 function rollPhysicalPsr(rollRng: Rng, unit: UnitState): PilotingRollResult {
+  // A shut-down 'Mech or unconscious pilot cannot roll and fails (TW pp.40, 59).
+  if (isShutdown(unit) || unit.unconscious) {
+    return { target: D2D6_IMPOSSIBLE, roll: null, success: false };
+  }
   const def = mechDefFor(unit);
   const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
   return rollPilotingCheck(rollRng, unit.piloting, pre.modifier);
+}
+
+/** Where a push would send the target (TW pp.147, 151). Off the map is legal
+ *  and destroys the unit; prohibited terrain blocks the displacement (the
+ *  other effects stand); more than two levels down is an automatic fall.
+ *  An occupied hex is treated as blocked: the domino effect (TW pp.152–153)
+ *  is not modelled. */
+export type PushOutcome =
+  | { kind: "ok" }
+  | { kind: "offBoard" }
+  | { kind: "blocked"; reason: string }
+  | { kind: "cliff"; levels: number };
+
+export function pushDisplacementOutcome(
+  battle: BattleState,
+  target: UnitState,
+  to: HexCoord,
+): PushOutcome {
+  if (to.col < 1 || to.col > battle.width || to.row < 1 || to.row > battle.height) {
+    return { kind: "offBoard" };
+  }
+  if (wreckAt(battle, to) !== undefined) return { kind: "blocked", reason: "wreck" };
+  if (occupantAt(battle, to, target.id) !== undefined) {
+    return { kind: "blocked", reason: "occupied (domino effect not implemented)" };
+  }
+  const delta = groundLevel(battle, to) - groundLevel(battle, target.position);
+  if (delta > FORWARD_LEVEL_CHANGE_MAX) return { kind: "blocked", reason: "too high to climb" };
+  if (delta < -FORWARD_LEVEL_CHANGE_MAX) return { kind: "cliff", levels: -delta };
+  return { kind: "ok" };
 }
 
 /**
@@ -1039,7 +1096,7 @@ export function resolvePhysicalAttack(
     // (TW p.151): the effective table selects the dice (punch/kick 1D6,
     // standard 2D6). No +4 election modifier on auto-swaps (TW p.146).
     const levelDelta =
-      cellAt(battle, target.position).level - cellAt(battle, attacker.position).level;
+      groundLevel(battle, target.position) - groundLevel(battle, attacker.position);
     const table = physicalLocationTable(decl.type, levelDelta, target.prone);
     const locRoll = table === "standard" ? roll2D6(rng) : rollD6(rng);
     // Through-armor critical on a 2 rolled on the 2D6 'Mech Hit Location
@@ -1060,6 +1117,7 @@ export function resolvePhysicalAttack(
   let targetFalls = false;
   let kickTargetPsrPending = false;
   let kickAttackerPsrPending = false;
+  let displacementLevels = 0;
 
   if (decl.type === "push") {
     if (hit) {
@@ -1069,12 +1127,22 @@ export function resolvePhysicalAttack(
       // are the sole exception and resolve via `resolveMutualPush`.
       const pushDir = attacker.facing;
       const targetNewHex = neighbor(target.position, pushDir);
-      targetDisplacedTo = targetNewHex;
-      attackerDisplacedTo = { ...target.position };
-
-      const targetPsrResult = rollPhysicalPsr(rng, target);
-      targetPsr = targetPsrResult;
-      if (!targetPsrResult.success) targetFalls = true;
+      const outcome = pushDisplacementOutcome(battle, target, targetNewHex);
+      if (outcome.kind === "blocked") {
+        notes.push(`push displacement blocked (${outcome.reason}) — neither unit moves`);
+      } else {
+        targetDisplacedTo = targetNewHex;
+        attackerDisplacedTo = { ...target.position };
+      }
+      if (outcome.kind === "cliff") {
+        // Displaced more than two levels down: an automatic fall (TW p.147).
+        displacementLevels = outcome.levels;
+        targetFalls = true;
+      } else if (outcome.kind !== "offBoard") {
+        const targetPsrResult = rollPhysicalPsr(rng, target);
+        targetPsr = targetPsrResult;
+        if (!targetPsrResult.success) targetFalls = true;
+      }
     }
   }
 
@@ -1114,6 +1182,7 @@ export function resolvePhysicalAttack(
     ...(extraToHit !== 0 ? { displacementPenalty: extraToHit } : {}),
     ...(kickTargetPsrPending ? { kickTargetPsrPending } : {}),
     ...(kickAttackerPsrPending ? { kickAttackerPsrPending } : {}),
+    ...(displacementLevels > 0 ? { displacementLevels } : {}),
   };
 }
 
@@ -1169,9 +1238,23 @@ export function resolveMutualPush(
     roll: number | null;
     success: boolean;
   } {
+    if (isShutdown(unit) || unit.unconscious) {
+      return { target: D2D6_IMPOSSIBLE, roll: null, success: false };
+    }
     const def = mechDefFor(unit);
     const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
     return rollPilotingCheck(rng, unit.piloting, pre.modifier);
+  }
+
+  /** Defender PSR for a one-sided mutual push: none when shoved off the map,
+   *  automatic failure off a cliff. */
+  function mutualPsr(
+    outcome: PushOutcome,
+    unit: UnitState,
+  ): { target: number; roll: number | null; success: boolean } {
+    if (outcome.kind === "offBoard") return { target: 0, roll: null, success: true };
+    if (outcome.kind === "cliff") return { target: D2D6_IMPOSSIBLE, roll: null, success: false };
+    return rollDefenderPsr(unit);
   }
 
   function missResolution(
@@ -1222,8 +1305,9 @@ export function resolveMutualPush(
   }
 
   if (ra.hit && !rb.hit) {
-    const targetNewHex = neighbor(unitB.position, unitA.facing);
-    const psr = rollDefenderPsr(unitB);
+    const outB = pushDisplacementOutcome(battle, unitB, neighbor(unitB.position, unitA.facing));
+    const targetNewHex = outB.kind === "blocked" ? null : neighbor(unitB.position, unitA.facing);
+    const psr = mutualPsr(outB, unitB);
     const hitRes: PhysicalResolution = {
       type: "push",
       attackerId: attackerAId,
@@ -1239,7 +1323,7 @@ export function resolveMutualPush(
       attackerApplication: null,
       crits: [],
       targetDisplacedTo: targetNewHex,
-      attackerDisplacedTo: { ...unitB.position },
+      attackerDisplacedTo: targetNewHex === null ? null : { ...unitB.position },
       targetPsr: psr,
       attackerPsr: null,
       attackerFalls: false,
@@ -1260,8 +1344,9 @@ export function resolveMutualPush(
   }
 
   if (!ra.hit && rb.hit) {
-    const targetNewHex = neighbor(unitA.position, unitB.facing);
-    const psr = rollDefenderPsr(unitA);
+    const outA = pushDisplacementOutcome(battle, unitA, neighbor(unitA.position, unitB.facing));
+    const targetNewHex = outA.kind === "blocked" ? null : neighbor(unitA.position, unitB.facing);
+    const psr = mutualPsr(outA, unitA);
     const missRes = missResolution(
       attackerAId,
       attackerBId,
@@ -1286,7 +1371,7 @@ export function resolveMutualPush(
       attackerApplication: null,
       crits: [],
       targetDisplacedTo: targetNewHex,
-      attackerDisplacedTo: { ...unitA.position },
+      attackerDisplacedTo: targetNewHex === null ? null : { ...unitA.position },
       targetPsr: psr,
       attackerPsr: null,
       attackerFalls: false,
