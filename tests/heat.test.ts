@@ -799,9 +799,9 @@ describe("game integration: partial cover in to-hit", () => {
     expect(coverModFor("water1")).toBe(1);
   });
 
-  it("target in building hex: coverMod 1 (partial cover), terrainMod 0", () => {
+  it("target in building hex: no cover and no terrain modifier (TW p.171)", () => {
     expect(terrainModFor("mediumBuilding")).toBe(0);
-    expect(coverModFor("mediumBuilding")).toBe(1);
+    expect(coverModFor("mediumBuilding")).toBe(0);
   });
 });
 

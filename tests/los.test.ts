@@ -81,13 +81,13 @@ describe("losBlockedByBuilding", () => {
     expect(losClear(grid, { col: 2, row: 2 }, { col: 4, row: 2 })).toBe(false);
   });
 
-  it("elevation folds building blocking into the ray: a level-2 attacker sees over", () => {
+  it("a building adjacent to a lower target blocks even a level-2 attacker (TW p.100 clause 3)", () => {
     // Attacker (2,2) L2 (LOS 3), building (3,2) top L2, target (4,2) L0.
-    // Ray at the building's center is 2, which does not strictly exceed → clear.
+    // The building is adjacent to the target and its top (2) is at least the
+    // target's LOS level (2), so it intervenes even though the attacker is higher.
     const grid = gridWithBuildings(["3,2"], { "2,2": 2 });
-    expect(losBlockedByBuilding(grid, { col: 2, row: 2 }, { col: 4, row: 2 })).toBe(false);
-    expect(losBlockedByElevation(grid, { col: 2, row: 2 }, { col: 4, row: 2 })).toBe(false);
-    expect(losClear(grid, { col: 2, row: 2 }, { col: 4, row: 2 })).toBe(true);
+    expect(losBlockedByBuilding(grid, { col: 2, row: 2 }, { col: 4, row: 2 })).toBe(true);
+    expect(losClear(grid, { col: 2, row: 2 }, { col: 4, row: 2 })).toBe(false);
   });
 
   it("the building hex a unit occupies is not intervening", () => {

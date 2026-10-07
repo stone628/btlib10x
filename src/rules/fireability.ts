@@ -4,7 +4,7 @@ import { cellAt } from "../core/terrain";
 import type { Location } from "../core/types";
 import { mechDefFor } from "../data/index";
 import { weaponDefFor } from "../data/weapon.schema";
-import { armWeaponToHitModifier } from "./actuators";
+import { armWeaponToHitModifier, targetingComputerModifier } from "./actuators";
 import { binsForWeaponName, pooledShotsLeft } from "./ammo";
 import { type Arc, classifyFiringArc, effectiveFacingForTwist, weaponCanFireIntoArc } from "./arcs";
 import { countDestroyedSensor } from "./critical";
@@ -164,7 +164,10 @@ export function suggestFireTargets(
       // (null only when attacker and target share a hex).
       const arc = classifyFiringArc(unit.position, enemy.position, effectiveFacing);
       const altArc = null as Arc | null;
-      const interveningWoods = losWoodsPointsBetween(state, unit.position, enemy.position);
+      const interveningWoods = losWoodsPointsBetween(state, unit.position, enemy.position, {
+        from: unit.prone,
+        to: enemy.prone,
+      });
 
       const weaponsIfPropLeft: FireWeapon[] = [];
       const weaponsIfPropRight: FireWeapon[] = [];
@@ -272,6 +275,7 @@ export function suggestFireTargets(
           distance,
           weapon,
           heatMod: toHitHeatModifier(unit.heat),
+          tcMod: targetingComputerModifier(def, unit.damage, unit.critSlotsDestroyed, weapon),
         });
         if (breakdown.outOfRange) {
           blockBoth("outOfRange");

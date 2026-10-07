@@ -15,10 +15,11 @@
  */
 
 import type { ArmLocation, Location } from "../core/types";
-import { isArm } from "../core/types";
+import { isArm, LOCATIONS } from "../core/types";
 import type { ResolvedMechDef } from "../data/mech.schema";
 import { destroyedStructures } from "./critical";
-import type { UnitDamageState } from "./damage";
+import type { WeaponDef } from "../data/weapon.schema";
+import { isUnitLocationDestroyed, type UnitDamageState } from "./damage";
 
 /** Weapon to-hit penalty for a destroyed shoulder in the firing arm (TW p.125). */
 export const SHOULDER_WEAPON_MOD = 4;
@@ -81,4 +82,34 @@ export function armWeaponToHitModifier(
   const counts = countArmActuators(def, damage, destroyed, location);
   if (counts.shoulder > 0) return SHOULDER_WEAPON_MOD;
   return (counts.upper + counts.lower) * ARM_ACTUATOR_WEAPON_MOD;
+}
+
+/** To-hit bonus of a targeting computer for an eligible weapon (TW p.143). */
+export const TARGETING_COMPUTER_MOD = -1;
+
+/**
+ * -1 for direct-fire energy and ballistic weapons (flamers and machine guns
+ * excepted, TW p.113) when the 'Mech carries a targeting computer whose
+ * slots are all intact and whose location still stands. Aimed shots (the
+ * +3 alternative) belong to the aimed-shot system, which is not modelled.
+ */
+export function targetingComputerModifier(
+  def: ResolvedMechDef,
+  damage: UnitDamageState,
+  destroyed: Readonly<Record<Location, readonly boolean[]>>,
+  weapon: WeaponDef,
+): number {
+  if (weapon.category !== "ENERGY" && weapon.category !== "BALLISTIC") return 0;
+  if (/Flamer|Machine Gun/.test(weapon.name)) return 0;
+  let fitted = false;
+  for (const loc of LOCATIONS) {
+    const slots = def.critSlots[loc];
+    for (let i = 0; i < slots.length; i++) {
+      const slot = slots[i];
+      if (slot?.kind !== "structure" || slot.name !== "targetingComputer") continue;
+      fitted = true;
+      if (destroyed[loc]?.[i] === true || isUnitLocationDestroyed(damage, loc)) return 0;
+    }
+  }
+  return fitted ? TARGETING_COMPUTER_MOD : 0;
 }

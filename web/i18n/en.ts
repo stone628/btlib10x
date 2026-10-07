@@ -635,6 +635,7 @@ export const en = {
   "res.gator.heat": "heat",
   "res.gator.sensors": "sensors",
   "res.gator.actuators": "actuators",
+  "res.gator.targetingComputer": "targeting computer",
   "res.line": "{weapon}: {gator}, 2D6 = {roll} -> {verdict}{jam}",
   "res.jamSuffix": " JAMMED",
   "res.autoHit": "auto-hit",

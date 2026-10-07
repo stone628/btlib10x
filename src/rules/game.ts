@@ -35,7 +35,7 @@ import {
 import { type MapDef, type MechModelHolder, mechDef, mechDefFor } from "../data/index";
 import type { ResolvedMechDef } from "../data/mech.schema";
 import { weaponDefFor } from "../data/weapon.schema";
-import { armWeaponToHitModifier } from "./actuators";
+import { armWeaponToHitModifier, targetingComputerModifier } from "./actuators";
 import {
   type AmmoBins,
   type AmmoPolicy,
@@ -122,7 +122,7 @@ import {
   losBlockedByElevation,
   losClear,
   losWoodsPointsBetween,
-  MECH_LOS_HEIGHT,
+  unitLosLevel,
 } from "./los";
 import * as mv from "./movement";
 import { BACKWARD_LEVEL_CHANGE_MAX, FORWARD_LEVEL_CHANGE_MAX, JUMP_MP_PER_HEX } from "./movement";
@@ -879,15 +879,12 @@ export function partialCoverMod(
     if (targetTerrain === "water1") {
       // TW p.102: water1 surrounds the 'Mech, applies even when attacker higher.
       terrain = PARTIAL_COVER_TERRAIN_MOD;
-    } else if (hasPartialCover(targetTerrain) && attackerLevel <= targetLevel) {
-      // Target's own building hex: walls provide cover when attacker not higher.
-      terrain = PARTIAL_COVER_TERRAIN_MOD;
     } else {
       // Intervening higher hex (TW p.102): adjacent to target, between
       // attacker and target, at least one level above target's underlying
       // hex, attacker not firing downhill.
-      const attackerLos = attackerLevel + MECH_LOS_HEIGHT;
-      const targetLos = targetLevel + MECH_LOS_HEIGHT;
+      const attackerLos = unitLosLevel(state, attacker.position, attacker.prone);
+      const targetLos = unitLosLevel(state, target.position, false);
       if (attackerLos <= targetLos) {
         for (const h of interveningHexes(attacker.position, target.position)) {
           if (!isAdjacent(h, target.position)) continue;
@@ -1696,7 +1693,10 @@ export function executeMove(
     unit.position = hex;
     unit.facing = face;
     unit.jumpedThisTurn = jumping && steps.length > 0;
-    unit.movesThisTurn = [...dirs];
+    // Target movement counts only hexes since the last reversal (TW p.107).
+    let since = dirs.length;
+    while (since > 0 && dirs[since - 1] === dirs[dirs.length - 1]) since -= 1;
+    unit.movesThisTurn = dirs.slice(since);
     unit.mpSpent = mp + prechargedMP;
     sink.push({
       kind: "moved",
@@ -2065,17 +2065,13 @@ export function validateAttacksImpl(
       attackDirection = defenderArcChoice(dir.arc, dir.altArc);
     }
 
-    const woodsPoints = losWoodsPointsBetween(state, unit.position, target.position);
-    if (
-      !losClear(state, unit.position, target.position, state.wrecks, {
-        from: unit.prone,
-        to: target.prone,
-      })
-    ) {
-      if (losBlockedByBuilding(state, unit.position, target.position)) {
+    const losProne = { from: unit.prone, to: target.prone };
+    const woodsPoints = losWoodsPointsBetween(state, unit.position, target.position, losProne);
+    if (!losClear(state, unit.position, target.position, state.wrecks, losProne)) {
+      if (losBlockedByBuilding(state, unit.position, target.position, losProne)) {
         throw new Error("Line of sight is blocked by intervening building");
       }
-      if (losBlockedByElevation(state, unit.position, target.position)) {
+      if (losBlockedByElevation(state, unit.position, target.position, losProne)) {
         throw new Error("Line of sight is blocked by intervening elevation");
       }
       throw new Error("Line of sight is blocked by intervening woods");
@@ -2106,6 +2102,7 @@ export function validateAttacksImpl(
       distance: dist,
       weapon,
       heatMod: toHitHeatModifier(unit.heat),
+      tcMod: targetingComputerModifier(def, unit.damage, unit.critSlotsDestroyed, weapon),
     });
     if (index === 0) {
       attackDistance = dist;
@@ -2572,6 +2569,7 @@ function resolveUnitAttacks(
       gunnery: unit.gunnery,
       attackerMoved: unit.moveMode ?? "standStill",
       attackerHeat: preHeat,
+      tcMod: targetingComputerModifier(def, unit.damage, unit.critSlotsDestroyed, weapon),
       attackerProne: unit.prone,
       ...(pronePropArm !== null ? { propArm: pronePropArm } : {}),
       sensorMod,
@@ -2587,7 +2585,10 @@ function resolveUnitAttacks(
       targetProne: target.prone,
       targetTerrain: cellAt(state, target.position).terrain,
       partialCoverMod: partialCoverMod(state, unit, target),
-      interveningTerrains: interveningTerrains(state, unit.position, target.position),
+      interveningTerrains: interveningTerrains(state, unit.position, target.position, {
+        from: unit.prone,
+        to: target.prone,
+      }),
       distance: hexDistance(unit.position, target.position),
       // Resolution keys hit location and armor pool off the attack direction
       // (side of the target struck); the attacker-side firing arc only
@@ -2601,6 +2602,9 @@ function resolveUnitAttacks(
       ammoExhausted,
       shots,
       targetDamage: targetBaseDamage,
+      buildingAbsorb: Math.ceil(
+        (phaseStartCf[hexKey(target.position)] ?? 0) / BUILDING_ABSORB_DIVISOR,
+      ),
       attackerLevel: cellAt(state, unit.position).level,
       targetLevel: cellAt(state, target.position).level,
       ...(state.critsDisabled
@@ -2646,15 +2650,10 @@ function resolveUnitAttacks(
     // TW p. 171: the hex absorbs, from each attack that hits, damage equal
     // to its CF at the beginning of the phase / 10 (round up). Each Damage
     // Value grouping with its own hit location roll counts as a separate
-    // attack. The unit inside still takes its full damage (applied by the
-    // caller from `resolution.application`).
-    let buildingDamage = 0;
-    if (resolution.hit && resolution.groups.length > 0) {
-      const toll = Math.ceil(
-        (phaseStartCf[hexKey(target.position)] ?? 0) / BUILDING_ABSORB_DIVISOR,
-      );
-      buildingDamage = toll * resolution.groups.length;
-    }
+    // attack. The occupant takes only what the groupings have left
+    // (absorbed inside `resolveWeaponAttack`); the building is charged what
+    // it actually absorbed.
+    const buildingDamage = resolution.buildingAbsorbed ?? 0;
 
     resolutions.push({
       targetId: target.id,

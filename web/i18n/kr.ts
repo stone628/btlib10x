@@ -615,6 +615,7 @@ export const kr: Catalog = {
   "res.gator.heat": "열",
   "res.gator.sensors": "센서",
   "res.gator.actuators": "액추에이터",
+  "res.gator.targetingComputer": "표적 컴퓨터",
   "res.line": "{weapon}: {gator}, 2D6 = {roll} -> {verdict}{jam}",
   "res.jamSuffix": " 고장",
   "res.autoHit": "항상 명중",

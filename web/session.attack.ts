@@ -930,6 +930,7 @@ function gatorText(r: AttackResolution): string {
   if (b.heatMod) parts.push(`${i18n("res.gator.heat")} ${b.heatMod}`);
   if (b.sensorMod) parts.push(`${i18n("res.gator.sensors")} ${b.sensorMod}`);
   if (b.actuatorMod) parts.push(`${i18n("res.gator.actuators")} ${b.actuatorMod}`);
+  if (b.tcMod) parts.push(`${i18n("res.gator.targetingComputer")} ${b.tcMod}`);
   const total = b.automatic === "hit" ? i18n("res.needAuto") : String(b.total);
   return `${i18n("res.need", { total })} (${parts.join(" + ")})`;
 }
