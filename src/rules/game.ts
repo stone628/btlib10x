@@ -1743,12 +1743,15 @@ export function executeMove(
     // hex on a fall across levels).
     if (!jumping || isFinal) {
       const fellAt = movementTerrainPsr(state, unit, rng, from, to, !jumping, pre.modifier, sink);
+      // A move cut short still uses up the unit's activation (TW p.59).
       if (fellAt !== null) {
         commitAt({ ...fellAt }, unit.facing, mode, curSpent, curDirs);
+        if (needActorCheck) state.actedThisPhase.push(unitId);
         return;
       }
       if (unit.prone || unit.destroyed !== "not") {
         commitAt({ ...cur }, unit.facing, mode, curSpent, curDirs);
+        if (needActorCheck) state.actedThisPhase.push(unitId);
         return;
       }
     }
@@ -2708,6 +2711,7 @@ export function applyPilotHits(
     // An ejected pilot still accrues hits (ejection damage, the triggering
     // blast); every other removal ends pilot bookkeeping.
     if (isUnitRemoved(unit) && unit.removed !== "pilotEjected") return;
+    if (unit.pilotHits >= unit.pilotHitMax) return;
     unit.pilotHits += 1;
     sink.push({
       kind: "pilotDamaged",
@@ -2840,9 +2844,12 @@ function shutdownFallCheck(state: BattleState, unit: UnitState, rng: Rng, sink: 
   if (isUnitRemoved(unit) || unit.prone) return;
   const def = mechDefFor(unit);
   const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
-  const r = pushPilotingCheck(sink, unit, "shutdown", SHUTDOWN_PSR_MOD, pre.modifier, rng, {
-    ...unit.position,
-  });
+  // An unconscious pilot cannot roll and fails automatically (TW p.40).
+  const r = unit.unconscious
+    ? { success: false }
+    : pushPilotingCheck(sink, unit, "shutdown", SHUTDOWN_PSR_MOD, pre.modifier, rng, {
+        ...unit.position,
+      });
   if (!r.success) {
     applyFall(
       state,
@@ -2915,6 +2922,10 @@ export function applyFall(
     totalDamage: total,
     crits,
   });
+
+  // A pilot who ejected during the fall's damage (head destroyed) is no
+  // longer aboard and takes no fall damage (TO:AR p.165).
+  if (isUnitRemoved(unit)) return;
 
   // Seatbelt check (TW p.68): same modifiers as the failed roll, or automatic
   // pilot damage when the 'Mech is immobile or the TN exceeds 12.
@@ -4574,7 +4585,9 @@ function movementTerrainPsr(
           );
         }
       }
-      return to;
+      // A failed building roll deals damage but is not a fall (TW p.167):
+      // the move goes on unless the crash knocked the 'Mech down.
+      return stop() ? to : null;
     }
   }
   return stop() ? to : null;
@@ -4823,6 +4836,11 @@ export function attemptVoluntaryStartup(
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
   if (isNominal(unit)) throw new Error(`${unitId} is not shut down`);
   if (unit.shutdown === "starting") throw new Error(`${unitId} is already starting up`);
+  // A heat shutdown restarts only through the Heat Phase roll (TW p.160);
+  // a movement-phase attempt would be a second roll in the same turn.
+  if (unit.shutdown === "heat") {
+    throw new Error(`${unitId} shut down from heat: the restart roll is made in the Heat Phase`);
+  }
   const heat = unit.heat;
   const avoid = shutdownAvoid(heat);
   state.actedThisPhase.push(unitId);
@@ -5024,8 +5042,10 @@ function pendingActors(state: BattleState): string[] {
 
 /** Full activation order for the current phase: movement phases front-load
  *  shut-down units (they can only attempt startup or pass); both phases then
- *  alternate initiative-loser-first, letting the larger team act
- *  ⌊size/minSize⌋ units per step (TW unequal-force activation). */
+ *  alternate initiative-loser-first. Before every step the ratio is
+ *  recounted from the units each team still has to place: each team places
+ *  ⌊left/minLeft⌋ units (TW p.39 unequal-force activation, e.g. 8 v 5 →
+ *  1/1, 1/1, 1/2, 1/2, 1/2). */
 function buildActorQueue(state: BattleState): string[] {
   const alive = Object.values(state.units).filter((u) => !isUnitRemoved(u));
   const teams = [...new Set(alive.map((u) => u.team))];
@@ -5034,53 +5054,34 @@ function buildActorQueue(state: BattleState): string[] {
   const loser = teams.find((t) => t !== winner) ?? winner;
   const order = loser === winner ? teams : [loser, ...teams.filter((t) => t !== loser)];
 
-  const sizeByTeam = new Map<number, number>();
-  for (const u of alive) sizeByTeam.set(u.team, (sizeByTeam.get(u.team) ?? 0) + 1);
-  const minSize = Math.min(...teams.map((t) => sizeByTeam.get(t) ?? 0));
-  const unitsPerStep = (team: number): number => {
-    const size = sizeByTeam.get(team) ?? 0;
-    if (size === 0 || minSize === 0) return 1;
-    return Math.max(1, Math.floor(size / minSize));
-  };
-
   const downIds = new Set<string>();
   if (state.phase === "movement") {
     for (const u of alive) if (isShutdown(u)) downIds.add(u.id);
   }
 
-  // Number of units already "placed" per team, including down units that were
-  // front-loaded; the alternating order is replayed from these counts.
-  const placed = new Map<number, number>();
-  for (const t of teams) placed.set(t, 0);
-
-  const queue: string[] = [];
-  const downOf = alive.filter((u) => downIds.has(u.id));
-  for (const u of downOf) {
-    queue.push(u.id);
-    placed.set(u.team, (placed.get(u.team) ?? 0) + 1);
-  }
-
-  const stepNumber = (team: number): number =>
-    Math.floor((placed.get(team) ?? 0) / unitsPerStep(team));
+  // Shut-down units are front-loaded and stay outside the alternation.
+  const queue: string[] = alive.filter((u) => downIds.has(u.id)).map((u) => u.id);
 
   const nominal = alive.filter((u) => !downIds.has(u.id));
   const nextIndex = new Map<number, number>();
   for (const t of teams) nextIndex.set(t, 0);
+  const left = (team: number): number =>
+    nominal.filter((u) => u.team === team).length - (nextIndex.get(team) ?? 0);
 
   while (queue.length < alive.length) {
-    const pick = order
-      .map((team) => ({ team, step: stepNumber(team) }))
-      .sort((a, b) => {
-        if (a.step !== b.step) return a.step - b.step;
-        return a.team === loser ? -1 : b.team === loser ? 1 : 0;
-      })
-      .map((entry) => entry.team)[0]!;
-    const idx = nextIndex.get(pick) ?? 0;
-    const unit = nominal.filter((u) => u.team === pick)[idx];
-    if (!unit) break;
-    queue.push(unit.id);
-    placed.set(pick, (placed.get(pick) ?? 0) + 1);
-    nextIndex.set(pick, idx + 1);
+    const live = order.filter((team) => left(team) > 0);
+    if (live.length === 0) break;
+    const minLeft = Math.min(...live.map(left));
+    for (const team of live) {
+      const count = Math.max(1, Math.floor(left(team) / minLeft));
+      for (let n = 0; n < count; n++) {
+        const idx = nextIndex.get(team) ?? 0;
+        const unit = nominal.filter((u) => u.team === team)[idx];
+        if (!unit) break;
+        queue.push(unit.id);
+        nextIndex.set(team, idx + 1);
+      }
+    }
   }
   return queue;
 }

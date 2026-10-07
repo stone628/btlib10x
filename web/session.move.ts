@@ -242,6 +242,7 @@ export function declareMovementMode(
   if (mode === "startup") {
     if (unit.shutdown === "not") throw new Error(i18n("err.mustBeDownForStartup"));
     if (unit.shutdown === "starting") throw new Error(i18n("err.alreadyStarting"));
+    if (unit.shutdown === "heat") throw new Error(i18n("err.heatShutdownNoStartup", { id: unit.id }));
     context.moveMode = "startup";
     context.postureMove = null;
     clearMoveQueue(context);

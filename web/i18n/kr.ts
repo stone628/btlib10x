@@ -231,6 +231,7 @@ export const kr: Catalog = {
   "err.mustBeDownForStartup": "mode startup은 셧다운된 유닛에서만 사용할 수 있습니다",
   "err.alreadyEjected": "{id} 는 더 이상 전장에 없습니다",
   "err.alreadyStarting": "{id} 은 이미 기동 중입니다",
+  "err.heatShutdownNoStartup": "{id} 은 열로 정지됨: 재기동 판정은 열 페이즈에 자동으로 이루어집니다",
   "err.noBattle": "진행 중인 전투가 없습니다",
   "err.wrongPhase": "이 명령은 {phase} 단계가 필요합니다",
   "err.declareModeFirst": "{id} 유닛의 이동 모드를 먼저 선언하세요. 유효 모드: {modes}",

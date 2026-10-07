@@ -240,6 +240,8 @@ export const en = {
   "err.mustBeDownForStartup": "mode startup requires a shut-down unit",
   "err.alreadyEjected": "{id} is no longer on the battlefield",
   "err.alreadyStarting": "{id} is already starting up",
+  "err.heatShutdownNoStartup":
+    "{id} shut down from heat: the restart roll is made automatically in the Heat Phase",
   "err.noBattle": "No active battle",
   "err.wrongPhase": "Command requires the {phase} phase",
   "err.declareModeFirst": "Declare a movement mode for {id} first. valid modes: {modes}",

@@ -643,7 +643,7 @@ describe("game integration: shutdown", () => {
     expect(restart).toMatchObject({ result: "success", roll: 10, avoid: 10 });
   });
 
-  it("gives an unconscious pilot no avoid roll: automatic shutdown plus the +3 PSR", () => {
+  it("gives an unconscious pilot no avoid roll and no shutdown PSR: automatic shutdown and fall", () => {
     const state = hbkVsEnf();
     const hbk = requireUnit(state, "hbk");
     hbk.unconscious = true;
@@ -659,11 +659,13 @@ describe("game integration: shutdown", () => {
         e.kind === "shutdownCheck" && e.unitId === "hbk",
     );
     expect(check).toMatchObject({ result: "unconscious", roll: 0, avoid: 6 });
+    // TW p.40: an unconscious pilot fails the shutdown PSR automatically.
     expect(
       events.some(
         (e) => e.kind === "pilotingCheck" && e.unitId === "hbk" && e.reason === "shutdown",
       ),
-    ).toBe(true);
+    ).toBe(false);
+    expect(hbk.prone).toBe(true);
   });
 
   it("blocks an unconscious pilot's heat restart at 14+ but restarts automatically below 14", () => {
