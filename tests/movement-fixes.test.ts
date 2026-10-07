@@ -103,3 +103,73 @@ describe("stand-up retries (MOV-06)", () => {
     expect(state.actedThisPhase).toContain("a");
   });
 });
+
+describe("domino effect on a movement fall (MOV-09)", () => {
+  function dominoBattle() {
+    const state = createTestBattle(
+      [{ col: 5, row: 8, type: "rubble" }],
+      [
+        buildUnitInit("a", "HBK-4G", 0, { col: 5, row: 9 }, "n"),
+        buildUnitInit("c", "HBK-4G", 0, { col: 5, row: 8 }, "n"),
+        buildUnitInit("b", "HBK-4G", 1, { col: 1, row: 1 }, "s"),
+      ],
+      true,
+      9,
+      10,
+    );
+    state.phase = "movement";
+    state.initiativeWinnerTeam = 0;
+    state.actorQueue = ["a", "c", "b"];
+    state.actedThisPhase = [];
+    return state;
+  }
+  const walkThrough = [
+    { kind: "enter" as const, to: { col: 5, row: 8 } },
+    { kind: "enter" as const, to: { col: 5, row: 7 } },
+  ];
+
+  it("shoves the occupant one hex along the line of travel", () => {
+    const state = dominoBattle();
+    const events: GameEvent[] = [];
+    // rubble PSR 1+1 fails; fall direction, location and seatbelt; then the
+    // shoved unit's own piloting roll passes.
+    executeMove(state, "a", "walk", walkThrough, events, {
+      rng: scriptedRng(1, 1, 1, 3, 4, 6, 6, 6, 6, 6, 6, 6, 6),
+    });
+    const a = requireUnit(state, "a");
+    const c = requireUnit(state, "c");
+    expect(a.prone).toBe(true);
+    expect(a.position).toEqual({ col: 5, row: 8 });
+    expect(c.position).toEqual({ col: 5, row: 7 });
+    expect(events).toContainEqual(
+      expect.objectContaining({ kind: "unitDisplaced", unitId: "c" }),
+    );
+  });
+
+  it("a shoved unit that lands on a third unit shoves it in turn (chain)", () => {
+    const state = createTestBattle(
+      [{ col: 5, row: 8, type: "rubble" }],
+      [
+        buildUnitInit("a", "HBK-4G", 0, { col: 5, row: 9 }, "n"),
+        buildUnitInit("c", "HBK-4G", 0, { col: 5, row: 8 }, "n"),
+        buildUnitInit("d", "HBK-4G", 0, { col: 5, row: 7 }, "n"),
+        buildUnitInit("b", "HBK-4G", 1, { col: 1, row: 1 }, "s"),
+      ],
+      true,
+      9,
+      10,
+    );
+    state.phase = "movement";
+    state.initiativeWinnerTeam = 0;
+    state.actorQueue = ["a", "c", "d", "b"];
+    state.actedThisPhase = [];
+    // The walk's second step is blocked by d, so the fall happens on the first.
+    executeMove(state, "a", "walk", [{ kind: "enter", to: { col: 5, row: 8 } }, { kind: "enter", to: { col: 5, row: 7 } }, { kind: "enter", to: { col: 5, row: 6 } }], [], {
+      rng: scriptedRng(1, 1, 1, 3, 4, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6),
+    });
+    expect(requireUnit(state, "c").position).toEqual({ col: 5, row: 7 });
+    expect(requireUnit(state, "d").position).toEqual({ col: 5, row: 6 });
+    const all = Object.values(state.units).map((u) => `${u.position.col},${u.position.row}`);
+    expect(new Set(all).size).toBe(all.length);
+  });
+});

@@ -12,6 +12,7 @@ import {
 } from "../core/terrain";
 import {
   type ArmLocation,
+  FACINGS,
   type Facing,
   type HexCell,
   type HexCoord,
@@ -133,6 +134,7 @@ import {
   type PhysicalAttackType,
   type PhysicalResolution,
   type PhysicalWeaponName,
+  pushDisplacementOutcome,
   resolveMutualPush,
   resolvePhysicalAttack,
   resolveStrikeArm,
@@ -361,7 +363,8 @@ export type PilotingCheckReason =
   | "building"
   | "kick"
   | "kickMiss"
-  | "ejection";
+  | "ejection"
+  | "domino";
 
 /** Why a 'Mech fell (TW p.68). `failedPsr` carries the PSR trigger that
  *  failed; `terrain` covers automatic falls while entering terrain
@@ -516,6 +519,13 @@ export type GameEvent =
       readonly kind: "pickupDeclared";
       readonly unitId: string;
       readonly source: ClubKind;
+    }
+  | {
+      /** A unit shoved one hex by the domino effect (TW p.152). */
+      readonly kind: "unitDisplaced";
+      readonly unitId: string;
+      readonly from: HexCoord;
+      readonly to: HexCoord;
     }
   | {
       /** Club pickup resolved in the physical sub-pass. Limb/tree success
@@ -4706,6 +4716,78 @@ function waterHalvesFall(terrain: TerrainType, ground: boolean): boolean {
  * must stop here (fell, crashed, or shut down mid-path), or null to
  * continue.
  */
+/** True when `victim` can be shoved one hex along `dir` (and whoever stands
+ *  there after it): the chain ends off the map, in an empty hex, or in a hex
+ *  the terrain lets its occupant enter. Walls, wrecks and cliffs up refuse. */
+function dominoPossible(state: BattleState, victim: UnitState, dir: Facing, depth = 0): boolean {
+  if (depth > DOMINO_CHAIN_MAX) return false;
+  const dest = neighbor(victim.position, dir);
+  const outcome = pushDisplacementOutcome(state, victim, dest, true);
+  if (outcome.kind === "blocked") return false;
+  const next = occupantAt(state, dest, victim.id);
+  return next === undefined || dominoPossible(state, next, dir, depth + 1);
+}
+const DOMINO_CHAIN_MAX = 6;
+
+/**
+ * Domino effect (TW p.152): a unit that falls into an occupied hex shoves the
+ * occupant one hex away along the line of travel. The displaced unit rolls a
+ * piloting check or falls (a drop of more than two levels is an automatic
+ * fall; off the map destroys it) and, if its new hex is occupied too, the
+ * chain continues. Callers check `dominoPossible` first.
+ */
+function displaceWithDomino(
+  state: BattleState,
+  victim: UnitState,
+  dir: Facing,
+  rng: Rng,
+  sink: GameEvent[],
+): void {
+  const dest = neighbor(victim.position, dir);
+  const next = occupantAt(state, dest, victim.id);
+  if (next !== undefined) displaceWithDomino(state, next, dir, rng, sink);
+  const outcome = pushDisplacementOutcome(state, victim, dest, true);
+  if (outcome.kind === "blocked") return;
+  const origin = { ...victim.position };
+  victim.position = { ...dest };
+  sink.push({ kind: "unitDisplaced", unitId: victim.id, from: origin, to: { ...dest } });
+  if (outcome.kind === "offBoard") {
+    markUnitDestroyed(state, victim, "displacedOffBoard", rng, sink);
+    return;
+  }
+  // A prone unit has nothing left to lose by being shoved.
+  if (victim.prone) return;
+  const pre = preexistingDamageModifier(
+    mechDefFor(victim),
+    victim.damage,
+    victim.critSlotsDestroyed,
+  ).modifier;
+  const levels = outcome.kind === "cliff" ? outcome.levels : 0;
+  let falls = outcome.kind === "cliff";
+  if (!falls) {
+    falls =
+      isShutdown(victim) ||
+      victim.unconscious ||
+      !pushPilotingCheck(sink, victim, "domino", 0, pre, rng, { ...dest }).success;
+  }
+  if (!falls) return;
+  const terrain = cellAt(state, dest).terrain;
+  applyFall(
+    state,
+    victim,
+    rng,
+    {
+      cause: { kind: "failedPsr", reason: "domino" },
+      hex: { ...dest },
+      seatbeltModifier:
+        isShutdown(victim) || victim.unconscious ? null : pre + Math.max(0, levels - 1),
+      halved: terrain === "water2" || terrain === "water3",
+      ...(levels > 0 ? { levelsFallen: levels } : {}),
+    },
+    sink,
+  );
+}
+
 function movementTerrainPsr(
   state: BattleState,
   unit: UnitState,
@@ -4727,6 +4809,21 @@ function movementTerrainPsr(
     const toLevel = cellAt(state, to).level;
     const lower = toLevel <= fromLevel ? to : from;
     return { lower, levels: Math.max(0, fromLevel - cellAt(state, lower).level) };
+  };
+  /** A faller that lands on another unit shoves it along the line of travel
+   *  (domino effect, TW p.152). When the occupant cannot be shoved the faller
+   *  stays in the hex it came from. Returns the hex the faller ends in. */
+  const settleFall = (lower: HexCoord): HexCoord => {
+    if (isUnitRemoved(unit)) return lower;
+    const occupant = occupantAt(state, lower, unit.id);
+    if (occupant === undefined) return lower;
+    const dir = FACINGS.find((f) => sameHex(neighbor(from, f), to));
+    if (dir !== undefined && sameHex(lower, to) && dominoPossible(state, occupant, dir)) {
+      displaceWithDomino(state, occupant, dir, rng, sink);
+      return lower;
+    }
+    unit.position = { ...from };
+    return { ...from };
   };
   const rollFall = (
     reason: PilotingCheckReason,
@@ -4763,7 +4860,7 @@ function movementTerrainPsr(
         },
         sink,
       );
-      return lower;
+      return settleFall(lower);
     }
     const r = pushPilotingCheck(sink, unit, reason, trigger, preModifier, rng, { ...hex });
     if (r.success) return null;
@@ -4783,7 +4880,7 @@ function movementTerrainPsr(
       },
       sink,
     );
-    return lower;
+    return settleFall(lower);
   };
   const entering = cellAt(state, to).terrain;
   const water = waterEntryModifier(entering);

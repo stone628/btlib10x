@@ -1028,12 +1028,13 @@ export function pushDisplacementOutcome(
   battle: BattleState,
   target: UnitState,
   to: HexCoord,
+  ignoreOccupants = false,
 ): PushOutcome {
   if (to.col < 1 || to.col > battle.width || to.row < 1 || to.row > battle.height) {
     return { kind: "offBoard" };
   }
   if (wreckAt(battle, to) !== undefined) return { kind: "blocked", reason: "wreck" };
-  if (occupantAt(battle, to, target.id) !== undefined) {
+  if (!ignoreOccupants && occupantAt(battle, to, target.id) !== undefined) {
     return { kind: "blocked", reason: "occupied (domino effect not implemented)" };
   }
   const delta = groundLevel(battle, to) - groundLevel(battle, target.position);
