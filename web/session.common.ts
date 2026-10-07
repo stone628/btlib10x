@@ -1047,6 +1047,7 @@ const PSR_REASON_KEY: Record<PilotingCheckReason, MessageKey> = {
   kick: "log.psrReason.kick",
   kickMiss: "log.psrReason.kickMiss",
   ejection: "log.psrReason.ejection",
+  domino: "log.psrReason.domino",
 };
 
 function psrReasonDetail(reason: PilotingCheckReason): string {
@@ -1549,6 +1550,18 @@ function handleSessionGameEvent(
         }
         idLines(e.unitId, ...lines);
       }
+      break;
+    case "unitDisplaced":
+      idLines(
+        e.unitId,
+        i18n("log.unitDisplaced", {
+          id: e.unitId,
+          fromCol: e.from.col,
+          fromRow: e.from.row,
+          toCol: e.to.col,
+          toRow: e.to.row,
+        }),
+      );
       break;
     case "pickupDeclared":
       idLines(e.unitId, i18n("log.pickupDeclared", { id: e.unitId, source: e.source }));

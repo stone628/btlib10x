@@ -575,6 +575,8 @@ export const kr: Catalog = {
   "log.psrReason.building": "건물 진입",
   "log.psrReason.kick": "발차기 피격",
   "log.psrReason.kickMiss": "발차기 빗나감",
+  "log.psrReason.domino": "도미노 효과",
+  "log.unitDisplaced": "[{id}] ({fromCol},{fromRow})에서 ({toCol},{toRow})로 밀려남 (도미노 효과)",
   "log.psrReason.ejection": "탈출(실패 시 조종사 부상)",
   "log.fallCause.failedPsr": "{reason} 판정 실패",
   "log.fallCause.legDestroyed": "다리 파괴",
