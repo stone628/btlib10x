@@ -15,7 +15,12 @@ import type { AmmoBins } from "./ammo";
 import type { Arc } from "./arcs";
 import { clusterHits, groupMissiles, modifiedClusterRoll } from "./cluster";
 import { type CriticalResolution, resolveCriticalHits } from "./critical";
-import { applyDamage, type DamageApplication, type UnitDamageState } from "./damage";
+import {
+  applyDamage,
+  type DamageApplication,
+  structureStruck,
+  type UnitDamageState,
+} from "./damage";
 import { toHitHeatModifier } from "./heat";
 import { hitLocationForArc } from "./hitlocation";
 import { losWoodsPoints } from "./los";
@@ -90,8 +95,11 @@ export interface WeaponAttackInput {
    * used for crit-slot layout, weapon linkage, and the per-bin ammo state.
    */
   readonly targetDef?: ResolvedMechDef;
-  /** Pre-attack crit-slot destroyed flags (snapshot). */
+  /** Pre-attack crit-slot destroyed flags (running state for this phase). */
   readonly targetCritSlotsDestroyed?: Record<Location, boolean[]>;
+  /** Phase-start crit-slot flags for the TW p.122 step-4 transfer test.
+   *  Defaults to `targetCritSlotsDestroyed`. */
+  readonly targetBaseCritSlotsDestroyed?: Record<Location, boolean[]>;
   /** Pre-attack destroyed weapon indices. */
   readonly targetDestroyedWeapons?: readonly number[];
   /** Pre-attack per-crit-slot ammo state. */
@@ -324,29 +332,29 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
           };
 
     if (!critStateAvailable || !input.targetDef) continue;
-    // Did this group strip at least 1 IS point at the group's *original*
-    // location (not a transferred one)? The rules call for one determining
-    // roll per location that loses IS in a given group. A hit-location roll
-    // of 2 adds one determining roll even with armor unbreached
-    // (through-armor critical, TW p.123), and is explicitly "in addition to
-    // any structure-damage critical roll" (TW p.124): when the group both
-    // strips IS and rolled a 2, two independent determining rolls resolve
-    // against the same source location, slot state advancing between them.
-    const stripped = app.steps.some(
-      (s) => s.location === group.location && s.pool === "structure" && s.damageApplied > 0,
-    );
-    if (!stripped && !group.throughArmor) continue;
-    const rollCount = stripped && group.throughArmor ? 2 : 1;
-    for (let rollIdx = 0; rollIdx < rollCount; rollIdx++) {
-      // Single-roll triggers tag from the firing cause: structure breach or
-      // through-armor. Two-roll path fires the structure-breach roll first
-      // (untagged) and the through-armor roll second (tagged).
-      const tagThroughArmor = rollCount === 1 ? group.throughArmor : rollIdx > 0;
+    // One determining roll per location whose internal structure this group
+    // damaged, transferred locations included (TW p.124 Multiple Locations).
+    // A hit-location roll of 2 adds one determining roll on the hit location
+    // even with armor unbreached (through-armor critical, TW p.123), "in
+    // addition to any structure-damage critical roll" (TW p.124); it resolves
+    // last, tagged, slot state advancing between rolls.
+    const struck = structureStruck(app);
+    const critRolls = struck.map((location) => ({ location, tac: false }));
+    if (group.throughArmor) critRolls.push({ location: group.location, tac: true });
+    for (const { location: critLoc, tac: tagThroughArmor } of critRolls) {
       const res = resolveCriticalHits({
         rng: input.rng,
         def: input.targetDef,
-        source: { location: group.location, damage: group.damage },
+        source: {
+          location: critLoc,
+          damage: group.damage,
+          struck: struck.includes(critLoc),
+          tac: tagThroughArmor,
+        },
         ...(tagThroughArmor ? { throughArmor: true } : {}),
+        ...(input.targetBaseCritSlotsDestroyed !== undefined
+          ? { baseCritSlotsDestroyed: input.targetBaseCritSlotsDestroyed }
+          : {}),
         critSlotsDestroyed: critSlotsDestroyed!,
         destroyedWeapons,
         damage,

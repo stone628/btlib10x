@@ -52,6 +52,19 @@ export interface DamageApplication {
   readonly killed: boolean;
 }
 
+/** Locations whose internal structure the application damaged, in order.
+ *  Each gets its own critical roll (TW p.124: "A single hit damaging
+ *  multiple locations gives a critical roll for each location"). */
+export function structureStruck(app: DamageApplication): Location[] {
+  const out: Location[] = [];
+  for (const s of app.steps) {
+    if (s.pool === "structure" && s.damageApplied > 0 && !out.includes(s.location)) {
+      out.push(s.location);
+    }
+  }
+  return out;
+}
+
 function clone(state: UnitDamageState): UnitDamageState {
   return {
     armor: { ...state.armor },
@@ -112,8 +125,10 @@ export function applyDamage(
     const cur: Location = current;
 
     // Ammo-explosion overflow (bypassArmor) skips the armor pool entirely at
-    // every location — damage lands on IS directly (TW).
-    if (!bypassArmor) {
+    // every location — damage lands on IS directly (TW). A destroyed location
+    // keeps its recorded armor but no longer soaks anything: its armor is
+    // destroyed with it (TW p.122 step 5), so damage carries inward.
+    if (!bypassArmor && next.internalStructure[cur] > 0) {
       const pool = poolOf(next, cur, arc);
       if (pool.value > 0) {
         const applied = Math.min(remaining, pool.value);
@@ -171,6 +186,8 @@ export function applyDamage(
         current = damageTransferTo(cur);
       } else break;
     } else {
+      // CASE still vents a blast in a location already at 0 IS (CRIT-02).
+      if (caseKind !== undefined && cur === location) break;
       current = damageTransferTo(cur);
     }
   }

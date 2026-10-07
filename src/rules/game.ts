@@ -75,6 +75,7 @@ import {
   checkCASE,
   countDestroyedEngine,
   countDestroyedGyro,
+  ENGINE_SLOTS_KILL,
   countDestroyedHip,
   countDestroyedLifeSupport,
   countDestroyedSensor,
@@ -94,6 +95,7 @@ import {
   isUnitDestroyed,
   isUnitImmobile,
   isUnitLocationDestroyed,
+  structureStruck,
   type UnitDamageState,
 } from "./damage";
 import {
@@ -659,6 +661,8 @@ export type GameEvent =
       readonly damage: number;
       readonly damagePerShot: number;
       readonly avoided: boolean;
+      /** Follow-up criticals rolled for structure the blast damaged. */
+      readonly crits?: readonly CriticalResolution[];
     }
   | {
       /** One Piloting Skill Roll (TW p.59). `roll` is null when the outcome
@@ -1022,7 +1026,18 @@ function destroyedReasonFor(
     }
   }
   if (damage.internalStructure.head <= 0) return "headDestroyed";
-  return "centerTorsoDestroyed";
+  if (damage.internalStructure.centerTorso <= 0) return "centerTorsoDestroyed";
+  return "engineDestroyed";
+}
+
+/** Out of the game by damage alone: head or center torso gone, or three
+ *  engine hits counting slots in destroyed locations (TW pp.125, 128). */
+function isUnitWrecked(unit: UnitState): boolean {
+  return (
+    isUnitDestroyed(unit.damage) ||
+    countDestroyedEngine(mechDefFor(unit), unit.damage, unit.critSlotsDestroyed) >=
+      ENGINE_SLOTS_KILL
+  );
 }
 
 export function createBattle(
@@ -2501,11 +2516,21 @@ function physicalWeaponConflict(
   return null;
 }
 
+/** Running per-target state while a volley resolves: every weapon sees the
+ *  damage and criticals of the weapons resolved before it (TW p.125: crits
+ *  are rolled "before resolving any further weapons fire"). */
+interface RunningTarget {
+  damage: UnitDamageState;
+  crit: Record<Location, boolean[]>;
+  destroyedWeapons: number[];
+  ammoBins: AmmoBins;
+}
+
 function resolveUnitAttacks(
   state: BattleState,
   unit: UnitState,
   rng: Rng,
-  baseDamage: Record<string, UnitDamageState>,
+  running: Record<string, RunningTarget>,
   phaseStartCf: Record<string, number>,
 ): UnitAttackResult {
   const def = mechDefFor(unit);
@@ -2534,7 +2559,13 @@ function resolveUnitAttacks(
       ammoExhausted = true;
     }
 
-    const targetBaseDamage = baseDamage[target.id] ?? target.damage;
+    const run = (running[target.id] ??= {
+      damage: cloneDamage(target.damage),
+      crit: cloneCritDestroyed(target.critSlotsDestroyed),
+      destroyedWeapons: [...target.destroyedWeapons],
+      ammoBins: { ...target.ammoBins },
+    });
+    const targetBaseDamage = run.damage;
 
     const resolution = resolveWeaponAttack({
       rng,
@@ -2576,11 +2607,19 @@ function resolveUnitAttacks(
         ? {}
         : {
             targetDef: mechDefFor(target),
-            targetCritSlotsDestroyed: target.critSlotsDestroyed,
-            targetDestroyedWeapons: target.destroyedWeapons,
-            targetAmmoBins: target.ammoBins,
+            targetCritSlotsDestroyed: run.crit,
+            targetBaseCritSlotsDestroyed: target.critSlotsDestroyed,
+            targetDestroyedWeapons: run.destroyedWeapons,
+            targetAmmoBins: run.ammoBins,
           }),
     });
+    if (resolution.application !== null) run.damage = resolution.application.after;
+    const lastCrit = resolution.crits[resolution.crits.length - 1];
+    if (lastCrit !== undefined) {
+      run.crit = lastCrit.critSlotsDestroyed;
+      run.destroyedWeapons = [...lastCrit.destroyedWeapons];
+      run.ammoBins = lastCrit.ammoBins;
+    }
 
     // Streak launchers expend one shot only when to-hit succeeds: miss
     // means launcher never fired (no ammo, no heat, no damage).
@@ -2765,14 +2804,12 @@ function applyDamageGroups(
     const app = applyDamage(unit.damage, group.location, group.damage, arc);
     unit.damage = app.after;
     if (!state.critsDisabled) {
-      const stripped = app.steps.some(
-        (s) => s.location === group.location && s.pool === "structure" && s.damageApplied > 0,
-      );
-      if (stripped) {
+      // One roll per location whose structure the group damaged (TW p.124).
+      for (const critLoc of structureStruck(app)) {
         const res = resolveCriticalHits({
           rng,
           def,
-          source: { location: group.location, damage: group.damage },
+          source: { location: critLoc, damage: group.damage, struck: true },
           critSlotsDestroyed: unit.critSlotsDestroyed,
           destroyedWeapons: unit.destroyedWeapons,
           damage: unit.damage,
@@ -2800,7 +2837,7 @@ function applyDamageGroups(
   }
   if (
     isUnitAvailable(unit) &&
-    (isUnitDestroyed(unit.damage) || crits.some((c) => c.killedReason !== null))
+    (isUnitWrecked(unit) || crits.some((c) => c.killedReason !== null))
   ) {
     markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage, crits), rng, sink);
   }
@@ -2944,7 +2981,7 @@ export function applyFall(
     const r = pushPilotingCheck(sink, unit, "seatbelt", modifier, SEATBELT_PRE_MOD, rng, opts.hex);
     if (!r.success) applyPilotHits(state, unit, FALL_PILOT_HITS, "fall", rng, sink);
   }
-  if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
+  if (isUnitAvailable(unit) && isUnitWrecked(unit)) {
     markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), rng, sink);
   }
 }
@@ -3083,9 +3120,10 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   for (const [key, building] of Object.entries(state.buildings)) {
     phaseStartCf[key] = building.cf;
   }
+  const running: Record<string, RunningTarget> = {};
   for (const unit of Object.values(state.units)) {
     if (unit.declaredWeaponAttacks.length === 0) continue;
-    results.push(resolveUnitAttacks(state, unit, rng, baseDamage, phaseStartCf));
+    results.push(resolveUnitAttacks(state, unit, rng, running, phaseStartCf));
   }
 
   // Phase 2: apply all damage, crits, building damage, and heat simultaneously
@@ -3344,7 +3382,16 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     const destroyedWeapons = targetDestroyedWeaponsMap[targetId];
     if (destroyedWeapons !== undefined) target.destroyedWeapons = destroyedWeapons;
     const bins = targetAmmoBinsMap[targetId];
-    if (bins !== undefined) target.ammoBins = bins;
+    if (bins !== undefined) {
+      // A firer's own Streak spending (finalAmmoBins) may predate or lose to
+      // this snapshot: keep the lower shot count per bin (AMMO-01).
+      const merged = { ...bins };
+      for (const [id, own] of Object.entries(target.ammoBins)) {
+        const snap = merged[id];
+        if (snap !== undefined && own.shots < snap.shots) merged[id] = own;
+      }
+      target.ammoBins = merged;
+    }
     // Crit blow-offs leave their limbs in the target's hex (TW p.146).
     const limbCrits = targetCritsForLimbs[targetId] ?? [];
     if (limbCrits.length > 0) recordCritSeveredLimbs(state, target, limbCrits);
@@ -3436,7 +3483,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   for (const unit of Object.values(state.units)) {
     if (
       isUnitAvailable(unit) &&
-      (isUnitDestroyed(unit.damage) || targetKilledReason[unit.id] !== undefined)
+      (isUnitWrecked(unit) || targetKilledReason[unit.id] !== undefined)
     ) {
       markUnitDestroyed(
         state,
@@ -3479,7 +3526,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     }
   }
   for (const unit of Object.values(state.units)) {
-    if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
+    if (isUnitAvailable(unit) && isUnitWrecked(unit)) {
       markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), rng, sink);
     }
   }
@@ -3495,7 +3542,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   }
   resolvePhasePiloting(state, rng, weaponBefore, sink);
   for (const unit of Object.values(state.units)) {
-    if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
+    if (isUnitAvailable(unit) && isUnitWrecked(unit)) {
       markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), rng, sink);
     }
   }
@@ -3818,18 +3865,23 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
           // Critical hit resolution (TW p.123-124):
           // - One determining roll per location that loses internal structure
           // - One additional determining roll if hit-location roll was 2 (through-armor critical)
-          // Check if this group stripped IS at its original location
-          const strippedIS = app.steps.some(
-            (s) => s.location === group.location && s.pool === "structure" && s.damageApplied > 0,
-          );
-          const rollCount = (strippedIS ? 1 : 0) + (resolution.throughArmorCrit ? 1 : 0);
-          for (let rollIdx = 0; rollIdx < rollCount; rollIdx++) {
-            const tagThroughArmor = rollCount === 1 ? resolution.throughArmorCrit : rollIdx > 0;
+          // - One roll for every location the group damaged (TW p.124)
+          const struck = structureStruck(app);
+          const critRolls = struck.map((location) => ({ location, tac: false }));
+          if (resolution.throughArmorCrit) critRolls.push({ location: group.location, tac: true });
+          for (const { location: critLoc, tac: tagThroughArmor } of critRolls) {
+            const baseCrit = postWeaponCrit[hitTarget.id];
             const res = resolveCriticalHits({
               rng,
               def: targetDef,
-              source: { location: group.location, damage: group.damage },
+              source: {
+                location: critLoc,
+                damage: group.damage,
+                struck: struck.includes(critLoc),
+                tac: tagThroughArmor,
+              },
               throughArmor: tagThroughArmor,
+              ...(baseCrit !== undefined ? { baseCritSlotsDestroyed: baseCrit } : {}),
               critSlotsDestroyed: hitTarget.critSlotsDestroyed,
               destroyedWeapons: hitTarget.destroyedWeapons,
               damage: hitTarget.damage,
@@ -3961,8 +4013,11 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   // Destruction from physical-attack damage, displacement falls, and pilot
   // hits above lands before the end-of-phase piloting sweep.
   for (const unit of Object.values(state.units)) {
-    if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
-      const physCrits = physicalAttackCrits[unit.id];
+    const physCrits = physicalAttackCrits[unit.id];
+    if (
+      isUnitAvailable(unit) &&
+      (isUnitWrecked(unit) || (physCrits ?? []).some((c) => c.killedReason !== null))
+    ) {
       markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage, physCrits), rng, sink);
     }
   }
@@ -4039,7 +4094,7 @@ export function* advancePhaseGen(state: BattleState, rng: Rng): Generator<GameEv
     case "attack": {
       const sink: GameEvent[] = [];
       for (const unit of Object.values(state.units)) {
-        if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
+        if (isUnitAvailable(unit) && isUnitWrecked(unit)) {
           markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), rng, sink);
         }
       }
@@ -4319,11 +4374,44 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
             unit.damage = application.after;
             // A blast that shears off a limb leaves it in the hex (TW p.146).
             recordSeveredLimbs(state, unit, application.blownOffLimbs);
+            // The blasted bin is emptied and its slot flagged first, so the
+            // follow-up criticals cannot re-hit or re-explode it.
+            const slot = collectAmmoBins(def).find((b) => b.id === bin.binId);
+            if (slot !== undefined) {
+              unit.ammoBins[bin.binId] = { ...slot, shots: 0 };
+              unit.critSlotsDestroyed = {
+                ...unit.critSlotsDestroyed,
+                [bin.location]: unit.critSlotsDestroyed[bin.location].map(
+                  (hit, i) => hit || i === bin.slotIndex - 1,
+                ),
+              };
+            }
+            // Like any ammo explosion, the blast damages internal structure,
+            // so each struck location gets a critical roll (TW p.125).
+            const heatCrits: CriticalResolution[] = [];
+            if (!state.critsDisabled) {
+              for (const critLoc of structureStruck(application)) {
+                const res = resolveCriticalHits({
+                  rng,
+                  def,
+                  source: { location: critLoc, damage: bin.damage, struck: true },
+                  critSlotsDestroyed: unit.critSlotsDestroyed,
+                  destroyedWeapons: unit.destroyedWeapons,
+                  damage: unit.damage,
+                  ammoBins: unit.ammoBins,
+                });
+                unit.critSlotsDestroyed = res.critSlotsDestroyed;
+                unit.destroyedWeapons = res.destroyedWeapons;
+                unit.ammoBins = res.ammoBins;
+                unit.damage = res.damage;
+                heatCrits.push(res);
+              }
+              recordCritSeveredLimbs(state, unit, heatCrits);
+            }
             // Mark every freshly-zeroed location as catastrophic so
             // counters (`countDestroyedEngine`, `heatSinksOperational`,
             // `effectiveMovement`) report truthful destruction state for
-            // the rest of the phase. No cascade `runDetermining` here —
-            // heat-triggered ammo explosions do not chain crit determining.
+            // the rest of the phase.
             for (const lost of application.newlyDestroyed) {
               markLocationCatastrophicallyDestroyed(
                 unit.damage,
@@ -4332,7 +4420,8 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
                 lost,
               );
             }
-            const slot = collectAmmoBins(def).find((b) => b.id === bin.binId);
+            // Keep the spent bin on record as empty even when its location
+            // was stripped.
             if (slot !== undefined) unit.ammoBins[bin.binId] = { ...slot, shots: 0 };
             sink.push({
               kind: "ammoExplosionCheck",
@@ -4348,15 +4437,33 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
               damage: bin.damage,
               damagePerShot: bin.damagePerShot,
               avoided: false,
+              crits: heatCrits,
             });
-            autoEjectOnCenterTorsoBlast(state, unit, [application], rng, sink);
+            const chained = heatCrits.flatMap((c) => c.rows.filter(isCritBlastRow));
+            autoEjectOnCenterTorsoBlast(
+              state,
+              unit,
+              [application, ...chained.map(blastApplication)],
+              rng,
+              sink,
+            );
             // TW p.160: ammo explosion auto-deals 2 pilot hits and a
             // Consciousness Roll per hit. Apply before the destroyed check
             // so a pilot killed by the explosion is recorded with reason
             // "pilotKilled" rather than the explosion's structural kill.
-            applyPilotHits(state, unit, AMMO_BLAST_PILOT_HITS, "ammoExplosion", rng, sink);
-            if (isUnitAvailable(unit) && isUnitDestroyed(unit.damage)) {
-              markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), rng, sink);
+            applyPilotHits(
+              state,
+              unit,
+              AMMO_BLAST_PILOT_HITS * (1 + chained.length),
+              "ammoExplosion",
+              rng,
+              sink,
+            );
+            if (
+              isUnitAvailable(unit) &&
+              (isUnitWrecked(unit) || heatCrits.some((c) => c.killedReason !== null))
+            ) {
+              markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage, heatCrits), rng, sink);
             }
           }
         }

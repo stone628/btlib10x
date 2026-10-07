@@ -282,7 +282,12 @@ export function resolveMechDef(def: MechDef): ResolvedMechDef {
     ResolvedCritSlot[]
   >;
   for (const loc of LOCATIONS) {
-    critSlots[loc] = resolveLocationCrits(def.critSlots[loc], weapons, loc);
+    critSlots[loc] = resolveLocationCrits(
+      def.critSlots[loc],
+      weapons,
+      loc,
+      def.techBase === "Clan" ? 2 : 3,
+    );
   }
   return {
     model: def.model,
@@ -321,6 +326,7 @@ function resolveLocationCrits(
   rawSlots: readonly CritSlot[],
   weapons: Record<number, WeaponMount>,
   loc: Location,
+  dhsWidth = 3,
 ): ResolvedCritSlot[] {
   // Weapons mounted in this location, by weapon name, in ascending index
   // order. Each crit slot consumes the next available mount so two
@@ -426,7 +432,9 @@ function resolveLocationCrits(
     const isDhs = s !== undefined && isStructure(s) && s.name === "doubleHeatSink";
     if (isDhs && runStart < 0) runStart = i;
     else if (!isDhs && runStart >= 0) {
-      finalizeRun(runStart, i);
+      // Adjacent double heat sinks are separate sinks (TW p.125): split the
+      // run into sink-wide groups (2 slots Clan, 3 Inner Sphere).
+      for (let k = runStart; k < i; k += dhsWidth) finalizeRun(k, Math.min(k + dhsWidth, i));
       runStart = -1;
     }
   }
