@@ -949,10 +949,11 @@ export function effectiveMovement(
   } else if (!leftHip && !rightHip) {
     walk = Math.max(0, walk - mpl - mpr);
   } else if (leftHip) {
-    walk = Math.ceil(Math.max(0, walk - mpr) / 2);
+    // TW p.125 Hip: halve first, then subtract the other leg's actuator losses.
+    walk = Math.max(0, Math.ceil(walk / 2) - mpr);
   } else {
     // rightHip only
-    walk = Math.ceil(Math.max(0, walk - mpl) / 2);
+    walk = Math.max(0, Math.ceil(walk / 2) - mpl);
   }
   let jump = Math.max(0, def.jumping - jpl - jpr);
   if (jump > 0) {

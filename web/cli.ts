@@ -387,7 +387,7 @@ const MOVE_CMDS: Record<string, CmdDef> = {
   mode: {
     helpKey: "cmd.mode.help",
     usage:
-      "mode <standstill|walk|run|jump|prone [turn|pronestill]|turn|pronestill|standup [walk|run|jump|standstill]|shutdown|startup|eject>",
+      "mode <standstill|walk|run|jump|prone [turn|pronestill]|turn|pronestill|standup [walk|run|standstill]|shutdown|startup|eject>",
     argsDoc: [
       ["standstill", "cmd.mode.arg.standstill"],
       ["walk", "cmd.mode.arg.walk"],
@@ -405,7 +405,7 @@ const MOVE_CMDS: Record<string, CmdDef> = {
       expectArgs(
         a,
         1,
-        "mode standstill|walk|run|jump|prone [turn|pronestill]|turn|pronestill|standup [walk|run|jump|standstill]|shutdown|startup|eject",
+        "mode standstill|walk|run|jump|prone [turn|pronestill]|turn|pronestill|standup [walk|run|standstill]|shutdown|startup|eject",
       );
       const mode = parseMoveMode(a[0]!);
       declareMovementMode(s, mode, a[1]);

@@ -166,7 +166,7 @@ export function parseMoveMode(word: string): DeclaredMovementMode {
 /** Locale-neutral `mode` syntax legal for `unit` right now (null = unknown unit). */
 export function modeSyntaxFor(unit: UnitState | null): string {
   if (unit === null)
-    return "standstill|walk|run|jump|prone [turn|pronestill]|turn|pronestill|standup [walk|run|jump|standstill]|shutdown|startup|eject";
+    return "standstill|walk|run|jump|prone [turn|pronestill]|turn|pronestill|standup [walk|run|standstill]|shutdown|startup|eject";
   if (isShutdown(unit)) return "startup|eject";
   const legs = destroyedLegs(unit.damage);
   const arms = destroyedArms(unit.damage);
@@ -187,8 +187,8 @@ export function modeSyntaxFor(unit: UnitState | null): string {
     const runOk = false; // one-leg cannot run
     const standupModes = standOk
       ? runOk
-        ? "standup [walk|run|jump|standstill]"
-        : "standup [walk|jump|standstill]"
+        ? "standup [walk|run|standstill]"
+        : "standup [walk|standstill]"
       : "";
     const sep = standupModes ? "|" : "";
     return `turn|pronestill${sep}${standupModes}|shutdown|eject`;
@@ -272,9 +272,9 @@ export function declareMovementMode(
       unit.critSlotsDestroyed,
       isTsmActive(def, unit.heat),
     );
-    // Standing in place draws the stand cost from the walk pool.
-    const budgetMode = chosen === "standStill" ? "walk" : chosen;
-    if (effectiveMoveBudget(budgetMode, movement, unit.heat) < STAND_MP_COST) {
+    // The stand draws on the walk pool whatever locomotion follows; a 'Mech
+    // with only 1 MP may still try (TW p.50). Jumping after a stand is illegal.
+    if (effectiveMoveBudget("walk", movement, unit.heat) < 1) {
       throw new Error(i18n("err.postureBudget", { id: unit.id }));
     }
     // Engine declareMove deferred to commit: unit still prone, would throw.
@@ -417,11 +417,11 @@ function parseProneLocomotion(unit: UnitState, word: string | undefined): MoveMo
   if (w === "pronestill") return "standStill";
   throw new Error(i18n("err.proneNeedsMode", { modes: modeSyntaxFor(unit) }));
 }
-/** Locomotion arg for `mode standup [walk|run|jump|standstill]` (default standstill). */
+/** Locomotion arg for `mode standup [walk|run|standstill]` (default standstill). */
 function parseStandupLocomotion(word: string | undefined): MoveMode {
   if (word === undefined) return "standStill";
   const w = word.toLowerCase();
-  if (w === "walk" || w === "run" || w === "jump" || w === "standstill")
+  if (w === "walk" || w === "run" || w === "standstill")
     return w === "standstill" ? "standStill" : w;
   throw new Error(i18n("err.standupNeedsMode"));
 }
@@ -610,13 +610,14 @@ export function commitMovement(s: Session): SessionGameEvent[] {
       const locomotion = context.postureMove ?? "walk";
       const steps = context.moveSteps;
       const finalFacing = context.moveFinalFacing;
-      const posture = attemptStandUp(battle, unitId, collected, s.rng);
+      const posture = attemptStandUp(battle, unitId, collected, s.rng, locomotion);
       const after = battle.units[unitId]!;
       if (!after.prone) {
         if (steps.length > 0 || finalFacing !== null) {
           executeMove(battle, unitId, locomotion, steps, collected, {
             ...(finalFacing === null ? { rng: s.rng } : { finalFacing, rng: s.rng }),
             spentMP: posture,
+            modeHeatPaid: locomotion === "walk" || locomotion === "run",
           });
         }
       }
@@ -688,7 +689,6 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo {
     isTsmActive(def, actor.heat),
     waterDepth(cellAt(s.battle!, actor.position).terrain),
   );
-  const heatPenalty = movementMpPenalty(actor.heat);
   // Posture-change modes share one budget: candidate assumes posture succeeds.
   // prone turn: drop first (1 MP) then in-place turns (walk + prone, 1 MP each).
   // prone pronestill: drop in place, no map. turn: in-place turns on walk budget.
@@ -696,9 +696,11 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo {
   // standup: stand first (2 MP) then chosen locomotion as standing unit.
   let locomotion: MoveMode;
   let proneFlag = actor.prone;
-  let walking = Math.max(0, effMove.walking - heatPenalty);
-  let running = Math.max(0, effMove.running - heatPenalty);
-  let jumping = Math.max(0, effMove.jumping - heatPenalty);
+  // Heat cuts Walking MP and recomputes Running MP; Jumping MP is never
+  // reduced (TW p.159).
+  let walking = effectiveMoveBudget("walk", effMove, actor.heat);
+  let running = effectiveMoveBudget("run", effMove, actor.heat);
+  let jumping = effectiveMoveBudget("jump", effMove, actor.heat);
   const postureMove = s.move?.postureMove ?? null;
   if (mode === "prone") {
     if ((postureMove ?? "walk") === "standStill") return { team: actor.team, revealed: [] }; // drop in place: no map
@@ -714,7 +716,6 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo {
     if (locomotion === "standStill") return { team: actor.team, revealed: [] }; // stand in place: no map, `place` stays shut
     if (locomotion === "walk") walking = Math.max(0, walking - STAND_MP_COST);
     else if (locomotion === "run") running = Math.max(0, running - STAND_MP_COST);
-    else if (locomotion === "jump") jumping = Math.max(0, jumping - STAND_MP_COST);
     else walking = Math.max(0, walking - STAND_MP_COST);
   } else {
     locomotion = mode;

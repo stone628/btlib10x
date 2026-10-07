@@ -1,4 +1,4 @@
-import { neighbor } from "../core/hex";
+import { hexDistance, neighbor } from "../core/hex";
 import {
   cellAt,
   costToClimb,
@@ -307,6 +307,7 @@ export function reachableLandings(
   const canEnter = (from: HexCoord, hex: HexCoord, backward: boolean, minMove = false): boolean => {
     if (!inBounds(hex)) return false;
     if (options.wreckAt?.(hex)) return false;
+    // Jumps ignore elevation (VISION §2.3: the TW p.53 height cap is not enforced).
     if (jumping) return true;
     // TW p.53: running units cannot enter water; Minimum Movement (p.57) can.
     if (running && !minMove && waterDepth(cellAt(options.grid, hex).terrain) > 0) return false;
@@ -389,6 +390,8 @@ export function reachableLandings(
     const hexKeyStr = key.slice(0, sep);
     const hex = parseHexKey(hexKeyStr);
     if (!canLand(hex)) continue;
+    // A jump follows a shortest path to its landing hex (TW p.53).
+    if (jumping && cost !== hexDistance(start, hex)) continue;
     const facing = key.slice(sep + 1) as Facing;
     results.push({ hex, facing, path: bestPath.get(key) ?? [] });
   }

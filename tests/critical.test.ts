@@ -22,6 +22,7 @@ import {
   rollInitiativePhase,
 } from "../src/rules/game";
 import { heatSinksOperational } from "../src/rules/heat";
+import { preexistingDamageModifier } from "../src/rules/piloting";
 import { createTestBattle, overrideAmmoBin, scriptedRng } from "./helpers";
 
 /** Helper: returns an Rng whose first 2D6 sums to `sum` (1..12), then yields `tail`. */
@@ -666,6 +667,18 @@ describe("effectiveMovement", () => {
     const m = effectiveMovement(def, damage, flags({ rightLeg: [0, 1, 2] }));
     expect(m.walking).toBe(2);
     expect(m.running).toBe(3);
+  });
+
+  it("hip halves Walking MP before the other leg's actuator losses (MOV-07)", () => {
+    // Right hip + left upper leg actuator: ceil(4/2) - 1 = 1 (not ceil(3/2) = 2).
+    const m = effectiveMovement(def, damage, flags({ rightLeg: [0], leftLeg: [1] }));
+    expect(m.walking).toBe(1);
+  });
+
+  it("a destroyed hip replaces the other crit modifiers on its leg (PSR-02)", () => {
+    // Hip + upper leg actuator on one leg: +2 for the hip only, not +3.
+    const pre = preexistingDamageModifier(def, damage, flags({ rightLeg: [0, 1] }));
+    expect(pre.modifier).toBe(2);
   });
 
   it("destroyed jump jet slots reduce jumping by 1 each", () => {
