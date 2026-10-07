@@ -124,7 +124,7 @@ pass), plus `cancel`, `sheet`, `status`, `heat` and the globals.
 
 The engine implements a **subset of BattleTech Total Warfare rules** for
 **bipedal 'Mechs only**. The terminal app exposes everything the engine can
-simulate. See `docs/TODO.md` for the roadmap toward a fuller ruleset.
+simulate. See `docs/VISION.md` for direction and the will/won't lists.
 
 ### Implemented
 
@@ -500,7 +500,7 @@ stated elsewhere in this document or the codebase:
 - **Hull breach / underwater combat** — TW has no drowning rule; submerged
   'Mechs risk hull breach instead (TW p.121). Water blocks targeting at depth
   2+ and halves falls, but breaches, underwater weapons and ranges, and the
-  underwater LOS table (TW pp.108-109) are not implemented (see `docs/TODO.md`).
+  underwater LOS table (TW pp.108-109) are not implemented (see `docs/VISION.md`).
 
 ### Verify-later
 
