@@ -975,6 +975,8 @@ function markUnitDestroyed(
   // TO p.165: head destruction auto-ejects the pilot (cockpit crits still kill).
   if (reason === "headDestroyed" || reason === "headBlownOff") {
     unit.pilotHits = Math.max(unit.pilotHits, unit.pilotHitMax - 1);
+    // Keep the cause of the loss: the ejection itself only marks `removed`.
+    unit.destroyed = reason;
     resolveEjection(state, unit, rng, sink, "auto");
     return;
   }
@@ -1398,6 +1400,7 @@ function autoEjectOnCenterTorsoBlast(
 ): boolean {
   if (isUnitRemoved(unit)) return false;
   if (!applications.some((a) => a?.newlyDestroyed.includes("centerTorso"))) return false;
+  unit.destroyed = "centerTorsoDestroyed";
   resolveEjection(state, unit, rng, sink, "auto");
   return true;
 }

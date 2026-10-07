@@ -30,8 +30,9 @@ export interface PilotRecord {
 }
 
 export function pilotStatus(unit: UnitState): PilotStatus {
-  if (unit.removed === "pilotEjected") return "ejected";
+  // A pilot killed by the ejection landing is dead, not "ejected".
   if (unit.pilotHits >= unit.pilotHitMax) return "dead";
+  if (unit.removed === "pilotEjected") return "ejected";
   return unit.unconscious ? "unconscious" : "active";
 }
 

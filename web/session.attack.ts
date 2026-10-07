@@ -11,6 +11,7 @@ import {
   type DamageApplication,
   type DamageTransferStep,
   declareAttacks,
+  declarePickup,
   type FireBlockerReason,
   type FireSuggestion,
   type FireWeapon,
@@ -71,6 +72,8 @@ export interface AttackContext {
   weaponDecls: WeaponAttackDecl[];
   physicalDecls: PhysicalAttackDecl[];
   pickupDecl: ClubPickupDecl | null;
+  /** Arguments `queuePickup` was called with, replayed at commit. */
+  pickupArgs: ClubPickupDecl | null;
   dropClub: boolean;
   /** Acting unit's torso twist (TW pp.105-106) for the current attack-phase
    *  declaration: starts at `"front"` on context allocation (new actor or
@@ -91,6 +94,7 @@ export function initAttackContext(s: Session, actorId: string): AttackContext {
     weaponDecls: [],
     physicalDecls: [],
     pickupDecl: null,
+    pickupArgs: null,
     dropClub: false,
     torsoTwist: "front",
     fireCandidate: null,
@@ -233,7 +237,12 @@ export function commitAttack(s: Session): SessionGameEvent[] {
   const actor = requireUnit(battle, context.actorId);
   const unitId = actor.id;
   const events: SessionGameEvent[] = [];
-  if (context.weaponDecls.length === 0 && context.physicalDecls.length === 0) {
+  if (
+    context.weaponDecls.length === 0 &&
+    context.physicalDecls.length === 0 &&
+    context.pickupDecl === null &&
+    !context.dropClub
+  ) {
     commitAtomic(s, () => {
       actor.passedAttacks = true;
       clearContext(s);
@@ -249,9 +258,19 @@ export function commitAttack(s: Session): SessionGameEvent[] {
   } else {
     commitAtomic(s, () => {
       const collected: GameEvent[] = [];
-      declareAttacks(battle, unitId, context.weaponDecls, context.physicalDecls, collected, s.rng, {
-        twist: context.torsoTwist,
-      });
+      if (context.pickupDecl !== null && context.pickupArgs !== null) {
+        declarePickup(battle, unitId, context.pickupArgs, collected);
+      } else {
+        declareAttacks(
+          battle,
+          unitId,
+          context.weaponDecls,
+          context.physicalDecls,
+          collected,
+          s.rng,
+          { twist: context.torsoTwist, dropClub: context.dropClub },
+        );
+      }
       clearContext(s);
       events.push(
         ...collected,
@@ -431,6 +450,10 @@ export function queuePickup(s: Session, source?: ClubKind, tokenIndex?: number):
     result.token === undefined
       ? { source: result.source }
       : { source: result.source, token: result.token };
+  context.pickupArgs = {
+    ...(source !== undefined ? { source } : {}),
+    ...(tokenIndex !== undefined ? { tokenIndex } : {}),
+  };
   context.fireCandidate = null;
   return [i18n("ok.pickup.queued", { source: result.source })];
 }

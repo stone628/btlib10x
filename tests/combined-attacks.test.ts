@@ -5,6 +5,7 @@ import {
   commitMovement,
   declareMovementMode,
   newSession,
+  queueDrop,
   queuePhysicalAttack,
   queueWeaponAttacks,
   type Session,
@@ -85,5 +86,15 @@ describe("stacked weapon + physical declarations", () => {
     queuePhysicalAttack(second.s, "kick", second.enemy, "rightLeg");
     expect(setTorsoTwist(second.s, "leftSide")).toBe("front");
     expect(second.s.attack!.torsoTwist).toBe("leftSide");
+  });
+});
+
+describe("club commands reach the engine (DEAD-01)", () => {
+  it("a queued drop is committed: the held club lands in the hex", () => {
+    const { s, actor } = attackSetup();
+    requireUnit(s.battle!, actor).club = { kind: "tree" };
+    queueDrop(s);
+    for (const line of execute(s, "done")) expect(line).not.toMatch(/^error:/);
+    expect(requireUnit(s.battle!, actor).club).toBeNull();
   });
 });
