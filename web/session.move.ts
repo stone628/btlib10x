@@ -274,7 +274,7 @@ export function declareMovementMode(
     );
     // The stand draws on the walk pool whatever locomotion follows; a 'Mech
     // with only 1 MP may still try (TW p.50). Jumping after a stand is illegal.
-    if (effectiveMoveBudget("walk", movement, unit.heat) < 1) {
+    if (effectiveMoveBudget("walk", movement, unit.heat) - unit.mpSpent < 1) {
       throw new Error(i18n("err.postureBudget", { id: unit.id }));
     }
     // Engine declareMove deferred to commit: unit still prone, would throw.
@@ -455,7 +455,7 @@ export function budgetFor(unit: UnitState, context: MovementContext): number {
   }
   if (declared === "standup") {
     const loco = context.postureMove ?? "walk";
-    return Math.max(0, effectiveMoveBudget(loco, movement, unit.heat) - STAND_MP_COST);
+    return Math.max(0, effectiveMoveBudget(loco, movement, unit.heat) - standCostFor(unit));
   }
   const mode: MoveMode =
     declared === "shutdown" || declared === "startup" || declared === "eject" || declared === null
@@ -486,8 +486,14 @@ function fullBudgetFor(unit: UnitState, context: MovementContext): number {
 export function postureCostFor(s: Session): number {
   const mode = s.move?.moveMode ?? null;
   if (mode === "prone") return DROP_MP_COST;
-  if (mode === "standup") return STAND_MP_COST;
+  if (mode === "standup") return standCostFor(s.battle!.units[s.move!.actorId]!);
   return 0;
+}
+
+/** MP a stand-up reserves: its own cost plus what earlier failed attempts
+ *  this turn already spent (TW p.50 allows repeats while MP remain). */
+function standCostFor(unit: UnitState): number {
+  return STAND_MP_COST + unit.mpSpent;
 }
 
 /** Display mode for previews: prone/standup carry their sub-mode arg. */
@@ -714,9 +720,9 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo {
     locomotion = postureMove ?? "standStill";
     proneFlag = false;
     if (locomotion === "standStill") return { team: actor.team, revealed: [] }; // stand in place: no map, `place` stays shut
-    if (locomotion === "walk") walking = Math.max(0, walking - STAND_MP_COST);
-    else if (locomotion === "run") running = Math.max(0, running - STAND_MP_COST);
-    else walking = Math.max(0, walking - STAND_MP_COST);
+    if (locomotion === "walk") walking = Math.max(0, walking - standCostFor(actor));
+    else if (locomotion === "run") running = Math.max(0, running - standCostFor(actor));
+    else walking = Math.max(0, walking - standCostFor(actor));
   } else {
     locomotion = mode;
   }
@@ -756,7 +762,7 @@ function stepResultLines(s: Session, landing: RevealedLanding): string[] {
   const last = path[path.length - 1];
   const m = s.move;
   const mode = m?.moveMode ?? null;
-  const postureCost = mode === "prone" ? DROP_MP_COST : mode === "standup" ? STAND_MP_COST : 0;
+  const postureCost = mode === "prone" ? DROP_MP_COST : mode === "standup" ? standCostFor(actor) : 0;
   const locomotion =
     mode === "standup" || mode === "prone"
       ? (m?.postureMove ?? "walk")
