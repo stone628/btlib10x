@@ -18,12 +18,18 @@ import { buildingTypeOf } from "./building";
 
 /**
  * Hexes along the center-to-center LOS, excluding the attacker's and target's
- * own hexes. The cube-lerp rounding picks one hex deterministically when the
- * line grazes an edge (defender-choice tie-break is a documented v1 gap).
+ * own hexes. A line running exactly along a hexside has two candidate hexes at
+ * that step (TW p.99: the target's controller picks); `side` selects one of
+ * them (see `lineHexes`), and `0` keeps the deterministic tie-break.
  */
-export function interveningHexes(from: HexCoord, to: HexCoord): HexCoord[] {
-  return lineHexes(from, to);
+export function interveningHexes(from: HexCoord, to: HexCoord, side: 0 | 1 | -1 = 0): HexCoord[] {
+  return lineHexes(from, to, side);
 }
+
+/** Both tie-break sides of a hexside line. The defender chooses the side, so
+ *  every LOS question is asked of both and the one worse for the attacker
+ *  wins (LOS-03); off a tie the two sides are identical. */
+export const LOS_SIDES = [1, -1] as const;
 
 export function losWoodsPoints(intervening: readonly TerrainType[]): number {
   let points = 0;
@@ -98,8 +104,20 @@ export function losWoodsPointsBetween(
   to: HexCoord,
   prone?: ProneEnds,
 ): number {
+  let worst = 0;
+  for (const side of LOS_SIDES) worst = Math.max(worst, woodsPointsOnSide(grid, from, to, side, prone));
+  return worst;
+}
+
+function woodsPointsOnSide(
+  grid: HexGrid,
+  from: HexCoord,
+  to: HexCoord,
+  side: 0 | 1 | -1,
+  prone?: ProneEnds,
+): number {
   let points = 0;
-  for (const h of interveningHexes(from, to)) {
+  for (const h of interveningHexes(from, to, side)) {
     if (woodsIntervene(grid, from, to, h, prone)) points += screeningPoints(cellAt(grid, h).terrain);
   }
   return points;
@@ -113,7 +131,17 @@ export function interveningTerrains(
   to: HexCoord,
   prone?: ProneEnds,
 ): TerrainType[] {
-  return interveningHexes(from, to).map((h) =>
+  // The side with more screening is the one the defender picks.
+  let best: 0 | 1 | -1 = LOS_SIDES[0];
+  let bestPoints = -1;
+  for (const side of LOS_SIDES) {
+    const points = woodsPointsOnSide(grid, from, to, side, prone);
+    if (points > bestPoints) {
+      best = side;
+      bestPoints = points;
+    }
+  }
+  return interveningHexes(from, to, best).map((h) =>
     woodsIntervene(grid, from, to, h, prone) ? cellAt(grid, h).terrain : "clear",
   );
 }
@@ -160,7 +188,17 @@ export function losBlockedByElevation(
   to: HexCoord,
   prone?: ProneEnds,
 ): boolean {
-  for (const h of interveningHexes(from, to)) {
+  return LOS_SIDES.some((side) => elevationBlockedOnSide(grid, from, to, side, prone));
+}
+
+function elevationBlockedOnSide(
+  grid: HexGrid,
+  from: HexCoord,
+  to: HexCoord,
+  side: 0 | 1 | -1,
+  prone?: ProneEnds,
+): boolean {
+  for (const h of interveningHexes(from, to, side)) {
     const cell = cellAt(grid, h);
     if (losIntervenes(grid, from, to, h, cell.level, prone)) return true;
     if (
@@ -181,7 +219,17 @@ export function losBlockedByBuilding(
   to: HexCoord,
   prone?: ProneEnds,
 ): boolean {
-  for (const h of interveningHexes(from, to)) {
+  return LOS_SIDES.some((side) => buildingBlockedOnSide(grid, from, to, side, prone));
+}
+
+function buildingBlockedOnSide(
+  grid: HexGrid,
+  from: HexCoord,
+  to: HexCoord,
+  side: 0 | 1 | -1,
+  prone?: ProneEnds,
+): boolean {
+  for (const h of interveningHexes(from, to, side)) {
     const cell = cellAt(grid, h);
     if (buildingTypeOf(cell.terrain) === undefined) continue;
     if (losIntervenes(grid, from, to, h, cell.level + BUILDING_LOS_HEIGHT, prone)) return true;
@@ -222,9 +270,11 @@ export function losBlockedByWreck(
   wrecks?: Readonly<Record<string, WreckState>>,
 ): boolean {
   if (wrecks === undefined) return false;
-  for (const h of interveningHexes(from, to)) {
-    const w = wrecks[hexKey(h)];
-    if (w !== undefined && w.level >= 2) return true;
+  for (const side of LOS_SIDES) {
+    for (const h of interveningHexes(from, to, side)) {
+      const w = wrecks[hexKey(h)];
+      if (w !== undefined && w.level >= 2) return true;
+    }
   }
   return false;
 }

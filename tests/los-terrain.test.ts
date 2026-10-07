@@ -136,3 +136,38 @@ describe("target movement counts hexes since the last reversal (TW p.107, TOH-02
     expect(requireUnit(state, "t").movesThisTurn).toEqual(["forward", "forward"]);
   });
 });
+
+describe("hexside LOS gives the defender the side (TW p.99, LOS-03)", () => {
+  // From 2,4 to 4,4 the line runs exactly between 3,4 and 3,5.
+  const from = { col: 2, row: 4 };
+  const to = { col: 4, row: 4 };
+  const wide = (over: Record<string, Partial<HexCell> & { terrain?: TerrainType }>): HexGrid => {
+    const width = 6;
+    const height = 6;
+    const cells: HexCell[] = [];
+    for (let i = 0; i < width * height; i++) cells.push({ terrain: "clear", level: 0 });
+    for (const [key, o] of Object.entries(over)) {
+      const [col, row] = key.split(",").map(Number);
+      cells[col! - 1 + (row! - 1) * width] = { terrain: "clear", level: 0, ...o };
+    }
+    return { cells, width, height };
+  };
+
+  it("woods on either candidate hex count, whichever side they sit on", () => {
+    const a = losWoodsPointsBetween(wide({ "3,4": { terrain: "heavyWoods" } }), from, to);
+    const b = losWoodsPointsBetween(wide({ "3,5": { terrain: "heavyWoods" } }), from, to);
+    expect(a).toBe(2);
+    expect(b).toBe(2);
+  });
+
+  it("intervening terrains report the worse side for the attacker", () => {
+    expect(interveningTerrains(wide({ "3,5": { terrain: "heavyWoods" } }), from, to)).toEqual([
+      "heavyWoods",
+    ]);
+  });
+
+  it("a blocking hill on either candidate hex blocks the line", () => {
+    expect(losClear(wide({ "3,5": { level: 3 } }), from, to)).toBe(false);
+    expect(losClear(wide({ "3,4": { level: 3 } }), from, to)).toBe(false);
+  });
+});

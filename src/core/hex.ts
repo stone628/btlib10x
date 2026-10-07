@@ -69,8 +69,15 @@ export function sameHex(a: HexCoord, b: HexCoord): boolean {
  * Uses cube-coordinate lerp with rounding; ties are broken deterministically by
  * preferring the hex closer to the straight line (lowest cube-distance error),
  * then by lower x, y, z so results are reproducible.
+ *
+ * `side` (TW p.99) resolves a line that runs exactly along a hexside: the
+ * sampled point is nudged by (+e, +e, -2e) times `side` (e = 1e-6), which only
+ * moves exact ties and yields the hex on one side (+1) or the other (-1).
+ * `0` keeps the deterministic tie-break.
  */
-export function lineHexes(from: HexCoord, to: HexCoord): HexCoord[] {
+const LINE_NUDGE = 1e-6;
+
+export function lineHexes(from: HexCoord, to: HexCoord, side: 0 | 1 | -1 = 0): HexCoord[] {
   if (sameHex(from, to)) return [];
   const a = offsetToCube(from);
   const b = offsetToCube(to);
@@ -78,9 +85,9 @@ export function lineHexes(from: HexCoord, to: HexCoord): HexCoord[] {
   const result: HexCoord[] = [];
   for (let i = 1; i < n; i++) {
     const t = i / n;
-    const px = a.x + (b.x - a.x) * t;
-    const py = a.y + (b.y - a.y) * t;
-    const pz = a.z + (b.z - a.z) * t;
+    const px = a.x + (b.x - a.x) * t + side * LINE_NUDGE;
+    const py = a.y + (b.y - a.y) * t + side * LINE_NUDGE;
+    const pz = a.z + (b.z - a.z) * t - 2 * side * LINE_NUDGE;
     result.push(cubeRound(px, py, pz));
   }
   return result;

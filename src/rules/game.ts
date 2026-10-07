@@ -118,6 +118,7 @@ import { internalStructureForTonnage } from "./internalStructure";
 import {
   interveningHexes,
   interveningTerrains,
+  LOS_SIDES,
   losBlockedByBuilding,
   losBlockedByElevation,
   losClear,
@@ -887,14 +888,18 @@ export function partialCoverMod(
       const attackerLos = unitLosLevel(state, attacker.position, attacker.prone);
       const targetLos = unitLosLevel(state, target.position, false);
       if (attackerLos <= targetLos) {
-        for (const h of interveningHexes(attacker.position, target.position)) {
-          if (!isAdjacent(h, target.position)) continue;
-          const cell = cellAt(state, h);
-          const effectiveLevel =
-            buildingTypeOf(cell.terrain) !== undefined ? cell.level + 2 : cell.level;
-          if (effectiveLevel >= targetLevel + 1) {
-            terrain = PARTIAL_COVER_TERRAIN_MOD;
-            break;
+        // A hexside line gives the defender the choice of side (TW p.99):
+        // cover on either candidate hex applies.
+        coverSides: for (const side of LOS_SIDES) {
+          for (const h of interveningHexes(attacker.position, target.position, side)) {
+            if (!isAdjacent(h, target.position)) continue;
+            const cell = cellAt(state, h);
+            const effectiveLevel =
+              buildingTypeOf(cell.terrain) !== undefined ? cell.level + 2 : cell.level;
+            if (effectiveLevel >= targetLevel + 1) {
+              terrain = PARTIAL_COVER_TERRAIN_MOD;
+              break coverSides;
+            }
           }
         }
       }
