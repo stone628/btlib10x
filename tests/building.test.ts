@@ -141,7 +141,7 @@ describe("battle building integration", () => {
 
   it("charges the phase-start toll per grouping, not full damage (TW p.171)", () => {
     // Medium building CF 40: an AC/20 single-group hit costs the hex
-    // ceil(40/10) = 4, once. The unit inside still takes its full 20.
+    // ceil(40/10) = 4, once, and absorbs that much: the occupant takes 16.
     const battle: BattleState = createTestBattle(
       [{ col: 3, row: 3, type: "mediumBuilding" }],
       [
@@ -169,7 +169,7 @@ describe("battle building integration", () => {
       cf: 36,
     });
     expect(events.some((e) => e.kind === "buildingCollapsed")).toBe(false);
-    expect(poolTotal(battle.units.b!)).toBe(totalBefore - 20);
+    expect(poolTotal(battle.units.b!)).toBe(totalBefore - 16);
   });
 
   it("freezes the toll at phase-start CF and defers reduction (TW p.171)", () => {
@@ -212,8 +212,8 @@ describe("battle building integration", () => {
       cf: 11,
     });
     expect(events.some((e) => e.kind === "buildingCollapsed")).toBe(false);
-    expect(poolTotal(battle.units.b!)).toBe(bBefore - 20);
-    expect(poolTotal(battle.units.d!)).toBe(dBefore - 20);
+    expect(poolTotal(battle.units.b!)).toBe(bBefore - 18);
+    expect(poolTotal(battle.units.d!)).toBe(dBefore - 18);
   });
 
   it("collapses on tolls with punch-table groupings (TW pp.176-177)", () => {
@@ -225,7 +225,7 @@ describe("battle building integration", () => {
       ],
       true,
     );
-    // CF 1: a single AC/20 grouping tolls 1 and collapses the hex.
+    // CF 1: a single AC/20 grouping tolls 1 (19 reaches the occupant) and collapses the hex.
     // Collapse total = ceil(1/10 x 3) = 1, one punch-table group.
     battle.buildings["3,3"] = { cf: 1, type: "light" };
     // RNG: initiative; to-hit; location 7 (center torso); punch 2
@@ -249,7 +249,7 @@ describe("battle building integration", () => {
       location: "leftTorso",
       damage: 1,
     });
-    expect(poolTotal(battle.units.b!)).toBe(totalBefore - 21);
+    expect(poolTotal(battle.units.b!)).toBe(totalBefore - 20);
   });
 
   it("adds standard falling damage above Level 0 (TW p.177)", () => {
@@ -307,8 +307,8 @@ describe("battle building integration", () => {
     expect(events.some((e) => e.kind === "unitFell" && e.cause.kind === "buildingCollapse")).toBe(
       true,
     );
-    // 20 attack + 1 collapse + 15 falling (50t, 2 levels + 1).
-    expect(poolTotal(battle.units.b!)).toBe(totalBefore - 36);
+    // 19 attack (1 absorbed) + 1 collapse + 15 falling (50t, 2 levels + 1).
+    expect(poolTotal(battle.units.b!)).toBe(totalBefore - 35);
   });
 });
 

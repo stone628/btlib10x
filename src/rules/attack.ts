@@ -63,12 +63,17 @@ export interface WeaponAttackInput {
   /** Arm-actuator to-hit modifier for the firing arm (TW p.125); caller
    *  computes per weapon mount via `armWeaponToHitModifier`. */
   readonly actuatorMod?: number;
+  /** Targeting-computer modifier for this weapon (TW p.143). */
+  readonly tcMod?: number;
   /** Partial-cover to-hit modifier supplied by the caller (the board aware
    *  of wrecks): 2 when the target is adjacent to a level-2 wreck and the
    *  attacker is below its top. Merged with the terrain-derived value
    *  (larger wins); the caller computes it in `partialCoverMod`. */
   readonly partialCoverMod?: number;
   readonly interveningTerrains: readonly TerrainType[];
+  /** Damage the target's building hex absorbs from each hit grouping: its CF
+   *  at the start of the phase ÷ 10, rounded up (TW p.171). */
+  readonly buildingAbsorb?: number;
   readonly distance: number;
   readonly weapon: string;
   readonly ammoExhausted?: boolean;
@@ -129,7 +134,11 @@ export interface AttackResolution {
    *  -2 long, TW p.136); null when the weapon has none. `clusterRoll` stays
    *  the raw 2D6 thrown. */
   readonly clusterMod: number | null;
+  /** Hit groupings that reach the target, after building absorption. */
   readonly groups: readonly HitGroup[];
+  /** Damage the building hex soaked from the groupings (TW p.171); this is
+   *  what its CF loses. Absent when the target is not in a building. */
+  readonly buildingAbsorbed?: number;
   readonly application: DamageApplication | null;
   /** Attack direction the attack resolved against (side of the target hit);
    *  drove the hit-location table and armor pool. Defaults to front when the
@@ -192,6 +201,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     ...(input.targetProne !== undefined ? { targetProne: input.targetProne } : {}),
     ...(input.sensorMod !== undefined ? { sensorMod: input.sensorMod } : {}),
     ...(input.actuatorMod !== undefined ? { actuatorMod: input.actuatorMod } : {}),
+    ...(input.tcMod !== undefined ? { tcMod: input.tcMod } : {}),
     ...(partialCoverMod > 0 ? { partialCoverMod } : {}),
     interveningWoods: losWoodsPoints(input.interveningTerrains),
     distance: input.distance,
@@ -295,6 +305,22 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
         throughArmor: placed.throughArmor,
       });
     }
+  }
+
+  // TW p.171: each grouping loses the hex's absorption before it reaches the
+  // unit; the building is charged only what it actually absorbed. A grouping
+  // reduced to nothing is dropped (and with it any through-armor crit chance).
+  const absorbPerGroup = input.buildingAbsorb ?? 0;
+  if (absorbPerGroup > 0) {
+    let absorbed = 0;
+    const reaching: HitGroup[] = [];
+    for (const g of base.groups) {
+      const soak = Math.min(absorbPerGroup, g.damage);
+      absorbed += soak;
+      if (g.damage > soak) reaching.push({ ...g, damage: g.damage - soak });
+    }
+    base.groups = reaching;
+    (base as { buildingAbsorbed?: number }).buildingAbsorbed = absorbed;
   }
 
   let damage = input.targetDamage;

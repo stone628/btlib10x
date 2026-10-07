@@ -42,6 +42,9 @@ export interface AttackModifiers {
    *  actuator in that arm (TW p.125). Caller computes per weapon mount via
    *  `armWeaponToHitModifier`. */
   readonly actuatorMod?: number;
+  /** Targeting-computer modifier (-1 for an eligible weapon, TW p.143); caller
+   *  computes per weapon via `targetingComputerModifier`. */
+  readonly tcMod?: number;
 }
 
 export interface ToHitBreakdown {
@@ -66,6 +69,8 @@ export interface ToHitBreakdown {
   readonly sensorMod: number;
   /** Arm-actuator modifier for the firing arm (0 when intact / non-arm). */
   readonly actuatorMod: number;
+  /** Targeting-computer modifier (0 or -1, TW p.143). */
+  readonly tcMod: number;
   readonly total: number;
   readonly rangeBracket: RangeBracket;
   /** Modified TN <= 2 auto-hits; > 12 auto-misses (attack may be aborted). */
@@ -128,6 +133,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
       heatMod: 0,
       sensorMod: 0,
       actuatorMod: 0,
+      tcMod: 0,
       total: Number.POSITIVE_INFINITY,
       rangeBracket: "long",
       automatic: "miss",
@@ -155,6 +161,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
   const heatMod = mods.heatMod ?? 0;
   const sensorMod = mods.sensorMod ?? 0;
   const actuatorMod = mods.actuatorMod ?? 0;
+  const tcMod = mods.tcMod ?? 0;
 
   const total =
     mods.gunnery +
@@ -167,7 +174,8 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     min +
     heatMod +
     sensorMod +
-    actuatorMod;
+    actuatorMod +
+    tcMod;
 
   return {
     gunnery: mods.gunnery,
@@ -181,6 +189,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     heatMod,
     sensorMod,
     actuatorMod,
+    tcMod,
     total,
     rangeBracket: bracket,
     automatic: total <= D2D6_MIN ? "hit" : total > D2D6_MAX ? "miss" : null,

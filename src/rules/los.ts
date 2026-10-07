@@ -1,7 +1,8 @@
-import { hexDistance, lineHexes } from "../core/hex";
+import { isAdjacent, lineHexes } from "../core/hex";
 import {
   blocksTargeting,
   cellAt,
+  groundLevel,
   type HexGrid,
   screeningPoints,
   waterDepth,
@@ -38,18 +39,83 @@ export function losBlocked(points: number): boolean {
   return points >= WOODS_BLOCK_POINTS;
 }
 
-/** Sum of screening points among hexes between `from` and `to` (endpoints excluded). */
-export function losWoodsPointsBetween(grid: HexGrid, from: HexCoord, to: HexCoord): number {
+/** Posture of the two LOS endpoints (prone lowers a unit's LOS level). */
+export interface ProneEnds {
+  readonly from?: boolean;
+  readonly to?: boolean;
+}
+
+/** A unit's LOS level: the level of the hex it stands on (the bed, for a
+ *  'Mech in water) plus its height, 2 standing or 1 prone (TW p.99). */
+export function unitLosLevel(grid: HexGrid, hex: HexCoord, prone?: boolean): number {
+  return groundLevel(grid, hex) + (prone === true ? 1 : MECH_LOS_HEIGHT);
+}
+
+/**
+ * TW p.100: terrain along the LOS intervenes if its level (top) is equal to
+ * or higher than both units; or it is adjacent to the attacker and equal to
+ * or higher than the attacker's level; or it is adjacent to the target and
+ * equal to or higher than the target's level. No line is interpolated.
+ */
+function losIntervenes(
+  grid: HexGrid,
+  from: HexCoord,
+  to: HexCoord,
+  h: HexCoord,
+  top: number,
+  prone?: ProneEnds,
+): boolean {
+  const aLos = unitLosLevel(grid, from, prone?.from);
+  const bLos = unitLosLevel(grid, to, prone?.to);
+  return (
+    (top >= aLos && top >= bLos) ||
+    (isAdjacent(h, from) && top >= aLos) ||
+    (isAdjacent(h, to) && top >= bLos)
+  );
+}
+
+/** A woods hex counts toward the woods modifier and the blocking limit only
+ *  when its canopy intervenes (TW p.100; LOS-02). */
+function woodsIntervene(
+  grid: HexGrid,
+  from: HexCoord,
+  to: HexCoord,
+  h: HexCoord,
+  prone?: ProneEnds,
+): boolean {
+  const cell = cellAt(grid, h);
+  return (
+    isWoodsTerrain(cell.terrain) &&
+    losIntervenes(grid, from, to, h, cell.level + WOODS_LOS_HEIGHT, prone)
+  );
+}
+
+/** Sum of screening points among intervening woods between `from` and `to`
+ *  (endpoints excluded). */
+export function losWoodsPointsBetween(
+  grid: HexGrid,
+  from: HexCoord,
+  to: HexCoord,
+  prone?: ProneEnds,
+): number {
   let points = 0;
   for (const h of interveningHexes(from, to)) {
-    points += screeningPoints(cellAt(grid, h).terrain);
+    if (woodsIntervene(grid, from, to, h, prone)) points += screeningPoints(cellAt(grid, h).terrain);
   }
   return points;
 }
 
-/** Terrain types of hexes between `from` and `to` (endpoints excluded). */
-export function interveningTerrains(grid: HexGrid, from: HexCoord, to: HexCoord): TerrainType[] {
-  return interveningHexes(from, to).map((h) => cellAt(grid, h).terrain);
+/** Terrain types of intervening hexes between `from` and `to` (endpoints
+ *  excluded); woods whose canopy does not intervene read as clear. */
+export function interveningTerrains(
+  grid: HexGrid,
+  from: HexCoord,
+  to: HexCoord,
+  prone?: ProneEnds,
+): TerrainType[] {
+  return interveningHexes(from, to).map((h) =>
+    woodsIntervene(grid, from, to, h, prone) ? cellAt(grid, h).terrain : "clear",
+  );
 }
 
 /**
@@ -70,11 +136,6 @@ export function losBlockedByWater(
   return submerged(from, prone?.from) || submerged(to, prone?.to);
 }
 
-/** Posture of the two LOS endpoints (only prone matters for water LOS). */
-export interface ProneEnds {
-  readonly from?: boolean;
-  readonly to?: boolean;
-}
 
 /**
  * Standing feature heights above the underlying hex level (TW p. 100):
@@ -87,51 +148,43 @@ export const MECH_LOS_HEIGHT = 2;
 const BUILDING_LOS_HEIGHT = 2;
 const WOODS_LOS_HEIGHT = 2;
 
-function terrainHeightAt(grid: HexGrid, hex: HexCoord): number {
-  const cell = cellAt(grid, hex);
-  const t = cell.terrain;
-  if (buildingTypeOf(t) !== undefined) return cell.level + BUILDING_LOS_HEIGHT;
-  if (isWoodsTerrain(t)) return cell.level + WOODS_LOS_HEIGHT;
-  return cell.level;
-}
-
 /**
- * LOS elevation check (TW p. 100): the ray runs between the two units' eye
- * levels (ground + MECH_LOS_HEIGHT) and an intervening feature blocks if its
- * top strictly exceeds the ray height at that hex's center. Woods are sized
- * equal to a standing 'Mech (2 levels) so the elevation ray never blocks on
- * woods alone — the screening-points rule (losBlocked) handles woods LOS.
- * Bipedal 'Mechs only — no multi-floor interiors, no hull-down, no partial
- * cover.
+ * LOS elevation check (TW p.100): hills and buildings block when they
+ * intervene by the three-clause test. A hex blocks at its own level; a
+ * building rises 2 levels above it. Bipedal 'Mechs only — no multi-floor
+ * interiors, no hull-down.
  */
-export function losBlockedByElevation(grid: HexGrid, from: HexCoord, to: HexCoord): boolean {
-  const aLos = cellAt(grid, from).level + MECH_LOS_HEIGHT;
-  const bLos = cellAt(grid, to).level + MECH_LOS_HEIGHT;
-  const dTotal = hexDistance(from, to);
-  if (dTotal === 0) return false;
+export function losBlockedByElevation(
+  grid: HexGrid,
+  from: HexCoord,
+  to: HexCoord,
+  prone?: ProneEnds,
+): boolean {
   for (const h of interveningHexes(from, to)) {
-    const dA = hexDistance(from, h);
-    const rayHeight = aLos + (bLos - aLos) * (dA / dTotal);
-    if (terrainHeightAt(grid, h) > rayHeight) return true;
+    const cell = cellAt(grid, h);
+    if (losIntervenes(grid, from, to, h, cell.level, prone)) return true;
+    if (
+      buildingTypeOf(cell.terrain) !== undefined &&
+      losIntervenes(grid, from, to, h, cell.level + BUILDING_LOS_HEIGHT, prone)
+    ) {
+      return true;
+    }
   }
   return false;
 }
 
-/**
- * True when an intervening building hex rises above the LOS ray. Building
- * hexes block LOS (TW p. 100) unless the eye-level ray clears their height;
- * the building hex a unit occupies is not intervening.
- */
-export function losBlockedByBuilding(grid: HexGrid, from: HexCoord, to: HexCoord): boolean {
-  const aLos = cellAt(grid, from).level + MECH_LOS_HEIGHT;
-  const bLos = cellAt(grid, to).level + MECH_LOS_HEIGHT;
-  const dTotal = hexDistance(from, to);
-  if (dTotal === 0) return false;
+/** True when an intervening building hex blocks LOS (TW p.100); the
+ *  building hex a unit occupies is not intervening. */
+export function losBlockedByBuilding(
+  grid: HexGrid,
+  from: HexCoord,
+  to: HexCoord,
+  prone?: ProneEnds,
+): boolean {
   for (const h of interveningHexes(from, to)) {
-    if (buildingTypeOf(cellAt(grid, h).terrain) === undefined) continue;
-    const dA = hexDistance(from, h);
-    const rayHeight = aLos + (bLos - aLos) * (dA / dTotal);
-    if (terrainHeightAt(grid, h) > rayHeight) return true;
+    const cell = cellAt(grid, h);
+    if (buildingTypeOf(cell.terrain) === undefined) continue;
+    if (losIntervenes(grid, from, to, h, cell.level + BUILDING_LOS_HEIGHT, prone)) return true;
   }
   return false;
 }
@@ -148,9 +201,9 @@ export function losClear(
   wrecks?: Readonly<Record<string, WreckState>>,
   prone?: ProneEnds,
 ): boolean {
-  if (losBlocked(losWoodsPointsBetween(grid, from, to))) return false;
+  if (losBlocked(losWoodsPointsBetween(grid, from, to, prone))) return false;
   if (losBlockedByWater(grid, from, to, prone)) return false;
-  if (losBlockedByElevation(grid, from, to)) return false;
+  if (losBlockedByElevation(grid, from, to, prone)) return false;
   if (losBlockedByWreck(from, to, wrecks)) return false;
   return true;
 }
