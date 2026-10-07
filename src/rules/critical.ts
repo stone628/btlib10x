@@ -95,6 +95,7 @@ import {
   type DamageApplication,
   destroyedLegs,
   isUnitLocationDestroyed,
+  structureStruck,
   type UnitDamageState,
 } from "./damage";
 import type { DestroyedReason } from "./game";
@@ -105,6 +106,16 @@ export interface CritSource {
   readonly location: Location;
   /** Damage value applied at the source location (used for ammo-explosion trace). */
   readonly damage: number;
+  /** The hit itself damaged this location's internal structure. When it also
+   *  destroyed the location, only explosive slots there can take the crit
+   *  (TW p.124 Destroyed Location); nothing transfers inward. */
+  readonly struck?: boolean;
+  /** Hit-location (through-armor) critical chance. On an already-destroyed
+   *  location the chance itself transfers inward (TW p.124). */
+  readonly tac?: boolean;
+  /** Crit count carried inward from an exhausted location: applied without a
+   *  fresh Determining roll (TW pp.122, 125 Transferring Criticals). */
+  readonly carried?: number;
 }
 
 export type CriticalEffect =
@@ -255,13 +266,12 @@ const CRIT_ONE_MAX = 9;
 const CRIT_TWO_MAX = 11;
 
 /** 2D6 determining critical hits. */
-function determiningResult(
-  rng: Rng,
-  sourceLoc: Location,
-):
+type DeterminingResult =
   | { kind: "none"; roll: number }
   | { kind: "hits"; count: number; roll: number }
-  | { kind: "blownOff"; roll: number } {
+  | { kind: "blownOff"; roll: number };
+
+function determiningResult(rng: Rng, sourceLoc: Location): DeterminingResult {
   const r = roll2D6(rng);
   if (r <= CRIT_NONE_MAX) return { kind: "none", roll: r };
   if (r <= CRIT_ONE_MAX) return { kind: "hits", count: 1, roll: r };
@@ -419,6 +429,10 @@ export interface ResolveCriticalsInput {
   readonly damage: UnitDamageState;
   /** Current per-crit-slot ammo state. */
   readonly ammoBins: Readonly<AmmoBins>;
+  /** Phase-start destroyed-slot flags for the step-4 test (TW p.122: "at the
+   *  beginning of the current phase, did the location contain components
+   *  that could take a critical hit?"). Defaults to `critSlotsDestroyed`. */
+  readonly baseCritSlotsDestroyed?: Record<Location, boolean[]>;
 }
 
 interface MutableCritState {
@@ -431,6 +445,8 @@ interface MutableCritState {
   killedReason: DestroyedReason | null;
   /** Guard against pathological recursion in ammo-explosion cascades. */
   depth: number;
+  /** Phase-start slot flags for the exhaustion (transfer) test. */
+  base: Record<Location, boolean[]> | undefined;
 }
 
 const MAX_RECURSION = 4;
@@ -449,6 +465,7 @@ export function resolveCriticalHits(input: ResolveCriticalsInput): CriticalResol
     blownOffLimbs: [],
     killedReason: null,
     depth: 0,
+    base: input.baseCritSlotsDestroyed,
   };
   const topRoll = runDetermining(input.rng, input.def, input.source, state);
   // Ammo in a location whose IS has dropped to 0 (explosion transfer,
@@ -491,7 +508,10 @@ function runDetermining(
 ): number | null {
   if (state.depth > MAX_RECURSION) return null;
   state.depth += 1;
-  const det = determiningResult(rng, source.location);
+  const det: DeterminingResult =
+    source.carried !== undefined
+      ? { kind: "hits", count: source.carried, roll: 0 }
+      : determiningResult(rng, source.location);
   // 12 on head/arm/leg = blown off; arms/legs/head are handled here, the
   // source is the original hit location in this determining's call chain.
   if (det.kind === "blownOff") {
@@ -520,14 +540,18 @@ function runDetermining(
     return det.roll;
   }
   // det.count hits: walk the determining against the source. If the source
-  // is exhausted — either IS has depleted (TW p.124 destroyed-location
-  // carve-out) or no hittable slot remains at the start of THIS
-  // determining — the whole thing transfers inward; otherwise excess is
-  // lost.
+  // was already destroyed, or held no hittable slot at the start of the
+  // phase (TW p.122 step 4), the crits transfer inward; otherwise excess is
+  // lost. A location destroyed by this very hit keeps its crits, but only
+  // explosive slots there take effect (TW p.124 Destroyed Location).
   const sourceLayout = def.critSlots[source.location];
   const sourceDestroyed = state.destroyed[source.location];
   const sourceLocationLost = isUnitLocationDestroyed(state.damage, source.location);
-  const exhausted = sourceLocationLost || isLocationExhausted(sourceLayout, sourceDestroyed);
+  const justDestroyed = sourceLocationLost && source.struck === true;
+  const exhausted =
+    !justDestroyed &&
+    (sourceLocationLost ||
+      isLocationExhausted(sourceLayout, state.base?.[source.location] ?? sourceDestroyed));
   if (exhausted) {
     const next = damageTransferTo(source.location);
     if (next === null) {
@@ -537,7 +561,18 @@ function runDetermining(
       state.depth -= 1;
       return det.roll;
     }
-    runDetermining(rng, def, { ...source, location: next }, state);
+    // The crit count carries inward; only a hit-location crit chance on an
+    // already-destroyed location re-rolls there (TW p.124).
+    const chanceOnly = source.tac === true && sourceLocationLost && source.carried === undefined;
+    const { carried: _carried, ...rest } = source;
+    runDetermining(
+      rng,
+      def,
+      chanceOnly
+        ? { ...rest, location: next, struck: false }
+        : { ...rest, location: next, struck: false, carried: det.count },
+      state,
+    );
     state.depth -= 1;
     return det.roll;
   }
@@ -551,11 +586,23 @@ function runDetermining(
       remaining = 0;
       break;
     }
-    applySlotHit(rng, def, source.location, found.slotIndex, found.rolls, state, false);
+    if (justDestroyed && !isExplosiveSlot(sourceLayout[found.slotIndex - 1])) {
+      state.rows.push({ kind: "noEffect", rolls: found.rolls.slice() });
+    } else {
+      applySlotHit(rng, def, source.location, found.slotIndex, found.rolls, state, false);
+    }
     remaining -= 1;
   }
   state.depth -= 1;
   return det.roll;
+}
+
+/** Explosive ammo, or a weapon that detonates when critted (Gauss family). */
+function isExplosiveSlot(slot: ResolvedCritSlot | undefined): boolean {
+  if (slot === undefined) return false;
+  if (slot.kind === "ammo") return ammoDefFor(slot).explosive;
+  if (slot.kind === "weapon") return (weaponDefFor(slot).critExplosion ?? 0) > 0;
+  return false;
 }
 
 /**
@@ -581,18 +628,16 @@ function detonateCritBlast(
   for (const arm of app.blownOffLimbs) {
     state.blownOffLimbs.push(arm);
   }
-  // Cascade a fresh determining roll for each location that lost IS
-  // during the explosion (the official rule: "Because an ammunition
-  // explosion damages the internal structure of the location where it
-  // explodes, a roll to determine critical hits is necessary"). Mark
-  // each freshly-destroyed location as catastrophic first so the
-  // cascade sees every slot as already destroyed and re-routes to the
-  // next inward location per TW p.124 (no crit check in a destroyed
-  // location unless an explosive slot is involved — and we just
-  // stripped the bins, so even that carve-out cannot fire).
+  // Roll once for every location whose internal structure the blast reached
+  // (TW p.125 "a further critical roll is required"; p.124 one roll per
+  // location damaged). Rolled before the lost locations are marked so a
+  // second explosive slot in a dying location can still detonate (TW p.124
+  // Destroyed Location).
+  for (const critLoc of structureStruck(app)) {
+    runDetermining(rng, def, { location: critLoc, damage: amount, struck: true }, state);
+  }
   for (const newlyLost of app.newlyDestroyed) {
     markLocationCatastrophicallyDestroyed(state.damage, state.destroyed, state.ammoBins, newlyLost);
-    runDetermining(rng, def, { location: newlyLost, damage: amount }, state);
   }
   return app;
 }

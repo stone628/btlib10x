@@ -331,7 +331,8 @@ describe("weapon and ammo crit effects", () => {
     overrideAmmoBin(ammoBins, "leftTorso", 1, 5);
     overrideAmmoBin(ammoBins, "leftTorso", 2, 5);
     const res = resolveCriticalHits({
-      rng: detRoll(8, 1, 1),
+      // Tail: follow-up Determining roll 2 (no crit) for the struck LT (TW p.125).
+      rng: detRoll(8, 1, 1, 1, 1),
       def,
       source: { location: "leftTorso", damage: 5 },
       critSlotsDestroyed: freshFlags(def),
@@ -465,7 +466,8 @@ describe("weapon and ammo crit effects", () => {
     const rtArmor = def.armor.rightTorso;
     const res = resolveCriticalHits({
       // det 8 -> 1 crit; (1,3) lands on slot 3 = Gauss Rifle.
-      rng: detRoll(8, 1, 3),
+      // Tail: follow-up Determining roll 2 (no crit) for the struck RT (TW p.125).
+      rng: detRoll(8, 1, 3, 1, 1),
       def,
       source: { location: "rightTorso", damage: 5 },
       critSlotsDestroyed: freshFlags(def),
