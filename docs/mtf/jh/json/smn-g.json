@@ -40,6 +40,22 @@
     },
     {
       "weapon": "CL SRM 4",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL SRM 4",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL SRM 4",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL SRM 4",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL SRM 4",
       "location": "rightTorso"
     }
   ],

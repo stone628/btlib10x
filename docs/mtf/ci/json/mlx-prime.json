@@ -40,6 +40,10 @@
       "weapon": "CL Machine Gun",
       "location": "rightArm",
       "shots": 100
+    },
+    {
+      "weapon": "CL Machine Gun",
+      "location": "rightArm"
     }
   ],
   "critSlots": {

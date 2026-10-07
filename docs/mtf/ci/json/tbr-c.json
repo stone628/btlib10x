@@ -27,6 +27,10 @@
       "location": "leftArm"
     },
     {
+      "weapon": "CL ER Large Laser",
+      "location": "leftArm"
+    },
+    {
       "weapon": "CL LRM 15",
       "location": "leftTorso"
     },

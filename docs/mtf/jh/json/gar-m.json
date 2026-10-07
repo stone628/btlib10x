@@ -35,6 +35,14 @@
       "weapon": "CL SRM 2",
       "location": "leftTorso",
       "shots": 50
+    },
+    {
+      "weapon": "CL SRM 2",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL SRM 2",
+      "location": "leftTorso"
     }
   ],
   "critSlots": {

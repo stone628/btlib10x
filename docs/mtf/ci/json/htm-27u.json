@@ -35,6 +35,14 @@
     },
     {
       "weapon": "Medium Pulse Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "Medium Pulse Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "Medium Pulse Laser",
       "location": "rightTorso"
     }
   ],

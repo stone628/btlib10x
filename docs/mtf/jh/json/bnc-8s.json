@@ -38,6 +38,10 @@
       "location": "rightTorso"
     },
     {
+      "weapon": "Medium Laser",
+      "location": "rightTorso"
+    },
+    {
       "weapon": "ER Small Laser",
       "location": "rightTorso"
     },

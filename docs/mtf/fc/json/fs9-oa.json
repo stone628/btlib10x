@@ -32,8 +32,7 @@
     },
     {
       "weapon": "Flamer",
-      "location": "centerTorso",
-      "rearFacing": true
+      "location": "centerTorso"
     },
     {
       "weapon": "Flamer",

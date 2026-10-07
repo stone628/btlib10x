@@ -31,7 +31,15 @@
       "location": "rightArm"
     },
     {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "rightArm"
+    },
+    {
       "weapon": "CL Machine Gun",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL SRM 6",
       "location": "leftTorso"
     },
     {
@@ -51,6 +59,10 @@
       "weapon": "CL SRM 6",
       "location": "rightTorso",
       "shots": 60
+    },
+    {
+      "weapon": "CL SRM 6",
+      "location": "rightTorso"
     }
   ],
   "critSlots": {

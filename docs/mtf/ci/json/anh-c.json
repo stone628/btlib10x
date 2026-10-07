@@ -49,6 +49,10 @@
     {
       "weapon": "CL ER Medium Laser",
       "location": "centerTorso"
+    },
+    {
+      "weapon": "CL ER Medium Laser",
+      "location": "centerTorso"
     }
   ],
   "critSlots": {

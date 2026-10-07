@@ -32,6 +32,10 @@
       "location": "rightTorso"
     },
     {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "rightTorso"
+    },
+    {
       "weapon": "CL Machine Gun",
       "location": "rightTorso",
       "shots": 200
@@ -39,6 +43,10 @@
     {
       "weapon": "CL Large Pulse Laser",
       "location": "leftArm"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "leftTorso"
     },
     {
       "weapon": "CL Medium Pulse Laser",
@@ -60,6 +68,10 @@
     {
       "weapon": "CL Medium Pulse Laser",
       "location": "head"
+    },
+    {
+      "weapon": "A-Pod",
+      "location": "rightLeg"
     },
     {
       "weapon": "A-Pod",

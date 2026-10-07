@@ -31,8 +31,28 @@
       "location": "leftArm"
     },
     {
+      "weapon": "CL ER Micro Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL ER Micro Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL ER Micro Laser",
+      "location": "leftArm"
+    },
+    {
       "weapon": "CL Micro Pulse Laser",
       "location": "rightTorso"
+    },
+    {
+      "weapon": "CL Micro Pulse Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL Micro Pulse Laser",
+      "location": "leftTorso"
     },
     {
       "weapon": "CL Micro Pulse Laser",

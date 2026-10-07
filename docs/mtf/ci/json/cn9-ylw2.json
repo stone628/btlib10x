@@ -31,6 +31,10 @@
       "location": "leftArm"
     },
     {
+      "weapon": "Medium Pulse Laser",
+      "location": "leftArm"
+    },
+    {
       "weapon": "Gauss Rifle",
       "location": "rightArm",
       "shots": 16

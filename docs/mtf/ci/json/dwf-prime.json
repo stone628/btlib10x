@@ -27,6 +27,14 @@
       "location": "leftArm"
     },
     {
+      "weapon": "CL ER Large Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "leftArm"
+    },
+    {
       "weapon": "CL Medium Pulse Laser",
       "location": "leftArm"
     },
@@ -42,6 +50,14 @@
     },
     {
       "weapon": "CL ER Large Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL ER Large Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
       "location": "rightArm"
     },
     {

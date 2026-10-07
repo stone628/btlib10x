@@ -32,6 +32,10 @@
       "location": "leftTorso"
     },
     {
+      "weapon": "Medium Laser",
+      "location": "leftTorso"
+    },
+    {
       "weapon": "LRM 10",
       "location": "centerTorso",
       "shots": 12

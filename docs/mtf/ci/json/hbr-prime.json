@@ -36,11 +36,23 @@
       "location": "leftLeg"
     },
     {
+      "weapon": "A-Pod",
+      "location": "leftLeg"
+    },
+    {
       "weapon": "CL ECM Suite",
       "location": "leftTorso"
     },
     {
       "weapon": "CL Active Probe",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL ER Medium Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL ER Medium Laser",
       "location": "leftTorso"
     },
     {
@@ -56,6 +68,10 @@
       "location": "rightLeg"
     },
     {
+      "weapon": "A-Pod",
+      "location": "rightLeg"
+    },
+    {
       "weapon": "CL Streak SRM 6",
       "location": "rightTorso",
       "shots": 15
@@ -64,6 +80,10 @@
       "weapon": "CL Machine Gun",
       "location": "rightTorso",
       "shots": 100
+    },
+    {
+      "weapon": "CL Machine Gun",
+      "location": "rightTorso"
     }
   ],
   "critSlots": {

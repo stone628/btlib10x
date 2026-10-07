@@ -39,6 +39,10 @@
       "location": "leftTorso"
     },
     {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "leftTorso"
+    },
+    {
       "weapon": "CL SRM 6",
       "location": "leftTorso",
       "shots": 15

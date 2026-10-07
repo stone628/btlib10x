@@ -36,6 +36,10 @@
       "location": "rightArm"
     },
     {
+      "weapon": "CL ER Medium Laser",
+      "location": "rightArm"
+    },
+    {
       "weapon": "CL LRM 5",
       "location": "rightTorso",
       "shots": 24

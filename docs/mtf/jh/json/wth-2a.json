@@ -36,6 +36,14 @@
     },
     {
       "weapon": "Streak SRM 4",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "Streak SRM 4",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "Streak SRM 4",
       "location": "leftTorso"
     },
     {

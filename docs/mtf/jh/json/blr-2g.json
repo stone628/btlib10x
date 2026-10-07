@@ -39,8 +39,19 @@
     },
     {
       "weapon": "Medium Laser",
-      "location": "leftTorso",
-      "rearFacing": true
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "leftTorso"
     },
     {
       "weapon": "Medium Laser",
@@ -49,38 +60,19 @@
     },
     {
       "weapon": "Medium Laser",
-      "location": "leftTorso",
-      "rearFacing": true
+      "location": "rightTorso"
     },
     {
       "weapon": "Medium Laser",
-      "location": "leftTorso",
-      "rearFacing": true
+      "location": "rightTorso"
     },
     {
       "weapon": "Medium Laser",
-      "location": "leftTorso",
-      "rearFacing": true
+      "location": "rightTorso"
     },
     {
       "weapon": "Medium Laser",
-      "location": "rightTorso",
-      "rearFacing": true
-    },
-    {
-      "weapon": "Medium Laser",
-      "location": "rightTorso",
-      "rearFacing": true
-    },
-    {
-      "weapon": "Medium Laser",
-      "location": "rightTorso",
-      "rearFacing": true
-    },
-    {
-      "weapon": "Medium Laser",
-      "location": "rightTorso",
-      "rearFacing": true
+      "location": "rightTorso"
     },
     {
       "weapon": "Medium Laser",

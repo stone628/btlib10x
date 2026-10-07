@@ -27,6 +27,18 @@
       "location": "leftTorso"
     },
     {
+      "weapon": "CL ER Medium Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL ER Medium Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL ER Medium Laser",
+      "location": "leftTorso"
+    },
+    {
       "weapon": "CL LB 20-X AC",
       "location": "rightArm",
       "shots": 15
@@ -35,6 +47,14 @@
       "weapon": "AP Gauss Rifle",
       "location": "leftArm",
       "shots": 40
+    },
+    {
+      "weapon": "AP Gauss Rifle",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "AP Gauss Rifle",
+      "location": "leftArm"
     }
   ],
   "critSlots": {

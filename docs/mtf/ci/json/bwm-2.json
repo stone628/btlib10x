@@ -31,6 +31,14 @@
       "location": "leftArm"
     },
     {
+      "weapon": "CL ER Medium Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL ER Medium Laser",
+      "location": "leftArm"
+    },
+    {
       "weapon": "CL ER Large Laser",
       "location": "rightTorso"
     },
@@ -45,6 +53,14 @@
     {
       "weapon": "A-Pod",
       "location": "leftLeg"
+    },
+    {
+      "weapon": "A-Pod",
+      "location": "leftLeg"
+    },
+    {
+      "weapon": "A-Pod",
+      "location": "rightLeg"
     },
     {
       "weapon": "A-Pod",

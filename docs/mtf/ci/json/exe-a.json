@@ -27,6 +27,26 @@
       "location": "leftArm"
     },
     {
+      "weapon": "CL Large Pulse Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Large Pulse Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL ER Medium Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL ER Medium Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL ER Medium Laser",
+      "location": "rightArm"
+    },
+    {
       "weapon": "CL ER Medium Laser",
       "location": "rightArm"
     },
@@ -34,6 +54,10 @@
       "weapon": "CL Machine Gun",
       "location": "rightTorso",
       "shots": 200
+    },
+    {
+      "weapon": "CL Machine Gun",
+      "location": "rightTorso"
     }
   ],
   "critSlots": {

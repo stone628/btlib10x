@@ -35,6 +35,10 @@
       "location": "rightArm"
     },
     {
+      "weapon": "Medium Pulse Laser",
+      "location": "rightArm"
+    },
+    {
       "weapon": "Streak SRM 2",
       "location": "rightTorso",
       "shots": 50

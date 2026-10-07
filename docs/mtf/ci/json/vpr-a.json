@@ -33,7 +33,15 @@
     },
     {
       "weapon": "CL ER Medium Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL ER Medium Laser",
       "location": "rightArm"
+    },
+    {
+      "weapon": "CL ER Medium Laser",
+      "location": "rightTorso"
     },
     {
       "weapon": "CL ER Medium Laser",

@@ -27,6 +27,10 @@
       "location": "leftArm"
     },
     {
+      "weapon": "CL ER Large Laser",
+      "location": "leftArm"
+    },
+    {
       "weapon": "CL LRM 20",
       "location": "leftTorso",
       "shots": 6
@@ -36,9 +40,21 @@
       "location": "rightArm"
     },
     {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "rightArm"
+    },
+    {
       "weapon": "CL Streak SRM 6",
       "location": "rightTorso",
       "shots": 15
+    },
+    {
+      "weapon": "CL Streak SRM 6",
+      "location": "rightTorso"
     }
   ],
   "critSlots": {

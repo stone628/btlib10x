@@ -33,8 +33,11 @@
     },
     {
       "weapon": "Medium Pulse Laser",
-      "location": "leftTorso",
-      "rearFacing": true
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "Medium Pulse Laser",
+      "location": "leftTorso"
     },
     {
       "weapon": "Medium Pulse Laser",
@@ -43,18 +46,11 @@
     },
     {
       "weapon": "Medium Pulse Laser",
-      "location": "leftTorso",
-      "rearFacing": true
+      "location": "rightTorso"
     },
     {
       "weapon": "Medium Pulse Laser",
-      "location": "rightTorso",
-      "rearFacing": true
-    },
-    {
-      "weapon": "Medium Pulse Laser",
-      "location": "rightTorso",
-      "rearFacing": true
+      "location": "rightTorso"
     },
     {
       "weapon": "Medium Pulse Laser",

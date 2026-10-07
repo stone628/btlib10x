@@ -40,6 +40,10 @@
       "weapon": "CL SRM 6",
       "location": "rightTorso",
       "shots": 30
+    },
+    {
+      "weapon": "CL SRM 6",
+      "location": "rightTorso"
     }
   ],
   "critSlots": {

@@ -35,11 +35,23 @@
       "location": "leftArm"
     },
     {
+      "weapon": "CL Heavy Small Laser",
+      "location": "leftArm"
+    },
+    {
       "weapon": "CL Light TAG",
       "location": "leftArm"
     },
     {
       "weapon": "CL Heavy Medium Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Heavy Medium Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Heavy Small Laser",
       "location": "rightArm"
     },
     {

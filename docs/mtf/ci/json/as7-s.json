@@ -38,6 +38,11 @@
     },
     {
       "weapon": "Medium Laser",
+      "location": "centerTorso",
+      "rearFacing": true
+    },
+    {
+      "weapon": "Medium Laser",
       "location": "leftArm"
     },
     {
@@ -53,6 +58,11 @@
       "weapon": "Streak SRM 2",
       "location": "leftTorso",
       "shots": 50,
+      "rearFacing": true
+    },
+    {
+      "weapon": "Streak SRM 2",
+      "location": "leftTorso",
       "rearFacing": true
     }
   ],

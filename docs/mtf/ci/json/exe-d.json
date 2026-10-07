@@ -28,7 +28,19 @@
       "shots": 45
     },
     {
+      "weapon": "CL SRM 6",
+      "location": "leftArm"
+    },
+    {
       "weapon": "CL Large Pulse Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
       "location": "rightArm"
     },
     {
@@ -38,6 +50,18 @@
     {
       "weapon": "CL Small Pulse Laser",
       "location": "rightArm"
+    },
+    {
+      "weapon": "CL Small Pulse Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Small Pulse Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Small Pulse Laser",
+      "location": "rightTorso"
     },
     {
       "weapon": "CL Small Pulse Laser",

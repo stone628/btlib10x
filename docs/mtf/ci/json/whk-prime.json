@@ -27,9 +27,17 @@
       "location": "leftArm"
     },
     {
+      "weapon": "CL ER PPC",
+      "location": "leftArm"
+    },
+    {
       "weapon": "CL LRM 10",
       "location": "leftArm",
       "shots": 12
+    },
+    {
+      "weapon": "CL ER PPC",
+      "location": "rightArm"
     },
     {
       "weapon": "CL ER PPC",

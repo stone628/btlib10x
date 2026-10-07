@@ -42,6 +42,10 @@
     {
       "weapon": "Medium Laser",
       "location": "leftTorso"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "leftTorso"
     }
   ],
   "critSlots": {

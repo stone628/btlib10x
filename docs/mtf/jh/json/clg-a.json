@@ -29,6 +29,10 @@
       "weapon": "CL LRM 15",
       "location": "leftArm",
       "shots": 32
+    },
+    {
+      "weapon": "CL LRM 15",
+      "location": "leftArm"
     }
   ],
   "critSlots": {

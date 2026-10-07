@@ -32,6 +32,10 @@
       "shots": 200
     },
     {
+      "weapon": "CL Machine Gun",
+      "location": "leftArm"
+    },
+    {
       "weapon": "CL Small Pulse Laser",
       "location": "leftArm"
     },
@@ -39,6 +43,14 @@
       "weapon": "Anti-Missile System",
       "location": "rightArm",
       "shots": 96
+    },
+    {
+      "weapon": "Anti-Missile System",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "Anti-Missile System",
+      "location": "rightArm"
     },
     {
       "weapon": "CL ECM Suite",

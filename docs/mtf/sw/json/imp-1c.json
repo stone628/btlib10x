@@ -31,6 +31,10 @@
       "location": "leftArm"
     },
     {
+      "weapon": "Medium Laser",
+      "location": "leftArm"
+    },
+    {
       "weapon": "ER PPC",
       "location": "rightTorso"
     },
@@ -45,6 +49,10 @@
     {
       "weapon": "Medium Laser",
       "location": "leftTorso"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "centerTorso"
     },
     {
       "weapon": "Medium Laser",
