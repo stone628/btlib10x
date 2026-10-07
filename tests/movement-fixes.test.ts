@@ -53,6 +53,47 @@ describe("jump path validation (MOV-02)", () => {
   });
 });
 
+describe("jump height cap (MOV-02, TW p.53)", () => {
+  it("cannot cross a level higher than Jumping MP plus the starting level", () => {
+    const state = createTestBattle(
+      [{ col: 5, row: 4, type: "clear", level: 6 }],
+      [
+        buildUnitInit("a", "GRF-1N", 0, { col: 5, row: 5 }, "n"),
+        buildUnitInit("b", "GRF-1N", 1, { col: 1, row: 1 }, "s"),
+      ],
+      true,
+      9,
+      9,
+    );
+    state.phase = "movement";
+    state.initiativeWinnerTeam = 0;
+    state.actorQueue = ["a", "b"];
+    state.actedThisPhase = [];
+    expect(() =>
+      executeMove(state, "a", "jump", [{ kind: "enter", to: { col: 5, row: 4 } }], []),
+    ).toThrow(/higher than Jumping MP/);
+  });
+
+  it("clears a hill exactly as high as Jumping MP", () => {
+    const state = createTestBattle(
+      [{ col: 5, row: 4, type: "clear", level: 5 }],
+      [
+        buildUnitInit("a", "GRF-1N", 0, { col: 5, row: 5 }, "n"),
+        buildUnitInit("b", "GRF-1N", 1, { col: 1, row: 1 }, "s"),
+      ],
+      true,
+      9,
+      9,
+    );
+    state.phase = "movement";
+    state.initiativeWinnerTeam = 0;
+    state.actorQueue = ["a", "b"];
+    state.actedThisPhase = [];
+    executeMove(state, "a", "jump", [{ kind: "enter", to: { col: 5, row: 4 } }], []);
+    expect(requireUnit(state, "a").position).toEqual({ col: 5, row: 4 });
+  });
+});
+
 describe("posture and jump (MOV-04)", () => {
   it("refuses a jump chained after a stand-up (spentMP carried)", () => {
     const state = movementBattle();
