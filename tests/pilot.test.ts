@@ -90,6 +90,8 @@ describe("pilotStatus / pilotRecord", () => {
     hbk.pilotHits = 6;
     expect(pilotStatus(hbk)).toBe("dead");
     hbk.removed = "pilotEjected";
+    expect(pilotStatus(hbk)).toBe("dead");
+    hbk.pilotHits = 2;
     expect(pilotStatus(hbk)).toBe("ejected");
   });
 
@@ -141,13 +143,13 @@ describe("ejection PSR", () => {
     expect(events.some((e) => e.kind === "pilotDamaged")).toBe(false);
   });
 
-  it("pilot killed by ejection damage still reads as ejected with HP 0", () => {
+  it("pilot killed by ejection damage reads as dead with HP 0 (SALV-01)", () => {
     const state = battle({ pilotHitMax: 1 });
     const hbk = requireUnit(state, "hbk");
     hurtHead(hbk, 1);
     ejectPilot(state, "hbk", scriptedRng(1, 1), []);
     expect(hbk.removed).toBe("pilotEjected");
-    expect(pilotStatus(hbk)).toBe("ejected");
+    expect(pilotStatus(hbk)).toBe("dead");
     expect(pilotRecord(hbk).hp).toBe(0);
   });
 

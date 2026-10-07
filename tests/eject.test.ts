@@ -317,7 +317,8 @@ describe("auto-eject on head destruction (TO p.165)", () => {
     for (const pre of [0, 3]) {
       const { hbk, events } = sweepHeadLoss(pre);
       expect(hbk.removed).toBe("pilotEjected");
-      expect(hbk.destroyed).toBe("not");
+      // SALV-02: the cause of the loss survives the ejection.
+      expect(hbk.destroyed).toBe("headDestroyed");
       expect(hbk.pilotHits).toBe(5);
       expect(events.some((e) => e.kind === "unitRemoved" && e.reason === "pilotEjected")).toBe(
         true,
