@@ -49,7 +49,7 @@ export interface WeaponDef {
   readonly pulse?: boolean;
   /** To-Hit Mod column (TW p.303-304): -2 pulse, +1 MRM / Clan heavy lasers.
    *  LB-X stays 0 in slug mode; its -1 cluster-mode modifier arrives with the
-   *  switchable-ammo milestone (see Later phases in docs/TODO.md). */
+   *  switchable-ammo milestone (see "What I'll do" in docs/VISION.md). */
   readonly toHitMod?: number;
   readonly antiInfantry?: boolean;
   /** HAG range-dependent cluster-roll modifier (TW p.136). */
