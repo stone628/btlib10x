@@ -76,7 +76,7 @@ The prompt names the acting unit; commands act on that 'Mech.
 | command | effect |
 |---|---|
 | `mode standstill\|walk\|run\|jump` | declare movement mode (required first); for walk/run/jump, renders a clipped ASCII hex map of the reachable hexes — exactly the smallest bounding box around every reachable hex, clamped to the board (no padding). Reachable hexes draw a team-colored `<>` in the belly; every reachable (hex, facing) edge is tinted with the acting unit's team color, and no facing arrows are drawn. Other units inside the crop keep their ids (team-colored) but no facing arrow. Movement paths (the `F`/`B`/`R`/`L` fragment sequence per landing) remain available programmatically via `reachableLandings`/`RevealedLanding.path` for later use, but are not rendered on the map |
-| `mode standup [walk\|run\|jump\|standstill]` | declare a stand-up attempt for a prone unit plus optional movement sharing one MP pool (stand costs 2; default `standstill` stands in place with no map; PSR with preexisting-damage modifiers, +1 heat; failure crashes back down for fresh falling damage and discards any queued `place`). Renders the reachable map for the named mode minus the stand cost, assuming the stand succeeds. `done` evaluates the stand first, then moves only on success — the activation ends either way; without a queued `place`, `done` just stands in place |
+| `mode standup [walk\|run\|standstill]` | declare a stand-up attempt for a prone unit plus optional movement sharing one MP pool (stand costs 2; default `standstill` stands in place with no map; PSR with preexisting-damage modifiers, +1 heat; failure crashes back down for fresh falling damage and discards any queued `place`). Renders the reachable map for the named mode minus the stand cost, assuming the stand succeeds. `done` evaluates the stand first, then moves only on success — the activation ends either way; without a queued `place`, `done` just stands in place |
 | `mode prone [turn\|pronestill]` | declare a voluntary drop to prone (no roll, no heat, no damage, costs 1 MP) plus an optional in-place turn sharing the walk budget (default `turn`: 1 MP per hexside, multiple turns allowed, +1 turn heat; `pronestill` drops in place with no map). Renders the turn map minus the drop cost. `done` drops first, then turns to the queued `place` (same hex) — without a `place`, `done` just drops in place |
 | `mode turn` | turn in place while prone (prone unit only; 1 MP per hexside, multiple turns within the walk budget, +1 heat). `place` takes the same hex with a new facing; `done` commits |
 | `mode pronestill` | stay prone (prone unit only; 0 MP, 0 heat). `place` stays unavailable; `done` ends the activation |
@@ -141,8 +141,9 @@ simulate. See `docs/VISION.md` for direction and the will/won't lists.
   hexside of facing change. Ground moves step straight ahead or back; run
   cannot move backward; forward steps may change level by at most 2 per hex
   and backward steps cannot change level at all. Jump steps into any adjacent
-  hex at 1 MP per step, with the landing facing chosen freely; jump ignores
-  elevation. Water hexes are measured at their bed (hex level minus depth,
+  hex at 1 MP per step, with the landing facing chosen freely; a jump follows a shortest
+  path and is impossible when any hex on it is more than Jumping MP + the
+  starting level above the sea (TW p.53). Water hexes are measured at their bed (hex level minus depth,
   TW p.32), so entering water costs 1 MP per level of depth on top of the
   water surcharge (depth 3 cannot be entered from the surface: 3 levels > 2).
 - **Line of sight** — intervening-hex line trace; light/heavy woods points
@@ -325,8 +326,8 @@ simulate. See `docs/VISION.md` for direction and the will/won't lists.
   the failed roll's modifiers, plus +1 per level above 1 fallen) or takes
   1 hit — automatic when the 'Mech is
   immobile or the target exceeds 12. Prone units stand up with `mode
-  standup <walk|run|jump>` (one attempt per activation sharing one MP pool,
-  stand costs 2, +1 heat; failure crashes back down for fresh fall damage and
+  standup <walk|run>` (stand costs 2 plus the declared mode's heat, +1 heat for the stand; a failed stand
+  with a full attempt of MP left may be retried, MP shared across attempts; failure crashes back down for fresh fall damage and
    discards any queued `place`), drop and optionally turn in place with `mode prone
    [turn|pronestill]` (drop costs 1 MP, no heat, no damage; turns cost 1 MP per hexside
   within the remaining walk budget + 1 turn heat); prone units turn with

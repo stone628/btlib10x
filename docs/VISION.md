@@ -81,9 +81,6 @@ yet is a gap, not a deviation; gaps are tracked in §4.
 - **Shut-down units move first.** TW lets a player move units in any order;
   shut-down units always act first in the movement phase. *Why:* they can only
   stand still, so this removes empty turns without changing outcomes.
-- **Jump height (TW p.53).** Jumps ignore elevation entirely; the cap that
-  forbids crossing a level higher than Jumping MP + start level is not
-  enforced.
 
 ### 2.4 House rulings where TW is silent
 

@@ -1673,6 +1673,9 @@ export function executeMove(
       if (!isAdjacent(cursor, to)) {
         throw new Error("Jump steps must enter an adjacent hex");
       }
+      if (budget > 0 && cellAt(state, to).level > budget + groundLevel(state, unit.position)) {
+        throw new Error(`Jump path crosses ${msgHex(to)}, higher than Jumping MP + starting level`);
+      }
       spent += JUMP_MP_PER_HEX;
       directions.push("forward");
     } else {
