@@ -72,6 +72,25 @@ export function countArmActuators(
  * shoulder is destroyed (other arm-crit weapon mods suppressed), else +1
  * per destroyed upper/lower actuator in that arm. Non-arm mounts score 0.
  */
+/**
+ * Arm actuators the design never had. A 'Mech without a lower arm actuator
+ * or hand punches as if it were damaged (TW p.145): an absent upper/lower
+ * actuator adds +2 and halves the damage like a destroyed one, an absent
+ * hand adds +1; a club needs a hand (TW p.146).
+ */
+export function absentArmActuators(
+  def: ResolvedMechDef,
+  arm: ArmLocation,
+): { upper: number; lower: number; hand: number } {
+  const names = new Set<string>();
+  for (const s of def.critSlots[arm]) if (s.kind === "structure") names.add(s.name);
+  return {
+    upper: names.has("upperArmActuator") ? 0 : 1,
+    lower: names.has("lowerArmActuator") ? 0 : 1,
+    hand: names.has("handActuator") ? 0 : 1,
+  };
+}
+
 export function armWeaponToHitModifier(
   def: ResolvedMechDef,
   damage: UnitDamageState,

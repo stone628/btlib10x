@@ -763,6 +763,7 @@ const DESTROYED_REASON_KEY: Readonly<Record<DestroyedReason, MessageKey>> = {
   cockpitDestroyed: "sheet.remove.cockpitDestroyed",
   headBlownOff: "sheet.remove.hdBlownOff",
   engineDestroyed: "sheet.remove.engineDestroyed",
+  displacedOffBoard: "sheet.remove.displacedOffBoard",
 };
 
 export function sheetIdLine(view: SheetView): string {

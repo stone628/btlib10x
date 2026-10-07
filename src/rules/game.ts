@@ -258,7 +258,8 @@ export type DestroyedReason =
   | "centerTorsoDestroyed"
   | "cockpitDestroyed"
   | "headBlownOff"
-  | "engineDestroyed";
+  | "engineDestroyed"
+  | "displacedOffBoard";
 export type DestroyedState = "not" | DestroyedReason;
 
 /** Club source / held-club kind (TW p.146): a severed limb, an uprooted
@@ -935,7 +936,11 @@ function requirePhase(state: BattleState, phase: Phase): void {
   }
 }
 
-function occupantAt(state: BattleState, hex: HexCoord, excludeId?: string): UnitState | undefined {
+function onBoard(state: BattleState, hex: HexCoord): boolean {
+  return hex.col >= 1 && hex.col <= state.width && hex.row >= 1 && hex.row <= state.height;
+}
+
+export function occupantAt(state: BattleState, hex: HexCoord, excludeId?: string): UnitState | undefined {
   for (const unit of Object.values(state.units)) {
     if (isUnitRemoved(unit) || unit.id === excludeId) continue;
     if (sameHex(unit.position, hex)) return unit;
@@ -1948,13 +1953,25 @@ export function validateAttacksImpl(
   let targetId: string | null = null;
   if (wantPhysical) {
     checkPhysicalSetShape(unitId, normalizedPhysical);
+    // TW p.145: the two punches may go to two different targets; every
+    // other physical attack (and weapon fire) is independent of the weapon
+    // target, so no single-target rule applies here.
+    const physicalTargets = new Set(normalizedPhysical.map((p) => p.targetId));
+    if (physicalTargets.size > 1 && normalizedPhysical.some((p) => p.type !== "punch")) {
+      throw new Error("Only two punches may be split between two targets");
+    }
     for (const p of normalizedPhysical) {
       const result = validatePhysicalAttack(state, unitId, p, twist, dropping);
       if (!result.ok) throw new Error(result.reason ?? "invalid physical attack");
-      if (targetId === null) targetId = p.targetId;
-      else if (targetId !== p.targetId) {
-        throw new Error("A unit may only declare attacks against one target per turn");
-      }
+      // TW p.147: a 'Mech may be the target of only one push per turn.
+      const pushedAlready =
+        p.type === "push" &&
+        Object.values(state.units).some(
+          (u) =>
+            u.id !== unitId &&
+            u.declaredPhysicalAttacks.some((d) => d.type === "push" && d.targetId === p.targetId),
+        );
+      if (pushedAlready) throw new Error(`${p.targetId} is already the target of a push this turn`);
     }
   }
   const sensorsOut = countDestroyedSensor(def, unit.damage, unit.critSlotsDestroyed);
@@ -2126,10 +2143,11 @@ export function validateAttacksImpl(
 
   const conflict = physicalWeaponConflict(def, weaponDecls, normalizedPhysical);
   if (conflict !== null) throw new Error(conflict);
-  if (targetId === null) throw new Error("declareAttacks requires at least one declaration");
+  const volleyTarget = targetId ?? normalizedPhysical[0]?.targetId ?? null;
+  if (volleyTarget === null) throw new Error("declareAttacks requires at least one declaration");
 
   return {
-    targetId,
+    targetId: volleyTarget,
     attackDirection: attackDirection!,
     attackDistance,
     attackRangeBracket,
@@ -2236,7 +2254,9 @@ export function declareAttacks(
     unit.firedTargetId = volley.targetId;
   }
   if (wantPhysical) {
-    for (const decl of volley.normalized) unit.declaredPhysicalAttacks.push({ ...decl });
+    for (const decl of volley.normalized) {
+      unit.declaredPhysicalAttacks.push({ ...decl, ...(options.twist ? { twist: options.twist } : {}) });
+    }
   }
   sink.push({
     kind: "attacksDeclared",
@@ -3452,7 +3472,11 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
           {
             cause: { kind: "buildingCollapse" },
             hex: { col: outcome.col, row: outcome.row },
-            seatbeltModifier: null,
+            seatbeltModifier: preexistingDamageModifier(
+              mechDefFor(unit),
+              unit.damage,
+              unit.critSlotsDestroyed,
+            ).modifier,
             halved: false,
             levelsFallen: groundLevel,
           },
@@ -3562,6 +3586,24 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
 
   // Sub-pass 2: Physical attacks (TW p. 37: physical attacks resolve after weapon attacks)
   // Collect physical attack crits per target for destruction sweep
+  const pendingPilotHits: { unit: UnitState; hits: number; reason: PilotHitReason }[] = [];
+  // Physical attacks are declared against the state at phase start (TW p.38:
+  // damage and consciousness rolls take effect at the end of the phase), so
+  // legality and to-hit read each attacker's post-weapon damage snapshot.
+  const phaseStartView = (attackerId: string): BattleState => {
+    const u = requireUnit(state, attackerId);
+    return {
+      ...state,
+      units: {
+        ...state.units,
+        [attackerId]: {
+          ...u,
+          damage: postWeaponDamage[attackerId] ?? u.damage,
+          critSlotsDestroyed: postWeaponCrit[attackerId] ?? u.critSlotsDestroyed,
+        },
+      },
+    };
+  };
   const physicalAttackCrits: Record<string, CriticalResolution[]> = {};
   // Kick PSRs deferred here for the end-of-physical sweep (TW pp.59,147).
   const kickExtras: Record<string, Array<{ reason: PilotingCheckReason; modifier: number }>> = {};
@@ -3719,6 +3761,11 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
             if (resB.attackerDisplacedTo && !isUnitRemoved(counterpart)) {
               counterpart.position = resB.attackerDisplacedTo;
             }
+            for (const moved of [counterpart, attacker]) {
+              if (!isUnitRemoved(moved) && !onBoard(state, moved.position)) {
+                markUnitDestroyed(state, moved, "displacedOffBoard", rng, sink);
+              }
+            }
             if (resA.targetFalls && !isUnitRemoved(counterpart)) {
               applyFall(
                 state,
@@ -3727,7 +3774,11 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
                 {
                   cause: { kind: "physicalAttack" },
                   hex: { ...counterpart.position },
-                  seatbeltModifier: null,
+                  seatbeltModifier: preexistingDamageModifier(
+                    mechDefFor(counterpart),
+                    counterpart.damage,
+                    counterpart.critSlotsDestroyed,
+                  ).modifier,
                   halved: false,
                 },
                 sink,
@@ -3741,7 +3792,11 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
                 {
                   cause: { kind: "physicalAttack" },
                   hex: { ...attacker.position },
-                  seatbeltModifier: null,
+                  seatbeltModifier: preexistingDamageModifier(
+                    mechDefFor(attacker),
+                    attacker.damage,
+                    attacker.critSlotsDestroyed,
+                  ).modifier,
                   halved: false,
                 },
                 sink,
@@ -3758,6 +3813,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       // Resolve against whoever now holds that hex (+1) or auto-miss with
       // no valid target — even if the displaced unit itself is still in
       // reach, the blow was aimed at its declared hex.
+      const view = phaseStartView(attacker.id);
       const declaredHex = declaredPositions[target.id];
       let effectiveDecl = decl;
       let redirectNote: string | null = null;
@@ -3770,7 +3826,12 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
           !isUnitRemoved(occupant) &&
           occupant.id !== target.id &&
           occupant.team !== attacker.team &&
-          validatePhysicalAttack(state, attacker.id, { ...decl, targetId: occupant.id }).ok;
+          validatePhysicalAttack(
+            view,
+            attacker.id,
+            { ...decl, targetId: occupant.id },
+            decl.twist ?? null,
+          ).ok;
         if (occupant !== undefined && valid) {
           redirectFrom = target.id;
           effectiveDecl = { ...decl, targetId: occupant.id };
@@ -3797,7 +3858,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         // hex: a weapon-phase fall leaves the attacker prone (validate
         // rejects prone attackers) and falls may have broken arcs
         // (TW pp.144,151).
-        const check = validatePhysicalAttack(state, attacker.id, decl);
+        const check = validatePhysicalAttack(view, attacker.id, decl, decl.twist ?? null);
         if (!check.ok) {
           const resolution = missResolution(
             decl.type,
@@ -3816,7 +3877,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         }
       }
       let resolution = resolvePhysicalAttack(
-        state,
+        view,
         attacker.id,
         effectiveDecl,
         rng,
@@ -3940,10 +4001,13 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       });
 
       // Handle displacement (push only in this subset; immediate per TW p.151).
-      if (resolution.targetDisplacedTo && hitTarget && !isUnitRemoved(hitTarget)) {
-        hitTarget.position = resolution.targetDisplacedTo;
-      } else if (resolution.targetDisplacedTo && !isUnitRemoved(target)) {
-        target.position = resolution.targetDisplacedTo;
+      // PHY-12: a redirected push moves the unit that was actually struck.
+      const struck = requireUnit(state, effectiveDecl.targetId);
+      if (resolution.targetDisplacedTo && !isUnitRemoved(struck)) {
+        struck.position = resolution.targetDisplacedTo;
+        if (!onBoard(state, struck.position)) {
+          markUnitDestroyed(state, struck, "displacedOffBoard", rng, sink);
+        }
       }
       if (resolution.attackerDisplacedTo && !isUnitRemoved(attacker)) {
         attacker.position = resolution.attackerDisplacedTo;
@@ -3951,8 +4015,15 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
 
       // Handle immediate falls (push defender PSR only — kick defers to
       // the sweep; mutual pushes resolve above with one defender PSR each).
-      const fallTarget = hitTarget ?? target;
-      if (resolution.targetFalls && fallTarget && !isUnitRemoved(fallTarget)) {
+      const fallTarget = struck;
+      if (resolution.targetFalls && !isUnitRemoved(fallTarget)) {
+        const levelsFallen = resolution.displacementLevels ?? 0;
+        const fallPre = preexistingDamageModifier(
+          mechDefFor(fallTarget),
+          fallTarget.damage,
+          fallTarget.critSlotsDestroyed,
+        ).modifier;
+        const fallTerrain = cellAt(state, fallTarget.position).terrain;
         applyFall(
           state,
           fallTarget,
@@ -3960,8 +4031,9 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
           {
             cause: { kind: "physicalAttack" },
             hex: { ...fallTarget.position },
-            seatbeltModifier: null,
-            halved: false,
+            seatbeltModifier: fallPre + Math.max(0, levelsFallen - 1),
+            halved: fallTerrain === "water2" || fallTerrain === "water3",
+            ...(levelsFallen > 0 ? { levelsFallen } : {}),
           },
           sink,
         );
@@ -3981,7 +4053,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         );
       }
       // Kick PSRs defer to the end-of-physical sweep (TW pp.59,147).
-      if (resolution.kickTargetPsrPending && fallTarget && !isUnitRemoved(fallTarget)) {
+      if (resolution.kickTargetPsrPending && !isUnitRemoved(fallTarget)) {
         queueKickPsr(fallTarget.id, "kick");
       }
       if (resolution.kickAttackerPsrPending && !isUnitRemoved(attacker)) {
@@ -3996,8 +4068,13 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         ).length;
         // A destroyed head is resolved by the destruction sweep below (auto-eject
         // or cockpit kill), not by an extra head-hit tally.
-        if (headGroups > 0 && hitTarget.damage.internalStructure.head > 0)
-          applyPilotHits(state, hitTarget, headGroups * HEAD_HIT_PILOT_HITS, "headHit", rng, sink);
+        if (headGroups > 0) {
+          pendingPilotHits.push({
+            unit: hitTarget,
+            hits: headGroups * HEAD_HIT_PILOT_HITS,
+            reason: "headHit",
+          });
+        }
       }
 
       // Uprooted trees are good for one successful club attack only (TW
@@ -4011,6 +4088,22 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
 
   // Destruction from physical-attack damage, displacement falls, and pilot
   // hits above lands before the end-of-phase piloting sweep.
+  // Ammo blasts from physical crits eject on a CT blast and hurt the pilot
+  // like the weapon path (PHY-08); pilot hits land with the phase's damage.
+  for (const unit of Object.values(state.units)) {
+    const crits = physicalAttackCrits[unit.id] ?? [];
+    autoEjectOnCenterTorsoBlast(
+      state,
+      unit,
+      crits.flatMap((c) => c.rows.map(blastApplication)),
+      rng,
+      sink,
+    );
+    const blasts = crits.reduce((n, c) => n + c.rows.filter(isCritBlastRow).length, 0);
+    if (blasts > 0) {
+      pendingPilotHits.push({ unit, hits: blasts * AMMO_BLAST_PILOT_HITS, reason: "ammoExplosion" });
+    }
+  }
   for (const unit of Object.values(state.units)) {
     const physCrits = physicalAttackCrits[unit.id];
     if (
@@ -4019,6 +4112,13 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     ) {
       markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage, physCrits), rng, sink);
     }
+  }
+  // Pilot hits and their consciousness rolls take effect at the end of the
+  // phase, after every declared physical attack has resolved (TW p.38).
+  for (const { unit, hits, reason } of pendingPilotHits) {
+    if (isUnitRemoved(unit) && unit.removed !== "pilotEjected") continue;
+    if (reason === "headHit" && headLossEjected(unit)) continue;
+    applyPilotHits(state, unit, hits, reason, rng, sink);
   }
 
   // End-of-physical sweep: physical-sub-pass damage/crits plus deferred kick
