@@ -527,7 +527,7 @@ stated elsewhere in this document or the codebase:
     web/i18n/          string catalogs (`en` canonical, `kr`)
     web/render.ts       structured BoardModel / Span model + boardToText / boardToSpans
     scripts/build-web.mjs  esbuild bundles: src/index.ts → web/btlib10x.js (engine),
-                         web/main.ts → web/app.js (app; engine kept external),
+                         web/main.ts → web/bt10x.js (app; engine kept external),
                          and copies data/btlib10x.jsonl → web/btlib10x.jsonl (catalog,
                          fetched once at boot)
 
@@ -538,13 +538,13 @@ Library sources stay untouched.
 ## Build, run, and ship
 
     npm install            # picks up esbuild devDependency
-    npm run build:web      # one-shot esbuild bundle → web/btlib10x.js + web/app.js (+ web/btlib10x.jsonl copy)
+    npm run build:web      # one-shot esbuild bundle → web/btlib10x.js + web/bt10x.js (+ web/btlib10x.jsonl and web/VISION.md copies)
     npm run dev:web        # watch + serve: rebuilds on change, serves at http://127.0.0.1:8012/index.html
     # custom port:  node scripts/build-web.mjs --watch --serve --port=3000
     # open http://localhost:8012
 
 To publish the app's static output (not the npm package), run:
 
-    npm run dist:web       # copies web/{index.html,btlib10x.js,btlib10x.jsonl,app.js,favicon.ico} → dist/web/
-    npm run dist:standalone  # dist/standalone/bt10x.html (+ btlib10x.jsonl alongside; the app fetches it at boot)
-    # (bundles engine + app into the HTML; copy both files anywhere and serve them over HTTP)
+    npm run dist:web       # copies web/{index.html,btlib10x.js,btlib10x.jsonl,bt10x.js,VISION.md,favicon.ico} → dist/web/
+    npm run dist:standalone  # dist/standalone/bt10x.html (self-contained: engine + app + catalog embedded; works from file://)
+    # (multi-file dist/web/ must still be served over HTTP: the app fetches btlib10x.jsonl at boot)

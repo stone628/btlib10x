@@ -234,15 +234,33 @@ appendChunk(
   ),
 );
 
-// The only async step: fetch the unified catalog once, then everything runs
+// The only async step: obtain the unified catalog once, then everything runs
 // synchronously from the in-memory store (sheets decode + register on demand).
-input.disabled = true;
-modeHint.textContent = i18n("app.catalog.loading");
-void fetch("btlib10x.jsonl")
-  .then(async (res) => {
+// The standalone single-file build embeds the catalog in a
+// <script type="text/plain" id="bt10x-catalog"> tag (see
+// scripts/standalone-web.mjs); the multi-file build fetches the sibling file.
+function embeddedCatalogText(): string | null {
+  const el = document.getElementById("bt10x-catalog");
+  const text = el?.textContent;
+  // The engine keeps the lines it needs (see loadCatalog); drop the DOM copy
+  // now so the catalog text isn't retained twice.
+  el?.remove();
+  return typeof text === "string" && text.trim().length > 0 ? text : null;
+}
+
+function loadCatalogText(): Promise<string> {
+  // Scoped (not a module-level const) so the full text is GC-able once
+  // loadCatalog has split out the lines it keeps.
+  const embedded = embeddedCatalogText();
+  if (embedded !== null) return Promise.resolve(embedded);
+  return fetch("btlib10x.jsonl").then(async (res) => {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.text();
-  })
+  });
+}
+input.disabled = true;
+modeHint.textContent = i18n("app.catalog.loading");
+void loadCatalogText()
   .then((text) => {
     const manifest = loadCatalog(text);
     for (const m of manifest.maps) {

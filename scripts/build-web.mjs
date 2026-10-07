@@ -12,6 +12,10 @@ const stamp = buildStamp();
 // The unified catalog ships as a static file beside the bundles; the app
 // fetches it once at boot (see web/main.ts).
 copyFileSync("data/btlib10x.jsonl", "web/btlib10x.jsonl");
+// VISION.md ships as a hidden static file for reviewing LLM agents only:
+// fetched via GET ./VISION.md, never linked in the UI. Source of truth is
+// docs/VISION.md.
+copyFileSync("docs/VISION.md", "web/VISION.md");
 
 const coreCtx = await esbuild.context({
   entryPoints: ["src/index.ts"],
@@ -25,7 +29,7 @@ const coreCtx = await esbuild.context({
 
 const appCtx = await esbuild.context({
   entryPoints: ["web/main.ts"],
-  outfile: "web/app.js",
+  outfile: "web/bt10x.js",
   bundle: true,
   format: "esm",
   target: "es2022",

@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import * as esbuild from "esbuild";
 import { buildStamp } from "./build-stamp.mjs";
 
@@ -23,14 +23,23 @@ const single = html
   .replace('<link rel="stylesheet" href="bt10x.css" />', `<style>\n${css}\n    </style>`)
   .replace(/<script type="importmap">.*?<\/script>\s*/, "")
   .replace(
-    '<script type="module" src="./app.js"></script>',
+    '<script type="module" src="./bt10x.js"></script>',
     `<script type="module">${app}</script>`,
   );
 
 const dest = "dist/standalone/bt10x.html";
 rmSync("dist/standalone", { recursive: true, force: true });
 mkdirSync("dist/standalone", { recursive: true });
-writeFileSync(dest, single);
-// The app fetches the catalog at boot; ship it beside the single file.
-copyFileSync("data/btlib10x.jsonl", "dist/standalone/btlib10x.jsonl");
-console.log(`${dest}: ${single.length} bytes (+ btlib10x.jsonl alongside)`);
+// Embed the catalog in the single file so it launches anywhere (including
+// file://, where fetch() is blocked). A payload </script> sequence would
+// close the carrier tag early; JSON string escape \/ decodes to /, so this
+// keeps every line valid JSONL. The function replacer avoids `$` patterns in
+// the payload being interpreted as replacement patterns.
+const catalog = readFileSync("data/btlib10x.jsonl", "utf8");
+const safeCatalog = catalog.replace(/<\/script/gi, "<\\/script");
+const withCatalog = single.replace(
+  "</head>",
+  () => `<script type="text/plain" id="bt10x-catalog">${safeCatalog}</script>\n</head>`,
+);
+writeFileSync(dest, withCatalog);
+console.log(`${dest}: ${withCatalog.length} bytes (self-contained)`);

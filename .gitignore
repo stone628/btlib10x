@@ -1,8 +1,9 @@
 node_modules/
 dist/
-web/app.js
+web/bt10x.js
 web/btlib10x.js
 web/btlib10x.jsonl
+web/VISION.md
 *.tsbuildinfo
 .DS_Store
 tmp/
