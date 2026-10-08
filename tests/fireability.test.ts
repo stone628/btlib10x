@@ -77,22 +77,8 @@ describe("suggestFireTargets", () => {
     // AC/20 bins are leftTorso slots 1-2; drain both.
     state.units.hbk!.ammoBins = {
       ...state.units.hbk!.ammoBins,
-      "leftTorso:1": {
-        id: "leftTorso:1",
-        location: "leftTorso",
-        slotIndex: 1,
-        weaponIndex: 4,
-        weapon: "AC/20",
-        shots: 0,
-      },
-      "leftTorso:2": {
-        id: "leftTorso:2",
-        location: "leftTorso",
-        slotIndex: 2,
-        weaponIndex: 4,
-        weapon: "AC/20",
-        shots: 0,
-      },
+      "leftTorso:1": 0,
+      "leftTorso:2": 0,
     };
     const reasons = blockedReasons(state, "hbk", "enf");
     expect(reasons.filter((r) => r === "outOfAmmo")).toHaveLength(1);
@@ -127,22 +113,8 @@ describe("suggestFireTargets", () => {
     // Streak bins: rightTorso:7, leftTorso:7 (25 each).
     state.units.mad!.ammoBins = {
       ...state.units.mad!.ammoBins,
-      "rightTorso:7": {
-        id: "rightTorso:7",
-        location: "rightTorso",
-        slotIndex: 7,
-        weaponIndex: 3,
-        weapon: "CL Streak SRM 4",
-        shots: 0,
-      },
-      "leftTorso:7": {
-        id: "leftTorso:7",
-        location: "leftTorso",
-        slotIndex: 7,
-        weaponIndex: 3,
-        weapon: "CL Streak SRM 4",
-        shots: 0,
-      },
+      "rightTorso:7": 0,
+      "leftTorso:7": 0,
     };
     const sugg = suggestFireTargets(state, "mad");
     const enf = sugg.targets.find((t) => t.targetId === "enf")!;

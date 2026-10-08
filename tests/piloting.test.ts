@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { Location } from "../src/core/types";
 import {
   mechDefFor,
   type ResolvedCritSlot,
   suggestFireTargets,
   type UnitDamageState,
 } from "../src/index";
+import { type CritMask, cloneCritTable, setSlotDestroyed } from "../src/rules/critical";
 import { applyDamage } from "../src/rules/damage";
 import {
   advancePhase,
@@ -75,15 +75,10 @@ function cloneDamage(d: UnitDamageState): UnitDamageState {
 
 function snapshot(state: ReturnType<typeof hbkEnf>): PhaseSnapshots {
   const damage: Record<string, UnitDamageState> = {};
-  const crit: Record<string, Record<Location, boolean[]>> = {};
+  const crit: Record<string, CritMask> = {};
   for (const u of Object.values(state.units)) {
     damage[u.id] = cloneDamage(u.damage);
-    crit[u.id] = Object.fromEntries(
-      (Object.keys(u.critSlotsDestroyed) as Location[]).map((loc) => [
-        loc,
-        [...u.critSlotsDestroyed[loc]],
-      ]),
-    ) as Record<Location, boolean[]>;
+    crit[u.id] = cloneCritTable(u.critSlotsDestroyed);
   }
   return { damage, crit };
 }
@@ -237,7 +232,7 @@ describe("gyro crits", () => {
     const enf = requireUnit(state, "enf");
     const gyro = structureSlots(state, "enf", "centerTorso", "gyro");
     expect(gyro.length).toBeGreaterThan(0);
-    enf.critSlotsDestroyed.centerTorso[gyro[0]!] = true;
+    setSlotDestroyed(enf.critSlotsDestroyed, "centerTorso", gyro[0]!);
     // modifier 3, target 8: 4+4 succeeds, stays up.
     const events: GameEvent[] = [];
     resolvePhasePiloting(state, scriptedRng(4, 4), before, events);
@@ -260,7 +255,7 @@ describe("gyro crits", () => {
     const before = snapshot(state);
     const enf = requireUnit(state, "enf");
     for (const i of structureSlots(state, "enf", "centerTorso", "gyro")) {
-      enf.critSlotsDestroyed.centerTorso[i] = true;
+      setSlotDestroyed(enf.critSlotsDestroyed, "centerTorso", i);
     }
     // fall dir 1, loc 3+4, seatbelt 5+6 (needs 11: success).
     const events: GameEvent[] = [];
@@ -293,7 +288,7 @@ describe("actuator crits", () => {
     const enf = requireUnit(state, "enf");
     const hip = structureSlots(state, "enf", "rightLeg", "hip");
     expect(hip.length).toBeGreaterThan(0);
-    enf.critSlotsDestroyed.rightLeg[hip[0]!] = true;
+    setSlotDestroyed(enf.critSlotsDestroyed, "rightLeg", hip[0]!);
     // modifier 2, target 7: 4+3 succeeds.
     const events: GameEvent[] = [];
     resolvePhasePiloting(state, scriptedRng(4, 3), before, events);
@@ -389,7 +384,7 @@ describe("run-damaged PSR", () => {
     const enf = requireUnit(state, "enf");
     const hipSlots = structureSlots(state, "enf", "rightLeg", "hip");
     expect(hipSlots.length).toBeGreaterThanOrEqual(1);
-    enf.critSlotsDestroyed.rightLeg[hipSlots[0]!] = true;
+    setSlotDestroyed(enf.critSlotsDestroyed, "rightLeg", hipSlots[0]!);
     // North forward: (2,3), then (2,2). PSR 5+2=7, 2D6=8 passes.
     const events: GameEvent[] = [];
     executeMove(
@@ -423,7 +418,7 @@ describe("run-damaged PSR", () => {
     toMovement(state);
     const enf = requireUnit(state, "enf");
     const hipSlots = structureSlots(state, "enf", "rightLeg", "hip");
-    enf.critSlotsDestroyed.rightLeg[hipSlots[0]!] = true;
+    setSlotDestroyed(enf.critSlotsDestroyed, "rightLeg", hipSlots[0]!);
     // PSR 2D6=2<7 fails; fall dir 1, loc 3+4 CT; seatbelt 5+2=7, 2D6=2 fails.
     // Consciousness 2D6=6>=3 pass.
     executeMove(state, "enf", "run", [{ kind: "enter", to: { col: 2, row: 3 } }], [], {
@@ -449,7 +444,7 @@ describe("jump-damaged PSR", () => {
     const enf = requireUnit(state, "enf");
     const footSlots = structureSlots(state, "enf", "rightLeg", "footActuator");
     expect(footSlots.length).toBeGreaterThanOrEqual(1);
-    enf.critSlotsDestroyed.rightLeg[footSlots[0]!] = true;
+    setSlotDestroyed(enf.critSlotsDestroyed, "rightLeg", footSlots[0]!);
     // PSR 5+1=6, 2D6=6 passes.
     const events: GameEvent[] = [];
     executeMove(state, "enf", "jump", [{ kind: "enter", to: { col: 2, row: 3 } }], events, {
@@ -475,7 +470,7 @@ describe("jump-damaged PSR", () => {
     toMovement(state);
     const enf = requireUnit(state, "enf");
     const footSlots = structureSlots(state, "enf", "rightLeg", "footActuator");
-    enf.critSlotsDestroyed.rightLeg[footSlots[0]!] = true;
+    setSlotDestroyed(enf.critSlotsDestroyed, "rightLeg", footSlots[0]!);
     // PSR 2D6=2<6 fails; fall dir 1, loc 3+4 CT; seatbelt 5+1=6, 2D6=2 fails.
     // Consciousness 2D6=6>=3 pass.
     executeMove(state, "enf", "jump", [{ kind: "enter", to: { col: 2, row: 3 } }], [], {
@@ -599,11 +594,11 @@ describe("standing up", () => {
     const enf = requireUnit(state, "enf");
     enf.prone = true;
     for (const i of structureSlots(state, "enf", "centerTorso", "gyro")) {
-      enf.critSlotsDestroyed.centerTorso[i] = true;
+      setSlotDestroyed(enf.critSlotsDestroyed, "centerTorso", i);
     }
     expect(() => attemptStandUp(state, "enf", [])).toThrow(/destroyed gyro/);
     for (const i of structureSlots(state, "enf", "centerTorso", "gyro")) {
-      enf.critSlotsDestroyed.centerTorso[i] = false;
+      enf.critSlotsDestroyed.centerTorso &= ~(1 << i);
     }
     enf.damage.internalStructure.rightLeg = 0;
     enf.damage.internalStructure.leftLeg = 0;
@@ -815,10 +810,10 @@ describe("prone combat", () => {
     const hbk = requireUnit(state, "hbk");
     const sensors = structureSlots(state, "hbk", "head", "sensors");
     expect(sensors).toHaveLength(2);
-    hbk.critSlotsDestroyed.head[sensors[0]!] = true;
+    setSlotDestroyed(hbk.critSlotsDestroyed, "head", sensors[0]!);
     const one = suggestFireTargets(state, "hbk").targets[0]!.weapons[0]!.tn;
     expect(one - base).toBe(2);
-    hbk.critSlotsDestroyed.head[sensors[1]!] = true;
+    setSlotDestroyed(hbk.critSlotsDestroyed, "head", sensors[1]!);
     const blind = suggestFireTargets(state, "hbk").targets[0]!;
     expect(blind.weapons).toHaveLength(0);
     expect(blind.blocked.length).toBeGreaterThan(0);
@@ -892,7 +887,7 @@ describe("pilot damage", () => {
     let marked = false;
     def.critSlots.head.forEach((slot: ResolvedCritSlot | undefined, i: number) => {
       if (slot?.kind === "structure" && slot.name === "lifeSupport") {
-        hbk.critSlotsDestroyed.head[i] = true;
+        setSlotDestroyed(hbk.critSlotsDestroyed, "head", i);
         marked = true;
       }
     });

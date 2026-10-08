@@ -10,6 +10,7 @@ import {
   VERSION,
 } from "btlib10x";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { setSlotDestroyed } from "../src/rules/critical";
 import { nextAutoPlayCommand, resetAutoplayState } from "../web/autoplay";
 import {
   type AttackDeclaration,
@@ -293,8 +294,8 @@ describe("unit and end lines", () => {
     hunchy.damage.armor.centerTorso = 0;
     hunchy.damage.armorRear.centerTorso -= 4;
     hunchy.damage.internalStructure.centerTorso -= 1;
-    hunchy.critSlotsDestroyed.rightArm[4] = true;
-    hunchy.ammoBins["leftTorso:1"]!.shots -= 3;
+    setSlotDestroyed(hunchy.critSlotsDestroyed, "rightArm", 4);
+    hunchy.ammoBins["leftTorso:1"]! -= 3;
     const line = encodeEndLine("0", hunchy);
     expect(line).toBe(`E03:h5C${startCtArmor}/4/1:a5:L13`);
   });

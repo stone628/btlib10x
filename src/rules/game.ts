@@ -75,17 +75,23 @@ import {
   applyAmmoExplosion,
   type CriticalEffect,
   type CriticalResolution,
+  type CritMask,
   checkCASE,
+  cloneCritTable,
   countDestroyedEngine,
   countDestroyedGyro,
   countDestroyedHip,
   countDestroyedLifeSupport,
   countDestroyedSensor,
+  destroyAllSlots,
   ENGINE_SLOTS_KILL,
   effectiveMovement,
   HIP,
+  isSlotDestroyed,
   markLocationCatastrophicallyDestroyed,
+  mergeCritTable,
   resolveCriticalHits,
+  setSlotDestroyed,
   zeroLocationStructure,
 } from "./critical";
 import {
@@ -438,7 +444,7 @@ export interface UnitState extends MechModelHolder {
   facing: Facing;
   damage: UnitDamageState;
   /** Per-slot destroyed flag for each location's crit slot table. */
-  critSlotsDestroyed: Record<Location, boolean[]>;
+  critSlotsDestroyed: CritMask;
   /** Per-crit-slot ammo state: identity + remaining shots (see
    *  `src/rules/ammo.ts`). Per-weapon totals are derived on demand. */
   ammoBins: AmmoBins;
@@ -2598,8 +2604,12 @@ export function salvageableSeveredLimbs(state: BattleState, unitId: string): Lim
   for (const { limb, salvageable } of unit.blownOffLimbs) {
     if (!salvageable) continue;
     const slots = def.critSlots[limb];
-    const flags = unit.critSlotsDestroyed[limb];
-    if (slots.some((slot, i) => slot.kind === "weapon" && flags[i] !== true)) out.push(limb);
+    if (
+      slots.some(
+        (slot, i) => slot.kind === "weapon" && !isSlotDestroyed(unit.critSlotsDestroyed, limb, i),
+      )
+    )
+      out.push(limb);
   }
   return out;
 }
@@ -2689,7 +2699,7 @@ function physicalWeaponConflict(
  *  are rolled "before resolving any further weapons fire"). */
 interface RunningTarget {
   damage: UnitDamageState;
-  crit: Record<Location, boolean[]>;
+  crit: CritMask;
   destroyedWeapons: number[];
   ammoBins: AmmoBins;
 }
@@ -2730,7 +2740,7 @@ function resolveUnitAttacks(
 
     const run = running[target.id] ?? {
       damage: cloneDamage(target.damage),
-      crit: cloneCritDestroyed(target.critSlotsDestroyed),
+      crit: cloneCritTable(target.critSlotsDestroyed),
       destroyedWeapons: [...target.destroyedWeapons],
       ammoBins: { ...target.ammoBins },
     };
@@ -2891,18 +2901,16 @@ interface NewStructureHit {
 /** Structure slots destroyed now that were intact in the phase snapshot. */
 function newlyDestroyedStructures(
   def: ResolvedMechDef,
-  before: Readonly<Record<Location, readonly boolean[]>>,
-  now: Readonly<Record<Location, readonly boolean[]>>,
+  before: Readonly<CritMask>,
+  now: Readonly<CritMask>,
 ): NewStructureHit[] {
   const out: NewStructureHit[] = [];
   for (const loc of Object.keys(def.critSlots) as Location[]) {
     const layout = def.critSlots[loc];
-    const beforeFlags = before[loc] ?? [];
-    const nowFlags = now[loc] ?? [];
     for (let i = 0; i < layout.length; i++) {
       const slot = layout[i];
       if (slot?.kind !== "structure") continue;
-      if ((nowFlags[i] ?? false) && !(beforeFlags[i] ?? false)) {
+      if (isSlotDestroyed(now, loc, i) && !isSlotDestroyed(before, loc, i)) {
         out.push({ location: loc, name: slot.name });
       }
     }
@@ -3170,7 +3178,7 @@ export function applyFall(
 
 export interface PhaseSnapshots {
   readonly damage: Record<string, UnitDamageState>;
-  readonly crit: Record<string, Record<Location, boolean[]>>;
+  readonly crit: Record<string, CritMask>;
 }
 
 /**
@@ -3291,9 +3299,9 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   // Phase 1: collect resolutions for ALL units with declared attacks
   // (ignore `removed` flag — TW simultaneity means even destroyed units fire)
   const baseDamage: Record<string, UnitDamageState> = {};
-  const baseCrit: Record<string, Record<Location, boolean[]>> = {};
+  const baseCrit: Record<string, CritMask> = {};
   for (const unit of Object.values(state.units)) {
-    baseCrit[unit.id] = cloneCritDestroyed(unit.critSlotsDestroyed);
+    baseCrit[unit.id] = cloneCritTable(unit.critSlotsDestroyed);
     baseDamage[unit.id] = {
       armor: { ...unit.damage.armor },
       armorRear: { ...unit.damage.armorRear },
@@ -3334,7 +3342,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   // `targetDamageMap` together before its `attackResolved` emits, so a
   // later resolution's `before` already includes earlier explosions.
   /** Per-target crit-slot accumulators (OR-merged across the volley). */
-  const targetCritSlotsMap: Record<string, Record<Location, boolean[]>> = {};
+  const targetCritSlotsMap: Record<string, CritMask> = {};
   /** Original crit resolutions per target (for severed-limb tokens). */
   const targetCritsForLimbs: Record<string, CriticalResolution[]> = {};
 
@@ -3359,13 +3367,8 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         };
         targetAmmoBinsMap[targetId] = { ...target.ammoBins };
         targetDestroyedWeaponsMap[targetId] = [...target.destroyedWeapons];
-        // Clone the inner arrays so OR-merge below mutates a fresh copy,
-        // not the unit's persistent table.
-        const slots: Record<Location, boolean[]> = {} as Record<Location, boolean[]>;
-        for (const loc of Object.keys(target.critSlotsDestroyed) as Location[]) {
-          slots[loc] = target.critSlotsDestroyed[loc]!.slice();
-        }
-        targetCritSlotsMap[targetId] = slots;
+        // Copy so the OR-merge below mutates a fresh table, not the unit's.
+        targetCritSlotsMap[targetId] = cloneCritTable(target.critSlotsDestroyed);
         targetCritsForLimbs[targetId] = [];
       }
       const def = mechDefFor(target);
@@ -3432,15 +3435,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         // re-roll skips already-destroyed slots; crit transfer checks prior
         // hits in the location. Both rules require flags to be visible
         // across weapons in the same volley.
-        for (const loc of Object.keys(crit.critSlotsDestroyed) as Location[]) {
-          const next = crit.critSlotsDestroyed[loc];
-          const cur = currentCritSlots[loc];
-          if (cur === undefined) {
-            currentCritSlots[loc] = next.slice();
-            continue;
-          }
-          for (let i = 0; i < next.length; i++) if (next[i]) cur[i] = true;
-        }
+        mergeCritTable(currentCritSlots, crit.critSlotsDestroyed);
         currentDestroyedWeapons = appendUnique(currentDestroyedWeapons, crit.destroyedWeapons);
         // Ammo bins: per-bin last-write-wins. Two weapons in the same volley
         // never share a bin id (each crit touches bins only in the location
@@ -3464,7 +3459,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
             for (const loc of app.newlyDestroyed) {
               currentDamage.armor[loc] = 0;
               if (isTorso(loc)) currentDamage.armorRear[loc] = 0;
-              currentCritSlots[loc] = def.critSlots[loc].map(() => true);
+              destroyAllSlots(currentCritSlots, loc, def.critSlots[loc].length);
               stripBinsInLocation(currentAmmoBins, loc);
             }
             // Refresh the row's application so the log renders this
@@ -3481,7 +3476,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
             for (const loc of app.newlyDestroyed) {
               currentDamage.armor[loc] = 0;
               if (isTorso(loc)) currentDamage.armorRear[loc] = 0;
-              currentCritSlots[loc] = def.critSlots[loc].map(() => true);
+              destroyAllSlots(currentCritSlots, loc, def.critSlots[loc].length);
               stripBinsInLocation(currentAmmoBins, loc);
             }
             newRows.push({
@@ -3593,7 +3588,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       const merged = { ...bins };
       for (const [id, own] of Object.entries(target.ammoBins)) {
         const snap = merged[id];
-        if (snap !== undefined && own.shots < snap.shots) merged[id] = own;
+        if (snap !== undefined && own < snap) merged[id] = own;
       }
       target.ammoBins = merged;
     }
@@ -3757,14 +3752,14 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   // physical-sub-pass damage (TW p.60 "in one phase" per phase), and weapon
   // fall damage never re-triggers the sweep.
   const postWeaponDamage: Record<string, UnitDamageState> = {};
-  const postWeaponCrit: Record<string, Record<Location, boolean[]>> = {};
+  const postWeaponCrit: Record<string, CritMask> = {};
   for (const unit of Object.values(state.units)) {
     postWeaponDamage[unit.id] = {
       armor: { ...unit.damage.armor },
       armorRear: { ...unit.damage.armorRear },
       internalStructure: { ...unit.damage.internalStructure },
     };
-    postWeaponCrit[unit.id] = cloneCritDestroyed(unit.critSlotsDestroyed);
+    postWeaponCrit[unit.id] = cloneCritTable(unit.critSlotsDestroyed);
   }
 
   // Sub-pass 2: Physical attacks (TW p. 37: physical attacks resolve after weapon attacks)
@@ -4428,7 +4423,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
       armorRear: { ...unit.damage.armorRear },
       internalStructure: { ...unit.damage.internalStructure },
     };
-    before.crit[unit.id] = cloneCritDestroyed(unit.critSlotsDestroyed);
+    before.crit[unit.id] = cloneCritTable(unit.critSlotsDestroyed);
 
     const def = mechDefFor(unit);
     const startHeat = unit.heat;
@@ -4658,13 +4653,9 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
             // follow-up criticals cannot re-hit or re-explode it.
             const slot = collectAmmoBins(def).find((b) => b.id === bin.binId);
             if (slot !== undefined) {
-              unit.ammoBins[bin.binId] = { ...slot, shots: 0 };
-              unit.critSlotsDestroyed = {
-                ...unit.critSlotsDestroyed,
-                [bin.location]: unit.critSlotsDestroyed[bin.location].map(
-                  (hit, i) => hit || i === bin.slotIndex - 1,
-                ),
-              };
+              unit.ammoBins[bin.binId] = 0;
+              unit.critSlotsDestroyed = cloneCritTable(unit.critSlotsDestroyed);
+              setSlotDestroyed(unit.critSlotsDestroyed, bin.location, bin.slotIndex - 1);
             }
             // Like any ammo explosion, the blast damages internal structure,
             // so each struck location gets a critical roll (TW p.125).
@@ -4694,6 +4685,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
             // the rest of the phase.
             for (const lost of application.newlyDestroyed) {
               markLocationCatastrophicallyDestroyed(
+                def,
                 unit.damage,
                 unit.critSlotsDestroyed,
                 unit.ammoBins,
@@ -4702,7 +4694,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
             }
             // Keep the spent bin on record as empty even when its location
             // was stripped.
-            if (slot !== undefined) unit.ammoBins[bin.binId] = { ...slot, shots: 0 };
+            if (slot !== undefined) unit.ammoBins[bin.binId] = 0;
             sink.push({
               kind: "ammoExplosionCheck",
               unitId: unit.id,
@@ -5628,15 +5620,6 @@ function buildActorQueue(state: BattleState): string[] {
     }
   }
   return queue;
-}
-
-/** Deep copy of a per-slot destroyed-flag table (phase snapshots). */
-function cloneCritDestroyed(src: Record<Location, boolean[]>): Record<Location, boolean[]> {
-  const out: Record<Location, boolean[]> = {} as Record<Location, boolean[]>;
-  (Object.keys(src) as Location[]).forEach((loc) => {
-    out[loc] = src[loc].slice();
-  });
-  return out;
 }
 
 /**

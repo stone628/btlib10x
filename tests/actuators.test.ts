@@ -4,6 +4,7 @@ import { mechDef } from "../src/data/index";
 import type { ResolvedMechDef } from "../src/data/mech.schema";
 import { armWeaponToHitModifier, countArmActuators } from "../src/rules/actuators";
 import { resolveWeaponAttack } from "../src/rules/attack";
+import { type CritMask, emptyCritTable, setSlotDestroyed } from "../src/rules/critical";
 import type { UnitDamageState } from "../src/rules/damage";
 import { suggestFireTargets } from "../src/rules/fireability";
 import { buildUnitInit } from "../src/rules/game";
@@ -11,11 +12,7 @@ import { computeToHit } from "../src/rules/tohit";
 import { createTestBattle, scriptedRng } from "./helpers";
 
 function freshFlags(def = mechDef("TBR-Prime")!) {
-  const out: Record<Location, boolean[]> = {} as Record<Location, boolean[]>;
-  for (const loc of Object.keys(def.critSlots) as Location[]) {
-    out[loc] = new Array(def.critSlots[loc].length).fill(false);
-  }
-  return out;
+  return emptyCritTable(def);
 }
 
 function freshDamage(def = mechDef("TBR-Prime")!): UnitDamageState {
@@ -27,15 +24,10 @@ function freshDamage(def = mechDef("TBR-Prime")!): UnitDamageState {
 }
 
 /** Mark every slot named `name` in `loc` destroyed. */
-function destroyNamed(
-  def: ResolvedMechDef,
-  flags: Record<Location, boolean[]>,
-  loc: Location,
-  name: string,
-): void {
+function destroyNamed(def: ResolvedMechDef, flags: CritMask, loc: Location, name: string): void {
   const layout = def.critSlots[loc];
   layout.forEach((slot, i) => {
-    if (slot.kind === "structure" && slot.name === name) flags[loc][i] = true;
+    if (slot.kind === "structure" && slot.name === name) setSlotDestroyed(flags, loc, i);
   });
 }
 
@@ -85,10 +77,7 @@ describe("arm actuator weapon modifiers (TW p.125)", () => {
       armorRear: { ...handDef.armorRear },
       internalStructure: { ...handDef.internalStructure },
     };
-    const flags: Record<Location, boolean[]> = {} as Record<Location, boolean[]>;
-    for (const loc of Object.keys(handDef.critSlots) as Location[]) {
-      flags[loc] = new Array(handDef.critSlots[loc].length).fill(false);
-    }
+    const flags = emptyCritTable(handDef);
     destroyNamed(handDef, flags, "rightArm", "handActuator");
     expect(countArmActuators(handDef, damage, flags, "rightArm").hand).toBe(1);
     expect(armWeaponToHitModifier(handDef, damage, flags, "rightArm")).toBe(0);
@@ -148,7 +137,7 @@ describe("arm actuator weapon modifiers (TW p.125)", () => {
     const atkDef = mechDef("TBR-Prime")!;
     atkDef.critSlots.leftArm.forEach((slot, i) => {
       if (slot.kind === "structure" && slot.name === "shoulder") {
-        attacker.critSlotsDestroyed.leftArm[i] = true;
+        setSlotDestroyed(attacker.critSlotsDestroyed, "leftArm", i);
       }
     });
     const tnAfter = suggestFireTargets(state, "a").targets.find((t) => t.targetId === "b");

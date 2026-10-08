@@ -23,6 +23,7 @@ import {
 import { type MechDef, type ResolvedMechDef, resolveMechDef } from "../src/data/index";
 import { parseWeaponsData } from "../src/data/weapon.schema";
 import { WEAPON_DATA } from "../src/data/weapons.data";
+import { setSlotDestroyed } from "../src/rules/critical";
 
 /** Raw HCT-5S sheet as written in data/mechs/hct-5s.json. */
 const hct5sRaw = hct5sJson as unknown as MechDef;
@@ -163,7 +164,7 @@ describe("strike to-hit and damage", () => {
   it("halves hatchet damage on a damaged upper arm actuator", () => {
     const battle = faceToFaceBattle();
     const attacker = battle.units.a!;
-    attacker.critSlotsDestroyed.rightArm![1] = true; // upperArmActuator
+    setSlotDestroyed(attacker.critSlotsDestroyed, "rightArm", 1); // upperArmActuator
     // 9 → floor(9/2) = 4
     expect(physicalDamage("strike", attacker, "rightArm", "Hatchet")).toBe(4);
   });
@@ -172,11 +173,11 @@ describe("strike to-hit and damage", () => {
     const battle = faceToFaceBattle();
     const attacker = battle.units.a!;
     const target = battle.units.t!;
-    attacker.critSlotsDestroyed.rightArm![3] = true; // handActuator
+    setSlotDestroyed(attacker.critSlotsDestroyed, "rightArm", 3); // handActuator
     expect(
       computePhysicalToHit(battle, attacker, target, "strike", "rightArm", "Hatchet").actuatorMod,
     ).toBe(1);
-    attacker.critSlotsDestroyed.rightArm![1] = true; // upperArmActuator
+    setSlotDestroyed(attacker.critSlotsDestroyed, "rightArm", 1); // upperArmActuator
     expect(
       computePhysicalToHit(battle, attacker, target, "strike", "rightArm", "Hatchet").actuatorMod,
     ).toBe(3);
@@ -241,7 +242,7 @@ describe("strike validation", () => {
 
   it("rejects a strike with a destroyed shoulder", () => {
     const battle = faceToFaceBattle();
-    battle.units.a!.critSlotsDestroyed.rightArm![0] = true; // shoulder
+    setSlotDestroyed(battle.units.a!.critSlotsDestroyed, "rightArm", 0); // shoulder
     const result = validatePhysicalAttack(battle, "a", hatchetDecl());
     expect(result.ok).toBe(false);
     expect(result.reason).toContain("shoulder");

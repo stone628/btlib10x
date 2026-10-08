@@ -7,6 +7,7 @@ import {
   requireUnit,
   saveBattleState,
 } from "../src/index";
+import { setSlotDestroyed } from "../src/rules/critical";
 import type { BattleState, GameEvent, UnitInit } from "../src/rules/game";
 import {
   advancePhase,
@@ -70,11 +71,11 @@ function dirtyBattle(state: BattleState): void {
   hbk.shutdown = "heat";
   hbk.pilotHits = 3;
   hbk.damage.armor.head = 0;
-  hbk.critSlotsDestroyed.centerTorso[0] = true;
+  setSlotDestroyed(hbk.critSlotsDestroyed, "centerTorso", 0);
   hbk.jammedWeapons.push(0);
   hbk.destroyedWeapons.push(1);
   hbk.hexesMovedThisTurn += 1;
-  for (const bin of Object.values(hbk.ammoBins)) bin.shots = 0;
+  for (const id of Object.keys(hbk.ammoBins)) hbk.ammoBins[id] = 0;
   delete hbk.ammoBins[Object.keys(hbk.ammoBins)[0]!];
   state.actedThisPhase.push("hbk");
   state.actorQueue = ["stale"];
@@ -105,7 +106,7 @@ describe("snapshot", () => {
     expect(state).toEqual(parsed);
   });
 
-  it("packs sparsely and round-trips crits, ammo, limbs, collapsed cells", () => {
+  it("stores only cell exceptions and round-trips crits, ammo, limbs, collapsed cells", () => {
     const units: UnitInit[] = [
       buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
       buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 5 }, "se"),
@@ -118,19 +119,21 @@ describe("snapshot", () => {
       30,
     );
     const hbk = requireUnit(state, "hbk");
-    hbk.critSlotsDestroyed.centerTorso[2] = true;
-    hbk.critSlotsDestroyed.leftArm[0] = true;
+    setSlotDestroyed(hbk.critSlotsDestroyed, "centerTorso", 2);
+    setSlotDestroyed(hbk.critSlotsDestroyed, "leftArm", 0);
     hbk.blownOffLimbs.push({ limb: "rightArm", salvageable: true });
     const [firstBin, secondBin] = Object.keys(hbk.ammoBins);
-    hbk.ammoBins[firstBin!]!.shots -= 2;
+    hbk.ammoBins[firstBin!]! -= 2;
     delete hbk.ammoBins[secondBin!];
     damageBuildingAt(state, { col: 3, row: 5 }, 999, []);
 
     const snap = saveBattleState(state);
     const raw = JSON.parse(snap);
     expect(raw.cells).toEqual([[2 + 4 * 30, "rubble", 0]]);
-    expect(raw.units.hbk.crit).toEqual({ centerTorso: [2], leftArm: [0] });
-    expect(raw.units.hbk).not.toHaveProperty("baseDamage");
+    expect(raw.units.hbk.critSlotsDestroyed.centerTorso).toBe(0b100);
+    expect(raw.units.hbk.critSlotsDestroyed.leftArm).toBe(0b1);
+    expect(raw.units.hbk.ammoBins[firstBin!]).toBe(hbk.ammoBins[firstBin!]);
+    expect(raw.units.hbk.ammoBins).not.toHaveProperty(secondBin!);
     expect(snap.length).toBeLessThan(6000);
     expect(parseBattleState(snap)).toEqual(state);
     expect(saveBattleState(parseBattleState(snap))).toBe(snap);
@@ -226,7 +229,7 @@ describe("snapshot", () => {
     enf.damage.internalStructure.leftLeg = 0;
     const firstBin = Object.keys(enf.ammoBins)[0]!;
     delete enf.ammoBins[firstBin];
-    enf.critSlotsDestroyed.centerTorso[0] = true;
+    setSlotDestroyed(enf.critSlotsDestroyed, "centerTorso", 0);
 
     loadDamageState(enf.damage, dmgSnap);
     expect(enf.damage).toEqual(dmgSnap);

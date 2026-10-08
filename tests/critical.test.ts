@@ -4,13 +4,22 @@ import { LOCATIONS, type Location } from "../src/core/types";
 import { mechDef } from "../src/data/index";
 import { ammoWeaponTotals, loadAmmoBins } from "../src/rules/ammo";
 import {
+  anySlotDestroyed,
   applyAmmoExplosion,
   checkCASE,
+  cloneCritTable,
   componentHitStatus,
   countDestroyedEngine,
+  destroyAllSlots,
+  destroyedSlots,
   effectiveMovement,
+  emptyCritTable,
+  isSlotDestroyed,
+  MAX_CRIT_SLOTS,
   markLocationCatastrophicallyDestroyed,
+  mergeCritTable,
   resolveCriticalHits,
+  setSlotDestroyed,
 } from "../src/rules/critical";
 import type { UnitDamageState } from "../src/rules/damage";
 import {
@@ -33,11 +42,7 @@ function detRoll(sum: number, ...tail: number[]): ReturnType<typeof scriptedRng>
 }
 
 function freshFlags(def = mechDef("HBK-4G")!) {
-  const out: Record<Location, boolean[]> = {} as Record<Location, boolean[]>;
-  for (const loc of Object.keys(def.critSlots) as Location[]) {
-    out[loc] = new Array(def.critSlots[loc].length).fill(false);
-  }
-  return out;
+  return emptyCritTable(def);
 }
 
 describe("determining critical hits table", () => {
@@ -356,8 +361,8 @@ describe("weapon and ammo crit effects", () => {
     }
     // The exploded bin is empty; the sibling bin keeps its 5 shots, and the
     // derived per-weapon total drops from 10 to 5.
-    expect(res.ammoBins["leftTorso:1"]?.shots).toBe(0);
-    expect(res.ammoBins["leftTorso:2"]?.shots).toBe(5);
+    expect(res.ammoBins["leftTorso:1"]).toBe(0);
+    expect(res.ammoBins["leftTorso:2"]).toBe(5);
     expect(ammoWeaponTotals(def, res.ammoBins)[4]).toBe(5);
   });
 
@@ -421,8 +426,8 @@ describe("weapon and ammo crit effects", () => {
     const def = mechDef("BZK-F3")!;
     const bins = loadAmmoBins(def);
     // Pre-condition: both CT gauss bins are loaded.
-    expect(bins["centerTorso:11"]?.shots).toBe(8);
-    expect(bins["centerTorso:12"]?.shots).toBe(8);
+    expect(bins["centerTorso:11"]).toBe(8);
+    expect(bins["centerTorso:12"]).toBe(8);
     const ctArmorBefore = def.armor.centerTorso;
     const res = resolveCriticalHits({
       // det 8 -> 1 crit. CT is 12-slot: first die 1-3 = slots 1-6, 4-6 =
@@ -448,8 +453,8 @@ describe("weapon and ammo crit effects", () => {
       expect(eff.slotIndex).toBe(11);
     }
     // The hit bin empties; the sibling gauss bin keeps its 8 shots.
-    expect(res.ammoBins["centerTorso:11"]?.shots).toBe(0);
-    expect(res.ammoBins["centerTorso:12"]?.shots).toBe(8);
+    expect(res.ammoBins["centerTorso:11"]).toBe(0);
+    expect(res.ammoBins["centerTorso:12"]).toBe(8);
     // No damage, no kill, no cascade rows. We pre-set CT IS to 1000 so
     // any non-zero damage applied at this slot would show up.
     expect(res.damage.armor.centerTorso).toBe(0);
@@ -500,7 +505,7 @@ describe("weapon and ammo crit effects", () => {
   it("second crit on a powered-down gauss mount soaks with no second blast", () => {
     const def = mechDef("BZK-F3")!;
     const destroyed = freshFlags(def);
-    destroyed.rightTorso[2] = true; // slot 3 already hit
+    setSlotDestroyed(destroyed, "rightTorso", 2); // slot 3 already hit
     const res = resolveCriticalHits({
       // det 8 -> 1 crit; (1,4) lands on slot 4 = same Gauss mount.
       rng: detRoll(8, 1, 4),
@@ -581,7 +586,7 @@ describe("transfer rules", () => {
     for (let i = 0; i < def.critSlots.leftTorso.length; i++) {
       const slot = def.critSlots.leftTorso[i]!;
       if (slot.kind !== "empty" && slot.kind !== "soak") {
-        destroyed.leftTorso[i] = true;
+        setSlotDestroyed(destroyed, "leftTorso", i);
       }
     }
     const res = resolveCriticalHits({
@@ -610,7 +615,7 @@ describe("transfer rules", () => {
     // Mark every head slot destroyed.
     const destroyed = freshFlags(def);
     for (let i = 0; i < def.critSlots.head.length; i++) {
-      destroyed.head[i] = true;
+      setSlotDestroyed(destroyed, "head", i);
     }
     const res = resolveCriticalHits({
       rng: detRoll(8),
@@ -636,7 +641,7 @@ describe("effectiveMovement", () => {
   const flags = (mods: Partial<Record<Location, number[]>>) => {
     const out = freshFlags(def);
     for (const [loc, idxs] of Object.entries(mods) as [Location, number[]][]) {
-      for (const i of idxs) out[loc][i] = true;
+      for (const i of idxs) setSlotDestroyed(out, loc, i);
     }
     return out;
   };
@@ -877,8 +882,8 @@ describe("engine crit destruction", () => {
     const def = mechDef("HBK-4G")!;
     // Pre-destroy 2 engine slots (CT indices 0 and 1).
     const destroyed = freshFlags(def);
-    destroyed.centerTorso[0] = true;
-    destroyed.centerTorso[1] = true;
+    setSlotDestroyed(destroyed, "centerTorso", 0);
+    setSlotDestroyed(destroyed, "centerTorso", 1);
     // Roll 8 (one crit) targeting CT. Slot roll: first=4 (half 1), second=2
     // → slot=8, index 7 = engine. Not pre-destroyed.
     const res = resolveCriticalHits({
@@ -902,7 +907,7 @@ describe("engine crit destruction", () => {
     const def = mechDef("HBK-4G")!;
     // Pre-destroy 1 engine slot (CT index 0).
     const destroyed = freshFlags(def);
-    destroyed.centerTorso[0] = true;
+    setSlotDestroyed(destroyed, "centerTorso", 0);
     // Roll 8 (one crit) targeting CT. Slot roll: first=1 (half 0), second=2
     // → slot=2, index 1 = engine. Not pre-destroyed.
     const res = resolveCriticalHits({
@@ -948,9 +953,9 @@ describe("computeCritCounts", () => {
     const destroyed = freshFlags(def);
     // HBK-4G centerTorso: 0..2 = engine, 3..6 = gyro, 7..9 = engine.
     // HBK-4G RT and LT carry weapons/ammo only (no engine/gyro slots there).
-    destroyed.centerTorso[3] = true; // gyro slot 4
-    destroyed.centerTorso[0] = true; // engine slot 1 (first band)
-    destroyed.centerTorso[7] = true; // engine slot 8 (second band)
+    setSlotDestroyed(destroyed, "centerTorso", 3); // gyro slot 4
+    setSlotDestroyed(destroyed, "centerTorso", 0); // engine slot 1 (first band)
+    setSlotDestroyed(destroyed, "centerTorso", 7); // engine slot 8 (second band)
     const counts = componentHitStatus(def, damage, destroyed);
     expect(counts.engine).toBe(2);
     expect(counts.gyro).toBe(1);
@@ -968,9 +973,9 @@ describe("computeCritCounts", () => {
     const destroyed = freshFlags(def);
     // HBK-4G head: 0=lifeSupport, 1=sensors, 2=cockpit, 3=Small Laser,
     //              4=sensors, 5=lifeSupport.
-    destroyed.head[1] = true;
-    destroyed.head[4] = true;
-    destroyed.head[5] = true;
+    setSlotDestroyed(destroyed, "head", 1);
+    setSlotDestroyed(destroyed, "head", 4);
+    setSlotDestroyed(destroyed, "head", 5);
     const counts = componentHitStatus(def, damage, destroyed);
     expect(counts.sensors).toBe(2);
     expect(counts.lifeSupport).toBe(1);
@@ -988,17 +993,17 @@ describe("markLocationCatastrophicallyDestroyed", () => {
       internalStructure: { ...def.internalStructure },
     };
     const destroyed = freshFlags(def);
-    expect(destroyed.leftTorso.some((f) => f)).toBe(false);
+    expect(destroyed.leftTorso).toBe(0);
     // HBK-4G carries AC/20 ammo in the leftTorso.
     const ammoBins = loadAmmoBins(def);
     const binKeys = Object.keys(ammoBins).filter((k) => k.startsWith("leftTorso:"));
     expect(binKeys.length).toBeGreaterThan(0);
 
-    markLocationCatastrophicallyDestroyed(damage, destroyed, ammoBins, "leftTorso");
+    markLocationCatastrophicallyDestroyed(def, damage, destroyed, ammoBins, "leftTorso");
 
     expect(damage.armor.leftTorso).toBe(0);
     expect(damage.internalStructure.leftTorso).toBe(0);
-    expect(destroyed.leftTorso.every((f) => f === true)).toBe(true);
+    expect(destroyed.leftTorso).toBe((1 << def.critSlots.leftTorso.length) - 1);
     // Rear pool: HBK-4G carries some left-torso rear armor; mark should
     // wipe it (TW p.121 "remaining armor there (front or rear)").
     expect(damage.armorRear.leftTorso ?? 0).toBe(0);
@@ -1007,7 +1012,7 @@ describe("markLocationCatastrophicallyDestroyed", () => {
     }
     // Untouched location stays intact
     expect(damage.armor.centerTorso).toBe(def.armor.centerTorso);
-    expect(destroyed.centerTorso.some((f) => f)).toBe(false);
+    expect(destroyed.centerTorso).toBe(0);
   });
 
   it("does not throw or mutate ammo bins in other locations", () => {
@@ -1021,7 +1026,7 @@ describe("markLocationCatastrophicallyDestroyed", () => {
     const ammoBins = loadAmmoBins(def);
     const before = { ...ammoBins };
 
-    markLocationCatastrophicallyDestroyed(damage, destroyed, ammoBins, "head");
+    markLocationCatastrophicallyDestroyed(def, damage, destroyed, ammoBins, "head");
 
     for (const key of Object.keys(before)) {
       if (key.startsWith("head:")) {
@@ -1045,7 +1050,7 @@ describe("markLocationCatastrophicallyDestroyed", () => {
     const destroyed = freshFlags(def);
     const ammoBins = loadAmmoBins(def);
     expect(damage.internalStructure.leftTorso).toBe(0);
-    expect(destroyed.leftTorso.every((f) => f === false)).toBe(true);
+    expect(destroyed.leftTorso).toBe(0);
     // Counters read only flags and must NOT auto-include the destroyed
     // location's contents.
     expect(countDestroyedEngine(def, damage, destroyed)).toBe(0);
@@ -1066,10 +1071,10 @@ describe("markLocationCatastrophicallyDestroyed", () => {
     const destroyed = freshFlags(def);
     const ammoBins = loadAmmoBins(def);
     expect(damage.armorRear.rightTorso).toBe(7);
-    markLocationCatastrophicallyDestroyed(damage, destroyed, ammoBins, "rightTorso");
+    markLocationCatastrophicallyDestroyed(def, damage, destroyed, ammoBins, "rightTorso");
     expect(damage.armorRear.rightTorso ?? 0).toBe(0);
     // Non-torso location passes through cleanly.
-    markLocationCatastrophicallyDestroyed(damage, destroyed, ammoBins, "head");
+    markLocationCatastrophicallyDestroyed(def, damage, destroyed, ammoBins, "head");
     expect(damage.armor.head).toBe(0);
     // expect(damage.armorRear.head ?? 0).toBe(0);  // adopted TorsoLocationValue. cannot happen
   });
@@ -1085,7 +1090,7 @@ describe("blow-off and cockpit kill: salvage-friendly slot preservation", () => 
     };
     const destroyed = freshFlags(def);
     const ammoBins = loadAmmoBins(def);
-    const flagsBefore = destroyed.leftArm.slice();
+    const flagsBefore = destroyed.leftArm;
 
     const res = resolveCriticalHits({
       rng: detRoll(12),
@@ -1115,7 +1120,7 @@ describe("blow-off and cockpit kill: salvage-friendly slot preservation", () => 
       internalStructure: { ...def.internalStructure, rightLeg: 1 },
     };
     const destroyed = freshFlags(def);
-    const flagsBefore = destroyed.rightLeg.slice();
+    const flagsBefore = destroyed.rightLeg;
 
     const res = resolveCriticalHits({
       rng: detRoll(12),
@@ -1140,7 +1145,7 @@ describe("blow-off and cockpit kill: salvage-friendly slot preservation", () => 
       internalStructure: { ...def.internalStructure },
     };
     const destroyed = freshFlags(def);
-    const flagsBefore = destroyed.head.slice();
+    const flagsBefore = destroyed.head;
     const ammoBins = loadAmmoBins(def);
 
     // Drive a hit slot that's the cockpit. HBK-4G head slot 2 = cockpit.
@@ -1168,9 +1173,7 @@ describe("blow-off and cockpit kill: salvage-friendly slot preservation", () => 
     // of the hit. Per salvage design the cockpit-driven kill leaves
     // head components (sensors, life support) readable for salvage
     // readers — no all-true wipe.
-    const expected = flagsBefore.slice();
-    expected[cockpitSlot] = true;
-    expect(res.critSlotsDestroyed.head).toEqual(expected);
+    expect(res.critSlotsDestroyed.head).toBe(flagsBefore | (1 << cockpitSlot));
   });
 
   it("cascade runDetermining against an IS=0 source transfers inward (TW p.124)", () => {
@@ -1187,7 +1190,7 @@ describe("blow-off and cockpit kill: salvage-friendly slot preservation", () => 
     const destroyed = freshFlags(def);
     const ammoBins = loadAmmoBins(def);
     // Confirm flags are intact (no all-true)
-    expect(destroyed.rightArm.some((f) => f === true)).toBe(false);
+    expect(destroyed.rightArm).toBe(0);
 
     // Det 8 ("1 hit"). Without the IS gate the slot-picker would land
     // on a rightArm weapon slot. With the gate, the cascade sees the
@@ -1226,10 +1229,10 @@ describe("ammo-explosion casualty: catastrophic mark", () => {
     expect(app.newlyDestroyed).toContain("rightTorso");
 
     for (const lost of app.newlyDestroyed) {
-      markLocationCatastrophicallyDestroyed(damage, destroyed, ammoBins, lost);
+      markLocationCatastrophicallyDestroyed(def, damage, destroyed, ammoBins, lost);
     }
 
-    expect(destroyed.rightTorso.every((f) => f === true)).toBe(true);
+    expect(destroyed.rightTorso).toBe((1 << def.critSlots.rightTorso.length) - 1);
     expect(damage.armorRear.rightTorso ?? 0).toBe(0);
     const rtBins = Object.keys(ammoBins).filter((k) => k.startsWith("rightTorso:"));
     for (const k of rtBins) expect(ammoBins[k]).toBeUndefined();
@@ -1251,7 +1254,7 @@ describe("ammo-explosion casualty: catastrophic mark", () => {
     const destroyed = freshFlags(def);
     const ammoBins = loadAmmoBins(def);
     // Pre-mark RT as fully destroyed (catastrophic mark already applied).
-    markLocationCatastrophicallyDestroyed(damage, destroyed, ammoBins, "rightTorso");
+    markLocationCatastrophicallyDestroyed(def, damage, destroyed, ammoBins, "rightTorso");
 
     // Trigger a fresh cascade roll against the destroyed RT. With a
     // determining roll of 8 ("1 hit"), the slot-picker would normally
@@ -1295,7 +1298,7 @@ describe("ammo-explosion casualty: catastrophic mark", () => {
     expect(app.newlyDestroyed).toContain("centerTorso");
 
     for (const lost of app.newlyDestroyed) {
-      markLocationCatastrophicallyDestroyed(damage, destroyed, ammoBins, lost);
+      markLocationCatastrophicallyDestroyed(def, damage, destroyed, ammoBins, lost);
     }
 
     const totalEngineSlots = def.critSlots.centerTorso.filter(
@@ -1399,5 +1402,46 @@ describe("crit damage merge: ammo explosion survives resolveAllAttacks", () => {
     const after = requireUnit(state, "tgt");
     expect(after.damage.internalStructure.rightArm).toBeLessThan(isBefore.rightArm!);
     expect(after.pilotHits - pilotBefore).toBe(2);
+  });
+});
+
+describe("crit slot table bitmask", () => {
+  const def = mechDef("HBK-4G")!;
+
+  it("starts empty with one entry per location", () => {
+    const t = emptyCritTable(def);
+    expect(Object.keys(t).sort()).toEqual(Object.keys(def.critSlots).sort());
+    expect(Object.values(t).every((m) => m === 0)).toBe(true);
+    expect(anySlotDestroyed(t, "head")).toBe(false);
+  });
+
+  it("sets and reads 0-based slots, including the last of twelve", () => {
+    const t = emptyCritTable(def);
+    setSlotDestroyed(t, "leftTorso", 0);
+    setSlotDestroyed(t, "leftTorso", MAX_CRIT_SLOTS - 1);
+    expect(isSlotDestroyed(t, "leftTorso", 0)).toBe(true);
+    expect(isSlotDestroyed(t, "leftTorso", 1)).toBe(false);
+    expect(isSlotDestroyed(t, "leftTorso", MAX_CRIT_SLOTS - 1)).toBe(true);
+    expect(destroyedSlots(t, "leftTorso")).toEqual([0, MAX_CRIT_SLOTS - 1]);
+    expect(isSlotDestroyed(t, "rightTorso", 0)).toBe(false);
+  });
+
+  it("destroys exactly the slots a location has", () => {
+    const t = emptyCritTable(def);
+    destroyAllSlots(t, "head", def.critSlots.head.length);
+    expect(destroyedSlots(t, "head")).toEqual(def.critSlots.head.map((_, i) => i));
+    destroyAllSlots(t, "leftArm", MAX_CRIT_SLOTS);
+    expect(t.leftArm).toBe(0b111111111111);
+  });
+
+  it("clones independently and merges slot-wise", () => {
+    const a = emptyCritTable(def);
+    setSlotDestroyed(a, "head", 1);
+    const b = cloneCritTable(a);
+    setSlotDestroyed(b, "head", 2);
+    expect(destroyedSlots(a, "head")).toEqual([1]);
+    mergeCritTable(a, b);
+    expect(destroyedSlots(a, "head")).toEqual([1, 2]);
+    expect(destroyedSlots(b, "head")).toEqual([1, 2]);
   });
 });

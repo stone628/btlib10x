@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { UnitDamageState } from "../src";
 import { D2D6_IMPOSSIBLE } from "../src/core/dice";
-import { LOCATIONS, type Location, type TerrainType } from "../src/core/types";
+import type { TerrainType } from "../src/core/types";
 import { mechDef, mechDefFor } from "../src/data/index";
-import { countDestroyedEngine } from "../src/rules/critical";
+import { collectAmmoBins } from "../src/rules/ammo";
+import { countDestroyedEngine, emptyCritTable, setSlotDestroyed } from "../src/rules/critical";
 import type { BattleState, GameEvent, UnitInit } from "../src/rules/game";
 import {
   advancePhase,
@@ -208,7 +209,7 @@ describe("heatDissipation / countDestroyedEngineSlots", () => {
     const def = mechDefFor(unit);
     const destroyed = {
       ...unit.critSlotsDestroyed,
-      centerTorso: [true, ...unit.critSlotsDestroyed.centerTorso.slice(1)],
+      centerTorso: unit.critSlotsDestroyed.centerTorso | 0b1,
     };
     expect(heatDissipation(def, unit.damage, destroyed)).toBe(13);
     expect(countDestroyedEngine(def, unit.damage, destroyed)).toBe(1);
@@ -259,9 +260,7 @@ describe("heatDissipation: engine sink capacity + double heat sinks", () => {
       armorRear: { ...def.armorRear },
       internalStructure: { ...def.internalStructure },
     };
-    const destroyed = Object.fromEntries(
-      LOCATIONS.map((l) => [l, def.critSlots[l].map(() => false)]),
-    ) as Record<Location, boolean[]>;
+    const destroyed = emptyCritTable(def);
     expect(heatDissipation(def, damage, destroyed)).toBe(expected);
   });
 
@@ -272,12 +271,10 @@ describe("heatDissipation: engine sink capacity + double heat sinks", () => {
       armorRear: { ...def.armorRear },
       internalStructure: { ...def.internalStructure },
     };
-    const destroyed = Object.fromEntries(
-      LOCATIONS.map((l) => [l, def.critSlots[l].map(() => false)]),
-    ) as Record<Location, boolean[]>;
+    const destroyed = emptyCritTable(def);
     // One Clan DHS device = 2 crit slots in a run; destroy one slot of the
     // left-leg run [5,6].
-    destroyed.leftLeg[4] = true;
+    setSlotDestroyed(destroyed, "leftLeg", 4);
     expect(heatDissipation(def, damage, destroyed)).toBe(38);
   });
 });
@@ -301,8 +298,8 @@ describe("largestAmmoBin", () => {
     const unit = requireUnit(state, "bzk");
     const def = mechDefFor(unit);
     // BZK-F3 mounts two gauss ammo bins in the center torso.
-    expect(unit.ammoBins["centerTorso:11"]?.shots).toBe(8);
-    expect(unit.ammoBins["centerTorso:12"]?.shots).toBe(8);
+    expect(unit.ammoBins["centerTorso:11"]).toBe(8);
+    expect(unit.ammoBins["centerTorso:12"]).toBe(8);
     expect(largestAmmoBin(def, unit.ammoBins, scriptedRng(6))).toBeNull();
   });
 
@@ -322,10 +319,13 @@ describe("largestAmmoBin", () => {
     const unit = requireUnit(state, "wvr");
     const def = mechDefFor(unit);
     // Drain every SRM-6 ammo bin down to 1 shot.
-    for (const [id, bin] of Object.entries(unit.ammoBins)) {
-      if (bin.weapon === "SRM 6") {
-        unit.ammoBins[id] = { ...bin, shots: 1 };
-      }
+    const srm6 = new Set(
+      collectAmmoBins(def)
+        .filter((b) => b.weapon === "SRM 6")
+        .map((b) => b.id),
+    );
+    for (const id of Object.keys(unit.ammoBins)) {
+      if (srm6.has(id)) unit.ammoBins[id] = 1;
     }
     const bin = largestAmmoBin(def, unit.ammoBins, scriptedRng(6));
     expect(bin).not.toBeNull();
@@ -485,7 +485,7 @@ describe("game integration: engine crit heat", () => {
     const def = mechDefFor(hbk);
     hbk.critSlotsDestroyed = {
       ...hbk.critSlotsDestroyed,
-      centerTorso: [true, true, ...hbk.critSlotsDestroyed.centerTorso.slice(2)],
+      centerTorso: hbk.critSlotsDestroyed.centerTorso | 0b11,
     };
     hbk.heat = 0;
     startAttackTurn(state);
@@ -829,7 +829,7 @@ describe("game integration: heat ammo explosion", () => {
     // The exploded bin empties (its 5 shots x 20 = 100 damage), not the
     // mount's full 10-shot magazine. The 100-point blast kills the 50-ton
     // HBK outright, so the sibling bin's location is stripped away.
-    expect(hbk.ammoBins["leftTorso:1"]?.shots).toBe(0);
+    expect(hbk.ammoBins["leftTorso:1"]).toBe(0);
     const blast = events.find(
       (e): e is Extract<GameEvent, { kind: "ammoExplosionCheck" }> =>
         e.kind === "ammoExplosionCheck" && e.unitId === "hbk" && !e.avoided,
@@ -871,8 +871,8 @@ describe("game integration: heat ammo explosion", () => {
       events.some((e) => e.kind === "ammoExplosionCheck" && e.unitId === "bzk" && !e.avoided),
     ).toBe(false);
     // Gauss ammo bins survive intact.
-    expect(bzk.ammoBins["centerTorso:11"]?.shots).toBe(8);
-    expect(bzk.ammoBins["centerTorso:12"]?.shots).toBe(8);
+    expect(bzk.ammoBins["centerTorso:11"]).toBe(8);
+    expect(bzk.ammoBins["centerTorso:12"]).toBe(8);
   });
 });
 
@@ -884,7 +884,7 @@ describe("Bug A: engine crit heat skipped for shut-down units (TW p.160)", () =>
     const hbk = requireUnit(state, "hbk");
     hbk.critSlotsDestroyed = {
       ...hbk.critSlotsDestroyed,
-      centerTorso: [true, true, ...hbk.critSlotsDestroyed.centerTorso.slice(2)],
+      centerTorso: hbk.critSlotsDestroyed.centerTorso | 0b11,
     };
     hbk.heat = 18;
     hbk.shutdown = "heat";
@@ -900,7 +900,7 @@ describe("Bug A: engine crit heat skipped for shut-down units (TW p.160)", () =>
     const hbk = requireUnit(state, "hbk");
     hbk.critSlotsDestroyed = {
       ...hbk.critSlotsDestroyed,
-      centerTorso: [true, true, ...hbk.critSlotsDestroyed.centerTorso.slice(2)],
+      centerTorso: hbk.critSlotsDestroyed.centerTorso | 0b11,
     };
     hbk.heat = 5;
     hbk.shutdown = "manual";

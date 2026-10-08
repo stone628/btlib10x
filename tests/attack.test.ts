@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { Location } from "../src/core/types";
 import { LOCATIONS } from "../src/core/types";
 import { mechDef } from "../src/data/index";
 import { loadAmmoBins } from "../src/rules/ammo";
 import { resolveWeaponAttack } from "../src/rules/attack";
+import { emptyCritTable } from "../src/rules/critical";
 import type { LocationValue, TorsoLocationValue, UnitDamageState } from "../src/rules/damage";
 import { scriptedRng } from "./helpers";
 
@@ -18,11 +18,7 @@ function freshState(hp = 10): UnitDamageState {
 }
 
 function freshFlags(def = mechDef("HBK-4G")!) {
-  const out: Record<Location, boolean[]> = {} as Record<Location, boolean[]>;
-  for (const loc of Object.keys(def.critSlots) as Location[]) {
-    out[loc] = new Array(def.critSlots[loc].length).fill(false);
-  }
-  return out;
+  return emptyCritTable(def);
 }
 
 /** Stationary gunnery-4 shooter at range 1 vs stationary target in the clear: TN 4. */

@@ -1,12 +1,11 @@
 /**
  * Per-bin ammunition depletion and per-unit depletion policies.
  *
- * Ammo is tracked per crit slot ("bin") as a single `AmmoBinState` object per
- * bin, keyed by `AmmoBinId` = `${location}:${slotIndex}` in
- * `UnitState.ammoBins`. Each state object carries the bin's static identity
- * (location, slot, linked weapon) together with its live remaining `shots`, so
- * no separate identity walk (`collectAmmoBins`) is needed to interpret a bin
- * map. Per-weapon totals (`ammoWeaponTotals`, `pooledShotsLeft`,
+ * Ammo is tracked per crit slot ("bin") as its remaining shot count, keyed by
+ * `AmmoBinId` = `${location}:${slotIndex}` in `UnitState.ammoBins`. A bin's
+ * static identity (location, slot, linked weapon) comes from the mech def via
+ * `collectAmmoBins`; a missing key means the bin was stripped along with its
+ * location. Per-weapon totals (`ammoWeaponTotals`, `pooledShotsLeft`,
  * `pooledTotalsByWeaponName`) are derived on demand and never stored.
  *
  * A unit's `ammoPolicy` orders the bins it draws a shot from, chosen between
@@ -39,14 +38,8 @@ export interface AmmoBin extends AmmoNameHolder {
   readonly weaponIndex: number;
 }
 
-/** Live ammo state of one bin: static identity plus remaining shots. */
-export interface AmmoBinState extends AmmoBin {
-  /** Remaining shots in this bin. */
-  shots: number;
-}
-
-/** Unit-level ammo state: every bin keyed by its `AmmoBinId`. */
-export type AmmoBins = Record<AmmoBinId, AmmoBinState>;
+/** Unit-level ammo state: remaining shots per bin, keyed by `AmmoBinId`. */
+export type AmmoBins = Record<AmmoBinId, number>;
 
 export const AMMO_POLICIES: AmmoPolicy[] = ["exposed", "core", "spread", "leastFirst"] as const;
 
@@ -114,7 +107,7 @@ export function pooledShotsLeft(
 ): number {
   let total = 0;
   for (const bin of binsForWeaponName(def, weaponName)) {
-    total += bins[bin.id]?.shots ?? 0;
+    total += bins[bin.id] ?? 0;
   }
   return total;
 }
@@ -127,7 +120,7 @@ export function pooledTotalsByWeaponName(
 ): Readonly<Record<string, number>> {
   const totals: Record<string, number> = {};
   for (const bin of collectAmmoBins(def)) {
-    totals[bin.weapon] = (totals[bin.weapon] ?? 0) + (bins[bin.id]?.shots ?? 0);
+    totals[bin.weapon] = (totals[bin.weapon] ?? 0) + (bins[bin.id] ?? 0);
   }
   return totals;
 }
@@ -142,7 +135,7 @@ export function loadAmmoBins(def: ResolvedMechDef): AmmoBins {
   const loaded = loadAmmoCounts(def);
   const bins: AmmoBins = {};
   for (const bin of collectAmmoBins(def)) {
-    bins[bin.id] = { ...bin, shots: loaded[bin.id] ?? 0 };
+    bins[bin.id] = loaded[bin.id] ?? 0;
   }
   return bins;
 }
@@ -184,7 +177,7 @@ export function ammoWeaponTotals(
 ): Record<number, number> {
   const totals: Record<number, number> = {};
   for (const bin of collectAmmoBins(def)) {
-    const n = bins[bin.id]?.shots ?? 0;
+    const n = bins[bin.id] ?? 0;
     if (n > 0) totals[bin.weaponIndex] = (totals[bin.weaponIndex] ?? 0) + n;
   }
   return totals;
@@ -259,7 +252,7 @@ export function drawOrderBins(
   rng: Rng,
 ): AmmoBin[] {
   const key = (b: AmmoBin): number => {
-    const shots = state[b.id]?.shots ?? 0;
+    const shots = state[b.id] ?? 0;
     if (policy === "spread") return -shots;
     if (policy === "leastFirst") return shots;
     return policy === "exposed" ? (EXPOSED_RANK[b.location] ?? 0) : (CORE_RANK[b.location] ?? 0);
@@ -291,14 +284,13 @@ function drainBins(
   policy: AmmoPolicy,
   rng: Rng,
 ): AmmoBins {
-  const next: AmmoBins = {};
-  for (const bin of Object.values(bins)) next[bin.id] = { ...bin };
+  const next: AmmoBins = { ...bins };
   let remaining = needed;
   while (remaining > 0) {
-    const candidates = pool.filter((b) => (next[b.id]?.shots ?? 0) > 0);
+    const candidates = pool.filter((b) => (next[b.id] ?? 0) > 0);
     if (candidates.length === 0) break;
     const target = drawOrderBins(candidates, next, policy, rng)[0]!;
-    next[target.id]!.shots -= 1;
+    next[target.id]! -= 1;
     remaining -= 1;
   }
   return next;

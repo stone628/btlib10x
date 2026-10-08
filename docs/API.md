@@ -615,10 +615,11 @@ Bin identity + depletion helpers for custom UIs:
 
 - `AmmoPolicy` (`"exposed" | "core" | "spread" | "leastFirst"`)
 - `UnitPolicy` (`{ ammoPolicy: AmmoPolicy }`, per-unit settings fixed at setup; `DEFAULT_UNIT_POLICY` = `{ ammoPolicy: "exposed" }`, filled by `buildUnitInit`)
-- `AmmoBins` — `Record<AmmoBinId, AmmoBinState>` (the per-bin map type)
+- `AmmoBins` — `Record<AmmoBinId, number>` (remaining shots per bin; identity comes from `collectAmmoBins`; a missing key means the bin was stripped)
 - `ammoBinId(loc, slotIndex): AmmoBinId` — `"${loc}:${slotIndex}"`
 - `collectAmmoBins(def): AmmoBin[]` — every bin in the resolved def
 - `loadAmmoBins(def): AmmoBins` — initial shot counts
+- `CritMask` — `Record<Location, number>`: destroyed crit slots as one bitmask per location (bit `i` = 0-based slot `i`; slot counts come from the def). Helpers: `emptyCritTable(def)`, `isSlotDestroyed(table, loc, slot)`, `setSlotDestroyed(table, loc, slot)`, `destroyedSlots(table, loc)`, `cloneCritTable(table)`
 - `pooledTotalsByWeaponName(def, bins): Readonly<Record<string, number>>`
 
 The draw-order/consumption internals (`AMMO_POLICIES`, `isAmmoPolicy`,
@@ -746,9 +747,9 @@ interface UnitState {
   heat; heatPending;                  // scale value (last turn's end) + this turn's own heat
   position; facing;
   damage: UnitDamageState;            // updated as soon as damage lands
-  ammoBins: AmmoBins;                 // per ammo-bin object, keyed "location:slotIndex"
+  ammoBins: AmmoBins;                 // remaining shots per bin, keyed "location:slotIndex"
   jammedWeapons: number[];
-  critSlotsDestroyed: Record<Location, boolean[]>;
+  critSlotsDestroyed: CritMask;       // destroyed-slot bitmask per location (bit i = 0-based slot i)
   destroyedWeapons: number[];
   blownOffLimbs: SeveredLimb[]; club: HeldClub | null;   // severed limbs / held club
   ammoPolicy: AmmoPolicy;
