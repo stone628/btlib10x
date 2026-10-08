@@ -1,6 +1,7 @@
 import { createBattle, mapDefFor } from "btlib10x";
 import { buildLinesChunk, buildLinesChunkWith, type Chunk } from "./chunk";
 import { i18n } from "./i18n";
+import { startReplay } from "./replay";
 import { createRng } from "./rng";
 import { drive, type Session, type SessionGameEvent } from "./session";
 import { battleSheet, sheetIdLine, sheetLinesShort } from "./session.common";
@@ -23,6 +24,7 @@ export function overRematch(s: Session): SessionGameEvent[] {
   s.attack = null;
   s.over = null;
   s.battle = createBattle(mapDefFor(s.setup), s.setup.roster);
+  startReplay(s);
   return drive(s);
 }
 

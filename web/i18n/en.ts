@@ -180,6 +180,8 @@ export const en = {
   "ok.modeDeclaredVoluntary": "{id} declares {mode} (committed by 'done').",
   "banner.draw": "=== DRAW - NO UNITS REMAIN ===",
   "banner.win": "=== TEAM {team} WINS ===",
+  "replay.summary": "you can replay this match with this data",
+  "replay.help": "keep the records below; each line is one step of the match.",
 
   // setup/session errors
   "err.unknownMap": "Unknown map {name}; available: {list}",

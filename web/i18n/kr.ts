@@ -174,6 +174,8 @@ export const kr: Catalog = {
   "ok.rematchDone": "=== 재경기 시작 ===",
   "ok.modeDeclaredVoluntary": "{id}, {mode} 선언 ('done'으로 확정).",
   "banner.draw": "=== 무승부 - 남은 유닛 없음 ===",
+  "replay.summary": "이 데이터로 이 경기를 다시 재생할 수 있습니다",
+  "replay.help": "아래 기록을 보관하세요. 한 줄이 경기의 한 단계입니다.",
   "banner.win": "=== 팀 {team} 승리 ===",
 
   // setup/session errors

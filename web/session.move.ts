@@ -46,6 +46,7 @@ import {
   createBoardRenderUnit,
   createEjectedBoardRenderUnits,
 } from "./render";
+import { recordMove } from "./replay";
 import { commitAtomic, drive, requireBattle, type Session, type SessionGameEvent } from "./session";
 import { actorOrderLines, clubHexKeys } from "./session.common";
 
@@ -599,6 +600,7 @@ export function commitMovement(s: Session): SessionGameEvent[] {
     const { battle, context } = requireBattleAndContext(s);
     const unitId = context.actorId;
     const unit = requireUnit(battle, unitId);
+    recordMove(s, context, unit);
     const collected: GameEvent[] = [];
     if (context.moveMode === "shutdown") {
       voluntaryShutdown(battle, unitId, collected);

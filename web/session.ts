@@ -10,6 +10,7 @@ import type {
 import { gameLoop, isUnitRemoved } from "btlib10x";
 import type { LocaleId } from "./i18n/index";
 import { i18n, setI18nDefaultLocale } from "./i18n/index";
+import { finishReplay, type ReplayLog } from "./replay";
 import { createRng } from "./rng";
 import {
   type AttackContext,
@@ -56,6 +57,8 @@ export interface Session {
   /** Populated when `drive()` detects victory, cleared on next battle. */
   over: OverContext | null;
   battle: BattleState | null;
+  /** Replay data of the battle in progress (or just finished); see `web/replay.ts`. */
+  replay: ReplayLog | null;
 }
 
 export function newSession(seed: number): Session {
@@ -67,6 +70,7 @@ export function newSession(seed: number): Session {
     attack: null,
     over: null,
     battle: null,
+    replay: null,
   };
 }
 
@@ -121,6 +125,10 @@ export function resetSession(s: Session): void {
   s.attack = null;
   s.over = null;
   s.battle = null;
+  s.replay = null;
+  // A fresh setup starts from a fresh generator, so the next battle is
+  // reproducible from its seed (and recordable as a replay).
+  s.rng = createRng(s.setup.seed);
 }
 
 export function requireBattle(s: Session): BattleState {
@@ -145,7 +153,9 @@ export function setConfigLocale(locale: LocaleId) {
   setI18nDefaultLocale(locale);
 }
 
+/** Set the dice seed. Setup only: a battle in progress keeps its generator. */
 export function setSeed(s: Session, n: number): void {
+  if (s.state !== "setup") throw new Error(i18n("err.alreadyStarted"));
   if (!Number.isInteger(n)) throw new Error(i18n("err.seedInteger"));
   s.setup.seed = n >>> 0;
   s.rng = createRng(s.setup.seed);
@@ -195,9 +205,11 @@ export function commitAtomic(s: Session, fn: () => void): void {
   const battleSnapshot = structuredClone(battle);
   const rngSnapshot = s.rng.snapshot();
   const sessionSnapshot = snapshotSessionCommit(s);
+  const replayLength = s.replay?.lines.length ?? 0;
   try {
     fn();
   } catch (e) {
+    if (s.replay !== null) s.replay.lines.length = replayLength;
     s.battle = battleSnapshot;
     s.rng.load(rngSnapshot);
     restoreSessionCommit(s, sessionSnapshot);
@@ -304,6 +316,7 @@ export function drive(s: Session): SessionGameEvent[] {
     s.state = "over";
     s.over = { victory };
     clearBattleContexts(s);
+    finishReplay(s, victory);
     return [...collected, { kind: "sessionOver" }];
   }
   s.state = "battle";

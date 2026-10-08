@@ -56,6 +56,7 @@ import {
 } from "./chunk";
 import { i18n, type MessageKey } from "./i18n";
 import { SHORT_LOC } from "./misc";
+import { recordAttack } from "./replay";
 import { commitAtomic, drive, requireBattle, type Session, type SessionGameEvent } from "./session";
 import { actorOrderLines } from "./session.common";
 
@@ -243,6 +244,7 @@ export function commitAttack(s: Session): SessionGameEvent[] {
     !context.dropClub
   ) {
     commitAtomic(s, () => {
+      recordAttack(s, context, unitId);
       actor.passedAttacks = true;
       clearContext(s);
       events.push(
@@ -256,6 +258,7 @@ export function commitAttack(s: Session): SessionGameEvent[] {
     });
   } else {
     commitAtomic(s, () => {
+      recordAttack(s, context, unitId);
       const collected: GameEvent[] = [];
       if (context.pickupDecl !== null && context.pickupArgs !== null) {
         declarePickup(battle, unitId, context.pickupArgs, collected);

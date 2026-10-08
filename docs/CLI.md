@@ -30,7 +30,7 @@ Examples:
   rows 1..height), matching printed mapsheet labels and map JSON. Converted to
   engine coords internally.
 - Dice flow through a mulberry32-backed `{ d6() }` Rng, default seed 42;
-  `seed <n>` changes it at any time. Same seed ⇒ identical battle replay.
+  `seed <n>` changes it, in setup only. Same seed ⇒ identical battle replay.
 - Errors print as `error: <engine message>`. Failed commits leave state
   unchanged (the session rolls back via a serializable snapshot; buffers stay
   editable).
@@ -52,7 +52,6 @@ Examples:
 | `info map` | list available maps |
 | `info weapon [name]` | list weapons, or show one weapon's stats |
 | `table [cluster\|hitloc\|crit\|heat]` | print a reference table (no argument lists them) |
-| `seed <n>` | set the dice seed |
 | `info map <name>` | map info: width×height, terrain types and counts, elevation counts, ASCII map with terrain glyphs |
 | `reset` | wipe everything back to empty setup |
 | `ver` | show the built library version (`YYMMDD-<git hash>` stamp of the bundled commit) |
@@ -65,6 +64,7 @@ Examples:
 | `map <name>` | load a bundled map as terrain (`beginner`, `quickstart`, `test`, `testground`) |
 | `add <id> <model> <col> <row> [facing]` | place unit (team auto-assigned to smallest team; default gunnery `4`, piloting `5`, facing `n`) |
 | `set <id> <prop> <value>` | edit a property on a unit already on the roster (`model`, `team`, `col`, `row`, `facing`, `gunnery`, `piloting`, `pilotHitMax` (integer >= 1, default 6), `ammoPolicy` (`exposed` default, `core`, `spread`, `least-first`; case-insensitive, hyphens optional); property names are case-insensitive; cannot modify `id`) |
+| `seed <n>` | set the dice seed (setup only; a battle in progress keeps its generator) |
 | `rm <id>` | remove placed unit |
 | `status` | setup summary: 'Mechs grouped by team, selected map name |
 | `start` | ≥2 units on ≥2 teams required; creates battle, rolls initiative → `turn` |
@@ -118,6 +118,15 @@ pass), plus `cancel`, `sheet`, `status`, `heat` and the globals.
 | `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [J](jam) / [-](destroyed) / per-bin ammo `(n left)` markers); without id: brief unit list (id, model, position+facing) grouped by team |
 | `rematch` | new battle, same roster + terrain + seed |
 | globals | `board`, `log` remain available; `reset` returns to empty setup |
+
+**Replay data.** While a battle is played the session records it in the compact
+format of `docs/REPLAY.md` (`web/replay.ts`: header on `start`/`rematch`, one `M`/`A`
+line per committed activation, rejected commands leave no trace). When the battle
+ends, the victory banner is followed by a collapsed block *"you can replay this
+match with this data"* holding the records, one per line. `rematch` starts a new
+log; `reset` clears it and re-creates the dice generator from the seed. A match
+that cannot be reproduced (more than 36 units, a team above 9, a unit id with
+`:` `;` `,` or whitespace, a replaced dice generator) shows no block.
 
 ## Status — BattleTech Total Warfare rule coverage
 
