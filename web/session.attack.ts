@@ -136,7 +136,7 @@ export function queueWeaponAttacks(s: Session, targetId: string, weapons: number
   const { battle, context } = requireBattleAndContext(s);
   const unit = requireUnit(battle, context.actorId);
   if (targetId === unit.id) throw new Error(i18n("err.selfTarget"));
-  const target = battle.units[targetId];
+  const target = Object.hasOwn(battle.units, targetId) ? battle.units[targetId] : undefined;
   if (!target) throw new Error(i18n("err.unknownUnitId", { id: targetId }));
   if (target.team === unit.team) throw new Error(i18n("err.selfTarget"));
   if (isUnitRemoved(target)) throw new Error(i18n("err.targetRemoved", { id: target.id }));
@@ -230,6 +230,10 @@ export function cancelAttack(s: Session): void {
   const { context } = requireBattleAndContext(s);
   context.weaponDecls = [];
   context.physicalDecls = [];
+  context.pickupDecl = null;
+  context.pickupArgs = null;
+  context.dropClub = false;
+  context.fireCandidate = null;
 }
 
 export function commitAttack(s: Session): SessionGameEvent[] {
@@ -307,7 +311,7 @@ export function queuePhysicalAttack(
   const { battle, context } = requireBattleAndContext(s);
   const unit = requireUnit(battle, context.actorId);
   if (targetId === unit.id) throw new Error(i18n("err.selfTarget"));
-  const target = battle.units[targetId];
+  const target = Object.hasOwn(battle.units, targetId) ? battle.units[targetId] : undefined;
   if (!target) throw new Error(i18n("err.unknownUnitId", { id: targetId }));
   if (target.team === unit.team) throw new Error(i18n("err.selfTarget"));
   if (isUnitRemoved(target)) throw new Error(i18n("err.targetRemoved", { id: target.id }));
@@ -543,13 +547,16 @@ export function physicalResolutionLines(r: PhysicalResolution): string[] {
       target: r.targetId,
     }),
   );
-  lines.push(
-    i18n("res.physical.toHit", {
-      total: r.toHit,
-      roll: r.roll === null ? "—" : r.roll,
-      verdict,
-    }),
-  );
+  const reasonFollows =
+    r.missReason === "displaced" ||
+    r.missReason === "attackerDown" ||
+    r.missReason === "targetDown";
+  if (r.roll !== null) {
+    lines.push(i18n("res.physical.toHit", { total: r.toHit, roll: r.roll, verdict }));
+  } else if (!reasonFollows) {
+    // No roll was made: the verdict alone, not a fake target number.
+    lines.push(`  ${verdict}`);
+  }
 
   if (r.hit && r.damageToTarget.length > 0) {
     const dmgStr = r.damageToTarget.map((g) => `${SHORT_LOC[g.location]}(${g.damage})`).join(" ");
@@ -700,6 +707,11 @@ const ARC_LABEL: Readonly<Record<Arc, MessageKey>> = {
   rightSide: "fireSuggestion.arc.rightSide",
 };
 
+/** Player-facing torso twist word (front/left/right) for an arc. */
+export function twistLabel(twist: Arc): string {
+  return i18n(TWIST_LABEL[twist]);
+}
+
 const TWIST_LABEL: Readonly<Record<Arc, MessageKey>> = {
   front: "fireSuggestion.twist.front",
   leftSide: "fireSuggestion.twist.left",
@@ -725,9 +737,7 @@ function fireWeaponTable(weapons: readonly FireWeapon[]): Chunk {
     w.minRangePenalty !== undefined
       ? `[${BRACKET_LABEL[w.rangeBracket]}!]`
       : `[${BRACKET_LABEL[w.rangeBracket]}]`,
-    w.minRangePenalty !== undefined
-      ? `${w.tn - w.minRangePenalty}+${w.minRangePenalty}`
-      : String(w.tn),
+    w.minRangePenalty !== undefined ? `${w.tn} (min +${w.minRangePenalty})` : String(w.tn),
     String(w.heat),
     w.cluster !== undefined
       ? `${w.expectedDamage} (${i18n("fireSuggestion.cluster", {
@@ -782,7 +792,7 @@ export function fireSuggestionChunks(s: Session): Chunk[] {
   ];
   if (twist !== null) {
     chunks.push(
-      buildLinesChunkWith("hint", i18n("fireSuggestion.twist", { dir: i18n(TWIST_LABEL[twist]) })),
+      buildLinesChunkWith("hint", i18n("fireSuggestion.twist", { dir: twistLabel(twist) })),
     );
   }
   if (sugg.targets.length === 0) {
@@ -882,7 +892,12 @@ export function attackStatusChunk(s: Session): Chunk {
   lines.push(...actorOrderLines(s), i18n("attackStatus.header"));
   const decls = context.weaponDecls ?? [];
   const physical = context.physicalDecls ?? [];
-  if (decls.length === 0 && physical.length === 0) {
+  if (
+    decls.length === 0 &&
+    physical.length === 0 &&
+    context.pickupDecl === null &&
+    !context.dropClub
+  ) {
     lines.push(i18n("attackStatus.none"));
   } else {
     // Engine guarantee: `actor.model` was validated by `createBattle`.
@@ -1130,7 +1145,7 @@ export function formatCritEffect(eff: CriticalEffect): string {
         slot: String(eff.slotIndex),
       });
     case "noEffect":
-      return i18n("res.critNoEffect", { loc: "reroll" });
+      return i18n("res.critNoEffect", { loc: "" });
   }
   return "";
 }

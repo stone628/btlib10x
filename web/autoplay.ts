@@ -19,6 +19,7 @@ import {
   type UnitState,
   weaponCanFireIntoArc,
 } from "btlib10x";
+import { isGyroDestroyed } from "./misc";
 import type { Session, SessionState } from "./session";
 // import type * as S from "./session";
 
@@ -37,10 +38,11 @@ const SCRIPT_SETUP: ReadonlyArray<{ id: string; command: string }> = [
 ];
 
 /** Queued commands to issue before falling back to state-based logic. */
-let currSession: Session | null = null;
 let nextCommandQueue: string[] = [];
 let currApp: SessionState | null = null;
 let currBattlePhase: string | null = null;
+/** Setup is tried once per autoplay run; a failed `start` ends the demo. */
+let setupAttempted = false;
 let helpShown: Record<string, boolean> = {};
 let noWeapon: Record<string, boolean> = {};
 let unitForwarded: Record<string, boolean> = {};
@@ -58,25 +60,22 @@ function returnFirstQueuedCommand(): string {
   return nextCommandQueue.shift()!;
 }
 
-/** Reset transient autoplay memory; called when the user re-enters setup. */
+/**
+ * Reset all transient autoplay memory. Called on every autoplay start: reset
+ * and rematch mutate the same session object, so identity cannot signal a new
+ * game, and the heuristics are recomputed from live state anyway.
+ */
 export function resetAutoplayState(s: Session): void {
-  if (currSession !== s) {
-    currSession = s;
-    nextCommandQueue = [];
-    currApp = s.state;
-    currBattlePhase = null;
+  nextCommandQueue = [];
+  currApp = s.state;
+  currBattlePhase = null;
+  setupAttempted = false;
 
-    helpShown = {};
-    noWeapon = {};
-    unitForwarded = {};
-    pronestillThenEject = {};
-    faceEnemy = {};
-  } else {
-    if (currApp !== s.state) {
-      currApp = s.state;
-      currBattlePhase = null;
-    }
-  }
+  helpShown = {};
+  noWeapon = {};
+  unitForwarded = {};
+  pronestillThenEject = {};
+  faceEnemy = {};
 }
 
 /** Post-heat walk budget for the actor; 0 when heat/structure deny walking. */
@@ -194,6 +193,8 @@ export function nextAutoPlayCommand(s: Session): string | null {
   currApp = s.state;
 
   if (currApp === "setup") {
+    if (setupAttempted) return null;
+    setupAttempted = true;
     enusreHelpShown(currApp);
     if (s.setup.mapName === null) queueNextCommand("map test");
     for (const u of SCRIPT_SETUP) {
@@ -263,8 +264,9 @@ export function nextAutoPlayCommand(s: Session): string | null {
                 queueNextCommand("mode pronestill");
               }
               queueNextCommand("done");
-            } else if (!canAttemptStandUp(actor.damage)) {
-              // Both legs gone (or one leg + both arms): cannot stand, stay prone.
+            } else if (!canAttemptStandUp(actor.damage) || isGyroDestroyed(actor)) {
+              // Both legs gone (or one leg + both arms, or a destroyed gyro):
+              // cannot stand, stay prone.
               queueNextCommand("mode pronestill");
               queueNextCommand("done");
             } else if (destroyedLegs(actor.damage) === 1 && walkBudgetFor(actor) >= 1) {

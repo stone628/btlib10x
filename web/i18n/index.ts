@@ -10,7 +10,7 @@ export const LOCALES = { en, kr } as const satisfies Record<string, Catalog>;
 export type LocaleId = keyof typeof LOCALES;
 
 export function isLocale(value: string): value is LocaleId {
-  return value in LOCALES;
+  return Object.hasOwn(LOCALES, value);
 }
 
 export function localeList(): string {
@@ -36,9 +36,11 @@ export function i18nIn(
   const catalog: Partial<Catalog> = LOCALES[locale];
   let text = catalog[key] ?? en[key];
   if (params !== undefined) {
-    for (const [name, value] of Object.entries(params)) {
-      text = text.replaceAll(`{${name}}`, String(value));
-    }
+    // One pass, so a substituted value that itself contains `{name}` (typed by
+    // the player) is never substituted again.
+    text = text.replace(/\{(\w+)\}/g, (whole, name: string) =>
+      Object.hasOwn(params, name) ? String(params[name]) : whole,
+    );
   }
   return text;
 }

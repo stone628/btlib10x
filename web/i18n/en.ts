@@ -8,7 +8,7 @@ export const en = {
   "app.banner.title": "bt10x terminal v{version} - BattleTech Total Warfare rules subset",
   "app.banner.help": "type 'help' for commands.",
   "app.catalog.loading": "loading catalog…",
-  "app.catalog.failed": "catalog failed to load: {error}",
+  "app.catalog.failed": "catalog failed to load: {error} - reload the page to retry",
   "err.prefix": "error:",
 
   // per-state hints (multi-line)
@@ -59,7 +59,7 @@ export const en = {
   "cmd.sheetActing.arg.id": "unit id. omit to list all units grouped by team",
   "cmd.seed.help": "set the dice seed",
   "cmd.seed.arg.n": "integer seed. the same seed reproduces the same rolls",
-  "cmd.reset.help": "wipe everything back to empty setup",
+  "cmd.reset.help": "wipe everything back to empty setup (during a battle: reset !)",
   "cmd.ver.help": "show the built library version",
   "version.line": "bt10x {version}",
   "cmd.map.help": "load a bundled rulebook map ({names})",
@@ -109,11 +109,11 @@ export const en = {
     "front = untwisted, left/right = one hexside twist in that direction. cannot change once a fire command is queued",
   "cmd.fire.help": "queue one or more weapon attacks",
   "cmd.fire.arg.weaponIndex":
-    "1-based weapon number from the 'weapons' listing\nrepeat to declare several weapons at once",
+    "weapon number (# column of 'candidate', or 'sheet')\nrepeat to declare several weapons at once",
   "cmd.fire.arg.targetId": "enemy unit id. all declared weapons fire at this one target",
   "cmd.statusAttack.help": "queued attack declarations",
   "cmd.statusOver.help": "show victory result and final roster",
-  "cmd.cancelFire.help": "clear queued shots",
+  "cmd.cancelFire.help": "clear all queued declarations (shots, physical attacks, pickup, drop)",
   "cmd.doneFire.help": "declare attacks and resolve them",
   "cmd.rematch.help": "new battle with the same roster, terrain and seed",
   "cmd.heat.help": "show a unit's heat scale status (default: acting unit)",
@@ -133,7 +133,7 @@ export const en = {
     "queue a club attack against an adjacent enemy in the forward arc (TW p.145; requires a held club — see 'pickup')",
   "cmd.club.arg.targetId": "enemy unit id in the forward arc",
   "cmd.pickup.help":
-    "declare picking up a club from this hex (TW p.146): severed limb, dropped club, uprooted tree in woods, or girder from rubble. Exclusive — no attacks this turn; the club lands in the physical sub-pass",
+    "declare picking up a club from this hex (TW p.146): severed limb, dropped club, uprooted tree in woods, or girder from the rubble of a collapsed medium/heavy/hardened building. Exclusive — no attacks this turn; the club lands in the physical sub-pass",
   "cmd.pickup.arg.source":
     "club source: limb|tree|girder; optional token number when several clubs lie in the hex (default: the only token, else terrain source)",
   "cmd.drop.help":
@@ -148,6 +148,7 @@ export const en = {
   "autoPlay.started":
     "autoplay: building a demo battle and playing both sides; type any command to take over.",
   "autoPlay.done": "autoplay finished.",
+  "autoPlay.stuck": "autoplay: the same step keeps failing; stopped. you have the controls.",
 
   // command acknowledgements
   "ok.mapLoaded": "map {name}: {w}x{h}",
@@ -189,8 +190,8 @@ export const en = {
   "err.unknownWeapon": "Unknown weapon: {name}; available: {list}",
   "err.duplicateId": "Duplicate unit id: {id}",
   "err.badTeam": "team must be a non-negative integer",
-  "err.badGunnery": "gunnery must be an integer 0..7",
-  "err.badPiloting": "piloting must be an integer 0..7",
+  "err.badGunnery": "gunnery must be an integer 0..8",
+  "err.badPiloting": "piloting must be an integer 0..8",
   "err.badPilotHitMax": "pilotHitMax must be an integer >= 1",
   "err.cantSetId": "cannot modify 'id'; remove the unit and re-add instead",
   "err.unknownProp": "unknown property '{name}'; legal: {list}",
@@ -231,6 +232,14 @@ export const en = {
   "err.oneLegNoRun":
     "{id} has a destroyed leg and cannot run (TW p.122: walk 1 MP, no run). valid modes: {modes}",
   "mode.hint": "modes: {modes}",
+  "err.notInPhase": "'{name}' is not available in this phase (try 'help {name}' to read about it)",
+  "warn.idleMove":
+    "warning: no hex was entered, so the unit stays in place (movement heat still applies)",
+  "err.idPrefixClash":
+    "unit id '{id}' would look identical to '{other}' on the board (only the first 4 characters are drawn)",
+  "log.rangeCtx": "range {dist}",
+  "err.noJumpMP": "{id} has no jump MP. valid modes: {modes}",
+  "err.gyroNoStand": "{id} has a destroyed gyro and cannot stand up",
   "err.postureBudget": "{id} has no MP left for the posture change in this mode",
   "err.noMoveInShutdownMode":
     "movement is not available while the declared mode is shutdown/startup/eject",
@@ -247,17 +256,15 @@ export const en = {
   "err.place.noCandidate":
     "No movement candidate — declare a move mode first. valid modes: {modes}",
   "err.place.unreachable": "Hex ({col},{row}) is not reachable in the declared mode",
-  "err.place.facing":
-    "Hex ({col},{row}) is reachable but not while facing {facing} but facing {rfacing}",
-  "err.faceArg": "place expects an absolute facing ({facings})",
+  "err.place.facing": "Hex ({col},{row}) is reachable only facing {rfacing}, not {facing}",
+  "err.faceArg": "expected an absolute facing ({facings})",
   "err.needsActor": "Command requires an acting unit",
   "err.unknownUnitId": "Unknown unit id: {id}",
   "err.selfTarget": "Target must belong to another team",
   "err.targetRemoved": "Target {id} is removed from play",
   "err.oneTarget":
     "A unit may only declare attacks against one target per turn (already targeting {target})",
-  "err.weaponRepeated":
-    "Weapon #{weapon} may only be declared once per turn (use 'shots' for rapid-fire)",
+  "err.weaponRepeated": "Weapon #{weapon} may only be declared once per turn",
   "err.noAttacksQueued": "no attacks queued — queue weapons with 'fire' or pass with 'done'",
   "err.overRange": "{weapon}: target at range {dist} exceeds long range {max}",
   "err.weaponIndex": "weapon index {index} out of range for {unit}",
@@ -265,7 +272,8 @@ export const en = {
     "{weapon}: target at range {dist} is within minimum range {min} ({penalty} to-hit penalty)",
   "err.rematchOnlyOver": "Only available when the battle is over",
   "err.notOver": "battle not over yet",
-  "err.seedInteger": "seed must be an integer",
+  "err.resetConfirm": "a battle is in progress; type 'reset !' to discard it",
+  "err.seedInteger": "seed must be an integer from 0 to 4294967295",
   "err.badAmmoPolicy": "ammo policy must be one of exposed|core|spread|least-first",
   "err.phaseDriver": "phase driver failed to settle",
   "err.twist.badDirection": "torso direction must be front, left, or right",
@@ -298,7 +306,8 @@ export const en = {
   "setup.mapLabel": "map: {name}",
   "setup.mapNone": "(none)",
   "setup.teamHeader": "team {team}:",
-  "setup.unitLine": "  {id}  {model} ({name}) gunnery {gunnery} @ {pos} facing {facing}",
+  "setup.unitLine":
+    "  {id}  {model} ({name}) gunnery {gunnery} piloting {piloting} hits {hitMax} ammo {ammo} @ {pos} facing {facing}",
   "setup.noUnits": "(no units placed)",
 
   // movement status
@@ -346,7 +355,7 @@ export const en = {
   // fire suggestion
   "fireSuggestion.header": "possible targets for {id}:",
   "fireSuggestion.noTargets": "(no target in range, arc, or line of sight)",
-  "fireSuggestion.target": "{id} at {distance} hexes ({arc}):",
+  "fireSuggestion.target": "{id} at range {distance} ({arc}):",
   "fireSuggestion.arc.front": "front arc",
   "fireSuggestion.arc.rear": "rear arc",
   "fireSuggestion.arc.leftSide": "left side arc",
@@ -519,6 +528,11 @@ export const en = {
 
   // event log
   "log.phase": "   turn: {turn}, phase: {phase}   ",
+  "log.initiativeRoll": "team {team} (2D6: {roll})",
+  "log.phaseName.initiative": "initiative",
+  "log.phaseName.movement": "movement",
+  "log.phaseName.attack": "attack",
+  "log.phaseName.end": "end",
   "log.initiative": "initiative: {rolls} -> team {winner} wins initiative and moves last.",
   "log.moveDeclared": "[{id}] declares {mode}",
   "log.moveActor":
@@ -559,7 +573,7 @@ export const en = {
   "log.shutdownAvoided":
     "[{id}] avoids shutdown (heat {heat} >= {threshold}) avoid success(2D6 = {roll} >= {avoid})",
   "log.restarted":
-    "[{id}] restarts (heat {heat} < {threshold}) avoid success(2D6 = {roll} > {avoid})",
+    "[{id}] restarts (heat {heat} < {threshold}) avoid success(2D6 = {roll} >= {avoid})",
   "log.restartedNoCheck": "[{id}] restarts (heat {heat} below {threshold})",
   "log.shutdownManual": "[{id}] manually shuts down",
   "log.startupSuccess": "[{id}] startup check passed (2D6 = {roll} >= {avoid}) — online next turn",
@@ -610,12 +624,18 @@ export const en = {
   "log.fallCause.voluntaryDrop": "voluntary drop",
   "log.unitFell":
     "[{id}] *** FALLS ({cause}) facing {facing}: {groups} ({damage} total, {levels}-level fall) at {hex} ***",
+  "log.pilotHitReason.headHit": "head hit",
+  "log.pilotHitReason.ammoExplosion": "ammo explosion",
+  "log.pilotHitReason.ejection": "failed ejection",
+  "log.pilotHitReason.fall": "fall",
+  "log.pilotHitReason.shutdownFall": "fall, no roll (shut down or unconscious)",
+  "log.pilotHitReason.lifeSupport": "heat with damaged life support",
   "log.pilotDamaged": "[{id}] pilot takes a hit ({reason}) — {total} total",
   "log.consciousnessCheckSuccess":
     "[{id}] consciousness check success(2D6 = {roll} >= {target}) -> AWAKE",
   "log.consciousnessCheckFail":
     "[{id}] consciousness check fail(2D6 = {roll} < {target}) -> STILL UNCONSCIOUS",
-  "log.pilotUnconscious": "[{id}] *** pilot UNCONSCIOUS (2D6 = {roll} < {target})***",
+  "log.pilotUnconscious": "[{id}] *** pilot UNCONSCIOUS (2D6 = {roll} < {target}) ***",
   "log.pilotRecovered": "[{id}] pilot regains consciousness (2D6 = {roll} >= {target})",
   "log.pilotKilled": "[{id}] *** pilot KILLED — abandoned 'Mech left as a level-2 wreck ***",
   "log.stoodUp": "[{id}] stands up",
@@ -691,7 +711,7 @@ export const en = {
   "res.critCockpitDestroyed": "{loc} #{slot} cockpit destroyed — pilot killed",
   "res.critComponentDestroyed": "{loc} #{slot} {name} destroyed",
   "res.critEngineDestroyed": "{loc} #{slot} ENGINE DESTROYED — 'Mech killed",
-  "res.critNoEffect": "{loc} reroll — no crit-hittable slot remaining",
+  "res.critNoEffect": "reroll — no crit-hittable slot remaining",
   "res.critTransferred": " (transferred from {from})",
   "res.throughArmorTag": "through-armor",
   "res.critCluster": "blast cascades a new determining roll on {loc}",

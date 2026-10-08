@@ -9,7 +9,7 @@ import { buildLinesChunkWith, type Chunk } from "./chunk";
 import { runChunks } from "./cli";
 import { i18n, isLocale } from "./i18n/index";
 import motdText from "./MOTD.txt";
-import { newSession, promptBody, promptHint, setConfigLocale } from "./session";
+import { configLocale, newSession, promptBody, promptHint, setConfigLocale } from "./session";
 
 document.title = `bt10x terminal v${VERSION}`;
 
@@ -23,26 +23,80 @@ const session = newSession(42);
 const modeHint = document.createElement("div");
 modeHint.id = "modehint";
 out.insertBefore(modeHint, inrow);
+
+// Locale precedence: ?lang= in the URL, then the last choice kept in
+// localStorage (every access guarded: storage may be blocked), then English.
+const LANG_STORAGE_KEY = "bt10x.lang";
+let savedLang: string | null = null;
+try {
+  savedLang = localStorage.getItem(LANG_STORAGE_KEY);
+} catch {
+  // storage unavailable: fall back to the default locale
+}
+if (savedLang !== null && isLocale(savedLang)) setConfigLocale(savedLang);
 const urlLang = new URLSearchParams(window.location.search).get("lang");
 if (urlLang !== null && isLocale(urlLang)) {
   setConfigLocale(urlLang);
 }
+
+/** Keep `<html lang>` and the stored choice in step with the active locale. */
+function syncDocLang(): void {
+  const locale = configLocale();
+  document.documentElement.lang = locale === "kr" ? "ko" : locale;
+  if (locale !== savedLang) {
+    savedLang = locale;
+    try {
+      localStorage.setItem(LANG_STORAGE_KEY, locale);
+    } catch {
+      // storage unavailable: the choice just won't survive a reload
+    }
+  }
+}
+syncDocLang();
 
 const motdBody = document.getElementById("motd-body");
 if (motdBody) motdBody.innerHTML = motdText;
 
 const history: string[] = [];
 let historyIdx = -1;
+/** Half-typed line saved while ArrowUp browses history; restored past the end. */
+let historyDraft = "";
 
 function scrollToBottom(): void {
   out.scrollTop = out.scrollHeight;
 }
 
+/** Scrollback cap: oldest entries go first, keeping #modehint first and #inrow last. */
+const MAX_SCROLLBACK = 1500;
+
+/** Plain-text copy of a chunk for the screen-reader live region. */
+function spokenText(chunk: Chunk): string[] {
+  if (chunk.kind === "lines") {
+    if (chunk.lines.length === 1 && chunk.lines[0] === "\f") return [];
+    return [chunk.lines.join("\n")];
+  }
+  if (chunk.kind === "columns") {
+    const rows: string[] = [];
+    const n = Math.max(0, ...chunk.columns.map((c) => c.length));
+    for (let i = 0; i < n; i++) rows.push(chunk.columns.map((c) => c[i] ?? "").join(" "));
+    return rows;
+  }
+  if (chunk.kind === "collapsible") return [chunk.summary];
+  return [];
+}
+
 function appendChunk(chunk: Chunk, parent: HTMLElement = out): void {
   const kind = chunk.kind;
   const insert = (el: Node): void => {
-    if (parent === out) out.insertBefore(el, inrow);
-    else parent.append(el);
+    if (parent === out) {
+      out.insertBefore(el, inrow);
+      while (out.childElementCount > MAX_SCROLLBACK) {
+        const oldest =
+          out.firstElementChild === modeHint ? modeHint.nextElementSibling : out.firstElementChild;
+        if (oldest === null || oldest === inrow) break;
+        oldest.remove();
+      }
+    } else parent.append(el);
     scrollToBottom();
   };
 
@@ -85,7 +139,7 @@ function appendChunk(chunk: Chunk, parent: HTMLElement = out): void {
   if (kind === "lines") {
     if (chunk.lines.length === 0) return;
     if (parent === out && chunk.lines.length === 1 && chunk.lines[0] === "\f") {
-      out.replaceChildren(inrow);
+      out.replaceChildren(modeHint, inrow);
       // Re-parenting the input blurs it; restore focus so the caret stays live.
       input.focus();
       return;
@@ -103,31 +157,81 @@ function refreshPrompt(): void {
   modeHint.textContent = promptHint(session);
 }
 
-function submitImpl(raw: string) {
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
+function printError(message: string): void {
+  try {
+    appendChunk(buildLinesChunkWith("err", `${i18n("err.prefix")} ${message}`));
+  } catch {
+    // Nothing left to report through; the terminal must stay usable.
+  }
+}
+
+/** Echo and run one command line; returns true when the command failed. */
+function submitImpl(raw: string, record = true): boolean {
   const line = raw.trim();
-  const echoed = `${promptBody(session)} > ${raw}`;
-  const echo = document.createElement("div");
-  echo.className = "cmd";
-  echo.textContent = echoed;
-  out.insertBefore(echo, inrow);
-  if (line.length > 0) {
-    history.push(line);
-    historyIdx = history.length;
+  let failed = false;
+  const said: string[] = [];
+  try {
+    const echo = document.createElement("div");
+    echo.className = "cmd";
+    echo.textContent = `${promptBody(session)} > ${raw}`;
+    out.insertBefore(echo, inrow);
+    if (record && line.length > 0) {
+      if (history[history.length - 1] !== line) history.push(line);
+      historyIdx = history.length;
+      historyDraft = "";
+    }
+    for (const chunk of runChunks(session, line)) {
+      if (chunk.kind === "lines" && chunk.cls === "err") failed = true;
+      appendChunk(chunk, out);
+      said.push(...spokenText(chunk));
+    }
+  } catch (e) {
+    failed = true;
+    const message = `${i18n("err.prefix")} ${errorMessage(e)}`;
+    printError(errorMessage(e));
+    said.push(message);
   }
-  for (const chunk of runChunks(session, line)) {
-    appendChunk(chunk, out);
-  }
+  // Silent while autoplay is running: the demo would flood the reader.
+  const live = document.getElementById("sr-live");
+  if (live !== null && autoPlayTimer === null) live.textContent = said.join("\n");
+  return failed;
 }
 
 function submitEpilog(): void {
   input.value = "";
-  refreshPrompt();
+  syncDocLang();
+  try {
+    refreshPrompt();
+  } catch (e) {
+    printError(errorMessage(e));
+  }
   scrollToBottom();
 }
 
+/** Consecutive failed autoplay steps at an unchanged prompt before giving up. */
+const AUTOPLAY_MAX_STUCK = 6;
+let autoStuckPrompt: string | null = null;
+let autoStuckCount = 0;
+
 function submitAuto(raw: string): void {
-  submitImpl(raw);
+  const before = promptBody(session);
+  const failed = submitImpl(raw, false);
   submitEpilog();
+  if (before !== autoStuckPrompt) {
+    autoStuckPrompt = before;
+    autoStuckCount = 0;
+  }
+  if (!failed) return;
+  autoStuckCount += 1;
+  if (autoStuckCount >= AUTOPLAY_MAX_STUCK) {
+    stopAutoPlay(false);
+    appendChunk(buildLinesChunkWith("banner", i18n("autoPlay.stuck")));
+    refreshPrompt();
+  }
 }
 
 function submitInput(raw: string) {
@@ -144,6 +248,7 @@ function stopAutoPlay(finished: boolean): void {
   if (autoPlayTimer === null) return;
   clearInterval(autoPlayTimer);
   autoPlayTimer = null;
+  flushAutoPlayCommand();
   if (finished) {
     appendChunk(buildLinesChunkWith("banner", i18n("autoPlay.done")));
     refreshPrompt();
@@ -152,29 +257,32 @@ function stopAutoPlay(finished: boolean): void {
 
 function startAutoPlay(): void {
   stopAutoPlay(false);
+  // A finished game has nothing left to demo: start over (the battle is already
+  // decided, so no reset confirmation applies).
+  if (session.state === "over") submitAuto("reset");
   appendChunk(buildLinesChunkWith("banner", i18n("autoPlay.started")));
   scrollToBottom();
   resetAutoplayState(session);
+  autoStuckPrompt = null;
+  autoStuckCount = 0;
   autoPlayTimer = setInterval(() => {
-    if (autoPlayTimer === null) {
-      // flush remaining nextAutoPlayCommand
-      const flushed = flushAutoPlayCommand();
-      for (const cmd of flushed) submitImpl(cmd);
-      submitEpilog();
-      return;
+    try {
+      const command = nextAutoPlayCommand(session);
+      if (command === null) {
+        stopAutoPlay(true);
+        return;
+      }
+      submitAuto(command);
+    } catch (e) {
+      stopAutoPlay(false);
+      printError(`autoplay: ${errorMessage(e)}`);
     }
-    const command = nextAutoPlayCommand(session);
-    if (command === null) {
-      stopAutoPlay(true);
-      return;
-    }
-    submitAuto(command);
   }, AUTOPLAY_INTERVAL_MS);
 }
 
 input.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
-    if (input.value.trim() === "autoplay") {
+    if (input.value.trim().toLowerCase() === "autoplay") {
       const echoed = `${promptBody(session)} > autoplay`;
       const echo = document.createElement("div");
       echo.className = "cmd";
@@ -189,6 +297,7 @@ input.addEventListener("keydown", (e) => {
     }
   } else if (e.key === "ArrowUp") {
     if (history.length > 0 && historyIdx > 0) {
+      if (historyIdx === history.length) historyDraft = input.value;
       historyIdx -= 1;
       input.value = history[historyIdx] ?? "";
       scrollToBottom();
@@ -197,7 +306,7 @@ input.addEventListener("keydown", (e) => {
   } else if (e.key === "ArrowDown") {
     if (historyIdx < history.length) {
       historyIdx += 1;
-      input.value = history[historyIdx] ?? "";
+      input.value = history[historyIdx] ?? historyDraft;
       scrollToBottom();
     }
     e.preventDefault();
@@ -205,6 +314,14 @@ input.addEventListener("keydown", (e) => {
 });
 
 input.addEventListener("input", scrollToBottom);
+document.getElementById("motd")?.addEventListener("toggle", scrollToBottom);
+
+// A battle lives only in memory: ask before a reload, close or Back throws it
+// away. Autoplay demos are disposable and leave freely.
+window.addEventListener("beforeunload", (e) => {
+  if (session.state !== "battle" || autoPlayTimer !== null) return;
+  e.preventDefault();
+});
 
 // Refocus the input on clicks inside the terminal, except when the click is a
 // drag-selection (text copy) or lands in the scrollbar gutter — either would
@@ -253,10 +370,13 @@ function loadCatalogText(): Promise<string> {
   // loadCatalog has split out the lines it keeps.
   const embedded = embeddedCatalogText();
   if (embedded !== null) return Promise.resolve(embedded);
-  return fetch("btlib10x.jsonl").then(async (res) => {
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.text();
-  });
+  const fetchOnce = (): Promise<string> =>
+    fetch("btlib10x.jsonl").then(async (res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.text();
+    });
+  // One retry rides out a transient network error.
+  return fetchOnce().catch(fetchOnce);
 }
 input.disabled = true;
 modeHint.textContent = i18n("app.catalog.loading");
@@ -271,6 +391,7 @@ void loadCatalogText()
     refreshPrompt();
   })
   .catch((err: unknown) => {
+    modeHint.textContent = "";
     appendChunk(
       buildLinesChunkWith(
         "banner",

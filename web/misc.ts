@@ -1,5 +1,11 @@
 import type { Facing, Location, ResolvedMechDef, TerrainType, WeaponCategory } from "btlib10x";
-import { ensureMechRegistered } from "btlib10x";
+import {
+  componentHitStatus,
+  ensureMechRegistered,
+  GYRO_DESTROYED_HITS,
+  mechDefFor,
+  type UnitState,
+} from "btlib10x";
 import { i18n, type MessageKey } from "./i18n";
 import { lookupMech } from "./lookup";
 
@@ -56,4 +62,22 @@ export const SHORT_LOC: Readonly<Record<Location, string>> = {
 
 export function signedMod(n: number): string {
   return n >= 0 ? `+${n}` : String(n);
+}
+
+/** Plain decimal integer (`-3`, `+2`, `7`); rejects `0x2`, `1e0`, `2.0`, ``. Null when invalid. */
+export function strictInt(raw: string): number | null {
+  return /^[+-]?\d+$/.test(raw) ? Number(raw) : null;
+}
+
+/** Player-typed spelling of an engine move mode (`standStill` -> `standstill`). */
+export function modeWord(mode: string): string {
+  return mode === "standStill" ? "standstill" : mode;
+}
+
+/** TW p.125 Gyro: a destroyed gyro means the 'Mech can never stand again. */
+export function isGyroDestroyed(unit: UnitState): boolean {
+  return (
+    componentHitStatus(mechDefFor(unit), unit.damage, unit.critSlotsDestroyed).gyro >=
+    GYRO_DESTROYED_HITS
+  );
 }
