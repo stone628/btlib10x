@@ -165,6 +165,7 @@ export type {
   PilotingCheckReason,
   RemovalReason,
   RemovedState,
+  SecondaryTargetMod,
   SeveredLimb,
   ShutdownState,
   UnitFallCause,
@@ -172,6 +173,7 @@ export type {
   UnitPolicy,
   UnitSkillRange,
   UnitState,
+  ValidatedTargetVolley,
   WeaponAttackDecl as AttackDecl,
 } from "./rules/game";
 export {

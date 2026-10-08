@@ -677,7 +677,7 @@ describe("declarePhysicalAttacks", () => {
     expect(battle.units.a!.declaredPhysicalAttacks.length).toBe(1);
     expect(battle.actedThisPhase).toContain("a");
     const declared = events.find((e) => e.kind === "attacksDeclared");
-    expect(declared?.weapons).toBeNull();
+    expect(declared?.weapons).toEqual([]);
     expect(declared?.physical).toEqual([{ type: "punch", targetId: "t" }]);
   });
 
@@ -811,8 +811,8 @@ describe("declareAttacks with weapons and physicals", () => {
     expect(battle.units.a!.declaredPhysicalAttacks[0]!.limb).toBe("rightArm");
     expect(battle.actedThisPhase).toEqual(["a"]);
     const declared = events.find((e) => e.kind === "attacksDeclared");
-    expect(declared?.weapons?.targetId).toBe("t");
-    expect(declared?.weapons?.count).toBe(1);
+    expect(declared?.weapons[0]?.targetId).toBe("t");
+    expect(declared?.weapons[0]?.count).toBe(1);
     expect(declared?.physical).toEqual([{ type: "punch", targetId: "t" }]);
   });
 

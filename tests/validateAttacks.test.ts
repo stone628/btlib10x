@@ -33,7 +33,6 @@ function snapshotUnit(state: BattleState, id: string) {
   const u = state.units[id]!;
   return {
     declaredAttacks: u.declaredWeaponAttacks,
-    firedTargetId: u.firedTargetId,
     ammoBins: u.ammoBins,
     actedThisPhase: state.actedThisPhase,
     heat: u.heat,
@@ -45,11 +44,15 @@ describe("validateAttacks — gate coverage", () => {
     const state = hbkVsEnf();
     const before = snapshotUnit(state, "hbk");
     const r = validateAttacksImpl(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }], [], {})!;
-    expect(r.targetId).toBe("enf");
-    expect(typeof r.attackDirection).toBe("string");
-    expect(r.attackDistance).toBe(1);
-    expect(["short", "medium", "long"]).toContain(r.attackRangeBracket);
-    expect(r.attackRangeMod).toBe(0);
+    expect(r.primaryTargetId).toBe("enf");
+    expect(r.targets).toHaveLength(1);
+    const t = r.targets[0]!;
+    expect(t.targetId).toBe("enf");
+    expect(typeof t.attackDirection).toBe("string");
+    expect(t.distance).toBe(1);
+    expect(["short", "medium", "long"]).toContain(t.rangeBracket);
+    expect(t.rangeMod).toBe(0);
+    expect(t.secondaryMod).toBe(0);
     expect(r.arcs[2]).toBeDefined();
     // No-mutation contract: declareAttacks side effects absent.
     expect(snapshotUnit(state, "hbk")).toEqual(before);
@@ -94,31 +97,28 @@ describe("validateAttacks — gate coverage", () => {
     ).toThrow(/Target must belong to another team/);
   });
 
-  it("throws on multi-target volley", () => {
+  it("accepts a multi-target volley (TW p.108)", () => {
     const state = createTestBattle(
       [],
       [
         buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "n"),
         buildUnitInit("enf1", "ENF-4R", 1, { col: 3, row: 4 }, "sw"),
-        buildUnitInit("enf2", "ENF-4R", 1, { col: 4, row: 4 }, "sw"),
+        buildUnitInit("enf2", "ENF-4R", 1, { col: 2, row: 2 }, "s"),
       ],
       true,
     );
     startAttackTurn(state);
-    // Order: weapon 2 (right arm, in-arc at rightSide target) first so the
-    // single-target invariant throws before the arc check on weapon 1.
-    expect(() =>
-      validateAttacksImpl(
-        state,
-        "hbk",
-        [
-          { weaponIndex: 2, targetId: "enf1" },
-          { weaponIndex: 1, targetId: "enf2" },
-        ],
-        [],
-        {},
-      ),
-    ).toThrow(/only declare attacks against one target/);
+    const r = validateAttacksImpl(
+      state,
+      "hbk",
+      [
+        { weaponIndex: 2, targetId: "enf1" },
+        { weaponIndex: 1, targetId: "enf2" },
+      ],
+      [],
+      {},
+    );
+    expect(r.targets.map((t) => t.targetId)).toEqual(["enf1", "enf2"]);
   });
 
   it("throws on target outside firing arc", () => {
@@ -161,7 +161,7 @@ describe("validateAttacks — gate coverage", () => {
       [],
       {},
     )!;
-    expect(r.attackDistance).toBe(1);
+    expect(r.targets[0]!.distance).toBe(1);
     expect(r.arcs[1]).toBe("front");
     expect(r.arcs[2]).toBe("front");
   });
@@ -262,7 +262,7 @@ describe("validateAttacks — gate coverage", () => {
     startAttackTurn(state);
     requireUnit(state, "hbk").prone = true;
     const r = validateAttacksImpl(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], {})!;
-    expect(r.targetId).toBe("enf");
+    expect(r.primaryTargetId).toBe("enf");
   });
 
   it("does not check phase, actor queue, or sensors (session-level gates)", () => {

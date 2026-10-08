@@ -65,6 +65,9 @@ export interface WeaponAttackInput {
   readonly actuatorMod?: number;
   /** Targeting-computer modifier for this weapon (TW p.143). */
   readonly tcMod?: number;
+  /** Multiple-targets modifier (TW p.108): +1 forward-arc / +2 side-rear
+   *  secondary target, 0 for the primary. */
+  readonly secondaryTargetMod?: number;
   /** Partial-cover to-hit modifier supplied by the caller (the board aware
    *  of wrecks): 2 when the target is adjacent to a level-2 wreck and the
    *  attacker is below its top. Merged with the terrain-derived value
@@ -205,6 +208,9 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     ...(input.sensorMod !== undefined ? { sensorMod: input.sensorMod } : {}),
     ...(input.actuatorMod !== undefined ? { actuatorMod: input.actuatorMod } : {}),
     ...(input.tcMod !== undefined ? { tcMod: input.tcMod } : {}),
+    ...(input.secondaryTargetMod !== undefined
+      ? { secondaryTargetMod: input.secondaryTargetMod }
+      : {}),
     ...(partialCoverMod > 0 ? { partialCoverMod } : {}),
     interveningWoods: losWoodsPoints(input.interveningTerrains),
     distance: input.distance,
