@@ -89,7 +89,7 @@ import { type AmmoNameHolder, ammoDefFor } from "../data/ammo.schema";
 import type { ResolvedCritSlot, ResolvedMechDef } from "../data/mech.schema";
 import { CRIT_SLOT_COUNTS } from "../data/mech.schema";
 import { weaponDefFor } from "../data/weapon.schema";
-import { type AmmoBinState, type AmmoBins, ammoBinId, stripBinsInLocation } from "./ammo";
+import { type AmmoBins, ammoBinId, stripBinsInLocation } from "./ammo";
 import {
   applyDamage,
   type DamageApplication,
@@ -100,6 +100,72 @@ import {
 } from "./damage";
 import type { DestroyedReason } from "./game";
 import { GYRO_DESTROYED_HITS, SENSOR_BLIND_HITS } from "./piloting";
+
+// ---------------------------------------------------------------------------
+// Destroyed crit-slot table: one bitmask per location (bit `i` = 0-based slot
+// `i` destroyed). A location has at most 12 slots, so a mask is a small int
+// and a whole table copies with an object spread. Slot counts and layout come
+// from the mech def, never from the table. All helpers take 0-based slot
+// indices; callers holding a 1-based slot number subtract 1 at the call site.
+// ---------------------------------------------------------------------------
+
+/** Destroyed-slot bitmask per location. */
+export type CritMask = Record<Location, number>;
+
+/** Most crit slots a location can hold (TW record sheets). */
+export const MAX_CRIT_SLOTS = 12;
+
+/** Fresh table with nothing destroyed, keyed like `def.critSlots`. */
+export function emptyCritTable(def: ResolvedMechDef): CritMask {
+  const out = {} as CritMask;
+  for (const loc of Object.keys(def.critSlots) as Location[]) {
+    if (def.critSlots[loc].length > MAX_CRIT_SLOTS) {
+      throw new Error(`${def.model}: ${loc} has more than ${MAX_CRIT_SLOTS} crit slots`);
+    }
+    out[loc] = 0;
+  }
+  return out;
+}
+
+/** Independent copy of a table. */
+export function cloneCritTable(table: Readonly<CritMask>): CritMask {
+  return { ...table };
+}
+
+/** True when 0-based slot `slot` of `loc` is destroyed. */
+export function isSlotDestroyed(table: Readonly<CritMask>, loc: Location, slot: number): boolean {
+  return (((table[loc] ?? 0) >> slot) & 1) === 1;
+}
+
+/** Mark 0-based slot `slot` of `loc` destroyed, in place. */
+export function setSlotDestroyed(table: CritMask, loc: Location, slot: number): void {
+  table[loc] = (table[loc] ?? 0) | (1 << slot);
+}
+
+/** Mark every one of the `count` slots of `loc` destroyed, in place. */
+export function destroyAllSlots(table: CritMask, loc: Location, count: number): void {
+  table[loc] = (1 << count) - 1;
+}
+
+/** True when any slot of `loc` is destroyed. */
+export function anySlotDestroyed(table: Readonly<CritMask>, loc: Location): boolean {
+  return (table[loc] ?? 0) !== 0;
+}
+
+/** Merge `other` into `table` (slot-wise OR), in place. */
+export function mergeCritTable(table: CritMask, other: Readonly<CritMask>): void {
+  for (const loc of Object.keys(other) as Location[]) {
+    table[loc] = (table[loc] ?? 0) | (other[loc] ?? 0);
+  }
+}
+
+/** Ascending 0-based indices of the destroyed slots of `loc`. */
+export function destroyedSlots(table: Readonly<CritMask>, loc: Location): number[] {
+  const out: number[] = [];
+  const mask = table[loc] ?? 0;
+  for (let i = 0; i < MAX_CRIT_SLOTS; i++) if ((mask >> i) & 1) out.push(i);
+  return out;
+}
 
 export interface CritSource {
   /** Location where the original hit stripped at least 1 internal-structure point. */
@@ -207,7 +273,7 @@ export interface CriticalResolution {
   readonly throughArmor: boolean;
   readonly rows: readonly CriticalEffect[];
   /** Per-location per-slot destroyed flags after this resolution. */
-  readonly critSlotsDestroyed: Record<Location, boolean[]>;
+  readonly critSlotsDestroyed: CritMask;
   /** Weapon indices destroyed (newly added) by these crits. */
   readonly destroyedWeapons: number[];
   /** Final damage state after any ammo-explosion cascades have applied. */
@@ -247,13 +313,10 @@ function isCritHittableStatic(slot: ResolvedCritSlot): boolean {
 }
 
 /** Is the location's hittable inventory exhausted (no non-empty non-soak slot remains undestroyed)? */
-function isLocationExhausted(
-  layout: readonly ResolvedCritSlot[],
-  destroyed: readonly boolean[],
-): boolean {
+function isLocationExhausted(layout: readonly ResolvedCritSlot[], destroyed: number): boolean {
   for (let i = 0; i < layout.length; i++) {
     const slot = layout[i] ?? { kind: "empty" };
-    if (isCritHittableStatic(slot) && !(destroyed[i] ?? false)) return false;
+    if (isCritHittableStatic(slot) && ((destroyed >> i) & 1) === 0) return false;
   }
   return true;
 }
@@ -340,7 +403,7 @@ function findHittableSlot(
   rng: Rng,
   loc: Location,
   layout: readonly ResolvedCritSlot[],
-  destroyed: readonly boolean[],
+  destroyed: number,
 ): { slotIndex: number; rolls: number[] } | null {
   const maxTries = SLOT_REROLL_CAP;
   for (let i = 0; i < maxTries; i++) {
@@ -349,7 +412,7 @@ function findHittableSlot(
     if (i0 < 0 || i0 >= layout.length) continue;
     const staticSlot = layout[i0] ?? { kind: "empty" };
     if (!isCritHittableStatic(staticSlot)) continue;
-    if (destroyed[i0]) continue;
+    if ((destroyed >> i0) & 1) continue;
     return { slotIndex: slot, rolls: [...rolls] };
   }
   return null;
@@ -422,7 +485,7 @@ export interface ResolveCriticalsInput {
    *  unbreached); echoed into the resolution as a tag. Defaults false. */
   readonly throughArmor?: boolean;
   /** Pre-damage destroyed-slot flags. */
-  readonly critSlotsDestroyed: Record<Location, boolean[]>;
+  readonly critSlotsDestroyed: CritMask;
   /** Pre-damage destroyed-weapon indices. */
   readonly destroyedWeapons: readonly number[];
   /** Pre-damage damage state. */
@@ -432,11 +495,11 @@ export interface ResolveCriticalsInput {
   /** Phase-start destroyed-slot flags for the step-4 test (TW p.122: "at the
    *  beginning of the current phase, did the location contain components
    *  that could take a critical hit?"). Defaults to `critSlotsDestroyed`. */
-  readonly baseCritSlotsDestroyed?: Record<Location, boolean[]>;
+  readonly baseCritSlotsDestroyed?: CritMask;
 }
 
 interface MutableCritState {
-  destroyed: Record<Location, boolean[]>;
+  destroyed: CritMask;
   destroyedWeapons: number[];
   damage: UnitDamageState;
   ammoBins: AmmoBins;
@@ -446,14 +509,14 @@ interface MutableCritState {
   /** Guard against pathological recursion in ammo-explosion cascades. */
   depth: number;
   /** Phase-start slot flags for the exhaustion (transfer) test. */
-  base: Record<Location, boolean[]> | undefined;
+  base: CritMask | undefined;
 }
 
 const MAX_RECURSION = 4;
 
 export function resolveCriticalHits(input: ResolveCriticalsInput): CriticalResolution {
   const state: MutableCritState = {
-    destroyed: cloneDestroyed(input.critSlotsDestroyed),
+    destroyed: cloneCritTable(input.critSlotsDestroyed),
     destroyedWeapons: [...input.destroyedWeapons],
     damage: {
       armor: { ...input.damage.armor },
@@ -637,7 +700,13 @@ function detonateCritBlast(
     runDetermining(rng, def, { location: critLoc, damage: amount, struck: true }, state);
   }
   for (const newlyLost of app.newlyDestroyed) {
-    markLocationCatastrophicallyDestroyed(state.damage, state.destroyed, state.ammoBins, newlyLost);
+    markLocationCatastrophicallyDestroyed(
+      def,
+      state.damage,
+      state.destroyed,
+      state.ammoBins,
+      newlyLost,
+    );
   }
   return app;
 }
@@ -663,7 +732,7 @@ function applySlotHit(
     state.rows.push({ kind: "noEffect", rolls: rolls.slice() });
     return;
   }
-  state.destroyed[loc][i0] = true;
+  setSlotDestroyed(state.destroyed, loc, i0);
   if (slot.kind === "weapon") {
     // Disable the linked mount. First hit on any of a multi-slot weapon's
     // slots destroys the whole mount; further hits on this same mount are
@@ -704,19 +773,11 @@ function applySlotHit(
     const weaponName = slot.weapon;
     const weaponIndex = slot.weaponIndex;
     const binId = ammoBinId(loc, slotIndex);
-    const emptyBin = (): AmmoBinState => ({
-      id: binId,
-      location: loc,
-      slotIndex,
-      weaponIndex: slot.weaponIndex,
-      weapon: slot.weapon,
-      shots: 0,
-    });
     // Non-explosive ammo (e.g. gauss rifle rounds) cannot detonate. The crit
     // still destroys the slot and empties the bin (slugs spill), but no
     // damage roll and no cascade.
     if (!ammoDefFor(slot).explosive) {
-      state.ammoBins[binId] = emptyBin();
+      state.ammoBins[binId] = 0;
       state.rows.push({
         kind: "ammoNoExplosion",
         location: loc,
@@ -729,7 +790,7 @@ function applySlotHit(
       return;
     }
     // Only the hit bin detonates; sibling bins of the same weapon stay.
-    const shotsRemaining = state.ammoBins[binId]?.shots ?? 0;
+    const shotsRemaining = state.ammoBins[binId] ?? 0;
     const damagePerShot = ammoDamagePerShot(slot);
     const amount = shotsRemaining * damagePerShot;
     if (amount > 0) {
@@ -753,7 +814,7 @@ function applySlotHit(
       state.rows.push({ kind: "noEffect", rolls: rolls.slice() });
     }
     // The bin's contents exploded or the bin was empty.
-    state.ammoBins[binId] = emptyBin();
+    state.ammoBins[binId] = 0;
     return;
   }
   // structure component
@@ -779,7 +840,7 @@ function applySlotHit(
     const group = (slot as { group: readonly number[] }).group;
     for (const idx of group) {
       const j = idx - 1;
-      if (j >= 0 && j < state.destroyed[loc].length) state.destroyed[loc][j] = true;
+      if (j >= 0 && j < layout.length) setSlotDestroyed(state.destroyed, loc, j);
     }
   }
   if (name === ENGINE) {
@@ -835,31 +896,24 @@ export function zeroLocationStructure(damage: UnitDamageState, loc: Location): v
  * through here — see the asymmetry note in `src/rules/damage.ts:140`.
  */
 export function markLocationCatastrophicallyDestroyed(
+  def: ResolvedMechDef,
   damage: UnitDamageState,
-  destroyed: Record<Location, boolean[]>,
+  destroyed: CritMask,
   ammoBins: AmmoBins,
   loc: Location,
 ): void {
   damage.armor[loc] = 0;
   if (isTorso(loc)) damage.armorRear[loc] = 0;
   damage.internalStructure[loc] = 0;
-  destroyed[loc] = destroyed[loc].map(() => true);
+  destroyAllSlots(destroyed, loc, def.critSlots[loc].length);
   stripBinsInLocation(ammoBins, loc);
-}
-
-function cloneDestroyed(src: Record<Location, boolean[]>): Record<Location, boolean[]> {
-  const out: Record<Location, boolean[]> = {} as Record<Location, boolean[]>;
-  (Object.keys(src) as Location[]).forEach((loc) => {
-    out[loc] = src[loc].slice();
-  });
-  return out;
 }
 
 /** Intact jump jets mounted outside the legs (TW p.53: depth 1 water). */
 function intactNonLegJumpJets(
   def: ResolvedMechDef,
   damage: UnitDamageState,
-  destroyed: Readonly<Record<Location, readonly boolean[]>>,
+  destroyed: Readonly<CritMask>,
 ): number {
   let n = 0;
   for (const loc of LOCATIONS) {
@@ -868,7 +922,11 @@ function intactNonLegJumpJets(
     const layout = def.critSlots[loc];
     for (let i = 0; i < layout.length; i++) {
       const slot = layout[i];
-      if (slot?.kind === "structure" && slot.name === JUMPJET && !(destroyed[loc]?.[i] ?? false)) {
+      if (
+        slot?.kind === "structure" &&
+        slot.name === JUMPJET &&
+        !isSlotDestroyed(destroyed, loc, i)
+      ) {
         n += 1;
       }
     }
@@ -903,7 +961,7 @@ export const TSM_WALK_BONUS = 2;
 export function destroyedStructures(
   def: ResolvedMechDef,
   damage: UnitDamageState,
-  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+  critSlotsDestroyed: Readonly<CritMask>,
   loc: Location,
 ): string[] {
   return [...iterateDestoyedStructures(def, damage, critSlotsDestroyed, [loc])];
@@ -912,7 +970,7 @@ export function destroyedStructures(
 export function effectiveMovement(
   def: ResolvedMechDef,
   damage: UnitDamageState,
-  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+  critSlotsDestroyed: Readonly<CritMask>,
   tsmActive = false,
   waterDepth = 0,
 ): EffectiveMovement {
@@ -991,7 +1049,7 @@ export function effectiveMovement(
 export function countDestroyedEngine(
   def: ResolvedMechDef,
   damage: UnitDamageState,
-  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+  critSlotsDestroyed: Readonly<CritMask>,
 ): number {
   let destroyed = 0;
   for (const name of iterateDestoyedStructures(def, damage, critSlotsDestroyed, TORSO_LOCATIONS)) {
@@ -1003,7 +1061,7 @@ export function countDestroyedEngine(
 function countDestroyedHeadStructure(
   def: ResolvedMechDef,
   damage: UnitDamageState,
-  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+  critSlotsDestroyed: Readonly<CritMask>,
   name: string,
 ): number {
   let destroyed = 0;
@@ -1016,7 +1074,7 @@ function countDestroyedHeadStructure(
 export function countDestroyedSensor(
   def: ResolvedMechDef,
   damage: UnitDamageState,
-  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+  critSlotsDestroyed: Readonly<CritMask>,
 ): number {
   return countDestroyedHeadStructure(def, damage, critSlotsDestroyed, SENSORS);
 }
@@ -1024,7 +1082,7 @@ export function countDestroyedSensor(
 export function countDestroyedLifeSupport(
   def: ResolvedMechDef,
   damage: UnitDamageState,
-  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+  critSlotsDestroyed: Readonly<CritMask>,
 ): number {
   return countDestroyedHeadStructure(def, damage, critSlotsDestroyed, LIFE_SUPPORT);
 }
@@ -1032,7 +1090,7 @@ export function countDestroyedLifeSupport(
 export function countDestroyedGyro(
   def: ResolvedMechDef,
   damage: UnitDamageState,
-  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+  critSlotsDestroyed: Readonly<CritMask>,
 ): number {
   let destroyed = 0;
   for (const name of iterateDestoyedStructures(def, damage, critSlotsDestroyed, ["centerTorso"])) {
@@ -1044,7 +1102,7 @@ export function countDestroyedGyro(
 export function countDestroyedHip(
   def: ResolvedMechDef,
   damage: UnitDamageState,
-  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+  critSlotsDestroyed: Readonly<CritMask>,
 ): number {
   let destroyed = 0;
   for (const name of iterateDestoyedStructures(def, damage, critSlotsDestroyed, [
@@ -1059,16 +1117,15 @@ export function countDestroyedHip(
 function* iterateDestoyedStructures(
   def: ResolvedMechDef,
   damage: UnitDamageState,
-  destroyed: Readonly<Record<Location, readonly boolean[]>>,
+  destroyed: Readonly<CritMask>,
   locations: Readonly<Location[]>,
 ): Generator<string> {
   for (const loc of locations) {
     const ld = isUnitLocationDestroyed(damage, loc);
     const layout = def.critSlots[loc];
-    const flags = destroyed[loc];
     for (let i = 0; i < layout.length; i++) {
       const slot = layout[i];
-      if (slot?.kind === "structure" && (ld || (flags?.[i] ?? false))) {
+      if (slot?.kind === "structure" && (ld || isSlotDestroyed(destroyed, loc, i))) {
         yield slot.name;
       }
     }
@@ -1092,7 +1149,7 @@ export interface ComponentHitStatus {
 export function componentHitStatus(
   def: ResolvedMechDef,
   damage: UnitDamageState,
-  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+  critSlotsDestroyed: Readonly<CritMask>,
 ): ComponentHitStatus {
   let engineDestoryed = 0;
   let gyroDestroyed = 0;

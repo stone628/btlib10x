@@ -16,7 +16,16 @@ import type { Location } from "../core/types";
 import { armFor, isLocation, isTorso, LOCATIONS } from "../core/types";
 import type { ResolvedMechDef } from "../data/mech.schema";
 import { type AmmoBins, ammoBinId, loadAmmoBins } from "./ammo";
-import { COCKPIT, countDestroyedEngine, countDestroyedGyro, ENGINE_SLOTS_KILL } from "./critical";
+import {
+  COCKPIT,
+  type CritMask,
+  countDestroyedEngine,
+  countDestroyedGyro,
+  ENGINE_SLOTS_KILL,
+  emptyCritTable,
+  isSlotDestroyed,
+  setSlotDestroyed,
+} from "./critical";
 import {
   destroyedLegs,
   type LocationValue,
@@ -46,7 +55,7 @@ export interface UnitInitDamage {
 /** Everything `createBattle` needs to seed a unit with its starting damage. */
 export interface ResolvedInitialDamage {
   damage: UnitDamageState;
-  critSlotsDestroyed: Record<Location, boolean[]>;
+  critSlotsDestroyed: CritMask;
   ammoBins: AmmoBins;
   destroyedWeapons: number[];
   pilotHits: number;
@@ -88,15 +97,6 @@ function takeFromPool(
     if (n > max) fail(id, `${what} taken at ${loc} (${n}) exceeds ${max}`);
     pool[loc] = max - n;
   }
-}
-
-/** Fresh all-false destroyed-flag table shaped like `def.critSlots`. */
-export function emptyCritTable(def: ResolvedMechDef): Record<Location, boolean[]> {
-  const out = {} as Record<Location, boolean[]>;
-  for (const loc of Object.keys(def.critSlots) as Location[]) {
-    out[loc] = new Array<boolean>(def.critSlots[loc].length).fill(false);
-  }
-  return out;
 }
 
 export function resolveInitialDamage(
@@ -159,10 +159,10 @@ export function resolveInitialDamage(
       seen.add(n);
       const slot = layout[n - 1]!;
       if (slot.kind === "empty") fail(id, `${loc} crit slot ${n} is empty`);
-      critSlotsDestroyed[loc][n - 1] = true;
+      setSlotDestroyed(critSlotsDestroyed, loc, n - 1);
       if (slot.kind === "structure") {
         // A double heat sink dies as a whole group (1-based sibling indices).
-        for (const sibling of slot.group) critSlotsDestroyed[loc][sibling - 1] = true;
+        for (const sibling of slot.group) setSlotDestroyed(critSlotsDestroyed, loc, sibling - 1);
       } else if (slot.kind === "weapon") {
         destroyedWeapons.add(slot.weaponIndex);
       } else if (slot.kind === "ammo") {
@@ -174,13 +174,13 @@ export function resolveInitialDamage(
   // 4. Ammo: used shots come off the loaded count; a destroyed bin is empty.
   const ammoBins = loadAmmoBins(def);
   for (const [binId, raw] of Object.entries(init?.ammoUsed ?? {})) {
-    const bin = ammoBins[binId];
-    if (bin === undefined) fail(id, `no ammo bin ${JSON.stringify(binId)}`);
+    const shots = ammoBins[binId];
+    if (shots === undefined) fail(id, `no ammo bin ${JSON.stringify(binId)}`);
     const used = requireCount(id, `ammo used in ${binId}`, raw);
-    if (used > bin.shots) fail(id, `ammo used in ${binId} (${used}) exceeds ${bin.shots}`);
-    bin.shots -= used;
+    if (used > shots) fail(id, `ammo used in ${binId} (${used}) exceeds ${shots}`);
+    ammoBins[binId] = shots - used;
   }
-  for (const binId of destroyedAmmo) ammoBins[binId]!.shots = 0;
+  for (const binId of destroyedAmmo) ammoBins[binId] = 0;
 
   // 5. Pilot.
   const pilotHits = requireCount(id, "pilotHits", init?.pilotHits ?? 0);
@@ -191,7 +191,10 @@ export function resolveInitialDamage(
   if (damage.internalStructure.head <= 0) unplayable("headDestroyed");
   if (damage.internalStructure.centerTorso <= 0) unplayable("centerTorsoDestroyed");
   const cockpit = def.critSlots.head.some(
-    (slot, i) => slot.kind === "structure" && slot.name === COCKPIT && critSlotsDestroyed.head[i],
+    (slot, i) =>
+      slot.kind === "structure" &&
+      slot.name === COCKPIT &&
+      isSlotDestroyed(critSlotsDestroyed, "head", i),
   );
   if (cockpit) unplayable("cockpitDestroyed");
   if (countDestroyedEngine(def, damage, critSlotsDestroyed) >= ENGINE_SLOTS_KILL) {

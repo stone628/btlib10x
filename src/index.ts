@@ -115,10 +115,16 @@ export type {
   EffectiveMovement,
 } from "./rules/critical";
 export {
+  type CritMask,
+  cloneCritTable,
   componentHitStatus,
   countDestroyedEngine,
+  destroyedSlots,
   ENGINE_SLOTS_KILL,
   effectiveMovement,
+  emptyCritTable,
+  isSlotDestroyed,
+  setSlotDestroyed,
   TSM_WALK_BONUS,
 } from "./rules/critical";
 export {

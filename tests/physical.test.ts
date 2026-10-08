@@ -17,6 +17,7 @@ import {
 } from "../src";
 import { bearingExact } from "../src/core/hex";
 import { classifyArcWithBoundary, defenderArcChoice } from "../src/rules/arcs";
+import { setSlotDestroyed } from "../src/rules/critical";
 import { buildUnitInit, resolveAllAttacks, validateAttacksImpl } from "../src/rules/game";
 import { hitLocationForArc, punchHitLocationForArc } from "../src/rules/hitlocation";
 import {
@@ -93,7 +94,7 @@ describe("punch", () => {
     );
     const attacker = battle.units.a!;
     // Simulate destroyed upper arm actuator
-    attacker.critSlotsDestroyed.rightArm![1] = true; // upperArmActuator
+    setSlotDestroyed(attacker.critSlotsDestroyed, "rightArm", 1); // upperArmActuator
     // 5 damage → halved to 2.5 → floor → 2
     expect(physicalDamage("punch", attacker, "rightArm")).toBe(2);
   });
@@ -104,8 +105,8 @@ describe("punch", () => {
       makeUnitInit("t", 2, { col: 6, row: 5 }, "sw"),
     );
     const attacker = battle.units.a!;
-    attacker.critSlotsDestroyed.rightArm![1] = true; // upperArmActuator
-    attacker.critSlotsDestroyed.rightArm![2] = true; // lowerArmActuator
+    setSlotDestroyed(attacker.critSlotsDestroyed, "rightArm", 1); // upperArmActuator
+    setSlotDestroyed(attacker.critSlotsDestroyed, "rightArm", 2); // lowerArmActuator
     // 5 damage → halved twice → 1.25 → floor → 1
     expect(physicalDamage("punch", attacker, "rightArm")).toBe(1);
   });
@@ -139,7 +140,7 @@ describe("punch", () => {
     );
     const attacker = battle.units.a!;
     // Destroy right shoulder
-    attacker.critSlotsDestroyed.rightArm![0] = true; // shoulder
+    setSlotDestroyed(attacker.critSlotsDestroyed, "rightArm", 0); // shoulder
     const decl: PhysicalAttackDecl = { type: "punch", targetId: "t", limb: "rightArm" };
     const result = validatePhysicalAttack(battle, "a", decl);
     expect(result.ok).toBe(false);
@@ -192,7 +193,7 @@ describe("kick", () => {
     );
     const attacker = battle.units.a!;
     // Destroy left hip
-    attacker.critSlotsDestroyed.leftLeg![0] = true; // hip
+    setSlotDestroyed(attacker.critSlotsDestroyed, "leftLeg", 0); // hip
     const decl: PhysicalAttackDecl = { type: "kick", targetId: "t", limb: "rightLeg" };
     const result = validatePhysicalAttack(battle, "a", decl);
     expect(result.ok).toBe(false);
@@ -244,7 +245,7 @@ describe("kick", () => {
       makeUnitInit("a", 1, { col: 5, row: 5 }, "ne"),
       makeUnitInit("t", 2, { col: 6, row: 5 }, "sw"),
     );
-    battle.units.t!.critSlotsDestroyed.leftLeg![1] = true; // upperLegActuator: +1 at sweep
+    setSlotDestroyed(battle.units.t!.critSlotsDestroyed, "leftLeg", 1); // upperLegActuator: +1 at sweep
     const decl: PhysicalAttackDecl = { type: "kick", targetId: "t", limb: "rightLeg" };
     const resolution = resolvePhysicalAttack(battle, "a", decl, HIGH_RNG);
     expect(resolution.kickTargetPsrPending).toBe(true);
@@ -459,7 +460,7 @@ describe("club", () => {
     );
     const attacker = battle.units.a!;
     attacker.club = { kind: "limb", limb: "rightArm", ownerId: "x" };
-    attacker.critSlotsDestroyed.leftArm![0] = true; // left shoulder
+    setSlotDestroyed(attacker.critSlotsDestroyed, "leftArm", 0); // left shoulder
     const decl: PhysicalAttackDecl = { type: "club", targetId: "t" };
     const result = validatePhysicalAttack(battle, "a", decl);
     expect(result.ok).toBe(false);
@@ -473,7 +474,7 @@ describe("club", () => {
     );
     const attacker = battle.units.a!;
     attacker.club = { kind: "limb", limb: "rightArm", ownerId: "x" };
-    attacker.critSlotsDestroyed.rightArm![3] = true; // hand actuator
+    setSlotDestroyed(attacker.critSlotsDestroyed, "rightArm", 3); // hand actuator
     const decl: PhysicalAttackDecl = { type: "club", targetId: "t" };
     const result = validatePhysicalAttack(battle, "a", decl);
     expect(result.ok).toBe(false);
@@ -574,12 +575,12 @@ describe("physical to-hit modifiers", () => {
 
   it("kick leg actuators: +2 per upper/lower, +1 per foot", () => {
     const upper = adjacentPair();
-    upper.units.a!.critSlotsDestroyed.rightLeg![1] = true; // upperLegActuator
+    setSlotDestroyed(upper.units.a!.critSlotsDestroyed, "rightLeg", 1); // upperLegActuator
     expect(
       computePhysicalToHit(upper, upper.units.a!, upper.units.t!, "kick", "rightLeg").actuatorMod,
     ).toBe(2);
     const foot = adjacentPair();
-    foot.units.a!.critSlotsDestroyed.rightLeg![3] = true; // footActuator
+    setSlotDestroyed(foot.units.a!.critSlotsDestroyed, "rightLeg", 3); // footActuator
     expect(
       computePhysicalToHit(foot, foot.units.a!, foot.units.t!, "kick", "rightLeg").actuatorMod,
     ).toBe(1);

@@ -21,10 +21,8 @@
  *   const snap = saveBattleState(state);
  *   const revived = parseBattleState(snap);
  *
- * The string is a packed form (undo-style rollback, never stored): cells are listed only when not
- * clear/level 0, crit tables hold destroyed slot indices, and ammo holds
- * shots per bin; layout and bin identity are rebuilt from the mech def on
- * load, so parsing needs the unit's model registered.
+ * The string is plain JSON of the state (undo-style rollback, never stored)
+ * except that cells are listed only when not clear/level 0.
  *
  * Manual field-by-field copy under the JSON, not `structuredClone`:
  * explicit list guards against future `BattleState` additions, keeps `src/`
@@ -37,9 +35,9 @@
 
 import { hexCell } from "../core/terrain";
 import type { HexCell, Location, TerrainType, WreckState } from "../core/types";
-import { mechDefFor } from "../data/mech.schema";
-import { type AmmoBins, collectAmmoBins } from "./ammo";
+import type { AmmoBins } from "./ammo";
 import type { BuildingState, BuildingType } from "./building";
+import { type CritMask, cloneCritTable } from "./critical";
 import type { UnitDamageState } from "./damage";
 import type {
   BattleState,
@@ -50,7 +48,6 @@ import type {
   UnitState,
   WeaponAttackDecl,
 } from "./game";
-import { emptyCritTable } from "./initialDamage";
 import type { PhysicalAttackDecl } from "./physical";
 
 /** Detached deep copy of a `BattleState`. Treat as immutable. */
@@ -61,8 +58,8 @@ type UnitSnapshot = UnitState;
 type DamageSnapshot = UnitDamageState;
 /** Detached deep copy of a unit's `AmmoBins`. Treat as immutable. */
 type AmmoStateSnapshot = AmmoBins;
-/** Detached deep copy of a per-slot destroyed-flag table. Treat as immutable. */
-type CritTableSnapshot = Record<Location, boolean[]>;
+/** Detached deep copy of a destroyed-slot table. Treat as immutable. */
+type CritTableSnapshot = CritMask;
 /** Detached deep copy of the building map. Treat as immutable. */
 type BuildingsSnapshot = Record<string, BuildingState>;
 /** Detached deep copy of the wreck map. Treat as immutable. */
@@ -74,22 +71,6 @@ function cloneDamageState(damage: UnitDamageState): UnitDamageState {
     armorRear: { ...damage.armorRear },
     internalStructure: { ...damage.internalStructure },
   };
-}
-
-function cloneCritTable(src: Record<Location, boolean[]>): Record<Location, boolean[]> {
-  const out = {} as Record<Location, boolean[]>;
-  for (const loc of Object.keys(src) as Location[]) {
-    out[loc] = [...(src[loc] ?? [])];
-  }
-  return out;
-}
-
-function cloneAmmoBins(bins: Readonly<AmmoBins>): AmmoBins {
-  const out: AmmoBins = {};
-  for (const bin of Object.values(bins)) {
-    out[bin.id] = { ...bin };
-  }
-  return out;
 }
 
 function cloneWeaponAttackDecl(decl: WeaponAttackDecl): WeaponAttackDecl {
@@ -135,7 +116,7 @@ function cloneUnitState(unit: UnitState): UnitState {
     position: unit.position,
     facing: unit.facing,
     damage: cloneDamageState(unit.damage),
-    ammoBins: cloneAmmoBins(unit.ammoBins),
+    ammoBins: { ...unit.ammoBins },
     ammoPolicy: unit.ammoPolicy,
     jammedWeapons: [...unit.jammedWeapons],
     critSlotsDestroyed: cloneCritTable(unit.critSlotsDestroyed),
@@ -158,55 +139,11 @@ function cloneUnitState(unit: UnitState): UnitState {
   };
 }
 
-/** Packed unit: the crit table and ammo bins are stored sparsely, since their
- *  static layout (slot counts, bin identity) is rebuilt from the mech def. */
-type PackedUnit = Omit<UnitState, "critSlotsDestroyed" | "ammoBins"> & {
-  /** Destroyed crit-slot indices (0-based) per location; empty locations omitted. */
-  crit: Partial<Record<Location, number[]>>;
-  /** Remaining shots per surviving ammo bin id. */
-  ammo: Record<string, number>;
-};
-
 /** Packed battle: cells listed only when not clear/level 0. */
-type PackedBattle = Omit<BattleState, "cells" | "units"> & {
+type PackedBattle = Omit<BattleState, "cells"> & {
   /** `[index, terrain, level]`, index = col-1 + (row-1)·width. */
   cells: Array<[number, TerrainType, number]>;
-  units: Record<string, PackedUnit>;
 };
-
-function packUnit(unit: UnitState): PackedUnit {
-  const { critSlotsDestroyed, ammoBins, ...rest } = cloneUnitState(unit);
-  const crit: PackedUnit["crit"] = {};
-  for (const loc of Object.keys(critSlotsDestroyed) as Location[]) {
-    const hit: number[] = [];
-    critSlotsDestroyed[loc].forEach((destroyed, i) => {
-      if (destroyed) hit.push(i);
-    });
-    if (hit.length > 0) crit[loc] = hit;
-  }
-  const ammo: Record<string, number> = {};
-  for (const bin of Object.values(ammoBins)) ammo[bin.id] = bin.shots;
-  return { ...rest, crit, ammo };
-}
-
-function unpackUnit(packed: PackedUnit): UnitState {
-  const { crit, ammo, ...rest } = packed;
-  const def = mechDefFor(rest);
-  const critSlotsDestroyed = emptyCritTable(def);
-  for (const loc of Object.keys(crit) as Location[]) {
-    const slots = critSlotsDestroyed[loc];
-    if (slots === undefined) throw new Error("Invalid battle snapshot string");
-    for (const i of crit[loc] ?? []) slots[i] = true;
-  }
-  const identity = new Map(collectAmmoBins(def).map((bin) => [bin.id, bin]));
-  const ammoBins: AmmoBins = {};
-  for (const [id, shots] of Object.entries(ammo)) {
-    const bin = identity.get(id);
-    if (bin === undefined) throw new Error("Invalid battle snapshot string");
-    ammoBins[id] = { ...bin, shots };
-  }
-  return cloneUnitState({ ...rest, critSlotsDestroyed, ammoBins });
-}
 
 function packCells(cells: readonly HexCell[]): PackedBattle["cells"] {
   const out: PackedBattle["cells"] = [];
@@ -227,11 +164,9 @@ function unpackCells(packed: PackedBattle["cells"], count: number): HexCell[] {
 
 /** Serializes whole battle state to a storable string. */
 export function saveBattleState(state: BattleState): string {
-  const units: Record<string, PackedUnit> = {};
-  for (const [id, unit] of Object.entries(state.units)) units[id] = packUnit(unit);
   const packed: PackedBattle = {
     ...cloneBattleRest(state),
-    units,
+    units: state.units,
     cells: packCells(state.cells),
   };
   return JSON.stringify(packed);
@@ -295,14 +230,9 @@ export function parseBattleState(data: string): BattleState {
   return unpackBattle(parsed);
 }
 
+/** The parsed JSON is fresh, so it is adopted as is apart from the cells. */
 function unpackBattle(packed: PackedBattle): BattleSnapshot {
-  const units: Record<string, UnitState> = {};
-  for (const [id, unit] of Object.entries(packed.units)) units[id] = unpackUnit(unit);
-  return {
-    ...cloneBattleRest(packed),
-    units,
-    cells: unpackCells(packed.cells, packed.width * packed.height),
-  };
+  return { ...packed, cells: unpackCells(packed.cells, packed.width * packed.height) };
 }
 
 /** Deep copy of every battle field except `units` and `cells`. */
@@ -436,33 +366,26 @@ export function loadDamageState(target: UnitDamageState, snapshot: DamageSnapsho
 
 /** Detached deep copy of per-bin ammo map. Treat result as immutable. */
 export function saveAmmoState(bins: Readonly<AmmoBins>): AmmoStateSnapshot {
-  return cloneAmmoBins(bins);
+  return { ...bins };
 }
 
 /** Roll ammo map back to snapshot in place; drops bins added after save. */
 export function loadAmmoState(target: AmmoBins, snapshot: AmmoStateSnapshot): void {
   for (const id of Object.keys(target)) delete target[id];
-  for (const [id, bin] of Object.entries(cloneAmmoBins(snapshot))) {
-    target[id] = bin;
+  for (const [id, shots] of Object.entries(snapshot)) {
+    target[id] = shots;
   }
 }
 
-/** Detached deep copy of per-slot destroyed-flag table. Treat as immutable. */
-export function saveCritTable(src: Record<Location, boolean[]>): CritTableSnapshot {
+/** Detached deep copy of the destroyed-slot table. Treat as immutable. */
+export function saveCritTable(src: CritMask): CritTableSnapshot {
   return cloneCritTable(src);
 }
 
-/** Roll destroyed-flag table back to snapshot in place. */
-export function loadCritTable(
-  target: Record<Location, boolean[]>,
-  snapshot: CritTableSnapshot,
-): void {
+/** Roll destroyed-slot table back to snapshot in place. */
+export function loadCritTable(target: CritMask, snapshot: CritTableSnapshot): void {
   for (const loc of Object.keys(target) as Location[]) delete target[loc];
-  for (const [loc, flags] of Object.entries(cloneCritTable(snapshot)) as Array<
-    [Location, boolean[]]
-  >) {
-    target[loc] = flags;
-  }
+  Object.assign(target, cloneCritTable(snapshot));
 }
 
 /** Detached deep copy of building map. Treat result as immutable. */

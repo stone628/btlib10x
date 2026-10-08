@@ -25,6 +25,7 @@ import {
   DROP_MP_COST,
   declareAttacks,
   declarePickup,
+  destroyedSlots,
   dropProne,
   ejectPilot,
   ensureMapRegistered,
@@ -435,16 +436,11 @@ export function encodeEndLine(idx: string, unit: UnitState): string {
       f.armorRear[loc] =
         def.armorRear[loc as "centerTorso"] - unit.damage.armorRear[loc as "centerTorso"];
     }
-    const flags = unit.critSlotsDestroyed[loc];
-    const slots: number[] = [];
-    flags.forEach((hit, i) => {
-      if (hit) slots.push(i + 1);
-    });
-    f.crits[loc] = slots;
+    f.crits[loc] = destroyedSlots(unit.critSlotsDestroyed, loc).map((i) => i + 1);
   }
   const loaded = loadAmmoBins(def);
-  for (const [binId, bin] of Object.entries(unit.ammoBins)) {
-    f.ammo[binId] = (loaded[binId]?.shots ?? 0) - bin.shots;
+  for (const [binId, shots] of Object.entries(unit.ammoBins)) {
+    f.ammo[binId] = (loaded[binId] ?? 0) - shots;
   }
   return `E${idx}${unit.pilotHits.toString(36)}${joinFields([
     armorField(f),

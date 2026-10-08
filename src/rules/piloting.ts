@@ -46,11 +46,11 @@
 
 import { D2D6_MAX, D2D6_MIN, roll2D6, rollD6 } from "../core/dice";
 import { ejectionLandingMod } from "../core/terrain";
-import type { Facing, Location, Rng, TerrainType } from "../core/types";
+import type { Facing, Rng, TerrainType } from "../core/types";
 import { rotateFacing } from "../core/types";
 import type { ResolvedMechDef } from "../data/mech.schema";
 import type { Arc } from "./arcs";
-import { countDestroyedGyro, destroyedStructures, HIP } from "./critical";
+import { type CritMask, countDestroyedGyro, destroyedStructures, HIP } from "./critical";
 import { isUnitLocationDestroyed, type UnitDamageState } from "./damage";
 import type { UnitSkillRange } from "./game";
 
@@ -184,7 +184,7 @@ export interface PreexistingDamage {
 export function preexistingDamageModifier(
   def: ResolvedMechDef,
   damage: UnitDamageState,
-  destroyed: Readonly<Record<Location, readonly boolean[]>>,
+  destroyed: Readonly<CritMask>,
 ): PreexistingDamage {
   const gyroHits = countDestroyedGyro(def, damage, destroyed);
   let modifier = 0;

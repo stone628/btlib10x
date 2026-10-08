@@ -3,8 +3,10 @@
  * stand (MOV-04), destroyed-gyro prone turning (MOV-08), fall position
  * (MOV-10), and combined phase PSR modifiers (PSR-01).
  */
+
 import { describe, expect, it } from "vitest";
 import { mechDef } from "../src/data/index";
+import { setSlotDestroyed } from "../src/rules/critical";
 import {
   attemptStandUp,
   buildUnitInit,
@@ -118,7 +120,7 @@ describe("destroyed gyro while prone (MOV-08)", () => {
     const layout = mechDef("HBK-4G")!.critSlots.centerTorso;
     layout.forEach((slot, i) => {
       if (slot.kind === "structure" && slot.name === "gyro")
-        a.critSlotsDestroyed.centerTorso[i] = true;
+        setSlotDestroyed(a.critSlotsDestroyed, "centerTorso", i);
     });
     expect(() => executeMove(state, "a", "walk", [{ kind: "turn", facings: 2 }], [])).toThrow(
       /one hexside/,

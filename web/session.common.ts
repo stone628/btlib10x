@@ -9,6 +9,7 @@ import {
   ammoExplosionAvoidWithThreshold,
   type BattleState,
   type ComponentHitStatus,
+  type CritMask,
   type CritSoakName,
   type CritStructureName,
   canFireFromLocation,
@@ -27,6 +28,7 @@ import {
   heatDissipationMax,
   hexKey,
   internalStructureForTonnage,
+  isSlotDestroyed,
   isTorso,
   isUnitAvailable,
   isUnitDestroyed,
@@ -541,7 +543,7 @@ function armorDiagramSheet(view: SheetView): string[] {
 
 /** Per-unit live crit state shown per slot on the `sheet <id>` chart. */
 interface CritChartLive {
-  readonly critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>;
+  readonly critSlotsDestroyed: Readonly<CritMask>;
   readonly destroyedWeapons: readonly number[];
   readonly jammedWeapons: readonly number[];
   /** Per-crit-slot ammo state (identity + remaining shots). */
@@ -615,9 +617,9 @@ function critSlotText(
   } else if (slot.kind === "ammo") {
     body = slot.weapon;
     const binId = ammoBinId(loc, slotIndex);
-    const max = loadAmmoBins(def)[binId]?.shots;
+    const max = loadAmmoBins(def)[binId];
     if (max !== undefined) {
-      const curr = live !== null ? (live.ammoBins[binId]?.shots ?? max) : max;
+      const curr = live !== null ? (live.ammoBins[binId] ?? max) : max;
       markers.push(
         live === null
           ? i18n("critChart.ammoDesign", { max })
@@ -630,7 +632,7 @@ function critSlotText(
   }
   const line = ` ${dice} ${body}`;
   if (live !== null && live.critSlotsDestroyed[loc] !== undefined) {
-    const slotHit = live.critSlotsDestroyed[loc]?.[slotIndex - 1] ?? false;
+    const slotHit = isSlotDestroyed(live.critSlotsDestroyed, loc, slotIndex - 1);
     const mountDestroyed =
       slot.kind === "weapon" && live.destroyedWeapons.includes(slot.weaponIndex);
     const mountJammed = slot.kind === "weapon" && live.jammedWeapons.includes(slot.weaponIndex);

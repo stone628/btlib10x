@@ -6,6 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { type BattleState, createBattle, type GameEvent, mechDefFor, type Rng } from "../src";
 import type { LimbLocation } from "../src/core/types";
+import { setSlotDestroyed } from "../src/rules/critical";
 import {
   applyFall,
   buildUnitInit,
@@ -85,7 +86,7 @@ describe("severed limb salvage flag", () => {
     const limb = weaponLimb(battle);
     const def = mechDefFor(battle.units.a!);
     def.critSlots[limb].forEach((s, i) => {
-      if (s.kind === "weapon") battle.units.a!.critSlotsDestroyed[limb][i] = true;
+      if (s.kind === "weapon") setSlotDestroyed(battle.units.a!.critSlotsDestroyed, limb, i);
     });
     recordSeveredLimbs(battle, battle.units.a!, [limb]);
     expect(salvageableSeveredLimbs(battle, "a")).toEqual([]);

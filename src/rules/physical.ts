@@ -27,7 +27,7 @@ import {
   effectiveFacingForTwist,
 } from "./arcs";
 import { isBuildingTerrain } from "./building";
-import { type CriticalResolution, destroyedStructures } from "./critical";
+import { type CriticalResolution, type CritMask, destroyedStructures } from "./critical";
 import {
   applyDamage,
   canFireFromLocation,
@@ -358,7 +358,7 @@ function destroyedStructuresIn(
   location: Location,
   def: ResolvedMechDef,
   damage: UnitDamageState,
-  destroyed: Readonly<Record<Location, readonly boolean[]>>,
+  destroyed: Readonly<CritMask>,
 ): string[] {
   return destroyedStructures(def, damage, destroyed, location);
 }
@@ -366,7 +366,7 @@ function destroyedStructuresIn(
 function countDestroyedStructure(
   def: ResolvedMechDef,
   damage: UnitDamageState,
-  destroyed: Readonly<Record<Location, readonly boolean[]>>,
+  destroyed: Readonly<CritMask>,
   location: Location,
   name: string,
 ): number {

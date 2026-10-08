@@ -22,16 +22,17 @@ import type { Location } from "../src/core/types";
 import { loadCatalog } from "../src/data/catalog";
 import { decodeMechLine, encodeMechDef } from "../src/data/mech.codec";
 import { decodeRelaxed } from "../src/data/relaxed-json";
-import { effectiveMovement, TSM_WALK_BONUS } from "../src/rules/critical";
+import {
+  type CritMask,
+  effectiveMovement,
+  emptyCritTable,
+  TSM_WALK_BONUS,
+} from "../src/rules/critical";
 import type { UnitDamageState } from "../src/rules/damage";
 import { physicalDamage, resolvePhysicalAttack } from "../src/rules/physical";
 
-function freshFlags(def = mechDefFor({ model: "CN9-YLW2" })): Record<Location, boolean[]> {
-  const out = {} as Record<Location, boolean[]>;
-  for (const loc of Object.keys(def.critSlots) as Location[]) {
-    out[loc] = new Array(def.critSlots[loc].length).fill(false);
-  }
-  return out;
+function freshFlags(def = mechDefFor({ model: "CN9-YLW2" })): CritMask {
+  return emptyCritTable(def);
 }
 
 function freshDamage(model: "CN9-YLW2" | "HBK-4G"): UnitDamageState {

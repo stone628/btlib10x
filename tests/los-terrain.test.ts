@@ -4,6 +4,7 @@ import type { HexCell, TerrainType } from "../src/core/types";
 import { mechDef } from "../src/data/index";
 import { weaponDefFor } from "../src/data/weapon.schema";
 import { targetingComputerModifier } from "../src/rules/actuators";
+import { emptyCritTable, setSlotDestroyed } from "../src/rules/critical";
 import {
   buildUnitInit,
   executeMove,
@@ -86,11 +87,7 @@ describe("targeting computer (TW p.143, TOH-01)", () => {
     armorRear: { ...def.armorRear },
     internalStructure: { ...def.internalStructure },
   };
-  const flags = () => {
-    const out: Record<string, boolean[]> = {};
-    for (const [loc, slots] of Object.entries(def.critSlots)) out[loc] = slots.map(() => false);
-    return out as Record<keyof typeof def.critSlots, boolean[]>;
-  };
+  const flags = () => emptyCritTable(def);
 
   it("gives -1 to energy weapons and nothing to missiles", () => {
     expect(
@@ -106,7 +103,7 @@ describe("targeting computer (TW p.143, TOH-01)", () => {
     const i = def.critSlots.rightTorso.findIndex(
       (s) => s.kind === "structure" && s.name === "targetingComputer",
     );
-    f.rightTorso[i] = true;
+    setSlotDestroyed(f, "rightTorso", i);
     expect(targetingComputerModifier(def, damage, f, weaponDefFor({ weapon: "CL ER PPC" }))).toBe(
       0,
     );
@@ -114,8 +111,7 @@ describe("targeting computer (TW p.143, TOH-01)", () => {
 
   it("is absent on a 'Mech without one", () => {
     const hbk = mechDef("HBK-4G")!;
-    const f: Record<string, boolean[]> = {};
-    for (const [loc, slots] of Object.entries(hbk.critSlots)) f[loc] = slots.map(() => false);
+    const f = emptyCritTable(hbk);
     const dmg = {
       armor: { ...hbk.armor },
       armorRear: { ...hbk.armorRear },

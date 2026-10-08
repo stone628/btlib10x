@@ -18,7 +18,7 @@ import type { ArmLocation, Location } from "../core/types";
 import { isArm, LOCATIONS } from "../core/types";
 import type { ResolvedMechDef } from "../data/mech.schema";
 import type { WeaponDef } from "../data/weapon.schema";
-import { destroyedStructures } from "./critical";
+import { type CritMask, destroyedStructures, isSlotDestroyed } from "./critical";
 import { isUnitLocationDestroyed, type UnitDamageState } from "./damage";
 
 /** Weapon to-hit penalty for a destroyed shoulder in the firing arm (TW p.125). */
@@ -37,7 +37,7 @@ export interface ArmActuatorCounts {
 export function countArmActuators(
   def: ResolvedMechDef,
   damage: UnitDamageState,
-  destroyed: Readonly<Record<Location, readonly boolean[]>>,
+  destroyed: Readonly<CritMask>,
   arm: ArmLocation,
 ): ArmActuatorCounts {
   let shoulder = 0;
@@ -94,7 +94,7 @@ export function absentArmActuators(
 export function armWeaponToHitModifier(
   def: ResolvedMechDef,
   damage: UnitDamageState,
-  destroyed: Readonly<Record<Location, readonly boolean[]>>,
+  destroyed: Readonly<CritMask>,
   location: Location,
 ): number {
   if (!isArm(location)) return 0;
@@ -115,7 +115,7 @@ export const TARGETING_COMPUTER_MOD = -1;
 export function targetingComputerModifier(
   def: ResolvedMechDef,
   damage: UnitDamageState,
-  destroyed: Readonly<Record<Location, readonly boolean[]>>,
+  destroyed: Readonly<CritMask>,
   weapon: WeaponDef,
 ): number {
   if (weapon.category !== "ENERGY" && weapon.category !== "BALLISTIC") return 0;
@@ -127,7 +127,7 @@ export function targetingComputerModifier(
       const slot = slots[i];
       if (slot?.kind !== "structure" || slot.name !== "targetingComputer") continue;
       fitted = true;
-      if (destroyed[loc]?.[i] === true || isUnitLocationDestroyed(damage, loc)) return 0;
+      if (isSlotDestroyed(destroyed, loc, i) || isUnitLocationDestroyed(damage, loc)) return 0;
     }
   }
   return fitted ? TARGETING_COMPUTER_MOD : 0;

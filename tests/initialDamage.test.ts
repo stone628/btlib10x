@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Location } from "../src/core/types";
+import { destroyedSlots, isSlotDestroyed } from "../src/rules/critical";
 import { canAttemptStandUp } from "../src/rules/damage";
 import { buildUnitInit, type UnitInit, type UnitState } from "../src/rules/game";
 import type { UnitInitDamage } from "../src/rules/initialDamage";
@@ -44,7 +45,7 @@ describe("starting damage (UnitInit.damage)", () => {
 
   it("applies damage taken, crits, ammo used and pilot hits", () => {
     const full = unitWith();
-    const loaded = full.ammoBins["leftTorso:1"]!.shots;
+    const loaded = full.ammoBins["leftTorso:1"]!;
     const u = unitWith({
       pilotHits: 2,
       damageTaken: {
@@ -62,32 +63,32 @@ describe("starting damage (UnitInit.damage)", () => {
     expect(u.damage.internalStructure.centerTorso).toBe(
       full.damage.internalStructure.centerTorso - 4,
     );
-    expect(u.critSlotsDestroyed.head[3]).toBe(true);
-    expect(u.critSlotsDestroyed.rightArm[4]).toBe(true);
+    expect(isSlotDestroyed(u.critSlotsDestroyed, "head", 3)).toBe(true);
+    expect(isSlotDestroyed(u.critSlotsDestroyed, "rightArm", 4)).toBe(true);
     // Weapon slots map to mounts (1-based); a multi-slot mount counts once.
     expect([...u.destroyedWeapons].sort()).toEqual([2, 3, 4]);
-    expect(u.ammoBins["leftTorso:1"]!.shots).toBe(loaded - 3);
-    expect(u.ammoBins["leftTorso:2"]!.shots).toBe(0); // destroyed bin is empty
+    expect(u.ammoBins["leftTorso:1"]!).toBe(loaded - 3);
+    expect(u.ammoBins["leftTorso:2"]!).toBe(0); // destroyed bin is empty
     expect(u.jammedWeapons).toEqual([]);
   });
 
   it("keeps 'structure gone, crit slots alive' as given (plain-damage asymmetry)", () => {
-    const loaded = unitWith().ammoBins["leftTorso:1"]!.shots;
+    const loaded = unitWith().ammoBins["leftTorso:1"]!;
     const u = unitWith(wipe("HBK-4G", "leftTorso", "leftArm"));
     expect(u.damage.internalStructure.leftTorso).toBe(0);
     // Plain damage never flags slots or strips bins (see damage.ts); neither do we.
-    expect(u.critSlotsDestroyed.leftTorso.some(Boolean)).toBe(false);
-    expect(u.critSlotsDestroyed.leftArm.some(Boolean)).toBe(false);
-    expect(u.ammoBins["leftTorso:1"]!.shots).toBe(loaded);
+    expect(u.critSlotsDestroyed.leftTorso).toBe(0);
+    expect(u.critSlotsDestroyed.leftArm).toBe(0);
+    expect(u.ammoBins["leftTorso:1"]!).toBe(loaded);
     expect(u.destroyedWeapons).toEqual([]);
     // Listing a slot of the dead location flags just that slot.
     const v = unitWith({
       ...wipe("HBK-4G", "leftTorso", "leftArm"),
       critsDestroyed: { leftTorso: [2] },
     });
-    expect(v.critSlotsDestroyed.leftTorso.filter(Boolean)).toHaveLength(1);
-    expect(v.ammoBins["leftTorso:2"]!.shots).toBe(0);
-    expect(v.ammoBins["leftTorso:1"]!.shots).toBe(loaded);
+    expect(destroyedSlots(v.critSlotsDestroyed, "leftTorso")).toHaveLength(1);
+    expect(v.ammoBins["leftTorso:2"]!).toBe(0);
+    expect(v.ammoBins["leftTorso:1"]!).toBe(loaded);
   });
 
   describe("gates: states that would start destroyed", () => {

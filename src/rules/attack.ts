@@ -14,7 +14,12 @@ import { weaponDefFor } from "../data/weapon.schema";
 import type { AmmoBins } from "./ammo";
 import type { Arc } from "./arcs";
 import { clusterHits, groupMissiles, modifiedClusterRoll } from "./cluster";
-import { type CriticalResolution, resolveCriticalHits } from "./critical";
+import {
+  type CriticalResolution,
+  type CritMask,
+  cloneCritTable,
+  resolveCriticalHits,
+} from "./critical";
 import {
   applyDamage,
   type DamageApplication,
@@ -104,10 +109,10 @@ export interface WeaponAttackInput {
    */
   readonly targetDef?: ResolvedMechDef;
   /** Pre-attack crit-slot destroyed flags (running state for this phase). */
-  readonly targetCritSlotsDestroyed?: Record<Location, boolean[]>;
+  readonly targetCritSlotsDestroyed?: CritMask;
   /** Phase-start crit-slot flags for the TW p.122 step-4 transfer test.
    *  Defaults to `targetCritSlotsDestroyed`. */
-  readonly targetBaseCritSlotsDestroyed?: Record<Location, boolean[]>;
+  readonly targetBaseCritSlotsDestroyed?: CritMask;
   /** Pre-attack destroyed weapon indices. */
   readonly targetDestroyedWeapons?: readonly number[];
   /** Pre-attack per-crit-slot ammo state. */
@@ -356,8 +361,8 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
   // reuses the snapshot from the previous group's crit, mirroring the rules
   // ("before resolving any further weapons fire" the determining roll is
   // made and the crit slot state advances immediately).
-  let critSlotsDestroyed: Record<Location, boolean[]> | undefined = input.targetCritSlotsDestroyed
-    ? cloneDestroyed(input.targetCritSlotsDestroyed)
+  let critSlotsDestroyed: CritMask | undefined = input.targetCritSlotsDestroyed
+    ? cloneCritTable(input.targetCritSlotsDestroyed)
     : undefined;
   let destroyedWeapons: number[] = input.targetDestroyedWeapons
     ? [...input.targetDestroyedWeapons]
@@ -442,14 +447,6 @@ function hitLocationPlaced(
   const location = hitLocationForArc(arc, roll);
   if (partialCover && (location === "leftLeg" || location === "rightLeg")) return null;
   return { location, throughArmor: roll === THROUGH_ARMOR_LOCATION_ROLL };
-}
-
-function cloneDestroyed(src: Record<Location, boolean[]>): Record<Location, boolean[]> {
-  const out: Record<Location, boolean[]> = {} as Record<Location, boolean[]>;
-  (Object.keys(src) as Location[]).forEach((loc) => {
-    out[loc] = src[loc].slice();
-  });
-  return out;
 }
 
 function mergeUniqueLimb(a: readonly LimbLocation[], b: readonly LimbLocation[]): LimbLocation[] {

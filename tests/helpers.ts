@@ -154,9 +154,7 @@ export function overrideAmmoBin(
   slotIndex: number,
   shots: number,
 ) {
-  const id = `${location}:${slotIndex}`;
-  const prev = src[id]!;
-  src[id] = { ...prev, shots };
+  src[`${location}:${slotIndex}`] = shots;
 }
 
 export interface VictoryResult {

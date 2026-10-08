@@ -26,7 +26,9 @@ import type { ResolvedMechDef } from "../data/mech.schema";
 import { type AmmoBinId, type AmmoBins, collectAmmoBins } from "./ammo";
 import {
   ammoDamagePerShot,
+  type CritMask,
   type EffectiveMovement,
+  isSlotDestroyed,
   RUN_WALK_DENOMINATOR,
   RUN_WALK_NUMERATOR,
 } from "./critical";
@@ -121,7 +123,7 @@ export function isTsmActive(def: ResolvedMechDef, endHeat: number): boolean {
 export function heatSinksOperational(
   def: ResolvedMechDef,
   damage: UnitDamageState,
-  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+  critSlotsDestroyed: Readonly<CritMask>,
 ): number {
   const external = LOCATIONS.reduce(
     (n, loc) => n + externalSinksIn(def, damage, critSlotsDestroyed, loc),
@@ -134,25 +136,24 @@ export function heatSinksOperational(
 function externalSinksIn(
   def: ResolvedMechDef,
   damage: UnitDamageState,
-  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+  critSlotsDestroyed: Readonly<CritMask>,
   loc: Location,
 ): number {
   if (isUnitLocationDestroyed(damage, loc)) return 0;
   const width = dhsCritWidth(def);
   const layout = def.critSlots[loc];
-  const destroyed = critSlotsDestroyed[loc];
   let external = 0;
   for (let i = 0; i < layout.length; i++) {
     const slot = layout[i];
     if (slot?.kind !== "structure") continue;
     if (slot.name === "heatSink") {
-      if (!(destroyed?.[i] ?? false)) external += 1;
+      if (!isSlotDestroyed(critSlotsDestroyed, loc, i)) external += 1;
     } else if (slot.name === "doubleHeatSink") {
       // Count a DHS device once (via its first slot); the whole group is
       // destroyed together by a single critical hit.
       const group = slot.group;
       if (group[0] !== i + 1) continue;
-      if (!group.some((j) => destroyed?.[j - 1] ?? false)) {
+      if (!group.some((j) => isSlotDestroyed(critSlotsDestroyed, loc, j - 1))) {
         external += Math.floor(group.length / width);
       }
     }
@@ -172,7 +173,7 @@ export const WATER_HEAT_BONUS_CAP = 6;
 export function waterHeatBonus(
   def: ResolvedMechDef,
   damage: UnitDamageState,
-  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+  critSlotsDestroyed: Readonly<CritMask>,
   depth: number,
   prone: boolean,
 ): number {
@@ -193,7 +194,7 @@ export function waterHeatBonus(
 export function heatDissipation(
   def: ResolvedMechDef,
   damage: UnitDamageState,
-  critSlotsDestroyed: Readonly<Record<Location, readonly boolean[]>>,
+  critSlotsDestroyed: Readonly<CritMask>,
 ): number {
   const sinks = heatSinksOperational(def, damage, critSlotsDestroyed);
   return def.heatsink.type === "double" ? sinks * DOUBLE_SINK_RATE : sinks;
@@ -381,7 +382,7 @@ export function largestAmmoBin(
   const candidates: LargestAmmoBin[] = [];
   for (const bin of collectAmmoBins(def)) {
     if (!ammoDefFor(bin).explosive) continue;
-    const shotsRemaining = ammoBins[bin.id]?.shots ?? 0;
+    const shotsRemaining = ammoBins[bin.id] ?? 0;
     if (shotsRemaining <= 0) continue;
     const damagePerShot = ammoDamagePerShot(bin);
     candidates.push({

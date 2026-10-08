@@ -1,17 +1,19 @@
 import { describe, expect, it } from "vitest";
-import type { Location } from "../src/core/types";
 import { mechDef } from "../src/data/index";
 import { loadAmmoBins } from "../src/rules/ammo";
-import { countDestroyedEngine, resolveCriticalHits } from "../src/rules/critical";
+import {
+  cloneCritTable,
+  countDestroyedEngine,
+  destroyAllSlots,
+  emptyCritTable,
+  resolveCriticalHits,
+} from "../src/rules/critical";
 import { applyDamage, type UnitDamageState } from "../src/rules/damage";
 import { scriptedRng } from "./helpers";
 
 function fresh(model: string) {
   const def = mechDef(model)!;
-  const flags = {} as Record<Location, boolean[]>;
-  for (const loc of Object.keys(def.critSlots) as Location[]) {
-    flags[loc] = new Array(def.critSlots[loc].length).fill(false);
-  }
+  const flags = emptyCritTable(def);
   const damage: UnitDamageState = {
     armor: { ...def.armor },
     armorRear: { ...def.armorRear },
@@ -41,7 +43,7 @@ describe("DMG-01: a destroyed location stops soaking damage (TW p.122)", () => {
 describe("CRIT-08: transferred criticals are carried, not re-rolled (TW pp.122, 125)", () => {
   it("one crit on an exhausted arm lands in the torso without a fresh roll", () => {
     const { def, flags, damage } = fresh("AS7-D");
-    flags.leftArm = flags.leftArm!.map(() => true);
+    destroyAllSlots(flags, "leftArm", def.critSlots.leftArm.length);
     const res = resolveCriticalHits({
       rng: dice(8, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
       def,
@@ -60,11 +62,9 @@ describe("CRIT-08: transferred criticals are carried, not re-rolled (TW pp.122, 
 describe("CRIT-03: step-4 uses phase-start flags (TW p.122)", () => {
   it("a second crit on a location that is only now exhausted is lost, not transferred", () => {
     const { def, flags, damage } = fresh("AS7-D");
-    const base = Object.fromEntries(
-      Object.entries(flags).map(([k, v]) => [k, [...v]]),
-    ) as typeof flags;
+    const base = cloneCritTable(flags);
     // Running state: every left-arm slot already hit this phase; phase start: none hit.
-    flags.leftArm = flags.leftArm!.map(() => true);
+    destroyAllSlots(flags, "leftArm", def.critSlots.leftArm.length);
     const res = resolveCriticalHits({
       rng: dice(8, ...new Array<number>(400).fill(1)),
       def,

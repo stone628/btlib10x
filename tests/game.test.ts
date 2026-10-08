@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mechDef } from "../src/data/index";
 import { weaponDefFor } from "../src/data/weapon.schema";
 import { ammoWeaponTotals, pooledShotsLeft } from "../src/rules/ammo";
+import { isSlotDestroyed } from "../src/rules/critical";
 import type { BattleState, GameEvent, TerrainHexDef, UnitInit } from "../src/rules/game";
 import {
   actorQueue,
@@ -880,8 +881,8 @@ describe("streak missiles", () => {
     const state = streakSetup();
     const mc = requireUnit(state, "mc");
     // Shared pool drained to a single shot in one bin.
-    mc.ammoBins["leftTorso:7"]!.shots = 0;
-    mc.ammoBins["rightTorso:7"]!.shots = 1;
+    mc.ammoBins["leftTorso:7"]! = 0;
+    mc.ammoBins["rightTorso:7"]! = 1;
     expect(pooledShotsLeft(mechDef("MC-MKII-2")!, mc.ammoBins, "CL Streak SRM 4")).toBe(1);
     // Mount 4 links zero bins (shared pool lives on mount 3): declare runs
     // unchecked for it, mirroring the live over-commit hole.
@@ -1192,9 +1193,9 @@ describe("weapon-volley crit accumulation (TW p. 38 simultaneity)", () => {
     const after = requireUnit(state, "enf");
     // CT gyro slot 4 (layout index 3) must be flagged — pre-fix this was
     // wiped by the second weapon's overwrite.
-    expect(after.critSlotsDestroyed.centerTorso[3]).toBe(true);
+    expect(isSlotDestroyed(after.critSlotsDestroyed, "centerTorso", 3)).toBe(true);
     // RA AC/10 first slot must be flagged.
-    expect(after.critSlotsDestroyed.rightArm[3]).toBe(true);
+    expect(isSlotDestroyed(after.critSlotsDestroyed, "rightArm", 3)).toBe(true);
     // AC/10 (ENF weaponIndex 1) must appear in destroyedWeapons.
     expect(after.destroyedWeapons).toContain(1);
   });
