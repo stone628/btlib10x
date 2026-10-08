@@ -32,11 +32,11 @@ V<engineVer>                      engine version stamp (`ver`, YYMMDD-hash)
 B<map>                            map (battlefield) name
 S<n>                              seed, always explicit; re-creates the Rng, legal between any records
 K                                 CreateBattleOptions.critsDisabled = true (omit normally)
-U<team><id>:<model>:<place>[:<armor>[:<crit>[:<ammo>[:<policy>[:<jam>]]]]]    unit registration (setup only)
+U<team><id>:<model>:<place>[:<armor>[:<crit>[:<ammo>[:<policy>]]]]    unit registration (setup only)
 M<move>                           one movement activation (one unit), in activation order
 A<attack>                         one attack activation (one unit), in activation order
 W<teamId><rng>                    winner: team still standing (`W-` = nobody) + final Rng state; ends play
-E<idx><hits>[:<armor>[:<crit>[:<ammo>[::<jam>]]]]    final state per unit, idx order
+E<idx><hits>[:<armor>[:<crit>[:<ammo>]]]    final state per unit, idx order
 ```
 
 - **No start record.** The first `M` implies `createBattle(map, units, options)`
@@ -68,30 +68,30 @@ E<idx><hits>[:<armor>[:<crit>[:<ammo>[::<jam>]]]]    final state per unit, idx o
 | crit | destroyed crit slots: `<loc><slot>` repeated (`a3a4` = right arm slots 3, 4) |
 | ammo | shots **used**: `<loc><slot><n>` repeated (`L13L22` = LT slot 1 used 3, LT slot 2 used 2); `n` is decimal, runs to the next letter |
 | policy | this unit's ammo policy, one char: `e` exposed / `c` core / `s` spread / `l` leastFirst. Omit the field when it is the default (`e`) |
-| jam | jammed weapons: wpn chars (`UnitState.jammedWeapons`) |
 
 Index = registration order (first `U` is `0`). Ammo policy is **setup-only** (`UnitInit.policy`, edited with `set <id> ammoPolicy <policy>`); the
 attack phase has no ammo command or policy item. `set`/`rm` edits made during setup are not
 recorded — only the final roster is.
 
-**Engine change required:** extend `UnitInit` (game.ts) with optional starting
-state, applied and validated by `createBattle` (no post-hoc patching):
+Starting damage is `UnitInit.damage?: UnitInitDamage` (`src/rules/initialDamage.ts`),
+applied and validated by `createBattle`; there is no post-hoc patching. Jams are
+transient and are **not** part of starting damage (`jammedWeapons` always starts empty).
 
 ```ts
-interface UnitInit {
-  // …existing fields…
+interface UnitInitDamage {
   pilotHits?: number;
   damageTaken?: { armor?: Partial<LocationValue>; armorRear?: Partial<TorsoLocationValue>;
-                  internalStructure?: Partial<LocationValue> };
-  critsDestroyed?: Partial<Record<Location, number[]>>;   // 1-based slot numbers
-  ammoUsed?: Partial<Record<AmmoBinId, number>>;
-  jammedWeapons?: number[];                               // 1-based weapon numbers
+                  internalStructure?: Partial<LocationValue> };   // damage TAKEN, not remaining
+  critsDestroyed?: Partial<Record<Location, number[]>>;          // 1-based slot numbers
+  ammoUsed?: Record<AmmoBinId, number>;                          // shots used per bin
 }
-// policy: UnitPolicy ({ ammoPolicy }) is already part of UnitInit
+// UnitInit.policy: UnitPolicy ({ ammoPolicy }) is separate and always present
 ```
 
-`createBattle` also sets `baseDamage`/`baseCritSlotsDestroyed` from it and derives
-`destroyedWeapons`, `destroyed`/`removed`.
+`createBattle` sets `baseDamage` / `baseCritSlotsDestroyed` to clones of the starting
+state (so the first turn raises no piloting rolls for it) and derives
+`destroyedWeapons` (any destroyed slot of a mount) and empties destroyed ammo bins.
+A unit with a destroyed leg or gyro starts **prone** (TW p.122, crit table gyro row).
 
 #### armor field → `UnitDamageState`
 
@@ -102,13 +102,21 @@ interface UnitInit {
 
 #### validation (in `createBattle`, against `MechDef` + tables)
 
-- `|gunnery − piloting| ≤ 2` (TW p.273); `pilotHits ≤ pilotHitMax`; unique ids; ≥ 2 units on ≥ 2 teams.
-- armor lost ≤ model armor per pool; internal lost ≤ model internal structure.
-- internal lost > 0 requires at least one armor pool of that location fully lost (overflow moves inward only after depletion).
-- crit slot exists in `critSlots[loc]` and is not `empty`.
-- ammo: slot is an `ammo` slot; used ≤ that bin's capacity.
+Consistency (each failure throws `Starting damage for <id>: …`):
+
+- `|gunnery − piloting| ≤ 2` (TW p.273); unique ids; ≥ 2 units on ≥ 2 teams.
+- armor lost ≤ model armor per pool; internal lost ≤ model internal structure; no negatives.
+- internal lost > 0 requires the location's armor depleted (torso: front **or** rear pool); a destroyed side torso needs its arm destroyed too (mirrors `applyDamage`).
+- crit slot exists in `critSlots[loc]`, is not `empty`, and is not listed twice (a double heat sink dies as a whole group).
+- ammo: key is an existing bin; used ≤ the bin's loaded shots.
 - hex inside the map, not occupied.
-- jam: only that the weapon exists. Jams barely affect validation; an inconsistent jam surfaces later as an engine error where it matters.
+
+Gates — states that would already be out of play are rejected as `unit would start destroyed (<reason>)`, using the same counters the runtime uses:
+
+- `headDestroyed` (head structure gone), `centerTorsoDestroyed`, `cockpitDestroyed` (a destroyed cockpit slot), `engineDestroyed` (3 engine slots destroyed, counting those lost with a destroyed side torso on XL engines);
+- pilot dead (`pilotHits ≥ pilotHitMax`).
+
+Crippled-but-alive states (destroyed gyro, blinded sensors, both legs, no arms) are legal.
 
 ### `M` — movement entries (→ posture calls + `executeMove`)
 
@@ -165,8 +173,8 @@ drop-only activation.
 
 ### `E` — final state (checksum)
 
-`E<idx><hits>` (after `W`) + armor / crit / ammo / jam in the same notation as `U`, cumulative
-vs. model default (starting damage included). The policy field is setup-only, so it is left empty here (`E10:…:::<jam>`).
+`E<idx><hits>` (after `W`) + armor / crit / ammo in the same notation as `U`, cumulative
+vs. model default (starting damage included). The policy field is setup-only and is not repeated here.
 Replaying and diffing against it detects engine-version drift. Dead/removed units
 need no flag (`destroyed` follows from the structure).
 

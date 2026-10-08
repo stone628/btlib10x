@@ -704,7 +704,20 @@ Constants:
 Key types:
 
 ```ts
-interface UnitInit { id; model; team; gunnery: UnitSkillRange; piloting: UnitSkillRange; pilotHitMax?: number; position: HexCoord; facing: Facing; policy: UnitPolicy }  // pilotHitMax integer >= 1 (default 6); skills 0..7, gunnery/piloting within 2 of each other (TW p.273)
+interface UnitInit { id; model; team; gunnery: UnitSkillRange; piloting: UnitSkillRange; pilotHitMax?: number; position: HexCoord; facing: Facing; policy: UnitPolicy; damage?: UnitInitDamage }  // pilotHitMax integer >= 1 (default 6); skills 0..7, gunnery/piloting within 2 of each other (TW p.273)
+
+// Starting damage (optional on UnitInit; absent = pristine). Numbers are damage TAKEN vs. the model
+// default; slot and weapon numbers are 1-based; jams are transient and not part of it.
+interface UnitInitDamage {
+  pilotHits?: number;
+  damageTaken?: { armor?: Partial<LocationValue>; armorRear?: Partial<TorsoLocationValue>; internalStructure?: Partial<LocationValue> };
+  critsDestroyed?: Partial<Record<Location, number[]>>;
+  ammoUsed?: Record<AmmoBinId, number>;
+}
+// createBattle validates it (taken <= default, structure only behind depleted armor, a lost side torso takes its arm,
+// real non-empty crit slots, ammo within the bin) and rejects states that would start destroyed:
+// head or center torso structure gone, a destroyed cockpit slot, 3 destroyed engine slots, a dead pilot.
+// A unit with a destroyed leg or gyro starts prone (TW p.122); other crippled states are legal.
 
 type MoveStep =
   | { kind: "enter"; to: HexCoord }      // forward/backward (ground) or adjacent hop (jump)

@@ -45,8 +45,6 @@ import {
   collectAmmoBins,
   consumeAmmo,
   consumeAmmoForName,
-  isAmmoPolicy,
-  loadAmmoBins,
   pooledShotsLeft,
   stripBinsInLocation,
 } from "./ammo";
@@ -115,6 +113,7 @@ import {
   waterHeatBonus,
 } from "./heat";
 import { hitLocation, hitLocationForArc, punchHitLocation } from "./hitlocation";
+import { resolveInitialDamage, type UnitInitDamage } from "./initialDamage";
 import { rollInitiative } from "./initiative";
 import { internalStructureForTonnage } from "./internalStructure";
 import {
@@ -195,6 +194,8 @@ export interface UnitInit extends MechModelHolder {
   facing: Facing;
   /** Per-unit policies; `buildUnitInit` fills {@link DEFAULT_UNIT_POLICY}. */
   policy: UnitPolicy;
+  /** Starting damage; absent = a pristine unit. See `UnitInitDamage`. */
+  damage?: UnitInitDamage;
 }
 
 export function buildUnitInit(
@@ -1129,23 +1130,20 @@ export function createBattle(
   const unitStates: Record<string, UnitState> = {};
   for (const init of units) {
     const def: ResolvedMechDef = mechDefFor(init);
-    const ammoBins = loadAmmoBins(def);
-    const damage: UnitDamageState = {
-      armor: { ...def.armor },
-      armorRear: { ...def.armorRear },
-      internalStructure: { ...def.internalStructure },
-    };
+    const pilotHitMax = init.pilotHitMax ?? DEFAULT_PILOT_HIT_MAX;
+    const start = resolveInitialDamage(def, init.id, init.damage, pilotHitMax);
+    const { damage, ammoBins } = start;
     unitStates[init.id] = {
       id: init.id,
       model: init.model,
       team: init.team,
       gunnery: init.gunnery,
       piloting: init.piloting,
-      pilotHits: 0,
-      pilotHitMax: init.pilotHitMax ?? DEFAULT_PILOT_HIT_MAX,
+      pilotHits: start.pilotHits,
+      pilotHitMax,
       unconscious: false,
       unconsciousSinceTurn: null,
-      prone: false,
+      prone: start.prone,
       position: { ...init.position },
       facing: init.facing,
       damage,
@@ -1154,12 +1152,12 @@ export function createBattle(
         armorRear: { ...damage.armorRear },
         internalStructure: { ...damage.internalStructure },
       },
-      baseCritSlotsDestroyed: initCritDestroyed(def),
+      baseCritSlotsDestroyed: cloneCritDestroyed(start.critSlotsDestroyed),
       ammoBins,
       ammoPolicy: init.policy.ammoPolicy,
       jammedWeapons: [],
-      critSlotsDestroyed: initCritDestroyed(def),
-      destroyedWeapons: [],
+      critSlotsDestroyed: start.critSlotsDestroyed,
+      destroyedWeapons: start.destroyedWeapons,
       blownOffLimbs: [],
       club: null,
       declaredPickup: null,
@@ -5568,15 +5566,6 @@ function buildActorQueue(state: BattleState): string[] {
     }
   }
   return queue;
-}
-
-/** Build the per-slot destroyed-flag table for a fresh unit, all false. */
-function initCritDestroyed(def: ResolvedMechDef): Record<Location, boolean[]> {
-  const out: Record<Location, boolean[]> = {} as Record<Location, boolean[]>;
-  for (const loc of Object.keys(def.critSlots) as Location[]) {
-    out[loc] = new Array(def.critSlots[loc].length).fill(false);
-  }
-  return out;
 }
 
 /** Deep copy of a per-slot destroyed-flag table (phase snapshots). */
