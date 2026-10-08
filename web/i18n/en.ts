@@ -165,6 +165,10 @@ export const en = {
   "stepResult.enter":
     "  {type} enter ({col},{row}) {terrain}: {mp} MP (1 base, +{surcharge} terrain, +{climb} climb {levels}lv)",
   "ok.cancelled": "cancelled",
+  "ok.rolledBack": "rolled back to the previous prompt",
+  "err.nothingToRollback": "nothing to roll back",
+  "cmd.rollback.help":
+    "undo the last completed 'done' (from game over: return to the last battle prompt)",
   "ok.fireQueuedBatch": "queued {target} <- weapons {weapons}",
   "ok.physical.queued": "queued {type} -> {target}",
   "ok.pickup.queued": "queued pickup ({source}) — no attacks this turn",

@@ -161,6 +161,9 @@ export const kr: Catalog = {
   "stepResult.enter":
     "  {type} 모드 진입 ({col},{row}) {terrain}: MP {mp} 사용 (기본 1, 지형 +{surcharge}, 고도차 +{climb} {levels}lv)",
   "ok.cancelled": "취소되었습니다",
+  "ok.rolledBack": "이전 프롬프트로 되돌렸습니다",
+  "err.nothingToRollback": "되돌릴 내용이 없습니다",
+  "cmd.rollback.help": "마지막으로 완료한 'done' 취소 (게임 종료 시: 마지막 전투 프롬프트로 복귀)",
   "ok.fireQueuedBatch": "{target} <- 무기 {weapons} 예약됨",
   "ok.physical.queued": "{type} -> {target} 예약됨",
   "ok.pickup.queued": "획득 예약됨 ({source}) — 이번 턴 공격 불가",

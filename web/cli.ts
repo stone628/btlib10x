@@ -13,6 +13,7 @@ import type { MessageKey } from "./i18n/index";
 import { i18n, isLocale, localeList } from "./i18n/index";
 import { lookupMap } from "./lookup";
 import { strictInt } from "./misc";
+import { clearSnapshots, recordPromptSnapshot, rollbackSession } from "./rollback";
 import type { Session } from "./session";
 import {
   attackStatusChunk,
@@ -238,6 +239,15 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
   },
 };
 
+/** Undo for the movement, attack and over prompts (snapshots: `web/rollback.ts`). */
+const ROLLBACK_CMD: CmdDef = {
+  helpKey: "cmd.rollback.help",
+  run: (s) => {
+    rollbackSession(s);
+    return [buildLinesChunkWith("banner", i18n("ok.rolledBack"))];
+  },
+};
+
 // --------------------------------------------------------------- setup ----
 
 const SETUP_CMDS: Record<string, CmdDef> = {
@@ -446,6 +456,7 @@ const MOVE_CMDS: Record<string, CmdDef> = {
       return cmdRunChunks(i18n("ok.cancelled"));
     },
   },
+  rollback: ROLLBACK_CMD,
   done: {
     helpKey: "cmd.doneMove.help",
     run: (s) => {
@@ -623,6 +634,7 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
       return cmdRunChunks(i18n("ok.cancelled"));
     },
   },
+  rollback: ROLLBACK_CMD,
   done: {
     helpKey: "cmd.doneFire.help",
     run: (s) => handleSessionGameEvents(s, commitAttack(s)),
@@ -643,9 +655,11 @@ const OVER_CMDS: Record<string, CmdDef> = {
     helpKey: "cmd.statusOver.help",
     run: (s) => [victoryBannerChunk(s), overStatusChunk(s)],
   },
+  rollback: ROLLBACK_CMD,
   rematch: {
     helpKey: "cmd.rematch.help",
     run: (s) => {
+      clearSnapshots(s);
       const newEvents = overRematch(s);
       return [
         buildLinesChunkWith("banner", i18n("ok.rematchDone")),
@@ -815,6 +829,7 @@ export function runChunks(session: Session, raw: string): Chunk[] {
       throw new Error(i18n("err.unknownCommand", { name }));
     }
     chunks = def.run(session, tokens.slice(1));
+    recordPromptSnapshot(session);
   } catch (e) {
     return [
       buildLinesChunkWith(

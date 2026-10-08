@@ -11,7 +11,8 @@ export function createRng(seed: number): Rng {
       return (((t ^ (t >>> 14)) >>> 0) % 6) + 1;
     },
     snapshot(): string {
-      return a.toString(16);
+      // Unsigned, so a loaded state prints exactly like the original.
+      return (a >>> 0).toString(16);
     },
     load(snapshot: string): void {
       const v = parseInt(snapshot, 16);
