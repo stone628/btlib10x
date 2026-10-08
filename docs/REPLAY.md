@@ -30,7 +30,7 @@ spelled out (`123`).
 ```
 V<engineVer>                      engine version stamp (`ver`, YYMMDD-hash)
 B<map>                            map (battlefield) name
-S<n>                              seed, always explicit; re-creates the Rng, legal between any records
+S<n>                              seed, always explicit; setup only (before the first `M`)
 K                                 CreateBattleOptions.critsDisabled = true (omit normally)
 U<team><id>:<model>:<place>[:<armor>[:<crit>[:<ammo>[:<policy>]]]]    unit registration (setup only)
 M<move>                           one movement activation (one unit), in activation order
@@ -256,6 +256,23 @@ Decode notes:
 - `A0F:11~4` / `A1F:0Q`: unit 0 fires weapons 1–4 at unit 1; unit 1 right-punches unit 0.
 - `W03f9a41c7`: team 0 is the last one standing; the Rng ended in state `0x3f9a41c7` (illustrative value). `E10:…`: unit 1, 0 pilot hits, CT internal −12 (full) ⇒ destroyed.
 - Other shapes: `A1F` pass · `A1F-:01~4` drop club then fire · `A1F+t` pick up a tree · `A2R:0Ts:1P` unit 2 twisted right: right-arm strike with a Sword at unit 0, left punch at unit 1.
+
+## Implementation status
+
+Recording and display exist in the web CLI (`web/replay.ts`); the player/decoder is
+not written yet. Notes that came out of implementing the recorder:
+
+- Entries are built from the session's pending declarations (`MovementContext`,
+  `AttackContext`) and pushed at the top of the `commitAtomic` closure; `commitAtomic`
+  truncates the log on failure, so rejected commands leave nothing.
+- `S` is written from `setup.seed`. The seed can only be set in setup (`setSeed` and
+  the `seed` command refuse once a battle has started), so there is exactly one `S`.
+- A recording is only valid if the battle started from a fresh generator for that
+  seed. `reset` re-creates the generator; a session whose generator was replaced is
+  marked unrecordable and shows nothing.
+- Weapon order inside an `A` group is the declaration order (it decides ammo
+  priority) and is never sorted.
+- Strike pairs are recorded as the CLI resolved them (arm + weapon).
 
 ## Implementation sketch
 

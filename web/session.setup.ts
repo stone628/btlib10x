@@ -18,6 +18,7 @@ import {
 import { buildLinesChunk, type Chunk } from "./chunk";
 import { i18n } from "./i18n";
 import { gunneryLabel, requireMechDef } from "./misc";
+import { startReplay } from "./replay";
 import type { Session, SessionGameEvent } from "./session";
 import { drive } from "./session";
 import { ammoPolicyLabel } from "./session.common";
@@ -263,5 +264,6 @@ export function setupStartBattle(s: Session): SessionGameEvent[] {
   s.attack = null;
   s.over = null;
   s.battle = createBattle(map, s.setup.roster);
+  startReplay(s);
   return drive(s);
 }

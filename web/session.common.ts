@@ -70,6 +70,7 @@ import { compensatedLength, i18n, type MessageKey } from "./i18n";
 import { lookupMech } from "./lookup";
 import { F, gunneryLabel, PRN, requireMechDef, SHORT_LOC, signedMod, TRN } from "./misc";
 import { createBoardRenderUnit, createEjectedBoardRenderUnits } from "./render";
+import { replayChunk } from "./replay";
 import { requireBattle, type Session, type SessionGameEvent, victoryBannerChunk } from "./session";
 import {
   critLines,
@@ -1642,9 +1643,12 @@ function handleSessionGameEvent(
         lines(i18n("res.attackResolutionEnd"));
       }
       break;
-    case "sessionOver":
+    case "sessionOver": {
       chunks(victoryBannerChunk(s));
+      const replay = replayChunk(s);
+      if (replay !== null) chunks(replay);
       break;
+    }
     default: {
       // Exhaustiveness guard: adding a GameEvent kind must add a case above.
       const unreachable: never = e;
