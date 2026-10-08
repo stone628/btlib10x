@@ -225,6 +225,7 @@ export {
   toHitHeatModifierWithThreshold,
 } from "./rules/heat";
 export { HIT_LOCATION_TABLE, LEFT_SIDE_TABLE, RIGHT_SIDE_TABLE } from "./rules/hitlocation";
+export type { UnitInitDamage } from "./rules/initialDamage";
 export type { InitiativeResult } from "./rules/initiative";
 export { internalStructureForTonnage } from "./rules/internalStructure";
 export {

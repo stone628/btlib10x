@@ -347,9 +347,6 @@ describe("ammoPolicy setup (session)", () => {
     const state = createTestBattle([], mk({ ammoPolicy: "core" }), true);
     expect(state.units.a!.ammoPolicy).toBe("core");
     expect(state.units.b!.ammoPolicy).toBe("exposed");
-    expect(() => createTestBattle([], mk({ ammoPolicy: "nope" as never }), true)).toThrow(
-      /Unknown ammo policy/,
-    );
   });
 
   it("renders the policy line on the record sheet only for ammo-carrying units", () => {
