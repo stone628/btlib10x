@@ -323,7 +323,7 @@ describe("engine prone turn", () => {
     expect(unit.position).toEqual({ col: 3, row: 3 });
     expect(unit.facing).toBe("se");
     expect(unit.mpSpent).toBe(2);
-    expect(unit.movesThisTurn).toEqual([]);
+    expect(unit.hexesMovedThisTurn).toBe(0);
   });
 
   it("rejects hex enters while prone", async () => {

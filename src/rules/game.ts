@@ -6,6 +6,7 @@ import {
   costToEnter,
   groundLevel,
   type HexGrid,
+  hexCell,
   setCell,
   terrainTargetMod,
   waterDepth,
@@ -436,13 +437,8 @@ export interface UnitState extends MechModelHolder {
   position: HexCoord;
   facing: Facing;
   damage: UnitDamageState;
-  baseDamage: UnitDamageState;
   /** Per-slot destroyed flag for each location's crit slot table. */
   critSlotsDestroyed: Record<Location, boolean[]>;
-  /** Crit-slot destroyed flags at the start of the weapon attack phase; the
-   *  piloting sweep diffs against this to find newly destroyed actuators,
-   *  hips, and gyros (TW "previously destroyed" = destroyed before now). */
-  baseCritSlotsDestroyed: Record<Location, boolean[]>;
   /** Per-crit-slot ammo state: identity + remaining shots (see
    *  `src/rules/ammo.ts`). Per-weapon totals are derived on demand. */
   ammoBins: AmmoBins;
@@ -464,7 +460,9 @@ export interface UnitState extends MechModelHolder {
    *  attacks at all. Acquisition resolves in the physical sub-pass. */
   declaredPickup: ClubPickupDecl | null;
   moveMode: MoveMode | null;
-  movesThisTurn: ("forward" | "backward")[];
+  /** Hexes counting toward the target movement modifier: those since the
+   *  last direction reversal (TW p.107). */
+  hexesMovedThisTurn: number;
   jumpedThisTurn: boolean;
   mpSpent: number;
   /** Current heat scale value (TW p. 159: 0-30 scale plus unbounded
@@ -1161,12 +1159,6 @@ export function createBattle(
       position: { ...init.position },
       facing: init.facing,
       damage,
-      baseDamage: {
-        armor: { ...damage.armor },
-        armorRear: { ...damage.armorRear },
-        internalStructure: { ...damage.internalStructure },
-      },
-      baseCritSlotsDestroyed: cloneCritDestroyed(start.critSlotsDestroyed),
       ammoBins,
       ammoPolicy: init.policy.ammoPolicy,
       jammedWeapons: [],
@@ -1176,7 +1168,7 @@ export function createBattle(
       club: null,
       declaredPickup: null,
       moveMode: null,
-      movesThisTurn: [],
+      hexesMovedThisTurn: 0,
       jumpedThisTurn: false,
       mpSpent: 0,
       heat: 0,
@@ -1199,17 +1191,14 @@ export function createBattle(
       throw new Error(`Board ${label} must be an integer >= 1`);
     }
   }
-  const cells: HexCell[] = new Array<HexCell>(width * height).fill({
-    terrain: "clear",
-    level: 0,
-  });
+  const cells: HexCell[] = new Array<HexCell>(width * height).fill(hexCell("clear"));
   const terrainSeen = new Set<string>();
   const buildings: Record<string, BuildingState> = {};
   for (const t of map.terrain) {
     const key = hexKey(t);
     if (terrainSeen.has(key)) throw new Error(`Duplicate terrain definition for hex ${msgHex(t)}`);
     terrainSeen.add(key);
-    cells[t.col - 1 + (t.row - 1) * width] = { terrain: t.type, level: t.level ?? 0 };
+    cells[t.col - 1 + (t.row - 1) * width] = hexCell(t.type, t.level ?? 0);
     const bt = buildingTypeOf(t.type);
     if (bt !== undefined) buildings[key] = createBuildingState(bt);
   }
@@ -1644,7 +1633,7 @@ export function executeMove(
     throw new Error(`${unitId} is prone: turn or pronestill only (no hex enters)`);
   }
   unit.moveMode = mode;
-  unit.movesThisTurn = [];
+  unit.hexesMovedThisTurn = 0;
   unit.mpSpent = 0;
   sink.push({ kind: "moveDeclared", unitId, mode });
   const rng = options.rng ?? DEFAULT_RNG;
@@ -1801,7 +1790,7 @@ export function executeMove(
     // Target movement counts only hexes since the last reversal (TW p.107).
     let since = dirs.length;
     while (since > 0 && dirs[since - 1] === dirs[dirs.length - 1]) since -= 1;
-    unit.movesThisTurn = dirs.slice(since);
+    unit.hexesMovedThisTurn = dirs.length - since;
     unit.mpSpent = mp + prechargedMP;
     sink.push({
       kind: "moved",
@@ -2103,8 +2092,8 @@ export function validateAttacksImpl(
   }
   if (wantWeapons && unit.prone) {
     if (
-      isUnitLocationDestroyed(unit.baseDamage, "leftArm") ||
-      isUnitLocationDestroyed(unit.baseDamage, "rightArm")
+      isUnitLocationDestroyed(unit.damage, "leftArm") ||
+      isUnitLocationDestroyed(unit.damage, "rightArm")
     ) {
       throw new Error(`${unitId} cannot fire while prone (need both arm location)`);
     }
@@ -2173,7 +2162,7 @@ export function validateAttacksImpl(
     if (unit.destroyedWeapons.includes(decl.weaponIndex)) {
       throw new Error(`${mount.weapon} on ${unitId} is destroyed by a critical hit`);
     }
-    if (!canFireFromLocation(unit.baseDamage, mount.location)) {
+    if (!canFireFromLocation(unit.damage, mount.location)) {
       throw new Error(
         `${mount.weapon} location (${mount.location}) is destroyed or its support torso is gone`,
       );
@@ -2255,7 +2244,7 @@ export function validateAttacksImpl(
         unit.critSlotsDestroyed,
         mount.location,
       ),
-      targetHexesMoved: target.movesThisTurn.length,
+      targetHexesMoved: target.hexesMovedThisTurn,
       targetJumped: target.jumpedThisTurn,
       targetImmobile: isImmobile(target),
       targetProne: target.prone,
@@ -2764,7 +2753,7 @@ function resolveUnitAttacks(
         unit.critSlotsDestroyed,
         mount.location,
       ),
-      targetHexesMoved: target.movesThisTurn.length,
+      targetHexesMoved: target.hexesMovedThisTurn,
       targetJumped: target.jumpedThisTurn,
       targetImmobile: isImmobile(target),
       targetProne: target.prone,
@@ -3302,7 +3291,9 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   // Phase 1: collect resolutions for ALL units with declared attacks
   // (ignore `removed` flag — TW simultaneity means even destroyed units fire)
   const baseDamage: Record<string, UnitDamageState> = {};
+  const baseCrit: Record<string, Record<Location, boolean[]>> = {};
   for (const unit of Object.values(state.units)) {
+    baseCrit[unit.id] = cloneCritDestroyed(unit.critSlotsDestroyed);
     baseDamage[unit.id] = {
       armor: { ...unit.damage.armor },
       armorRear: { ...unit.damage.armorRear },
@@ -3754,10 +3745,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   // and a weapon-phase kill never swings a declared melee blow. Declarations
   // stay merged for playability (one attack activation per unit per turn);
   // only the resolution is split into weapon-then-physical sub-passes.
-  const weaponBefore: PhaseSnapshots = { damage: baseDamage, crit: {} };
-  for (const unit of Object.values(state.units)) {
-    weaponBefore.crit[unit.id] = unit.baseCritSlotsDestroyed;
-  }
+  const weaponBefore: PhaseSnapshots = { damage: baseDamage, crit: baseCrit };
   resolvePhasePiloting(state, rng, weaponBefore, sink);
   for (const unit of Object.values(state.units)) {
     if (isUnitAvailable(unit) && isUnitWrecked(unit)) {
@@ -4026,6 +4014,8 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
             attacker.id,
             { ...decl, targetId: occupant.id },
             decl.twist ?? null,
+            false,
+            baseDamage[attacker.id],
           ).ok;
         if (occupant !== undefined && valid) {
           redirectFrom = target.id;
@@ -4053,7 +4043,14 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         // hex: a weapon-phase fall leaves the attacker prone (validate
         // rejects prone attackers) and falls may have broken arcs
         // (TW pp.144,151).
-        const check = validatePhysicalAttack(view, attacker.id, decl, decl.twist ?? null);
+        const check = validatePhysicalAttack(
+          view,
+          attacker.id,
+          decl,
+          decl.twist ?? null,
+          false,
+          baseDamage[attacker.id],
+        );
         if (!check.ok) {
           const resolution = missResolution(
             decl.type,
@@ -4125,7 +4122,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
           const critRolls = struck.map((location) => ({ location, tac: false }));
           if (resolution.throughArmorCrit) critRolls.push({ location: group.location, tac: true });
           for (const { location: critLoc, tac: tagThroughArmor } of critRolls) {
-            const baseCrit = postWeaponCrit[hitTarget.id];
+            const startCrit = postWeaponCrit[hitTarget.id];
             const res = resolveCriticalHits({
               rng,
               def: targetDef,
@@ -4136,7 +4133,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
                 tac: tagThroughArmor,
               },
               throughArmor: tagThroughArmor,
-              ...(baseCrit !== undefined ? { baseCritSlotsDestroyed: baseCrit } : {}),
+              ...(startCrit !== undefined ? { baseCritSlotsDestroyed: startCrit } : {}),
               critSlotsDestroyed: hitTarget.critSlotsDestroyed,
               destroyedWeapons: hitTarget.destroyedWeapons,
               damage: hitTarget.damage,
@@ -4334,17 +4331,6 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   }
 }
 
-function updatePhaseBaseValues(state: BattleState) {
-  for (const unit of Object.values(state.units)) {
-    unit.baseDamage = {
-      armor: { ...unit.damage.armor },
-      armorRear: { ...unit.damage.armorRear },
-      internalStructure: { ...unit.damage.internalStructure },
-    };
-    unit.baseCritSlotsDestroyed = cloneCritDestroyed(unit.critSlotsDestroyed);
-  }
-}
-
 function processEndPhase(state: BattleState) {
   state.turn += 1;
   state.initiativeWinnerTeam = null;
@@ -4352,7 +4338,7 @@ function processEndPhase(state: BattleState) {
   state.actedThisPhase = [];
   for (const unit of Object.values(state.units)) {
     unit.moveMode = null;
-    unit.movesThisTurn = [];
+    unit.hexesMovedThisTurn = 0;
     unit.jumpedThisTurn = false;
     unit.mpSpent = 0;
     unit.declaredWeaponAttacks = [];
@@ -4377,14 +4363,11 @@ export function* advancePhaseGen(state: BattleState, rng: Rng): Generator<GameEv
       if (state.initiativeWinnerTeam === null) {
         throw new Error("Roll initiative before leaving the initiative phase");
       }
-      // Capture base snapshots at start of movement phase
-      updatePhaseBaseValues(state);
       state.phase = "movement";
       break;
     }
     case "movement": {
       state.phase = "attack";
-      updatePhaseBaseValues(state);
       state.actedThisPhase = [];
       break;
     }
@@ -4946,11 +4929,7 @@ function movementTerrainPsr(
     if (drop >= 2) {
       const tn =
         ACCIDENTAL_FALL_BASE_TN +
-        mv.targetMovementModifier(
-          occupant.movesThisTurn.length,
-          occupant.jumpedThisTurn,
-          undefined,
-        ) +
+        mv.targetMovementModifier(occupant.hexesMovedThisTurn, occupant.jumpedThisTurn, undefined) +
         terrainTargetMod(cellAt(state, lower).terrain);
       const roll = roll2D6(rng);
       const hit = roll >= tn;
@@ -5190,7 +5169,7 @@ export function attemptStandUp(
   if (remaining < 1) throw new Error(`${unitId} has no MP left to stand up`);
   const standCost = Math.min(STAND_MP_COST, remaining);
   unit.moveMode = "walk";
-  unit.movesThisTurn = [];
+  unit.hexesMovedThisTurn = 0;
   unit.jumpedThisTurn = false;
   unit.mpSpent = priorSpent + standCost;
   state.actedThisPhase.push(unitId);
@@ -5274,7 +5253,7 @@ export function dropProne(
   if (budget < DROP_BUDGET_MIN) throw new Error(`${unitId} has no MP to drop prone`);
   const prevMode = unit.moveMode ?? "standStill";
   unit.moveMode = "walk";
-  unit.movesThisTurn = [];
+  unit.hexesMovedThisTurn = 0;
   unit.jumpedThisTurn = false;
   unit.mpSpent = DROP_MP_COST;
   unit.prone = true;

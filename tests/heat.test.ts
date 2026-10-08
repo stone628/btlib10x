@@ -738,10 +738,10 @@ describe("game integration: immobile target modifier in to-hit", () => {
   });
 });
 
-describe("game integration: target movement modifier counts total hexes", () => {
-  function targetModForMoves(moves: readonly ("forward" | "backward")[]): number {
+describe("game integration: target movement modifier from hexes moved", () => {
+  function targetModForMoves(hexes: number): number {
     const state = hbkVsEnf();
-    requireUnit(state, "enf").movesThisTurn = [...moves];
+    requireUnit(state, "enf").hexesMovedThisTurn = hexes;
     startAttackTurn(state);
     declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []);
     const events: GameEvent[] = [];
@@ -752,8 +752,8 @@ describe("game integration: target movement modifier counts total hexes", () => 
       .targetMod;
   }
 
-  it("reversed 4-hex walk counts all four hexes (not the 2 since reversal)", () => {
-    expect(targetModForMoves(["forward", "forward", "backward", "backward"])).toBe(1);
+  it("a 4-hex walk gives the +1 target movement modifier", () => {
+    expect(targetModForMoves(4)).toBe(1);
   });
 });
 

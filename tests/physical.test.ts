@@ -513,7 +513,7 @@ describe("physical to-hit modifiers", () => {
   }
 
   function fillMoves(battle: BattleState, hexes: number) {
-    battle.units.t!.movesThisTurn = new Array<"forward" | "backward">(hexes).fill("forward");
+    battle.units.t!.hexesMovedThisTurn = hexes;
   }
 
   it("attacker prone is cumulative with movement (run + prone = +4)", () => {
@@ -1028,15 +1028,6 @@ describe("physical attack critical hits", () => {
       targetLocation === "centerTorso"
     ) {
       target.damage.armorRear[targetLocation] = 0;
-    }
-    // Also set baseDamage to match
-    target.baseDamage.armor[targetLocation] = 0;
-    if (
-      targetLocation === "leftTorso" ||
-      targetLocation === "rightTorso" ||
-      targetLocation === "centerTorso"
-    ) {
-      target.baseDamage.armorRear[targetLocation] = 0;
     }
     return battle;
   }

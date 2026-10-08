@@ -122,7 +122,7 @@ describe("nextAutoPlayCommand (autoplay demo driver)", () => {
     // gunnery 4 + walk 1 + target 6 + long 4 = 15 -> lasers auto-miss.
     enemy.position = { col: 9, row: 1 };
     actor.facing = "n";
-    enemy.movesThisTurn = Array(30).fill("forward");
+    enemy.hexesMovedThisTurn = 30;
 
     const cmds = [0, 1, 2, 3, 4]
       .map(() => nextAutoPlayCommand(s))

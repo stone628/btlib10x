@@ -1,4 +1,4 @@
-import { cellAt, type HexGrid } from "../core/terrain";
+import { cellAt, type HexGrid, hexCell } from "../core/terrain";
 import { type HexCell, type HexCoord, hexKey, type TerrainType } from "../core/types";
 
 /** Building types recognized by the core rulebook. */
@@ -90,5 +90,5 @@ export function buildingAt(
  */
 export function collapseToRubble(cell: HexCell): HexCell | null {
   if (buildingTypeOf(cell.terrain) === undefined) return null;
-  return { terrain: "rubble", level: cell.level };
+  return hexCell("rubble", cell.level);
 }

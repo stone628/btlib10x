@@ -82,7 +82,6 @@ describe("createBattle", () => {
     const hbk = requireUnit(state, "hbk");
     expect(hbk.damage.armor).toEqual(mechDef("HBK-4G")!.armor);
     expect(ammoWeaponTotals(mechDef("HBK-4G")!, hbk.ammoBins)["4"]).toBe(10);
-    expect(hbk.baseDamage).toEqual(hbk.damage);
     expect(state.phase).toBe("initiative");
     expect(state.turn).toBe(1);
   });

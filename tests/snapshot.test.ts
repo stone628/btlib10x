@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { HexCell } from "../src/core/types";
+import { hexCell } from "../src/core/terrain";
 import {
   declareAttacks,
   loadBattleState,
@@ -61,7 +61,7 @@ function dirtyBattle(state: BattleState): void {
   state.phase = "movement";
   state.initiativeWinnerTeam = 5;
   state.critsDisabled = !state.critsDisabled;
-  (state.cells as HexCell[])[0] = { terrain: "heavyWoods", level: 2 };
+  state.cells[0] = hexCell("heavyWoods", 2);
   const hbk = requireUnit(state, "hbk");
   hbk.position = { col: 5, row: 5 };
   hbk.facing = "n";
@@ -71,10 +71,9 @@ function dirtyBattle(state: BattleState): void {
   hbk.pilotHits = 3;
   hbk.damage.armor.head = 0;
   hbk.critSlotsDestroyed.centerTorso[0] = true;
-  hbk.baseCritSlotsDestroyed.centerTorso[0] = true;
   hbk.jammedWeapons.push(0);
   hbk.destroyedWeapons.push(1);
-  hbk.movesThisTurn.push("forward");
+  hbk.hexesMovedThisTurn += 1;
   for (const bin of Object.values(hbk.ammoBins)) bin.shots = 0;
   delete hbk.ammoBins[Object.keys(hbk.ammoBins)[0]!];
   state.actedThisPhase.push("hbk");
@@ -92,9 +91,9 @@ describe("snapshot", () => {
     expect(state.phase).toBe("end");
     const snap = saveBattleState(state);
     expect(typeof snap).toBe("string");
-    const parsed = JSON.parse(snap) as BattleState;
     // no event log travels with the snapshot
-    expect("events" in parsed).toBe(false);
+    expect("events" in JSON.parse(snap)).toBe(false);
+    const parsed = parseBattleState(snap);
 
     dirtyBattle(state);
     expect(state).not.toEqual(parsed);
@@ -104,6 +103,37 @@ describe("snapshot", () => {
     dirtyBattle(state);
     loadBattleState(state, snap);
     expect(state).toEqual(parsed);
+  });
+
+  it("packs sparsely and round-trips crits, ammo, limbs, collapsed cells", () => {
+    const units: UnitInit[] = [
+      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
+      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 5 }, "se"),
+    ];
+    const state = createTestBattle(
+      [{ col: 3, row: 5, type: "lightBuilding" }],
+      units,
+      false,
+      30,
+      30,
+    );
+    const hbk = requireUnit(state, "hbk");
+    hbk.critSlotsDestroyed.centerTorso[2] = true;
+    hbk.critSlotsDestroyed.leftArm[0] = true;
+    hbk.blownOffLimbs.push({ limb: "rightArm", salvageable: true });
+    const [firstBin, secondBin] = Object.keys(hbk.ammoBins);
+    hbk.ammoBins[firstBin!]!.shots -= 2;
+    delete hbk.ammoBins[secondBin!];
+    damageBuildingAt(state, { col: 3, row: 5 }, 999, []);
+
+    const snap = saveBattleState(state);
+    const raw = JSON.parse(snap);
+    expect(raw.cells).toEqual([[2 + 4 * 30, "rubble", 0]]);
+    expect(raw.units.hbk.crit).toEqual({ centerTorso: [2], leftArm: [0] });
+    expect(raw.units.hbk).not.toHaveProperty("baseDamage");
+    expect(snap.length).toBeLessThan(6000);
+    expect(parseBattleState(snap)).toEqual(state);
+    expect(saveBattleState(parseBattleState(snap))).toBe(snap);
   });
 
   it("save detaches: live mutation never leaks into snapshot string", () => {

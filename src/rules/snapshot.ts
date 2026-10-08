@@ -21,6 +21,11 @@
  *   const snap = saveBattleState(state);
  *   const revived = parseBattleState(snap);
  *
+ * The string is a packed form (undo-style rollback, never stored): cells are listed only when not
+ * clear/level 0, crit tables hold destroyed slot indices, and ammo holds
+ * shots per bin; layout and bin identity are rebuilt from the mech def on
+ * load, so parsing needs the unit's model registered.
+ *
  * Manual field-by-field copy under the JSON, not `structuredClone`:
  * explicit list guards against future `BattleState` additions, keeps `src/`
  * browser-first with zero runtime dependencies. Finer-grained save/load
@@ -30,8 +35,10 @@
  * `GameEvent[]` instead, so snapshots stay small.
  */
 
-import type { HexCell, HexCoord, Location, WreckState } from "../core/types";
-import type { AmmoBins } from "./ammo";
+import { hexCell } from "../core/terrain";
+import type { HexCell, Location, TerrainType, WreckState } from "../core/types";
+import { mechDefFor } from "../data/mech.schema";
+import { type AmmoBins, collectAmmoBins } from "./ammo";
 import type { BuildingState, BuildingType } from "./building";
 import type { UnitDamageState } from "./damage";
 import type {
@@ -43,6 +50,7 @@ import type {
   UnitState,
   WeaponAttackDecl,
 } from "./game";
+import { emptyCritTable } from "./initialDamage";
 import type { PhysicalAttackDecl } from "./physical";
 
 /** Detached deep copy of a `BattleState`. Treat as immutable. */
@@ -59,14 +67,6 @@ type CritTableSnapshot = Record<Location, boolean[]>;
 type BuildingsSnapshot = Record<string, BuildingState>;
 /** Detached deep copy of the wreck map. Treat as immutable. */
 type WrecksSnapshot = Record<string, WreckState>;
-
-function cloneHexCoord(hex: HexCoord): HexCoord {
-  return { col: hex.col, row: hex.row };
-}
-
-function cloneCell(cell: HexCell): HexCell {
-  return { terrain: cell.terrain, level: cell.level };
-}
 
 function cloneDamageState(damage: UnitDamageState): UnitDamageState {
   return {
@@ -132,11 +132,9 @@ function cloneUnitState(unit: UnitState): UnitState {
     unconscious: unit.unconscious,
     unconsciousSinceTurn: unit.unconsciousSinceTurn,
     prone: unit.prone,
-    position: cloneHexCoord(unit.position),
+    position: unit.position,
     facing: unit.facing,
     damage: cloneDamageState(unit.damage),
-    baseDamage: cloneDamageState(unit.baseDamage),
-    baseCritSlotsDestroyed: cloneCritTable(unit.baseCritSlotsDestroyed),
     ammoBins: cloneAmmoBins(unit.ammoBins),
     ammoPolicy: unit.ammoPolicy,
     jammedWeapons: [...unit.jammedWeapons],
@@ -146,7 +144,7 @@ function cloneUnitState(unit: UnitState): UnitState {
     club: cloneHeldClub(unit.club),
     declaredPickup: clonePickupDecl(unit.declaredPickup),
     moveMode: unit.moveMode,
-    movesThisTurn: [...unit.movesThisTurn],
+    hexesMovedThisTurn: unit.hexesMovedThisTurn,
     jumpedThisTurn: unit.jumpedThisTurn,
     mpSpent: unit.mpSpent,
     heat: unit.heat,
@@ -160,9 +158,83 @@ function cloneUnitState(unit: UnitState): UnitState {
   };
 }
 
+/** Packed unit: the crit table and ammo bins are stored sparsely, since their
+ *  static layout (slot counts, bin identity) is rebuilt from the mech def. */
+type PackedUnit = Omit<UnitState, "critSlotsDestroyed" | "ammoBins"> & {
+  /** Destroyed crit-slot indices (0-based) per location; empty locations omitted. */
+  crit: Partial<Record<Location, number[]>>;
+  /** Remaining shots per surviving ammo bin id. */
+  ammo: Record<string, number>;
+};
+
+/** Packed battle: cells listed only when not clear/level 0. */
+type PackedBattle = Omit<BattleState, "cells" | "units"> & {
+  /** `[index, terrain, level]`, index = col-1 + (row-1)·width. */
+  cells: Array<[number, TerrainType, number]>;
+  units: Record<string, PackedUnit>;
+};
+
+function packUnit(unit: UnitState): PackedUnit {
+  const { critSlotsDestroyed, ammoBins, ...rest } = cloneUnitState(unit);
+  const crit: PackedUnit["crit"] = {};
+  for (const loc of Object.keys(critSlotsDestroyed) as Location[]) {
+    const hit: number[] = [];
+    critSlotsDestroyed[loc].forEach((destroyed, i) => {
+      if (destroyed) hit.push(i);
+    });
+    if (hit.length > 0) crit[loc] = hit;
+  }
+  const ammo: Record<string, number> = {};
+  for (const bin of Object.values(ammoBins)) ammo[bin.id] = bin.shots;
+  return { ...rest, crit, ammo };
+}
+
+function unpackUnit(packed: PackedUnit): UnitState {
+  const { crit, ammo, ...rest } = packed;
+  const def = mechDefFor(rest);
+  const critSlotsDestroyed = emptyCritTable(def);
+  for (const loc of Object.keys(crit) as Location[]) {
+    const slots = critSlotsDestroyed[loc];
+    if (slots === undefined) throw new Error("Invalid battle snapshot string");
+    for (const i of crit[loc] ?? []) slots[i] = true;
+  }
+  const identity = new Map(collectAmmoBins(def).map((bin) => [bin.id, bin]));
+  const ammoBins: AmmoBins = {};
+  for (const [id, shots] of Object.entries(ammo)) {
+    const bin = identity.get(id);
+    if (bin === undefined) throw new Error("Invalid battle snapshot string");
+    ammoBins[id] = { ...bin, shots };
+  }
+  return cloneUnitState({ ...rest, critSlotsDestroyed, ammoBins });
+}
+
+function packCells(cells: readonly HexCell[]): PackedBattle["cells"] {
+  const out: PackedBattle["cells"] = [];
+  cells.forEach((cell, i) => {
+    if (cell.terrain !== "clear" || cell.level !== 0) out.push([i, cell.terrain, cell.level]);
+  });
+  return out;
+}
+
+function unpackCells(packed: PackedBattle["cells"], count: number): HexCell[] {
+  const cells: HexCell[] = new Array<HexCell>(count).fill(hexCell("clear"));
+  for (const [i, terrain, level] of packed) {
+    if (cells[i] === undefined) throw new Error("Invalid battle snapshot string");
+    cells[i] = hexCell(terrain, level);
+  }
+  return cells;
+}
+
 /** Serializes whole battle state to a storable string. */
 export function saveBattleState(state: BattleState): string {
-  return JSON.stringify(cloneBattleState(state));
+  const units: Record<string, PackedUnit> = {};
+  for (const [id, unit] of Object.entries(state.units)) units[id] = packUnit(unit);
+  const packed: PackedBattle = {
+    ...cloneBattleRest(state),
+    units,
+    cells: packCells(state.cells),
+  };
+  return JSON.stringify(packed);
 }
 
 /** Phases in TW turn order; used to validate parsed snapshots. */
@@ -176,7 +248,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  *  rejects garbage / wrong-payload strings before touching live state.
  *  Snapshots pre-dating event-log removal carry an `events` key and are
  *  rejected outright (clean break, no migration). */
-function isBattleSnapshotObject(value: unknown): value is BattleSnapshot {
+function isBattleSnapshotObject(value: unknown): value is PackedBattle {
   if (!isRecord(value)) return false;
   return (
     typeof value.turn === "number" &&
@@ -207,7 +279,7 @@ export function loadBattleState(state: BattleState, data: string): void {
     throw new Error("Invalid battle snapshot string");
   }
   if (!isBattleSnapshotObject(parsed)) throw new Error("Invalid battle snapshot string");
-  loadClonedBattleState(state, parsed);
+  loadClonedBattleState(state, unpackBattle(parsed));
 }
 
 /** Parses snapshot string into fresh detached `BattleState`. Same string
@@ -220,14 +292,23 @@ export function parseBattleState(data: string): BattleState {
     throw new Error("Invalid battle snapshot string");
   }
   if (!isBattleSnapshotObject(parsed)) throw new Error("Invalid battle snapshot string");
-  return cloneBattleState(parsed);
+  return unpackBattle(parsed);
 }
 
-function cloneBattleState(state: BattleState): BattleSnapshot {
+function unpackBattle(packed: PackedBattle): BattleSnapshot {
   const units: Record<string, UnitState> = {};
-  for (const [id, unit] of Object.entries(state.units)) {
-    units[id] = cloneUnitState(unit);
-  }
+  for (const [id, unit] of Object.entries(packed.units)) units[id] = unpackUnit(unit);
+  return {
+    ...cloneBattleRest(packed),
+    units,
+    cells: unpackCells(packed.cells, packed.width * packed.height),
+  };
+}
+
+/** Deep copy of every battle field except `units` and `cells`. */
+function cloneBattleRest(
+  state: Omit<BattleState, "cells" | "units">,
+): Omit<BattleSnapshot, "cells" | "units"> {
   const buildings: Record<string, BuildingState> = {};
   for (const [key, building] of Object.entries(state.buildings)) {
     buildings[key] = cloneBuildingState(building);
@@ -244,8 +325,6 @@ function cloneBattleState(state: BattleState): BattleSnapshot {
     turn: state.turn,
     phase: state.phase,
     initiativeWinnerTeam: state.initiativeWinnerTeam,
-    units,
-    cells: state.cells.map(cloneCell),
     width: state.width,
     height: state.height,
     critsDisabled: state.critsDisabled,
@@ -265,11 +344,13 @@ function loadClonedBattleState(state: BattleState, snapshot: BattleSnapshot): vo
   state.phase = snapshot.phase;
   state.initiativeWinnerTeam = snapshot.initiativeWinnerTeam;
   state.critsDisabled = snapshot.critsDisabled;
-  const grid = state as unknown as { width: number; height: number; cells: HexCell[] };
+  const grid = state as unknown as { width: number; height: number };
   grid.width = snapshot.width;
   grid.height = snapshot.height;
-  grid.cells.length = 0;
-  for (const cell of snapshot.cells) grid.cells.push(cloneCell(cell));
+  state.cells.length = snapshot.cells.length;
+  snapshot.cells.forEach((cell, i) => {
+    state.cells[i] = cell;
+  });
   for (const id of Object.keys(state.units)) delete state.units[id];
   for (const [id, unit] of Object.entries(snapshot.units)) {
     state.units[id] = cloneUnitState(unit);
@@ -313,8 +394,6 @@ export function loadUnitState(unit: UnitState, snapshot: UnitSnapshot): void {
   unit.position = next.position;
   unit.facing = next.facing;
   unit.damage = next.damage;
-  unit.baseDamage = next.baseDamage;
-  unit.baseCritSlotsDestroyed = next.baseCritSlotsDestroyed;
   unit.ammoBins = next.ammoBins;
   unit.ammoPolicy = next.ammoPolicy;
   unit.jammedWeapons = next.jammedWeapons;
@@ -324,7 +403,7 @@ export function loadUnitState(unit: UnitState, snapshot: UnitSnapshot): void {
   unit.club = cloneHeldClub(next.club);
   unit.declaredPickup = clonePickupDecl(next.declaredPickup);
   unit.moveMode = next.moveMode;
-  unit.movesThisTurn = next.movesThisTurn;
+  unit.hexesMovedThisTurn = next.hexesMovedThisTurn;
   unit.jumpedThisTurn = next.jumpedThisTurn;
   unit.mpSpent = next.mpSpent;
   unit.heat = next.heat;

@@ -288,6 +288,7 @@ describe("unit and end lines", () => {
     const hunchy = state.units.hunchy!;
     expect(encodeEndLine("0", hunchy)).toBe("E00");
     hunchy.pilotHits = 3;
+    const startCtArmor = hunchy.damage.armor.centerTorso;
     hunchy.damage.armor.head -= 5;
     hunchy.damage.armor.centerTorso = 0;
     hunchy.damage.armorRear.centerTorso -= 4;
@@ -295,7 +296,7 @@ describe("unit and end lines", () => {
     hunchy.critSlotsDestroyed.rightArm[4] = true;
     hunchy.ammoBins["leftTorso:1"]!.shots -= 3;
     const line = encodeEndLine("0", hunchy);
-    expect(line).toBe(`E03:h5C${state.units.hunchy!.baseDamage.armor.centerTorso}/4/1:a5:L13`);
+    expect(line).toBe(`E03:h5C${startCtArmor}/4/1:a5:L13`);
   });
   it("winner line: team or '-', rng as 8 hex digits (negative snapshots included)", () => {
     expect(normalizeRng("3f9a41c7")).toBe("3f9a41c7");

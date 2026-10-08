@@ -4,11 +4,26 @@ import type { HexCell, HexCoord, TerrainType } from "./types";
 /** Per-level MP cost to change elevation (up or down). */
 export const MP_PER_LEVEL_CLIMB = 1;
 
+const CELL_REGISTRY = new Map<string, HexCell>();
+
+/** The shared `HexCell` for a terrain/level pair. Every grid and snapshot
+ *  holds the same instance per distinct cell, so grids copy references, never
+ *  cell objects. Cells are immutable: replace a grid slot, never edit a cell. */
+export function hexCell(terrain: TerrainType, level = 0): HexCell {
+  const key = `${terrain}|${level}`;
+  let cell = CELL_REGISTRY.get(key);
+  if (cell === undefined) {
+    cell = { terrain, level };
+    CELL_REGISTRY.set(key, cell);
+  }
+  return cell;
+}
+
 /** Default cell returned for out-of-bounds coordinates. */
-const DEFAULT_CELL: Readonly<HexCell> = { terrain: "clear", level: 0 };
+const DEFAULT_CELL = hexCell("clear");
 
 export interface HexGrid {
-  readonly cells: readonly HexCell[];
+  readonly cells: HexCell[];
   readonly width: number;
   readonly height: number;
 }
@@ -17,7 +32,7 @@ export interface HexGrid {
 export function cellAt(grid: HexGrid, hex: HexCoord): HexCell {
   const { col, row } = hex;
   if (col < 1 || col > grid.width || row < 1 || row > grid.height) {
-    return DEFAULT_CELL as HexCell;
+    return DEFAULT_CELL;
   }
   return grid.cells[col - 1 + (row - 1) * grid.width]!;
 }
@@ -26,7 +41,7 @@ export function cellAt(grid: HexGrid, hex: HexCoord): HexCell {
 export function setCell(grid: HexGrid, hex: HexCoord, cell: HexCell): void {
   const { col, row } = hex;
   if (col < 1 || col > grid.width || row < 1 || row > grid.height) return;
-  (grid.cells as HexCell[])[col - 1 + (row - 1) * grid.width] = cell;
+  grid.cells[col - 1 + (row - 1) * grid.width] = cell;
 }
 
 export const MP_TO_ENTER_HEX = 1;
