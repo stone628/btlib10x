@@ -181,7 +181,7 @@ export const en = {
   "banner.draw": "=== DRAW - NO UNITS REMAIN ===",
   "banner.win": "=== TEAM {team} WINS ===",
   "replay.summary": "you can replay this match with this data",
-  "replay.help": "keep the records below; each line is one step of the match.",
+  "replay.help": "replay data for version {version}; keep it as is.",
 
   // setup/session errors
   "err.unknownMap": "Unknown map {name}; available: {list}",

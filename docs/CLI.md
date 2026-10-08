@@ -123,7 +123,9 @@ pass), plus `cancel`, `sheet`, `status`, `heat` and the globals.
 format of `docs/REPLAY.md` (`web/replay.ts`: header on `start`/`rematch`, one `M`/`A`
 line per committed activation, rejected commands leave no trace). When the battle
 ends, the victory banner is followed by a collapsed block *"you can replay this
-match with this data"* holding the records, one per line. `rematch` starts a new
+match with this data"* holding the records laid out by `replayPrettifier`: version,
+the setup line (`B…;S…`), one line per unit, then per turn one movement line and one
+attack line (activations joined by `;`), the `W` line and one `E` line per unit. `rematch` starts a new
 log; `reset` clears it and re-creates the dice generator from the seed. A match
 that cannot be reproduced (more than 36 units, a team above 9, a unit id with
 `:` `;` `,` or whitespace, a replaced dice generator) shows no block.
