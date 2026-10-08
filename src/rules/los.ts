@@ -105,7 +105,8 @@ export function losWoodsPointsBetween(
   prone?: ProneEnds,
 ): number {
   let worst = 0;
-  for (const side of LOS_SIDES) worst = Math.max(worst, woodsPointsOnSide(grid, from, to, side, prone));
+  for (const side of LOS_SIDES)
+    worst = Math.max(worst, woodsPointsOnSide(grid, from, to, side, prone));
   return worst;
 }
 
@@ -118,7 +119,8 @@ function woodsPointsOnSide(
 ): number {
   let points = 0;
   for (const h of interveningHexes(from, to, side)) {
-    if (woodsIntervene(grid, from, to, h, prone)) points += screeningPoints(cellAt(grid, h).terrain);
+    if (woodsIntervene(grid, from, to, h, prone))
+      points += screeningPoints(cellAt(grid, h).terrain);
   }
   return points;
 }
@@ -163,7 +165,6 @@ export function losBlockedByWater(
   };
   return submerged(from, prone?.from) || submerged(to, prone?.to);
 }
-
 
 /**
  * Standing feature heights above the underlying hex level (TW p. 100):

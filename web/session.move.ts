@@ -25,7 +25,6 @@ import {
   MP_PER_FACING_CHANGE,
   mapDefFor,
   mechDefFor,
-  movementMpPenalty,
   neighbor,
   oppositeFacing,
   passMovement,
@@ -242,7 +241,8 @@ export function declareMovementMode(
   if (mode === "startup") {
     if (unit.shutdown === "not") throw new Error(i18n("err.mustBeDownForStartup"));
     if (unit.shutdown === "starting") throw new Error(i18n("err.alreadyStarting"));
-    if (unit.shutdown === "heat") throw new Error(i18n("err.heatShutdownNoStartup", { id: unit.id }));
+    if (unit.shutdown === "heat")
+      throw new Error(i18n("err.heatShutdownNoStartup", { id: unit.id }));
     context.moveMode = "startup";
     context.postureMove = null;
     clearMoveQueue(context);
@@ -706,7 +706,7 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo {
   // reduced (TW p.159).
   let walking = effectiveMoveBudget("walk", effMove, actor.heat);
   let running = effectiveMoveBudget("run", effMove, actor.heat);
-  let jumping = effectiveMoveBudget("jump", effMove, actor.heat);
+  const jumping = effectiveMoveBudget("jump", effMove, actor.heat);
   const postureMove = s.move?.postureMove ?? null;
   if (mode === "prone") {
     if ((postureMove ?? "walk") === "standStill") return { team: actor.team, revealed: [] }; // drop in place: no map
@@ -762,7 +762,8 @@ function stepResultLines(s: Session, landing: RevealedLanding): string[] {
   const last = path[path.length - 1];
   const m = s.move;
   const mode = m?.moveMode ?? null;
-  const postureCost = mode === "prone" ? DROP_MP_COST : mode === "standup" ? standCostFor(actor) : 0;
+  const postureCost =
+    mode === "prone" ? DROP_MP_COST : mode === "standup" ? standCostFor(actor) : 0;
   const locomotion =
     mode === "standup" || mode === "prone"
       ? (m?.postureMove ?? "walk")

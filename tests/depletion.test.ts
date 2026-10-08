@@ -21,13 +21,7 @@ import {
   rollInitiativePhase,
   type UnitInit,
 } from "../src/rules/game";
-import {
-  commitMovement,
-  declareMovementMode,
-  newSession,
-  requireAttackActor,
-  type Session,
-} from "../web/session";
+import { commitMovement, declareMovementMode, newSession, type Session } from "../web/session";
 import { createTestBattle, disableCritical, execute, scriptedRng } from "./helpers";
 
 const HBK = mechDef("HBK-4G")!;
@@ -309,22 +303,53 @@ function freshBrawl(): Session {
   return s;
 }
 
-describe("ammo command (session)", () => {
-  it("shows the acting unit's policy, sets it, and rejects gibberish", () => {
-    const s = freshBrawl();
+describe("ammoPolicy setup (session)", () => {
+  it("sets the policy with `set` during setup, rejects gibberish, and `ammo` is gone", () => {
+    const s = newSession(42);
+    execute(s, "map quickstart");
+    execute(s, "add hunchy HBK-4G 9 9 n");
+    execute(s, "add cicada CDA-3MA 9 8 s");
+    const unit = () => s.setup.roster.find((u) => u.id === "hunchy")!;
+    expect(unit().policy).toEqual({ ammoPolicy: "exposed" });
+    expect(execute(s, "set hunchy ammoPolicy spread")).toEqual([
+      "hunchy: ammoPolicy set to spread",
+    ]);
+    expect(unit().policy.ammoPolicy).toBe("spread");
+    expect(execute(s, "set hunchy AMMOPOLICY leastfirst")[0]).toBe(
+      "hunchy: ammoPolicy set to least-first",
+    );
+    expect(unit().policy.ammoPolicy).toBe("leastFirst");
+    expect(execute(s, "set hunchy ammoPolicy nope")[0]).toMatch(
+      /^error: ammo policy must be one of/,
+    );
+    expect(unit().policy.ammoPolicy).toBe("leastFirst");
+
+    execute(s, "start");
+    expect(s.battle!.units.hunchy!.ammoPolicy).toBe("leastFirst");
+    expect(s.battle!.units.cicada!.ammoPolicy).toBe("exposed");
     while (s.state === "battle" && s.battle!.phase === "movement") {
       declareMovementMode(s, "walk");
       commitMovement(s);
     }
     expect(s.battle!.phase).toBe("attack");
-    const actor = requireAttackActor(s).id;
-    expect(execute(s, "ammo")[0]).toBe("ammo policy: exposed");
-    expect(execute(s, "ammo spread")).toEqual([`${actor}: ammo policy set to spread`]);
-    expect(s.battle!.units[actor]!.ammoPolicy).toBe("spread");
-    expect(execute(s, "ammo leastfirst")[0]).toBe(`${actor}: ammo policy set to least-first`);
-    expect(s.battle!.units[actor]!.ammoPolicy).toBe("leastFirst");
-    expect(execute(s, "ammo nope")[0]).toMatch(/^error: ammo policy must be one of/);
-    expect(s.battle!.units[actor]!.ammoPolicy).toBe("leastFirst");
+    expect(execute(s, "ammo spread")[0]).toMatch(/^error:/);
+    expect(s.battle!.units.hunchy!.ammoPolicy).toBe("leastFirst");
+  });
+
+  it("buildUnitInit defaults the policy; createBattle applies and validates it", () => {
+    expect(buildUnitInit("a", "HBK-4G", 0, { col: 1, row: 1 }).policy).toEqual({
+      ammoPolicy: "exposed",
+    });
+    const mk = (policy: UnitInit["policy"]) => [
+      { ...buildUnitInit("a", "HBK-4G", 0, { col: 1, row: 1 }), policy },
+      buildUnitInit("b", "CDA-3MA", 1, { col: 3, row: 1 }),
+    ];
+    const state = createTestBattle([], mk({ ammoPolicy: "core" }), true);
+    expect(state.units.a!.ammoPolicy).toBe("core");
+    expect(state.units.b!.ammoPolicy).toBe("exposed");
+    expect(() => createTestBattle([], mk({ ammoPolicy: "nope" as never }), true)).toThrow(
+      /Unknown ammo policy/,
+    );
   });
 
   it("renders the policy line on the record sheet only for ammo-carrying units", () => {

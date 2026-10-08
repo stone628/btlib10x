@@ -1,4 +1,6 @@
 import {
+  AMMO_POLICIES,
+  type AmmoPolicy,
   buildUnitInit,
   createBattle,
   FACINGS,
@@ -18,6 +20,7 @@ import { i18n } from "./i18n";
 import { gunneryLabel, requireMechDef } from "./misc";
 import type { Session, SessionGameEvent } from "./session";
 import { drive } from "./session";
+import { ammoPolicyLabel } from "./session.common";
 
 export interface SetupContext extends MapNameHolder {
   seed: number;
@@ -106,7 +109,8 @@ export type UnitProp =
   | "facing"
   | "gunnery"
   | "piloting"
-  | "pilotHitMax";
+  | "pilotHitMax"
+  | "ammoPolicy";
 
 export const UNIT_PROPS: ReadonlyArray<UnitProp> = [
   "model",
@@ -117,12 +121,21 @@ export const UNIT_PROPS: ReadonlyArray<UnitProp> = [
   "gunnery",
   "piloting",
   "pilotHitMax",
+  "ammoPolicy",
 ];
 
 export function parseUnitProp(word: string): UnitProp {
   const lower = word.toLowerCase();
-  if ((UNIT_PROPS as readonly string[]).includes(lower)) return lower as UnitProp;
+  const prop = UNIT_PROPS.find((p) => p.toLowerCase() === lower);
+  if (prop !== undefined) return prop;
   throw new Error(i18n("err.unknownProp", { name: word, list: UNIT_PROPS.join(", ") }));
+}
+
+/** Parse a CLI word into a policy. Case-insensitive; `least-first` and
+ *  `leastfirst` are accepted for `leastFirst`. Null when unrecognized. */
+function resolveAmmoPolicy(word: string): AmmoPolicy | null {
+  const normalized = word.toLowerCase().replaceAll("-", "");
+  return AMMO_POLICIES.find((p) => p.toLowerCase() === normalized) ?? null;
 }
 
 function isUnitSkillRange(n: number): n is UnitSkillRange {
@@ -200,6 +213,12 @@ export function setupSetUnitProp(
       if (!isValidPilotHitMax(n)) throw new Error(i18n("err.badPilotHitMax"));
       unit.pilotHitMax = n;
       return { prop, value: String(n) };
+    }
+    case "ammoPolicy": {
+      const policy = resolveAmmoPolicy(raw);
+      if (policy === null) throw new Error(i18n("err.badAmmoPolicy"));
+      unit.policy = { ammoPolicy: policy };
+      return { prop, value: ammoPolicyLabel(policy) };
     }
   }
 }

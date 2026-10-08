@@ -25,8 +25,13 @@ import { createTestBattle, scriptedRng } from "./helpers";
 const HIGH_RNG = { d6: () => 6, snapshot: () => "", load: () => {} };
 
 type Facing = "n" | "ne" | "se" | "s" | "sw" | "nw";
-const mech = (id: string, team: number, pos: HexCoord, facing: Facing, model = "HBK-4G"): UnitInit =>
-  buildUnitInit(id, model, team, pos, facing);
+const mech = (
+  id: string,
+  team: number,
+  pos: HexCoord,
+  facing: Facing,
+  model = "HBK-4G",
+): UnitInit => buildUnitInit(id, model, team, pos, facing);
 
 function toAttack(state: BattleState): void {
   rollInitiativePhase(state, scriptedRng(4, 4, 2, 2), []);
@@ -42,7 +47,11 @@ function pushSetup(
 ): BattleState {
   return createTestBattle(
     terrain,
-    [mech("a", 0, { col: 2, row: aRow }, "s"), mech("b", 1, { col: 2, row: aRow + 1 }, "n"), ...extra],
+    [
+      mech("a", 0, { col: 2, row: aRow }, "s"),
+      mech("b", 1, { col: 2, row: aRow + 1 }, "n"),
+      ...extra,
+    ],
     true,
     3,
     height,
@@ -114,10 +123,7 @@ describe("missing arm actuators (PHY-05)", () => {
   it("an MC-MKII-2 punch ignores the lower arm and hand it does not have", () => {
     const state = createTestBattle(
       [],
-      [
-        mech("a", 0, { col: 2, row: 2 }, "s", "MC-MKII-2"),
-        mech("b", 1, { col: 2, row: 3 }, "n"),
-      ],
+      [mech("a", 0, { col: 2, row: 2 }, "s", "MC-MKII-2"), mech("b", 1, { col: 2, row: 3 }, "n")],
       true,
     );
     const res = resolvePhysicalAttack(

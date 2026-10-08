@@ -1,5 +1,4 @@
 import {
-  type AmmoPolicy,
   type Arc,
   type ArmLocation,
   type AttackResolution,
@@ -671,15 +670,6 @@ export function setTorsoTwist(s: Session, arc: Arc): Arc {
     ensureFireCandidate(battle, context, true);
   }
   return prev;
-}
-
-/**
- * Set the acting unit's ammo-depletion policy. Affects the order its ammo
- * bins are drained by future shots (and which bin explodes on a crit).
- */
-export function setAmmoPolicy(s: Session, policy: AmmoPolicy): void {
-  const unit = requireAttackActor(s);
-  unit.ammoPolicy = policy;
 }
 
 const BRACKET_LABEL: Readonly<Record<RangeBracket, string>> = {

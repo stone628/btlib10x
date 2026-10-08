@@ -70,8 +70,10 @@ export const kr: Catalog = {
   "cmd.add.arg.facing": "선택적 방향 n|ne|se|s|sw|nw (기본 n)",
   "cmd.set.help": "로스터에 있는 유닛의 속성을 수정",
   "cmd.set.arg.id": "수정할 유닛 id",
-  "cmd.set.arg.prop": "속성 이름: model, team, col, row, facing, gunnery, piloting, pilotHitMax",
-  "cmd.set.arg.value": "새 값 (정수, 모델의 경우 메크 키, 방향의 경우 방향 단어)",
+  "cmd.set.arg.prop":
+    "속성 이름: model, team, col, row, facing, gunnery, piloting, pilotHitMax, ammoPolicy",
+  "cmd.set.arg.value":
+    "새 값 (정수, 모델의 경우 메크 키, 방향의 경우 방향 단어, ammoPolicy의 경우 exposed|core|spread|least-first)",
   "cmd.rm.help": "배치된 유닛 제거",
   "cmd.rm.arg.id": "이전에 추가한 유닛의 id",
   "cmd.statusSetup.help": "설정 요약: 팀별 유닛 그룹, 선택된 맵",
@@ -99,8 +101,6 @@ export const kr: Catalog = {
   "cmd.statusMove.help": "예약된 이동 단계와 누적 MP 비용",
   "cmd.cancelMove.help": "모드와 예약된 단계 지우기",
   "cmd.doneMove.help": "선언된 이동 확정",
-  "cmd.ammo.help": "행동 유닛의 탄약 소진 정책 표시 또는 설정",
-  "cmd.ammo.arg.policy": "exposed | core | spread | leastFirst\n생략하면 현재 정책 표시",
   "cmd.torso.help":
     "행동 유닛의 상체를 회전(TW pp.105-106). 회전 시 팔과 앞쪽 torso가 회전 방향의 아크로 사격 가능",
   "cmd.torso.arg.direction":
@@ -165,8 +165,6 @@ export const kr: Catalog = {
   "ok.drop.queued": "버리기 예약됨 ({kind}) — 이후 선언에는 손이 빔",
   "ok.twistSet": "{id}: 상체가 {dir}(으)로 회전",
   "ok.twistAlready": "{id}: 이미 {dir}(으)로 회전 상태",
-  "ammo.current": "탄약 정책: {policy}",
-  "ammo.set": "{id}: 탄약 정책이 {policy}(으)로 설정되었습니다",
   "ammo.policy.exposed": "노출 우선(exposed)",
   "ammo.policy.core": "코어 우선(core)",
   "ammo.policy.spread": "분산(spread)",
@@ -231,7 +229,8 @@ export const kr: Catalog = {
   "err.mustBeDownForStartup": "mode startup은 셧다운된 유닛에서만 사용할 수 있습니다",
   "err.alreadyEjected": "{id} 는 더 이상 전장에 없습니다",
   "err.alreadyStarting": "{id} 은 이미 기동 중입니다",
-  "err.heatShutdownNoStartup": "{id} 은 열로 정지됨: 재기동 판정은 열 페이즈에 자동으로 이루어집니다",
+  "err.heatShutdownNoStartup":
+    "{id} 은 열로 정지됨: 재기동 판정은 열 페이즈에 자동으로 이루어집니다",
   "err.noBattle": "진행 중인 전투가 없습니다",
   "err.wrongPhase": "이 명령은 {phase} 단계가 필요합니다",
   "err.declareModeFirst": "{id} 유닛의 이동 모드를 먼저 선언하세요. 유효 모드: {modes}",

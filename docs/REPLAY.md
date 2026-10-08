@@ -70,8 +70,8 @@ E<idx><hits>[:<armor>[:<crit>[:<ammo>[::<jam>]]]]    final state per unit, idx o
 | policy | this unit's ammo policy, one char: `e` exposed / `c` core / `s` spread / `l` leastFirst. Omit the field when it is the default (`e`) |
 | jam | jammed weapons: wpn chars (`UnitState.jammedWeapons`) |
 
-Index = registration order (first `U` is `0`). Ammo policy is **setup-only**; the
-attack phase has no policy item. `set`/`rm` edits made during setup are not
+Index = registration order (first `U` is `0`). Ammo policy is **setup-only** (`UnitInit.policy`, edited with `set <id> ammoPolicy <policy>`); the
+attack phase has no ammo command or policy item. `set`/`rm` edits made during setup are not
 recorded — only the final roster is.
 
 **Engine change required:** extend `UnitInit` (game.ts) with optional starting
@@ -86,8 +86,8 @@ interface UnitInit {
   critsDestroyed?: Partial<Record<Location, number[]>>;   // 1-based slot numbers
   ammoUsed?: Partial<Record<AmmoBinId, number>>;
   jammedWeapons?: number[];                               // 1-based weapon numbers
-  ammoPolicy?: AmmoPolicy;
 }
+// policy: UnitPolicy ({ ammoPolicy }) is already part of UnitInit
 ```
 
 `createBattle` also sets `baseDamage`/`baseCritSlotsDestroyed` from it and derives
@@ -195,7 +195,7 @@ Every CLI command and where it lands. "UI" = no effect on battle state, never re
 | `mode shutdown` / `startup` / `eject` + `done` | `X` / `O` / `E` |
 | `done` with nothing declared in movement (pass) | `.` |
 | `cancel` | not recorded (pre-commit) |
-| `ammo [policy]` | setup only: the `U` policy field (`e` `c` `s` `l`) |
+| `set <id> ammoPolicy <policy>` | setup only: the `U` policy field (`e` `c` `s` `l`); the attack-phase `ammo` command no longer exists |
 | `torso <front\|left\|right>` | header char `F` `L` `R` (always written) |
 | `fire <tgt> <weapons…>` + `done` | `:<tgt><wpns>`, `!` for rapid-fire |
 | `punch <tgt> [left\|right]` | `P` / `Q` (default right = `Q`; limb is always written) |

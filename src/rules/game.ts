@@ -6,7 +6,6 @@ import {
   costToEnter,
   groundLevel,
   type HexGrid,
-  hasPartialCover,
   setCell,
   terrainTargetMod,
   waterDepth,
@@ -46,6 +45,7 @@ import {
   collectAmmoBins,
   consumeAmmo,
   consumeAmmoForName,
+  isAmmoPolicy,
   loadAmmoBins,
   pooledShotsLeft,
   stripBinsInLocation,
@@ -77,10 +77,10 @@ import {
   checkCASE,
   countDestroyedEngine,
   countDestroyedGyro,
-  ENGINE_SLOTS_KILL,
   countDestroyedHip,
   countDestroyedLifeSupport,
   countDestroyedSensor,
+  ENGINE_SLOTS_KILL,
   effectiveMovement,
   HIP,
   markLocationCatastrophicallyDestroyed,
@@ -171,6 +171,15 @@ import { computeToHit, DEFAULT_GUNNERY, type RangeBracket } from "./tohit";
 
 export type UnitSkillRange = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
+/** Per-unit behavior settings fixed at setup (before the battle starts). */
+export interface UnitPolicy {
+  /** Which ammo bin a shot is drawn from (see `src/rules/ammo.ts`). */
+  ammoPolicy: AmmoPolicy;
+}
+
+/** Policy a unit gets when setup names none. */
+export const DEFAULT_UNIT_POLICY: Readonly<UnitPolicy> = { ammoPolicy: "exposed" };
+
 export interface UnitInit extends MechModelHolder {
   readonly id: string;
   model: string;
@@ -184,6 +193,8 @@ export interface UnitInit extends MechModelHolder {
   pilotHitMax: number;
   position: HexCoord;
   facing: Facing;
+  /** Per-unit policies; `buildUnitInit` fills {@link DEFAULT_UNIT_POLICY}. */
+  policy: UnitPolicy;
 }
 
 export function buildUnitInit(
@@ -195,6 +206,7 @@ export function buildUnitInit(
   gunnery: UnitSkillRange = DEFAULT_GUNNERY,
   piloting: UnitSkillRange = DEFAULT_PILOTING,
   pilotHitMax: number = DEFAULT_PILOT_HIT_MAX,
+  policy: UnitPolicy = DEFAULT_UNIT_POLICY,
 ): UnitInit {
   return {
     id,
@@ -205,6 +217,7 @@ export function buildUnitInit(
     gunnery,
     piloting,
     pilotHitMax,
+    policy: { ...policy },
   };
 }
 
@@ -989,7 +1002,11 @@ function onBoard(state: BattleState, hex: HexCoord): boolean {
   return hex.col >= 1 && hex.col <= state.width && hex.row >= 1 && hex.row <= state.height;
 }
 
-export function occupantAt(state: BattleState, hex: HexCoord, excludeId?: string): UnitState | undefined {
+export function occupantAt(
+  state: BattleState,
+  hex: HexCoord,
+  excludeId?: string,
+): UnitState | undefined {
   for (const unit of Object.values(state.units)) {
     if (isUnitRemoved(unit) || unit.id === excludeId) continue;
     if (sameHex(unit.position, hex)) return unit;
@@ -1104,11 +1121,6 @@ export function createBattle(
     if (seen.has(init.id)) throw new Error(`Duplicate unit id: ${init.id}`);
     seen.add(init.id);
     if (!mechDef(init.model)) throw new Error(`Unknown 'Mech model: ${init.model}`);
-    if (Math.abs((init.gunnery as number) - (init.piloting as number)) > 2) {
-      throw new Error(
-        `Gunnery(${init.gunnery}), Piloting(${init.piloting}) for ${init.id} cannot differ by more than 2 points, TW p.273`,
-      );
-    }
     if (!isValidPilotHitMax(init.pilotHitMax)) {
       throw new Error(`pilotHitMax(${init.pilotHitMax}) for ${init.id} must be an integer >= 1`);
     }
@@ -1144,7 +1156,7 @@ export function createBattle(
       },
       baseCritSlotsDestroyed: initCritDestroyed(def),
       ammoBins,
-      ammoPolicy: "exposed",
+      ammoPolicy: init.policy.ammoPolicy,
       jammedWeapons: [],
       critSlotsDestroyed: initCritDestroyed(def),
       destroyedWeapons: [],
@@ -2332,7 +2344,10 @@ export function declareAttacks(
   }
   if (wantPhysical) {
     for (const decl of volley.normalized) {
-      unit.declaredPhysicalAttacks.push({ ...decl, ...(options.twist ? { twist: options.twist } : {}) });
+      unit.declaredPhysicalAttacks.push({
+        ...decl,
+        ...(options.twist ? { twist: options.twist } : {}),
+      });
     }
   }
   sink.push({
@@ -4199,7 +4214,11 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     );
     const blasts = crits.reduce((n, c) => n + c.rows.filter(isCritBlastRow).length, 0);
     if (blasts > 0) {
-      pendingPilotHits.push({ unit, hits: blasts * AMMO_BLAST_PILOT_HITS, reason: "ammoExplosion" });
+      pendingPilotHits.push({
+        unit,
+        hits: blasts * AMMO_BLAST_PILOT_HITS,
+        reason: "ammoExplosion",
+      });
     }
   }
   for (const unit of Object.values(state.units)) {
@@ -4846,7 +4865,11 @@ function movementTerrainPsr(
     if (drop >= 2) {
       const tn =
         ACCIDENTAL_FALL_BASE_TN +
-        mv.targetMovementModifier(occupant.movesThisTurn.length, occupant.jumpedThisTurn, undefined) +
+        mv.targetMovementModifier(
+          occupant.movesThisTurn.length,
+          occupant.jumpedThisTurn,
+          undefined,
+        ) +
         terrainTargetMod(cellAt(state, lower).terrain);
       const roll = roll2D6(rng);
       const hit = roll >= tn;
