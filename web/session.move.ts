@@ -40,7 +40,7 @@ import {
 } from "btlib10x";
 import { buildBoardChunk, buildLinesChunk, type Chunk } from "./chunk";
 import { i18n } from "./i18n";
-import { F, PRN, TRN } from "./misc";
+import { F, isGyroDestroyed, modeWord, PRN, TRN } from "./misc";
 import {
   type BoardRenderReachableInfo,
   createBoardRenderUnit,
@@ -163,10 +163,24 @@ export function parseMoveMode(word: string): DeclaredMovementMode {
   throw new Error(i18n("err.badModeWord", { modes: modeSyntaxFor(null) }));
 }
 
+/** True when the unit's effective jump budget (jump jets destroyed, heat) is at least 1. */
+function hasJumpMP(unit: UnitState): boolean {
+  const def = mechDefFor(unit);
+  const movement = effectiveMovement(
+    def,
+    unit.damage,
+    unit.critSlotsDestroyed,
+    isTsmActive(def, unit.heat),
+  );
+  return effectiveMoveBudget("jump", movement, unit.heat) >= 1;
+}
+
 /** Locale-neutral `mode` syntax legal for `unit` right now (null = unknown unit). */
 export function modeSyntaxFor(unit: UnitState | null): string {
   if (unit === null)
     return "standstill|walk|run|jump|prone [turn|pronestill]|turn|pronestill|standup [walk|run|standstill]|shutdown|startup|eject";
+  // A heat shutdown restarts by itself in the Heat Phase: only eject is open.
+  if (unit.shutdown === "heat") return "eject";
   if (isShutdown(unit)) return "startup|eject";
   const legs = destroyedLegs(unit.damage);
   const arms = destroyedArms(unit.damage);
@@ -183,8 +197,8 @@ export function modeSyntaxFor(unit: UnitState | null): string {
     return "pronestill|shutdown|eject";
   }
   if (unit.prone) {
-    const standOk = canAttemptStandUp(unit.damage);
-    const runOk = false; // one-leg cannot run
+    const standOk = canAttemptStandUp(unit.damage) && !isGyroDestroyed(unit);
+    const runOk = legs === 0; // a one-leg 'Mech cannot stand into a run (TW p.122)
     const standupModes = standOk
       ? runOk
         ? "standup [walk|run|standstill]"
@@ -194,10 +208,10 @@ export function modeSyntaxFor(unit: UnitState | null): string {
     return `turn|pronestill${sep}${standupModes}|shutdown|eject`;
   }
   // Standing one-leg 'Mech: walk 1 MP, jump allowed; run only as minimum movement (TW p.49).
-  if (legs === 1) {
-    return "standstill|walk|run|jump|prone [turn|pronestill]|shutdown|eject";
-  }
-  return "standstill|walk|run|jump|prone [turn|pronestill]|shutdown|eject";
+  const jump = hasJumpMP(unit) ? "|jump" : "";
+  // TW p.49: a one-legged 'Mech may run only as minimum movement (one hex forward).
+  const run = legs === 1 ? "run [1 hex forward only]" : "run";
+  return `standstill|walk|${run}${jump}|prone [turn|pronestill]|shutdown|eject`;
 }
 
 /** One-line `modes: ...` hint shown above the movement prompt; null outside it. */
@@ -265,6 +279,7 @@ export function declareMovementMode(
         }),
       );
     if (isUnitImmobile(unit.damage)) throw new Error(i18n("err.postureBudget", { id: unit.id }));
+    if (isGyroDestroyed(unit)) throw new Error(i18n("err.gyroNoStand", { id: unit.id }));
     const chosen = parseStandupLocomotion(locomotionWord);
     const def = mechDefFor(unit);
     const movement = effectiveMovement(
@@ -355,6 +370,9 @@ export function declareMovementMode(
   }
   if (mode !== "standStill" && mode !== "walk" && mode !== "run" && mode !== "jump") {
     throw new Error(i18n("err.badModeWord", { modes: modeSyntaxFor(unit) }));
+  }
+  if (mode === "jump" && !hasJumpMP(unit)) {
+    throw new Error(i18n("err.noJumpMP", { id: unit.id, modes: modeSyntaxFor(unit) }));
   }
   if (isUnitImmobile(unit.damage) && mode !== "standStill") {
     throw new Error(i18n("err.immobileStandstill", { id: unit.id, modes: modeSyntaxFor(unit) }));
@@ -502,7 +520,7 @@ function displayMovementModeStr(m: MovementContext): string {
   if (m.moveMode === "standup") return `standup ${m.postureMove ?? "walk"}`;
   if (m.moveMode === "prone")
     return `prone ${m.postureMove === "standStill" ? "pronestill" : "turn"}`;
-  return m.moveMode ?? "";
+  return modeWord(m.moveMode ?? "");
 }
 
 /**
@@ -649,7 +667,8 @@ export function commitMovement(s: Session): SessionGameEvent[] {
     } else {
       // Past this branch m.moveMode is a real MoveMode (the special posture
       // strings above were the only alternatives).
-      const mode = context.moveMode as MoveMode;
+      // A bare `done` on a standing, online unit is a stand-still.
+      const mode = (context.moveMode ?? (unit.prone ? null : "standStill")) as MoveMode;
       executeMove(
         battle,
         unitId,
@@ -853,7 +872,10 @@ export function moveStatusChunk(s: Session): Chunk {
   const lines: string[] = [];
   lines.push(...actorOrderLines(s), i18n("moveStatus.headLine"));
   const mode = s.move?.moveMode ?? null;
-  if (mode === null || mode === "shutdown" || mode === "startup" || mode === "eject") {
+  if (mode === "shutdown" || mode === "startup" || mode === "eject") {
+    const actor = requireUnit(requireBattleAndContext(s).battle, s.move!.actorId);
+    lines.push(`  ${i18n("ok.modeDeclaredVoluntary", { id: actor.id, mode })}`);
+  } else if (mode === null) {
     lines.push(i18n("moveStatus.noMode"));
   } else {
     lines.push(...queuedMoveLines(s).map((l) => `  ${l}`));
@@ -881,7 +903,7 @@ export function displayModeFor(m: MovementContext): string {
   if (m.moveMode === "standup") return `standup ${m.postureMove ?? "walk"}`;
   if (m.moveMode === "prone")
     return `prone ${m.postureMove === "standStill" ? "pronestill" : "turn"}`;
-  return m.moveMode ?? "";
+  return modeWord(m.moveMode ?? "");
 }
 
 export function onEnterMovement(s: Session, sink: SessionGameEvent[]) {

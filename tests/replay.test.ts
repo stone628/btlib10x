@@ -446,7 +446,7 @@ describe("replay log in the session", () => {
     execute(s, "start");
     expect(s.replay!.lines[2]).toBe("S99");
     const before = [...s.replay!.lines];
-    expect(execute(s, "seed 5")[0]).toMatch(/^error: unknown command 'seed'/);
+    expect(execute(s, "seed 5")[0]).toMatch(/^error: 'seed' is not available in this phase/);
     expect(() => setSeed(s, 5)).toThrow(/already started/);
     expect(s.setup.seed).toBe(99);
     expect(s.replay!.lines).toEqual(before);
@@ -460,7 +460,7 @@ describe("replay log in the session", () => {
     execute(s, "rematch");
     expect(s.replay!.lines).toHaveLength(first.indexOf(first.find((l) => l.startsWith("M"))!));
     expect(s.replay!.lines.slice(0, 3)).toEqual(first.slice(0, 3));
-    execute(s, "reset");
+    execute(s, "reset !");
     expect(s.replay).toBeNull();
     // After a reset the generator is fresh again, so the next battle is recordable.
     execute(s, "map quickstart");

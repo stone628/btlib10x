@@ -156,8 +156,8 @@ export function setConfigLocale(locale: LocaleId) {
 /** Set the dice seed. Setup only: a battle in progress keeps its generator. */
 export function setSeed(s: Session, n: number): void {
   if (s.state !== "setup") throw new Error(i18n("err.alreadyStarted"));
-  if (!Number.isInteger(n)) throw new Error(i18n("err.seedInteger"));
-  s.setup.seed = n >>> 0;
+  if (!Number.isInteger(n) || n < 0 || n > 0xffffffff) throw new Error(i18n("err.seedInteger"));
+  s.setup.seed = n;
   s.rng = createRng(s.setup.seed);
 }
 

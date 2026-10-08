@@ -17,7 +17,7 @@ import {
 } from "btlib10x";
 import { buildLinesChunk, type Chunk } from "./chunk";
 import { i18n } from "./i18n";
-import { gunneryLabel, requireMechDef } from "./misc";
+import { gunneryLabel, requireMechDef, strictInt } from "./misc";
 import { startReplay } from "./replay";
 import type { Session, SessionGameEvent } from "./session";
 import { drive } from "./session";
@@ -81,6 +81,9 @@ export function setupAddUnit(
 ): AddUnitResult {
   const m = requireMechDef(model);
   if (context.roster.some((u) => u.id === id)) throw new Error(i18n("err.duplicateId", { id }));
+  // The board draws only the first 4 characters of an id.
+  const clash = context.roster.find((u) => u.id.slice(0, 4) === id.slice(0, 4));
+  if (clash !== undefined) throw new Error(i18n("err.idPrefixClash", { id, other: clash.id }));
   if (context.roster.some((u) => sameHex(u.position, position))) {
     throw new Error(i18n("err.hexOccupied", { col: position.col, row: position.row }));
   }
@@ -158,13 +161,13 @@ export function setupSetUnitProp(
       return { prop, value: m.model };
     }
     case "team": {
-      const n = Number(raw);
+      const n = strictInt(raw) ?? Number.NaN;
       if (!Number.isInteger(n) || n < 0) throw new Error(i18n("err.badTeam"));
       unit.team = n;
       return { prop, value: String(n) };
     }
     case "col": {
-      const n = Number(raw);
+      const n = strictInt(raw) ?? Number.NaN;
       if (!Number.isInteger(n) || n < 1) throw new Error(i18n("err.oneBased", { label: "col" }));
       const map = context.mapName != null ? mapDefFor(context) : undefined;
       if (map !== undefined && n > map.width)
@@ -178,7 +181,7 @@ export function setupSetUnitProp(
       return { prop, value: String(n) };
     }
     case "row": {
-      const n = Number(raw);
+      const n = strictInt(raw) ?? Number.NaN;
       if (!Number.isInteger(n) || n < 1) throw new Error(i18n("err.oneBased", { label: "row" }));
       const map = context.mapName != null ? mapDefFor(context) : undefined;
       if (map !== undefined && n > map.height)
@@ -198,19 +201,19 @@ export function setupSetUnitProp(
       return { prop, value: f };
     }
     case "gunnery": {
-      const n = Number(raw);
+      const n = strictInt(raw) ?? Number.NaN;
       if (!Number.isInteger(n) || !isUnitSkillRange(n)) throw new Error(i18n("err.badGunnery"));
       unit.gunnery = n;
       return { prop, value: String(n) };
     }
     case "piloting": {
-      const n = Number(raw);
+      const n = strictInt(raw) ?? Number.NaN;
       if (!Number.isInteger(n) || !isUnitSkillRange(n)) throw new Error(i18n("err.badPiloting"));
       unit.piloting = n;
       return { prop, value: String(n) };
     }
     case "pilotHitMax": {
-      const n = Number(raw);
+      const n = strictInt(raw) ?? Number.NaN;
       if (!isValidPilotHitMax(n)) throw new Error(i18n("err.badPilotHitMax"));
       unit.pilotHitMax = n;
       return { prop, value: String(n) };
@@ -244,6 +247,9 @@ export function setupStatus(setup: SetupContext): Chunk {
           model: u.model,
           name: def.name,
           gunnery: gunneryLabel(u.gunnery),
+          piloting: u.piloting,
+          hitMax: u.pilotHitMax,
+          ammo: ammoPolicyLabel(u.policy.ammoPolicy),
           pos: hexKey(u.position),
           facing: u.facing,
         }),

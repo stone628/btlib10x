@@ -14,13 +14,13 @@
   --t-rubble: #a08a6a;
   --club: #e5c07b;
   --t-pavement: #8a8a9a;
-  --t-water1: #5a9ad8;
-  --t-water2: #4a8ac8;
-  --t-water3: #3a7ab8;
+  --t-water1: #6aaae0;
+  --t-water2: #5a9ad8;
+  --t-water3: #4a8ac8;
   --t-lightBuilding: #d8b06a;
   --t-mediumBuilding: #c89a5a;
-  --t-heavyBuilding: #a87a4a;
-  --t-hardenedBuilding: #8a5a3a;
+  --t-heavyBuilding: #b4885a;
+  --t-hardenedBuilding: #a87a4a;
   --c-red: #e07a6a;
   --c-green: #8fd08f;
   --c-yellow: #d8c26a;
@@ -48,6 +48,14 @@ body {
   font-family: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   font-size: 13px;
   line-height: 1.35;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+@supports (height: 100dvh) {
+  body {
+    height: 100dvh;
+  }
 }
 #motd {
   position: fixed;
@@ -98,7 +106,8 @@ body {
 #term {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  flex: 1;
+  min-height: 0;
   padding: 8px 12px;
 }
 #out {
@@ -173,6 +182,20 @@ body {
 #out .board-grid > span {
   display: block;
   width: 1ch;
+}
+/* Row renderer: ASCII runs as text, other glyphs boxed in fixed 1ch cells. */
+#out .board-grid.board-rows {
+  display: inline-block;
+  white-space: pre;
+}
+#out .board-grid.board-rows > div {
+  height: 1em;
+}
+#out .board-grid.board-rows .cell {
+  display: inline-block;
+  width: 1ch;
+  height: 1em;
+  vertical-align: top;
 }
 .t-lightWoods {
   color: var(--t-lightWoods);
@@ -272,6 +295,7 @@ body {
 }
 #inrow {
   display: flex;
+  flex-wrap: wrap;
   border-top: 1px solid #233023;
   padding-top: 6px;
   margin-top: 6px;
@@ -289,6 +313,58 @@ body {
   color: inherit;
   font: inherit;
   caret-shape: bar;
+  min-width: 8ch;
+}
+#cmd:focus-visible {
+  box-shadow: inset 0 -1px 0 var(--c-green);
+}
+@media (pointer: coarse) {
+  #cmd {
+    font-size: 16px;
+  }
+}
+/* Narrow screens: wrap the log so the prompt never scrolls away; wide blocks scroll in place. */
+@media (max-width: 480px) {
+  #motd {
+    position: static;
+    margin: 4px 12px 0;
+    width: auto;
+    max-height: 40vh;
+  }
+  @supports (height: 100dvh) {
+    #motd {
+      max-height: 40dvh;
+    }
+  }
+  #out {
+    overflow-x: hidden;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  #out .board,
+  #out .board-grid,
+  #out .board-legend,
+  #out .columns,
+  #out .collapsible-body {
+    overflow-x: auto;
+    overflow-wrap: normal;
+    white-space: pre;
+  }
+  #out .board-grid.board-rows {
+    display: block;
+    max-width: 100%;
+  }
+  #prompt {
+    white-space: pre-wrap;
+  }
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: pre;
 }
 
 .link-button {

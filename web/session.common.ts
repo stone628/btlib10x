@@ -41,6 +41,8 @@ import {
   movementMpPenalty,
   movementMpPenaltyWithThreshold,
   msgHex,
+  type Phase,
+  type PilotHitReason,
   type PilotingCheckReason,
   type PilotRecord,
   type PilotStatus,
@@ -70,7 +72,7 @@ import {
 } from "./chunk";
 import { compensatedLength, i18n, type MessageKey } from "./i18n";
 import { lookupMech } from "./lookup";
-import { F, gunneryLabel, PRN, requireMechDef, SHORT_LOC, signedMod, TRN } from "./misc";
+import { F, gunneryLabel, modeWord, PRN, requireMechDef, SHORT_LOC, TRN } from "./misc";
 import { createBoardRenderUnit, createEjectedBoardRenderUnits } from "./render";
 import { replayChunk } from "./replay";
 import { requireBattle, type Session, type SessionGameEvent, victoryBannerChunk } from "./session";
@@ -502,7 +504,7 @@ function armorDiagramSheet(view: SheetView): string[] {
   const rear = (loc: Location) => (isTorso(loc) ? cell(ar[loc], or[loc], "R") : cell(0, 0, "R"));
   const pRT = p(RT);
   const statusHeader = shutdownHeader(view).padEnd(CT);
-  const heatHeader = "[HEAT]".padStart(CT);
+  const heatHeader = "[HEAT|HS]".padStart(CT);
   const heat = cell(view.heat, HEAT_SCALE_MAX, " ").padStart(CT);
   const dissip = cell(-view.dissipCurr, view.dissipMax, " ").padStart(CT);
   const el = engineLifeSupport(view).padEnd(CT);
@@ -846,7 +848,8 @@ function mergeDiagramToColumns(
 }
 
 export function sheetForUnit(s: Session, id: string): Chunk[] {
-  const unit = requireBattle(s).units[id];
+  const units = requireBattle(s).units;
+  const unit = Object.hasOwn(units, id) ? units[id] : undefined;
   if (!unit) throw new Error(i18n("err.unknownUnitId", { id }));
   return sheetLines(battleSheet(unit, id));
 }
@@ -908,6 +911,7 @@ function sheetPilotLine(view: SheetView): string {
     state: i18n(PILOT_STATUS_KEY[view.pilot.status]),
     hp: view.pilot.hp,
     max: view.pilot.hitMax,
+    cons: "",
   });
 }
 
@@ -1097,25 +1101,25 @@ export function handleSessionGameEvents(s: Session, events: SessionGameEvent[]):
   const linesBuf: string[] = [];
   const idLinesBuf: string[] = [];
   const { tnw, tsw, tv } = GRID_THEME.LIGHT;
-  let lastUnitPrefix: string = "";
-  let skipUnitPrefix: boolean = false;
+  let lastBoxKey: string = "";
+  let indentLen: number = 0;
   const flushIdLinesBuf = () => {
     const bufferedLen = idLinesBuf.length;
     if (bufferedLen > 0) {
-      const prefixLen = lastUnitPrefix.length;
+      const prefixLen = indentLen > 0 ? indentLen : lastBoxKey.length;
       const blank = " ".repeat(prefixLen);
       const firstLine = idLinesBuf[0]!;
       if (bufferedLen === 1) {
-        if (skipUnitPrefix) {
+        if (indentLen > 0) {
           linesBuf.push(`${blank} ${firstLine}`);
         } else {
-          linesBuf.push(`${lastUnitPrefix} ${firstLine}`);
+          linesBuf.push(`${lastBoxKey} ${firstLine}`);
         }
       } else {
-        if (skipUnitPrefix) {
+        if (indentLen > 0) {
           linesBuf.push(`${blank}${tnw} ${firstLine}`);
         } else {
-          linesBuf.push(`${lastUnitPrefix}${tnw} ${firstLine}`);
+          linesBuf.push(`${lastBoxKey}${tnw} ${firstLine}`);
         }
         for (let i = 1; i < bufferedLen - 1; i++) {
           linesBuf.push(`${blank}${tv} ${idLinesBuf[i]!}`);
@@ -1124,8 +1128,8 @@ export function handleSessionGameEvents(s: Session, events: SessionGameEvent[]):
       }
       idLinesBuf.length = 0;
     }
-    lastUnitPrefix = "";
-    skipUnitPrefix = false;
+    lastBoxKey = "";
+    indentLen = 0;
   };
   const flushLinesBuf = () => {
     flushIdLinesBuf();
@@ -1141,74 +1145,104 @@ export function handleSessionGameEvents(s: Session, events: SessionGameEvent[]):
   };
   const idLines = (id: string, ...lines: string[]) => {
     if (lines.length === 0) return;
-    const currUnitPrefix = `[${id}]`;
+    const currPrefix = `[${id}]`;
     const firstLine = lines.shift()!;
-    const firstLineHasPrefix = firstLine.startsWith(currUnitPrefix);
-    if (lastUnitPrefix !== currUnitPrefix) {
+    if (lastBoxKey !== currPrefix) {
       flushIdLinesBuf();
-      lastUnitPrefix = currUnitPrefix;
+      lastBoxKey = currPrefix;
     }
-    if (firstLineHasPrefix) {
-      idLinesBuf.push(firstLine.substring(currUnitPrefix.length).trimStart());
-    } else {
-      if (idLinesBuf.length === 0) {
-        skipUnitPrefix = true;
-        linesBuf.push(firstLine);
-      }
+    idLinesBuf.push(
+      firstLine.startsWith(currPrefix)
+        ? firstLine.substring(currPrefix.length).trimStart()
+        : firstLine,
+      ...lines
+    );
+  };
+  const pairLines = (from: string, to: string, ...lines: string[]) => {
+    if (lines.length === 0) return;
+    const currPrefix = `[${from} -> ${to}]`;
+    const fromPrefix = `[${from}]`;
+    const fromPrefixLen = fromPrefix.length;
+    if (lastBoxKey !== currPrefix) {
+      flushLinesBuf();
+      lastBoxKey = currPrefix;
+      linesBuf.push(currPrefix);
+      indentLen = fromPrefixLen;
     }
-    idLinesBuf.push(...lines);
+    idLinesBuf.push(...lines.map((l) => l.startsWith(fromPrefix) ? l.substring(fromPrefixLen).trimStart() : l));
   };
   const chunks = (...chunks: Chunk[]) => {
     flushLinesBuf();
     result.push(...chunks);
   };
-  for (const e of events) handleSessionGameEvent(s, e, lines, idLines, chunks);
+  for (const e of events) handleSessionGameEvent(s, e, { lines, idLines, pairLines, chunks });
   flushLinesBuf();
   return result;
+}
+
+const PILOT_HIT_REASON_KEY: Readonly<Record<PilotHitReason, MessageKey>> = {
+  headHit: "log.pilotHitReason.headHit",
+  ammoExplosion: "log.pilotHitReason.ammoExplosion",
+  ejection: "log.pilotHitReason.ejection",
+  fall: "log.pilotHitReason.fall",
+  shutdownFall: "log.pilotHitReason.shutdownFall",
+  lifeSupport: "log.pilotHitReason.lifeSupport",
+};
+
+const PHASE_NAME_KEY: Readonly<Record<Phase, MessageKey>> = {
+  initiative: "log.phaseName.initiative",
+  movement: "log.phaseName.movement",
+  attack: "log.phaseName.attack",
+  end: "log.phaseName.end",
+};
+
+interface OutputHandlers {
+  readonly lines: (...lines: string[]) => void,
+  readonly idLines: (id: string, ...lines: string[]) => void,
+  readonly pairLines: (from: string, to: string, ...lines: string[]) => void,
+  readonly chunks: (...chunks: Chunk[]) => void,
 }
 
 function handleSessionGameEvent(
   s: Session,
   e: SessionGameEvent,
-  lines: (...lines: string[]) => void,
-  idLines: (id: string, ...lines: string[]) => void,
-  chunks: (...chunks: Chunk[]) => void,
+  out: OutputHandlers
 ): void {
   switch (e.kind) {
     case "phase":
       {
-        const phaseLine = i18n("log.phase", { turn: e.turn, phase: e.phase });
+        const phaseLine = i18n("log.phase", { turn: e.turn, phase: i18n(PHASE_NAME_KEY[e.phase]) });
         const len = compensatedLength(phaseLine);
         const separator = "-".repeat(len);
-        lines(" ", separator, phaseLine, separator);
+        out.lines(" ", separator, phaseLine, separator);
       }
       break;
     case "initiative":
       {
         const rolls = Object.entries(e.rolls)
           .sort((a, b) => Number(a[0]) - Number(b[0]))
-          .map(([team, roll]) => `team ${team} (2D6: ${roll})`)
+          .map(([team, roll]) => i18n("log.initiativeRoll", { team, roll }))
           .join(", ");
-        lines(i18n("log.initiative", { rolls, winner: e.winnerTeam }));
+        out.lines(i18n("log.initiative", { rolls, winner: e.winnerTeam }));
       }
       break;
     case "moveDeclared":
-      idLines(e.unitId, i18n("log.moveDeclared", { id: e.unitId, mode: e.mode }));
+      out.idLines(e.unitId, i18n("log.moveDeclared", { id: e.unitId, mode: modeWord(e.mode) }));
       break;
     case "moved":
       if (e.mode === "prone") {
-        idLines(e.unitId, i18n("log.droppedProne", { id: e.unitId }));
+        out.idLines(e.unitId, i18n("log.droppedProne", { id: e.unitId }));
         break;
       }
       if (e.prevMode === "prone") {
-        idLines(e.unitId, i18n("log.stoodUp", { id: e.unitId }));
+        out.idLines(e.unitId, i18n("log.stoodUp", { id: e.unitId }));
         break;
       }
-      idLines(
+      out.idLines(
         e.unitId,
         i18n("log.moved", {
           id: e.unitId,
-          mode: e.mode,
+          mode: modeWord(e.mode),
           pos: hexKey(e.position),
           facing: e.facing,
           mp: e.mpSpent,
@@ -1218,19 +1252,19 @@ function handleSessionGameEvent(
       break;
     case "attacksDeclared": {
       for (const w of e.weapons) {
-        idLines(
-          e.unitId,
+        out.pairLines(
+          e.unitId, w.targetId,
           i18n(w.count === 1 ? "log.attacksDeclaredOne" : "log.attacksDeclaredOther", {
             id: e.unitId,
             target: w.targetId,
             count: w.count,
-            rangeCtx: `range ${w.distance} (${w.rangeBracket}, ${signedMod(w.rangeMod)})`,
+            rangeCtx: i18n("log.rangeCtx", { dist: w.distance }),
           }),
         );
       }
       for (const p of e.physical) {
-        idLines(
-          e.unitId,
+        out.pairLines(
+          e.unitId, p.targetId,
           i18n("log.physicalDeclaredOne", {
             id: e.unitId,
             type: p.type,
@@ -1242,27 +1276,36 @@ function handleSessionGameEvent(
       break;
     }
     case "attackResolved":
-      idLines(e.unitId, `[${e.unitId} -> ${e.targetId}]`, ...resolutionLines(e.resolution));
+      out.pairLines(e.unitId, e.targetId, ...resolutionLines(e.resolution));
       break;
     case "physicalAttackResolved":
-      idLines(e.unitId, `[${e.unitId} -> ${e.targetId}]`, ...physicalResolutionLines(e.resolution));
+      out.pairLines(e.unitId, e.targetId, ...physicalResolutionLines(e.resolution));
       break;
     case "unitRemoved":
       switch (e.reason) {
         case "pilotEjected":
-          idLines(e.unitId, i18n("log.ejected", { id: e.unitId }));
+          out.idLines(e.unitId, i18n("log.ejected", { id: e.unitId }));
           break;
         case "pilotKilled":
-          idLines(e.unitId, i18n("log.pilotKilled", { id: e.unitId }));
+          out.idLines(e.unitId, i18n("log.pilotKilled", { id: e.unitId }));
           break;
       }
-      idLines(e.unitId, i18n("log.destroyed", { id: e.unitId, destroyed: e.destroyReason! }));
+      if (e.reason === "destroyed") {
+        const reason = e.destroyReason;
+        out.idLines(
+          e.unitId,
+          i18n("log.destroyed", {
+            id: e.unitId,
+            destroyed: reason == null ? "" : i18n(DESTROYED_REASON_KEY[reason]),
+          }),
+        );
+      }
       break;
     case "buildingCollapsed":
-      lines(i18n("log.buildingCollapsed", { hex: msgHex(e) }));
+      out.lines(i18n("log.buildingCollapsed", { hex: msgHex(e) }));
       break;
     case "buildingDamaged":
-      lines(
+      out.lines(
         i18n("log.buildingDamaged", {
           hex: msgHex(e),
           damage: e.damage,
@@ -1271,7 +1314,7 @@ function handleSessionGameEvent(
       );
       break;
     case "collapseDamage":
-      lines(
+      out.lines(
         i18n("log.collapseDamage", {
           id: e.unitId,
           hex: msgHex(e),
@@ -1281,7 +1324,7 @@ function handleSessionGameEvent(
       );
       break;
     case "heatMove":
-      idLines(
+      out.idLines(
         e.unitId,
         i18n("log.heatMove", {
           id: e.unitId,
@@ -1292,7 +1335,7 @@ function handleSessionGameEvent(
       );
       break;
     case "heatWeapon":
-      idLines(
+      out.idLines(
         e.unitId,
         i18n("log.heatWeapon", {
           id: e.unitId,
@@ -1303,7 +1346,7 @@ function handleSessionGameEvent(
       );
       break;
     case "heatEngineCrit":
-      idLines(
+      out.idLines(
         e.unitId,
         i18n("log.heatEngineCrit", {
           id: e.unitId,
@@ -1314,7 +1357,7 @@ function handleSessionGameEvent(
       );
       break;
     case "heatDissipated":
-      idLines(
+      out.idLines(
         e.unitId,
         i18n("log.heatDissipated", {
           id: e.unitId,
@@ -1330,11 +1373,11 @@ function handleSessionGameEvent(
       break;
     case "shutdownCheck":
       if (e.manual) {
-        idLines(e.unitId, i18n("log.shutdownManual", { id: e.unitId }));
+        out.idLines(e.unitId, i18n("log.shutdownManual", { id: e.unitId }));
         break;
       }
       if (e.result === "avoid") {
-        idLines(
+        out.idLines(
           e.unitId,
           i18n("log.shutdownAvoided", {
             id: e.unitId,
@@ -1347,20 +1390,20 @@ function handleSessionGameEvent(
         break;
       }
       if (e.result === "unconscious") {
-        idLines(
+        out.idLines(
           e.unitId,
           i18n("log.shutdownUnconscious", { id: e.unitId, heat: e.heat, threshold: e.threshold }),
         );
         break;
       }
       if (e.avoid > D2D6_MAX) {
-        idLines(
+        out.idLines(
           e.unitId,
           i18n("log.shutdownAuto", { id: e.unitId, heat: e.heat, threshold: e.threshold }),
         );
         break;
       }
-      idLines(
+      out.idLines(
         e.unitId,
         i18n("log.shutdown", {
           id: e.unitId,
@@ -1374,14 +1417,14 @@ function handleSessionGameEvent(
     case "restartCheck":
       switch (e.result) {
         case "heat":
-          idLines(e.unitId, i18n("log.restartBlockedHeat", { id: e.unitId, heat: e.heat }));
+          out.idLines(e.unitId, i18n("log.restartBlockedHeat", { id: e.unitId, heat: e.heat }));
           break;
         case "unconscious":
-          idLines(e.unitId, i18n("log.restartBlockedUnconscious", { id: e.unitId, heat: e.heat }));
+          out.idLines(e.unitId, i18n("log.restartBlockedUnconscious", { id: e.unitId, heat: e.heat }));
           break;
         case "fail":
           if (e.manual) {
-            idLines(
+            out.idLines(
               e.unitId,
               i18n("log.startupFailed", {
                 id: e.unitId,
@@ -1391,7 +1434,7 @@ function handleSessionGameEvent(
               }),
             );
           } else {
-            idLines(
+            out.idLines(
               e.unitId,
               i18n("log.restartFailed", {
                 id: e.unitId,
@@ -1405,7 +1448,7 @@ function handleSessionGameEvent(
           break;
         case "success":
           if (e.manual) {
-            idLines(
+            out.idLines(
               e.unitId,
               i18n("log.startupSuccess", {
                 id: e.unitId,
@@ -1414,14 +1457,20 @@ function handleSessionGameEvent(
                 avoid: e.avoid,
               }),
             );
-          } else {
-            idLines(
+          } else if (e.roll === 0) {
+            out.idLines(
               e.unitId,
-              i18n("log.startupFailed", {
+              i18n("log.restartedNoCheck", { id: e.unitId, heat: e.heat, threshold: e.threshold }),
+            );
+          } else {
+            out.idLines(
+              e.unitId,
+              i18n("log.restarted", {
                 id: e.unitId,
                 roll: e.roll,
                 heat: e.heat,
                 avoid: e.avoid,
+                threshold: e.threshold,
               }),
             );
           }
@@ -1434,7 +1483,7 @@ function handleSessionGameEvent(
       break;
     case "ammoExplosionCheck":
       if (e.avoided) {
-        idLines(
+        out.idLines(
           e.unitId,
           i18n("log.ammoExplosionAvoidCheck", {
             id: e.unitId,
@@ -1450,7 +1499,7 @@ function handleSessionGameEvent(
         );
         break;
       }
-      idLines(
+      out.idLines(
         e.unitId,
         i18n("log.ammoExplosionAvoidCheck", {
           id: e.unitId,
@@ -1475,7 +1524,7 @@ function handleSessionGameEvent(
         const modifier = e.triggerModifier + e.preexistingModifier;
         const target = e.basePiloting + modifier;
         const verdict = e.success ? i18n("log.psrSuccess") : i18n("log.psrFail");
-        idLines(
+        out.idLines(
           e.unitId,
           i18n("log.pilotingCheck", {
             id: e.unitId,
@@ -1485,7 +1534,7 @@ function handleSessionGameEvent(
             pre: e.preexistingModifier,
             modifier,
             target,
-            hex: hexLabel(e.hex),
+            hex: hexLabel(e.hex ?? s.battle?.units[e.unitId]?.position),
             roll: e.roll === null ? i18n("log.psrAuto") : String(e.roll),
             verdict,
           }),
@@ -1493,6 +1542,8 @@ function handleSessionGameEvent(
       }
       break;
     case "unitFell":
+      // A deliberate, damage-free drop is not a fall; "drops prone" already logs it.
+      if (e.cause.kind === "voluntaryDrop" && e.totalDamage === 0) break;
       {
         const lines = [
           i18n("log.unitFell", {
@@ -1508,27 +1559,31 @@ function handleSessionGameEvent(
         for (const crit of e.crits) {
           for (const line of critLines(crit)) lines.push(`  ${line}`);
         }
-        idLines(e.unitId, ...lines);
+        out.idLines(e.unitId, ...lines);
       }
       break;
     case "pilotDamaged":
-      idLines(
+      out.idLines(
         e.unitId,
-        i18n("log.pilotDamaged", { id: e.unitId, reason: e.reason, total: e.totalHits }),
+        i18n("log.pilotDamaged", {
+          id: e.unitId,
+          reason: i18n(PILOT_HIT_REASON_KEY[e.reason]),
+          total: e.totalHits,
+        }),
       );
       break;
     case "consciousnessCheck":
       {
         const { unitId, roll, target, success, consciousBefore } = e;
         if (consciousBefore && !success) {
-          idLines(e.unitId, i18n("log.pilotUnconscious", { id: unitId, roll, target }));
+          out.idLines(e.unitId, i18n("log.pilotUnconscious", { id: unitId, roll, target }));
           break;
         }
         if (!consciousBefore && success) {
-          idLines(e.unitId, i18n("log.pilotRecovered", { id: unitId, roll, target }));
+          out.idLines(e.unitId, i18n("log.pilotRecovered", { id: unitId, roll, target }));
           break;
         }
-        idLines(
+        out.idLines(
           e.unitId,
           i18n(success ? "log.consciousnessCheckSuccess" : "log.consciousnessCheckFail", {
             id: unitId,
@@ -1551,11 +1606,11 @@ function handleSessionGameEvent(
         for (const crit of e.crits) {
           for (const line of critLines(crit)) lines.push(`  ${line}`);
         }
-        idLines(e.unitId, ...lines);
+        out.idLines(e.unitId, ...lines);
       }
       break;
     case "accidentalFall":
-      idLines(
+      out.idLines(
         e.unitId,
         i18n(e.hit ? "log.accidentalFallHit" : "log.accidentalFallMiss", {
           id: e.unitId,
@@ -1567,7 +1622,7 @@ function handleSessionGameEvent(
       );
       break;
     case "unitDisplaced":
-      idLines(
+      out.idLines(
         e.unitId,
         i18n("log.unitDisplaced", {
           id: e.unitId,
@@ -1579,13 +1634,13 @@ function handleSessionGameEvent(
       );
       break;
     case "pickupDeclared":
-      idLines(e.unitId, i18n("log.pickupDeclared", { id: e.unitId, source: e.source }));
+      out.idLines(e.unitId, i18n("log.pickupDeclared", { id: e.unitId, source: e.source }));
       break;
     case "clubPickedUp":
       if (e.success) {
-        idLines(e.unitId, i18n("log.clubPickedUp", { id: e.unitId, kind: e.clubKind ?? "club" }));
+        out.idLines(e.unitId, i18n("log.clubPickedUp", { id: e.unitId, kind: e.clubKind ?? "club" }));
       } else if (e.roll !== undefined && e.required !== undefined) {
-        idLines(
+        out.idLines(
           e.unitId,
           i18n("log.girderSearchFailed", {
             id: e.unitId,
@@ -1594,11 +1649,11 @@ function handleSessionGameEvent(
           }),
         );
       } else {
-        idLines(e.unitId, i18n("log.clubPickupFailed", { id: e.unitId, reason: e.reason ?? "—" }));
+        out.idLines(e.unitId, i18n("log.clubPickupFailed", { id: e.unitId, reason: e.reason ?? "—" }));
       }
       break;
     case "clubDropped":
-      idLines(
+      out.idLines(
         e.unitId,
         i18n(e.cause !== undefined ? "log.clubReleased" : "log.clubDroppedReturned", {
           id: e.unitId,
@@ -1608,10 +1663,10 @@ function handleSessionGameEvent(
       );
       break;
     case "clubConsumed":
-      idLines(e.unitId, i18n("log.clubConsumed", { id: e.unitId, kind: e.clubKind }));
+      out.idLines(e.unitId, i18n("log.clubConsumed", { id: e.unitId, kind: e.clubKind }));
       break;
     case "sessionMoveActor":
-      idLines(
+      out.idLines(
         e.actorId,
         i18n("log.moveActor", {
           id: e.actorId,
@@ -1627,28 +1682,28 @@ function handleSessionGameEvent(
     case "sessionMoveActorDone":
       break;
     case "sessionAttackActor":
-      chunks(...fireSuggestionChunks(s));
+      out.chunks(...fireSuggestionChunks(s));
       break;
     case "sessionAttackActorDone":
       if (e.pass) {
-        lines(i18n("log.attacksPassed", { id: e.actorId }));
+        out.lines(i18n("log.attacksPassed", { id: e.actorId }));
         break;
       }
       break;
     case "sessionPhase":
       if (e.phase === "weaponAttackResolution") {
-        lines(i18n("res.attackResolutionStart"));
+        out.lines(i18n("res.attackResolutionStart"));
       }
       break;
     case "sessionPhaseDone":
       if (e.phase === "weaponAttackResolution") {
-        lines(i18n("res.attackResolutionEnd"));
+        out.lines(i18n("res.attackResolutionEnd"));
       }
       break;
     case "sessionOver": {
-      chunks(victoryBannerChunk(s));
+      out.chunks(victoryBannerChunk(s));
       const replay = replayChunk(s);
-      if (replay !== null) chunks(replay);
+      if (replay !== null) out.chunks(replay);
       break;
     }
     default: {

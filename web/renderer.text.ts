@@ -820,26 +820,40 @@ function renderLegend(map: MapDef, el: Element, withClubs: boolean): void {
   el.appendChild(legendDiv);
 }
 
-/** CSS Grid renderer: one `<span>` per character, bold isolated to single cells. */
+/**
+ * Row renderer: one `<div>` per board row. Runs of printable ASCII sharing a
+ * style merge into one text span; any other glyph (water marks, Hangul ids)
+ * gets its own inline-block 1ch cell, which keeps hex columns aligned when a
+ * fallback font's advance differs. Text reads as whole lines for copy/paste
+ * and screen readers.
+ */
 export const cssGridRenderer: BoardRenderer = (info, el) => {
   renderLegend(info.map, el, (info.clubHexes?.length ?? 0) > 0);
   const grid = document.createElement("div");
-  grid.className = "board-grid";
-  const lines = boardToChars(createBoardModel(info));
-  const maxCols = Math.max(...lines.map((l) => l.length), 1);
-  (grid as HTMLElement).style.gridTemplateColumns = `repeat(${maxCols}, 1ch)`;
-  for (const line of lines) {
+  grid.className = "board-grid board-rows";
+  for (const line of boardToChars(createBoardModel(info))) {
+    const row = document.createElement("div");
+    let run: HTMLSpanElement | null = null;
+    let runCls = "";
     for (const sp of line) {
-      const span = document.createElement("span");
-      span.className = styleClasses(sp.style);
-      span.textContent = sp.text;
-      grid.appendChild(span);
+      const cls = styleClasses(sp.style);
+      if (sp.text.length !== 1 || sp.text.charCodeAt(0) > 126) {
+        const cell = document.createElement("span");
+        cell.className = cls === "" ? "cell" : `${cls} cell`;
+        cell.textContent = sp.text;
+        row.appendChild(cell);
+        run = null;
+        continue;
+      }
+      if (run === null || cls !== runCls) {
+        run = document.createElement("span");
+        run.className = cls;
+        runCls = cls;
+        row.appendChild(run);
+      }
+      run.textContent += sp.text;
     }
-    for (let p = line.length; p < maxCols; p++) {
-      const span = document.createElement("span");
-      span.textContent = "\u00a0";
-      grid.appendChild(span);
-    }
+    grid.appendChild(row);
   }
   el.appendChild(grid);
 };

@@ -2,7 +2,6 @@ import type { ClubKind, Facing, UnitState } from "btlib10x";
 import {
   ensureMapRegistered,
   FACINGS,
-  isShutdown,
   listMapNames,
   requireUnit,
   sameHex,
@@ -13,6 +12,7 @@ import { buildLinesChunk, buildLinesChunkWith, type Chunk } from "./chunk";
 import type { MessageKey } from "./i18n/index";
 import { i18n, isLocale, localeList } from "./i18n/index";
 import { lookupMap } from "./lookup";
+import { strictInt } from "./misc";
 import type { Session } from "./session";
 import {
   attackStatusChunk,
@@ -55,7 +55,9 @@ import {
   setupStatus,
   sheetForUnit,
   stepResultChunk,
+  twistLabel,
   unitBriefList,
+  victoryBannerChunk,
 } from "./session";
 import {
   infoMapChunks,
@@ -84,8 +86,8 @@ export interface CmdDef {
 // ------------------------------------------------------------- parsing ----
 
 function int(value: string, label: string): number {
-  const n = Number(value);
-  if (!Number.isInteger(n)) throw new Error(i18n("err.notInteger", { label }));
+  const n = strictInt(value);
+  if (n === null) throw new Error(i18n("err.notInteger", { label }));
   return n;
 }
 
@@ -122,8 +124,11 @@ function currentActor(s: Session): UnitState | null {
   return null;
 }
 
-function actorBy(s: Session, id: string): UnitState | null {
-  return requireBattle(s).units[id] ?? null;
+function actorBy(s: Session, id: string): UnitState {
+  const units = requireBattle(s).units;
+  const unit = Object.hasOwn(units, id) ? units[id] : undefined;
+  if (unit === undefined) throw new Error(i18n("err.unknownUnitId", { id }));
+  return unit;
 }
 
 /** Resolve a `place` facing argument: an absolute facing word. */
@@ -158,9 +163,11 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
           i18n("lang.available", { list: localeList() }),
         );
       }
-      if (!isLocale(a[0]))
+      // Commands are case-insensitive, so locales are too; `ko` aliases `kr`.
+      const wanted = a[0].toLowerCase() === "ko" ? "kr" : a[0].toLowerCase();
+      if (!isLocale(wanted))
         throw new Error(i18n("err.unknownLocale", { name: a[0], list: localeList() }));
-      setConfigLocale(a[0]);
+      setConfigLocale(wanted);
       return cmdRunChunks(i18n("lang.set", { locale: configLocale() }));
     },
   },
@@ -197,7 +204,9 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
   },
   reset: {
     helpKey: "cmd.reset.help",
-    run: (s) => {
+    usage: "reset [!]",
+    run: (s, a) => {
+      if (s.state === "battle" && a[0] !== "!") throw new Error(i18n("err.resetConfirm"));
       resetSession(s);
       return [buildLinesChunkWith("banner", i18n("ok.resetDone"))];
     },
@@ -223,7 +232,7 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
         case "heat":
           return renderHeatScaleTable();
         default:
-          throw new Error(i18n("err.unknownCommand", { name }));
+          throw new Error(i18n("err.expectedArgs", { usage: "table [cluster|hitloc|crit|heat]" }));
       }
     },
   },
@@ -259,19 +268,21 @@ const SETUP_CMDS: Record<string, CmdDef> = {
     run: (s, a) => {
       expectArgs(a, 4, "add <id> <model> <col> <row> [facing]");
       const facing = a[4] !== undefined ? resolveFacing(a[4]!) : "n";
+      const col = coord(a[2]!, "col");
+      const row = coord(a[3]!, "row");
       const result = setupAddUnit(
         s.setup,
         a[0]!,
         a[1]!,
-        { col: coord(a[2]!, "col"), row: coord(a[3]!, "row") },
+        { col, row },
         facing as (typeof FACINGS)[number],
       );
       return cmdRunChunks(
         i18n("ok.added", {
           id: a[0]!,
           model: result.model,
-          col: a[2]!,
-          row: a[3]!,
+          col,
+          row,
           facing,
           team: String(result.team),
         }),
@@ -437,7 +448,18 @@ const MOVE_CMDS: Record<string, CmdDef> = {
   },
   done: {
     helpKey: "cmd.doneMove.help",
-    run: (s) => handleSessionGameEvents(s, commitMovement(s)),
+    run: (s) => {
+      // A walk/run that enters no hex still costs movement heat: say so, so a
+      // failed `place` scrolled out of view does not go unnoticed.
+      const m = s.move;
+      const idle =
+        m !== null &&
+        (m.moveMode === "walk" || m.moveMode === "run") &&
+        m.moveSteps.length === 0 &&
+        m.moveFinalFacing === null;
+      const events = handleSessionGameEvents(s, commitMovement(s));
+      return idle ? [buildLinesChunkWith("hint", i18n("warn.idleMove")), ...events] : events;
+    },
   },
   ...BATTLE_CMDS,
 };
@@ -456,8 +478,11 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
       const dir = parseTorsoTwist(a[0]!);
       const prev = setTorsoTwist(s, dir);
       return prev === dir
-        ? cmdRunChunks(i18n("ok.twistAlready", { id: actor.id, dir }))
-        : [buildLinesChunk(i18n("ok.twistSet", { id: actor.id, dir })), ...fireSuggestionChunks(s)];
+        ? cmdRunChunks(i18n("ok.twistAlready", { id: actor.id, dir: twistLabel(dir) }))
+        : [
+            buildLinesChunk(i18n("ok.twistSet", { id: actor.id, dir: twistLabel(dir) })),
+            ...fireSuggestionChunks(s),
+          ];
     },
   },
   candidate: {
@@ -566,25 +591,28 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
   },
   pickup: {
     helpKey: "cmd.pickup.help",
-    usage: "pickup [limb|tree|girder] [n]",
+    usage: "pickup [limb|tree|girder] [n] | pickup <n>",
     argsDoc: [["source", "cmd.pickup.arg.source"]],
     run: (s, a) => {
-      const source = a[0]?.toLowerCase() as ClubKind | undefined;
+      // A lone number picks among several clubs lying in the hex (`pickup 2`).
+      const loneNumber = a[0] !== undefined && /^\d/.test(a[0]);
+      const source = loneNumber ? undefined : (a[0]?.toLowerCase() as ClubKind | undefined);
       if (source !== undefined && !["limb", "tree", "girder"].includes(source)) {
         throw new Error(i18n("err.pickup.badSource", { source }));
       }
-      const n = a[1] === undefined ? undefined : Number.parseInt(a[1], 10);
-      if (n !== undefined && !(n >= 1))
-        throw new Error(i18n("err.pickup.badSource", { source: a[1] ?? "" }));
-      const warnings = queuePickup(s, source, n);
-      return cmdRunChunks(i18n("ok.pickup.queued", { source: source ?? "auto" }), ...warnings);
+      const numberArg = loneNumber ? a[0] : a[1];
+      let n: number | undefined;
+      if (numberArg !== undefined) {
+        n = int(numberArg, "n");
+        if (n < 1) throw new Error(i18n("err.oneBased", { label: "n" }));
+      }
+      return cmdRunChunks(...queuePickup(s, source, n));
     },
   },
   drop: {
     helpKey: "cmd.drop.help",
     run: (s) => {
-      const warnings = queueDrop(s);
-      return cmdRunChunks(i18n("ok.drop.queued", { kind: "club" }), ...warnings);
+      return cmdRunChunks(...queueDrop(s));
     },
   },
   status: { helpKey: "cmd.statusAttack.help", run: (s) => [attackStatusChunk(s)] },
@@ -611,7 +639,10 @@ const OVER_CMDS: Record<string, CmdDef> = {
     argsDoc: [["id", "cmd.sheetActing.arg.id"]],
     run: (s, a) => (a[0] !== undefined ? sheetForUnit(s, a[0]) : [unitBriefList(s)]),
   },
-  status: { helpKey: "cmd.statusOver.help", run: (s) => [overStatusChunk(s)] },
+  status: {
+    helpKey: "cmd.statusOver.help",
+    run: (s) => [victoryBannerChunk(s), overStatusChunk(s)],
+  },
   rematch: {
     helpKey: "cmd.rematch.help",
     run: (s) => {
@@ -652,14 +683,6 @@ function availableCmds(session: Session): Record<string, CmdDef> {
       const phase = session.battle?.phase;
       if (phase === "attack") return { ...GLOBAL_CMDS, ...ATTACK_CMDS };
       if (phase !== "movement") return { ...GLOBAL_CMDS, ...MOVE_CMDS };
-      const actor = currentActor(session);
-      const down = actor !== null && isShutdown(actor);
-      const declared = session.move?.moveMode ?? null;
-      if (down || declared === "shutdown" || declared === "startup" || declared === "prone") {
-        // Pending voluntary declaration: no hex movement.
-        const { move: _move, face: _face, ...rest } = MOVE_CMDS;
-        return { ...GLOBAL_CMDS, ...rest };
-      }
       return { ...GLOBAL_CMDS, ...MOVE_CMDS };
     }
     case "over":
@@ -667,9 +690,21 @@ function availableCmds(session: Session): Record<string, CmdDef> {
   }
 }
 
+/** Own-property command lookup (`constructor` and friends are not commands). */
+function findCmd(table: Record<string, CmdDef>, name: string): CmdDef | undefined {
+  const key = name.toLowerCase();
+  return Object.hasOwn(table, key) ? table[key] : undefined;
+}
+
+/** Every phase's commands merged, for "wrong phase" detection and help. */
+function allCmds(): Record<string, CmdDef> {
+  return { ...OVER_CMDS, ...ATTACK_CMDS, ...MOVE_CMDS, ...SETUP_CMDS, ...GLOBAL_CMDS };
+}
+
 /** Detailed single-command help: usage + argument explanations, no state hint. */
 function commandHelpChunk(session: Session, name: string): Chunk {
-  const def = availableCmds(session)[name.toLowerCase()];
+  // Help reads every phase's table, so a command can be studied before its phase.
+  const def = findCmd(availableCmds(session), name) ?? findCmd(allCmds(), name);
   if (!def) throw new Error(i18n("err.unknownCommand", { name }));
   const names = listMapNames().join("|");
   const lines = [
@@ -771,8 +806,14 @@ export function runChunks(session: Session, raw: string): Chunk[] {
       .split(/\s+/)
       .filter((x) => x.length > 0);
     if (tokens.length === 0) return [];
-    const def = availableCmds(session)[tokens[0]!.toLowerCase()];
-    if (!def) throw new Error(i18n("err.unknownCommand", { name: tokens[0]! }));
+    const name = tokens[0]!;
+    const def = findCmd(availableCmds(session), name);
+    if (!def) {
+      if (findCmd(allCmds(), name) !== undefined) {
+        throw new Error(i18n("err.notInPhase", { name }));
+      }
+      throw new Error(i18n("err.unknownCommand", { name }));
+    }
     chunks = def.run(session, tokens.slice(1));
   } catch (e) {
     return [

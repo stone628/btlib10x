@@ -6,7 +6,8 @@ export const kr: Catalog = {
   "app.banner.title": "bt10x 터미널 v{version} - 배틀테크 토탈 워페어 규칙 서브셋",
   "app.banner.help": "명령어는 'help'를 입력하세요.",
   "app.catalog.loading": "카탈로그 불러오는 중…",
-  "app.catalog.failed": "카탈로그를 불러오지 못했습니다: {error}",
+  "app.catalog.failed":
+    "카탈로그를 불러오지 못했습니다: {error} - 페이지를 새로 고쳐 다시 시도하세요",
   "err.prefix": "오류:",
 
   // per-state hints (multi-line)
@@ -58,7 +59,7 @@ export const kr: Catalog = {
   "cmd.sheetActing.arg.id": "유닛 id. 생략 시 팀별 유닛 목록",
   "cmd.seed.help": "주사위 시드 설정",
   "cmd.seed.arg.n": "정수 시드. 같은 시드는 같은 굴림을 재현합니다",
-  "cmd.reset.help": "모두 지우고 빈 설정 단계로 초기화",
+  "cmd.reset.help": "모두 지우고 빈 설정 단계로 초기화 (전투 중에는 reset !)",
   "cmd.ver.help": "빌드된 라이브러리 버전 표시",
   "version.line": "bt10x {version}",
   "cmd.map.help": "내장 규칙book 맵 불러오기 ({names})",
@@ -107,11 +108,11 @@ export const kr: Catalog = {
     "front = 회전 없음, left/right = 한 변만큼 그 방향으로 회전. fire 명령 예약 후에는 변경 불가",
   "cmd.fire.help": "하나 이상의 무기 공격 예약",
   "cmd.fire.arg.weaponIndex":
-    "'weapons' 목록의 1부터 시작하는 무기 번호\n여러 무기를 한 번에 선언하려면 반복",
+    "'candidate' 또는 'sheet'의 # 번호\n여러 무기를 한 번에 선언하려면 반복",
   "cmd.fire.arg.targetId": "적 유닛 id\n선언된 모든 무기는 이 목표 하나를 사격",
   "cmd.statusAttack.help": "예약된 공격 선언",
   "cmd.statusOver.help": "승리 결과와 최종 로스터 표시",
-  "cmd.cancelFire.help": "예약된 사격 지우기",
+  "cmd.cancelFire.help": "예약된 선언 모두 지우기 (사격, 물리공격, 줍기, 버리기)",
   "cmd.doneFire.help": "공격 선언 및 해결",
   "cmd.rematch.help": "같은 편성, 지형, 시드로 새 전투",
   "cmd.heat.help": "유닛의 발열 게이지 상태 표시 (기본: 행동 유닛)",
@@ -130,7 +131,7 @@ export const kr: Catalog = {
     "전방 아크의 인접한 적에 곤봉 공격 예약 (TW p.145; 곤봉 소지 필요 — 'pickup' 참조)",
   "cmd.club.arg.targetId": "전방 아크에 있는 적 유닛 id",
   "cmd.pickup.help":
-    "현재 육각에서 곤봉 획득 선언 (TW p.146): 절단된 사지, 버려진 곤봉, 삼림 육각의 나무, 잔해의 거더. 단독 선언 — 이번 턴 공격 불가; 물리 하위 단계에서 획득",
+    "현재 육각에서 곤봉 획득 선언 (TW p.146): 절단된 사지, 버려진 곤봉, 삼림 육각의 나무, 붕괴한 중형/중량/강화 건물 잔해의 거더. 단독 선언 — 이번 턴 공격 불가; 물리 하위 단계에서 획득",
   "cmd.pickup.arg.source":
     "곤봉 출처: limb|tree|girder; 육각에 곤봉이 여러 개면 토큰 번호 (기본: 유일한 토큰, 없으면 지형 출처)",
   "cmd.drop.help":
@@ -143,6 +144,7 @@ export const kr: Catalog = {
   "autoPlay.started":
     "autoplay: 데모 전투를 만들어 양측을 자동 진행합니다. 아무 명령이나 입력하면 조종권을 돌려받습니다.",
   "autoPlay.done": "autoplay 종료.",
+  "autoPlay.stuck": "autoplay: 같은 단계가 계속 실패하여 중단했습니다. 조종권을 돌려드립니다.",
 
   // command acknowledgements
   "ok.mapLoaded": "맵 {name}: {w}x{h}개",
@@ -184,8 +186,8 @@ export const kr: Catalog = {
   "err.unknownWeapon": "알 수 없는 무기: {name}; 사용 가능: {list}",
   "err.duplicateId": "유닛 id 중복: {id}",
   "err.badTeam": "team은 음수가 아닌 정수여야 합니다",
-  "err.badGunnery": "gunnery는 0..7 범위의 정수여야 합니다",
-  "err.badPiloting": "piloting은 0..7 범위의 정수여야 합니다",
+  "err.badGunnery": "gunnery는 0..8 범위의 정수여야 합니다",
+  "err.badPiloting": "piloting은 0..8 범위의 정수여야 합니다",
   "err.badPilotHitMax": "pilotHitMax는 1 이상의 정수여야 합니다",
   "err.cantSetId": "'id'는 수정할 수 없습니다; 유닛을 제거하고 다시 추가하세요",
   "err.unknownProp": "알 수 없는 속성 '{name}'; legal: {list}",
@@ -225,6 +227,14 @@ export const kr: Catalog = {
   "err.oneLegNoRun":
     "{id}는 다리가 파괴되어 달리기 불가 (TW p.122: walk 1 MP, run 불가). 유효 모드: {modes}",
   "mode.hint": "모드: {modes}",
+  "err.notInPhase":
+    "'{name}'은(는) 이 단계에서 사용할 수 없습니다 ('help {name}'으로 설명을 볼 수 있습니다)",
+  "warn.idleMove": "경고: 진입한 육각이 없어 유닛은 제자리에 머뭅니다 (이동 발열은 그대로 적용)",
+  "err.idPrefixClash":
+    "유닛 id '{id}'는 보드에서 '{other}'와 구별되지 않습니다 (앞 4글자만 표시됨)",
+  "log.rangeCtx": "거리 {dist}",
+  "err.noJumpMP": "{id}는 점프 MP가 없음. 사용 가능한 모드: {modes}",
+  "err.gyroNoStand": "{id}는 자이로가 파괴되어 일어설 수 없음",
   "err.postureBudget": "{id}는 자세 변경에 쓸 MP가 부족함",
   "err.noMoveInShutdownMode": "선언된 모드가 shutdown/startup/eject일 때는 이동할 수 없습니다",
   "err.mustBeOnlineForShutdown": "mode shutdown은 온라인 유닛에서만 사용할 수 있습니다",
@@ -241,14 +251,13 @@ export const kr: Catalog = {
   "err.place.unreachable": "육각 ({col},{row}) 는 선언된 모드로 도달할 수 없습니다",
   "err.place.facing":
     "육각 ({col},{row}) 는 도달 가능하지만 {facing} 방향 불가, {rfacing} 방향 가능",
-  "err.faceArg": "place는 절대 방향({facings})을 기대합니다",
+  "err.faceArg": "절대 방향({facings})이 필요합니다",
   "err.needsActor": "이 명령에는 행동 유닛이 필요합니다",
   "err.unknownUnitId": "알 수 없는 유닛 id: {id}",
   "err.selfTarget": "목표는 다른 팀이어야 합니다",
   "err.targetRemoved": "목표 {id} 은(는) 게임에서 제외되었습니다",
   "err.oneTarget": "한 유닛은 턴당 하나의 목표에만 공격을 선언할 수 있습니다 (현재 목표: {target})",
-  "err.weaponRepeated":
-    "Weapon #{weapon} may only be declared once per turn (use 'shots' for rapid-fire)",
+  "err.weaponRepeated": "무기 #{weapon}은(는) 턴당 한 번만 선언할 수 있습니다",
   "err.noAttacksQueued": "예약된 공격 없음 — 'fire'로 무기를 예약하거나 'done'으로 패스",
   "err.overRange": "{weapon}: 목표가 사거리 {dist}로 장거리 {max}를 초과합니다",
   "err.weaponIndex": "{unit}의 무기 인덱스 {index}가 범위를 벗어났습니다",
@@ -256,7 +265,8 @@ export const kr: Catalog = {
     "{weapon}: 목표가 사거리 {dist}로 최소 사거리 {min} 내에 있습니다 (명중 패널티 {penalty})",
   "err.rematchOnlyOver": "전투가 끝난 후에만 사용할 수 있습니다",
   "err.notOver": "전투가 아직 끝나지 않았습니다",
-  "err.seedInteger": "seed는 정수여야 합니다",
+  "err.resetConfirm": "전투가 진행 중입니다. 폐기하려면 'reset !'를 입력하세요",
+  "err.seedInteger": "seed는 0부터 4294967295 사이의 정수여야 합니다",
   "err.badAmmoPolicy": "탄약 정책은 exposed|core|spread|least-first 중 하나여야 합니다",
   "err.phaseDriver": "단계 드라이버가 수렴하지 않았습니다",
   "err.twist.badDirection": "상체 회전 방향은 front, left, right 중 하나여야 합니다",
@@ -287,7 +297,8 @@ export const kr: Catalog = {
   "setup.mapLabel": "맵: {name}",
   "setup.mapNone": "(없음)",
   "setup.teamHeader": "팀 {team}:",
-  "setup.unitLine": "  {id}  {model} ({name}) gunnery {gunnery} @ {pos} 방향 {facing}",
+  "setup.unitLine":
+    "  {id}  {model} ({name}) gunnery {gunnery} piloting {piloting} hits {hitMax} ammo {ammo} @ {pos} 방향 {facing}",
   "setup.noUnits": "(배치된 유닛 없음)",
 
   // movement status
@@ -507,6 +518,11 @@ export const kr: Catalog = {
 
   // event log
   "log.phase": "   턴 {turn}, 단계 {phase}   ",
+  "log.initiativeRoll": "팀 {team} (2D6: {roll})",
+  "log.phaseName.initiative": "선제",
+  "log.phaseName.movement": "이동",
+  "log.phaseName.attack": "공격",
+  "log.phaseName.end": "종료",
   "log.initiative": "선제: {rolls} -> 팀 {winner} 선제 획득, 마지막에 이동.",
   "log.moveDeclared": "[{id}] {mode} 선언",
   "log.moveActor":
@@ -544,7 +560,7 @@ export const kr: Catalog = {
   "log.restartBlockedUnconscious": "[{id}] 재기동 불가: 파일럿 의식불명 (발열 {heat} >= 14)",
   "log.shutdownAvoided":
     "[{id}] 셧다운 회피 (발열 {heat} >= {threshold}) 회피 성공(2D6 = {roll} >= {avoid})",
-  "log.restarted": "[{id}] 재기동됨 (발열 {heat} < {threshold}) 회피 성공(2D6 = {roll} > {avoid})",
+  "log.restarted": "[{id}] 재기동됨 (발열 {heat} < {threshold}) 회피 성공(2D6 = {roll} >= {avoid})",
   "log.restartedNoCheck": "[{id}] 재기동됨 (발열 {heat} < {threshold})",
   "log.shutdownManual": "[{id}] 수동 셧다운",
   "log.startupSuccess": "[{id}] 시동 체크 성공 (2D6 = {roll} >= {avoid}) — 다음 턴 온라인",
@@ -593,11 +609,17 @@ export const kr: Catalog = {
   "log.fallCause.voluntaryDrop": "자발적 엎드림",
   "log.unitFell":
     "[{id}] *** 넘어짐 ({cause}) 방향 {facing}: {groups} (합계 {damage}, {levels}레벨 추락) ({hex}) ***",
+  "log.pilotHitReason.headHit": "머리 피격",
+  "log.pilotHitReason.ammoExplosion": "탄약 폭발",
+  "log.pilotHitReason.ejection": "탈출 실패",
+  "log.pilotHitReason.fall": "낙하",
+  "log.pilotHitReason.shutdownFall": "낙하, 판정 없음 (정지 또는 의식불명)",
+  "log.pilotHitReason.lifeSupport": "생명유지장치 손상 상태의 발열",
   "log.pilotDamaged": "[{id}] 조종사 피해 1점 ({reason}) — 누적 {total}점",
   "log.consciousnessCheckSuccess": "[{id}] 의식 판정 성공(2D6 = {roll} >= {target}) -> 의식 유지",
   "log.consciousnessCheckFail": "[{id}] 의식 판정 실패(2D6 = {roll} < {target}) -> 의식 미회복",
-  "log.pilotUnconscious": "[{id}] *** 조종사 의식 불명 ***",
-  "log.pilotRecovered": "[{id}] 조종사 의식 회복 (2D6 = {roll})",
+  "log.pilotUnconscious": "[{id}] *** 조종사 의식 불명 (2D6 = {roll} < {target}) ***",
+  "log.pilotRecovered": "[{id}] 조종사 의식 회복 (2D6 = {roll} >= {target})",
   "log.pilotKilled": "[{id}] *** 조종사 사망 — 버려진 메크는 레벨-2 잔해가 됨 ***",
   "log.stoodUp": "[{id}] 일어남",
   "log.droppedProne": "[{id}] 엎드림",
@@ -669,7 +691,7 @@ export const kr: Catalog = {
   "res.critCockpitDestroyed": "{loc} #{slot} 조종석 파괴 — 파일럿 사망",
   "res.critComponentDestroyed": "{loc} #{slot} {name} 파괴",
   "res.critEngineDestroyed": "{loc} #{slot} 엔진 파괴 — 메크 격파",
-  "res.critNoEffect": "{loc} 재굴림 — 남은 크리티컬 가능 슬롯 없음",
+  "res.critNoEffect": "재굴림 — 남은 크리티컬 가능 슬롯 없음",
   "res.critTransferred": " ({from}에서 이전)",
   "res.throughArmorTag": "관통",
   "res.critCluster": "폭발이 {loc}에서 새로운 결정 굴림을 유발",
