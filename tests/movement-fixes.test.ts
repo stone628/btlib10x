@@ -5,7 +5,13 @@
  */
 import { describe, expect, it } from "vitest";
 import { mechDef } from "../src/data/index";
-import { attemptStandUp, buildUnitInit, executeMove, type GameEvent, requireUnit } from "../src/rules/game";
+import {
+  attemptStandUp,
+  buildUnitInit,
+  executeMove,
+  type GameEvent,
+  requireUnit,
+} from "../src/rules/game";
 import { createTestBattle, scriptedRng } from "./helpers";
 
 function movementBattle(model = "GRF-1N", prone = false) {
@@ -111,11 +117,12 @@ describe("destroyed gyro while prone (MOV-08)", () => {
     const a = requireUnit(state, "a");
     const layout = mechDef("HBK-4G")!.critSlots.centerTorso;
     layout.forEach((slot, i) => {
-      if (slot.kind === "structure" && slot.name === "gyro") a.critSlotsDestroyed.centerTorso[i] = true;
+      if (slot.kind === "structure" && slot.name === "gyro")
+        a.critSlotsDestroyed.centerTorso[i] = true;
     });
-    expect(() =>
-      executeMove(state, "a", "walk", [{ kind: "turn", facings: 2 }], []),
-    ).toThrow(/one hexside/);
+    expect(() => executeMove(state, "a", "walk", [{ kind: "turn", facings: 2 }], [])).toThrow(
+      /one hexside/,
+    );
     executeMove(state, "a", "walk", [{ kind: "turn", facings: 1 }], []);
     expect(a.facing).toBe("ne");
   });
@@ -182,9 +189,7 @@ describe("domino effect on a movement fall (MOV-09)", () => {
     expect(a.prone).toBe(true);
     expect(a.position).toEqual({ col: 5, row: 8 });
     expect(c.position).toEqual({ col: 5, row: 7 });
-    expect(events).toContainEqual(
-      expect.objectContaining({ kind: "unitDisplaced", unitId: "c" }),
-    );
+    expect(events).toContainEqual(expect.objectContaining({ kind: "unitDisplaced", unitId: "c" }));
   });
 
   it("a shoved unit that lands on a third unit shoves it in turn (chain)", () => {
@@ -205,9 +210,20 @@ describe("domino effect on a movement fall (MOV-09)", () => {
     state.actorQueue = ["a", "c", "d", "b"];
     state.actedThisPhase = [];
     // The walk's second step is blocked by d, so the fall happens on the first.
-    executeMove(state, "a", "walk", [{ kind: "enter", to: { col: 5, row: 8 } }, { kind: "enter", to: { col: 5, row: 7 } }, { kind: "enter", to: { col: 5, row: 6 } }], [], {
-      rng: scriptedRng(1, 1, 1, 3, 4, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6),
-    });
+    executeMove(
+      state,
+      "a",
+      "walk",
+      [
+        { kind: "enter", to: { col: 5, row: 8 } },
+        { kind: "enter", to: { col: 5, row: 7 } },
+        { kind: "enter", to: { col: 5, row: 6 } },
+      ],
+      [],
+      {
+        rng: scriptedRng(1, 1, 1, 3, 4, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6),
+      },
+    );
     expect(requireUnit(state, "c").position).toEqual({ col: 5, row: 7 });
     expect(requireUnit(state, "d").position).toEqual({ col: 5, row: 6 });
     const all = Object.values(state.units).map((u) => `${u.position.col},${u.position.row}`);
@@ -249,7 +265,9 @@ describe("domino effect on a movement fall (MOV-09)", () => {
       executeMove(state, "a", "run", step, events, {
         rng: scriptedRng(...fall, 1, 1, 6, 6, 6, 6, 6, 6),
       });
-      expect(events).toContainEqual(expect.objectContaining({ kind: "accidentalFall", hit: false }));
+      expect(events).toContainEqual(
+        expect.objectContaining({ kind: "accidentalFall", hit: false }),
+      );
       expect(requireUnit(state, "a").position).toEqual({ col: 5, row: 9 });
       expect(requireUnit(state, "c").position).toEqual({ col: 5, row: 8 });
     });

@@ -1,6 +1,5 @@
-import type { AmmoPolicy, ClubKind, Facing, UnitState } from "btlib10x";
+import type { ClubKind, Facing, UnitState } from "btlib10x";
 import {
-  AMMO_POLICIES,
   ensureMapRegistered,
   FACINGS,
   isShutdown,
@@ -16,7 +15,6 @@ import { i18n, isLocale, localeList } from "./i18n/index";
 import { lookupMap } from "./lookup";
 import type { Session } from "./session";
 import {
-  ammoPolicyLabel,
   attackStatusChunk,
   boardChunk,
   cancelAttack,
@@ -46,7 +44,6 @@ import {
   reachableChunk,
   requireBattle,
   resetSession,
-  setAmmoPolicy,
   setConfigLocale,
   setSeed,
   setTorsoTwist,
@@ -134,16 +131,6 @@ function resolveFacing(arg: string): Facing {
   const facing = FACINGS.find((f) => f === arg.toLowerCase());
   if (!facing) throw new Error(i18n("err.faceArg", { facings: FACINGS.join("/") }));
   return facing;
-}
-
-/** Parse a CLI word into a policy. Case-insensitive; `least-first` and
- *  `leastfirst` are accepted for `leastFirst`. Null when unrecognized. */
-function resolveAmmoPolicy(word: string): AmmoPolicy | null {
-  const normalized = word.toLowerCase();
-  for (const policy of AMMO_POLICIES) {
-    if (normalized === policy.toLowerCase()) return policy;
-  }
-  return null;
 }
 
 function cmdRunChunks(...lines: string[]): Chunk[] {
@@ -458,24 +445,6 @@ const MOVE_CMDS: Record<string, CmdDef> = {
 // -------------------------------------------------------- turn:attack ----
 
 const ATTACK_CMDS: Record<string, CmdDef> = {
-  ammo: {
-    helpKey: "cmd.ammo.help",
-    usage: "ammo [policy]",
-    argsDoc: [["policy", "cmd.ammo.arg.policy"]],
-    run: (s, a) => {
-      const unit = currentActor(s);
-      if (!unit) throw new Error(i18n("err.needsActor"));
-      if (a[0] === undefined) {
-        return cmdRunChunks(i18n("ammo.current", { policy: ammoPolicyLabel(unit.ammoPolicy) }));
-      }
-      const policy = resolveAmmoPolicy(a[0]);
-      if (policy === null) throw new Error(i18n("err.badAmmoPolicy"));
-      setAmmoPolicy(s, policy);
-      return cmdRunChunks(
-        i18n("ammo.set", { id: unit.id, policy: ammoPolicyLabel(unit.ammoPolicy) }),
-      );
-    },
-  },
   torso: {
     helpKey: "cmd.torso.help",
     usage: "torso <front|left|right>",

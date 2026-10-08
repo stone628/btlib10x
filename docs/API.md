@@ -613,6 +613,7 @@ only).
 Bin identity + depletion helpers for custom UIs:
 
 - `AmmoPolicy` (`"exposed" | "core" | "spread" | "leastFirst"`)
+- `UnitPolicy` (`{ ammoPolicy: AmmoPolicy }`, per-unit settings fixed at setup; `DEFAULT_UNIT_POLICY` = `{ ammoPolicy: "exposed" }`, filled by `buildUnitInit`)
 - `AmmoBins` — `Record<AmmoBinId, AmmoBinState>` (the per-bin map type)
 - `ammoBinId(loc, slotIndex): AmmoBinId` — `"${loc}:${slotIndex}"`
 - `collectAmmoBins(def): AmmoBin[]` — every bin in the resolved def
@@ -703,7 +704,7 @@ Constants:
 Key types:
 
 ```ts
-interface UnitInit { id; model; team; gunnery: UnitSkillRange; piloting: UnitSkillRange; pilotHitMax?: number; position: HexCoord; facing: Facing }  // pilotHitMax integer >= 1 (default 6); skills 0..7, gunnery/piloting within 2 of each other (TW p.273)
+interface UnitInit { id; model; team; gunnery: UnitSkillRange; piloting: UnitSkillRange; pilotHitMax?: number; position: HexCoord; facing: Facing; policy: UnitPolicy }  // pilotHitMax integer >= 1 (default 6); skills 0..7, gunnery/piloting within 2 of each other (TW p.273)
 
 type MoveStep =
   | { kind: "enter"; to: HexCoord }      // forward/backward (ground) or adjacent hop (jump)

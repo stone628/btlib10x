@@ -64,7 +64,7 @@ Examples:
 |---|---|
 | `map <name>` | load a bundled map as terrain (`beginner`, `quickstart`, `test`, `testground`) |
 | `add <id> <model> <col> <row> [facing]` | place unit (team auto-assigned to smallest team; default gunnery `4`, piloting `5`, facing `n`) |
-| `set <id> <prop> <value>` | edit a property on a unit already on the roster (`model`, `team`, `col`, `row`, `facing`, `gunnery`, `piloting`, `pilotHitMax` (integer >= 1, default 6); cannot modify `id`) |
+| `set <id> <prop> <value>` | edit a property on a unit already on the roster (`model`, `team`, `col`, `row`, `facing`, `gunnery`, `piloting`, `pilotHitMax` (integer >= 1, default 6), `ammoPolicy` (`exposed` default, `core`, `spread`, `least-first`; case-insensitive, hyphens optional); property names are case-insensitive; cannot modify `id`) |
 | `rm <id>` | remove placed unit |
 | `status` | setup summary: 'Mechs grouped by team, selected map name |
 | `start` | ≥2 units on ≥2 teams required; creates battle, rolls initiative → `turn` |
@@ -101,7 +101,6 @@ pass), plus `cancel`, `sheet`, `status`, `heat` and the globals.
 
 | command | effect |
 |---|---|
-| `ammo [policy]` | show (no argument) or set the acting unit's ammo depletion policy: `exposed` (default), `core`, `spread`, `least-first` (case-insensitive, hyphens optional). The policy picks which bin of a weapon takes the next shot; ties are broken at random |
 | `torso <front\|left\|right>` | twist the acting unit's torso one hexside (TW pp.105-106): arm and front-torso weapons fire into the twisted arc; locked once a `fire` is queued |
 | `candidate` | show possible targets with available weapons |
 | `fire <targetId> <weapon> [<weapon> ...]` | queue weapon declarations using 1-based weapon numbers (target first; declare several weapons at once, all against the one shared target; rapid-fire SRM/LRM fire a full volley — no `shots` argument). A prone attacker fires at +2, cannot fire leg-mounted weapons, and must draw the whole volley from one prop side (left-arm and right-arm weapons cannot mix — the suggestion shows both prop-left and prop-right sets; firing an arm set props the other arm) |
@@ -215,7 +214,7 @@ simulate. See `docs/VISION.md` for direction and the will/won't lists.
   brackets, rapid-fire, weapon to-hit mods (−2 pulse, +1 MRM / Clan heavy
   lasers), per-bin ammo tracking, jam on
   natural 2 (multi-shot), LRM lots-of-5 grouping. Ammo is depleted per
-  crit slot ("bin") under a per-unit policy set with `ammo <policy>`:
+  crit slot ("bin") under a per-unit policy fixed at setup with `set <id> ammoPolicy <policy>`:
   `exposed` arms → legs → side torsos → head → center torso (default),
   `core` the reverse priority, `spread` fullest-bin-first, `leastFirst`
   emptiest-first; equal-priority bins are chosen at random. Declared

@@ -69,7 +69,11 @@ describe("LOS intervening-terrain test (TW p.100, LOS-01/02)", () => {
 
   it("woods whose canopy is below both units do not count (LOS-02)", () => {
     // Units on Level 8 hexes see over the Level 0 woods canopy (top 2).
-    const grid = strip({ "2,2": { level: 8 }, "6,2": { level: 8 }, "4,2": { terrain: "lightWoods" } });
+    const grid = strip({
+      "2,2": { level: 8 },
+      "6,2": { level: 8 },
+      "4,2": { terrain: "lightWoods" },
+    });
     expect(losWoodsPointsBetween(grid, A, B)).toBe(0);
     expect(interveningTerrains(grid, A, B)).not.toContain("lightWoods");
   });
@@ -89,8 +93,12 @@ describe("targeting computer (TW p.143, TOH-01)", () => {
   };
 
   it("gives -1 to energy weapons and nothing to missiles", () => {
-    expect(targetingComputerModifier(def, damage, flags(), weaponDefFor({ weapon: "CL ER PPC" }))).toBe(-1);
-    expect(targetingComputerModifier(def, damage, flags(), weaponDefFor({ weapon: "CL LRM 10" }))).toBe(0);
+    expect(
+      targetingComputerModifier(def, damage, flags(), weaponDefFor({ weapon: "CL ER PPC" })),
+    ).toBe(-1);
+    expect(
+      targetingComputerModifier(def, damage, flags(), weaponDefFor({ weapon: "CL LRM 10" })),
+    ).toBe(0);
   });
 
   it("is lost when a targeting computer slot is destroyed", () => {
@@ -99,14 +107,20 @@ describe("targeting computer (TW p.143, TOH-01)", () => {
       (s) => s.kind === "structure" && s.name === "targetingComputer",
     );
     f.rightTorso[i] = true;
-    expect(targetingComputerModifier(def, damage, f, weaponDefFor({ weapon: "CL ER PPC" }))).toBe(0);
+    expect(targetingComputerModifier(def, damage, f, weaponDefFor({ weapon: "CL ER PPC" }))).toBe(
+      0,
+    );
   });
 
   it("is absent on a 'Mech without one", () => {
     const hbk = mechDef("HBK-4G")!;
     const f: Record<string, boolean[]> = {};
     for (const [loc, slots] of Object.entries(hbk.critSlots)) f[loc] = slots.map(() => false);
-    const dmg = { armor: { ...hbk.armor }, armorRear: { ...hbk.armorRear }, internalStructure: { ...hbk.internalStructure } };
+    const dmg = {
+      armor: { ...hbk.armor },
+      armorRear: { ...hbk.armorRear },
+      internalStructure: { ...hbk.internalStructure },
+    };
     expect(
       targetingComputerModifier(hbk, dmg, f as never, weaponDefFor({ weapon: "Medium Laser" })),
     ).toBe(0);

@@ -72,9 +72,9 @@ export const en = {
   "cmd.set.help": "edit a property on a unit already on the roster",
   "cmd.set.arg.id": "unit id to modify",
   "cmd.set.arg.prop":
-    "property name: model, team, col, row, facing, gunnery, piloting, pilotHitMax",
+    "property name: model, team, col, row, facing, gunnery, piloting, pilotHitMax, ammoPolicy",
   "cmd.set.arg.value":
-    "new value (integer for numeric props, 'Mech key for model, facing word for facing)",
+    "new value (integer for numeric props, 'Mech key for model, facing word for facing, exposed|core|spread|least-first for ammoPolicy)",
   "cmd.rm.help": "remove a placed unit",
   "cmd.rm.arg.id": "id of a previously added unit",
   "cmd.statusSetup.help": "setup summary: units grouped by team, selected map",
@@ -103,8 +103,6 @@ export const en = {
   "cmd.statusMove.help": "queued move steps with running MP cost per step",
   "cmd.cancelMove.help": "clear mode and queued steps",
   "cmd.doneMove.help": "commit the declared move",
-  "cmd.ammo.help": "show or set the acting unit's ammo depletion policy",
-  "cmd.ammo.arg.policy": "exposed | core | spread | leastFirst. omit to show the current policy",
   "cmd.torso.help":
     "twist the acting unit's torso (TW pp.105-106). arms and front torso fire into the twisted arc",
   "cmd.torso.arg.direction":
@@ -172,8 +170,6 @@ export const en = {
   "ok.drop.queued": "queued drop ({kind}) — hands free for the rest of the declaration",
   "ok.twistSet": "{id}: torso twisted to {dir}",
   "ok.twistAlready": "{id}: torso is already facing {dir}",
-  "ammo.current": "ammo policy: {policy}",
-  "ammo.set": "{id}: ammo policy set to {policy}",
   "ammo.policy.exposed": "exposed",
   "ammo.policy.core": "core",
   "ammo.policy.spread": "spread",
@@ -594,9 +590,11 @@ export const en = {
   "log.psrReason.kick": "kicked",
   "log.psrReason.kickMiss": "missed kick",
   "log.psrReason.domino": "domino effect",
-  "log.accidentalFallHit": "[{id}] falls onto {target} (needs {tn}+, rolled {roll}): {damage} damage",
+  "log.accidentalFallHit":
+    "[{id}] falls onto {target} (needs {tn}+, rolled {roll}): {damage} damage",
   "log.accidentalFallMiss": "[{id}] falls toward {target} but misses (needs {tn}+, rolled {roll})",
-  "log.unitDisplaced": "[{id}] is shoved from ({fromCol},{fromRow}) to ({toCol},{toRow}) (domino effect)",
+  "log.unitDisplaced":
+    "[{id}] is shoved from ({fromCol},{fromRow}) to ({toCol},{toRow}) (domino effect)",
   "log.psrReason.ejection": "ejecting (failure injures the pilot)",
   "log.fallCause.failedPsr": "failed {reason} PSR",
   "log.fallCause.legDestroyed": "leg destroyed",

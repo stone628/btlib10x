@@ -17,8 +17,8 @@
 import type { ArmLocation, Location } from "../core/types";
 import { isArm, LOCATIONS } from "../core/types";
 import type { ResolvedMechDef } from "../data/mech.schema";
-import { destroyedStructures } from "./critical";
 import type { WeaponDef } from "../data/weapon.schema";
+import { destroyedStructures } from "./critical";
 import { isUnitLocationDestroyed, type UnitDamageState } from "./damage";
 
 /** Weapon to-hit penalty for a destroyed shoulder in the firing arm (TW p.125). */

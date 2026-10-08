@@ -309,7 +309,8 @@ export function reachableLandings(
     if (options.wreckAt?.(hex)) return false;
     // TW p.53: a jump is impossible if its path crosses a level higher than
     // Jumping MP + the starting level.
-    if (jumping) return cellAt(options.grid, hex).level <= budget + groundLevel(options.grid, start);
+    if (jumping)
+      return cellAt(options.grid, hex).level <= budget + groundLevel(options.grid, start);
     // TW p.53: running units cannot enter water; Minimum Movement (p.57) can.
     if (running && !minMove && waterDepth(cellAt(options.grid, hex).terrain) > 0) return false;
     const delta = groundLevel(options.grid, hex) - groundLevel(options.grid, from);
