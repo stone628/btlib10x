@@ -126,7 +126,9 @@ ends, the victory banner is followed by a collapsed block *"you can replay this
 match with this data"* holding the records laid out by `replayPrettifier`: version,
 the setup line (`B…;S…`), one line per unit, then per turn one movement line and one
 attack line (activations joined by `;`), the `W` line and one `E` line per unit. `rematch` starts a new
-log; `reset` clears it and re-creates the dice generator from the seed. A match
+log; `reset` clears it and re-creates the dice generator from the seed. `replayPlayer(text)`
+(`web/replay.ts`) replays such text and checks the winner, the final dice state and every
+unit's end state; it throws a single error naming turn, phase and actor on the first problem. A match
 that cannot be reproduced (more than 36 units, a team above 9, a unit id with
 `:` `;` `,` or whitespace, a replaced dice generator) shows no block.
 

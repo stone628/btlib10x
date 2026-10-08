@@ -9,10 +9,11 @@ import {
   rotateFacing,
   VERSION,
 } from "btlib10x";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { nextAutoPlayCommand, resetAutoplayState } from "../web/autoplay";
 import {
   type AttackDeclaration,
+  decodeUnitLine,
   encodeAttackEntry,
   encodeEndLine,
   encodeMoveEntry,
@@ -22,6 +23,7 @@ import {
   type MoveStart,
   normalizeRng,
   replayChunk,
+  replayPlayer,
   replayPrettifier,
   stepsText,
   weaponListText,
@@ -492,5 +494,229 @@ describe("replay log in the session", () => {
     for (const line of replayPrettifier(s.replay!.lines)) expect(last).toContain(line);
     const chunk = replayChunk(s)!;
     expect(chunk.kind).toBe("collapsible");
+  });
+});
+
+// ------------------------------------------------------------- replayPlayer ----
+
+function recorded(setup: string[], seed = 42, maxCommands = 6000): Session {
+  const s = newSession(seed);
+  execute(s, "map quickstart");
+  for (const cmd of setup) execute(s, cmd);
+  execute(s, "start");
+  resetAutoplayState(s);
+  for (let i = 0; i < maxCommands && s.state !== "over"; i++) {
+    const cmd = nextAutoPlayCommand(s);
+    if (cmd === null) break;
+    execute(s, cmd);
+  }
+  expect(s.state).toBe("over");
+  return s;
+}
+
+const TWO = ["add hunchy HBK-4G 9 9 n", "add cicada CDA-3MA 9 8 s"];
+const FOUR = [
+  "add AT AS7-D 3 4 ne",
+  "add MD MC-MKII-2 5 3 sw",
+  "add ENF ENF-4R 4 5 ne",
+  "add WVR WVR-6R 6 4 sw",
+];
+
+describe("replayPlayer: a recorded match replays and verifies", () => {
+  it.each([
+    ["two units", TWO, 42],
+    ["two units, other seed", TWO, 7],
+    ["four units", FOUR, 42],
+    ["four units, other seed", FOUR, 1234],
+  ])("%s", (_name, setup, seed) => {
+    const s = recorded(setup, seed);
+    const lines = s.replay!.lines;
+    expect(() => replayPlayer(lines.join("\n"))).not.toThrow();
+    expect(() => replayPlayer(lines.join(";"))).not.toThrow();
+    expect(() => replayPlayer(replayPrettifier(lines).join("\n"))).not.toThrow();
+  });
+
+  it("prints nothing", () => {
+    const s = recorded(TWO);
+    const spies = (["log", "info", "warn", "error"] as const).map((m) => vi.spyOn(console, m));
+    replayPlayer(s.replay!.lines.join("\n"));
+    for (const spy of spies) {
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
+    }
+  });
+});
+
+describe("decodeUnitLine", () => {
+  it("is the inverse of encodeUnitLine, damage and policy included", () => {
+    const init = {
+      ...buildUnitInit("hunchy", "HBK-4G", 1, { col: 5, row: 3 }, "sw", 3, 5, 7, {
+        ammoPolicy: "leastFirst" as const,
+      }),
+      damage: {
+        pilotHits: 2,
+        damageTaken: {
+          armor: { centerTorso: 26, leftArm: 16, head: 4 },
+          armorRear: { centerTorso: 1 },
+          internalStructure: { centerTorso: 1, leftArm: 2 },
+        },
+        critsDestroyed: { rightArm: [3, 4], head: [2] },
+        ammoUsed: { "leftTorso:1": 3, "leftTorso:2": 2 },
+      },
+    };
+    const line = encodeUnitLine(init);
+    expect(decodeUnitLine(line)).toEqual(init);
+    expect(encodeUnitLine(decodeUnitLine(line))).toBe(line);
+    const plain = buildUnitInit("cicada", "CDA-3MA", 0, { col: 5, row: 8 }, "n");
+    expect(decodeUnitLine(encodeUnitLine(plain))).toEqual(plain);
+  });
+  it("rejects malformed records", () => {
+    expect(() => decodeUnitLine("U0cicada:CDA-3MA:5n")).toThrow(/place/);
+    expect(() => decodeUnitLine("U0cicada:CDA-3MA:0508n456:x9")).toThrow(/armor/);
+    expect(() => decodeUnitLine("U0cicada:CDA-3MA:0508n456::::z")).toThrow(/policy/);
+  });
+});
+
+describe("replayPlayer: failures stop at once, naming turn, phase, actor and why", () => {
+  const base = recorded(TWO).replay!.lines;
+  const at = (prefix: string, nth = 0): number =>
+    base.map((l, i) => [l, i] as const).filter(([l]) => l.startsWith(prefix))[nth]![1];
+  /** The recorded text with the first record starting with `prefix` replaced by `f(record)`. */
+  const change = (prefix: string, f: (record: string) => string): string => {
+    const lines = [...base];
+    const i = at(prefix);
+    lines[i] = f(lines[i]!);
+    return lines.join("\n");
+  };
+  const without = (prefix: string): string => base.filter((_, i) => i !== at(prefix)).join("\n");
+  const insertBefore = (prefix: string, record: string): string => {
+    const lines = [...base];
+    lines.splice(at(prefix), 0, record);
+    return lines.join("\n");
+  };
+  const failure = (text: string): string => {
+    try {
+      replayPlayer(text);
+    } catch (e) {
+      return (e as Error).message;
+    }
+    throw new Error("expected replayPlayer to throw");
+  };
+  const located = /^replay failed at turn \d+, (setup|movement|attack|end) phase, actor \S+: /;
+  const other = (idx: string) => (idx === "0" ? "1" : "0");
+
+  it("a changed step", () => {
+    const msg = failure(change("M", (r) => `M${r[1]}w>>>>`));
+    expect(msg).toMatch(located);
+  });
+  it("the wrong unit acts", () => {
+    const msg = failure(change("M", (r) => `M${other(r[1]!)}${r.slice(2)}`));
+    expect(msg).toMatch(located);
+    expect(msg).toMatch(/acts in the record but/);
+  });
+  it("an attack where movement is due", () => {
+    expect(failure(insertBefore("M", "A0F"))).toMatch(/movement activation|attack activation/);
+  });
+  it("an impossible attack", () => {
+    const msg = failure(change("A", (r) => `A${r[1]}F:${other(r[1]!)}z`));
+    expect(msg).toMatch(located);
+  });
+  it("unknown unit index, stray character, unknown record", () => {
+    expect(failure(change("M", () => "Mz"))).toMatch(/unknown unit index/);
+    expect(failure(change("M", (r) => `${r}*`))).toMatch(/unexpected "\*"/);
+    expect(failure(insertBefore("M", "Q1"))).toMatch(/unknown record/);
+  });
+  it("wrong winner, rng or end state", () => {
+    expect(failure(change("W", (r) => `W${other(r[1]!)}${r.slice(2)}`))).toMatch(/expected W/);
+    expect(failure(change("W", (r) => `${r.slice(0, -1)}${r.endsWith("0") ? "1" : "0"}`))).toMatch(
+      /expected W/,
+    );
+    expect(failure(change("E", (r) => `${r}h1`))).toMatch(/ended as/);
+  });
+  it("missing or extra pieces", () => {
+    expect(failure(without("W"))).toMatch(/before W|ends before/);
+    expect(failure(base.slice(0, -1).join("\n"))).toMatch(/no E record/);
+    expect(failure(insertBefore("W", "M0s"))).toMatch(/already over|not over/);
+    expect(failure([...base, base[base.length - 1]!].join("\n"))).toMatch(/two E records/);
+    expect(failure([...base, "M0s"].join("\n"))).toMatch(/only E records/);
+    expect(failure(change("B", () => "Bnowhere"))).toMatch(/Unknown map/);
+    expect(failure(change("U", () => "U0x:NOPE-1:0909n456"))).toMatch(/NOPE/);
+  });
+  it("names the version when it differs", () => {
+    expect(failure(`${change("V", () => "Vold-version")}\nM0s`)).toMatch(
+      /recorded with old-version/,
+    );
+  });
+});
+
+describe("replayPlayer: scripted matches reach every movement and attack branch", () => {
+  type Script = Record<
+    string,
+    { movement?: Record<number, string[]>; attack?: Record<number, string[]> }
+  >;
+
+  /** Drive a session with fixed per-unit command lists (by phase and turn); autoplay never picks these. */
+  function playScript(s: Session, script: Script): string[] {
+    const errors: string[] = [];
+    for (let guard = 0; guard < 400 && s.state === "battle"; guard++) {
+      const battle = s.battle!;
+      const phase = battle.phase === "attack" ? "attack" : "movement";
+      const actor = phase === "attack" ? s.attack?.actorId : s.move?.actorId;
+      if (actor === undefined) break;
+      const commands =
+        script[actor]?.[phase]?.[battle.turn] ??
+        (phase === "attack" ? ["done"] : ["mode standstill", "done"]);
+      for (const cmd of commands) {
+        const out = execute(s, cmd);
+        if (out.some((l) => l.startsWith("error:")))
+          errors.push(`turn ${battle.turn} ${actor} ${cmd}: ${out.join(" / ")}`);
+      }
+    }
+    return errors;
+  }
+
+  const roster = ["add enf ENF-4R 9 9 n", "add hct HCT-5S 9 8 s"];
+
+  function scripted(seed = 42): Session {
+    const s = newSession(seed);
+    execute(s, "map quickstart");
+    for (const cmd of roster) execute(s, cmd);
+    execute(s, "start");
+    return s;
+  }
+
+  it("punches, a hatchet strike, a jump, a drop, stand-up, shutdown, startup and eject", () => {
+    const script: Script = {
+      hct: {
+        attack: { 1: ["strike enf", "done"] },
+        movement: {
+          2: ["mode prone", "done"],
+          3: ["mode standup", "done"],
+          4: ["mode eject", "done"],
+        },
+      },
+      enf: {
+        attack: { 1: ["punch hct left", "punch hct right", "done"] },
+        movement: {
+          2: ["mode jump", "place 9 12 ne", "done"],
+          3: ["mode shutdown", "done"],
+          4: ["mode startup", "done"],
+        },
+      },
+    };
+    const s = scripted();
+    expect(playScript(s, script)).toEqual([]);
+    expect(s.state).toBe("over");
+    const text = s.replay!.lines.join("\n");
+    // The branches the script was written to reach actually got recorded.
+    expect(text).toMatch(/^A[01]F:[01]Th$/m); // hatchet strike, right arm
+    expect(text).toMatch(/^A[01]F:[01]PQ$/m); // both punches
+    expect(text).toMatch(/^M[01]j---m$/m); // jump backward, landing facing north-east
+    expect(text).toMatch(/^M[01]D$/m); // drop prone
+    expect(text).toMatch(/^M[01]Us$/m); // stand up
+    expect(text).toMatch(/^M[01]X$/m); // shutdown
+    expect(text).toMatch(/^M[01]O$/m); // startup
+    expect(text).toMatch(/^M[01]E$/m); // eject
+    expect(() => replayPlayer(text)).not.toThrow();
   });
 });

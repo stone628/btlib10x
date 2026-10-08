@@ -26,7 +26,7 @@ import {
   onEnterMovement,
   requireMovementActor,
 } from "./session.move";
-import type { OverContext, SessionVictoryResult } from "./session.over";
+import type { SessionVictoryResult as BattleVictoryResult, OverContext } from "./session.over";
 import type { SetupContext } from "./session.setup";
 
 export * from "./session.attack";
@@ -256,7 +256,7 @@ export type SessionGameEvent =
       readonly kind: "sessionOver";
     };
 
-function checkSessionVictory(state: BattleState): SessionVictoryResult | null {
+export function checkBattleVictory(state: BattleState): BattleVictoryResult | null {
   const aliveTeams = new Set(
     Object.values(state.units)
       .filter((u) => !isUnitRemoved(u))
@@ -295,14 +295,14 @@ function ensureBattleContextsCleared(s: Session): void {
  */
 export function drive(s: Session): SessionGameEvent[] {
   const battle = requireBattle(s);
-  const v: SessionVictoryResult[] = [];
+  const v: BattleVictoryResult[] = [];
   const collected: GameEvent[] = [];
   const wasInWeaponAttack = battle.phase === "attack";
   const r = gameLoop(
     battle,
     s.rng,
     (state) => {
-      const victory = checkSessionVictory(state);
+      const victory = checkBattleVictory(state);
       if (victory !== null) {
         v.push(victory);
         return true;
