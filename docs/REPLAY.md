@@ -15,9 +15,9 @@ Records are separated by `;` or `\n` (decoders accept both, mixed).
 | idx | `0-9a-z` | unit index, **0-based** registration order (0..35 max) |
 | wpn | `1-9a-z` | weapon number, **1-based** as in `fire` (`weaponIndex = n − 1`), 1..35 |
 | slot | `1-9abc` | crit slot number, **1-based** as on `sheet` |
-| dir | `0-5` | `Facing`, clockwise from north: `0`n `1`ne `2`se `3`s `4`sw `5`nw |
+| dir | `n m d s a b` | `Facing` as keyboard letters: `n` north, `m` north-east, `d` south-east, `s` south, `a` south-west, `b` north-west (`b n m` and `a s d` read west to east) |
 | loc | `h C R L a A g G` | `LOC_CODES` in `src/data/mech.codec.ts` (head, CT, RT, LT, RA, LA, RL, LL). Rear codes `c r l` are unused: torsos carry rear inline |
-| hex | `ccrr` | 1-based col, row, two digits each (`0504` = col 5, row 4), as `HexCoord` |
+| hex | `ccrr` | 1-based col, row, two digits each (`0504` = col 5, row 4), as `HexCoord`; only unit start positions use it, moves are relative |
 
 `LOC_CODES` is module-private today; export it plus a canonical order
 `hCRLaAgG` when implementing.
@@ -56,14 +56,14 @@ E<idx><hits>[:<armor>[:<crit>[:<ammo>]]]    final state per unit, idx order
 
 ### `U` — unit registration (→ extended `UnitInit`)
 
-`U0hunchy:HBK-4G:05033456:C26/1/1A16/2:a3a4:L13L22:s`
+`U0hunchy:HBK-4G:0503s456:C26/1/1A16/2:a3a4:L13L22:s`
 
 | part | meaning |
 |---|---|
 | `U0` | `team` 0..9 |
 | `hunchy` | unit `id` (up to the first `:`; no `:` `,` `;` in names) |
 | `HBK-4G` | `model`, must exist in the catalog |
-| `05033456` | `position` `0503`, `facing` `3`, `gunnery` `4`, `piloting` `5`, `pilotHitMax` `6`; optional 9th digit = `pilotHits` (omit = 0) |
+| `0503s456` | `position` `0503`, `facing` `s`, `gunnery` `4`, `piloting` `5`, `pilotHitMax` `6`; optional 9th digit = `pilotHits` (omit = 0) |
 | armor | damage **taken** per location vs model default, see below |
 | crit | destroyed crit slots: `<loc><slot>` repeated (`a3a4` = right arm slots 3, 4) |
 | ammo | shots **used**: `<loc><slot><n>` repeated (`L13L22` = LT slot 1 used 3, LT slot 2 used 2); `n` is decimal, runs to the next letter |
@@ -124,18 +124,39 @@ Line: `M<idx><op>[args]` (one actor).
 
 | op | engine call(s) | args |
 |---|---|---|
-| `s` `w` `r` `j` | `executeMove(mode, steps, {finalFacing})`, mode standStill / walk / run / jump | `[steps][>dir]` |
-| `U<s\|w\|r>` | `attemptStandUp(locomotion)` (standStill / walk / run), then — only if now upright and steps or facing given — `executeMove(locomotion, steps, {finalFacing, spentMP, modeHeatPaid})` | `[steps][>dir]` |
-| `D` | `dropProne`, then — if steps or facing given — `executeMove("walk", steps, {finalFacing, spentMP: DROP_MP_COST})` | `[steps][>dir]` |
+| `s` `w` `r` `j` | `executeMove(mode, steps, {finalFacing})`, mode standStill / walk / run / jump | `[steps][facing]` |
+| `U<s\|w\|r>` | `attemptStandUp(locomotion)` (standStill / walk / run), then — only if now upright and steps or facing given — `executeMove(locomotion, steps, {finalFacing, spentMP, modeHeatPaid})` | `[steps][facing]` |
+| `D` | `dropProne`, then — if steps or facing given — `executeMove("walk", steps, {finalFacing, spentMP: DROP_MP_COST})` | `[steps][facing]` |
 | `X` | `voluntaryShutdown` | – |
 | `O` | `attemptVoluntaryStartup` | – |
 | `E` | `ejectPilot` | – |
 | `.` | `passMovement` (also what the session does when a shut-down or unconscious unit commits) | – |
 
-`steps` is the literal `MoveStep[]` concatenated: `enter` = hex (4 digits,
-absolute), `turn` = `+n` / `-n` (one digit, signed `facings`). `>dir` is
-`finalFacing` (jump landing facing, stand-up free facing). Prone turning is `w`
-with turn steps only; staying prone is `s`.
+`steps` are relative to the actor's hex and heading when the move starts, one character each:
+
+| char | meaning | engine step |
+|---|---|---|
+| `>` / `<` | turn right / left one hexside | `turn` +1 / −1 (ground), or a free re-aim of the travel direction (jump, no engine step) |
+| `+` | step forward (the hex ahead of the current heading) | `enter` |
+| `-` | step backward (the hex behind) | `enter` |
+
+`facing` is one optional trailing letter, the `finalFacing` option (jump landing
+facing, stand-up free facing). It needs no prefix: a letter can only follow the
+steps (`U<loco>` has a fixed one-char locomotion and no other op takes an
+argument first), and the step characters share nothing with the facing letters.
+`s` as an op (standstill) is always the char right after the unit index, so it
+never collides with `s` as a facing.
+
+On the ground the engine only allows the hex ahead or behind, so `+`, `-` and the
+turns say everything. A jump may enter any neighbour: re-aim with `<`/`>` (free),
+then `+` (or `-` for the hex exactly behind); the replayer must not turn those
+re-aims into engine turn steps. Prone turning is `w` with `<`/`>` only; staying
+prone is `s`.
+
+Examples (clear map, north is row − 1): walk two hexes straight `M0w++`; one back
+`M0w-`; half turn in place `M0w>>>`; run from (5,7) facing north to (6,4)
+`M0r>+<++`; jump three north landing south-east `M0j+++d`; stand up in place
+facing south `M0Uss` (`U`, locomotion `s`, facing `s`).
 
 ### `A` — attack entries (→ `declareAttacks` / `declarePickup`)
 
@@ -195,7 +216,7 @@ Every CLI command and where it lands. "UI" = no effect on battle state, never re
 | `add` / `set` / `rm` | folded into the final `U` records (id, model, team, col, row, facing, gunnery, piloting, pilotHitMax, plus starting damage and ammo policy) |
 | `start` | implicit at the first `M` |
 | `reset` / `rematch` | not recorded; a replay is one battle. A rematch is a new replay with the same `v m s k u` header |
-| `mode standstill\|walk\|run\|jump` + `place` + `done` | `s` `w` `r` `j` + steps + `>dir` |
+| `mode standstill\|walk\|run\|jump` + `place` + `done` | `s` `w` `r` `j` + steps + facing letter |
 | `mode standup [walk\|run\|standstill]` + `place` + `done` | `Uw` `Ur` `Us` + steps |
 | `mode prone [turn\|pronestill]` + `place` + `done` | `D` + turn steps (or bare `D` for `pronestill` / no place) |
 | `mode turn` + `place` + `done` | `w` + turn steps |
@@ -223,14 +244,14 @@ starts damaged, spread ammo policy) vs CDA-3MA `cicada` (team 1, gunnery 3).
 V261008-8211edb
 Bquickstart
 S42
-U0hunchy:HBK-4G:05033456:C26/1/1A16/2:a3a4:L13L22:s
-U1cicada:CDA-3MA:05080356
-M1r05070506
-M0w0504
+U0hunchy:HBK-4G:0503s456:C26/1/1A16/2:a3a4:L13L22:s
+U1cicada:CDA-3MA:0508n356
+M1r++
+M0w+
 A1L:01~4
 A0F:1124
 M0s
-M1w0505
+M1w+
 A0F:11~4
 A1F:0Q
 M1s
@@ -245,17 +266,40 @@ E10:C17/6/12L15//10:L4L5
 One line:
 
 ```
-V261008-8211edb;Bquickstart;S42;U0hunchy:HBK-4G:05033456:C26/1/1A16/2:a3a4:L13L22:s;U1cicada:CDA-3MA:05080356;M1r05070506;M0w0504;A1L:01~4;A0F:1124;M0s;M1w0505;A0F:11~4;A1F:0Q;M1s;M0s;A1F:01~4;A0F:11~4;W03f9a41c7;E01:h5C26/4/1A16/2:a3a4:L16L22;E10:C17/6/12L15//10:L4L5
+V261008-8211edb;Bquickstart;S42;U0hunchy:HBK-4G:0503s456:C26/1/1A16/2:a3a4:L13L22:s;U1cicada:CDA-3MA:0508n356;M1r++;M0w+;A1L:01~4;A0F:1124;M0s;M1w+;A0F:11~4;A1F:0Q;M1s;M0s;A1F:01~4;A0F:11~4;W03f9a41c7;E01:h5C26/4/1A16/2:a3a4:L16L22
+E10:C17/6/12L15//10:L4L5
 ```
 
 Decode notes:
 
-- `U0hunchy…`: unit 0, team 0, at (5,3) facing south, gunnery 4 / piloting 5 / hit max 6; CT front −26 (gone), rear −1, internal −1; left arm armor −16 (gone), internal −2; right-arm slots 3,4 destroyed; LT ammo slot 1 used 3 shots, slot 2 used 2; spread ammo policy (`s`). `U1cicada` has no armor/crit/ammo/policy fields: undamaged, default policy.
-- `M1r05070506` / `M0w0504`: unit 1 `executeMove("run", [enter 5,7; enter 5,6])`, then unit 0 `executeMove("walk", [enter 5,4])`. The first `M` also creates the battle.
+- `U0hunchy…`: unit 0, team 0, at (5,3) facing south (`s`), gunnery 4 / piloting 5 / hit max 6; CT front −26 (gone), rear −1, internal −1; left arm armor −16 (gone), internal −2; right-arm slots 3,4 destroyed; LT ammo slot 1 used 3 shots, slot 2 used 2; spread ammo policy (`s`). `U1cicada` has no armor/crit/ammo/policy fields: undamaged, default policy.
+- `M1r++` / `M0w+`: unit 1 (at (5,8), facing north) `executeMove("run", [enter 5,7; enter 5,6])`, then unit 0 (at (5,3), facing south) `executeMove("walk", [enter 5,4])`. The first `M` also creates the battle.
 - `A1L:01~4` / `A0F:1124`: unit 1 twists left and fires weapons 1–4 at unit 0; unit 0 (front) fires weapons 1,2,4 at unit 1.
 - `A0F:11~4` / `A1F:0Q`: unit 0 fires weapons 1–4 at unit 1; unit 1 right-punches unit 0.
 - `W03f9a41c7`: team 0 is the last one standing; the Rng ended in state `0x3f9a41c7` (illustrative value). `E10:…`: unit 1, 0 pilot hits, CT internal −12 (full) ⇒ destroyed.
 - Other shapes: `A1F` pass · `A1F-:01~4` drop club then fire · `A1F+t` pick up a tree · `A2R:0Ts:1P` unit 2 twisted right: right-arm strike with a Sword at unit 0, left punch at unit 1.
+
+## Display layout
+
+Records are separated by `;` or a newline, so a replay can be laid out either way.
+The web CLI shows it as (`replayPrettifier` in `web/replay.ts`):
+
+```
+V261008-8211edb
+Bquickstart;S42
+U0hunchy:HBK-4G:0503s456:C26/1/1A16/2:a3a4:L13L22:s
+U1cicada:CDA-3MA:0508n356
+M1r++;M0w+
+A1L:01~4;A0F:1124
+M0s;M1w+
+A0F:11~4;A1F:0Q
+W03f9a41c7
+E01:h5C26/4/1A16/2:a3a4:L16L22
+E10:C17/6/12L15//10:L4L5
+```
+
+version alone · setup records other than units on one line · one line per unit · per
+turn a movement line and an attack line · the winner line · one line per unit's end state.
 
 ## Implementation status
 

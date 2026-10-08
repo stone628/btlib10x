@@ -1,4 +1,14 @@
-import { buildUnitInit, type PhysicalAttackDecl } from "btlib10x";
+import {
+  buildUnitInit,
+  type Facing,
+  type HexCoord,
+  type MoveStep,
+  neighbor,
+  oppositeFacing,
+  type PhysicalAttackDecl,
+  rotateFacing,
+  VERSION,
+} from "btlib10x";
 import { beforeEach, describe, expect, it } from "vitest";
 import { nextAutoPlayCommand, resetAutoplayState } from "../web/autoplay";
 import {
@@ -9,8 +19,11 @@ import {
   encodeUnitLine,
   encodeWinnerLine,
   type MoveDecl,
+  type MoveStart,
   normalizeRng,
   replayChunk,
+  replayPrettifier,
+  stepsText,
   weaponListText,
 } from "../web/replay";
 import { commitAtomic, newSession, type Session, setSeed } from "../web/session";
@@ -50,59 +63,101 @@ describe("encodeMoveEntry", () => {
   });
   const enter = (col: number, row: number) => ({ kind: "enter" as const, to: { col, row } });
   const turn = (facings: number) => ({ kind: "turn" as const, facings });
+  const at = (col: number, row: number, facing: Facing = "n") => ({
+    position: { col, row },
+    facing,
+  });
+  const enc = (d: Partial<MoveDecl>, start = at(5, 7), downed = false) =>
+    encodeMoveEntry("0", decl(d), downed, start);
 
-  it("encodes locomotion modes with steps and final facing", () => {
-    expect(encodeMoveEntry("1", decl({ moveMode: "standStill" }), false)).toBe("1s");
+  it("walks and runs are relative: + forward, - backward, < > turns", () => {
+    expect(enc({ moveMode: "standStill" })).toBe("0s");
+    // (5,7) facing n: north is row - 1.
+    expect(enc({ moveSteps: [enter(5, 6), enter(5, 5)] })).toBe("0w++");
+    expect(enc({ moveSteps: [enter(5, 8)] })).toBe("0w-");
+    expect(enc({ moveSteps: [turn(1), turn(1), turn(1)] })).toBe("0w>>>");
+    expect(enc({ moveSteps: [turn(-2)] })).toBe("0w<<");
+    // right (now facing north-east), forward to (6,6), left, forward x2 to (6,4).
     expect(
-      encodeMoveEntry("1", decl({ moveMode: "run", moveSteps: [enter(5, 7), enter(5, 6)] }), false),
-    ).toBe("1r05070506");
-    expect(
-      encodeMoveEntry("a", decl({ moveSteps: [turn(1), enter(12, 3), turn(-2)] }), false),
-    ).toBe("aw+11203-2");
-    expect(
-      encodeMoveEntry(
-        "0",
-        decl({ moveMode: "jump", moveSteps: [enter(4, 4)], moveFinalFacing: "sw" }),
-        false,
-      ),
-    ).toBe("0j0404>4");
+      enc({
+        moveMode: "run",
+        moveSteps: [turn(1), enter(6, 6), turn(-1), enter(6, 5), enter(6, 4)],
+      }),
+    ).toBe("0r>+<++");
+  });
+  it("a jump re-aims for free and lands facing the final letter", () => {
+    const jump = (steps: MoveStep[], f: Facing | null) =>
+      enc({ moveMode: "jump", moveSteps: steps, moveFinalFacing: f });
+    expect(jump([enter(5, 6), enter(5, 5), enter(5, 4)], "se")).toBe("0j+++d");
+    expect(jump([enter(6, 6), enter(6, 5)], "se")).toBe("0j>+<+d");
+    expect(jump([enter(5, 8)], "nw")).toBe("0j-b");
+    // 120 degrees to the right reaches the south-east neighbour, to the left the south-west one.
+    expect(jump([enter(6, 7)], "n")).toBe("0j>>+n");
+    expect(jump([enter(4, 7)], "sw")).toBe("0j<<+a");
+  });
+  it("every facing has its keyboard letter", () => {
+    const letters = (["n", "ne", "se", "s", "sw", "nw"] as const).map((f) =>
+      enc({ moveMode: "jump", moveSteps: [enter(5, 6)], moveFinalFacing: f }),
+    );
+    expect(letters).toEqual(["0j+n", "0j+m", "0j+d", "0j+s", "0j+a", "0j+b"]);
   });
   it("encodes posture changes", () => {
-    expect(
-      encodeMoveEntry("0", decl({ moveMode: "standup", postureMove: "standStill" }), false),
-    ).toBe("0Us");
-    expect(
-      encodeMoveEntry(
-        "0",
-        decl({
-          moveMode: "standup",
-          postureMove: "run",
-          moveSteps: [enter(2, 2)],
-          moveFinalFacing: "n",
-        }),
-        false,
-      ),
-    ).toBe("0Ur0202>0");
-    expect(
-      encodeMoveEntry("0", decl({ moveMode: "prone", postureMove: "standStill" }), false),
-    ).toBe("0D");
-    expect(
-      encodeMoveEntry(
-        "0",
-        decl({ moveMode: "prone", postureMove: "walk", moveSteps: [turn(2)] }),
-        false,
-      ),
-    ).toBe("0D+2");
-    expect(encodeMoveEntry("0", decl({ moveMode: "turn", moveSteps: [turn(-1)] }), false)).toBe(
-      "0w-1",
+    expect(enc({ moveMode: "standup", postureMove: "standStill", moveFinalFacing: "s" })).toBe(
+      "0Uss",
     );
-    expect(encodeMoveEntry("0", decl({ moveMode: "pronestill" }), false)).toBe("0s");
+    expect(enc({ moveMode: "standup", postureMove: "standStill" })).toBe("0Us");
+    expect(
+      enc({
+        moveMode: "standup",
+        postureMove: "run",
+        moveSteps: [enter(5, 6)],
+        moveFinalFacing: "n",
+      }),
+    ).toBe("0Ur+n");
+    expect(enc({ moveMode: "prone", postureMove: "standStill" })).toBe("0D");
+    expect(enc({ moveMode: "prone", postureMove: "walk", moveSteps: [turn(2)] })).toBe("0D>>");
+    expect(enc({ moveMode: "turn", moveSteps: [turn(-1)] })).toBe("0w<");
+    expect(enc({ moveMode: "pronestill" })).toBe("0s");
   });
   it("encodes shutdown, startup, eject and a downed pass", () => {
-    expect(encodeMoveEntry("2", decl({ moveMode: "shutdown" }), false)).toBe("2X");
-    expect(encodeMoveEntry("2", decl({ moveMode: "startup" }), true)).toBe("2O");
-    expect(encodeMoveEntry("2", decl({ moveMode: "eject" }), true)).toBe("2E");
-    expect(encodeMoveEntry("2", decl({ moveMode: "walk" }), true)).toBe("2.");
+    expect(enc({ moveMode: "shutdown" })).toBe("0X");
+    expect(enc({ moveMode: "startup" }, at(5, 7), true)).toBe("0O");
+    expect(enc({ moveMode: "eject" }, at(5, 7), true)).toBe("0E");
+    expect(enc({ moveMode: "walk" }, at(5, 7), true)).toBe("0.");
+  });
+  it("rejects what a relative path cannot say", () => {
+    expect(() => enc({ moveSteps: [enter(9, 9)] })).toThrow(/adjacent/);
+    // Diagonal entry on the ground is not forward or backward.
+    expect(() => enc({ moveSteps: [enter(6, 6)] })).toThrow(/neither forward nor backward/);
+  });
+  it("round-trips: a reference decoder rebuilds the original steps", () => {
+    // Minimal decoder of the step part (ground: turns are steps; jump: re-aims are free).
+    const decode = (text: string, start: MoveStart, jumping: boolean): MoveStep[] => {
+      const out: MoveStep[] = [];
+      let hex: HexCoord = start.position;
+      let heading: Facing = start.facing;
+      for (const ch of text) {
+        if (ch === ">" || ch === "<") {
+          heading = rotateFacing(heading, ch === ">" ? 1 : -1);
+          if (!jumping) out.push({ kind: "turn", facings: ch === ">" ? 1 : -1 });
+        } else {
+          hex = neighbor(hex, ch === "+" ? heading : oppositeFacing(heading));
+          out.push({ kind: "enter", to: hex });
+        }
+      }
+      return out;
+    };
+    const cases: [MoveStep[], boolean][] = [
+      [[enter(5, 6), enter(5, 5)], false],
+      [[turn(1), enter(6, 6), turn(-1), enter(6, 5), enter(6, 4)], false],
+      [[enter(5, 8), turn(1), turn(1), turn(1), enter(5, 9)], false],
+      [[enter(6, 6), enter(6, 5), enter(5, 5)], true],
+      [[enter(4, 7), enter(4, 8), enter(5, 8)], true],
+    ];
+    for (const [steps, jumping] of cases) {
+      const text = stepsText(steps, at(5, 7), jumping);
+      expect(decode(text, at(5, 7), jumping)).toEqual(steps);
+    }
   });
 });
 
@@ -199,10 +254,10 @@ describe("unit and end lines", () => {
     buildUnitInit("hunchy", model, 0, { col: 5, row: 3 }, "s", 4, 5, 6);
 
   it("unit line: defaults omit every optional field", () => {
-    expect(encodeUnitLine(init())).toBe("U0hunchy:HBK-4G:05033456");
+    expect(encodeUnitLine(init())).toBe("U0hunchy:HBK-4G:0503s456");
     expect(
       encodeUnitLine(buildUnitInit("cicada", "CDA-3MA", 1, { col: 5, row: 8 }, "n", 3, 5)),
-    ).toBe("U1cicada:CDA-3MA:05080356");
+    ).toBe("U1cicada:CDA-3MA:0508n356");
   });
   it("unit line: starting damage, pilot hits and ammo policy", () => {
     const u = {
@@ -220,7 +275,7 @@ describe("unit and end lines", () => {
         ammoUsed: { "leftTorso:1": 3, "leftTorso:2": 2 },
       },
     };
-    expect(encodeUnitLine(u)).toBe("U0hunchy:HBK-4G:050334562:C26/1/1A16/2:a3a4:L13L22:s");
+    expect(encodeUnitLine(u)).toBe("U0hunchy:HBK-4G:0503s4562:C26/1/1A16/2:a3a4:L13L22:s");
   });
   it("end line: pristine unit is just the hit count; damage is diffed vs the model", () => {
     const state = createTestBattle(
@@ -268,6 +323,48 @@ function playToEnd(s: Session): void {
   }
 }
 
+describe("replayPrettifier", () => {
+  const raw = [
+    "V261008-8211edb",
+    "Bquickstart",
+    "S42",
+    "U0hunchy:HBK-4G:0503s456",
+    "U1cicada:CDA-3MA:0508n356",
+    "M1r++",
+    "M0w+",
+    "A1L:01~4",
+    "A0F:1124",
+    "M0s",
+    "M1w+",
+    "A0F:11~4",
+    "A1F:0Q",
+    "W03f9a41c7",
+    "E01:h5",
+    "E10:C17//12",
+  ];
+  it("lays the records out as version, setup, units, turns, winner, end", () => {
+    expect(replayPrettifier(raw)).toEqual([
+      "V261008-8211edb",
+      "Bquickstart;S42",
+      "U0hunchy:HBK-4G:0503s456",
+      "U1cicada:CDA-3MA:0508n356",
+      "M1r++;M0w+",
+      "A1L:01~4;A0F:1124",
+      "M0s;M1w+",
+      "A0F:11~4;A1F:0Q",
+      "W03f9a41c7",
+      "E01:h5",
+      "E10:C17//12",
+    ]);
+  });
+  it("is still valid replay text and handles degenerate logs", () => {
+    expect(replayPrettifier(raw).join(";").split(";")).toEqual(raw.flatMap((r) => r.split(";")));
+    expect(replayPrettifier([])).toEqual([]);
+    expect(replayPrettifier(["V1", "Bm", "S1"])).toEqual(["V1", "Bm;S1"]);
+    expect(replayPrettifier(["V1", "M0s", "W-0"])).toEqual(["V1", "M0s", "W-0"]);
+  });
+});
+
 describe("replay log in the session", () => {
   beforeEach(() => resetAutoplayState(newSession(1)));
 
@@ -281,8 +378,8 @@ describe("replay log in the session", () => {
     expect(lines.slice(1)).toEqual([
       "Bquickstart",
       "S7",
-      "U0hunchy:HBK-4G:09090456::::c",
-      "U1cicada:CDA-3MA:09083456",
+      "U0hunchy:HBK-4G:0909n456::::c",
+      "U1cicada:CDA-3MA:0908s456",
     ]);
   });
 
@@ -391,7 +488,8 @@ describe("replay log in the session", () => {
     }
     const last = outputs.at(-1)!;
     expect(last).toContain("you can replay this match with this data");
-    for (const line of s.replay!.lines) expect(last).toContain(line);
+    expect(last).toContain(`replay data for version ${VERSION}; keep it as is.`);
+    for (const line of replayPrettifier(s.replay!.lines)) expect(last).toContain(line);
     const chunk = replayChunk(s)!;
     expect(chunk.kind).toBe("collapsible");
   });

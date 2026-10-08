@@ -17,12 +17,15 @@ import {
   type ClubPickupDecl,
   FACINGS,
   type Facing,
+  type HexCoord,
   isShutdown,
   loadAmmoBins,
   type MoveStep,
   mechDefFor,
+  neighbor,
   type PhysicalAttackDecl,
   type PhysicalWeaponName,
+  sameHex,
   type UnitInit,
   type UnitState,
   VERSION,
@@ -91,8 +94,18 @@ function hexText(col: number, row: number): string {
   return `${String(col).padStart(2, "0")}${String(row).padStart(2, "0")}`;
 }
 
-function facingDigit(f: Facing): string {
-  return String(FACINGS.indexOf(f));
+/** Facings as keyboard letters: `b n m` / `a s d` read west to east. */
+const FACING_CHAR: Readonly<Record<Facing, string>> = {
+  n: "n",
+  ne: "m",
+  se: "d",
+  s: "s",
+  sw: "a",
+  nw: "b",
+};
+
+function facingChar(f: Facing): string {
+  return FACING_CHAR[f];
 }
 
 // --------------------------------------------------------- move entries ----
@@ -104,14 +117,48 @@ const LOCOMOTION_CHAR: Readonly<Record<string, string>> = {
   jump: "j",
 };
 
-function stepsText(steps: readonly MoveStep[]): string {
-  return steps
-    .map((st) =>
-      st.kind === "enter"
-        ? hexText(st.to.col, st.to.row)
-        : `${st.facings < 0 ? "-" : "+"}${Math.abs(st.facings)}`,
-    )
-    .join("");
+/** Where the actor stands before the move; steps are written relative to it. */
+export interface MoveStart {
+  readonly position: HexCoord;
+  readonly facing: Facing;
+}
+
+/**
+ * Steps as `<` (turn left), `>` (turn right), `+` (forward), `-` (backward),
+ * relative to a cursor that starts at `start`. On the ground the engine only
+ * allows entering the hex ahead or behind, and turns are engine steps. A jump
+ * may enter any neighbour: the cursor re-aims for free (the decoder must not
+ * turn those into engine steps) and then steps `+`, or `-` when the target is
+ * exactly behind.
+ */
+export function stepsText(steps: readonly MoveStep[], start: MoveStart, jumping: boolean): string {
+  let out = "";
+  let hex = start.position;
+  let heading = FACINGS.indexOf(start.facing);
+  for (const st of steps) {
+    if (st.kind === "turn") {
+      if (jumping) throw new Error("replay: a jump has no turn steps");
+      out += (st.facings > 0 ? ">" : "<").repeat(Math.abs(st.facings));
+      heading += st.facings;
+      continue;
+    }
+    const dir = FACINGS.findIndex((f) => sameHex(neighbor(hex, f), st.to));
+    if (dir < 0) throw new Error("replay: step is not into an adjacent hex");
+    const diff = (((dir - heading) % 6) + 6) % 6;
+    if (diff === 3) {
+      out += "-";
+    } else if (diff === 0) {
+      out += "+";
+    } else if (!jumping) {
+      throw new Error("replay: ground step is neither forward nor backward");
+    } else {
+      out += diff < 3 ? ">".repeat(diff) : "<".repeat(6 - diff);
+      out += "+";
+      heading = dir;
+    }
+    hex = st.to;
+  }
+  return out;
 }
 
 /** The declaration part of a movement context that a record needs. */
@@ -121,14 +168,23 @@ export type MoveDecl = Pick<
 >;
 
 /**
- * `<idx><op>[steps][>dir]` for one movement activation. `downed` is true when
- * the actor is shut down or unconscious *before* the commit: the session then
- * passes whatever mode was declared (`passMovement`).
+ * `<idx><op>[steps][facing]` for one movement activation. `downed` is true
+ * when the actor is shut down or unconscious *before* the commit: the session
+ * then passes whatever mode was declared (`passMovement`).
  */
-export function encodeMoveEntry(idx: string, decl: MoveDecl, downed: boolean): string {
+export function encodeMoveEntry(
+  idx: string,
+  decl: MoveDecl,
+  downed: boolean,
+  start: MoveStart,
+): string {
+  const jumping =
+    (decl.moveMode === "standup" || decl.moveMode === "prone"
+      ? (decl.postureMove ?? "walk")
+      : decl.moveMode) === "jump";
+  const steps = (): string => stepsText(decl.moveSteps, start, jumping);
   const tail = (): string =>
-    stepsText(decl.moveSteps) +
-    (decl.moveFinalFacing !== null ? `>${facingDigit(decl.moveFinalFacing)}` : "");
+    steps() + (decl.moveFinalFacing !== null ? facingChar(decl.moveFinalFacing) : "");
   switch (decl.moveMode) {
     case "shutdown":
       return `${idx}X`;
@@ -144,7 +200,7 @@ export function encodeMoveEntry(idx: string, decl: MoveDecl, downed: boolean): s
     case "prone":
       return `${idx}D${tail()}`;
     case "turn":
-      return `${idx}w${stepsText(decl.moveSteps)}`;
+      return `${idx}w${steps()}`;
     case "pronestill":
       return `${idx}s`;
     default:
@@ -332,7 +388,7 @@ export function encodeUnitLine(init: UnitInit): string {
   const hits = init.damage?.pilotHits ?? 0;
   const place =
     hexText(init.position.col, init.position.row) +
-    facingDigit(init.facing) +
+    facingChar(init.facing) +
     String(init.gunnery) +
     String(init.piloting) +
     init.pilotHitMax.toString(36) +
@@ -425,20 +481,37 @@ function indexOfUnit(log: ReplayLog, id: string): string {
   return i.toString(36);
 }
 
+/**
+ * Recording must never break a game: if an entry cannot be expressed, drop the
+ * whole log (and show nothing at the end) instead of failing the commit.
+ */
+function guarded(s: Session & { replay: ReplayLog }, record: (log: ReplayLog) => void): void {
+  try {
+    record(s.replay);
+  } catch {
+    s.replay.lines.length = 0;
+    s.replay.disabled = true;
+  }
+}
+
 /** Record the movement activation about to be committed (call before the engine calls). */
 export function recordMove(s: Session, decl: MoveDecl, actor: UnitState): void {
   if (!usable(s)) return;
   const downed = isShutdown(actor) || actor.unconscious;
-  s.replay.lines.push(`M${encodeMoveEntry(indexOfUnit(s.replay, actor.id), decl, downed)}`);
+  guarded(s, (log) => {
+    const start = { position: actor.position, facing: actor.facing };
+    log.lines.push(`M${encodeMoveEntry(indexOfUnit(log, actor.id), decl, downed, start)}`);
+  });
 }
 
 /** Record the attack activation about to be committed (call before the engine calls). */
 export function recordAttack(s: Session, decl: AttackDeclaration, actorId: string): void {
   if (!usable(s)) return;
-  const log = s.replay;
-  s.replay.lines.push(
-    `A${encodeAttackEntry(indexOfUnit(log, actorId), decl, (id) => indexOfUnit(log, id))}`,
-  );
+  guarded(s, (log) => {
+    log.lines.push(
+      `A${encodeAttackEntry(indexOfUnit(log, actorId), decl, (id) => indexOfUnit(log, id))}`,
+    );
+  });
 }
 
 /** Close the log when the battle is over: winner + rng checksum, then final unit states. */
@@ -452,11 +525,56 @@ export function finishReplay(s: Session, victory: SessionVictoryResult): void {
   });
 }
 
+/**
+ * Lay the records out for reading and copying. The result is still valid
+ * replay text (decoders take `;` and newline interchangeably):
+ *
+ *   V…                      version alone
+ *   B…;S…                   setup records other than units, joined by `;`
+ *   U…                      one line per unit
+ *   M…;M…                   a turn's movement activations, joined by `;`
+ *   A…;A…                   the same turn's attack activations
+ *   (more M / A line pairs, one per turn)
+ *   W…                      winner line
+ *   E…                      one line per unit's final state
+ */
+export function replayPrettifier(records: readonly string[]): string[] {
+  const out: string[] = [];
+  const setup: string[] = [];
+  let i = 0;
+  const flushSetup = () => {
+    if (setup.length > 0) out.push(setup.join(";"));
+    setup.length = 0;
+  };
+  while (i < records.length) {
+    const kind = records[i]![0];
+    if (kind === "U" || kind === "V" || kind === "W" || kind === "E") {
+      flushSetup();
+      out.push(records[i]!);
+      i++;
+    } else if (kind === "B" || kind === "S" || kind === "K") {
+      setup.push(records[i]!);
+      i++;
+    } else {
+      // M and A merge with their neighbours of the same kind; anything
+      // unknown stands alone on its own line.
+      flushSetup();
+      const merge = kind === "M" || kind === "A";
+      let j = i + 1;
+      while (merge && j < records.length && records[j]![0] === kind) j++;
+      out.push(records.slice(i, j).join(";"));
+      i = j;
+    }
+  }
+  flushSetup();
+  return out;
+}
+
 /** The collapsible "you can replay this match" block, or null when there is nothing to show. */
 export function replayChunk(s: Session): Chunk | null {
   if (!usable(s) || s.replay.lines.length === 0) return null;
   return buildCollapsibleChunk(i18n("replay.summary"), [
-    buildLinesChunk(i18n("replay.help")),
-    buildLinesChunk(...s.replay.lines),
+    buildLinesChunk(i18n("replay.help", { version: VERSION })),
+    buildLinesChunk(...replayPrettifier(s.replay.lines)),
   ]);
 }
