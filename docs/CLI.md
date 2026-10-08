@@ -89,6 +89,7 @@ The prompt names the acting unit; commands act on that 'Mech.
 | `candidate` | re-show the queued move and the reachable-hex map for the declared mode |
 | `status` | queued move steps with running MP cost per step |
 | `cancel` | clear mode + steps |
+| `rollback` | undo the last completed `done`: back to the previous actor's prompt (half-declared input is discarded; dice state and replay log are restored too). At most `MAX_SNAPSHOT_COUNT` (10) prompt snapshots are kept (`web/rollback.ts`); no redo |
 | `done` | commit posture-change first, then move only on success (`attemptStandUp`/`dropProne` then `executeMove` in one atomic commit; failed stand discards queued `place`); prints path + MP spent (posture cost folded in) and full budget |
 
 Shut-down units (including `starting`) act **first** in the movement phase,
@@ -109,6 +110,7 @@ pass), plus `cancel`, `sheet`, `status`, `heat` and the globals.
 | `heat [id]` | heat scale status |
 | `status` | queued attack declarations |
 | `cancel` | clear declarations |
+| `rollback` | undo the last completed `done`: back to the previous actor's prompt (half-declared input is discarded; dice state and replay log are restored too). At most `MAX_SNAPSHOT_COUNT` (10) prompt snapshots are kept (`web/rollback.ts`); no redo |
 | `done` | `declareAttacks` + `resolveAllAttacks` (simultaneous — every unit's declared shots resolve, even units killed that phase); prints per-weapon GATOR to-hit line, dice, cluster hits, damage by location |
 
 ### over
@@ -116,6 +118,7 @@ pass), plus `cancel`, `sheet`, `status`, `heat` and the globals.
 | command | effect |
 |---|---|
 | `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [J](jam) / [-](destroyed) / per-bin ammo `(n left)` markers); without id: brief unit list (id, model, position+facing) grouped by team |
+| `rollback` | return to the last battle prompt (the one before the game-ending `done`) |
 | `rematch` | new battle, same roster + terrain + seed |
 | globals | `board`, `log` remain available; `reset` returns to empty setup |
 
@@ -534,6 +537,7 @@ stated elsewhere in this document or the codebase:
     web/session.attack.ts  attack phase: fire/physical queues, validation, torso twist, ammo policy, resolve
     web/session.setup.ts   setup phase: map, add/set/rm units, status, start
     web/session.over.ts    over state: rematch, status
+    web/rollback.ts        prompt snapshots + the `rollback` command's undo
     web/chunk.ts       structured output chunks: lines, board, columns, collapsible
     web/rng.ts          mulberry32-seeded Rng
     web/autoplay.ts    hidden `autoplay` demo driver

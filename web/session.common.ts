@@ -1155,7 +1155,7 @@ export function handleSessionGameEvents(s: Session, events: SessionGameEvent[]):
       firstLine.startsWith(currPrefix)
         ? firstLine.substring(currPrefix.length).trimStart()
         : firstLine,
-      ...lines
+      ...lines,
     );
   };
   const pairLines = (from: string, to: string, ...lines: string[]) => {
@@ -1169,7 +1169,9 @@ export function handleSessionGameEvents(s: Session, events: SessionGameEvent[]):
       linesBuf.push(currPrefix);
       indentLen = fromPrefixLen;
     }
-    idLinesBuf.push(...lines.map((l) => l.startsWith(fromPrefix) ? l.substring(fromPrefixLen).trimStart() : l));
+    idLinesBuf.push(
+      ...lines.map((l) => (l.startsWith(fromPrefix) ? l.substring(fromPrefixLen).trimStart() : l)),
+    );
   };
   const chunks = (...chunks: Chunk[]) => {
     flushLinesBuf();
@@ -1197,17 +1199,13 @@ const PHASE_NAME_KEY: Readonly<Record<Phase, MessageKey>> = {
 };
 
 interface OutputHandlers {
-  readonly lines: (...lines: string[]) => void,
-  readonly idLines: (id: string, ...lines: string[]) => void,
-  readonly pairLines: (from: string, to: string, ...lines: string[]) => void,
-  readonly chunks: (...chunks: Chunk[]) => void,
+  readonly lines: (...lines: string[]) => void;
+  readonly idLines: (id: string, ...lines: string[]) => void;
+  readonly pairLines: (from: string, to: string, ...lines: string[]) => void;
+  readonly chunks: (...chunks: Chunk[]) => void;
 }
 
-function handleSessionGameEvent(
-  s: Session,
-  e: SessionGameEvent,
-  out: OutputHandlers
-): void {
+function handleSessionGameEvent(s: Session, e: SessionGameEvent, out: OutputHandlers): void {
   switch (e.kind) {
     case "phase":
       {
@@ -1253,7 +1251,8 @@ function handleSessionGameEvent(
     case "attacksDeclared": {
       for (const w of e.weapons) {
         out.pairLines(
-          e.unitId, w.targetId,
+          e.unitId,
+          w.targetId,
           i18n(w.count === 1 ? "log.attacksDeclaredOne" : "log.attacksDeclaredOther", {
             id: e.unitId,
             target: w.targetId,
@@ -1264,7 +1263,8 @@ function handleSessionGameEvent(
       }
       for (const p of e.physical) {
         out.pairLines(
-          e.unitId, p.targetId,
+          e.unitId,
+          p.targetId,
           i18n("log.physicalDeclaredOne", {
             id: e.unitId,
             type: p.type,
@@ -1420,7 +1420,10 @@ function handleSessionGameEvent(
           out.idLines(e.unitId, i18n("log.restartBlockedHeat", { id: e.unitId, heat: e.heat }));
           break;
         case "unconscious":
-          out.idLines(e.unitId, i18n("log.restartBlockedUnconscious", { id: e.unitId, heat: e.heat }));
+          out.idLines(
+            e.unitId,
+            i18n("log.restartBlockedUnconscious", { id: e.unitId, heat: e.heat }),
+          );
           break;
         case "fail":
           if (e.manual) {
@@ -1638,7 +1641,10 @@ function handleSessionGameEvent(
       break;
     case "clubPickedUp":
       if (e.success) {
-        out.idLines(e.unitId, i18n("log.clubPickedUp", { id: e.unitId, kind: e.clubKind ?? "club" }));
+        out.idLines(
+          e.unitId,
+          i18n("log.clubPickedUp", { id: e.unitId, kind: e.clubKind ?? "club" }),
+        );
       } else if (e.roll !== undefined && e.required !== undefined) {
         out.idLines(
           e.unitId,
@@ -1649,7 +1655,10 @@ function handleSessionGameEvent(
           }),
         );
       } else {
-        out.idLines(e.unitId, i18n("log.clubPickupFailed", { id: e.unitId, reason: e.reason ?? "—" }));
+        out.idLines(
+          e.unitId,
+          i18n("log.clubPickupFailed", { id: e.unitId, reason: e.reason ?? "—" }),
+        );
       }
       break;
     case "clubDropped":
