@@ -12,28 +12,61 @@
  */
 
 import {
+  type AmmoPolicy,
   type Arc,
   type AttackDecl,
+  attemptStandUp,
+  attemptVoluntaryStartup,
+  type BattleState,
+  buildUnitInit,
+  type ClubKind,
   type ClubPickupDecl,
+  createBattle,
+  DROP_MP_COST,
+  declareAttacks,
+  declarePickup,
+  dropProne,
+  ejectPilot,
+  ensureMapRegistered,
+  executeMove,
   FACINGS,
   type Facing,
+  type GameEvent,
+  gameLoop,
   type HexCoord,
   isShutdown,
+  isTorso,
+  type Location,
+  type LocationValue,
   loadAmmoBins,
+  type MoveMode,
   type MoveStep,
+  mapDefFor,
   mechDefFor,
   neighbor,
+  oppositeFacing,
   type PhysicalAttackDecl,
   type PhysicalWeaponName,
+  passMovement,
+  rotateFacing,
   sameHex,
+  type TorsoLocationValue,
   type UnitInit,
+  type UnitInitDamage,
   type UnitState,
   VERSION,
+  voluntaryShutdown,
 } from "btlib10x";
 import { buildCollapsibleChunk, buildLinesChunk, type Chunk } from "./chunk";
 import { i18n } from "./i18n";
 import { createRng } from "./rng";
-import type { AttackContext, MovementContext, Session, SessionVictoryResult } from "./session";
+import {
+  type AttackContext,
+  checkBattleVictory,
+  type MovementContext,
+  type Session,
+  type SessionVictoryResult,
+} from "./session";
 
 export interface ReplayLog {
   /** Finished records in order: `V B S U… M A … W E…`. */
@@ -46,19 +79,9 @@ export interface ReplayLog {
 
 // ----------------------------------------------------------- alphabets ----
 
-type Loc =
-  | "head"
-  | "centerTorso"
-  | "rightTorso"
-  | "leftTorso"
-  | "rightArm"
-  | "leftArm"
-  | "rightLeg"
-  | "leftLeg";
-
 /** Location letters, in canonical order. Mirrors `LOC_CODES` in
  *  `src/data/mech.codec.ts` (module-private there). */
-const LOC_ORDER: ReadonlyArray<readonly [Loc, string]> = [
+const LOC_ORDER: ReadonlyArray<readonly [Location, string]> = [
   ["head", "h"],
   ["centerTorso", "C"],
   ["rightTorso", "R"],
@@ -68,8 +91,6 @@ const LOC_ORDER: ReadonlyArray<readonly [Loc, string]> = [
   ["rightLeg", "g"],
   ["leftLeg", "G"],
 ];
-const isTorsoLoc = (loc: Loc): boolean =>
-  loc === "centerTorso" || loc === "rightTorso" || loc === "leftTorso";
 
 /** Crit slot numbers (1-based) as one char. */
 const SLOT_CHARS = "123456789abc";
@@ -316,10 +337,10 @@ export function encodeAttackEntry(
 
 /** Damage taken / state shape shared by `U` (from `UnitInit`) and `E` (from state). */
 interface DamageFields {
-  armor: Partial<Record<Loc, number>>;
-  armorRear: Partial<Record<Loc, number>>;
-  structure: Partial<Record<Loc, number>>;
-  crits: Partial<Record<Loc, readonly number[]>>;
+  armor: Partial<LocationValue>;
+  armorRear: Partial<TorsoLocationValue>;
+  structure: Partial<LocationValue>;
+  crits: Partial<Record<Location, readonly number[]>>;
   /** `<loc>:<slot>` style bin id → shots used. */
   ammo: Record<string, number>;
 }
@@ -328,10 +349,10 @@ function armorField(f: DamageFields): string {
   let out = "";
   for (const [loc, code] of LOC_ORDER) {
     const a = f.armor[loc] ?? 0;
-    const r = f.armorRear[loc] ?? 0;
+    const r = isTorso(loc) ? (f.armorRear[loc] ?? 0) : 0;
     const s = f.structure[loc] ?? 0;
     if (a === 0 && r === 0 && s === 0) continue;
-    const values = isTorsoLoc(loc) ? [a, r, s] : [a, s];
+    const values = isTorso(loc) ? [a, r, s] : [a, s];
     while (values.length > 1 && values[values.length - 1] === 0) values.pop();
     out += code + values.map((v, i) => (i > 0 && v === 0 ? "" : String(v))).join("/");
   }
@@ -410,7 +431,7 @@ export function encodeEndLine(idx: string, unit: UnitState): string {
   for (const [loc] of LOC_ORDER) {
     f.armor[loc] = def.armor[loc] - unit.damage.armor[loc];
     f.structure[loc] = def.internalStructure[loc] - unit.damage.internalStructure[loc];
-    if (isTorsoLoc(loc)) {
+    if (isTorso(loc)) {
       f.armorRear[loc] =
         def.armorRear[loc as "centerTorso"] - unit.damage.armorRear[loc as "centerTorso"];
     }
@@ -577,4 +598,439 @@ export function replayChunk(s: Session): Chunk | null {
     buildLinesChunk(i18n("replay.help", { version: VERSION })),
     buildLinesChunk(...replayPrettifier(s.replay.lines)),
   ]);
+}
+
+// ---------------------------------------------------------------- player ----
+
+const LOC_BY_CODE: ReadonlyMap<string, Location> = new Map(
+  LOC_ORDER.map(([loc, code]) => [code, loc]),
+);
+const FACING_BY_CHAR: ReadonlyMap<string, Facing> = new Map(
+  (Object.entries(FACING_CHAR) as [Facing, string][]).map(([f, c]) => [c, f]),
+);
+const POLICY_BY_CHAR: ReadonlyMap<string, AmmoPolicy> = new Map([
+  ["e", "exposed"],
+  ["c", "core"],
+  ["s", "spread"],
+  ["l", "leastFirst"],
+]);
+const MODE_BY_CHAR: Readonly<Record<string, MoveMode>> = {
+  s: "standStill",
+  w: "walk",
+  r: "run",
+  j: "jump",
+};
+const TWIST_BY_CHAR: Readonly<Record<string, Arc>> = { F: "front", L: "leftSide", R: "rightSide" };
+const STRIKE_WEAPON_BY_CHAR: Readonly<Record<string, PhysicalWeaponName>> = {
+  h: "Hatchet",
+  s: "Sword",
+  b: "Retractable Blade",
+};
+const PICKUP_SOURCE_BY_CHAR: Readonly<Record<string, ClubKind>> = {
+  l: "limb",
+  t: "tree",
+  g: "girder",
+};
+
+function slotNumber(c: string | undefined): number {
+  const i = c === undefined ? -1 : SLOT_CHARS.indexOf(c);
+  if (i < 0) throw new Error(`bad crit slot character ${JSON.stringify(c)}`);
+  return i + 1;
+}
+
+function locOf(c: string | undefined): Location {
+  const loc = c === undefined ? undefined : LOC_BY_CODE.get(c);
+  if (loc === undefined) throw new Error(`bad location character ${JSON.stringify(c)}`);
+  return loc;
+}
+
+/** Inverse of {@link encodeUnitLine}. Throws a plain `Error` describing what is wrong. */
+export function decodeUnitLine(line: string): UnitInit {
+  if (line[0] !== "U") throw new Error("not a unit record");
+  const parts = line.slice(1).split(":");
+  const [head, model, place, armor = "", crit = "", ammo = "", policy = ""] = parts;
+  if (parts.length > 7 || head === undefined || model === undefined || place === undefined) {
+    throw new Error("unit record needs U<team><id>:<model>:<place>");
+  }
+  const team = Number(head[0]);
+  const id = head.slice(1);
+  if (!Number.isInteger(team) || id === "")
+    throw new Error("unit record needs a team digit and an id");
+  const m = /^(\d\d)(\d\d)([nmdsab])(\d)(\d)([0-9a-z])([0-9a-z])?$/.exec(place);
+  if (m === null) throw new Error(`bad unit place ${JSON.stringify(place)}`);
+  const [, col, row, facing, gunnery, piloting, hitMax, hits] = m;
+  const damage: UnitInitDamage = {};
+  const taken: NonNullable<UnitInitDamage["damageTaken"]> = {};
+  if (hits !== undefined && parseInt(hits, 36) > 0) damage.pilotHits = parseInt(hits, 36);
+  // armor: <loc><front>[/<rear>]/<internal>, trailing zeros dropped, empty = 0
+  for (const mm of armor.matchAll(/([hCRLaAgG])([0-9/]*)/g)) {
+    const loc = locOf(mm[1]);
+    const v = mm[2]!.split("/").map((x) => (x === "" ? 0 : Number(x)));
+    const [front = 0, second = 0, third = 0] = v;
+    const rear = isTorso(loc) ? second : 0;
+    const structure = isTorso(loc) ? third : second;
+    if (front > 0) taken.armor = { ...taken.armor, [loc]: front };
+    if (rear > 0) taken.armorRear = { ...taken.armorRear, [loc]: rear };
+    if (structure > 0) taken.internalStructure = { ...taken.internalStructure, [loc]: structure };
+  }
+  if (armor.replace(/([hCRLaAgG])([0-9/]*)/g, "") !== "") throw new Error("bad armor field");
+  if (Object.keys(taken).length > 0) damage.damageTaken = taken;
+  if (crit.length % 2 !== 0) throw new Error("bad crit field");
+  for (let i = 0; i < crit.length; i += 2) {
+    const loc = locOf(crit[i]);
+    const crits = damage.critsDestroyed ?? {};
+    damage.critsDestroyed = { ...crits, [loc]: [...(crits[loc] ?? []), slotNumber(crit[i + 1])] };
+  }
+  if (ammo.replace(/([hCRLaAgG])([1-9abc])(\d+)/g, "") !== "") throw new Error("bad ammo field");
+  for (const mm of ammo.matchAll(/([hCRLaAgG])([1-9abc])(\d+)/g)) {
+    damage.ammoUsed = {
+      ...damage.ammoUsed,
+      [`${locOf(mm[1])}:${slotNumber(mm[2])}`]: Number(mm[3]),
+    };
+  }
+  const ammoPolicy = policy === "" ? "exposed" : POLICY_BY_CHAR.get(policy);
+  if (ammoPolicy === undefined) throw new Error(`bad ammo policy ${JSON.stringify(policy)}`);
+  const init = buildUnitInit(
+    id,
+    model,
+    team,
+    { col: Number(col), row: Number(row) },
+    FACING_BY_CHAR.get(facing!)!,
+    Number(gunnery) as UnitInit["gunnery"],
+    Number(piloting) as UnitInit["piloting"],
+    parseInt(hitMax!, 36),
+    { ammoPolicy },
+  );
+  return Object.keys(damage).length > 0 ? { ...init, damage } : init;
+}
+
+/**
+ * Steps (`< > + -`) plus an optional trailing facing letter, relative to
+ * the actor's hex and heading. On the ground a turn is an engine step; in a
+ * jump it only re-aims the travel direction.
+ */
+function decodeSteps(
+  text: string,
+  start: { position: HexCoord; facing: Facing },
+  jumping: boolean,
+): { steps: MoveStep[]; finalFacing: Facing | null } {
+  const steps: MoveStep[] = [];
+  let hex = start.position;
+  let heading = start.facing;
+  let finalFacing: Facing | null = null;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i]!;
+    if (c === ">" || c === "<") {
+      const d = c === ">" ? 1 : -1;
+      heading = rotateFacing(heading, d);
+      if (!jumping) steps.push({ kind: "turn", facings: d });
+    } else if (c === "+" || c === "-") {
+      hex = neighbor(hex, c === "+" ? heading : oppositeFacing(heading));
+      steps.push({ kind: "enter", to: hex });
+    } else if (i === text.length - 1 && FACING_BY_CHAR.has(c)) {
+      finalFacing = FACING_BY_CHAR.get(c)!;
+    } else {
+      throw new Error(`unexpected ${JSON.stringify(c)} in the movement steps`);
+    }
+  }
+  return { steps, finalFacing };
+}
+
+interface DecodedAttack {
+  twist: Arc;
+  dropClub: boolean;
+  pickup: ClubPickupDecl | null;
+  weapons: { weaponIndex: number; targetId: string; rapidFire?: boolean }[];
+  physicals: PhysicalAttackDecl[];
+}
+
+function decodeAttackBody(body: string, unitAt: (c: string) => string): DecodedAttack {
+  const twist = TWIST_BY_CHAR[body[0] ?? ""];
+  if (twist === undefined) throw new Error(`bad torso twist ${JSON.stringify(body[0])}`);
+  const out: DecodedAttack = { twist, dropClub: false, pickup: null, weapons: [], physicals: [] };
+  let rest = body.slice(1);
+  if (rest[0] === "-") {
+    out.dropClub = true;
+    rest = rest.slice(1);
+  } else if (rest[0] === "+") {
+    const m = /^\+([ltg])?(\d)?$/.exec(rest);
+    if (m === null) throw new Error(`bad pickup ${JSON.stringify(rest)}`);
+    out.pickup = {
+      ...(m[1] !== undefined ? { source: PICKUP_SOURCE_BY_CHAR[m[1]]! } : {}),
+      ...(m[2] !== undefined ? { tokenIndex: Number(m[2]) } : {}),
+    };
+    return out;
+  }
+  if (rest !== "" && rest[0] !== ":")
+    throw new Error(`unexpected ${JSON.stringify(rest[0])} in the attack`);
+  for (const group of rest === "" ? [] : rest.slice(1).split(":")) {
+    if (group === "") throw new Error("empty target group");
+    const targetId = unitAt(group[0]!);
+    const wpn = (c: string | undefined): number => {
+      const i = c === undefined ? -1 : WPN_CHARS.indexOf(c);
+      if (i < 0) throw new Error(`bad weapon character ${JSON.stringify(c)}`);
+      return i + 1;
+    };
+    for (let i = 1; i < group.length; i++) {
+      const c = group[i]!;
+      const physical = ((): PhysicalAttackDecl | null => {
+        switch (c) {
+          case "P":
+            return { type: "punch", targetId, limb: "leftArm" };
+          case "Q":
+            return { type: "punch", targetId, limb: "rightArm" };
+          case "K":
+            return { type: "kick", targetId, limb: "leftLeg" };
+          case "L":
+            return { type: "kick", targetId, limb: "rightLeg" };
+          case "U":
+            return { type: "push", targetId };
+          case "C":
+            return { type: "club", targetId };
+          case "S":
+          case "T": {
+            const w = group[++i];
+            const weapon = w === undefined ? undefined : STRIKE_WEAPON_BY_CHAR[w];
+            if (w !== "-" && weapon === undefined)
+              throw new Error(`bad strike weapon ${JSON.stringify(w)}`);
+            return {
+              type: "strike",
+              targetId,
+              limb: c === "S" ? "leftArm" : "rightArm",
+              ...(weapon !== undefined ? { weapon } : {}),
+            };
+          }
+          default:
+            return null;
+        }
+      })();
+      if (physical !== null) {
+        out.physicals.push(physical);
+      } else if (group[i + 1] === "~") {
+        const from = wpn(c);
+        const to = wpn(group[i + 2]);
+        if (to < from) throw new Error("descending weapon range");
+        for (let n = from; n <= to; n++) out.weapons.push({ weaponIndex: n, targetId });
+        i += 2;
+      } else {
+        const rapid = group[i + 1] === "!";
+        out.weapons.push({ weaponIndex: wpn(c), targetId, ...(rapid ? { rapidFire: true } : {}) });
+        if (rapid) i++;
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Replay a recorded match (raw or prettified text) and check it: the engine
+ * calls are re-run on the seeded dice until the `W` line, and the resulting
+ * unit states must equal the `E` lines. Returns normally when everything
+ * matches; otherwise throws one `Error` naming the turn, phase and actor and
+ * why. Prints nothing.
+ */
+export function replayPlayer(text: string): void {
+  const records = text
+    .split(/[;\n]/)
+    .map((r) => r.trim())
+    .filter((r) => r.length > 0);
+  let version: string | null = null;
+  let mapName: string | null = null;
+  let seed: number | null = null;
+  let critsDisabled = false;
+  const inits: UnitInit[] = [];
+  let battle: BattleState | null = null;
+  let rng = createRng(0);
+  let actor: string | null = null;
+  let over: { winnerTeam: number | null; draw: boolean } | null = null;
+  let ended = false;
+  const checked = new Set<string>();
+  let record = "";
+  const sink: GameEvent[] = [];
+
+  const unitAt = (c: string): string => {
+    const id = inits[parseInt(c, 36)]?.id;
+    if (id === undefined) throw new Error(`unknown unit index ${JSON.stringify(c)}`);
+    return id;
+  };
+  const advance = (): void => {
+    const b = battle!;
+    const found: { winnerTeam: number | null; draw: boolean }[] = [];
+    const r = gameLoop(
+      b,
+      rng,
+      (state) => {
+        const v = checkBattleVictory(state);
+        if (v !== null) found.push(v);
+        return v !== null;
+      },
+      sink,
+    );
+    over = found[0] ?? null;
+    actor = r.actorId;
+  };
+  const begin = (): BattleState => {
+    if (battle !== null) return battle;
+    if (mapName === null) throw new Error("the replay names no map (B record)");
+    if (seed === null) throw new Error("the replay names no seed (S record)");
+    ensureMapRegistered(mapName);
+    rng = createRng(seed);
+    battle = createBattle(mapDefFor({ mapName }), inits, { critsDisabled });
+    advance();
+    return battle;
+  };
+
+  const move = (b: BattleState, id: string, body: string): void => {
+    const unit = b.units[id]!;
+    const op = body[1];
+    const mode = op === undefined ? undefined : MODE_BY_CHAR[op];
+    const opts = (finalFacing: Facing | null, extra: object = {}) => ({
+      rng,
+      ...extra,
+      ...(finalFacing !== null ? { finalFacing } : {}),
+    });
+    const start = { position: unit.position, facing: unit.facing };
+    if (op === "X") {
+      voluntaryShutdown(b, id, sink);
+      return;
+    }
+    if (op === "O") {
+      attemptVoluntaryStartup(b, id, sink, rng);
+      return;
+    }
+    if (op === "E") {
+      ejectPilot(b, id, rng, sink);
+      return;
+    }
+    if (op === ".") {
+      passMovement(b, id);
+      return;
+    }
+    if (op === "U") {
+      const loco = MODE_BY_CHAR[body[2] ?? ""];
+      if (loco === undefined || loco === "jump") {
+        throw new Error(`bad stand-up locomotion ${JSON.stringify(body[2])}`);
+      }
+      const { steps, finalFacing } = decodeSteps(body.slice(3), start, false);
+      const posture = attemptStandUp(b, id, sink, rng, loco);
+      if (!b.units[id]!.prone && (steps.length > 0 || finalFacing !== null)) {
+        executeMove(
+          b,
+          id,
+          loco,
+          steps,
+          sink,
+          opts(finalFacing, {
+            spentMP: posture,
+            modeHeatPaid: loco === "walk" || loco === "run",
+          }),
+        );
+      }
+      return;
+    }
+    if (op === "D") {
+      const { steps, finalFacing } = decodeSteps(body.slice(2), start, false);
+      dropProne(b, id, sink, rng);
+      if (steps.length > 0 || finalFacing !== null) {
+        executeMove(b, id, "walk", steps, sink, opts(finalFacing, { spentMP: DROP_MP_COST }));
+      }
+      return;
+    }
+    if (mode === undefined) throw new Error(`unknown movement op ${JSON.stringify(op)}`);
+    const { steps, finalFacing } = decodeSteps(body.slice(2), start, mode === "jump");
+    executeMove(b, id, mode, steps, sink, opts(finalFacing));
+  };
+
+  const attack = (b: BattleState, id: string, body: string): void => {
+    const a = decodeAttackBody(body.slice(1), unitAt);
+    if (a.pickup !== null) {
+      declarePickup(b, id, a.pickup, sink);
+      return;
+    }
+    if (a.weapons.length === 0 && a.physicals.length === 0 && !a.dropClub) {
+      b.units[id]!.passedAttacks = true;
+      return;
+    }
+    declareAttacks(b, id, a.weapons, a.physicals, sink, rng, {
+      twist: a.twist,
+      dropClub: a.dropClub,
+    });
+  };
+
+  try {
+    for (const rec of records) {
+      record = rec;
+      const kind = rec[0];
+      if (ended && kind !== "E") throw new Error("only E records may follow W");
+      switch (kind) {
+        case "V":
+          version = rec.slice(1);
+          break;
+        case "B":
+        case "S":
+        case "K":
+        case "U":
+          if (battle !== null) throw new Error(`${kind} record after the battle started`);
+          if (kind === "B") mapName = rec.slice(1);
+          else if (kind === "S") seed = Number(rec.slice(1));
+          else if (kind === "K") critsDisabled = true;
+          else inits.push(decodeUnitLine(rec));
+          if (kind === "S" && !Number.isInteger(seed)) throw new Error("bad seed");
+          break;
+        case "M":
+        case "A": {
+          const b = begin();
+          if (over !== null) throw new Error("the battle is already over");
+          const wanted = kind === "M" ? "movement" : "attack";
+          if (b.phase !== wanted) {
+            throw new Error(`a ${wanted} activation was recorded but the ${b.phase} phase is due`);
+          }
+          const id = unitAt(rec[1] ?? "");
+          if (id !== actor) throw new Error(`${id} acts in the record but ${actor} is due`);
+          if (kind === "M") move(b, id, rec.slice(1));
+          else attack(b, id, rec.slice(1));
+          advance();
+          break;
+        }
+        case "W": {
+          begin();
+          if (over === null) throw new Error("W recorded but the battle is not over");
+          const o: { winnerTeam: number | null; draw: boolean } = over;
+          const team = o.draw || o.winnerTeam === null ? "-" : String(o.winnerTeam);
+          const expected = `W${team}${normalizeRng(rng.snapshot())}`;
+          if (rec !== expected) throw new Error(`expected ${expected}, replayed to ${rec}`);
+          ended = true;
+          break;
+        }
+        case "E": {
+          if (!ended || battle === null) throw new Error("E record before W");
+          const id = unitAt(rec[1] ?? "");
+          if (checked.has(id)) throw new Error(`unit ${id} has two E records`);
+          checked.add(id);
+          const expected = encodeEndLine(rec[1]!, (battle as BattleState).units[id]!);
+          if (rec !== expected) throw new Error(`unit ${id} ended as ${expected}, recorded ${rec}`);
+          break;
+        }
+        default:
+          throw new Error(`unknown record ${JSON.stringify(kind)}`);
+      }
+    }
+    record = "";
+    if (!ended) throw new Error("the replay ends before its W line");
+    for (const init of inits) {
+      if (!checked.has(init.id)) throw new Error(`no E record for unit ${init.id}`);
+    }
+  } catch (e) {
+    const b = battle as BattleState | null;
+    const why = e instanceof Error ? e.message : String(e);
+    const phase = b === null ? "setup" : over !== null ? "end" : b.phase;
+    const note =
+      version !== null && version !== VERSION
+        ? ` (recorded with ${version}, engine is ${VERSION})`
+        : "";
+    throw new Error(
+      `replay failed at turn ${b?.turn ?? 0}, ${phase} phase, actor ${actor ?? "-"}: ${why}` +
+        `${record === "" ? "" : ` [record: ${record}]`}${note}`,
+    );
+  }
 }

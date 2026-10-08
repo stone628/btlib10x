@@ -303,8 +303,14 @@ turn a movement line and an attack line · the winner line · one line per unit'
 
 ## Implementation status
 
-Recording and display exist in the web CLI (`web/replay.ts`); the player/decoder is
-not written yet. Notes that came out of implementing the recorder:
+Recording, display and a verifying player exist in the web CLI (`web/replay.ts`).
+`replayPlayer(text)` accepts raw or prettified text, rebuilds the battle from the
+header and `U` lines, re-runs every `M`/`A` activation through the engine API on the
+seeded dice, stops at `W` (winner and final Rng state must match) and compares each
+unit's state with its `E` line. It returns nothing and prints nothing; the first
+problem throws `replay failed at turn T, <phase> phase, actor <id>: <why> [record: …]`.
+A version mismatch is not an error by itself, but is named in the message when
+something else fails. Notes that came out of implementing the recorder:
 
 - Entries are built from the session's pending declarations (`MovementContext`,
   `AttackContext`) and pushed at the top of the `commitAtomic` closure; `commitAtomic`

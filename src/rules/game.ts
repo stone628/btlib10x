@@ -2666,12 +2666,13 @@ function resolveUnitAttacks(
       ammoExhausted = true;
     }
 
-    const run = (running[target.id] ??= {
+    const run = running[target.id] ?? {
       damage: cloneDamage(target.damage),
       crit: cloneCritDestroyed(target.critSlotsDestroyed),
       destroyedWeapons: [...target.destroyedWeapons],
       ammoBins: { ...target.ammoBins },
-    });
+    };
+    if (running[target.id] !== run) running[target.id] = run;
     const targetBaseDamage = run.damage;
 
     const resolution = resolveWeaponAttack({
