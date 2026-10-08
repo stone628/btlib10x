@@ -184,6 +184,9 @@ A<idx><F|L|R>[-|+[<src>][<tok>]]{:<tgt><item>...}
 | `C` | club (no limb) |
 | `S<w>` / `T<w>` | strike, `limb` leftArm / rightArm (mounting arm); `w` = `weapon` `h` Hatchet / `s` Sword / `b` Retractable Blade. Both are written because `PhysicalAttackDecl` carries both; the decoder validates the pair against the mounts (`resolveStrikeMount`) |
 
+The engine accepts several target groups per line (multiple targets, TW p.108). The primary target is not
+recorded: replay uses the engine default (first target, or the first forward-arc target).
+
 One actor per line, so no actor separator is needed. Physical items keep declaration order; two punches
 (`P` and `Q`) may appear. The engine's own rules (one physical type per turn,
 arm/leg conflicts with fired weapons, club bars arm weapons) are enforced by

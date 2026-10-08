@@ -54,6 +54,8 @@ import {
   classifyFiringArc,
   defenderArcChoice,
   effectiveFacingForTwist,
+  type SecondaryTargetMod,
+  secondaryTargetModifier,
   twistDelta,
   weaponCanFireIntoArc,
 } from "./arcs";
@@ -237,20 +239,29 @@ export interface WeaponAttackDecl {
    *  ambiguity resolves to the defender's dominant choice
    *  (`defenderArcChoice`). */
   readonly attackDirection?: Arc;
+  /** Multiple-targets to-hit modifier (TW p.108), classified at declaration
+   *  against the attacker's twisted facing: +1 for a secondary target in the
+   *  forward arc, +2 in a side/rear arc. Absent for the primary target. */
+  readonly secondaryMod?: SecondaryTargetMod;
 }
+
+export type { SecondaryTargetMod };
 
 export type MoveStep =
   | { readonly kind: "enter"; readonly to: HexCoord }
   | { readonly kind: "turn"; readonly facings: number };
 
-/** Weapon half of a merged `attacksDeclared` event: the volley's shared
- *  target, resolved range fields, and declaration count. */
+/** Weapon half of a merged `attacksDeclared` event: one entry per distinct
+ *  weapon target — resolved range fields (from the target's first declared
+ *  weapon), declaration count, and the multiple-targets status (TW p.108). */
 export interface DeclaredWeaponVolley {
   readonly targetId: string;
   readonly count: number;
   readonly distance: number;
   readonly rangeBracket: string;
   readonly rangeMod: number;
+  /** Multiple-targets to-hit modifier: 0 primary, +1 forward-arc secondary, +2 side/rear. */
+  readonly secondaryMod: 0 | SecondaryTargetMod;
 }
 
 /** Physical half of a merged `attacksDeclared` event: one entry per
@@ -476,7 +487,6 @@ export interface UnitState extends MechModelHolder {
   declaredWeaponAttacks: WeaponAttackDecl[];
   /** Physical attack declarations (punch, kick, push, club, strike) for this phase. */
   declaredPhysicalAttacks: PhysicalAttackDecl[];
-  firedTargetId: string | null;
   /** True if the unit explicitly passed on declaring attacks this phase. */
   passedAttacks: boolean;
   destroyed: DestroyedState;
@@ -510,8 +520,9 @@ export type GameEvent =
   | {
       readonly kind: "attacksDeclared";
       readonly unitId: string;
-      /** Weapon volley, or null when the declaration holds physicals only. */
-      readonly weapons: DeclaredWeaponVolley | null;
+      /** Weapon volleys, one per target (primary first); empty when the
+       *  declaration holds no weapon attacks. */
+      readonly weapons: readonly DeclaredWeaponVolley[];
       /** Declared physical attacks (possibly empty). */
       readonly physical: readonly DeclaredPhysicalAttack[];
     }
@@ -519,6 +530,8 @@ export type GameEvent =
       readonly kind: "attackResolved";
       readonly unitId: string;
       readonly targetId: string;
+      /** Multiple-targets to-hit modifier applied: 0 primary, +1/+2 secondary. */
+      readonly secondaryMod: 0 | SecondaryTargetMod;
       readonly resolution: AttackResolution;
     }
   | {
@@ -773,6 +786,7 @@ export type GameEvent =
 
 interface UnitAttackResolution {
   readonly targetId: string;
+  readonly secondaryMod: 0 | SecondaryTargetMod;
   readonly resolution: AttackResolution;
   readonly weaponHeat: number;
   readonly buildingDamage: number;
@@ -1170,7 +1184,6 @@ export function createBattle(
       shutdown: "not",
       declaredWeaponAttacks: [],
       declaredPhysicalAttacks: [],
-      firedTargetId: null,
       passedAttacks: false,
       destroyed: "not",
       removed: "not",
@@ -1934,18 +1947,35 @@ export interface DeclareAttacksOptions {
    *  normally. A dropped limb returns to the hex; trees/girders vanish.
    *  Requires holding a club. */
   readonly dropClub?: boolean;
+  /** Primary target for a multi-target volley (TW p.108). Must be one of the
+   *  weapon targets, and in the forward arc whenever any weapon target is.
+   *  Defaults to the first declared target (or the first forward-arc target
+   *  when the first is not). Ignored when no weapons are declared. */
+  readonly primaryTargetId?: string;
 }
 
-/** Per-weapon resolved arc plus volley-wide direction/range fields.
+/** Resolved per-target fields of a weapon volley (TW p.108: a unit may split
+ *  its weapons among any number of targets). Range fields come from the
+ *  target's first declared weapon. */
+export interface ValidatedTargetVolley {
+  readonly targetId: string;
+  readonly count: number;
+  readonly attackDirection: Arc;
+  readonly distance: number;
+  readonly rangeBracket: RangeBracket;
+  readonly rangeMod: number;
+  readonly secondaryMod: 0 | SecondaryTargetMod;
+}
+
+/** Per-weapon resolved arc plus per-target direction/range fields.
  *  Returned by `validateAttacks` so `declareAttacks` (and any UIs that
  *  want to display the resolved arc before commit) can skip recomputing
  *  LOS, arc classification, and the to-hit range breakdown. */
 export interface ValidatedAttackVolley {
-  readonly targetId: string;
-  readonly attackDirection: Arc;
-  readonly attackDistance: number;
-  readonly attackRangeBracket: RangeBracket;
-  readonly attackRangeMod: number;
+  /** Primary weapon target; null when only physical attacks are declared. */
+  readonly primaryTargetId: string | null;
+  /** One entry per distinct weapon target, in declaration order. */
+  readonly targets: readonly ValidatedTargetVolley[];
   readonly arcs: Readonly<Record<number, Arc>>;
   readonly normalized: PhysicalAttackDecl[];
 }
@@ -1993,13 +2023,15 @@ function checkPhysicalSetShape(unitId: string, normalized: readonly PhysicalAtta
 /** Validation core shared by `validateAttacks` and `declareAttacks`.
  *  Runs every gate `declareAttacks` enforces: unit status (removed /
  *  shutdown / unconscious), sensors, prone arm-prop, and per-decl checks
- *  (weapon bounds, dup, jammed / destroyed, location, rapid-fire, single
- *  target, target validity, arc, LOS, range, to-hit, ammo), plus the
+ *  (weapon bounds, dup, jammed / destroyed, location, rapid-fire,
+ *  multiple-target primary / secondary modifier, target validity, arc, LOS,
+ *  range, to-hit, ammo), plus the
  *  physical set (one-type / two-punch shape, per-decl legality with the
  *  twist-aware arcs of `validatePhysicalAttack`, and the weapon/physical
- *  interaction backstop below). On success returns the volley's resolved
- *  arc, attack direction, distance, and range bracket — or null when no
- *  weapon attacks were passed. Does NOT mutate state, consume RNG, or
+ *  interaction backstop below). On success returns the primary target, each
+ *  weapon's firing arc, and per-target attack direction, distance, range
+ *  bracket, and secondary-target modifier (empty when no weapon attacks
+ *  were passed). Does NOT mutate state, consume RNG, or
  *  emit events. Phase and actor-queue are checked by `declareAttacks`,
  *  not here. */
 export function validateAttacksImpl(
@@ -2037,7 +2069,6 @@ export function validateAttacksImpl(
   // and arm-mounted weapon fire are barred until it is dropped first.
   const handsOccupied = unit.club !== null && !dropping;
   const normalizedPhysical = normalizePhysicalDecls(def, physicalDecls);
-  let targetId: string | null = null;
   if (wantPhysical) {
     checkPhysicalSetShape(unitId, normalizedPhysical);
     // TW p.145: the two punches may go to two different targets; every
@@ -2084,14 +2115,44 @@ export function validateAttacksImpl(
     }
   }
 
-  let attackDirection: Arc | undefined;
-  let attackDistance = 0;
-  let attackRangeBracket: RangeBracket = "short";
-  let attackRangeMod = 0;
+  // Multiple targets (TW p.108): classify every weapon target against the
+  // twisted facing first, so the primary target and each secondary modifier
+  // are known before any to-hit is computed. Invalid targets are left for
+  // the per-weapon checks below to reject with their specific error.
+  const declaredTargets = [...new Set(weaponDecls.map((d) => d.targetId))];
+  const forwardArcOf = new Map<string, boolean>();
+  for (const id of declaredTargets) {
+    const t = state.units[id];
+    if (t === undefined || isUnitRemoved(t) || t.team === unit.team) continue;
+    const a = classifyFiringArc(unit.position, t.position, effectiveFacing);
+    if (a !== null) forwardArcOf.set(id, a === "front");
+  }
+  let primaryTargetId: string | null = null;
+  if (declaredTargets.length > 0 && forwardArcOf.size === declaredTargets.length) {
+    const forward = declaredTargets.filter((id) => forwardArcOf.get(id) === true);
+    const requested = options.primaryTargetId;
+    if (requested !== undefined) {
+      if (!declaredTargets.includes(requested)) {
+        throw new Error(`primary target ${requested} is not a declared weapon target`);
+      }
+      if (forward.length > 0 && !forward.includes(requested)) {
+        throw new Error("primary target must be in the forward arc when any target is");
+      }
+      primaryTargetId = requested;
+    } else {
+      const first = declaredTargets[0]!;
+      primaryTargetId = forward.length === 0 || forward.includes(first) ? first : forward[0]!;
+    }
+  }
+  const secondaryModFor = (id: string): 0 | SecondaryTargetMod =>
+    primaryTargetId === null || id === primaryTargetId
+      ? 0
+      : secondaryTargetModifier(unit.position, requireUnit(state, id).position, unit.facing, twist);
 
+  const targetVolleys = new Map<string, ValidatedTargetVolley>();
   const seenWeapons = new Set<number>();
   const arcs: Record<number, Arc> = {};
-  weaponDecls.forEach((decl, index) => {
+  weaponDecls.forEach((decl) => {
     const mount = def.weapons[decl.weaponIndex];
     if (!mount) throw new Error(`weaponIndex ${decl.weaponIndex} out of range for ${unitId}`);
     const weapon = weaponDefFor(mount);
@@ -2131,11 +2192,6 @@ export function validateAttacksImpl(
     }
     const shots = rapidFire ? (weapon.rapidFireShots ?? 1) : 1;
 
-    if (targetId === null) targetId = decl.targetId;
-    else if (targetId !== decl.targetId) {
-      throw new Error("A unit may only declare attacks against one target per turn");
-    }
-
     const target = requireUnit(state, decl.targetId);
     if (isUnitRemoved(target)) throw new Error(`Target ${target.id} is removed from play`);
     if (target.team === unit.team) throw new Error("Target must belong to another team");
@@ -2162,12 +2218,15 @@ export function validateAttacksImpl(
       );
     }
     // Target-side attack direction (TW p.119): which side of the target the
-    // attack strikes. Same for every weapon of this volley.
-    if (attackDirection === undefined) {
-      const back = bearingExact(target.position, unit.position)!;
-      const dir = classifyArcWithBoundary(target.facing, back);
-      attackDirection = defenderArcChoice(dir.arc, dir.altArc);
-    }
+    // attack strikes. Same for every weapon fired at this target.
+    let targetVolley = targetVolleys.get(target.id);
+    const attackDirection =
+      targetVolley?.attackDirection ??
+      (() => {
+        const back = bearingExact(target.position, unit.position)!;
+        const dir = classifyArcWithBoundary(target.facing, back);
+        return defenderArcChoice(dir.arc, dir.altArc);
+      })();
 
     const losProne = { from: unit.prone, to: target.prone };
     const woodsPoints = losWoodsPointsBetween(state, unit.position, target.position, losProne);
@@ -2207,12 +2266,18 @@ export function validateAttacksImpl(
       weapon,
       heatMod: toHitHeatModifier(unit.heat),
       tcMod: targetingComputerModifier(def, unit.damage, unit.critSlotsDestroyed, weapon),
+      secondaryTargetMod: secondaryModFor(target.id),
     });
-    if (index === 0) {
-      attackDistance = dist;
-      attackRangeBracket = breakdown.rangeBracket;
-      attackRangeMod = breakdown.rangeMod;
-    }
+    targetVolley = {
+      targetId: target.id,
+      count: (targetVolley?.count ?? 0) + 1,
+      attackDirection,
+      distance: targetVolley?.distance ?? dist,
+      rangeBracket: targetVolley?.rangeBracket ?? breakdown.rangeBracket,
+      rangeMod: targetVolley?.rangeMod ?? breakdown.rangeMod,
+      secondaryMod: secondaryModFor(target.id),
+    };
+    targetVolleys.set(target.id, targetVolley);
     if (breakdown.automatic === "miss") {
       throw new Error(
         `${mount.weapon}: modified TN ${breakdown.total} auto-misses; abort the declaration instead`,
@@ -2230,15 +2295,10 @@ export function validateAttacksImpl(
 
   const conflict = physicalWeaponConflict(def, weaponDecls, normalizedPhysical);
   if (conflict !== null) throw new Error(conflict);
-  const volleyTarget = targetId ?? normalizedPhysical[0]?.targetId ?? null;
-  if (volleyTarget === null) throw new Error("declareAttacks requires at least one declaration");
 
   return {
-    targetId: volleyTarget,
-    attackDirection: attackDirection!,
-    attackDistance,
-    attackRangeBracket,
-    attackRangeMod,
+    primaryTargetId,
+    targets: declaredTargets.map((id) => targetVolleys.get(id)!),
     arcs,
     normalized: normalizedPhysical,
   };
@@ -2263,8 +2323,8 @@ export function validateAttacks(
  * Validates the full combined set (including the arm/leg weapon
  * interaction backstop) before mutating anything, so a throwing call
  * leaves no partial declarations behind. Emits one merged
- * `attacksDeclared` event carrying the weapon volley (null when the
- * declaration holds physicals only) and the physical entries. At least
+ * `attacksDeclared` event carrying one weapon volley per target (primary
+ * first; empty when the declaration holds physicals only) and the physical entries. At least
  * one declaration of either kind is required — except a lone `dropClub`,
  * which spends the activation shedding the club and attacking nothing.
  */
@@ -2291,7 +2351,7 @@ export function declareAttacks(
     if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot attack`);
     if (unit.club === null) throw new Error(`${unitId} holds no club to drop`);
     applyClubDrop(state, unit, sink);
-    sink.push({ kind: "attacksDeclared", unitId, weapons: null, physical: [] });
+    sink.push({ kind: "attacksDeclared", unitId, weapons: [], physical: [] });
     if (!state.actedThisPhase.includes(unitId)) state.actedThisPhase.push(unitId);
     return;
   }
@@ -2314,12 +2374,20 @@ export function declareAttacks(
   // resolves its own ammo in `resolveUnitAttacks`. RNG via ammo policy.
   if (wantWeapons) {
     for (const decl of weaponDecls) {
+      const targetVolley = volley.targets.find((t) => t.targetId === decl.targetId);
       unit.declaredWeaponAttacks.push({
         ...decl,
         ...(volley.arcs[decl.weaponIndex] !== undefined
           ? { arc: volley.arcs[decl.weaponIndex] }
           : {}),
-        attackDirection: volley.attackDirection,
+        ...(targetVolley !== undefined
+          ? {
+              attackDirection: targetVolley.attackDirection,
+              ...(targetVolley.secondaryMod !== 0
+                ? { secondaryMod: targetVolley.secondaryMod }
+                : {}),
+            }
+          : {}),
       });
       const mount = def.weapons[decl.weaponIndex];
       if (!mount) continue;
@@ -2338,7 +2406,6 @@ export function declareAttacks(
         rng,
       );
     }
-    unit.firedTargetId = volley.targetId;
   }
   if (wantPhysical) {
     for (const decl of volley.normalized) {
@@ -2351,15 +2418,20 @@ export function declareAttacks(
   sink.push({
     kind: "attacksDeclared",
     unitId,
-    weapons: wantWeapons
-      ? {
-          targetId: volley.targetId,
-          count: weaponDecls.length,
-          distance: volley.attackDistance,
-          rangeBracket: volley.attackRangeBracket,
-          rangeMod: volley.attackRangeMod,
-        }
-      : null,
+    weapons: [...volley.targets]
+      .sort(
+        (a, b) =>
+          Number(b.targetId === volley.primaryTargetId) -
+          Number(a.targetId === volley.primaryTargetId),
+      )
+      .map((t) => ({
+        targetId: t.targetId,
+        count: t.count,
+        distance: t.distance,
+        rangeBracket: t.rangeBracket,
+        rangeMod: t.rangeMod,
+        secondaryMod: t.secondaryMod,
+      })),
     physical: volley.normalized.map((d) => ({
       type: d.type,
       targetId: d.targetId,
@@ -2654,6 +2726,7 @@ function resolveUnitAttacks(
     const mount = def.weapons[decl.weaponIndex]!;
     const weapon = weaponDefFor(mount);
     const target = requireUnit(state, decl.targetId);
+    const secondaryMod = decl.secondaryMod ?? 0;
     const rapidFire = decl.rapidFire ?? false;
     const shots = rapidFire ? (weapon.rapidFireShots ?? 1) : 1;
     let ammoExhausted = false;
@@ -2681,6 +2754,7 @@ function resolveUnitAttacks(
       attackerMoved: unit.moveMode ?? "standStill",
       attackerHeat: preHeat,
       tcMod: targetingComputerModifier(def, unit.damage, unit.critSlotsDestroyed, weapon),
+      ...(secondaryMod !== 0 ? { secondaryTargetMod: secondaryMod } : {}),
       attackerProne: unit.prone,
       ...(pronePropArm !== null ? { propArm: pronePropArm } : {}),
       sensorMod,
@@ -2742,6 +2816,7 @@ function resolveUnitAttacks(
     if (weapon.streak === true && !resolution.hit) {
       resolutions.push({
         targetId: target.id,
+        secondaryMod,
         resolution,
         weaponHeat: 0,
         buildingDamage: 0,
@@ -2772,6 +2847,7 @@ function resolveUnitAttacks(
 
     resolutions.push({
       targetId: target.id,
+      secondaryMod,
       resolution,
       weaponHeat,
       buildingDamage,
@@ -3272,7 +3348,13 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   const targetCritsForLimbs: Record<string, CriticalResolution[]> = {};
 
   for (const result of results) {
-    for (const { targetId, resolution, buildingDamage, coverBuilding } of result.resolutions) {
+    for (const {
+      targetId,
+      secondaryMod,
+      resolution,
+      buildingDamage,
+      coverBuilding,
+    } of result.resolutions) {
       const target = requireUnit(state, targetId);
       let reported = resolution;
 
@@ -3476,6 +3558,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         kind: "attackResolved",
         unitId: result.unitId,
         targetId,
+        secondaryMod,
         resolution: reported,
       });
     }
@@ -4273,7 +4356,6 @@ function processEndPhase(state: BattleState) {
     unit.jumpedThisTurn = false;
     unit.mpSpent = 0;
     unit.declaredWeaponAttacks = [];
-    unit.firedTargetId = null;
     unit.passedAttacks = false;
     unit.declaredPickup = null;
     // A successful voluntary startup comes online just before the next

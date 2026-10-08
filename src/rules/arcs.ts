@@ -168,3 +168,21 @@ export function effectiveFacingForTwist(facing: Facing, twist: Arc | null | unde
   const delta = twist === null || twist === undefined ? 0 : twistDelta(twist);
   return delta === 0 ? facing : rotateFacing(facing, delta);
 }
+
+/** Multiple-targets to-hit modifier for a secondary target (TW p.108). */
+export type SecondaryTargetMod = 1 | 2;
+
+/**
+ * To-hit modifier for a secondary target: +1 when it lies in the attacker's
+ * forward arc (after torso twist), +2 in a side or rear arc. Callers apply it
+ * only to targets other than the primary. Returns 2 when the hexes coincide
+ * (no arc), which cannot occur for a legal declaration.
+ */
+export function secondaryTargetModifier(
+  from: HexCoord,
+  to: HexCoord,
+  facing: Facing,
+  twist: Arc | null | undefined,
+): SecondaryTargetMod {
+  return classifyFiringArc(from, to, effectiveFacingForTwist(facing, twist)) === "front" ? 1 : 2;
+}

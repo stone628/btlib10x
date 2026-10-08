@@ -384,6 +384,9 @@ simulate. See `docs/VISION.md` for direction and the will/won't lists.
   wrecks a leg/gyro or knocks the pilot out, which drops the 'Mech on the
   spot. Exiting a building hex requires no PSR.
 
+- **Multiple targets** (TW p.108, engine only; the CLI still fires at one target) —
+  weapons may be split among targets; secondary targets take +1 (forward arc)
+  or +2 (side/rear), physical attacks exempt.
 - **Torso twist** — `torso <front|left|right>` twists the acting unit one
   hexside for the attack phase (TW pp.105-106): arm and front-torso weapons
   fire as if the 'Mech faced the twisted direction. Physical attacks respect

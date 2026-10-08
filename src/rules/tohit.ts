@@ -45,6 +45,10 @@ export interface AttackModifiers {
   /** Targeting-computer modifier (-1 for an eligible weapon, TW p.143); caller
    *  computes per weapon via `targetingComputerModifier`. */
   readonly tcMod?: number;
+  /** Multiple-targets modifier (TW p.108): +1 for a secondary target in the
+   *  attacker's forward arc, +2 for one in a side/rear arc; 0 for the primary
+   *  target. Never cumulative across targets. Weapon attacks only. */
+  readonly secondaryTargetMod?: number;
 }
 
 export interface ToHitBreakdown {
@@ -71,6 +75,8 @@ export interface ToHitBreakdown {
   readonly actuatorMod: number;
   /** Targeting-computer modifier (0 or -1, TW p.143). */
   readonly tcMod: number;
+  /** Secondary-target modifier (0 for the primary target, else +1/+2). */
+  readonly secondaryTargetMod: number;
   readonly total: number;
   readonly rangeBracket: RangeBracket;
   /** Modified TN <= 2 auto-hits; > 12 auto-misses (attack may be aborted). */
@@ -134,6 +140,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
       sensorMod: 0,
       actuatorMod: 0,
       tcMod: 0,
+      secondaryTargetMod: 0,
       total: Number.POSITIVE_INFINITY,
       rangeBracket: "long",
       automatic: "miss",
@@ -162,6 +169,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
   const sensorMod = mods.sensorMod ?? 0;
   const actuatorMod = mods.actuatorMod ?? 0;
   const tcMod = mods.tcMod ?? 0;
+  const secondaryTargetMod = mods.secondaryTargetMod ?? 0;
 
   const total =
     mods.gunnery +
@@ -175,7 +183,8 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     heatMod +
     sensorMod +
     actuatorMod +
-    tcMod;
+    tcMod +
+    secondaryTargetMod;
 
   return {
     gunnery: mods.gunnery,
@@ -190,6 +199,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     sensorMod,
     actuatorMod,
     tcMod,
+    secondaryTargetMod,
     total,
     rangeBracket: bracket,
     automatic: total <= D2D6_MIN ? "hit" : total > D2D6_MAX ? "miss" : null,

@@ -154,7 +154,6 @@ function cloneUnitState(unit: UnitState): UnitState {
     shutdown: unit.shutdown,
     declaredWeaponAttacks: unit.declaredWeaponAttacks.map(cloneWeaponAttackDecl),
     declaredPhysicalAttacks: unit.declaredPhysicalAttacks.map(clonePhysicalAttackDecl),
-    firedTargetId: unit.firedTargetId,
     passedAttacks: unit.passedAttacks,
     destroyed: unit.destroyed,
     removed: unit.removed,
@@ -333,7 +332,6 @@ export function loadUnitState(unit: UnitState, snapshot: UnitSnapshot): void {
   unit.shutdown = next.shutdown;
   unit.declaredWeaponAttacks = next.declaredWeaponAttacks;
   unit.declaredPhysicalAttacks = next.declaredPhysicalAttacks.map((d) => ({ ...d }));
-  unit.firedTargetId = next.firedTargetId;
   unit.passedAttacks = next.passedAttacks;
   unit.destroyed = next.destroyed;
   unit.removed = next.removed;

@@ -1215,14 +1215,14 @@ function handleSessionGameEvent(
       );
       break;
     case "attacksDeclared": {
-      if (e.weapons !== null) {
+      for (const w of e.weapons) {
         idLines(
           e.unitId,
-          i18n(e.weapons.count === 1 ? "log.attacksDeclaredOne" : "log.attacksDeclaredOther", {
+          i18n(w.count === 1 ? "log.attacksDeclaredOne" : "log.attacksDeclaredOther", {
             id: e.unitId,
-            target: e.weapons.targetId,
-            count: e.weapons.count,
-            rangeCtx: `range ${e.weapons.distance} (${e.weapons.rangeBracket}, ${signedMod(e.weapons.rangeMod)})`,
+            target: w.targetId,
+            count: w.count,
+            rangeCtx: `range ${w.distance} (${w.rangeBracket}, ${signedMod(w.rangeMod)})`,
           }),
         );
       }

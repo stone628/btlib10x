@@ -753,7 +753,7 @@ interface UnitState {
   blownOffLimbs: SeveredLimb[]; club: HeldClub | null;   // severed limbs / held club
   ammoPolicy: AmmoPolicy;
   moveMode; movesThisTurn; jumpedThisTurn; mpSpent;
-  declaredWeaponAttacks; declaredPhysicalAttacks; declaredPickup; firedTargetId; passedAttacks;
+  declaredWeaponAttacks; declaredPhysicalAttacks; declaredPickup; passedAttacks;
   destroyed: DestroyedState;          // "not" | "headDestroyed" | "centerTorsoDestroyed" | "cockpitDestroyed" | "headBlownOff" | "engineDestroyed"
   removed: RemovedState;              // "not" | "destroyed" | "pilotEjected" | "pilotKilled"
   shutdown: ShutdownState;            // "not" | "manual" | "heat" | "starting"
@@ -772,8 +772,8 @@ type GameEvent =
   | { kind: "initiative"; rolls; winnerTeam }
   | { kind: "moveDeclared"; unitId; mode }
   | { kind: "moved"; unitId; mode; prevMode; position; facing; mpSpent; mpBudget }
-  | { kind: "attacksDeclared"; unitId; weapons: DeclaredWeaponVolley | null; physical: DeclaredPhysicalAttack[] }
-  | { kind: "attackResolved"; unitId; targetId; resolution: AttackResolution }
+  | { kind: "attacksDeclared"; unitId; weapons: DeclaredWeaponVolley[] /* one per target, primary first; {targetId,count,distance,rangeBracket,rangeMod,secondaryMod} */; physical: DeclaredPhysicalAttack[] }
+  | { kind: "attackResolved"; unitId; targetId; secondaryMod: 0|1|2; resolution: AttackResolution }
   | { kind: "physicalAttackResolved"; unitId; targetId; resolution: PhysicalResolution }
   | { kind: "unitRemoved"; unitId; reason: RemovalReason; destroyReason?: DestroyedReason | null }
   | { kind: "unitFell"; unitId; cause: UnitFallCause; levelsFallen; totalDamage; ... }
@@ -797,7 +797,10 @@ Rules encoded by the state machine:
   `removed` (`"pilotKilled"` / `"pilotEjected"`), leaving `destroyed = "not"`.
 - **Weapon usability** is judged against `baseDamage`.
 - **Ammo** is deducted at declaration time; jams persist for the rest of the game.
-- **Declaration validation**: weapon indexes are 1-based; one target per turn,
+- **Declaration validation**: weapon indexes are 1-based; weapons may be split among any
+  number of targets (TW p.108: `options.primaryTargetId`, else the first
+  forward-arc target; each secondary target takes `secondaryTargetMod` +1
+  forward arc / +2 side-rear, not cumulative; physicals exempt),
   per-weapon mounting arc (TW p.105, torso twist applied), unblocked LOS
   (woods + elevation + water + wrecks), range check, rapid-fire limits
   (`rapidFire: true` only on R weapons), TN > 12 must be aborted (throws), one
