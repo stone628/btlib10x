@@ -373,7 +373,7 @@ export function battleSheet(unit: UnitState, id: string): SheetView {
     originalArmorStructure: def.internalStructure,
     mounts: buildMountInfos(def, unit.ammoBins, (key) => {
       const mount = def.weapons[key];
-      const baseDamage = unit.baseDamage ?? unit.damage;
+      const baseDamage = unit.damage;
       return {
         jammed: unit.jammedWeapons.includes(key),
         destroyed:
@@ -386,7 +386,7 @@ export function battleSheet(unit: UnitState, id: string): SheetView {
       destroyedWeapons: unit.destroyedWeapons,
       jammedWeapons: unit.jammedWeapons,
       ammoBins: unit.ammoBins,
-      locationDestroyed: (loc) => (unit.baseDamage ?? unit.damage).internalStructure[loc] <= 0,
+      locationDestroyed: (loc) => unit.damage.internalStructure[loc] <= 0,
     },
     critCounts: componentHitStatus(def, unit.damage, unit.critSlotsDestroyed),
   };

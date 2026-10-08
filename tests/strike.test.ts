@@ -261,10 +261,24 @@ describe("strike validation", () => {
 
   it("rejects a strike from a destroyed arm location", () => {
     const battle = faceToFaceBattle();
-    battle.units.a!.baseDamage.internalStructure.rightArm = 0;
+    battle.units.a!.damage.internalStructure.rightArm = 0;
     const result = validatePhysicalAttack(battle, "a", hatchetDecl());
     expect(result.ok).toBe(false);
     expect(result.reason).toContain("destroyed");
+  });
+
+  it("judges the striking arm against the supplied phase-start damage", () => {
+    const battle = faceToFaceBattle();
+    const intact = { ...battle.units.a!.damage };
+    battle.units.a!.damage = {
+      ...intact,
+      internalStructure: { ...intact.internalStructure, rightTorso: 0 },
+    };
+    // Support torso lost to this phase's weapon fire: the phase-start state still allows the strike.
+    const r = validatePhysicalAttack(battle, "a", hatchetDecl(), null, false, intact);
+    expect(r.ok).toBe(true);
+    // Without it, the live (destroyed) state rejects.
+    expect(validatePhysicalAttack(battle, "a", hatchetDecl()).ok).toBe(false);
   });
 });
 

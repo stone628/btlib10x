@@ -147,7 +147,7 @@ describe("target movement counts hexes since the last reversal (TW p.107, TOH-02
       ],
       [],
     );
-    expect(requireUnit(state, "t").movesThisTurn).toEqual(["forward", "forward"]);
+    expect(requireUnit(state, "t").hexesMovedThisTurn).toBe(2);
   });
 });
 

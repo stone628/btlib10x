@@ -40,7 +40,6 @@ describe("starting damage (UnitInit.damage)", () => {
     expect(u.destroyedWeapons).toEqual([]);
     expect(u.jammedWeapons).toEqual([]);
     expect(Object.values(u.critSlotsDestroyed).flat().some(Boolean)).toBe(false);
-    expect(u.baseDamage).toEqual(u.damage);
   });
 
   it("applies damage taken, crits, ammo used and pilot hits", () => {
@@ -70,10 +69,6 @@ describe("starting damage (UnitInit.damage)", () => {
     expect(u.ammoBins["leftTorso:1"]!.shots).toBe(loaded - 3);
     expect(u.ammoBins["leftTorso:2"]!.shots).toBe(0); // destroyed bin is empty
     expect(u.jammedWeapons).toEqual([]);
-    // The starting state is the baseline, so turn one raises no PSR for it.
-    expect(u.baseDamage).toEqual(u.damage);
-    expect(u.baseCritSlotsDestroyed).toEqual(u.critSlotsDestroyed);
-    expect(u.baseCritSlotsDestroyed).not.toBe(u.critSlotsDestroyed);
   });
 
   it("keeps 'structure gone, crit slots alive' as given (plain-damage asymmetry)", () => {

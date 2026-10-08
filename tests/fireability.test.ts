@@ -156,11 +156,10 @@ describe("suggestFireTargets", () => {
 
   it("marks a weapon whose location is destroyed", () => {
     const state = startAttackTurn(hbkVsEnf());
-    const damage = {
-      ...state.units.hbk!.baseDamage,
-      internalStructure: { ...state.units.hbk!.baseDamage.internalStructure, rightTorso: 0 },
+    state.units.hbk!.damage = {
+      ...state.units.hbk!.damage,
+      internalStructure: { ...state.units.hbk!.damage.internalStructure, rightTorso: 0 },
     };
-    state.units.hbk!.baseDamage = damage;
     const reasons = blockedReasons(state, "hbk", "enf");
     // AC/20 (rightTorso) and the right-arm Medium Laser both lost support.
     expect(reasons.filter((r) => r === "destroyed")).toHaveLength(2);
@@ -266,24 +265,12 @@ describe("suggestFireTargets", () => {
       buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: -7 }, "s"),
     ];
     const state = startAttackTurn(createTestBattle([], units, false));
-    state.units.enf!.movesThisTurn = Array(30).fill("forward");
+    state.units.enf!.hexesMovedThisTurn = 30;
     const reasons = blockedReasons(state, "hbk", "enf");
     // long range (+4) + target moved 30 (+6) + gunnery 4 = 14 -> auto-miss.
     expect(reasons.filter((r) => r === "autoMiss").length).toBeGreaterThan(0);
     const sugg = suggestFireTargets(state, "hbk");
     expect(sugg.targets.find((t) => t.targetId === "enf")!.weapons).toHaveLength(0);
-  });
-
-  it("counts reversed hexes toward the target movement modifier", () => {
-    const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 2 }, "n"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: -7 }, "s"),
-    ];
-    const state = startAttackTurn(createTestBattle([], units, false));
-    state.units.enf!.movesThisTurn = [...Array(18).fill("forward"), ...Array(12).fill("backward")];
-    const reasons = blockedReasons(state, "hbk", "enf");
-    // 30 hexes total -> target +6, long range +4, gunnery 4 = 14 -> auto-miss.
-    expect(reasons.filter((r) => r === "autoMiss").length).toBeGreaterThan(0);
   });
 
   it("sorts targets best-first so first entry holds most firepower", () => {

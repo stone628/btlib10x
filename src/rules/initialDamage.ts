@@ -91,7 +91,7 @@ function takeFromPool(
 }
 
 /** Fresh all-false destroyed-flag table shaped like `def.critSlots`. */
-function emptyCritTable(def: ResolvedMechDef): Record<Location, boolean[]> {
+export function emptyCritTable(def: ResolvedMechDef): Record<Location, boolean[]> {
   const out = {} as Record<Location, boolean[]>;
   for (const loc of Object.keys(def.critSlots) as Location[]) {
     out[loc] = new Array<boolean>(def.critSlots[loc].length).fill(false);

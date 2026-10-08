@@ -68,6 +68,7 @@ catalog in `src/data/terrain.data.ts` (`TerrainDef` in `terrain.schema.ts`).
 The package root exposes only the grid lookup plus the facing-change cost:
 
 - `cellAt(grid, hex): HexCell` — grid cell lookup
+- `hexCell(terrain, level = 0): HexCell` — the shared, immutable cell instance for a terrain/level pair; grids and snapshots hold these instances instead of copies
 - `waterDepth(terrain): number` — water depth of a terrain type (0 for dry
   land, 1–3 for water1/2/3)
 - `MP_PER_FACING_CHANGE = 1`
@@ -745,14 +746,13 @@ interface UnitState {
   heat; heatPending;                  // scale value (last turn's end) + this turn's own heat
   position; facing;
   damage: UnitDamageState;            // updated as soon as damage lands
-  baseDamage: UnitDamageState;  // snapshot for weapon usability this phase
   ammoBins: AmmoBins;                 // per ammo-bin object, keyed "location:slotIndex"
   jammedWeapons: number[];
   critSlotsDestroyed: Record<Location, boolean[]>;
   destroyedWeapons: number[];
   blownOffLimbs: SeveredLimb[]; club: HeldClub | null;   // severed limbs / held club
   ammoPolicy: AmmoPolicy;
-  moveMode; movesThisTurn; jumpedThisTurn; mpSpent;
+  moveMode; hexesMovedThisTurn; jumpedThisTurn; mpSpent;
   declaredWeaponAttacks; declaredPhysicalAttacks; declaredPickup; passedAttacks;
   destroyed: DestroyedState;          // "not" | "headDestroyed" | "centerTorsoDestroyed" | "cockpitDestroyed" | "headBlownOff" | "engineDestroyed"
   removed: RemovedState;              // "not" | "destroyed" | "pilotEjected" | "pilotKilled"

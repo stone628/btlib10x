@@ -202,7 +202,7 @@ export function suggestFireTargets(
           blockBoth("destroyed");
           return;
         }
-        const baseDamage = unit.baseDamage ?? unit.damage;
+        const baseDamage = unit.damage;
         if (
           unit.prone &&
           (isUnitLocationDestroyed(baseDamage, "leftArm") ||
@@ -265,7 +265,7 @@ export function suggestFireTargets(
             unit.critSlotsDestroyed,
             mount.location,
           ),
-          targetHexesMoved: enemy.movesThisTurn.length,
+          targetHexesMoved: enemy.hexesMovedThisTurn,
           targetJumped: enemy.jumpedThisTurn,
           targetImmobile: isImmobile(enemy),
           targetProne: enemy.prone,

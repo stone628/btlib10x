@@ -227,7 +227,7 @@ export function computePhysicalToHit(
   // plus prone (−2 adjacent, +1 otherwise) and immobile (−4) — cumulative.
   const distance = hexDistance(attacker.position, target.position);
   const targetMoveMod =
-    targetMovementModifier(target.movesThisTurn.length, target.jumpedThisTurn, undefined) +
+    targetMovementModifier(target.hexesMovedThisTurn, target.jumpedThisTurn, undefined) +
     (target.prone ? proneTargetModifier(distance) : 0) +
     (isImmobile(target) ? TARGET_IMMOBILE_MOD : 0);
 
@@ -661,6 +661,7 @@ export function validatePhysicalAttack(
   decl: PhysicalAttackDecl,
   twist?: Arc | null,
   dropped = false,
+  startDamage?: UnitDamageState,
 ): ValidationResult {
   const attacker = battle.units[attackerId];
   if (!attacker) return { ok: false, reason: `Unknown unit ${attackerId}` };
@@ -723,7 +724,14 @@ export function validatePhysicalAttack(
     case "club":
       return validateClub(attacker, target, decl, twist ?? null, dropped);
     case "strike":
-      return validateStrike(attacker, target, decl, twist ?? null, dropped);
+      return validateStrike(
+        attacker,
+        target,
+        decl,
+        twist ?? null,
+        dropped,
+        startDamage ?? attacker.damage,
+      );
   }
 }
 
@@ -935,6 +943,7 @@ function validateStrike(
   decl: PhysicalAttackDecl,
   twist: Arc | null,
   dropped: boolean,
+  startDamage: UnitDamageState,
 ): ValidationResult {
   // A strike needs its mounting hand free (TW p.146): no striking while
   // carrying a club.
@@ -963,7 +972,7 @@ function validateStrike(
   if (weaponIndex !== null && attacker.destroyedWeapons.includes(weaponIndex)) {
     return { ok: false, reason: `${weapon} in ${arm} is destroyed` };
   }
-  if (!canFireFromLocation(attacker.baseDamage, arm)) {
+  if (!canFireFromLocation(startDamage, arm)) {
     return { ok: false, reason: `Cannot strike: ${arm} destroyed` };
   }
 
