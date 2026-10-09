@@ -91,7 +91,8 @@ export interface FireSuggestion {
 /** 2d6 ways to roll >= tn, over 36. TNs below 3 always hit; above 12 never do. */
 const WAYS_TO_HIT: readonly number[] = [36, 36, 36, 35, 33, 30, 26, 21, 15, 10, 6, 3, 1, 0];
 
-function hitProbability(tn: number): number {
+/** Probability that 2D6 rolls at least `tn` (TW p. 106: 2 or less always hits, over 12 never). */
+export function hitProbability(tn: number): number {
   if (tn <= D2D6_MIN) return 1;
   if (tn > D2D6_MAX) return 0;
   return WAYS_TO_HIT[tn]! / 36;

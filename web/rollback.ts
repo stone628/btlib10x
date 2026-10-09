@@ -7,7 +7,10 @@ export const MAX_SNAPSHOT_COUNT = 10;
 
 /** Everything `rollback` restores, deep-copied at an actor prompt. `setup` is
  *  never mutated during a battle, so it is not captured. */
-type Snapshot = Pick<Session, "state" | "battle" | "move" | "attack" | "over" | "replay"> & {
+type Snapshot = Pick<
+  Session,
+  "state" | "battle" | "move" | "attack" | "over" | "replay" | "doctrine"
+> & {
   readonly rng: string;
 };
 
@@ -62,6 +65,7 @@ export function recordPromptSnapshot(s: Session): void {
       attack: s.attack,
       over: s.over,
       replay: s.replay,
+      doctrine: s.doctrine,
       rng: s.rng.snapshot(),
     }),
   );
@@ -84,5 +88,11 @@ export function rollbackSession(s: Session): void {
   s.attack = snap.attack;
   s.over = snap.over;
   s.replay = snap.replay;
+  // Assignments and the trace level are settings, not battle state: keep the live ones.
+  s.doctrine = {
+    ...snap.doctrine,
+    assignments: s.doctrine.assignments,
+    traceLevel: s.doctrine.traceLevel,
+  };
   s.rng.load(snap.rng);
 }

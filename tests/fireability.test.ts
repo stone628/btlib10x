@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { neighbor } from "../src/core/hex";
 import { classifyFiringArc } from "../src/rules/arcs";
-import { bestFireTarget, suggestFireTargets } from "../src/rules/fireability";
+import { bestFireTarget, hitProbability, suggestFireTargets } from "../src/rules/fireability";
 import type { BattleState, TerrainHexDef, UnitInit } from "../src/rules/game";
 import { advancePhase, buildUnitInit, rollInitiativePhase } from "../src/rules/game";
 import { createTestBattle, scriptedRng } from "./helpers";
@@ -285,5 +285,16 @@ describe("suggestFireTargets", () => {
     // Only matching side arm bears; rear impossible without rear mounts.
     expect(enf.weapons.map((w) => w.weaponIndex)).toEqual([2]);
     expect(enf.weapons[0]!.arc).toBe("rightSide");
+  });
+});
+
+describe("hitProbability", () => {
+  it("is P(2D6 >= tn) with automatic hit at 2 or less and miss over 12 (TW p. 106)", () => {
+    expect(hitProbability(2)).toBe(1);
+    expect(hitProbability(-1)).toBe(1);
+    expect(hitProbability(7)).toBeCloseTo(21 / 36, 10);
+    expect(hitProbability(8)).toBeCloseTo(15 / 36, 10);
+    expect(hitProbability(12)).toBeCloseTo(1 / 36, 10);
+    expect(hitProbability(13)).toBe(0);
   });
 });
