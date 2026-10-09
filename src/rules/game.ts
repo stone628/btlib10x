@@ -350,6 +350,14 @@ export const GIRDER_SEARCH_TARGET: Readonly<Record<string, number>> = {
   hardened: 5,
 };
 
+/** One consciousness roll: 2D6 `roll` against `target`, the table number
+ *  for `hits` total pilot hits (TW p.42). */
+export interface ConsciousnessRoll {
+  readonly roll: number;
+  readonly target: number;
+  readonly hits: number;
+}
+
 /** Why the pilot took damage. Drives the `pilotDamaged` event `reason`
  *  field and the `applyPilotHits` parameter; both stay typed so web and
  *  tests can pattern-match exhaustively. */
@@ -765,21 +773,33 @@ export type GameEvent =
       readonly crits: readonly CriticalResolution[];
     }
   | {
+      /** One event per damage source (one `applyPilotHits` call). */
       readonly kind: "pilotDamaged";
       readonly unitId: string;
       readonly reason: PilotHitReason;
+      /** Points applied by this source (>= 1; fewer than dealt once dead). */
       readonly hits: number;
+      /** Pilot hits after all of this source's points. */
       readonly totalHits: number;
-      /** Pilot HP left after this hit (pilotHitMax - totalHits, floored at 0). */
+      /** Pilot HP left afterwards (pilotHitMax - totalHits, floored at 0). */
       readonly hpRemaining: number;
     }
   | {
+      /** Consciousness rolls for one damage source, or the End Phase
+       *  recovery roll (TW p.42). Damage rolls stop at the first failure. */
       readonly kind: "consciousnessCheck";
       readonly unitId: string;
-      readonly roll: number;
-      readonly target: number;
+      readonly cause: PilotHitReason | "recovery";
+      /** Rolls actually made, in order. */
+      readonly rolls: readonly ConsciousnessRoll[];
+      /** Rolls the damage demanded (m): one per point taken while conscious,
+       *  a killing point excluded. Recovery = 1. */
+      readonly required: number;
+      /** 1-based index (n) of the failing roll, or null when all passed. */
+      readonly failedAt: number | null;
+      /** True when every roll made passed (`failedAt === null`). */
       readonly success: boolean;
-      readonly hits: number;
+      /** Conscious before these rolls (false for recovery). */
       readonly consciousBefore: boolean;
     }
   | {
@@ -2943,8 +2963,10 @@ function legGone(damage: UnitDamageState, leg: "rightLeg" | "leftLeg"): boolean 
 /**
  * Deal `hits` pilot hits to `unit` (TW p.41-42): head hits, ammo explosions,
  * falls, and heat-soaked life support all land here. Every point forces a
- * consciousness roll (2D6 >= the table target) unless the pilot is already
- * unconscious; six total hits kills the pilot and destroys the unit.
+ * consciousness roll (2D6 >= the table target) until one fails; once out,
+ * no further rolls that turn. Six total hits kills the pilot and destroys
+ * the unit. Emits one `pilotDamaged` for the whole call, then at most one
+ * `consciousnessCheck` holding every roll made.
  */
 export function applyPilotHits(
   state: BattleState,
@@ -2954,43 +2976,54 @@ export function applyPilotHits(
   rng: Rng,
   sink: GameEvent[],
 ): void {
-  for (let i = 0; i < hits; i++) {
-    // An ejected pilot still accrues hits (ejection damage, the triggering
-    // blast); every other removal ends pilot bookkeeping.
-    if (isUnitRemoved(unit) && unit.removed !== "pilotEjected") return;
-    if (unit.pilotHits >= unit.pilotHitMax) return;
+  // An ejected pilot still accrues hits (ejection damage, the triggering
+  // blast); every other removal ends pilot bookkeeping.
+  if (isUnitRemoved(unit) && unit.removed !== "pilotEjected") return;
+  const wasConscious = !unit.unconscious;
+  const rolls: ConsciousnessRoll[] = [];
+  let failedAt: number | null = null;
+  let applied = 0;
+  let killed = false;
+  for (let i = 0; i < hits && unit.pilotHits < unit.pilotHitMax; i++) {
     unit.pilotHits += 1;
-    sink.push({
-      kind: "pilotDamaged",
-      unitId: unit.id,
-      reason,
-      hits: 1,
-      totalHits: unit.pilotHits,
-      hpRemaining: Math.max(0, unit.pilotHitMax - unit.pilotHits),
-    });
+    applied += 1;
     const target = consciousnessTarget(unit.pilotHits, unit.pilotHitMax);
     if (target === null) {
-      removePilotKilled(state, unit, sink);
-      return;
+      killed = true;
+      break;
     }
     // No further consciousness rolls once out this turn (TW p.42).
     if (unit.unconscious) continue;
     const { roll, success } = rollConsciousness(rng, target);
-    const wasConscious = !unit.unconscious;
-    sink.push({
-      kind: "consciousnessCheck",
-      unitId: unit.id,
-      roll,
-      target,
-      success,
-      hits: unit.pilotHits,
-      consciousBefore: wasConscious,
-    });
+    rolls.push({ roll, target, hits: unit.pilotHits });
     if (!success) {
+      failedAt = rolls.length;
       unit.unconscious = true;
       unit.unconsciousSinceTurn = state.turn;
     }
   }
+  if (applied === 0) return;
+  sink.push({
+    kind: "pilotDamaged",
+    unitId: unit.id,
+    reason,
+    hits: applied,
+    totalHits: unit.pilotHits,
+    hpRemaining: Math.max(0, unit.pilotHitMax - unit.pilotHits),
+  });
+  if (rolls.length > 0) {
+    sink.push({
+      kind: "consciousnessCheck",
+      unitId: unit.id,
+      cause: reason,
+      rolls,
+      required: applied - (killed ? 1 : 0),
+      failedAt,
+      success: failedAt === null,
+      consciousBefore: wasConscious,
+    });
+  }
+  if (killed) removePilotKilled(state, unit, sink);
 }
 
 /**
@@ -4790,10 +4823,11 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
         sink.push({
           kind: "consciousnessCheck",
           unitId: unit.id,
-          roll,
-          target,
+          cause: "recovery",
+          rolls: [{ roll, target, hits: unit.pilotHits }],
+          required: 1,
+          failedAt: success ? null : 1,
           success,
-          hits: unit.pilotHits,
           consciousBefore: false,
         });
       }

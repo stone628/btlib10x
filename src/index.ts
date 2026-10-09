@@ -158,6 +158,7 @@ export type {
   ClubGroundToken,
   ClubKind,
   ClubPickupDecl,
+  ConsciousnessRoll,
   CreateBattleOptions,
   DeclaredPhysicalAttack,
   DeclaredWeaponVolley,

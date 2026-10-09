@@ -843,12 +843,15 @@ describe("game integration: heat ammo explosion", () => {
       (e): e is Extract<GameEvent, { kind: "pilotDamaged" }> =>
         e.kind === "pilotDamaged" && e.reason === "ammoExplosion",
     );
-    expect(ammoHits).toHaveLength(2);
+    expect(ammoHits).toEqual([expect.objectContaining({ hits: 2, totalHits: 3 })]);
     const consciousness = events.filter(
       (e): e is Extract<GameEvent, { kind: "consciousnessCheck" }> =>
         e.kind === "consciousnessCheck" && e.unitId === "hbk",
     );
-    expect(consciousness.length).toBeGreaterThanOrEqual(3);
+    expect(consciousness.map((e) => e.cause)).toEqual(["shutdownFall", "ammoExplosion"]);
+    const ammoCheck = consciousness[1]!;
+    expect(ammoCheck.rolls).toHaveLength(2);
+    expect(ammoCheck).toMatchObject({ required: 2, failedAt: null, success: true });
     expect(hbk.pilotHits).toBe(3);
     expect(hbk.unconscious).toBe(false);
     expect(hbk.removed).toBe("pilotEjected");

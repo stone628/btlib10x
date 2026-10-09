@@ -719,13 +719,16 @@ export const en = {
   "log.pilotHitReason.fall": "fall",
   "log.pilotHitReason.shutdownFall": "fall, no roll (shut down or unconscious)",
   "log.pilotHitReason.lifeSupport": "heat with damaged life support",
-  "log.pilotDamaged": "[{id}] pilot takes a hit ({reason}) — {total} total",
-  "log.consciousnessCheckSuccess":
-    "[{id}] consciousness check success(2D6 = {roll} >= {target}) -> AWAKE",
+  "log.consciousnessCause.recovery": "recovery",
+  "log.pilotDamagedOne": "[{id}] pilot takes a hit ({reason}) — {total} total",
+  "log.pilotDamagedOther": "[{id}] pilot takes {hits} hits ({reason}) — {total} total",
+  "log.consciousnessPassed":
+    "[{id}] consciousness check ({cause}) passed {passed}/{required}: {rolls}",
+  "log.pilotUnconscious":
+    "[{id}] *** pilot UNCONSCIOUS ({cause}) — failed roll {n} of {required}: {rolls} ***",
   "log.consciousnessCheckFail":
-    "[{id}] consciousness check fail(2D6 = {roll} < {target}) -> STILL UNCONSCIOUS",
-  "log.pilotUnconscious": "[{id}] *** pilot UNCONSCIOUS (2D6 = {roll} < {target}) ***",
-  "log.pilotRecovered": "[{id}] pilot regains consciousness (2D6 = {roll} >= {target})",
+    "[{id}] consciousness check ({cause}) fail: {rolls} -> STILL UNCONSCIOUS",
+  "log.pilotRecovered": "[{id}] pilot regains consciousness ({cause}): {rolls}",
   "log.pilotKilled": "[{id}] *** pilot KILLED — abandoned 'Mech left as a level-2 wreck ***",
   "log.stoodUp": "[{id}] stands up",
   "log.droppedProne": "[{id}] drops prone",

@@ -9,6 +9,7 @@ import {
   ammoExplosionAvoidWithThreshold,
   type BattleState,
   type ComponentHitStatus,
+  type ConsciousnessRoll,
   type CritMask,
   type CritSoakName,
   type CritStructureName,
@@ -1191,6 +1192,19 @@ const PILOT_HIT_REASON_KEY: Readonly<Record<PilotHitReason, MessageKey>> = {
   lifeSupport: "log.pilotHitReason.lifeSupport",
 };
 
+function consciousnessCauseText(cause: PilotHitReason | "recovery"): string {
+  return i18n(
+    cause === "recovery" ? "log.consciousnessCause.recovery" : PILOT_HIT_REASON_KEY[cause],
+  );
+}
+
+/** "2D6 = 9 >= 7, 2D6 = 6 < 10" — every roll a consciousness check made. */
+function consciousnessRollsText(rolls: readonly ConsciousnessRoll[]): string {
+  return rolls
+    .map((r) => `2D6 = ${r.roll} ${r.roll >= r.target ? ">=" : "<"} ${r.target}`)
+    .join(", ");
+}
+
 const PHASE_NAME_KEY: Readonly<Record<Phase, MessageKey>> = {
   initiative: "log.phaseName.initiative",
   movement: "log.phaseName.movement",
@@ -1567,8 +1581,9 @@ function handleSessionGameEvent(s: Session, e: SessionGameEvent, out: OutputHand
     case "pilotDamaged":
       out.idLines(
         e.unitId,
-        i18n("log.pilotDamaged", {
+        i18n(e.hits === 1 ? "log.pilotDamagedOne" : "log.pilotDamagedOther", {
           id: e.unitId,
+          hits: e.hits,
           reason: i18n(PILOT_HIT_REASON_KEY[e.reason]),
           total: e.totalHits,
         }),
@@ -1576,23 +1591,25 @@ function handleSessionGameEvent(s: Session, e: SessionGameEvent, out: OutputHand
       break;
     case "consciousnessCheck":
       {
-        const { unitId, roll, target, success, consciousBefore } = e;
-        if (consciousBefore && !success) {
-          out.idLines(e.unitId, i18n("log.pilotUnconscious", { id: unitId, roll, target }));
-          break;
+        const params = {
+          id: e.unitId,
+          cause: consciousnessCauseText(e.cause),
+          rolls: consciousnessRollsText(e.rolls),
+          required: e.required,
+        };
+        if (e.cause === "recovery") {
+          out.idLines(
+            e.unitId,
+            i18n(e.success ? "log.pilotRecovered" : "log.consciousnessCheckFail", params),
+          );
+        } else if (e.failedAt === null) {
+          out.idLines(
+            e.unitId,
+            i18n("log.consciousnessPassed", { ...params, passed: e.rolls.length }),
+          );
+        } else {
+          out.idLines(e.unitId, i18n("log.pilotUnconscious", { ...params, n: e.failedAt }));
         }
-        if (!consciousBefore && success) {
-          out.idLines(e.unitId, i18n("log.pilotRecovered", { id: unitId, roll, target }));
-          break;
-        }
-        out.idLines(
-          e.unitId,
-          i18n(success ? "log.consciousnessCheckSuccess" : "log.consciousnessCheckFail", {
-            id: unitId,
-            roll,
-            target,
-          }),
-        );
       }
       break;
     case "buildingCrash":
