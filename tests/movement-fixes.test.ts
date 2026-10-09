@@ -130,27 +130,17 @@ describe("destroyed gyro while prone (MOV-08)", () => {
   });
 });
 
-describe("stand-up retries (MOV-06)", () => {
-  it("a failed stand with MP left keeps the unit active and accumulates MP", () => {
+describe("failed stand-up (MOV-06)", () => {
+  it("a failed stand leaves the unit prone and ends its activation", () => {
     const state = movementBattle("HBK-4G", true);
     const a = requireUnit(state, "a");
     // stand PSR 1+1 fails; fall direction, fall location and seatbelt follow.
     const cost = attemptStandUp(state, "a", [], scriptedRng(1, 1, 1, 3, 4, 6, 6));
     expect(cost).toBe(2);
     expect(a.prone).toBe(true);
-    expect(state.actedThisPhase).not.toContain("a");
-    // second attempt succeeds (6+6) and the total is carried forward.
-    const total = attemptStandUp(state, "a", [], scriptedRng(6, 6));
-    expect(total).toBe(4);
-    expect(a.prone).toBe(false);
+    expect(a.mpSpent).toBe(2);
     expect(state.actedThisPhase).toContain("a");
-  });
-
-  it("a failed stand with less than a full attempt left ends the activation", () => {
-    const state = movementBattle("HBK-4G", true);
-    requireUnit(state, "a").mpSpent = 1; // the stand then leaves only 1 of 4 MP
-    attemptStandUp(state, "a", [], scriptedRng(1, 1, 1, 3, 4, 6, 6));
-    expect(state.actedThisPhase).toContain("a");
+    expect(() => attemptStandUp(state, "a", [], scriptedRng(6, 6))).toThrow();
   });
 });
 
