@@ -154,6 +154,7 @@ export {
 } from "./rules/fireability";
 export type {
   ActorQueueActorView,
+  AttackPhaseStage,
   BattleState,
   ClubGroundToken,
   ClubKind,
