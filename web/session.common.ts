@@ -1111,14 +1111,10 @@ export function handleSessionGameEvents(s: Session, events: SessionGameEvent[]):
       const blank = " ".repeat(prefixLen);
       const firstLine = idLinesBuf[0]!;
       if (bufferedLen === 1) {
-        if (indentLen > 0) {
-          linesBuf.push(`${blank} ${firstLine}`);
-        } else {
-          linesBuf.push(`${lastBoxKey} ${firstLine}`);
-        }
+        linesBuf.push(`${lastBoxKey} ${firstLine}`);
       } else {
         if (indentLen > 0) {
-          linesBuf.push(`${blank}${tnw} ${firstLine}`);
+          linesBuf.push(lastBoxKey, `${blank}${tnw} ${firstLine}`);
         } else {
           linesBuf.push(`${lastBoxKey}${tnw} ${firstLine}`);
         }
@@ -1167,7 +1163,7 @@ export function handleSessionGameEvents(s: Session, events: SessionGameEvent[]):
     if (lastBoxKey !== currPrefix) {
       flushLinesBuf();
       lastBoxKey = currPrefix;
-      linesBuf.push(currPrefix);
+      // linesBuf.push(currPrefix);
       indentLen = fromPrefixLen;
     }
     idLinesBuf.push(
