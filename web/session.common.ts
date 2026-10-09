@@ -1109,16 +1109,21 @@ export function handleSessionGameEvents(s: Session, events: SessionGameEvent[]):
   // lazily on the first line, so an empty section renders nothing.
   let sectionTitle: string | null = null;
   let sectionOpen = false;
+  let sectionLast: string | null = null;
   const pushLines = (...lines: string[]) => {
     if (sectionTitle === null) {
       linesBuf.push(...lines);
       return;
     }
     if (!sectionOpen) {
-      linesBuf.push(`${tnw}${th} ${sectionTitle}`);
+      linesBuf.push(`${tnw}[${sectionTitle}]`);
       sectionOpen = true;
     }
-    linesBuf.push(...lines.map((l) => `${tv} ${l}`));
+    // Hold the newest line back so the close can draw it with the corner.
+    for (const l of lines) {
+      if (sectionLast !== null) linesBuf.push(`${tv}  ${sectionLast}`);
+      sectionLast = l;
+    }
   };
   const flushIdLinesBuf = () => {
     const bufferedLen = idLinesBuf.length;
@@ -1146,9 +1151,10 @@ export function handleSessionGameEvents(s: Session, events: SessionGameEvent[]):
   };
   const closeSection = () => {
     flushIdLinesBuf();
-    if (sectionOpen) linesBuf.push(`${tsw}${th}`);
+    if (sectionLast !== null) linesBuf.push(`${tsw}${th} ${sectionLast}`);
     sectionTitle = null;
     sectionOpen = false;
+    sectionLast = null;
   };
   const flushLinesBuf = () => {
     flushIdLinesBuf();

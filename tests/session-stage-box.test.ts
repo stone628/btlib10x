@@ -19,10 +19,16 @@ function render(events: GameEvent[]): string[] {
 describe("attack-stage log boxes", () => {
   it("frames a stage's lines under its title", () => {
     const lines = render([stage("begin"), initiative, stage("weaponDone")]);
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toBe("┌[Weapon Attacks — turn 3]");
+    expect(lines[1]?.startsWith("└─ initiative")).toBe(true);
+  });
+
+  it("draws inner lines with │ and the last line with the corner", () => {
+    const lines = render([stage("begin"), initiative, initiative, stage("weaponDone")]);
     expect(lines).toHaveLength(3);
-    expect(lines[0]).toBe("┌─ Weapon Attacks — turn 3");
-    expect(lines[1]?.startsWith("│ ")).toBe(true);
-    expect(lines[2]).toBe("└─");
+    expect(lines[1]?.startsWith("│  initiative")).toBe(true);
+    expect(lines[2]?.startsWith("└─ initiative")).toBe(true);
   });
 
   it("renders nothing for an empty stage and closes on end", () => {
@@ -34,9 +40,9 @@ describe("attack-stage log boxes", () => {
       stage("end"),
       initiative,
     ]);
-    expect(lines[0]).toBe("┌─ Attack Aftermath — turn 3");
-    expect(lines[2]).toBe("└─");
-    expect(lines[3]?.startsWith("│")).toBe(false);
-    expect(lines).toHaveLength(4);
+    expect(lines[0]).toBe("┌[Attack Aftermath — turn 3]");
+    expect(lines[1]?.startsWith("└─ initiative")).toBe(true);
+    expect(lines[2]?.startsWith("initiative")).toBe(true);
+    expect(lines).toHaveLength(3);
   });
 });

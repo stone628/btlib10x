@@ -658,7 +658,7 @@ export const kr: Catalog = {
   "log.heatAmmoExplosion":
     "  {shots}회분 폭발, 총 {damage} 피해 발생({shots}회분 x 1회당 피해 {damagePerShot})",
   "log.pilotingCheck":
-    "[{id}] 조종 판정 {detail}: 좌표 ({hex})에서 필요 {target}=조종({base})+유발({trigger})+기존값({pre}), 2D6 = {roll} -> {verdict}",
+    "[{id}] 조종 판정 {detail}: 좌표 ({hex})에서 최소 {target} 필요 (조종 {base} + 유발 {trigger} + 기존값 {pre}), 2D6 = {roll} -> {verdict}",
   "log.psrSuccess": "성공",
   "log.psrFail": "실패",
   "log.psrAuto": "자동",
