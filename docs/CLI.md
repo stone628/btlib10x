@@ -424,7 +424,11 @@ simulate. See `docs/VISION.md` for direction and the will/won't lists.
   seatbelt), shut-down falls, and heat-soaked life support (destroyed slot +
   end-of-heat-phase heat 15+ → 1 point, 26+ → 2 points) injure the pilot;
   every point forces a consciousness roll (default pilot: 1→3+, 2→5+, 3→7+, 4→10+, 5→11+; the table scales to `pilotHitMax`)
-  taken before any simultaneous PSR. A failed roll knocks the pilot out:
+  taken before any simultaneous PSR, and rolls stop at the first failure
+  (TW p.42). Each damage source logs one `pilotDamaged` (all its points) and
+  at most one `consciousnessCheck` (every roll made, `cause`, and "failed
+  roll n of m"); the end-phase wake-up roll is a `consciousnessCheck` with
+  cause `recovery`. A failed roll knocks the pilot out:
   the unit cannot act and counts as immobile until it wakes in a later end
   phase; `pilotHitMax` (default 6) total hits kills the pilot and removes the unit
    (`removed = "pilotKilled"`, destroyed stays `"not"`), leaving a level-2

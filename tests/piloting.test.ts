@@ -870,6 +870,93 @@ describe("pilot damage", () => {
     );
   });
 
+  it("multi-hit damage emits one pilotDamaged and one consciousnessCheck", () => {
+    const state = hbkEnf();
+    const enf = requireUnit(state, "enf");
+    const events: GameEvent[] = [];
+    // TN 3 then 5: both pass.
+    applyPilotHits(state, enf, 2, "ammoExplosion", scriptedRng(2, 2, 3, 3), events);
+    expect(events).toEqual([
+      expect.objectContaining({ kind: "pilotDamaged", hits: 2, totalHits: 2, hpRemaining: 4 }),
+      expect.objectContaining({
+        kind: "consciousnessCheck",
+        cause: "ammoExplosion",
+        rolls: [
+          { roll: 4, target: 3, hits: 1 },
+          { roll: 6, target: 5, hits: 2 },
+        ],
+        required: 2,
+        failedAt: null,
+        success: true,
+        consciousBefore: true,
+      }),
+    ]);
+  });
+
+  it("a failed roll stops further rolls and reports n of m", () => {
+    const state = hbkEnf();
+    const enf = requireUnit(state, "enf");
+    const events: GameEvent[] = [];
+    // TN 3: 1+1 fails; the second point needs no roll.
+    applyPilotHits(state, enf, 2, "ammoExplosion", scriptedRng(1, 1), events);
+    expect(enf.pilotHits).toBe(2);
+    expect(enf.unconscious).toBe(true);
+    expect(events).toEqual([
+      expect.objectContaining({ kind: "pilotDamaged", hits: 2 }),
+      expect.objectContaining({
+        kind: "consciousnessCheck",
+        rolls: [{ roll: 2, target: 3, hits: 1 }],
+        required: 2,
+        failedAt: 1,
+        success: false,
+      }),
+    ]);
+  });
+
+  it("an already unconscious pilot takes damage without a check", () => {
+    const state = hbkEnf();
+    const enf = requireUnit(state, "enf");
+    applyPilotHits(state, enf, 1, "fall", scriptedRng(1, 1), []);
+    const events: GameEvent[] = [];
+    applyPilotHits(state, enf, 2, "ammoExplosion", scriptedRng(), events);
+    expect(events).toEqual([
+      expect.objectContaining({ kind: "pilotDamaged", hits: 2, totalHits: 3 }),
+    ]);
+  });
+
+  it("a killing point is applied without a roll and caps the hit count", () => {
+    const state = hbkEnf();
+    const enf = requireUnit(state, "enf");
+    applyPilotHits(state, enf, 5, "headHit", scriptedRng(2, 2, 3, 3, 4, 4, 5, 5, 6, 6), []);
+    const events: GameEvent[] = [];
+    applyPilotHits(state, enf, 2, "ammoExplosion", scriptedRng(), events);
+    expect(events[0]).toMatchObject({ kind: "pilotDamaged", hits: 1, totalHits: 6 });
+    expect(events.some((e) => e.kind === "consciousnessCheck")).toBe(false);
+    expect(enf.removed).toBe("pilotKilled");
+  });
+
+  it("the recovery roll carries cause 'recovery'", () => {
+    const state = hbkEnf();
+    const enf = requireUnit(state, "enf");
+    applyPilotHits(state, enf, 1, "fall", scriptedRng(1, 1), []);
+    state.turn += 1;
+    const events: GameEvent[] = [];
+    // TN 3 for 1 hit: 2+2 wakes the pilot.
+    resolveHeatPhase(state, scriptedRng(2, 2), events);
+    expect(enf.unconscious).toBe(false);
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: "consciousnessCheck",
+        unitId: "enf",
+        cause: "recovery",
+        rolls: [{ roll: 4, target: 3, hits: 1 }],
+        required: 1,
+        failedAt: null,
+        consciousBefore: false,
+      }),
+    );
+  });
+
   it("knockout skips the unit in the actor queue as immobile", () => {
     const state = hbkEnf();
     toMovement(state, scriptedRng(2, 2, 5, 5));
