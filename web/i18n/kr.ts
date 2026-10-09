@@ -151,6 +151,19 @@ export const kr: Catalog = {
     "독트린 플레이어: 설정 단계에서 유닛에 메크워리어 독트린을 지정하면 그 유닛의 차례를 대신 진행하고 판단 근거를 보여줍니다",
   "cmd.dp.arg.list": "인자 없음: 지정 현황, 독트린 목록, 추적 수준 표시",
   "cmd.dp.arg.assign": "편성 유닛에 독트린 지정, 'off'는 직접 조종 (설정 단계 전용)",
+  "cmd.dp.arg.setup":
+    "2명 또는 4명이 두 팀으로 나뉘는 무작위 독트린 대전 설정: 맵, 메크, 위치, 독트린을 무작위로 선택 (빈 설정에서만, 'seed'로 재현 가능)",
+  "dp.err.setupPhase": "'dp setup'은 설정 단계에서만 사용할 수 있습니다",
+  "dp.err.setupMapSet":
+    "'dp setup'은 빈 설정이 필요하지만 이미 맵 {map}이(가) 불러와져 있습니다. 먼저 'reset'하세요.",
+  "dp.err.setupRoster":
+    "'dp setup'은 빈 설정이 필요하지만 이미 유닛 {count}개가 추가되어 있습니다. 먼저 'reset'하세요.",
+  "dp.err.setupCatalog": "'dp setup': 카탈로그에 맵이나 메크가 없습니다",
+  "dp.err.setupNoRoom": "맵 {map}에 플레이어를 배치할 빈 헥스가 부족합니다",
+  "dp.setup.map": "맵 {name}: {w}x{h}",
+  "dp.setup.unit": "{id}: {model} 위치 ({col},{row}) 방향 {facing}, 팀 {team}, 독트린 {doctrine}",
+  "dp.setup.done":
+    "무작위 설정 완료: 플레이어 {players}명, 시드 {seed}. 'start'로 전투를 지켜보세요.",
   "cmd.dp.arg.go": "현재 프롬프트를 독트린 플레이어가 진행 (예: 'rollback' 이후)",
   "cmd.dp.arg.why": "유닛의 마지막 판단 다시 표시 (기본: 행동 중인 유닛)",
   "cmd.dp.arg.trace": "판단 근거 표시량: off, brief (상위 3개), full",
@@ -668,7 +681,7 @@ export const kr: Catalog = {
   "log.accidentalFallHit": "[{id}] {target} 위로 추락 ({tn}+ 필요, 굴림 {roll}): 피해 {damage}",
   "log.accidentalFallMiss": "[{id}] {target} 쪽으로 추락했으나 빗나감 ({tn}+ 필요, 굴림 {roll})",
   "log.unitDisplaced": "[{id}] ({fromCol},{fromRow})에서 ({toCol},{toRow})로 밀려남 (도미노 효과)",
-  "log.psrReason.ejection": "탈출(실패 시 조종사 부상)",
+  "log.psrReason.ejection": "탈출",
   "log.fallCause.failedPsr": "{reason} 판정 실패",
   "log.fallCause.legDestroyed": "다리 파괴",
   "log.fallCause.gyroDestroyed": "자이로 파괴",

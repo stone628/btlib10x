@@ -156,6 +156,20 @@ export const en = {
   "cmd.dp.arg.list": "no argument: list assignments, doctrines and the trace level",
   "cmd.dp.arg.assign":
     "assign a doctrine to a roster unit, or 'off' to play it by hand (setup only)",
+  "cmd.dp.arg.setup":
+    "random doctrine-vs-doctrine setup for 2 or 4 players, split evenly into two teams: random map, 'Mechs, hexes and doctrines (empty setup only; reproducible from 'seed')",
+  "dp.err.setupPhase": "'dp setup' works in the setup phase only",
+  "dp.err.setupMapSet":
+    "'dp setup' needs an empty setup, but map {map} is already loaded. 'reset' first.",
+  "dp.err.setupRoster":
+    "'dp setup' needs an empty setup, but {count} unit(s) are already added. 'reset' first.",
+  "dp.err.setupCatalog": "'dp setup' found no maps or 'Mechs in the catalog",
+  "dp.err.setupNoRoom": "map {map} has too few open hexes for the players",
+  "dp.setup.map": "map {name}: {w}x{h}",
+  "dp.setup.unit":
+    "{id}: {model} at ({col},{row}) facing {facing}, team {team}, doctrine {doctrine}",
+  "dp.setup.done":
+    "random setup ready: {players} players, seed {seed}. type 'start' to watch them fight.",
   "cmd.dp.arg.go": "let the doctrine player act at the current prompt (e.g. after 'rollback')",
   "cmd.dp.arg.why": "reprint a unit's last decision (default: the acting unit)",
   "cmd.dp.arg.trace": "how much reasoning to show: off, brief (top 3 options) or full",
@@ -685,7 +699,7 @@ export const en = {
   "log.accidentalFallMiss": "[{id}] falls toward {target} but misses (needs {tn}+, rolled {roll})",
   "log.unitDisplaced":
     "[{id}] is shoved from ({fromCol},{fromRow}) to ({toCol},{toRow}) (domino effect)",
-  "log.psrReason.ejection": "ejecting (failure injures the pilot)",
+  "log.psrReason.ejection": "ejecting",
   "log.fallCause.failedPsr": "failed {reason} PSR",
   "log.fallCause.legDestroyed": "leg destroyed",
   "log.fallCause.gyroDestroyed": "gyro destroyed",

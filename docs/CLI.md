@@ -55,7 +55,7 @@ Examples:
 | `info map <name>` | map info: width×height, terrain types and counts, elevation counts, ASCII map with terrain glyphs |
 | `reset` | wipe everything back to empty setup |
 | `ver` | show the built library version (`YYMMDD-<git hash>` stamp of the bundled commit) |
-| `dp` | doctrine player (see below): no argument lists assignments, doctrines and the trace level; `dp <id> <doctrine\|off>` assigns in setup only; `dp go` lets it act at the current prompt; `dp why [id]` reprints a unit's last decision; `dp trace off\|brief\|full` sets how much reasoning is shown |
+| `dp` | doctrine player (see below): no argument lists assignments, doctrines and the trace level; `dp <id> <doctrine\|off>` assigns in setup only; `dp setup 2\|4` builds a random doctrine-vs-doctrine setup (empty setup only); `dp go` lets it act at the current prompt; `dp why [id]` reprints a unit's last decision; `dp trace off\|brief\|full` sets how much reasoning is shown |
 | `autoplay` | hidden demo driver (not listed by `help`): resets nothing itself but expects a blank slate — run `reset` first. Prints a notice, then on a short timer (`AUTOPLAY_INTERVAL_MS` in `web/autoplay.ts`) types the next command a demonstrator would: loads `quickstart`, places HBK-4G vs CDA-3MA adjacent, starts, then walks in place and fires every working weapon each turn until victory. Any manually typed command cancels it; it prints `autoplay finished.` when the battle ends |
 
 ### setup
@@ -145,6 +145,16 @@ with a doctrine unit, the CLI plays it at once (no timer): it prints the
 reasoning, then types the commands, each echoed as `<prompt> > <command>` and run
 through the normal dispatch, so atomic commits, replay recording and rollback
 snapshots all apply. A failed command stops it and hands the prompt to the human.
+
+**Random setup.** `dp setup 2|4` fills an empty setup (no map, no units; otherwise it
+says which is already set and asks for `reset`) through the setup API directly
+(`setupSetMap` / `setupAddUnit`): a random catalog map, then per player a random catalog
+'Mech on a random dry, non-building hex with a random facing, and a random doctrine. It
+prints one line for the map and one per player (`A1: HBK-4G at (14,2) facing s, team 0,
+doctrine Jump Jockey`). Ids are `A1 B1 A2 B2`; teams alternate, so players split evenly
+into teams 0 and 1. Draws come from a stream salted off the setup seed
+(`web/doctrine.setup.ts`): the same `seed` gives the same setup, and the battle dice are
+untouched. Then `start` plays the whole bout.
 
 Doctrines (`web/doctrine.data.ts`): `alpha` (Alpha Striker), `longtom` (Long Tom),
 `jumpjockey` (Jump Jockey), `hulldown` (Hull-Down), `pitfighter` (Pit Fighter),
@@ -596,7 +606,8 @@ stated elsewhere in this document or the codebase:
     web/rng.ts          mulberry32-seeded Rng
     web/autoplay.ts    hidden `autoplay` demo driver
     web/doctrine*.ts   doctrine player (GDD §9): doctrine table, move/attack scoring,
-                         context + decide(), `dp` command + synchronous driver
+                         context + decide(), `dp` command + synchronous driver,
+                         `dp setup` random setup
     web/lookup.ts      tolerant (case-insensitive) catalog lookups
     web/table.ts       reference-table renderers (`table` command)
     web/misc.ts        shared label helpers (facing, posture, weapon category)
