@@ -468,7 +468,7 @@ export function applyAmmoExplosion(
       steps: [],
       newlyDestroyed: [],
       blownOffLimbs: [],
-      killed: false,
+      mechDestroyed: false,
     };
   }
   // Ammo explosions bypass armor at every location in the transfer chain
@@ -684,7 +684,7 @@ function detonateCritBlast(
 ): DamageApplication {
   const app = applyAmmoExplosion(state.damage, loc, amount, checkCASE(def, loc));
   state.damage = app.after;
-  if (app.killed) {
+  if (app.mechDestroyed) {
     state.killedReason =
       state.damage.internalStructure.head <= 0 ? "headDestroyed" : "centerTorsoDestroyed";
   }

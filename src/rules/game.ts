@@ -183,10 +183,15 @@ export type UnitSkillRange = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export interface UnitPolicy {
   /** Which ammo bin a shot is drawn from (see `src/rules/ammo.ts`). */
   ammoPolicy: AmmoPolicy;
+  /** Auto-eject system engaged (TO:AR p. 165; players may disable it per
+   *  'Mech before the battle). On: losing the head, or a center torso to an
+   *  ammo/weapon blast, ejects the pilot. Off: those kill the MechWarrior
+   *  (TW p. 128). */
+  autoEject: boolean;
 }
 
 /** Policy a unit gets when setup names none. */
-export const DEFAULT_UNIT_POLICY: Readonly<UnitPolicy> = { ammoPolicy: "exposed" };
+export const DEFAULT_UNIT_POLICY: Readonly<UnitPolicy> = { ammoPolicy: "exposed", autoEject: true };
 
 export interface UnitInit extends MechModelHolder {
   readonly id: string;
@@ -450,6 +455,8 @@ export interface UnitState extends MechModelHolder {
   ammoBins: AmmoBins;
   /** Which of a unit's ammo bins the next shot is drawn from. */
   ammoPolicy: AmmoPolicy;
+  /** Auto-eject system engaged (from `UnitPolicy.autoEject`). */
+  autoEject: boolean;
   jammedWeapons: number[];
   /** Weapon indices destroyed by a critical hit (in addition to destroyed
    *  locations, which the canFireFromLocation check already covers). */
@@ -1048,17 +1055,22 @@ export function wreckAt(state: BattleState, hex: HexCoord): WreckState | undefin
 
 /** Mark a unit as killed and removed, returning the paired events. The first
  *  kill wins: an already-removed unit (e.g. ejected or pilot-killed) is left
- *  untouched so the recorded reason stays the earliest cause. */
+ *  untouched so the recorded reason stays the earliest cause. `pilotDies`
+ *  marks a destruction the MechWarrior does not survive (TW p. 128: center
+ *  torso lost to an ammo/weapon blast with auto-eject off). */
 function markUnitDestroyed(
   state: BattleState,
   unit: UnitState,
   reason: DestroyedReason,
   rng: Rng,
   sink: GameEvent[],
+  pilotDies = false,
 ): void {
   if (isUnitRemoved(unit)) return;
-  // TO p.165: head destruction auto-ejects the pilot (cockpit crits still kill).
-  if (reason === "headDestroyed" || reason === "headBlownOff") {
+  const headLoss = reason === "headDestroyed" || reason === "headBlownOff";
+  // TO p.165: head destruction auto-ejects the pilot (cockpit crits still kill),
+  // brought one hit short of death so the ejection roll decides survival.
+  if (headLoss && unit.autoEject) {
     unit.pilotHits = Math.max(unit.pilotHits, unit.pilotHitMax - 1);
     // Keep the cause of the loss: the ejection itself only marks `removed`.
     unit.destroyed = reason;
@@ -1068,9 +1080,10 @@ function markUnitDestroyed(
   releaseClub(state, unit, "removed", sink);
   unit.destroyed = reason;
   unit.removed = "destroyed";
-  // TW p.128: the MechWarrior dies on loss of the cockpit; any other
-  // destruction (engine, center torso) leaves the pilot alive inside.
-  if (reason === "cockpitDestroyed") {
+  // TW p.128: the MechWarrior dies on loss of the head or cockpit (head loss
+  // only reaches here with auto-eject off) or a CT lost to a blast without
+  // auto-eject; any other destruction (engine, CT) leaves the pilot alive.
+  if (reason === "cockpitDestroyed" || headLoss || pilotDies) {
     unit.pilotHits = Math.max(unit.pilotHits, unit.pilotHitMax);
   }
   sink.push({
@@ -1167,6 +1180,7 @@ export function createBattle(
       damage,
       ammoBins,
       ammoPolicy: init.policy.ammoPolicy,
+      autoEject: init.policy.autoEject,
       jammedWeapons: [],
       critSlotsDestroyed: start.critSlotsDestroyed,
       destroyedWeapons: start.destroyedWeapons,
@@ -1453,23 +1467,27 @@ function blastApplication(row: CriticalEffect): DamageApplication | undefined {
   return undefined;
 }
 
-/** Auto-eject (Tactical Operations): an ammo/weapon explosion that destroys
- *  the center torso (directly or via transfer) ejects the pilot before the
- *  damage resolves. The ejection PSR may still injure the pilot; the blast's own
- *  pilot hits are applied by the caller afterwards. Any other destruction
- *  leaves the pilot inside the 'Mech. Returns true when the pilot ejected. */
-function autoEjectOnCenterTorsoBlast(
+/** An ammo/weapon explosion (TW p. 98: weapon blasts are handled like ammo)
+ *  that destroys the center torso, directly or via transfer. With auto-eject
+ *  on (TO:AR p. 165) the pilot ejects before the damage resolves; the ejection
+ *  PSR may still injure the pilot, and the blast's own pilot hits are applied
+ *  by the caller afterwards. With auto-eject off the MechWarrior dies with the
+ *  'Mech (TW p. 128). Any other destruction leaves the pilot inside the 'Mech. */
+function resolveCenterTorsoBlast(
   state: BattleState,
   unit: UnitState,
   applications: readonly (DamageApplication | undefined)[],
   rng: Rng,
   sink: GameEvent[],
-): boolean {
-  if (isUnitRemoved(unit)) return false;
-  if (!applications.some((a) => a?.newlyDestroyed.includes("centerTorso"))) return false;
+): void {
+  if (isUnitRemoved(unit)) return;
+  if (!applications.some((a) => a?.newlyDestroyed.includes("centerTorso"))) return;
+  if (!unit.autoEject) {
+    markUnitDestroyed(state, unit, "centerTorsoDestroyed", rng, sink, true);
+    return;
+  }
   unit.destroyed = "centerTorsoDestroyed";
   resolveEjection(state, unit, rng, sink, "auto");
-  return true;
 }
 
 /** True when the pilot ejected because the head was destroyed: the blow that
@@ -3009,7 +3027,7 @@ function applyDamageGroups(
         unit.destroyedWeapons = res.destroyedWeapons;
         unit.ammoBins = res.ammoBins;
         unit.damage = res.damage;
-        autoEjectOnCenterTorsoBlast(state, unit, res.rows.map(blastApplication), rng, sink);
+        resolveCenterTorsoBlast(state, unit, res.rows.map(blastApplication), rng, sink);
         for (const row of res.rows) {
           if (isCritBlastRow(row)) applyPilotHits(state, unit, 2, "ammoExplosion", rng, sink);
         }
@@ -3384,7 +3402,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         const sheared: LimbLocation[] = [];
         const steps: DamageTransferStep[] = [];
         const newlyDestroyed: Location[] = [];
-        let killed = false;
+        let mechDestroyed = false;
         for (const group of resolution.groups) {
           // Apply each hit group with the attack's arc (determines armor pool)
           const app = applyDamage(currentDamage, group.location, group.damage, resolution.arc);
@@ -3392,7 +3410,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
           sheared.push(...app.blownOffLimbs);
           steps.push(...app.steps);
           newlyDestroyed.push(...app.newlyDestroyed);
-          killed ||= app.killed;
+          mechDestroyed ||= app.mechDestroyed;
         }
         targetDamageMap[targetId] = currentDamage;
         recordSeveredLimbs(state, target, sheared);
@@ -3412,7 +3430,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
             steps,
             newlyDestroyed,
             blownOffLimbs: [...sheared, ...critLimbs],
-            killed: killed || resolution.application.killed,
+            mechDestroyed: mechDestroyed || resolution.application.mechDestroyed,
           },
         };
       }
@@ -3667,13 +3685,14 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     }
   }
 
-  // Auto-eject (TO): a blast that destroyed the center torso ejects the pilot
-  // before the unit is marked destroyed, so the 'Mech leaves play as ejected.
+  // A blast that destroyed the center torso: auto-eject (TO) ejects the pilot
+  // before the unit is marked destroyed, so the 'Mech leaves play as ejected;
+  // with auto-eject off the MechWarrior dies with it (TW p. 128).
   for (const result of results) {
     for (const { targetId, resolution } of result.resolutions) {
       if (!resolution.hit) continue;
       const target = requireUnit(state, targetId);
-      autoEjectOnCenterTorsoBlast(
+      resolveCenterTorsoBlast(
         state,
         target,
         resolution.crits.flatMap((c) => c.rows.map(blastApplication)),
@@ -4105,7 +4124,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
                   steps: [...targetApplication.steps, ...app.steps],
                   newlyDestroyed: [...targetApplication.newlyDestroyed, ...app.newlyDestroyed],
                   blownOffLimbs: [...targetApplication.blownOffLimbs, ...app.blownOffLimbs],
-                  killed: targetApplication.killed || app.killed,
+                  mechDestroyed: targetApplication.mechDestroyed || app.mechDestroyed,
                 };
           sheared.push(...app.blownOffLimbs);
 
@@ -4167,7 +4186,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
                   steps: [...attackerApplication.steps, ...app.steps],
                   newlyDestroyed: [...attackerApplication.newlyDestroyed, ...app.newlyDestroyed],
                   blownOffLimbs: [...attackerApplication.blownOffLimbs, ...app.blownOffLimbs],
-                  killed: attackerApplication.killed || app.killed,
+                  mechDestroyed: attackerApplication.mechDestroyed || app.mechDestroyed,
                 };
         }
       }
@@ -4279,7 +4298,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   // like the weapon path (PHY-08); pilot hits land with the phase's damage.
   for (const unit of Object.values(state.units)) {
     const crits = physicalAttackCrits[unit.id] ?? [];
-    autoEjectOnCenterTorsoBlast(
+    resolveCenterTorsoBlast(
       state,
       unit,
       crits.flatMap((c) => c.rows.map(blastApplication)),
@@ -4712,7 +4731,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
               crits: heatCrits,
             });
             const chained = heatCrits.flatMap((c) => c.rows.filter(isCritBlastRow));
-            autoEjectOnCenterTorsoBlast(
+            resolveCenterTorsoBlast(
               state,
               unit,
               [application, ...chained.map(blastApplication)],

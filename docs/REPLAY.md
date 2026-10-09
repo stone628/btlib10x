@@ -67,7 +67,7 @@ E<idx><hits>[:<armor>[:<crit>[:<ammo>]]]    final state per unit, idx order
 | armor | damage **taken** per location vs model default, see below |
 | crit | destroyed crit slots: `<loc><slot>` repeated (`a3a4` = right arm slots 3, 4) |
 | ammo | shots **used**: `<loc><slot><n>` repeated (`L13L22` = LT slot 1 used 3, LT slot 2 used 2); `n` is decimal, runs to the next letter |
-| policy | this unit's ammo policy, one char: `e` exposed / `c` core / `s` spread / `l` leastFirst. Omit the field when it is the default (`e`) |
+| policy | this unit's ammo policy, one char: `e` exposed / `c` core / `s` spread / `l` leastFirst, followed by `x` when auto-eject is off (`set <id> autoEject off`). Omit the field when both are the default (`e`, auto-eject on) |
 
 Index = registration order (first `U` is `0`). Ammo policy is **setup-only** (`UnitInit.policy`, edited with `set <id> ammoPolicy <policy>`); the
 attack phase has no ammo command or policy item. `set`/`rm` edits made during setup are not

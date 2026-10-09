@@ -72,9 +72,9 @@ export const en = {
   "cmd.set.help": "edit a property on a unit already on the roster",
   "cmd.set.arg.id": "unit id to modify",
   "cmd.set.arg.prop":
-    "property name: model, team, col, row, facing, gunnery, piloting, pilotHitMax, ammoPolicy",
+    "property name: model, team, col, row, facing, gunnery, piloting, pilotHitMax, ammoPolicy, autoEject",
   "cmd.set.arg.value":
-    "new value (integer for numeric props, 'Mech key for model, facing word for facing, exposed|core|spread|least-first for ammoPolicy)",
+    "new value (integer for numeric props, 'Mech key for model, facing word for facing, exposed|core|spread|least-first for ammoPolicy, on|off for autoEject)",
   "cmd.rm.help": "remove a placed unit",
   "cmd.rm.arg.id": "id of a previously added unit",
   "cmd.statusSetup.help": "setup summary: units grouped by team, selected map",
@@ -363,6 +363,7 @@ export const en = {
   "err.resetConfirm": "a battle is in progress; type 'reset !' to discard it",
   "err.seedInteger": "seed must be an integer from 0 to 4294967295",
   "err.badAmmoPolicy": "ammo policy must be one of exposed|core|spread|least-first",
+  "err.badAutoEject": "autoEject must be on or off",
   "err.phaseDriver": "phase driver failed to settle",
   "err.twist.badDirection": "torso direction must be front, left, or right",
   "err.twist.locked": "torso twist is locked once a fire command is queued; cancel first",
@@ -395,7 +396,7 @@ export const en = {
   "setup.mapNone": "(none)",
   "setup.teamHeader": "team {team}:",
   "setup.unitLine":
-    "  {id}  {model} ({name}) gunnery {gunnery} piloting {piloting} hits {hitMax} ammo {ammo} @ {pos} facing {facing}",
+    "  {id}  {model} ({name}) gunnery {gunnery} piloting {piloting} hits {hitMax} ammo {ammo} auto-eject {eject} @ {pos} facing {facing}",
   "setup.noUnits": "(no units placed)",
 
   // movement status
@@ -781,7 +782,7 @@ export const en = {
   "res.hits": "hits: {groups} ({arc})",
   "res.limbBlownOff": "; {cause} destroyed -> {limb} blown off",
   "res.immobilized": "; immobilized",
-  "res.killed": "; killed",
+  "res.mechDestroyed": "; 'Mech destroyed",
   "res.destroyedTail": "; destroyed {locs}",
 
   // critical hit table

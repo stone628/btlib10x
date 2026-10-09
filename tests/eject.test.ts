@@ -332,6 +332,16 @@ describe("auto-eject on head destruction (TO p.165)", () => {
     expect(hbk.pilotHits).toBe(3);
   });
 
+  it("with auto-eject off the head loss kills the MechWarrior (TW p.128)", () => {
+    const { hbk, events } = sweepHeadLoss(0, {
+      policy: { ammoPolicy: "exposed", autoEject: false },
+    });
+    expect(hbk.removed).toBe("destroyed");
+    expect(hbk.destroyed).toBe("headDestroyed");
+    expect(hbk.pilotHits).toBe(hbk.pilotHitMax);
+    expect(events.some((e) => e.kind === "pilotingCheck" && e.reason === "ejection")).toBe(false);
+  });
+
   it("rolls the ejection PSR with head damage +3, auto +1, clear landing -2", () => {
     const { events } = sweepHeadLoss(0);
     const psr = events.find((e) => e.kind === "pilotingCheck" && e.reason === "ejection");

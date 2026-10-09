@@ -1095,7 +1095,7 @@ export function blastDetail(app: DamageApplication): string | null {
     });
   }
   if (isUnitImmobile(app.after) && !wasImmobile) text += i18n("res.immobilized");
-  if (app.killed && !wasDestroyed) text += i18n("res.killed");
+  if (app.mechDestroyed && !wasDestroyed) text += i18n("res.mechDestroyed");
   return text;
 }
 

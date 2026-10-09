@@ -823,7 +823,7 @@ describe("CASE", () => {
     expect(app.after.internalStructure.centerTorso).toBe(0);
     expect(app.after.internalStructure.leftTorso).toBe(ltBefore);
     expect(app.after.internalStructure.rightTorso).toBe(rtBefore);
-    expect(app.killed).toBe(true);
+    expect(app.mechDestroyed).toBe(true);
   });
 
   it("CASE: explosion vents at the side torso, center torso untouched", () => {
@@ -834,7 +834,7 @@ describe("CASE", () => {
     const app = applyAmmoExplosion(s, "leftTorso", 1000, "case");
     expect(app.after.internalStructure.leftTorso).toBe(0);
     expect(app.after.internalStructure.centerTorso).toBe(ctBefore);
-    expect(app.killed).toBe(false);
+    expect(app.mechDestroyed).toBe(false);
   });
 
   it("no CASE: explosion transfers inward to the center torso as normal", () => {
@@ -855,7 +855,7 @@ describe("CASE", () => {
     const app = applyAmmoExplosion(s, "leftTorso", 1000, "case");
     expect(app.blownOffLimbs).toContain("leftArm");
     expect(app.after.internalStructure.leftArm).toBe(0);
-    expect(app.killed).toBe(false);
+    expect(app.mechDestroyed).toBe(false);
     expect(app.after.internalStructure.centerTorso).toBeGreaterThan(0);
   });
 

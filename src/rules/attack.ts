@@ -381,7 +381,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
             steps: [...application.steps, ...app.steps],
             newlyDestroyed: [...application.newlyDestroyed, ...app.newlyDestroyed],
             blownOffLimbs: [...application.blownOffLimbs, ...app.blownOffLimbs],
-            killed: application.killed || app.killed,
+            mechDestroyed: application.mechDestroyed || app.mechDestroyed,
           };
 
     if (!critStateAvailable || !input.targetDef) continue;
@@ -424,7 +424,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
           ...application,
           after: res.damage,
           blownOffLimbs: mergeUniqueLimb(application.blownOffLimbs, res.blownOffLimbs),
-          killed: application.killed || res.killedReason !== null,
+          mechDestroyed: application.mechDestroyed || res.killedReason !== null,
         };
       }
       base.crits.push(res);
