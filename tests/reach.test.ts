@@ -111,6 +111,14 @@ describe("reachableLandings", () => {
     }
   });
 
+  it("jump never lists the starting hex: in-place reorientation is not a jump (TW p.53)", () => {
+    const rs = reach("jump", 6, 8, 3);
+    expect(rs.filter((l) => l.hex.col === start.col && l.hex.row === start.row)).toEqual([]);
+    // Ground modes still offer in-place turns at the starting hex.
+    const walk = reach("walk", 6, 8, 3);
+    expect(fragments(lookup(walk, start, "ne"))).toEqual(["R"]);
+  });
+
   it("passes through a friendly-occupied hex but does not land on it", () => {
     const occupantTeam = (hex: { col: number; row: number }): number | undefined =>
       hex.col === 12 && hex.row === 11 ? 0 : undefined;
