@@ -187,12 +187,12 @@ export interface ReachabilityOptions {
  * run never moves backward. Prone turn (walk+prone) allows only R/L turns
  * (1 MP each, multiple turns within budget), no hex enters. Jump charges
  * 1 MP per J step forward (backward steps stay B) and treats R/L as free
- * reorientations (landing facing chosen freely). Jump needs >= 1 hex enter;
- * zero-hex jump declarations are rejected at commit.
+ * reorientations (landing facing chosen freely). Jump needs >= 1 hex enter, so
+ * jump mode never lists the starting hex (commit rejects zero-hex jumps too).
  *
- * The starting hex is included: the initial state has an empty path, and every
- * facing reachable from it by pure turns (free for jump, paid for ground)
- * appears as its own entry.
+ * Ground modes include the starting hex: the initial state has an empty path,
+ * and every facing reachable from it by pure (paid) turns appears as its own
+ * entry.
  */
 export function reachableLandings(
   start: HexCoord,
@@ -392,8 +392,9 @@ export function reachableLandings(
     const hexKeyStr = key.slice(0, sep);
     const hex = parseHexKey(hexKeyStr);
     if (!canLand(hex)) continue;
-    // A jump follows a shortest path to its landing hex (TW p.53).
-    if (jumping && cost !== hexDistance(start, hex)) continue;
+    // A jump follows a shortest path to its landing hex and must leave the
+    // starting hex (TW p.53): in-place reorientation is not a jump.
+    if (jumping && (hexDistance(start, hex) === 0 || cost !== hexDistance(start, hex))) continue;
     const facing = key.slice(sep + 1) as Facing;
     results.push({ hex, facing, path: bestPath.get(key) ?? [] });
   }

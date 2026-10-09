@@ -2,7 +2,9 @@ import { suggestFireTargets } from "btlib10x";
 import { describe, expect, it } from "vitest";
 import { decide } from "../web/doctrine";
 import { scoreAttacks } from "../web/doctrine.attack";
+import { rangeProfile } from "../web/doctrine.common";
 import { DOCTRINES } from "../web/doctrine.data";
+import { scoreMoves } from "../web/doctrine.move";
 import { newSession, type Session } from "../web/session";
 import { execute } from "./helpers";
 
@@ -96,6 +98,47 @@ describe("doctrine player: decisions", () => {
     const replayed = execute(s, "dp go").join("\n");
     expect(replayed).toMatch(/\[foe/);
     expect(s.doctrine.lastTrace.foe?.commands).toEqual(trace?.commands);
+  });
+});
+
+describe("doctrine player: jump", () => {
+  it("never jumps back into its own hex (TW p. 53: a jump must leave the hex)", () => {
+    for (const seed of [1, 2, 3, 5, 8]) {
+      for (const key of ["jumpjockey", "gladiator", "longtom"] as const) {
+        const s = setup(seed, key);
+        execute(s, "dp trace off");
+        execute(s, "start");
+        for (let i = 0; i < 20 && s.state === "battle"; i++) {
+          const foe = s.battle!.units.foe!;
+          if (s.battle!.phase === "movement" && foe.position !== undefined) {
+            const candidates = scoreMoves({
+              battle: s.battle!,
+              actor: foe,
+              target: s.battle!.units.me!,
+              doctrine: DOCTRINES[key],
+              profile: rangeProfile(foe, DOCTRINES[key].range),
+              heatCeiling: DOCTRINES[key].heatCeiling,
+            });
+            const inPlace = candidates.filter(
+              (c) =>
+                c.commands[0] === "mode jump" &&
+                c.commands[1] ===
+                  `place ${foe.position.col} ${foe.position.row} ${c.label.split(" ").at(-1)}`,
+            );
+            expect(inPlace).toEqual([]);
+          }
+          const from = { ...foe.position };
+          const t = s.doctrine.lastTrace.foe;
+          pass(s);
+          const played = s.doctrine.lastTrace.foe;
+          if (played !== t && played?.commands.includes("mode jump")) {
+            expect(played.commands).not.toContain(
+              expect.stringMatching(new RegExp(`^place ${from.col} ${from.row} `)),
+            );
+          }
+        }
+      }
+    }
   });
 });
 
