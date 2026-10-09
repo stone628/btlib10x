@@ -512,6 +512,9 @@ export interface UnitState extends MechModelHolder {
   removed: RemovedState;
 }
 
+/** Attack-phase resolution boundaries, in order. */
+export type AttackPhaseStage = "begin" | "weaponDone" | "physicalDone" | "end";
+
 export type GameEvent =
   | {
       readonly kind: "phase";
@@ -544,6 +547,16 @@ export type GameEvent =
       readonly weapons: readonly DeclaredWeaponVolley[];
       /** Declared physical attacks (possibly empty). */
       readonly physical: readonly DeclaredPhysicalAttack[];
+    }
+  | {
+      /** Attack-phase resolution boundaries: weapon pass begin..weaponDone
+       *  (incl. its pilot hits and PSR sweep), physical pass
+       *  weaponDone..physicalDone, then physicalDone..end = physical pilot
+       *  hits + PSR sweep + heat resolution. `end` lands right before the
+       *  attack -> end `phase` event. */
+      readonly kind: "attackPhaseStage";
+      readonly stage: AttackPhaseStage;
+      readonly turn: number;
     }
   | {
       readonly kind: "attackResolved";
@@ -3346,6 +3359,7 @@ export function resolvePhasePiloting(
  */
 export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[]): void {
   requirePhase(state, "attack");
+  sink.push({ kind: "attackPhaseStage", stage: "begin", turn: state.turn });
 
   // Phase 1: collect resolutions for ALL units with declared attacks
   // (ignore `removed` flag — TW simultaneity means even destroyed units fire)
@@ -3813,6 +3827,8 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     };
     postWeaponCrit[unit.id] = cloneCritTable(unit.critSlotsDestroyed);
   }
+
+  sink.push({ kind: "attackPhaseStage", stage: "weaponDone", turn: state.turn });
 
   // Sub-pass 2: Physical attacks (TW p. 37: physical attacks resolve after weapon attacks)
   // Collect physical attack crits per target for destruction sweep
@@ -4356,6 +4372,8 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage, physCrits), rng, sink);
     }
   }
+  sink.push({ kind: "attackPhaseStage", stage: "physicalDone", turn: state.turn });
+
   // Pilot hits and their consciousness rolls take effect at the end of the
   // phase, after every declared physical attack has resolved (TW p.38).
   for (const { unit, hits, reason } of pendingPilotHits) {
@@ -4428,6 +4446,7 @@ export function* advancePhaseGen(state: BattleState, rng: Rng): Generator<GameEv
       // The end phase starts with heat resolution: engine crit heat,
       // shutdown/restart checks, heat ammo explosions, then dissipation.
       resolveHeatPhase(state, rng, sink);
+      sink.push({ kind: "attackPhaseStage", stage: "end", turn: state.turn });
       yield* sink;
       state.phase = "end";
       break;

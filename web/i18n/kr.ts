@@ -701,6 +701,9 @@ export const kr: Catalog = {
   "log.pilotHitReason.fall": "낙하",
   "log.pilotHitReason.shutdownFall": "낙하, 판정 없음 (정지 또는 의식불명)",
   "log.pilotHitReason.lifeSupport": "생명유지장치 손상 상태의 발열",
+  "log.stage.weapon": "사격 공격 — 턴 {turn}",
+  "log.stage.physical": "격투 공격 — 턴 {turn}",
+  "log.stage.aftermath": "공격 후속 처리 — 턴 {turn}",
   "log.consciousnessCause.recovery": "회복 판정",
   "log.pilotDamagedOne": "[{id}] 조종사 피해 1점 ({reason}) — 누적 {total}점",
   "log.pilotDamagedOther": "[{id}] 조종사 피해 {hits}점 ({reason}) — 누적 {total}점",
@@ -715,8 +718,6 @@ export const kr: Catalog = {
   "log.buildingCrash": "[{id}] 건물 {hex}에 충돌: {groups} (합계 {damage})",
 
   // attack resolution
-  "res.attackResolutionStart": "=== 선언된 공격 피해 판정 시작 ===",
-  "res.attackResolutionEnd": "=== 공격 피해 판정 완료 ===",
   "res.outOfRange": "사거리 밖",
   "res.outOfRangeLine": "{weapon} (사거리 {distance}): 사거리 밖",
   "res.needAuto": "자동",

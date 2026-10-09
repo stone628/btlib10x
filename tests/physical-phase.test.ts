@@ -255,3 +255,43 @@ describe("per-sub-phase 20-point accounting", () => {
     expect(enf.prone).toBe(false);
   });
 });
+
+describe("attackPhaseStage markers", () => {
+  it("bracket the weapon pass, the physical pass, and the aftermath through heat", () => {
+    const state = faceToFace();
+    toAttack(state);
+    declareAttacks(state, "enf", [], [{ type: "punch", targetId: "hbk", limb: "rightArm" }], []);
+    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []);
+    const events: GameEvent[] = [];
+    resolveAllAttacks(state, HIGH_RNG, events);
+    advancePhase(state, events, HIGH_RNG);
+
+    const stageIdx = (stage: string) =>
+      events.findIndex((e) => e.kind === "attackPhaseStage" && e.stage === stage);
+    const [begin, weaponDone, physicalDone, end] = [
+      stageIdx("begin"),
+      stageIdx("weaponDone"),
+      stageIdx("physicalDone"),
+      stageIdx("end"),
+    ];
+    expect(begin).toBe(0);
+    expect(weaponDone).toBeGreaterThan(begin);
+    expect(physicalDone).toBeGreaterThan(weaponDone);
+    expect(end).toBeGreaterThan(physicalDone);
+    for (const e of events) {
+      if (e.kind === "attackPhaseStage") expect(e.turn).toBe(state.turn);
+    }
+
+    const kindIdx = (kind: GameEvent["kind"]) => events.findIndex((e) => e.kind === kind);
+    const shot = kindIdx("attackResolved");
+    expect(shot).toBeGreaterThan(begin);
+    expect(shot).toBeLessThan(weaponDone);
+    const melee = kindIdx("physicalAttackResolved");
+    expect(melee).toBeGreaterThan(weaponDone);
+    expect(melee).toBeLessThan(physicalDone);
+    const heat = kindIdx("heatDissipated");
+    expect(heat).toBeGreaterThan(physicalDone);
+    expect(heat).toBeLessThan(end);
+    expect(events[end + 1]).toMatchObject({ kind: "phase", prevPhase: "attack", phase: "end" });
+  });
+});

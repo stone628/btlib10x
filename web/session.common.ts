@@ -3,6 +3,7 @@ import {
   AMMO_EXPLOSION_START_HEAT,
   type AmmoBins,
   type AmmoPolicy,
+  type AttackPhaseStage,
   actorQueue,
   ammoBinId,
   ammoExplosionAvoid,
@@ -1101,9 +1102,24 @@ export function handleSessionGameEvents(s: Session, events: SessionGameEvent[]):
   const result: Chunk[] = [];
   const linesBuf: string[] = [];
   const idLinesBuf: string[] = [];
-  const { tnw, tsw, tv } = GRID_THEME.LIGHT;
+  const { tnw, tsw, tv, th } = GRID_THEME.LIGHT;
   let lastBoxKey: string = "";
   let indentLen: number = 0;
+  // Titled section frame (attack-resolution stages). The header is written
+  // lazily on the first line, so an empty section renders nothing.
+  let sectionTitle: string | null = null;
+  let sectionOpen = false;
+  const pushLines = (...lines: string[]) => {
+    if (sectionTitle === null) {
+      linesBuf.push(...lines);
+      return;
+    }
+    if (!sectionOpen) {
+      linesBuf.push(`${tnw}${th} ${sectionTitle}`);
+      sectionOpen = true;
+    }
+    linesBuf.push(...lines.map((l) => `${tv} ${l}`));
+  };
   const flushIdLinesBuf = () => {
     const bufferedLen = idLinesBuf.length;
     if (bufferedLen > 0) {
@@ -1111,22 +1127,28 @@ export function handleSessionGameEvents(s: Session, events: SessionGameEvent[]):
       const blank = " ".repeat(prefixLen);
       const firstLine = idLinesBuf[0]!;
       if (bufferedLen === 1) {
-        linesBuf.push(`${lastBoxKey} ${firstLine}`);
+        pushLines(`${lastBoxKey} ${firstLine}`);
       } else {
         if (indentLen > 0) {
-          linesBuf.push(lastBoxKey, `${blank}${tnw} ${firstLine}`);
+          pushLines(lastBoxKey, `${blank}${tnw} ${firstLine}`);
         } else {
-          linesBuf.push(`${lastBoxKey}${tnw} ${firstLine}`);
+          pushLines(`${lastBoxKey}${tnw} ${firstLine}`);
         }
         for (let i = 1; i < bufferedLen - 1; i++) {
-          linesBuf.push(`${blank}${tv} ${idLinesBuf[i]!}`);
+          pushLines(`${blank}${tv} ${idLinesBuf[i]!}`);
         }
-        linesBuf.push(`${blank}${tsw} ${idLinesBuf[bufferedLen - 1]!}`);
+        pushLines(`${blank}${tsw} ${idLinesBuf[bufferedLen - 1]!}`);
       }
       idLinesBuf.length = 0;
     }
     lastBoxKey = "";
     indentLen = 0;
+  };
+  const closeSection = () => {
+    flushIdLinesBuf();
+    if (sectionOpen) linesBuf.push(`${tsw}${th}`);
+    sectionTitle = null;
+    sectionOpen = false;
   };
   const flushLinesBuf = () => {
     flushIdLinesBuf();
@@ -1138,7 +1160,7 @@ export function handleSessionGameEvents(s: Session, events: SessionGameEvent[]):
   const lines = (...lines: string[]) => {
     if (lines.length === 0) return;
     flushIdLinesBuf();
-    linesBuf.push(...lines);
+    pushLines(...lines);
   };
   const idLines = (id: string, ...lines: string[]) => {
     if (lines.length === 0) return;
@@ -1171,10 +1193,18 @@ export function handleSessionGameEvents(s: Session, events: SessionGameEvent[]):
     );
   };
   const chunks = (...chunks: Chunk[]) => {
+    closeSection();
     flushLinesBuf();
     result.push(...chunks);
   };
-  for (const e of events) handleSessionGameEvent(s, e, { lines, idLines, pairLines, chunks });
+  const section = (title: string | null) => {
+    closeSection();
+    sectionTitle = title;
+  };
+  for (const e of events) {
+    handleSessionGameEvent(s, e, { lines, idLines, pairLines, chunks, section });
+  }
+  closeSection();
   flushLinesBuf();
   return result;
 }
@@ -1201,6 +1231,13 @@ function consciousnessRollsText(rolls: readonly ConsciousnessRoll[]): string {
     .join(", ");
 }
 
+/** Box title for the section each stage marker opens (`end` closes). */
+const ATTACK_STAGE_TITLE_KEY: Readonly<Record<Exclude<AttackPhaseStage, "end">, MessageKey>> = {
+  begin: "log.stage.weapon",
+  weaponDone: "log.stage.physical",
+  physicalDone: "log.stage.aftermath",
+};
+
 const PHASE_NAME_KEY: Readonly<Record<Phase, MessageKey>> = {
   initiative: "log.phaseName.initiative",
   movement: "log.phaseName.movement",
@@ -1213,6 +1250,8 @@ interface OutputHandlers {
   readonly idLines: (id: string, ...lines: string[]) => void;
   readonly pairLines: (from: string, to: string, ...lines: string[]) => void;
   readonly chunks: (...chunks: Chunk[]) => void;
+  /** Open a titled section frame (closing any open one), or close it with null. */
+  readonly section: (title: string | null) => void;
 }
 
 function handleSessionGameEvent(s: Session, e: SessionGameEvent, out: OutputHandlers): void {
@@ -1284,6 +1323,11 @@ function handleSessionGameEvent(s: Session, e: SessionGameEvent, out: OutputHand
       }
       break;
     }
+    case "attackPhaseStage":
+      out.section(
+        e.stage === "end" ? null : i18n(ATTACK_STAGE_TITLE_KEY[e.stage], { turn: e.turn }),
+      );
+      break;
     case "attackResolved":
       out.pairLines(e.unitId, e.targetId, ...resolutionLines(e.resolution));
       break;
@@ -1712,14 +1756,8 @@ function handleSessionGameEvent(s: Session, e: SessionGameEvent, out: OutputHand
       }
       break;
     case "sessionPhase":
-      if (e.phase === "weaponAttackResolution") {
-        out.lines(i18n("res.attackResolutionStart"));
-      }
-      break;
     case "sessionPhaseDone":
-      if (e.phase === "weaponAttackResolution") {
-        out.lines(i18n("res.attackResolutionEnd"));
-      }
+      // Attack resolution is framed by the engine's `attackPhaseStage` boxes.
       break;
     case "doctrineDecision":
       if (e.targetId !== null) out.pairLines(e.actorId, e.targetId, ...e.lines);

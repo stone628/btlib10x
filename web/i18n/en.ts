@@ -719,6 +719,9 @@ export const en = {
   "log.pilotHitReason.fall": "fall",
   "log.pilotHitReason.shutdownFall": "fall, no roll (shut down or unconscious)",
   "log.pilotHitReason.lifeSupport": "heat with damaged life support",
+  "log.stage.weapon": "Weapon Attacks — turn {turn}",
+  "log.stage.physical": "Physical Attacks — turn {turn}",
+  "log.stage.aftermath": "Attack Aftermath — turn {turn}",
   "log.consciousnessCause.recovery": "recovery",
   "log.pilotDamagedOne": "[{id}] pilot takes a hit ({reason}) — {total} total",
   "log.pilotDamagedOther": "[{id}] pilot takes {hits} hits ({reason}) — {total} total",
@@ -735,8 +738,6 @@ export const en = {
   "log.buildingCrash": "[{id}] crashes into building at {hex}: {groups} ({damage} total)",
 
   // attack resolution
-  "res.attackResolutionStart": "=== resolving declared attacks ===",
-  "res.attackResolutionEnd": "=== attack damage resolved ===",
   "res.outOfRange": "out of range",
   "res.outOfRangeLine": "{weapon} (range {distance}): out of range",
   "res.needAuto": "auto",
