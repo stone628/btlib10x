@@ -1709,6 +1709,10 @@ function handleSessionGameEvent(s: Session, e: SessionGameEvent, out: OutputHand
         out.lines(i18n("res.attackResolutionEnd"));
       }
       break;
+    case "doctrineDecision":
+      if (e.targetId !== null) out.pairLines(e.actorId, e.targetId, ...e.lines);
+      else out.idLines(e.actorId, ...e.lines);
+      break;
     case "sessionOver": {
       out.chunks(victoryBannerChunk(s));
       const replay = replayChunk(s);

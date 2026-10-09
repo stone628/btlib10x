@@ -85,7 +85,7 @@ export type {
   WeaponMount,
   WeightClass,
 } from "./data/mech.schema";
-export type { TerrainDef } from "./data/terrain.schema";
+export { type TerrainDef, terrainDef } from "./data/terrain.schema";
 export type { WeaponCategory, WeaponDef, WeaponNameHolder } from "./data/weapon.schema";
 export { allWeaponDefs, listWeaponNames, weaponDefFor } from "./data/weapon.schema";
 export type { ArmActuatorCounts } from "./rules/actuators";
@@ -105,7 +105,7 @@ export {
   weaponCanFireIntoArc,
 } from "./rules/arcs";
 export type { AttackResolution, HitGroup, WeaponAttackInput } from "./rules/attack";
-export { CLUSTER_COLUMNS, CLUSTER_TABLE } from "./rules/cluster";
+export { CLUSTER_COLUMNS, CLUSTER_TABLE, expectedClusterHits } from "./rules/cluster";
 export type {
   CaseKind,
   ComponentHitStatus,
@@ -148,6 +148,8 @@ export {
   type FireSuggestion,
   type FireTarget,
   type FireWeapon,
+  fireTargetScore,
+  hitProbability,
   suggestFireTargets,
 } from "./rules/fireability";
 export type {
@@ -225,6 +227,7 @@ export {
   heatScaleEffects,
   isTsmActive,
   type LargestAmmoBin,
+  movementHeat,
   movementMpPenalty,
   movementMpPenaltyWithThreshold,
   shutdownAvoid,
@@ -236,14 +239,18 @@ export { HIT_LOCATION_TABLE, LEFT_SIDE_TABLE, RIGHT_SIDE_TABLE } from "./rules/h
 export type { UnitInitDamage } from "./rules/initialDamage";
 export type { InitiativeResult } from "./rules/initiative";
 export { internalStructureForTonnage } from "./rules/internalStructure";
+export { losClear } from "./rules/los";
 export {
+  attackerMovementModifier,
   type MoveFragment,
   type MovePathStep,
   type ReachabilityOptions,
   type RevealedLanding,
   reachableLandings,
+  targetMovementModifier,
 } from "./rules/movement";
 export {
+  computePhysicalToHit,
   type DamageGroup,
   isPhysicalWeaponName,
   PHYSICAL_WEAPONS,
@@ -253,6 +260,7 @@ export {
   type PhysicalResolution,
   type PhysicalWeaponName,
   type PhysicalWeaponStats,
+  physicalDamage,
   resolveStrikeArm,
   resolveStrikeMount,
   type StrikeMountResolution,
@@ -282,6 +290,7 @@ export { loadBattleState, parseBattleState, saveBattleState } from "./rules/snap
 export {
   type AttackModifiers,
   DEFAULT_GUNNERY,
+  damageForBracket,
   type RangeBracket,
   type ToHitBreakdown,
 } from "./rules/tohit";

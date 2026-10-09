@@ -63,6 +63,19 @@ export function clusterHits(missiles: number, roll2d6: number): number {
   return lookup(CLUSTER_TABLE, roll2d6, col);
 }
 
+/** 2D6 ways (over 36) to roll 2..12, index 0 = roll 2. */
+const WAYS_2D6: readonly number[] = [1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1];
+
+/**
+ * Expected projectiles hitting for a cluster weapon of `missiles` size: the
+ * Cluster Hits Table (TW p. 116) averaged over the 2D6 distribution.
+ */
+export function expectedClusterHits(missiles: number): number {
+  let sum = 0;
+  for (let roll = 2; roll <= 12; roll++) sum += clusterHits(missiles, roll) * WAYS_2D6[roll - 2]!;
+  return sum / 36;
+}
+
 /** HAG range-dependent cluster-roll modifier (TW p.136): +2 at short range,
  *  -2 at long range, applied to the 2D6 roll with results clamped to 2..12. */
 export function modifiedClusterRoll(roll2d6: number, mod: number): number {
