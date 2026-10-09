@@ -281,6 +281,11 @@ function startAutoPlay(): void {
 }
 
 input.addEventListener("keydown", (e) => {
+  if (e.key === "Insert") {
+    // No overtype mode in the CLI: keep Insert from swapping in a block caret.
+    e.preventDefault();
+    return;
+  }
   if (e.key === "Enter") {
     if (input.value.trim().toLowerCase() === "autoplay") {
       const echoed = `${promptBody(session)} > autoplay`;
