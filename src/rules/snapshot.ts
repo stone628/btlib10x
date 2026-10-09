@@ -118,6 +118,7 @@ function cloneUnitState(unit: UnitState): UnitState {
     damage: cloneDamageState(unit.damage),
     ammoBins: { ...unit.ammoBins },
     ammoPolicy: unit.ammoPolicy,
+    autoEject: unit.autoEject,
     jammedWeapons: [...unit.jammedWeapons],
     critSlotsDestroyed: cloneCritTable(unit.critSlotsDestroyed),
     destroyedWeapons: [...unit.destroyedWeapons],
@@ -230,8 +231,13 @@ export function parseBattleState(data: string): BattleState {
   return unpackBattle(parsed);
 }
 
-/** The parsed JSON is fresh, so it is adopted as is apart from the cells. */
+/** The parsed JSON is fresh, so it is adopted as is apart from the cells.
+ *  Snapshots saved before `autoEject` existed load with it engaged (the
+ *  default policy). */
 function unpackBattle(packed: PackedBattle): BattleSnapshot {
+  for (const unit of Object.values(packed.units)) {
+    if (typeof unit.autoEject !== "boolean") unit.autoEject = true;
+  }
   return { ...packed, cells: unpackCells(packed.cells, packed.width * packed.height) };
 }
 
@@ -326,6 +332,7 @@ export function loadUnitState(unit: UnitState, snapshot: UnitSnapshot): void {
   unit.damage = next.damage;
   unit.ammoBins = next.ammoBins;
   unit.ammoPolicy = next.ammoPolicy;
+  unit.autoEject = next.autoEject;
   unit.jammedWeapons = next.jammedWeapons;
   unit.critSlotsDestroyed = next.critSlotsDestroyed;
   unit.destroyedWeapons = next.destroyedWeapons;

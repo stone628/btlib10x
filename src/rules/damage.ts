@@ -49,7 +49,13 @@ export interface DamageApplication {
    *  TW p.121; the leg is unharmed). Callers that merge crit results (attack.ts)
    *  may also add legs (TW p.124: 12 on a leg determination). */
   readonly blownOffLimbs: readonly LimbLocation[];
-  readonly killed: boolean;
+  /** This damage destroyed the 'Mech (TW p. 128): `applyDamage` sets it when a
+   *  kill location (head / center torso) reaches 0 internal structure; merged
+   *  applications also set it when a critical hit destroys the 'Mech (cockpit,
+   *  head blown off, third engine hit). Says nothing about the MechWarrior,
+   *  whose fate is resolved separately (cockpit crit, CT ammo/weapon blast,
+   *  TO auto-eject). */
+  readonly mechDestroyed: boolean;
 }
 
 /** Locations whose internal structure the application damaged, in order.
@@ -118,10 +124,10 @@ export function applyDamage(
   const blownOffLimbs: LimbLocation[] = [];
   const caseKind = options?.caseKind;
   const bypassArmor = options?.bypassArmor;
-  let killed = false;
+  let mechDestroyed = false;
   let remaining = caseKind === "caseII" ? 1 : amount;
   let current: Location | null = location;
-  while (current !== null && remaining > 0 && !killed) {
+  while (current !== null && remaining > 0 && !mechDestroyed) {
     const cur: Location = current;
 
     // Ammo-explosion overflow (bypassArmor) skips the armor pool entirely at
@@ -166,7 +172,7 @@ export function applyDamage(
       if (depleted) {
         newlyDestroyed.push(cur);
         if (isKillLocation(cur)) {
-          killed = true;
+          mechDestroyed = true;
           break;
         }
         const arm = armFor(cur);
@@ -177,7 +183,7 @@ export function applyDamage(
           blownOffLimbs.push(arm);
         }
       }
-      if (remaining > 0 && !killed) {
+      if (remaining > 0 && !mechDestroyed) {
         if (caseKind !== undefined && cur === location) {
           // CASE / CASE II: contain the blast here instead of transferring
           // inward - remaining damage is ignored; the blast just vents.
@@ -199,7 +205,7 @@ export function applyDamage(
     steps,
     newlyDestroyed,
     blownOffLimbs,
-    killed,
+    mechDestroyed,
   };
 }
 

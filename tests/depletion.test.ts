@@ -298,7 +298,7 @@ describe("ammoPolicy setup (session)", () => {
     execute(s, "add hunchy HBK-4G 9 9 n");
     execute(s, "add cicada CDA-3MA 9 8 s");
     const unit = () => s.setup.roster.find((u) => u.id === "hunchy")!;
-    expect(unit().policy).toEqual({ ammoPolicy: "exposed" });
+    expect(unit().policy).toEqual({ ammoPolicy: "exposed", autoEject: true });
     expect(execute(s, "set hunchy ammoPolicy spread")).toEqual([
       "hunchy: ammoPolicy set to spread",
     ]);
@@ -327,12 +327,13 @@ describe("ammoPolicy setup (session)", () => {
   it("buildUnitInit defaults the policy; createBattle applies and validates it", () => {
     expect(buildUnitInit("a", "HBK-4G", 0, { col: 1, row: 1 }).policy).toEqual({
       ammoPolicy: "exposed",
+      autoEject: true,
     });
     const mk = (policy: UnitInit["policy"]) => [
       { ...buildUnitInit("a", "HBK-4G", 0, { col: 1, row: 1 }), policy },
       buildUnitInit("b", "CDA-3MA", 1, { col: 3, row: 1 }),
     ];
-    const state = createTestBattle([], mk({ ammoPolicy: "core" }), true);
+    const state = createTestBattle([], mk({ ammoPolicy: "core", autoEject: true }), true);
     expect(state.units.a!.ammoPolicy).toBe("core");
     expect(state.units.b!.ammoPolicy).toBe("exposed");
   });

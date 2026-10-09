@@ -524,7 +524,11 @@ and inward transfer (head/CT terminal; excess lost).
 `CriticalResolution` exposes `rows` (the individual `CriticalEffect`s),
 `determiningRoll`, `throughArmor` (true when the roll came from a hit-location
 2 with armor unbreached), and the resulting `critSlotsDestroyed` /
-`destroyedWeapons` / `damage` / `killed` / `ammoBins`.
+`destroyedWeapons` / `damage` / `blownOffLimbs` / `killedReason` / `ammoBins`.
+A `DamageApplication`'s `mechDestroyed` means the damage destroyed the 'Mech
+(head or center torso at 0 internal structure, or a destroying crit, TW p. 128);
+it says nothing about the MechWarrior, whose fate the destruction sweep resolves
+(cockpit crit, center-torso ammo/weapon blast, Tactical Operations auto-eject).
 
 - `ENGINE_SLOTS_KILL = 3` — engine hits that destroy the unit
 - `effectiveMovement(def, damage, critSlotsDestroyed, tsmActive?, waterDepth?):
@@ -614,7 +618,7 @@ only).
 Bin identity + depletion helpers for custom UIs:
 
 - `AmmoPolicy` (`"exposed" | "core" | "spread" | "leastFirst"`)
-- `UnitPolicy` (`{ ammoPolicy: AmmoPolicy }`, per-unit settings fixed at setup; `DEFAULT_UNIT_POLICY` = `{ ammoPolicy: "exposed" }`, filled by `buildUnitInit`)
+- `UnitPolicy` (`{ ammoPolicy: AmmoPolicy; autoEject: boolean }`, per-unit settings fixed at setup; `DEFAULT_UNIT_POLICY` = `{ ammoPolicy: "exposed", autoEject: true }`, filled by `buildUnitInit`). `autoEject` (TO:AR p. 165): on, losing the head (by damage or a blown-off head) or the center torso to an ammo/weapon blast ejects the pilot (head loss raises pilot hits to `pilotHitMax − 1` first); off, both kill the MechWarrior (TW p. 128). Copied to `UnitState.autoEject`; snapshots saved without it load as `true`
 - `AmmoBins` — `Record<AmmoBinId, number>` (remaining shots per bin; identity comes from `collectAmmoBins`; a missing key means the bin was stripped)
 - `ammoBinId(loc, slotIndex): AmmoBinId` — `"${loc}:${slotIndex}"`
 - `collectAmmoBins(def): AmmoBin[]` — every bin in the resolved def
@@ -752,7 +756,7 @@ interface UnitState {
   critSlotsDestroyed: CritMask;       // destroyed-slot bitmask per location (bit i = 0-based slot i)
   destroyedWeapons: number[];
   blownOffLimbs: SeveredLimb[]; club: HeldClub | null;   // severed limbs / held club
-  ammoPolicy: AmmoPolicy;
+  ammoPolicy: AmmoPolicy; autoEject: boolean;   // from UnitPolicy
   moveMode; hexesMovedThisTurn; jumpedThisTurn; mpSpent;
   declaredWeaponAttacks; declaredPhysicalAttacks; declaredPickup; passedAttacks;
   destroyed: DestroyedState;          // "not" | "headDestroyed" | "centerTorsoDestroyed" | "cockpitDestroyed" | "headBlownOff" | "engineDestroyed"

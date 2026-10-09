@@ -34,7 +34,7 @@ describe("layered damage resolution", () => {
     const app = applyDamage(s, "centerTorso", 30);
     expect(app.after.armor.centerTorso).toBe(0);
     expect(app.after.internalStructure.centerTorso).toBe(12);
-    expect(app.killed).toBe(false);
+    expect(app.mechDestroyed).toBe(false);
     expect(app.steps).toEqual([
       { location: "centerTorso", pool: "armor", damageApplied: 26, depleted: true },
       { location: "centerTorso", pool: "structure", damageApplied: 4, depleted: false },
@@ -73,7 +73,7 @@ describe("layered damage resolution", () => {
       is: { centerTorso: 4 },
     });
     const app = applyDamage(s, "centerTorso", 9, "rear");
-    expect(app.killed).toBe(true);
+    expect(app.mechDestroyed).toBe(true);
     expect(app.after.armorRear.centerTorso).toBe(0);
     expect(app.after.internalStructure.centerTorso).toBe(0);
   });
@@ -112,11 +112,11 @@ describe("layered damage resolution", () => {
 
   it("destroys the 'Mech when center torso or head structure is depleted", () => {
     const ct = mk({ armor: { centerTorso: 0 }, is: { centerTorso: 4 } });
-    expect(applyDamage(ct, "centerTorso", 4).killed).toBe(true);
+    expect(applyDamage(ct, "centerTorso", 4).mechDestroyed).toBe(true);
 
     const head = mk({ armor: { head: 0 }, is: { head: 2 } });
     const headApp = applyDamage(head, "head", 2);
-    expect(headApp.killed).toBe(true);
+    expect(headApp.mechDestroyed).toBe(true);
     expect(isUnitDestroyed(headApp.after)).toBe(true);
   });
 
@@ -196,7 +196,7 @@ describe("layered damage resolution", () => {
     expect(app.after.internalStructure.centerTorso).toBe(3);
     expect(app.after.armor.centerTorso).toBe(10);
     expect(app.after.armorRear.centerTorso).toBe(10);
-    expect(app.killed).toBe(false);
+    expect(app.mechDestroyed).toBe(false);
   });
 
   it("bypassArmor: rear-arc damage also skips the rear armor pool", () => {
@@ -216,7 +216,7 @@ describe("layered damage resolution", () => {
       is: { centerTorso: 5 },
     });
     const app = applyDamage(s, "centerTorso", 5, "front", { bypassArmor: true });
-    expect(app.killed).toBe(true);
+    expect(app.mechDestroyed).toBe(true);
     expect(app.after.armor.centerTorso).toBe(10);
     expect(app.after.internalStructure.centerTorso).toBe(0);
   });

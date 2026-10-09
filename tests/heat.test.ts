@@ -854,6 +854,22 @@ describe("game integration: heat ammo explosion", () => {
     expect(hbk.removed).toBe("pilotEjected");
   });
 
+  it("with auto-eject off the CT blast kills the MechWarrior (TW p.128)", () => {
+    const state = hbkVsEnf();
+    const hbk = requireUnit(state, "hbk");
+    hbk.autoEject = false;
+    hbk.heat = 43;
+    startAttackTurn(state);
+    // Same dice as above up to the blast; no ejection PSR is rolled and the
+    // dead pilot takes no further consciousness rolls.
+    const events: GameEvent[] = [];
+    advancePhase(state, events, scriptedRng(1, 1, 1, 3, 4, 3, 3, 3, 1, 6, 6, 6, 6, 6, 6, 6));
+    expect(hbk.removed).toBe("destroyed");
+    expect(hbk.destroyed).toBe("centerTorsoDestroyed");
+    expect(hbk.pilotHits).toBe(hbk.pilotHitMax);
+    expect(events.some((e) => e.kind === "pilotingCheck" && e.reason === "ejection")).toBe(false);
+  });
+
   it("gauss-only unit does not detonate from heat (inert ammo)", () => {
     const state = bzkVsEnf();
     const bzk = requireUnit(state, "bzk");

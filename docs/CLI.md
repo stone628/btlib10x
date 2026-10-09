@@ -64,7 +64,7 @@ Examples:
 |---|---|
 | `map <name>` | load a bundled map as terrain (`beginner`, `quickstart`, `test`, `testground`) |
 | `add <id> <model> <col> <row> [facing]` | place unit (team auto-assigned to smallest team; default gunnery `4`, piloting `5`, facing `n`) |
-| `set <id> <prop> <value>` | edit a property on a unit already on the roster (`model`, `team`, `col`, `row`, `facing`, `gunnery`, `piloting`, `pilotHitMax` (integer >= 1, default 6), `ammoPolicy` (`exposed` default, `core`, `spread`, `least-first`; case-insensitive, hyphens optional); property names are case-insensitive; cannot modify `id`) |
+| `set <id> <prop> <value>` | edit a property on a unit already on the roster (`model`, `team`, `col`, `row`, `facing`, `gunnery`, `piloting`, `pilotHitMax` (integer >= 1, default 6), `ammoPolicy` (`exposed` default, `core`, `spread`, `least-first`; case-insensitive, hyphens optional), `autoEject` (`on` default / `off`: TO:AR p. 165 auto-eject; off means losing the head, or the center torso to an ammo/weapon blast, kills the pilot, TW p. 128); property names are case-insensitive; cannot modify `id`) |
 | `seed <n>` | set the dice seed (setup only; a battle in progress keeps its generator) |
 | `rm <id>` | remove placed unit |
 | `status` | setup summary: 'Mechs grouped by team, selected map name |

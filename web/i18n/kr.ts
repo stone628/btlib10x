@@ -72,9 +72,9 @@ export const kr: Catalog = {
   "cmd.set.help": "로스터에 있는 유닛의 속성을 수정",
   "cmd.set.arg.id": "수정할 유닛 id",
   "cmd.set.arg.prop":
-    "속성 이름: model, team, col, row, facing, gunnery, piloting, pilotHitMax, ammoPolicy",
+    "속성 이름: model, team, col, row, facing, gunnery, piloting, pilotHitMax, ammoPolicy, autoEject",
   "cmd.set.arg.value":
-    "새 값 (정수, 모델의 경우 메크 키, 방향의 경우 방향 단어, ammoPolicy의 경우 exposed|core|spread|least-first)",
+    "새 값 (정수, 모델의 경우 메크 키, 방향의 경우 방향 단어, ammoPolicy의 경우 exposed|core|spread|least-first, autoEject의 경우 on|off)",
   "cmd.rm.help": "배치된 유닛 제거",
   "cmd.rm.arg.id": "이전에 추가한 유닛의 id",
   "cmd.statusSetup.help": "설정 요약: 팀별 유닛 그룹, 선택된 맵",
@@ -353,6 +353,7 @@ export const kr: Catalog = {
   "err.resetConfirm": "전투가 진행 중입니다. 폐기하려면 'reset !'를 입력하세요",
   "err.seedInteger": "seed는 0부터 4294967295 사이의 정수여야 합니다",
   "err.badAmmoPolicy": "탄약 정책은 exposed|core|spread|least-first 중 하나여야 합니다",
+  "err.badAutoEject": "autoEject는 on 또는 off여야 합니다",
   "err.phaseDriver": "단계 드라이버가 수렴하지 않았습니다",
   "err.twist.badDirection": "상체 회전 방향은 front, left, right 중 하나여야 합니다",
   "err.twist.locked": "fire 명령이 예약되면 상체 회전은 잠김 — 먼저 cancel 하세요",
@@ -383,7 +384,7 @@ export const kr: Catalog = {
   "setup.mapNone": "(없음)",
   "setup.teamHeader": "팀 {team}:",
   "setup.unitLine":
-    "  {id}  {model} ({name}) gunnery {gunnery} piloting {piloting} hits {hitMax} ammo {ammo} @ {pos} 방향 {facing}",
+    "  {id}  {model} ({name}) gunnery {gunnery} piloting {piloting} hits {hitMax} ammo {ammo} 자동탈출 {eject} @ {pos} 방향 {facing}",
   "setup.noUnits": "(배치된 유닛 없음)",
 
   // movement status
@@ -759,7 +760,7 @@ export const kr: Catalog = {
   "res.hits": "명중: {groups} ({arc})",
   "res.limbBlownOff": "; {cause} 파괴 -> {limb} 절단",
   "res.immobilized": "; 이동 불능",
-  "res.killed": "; 격파",
+  "res.mechDestroyed": "; 메크 파괴",
   "res.destroyedTail": "; 파괴됨 {locs}",
 
   "res.critHeader": "{loc} 크리티컬 굴림 2D6 = {roll} ({count})",
