@@ -1250,9 +1250,8 @@ function handleSessionGameEvent(s: Session, e: SessionGameEvent, out: OutputHand
       break;
     case "attacksDeclared": {
       for (const w of e.weapons) {
-        out.pairLines(
+        out.idLines(
           e.unitId,
-          w.targetId,
           i18n(w.count === 1 ? "log.attacksDeclaredOne" : "log.attacksDeclaredOther", {
             id: e.unitId,
             target: w.targetId,

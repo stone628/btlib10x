@@ -13,6 +13,7 @@ import type { CmdDef } from "./cli";
 import { decide, promptActorId, promptDoctrine, type TraceLevel } from "./doctrine";
 import type { DecisionTrace, TraceCandidate, TraceNote, TraceTerm } from "./doctrine.common";
 import { DOCTRINE_KEYS, DOCTRINES, isDoctrineKey } from "./doctrine.data";
+import { DP_SETUP_USAGE, randomDoctrineSetup } from "./doctrine.setup";
 import type { MessageKey } from "./i18n/index";
 import { i18n } from "./i18n/index";
 import { handleSessionGameEvents, promptBody, type Session } from "./session";
@@ -227,7 +228,7 @@ function listChunk(s: Session): Chunk {
   );
 }
 
-const DP_USAGE = "dp [<id> <doctrine|off> | go | why [id] | trace off|brief|full]";
+const DP_USAGE = "dp [<id> <doctrine|off> | setup 2|4 | go | why [id] | trace off|brief|full]";
 
 /** `dp`: assign doctrines in setup; inspect, tune and resume the doctrine player in battle. */
 export function doctrineCmd(run: (s: Session, raw: string) => Chunk[]): CmdDef {
@@ -237,6 +238,7 @@ export function doctrineCmd(run: (s: Session, raw: string) => Chunk[]): CmdDef {
     argsDoc: [
       ["", "cmd.dp.arg.list"],
       ["<id> <doctrine|off>", "cmd.dp.arg.assign"],
+      ["setup 2|4", "cmd.dp.arg.setup"],
       ["go", "cmd.dp.arg.go"],
       ["why [id]", "cmd.dp.arg.why"],
       ["trace off|brief|full", "cmd.dp.arg.trace"],
@@ -266,6 +268,13 @@ export function doctrineCmd(run: (s: Session, raw: string) => Chunk[]): CmdDef {
       if (sub === "go") {
         if (promptDoctrine(s) === null) throw new Error(i18n("dp.err.notDoctrinePrompt"));
         return driveDoctrine(s, (raw) => run(s, raw));
+      }
+      // `dp setup <n>`; a roster unit literally named "setup" still takes `dp setup <doctrine>`.
+      if (sub === "setup" && (a[1] === undefined || /^\d+$/.test(a[1]))) {
+        if (a[1] === undefined) {
+          throw new Error(i18n("err.expectedArgs", { usage: DP_SETUP_USAGE }));
+        }
+        return randomDoctrineSetup(s, Number(a[1]));
       }
       // dp <id> <doctrine|off>
       if (s.state !== "setup") throw new Error(i18n("dp.err.setupOnly"));

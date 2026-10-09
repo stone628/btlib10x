@@ -1,4 +1,4 @@
-import { suggestFireTargets } from "btlib10x";
+import { mapDefFor, suggestFireTargets } from "btlib10x";
 import { describe, expect, it } from "vitest";
 import { decide } from "../web/doctrine";
 import { scoreAttacks } from "../web/doctrine.attack";
@@ -222,5 +222,92 @@ describe("doctrine player: full bout", () => {
     const out = execute(s, "start");
     expect(out.some((l) => l.startsWith("error:"))).toBe(false);
     expect(s.state).toBe("over");
+  });
+});
+
+describe("doctrine player: dp setup", () => {
+  it("builds a random 2-player setup: one unit per team, open hexes, a doctrine each", () => {
+    const s = newSession(7);
+    const dice = s.rng.snapshot();
+    const out = execute(s, "dp setup 2");
+    expect(out.at(-1)).toMatch(/random setup ready: 2 players, seed 7/);
+    // It reports what it picked, without echoing CLI commands.
+    expect(out[0]).toBe(
+      `map ${s.setup.mapName}: ${mapDefFor(s.setup).width}x${mapDefFor(s.setup).height}`,
+    );
+    for (const u of s.setup.roster) {
+      const doctrine = DOCTRINES[s.doctrine.assignments[u.id]!].name;
+      expect(out).toContain(
+        `${u.id}: ${u.model} at (${u.position.col},${u.position.row}) facing ${u.facing}, team ${u.team}, doctrine ${doctrine}`,
+      );
+    }
+    expect(out.some((l) => l.startsWith("setup >"))).toBe(false);
+    expect(s.setup.mapName).not.toBeNull();
+    expect(s.setup.roster.map((u) => u.team).sort()).toEqual([0, 1]);
+    for (const u of s.setup.roster) {
+      expect(s.doctrine.assignments[u.id]).toBeDefined();
+    }
+    const hexes = s.setup.roster.map((u) => `${u.position.col},${u.position.row}`);
+    expect(new Set(hexes).size).toBe(2);
+    // The battle dice are untouched by the setup draws.
+    expect(s.rng.snapshot()).toBe(dice);
+  });
+
+  it("splits 4 players evenly and avoids water and buildings", () => {
+    for (const seed of [1, 2, 3, 4, 5, 6]) {
+      const s = newSession(seed);
+      execute(s, "dp setup 4");
+      expect(s.setup.roster).toHaveLength(4);
+      expect(s.setup.roster.filter((u) => u.team === 0)).toHaveLength(2);
+      expect(s.setup.roster.filter((u) => u.team === 1)).toHaveLength(2);
+      const map = mapDefFor(s.setup);
+      for (const u of s.setup.roster) {
+        const t = map.terrain.find((h) => h.col === u.position.col && h.row === u.position.row);
+        expect(t?.type ?? "clear").not.toMatch(/^water|Building$/);
+        expect(u.position.col).toBeLessThanOrEqual(map.width);
+        expect(u.position.row).toBeLessThanOrEqual(map.height);
+      }
+    }
+  });
+
+  it("is reproducible from the seed", () => {
+    const roster = (seed: number) => {
+      const s = newSession(seed);
+      execute(s, "dp setup 4");
+      return JSON.stringify([s.setup.mapName, s.setup.roster, s.doctrine.assignments]);
+    };
+    expect(roster(9)).toBe(roster(9));
+    expect(roster(9)).not.toBe(roster(10));
+  });
+
+  it("refuses unless the setup is empty, and checks the player count", () => {
+    const withMap = newSession(1);
+    execute(withMap, "map quickstart");
+    expect(execute(withMap, "dp setup 2")[0]).toMatch(/map quickstart is already loaded/);
+
+    const withUnit = newSession(1);
+    execute(withUnit, "add me HBK-4G 9 9 n");
+    expect(execute(withUnit, "dp setup 2")[0]).toMatch(/1 unit\(s\) are already added/);
+
+    const s = newSession(1);
+    expect(execute(s, "dp setup 3")[0]).toMatch(/dp setup 2\|4/);
+    expect(execute(s, "dp setup")[0]).toMatch(/dp setup 2\|4/);
+    expect(s.setup.mapName).toBeNull();
+
+    const inBattle = setup();
+    execute(inBattle, "start");
+    expect(execute(inBattle, "dp setup 2")[0]).toMatch(/setup phase only/);
+  });
+
+  it("random 4-player bouts play out without errors", () => {
+    for (const seed of [1, 2, 3]) {
+      const s = newSession(seed);
+      execute(s, "dp setup 4");
+      execute(s, "dp trace off");
+      const out = execute(s, "start");
+      expect(out.filter((l) => l.startsWith("error:"))).toEqual([]);
+      expect(out.some((l) => /failed; stopped/.test(l))).toBe(false);
+      expect(s.state).toBe("over");
+    }
   });
 });
