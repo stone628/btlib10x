@@ -5215,18 +5215,11 @@ export function attemptStandUp(
   if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot stand up`);
   const def = mechDefFor(unit);
   const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
-  const budget = effectiveMoveBudget(
-    "walk",
-    effectiveMovement(def, unit.damage, unit.critSlotsDestroyed, isTsmActive(def, unit.heat)),
-    unit.heat,
-  );
+  const budget = standUpWalkBudget(unit);
   if (pre.gyroHits >= GYRO_DESTROYED_HITS)
     throw new Error(`${unitId} has a destroyed gyro and cannot stand up`);
   if (!canAttemptStandUp(unit.damage)) throw new Error(`${unitId} cannot stand up in this state`);
-  // TW p.50: a prone 'Mech with only 1 MP (e.g. a one-leg 'Mech) may still
-  // attempt to stand, but the stand cost is whatever walking budget they
-  // have. Charge the actual budget so the move still resolves.
-  const standCost = Math.min(STAND_MP_COST, budget);
+  const standCost = standUpCost(unit);
   unit.moveMode = "walk";
   unit.hexesMovedThisTurn = 0;
   unit.jumpedThisTurn = false;
@@ -5273,6 +5266,23 @@ export function attemptStandUp(
     sink,
   );
   return standCost;
+}
+
+/** Walking MP a stand-up attempt draws on, whatever locomotion follows. */
+function standUpWalkBudget(unit: UnitState): number {
+  const def = mechDefFor(unit);
+  return effectiveMoveBudget(
+    "walk",
+    effectiveMovement(def, unit.damage, unit.critSlotsDestroyed, isTsmActive(def, unit.heat)),
+    unit.heat,
+  );
+}
+
+/** MP `attemptStandUp` charges: TW p.50 lets a prone 'Mech with only 1 MP
+ *  (e.g. a one-leg 'Mech) still attempt to stand, at the cost of whatever
+ *  walking budget it has, so the charge is capped at that budget. */
+export function standUpCost(unit: UnitState): number {
+  return Math.min(STAND_MP_COST, standUpWalkBudget(unit));
 }
 
 /**

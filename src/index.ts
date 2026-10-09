@@ -212,6 +212,7 @@ export {
   requireUnit,
   STAND_MP_COST,
   salvageableSeveredLimbs,
+  standUpCost,
   validateAttacks,
   validatePickup,
   voluntaryShutdown,

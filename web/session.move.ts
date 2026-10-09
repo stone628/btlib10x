@@ -32,7 +32,7 @@ import {
   reachableLandings,
   requireUnit,
   rotateFacing,
-  STAND_MP_COST,
+  standUpCost,
   type UnitState,
   voluntaryShutdown,
   waterDepth,
@@ -474,7 +474,7 @@ export function budgetFor(unit: UnitState, context: MovementContext): number {
   }
   if (declared === "standup") {
     const loco = context.postureMove ?? "walk";
-    return Math.max(0, effectiveMoveBudget(loco, movement, unit.heat) - STAND_MP_COST);
+    return Math.max(0, effectiveMoveBudget(loco, movement, unit.heat) - standUpCost(unit));
   }
   const mode: MoveMode =
     declared === "shutdown" || declared === "startup" || declared === "eject" || declared === null
@@ -505,7 +505,10 @@ function fullBudgetFor(unit: UnitState, context: MovementContext): number {
 export function postureCostFor(s: Session): number {
   const mode = s.move?.moveMode ?? null;
   if (mode === "prone") return DROP_MP_COST;
-  if (mode === "standup") return STAND_MP_COST;
+  if (mode === "standup") {
+    const { battle, context } = requireBattleAndContext(s);
+    return standUpCost(requireUnit(battle, context.actorId));
+  }
   return 0;
 }
 
@@ -735,9 +738,9 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo {
     locomotion = postureMove ?? "standStill";
     proneFlag = false;
     if (locomotion === "standStill") return { team: actor.team, revealed: [] }; // stand in place: no map, `place` stays shut
-    if (locomotion === "walk") walking = Math.max(0, walking - STAND_MP_COST);
-    else if (locomotion === "run") running = Math.max(0, running - STAND_MP_COST);
-    else walking = Math.max(0, walking - STAND_MP_COST);
+    const standCost = standUpCost(actor);
+    if (locomotion === "run") running = Math.max(0, running - standCost);
+    else walking = Math.max(0, walking - standCost);
   } else {
     locomotion = mode;
   }
@@ -777,7 +780,7 @@ function stepResultLines(s: Session, landing: RevealedLanding): string[] {
   const last = path[path.length - 1];
   const m = s.move;
   const mode = m?.moveMode ?? null;
-  const postureCost = mode === "prone" ? DROP_MP_COST : mode === "standup" ? STAND_MP_COST : 0;
+  const postureCost = mode === "prone" ? DROP_MP_COST : mode === "standup" ? standUpCost(actor) : 0;
   const locomotion =
     mode === "standup" || mode === "prone"
       ? (m?.postureMove ?? "walk")

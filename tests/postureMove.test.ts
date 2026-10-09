@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { neighbor } from "../src/core/hex";
 import type { RevealedLanding } from "../src/index";
 import { buildUnitInit, executeMove, requireUnit, rollInitiativePhase } from "../src/rules/game";
-import { budgetFor, newSession, requireMovementActor, type Session } from "../web/session";
+import {
+  budgetFor,
+  newSession,
+  postureCostFor,
+  requireMovementActor,
+  type Session,
+} from "../web/session";
 import { createTestBattle, disableCritical, execute, scriptedRng } from "./helpers";
 
 /** Started quickstart battle; returns session plus acting-unit id. */
@@ -248,6 +254,16 @@ describe("posture-change then move", () => {
       const last = landing.path[landing.path.length - 1];
       expect(last?.totalMp ?? 0).toBeLessThanOrEqual(budget);
     }
+  });
+
+  it("a 1-MP stand charges only the walking budget it has (TW p.50)", async () => {
+    const { s, actor } = await started(0);
+    forceProne(s, actor);
+    // HBK-4G walks 4; heat 15 cuts walking to 1, running to 2 (TW p.159).
+    s.battle!.units[actor]!.heat = 15;
+    execute(s, "mode standup run");
+    expect(postureCostFor(s)).toBe(1);
+    expect(budgetFor(requireMovementActor(s), s.move!)).toBe(1);
   });
 
   it("standup offers the start hex in every facing for free (TW p.50)", async () => {
