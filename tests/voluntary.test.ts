@@ -52,15 +52,14 @@ describe("voluntary shutdown", () => {
     expect(() => voluntaryShutdown(state, "hbk", [])).toThrow(/already shut down/);
   });
 
-  it("blocks movement and firing while down (including 'starting')", () => {
+  it("blocks movement and firing while down", () => {
     const state = startMovementTurn(hbkVsEnf());
     voluntaryShutdown(state, "hbk", []);
     // hbk is down; only enf remains in the movement phase. Move enf, then
-    // advance to weapon attack. hbk (still down as "starting") must be
-    // refused a target declaration.
+    // advance to weapon attack. hbk (still down) must be refused a
+    // target declaration.
     executeMove(state, "enf", "walk", [], []);
     expect(requireUnit(state, "hbk").shutdown).toBe("manual");
-    requireUnit(state, "hbk").shutdown = "starting";
     advancePhase(state, []); // movement -> weaponAttack
     expect(() =>
       declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []),
@@ -86,7 +85,7 @@ describe("voluntary startup", () => {
     voluntaryShutdown(state, "hbk", []);
     const events: GameEvent[] = [];
     attemptVoluntaryStartup(state, "hbk", events, scriptedRng());
-    expect(hbk.shutdown).toBe("starting");
+    expect(hbk.shutdown).toBe("not");
     expect(
       events.some(
         (e) =>
@@ -141,31 +140,31 @@ describe("voluntary startup", () => {
     hbk2.unconscious = true;
     voluntaryShutdown(low, "hbk", []);
     attemptVoluntaryStartup(low, "hbk", [], scriptedRng());
-    expect(hbk2.shutdown).toBe("starting");
+    expect(hbk2.shutdown).toBe("not");
   });
 
-  it("rejects an online unit and a pending startup", () => {
+  it("rejects an online unit, including one that just started up", () => {
     const state = startMovementTurn(hbkVsEnf());
     expect(() => attemptVoluntaryStartup(state, "enf", [], scriptedRng())).toThrow(/not shut down/);
     voluntaryShutdown(state, "hbk", []);
     attemptVoluntaryStartup(state, "hbk", []);
     expect(() => attemptVoluntaryStartup(state, "hbk", [], scriptedRng())).toThrow(
-      /already starting/,
+      /not shut down/,
     );
   });
 
-  it("still counts as down until the next initiative roll", () => {
+  it("comes online at once: movement is spent, the attack phase is kept", () => {
     const state = startMovementTurn(hbkVsEnf());
     const hbk = requireUnit(state, "hbk");
     voluntaryShutdown(state, "hbk", []);
     attemptVoluntaryStartup(state, "hbk", []);
-    expect(hbk.shutdown).toBe("starting");
-    advancePhase(state, []); // movement -> weaponAttack
-    expect(nextActor(state)).toBe("enf"); // hbk skipped, still down
-    advancePhase(state, [], scriptedRng(3, 3, 3, 1)); // weaponAttack -> end
-    expect(hbk.shutdown).toBe("starting");
-    advancePhase(state, [], scriptedRng(3, 3, 3, 1)); // end -> initiative
     expect(hbk.shutdown).toBe("not");
+    expect(state.actedThisPhase).toContain("hbk");
+    expect(hbk.mpSpent).toBe(0);
+    advancePhase(state, []); // movement -> weaponAttack
+    const first = nextActor(state) as string;
+    state.actedThisPhase.push(first);
+    expect(new Set([first, nextActor(state)])).toEqual(new Set(["hbk", "enf"]));
   });
 });
 

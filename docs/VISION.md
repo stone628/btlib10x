@@ -74,7 +74,8 @@ yet is a gap, not a deviation; gaps are tracked in §4.
   - **Shut-down units move first.** *Why:* they can only restart, pass or
     eject; no empty turns.
   - **Shutdown and restart in the Movement Phase,** not the End Phase
-    (TW p.160).
+    (TW p.160). A passed startup is the unit's movement and it still attacks
+    that turn, so a restart costs one turn as in TW.
   - **Posture change plus movement.** A drop or stand-up and the movement
     after it share one declaration and one MP pool; movement follows only a
     successful posture change.
