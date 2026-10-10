@@ -8,8 +8,8 @@ import { createTestBattle, scriptedRng } from "./helpers";
 
 function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
   const units: UnitInit[] = [
-    buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "ne"),
-    buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 4 }, "nw"),
+    buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "ne"),
+    buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 4 }, "nw"),
   ];
   return createTestBattle(terrain, units, false);
 }
@@ -50,8 +50,8 @@ describe("suggestFireTargets", () => {
     // hbk faces nw; enf due south sits in the left side arc: only the
     // left-arm Medium Laser (weapon 1) may fire.
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "nw"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 5 }, "nw"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "nw"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 5 }, "nw"),
     ];
     const state = startAttackTurn(createTestBattle([], units, false));
     const sugg = suggestFireTargets(state, "hbk");
@@ -86,8 +86,8 @@ describe("suggestFireTargets", () => {
 
   it("shows the shared pool count on every mount of a pooled weapon", () => {
     const units: UnitInit[] = [
-      buildUnitInit("mad", "MC-MKII-2", 0, { col: 2, row: 4 }, "ne"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 4 }, "nw"),
+      buildUnitInit("mad", "MC-MKII-2", 1, { col: 2, row: 4 }, "ne"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 4 }, "nw"),
     ];
     const state = startAttackTurn(createTestBattle([], units, false));
     const sugg = suggestFireTargets(state, "mad");
@@ -106,8 +106,8 @@ describe("suggestFireTargets", () => {
 
   it("blocks every mount of a pooled weapon when the shared pool is dry", () => {
     const units: UnitInit[] = [
-      buildUnitInit("mad", "MC-MKII-2", 0, { col: 2, row: 4 }, "ne"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 4 }, "nw"),
+      buildUnitInit("mad", "MC-MKII-2", 1, { col: 2, row: 4 }, "ne"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 4 }, "nw"),
     ];
     const state = startAttackTurn(createTestBattle([], units, false));
     // Streak bins: rightTorso:7, leftTorso:7 (25 each).
@@ -139,8 +139,8 @@ describe("suggestFireTargets", () => {
 
   it("marks weapons out of range", () => {
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 2 }, "n"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: -38 }, "s"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 2 }, "n"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: -38 }, "s"),
     ];
     const state = startAttackTurn(createTestBattle([], units, false));
     const reasons = blockedReasons(state, "hbk", "enf");
@@ -151,8 +151,8 @@ describe("suggestFireTargets", () => {
 
   it("applies the minimum-range penalty inside minimum range", () => {
     const units: UnitInit[] = [
-      buildUnitInit("grf", "GRF-1N", 0, { col: 2, row: 4 }, "ne"),
-      buildUnitInit("hbk", "HBK-4G", 1, { col: 3, row: 4 }, "nw"),
+      buildUnitInit("grf", "GRF-1N", 1, { col: 2, row: 4 }, "ne"),
+      buildUnitInit("hbk", "HBK-4G", 2, { col: 3, row: 4 }, "nw"),
     ];
     const state = startAttackTurn(createTestBattle([], units, false));
     const sugg = suggestFireTargets(state, "grf");
@@ -168,8 +168,8 @@ describe("suggestFireTargets", () => {
 
   it("omits the minimum-range penalty at or beyond minimum range", () => {
     const units: UnitInit[] = [
-      buildUnitInit("grf", "GRF-1N", 0, { col: 2, row: 4 }, "ne"),
-      buildUnitInit("hbk", "HBK-4G", 1, { col: 9, row: 4 }, "nw"),
+      buildUnitInit("grf", "GRF-1N", 1, { col: 2, row: 4 }, "ne"),
+      buildUnitInit("hbk", "HBK-4G", 2, { col: 9, row: 4 }, "nw"),
     ];
     const state = startAttackTurn(createTestBattle([], units, false));
     const sugg = suggestFireTargets(state, "grf");
@@ -182,8 +182,8 @@ describe("suggestFireTargets", () => {
 
   it("marks weapons blocked when the target stands in deep water (losBlockedByWater)", () => {
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 2 }, "ne"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 2 }, "nw"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 2 }, "ne"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 2 }, "nw"),
     ];
     const state = startAttackTurn(
       createTestBattle([{ col: 3, row: 2, type: "water2" }], units, false),
@@ -198,8 +198,8 @@ describe("suggestFireTargets", () => {
 
   it("marks weapons blocked by an intervening building", () => {
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 10 }, "n"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 2 }, "s"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 10 }, "n"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 2 }, "s"),
     ];
     const state = startAttackTurn(
       createTestBattle([{ col: 2, row: 7, type: "lightBuilding", level: 1 }], units, false),
@@ -212,8 +212,8 @@ describe("suggestFireTargets", () => {
 
   it("marks weapons blocked by intervening woods", () => {
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 10 }, "n"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 2 }, "s"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 10 }, "n"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 2 }, "s"),
     ];
     const state = startAttackTurn(
       createTestBattle(
@@ -233,8 +233,8 @@ describe("suggestFireTargets", () => {
 
   it("marks weapons that auto-miss", () => {
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 2 }, "n"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: -7 }, "s"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 2 }, "n"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: -7 }, "s"),
     ];
     const state = startAttackTurn(createTestBattle([], units, false));
     state.units.enf!.hexesMovedThisTurn = 30;
@@ -249,10 +249,10 @@ describe("suggestFireTargets", () => {
     const origin = { col: 5, row: 5 };
     // Insert worst-first: rear (0 weapons), right side (arm only), front (all).
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, origin, "n"),
-      buildUnitInit("rear", "ENF-4R", 1, neighbor(origin, "s"), "n"),
-      buildUnitInit("side", "ENF-4R", 1, neighbor(origin, "se"), "n"),
-      buildUnitInit("front", "ENF-4R", 1, neighbor(origin, "n"), "n"),
+      buildUnitInit("hbk", "HBK-4G", 1, origin, "n"),
+      buildUnitInit("rear", "ENF-4R", 2, neighbor(origin, "s"), "n"),
+      buildUnitInit("side", "ENF-4R", 2, neighbor(origin, "se"), "n"),
+      buildUnitInit("front", "ENF-4R", 2, neighbor(origin, "n"), "n"),
     ];
     const state = startAttackTurn(createTestBattle([], units, false));
     const sugg = suggestFireTargets(state, "hbk");
@@ -274,8 +274,8 @@ describe("suggestFireTargets", () => {
     const sideHex = { col: 6, row: 5 };
     expect(classifyFiringArc(origin, sideHex, "n")).toBe("rightSide");
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, origin, "n"),
-      buildUnitInit("enf", "ENF-4R", 1, sideHex, "s"),
+      buildUnitInit("hbk", "HBK-4G", 1, origin, "n"),
+      buildUnitInit("enf", "ENF-4R", 2, sideHex, "s"),
     ];
     const state = startAttackTurn(createTestBattle([], units, false));
     const sugg = suggestFireTargets(state, "hbk");

@@ -12,18 +12,18 @@ import {
 } from "../src/rules/game";
 import { createTestBattle, scriptedRng } from "./helpers";
 
-/** Winner = team 1 (rolls 6 against team 0's 2). Order string: L = loser, W = winner. */
+/** Winner = team 2 (rolls 6 against team 1's 2). Order string: L = loser, W = winner. */
 function queueOrder(winners: number, losers: number): string {
   const units: UnitInit[] = [];
   for (let i = 0; i < losers; i++) {
-    units.push(buildUnitInit(`l${i}`, "HBK-4G", 0, { col: i, row: 0 }, "s"));
+    units.push(buildUnitInit(`l${i}`, "HBK-4G", 1, { col: i, row: 0 }, "s"));
   }
   for (let i = 0; i < winners; i++) {
-    units.push(buildUnitInit(`w${i}`, "HBK-4G", 1, { col: i, row: 5 }, "n"));
+    units.push(buildUnitInit(`w${i}`, "HBK-4G", 2, { col: i, row: 5 }, "n"));
   }
   const state = createTestBattle([], units, true);
   rollInitiativePhase(state, scriptedRng(1, 1, 3, 3), []);
-  expect(state.initiativeWinnerTeam).toBe(1);
+  expect(state.initiativeWinnerTeam).toBe(2);
   return actorQueue(state)
     .pending.map((v) => (v.id.startsWith("w") ? "W" : "L"))
     .join("");
@@ -50,8 +50,8 @@ function hbkVsEnf(terrain: Parameters<typeof createTestBattle>[0] = []): BattleS
   const state = createTestBattle(
     terrain,
     [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 2 }, "s"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 6, row: 6 }, "n"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 2 }, "s"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 6, row: 6 }, "n"),
     ],
     true,
   );

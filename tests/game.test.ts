@@ -20,8 +20,8 @@ import { checkVictory, createTestBattle, overrideAmmoBin, scriptedRng } from "./
 
 function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
   const units: UnitInit[] = [
-    buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
-    buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 5 }, "nw"),
+    buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "se"),
+    buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 5 }, "nw"),
   ];
   return createTestBattle(terrain, units, true);
 }
@@ -45,7 +45,7 @@ function startAttackTurn(
 
 describe("createBattle", () => {
   it("rejects duplicate ids, unknown models, and bad gunnery", () => {
-    const base: UnitInit = buildUnitInit("a", "HBK-4G", 0, { col: 2, row: 2 }, "n" as const);
+    const base: UnitInit = buildUnitInit("a", "HBK-4G", 1, { col: 2, row: 2 }, "n" as const);
     expect(() => createTestBattle([], [base, base], false)).toThrow(/Duplicate unit id/);
     expect(() =>
       createTestBattle([], [base, { ...base, id: "b", model: "MAD-3R" }], false),
@@ -56,13 +56,13 @@ describe("createBattle", () => {
     const base: UnitInit = /* temporary */ /* temporary */ buildUnitInit(
       "temp",
       "HBK-4G",
-      0,
+      1,
       { col: 2, row: 4 },
       "se" as const,
     );
     const units: UnitInit[] = [
-      { ...base, id: "a", team: 0 },
-      { ...base, id: "b", team: 1 },
+      { ...base, id: "a", team: 1 },
+      { ...base, id: "b", team: 2 },
     ];
     expect(() =>
       createTestBattle(
@@ -95,8 +95,8 @@ describe("movement phase", () => {
 
   it("charges MP for terrain and facing changes within budget", () => {
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 11, row: 11 }, "nw"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "se"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 11, row: 11 }, "nw"),
     ];
     const setup = createTestBattle([{ col: 3, row: 5, type: "lightWoods" }], units, true);
     const state = startMovementTurn(setup);
@@ -218,8 +218,8 @@ describe("movement phase", () => {
 
   it("re-evaluates forward/backward relative to facing after each turn", () => {
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 11, row: 11 }, "nw"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "se"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 11, row: 11 }, "nw"),
     ];
     const setup = createTestBattle([], units, true);
     const state = startMovementTurn(setup);
@@ -242,9 +242,9 @@ describe("movement phase", () => {
 
   it("rejects ending in a friendly-occupied hex (an enemy hex is a charge)", () => {
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
-      buildUnitInit("enf", "ENF-4R", 0, { col: 3, row: 5 }, "nw"),
-      buildUnitInit("far", "HBK-4G", 1, { col: 8, row: 8 }, "n"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "se"),
+      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 5 }, "nw"),
+      buildUnitInit("far", "HBK-4G", 2, { col: 8, row: 8 }, "n"),
     ];
     const setup = createTestBattle([], units, true);
     const state = startMovementTurn(setup);
@@ -255,8 +255,8 @@ describe("movement phase", () => {
 
   it("rejects moves exceeding the mode budget", () => {
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 11, row: 11 }, "nw"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "se"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 11, row: 11 }, "nw"),
     ];
     const setup = createTestBattle([], units, true);
     const state = startMovementTurn(setup);
@@ -291,8 +291,8 @@ describe("movement phase", () => {
 
   it("jumping pays 1 MP per hex entered and may pass over enemies", () => {
     const units: UnitInit[] = [
-      buildUnitInit("grf", "GRF-1N", 0, { col: 2, row: 4 }, "se"),
-      buildUnitInit("wvr", "WVR-6R", 1, { col: 3, row: 4 }, "nw"),
+      buildUnitInit("grf", "GRF-1N", 1, { col: 2, row: 4 }, "se"),
+      buildUnitInit("wvr", "WVR-6R", 2, { col: 3, row: 4 }, "nw"),
     ];
     const setup = createTestBattle([], units, false);
     const state = startMovementTurn(setup);
@@ -315,14 +315,14 @@ describe("movement phase", () => {
 });
 
 describe("nextActor with unequal forces", () => {
-  function fourVsTwo(teamOfFour: 0 | 1): BattleState {
+  function fourVsTwo(teamOfFour: 1 | 2): BattleState {
     const units: UnitInit[] = [];
     for (let i = 0; i < 4; i++) {
       units.push(buildUnitInit(`a${i}`, "HBK-4G", teamOfFour, { col: i, row: 0 }, "ne"));
     }
     for (let i = 0; i < 2; i++) {
       units.push(
-        buildUnitInit(`b${i}`, "ENF-4R", (1 - teamOfFour) as 0 | 1, { col: 5 + i, row: 0 }, "sw"),
+        buildUnitInit(`b${i}`, "ENF-4R", (3 - teamOfFour) as 1 | 2, { col: 5 + i, row: 0 }, "sw"),
       );
     }
     return createTestBattle([], units, true);
@@ -341,52 +341,52 @@ describe("nextActor with unequal forces", () => {
   }
 
   it("spec example: team of 4 loses initiative, winner (team of 2) moves last", () => {
-    // team0=4-Mech, team1=2-Mech. Roll initiative so team 1 wins.
-    const state = startMovementTurn(fourVsTwo(0), scriptedRng(1, 1, 3, 3));
-    expect(state.initiativeWinnerTeam).toBe(1);
+    // team1=4-Mech, team2=2-Mech. Roll initiative so team 2 wins.
+    const state = startMovementTurn(fourVsTwo(1), scriptedRng(1, 1, 3, 3));
+    expect(state.initiativeWinnerTeam).toBe(2);
     // Per §3: loser moves ⌊4/2⌋=2 units, winner moves 1, alternating starting with loser.
     expect(activationOrder(state)).toEqual(["a0", "a1", "b0", "a2", "a3", "b1"]);
   });
 
   it("team of 2 loses initiative: winner (team of 4) still moves last; loser (team of 2) goes first", () => {
-    // team0=4-Mech, team1=2-Mech. team 0 wins via higher roll.
-    const state = startMovementTurn(fourVsTwo(0), scriptedRng(3, 3, 1, 1));
-    expect(state.initiativeWinnerTeam).toBe(0);
+    // team1=4-Mech, team2=2-Mech. team 1 wins via higher roll.
+    const state = startMovementTurn(fourVsTwo(1), scriptedRng(3, 3, 1, 1));
+    expect(state.initiativeWinnerTeam).toBe(1);
     const order = activationOrder(state);
-    expect(order[0]).toMatch(/^b/); // loser (team 1) moves first
-    expect(order.at(-1)).toMatch(/^a/); // winner (team 0) moves last
+    expect(order[0]).toMatch(/^b/); // loser (team 2) moves first
+    expect(order.at(-1)).toMatch(/^a/); // winner (team 1) moves last
     expect(order.filter((id) => id.startsWith("b"))).toEqual(["b0", "b1"]);
     expect(order.filter((id) => id.startsWith("a"))).toEqual(["a0", "a1", "a2", "a3"]);
   });
 
   it("winner of initiative always moves last regardless of which side is larger", () => {
-    // 4-Mech on team 1 (iterates first, so team 1 rolls first). Larger side wins.
-    const largerWins = startMovementTurn(fourVsTwo(1), scriptedRng(3, 3, 1, 1));
-    expect(largerWins.initiativeWinnerTeam).toBe(1);
+    // 4-Mech on team 2 (iterates first, so team 2 rolls first). Larger side wins.
+    const largerWins = startMovementTurn(fourVsTwo(2), scriptedRng(3, 3, 1, 1));
+    expect(largerWins.initiativeWinnerTeam).toBe(2);
     expect(activationOrder(largerWins).at(-1)).toBe("a3");
 
-    // 4-Mech on team 0 (iterates first, so team 0 rolls first). Larger side wins.
-    const largerWinsAlso = startMovementTurn(fourVsTwo(0), scriptedRng(3, 3, 1, 1));
-    expect(largerWinsAlso.initiativeWinnerTeam).toBe(0);
+    // 4-Mech on team 1 (iterates first, so team 1 rolls first). Larger side wins.
+    const largerWinsAlso = startMovementTurn(fourVsTwo(1), scriptedRng(3, 3, 1, 1));
+    expect(largerWinsAlso.initiativeWinnerTeam).toBe(1);
     expect(activationOrder(largerWinsAlso).at(-1)).toBe("a3");
   });
 
   it("with equal force sizes, ordering falls back to simple loser-first alternation", () => {
     const state = startMovementTurn(hbkVsEnf());
-    expect(state.initiativeWinnerTeam).toBe(1);
+    expect(state.initiativeWinnerTeam).toBe(2);
     expect(activationOrder(state)).toEqual(["hbk", "enf"]);
   });
 });
 
 describe("actorQueue", () => {
-  /** 4-vs-2 state with team 1 winning initiative (see fourVsTwo above). */
+  /** 4-vs-2 state with team 2 winning initiative (see fourVsTwo above). */
   function fourVsTwoState(): BattleState {
     const units: UnitInit[] = [];
     for (let i = 0; i < 4; i++) {
-      units.push(buildUnitInit(`a${i}`, "HBK-4G", 0, { col: i, row: 0 }, "ne"));
+      units.push(buildUnitInit(`a${i}`, "HBK-4G", 1, { col: i, row: 0 }, "ne"));
     }
     for (let i = 0; i < 2; i++) {
-      units.push(buildUnitInit(`b${i}`, "ENF-4R", 1, { col: 5 + i, row: 0 }, "sw"));
+      units.push(buildUnitInit(`b${i}`, "ENF-4R", 2, { col: 5 + i, row: 0 }, "sw"));
     }
     return startMovementTurn(createTestBattle([], units, true), scriptedRng(1, 1, 3, 3));
   }
@@ -443,7 +443,7 @@ describe("actorQueue", () => {
   });
 
   it("front-loads shut-down units in the movement phase", () => {
-    const state = startMovementTurn(hbkVsEnf(), scriptedRng(2, 2, 6, 6)); // team 1 wins
+    const state = startMovementTurn(hbkVsEnf(), scriptedRng(2, 2, 6, 6)); // team 2 wins
     requireUnit(state, "hbk").shutdown = "heat";
     const q = actorQueue(state);
     expect(q.pending.map((av) => av.id)).toEqual(["hbk", "enf"]);
@@ -499,8 +499,8 @@ describe("weapon attack phase", () => {
     ];
     for (const c of cases) {
       const units: UnitInit[] = [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, c.facing as UnitInit["facing"]),
-        buildUnitInit("enf", "ENF-4R", 1, c.targetPos, "nw"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, c.facing as UnitInit["facing"]),
+        buildUnitInit("enf", "ENF-4R", 2, c.targetPos, "nw"),
       ];
       const state = startAttackTurn(createTestBattle([], units, true));
       if (c.weaponIndex === 0) {
@@ -528,8 +528,8 @@ describe("weapon attack phase", () => {
     // Target due south of a nw-facing attacker -> left side arc: the
     // right-arm ML, head SL and right-torso AC/20 may not fire.
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "nw"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 5 }, "nw"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "nw"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 5 }, "nw"),
     ];
     const state = startAttackTurn(createTestBattle([], units, true));
     for (const wi of [2, 3, 4]) {
@@ -548,11 +548,11 @@ describe("weapon attack phase", () => {
     // the target's rear arc: hits roll on the front/rear column and drain
     // the rear torso armor pool.
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "se"),
       /* facing away from the attacker */ buildUnitInit(
         "enf",
         "ENF-4R",
-        1,
+        2,
         { col: 3, row: 5 },
         "se",
       ),
@@ -582,11 +582,11 @@ describe("weapon attack phase", () => {
     // Attacker in the target's LEFT side: location roll 4 -> left arm on the
     // left-side column (front column would give right arm).
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "se"),
       /* attacker lies in its left side arc */ buildUnitInit(
         "enf",
         "ENF-4R",
-        1,
+        2,
         { col: 3, row: 5 },
         "ne",
       ),
@@ -609,8 +609,8 @@ describe("weapon attack phase", () => {
 
   it("lets rear-facing torso weapons fire into the rear arc only (AS7-D)", () => {
     const units: UnitInit[] = [
-      /* target sits in the rear arc */ buildUnitInit("as7", "AS7-D", 0, { col: 2, row: 4 }, "nw"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 5 }, "nw"),
+      /* target sits in the rear arc */ buildUnitInit("as7", "AS7-D", 1, { col: 2, row: 4 }, "nw"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 5 }, "nw"),
     ];
     const state = startAttackTurn(createTestBattle([], units, true));
     // Front-firing weapons reject the rear-arc target.
@@ -644,8 +644,8 @@ describe("weapon attack phase", () => {
     );
     // Move units apart so intervening hexes exist.
     units = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 5, row: 4 }, "nw"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "se"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 5, row: 4 }, "nw"),
     ];
     state = createTestBattle(
       [
@@ -663,8 +663,8 @@ describe("weapon attack phase", () => {
     // Out of range.
     const ac20 = weaponDefFor({ weapon: "AC/20" });
     units = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: ac20.long + 3, row: 2 }, "nw"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "se"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: ac20.long + 3, row: 2 }, "nw"),
     ];
     state = createTestBattle([], units, true);
     state = startAttackTurn(state);
@@ -674,8 +674,8 @@ describe("weapon attack phase", () => {
 
     // Modified TN > 12 must be aborted at declaration.
     units = [
-      buildUnitInit("enf", "ENF-4R", 0, { col: 2, row: 4 }, "se", 7),
-      buildUnitInit("hbk", "HBK-4G", 1, { col: 11, row: 4 }, "nw"),
+      buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 4 }, "se", 7),
+      buildUnitInit("hbk", "HBK-4G", 2, { col: 11, row: 4 }, "nw"),
     ];
     state = createTestBattle(
       [
@@ -759,7 +759,7 @@ describe("weapon attack phase", () => {
     const enf = requireUnit(state, "enf");
     expect(enf.destroyed).toBe("centerTorsoDestroyed");
     expect(enf.removed).toBe("destroyed");
-    expect(checkVictory(state)).toEqual({ winnerTeam: 0, draw: false });
+    expect(checkVictory(state)).toEqual({ winnerTeam: 1, draw: false });
   });
 
   it("resolves attacks simultaneously: a unit killed by an earlier attacker still fires", () => {
@@ -791,8 +791,8 @@ describe("weapon attack phase", () => {
 
   it("jams Ultra AC/5 double taps on a natural 2 and tracks the jam", () => {
     const units: UnitInit[] = [
-      buildUnitInit("her", "HER-5SA", 0, { col: 2, row: 4 }, "ne"),
-      buildUnitInit("cda", "CDA-3MA", 1, { col: 3, row: 4 }, "nw"),
+      buildUnitInit("her", "HER-5SA", 1, { col: 2, row: 4 }, "ne"),
+      buildUnitInit("cda", "CDA-3MA", 2, { col: 3, row: 4 }, "nw"),
     ];
     const setup = createTestBattle([], units, true);
     const state = startAttackTurn(setup);
@@ -808,11 +808,11 @@ describe("weapon attack phase", () => {
 
   it("fires a single shot by default and a double-tap only when rapidFire is set on an Ultra AC/5", () => {
     const units: UnitInit[] = [
-      buildUnitInit("her", "HER-5SA", 0, { col: 2, row: 4 }, "ne"),
+      buildUnitInit("her", "HER-5SA", 1, { col: 2, row: 4 }, "ne"),
       /* Faces the attacker so the attack direction is front (location 7 -> CT). */ buildUnitInit(
         "cda",
         "CDA-3MA",
-        1,
+        2,
         { col: 5, row: 4 },
         "sw",
       ),
@@ -851,8 +851,8 @@ describe("weapon attack phase", () => {
 
 describe("streak missiles", () => {
   const streakUnits: UnitInit[] = [
-    buildUnitInit("mc", "MC-MKII-2", 0, { col: 2, row: 4 }, "ne"),
-    buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 4 }, "nw"),
+    buildUnitInit("mc", "MC-MKII-2", 1, { col: 2, row: 4 }, "ne"),
+    buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 4 }, "nw"),
   ];
   const streakSetup = () => startAttackTurn(createTestBattle([], streakUnits, true));
 
@@ -974,8 +974,8 @@ describe("streak missiles", () => {
     // to a single shot: 20 blast damage straight to IS, TW p.125); the
     // follow-up laser must see the post-blast CT, not the phase-start CT.
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
-      buildUnitInit("tgt", "HBK-4G", 1, { col: 3, row: 5 }, "nw"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "se"),
+      buildUnitInit("tgt", "HBK-4G", 2, { col: 3, row: 5 }, "nw"),
     ];
     const state = startAttackTurn(createTestBattle([], units, false));
     const target = requireUnit(state, "tgt");
@@ -1132,8 +1132,8 @@ describe("weapon-volley crit accumulation (TW p. 38 simultaneity)", () => {
 
   function hbkVsEnfCrits(): BattleState {
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 5 }, "nw"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "se"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 5 }, "nw"),
     ];
     return createTestBattle([], units, false);
   }

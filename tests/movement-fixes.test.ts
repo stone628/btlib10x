@@ -20,15 +20,15 @@ function movementBattle(model = "GRF-1N", prone = false) {
   const state = createTestBattle(
     [],
     [
-      buildUnitInit("a", model, 0, { col: 5, row: 5 }, "n"),
-      buildUnitInit("b", model, 1, { col: 1, row: 1 }, "s"),
+      buildUnitInit("a", model, 1, { col: 5, row: 5 }, "n"),
+      buildUnitInit("b", model, 2, { col: 1, row: 1 }, "s"),
     ],
     true,
     9,
     9,
   );
   state.phase = "movement";
-  state.initiativeWinnerTeam = 0;
+  state.initiativeWinnerTeam = 1;
   state.actorQueue = ["a", "b"];
   state.actedThisPhase = [];
   requireUnit(state, "a").prone = prone;
@@ -66,15 +66,15 @@ describe("jump height cap (MOV-02, TW p.53)", () => {
     const state = createTestBattle(
       [{ col: 5, row: 4, type: "clear", level: 6 }],
       [
-        buildUnitInit("a", "GRF-1N", 0, { col: 5, row: 5 }, "n"),
-        buildUnitInit("b", "GRF-1N", 1, { col: 1, row: 1 }, "s"),
+        buildUnitInit("a", "GRF-1N", 1, { col: 5, row: 5 }, "n"),
+        buildUnitInit("b", "GRF-1N", 2, { col: 1, row: 1 }, "s"),
       ],
       true,
       9,
       9,
     );
     state.phase = "movement";
-    state.initiativeWinnerTeam = 0;
+    state.initiativeWinnerTeam = 1;
     state.actorQueue = ["a", "b"];
     state.actedThisPhase = [];
     expect(() =>
@@ -86,15 +86,15 @@ describe("jump height cap (MOV-02, TW p.53)", () => {
     const state = createTestBattle(
       [{ col: 5, row: 4, type: "clear", level: 5 }],
       [
-        buildUnitInit("a", "GRF-1N", 0, { col: 5, row: 5 }, "n"),
-        buildUnitInit("b", "GRF-1N", 1, { col: 1, row: 1 }, "s"),
+        buildUnitInit("a", "GRF-1N", 1, { col: 5, row: 5 }, "n"),
+        buildUnitInit("b", "GRF-1N", 2, { col: 1, row: 1 }, "s"),
       ],
       true,
       9,
       9,
     );
     state.phase = "movement";
-    state.initiativeWinnerTeam = 0;
+    state.initiativeWinnerTeam = 1;
     state.actorQueue = ["a", "b"];
     state.actedThisPhase = [];
     executeMove(state, "a", "jump", [{ kind: "enter", to: { col: 5, row: 4 } }], []);
@@ -149,16 +149,16 @@ describe("movement fall onto an occupied hex (MOV-09)", () => {
     const state = createTestBattle(
       [{ col: 5, row: 8, type: "rubble" }],
       [
-        buildUnitInit("a", "HBK-4G", 0, { col: 5, row: 9 }, "n"),
-        buildUnitInit("c", "HBK-4G", 0, { col: 5, row: 8 }, "n"),
-        buildUnitInit("b", "HBK-4G", 1, { col: 1, row: 1 }, "s"),
+        buildUnitInit("a", "HBK-4G", 1, { col: 5, row: 9 }, "n"),
+        buildUnitInit("c", "HBK-4G", 1, { col: 5, row: 8 }, "n"),
+        buildUnitInit("b", "HBK-4G", 2, { col: 1, row: 1 }, "s"),
       ],
       true,
       9,
       10,
     );
     state.phase = "movement";
-    state.initiativeWinnerTeam = 0;
+    state.initiativeWinnerTeam = 1;
     state.actorQueue = ["a", "c", "b"];
     state.actedThisPhase = [];
     return state;
@@ -188,16 +188,16 @@ describe("movement fall onto an occupied hex (MOV-09)", () => {
           { col: 5, row: 8, type: "rubble", level: 0 },
         ],
         [
-          buildUnitInit("a", "HBK-4G", 0, { col: 5, row: 9 }, "n"),
-          buildUnitInit("c", "HBK-4G", 0, { col: 5, row: 8 }, "n"),
-          buildUnitInit("b", "HBK-4G", 1, { col: 1, row: 1 }, "s"),
+          buildUnitInit("a", "HBK-4G", 1, { col: 5, row: 9 }, "n"),
+          buildUnitInit("c", "HBK-4G", 1, { col: 5, row: 8 }, "n"),
+          buildUnitInit("b", "HBK-4G", 2, { col: 1, row: 1 }, "s"),
         ],
         true,
         9,
         10,
       );
       state.phase = "movement";
-      state.initiativeWinnerTeam = 0;
+      state.initiativeWinnerTeam = 1;
       state.actorQueue = ["a", "c", "b"];
       state.actedThisPhase = [];
       return state;

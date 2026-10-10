@@ -93,9 +93,9 @@ const state: BattleState = createBattle(
     legends: ["lightWoods"],
   },
   [
-    { id: "wvr", model: "WVR-6R", team: 0, gunnery: 4, piloting: 5,
+    { id: "wvr", model: "WVR-6R", team: 1, gunnery: 4, piloting: 5,
       position: { col: 3, row: 5 }, facing: "se" },       // facing southeast
-    { id: "grf", model: "GRF-1N", team: 1, gunnery: 3, piloting: 5,
+    { id: "grf", model: "GRF-1N", team: 2, gunnery: 3, piloting: 5,
       position: { col: 11, row: 8 }, facing: "nw" },      // facing northwest
   ],
   { critsDisabled: false },
@@ -119,7 +119,7 @@ record sheets are usually authored from a `.mtf` file (see `docs/MTF.md`).
 
 ```ts
 rollInitiativePhase(state, rng, events);   // 2D6 per team, ties reroll
-// state.initiativeWinnerTeam === 0 -> team 0 moves/fires first this round
+// state.initiativeWinnerTeam === 1 -> team 1 moves/fires first this round
 ```
 
 The loser's team acts first each phase (Total Warfare convention);

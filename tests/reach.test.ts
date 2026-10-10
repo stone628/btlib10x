@@ -8,7 +8,7 @@ import { reachableLandings } from "../src/rules/movement";
 const start = { col: 12, row: 12 };
 const startFacing: Facing = "n";
 const noOccupants = () => undefined;
-const team = 0;
+const team = 1;
 const boardWidth = 21;
 const boardHeight = 21;
 
@@ -121,7 +121,7 @@ describe("reachableLandings", () => {
 
   it("passes through a friendly-occupied hex but does not land on it", () => {
     const occupantTeam = (hex: { col: number; row: number }): number | undefined =>
-      hex.col === 12 && hex.row === 11 ? 0 : undefined;
+      hex.col === 12 && hex.row === 11 ? 1 : undefined;
     const rs = reach("walk", 2, 2, 0, "n", occupantTeam);
     expect(lookup(rs, { col: 12, row: 11 }, "n")).toBeUndefined();
     expect(lookup(rs, { col: 12, row: 10 }, "n")).toBeDefined();
@@ -141,7 +141,7 @@ describe("reachableLandings", () => {
       jumping: 0,
       prone: false,
       grid: grid(13, 13),
-      team: 0,
+      team: 1,
       occupantTeam: noOccupants,
     });
     expect(rs.length).toBeGreaterThan(0);

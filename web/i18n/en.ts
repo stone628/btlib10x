@@ -276,7 +276,7 @@ export const en = {
   "err.unknownModel": "Unknown 'Mech model: {model} (try 'info mech')",
   "err.unknownWeapon": "Unknown weapon: {name}; available: {list}",
   "err.duplicateId": "Duplicate unit id: {id}",
-  "err.badTeam": "team must be a non-negative integer",
+  "err.badTeam": "team must be 1 or 2",
   "err.badGunnery": "gunnery must be an integer 0..8",
   "err.badPiloting": "piloting must be an integer 0..8",
   "err.badPilotHitMax": "pilotHitMax must be an integer >= 1",
@@ -298,7 +298,7 @@ export const en = {
   "err.alreadyStarted": "Battle already started",
   "err.noMap": "Load a map before starting a battle",
   "err.needTwoUnits": "A battle needs at least two units",
-  "err.needTwoTeams": "Units must span at least two teams",
+  "err.needTwoTeams": "Units must span teams 1 and 2",
   "err.badModeWord": "unknown move mode — valid modes: {modes}",
   "err.standupRequiresProne":
     "{id} is not prone — mode standup needs a prone unit. valid modes: {modes}",

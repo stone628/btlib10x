@@ -23,11 +23,11 @@ function setup() {
   const state = createTestBattle(
     [],
     [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 4, row: 6 }, "n"),
-      buildUnitInit("fa", "ENF-4R", 1, FRONT_A, "s"),
-      buildUnitInit("fb", "ENF-4R", 1, FRONT_B, "s"),
-      buildUnitInit("l", "ENF-4R", 1, LEFT, "s"),
-      buildUnitInit("r", "ENF-4R", 1, RIGHT, "s"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 4, row: 6 }, "n"),
+      buildUnitInit("fa", "ENF-4R", 2, FRONT_A, "s"),
+      buildUnitInit("fb", "ENF-4R", 2, FRONT_B, "s"),
+      buildUnitInit("l", "ENF-4R", 2, LEFT, "s"),
+      buildUnitInit("r", "ENF-4R", 2, RIGHT, "s"),
     ],
     true,
   );

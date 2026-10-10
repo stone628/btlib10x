@@ -238,8 +238,8 @@ describe("consumeAmmo", () => {
 
 function hbkBattle(): ReturnType<typeof createBattle> {
   const units: UnitInit[] = [
-    buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "ne"),
-    buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 4 }, "nw"),
+    buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "ne"),
+    buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 4 }, "nw"),
   ];
   return createTestBattle([], units, true);
 }
@@ -263,8 +263,8 @@ describe("declareAttacks (game level)", () => {
   it("drains one shot per rapid-fire round declared (TW p.103-104)", () => {
     // HER-5SA Ultra AC/5 (weaponIndex 3, 1-based): 20 shots loaded; a double-tap declares 2.
     const units: UnitInit[] = [
-      buildUnitInit("her", "HER-5SA", 0, { col: 2, row: 4 }, "ne"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 4 }, "nw"),
+      buildUnitInit("her", "HER-5SA", 1, { col: 2, row: 4 }, "ne"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 4 }, "nw"),
     ];
     const state = createTestBattle([], units, true);
     attackPhase(state);
@@ -337,13 +337,13 @@ describe("ammoPolicy setup (session)", () => {
   });
 
   it("buildUnitInit defaults the policy; createBattle applies and validates it", () => {
-    expect(buildUnitInit("a", "HBK-4G", 0, { col: 1, row: 1 }).policy).toEqual({
+    expect(buildUnitInit("a", "HBK-4G", 1, { col: 1, row: 1 }).policy).toEqual({
       ammoPolicy: "exposed",
       autoEject: true,
     });
     const mk = (policy: UnitInit["policy"]) => [
-      { ...buildUnitInit("a", "HBK-4G", 0, { col: 1, row: 1 }), policy },
-      buildUnitInit("b", "CDA-3MA", 1, { col: 3, row: 1 }),
+      { ...buildUnitInit("a", "HBK-4G", 1, { col: 1, row: 1 }), policy },
+      buildUnitInit("b", "CDA-3MA", 2, { col: 3, row: 1 }),
     ];
     const state = createTestBattle([], mk({ ammoPolicy: "core", autoEject: true }), true);
     expect(state.units.a!.ammoPolicy).toBe("core");

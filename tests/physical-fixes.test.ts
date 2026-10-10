@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 import type { HexCoord } from "../src/core/types";
-import type { BattleState, UnitInit } from "../src/rules/game";
+import type { BattleState, TeamId, UnitInit } from "../src/rules/game";
 import {
   advancePhase,
   buildUnitInit,
@@ -21,7 +21,7 @@ const HIGH_RNG = { d6: () => 6, snapshot: () => "", load: () => {} };
 type Facing = "n" | "ne" | "se" | "s" | "sw" | "nw";
 const mech = (
   id: string,
-  team: number,
+  team: TeamId,
   pos: HexCoord,
   facing: Facing,
   model = "HBK-4G",
@@ -36,7 +36,7 @@ describe("missing arm actuators (PHY-05)", () => {
   it("an MC-MKII-2 punch ignores the lower arm and hand it does not have", () => {
     const state = createTestBattle(
       [],
-      [mech("a", 0, { col: 2, row: 2 }, "s", "MC-MKII-2"), mech("b", 1, { col: 2, row: 3 }, "n")],
+      [mech("a", 1, { col: 2, row: 2 }, "s", "MC-MKII-2"), mech("b", 2, { col: 2, row: 3 }, "n")],
       true,
     );
     const res = resolvePhysicalAttack(
@@ -55,9 +55,9 @@ describe("declaration rules (PHY-10, PHY-11)", () => {
     const state = createTestBattle(
       [],
       [
-        mech("a", 1, { col: 2, row: 2 }, "s"),
-        mech("b", 0, { col: 2, row: 3 }, "n"),
-        mech("c", 0, { col: 3, row: 2 }, "n"),
+        mech("a", 2, { col: 2, row: 2 }, "s"),
+        mech("b", 1, { col: 2, row: 3 }, "n"),
+        mech("c", 1, { col: 3, row: 2 }, "n"),
       ],
       true,
     );
@@ -97,7 +97,7 @@ describe("simultaneous physical phase (PHY-07)", () => {
   it("a head hit does not stop the victim's own declared punch", () => {
     const state = createTestBattle(
       [],
-      [mech("a", 0, { col: 2, row: 2 }, "s"), mech("b", 1, { col: 2, row: 3 }, "n")],
+      [mech("a", 1, { col: 2, row: 2 }, "s"), mech("b", 2, { col: 2, row: 3 }, "n")],
       true,
     );
     toAttack(state);

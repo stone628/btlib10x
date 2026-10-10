@@ -116,8 +116,13 @@ const TERRAIN_STYLES: Readonly<Record<string, CharStyle>> = {
   hardenedBuilding: { cls: "t-hardenedBuilding" },
 };
 
-/** Team-tinted unit ids: team 0 cyan, team 1 magenta, others unstyled. */
+/** Team-tinted unit ids: team 1 cyan, team 2 magenta. */
 export const TEAM_STYLES: readonly CharStyle[] = [{ fg: "cyan" }, { fg: "magenta" }];
+
+/** Board style for a team id (1 or 2); undefined for anything else. */
+export function teamStyle(team: number): CharStyle | undefined {
+  return TEAM_STYLES[team - 1];
+}
 
 /** Belly marker drawn in a reachable hex on the reachable map. */
 export const REACHABLE_MARKER = "<>";
@@ -703,7 +708,7 @@ export function battleModel(
     for (const unit of Object.values(state.units)) {
       if (isUnitRemoved(unit)) continue;
       const key = hexKey(unit.position);
-      const team = TEAM_STYLES[unit.team];
+      const team = teamStyle(unit.team);
       if (team !== undefined) autoCells[key] = team;
     }
   }
@@ -747,7 +752,7 @@ export function createBoardModel(info: BoardRenderInfo): BoardModel {
       const key = hexKey(unit.position);
       cells[key] = unit.ejected ? `-${unit.id}` : unit.id;
       facings[key] = unit.facing;
-      const team = TEAM_STYLES[unit.team];
+      const team = teamStyle(unit.team);
       if (team !== undefined) idStyles[key] = team;
     }
   }
@@ -785,10 +790,10 @@ export function createBoardModel(info: BoardRenderInfo): BoardModel {
   const row1 = Math.min(base.rows, maxR);
 
   const edgeStyles: Record<string, CharStyle> = {};
-  const team = TEAM_STYLES[info.reachable.team]!;
+  const team = teamStyle(info.reachable.team);
   for (const l of info.reachable.revealed) {
     const key = hexKey(l.hex);
-    edgeStyles[`${key}:${l.facing}`] = team;
+    if (team !== undefined) edgeStyles[`${key}:${l.facing}`] = team;
     if (cells[key] === undefined) {
       cells[key] = REACHABLE_MARKER;
       if (team !== undefined) idStyles[key] = team;

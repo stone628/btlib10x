@@ -11,8 +11,8 @@ function battle() {
       { col: 4, row: 3, type: "heavyWoods" },
     ],
     [
-      buildUnitInit("a", "HBK-4G", 0, { col: 1, row: 1 }, "n"),
-      buildUnitInit("b", "ENF-4R", 1, { col: 6, row: 6 }, "s"),
+      buildUnitInit("a", "HBK-4G", 1, { col: 1, row: 1 }, "n"),
+      buildUnitInit("b", "ENF-4R", 2, { col: 6, row: 6 }, "s"),
     ],
     true,
   );

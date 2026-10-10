@@ -8,6 +8,7 @@ import {
   type HexCoord,
   hexKey,
   isValidPilotHitMax,
+  isValidTeam,
   type MapDef,
   type MapNameHolder,
   mapDefFor,
@@ -58,13 +59,14 @@ export function setupSetMap(context: SetupContext, m: MapDef): void {
 }
 
 export function setupPickTeam(roster: UnitInit[]): number {
-  if (roster.length === 0) return 0;
-  const counts: [number, number] = [0, 0];
+  if (roster.length === 0) return 1;
+  let one = 0;
+  let two = 0;
   for (const u of roster) {
-    if (u.team === 0) counts[0]++;
-    else if (u.team === 1) counts[1]++;
+    if (u.team === 1) one++;
+    else if (u.team === 2) two++;
   }
-  return counts[0] <= counts[1] ? 0 : 1;
+  return one <= two ? 1 : 2;
 }
 
 export interface AddUnitResult {
@@ -164,7 +166,7 @@ export function setupSetUnitProp(
     }
     case "team": {
       const n = strictInt(raw) ?? Number.NaN;
-      if (!Number.isInteger(n) || n < 0) throw new Error(i18n("err.badTeam"));
+      if (!isValidTeam(n)) throw new Error(i18n("err.badTeam"));
       unit.team = n;
       return { prop, value: String(n) };
     }
@@ -273,7 +275,7 @@ export function setupStartBattle(s: Session): SessionGameEvent[] {
   if (s.state !== "setup") throw new Error(i18n("err.alreadyStarted"));
   if (s.setup.roster.length < 2) throw new Error(i18n("err.needTwoUnits"));
   const teams = new Set(s.setup.roster.map((u) => u.team));
-  if (teams.size < 2) throw new Error(i18n("err.needTwoTeams"));
+  if (teams.size !== 2 || !teams.has(1) || !teams.has(2)) throw new Error(i18n("err.needTwoTeams"));
   const map = mapDefFor(s.setup);
   s.move = null;
   s.attack = null;

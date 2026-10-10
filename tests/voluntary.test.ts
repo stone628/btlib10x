@@ -16,8 +16,8 @@ import { createTestBattle, scriptedRng } from "./helpers";
 
 function hbkVsEnf(): BattleState {
   const units: UnitInit[] = [
-    buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
-    buildUnitInit("enf", "ENF-4R", 1, { col: 5, row: 4 }, "nw"),
+    buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "se"),
+    buildUnitInit("enf", "ENF-4R", 2, { col: 5, row: 4 }, "nw"),
   ];
   return createTestBattle([], units, true);
 }
@@ -188,7 +188,7 @@ describe("movement pass for shut-down units", () => {
 describe("movement priority for shut-down units", () => {
   it("puts a down unit first regardless of initiative", () => {
     const state = hbkVsEnf();
-    startMovementTurn(state, scriptedRng(2, 2, 6, 6)); // team 1 (enf) wins initiative
+    startMovementTurn(state, scriptedRng(2, 2, 6, 6)); // team 2 (enf) wins initiative
     requireUnit(state, "hbk").shutdown = "heat"; // down, not acted this turn
     expect(nextActor(state)).toBe("hbk");
   });

@@ -33,7 +33,7 @@ export const SETUP_PLAYER_COUNTS: readonly number[] = [2, 4];
 export const DP_SETUP_USAGE = "dp setup 2|4";
 /** Keeps the setup stream apart from the battle dice seeded with the same number. */
 const SETUP_SEED_SALT = 0x5eed5e7;
-/** Unit ids by add order; `setupAddUnit` alternates teams, so A* are team 0 and B* team 1. */
+/** Unit ids by add order; `setupAddUnit` alternates teams, so A* are team 1 and B* team 2. */
 const PLAYER_IDS: readonly string[] = ["A1", "B1", "A2", "B2"];
 /** Base-6 digits per uniform draw (6^8 ≈ 1.7M ≫ any catalog or board size). */
 const DIGITS = 8;

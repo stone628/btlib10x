@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 import type { HexCoord } from "../src/core/types";
-import type { BattleState, UnitInit } from "../src/rules/game";
+import type { BattleState, TeamId, UnitInit } from "../src/rules/game";
 import {
   advancePhase,
   buildUnitInit,
@@ -27,25 +27,25 @@ const HIGH_RNG = {
 
 function unit(
   id: string,
-  team: number,
+  team: TeamId,
   pos: HexCoord,
   facing: "n" | "ne" | "se" | "s" | "sw" | "nw",
 ): UnitInit {
   return buildUnitInit(id, "HBK-4G", team, pos, facing);
 }
 
-/** hbk (team 0) at (2,2)/s facing enf (team 1) at (2,3)/n, attack phase. */
+/** hbk (team 1) at (2,2)/s facing enf (team 2) at (2,3)/n, attack phase. */
 function faceToFace(): BattleState {
   return createTestBattle(
     [],
-    [unit("hbk", 0, { col: 2, row: 2 }, "s"), unit("enf", 1, { col: 2, row: 3 }, "n")],
+    [unit("hbk", 1, { col: 2, row: 2 }, "s"), unit("enf", 2, { col: 2, row: 3 }, "n")],
     true,
   );
 }
 
 function toAttack(state: BattleState): void {
   // Duplicate of the piloting-test drive: initiative -> movement -> attack.
-  // Default rng: team 0 (8) beats team 1 (4), so enf (loser) declares first.
+  // Default rng: team 1 (8) beats team 2 (4), so enf (loser) declares first.
   rollInitiativePhase(state, scriptedRng(4, 4, 2, 2), []);
   advancePhase(state, []);
 }

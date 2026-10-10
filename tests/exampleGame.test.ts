@@ -24,8 +24,8 @@ import { checkVictory, createTestBattle, scriptedRng } from "./helpers";
  */
 function setup(): BattleState {
   const units: UnitInit[] = [
-    buildUnitInit("wvr", "WVR-6R", 0, { col: 3, row: 5 }, "se"),
-    buildUnitInit("grf", "GRF-1N", 1, { col: 11, row: 8 }, "nw", 3),
+    buildUnitInit("wvr", "WVR-6R", 1, { col: 3, row: 5 }, "se"),
+    buildUnitInit("grf", "GRF-1N", 2, { col: 11, row: 8 }, "nw", 3),
   ];
   return createTestBattle([{ col: 7, row: 7, type: "lightWoods" }], units, true);
 }
@@ -34,9 +34,9 @@ describe("example battle: Wolverine vs Griffin", () => {
   it("plays turn 1 exactly as the rulebook diagram describes", () => {
     const state = setup();
 
-    // Initiative: GRF rolls 10 (5+5), WVR rolls 5 (2+3) -> team 1 wins.
+    // Initiative: GRF rolls 10 (5+5), WVR rolls 5 (2+3) -> team 2 wins.
     rollInitiativePhase(state, scriptedRng(2, 3, 5, 5), []);
-    expect(state.initiativeWinnerTeam).toBe(1);
+    expect(state.initiativeWinnerTeam).toBe(2);
 
     // Movement phase: Wolverine runs southeast into (4,5), turns south
     // (1 MP), steps south into (4,6), and squares up southeast (1 MP) -
@@ -137,6 +137,6 @@ describe("example battle: Wolverine vs Griffin", () => {
     advancePhase(state, []); // weaponAttack -> end: kill committed
     expect(requireUnit(state, "grf").destroyed).toBe("centerTorsoDestroyed");
     expect(requireUnit(state, "grf").removed).toBe("destroyed");
-    expect(checkVictory(state)).toEqual({ winnerTeam: 0, draw: false });
+    expect(checkVictory(state)).toEqual({ winnerTeam: 1, draw: false });
   });
 });

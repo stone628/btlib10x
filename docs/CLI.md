@@ -20,8 +20,8 @@ terminal emulator UI. Vanilla TypeScript + DOM only; zero runtime dependencies
 Examples:
 
     setup >
-    turn(1):move(team 1, mech cicada) >
-    turn(1):attack(team 0, mech hunchy) >
+    turn(1):move(team 2, mech cicada) >
+    turn(1):attack(team 1, mech hunchy) >
     over >
 
 ## Conventions
@@ -150,9 +150,9 @@ snapshots all apply. A failed command stops it and hands the prompt to the human
 says which is already set and asks for `reset`) through the setup API directly
 (`setupSetMap` / `setupAddUnit`): a random catalog map, then per player a random catalog
 'Mech on a random dry, non-building hex with a random facing, and a random doctrine. It
-prints one line for the map and one per player (`A1: HBK-4G at (14,2) facing s, team 0,
+prints one line for the map and one per player (`A1: HBK-4G at (14,2) facing s, team 1,
 doctrine Jump Jockey`). Ids are `A1 B1 A2 B2`; teams alternate, so players split evenly
-into teams 0 and 1. Draws come from a stream salted off the setup seed
+into teams 1 and 2. Draws come from a stream salted off the setup seed
 (`web/doctrine.setup.ts`): the same `seed` gives the same setup, and the battle dice are
 untouched. Then `start` plays the whole bout.
 

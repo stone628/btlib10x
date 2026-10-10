@@ -9,7 +9,7 @@ import {
 } from "../src/rules/game";
 import { createTestBattle, scriptedRng } from "./helpers";
 
-/** initiative -> weaponAttack with nobody moving. hbk acts first (team 0). */
+/** initiative -> weaponAttack with nobody moving. hbk acts first (team 1). */
 function startAttackTurn(state: BattleState): BattleState {
   rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []);
   advancePhase(state, []); // initiative -> movement
@@ -21,8 +21,8 @@ function hbkVsEnf(): BattleState {
   const state = createTestBattle(
     [],
     [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "n"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 4 }, "sw"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "n"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 4 }, "sw"),
     ],
     true,
   );
@@ -85,9 +85,9 @@ describe("validateAttacks — gate coverage", () => {
     const state = createTestBattle(
       [],
       [
-        buildUnitInit("a", "HBK-4G", 0, { col: 2, row: 4 }, "n"),
-        buildUnitInit("b", "ENF-4R", 0, { col: 3, row: 4 }, "sw"),
-        buildUnitInit("c", "ENF-4R", 1, { col: 5, row: 4 }, "sw"),
+        buildUnitInit("a", "HBK-4G", 1, { col: 2, row: 4 }, "n"),
+        buildUnitInit("b", "ENF-4R", 1, { col: 3, row: 4 }, "sw"),
+        buildUnitInit("c", "ENF-4R", 2, { col: 5, row: 4 }, "sw"),
       ],
       true,
     );
@@ -101,9 +101,9 @@ describe("validateAttacks — gate coverage", () => {
     const state = createTestBattle(
       [],
       [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "n"),
-        buildUnitInit("enf1", "ENF-4R", 1, { col: 3, row: 4 }, "sw"),
-        buildUnitInit("enf2", "ENF-4R", 1, { col: 2, row: 2 }, "s"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "n"),
+        buildUnitInit("enf1", "ENF-4R", 2, { col: 3, row: 4 }, "sw"),
+        buildUnitInit("enf2", "ENF-4R", 2, { col: 2, row: 2 }, "s"),
       ],
       true,
     );
@@ -127,8 +127,8 @@ describe("validateAttacks — gate coverage", () => {
     const state = createTestBattle(
       [],
       [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "n"),
-        buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 5 }, "sw"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "n"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 5 }, "sw"),
       ],
       true,
     );
@@ -145,8 +145,8 @@ describe("validateAttacks — gate coverage", () => {
     const state = createTestBattle(
       [],
       [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "n"),
-        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 3 }, "s"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "n"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 3 }, "s"),
       ],
       true,
     );
@@ -172,8 +172,8 @@ describe("validateAttacks — gate coverage", () => {
     const state = createTestBattle(
       [],
       [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 5, row: 15 }, "n"),
-        buildUnitInit("enf", "ENF-4R", 1, { col: 5, row: 5 }, "s"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 5, row: 15 }, "n"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 5, row: 5 }, "s"),
       ],
       true,
       7,
@@ -216,8 +216,8 @@ describe("validateAttacks — gate coverage", () => {
     const state = createTestBattle(
       [],
       [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "n"),
-        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 3 }, "s"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "n"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 3 }, "s"),
       ],
       true,
     );
@@ -254,8 +254,8 @@ describe("validateAttacks — gate coverage", () => {
     const state = createTestBattle(
       [],
       [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "n"),
-        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 3 }, "s"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "n"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 3 }, "s"),
       ],
       true,
     );
@@ -270,12 +270,12 @@ describe("validateAttacks — gate coverage", () => {
     const state = createTestBattle(
       [],
       [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "n"),
-        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 3 }, "s"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "n"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 3 }, "s"),
       ],
       true,
     );
-    rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []); // now initiative phase, team 0 wins
+    rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []); // now initiative phase, team 1 wins
     // Phase is "initiative" — validateAttacks should still run.
     expect(() =>
       validateAttacksImpl(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], {}),

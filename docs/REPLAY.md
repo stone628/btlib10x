@@ -56,11 +56,11 @@ E<idx><hits>[:<armor>[:<crit>[:<ammo>]]]    final state per unit, idx order
 
 ### `U` — unit registration (→ extended `UnitInit`)
 
-`U0hunchy:HBK-4G:0503s456:C26/1/1A16/2:a3a4:L13L22:s`
+`U1hunchy:HBK-4G:0503s456:C26/1/1A16/2:a3a4:L13L22:s`
 
 | part | meaning |
 |---|---|
-| `U0` | `team` 0..9 |
+| `U1` | `team` 1..2 |
 | `hunchy` | unit `id` (up to the first `:`; no `:` `,` `;` in names) |
 | `HBK-4G` | `model`, must exist in the catalog |
 | `0503s456` | `position` `0503`, `facing` `s`, `gunnery` `4`, `piloting` `5`, `pilotHitMax` `6`; optional 9th digit = `pilotHits` (omit = 0) |
@@ -104,7 +104,7 @@ A unit with a destroyed leg or gyro starts **prone** (TW p.122, crit table gyro 
 
 Consistency (each failure throws `Starting damage for <id>: …`):
 
-- `|gunnery − piloting| ≤ 2` (TW p.273); unique ids; ≥ 2 units on ≥ 2 teams.
+- `|gunnery − piloting| ≤ 2` (TW p.273); unique ids; units on both teams 1 and 2.
 - armor lost ≤ model armor per pool; internal lost ≤ model internal structure; no negatives.
 - internal lost > 0 requires the location's armor depleted (torso: front **or** rear pool); a destroyed side torso needs its arm destroyed too (mirrors `applyDamage`).
 - crit slot exists in `critSlots[loc]`, is not `empty`, and is not listed twice (a double heat sink dies as a whole group).
@@ -209,7 +209,7 @@ need no flag (`destroyed` follows from the structure).
 
 ### `W` — rng state
 
-`<rng>` is the mulberry32 state as exactly 8 lowercase hex digits (`W03f9a41c7` = team 0, state `3f9a41c7`; `W-3f9a41c7` = nobody left). It is the single `uint32` behind `createRng` in `web/rng.ts`, read with `rng.snapshot()`. Note `snapshot()` currently prints the raw signed int (`a.toString(16)` can start with `-`), so the encoder must normalize: `(a >>> 0).toString(16).padStart(8, "0")`, and the decoder compares as unsigned. The state is a cumulative fingerprint of every d6 drawn, so it catches any drift in dice consumption (an extra or missing roll anywhere) even when the `E` blocks happen to agree.
+`<rng>` is the mulberry32 state as exactly 8 lowercase hex digits (`W13f9a41c7` = team 1, state `3f9a41c7`; `W-3f9a41c7` = nobody left). It is the single `uint32` behind `createRng` in `web/rng.ts`, read with `rng.snapshot()`. Note `snapshot()` currently prints the raw signed int (`a.toString(16)` can start with `-`), so the encoder must normalize: `(a >>> 0).toString(16).padStart(8, "0")`, and the decoder compares as unsigned. The state is a cumulative fingerprint of every d6 drawn, so it catches any drift in dice consumption (an extra or missing roll anywhere) even when the `E` blocks happen to agree.
 
 ## CLI coverage
 
@@ -245,15 +245,15 @@ Every CLI command and where it lands. "UI" = no effect on battle state, never re
 
 ## Example
 
-Illustrative, hand-written (not engine-generated): HBK-4G `hunchy` (team 0,
-starts damaged, spread ammo policy) vs CDA-3MA `cicada` (team 1, gunnery 3).
+Illustrative, hand-written (not engine-generated): HBK-4G `hunchy` (team 1,
+starts damaged, spread ammo policy) vs CDA-3MA `cicada` (team 2, gunnery 3).
 
 ```
 V261008-8211edb
 Bquickstart
 S42
-U0hunchy:HBK-4G:0503s456:C26/1/1A16/2:a3a4:L13L22:s
-U1cicada:CDA-3MA:0508n356
+U1hunchy:HBK-4G:0503s456:C26/1/1A16/2:a3a4:L13L22:s
+U2cicada:CDA-3MA:0508n356
 M1r++
 M0w+
 A1L:01~4
@@ -266,7 +266,7 @@ M1s
 M0s
 A1F:01~4
 A0F:11~4
-W03f9a41c7
+W13f9a41c7
 E01:h5C26/4/1A16/2:a3a4:L16L22
 E10:C17/6/12L15//10:L4L5
 ```
@@ -274,17 +274,17 @@ E10:C17/6/12L15//10:L4L5
 One line:
 
 ```
-V261008-8211edb;Bquickstart;S42;U0hunchy:HBK-4G:0503s456:C26/1/1A16/2:a3a4:L13L22:s;U1cicada:CDA-3MA:0508n356;M1r++;M0w+;A1L:01~4;A0F:1124;M0s;M1w+;A0F:11~4;A1F:0Q;M1s;M0s;A1F:01~4;A0F:11~4;W03f9a41c7;E01:h5C26/4/1A16/2:a3a4:L16L22
+V261008-8211edb;Bquickstart;S42;U1hunchy:HBK-4G:0503s456:C26/1/1A16/2:a3a4:L13L22:s;U2cicada:CDA-3MA:0508n356;M1r++;M0w+;A1L:01~4;A0F:1124;M0s;M1w+;A0F:11~4;A1F:0Q;M1s;M0s;A1F:01~4;A0F:11~4;W13f9a41c7;E01:h5C26/4/1A16/2:a3a4:L16L22
 E10:C17/6/12L15//10:L4L5
 ```
 
 Decode notes:
 
-- `U0hunchy…`: unit 0, team 0, at (5,3) facing south (`s`), gunnery 4 / piloting 5 / hit max 6; CT front −26 (gone), rear −1, internal −1; left arm armor −16 (gone), internal −2; right-arm slots 3,4 destroyed; LT ammo slot 1 used 3 shots, slot 2 used 2; spread ammo policy (`s`). `U1cicada` has no armor/crit/ammo/policy fields: undamaged, default policy.
+- `U1hunchy…`: unit 0, team 1, at (5,3) facing south (`s`), gunnery 4 / piloting 5 / hit max 6; CT front −26 (gone), rear −1, internal −1; left arm armor −16 (gone), internal −2; right-arm slots 3,4 destroyed; LT ammo slot 1 used 3 shots, slot 2 used 2; spread ammo policy (`s`). `U2cicada` has no armor/crit/ammo/policy fields: undamaged, default policy.
 - `M1r++` / `M0w+`: unit 1 (at (5,8), facing north) `executeMove("run", [enter 5,7; enter 5,6])`, then unit 0 (at (5,3), facing south) `executeMove("walk", [enter 5,4])`. The first `M` also creates the battle.
 - `A1L:01~4` / `A0F:1124`: unit 1 twists left and fires weapons 1–4 at unit 0; unit 0 (front) fires weapons 1,2,4 at unit 1.
 - `A0F:11~4` / `A1F:0Q`: unit 0 fires weapons 1–4 at unit 1; unit 1 right-punches unit 0.
-- `W03f9a41c7`: team 0 is the last one standing; the Rng ended in state `0x3f9a41c7` (illustrative value). `E10:…`: unit 1, 0 pilot hits, CT internal −12 (full) ⇒ destroyed.
+- `W13f9a41c7`: team 1 is the last one standing; the Rng ended in state `0x3f9a41c7` (illustrative value). `E10:…`: unit 1, 0 pilot hits, CT internal −12 (full) ⇒ destroyed.
 - Other shapes: `A1F` pass · `A1F-:01~4` drop club then fire · `A1F+t` pick up a tree · `A2R:0Ts:1P` unit 2 twisted right: right-arm strike with a Sword at unit 0, left punch at unit 1.
 
 ## Display layout
@@ -295,13 +295,13 @@ The web CLI shows it as (`replayPrettifier` in `web/replay.ts`):
 ```
 V261008-8211edb
 Bquickstart;S42
-U0hunchy:HBK-4G:0503s456:C26/1/1A16/2:a3a4:L13L22:s
-U1cicada:CDA-3MA:0508n356
+U1hunchy:HBK-4G:0503s456:C26/1/1A16/2:a3a4:L13L22:s
+U2cicada:CDA-3MA:0508n356
 M1r++;M0w+
 A1L:01~4;A0F:1124
 M0s;M1w+
 A0F:11~4;A1F:0Q
-W03f9a41c7
+W13f9a41c7
 E01:h5C26/4/1A16/2:a3a4:L16L22
 E10:C17/6/12L15//10:L4L5
 ```

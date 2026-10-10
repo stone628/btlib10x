@@ -92,8 +92,8 @@ describe("water LOS blocking", () => {
 
 function battleWithBuilding(): BattleState {
   const units: UnitInit[] = [
-    buildUnitInit("a", "HBK-4G", 0, { col: 2, row: 3 }, "se"),
-    buildUnitInit("b", "ENF-4R", 1, { col: 2, row: 1 }, "sw"),
+    buildUnitInit("a", "HBK-4G", 1, { col: 2, row: 3 }, "se"),
+    buildUnitInit("b", "ENF-4R", 2, { col: 2, row: 1 }, "sw"),
   ];
   const terrain: readonly TerrainHexDef[] = [{ col: 3, row: 3, type: "lightBuilding" }];
   return createTestBattle(terrain, units, true);
@@ -145,8 +145,8 @@ describe("battle building integration", () => {
     const battle: BattleState = createTestBattle(
       [{ col: 3, row: 3, type: "mediumBuilding" }],
       [
-        buildUnitInit("a", "HBK-4G", 0, { col: 2, row: 3 }, "ne"),
-        buildUnitInit("b", "ENF-4R", 1, { col: 3, row: 3 }, "sw"),
+        buildUnitInit("a", "HBK-4G", 1, { col: 2, row: 3 }, "ne"),
+        buildUnitInit("b", "ENF-4R", 2, { col: 3, row: 3 }, "sw"),
       ],
       true,
     );
@@ -180,10 +180,10 @@ describe("battle building integration", () => {
     const battle: BattleState = createTestBattle(
       [{ col: 3, row: 3, type: "lightBuilding" }],
       [
-        buildUnitInit("a", "HBK-4G", 0, { col: 2, row: 3 }, "ne"),
-        buildUnitInit("c", "HBK-4G", 0, { col: 4, row: 3 }, "nw"),
-        buildUnitInit("b", "ENF-4R", 1, { col: 3, row: 3 }, "sw"),
-        buildUnitInit("d", "ENF-4R", 1, { col: 3, row: 3 }, "ne"),
+        buildUnitInit("a", "HBK-4G", 1, { col: 2, row: 3 }, "ne"),
+        buildUnitInit("c", "HBK-4G", 1, { col: 4, row: 3 }, "nw"),
+        buildUnitInit("b", "ENF-4R", 2, { col: 3, row: 3 }, "sw"),
+        buildUnitInit("d", "ENF-4R", 2, { col: 3, row: 3 }, "ne"),
       ],
       true,
     );
@@ -220,8 +220,8 @@ describe("battle building integration", () => {
     const battle: BattleState = createTestBattle(
       [{ col: 3, row: 3, type: "lightBuilding" }],
       [
-        buildUnitInit("a", "HBK-4G", 0, { col: 2, row: 3 }, "ne"),
-        buildUnitInit("b", "ENF-4R", 1, { col: 3, row: 3 }, "sw"),
+        buildUnitInit("a", "HBK-4G", 1, { col: 2, row: 3 }, "ne"),
+        buildUnitInit("b", "ENF-4R", 2, { col: 3, row: 3 }, "sw"),
       ],
       true,
     );
@@ -256,8 +256,8 @@ describe("battle building integration", () => {
     const battle: BattleState = createTestBattle(
       [{ col: 3, row: 3, type: "lightBuilding", level: 2 }],
       [
-        buildUnitInit("a", "HBK-4G", 0, { col: 2, row: 3 }, "ne"),
-        buildUnitInit("b", "ENF-4R", 1, { col: 3, row: 3 }, "sw"),
+        buildUnitInit("a", "HBK-4G", 1, { col: 2, row: 3 }, "ne"),
+        buildUnitInit("b", "ENF-4R", 2, { col: 3, row: 3 }, "sw"),
       ],
       true,
     );

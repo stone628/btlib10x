@@ -312,8 +312,8 @@ describe("engine prone turn", () => {
     const state = createTestBattle(
       [],
       [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 3, row: 3 }, "n"),
-        buildUnitInit("enf", "ENF-4R", 1, { col: 5, row: 5 }, "s"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 3, row: 3 }, "n"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 5, row: 5 }, "s"),
       ],
       true,
     );

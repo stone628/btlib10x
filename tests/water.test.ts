@@ -12,8 +12,8 @@ function battle(terrain: Parameters<typeof createTestBattle>[0], startType?: str
   const state = createTestBattle(
     terrain,
     [
-      buildUnitInit("enf", "ENF-4R", 0, { col: 2, row: 2 }, "s"),
-      buildUnitInit("hbk", "HBK-4G", 1, { col: 1, row: 1 }, "s"),
+      buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 2 }, "s"),
+      buildUnitInit("hbk", "HBK-4G", 2, { col: 1, row: 1 }, "s"),
     ],
     true,
   );
@@ -58,7 +58,7 @@ describe("running and water (TW p.53, p.57)", () => {
       jumping: 0,
       prone: false,
       grid: state,
-      team: 0,
+      team: 1,
       occupantTeam: () => undefined,
     } as const;
     const run = reachableLandings({ col: 2, row: 2 }, "s", { ...base, mode: "run" });
@@ -146,7 +146,7 @@ describe("water depth-change movement (TW p.48-49)", () => {
       jumping: 0,
       prone: false,
       grid: state,
-      team: 0,
+      team: 1,
       occupantTeam: () => undefined,
       mode: "walk" as const,
     };

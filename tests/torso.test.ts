@@ -25,8 +25,8 @@ function hbkFacingAt(targetBearing: "se" | "nw"): {
   if (targetBearing === "se") {
     return {
       units: [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "n"),
-        buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 5 }, "sw"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "n"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 5 }, "sw"),
       ],
       facing: "n",
       enemy: { col: 3, row: 5 },
@@ -34,8 +34,8 @@ function hbkFacingAt(targetBearing: "se" | "nw"): {
   }
   return {
     units: [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "ne"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 1, row: 4 }, "sw"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "ne"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 1, row: 4 }, "sw"),
     ],
     facing: "ne",
     enemy: { col: 1, row: 4 },

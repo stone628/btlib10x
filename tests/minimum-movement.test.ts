@@ -15,8 +15,8 @@ const ahead = neighbor(startHex, "n");
 /** HBK-4G (walk 4) alone-ish on a board with heavy woods (3 MP) straight ahead. */
 function woodsBattle(): BattleState {
   const units: UnitInit[] = [
-    buildUnitInit("a", "HBK-4G", 0, startHex, "n"),
-    buildUnitInit("b", "ENF-4R", 1, { col: 6, row: 6 }, "n"),
+    buildUnitInit("a", "HBK-4G", 1, startHex, "n"),
+    buildUnitInit("b", "ENF-4R", 2, { col: 6, row: 6 }, "n"),
   ];
   const state = createTestBattle(
     [{ col: ahead.col, row: ahead.row, type: "heavyWoods" }],
@@ -53,7 +53,7 @@ const reach = (mode: "walk" | "run", walking: number, running: number) =>
     jumping: 0,
     prone: false,
     grid: woodsGrid(),
-    team: 0,
+    team: 1,
     occupantTeam: () => undefined,
   });
 
