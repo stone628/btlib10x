@@ -72,23 +72,28 @@ describe("starting damage (UnitInit.damage)", () => {
     expect(u.jammedWeapons).toEqual([]);
   });
 
-  it("keeps 'structure gone, crit slots alive' as given (plain-damage asymmetry)", () => {
-    const loaded = unitWith().ammoBins["leftTorso:1"]!;
+  it("keeps 'structure gone, crit slots alive' as given, but strips the location's bins", () => {
     const u = unitWith(wipe("HBK-4G", "leftTorso", "leftArm"));
     expect(u.damage.internalStructure.leftTorso).toBe(0);
-    // Plain damage never flags slots or strips bins (see damage.ts); neither do we.
+    // Plain damage never flags slots (see damage.ts); neither do we.
     expect(u.critSlotsDestroyed.leftTorso).toBe(0);
     expect(u.critSlotsDestroyed.leftArm).toBe(0);
-    expect(u.ammoBins["leftTorso:1"]!).toBe(loaded);
     expect(u.destroyedWeapons).toEqual([]);
+    // Play deletes the bins of a destroyed location, so do we.
+    expect(u.ammoBins["leftTorso:1"]).toBeUndefined();
+    expect(u.ammoBins["leftTorso:2"]).toBeUndefined();
+    const intact = unitWith();
+    for (const id of Object.keys(intact.ammoBins).filter((b) => !b.startsWith("leftTorso:"))) {
+      expect(u.ammoBins[id]).toBe(intact.ammoBins[id]);
+    }
     // Listing a slot of the dead location flags just that slot.
     const v = unitWith({
       ...wipe("HBK-4G", "leftTorso", "leftArm"),
       critsDestroyed: { leftTorso: [2] },
     });
     expect(destroyedSlots(v.critSlotsDestroyed, "leftTorso")).toHaveLength(1);
-    expect(v.ammoBins["leftTorso:2"]!).toBe(0);
-    expect(v.ammoBins["leftTorso:1"]!).toBe(loaded);
+    expect(v.ammoBins["leftTorso:1"]).toBeUndefined();
+    expect(v.ammoBins["leftTorso:2"]).toBeUndefined();
   });
 
   describe("gates: states that would start destroyed", () => {

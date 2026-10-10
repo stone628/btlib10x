@@ -299,6 +299,17 @@ describe("unit and end lines", () => {
     const line = encodeEndLine("0", hunchy);
     expect(line).toBe(`E03:h5C${startCtArmor}/4/1:a5:L13`);
   });
+  it("end line: bins deleted with a destroyed location are recorded as fully used", () => {
+    const state = createTestBattle(
+      [],
+      [init(), buildUnitInit("b", "ENF-4R", 1, { col: 3, row: 1 })],
+      true,
+    );
+    const hunchy = state.units.hunchy!;
+    const full = hunchy.ammoBins["leftTorso:1"]!;
+    delete hunchy.ammoBins["leftTorso:1"];
+    expect(encodeEndLine("0", hunchy)).toBe(`E00:::L1${full}`);
+  });
   it("winner line: team or '-', rng as 8 hex digits (negative snapshots included)", () => {
     expect(normalizeRng("3f9a41c7")).toBe("3f9a41c7");
     expect(normalizeRng("ff")).toBe("000000ff");
