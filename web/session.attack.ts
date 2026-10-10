@@ -28,6 +28,7 @@ import {
   type Location,
   type LocationValue,
   mechDefFor,
+  msgHex,
   type PhysicalAttackDecl,
   type PhysicalAttackType,
   type PhysicalResolution,
@@ -546,7 +547,12 @@ export function physicalResolutionLines(r: PhysicalResolution): string[] {
       target: r.targetId,
     }),
   );
-  const reasonFollows = r.missReason === "attackerDown" || r.missReason === "targetDown";
+  const reasonFollows =
+    r.missReason === "attackerDown" ||
+    r.missReason === "targetDown" ||
+    r.missReason === "dfaAborted" ||
+    r.missReason === "advanced" ||
+    r.missReason?.startsWith("voided:") === true;
   if (r.roll !== null) {
     lines.push(i18n("res.physical.toHit", { total: r.toHit, roll: r.roll, verdict }));
   } else if (!reasonFollows) {
@@ -575,11 +581,38 @@ export function physicalResolutionLines(r: PhysicalResolution): string[] {
   for (const crit of r.crits) {
     for (const line of critLines(crit)) lines.push(`  ${line}`);
   }
+  if (r.dfaMissFall === true) {
+    lines.push(i18n("res.physical.dfaMissFall", { attacker: r.attackerId }));
+  }
 
   if (r.missReason === "attackerDown") {
     lines.push(i18n("res.physical.attackerDown", { attacker: r.attackerId }));
   } else if (r.missReason === "targetDown") {
     lines.push(i18n("res.physical.targetDown", { target: r.targetId }));
+  } else if (r.missReason === "advanced" && r.advancedTo !== undefined) {
+    lines.push(
+      i18n("res.physical.advanced", {
+        attacker: r.attackerId,
+        target: r.targetId,
+        pos: msgHex(r.advancedTo),
+      }),
+    );
+  } else if (r.missReason?.startsWith("voided:")) {
+    const why = r.missReason.slice("voided:".length);
+    lines.push(
+      i18n("res.physical.voided", {
+        attacker: r.attackerId,
+        reason: i18n(
+          why === "wreck"
+            ? "res.physical.voided.wreck"
+            : why === "hexTaken"
+              ? "res.physical.voided.hexTaken"
+              : "res.physical.voided.attackerDown",
+        ),
+      }),
+    );
+  } else if (r.missReason === "dfaAborted") {
+    lines.push(i18n("res.physical.dfaAborted", { attacker: r.attackerId }));
   } else if (r.missReason?.startsWith("invalid:")) {
     lines.push(
       i18n("res.physical.noLongerLegal", {

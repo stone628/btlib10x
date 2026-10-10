@@ -169,6 +169,7 @@ export type {
   GameLoopResult,
   GameLoopStopper,
   HeldClub,
+  MeleeCharge,
   MoveStep,
   Phase,
   PilotHitReason,
@@ -207,6 +208,7 @@ export {
   isShutdown,
   isUnitAvailable,
   isUnitRemoved,
+  meleeDeclarationProblem,
   passMovement,
   pickupSourceInHex,
   requireUnit,
@@ -255,6 +257,7 @@ export {
 export {
   computePhysicalToHit,
   type DamageGroup,
+  isMeleeCharge,
   isPhysicalWeaponName,
   PHYSICAL_WEAPONS,
   type PhysicalAttackDecl,

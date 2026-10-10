@@ -1,8 +1,10 @@
 /**
  * Physical attack rules (BattleTech Total Warfare, pp. 144–153).
  *
- * Implements punch, kick, club, and physical-weapon (strike) attacks.
- * Charge and DFA are deferred to a future phase. A club attack requires the
+ * Implements punch, kick, club, physical-weapon (strike), charge and DFA
+ * attacks. Charge and DFA are declared by movement (ending a path in an enemy
+ * hex), stop the attacker in front of the target, and never displace anyone.
+ * A club attack requires the
  * attacker to hold a club (`UnitState.club`), acquired through the pickup
  * rules in `game.ts` (severed limbs, trees, girders).
  *
@@ -11,9 +13,9 @@
  */
 
 import { roll2D6, rollD6 } from "../core/dice";
-import { bearingExact, hexDistance, isAdjacent } from "../core/hex";
+import { bearingExact, hexDistance, isAdjacent, neighbor } from "../core/hex";
 import { cellAt, groundLevel, terrainTargetMod } from "../core/terrain";
-import type { ArmLocation, Location, Rng } from "../core/types";
+import type { ArmLocation, HexCoord, Location, Rng } from "../core/types";
 import { isArm } from "../core/types";
 import { mechDefFor } from "../data/index";
 import type { ResolvedMechDef } from "../data/mech.schema";
@@ -40,13 +42,21 @@ import { isTsmActive } from "./heat";
 import { hitLocationForArc, punchHitLocationForArc } from "./hitlocation";
 import { losWoodsPointsBetween } from "./los";
 import { attackerMovementModifier, TARGET_IMMOBILE_MOD, targetMovementModifier } from "./movement";
+import { fallingDamageGroups } from "./piloting";
 import { PRONE_ATTACKER_MOD, proneTargetModifier } from "./tohit";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export type PhysicalAttackType = "punch" | "kick" | "club" | "strike";
+export type PhysicalAttackType = "punch" | "kick" | "club" | "strike" | "charge" | "dfa";
+
+/** Charge and DFA are declared by movement (ending a path in an enemy hex),
+ *  never through `declareAttacks`; the attacker stops in the hex before the
+ *  target and no unit is ever displaced. */
+export function isMeleeCharge(type: PhysicalAttackType): type is "charge" | "dfa" {
+  return type === "charge" || type === "dfa";
+}
 
 /** Melee equipment usable through a strike (TW p.146 subset). */
 export type PhysicalWeaponName = "Hatchet" | "Sword" | "Retractable Blade";
@@ -88,6 +98,9 @@ export interface PhysicalModifiers {
 export interface DamageGroup {
   readonly location: Location;
   readonly damage: number;
+  /** Through-armor critical: this group's location roll was a 2 on the 2D6
+   *  table (charge groups roll their own locations, TW p.121). */
+  readonly tac?: boolean;
 }
 
 export interface PhysicalResolution {
@@ -114,12 +127,25 @@ export interface PhysicalResolution {
   readonly notes: string[];
   /** True when the hit-location roll was 2 (through-armor critical, TW p.123). */
   readonly throughArmorCrit: boolean;
-  /** Why the attack never rolled (attackerDown | targetDown | invalid:<reason>). */
+  /** Why the attack never rolled (attackerDown | targetDown | dfaAborted |
+   *  advanced | voided:<wreck|hexTaken|attackerDown> | invalid:<reason>). */
   readonly missReason?: string;
+  /** Charge / DFA whose target had left its hex (`missReason` "advanced"):
+   *  the hex the attacker moved into instead. */
+  readonly advancedTo?: HexCoord;
   /** Kick target PSR deferred to the end-of-phase sweep (TW pp.59,147). */
   readonly kickTargetPsrPending?: boolean;
   /** Kick attacker PSR on a miss, deferred to the end-of-phase sweep. */
   readonly kickAttackerPsrPending?: boolean;
+  /** Charge / DFA hit: PSR modifier the target rolls at the end-of-phase
+   *  sweep (TW p.60: +2). */
+  readonly targetPsrMod?: number;
+  /** Charge / DFA hit: PSR modifier the attacker rolls at the sweep
+   *  (charge +2, DFA +4). */
+  readonly attackerPsrMod?: number;
+  /** DFA missed: the attacker falls automatically (2 levels, rear hit
+   *  location, TW p.150). */
+  readonly dfaMissFall?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -133,6 +159,24 @@ export const PUNCH_DAMAGE_PER_TONS = 10;
 /** Kick: −2 to-hit, 1 damage per 5 tons (round up). */
 export const KICK_ATTACK_MOD = -2;
 export const KICK_DAMAGE_PER_TONS = 5;
+
+/** Charge / DFA: +0 to-hit, plus the Piloting-skill difference (TW p.144). */
+export const CHARGE_ATTACK_MOD = 0;
+export const DFA_ATTACK_MOD = 0;
+/** Charge: 1 damage per 10 tons per hex moved to the target; 1 per 10 tons
+ *  of the target to the attacker (TW p.148). */
+export const CHARGE_DAMAGE_PER_TONS = 10;
+/** Hexes added to the hexes moved for charge damage: the target's own hex. */
+export const CHARGE_TARGET_HEX = 1;
+/** DFA: tonnage / 10 x 3 to the target, tonnage / 5 to the attacker's legs
+ *  (TW p.150). */
+export const DFA_DAMAGE_MULTIPLIER = 3;
+export const DFA_RECOIL_PER_TONS = 5;
+/** PSRs after a hit (TW p.60): target +2; charger +2; DFA attacker +4. */
+export const CHARGE_PSR_MOD = 2;
+export const DFA_ATTACKER_PSR_MOD = 4;
+/** A failed DFA drops the attacker as from a 2-level fall (TW p.150). */
+export const DFA_MISS_LEVELS_FALLEN = 2;
 
 /** Club: −1 to-hit, 1 damage per 5 tons (round up). */
 export const CLUB_ATTACK_MOD = -1;
@@ -188,7 +232,11 @@ export function computePhysicalToHit(
   weapon?: PhysicalWeaponName,
 ): PhysicalModifiers {
   const base = attacker.piloting;
-  const attackMod = attackTypeModifier(type, weapon);
+  const melee = isMeleeCharge(type);
+  // Charge / DFA (TW p.144): add the Piloting-skill difference when the
+  // target's rating is lower, subtract it when the attacker's is lower.
+  const attackMod =
+    attackTypeModifier(type, weapon) + (melee ? attacker.piloting - target.piloting : 0);
 
   // Attacker movement (TW pp. 113, 117–118): same band as weapon attacks,
   // plus +2 when prone — cumulative (ran then dropped prone is +4).
@@ -205,10 +253,12 @@ export function computePhysicalToHit(
   // Terrain (TW pp. 107–108, 117–118): target-hex woods + intervening woods.
   // Partial cover (TW p.102) is a separate term — same as weapon attacks.
   const targetTerrain = cellAt(battle, target.position).terrain;
-  const terrainMod =
-    terrainTargetMod(targetTerrain) +
-    losWoodsPointsBetween(battle, attacker.position, target.position);
-  const coverMod = partialCoverMod(battle, attacker, target);
+  // Charge / DFA are not modified for terrain (TW p.144).
+  const terrainMod = melee
+    ? 0
+    : terrainTargetMod(targetTerrain) +
+      losWoodsPointsBetween(battle, attacker.position, target.position);
+  const coverMod = melee ? 0 : partialCoverMod(battle, attacker, target);
 
   // Actuator damage modifier
   const actuatorMod = physicalActuatorMod(attacker, type, limb, weapon);
@@ -249,6 +299,10 @@ function attackTypeModifier(type: PhysicalAttackType, weapon?: PhysicalWeaponNam
       return CLUB_ATTACK_MOD;
     case "strike":
       return weapon !== undefined ? (PHYSICAL_WEAPONS[weapon]?.toHitMod ?? 0) : 0;
+    case "charge":
+      return CHARGE_ATTACK_MOD;
+    case "dfa":
+      return DFA_ATTACK_MOD;
   }
 }
 
@@ -310,6 +364,9 @@ function physicalActuatorMod(
       if (counts.hand > 0 && weapon !== "Retractable Blade") mod += 1;
       return mod;
     }
+    case "charge":
+    case "dfa":
+      return 0;
   }
 }
 
@@ -502,7 +559,31 @@ export function physicalDamage(
       }
       return doubled(dmg);
     }
+    // Charge / DFA damage is not TSM-sensitive (TW p.143 lists punch, kick
+    // and club only).
+    case "charge":
+      // The charge is meant to reach the target's coordinate, so its hex
+      // counts as one more hex moved even though the attacker stops short of
+      // it (house rule; TW counts only the hexes before the target's, p.148).
+      return Math.ceil(
+        (tons * (attacker.hexesMovedThisTurn + CHARGE_TARGET_HEX)) / CHARGE_DAMAGE_PER_TONS,
+      );
+    case "dfa":
+      return Math.ceil(tons / PUNCH_DAMAGE_PER_TONS) * DFA_DAMAGE_MULTIPLIER;
   }
+}
+
+/** Damage the attacker takes from its own charge / DFA that hit (TW pp.148,
+ *  150): a charger takes 1 per 10 tons of the target, a DFA attacker takes
+ *  tonnage / 5. Zero for every other attack type. */
+export function meleeRecoilDamage(
+  type: PhysicalAttackType,
+  attacker: UnitState,
+  target: UnitState,
+): number {
+  if (type === "charge") return Math.ceil(mechDefFor(target).tonnage / CHARGE_DAMAGE_PER_TONS);
+  if (type === "dfa") return Math.ceil(mechDefFor(attacker).tonnage / DFA_RECOIL_PER_TONS);
+  return 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -558,6 +639,11 @@ export function physicalLocationTable(
   levelDelta: number,
   targetProne: boolean,
 ): "punch" | "kick" | "standard" {
+  // Charge uses the standard table; DFA the Punch table, or the standard
+  // table's rear column against a prone target (TW pp.148, 150). Neither
+  // swaps tables across levels.
+  if (type === "charge") return "standard";
+  if (type === "dfa") return targetProne ? "standard" : "punch";
   if (targetProne) return "standard";
   if (type === "punch") return levelDelta === 1 ? "kick" : "punch";
   if (type === "kick") return levelDelta === -1 ? "punch" : "kick";
@@ -628,6 +714,16 @@ export function validatePhysicalAttack(
   if (isUnitRemoved(target)) return { ok: false, reason: `Target ${decl.targetId} is removed` };
   if (target.team === attacker.team) return { ok: false, reason: "Target must be enemy" };
 
+  // A DFA attacker is in the air until the physical phase: no physical attack
+  // may target it (TW p.149). A charging or DFA-ing unit is never a charge /
+  // DFA target either (TW pp.148-149).
+  if (target.meleeCharge?.kind === "dfa") {
+    return { ok: false, reason: `${target.id} is performing a DFA and cannot be attacked` };
+  }
+  if (isMeleeCharge(decl.type) && target.meleeCharge !== null) {
+    return { ok: false, reason: `${target.id} is charging and cannot be charged or DFA'd` };
+  }
+
   // Adjacency (TW p. 144)
   if (!isAdjacent(attacker.position, target.position)) {
     return { ok: false, reason: "Physical attack requires adjacency" };
@@ -651,7 +747,7 @@ export function validatePhysicalAttack(
   // Level difference (TW p. 150)
   // Levels are measured from the bottom of the hex a 'Mech stands on (TW p.150).
   const levelDelta = groundLevel(battle, target.position) - groundLevel(battle, attacker.position);
-  if (Math.abs(levelDelta) > 1) {
+  if (Math.abs(levelDelta) > 1 && decl.type !== "dfa") {
     return { ok: false, reason: "Level difference too great for physical attack" };
   }
 
@@ -685,7 +781,46 @@ export function validatePhysicalAttack(
         dropped,
         startDamage ?? attacker.damage,
       );
+    case "charge":
+    case "dfa":
+      return validateMeleeCharge(attacker, target, decl.type);
   }
+}
+
+/** Charge / DFA (TW pp.148-150): the target stands in the hex directly ahead
+ *  (feet orientation, no twist). A charge may not follow a jump and a DFA
+ *  must; the attacker never occupies the target hex. */
+function validateMeleeCharge(
+  attacker: UnitState,
+  target: UnitState,
+  type: "charge" | "dfa",
+): ValidationResult {
+  if (type === "charge" && attacker.jumpedThisTurn) {
+    return { ok: false, reason: "A charge cannot follow a jump" };
+  }
+  if (type === "dfa" && !attacker.jumpedThisTurn) {
+    return { ok: false, reason: "A DFA requires a jump" };
+  }
+  const ahead = neighbor(attacker.position, attacker.facing);
+  if (ahead.col !== target.position.col || ahead.row !== target.position.row) {
+    return { ok: false, reason: "Charge / DFA requires the target in the hex directly ahead" };
+  }
+  return { ok: true, attackDirection: meleeAttackDirection(attacker, target, type) };
+}
+
+/** Attack direction as seen from the target: a DFA reads it from the
+ *  attacker's starting hex (TW p.150), everything else from where it stands. */
+function meleeAttackDirection(
+  attacker: UnitState,
+  target: UnitState,
+  type: PhysicalAttackType,
+): Arc {
+  const origin =
+    type === "dfa" && attacker.meleeCharge !== null ? attacker.meleeCharge.from : attacker.position;
+  const back =
+    bearingExact(target.position, origin) ?? bearingExact(target.position, attacker.position)!;
+  const dir = classifyArcWithBoundary(target.facing, back);
+  return defenderArcChoice(dir.arc, dir.altArc);
 }
 
 /**
@@ -702,6 +837,10 @@ function checkPhysicalLevelGate(
   targetProne: boolean,
   levelDelta: number,
 ): string | null {
+  // DFA is legal at any level once its Jumping MP clears the hex (TW p.150
+  // note); a charge may not target a prone 'Mech (TW p.151).
+  if (type === "dfa") return null;
+  if (type === "charge") return targetProne ? "Cannot charge a prone 'Mech" : null;
   if (targetProne) {
     if (levelDelta === 0) {
       return type === "kick" ? null : "Only kicks may target a prone 'Mech on the same level";
@@ -967,9 +1106,7 @@ export function resolvePhysicalAttack(
   const hit = autoHit || (roll !== null && roll >= total);
 
   // Compute attack direction for hit location
-  const back = bearingExact(target.position, attacker.position)!;
-  const dir = classifyArcWithBoundary(target.facing, back);
-  const attackDirection = defenderArcChoice(dir.arc, dir.altArc);
+  const attackDirection = meleeAttackDirection(attacker, target, decl.type);
 
   // Compute damage
   const dmg = physicalDamage(decl.type, attacker, decl.limb, decl.weapon);
@@ -977,7 +1114,37 @@ export function resolvePhysicalAttack(
   const damageToAttacker: DamageGroup[] = [];
 
   let throughArmorCrit = false;
-  if (hit && dmg > 0) {
+  if (isMeleeCharge(decl.type)) {
+    // Charge / DFA (TW pp.148, 150): damage in 5-point groups, each group
+    // located separately; the attacker takes recoil damage on a hit.
+    if (hit) {
+      const levelDelta =
+        groundLevel(battle, target.position) - groundLevel(battle, attacker.position);
+      const table = physicalLocationTable(decl.type, levelDelta, target.prone);
+      // A DFA against a prone 'Mech reads the Rear column (TW p.150).
+      const arc: Arc = decl.type === "dfa" && target.prone ? "rear" : attackDirection;
+      for (const amount of fallingDamageGroups(dmg)) {
+        const locRoll = table === "standard" ? roll2D6(rng) : rollD6(rng);
+        damageToTarget.push({
+          location: physicalHitLocation(decl.type, target, arc, locRoll, levelDelta),
+          damage: amount,
+          ...(table === "standard" && locRoll === 2 ? { tac: true } : {}),
+        });
+      }
+      const recoil = meleeRecoilDamage(decl.type, attacker, target);
+      for (const amount of fallingDamageGroups(recoil)) {
+        // Charge recoil: standard table, front column. DFA recoil: Kick
+        // table, front column (TW p.150).
+        damageToAttacker.push({
+          location:
+            decl.type === "charge"
+              ? hitLocationForArc("front", roll2D6(rng))
+              : kickHitLocation(rollD6(rng), "front"),
+          damage: amount,
+        });
+      }
+    }
+  } else if (hit && dmg > 0) {
     // Different-levels table swap (TW p.150) and prone-higher exception
     // (TW p.151): the effective table selects the dice (punch/kick 1D6,
     // standard 2D6). No +4 election modifier on auto-swaps (TW p.146).
@@ -1006,11 +1173,19 @@ export function resolvePhysicalAttack(
     kickAttackerPsrPending = !hit && !autoMiss;
   }
 
+  const melee = isMeleeCharge(decl.type);
   return {
     type: decl.type,
     attackerId,
     targetId: decl.targetId,
     ...(decl.type === "strike" && decl.weapon !== undefined ? { weapon: decl.weapon } : {}),
+    ...(melee && hit
+      ? {
+          targetPsrMod: CHARGE_PSR_MOD,
+          attackerPsrMod: decl.type === "dfa" ? DFA_ATTACKER_PSR_MOD : CHARGE_PSR_MOD,
+        }
+      : {}),
+    ...(decl.type === "dfa" && !hit ? { dfaMissFall: true } : {}),
     toHit: total,
     roll,
     hit,

@@ -13,6 +13,7 @@ import {
 } from "../core/terrain";
 import {
   type ArmLocation,
+  FACINGS,
   type Facing,
   type HexCell,
   type HexCoord,
@@ -132,12 +133,16 @@ import {
   losBlockedByElevation,
   losClear,
   losWoodsPointsBetween,
+  type ProneEnds,
   unitLosLevel,
 } from "./los";
 import * as mv from "./movement";
 import { BACKWARD_LEVEL_CHANGE_MAX, FORWARD_LEVEL_CHANGE_MAX, JUMP_MP_PER_HEX } from "./movement";
 import {
   type DamageGroup,
+  DFA_ATTACKER_PSR_MOD,
+  DFA_MISS_LEVELS_FALLEN,
+  isMeleeCharge,
   type PhysicalAttackDecl,
   type PhysicalAttackType,
   type PhysicalResolution,
@@ -405,6 +410,9 @@ export type PilotingCheckReason =
   | "building"
   | "kick"
   | "kickMiss"
+  | "chargeTarget"
+  | "chargeMade"
+  | "dfaMade"
   | "ejection";
 
 /** Why a 'Mech fell (TW p.68). `failedPsr` carries the PSR trigger that
@@ -417,6 +425,7 @@ export type UnitFallCause =
   | { readonly kind: "shutdown" }
   | { readonly kind: "terrain"; readonly terrain: "rubble" | "water" | "building" }
   | { readonly kind: "buildingCollapse" }
+  | { readonly kind: "dfaMiss" }
   | { readonly kind: "voluntaryDrop" };
 
 /** Deterministic rng for ammo draws when the caller omits one: ties resolve
@@ -502,8 +511,27 @@ export interface UnitState extends MechModelHolder {
   declaredPhysicalAttacks: PhysicalAttackDecl[];
   /** True if the unit explicitly passed on declaring attacks this phase. */
   passedAttacks: boolean;
+  /** Charge or DFA declared by this turn's movement (TW pp.148-150). The
+   *  unit stopped in the hex before the target and attacks nothing else; the
+   *  attack resolves in the physical sub-pass. Cleared after it. */
+  meleeCharge: MeleeCharge | null;
   destroyed: DestroyedState;
   removed: RemovedState;
+}
+
+/** A charge or DFA declared by movement (see `UnitState.meleeCharge`). */
+export interface MeleeCharge {
+  readonly kind: "charge" | "dfa";
+  readonly targetId: string;
+  /** The target's hex when declared; reserved for the attacker (nobody else
+   *  may end movement there) in case the target leaves it. */
+  readonly hex: HexCoord;
+  /** Hex the move started in: a DFA reads its attack direction from here
+   *  (TW p.150). */
+  readonly from: HexCoord;
+  /** A DFA'er whose weapon-phase piloting roll failed does not fall; the DFA
+   *  automatically misses instead (TW p.149). */
+  missed: boolean;
 }
 
 /** Attack-phase resolution boundaries, in order. */
@@ -532,6 +560,14 @@ export type GameEvent =
       readonly facing: Facing;
       readonly mpSpent: number;
       readonly mpBudget: number;
+      /** Set when the move ended against an enemy: the unit stopped in front
+       *  of the target (`position`) and the charge (walk / run) or DFA (jump)
+       *  resolves in the physical phase (TW pp.148-150). */
+      readonly pendingCharge?: {
+        readonly attack: "charge" | "dfa";
+        readonly targetId: string;
+        readonly targetHex: HexCoord;
+      };
     }
   | {
       readonly kind: "attacksDeclared";
@@ -1213,6 +1249,7 @@ export function createBattle(
       declaredWeaponAttacks: [],
       declaredPhysicalAttacks: [],
       passedAttacks: false,
+      meleeCharge: null,
       destroyed: "not",
       removed: "not",
     };
@@ -1631,6 +1668,86 @@ export interface ExecuteMoveOptions {
   readonly modeHeatPaid?: boolean;
 }
 
+/** Facing from `from` to the adjacent hex `to`, or undefined when not adjacent. */
+/** LOS endpoint postures for an attack from `from` against `to`. A unit that
+ *  declared a DFA is in the air until the physical phase: for LOS it sits two
+ *  levels above the higher of its own hex and its target's hex (TW p.149). */
+export function losEnds(state: BattleState, from: UnitState, to: UnitState): ProneEnds {
+  const level = (u: UnitState): number | undefined => {
+    const charge = u.meleeCharge;
+    if (charge?.kind !== "dfa") return undefined;
+    return Math.max(groundLevel(state, u.position), groundLevel(state, charge.hex)) + 2;
+  };
+  const fromLevel = level(from);
+  const toLevel = level(to);
+  return {
+    from: from.prone,
+    to: to.prone,
+    ...(fromLevel !== undefined ? { fromLevel } : {}),
+    ...(toLevel !== undefined ? { toLevel } : {}),
+  };
+}
+
+export function facingToward(from: HexCoord, to: HexCoord): Facing | undefined {
+  return FACINGS.find((f) => sameHex(neighbor(from, f), to));
+}
+
+/**
+ * Why `unitId` cannot charge (walk / run) or DFA (jump) `targetId` from the
+ * hex `stop` just before it, or null when the declaration is legal (TW
+ * pp.148-150). The attacker is checked as if it already stood in `stop`
+ * facing the target; `jumpMP` is the Jumping MP available for a DFA's
+ * clearance. Shared by `executeMove` and the movement-candidate display.
+ */
+export function meleeDeclarationProblem(
+  state: BattleState,
+  unitId: string,
+  stop: HexCoord,
+  targetId: string,
+  kind: "charge" | "dfa",
+  jumpMP: number,
+): string | null {
+  const unit = state.units[unitId];
+  const target = state.units[targetId];
+  if (unit === undefined || target === undefined) return "unknown unit";
+  const toward = facingToward(stop, target.position);
+  if (toward === undefined) return "Charge / DFA target must be adjacent";
+  if (kind === "dfa") {
+    // The jump must clear the target hex: its level over the start hex plus
+    // two for a standing target (TW p.149).
+    const need =
+      groundLevel(state, target.position) -
+      groundLevel(state, unit.position) +
+      (target.prone ? 0 : 2);
+    if (jumpMP < need) return `A DFA at ${target.id} needs ${need} Jumping MP to clear it`;
+  }
+  // The attacker stays in `stop` for the rest of the turn.
+  const squatter = occupantAt(state, stop, unitId);
+  if (squatter !== undefined) return `${msgHex(stop)} is occupied by ${squatter.id}`;
+  if (wreckAt(state, stop) !== undefined) return `${msgHex(stop)} is blocked by a wreck`;
+  const others = Object.values(state.units).filter((u) => u.id !== unitId && !isUnitRemoved(u));
+  // Standing in a hex another unit reserved is fine; moving into one is not.
+  const reserved = sameHex(unit.position, stop)
+    ? undefined
+    : others.find((u) => u.meleeCharge !== null && sameHex(u.meleeCharge.hex, stop));
+  if (reserved !== undefined) return `${msgHex(stop)} is reserved for ${reserved.id}'s charge`;
+  if (others.some((u) => u.meleeCharge?.targetId === target.id)) {
+    return `${target.id} is already the target of a charge or DFA this turn`;
+  }
+  if (others.some((u) => u.meleeCharge?.targetId === unitId)) {
+    return `${unitId} is the target of a charge or DFA and cannot make one`;
+  }
+  const view: BattleState = {
+    ...state,
+    units: {
+      ...state.units,
+      [unitId]: { ...unit, position: stop, facing: toward, jumpedThisTurn: kind === "dfa" },
+    },
+  };
+  const check = validatePhysicalAttack(view, unitId, { type: kind, targetId });
+  return check.ok ? null : (check.reason ?? "illegal charge");
+}
+
 export function executeMove(
   state: BattleState,
   unitId: string,
@@ -1672,6 +1789,7 @@ export function executeMove(
   if (unit.prone && mode === "walk" && steps.some((s) => s.kind === "enter")) {
     throw new Error(`${unitId} is prone: turn or pronestill only (no hex enters)`);
   }
+  const startHex: HexCoord = { ...unit.position };
   unit.moveMode = mode;
   unit.hexesMovedThisTurn = 0;
   unit.mpSpent = 0;
@@ -1700,6 +1818,10 @@ export function executeMove(
   let facing: Facing = unit.facing;
   let spent = 0;
   const directions: ("forward" | "backward")[] = [];
+  // Charge / DFA (TW pp.148-150): a path whose last step enters an enemy hex
+  // stops in front of it; the attack resolves in the physical phase.
+  let meleeTarget: UnitState | null = null;
+  let meleeStop: HexCoord = unit.position;
 
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i]!;
@@ -1773,11 +1895,27 @@ export function executeMove(
 
     const occupant = occupantAt(state, to, unitId);
     if (occupant !== undefined) {
-      if (isFinalStep) {
+      if (isFinalStep && occupant.team !== unit.team) {
+        if (directions[directions.length - 1] !== "forward") {
+          throw new Error("A charge must be made straight ahead");
+        }
+        meleeTarget = occupant;
+        meleeStop = cursor;
+      } else if (isFinalStep) {
         throw new Error(`Cannot end movement in ${msgHex(to)}: occupied by ${occupant.id}`);
-      }
-      if (!jumping && occupant.team !== unit.team) {
+      } else if (!jumping && occupant.team !== unit.team) {
         throw new Error(`Cannot move through enemy ${occupant.id} at ${msgHex(to)}`);
+      }
+    } else if (isFinalStep) {
+      const holder = Object.values(state.units).find(
+        (u) =>
+          u.id !== unitId &&
+          !isUnitRemoved(u) &&
+          u.meleeCharge !== null &&
+          sameHex(u.meleeCharge.hex, to),
+      );
+      if (holder !== undefined) {
+        throw new Error(`Cannot end movement in ${msgHex(to)}: reserved for ${holder.id}'s charge`);
       }
     }
 
@@ -1815,6 +1953,24 @@ export function executeMove(
     throw new Error(`${unitId} has no intact legs and arms and cannot move`);
   }
 
+  // Charge / DFA declaration checks (TW pp.148-150).
+  let meleeKind: "charge" | "dfa" | null = null;
+  let meleeFacing: Facing = facing;
+  if (meleeTarget !== null) {
+    meleeKind = jumping ? "dfa" : "charge";
+    const problem = meleeDeclarationProblem(
+      state,
+      unitId,
+      meleeStop,
+      meleeTarget.id,
+      meleeKind,
+      budget,
+    );
+    if (problem !== null) throw new Error(problem);
+    meleeFacing = facingToward(meleeStop, meleeTarget.position) ?? facing;
+    cursor = meleeStop;
+  }
+
   // Preexisting damage applies to every movement-entry PSR (TW p.60).
   const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
   const commitAt = (
@@ -1823,6 +1979,7 @@ export function executeMove(
     mode: MoveMode,
     mp: number,
     dirs: ("forward" | "backward")[],
+    declareCharge = false,
   ): void => {
     unit.position = hex;
     unit.facing = face;
@@ -1832,6 +1989,29 @@ export function executeMove(
     while (since > 0 && dirs[since - 1] === dirs[dirs.length - 1]) since -= 1;
     unit.hexesMovedThisTurn = dirs.length - since;
     unit.mpSpent = mp + prechargedMP;
+    // A path that ends against an enemy declares the charge / DFA: the unit
+    // takes no attack-phase actions and its attack resolves in the physical
+    // sub-pass (TW pp.148-149). A later fall (strain PSR) leaves it declared;
+    // the prone attacker then simply misses.
+    let pendingCharge: { attack: "charge" | "dfa"; targetId: string; targetHex: HexCoord } | null =
+      null;
+    if (declareCharge && meleeKind !== null && meleeTarget !== null) {
+      const target: UnitState = meleeTarget;
+      unit.meleeCharge = {
+        kind: meleeKind,
+        targetId: target.id,
+        hex: { ...target.position },
+        from: { ...startHex },
+        missed: false,
+      };
+      unit.declaredPhysicalAttacks = [{ type: meleeKind, targetId: target.id }];
+      unit.passedAttacks = true;
+      pendingCharge = {
+        attack: meleeKind,
+        targetId: target.id,
+        targetHex: { ...target.position },
+      };
+    }
     sink.push({
       kind: "moved",
       unitId,
@@ -1841,6 +2021,7 @@ export function executeMove(
       facing: face,
       mpSpent: mp + prechargedMP,
       mpBudget: budget,
+      ...(pendingCharge !== null ? { pendingCharge } : {}),
     });
     const moveHeat = options.modeHeatPaid === true ? 0 : movementHeat(mode, mp);
     if (moveHeat > 0) {
@@ -1885,6 +2066,9 @@ export function executeMove(
       curDirs.push(forward ? "forward" : "backward");
     }
     if (minMove) curSpent = Math.min(curSpent, minMoveCap);
+    // The target hex of a charge / DFA is never entered: no terrain PSR, the
+    // unit stays in the hex before it (MP for the step is still paid).
+    if (isFinal && meleeKind !== null) break;
     cur = to;
     // Terrain-entry PSRs (TW p.60): ground checks every entered hex, jump
     // only its landing. A fall, crash-kill, or shutdown ends the move here,
@@ -1906,7 +2090,15 @@ export function executeMove(
     }
   }
 
-  commitAt(cursor, options.finalFacing ?? facing, mode, spent, directions);
+  // A charge counts only the hexes moved before the target's (TW p.148).
+  commitAt(
+    cursor,
+    meleeKind !== null ? meleeFacing : (options.finalFacing ?? facing),
+    mode,
+    spent,
+    meleeKind === "charge" ? directions.slice(0, -1) : directions,
+    true,
+  );
   if (needActorCheck) state.actedThisPhase.push(unitId);
 
   // Running with a damaged hip/gyro, or jumping with damaged gyro, leg,
@@ -2036,6 +2228,9 @@ function normalizePhysicalDecls(
  * Throws on violation.
  */
 function checkPhysicalSetShape(unitId: string, normalized: readonly PhysicalAttackDecl[]): void {
+  if (normalized.some((d) => isMeleeCharge(d.type))) {
+    throw new Error(`${unitId}: charge and DFA are declared by movement, not in the attack phase`);
+  }
   const types = new Set(normalized.map((d) => d.type));
   if (types.size > 1)
     throw new Error(`${unitId} may make only one type of physical attack per turn`);
@@ -2248,7 +2443,7 @@ export function validateAttacksImpl(
         return defenderArcChoice(dir.arc, dir.altArc);
       })();
 
-    const losProne = { from: unit.prone, to: target.prone };
+    const losProne = losEnds(state, unit, target);
     const woodsPoints = losWoodsPointsBetween(state, unit.position, target.position, losProne);
     if (!losClear(state, unit.position, target.position, state.wrecks, losProne)) {
       if (losBlockedByBuilding(state, unit.position, target.position, losProne)) {
@@ -2794,10 +2989,12 @@ function resolveUnitAttacks(
       targetProne: target.prone,
       targetTerrain: cellAt(state, target.position).terrain,
       partialCoverMod: partialCoverMod(state, unit, target),
-      interveningTerrains: interveningTerrains(state, unit.position, target.position, {
-        from: unit.prone,
-        to: target.prone,
-      }),
+      interveningTerrains: interveningTerrains(
+        state,
+        unit.position,
+        target.position,
+        losEnds(state, unit, target),
+      ),
       distance: hexDistance(unit.position, target.position),
       // Resolution keys hit location and armor pool off the attack direction
       // (side of the target struck); the attacker-side firing arc only
@@ -3096,6 +3293,9 @@ export interface FallOptions {
   readonly levelsFallen?: number;
   /** Allow the fall damage path on an already-prone unit (failed stand-up). */
   readonly allowProne?: boolean;
+  /** Hit location is always the rear, whatever the fall direction rolled
+   *  (a failed DFA, TW p.150). Facing after the fall still follows the roll. */
+  readonly rearHits?: boolean;
 }
 
 /**
@@ -3162,16 +3362,17 @@ export function applyFall(
   } else if (opts.halved) {
     total = Math.floor(total / 2);
   }
+  const column = opts.rearHits === true ? "rear" : dir.column;
   const groups: DamageGroup[] = [];
   for (const amount of fallingDamageGroups(total)) {
-    groups.push({ location: hitLocationForArc(dir.column, roll2D6(rng)), damage: amount });
+    groups.push({ location: hitLocationForArc(column, roll2D6(rng)), damage: amount });
   }
   const crits = applyDamageGroups(
     state,
     unit,
     rng,
     groups,
-    dir.column === "rear" ? "rear" : "front",
+    column === "rear" ? "rear" : "front",
     sink,
   );
   sink.push({
@@ -3181,7 +3382,7 @@ export function applyFall(
     ...(opts.hex === undefined ? {} : { hex: { ...opts.hex } }),
     facingAfter: unit.facing,
     fallRoll: dir.roll,
-    column: dir.column,
+    column,
     levelsFallen: levels,
     groups,
     totalDamage: total,
@@ -3235,9 +3436,13 @@ export function resolvePhasePiloting(
   extraTriggers?: Readonly<
     Record<string, ReadonlyArray<{ reason: PilotingCheckReason; modifier: number }>>
   >,
+  /** Weapon-phase sweep: a DFA'er that fails (or would automatically fail)
+   *  its roll does not fall; its DFA misses instead (TW p.149). */
+  spareDfa = false,
 ): void {
   for (const unit of Object.values(state.units)) {
     if (isUnitRemoved(unit) || unit.prone) continue;
+    const sparedDfa = spareDfa && unit.meleeCharge?.kind === "dfa";
     const def = mechDefFor(unit);
     const dmgBefore = before.damage[unit.id] ?? unit.damage;
     const critBefore = before.crit[unit.id] ?? unit.critSlotsDestroyed;
@@ -3286,6 +3491,11 @@ export function resolvePhasePiloting(
         ...unit.position,
       });
       if (!r.success) {
+        if (sparedDfa && unit.meleeCharge !== null) {
+          unit.meleeCharge.missed = true;
+          fell = true;
+          break;
+        }
         const terrain = cellAt(state, unit.position).terrain;
         const halved = terrain === "water2" || terrain === "water3";
         applyFall(
@@ -3303,6 +3513,10 @@ export function resolvePhasePiloting(
         fell = true;
         break;
       }
+    }
+    if (sparedDfa && !fell && autoFall !== null && unit.meleeCharge !== null) {
+      unit.meleeCharge.missed = true;
+      autoFall = null;
     }
     if (!fell && autoFall !== null) {
       const terrain = cellAt(state, unit.position).terrain;
@@ -3781,7 +3995,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   // stay merged for playability (one attack activation per unit per turn);
   // only the resolution is split into weapon-then-physical sub-passes.
   const weaponBefore: PhaseSnapshots = { damage: baseDamage, crit: baseCrit };
-  resolvePhasePiloting(state, rng, weaponBefore, sink);
+  resolvePhasePiloting(state, rng, weaponBefore, sink, undefined, true);
   for (const unit of Object.values(state.units)) {
     if (isUnitAvailable(unit) && isUnitWrecked(unit)) {
       markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), rng, sink);
@@ -3827,10 +4041,113 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   const physicalAttackCrits: Record<string, CriticalResolution[]> = {};
   // Kick PSRs deferred here for the end-of-physical sweep (TW pp.59,147).
   const kickExtras: Record<string, Array<{ reason: PilotingCheckReason; modifier: number }>> = {};
-  const queueKickPsr = (unitId: string, reason: PilotingCheckReason): void => {
+  const queuePhysicalPsr = (unitId: string, reason: PilotingCheckReason, modifier = 0): void => {
     const list = kickExtras[unitId];
-    if (list === undefined) kickExtras[unitId] = [{ reason, modifier: 0 }];
-    else list.push({ reason, modifier: 0 });
+    if (list === undefined) kickExtras[unitId] = [{ reason, modifier }];
+    else list.push({ reason, modifier });
+  };
+  // Applies physical damage groups to one side, merging per-group
+  // applications and rolling criticals (TW pp.123-124). `origin` is the hex
+  // the blow came from (null: the recipient's own front, e.g. recoil).
+  const applyPhysicalGroups = (
+    recipient: UnitState,
+    groups: readonly DamageGroup[],
+    origin: HexCoord | null,
+    resolutionTac: boolean,
+  ): { application: DamageApplication | null; crits: CriticalResolution[] } => {
+    const recipientDef = mechDefFor(recipient);
+    const sheared: LimbLocation[] = [];
+    const crits: CriticalResolution[] = [];
+    let application: DamageApplication | null = null;
+    for (const group of groups) {
+      let attackDirection: Arc = "front";
+      if (origin !== null) {
+        const back = bearingExact(recipient.position, origin)!;
+        const dir = classifyArcWithBoundary(recipient.facing, back);
+        attackDirection = defenderArcChoice(dir.arc, dir.altArc);
+      }
+      const app = applyDamage(recipient.damage, group.location, group.damage, attackDirection);
+      recipient.damage = app.after;
+      application =
+        application === null
+          ? app
+          : {
+              after: app.after,
+              before: application.before,
+              steps: [...application.steps, ...app.steps],
+              newlyDestroyed: [...application.newlyDestroyed, ...app.newlyDestroyed],
+              blownOffLimbs: [...application.blownOffLimbs, ...app.blownOffLimbs],
+              mechDestroyed: application.mechDestroyed || app.mechDestroyed,
+            };
+      sheared.push(...app.blownOffLimbs);
+
+      // Critical hit resolution (TW p.123-124):
+      // - One determining roll per location that loses internal structure
+      // - One additional determining roll if hit-location roll was 2 (through-armor critical)
+      // - One roll for every location the group damaged (TW p.124)
+      const struck = structureStruck(app);
+      const critRolls = struck.map((location) => ({ location, tac: false }));
+      if (group.tac === true || resolutionTac) {
+        critRolls.push({ location: group.location, tac: true });
+      }
+      for (const { location: critLoc, tac: tagThroughArmor } of critRolls) {
+        const startCrit = postWeaponCrit[recipient.id];
+        const res = resolveCriticalHits({
+          rng,
+          def: recipientDef,
+          source: {
+            location: critLoc,
+            damage: group.damage,
+            struck: struck.includes(critLoc),
+            tac: tagThroughArmor,
+          },
+          throughArmor: tagThroughArmor,
+          ...(startCrit !== undefined ? { baseCritSlotsDestroyed: startCrit } : {}),
+          critSlotsDestroyed: recipient.critSlotsDestroyed,
+          destroyedWeapons: recipient.destroyedWeapons,
+          damage: recipient.damage,
+          ammoBins: recipient.ammoBins,
+        });
+        recipient.critSlotsDestroyed = res.critSlotsDestroyed;
+        recipient.destroyedWeapons = res.destroyedWeapons;
+        recipient.ammoBins = res.ammoBins;
+        recipient.damage = res.damage;
+        crits.push(res);
+      }
+    }
+    // Accumulate crits for this unit (multiple attacks possible)
+    if (crits.length > 0) {
+      physicalAttackCrits[recipient.id] = [...(physicalAttackCrits[recipient.id] ?? []), ...crits];
+    }
+    // Severed limbs stay where they were lost (TW p.146).
+    recordSeveredLimbs(state, recipient, sheared);
+    recordCritSeveredLimbs(state, recipient, crits);
+    return { application, crits };
+  };
+  // A failed DFA drops the attacker as from a 2-level fall onto its rear
+  // (TW p.150); nothing else moves.
+  const dfaMissFall = (attacker: UnitState): void => {
+    if (isUnitRemoved(attacker) || attacker.prone) return;
+    const pre = preexistingDamageModifier(
+      mechDefFor(attacker),
+      attacker.damage,
+      attacker.critSlotsDestroyed,
+    ).modifier;
+    const terrain = cellAt(state, attacker.position).terrain;
+    applyFall(
+      state,
+      attacker,
+      rng,
+      {
+        cause: { kind: "dfaMiss" },
+        hex: { ...attacker.position },
+        seatbeltModifier: pre + DFA_ATTACKER_PSR_MOD,
+        halved: terrain === "water2" || terrain === "water3",
+        levelsFallen: DFA_MISS_LEVELS_FALLEN,
+        rearHits: true,
+      },
+      sink,
+    );
   };
   const missResolution = (
     type: PhysicalAttackDecl["type"],
@@ -3838,10 +4155,14 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     targetId: string,
     missReason: string,
     note: string,
+    fallsOnMiss = false,
+    advancedTo?: HexCoord,
   ): PhysicalResolution => ({
     type,
     attackerId,
     targetId,
+    ...(fallsOnMiss ? { dfaMissFall: true } : {}),
+    ...(advancedTo !== undefined ? { advancedTo } : {}),
     toHit: 13,
     roll: null,
     hit: false,
@@ -3885,6 +4206,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
           decl.targetId,
           "attackerDown",
           `attacker unable to attack (destroyed/unconscious/shut down) — auto-miss`,
+          decl.type === "dfa",
         );
         sink.push({
           kind: "physicalAttackResolved",
@@ -3892,7 +4214,76 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
           targetId: decl.targetId,
           resolution,
         });
+        if (decl.type === "dfa") dfaMissFall(attacker);
         continue;
+      }
+      // Charge / DFA: the target may have left its hex since the declaration.
+      // The attacker, having paid for the move, then advances into the
+      // vacated hex (only a wreck or another unit can stop it).
+      const charge = attacker.meleeCharge;
+      if (isMeleeCharge(decl.type) && charge !== null) {
+        const targetHere =
+          target !== undefined && !isUnitRemoved(target) && sameHex(target.position, charge.hex);
+        if (!targetHere) {
+          const holder = occupantAt(state, charge.hex, attacker.id);
+          const wreck = wreckAt(state, charge.hex);
+          let resolution: PhysicalResolution;
+          if (attacker.prone) {
+            resolution = missResolution(
+              decl.type,
+              attacker.id,
+              decl.targetId,
+              "voided:attackerDown",
+              `attacker is down — no attack`,
+            );
+          } else if (holder === undefined && wreck === undefined) {
+            attacker.position = { ...charge.hex };
+            resolution = missResolution(
+              decl.type,
+              attacker.id,
+              decl.targetId,
+              "advanced",
+              `target left its hex — the attacker advances into it`,
+              false,
+              { ...charge.hex },
+            );
+          } else {
+            resolution = missResolution(
+              decl.type,
+              attacker.id,
+              decl.targetId,
+              holder !== undefined ? "voided:hexTaken" : "voided:wreck",
+              `target left its hex and it is blocked — no attack`,
+            );
+          }
+          sink.push({
+            kind: "physicalAttackResolved",
+            unitId: attacker.id,
+            targetId: decl.targetId,
+            resolution,
+          });
+          continue;
+        }
+        // A DFA'er whose weapon-phase piloting roll failed does not fall
+        // then: the DFA misses and it falls now (TW p.149).
+        if (decl.type === "dfa" && charge.missed) {
+          const resolution = missResolution(
+            decl.type,
+            attacker.id,
+            decl.targetId,
+            "dfaAborted",
+            `piloting roll failed in the weapon phase — the DFA misses`,
+            true,
+          );
+          sink.push({
+            kind: "physicalAttackResolved",
+            unitId: attacker.id,
+            targetId: decl.targetId,
+            resolution,
+          });
+          dfaMissFall(attacker);
+          continue;
+        }
       }
       if (target === undefined || isUnitRemoved(target)) {
         const resolution = missResolution(
@@ -3939,100 +4330,33 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         continue;
       }
       let resolution = resolvePhysicalAttack(view, attacker.id, decl, rng);
-      // Apply damage to the target, merging
-      // per-group applications like the weapon path (attack.ts) so the
-      // emitted resolution carries the armor-change detail and crits.
+      // Apply damage to both sides, merging per-group applications like the
+      // weapon path (attack.ts) so the emitted resolution carries the
+      // armor-change detail and crits. A DFA reads its direction from the
+      // hex it jumped from (TW p.150).
       const hitTarget =
         resolution.hit && resolution.damageToTarget.length > 0
           ? requireUnit(state, decl.targetId)
           : null;
-      let targetApplication: DamageApplication | null = null;
-      let attackerApplication: DamageApplication | null = null;
-      const targetCrits: CriticalResolution[] = [];
-      if (hitTarget && resolution.hit && resolution.damageToTarget.length > 0) {
-        const targetDef = mechDefFor(hitTarget);
-        const sheared: LimbLocation[] = [];
-        for (const group of resolution.damageToTarget) {
-          const back = bearingExact(hitTarget.position, attacker.position)!;
-          const dir = classifyArcWithBoundary(hitTarget.facing, back);
-          const attackDirection = defenderArcChoice(dir.arc, dir.altArc);
-          const app = applyDamage(hitTarget.damage, group.location, group.damage, attackDirection);
-          hitTarget.damage = app.after;
-          targetApplication =
-            targetApplication === null
-              ? app
-              : {
-                  after: app.after,
-                  before: targetApplication.before,
-                  steps: [...targetApplication.steps, ...app.steps],
-                  newlyDestroyed: [...targetApplication.newlyDestroyed, ...app.newlyDestroyed],
-                  blownOffLimbs: [...targetApplication.blownOffLimbs, ...app.blownOffLimbs],
-                  mechDestroyed: targetApplication.mechDestroyed || app.mechDestroyed,
-                };
-          sheared.push(...app.blownOffLimbs);
-
-          // Critical hit resolution (TW p.123-124):
-          // - One determining roll per location that loses internal structure
-          // - One additional determining roll if hit-location roll was 2 (through-armor critical)
-          // - One roll for every location the group damaged (TW p.124)
-          const struck = structureStruck(app);
-          const critRolls = struck.map((location) => ({ location, tac: false }));
-          if (resolution.throughArmorCrit) critRolls.push({ location: group.location, tac: true });
-          for (const { location: critLoc, tac: tagThroughArmor } of critRolls) {
-            const startCrit = postWeaponCrit[hitTarget.id];
-            const res = resolveCriticalHits({
-              rng,
-              def: targetDef,
-              source: {
-                location: critLoc,
-                damage: group.damage,
-                struck: struck.includes(critLoc),
-                tac: tagThroughArmor,
-              },
-              throughArmor: tagThroughArmor,
-              ...(startCrit !== undefined ? { baseCritSlotsDestroyed: startCrit } : {}),
-              critSlotsDestroyed: hitTarget.critSlotsDestroyed,
-              destroyedWeapons: hitTarget.destroyedWeapons,
-              damage: hitTarget.damage,
-              ammoBins: hitTarget.ammoBins,
-            });
-            hitTarget.critSlotsDestroyed = res.critSlotsDestroyed;
-            hitTarget.destroyedWeapons = res.destroyedWeapons;
-            hitTarget.ammoBins = res.ammoBins;
-            hitTarget.damage = res.damage;
-            targetCrits.push(res);
-          }
-        }
-        // Accumulate crits for this target (multiple attacks possible)
-        if (targetCrits.length > 0) {
-          physicalAttackCrits[hitTarget.id] = [
-            ...(physicalAttackCrits[hitTarget.id] ?? []),
-            ...targetCrits,
-          ];
-        }
-        // Severed limbs stay where they were lost (TW p.146).
-        recordSeveredLimbs(state, hitTarget, sheared);
-        recordCritSeveredLimbs(state, hitTarget, targetCrits);
-      }
-
-      // Apply damage to attacker (e.g., kick miss PSR)
-      if (resolution.damageToAttacker.length > 0) {
-        for (const group of resolution.damageToAttacker) {
-          const app = applyDamage(attacker.damage, group.location, group.damage, "front");
-          attacker.damage = app.after;
-          attackerApplication =
-            attackerApplication === null
-              ? app
-              : {
-                  after: app.after,
-                  before: attackerApplication.before,
-                  steps: [...attackerApplication.steps, ...app.steps],
-                  newlyDestroyed: [...attackerApplication.newlyDestroyed, ...app.newlyDestroyed],
-                  blownOffLimbs: [...attackerApplication.blownOffLimbs, ...app.blownOffLimbs],
-                  mechDestroyed: attackerApplication.mechDestroyed || app.mechDestroyed,
-                };
-        }
-      }
+      const origin =
+        decl.type === "dfa" && attacker.meleeCharge !== null
+          ? attacker.meleeCharge.from
+          : attacker.position;
+      const targetOutcome = hitTarget
+        ? applyPhysicalGroups(
+            hitTarget,
+            resolution.damageToTarget,
+            origin,
+            resolution.throughArmorCrit,
+          )
+        : null;
+      const attackerOutcome =
+        resolution.damageToAttacker.length > 0
+          ? applyPhysicalGroups(attacker, resolution.damageToAttacker, null, false)
+          : null;
+      const targetApplication = targetOutcome?.application ?? null;
+      const attackerApplication = attackerOutcome?.application ?? null;
+      const targetCrits = targetOutcome?.crits ?? [];
 
       // Emit the event after damage resolution so the log can render the
       // armor-change detail and crits, like weapon `attackResolved`.
@@ -4052,11 +4376,24 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       const fallTarget = requireUnit(state, decl.targetId);
       // Kick PSRs defer to the end-of-physical sweep (TW pp.59,147).
       if (resolution.kickTargetPsrPending && !isUnitRemoved(fallTarget)) {
-        queueKickPsr(fallTarget.id, "kick");
+        queuePhysicalPsr(fallTarget.id, "kick");
       }
       if (resolution.kickAttackerPsrPending && !isUnitRemoved(attacker)) {
-        queueKickPsr(attacker.id, "kickMiss");
+        queuePhysicalPsr(attacker.id, "kickMiss");
       }
+      // Charge / DFA PSRs, with the Piloting Skill Roll Table modifiers
+      // (TW p.60), resolve in the same end-of-physical sweep.
+      if (resolution.targetPsrMod !== undefined && !isUnitRemoved(fallTarget)) {
+        queuePhysicalPsr(fallTarget.id, "chargeTarget", resolution.targetPsrMod);
+      }
+      if (resolution.attackerPsrMod !== undefined && !isUnitRemoved(attacker)) {
+        queuePhysicalPsr(
+          attacker.id,
+          decl.type === "dfa" ? "dfaMade" : "chargeMade",
+          resolution.attackerPsrMod,
+        );
+      }
+      if (resolution.dfaMissFall === true) dfaMissFall(attacker);
 
       // Pilot damage (TW p.41): head hits land 1 point per damaging
       // grouping. Physical attacks now roll crits per TW p.123-124.
@@ -4070,6 +4407,20 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
           pendingPilotHits.push({
             unit: hitTarget,
             hits: headGroups * HEAD_HIT_PILOT_HITS,
+            reason: "headHit",
+          });
+        }
+      }
+
+      // Recoil that hit the attacker's head injures its pilot too.
+      if (!isUnitRemoved(attacker)) {
+        const recoilHeads = resolution.damageToAttacker.filter(
+          (g) => g.location === "head" && g.damage >= 1,
+        ).length;
+        if (recoilHeads > 0) {
+          pendingPilotHits.push({
+            unit: attacker,
+            hits: recoilHeads * HEAD_HIT_PILOT_HITS,
             reason: "headHit",
           });
         }
@@ -4136,6 +4487,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     unit.declaredWeaponAttacks = [];
     unit.declaredPhysicalAttacks = [];
     unit.declaredPickup = null;
+    unit.meleeCharge = null;
   }
 }
 

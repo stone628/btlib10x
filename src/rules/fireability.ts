@@ -9,7 +9,7 @@ import { binsForWeaponName, pooledShotsLeft } from "./ammo";
 import { type Arc, classifyFiringArc, effectiveFacingForTwist, weaponCanFireIntoArc } from "./arcs";
 import { countDestroyedSensor } from "./critical";
 import { canFireFromLocation, isUnitLocationDestroyed } from "./damage";
-import { type BattleState, isImmobile, isUnitRemoved, partialCoverMod } from "./game";
+import { type BattleState, isImmobile, isUnitRemoved, losEnds, partialCoverMod } from "./game";
 import { toHitHeatModifier } from "./heat";
 import { losClear, losWoodsPointsBetween } from "./los";
 import { sensorAttackModifier, sensorsBlind } from "./piloting";
@@ -165,10 +165,12 @@ export function suggestFireTargets(
       // (null only when attacker and target share a hex).
       const arc = classifyFiringArc(unit.position, enemy.position, effectiveFacing);
       const altArc = null as Arc | null;
-      const interveningWoods = losWoodsPointsBetween(state, unit.position, enemy.position, {
-        from: unit.prone,
-        to: enemy.prone,
-      });
+      const interveningWoods = losWoodsPointsBetween(
+        state,
+        unit.position,
+        enemy.position,
+        losEnds(state, unit, enemy),
+      );
 
       const weaponsIfPropLeft: FireWeapon[] = [];
       const weaponsIfPropRight: FireWeapon[] = [];
@@ -247,10 +249,7 @@ export function suggestFireTargets(
         // (`losBlockedByWater`), elevation and intervening buildings
         // (`losBlockedByElevation`/`losBlockedByBuilding` fold into the ray).
         if (
-          !losClear(state, unit.position, enemy.position, state.wrecks, {
-            from: unit.prone,
-            to: enemy.prone,
-          })
+          !losClear(state, unit.position, enemy.position, state.wrecks, losEnds(state, unit, enemy))
         ) {
           blockBoth("noLos");
           return;

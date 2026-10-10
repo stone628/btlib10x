@@ -158,6 +158,12 @@ Examples (clear map, north is row − 1): walk two hexes straight `M0w++`; one b
 `M0r>+<++`; jump three north landing south-east `M0j+++d`; stand up in place
 facing south `M0Uss` (`U`, locomotion `s`, facing `s`).
 
+A charge or DFA needs no op of its own: it is a `w` / `r` (charge) or `j` (DFA)
+move whose last `+` enters an enemy hex (`M0r++++` runs three hexes and charges
+the enemy in the fourth). `executeMove` stops the unit in the hex before it and
+marks it as having passed its attack turn, so the replay carries **no `A` record**
+for that unit; its attack is resolved by the normal end-of-phase resolution.
+
 ### `A` — attack entries (→ `declareAttacks` / `declarePickup`)
 
 ```

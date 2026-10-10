@@ -25,6 +25,7 @@ import {
   MP_PER_FACING_CHANGE,
   mapDefFor,
   mechDefFor,
+  meleeDeclarationProblem,
   neighbor,
   oppositeFacing,
   passMovement,
@@ -761,8 +762,34 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo {
           if (isUnitRemoved(u)) continue;
           if (u.position.col === hex.col && u.position.row === hex.row) return u.team;
         }
+        // A declared charge / DFA reserves its target hex for the attacker.
+        for (const u of Object.values(s.battle!.units)) {
+          if (isUnitRemoved(u) || u.id === actor.id) continue;
+          if (u.meleeCharge?.hex.col === hex.col && u.meleeCharge.hex.row === hex.row) {
+            return u.team;
+          }
+        }
         return undefined;
       },
+      // Plain walk / run / jump may end in an enemy hex: a charge or DFA.
+      ...(mode === "walk" || mode === "run" || mode === "jump"
+        ? {
+            meleeOk: (stop: HexCoord, targetHex: HexCoord, kind: "charge" | "dfa"): boolean => {
+              const target = Object.values(s.battle!.units).find(
+                (u) =>
+                  !isUnitRemoved(u) &&
+                  u.position.col === targetHex.col &&
+                  u.position.row === targetHex.row,
+              );
+              return (
+                target !== undefined &&
+                target.team !== actor.team &&
+                meleeDeclarationProblem(s.battle!, actor.id, stop, target.id, kind, jumping) ===
+                  null
+              );
+            },
+          }
+        : {}),
     }),
   };
 }
@@ -836,6 +863,21 @@ function stepResultLines(s: Session, landing: RevealedLanding): string[] {
         }),
       );
     }
+  }
+  if (landing.melee !== undefined) {
+    const target = Object.values(battle.units).find(
+      (u) =>
+        !isUnitRemoved(u) &&
+        u.position.col === landing.hex.col &&
+        u.position.row === landing.hex.row,
+    );
+    lines.push(
+      i18n(landing.melee.kind === "dfa" ? "stepResult.dfa" : "stepResult.charge", {
+        target: target?.id ?? "?",
+        stopCol: landing.melee.stopsAt.col,
+        stopRow: landing.melee.stopsAt.row,
+      }),
+    );
   }
   return lines;
 }
