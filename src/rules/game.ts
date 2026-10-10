@@ -13,7 +13,6 @@ import {
 } from "../core/terrain";
 import {
   type ArmLocation,
-  FACINGS,
   type Facing,
   type HexCell,
   type HexCoord,
@@ -143,8 +142,6 @@ import {
   type PhysicalAttackType,
   type PhysicalResolution,
   type PhysicalWeaponName,
-  pushDisplacementOutcome,
-  resolveMutualPush,
   resolvePhysicalAttack,
   resolveStrikeArm,
   validatePhysicalAttack,
@@ -299,8 +296,7 @@ export type DestroyedReason =
   | "centerTorsoDestroyed"
   | "cockpitDestroyed"
   | "headBlownOff"
-  | "engineDestroyed"
-  | "displacedOffBoard";
+  | "engineDestroyed";
 export type DestroyedState = "not" | DestroyedReason;
 
 /** Club source / held-club kind (TW p.146): a severed limb, an uprooted
@@ -409,8 +405,7 @@ export type PilotingCheckReason =
   | "building"
   | "kick"
   | "kickMiss"
-  | "ejection"
-  | "domino";
+  | "ejection";
 
 /** Why a 'Mech fell (TW p.68). `failedPsr` carries the PSR trigger that
  *  failed; `terrain` covers automatic falls while entering terrain
@@ -422,7 +417,6 @@ export type UnitFallCause =
   | { readonly kind: "shutdown" }
   | { readonly kind: "terrain"; readonly terrain: "rubble" | "water" | "building" }
   | { readonly kind: "buildingCollapse" }
-  | { readonly kind: "physicalAttack" }
   | { readonly kind: "voluntaryDrop" };
 
 /** Deterministic rng for ammo draws when the caller omits one: ties resolve
@@ -473,7 +467,7 @@ export interface UnitState extends MechModelHolder {
    *  salvage flag. A severed limb can be picked up as a club (TW p.146). */
   blownOffLimbs: SeveredLimb[];
   /** Club currently carried (TW p.146). While held, both hands are occupied:
-   *  punch, strike, and push declarations plus arm-mounted weapon fire are
+   *  punch and strike declarations plus arm-mounted weapon fire are
    *  rejected until the club is dropped or consumed. */
   club: HeldClub | null;
   /** Pickup declaration for this attack phase (TW p.146). Exclusive with
@@ -504,7 +498,7 @@ export interface UnitState extends MechModelHolder {
    *  as shut down: cannot move, fire, or act as the next actor. */
   shutdown: ShutdownState;
   declaredWeaponAttacks: WeaponAttackDecl[];
-  /** Physical attack declarations (punch, kick, push, club, strike) for this phase. */
+  /** Physical attack declarations (punch, kick, club, strike) for this phase. */
   declaredPhysicalAttacks: PhysicalAttackDecl[];
   /** True if the unit explicitly passed on declaring attacks this phase. */
   passedAttacks: boolean;
@@ -589,13 +583,6 @@ export type GameEvent =
       readonly roll: number;
       readonly hit: boolean;
       readonly damage: number;
-    }
-  | {
-      /** A unit shoved one hex by the domino effect (TW p.152). */
-      readonly kind: "unitDisplaced";
-      readonly unitId: string;
-      readonly from: HexCoord;
-      readonly to: HexCoord;
     }
   | {
       /** Club pickup resolved in the physical sub-pass. Limb/tree success
@@ -1055,10 +1042,6 @@ function requirePhase(state: BattleState, phase: Phase): void {
   if (state.phase !== phase) {
     throw new Error(`Expected phase ${phase}, but battle is in ${state.phase}`);
   }
-}
-
-function onBoard(state: BattleState, hex: HexCoord): boolean {
-  return hex.col >= 1 && hex.col <= state.width && hex.row >= 1 && hex.row <= state.height;
 }
 
 export function occupantAt(
@@ -1989,7 +1972,7 @@ export interface DeclareAttacksOptions {
    *  hexside before classifying the firing arc. Defaults to untwisted. */
   readonly twist?: Arc | null;
   /** Drop the held club first: hands are free for the rest of this
-   *  declaration, so arm-mounted weapons, punch, strike, and push validate
+   *  declaration, so arm-mounted weapons, punch, and strike validate
    *  normally. A dropped limb returns to the hex; trees/girders vanish.
    *  Requires holding a club. */
   readonly dropClub?: boolean;
@@ -2029,8 +2012,8 @@ export interface ValidatedAttackVolley {
 /** Normalize physical attack limbs: a limbless punch defaults to the right
  *  arm, a limbless kick to the right leg (TW lets the attacker pick; the
  *  default keeps single-command declarations deterministic). A limbless
- *  strike defaults to its mounting arm (right when both mount it). Push
- *  and club carry no limb. */
+ *  strike defaults to its mounting arm (right when both mount it).
+ *  A club carries no limb. */
 function normalizePhysicalDecls(
   def: ResolvedMechDef,
   decls: readonly PhysicalAttackDecl[],
@@ -2111,7 +2094,7 @@ export function validateAttacksImpl(
   if (dropping && unit.club === null) {
     throw new Error(`${unitId} holds no club to drop`);
   }
-  // Carrying a club occupies both hands (TW p.146): punch, strike, push,
+  // Carrying a club occupies both hands (TW p.146): punch, strike,
   // and arm-mounted weapon fire are barred until it is dropped first.
   const handsOccupied = unit.club !== null && !dropping;
   const normalizedPhysical = normalizePhysicalDecls(def, physicalDecls);
@@ -2127,15 +2110,6 @@ export function validateAttacksImpl(
     for (const p of normalizedPhysical) {
       const result = validatePhysicalAttack(state, unitId, p, twist, dropping);
       if (!result.ok) throw new Error(result.reason ?? "invalid physical attack");
-      // TW p.147: a 'Mech may be the target of only one push per turn.
-      const pushedAlready =
-        p.type === "push" &&
-        Object.values(state.units).some(
-          (u) =>
-            u.id !== unitId &&
-            u.declaredPhysicalAttacks.some((d) => d.type === "push" && d.targetId === p.targetId),
-        );
-      if (pushedAlready) throw new Error(`${p.targetId} is already the target of a push this turn`);
     }
   }
   const sensorsOut = countDestroyedSensor(def, unit.damage, unit.critSlotsDestroyed);
@@ -2548,7 +2522,7 @@ export function declarePickup(
 /**
  * Resolve one declared pickup in the physical sub-pass (TW p.146). The
  * declaration-time environment is re-checked against the unit's current
- * hex: displacement, falls, or kills since declaration can void it. Limb
+ * hex: falls or kills since declaration can void it. Limb
  * and tree acquisition are automatic; girders need 2D6 against 7+/6+/5+
  * by rubble origin. Emits `clubPickedUp` in all cases.
  */
@@ -2732,7 +2706,7 @@ function physicalWeaponConflict(
       const arm = resolveStrikeArm(def, p.weapon, p.limb);
       if (arm !== null) struckArms.add(arm);
     }
-    if (p.type === "push" || p.type === "club") noArmWeapons = true;
+    if (p.type === "club") noArmWeapons = true;
   }
   for (const w of weaponDecls) {
     const loc = def.weapons[w.weaponIndex]?.location;
@@ -3858,12 +3832,6 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     if (list === undefined) kickExtras[unitId] = [{ reason, modifier: 0 }];
     else list.push({ reason, modifier: 0 });
   };
-  // Declared hexes at melee start (the weapon sub-pass never displaces, so
-  // these are the declaration-time hexes TW p.144 reasons about).
-  const declaredPositions: Record<string, HexCoord> = {};
-  for (const unit of Object.values(state.units)) {
-    declaredPositions[unit.id] = { ...unit.position };
-  }
   const missResolution = (
     type: PhysicalAttackDecl["type"],
     attackerId: string,
@@ -3884,21 +3852,13 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     application: null,
     attackerApplication: null,
     crits: [],
-    targetDisplacedTo: null,
-    attackerDisplacedTo: null,
-    targetPsr: null,
-    attackerPsr: null,
-    attackerFalls: false,
-    targetFalls: false,
     notes: [note],
     throughArmorCrit: false,
     missReason,
   });
-  // TW p.144 displacement order: the lower-initiative (losing) team's melee
-  // resolves first; same-team order follows declaration order (stable sort).
-  // `mutualPushConsumed` tracks mutual-push pairs resolved simultaneously
-  // (TW p.147) so the counterpart's declaration is skipped on its own turn.
-  const mutualPushConsumed = new Set<string>();
+  // The lower-initiative (losing) team's melee resolves first (TW p.144);
+  // same-team order follows declaration order (stable sort). Matters for
+  // club pickups racing for the same ground token.
   const physicalOrder = Object.values(state.units)
     .filter((u) => u.declaredPhysicalAttacks.length > 0 || u.declaredPickup !== null)
     .sort((a, b) => {
@@ -3916,7 +3876,6 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       continue;
     }
     for (const decl of unit.declaredPhysicalAttacks) {
-      if (mutualPushConsumed.has(unit.id)) continue;
       const attacker = requireUnit(state, unit.id);
       const target = state.units[decl.targetId];
       if (isUnitRemoved(attacker) || attacker.unconscious || isShutdown(attacker)) {
@@ -3951,206 +3910,41 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         });
         continue;
       }
-      // TW p.147 mutual push: two 'Mechs pushing each other resolve both
-      // blows simultaneously (both fail = nothing; both succeed = neither
-      // moves and both roll; one succeeds = resolve normally). Only when
-      // both still stand in their declared hexes and both pushes are still
-      // legal — otherwise fall through to sequential resolution (displacement
-      // redirect / validity misses below).
-      if (decl.type === "push") {
-        const counterpart = state.units[decl.targetId];
-        const counterpartDecl = counterpart?.declaredPhysicalAttacks.find(
-          (d) => d.type === "push" && d.targetId === unit.id,
-        );
-        if (
-          counterpart !== undefined &&
-          counterpartDecl !== undefined &&
-          !mutualPushConsumed.has(counterpart.id) &&
-          !isUnitRemoved(counterpart) &&
-          !counterpart.unconscious &&
-          !isShutdown(counterpart)
-        ) {
-          const declaredA = declaredPositions[unit.id];
-          const declaredB = declaredPositions[counterpart.id];
-          const bothInPlace =
-            declaredA !== undefined &&
-            declaredB !== undefined &&
-            sameHex(declaredA, attacker.position) &&
-            sameHex(declaredB, counterpart.position);
-          if (
-            bothInPlace &&
-            validatePhysicalAttack(state, attacker.id, decl).ok &&
-            validatePhysicalAttack(state, counterpart.id, counterpartDecl).ok
-          ) {
-            const [resA, resB] = resolveMutualPush(state, attacker.id, counterpart.id, rng);
-            sink.push({
-              kind: "physicalAttackResolved",
-              unitId: attacker.id,
-              targetId: counterpart.id,
-              resolution: resA,
-            });
-            sink.push({
-              kind: "physicalAttackResolved",
-              unitId: counterpart.id,
-              targetId: attacker.id,
-              resolution: resB,
-            });
-            if (resA.targetDisplacedTo && !isUnitRemoved(counterpart)) {
-              counterpart.position = resA.targetDisplacedTo;
-            }
-            if (resA.attackerDisplacedTo && !isUnitRemoved(attacker)) {
-              attacker.position = resA.attackerDisplacedTo;
-            }
-            if (resB.targetDisplacedTo && !isUnitRemoved(attacker)) {
-              attacker.position = resB.targetDisplacedTo;
-            }
-            if (resB.attackerDisplacedTo && !isUnitRemoved(counterpart)) {
-              counterpart.position = resB.attackerDisplacedTo;
-            }
-            for (const moved of [counterpart, attacker]) {
-              if (!isUnitRemoved(moved) && !onBoard(state, moved.position)) {
-                markUnitDestroyed(state, moved, "displacedOffBoard", rng, sink);
-              }
-            }
-            if (resA.targetFalls && !isUnitRemoved(counterpart)) {
-              applyFall(
-                state,
-                counterpart,
-                rng,
-                {
-                  cause: { kind: "physicalAttack" },
-                  hex: { ...counterpart.position },
-                  seatbeltModifier: preexistingDamageModifier(
-                    mechDefFor(counterpart),
-                    counterpart.damage,
-                    counterpart.critSlotsDestroyed,
-                  ).modifier,
-                  halved: false,
-                },
-                sink,
-              );
-            }
-            if (resB.targetFalls && !isUnitRemoved(attacker)) {
-              applyFall(
-                state,
-                attacker,
-                rng,
-                {
-                  cause: { kind: "physicalAttack" },
-                  hex: { ...attacker.position },
-                  seatbeltModifier: preexistingDamageModifier(
-                    mechDefFor(attacker),
-                    attacker.damage,
-                    attacker.critSlotsDestroyed,
-                  ).modifier,
-                  halved: false,
-                },
-                sink,
-              );
-            }
-            mutualPushConsumed.add(attacker.id);
-            mutualPushConsumed.add(counterpart.id);
-            continue;
-          }
-        }
-      }
-      // TW p.144 comes before legality: a target displaced before its
-      // attacker's melee resolves no longer stands in the aimed hex.
-      // Resolve against whoever now holds that hex (+1) or auto-miss with
-      // no valid target — even if the displaced unit itself is still in
-      // reach, the blow was aimed at its declared hex.
+      // Re-validate against post-weapon state: a weapon-phase fall leaves
+      // the attacker prone (validate rejects prone attackers) and falls may
+      // have broken arcs (TW pp.144,151).
       const view = phaseStartView(attacker.id);
-      const declaredHex = declaredPositions[target.id];
-      let effectiveDecl = decl;
-      let redirectNote: string | null = null;
-      let redirectPenalty = 0;
-      let redirectFrom: string | null = null;
-      if (declaredHex !== undefined && !sameHex(declaredHex, target.position)) {
-        const occupant = occupantAt(state, declaredHex, attacker.id);
-        const valid =
-          occupant !== undefined &&
-          !isUnitRemoved(occupant) &&
-          occupant.id !== target.id &&
-          occupant.team !== attacker.team &&
-          validatePhysicalAttack(
-            view,
-            attacker.id,
-            { ...decl, targetId: occupant.id },
-            decl.twist ?? null,
-            false,
-            baseDamage[attacker.id],
-          ).ok;
-        if (occupant !== undefined && valid) {
-          redirectFrom = target.id;
-          effectiveDecl = { ...decl, targetId: occupant.id };
-          redirectPenalty = 1;
-          redirectNote = `target ${target.id} displaced — redirected to ${occupant.id} at +1 (TW p.144)`;
-        } else {
-          const resolution = missResolution(
-            decl.type,
-            attacker.id,
-            decl.targetId,
-            "displaced",
-            `target ${target.id} displaced before the blow — no valid target, auto-miss (TW p.144)`,
-          );
-          sink.push({
-            kind: "physicalAttackResolved",
-            unitId: attacker.id,
-            targetId: decl.targetId,
-            resolution,
-          });
-          continue;
-        }
-      } else {
-        // Re-validate against post-weapon state when the target held its
-        // hex: a weapon-phase fall leaves the attacker prone (validate
-        // rejects prone attackers) and falls may have broken arcs
-        // (TW pp.144,151).
-        const check = validatePhysicalAttack(
-          view,
-          attacker.id,
-          decl,
-          decl.twist ?? null,
-          false,
-          baseDamage[attacker.id],
-        );
-        if (!check.ok) {
-          const resolution = missResolution(
-            decl.type,
-            attacker.id,
-            decl.targetId,
-            `invalid:${check.reason ?? "illegal"}`,
-            `no longer legal (${check.reason ?? "illegal"}) — auto-miss`,
-          );
-          sink.push({
-            kind: "physicalAttackResolved",
-            unitId: attacker.id,
-            targetId: decl.targetId,
-            resolution,
-          });
-          continue;
-        }
-      }
-      let resolution = resolvePhysicalAttack(
+      const check = validatePhysicalAttack(
         view,
         attacker.id,
-        effectiveDecl,
-        rng,
-        redirectPenalty,
+        decl,
+        decl.twist ?? null,
+        false,
+        baseDamage[attacker.id],
       );
-      if (redirectFrom !== null && redirectNote !== null) {
-        resolution = {
-          ...resolution,
-          redirectedFrom: redirectFrom,
-          notes: [...resolution.notes, redirectNote],
-        };
+      if (!check.ok) {
+        const resolution = missResolution(
+          decl.type,
+          attacker.id,
+          decl.targetId,
+          `invalid:${check.reason ?? "illegal"}`,
+          `no longer legal (${check.reason ?? "illegal"}) — auto-miss`,
+        );
+        sink.push({
+          kind: "physicalAttackResolved",
+          unitId: attacker.id,
+          targetId: decl.targetId,
+          resolution,
+        });
+        continue;
       }
-      // Apply damage to the effective target (redirect-aware), merging
+      let resolution = resolvePhysicalAttack(view, attacker.id, decl, rng);
+      // Apply damage to the target, merging
       // per-group applications like the weapon path (attack.ts) so the
       // emitted resolution carries the armor-change detail and crits.
       const hitTarget =
         resolution.hit && resolution.damageToTarget.length > 0
-          ? requireUnit(state, effectiveDecl.targetId)
+          ? requireUnit(state, decl.targetId)
           : null;
       let targetApplication: DamageApplication | null = null;
       let attackerApplication: DamageApplication | null = null;
@@ -4251,62 +4045,11 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       sink.push({
         kind: "physicalAttackResolved",
         unitId: attacker.id,
-        targetId: effectiveDecl.targetId,
+        targetId: decl.targetId,
         resolution,
       });
 
-      // Handle displacement (push only in this subset; immediate per TW p.151).
-      // PHY-12: a redirected push moves the unit that was actually struck.
-      const struck = requireUnit(state, effectiveDecl.targetId);
-      if (resolution.targetDisplacedTo && !isUnitRemoved(struck)) {
-        struck.position = resolution.targetDisplacedTo;
-        if (!onBoard(state, struck.position)) {
-          markUnitDestroyed(state, struck, "displacedOffBoard", rng, sink);
-        }
-      }
-      if (resolution.attackerDisplacedTo && !isUnitRemoved(attacker)) {
-        attacker.position = resolution.attackerDisplacedTo;
-      }
-
-      // Handle immediate falls (push defender PSR only — kick defers to
-      // the sweep; mutual pushes resolve above with one defender PSR each).
-      const fallTarget = struck;
-      if (resolution.targetFalls && !isUnitRemoved(fallTarget)) {
-        const levelsFallen = resolution.displacementLevels ?? 0;
-        const fallPre = preexistingDamageModifier(
-          mechDefFor(fallTarget),
-          fallTarget.damage,
-          fallTarget.critSlotsDestroyed,
-        ).modifier;
-        const fallTerrain = cellAt(state, fallTarget.position).terrain;
-        applyFall(
-          state,
-          fallTarget,
-          rng,
-          {
-            cause: { kind: "physicalAttack" },
-            hex: { ...fallTarget.position },
-            seatbeltModifier: fallPre + Math.max(0, levelsFallen - 1),
-            halved: fallTerrain === "water2" || fallTerrain === "water3",
-            ...(levelsFallen > 0 ? { levelsFallen } : {}),
-          },
-          sink,
-        );
-      }
-      if (resolution.attackerFalls && !isUnitRemoved(attacker)) {
-        applyFall(
-          state,
-          attacker,
-          rng,
-          {
-            cause: { kind: "physicalAttack" },
-            hex: { ...attacker.position },
-            seatbeltModifier: null,
-            halved: false,
-          },
-          sink,
-        );
-      }
+      const fallTarget = requireUnit(state, decl.targetId);
       // Kick PSRs defer to the end-of-physical sweep (TW pp.59,147).
       if (resolution.kickTargetPsrPending && !isUnitRemoved(fallTarget)) {
         queueKickPsr(fallTarget.id, "kick");
@@ -4341,7 +4084,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     }
   }
 
-  // Destruction from physical-attack damage, displacement falls, and pilot
+  // Destruction from physical-attack damage and pilot
   // hits above lands before the end-of-phase piloting sweep.
   // Ammo blasts from physical crits eject on a CT blast and hurt the pilot
   // like the weapon path (PHY-08); pilot hits land with the phase's damage.
@@ -4864,6 +4607,8 @@ function waterHalvesFall(terrain: TerrainType, ground: boolean): boolean {
   return depth >= 2 || (!ground && depth >= 1);
 }
 
+/** Base to-hit of an Accidental Fall From Above (TW p.152). */
+const ACCIDENTAL_FALL_BASE_TN = 7;
 /**
  * Movement terrain PSRs for one entered hex (TW p.60, p.167): entering water
  * (depth 1: -1, depth 2: +0, depth 3+: +1), rubble (+0), or a building hex
@@ -4877,83 +4622,6 @@ function waterHalvesFall(terrain: TerrainType, ground: boolean): boolean {
  * must stop here (fell, crashed, or shut down mid-path), or null to
  * continue.
  */
-/** True when `victim` can be shoved one hex along `dir` (and whoever stands
- *  there after it): the chain ends off the map, in an empty hex, or in a hex
- *  the terrain lets its occupant enter. Walls, wrecks and cliffs up refuse. */
-function dominoPossible(state: BattleState, victim: UnitState, dir: Facing, depth = 0): boolean {
-  if (depth > DOMINO_CHAIN_MAX) return false;
-  const dest = neighbor(victim.position, dir);
-  const outcome = pushDisplacementOutcome(state, victim, dest, true);
-  if (outcome.kind === "blocked") return false;
-  const next = occupantAt(state, dest, victim.id);
-  return next === undefined || dominoPossible(state, next, dir, depth + 1);
-}
-const DOMINO_CHAIN_MAX = 6;
-/** Base to-hit of an Accidental Fall From Above (TW p.152). */
-const ACCIDENTAL_FALL_BASE_TN = 7;
-/** Piloting modifier of a unit struck by an accidental fall (as a DFA target). */
-const ACCIDENTAL_FALL_TARGET_PSR = 2;
-
-/**
- * Domino effect (TW p.152): a unit that falls into an occupied hex shoves the
- * occupant one hex away along the line of travel. The displaced unit rolls a
- * piloting check or falls (a drop of more than two levels is an automatic
- * fall; off the map destroys it) and, if its new hex is occupied too, the
- * chain continues. Callers check `dominoPossible` first.
- */
-function displaceWithDomino(
-  state: BattleState,
-  victim: UnitState,
-  dir: Facing,
-  rng: Rng,
-  sink: GameEvent[],
-  psrMod = 0,
-): void {
-  const dest = neighbor(victim.position, dir);
-  const next = occupantAt(state, dest, victim.id);
-  if (next !== undefined) displaceWithDomino(state, next, dir, rng, sink);
-  const outcome = pushDisplacementOutcome(state, victim, dest, true);
-  if (outcome.kind === "blocked") return;
-  const origin = { ...victim.position };
-  victim.position = { ...dest };
-  sink.push({ kind: "unitDisplaced", unitId: victim.id, from: origin, to: { ...dest } });
-  if (outcome.kind === "offBoard") {
-    markUnitDestroyed(state, victim, "displacedOffBoard", rng, sink);
-    return;
-  }
-  // A prone unit has nothing left to lose by being shoved.
-  if (victim.prone) return;
-  const pre = preexistingDamageModifier(
-    mechDefFor(victim),
-    victim.damage,
-    victim.critSlotsDestroyed,
-  ).modifier;
-  const levels = outcome.kind === "cliff" ? outcome.levels : 0;
-  let falls = outcome.kind === "cliff";
-  if (!falls) {
-    falls =
-      isShutdown(victim) ||
-      victim.unconscious ||
-      !pushPilotingCheck(sink, victim, "domino", psrMod, pre, rng, { ...dest }).success;
-  }
-  if (!falls) return;
-  const terrain = cellAt(state, dest).terrain;
-  applyFall(
-    state,
-    victim,
-    rng,
-    {
-      cause: { kind: "failedPsr", reason: "domino" },
-      hex: { ...dest },
-      seatbeltModifier:
-        isShutdown(victim) || victim.unconscious ? null : pre + psrMod + Math.max(0, levels - 1),
-      halved: terrain === "water2" || terrain === "water3",
-      ...(levels > 0 ? { levelsFallen: levels } : {}),
-    },
-    sink,
-  );
-}
-
 function movementTerrainPsr(
   state: BattleState,
   unit: UnitState,
@@ -4976,19 +4644,15 @@ function movementTerrainPsr(
     const lower = toLevel <= fromLevel ? to : from;
     return { lower, levels: Math.max(0, fromLevel - cellAt(state, lower).level) };
   };
-  /** A faller that lands on another unit shoves it along the line of travel
-   *  (domino effect, TW p.152). When the occupant cannot be shoved the faller
-   *  stays in the hex it came from. Returns the hex the faller ends in. */
+  /** A faller that lands on another unit cannot share its hex: it stays in
+   *  the hex it came from. Accidental Falls From Above (TW p.152): two or more
+   *  levels down onto the occupant; a hit damages it like a DFA, and the
+   *  faller still ends in the hex it fell from unless the occupant is gone.
+   *  Returns the hex the faller ends in. */
   const settleFall = (lower: HexCoord): HexCoord => {
     if (isUnitRemoved(unit)) return lower;
     const occupant = occupantAt(state, lower, unit.id);
     if (occupant === undefined) return lower;
-    const dir = FACINGS.find((f) => sameHex(neighbor(from, f), to));
-    const shoveable =
-      dir !== undefined && sameHex(lower, to) && dominoPossible(state, occupant, dir);
-    // Accidental Falls From Above (TW p.152): two or more levels down onto
-    // the occupant; a hit damages it like a DFA, a miss lands the faller in
-    // the hex it fell from.
     const drop = ground ? groundLevel(state, from) - groundLevel(state, lower) : 0;
     if (drop >= 2) {
       const tn =
@@ -5007,29 +4671,14 @@ function movementTerrainPsr(
         hit,
         damage: hit ? total : 0,
       });
-      if (!hit) {
-        unit.position = { ...from };
-        return { ...from };
+      if (hit) {
+        const groups: DamageGroup[] = fallingDamageGroups(total).map((amount) => ({
+          location: punchHitLocation(rollD6(rng)),
+          damage: amount,
+        }));
+        applyDamageGroups(state, occupant, rng, groups, "front", sink);
+        if (isUnitRemoved(occupant)) return lower;
       }
-      const groups: DamageGroup[] = fallingDamageGroups(total).map((amount) => ({
-        location: punchHitLocation(rollD6(rng)),
-        damage: amount,
-      }));
-      applyDamageGroups(state, occupant, rng, groups, "front", sink);
-      if (!isUnitRemoved(occupant)) {
-        if (shoveable && dir !== undefined) {
-          // A hit target is pushed one hex directly away and rolls at +2.
-          displaceWithDomino(state, occupant, dir, rng, sink, ACCIDENTAL_FALL_TARGET_PSR);
-        } else {
-          unit.position = { ...from };
-          return { ...from };
-        }
-      }
-      return lower;
-    }
-    if (shoveable && dir !== undefined) {
-      displaceWithDomino(state, occupant, dir, rng, sink);
-      return lower;
     }
     unit.position = { ...from };
     return { ...from };

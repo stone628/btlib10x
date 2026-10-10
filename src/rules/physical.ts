@@ -1,7 +1,7 @@
 /**
  * Physical attack rules (BattleTech Total Warfare, pp. 144–153).
  *
- * Implements punch, kick, push, club, and physical-weapon (strike) attacks.
+ * Implements punch, kick, club, and physical-weapon (strike) attacks.
  * Charge and DFA are deferred to a future phase. A club attack requires the
  * attacker to hold a club (`UnitState.club`), acquired through the pickup
  * rules in `game.ts` (severed limbs, trees, girders).
@@ -10,10 +10,10 @@
  * after all weapon attacks (TW p. 37 phase order within the unified phase).
  */
 
-import { D2D6_IMPOSSIBLE, roll2D6, rollD6 } from "../core/dice";
-import { bearingExact, hexDistance, isAdjacent, neighbor } from "../core/hex";
+import { roll2D6, rollD6 } from "../core/dice";
+import { bearingExact, hexDistance, isAdjacent } from "../core/hex";
 import { cellAt, groundLevel, terrainTargetMod } from "../core/terrain";
-import type { ArmLocation, HexCoord, Location, Rng } from "../core/types";
+import type { ArmLocation, Location, Rng } from "../core/types";
 import { isArm } from "../core/types";
 import { mechDefFor } from "../data/index";
 import type { ResolvedMechDef } from "../data/mech.schema";
@@ -35,31 +35,18 @@ import {
   type UnitDamageState,
 } from "./damage";
 import type { BattleState, UnitState } from "./game";
-import {
-  isImmobile,
-  isShutdown,
-  isUnitRemoved,
-  occupantAt,
-  partialCoverMod,
-  wreckAt,
-} from "./game";
+import { isImmobile, isUnitRemoved, partialCoverMod } from "./game";
 import { isTsmActive } from "./heat";
 import { hitLocationForArc, punchHitLocationForArc } from "./hitlocation";
 import { losWoodsPointsBetween } from "./los";
-import {
-  attackerMovementModifier,
-  FORWARD_LEVEL_CHANGE_MAX,
-  TARGET_IMMOBILE_MOD,
-  targetMovementModifier,
-} from "./movement";
-import { type PilotingRollResult, preexistingDamageModifier, rollPilotingCheck } from "./piloting";
+import { attackerMovementModifier, TARGET_IMMOBILE_MOD, targetMovementModifier } from "./movement";
 import { PRONE_ATTACKER_MOD, proneTargetModifier } from "./tohit";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export type PhysicalAttackType = "punch" | "kick" | "push" | "club" | "strike";
+export type PhysicalAttackType = "punch" | "kick" | "club" | "strike";
 
 /** Melee equipment usable through a strike (TW p.146 subset). */
 export type PhysicalWeaponName = "Hatchet" | "Sword" | "Retractable Blade";
@@ -79,7 +66,7 @@ export interface PhysicalAttackDecl {
 export interface PhysicalModifiers {
   /** Base to-hit: piloting skill. */
   readonly base: number;
-  /** Attack-type modifier (punch +0, kick −2, push −1, club −1, strike per weapon). */
+  /** Attack-type modifier (punch +0, kick −2, club −1, strike per weapon). */
   readonly attackMod: number;
   /** Attacker movement modifier (same band as weapon attacks). */
   readonly attackerMoveMod: number;
@@ -124,28 +111,15 @@ export interface PhysicalResolution {
   /** Critical resolutions triggered by the target damage, rendered with the
    *  same `critLines` formatter as weapon `crits`. */
   readonly crits: readonly CriticalResolution[];
-  readonly targetDisplacedTo: HexCoord | null;
-  readonly attackerDisplacedTo: HexCoord | null;
-  readonly targetPsr: PilotingRollResult | null;
-  readonly attackerPsr: PilotingRollResult | null;
-  readonly attackerFalls: boolean;
-  readonly targetFalls: boolean;
   readonly notes: string[];
   /** True when the hit-location roll was 2 (through-armor critical, TW p.123). */
   readonly throughArmorCrit: boolean;
-  /** Extra to-hit applied for a displacement redirect (TW p.144, +1). */
-  readonly displacementPenalty?: number;
-  /** Original target before a displacement redirect (TW p.144). */
-  readonly redirectedFrom?: string;
-  /** Why the attack never rolled (displaced | attackerDown | targetDown | invalid:<reason>). */
+  /** Why the attack never rolled (attackerDown | targetDown | invalid:<reason>). */
   readonly missReason?: string;
   /** Kick target PSR deferred to the end-of-phase sweep (TW pp.59,147). */
   readonly kickTargetPsrPending?: boolean;
   /** Kick attacker PSR on a miss, deferred to the end-of-phase sweep. */
   readonly kickAttackerPsrPending?: boolean;
-  /** Levels the pushed target drops off a cliff (more than two levels down,
-   *  TW p.147): the fall is automatic and carries that many levels. */
-  readonly displacementLevels?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -159,9 +133,6 @@ export const PUNCH_DAMAGE_PER_TONS = 10;
 /** Kick: −2 to-hit, 1 damage per 5 tons (round up). */
 export const KICK_ATTACK_MOD = -2;
 export const KICK_DAMAGE_PER_TONS = 5;
-
-/** Push: −1 to-hit, 0 damage. */
-export const PUSH_ATTACK_MOD = -1;
 
 /** Club: −1 to-hit, 1 damage per 5 tons (round up). */
 export const CLUB_ATTACK_MOD = -1;
@@ -274,8 +245,6 @@ function attackTypeModifier(type: PhysicalAttackType, weapon?: PhysicalWeaponNam
       return PUNCH_ATTACK_MOD;
     case "kick":
       return KICK_ATTACK_MOD;
-    case "push":
-      return PUSH_ATTACK_MOD;
     case "club":
       return CLUB_ATTACK_MOD;
     case "strike":
@@ -287,7 +256,6 @@ function attackTypeModifier(type: PhysicalAttackType, weapon?: PhysicalWeaponNam
  * Actuator damage modifier for physical attacks (TW pp. 145–147).
  * Punch: +2 per damaged upper/lower arm actuator, +1 if no hand.
  * Kick: +2 per damaged upper/lower leg actuator, +1 per damaged foot.
- * Push: +2 per damaged shoulder.
  * Club: +2 per damaged upper/lower arm actuator.
  * Strike: like punch but in the mounting arm only; a damaged hand adds +1
  *   except on the Retractable Blade (TW p.146, hand exception).
@@ -323,14 +291,6 @@ function physicalActuatorMod(
       if (structs.includes("upperLegActuator")) mod += 2;
       if (structs.includes("lowerLegActuator")) mod += 2;
       if (structs.includes("footActuator")) mod += 1;
-      return mod;
-    }
-    case "push": {
-      // +2 per damaged shoulder
-      let mod = 0;
-      const leftShoulder = countDestroyedStructure(def, damage, destroyed, "leftArm", "shoulder");
-      const rightShoulder = countDestroyedStructure(def, damage, destroyed, "rightArm", "shoulder");
-      mod += (leftShoulder + rightShoulder) * 2;
       return mod;
     }
     case "club": {
@@ -481,7 +441,7 @@ export function resolveStrikeMount(
  *
  * TSM (TW p.143) doubles punch, kick, club, and physical-weapon (hatchet,
  * sword, retractable blade — all "Yes" in the TW p.146 table) damage while
- * active, applied after the actuator halving below. Push deals no damage.
+ * active, applied after the actuator halving below.
  */
 export function physicalDamage(
   type: PhysicalAttackType,
@@ -523,8 +483,6 @@ export function physicalDamage(
       }
       return doubled(dmg);
     }
-    case "push":
-      return 0;
     case "club":
       return doubled(Math.ceil(tons / CLUB_DAMAGE_PER_TONS));
     case "strike": {
@@ -556,7 +514,6 @@ export function physicalDamage(
  * Punch: 1D6 on the Punch Location Table (TW p.145).
  * Kick: 1D6 on the Kick Location Table (TW p.147).
  * Club / strike: 2D6 on the 'Mech Hit Location Table (TW pp.145–146).
- * Push: no damage, no location roll.
  * Every table reads the column matching the attack direction (left side,
  * front/rear, right side). Against a prone target every attack rolls 2D6 on
  * the 'Mech Hit Location Table (TW p.151).
@@ -573,7 +530,6 @@ export function physicalHitLocation(
   roll: number,
   levelDelta = 0,
 ): Location {
-  if (type === "push") return "centerTorso"; // unused
   switch (physicalLocationTable(type, levelDelta, target.prone)) {
     case "punch":
       return punchHitLocationForArc(attackDirection, roll);
@@ -602,7 +558,7 @@ export function physicalLocationTable(
   levelDelta: number,
   targetProne: boolean,
 ): "punch" | "kick" | "standard" {
-  if (type === "push" || targetProne) return "standard";
+  if (targetProne) return "standard";
   if (type === "punch") return levelDelta === 1 ? "kick" : "punch";
   if (type === "kick") return levelDelta === -1 ? "punch" : "kick";
   // club / strike
@@ -647,9 +603,8 @@ export interface ValidationResult {
  *
  * `twist` is the attacker's torso twist (TW pp. 105–106, 98–99: the
  * twist governs physical-attack arcs too). Punch and club attacker-side
- * arcs classify against the twisted facing; kick and push are feet-based
- * (TW pp. 147–149: kick uses the feet's forward arc, push/charge ignore
- * the twist) and never read it.
+ * arcs classify against the twisted facing; kick is feet-based
+ * (TW pp. 147–149: kick uses the feet's forward arc) and never reads it.
  *
  * `dropped` counts as empty-handed: a declaration that drops the held club
  * first validates as if the hands were already free (so a drop-first club
@@ -719,8 +674,6 @@ export function validatePhysicalAttack(
       return validatePunch(attacker, target, decl, twist ?? null, dropped);
     case "kick":
       return validateKick(attacker, target, decl);
-    case "push":
-      return validatePush(attacker, target, decl, dropped);
     case "club":
       return validateClub(attacker, target, decl, twist ?? null, dropped);
     case "strike":
@@ -764,7 +717,7 @@ function checkPhysicalLevelGate(
   if (levelDelta === 0) return null;
   if (levelDelta === 1) {
     // Standing target one level higher: punch and club (+physical weapon);
-    // kick and push are illegal.
+    // kick is illegal.
     return type === "punch" || type === "club" || type === "strike"
       ? null
       : "This physical attack cannot target a 'Mech one level higher";
@@ -852,35 +805,6 @@ function validateKick(
   }
 
   // Compute attack direction
-  const back = bearingExact(target.position, attacker.position)!;
-  const dir = classifyArcWithBoundary(target.facing, back);
-  const attackDirection = defenderArcChoice(dir.arc, dir.altArc);
-
-  return { ok: true, attackDirection };
-}
-
-function validatePush(
-  attacker: UnitState,
-  target: UnitState,
-  _decl: PhysicalAttackDecl,
-  dropped: boolean,
-): ValidationResult {
-  // A push uses both arms (TW p. 147): no pushing while carrying a club.
-  if (!dropped && attacker.club !== null) {
-    return { ok: false, reason: "Cannot push: hands occupied by club (drop it first)" };
-  }
-  // Target must be in hex directly in front (TW p. 147)
-  const frontHex = neighbor(attacker.position, attacker.facing);
-  if (frontHex.col !== target.position.col || frontHex.row !== target.position.row) {
-    return { ok: false, reason: "Push requires target in hex directly ahead" };
-  }
-
-  // Target must be standing 'Mech not charging or performing DFA
-  if (target.prone) {
-    return { ok: false, reason: "Cannot push a prone 'Mech" };
-  }
-
-  // Compute attack direction (for PSR purposes)
   const back = bearingExact(target.position, attacker.position)!;
   const dir = classifyArcWithBoundary(target.facing, back);
   const attackDirection = defenderArcChoice(dir.arc, dir.altArc);
@@ -1009,68 +933,20 @@ function validateStrike(
 // ---------------------------------------------------------------------------
 
 /**
- * Roll one physical-attack PSR for `unit`, applying its own preexisting
- * damage (TW p.60). Pure dice wrapper so push/kick call sites stay flat.
- */
-function rollPhysicalPsr(rollRng: Rng, unit: UnitState): PilotingRollResult {
-  // A shut-down 'Mech or unconscious pilot cannot roll and fails (TW pp.40, 59).
-  if (isShutdown(unit) || unit.unconscious) {
-    return { target: D2D6_IMPOSSIBLE, roll: null, success: false };
-  }
-  const def = mechDefFor(unit);
-  const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
-  return rollPilotingCheck(rollRng, unit.piloting, pre.modifier);
-}
-
-/** Where a push would send the target (TW pp.147, 151). Off the map is legal
- *  and destroys the unit; prohibited terrain blocks the displacement (the
- *  other effects stand); more than two levels down is an automatic fall.
- *  An occupied hex is treated as blocked: the domino effect (TW pp.152–153)
- *  is not modelled. */
-export type PushOutcome =
-  | { kind: "ok" }
-  | { kind: "offBoard" }
-  | { kind: "blocked"; reason: string }
-  | { kind: "cliff"; levels: number };
-
-export function pushDisplacementOutcome(
-  battle: BattleState,
-  target: UnitState,
-  to: HexCoord,
-  ignoreOccupants = false,
-): PushOutcome {
-  if (to.col < 1 || to.col > battle.width || to.row < 1 || to.row > battle.height) {
-    return { kind: "offBoard" };
-  }
-  if (wreckAt(battle, to) !== undefined) return { kind: "blocked", reason: "wreck" };
-  if (!ignoreOccupants && occupantAt(battle, to, target.id) !== undefined) {
-    return { kind: "blocked", reason: "occupied (domino effect not implemented)" };
-  }
-  const delta = groundLevel(battle, to) - groundLevel(battle, target.position);
-  if (delta > FORWARD_LEVEL_CHANGE_MAX) return { kind: "blocked", reason: "too high to climb" };
-  if (delta < -FORWARD_LEVEL_CHANGE_MAX) return { kind: "cliff", levels: -delta };
-  return { kind: "ok" };
-}
-
-/**
  * Resolve a single physical attack (TW pp. 144–151).
  * Pure function: does not mutate state. Returns the resolution with
- * damage groups, displacement, and PSR results.
+ * damage groups.
  *
  * Kick PSRs are NOT rolled here: the kicked target's check on a hit and the
  * missed-kick attacker's check defer to the end-of-phase sweep (TW pp. 59,
  * 147) and come back as `kickTargetPsrPending` / `kickAttackerPsrPending`
- * for the caller to roll after all physical damage lands. Push PSRs stay
- * immediate: displacement (and its defender-only PSR) resolves immediately
- * after the causing action (TW pp. 147, 151). Mutual pushes resolve via
- * `resolveMutualPush`, not here.
+ * for the caller to roll after all physical damage lands.
  */
 export function resolvePhysicalAttack(
   battle: BattleState,
   attackerId: string,
   decl: PhysicalAttackDecl,
   rng: Rng,
-  extraToHit = 0,
 ): PhysicalResolution {
   const attacker = battle.units[attackerId]!;
   const target = battle.units[decl.targetId]!;
@@ -1078,9 +954,9 @@ export function resolvePhysicalAttack(
 
   const notes: string[] = [];
 
-  // Compute to-hit (extraToHit carries the TW p.144 displacement redirect +1).
+  // Compute to-hit.
   const mods = computePhysicalToHit(battle, attacker, target, decl.type, decl.limb, decl.weapon);
-  const total = mods.total + extraToHit;
+  const total = mods.total;
 
   // Auto-hit / auto-miss
   const autoHit = total <= PHYSICAL_MIN_TOHIT;
@@ -1117,44 +993,8 @@ export function resolvePhysicalAttack(
     damageToTarget.push({ location, damage: dmg });
   }
 
-  // Displacement and PSRs. Preexisting damage (leg/hip/gyro, TW p.60)
-  // applies to every PSR, evaluated against each side's own damage state.
-  let targetDisplacedTo: HexCoord | null = null;
-  let attackerDisplacedTo: HexCoord | null = null;
-  let targetPsr: PilotingRollResult | null = null;
-  const attackerPsr: PilotingRollResult | null = null;
-  const attackerFalls = false;
-  let targetFalls = false;
   let kickTargetPsrPending = false;
   let kickAttackerPsrPending = false;
-  let displacementLevels = 0;
-
-  if (decl.type === "push") {
-    if (hit) {
-      // Target moves one hex in push direction, attacker advances (TW p. 147).
-      // Only the defender rolls (TW p. 147: "the defender must make a
-      // Piloting Skill Roll or fall"). Mutual pushes — where both succeed —
-      // are the sole exception and resolve via `resolveMutualPush`.
-      const pushDir = attacker.facing;
-      const targetNewHex = neighbor(target.position, pushDir);
-      const outcome = pushDisplacementOutcome(battle, target, targetNewHex);
-      if (outcome.kind === "blocked") {
-        notes.push(`push displacement blocked (${outcome.reason}) — neither unit moves`);
-      } else {
-        targetDisplacedTo = targetNewHex;
-        attackerDisplacedTo = { ...target.position };
-      }
-      if (outcome.kind === "cliff") {
-        // Displaced more than two levels down: an automatic fall (TW p.147).
-        displacementLevels = outcome.levels;
-        targetFalls = true;
-      } else if (outcome.kind !== "offBoard") {
-        const targetPsrResult = rollPhysicalPsr(rng, target);
-        targetPsr = targetPsrResult;
-        if (!targetPsrResult.success) targetFalls = true;
-      }
-    }
-  }
 
   if (decl.type === "kick") {
     // Deferred to the end-of-phase sweep (TW pp. 59,147): on a hit the
@@ -1181,269 +1021,11 @@ export function resolvePhysicalAttack(
     application: null,
     attackerApplication: null,
     crits: [],
-    targetDisplacedTo,
-    attackerDisplacedTo,
-    targetPsr,
-    attackerPsr,
-    attackerFalls,
-    targetFalls,
     notes,
     throughArmorCrit,
-    ...(extraToHit !== 0 ? { displacementPenalty: extraToHit } : {}),
     ...(kickTargetPsrPending ? { kickTargetPsrPending } : {}),
     ...(kickAttackerPsrPending ? { kickAttackerPsrPending } : {}),
-    ...(displacementLevels > 0 ? { displacementLevels } : {}),
   };
-}
-
-// ---------------------------------------------------------------------------
-// Mutual push (TW p. 147)
-// ---------------------------------------------------------------------------
-
-/**
- * Resolve two 'Mechs pushing each other (TW p. 147: "If two 'Mechs push
- * each other, resolve both: both fail = nothing; both succeed = neither
- * moves and both make Piloting Skill Rolls or fall; one succeeds = resolve
- * normally").
- *
- * The caller guarantees `attackerAId` declared a push against `attackerBId`
- * and vice versa, both still stand in their declared hexes, and both pushes
- * are still legal. Dice order is fixed: A's to-hit, B's to-hit, then the
- * defender PSR(s) — B's first (defender of A's blow), then A's.
- * Displacements and PSRs are immediate (TW p. 151), matching the single
- * push path in `resolvePhysicalAttack`.
- */
-export function resolveMutualPush(
-  battle: BattleState,
-  attackerAId: string,
-  attackerBId: string,
-  rng: Rng,
-): [PhysicalResolution, PhysicalResolution] {
-  const unitA = battle.units[attackerAId]!;
-  const unitB = battle.units[attackerBId]!;
-
-  function toHitFor(
-    attacker: UnitState,
-    target: UnitState,
-  ): { total: number; autoHit: boolean; autoMiss: boolean } {
-    const mods = computePhysicalToHit(battle, attacker, target, "push", undefined);
-    return {
-      total: mods.total,
-      autoHit: mods.total <= PHYSICAL_MIN_TOHIT,
-      autoMiss: mods.total > PHYSICAL_MAX_TOHIT,
-    };
-  }
-
-  function rollToHit(
-    total: number,
-    autoHit: boolean,
-    autoMiss: boolean,
-  ): { roll: number | null; hit: boolean } {
-    const roll = autoHit || autoMiss ? null : roll2D6(rng);
-    return { roll, hit: autoHit || (roll !== null && roll >= total) };
-  }
-
-  function rollDefenderPsr(unit: UnitState): {
-    target: number;
-    roll: number | null;
-    success: boolean;
-  } {
-    if (isShutdown(unit) || unit.unconscious) {
-      return { target: D2D6_IMPOSSIBLE, roll: null, success: false };
-    }
-    const def = mechDefFor(unit);
-    const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
-    return rollPilotingCheck(rng, unit.piloting, pre.modifier);
-  }
-
-  /** Defender PSR for a one-sided mutual push: none when shoved off the map,
-   *  automatic failure off a cliff. */
-  function mutualPsr(
-    outcome: PushOutcome,
-    unit: UnitState,
-  ): { target: number; roll: number | null; success: boolean } {
-    if (outcome.kind === "offBoard") return { target: 0, roll: null, success: true };
-    if (outcome.kind === "cliff") return { target: D2D6_IMPOSSIBLE, roll: null, success: false };
-    return rollDefenderPsr(unit);
-  }
-
-  function missResolution(
-    attackerId: string,
-    targetId: string,
-    toHit: number,
-    roll: number | null,
-    autoHit: boolean,
-    autoMiss: boolean,
-    note: string,
-  ): PhysicalResolution {
-    return {
-      type: "push",
-      attackerId,
-      targetId,
-      toHit,
-      roll,
-      hit: false,
-      autoHit,
-      autoMiss,
-      damageToTarget: [],
-      damageToAttacker: [],
-      application: null,
-      attackerApplication: null,
-      crits: [],
-      targetDisplacedTo: null,
-      attackerDisplacedTo: null,
-      targetPsr: null,
-      attackerPsr: null,
-      attackerFalls: false,
-      targetFalls: false,
-      notes: [note],
-      throughArmorCrit: false,
-    };
-  }
-
-  const a = toHitFor(unitA, unitB);
-  const b = toHitFor(unitB, unitA);
-  const ra = rollToHit(a.total, a.autoHit, a.autoMiss);
-  const rb = rollToHit(b.total, b.autoHit, b.autoMiss);
-
-  if (!ra.hit && !rb.hit) {
-    const note = "mutual push: both miss — nothing happens (TW p.147)";
-    return [
-      missResolution(attackerAId, attackerBId, a.total, ra.roll, a.autoHit, a.autoMiss, note),
-      missResolution(attackerBId, attackerAId, b.total, rb.roll, b.autoHit, b.autoMiss, note),
-    ];
-  }
-
-  if (ra.hit && !rb.hit) {
-    const outB = pushDisplacementOutcome(battle, unitB, neighbor(unitB.position, unitA.facing));
-    const targetNewHex = outB.kind === "blocked" ? null : neighbor(unitB.position, unitA.facing);
-    const psr = mutualPsr(outB, unitB);
-    const hitRes: PhysicalResolution = {
-      type: "push",
-      attackerId: attackerAId,
-      targetId: attackerBId,
-      toHit: a.total,
-      roll: ra.roll,
-      hit: true,
-      autoHit: a.autoHit,
-      autoMiss: a.autoMiss,
-      damageToTarget: [],
-      damageToAttacker: [],
-      application: null,
-      attackerApplication: null,
-      crits: [],
-      targetDisplacedTo: targetNewHex,
-      attackerDisplacedTo: targetNewHex === null ? null : { ...unitB.position },
-      targetPsr: psr,
-      attackerPsr: null,
-      attackerFalls: false,
-      targetFalls: !psr.success,
-      notes: ["mutual push: only the first blow lands — resolved normally (TW p.147)"],
-      throughArmorCrit: false,
-    };
-    const missRes = missResolution(
-      attackerBId,
-      attackerAId,
-      b.total,
-      rb.roll,
-      b.autoHit,
-      b.autoMiss,
-      "mutual push: blow misses — resolved normally (TW p.147)",
-    );
-    return [hitRes, missRes];
-  }
-
-  if (!ra.hit && rb.hit) {
-    const outA = pushDisplacementOutcome(battle, unitA, neighbor(unitA.position, unitB.facing));
-    const targetNewHex = outA.kind === "blocked" ? null : neighbor(unitA.position, unitB.facing);
-    const psr = mutualPsr(outA, unitA);
-    const missRes = missResolution(
-      attackerAId,
-      attackerBId,
-      a.total,
-      ra.roll,
-      a.autoHit,
-      a.autoMiss,
-      "mutual push: blow misses — resolved normally (TW p.147)",
-    );
-    const hitRes: PhysicalResolution = {
-      type: "push",
-      attackerId: attackerBId,
-      targetId: attackerAId,
-      toHit: b.total,
-      roll: rb.roll,
-      hit: true,
-      autoHit: b.autoHit,
-      autoMiss: b.autoMiss,
-      damageToTarget: [],
-      damageToAttacker: [],
-      application: null,
-      attackerApplication: null,
-      crits: [],
-      targetDisplacedTo: targetNewHex,
-      attackerDisplacedTo: targetNewHex === null ? null : { ...unitA.position },
-      targetPsr: psr,
-      attackerPsr: null,
-      attackerFalls: false,
-      targetFalls: !psr.success,
-      notes: ["mutual push: only the second blow lands — resolved normally (TW p.147)"],
-      throughArmorCrit: false,
-    };
-    return [missRes, hitRes];
-  }
-
-  // Both succeed: neither moves and both roll (TW p.147). B's PSR first
-  // (defender of A's blow), then A's.
-  const psrB = rollDefenderPsr(unitB);
-  const psrA = rollDefenderPsr(unitA);
-  const note = "mutual push: both succeed — neither moves and both roll (TW p.147)";
-  const resA: PhysicalResolution = {
-    type: "push",
-    attackerId: attackerAId,
-    targetId: attackerBId,
-    toHit: a.total,
-    roll: ra.roll,
-    hit: true,
-    autoHit: a.autoHit,
-    autoMiss: a.autoMiss,
-    damageToTarget: [],
-    damageToAttacker: [],
-    application: null,
-    attackerApplication: null,
-    crits: [],
-    targetDisplacedTo: null,
-    attackerDisplacedTo: null,
-    targetPsr: psrB,
-    attackerPsr: null,
-    attackerFalls: false,
-    targetFalls: !psrB.success,
-    notes: [note],
-    throughArmorCrit: false,
-  };
-  const resB: PhysicalResolution = {
-    type: "push",
-    attackerId: attackerBId,
-    targetId: attackerAId,
-    toHit: b.total,
-    roll: rb.roll,
-    hit: true,
-    autoHit: b.autoHit,
-    autoMiss: b.autoMiss,
-    damageToTarget: [],
-    damageToAttacker: [],
-    application: null,
-    attackerApplication: null,
-    crits: [],
-    targetDisplacedTo: null,
-    attackerDisplacedTo: null,
-    targetPsr: psrA,
-    attackerPsr: null,
-    attackerFalls: false,
-    targetFalls: !psrA.success,
-    notes: [note],
-    throughArmorCrit: false,
-  };
-  return [resA, resB];
 }
 
 // ---------------------------------------------------------------------------

@@ -95,6 +95,13 @@ yet is a gap, not a deviation; gaps are tracked in §4.
 - **Non-biped units and their rules:** quads, vehicles, infantry, battle
   armor, aerospace, ProtoMechs, support vehicles, and their PSR rows
   (skidding vehicles, sideslipping VTOLs).
+- **Displacement rules (by design, for simpler play):** no rule moves a unit
+  across hexes. The push attack, the domino effect, skidding / sliding
+  (pavement skids fall in place) and displacement from charge / DFA are
+  intentionally absent. Falls always happen in place (ground-movement falls
+  across levels use the lower-hex rule); a faller landing on an occupied
+  hex stays in the hex it came from. Charge / DFA, when added, resolve
+  without moving either unit.
 - **Scenario and campaign rules (TW ch. 13):** victory conditions, forced
   withdrawal, crippling damage. The caller owns these (§1).
 
@@ -116,8 +123,9 @@ These are implementation choices, not rule changes.
 ## 4. What I'll do
 
 - **Physicals completion.** Charge / DFA (TW pp.151–152); more physical
-  weapons (spike, shield); the optional Punch/Kick-table election; domino
-  effect from a push; push and charge / DFA PSRs.
+  weapons (spike, shield); the optional Punch/Kick-table election; charge /
+  DFA PSRs. Charge / DFA are implemented in a simpler way without displacement
+  (§2.5).
 - **Weapon to-hit audit P2 (TW pp.103–140).** One-Shot weapons; point-blank
   legality; Flak; plasma heat damage; Heavy Gauss move-and-fire PSR;
   MGA / A-Pod / B-Pod; missing catalog rows (Rocket Launchers, Plasma Cannon,

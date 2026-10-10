@@ -107,7 +107,7 @@ pass), plus `cancel`, `sheet`, `status`, `heat` and the globals.
 | `candidate` | show possible targets with available weapons |
 | `fire <targetId> <weapon> [<weapon> ...]` | queue weapon declarations using 1-based weapon numbers (target first; declare several weapons at once, all against the one shared target; rapid-fire SRM/LRM fire a full volley — no `shots` argument). A prone attacker fires at +2, cannot fire leg-mounted weapons, and must draw the whole volley from one prop side (left-arm and right-arm weapons cannot mix — the suggestion shows both prop-left and prop-right sets; firing an arm set props the other arm) |
 | `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [J](jam) / [-](destroyed) / per-bin ammo `(n left)` markers); without id: brief unit list (id, model, position+facing) grouped by team |
-| `punch` / `kick` / `push` / `club` / `strike` / `pickup` / `drop` | physical attacks and club handling, see "Implemented subset: physical attacks" below |
+| `punch` / `kick` / `club` / `strike` / `pickup` / `drop` | physical attacks and club handling, see "Implemented subset: physical attacks" below |
 | `heat [id]` | heat scale status |
 | `status` | queued attack declarations |
 | `cancel` | clear declarations |
@@ -166,12 +166,12 @@ Conservative (TN ≤ 8, 25% reserve) / Miser (TN ≤ 7, 50% reserve, energy firs
 - **Movement**: every reachable landing for standstill / walk / run / jump (jump
   only if the doctrine uses jump jets) is scored with the GDD §9.1 terms: range
   (expected damage at that hex, best torso twist, minus drift from the preferred
-  distance), cover, tmm (TW p. 107), flank, melee, edge (ring-out push setup),
+  distance), cover, tmm (TW p. 107), flank, melee,
   exposed (enemy expected damage), heat (over the ceiling) and crowd (Gladiator).
 - **Attack**: per torso twist, a greedy weapon set by expected damage per heat,
   stopping at the heat ceiling and honouring the ammo discipline; adjacent
-  punch / kick / push options are weighed against the weapons those limbs give
-  up (opportunistic doctrines skip kicks above TN 8; push only for a ring-out).
+  punch / kick options are weighed against the weapons those limbs give
+  up (opportunistic doctrines skip kicks above TN 8).
 - **Strategy memory** (per unit, across turns): committed target (switched only
   for a 1.5× better one), posture (approach / engage / hold / recover / yield),
   turns in contact, losses per turn, and a tally of enemy move modes.
@@ -461,7 +461,7 @@ simulate. See `docs/VISION.md` for direction and the will/won't lists.
 - **Torso twist** — `torso <front|left|right>` twists the acting unit one
   hexside for the attack phase (TW pp.105-106): arm and front-torso weapons
   fire as if the 'Mech faced the twisted direction. Physical attacks respect
-  it (punch/club/strike follow the twist; kick and push are feet-based).
+  it (punch/club/strike follow the twist; kick is feet-based).
 - **Water** — water hexes have a surface at the hex level and a bed `depth`
   levels below. Depth-change MP is charged per level of bed difference, 'Mechs
   cannot run into water (Minimum Movement excepted, TW p.53), jump limits
@@ -470,26 +470,24 @@ simulate. See `docs/VISION.md` for direction and the will/won't lists.
   failure), and prone 'Mechs in depth 1+ water are out of LOS. Hull breach,
   underwater weapons and the underwater LOS table are not implemented.
 
-### Implemented subset: physical attacks (punch, kick, push, club, strike)
+### Implemented subset: physical attacks (punch, kick, club, strike)
 
 - **Declaration** — in the weapon attack phase alongside `fire`: `punch
   <target> [left|right]` (default right; queue twice for both arms, one
-  roll each), `kick <target> [left|right]` (default right), `push
-  <target>`, `club <target>`, `strike <target> [left|right]` (default: the
+  roll each), `kick <target> [left|right]` (default right),
+  `club <target>`, `strike <target> [left|right]` (default: the
   arm mounting the unit's physical weapon; required when both arms mount
   one). One type per turn
   (two-arm punch excepted; at most one strike even with two mounted).
   A punching / striking arm or kicking leg cannot fire its mounted weapons, and
-  push / club bars all arm-mounted weapons. `candidate` lists legal
+  club bars all arm-mounted weapons. `candidate` lists legal
   physical options for adjacent enemies; `status` shows the queued
   physical declarations.
 - **Resolution** — weapons resolve first in `resolveAllAttacks`,
   then a weapon PSR sweep (falls, consciousness, kills) lands before any
   melee (TW pp. 37-38, 59, 61: a weapon-phase fall starts the melee prone),
   then physical attacks resolve against post-weapon state with re-validation
-  (destroyed/unconscious/shut-down attackers skip; displaced targets redirect
-  at +1 onto an enemy holding the declared hex or auto-miss with no valid
-  target, TW p.144 — both reported in the CLI), then a physical sweep rolls
+  (destroyed/unconscious/shut-down attackers skip), then a physical sweep rolls
   the 20-point trigger per sub-pass (weapon and physical damage never pool)
   plus deferred kick PSRs: punch damage 1/10 t on the Punch table, kick 1/5 t
   on the Kick table, club 1/5 t on the standard table, strike per weapon
@@ -497,11 +495,8 @@ simulate. See `docs/VISION.md` for direction and the will/won't lists.
   (every table read on the attack-direction column — Left Side, Front/Rear
   or Right Side, TW pp.145, 147; any attack on a prone 'Mech rolls 2D6 on
   the standard table, TW p.151; a through-armor critical only on a 2 rolled
-  on the 2D6 standard table, TW p.121),
-  push no damage with target displacement + attacker advance (immediate
-  defender PSR, TW pp.147, 151; mutual pushes resolve simultaneously —
-  both fail = nothing, both succeed = neither moves and both roll,
-  one succeeds = resolve normally). Kick PSRs defer to the sweep (kicked
+  on the 2D6 standard table, TW p.121).
+  No physical attack moves a unit (see "Displacement" below). Kick PSRs defer to the sweep (kicked
   target on a hit, attacker on a miss).
   Head hits injure the pilot as usual. A crit on any slot of a mounted
   physical weapon destroys it (the HCT-5S Hatchetman now ships its hatchet).
@@ -522,8 +517,7 @@ simulate. See `docs/VISION.md` for direction and the will/won't lists.
   The `board` map marks hexes holding a ground club token with `!`.
 - **Deferred** — charge / DFA (movement-phase declarations), the remaining nine
   physical-weapon types (industrial tools), the optional
-  Punch/Kick-table election (+4), domino effect / accidental falls from
-  above. (The level-difference table auto-swap and through-armor / structure
+  Punch/Kick-table election (+4). (The level-difference table auto-swap and through-armor / structure
   critical hits from physical damage are implemented.)
 
 ### Not yet implemented
@@ -556,17 +550,14 @@ simulate. See `docs/VISION.md` for direction and the will/won't lists.
 These piloting-adjacent rules cannot be implemented without breaking limits
 stated elsewhere in this document or the codebase:
 
-- **Pavement skidding with displacement** (TW p.62) — a failed running skid
-  slides the 'Mech extra hexes before it falls. The engine's only
-  displacement mechanic is the push attack (cf. the atomic commit boundary
-  in AGENTS.md), so only the fall itself could land, never the slide.
-- **Falls from displacement / above** (TW pp.151-152) — charges, DFAs and
-  accidental falls from above displace a unit across hexes or levels
-  before it falls. All falls here from combat PSRs, shutdowns, stand-up
-  attempts and building crashes happen in place (0 levels fallen); only
-  ground-movement falls across levels use the `levelsFallen` term
-  (lower-hex rule), since push is the only displacing rule in the subset.
-  DFA's 2-level rear-column fall waits on the charge/DFA phase.
+- **Displacement** (push, domino effect, pavement skidding, charge / DFA
+  displacement; TW pp.62, 147, 151-153) — intentionally not implemented, for
+  simpler play (`docs/VISION.md` §2.5). A failed running skid falls in place.
+  All falls (combat PSRs, shutdowns, stand-up attempts, building crashes,
+  accidental falls from above) happen in place; only ground-movement falls
+  across levels use the `levelsFallen` term (lower-hex rule). A faller
+  landing on an occupied hex stays in the hex it came from. Charge / DFA are
+  still planned, without displacement.
 - **Minimum movement** (TW p.49) — a standing unit with at least 1 MP may
   always enter the single hex directly ahead, whatever the terrain/climb
   cost, as its only expenditure (no facing change). Declared as `mode run`

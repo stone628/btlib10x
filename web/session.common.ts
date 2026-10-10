@@ -770,7 +770,6 @@ const DESTROYED_REASON_KEY: Readonly<Record<DestroyedReason, MessageKey>> = {
   cockpitDestroyed: "sheet.remove.cockpitDestroyed",
   headBlownOff: "sheet.remove.hdBlownOff",
   engineDestroyed: "sheet.remove.engineDestroyed",
-  displacedOffBoard: "sheet.remove.displacedOffBoard",
 };
 
 export function sheetIdLine(view: SheetView): string {
@@ -1056,7 +1055,6 @@ const PSR_REASON_KEY: Record<PilotingCheckReason, MessageKey> = {
   kick: "log.psrReason.kick",
   kickMiss: "log.psrReason.kickMiss",
   ejection: "log.psrReason.ejection",
-  domino: "log.psrReason.domino",
 };
 
 function psrReasonDetail(reason: PilotingCheckReason): string {
@@ -1087,8 +1085,6 @@ function fallCauseLabel(cause: UnitFallCause): string {
       );
     case "buildingCollapse":
       return i18n("log.fallCause.buildingCollapse");
-    case "physicalAttack":
-      return i18n("log.fallCause.physicalAttack");
     case "voluntaryDrop":
       return i18n("log.fallCause.voluntaryDrop");
     default: {
@@ -1683,18 +1679,6 @@ function handleSessionGameEvent(s: Session, e: SessionGameEvent, out: OutputHand
           tn: e.toHit,
           roll: e.roll,
           damage: e.damage,
-        }),
-      );
-      break;
-    case "unitDisplaced":
-      out.idLines(
-        e.unitId,
-        i18n("log.unitDisplaced", {
-          id: e.unitId,
-          fromCol: e.from.col,
-          fromRow: e.from.row,
-          toCol: e.to.col,
-          toRow: e.to.row,
         }),
       );
       break;

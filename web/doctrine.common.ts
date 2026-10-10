@@ -43,7 +43,6 @@ export type TermId =
   | "tmm"
   | "flank"
   | "melee"
-  | "edge"
   | "exposed"
   | "heat"
   | "crowd"
@@ -275,11 +274,6 @@ export function exposureAt(
     sum += expectedDamageAt(weapons, d, tnBase);
   }
   return sum;
-}
-
-/** True when `hex` lies outside the map (a push there is a ring-out, GDD §8.3). */
-export function offMap(battle: BattleState, hex: HexCoord): boolean {
-  return hex.col < 1 || hex.row < 1 || hex.col > battle.width || hex.row > battle.height;
 }
 
 export function round1(n: number): number {

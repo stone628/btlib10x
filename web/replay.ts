@@ -280,8 +280,6 @@ function physicalText(decl: PhysicalAttackDecl): string {
       return decl.limb === "leftArm" ? "P" : "Q";
     case "kick":
       return decl.limb === "leftLeg" ? "K" : "L";
-    case "push":
-      return "U";
     case "club":
       return "C";
     case "strike":
@@ -783,8 +781,6 @@ function decodeAttackBody(body: string, unitAt: (c: string) => string): DecodedA
             return { type: "kick", targetId, limb: "leftLeg" };
           case "L":
             return { type: "kick", targetId, limb: "rightLeg" };
-          case "U":
-            return { type: "push", targetId };
           case "C":
             return { type: "club", targetId };
           case "S":

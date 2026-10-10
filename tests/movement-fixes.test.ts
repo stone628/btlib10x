@@ -144,8 +144,8 @@ describe("failed stand-up (MOV-06)", () => {
   });
 });
 
-describe("domino effect on a movement fall (MOV-09)", () => {
-  function dominoBattle() {
+describe("movement fall onto an occupied hex (MOV-09)", () => {
+  function occupiedBattle() {
     const state = createTestBattle(
       [{ col: 5, row: 8, type: "rubble" }],
       [
@@ -168,58 +168,16 @@ describe("domino effect on a movement fall (MOV-09)", () => {
     { kind: "enter" as const, to: { col: 5, row: 7 } },
   ];
 
-  it("shoves the occupant one hex along the line of travel", () => {
-    const state = dominoBattle();
+  it("never displaces the occupant: the faller stays in the hex it came from", () => {
+    const state = occupiedBattle();
     const events: GameEvent[] = [];
-    // rubble PSR 1+1 fails; fall direction, location and seatbelt; then the
-    // shoved unit's own piloting roll passes.
+    // rubble PSR 1+1 fails; fall direction, location and seatbelt.
     executeMove(state, "a", "walk", walkThrough, events, {
       rng: scriptedRng(1, 1, 1, 3, 4, 6, 6, 6, 6, 6, 6, 6, 6),
     });
-    const a = requireUnit(state, "a");
-    const c = requireUnit(state, "c");
-    expect(a.prone).toBe(true);
-    expect(a.position).toEqual({ col: 5, row: 8 });
-    expect(c.position).toEqual({ col: 5, row: 7 });
-    expect(events).toContainEqual(expect.objectContaining({ kind: "unitDisplaced", unitId: "c" }));
-  });
-
-  it("a shoved unit that lands on a third unit shoves it in turn (chain)", () => {
-    const state = createTestBattle(
-      [{ col: 5, row: 8, type: "rubble" }],
-      [
-        buildUnitInit("a", "HBK-4G", 0, { col: 5, row: 9 }, "n"),
-        buildUnitInit("c", "HBK-4G", 0, { col: 5, row: 8 }, "n"),
-        buildUnitInit("d", "HBK-4G", 0, { col: 5, row: 7 }, "n"),
-        buildUnitInit("b", "HBK-4G", 1, { col: 1, row: 1 }, "s"),
-      ],
-      true,
-      9,
-      10,
-    );
-    state.phase = "movement";
-    state.initiativeWinnerTeam = 0;
-    state.actorQueue = ["a", "c", "d", "b"];
-    state.actedThisPhase = [];
-    // The walk's second step is blocked by d, so the fall happens on the first.
-    executeMove(
-      state,
-      "a",
-      "walk",
-      [
-        { kind: "enter", to: { col: 5, row: 8 } },
-        { kind: "enter", to: { col: 5, row: 7 } },
-        { kind: "enter", to: { col: 5, row: 6 } },
-      ],
-      [],
-      {
-        rng: scriptedRng(1, 1, 1, 3, 4, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6),
-      },
-    );
-    expect(requireUnit(state, "c").position).toEqual({ col: 5, row: 7 });
-    expect(requireUnit(state, "d").position).toEqual({ col: 5, row: 6 });
-    const all = Object.values(state.units).map((u) => `${u.position.col},${u.position.row}`);
-    expect(new Set(all).size).toBe(all.length);
+    expect(requireUnit(state, "a").prone).toBe(true);
+    expect(requireUnit(state, "a").position).toEqual({ col: 5, row: 9 });
+    expect(requireUnit(state, "c").position).toEqual({ col: 5, row: 8 });
   });
 
   describe("accidental fall from above (TW p.152)", () => {
@@ -264,15 +222,15 @@ describe("domino effect on a movement fall (MOV-09)", () => {
       expect(requireUnit(state, "c").position).toEqual({ col: 5, row: 8 });
     });
 
-    it("a hit damages the occupant and pushes it one hex away", () => {
+    it("a hit damages the occupant without moving it", () => {
       const state = highBattle();
       const events: GameEvent[] = [];
       executeMove(state, "a", "run", step, events, {
         rng: scriptedRng(...fall, 6, 6, 3, 3, 6, 6, 6, 6, 6, 6),
       });
       expect(events).toContainEqual(expect.objectContaining({ kind: "accidentalFall", hit: true }));
-      expect(requireUnit(state, "a").position).toEqual({ col: 5, row: 8 });
-      expect(requireUnit(state, "c").position).toEqual({ col: 5, row: 7 });
+      expect(requireUnit(state, "a").position).toEqual({ col: 5, row: 9 });
+      expect(requireUnit(state, "c").position).toEqual({ col: 5, row: 8 });
     });
   });
 });

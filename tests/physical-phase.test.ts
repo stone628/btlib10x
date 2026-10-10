@@ -17,7 +17,6 @@ import {
   resolvePhasePiloting,
   rollInitiativePhase,
 } from "../src/rules/game";
-import { physicalResolutionLines } from "../web/session.attack";
 import { createTestBattle, scriptedRng } from "./helpers";
 
 const HIGH_RNG = {
@@ -107,103 +106,6 @@ describe("weapon sweep lands before the melee", () => {
     expect(melee.resolution.missReason).toBe("attackerDown");
     expect(melee.resolution.hit).toBe(false);
     expect(requireUnit(state, "hbk").damage.armor.centerTorso).toBe(26);
-  });
-});
-
-describe("displaced targets (TW p.144)", () => {
-  /** Pusher (5,5)/ne shoves T out of (6,4); A (6,5)/n punches T. */
-  function pushSetup(pTeam: number, aTeam: number, tTeam: number): BattleState {
-    const state = createTestBattle(
-      [],
-      [
-        unit("p", pTeam, { col: 5, row: 5 }, "ne"),
-        unit("a", aTeam, { col: 6, row: 5 }, "n"),
-        unit("t", tTeam, { col: 6, row: 4 }, "s"),
-      ],
-      true,
-    );
-    state.phase = "attack";
-    state.units.p!.declaredPhysicalAttacks.push({ type: "push", targetId: "t" });
-    state.units.a!.declaredPhysicalAttacks.push({
-      type: "punch",
-      targetId: "t",
-      limb: "rightArm",
-    });
-    return state;
-  }
-
-  it("auto-misses with no valid target when a friend holds the declared hex", () => {
-    const state = pushSetup(0, 0, 1);
-    const events: GameEvent[] = [];
-    resolveAllAttacks(state, HIGH_RNG, events);
-
-    // Push landed and advanced into the declared hex.
-    expect(requireUnit(state, "p").position).toEqual({ col: 6, row: 4 });
-    expect(requireUnit(state, "t").position).not.toEqual({ col: 6, row: 4 });
-
-    const punches = events.filter(
-      (e): e is Extract<GameEvent, { kind: "physicalAttackResolved" }> =>
-        e.kind === "physicalAttackResolved" && e.unitId === "a",
-    );
-    expect(punches).toHaveLength(1);
-    const res = punches[0]!.resolution;
-    expect(res.hit).toBe(false);
-    expect(res.autoMiss).toBe(true);
-    expect(res.missReason).toBe("displaced");
-    expect(res.damageToTarget).toEqual([]);
-
-    // The web CLI names the cause instead of a bare MISS.
-    const lines = physicalResolutionLines(res);
-    expect(lines.join("\n")).toContain("displaced");
-    expect(lines.join("\n")).toContain("auto-miss");
-  });
-
-  it("redirects at +1 onto an enemy holding the declared hex", () => {
-    const state = pushSetup(1, 0, 2);
-    const events: GameEvent[] = [];
-    resolveAllAttacks(state, HIGH_RNG, events);
-
-    const punches = events.filter(
-      (e): e is Extract<GameEvent, { kind: "physicalAttackResolved" }> =>
-        e.kind === "physicalAttackResolved" && e.unitId === "a",
-    );
-    expect(punches).toHaveLength(1);
-    const evt = punches[0]!;
-    expect(evt.targetId).toBe("p");
-    expect(evt.resolution.redirectedFrom).toBe("t");
-    expect(evt.resolution.displacementPenalty).toBe(1);
-    expect(evt.resolution.toHit).toBe(6);
-    expect(evt.resolution.hit).toBe(true);
-
-    const lines = physicalResolutionLines(evt.resolution);
-    expect(lines.join("\n")).toContain("+1");
-  });
-});
-
-describe("mutual push (TW p.147)", () => {
-  it("both succeed: neither moves and both roll defender-only PSRs", () => {
-    const state = faceToFace();
-    state.phase = "attack";
-    state.units.hbk!.declaredPhysicalAttacks.push({ type: "push", targetId: "enf" });
-    state.units.enf!.declaredPhysicalAttacks.push({ type: "push", targetId: "hbk" });
-    const events: GameEvent[] = [];
-    resolveAllAttacks(state, HIGH_RNG, events);
-
-    const pushes = events.filter(
-      (e): e is Extract<GameEvent, { kind: "physicalAttackResolved" }> =>
-        e.kind === "physicalAttackResolved",
-    );
-    expect(pushes).toHaveLength(2);
-    for (const p of pushes) {
-      expect(p.resolution.hit).toBe(true);
-      expect(p.resolution.targetPsr).not.toBeNull();
-      expect(p.resolution.attackerPsr).toBeNull();
-      expect(p.resolution.targetDisplacedTo).toBeNull();
-      expect(p.resolution.attackerDisplacedTo).toBeNull();
-    }
-    // Neither 'Mech moves on a mutual both-succeed.
-    expect(requireUnit(state, "hbk").position).toEqual({ col: 2, row: 2 });
-    expect(requireUnit(state, "enf").position).toEqual({ col: 2, row: 3 });
   });
 });
 
