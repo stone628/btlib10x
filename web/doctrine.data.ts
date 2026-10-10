@@ -63,6 +63,19 @@ export interface Doctrine {
   readonly yieldWhenAhead: boolean;
 }
 
+/** Attack-phase multiplier on expected physical damage, by melee preference. */
+export const MELEE_FACTOR: Readonly<Record<MeleePreference, number>> = {
+  never: 0,
+  opportunistic: 1,
+  seeks: 1.2,
+  first: 1.5,
+};
+
+/** Physical-biased doctrines (melee "seeks" / "first") also charge, DFA and pick up clubs. */
+export function isMeleeBiased(doctrine: Doctrine): boolean {
+  return doctrine.melee === "seeks" || doctrine.melee === "first";
+}
+
 const COLD = 4;
 const WARM = 7;
 const HOT = 9;

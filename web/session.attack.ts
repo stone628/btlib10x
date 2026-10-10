@@ -220,6 +220,7 @@ export function queueWeaponAttacks(s: Session, targetId: string, weapons: number
   }
   validateAttacks(battle, unit.id, [...context.weaponDecls, ...decls], context.physicalDecls, {
     twist: context.torsoTwist,
+    dropClub: context.dropClub,
   });
   context.weaponDecls.push(...decls);
   context.fireCandidate = null;
@@ -373,7 +374,13 @@ export function queuePhysicalAttack(
     throw new Error(i18n("err.physical.duplicate", { type }));
   }
 
-  const result = validatePhysicalAttack(battle, unit.id, decl, context.torsoTwist);
+  const result = validatePhysicalAttack(
+    battle,
+    unit.id,
+    decl,
+    context.torsoTwist,
+    context.dropClub,
+  );
   if (!result.ok) {
     throw new Error(i18n("err.physical.invalid", { reason: result.reason ?? "invalid" }));
   }

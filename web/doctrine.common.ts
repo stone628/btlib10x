@@ -43,6 +43,8 @@ export type TermId =
   | "tmm"
   | "flank"
   | "melee"
+  | "charge"
+  | "recoil"
   | "exposed"
   | "heat"
   | "crowd"

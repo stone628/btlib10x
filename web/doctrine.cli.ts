@@ -40,6 +40,8 @@ const TERM_KEY: Readonly<Record<TraceTerm["id"], MessageKey>> = {
   tmm: "dp.term.tmm",
   flank: "dp.term.flank",
   melee: "dp.term.melee",
+  charge: "dp.term.charge",
+  recoil: "dp.term.recoil",
   exposed: "dp.term.exposed",
   heat: "dp.term.heat",
   crowd: "dp.term.crowd",

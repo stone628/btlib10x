@@ -1,4 +1,4 @@
-import { mapDefFor, suggestFireTargets } from "btlib10x";
+import { isArm, mapDefFor, mechDefFor, suggestFireTargets } from "btlib10x";
 import { describe, expect, it } from "vitest";
 import { decide } from "../web/doctrine";
 import { scoreAttacks } from "../web/doctrine.attack";
@@ -303,6 +303,92 @@ describe("doctrine player: dp setup", () => {
     for (const seed of [1, 2, 3]) {
       const s = newSession(seed);
       execute(s, "dp setup 4");
+      execute(s, "dp trace off");
+      const out = execute(s, "start");
+      expect(out.filter((l) => l.startsWith("error:"))).toEqual([]);
+      expect(out.some((l) => /failed; stopped/.test(l))).toBe(false);
+      expect(s.state).toBe("over");
+    }
+  });
+});
+
+describe("doctrine player: physical attacks", () => {
+  /** A Hatchetman doctrine unit adjacent to the human's Hunchback. */
+  function adjacent(seed = 5, doctrine = "pitfighter"): Session {
+    const s = newSession(seed);
+    execute(s, "map quickstart");
+    execute(s, "add me HBK-4G 9 6 n");
+    execute(s, "add foe HCT-5S 9 5 s");
+    execute(s, `dp foe ${doctrine}`);
+    execute(s, "dp trace off");
+    execute(s, "start");
+    return s;
+  }
+
+  function attacks(s: Session, doctrine: keyof typeof DOCTRINES = "pitfighter") {
+    return scoreAttacks({
+      battle: s.battle!,
+      actor: s.battle!.units.foe!,
+      targetId: "me",
+      doctrine: DOCTRINES[doctrine],
+      heatCeiling: DOCTRINES[doctrine].heatCeiling,
+    }).candidates;
+  }
+
+  it("weighs strikes, both punches and kicks when adjacent", () => {
+    const labels = attacks(adjacent()).map((c) => c.label);
+    expect(labels.some((l) => /strike (left|right) \(hatchet\)/.test(l))).toBe(true);
+    expect(labels.some((l) => /punch left · punch right/.test(l))).toBe(true);
+    expect(labels.some((l) => /kick (left|right)/.test(l))).toBe(true);
+  });
+
+  it("Never doctrines make no physical attacks", () => {
+    const labels = attacks(adjacent(5, "longtom"), "longtom").map((c) => c.label);
+    expect(labels.some((l) => /punch|kick|strike|club|pickup/.test(l))).toBe(false);
+  });
+
+  it("with a club in hand: swings it, and fires arm weapons only after a drop", () => {
+    const s = adjacent();
+    const foe = s.battle!.units.foe!;
+    foe.club = { kind: "girder" };
+    const def = mechDefFor(foe);
+    const candidates = attacks(s);
+    expect(candidates.some((c) => c.commands.includes("club me"))).toBe(true);
+    for (const c of candidates) {
+      const fire = c.commands.find((k) => k.startsWith("fire"));
+      if (fire === undefined) continue;
+      const arm = fire
+        .split(" ")
+        .slice(2)
+        .some((i) => isArm(def.weapons[Number(i)]!.location));
+      if (arm) expect(c.commands).toContain("drop");
+    }
+  });
+
+  it("charges or DFAs the target from movement (physical-biased doctrines only)", () => {
+    const bout = (doctrine: string) => {
+      const s = newSession(3);
+      execute(s, "map quickstart");
+      execute(s, "add a HBK-4G 9 9 n");
+      execute(s, "add b WVR-6R 9 5 s");
+      execute(s, "dp a alpha");
+      execute(s, `dp b ${doctrine}`);
+      execute(s, "dp trace off");
+      const out = execute(s, "start");
+      expect(out.filter((l) => l.startsWith("error:"))).toEqual([]);
+      return out.join("\n");
+    };
+    expect(bout("pitfighter")).toMatch(/charges a and stops|leaps at a/);
+    expect(bout("jumpjockey")).not.toMatch(/charges a and stops|leaps at a/);
+  });
+
+  it("melee doctrine bouts play out without errors", () => {
+    for (const seed of [1, 2, 3, 4, 5, 6]) {
+      const s = newSession(seed);
+      execute(s, "dp setup 4");
+      for (const id of Object.keys(s.doctrine.assignments)) {
+        s.doctrine.assignments[id] = seed % 2 === 0 ? "pitfighter" : "gladiator";
+      }
       execute(s, "dp trace off");
       const out = execute(s, "start");
       expect(out.filter((l) => l.startsWith("error:"))).toEqual([]);

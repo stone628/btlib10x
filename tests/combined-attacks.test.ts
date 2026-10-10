@@ -97,4 +97,16 @@ describe("club commands reach the engine (DEAD-01)", () => {
     for (const line of execute(s, "done")) expect(line).not.toMatch(/^error:/);
     expect(requireUnit(s.battle!, actor).club).toBeNull();
   });
+
+  it("after a drop, arm weapons fire and the arm punches", () => {
+    const { s, actor, enemy } = attackSetup();
+    requireUnit(s.battle!, actor).club = { kind: "girder" };
+    const { arm } = armAndTorso(s, actor);
+    expect(() => queueWeaponAttacks(s, enemy, [arm])).toThrow(/club/);
+    queueDrop(s);
+    queueWeaponAttacks(s, enemy, [arm]);
+    queuePhysicalAttack(s, "punch", enemy, "leftArm");
+    for (const line of execute(s, "done")) expect(line).not.toMatch(/^error:/);
+    expect(requireUnit(s.battle!, actor).club).toBeNull();
+  });
 });

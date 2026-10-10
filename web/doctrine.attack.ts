@@ -1,13 +1,18 @@
 /**
  * Attack scoring for the doctrine player (GDD §9.1, attack): for each torso
  * twist, pick a weapon set against the committed target under the doctrine's
- * heat ceiling and ammo discipline, then weigh physical options (punch, kick)
- * against the weapons those limbs give up.
+ * heat ceiling and ammo discipline, then weigh every legal physical plan
+ * (punch with one or both arms, kick, physical-weapon strike, club swing,
+ * dropping a held club, picking one up) against the weapons it gives up.
  *
- * Rules used: one target per turn; a limb that fires a weapon cannot punch or
- * kick with it (TW p. 144, enforced again by `validatePhysicalAttack`);
- * punch/kick to-hit and damage come straight from the engine
- * (`computePhysicalToHit`, `physicalDamage`, TW pp. 145–148).
+ * Rules used: one target per turn; one type of physical attack per turn,
+ * except one punch per arm (TW p. 144); a limb that punches, kicks or
+ * strikes cannot fire its weapons, a club bars every arm weapon, and a held
+ * club occupies both hands until dropped (TW pp. 144–146); a pickup is the
+ * unit's whole attack (TW p. 146). Every plan is checked by the engine's
+ * `validateAttacks` before it is scored; to-hit and damage come straight
+ * from the engine (`computePhysicalToHit`, `physicalDamage`, TW pp. 145–147).
+ * Charge and DFA are declared by movement (`doctrine.move.ts`).
  */
 import {
   type Arc,
@@ -17,15 +22,19 @@ import {
   type FireWeapon,
   hexDistance,
   hitProbability,
+  isArm,
   type Location,
   loadAmmoBins,
   mechDefFor,
-  type PhysicalAttackType,
+  type PhysicalAttackDecl,
+  type PhysicalWeaponName,
   physicalDamage,
   pooledTotalsByWeaponName,
+  strikeMounts,
   suggestFireTargets,
   type UnitState,
-  validatePhysicalAttack,
+  validateAttacks,
+  validatePickup,
   weaponDefFor,
 } from "btlib10x";
 import {
@@ -36,17 +45,13 @@ import {
   type TraceNote,
   type TraceTerm,
 } from "./doctrine.common";
-import type { Doctrine, MeleePreference } from "./doctrine.data";
+import { type Doctrine, isMeleeBiased, MELEE_FACTOR } from "./doctrine.data";
 
 /** Kicks risk a fall on a miss (TW p. 147): Opportunistic doctrines skip worse TNs
  *  (Never doctrines do not reach physical options at all). */
 const CAUTIOUS_KICK_MAX_TN = 8;
-const MELEE_FACTOR: Readonly<Record<MeleePreference, number>> = {
-  never: 0,
-  opportunistic: 1,
-  seeks: 1.2,
-  first: 1.5,
-};
+/** A picked-up club pays off on later turns: one future swing, discounted. */
+const PICKUP_DISCOUNT = 0.5;
 
 const TWIST_WORD: Readonly<Record<string, string>> = {
   leftSide: "left",
@@ -55,26 +60,21 @@ const TWIST_WORD: Readonly<Record<string, string>> = {
 
 type Limb = "leftArm" | "rightArm" | "leftLeg" | "rightLeg";
 
-interface PhysicalOption {
-  readonly type: PhysicalAttackType;
-  readonly limb?: Limb;
-  /** Weapon locations this option keeps from firing. */
-  readonly blocks: readonly Location[];
-}
-
-const PHYSICAL_OPTIONS: readonly PhysicalOption[] = [
-  { type: "punch", limb: "leftArm", blocks: ["leftArm"] },
-  { type: "punch", limb: "rightArm", blocks: ["rightArm"] },
-  { type: "kick", limb: "leftLeg", blocks: ["leftLeg"] },
-  { type: "kick", limb: "rightLeg", blocks: ["rightLeg"] },
-];
-
 const LIMB_WORD: Readonly<Record<Limb, string>> = {
   leftArm: "left",
   rightArm: "right",
   leftLeg: "left",
   rightLeg: "right",
 };
+
+/** One physical attack plan for a turn: what it declares and what it costs. */
+interface PhysicalPlan {
+  readonly decls: readonly PhysicalAttackDecl[];
+  /** Drop the held club first (frees both hands for this plan). */
+  readonly drop: boolean;
+  /** Weapon locations the plan keeps from firing. */
+  readonly blocks: (loc: Location) => boolean;
+}
 
 export interface AttackScoringInput {
   readonly battle: BattleState;
@@ -167,6 +167,87 @@ function pickVolley(
   return { weapons, ev, heat, shots };
 }
 
+const only =
+  (...locs: Location[]) =>
+  (loc: Location): boolean =>
+    locs.includes(loc);
+
+/**
+ * Every physical plan worth checking this turn (before engine validation):
+ * single and double punches, kicks (front twist only: a kick ignores the
+ * twist), one strike per mounted physical weapon, and the club swing. While
+ * a club is held, punches and strikes only come with a drop.
+ */
+function physicalPlans(actor: UnitState, targetId: string, twist: Arc): PhysicalPlan[] {
+  const holding = actor.club !== null;
+  const plans: PhysicalPlan[] = [];
+  const punch = (limb: "leftArm" | "rightArm"): PhysicalAttackDecl => ({
+    type: "punch",
+    targetId,
+    limb,
+  });
+  plans.push(
+    { decls: [punch("leftArm")], drop: holding, blocks: only("leftArm") },
+    { decls: [punch("rightArm")], drop: holding, blocks: only("rightArm") },
+    {
+      decls: [punch("leftArm"), punch("rightArm")],
+      drop: holding,
+      blocks: only("leftArm", "rightArm"),
+    },
+  );
+  if (twist === "front") {
+    for (const limb of ["leftLeg", "rightLeg"] as const) {
+      plans.push({ decls: [{ type: "kick", targetId, limb }], drop: false, blocks: only(limb) });
+    }
+  }
+  for (const { arm, weapon } of strikeMounts(mechDefFor(actor))) {
+    plans.push({
+      decls: [{ type: "strike", targetId, limb: arm, weapon }],
+      drop: holding,
+      blocks: only(arm),
+    });
+  }
+  if (holding) plans.push({ decls: [{ type: "club", targetId }], drop: false, blocks: isArm });
+  return plans;
+}
+
+function physicalWord(d: PhysicalAttackDecl): string {
+  if (d.type === "club") return "club";
+  const limb = d.limb !== undefined ? LIMB_WORD[d.limb] : "";
+  if (d.type === "strike") return `strike ${limb} (${(d.weapon ?? "").toLowerCase()})`;
+  return `${d.type} ${limb}`;
+}
+
+function physicalCommand(d: PhysicalAttackDecl): string {
+  if (d.type === "club") return `club ${d.targetId}`;
+  const limb = d.limb !== undefined ? ` ${LIMB_WORD[d.limb]}` : "";
+  return `${d.type} ${d.targetId}${limb}`;
+}
+
+/** Engine check of one whole declaration (weapons + physical + twist + drop). */
+function legal(
+  battle: BattleState,
+  actor: UnitState,
+  targetId: string,
+  weapons: readonly FireWeapon[],
+  decls: readonly PhysicalAttackDecl[],
+  twist: Arc,
+  drop: boolean,
+): boolean {
+  try {
+    validateAttacks(
+      battle,
+      actor.id,
+      weapons.map((w) => ({ targetId, weaponIndex: w.weaponIndex })),
+      decls,
+      { twist: twist === "front" ? null : twist, dropClub: drop },
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Every attack option scored, best first, plus notes on skipped choices. */
 export function scoreAttacks(input: AttackScoringInput): AttackScoring {
   const { battle, actor, targetId, doctrine } = input;
@@ -177,11 +258,13 @@ export function scoreAttacks(input: AttackScoringInput): AttackScoring {
   const notes: TraceNote[] = [];
   const candidates: TraceCandidate[] = [];
   const twists: Arc[] = actor.prone ? ["front"] : ["front", "leftSide", "rightSide"];
+  const factor = MELEE_FACTOR[doctrine.melee];
+  const holding = actor.club !== null;
 
   const build = (
     twist: Arc,
     volley: Volley,
-    physical: { option: PhysicalOption; value: number } | null,
+    plan: { decls: readonly PhysicalAttackDecl[]; drop: boolean; value: number } | null,
   ): TraceCandidate => {
     const twistWord = TWIST_WORD[twist];
     const commands: string[] = [];
@@ -190,16 +273,18 @@ export function scoreAttacks(input: AttackScoringInput): AttackScoring {
       commands.push(`torso ${twistWord}`);
       parts.push(`torso ${twistWord}`);
     }
+    if (plan?.drop === true) {
+      commands.push("drop");
+      parts.push("drop club");
+    }
     if (volley.weapons.length > 0) {
       const idx = volley.weapons.map((x) => x.weaponIndex);
       commands.push(`fire ${targetId} ${idx.join(" ")}`);
       parts.push(`fire ${idx.join(",")}`);
     }
-    if (physical !== null) {
-      const { type, limb } = physical.option;
-      const limbWord = limb !== undefined ? ` ${LIMB_WORD[limb]}` : "";
-      commands.push(`${type} ${targetId}${limbWord}`);
-      parts.push(`${type}${limbWord}`);
+    for (const d of plan?.decls ?? []) {
+      commands.push(physicalCommand(d));
+      parts.push(physicalWord(d));
     }
     commands.push("done");
     const heatOver = Math.max(
@@ -208,7 +293,7 @@ export function scoreAttacks(input: AttackScoringInput): AttackScoring {
     );
     const terms: TraceTerm[] = [
       { id: "ev", value: round1(volley.ev) },
-      { id: "melee", value: round1(physical?.value ?? 0) },
+      { id: "melee", value: round1(plan?.value ?? 0) },
       { id: "ammo", value: round1(-w.ammo * volley.shots) },
       { id: "heat", value: round1(-w.heat * heatOver) },
     ].filter((t) => t.value !== 0) as TraceTerm[];
@@ -223,6 +308,19 @@ export function scoreAttacks(input: AttackScoringInput): AttackScoring {
   candidates.push({ label: "hold fire", score: 0, terms: [], commands: ["done"] });
   if (target === undefined) return { candidates, notes };
 
+  /** Expected physical damage of one declaration, or null when the doctrine skips it. */
+  const physicalValue = (d: PhysicalAttackDecl): number | null => {
+    const limb = d.limb as Limb | undefined;
+    const weapon = d.weapon as PhysicalWeaponName | undefined;
+    const tn = computePhysicalToHit(battle, actor, target, d.type, limb, weapon).total;
+    if (d.type === "kick" && doctrine.melee === "opportunistic" && tn > CAUTIOUS_KICK_MAX_TN) {
+      notes.push({ key: "dp.note.kickRisk", params: { tn } });
+      return null;
+    }
+    return factor * hitProbability(tn) * physicalDamage(d.type, actor, limb, weapon);
+  };
+
+  const adjacent = hexDistance(actor.position, target.position) <= 1;
   for (const twist of twists) {
     let sugg: ReturnType<typeof suggestFireTargets>;
     try {
@@ -232,36 +330,82 @@ export function scoreAttacks(input: AttackScoringInput): AttackScoring {
     }
     const t = sugg.targets.find((x) => x.targetId === targetId);
     const pool = t !== undefined ? weaponsOf(t) : [];
-    const volley = pickVolley(pool, input, startShots, twist === "front" ? notes : null);
-    if (volley.weapons.length > 0) candidates.push(build(twist, volley, null));
-
-    if (doctrine.melee === "never" || hexDistance(actor.position, target.position) > 1) continue;
-    for (const option of PHYSICAL_OPTIONS) {
-      // Kick is a feet attack: the twist does not change it.
-      if (option.type !== "punch" && twist !== "front") continue;
-      const decl = {
-        type: option.type,
-        targetId,
-        ...(option.limb !== undefined ? { limb: option.limb } : {}),
-        twist,
-      };
-      if (!validatePhysicalAttack(battle, actor.id, decl, twist).ok) continue;
-      const mods = computePhysicalToHit(battle, actor, target, option.type, option.limb);
-      const p = hitProbability(mods.total);
+    // A held club occupies both hands: arm weapons fire only after a drop.
+    const handsFree = holding ? pool.filter((x) => !isArm(x.location)) : pool;
+    const volley = pickVolley(handsFree, input, startShots, twist === "front" ? notes : null);
+    if (
+      volley.weapons.length > 0 &&
+      legal(battle, actor, targetId, volley.weapons, [], twist, false)
+    ) {
+      candidates.push(build(twist, volley, null));
+    }
+    if (holding) {
+      const dropped = pickVolley(pool, input, startShots, null);
       if (
-        option.type === "kick" &&
-        doctrine.melee === "opportunistic" &&
-        mods.total > CAUTIOUS_KICK_MAX_TN
+        dropped.weapons.length > 0 &&
+        legal(battle, actor, targetId, dropped.weapons, [], twist, true)
       ) {
-        notes.push({ key: "dp.note.kickRisk", params: { tn: mods.total } });
-        continue;
+        candidates.push(build(twist, dropped, { decls: [], drop: true, value: 0 }));
       }
-      const value =
-        MELEE_FACTOR[doctrine.melee] * p * physicalDamage(option.type, actor, option.limb);
-      const free = pool.filter((x) => !option.blocks.includes(x.location));
-      candidates.push(build(twist, pickVolley(free, input, startShots, null), { option, value }));
+    }
+
+    if (doctrine.melee === "never" || !adjacent) continue;
+    for (const plan of physicalPlans(actor, targetId, twist)) {
+      if (!legal(battle, actor, targetId, [], plan.decls, twist, plan.drop)) continue;
+      const values = plan.decls.map(physicalValue);
+      if (values.some((v) => v === null)) continue;
+      const value = values.reduce((a: number, v) => a + (v ?? 0), 0);
+      const free = (plan.drop ? pool : handsFree).filter((x) => !plan.blocks(x.location));
+      let sideVolley = pickVolley(free, input, startShots, null);
+      if (!legal(battle, actor, targetId, sideVolley.weapons, plan.decls, twist, plan.drop)) {
+        sideVolley = { weapons: [], ev: 0, heat: 0, shots: 0 };
+      }
+      candidates.push(build(twist, sideVolley, { decls: plan.decls, drop: plan.drop, value }));
     }
   }
+
+  // Club pickup (physical-biased doctrines): the whole attack phase for one
+  // future swing at the target, worth only what the swing adds over the
+  // unit's best bare-handed attack (a kick, or both punches) and less the arm
+  // weapons the club will bar.
+  if (isMeleeBiased(doctrine) && !holding) {
+    const pickup = validatePickup(battle, actor.id);
+    if (pickup.ok) {
+      const expected = (d: PhysicalAttackDecl): number => {
+        const limb = d.limb as Limb | undefined;
+        const tn = computePhysicalToHit(battle, actor, target, d.type, limb).total;
+        return factor * hitProbability(tn) * physicalDamage(d.type, actor, limb);
+      };
+      const swing = expected({ type: "club", targetId });
+      const bare = Math.max(
+        expected({ type: "kick", targetId, limb: "leftLeg" }),
+        expected({ type: "kick", targetId, limb: "rightLeg" }),
+        expected({ type: "punch", targetId, limb: "leftArm" }) +
+          expected({ type: "punch", targetId, limb: "rightArm" }),
+      );
+      let armEv = 0;
+      try {
+        const t = suggestFireTargets(battle, actor.id, "front").targets.find(
+          (x) => x.targetId === targetId,
+        );
+        armEv = (t !== undefined ? weaponsOf(t) : [])
+          .filter((x) => isArm(x.location))
+          .reduce((a, x) => a + weaponEv(x), 0);
+      } catch {
+        // No fire suggestion: no arm weapons to give up.
+      }
+      const value = round1(PICKUP_DISCOUNT * (swing - bare - armEv));
+      if (value > 0) {
+        candidates.push({
+          label: `pickup ${pickup.source}`,
+          score: value,
+          terms: [{ id: "melee", value }],
+          commands: [`pickup ${pickup.source}`, "done"],
+        });
+      }
+    }
+  }
+
   candidates.sort((a, b) => b.score - a.score);
   return { candidates, notes: dedupeNotes(notes) };
 }

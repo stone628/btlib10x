@@ -204,6 +204,8 @@ export const kr: Catalog = {
   "dp.term.tmm": "회피",
   "dp.term.flank": "측후방",
   "dp.term.melee": "근접",
+  "dp.term.charge": "돌진",
+  "dp.term.recoil": "자기 피해",
   "dp.term.exposed": "피격",
   "dp.term.heat": "열",
   "dp.term.crowd": "관중",

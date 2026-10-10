@@ -208,6 +208,8 @@ export const en = {
   "dp.term.tmm": "tmm",
   "dp.term.flank": "flank",
   "dp.term.melee": "melee",
+  "dp.term.charge": "charge",
+  "dp.term.recoil": "self-damage",
   "dp.term.exposed": "exposed",
   "dp.term.heat": "heat",
   "dp.term.crowd": "crowd",

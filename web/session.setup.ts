@@ -13,6 +13,7 @@ import {
   type MapNameHolder,
   mapDefFor,
   sameHex,
+  type TeamId,
   type UnitInit,
   type UnitSkillRange,
 } from "btlib10x";
@@ -58,7 +59,7 @@ export function setupSetMap(context: SetupContext, m: MapDef): void {
   context.mapName = m.name;
 }
 
-export function setupPickTeam(roster: UnitInit[]): number {
+export function setupPickTeam(roster: UnitInit[]): TeamId {
   if (roster.length === 0) return 1;
   let one = 0;
   let two = 0;
