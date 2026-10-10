@@ -411,10 +411,10 @@ describe("weapon and ammo crit effects", () => {
     }
     expect(res.killedReason).toBe("centerTorsoDestroyed");
     expect(res.damage.internalStructure.centerTorso).toBe(0);
-    // The exploded bin's location is gone, so all leftTorso bins (and the
-    // derived per-weapon total) are removed entirely.
-    expect(res.ammoBins["leftTorso:1"]).toBeUndefined();
-    expect(res.ammoBins["leftTorso:2"]).toBeUndefined();
+    // The exploded bin's location is gone, so all leftTorso bins are zeroed
+    // (exploded, nothing to salvage) and the derived per-weapon total vanishes.
+    expect(res.ammoBins["leftTorso:1"]).toBe(0);
+    expect(res.ammoBins["leftTorso:2"]).toBe(0);
     expect(ammoWeaponTotals(def, res.ammoBins)[1]).toBeUndefined();
   });
 
@@ -1008,7 +1008,7 @@ describe("markLocationCatastrophicallyDestroyed", () => {
     // wipe it (TW p.121 "remaining armor there (front or rear)").
     expect(damage.armorRear.leftTorso ?? 0).toBe(0);
     for (const k of binKeys) {
-      expect(ammoBins[k]).toBeUndefined();
+      expect(ammoBins[k]).toBe(0);
     }
     // Untouched location stays intact
     expect(damage.armor.centerTorso).toBe(def.armor.centerTorso);
@@ -1030,7 +1030,7 @@ describe("markLocationCatastrophicallyDestroyed", () => {
 
     for (const key of Object.keys(before)) {
       if (key.startsWith("head:")) {
-        expect(ammoBins[key]).toBeUndefined();
+        expect(ammoBins[key]).toBe(0);
       } else {
         expect(ammoBins[key]).toEqual(before[key]);
       }

@@ -299,7 +299,7 @@ describe("unit and end lines", () => {
     const line = encodeEndLine("0", hunchy);
     expect(line).toBe(`E03:h5C${startCtArmor}/4/1:a5:L13`);
   });
-  it("end line: bins deleted with a destroyed location are recorded as fully used", () => {
+  it("end line: a stranded (negative) bin counts by magnitude, a zeroed bin is fully spent", () => {
     const state = createTestBattle(
       [],
       [init(), buildUnitInit("b", "ENF-4R", 1, { col: 3, row: 1 })],
@@ -307,7 +307,14 @@ describe("unit and end lines", () => {
     );
     const hunchy = state.units.hunchy!;
     const full = hunchy.ammoBins["leftTorso:1"]!;
-    delete hunchy.ammoBins["leftTorso:1"];
+    // Lost to plain depletion with all shots left: untouched.
+    hunchy.ammoBins["leftTorso:1"] = -full;
+    expect(encodeEndLine("0", hunchy)).toBe("E00");
+    // Stranded after 3 shots were fired.
+    hunchy.ammoBins["leftTorso:1"] = -(full - 3);
+    expect(encodeEndLine("0", hunchy)).toBe("E00:::L13");
+    // Exploded with its location: spent.
+    hunchy.ammoBins["leftTorso:1"] = 0;
     expect(encodeEndLine("0", hunchy)).toBe(`E00:::L1${full}`);
   });
   it("winner line: team or '-', rng as 8 hex digits (negative snapshots included)", () => {

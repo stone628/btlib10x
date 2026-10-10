@@ -89,7 +89,13 @@ import { type AmmoNameHolder, ammoDefFor } from "../data/ammo.schema";
 import type { ResolvedCritSlot, ResolvedMechDef } from "../data/mech.schema";
 import { CRIT_SLOT_COUNTS } from "../data/mech.schema";
 import { weaponDefFor } from "../data/weapon.schema";
-import { type AmmoBins, ammoBinId, stripBinsInLocation } from "./ammo";
+import {
+  type AmmoBins,
+  ammoBinId,
+  liveShots,
+  stripBinsInLocation,
+  zeroBinsInLocation,
+} from "./ammo";
 import {
   applyDamage,
   type DamageApplication,
@@ -790,7 +796,7 @@ function applySlotHit(
       return;
     }
     // Only the hit bin detonates; sibling bins of the same weapon stay.
-    const shotsRemaining = state.ammoBins[binId] ?? 0;
+    const shotsRemaining = liveShots(state.ammoBins[binId]);
     const damagePerShot = ammoDamagePerShot(slot);
     const amount = shotsRemaining * damagePerShot;
     if (amount > 0) {
@@ -906,7 +912,7 @@ export function markLocationCatastrophicallyDestroyed(
   if (isTorso(loc)) damage.armorRear[loc] = 0;
   damage.internalStructure[loc] = 0;
   destroyAllSlots(destroyed, loc, def.critSlots[loc].length);
-  stripBinsInLocation(ammoBins, loc);
+  zeroBinsInLocation(ammoBins, loc);
 }
 
 /** Intact jump jets mounted outside the legs (TW p.53: depth 1 water). */

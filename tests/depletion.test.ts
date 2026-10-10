@@ -9,8 +9,11 @@ import {
   collectAmmoBins,
   consumeAmmo,
   drawOrderBins,
+  liveShots,
   loadAmmoBins,
+  strandedShots,
   stripBinsInLocation,
+  zeroBinsInLocation,
 } from "../src/rules/ammo";
 import {
   advancePhase,
@@ -93,14 +96,23 @@ describe("bin utilities", () => {
     expect(ammoBinId("leftTorso", 3)).toBe("leftTorso:3");
   });
 
-  it("stripBinsInLocation deletes only that location's bins", () => {
+  it("stripBinsInLocation strands only that location's bins (negative = salvage)", () => {
     const bins: AmmoBins = {
       "leftTorso:1": 5,
-      "leftTorso:2": 5,
+      "leftTorso:2": 0,
       "rightTorso:1": 6,
     };
     stripBinsInLocation(bins, "leftTorso");
-    expect(bins).toEqual({ "rightTorso:1": 6 });
+    expect(bins).toEqual({ "leftTorso:1": -5, "leftTorso:2": 0, "rightTorso:1": 6 });
+    expect(liveShots(bins["leftTorso:1"])).toBe(0);
+    expect(strandedShots(bins["leftTorso:1"])).toBe(5);
+    expect(ammoWeaponTotals(HBK, bins)[4] ?? 0).toBe(0);
+  });
+
+  it("zeroBinsInLocation empties only that location's bins", () => {
+    const bins: AmmoBins = { "leftTorso:1": 5, "leftTorso:2": -3, "rightTorso:1": 6 };
+    zeroBinsInLocation(bins, "leftTorso");
+    expect(bins).toEqual({ "leftTorso:1": 0, "leftTorso:2": 0, "rightTorso:1": 6 });
   });
 
   it("ammoWeaponTotals sums only the non-empty bins", () => {

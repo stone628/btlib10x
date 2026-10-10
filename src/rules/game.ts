@@ -48,6 +48,7 @@ import {
   consumeAmmoForName,
   pooledShotsLeft,
   stripBinsInLocation,
+  zeroBinsInLocation,
 } from "./ammo";
 import {
   type Arc,
@@ -3724,7 +3725,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
               currentDamage.armor[loc] = 0;
               if (isTorso(loc)) currentDamage.armorRear[loc] = 0;
               destroyAllSlots(currentCritSlots, loc, def.critSlots[loc].length);
-              stripBinsInLocation(currentAmmoBins, loc);
+              zeroBinsInLocation(currentAmmoBins, loc);
             }
             // Refresh the row's application so the log renders this
             // sequential state, not the pre-volley snapshot.
@@ -3741,7 +3742,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
               currentDamage.armor[loc] = 0;
               if (isTorso(loc)) currentDamage.armorRear[loc] = 0;
               destroyAllSlots(currentCritSlots, loc, def.critSlots[loc].length);
-              stripBinsInLocation(currentAmmoBins, loc);
+              zeroBinsInLocation(currentAmmoBins, loc);
             }
             newRows.push({
               ...row,
@@ -3848,11 +3849,14 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     const bins = targetAmmoBinsMap[targetId];
     if (bins !== undefined) {
       // A firer's own Streak spending (finalAmmoBins) may predate or lose to
-      // this snapshot: keep the lower shot count per bin (AMMO-01).
+      // this snapshot: keep the lower shot count per bin (AMMO-01), and a
+      // stranded (negative) bin stays stranded.
       const merged = { ...bins };
       for (const [id, own] of Object.entries(target.ammoBins)) {
         const snap = merged[id];
-        if (snap !== undefined && own < snap) merged[id] = own;
+        if (snap === undefined) continue;
+        const shots = Math.min(Math.abs(own), Math.abs(snap));
+        merged[id] = own < 0 || snap < 0 ? (shots > 0 ? -shots : 0) : shots;
       }
       target.ammoBins = merged;
     }

@@ -37,6 +37,7 @@ import {
   isUnitImmobile,
   type Location,
   type LocationValue,
+  liveShots,
   loadAmmoBins,
   mapDefFor,
   mechDefFor,
@@ -623,7 +624,7 @@ function critSlotText(
     const binId = ammoBinId(loc, slotIndex);
     const max = loadAmmoBins(def)[binId];
     if (max !== undefined) {
-      const curr = live !== null ? (live.ammoBins[binId] ?? max) : max;
+      const curr = live !== null ? liveShots(live.ammoBins[binId]) : max;
       markers.push(
         live === null
           ? i18n("critChart.ammoDesign", { max })

@@ -443,9 +443,10 @@ export function encodeEndLine(idx: string, unit: UnitState): string {
     f.crits[loc] = destroyedSlots(unit.critSlotsDestroyed, loc).map((i) => i + 1);
   }
   const loaded = loadAmmoBins(def);
-  // A bin deleted with its destroyed location counts as fully used.
+  // A stranded bin (negative: lost with its location, shots intact) counts by
+  // magnitude, so a restart strands the same shots again; an absent bin is spent.
   for (const [binId, full] of Object.entries(loaded)) {
-    f.ammo[binId] = full - (unit.ammoBins[binId] ?? 0);
+    f.ammo[binId] = full - Math.abs(unit.ammoBins[binId] ?? 0);
   }
   return `E${idx}${unit.pilotHits.toString(36)}${joinFields([
     armorField(f),
