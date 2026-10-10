@@ -95,8 +95,10 @@ export {
   type AmmoPolicy,
   ammoBinId,
   collectAmmoBins,
+  liveShots,
   loadAmmoBins,
   pooledTotalsByWeaponName,
+  strandedShots,
 } from "./rules/ammo";
 export {
   type Arc,

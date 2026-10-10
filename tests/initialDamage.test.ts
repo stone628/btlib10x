@@ -79,9 +79,10 @@ describe("starting damage (UnitInit.damage)", () => {
     expect(u.critSlotsDestroyed.leftTorso).toBe(0);
     expect(u.critSlotsDestroyed.leftArm).toBe(0);
     expect(u.destroyedWeapons).toEqual([]);
-    // Play deletes the bins of a destroyed location, so do we.
-    expect(u.ammoBins["leftTorso:1"]).toBeUndefined();
-    expect(u.ammoBins["leftTorso:2"]).toBeUndefined();
+    // Play strands the bins of a destroyed location (negative = salvage), so do we.
+    const loaded = unitWith().ammoBins;
+    expect(u.ammoBins["leftTorso:1"]).toBe(-loaded["leftTorso:1"]!);
+    expect(u.ammoBins["leftTorso:2"]).toBe(-loaded["leftTorso:2"]!);
     const intact = unitWith();
     for (const id of Object.keys(intact.ammoBins).filter((b) => !b.startsWith("leftTorso:"))) {
       expect(u.ammoBins[id]).toBe(intact.ammoBins[id]);
@@ -92,8 +93,17 @@ describe("starting damage (UnitInit.damage)", () => {
       critsDestroyed: { leftTorso: [2] },
     });
     expect(destroyedSlots(v.critSlotsDestroyed, "leftTorso")).toHaveLength(1);
-    expect(v.ammoBins["leftTorso:1"]).toBeUndefined();
-    expect(v.ammoBins["leftTorso:2"]).toBeUndefined();
+    expect(v.ammoBins["leftTorso:1"]).toBe(-loaded["leftTorso:1"]!);
+    expect(v.ammoBins["leftTorso:2"]).toBe(0); // destroyed slot: nothing left
+  });
+
+  it("a destroyed location with ammo used keeps its remaining shots as a stranded count", () => {
+    const loaded = unitWith().ammoBins["leftTorso:1"]!;
+    const u = unitWith({
+      ...wipe("HBK-4G", "leftTorso", "leftArm"),
+      ammoUsed: { "leftTorso:1": 3 },
+    });
+    expect(u.ammoBins["leftTorso:1"]).toBe(-(loaded - 3));
   });
 
   describe("gates: states that would start destroyed", () => {

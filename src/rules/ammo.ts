@@ -38,8 +38,24 @@ export interface AmmoBin extends AmmoNameHolder {
   readonly weaponIndex: number;
 }
 
-/** Unit-level ammo state: remaining shots per bin, keyed by `AmmoBinId`. */
+/**
+ * Unit-level ammo state, keyed by `AmmoBinId`. The sign of a bin tells its fate:
+ * `n > 0` is live ammo with n shots; `0` is spent, exploded or lost with an
+ * exploded location; `n < 0` is a bin stripped with a location lost to plain
+ * damage, still holding `-n` shots that no weapon can draw (salvage value).
+ * Read live shots with `liveShots`, salvage with `strandedShots`.
+ */
 export type AmmoBins = Record<AmmoBinId, number>;
+
+/** Shots a weapon can draw from a bin value (negative = stranded = 0). */
+export function liveShots(n: number | undefined): number {
+  return n !== undefined && n > 0 ? n : 0;
+}
+
+/** Shots left in a bin stripped with its location (0 for any other bin). */
+export function strandedShots(n: number | undefined): number {
+  return n !== undefined && n < 0 ? -n : 0;
+}
 
 export const AMMO_POLICIES: AmmoPolicy[] = ["exposed", "core", "spread", "leastFirst"] as const;
 
@@ -107,7 +123,7 @@ export function pooledShotsLeft(
 ): number {
   let total = 0;
   for (const bin of binsForWeaponName(def, weaponName)) {
-    total += bins[bin.id] ?? 0;
+    total += liveShots(bins[bin.id]);
   }
   return total;
 }
@@ -120,7 +136,7 @@ export function pooledTotalsByWeaponName(
 ): Readonly<Record<string, number>> {
   const totals: Record<string, number> = {};
   for (const bin of collectAmmoBins(def)) {
-    totals[bin.weapon] = (totals[bin.weapon] ?? 0) + (bins[bin.id] ?? 0);
+    totals[bin.weapon] = (totals[bin.weapon] ?? 0) + liveShots(bins[bin.id]);
   }
   return totals;
 }
@@ -183,11 +199,23 @@ export function ammoWeaponTotals(
   return totals;
 }
 
-/** Delete (in place) every bin located in `loc` (e.g. blown-off / destroyed). */
+/**
+ * Strand (in place) every bin located in `loc`: a location lost to plain
+ * damage keeps its shots on record as a negative count that no weapon can
+ * draw (see `AmmoBins`).
+ */
 export function stripBinsInLocation(bins: AmmoBins, loc: Location): void {
   const prefix = `${loc}:`;
+  for (const [id, n] of Object.entries(bins)) {
+    if (id.startsWith(prefix) && n > 0) bins[id] = -n;
+  }
+}
+
+/** Zero (in place) every bin located in `loc`: its ammo exploded with it. */
+export function zeroBinsInLocation(bins: AmmoBins, loc: Location): void {
+  const prefix = `${loc}:`;
   for (const id of Object.keys(bins)) {
-    if (id.startsWith(prefix)) delete bins[id];
+    if (id.startsWith(prefix)) bins[id] = 0;
   }
 }
 
