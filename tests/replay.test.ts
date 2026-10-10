@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { neighbor } from "../src/core/hex";
+import { type Facing, type HexCoord, oppositeFacing, rotateFacing } from "../src/core/types";
 import { setSlotDestroyed } from "../src/rules/critical";
+import { buildUnitInit, type MoveStep } from "../src/rules/game";
+import type { PhysicalAttackDecl } from "../src/rules/physical";
+import { VERSION } from "../src/version";
 import { nextAutoPlayCommand, resetAutoplayState } from "../web/autoplay";
 import {
   type AttackDeclaration,
@@ -20,11 +25,6 @@ import {
 } from "../web/replay";
 import { commitAtomic, newSession, type Session, setSeed } from "../web/session";
 import { createTestBattle, disableCritical, execute, scriptedRng } from "./helpers";
-import { oppositeFacing, rotateFacing, type Facing, type HexCoord } from "../src/core/types";
-import { buildUnitInit, type MoveStep } from "../src/rules/game";
-import { neighbor } from "../src/core/hex";
-import type { PhysicalAttackDecl } from "../src/rules/physical";
-import { VERSION } from "../src/version";
 
 const w = (...ns: number[]) => ns.map((weaponIndex) => ({ weaponIndex }));
 const idxOf = (id: string) => ({ a: "0", b: "1", c: "2" })[id] ?? "?";

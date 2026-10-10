@@ -4065,6 +4065,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   // fall damage never re-triggers the sweep.
   const postWeaponDamage: Record<string, UnitDamageState> = {};
   const postWeaponCrit: Record<string, CritMask> = {};
+  const postWeaponWeapons: Record<string, number[]> = {};
   for (const unit of Object.values(state.units)) {
     postWeaponDamage[unit.id] = {
       armor: { ...unit.damage.armor },
@@ -4072,6 +4073,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       internalStructure: { ...unit.damage.internalStructure },
     };
     postWeaponCrit[unit.id] = cloneCritTable(unit.critSlotsDestroyed);
+    postWeaponWeapons[unit.id] = [...unit.destroyedWeapons];
   }
 
   sink.push({ kind: "attackPhaseStage", stage: "weaponDone", turn: state.turn });
@@ -4092,6 +4094,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
           ...u,
           damage: postWeaponDamage[attackerId] ?? u.damage,
           critSlotsDestroyed: postWeaponCrit[attackerId] ?? u.critSlotsDestroyed,
+          destroyedWeapons: postWeaponWeapons[attackerId] ?? u.destroyedWeapons,
         },
       },
     };
