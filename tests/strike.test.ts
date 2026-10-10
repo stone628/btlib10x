@@ -20,6 +20,7 @@ import {
   suggestFireTargets,
   type UnitInit,
 } from "../src";
+import type { Location } from "../src/core/types";
 import { type MechDef, type ResolvedMechDef, resolveMechDef } from "../src/data/index";
 import { parseWeaponsData } from "../src/data/weapon.schema";
 import { WEAPON_DATA } from "../src/data/weapons.data";
@@ -28,7 +29,12 @@ import { setSlotDestroyed } from "../src/rules/critical";
 /** Raw HCT-5S sheet as written in data/mechs/hct-5s.json. */
 const hct5sRaw = hct5sJson as unknown as MechDef;
 
-import { buildUnitInit, resolveAllAttacks, validateAttacksImpl, type TeamId } from "../src/rules/game";
+import {
+  buildUnitInit,
+  resolveAllAttacks,
+  type TeamId,
+  validateAttacksImpl,
+} from "../src/rules/game";
 import {
   computePhysicalToHit,
   isPhysicalWeaponName,
@@ -50,7 +56,7 @@ import {
   queuePhysicalAttack,
   type Session,
 } from "../web/session";
-import { disableCritical, execute } from "./helpers";
+import { disableCritical, execute, seededRng } from "./helpers";
 
 function makeUnitInit(
   id: string,
@@ -569,5 +575,58 @@ describe("strike command", () => {
     commitAttack(s);
     expect(s.attack!.actorId).toBe(enemy);
     expect(execute(s, "strike a")[0]).toMatch(/^error: unit mounts no physical weapon$/);
+  });
+});
+
+describe("simultaneous physical sub-pass (PHY-05)", () => {
+  it("a hatchet crit from an earlier physical attack does not cancel the declared strike", () => {
+    let seen = 0;
+    for (let seed = 1; seed <= 400 && seen < 3; seed++) {
+      const battle = createBattle(
+        { name: "test", width: 20, height: 20, terrain: [], legends: [] },
+        [
+          makeUnitInit("a", 1, { col: 5, row: 5 }, "se", "HCT-5S"),
+          makeUnitInit("t", 2, { col: 6, row: 5 }, "nw", "HBK-4G"),
+        ],
+      );
+      battle.phase = "attack";
+      battle.initiativeWinnerTeam = 1;
+      battle.actorQueue = ["t", "a"];
+      battle.actedThisPhase = [];
+      const a = battle.units.a!;
+      for (const loc of Object.keys(a.damage.armor) as Location[]) a.damage.armor[loc] = 0;
+      for (const loc of Object.keys(a.damage.armorRear) as Array<keyof typeof a.damage.armorRear>) {
+        a.damage.armorRear[loc] = 0;
+      }
+      const def = mechDefFor(a);
+      const hatchet = Number(
+        Object.keys(def.weapons).find((k) => def.weapons[Number(k)]?.weapon === "Hatchet"),
+      );
+      const rng = seededRng(seed);
+      const events: GameEvent[] = [];
+      declareAttacks(
+        battle,
+        "t",
+        [],
+        [{ type: "punch", targetId: "a", limb: "rightArm" }],
+        events,
+        rng,
+      );
+      declareAttacks(
+        battle,
+        "a",
+        [],
+        [{ type: "strike", targetId: "t", limb: "rightArm", weapon: "Hatchet" }],
+        events,
+        rng,
+      );
+      resolveAllAttacks(battle, rng, events);
+      const strike = events.find((e) => e.kind === "physicalAttackResolved" && e.unitId === "a");
+      if (!a.destroyedWeapons.includes(hatchet) || strike?.kind !== "physicalAttackResolved")
+        continue;
+      seen++;
+      expect(strike.resolution.missReason ?? "").not.toMatch(/^invalid:/);
+    }
+    expect(seen).toBeGreaterThan(0);
   });
 });

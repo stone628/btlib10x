@@ -18,7 +18,12 @@ import {
 import { bearingExact } from "../src/core/hex";
 import { classifyArcWithBoundary, defenderArcChoice } from "../src/rules/arcs";
 import { setSlotDestroyed } from "../src/rules/critical";
-import { buildUnitInit, resolveAllAttacks, validateAttacksImpl, type TeamId } from "../src/rules/game";
+import {
+  buildUnitInit,
+  resolveAllAttacks,
+  type TeamId,
+  validateAttacksImpl,
+} from "../src/rules/game";
 import { hitLocationForArc, punchHitLocationForArc } from "../src/rules/hitlocation";
 import {
   computePhysicalToHit,
