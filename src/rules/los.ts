@@ -49,6 +49,10 @@ export function losBlocked(points: number): boolean {
 export interface ProneEnds {
   readonly from?: boolean;
   readonly to?: boolean;
+  /** Explicit LOS level of an endpoint, replacing the ground-plus-height
+   *  rule (a DFA'er is in the air until the physical phase, TW p.149). */
+  readonly fromLevel?: number;
+  readonly toLevel?: number;
 }
 
 /** A unit's LOS level: the level of the hex it stands on (the bed, for a
@@ -71,8 +75,8 @@ function losIntervenes(
   top: number,
   prone?: ProneEnds,
 ): boolean {
-  const aLos = unitLosLevel(grid, from, prone?.from);
-  const bLos = unitLosLevel(grid, to, prone?.to);
+  const aLos = prone?.fromLevel ?? unitLosLevel(grid, from, prone?.from);
+  const bLos = prone?.toLevel ?? unitLosLevel(grid, to, prone?.to);
   return (
     (top >= aLos && top >= bLos) ||
     (isAdjacent(h, from) && top >= aLos) ||

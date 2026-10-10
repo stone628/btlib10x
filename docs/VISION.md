@@ -100,8 +100,10 @@ yet is a gap, not a deviation; gaps are tracked in §4.
   (pavement skids fall in place) and displacement from charge / DFA are
   intentionally absent. Falls always happen in place (ground-movement falls
   across levels use the lower-hex rule); a faller landing on an occupied
-  hex stays in the hex it came from. Charge / DFA, when added, resolve
-  without moving either unit.
+  hex stays in the hex it came from. Charge / DFA resolve without moving
+  either unit: the attacker stops in the hex before the target (the one
+  exception to "nobody moves" is an attacker advancing into the hex its
+  target vacated before the physical phase, after paying for the move).
 - **Scenario and campaign rules (TW ch. 13):** victory conditions, forced
   withdrawal, crippling damage. The caller owns these (§1).
 
@@ -122,10 +124,9 @@ These are implementation choices, not rule changes.
 
 ## 4. What I'll do
 
-- **Physicals completion.** Charge / DFA (TW pp.151–152); more physical
-  weapons (spike, shield); the optional Punch/Kick-table election; charge /
-  DFA PSRs. Charge / DFA are implemented in a simpler way without displacement
-  (§2.5).
+- **Physicals completion.** More physical weapons (spike, shield); the
+  optional Punch/Kick-table election. (Charge / DFA, TW pp.148–150, are
+  implemented without displacement, §2.5.)
 - **Weapon to-hit audit P2 (TW pp.103–140).** One-Shot weapons; point-blank
   legality; Flak; plasma heat damage; Heavy Gauss move-and-fire PSR;
   MGA / A-Pod / B-Pod; missing catalog rows (Rocket Launchers, Plasma Cannon,

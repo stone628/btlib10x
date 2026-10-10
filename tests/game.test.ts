@@ -240,10 +240,11 @@ describe("movement phase", () => {
     expect(hbk.mpSpent).toBe(4); // 2 enters + 2-hexside turn
   });
 
-  it("rejects ending in an occupied hex but allows friendly pass-through", () => {
+  it("rejects ending in a friendly-occupied hex (an enemy hex is a charge)", () => {
     const units: UnitInit[] = [
       buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 5 }, "nw"),
+      buildUnitInit("enf", "ENF-4R", 0, { col: 3, row: 5 }, "nw"),
+      buildUnitInit("far", "HBK-4G", 1, { col: 8, row: 8 }, "n"),
     ];
     const setup = createTestBattle([], units, true);
     const state = startMovementTurn(setup);

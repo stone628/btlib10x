@@ -1054,6 +1054,9 @@ const PSR_REASON_KEY: Record<PilotingCheckReason, MessageKey> = {
   building: "log.psrReason.building",
   kick: "log.psrReason.kick",
   kickMiss: "log.psrReason.kickMiss",
+  chargeTarget: "log.psrReason.chargeTarget",
+  chargeMade: "log.psrReason.chargeMade",
+  dfaMade: "log.psrReason.dfaMade",
   ejection: "log.psrReason.ejection",
 };
 
@@ -1087,6 +1090,8 @@ function fallCauseLabel(cause: UnitFallCause): string {
       return i18n("log.fallCause.buildingCollapse");
     case "voluntaryDrop":
       return i18n("log.fallCause.voluntaryDrop");
+    case "dfaMiss":
+      return i18n("log.fallCause.dfaMiss");
     default: {
       const _exhaustive: never = cause;
       return _exhaustive;
@@ -1298,6 +1303,15 @@ function handleSessionGameEvent(s: Session, e: SessionGameEvent, out: OutputHand
           budget: e.mpBudget,
         }),
       );
+      if (e.pendingCharge !== undefined) {
+        out.idLines(
+          e.unitId,
+          i18n(e.pendingCharge.attack === "dfa" ? "log.dfaDeclared" : "log.chargeDeclared", {
+            id: e.unitId,
+            target: e.pendingCharge.targetId,
+          }),
+        );
+      }
       break;
     case "attacksDeclared": {
       for (const w of e.weapons) {

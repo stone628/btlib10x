@@ -241,6 +241,10 @@ export const en = {
   "stepResult.from": "  from ({col},{row}) facing {facing} {posture}",
   "stepResult.turn": "  turn {dir} x{facings}: {mp} MP (face change, {perFacing} MP/hexside)",
   "stepResult.jump": "  jump ({col},{row}): {mp} MP (jump step, flat 1 MP)",
+  "stepResult.charge":
+    "  charge: ends against {target}; stops in ({stopCol},{stopRow}), the attack resolves in the physical phase (no weapons this turn)",
+  "stepResult.dfa":
+    "  DFA: leaps at {target}; stays in ({stopCol},{stopRow}), the attack resolves in the physical phase (no weapons this turn)",
   "stepResult.enter":
     "  {type} enter ({col},{row}) {terrain}: {mp} MP (1 base, +{surcharge} terrain, +{climb} climb {levels}lv)",
   "ok.cancelled": "cancelled",
@@ -688,6 +692,20 @@ export const en = {
   "log.psrReason.building": "entering building",
   "log.psrReason.kick": "kicked",
   "log.psrReason.kickMiss": "missed kick",
+  "log.psrReason.chargeTarget": "charged or hit by a DFA",
+  "log.psrReason.chargeMade": "made a charge",
+  "log.psrReason.dfaMade": "made a DFA",
+  "log.chargeDeclared":
+    "[{id}] charges {target} and stops in front of it (resolves in the physical phase)",
+  "log.dfaDeclared": "[{id}] leaps at {target} (death from above; resolves in the physical phase)",
+  "res.physical.advanced": "{target} has left its hex — {attacker} advances into {pos}",
+  "res.physical.voided": "{attacker} cannot carry out the attack: {reason}",
+  "res.physical.voided.wreck": "a wreck now holds the hex",
+  "res.physical.voided.hexTaken": "another unit now holds the hex",
+  "res.physical.voided.attackerDown": "the attacker is down",
+  "log.fallCause.dfaMiss": "failed DFA",
+  "res.physical.dfaMissFall": "{attacker} falls after the failed DFA (2-level fall, rear damage)",
+  "res.physical.dfaAborted": "{attacker} lost its footing in the weapon phase — the DFA misses",
   "log.accidentalFallHit":
     "[{id}] falls onto {target} (needs {tn}+, rolled {roll}): {damage} damage",
   "log.accidentalFallMiss": "[{id}] falls toward {target} but misses (needs {tn}+, rolled {roll})",

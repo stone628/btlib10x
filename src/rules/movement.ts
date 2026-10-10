@@ -142,6 +142,10 @@ export interface RevealedLanding {
   readonly facing: Facing;
   /** Movement fragments from the start (in order) that end at `hex` facing `facing`. */
   readonly path: readonly MovePathStep[];
+  /** Set when `hex` holds an enemy: ending the path there declares a charge
+   *  (walk / run) or DFA (jump). The unit stops in `stopsAt`, the hex before
+   *  it, and never enters `hex` (TW pp.148-150, without displacement). */
+  readonly melee?: { readonly kind: "charge" | "dfa"; readonly stopsAt: HexCoord };
 }
 
 export interface ReachabilityOptions {
@@ -157,6 +161,12 @@ export interface ReachabilityOptions {
   readonly occupantTeam: (hex: HexCoord) => number | undefined;
   /** True when `hex` holds a wreck obstacle: never passable, never landable. */
   readonly wreckAt?: (hex: HexCoord) => boolean;
+  /**
+   * Enables charge / DFA landings: true when the mover could declare `kind`
+   * against the enemy in `targetHex` while standing in `stop`. Omit to list
+   * ordinary landings only.
+   */
+  readonly meleeOk?: (stop: HexCoord, targetHex: HexCoord, kind: "charge" | "dfa") => boolean;
   /**
    * TW p.50 standup free pick: "Once standing, it may face any direction at
    * no cost and continue moving under the declared mode." When true, the
@@ -397,6 +407,48 @@ export function reachableLandings(
     if (jumping && (hexDistance(start, hex) === 0 || cost !== hexDistance(start, hex))) continue;
     const facing = key.slice(sep + 1) as Facing;
     results.push({ hex, facing, path: bestPath.get(key) ?? [] });
+  }
+
+  if (options.meleeOk !== undefined && !proneTurn) {
+    for (const [key, cost] of dist) {
+      if (cost > budget) continue;
+      const sep = key.lastIndexOf("|");
+      const hex = parseHexKey(key.slice(0, sep));
+      const facing = key.slice(sep + 1) as Facing;
+      const path = bestPath.get(key) ?? [];
+      const enemyAt = (h: HexCoord): boolean => {
+        const occ = options.occupantTeam(h);
+        return occ !== undefined && occ !== options.team;
+      };
+      if (jumping) {
+        // DFA: the jump's last step flew into the enemy hex, so the stop is
+        // the hex behind it along that step's facing.
+        const last = path[path.length - 1];
+        if (last === undefined || last.fragment !== "J") continue;
+        if (!enemyAt(hex) || cost !== hexDistance(start, hex)) continue;
+        const stop = neighbor(hex, oppositeFacing(facing));
+        if (options.meleeOk(stop, hex, "dfa")) {
+          results.push({ hex, facing, path, melee: { kind: "dfa", stopsAt: stop } });
+        }
+        continue;
+      }
+      // Charge: step straight ahead from a reachable state into the enemy.
+      const ahead = neighbor(hex, facing);
+      if (!inBounds(ahead) || !enemyAt(ahead) || options.wreckAt?.(ahead)) continue;
+      if (running && waterDepth(cellAt(options.grid, ahead).terrain) > 0) continue;
+      const delta = groundLevel(options.grid, ahead) - groundLevel(options.grid, hex);
+      if (Math.abs(delta) > FORWARD_LEVEL_CHANGE_MAX) continue;
+      const base = stepCost(hex, ahead);
+      if (cost + base > budget) continue;
+      if (!options.meleeOk(hex, ahead, "charge")) continue;
+      const step = makeStep(hex, ahead, stepFragment(), base, cost);
+      results.push({
+        hex: ahead,
+        facing,
+        path: [...path, step],
+        melee: { kind: "charge", stopsAt: hex },
+      });
+    }
   }
 
   results.sort((a, b) => {

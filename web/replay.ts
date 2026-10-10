@@ -287,6 +287,11 @@ function physicalText(decl: PhysicalAttackDecl): string {
         (decl.limb === "leftArm" ? "S" : "T") +
         (decl.weapon === undefined ? "-" : STRIKE_WEAPON_CHAR[decl.weapon])
       );
+    case "charge":
+    case "dfa":
+      // Declared by the move record (a final step into the enemy hex), never
+      // through an attack record.
+      throw new Error(`${decl.type} has no attack-record form`);
   }
 }
 

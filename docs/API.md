@@ -440,10 +440,19 @@ from their source modules when needed.
 
 ### Physical attacks (`rules/physical.ts`, TW pp. 144-147)
 
-Punch, kick, club, and physical-weapon strikes (charge/DFA deferred),
-declared through `declareAttacks` and gated by `validatePhysicalAttack` (see
-the state-machine section). `PhysicalAttackType` is `"punch" | "kick" |
-"club" | "strike"`; `PhysicalAttackDecl` carries `{ type, targetId,
+Punch, kick, club, and physical-weapon strikes, declared through
+`declareAttacks` and gated by `validatePhysicalAttack` (see the state-machine
+section). Charge and DFA are declared by `executeMove` instead: a walk / run
+(charge) or jump (DFA) path whose last step enters an enemy hex stops the unit
+in the hex before it, sets `UnitState.meleeCharge` (`MeleeCharge`) plus
+`passedAttacks`, reports it as `moved.pendingCharge`, and is resolved by `resolveAllAttacks`
+(`meleeDeclarationProblem` explains why a declaration is illegal; reachability
+lists such hexes as `RevealedLanding.melee` when `meleeOk` is supplied; the
+target's hex stays reserved for the attacker; a target that left is reported by
+a `physicalAttackResolved` whose `resolution.missReason` is `"advanced"`
+(`advancedTo` is the hex the attacker moved into) or `"voided:wreck"` /
+`"voided:hexTaken"` / `"voided:attackerDown"`). `PhysicalAttackType` is `"punch" |
+"kick" | "club" | "strike" | "charge" | "dfa"` (`isMeleeCharge`); `PhysicalAttackDecl` carries `{ type, targetId,
 limb?, weapon? }`; `PHYSICAL_WEAPONS` / `PhysicalWeaponStats` /
 `PhysicalWeaponName` / `isPhysicalWeaponName` describe the hatchet / sword /
 retractable blade table, and `strikeMounts` / `strikeMountArms` /

@@ -44,6 +44,7 @@ import type {
   ClubGroundToken,
   ClubPickupDecl,
   HeldClub,
+  MeleeCharge,
   Phase,
   UnitState,
   WeaponAttackDecl,
@@ -79,6 +80,10 @@ function cloneWeaponAttackDecl(decl: WeaponAttackDecl): WeaponAttackDecl {
 
 function clonePhysicalAttackDecl(decl: PhysicalAttackDecl): PhysicalAttackDecl {
   return { ...decl };
+}
+
+function cloneMeleeCharge(charge: MeleeCharge): MeleeCharge {
+  return { ...charge, hex: { ...charge.hex }, from: { ...charge.from } };
 }
 
 function cloneHeldClub(club: HeldClub | null): HeldClub | null {
@@ -135,6 +140,7 @@ function cloneUnitState(unit: UnitState): UnitState {
     declaredWeaponAttacks: unit.declaredWeaponAttacks.map(cloneWeaponAttackDecl),
     declaredPhysicalAttacks: unit.declaredPhysicalAttacks.map(clonePhysicalAttackDecl),
     passedAttacks: unit.passedAttacks,
+    meleeCharge: unit.meleeCharge === null ? null : cloneMeleeCharge(unit.meleeCharge),
     destroyed: unit.destroyed,
     removed: unit.removed,
   };
@@ -349,6 +355,7 @@ export function loadUnitState(unit: UnitState, snapshot: UnitSnapshot): void {
   unit.declaredWeaponAttacks = next.declaredWeaponAttacks;
   unit.declaredPhysicalAttacks = next.declaredPhysicalAttacks.map((d) => ({ ...d }));
   unit.passedAttacks = next.passedAttacks;
+  unit.meleeCharge = next.meleeCharge === null ? null : cloneMeleeCharge(next.meleeCharge);
   unit.destroyed = next.destroyed;
   unit.removed = next.removed;
 }

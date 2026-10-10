@@ -515,14 +515,40 @@ simulate. See `docs/VISION.md` for direction and the will/won't lists.
   ruling). A severed limb that is ever picked up loses its `salvageable`
   flag (`blownOffLimbs`; house rule, `salvageableSeveredLimbs`).
   The `board` map marks hexes holding a ground club token with `!`.
-- **Deferred** — charge / DFA (movement-phase declarations), the remaining nine
+- **Charge / DFA (TW pp.148-150, no displacement)** — declared by movement: in
+  `walk` or `run` mode, `place` on the hex of an enemy 'Mech standing straight
+  ahead of a reachable hex (a charge); in `jump` mode, `place` on an enemy hex
+  within Jumping MP, clearing its height (level + 2 for a standing target; a
+  DFA). The enemy hex appears among the reachable landings; `place` reports
+  `charge:` / `DFA:` and where the unit will stop. The unit stops in the hex
+  before the target (MP for the target hex is still paid, facing the target),
+  gets no weapon or other physical attack, and its attack resolves in the
+  physical phase. To-hit is Piloting skill plus the skill difference and the
+  usual movement modifiers (no terrain). Charge: target takes
+  tonnage / 10 per hex moved, counting the target's hex as one more (house
+  rule: the unit stops short but the charge is meant to reach the target),
+  the charger takes
+  target tonnage / 10; both in 5-point groups located separately (standard
+  table). DFA: target takes tonnage / 10 x 3 (Punch table; a prone target the
+  standard table's rear column), the DFA'er tonnage / 5 on the legs (Kick
+  table). After a hit both roll PSRs at the end of the phase (target +2;
+  charger +2; DFA'er +4). A DFA miss drops the DFA'er (2-level fall, rear
+  damage); a charge miss costs nothing. A DFA'er cannot be the target of any
+  physical attack, and an unconscious or fallen attacker misses. A weapon-phase
+  PSR failure does not drop a DFA'er (the DFA misses and it falls in the physical
+  phase). LOS to a DFA'er treats it as two levels above the higher of its hex and
+  its target's. A charged or DFA'd unit cannot charge, and a unit can be charged
+  once per turn. The target's hex is reserved for the attacker: if the target
+  moved away, the attacker advances into the vacated hex (no attack); a wreck
+  or another unit there voids the attack. Not modeled: charging buildings or
+  building hexes, terrain-entry PSRs for the advance, displacement (see below).
+- **Deferred** — the remaining nine
   physical-weapon types (industrial tools), the optional
   Punch/Kick-table election (+4). (The level-difference table auto-swap and through-armor / structure
   critical hits from physical damage are implemented.)
 
 ### Not yet implemented
 
-- **Charge / DFA physical attacks**.
 - **Building structural damage beyond CF** — basements / multi-floor
   interiors, structural-factor transfer between levels.
 - **Wreck destruction** — wrecks are permanent obstacles; clearing,
@@ -556,8 +582,8 @@ stated elsewhere in this document or the codebase:
   All falls (combat PSRs, shutdowns, stand-up attempts, building crashes,
   accidental falls from above) happen in place; only ground-movement falls
   across levels use the `levelsFallen` term (lower-hex rule). A faller
-  landing on an occupied hex stays in the hex it came from. Charge / DFA are
-  still planned, without displacement.
+  landing on an occupied hex stays in the hex it came from. Charge / DFA
+  are implemented without displacement (see above).
 - **Minimum movement** (TW p.49) — a standing unit with at least 1 MP may
   always enter the single hex directly ahead, whatever the terrain/climb
   cost, as its only expenditure (no facing change). Declared as `mode run`

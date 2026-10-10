@@ -7,10 +7,13 @@ TypeScript library encapsulating BattleTech Total Warfare board game logic.
 - Implements a **subset of BattleTech Total Warfare rules**. The currently
   implemented subset is documented under "Status — BattleTech Total Warfare rule
   coverage" in `docs/CLI.md`.
-- Bipedal 'Mechs only. Punch, kick, club and physical-weapon attacks
-  are implemented; charge / DFA and the other physical-attack extras are not
-  (see `docs/VISION.md`). Piloting rolls, falling/prone, pilot damage and
-  consciousness are implemented; PSRs from charges and DFAs wait on those.
+- Bipedal 'Mechs only. Punch, kick, club, physical-weapon, charge and DFA
+  attacks are implemented (no displacement of any kind, by design); the other
+  physical-attack extras are not (see `docs/VISION.md`). Charge / DFA are
+  declared by movement: ending a walk / run (charge) or jump (DFA) path in an
+  enemy hex stops the unit in the hex before it and the attack resolves in the
+  physical phase. Piloting rolls, falling/prone, pilot damage and
+  consciousness are implemented, including the PSRs from charges and DFAs.
   Firing arcs implemented per TW: four arcs (front / rear /
   left / right side), per-weapon mounting arcs (head/legs/torso front-only,
   arms add own side, `rearFacing` torso mounts rear-only), attack
