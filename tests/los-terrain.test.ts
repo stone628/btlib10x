@@ -126,8 +126,8 @@ describe("targeting computer (TW p.143, TOH-01)", () => {
 describe("target movement counts hexes since the last reversal (TW p.107, TOH-02)", () => {
   it("two back then two forward counts two", () => {
     const units: UnitInit[] = [
-      buildUnitInit("t", "HBK-4G", 0, { col: 4, row: 4 }, "n"),
-      buildUnitInit("e", "ENF-4R", 1, { col: 9, row: 9 }, "s"),
+      buildUnitInit("t", "HBK-4G", 1, { col: 4, row: 4 }, "n"),
+      buildUnitInit("e", "ENF-4R", 2, { col: 9, row: 9 }, "s"),
     ];
     const state = createTestBattle([], units, true, 10, 10);
     rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []);

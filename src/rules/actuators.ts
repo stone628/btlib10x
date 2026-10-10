@@ -132,3 +132,22 @@ export function targetingComputerModifier(
   }
   return fitted ? TARGETING_COMPUTER_MOD : 0;
 }
+
+/**
+ * A 'Mech can hold and swing a club only with both hands working (TW p.146):
+ * each arm location still standing and carrying an undestroyed hand
+ * actuator. A shoulder hit does not matter here (the club is still carried;
+ * only the swing is refused, see `validateClub`).
+ */
+export function clubHandsFunctional(
+  def: ResolvedMechDef,
+  damage: UnitDamageState,
+  destroyed: Readonly<CritMask>,
+): boolean {
+  for (const arm of ["leftArm", "rightArm"] as const) {
+    if (isUnitLocationDestroyed(damage, arm)) return false;
+    if (absentArmActuators(def, arm).hand > 0) return false;
+    if (countArmActuators(def, damage, destroyed, arm).hand > 0) return false;
+  }
+  return true;
+}

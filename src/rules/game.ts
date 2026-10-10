@@ -37,7 +37,11 @@ import {
 import { type MapDef, type MechModelHolder, mechDef, mechDefFor } from "../data/index";
 import type { ResolvedMechDef } from "../data/mech.schema";
 import { weaponDefFor } from "../data/weapon.schema";
-import { armWeaponToHitModifier, targetingComputerModifier } from "./actuators";
+import {
+  armWeaponToHitModifier,
+  clubHandsFunctional,
+  targetingComputerModifier,
+} from "./actuators";
 import {
   type AmmoBins,
   type AmmoPolicy,
@@ -196,10 +200,19 @@ export interface UnitPolicy {
 /** Policy a unit gets when setup names none. */
 export const DEFAULT_UNIT_POLICY: Readonly<UnitPolicy> = { ammoPolicy: "exposed", autoEject: true };
 
+/** The only legal team ids: 1 and 2 (one side each). */
+export const TEAM_IDS = [1, 2] as const;
+/** Legal team id. */
+export type TeamId = (typeof TEAM_IDS)[number];
+/** True when `n` is a legal team id (1 or 2). */
+export function isValidTeam(n: number): n is TeamId {
+  return n === 1 || n === 2;
+}
+
 export interface UnitInit extends MechModelHolder {
   readonly id: string;
   model: string;
-  team: number;
+  team: TeamId;
   /** Gunnery skill (TW regular = 4); defaults to {@link DEFAULT_GUNNERY}. */
   gunnery: UnitSkillRange;
   /** Pilot skill (TW regular = 5); defaults to {@link DEFAULT_PILOTING}. */
@@ -218,7 +231,7 @@ export interface UnitInit extends MechModelHolder {
 export function buildUnitInit(
   id: string,
   model: string,
-  team: number,
+  team: TeamId,
   position: HexCoord,
   facing: Facing = "n",
   gunnery: UnitSkillRange = DEFAULT_GUNNERY,
@@ -656,7 +669,7 @@ export type GameEvent =
       readonly col: number;
       readonly row: number;
       readonly returned: boolean;
-      readonly cause?: "fall" | "removed";
+      readonly cause?: "fall" | "removed" | "hands";
     }
   | {
       /** Uprooted tree consumed by a successful club hit (TW p.146: good
@@ -1221,6 +1234,9 @@ export function createBattle(
       throw new Error(`pilotHitMax(${init.pilotHitMax}) for ${init.id} must be an integer >= 1`);
     }
   }
+  // Note: team ids are locked to 1|2 per unit (checked above), but a single
+  // team is allowed here (rendering drills, movement fixtures). Real games
+  // require both teams 1 and 2 via setupStartBattle.
 
   const unitStates: Record<string, UnitState> = {};
   for (const init of units) {
@@ -2694,6 +2710,9 @@ export function validatePickup(
   if (unit.club !== null) {
     return { ok: false, reason: `${unitId} already holds a club (drop it first)` };
   }
+  if (!clubHandsFunctional(mechDefFor(unit), unit.damage, unit.critSlotsDestroyed)) {
+    return { ok: false, reason: `${unitId} needs two working hands to pick up a club` };
+  }
   const choice = choosePickup(state, unit, decl);
   if (!choice.ok) return choice;
   return choice.token === undefined
@@ -2745,6 +2764,10 @@ function resolveClubPickup(
   };
   if (isUnitRemoved(unit) || unit.unconscious || isShutdown(unit)) {
     fail("attackerDown");
+    return;
+  }
+  if (!clubHandsFunctional(mechDefFor(unit), unit.damage, unit.critSlotsDestroyed)) {
+    fail("noHands");
     return;
   }
   const tokens = clubTokensInHex(state, unit);
@@ -2856,7 +2879,7 @@ function applyClubDrop(
   state: BattleState,
   unit: UnitState,
   sink: GameEvent[],
-  cause?: "fall" | "removed",
+  cause?: "fall" | "removed" | "hands",
 ): void {
   const held = unit.club;
   if (held === null) throw new Error(`${unit.id} holds no club to drop`);
@@ -2883,10 +2906,26 @@ function applyClubDrop(
 function releaseClub(
   state: BattleState,
   unit: UnitState,
-  cause: "fall" | "removed",
+  cause: "fall" | "removed" | "hands",
   sink: GameEvent[],
 ): void {
   if (unit.club !== null) applyClubDrop(state, unit, sink, cause);
+}
+
+/**
+ * Forced drop (TW p.146): a unit whose arms or hand actuators no longer let
+ * it hold a club (see `clubHandsFunctional`) lets go of it in its hex. A
+ * shoulder hit alone keeps the club; it only blocks the swing.
+ */
+function enforceClubHands(state: BattleState, unit: UnitState, sink: GameEvent[]): void {
+  if (unit.club === null) return;
+  if (!clubHandsFunctional(mechDefFor(unit), unit.damage, unit.critSlotsDestroyed)) {
+    applyClubDrop(state, unit, sink, "hands");
+  }
+}
+
+function enforceClubHandsAll(state: BattleState, sink: GameEvent[]): void {
+  for (const unit of Object.values(state.units)) enforceClubHands(state, unit, sink);
 }
 
 /**
@@ -3237,9 +3276,11 @@ function applyDamageGroups(
 ): CriticalResolution[] {
   const def = mechDefFor(unit);
   const crits: CriticalResolution[] = [];
+  const sheared: LimbLocation[] = [];
   for (const group of groups) {
     const app = applyDamage(unit.damage, group.location, group.damage, arc);
     unit.damage = app.after;
+    sheared.push(...app.blownOffLimbs);
     if (!state.critsDisabled) {
       // One roll per location whose structure the group damaged (TW p.124).
       for (const critLoc of structureStruck(app)) {
@@ -3267,11 +3308,13 @@ function applyDamageGroups(
   // Severed limbs stay where they were lost (TW p.146): record blow-offs
   // from fall/crash/collapse crits and leave the matching ground tokens.
   recordCritSeveredLimbs(state, unit, crits);
+  recordSeveredLimbs(state, unit, sheared);
   for (const loc of LOCATIONS) {
     if ((unit.damage.internalStructure[loc] ?? 0) <= 0) {
       stripBinsInLocation(unit.ammoBins, loc);
     }
   }
+  enforceClubHands(state, unit, sink);
   if (
     isUnitAvailable(unit) &&
     (isUnitWrecked(unit) || crits.some((c) => c.killedReason !== null))
@@ -4496,6 +4539,8 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   // damage, so weapon and physical phases never pool into one roll.
   const physicalBefore: PhaseSnapshots = { damage: postWeaponDamage, crit: postWeaponCrit };
   resolvePhasePiloting(state, rng, physicalBefore, sink, kickExtras);
+  // Attacks resolve simultaneously; hands lost during them drop the club now.
+  enforceClubHandsAll(state, sink);
 
   // Clear declared attacks for all units
   for (const unit of Object.values(state.units)) {
@@ -4965,6 +5010,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
 
   // End-of-heat-phase piloting: falls from heat-phase ammo-explosion damage.
   resolvePhasePiloting(state, rng, before, sink);
+  enforceClubHandsAll(state, sink);
 }
 
 /** Falls underwater halve damage: any depth 2+, plus a jump landing that

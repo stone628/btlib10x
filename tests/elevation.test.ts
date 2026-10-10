@@ -34,7 +34,7 @@ function gridWithLevels(levels: Record<string, number>): HexGrid {
 
 const elevation = gridWithLevels({ "5,2": 1 });
 const clear = gridWithLevels({});
-const team = 0;
+const team = 1;
 const noOcc = () => undefined;
 
 const reachOptions = (grid: HexGrid): ReachabilityOptions => ({

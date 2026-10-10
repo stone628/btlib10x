@@ -34,8 +34,8 @@ import { createTestBattle, scriptedRng } from "./helpers";
 
 function hbkEnf(critsDisabled: boolean): BattleState {
   const units: UnitInit[] = [
-    buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
-    buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 5 }, "se"),
+    buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "se"),
+    buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 5 }, "se"),
   ];
   return createTestBattle([], units, critsDisabled);
 }
@@ -108,8 +108,8 @@ describe("snapshot", () => {
 
   it("stores only cell exceptions and round-trips crits, ammo, limbs, collapsed cells", () => {
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 5 }, "se"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "se"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 5 }, "se"),
     ];
     const state = createTestBattle(
       [{ col: 3, row: 5, type: "lightBuilding" }],
@@ -252,8 +252,8 @@ describe("snapshot", () => {
 
   it("buildings/wrecks granularity restores collapse", () => {
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 5 }, "se"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "se"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 5 }, "se"),
     ];
     const state = createTestBattle([{ col: 3, row: 5, type: "lightBuilding" }], units, false);
     const buildingsSnap = saveBuildings(state.buildings);

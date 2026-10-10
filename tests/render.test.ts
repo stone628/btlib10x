@@ -32,8 +32,8 @@ describe("console renderer", () => {
     position: { col: number; row: number };
   }): ReturnType<typeof createBattle> {
     const units: UnitInit[] = [
-      buildUnitInit(primary.id, primary.model, 0, primary.position, "n"),
-      buildUnitInit("far", "GRF-1N", 1, farAway, "s"),
+      buildUnitInit(primary.id, primary.model, 1, primary.position, "n"),
+      buildUnitInit("far", "GRF-1N", 2, farAway, "s"),
     ];
     return createTestBattle([], units, false);
   }
@@ -47,8 +47,8 @@ describe("console renderer", () => {
 
   it("staggers even columns down half a hex", () => {
     const units: UnitInit[] = [
-      buildUnitInit("wvr", "WVR-6R", 0, { col: 3, row: 1 }, "n"),
-      buildUnitInit("grf", "GRF-1N", 1, { col: 4, row: 1 }, "s", 3),
+      buildUnitInit("wvr", "WVR-6R", 1, { col: 3, row: 1 }, "n"),
+      buildUnitInit("grf", "GRF-1N", 2, { col: 4, row: 1 }, "s", 3),
     ];
     const state = createTestBattle([], units, false, 4, 2);
     const lines = renderBattle(state).split("\n");
@@ -72,8 +72,8 @@ describe("console renderer", () => {
 
   it("clips long ids and centers short ones in the 6-char belly", () => {
     const units: UnitInit[] = [
-      buildUnitInit("wolverine", "WVR-6R", 0, { col: 3, row: 3 }, "n"),
-      buildUnitInit("ab", "GRF-1N", 1, { col: 4, row: 3 }, "s"),
+      buildUnitInit("wolverine", "WVR-6R", 1, { col: 3, row: 3 }, "n"),
+      buildUnitInit("ab", "GRF-1N", 2, { col: 4, row: 3 }, "s"),
     ];
     const state = createTestBattle([], units, false);
     const out = renderBattle(state);
@@ -84,8 +84,8 @@ describe("console renderer", () => {
 
   it("caps outer edges with _ and overline, sharing ==== below", () => {
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 4, row: 3 }, "n"),
-      buildUnitInit("enf", "ENF-4R", 0, { col: 4, row: 4 }, "s"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 4, row: 3 }, "n"),
+      buildUnitInit("enf", "ENF-4R", 1, { col: 4, row: 4 }, "s"),
     ];
     const state = createTestBattle([], units, false, 4, 4);
     const lines = renderBattle(state).split("\n");
@@ -119,8 +119,8 @@ describe("console renderer", () => {
   it("helper sizes board to cover unit and terrain extents (engine no longer derives)", () => {
     const terrain: TerrainHexDef[] = [{ col: 11, row: 9, type: "lightWoods" }];
     const units: UnitInit[] = [
-      buildUnitInit("enf", "ENF-4R", 0, { col: 3, row: 3 }, "n"),
-      buildUnitInit("wvr", "WVR-6R", 1, { col: 3, row: 4 }, "s"),
+      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 3 }, "n"),
+      buildUnitInit("wvr", "WVR-6R", 2, { col: 3, row: 4 }, "s"),
     ];
     const state = createTestBattle(terrain, units, false);
     const out = renderBattle(state);
@@ -144,12 +144,12 @@ describe("console renderer", () => {
 
   it("marks mech facing at the matching hexside vertex", () => {
     const units: UnitInit[] = [
-      buildUnitInit("a", "HBK-4G", 0, { col: 2, row: 2 }, "n"),
-      buildUnitInit("b", "HBK-4G", 0, { col: 2, row: 3 }, "s"),
-      buildUnitInit("c", "HBK-4G", 0, { col: 3, row: 2 }, "ne"),
-      buildUnitInit("d", "HBK-4G", 0, { col: 3, row: 3 }, "sw"),
-      buildUnitInit("e", "HBK-4G", 0, { col: 4, row: 2 }, "nw"),
-      buildUnitInit("f", "HBK-4G", 0, { col: 4, row: 3 }, "se"),
+      buildUnitInit("a", "HBK-4G", 1, { col: 2, row: 2 }, "n"),
+      buildUnitInit("b", "HBK-4G", 1, { col: 2, row: 3 }, "s"),
+      buildUnitInit("c", "HBK-4G", 1, { col: 3, row: 2 }, "ne"),
+      buildUnitInit("d", "HBK-4G", 1, { col: 3, row: 3 }, "sw"),
+      buildUnitInit("e", "HBK-4G", 1, { col: 4, row: 2 }, "nw"),
+      buildUnitInit("f", "HBK-4G", 1, { col: 4, row: 3 }, "se"),
     ];
     const state = createTestBattle([], units, false);
     const out = renderBattle(state);
@@ -186,8 +186,8 @@ describe("map renderer", () => {
 
   it("keeps unit ids in the center cell while terrain marks sit at the bottom", () => {
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 3, row: 4 }, "n"),
-      buildUnitInit("far", "GRF-1N", 1, { col: 11, row: 11 }, "s"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 3, row: 4 }, "n"),
+      buildUnitInit("far", "GRF-1N", 2, { col: 11, row: 11 }, "s"),
     ];
     const state = createTestBattle([], units, false);
     const out = renderBattle(state, undefined, { "4,1": "W" });
@@ -197,8 +197,8 @@ describe("map renderer", () => {
 
   it("draws battle terrain via the marks layer", () => {
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 3, row: 3 }, "n"),
-      buildUnitInit("far", "GRF-1N", 1, { col: 11, row: 11 }, "s"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 3, row: 3 }, "n"),
+      buildUnitInit("far", "GRF-1N", 2, { col: 11, row: 11 }, "s"),
     ];
     const state = createTestBattle([{ col: 1, row: 1, type: "lightWoods" }], units, false);
     const out = renderBattle(state, undefined, { "1,1": "w" });

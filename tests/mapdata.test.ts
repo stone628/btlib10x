@@ -127,8 +127,8 @@ describe("bundled maps", () => {
     expect(mapDef("beginner")!.terrain[0]).toEqual({ col: 2, row: 5, type: "heavyWoods" });
     const quickstart = mapDef("quickstart")!;
     const units: UnitInit[] = [
-      buildUnitInit("a", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
-      buildUnitInit("b", "GRF-1N", 1, { col: 10, row: 8 }, "nw", 3),
+      buildUnitInit("a", "HBK-4G", 1, { col: 2, row: 4 }, "se"),
+      buildUnitInit("b", "GRF-1N", 2, { col: 10, row: 8 }, "nw", 3),
     ];
     expect(() =>
       createTestBattle(quickstart.terrain, units, false, quickstart.width, quickstart.height),

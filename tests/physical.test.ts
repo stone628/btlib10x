@@ -18,7 +18,7 @@ import {
 import { bearingExact } from "../src/core/hex";
 import { classifyArcWithBoundary, defenderArcChoice } from "../src/rules/arcs";
 import { setSlotDestroyed } from "../src/rules/critical";
-import { buildUnitInit, resolveAllAttacks, validateAttacksImpl } from "../src/rules/game";
+import { buildUnitInit, resolveAllAttacks, validateAttacksImpl, type TeamId } from "../src/rules/game";
 import { hitLocationForArc, punchHitLocationForArc } from "../src/rules/hitlocation";
 import {
   computePhysicalToHit,
@@ -37,7 +37,7 @@ import {
 
 function makeUnitInit(
   id: string,
-  team: number,
+  team: TeamId,
   hex: HexCoord,
   facing: "n" | "ne" | "se" | "s" | "sw" | "nw" = "n",
 ): UnitInit {

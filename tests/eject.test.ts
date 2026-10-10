@@ -20,8 +20,8 @@ import { checkVictory, createTestBattle, scriptedRng } from "./helpers";
 
 function hbkVsEnf(): BattleState {
   const units: UnitInit[] = [
-    buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
-    buildUnitInit("enf", "ENF-4R", 1, { col: 5, row: 4 }, "nw"),
+    buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "se"),
+    buildUnitInit("enf", "ENF-4R", 2, { col: 5, row: 4 }, "nw"),
   ];
   return createTestBattle([], units, true);
 }
@@ -72,15 +72,15 @@ describe("eject", () => {
     const state = startMovementTurn(hbkVsEnf());
     ejectPilot(state, "hbk", scriptedRng(6, 6), []);
     expect(nextActor(state)).toBe("enf");
-    expect(checkVictory(state).winnerTeam).toBe(1);
+    expect(checkVictory(state).winnerTeam).toBe(2);
   });
 
   it("blocks walking into a wreck hex", () => {
     const wreck = { col: 3, row: 4 };
     const start = neighbor(neighbor(wreck, "s"), "s");
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, wreck, "n"),
-      buildUnitInit("enf", "ENF-4R", 1, start, "n"),
+      buildUnitInit("hbk", "HBK-4G", 1, wreck, "n"),
+      buildUnitInit("enf", "ENF-4R", 2, start, "n"),
     ];
     const state = startMovementTurn(createTestBattle([], units, true));
     ejectPilot(state, "hbk", scriptedRng(6, 6), []);
@@ -102,8 +102,8 @@ describe("eject", () => {
     const wreck = { col: 3, row: 4 };
     const start = neighbor(wreck, "n");
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, wreck, "n"),
-      buildUnitInit("enf", "ENF-4R", 1, start, "s"),
+      buildUnitInit("hbk", "HBK-4G", 1, wreck, "n"),
+      buildUnitInit("enf", "ENF-4R", 2, start, "s"),
     ];
     const state = startMovementTurn(createTestBattle([], units, true));
     ejectPilot(state, "hbk", scriptedRng(6, 6), []);
@@ -115,7 +115,7 @@ describe("eject", () => {
         jumping: 3,
         prone: false,
         grid: state,
-        team: 1,
+        team: 2,
         wreckAt: (hex) => wreckAt(state, hex) !== undefined,
         occupantTeam: () => undefined,
       }).some((l) => l.hex.col === wreck.col && l.hex.row === wreck.row),
@@ -140,8 +140,8 @@ describe("eject", () => {
   it("a level-1 wreck does not block LOS between standard ground 'Mechs (TO)", () => {
     const units: UnitInit[] = [
       // BZK-F3 is 35t (light) → eject produces a level-1 wreck per TO.
-      buildUnitInit("bzk", "BZK-F3", 0, { col: 3, row: 4 }, "n"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 5, row: 4 }, "nw"),
+      buildUnitInit("bzk", "BZK-F3", 1, { col: 3, row: 4 }, "n"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 5, row: 4 }, "nw"),
     ];
     const state = startMovementTurn(createTestBattle([], units, true));
     const from = { col: 2, row: 4 };
@@ -156,9 +156,9 @@ describe("eject", () => {
   it("grants +2 partial cover to a target adjacent to a wreck", () => {
     const wreck = { col: 3, row: 3 };
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, wreck, "n"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 4 }, "s"),
-      buildUnitInit("cda", "CDA-3MA", 0, { col: 2, row: 4 }, "se"),
+      buildUnitInit("hbk", "HBK-4G", 1, wreck, "n"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 4 }, "s"),
+      buildUnitInit("cda", "CDA-3MA", 1, { col: 2, row: 4 }, "se"),
     ];
     const state = startMovementTurn(createTestBattle([], units, true));
     ejectPilot(state, "hbk", scriptedRng(6, 6), []);
@@ -177,16 +177,16 @@ describe("eject", () => {
   it("light 'Mech eject leaves a level-1 wreck regardless of posture (TO)", () => {
     // BZK-F3 is 35t (light). Eject from standing or prone → L1 either way.
     const units: UnitInit[] = [
-      buildUnitInit("bzk", "BZK-F3", 0, { col: 2, row: 4 }, "n"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 5, row: 4 }, "nw"),
+      buildUnitInit("bzk", "BZK-F3", 1, { col: 2, row: 4 }, "n"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 5, row: 4 }, "nw"),
     ];
     const standing = startMovementTurn(createTestBattle([], units, true));
     ejectPilot(standing, "bzk", scriptedRng(6, 6), []);
     expect(standing.wrecks["2,4"]).toEqual({ unitId: "bzk", level: 1 });
 
     const proneUnits: UnitInit[] = [
-      buildUnitInit("bzk", "BZK-F3", 0, { col: 2, row: 4 }, "n"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 5, row: 4 }, "nw"),
+      buildUnitInit("bzk", "BZK-F3", 1, { col: 2, row: 4 }, "n"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 5, row: 4 }, "nw"),
     ];
     const prone = startMovementTurn(createTestBattle([], proneUnits, true));
     requireUnit(prone, "bzk").prone = true;
@@ -198,9 +198,9 @@ describe("eject", () => {
     // Light wreck (BZK) at (3,3); ENF adjacent at (3,4) standing; attacker
     // CDA at (2,4) on the same level as the target — below the L1 wreck top.
     const units: UnitInit[] = [
-      buildUnitInit("bzk", "BZK-F3", 0, { col: 3, row: 3 }, "n"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 4 }, "s"),
-      buildUnitInit("cda", "CDA-3MA", 0, { col: 2, row: 4 }, "se"),
+      buildUnitInit("bzk", "BZK-F3", 1, { col: 3, row: 3 }, "n"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 4 }, "s"),
+      buildUnitInit("cda", "CDA-3MA", 1, { col: 2, row: 4 }, "se"),
     ];
     const state = startMovementTurn(createTestBattle([], units, true));
     ejectPilot(state, "bzk", scriptedRng(6, 6), []);
@@ -210,9 +210,9 @@ describe("eject", () => {
 
   it("L1 wreck provides no cover to a prone target (TO: standing ground only)", () => {
     const units: UnitInit[] = [
-      buildUnitInit("bzk", "BZK-F3", 0, { col: 3, row: 3 }, "n"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 4 }, "s"),
-      buildUnitInit("cda", "CDA-3MA", 0, { col: 2, row: 4 }, "se"),
+      buildUnitInit("bzk", "BZK-F3", 1, { col: 3, row: 3 }, "n"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 4 }, "s"),
+      buildUnitInit("cda", "CDA-3MA", 1, { col: 2, row: 4 }, "se"),
     ];
     const state = startMovementTurn(createTestBattle([], units, true));
     ejectPilot(state, "bzk", scriptedRng(6, 6), []);
@@ -226,9 +226,9 @@ describe("eject", () => {
     // 2 (equal to wreck top, so attacker is "at" the wreck top → attacker is
     // NOT below). Target is elevated vs attacker. → TO +1 branch fires.
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 3, row: 3 }, "n"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 4 }, "s"),
-      buildUnitInit("cda", "CDA-3MA", 0, { col: 2, row: 3 }, "se"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 3, row: 3 }, "n"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 4 }, "s"),
+      buildUnitInit("cda", "CDA-3MA", 1, { col: 2, row: 3 }, "se"),
     ];
     const terrain: TerrainHexDef[] = [
       { col: 3, row: 4, type: "clear", level: 3 },
@@ -245,9 +245,9 @@ describe("eject", () => {
     // still below the wreck top (cell level 0 < 0 + 2 = 2) → TW default +2
     // path wins over the TO elevated-target branch.
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 3, row: 3 }, "n"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 4 }, "s"),
-      buildUnitInit("cda", "CDA-3MA", 0, { col: 2, row: 4 }, "se"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 3, row: 3 }, "n"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 4 }, "s"),
+      buildUnitInit("cda", "CDA-3MA", 1, { col: 2, row: 4 }, "se"),
     ];
     const terrain: TerrainHexDef[] = [{ col: 3, row: 4, type: "clear", level: 2 }];
     const state = startMovementTurn(createTestBattle(terrain, units, true));
@@ -299,8 +299,8 @@ function zeroHead(state: BattleState, id: string): void {
 
 function sweepHeadLoss(preHits: number, extra: Partial<UnitInit> = {}) {
   const units: UnitInit[] = [
-    { ...buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"), ...extra },
-    buildUnitInit("enf", "ENF-4R", 1, { col: 5, row: 4 }, "nw"),
+    { ...buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "se"), ...extra },
+    buildUnitInit("enf", "ENF-4R", 2, { col: 5, row: 4 }, "nw"),
   ];
   const state = createTestBattle([], units, true);
   startMovementTurn(state);

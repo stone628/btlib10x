@@ -717,7 +717,7 @@ Constants:
 Key types:
 
 ```ts
-interface UnitInit { id; model; team; gunnery: UnitSkillRange; piloting: UnitSkillRange; pilotHitMax?: number; position: HexCoord; facing: Facing; policy: UnitPolicy; damage?: UnitInitDamage }  // pilotHitMax integer >= 1 (default 6); skills 0..7, gunnery/piloting within 2 of each other (TW p.273)
+interface UnitInit { id; model; team; gunnery: UnitSkillRange; piloting: UnitSkillRange; pilotHitMax?: number; position: HexCoord; facing: Facing; policy: UnitPolicy; damage?: UnitInitDamage }  // team is 1 or 2 (both required); pilotHitMax integer >= 1 (default 6); skills 0..7, gunnery/piloting within 2 of each other (TW p.273)
 
 // Starting damage (optional on UnitInit; absent = pristine). Numbers are damage TAKEN vs. the model
 // default; slot and weapon numbers are 1-based; jams are transient and not part of it.

@@ -35,8 +35,8 @@ function hbkEnf(critsDisabled = true) {
   return createTestBattle(
     [],
     [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 2 }, "s"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 3 }, "n"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 2 }, "s"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 3 }, "n"),
     ],
     critsDisabled,
   );
@@ -47,7 +47,7 @@ function toMovement(
   rng: ReturnType<typeof scriptedRng> = scriptedRng(4, 4, 2, 2),
 ): void {
   // rollInitiativePhase lands the battle straight in the movement phase.
-  // Default rng makes team 0 win: enf is the loser and acts first. Tests
+  // Default rng makes team 1 win: enf is the loser and acts first. Tests
   // that need hbk to act first pass an explicit rng.
   rollInitiativePhase(state, rng, []);
 }
@@ -106,8 +106,8 @@ describe("piloting skill", () => {
     const custom = createTestBattle(
       [],
       [
-        buildUnitInit("a", "HBK-4G", 0, { col: 1, row: 1 }, "n", 4, 2),
-        buildUnitInit("b", "ENF-4R", 1, { col: 1, row: 2 }, "s"),
+        buildUnitInit("a", "HBK-4G", 1, { col: 1, row: 1 }, "n", 4, 2),
+        buildUnitInit("b", "ENF-4R", 2, { col: 1, row: 2 }, "s"),
       ],
       true,
     );
@@ -375,8 +375,8 @@ describe("run-damaged PSR", () => {
     const state = createTestBattle(
       [],
       [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 8, row: 8 }, "s"),
-        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 4 }, "n"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 8, row: 8 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 4 }, "n"),
       ],
       true,
     );
@@ -410,8 +410,8 @@ describe("run-damaged PSR", () => {
     const state = createTestBattle(
       [],
       [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 8, row: 8 }, "s"),
-        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 4 }, "n"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 8, row: 8 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 4 }, "n"),
       ],
       true,
     );
@@ -435,8 +435,8 @@ describe("jump-damaged PSR", () => {
     const state = createTestBattle(
       [],
       [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 8, row: 8 }, "s"),
-        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 4 }, "n"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 8, row: 8 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 4 }, "n"),
       ],
       true,
     );
@@ -462,8 +462,8 @@ describe("jump-damaged PSR", () => {
     const state = createTestBattle(
       [],
       [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 8, row: 8 }, "s"),
-        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 4 }, "n"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 8, row: 8 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 4 }, "n"),
       ],
       true,
     );
@@ -487,8 +487,8 @@ describe("building crash auto-fall", () => {
     const state = createTestBattle(
       [{ col: 2, row: 3, type: "heavyBuilding" }],
       [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 8, row: 8 }, "s"),
-        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 4 }, "n"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 8, row: 8 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 4 }, "n"),
       ],
       true,
     );
@@ -512,8 +512,8 @@ describe("building crash auto-fall", () => {
     const state = createTestBattle(
       [{ col: 2, row: 3, type: "heavyBuilding" }],
       [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 8, row: 8 }, "s"),
-        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 4 }, "n"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 8, row: 8 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 4 }, "n"),
       ],
       true,
     );
@@ -537,8 +537,8 @@ describe("building crash auto-fall", () => {
     const state = createTestBattle(
       [{ col: 2, row: 3, type: "heavyBuilding" }],
       [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 8, row: 8 }, "s"),
-        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 4 }, "n"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 8, row: 8 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 4 }, "n"),
       ],
       true,
     );
@@ -650,8 +650,8 @@ describe("going prone voluntarily", () => {
     const state = createTestBattle(
       [{ col: 2, row: 3, type: "water2" }],
       [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 2 }, "s"),
-        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 3 }, "n"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 2 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 3 }, "n"),
       ],
       true,
     );
@@ -997,8 +997,8 @@ describe("movement terrain PSRs", () => {
     const state = createTestBattle(
       [{ col: 2, row: 3, type: "rubble" }],
       [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 2 }, "s"),
-        buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 3 }, "n"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 2 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 3 }, "n"),
       ],
       true,
     );
@@ -1016,8 +1016,8 @@ describe("movement terrain PSRs", () => {
     const state = createTestBattle(
       [{ col: 2, row: 3, type: "water1" }],
       [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 2 }, "s"),
-        buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 3 }, "n"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 2 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 3 }, "n"),
       ],
       true,
     );
@@ -1038,8 +1038,8 @@ describe("movement terrain PSRs", () => {
         { col: 2, row: 4, type: "clear" },
       ],
       [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 3 }, "s"),
-        buildUnitInit("enf", "ENF-4R", 1, { col: 8, row: 8 }, "n"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 3 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 8, row: 8 }, "n"),
       ],
       true,
     );
@@ -1063,8 +1063,8 @@ describe("movement terrain PSRs", () => {
     const state = createTestBattle(
       [{ col: 2, row: 3, type: "lightBuilding" }],
       [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 2 }, "s"),
-        buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 3 }, "n"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 2 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 3 }, "n"),
       ],
       true,
     );
@@ -1088,8 +1088,8 @@ describe("movement terrain PSRs", () => {
         { col: 2, row: 3, type: "rubble", level: 0 },
       ],
       [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 2 }, "s"),
-        buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 3 }, "n"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 2 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 3 }, "n"),
       ],
       true,
     );
@@ -1128,8 +1128,8 @@ describe("movement terrain PSRs", () => {
     const state = createTestBattle(
       [{ col: 2, row: 3, type: "rubble", level: 2 }],
       [
-        buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 2 }, "s"),
-        buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 3 }, "n"),
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 2 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 3 }, "n"),
       ],
       true,
     );
@@ -1161,8 +1161,8 @@ describe("movement terrain PSRs", () => {
         { col: 2, row: 3, type: "water1", level: 0 },
       ],
       [
-        buildUnitInit("enf", "ENF-4R", 0, { col: 2, row: 2 }, "s"),
-        buildUnitInit("hbk", "HBK-4G", 1, { col: 1, row: 1 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 2 }, "s"),
+        buildUnitInit("hbk", "HBK-4G", 2, { col: 1, row: 1 }, "s"),
       ],
       true,
     );

@@ -8,7 +8,7 @@ const stage = (s: "begin" | "weaponDone" | "physicalDone" | "end"): GameEvent =>
   stage: s,
   turn: 3,
 });
-const initiative: GameEvent = { kind: "initiative", rolls: { 0: 8, 1: 4 }, winnerTeam: 0 };
+const initiative: GameEvent = { kind: "initiative", rolls: { 1: 8, 2: 4 }, winnerTeam: 1 };
 
 function render(events: GameEvent[]): string[] {
   return handleSessionGameEvents({} as Session, events).flatMap((c) =>

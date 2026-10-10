@@ -1320,8 +1320,8 @@ describe("ammo-explosion casualty: catastrophic mark", () => {
 describe("crit damage merge: ammo explosion survives resolveAllAttacks", () => {
   it("replays explosion IS damage + transfer into the phase accumulator", () => {
     const units: UnitInit[] = [
-      buildUnitInit("atk", "HBK-4G", 0, { col: 3, row: 4 }, "n"),
-      buildUnitInit("tgt", "HBK-4G", 1, { col: 3, row: 2 }, "s"),
+      buildUnitInit("atk", "HBK-4G", 1, { col: 3, row: 4 }, "n"),
+      buildUnitInit("tgt", "HBK-4G", 2, { col: 3, row: 2 }, "s"),
     ];
     const state = createTestBattle([], units, false);
     const tgt = requireUnit(state, "tgt");
@@ -1362,8 +1362,8 @@ describe("crit damage merge: ammo explosion survives resolveAllAttacks", () => {
     // 90t Clan target survives its own 20-pt blast (arm IS 15, CASE vents
     // the excess), so the phase pilot-hit sweep still sees a live unit.
     const units: UnitInit[] = [
-      buildUnitInit("atk", "HBK-4G", 0, { col: 3, row: 4 }, "n"),
-      buildUnitInit("tgt", "MC-MKII-2", 1, { col: 3, row: 2 }, "s"),
+      buildUnitInit("atk", "HBK-4G", 1, { col: 3, row: 4 }, "n"),
+      buildUnitInit("tgt", "MC-MKII-2", 2, { col: 3, row: 2 }, "s"),
     ];
     const state = createTestBattle([], units, false);
     const tgt = requireUnit(state, "tgt");

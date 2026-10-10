@@ -126,8 +126,8 @@ describe("arm actuator weapon modifiers (TW p.125)", () => {
     const state = createTestBattle(
       [],
       [
-        buildUnitInit("a", "TBR-Prime", 0, { col: 1, row: 1 }, "s"),
-        buildUnitInit("b", "HBK-4G", 1, { col: 1, row: 2 }, "n"),
+        buildUnitInit("a", "TBR-Prime", 1, { col: 1, row: 1 }, "s"),
+        buildUnitInit("b", "HBK-4G", 2, { col: 1, row: 2 }, "n"),
       ],
       true,
     );

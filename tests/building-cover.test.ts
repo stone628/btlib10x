@@ -16,8 +16,8 @@ function setup() {
   return createTestBattle(
     [{ col: 3, row: 3, type: "lightBuilding" }],
     [
-      buildUnitInit("a", "HBK-4G", 0, { col: 3, row: 2 }, "s"),
-      buildUnitInit("t", "ENF-4R", 1, { col: 3, row: 4 }, "n"),
+      buildUnitInit("a", "HBK-4G", 1, { col: 3, row: 2 }, "s"),
+      buildUnitInit("t", "ENF-4R", 2, { col: 3, row: 4 }, "n"),
     ],
     true,
   );

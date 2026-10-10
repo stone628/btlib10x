@@ -32,16 +32,16 @@ import { createTestBattle, scriptedRng } from "./helpers";
 
 function hbkVsEnf(): BattleState {
   const units: UnitInit[] = [
-    buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
-    buildUnitInit("enf", "ENF-4R", 1, { col: 4, row: 5 }, "nw"),
+    buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "se"),
+    buildUnitInit("enf", "ENF-4R", 2, { col: 4, row: 5 }, "nw"),
   ];
   return createTestBattle([], units, true);
 }
 
 function bzkVsEnf(): BattleState {
   const units: UnitInit[] = [
-    buildUnitInit("bzk", "BZK-F3", 0, { col: 2, row: 4 }, "se"),
-    buildUnitInit("enf", "ENF-4R", 1, { col: 4, row: 5 }, "nw"),
+    buildUnitInit("bzk", "BZK-F3", 1, { col: 2, row: 4 }, "se"),
+    buildUnitInit("enf", "ENF-4R", 2, { col: 4, row: 5 }, "nw"),
   ];
   return createTestBattle([], units, true);
 }
@@ -311,8 +311,8 @@ describe("largestAmmoBin", () => {
     const state = createTestBattle(
       [],
       [
-        buildUnitInit("wvr", "WVR-6R", 0, { col: 2, row: 4 }, "n"),
-        buildUnitInit("dummy", "ENF-4R", 1, { col: 6, row: 6 }, "nw"),
+        buildUnitInit("wvr", "WVR-6R", 1, { col: 2, row: 4 }, "n"),
+        buildUnitInit("dummy", "ENF-4R", 2, { col: 6, row: 6 }, "nw"),
       ],
       true,
     );
@@ -410,8 +410,8 @@ describe("game integration: weapon heat", () => {
     // HER-5SA Ultra AC/5 (weaponIndex 3, 1-based, heat 1/shot): raw to-hit 2 jams and
     // misses TN 6, but both fired shots still cost ammo (declared) and heat.
     const units: UnitInit[] = [
-      buildUnitInit("her", "HER-5SA", 0, { col: 2, row: 4 }, "ne"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 3, row: 4 }, "nw"),
+      buildUnitInit("her", "HER-5SA", 1, { col: 2, row: 4 }, "ne"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 4 }, "nw"),
     ];
     const state = createTestBattle([], units, true);
     startAttackTurn(state);
@@ -760,8 +760,8 @@ describe("game integration: target movement modifier from hexes moved", () => {
 describe("game integration: partial cover in to-hit", () => {
   function makeBattleWithTargetTerrain(type: TerrainType): BattleState {
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"),
-      buildUnitInit("enf", "ENF-4R", 1, { col: 5, row: 4 }, "nw"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "se"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 5, row: 4 }, "nw"),
     ];
     return createTestBattle([{ col: 5, row: 4, type }], units, true);
   }

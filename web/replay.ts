@@ -488,7 +488,7 @@ function canExpress(s: Session): boolean {
   const roster = s.setup.roster;
   if (roster.length > MAX_UNITS) return false;
   for (const u of roster) {
-    if (!Number.isInteger(u.team) || u.team < 0 || u.team > 9) return false;
+    if (u.team !== 1 && u.team !== 2) return false;
     if (/[:;,\s]/.test(u.id)) return false;
     if (u.pilotHitMax > MAX_UNITS - 1 || (u.damage?.pilotHits ?? 0) > MAX_UNITS - 1) return false;
   }
@@ -668,8 +668,8 @@ export function decodeUnitLine(line: string): UnitInit {
   }
   const team = Number(head[0]);
   const id = head.slice(1);
-  if (!Number.isInteger(team) || id === "")
-    throw new Error("unit record needs a team digit and an id");
+  if ((team !== 1 && team !== 2) || id === "")
+    throw new Error("unit record needs a team digit (1 or 2) and an id");
   const m = /^(\d\d)(\d\d)([nmdsab])(\d)(\d)([0-9a-z])([0-9a-z])?$/.exec(place);
   if (m === null) throw new Error(`bad unit place ${JSON.stringify(place)}`);
   const [, col, row, facing, gunnery, piloting, hitMax, hits] = m;

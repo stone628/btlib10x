@@ -270,7 +270,7 @@ export const kr: Catalog = {
   "err.unknownModel": "알 수 없는 메크 모델: {model} ('info mech' 참조)",
   "err.unknownWeapon": "알 수 없는 무기: {name}; 사용 가능: {list}",
   "err.duplicateId": "유닛 id 중복: {id}",
-  "err.badTeam": "team은 음수가 아닌 정수여야 합니다",
+  "err.badTeam": "team은 1 또는 2여야 합니다",
   "err.badGunnery": "gunnery는 0..8 범위의 정수여야 합니다",
   "err.badPiloting": "piloting은 0..8 범위의 정수여야 합니다",
   "err.badPilotHitMax": "pilotHitMax는 1 이상의 정수여야 합니다",
@@ -291,7 +291,7 @@ export const kr: Catalog = {
   "err.alreadyStarted": "전투가 이미 시작되었습니다",
   "err.noMap": "전투를 시작하기 전에 맵을 불러오세요",
   "err.needTwoUnits": "전투에는 최소 두 유닛이 필요합니다",
-  "err.needTwoTeams": "유닛은 최소 두 팀에 걸쳐 있어야 합니다",
+  "err.needTwoTeams": "유닛은 팀 1과 2에 걸쳐 있어야 합니다",
   "err.badModeWord": "알 수 없는 이동 모드 — 유효 모드: {modes}",
   "err.standupRequiresProne":
     "{id}는 엎드린 상태가 아님 — mode standup은 엎드린 유닛 필요. 유효 모드: {modes}",

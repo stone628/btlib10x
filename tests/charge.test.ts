@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 import type { Facing, HexCoord } from "../src/core/types";
-import type { BattleState, GameEvent, TerrainHexDef, UnitInit } from "../src/rules/game";
+import type { BattleState, GameEvent, TeamId, TerrainHexDef, UnitInit } from "../src/rules/game";
 import {
   buildUnitInit,
   declareAttacks,
@@ -24,7 +24,7 @@ import { createTestBattle, scriptedRng } from "./helpers";
 const unit = (
   id: string,
   model: string,
-  team: number,
+  team: TeamId,
   position: HexCoord,
   facing: Facing,
 ): UnitInit => buildUnitInit(id, model, team, position, facing);
@@ -33,7 +33,7 @@ const unit = (
 function movementState(units: UnitInit[], terrain: TerrainHexDef[] = []): BattleState {
   const state = createTestBattle(terrain, units, true, 10, 10);
   state.phase = "movement";
-  state.initiativeWinnerTeam = 0;
+  state.initiativeWinnerTeam = 1;
   state.actorQueue = units.map((u) => u.id);
   state.actedThisPhase = [];
   return state;
@@ -50,8 +50,8 @@ const pad = (...head: number[]) => scriptedRng(...head, ...Array<number>(80).fil
 /** hbk (5,2)/s walks into enf (5,5)/n: charge from (5,4) after 2 hexes. */
 function chargeBattle(): BattleState {
   return movementState([
-    unit("a", "HBK-4G", 0, { col: 5, row: 2 }, "s"),
-    unit("t", "ENF-4R", 1, { col: 5, row: 5 }, "n"),
+    unit("a", "HBK-4G", 1, { col: 5, row: 2 }, "s"),
+    unit("t", "ENF-4R", 2, { col: 5, row: 5 }, "n"),
   ]);
 }
 const chargePath = [
@@ -64,8 +64,8 @@ const chargePath = [
 function dfaBattle(terrain: TerrainHexDef[] = []): BattleState {
   return movementState(
     [
-      unit("a", "ENF-4R", 0, { col: 5, row: 2 }, "s"),
-      unit("t", "HBK-4G", 1, { col: 5, row: 4 }, "n"),
+      unit("a", "ENF-4R", 1, { col: 5, row: 2 }, "s"),
+      unit("t", "HBK-4G", 2, { col: 5, row: 4 }, "n"),
     ],
     terrain,
   );
@@ -113,15 +113,15 @@ describe("charge declaration (TW p.148)", () => {
 
   it("must be made straight ahead and within the movement budget", () => {
     const back = movementState([
-      unit("a", "HBK-4G", 0, { col: 5, row: 3 }, "n"),
-      unit("t", "ENF-4R", 1, { col: 5, row: 4 }, "n"),
+      unit("a", "HBK-4G", 1, { col: 5, row: 3 }, "n"),
+      unit("t", "ENF-4R", 2, { col: 5, row: 4 }, "n"),
     ]);
     expect(() =>
       executeMove(back, "a", "walk", [{ kind: "enter", to: { col: 5, row: 4 } }], []),
     ).toThrow(/straight ahead/);
     const far = movementState([
-      unit("a", "HBK-4G", 0, { col: 5, row: 1 }, "s"),
-      unit("t", "ENF-4R", 1, { col: 5, row: 7 }, "n"),
+      unit("a", "HBK-4G", 1, { col: 5, row: 1 }, "s"),
+      unit("t", "ENF-4R", 2, { col: 5, row: 7 }, "n"),
     ]);
     expect(() =>
       executeMove(
@@ -140,16 +140,16 @@ describe("charge declaration (TW p.148)", () => {
     expect(() => executeMove(prone, "a", "walk", chargePath, [])).toThrow(/prone/);
 
     const friend = movementState([
-      unit("a", "HBK-4G", 0, { col: 5, row: 2 }, "s"),
-      unit("f", "ENF-4R", 0, { col: 5, row: 5 }, "n"),
-      unit("t", "ENF-4R", 1, { col: 8, row: 8 }, "n"),
+      unit("a", "HBK-4G", 1, { col: 5, row: 2 }, "s"),
+      unit("f", "ENF-4R", 1, { col: 5, row: 5 }, "n"),
+      unit("t", "ENF-4R", 2, { col: 8, row: 8 }, "n"),
     ]);
     expect(() => executeMove(friend, "a", "walk", chargePath, [])).toThrow(/occupied by f/);
 
     const twice = movementState([
-      unit("a", "HBK-4G", 0, { col: 5, row: 2 }, "s"),
-      unit("b", "HBK-4G", 0, { col: 4, row: 4 }, "ne"),
-      unit("t", "ENF-4R", 1, { col: 5, row: 5 }, "n"),
+      unit("a", "HBK-4G", 1, { col: 5, row: 2 }, "s"),
+      unit("b", "HBK-4G", 1, { col: 4, row: 4 }, "ne"),
+      unit("t", "ENF-4R", 2, { col: 5, row: 5 }, "n"),
     ]);
     executeMove(twice, "a", "walk", chargePath, []);
     expect(() =>
@@ -159,9 +159,9 @@ describe("charge declaration (TW p.148)", () => {
 
   it("a unit already charged cannot declare a charge of its own, nor be charged twice", () => {
     const state = movementState([
-      unit("a", "HBK-4G", 0, { col: 5, row: 2 }, "s"),
-      unit("t", "HBK-4G", 1, { col: 5, row: 5 }, "n"),
-      unit("u", "HBK-4G", 1, { col: 5, row: 7 }, "n"),
+      unit("a", "HBK-4G", 1, { col: 5, row: 2 }, "s"),
+      unit("t", "HBK-4G", 2, { col: 5, row: 5 }, "n"),
+      unit("u", "HBK-4G", 2, { col: 5, row: 7 }, "n"),
     ]);
     executeMove(state, "a", "walk", chargePath, []);
     state.actorQueue = ["t", "u"];
@@ -173,8 +173,8 @@ describe("charge declaration (TW p.148)", () => {
 
   it("charge and DFA are not declarable in the attack phase", () => {
     const state = movementState([
-      unit("a", "HBK-4G", 0, { col: 5, row: 4 }, "s"),
-      unit("t", "ENF-4R", 1, { col: 5, row: 5 }, "n"),
+      unit("a", "HBK-4G", 1, { col: 5, row: 4 }, "s"),
+      unit("t", "ENF-4R", 2, { col: 5, row: 5 }, "n"),
     ]);
     toAttack(state);
     state.actorQueue = ["a", "t"];
@@ -185,9 +185,9 @@ describe("charge declaration (TW p.148)", () => {
 
   it("reserves the target hex: nobody else may end movement there", () => {
     const state = movementState([
-      unit("a", "HBK-4G", 0, { col: 5, row: 2 }, "s"),
-      unit("b", "HBK-4G", 0, { col: 6, row: 5 }, "nw"),
-      unit("t", "ENF-4R", 1, { col: 5, row: 5 }, "n"),
+      unit("a", "HBK-4G", 1, { col: 5, row: 2 }, "s"),
+      unit("b", "HBK-4G", 1, { col: 6, row: 5 }, "nw"),
+      unit("t", "ENF-4R", 2, { col: 5, row: 5 }, "n"),
     ]);
     executeMove(state, "a", "walk", chargePath, []);
     // The target leaves; the hex stays reserved for the charger.
@@ -212,8 +212,8 @@ describe("DFA declaration (TW p.149)", () => {
 
   it("an adjacent target is attacked from the start hex", () => {
     const state = movementState([
-      unit("a", "ENF-4R", 0, { col: 5, row: 2 }, "n"),
-      unit("t", "HBK-4G", 1, { col: 5, row: 3 }, "n"),
+      unit("a", "ENF-4R", 1, { col: 5, row: 2 }, "n"),
+      unit("t", "HBK-4G", 2, { col: 5, row: 3 }, "n"),
     ]);
     executeMove(state, "a", "jump", [{ kind: "enter", to: { col: 5, row: 3 } }], []);
     const a = requireUnit(state, "a");
@@ -269,8 +269,8 @@ describe("charge resolution (TW p.148)", () => {
 
   it("counts the target's hex as one more hex moved, even from an adjacent start", () => {
     const state = movementState([
-      unit("a", "HBK-4G", 0, { col: 5, row: 4 }, "s"),
-      unit("t", "ENF-4R", 1, { col: 5, row: 5 }, "n"),
+      unit("a", "HBK-4G", 1, { col: 5, row: 4 }, "s"),
+      unit("t", "ENF-4R", 2, { col: 5, row: 5 }, "n"),
     ]);
     executeMove(state, "a", "walk", [{ kind: "enter", to: { col: 5, row: 5 } }], []);
     expect(requireUnit(state, "a").hexesMovedThisTurn).toBe(0);
@@ -392,8 +392,8 @@ describe("DFA resolution (TW p.150)", () => {
     const view = createTestBattle(
       [],
       [
-        unit("a", "ENF-4R", 0, { col: 5, row: 3 }, "s"),
-        unit("t", "HBK-4G", 1, { col: 5, row: 4 }, "n"),
+        unit("a", "ENF-4R", 1, { col: 5, row: 3 }, "s"),
+        unit("t", "HBK-4G", 2, { col: 5, row: 4 }, "n"),
       ],
       true,
     );
@@ -466,8 +466,8 @@ describe("charge landings in reachability", () => {
       jumping: 0,
       prone: false,
       grid: state,
-      team: 0,
-      occupantTeam: (hex) => (hex.col === 5 && hex.row === 5 ? 1 : undefined),
+      team: 1,
+      occupantTeam: (hex) => (hex.col === 5 && hex.row === 5 ? 2 : undefined),
       meleeOk: (stop, targetHex, kind) =>
         meleeDeclarationProblem(state, "a", stop, "t", kind, 0) === null && targetHex.col === 5,
     });
@@ -487,8 +487,8 @@ describe("charge landings in reachability", () => {
       jumping: 0,
       prone: false,
       grid: state,
-      team: 0,
-      occupantTeam: (hex) => (hex.col === 5 && hex.row === 5 ? 1 : undefined),
+      team: 1,
+      occupantTeam: (hex) => (hex.col === 5 && hex.row === 5 ? 2 : undefined),
     });
     expect(plain.some((l) => l.melee !== undefined)).toBe(false);
   });
@@ -503,8 +503,8 @@ describe("charge landings in reachability", () => {
       jumping: 4,
       prone: false,
       grid: state,
-      team: 0,
-      occupantTeam: (hex) => (hex.col === 5 && hex.row === 4 ? 1 : undefined),
+      team: 1,
+      occupantTeam: (hex) => (hex.col === 5 && hex.row === 4 ? 2 : undefined),
       meleeOk: (stop, _targetHex, kind) =>
         meleeDeclarationProblem(state, "a", stop, "t", kind, 4) === null,
     });

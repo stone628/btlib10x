@@ -285,7 +285,7 @@ describe("set <id> autoEject", () => {
   });
 
   it("round-trips through replay unit records", () => {
-    const base = buildUnitInit("me", "HBK-4G", 0, { col: 9, row: 9 }, "n");
+    const base = buildUnitInit("me", "HBK-4G", 1, { col: 9, row: 9 }, "n");
     const off = { ...base, policy: { ammoPolicy: "exposed" as const, autoEject: false } };
     const line = encodeUnitLine(off);
     expect(line.endsWith(":ex")).toBe(true);

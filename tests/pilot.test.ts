@@ -14,8 +14,8 @@ import { createTestBattle, scriptedRng } from "./helpers";
 
 function battle(hbkExtra: Partial<UnitInit> = {}): BattleState {
   const units: UnitInit[] = [
-    { ...buildUnitInit("hbk", "HBK-4G", 0, { col: 2, row: 4 }, "se"), ...hbkExtra },
-    buildUnitInit("enf", "ENF-4R", 1, { col: 5, row: 4 }, "nw"),
+    { ...buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "se"), ...hbkExtra },
+    buildUnitInit("enf", "ENF-4R", 2, { col: 5, row: 4 }, "nw"),
   ];
   const state = createTestBattle([], units, true);
   rollInitiativePhase(state, scriptedRng(3, 3, 3, 1), []);
@@ -64,8 +64,8 @@ describe("pilotHitMax", () => {
     for (const bad of [0, -1, 2.5]) {
       expect(() =>
         createBattle({ name: "t", width: 8, height: 8, cells: [] } as never, [
-          buildUnitInit("a", "HBK-4G", 0, { col: 1, row: 1 }, "n", 4, 5, bad),
-          buildUnitInit("b", "ENF-4R", 1, { col: 3, row: 3 }, "n"),
+          buildUnitInit("a", "HBK-4G", 1, { col: 1, row: 1 }, "n", 4, 5, bad),
+          buildUnitInit("b", "ENF-4R", 2, { col: 3, row: 3 }, "n"),
         ]),
       ).toThrow(/pilotHitMax/);
     }

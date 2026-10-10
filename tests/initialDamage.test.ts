@@ -8,10 +8,10 @@ import { createTestBattle } from "./helpers";
 
 function unitWith(damage?: UnitInitDamage, model = "HBK-4G", pilotHitMax = 6): UnitState {
   const a: UnitInit = {
-    ...buildUnitInit("a", model, 0, { col: 1, row: 1 }, "n", 4, 5, pilotHitMax),
+    ...buildUnitInit("a", model, 1, { col: 1, row: 1 }, "n", 4, 5, pilotHitMax),
     ...(damage === undefined ? {} : { damage }),
   };
-  const b = buildUnitInit("b", "ENF-4R", 1, { col: 3, row: 1 });
+  const b = buildUnitInit("b", "ENF-4R", 2, { col: 3, row: 1 });
   return createTestBattle([], [a, b], true).units.a!;
 }
 

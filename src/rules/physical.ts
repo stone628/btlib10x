@@ -20,7 +20,7 @@ import { isArm } from "../core/types";
 import { mechDefFor } from "../data/index";
 import type { ResolvedMechDef } from "../data/mech.schema";
 import { weaponDefFor } from "../data/weapon.schema";
-import { absentArmActuators, countArmActuators } from "./actuators";
+import { absentArmActuators, clubHandsFunctional, countArmActuators } from "./actuators";
 import {
   type Arc,
   classifyArcWithBoundary,
@@ -993,6 +993,9 @@ function validateClub(
     if (absentArmActuators(def, arm).hand > 0) {
       return { ok: false, reason: `Cannot club: ${arm} has no hand actuator` };
     }
+  }
+  if (!clubHandsFunctional(def, damage, destroyed)) {
+    return { ok: false, reason: "Cannot club: an arm is lost" };
   }
 
   // Compute attack direction

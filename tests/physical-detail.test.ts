@@ -6,25 +6,25 @@
  */
 import { describe, expect, it } from "vitest";
 import type { HexCoord } from "../src/core/types";
-import type { BattleState, GameEvent, UnitInit } from "../src/rules/game";
+import type { BattleState, GameEvent, TeamId, UnitInit } from "../src/rules/game";
 import { buildUnitInit, requireUnit, resolveAllAttacks } from "../src/rules/game";
 import { physicalResolutionLines } from "../web/session.attack";
 import { createTestBattle, scriptedRng } from "./helpers";
 
 function unit(
   id: string,
-  team: number,
+  team: TeamId,
   pos: HexCoord,
   facing: "n" | "ne" | "se" | "s" | "sw" | "nw",
 ): UnitInit {
   return buildUnitInit(id, "HBK-4G", team, pos, facing);
 }
 
-/** hbk (team 0) at (2,2)/s facing enf (team 1) at (2,3)/n, crits enabled. */
+/** hbk (team 1) at (2,2)/s facing enf (team 2) at (2,3)/n, crits enabled. */
 function faceToFace(): BattleState {
   const state = createTestBattle(
     [],
-    [unit("hbk", 0, { col: 2, row: 2 }, "s"), unit("enf", 1, { col: 2, row: 3 }, "n")],
+    [unit("hbk", 1, { col: 2, row: 2 }, "s"), unit("enf", 2, { col: 2, row: 3 }, "n")],
     false,
   );
   state.phase = "attack";

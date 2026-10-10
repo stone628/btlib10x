@@ -1,14 +1,3 @@
-import {
-  buildUnitInit,
-  type Facing,
-  type HexCoord,
-  type MoveStep,
-  neighbor,
-  oppositeFacing,
-  type PhysicalAttackDecl,
-  rotateFacing,
-  VERSION,
-} from "btlib10x";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { setSlotDestroyed } from "../src/rules/critical";
 import { nextAutoPlayCommand, resetAutoplayState } from "../web/autoplay";
@@ -31,6 +20,11 @@ import {
 } from "../web/replay";
 import { commitAtomic, newSession, type Session, setSeed } from "../web/session";
 import { createTestBattle, disableCritical, execute, scriptedRng } from "./helpers";
+import { oppositeFacing, rotateFacing, type Facing, type HexCoord } from "../src/core/types";
+import { buildUnitInit, type MoveStep } from "../src/rules/game";
+import { neighbor } from "../src/core/hex";
+import type { PhysicalAttackDecl } from "../src/rules/physical";
+import { VERSION } from "../src/version";
 
 const w = (...ns: number[]) => ns.map((weaponIndex) => ({ weaponIndex }));
 const idxOf = (id: string) => ({ a: "0", b: "1", c: "2" })[id] ?? "?";
@@ -253,17 +247,17 @@ describe("encodeAttackEntry", () => {
 
 describe("unit and end lines", () => {
   const init = (model = "HBK-4G") =>
-    buildUnitInit("hunchy", model, 0, { col: 5, row: 3 }, "s", 4, 5, 6);
+    buildUnitInit("hunchy", model, 1, { col: 5, row: 3 }, "s", 4, 5, 6);
 
   it("unit line: defaults omit every optional field", () => {
-    expect(encodeUnitLine(init())).toBe("U0hunchy:HBK-4G:0503s456");
+    expect(encodeUnitLine(init())).toBe("U1hunchy:HBK-4G:0503s456");
     expect(
-      encodeUnitLine(buildUnitInit("cicada", "CDA-3MA", 1, { col: 5, row: 8 }, "n", 3, 5)),
-    ).toBe("U1cicada:CDA-3MA:0508n356");
+      encodeUnitLine(buildUnitInit("cicada", "CDA-3MA", 2, { col: 5, row: 8 }, "n", 3, 5)),
+    ).toBe("U2cicada:CDA-3MA:0508n356");
   });
   it("unit line: starting damage, pilot hits and ammo policy", () => {
     const u = {
-      ...buildUnitInit("hunchy", "HBK-4G", 0, { col: 5, row: 3 }, "s", 4, 5, 6, {
+      ...buildUnitInit("hunchy", "HBK-4G", 1, { col: 5, row: 3 }, "s", 4, 5, 6, {
         ammoPolicy: "spread" as const,
         autoEject: true,
       }),
@@ -278,12 +272,12 @@ describe("unit and end lines", () => {
         ammoUsed: { "leftTorso:1": 3, "leftTorso:2": 2 },
       },
     };
-    expect(encodeUnitLine(u)).toBe("U0hunchy:HBK-4G:0503s4562:C26/1/1A16/2:a3a4:L13L22:s");
+    expect(encodeUnitLine(u)).toBe("U1hunchy:HBK-4G:0503s4562:C26/1/1A16/2:a3a4:L13L22:s");
   });
   it("end line: pristine unit is just the hit count; damage is diffed vs the model", () => {
     const state = createTestBattle(
       [],
-      [init(), buildUnitInit("b", "ENF-4R", 1, { col: 3, row: 1 })],
+      [init(), buildUnitInit("b", "ENF-4R", 2, { col: 3, row: 1 })],
       true,
     );
     const hunchy = state.units.hunchy!;
@@ -302,7 +296,7 @@ describe("unit and end lines", () => {
   it("end line: a stranded (negative) bin counts by magnitude, a zeroed bin is fully spent", () => {
     const state = createTestBattle(
       [],
-      [init(), buildUnitInit("b", "ENF-4R", 1, { col: 3, row: 1 })],
+      [init(), buildUnitInit("b", "ENF-4R", 2, { col: 3, row: 1 })],
       true,
     );
     const hunchy = state.units.hunchy!;
@@ -321,7 +315,7 @@ describe("unit and end lines", () => {
     expect(normalizeRng("3f9a41c7")).toBe("3f9a41c7");
     expect(normalizeRng("ff")).toBe("000000ff");
     expect(normalizeRng("-1")).toBe("ffffffff");
-    expect(encodeWinnerLine({ winnerTeam: 0, draw: false }, "3f9a41c7")).toBe("W03f9a41c7");
+    expect(encodeWinnerLine({ winnerTeam: 1, draw: false }, "3f9a41c7")).toBe("W13f9a41c7");
     expect(encodeWinnerLine({ winnerTeam: null, draw: true }, "ff")).toBe("W-000000ff");
   });
 });
@@ -350,8 +344,8 @@ describe("replayPrettifier", () => {
     "V261008-8211edb",
     "Bquickstart",
     "S42",
-    "U0hunchy:HBK-4G:0503s456",
-    "U1cicada:CDA-3MA:0508n356",
+    "U1hunchy:HBK-4G:0503s456",
+    "U2cicada:CDA-3MA:0508n356",
     "M1r++",
     "M0w+",
     "A1L:01~4",
@@ -360,7 +354,7 @@ describe("replayPrettifier", () => {
     "M1w+",
     "A0F:11~4",
     "A1F:0Q",
-    "W03f9a41c7",
+    "W13f9a41c7",
     "E01:h5",
     "E10:C17//12",
   ];
@@ -368,13 +362,13 @@ describe("replayPrettifier", () => {
     expect(replayPrettifier(raw)).toEqual([
       "V261008-8211edb",
       "Bquickstart;S42",
-      "U0hunchy:HBK-4G:0503s456",
-      "U1cicada:CDA-3MA:0508n356",
+      "U1hunchy:HBK-4G:0503s456",
+      "U2cicada:CDA-3MA:0508n356",
       "M1r++;M0w+",
       "A1L:01~4;A0F:1124",
       "M0s;M1w+",
       "A0F:11~4;A1F:0Q",
-      "W03f9a41c7",
+      "W13f9a41c7",
       "E01:h5",
       "E10:C17//12",
     ]);
@@ -400,8 +394,8 @@ describe("replay log in the session", () => {
     expect(lines.slice(1)).toEqual([
       "Bquickstart",
       "S7",
-      "U0hunchy:HBK-4G:0909n456::::c",
-      "U1cicada:CDA-3MA:0908s456",
+      "U1hunchy:HBK-4G:0909n456::::c",
+      "U2cicada:CDA-3MA:0908s456",
     ]);
   });
 
@@ -570,7 +564,7 @@ describe("replayPlayer: a recorded match replays and verifies", () => {
 describe("decodeUnitLine", () => {
   it("is the inverse of encodeUnitLine, damage and policy included", () => {
     const init = {
-      ...buildUnitInit("hunchy", "HBK-4G", 1, { col: 5, row: 3 }, "sw", 3, 5, 7, {
+      ...buildUnitInit("hunchy", "HBK-4G", 2, { col: 5, row: 3 }, "sw", 3, 5, 7, {
         ammoPolicy: "leastFirst" as const,
         autoEject: true,
       }),
@@ -588,13 +582,13 @@ describe("decodeUnitLine", () => {
     const line = encodeUnitLine(init);
     expect(decodeUnitLine(line)).toEqual(init);
     expect(encodeUnitLine(decodeUnitLine(line))).toBe(line);
-    const plain = buildUnitInit("cicada", "CDA-3MA", 0, { col: 5, row: 8 }, "n");
+    const plain = buildUnitInit("cicada", "CDA-3MA", 1, { col: 5, row: 8 }, "n");
     expect(decodeUnitLine(encodeUnitLine(plain))).toEqual(plain);
   });
   it("rejects malformed records", () => {
-    expect(() => decodeUnitLine("U0cicada:CDA-3MA:5n")).toThrow(/place/);
-    expect(() => decodeUnitLine("U0cicada:CDA-3MA:0508n456:x9")).toThrow(/armor/);
-    expect(() => decodeUnitLine("U0cicada:CDA-3MA:0508n456::::z")).toThrow(/policy/);
+    expect(() => decodeUnitLine("U1cicada:CDA-3MA:5n")).toThrow(/place/);
+    expect(() => decodeUnitLine("U1cicada:CDA-3MA:0508n456:x9")).toThrow(/armor/);
+    expect(() => decodeUnitLine("U1cicada:CDA-3MA:0508n456::::z")).toThrow(/policy/);
   });
 });
 
@@ -661,7 +655,7 @@ describe("replayPlayer: failures stop at once, naming turn, phase, actor and why
     expect(failure([...base, base[base.length - 1]!].join("\n"))).toMatch(/two E records/);
     expect(failure([...base, "M0s"].join("\n"))).toMatch(/only E records/);
     expect(failure(change("B", () => "Bnowhere"))).toMatch(/Unknown map/);
-    expect(failure(change("U", () => "U0x:NOPE-1:0909n456"))).toMatch(/NOPE/);
+    expect(failure(change("U", () => "U1x:NOPE-1:0909n456"))).toMatch(/NOPE/);
   });
   it("names the version when it differs", () => {
     expect(failure(`${change("V", () => "Vold-version")}\nM0s`)).toMatch(

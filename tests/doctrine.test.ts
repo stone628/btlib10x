@@ -243,7 +243,7 @@ describe("doctrine player: dp setup", () => {
     }
     expect(out.some((l) => l.startsWith("setup >"))).toBe(false);
     expect(s.setup.mapName).not.toBeNull();
-    expect(s.setup.roster.map((u) => u.team).sort()).toEqual([0, 1]);
+    expect(s.setup.roster.map((u) => u.team).sort()).toEqual([1, 2]);
     for (const u of s.setup.roster) {
       expect(s.doctrine.assignments[u.id]).toBeDefined();
     }
@@ -258,8 +258,8 @@ describe("doctrine player: dp setup", () => {
       const s = newSession(seed);
       execute(s, "dp setup 4");
       expect(s.setup.roster).toHaveLength(4);
-      expect(s.setup.roster.filter((u) => u.team === 0)).toHaveLength(2);
       expect(s.setup.roster.filter((u) => u.team === 1)).toHaveLength(2);
+      expect(s.setup.roster.filter((u) => u.team === 2)).toHaveLength(2);
       const map = mapDefFor(s.setup);
       for (const u of s.setup.roster) {
         const t = map.terrain.find((h) => h.col === u.position.col && h.row === u.position.row);

@@ -15,6 +15,7 @@ import {
   isTsmActive,
   mechDefFor,
   type Rng,
+  type TeamId,
   TSM_ACTIVATION_HEAT,
   type UnitInit,
 } from "../src";
@@ -46,7 +47,7 @@ function freshDamage(model: "CN9-YLW2" | "HBK-4G"): UnitDamageState {
 
 function makeUnitInit(
   id: string,
-  team: number,
+  team: TeamId,
   hex: HexCoord,
   model: string,
   facing: "n" | "ne" | "se" | "s" | "sw" | "nw" = "n",

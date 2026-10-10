@@ -39,7 +39,7 @@ function attackPhase(terrain: Array<{ col: number; row: number; terrain: string 
       legends: [],
     },
     [
-      buildUnitInit("a", "HBK-4G", 1, { col: 5, row: 5 }, "n"),
+      buildUnitInit("a", "HBK-4G", 2, { col: 5, row: 5 }, "n"),
       buildUnitInit("b", "HBK-4G", 2, { col: 5, row: 5 }, "n"),
       buildUnitInit("far", "HBK-4G", 2, { col: 1, row: 1 }, "n"),
     ],
@@ -157,5 +157,51 @@ describe("pickup tokens", () => {
     );
     const result = validatePickup(battle, "b", {});
     expect(result).toEqual({ ok: true, source: "girder", token: { kind: "girder" } });
+  });
+});
+
+describe("two-hand club rule", () => {
+  function withTree() {
+    const battle = attackPhase();
+    battle.units.a!.club = { kind: "tree" };
+    return battle;
+  }
+
+  it("refuses a pickup when an arm is destroyed", () => {
+    const battle = attackPhase();
+    recordSeveredLimbs(battle, battle.units.b!, ["leftArm"]);
+    battle.units.a!.damage.internalStructure.leftArm = 0;
+    expect(validatePickup(battle, "a").ok).toBe(false);
+  });
+
+  it("refuses a pickup when a hand actuator is destroyed", () => {
+    const battle = attackPhase();
+    recordSeveredLimbs(battle, battle.units.b!, ["leftLeg"]);
+    const def = mechDefFor(battle.units.a!);
+    const idx = def.critSlots.rightArm.findIndex(
+      (s) => s.kind === "structure" && s.name === "handActuator",
+    );
+    setSlotDestroyed(battle.units.a!.critSlotsDestroyed, "rightArm", idx);
+    expect(validatePickup(battle, "a").ok).toBe(false);
+  });
+
+  it("drops a held club when an arm location is lost", () => {
+    const battle = withTree();
+    battle.units.a!.damage.internalStructure.rightArm = 0;
+    const sink: GameEvent[] = [];
+    resolveAllAttacks(battle, NO_RNG, sink);
+    expect(battle.units.a!.club).toBeNull();
+    expect(clubTokensInHex(battle, battle.units.a!)).toEqual([{ kind: "tree" }]);
+  });
+
+  it("keeps the club through a shoulder hit", () => {
+    const battle = withTree();
+    const def = mechDefFor(battle.units.a!);
+    const idx = def.critSlots.rightArm.findIndex(
+      (s) => s.kind === "structure" && s.name === "shoulder",
+    );
+    setSlotDestroyed(battle.units.a!.critSlotsDestroyed, "rightArm", idx);
+    resolveAllAttacks(battle, NO_RNG, []);
+    expect(battle.units.a!.club).toEqual({ kind: "tree" });
   });
 });

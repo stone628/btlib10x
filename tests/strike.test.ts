@@ -28,7 +28,7 @@ import { setSlotDestroyed } from "../src/rules/critical";
 /** Raw HCT-5S sheet as written in data/mechs/hct-5s.json. */
 const hct5sRaw = hct5sJson as unknown as MechDef;
 
-import { buildUnitInit, resolveAllAttacks, validateAttacksImpl } from "../src/rules/game";
+import { buildUnitInit, resolveAllAttacks, validateAttacksImpl, type TeamId } from "../src/rules/game";
 import {
   computePhysicalToHit,
   isPhysicalWeaponName,
@@ -54,7 +54,7 @@ import { disableCritical, execute } from "./helpers";
 
 function makeUnitInit(
   id: string,
-  team: number,
+  team: TeamId,
   hex: HexCoord,
   facing: "n" | "ne" | "se" | "s" | "sw" | "nw" = "se",
   model = "HCT-5S",
