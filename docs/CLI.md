@@ -145,6 +145,7 @@ with a doctrine unit, the CLI plays it at once (no timer): it prints the
 reasoning, then types the commands, each echoed as `<prompt> > <command>` and run
 through the normal dispatch, so atomic commits, replay recording and rollback
 snapshots all apply. A failed command stops it and hands the prompt to the human.
+How each doctrine scores its options is described in [DOCTRINE.md](DOCTRINE.md).
 
 **Random setup.** `dp setup 2|4` fills an empty setup (no map, no units; otherwise it
 says which is already set and asks for `reset`) through the setup API directly
