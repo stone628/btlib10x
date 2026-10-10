@@ -238,6 +238,9 @@ export function buildUnitInit(
   };
 }
 
+/** One declared weapon shot.
+ *
+ * Immutable: all fields are `readonly`, so instances are assigned (shared by reference), never copied. */
 export interface WeaponAttackDecl {
   readonly weaponIndex: number;
   readonly targetId: string;
@@ -261,6 +264,7 @@ export interface WeaponAttackDecl {
 
 export type { SecondaryTargetMod };
 
+/** One step of a declared move. Immutable: all fields are `readonly`, so instances are assigned (shared by reference), never copied. */
 export type MoveStep =
   | { readonly kind: "enter"; readonly to: HexCoord }
   | { readonly kind: "turn"; readonly facings: number };
@@ -310,7 +314,9 @@ export type ClubKind = "limb" | "tree" | "girder";
 
 /** A club carried by a unit. A limb club records which severed limb it is;
  *  trees and girders carry no per-item identity (trees are consumed on a
- *  successful hit, girders are reusable indefinitely). */
+ *  successful hit, girders are reusable indefinitely).
+ *
+ *  Immutable: all fields are `readonly`, so instances are assigned (shared by reference), never copied. */
 export type HeldClub =
   | { readonly kind: "limb"; readonly limb: LimbLocation; readonly ownerId: string }
   | { readonly kind: "tree" }
@@ -319,7 +325,9 @@ export type HeldClub =
 /** Pickup declaration: which source to take. Omitted resolves at
  *  declaration time: the hex's single club token, else terrain (tree, then
  *  girder). `tokenIndex` picks one of several tokens in the hex; `token`
- *  is the resolved token (set by `validatePickup`, never by callers). */
+ *  is the resolved token (set by `validatePickup`, never by callers).
+ *
+ *  Immutable: all fields are `readonly`, so instances are assigned (shared by reference), never copied. */
 export interface ClubPickupDecl {
   readonly source?: ClubKind;
   readonly tokenIndex?: number;
@@ -329,7 +337,9 @@ export interface ClubPickupDecl {
 /** A club lying in a hex, available for pickup (TW p.146): a severed limb
  *  (owner recorded so a pickup can void its salvage), or a dropped tree /
  *  girder, which stays intact and is re-taken without a roll. Fresh trees
- *  and girders still in terrain leave no token. */
+ *  and girders still in terrain leave no token.
+ *
+ *  Immutable: all fields are `readonly`, so instances are assigned (shared by reference), never copied. */
 export type ClubGroundToken =
   | { readonly kind: "limb"; readonly limb: LimbLocation; readonly ownerId: string }
   | { readonly kind: "tree" }
@@ -524,7 +534,8 @@ export interface MeleeCharge {
   readonly kind: "charge" | "dfa";
   readonly targetId: string;
   /** The target's hex when declared; reserved for the attacker (nobody else
-   *  may end movement there) in case the target leaves it. */
+   *  may end movement there) in case the target leaves it. A shared
+   *  `HexCoord`, not a copy. */
   readonly hex: HexCoord;
   /** Hex the move started in: a DFA reads its attack direction from here
    *  (TW p.150). */
@@ -1227,7 +1238,7 @@ export function createBattle(
       unconscious: false,
       unconsciousSinceTurn: null,
       prone: start.prone,
-      position: { ...init.position },
+      position: init.position,
       facing: init.facing,
       damage,
       ammoBins,
@@ -1616,7 +1627,7 @@ function pushPilotingCheck(
       preexistingModifier,
       roll: r.roll,
       success: r.success,
-      hex: { ...hex },
+      hex,
     });
   }
   return r;
@@ -1789,7 +1800,7 @@ export function executeMove(
   if (unit.prone && mode === "walk" && steps.some((s) => s.kind === "enter")) {
     throw new Error(`${unitId} is prone: turn or pronestill only (no hex enters)`);
   }
-  const startHex: HexCoord = { ...unit.position };
+  const startHex: HexCoord = unit.position;
   unit.moveMode = mode;
   unit.hexesMovedThisTurn = 0;
   unit.mpSpent = 0;
@@ -2000,8 +2011,8 @@ export function executeMove(
       unit.meleeCharge = {
         kind: meleeKind,
         targetId: target.id,
-        hex: { ...target.position },
-        from: { ...startHex },
+        hex: target.position,
+        from: startHex,
         missed: false,
       };
       unit.declaredPhysicalAttacks = [{ type: meleeKind, targetId: target.id }];
@@ -2009,7 +2020,7 @@ export function executeMove(
       pendingCharge = {
         attack: meleeKind,
         targetId: target.id,
-        targetHex: { ...target.position },
+        targetHex: target.position,
       };
     }
     sink.push({
@@ -2115,7 +2126,7 @@ export function executeMove(
       mode === "run" ? hipHits > 0 || gyroHits > 0 : mode === "jump" ? pre.modifier > 0 : false;
     if (strained) {
       const reason: PilotingCheckReason = mode === "run" ? "runDamaged" : "jumpDamaged";
-      const r = pushPilotingCheck(sink, unit, reason, 0, pre.modifier, rng, { ...cursor });
+      const r = pushPilotingCheck(sink, unit, reason, 0, pre.modifier, rng, cursor);
       if (!r.success) {
         const terrain = cellAt(state, cursor).terrain;
         applyFall(
@@ -2124,7 +2135,7 @@ export function executeMove(
           rng,
           {
             cause: { kind: "failedPsr", reason },
-            hex: { ...cursor },
+            hex: cursor,
             seatbeltModifier: pre.modifier,
             halved: terrain === "water2" || terrain === "water3",
           },
@@ -2217,7 +2228,7 @@ function normalizePhysicalDecls(
       const arm = resolveStrikeArm(def, d.weapon, undefined);
       if (arm !== null) return { ...d, limb: arm };
     }
-    return { ...d };
+    return d;
   });
 }
 
@@ -3322,7 +3333,7 @@ function shutdownFallCheck(state: BattleState, unit: UnitState, rng: Rng, sink: 
       rng,
       {
         cause: { kind: "shutdown" },
-        hex: { ...unit.position },
+        hex: unit.position,
         seatbeltModifier: null,
         halved: false,
       },
@@ -3379,7 +3390,7 @@ export function applyFall(
     kind: "unitFell",
     unitId: unit.id,
     cause: opts.cause,
-    ...(opts.hex === undefined ? {} : { hex: { ...opts.hex } }),
+    ...(opts.hex === undefined ? {} : { hex: opts.hex }),
     facingAfter: unit.facing,
     fallRoll: dir.roll,
     column,
@@ -3504,7 +3515,7 @@ export function resolvePhasePiloting(
           rng,
           {
             cause: { kind: "failedPsr", reason: t.reason },
-            hex: { ...unit.position },
+            hex: unit.position,
             seatbeltModifier: modifier,
             halved,
           },
@@ -3527,7 +3538,7 @@ export function resolvePhasePiloting(
         rng,
         {
           cause: autoFall.cause,
-          hex: { ...unit.position },
+          hex: unit.position,
           seatbeltModifier: autoFall.seatbelt,
           halved,
         },
@@ -3769,7 +3780,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         const key = hexKey(coverBuilding.hex);
         const entry = buildingDamageByHex[key];
         buildingDamageByHex[key] = {
-          hex: { ...coverBuilding.hex },
+          hex: coverBuilding.hex,
           damage: (entry?.damage ?? 0) + coverBuilding.damage,
         };
       }
@@ -3781,7 +3792,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         const entry = buildingDamageByHex[key];
         if (entry === undefined) {
           buildingDamageByHex[key] = {
-            hex: { ...target.position },
+            hex: target.position,
             damage: buildingDamage,
           };
         } else {
@@ -4140,7 +4151,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       rng,
       {
         cause: { kind: "dfaMiss" },
-        hex: { ...attacker.position },
+        hex: attacker.position,
         seatbeltModifier: pre + DFA_ATTACKER_PSR_MOD,
         halved: terrain === "water2" || terrain === "water3",
         levelsFallen: DFA_MISS_LEVELS_FALLEN,
@@ -4237,7 +4248,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
               `attacker is down — no attack`,
             );
           } else if (holder === undefined && wreck === undefined) {
-            attacker.position = { ...charge.hex };
+            attacker.position = charge.hex;
             resolution = missResolution(
               decl.type,
               attacker.id,
@@ -4245,7 +4256,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
               "advanced",
               `target left its hex — the attacker advances into it`,
               false,
-              { ...charge.hex },
+              charge.hex,
             );
           } else {
             resolution = missResolution(
@@ -5032,8 +5043,8 @@ function movementTerrainPsr(
         if (isUnitRemoved(occupant)) return lower;
       }
     }
-    unit.position = { ...from };
-    return { ...from };
+    unit.position = from;
+    return from;
   };
   const rollFall = (
     reason: PilotingCheckReason,
@@ -5072,7 +5083,7 @@ function movementTerrainPsr(
       );
       return settleFall(lower);
     }
-    const r = pushPilotingCheck(sink, unit, reason, trigger, preModifier, rng, { ...hex });
+    const r = pushPilotingCheck(sink, unit, reason, trigger, preModifier, rng, hex);
     if (r.success) return null;
     unit.position = { ...lower };
     const terrain = cellAt(state, lower).terrain;
@@ -5109,7 +5120,7 @@ function movementTerrainPsr(
   const building = buildingEntryModifier(entering);
   const def = mechDefFor(unit);
   if (building !== null) {
-    unit.position = { ...to };
+    unit.position = to;
     const legWasGoneR = legGone(unit.damage, "rightLeg");
     const legWasGoneL = legGone(unit.damage, "leftLeg");
     const gyroWasGone = countDestroyedGyro(def, unit.damage, unit.critSlotsDestroyed);
@@ -5120,7 +5131,7 @@ function movementTerrainPsr(
         rng,
         {
           cause: { kind: "terrain", terrain: "building" },
-          hex: { ...to },
+          hex: to,
           seatbeltModifier: null,
           halved: false,
         },
@@ -5128,7 +5139,7 @@ function movementTerrainPsr(
       );
       return to;
     }
-    const r = pushPilotingCheck(sink, unit, "building", building, preModifier, rng, { ...to });
+    const r = pushPilotingCheck(sink, unit, "building", building, preModifier, rng, to);
     if (!r.success) {
       const cf = state.buildings[hexKey(to)]?.cf ?? 0;
       const total = Math.ceil(cf / BUILDING_CRASH_DIVISOR);
@@ -5164,7 +5175,7 @@ function movementTerrainPsr(
             rng,
             {
               cause: { kind: "terrain", terrain: "building" },
-              hex: { ...to },
+              hex: to,
               seatbeltModifier: down
                 ? null
                 : gyroFell
@@ -5236,7 +5247,7 @@ export function attemptStandUp(
     base: unit.heat,
     totalGenerated: unit.heatPending,
   });
-  const r = pushPilotingCheck(sink, unit, "standUp", 0, pre.modifier, rng, { ...unit.position });
+  const r = pushPilotingCheck(sink, unit, "standUp", 0, pre.modifier, rng, unit.position);
   if (r.success) {
     unit.prone = false;
     sink.push({
@@ -5244,7 +5255,7 @@ export function attemptStandUp(
       unitId,
       mode: "walk",
       prevMode: "prone",
-      position: { ...unit.position },
+      position: unit.position,
       facing: unit.facing,
       mpSpent: standCost,
       mpBudget: budget,
@@ -5259,7 +5270,7 @@ export function attemptStandUp(
     rng,
     {
       cause: { kind: "failedPsr", reason: "standUp" },
-      hex: { ...unit.position },
+      hex: unit.position,
       seatbeltModifier: pre.modifier,
       halved: terrain === "water2" || terrain === "water3",
       allowProne: true,
@@ -5327,7 +5338,7 @@ export function dropProne(
       kind: "unitFell",
       unitId,
       cause: { kind: "voluntaryDrop" },
-      hex: { ...unit.position },
+      hex: unit.position,
       facingAfter: unit.facing,
       fallRoll: null,
       column: "front",
@@ -5341,7 +5352,7 @@ export function dropProne(
       unitId,
       mode: "prone",
       prevMode,
-      position: { ...unit.position },
+      position: unit.position,
       facing: unit.facing,
       mpSpent: DROP_MP_COST,
       mpBudget: budget,

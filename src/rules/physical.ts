@@ -61,6 +61,9 @@ export function isMeleeCharge(type: PhysicalAttackType): type is "charge" | "dfa
 /** Melee equipment usable through a strike (TW p.146 subset). */
 export type PhysicalWeaponName = "Hatchet" | "Sword" | "Retractable Blade";
 
+/** One declared physical attack.
+ *
+ * Immutable: all fields are `readonly`, so instances are assigned (shared by reference), never copied. */
 export interface PhysicalAttackDecl {
   readonly type: PhysicalAttackType;
   readonly targetId: string;

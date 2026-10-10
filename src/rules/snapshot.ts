@@ -24,6 +24,11 @@
  * The string is plain JSON of the state (undo-style rollback, never stored)
  * except that cells are listed only when not clear/level 0.
  *
+ * Objects whose fields are all `readonly` (`HexCoord`, attack declarations,
+ * `HeldClub`, `ClubPickupDecl`, `ClubGroundToken`, `WreckState`) are replaced
+ * wholesale by the engine, never edited in place, so snapshots and live state
+ * share them by reference; only mutable containers and records are copied.
+ *
  * Manual field-by-field copy under the JSON, not `structuredClone`:
  * explicit list guards against future `BattleState` additions, keeps `src/`
  * browser-first with zero runtime dependencies. Finer-grained save/load
@@ -39,17 +44,7 @@ import type { AmmoBins } from "./ammo";
 import type { BuildingState, BuildingType } from "./building";
 import { type CritMask, cloneCritTable } from "./critical";
 import type { UnitDamageState } from "./damage";
-import type {
-  BattleState,
-  ClubGroundToken,
-  ClubPickupDecl,
-  HeldClub,
-  MeleeCharge,
-  Phase,
-  UnitState,
-  WeaponAttackDecl,
-} from "./game";
-import type { PhysicalAttackDecl } from "./physical";
+import type { BattleState, ClubGroundToken, MeleeCharge, Phase, UnitState } from "./game";
 
 /** Detached deep copy of a `BattleState`. Treat as immutable. */
 type BattleSnapshot = BattleState;
@@ -74,36 +69,14 @@ function cloneDamageState(damage: UnitDamageState): UnitDamageState {
   };
 }
 
-function cloneWeaponAttackDecl(decl: WeaponAttackDecl): WeaponAttackDecl {
-  return { ...decl };
-}
-
-function clonePhysicalAttackDecl(decl: PhysicalAttackDecl): PhysicalAttackDecl {
-  return { ...decl };
-}
-
+/** `hex` and `from` are readonly `HexCoord`s: shared, not copied. `missed`
+ *  is mutable, so the record itself is copied. */
 function cloneMeleeCharge(charge: MeleeCharge): MeleeCharge {
-  return { ...charge, hex: { ...charge.hex }, from: { ...charge.from } };
-}
-
-function cloneHeldClub(club: HeldClub | null): HeldClub | null {
-  return club === null ? null : { ...club };
-}
-
-function clonePickupDecl(decl: ClubPickupDecl | null): ClubPickupDecl | null {
-  return decl === null ? null : { ...decl };
-}
-
-function cloneGroundTokens(tokens: readonly ClubGroundToken[]): ClubGroundToken[] {
-  return tokens.map((t) => ({ ...t }));
+  return { ...charge };
 }
 
 function cloneBuildingState(building: BuildingState): BuildingState {
   return { cf: building.cf, type: building.type };
-}
-
-function cloneWreckState(wreck: WreckState): WreckState {
-  return { unitId: wreck.unitId, level: wreck.level };
 }
 
 function cloneUnitState(unit: UnitState): UnitState {
@@ -128,8 +101,8 @@ function cloneUnitState(unit: UnitState): UnitState {
     critSlotsDestroyed: cloneCritTable(unit.critSlotsDestroyed),
     destroyedWeapons: [...unit.destroyedWeapons],
     blownOffLimbs: unit.blownOffLimbs.map((l) => ({ ...l })),
-    club: cloneHeldClub(unit.club),
-    declaredPickup: clonePickupDecl(unit.declaredPickup),
+    club: unit.club,
+    declaredPickup: unit.declaredPickup,
     moveMode: unit.moveMode,
     hexesMovedThisTurn: unit.hexesMovedThisTurn,
     jumpedThisTurn: unit.jumpedThisTurn,
@@ -137,8 +110,8 @@ function cloneUnitState(unit: UnitState): UnitState {
     heat: unit.heat,
     heatPending: unit.heatPending,
     shutdown: unit.shutdown,
-    declaredWeaponAttacks: unit.declaredWeaponAttacks.map(cloneWeaponAttackDecl),
-    declaredPhysicalAttacks: unit.declaredPhysicalAttacks.map(clonePhysicalAttackDecl),
+    declaredWeaponAttacks: [...unit.declaredWeaponAttacks],
+    declaredPhysicalAttacks: [...unit.declaredPhysicalAttacks],
     passedAttacks: unit.passedAttacks,
     meleeCharge: unit.meleeCharge === null ? null : cloneMeleeCharge(unit.meleeCharge),
     destroyed: unit.destroyed,
@@ -257,11 +230,11 @@ function cloneBattleRest(
   }
   const wrecks: Record<string, WreckState> = {};
   for (const [key, wreck] of Object.entries(state.wrecks)) {
-    wrecks[key] = cloneWreckState(wreck);
+    wrecks[key] = wreck;
   }
   const clubs: Record<string, ClubGroundToken[]> = {};
   for (const [key, tokens] of Object.entries(state.clubs)) {
-    clubs[key] = cloneGroundTokens(tokens);
+    clubs[key] = [...tokens];
   }
   return {
     turn: state.turn,
@@ -306,11 +279,11 @@ function loadClonedBattleState(state: BattleState, snapshot: BattleSnapshot): vo
   }
   for (const key of Object.keys(state.wrecks)) delete state.wrecks[key];
   for (const [key, wreck] of Object.entries(snapshot.wrecks)) {
-    state.wrecks[key] = cloneWreckState(wreck);
+    state.wrecks[key] = wreck;
   }
   for (const key of Object.keys(state.clubs)) delete state.clubs[key];
   for (const [key, tokens] of Object.entries(snapshot.clubs)) {
-    state.clubs[key] = cloneGroundTokens(tokens);
+    state.clubs[key] = [...tokens];
   }
   for (const key of Object.keys(state.rubbleOrigin)) delete state.rubbleOrigin[key];
   for (const [key, origin] of Object.entries(snapshot.rubbleOrigin)) {
@@ -343,8 +316,8 @@ export function loadUnitState(unit: UnitState, snapshot: UnitSnapshot): void {
   unit.critSlotsDestroyed = next.critSlotsDestroyed;
   unit.destroyedWeapons = next.destroyedWeapons;
   unit.blownOffLimbs = next.blownOffLimbs.map((l) => ({ ...l }));
-  unit.club = cloneHeldClub(next.club);
-  unit.declaredPickup = clonePickupDecl(next.declaredPickup);
+  unit.club = next.club;
+  unit.declaredPickup = next.declaredPickup;
   unit.moveMode = next.moveMode;
   unit.hexesMovedThisTurn = next.hexesMovedThisTurn;
   unit.jumpedThisTurn = next.jumpedThisTurn;
@@ -353,7 +326,7 @@ export function loadUnitState(unit: UnitState, snapshot: UnitSnapshot): void {
   unit.heatPending = next.heatPending;
   unit.shutdown = next.shutdown;
   unit.declaredWeaponAttacks = next.declaredWeaponAttacks;
-  unit.declaredPhysicalAttacks = next.declaredPhysicalAttacks.map((d) => ({ ...d }));
+  unit.declaredPhysicalAttacks = [...next.declaredPhysicalAttacks];
   unit.passedAttacks = next.passedAttacks;
   unit.meleeCharge = next.meleeCharge === null ? null : cloneMeleeCharge(next.meleeCharge);
   unit.destroyed = next.destroyed;
@@ -422,11 +395,11 @@ export function loadBuildings(
   }
 }
 
-/** Detached deep copy of wreck map. Treat result as immutable. */
+/** Detached copy of the wreck map (its readonly `WreckState` values are shared). Treat as immutable. */
 export function saveWrecks(wrecks: Record<string, WreckState>): WrecksSnapshot {
   const out: Record<string, WreckState> = {};
   for (const [key, wreck] of Object.entries(wrecks)) {
-    out[key] = cloneWreckState(wreck);
+    out[key] = wreck;
   }
   return out;
 }
@@ -435,6 +408,6 @@ export function saveWrecks(wrecks: Record<string, WreckState>): WrecksSnapshot {
 export function loadWrecks(target: Record<string, WreckState>, snapshot: WrecksSnapshot): void {
   for (const key of Object.keys(target)) delete target[key];
   for (const [key, wreck] of Object.entries(snapshot)) {
-    target[key] = cloneWreckState(wreck);
+    target[key] = wreck;
   }
 }
