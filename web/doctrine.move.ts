@@ -87,7 +87,7 @@ function landingsFor(
   mode: MoveMode,
   b: Budgets,
 ): RevealedLanding[] {
-  return reachableLandings({ ...unit.position }, unit.facing, {
+  return reachableLandings(unit.position, unit.facing, {
     mode,
     walking: b.walking,
     running: b.running,
@@ -171,7 +171,7 @@ export function scoreMoves(input: MoveScoringInput): TraceCandidate[] {
   for (const mode of modesFor(actor, doctrine, budgets)) {
     const landings: RevealedLanding[] =
       mode === "standStill"
-        ? [{ hex: { ...actor.position }, facing: actor.facing, path: [] }]
+        ? [{ hex: actor.position, facing: actor.facing, path: [] }]
         : landingsFor(battle, actor, mode, budgets).filter((l) => l.path.length > 0);
     for (const landing of landings) {
       const key = `${mode}|${landing.hex.col},${landing.hex.row}|${landing.facing}`;

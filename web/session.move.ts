@@ -747,7 +747,7 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo {
   }
   return {
     team: actor.team,
-    revealed: reachableLandings({ ...actor.position }, actor.facing, {
+    revealed: reachableLandings(actor.position, actor.facing, {
       mode: locomotion,
       walking,
       running,
@@ -828,7 +828,7 @@ function stepResultLines(s: Session, landing: RevealedLanding): string[] {
     stepResultFromLine(actor),
   ];
   const jumping = locomotion === "jump";
-  let hex = { ...actor.position };
+  let hex = actor.position;
   let facing = actor.facing;
   for (const step of path) {
     const frag = step.fragment;

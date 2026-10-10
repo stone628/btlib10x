@@ -58,7 +58,10 @@ export function isWoodsTerrain(value: TerrainType): boolean {
   return value === "lightWoods" || value === "heavyWoods";
 }
 
-/** A coordinate on the hex grid (1-based column and row). */
+/** A coordinate on the hex grid (1-based column and row).
+ *
+ * Immutable: all fields are `readonly`, so instances are assigned (shared by reference), never copied.
+ * Positions, event payloads and snapshots all alias one object safely. */
 export interface HexCoord {
   readonly col: number;
   readonly row: number;
@@ -99,7 +102,9 @@ export interface HexCell {
  *         'Mechs; +2 partial cover to adjacent targets, or +1 to elevated
  *         / Level 3+ targets.
  *  Wreck level is computed by `wreckLevelFor` in `src/rules/game.ts` when
- *  the wreck is spawned (`ejectPilot`, `removePilotKilled`). */
+ *  the wreck is spawned (`ejectPilot`, `removePilotKilled`).
+ *
+ *  Immutable: all fields are `readonly`, so instances are assigned (shared by reference), never copied. */
 export interface WreckState {
   /** Unit that ejected and left the wreck. */
   readonly unitId: string;
