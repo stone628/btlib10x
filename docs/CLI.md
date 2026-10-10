@@ -207,345 +207,67 @@ simulate. See `docs/VISION.md` for direction and the will/won't lists.
 
 ### Implemented
 
-- **Units** — bipedal 'Mechs only (fourteen record-sheet 'Mechs in `data/mechs/`:
-  AS7-D, BSW-X1, BZK-F3, CDA-3MA, CN9-YLW2, ENF-4R, GRF-1N, HBK-4G, HCT-5S,
-  HER-5SA, MC-MKII-2, TBR-Prime, WHK-Prime, WVR-6R; see `docs/MTF.md` to add more).
-  Front and rear armor are separate pools; internal structure is derived from
-  tonnage on the standard TW table.
-- **Movement** — walk, run, jump, standstill. MP costs include the base 1 MP
-  to enter a hex plus a terrain surcharge (data-driven from
-  `src/data/terrain.data.ts`; e.g. lightWoods +1, heavyWoods +2, rough/rubble +1,
-  water2/3 +3, buildings +1/+2/+3/+4, pavement +0), +1 MP per
-  level of elevation changed (up or down), and 1 MP per
-  hexside of facing change. Ground moves step straight ahead or back; run
-  cannot move backward; forward steps may change level by at most 2 per hex
-  and backward steps cannot change level at all. Jump steps into any adjacent
-  hex at 1 MP per step, with the landing facing chosen freely; a jump follows a shortest
-  path and is impossible when any hex on it is more than Jumping MP + the
-  starting level above the sea (TW p.53). Water hexes are measured at their bed (hex level minus depth,
-  TW p.32), so entering water costs 1 MP per level of depth on top of the
-  water surcharge (depth 3 cannot be entered from the surface: 3 levels > 2).
-- **Line of sight** — intervening-hex line trace; light/heavy woods points
-  (1/2) accumulate along the line and ≥ 3 points block. A real-valued
-  "ray height" is drawn between attacker and target LOS levels (hex
-  level + 2 for a bipedal 'Mech); an intervening hex blocks when its own
-  LOS level strictly exceeds the ray's height at the hex's center. Water
-  depth 2+ (water2/water3) blocks firing into and out of the hex
-  (`blocksTargeting`), and so does depth 1+ water for a prone 'Mech
-  (TW p.102).
-- **To-hit (GATOR)** — gunnery + attacker movement + target movement + range
-  bracket + intervening terrain + weapon mod + minimum range penalty; auto-hit ≤
-  2, auto-miss > 12. Target-terrain modifier is data-driven
-  (`terrainTargetMod`): lightWoods/heavyWoods +1/+2. A shut-down 'Mech (or
-  one with both legs destroyed) is immobile and applies a flat −4 target
-  modifier instead of a movement band.
-  **Partial cover (TW)** — a target standing in a water1 or building hex is
-  in partial cover while the attacker's ground level is not higher than the
-  target's: +1 to-hit (separate `coverMod` breakdown field, printed as
-  `cover +1`) and a hit-location roll
-  that lands on a leg strikes the cover instead (no damage to the target).
-  A target adjacent to a level-2 'Mech wreck is in partial cover for
-  +2 to-hit while the attacker's ground level is below the wreck's top
-  (hex level + 2); the larger of the terrain and wreck values applies, and
-  the leg-strike miss rule holds under either.
-  Depth-1 water cover applies even when the attacker is higher (the water
-  surrounds the 'Mech); building cover is negated by a downhill attacker.
-  An adjacent higher hex between attacker and target also grants partial
-  cover (TW p.102).
-- **Terrain catalog** — 13 core-rulebook terrain types (`clear`, lightWoods,
-  heavyWoods, rough, rubble, pavement, water1, water2, water3, and four
-  building classes) defined in `src/data/terrain.data.ts` and validated by
-  `terrain.schema.ts`. Move surcharge, screening value, target modifier,
-  partial-cover flag, and targeting-restriction flag all live in the catalog.
-- **Buildings** — building hexes carry a structural factor (CF) initialized
-  from the sub-type (light 15 / medium 40 / heavy 90 / hardened 120).
-  Each weapon grouping that hits a unit inside costs the hex ceil(CF at
-  phase start / 10), applied after all weapons fire (`damageBuildingAt`);
-  when CF reaches 0 the hex collapses to rubble and a `buildingCollapsed`
-  event fires. Collapse damage is ceil(CF/10 x (1 + levels above)) in
-  5-point punch-table groups, plus standard falling damage above Level 0.
-  Units inside a collapsing hex take collapse damage (`collapseDamage`
-  event).
-- **Hit location** — bipedal front / left side / right side / rear tables.
-- **Cluster hits** — missile 2/4/5/6/10/15/20 + shot columns 2/3/4.
-  HAG applies its range mod (+2 short / −2 long, clamped 2..12) to the
-  roll; 1-damage missiles (incl. HAG) group into 5-point lots.
-  Streak launchers skip table: to-hit success lands full tube count, miss
-  fires nothing (no ammo spent, no heat). Launchers share one ammo pool per
-  weapon name; an earlier launcher may drain pool mid-resolution, and a later
-  launcher with nothing left auto-misses without rolling (declaration order
-  sets ammo priority).
-- **Damage** — front/rear armor transfer inward on depletion; side-torso
-  internal-structure loss blows off the arm; head/CT IS death kills; leg IS
-  death immobilizes. Hits on already-destroyed locations transfer.
-- **Firing arc** — attacker-side arcs gate declarations per weapon mounting
-  (TW p.105: head/legs/torso front-only, arms add their own side,
-  `rearFacing` torso mounts rear-only). The p.105 hex template assigns every
-  hex wholly to one arc (forward arc three hexes wide: facing ±1 included),
-  so firing has no boundary pairs; the target-side attack direction
-  (TW p.119) picks the hit-location column (front/left/right share one
-  per-arc table, rear shares the front column) and the armor pool (rear
-  torso pool for rear-direction torso hits). Attack direction on an exact
-  boundary line resolves to the defender's dominant choice (front over side,
-  never rear). The web fire-suggestion header shows
-  the target's firing arc, and the attack-resolution hit line names the
-  attack direction it resolved against.
-- **Weapons** — ballistic / energy / missile with short/medium/long range
-  brackets, rapid-fire, weapon to-hit mods (−2 pulse, +1 MRM / Clan heavy
-  lasers), per-bin ammo tracking, jam on
-  natural 2 (multi-shot), LRM lots-of-5 grouping. Ammo is depleted per
-  crit slot ("bin") under a per-unit policy fixed at setup with `set <id> ammoPolicy <policy>`:
-  `exposed` arms → legs → side torsos → head → center torso (default),
-  `core` the reverse priority, `spread` fullest-bin-first, `leastFirst`
-  emptiest-first; equal-priority bins are chosen at random. Declared
-  `shots` pool across all mounts and bins of a weapon name (remainder one
-  per bin); per-weapon totals derive live from the bins. Streak ammo depletes
-  only on hit (miss = launcher never fired).
-- **Battle flow** — initiative roll, sequential movement phase, weapon
-  attack phase, end-phase kill sweep, victory check, rematch.
-- **Critical hit table** — the official TW determining table
-  (2D6: 2-7 no crit, 8-9 one, 10-11 two, 12 blow-off or three on torso) plus
-  the 1D6 / 2D6 half+slot roll per location. A hit-location roll of 2 is a
-  through-armor critical: damage lands on armor normally and the attacker
-  still rolls once on the determining table (tagged `through-armor` in the
-  log). Slot selection re-rolls on
-  empty / soak / already-destroyed slots and the whole determining roll
-  transfers inward when the source is exhausted (head and center torso
-  are terminal).   Effects implemented: weapon destroyed (Gauss-family / HAG
-  weapon crits detonate their `critExplosion` blast inside the same
-  `weaponDestroyed` event — 20-pt IS Gauss / 3-pt AP / 16-pt Light /
-  25-pt Heavy / 10-15-20-pt HAG, direct to IS with CASE + cascade + 2
-  pilot hits like an ammo explosion; further hits on the powered-down
-  mount soak), ammo explosion
-  (an explosion detonates only the hit bin — its remaining shots ×
-  per-shot damage applied directly to that bin location's internal
-  structure, with a cascading critical roll on the drained IS; bins in a
-  location whose IS is fully gone are removed outright, and an empty bin
-  soaks the hit), inert ammo (e.g. gauss rifle) recorded as a non-
-  exploding crit that still empties the bin, arm/leg/head blown off on a 12, cockpit crit kills the
-  pilot, leg actuator/hip/jump-jet destruction feeds the effective
-  movement helper (leg actuators −1 walk each, hip halves walking, jump
-  jets −1 jump each), and arm actuator/shoulder destruction feeds the
-  weapon to-hit modifier (shoulder +4 suppressing upper/lower, otherwise
-  +1 per destroyed upper/lower actuator in the firing arm; hand has no
-  weapon effect). Engine / gyro / sensor / life-support / heat-sink
-  slots take and absorb crits in the slot table; destroyed engine slots
-  feed the heat system below.
-- **Heat** — heat scale 0-30 (the stored value is never clamped; the excess above 30 is the Heat Overflow box) with movement heat, weapon heat, posture heat
-  (stand-up, prone-turn), and engine-crit heat. Per TW p.159 the scale
-  updates once at the heat phase: own heat generated during the movement
-  and weapon attack phases accumulates into `unit.heatPending` (does not
-  touch the scale mid-turn — weapon to-hit this turn reads the previous
-  turn's end value), then lands on the scale, dissipation subtracts, and
-  the result is the new `unit.heat`. Shutdown/restart and ammo-explosion
-  checks read the post-dissipation end heat (`endHeat`) only.
-  Heat-caused shutdown auto-fires at 30+ and no restart is possible while
-  heat stays at 30+ (TW p.159-160; `shutdownAvoid(30)` is the unreachable
-  `D2D6_IMPOSSIBLE`, and a blocked restart rolls no dice). A pilot who is
-  unconscious cannot override a shutdown (automatic, +3 PSR as usual) and
-  cannot attempt a restart at 14+; below 14 the restart is automatic. 2D6 avoidance runs at 14, 18, 22, 26 with
-  `roll >= avoid` for success (matches the voluntary startup convention);
-  automatic restart once dissipation drops the unit below 14. Heat ammo
-  explosion checks at 19, 23, 28 with `roll >= avoid` for avoided.
-  Engine crit heat skips any non-online unit (TW p.160 "even engine
-  criticals generate no extra heat while shut down"). Inert ammunition
-  (gauss rifle rounds) is excluded from the heat-triggered selection and
-  from crit-slot detonation; a crit on such a bin still empties it.
-  Dissipation comes from the design's heat sinks: the engine mounts
-  `floor(walking × tonnage / 25)` sinks free, the rest occupy crit slots;
-  double heat sinks dissipate 2 heat each and take 3 crits (Inner Sphere)
-  or 2 crits (Clan) per device. Destroyed sink crits reduce dissipation
-  (a DHS retires per whole device); destroyed engine slots add +5/+10 heat
-  per turn but never retire internal sinks (strict Total Warfare).
-  Standing in water adds dissipation (TW p.159): each submerged sink removes
-  1 more heat (2 for a double), capped at 6 — all sinks count at depth 2+ or
-  prone in depth 1+, only leg sinks when standing in depth 1.
-- **Voluntary shutdown / startup** — `mode shutdown` + `done` sends an
-  online unit off-line (`manual`); it persists (no end-phase auto-restart)
-  until a voluntary startup succeeds. `mode startup` + `done` rolls 2D6
-  against the shutdown avoidance: success → `starting` (still off-line,
-  online just before the next initiative roll), failure → stays off-line.
-  Startup at 30+ heat is blocked (no roll), and so is startup at 14+ for an
-  unconscious pilot.
-  Shut-down units act first in the movement phase regardless of initiative.
-- **Pilot ejection / wrecks** — `mode eject` + `done` marks the unit
-  removed (`removed = "pilotEjected"`; destroyed stays `"not"`; counts toward
-  victory; skipped by the actor queue and by occupancy checks) and spawns a
-  wreck in its hex (level 2; level 1 for light or prone 'Mechs, see below). A
-  wreck is permanent and blocks the hex entirely: no ground or jump
-  movement may enter or land on it, LOS is blocked when the wreck lies
-  strictly between the endpoints (independent of elevation), and a target
-  adjacent to a wreck gains +2 partial cover when the attacker is below the
-  wreck's top. The hex is rendered with an `X` mark.
-- **Piloting skill rolls, falling, prone** — every unit carries a piloting
-  skill (`add`/`set` argument, default 5). End-of-phase PSRs fire for 20+ damage
-  (+1), each destroyed leg/foot actuator (+1), each destroyed hip (+2), and
-  a first gyro hit (+3); a destroyed gyro or leg drops the 'Mech
-  automatically, as does any required PSR on a shut-down or unconscious
-  unit. An involuntary (heat) reactor shutdown forces an immediate +3 PSR; a voluntary one forces none (TW p.160);
-  running with a damaged hip/gyro or jumping with damaged gyro/leg/foot/hip
-  actuators (or a destroyed leg) forces a PSR with preexisting-damage
-  modifiers at the end of the move. Preexisting damage modifies every PSR (+1 per destroyed leg/foot
-  actuator, +2 per destroyed hip replacing that leg's other mods, +3 for a
-  hit gyro, +5 per destroyed leg replacing that leg's other mods). Pilot
-  wounds never modify PSRs or to-hit numbers (TW tracks wounds through
-  consciousness rolls only). A fall
-   rotates facing per the Facing After Fall table (1 same/front, 2 +1/right,
-   3 +2/right, 4 opposite/rear, 5 −2/left, 6 −1/left) and lands
-   `ceil(tonnage / 10) × (levels fallen + 1)` damage in 5-point clusters
-   on the fall column (halved rounding down underwater at depth 2+ per TW
-   errata), with normal crit rolls; levels fallen measure underlying
-   terrain (hex fell into minus hex the fall began from — a fall across
-   levels drops into the lower hex; jump-phase falls count 0 levels; a 'Mech
-   walking into water from above the surface takes two packets, TW p.57:
-   surface impact `ceil(t/10) × (levels+1) / 2` plus bottom impact
-   `ceil(t/10) × (depth+1) / 2`, each rounded down), and
-   the pilot then
-  makes a seatbelt PSR (+5 off a destroyed leg, +6 off a destroyed gyro, or
-  the failed roll's modifiers, plus +1 per level above 1 fallen) or takes
-  1 hit — automatic when the 'Mech is
-  immobile or the target exceeds 12. Prone units stand up with `mode
-  standup <walk|run>` (stand costs 2 plus the declared mode's heat, +1 heat for the stand; a failed stand
-  with a full attempt of MP left may be retried, MP shared across attempts; failure crashes back down for fresh fall damage and
-   discards any queued `place`), drop and optionally turn in place with `mode prone
-   [turn|pronestill]` (drop costs 1 MP, no heat, no damage; turns cost 1 MP per hexside
-  within the remaining walk budget + 1 turn heat); prone units turn with
-  `mode turn` or hold with `mode pronestill`. Facing changes go through `place`
-  at the current or a new hex — a destroyed gyro or two destroyed legs forbid
-  standing. Prone attackers fire at +2 without leg weapons and cannot mix
-  left-arm and right-arm weapons in one volley (each volley props the
-  opposite arm; the fire suggestion shows both prop sides); prone targets take
-  −2 from an adjacent hex and +1 from every other hex.
-- **Sensor crits** — the first destroyed sensor slot adds +2 to the unit's weapon
-  to-hit numbers; a second destroyed sensor blinds the 'Mech (no weapon
-  attacks at all).
-- **Pilot damage / consciousness** — head hits (1 point per damaging
-  grouping, even armor-only), ammo explosions (2 points), falls (failed
-  seatbelt), shut-down falls, and heat-soaked life support (destroyed slot +
-  end-of-heat-phase heat 15+ → 1 point, 26+ → 2 points) injure the pilot;
-  every point forces a consciousness roll (default pilot: 1→3+, 2→5+, 3→7+, 4→10+, 5→11+; the table scales to `pilotHitMax`)
-  taken before any simultaneous PSR, and rolls stop at the first failure
-  (TW p.42). Each damage source logs one `pilotDamaged` (all its points) and
-  at most one `consciousnessCheck` (every roll made, `cause`, and "failed
-  roll n of m"); the end-phase wake-up roll is a `consciousnessCheck` with
-  cause `recovery`. A failed roll knocks the pilot out:
-  the unit cannot act and counts as immobile until it wakes in a later end
-  phase; `pilotHitMax` (default 6) total hits kills the pilot and removes the unit
-   (`removed = "pilotKilled"`, destroyed stays `"not"`), leaving a level-2
-   wreck like an eject. A cockpit-slot crit kills the pilot outright
-   (TW p.128); head destruction / blow-off instead auto-ejects (see below); any other destruction (engine, center torso) leaves the pilot
-   alive inside while hits < `pilotHitMax`.
-   The `sheet` shows a pilot block (status, HP boxes, consciousness targets).
-   **Ejection / auto-eject are Tactical Operations extensions, not TW:** manual
-   eject (`mode eject`) and auto-eject (always on: an ammo / Gauss explosion that
-   destroys the center torso, directly or by transfer; or destruction / blow-off of the
-   head, which first raises pilot hits to `pilotHitMax - 1`, TO p.165) roll a PSR; failure deals
-   floor(margin of failure / 2) pilot hits (`pilotDamaged`, reason `ejection`).
-   The pilot keeps `pilotHits`; status stays `ejected` even if those hits reach the max.
-   The PSR carries the Ejection Modifiers Table (TO p.165): landing hex behind the 'Mech
-   (clear/pavement -2, water -1, rough/rubble 0, light woods +2, heavy woods +3, +1 per
-   building level), prone +5, unconscious +3, +1 per head IS point lost, +1 for auto-eject.
-   Planetary conditions and the submerged-cockpit ban are not modeled.
-- **Movement-entry PSRs** — entering rubble (+0) or water (depth 1: −1,
-  depth 2: +0, depth 3+: +1) and entering a building hex (light +0 /
-  medium +1 / heavy +2 / hardened +5) forces a PSR (plus preexisting
-  damage); a failed water/rubble roll falls the 'Mech in the entered hex
-  (jump checks the landing only), while a failed building roll crashes it
-  for `ceil(CF / 10)` front-column damage without falling — unless the crash
-  wrecks a leg/gyro or knocks the pilot out, which drops the 'Mech on the
-  spot. Exiting a building hex requires no PSR.
+Behavior follows TW unless noted; only commands, engine names and deviations
+are listed here. Rule text lives in the rulebook.
 
-- **Multiple targets** (TW p.108, engine only; the CLI still fires at one target) —
-  weapons may be split among targets; secondary targets take +1 (forward arc)
-  or +2 (side/rear), physical attacks exempt.
-- **Torso twist** — `torso <front|left|right>` twists the acting unit one
-  hexside for the attack phase (TW pp.105-106): arm and front-torso weapons
-  fire as if the 'Mech faced the twisted direction. Physical attacks respect
-  it (punch/club/strike follow the twist; kick is feet-based).
-- **Water** — water hexes have a surface at the hex level and a bed `depth`
-  levels below. Depth-change MP is charged per level of bed difference, 'Mechs
-  cannot run into water (Minimum Movement excepted, TW p.53), jump limits
-  apply (no jumping from depth 2+, only non-leg jets at depth 1, a jump
-  landing in water rolls the entry PSR and tumbles `depth` levels on
-  failure), and prone 'Mechs in depth 1+ water are out of LOS. Hull breach,
-  underwater weapons and the underwater LOS table are not implemented.
+- **Units** — bipedal 'Mechs only (record-sheet 'Mechs in `data/mechs/`,
+  see `docs/MTF.md` to add more). Front and rear armor are separate pools.
+- **Movement** — walk, run, jump, standstill; terrain MP surcharges are
+  data-driven (`src/data/terrain.data.ts`). Water hexes have a surface and a
+  bed `depth` levels below; Minimum Movement (TW p.49) is `mode run`; one-leg
+  'Mechs hop (`effectiveMovement`).
+- **Line of sight / to-hit** — woods points, elevation ray and partial cover
+  (including wrecks, TO) per TW; GATOR breakdown printed by `fire`. Water
+  depth 2+ blocks targeting (`blocksTargeting`).
+- **Firing arcs** — per-weapon mounting arcs and target-side attack
+  direction; a boundary attack direction resolves to the defender's choice
+  (front over side, never rear). `torso <front|left|right>` twists one hexside.
+- **Weapons and ammo** — ballistic / energy / missile with cluster tables;
+  streak weapons fire full tubes on a hit. Ammo depletes per bin under a
+  per-unit policy set at setup (`set <id> ammoPolicy exposed|core|spread|leastFirst`).
+  Multiple targets (TW p.108) are engine-only; the CLI fires at one target.
+- **Damage and criticals** — hit location tables, transfer inward, arm
+  blow-off, through-armor criticals, ammo and Gauss explosions, actuator /
+  engine / gyro / sensor / cockpit effects. Buildings carry a CF and collapse
+  to rubble.
+- **Heat** — scale 0-30 plus overflow; the scale updates once in the heat
+  phase (`unit.heatPending`). Shutdown, restart and ammo-explosion rolls read
+  post-dissipation heat. `mode shutdown` / `mode startup` are voluntary;
+  standing in water adds dissipation.
+- **Piloting and falls** — PSR triggers, falls with Facing After Fall, seatbelt
+  rolls, prone / stand-up (`mode standup|prone|turn|pronestill`), movement-entry
+  PSRs for rubble, water and buildings.
+- **Pilot** — damage, consciousness rolls (`pilotHitMax`, default 6), cockpit
+  kills. Ejection and auto-eject are Tactical Operations (TO p.165), not TW:
+  `mode eject`; the wreck blocks its hex and gives partial cover.
+- **Battle flow** — initiative, sequential movement, attack phase (weapons
+  and physical attacks in one activation, a playability merge), heat phase,
+  victory check, rematch.
 
 ### Implemented subset: physical attacks (punch, kick, club, strike)
 
-- **Declaration** — in the weapon attack phase alongside `fire`: `punch
-  <target> [left|right]` (default right; queue twice for both arms, one
-  roll each), `kick <target> [left|right]` (default right),
-  `club <target>`, `strike <target> [left|right]` (default: the
-  arm mounting the unit's physical weapon; required when both arms mount
-  one). One type per turn
-  (two-arm punch excepted; at most one strike even with two mounted).
-  A punching / striking arm or kicking leg cannot fire its mounted weapons, and
-  club bars all arm-mounted weapons. `candidate` lists legal
-  physical options for adjacent enemies; `status` shows the queued
-  physical declarations.
-- **Resolution** — weapons resolve first in `resolveAllAttacks`,
-  then a weapon PSR sweep (falls, consciousness, kills) lands before any
-  melee (TW pp. 37-38, 59, 61: a weapon-phase fall starts the melee prone),
-  then physical attacks resolve against post-weapon state with re-validation
-  (destroyed/unconscious/shut-down attackers skip), then a physical sweep rolls
-  the 20-point trigger per sub-pass (weapon and physical damage never pool)
-  plus deferred kick PSRs: punch damage 1/10 t on the Punch table, kick 1/5 t
-  on the Kick table, club 1/5 t on the standard table, strike per weapon
-  (hatchet 1/5 t, sword 1/10 t +1, blade 1/10 t) on the standard table
-  (every table read on the attack-direction column — Left Side, Front/Rear
-  or Right Side, TW pp.145, 147; any attack on a prone 'Mech rolls 2D6 on
-  the standard table, TW p.151; a through-armor critical only on a 2 rolled
-  on the 2D6 standard table, TW p.121).
-  No physical attack moves a unit (see "Displacement" below). Kick PSRs defer to the sweep (kicked
-  target on a hit, attacker on a miss).
-  Head hits injure the pilot as usual. A crit on any slot of a mounted
-  physical weapon destroys it (the HCT-5S Hatchetman now ships its hatchet).
-  Triple-Strength Myomer (TW p.143, e.g. the CN9-YLW2 Centurion): active the
-  turn after a turn ending at heat 9+ — +2 Walking MP (running recomputed,
-  jump unaffected) and doubled punch/kick/club/hatchet/sword/blade damage.
-  Declarations stay merged (weapons + physicals in one attack activation) for
-  playability — TW declares physicals in their own phase.
-- **Club acquisition** — `pickup [limb|tree|girder] [n]` takes a severed
-  limb, dropped club, uprooted tree (woods) or girder (rubble 2D6 7+/6+/5+)
-  and is exclusive with every attack that turn (TW p.146); no PSR, MP or heat.
-  A lone token in the hex is taken automatically; with several, pick one by
-  number or the command errors. `drop` leaves the club intact in the hex
-  (any kind), where any 'Mech may re-take it with no roll. A fall, a drop to
-  prone, or leaving play also drops the club in the hex (TW silent; house
-  ruling). A severed limb that is ever picked up loses its `salvageable`
-  flag (`blownOffLimbs`; house rule, `salvageableSeveredLimbs`).
-  The `board` map marks hexes holding a ground club token with `!`.
-- **Charge / DFA (TW pp.148-150, no displacement)** — declared by movement: in
-  `walk` or `run` mode, `place` on the hex of an enemy 'Mech standing straight
-  ahead of a reachable hex (a charge); in `jump` mode, `place` on an enemy hex
-  within Jumping MP, clearing its height (level + 2 for a standing target; a
-  DFA). The enemy hex appears among the reachable landings; `place` reports
-  `charge:` / `DFA:` and where the unit will stop. The unit stops in the hex
-  before the target (MP for the target hex is still paid, facing the target),
-  gets no weapon or other physical attack, and its attack resolves in the
-  physical phase. To-hit is Piloting skill plus the skill difference and the
-  usual movement modifiers (no terrain). Charge: target takes
-  tonnage / 10 per hex moved, counting the target's hex as one more (house
-  rule: the unit stops short but the charge is meant to reach the target),
-  the charger takes
-  target tonnage / 10; both in 5-point groups located separately (standard
-  table). DFA: target takes tonnage / 10 x 3 (Punch table; a prone target the
-  standard table's rear column), the DFA'er tonnage / 5 on the legs (Kick
-  table). After a hit both roll PSRs at the end of the phase (target +2;
-  charger +2; DFA'er +4). A DFA miss drops the DFA'er (2-level fall, rear
-  damage); a charge miss costs nothing. A DFA'er cannot be the target of any
-  physical attack, and an unconscious or fallen attacker misses. A weapon-phase
-  PSR failure does not drop a DFA'er (the DFA misses and it falls in the physical
-  phase). LOS to a DFA'er treats it as two levels above the higher of its hex and
-  its target's. A charged or DFA'd unit cannot charge, and a unit can be charged
-  once per turn. The target's hex is reserved for the attacker: if the target
-  moved away, the attacker advances into the vacated hex (no attack); a wreck
-  or another unit there voids the attack. Not modeled: charging buildings or
-  building hexes, terrain-entry PSRs for the advance, displacement (see below).
-- **Deferred** — the remaining nine
-  physical-weapon types (industrial tools), the optional
-  Punch/Kick-table election (+4). (The level-difference table auto-swap and through-armor / structure
-  critical hits from physical damage are implemented.)
+- **Commands** — in the attack phase: `punch|kick|club|strike <target>
+  [left|right]`, `pickup [limb|tree|girder] [n]`, `drop`. `candidate` lists
+  legal options; `status` shows queued declarations.
+- **Resolution** — weapons first, then a PSR sweep, then physical attacks
+  against post-weapon state, then a physical sweep (the 20-point trigger
+  never pools weapon and physical damage). Triple-Strength Myomer (TW p.143)
+  is supported (e.g. CN9-YLW2). No physical attack displaces a unit.
+- **Club hands** — picking up, holding and swinging need both arms standing
+  with intact hand actuators (`clubHandsFunctional`). Losing either drops the
+  club in place (checked after attacks, heat and falls); a destroyed shoulder
+  only bars the swing. A fall, drop to prone or leaving play also drops it.
+- **Club sources** — severed limb (including limbs sheared by damage), dropped
+  club, tree (woods) or girder (rubble 2D6 7+/6+/5+). A picked-up limb is no
+  longer `salvageable`. The `board` marks hexes holding a club token with `!`.
+- **Charge / DFA** — declared by movement: `place` on an enemy hex in
+  `walk`/`run` (charge) or `jump` (DFA). The unit stops in the hex before the
+  target and the attack resolves in the physical phase. House rules: charge
+  damage counts the target hex as one more hex moved; if the target moved away
+  the attacker advances into the vacated hex. Not modeled: charging buildings,
+  displacement.
+- **Deferred** — industrial-tool physical weapons and the optional Punch/Kick
+  table election (+4).
 
 ### Not yet implemented
 
