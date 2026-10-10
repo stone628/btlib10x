@@ -15,7 +15,7 @@
 import type { Location } from "../core/types";
 import { armFor, isLocation, isTorso, LOCATIONS } from "../core/types";
 import type { ResolvedMechDef } from "../data/mech.schema";
-import { type AmmoBins, ammoBinId, loadAmmoBins } from "./ammo";
+import { type AmmoBins, ammoBinId, loadAmmoBins, stripBinsInLocation } from "./ammo";
 import {
   COCKPIT,
   type CritMask,
@@ -181,6 +181,10 @@ export function resolveInitialDamage(
     ammoBins[binId] = shots - used;
   }
   for (const binId of destroyedAmmo) ammoBins[binId] = 0;
+  // A destroyed location loses its bins, as in play (TW p.123).
+  for (const loc of LOCATIONS) {
+    if (damage.internalStructure[loc] <= 0) stripBinsInLocation(ammoBins, loc);
+  }
 
   // 5. Pilot.
   const pilotHits = requireCount(id, "pilotHits", init?.pilotHits ?? 0);
