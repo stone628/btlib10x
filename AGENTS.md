@@ -14,6 +14,9 @@ TypeScript library encapsulating BattleTech Total Warfare board game logic.
   enemy hex stops the unit in the hex before it and the attack resolves in the
   physical phase. Piloting rolls, falling/prone, pilot damage and
   consciousness are implemented, including the PSRs from charges and DFAs.
+  Clubs need two working hands (both arms standing, hand actuators intact) to
+  pick up, hold and swing; losing one drops the club, a shoulder hit only
+  bars the swing.
   Firing arcs implemented per TW: four arcs (front / rear /
   left / right side), per-weapon mounting arcs (head/legs/torso front-only,
   arms add own side, `rearFacing` torso mounts rear-only), attack

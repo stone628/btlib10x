@@ -89,6 +89,8 @@ yet is a gap, not a deviation; gaps are tracked in §4.
 - A held club drops into the hex when its wielder falls, drops prone or leaves
   play.
 - A severed limb once used as a club is no longer salvageable.
+- Picking up or carrying a club needs both hands working; losing either
+  drops it. A destroyed shoulder only bars the swing.
 
 ### 2.5 Omissions (permanent)
 

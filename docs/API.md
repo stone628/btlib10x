@@ -468,7 +468,10 @@ Club handling (TW p.146): `HeldClub`, `ClubKind` (`"limb" | "tree" |
 `GIRDER_SEARCH_TARGET`, `clubTokensInHex(state, hex)`,
 `pickupSourceInHex(state, hex)`, `salvageableSeveredLimbs(unit)`,
 `validatePickup(state, unitId, decl?)` and `declarePickup(state, unitId, decl,
-sink)` (an exclusive, attack-phase pickup declaration).
+sink)` (an exclusive, attack-phase pickup declaration). Both need two working
+hands: `clubHandsFunctional(def, damage, destroyed)` (each arm standing with an
+undestroyed hand actuator); a unit that loses them drops its club
+(`clubDropped` with `cause: "hands"`).
 
 The numeric tuning constants (`PUNCH_ATTACK_MOD`, `KICK_ATTACK_MOD`,
 `CLUB_ATTACK_MOD`, `PUNCH_DAMAGE_PER_TONS`,
@@ -758,7 +761,7 @@ interface UnitState {
   heat; heatPending;                  // scale value (last turn's end) + this turn's own heat
   position; facing;
   damage: UnitDamageState;            // updated as soon as damage lands
-  ammoBins: AmmoBins;                 // remaining shots per bin, keyed "location:slotIndex"
+  ammoBins: AmmoBins;                 // per bin, keyed "location:slotIndex": >0 live shots, 0 spent/exploded, <0 stranded in a lost location (-n = salvage shots)
   jammedWeapons: number[];
   critSlotsDestroyed: CritMask;       // destroyed-slot bitmask per location (bit i = 0-based slot i)
   destroyedWeapons: number[];
