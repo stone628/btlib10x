@@ -24,7 +24,6 @@ import {
   type MoveMode,
   mechDefFor,
   movementHeat,
-  neighbor,
   type RevealedLanding,
   reachableLandings,
   rotateFacing,
@@ -40,7 +39,6 @@ import {
   expectedDamageAt,
   exposureAt,
   hexDefenseMod,
-  offMap,
   type RangeProfile,
   round1,
   type TraceCandidate,
@@ -214,18 +212,6 @@ export function scoreMoves(input: MoveScoringInput): TraceCandidate[] {
 
       const melee = d <= 1 ? 1 : d === 2 ? MELEE_NEAR : 0;
 
-      // Ring-out: adjacent and facing the target, which stands with the map edge behind it.
-      const facingTarget =
-        d === 1 &&
-        neighbor(landing.hex, landing.facing).col === target.position.col &&
-        neighbor(landing.hex, landing.facing).row === target.position.row;
-      const edge =
-        doctrine.ringOut &&
-        facingTarget &&
-        offMap(battle, neighbor(target.position, landing.facing))
-          ? 1
-          : 0;
-
       const exposed = exposureAt(battle, threats, landing.hex, myTmm);
       const heatOver = Math.max(0, heatNow + movementHeat(mode, mp) - heatCeiling);
       const crowd = d <= CROWD_RANGE && arcFromTarget === "front" ? 1 : 0;
@@ -236,7 +222,6 @@ export function scoreMoves(input: MoveScoringInput): TraceCandidate[] {
         { id: "tmm", value: w.tmm * myTmm },
         { id: "flank", value: w.flank * flank },
         { id: "melee", value: w.melee * melee },
-        { id: "edge", value: w.edge * edge },
         { id: "exposed", value: -w.exposed * exposed },
         { id: "heat", value: -w.heat * heatOver },
         { id: "crowd", value: w.crowd * crowd },

@@ -1,12 +1,12 @@
 /**
  * Attack scoring for the doctrine player (GDD §9.1, attack): for each torso
  * twist, pick a weapon set against the committed target under the doctrine's
- * heat ceiling and ammo discipline, then weigh physical options (punch, kick,
- * push) against the weapons those limbs give up.
+ * heat ceiling and ammo discipline, then weigh physical options (punch, kick)
+ * against the weapons those limbs give up.
  *
  * Rules used: one target per turn; a limb that fires a weapon cannot punch or
  * kick with it (TW p. 144, enforced again by `validatePhysicalAttack`);
- * punch/kick/push to-hit and damage come straight from the engine
+ * punch/kick to-hit and damage come straight from the engine
  * (`computePhysicalToHit`, `physicalDamage`, TW pp. 145–148).
  */
 import {
@@ -20,7 +20,6 @@ import {
   type Location,
   loadAmmoBins,
   mechDefFor,
-  neighbor,
   type PhysicalAttackType,
   physicalDamage,
   pooledTotalsByWeaponName,
@@ -32,7 +31,6 @@ import {
 import {
   dissipationOf,
   expectedHitDamage,
-  offMap,
   round1,
   type TraceCandidate,
   type TraceNote,
@@ -43,8 +41,6 @@ import type { Doctrine, MeleePreference } from "./doctrine.data";
 /** Kicks risk a fall on a miss (TW p. 147): Opportunistic doctrines skip worse TNs
  *  (Never doctrines do not reach physical options at all). */
 const CAUTIOUS_KICK_MAX_TN = 8;
-/** Value of a push that throws the target out of the arena (wins the bout, GDD §8.3). */
-const RING_OUT_VALUE = 50;
 const MELEE_FACTOR: Readonly<Record<MeleePreference, number>> = {
   never: 0,
   opportunistic: 1,
@@ -71,7 +67,6 @@ const PHYSICAL_OPTIONS: readonly PhysicalOption[] = [
   { type: "punch", limb: "rightArm", blocks: ["rightArm"] },
   { type: "kick", limb: "leftLeg", blocks: ["leftLeg"] },
   { type: "kick", limb: "rightLeg", blocks: ["rightLeg"] },
-  { type: "push", blocks: ["leftArm", "rightArm"] },
 ];
 
 const LIMB_WORD: Readonly<Record<Limb, string>> = {
@@ -172,12 +167,6 @@ function pickVolley(
   return { weapons, ev, heat, shots };
 }
 
-function pushRingsOut(battle: BattleState, actor: UnitState, target: UnitState): boolean {
-  const ahead = neighbor(actor.position, actor.facing);
-  if (ahead.col !== target.position.col || ahead.row !== target.position.row) return false;
-  return offMap(battle, neighbor(target.position, actor.facing));
-}
-
 /** Every attack option scored, best first, plus notes on skipped choices. */
 export function scoreAttacks(input: AttackScoringInput): AttackScoring {
   const { battle, actor, targetId, doctrine } = input;
@@ -248,7 +237,7 @@ export function scoreAttacks(input: AttackScoringInput): AttackScoring {
 
     if (doctrine.melee === "never" || hexDistance(actor.position, target.position) > 1) continue;
     for (const option of PHYSICAL_OPTIONS) {
-      // Kick and push are feet/body attacks: the twist does not change them.
+      // Kick is a feet attack: the twist does not change it.
       if (option.type !== "punch" && twist !== "front") continue;
       const decl = {
         type: option.type,
@@ -259,22 +248,16 @@ export function scoreAttacks(input: AttackScoringInput): AttackScoring {
       if (!validatePhysicalAttack(battle, actor.id, decl, twist).ok) continue;
       const mods = computePhysicalToHit(battle, actor, target, option.type, option.limb);
       const p = hitProbability(mods.total);
-      let value: number;
-      if (option.type === "push") {
-        if (!doctrine.ringOut || !pushRingsOut(battle, actor, target)) continue;
-        value = RING_OUT_VALUE * p;
-        notes.push({ key: "dp.note.ringOut", params: { target: targetId, tn: mods.total } });
-      } else {
-        if (
-          option.type === "kick" &&
-          doctrine.melee === "opportunistic" &&
-          mods.total > CAUTIOUS_KICK_MAX_TN
-        ) {
-          notes.push({ key: "dp.note.kickRisk", params: { tn: mods.total } });
-          continue;
-        }
-        value = MELEE_FACTOR[doctrine.melee] * p * physicalDamage(option.type, actor, option.limb);
+      if (
+        option.type === "kick" &&
+        doctrine.melee === "opportunistic" &&
+        mods.total > CAUTIOUS_KICK_MAX_TN
+      ) {
+        notes.push({ key: "dp.note.kickRisk", params: { tn: mods.total } });
+        continue;
       }
+      const value =
+        MELEE_FACTOR[doctrine.melee] * p * physicalDamage(option.type, actor, option.limb);
       const free = pool.filter((x) => !option.blocks.includes(x.location));
       candidates.push(build(twist, pickVolley(free, input, startShots, null), { option, value }));
     }

@@ -562,20 +562,6 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
       );
     },
   },
-  push: {
-    helpKey: "cmd.push.help",
-    usage: "push <targetId>",
-    argsDoc: [["targetId", "cmd.push.arg.targetId"]],
-    run: (s, a) => {
-      expectArgs(a, 1, "push <targetId>");
-      const targetId = a[0]!;
-      const warnings = queuePhysicalAttack(s, "push", targetId);
-      return cmdRunChunks(
-        i18n("ok.physical.queued", { type: "push", target: targetId }),
-        ...warnings,
-      );
-    },
-  },
   club: {
     helpKey: "cmd.club.help",
     usage: "club <targetId>",

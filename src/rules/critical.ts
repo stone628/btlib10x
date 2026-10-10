@@ -74,7 +74,7 @@
  *   - engine crits feed heat only (no eventual shutdown modeling beyond the
  *     heat scale)
  *   - arm actuators, shoulder, hand physical-attack effects (to-hit /
- *     damage / punch / club / push legality — deferred with the physical
+ *     damage / punch / club legality — deferred with the physical
  *     attack phase; the WEAPON-fire modifiers, TW p.125, live in
  *     `src/rules/actuators.ts`)
  *

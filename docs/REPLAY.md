@@ -180,7 +180,6 @@ A<idx><F|L|R>[-|+[<src>][<tok>]]{:<tgt><item>...}
 | weapon chars `1-9a-z`, `~` runs | `WeaponAttackDecl {weaponIndex, targetId}` per weapon; `!` after a weapon char sets `rapidFire` (`3!`; no `~` across `!`) |
 | `P` / `Q` | punch, `limb` leftArm / rightArm |
 | `K` / `L` | kick, `limb` leftLeg / rightLeg |
-| `U` | push (no limb) |
 | `C` | club (no limb) |
 | `S<w>` / `T<w>` | strike, `limb` leftArm / rightArm (mounting arm); `w` = `weapon` `h` Hatchet / `s` Sword / `b` Retractable Blade. Both are written because `PhysicalAttackDecl` carries both; the decoder validates the pair against the mounts (`resolveStrikeMount`) |
 
@@ -232,7 +231,7 @@ Every CLI command and where it lands. "UI" = no effect on battle state, never re
 | `fire <tgt> <weapons…>` + `done` | `:<tgt><wpns>`, `!` for rapid-fire |
 | `punch <tgt> [left\|right]` | `P` / `Q` (default right = `Q`; limb is always written) |
 | `kick <tgt> [left\|right]` | `K` / `L` |
-| `push` `club` | `U` `C` |
+| `club` | `C` |
 | `strike <tgt> [left\|right]` | `S` / `T` + weapon char (the CLI's resolved arm and weapon are recorded) |
 | `pickup [limb\|tree\|girder] [n]` | header `+[l\|t\|g][n]` |
 | `drop` | header `-` (no groups = drop-only activation) |

@@ -17,7 +17,7 @@ export const en = {
   "hint.move":
     "you are in the movement phase - the prompt shows whose turn it is.\ndeclare a speed via 'mode', then queue a landing via 'place'; check MP costs with 'status'.\ncommit the move with 'done', or discard it with 'cancel'.",
   "hint.attack":
-    "you are in the attack phase - the prompt shows who is firing.\nbrowse the acting unit's available options via 'candidate', then declare shots against one target via 'fire'.\nagainst an adjacent enemy you may also 'punch', 'kick', 'push', 'club', or 'strike' (resolved after weapons).\nreview the declaration with 'status', resolve with 'done', or discard it with 'cancel'.",
+    "you are in the attack phase - the prompt shows who is firing.\nbrowse the acting unit's available options via 'candidate', then declare shots against one target via 'fire'.\nagainst an adjacent enemy you may also 'punch', 'kick', 'club', or 'strike' (resolved after weapons).\nreview the declaration with 'status', resolve with 'done', or discard it with 'cancel'.",
   "hint.over":
     "the battle is over.\nreplay the same roster and seed with 'rematch', or return to an empty setup with 'reset'.",
 
@@ -126,9 +126,6 @@ export const en = {
   "cmd.kick.help": "queue a kick attack against an adjacent enemy in the forward arc (TW p.147)",
   "cmd.kick.arg.targetId": "enemy unit id in the forward arc",
   "cmd.kick.arg.limb": "kicking leg: left|right (default right)",
-  "cmd.push.help":
-    "queue a push against the enemy in the hex directly ahead (TW p.147): no damage, displaces the target",
-  "cmd.push.arg.targetId": "enemy unit id in the hex directly ahead",
   "cmd.club.help":
     "queue a club attack against an adjacent enemy in the forward arc (TW p.145; requires a held club — see 'pickup')",
   "cmd.club.arg.targetId": "enemy unit id in the forward arc",
@@ -137,7 +134,7 @@ export const en = {
   "cmd.pickup.arg.source":
     "club source: limb|tree|girder; optional token number when several clubs lie in the hex (default: the only token, else terrain source)",
   "cmd.drop.help":
-    "drop the held club first in this declaration, freeing the hands for arm weapons, punch, strike, or push below (the dropped club stays intact in the hex)",
+    "drop the held club first in this declaration, freeing the hands for arm weapons, punch, or strike below (the dropped club stays intact in the hex)",
   "cmd.strike.help":
     "queue a physical-weapon strike against an adjacent enemy (TW p.146) with the mounted hatchet, sword, or retractable blade",
   "cmd.strike.arg.targetId": "enemy unit id in the forward or mounting-arm side arc",
@@ -211,7 +208,6 @@ export const en = {
   "dp.term.tmm": "tmm",
   "dp.term.flank": "flank",
   "dp.term.melee": "melee",
-  "dp.term.edge": "edge",
   "dp.term.exposed": "exposed",
   "dp.term.heat": "heat",
   "dp.term.crowd": "crowd",
@@ -220,7 +216,6 @@ export const en = {
   "dp.note.ammoTn": "{weapon} held: to-hit {tn} is over the ammo limit {max}",
   "dp.note.ammoReserve": "{weapon} held: {shots} shots left, reserve {reserve}",
   "dp.note.heatSkip": "{weapon} held: +{heat} heat would pass the ceiling",
-  "dp.note.ringOut": "a push could throw {target} out of the arena (to-hit {tn})",
   "dp.note.kickRisk": "kick skipped: to-hit {tn} risks a fall",
   "dp.note.targetLost": "target {target} is gone",
   "dp.note.targetPicked": "new target {target}",
@@ -379,7 +374,7 @@ export const en = {
   "err.physical.armConflict": "cannot fire {limb} weapons while punching with that arm",
   "err.physical.strikeConflict": "cannot fire {limb} weapons while striking with that arm",
   "err.physical.legConflict": "cannot fire {limb} weapons while kicking with that leg",
-  "err.physical.noArmWeapons": "cannot fire arm-mounted weapons while pushing or clubbing",
+  "err.physical.noArmWeapons": "cannot fire arm-mounted weapons while clubbing",
   "err.pickup.exclusive": "pickup allows no weapon or physical attacks this turn",
   "err.pickup.duplicate": "pickup already queued",
   "err.pickup.badSource": "unknown club source '{source}' (limb, tree, or girder)",
@@ -389,7 +384,7 @@ export const en = {
   "warn.physical.armWeapons": "note: {limb} weapons cannot fire while punching with that arm",
   "warn.physical.strikeArmWeapons": "note: {limb} weapons cannot fire while striking with that arm",
   "warn.physical.legWeapons": "note: {limb} weapons cannot fire while kicking with that leg",
-  "warn.physical.noArmWeapons": "note: arm-mounted weapons cannot fire while pushing or clubbing",
+  "warn.physical.noArmWeapons": "note: arm-mounted weapons cannot fire while clubbing",
 
   // setup status
   "setup.mapLabel": "map: {name}",
@@ -562,7 +557,6 @@ export const en = {
   "sheet.remove.cockpitDestroyed": "cockpit destroyed",
   "sheet.remove.hdBlownOff": "HD blown off",
   "sheet.remove.engineDestroyed": "engine destroyed",
-  "sheet.remove.displacedOffBoard": "pushed off the map",
 
   // critical slot chart
   "critChart.summary": "critical slots",
@@ -694,12 +688,9 @@ export const en = {
   "log.psrReason.building": "entering building",
   "log.psrReason.kick": "kicked",
   "log.psrReason.kickMiss": "missed kick",
-  "log.psrReason.domino": "domino effect",
   "log.accidentalFallHit":
     "[{id}] falls onto {target} (needs {tn}+, rolled {roll}): {damage} damage",
   "log.accidentalFallMiss": "[{id}] falls toward {target} but misses (needs {tn}+, rolled {roll})",
-  "log.unitDisplaced":
-    "[{id}] is shoved from ({fromCol},{fromRow}) to ({toCol},{toRow}) (domino effect)",
   "log.psrReason.ejection": "ejecting",
   "log.fallCause.failedPsr": "failed {reason} PSR",
   "log.fallCause.legDestroyed": "leg destroyed",
@@ -709,7 +700,6 @@ export const en = {
   "log.fallCause.terrain.water": "entered water",
   "log.fallCause.terrain.building": "entered building",
   "log.fallCause.buildingCollapse": "building collapse",
-  "log.fallCause.physicalAttack": "physical attack",
   "log.fallCause.voluntaryDrop": "voluntary drop",
   "log.unitFell":
     "[{id}] *** FALLS ({cause}) facing {facing}: {groups} ({damage} total, {levels}-level fall) at {hex} ***",
@@ -764,22 +754,10 @@ export const en = {
   "res.physical.toHit": "need {total}, 2D6 = {roll} -> {verdict}",
   "res.physical.targetDamage": "hits: {groups}",
   "res.physical.attackerDamage": "self-damage: {groups}",
-  "res.physical.targetDisplaced": "target displaced to ({col},{row})",
-  "res.physical.attackerDisplaced": "attacker advances to ({col},{row})",
-  "res.physical.redirected":
-    "target displaced — redirected from {from} to {target} at +1 (TW p.144)",
-  "res.physical.displacedMiss":
-    "target {target} displaced before the blow — no valid target, auto-miss (TW p.144)",
   "res.physical.attackerDown":
     "attacker {attacker} unable to attack (destroyed/unconscious/shut down) — auto-miss",
   "res.physical.targetDown": "target {target} destroyed or removed before the melee — auto-miss",
   "res.physical.noLongerLegal": "no longer legal ({reason}) — auto-miss",
-  "res.physical.targetPsr": "target PSR: {outcome}",
-  "res.physical.attackerPsr": "attacker PSR: {outcome}",
-  "res.physical.stands": "need {target}, 2D6 = {roll} stands",
-  "res.physical.falls": "need {target}, 2D6 = {roll} FALLS",
-  "res.physical.autoStand": "need {target}, stands automatically",
-  "res.physical.autoFall": "need {target}, falls automatically",
   "res.outOfAmmo": "{weapon} out of ammo, did not fire",
   "res.clusterRoll": "cluster roll 2D6 = {roll}",
   "res.clusterMod": "cluster range mod {mod}",

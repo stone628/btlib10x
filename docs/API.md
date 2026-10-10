@@ -440,10 +440,10 @@ from their source modules when needed.
 
 ### Physical attacks (`rules/physical.ts`, TW pp. 144-147)
 
-Punch, kick, push, club, and physical-weapon strikes (charge/DFA deferred),
+Punch, kick, club, and physical-weapon strikes (charge/DFA deferred),
 declared through `declareAttacks` and gated by `validatePhysicalAttack` (see
 the state-machine section). `PhysicalAttackType` is `"punch" | "kick" |
-"push" | "club" | "strike"`; `PhysicalAttackDecl` carries `{ type, targetId,
+"club" | "strike"`; `PhysicalAttackDecl` carries `{ type, targetId,
 limb?, weapon? }`; `PHYSICAL_WEAPONS` / `PhysicalWeaponStats` /
 `PhysicalWeaponName` / `isPhysicalWeaponName` describe the hatchet / sword /
 retractable blade table, and `strikeMounts` / `strikeMountArms` /
@@ -452,8 +452,7 @@ retractable blade table, and `strikeMounts` / `strikeMountArms` /
 `PhysicalModifiers` is the to-hit breakdown; `PhysicalResolution` carries the
 roll, `DamageGroup` hits (`{ location, damage }`), the merged target /
 self-damage `DamageApplication`s (armor-change detail via `blastDetail`) and
-weapon-style `crits` (rendered with `critLines`), push displacement hexes,
-and kick/push PSR outcomes. `DamageGroup` is the per-group shape.
+weapon-style `crits` (rendered with `critLines`) and the deferred kick PSR flags. `DamageGroup` is the per-group shape.
 
 Club handling (TW p.146): `HeldClub`, `ClubKind` (`"limb" | "tree" |
 "girder"`), `ClubGroundToken`, `SeveredLimb`, `ClubPickupDecl`,
@@ -463,11 +462,10 @@ Club handling (TW p.146): `HeldClub`, `ClubKind` (`"limb" | "tree" |
 sink)` (an exclusive, attack-phase pickup declaration).
 
 The numeric tuning constants (`PUNCH_ATTACK_MOD`, `KICK_ATTACK_MOD`,
-`PUSH_ATTACK_MOD`, `CLUB_ATTACK_MOD`, `PUNCH_DAMAGE_PER_TONS`,
+`CLUB_ATTACK_MOD`, `PUNCH_DAMAGE_PER_TONS`,
 `KICK_DAMAGE_PER_TONS`, `CLUB_DAMAGE_PER_TONS`, `PHYSICAL_MIN_TOHIT`,
 `PHYSICAL_MAX_TOHIT`) and the resolvers (`computePhysicalToHit`,
-`physicalDamage`, `kickHitLocation`, `resolvePhysicalAttack`,
-`resolveMutualPush`) are
+`physicalDamage`, `kickHitLocation`, `resolvePhysicalAttack`) are
 engine-internal (source-module import only), as are the arm-actuator helpers
 (`ARM_ACTUATOR_WEAPON_MOD`, `SHOULDER_WEAPON_MOD`, `armWeaponToHitModifier`,
 `countArmActuators`, `ArmActuatorCounts`).
@@ -656,7 +654,7 @@ dropProne(state, unitId, sink: GameEvent[], rng?): void                // moveme
 ejectPilot(state, unitId, rng, sink: GameEvent[]): void                // movement phase only (Tactical Operations extension): ejection PSR (failure = floor(MoF/2) pilot hits, `pilotDamaged` reason "ejection"), then removes the unit (removed = "pilotEjected") and spawns a wreck; pilotHits retained
 voluntaryShutdown(state, unitId, sink: GameEvent[]): void              // movement phase only: shuts down ("manual")
 attemptVoluntaryStartup(state, unitId, sink: GameEvent[], rng?): void  // startup attempt after a manual shutdown
-declareAttacks(state, unitId, weaponDecls, physicalDecls, sink: GameEvent[], rng?, options?): void  // attack phase only: one combined declaration per turn (weapons + punch/kick/push/club/strike); emits a single merged `attacksDeclared`
+declareAttacks(state, unitId, weaponDecls, physicalDecls, sink: GameEvent[], rng?, options?): void  // attack phase only: one combined declaration per turn (weapons + punch/kick/club/strike); emits a single merged `attacksDeclared`
 validateAttacks(state, unitId, weaponDecls, physicalDecls?, options?): void            // read-only gate check; throws on any rule violation without mutating state or emitting events. Options carry the torso `twist`. Returns the resolved volley metadata via `validateAttacksImpl`.
 declarePickup(state, unitId, decl, sink: GameEvent[]): void             // attack phase only: exclusive club pickup (see Physical attacks)
 validatePhysicalAttack(state, unitId, decl: PhysicalAttackDecl, twist?, dropped?): ValidationResult  // read-only single-decl check (adjacency, arc, level, actuators); consumed by `declareAttacks` and the web `candidate` hints

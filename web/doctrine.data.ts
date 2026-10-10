@@ -29,7 +29,6 @@ export interface DoctrineWeights {
   readonly tmm: number;
   readonly flank: number;
   readonly melee: number;
-  readonly edge: number;
   readonly exposed: number;
   readonly heat: number;
   readonly crowd: number;
@@ -57,8 +56,6 @@ export interface Doctrine {
   readonly heatCeilingEngaged: number;
   readonly ammo: AmmoDiscipline;
   readonly melee: MeleePreference;
-  /** Pushes a target standing at the map edge out of the arena. */
-  readonly ringOut: boolean;
   readonly jump: JumpUse;
   /** Yields when armor + structure left falls to this fraction; 0 = never. */
   readonly yieldAt: number;
@@ -100,7 +97,6 @@ function weights(
     tmm: 0.8,
     flank,
     melee: MELEE_WEIGHT[melee],
-    edge: 0,
     exposed,
     heat: 2,
     crowd: 0,
@@ -119,7 +115,6 @@ export const DOCTRINES: Readonly<Record<DoctrineKey, Doctrine>> = {
     heatCeilingEngaged: REDLINE,
     ammo: FREE,
     melee: "opportunistic",
-    ringOut: false,
     jump: "none",
     yieldAt: 0.15,
     yieldWhenAhead: false,
@@ -133,7 +128,6 @@ export const DOCTRINES: Readonly<Record<DoctrineKey, Doctrine>> = {
     heatCeilingEngaged: WARM,
     ammo: CONSERVATIVE,
     melee: "never",
-    ringOut: false,
     jump: "reposition",
     yieldAt: 0.4,
     yieldWhenAhead: false,
@@ -147,7 +141,6 @@ export const DOCTRINES: Readonly<Record<DoctrineKey, Doctrine>> = {
     heatCeilingEngaged: HOT,
     ammo: MEASURED,
     melee: "opportunistic",
-    ringOut: false,
     jump: "hitAndRun",
     yieldAt: 0.3,
     yieldWhenAhead: false,
@@ -161,7 +154,6 @@ export const DOCTRINES: Readonly<Record<DoctrineKey, Doctrine>> = {
     heatCeilingEngaged: HOT,
     ammo: CONSERVATIVE,
     melee: "opportunistic",
-    ringOut: false,
     jump: "reposition",
     yieldAt: 0.5,
     yieldWhenAhead: false,
@@ -170,12 +162,11 @@ export const DOCTRINES: Readonly<Record<DoctrineKey, Doctrine>> = {
     key: "pitfighter",
     name: "Pit Fighter",
     range: "short",
-    weights: weights(COVER.low, FLANK.high, "first", 0.5, { edge: 1 }),
+    weights: weights(COVER.low, FLANK.high, "first", 0.5),
     heatCeiling: HOT,
     heatCeilingEngaged: HOT,
     ammo: MEASURED,
     melee: "first",
-    ringOut: true,
     jump: "reposition",
     yieldAt: 0.2,
     yieldWhenAhead: false,
@@ -184,12 +175,11 @@ export const DOCTRINES: Readonly<Record<DoctrineKey, Doctrine>> = {
     key: "gladiator",
     name: "Gladiator",
     range: "short",
-    weights: weights(COVER.low, FLANK.medium, "seeks", 0.3, { edge: 1, crowd: 1, ammo: 0 }),
+    weights: weights(COVER.low, FLANK.medium, "seeks", 0.3, { crowd: 1, ammo: 0 }),
     heatCeiling: OVERDRIVE,
     heatCeilingEngaged: OVERDRIVE,
     ammo: FREE,
     melee: "seeks",
-    ringOut: true,
     jump: "hitAndRun",
     yieldAt: 0,
     yieldWhenAhead: false,
@@ -203,7 +193,6 @@ export const DOCTRINES: Readonly<Record<DoctrineKey, Doctrine>> = {
     heatCeilingEngaged: COLD,
     ammo: MISER,
     melee: "never",
-    ringOut: false,
     jump: "reposition",
     yieldAt: 0.6,
     yieldWhenAhead: true,

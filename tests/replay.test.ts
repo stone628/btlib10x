@@ -214,7 +214,6 @@ describe("encodeAttackEntry", () => {
     expect(one(phys({ type: "punch", targetId: "b", limb: "rightArm" }))).toBe("0F:1Q");
     expect(one(phys({ type: "kick", targetId: "b", limb: "leftLeg" }))).toBe("0F:1K");
     expect(one(phys({ type: "kick", targetId: "b", limb: "rightLeg" }))).toBe("0F:1L");
-    expect(one(phys({ type: "push", targetId: "b" }))).toBe("0F:1U");
     expect(one(phys({ type: "club", targetId: "b" }))).toBe("0F:1C");
     expect(one(phys({ type: "strike", targetId: "b", limb: "leftArm", weapon: "Hatchet" }))).toBe(
       "0F:1Sh",

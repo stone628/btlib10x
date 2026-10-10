@@ -16,7 +16,7 @@ export const kr: Catalog = {
   "hint.move":
     "이동 단계입니다 - 프롬프트에 현재 차례가 표시됩니다.\n'mode'로 이동 속도를 선언한 뒤 'place'로 목적지를 예약하고, 'status'로 MP 소비를 확인하세요.\n'done'으로 확정하거나 'cancel'로 취소합니다.",
   "hint.attack":
-    "무기 공격 단계입니다 - 프롬프트에 사격 유닛이 표시됩니다.\n'candidate'로 가능한 공격 방식을 확인하고 'fire'로 하나의 목표에 대한 사격을 선언하세요.\n인접한 적이 있으면 'punch', 'kick', 'push', 'club', 'strike'도 가능합니다 (무기 이후에 해결).\n'status'로 선언을 확인한 뒤 'done'으로 해결하거나 'cancel'로 취소합니다.",
+    "무기 공격 단계입니다 - 프롬프트에 사격 유닛이 표시됩니다.\n'candidate'로 가능한 공격 방식을 확인하고 'fire'로 하나의 목표에 대한 사격을 선언하세요.\n인접한 적이 있으면 'punch', 'kick', 'club', 'strike'도 가능합니다 (무기 이후에 해결).\n'status'로 선언을 확인한 뒤 'done'으로 해결하거나 'cancel'로 취소합니다.",
   "hint.over":
     "전투가 종료되었습니다.\n'rematch'로 같은 편성과 시드로 재대국하거나, 'reset'으로 빈 설정 화면으로 돌아갑니다.",
 
@@ -125,8 +125,6 @@ export const kr: Catalog = {
   "cmd.kick.help": "전방 아크의 인접한 적에 킥 공격 예약 (TW p.147)",
   "cmd.kick.arg.targetId": "전방 아크에 있는 적 유닛 id",
   "cmd.kick.arg.limb": "차는 다리: left|right (기본 right)",
-  "cmd.push.help": "정면 육각의 적을 밀기 예약 (TW p.147): 피해 없음, 목표를 변위",
-  "cmd.push.arg.targetId": "정면 육각에 있는 적 유닛 id",
   "cmd.club.help":
     "전방 아크의 인접한 적에 곤봉 공격 예약 (TW p.145; 곤봉 소지 필요 — 'pickup' 참조)",
   "cmd.club.arg.targetId": "전방 아크에 있는 적 유닛 id",
@@ -206,7 +204,6 @@ export const kr: Catalog = {
   "dp.term.tmm": "회피",
   "dp.term.flank": "측후방",
   "dp.term.melee": "근접",
-  "dp.term.edge": "장외",
   "dp.term.exposed": "피격",
   "dp.term.heat": "열",
   "dp.term.crowd": "관중",
@@ -215,7 +212,6 @@ export const kr: Catalog = {
   "dp.note.ammoTn": "{weapon} 보류: 명중 목표치 {tn}이(가) 탄약 한도 {max} 초과",
   "dp.note.ammoReserve": "{weapon} 보류: 잔탄 {shots}, 예비 {reserve}",
   "dp.note.heatSkip": "{weapon} 보류: 열 +{heat}이(가) 상한을 넘음",
-  "dp.note.ringOut": "밀치기로 {target}을(를) 장외로 밀어낼 수 있음 (명중 목표치 {tn})",
   "dp.note.kickRisk": "발차기 생략: 명중 목표치 {tn}은(는) 넘어질 위험",
   "dp.note.targetLost": "목표 {target} 소멸",
   "dp.note.targetPicked": "새 목표 {target}",
@@ -550,7 +546,6 @@ export const kr: Catalog = {
   "sheet.remove.cockpitDestroyed": "조종석 파괴",
   "sheet.remove.hdBlownOff": "HD 폭발",
   "sheet.remove.engineDestroyed": "엔진 파괴",
-  "sheet.remove.displacedOffBoard": "맵 밖으로 밀려남",
 
   "critChart.summary": "critical slots",
   "critChart.empty": "-",
@@ -678,10 +673,8 @@ export const kr: Catalog = {
   "log.psrReason.building": "건물 진입",
   "log.psrReason.kick": "발차기 피격",
   "log.psrReason.kickMiss": "발차기 빗나감",
-  "log.psrReason.domino": "도미노 효과",
   "log.accidentalFallHit": "[{id}] {target} 위로 추락 ({tn}+ 필요, 굴림 {roll}): 피해 {damage}",
   "log.accidentalFallMiss": "[{id}] {target} 쪽으로 추락했으나 빗나감 ({tn}+ 필요, 굴림 {roll})",
-  "log.unitDisplaced": "[{id}] ({fromCol},{fromRow})에서 ({toCol},{toRow})로 밀려남 (도미노 효과)",
   "log.psrReason.ejection": "탈출",
   "log.fallCause.failedPsr": "{reason} 판정 실패",
   "log.fallCause.legDestroyed": "다리 파괴",
@@ -691,7 +684,6 @@ export const kr: Catalog = {
   "log.fallCause.terrain.water": "수역 진입",
   "log.fallCause.terrain.building": "건물 진입",
   "log.fallCause.buildingCollapse": "건물 붕괴",
-  "log.fallCause.physicalAttack": "격투 공격",
   "log.fallCause.voluntaryDrop": "자발적 엎드림",
   "log.unitFell":
     "[{id}] *** 넘어짐 ({cause}) 방향 {facing}: {groups} (합계 {damage}, {levels}레벨 추락) ({hex}) ***",
@@ -744,20 +736,9 @@ export const kr: Catalog = {
   "res.physical.toHit": "최소 {total} 필요, 2D6 = {roll} -> {verdict}",
   "res.physical.targetDamage": "명중: {groups}",
   "res.physical.attackerDamage": "자해: {groups}",
-  "res.physical.targetDisplaced": "목표가 ({col},{row})으로 밀려남",
-  "res.physical.attackerDisplaced": "공격자가 ({col},{row})으로 전진",
-  "res.physical.redirected": "목표가 밀려남 — {from}에서 {target}(으)로 +1에 명중 굴림 (TW p.144)",
-  "res.physical.displacedMiss":
-    "목표 {target}가 타격 전 밀려남 — 유효 목표 없음, 자동 빗나감 (TW p.144)",
   "res.physical.attackerDown": "공격자 {attacker}가 공격 불가(격파/의식불명/정지) — 자동 빗나감",
   "res.physical.targetDown": "목표 {target}가 격투 전 파괴/제거됨 — 자동 빗나감",
   "res.physical.noLongerLegal": "더 이상 유효하지 않음({reason}) — 자동 빗나감",
-  "res.physical.targetPsr": "목표 조종 판정: {outcome}",
-  "res.physical.attackerPsr": "공격자 조종 판정: {outcome}",
-  "res.physical.stands": "최소 {target} 필요, 2D6 = {roll} 버팀",
-  "res.physical.falls": "최소 {target} 필요, 2D6 = {roll} 넘어짐",
-  "res.physical.autoStand": "최소 {target} 필요, 자동으로 버팀",
-  "res.physical.autoFall": "최소 {target} 필요, 자동으로 넘어짐",
   "res.outOfAmmo": "{weapon} 탄약 부족으로 발사 중지",
   "res.clusterRoll": "클러스터 굴림 2D6 = {roll}",
   "res.clusterMod": "클러스터 사거리 보정 {mod}",
