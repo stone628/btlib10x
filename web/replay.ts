@@ -366,7 +366,19 @@ function armorField(f: DamageFields): string {
 function critField(f: DamageFields): string {
   let out = "";
   for (const [loc, code] of LOC_ORDER) {
-    for (const n of [...(f.crits[loc] ?? [])].sort((a, b) => a - b)) out += code + slotChar(n);
+    const slots = [...(f.crits[loc] ?? [])].sort((a, b) => a - b);
+    let i = 0;
+    while (i < slots.length) {
+      let j = i;
+      while (j + 1 < slots.length && slots[j + 1] === slots[j]! + 1) j++;
+      if (j - i + 1 >= 3) {
+        out += `${code}${slotChar(slots[i]!)}~${slotChar(slots[j]!)}`;
+        i = j + 1;
+      } else {
+        out += code + slotChar(slots[i]!);
+        i++;
+      }
+    }
   }
   return out;
 }
@@ -677,11 +689,22 @@ export function decodeUnitLine(line: string): UnitInit {
   }
   if (armor.replace(/([hCRLaAgG])([0-9/]*)/g, "") !== "") throw new Error("bad armor field");
   if (Object.keys(taken).length > 0) damage.damageTaken = taken;
-  if (crit.length % 2 !== 0) throw new Error("bad crit field");
-  for (let i = 0; i < crit.length; i += 2) {
-    const loc = locOf(crit[i]);
-    const crits = damage.critsDestroyed ?? {};
-    damage.critsDestroyed = { ...crits, [loc]: [...(crits[loc] ?? []), slotNumber(crit[i + 1])] };
+  if (crit.replace(/([hCRLaAgG])([1-9abc])(~[1-9abc])?/g, "") !== "")
+    throw new Error("bad crit field");
+  for (const mm of crit.matchAll(/([hCRLaAgG])([1-9abc])(~[1-9abc])?/g)) {
+    const loc = locOf(mm[1]);
+    const from = slotNumber(mm[2]);
+    if (mm[3] === undefined) {
+      const crits = damage.critsDestroyed ?? {};
+      damage.critsDestroyed = { ...crits, [loc]: [...(crits[loc] ?? []), from] };
+    } else {
+      const to = slotNumber(mm[3].slice(1));
+      if (to <= from) throw new Error("descending crit range");
+      const crits = damage.critsDestroyed ?? {};
+      const expanded: number[] = [];
+      for (let n = from; n <= to; n++) expanded.push(n);
+      damage.critsDestroyed = { ...crits, [loc]: [...(crits[loc] ?? []), ...expanded] };
+    }
   }
   if (ammo.replace(/([hCRLaAgG])([1-9abc])(\d+)/g, "") !== "") throw new Error("bad ammo field");
   for (const mm of ammo.matchAll(/([hCRLaAgG])([1-9abc])(\d+)/g)) {
