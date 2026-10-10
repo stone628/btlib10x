@@ -333,7 +333,6 @@ export const en = {
   "err.mustBeOnlineForShutdown": "mode shutdown requires an online unit",
   "err.mustBeDownForStartup": "mode startup requires a shut-down unit",
   "err.alreadyEjected": "{id} is no longer on the battlefield",
-  "err.alreadyStarting": "{id} is already starting up",
   "err.heatShutdownNoStartup":
     "{id} shut down from heat: the restart roll is made automatically in the Heat Phase",
   "err.noBattle": "No active battle",
@@ -429,7 +428,6 @@ export const en = {
   "heat.ammoSafe": "ammo: safe (below 19)",
   "heat.stateOnline": "state: ONLINE",
   "heat.stateDown": "state: SHUT DOWN",
-  "heat.stateStarting": "state: STARTING",
 
   // attack status
   "attackStatus.header": "queued attacks:",
@@ -536,7 +534,6 @@ export const en = {
   "sheet.statusHeader": "status: {status}, HEAT({currHeat}/{maxHeat})",
   "sheet.statusOnline": "ONLINE",
   "sheet.statusShutdown": "SHUTDOWN",
-  "sheet.statusStarting": "STARTING",
   "sheet.statusDestroyed": "DESTROYED",
   "sheet.weaponsHeader": "weapons ({n}):",
   "sheet.ammoStatus": "ammo status: policy({policy}) {explosion}",
@@ -663,7 +660,7 @@ export const en = {
     "[{id}] restarts (heat {heat} < {threshold}) avoid success(2D6 = {roll} >= {avoid})",
   "log.restartedNoCheck": "[{id}] restarts (heat {heat} below {threshold})",
   "log.shutdownManual": "[{id}] manually shuts down",
-  "log.startupSuccess": "[{id}] startup check passed (2D6 = {roll} >= {avoid}) — online next turn",
+  "log.startupSuccess": "[{id}] startup check passed (2D6 = {roll} >= {avoid}) — online now, may attack this turn",
   "log.startupFailed": "[{id}] startup check failed (2D6 = {roll} < {avoid}); still shut down",
   "log.restartFailed":
     "[{id}] restart check failed (heat {heat} >= {threshold}) avoid fail(2D6 = {roll} < {avoid}); still shut down",

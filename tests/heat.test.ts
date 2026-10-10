@@ -596,19 +596,6 @@ describe("game integration: shutdown", () => {
     ).toBe(false);
   });
 
-  it("leaves a starting unit untouched and brings it online at the next initiative", () => {
-    const state = hbkVsEnf();
-    const hbk = requireUnit(state, "hbk");
-    hbk.shutdown = "starting";
-    hbk.heat = 12;
-    startAttackTurn(state);
-    advancePhase(state, [], scriptedRng(3, 3, 3, 1));
-    expect(hbk.shutdown).toBe("starting");
-    // weaponAttack -> end already ran; advance again: end -> initiative (turn 2).
-    advancePhase(state, [], scriptedRng(3, 3, 3, 1));
-    expect(hbk.shutdown).toBe("not");
-  });
-
   it("never restarts at heat 30+, even on a natural 12", () => {
     const state = hbkVsEnf();
     const hbk = requireUnit(state, "hbk");

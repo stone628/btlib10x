@@ -307,9 +307,8 @@ export interface DeclaredPhysicalAttack {
 
 /** Off-line status of a unit. `"not"` = online; any other value = shut down.
  *  `"manual"` persists until a voluntary startup roll succeeds, `"heat"`
- *  auto-restarts in the end phase once heat drops, and `"starting"` is a
- *  successful startup still pending the next initiative roll. */
-export type ShutdownState = "manual" | "heat" | "starting" | "not";
+ *  auto-restarts in the heat phase once heat drops. */
+export type ShutdownState = "manual" | "heat" | "not";
 
 /** Physical destruction state of a unit: "not" = intact. Reason tracks
  *  which kill condition ended the 'Mech (head/CT IS depleted, cockpit
@@ -526,8 +525,7 @@ export interface UnitState extends MechModelHolder {
    *  phase reads `heat` (not `heat + heatPending`), matching TW p.160. */
   heatPending: number;
   /** Shutdown state: "manual" (voluntary), "heat" (automatic, restartable in
-   *  the end phase), "starting" (startup roll succeeded; still off-line until
-   *  the next initiative roll) or "not" (online). Anything but "not" counts
+   *  the heat phase) or "not" (online). Anything but "not" counts
    *  as shut down: cannot move, fire, or act as the next actor. */
   shutdown: ShutdownState;
   declaredWeaponAttacks: WeaponAttackDecl[];
@@ -4567,9 +4565,6 @@ function processEndPhase(state: BattleState) {
     unit.declaredWeaponAttacks = [];
     unit.passedAttacks = false;
     unit.declaredPickup = null;
-    // A successful voluntary startup comes online just before the next
-    // initiative roll.
-    if (unit.shutdown === "starting") unit.shutdown = "not";
   }
 }
 
@@ -4712,10 +4707,9 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
       });
     }
 
-    // Shutdown / restart at `endHeat`. Voluntary "manual"
-    // and pending "starting" skip (voluntary restart only; comes-online at
-    // next initiative roll).
-    if (unit.shutdown !== "manual" && unit.shutdown !== "starting") {
+    // Shutdown / restart at `endHeat`. A voluntary "manual" shutdown skips
+    // it (restart only through `attemptVoluntaryStartup`).
+    if (unit.shutdown !== "manual") {
       const { avoid, threshold } = shutdownAvoidWithThreshold(endHeat);
       if (unit.shutdown === "heat") {
         // Already heat-shut-down: restart path.
@@ -5490,9 +5484,9 @@ export function voluntaryShutdown(state: BattleState, unitId: string, sink: Game
 
 /** Voluntary startup attempt, resolved during the movement phase: roll 2D6
  *  against the shutdown avoidance number at the current heat. On success the
- *  unit enters "starting" — still off-line, but it comes online just before
- *  the next initiative roll. On failure it remains shut down. Marks the unit
- *  as having acted either way. */
+ *  unit comes online at once: the startup is its movement for the turn (it
+ *  stands still) and it keeps the attack phase. On failure it remains shut
+ *  down. Marks the unit as having acted either way. */
 export function attemptVoluntaryStartup(
   state: BattleState,
   unitId: string,
@@ -5503,7 +5497,6 @@ export function attemptVoluntaryStartup(
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
   if (isNominal(unit)) throw new Error(`${unitId} is not shut down`);
-  if (unit.shutdown === "starting") throw new Error(`${unitId} is already starting up`);
   // A heat shutdown restarts only through the Heat Phase roll (TW p.160);
   // a movement-phase attempt would be a second roll in the same turn.
   if (unit.shutdown === "heat") {
@@ -5542,7 +5535,7 @@ export function attemptVoluntaryStartup(
   }
   const roll = avoid === 0 ? 0 : roll2D6(rng);
   if (roll >= avoid) {
-    unit.shutdown = "starting";
+    unit.shutdown = "not";
     sink.push({
       kind: "restartCheck",
       unitId,

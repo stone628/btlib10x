@@ -325,7 +325,6 @@ export const kr: Catalog = {
   "err.mustBeOnlineForShutdown": "mode shutdown은 온라인 유닛에서만 사용할 수 있습니다",
   "err.mustBeDownForStartup": "mode startup은 셧다운된 유닛에서만 사용할 수 있습니다",
   "err.alreadyEjected": "{id} 는 더 이상 전장에 없습니다",
-  "err.alreadyStarting": "{id} 은 이미 기동 중입니다",
   "err.heatShutdownNoStartup":
     "{id} 은 열로 정지됨: 재기동 판정은 열 페이즈에 자동으로 이루어집니다",
   "err.noBattle": "진행 중인 전투가 없습니다",
@@ -418,7 +417,6 @@ export const kr: Catalog = {
   "heat.ammoSafe": "탄약: 안전 (19 미만)",
   "heat.stateOnline": "상태: 온라인",
   "heat.stateDown": "상태: 셧다운",
-  "heat.stateStarting": "상태: 기동 중",
 
   // attack status/
   "attackStatus.header": "예약된 공격:",
@@ -525,7 +523,6 @@ export const kr: Catalog = {
   "sheet.statusHeader": "상태: {status}, 방열({currHeat}/{maxHeat})",
   "sheet.statusOnline": "온라인",
   "sheet.statusShutdown": "셧다운",
-  "sheet.statusStarting": "기동 중",
   "sheet.statusDestroyed": "파괴됨",
   "sheet.weaponsHeader": "무기 ({n}):",
   "sheet.shotsRange": "({curr}/{max}회분)",
@@ -648,7 +645,7 @@ export const kr: Catalog = {
   "log.restarted": "[{id}] 재기동됨 (발열 {heat} < {threshold}) 회피 성공(2D6 = {roll} >= {avoid})",
   "log.restartedNoCheck": "[{id}] 재기동됨 (발열 {heat} < {threshold})",
   "log.shutdownManual": "[{id}] 수동 셧다운",
-  "log.startupSuccess": "[{id}] 시동 체크 성공 (2D6 = {roll} >= {avoid}) — 다음 턴 온라인",
+  "log.startupSuccess": "[{id}] 시동 체크 성공 (2D6 = {roll} >= {avoid}) — 즉시 온라인, 이번 턴 공격 가능",
   "log.startupFailed": "[{id}] 시동 체크 실패 (2D6 = {roll} < {avoid}); 여전히 셧다운 상태",
   "log.restartFailed":
     "[{id}] 재기동 체크 실패 (발열 {heat} >= {threshold}) 회피 실패(2D6 = {roll} < {avoid}); 여전히 셧다운 상태",

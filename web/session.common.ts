@@ -112,7 +112,6 @@ export function heatStatusLines(unit: UnitState): Chunk {
 
 function heatStateLabel(shutdown: ShutdownState): string {
   if (shutdown === "not") return i18n("heat.stateOnline");
-  if (shutdown === "starting") return i18n("heat.stateStarting");
   return i18n("heat.stateDown");
 }
 
@@ -457,8 +456,6 @@ function shutdownHeader(view: SheetView): string {
       return "[SHUTDOWN]";
     case "heat":
       return "!SHUTDOWN!";
-    case "starting":
-      return "[STARTING]";
   }
   if (isUnitImmobile(view.damage)) return "[IMMOBILE]";
   return "[NOMINAL]";
@@ -974,9 +971,7 @@ function mechStatusLines(view: SheetView): string[] {
     ? i18n("sheet.statusDestroyed")
     : view.shutdown === "not"
       ? i18n("sheet.statusOnline")
-      : view.shutdown === "starting"
-        ? i18n("sheet.statusStarting")
-        : i18n("sheet.statusShutdown");
+      : i18n("sheet.statusShutdown");
   const lines: string[] = [
     i18n("sheet.statusHeader", { status, currHeat: view.heat, maxHeat: HEAT_SCALE_MAX }),
     `  ${durabilityFrag(view, "head")} ${durabilityFrag(view, "leftTorso")} ${durabilityFrag(view, "centerTorso")} ${durabilityFrag(view, "rightTorso")}`,

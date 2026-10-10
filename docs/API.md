@@ -335,8 +335,7 @@ the heat phase has no separate meaning.
 
 Engine crit heat is skipped for any non-online unit (`shutdown !== "not"`)
 per TW p.160: *"even engine criticals generate no extra heat while shut
-down."* Voluntary `manual` and pending `starting` shutdowns generate no
-own heat at all.
+down."* A voluntary `manual` shutdown generates no own heat at all.
 
 The involuntary shutdown / restart roll convention is `roll >= avoid` =
 success, matching the voluntary startup path and the ammo-explosion
@@ -771,14 +770,14 @@ interface UnitState {
   declaredWeaponAttacks; declaredPhysicalAttacks; declaredPickup; passedAttacks;
   destroyed: DestroyedState;          // "not" | "headDestroyed" | "centerTorsoDestroyed" | "cockpitDestroyed" | "headBlownOff" | "engineDestroyed"
   removed: RemovedState;              // "not" | "destroyed" | "pilotEjected" | "pilotKilled"
-  shutdown: ShutdownState;            // "not" | "manual" | "heat" | "starting"
+  shutdown: ShutdownState;            // "not" | "manual" | "heat"
 }
 
 type DestroyedReason = "headDestroyed" | "centerTorsoDestroyed" | "cockpitDestroyed" | "headBlownOff" | "engineDestroyed";
 type DestroyedState = "not" | DestroyedReason;
 type RemovalReason = "destroyed" | "pilotEjected" | "pilotKilled";
 type RemovedState = "not" | RemovalReason;
-type ShutdownState = "not" | "manual" | "heat" | "starting";
+type ShutdownState = "not" | "manual" | "heat";
 type PilotHitReason = "headHit" | "ammoExplosion" | "fall" | "shutdownFall" | "lifeSupport"; // pilot-damage cause tag
 
 type GameEvent =
