@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { requireUnit, type UnitInit } from "../src";
-import { LOCATIONS, type Location } from "../src/core/types";
+import { LOCATIONS, type Location, type Rng } from "../src/core/types";
 import { mechDef } from "../src/data/index";
 import { ammoWeaponTotals, loadAmmoBins } from "../src/rules/ammo";
 import {
@@ -32,7 +32,7 @@ import {
 } from "../src/rules/game";
 import { heatSinksOperational } from "../src/rules/heat";
 import { preexistingDamageModifier } from "../src/rules/piloting";
-import { createTestBattle, overrideAmmoBin, scriptedRng } from "./helpers";
+import { createTestBattle, overrideAmmoBin, scriptedRng, seededRng } from "./helpers";
 
 /** Helper: returns an Rng whose first 2D6 sums to `sum` (1..12), then yields `tail`. */
 function detRoll(sum: number, ...tail: number[]): ReturnType<typeof scriptedRng> {
@@ -1443,5 +1443,92 @@ describe("crit slot table bitmask", () => {
     mergeCritTable(a, b);
     expect(destroyedSlots(a, "head")).toEqual([1, 2]);
     expect(destroyedSlots(b, "head")).toEqual([1, 2]);
+  });
+});
+
+describe("audit fixes: critical-hit pipeline", () => {
+  const def = mechDef("HBK-4G")!;
+  const fresh = () => ({
+    critSlotsDestroyed: emptyCritTable(def),
+    destroyedWeapons: [] as number[],
+    damage: {
+      armor: { ...def.armor },
+      armorRear: { ...def.armorRear },
+      internalStructure: { ...def.internalStructure },
+    } as UnitDamageState,
+    ammoBins: loadAmmoBins(def),
+  });
+
+  it("CRIT-01: a multi-crit roll destroys distinct slots", () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const seeded = seededRng(seed);
+      let n = 0;
+      const rng: Rng = {
+        d6: () => (n++ < 2 ? 6 : seeded.d6()),
+        snapshot: () => "",
+        load: () => {},
+      };
+      const res = resolveCriticalHits({
+        rng,
+        def,
+        source: { location: "centerTorso", damage: 5 },
+        ...fresh(),
+      });
+      const marked = res.critSlotsDestroyed.centerTorso ?? 0;
+      const bits = marked.toString(2).replaceAll("0", "").length;
+      expect(bits).toBe(3);
+      expect(res.rows.length).toBe(3);
+    }
+  });
+
+  it("CRIT-02: a through-armor chance on a destroyed location moves inward unchanged", () => {
+    const f = fresh();
+    f.damage.internalStructure.leftTorso = 0;
+    const res = resolveCriticalHits({
+      rng: detRoll(8, 1, 1),
+      def,
+      source: { location: "leftTorso", damage: 0, tac: true, struck: false },
+      throughArmor: true,
+      ...f,
+    });
+    expect(res.determiningRoll).toBe(8);
+    expect(res.rows).toHaveLength(1);
+    const row = res.rows[0]!;
+    expect("location" in row ? row.location : null).toBe("centerTorso");
+  });
+
+  it("CRIT-03: a double heat sink takes one critical, later hits on it soak", () => {
+    const whk = mechDef("WHK-Prime")!;
+    const group = whk.critSlots.leftLeg
+      .map((s, i) => ({ s, i }))
+      .filter(({ s }) => s.kind === "structure" && s.name === "doubleHeatSink");
+    expect(group.length).toBeGreaterThanOrEqual(2);
+    const base = {
+      def: whk,
+      source: { location: "leftLeg" as Location, damage: 5 },
+      destroyedWeapons: [] as number[],
+      damage: {
+        armor: { ...whk.armor },
+        armorRear: { ...whk.armorRear },
+        internalStructure: { ...whk.internalStructure },
+      } as UnitDamageState,
+      ammoBins: loadAmmoBins(whk),
+    };
+    const mask = emptyCritTable(whk);
+    setSlotDestroyed(mask, "leftLeg", group[0]!.i);
+    const res = resolveCriticalHits({
+      ...base,
+      rng: detRoll(8, 1, 1, 1, 1, 1, 1),
+      critSlotsDestroyed: mask,
+    });
+    // The device is already gone: whichever of its other slots is struck soaks.
+    for (const r of res.rows) {
+      if (r.kind === "noEffect") continue;
+      expect(r.kind).not.toBe("heatSinkDestroyed");
+    }
+    // Only the originally struck slot (or at most one more via non-DHS rows) is marked.
+    for (const g of group.slice(1)) {
+      expect(isSlotDestroyed(res.critSlotsDestroyed, "leftLeg", g.i)).toBe(false);
+    }
   });
 });

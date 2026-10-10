@@ -645,7 +645,8 @@ export const kr: Catalog = {
   "log.restarted": "[{id}] 재기동됨 (발열 {heat} < {threshold}) 회피 성공(2D6 = {roll} >= {avoid})",
   "log.restartedNoCheck": "[{id}] 재기동됨 (발열 {heat} < {threshold})",
   "log.shutdownManual": "[{id}] 수동 셧다운",
-  "log.startupSuccess": "[{id}] 시동 체크 성공 (2D6 = {roll} >= {avoid}) — 즉시 온라인, 이번 턴 공격 가능",
+  "log.startupSuccess":
+    "[{id}] 시동 체크 성공 (2D6 = {roll} >= {avoid}) — 즉시 온라인, 이번 턴 공격 가능",
   "log.startupFailed": "[{id}] 시동 체크 실패 (2D6 = {roll} < {avoid}); 여전히 셧다운 상태",
   "log.restartFailed":
     "[{id}] 재기동 체크 실패 (발열 {heat} >= {threshold}) 회피 실패(2D6 = {roll} < {avoid}); 여전히 셧다운 상태",

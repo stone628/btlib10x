@@ -660,7 +660,8 @@ export const en = {
     "[{id}] restarts (heat {heat} < {threshold}) avoid success(2D6 = {roll} >= {avoid})",
   "log.restartedNoCheck": "[{id}] restarts (heat {heat} below {threshold})",
   "log.shutdownManual": "[{id}] manually shuts down",
-  "log.startupSuccess": "[{id}] startup check passed (2D6 = {roll} >= {avoid}) — online now, may attack this turn",
+  "log.startupSuccess":
+    "[{id}] startup check passed (2D6 = {roll} >= {avoid}) — online now, may attack this turn",
   "log.startupFailed": "[{id}] startup check failed (2D6 = {roll} < {avoid}); still shut down",
   "log.restartFailed":
     "[{id}] restart check failed (heat {heat} >= {threshold}) avoid fail(2D6 = {roll} < {avoid}); still shut down",

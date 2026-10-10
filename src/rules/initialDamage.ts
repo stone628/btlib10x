@@ -160,10 +160,7 @@ export function resolveInitialDamage(
       const slot = layout[n - 1]!;
       if (slot.kind === "empty") fail(id, `${loc} crit slot ${n} is empty`);
       setSlotDestroyed(critSlotsDestroyed, loc, n - 1);
-      if (slot.kind === "structure") {
-        // A double heat sink dies as a whole group (1-based sibling indices).
-        for (const sibling of slot.group) setSlotDestroyed(critSlotsDestroyed, loc, sibling - 1);
-      } else if (slot.kind === "weapon") {
+      if (slot.kind === "weapon") {
         destroyedWeapons.add(slot.weaponIndex);
       } else if (slot.kind === "ammo") {
         destroyedAmmo.push(ammoBinId(loc, n));

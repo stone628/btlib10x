@@ -577,6 +577,22 @@ function runDetermining(
 ): number | null {
   if (state.depth > MAX_RECURSION) return null;
   state.depth += 1;
+  // A hit-location critical chance on an already destroyed location moves
+  // inward unchanged, one Determining roll in the next location (TW p.124).
+  if (
+    source.tac === true &&
+    source.carried === undefined &&
+    source.struck !== true &&
+    isUnitLocationDestroyed(state.damage, source.location)
+  ) {
+    const next = damageTransferTo(source.location);
+    const moved =
+      next === null
+        ? null
+        : runDetermining(rng, def, { ...source, location: next, struck: false }, state);
+    state.depth -= 1;
+    return moved;
+  }
   const det: DeterminingResult =
     source.carried !== undefined
       ? { kind: "hits", count: source.carried, roll: 0 }
@@ -630,24 +646,18 @@ function runDetermining(
       state.depth -= 1;
       return det.roll;
     }
-    // The crit count carries inward; only a hit-location crit chance on an
-    // already-destroyed location re-rolls there (TW p.124).
-    const chanceOnly = source.tac === true && sourceLocationLost && source.carried === undefined;
+    // The crit count carries inward.
     const { carried: _carried, ...rest } = source;
-    runDetermining(
-      rng,
-      def,
-      chanceOnly
-        ? { ...rest, location: next, struck: false }
-        : { ...rest, location: next, struck: false, carried: det.count },
-      state,
-    );
+    runDetermining(rng, def, { ...rest, location: next, struck: false, carried: det.count }, state);
     state.depth -= 1;
     return det.roll;
   }
   let remaining = det.count;
   while (remaining > 0) {
-    const found = findHittableSlot(rng, source.location, sourceLayout, sourceDestroyed);
+    const live = state.destroyed[source.location];
+    const found = isLocationExhausted(sourceLayout, live)
+      ? null
+      : findHittableSlot(rng, source.location, sourceLayout, live);
     if (!found) {
       for (let i = 0; i < remaining; i++) {
         state.rows.push({ kind: "noEffect", rolls: [] });
@@ -842,11 +852,12 @@ function applySlotHit(
     return;
   }
   if (name === "doubleHeatSink") {
-    // Group destruction: mark all slots in the same DHS group as destroyed.
+    // One critical destroys the device; further hits on its other slots soak
+    // (TW pp.124-125). Only the struck slot is marked.
     const group = (slot as { group: readonly number[] }).group;
-    for (const idx of group) {
-      const j = idx - 1;
-      if (j >= 0 && j < layout.length) setSlotDestroyed(state.destroyed, loc, j);
+    if (group.some((idx) => idx - 1 !== i0 && isSlotDestroyed(state.destroyed, loc, idx - 1))) {
+      state.rows.push({ kind: "noEffect", rolls: rolls.slice() });
+      return;
     }
   }
   if (name === ENGINE) {

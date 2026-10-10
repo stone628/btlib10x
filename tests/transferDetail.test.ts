@@ -264,7 +264,7 @@ describe("web log: 'Mech destroyed vs. the pilot's fate", () => {
     const text = out.join("\n");
     expect(text).toMatch(/'Mech destroyed/);
     expect(text).not.toMatch(/PSR ejecting/);
-    expect(text).toMatch(/\[foe\] \*\*\* DESTROYED/);
+    expect(text).toMatch(/\*\*\* DESTROYED \(HD destroyed\) \*\*\*/);
     const foe = s.battle!.units.foe!;
     expect(foe.pilotHits).toBe(foe.pilotHitMax);
   });

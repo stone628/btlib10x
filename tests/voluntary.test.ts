@@ -148,9 +148,7 @@ describe("voluntary startup", () => {
     expect(() => attemptVoluntaryStartup(state, "enf", [], scriptedRng())).toThrow(/not shut down/);
     voluntaryShutdown(state, "hbk", []);
     attemptVoluntaryStartup(state, "hbk", []);
-    expect(() => attemptVoluntaryStartup(state, "hbk", [], scriptedRng())).toThrow(
-      /not shut down/,
-    );
+    expect(() => attemptVoluntaryStartup(state, "hbk", [], scriptedRng())).toThrow(/not shut down/);
   });
 
   it("comes online at once: movement is spent, the attack phase is kept", () => {

@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import type { Location } from "../src/core/types";
+import { mechDef } from "../src/data/index";
 import {
   mechDefFor,
   type ResolvedCritSlot,
@@ -1271,5 +1273,79 @@ describe("rollFallDirection", () => {
     expect(rollFallDirection(scriptedRng(4))).toEqual({ roll: 4, shift: 3, column: "rear" });
     expect(rollFallDirection(scriptedRng(5))).toEqual({ roll: 5, shift: -2, column: "leftSide" });
     expect(rollFallDirection(scriptedRng(6))).toEqual({ roll: 6, shift: -1, column: "leftSide" });
+  });
+});
+
+function slotIndex(modelId: string, loc: Location, name: string): number {
+  const layout = mechDef(modelId)!.critSlots[loc];
+  const i = layout.findIndex((s) => s.kind === "structure" && s.name === name);
+  if (i < 0) throw new Error(`no ${name} in ${modelId} ${loc}`);
+  return i;
+}
+
+describe("audit fixes: piloting modifiers", () => {
+  it("DMG-01: a sheared arm does not count toward the 20-point PSR", () => {
+    const state = hbkEnf();
+    const enf = requireUnit(state, "enf");
+    const before = {
+      damage: { enf: cloneDamage(enf.damage) },
+      crit: { enf: cloneCritTable(enf.critSlotsDestroyed) },
+    };
+    // Torso armor already gone before the phase; the phase strips the torso
+    // structure and the arm riding off with it.
+    enf.damage.armor.leftTorso = 0;
+    before.damage.enf = cloneDamage(enf.damage);
+    const lt = enf.damage.internalStructure.leftTorso;
+    const arm = enf.damage.armor.leftArm + enf.damage.internalStructure.leftArm;
+    expect(lt).toBeLessThan(20);
+    expect(lt + arm).toBeGreaterThanOrEqual(20);
+    enf.damage.internalStructure.leftTorso = 0;
+    enf.damage.armor.leftArm = 0;
+    enf.damage.internalStructure.leftArm = 0;
+    const events: GameEvent[] = [];
+    resolvePhasePiloting(state, scriptedRng(6, 6), before, events);
+    expect(events.filter((e) => e.kind === "pilotingCheck")).toEqual([]);
+  });
+
+  it("PSR-01: the seatbelt roll after a destroyed leg carries the 20-damage modifier", () => {
+    const state = hbkEnf();
+    const enf = requireUnit(state, "enf");
+    const before = {
+      damage: { enf: cloneDamage(enf.damage) },
+      crit: { enf: cloneCritTable(enf.critSlotsDestroyed) },
+    };
+    const leg = enf.damage.armor.rightLeg + enf.damage.internalStructure.rightLeg;
+    expect(leg).toBeGreaterThanOrEqual(20);
+    enf.damage.armor.rightLeg = 0;
+    enf.damage.internalStructure.rightLeg = 0;
+    const events: GameEvent[] = [];
+    resolvePhasePiloting(state, scriptedRng(6, 6, 6, 6, 6, 6, 6), before, events);
+    const seat = events
+      .filter((e) => e.kind === "pilotingCheck")
+      .find((e) => e.reason === "seatbelt");
+    expect(seat).toBeDefined();
+    // Destroyed leg +5, 20+ damage this phase +1.
+    expect(seat!.triggerModifier).toBe(6);
+  });
+
+  it("PSR-02: a hip destroyed this phase wipes that leg's earlier actuator modifiers", () => {
+    const state = hbkEnf();
+    const enf = requireUnit(state, "enf");
+    const ula = slotIndex("ENF-4R", "rightLeg", "upperLegActuator");
+    const hip = slotIndex("ENF-4R", "rightLeg", "hip");
+    setSlotDestroyed(enf.critSlotsDestroyed, "rightLeg", ula);
+    const before = {
+      damage: { enf: cloneDamage(enf.damage) },
+      crit: { enf: cloneCritTable(enf.critSlotsDestroyed) },
+    };
+    setSlotDestroyed(enf.critSlotsDestroyed, "rightLeg", hip);
+    const events: GameEvent[] = [];
+    resolvePhasePiloting(state, scriptedRng(6, 6, 6, 6), before, events);
+    const hipRoll = events
+      .filter((e) => e.kind === "pilotingCheck")
+      .find((e) => e.reason === "hip");
+    expect(hipRoll).toBeDefined();
+    expect(hipRoll!.triggerModifier).toBe(2);
+    expect(hipRoll!.preexistingModifier).toBe(0);
   });
 });

@@ -82,6 +82,9 @@ export interface WeaponAttackInput {
   /** Damage the target's building hex absorbs from each hit grouping: its CF
    *  at the start of the phase ÷ 10, rounded up (TW p.171). */
   readonly buildingAbsorb?: number;
+  /** The attacker is adjacent to a target standing in a building hex: every
+   *  missed shot strikes the building (TW p.171). */
+  readonly missesStrikeBuilding?: boolean;
   readonly distance: number;
   readonly weapon: string;
   readonly ammoExhausted?: boolean;
@@ -185,6 +188,19 @@ const MISSILE_SINGLE_DAMAGE = 2;
 const MISSILE_LOT_SIZE = 5;
 
 /** Resolve one declared weapon attack end-to-end: to-hit, location(s), damage. */
+/** Damage of a whole volley: every missile of a missile launcher, else
+ *  `shots` times the bracket damage. */
+function volleyDamage(
+  weapon: WeaponDef,
+  shots: number,
+  bracket: ToHitBreakdown["rangeBracket"],
+): number {
+  if (weapon.missiles !== undefined && weapon.missileDamage !== undefined) {
+    return weapon.missiles * weapon.missileDamage;
+  }
+  return damageForBracket(weapon, bracket) * shots;
+}
+
 export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution {
   const weapon: WeaponDef = weaponDefFor(input);
   const shots = input.shots ?? 1;
@@ -258,9 +274,20 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
   if (rapidFire && shots > 1 && roll <= rapidFireJamThreshold) base.jammed = true;
 
   base.hit = breakdown.automatic !== null ? breakdown.automatic === "hit" : roll >= breakdown.total;
-  if (!base.hit) return base;
+  if (!base.hit) {
+    // A Streak launcher that misses never fires, so it strikes nothing.
+    if (input.missesStrikeBuilding === true && weapon.streak !== true) {
+      (base as { buildingAbsorbed?: number }).buildingAbsorbed = volleyDamage(
+        weapon,
+        shots,
+        breakdown.rangeBracket,
+      );
+    }
+    return base;
+  }
 
   let coverDamage = 0;
+  let missedDamage = 0;
   if (weapon.missiles !== undefined && weapon.missileDamage !== undefined) {
     // Streak launchers: to-hit success means full tube count hits; no
     // cluster roll, no extra RNG consumed. Miss path already returned above,
@@ -277,6 +304,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
       if (mod !== 0) base.clusterMod = mod;
       hits = clusterHits(weapon.missiles, modifiedClusterRoll(clusterRoll, mod));
     }
+    missedDamage = (weapon.missiles - hits) * weapon.missileDamage;
     if (weapon.missileDamage === MISSILE_SINGLE_DAMAGE) {
       for (let i = 0; i < hits; i++) {
         const placed = hitLocationPlaced(input.rng, partialCover, arc);
@@ -308,6 +336,7 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     const clusterRoll = roll2D6(input.rng);
     base.clusterRoll = clusterRoll;
     const hits = clusterHits(shots, clusterRoll);
+    missedDamage = (shots - hits) * damageForBracket(weapon, breakdown.rangeBracket);
     for (let i = 0; i < hits; i++) {
       const placed = hitLocationPlaced(input.rng, partialCover, arc);
       if (placed === null) {
@@ -348,6 +377,10 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     }
     base.groups = reaching;
     (base as { buildingAbsorbed?: number }).buildingAbsorbed = absorbed;
+  }
+  if (input.missesStrikeBuilding === true && missedDamage > 0) {
+    const current = (base as { buildingAbsorbed?: number }).buildingAbsorbed ?? 0;
+    (base as { buildingAbsorbed?: number }).buildingAbsorbed = current + missedDamage;
   }
 
   let damage = input.targetDamage;

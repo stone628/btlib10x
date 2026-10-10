@@ -28,7 +28,7 @@ import {
   toHitHeatModifier,
   waterHeatBonus,
 } from "../src/rules/heat";
-import { createTestBattle, scriptedRng } from "./helpers";
+import { createTestBattle, scriptedRng, seededRng } from "./helpers";
 
 function hbkVsEnf(): BattleState {
   const units: UnitInit[] = [
@@ -1063,3 +1063,33 @@ describe("deferred event payload (base, heat, totalGenerated)", () => {
 function hbk_setHeat(state: BattleState, value: number): void {
   requireUnit(state, "hbk").heat = value;
 }
+
+describe("heat shutdown fall in deep water (HEAT-02)", () => {
+  it("halves the fall damage", () => {
+    let seen = false;
+    for (let seed = 1; seed <= 200 && !seen; seed++) {
+      const state = createTestBattle(
+        [{ col: 2, row: 2, type: "water2" }],
+        [
+          buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 2 }, "s"),
+          buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 6 }, "n"),
+        ],
+        true,
+      );
+      requireUnit(state, "hbk").heat = 60;
+      rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []);
+      advancePhase(state, []);
+      const events: GameEvent[] = [];
+      advancePhase(state, events, seededRng(seed));
+      const fell = events.find(
+        (e) => e.kind === "unitFell" && e.unitId === "hbk" && e.cause.kind === "shutdown",
+      );
+      if (fell?.kind === "unitFell") {
+        seen = true;
+        // 50 tons: 5 damage on land, 2 halved underwater.
+        expect(fell.totalDamage).toBe(2);
+      }
+    }
+    expect(seen).toBe(true);
+  });
+});

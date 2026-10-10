@@ -52,3 +52,47 @@ describe("building as partial cover (BLD-03)", () => {
     expect(res.coverDamage).toBe(3);
   });
 });
+
+describe("building misses (BLD-01)", () => {
+  const input = (extra: object) => ({
+    gunnery: 4,
+    attackerMoved: "standStill" as const,
+    targetHexesMoved: 0,
+    targetJumped: false,
+    targetTerrain: "clear" as const,
+    interveningTerrains: [],
+    distance: 1,
+    weapon: "Medium Laser",
+    targetDamage: requireUnit(setup(), "t").damage,
+    ...extra,
+  });
+
+  it("a missed shot at a target beside the building hits the building", () => {
+    const res = resolveWeaponAttack({
+      ...input({ missesStrikeBuilding: true }),
+      rng: scriptedRng(1, 1),
+    });
+    expect(res.groups).toHaveLength(0);
+    expect(res.buildingAbsorbed).toBe(5);
+  });
+
+  it("is off unless the attacker stands adjacent to a building target hex", () => {
+    const res = resolveWeaponAttack({ ...input({}), rng: scriptedRng(1, 1) });
+    expect(res.buildingAbsorbed).toBeUndefined();
+  });
+});
+
+describe("partial cover for powered-down targets", () => {
+  it("a shut-down standing 'Mech keeps its partial cover", () => {
+    const state = setup();
+    const a = requireUnit(state, "a");
+    const t = requireUnit(state, "t");
+    expect(partialCoverMod(state, a, t)).toBe(1);
+    t.shutdown = "heat";
+    expect(partialCoverMod(state, a, t)).toBe(1);
+    t.unconscious = true;
+    expect(partialCoverMod(state, a, t)).toBe(1);
+    t.prone = true;
+    expect(partialCoverMod(state, a, t)).toBe(0);
+  });
+});

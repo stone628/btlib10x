@@ -13,6 +13,7 @@ import {
 } from "../core/terrain";
 import {
   type ArmLocation,
+  damageTransferTo,
   FACINGS,
   type Facing,
   type HexCell,
@@ -89,6 +90,7 @@ import {
   countDestroyedLifeSupport,
   countDestroyedSensor,
   destroyAllSlots,
+  destroyedStructures,
   ENGINE_SLOTS_KILL,
   effectiveMovement,
   HIP,
@@ -1002,7 +1004,7 @@ export function isUnitAvailable(unit: UnitState): boolean {
  *  - L2 wreck adjacent + attacker at/above wreck top + target elevated
  *    (target hex higher than attacker) or target at Level 3+: +1 (TO).
  *  - L1 wreck adjacent + attacker below wreck top + target is a standing
- *    ground 'Mech (not prone, not shut down, not unconscious): +1 (TO).
+ *    ground 'Mech (not prone): +1 (TO).
  * Larger wins when both apply (TW: partial cover does not stack beyond one
  * source). Leg hit-location rolls strike the cover under any non-zero value
  * (see `hitLocationCovered` in `src/rules/attack.ts`).
@@ -1033,7 +1035,7 @@ function partialCoverDetail(
   const targetTerrain = cellAt(state, target.position).terrain;
   const attackerLevel = cellAt(state, attacker.position).level;
   const targetLevel = cellAt(state, target.position).level;
-  const targetStandingGround = !target.prone && isNominal(target) && !target.unconscious;
+  const targetStandingGround = !target.prone;
 
   let terrain = 0;
   let buildingHex: HexCoord | undefined;
@@ -1997,8 +1999,17 @@ export function executeMove(
     cursor = meleeStop;
   }
 
-  // Preexisting damage applies to every movement-entry PSR (TW p.60).
+  // Preexisting damage applies to every movement-entry PSR (TW p.60). The
+  // modifier is recomputed per roll: damage taken earlier in the move counts.
   const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
+  const currentPre = (): number =>
+    preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed).modifier;
+  // Damage and criticals taken during the move trigger their end-of-phase
+  // PSRs at the end of the move (TW pp.59-60, 126-128).
+  const movePhaseBefore: PhaseSnapshots = {
+    damage: { [unitId]: cloneDamage(unit.damage) },
+    crit: { [unitId]: cloneCritTable(unit.critSlotsDestroyed) },
+  };
   const commitAt = (
     hex: HexCoord,
     face: Facing,
@@ -2101,7 +2112,7 @@ export function executeMove(
     // committed at the hex the fall rule leaves the 'Mech in (the lower
     // hex on a fall across levels).
     if (!jumping || isFinal) {
-      const fellAt = movementTerrainPsr(state, unit, rng, from, to, !jumping, pre.modifier, sink);
+      const fellAt = movementTerrainPsr(state, unit, rng, from, to, !jumping, currentPre(), sink);
       // A move cut short still uses up the unit's activation (TW p.59).
       if (fellAt !== null) {
         commitAt({ ...fellAt }, unit.facing, mode, curSpent, curDirs);
@@ -2159,6 +2170,7 @@ export function executeMove(
       }
     }
   }
+  resolvePhasePiloting(state, rng, movePhaseBefore, sink);
 }
 
 /**
@@ -3060,6 +3072,9 @@ function resolveUnitAttacks(
       buildingAbsorb: Math.ceil(
         (phaseStartCf[hexKey(target.position)] ?? 0) / BUILDING_ABSORB_DIVISOR,
       ),
+      missesStrikeBuilding:
+        phaseStartCf[hexKey(target.position)] !== undefined &&
+        isAdjacent(unit.position, target.position),
       attackerLevel: cellAt(state, unit.position).level,
       targetLevel: cellAt(state, target.position).level,
       ...(state.critsDisabled
@@ -3146,6 +3161,17 @@ function resolveUnitAttacks(
 function damageTaken(before: UnitDamageState, after: UnitDamageState): number {
   let n = 0;
   for (const loc of LOCATIONS) {
+    // An arm lost with its side torso is blown off, not damaged point by
+    // point (TW p.121): its remaining armor and structure do not count.
+    if (isArm(loc)) {
+      const torso = damageTransferTo(loc);
+      if (
+        torso !== null &&
+        before.internalStructure[torso] > 0 &&
+        after.internalStructure[torso] <= 0
+      )
+        continue;
+    }
     n += Math.max(0, before.armor[loc] - after.armor[loc]);
     if (isTorso(loc)) {
       n += Math.max(0, (before.armorRear[loc] ?? 0) - (after.armorRear[loc] ?? 0));
@@ -3377,7 +3403,7 @@ function shutdownFallCheck(state: BattleState, unit: UnitState, rng: Rng, sink: 
         cause: { kind: "shutdown" },
         hex: unit.position,
         seatbeltModifier: null,
-        halved: false,
+        halved: waterDepth(cellAt(state, unit.position).terrain) >= 2,
       },
       sink,
     );
@@ -3499,7 +3525,15 @@ export function resolvePhasePiloting(
     const def = mechDefFor(unit);
     const dmgBefore = before.damage[unit.id] ?? unit.damage;
     const critBefore = before.crit[unit.id] ?? unit.critSlotsDestroyed;
-    const pre = preexistingDamageModifier(def, dmgBefore, critBefore);
+    const pre = { ...preexistingDamageModifier(def, dmgBefore, critBefore) };
+    // A hip destroyed this phase wipes that leg's earlier actuator modifiers
+    // from the roll made in the same phase (TW pp.60,127).
+    for (const hit of newlyDestroyedStructures(def, critBefore, unit.critSlotsDestroyed)) {
+      if (hit.name !== HIP) continue;
+      const earlier = destroyedStructures(def, dmgBefore, critBefore, hit.location);
+      if (earlier.includes(HIP)) continue;
+      for (const n of earlier) if (LEG_ACTUATORS.has(n)) pre.modifier -= LEG_ACTUATOR_MOD;
+    }
 
     const triggers: Array<{ reason: PilotingCheckReason; modifier: number }> = [];
     if (damageTaken(dmgBefore, unit.damage) >= PSR_DAMAGE_THRESHOLD) {
@@ -3522,10 +3556,17 @@ export function resolvePhasePiloting(
     const legDestroyed =
       (legGone(unit.damage, "rightLeg") && !legGone(dmgBefore, "rightLeg")) ||
       (legGone(unit.damage, "leftLeg") && !legGone(dmgBefore, "leftLeg"));
-    if (legDestroyed)
-      autoFall = { cause: { kind: "legDestroyed" }, seatbelt: SEATBELT_LEG_DESTROYED };
+    // The MechWarrior roll after an automatic fall carries every normal
+    // modifier (TW p.69): preexisting damage (a destroyed leg replaces that
+    // leg's other mods, +5), +1 for 20+ damage this phase, +6 for a destroyed
+    // gyro (TW pp.60,122).
+    const seatbeltNow = (): number =>
+      preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed).modifier +
+      (damageTaken(dmgBefore, unit.damage) >= PSR_DAMAGE_THRESHOLD ? PHASE_DAMAGE_PSR_MOD : 0) +
+      (gyroNow >= GYRO_DESTROYED_HITS ? SEATBELT_GYRO_DESTROYED : 0);
+    if (legDestroyed) autoFall = { cause: { kind: "legDestroyed" }, seatbelt: seatbeltNow() };
     else if (gyroNow >= GYRO_DESTROYED_HITS && gyroBefore < GYRO_DESTROYED_HITS)
-      autoFall = { cause: { kind: "gyroDestroyed" }, seatbelt: SEATBELT_GYRO_DESTROYED };
+      autoFall = { cause: { kind: "gyroDestroyed" }, seatbelt: seatbeltNow() };
 
     let fell = false;
     // TW p.59: every PSR triggered this phase carries the combined modifiers
@@ -3809,6 +3850,18 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         }
         enrichedCrits.push({ ...crit, rows: newRows });
       }
+      // The running result of the attack (each group followed by its own
+      // crits, TW pp.122-123) is authoritative; the group-first rebuild above
+      // only feeds the log rows and the crit/ammo accumulators.
+      if (resolution.application !== null) {
+        currentDamage = cloneDamage(resolution.application.after);
+        if (reported.application !== null) {
+          reported = {
+            ...reported,
+            application: { ...reported.application, after: cloneDamage(currentDamage) },
+          };
+        }
+      }
       targetDamageMap[targetId] = currentDamage;
       targetDestroyedWeaponsMap[targetId] = currentDestroyedWeapons;
       targetAmmoBinsMap[targetId] = currentAmmoBins;
@@ -3993,22 +4046,6 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     }
   }
 
-  // Check destruction and mark units
-  for (const unit of Object.values(state.units)) {
-    if (
-      isUnitAvailable(unit) &&
-      (isUnitWrecked(unit) || targetKilledReason[unit.id] !== undefined)
-    ) {
-      markUnitDestroyed(
-        state,
-        unit,
-        targetKilledReason[unit.id] ?? destroyedReasonFor(unit.damage),
-        rng,
-        sink,
-      );
-    }
-  }
-
   // Pilot damage (TW p.41): a head hit lands 1 point per damaging grouping,
   // an ammo/weapon explosion 2 points. Consciousness rolls run per point at once,
   // before any Piloting Skill Rolls (TW p.42 errata).
@@ -4039,9 +4076,20 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         );
     }
   }
+  // Units destroyed this sub-pass are marked after their pilot damage, so a
+  // blast that destroys the 'Mech still injures the MechWarrior (TW pp.41,125).
   for (const unit of Object.values(state.units)) {
-    if (isUnitAvailable(unit) && isUnitWrecked(unit)) {
-      markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), rng, sink);
+    if (
+      isUnitAvailable(unit) &&
+      (isUnitWrecked(unit) || targetKilledReason[unit.id] !== undefined)
+    ) {
+      markUnitDestroyed(
+        state,
+        unit,
+        targetKilledReason[unit.id] ?? destroyedReasonFor(unit.damage),
+        rng,
+        sink,
+      );
     }
   }
 
@@ -4516,6 +4564,15 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       });
     }
   }
+  // Pilot hits and their consciousness rolls take effect at the end of the
+  // phase, after every declared physical attack has resolved (TW p.38) and
+  // before units are marked destroyed (a blast that destroys the 'Mech still
+  // injures the MechWarrior, TW p.125).
+  for (const { unit, hits, reason } of pendingPilotHits) {
+    if (isUnitRemoved(unit) && unit.removed !== "pilotEjected") continue;
+    if (reason === "headHit" && headLossEjected(unit)) continue;
+    applyPilotHits(state, unit, hits, reason, rng, sink);
+  }
   for (const unit of Object.values(state.units)) {
     const physCrits = physicalAttackCrits[unit.id];
     if (
@@ -4526,14 +4583,6 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     }
   }
   sink.push({ kind: "attackPhaseStage", stage: "physicalDone", turn: state.turn });
-
-  // Pilot hits and their consciousness rolls take effect at the end of the
-  // phase, after every declared physical attack has resolved (TW p.38).
-  for (const { unit, hits, reason } of pendingPilotHits) {
-    if (isUnitRemoved(unit) && unit.removed !== "pilotEjected") continue;
-    if (reason === "headHit" && headLossEjected(unit)) continue;
-    applyPilotHits(state, unit, hits, reason, rng, sink);
-  }
 
   // End-of-physical sweep: physical-sub-pass damage/crits plus deferred kick
   // PSRs (TW pp.59-60,147). The 20-point trigger measures only post-weapon
