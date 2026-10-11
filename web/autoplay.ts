@@ -1,8 +1,5 @@
-import type { FireTarget, FireWeapon } from "btlib10x";
 import {
-  bestFireTarget,
   canAttemptStandUp,
-  classifyFiringArc,
   destroyedLegs,
   effectiveMoveBudget,
   effectiveMovement,
@@ -13,18 +10,26 @@ import {
   isUnitImmobile,
   isUnitRemoved,
   mechDefFor,
-  type RevealedLanding,
   STAND_MP_COST,
   suggestFireTargets,
   type UnitState,
-  weaponCanFireIntoArc,
 } from "btlib10x";
+import { decide, promptDoctrine } from "./doctrine";
+import type { DoctrineKey } from "./doctrine.data";
 import { isGyroDestroyed } from "./misc";
 import type { Session, SessionState } from "./session";
-// import type * as S from "./session";
 
 /** Delay between generated commands, in milliseconds. */
 export const AUTOPLAY_INTERVAL_MS = 100;
+
+/** Doctrine that picks movement and attacks for units without a `dp` assignment. */
+export const AUTOPLAY_DOCTRINE: DoctrineKey = "alpha";
+
+/**
+ * Turn cap: a doctrine bout can go on forever without a failing command (two
+ * units that cannot hurt each other), so the demo stops after this turn.
+ */
+export const AUTOPLAY_MAX_TURNS = 100;
 
 /**
  * Roster the demo builds after 'reset' (mirrors freshSetup() in
@@ -40,17 +45,19 @@ const SCRIPT_SETUP: ReadonlyArray<{ id: string; command: string }> = [
 /** Queued commands to issue before falling back to state-based logic. */
 let nextCommandQueue: string[] = [];
 let currApp: SessionState | null = null;
-let currBattlePhase: string | null = null;
+/** Turn whose unit sheets were shown. Keyed on the turn rather than on a phase
+ *  change seen here: `dp`-assigned prompts are played inside the previous
+ *  `done`, so autoplay may never see a whole phase. */
+let sheetsShownTurn: number | null = null;
+/** Turn whose attack phase was opened with `status`. */
+let attackStatusTurn: number | null = null;
 /** Setup is tried once per autoplay run; a failed `start` ends the demo. */
 let setupAttempted = false;
 let helpShown: Record<string, boolean> = {};
 let noWeapon: Record<string, boolean> = {};
-let unitForwarded: Record<string, boolean> = {};
 /** Immobile-prone actors: first turn emits `mode pronestill`, subsequent turns
  *  promote to `mode eject` so the wreck leaves play. */
 let pronestillThenEject: Record<string, boolean> = {};
-/** Actor id → enemy id whose out-of-arc weapons need facing next movement. */
-let faceEnemy: Record<string, string> = {};
 
 function queueNextCommand(cmd: string): void {
   nextCommandQueue.push(cmd);
@@ -68,14 +75,13 @@ function returnFirstQueuedCommand(): string {
 export function resetAutoplayState(s: Session): void {
   nextCommandQueue = [];
   currApp = s.state;
-  currBattlePhase = null;
+  sheetsShownTurn = null;
+  attackStatusTurn = null;
   setupAttempted = false;
 
   helpShown = {};
   noWeapon = {};
-  unitForwarded = {};
   pronestillThenEject = {};
-  faceEnemy = {};
 }
 
 /** Post-heat walk budget for the actor; 0 when heat/structure deny walking. */
@@ -103,79 +109,41 @@ export function flushAutoPlayCommand(): string[] {
   return flushing;
 }
 
-/** Pick the best 1-step landing (F toward enemy, B away) and queue a place command. */
-function queueStepToward(s: Session, fragment: "F" | "B"): void {
-  const candidate = s.move?.moveCandidate ?? null;
-  if (candidate === null) return;
-  const oneStep = candidate.revealed.filter(
-    (l: RevealedLanding) => l.path.length === 1 && l.path[0]?.fragment === fragment,
-  );
-  if (oneStep.length === 0) return;
-  const pick = oneStep.shift()!;
-  queueNextCommand(`place ${pick.hex.col} ${pick.hex.row} ${pick.facing}`);
+/**
+ * Queue the doctrine player's commands for the current prompt (movement or
+ * attack), played as {@link AUTOPLAY_DOCTRINE}. The next doctrine context is
+ * installed before the commands are typed, as `driveDoctrine` does, so the
+ * rollback snapshot at the following prompt already holds it.
+ */
+function queueDoctrineDecision(s: Session, fallback: readonly string[]): void {
+  const decision = decide(s, AUTOPLAY_DOCTRINE, s.doctrine);
+  if (decision === null) {
+    for (const cmd of fallback) queueNextCommand(cmd);
+    return;
+  }
+  s.doctrine = decision.next;
+  for (const cmd of decision.commands) queueNextCommand(cmd);
 }
 
-/**
- * Queue a `place` landing that turns the actor toward `targetId`, so weapons
- * currently blocked as out-of-arc can bear next turn. Scores every reachable
- * landing by how many of the actor's out-of-arc weapons would fire into the
- * landing's arc toward the target; prefers pure turns, then shortest path.
- * Returns true when a facing landing was queued.
- */
-function queueFaceTarget(s: Session, actorId: string, targetId: string): boolean {
+/** True when no ranged weapon of the actor works against anyone (destroyed,
+ *  jammed or out of ammo): the unit ejects at its next movement phase. */
+function hasNoFunctionalWeapon(s: Session, actorId: string): boolean {
   const st = s.battle;
-  const candidate = s.move?.moveCandidate ?? null;
-  if (st === null || candidate === null) return false;
-  const actor = st.units[actorId];
-  const target = st.units[targetId];
-  if (actor === undefined || target === undefined || isUnitRemoved(target)) {
-    return false;
-  }
-  let blocked: number[];
+  if (st === null) return false;
+  let sugg: ReturnType<typeof suggestFireTargets>;
   try {
-    const sugg = suggestFireTargets(st, actorId);
-    blocked = (sugg.targets.find((t) => t.targetId === targetId)?.blocked ?? [])
-      .filter((b) => b.reason === "outOfArc")
-      .map((b) => b.weaponIndex);
+    sugg = suggestFireTargets(st, actorId);
   } catch {
     return false;
   }
-  if (blocked.length === 0) return false;
-  const def = mechDefFor(actor);
-  let best: { col: number; row: number; facing: string; score: number; pathLen: number } | null =
-    null;
-  for (const landing of candidate.revealed) {
-    const arc = classifyFiringArc(landing.hex, target.position, landing.facing);
-    if (arc === null) continue;
-    let score = 0;
-    for (const weaponIndex of blocked) {
-      const mount = def.weapons[weaponIndex];
-      if (mount === undefined) continue;
-      const rearFacing = mount.rearFacing === true;
-      if (weaponCanFireIntoArc(mount.location, rearFacing, arc)) score++;
-    }
-    if (score === 0) continue;
-    const sameHex =
-      landing.hex.col === actor.position.col && landing.hex.row === actor.position.row;
-    if (
-      best === null ||
-      score > best.score ||
-      (score === best.score &&
-        (sameHex ||
-          (!(best.col === actor.position.col && best.row === actor.position.row) &&
-            landing.path.length < best.pathLen)))
-    ) {
-      best = {
-        col: landing.hex.col,
-        row: landing.hex.row,
-        facing: landing.facing,
-        score,
-        pathLen: landing.path.length,
-      };
+  for (const t of sugg.targets) {
+    if (t.weaponsIfPropLeft.length > 0 || t.weaponsIfPropRight.length > 0) return false;
+    for (const b of t.blocked) {
+      if (b.reason !== "destroyed" && b.reason !== "jammed" && b.reason !== "outOfAmmo") {
+        return false;
+      }
     }
   }
-  if (best === null) return false;
-  queueNextCommand(`place ${best.col} ${best.row} ${best.facing}`);
   return true;
 }
 
@@ -183,7 +151,9 @@ function queueFaceTarget(s: Session, actorId: string, targetId: string): boolean
  * Next command a demonstrator would type for this session, derived purely
  * from session internals; null when there is nothing left to do (battle over,
  * or a state the script cannot drive). Feed each result through execute()
- * one AUTOPLAY_INTERVAL_MS at a time.
+ * one AUTOPLAY_INTERVAL_MS at a time. Movement and attacks come from the
+ * doctrine player (`web/doctrine.ts`); autoplay adds the narration (help,
+ * board, sheets, status) and the posture and eject guards.
  */
 export function nextAutoPlayCommand(s: Session): string | null {
   if (nextCommandQueue.length > 0) {
@@ -223,6 +193,7 @@ export function nextAutoPlayCommand(s: Session): string | null {
 
     const actorId = s.move?.actorId ?? s.attack?.actorId ?? null;
     if (st === null || actorId === null) return null;
+    if (st.turn > AUTOPLAY_MAX_TURNS) return null;
 
     const actor = st.units[actorId];
     if (actor === undefined || isUnitRemoved(actor)) return null;
@@ -237,16 +208,24 @@ export function nextAutoPlayCommand(s: Session): string | null {
       return returnFirstQueuedCommand();
     }
 
-    const lastBattlePhase = currBattlePhase;
-    currBattlePhase = st.phase;
-
-    if (currBattlePhase === "movement") {
-      if (lastBattlePhase !== "movement") {
-        for (const u of Object.values(st.units)) {
-          if (isUnitAvailable(u)) queueNextCommand(`sheet ${u.id}`);
-        }
-        queueNextCommand("status");
+    // Start of a turn: every unit's sheet, then the status board.
+    if (sheetsShownTurn !== st.turn) {
+      sheetsShownTurn = st.turn;
+      for (const u of Object.values(st.units)) {
+        if (isUnitAvailable(u)) queueNextCommand(`sheet ${u.id}`);
       }
+      queueNextCommand("status");
+      if (st.phase === "attack") attackStatusTurn = st.turn;
+    }
+
+    // A `dp`-assigned unit waiting at its prompt (after a rollback): let its
+    // own doctrine play it.
+    if (promptDoctrine(s) !== null) {
+      queueNextCommand("dp go");
+      return returnFirstQueuedCommand();
+    }
+
+    if (st.phase === "movement") {
       // movement mode not set yet
       if ((s.move?.moveMode ?? null) === null) {
         // A shut-down unit just passes: no movement mode, stay off-line.
@@ -290,8 +269,8 @@ export function nextAutoPlayCommand(s: Session): string | null {
             queueNextCommand("mode walk");
             queueNextCommand("done");
           } else {
-            // s.moveCandidate wil be available only after "mode walk" command is processed.
-            queueNextCommand("mode walk");
+            // The doctrine scores every reachable landing over every mode.
+            queueDoctrineDecision(s, ["mode standstill", "done"]);
           }
 
           return returnFirstQueuedCommand();
@@ -300,88 +279,20 @@ export function nextAutoPlayCommand(s: Session): string | null {
         queueNextCommand("done");
         return returnFirstQueuedCommand();
       }
-      // A pending out-of-arc facing request beats the forward/backward pace:
-      // turn toward the recorded enemy so blocked weapons can bear next turn.
-      const faceTarget = faceEnemy[actor.id];
-      if (faceTarget !== undefined) {
-        delete faceEnemy[actor.id];
-        if (queueFaceTarget(s, actor.id, faceTarget)) {
-          queueNextCommand("done");
-          return returnFirstQueuedCommand();
-        }
-      }
-      // assume movement mode walk
-      if (unitForwarded[actor.id] === true) {
-        // one step backward
-        queueStepToward(s, "B");
-        unitForwarded[actor.id] = false;
-      } else {
-        // one step forward
-        queueStepToward(s, "F");
-        unitForwarded[actor.id] = true;
-      }
-      queueNextCommand("done");
+      // A mode left half-typed (a failed command): the doctrine cancels it
+      // and plays the prompt again.
+      queueDoctrineDecision(s, ["done"]);
       return returnFirstQueuedCommand();
     }
 
     if (st.phase === "attack") {
-      if (lastBattlePhase !== "attack") {
+      if (attackStatusTurn !== st.turn) {
+        attackStatusTurn = st.turn;
         queueNextCommand("status");
       }
-      const sugg = suggestFireTargets(st, actor.id);
-      const declared = new Set(
-        (s.attack?.weaponDecls ?? []).map((d: { weaponIndex: number }) => d.weaponIndex),
-      );
-      const variantWeapons = (t: FireTarget): FireWeapon[] =>
-        t.weaponsIfPropLeft.length >= t.weaponsIfPropRight.length
-          ? [...t.weaponsIfPropLeft]
-          : [...t.weaponsIfPropRight];
-      // Targets arrive best-first: first with an undeclared fireable weapon
-      // in either prop variant.
-      const target =
-        sugg.targets.find((t) => variantWeapons(t).some((w) => !declared.has(w.weaponIndex))) ??
-        bestFireTarget(sugg);
-      const available = (target ? variantWeapons(target) : [])
-        .filter((w) => !declared.has(w.weaponIndex))
-        .map((w) => String(w.weaponIndex));
-      if (target !== null && available.length > 0) {
-        queueNextCommand(`fire ${target.targetId} ${available.join(" ")}`);
-      } else {
-        // count functional weapons
-        let funcWeaponCount = 0;
-        const outOfArcTargets: FireTarget[] = [];
-        let foundNoLos = false;
-        for (const t of sugg.targets) {
-          let foundOutOfArc = false;
-          for (const b of t.blocked) {
-            if (b.reason === "destroyed" || b.reason === "jammed" || b.reason === "outOfAmmo") {
-              continue;
-            }
-            if (b.reason === "outOfArc") foundOutOfArc = true;
-            if (b.reason === "noLos") foundNoLos = true;
-            funcWeaponCount++;
-          }
-          if (foundOutOfArc) outOfArcTargets.push(t);
-        }
-        if (funcWeaponCount === 0) {
-          noWeapon[actor.id] = true;
-        } else {
-          // Remember an enemy holding out-of-arc weapons so the next
-          // movement phase turns the actor toward it. Prefer best target
-          // (targets sorted best-first) so facing fixes most firepower.
-          if (outOfArcTargets.length > 0) {
-            const outOfArcTarget =
-              (target !== null
-                ? outOfArcTargets.find((t) => t.targetId === target.targetId)
-                : undefined) ?? outOfArcTargets[0]!;
-            faceEnemy[actor.id] = outOfArcTarget.targetId;
-          } else if (foundNoLos) {
-            // make you go forward on next movement phase
-            unitForwarded[actor.id] = false;
-          }
-        }
-      }
-      queueNextCommand("done");
+      // Nothing left to fire: eject at the next movement phase.
+      if (hasNoFunctionalWeapon(s, actor.id)) noWeapon[actor.id] = true;
+      queueDoctrineDecision(s, ["done"]);
       return returnFirstQueuedCommand();
     }
 

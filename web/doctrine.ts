@@ -270,20 +270,18 @@ function rank(candidates: readonly TraceCandidate[], d6: () => number): TraceCan
 }
 
 /**
- * Decide the current prompt for a doctrine-assigned unit, or null when the
- * prompt belongs to a human (or there is no battle prompt).
+ * Decide the current prompt with doctrine `dk` from context `ctx`, whoever
+ * owns the prompt (callers pick the doctrine: the unit's assignment, or the
+ * autoplay demo's default); null when there is no battle prompt.
  */
-export function decide(s: Session): Decision | null {
+export function decide(s: Session, dk: DoctrineKey, ctx: DoctrineContext): Decision | null {
   const actorId = promptActorId(s);
   const battle = s.battle;
   if (actorId === null || battle === null) return null;
-  const key = s.doctrine.assignments[actorId];
-  if (key === undefined) return null;
-  const doctrine = DOCTRINES[key];
+  const doctrine = DOCTRINES[dk];
   const actor = battle.units[actorId];
   if (actor === undefined || !isUnitAvailable(actor)) return null;
 
-  const ctx = s.doctrine;
   const rng = createRng(0);
   rng.load(ctx.rng);
   const mem: StrategyMemory = structuredClone(ctx.memory[actorId] ?? freshMemory(actor));
@@ -356,7 +354,7 @@ export function decide(s: Session): Decision | null {
     phase,
     actorId,
     targetId: mem.targetId,
-    doctrine: key,
+    doctrine: dk,
     posture: mem.posture,
     targetHeld: mem.targetHeld,
     heat: actor.heat + actor.heatPending,

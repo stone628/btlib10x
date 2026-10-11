@@ -70,7 +70,7 @@ describe("doctrine player: decisions", () => {
     expect(actorId(s)).toBe("foe");
     const dice = s.rng.snapshot();
     const own = s.doctrine.rng;
-    expect(decide(s)).not.toBeNull();
+    expect(decide(s, s.doctrine.assignments.foe!, s.doctrine)).not.toBeNull();
     expect(s.rng.snapshot()).toBe(dice);
     expect(s.doctrine.rng).toBe(own);
   });

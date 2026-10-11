@@ -6,7 +6,7 @@ import {
   isUnitImmobile,
   STAND_MP_COST,
 } from "../src/index";
-import { nextAutoPlayCommand, resetAutoplayState } from "../web/autoplay";
+import { AUTOPLAY_MAX_TURNS, nextAutoPlayCommand, resetAutoplayState } from "../web/autoplay";
 import {
   commitMovement,
   declareMovementMode,
@@ -94,11 +94,9 @@ describe("nextAutoPlayCommand (autoplay demo driver)", () => {
     const destroyedIndex = Number(target![0]);
     actor.destroyedWeapons.push(destroyedIndex);
 
-    const cmds = [0, 1, 2, 3, 4]
-      .map(() => nextAutoPlayCommand(s))
-      .filter(
-        (c): c is string => c !== null && c !== "help" && c !== "status" && c !== "candidate",
-      );
+    const cmds = Array.from({ length: 12 }, () => nextAutoPlayCommand(s)).filter(
+      (c): c is string => c !== null && c !== "help" && c !== "status" && c !== "candidate",
+    );
     const cmd = cmds.find((c) => c.startsWith("fire"));
     expect(cmd).toBeDefined();
     const indexes = cmd!
@@ -124,11 +122,9 @@ describe("nextAutoPlayCommand (autoplay demo driver)", () => {
     actor.facing = "n";
     enemy.hexesMovedThisTurn = 30;
 
-    const cmds = [0, 1, 2, 3, 4]
-      .map(() => nextAutoPlayCommand(s))
-      .filter(
-        (c): c is string => c !== null && c !== "help" && c !== "status" && c !== "candidate",
-      );
+    const cmds = Array.from({ length: 12 }, () => nextAutoPlayCommand(s)).filter(
+      (c): c is string => c !== null && c !== "help" && c !== "status" && c !== "candidate",
+    );
     const fire = cmds.find((c) => c.startsWith("fire"));
     expect(fire).toBeDefined();
     const indexes = fire!
@@ -299,5 +295,70 @@ describe("nextAutoPlayCommand movement-phase posture/MP guards", () => {
     resetAutoplayState(s);
     const cmd = nextModeCommand(s);
     expect(cmd).toBe("mode standstill");
+  });
+});
+
+/** Feed autoplay commands through the CLI until it stops (or `limit` ticks),
+ *  returning every command it typed and every line that came back as an error. */
+function runAutoplay(s: Session, limit: number): { commands: string[]; errors: string[] } {
+  resetAutoplayState(s);
+  const commands: string[] = [];
+  const errors: string[] = [];
+  for (let i = 0; i < limit; i++) {
+    const cmd = nextAutoPlayCommand(s);
+    if (cmd === null) break;
+    commands.push(cmd);
+    for (const line of execute(s, cmd)) {
+      if (/^error:/.test(line)) errors.push(`${cmd}: ${line}`);
+    }
+  }
+  return { commands, errors };
+}
+
+describe("nextAutoPlayCommand with the doctrine player", () => {
+  it("plays movement with the doctrine: a mode, a landing, then done", () => {
+    const s = sessionAtMovementStart();
+    resetAutoplayState(s);
+    const cmds = Array.from({ length: 12 }, () => nextAutoPlayCommand(s));
+    const mode = cmds.findIndex((c) => c?.startsWith("mode ") === true);
+    expect(mode).toBeGreaterThanOrEqual(0);
+    const next = cmds.slice(mode + 1);
+    // standstill goes straight to done; every other mode places a landing first.
+    if (cmds[mode] === "mode standstill") expect(next[0]).toBe("done");
+    else expect(next[0]).toMatch(/^place \d+ \d+ \S+$/);
+  });
+
+  it("installs the doctrine context so `dp why` can show the reasoning", () => {
+    const s = sessionAtMovementStart();
+    const actorId = s.move!.actorId!;
+    resetAutoplayState(s);
+    for (let i = 0; i < 12 && s.doctrine.lastTrace[actorId] === undefined; i++) {
+      nextAutoPlayCommand(s);
+    }
+    expect(s.doctrine.lastTrace[actorId]?.doctrine).toBe("alpha");
+  });
+
+  it("plays several turns without errors, with help once per phase and sheets every turn", () => {
+    // Real dice: the scripted RNG of sessionAtMovementStart() runs out.
+    const s = newSession(7);
+    execute(s, "map quickstart");
+    execute(s, "add hunchy HBK-4G 9 9 n");
+    execute(s, "add cicada CDA-3MA 9 8 s");
+    execute(s, "start");
+    const startTurn = s.battle!.turn;
+    const { commands, errors } = runAutoplay(s, 400);
+    expect(errors).toEqual([]);
+    // help: at most once each for battle movement, battle attack and game over.
+    expect(commands.filter((c) => c === "help").length).toBeLessThanOrEqual(3);
+    const turnsPlayed = (s.battle?.turn ?? startTurn) - startTurn + 1;
+    const sheetRounds = commands.filter((c) => c === "sheet hunchy").length;
+    expect(sheetRounds).toBeGreaterThanOrEqual(Math.min(turnsPlayed, 2));
+  });
+
+  it("stops after AUTOPLAY_MAX_TURNS", () => {
+    const s = sessionAtMovementStart();
+    s.battle!.turn = AUTOPLAY_MAX_TURNS + 1;
+    resetAutoplayState(s);
+    expect(nextAutoPlayCommand(s)).toBeNull();
   });
 });

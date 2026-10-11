@@ -25,14 +25,17 @@ trace display) is summarised in [CLI.md](CLI.md#doctrine-player-gdd-9).
 
 ## 1. The decision pipeline
 
-`decide(session)` runs once per prompt (one movement prompt and one attack
-prompt per unit per turn). It returns the commands, a `DecisionTrace` and the
-next doctrine context; the driver installs the context **before** typing the
-commands so rollback snapshots already hold it.
+`decide(session, doctrine, context)` runs once per prompt (one movement prompt
+and one attack prompt per unit per turn). It returns the commands, a
+`DecisionTrace` and the next doctrine context; the driver installs the context
+**before** typing the commands so rollback snapshots already hold it. The caller
+picks the doctrine: the driver passes the unit's assignment (`promptDoctrine`)
+and leaves unassigned prompts to the human; the autoplay demo passes its default
+doctrine for every unassigned unit.
 
-1. **Is this prompt ours?** Only the acting unit of a movement or attack prompt
-   that has a doctrine assignment and is still available (not destroyed,
-   ejected or killed). Anything else returns `null` and the human plays.
+1. **Is this prompt playable?** Only the acting unit of a movement or attack
+   prompt that is still available (not destroyed, ejected or killed). Anything
+   else returns `null`.
 2. **Load state.** The doctrine's own RNG stream (seeded from the battle seed
    XOR `0x9e3779b9`, so it never touches the battle dice) and a copy of the
    unit's `StrategyMemory` (fresh on first activation: no target, posture

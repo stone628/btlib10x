@@ -174,7 +174,9 @@ export function driveDoctrine(s: Session, run: (raw: string) => Chunk[]): Chunk[
         out.push(buildLinesChunkWith("banner", i18n("dp.limit")));
         break;
       }
-      const decision = decide(s);
+      const key = promptDoctrine(s);
+      if (key === null) break;
+      const decision = decide(s, key, s.doctrine);
       if (decision === null) break;
       const before = s.doctrine;
       s.doctrine = decision.next;
