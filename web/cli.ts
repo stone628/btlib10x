@@ -765,14 +765,17 @@ function commandList(session: Session): string[] {
     .map((name) => ({ name, def: phaseCmds.cmds[name]! }));
   const lines: string[] = [];
   const renderEntries = (entries: { name: string; def: CmdDef }[]) => {
+    const indent = " ".repeat(10);
     for (const { name, def } of entries) {
       const help = i18n(def.helpKey).replace(/\{names\}/g, names);
+      const [first = "", ...rest] = help.split("\n");
       if (def.usage === undefined) {
-        lines.push(`${name.padEnd(9)} ${help}`);
+        lines.push(`${name.padEnd(9)} ${first}`);
       } else {
         lines.push(`${name.padEnd(9)} ${def.usage}`);
-        lines.push(`          ${help}`);
+        lines.push(`${indent}${first}`);
       }
+      for (const line of rest) lines.push(line.length > 0 ? `${indent}${line}` : line);
     }
   };
   lines.push(i18n("help.sectionGeneral"));

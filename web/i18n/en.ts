@@ -149,7 +149,7 @@ export const en = {
 
   // doctrine player (GDD §9)
   "cmd.dp.help":
-    "doctrine player: assign a MechWarrior doctrine to a unit in setup; it then plays that unit's prompts and shows its reasoning",
+    "doctrine player: assign a MechWarrior doctrine to a unit in setup;\nit then plays that unit's prompts and shows its reasoning",
   "cmd.dp.arg.list": "no argument: list assignments, doctrines and the trace level",
   "cmd.dp.arg.assign":
     "assign a doctrine to a roster unit, or 'off' to play it by hand (setup only)",
@@ -800,7 +800,7 @@ export const en = {
   "res.critAmmoExplosion": "{loc} #{slot} ammo {weapon} explodes for {damage} damage",
   "res.critCockpitDestroyed": "{loc} #{slot} cockpit destroyed — pilot killed",
   "res.critComponentDestroyed": "{loc} #{slot} {name} destroyed",
-  "res.critEngineDestroyed": "{loc} #{slot} ENGINE DESTROYED — 'Mech killed",
+  "res.critEngineDestroyed": "{loc} #{slot} ENGINE DESTROYED — 'Mech destroyed",
   "res.critNoEffect": "reroll — no crit-hittable slot remaining",
   "res.critTransferred": " (transferred from {from})",
   "res.throughArmorTag": "through-armor",

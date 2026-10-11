@@ -112,7 +112,8 @@ body {
 }
 #legal {
   flex: none;
-  padding: 2px 12px 6px;
+  border-top: 1px solid #233023;
+  padding: 4px 12px 6px;
   font-size: 10px;
   color: var(--c-dim);
 }
