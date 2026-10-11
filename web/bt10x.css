@@ -110,6 +110,12 @@ body {
   min-height: 0;
   padding: 8px 12px;
 }
+#legal {
+  flex: none;
+  padding: 2px 12px 6px;
+  font-size: 10px;
+  color: var(--c-dim);
+}
 #out {
   flex: 1;
   overflow-y: auto;
