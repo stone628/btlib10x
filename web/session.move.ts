@@ -179,40 +179,45 @@ function hasJumpMP(unit: UnitState): boolean {
 /** Locale-neutral `mode` syntax legal for `unit` right now (null = unknown unit). */
 export function modeSyntaxFor(unit: UnitState | null): string {
   if (unit === null)
-    return "standstill|walk|run|jump|prone [turn|pronestill]|turn|pronestill|standup [walk|run|standstill]|shutdown|startup|eject";
+    return [
+      "standstill | walk | run | jump",
+      "prone [turn | pronestill] | turn | pronestill",
+      "standup [walk | run | standstill]",
+      "shutdown | startup | eject",
+    ].join("\n");
   // A heat shutdown restarts by itself in the Heat Phase: only eject is open.
   if (unit.shutdown === "heat") return "eject";
-  if (isShutdown(unit)) return "startup|eject";
+  if (isShutdown(unit)) return "startup | eject";
   const legs = destroyedLegs(unit.damage);
   const arms = destroyedArms(unit.damage);
   if (isUnitImmobile(unit.damage)) {
-    return unit.prone ? "pronestill|shutdown|eject" : "standstill|shutdown|eject";
+    return unit.prone ? "pronestill | shutdown | eject" : "standstill | shutdown | eject";
   }
   // Both legs gone but not immobile (props up with arms intact): cannot stand,
   // cannot change facing (TW p.122). Stay prone; fire while propped.
   if (legs >= 2) {
-    return "pronestill|shutdown|eject";
+    return "pronestill | shutdown | eject";
   }
   // One leg destroyed + both arms: cannot stand, cannot fire, cannot turn.
   if (legs === 1 && arms >= 2) {
-    return "pronestill|shutdown|eject";
+    return "pronestill | shutdown | eject";
   }
   if (unit.prone) {
     const standOk = canAttemptStandUp(unit.damage) && !isGyroDestroyed(unit);
     const runOk = legs === 0; // a one-leg 'Mech cannot stand into a run (TW p.122)
     const standupModes = standOk
       ? runOk
-        ? "standup [walk|run|standstill]"
-        : "standup [walk|standstill]"
+        ? "standup [walk | run | standstill]"
+        : "standup [walk | standstill]"
       : "";
-    const sep = standupModes ? "|" : "";
-    return `turn|pronestill${sep}${standupModes}|shutdown|eject`;
+    const sep = standupModes ? " | " : "";
+    return `turn | pronestill${sep}${standupModes} | shutdown | eject`;
   }
   // Standing one-leg 'Mech: walk 1 MP, jump allowed; run only as minimum movement (TW p.49).
-  const jump = hasJumpMP(unit) ? "|jump" : "";
+  const jump = hasJumpMP(unit) ? " | jump" : "";
   // TW p.49: a one-legged 'Mech may run only as minimum movement (one hex forward).
   const run = legs === 1 ? "run [1 hex forward only]" : "run";
-  return `standstill|walk|${run}${jump}|prone [turn|pronestill]|shutdown|eject`;
+  return `standstill | walk | ${run}${jump} | prone [turn | pronestill] | shutdown | eject`;
 }
 
 /** One-line `modes: ...` hint shown above the movement prompt; null outside it. */

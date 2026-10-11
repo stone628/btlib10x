@@ -231,7 +231,12 @@ function listChunk(s: Session): Chunk {
   );
 }
 
-const DP_USAGE = "dp [<id> <doctrine|off> | setup 2|4 | go | why [id] | trace off|brief|full]";
+const DP_USAGE = [
+  "dp [<id> <doctrine | off>]",
+  "dp setup 2 | 4",
+  "dp go | dp why [id]",
+  "dp trace off | brief | full",
+].join("\n");
 
 /** `dp`: assign doctrines in setup; inspect, tune and resume the doctrine player in battle. */
 export function doctrineCmd(run: (s: Session, raw: string) => Chunk[]): CmdDef {

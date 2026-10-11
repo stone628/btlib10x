@@ -57,10 +57,35 @@ body {
     height: 100dvh;
   }
 }
+/* Scrollbars in the terminal palette: dark track, muted green thumb. */
+html {
+  scrollbar-color: var(--c-dim) #0c0f0c;
+}
+::-webkit-scrollbar {
+  width: 20px;
+  height: 20px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #233023;
+  border-radius: 1px;
+  border: 2px solid #0c0f0c;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--c-dim);
+}
+::-webkit-scrollbar-thumb:active {
+  background: var(--c-green);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
 #motd {
   position: fixed;
   top: 8px;
-  right: 30px;
+  right: 10px;
   width: fit-content;
   max-width: calc(100vw - 16px);
   max-height: 60vh;
@@ -108,7 +133,6 @@ body {
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  padding: 8px 12px;
 }
 #legal {
   flex: none;
@@ -121,6 +145,7 @@ body {
   flex: 1;
   overflow-y: auto;
   white-space: pre;
+  padding: 6px;
 }
 #out .cmd {
   color: #d7e4d7;

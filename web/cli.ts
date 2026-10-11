@@ -146,6 +146,8 @@ function cmdRunChunks(...lines: string[]): Chunk[] {
 }
 
 // ------------------------------------------------------------- globals ----
+/** Multi-line grouped usage shared by the `info` help entry and its arg errors. */
+const INFO_USAGE = ["info mech [model]", "info map [name]", "info weapon [name]"].join("\n");
 const GLOBAL_CMDS: Record<string, CmdDef> = {
   help: {
     helpKey: "cmd.help.help",
@@ -181,14 +183,14 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
   clear: { helpKey: "cmd.clear.help", run: () => cmdRunChunks("\f") },
   info: {
     helpKey: "cmd.info.help",
-    usage: "info mech [model] | info map [name] | info weapon [name]",
+    usage: INFO_USAGE,
     argsDoc: [
       ["mech [model]", "cmd.info.arg.mech"],
       ["map [name]", "cmd.info.arg.map"],
       ["weapon [name]", "cmd.info.arg.weapon"],
     ],
     run: (_s, a) => {
-      expectArgs(a, 1, "info mech [model] | info map [name] | info weapon [name]");
+      expectArgs(a, 1, INFO_USAGE);
       const what = a[0]!.toLowerCase();
       if (what === "mech") return a[1] !== undefined ? infoMechChunk(a[1]) : [infoMechListChunk()];
       if (what === "map") {
@@ -200,7 +202,7 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
       }
       throw new Error(
         i18n("err.expectedArgs", {
-          usage: "info mech [model] | info map [name] | info weapon [name]",
+          usage: INFO_USAGE,
         }),
       );
     },
@@ -379,6 +381,14 @@ const BATTLE_CMDS: Record<string, CmdDef> = {
   },
 };
 
+/** Multi-line grouped usage shared by the `mode` help entry and its arg error. */
+const MODE_USAGE = [
+  "mode standstill | walk | run | jump",
+  "mode prone [turn | pronestill] | turn | pronestill",
+  "mode standup [walk | run | standstill]",
+  "mode shutdown | startup | eject",
+].join("\n");
+
 const MOVE_CMDS: Record<string, CmdDef> = {
   candidate: {
     helpKey: "cmd.candidateMove.help",
@@ -402,27 +412,22 @@ const MOVE_CMDS: Record<string, CmdDef> = {
   },
   mode: {
     helpKey: "cmd.mode.help",
-    usage:
-      "mode <standstill|walk|run|jump|prone [turn|pronestill]|turn|pronestill|standup [walk|run|standstill]|shutdown|startup|eject>",
+    usage: MODE_USAGE,
     argsDoc: [
       ["standstill", "cmd.mode.arg.standstill"],
       ["walk", "cmd.mode.arg.walk"],
       ["run", "cmd.mode.arg.run"],
       ["jump", "cmd.mode.arg.jump"],
-      ["prone [turn|pronestill]", "cmd.mode.arg.prone"],
+      ["prone [turn | pronestill]", "cmd.mode.arg.prone"],
       ["turn", "cmd.mode.arg.turn"],
       ["pronestill", "cmd.mode.arg.pronestill"],
-      ["standup [mode]", "cmd.mode.arg.standup"],
+      ["standup [walk | run | standstill]", "cmd.mode.arg.standup"],
       ["shutdown", "cmd.mode.arg.shutdown"],
       ["startup", "cmd.mode.arg.startup"],
       ["eject", "cmd.mode.arg.eject"],
     ],
     run: (s, a) => {
-      expectArgs(
-        a,
-        1,
-        "mode standstill|walk|run|jump|prone [turn|pronestill]|turn|pronestill|standup [walk|run|standstill]|shutdown|startup|eject",
-      );
+      expectArgs(a, 1, MODE_USAGE);
       const mode = parseMoveMode(a[0]!);
       declareMovementMode(s, mode, a[1]);
       return declaredMovementModeChunk(s, mode);
@@ -596,7 +601,7 @@ const ATTACK_CMDS: Record<string, CmdDef> = {
   },
   pickup: {
     helpKey: "cmd.pickup.help",
-    usage: "pickup [limb|tree|girder] [n] | pickup <n>",
+    usage: ["pickup [limb | tree | girder] [n]", "pickup <n>"].join("\n"),
     argsDoc: [["source", "cmd.pickup.arg.source"]],
     run: (s, a) => {
       // A lone number picks among several clubs lying in the hex (`pickup 2`).
@@ -714,15 +719,24 @@ function allCmds(): Record<string, CmdDef> {
   return { ...OVER_CMDS, ...ATTACK_CMDS, ...MOVE_CMDS, ...SETUP_CMDS, ...GLOBAL_CMDS };
 }
 
+/** Split a (possibly multi-line) usage into display lines; continuations align under `usage: `. */
+function usageLines(usage: string): string[] {
+  const [first = "", ...rest] = usage.split("\n");
+  const prefix = i18n("help.usagePrefix");
+  const indent = " ".repeat(prefix.length);
+  return [
+    `${prefix}${first}`,
+    ...rest.map((line) => (line.length > 0 ? `${indent}${line}` : line)),
+  ];
+}
+
 /** Detailed single-command help: usage + argument explanations, no state hint. */
 function commandHelpChunk(session: Session, name: string): Chunk {
   // Help reads every phase's table, so a command can be studied before its phase.
   const def = findCmd(availableCmds(session), name) ?? findCmd(allCmds(), name);
   if (!def) throw new Error(i18n("err.unknownCommand", { name }));
   const names = listMapNames().join("|");
-  const lines = [
-    def.usage !== undefined ? `${i18n("help.usagePrefix")}${def.usage}` : name.toLowerCase(),
-  ];
+  const lines = def.usage !== undefined ? usageLines(def.usage) : [name.toLowerCase()];
   lines.push(i18n(def.helpKey).replace(/\{names\}/g, names));
   if (def.argsDoc !== undefined && def.argsDoc.length > 0) {
     lines.push(i18n("help.argumentsHeader"));
@@ -772,7 +786,9 @@ function commandList(session: Session): string[] {
       if (def.usage === undefined) {
         lines.push(`${name.padEnd(9)} ${first}`);
       } else {
-        lines.push(`${name.padEnd(9)} ${def.usage}`);
+        const [uFirst = "", ...uRest] = def.usage.split("\n");
+        lines.push(`${name.padEnd(9)} ${uFirst}`);
+        for (const line of uRest) lines.push(line.length > 0 ? `${indent}${line}` : line);
         lines.push(`${indent}${first}`);
       }
       for (const line of rest) lines.push(line.length > 0 ? `${indent}${line}` : line);
