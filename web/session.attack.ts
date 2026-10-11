@@ -748,7 +748,7 @@ function renderListing(lines: readonly ListingLine[]): string[] {
       ? l
       : `${l.indent}${l.cols
           .map((cell, i) => (i < l.cols.length - 1 ? cell.padEnd(widths[i]!) : cell))
-          .join("   ")}${l.tail}`,
+          .join(" ")}${l.tail}`,
   );
 }
 
