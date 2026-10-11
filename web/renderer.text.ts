@@ -183,9 +183,9 @@ const STAGGER = 2;
  * {@link TERRAIN_GLYPHS} / `FACING_GLYPH`.
  */
 export const GRID_GLYPHS = {
-  edgeTop: "_",
+  edgeTop: "⎼",
   edgeShared: "=",
-  edgeBottom: "\u203e",
+  edgeBottom: "⎻",
   edgeNW: "/",
   edgeNE: "\\",
   edgeSE: "/",
