@@ -12,6 +12,7 @@ import {
   type GameEvent,
   resolveAllAttacks,
   rollInitiativePhase,
+  validateAttacks,
 } from "../src/rules/game";
 import { resolvePhysicalAttack, validatePhysicalAttack } from "../src/rules/physical";
 import { createTestBattle, scriptedRng } from "./helpers";
@@ -90,6 +91,24 @@ describe("declaration rules (PHY-10, PHY-11)", () => {
         [],
       ),
     ).not.toThrow();
+  });
+});
+
+describe("one physical attack per turn", () => {
+  it("rejects a second kick, with either leg", () => {
+    const state = createTestBattle(
+      [],
+      [mech("a", 2, { col: 2, row: 2 }, "s"), mech("b", 1, { col: 2, row: 3 }, "n")],
+      true,
+    );
+    const kick = (limb: "leftLeg" | "rightLeg") => ({ type: "kick" as const, targetId: "b", limb });
+    expect(() => validateAttacks(state, "a", [], [kick("leftLeg")])).not.toThrow();
+    expect(() => validateAttacks(state, "a", [], [kick("leftLeg"), kick("leftLeg")])).toThrow(
+      /only one kick/,
+    );
+    expect(() => validateAttacks(state, "a", [], [kick("leftLeg"), kick("rightLeg")])).toThrow(
+      /only one kick/,
+    );
   });
 });
 

@@ -21,8 +21,8 @@ import {
   isUnitRemoved,
   type MapNameHolder,
   type MoveMode,
+  type MovePathStep,
   type MoveStep,
-  MP_PER_FACING_CHANGE,
   mapDefFor,
   mechDefFor,
   meleeDeclarationProblem,
@@ -392,13 +392,7 @@ export function declaredMovementModeChunk(s: Session, mode: DeclaredMovementMode
     emptyMoveCandidate(s);
     return [
       buildLinesChunk(
-        i18n("ok.modeDeclaredVoluntary", { id: actor.id, mode }),
-        i18n("stepResult.from", {
-          col: actor.position.col,
-          row: actor.position.row,
-          facing: F(actor.facing),
-          posture: PRN(actor.prone),
-        }),
+        i18n("ok.modeDeclaredVoluntary", { id: actor.id, mode, ...startParams(actor) }),
       ),
     ];
   }
@@ -408,8 +402,8 @@ export function declaredMovementModeChunk(s: Session, mode: DeclaredMovementMode
         id: actor.id,
         mode: displayMovementModeStr(context),
         budget: budgetFor(actor, context),
+        ...startParams(actor),
       }),
-      stepResultFromLine(actor),
     ),
   ];
   const mc = ensureMoveCandidate(s, true);
@@ -419,13 +413,14 @@ export function declaredMovementModeChunk(s: Session, mode: DeclaredMovementMode
   return chunks;
 }
 
-function stepResultFromLine(actor: UnitState): string {
-  return i18n("stepResult.from", {
+/** Start position params shared by the mode / place headers. */
+function startParams(actor: UnitState) {
+  return {
     col: actor.position.col,
     row: actor.position.row,
     facing: F(actor.facing),
     posture: PRN(actor.prone),
-  });
+  };
 }
 
 /** Locomotion arg for `mode prone [turn|pronestill]` (default turn). */
@@ -793,12 +788,67 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo {
   };
 }
 
-/** Header plus one line per path step, for `place` output. Costs come
- *  straight from `MovePathStep` (`baseMp` per step, `totalMp` cumulative);
- *  destination hexes are recomputed by walking fragments from the actor start
- *  (turns rotate the cursor, `F`/`J`/`P`/`U` go forward, `B` goes backward).
- *  Jump re-facing fragments cost 0 and render no line (landing facing rides
- *  in the header). */
+/** One rendered `place` line before merging: a turn, a plain hex step (no
+ *  terrain or climb surcharge), a hex step with surcharges, or a jump hex. */
+type StepLine =
+  | { kind: "turn"; dir: "L" | "R"; count: number; mp: number }
+  | { kind: "plain"; dir: "forward" | "backward"; hexes: string[]; mp: number }
+  | { kind: "cost"; dir: "forward" | "backward"; hex: string; step: MovePathStep }
+  | { kind: "jump"; hexes: string[]; mp: number };
+
+/** Append `next`, folding it into the previous line when both are turns the
+ *  same way, plain steps the same direction, or jump hexes. */
+function pushStep(out: StepLine[], next: StepLine): void {
+  const prev = out[out.length - 1];
+  if (prev?.kind === "turn" && next.kind === "turn" && prev.dir === next.dir) {
+    prev.count += next.count;
+    prev.mp += next.mp;
+  } else if (prev?.kind === "plain" && next.kind === "plain" && prev.dir === next.dir) {
+    prev.hexes.push(...next.hexes);
+    prev.mp += next.mp;
+  } else if (prev?.kind === "jump" && next.kind === "jump") {
+    prev.hexes.push(...next.hexes);
+    prev.mp += next.mp;
+  } else {
+    out.push(next);
+  }
+}
+
+function renderStep(line: StepLine): string {
+  switch (line.kind) {
+    case "turn":
+      return i18n("stepResult.turn", { dir: line.dir, facings: line.count, mp: line.mp });
+    case "plain":
+      return i18n(`stepResult.${line.dir}`, { hexes: line.hexes.join(" "), mp: line.mp });
+    case "jump":
+      return i18n("stepResult.jump", { hexes: line.hexes.join(" "), mp: line.mp });
+    case "cost": {
+      const { step } = line;
+      const extras: string[] = [];
+      if (step.terrainSurcharge > 0)
+        extras.push(i18n("stepResult.extra.terrain", { n: step.terrainSurcharge }));
+      if (step.climbCost > 0)
+        extras.push(
+          i18n("stepResult.extra.climb", { n: step.climbCost, levels: step.climbLevels }),
+        );
+      return i18n(`stepResult.${line.dir}Cost`, {
+        hex: line.hex,
+        terrain: TRN(step.terrain),
+        mp: step.baseMp,
+        extras: extras.join(", "),
+      });
+    }
+  }
+}
+
+/** Header plus the path steps, for `place` output. Costs come straight from
+ *  `MovePathStep` (`baseMp` per step, `totalMp` cumulative); destination hexes
+ *  are recomputed by walking fragments from the actor start (turns rotate the
+ *  cursor, `F`/`J`/`P`/`U` go forward, `B` goes backward). Consecutive turns
+ *  the same way, plain hex steps the same direction, and jump hexes merge into
+ *  one line; a step with a terrain or climb surcharge gets its own line
+ *  naming only the nonzero extras. Jump re-facing fragments cost 0 and render
+ *  no line (landing facing rides in the header). */
 function stepResultLines(s: Session, landing: RevealedLanding): string[] {
   const { battle, context } = requireBattleAndContext(s);
   const actor = requireUnit(battle, context.actorId);
@@ -813,10 +863,14 @@ function stepResultLines(s: Session, landing: RevealedLanding): string[] {
       : mode === "turn"
         ? "walk"
         : (mode ?? "standStill");
+  const start = startParams(actor);
   const lines = [
     i18n("ok.stepResult", {
       id: m?.actorId ?? "",
       mode: displayModeFor(context),
+      fromCol: start.col,
+      fromRow: start.row,
+      fromFacing: start.facing,
       col: landing.hex.col,
       row: landing.hex.row,
       facing: F(landing.facing),
@@ -824,45 +878,30 @@ function stepResultLines(s: Session, landing: RevealedLanding): string[] {
       spent: postureCost + (last?.totalMp ?? 0),
       budget: fullBudgetFor(actor, context),
     }),
-    stepResultFromLine(actor),
   ];
   const jumping = locomotion === "jump";
+  const steps: StepLine[] = [];
   let hex = actor.position;
   let facing = actor.facing;
   for (const step of path) {
     const frag = step.fragment;
     if (frag === "R" || frag === "L") {
       facing = rotateFacing(facing, frag === "R" ? 1 : -1);
-      if (!jumping) {
-        lines.push(
-          i18n("stepResult.turn", {
-            dir: frag,
-            facings: 1,
-            mp: step.baseMp,
-            perFacing: MP_PER_FACING_CHANGE,
-          }),
-        );
-      }
+      if (!jumping) pushStep(steps, { kind: "turn", dir: frag, count: 1, mp: step.baseMp });
       continue;
     }
     hex = neighbor(hex, frag === "B" ? oppositeFacing(facing) : facing);
+    const at = `(${hex.col},${hex.row})`;
+    const dir = frag === "B" ? "backward" : "forward";
     if (jumping) {
-      lines.push(i18n("stepResult.jump", { col: hex.col, row: hex.row, mp: step.baseMp }));
+      pushStep(steps, { kind: "jump", hexes: [at], mp: step.baseMp });
+    } else if (step.terrainSurcharge === 0 && step.climbCost === 0) {
+      pushStep(steps, { kind: "plain", dir, hexes: [at], mp: step.baseMp });
     } else {
-      lines.push(
-        i18n("stepResult.enter", {
-          type: locomotion === "walk" ? "walk" : "run",
-          col: hex.col,
-          row: hex.row,
-          terrain: TRN(step.terrain),
-          surcharge: step.terrainSurcharge,
-          climb: step.climbCost,
-          levels: step.climbLevels,
-          mp: step.baseMp,
-        }),
-      );
+      pushStep(steps, { kind: "cost", dir, hex: at, step });
     }
   }
+  lines.push(...steps.map(renderStep));
   if (landing.melee !== undefined) {
     const target = Object.values(battle.units).find(
       (u) =>
@@ -895,8 +934,8 @@ function queuedMoveLines(s: Session): string[] {
           id: actor.id,
           mode: displayModeFor(context),
           budget: budgetFor(actor, context),
+          ...startParams(actor),
         }),
-        stepResultFromLine(actor),
       ]
     : stepResultLines(s, landing);
 }
@@ -911,7 +950,8 @@ export function moveStatusChunk(s: Session): Chunk {
   const mode = s.move?.moveMode ?? null;
   if (mode === "shutdown" || mode === "startup" || mode === "eject") {
     const actor = requireUnit(requireBattleAndContext(s).battle, s.move!.actorId);
-    lines.push(`  ${i18n("ok.modeDeclaredVoluntary", { id: actor.id, mode })}`);
+    const line = i18n("ok.modeDeclaredVoluntary", { id: actor.id, mode, ...startParams(actor) });
+    lines.push(`  ${line}`);
   } else if (mode === null) {
     lines.push(i18n("moveStatus.noMode"));
   } else {

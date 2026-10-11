@@ -2280,6 +2280,10 @@ function checkPhysicalSetShape(unitId: string, normalized: readonly PhysicalAtta
   const strikes = normalized.filter((d) => d.type === "strike");
   if (strikes.length > 1)
     throw new Error(`${unitId} may make only one physical weapon attack per turn`);
+  // TW p. 144: one physical attack per turn; two punches (one per arm) are
+  // the only exception.
+  if (punches.length === 0 && normalized.length > 1)
+    throw new Error(`${unitId} may make only one ${normalized[0]!.type} per turn`);
 }
 
 /** Validation core shared by `validateAttacks` and `declareAttacks`.

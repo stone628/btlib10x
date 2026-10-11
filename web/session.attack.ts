@@ -7,16 +7,18 @@ import {
   type ClubPickupDecl,
   type CriticalEffect,
   type CriticalResolution,
+  computePhysicalToHit,
   type DamageApplication,
   type DamageTransferStep,
   declareAttacks,
   declarePickup,
-  type FireBlockerReason,
   type FireSuggestion,
+  type FireTarget,
   type FireWeapon,
   type GameEvent,
   type HitGroup,
   hexDistance,
+  hitProbability,
   isAdjacent,
   isArm,
   isLimb,
@@ -33,7 +35,7 @@ import {
   type PhysicalAttackType,
   type PhysicalResolution,
   type PhysicalWeaponName,
-  type RangeBracket,
+  physicalDamage,
   requireUnit,
   resolveStrikeArm,
   resolveStrikeMount,
@@ -47,13 +49,7 @@ import {
   type AttackDecl as WeaponAttackDecl,
   weaponDefFor,
 } from "btlib10x";
-import {
-  buildCollapsibleChunk,
-  buildHeaderTableChunkFromRows,
-  buildLinesChunk,
-  buildLinesChunkWith,
-  type Chunk,
-} from "./chunk";
+import { buildLinesChunk, buildLinesChunkWith, type Chunk } from "./chunk";
 import { i18n, type MessageKey } from "./i18n";
 import { SHORT_LOC } from "./misc";
 import { recordAttack } from "./replay";
@@ -655,12 +651,7 @@ export function parseTorsoTwist(direction: string): Arc {
  */
 export function setTorsoTwist(s: Session, arc: Arc): Arc {
   const { battle, context } = requireBattleAndContext(s);
-  const twistLocked =
-    context.weaponDecls.length > 0 ||
-    context.physicalDecls.some(
-      (d) => d.type === "punch" || d.type === "club" || d.type === "strike",
-    );
-  if (twistLocked) {
+  if (isTwistLocked(context)) {
     throw new Error(i18n("err.twist.locked"));
   }
   const prev = context.torsoTwist;
@@ -670,24 +661,6 @@ export function setTorsoTwist(s: Session, arc: Arc): Arc {
   }
   return prev;
 }
-
-const BRACKET_LABEL: Readonly<Record<RangeBracket, string>> = {
-  short: "S",
-  medium: "M",
-  long: "L",
-};
-
-const BLOCKER_LABEL: Readonly<Record<FireBlockerReason, MessageKey>> = {
-  jammed: "fireSuggestion.reason.jammed",
-  destroyed: "fireSuggestion.reason.destroyed",
-  outOfRange: "fireSuggestion.reason.outOfRange",
-  outOfArc: "fireSuggestion.reason.outOfArc",
-  noLos: "fireSuggestion.reason.noLos",
-  outOfAmmo: "fireSuggestion.reason.outOfAmmo",
-  autoMiss: "fireSuggestion.reason.autoMiss",
-  prone: "fireSuggestion.reason.prone",
-  noSensor: "fireSuggestion.reason.noSensor",
-};
 
 const ARC_LABEL: Readonly<Record<Arc, MessageKey>> = {
   front: "fireSuggestion.arc.front",
@@ -708,56 +681,25 @@ const TWIST_LABEL: Readonly<Record<Arc, MessageKey>> = {
   rear: "fireSuggestion.twist.front",
 };
 
-function fireWeaponTable(weapons: readonly FireWeapon[]): Chunk {
-  const header = [
-    i18n("fireSuggestion.colIndex"),
-    i18n("fireSuggestion.colWeapon"),
-    i18n("fireSuggestion.colLoc"),
-    i18n("fireSuggestion.colBracket"),
-    i18n("fireSuggestion.colTn"),
-    i18n("fireSuggestion.colHeat"),
-    i18n("fireSuggestion.colDmg"),
-    i18n("fireSuggestion.colShots"),
-  ];
-  const rows = weapons.map((w) => [
-    `#${w.weaponIndex}`,
-    w.weapon,
-    SHORT_LOC[w.location],
-    w.minRangePenalty !== undefined
-      ? `[${BRACKET_LABEL[w.rangeBracket]}!]`
-      : `[${BRACKET_LABEL[w.rangeBracket]}]`,
-    w.minRangePenalty !== undefined ? `${w.tn} (min +${w.minRangePenalty})` : String(w.tn),
-    String(w.heat),
-    w.cluster !== undefined
-      ? `${w.expectedDamage} (${i18n("fireSuggestion.cluster", {
-          shots: String(w.cluster.shots),
-          per: String(w.cluster.perMissile),
-        })})`
-      : String(w.expectedDamage),
-    w.shots !== null ? `${w.shots}` : "",
-  ]);
-  return buildHeaderTableChunkFromRows(header, rows);
-}
+/** `torso <word>` command argument for each twist. */
+const TWIST_COMMAND: Readonly<Record<Arc, string>> = {
+  front: "torso front",
+  leftSide: "torso left",
+  rightSide: "torso right",
+  rear: "torso front",
+};
 
-function blockedLines(
-  list: readonly { weaponIndex: number; weapon: string; reason: FireBlockerReason }[],
-): string[] {
-  return list.map(
-    (b) =>
-      `${i18n("fireSuggestion.blocked")}: #${b.weaponIndex} ${b.weapon} — ${i18n(BLOCKER_LABEL[b.reason])}`,
+const TWIST_OPTIONS: readonly Arc[] = ["front", "leftSide", "rightSide"];
+
+/** A twist is locked once a weapon, punch, club or strike is queued (kick
+ *  is feet-based and never locks it). */
+function isTwistLocked(context: AttackContext): boolean {
+  return (
+    context.weaponDecls.length > 0 ||
+    context.physicalDecls.some(
+      (d) => d.type === "punch" || d.type === "club" || d.type === "strike",
+    )
   );
-}
-
-function blockedChunks(list: ReturnType<typeof blockedLines>): Chunk[] {
-  if (list.length === 0) return [];
-  if (list.length > 3) {
-    return [
-      buildCollapsibleChunk(i18n("fireSuggestion.blockedSummary", { num: list.length }), [
-        buildLinesChunkWith("hint", ...list),
-      ]),
-    ];
-  }
-  return [buildLinesChunkWith("hint", ...list)];
 }
 
 function ensureFireCandidate(
@@ -771,107 +713,344 @@ function ensureFireCandidate(
   return context.fireCandidate;
 }
 
-// export function fireSuggestionChunks(sugg: FireSuggestion, twist: Arc | null = null): Chunk[] {
-export function fireSuggestionChunks(s: Session): Chunk[] {
-  const { battle, context } = requireBattleAndContext(s);
-  const sugg = ensureFireCandidate(battle, context);
-  const twist = context.torsoTwist;
-  const chunks: Chunk[] = [
-    buildLinesChunkWith("hint", i18n("fireSuggestion.header", { id: sugg.targetId })),
-  ];
-  if (twist !== null) {
-    chunks.push(
-      buildLinesChunkWith("hint", i18n("fireSuggestion.twist", { dir: twistLabel(twist) })),
+/** `, by "a" and "b"`: the trailing command list on a candidate line. */
+function byCommands(commands: readonly string[]): string {
+  const quoted = commands.map((c) => `"${c}"`);
+  const list =
+    quoted.length <= 1
+      ? (quoted[0] ?? "")
+      : `${quoted.slice(0, -1).join(", ")}${i18n("fireSuggestion.and")}${quoted[quoted.length - 1]}`;
+  return i18n("fireSuggestion.by", { cmds: list });
+}
+
+/** `TN n (p%)`, with the 2D6 chance of rolling n or higher. */
+function tnText(tn: number, minPenalty?: number): string {
+  const pct = String(Math.round(hitProbability(tn) * 100));
+  return minPenalty !== undefined
+    ? i18n("fireSuggestion.tnMin", { tn, pct, min: minPenalty })
+    : i18n("fireSuggestion.tnPct", { tn, pct });
+}
+
+/** A listing line: plain text, or columns aligned with the rest of its group. */
+type ListingLine = string | { indent: string; cols: string[]; tail: string };
+
+/** Pad the column rows of a group to common widths (three-space gutters). */
+function renderListing(lines: readonly ListingLine[]): string[] {
+  const rows = lines.filter((l): l is Exclude<ListingLine, string> => typeof l !== "string");
+  const widths: number[] = [];
+  for (const { cols } of rows) {
+    cols.forEach((cell, i) => {
+      widths[i] = Math.max(widths[i] ?? 0, cell.length);
+    });
+  }
+  return lines.map((l) =>
+    typeof l === "string"
+      ? l
+      : `${l.indent}${l.cols
+          .map((cell, i) => (i < l.cols.length - 1 ? cell.padEnd(widths[i]!) : cell))
+          .join("   ")}${l.tail}`,
+  );
+}
+
+/** One line per fireable weapon, then an all-weapons line when more than one
+ *  and the whole set is legal together. */
+function weaponLines(
+  targetId: string,
+  weapons: readonly FireWeapon[],
+  indent: string,
+  allLegal: boolean,
+): ListingLine[] {
+  const lines: ListingLine[] = weapons.map((w) => ({
+    indent,
+    cols: [
+      `#${w.weaponIndex} ${w.weapon}`,
+      tnText(w.tn, w.minRangePenalty),
+      i18n("fireSuggestion.dmg", {
+        dmg:
+          w.cluster !== undefined
+            ? `${w.cluster.perMissile}×${w.cluster.shots}`
+            : String(w.expectedDamage),
+      }),
+      i18n("fireSuggestion.heat", { heat: w.heat }),
+    ],
+    tail: byCommands([`fire ${targetId} ${w.weaponIndex}`]),
+  }));
+  return lines;
+}
+
+/** True when the two prop-side weapon sets differ (prone attacker). */
+function propSplit(target: FireTarget): boolean {
+  return (
+    target.weaponsIfPropLeft.length !== target.weaponsIfPropRight.length ||
+    target.weaponsIfPropLeft.some(
+      (w, i) => w.weaponIndex !== target.weaponsIfPropRight[i]?.weaponIndex,
+    )
+  );
+}
+
+/** Engine check of everything already queued plus `weapons`/`physical` at
+ *  `twist` (TW pp. 144-147: one target, one physical type, arm and leg
+ *  conflicts between fire and physical attacks, club hands). */
+function legalWithQueued(
+  battle: BattleState,
+  context: AttackContext,
+  twist: Arc,
+  weapons: readonly WeaponAttackDecl[],
+  physical: readonly PhysicalAttackDecl[],
+): boolean {
+  try {
+    validateAttacks(
+      battle,
+      context.actorId,
+      [...context.weaponDecls, ...weapons],
+      [...context.physicalDecls, ...physical],
+      { twist, dropClub: context.dropClub },
     );
+    return true;
+  } catch {
+    return false;
   }
-  if (sugg.targets.length === 0) {
-    chunks.push(buildLinesChunkWith("hint", i18n("fireSuggestion.noTargets")));
-    return chunks;
-  }
-  for (const target of sugg.targets) {
-    chunks.push(
-      buildLinesChunkWith(
-        "hint",
-        i18n("fireSuggestion.target", {
-          id: target.targetId,
-          distance: String(target.distance),
-          arc: target.arc !== null ? i18n(ARC_LABEL[target.arc]) : "—",
-        }),
-      ),
-    );
-    const split =
-      target.weaponsIfPropLeft.length !== target.weaponsIfPropRight.length ||
-      target.weaponsIfPropLeft.some(
-        (w, i) => w.weaponIndex !== target.weaponsIfPropRight[i]?.weaponIndex,
-      ) ||
-      target.blockedIfPropLeft.length !== target.blockedIfPropRight.length;
-    if (split) {
-      chunks.push(
-        buildLinesChunkWith(
-          "hint",
-          i18n("fireSuggestion.propLeft", { num: target.weaponsIfPropLeft.length }),
-        ),
-      );
-      if (target.weaponsIfPropLeft.length > 0) {
-        chunks.push(fireWeaponTable(target.weaponsIfPropLeft));
-      }
-      chunks.push(...blockedChunks(blockedLines(target.blockedIfPropLeft)));
-      chunks.push(
-        buildLinesChunkWith(
-          "hint",
-          i18n("fireSuggestion.propRight", { num: target.weaponsIfPropRight.length }),
-        ),
-      );
-      if (target.weaponsIfPropRight.length > 0) {
-        chunks.push(fireWeaponTable(target.weaponsIfPropRight));
-      }
-      chunks.push(...blockedChunks(blockedLines(target.blockedIfPropRight)));
-      continue;
-    }
-    if (target.weapons.length > 0) {
-      chunks.push(fireWeaponTable(target.weapons));
-    }
-    chunks.push(...blockedChunks(blockedLines(target.blocked)));
-  }
-  // Physical attacks (TW pp. 144-147) only matter at adjacency: list them
-  // after the weapon tables so most turns show no extra noise.
+}
+
+/** Weapon part: one group per reachable twist, one block per target. The
+ *  twist command sits on the group heading; weapon lines carry the fire
+ *  command alone. */
+function weaponCandidateLines(battle: BattleState, context: AttackContext): string[] {
   const actor = requireUnit(battle, context.actorId);
-  const physical: string[] = [];
-  for (const [targetId, target] of Object.entries(battle.units)) {
+  const locked = isTwistLocked(context);
+  // A prone 'Mech cannot twist (TW p.106); a locked twist cannot change.
+  const twists = actor.prone || locked ? [context.torsoTwist] : TWIST_OPTIONS;
+  // Weapon fire is one target per unit: once a fire is queued only its
+  // target remains, without the weapons already queued.
+  const pendingTarget = context.weaponDecls[0]?.targetId;
+  const queued = new Set(context.weaponDecls.map((d) => d.weaponIndex));
+  const out = [`[${i18n("fireSuggestion.weaponHeader")}]`];
+  // A held club occupies both hands: arm weapons fire only after a drop.
+  if (actor.club !== null && !context.dropClub) out.push(`  ${i18n("fireSuggestion.clubHeld")}`);
+  for (const twist of twists) {
+    const current = twist === context.torsoTwist;
+    const changeable = !actor.prone && !locked;
+    const group: ListingLine[] = [];
+    const sugg = suggestFireTargets(battle, context.actorId, twist);
+    // Each weapon must also fit with what is already queued (a punching or
+    // striking arm cannot fire, a held club bars arm weapons).
+    const usable = (targetId: string, list: readonly FireWeapon[]): FireWeapon[] =>
+      list.filter(
+        (w) =>
+          !queued.has(w.weaponIndex) &&
+          legalWithQueued(battle, context, twist, [{ targetId, weaponIndex: w.weaponIndex }], []),
+      );
+    const lines = (targetId: string, weapons: readonly FireWeapon[], indent: string) =>
+      weaponLines(
+        targetId,
+        weapons,
+        indent,
+        legalWithQueued(
+          battle,
+          context,
+          twist,
+          weapons.map((w) => ({ targetId, weaponIndex: w.weaponIndex })),
+          [],
+        ),
+      );
+    for (const target of sugg.targets) {
+      if (pendingTarget !== undefined && target.targetId !== pendingTarget) continue;
+      const head = `    ${i18n("fireSuggestion.target", {
+        id: target.targetId,
+        distance: String(target.distance),
+        arc: target.arc !== null ? i18n(ARC_LABEL[target.arc]) : "—",
+      })}`;
+      if (propSplit(target)) {
+        const left = usable(target.targetId, target.weaponsIfPropLeft);
+        const right = usable(target.targetId, target.weaponsIfPropRight);
+        if (left.length === 0 && right.length === 0) continue;
+        group.push(head);
+        if (left.length > 0) {
+          group.push(`      ${i18n("fireSuggestion.propLeft")}`);
+          group.push(...lines(target.targetId, left, "        "));
+        }
+        if (right.length > 0) {
+          group.push(`      ${i18n("fireSuggestion.propRight")}`);
+          group.push(...lines(target.targetId, right, "        "));
+        }
+        continue;
+      }
+      const weapons = usable(target.targetId, target.weapons);
+      if (weapons.length === 0) continue;
+      group.push(head, ...lines(target.targetId, weapons, "      "));
+    }
+    const groupHeader = `  ${i18n("fireSuggestion.twistGroup", { dir: twistLabel(twist) })}${changeable ? byCommands([TWIST_COMMAND[twist]]) : ""
+      }${current ? i18n("fireSuggestion.current") : ""}`;
+    if (group.length === 0) {
+      group.push(`${groupHeader}: ${i18n("fireSuggestion.groupNone")}`);
+    } else {
+      out.push(groupHeader, ...renderListing(group));
+    }
+  }
+  return out;
+}
+
+type Limb = "leftArm" | "rightArm" | "leftLeg" | "rightLeg";
+
+const LIMB_WORD: Readonly<Record<Limb, string>> = {
+  leftArm: "left",
+  rightArm: "right",
+  leftLeg: "left",
+  rightLeg: "right",
+};
+
+const PHYSICAL_LABEL: Readonly<Record<Limb, { punch: MessageKey; kick: MessageKey }>> = {
+  leftArm: { punch: "physicalSuggestion.punch.left", kick: "physicalSuggestion.kick.left" },
+  rightArm: { punch: "physicalSuggestion.punch.right", kick: "physicalSuggestion.kick.right" },
+  leftLeg: { punch: "physicalSuggestion.punch.left", kick: "physicalSuggestion.kick.left" },
+  rightLeg: { punch: "physicalSuggestion.punch.right", kick: "physicalSuggestion.kick.right" },
+};
+
+/** Physical part: one block per adjacent enemy, or nothing when none is adjacent. */
+function physicalCandidateLines(battle: BattleState, context: AttackContext): string[] {
+  const actor = requireUnit(battle, context.actorId);
+  const locked = isTwistLocked(context);
+  // Current twist first, so a legal attack needs no twist command when it can.
+  const twists =
+    actor.prone || locked
+      ? [context.torsoTwist]
+      : [context.torsoTwist, ...TWIST_OPTIONS.filter((t) => t !== context.torsoTwist)];
+  /** First twist under which `decls` are all legal, or null. */
+  const twistFor = (decls: readonly PhysicalAttackDecl[]): Arc | null => {
+    for (const twist of twists) {
+      if (legalWithQueued(battle, context, twist, [], decls)) return twist;
+    }
+    return null;
+  };
+  const prefixFor = (twist: Arc): string[] =>
+    twist === context.torsoTwist ? [] : [TWIST_COMMAND[twist]];
+  const lines: string[] = [];
+  let usesArm = false;
+  for (const target of Object.values(battle.units)) {
     if (target.team === actor.team || isUnitRemoved(target)) continue;
     if (!isAdjacent(actor.position, target.position)) continue;
-    for (const type of ["punch", "kick", "club"] as const) {
-      const decl: PhysicalAttackDecl = { type, targetId };
-      if (validatePhysicalAttack(battle, actor.id, decl, context.torsoTwist).ok) {
-        physical.push(
-          i18n("physicalSuggestion.line", {
-            type,
-            target: targetId,
+    const id = target.id;
+    const rows: { cols: string[]; commands: string[] }[] = [];
+    const add = (
+      label: string,
+      decl: PhysicalAttackDecl,
+      command: string,
+      limb: Limb | undefined,
+    ): Arc | null => {
+      // The current twist is tried first, and a kick ignores the twist.
+      const twist = twistFor([decl]);
+      if (twist === null) return null;
+      const tn = computePhysicalToHit(battle, actor, target, decl.type, limb, decl.weapon).total;
+      rows.push({
+        cols: [
+          label,
+          tnText(tn),
+          i18n("fireSuggestion.dmg", {
+            dmg: String(physicalDamage(decl.type, actor, limb, decl.weapon)),
           }),
-        );
+        ],
+        commands: [...prefixFor(twist), command],
+      });
+      if (decl.type !== "kick") usesArm = true;
+      return twist;
+    };
+    const punches: { limb: Limb; decl: PhysicalAttackDecl; tn: number; dmg: number }[] = [];
+    for (const limb of ["leftArm", "rightArm"] as const) {
+      const decl: PhysicalAttackDecl = { type: "punch", targetId: id, limb };
+      if (add(i18n(PHYSICAL_LABEL[limb].punch), decl, `punch ${id} ${LIMB_WORD[limb]}`, limb)) {
+        punches.push({
+          limb,
+          decl,
+          tn: computePhysicalToHit(battle, actor, target, "punch", limb).total,
+          dmg: physicalDamage("punch", actor, limb),
+        });
       }
     }
-    const actorDef = mechDefFor(actor);
-    for (const { arm, weapon } of strikeMounts(actorDef)) {
-      const decl: PhysicalAttackDecl = { type: "strike", targetId, limb: arm, weapon };
-      if (validatePhysicalAttack(battle, actor.id, decl, context.torsoTwist).ok) {
-        physical.push(
-          i18n("physicalSuggestion.strikeLine", {
-            weapon: weapon.toLowerCase(),
-            target: targetId,
-            limb: arm === "leftArm" ? "left" : "right",
-          }),
-        );
+    if (punches.length === 2) {
+      // Both arms may punch the same target, each rolled separately (TW p.145).
+      const twist = twistFor(punches.map((p) => p.decl));
+      if (twist !== null) {
+        const [l, r] = punches as [(typeof punches)[0], (typeof punches)[0]];
+        rows.push({
+          cols: [
+            i18n("physicalSuggestion.both"),
+            l.tn === r.tn
+              ? `${tnText(l.tn)}${i18n("physicalSuggestion.each")}`
+              : `${tnText(l.tn)} / ${tnText(r.tn)}`,
+            i18n("fireSuggestion.dmg", {
+              dmg:
+                l.dmg === r.dmg
+                  ? `${l.dmg}${i18n("physicalSuggestion.each")}`
+                  : `${l.dmg} + ${r.dmg}`,
+            }),
+          ],
+          commands: [...prefixFor(twist), `punch ${id} left`, `punch ${id} right`],
+        });
       }
     }
+    for (const limb of ["leftLeg", "rightLeg"] as const) {
+      add(
+        i18n(PHYSICAL_LABEL[limb].kick),
+        { type: "kick", targetId: id, limb },
+        `kick ${id} ${LIMB_WORD[limb]}`,
+        limb,
+      );
+    }
+    add(i18n("physicalSuggestion.club"), { type: "club", targetId: id }, `club ${id}`, undefined);
+    for (const { arm, weapon } of strikeMounts(mechDefFor(actor))) {
+      add(
+        i18n("physicalSuggestion.strike", { weapon: weapon.toLowerCase(), limb: LIMB_WORD[arm] }),
+        { type: "strike", targetId: id, limb: arm, weapon },
+        `strike ${id} ${LIMB_WORD[arm]}`,
+        arm,
+      );
+    }
+    lines.push(
+      `  ${i18n("physicalSuggestion.target", {
+        id,
+        distance: String(hexDistance(actor.position, target.position)),
+      })}`,
+    );
+    if (rows.length === 0) {
+      lines.push(`    ${i18n("physicalSuggestion.adjacentNone")}`);
+      continue;
+    }
+    lines.push(
+      ...renderListing(
+        rows.map((r) => ({ indent: "    ", cols: r.cols, tail: byCommands(r.commands) })),
+      ),
+    );
   }
-  chunks.push(buildLinesChunkWith("hint", i18n("physicalSuggestion.header")));
-  if (physical.length === 0) {
-    chunks.push(buildLinesChunkWith("hint", i18n("physicalSuggestion.none")));
+  if (lines.length === 0) return [];
+  if (usesArm) lines.push(`  ${i18n("physicalSuggestion.armNote")}`);
+  return [i18n("physicalSuggestion.header"), ...lines];
+}
+
+/**
+ * The attack-phase candidate listing, command first: a weapon part with
+ * one group per torso twist and one block per target (fireable weapons
+ * only, each with TN, 2D6 hit chance, damage, heat and its command), then a
+ * physical part per adjacent enemy (left out when none is adjacent).
+ */
+export function fireSuggestionChunks(s: Session): Chunk[] {
+  const { battle, context } = requireBattleAndContext(s);
+  const lines: string[] = [
+    i18n("fireSuggestion.header", { id: context.actorId }),
+  ];
+  // A pickup is the unit's whole attack (TW p. 146).
+  if (context.pickupDecl !== null) {
+    lines.push(i18n("fireSuggestion.pickupQueued"));
   } else {
-    chunks.push(buildLinesChunkWith("hint", ...physical));
+    // Anything queued narrows the candidates; `cancel` clears the whole queue.
+    const narrowed =
+      context.weaponDecls.length > 0 || context.physicalDecls.length > 0 || context.dropClub;
+    if (narrowed) lines.push(`  (${i18n("fireSuggestion.queuedNote")}`);
+    lines.push(
+      ...weaponCandidateLines(battle, context).map((l) => `  ${l}`),
+      ...physicalCandidateLines(battle, context).map((l) => `  ${l}`),
+    );
   }
-  return chunks;
+  return [buildLinesChunkWith("hint", ...lines)];
 }
 
 export function attackStatusChunk(s: Session): Chunk {
