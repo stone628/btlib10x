@@ -24,6 +24,7 @@ import {
   slotMapLines,
   withoutBoxes,
 } from "./avatar.slotmap";
+import { buildAvatarQuery, parseAvatarQuery, type UrlPart } from "./avatar.url";
 
 interface PartDef {
   key: string;
@@ -154,7 +155,31 @@ function loadState(): AvatarState {
   } catch {
     // Corrupt storage: fall back to defaults.
   }
+  // URL params win over saved state, so a shared link shows its own avatar.
+  const fromUrl = parseAvatarQuery(location.search, URL_PARTS);
+  if (fromUrl !== null) {
+    if (fromUrl.ignored.length > 0) {
+      console.warn(`avatar: ignored URL params: ${fromUrl.ignored.join(", ")}`);
+    }
+    return { idx: fromUrl.idx, active, ovr: fromUrl.ovr };
+  }
   return { idx, active, ovr };
+}
+
+/** Part keys and variant names as used in the URL (see avatar.url.ts). */
+const URL_PARTS: UrlPart[] = PARTS.map((def) => ({
+  key: def.key,
+  names: def.variants.map((v) => v.name),
+}));
+
+/** Keep the address bar on the current avatar; replaceState adds no history entries. */
+function syncUrl(state: AvatarState): void {
+  const query = buildAvatarQuery(URL_PARTS, state.idx, state.ovr);
+  try {
+    history.replaceState(history.state, "", `${location.pathname}?${query}${location.hash}`);
+  } catch {
+    // Some embedded or file: contexts refuse replaceState; the URL just stays put.
+  }
 }
 
 function saveState(state: AvatarState): void {
@@ -166,9 +191,11 @@ function saveState(state: AvatarState): void {
   } catch {
     // Storage may be blocked: the customizer still works in memory.
   }
+  syncUrl(state);
 }
 
 const state: AvatarState = loadState();
+saveState(state);
 
 /** Glyph shown in a slot while the picker is open; never saved. */
 let preview: Preview | null = null;
@@ -546,6 +573,15 @@ document.getElementById("copy")?.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(`${exportText()}\n${partsEl.textContent ?? ""}`);
     live.textContent = "avatar copied to clipboard";
+  } catch {
+    live.textContent = "copy failed: clipboard unavailable";
+  }
+});
+
+document.getElementById("copy-link")?.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(location.href);
+    live.textContent = "link copied to clipboard";
   } catch {
     live.textContent = "copy failed: clipboard unavailable";
   }
