@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>bt10x mech avatar</title>
+    <link rel="stylesheet" href="bt10x.css" />
+    <link rel="stylesheet" href="avatar.css" />
+  </head>
+  <body>
+    <main id="avatar-app">
+      <header id="avatar-head">
+        <h1>'MECH AVATAR</h1>
+        <p class="hint">up/down selects part · left/right changes variant · click or tap works too</p>
+      </header>
+      <div id="stage" aria-live="off"></div>
+      <section id="out-row">
+        <pre id="export" role="img" aria-label="current avatar"></pre>
+        <div id="parts"></div>
+        <div id="actions">
+          <button id="copy" class="link-button" type="button">copy</button>
+          <button id="random" class="link-button" type="button">random</button>
+          <a class="link-button" href="index.html">terminal</a>
+        </div>
+      </section>
+    </main>
+    <footer id="legal">
+      Unofficial fan project. Not affiliated with or endorsed by Catalyst Game Labs, The Topps
+      Company, Inc. or Microsoft.<br />BattleTech, BattleMech, 'Mech and MechWarrior are trademarks
+      of their respective owners.
+    </footer>
+    <div id="sr-live" class="sr-only" aria-live="polite"></div>
+    <script type="module" src="./avatar.js"></script>
+  </body>
+</html>

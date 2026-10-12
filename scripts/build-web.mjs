@@ -38,6 +38,15 @@ const appCtx = await esbuild.context({
   logLevel: "info",
 });
 
+const avatarCtx = await esbuild.context({
+  entryPoints: ["web/avatar.ts"],
+  outfile: "web/avatar.js",
+  bundle: true,
+  format: "esm",
+  target: "es2022",
+  logLevel: "info",
+});
+
 if (serve) {
   const { hosts, port: actualPort } = await appCtx.serve({ servedir: "web", port });
   console.log(`serving at http://${hosts[0]}:${actualPort}/index.html`);
@@ -45,11 +54,14 @@ if (serve) {
 if (watch) {
   await coreCtx.watch();
   await appCtx.watch();
+  await avatarCtx.watch();
   console.log("watching for changes…");
 }
 if (!watch && !serve) {
   await coreCtx.rebuild();
   await appCtx.rebuild();
+  await avatarCtx.rebuild();
   await coreCtx.dispose();
   await appCtx.dispose();
+  await avatarCtx.dispose();
 }
