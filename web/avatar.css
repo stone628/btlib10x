@@ -171,13 +171,209 @@
   gap: 8px;
 }
 
-#export {
-  margin: 0;
-  text-align: center;
-  color: var(--c-white);
+/* Slot map: the final avatar with one labelled box per override slot
+   (layout in avatar.slotmap.ts). Everything sits on one character grid, so
+   connectors, boxes and the avatar stay aligned. 0.6em is the font's advance:
+   the map shrinks to fit 36 columns on narrow screens. */
+#slotmap {
+  display: grid;
+  grid-template-columns: repeat(var(--map-cols, 36), 1ch);
+  grid-template-rows: repeat(var(--map-rows, 8), var(--board-lh));
   font-family: var(--board-ff);
-  font-size: calc(var(--board-fs) * 2);
+  font-size: min(calc(var(--board-fs) * 2), calc((100vw - 32px) / var(--map-cols, 36) / 0.6));
   line-height: var(--board-lh);
+  color: var(--c-dim);
+  white-space: pre;
+  font-synthesis: none;
+  font-synthesis-weight: none;
+}
+
+#slotmap .map-line {
+  pointer-events: none;
+}
+
+#slotmap .map-cell {
+  color: var(--c-white);
+  pointer-events: none;
+}
+
+#slotmap .map-cell.lit {
+  color: #0c0f0c;
+  background: var(--c-yellow);
+}
+
+#slotmap .map-box {
+  font: inherit;
+  line-height: inherit;
+  white-space: pre;
+  text-align: left;
+  color: var(--c-dim);
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+#slotmap .map-box.overridden {
+  color: var(--c-yellow);
+}
+
+#slotmap .map-box:hover,
+#slotmap .map-box:focus-visible {
+  color: var(--c-green);
+  background: var(--cb-green);
+  outline: none;
+}
+
+#slotmap .map-box.editing {
+  color: #0c0f0c;
+  background: var(--c-yellow);
+}
+
+/* Glyph picker: floats above the slot map (placed by avatar.picker.ts).
+   Size knobs: --gp-width is the panel width (capped at the screen width),
+   --gp-glyph is the grid glyph size, 0.9 of the slot map's glyphs. */
+.glyph-picker {
+  --gp-width: 100ch;
+  --gp-glyph: calc(0.9 * min(calc(var(--board-fs) * 2), calc((100vw - 32px) / 36 / 0.6)));
+  position: fixed;
+  inset: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  width: min(var(--gp-width), calc(100vw - 16px));
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  color: var(--c-white);
+  background: #0f140f;
+  border: 1px solid var(--c-green);
+  border-radius: 4px;
+  font-family: var(--board-ff);
+  font-synthesis: none;
+  font-synthesis-weight: none;
+  overflow: hidden;
+}
+
+.glyph-picker:not([open]) {
+  display: none;
+}
+
+.glyph-picker::backdrop {
+  background: transparent;
+}
+
+.gp-title {
+  color: var(--c-green);
+  font-weight: bold;
+  letter-spacing: 0.15em;
+}
+
+.gp-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  color: var(--c-dim);
+  font-size: 12px;
+}
+
+.gp-controls label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.gp-controls select {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.gp-controls select,
+.gp-controls input {
+  font: inherit;
+  font-size: 13px;
+  color: var(--c-white);
+  background: #1a1f1a;
+  border: 1px solid #233023;
+  border-radius: 4px;
+  padding: 3px 6px;
+}
+
+.gp-controls input {
+  width: 16ch;
+}
+
+.gp-grid {
+  display: grid;
+  font-size: var(--gp-glyph);
+  grid-template-columns: repeat(auto-fill, minmax(1.5em, 1fr));
+  gap: 2px;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  padding: 2px;
+}
+
+.gp-cell {
+  font: inherit;
+  line-height: var(--board-lh);
+  padding: 0.1em 0;
+  min-height: 32px;
+  color: var(--c-white);
+  background: #141914;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.gp-cell:hover {
+  border-color: var(--c-green);
+}
+
+.gp-cell:focus-visible,
+.gp-cell:focus {
+  outline: none;
+  border-color: var(--c-yellow);
+  box-shadow: 0 0 0 1px var(--cb-yellow);
+}
+
+.gp-cell.current {
+  color: var(--c-yellow);
+}
+
+.gp-cell.chosen {
+  color: #0c0f0c;
+  background: var(--c-yellow);
+}
+
+.gp-apply:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.gp-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.gp-status {
+  color: var(--c-dim);
+  font-size: 12px;
+  min-width: 10ch;
+}
+
+.gp-buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 #parts {

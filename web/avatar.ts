@@ -1,4 +1,29 @@
 import { ARMS, HEADS, LEGS, type PartVariant, SHOULDERS, TORSOS } from "./avatar.data";
+import {
+  applyOverrides,
+  clearPart,
+  codePointLabel,
+  formatOverrides,
+  type Overrides,
+  type Preview,
+  parseOverrides,
+  partOverrides,
+  SLOTS,
+  type SlotDef,
+  type SlotId,
+} from "./avatar.override";
+import { isPickerOpen, openPicker } from "./avatar.picker";
+import {
+  BOX_H,
+  BOX_W,
+  boxLines,
+  cellPos,
+  SLOT_MAP_COLS,
+  SLOT_MAP_ROWS,
+  SLOT_PLACES,
+  slotMapLines,
+  withoutBoxes,
+} from "./avatar.slotmap";
 
 interface PartDef {
   key: string;
@@ -102,15 +127,18 @@ function findVariantNameClashes(): { part: string; name: string }[] {
 interface AvatarState {
   idx: number[];
   active: number;
+  /** Per-cell glyph overrides, see avatar.override.ts. */
+  ovr: Overrides;
 }
 
 function loadState(): AvatarState {
   const idx = PARTS.map(() => 0);
   let active = 0;
+  let ovr: Overrides = {};
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw !== null) {
-      const parsed = JSON.parse(raw) as { idx?: unknown; active?: unknown };
+      const parsed = JSON.parse(raw) as { idx?: unknown; active?: unknown; ovr?: unknown };
       if (Array.isArray(parsed.idx)) {
         for (let p = 0; p < PARTS.length; p++) {
           const v = parsed.idx[p];
@@ -121,16 +149,20 @@ function loadState(): AvatarState {
       if (typeof parsed.active === "number" && Number.isInteger(parsed.active)) {
         active = wrapIndex(parsed.active, PARTS.length);
       }
+      ovr = parseOverrides(parsed.ovr);
     }
   } catch {
     // Corrupt storage: fall back to defaults.
   }
-  return { idx, active };
+  return { idx, active, ovr };
 }
 
 function saveState(state: AvatarState): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ idx: state.idx, active: state.active }));
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ idx: state.idx, active: state.active, ovr: state.ovr }),
+    );
   } catch {
     // Storage may be blocked: the customizer still works in memory.
   }
@@ -138,41 +170,60 @@ function saveState(state: AvatarState): void {
 
 const state: AvatarState = loadState();
 
+/** Glyph shown in a slot while the picker is open; never saved. */
+let preview: Preview | null = null;
+/** Slot whose picker is open. */
+let editing: SlotId | null = null;
+/** Set while focus returns to a slot box after the picker closes. */
+let restoringFocus = false;
+
 const stage = document.getElementById("stage") as HTMLDivElement;
-const exportEl = document.getElementById("export") as HTMLPreElement;
+const slotMapEl = document.getElementById("slotmap") as HTMLDivElement;
+const pickerEl = document.getElementById("glyph-picker") as HTMLDialogElement;
 const partsEl = document.getElementById("parts") as HTMLDivElement;
 const live = document.getElementById("sr-live") as HTMLDivElement;
 
-function currentData(): {
-  head: string;
-  shoulder: string;
-  torso: string;
-  arm: string;
-  leg: string;
-} {
-  return {
-    head: PARTS[0]?.variants[state.idx[0] ?? 0]?.data ?? "  ",
-    shoulder: PARTS[1]?.variants[state.idx[1] ?? 0]?.data ?? "  ",
-    torso: PARTS[2]?.variants[state.idx[2] ?? 0]?.data ?? "  ",
-    arm: PARTS[3]?.variants[state.idx[3] ?? 0]?.data ?? "  ",
-    leg: PARTS[4]?.variants[state.idx[4] ?? 0]?.data ?? "  ",
-  };
+/** Variant data of each part, in PARTS order (head, shoulder, torso, arms, legs). */
+function currentData(): string[] {
+  return PARTS.map((def, p) => def.variants[state.idx[p] ?? 0]?.data ?? "  ");
 }
 
+/** Part data as drawn: overrides applied, plus the picker's preview when `withPreview`. */
+function shownData(withPreview = true): string[] {
+  return applyOverrides(currentData(), state.ovr, withPreview ? preview : null);
+}
+
+function composeFrom(data: readonly string[], selected: boolean): string[] {
+  const [head, shoulder, torso, arm, leg] = data.map((d) => d ?? "  ");
+  return (selected ? composeSelectedAvatar : composeAvatar)(
+    head ?? "  ",
+    shoulder ?? "  ",
+    torso ?? "  ",
+    arm ?? "  ",
+    leg ?? "  ",
+  );
+}
+
+/**
+ * Side preview: `part` swapped to `variant`, every other part as drawn. The
+ * browsed part shows its variant without overrides, since picking a variant
+ * clears them.
+ */
 function avatarWithOverride(part: number, variant: number): string[] {
-  const cur = currentData();
-  const order = [cur.head, cur.shoulder, cur.torso, cur.arm, cur.leg] as string[];
+  const order = applyOverrides(currentData(), state.ovr, preview, part);
   const def = PARTS[part];
   if (def !== undefined)
     order[part] =
       def.variants[wrapIndex(variant, def.variants.length)]?.data ?? order[part] ?? "  ";
-  return composeAvatar(
-    order[0] ?? "  ",
-    order[1] ?? "  ",
-    order[2] ?? "  ",
-    order[3] ?? "  ",
-    order[4] ?? "  ",
-  );
+  return composeFrom(order, false);
+}
+
+/** Pick variant `vi` for part `p`; it replaces any overrides on that part. */
+function setVariant(p: number, vi: number): void {
+  const def = PARTS[p];
+  if (def === undefined) return;
+  state.idx[p] = wrapIndex(vi, def.variants.length);
+  state.ovr = clearPart(state.ovr, p);
 }
 
 function announce(): void {
@@ -180,7 +231,10 @@ function announce(): void {
   if (def === undefined) return;
   const v = def.variants[state.idx[state.active] ?? 0];
   if (v === undefined) return;
-  live.textContent = `${def.title}: ${v.name}, ${v.desc}`;
+  const ovr = partOverrides(state.ovr, state.active)
+    .map(([s, ch]) => `, ${s.title} set to ${codePointLabel(ch)}`)
+    .join("");
+  live.textContent = `${def.title}: ${v.name}, ${v.desc}${ovr}`;
 }
 
 /** Flex gap in `.carousel` (see avatar.css); kept in sync by hand. */
@@ -212,8 +266,7 @@ function syncWidth(): void {
 
 function render(): void {
   stage.replaceChildren();
-  const cur = currentData();
-  const selected = composeSelectedAvatar(cur.head, cur.shoulder, cur.torso, cur.arm, cur.leg);
+  const selected = composeFrom(shownData(), true);
 
   PARTS.forEach((def, p) => {
     const n = def.variants.length;
@@ -227,7 +280,10 @@ function render(): void {
 
     const label = document.createElement("div");
     label.className = "part-label";
-    label.textContent = `[${def.title}: ${variant.name} — ${variant.desc}]`;
+    const ovr = partOverrides(state.ovr, p)
+      .map(([s, ch]) => ` · ${s.id}=${ch}`)
+      .join("");
+    label.textContent = `[${def.title}: ${variant.name} — ${variant.desc}${ovr}]`;
     section.append(label);
 
     const row = document.createElement("div");
@@ -246,7 +302,7 @@ function render(): void {
         prev.textContent = "<";
         prev.setAttribute("aria-label", `previous ${def.title}`);
         prev.addEventListener("click", () => {
-          state.idx[p] = wrapIndex(sel - 1, n);
+          setVariant(p, sel - 1);
           state.active = p;
           saveState(state);
           render();
@@ -262,7 +318,8 @@ function render(): void {
         const cap = document.createElement("span");
         cap.className = "cap";
         cap.setAttribute("aria-hidden", "true");
-        cap.textContent = variant.name;
+        cap.textContent =
+          partOverrides(state.ovr, p).length > 0 ? `${variant.name}*` : variant.name;
         box.append(art, cap);
         box.setAttribute("aria-label", `${def.title} ${variant.name} selected`);
         box.addEventListener("click", () => {
@@ -278,7 +335,7 @@ function render(): void {
         next.textContent = ">";
         next.setAttribute("aria-label", `next ${def.title}`);
         next.addEventListener("click", () => {
-          state.idx[p] = wrapIndex(sel + 1, n);
+          setVariant(p, sel + 1);
           state.active = p;
           saveState(state);
           render();
@@ -308,7 +365,7 @@ function render(): void {
         b.setAttribute("aria-label", `${def.title} ${target?.name ?? ""}`);
         b.title = target !== undefined ? `${target.name} — ${target.desc}` : "";
         b.addEventListener("click", () => {
-          state.idx[p] = vi;
+          setVariant(p, vi);
           state.active = p;
           saveState(state);
           render();
@@ -325,15 +382,135 @@ function render(): void {
   const names = PARTS.map(
     (def, p) => `${def.title}=${def.variants[state.idx[p] ?? 0]?.name ?? "??"}`,
   ).join(" ");
-  exportEl.textContent = selected.join("\n");
-  partsEl.textContent = names;
+  const ovrText = formatOverrides(state.ovr);
+  partsEl.textContent = ovrText === "" ? names : `${names} ${ovrText}`;
+  renderSlotMap(selected);
+}
+
+/** The copied avatar: saved state only, never the picker's preview. */
+function exportText(): string {
+  return composeFrom(shownData(false), true).join("\n");
+}
+
+/** Glyph each slot shows right now. */
+function slotGlyphs(data: readonly string[]): Record<SlotId, string> {
+  const out = {} as Record<SlotId, string>;
+  for (const s of SLOTS) out[s.id] = data[s.part]?.[s.side] ?? " ";
+  return out;
+}
+
+function gridArea(el: HTMLElement, col: number, line: number, w: number, h: number): void {
+  el.style.gridColumn = `${col + 1} / span ${w}`;
+  el.style.gridRow = `${line + 1} / span ${h}`;
+}
+
+/** Focus survives re-renders by slot id. */
+function focusedSlot(): SlotId | null {
+  const el = document.activeElement;
+  return el instanceof HTMLElement && slotMapEl.contains(el)
+    ? ((el.dataset.slot as SlotId | undefined) ?? null)
+    : null;
+}
+
+function renderSlotMap(avatar: string[]): void {
+  const keepFocus = focusedSlot();
+  const data = shownData();
+  const lines = slotMapLines(avatar, slotGlyphs(data));
+  slotMapEl.replaceChildren();
+  slotMapEl.style.setProperty("--map-cols", String(SLOT_MAP_COLS));
+  slotMapEl.style.setProperty("--map-rows", String(SLOT_MAP_ROWS));
+
+  for (const [i, text] of withoutBoxes(lines).entries()) {
+    const row = document.createElement("span");
+    row.className = "map-line";
+    row.setAttribute("aria-hidden", "true");
+    row.textContent = text;
+    gridArea(row, 0, i, SLOT_MAP_COLS, 1);
+    slotMapEl.append(row);
+  }
+
+  for (const slot of SLOTS) {
+    const place = SLOT_PLACES[slot.id];
+    const ch = data[slot.part]?.[slot.side] ?? " ";
+    const overridden = state.ovr[slot.id] !== undefined;
+
+    const cell = document.createElement("span");
+    cell.className = "map-cell";
+    cell.dataset.cell = slot.id;
+    cell.setAttribute("aria-hidden", "true");
+    cell.textContent = ch;
+    const pos = cellPos(slot.id);
+    gridArea(cell, pos.col, pos.line, 1, 1);
+
+    const box = document.createElement("button");
+    box.type = "button";
+    box.className = "map-box";
+    box.dataset.slot = slot.id;
+    if (overridden) box.classList.add("overridden");
+    if (editing === slot.id) box.classList.add("editing");
+    box.textContent = boxLines(lines, slot.id).join("\n");
+    box.setAttribute(
+      "aria-label",
+      `${slot.title}: ${ch === " " ? "blank" : ch}, ${overridden ? "override" : "from variant"}`,
+    );
+    gridArea(box, place.box.col, place.box.line, BOX_W, BOX_H);
+    const lit = (on: boolean) => cell.classList.toggle("lit", on || editing === slot.id);
+    // Keyboard focus lights the cell. Focus handed back when the picker
+    // closes does not, or the cell would stay lit after the pick.
+    const keyFocused = () => box.matches(":focus-visible") && !restoringFocus;
+    box.addEventListener("pointerenter", () => lit(true));
+    box.addEventListener("pointerleave", () => lit(keyFocused()));
+    box.addEventListener("focus", () => lit(keyFocused()));
+    box.addEventListener("blur", () => lit(false));
+    box.addEventListener("click", () => openSlot(slot));
+    if (editing === slot.id) cell.classList.add("lit");
+
+    slotMapEl.append(cell, box);
+  }
+
+  if (keepFocus !== null) {
+    slotMapEl.querySelector<HTMLElement>(`[data-slot="${keepFocus}"]`)?.focus();
+  }
+}
+
+function openSlot(slot: SlotDef): void {
+  editing = slot.id;
+  const current = shownData(false)[slot.part]?.[slot.side] ?? " ";
+  render();
+  openPicker(pickerEl, {
+    slot,
+    current,
+    variant: currentData()[slot.part]?.[slot.side] ?? " ",
+    anchor: slotMapEl,
+    onPreview: (ch) => {
+      preview = ch === null ? null : { slot: slot.id, ch };
+      render();
+    },
+    onPick: (ch) => {
+      preview = null;
+      if (ch === null) delete state.ovr[slot.id];
+      else state.ovr[slot.id] = ch;
+      state.active = slot.part;
+      saveState(state);
+      render();
+      announce();
+    },
+    onClose: () => {
+      editing = null;
+      preview = null;
+      render();
+      // render() rebuilt the boxes: focus the new one for this slot.
+      restoringFocus = true;
+      slotMapEl.querySelector<HTMLElement>(`[data-slot="${slot.id}"]`)?.focus();
+      restoringFocus = false;
+    },
+  });
 }
 
 function stepActive(delta: number): void {
   const def = PARTS[state.active];
   if (def === undefined) return;
-  const n = def.variants.length;
-  state.idx[state.active] = wrapIndex((state.idx[state.active] ?? 0) + delta, n);
+  setVariant(state.active, (state.idx[state.active] ?? 0) + delta);
   saveState(state);
   render();
   announce();
@@ -347,6 +524,9 @@ function moveActive(delta: number): void {
 }
 
 document.addEventListener("keydown", (e) => {
+  // The picker handles its own keys; arrows there must not step variants.
+  if (isPickerOpen()) return;
+  // Arrow keys on a slot box still drive the carousels.
   if (e.key === "ArrowLeft") {
     e.preventDefault();
     stepActive(-1);
@@ -364,9 +544,7 @@ document.addEventListener("keydown", (e) => {
 
 document.getElementById("copy")?.addEventListener("click", async () => {
   try {
-    await navigator.clipboard.writeText(
-      `${exportEl.textContent ?? ""}\n${partsEl.textContent ?? ""}`,
-    );
+    await navigator.clipboard.writeText(`${exportText()}\n${partsEl.textContent ?? ""}`);
     live.textContent = "avatar copied to clipboard";
   } catch {
     live.textContent = "copy failed: clipboard unavailable";
@@ -377,6 +555,7 @@ document.getElementById("random")?.addEventListener("click", () => {
   PARTS.forEach((def, p) => {
     state.idx[p] = Math.floor(Math.random() * def.variants.length);
   });
+  state.ovr = {};
   saveState(state);
   render();
   announce();
