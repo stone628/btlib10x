@@ -81,6 +81,24 @@ function wrapIndex(i: number, n: number): number {
   return ((i % n) + n) % n;
 }
 
+/**
+ * Duplicate variant names inside one part's list. A clash makes captions,
+ * the export line (`HEAD=sq ...`) and saved indices ambiguous. Names are
+ * scoped per part, so reuse across parts (e.g. `sq` in HEAD and SHOULDER)
+ * is fine and not reported.
+ */
+function findVariantNameClashes(): { part: string; name: string }[] {
+  const clashes: { part: string; name: string }[] = [];
+  for (const part of PARTS) {
+    const seen = new Set<string>();
+    for (const variant of part.variants) {
+      if (seen.has(variant.name)) clashes.push({ part: part.title, name: variant.name });
+      else seen.add(variant.name);
+    }
+  }
+  return clashes;
+}
+
 interface AvatarState {
   idx: number[];
   active: number;
@@ -363,6 +381,13 @@ document.getElementById("random")?.addEventListener("click", () => {
   render();
   announce();
 });
+
+const clashes = findVariantNameClashes();
+if (clashes.length > 0) {
+  const detail = clashes.map((c) => `${c.part}="${c.name}"`).join(", ");
+  stage.textContent = `avatar data error: duplicate variant names: ${detail}`;
+  throw new Error(`avatar: duplicate variant names: ${detail}`);
+}
 
 render();
 syncWidth();
