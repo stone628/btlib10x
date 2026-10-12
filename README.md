@@ -16,3 +16,6 @@ Company, Inc. and the tabletop game is published under license by Catalyst
 Game Labs. 'Mech names and game data are used for reference only, and no
 claim to them is made. Rules are referenced by page from *Total Warfare*;
 buy the rulebook to play the full game.
+
+The web app's font, Bt10x Mono, is a subset of JuliaMono by cormullion,
+used under the SIL Open Font License 1.1 (see `web/fonts/OFL.txt`).

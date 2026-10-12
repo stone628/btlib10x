@@ -1,10 +1,32 @@
 /* Marker class: elements with .no-prompt-focus are exempt from the
    click-to-refocus-prompt behavior in web/main.ts. */
+/* Bt10x Mono: subset of JuliaMono (SIL OFL 1.1), see web/fonts/OFL.txt.
+   Regenerate with scripts/subset-juliamono.py. Hangul and anything outside
+   unicode-range falls through to the system fonts below. */
+@font-face {
+  font-family: "Bt10x Mono";
+  src: url("fonts/bt10x-mono-0.63.2-regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0020-007E, U+00A0-00AC, U+00AE-00FF, U+03A3, U+2000-200A, U+2010-2027, U+202F-205F, U+2190-2319, U+231C-2328, U+232B-23E8, U+23ED-23EF, U+23F1-23F2, U+23F4-23FF, U+2500-25FC, U+25FF-2613, U+2616-2647, U+2654-267E, U+2680-2692, U+2694-26A0, U+26A2-26A9, U+26AC-26BC, U+26BF-26C3, U+26C6-26CD, U+26CF-26D3, U+26D5-26E9, U+26EB-26F1, U+26F4, U+26F6-26F9, U+26FB-26FC, U+26FE-26FF, U+29C0-29FF;
+}
+@font-face {
+  font-family: "Bt10x Mono";
+  src: url("fonts/bt10x-mono-0.63.2-bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0020-007E, U+00A0-00AC, U+00AE-00FF, U+03A3, U+2000-200A, U+2010-2027, U+202F-205F, U+2190-2319, U+231C-2328, U+232B-23E8, U+23ED-23EF, U+23F1-23F2, U+23F4-23FF, U+2500-25FC, U+25FF-2613, U+2616-2647, U+2654-267E, U+2680-2692, U+2694-26A0, U+26A2-26A9, U+26AC-26BC, U+26BF-26C3, U+26C6-26CD, U+26CF-26D3, U+26D5-26E9, U+26EB-26F1, U+26F4, U+26F6-26F9, U+26FB-26FC, U+26FE-26FF, U+29C0-29FF;
+}
 :root {
   color-scheme: dark;
   /* Board rendering knobs (edit to restyle game boards only). */
-  --board-ff: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  --board-lh: 1;
+  --mono-ff: "Bt10x Mono", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --board-ff: var(--mono-ff);
+  /* 1.175em = JuliaMono ascent + descent: block elements tile exactly. Must be
+     a length (em), since it also sets row heights in the css-grid renderer. */
+  --board-lh: 1.175em;
   --board-fs: 1em;
   /* Per-terrain color scheme (one var per TerrainType). */
   --t-lightWoods: var(--c-green);
@@ -45,7 +67,8 @@ body {
   margin: 0;
   background: #0c0f0c;
   color: #b8c9b8;
-  font-family: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-family: var(--mono-ff);
+  font-variant-ligatures: none;
   font-size: 13px;
   line-height: 1.35;
   display: flex;
@@ -207,7 +230,7 @@ html {
 #out .board-grid {
   display: inline-grid;
   grid-auto-flow: row dense;
-  line-height: 1;
+  line-height: var(--board-lh);
   font-family: var(--board-ff);
   font-size: var(--board-fs);
 }
@@ -221,12 +244,12 @@ html {
   white-space: pre;
 }
 #out .board-grid.board-rows > div {
-  height: 1em;
+  height: var(--board-lh);
 }
 #out .board-grid.board-rows .cell {
   display: inline-block;
   width: 1ch;
-  height: 1em;
+  height: var(--board-lh);
   vertical-align: top;
 }
 .t-lightWoods {

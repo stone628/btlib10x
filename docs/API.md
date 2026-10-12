@@ -868,9 +868,9 @@ from a `BoardRenderInfo` (`{ map, units, reachable, clubHexes }`) rather
 than a pre-built model; reachable-hex clipping for the movement `mode` command
 happens inside `createBoardModel`. The web terminal renders spans inside a `.board` container
 whose font family, size and line spacing come from the CSS variables
-`--font-board` / `--board-fs` / `--board-lh`; each terrain's color scheme is
+`--board-ff` / `--board-fs` / `--board-lh`; each terrain's color scheme is
 its own set of variables (`--t-lightWoods`, `--t-heavyWoods`,
-`--tb-heavyWoods`) in `web/index.html`.
+`--tb-heavyWoods`) in `web/bt10x.css`.
 
 ## Public API check
 

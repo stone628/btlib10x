@@ -3,7 +3,11 @@ import * as esbuild from "esbuild";
 import { buildStamp } from "./build-stamp.mjs";
 
 const html = readFileSync("web/index.html", "utf8");
-const css = readFileSync("web/bt10x.css", "utf8");
+// The standalone file must work from file://, so fonts go in as data: URIs.
+const css = readFileSync("web/bt10x.css", "utf8").replace(
+  /url\("(fonts\/[^"]+\.woff2)"\)/g,
+  (_, f) => `url("data:font/woff2;base64,${readFileSync(`web/${f}`).toString("base64")}")`,
+);
 
 const { outputFiles } = await esbuild.build({
   entryPoints: ["web/main.ts"],
@@ -20,6 +24,7 @@ const { outputFiles } = await esbuild.build({
 const app = outputFiles[0].text;
 
 const single = html
+  .replace(/\s*<link rel="preload"[^>]*>/g, "")
   .replace('<link rel="stylesheet" href="bt10x.css" />', `<style>\n${css}\n    </style>`)
   .replace(/<script type="importmap">.*?<\/script>\s*/, "")
   .replace(
