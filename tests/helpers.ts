@@ -2,10 +2,10 @@ import type { Facing, HexCoord, Location, Rng, TerrainType } from "../src/core/t
 import { type AmmoBins, bearingExact, createBattle, isUnitRemoved } from "../src/index";
 import type { BattleState, TerrainHexDef, UnitInit, UnitState } from "../src/rules/game";
 import { advancePhase, requireUnit } from "../src/rules/game";
-import type { Chunk } from "../web/chunk";
-import { runChunks } from "../web/cli";
-import { boardLegendText, boardToText, createBoardModel } from "../web/renderer.text";
-import type { Session } from "../web/session";
+import type { Chunk } from "../web/terminal/chunk";
+import { runChunks } from "../web/terminal/cli";
+import { boardLegendText, boardToText, createBoardModel } from "../web/terminal/renderer.text";
+import type { Session } from "../web/terminal/session";
 
 /**
  * Build createBattle options from unit data (plus optional terrain), sizing the

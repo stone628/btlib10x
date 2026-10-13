@@ -9,9 +9,9 @@ import {
   suggestFireTargets,
   wreckAt,
 } from "../src/index";
-import { en } from "../web/i18n/en";
-import type { LocaleId, MessageKey } from "../web/i18n/index";
-import { i18nIn, LOCALES, normalizeLocale } from "../web/i18n/index";
+import { en } from "../web/terminal/i18n/en";
+import type { LocaleId, MessageKey } from "../web/terminal/i18n/index";
+import { i18nIn, LOCALES, normalizeLocale } from "../web/terminal/i18n/index";
 import {
   commitAttack,
   commitMovement,
@@ -21,7 +21,7 @@ import {
   placeLanding,
   queueWeaponAttacks,
   setConfigLocale,
-} from "../web/session";
+} from "../web/terminal/session";
 import { bearing, currentActor, execute } from "./helpers";
 
 /** Drive a started battle until it is over using minimal legal actions. */
@@ -230,7 +230,7 @@ describe("localized output smoke test", () => {
 describe("MOTD locale sections", () => {
   it("carries both en and ko sections with no Hangul in the English block", async () => {
     const { readFileSync } = await import("node:fs");
-    const motd = readFileSync(new URL("../web/MOTD.txt", import.meta.url), "utf8");
+    const motd = readFileSync(new URL("../web/terminal/MOTD.txt", import.meta.url), "utf8");
     expect(motd).toContain('lang="ko"');
     expect(motd).toContain('lang="en"');
     const enBlocks = [...motd.matchAll(/<div[^>]*lang="en"[^>]*>([\s\S]*?)<\/div>/g)].map(
@@ -241,5 +241,25 @@ describe("MOTD locale sections", () => {
     const css = readFileSync(new URL("../web/bt10x.css", import.meta.url), "utf8");
     expect(css).toContain(":root:lang(en) #motd-body :lang(ko)");
     expect(css).toContain(":root:lang(ko) #motd-body :lang(en)");
+  });
+});
+
+describe("landing page locale spans", () => {
+  it("pairs every en span with a ko span and keeps Hangul out of English", async () => {
+    const { readFileSync } = await import("node:fs");
+    const html = readFileSync(new URL("../web/index.html", import.meta.url), "utf8");
+    const spans = (lang: string) =>
+      [...html.matchAll(new RegExp(`<span lang="${lang}">([^<]*)</span>`, "g"))].map(
+        (m) => m[1] ?? "",
+      );
+    const enSpans = spans("en");
+    const koSpans = spans("ko");
+    expect(enSpans.length).toBeGreaterThan(0);
+    expect(koSpans.length).toBe(enSpans.length);
+    for (const text of enSpans) expect(text).not.toMatch(/[가-힣]/);
+    for (const text of koSpans) expect(text.trim()).not.toBe("");
+    const css = readFileSync(new URL("../web/landing.css", import.meta.url), "utf8");
+    expect(css).toContain(":root:lang(en) #landing :lang(ko)");
+    expect(css).toContain(":root:lang(ko) #landing :lang(en)");
   });
 });

@@ -15,7 +15,7 @@ import {
   resolveAllAttacks,
   rollInitiativePhase,
 } from "../src/rules/game";
-import { critLines, resolutionLines } from "../web/session";
+import { critLines, resolutionLines } from "../web/terminal/session";
 import { checkVictory, createTestBattle, overrideAmmoBin, scriptedRng } from "./helpers";
 
 function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {

@@ -1,7 +1,7 @@
 /**
  * Vitest setup: load the unified catalog (`data/btlib10x.jsonl`) into the
  * engine registries. Rule tests import `../src/*` directly, while the web
- * layer (`../web/*`) resolves `btlib10x` through package exports to `dist/`
+ * layer (`../web/terminal/*`) resolves `btlib10x` through package exports to `dist/`
  * — both copies need loading. Run `npm run build` first so `dist/`
  * matches `src/`.
  *

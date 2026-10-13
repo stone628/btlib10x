@@ -13,7 +13,7 @@ terminal emulator UI. Vanilla TypeScript + DOM only; zero runtime dependencies
   phase `movement`, `(N):attack(team T, mech ID)` during `attack` —
   N is the turn number; team and id come from `nextActor(state)`.
 - Phases auto-advance when every living unit has acted. After attacks resolve,
-  `drive()` in `web/session.ts` feeds `checkSessionVictory` as stopper into
+  `drive()` in `web/terminal/session.ts` feeds `checkSessionVictory` as stopper into
   engine `gameLoop()`: more teams alive → next turn (auto initiative roll),
   otherwise → `over`. Engine itself never decides winner.
 
@@ -56,7 +56,7 @@ Examples:
 | `reset` | wipe everything back to empty setup |
 | `ver` | show the built library version (`YYMMDD-<git hash>` stamp of the bundled commit) |
 | `pp` | persona player (see below): no argument lists assignments, personas and the trace level; `pp <id> <persona\|off>` assigns in setup only; `pp setup 2\|4` builds a random persona-vs-persona setup (empty setup only); `pp go` lets it act at the current prompt; `pp why [id]` reprints a unit's last decision; `pp trace off\|brief\|full` sets how much reasoning is shown |
-| `autoplay` | hidden demo driver (not listed by `help`): resets nothing itself but expects a blank slate — run `reset` first. Prints a notice, then on a short timer (`AUTOPLAY_INTERVAL_MS` in `web/autoplay.ts`) types the next command a demonstrator would: loads `quickstart`, places HBK-4G vs CDA-3MA adjacent, starts, then walks in place and fires every working weapon each turn until victory. Any manually typed command cancels it; it prints `autoplay finished.` when the battle ends |
+| `autoplay` | hidden demo driver (not listed by `help`): resets nothing itself but expects a blank slate — run `reset` first. Prints a notice, then on a short timer (`AUTOPLAY_INTERVAL_MS` in `web/terminal/autoplay.ts`) types the next command a demonstrator would: loads `quickstart`, places HBK-4G vs CDA-3MA adjacent, starts, then walks in place and fires every working weapon each turn until victory. Any manually typed command cancels it; it prints `autoplay finished.` when the battle ends |
 
 ### setup
 
@@ -90,7 +90,7 @@ The prompt names the acting unit; commands act on that 'Mech.
 | `candidate` | list attack candidates, also printed when a unit becomes the attacker. `weapon attacks` has one group per torso twist (`twist right, by "torso right"`; only the current twist once prone or locked), one block per target, and one line per fireable weapon with TN, 2D6 hit chance, damage, heat and its `fire` command, plus an all-weapons line with total heat. Weapons that cannot fire are not shown; once a fire is queued only that target remains. `physical attacks` (only when an enemy is adjacent) lists each legal punch, both punches, kick, club and strike per target with TN, hit chance, damage and the commands, a needed twist first |
 | `status` | queued move steps with running MP cost per step |
 | `cancel` | clear mode + steps |
-| `rollback` | undo the last completed `done`: back to the previous actor's prompt (half-declared input is discarded; dice state and replay log are restored too). At most `MAX_SNAPSHOT_COUNT` (10) prompt snapshots are kept (`web/rollback.ts`); no redo |
+| `rollback` | undo the last completed `done`: back to the previous actor's prompt (half-declared input is discarded; dice state and replay log are restored too). At most `MAX_SNAPSHOT_COUNT` (10) prompt snapshots are kept (`web/terminal/rollback.ts`); no redo |
 | `done` | commit posture-change first, then move only on success (`attemptStandUp`/`dropProne` then `executeMove` in one atomic commit; failed stand discards queued `place`); prints path + MP spent (posture cost folded in) and full budget |
 
 Shut-down units (including `starting`) act **first** in the movement phase,
@@ -111,7 +111,7 @@ pass), plus `cancel`, `sheet`, `status`, `heat` and the globals.
 | `heat [id]` | heat scale status |
 | `status` | queued attack declarations |
 | `cancel` | clear declarations |
-| `rollback` | undo the last completed `done`: back to the previous actor's prompt (half-declared input is discarded; dice state and replay log are restored too). At most `MAX_SNAPSHOT_COUNT` (10) prompt snapshots are kept (`web/rollback.ts`); no redo |
+| `rollback` | undo the last completed `done`: back to the previous actor's prompt (half-declared input is discarded; dice state and replay log are restored too). At most `MAX_SNAPSHOT_COUNT` (10) prompt snapshots are kept (`web/terminal/rollback.ts`); no redo |
 | `done` | `declareAttacks` + `resolveAllAttacks` (simultaneous — every unit's declared shots resolve, even units killed that phase); prints per-weapon GATOR to-hit line, dice, cluster hits, damage by location |
 
 ### over
@@ -124,14 +124,14 @@ pass), plus `cancel`, `sheet`, `status`, `heat` and the globals.
 | globals | `board`, `log` remain available; `reset` returns to empty setup |
 
 **Replay data.** While a battle is played the session records it in the compact
-format of `docs/REPLAY.md` (`web/replay.ts`: header on `start`/`rematch`, one `M`/`A`
+format of `docs/REPLAY.md` (`web/terminal/replay.ts`: header on `start`/`rematch`, one `M`/`A`
 line per committed activation, rejected commands leave no trace). When the battle
 ends, the victory banner is followed by a collapsed block *"you can replay this
 match with this data"* holding the records laid out by `replayPrettifier`: version,
 the setup line (`B…;S…`), one line per unit, then per turn one movement line and one
 attack line (activations joined by `;`), the `W` line and one `E` line per unit. `rematch` starts a new
 log; `reset` clears it and re-creates the dice generator from the seed. `replayPlayer(text)`
-(`web/replay.ts`) replays such text and checks the winner, the final dice state and every
+(`web/terminal/replay.ts`) replays such text and checks the winner, the final dice state and every
 unit's end state; it throws a single error naming turn, phase and actor on the first problem. A match
 that cannot be reproduced (more than 36 units, a team above 9, a unit id with
 `:` `;` `,` or whitespace, a replaced dice generator) shows no block.
@@ -154,10 +154,10 @@ says which is already set and asks for `reset`) through the setup API directly
 prints one line for the map and one per player (`A1: HBK-4G at (14,2) facing s, team 1,
 persona Jump Jockey`). Ids are `A1 B1 A2 B2`; teams alternate, so players split evenly
 into teams 1 and 2. Draws come from a stream salted off the setup seed
-(`web/persona.setup.ts`): the same `seed` gives the same setup, and the battle dice are
+(`web/terminal/persona.setup.ts`): the same `seed` gives the same setup, and the battle dice are
 untouched. Then `start` plays the whole bout.
 
-Personas (`web/persona.data.ts`): `alpha` (Alpha Striker), `longtom` (Long Tom),
+Personas (`web/terminal/persona.data.ts`): `alpha` (Alpha Striker), `longtom` (Long Tom),
 `jumpjockey` (Jump Jockey), `hulldown` (Hull-Down), `pitfighter` (Pit Fighter),
 `gladiator` (Gladiator), `dispossessed` (Dispossessed). Heat ceilings Cold 4 /
 Warm 7 / Hot 9 / Redline 13 / Overdrive 30 sit one point under a Heat Scale step
@@ -335,32 +335,35 @@ stated elsewhere in this document or the codebase:
 
 ## Architecture
 
-    web/index.html      terminal chrome: scrollback <pre>, prompt line, key capture, inline CSS
-    web/main.ts         bootstrap; wires DOM ↔ session/cli; reprints prompt after each command
-    web/cli.ts          tokenizer + per-state command registry + help generator
-    web/session.ts      core session state machine: setup/battle/over, RNG, atomic commit (commitAtomic),
-                         drive() phase-advance wrapper around engine gameLoop()
-    web/session.common.ts  shared formatters: heat, board, info, sheet, crit chart, log events
-    web/session.move.ts    movement phase: mode parsing, reachable map, place/cancel/done commit
-    web/session.attack.ts  attack phase: fire/physical queues, validation, torso twist, ammo policy, resolve
-    web/session.setup.ts   setup phase: map, add/set/rm units, status, start
-    web/session.over.ts    over state: rematch, status
-    web/rollback.ts        prompt snapshots + the `rollback` command's undo
-    web/chunk.ts       structured output chunks: lines, board, columns, collapsible
-    web/rng.ts          mulberry32-seeded Rng
-    web/autoplay.ts    hidden `autoplay` demo driver
-    web/persona*.ts   persona player (GDD §9): persona table, move/attack scoring,
-                         context + decide(), `pp` command + synchronous driver,
-                         `pp setup` random setup
-    web/lookup.ts      tolerant (case-insensitive) catalog lookups
-    web/table.ts       reference-table renderers (`table` command)
-    web/misc.ts        shared label helpers (facing, posture, weapon category)
-    web/i18n/          string catalogs (`en` canonical, `ko`; `kr` aliases `ko`)
-    web/render.ts       structured BoardModel / Span model + boardToText / boardToSpans
-    scripts/build-web.mjs  esbuild bundles: src/index.ts → web/btlib10x.js (engine),
-                         web/main.ts → web/bt10x.js (app; engine kept external),
-                         and copies data/btlib10x.jsonl → web/btlib10x.jsonl (catalog,
-                         fetched once at boot)
+    web/index.html               landing page at /: links to the terminal and the avatar creator (EN/KO inline)
+    web/terminal.html            terminal chrome: scrollback <pre>, prompt line, key capture
+    web/avatar.html              'Mech avatar creator page (sources in web/avatar/)
+    web/terminal/terminal.ts     bootstrap; wires DOM ↔ session/cli; reprints prompt after each command
+    web/terminal/cli.ts          tokenizer + per-state command registry + help generator
+    web/terminal/session.ts      core session state machine: setup/battle/over, RNG, atomic commit (commitAtomic),
+                                 drive() phase-advance wrapper around engine gameLoop()
+    web/terminal/session.common.ts  shared formatters: heat, board, info, sheet, crit chart, log events
+    web/terminal/session.move.ts    movement phase: mode parsing, reachable map, place/cancel/done commit
+    web/terminal/session.attack.ts  attack phase: fire/physical queues, validation, torso twist, ammo policy, resolve
+    web/terminal/session.setup.ts   setup phase: map, add/set/rm units, status, start
+    web/terminal/session.over.ts    over state: rematch, status
+    web/terminal/rollback.ts     prompt snapshots + the `rollback` command's undo
+    web/terminal/chunk.ts        structured output chunks: lines, board, columns, collapsible
+    web/terminal/rng.ts          mulberry32-seeded Rng
+    web/terminal/autoplay.ts     hidden `autoplay` demo driver
+    web/terminal/persona*.ts     persona player (GDD §9): persona table, move/attack scoring,
+                                 context + decide(), `pp` command + synchronous driver,
+                                 `pp setup` random setup
+    web/terminal/lookup.ts       tolerant (case-insensitive) catalog lookups
+    web/terminal/table.ts        reference-table renderers (`table` command)
+    web/terminal/misc.ts         shared label helpers (facing, posture, weapon category)
+    web/terminal/i18n/           string catalogs (`en` canonical, `ko`; `kr` aliases `ko`)
+    web/terminal/render.ts       structured BoardModel / Span model + boardToText / boardToSpans
+    scripts/build-web.mjs        esbuild bundles: src/index.ts → web/btlib10x.js (engine),
+                                 web/terminal/terminal.ts → web/terminal.js (app; engine kept external),
+                                 web/avatar/avatar.ts → web/avatar.js (avatar creator),
+                                 and copies data/btlib10x.jsonl → web/btlib10x.jsonl (catalog,
+                                 fetched once at boot)
 
 Import wrinkle: tsc-emitted `.json` imports are not loadable by browsers, so the
 app ships as an esbuild single-file bundle instead of consuming `dist/` directly.
@@ -369,13 +372,13 @@ Library sources stay untouched.
 ## Build, run, and ship
 
     npm install            # picks up esbuild devDependency
-    npm run build:web      # one-shot esbuild bundle → web/btlib10x.js + web/bt10x.js (+ web/btlib10x.jsonl and web/VISION.md copies)
-    npm run dev:web        # watch + serve: rebuilds on change, serves at http://127.0.0.1:8012/index.html
+    npm run build:web      # one-shot esbuild bundle → web/btlib10x.js + web/terminal.js + web/avatar.js (+ web/btlib10x.jsonl and web/VISION.md copies)
+    npm run dev:web        # watch + serve: rebuilds on change, serves at http://127.0.0.1:8012/index.html (landing; terminal at /terminal.html)
     # custom port:  node scripts/build-web.mjs --watch --serve --port=3000
     # open http://localhost:8012
 
 To publish the app's static output (not the npm package), run:
 
-    npm run dist:web       # copies web/{index.html,btlib10x.js,btlib10x.jsonl,bt10x.js,VISION.md,favicon.ico} → dist/web/
+    npm run dist:web       # copies web/{index.html,landing.css,terminal.html,terminal.js,bt10x.css,btlib10x.js,btlib10x.jsonl,avatar.*,VISION.md,favicon.ico,fonts/} → dist/web/
     npm run dist:standalone  # dist/standalone/bt10x.html (self-contained: engine + app + catalog embedded; works from file://)
     # (multi-file dist/web/ must still be served over HTTP: the app fetches btlib10x.jsonl at boot)

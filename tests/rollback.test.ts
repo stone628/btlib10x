@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { nextAutoPlayCommand, resetAutoplayState } from "../web/autoplay";
-import { MAX_SNAPSHOT_COUNT } from "../web/rollback";
-import { newSession, type Session } from "../web/session";
+import { nextAutoPlayCommand, resetAutoplayState } from "../web/terminal/autoplay";
+import { MAX_SNAPSHOT_COUNT } from "../web/terminal/rollback";
+import { newSession, type Session } from "../web/terminal/session";
 import { execute } from "./helpers";
 
 function battle(seed = 5): Session {

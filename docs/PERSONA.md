@@ -13,13 +13,13 @@ trace display) is summarised in [CLI.md](CLI.md#persona-player-gdd-9).
 
 | File | Role |
 |---|---|
-| `web/persona.data.ts` | the persona table: weights, range band, heat ceilings, ammo discipline, melee, jump, yield |
-| `web/persona.ts` | `decide()`: strategy memory, target choice, posture, yield, scripted prompts, ranking |
-| `web/persona.move.ts` | movement-phase scoring (`scoreMoves`) |
-| `web/persona.attack.ts` | attack-phase scoring (`scoreAttacks`) |
-| `web/persona.common.ts` | shared expected-value helpers, range profile, cover, exposure, trace types |
-| `web/persona.cli.ts` | `pp` command, driver, trace rendering |
-| `web/persona.setup.ts` | `pp setup 2|4` random persona-vs-persona setup |
+| `web/terminal/persona.data.ts` | the persona table: weights, range band, heat ceilings, ammo discipline, melee, jump, yield |
+| `web/terminal/persona.ts` | `decide()`: strategy memory, target choice, posture, yield, scripted prompts, ranking |
+| `web/terminal/persona.move.ts` | movement-phase scoring (`scoreMoves`) |
+| `web/terminal/persona.attack.ts` | attack-phase scoring (`scoreAttacks`) |
+| `web/terminal/persona.common.ts` | shared expected-value helpers, range profile, cover, exposure, trace types |
+| `web/terminal/persona.cli.ts` | `pp` command, driver, trace rendering |
+| `web/terminal/persona.setup.ts` | `pp setup 2|4` random persona-vs-persona setup |
 
 ---
 
@@ -208,7 +208,7 @@ never yields.
 
 ### 4.2 Scripted recovery
 
-Prompts the scorer does not handle are scripted (mirrors `web/autoplay.ts`):
+Prompts the scorer does not handle are scripted (mirrors `web/terminal/autoplay.ts`):
 
 | Situation | Commands |
 |---|---|

@@ -5,7 +5,7 @@
  *
  * Lookups read the live registries on every call (no import-time snapshots:
  * sheets register on demand after boot). The catalog loads once at boot
- * (main.ts fetches data/btlib10x.jsonl into the engine store); every web
+ * (terminal.ts fetches data/btlib10x.jsonl into the engine store); every web
  * entry point reaches the catalogs through this module.
  */
 import {

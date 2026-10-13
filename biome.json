@@ -7,10 +7,10 @@
       "scripts/**",
       "web/**",
       "data/**",
-      "!web/bt10x.js",
+      "!web/terminal.js",
       "!web/btlib10x.js",
       "!web/avatar.js",
-      "!web/avatar.glyphs.ts",
+      "!web/avatar/avatar.glyphs.ts",
       "!web/btlib10x.data.js",
       "!data/**/*.json"
     ]

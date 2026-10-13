@@ -8,8 +8,8 @@ import {
   parseOverrides,
   partOverrides,
   SLOTS,
-} from "../web/avatar.override";
-import { parseFind } from "../web/avatar.picker";
+} from "../web/avatar/avatar.override";
+import { parseFind } from "../web/avatar/avatar.picker";
 
 // head, shoulder, torso, arms, legs
 const PARTS = ["╭╮", "⎧⎫", "()", "╙╜", "╜╙"];

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { hexKey, type MapDef } from "../src/index";
 import type { BattleState, createBattle, TerrainHexDef, UnitInit } from "../src/rules/game";
 import { buildUnitInit } from "../src/rules/game";
-import type { BoardModel } from "../web/renderer.text";
+import type { BoardModel } from "../web/terminal/renderer.text";
 import {
   battleModel,
   boardToText,
@@ -11,7 +11,7 @@ import {
   FACING_GLYPH,
   GRID_GLYPHS,
   renderMap,
-} from "../web/renderer.text";
+} from "../web/terminal/renderer.text";
 import { createTestBattle } from "./helpers";
 
 /** Flat battle text via the structured model (historic renderer shape). */

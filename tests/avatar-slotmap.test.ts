@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SLOTS, type SlotId } from "../web/avatar.override";
+import { SLOTS, type SlotId } from "../web/avatar/avatar.override";
 import {
   AVATAR_ORIGIN,
   BOX_H,
@@ -11,7 +11,7 @@ import {
   SLOT_PLACES,
   slotMapLines,
   withoutBoxes,
-} from "../web/avatar.slotmap";
+} from "../web/avatar/avatar.slotmap";
 
 const AVATAR = ["╔════╗", "║⎧╭╮⎫║", "║╙()╜║", "║ ╜╙ ║", "╚════╝"];
 const MIRROR: Record<string, string> = {

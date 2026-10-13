@@ -3,7 +3,7 @@
 Status: **draft, not implemented.** A replay is a log of the **engine API calls**
 that drove a battle (`src/rules/game.ts`, `physical.ts`), plus the seed — not
 CLI words. Re-running the calls on the same engine version with the same seeded
-`Rng` (mulberry32, `web/rng.ts`) reproduces the battle; dice are never stored.
+`Rng` (mulberry32, `web/terminal/rng.ts`) reproduces the battle; dice are never stored.
 Terse on purpose — not meant to be read without this document.
 
 Records are separated by `;` or `\n` (decoders accept both, mixed).
@@ -209,7 +209,7 @@ need no flag (`destroyed` follows from the structure).
 
 ### `W` — rng state
 
-`<rng>` is the mulberry32 state as exactly 8 lowercase hex digits (`W13f9a41c7` = team 1, state `3f9a41c7`; `W-3f9a41c7` = nobody left). It is the single `uint32` behind `createRng` in `web/rng.ts`, read with `rng.snapshot()`. Note `snapshot()` currently prints the raw signed int (`a.toString(16)` can start with `-`), so the encoder must normalize: `(a >>> 0).toString(16).padStart(8, "0")`, and the decoder compares as unsigned. The state is a cumulative fingerprint of every d6 drawn, so it catches any drift in dice consumption (an extra or missing roll anywhere) even when the `E` blocks happen to agree.
+`<rng>` is the mulberry32 state as exactly 8 lowercase hex digits (`W13f9a41c7` = team 1, state `3f9a41c7`; `W-3f9a41c7` = nobody left). It is the single `uint32` behind `createRng` in `web/terminal/rng.ts`, read with `rng.snapshot()`. Note `snapshot()` currently prints the raw signed int (`a.toString(16)` can start with `-`), so the encoder must normalize: `(a >>> 0).toString(16).padStart(8, "0")`, and the decoder compares as unsigned. The state is a cumulative fingerprint of every d6 drawn, so it catches any drift in dice consumption (an extra or missing roll anywhere) even when the `E` blocks happen to agree.
 
 ## CLI coverage
 
@@ -290,7 +290,7 @@ Decode notes:
 ## Display layout
 
 Records are separated by `;` or a newline, so a replay can be laid out either way.
-The web CLI shows it as (`replayPrettifier` in `web/replay.ts`):
+The web CLI shows it as (`replayPrettifier` in `web/terminal/replay.ts`):
 
 ```
 V261008-8211edb
@@ -311,7 +311,7 @@ turn a movement line and an attack line · the winner line · one line per unit'
 
 ## Implementation status
 
-Recording, display and a verifying player exist in the web CLI (`web/replay.ts`).
+Recording, display and a verifying player exist in the web CLI (`web/terminal/replay.ts`).
 `replayPlayer(text)` accepts raw or prettified text, rebuilds the battle from the
 header and `U` lines, re-runs every `M`/`A` activation through the engine API on the
 seeded dice, stops at `W` (winner and final Rng state must match) and compares each
@@ -337,7 +337,7 @@ something else fails. Notes that came out of implementing the recorder:
 `src/rules/replay.ts` — pure `encode(calls) → string`, `decode(text) → calls`,
 `diffFromDefault(unit, def)`, and a `run(calls)` that reproduces the session's
 orchestration (posture + `executeMove` glue, `gameLoop` driver). A recorder in the
-`commitAtomic` success paths of `web/session.move.ts` / `session.attack.ts` emits
+`commitAtomic` success paths of `web/terminal/session.move.ts` / `session.attack.ts` emits
 the calls. Plus the `UnitInit` extension above. Round-trip test: seeded autoplay
 battle → encode → replay → byte-equal `E` block. No Node-only APIs.
 

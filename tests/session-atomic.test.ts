@@ -7,7 +7,7 @@ import {
   requireAttackActor,
   requireMovementActor,
   type Session,
-} from "../web/session";
+} from "../web/terminal/session";
 import { disableCritical, execute, scriptedRng } from "./helpers";
 
 /** Started quickstart battle; returns session plus acting-unit id. */

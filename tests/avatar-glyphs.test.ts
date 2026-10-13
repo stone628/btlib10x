@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { GLYPH_BLOCKS } from "../web/avatar.glyphs";
+import { GLYPH_BLOCKS } from "../web/avatar/avatar.glyphs";
 
 const CSS = readFileSync(new URL("../web/bt10x.css", import.meta.url), "utf8");
 

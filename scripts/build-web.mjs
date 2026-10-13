@@ -10,7 +10,7 @@ const port = portArg ? Number(portArg.split("=")[1]) : 8012;
 const stamp = buildStamp();
 
 // The unified catalog ships as a static file beside the bundles; the app
-// fetches it once at boot (see web/main.ts).
+// fetches it once at boot (see web/terminal/terminal.ts).
 copyFileSync("data/btlib10x.jsonl", "web/btlib10x.jsonl");
 // VISION.md ships as a hidden static file for reviewing LLM agents only:
 // fetched via GET ./VISION.md, never linked in the UI. Source of truth is
@@ -28,8 +28,8 @@ const coreCtx = await esbuild.context({
 });
 
 const appCtx = await esbuild.context({
-  entryPoints: ["web/main.ts"],
-  outfile: "web/bt10x.js",
+  entryPoints: ["web/terminal/terminal.ts"],
+  outfile: "web/terminal.js",
   bundle: true,
   format: "esm",
   target: "es2022",
@@ -39,7 +39,7 @@ const appCtx = await esbuild.context({
 });
 
 const avatarCtx = await esbuild.context({
-  entryPoints: ["web/avatar.ts"],
+  entryPoints: ["web/avatar/avatar.ts"],
   outfile: "web/avatar.js",
   bundle: true,
   format: "esm",
@@ -49,7 +49,9 @@ const avatarCtx = await esbuild.context({
 
 if (serve) {
   const { hosts, port: actualPort } = await appCtx.serve({ servedir: "web", port });
-  console.log(`serving at http://${hosts[0]}:${actualPort}/index.html`);
+  console.log(
+    `serving at http://${hosts[0]}:${actualPort}/index.html (terminal: /terminal.html, avatar: /avatar.html)`,
+  );
 }
 if (watch) {
   await coreCtx.watch();

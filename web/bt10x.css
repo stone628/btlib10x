@@ -1,5 +1,5 @@
 /* Marker class: elements with .no-prompt-focus are exempt from the
-   click-to-refocus-prompt behavior in web/main.ts. */
+   click-to-refocus-prompt behavior in web/terminal/terminal.ts. */
 /* Bt10x Mono: subset of JuliaMono (SIL OFL 1.1), see web/fonts/OFL.txt.
    Regenerate with scripts/subset-juliamono.py. Hangul and anything outside
    unicode-range falls through to the system fonts below. */

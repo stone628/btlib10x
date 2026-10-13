@@ -7,7 +7,7 @@ import {
   sameHex,
   VERSION,
 } from "btlib10x";
-import type { ArmLocation, LegLocation } from "../src/core/types";
+import type { ArmLocation, LegLocation } from "../../src/core/types";
 import { buildLinesChunk, buildLinesChunkWith, type Chunk } from "./chunk";
 import type { MessageKey } from "./i18n/index";
 import { i18n, localeList, normalizeLocale } from "./i18n/index";

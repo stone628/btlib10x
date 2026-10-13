@@ -1,0 +1,157 @@
+/* Landing page at the site root: same terminal palette as bt10x.css. */
+
+/* Both locales are in the markup; only the `<html lang>` match stays visible.
+   The language buttons are exempt so both labels always show. */
+:root:lang(en) #landing :lang(ko):not(#lang button) {
+  display: none;
+}
+:root:lang(ko) #landing :lang(en):not(#lang button) {
+  display: none;
+}
+
+#landing {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 16px 20px;
+  gap: 20px;
+}
+
+#landing-head {
+  width: 100%;
+  max-width: 760px;
+  text-align: center;
+  position: relative;
+}
+
+#lang {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+#lang button {
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+#lang button[aria-pressed="true"] {
+  color: var(--c-white);
+  border-color: var(--c-green);
+  background: var(--cb-green);
+}
+
+#landing-head h1 {
+  margin: 0;
+  font-size: 28px;
+  letter-spacing: 0.3em;
+  color: var(--c-green);
+}
+
+#landing-head .tagline {
+  margin: 6px 0 0;
+  color: #b9c9b0;
+  font-style: italic;
+}
+
+#cards {
+  width: 100%;
+  max-width: 760px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 640px) {
+  #cards {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid #233023;
+  border-radius: 6px;
+  background: #111611;
+  color: inherit;
+  text-decoration: none;
+}
+
+.card:hover {
+  border-color: var(--c-green);
+  background: #131c13;
+}
+
+.card:focus-visible {
+  outline: none;
+  border-color: var(--c-yellow);
+  box-shadow: 0 0 0 2px var(--cb-yellow);
+}
+
+.card .preview {
+  margin: 0;
+  padding: 8px 10px;
+  /* Fixed height so both cards' previews line up. */
+  height: 9em;
+  background: #0c0f0c;
+  border: 1px solid #1c251c;
+  border-radius: 4px;
+  font-family: var(--board-ff);
+  line-height: var(--board-lh);
+  overflow-x: auto;
+  color: #b8c9b8;
+}
+
+.card .preview .g {
+  color: var(--c-green);
+}
+
+.card .preview .d {
+  color: var(--c-dim);
+}
+
+.card .preview .r {
+  color: var(--c-red);
+}
+
+.card h2 {
+  margin: 4px 0 0;
+  font-size: 15px;
+  color: var(--c-green);
+}
+
+.card p {
+  margin: 0;
+  flex: 1;
+}
+
+.card .go {
+  align-self: flex-start;
+  color: var(--c-yellow);
+}
+
+.card:hover .go {
+  text-decoration: underline;
+}
+
+#coffee {
+  margin: 0;
+}
+
+/* The creator's selected-avatar box, enlarged; same glyphs as avatar.html. */
+.card .preview.avatar-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3em;
+  height: calc(9em / 1.3);
+  color: var(--c-green);
+}

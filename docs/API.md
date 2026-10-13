@@ -649,12 +649,12 @@ touching combat state; `nextActor` and `actorQueue` lazily fill the cached
 activation order on first use each phase). The engine never decides
 winner: `gameLoop(state, rng, stopper)` advances transient phases until
 caller-supplied `GameLoopStopper` returns true; victory checks live
-outside engine (`checkSessionVictory` in `web/session.ts`, `checkVictory`
+outside engine (`checkSessionVictory` in `web/terminal/session.ts`, `checkVictory`
 test helper in `tests/helpers.ts`).
 The engine is single-threaded and non-concurrent; atomicity is **not**
 guaranteed per rule call — callers that need all-or-nothing behavior (e.g. the
 web session) hold a serializable snapshot and roll back on failure (see
-`web/session.ts` `commitAtomic`), and `createBattle` commits at
+`web/terminal/session.ts` `commitAtomic`), and `createBattle` commits at
 the caller's boundary.
 
 ```ts
@@ -691,7 +691,7 @@ requireUnit(state, unitId): UnitState
 
 `GameLoopStopper = (state: BattleState) => boolean` — caller owns
 stop condition. Engine returns `{ actorId; stopped }` with no winner field
-(events go to the `sink` you pass). See `web/session.ts` `drive()` feeding
+(events go to the `sink` you pass). See `web/terminal/session.ts` `drive()` feeding
 `checkSessionVictory` as stopper; tests use `checkVictory` helper in
 `tests/helpers.ts` same role.
 
@@ -798,7 +798,7 @@ interface ActorQueueActorView { id; team; shutdown; destroyed; removed }
 type GameLoopStopper = (state: BattleState) => boolean;
 interface GameLoopResult { actorId: string | null; stopped: boolean; }  // transient: nothing stored on BattleState
 // No VictoryResult in engine. Winner checks live outside engine:
-// SessionVictoryResult in web/session.ts, VictoryResult test helper in tests/helpers.ts.
+// SessionVictoryResult in web/terminal/session.ts, VictoryResult test helper in tests/helpers.ts.
 ```
 
 Rules encoded by the state machine:
@@ -852,11 +852,11 @@ build has no injection and resolves to `"dev"`.
 
 Board and 'Mech-sheet rendering is **web-layer code, not part of the package
 root API** (the package root — `src/index.ts` — exposes no render functions).
-The renderer lives in `web/render.ts`, `web/renderer.text.ts`, and
-`web/misc.ts`, and is documented in `docs/CLI.md` (see the `board`, `mode`,
+The renderer lives in `web/terminal/render.ts`, `web/terminal/renderer.text.ts`, and
+`web/terminal/misc.ts`, and is documented in `docs/CLI.md` (see the `board`, `mode`,
 `info map`, and `sheet` commands).
 
-Key model: `web/render.ts` exposes a small facade over `web/renderer.text.ts`
+Key model: `web/terminal/render.ts` exposes a small facade over `web/terminal/renderer.text.ts`
 (which the web CLI must not import directly). The render layer builds a
 `BoardModel` (cells + per-character `CharStyle` hints keyed by `"col,row"`,
 including `BoardModel.elevations` and team-colored `idStyles`) either from a

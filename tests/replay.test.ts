@@ -5,7 +5,7 @@ import { setSlotDestroyed } from "../src/rules/critical";
 import { buildUnitInit, type MoveStep } from "../src/rules/game";
 import type { PhysicalAttackDecl } from "../src/rules/physical";
 import { VERSION } from "../src/version";
-import { nextAutoPlayCommand, resetAutoplayState } from "../web/autoplay";
+import { nextAutoPlayCommand, resetAutoplayState } from "../web/terminal/autoplay";
 import {
   type AttackDeclaration,
   decodeUnitLine,
@@ -22,8 +22,8 @@ import {
   replayPrettifier,
   stepsText,
   weaponListText,
-} from "../web/replay";
-import { commitAtomic, newSession, type Session, setSeed } from "../web/session";
+} from "../web/terminal/replay";
+import { commitAtomic, newSession, type Session, setSeed } from "../web/terminal/session";
 import { createTestBattle, disableCritical, execute, scriptedRng } from "./helpers";
 
 const w = (...ns: number[]) => ns.map((weaponIndex) => ({ weaponIndex }));

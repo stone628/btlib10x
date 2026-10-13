@@ -1,11 +1,11 @@
 import { isArm, mapDefFor, mechDefFor, suggestFireTargets } from "btlib10x";
 import { describe, expect, it } from "vitest";
-import { decide } from "../web/persona";
-import { scoreAttacks } from "../web/persona.attack";
-import { rangeProfile } from "../web/persona.common";
-import { PERSONAS } from "../web/persona.data";
-import { scoreMoves } from "../web/persona.move";
-import { newSession, type Session } from "../web/session";
+import { decide } from "../web/terminal/persona";
+import { scoreAttacks } from "../web/terminal/persona.attack";
+import { rangeProfile } from "../web/terminal/persona.common";
+import { PERSONAS } from "../web/terminal/persona.data";
+import { scoreMoves } from "../web/terminal/persona.move";
+import { newSession, type Session } from "../web/terminal/session";
 import { execute } from "./helpers";
 
 /** HBK by hand vs. a persona WVR, both well inside each other's range. */

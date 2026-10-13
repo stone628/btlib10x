@@ -211,7 +211,7 @@ world around it owns stop condition, passed as `GameLoopStopper`:
 ```ts
 advancePhase(state, events);                 // attack -> end (kills committed)
 // world-side victory check, e.g. test helper in tests/helpers.ts or
-// checkSessionVictory in web/session.ts:
+// checkSessionVictory in web/terminal/session.ts:
 const aliveTeams = new Set(
   Object.values(state.units).filter((u) => u.removed === "not").map((u) => u.team),
 );
@@ -226,7 +226,7 @@ Engine simulates; caller decides finish. Define a stopper over
 `BattleState` and feed it to `gameLoop(state, rng, stopper)` —
 `gameLoop` returns `{ actorId; stopped }` (events go to the sink you pass) with no winner field.
 `tests/helpers.ts` `checkVictory` shows minimal test-world version;
-`web/session.ts` `checkSessionVictory` + `drive()` shows app version:
+`web/terminal/session.ts` `checkSessionVictory` + `drive()` shows app version:
 
 ```ts
 const r = gameLoop(state, rng, (s) => checkVictory(s).winnerTeam !== null, events);

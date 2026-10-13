@@ -3,9 +3,9 @@
  * attacker skipping attack input, the physical-phase log, and replay.
  */
 import { describe, expect, it } from "vitest";
-import { nextAutoPlayCommand, resetAutoplayState } from "../web/autoplay";
-import { replayPlayer } from "../web/replay";
-import { newSession, type Session } from "../web/session";
+import { nextAutoPlayCommand, resetAutoplayState } from "../web/terminal/autoplay";
+import { replayPlayer } from "../web/terminal/replay";
+import { newSession, type Session } from "../web/terminal/session";
 import { currentActor, execute } from "./helpers";
 
 /** Drive until `stop` says so, running `commands(actorId, phase, turn)`. */

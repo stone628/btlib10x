@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import * as esbuild from "esbuild";
 import { buildStamp } from "./build-stamp.mjs";
 
-const html = readFileSync("web/index.html", "utf8");
+const html = readFileSync("web/terminal.html", "utf8");
 // The standalone file must work from file://, so fonts go in as data: URIs.
 const css = readFileSync("web/bt10x.css", "utf8").replace(
   /url\("(fonts\/[^"]+\.woff2)"\)/g,
@@ -10,7 +10,7 @@ const css = readFileSync("web/bt10x.css", "utf8").replace(
 );
 
 const { outputFiles } = await esbuild.build({
-  entryPoints: ["web/main.ts"],
+  entryPoints: ["web/terminal/terminal.ts"],
   bundle: true,
   format: "esm",
   target: "es2022",
@@ -28,7 +28,7 @@ const single = html
   .replace('<link rel="stylesheet" href="bt10x.css" />', `<style>\n${css}\n    </style>`)
   .replace(/<script type="importmap">.*?<\/script>\s*/, "")
   .replace(
-    '<script type="module" src="./bt10x.js"></script>',
+    '<script type="module" src="./terminal.js"></script>',
     `<script type="module">${app}</script>`,
   );
 

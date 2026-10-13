@@ -10,7 +10,7 @@ import {
   queueWeaponAttacks,
   type Session,
   setTorsoTwist,
-} from "../web/session";
+} from "../web/terminal/session";
 import { disableCritical, execute } from "./helpers";
 
 /** Head-to-head adjacency: hunchy (9,9) facing n, cicada (9,8) facing s. */

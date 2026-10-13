@@ -4,10 +4,12 @@ const dest = "dist/web";
 rmSync(dest, { recursive: true, force: true });
 mkdirSync(dest, { recursive: true });
 copyFileSync("web/index.html", `${dest}/index.html`);
+copyFileSync("web/landing.css", `${dest}/landing.css`);
+copyFileSync("web/terminal.html", `${dest}/terminal.html`);
 copyFileSync("web/bt10x.css", `${dest}/bt10x.css`);
 copyFileSync("web/btlib10x.js", `${dest}/btlib10x.js`);
 copyFileSync("web/btlib10x.jsonl", `${dest}/btlib10x.jsonl`);
-copyFileSync("web/bt10x.js", `${dest}/bt10x.js`);
+copyFileSync("web/terminal.js", `${dest}/terminal.js`);
 copyFileSync("web/avatar.html", `${dest}/avatar.html`);
 copyFileSync("web/avatar.css", `${dest}/avatar.css`);
 copyFileSync("web/avatar.js", `${dest}/avatar.js`);
@@ -25,5 +27,5 @@ writeFileSync(
     "/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n",
 );
 console.log(
-  `dist/web: ${["index.html", "bt10x.css", "btlib10x.js", "btlib10x.jsonl", "bt10x.js", "avatar.html", "avatar.css", "avatar.js", "VISION.md", "favicon.ico", "_headers", ...fonts.map((f) => `fonts/${f}`)].join(", ")}`,
+  `dist/web: ${["index.html", "landing.css", "terminal.html", "bt10x.css", "btlib10x.js", "btlib10x.jsonl", "terminal.js", "avatar.html", "avatar.css", "avatar.js", "VISION.md", "favicon.ico", "_headers", ...fonts.map((f) => `fonts/${f}`)].join(", ")}`,
 );

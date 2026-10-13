@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import type { HexCoord } from "../src/core/types";
 import type { BattleState, GameEvent, TeamId, UnitInit } from "../src/rules/game";
 import { buildUnitInit, requireUnit, resolveAllAttacks } from "../src/rules/game";
-import { physicalResolutionLines } from "../web/session.attack";
+import { physicalResolutionLines } from "../web/terminal/session.attack";
 import { createTestBattle, scriptedRng } from "./helpers";
 
 function unit(

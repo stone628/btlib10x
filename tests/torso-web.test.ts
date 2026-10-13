@@ -6,7 +6,7 @@ import {
   newSession,
   requireAttackActor,
   type Session,
-} from "../web/session";
+} from "../web/terminal/session";
 import { disableCritical, execute } from "./helpers";
 
 function freshSetup(): Session {

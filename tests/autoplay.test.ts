@@ -6,14 +6,18 @@ import {
   isUnitImmobile,
   STAND_MP_COST,
 } from "../src/index";
-import { AUTOPLAY_MAX_TURNS, nextAutoPlayCommand, resetAutoplayState } from "../web/autoplay";
+import {
+  AUTOPLAY_MAX_TURNS,
+  nextAutoPlayCommand,
+  resetAutoplayState,
+} from "../web/terminal/autoplay";
 import {
   commitMovement,
   declareMovementMode,
   newSession,
   requireAttackActor,
   type Session,
-} from "../web/session";
+} from "../web/terminal/session";
 import { disableCritical, execute, scriptedRng } from "./helpers";
 
 /**

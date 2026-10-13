@@ -6,7 +6,7 @@ import {
   requireMovementActor,
   type Session,
   setTorsoTwist,
-} from "../web/session";
+} from "../web/terminal/session";
 import { disableCritical, execute } from "./helpers";
 
 function started(): { s: Session; actor: string } {

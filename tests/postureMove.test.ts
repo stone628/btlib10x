@@ -8,7 +8,7 @@ import {
   postureCostFor,
   requireMovementActor,
   type Session,
-} from "../web/session";
+} from "../web/terminal/session";
 import { createTestBattle, disableCritical, execute, scriptedRng } from "./helpers";
 
 /** Started quickstart battle; returns session plus acting-unit id. */

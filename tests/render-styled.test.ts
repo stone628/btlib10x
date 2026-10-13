@@ -3,7 +3,7 @@ import { hexKey } from "../src/core/types";
 import { type MapDef, mapDef } from "../src/data/index";
 import type { UnitInit } from "../src/rules/game";
 import { buildUnitInit } from "../src/rules/game";
-import type { BoardModel, Canvas, CharStyle, Span } from "../web/renderer.text";
+import type { BoardModel, Canvas, CharStyle, Span } from "../web/terminal/renderer.text";
 import {
   applyEdgeStyles,
   battleModel,
@@ -18,7 +18,7 @@ import {
   mapModel,
   renderMap,
   TEAM_STYLES,
-} from "../web/renderer.text";
+} from "../web/terminal/renderer.text";
 import { createTestBattle } from "./helpers";
 
 function spansText(spans: readonly Span[]): string {

@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 import { LOCATIONS } from "../src/core/types";
 import { resolveWeaponAttack } from "../src/rules/attack";
 import type { LocationValue, TorsoLocationValue, UnitDamageState } from "../src/rules/damage";
-import { decodeUnitLine, encodeUnitLine } from "../web/replay";
-import { createRng } from "../web/rng";
-import { newSession, type Session, transferDetail } from "../web/session";
-import { formatCritEffect } from "../web/session.attack";
+import { decodeUnitLine, encodeUnitLine } from "../web/terminal/replay";
+import { createRng } from "../web/terminal/rng";
+import { newSession, type Session, transferDetail } from "../web/terminal/session";
+import { formatCritEffect } from "../web/terminal/session.attack";
 import { disableCritical, execute, scriptedRng } from "./helpers";
 
 function freshState(hp = 10): UnitDamageState {

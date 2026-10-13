@@ -55,7 +55,7 @@ import {
   newSession,
   queuePhysicalAttack,
   type Session,
-} from "../web/session";
+} from "../web/terminal/session";
 import { disableCritical, execute, seededRng } from "./helpers";
 
 function makeUnitInit(

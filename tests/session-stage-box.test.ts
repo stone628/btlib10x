@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { GameEvent } from "../src/rules/game";
-import type { Session } from "../web/session";
-import { handleSessionGameEvents } from "../web/session.common";
+import type { Session } from "../web/terminal/session";
+import { handleSessionGameEvents } from "../web/terminal/session.common";
 
 const stage = (s: "begin" | "weaponDone" | "physicalDone" | "end"): GameEvent => ({
   kind: "attackPhaseStage",

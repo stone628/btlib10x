@@ -8,7 +8,7 @@ cell wide, then writes renamed woff2 files plus the matching @font-face CSS.
 JuliaMono is SIL OFL 1.1 with Reserved Font Name "JuliaMono", and a subset is
 a Modified Version, so the output is renamed (default "Bt10x Mono").
 
-Also writes web/avatar.glyphs.ts, the glyph list the avatar app's character
+Also writes web/avatar/avatar.glyphs.ts, the glyph list the avatar app's character
 picker offers.
 
 Usage (from the repo root, needs `pip install fonttools brotli`):
@@ -129,7 +129,7 @@ def unicode_range(cps: list[int]) -> str:
     return ", ".join(parts)
 
 
-GLYPHS_TS = "web/avatar.glyphs.ts"
+GLYPHS_TS = "web/avatar/avatar.glyphs.ts"
 
 # Picker groups for code points outside BLOCKS (the scan can add any glyph).
 OTHER_GROUP = "Other"

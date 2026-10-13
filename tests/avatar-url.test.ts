@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAvatarQuery, parseAvatarQuery, parseGlyphParam } from "../web/avatar.url";
+import { buildAvatarQuery, parseAvatarQuery, parseGlyphParam } from "../web/avatar/avatar.url";
 
 const PARTS = [
   { key: "head", names: ["sr", "sq"] },
