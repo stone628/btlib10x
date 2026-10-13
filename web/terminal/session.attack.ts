@@ -879,8 +879,9 @@ function weaponCandidateLines(battle: BattleState, context: AttackContext): stri
       if (weapons.length === 0) continue;
       group.push(head, ...lines(target.targetId, weapons, "      "));
     }
-    const groupHeader = `  ${i18n("fireSuggestion.twistGroup", { dir: twistLabel(twist) })}${changeable ? byCommands([TWIST_COMMAND[twist]]) : ""
-      }${current ? i18n("fireSuggestion.current") : ""}`;
+    const groupHeader = `  ${i18n("fireSuggestion.twistGroup", { dir: twistLabel(twist) })}${
+      changeable ? byCommands([TWIST_COMMAND[twist]]) : ""
+    }${current ? i18n("fireSuggestion.current") : ""}`;
     if (group.length === 0) {
       group.push(`${groupHeader}: ${i18n("fireSuggestion.groupNone")}`);
     } else {
@@ -1034,9 +1035,7 @@ function physicalCandidateLines(battle: BattleState, context: AttackContext): st
  */
 export function fireSuggestionChunks(s: Session): Chunk[] {
   const { battle, context } = requireBattleAndContext(s);
-  const lines: string[] = [
-    i18n("fireSuggestion.header", { id: context.actorId }),
-  ];
+  const lines: string[] = [i18n("fireSuggestion.header", { id: context.actorId })];
   // A pickup is the unit's whole attack (TW p. 146).
   if (context.pickupDecl !== null) {
     lines.push(i18n("fireSuggestion.pickupQueued"));

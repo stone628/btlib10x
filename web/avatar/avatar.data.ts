@@ -49,10 +49,10 @@ export const SHOULDERS: PartVariant[] = [
   { name: "l4", data: "⚃⚃", desc: "missile-launcher 4" },
   { name: "l5", data: "⚄⚄", desc: "missile-launcher 5" },
   { name: "l6", data: "⚅⚅", desc: "missile-launcher 6" },
-  { name: "m3u", data: "∴∴", desc: "missile 3up"},
-  { name: "m3d", data: "∵∵", desc: "missile 3down"},
-  { name: "m4", data: "⁘⁘", desc: "missile 4"},
-  { name: "m5", data: "⁙⁙", desc: "missile 5"},
+  { name: "m3u", data: "∴∴", desc: "missile 3up" },
+  { name: "m3d", data: "∵∵", desc: "missile 3down" },
+  { name: "m4", data: "⁘⁘", desc: "missile 4" },
+  { name: "m5", data: "⁙⁙", desc: "missile 5" },
 ];
 
 /** Torso core: 2 chars, sits as TT in │ATTA│. */

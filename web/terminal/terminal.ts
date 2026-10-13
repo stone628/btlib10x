@@ -5,7 +5,7 @@ import {
   nextAutoPlayCommand,
   resetAutoplayState,
 } from "./autoplay";
-import { buildLinesChunkWith, type Chunk } from "./chunk";
+import { buildCollapsibleChunk, buildLinesChunkWith, type Chunk } from "./chunk";
 import { runChunks } from "./cli";
 import { i18n, normalizeLocale } from "./i18n/index";
 import motdText from "./MOTD.txt";
@@ -419,8 +419,13 @@ void loadCatalogText("bt10x-catalog", "btlib10x.jsonl")
     );
   })
   .then((warnings: string[]) => {
-    for (const warning of warnings) {
-      appendChunk(buildLinesChunkWith("banner", warning));
+    if (warnings.length > 0) {
+      appendChunk(
+        buildCollapsibleChunk(
+          i18n("app.catalog.warnSummary", { count: warnings.length }),
+          warnings.map((w) => buildLinesChunkWith("banner", w)),
+        ),
+      );
     }
     input.disabled = false;
     input.focus();
@@ -428,11 +433,13 @@ void loadCatalogText("bt10x-catalog", "btlib10x.jsonl")
   })
   .catch((err: unknown) => {
     modeHint.textContent = "";
+    const errorMsg = i18n("app.catalog.failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
     appendChunk(
-      buildLinesChunkWith(
-        "banner",
-        i18n("app.catalog.failed", { error: err instanceof Error ? err.message : String(err) }),
-      ),
+      buildCollapsibleChunk(i18n("app.catalog.errorSummary", { count: 1 }), [
+        buildLinesChunkWith("banner", errorMsg),
+      ]),
     );
     scrollToBottom();
   });

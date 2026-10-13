@@ -9,6 +9,8 @@ export const ko: Catalog = {
   "app.catalog.failed":
     "카탈로그를 불러오지 못했습니다: {error} - 페이지를 새로 고쳐 다시 시도하세요",
   "app.catalog.packFailed": "'{pack}' 팩을 불러오지 못했습니다 ({error}). 없이 계속합니다",
+  "app.catalog.warnSummary": "카탈로그 경고 ({count})",
+  "app.catalog.errorSummary": "카탈로그 오류 ({count})",
   "err.prefix": "오류:",
 
   // per-state hints (multi-line)

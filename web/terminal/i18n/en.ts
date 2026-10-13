@@ -10,6 +10,8 @@ export const en = {
   "app.catalog.loading": "loading catalog…",
   "app.catalog.failed": "catalog failed to load: {error} - reload the page to retry",
   "app.catalog.packFailed": "'{pack}' pack failed to load ({error}); continuing without it",
+  "app.catalog.warnSummary": "catalog warnings ({count})",
+  "app.catalog.errorSummary": "catalog error ({count})",
   "err.prefix": "error:",
 
   // per-state hints (multi-line)
