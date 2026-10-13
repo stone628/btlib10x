@@ -1,38 +1,54 @@
 {
-  "model": "VON 4RH-5",
-  "name": "Von Rohrs",
-  "clanName": "Hebis",
+  "model": "EXT-4DX",
+  "name": "Exterminator",
+  "callsign": "Caine",
   "tonnage": 65,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,
   "running": 8,
-  "jumping": 0,
+  "jumping": 5,
   "armor": {
     "head": 9,
-    "centerTorso": 22,
-    "rightTorso": 15,
-    "leftTorso": 15,
-    "rightArm": 13,
-    "leftArm": 13,
-    "rightLeg": 20,
-    "leftLeg": 20,
-    "centerTorsoRear": 7,
-    "rightTorsoRear": 5,
-    "leftTorsoRear": 5
+    "centerTorso": 32,
+    "rightTorso": 24,
+    "leftTorso": 24,
+    "rightArm": 20,
+    "leftArm": 20,
+    "rightLeg": 30,
+    "leftLeg": 30,
+    "centerTorsoRear": 10,
+    "rightTorsoRear": 6,
+    "leftTorsoRear": 6
   },
   "weapons": [
     {
-      "weapon": "Flamer",
-      "location": "leftArm"
-    },
-    {
-      "weapon": "PPC",
+      "weapon": "Medium Pulse Laser",
       "location": "rightArm"
     },
     {
-      "weapon": "LRM 10",
-      "location": "leftTorso",
+      "weapon": "Medium Pulse Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "Medium Pulse Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "Medium Pulse Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "Medium Pulse Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "Medium Pulse Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "Anti-Missile System",
+      "location": "head",
       "shots": 12
     }
   ],
@@ -79,39 +95,46 @@
         "name": "engine"
       },
       {
-        "kind": "empty"
+        "kind": "structure",
+        "name": "jumpJet"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "equipment"
       }
     ],
     "leftTorso": [
       {
-        "kind": "weapon",
-        "weapon": "LRM 10"
+        "kind": "structure",
+        "name": "engine"
       },
       {
-        "kind": "weapon",
-        "weapon": "LRM 10"
+        "kind": "structure",
+        "name": "engine"
       },
       {
-        "kind": "ammo",
-        "weapon": "LRM 10"
+        "kind": "structure",
+        "name": "engine"
       },
       {
-        "kind": "empty"
+        "kind": "structure",
+        "name": "jumpJet"
       },
       {
-        "kind": "empty"
+        "kind": "structure",
+        "name": "jumpJet"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "equipment"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "equipment"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "equipment"
       },
       {
         "kind": "empty"
@@ -129,23 +152,27 @@
     "rightTorso": [
       {
         "kind": "structure",
-        "name": "heatSink"
+        "name": "engine"
       },
       {
         "kind": "structure",
-        "name": "heatSink"
+        "name": "engine"
       },
       {
-        "kind": "empty"
+        "kind": "structure",
+        "name": "engine"
       },
       {
-        "kind": "empty"
+        "kind": "structure",
+        "name": "jumpJet"
       },
       {
-        "kind": "empty"
+        "kind": "structure",
+        "name": "jumpJet"
       },
       {
-        "kind": "empty"
+        "kind": "ammo",
+        "weapon": "Anti-Missile System"
       },
       {
         "kind": "empty"
@@ -185,22 +212,27 @@
       },
       {
         "kind": "weapon",
-        "weapon": "Flamer"
+        "weapon": "Medium Pulse Laser"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "equipment"
       },
       {
-        "kind": "empty"
+        "kind": "weapon",
+        "weapon": "Medium Pulse Laser"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "equipment"
       },
       {
-        "kind": "empty"
+        "kind": "weapon",
+        "weapon": "Medium Pulse Laser"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "equipment"
       },
       {
         "kind": "empty"
@@ -228,24 +260,27 @@
       },
       {
         "kind": "weapon",
-        "weapon": "PPC"
+        "weapon": "Medium Pulse Laser"
+      },
+      {
+        "kind": "soak",
+        "name": "equipment"
       },
       {
         "kind": "weapon",
-        "weapon": "PPC"
+        "weapon": "Medium Pulse Laser"
+      },
+      {
+        "kind": "soak",
+        "name": "equipment"
       },
       {
         "kind": "weapon",
-        "weapon": "PPC"
+        "weapon": "Medium Pulse Laser"
       },
       {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "equipment"
       },
       {
         "kind": "empty"
@@ -316,7 +351,8 @@
         "name": "cockpit"
       },
       {
-        "kind": "empty"
+        "kind": "weapon",
+        "weapon": "Anti-Missile System"
       },
       {
         "kind": "structure",
@@ -329,8 +365,8 @@
     ]
   },
   "heatsink": {
-    "type": "single",
-    "count": 15
+    "type": "double",
+    "count": 10
   },
   "myomer": "Standard"
 }

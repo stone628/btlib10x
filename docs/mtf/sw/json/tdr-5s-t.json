@@ -1,46 +1,62 @@
 {
-  "model": "MON-66GX (Gunslinger)",
-  "name": "Mongoose",
-  "tonnage": 25,
-  "weightClass": "Light",
+  "model": "TDR-5S-T",
+  "name": "Thunderbolt",
+  "callsign": "Tallman",
+  "tonnage": 65,
+  "weightClass": "Heavy",
   "techBase": "Inner Sphere",
-  "walking": 8,
-  "running": 12,
+  "walking": 4,
+  "running": 6,
   "jumping": 0,
   "armor": {
     "head": 9,
-    "centerTorso": 12,
-    "rightTorso": 10,
-    "leftTorso": 10,
-    "rightArm": 8,
-    "leftArm": 8,
-    "rightLeg": 12,
-    "leftLeg": 12,
-    "centerTorsoRear": 4,
-    "rightTorsoRear": 2,
-    "leftTorsoRear": 2
+    "centerTorso": 30,
+    "rightTorso": 24,
+    "leftTorso": 24,
+    "rightArm": 20,
+    "leftArm": 20,
+    "rightLeg": 29,
+    "leftLeg": 29,
+    "centerTorsoRear": 11,
+    "rightTorsoRear": 6,
+    "leftTorsoRear": 6
   },
   "weapons": [
     {
       "weapon": "Medium Laser",
-      "location": "leftArm"
+      "location": "leftTorso"
     },
     {
       "weapon": "Medium Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "Large Laser",
       "location": "rightArm"
-    },
-    {
-      "weapon": "Medium Laser",
-      "location": "leftArm"
-    },
-    {
-      "weapon": "Medium Laser",
-      "location": "rightArm"
-    },
-    {
-      "weapon": "SRM 6",
-      "location": "rightTorso",
-      "shots": 15
     }
   ],
   "critSlots": {
@@ -86,112 +102,102 @@
         "name": "engine"
       },
       {
-        "kind": "soak",
-        "name": "equipment"
+        "kind": "structure",
+        "name": "heatSink"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "structure",
+        "name": "heatSink"
       }
     ],
     "leftTorso": [
       {
         "kind": "structure",
-        "name": "engine"
+        "name": "heatSink"
       },
       {
         "kind": "structure",
-        "name": "engine"
+        "name": "heatSink"
       },
       {
         "kind": "structure",
-        "name": "engine"
+        "name": "heatSink"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "weapon",
+        "weapon": "Medium Laser"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "weapon",
+        "weapon": "Medium Laser"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "weapon",
+        "weapon": "Medium Laser"
       },
       {
-        "kind": "soak",
-        "name": "equipment"
+        "kind": "weapon",
+        "weapon": "Medium Laser"
       },
       {
-        "kind": "soak",
-        "name": "equipment"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
       }
     ],
     "rightTorso": [
       {
         "kind": "structure",
-        "name": "engine"
+        "name": "heatSink"
       },
       {
         "kind": "structure",
-        "name": "engine"
+        "name": "heatSink"
       },
       {
         "kind": "structure",
-        "name": "engine"
-      },
-      {
-        "kind": "structure",
-        "name": "doubleHeatSink"
-      },
-      {
-        "kind": "structure",
-        "name": "doubleHeatSink"
-      },
-      {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "name": "heatSink"
       },
       {
         "kind": "weapon",
-        "weapon": "SRM 6"
+        "weapon": "Medium Laser"
       },
       {
         "kind": "weapon",
-        "weapon": "SRM 6"
+        "weapon": "Medium Laser"
       },
       {
-        "kind": "ammo",
-        "weapon": "SRM 6"
+        "kind": "weapon",
+        "weapon": "Medium Laser"
       },
       {
-        "kind": "soak",
-        "name": "equipment"
+        "kind": "weapon",
+        "weapon": "Medium Laser"
       },
       {
-        "kind": "soak",
-        "name": "equipment"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
       }
     ],
     "leftArm": [
@@ -212,32 +218,25 @@
         "name": "handActuator"
       },
       {
-        "kind": "weapon",
-        "weapon": "Medium Laser"
+        "kind": "empty"
       },
       {
-        "kind": "weapon",
-        "weapon": "Medium Laser"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "equipment"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "equipment"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
       },
       {
         "kind": "empty"
@@ -262,35 +261,29 @@
       },
       {
         "kind": "weapon",
-        "weapon": "Medium Laser"
+        "weapon": "Large Laser"
       },
       {
         "kind": "weapon",
-        "weapon": "Medium Laser"
+        "weapon": "Large Laser"
       },
       {
-        "kind": "soak",
-        "name": "equipment"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "equipment"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
       }
     ],
     "leftLeg": [
@@ -311,12 +304,12 @@
         "name": "footActuator"
       },
       {
-        "kind": "soak",
-        "name": "equipment"
+        "kind": "structure",
+        "name": "heatSink"
       },
       {
-        "kind": "soak",
-        "name": "equipment"
+        "kind": "structure",
+        "name": "heatSink"
       }
     ],
     "rightLeg": [
@@ -337,12 +330,12 @@
         "name": "footActuator"
       },
       {
-        "kind": "soak",
-        "name": "equipment"
+        "kind": "structure",
+        "name": "heatSink"
       },
       {
-        "kind": "soak",
-        "name": "equipment"
+        "kind": "structure",
+        "name": "heatSink"
       }
     ],
     "head": [
@@ -359,8 +352,8 @@
         "name": "cockpit"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "structure",
+        "name": "heatSink"
       },
       {
         "kind": "structure",
@@ -373,8 +366,8 @@
     ]
   },
   "heatsink": {
-    "type": "double",
-    "count": 10
+    "type": "single",
+    "count": 23
   },
   "myomer": "Standard"
 }

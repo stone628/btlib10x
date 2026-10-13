@@ -175,6 +175,29 @@ describe("catalog registration", () => {
     expect(decodeMechLine(mechLine(entry), entry, STRINGS).clanName).toBeUndefined();
   });
 
+  it("round-trips an optional callsign through the manifest identity", () => {
+    const entry = findMechEntry("tbr-prime")!;
+    const wire = mechLine(entry);
+    const id = { ...entry, callsign: "Ross" };
+    expect(decodeMechLine(wire, id, STRINGS).callsign).toBe("Ross");
+    expect(decodeMechLine(wire, entry, STRINGS).callsign).toBeUndefined();
+    const manifest = parseCatalogManifest(
+      {
+        v: 1,
+        mechs: [{ m: "X", n: 0, b: 1, t: 50, k: "Ross", l: 2 }],
+        maps: [],
+      },
+      ["Y"],
+    );
+    expect(manifest.mechs[0]!.callsign).toBe("Ross");
+    expect(() =>
+      parseCatalogManifest(
+        { v: 1, mechs: [{ m: "X", n: 0, b: 1, t: 50, k: "", l: 2 }], maps: [] },
+        ["Y"],
+      ),
+    ).toThrow(/callsign/);
+  });
+
   it("keeps identity single-sourced: wire lines carry no model/name/techBase/tonnage", () => {
     for (const entry of MANIFEST.mechs) {
       const wire = decodeRelaxed(mechLine(entry)) as Record<string, unknown>;

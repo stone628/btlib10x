@@ -1,6 +1,7 @@
 {
-  "model": "PXH-1c (Special)",
+  "model": "PXH-1c",
   "name": "Phoenix Hawk",
+  "callsign": "Special",
   "tonnage": 45,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",

@@ -1,54 +1,47 @@
 {
-  "model": "EXT-4DX (Caine)",
-  "name": "Exterminator",
-  "tonnage": 65,
-  "weightClass": "Heavy",
+  "model": "MON-66GX",
+  "name": "Mongoose",
+  "callsign": "Gunslinger",
+  "tonnage": 25,
+  "weightClass": "Light",
   "techBase": "Inner Sphere",
-  "walking": 5,
-  "running": 8,
-  "jumping": 5,
+  "walking": 8,
+  "running": 12,
+  "jumping": 0,
   "armor": {
     "head": 9,
-    "centerTorso": 32,
-    "rightTorso": 24,
-    "leftTorso": 24,
-    "rightArm": 20,
-    "leftArm": 20,
-    "rightLeg": 30,
-    "leftLeg": 30,
-    "centerTorsoRear": 10,
-    "rightTorsoRear": 6,
-    "leftTorsoRear": 6
+    "centerTorso": 12,
+    "rightTorso": 10,
+    "leftTorso": 10,
+    "rightArm": 8,
+    "leftArm": 8,
+    "rightLeg": 12,
+    "leftLeg": 12,
+    "centerTorsoRear": 4,
+    "rightTorsoRear": 2,
+    "leftTorsoRear": 2
   },
   "weapons": [
     {
-      "weapon": "Medium Pulse Laser",
-      "location": "rightArm"
-    },
-    {
-      "weapon": "Medium Pulse Laser",
+      "weapon": "Medium Laser",
       "location": "leftArm"
     },
     {
-      "weapon": "Medium Pulse Laser",
-      "location": "leftArm"
-    },
-    {
-      "weapon": "Medium Pulse Laser",
+      "weapon": "Medium Laser",
       "location": "rightArm"
     },
     {
-      "weapon": "Medium Pulse Laser",
+      "weapon": "Medium Laser",
       "location": "leftArm"
     },
     {
-      "weapon": "Medium Pulse Laser",
+      "weapon": "Medium Laser",
       "location": "rightArm"
     },
     {
-      "weapon": "Anti-Missile System",
-      "location": "head",
-      "shots": 12
+      "weapon": "SRM 6",
+      "location": "rightTorso",
+      "shots": 15
     }
   ],
   "critSlots": {
@@ -94,12 +87,12 @@
         "name": "engine"
       },
       {
-        "kind": "structure",
-        "name": "jumpJet"
+        "kind": "soak",
+        "name": "equipment"
       },
       {
         "kind": "soak",
-        "name": "equipment"
+        "name": "endoSteel"
       }
     ],
     "leftTorso": [
@@ -117,11 +110,15 @@
       },
       {
         "kind": "structure",
-        "name": "jumpJet"
+        "name": "doubleHeatSink"
       },
       {
         "kind": "structure",
-        "name": "jumpJet"
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
       },
       {
         "kind": "soak",
@@ -133,19 +130,19 @@
       },
       {
         "kind": "soak",
-        "name": "equipment"
+        "name": "endoSteel"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "endoSteel"
       }
     ],
     "rightTorso": [
@@ -163,33 +160,39 @@
       },
       {
         "kind": "structure",
-        "name": "jumpJet"
+        "name": "doubleHeatSink"
       },
       {
         "kind": "structure",
-        "name": "jumpJet"
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "SRM 6"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "SRM 6"
       },
       {
         "kind": "ammo",
-        "weapon": "Anti-Missile System"
+        "weapon": "SRM 6"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "equipment"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "equipment"
       },
       {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "endoSteel"
       }
     ],
     "leftArm": [
@@ -211,30 +214,31 @@
       },
       {
         "kind": "weapon",
-        "weapon": "Medium Pulse Laser"
-      },
-      {
-        "kind": "soak",
-        "name": "equipment"
+        "weapon": "Medium Laser"
       },
       {
         "kind": "weapon",
-        "weapon": "Medium Pulse Laser"
+        "weapon": "Medium Laser"
       },
       {
         "kind": "soak",
         "name": "equipment"
       },
       {
-        "kind": "weapon",
-        "weapon": "Medium Pulse Laser"
-      },
-      {
         "kind": "soak",
         "name": "equipment"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
         "kind": "empty"
@@ -259,33 +263,35 @@
       },
       {
         "kind": "weapon",
-        "weapon": "Medium Pulse Laser"
-      },
-      {
-        "kind": "soak",
-        "name": "equipment"
+        "weapon": "Medium Laser"
       },
       {
         "kind": "weapon",
-        "weapon": "Medium Pulse Laser"
+        "weapon": "Medium Laser"
       },
       {
         "kind": "soak",
         "name": "equipment"
       },
       {
-        "kind": "weapon",
-        "weapon": "Medium Pulse Laser"
-      },
-      {
         "kind": "soak",
         "name": "equipment"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
       }
     ],
     "leftLeg": [
@@ -306,10 +312,12 @@
         "name": "footActuator"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "equipment"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "equipment"
       }
     ],
     "rightLeg": [
@@ -330,10 +338,12 @@
         "name": "footActuator"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "equipment"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "equipment"
       }
     ],
     "head": [
@@ -350,8 +360,8 @@
         "name": "cockpit"
       },
       {
-        "kind": "weapon",
-        "weapon": "Anti-Missile System"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
         "kind": "structure",

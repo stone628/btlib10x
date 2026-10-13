@@ -1,7 +1,8 @@
 {
-  "model": "CTF-3X (Sara)",
-  "name": "Cataphract",
-  "tonnage": 70,
+  "model": "MAD-SD",
+  "name": "Marauder",
+  "callsign": "Douglass",
+  "tonnage": 75,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,
@@ -9,38 +10,42 @@
   "jumping": 0,
   "armor": {
     "head": 9,
-    "centerTorso": 30,
-    "rightTorso": 20,
-    "leftTorso": 20,
-    "rightArm": 22,
-    "leftArm": 22,
-    "rightLeg": 29,
-    "leftLeg": 29,
-    "centerTorsoRear": 14,
-    "rightTorsoRear": 10,
-    "leftTorsoRear": 10
+    "centerTorso": 34,
+    "rightTorso": 24,
+    "leftTorso": 24,
+    "rightArm": 24,
+    "leftArm": 24,
+    "rightLeg": 32,
+    "leftLeg": 32,
+    "centerTorsoRear": 12,
+    "rightTorsoRear": 8,
+    "leftTorsoRear": 8
   },
   "weapons": [
     {
-      "weapon": "ER Large Laser",
+      "weapon": "Large Laser",
       "location": "rightArm"
     },
     {
-      "weapon": "Streak SRM 4",
-      "location": "leftArm",
+      "weapon": "Large Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "SRM 4",
+      "location": "rightTorso",
       "shots": 25
     },
     {
-      "weapon": "ER Medium Laser",
+      "weapon": "SRM 4",
       "location": "rightTorso"
-    },
-    {
-      "weapon": "Rotary AC/5",
-      "location": "rightTorso"
-    },
-    {
-      "weapon": "ER Medium Laser",
-      "location": "leftTorso"
     }
   ],
   "critSlots": {
@@ -86,52 +91,46 @@
         "name": "engine"
       },
       {
-        "kind": "empty"
+        "kind": "structure",
+        "name": "heatSink"
       },
       {
-        "kind": "empty"
+        "kind": "structure",
+        "name": "heatSink"
       }
     ],
     "leftTorso": [
       {
         "kind": "structure",
-        "name": "doubleHeatSink"
+        "name": "heatSink"
       },
       {
         "kind": "structure",
-        "name": "doubleHeatSink"
+        "name": "heatSink"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "empty"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "empty"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "empty"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "empty"
       },
       {
-        "kind": "weapon",
-        "weapon": "ER Medium Laser"
+        "kind": "empty"
       },
       {
-        "kind": "ammo",
-        "weapon": "Streak SRM 4"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "case"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "empty"
       },
       {
         "kind": "empty"
@@ -143,51 +142,42 @@
     "rightTorso": [
       {
         "kind": "weapon",
-        "weapon": "ER Medium Laser"
+        "weapon": "SRM 4"
       },
       {
         "kind": "weapon",
-        "weapon": "Rotary AC/5"
-      },
-      {
-        "kind": "weapon",
-        "weapon": "Rotary AC/5"
-      },
-      {
-        "kind": "weapon",
-        "weapon": "Rotary AC/5"
-      },
-      {
-        "kind": "weapon",
-        "weapon": "Rotary AC/5"
-      },
-      {
-        "kind": "weapon",
-        "weapon": "Rotary AC/5"
-      },
-      {
-        "kind": "weapon",
-        "weapon": "Rotary AC/5"
+        "weapon": "SRM 4"
       },
       {
         "kind": "ammo",
-        "weapon": "Rotary AC/5"
+        "weapon": "SRM 4"
       },
       {
-        "kind": "ammo",
-        "weapon": "Rotary AC/5"
+        "kind": "empty"
       },
       {
-        "kind": "ammo",
-        "weapon": "Rotary AC/5"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "case"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
       }
     ],
     "leftArm": [
@@ -204,28 +194,25 @@
         "name": "lowerArmActuator"
       },
       {
-        "kind": "structure",
-        "name": "handActuator"
+        "kind": "weapon",
+        "weapon": "Large Laser"
       },
       {
         "kind": "weapon",
-        "weapon": "Streak SRM 4"
+        "weapon": "Large Laser"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "weapon",
+        "weapon": "Medium Laser"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "empty"
       },
       {
         "kind": "empty"
@@ -251,40 +238,34 @@
         "name": "lowerArmActuator"
       },
       {
-        "kind": "structure",
-        "name": "doubleHeatSink"
-      },
-      {
-        "kind": "structure",
-        "name": "doubleHeatSink"
-      },
-      {
-        "kind": "structure",
-        "name": "doubleHeatSink"
+        "kind": "weapon",
+        "weapon": "Large Laser"
       },
       {
         "kind": "weapon",
-        "weapon": "ER Large Laser"
+        "weapon": "Large Laser"
       },
       {
         "kind": "weapon",
-        "weapon": "ER Large Laser"
+        "weapon": "Medium Laser"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
       }
     ],
     "leftLeg": [
@@ -305,12 +286,12 @@
         "name": "footActuator"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "structure",
+        "name": "heatSink"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "structure",
+        "name": "heatSink"
       }
     ],
     "rightLeg": [
@@ -331,12 +312,12 @@
         "name": "footActuator"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "structure",
+        "name": "heatSink"
       },
       {
-        "kind": "soak",
-        "name": "ferroFibrous"
+        "kind": "structure",
+        "name": "heatSink"
       }
     ],
     "head": [
@@ -353,7 +334,8 @@
         "name": "cockpit"
       },
       {
-        "kind": "empty"
+        "kind": "structure",
+        "name": "heatSink"
       },
       {
         "kind": "structure",
@@ -366,8 +348,8 @@
     ]
   },
   "heatsink": {
-    "type": "double",
-    "count": 14
+    "type": "single",
+    "count": 21
   },
   "myomer": "Standard"
 }

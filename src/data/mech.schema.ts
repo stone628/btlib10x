@@ -170,6 +170,8 @@ export interface MechDef {
   readonly name: string;
   /** Clan name from the MTF line-2 `(...)` part; undefined when absent (even for Clan sheets). */
   readonly clanName?: string;
+  /** Pilot callsign from the MTF line-3 `(...)` suffix (e.g. `BL-10-KNT (Ross)` → `Ross`); undefined when absent. */
+  readonly callsign?: string;
   readonly tonnage: number;
   readonly weightClass: "Light" | "Medium" | "Heavy" | "Assault";
   readonly techBase: string;
@@ -221,6 +223,8 @@ export interface ResolvedMechDef {
   readonly name: string;
   /** Clan name when the source sheet carried one; otherwise undefined. */
   readonly clanName?: string;
+  /** Pilot callsign when the source sheet carried one; otherwise undefined. */
+  readonly callsign?: string;
   readonly tonnage: number;
   readonly weightClass: "Light" | "Medium" | "Heavy" | "Assault";
   readonly techBase: string;
@@ -293,6 +297,7 @@ export function resolveMechDef(def: MechDef): ResolvedMechDef {
     model: def.model,
     name: def.name,
     ...(def.clanName !== undefined && { clanName: def.clanName }),
+    ...(def.callsign !== undefined && { callsign: def.callsign }),
     tonnage: def.tonnage,
     weightClass: def.weightClass,
     techBase: def.techBase,
@@ -482,6 +487,17 @@ export function validateMechDef(def: MechDef): MechDef {
     (typeof def.clanName !== "string" || def.clanName.length === 0)
   ) {
     errors.push("clanName must be a non-empty string when present");
+  }
+  if (typeof def.model !== "string" || def.model.length === 0) {
+    errors.push("model must be a non-empty string");
+  } else if (/\s/.test(def.model)) {
+    errors.push(`model ${JSON.stringify(def.model)} must not contain whitespace`);
+  }
+  if (
+    def.callsign !== undefined &&
+    (typeof def.callsign !== "string" || def.callsign.length === 0)
+  ) {
+    errors.push("callsign must be a non-empty string when present");
   }
   if (def.weightClass !== weightClassForTonnage(tonnage)) {
     errors.push(

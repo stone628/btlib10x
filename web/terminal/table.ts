@@ -24,7 +24,7 @@ import {
 } from "./chunk";
 import { i18n } from "./i18n/index";
 import { lookupMap, lookupWeapon } from "./lookup";
-import { weaponCategory } from "./misc";
+import { displayModel, weaponCategory } from "./misc";
 import {
   isEmptyQuery,
   MECH_FILTER_KEYS,
@@ -179,7 +179,7 @@ function mechTable(list: readonly MechManifestEntry[]): Chunk {
   ];
   // Move ratings live in the registered sheets; the manifest carries identity only.
   const rows = list.map((d) => [
-    d.model,
+    displayModel(d),
     d.clanName === undefined ? d.name : `${d.name} (${d.clanName})`,
     weightClassForTonnage(d.tonnage),
     d.techBase,

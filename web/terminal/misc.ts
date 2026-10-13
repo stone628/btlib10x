@@ -43,6 +43,14 @@ export function requireMechDef(model: string): ResolvedMechDef {
   return def;
 }
 
+/**
+ * Display key for a 'Mech: the bare `model`, or `MODEL (callsign)` when the
+ * sheet carries a pilot callsign. Lookup keys stay bare; this is display-only.
+ */
+export function displayModel(d: { readonly model: string; readonly callsign?: string }): string {
+  return d.callsign === undefined ? d.model : `${d.model} (${d.callsign})`;
+}
+
 export const F = (f: Facing): string => i18n(`sheet.facing.${f}` as MessageKey);
 
 export const PRN = (prone: boolean): string =>

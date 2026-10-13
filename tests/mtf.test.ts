@@ -427,3 +427,32 @@ describe("parseMtf: repeated weapons in one location", () => {
     expect(links[0]).not.toBe(links[2]);
   });
 });
+
+describe("parseMtf: model callsign suffix", () => {
+  const convert = (file: string) => {
+    const { def, errors } = parseMtf(readFileSync(file, "utf8"), file);
+    expect(errors).toEqual([]);
+    return def!;
+  };
+
+  it("splits a pilot suffix into a whitespace-free model plus callsign", () => {
+    const def = convert("docs/mtf/sw/mtf/Atlas AS7-WGS Samsonov.mtf");
+    expect(def.model).toBe("AS7-WGS");
+    expect(def.callsign).toBe("Samsonov");
+    expect(def.model).not.toMatch(/\s/);
+  });
+
+  it("folds the spaced Von Rohrs code to dashes with no callsign", () => {
+    const def = convert("docs/mtf/sw/mtf/Von Rohrs (Hebis) VON 4RH-5.mtf");
+    expect(def.model).toBe("VON-4RH-5");
+    expect(def.callsign).toBeUndefined();
+  });
+
+  it("rejects whitespace in model via validateMechDef", () => {
+    const def = convert("docs/mtf/sw/mtf/Atlas AS7-WGS Samsonov.mtf");
+    expect(() =>
+      validateMechDef({ ...(def as unknown as MechDef), model: "AS7-WGS (Samsonov)" }),
+    ).toThrow(/must not contain whitespace/);
+    expect(() => validateMechDef(def as unknown as MechDef)).not.toThrow();
+  });
+});

@@ -1,7 +1,12 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { registerMech } from "../dist/data/mech.schema.js";
+import { parseMtf } from "../scripts/mtf.mjs";
 import type { MechManifestEntry } from "../src/data/catalog";
+import type { MechDef } from "../src/data/index";
 import { WEAPON_DATA } from "../src/data/weapons.data";
 import type { Chunk } from "../web/terminal/chunk";
+import { displayModel } from "../web/terminal/misc";
 import {
   closestNames,
   MECH_FILTER_KEYS,
@@ -15,6 +20,7 @@ import {
   weaponTech,
 } from "../web/terminal/query";
 import { newSession } from "../web/terminal/session";
+import { infoMechChunk } from "../web/terminal/session.common";
 import { infoMechQuery, infoWeaponQuery } from "../web/terminal/table";
 import { chunkText, execute } from "./helpers";
 
@@ -253,6 +259,48 @@ describe("closestNames", () => {
     expect(closestNames("hbk", ["XHBK-1", "HBK-4G", "ABC-1"])).toEqual(["HBK-4G", "XHBK-1"]);
     expect(closestNames("as7-x", ["AS7-D", "LCT-1V"])).toEqual(["AS7-D"]);
     expect(closestNames("zzzz", ["AS7-D"])).toEqual([]);
+  });
+});
+
+describe("callsign display", () => {
+  it("renders the callsign suffix only when present", () => {
+    expect(displayModel({ model: "HBK-4G" })).toBe("HBK-4G");
+    expect(displayModel({ model: "AS7-WGS", callsign: "Samsonov" })).toBe("AS7-WGS (Samsonov)");
+  });
+
+  it("matches callsign text in selectMechs", () => {
+    const entries = [...SAMPLE, { ...mech("AS7-WGS", "Atlas", 100), callsign: "Samsonov" }];
+    const models = selectMechs(entries, parseQuery(["samsonov"], MECH_FILTER_KEYS)).map(
+      (m) => m.model,
+    );
+    expect(models).toEqual(["AS7-WGS"]);
+  });
+
+  it("shows the callsign in the mech table Model column", () => {
+    const entries = [
+      mech("HBK-4G", "Hunchback", 50),
+      { ...mech("AS7-WGS", "Atlas", 100), callsign: "Samsonov" },
+    ];
+    const text = listChunks("!", entries).flatMap(chunkText).join("\n");
+    expect(text).toContain("AS7-WGS (Samsonov)");
+    expect(text).not.toContain("HBK-4G (");
+  });
+
+  it("shows the callsign on info and sheet headlines but not in status", () => {
+    const file = "docs/mtf/sw/mtf/Atlas AS7-WGS Samsonov.mtf";
+    const { def, errors } = parseMtf(readFileSync(file, "utf8"), file);
+    expect(errors).toEqual([]);
+    registerMech(def as unknown as MechDef);
+    const s = newSession(1);
+    execute(s, "map quickstart");
+    expect(execute(s, "add sammy AS7-WGS 9 9 n")[0]).toContain("placed");
+    execute(s, "add hunchy HBK-4G 9 8 s");
+    expect(execute(s, "status").join("\n")).not.toContain("Samsonov");
+    expect(infoMechChunk("AS7-WGS").flatMap(chunkText).join("\n")).toContain(
+      "Atlas AS7-WGS (Samsonov)",
+    );
+    execute(s, "start");
+    expect(execute(s, "sheet sammy").join("\n")).toContain("model: Atlas AS7-WGS (Samsonov)");
   });
 });
 

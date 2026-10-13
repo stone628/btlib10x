@@ -1,50 +1,55 @@
 {
-  "model": "PXH-1b (Special)",
-  "name": "Phoenix Hawk",
-  "tonnage": 45,
-  "weightClass": "Medium",
+  "model": "THG-11ECX",
+  "name": "Thug",
+  "callsign": "Jose",
+  "tonnage": 80,
+  "weightClass": "Assault",
   "techBase": "Inner Sphere",
-  "walking": 6,
-  "running": 9,
-  "jumping": 6,
+  "walking": 4,
+  "running": 6,
+  "jumping": 4,
   "armor": {
-    "head": 6,
-    "centerTorso": 23,
-    "rightTorso": 18,
-    "leftTorso": 18,
-    "rightArm": 10,
-    "leftArm": 10,
-    "rightLeg": 15,
-    "leftLeg": 15,
-    "centerTorsoRear": 5,
-    "rightTorsoRear": 4,
-    "leftTorsoRear": 4
+    "head": 9,
+    "centerTorso": 35,
+    "rightTorso": 25,
+    "leftTorso": 25,
+    "rightArm": 25,
+    "leftArm": 25,
+    "rightLeg": 31,
+    "leftLeg": 31,
+    "centerTorsoRear": 10,
+    "rightTorsoRear": 8,
+    "leftTorsoRear": 8
   },
   "weapons": [
     {
-      "weapon": "ER PPC",
-      "location": "rightArm"
-    },
-    {
-      "weapon": "Medium Laser",
-      "location": "rightArm"
-    },
-    {
-      "weapon": "Medium Laser",
+      "weapon": "ER Large Laser",
       "location": "leftArm"
     },
     {
-      "weapon": "ER Large Laser",
+      "weapon": "SRM 6",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "SRM 6",
       "location": "rightTorso"
     },
     {
-      "weapon": "Machine Gun",
-      "location": "rightArm"
+      "weapon": "SRM 6",
+      "location": "leftTorso"
     },
     {
-      "weapon": "Machine Gun",
-      "location": "leftArm",
-      "shots": 200
+      "weapon": "SRM 6",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "SRM 6",
+      "location": "rightTorso",
+      "shots": 45
+    },
+    {
+      "weapon": "ER Large Laser",
+      "location": "rightArm"
     }
   ],
   "critSlots": {
@@ -90,12 +95,10 @@
         "name": "engine"
       },
       {
-        "kind": "soak",
-        "name": "equipment"
+        "kind": "empty"
       },
       {
-        "kind": "soak",
-        "name": "equipment"
+        "kind": "empty"
       }
     ],
     "leftTorso": [
@@ -116,28 +119,28 @@
         "name": "jumpJet"
       },
       {
-        "kind": "structure",
-        "name": "jumpJet"
+        "kind": "weapon",
+        "weapon": "SRM 6"
       },
       {
-        "kind": "structure",
-        "name": "jumpJet"
+        "kind": "weapon",
+        "weapon": "SRM 6"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "SRM 6"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "SRM 6"
       },
       {
         "kind": "ammo",
-        "weapon": "Machine Gun"
+        "weapon": "SRM 6"
       },
       {
-        "kind": "soak",
-        "name": "case"
-      },
-      {
-        "kind": "soak",
-        "name": "endoSteel"
-      },
-      {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "ammo",
+        "weapon": "SRM 6"
       },
       {
         "kind": "empty"
@@ -164,31 +167,32 @@
         "name": "jumpJet"
       },
       {
-        "kind": "structure",
-        "name": "jumpJet"
-      },
-      {
-        "kind": "structure",
-        "name": "jumpJet"
+        "kind": "weapon",
+        "weapon": "SRM 6"
       },
       {
         "kind": "weapon",
-        "weapon": "ER Large Laser"
+        "weapon": "SRM 6"
       },
       {
         "kind": "weapon",
-        "weapon": "ER Large Laser"
+        "weapon": "SRM 6"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "weapon",
+        "weapon": "SRM 6"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "weapon",
+        "weapon": "SRM 6"
       },
       {
-        "kind": "empty"
+        "kind": "weapon",
+        "weapon": "SRM 6"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "SRM 6"
       },
       {
         "kind": "empty"
@@ -209,27 +213,26 @@
       },
       {
         "kind": "structure",
-        "name": "handActuator"
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
       },
       {
         "kind": "weapon",
-        "weapon": "Medium Laser"
+        "weapon": "ER Large Laser"
       },
       {
         "kind": "weapon",
-        "weapon": "Machine Gun"
+        "weapon": "ER Large Laser"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
-      },
-      {
-        "kind": "soak",
-        "name": "endoSteel"
-      },
-      {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
       },
       {
         "kind": "empty"
@@ -256,35 +259,32 @@
       },
       {
         "kind": "structure",
-        "name": "handActuator"
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
       },
       {
         "kind": "weapon",
-        "weapon": "ER PPC"
+        "weapon": "ER Large Laser"
       },
       {
         "kind": "weapon",
-        "weapon": "ER PPC"
+        "weapon": "ER Large Laser"
       },
       {
-        "kind": "weapon",
-        "weapon": "ER PPC"
+        "kind": "empty"
       },
       {
-        "kind": "weapon",
-        "weapon": "Medium Laser"
+        "kind": "empty"
       },
       {
-        "kind": "weapon",
-        "weapon": "Machine Gun"
-      },
-      {
-        "kind": "soak",
-        "name": "endoSteel"
-      },
-      {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
       },
       {
         "kind": "empty"
@@ -308,12 +308,11 @@
         "name": "footActuator"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "structure",
+        "name": "jumpJet"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
       }
     ],
     "rightLeg": [
@@ -334,12 +333,11 @@
         "name": "footActuator"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "structure",
+        "name": "jumpJet"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "empty"
       }
     ],
     "head": [
@@ -356,8 +354,8 @@
         "name": "cockpit"
       },
       {
-        "kind": "soak",
-        "name": "endoSteel"
+        "kind": "structure",
+        "name": "cockpit"
       },
       {
         "kind": "structure",
@@ -371,7 +369,7 @@
   },
   "heatsink": {
     "type": "double",
-    "count": 10
+    "count": 14
   },
   "myomer": "Standard"
 }

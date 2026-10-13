@@ -1,61 +1,51 @@
 {
-  "model": "TDR-5S-T (Tallman)",
-  "name": "Thunderbolt",
-  "tonnage": 65,
-  "weightClass": "Heavy",
+  "model": "PXH-1b",
+  "name": "Phoenix Hawk",
+  "callsign": "Special",
+  "tonnage": 45,
+  "weightClass": "Medium",
   "techBase": "Inner Sphere",
-  "walking": 4,
-  "running": 6,
-  "jumping": 0,
+  "walking": 6,
+  "running": 9,
+  "jumping": 6,
   "armor": {
-    "head": 9,
-    "centerTorso": 30,
-    "rightTorso": 24,
-    "leftTorso": 24,
-    "rightArm": 20,
-    "leftArm": 20,
-    "rightLeg": 29,
-    "leftLeg": 29,
-    "centerTorsoRear": 11,
-    "rightTorsoRear": 6,
-    "leftTorsoRear": 6
+    "head": 6,
+    "centerTorso": 23,
+    "rightTorso": 18,
+    "leftTorso": 18,
+    "rightArm": 10,
+    "leftArm": 10,
+    "rightLeg": 15,
+    "leftLeg": 15,
+    "centerTorsoRear": 5,
+    "rightTorsoRear": 4,
+    "leftTorsoRear": 4
   },
   "weapons": [
     {
-      "weapon": "Medium Laser",
-      "location": "leftTorso"
-    },
-    {
-      "weapon": "Medium Laser",
-      "location": "leftTorso"
-    },
-    {
-      "weapon": "Medium Laser",
-      "location": "leftTorso"
-    },
-    {
-      "weapon": "Medium Laser",
-      "location": "leftTorso"
-    },
-    {
-      "weapon": "Medium Laser",
-      "location": "rightTorso"
-    },
-    {
-      "weapon": "Medium Laser",
-      "location": "rightTorso"
-    },
-    {
-      "weapon": "Medium Laser",
-      "location": "rightTorso"
-    },
-    {
-      "weapon": "Medium Laser",
-      "location": "rightTorso"
-    },
-    {
-      "weapon": "Large Laser",
+      "weapon": "ER PPC",
       "location": "rightArm"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "Medium Laser",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "ER Large Laser",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "Machine Gun",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "Machine Gun",
+      "location": "leftArm",
+      "shots": 200
     }
   ],
   "critSlots": {
@@ -101,51 +91,54 @@
         "name": "engine"
       },
       {
-        "kind": "structure",
-        "name": "heatSink"
+        "kind": "soak",
+        "name": "equipment"
       },
       {
-        "kind": "structure",
-        "name": "heatSink"
+        "kind": "soak",
+        "name": "equipment"
       }
     ],
     "leftTorso": [
       {
         "kind": "structure",
-        "name": "heatSink"
+        "name": "engine"
       },
       {
         "kind": "structure",
-        "name": "heatSink"
+        "name": "engine"
       },
       {
         "kind": "structure",
-        "name": "heatSink"
+        "name": "engine"
       },
       {
-        "kind": "weapon",
-        "weapon": "Medium Laser"
+        "kind": "structure",
+        "name": "jumpJet"
       },
       {
-        "kind": "weapon",
-        "weapon": "Medium Laser"
+        "kind": "structure",
+        "name": "jumpJet"
       },
       {
-        "kind": "weapon",
-        "weapon": "Medium Laser"
+        "kind": "structure",
+        "name": "jumpJet"
       },
       {
-        "kind": "weapon",
-        "weapon": "Medium Laser"
+        "kind": "ammo",
+        "weapon": "Machine Gun"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "case"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
         "kind": "empty"
@@ -157,40 +150,43 @@
     "rightTorso": [
       {
         "kind": "structure",
-        "name": "heatSink"
+        "name": "engine"
       },
       {
         "kind": "structure",
-        "name": "heatSink"
+        "name": "engine"
       },
       {
         "kind": "structure",
-        "name": "heatSink"
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
+      },
+      {
+        "kind": "structure",
+        "name": "jumpJet"
       },
       {
         "kind": "weapon",
-        "weapon": "Medium Laser"
+        "weapon": "ER Large Laser"
       },
       {
         "kind": "weapon",
-        "weapon": "Medium Laser"
+        "weapon": "ER Large Laser"
       },
       {
-        "kind": "weapon",
-        "weapon": "Medium Laser"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "weapon",
-        "weapon": "Medium Laser"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
         "kind": "empty"
@@ -217,19 +213,24 @@
         "name": "handActuator"
       },
       {
-        "kind": "empty"
+        "kind": "weapon",
+        "weapon": "Medium Laser"
       },
       {
-        "kind": "empty"
+        "kind": "weapon",
+        "weapon": "Machine Gun"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
         "kind": "empty"
@@ -260,26 +261,31 @@
       },
       {
         "kind": "weapon",
-        "weapon": "Large Laser"
+        "weapon": "ER PPC"
       },
       {
         "kind": "weapon",
-        "weapon": "Large Laser"
+        "weapon": "ER PPC"
       },
       {
-        "kind": "empty"
+        "kind": "weapon",
+        "weapon": "ER PPC"
       },
       {
-        "kind": "empty"
+        "kind": "weapon",
+        "weapon": "Medium Laser"
       },
       {
-        "kind": "empty"
+        "kind": "weapon",
+        "weapon": "Machine Gun"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "empty"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
         "kind": "empty"
@@ -303,12 +309,12 @@
         "name": "footActuator"
       },
       {
-        "kind": "structure",
-        "name": "heatSink"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "structure",
-        "name": "heatSink"
+        "kind": "soak",
+        "name": "endoSteel"
       }
     ],
     "rightLeg": [
@@ -329,12 +335,12 @@
         "name": "footActuator"
       },
       {
-        "kind": "structure",
-        "name": "heatSink"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
-        "kind": "structure",
-        "name": "heatSink"
+        "kind": "soak",
+        "name": "endoSteel"
       }
     ],
     "head": [
@@ -351,8 +357,8 @@
         "name": "cockpit"
       },
       {
-        "kind": "structure",
-        "name": "heatSink"
+        "kind": "soak",
+        "name": "endoSteel"
       },
       {
         "kind": "structure",
@@ -365,8 +371,8 @@
     ]
   },
   "heatsink": {
-    "type": "single",
-    "count": 23
+    "type": "double",
+    "count": 10
   },
   "myomer": "Standard"
 }

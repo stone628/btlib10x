@@ -1,50 +1,39 @@
 {
-  "model": "MAD-SD (Douglass)",
-  "name": "Marauder",
-  "tonnage": 75,
-  "weightClass": "Heavy",
+  "model": "AS7-WGS",
+  "name": "Atlas",
+  "callsign": "Samsonov",
+  "tonnage": 100,
+  "weightClass": "Assault",
   "techBase": "Inner Sphere",
-  "walking": 4,
-  "running": 6,
+  "walking": 3,
+  "running": 5,
   "jumping": 0,
   "armor": {
     "head": 9,
-    "centerTorso": 34,
-    "rightTorso": 24,
-    "leftTorso": 24,
-    "rightArm": 24,
-    "leftArm": 24,
-    "rightLeg": 32,
-    "leftLeg": 32,
-    "centerTorsoRear": 12,
-    "rightTorsoRear": 8,
-    "leftTorsoRear": 8
+    "centerTorso": 47,
+    "rightTorso": 32,
+    "leftTorso": 32,
+    "rightArm": 34,
+    "leftArm": 34,
+    "rightLeg": 41,
+    "leftLeg": 41,
+    "centerTorsoRear": 14,
+    "rightTorsoRear": 10,
+    "leftTorsoRear": 10
   },
   "weapons": [
     {
-      "weapon": "Large Laser",
-      "location": "rightArm"
-    },
-    {
-      "weapon": "Large Laser",
-      "location": "leftArm"
-    },
-    {
-      "weapon": "Medium Laser",
-      "location": "leftArm"
-    },
-    {
-      "weapon": "Medium Laser",
-      "location": "rightArm"
-    },
-    {
-      "weapon": "SRM 4",
+      "weapon": "AC/20",
       "location": "rightTorso",
-      "shots": 25
+      "shots": 10
     },
     {
-      "weapon": "SRM 4",
-      "location": "rightTorso"
+      "weapon": "PPC",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "PPC",
+      "location": "leftArm"
     }
   ],
   "critSlots": {
@@ -108,19 +97,24 @@
         "name": "heatSink"
       },
       {
-        "kind": "empty"
+        "kind": "structure",
+        "name": "heatSink"
       },
       {
-        "kind": "empty"
+        "kind": "structure",
+        "name": "heatSink"
       },
       {
-        "kind": "empty"
+        "kind": "structure",
+        "name": "heatSink"
       },
       {
-        "kind": "empty"
+        "kind": "structure",
+        "name": "heatSink"
       },
       {
-        "kind": "empty"
+        "kind": "structure",
+        "name": "heatSink"
       },
       {
         "kind": "empty"
@@ -141,42 +135,51 @@
     "rightTorso": [
       {
         "kind": "weapon",
-        "weapon": "SRM 4"
+        "weapon": "AC/20"
       },
       {
         "kind": "weapon",
-        "weapon": "SRM 4"
+        "weapon": "AC/20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "AC/20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "AC/20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "AC/20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "AC/20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "AC/20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "AC/20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "AC/20"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "AC/20"
       },
       {
         "kind": "ammo",
-        "weapon": "SRM 4"
+        "weapon": "AC/20"
       },
       {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
-      },
-      {
-        "kind": "empty"
+        "kind": "ammo",
+        "weapon": "AC/20"
       }
     ],
     "leftArm": [
@@ -193,19 +196,20 @@
         "name": "lowerArmActuator"
       },
       {
-        "kind": "weapon",
-        "weapon": "Large Laser"
+        "kind": "structure",
+        "name": "handActuator"
       },
       {
         "kind": "weapon",
-        "weapon": "Large Laser"
+        "weapon": "PPC"
       },
       {
         "kind": "weapon",
-        "weapon": "Medium Laser"
+        "weapon": "PPC"
       },
       {
-        "kind": "empty"
+        "kind": "weapon",
+        "weapon": "PPC"
       },
       {
         "kind": "empty"
@@ -237,19 +241,20 @@
         "name": "lowerArmActuator"
       },
       {
-        "kind": "weapon",
-        "weapon": "Large Laser"
+        "kind": "structure",
+        "name": "handActuator"
       },
       {
         "kind": "weapon",
-        "weapon": "Large Laser"
+        "weapon": "PPC"
       },
       {
         "kind": "weapon",
-        "weapon": "Medium Laser"
+        "weapon": "PPC"
       },
       {
-        "kind": "empty"
+        "kind": "weapon",
+        "weapon": "PPC"
       },
       {
         "kind": "empty"
@@ -348,7 +353,7 @@
   },
   "heatsink": {
     "type": "single",
-    "count": 21
+    "count": 26
   },
   "myomer": "Standard"
 }

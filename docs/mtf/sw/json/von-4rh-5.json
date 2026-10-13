@@ -1,38 +1,39 @@
 {
-  "model": "AS7-WGS (Samsonov)",
-  "name": "Atlas",
-  "tonnage": 100,
-  "weightClass": "Assault",
+  "model": "VON-4RH-5",
+  "name": "Von Rohrs",
+  "clanName": "Hebis",
+  "tonnage": 65,
+  "weightClass": "Heavy",
   "techBase": "Inner Sphere",
-  "walking": 3,
-  "running": 5,
+  "walking": 5,
+  "running": 8,
   "jumping": 0,
   "armor": {
     "head": 9,
-    "centerTorso": 47,
-    "rightTorso": 32,
-    "leftTorso": 32,
-    "rightArm": 34,
-    "leftArm": 34,
-    "rightLeg": 41,
-    "leftLeg": 41,
-    "centerTorsoRear": 14,
-    "rightTorsoRear": 10,
-    "leftTorsoRear": 10
+    "centerTorso": 22,
+    "rightTorso": 15,
+    "leftTorso": 15,
+    "rightArm": 13,
+    "leftArm": 13,
+    "rightLeg": 20,
+    "leftLeg": 20,
+    "centerTorsoRear": 7,
+    "rightTorsoRear": 5,
+    "leftTorsoRear": 5
   },
   "weapons": [
     {
-      "weapon": "AC/20",
-      "location": "rightTorso",
-      "shots": 10
+      "weapon": "Flamer",
+      "location": "leftArm"
     },
     {
       "weapon": "PPC",
       "location": "rightArm"
     },
     {
-      "weapon": "PPC",
-      "location": "leftArm"
+      "weapon": "LRM 10",
+      "location": "leftTorso",
+      "shots": 12
     }
   ],
   "critSlots": {
@@ -78,42 +79,36 @@
         "name": "engine"
       },
       {
-        "kind": "structure",
-        "name": "heatSink"
+        "kind": "empty"
       },
       {
-        "kind": "structure",
-        "name": "heatSink"
+        "kind": "empty"
       }
     ],
     "leftTorso": [
       {
-        "kind": "structure",
-        "name": "heatSink"
+        "kind": "weapon",
+        "weapon": "LRM 10"
       },
       {
-        "kind": "structure",
-        "name": "heatSink"
+        "kind": "weapon",
+        "weapon": "LRM 10"
       },
       {
-        "kind": "structure",
-        "name": "heatSink"
+        "kind": "ammo",
+        "weapon": "LRM 10"
       },
       {
-        "kind": "structure",
-        "name": "heatSink"
+        "kind": "empty"
       },
       {
-        "kind": "structure",
-        "name": "heatSink"
+        "kind": "empty"
       },
       {
-        "kind": "structure",
-        "name": "heatSink"
+        "kind": "empty"
       },
       {
-        "kind": "structure",
-        "name": "heatSink"
+        "kind": "empty"
       },
       {
         "kind": "empty"
@@ -133,52 +128,42 @@
     ],
     "rightTorso": [
       {
-        "kind": "weapon",
-        "weapon": "AC/20"
+        "kind": "structure",
+        "name": "heatSink"
       },
       {
-        "kind": "weapon",
-        "weapon": "AC/20"
+        "kind": "structure",
+        "name": "heatSink"
       },
       {
-        "kind": "weapon",
-        "weapon": "AC/20"
+        "kind": "empty"
       },
       {
-        "kind": "weapon",
-        "weapon": "AC/20"
+        "kind": "empty"
       },
       {
-        "kind": "weapon",
-        "weapon": "AC/20"
+        "kind": "empty"
       },
       {
-        "kind": "weapon",
-        "weapon": "AC/20"
+        "kind": "empty"
       },
       {
-        "kind": "weapon",
-        "weapon": "AC/20"
+        "kind": "empty"
       },
       {
-        "kind": "weapon",
-        "weapon": "AC/20"
+        "kind": "empty"
       },
       {
-        "kind": "weapon",
-        "weapon": "AC/20"
+        "kind": "empty"
       },
       {
-        "kind": "weapon",
-        "weapon": "AC/20"
+        "kind": "empty"
       },
       {
-        "kind": "ammo",
-        "weapon": "AC/20"
+        "kind": "empty"
       },
       {
-        "kind": "ammo",
-        "weapon": "AC/20"
+        "kind": "empty"
       }
     ],
     "leftArm": [
@@ -200,15 +185,13 @@
       },
       {
         "kind": "weapon",
-        "weapon": "PPC"
+        "weapon": "Flamer"
       },
       {
-        "kind": "weapon",
-        "weapon": "PPC"
+        "kind": "empty"
       },
       {
-        "kind": "weapon",
-        "weapon": "PPC"
+        "kind": "empty"
       },
       {
         "kind": "empty"
@@ -289,12 +272,10 @@
         "name": "footActuator"
       },
       {
-        "kind": "structure",
-        "name": "heatSink"
+        "kind": "empty"
       },
       {
-        "kind": "structure",
-        "name": "heatSink"
+        "kind": "empty"
       }
     ],
     "rightLeg": [
@@ -315,12 +296,10 @@
         "name": "footActuator"
       },
       {
-        "kind": "structure",
-        "name": "heatSink"
+        "kind": "empty"
       },
       {
-        "kind": "structure",
-        "name": "heatSink"
+        "kind": "empty"
       }
     ],
     "head": [
@@ -337,8 +316,7 @@
         "name": "cockpit"
       },
       {
-        "kind": "structure",
-        "name": "heatSink"
+        "kind": "empty"
       },
       {
         "kind": "structure",
@@ -352,7 +330,7 @@
   },
   "heatsink": {
     "type": "single",
-    "count": 26
+    "count": 15
   },
   "myomer": "Standard"
 }

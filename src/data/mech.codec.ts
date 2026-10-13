@@ -12,7 +12,7 @@ import { decodeRelaxed, encodeRelaxed } from "./relaxed-json";
  * Short keys regardless of transport compression: object keys shrink to 1-2
  * chars and closed vocabularies (slot kinds, structure/soak names,
  * heat-sink type, locations) become small ints. Identity
- * (`model`/`name`/`techBase`/`tonnage`, plus optional `clanName`) is NOT on
+ * (`model`/`name`/`techBase`/`tonnage`, plus optional `clanName`/`callsign`) is NOT on
  * the wire — the manifest entry already carries it, so `decodeMechLine`
  * takes it as a second argument and each sheet is single-sourced.
  * `weightClass` is omitted too (restored with `weightClassForTonnage`).
@@ -97,6 +97,7 @@ export interface MechIdentity {
   readonly techBase: string;
   readonly tonnage: number;
   readonly clanName?: string;
+  readonly callsign?: string;
 }
 
 /** Encode a canonical `MechDef` into one minified JSONL line (identity omitted). Weapon names are interned in `strings` (mutated first-seen) and emitted as numeric indices. Wire mirror lives in `scripts/pack-catalog.mjs`. */
@@ -264,6 +265,7 @@ export function decodeMechLine(
     model: identity.model,
     name: identity.name,
     ...(identity.clanName !== undefined && { clanName: identity.clanName }),
+    ...(identity.callsign !== undefined && { callsign: identity.callsign }),
     tonnage: identity.tonnage,
     weightClass: weightClassForTonnage(identity.tonnage),
     techBase: identity.techBase,

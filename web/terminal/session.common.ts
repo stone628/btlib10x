@@ -75,7 +75,7 @@ import {
 } from "./chunk";
 import { compensatedLength, i18n, type MessageKey } from "./i18n";
 import { lookupMech } from "./lookup";
-import { F, gunneryLabel, modeWord, PRN, requireMechDef, SHORT_LOC, TRN } from "./misc";
+import { F, displayModel, gunneryLabel, modeWord, PRN, requireMechDef, SHORT_LOC, TRN } from "./misc";
 import { unknownModelError } from "./query";
 import { createBoardRenderUnit, createEjectedBoardRenderUnits } from "./render";
 import { replayChunk } from "./replay";
@@ -152,7 +152,7 @@ export function infoMechChunk(model: string): Chunk[] {
   const is = internalStructureForTonnage(d.tonnage);
   const topLines = [
     i18n("info.head", {
-      model: d.model,
+      model: displayModel(d),
       name: d.name,
       weightClass: d.weightClass,
       tonnage: d.tonnage,
@@ -283,6 +283,8 @@ interface SheetView {
   readonly team: number;
   readonly model: string;
   readonly name: string;
+  /** Pilot callsign when the sheet carries one; shown as `MODEL (callsign)`. */
+  readonly callsign?: string;
   readonly weightClass: string;
   readonly tonnage: number;
   readonly gunnery: number | null;
@@ -347,6 +349,7 @@ export function battleSheet(unit: UnitState, id: string): SheetView {
     team: unit.team,
     model: def.model,
     name: def.name,
+    ...(def.callsign !== undefined && { callsign: def.callsign }),
     weightClass: def.weightClass,
     tonnage: def.tonnage,
     gunnery: unit.gunnery,
@@ -801,7 +804,7 @@ function sheetMovementLine(view: SheetView): string {
 export function sheetLines(view: SheetView): Chunk[] {
   const topLines = [
     i18n("sheet.modelLine", {
-      model: view.model,
+      model: displayModel(view),
       name: view.name,
       weightClass: view.weightClass,
       tonnage: view.tonnage,
@@ -917,7 +920,7 @@ function sheetPilotLine(view: SheetView): string {
 
 export function sheetLinesShort(view: SheetView): string[] {
   const head = i18n("sheet.modelLine", {
-    model: view.model,
+    model: displayModel(view),
     name: view.name,
     weightClass: view.weightClass,
     tonnage: view.tonnage,

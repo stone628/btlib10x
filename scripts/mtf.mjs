@@ -162,6 +162,7 @@ function parseMtf(text, file) {
   // MODEL_PREFIX_NAME (`<prefix>-<variant>`, e.g. "TBR-Prime"); a missing
   // table entry is a hard error, never a silent verbatim fallback.
   let model = variant;
+  let callsign;
   if (techBase === "Clan") {
     const entry = MODEL_PREFIX_NAME[rawName] ?? MODEL_PREFIX_NAME[name];
     if (!entry) {
@@ -190,23 +191,41 @@ function parseMtf(text, file) {
   } else {
     // Inner Sphere sheets must carry a distinct model code on line 3 (it is the
     // catalog key). A bare variant ("C", "Prime") is reported, never guessed.
-    if (model && !/[0-9-]/.test(model.replace(/\s+['"].*$/, ""))) {
+    // The line may carry a pilot-callsign suffix `CODE (Pilot)` (Starterbook /
+    // XTRO Gunslingers pilot customs, TRO 3075 `(Special)`) or a quoted
+    // nickname suffix (`CODE 'Nick'`, e.g. CN9-YLW2's "CN9-YLW2 'Yen Lo Wang'").
+    // The catalog key is the bare whitespace-free code; the suffix becomes the
+    // optional `callsign`.
+    const paren = model.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+    if (paren) {
+      model = paren[1].trim();
+      callsign = paren[2].trim() || undefined;
+    } else {
+      const quoted = model.match(/^(.*?)\s+(['"].*)$/);
+      if (quoted) {
+        model = quoted[1].trim();
+        callsign = quoted[2].replace(/^['"]+|['"]+$/g, "").trim() || undefined;
+      }
+    }
+    // Canon codes never contain whitespace (`VON 4RH-5` is the lone
+    // exception); fold any remainder to dashes so the key stays single-token.
+    model = model.replace(/\s+/g, "-").trim();
+    if (model && !/[0-9-]/.test(model)) {
       return {
         def: null,
         errors: [
-          `Inner Sphere sheet has no distinct model string (variant ${JSON.stringify(model)}); needs manual import`,
+          `Inner Sphere sheet has no distinct model string (variant ${JSON.stringify(variant)}); needs manual import`,
         ],
       };
     }
     if (model && !/[A-Za-z]/.test(model)) {
       return {
         def: null,
-        errors: [`variant ${JSON.stringify(model)} is not a model code; import this one manually`],
+        errors: [
+          `variant ${JSON.stringify(variant)} is not a model code; import this one manually`,
+        ],
       };
     }
-    // Variants may carry a quoted nickname suffix (e.g. CN9-YLW2's
-    // "CN9-YLW2 'Yen Lo Wang'"); the catalog key is the bare model code.
-    model = model.replace(/\s+['"].*$/, "").trim();
   }
   // MTF model codes are emitted all-caps in the catalog so the registry key
   // and the on-disk filename (`<model>.json`) are case-stable.
@@ -422,6 +441,7 @@ function parseMtf(text, file) {
     model,
     name,
     ...(clanName !== undefined && { clanName }),
+    ...(callsign !== undefined && { callsign }),
     tonnage,
     weightClass: tonnage ? weightClass(tonnage) : "Assault",
     techBase: fields.TechBase ?? "Inner Sphere",

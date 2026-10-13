@@ -185,7 +185,7 @@ export function selectMechs(
   const sortRaw = q.filters.get("sort");
   const sort = sortRaw === undefined ? { by: "ton", desc: false } : sortFilter(sortRaw, MECH_SORTS);
   const list = entries.filter(
-    (m) => textHit(q.text, m.model, m.name, m.clanName) && preds.every((p) => p(m)),
+    (m) => textHit(q.text, m.model, m.name, m.clanName, m.callsign) && preds.every((p) => p(m)),
   );
   const byName = (a: MechManifestEntry, b: MechManifestEntry) =>
     a.name.localeCompare(b.name) || a.model.localeCompare(b.model);

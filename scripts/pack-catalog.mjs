@@ -242,6 +242,7 @@ for (const file of mechFiles) {
     b: TECHBASE_CODES[def.techBase] ?? 0,
     t: def.tonnage,
     ...(def.clanName !== undefined && { c: def.clanName }),
+    ...(def.callsign !== undefined && { k: def.callsign }),
     l: wireLines.length + 2, // +2 for string table (line 0) + manifest (line 1)
   });
   wireLines.push(encodeMechDef(def));
