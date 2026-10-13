@@ -42,7 +42,7 @@ SKIP = re.compile(r"\.(test|d)\.ts$")
 # re-subset. Every character the scan finds is added on top, whatever its
 # block. Sizes measured on v0.63.2 (per face, woff2, no hinting):
 #   without the last four blocks   ~683 glyphs   ~26 KB
-#   all blocks below              ~1550 glyphs   ~87 KB
+#   all blocks below              ~2190 glyphs  ~116 KB
 BLOCKS = {
     "Basic Latin": (0x0020, 0x007E),
     "Latin-1 Supplement": (0x00A0, 0x00FF),
@@ -57,7 +57,12 @@ BLOCKS = {
     # Not needed so far; uncomment if a glyph from these shows up:
     # "Greek": (0x0370, 0x03FF),
     # "Superscripts and Subscripts": (0x2070, 0x209F),
-    "Miscellaneous Mathematical Symbols-B": (0x29C0, 0x29FF),
+    "Miscellaneous Mathematical Symbols-A": (0x27C0, 0x27EF),
+    "Supplemental Arrows-A": (0x27F0, 0x27FF),
+    "Supplemental Arrows-B": (0x2900, 0x297F),
+    "Miscellaneous Mathematical Symbols-B": (0x2980, 0x29FF),
+    "Supplemental Mathematical Operators": (0x2A00, 0x2AFF),
+    "Miscellaneous Symbols and Arrows": (0x2B00, 0x2BFF),
 }
 
 # Unicode categories with no width of their own (combining marks, format
