@@ -10,7 +10,7 @@ import {
 import type { ArmLocation, LegLocation } from "../src/core/types";
 import { buildLinesChunk, buildLinesChunkWith, type Chunk } from "./chunk";
 import type { MessageKey } from "./i18n/index";
-import { i18n, isLocale, localeList } from "./i18n/index";
+import { i18n, localeList, normalizeLocale } from "./i18n/index";
 import { lookupMap } from "./lookup";
 import { strictInt } from "./misc";
 import { resetPersonaBattle } from "./persona";
@@ -168,9 +168,9 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
           i18n("lang.available", { list: localeList() }),
         );
       }
-      // Commands are case-insensitive, so locales are too; `ko` aliases `kr`.
-      const wanted = a[0].toLowerCase() === "ko" ? "kr" : a[0].toLowerCase();
-      if (!isLocale(wanted))
+      // Commands are case-insensitive, so locales are too; `kr` aliases `ko`.
+      const wanted = normalizeLocale(a[0]);
+      if (wanted === null)
         throw new Error(i18n("err.unknownLocale", { name: a[0], list: localeList() }));
       setConfigLocale(wanted);
       return cmdRunChunks(i18n("lang.set", { locale: configLocale() }));

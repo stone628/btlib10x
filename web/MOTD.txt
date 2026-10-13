@@ -1,10 +1,16 @@
 <center><div class="banner">Welcome to bt10x terminal!</div></center>
-인터페이스가 좀 불친절한데, 이는 의도적인 것으로,
+<div lang="ko">인터페이스가 좀 불친절한데, 이는 의도적인 것으로,
 터미널에서 텍스트로 플레이 하는 감성을 살리려 노력했습니다.
 
 charge, DFA까지 추가했습니다.
 persona player를 설정하면 이동과 공격을 자동으로 진행합니다.
+</div>
+<div lang="en">The interface is a bit spartan — that's intentional,
+an effort to capture the feel of playing over a text terminal.
 
+Charge and DFA are now supported.
+Assign a persona player and it will handle movement and attacks automatically.
+</div>
 <center><a href="https://buymeacoffee.com/stone628" target="_blank" class="link-button"><span style="text-decoration: none; font-family: sans-serif; font-weight: bold;">☕</span> Buy me a coffee!</a>
 
-<div class="hint">[hint] 숨겨진 명령어 autoplay를 실행 해 보세요.</div></center>
+<div lang="ko" class="hint">[hint] 숨겨진 명령어 autoplay를 실행 해 보세요.</div><div lang="en" class="hint">[hint] Try the hidden autoplay command.</div></center>

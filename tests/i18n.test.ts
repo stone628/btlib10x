@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   bestFireTarget,
   isNominal,
@@ -11,7 +11,7 @@ import {
 } from "../src/index";
 import { en } from "../web/i18n/en";
 import type { LocaleId, MessageKey } from "../web/i18n/index";
-import { i18nIn, LOCALES } from "../web/i18n/index";
+import { i18nIn, LOCALES, normalizeLocale } from "../web/i18n/index";
 import {
   commitAttack,
   commitMovement,
@@ -20,6 +20,7 @@ import {
   newSession,
   placeLanding,
   queueWeaponAttacks,
+  setConfigLocale,
 } from "../web/session";
 import { bearing, currentActor, execute } from "./helpers";
 
@@ -117,17 +118,25 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
 }
 
 describe("i18n catalogs", () => {
-  it("kr provides every key in the canonical en catalog", () => {
+  it("ko provides every key in the canonical en catalog", () => {
     const enKeys = Object.keys(en);
-    const krKeys = Object.keys(LOCALES.kr);
-    expect(krKeys.sort()).toEqual([...enKeys].sort());
+    const koKeys = Object.keys(LOCALES.ko);
+    expect(koKeys.sort()).toEqual([...enKeys].sort());
   });
 
   it("interpolates {param} placeholders", () => {
     expect(i18nIn("en", "ok.mapLoaded", { name: "beginner", w: 15, h: 16 })).toBe(
       "map beginner: 15x16",
     );
-    expect(i18nIn("kr", "lang.set", { locale: "kr" })).toBe("언어가 kr(으)로 설정되었습니다");
+    expect(i18nIn("ko", "lang.set", { locale: "ko" })).toBe("언어가 ko(으)로 설정되었습니다");
+  });
+
+  it("accepts kr as an alias of ko", () => {
+    expect(normalizeLocale("kr")).toBe("ko");
+    expect(normalizeLocale("KR")).toBe("ko");
+    expect(normalizeLocale("ko")).toBe("ko");
+    expect(normalizeLocale("en")).toBe("en");
+    expect(normalizeLocale("xx")).toBeNull();
   });
 
   it("falls back to English for missing catalog entries", () => {
@@ -146,31 +155,41 @@ describe("i18n catalogs", () => {
 });
 
 describe("lang command", () => {
+  beforeEach(() => {
+    setConfigLocale("en");
+  });
+
   it("defaults to English and lists available locales", () => {
     const s = newSession(7);
     expect(configLocale()).toBe("en");
-    expect(execute(s, "lang")).toEqual(["language: en", "available: en, kr"]);
+    expect(execute(s, "lang")).toEqual(["language: en", "available: en, ko"]);
   });
 
   it("switches output language for subsequent commands", () => {
     const s = newSession(7);
-    expect(execute(s, "lang kr")).toEqual(["언어가 kr(으)로 설정되었습니다"]);
-    expect(configLocale()).toBe("kr");
+    expect(execute(s, "lang ko")).toEqual(["언어가 ko(으)로 설정되었습니다"]);
+    expect(configLocale()).toBe("ko");
     expect(execute(s, "status")[0]).toBe("맵: (없음)");
-    expect(execute(s, "help")[0]).toBe(i18nIn("kr", "hint.setup").split("\n")[0]);
+    expect(execute(s, "help")[0]).toBe(i18nIn("ko", "hint.setup").split("\n")[0]);
+  });
+
+  it("accepts kr as an alias of ko", () => {
+    const s = newSession(7);
+    expect(execute(s, "lang kr")).toEqual(["언어가 ko(으)로 설정되었습니다"]);
+    expect(configLocale()).toBe("ko");
   });
 
   it("rejects unknown locale codes with a localized error", () => {
     const s = newSession(7);
-    execute(s, "lang kr");
-    expect(execute(s, "lang xx")).toEqual([`오류: 알 수 없는 언어 'xx' (사용 가능: en, kr)`]);
+    execute(s, "lang ko");
+    expect(execute(s, "lang xx")).toEqual([`오류: 알 수 없는 언어 'xx' (사용 가능: en, ko)`]);
   });
 
   it("preserves the locale across reset and rematch", () => {
     const s = newSession(7);
-    execute(s, "lang kr");
+    execute(s, "lang ko");
     execute(s, "reset");
-    expect(configLocale()).toBe("kr");
+    expect(configLocale()).toBe("ko");
 
     execute(s, "map beginner");
     execute(s, "add a1 HBK-4G 2 2 s");
@@ -178,22 +197,26 @@ describe("lang command", () => {
     execute(s, "start");
     autoPlay(s);
     expect(execute(s, "rematch")[0]).toBe("=== 재경기 시작 ===");
-    expect(configLocale()).toBe("kr");
+    expect(configLocale()).toBe("ko");
   });
 });
 
 describe("localized output smoke test", () => {
+  beforeEach(() => {
+    setConfigLocale("en");
+  });
+
   it("renders board placeholder and errors in Korean after switching", () => {
     const s = newSession(7);
-    execute(s, "lang kr");
-    expect(execute(s, "board")).toEqual([i18nIn("kr", "board.noMap")]);
+    execute(s, "lang ko");
+    expect(execute(s, "board")).toEqual([i18nIn("ko", "board.noMap")]);
     expect(execute(s, "bogus")).toEqual([`오류: 알 수 없는 명령 'bogus' ('help'를 입력해 보세요)`]);
     expect(execute(s, "status").join("\n")).toContain("(배치된 유닛 없음)");
   });
 
   it("keeps dense rule tokens (GATOR, locations) untranslated", () => {
     const s = newSession(7);
-    execute(s, "lang kr");
+    execute(s, "lang ko");
     execute(s, "map beginner");
     execute(s, "add a1 HBK-4G 8 8");
     execute(s, "add b1 HBK-4G 12 12");
@@ -201,5 +224,22 @@ describe("localized output smoke test", () => {
     if (s.battle === null) throw new Error("battle not started");
     // location abbreviations stay stable regardless of locale
     expect(Object.keys(en) as MessageKey[]).toContain("sheet.statusHeader");
+  });
+});
+
+describe("MOTD locale sections", () => {
+  it("carries both en and ko sections with no Hangul in the English block", async () => {
+    const { readFileSync } = await import("node:fs");
+    const motd = readFileSync(new URL("../web/MOTD.txt", import.meta.url), "utf8");
+    expect(motd).toContain('lang="ko"');
+    expect(motd).toContain('lang="en"');
+    const enBlocks = [...motd.matchAll(/<div[^>]*lang="en"[^>]*>([\s\S]*?)<\/div>/g)].map(
+      (m) => m[1] ?? "",
+    );
+    expect(enBlocks.length).toBeGreaterThan(0);
+    for (const block of enBlocks) expect(block).not.toMatch(/[\uac00-\ud7a3]/);
+    const css = readFileSync(new URL("../web/bt10x.css", import.meta.url), "utf8");
+    expect(css).toContain(":root:lang(en) #motd-body :lang(ko)");
+    expect(css).toContain(":root:lang(ko) #motd-body :lang(en)");
   });
 });

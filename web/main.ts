@@ -7,7 +7,7 @@ import {
 } from "./autoplay";
 import { buildLinesChunkWith, type Chunk } from "./chunk";
 import { runChunks } from "./cli";
-import { i18n, isLocale } from "./i18n/index";
+import { i18n, normalizeLocale } from "./i18n/index";
 import motdText from "./MOTD.txt";
 import { configLocale, newSession, promptBody, promptHint, setConfigLocale } from "./session";
 
@@ -33,16 +33,18 @@ try {
 } catch {
   // storage unavailable: fall back to the default locale
 }
-if (savedLang !== null && isLocale(savedLang)) setConfigLocale(savedLang);
+const normalizedSaved = savedLang !== null ? normalizeLocale(savedLang) : null;
+if (normalizedSaved !== null) setConfigLocale(normalizedSaved);
 const urlLang = new URLSearchParams(window.location.search).get("lang");
-if (urlLang !== null && isLocale(urlLang)) {
-  setConfigLocale(urlLang);
+const normalizedUrl = urlLang !== null ? normalizeLocale(urlLang) : null;
+if (normalizedUrl !== null) {
+  setConfigLocale(normalizedUrl);
 }
 
 /** Keep `<html lang>` and the stored choice in step with the active locale. */
 function syncDocLang(): void {
   const locale = configLocale();
-  document.documentElement.lang = locale === "kr" ? "ko" : locale;
+  document.documentElement.lang = locale;
   if (locale !== savedLang) {
     savedLang = locale;
     try {

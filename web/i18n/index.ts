@@ -1,16 +1,23 @@
 import type { Catalog, MessageKey } from "./en";
 import { en } from "./en";
-import { kr } from "./kr";
+import { ko } from "./ko";
 
 export type { Catalog, MessageKey };
 
 /** All shipped locales. */
-export const LOCALES = { en, kr } as const satisfies Record<string, Catalog>;
+export const LOCALES = { en, ko } as const satisfies Record<string, Catalog>;
 
 export type LocaleId = keyof typeof LOCALES;
 
 export function isLocale(value: string): value is LocaleId {
   return Object.hasOwn(LOCALES, value);
+}
+
+/** Legacy alias: `kr` is accepted wherever a locale is parsed, mapping to `ko`. */
+export function normalizeLocale(raw: string): LocaleId | null {
+  const lowered = raw.toLowerCase();
+  if (lowered === "kr") return "ko";
+  return isLocale(lowered) ? lowered : null;
 }
 
 export function localeList(): string {

@@ -43,7 +43,7 @@ Examples:
 | command | effect |
 |---|---|
 | `help` / `?` | state hint line, then commands available now; `help <command>` shows usage plus per-argument explanations |
-| `lang [<locale>]` | show or switch output language (`en`, `kr`); session-scoped, survives reset/rematch, defaults to `en` |
+| `lang [<locale>]` | show or switch output language (`en`, `ko`; `kr` aliases `ko`); session-scoped, survives reset/rematch, defaults to `en` |
 | `board` | ASCII grid (styled spans from `createBoardModel(BoardRenderInfo)`), sized from loaded map's width×height; with no map loaded, explains how to load one. Rendered as styled spans in a `.board` block: terrain glyphs on the grid rows and team-colored unit ids (id characters only, via `idStyles`); a bold `!` (`t-club`, `--club`) at the bottom-left interior slot (`\!w0 /`) marks a hex holding a ground club token (`state.clubs`; terrain-derived trees/girders are not marked) and adds a legend entry; font family, size and line spacing come from the `--board-ff` / `--board-fs` / `--board-lh` CSS variables and each terrain's scheme from the `--t-*` variables in `web/bt10x.css` |
 | `clear` | clear the scrollback screen |
 | `log [n]` | last n events (default 10) |
@@ -355,7 +355,7 @@ stated elsewhere in this document or the codebase:
     web/lookup.ts      tolerant (case-insensitive) catalog lookups
     web/table.ts       reference-table renderers (`table` command)
     web/misc.ts        shared label helpers (facing, posture, weapon category)
-    web/i18n/          string catalogs (`en` canonical, `kr`)
+    web/i18n/          string catalogs (`en` canonical, `ko`; `kr` aliases `ko`)
     web/render.ts       structured BoardModel / Span model + boardToText / boardToSpans
     scripts/build-web.mjs  esbuild bundles: src/index.ts → web/btlib10x.js (engine),
                          web/main.ts → web/bt10x.js (app; engine kept external),

@@ -1,7 +1,7 @@
 import type { Catalog } from "./en";
 
 /** Korean catalog. Keys are compile-checked against the English original. */
-export const kr: Catalog = {
+export const ko: Catalog = {
   // app chrome
   "app.banner.title": "bt10x 터미널 v{version} - 배틀테크 토탈 워페어 규칙 서브셋",
   "app.banner.help": "명령어는 'help'를 입력하세요.",
