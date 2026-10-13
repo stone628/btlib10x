@@ -9,7 +9,6 @@ import {
   heatScaleEffects,
   LEFT_SIDE_TABLE,
   listMapNames,
-  listWeaponNames,
   RIGHT_SIDE_TABLE,
   type WeaponCategory,
   type WeaponDef,
@@ -17,6 +16,7 @@ import {
 } from "btlib10x";
 import {
   buildBoardChunk,
+  buildCollapsibleChunk,
   buildHeaderTableChunkFromColumns,
   buildHeaderTableChunkFromRows,
   buildLinesChunk,
@@ -25,6 +25,18 @@ import {
 import { i18n } from "./i18n/index";
 import { lookupMap, lookupWeapon } from "./lookup";
 import { weaponCategory } from "./misc";
+import {
+  isEmptyQuery,
+  MECH_FILTER_KEYS,
+  parseQuery,
+  queryLabel,
+  ROW_CAP,
+  selectMechs,
+  selectWeapons,
+  unknownModelError,
+  unknownWeaponError,
+  WEAPON_FILTER_KEYS,
+} from "./query";
 
 const CLUSTER_SIZES = CLUSTER_COLUMNS;
 
@@ -147,11 +159,17 @@ export function listTables(): Chunk[] {
   ];
 }
 
-export function infoMechListChunk(): Chunk {
-  const list = [...catalogMechs()].sort((a: MechManifestEntry, b: MechManifestEntry) => {
-    if (a.tonnage !== b.tonnage) return a.tonnage - b.tonnage;
-    return a.name.localeCompare(b.name);
-  });
+/** `info mech` resolves to either one sheet or a listing tier. */
+export type InfoMechResult =
+  | {
+      readonly kind: "sheet";
+      readonly model: string;
+      /** Set when a search (not an exact model key) narrowed to this one 'Mech. */
+      readonly note: string | null;
+    }
+  | { readonly kind: "list"; readonly chunks: Chunk[] };
+
+function mechTable(list: readonly MechManifestEntry[]): Chunk {
   const header = [
     i18n("info.mechColModel"),
     i18n("info.mechColName"),
@@ -159,18 +177,139 @@ export function infoMechListChunk(): Chunk {
     i18n("info.mechColTechBase"),
     i18n("info.mechColTon"),
   ];
-  const rows = list.map((d: MechManifestEntry) => {
-    // Move ratings live in the registered sheets (sync registry is fully
-    // loaded); the manifest carries identity only.
-    return [
-      d.model,
-      d.clanName === undefined ? d.name : `${d.name} (${d.clanName})`,
-      weightClassForTonnage(d.tonnage),
-      d.techBase,
-      String(d.tonnage),
-    ];
-  });
+  // Move ratings live in the registered sheets; the manifest carries identity only.
+  const rows = list.map((d) => [
+    d.model,
+    d.clanName === undefined ? d.name : `${d.name} (${d.clanName})`,
+    weightClassForTonnage(d.tonnage),
+    d.techBase,
+    String(d.tonnage),
+  ]);
   return buildHeaderTableChunkFromRows(header, rows);
+}
+
+function tonnageSpan(list: readonly MechManifestEntry[]): string {
+  const tons = list.map((m) => m.tonnage);
+  const lo = Math.min(...tons);
+  const hi = Math.max(...tons);
+  return lo === hi ? `${lo}t` : `${lo}–${hi}t`;
+}
+
+/** Group by chassis name, keeping the list's order of first appearance. */
+function groupBy<T>(list: readonly T[], key: (item: T) => string): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+  for (const item of list) {
+    const k = key(item);
+    const g = groups.get(k);
+    if (g === undefined) groups.set(k, [item]);
+    else g.push(item);
+  }
+  return groups;
+}
+
+/** Model keys shown inline on a collapsed chassis row before an ellipsis. */
+const CHASSIS_INLINE_MODELS = 6;
+
+function chassisChunks(chassis: ReadonlyMap<string, readonly MechManifestEntry[]>): Chunk[] {
+  const groups = [...chassis.values()];
+  const tonW = Math.max(...groups.map((g) => tonnageSpan(g).length));
+  const nameW = Math.max(...[...chassis.keys()].map((n) => n.length));
+  const countW = Math.max(...groups.map((g) => String(g.length).length));
+  return [...chassis].map(([name, variants]) => {
+    const models = variants.slice(0, CHASSIS_INLINE_MODELS).map((m) => m.model);
+    if (variants.length > CHASSIS_INLINE_MODELS) models.push("…");
+    const summary = `${tonnageSpan(variants).padStart(tonW)} ${name.padEnd(nameW)} ${String(variants.length).padStart(countW)}  ${models.join(" ")}`;
+    return buildCollapsibleChunk(summary, [mechTable(variants)]);
+  });
+}
+
+function mechCountsChunk(list: readonly MechManifestEntry[]): Chunk {
+  const byClass = groupBy(list, (m) => weightClassForTonnage(m.tonnage));
+  const chassisCount = (g: readonly MechManifestEntry[]) => new Set(g.map((m) => m.name)).size;
+  if (byClass.size > 1) {
+    const order = ["Light", "Medium", "Heavy", "Assault"];
+    const rows = [...byClass]
+      .sort(([a], [b]) => order.indexOf(a) - order.indexOf(b))
+      .map(([cls, g]) => [cls, tonnageSpan(g), String(g.length), String(chassisCount(g))]);
+    return buildHeaderTableChunkFromRows(
+      [
+        i18n("info.mechColClass"),
+        i18n("info.mechColTon"),
+        i18n("info.mechColCount"),
+        i18n("info.mechColChassis"),
+      ],
+      rows,
+    );
+  }
+  const byTon = groupBy(list, (m) => String(m.tonnage));
+  const rows = [...byTon]
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([ton, g]) => [`${ton}t`, String(g.length), String(chassisCount(g))]);
+  return buildHeaderTableChunkFromRows(
+    [i18n("info.mechColTon"), i18n("info.mechColCount"), i18n("info.mechColChassis")],
+    rows,
+  );
+}
+
+/**
+ * `info mech [model | text] [key:value …] [!]`. An exact model key (or a
+ * single match) opens its sheet; otherwise the listing tier depends on the
+ * match count: a table up to ROW_CAP 'Mechs, then one collapsible row per
+ * chassis up to ROW_CAP chassis, then counts by class (or by tonnage inside
+ * one class). `!` always prints the full table.
+ */
+export function infoMechQuery(
+  args: readonly string[],
+  entries: readonly MechManifestEntry[] = catalogMechs(),
+): InfoMechResult {
+  const q = parseQuery(args, MECH_FILTER_KEYS);
+  if (q.text !== "" && q.filters.size === 0) {
+    const needle = q.text.toLowerCase();
+    const exact = entries.find((m) => m.model.toLowerCase() === needle);
+    if (exact !== undefined) return { kind: "sheet", model: exact.model, note: null };
+  }
+  const list = selectMechs(entries, q);
+  if (list.length === 0) {
+    if (q.filters.size === 0) throw unknownModelError(q.text, entries);
+    throw new Error(i18n("err.noMechMatch", { query: queryLabel(q) }));
+  }
+  const first = list[0]!;
+  if (list.length === 1 && !q.force) {
+    const note = i18n("info.mechSingleMatch", { query: queryLabel(q), model: first.model });
+    return { kind: "sheet", model: first.model, note };
+  }
+  const chassis = groupBy(list, (m) => m.name);
+  const head = isEmptyQuery(q)
+    ? i18n("info.mechTotal", { count: list.length, chassis: chassis.size })
+    : i18n("info.mechMatches", { count: list.length, chassis: chassis.size, query: queryLabel(q) });
+  if (list.length <= ROW_CAP || q.force) {
+    return { kind: "list", chunks: [buildLinesChunk(head), mechTable(list)] };
+  }
+  const hint = buildLinesChunk(i18n("info.mechHint"));
+  if (chassis.size <= ROW_CAP) {
+    return {
+      kind: "list",
+      chunks: [buildLinesChunk(head, i18n("info.chassisHint")), ...chassisChunks(chassis), hint],
+    };
+  }
+  const classes = new Set(list.map((m) => weightClassForTonnage(m.tonnage)));
+  const tonnages = new Set(list.map((m) => m.tonnage));
+  if (classes.size > 1 || tonnages.size > 1) {
+    return { kind: "list", chunks: [buildLinesChunk(head), mechCountsChunk(list), hint] };
+  }
+  // One tonnage, still too many chassis: the first ROW_CAP chassis, then a tally.
+  const shown = new Map([...chassis].slice(0, ROW_CAP));
+  return {
+    kind: "list",
+    chunks: [
+      buildLinesChunk(head, i18n("info.chassisHint")),
+      ...chassisChunks(shown),
+      buildLinesChunk(
+        i18n("info.moreChassis", { count: chassis.size - ROW_CAP }),
+        i18n("info.mechHint"),
+      ),
+    ],
+  };
 }
 
 export function infoMapListChunk(): Chunk {
@@ -185,29 +324,69 @@ function weaponDamageSummary(w: WeaponDef): string {
   return String(w.damage ?? 0);
 }
 
-export function infoWeaponListChunk(): Chunk {
-  const grouped = new Map<WeaponCategory, WeaponDef[]>();
-  let maxNameLen = 0;
-  for (const w of allWeaponDefs()) {
-    const list = grouped.get(w.category) ?? [];
-    list.push(w);
-    grouped.set(w.category, list);
-    maxNameLen = Math.max(maxNameLen, w.name.length);
-  }
-  const lines: string[] = [];
-  for (const [cat, weapons] of grouped) {
-    lines.push(i18n("info.weaponCategory", { category: weaponCategory(cat) }));
-    for (const w of weapons) {
-      const rs = `S${w.short}`.padStart(3);
-      const rm = `M${w.medium}`.padStart(3);
-      const rl = `L${w.long}`.padStart(3);
-      const rh = `H${w.heat ?? 0}`.padStart(3);
+function weaponStatLine(w: WeaponDef, nameLen: number): string {
+  const rs = `S${w.short}`.padStart(3);
+  const rm = `M${w.medium}`.padStart(3);
+  const rl = `L${w.long}`.padStart(3);
+  const rh = `H${w.heat ?? 0}`.padStart(3);
+  return `  ${w.name.padEnd(nameLen)} ${rs} /${rm} /${rl}  ${rh}  D${weaponDamageSummary(w)}`;
+}
 
-      lines.push(
-        `  ${w.name.padEnd(maxNameLen)} ${rs} /${rm} /${rl}  ${rh}  D${weaponDamageSummary(w)}`,
-      );
-    }
+/** Stat lines, under `[Category]` headers when listed in catalog order. */
+function weaponStatLines(list: readonly WeaponDef[], grouped: boolean): string[] {
+  const nameLen = Math.max(...list.map((w) => w.name.length));
+  if (!grouped) return list.map((w) => weaponStatLine(w, nameLen));
+  const lines: string[] = [];
+  for (const [cat, weapons] of groupBy(list, (w) => w.category)) {
+    lines.push(i18n("info.weaponCategory", { category: weaponCategory(cat as WeaponCategory) }));
+    for (const w of weapons) lines.push(weaponStatLine(w, nameLen));
   }
+  return lines;
+}
+
+/**
+ * `info weapon [name | text] [key:value …] [!]`. An exact name (or a single
+ * match) shows its detail; up to ROW_CAP matches print stat lines; more print
+ * names only, one line per category. `!` always prints every stat line.
+ */
+export function infoWeaponQuery(
+  args: readonly string[],
+  entries: readonly WeaponDef[] = allWeaponDefs(),
+): Chunk {
+  const q = parseQuery(args, WEAPON_FILTER_KEYS);
+  if (q.text !== "" && q.filters.size === 0) {
+    const needle = q.text.toLowerCase();
+    const exact = entries.find((w) => w.name.toLowerCase() === needle);
+    if (exact !== undefined) return infoWeaponChunk(exact.name);
+  }
+  const list = selectWeapons(entries, q);
+  if (list.length === 0) {
+    if (q.filters.size === 0) throw unknownWeaponError(q.text, entries);
+    throw new Error(i18n("err.noWeaponMatch", { query: queryLabel(q) }));
+  }
+  if (list.length === 1 && !q.force) {
+    const only = infoWeaponChunk(list[0]!.name);
+    const note = i18n("info.weaponSingleMatch", { query: queryLabel(q), name: list[0]!.name });
+    return buildLinesChunk(note, ...(only.kind === "lines" ? only.lines : []));
+  }
+  const head = isEmptyQuery(q)
+    ? i18n("info.weaponTotal", { count: list.length })
+    : i18n("info.weaponMatches", { count: list.length, query: queryLabel(q) });
+  const sorted = q.filters.has("sort") && q.filters.get("sort")!.toLowerCase() !== "cat";
+  if (list.length <= ROW_CAP || q.force) {
+    return buildLinesChunk(head, ...weaponStatLines(list, !sorted));
+  }
+  const lines = [head];
+  for (const [cat, weapons] of groupBy(list, (w) => w.category)) {
+    lines.push(
+      i18n("info.weaponNamesLine", {
+        category: weaponCategory(cat as WeaponCategory),
+        count: weapons.length,
+        names: weapons.map((w) => w.name).join(", "),
+      }),
+    );
+  }
+  lines.push(i18n("info.weaponHint"));
   return buildLinesChunk(...lines);
 }
 
@@ -221,9 +400,7 @@ function weaponDamageDetail(w: WeaponDef): string {
 
 export function infoWeaponChunk(name: string): Chunk {
   const w = lookupWeapon(name);
-  if (w === undefined) {
-    throw new Error(i18n("err.unknownWeapon", { name, list: listWeaponNames().join(", ") }));
-  }
+  if (w === undefined) throw unknownWeaponError(name);
   const cat = weaponCategory(w.category);
   const lines = [
     i18n("info.weaponHead", { name: w.name, category: cat }),

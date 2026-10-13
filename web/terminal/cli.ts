@@ -65,9 +65,8 @@ import {
 import {
   infoMapChunks,
   infoMapListChunk,
-  infoMechListChunk,
-  infoWeaponChunk,
-  infoWeaponListChunk,
+  infoMechQuery,
+  infoWeaponQuery,
   listTables,
   renderClusterTable,
   renderCriticalTable,
@@ -147,7 +146,11 @@ function cmdRunChunks(...lines: string[]): Chunk[] {
 
 // ------------------------------------------------------------- globals ----
 /** Multi-line grouped usage shared by the `info` help entry and its arg errors. */
-const INFO_USAGE = ["info mech [model]", "info map [name]", "info weapon [name]"].join("\n");
+const INFO_USAGE = [
+  "info mech [model | text] [key:value ...] [!]",
+  "info map [name]",
+  "info weapon [name | text] [key:value ...] [!]",
+].join("\n");
 const GLOBAL_CMDS: Record<string, CmdDef> = {
   help: {
     helpKey: "cmd.help.help",
@@ -185,21 +188,23 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
     helpKey: "cmd.info.help",
     usage: INFO_USAGE,
     argsDoc: [
-      ["mech [model]", "cmd.info.arg.mech"],
+      ["mech [query]", "cmd.info.arg.mech"],
       ["map [name]", "cmd.info.arg.map"],
-      ["weapon [name]", "cmd.info.arg.weapon"],
+      ["weapon [query]", "cmd.info.arg.weapon"],
     ],
     run: (_s, a) => {
       expectArgs(a, 1, INFO_USAGE);
       const what = a[0]!.toLowerCase();
-      if (what === "mech") return a[1] !== undefined ? infoMechChunk(a[1]) : [infoMechListChunk()];
+      if (what === "mech") {
+        const res = infoMechQuery(a.slice(1));
+        if (res.kind === "list") return res.chunks;
+        const sheet = infoMechChunk(res.model);
+        return res.note === null ? sheet : [buildLinesChunk(res.note), ...sheet];
+      }
       if (what === "map") {
         return a[1] !== undefined ? infoMapChunks(a[1]) : [infoMapListChunk()];
       }
-      if (what === "weapon") {
-        const name = a.slice(1).join(" ");
-        return [name ? infoWeaponChunk(name) : infoWeaponListChunk()];
-      }
+      if (what === "weapon") return [infoWeaponQuery(a.slice(1))];
       throw new Error(
         i18n("err.expectedArgs", {
           usage: INFO_USAGE,

@@ -76,6 +76,7 @@ import {
 import { compensatedLength, i18n, type MessageKey } from "./i18n";
 import { lookupMech } from "./lookup";
 import { F, gunneryLabel, modeWord, PRN, requireMechDef, SHORT_LOC, TRN } from "./misc";
+import { unknownModelError } from "./query";
 import { createBoardRenderUnit, createEjectedBoardRenderUnits } from "./render";
 import { replayChunk } from "./replay";
 import { requireBattle, type Session, type SessionGameEvent, victoryBannerChunk } from "./session";
@@ -147,7 +148,7 @@ export function boardChunk(s: Session): Chunk {
 // ---------------------------------------------------------------- info ----
 export function infoMechChunk(model: string): Chunk[] {
   const d = lookupMech(model);
-  if (d === undefined) throw new Error(i18n("err.unknownModel", { model }));
+  if (d === undefined) throw unknownModelError(model);
   const is = internalStructureForTonnage(d.tonnage);
   const topLines = [
     i18n("info.head", {

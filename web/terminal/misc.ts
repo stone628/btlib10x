@@ -8,6 +8,7 @@ import {
 } from "btlib10x";
 import { i18n, type MessageKey } from "./i18n";
 import { lookupMech } from "./lookup";
+import { unknownModelError } from "./query";
 
 const CATEGORY_LABEL: Readonly<Record<WeaponCategory, MessageKey>> = {
   MISSILE: "info.weaponCategoryMissile",
@@ -38,7 +39,7 @@ export function gunneryLabel(gunnery: number): string {
 
 export function requireMechDef(model: string): ResolvedMechDef {
   const def = lookupMech(model) ?? ensureMechRegistered(model);
-  if (def === undefined) throw new Error(i18n("err.unknownModel", { model }));
+  if (def === undefined) throw unknownModelError(model);
   return def;
 }
 

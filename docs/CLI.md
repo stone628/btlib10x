@@ -47,10 +47,10 @@ Examples:
 | `board` | ASCII grid (styled spans from `createBoardModel(BoardRenderInfo)`), sized from loaded map's width×height; with no map loaded, explains how to load one. Rendered as styled spans in a `.board` block: terrain glyphs on the grid rows and team-colored unit ids (id characters only, via `idStyles`); a bold `!` (`t-club`, `--club`) at the bottom-left interior slot (`\!w0 /`) marks a hex holding a ground club token (`state.clubs`; terrain-derived trees/girders are not marked) and adds a legend entry; font family, size and line spacing come from the `--board-ff` / `--board-fs` / `--board-lh` CSS variables and each terrain's scheme from the `--t-*` variables in `web/bt10x.css` |
 | `clear` | clear the scrollback screen |
 | `log [n]` | last n events (default 10) |
-| `info mech` | list available 'Mechs |
+| `info mech [text] [key:value ...] [!]` | search the 'Mech catalog: plain words are a case-insensitive substring match on model, chassis and Clan name; filters AND together: `class:l\|m\|h\|a` (comma list, unambiguous prefix of light/medium/heavy/assault), `ton:70` / `ton:60-75` / `ton:>=80` (also `<`, `<=`, `>`), `tech:is\|clan`, `sort:[-]ton\|name\|model` (default tonnage, then name). Filters read the catalog manifest only (model, chassis, Clan name, tech base, tonnage). Up to 20 matches print the model table; more print one row per chassis (tonnage, name, variant count, models; collapsible in the web CLI, expanding to the variant table) while there are at most 20 chassis; beyond that, counts by class (or by tonnage when all matches share a class). A trailing `!` prints the full table. A single match opens its sheet; when it came from a search or filter rather than an exact model key, a line above the sheet names the one matching model. No match on plain text suggests up to 5 closest model keys (also for `add`) |
 | `info mech <model>` | sheet summary: walk/run/jump ratings, weapons, and the 3-row critical slot chart (right arm / head / left arm, right / center / left torso, right / left leg); web CLI renders the chart as a mouse-click-collapsible block |
 | `info map` | list available maps |
-| `info weapon [name]` | list weapons, or show one weapon's stats |
+| `info weapon [name \| text] [key:value ...] [!]` | an exact name (or a single match, with a line naming it when it was not an exact case-insensitive name) shows that weapon's stats; otherwise search the weapon catalog by name substring with filters `cat:ballistic\|energy\|missile\|equipment` (unambiguous prefix, comma list), `tech:is\|clan` (Clan = `CL ` name prefix), `heat:`, `range:` (long range), `dmg:` (best-case damage: best variable bracket or full missile salvo), same numeric forms as `ton:`, and `sort:[-]cat\|name\|heat\|range\|dmg` (default catalog order). Up to 20 matches print stat lines (grouped by category in catalog order); more print names only, one line per category. A trailing `!` prints every stat line. No match on plain text suggests up to 5 closest names |
 | `table [cluster\|hitloc\|crit\|heat]` | print a reference table (no argument lists them) |
 | `info map <name>` | map info: width×height, terrain types and counts, elevation counts, ASCII map with terrain glyphs |
 | `reset` | wipe everything back to empty setup |
@@ -355,7 +355,8 @@ stated elsewhere in this document or the codebase:
                                  context + decide(), `pp` command + synchronous driver,
                                  `pp setup` random setup
     web/terminal/lookup.ts       tolerant (case-insensitive) catalog lookups
-    web/terminal/table.ts        reference-table renderers (`table` command)
+    web/terminal/query.ts        `info mech` / `info weapon` query grammar: filters, sorting, closest-name suggestions
+    web/terminal/table.ts        reference-table renderers (`table` command) and the `info` listing tiers
     web/terminal/misc.ts         shared label helpers (facing, posture, weapon category)
     web/terminal/i18n/           string catalogs (`en` canonical, `ko`; `kr` aliases `ko`)
     web/terminal/render.ts       structured BoardModel / Span model + boardToText / boardToSpans
