@@ -478,6 +478,7 @@ function main() {
   mkdirSync(outDir, { recursive: true });
   let nonBiped = 0;
   let mixed = 0;
+  let primitive = 0;
   const written = new Map();
   for (const file of files) {
     const text = readFileSync(join(mtfDir, file), "utf8");
@@ -490,6 +491,14 @@ function main() {
     // Mixed tech base sheets are not supported yet.
     if (/^techbase:\s*Mixed/im.test(text)) {
       mixed++;
+      continue;
+    }
+    // Primitive construction (cockpit/armor/engine) is out of scope: the
+    // engine models standard construction only (notably the heat-sink
+    // check assumes a standard-rated engine). XTRO sheets are kept —
+    // only the primitive-technology markers are skipped.
+    if (/^(cockpit|armor|engine):.*primitive/im.test(text)) {
+      primitive++;
       continue;
     }
     const { def, errors } = parseMtf(text, file);
@@ -516,7 +525,7 @@ function main() {
     generated++;
   }
   console.log(
-    `\n${generated} generated, ${skipped} skipped, ${nonBiped} non-biped and ${mixed} mixed-tech ignored. Run 'npm run pack && npm test' to validate.`,
+    `\n${generated} generated, ${skipped} skipped, ${nonBiped} non-biped, ${mixed} mixed-tech and ${primitive} primitive ignored. Run 'npm run pack && npm test' to validate.`,
   );
 }
 
