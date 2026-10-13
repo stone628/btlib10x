@@ -12,7 +12,7 @@ import { decodeRelaxed, encodeRelaxed } from "./relaxed-json";
  * Short keys regardless of transport compression: object keys shrink to 1-2
  * chars and closed vocabularies (slot kinds, structure/soak names,
  * heat-sink type, locations) become small ints. Identity
- * (`model`/`name`/`techBase`/`tonnage`/`era`, plus optional `clanName`/`callsign`) is NOT on
+ * (`model`/`name`/`techBase`/`tonnage`/`intro`, plus optional `clanName`/`callsign`) is NOT on
  * the wire — the manifest entry already carries it, so `decodeMechLine`
  * takes it as a second argument and each sheet is single-sourced.
  * `weightClass` is omitted too (restored with `weightClassForTonnage`).
@@ -96,7 +96,7 @@ export interface MechIdentity {
   readonly name: string;
   readonly techBase: string;
   readonly tonnage: number;
-  readonly era: number;
+  readonly intro: number;
   readonly clanName?: string;
   readonly callsign?: string;
 }
@@ -158,7 +158,7 @@ export function encodeMechDef(def: MechDef, strings: string[] = []): string {
 /**
  * Decode one packed wire line into a raw `MechDef`, combining it with the
  * manifest identity (the wire carries no `model`/`name`/`techBase`/
- * `tonnage`/`era`). Weapon-name numeric refs resolve against `strings` (the
+ * `tonnage`/`intro`). Weapon-name numeric refs resolve against `strings` (the
  * catalog line-0 table). Full rule
  * validation happens in `registerMech` via `validateMechDef`.
  */
@@ -268,7 +268,7 @@ export function decodeMechLine(
     ...(identity.clanName !== undefined && { clanName: identity.clanName }),
     ...(identity.callsign !== undefined && { callsign: identity.callsign }),
     tonnage: identity.tonnage,
-    era: identity.era,
+    intro: identity.intro,
     weightClass: weightClassForTonnage(identity.tonnage),
     techBase: identity.techBase,
     walking: w as number,

@@ -2,7 +2,7 @@
   "model": "CRK-5003-1b",
   "name": "Crockett",
   "tonnage": 85,
-  "era": 2752,
+  "intro": 2752,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

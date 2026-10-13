@@ -2,7 +2,7 @@
   "model": "WR-DG-03FC",
   "name": "War Dog",
   "tonnage": 75,
-  "era": 3064,
+  "intro": 3064,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

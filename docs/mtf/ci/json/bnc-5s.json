@@ -2,7 +2,7 @@
   "model": "BNC-5S",
   "name": "Banshee",
   "tonnage": 95,
-  "era": 3053,
+  "intro": 3053,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

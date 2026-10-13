@@ -3,7 +3,7 @@
   "name": "Masakari",
   "clanName": "Warhawk",
   "tonnage": 85,
-  "era": 3059,
+  "intro": 3059,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

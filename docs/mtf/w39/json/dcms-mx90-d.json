@@ -2,7 +2,7 @@
   "model": "DCMS-MX90-D",
   "name": "Daboku",
   "tonnage": 90,
-  "era": 3038,
+  "intro": 3038,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

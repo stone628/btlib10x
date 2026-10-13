@@ -2,7 +2,7 @@
   "model": "LNX-9Q",
   "name": "Lynx",
   "tonnage": 55,
-  "era": 2761,
+  "intro": 2761,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

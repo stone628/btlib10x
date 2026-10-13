@@ -2,7 +2,7 @@
   "model": "RFL-7M",
   "name": "Rifleman",
   "tonnage": 60,
-  "era": 3066,
+  "intro": 3066,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

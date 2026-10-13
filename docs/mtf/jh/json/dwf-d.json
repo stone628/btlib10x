@@ -3,7 +3,7 @@
   "name": "Daishi",
   "clanName": "Dire Wolf",
   "tonnage": 100,
-  "era": 3069,
+  "intro": 3069,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

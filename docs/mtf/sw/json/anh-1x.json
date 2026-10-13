@@ -2,7 +2,7 @@
   "model": "ANH-1X",
   "name": "Annihilator",
   "tonnage": 100,
-  "era": 2779,
+  "intro": 2779,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 2,

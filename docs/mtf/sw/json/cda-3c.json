@@ -2,7 +2,7 @@
   "model": "CDA-3C",
   "name": "Cicada",
   "tonnage": 40,
-  "era": 2840,
+  "intro": 2840,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 7,

@@ -3,7 +3,7 @@
   "name": "Vixen",
   "clanName": "Incubus",
   "tonnage": 30,
-  "era": 2961,
+  "intro": 2961,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 9,

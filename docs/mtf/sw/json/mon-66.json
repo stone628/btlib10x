@@ -2,7 +2,7 @@
   "model": "MON-66",
   "name": "Mongoose",
   "tonnage": 25,
-  "era": 2660,
+  "intro": 2660,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

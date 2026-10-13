@@ -2,7 +2,7 @@
   "model": "HBK-5M",
   "name": "Hunchback",
   "tonnage": 50,
-  "era": 3046,
+  "intro": 3046,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

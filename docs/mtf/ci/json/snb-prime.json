@@ -2,7 +2,7 @@
   "model": "SNB-Prime",
   "name": "Sun Bear",
   "tonnage": 55,
-  "era": 2966,
+  "intro": 2966,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 5,

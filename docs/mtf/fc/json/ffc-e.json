@@ -2,7 +2,7 @@
   "model": "FFC-E",
   "name": "Fire Falcon",
   "tonnage": 25,
-  "era": 3061,
+  "intro": 3061,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 8,

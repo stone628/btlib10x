@@ -3,7 +3,7 @@
   "name": "Exterminator",
   "callsign": "Caine",
   "tonnage": 65,
-  "era": 2754,
+  "intro": 2754,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

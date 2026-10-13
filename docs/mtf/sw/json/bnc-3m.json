@@ -2,7 +2,7 @@
   "model": "BNC-3M",
   "name": "Banshee",
   "tonnage": 95,
-  "era": 2579,
+  "intro": 2579,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -2,7 +2,7 @@
   "model": "ARC-2K",
   "name": "Archer",
   "tonnage": 70,
-  "era": 2856,
+  "intro": 2856,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

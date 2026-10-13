@@ -2,7 +2,7 @@
   "model": "ARC-C-2",
   "name": "Archer",
   "tonnage": 70,
-  "era": 3065,
+  "intro": 3063,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

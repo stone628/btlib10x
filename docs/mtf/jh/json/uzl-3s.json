@@ -2,7 +2,7 @@
   "model": "UZL-3S",
   "name": "Uziel",
   "tonnage": 50,
-  "era": 3065,
+  "intro": 3065,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

@@ -2,7 +2,7 @@
   "model": "Y-H9GB",
   "name": "Yu Huang",
   "tonnage": 90,
-  "era": 3068,
+  "intro": 3068,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -2,7 +2,7 @@
   "model": "LCT-3V",
   "name": "Locust",
   "tonnage": 20,
-  "era": 3004,
+  "intro": 3004,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

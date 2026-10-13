@@ -2,7 +2,7 @@
   "model": "SGT-2",
   "name": "Storm Giant",
   "tonnage": 100,
-  "era": 2862,
+  "intro": 2862,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

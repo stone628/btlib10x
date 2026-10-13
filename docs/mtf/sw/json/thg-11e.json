@@ -2,7 +2,7 @@
   "model": "THG-11E",
   "name": "Thug",
   "tonnage": 80,
-  "era": 2572,
+  "intro": 2572,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

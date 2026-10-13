@@ -2,7 +2,7 @@
   "model": "TRC-4C",
   "name": "Chameleon",
   "tonnage": 50,
-  "era": 2820,
+  "intro": 2820,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

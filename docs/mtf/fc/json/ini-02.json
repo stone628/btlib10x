@@ -2,7 +2,7 @@
   "model": "INI-02",
   "name": "Initiate",
   "tonnage": 40,
-  "era": 3058,
+  "intro": 3058,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

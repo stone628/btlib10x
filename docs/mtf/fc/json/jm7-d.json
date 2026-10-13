@@ -2,7 +2,7 @@
   "model": "JM7-D",
   "name": "JagerMech",
   "tonnage": 70,
-  "era": 3057,
+  "intro": 3057,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

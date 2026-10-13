@@ -2,7 +2,7 @@
   "model": "WTH-2",
   "name": "Whitworth",
   "tonnage": 40,
-  "era": 3050,
+  "intro": 3050,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

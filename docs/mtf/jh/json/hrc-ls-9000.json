@@ -2,7 +2,7 @@
   "model": "HRC-LS-9000",
   "name": "Hercules",
   "tonnage": 70,
-  "era": 3054,
+  "intro": 3065,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -2,7 +2,7 @@
   "model": "COM-7Z",
   "name": "Commando",
   "tonnage": 25,
-  "era": 3051,
+  "intro": 3051,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

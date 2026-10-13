@@ -2,7 +2,7 @@
   "model": "PLG-3Z",
   "name": "Pillager",
   "tonnage": 100,
-  "era": 2594,
+  "intro": 2594,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

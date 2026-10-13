@@ -2,7 +2,7 @@
   "model": "HSR-350-D",
   "name": "Hussar",
   "tonnage": 30,
-  "era": 3038,
+  "intro": 3038,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

@@ -2,7 +2,7 @@
   "model": "WLF-1",
   "name": "Wolfhound",
   "tonnage": 35,
-  "era": 3028,
+  "intro": 3062,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

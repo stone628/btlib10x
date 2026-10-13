@@ -5,6 +5,7 @@ BLR-10S
 Config:Biped
 TechBase:Inner Sphere
 Era:3070
+Intro:3070
 Rules Level:2
 
 Mass:85

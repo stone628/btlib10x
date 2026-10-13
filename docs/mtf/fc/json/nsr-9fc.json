@@ -2,7 +2,7 @@
   "model": "NSR-9FC",
   "name": "Nightstar",
   "tonnage": 95,
-  "era": 3057,
+  "intro": 3057,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

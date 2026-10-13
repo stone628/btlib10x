@@ -2,7 +2,7 @@
   "model": "MAL-1KX",
   "name": "Mauler",
   "tonnage": 90,
-  "era": 3068,
+  "intro": 3068,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

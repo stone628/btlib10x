@@ -2,7 +2,7 @@
   "model": "BLN-B",
   "name": "Black Lanner",
   "tonnage": 55,
-  "era": 3052,
+  "intro": 3052,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 7,

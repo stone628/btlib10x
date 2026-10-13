@@ -2,7 +2,7 @@
   "model": "CRD-8S",
   "name": "Crusader",
   "tonnage": 65,
-  "era": 3066,
+  "intro": 3066,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

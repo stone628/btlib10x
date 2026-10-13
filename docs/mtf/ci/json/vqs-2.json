@@ -2,7 +2,7 @@
   "model": "VQS-2",
   "name": "Vision Quest",
   "tonnage": 60,
-  "era": 2868,
+  "intro": 2868,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

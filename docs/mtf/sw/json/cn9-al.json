@@ -2,7 +2,7 @@
   "model": "CN9-AL",
   "name": "Centurion",
   "tonnage": 50,
-  "era": 2915,
+  "intro": 2915,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

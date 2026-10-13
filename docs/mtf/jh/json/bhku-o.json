@@ -2,7 +2,7 @@
   "model": "BHKU-O",
   "name": "Black Hawk-KU",
   "tonnage": 60,
-  "era": 3055,
+  "intro": 3070,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -251,20 +251,6 @@
     "id": "8Q1AEKVX7Z"
   },
   {
-    "mtf": "Hunchback HBK-4G.mtf",
-    "chassis": "Hunchback",
-    "model": "HBK-4G (Shakir)",
-    "bv": 968,
-    "intro": 3039,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "SB:S&D"
-    ],
-    "id": "9E4QGM997V"
-  },
-  {
     "mtf": "Vulcan VL-2T.mtf",
     "chassis": "Vulcan",
     "model": "VL-2T (Timms)",
@@ -294,20 +280,6 @@
       "TR:SW"
     ],
     "id": "BEKJANKAWX"
-  },
-  {
-    "mtf": "Cataphract CTF-2X.mtf",
-    "chassis": "Cataphract",
-    "model": "CTF-2X (George)",
-    "bv": 1311,
-    "intro": 3039,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "SB:S&D"
-    ],
-    "id": "BQDFVNA3B0"
   },
   {
     "mtf": "Raven RVN-3X.mtf",
@@ -692,18 +664,6 @@
     "id": "TERH8AK58A"
   },
   {
-    "mtf": "Hunchback HBK-4G.mtf",
-    "chassis": "Hunchback",
-    "model": "HBK-4G (Gauss Prototype)",
-    "bv": 0,
-    "intro": 3039,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "W5546P4KJS"
-  },
-  {
     "mtf": "Grand Dragon DRG-1G.mtf",
     "chassis": "Grand Dragon",
     "model": "DRG-1G (Douglas)",
@@ -758,22 +718,6 @@
       "TR:SW"
     ],
     "id": "YH52FR8EAQ"
-  },
-  {
-    "mtf": "Banshee BNC-3S.mtf",
-    "chassis": "Banshee",
-    "model": "BNC-3S (Reinesblatt)",
-    "bv": 1678,
-    "intro": 3029,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "TR:3039",
-      "TR:SW"
-    ],
-    "id": "YHZG64DKWS"
   },
   {
     "mtf": "Kintaro KTO-20.mtf",

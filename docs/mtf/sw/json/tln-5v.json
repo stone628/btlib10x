@@ -2,7 +2,7 @@
   "model": "TLN-5V",
   "name": "Talon",
   "tonnage": 35,
-  "era": 2670,
+  "intro": 2670,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

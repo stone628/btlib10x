@@ -2,7 +2,7 @@
   "model": "LGB-8C",
   "name": "Longbow",
   "tonnage": 85,
-  "era": 2615,
+  "intro": 2615,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

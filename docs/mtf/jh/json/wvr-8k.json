@@ -2,7 +2,7 @@
   "model": "WVR-8K",
   "name": "Wolverine",
   "tonnage": 55,
-  "era": 3064,
+  "intro": 3064,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

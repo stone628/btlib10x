@@ -5,6 +5,7 @@ BWP-X1 'Bipedal Weapons Platform'
 Config:Biped
 TechBase:Inner Sphere
 Era:2462
+Intro:2462
 Source:XTRO Primitives V - Age of War
 Rules Level:5
 

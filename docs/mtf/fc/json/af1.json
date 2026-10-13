@@ -2,7 +2,7 @@
   "model": "AF1",
   "name": "Arctic Fox",
   "tonnage": 30,
-  "era": 3059,
+  "intro": 3059,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

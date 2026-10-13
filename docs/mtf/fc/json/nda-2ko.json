@@ -2,7 +2,7 @@
   "model": "NDA-2KO",
   "name": "No-Dachi",
   "tonnage": 70,
-  "era": 3060,
+  "intro": 3060,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

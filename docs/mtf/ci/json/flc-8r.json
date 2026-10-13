@@ -2,7 +2,7 @@
   "model": "FLC-8R",
   "name": "Falconer",
   "tonnage": 75,
-  "era": 3053,
+  "intro": 3053,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -5,6 +5,7 @@ SP2-X 'Warlord'
 Config:Biped
 TechBase:Inner Sphere
 Era:3069
+Intro:3069
 Rules Level:4
 
 Mass:60

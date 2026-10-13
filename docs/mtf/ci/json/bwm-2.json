@@ -2,7 +2,7 @@
   "model": "BWM-2",
   "name": "Bowman",
   "tonnage": 70,
-  "era": 2974,
+  "intro": 2974,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

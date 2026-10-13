@@ -2,7 +2,7 @@
   "model": "MAD-5CS",
   "name": "Marauder",
   "tonnage": 75,
-  "era": 3052,
+  "intro": 3052,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

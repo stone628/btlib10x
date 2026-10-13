@@ -3,7 +3,7 @@
   "name": "Black Hawk",
   "clanName": "Nova",
   "tonnage": 50,
-  "era": 2870,
+  "intro": 2870,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 5,

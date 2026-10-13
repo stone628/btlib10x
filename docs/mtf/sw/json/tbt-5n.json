@@ -2,7 +2,7 @@
   "model": "TBT-5N",
   "name": "Trebuchet",
   "tonnage": 50,
-  "era": 2799,
+  "intro": 2799,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

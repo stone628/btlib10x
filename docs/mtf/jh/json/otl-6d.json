@@ -2,7 +2,7 @@
   "model": "OTL-6D",
   "name": "Ostsol",
   "tonnage": 60,
-  "era": 3064,
+  "intro": 3064,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

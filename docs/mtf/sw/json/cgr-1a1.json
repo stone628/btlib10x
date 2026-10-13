@@ -2,7 +2,7 @@
   "model": "CGR-1A1",
   "name": "Charger",
   "tonnage": 80,
-  "era": 2665,
+  "intro": 2665,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -2,7 +2,7 @@
   "model": "WHM-9D",
   "name": "Warhammer",
   "tonnage": 70,
-  "era": 3067,
+  "intro": 3067,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

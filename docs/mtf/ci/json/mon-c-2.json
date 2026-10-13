@@ -2,7 +2,7 @@
   "model": "MON-C-2",
   "name": "Mongoose",
   "tonnage": 25,
-  "era": 2860,
+  "intro": 2860,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 8,

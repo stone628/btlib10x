@@ -2,7 +2,7 @@
   "model": "JKR-8T",
   "name": "Jackrabbit",
   "tonnage": 25,
-  "era": 2765,
+  "intro": 2765,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

@@ -2,7 +2,7 @@
   "model": "ON1-IIC",
   "name": "Orion IIC",
   "tonnage": 75,
-  "era": 2841,
+  "intro": 2841,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

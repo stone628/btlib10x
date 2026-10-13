@@ -3,7 +3,7 @@
   "name": "Koshi",
   "clanName": "Mist Lynx",
   "tonnage": 25,
-  "era": 3063,
+  "intro": 3063,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 7,

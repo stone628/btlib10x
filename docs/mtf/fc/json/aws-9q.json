@@ -2,7 +2,7 @@
   "model": "AWS-9Q",
   "name": "Awesome",
   "tonnage": 80,
-  "era": 3057,
+  "intro": 3057,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

@@ -2,7 +2,7 @@
   "model": "TYM-1A",
   "name": "Toyama",
   "tonnage": 75,
-  "era": 3057,
+  "intro": 3057,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -2,7 +2,7 @@
   "model": "CRB-C",
   "name": "Crab",
   "tonnage": 50,
-  "era": 3056,
+  "intro": 3056,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

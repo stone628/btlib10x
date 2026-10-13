@@ -2,7 +2,7 @@
   "model": "T-IT-N10M",
   "name": "Grand Titan",
   "tonnage": 100,
-  "era": 3054,
+  "intro": 3054,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

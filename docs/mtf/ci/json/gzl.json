@@ -2,7 +2,7 @@
   "model": "GZL",
   "name": "Grizzly",
   "tonnage": 70,
-  "era": 2947,
+  "intro": 2947,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

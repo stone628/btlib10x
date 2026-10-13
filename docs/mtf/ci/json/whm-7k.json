@@ -2,7 +2,7 @@
   "model": "WHM-7K",
   "name": "Warhammer",
   "tonnage": 70,
-  "era": 3054,
+  "intro": 3054,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -166,7 +166,7 @@ lookups below. `resolveMechDef`, `validateMechDef`, and the raw `mechDef` /
 ```ts
 interface MechDef {
   model: string; name: string; clanName?: string; callsign?: string; tonnage: number;   // 10..100
-  era: number;   // introduction year from the MTF `Era:` header
+  intro: number; // introduction year (Master Unit List) from the MTF `Intro:` header
   weightClass: WeightClass;   // must equal weightClassForTonnage(tonnage)
   techBase: string;
   walking: number; running: number; jumping: number; // running === ceil(walking*1.5)
@@ -220,7 +220,7 @@ and derives internal structure:
 ```ts
 interface ResolvedMechDef {
   model: string; name: string; clanName?: string; callsign?: string; tonnage: number;
-  era: number;
+  intro: number;
   weightClass: WeightClass; techBase: string;
   walking: number; running: number; jumping: number;
   armor: ResolvedArmor;                                // front armor only
@@ -248,14 +248,14 @@ Packed wire (`src/data/mech.codec.ts`, `src/data/map.codec.ts`,
 `data/btlib10x.jsonl`): `encodeMechDef` / `encodeMapDef` pack a sheet to one
 short-key line, `decodeMechLine` / `decodeMapLine` expand it back (both wire
 version `1`: `WIRE_VERSION` / `MAP_WIRE_VERSION`). Sheet identity
-(`model`/`name`/`techBase`/`tonnage`/`era`, optional `clanName`/`callsign` — the
+(`model`/`name`/`techBase`/`tonnage`/`intro`, optional `clanName`/`callsign` — the
 `MechIdentity` shape) lives only in the line-0 manifest entry, never the
 wire line: `decodeMechLine` takes it as a second argument, so each sheet is
 single-sourced. Myomer rides the mech wire as numeric `y` (1 = Standard,
 2 = Triple Strength Myomer); a missing `y` on older v1 lines decodes as
 Standard. `parseCatalogManifest` / `findMechEntry` / `findMapEntry`
 index the manifest (`CatalogManifest` with `MechManifestEntry` /
-`MapManifestEntry`: short keys `m`/`n`/`b`/`t`/`e`/`c?`/`k?`/`l` plus the sheet's
+`MapManifestEntry`: short keys `m`/`n`/`b`/`t`/`i`/`c?`/`k?`/`l` plus the sheet's
 absolute file line — class is inferred, never stored). `loadCatalog` holds
 the text in memory; `ensureMechRegistered` / `ensureMapRegistered` decode and
 register one sheet on demand (throwing duplicates stay an error via

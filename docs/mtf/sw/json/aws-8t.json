@@ -2,7 +2,7 @@
   "model": "AWS-8T",
   "name": "Awesome",
   "tonnage": 80,
-  "era": 2815,
+  "intro": 2815,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

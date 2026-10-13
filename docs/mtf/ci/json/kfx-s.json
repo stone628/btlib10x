@@ -3,7 +3,7 @@
   "name": "Uller",
   "clanName": "Kit Fox",
   "tonnage": 30,
-  "era": 3050,
+  "intro": 3050,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 6,

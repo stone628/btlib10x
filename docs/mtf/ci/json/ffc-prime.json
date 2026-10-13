@@ -2,7 +2,7 @@
   "model": "FFC-Prime",
   "name": "Fire Falcon",
   "tonnage": 25,
-  "era": 3052,
+  "intro": 3052,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 8,

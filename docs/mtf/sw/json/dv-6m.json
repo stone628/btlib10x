@@ -2,7 +2,7 @@
   "model": "DV-6M",
   "name": "Dervish",
   "tonnage": 55,
-  "era": 2610,
+  "intro": 2570,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

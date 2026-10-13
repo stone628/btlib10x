@@ -176,7 +176,7 @@ function mechTable(list: readonly MechManifestEntry[]): Chunk {
     i18n("info.mechColTon"),
     i18n("info.mechColClass"),
     i18n("info.mechColTechBase"),
-    i18n("info.mechColEra"),
+    i18n("info.mechColIntro"),
     i18n("info.mechColPack"),
   ];
   // Move ratings live in the registered sheets; the manifest carries identity only.
@@ -186,7 +186,7 @@ function mechTable(list: readonly MechManifestEntry[]): Chunk {
     String(d.tonnage),
     weightClassForTonnage(d.tonnage),
     d.techBase,
-    String(d.era),
+    String(d.intro),
     d.pack,
   ]);
   return buildHeaderTableChunkFromRows(header, rows);

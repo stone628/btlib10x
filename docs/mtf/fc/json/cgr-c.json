@@ -2,7 +2,7 @@
   "model": "CGR-C",
   "name": "Cougar",
   "tonnage": 35,
-  "era": 3058,
+  "intro": 3058,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 5,

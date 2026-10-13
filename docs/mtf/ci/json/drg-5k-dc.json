@@ -2,7 +2,7 @@
   "model": "DRG-5K-DC",
   "name": "Grand Dragon",
   "tonnage": 60,
-  "era": 3050,
+  "intro": 3050,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 6,

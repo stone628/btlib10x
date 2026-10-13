@@ -2,7 +2,7 @@
   "model": "NGS-6T",
   "name": "Nightsky",
   "tonnage": 50,
-  "era": 3067,
+  "intro": 3067,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

@@ -2,7 +2,7 @@
   "model": "ANH-1G",
   "name": "Annihilator",
   "tonnage": 100,
-  "era": 2823,
+  "intro": 2823,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 2,

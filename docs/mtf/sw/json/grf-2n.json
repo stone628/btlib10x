@@ -2,7 +2,7 @@
   "model": "GRF-2N",
   "name": "Griffin",
   "tonnage": 55,
-  "era": 2751,
+  "intro": 2751,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

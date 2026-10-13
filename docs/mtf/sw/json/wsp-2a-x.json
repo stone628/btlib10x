@@ -2,7 +2,7 @@
   "model": "WSP-2A-X",
   "name": "Super-Wasp",
   "tonnage": 25,
-  "era": 3020,
+  "intro": 3020,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

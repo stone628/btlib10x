@@ -2,7 +2,7 @@
   "model": "OWR-2Mb",
   "name": "Ostwar",
   "tonnage": 65,
-  "era": 2620,
+  "intro": 2620,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -5,6 +5,7 @@ DV-8D2 'Lightbringer'
 Config:Biped
 TechBase:Inner Sphere
 Era:3071
+Intro:3071
 Rules Level:4
 
 Mass:55

@@ -2,7 +2,7 @@
   "model": "TKN-C",
   "name": "Turkina",
   "tonnage": 95,
-  "era": 3052,
+  "intro": 3052,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

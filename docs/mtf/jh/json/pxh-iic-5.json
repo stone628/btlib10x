@@ -2,7 +2,7 @@
   "model": "PXH-IIC-5",
   "name": "Phoenix Hawk IIC",
   "tonnage": 80,
-  "era": 3069,
+  "intro": 3069,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 5,

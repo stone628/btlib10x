@@ -2,7 +2,7 @@
   "model": "STK-7D",
   "name": "Stalker",
   "tonnage": 85,
-  "era": 3062,
+  "intro": 3062,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

@@ -2,7 +2,7 @@
   "model": "MDR",
   "name": "Mandrill",
   "tonnage": 30,
-  "era": 2829,
+  "intro": 2829,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 4,

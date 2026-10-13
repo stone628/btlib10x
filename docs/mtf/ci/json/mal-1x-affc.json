@@ -2,7 +2,7 @@
   "model": "MAL-1X-AFFC",
   "name": "Mauler",
   "tonnage": 90,
-  "era": 3040,
+  "intro": 3040,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

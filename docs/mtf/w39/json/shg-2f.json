@@ -2,7 +2,7 @@
   "model": "SHG-2F",
   "name": "Shogun",
   "tonnage": 85,
-  "era": 3029,
+  "intro": 3029,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

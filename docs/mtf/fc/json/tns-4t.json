@@ -2,7 +2,7 @@
   "model": "TNS-4T",
   "name": "Thanatos",
   "tonnage": 75,
-  "era": 3062,
+  "intro": 3062,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -2,7 +2,7 @@
   "model": "RTX1-OF",
   "name": "Raptor",
   "tonnage": 25,
-  "era": 3060,
+  "intro": 3060,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 7,

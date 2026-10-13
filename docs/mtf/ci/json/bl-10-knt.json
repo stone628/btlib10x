@@ -3,7 +3,7 @@
   "name": "Black Knight",
   "callsign": "Ross",
   "tonnage": 75,
-  "era": 3055,
+  "intro": 3055,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

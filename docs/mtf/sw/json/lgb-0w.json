@@ -2,7 +2,7 @@
   "model": "LGB-0W",
   "name": "Longbow",
   "tonnage": 85,
-  "era": 2529,
+  "intro": 2529,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

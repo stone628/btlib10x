@@ -6,6 +6,7 @@ mul id:9628
 Config:Biped
 techbase:Inner Sphere
 era:3051
+intro:3051
 source:Shrapnel #16
 rules level:2
 role:Striker

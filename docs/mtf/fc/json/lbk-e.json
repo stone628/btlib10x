@@ -2,7 +2,7 @@
   "model": "LBK-E",
   "name": "Linebacker",
   "tonnage": 65,
-  "era": 3061,
+  "intro": 3061,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 6,

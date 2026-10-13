@@ -2,7 +2,7 @@
   "model": "PXH-2K",
   "name": "Phoenix Hawk",
   "tonnage": 45,
-  "era": 3050,
+  "intro": 3050,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

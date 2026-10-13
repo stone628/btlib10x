@@ -2,7 +2,7 @@
   "model": "SPW-A",
   "name": "Spirit Walker",
   "tonnage": 75,
-  "era": 2866,
+  "intro": 2866,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

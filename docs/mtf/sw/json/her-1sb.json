@@ -2,7 +2,7 @@
   "model": "HER-1Sb",
   "name": "Hermes",
   "tonnage": 30,
-  "era": 2740,
+  "intro": 2740,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 9,

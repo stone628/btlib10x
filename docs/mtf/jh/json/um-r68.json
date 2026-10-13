@@ -2,7 +2,7 @@
   "model": "UM-R68",
   "name": "UrbanMech",
   "tonnage": 30,
-  "era": 3065,
+  "intro": 3065,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 2,

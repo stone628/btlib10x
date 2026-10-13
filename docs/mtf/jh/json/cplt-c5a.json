@@ -2,7 +2,7 @@
   "model": "CPLT-C5A",
   "name": "Catapult",
   "tonnage": 65,
-  "era": 3068,
+  "intro": 3068,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -274,23 +274,6 @@
     "id": "0CNHM2NBEZ"
   },
   {
-    "mtf": "Victor VTR-9B.mtf",
-    "chassis": "Victor",
-    "model": "VTR-9B (Kataga)",
-    "bv": 1991,
-    "intro": 2766,
-    "tags": [
-      "archive",
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "HTP:New Dallas",
-      "TR:3075"
-    ],
-    "id": "0D58BKQ1SV"
-  },
-  {
     "mtf": "Orion ON1-V.mtf",
     "chassis": "Orion",
     "model": "ON1-V",
@@ -799,21 +782,6 @@
     "id": "3G6BT81Y80"
   },
   {
-    "mtf": "Falcon FLC-4Nb.mtf",
-    "chassis": "Falcon",
-    "model": "FLC-4Nb (Saho)",
-    "bv": 774,
-    "intro": 2801,
-    "tags": [
-      "archive",
-      "named"
-    ],
-    "sources": [
-      "His:OK"
-    ],
-    "id": "3HPQTKDG77"
-  },
-  {
     "mtf": "Lancelot LNC25-03.mtf",
     "chassis": "Lancelot",
     "model": "LNC25-03",
@@ -1058,18 +1026,6 @@
     "id": "4SJJEQPCNY"
   },
   {
-    "mtf": "Panther PNT-9R.mtf",
-    "chassis": "Panther",
-    "model": "PNT-9R (Tanaka)",
-    "bv": 759,
-    "intro": 3022,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "4VQZ3JVSR7"
-  },
-  {
     "mtf": "Alfar AL-A1.mtf",
     "chassis": "Alfar",
     "model": "AL-A1",
@@ -1293,19 +1249,6 @@
       "TR:SW"
     ],
     "id": "5YVN07D846"
-  },
-  {
-    "mtf": "King Crab KGC-000b.mtf",
-    "chassis": "King Crab",
-    "model": "KGC-000b (Chrichell)",
-    "bv": 0,
-    "intro": 2863,
-    "tags": [
-      "archive",
-      "named"
-    ],
-    "sources": [],
-    "id": "60EHP2W5KG"
   },
   {
     "mtf": "Javelin JVN-10F Fire Javelin.mtf",
@@ -2529,23 +2472,6 @@
     "id": "B1E8467KNY"
   },
   {
-    "mtf": "Orion ON1-K.mtf",
-    "chassis": "Orion",
-    "model": "ON1-K (Kerensky)",
-    "bv": 1821,
-    "intro": 2753,
-    "tags": [
-      "archive",
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "TR:3050",
-      "TR:SW"
-    ],
-    "id": "B1EKTJA8NV"
-  },
-  {
     "mtf": "Shadow Hawk LAM SHD-X1.mtf",
     "chassis": "Shadow Hawk LAM",
     "model": "SHD-X1",
@@ -2774,21 +2700,6 @@
       "TR:3039"
     ],
     "id": "C3V1QFQ4V1"
-  },
-  {
-    "mtf": "Victor VTR-9B.mtf",
-    "chassis": "Victor",
-    "model": "VTR-9B (Shoji)",
-    "bv": 1531,
-    "intro": 2725,
-    "tags": [
-      "archive",
-      "named"
-    ],
-    "sources": [
-      "ER:2750"
-    ],
-    "id": "C6HZJY01DJ"
   },
   {
     "mtf": "Grasshopper GHR-5H.mtf",
@@ -4524,22 +4435,6 @@
     "id": "N5ATPTQBH6"
   },
   {
-    "mtf": "Rampage RMP-4G.mtf",
-    "chassis": "Rampage",
-    "model": "RMP-4G (Benboudaoud)",
-    "bv": 1751,
-    "intro": 2766,
-    "tags": [
-      "archive",
-      "named"
-    ],
-    "sources": [
-      "HTP:New Dallas",
-      "ISP2"
-    ],
-    "id": "N88929NJV2"
-  },
-  {
     "mtf": "Stinger STG-3R.mtf",
     "chassis": "Stinger",
     "model": "STG-3R",
@@ -4952,22 +4847,6 @@
       "Shrap14"
     ],
     "id": "Q92XGSKAPM"
-  },
-  {
-    "mtf": "Vindicator VND-1R.mtf",
-    "chassis": "Vindicator",
-    "model": "VND-1R (Vong)",
-    "bv": 1024,
-    "intro": 3020,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "TR:3039",
-      "TR:SW"
-    ],
-    "id": "QG2288ZZXX"
   },
   {
     "mtf": "Cyclops CP-10-HQ.mtf",
@@ -6580,21 +6459,6 @@
     "tags": [],
     "sources": [],
     "id": "Z68V6BZTHK"
-  },
-  {
-    "mtf": "Warhammer WHM-6K.mtf",
-    "chassis": "Warhammer",
-    "model": "WHM-6K (Olesko)",
-    "bv": 1338,
-    "intro": 3023,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "TP:39V",
-      "RGv1"
-    ],
-    "id": "Z8ZYJC6W11"
   },
   {
     "mtf": "Wolverine WVR-6R.mtf",

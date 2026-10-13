@@ -2,7 +2,7 @@
   "model": "STY-2C",
   "name": "Starslayer",
   "tonnage": 50,
-  "era": 2772,
+  "intro": 2772,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

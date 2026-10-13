@@ -3,7 +3,7 @@
   "name": "Centurion",
   "callsign": "Yen Lo Wang",
   "tonnage": 50,
-  "era": 3051,
+  "intro": 3051,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

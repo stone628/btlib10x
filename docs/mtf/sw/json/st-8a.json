@@ -2,7 +2,7 @@
   "model": "ST-8A",
   "name": "Shootist",
   "tonnage": 70,
-  "era": 2621,
+  "intro": 2621,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

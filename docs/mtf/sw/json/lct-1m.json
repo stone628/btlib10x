@@ -2,7 +2,7 @@
   "model": "LCT-1M",
   "name": "Locust",
   "tonnage": 20,
-  "era": 2571,
+  "intro": 2571,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

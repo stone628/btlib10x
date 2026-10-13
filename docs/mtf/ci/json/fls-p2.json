@@ -2,7 +2,7 @@
   "model": "FLS-P2",
   "name": "Flashfire",
   "tonnage": 30,
-  "era": 3054,
+  "intro": 3054,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

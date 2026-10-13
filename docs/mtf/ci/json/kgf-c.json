@@ -2,7 +2,7 @@
   "model": "KGF-C",
   "name": "Kingfisher",
   "tonnage": 90,
-  "era": 2887,
+  "intro": 2887,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

@@ -2,7 +2,7 @@
   "model": "QKD-C",
   "name": "Quickdraw",
   "tonnage": 60,
-  "era": 3053,
+  "intro": 3053,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

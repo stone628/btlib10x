@@ -2,7 +2,7 @@
   "model": "CGR-C",
   "name": "Charger",
   "tonnage": 80,
-  "era": 3052,
+  "intro": 3052,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 5,

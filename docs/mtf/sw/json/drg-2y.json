@@ -3,7 +3,7 @@
   "name": "Dragon",
   "callsign": "Yoriyoshi",
   "tonnage": 60,
-  "era": 3025,
+  "intro": 3025,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

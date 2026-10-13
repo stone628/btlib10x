@@ -130,7 +130,7 @@ function parseMtf(text, file) {
   const CANON = Object.fromEntries(
     [
       "TechBase",
-      "Era",
+      "Intro",
       "Myomer",
       "Engine",
       "Structure",
@@ -236,12 +236,13 @@ function parseMtf(text, file) {
   const walking = numberRegex(text, "Walk MP");
   const jumping = numberRegex(text, "Jump MP") ?? 0;
 
-  // Era:N introduction year (required catalog identity, e.g. `Era:3025`).
-  // Every surveyed sheet carries one; a missing or non-integer value is a
-  // hard error, never a silent default.
-  const eraRaw = fields.Era ?? "";
-  const era = /^\d+$/.test(eraRaw) ? Number(eraRaw) : null;
-  if (era === null) errors.push(`Era header missing or malformed in ${file}`);
+  // Intro:N introduction year (required catalog identity, e.g. `Intro:3025`).
+  // It is the Master Unit List intro year copied from each pack's roster.json,
+  // not MegaMek's `Era:` header (which can disagree with the MUL). A missing
+  // or non-integer value is a hard error, never a silent default.
+  const introRaw = fields.Intro ?? "";
+  const intro = /^\d+$/.test(introRaw) ? Number(introRaw) : null;
+  if (intro === null) errors.push(`Intro header missing or malformed in ${file}`);
 
   // Heat Sinks:N <Single|Double> header -> canon heat sink config (total
   // count including engine-mounted sinks). Classic construction rule: an
@@ -451,7 +452,7 @@ function parseMtf(text, file) {
     ...(clanName !== undefined && { clanName }),
     ...(callsign !== undefined && { callsign }),
     tonnage,
-    era,
+    intro,
     weightClass: tonnage ? weightClass(tonnage) : "Assault",
     techBase: fields.TechBase ?? "Inner Sphere",
     walking,

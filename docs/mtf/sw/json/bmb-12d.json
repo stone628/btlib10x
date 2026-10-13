@@ -2,7 +2,7 @@
   "model": "BMB-12D",
   "name": "Bombardier",
   "tonnage": 65,
-  "era": 2735,
+  "intro": 2735,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

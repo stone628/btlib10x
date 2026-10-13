@@ -29,10 +29,10 @@ function mech(
   name: string,
   tonnage: number,
   techBase = "Inner Sphere",
-  era = 3025,
+  intro = 3025,
   pack = "base",
 ) {
-  return { model, name, tonnage, techBase, era, line: 0, pack } satisfies MechManifestEntry;
+  return { model, name, tonnage, techBase, intro, line: 0, pack } satisfies MechManifestEntry;
 }
 
 /** `chassis` chassis × `variants` models each, all at one tonnage. */
@@ -128,19 +128,19 @@ describe("selectMechs", () => {
     expect(() => models("ton:heavy")).toThrow(/ton:heavy/);
   });
 
-  it("filters and sorts by era", () => {
+  it("filters and sorts by intro", () => {
     const entries = [
       mech("A-1", "Alpha", 50, "Inner Sphere", 3025),
       mech("B-1", "Beta", 50, "Inner Sphere", 3050),
       mech("C-1", "Gamma", 50, "Clan", 3060),
     ];
-    const byEra = (...args: string[]) => selectMechs(entries, q(...args)).map((m) => m.model);
-    expect(byEra("era:3050")).toEqual(["B-1"]);
-    expect(byEra("era:3040-3060")).toEqual(["B-1", "C-1"]);
-    expect(byEra("era:>=3050")).toEqual(["B-1", "C-1"]);
-    expect(byEra("sort:era")).toEqual(["A-1", "B-1", "C-1"]);
-    expect(byEra("sort:-era")[0]).toBe("C-1");
-    expect(() => byEra("era:later")).toThrow(/era:later/);
+    const byIntro = (...args: string[]) => selectMechs(entries, q(...args)).map((m) => m.model);
+    expect(byIntro("intro:3050")).toEqual(["B-1"]);
+    expect(byIntro("intro:3040-3060")).toEqual(["B-1", "C-1"]);
+    expect(byIntro("intro:>=3050")).toEqual(["B-1", "C-1"]);
+    expect(byIntro("sort:intro")).toEqual(["A-1", "B-1", "C-1"]);
+    expect(byIntro("sort:-intro")[0]).toBe("C-1");
+    expect(() => byIntro("intro:later")).toThrow(/intro:later/);
   });
 
   it("filters by pack", () => {
@@ -231,16 +231,16 @@ describe("info mech tiers", () => {
     expect(chunkText(chunks[1]!).filter((l) => l.startsWith("│C"))).toHaveLength(ROW_CAP * 3);
   });
 
-  it("orders roster columns model, name, tonnage, class, techbase, era, pack", () => {
-    const entries = [{ ...mech("HBK-4G", "Hunchback", 50), era: 2572 }];
+  it("orders roster columns model, name, tonnage, class, techbase, intro, pack", () => {
+    const entries = [{ ...mech("HBK-4G", "Hunchback", 50), intro: 2572 }];
     const text = listChunks("!", entries).flatMap(chunkText).join("\n");
     expect(text).toMatch(/│HBK-4G\s+│Hunchback\s+│50\s+│Medium\s+│Inner Sphere\s+│2572\s+│base/);
   });
 
   it("shows the winning pack for cross-pack models", () => {
     const entries = [
-      { ...mech("HBK-4G", "Hunchback", 50), era: 2572 },
-      { ...mech("AEM-01", "Dragoon", 70), era: 2771, pack: "sw" },
+      { ...mech("HBK-4G", "Hunchback", 50), intro: 2572 },
+      { ...mech("AEM-01", "Dragoon", 70), intro: 2771, pack: "sw" },
     ];
     const text = listChunks("pack:sw !", entries).flatMap(chunkText).join("\n");
     expect(text).toContain("AEM-01");
@@ -394,7 +394,7 @@ describe("info commands in the CLI", () => {
     const help = execute(s, "help info");
     expect(help[0]).toBe("usage: info mech [model | text] [key:value ...] [!]");
     expect(help.join("\n")).toContain("class:l|m|h|a  ton:70|60-75|>=80  tech:is|clan");
-    expect(help.join("\n")).toContain("era:3025|3000-3060|>=3050");
+    expect(help.join("\n")).toContain("intro:3025|3000-3060|>=3050");
     expect(help.join("\n")).toContain("pack:base|sw");
     expect(help.join("\n")).toContain("cat:ballistic|energy|missile|equipment");
   });

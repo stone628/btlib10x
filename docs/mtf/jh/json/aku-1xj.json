@@ -2,7 +2,7 @@
   "model": "AKU-1XJ",
   "name": "Akuma",
   "tonnage": 90,
-  "era": 3064,
+  "intro": 3064,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

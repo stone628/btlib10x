@@ -2,7 +2,7 @@
   "model": "JR7-D",
   "name": "Jenner",
   "tonnage": 35,
-  "era": 2785,
+  "intro": 3047,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 7,

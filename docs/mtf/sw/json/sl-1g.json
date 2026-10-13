@@ -2,7 +2,7 @@
   "model": "SL-1G",
   "name": "Sling",
   "tonnage": 25,
-  "era": 2766,
+  "intro": 2766,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 7,

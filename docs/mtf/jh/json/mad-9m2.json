@@ -2,7 +2,7 @@
   "model": "MAD-9M2",
   "name": "Marauder",
   "tonnage": 75,
-  "era": 3068,
+  "intro": 3068,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

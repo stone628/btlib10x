@@ -2,7 +2,7 @@
   "model": "XBW-C",
   "name": "Crossbow",
   "tonnage": 65,
-  "era": 3063,
+  "intro": 3063,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

@@ -2,7 +2,7 @@
   "model": "RMP-4G",
   "name": "Rampage",
   "tonnage": 85,
-  "era": 2750,
+  "intro": 2750,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

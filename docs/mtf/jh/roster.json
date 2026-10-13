@@ -164,22 +164,6 @@
     "id": "0BD9MY2YWM"
   },
   {
-    "mtf": "Gladiator GLD-1R.mtf",
-    "chassis": "Gladiator",
-    "model": "GLD-1R (Keller)",
-    "bv": 1517,
-    "intro": 3071,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "TR:3075",
-      "TR:SW"
-    ],
-    "id": "0CG2GEP9VY"
-  },
-  {
     "mtf": "Quickdraw QKD-8K.mtf",
     "chassis": "Quickdraw",
     "model": "QKD-8K",
@@ -787,20 +771,6 @@
       "TR:J"
     ],
     "id": "22325TNETX"
-  },
-  {
-    "mtf": "Griffin GRF-6S.mtf",
-    "chassis": "Griffin",
-    "model": "GRF-6S (Francine II)",
-    "bv": 2249,
-    "intro": 3071,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "SB:W&B"
-    ],
-    "id": "284ENTSSTY"
   },
   {
     "mtf": "Panther PNT-12A.mtf",
@@ -5101,20 +5071,6 @@
     "id": "FF7G98CXMF"
   },
   {
-    "mtf": "Zeus X ZEU-9WD.mtf",
-    "chassis": "Zeus-X",
-    "model": "ZEU-9WD (Stacy)",
-    "bv": 1921,
-    "intro": 3070,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "SB:W&B"
-    ],
-    "id": "FFYDR30MP9"
-  },
-  {
     "mtf": "Hauptmann HA1-OD.mtf",
     "chassis": "Hauptmann",
     "model": "HA1-OD",
@@ -5680,20 +5636,6 @@
     "id": "H3YYP5JYTM"
   },
   {
-    "mtf": "BattleMaster BLR-4S.mtf",
-    "chassis": "BattleMaster",
-    "model": "BLR-4S (Calvin)",
-    "bv": 2029,
-    "intro": 3070,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "SB:W&B"
-    ],
-    "id": "H4J987SZWJ"
-  },
-  {
     "mtf": "Valiant V4-LNT-K7.mtf",
     "chassis": "Valiant",
     "model": "V4-LNT-K7",
@@ -5905,22 +5847,6 @@
       "TR:PP"
     ],
     "id": "HQX8JAN693"
-  },
-  {
-    "mtf": "Templar TLR1-O.mtf",
-    "chassis": "Templar",
-    "model": "TLR1-O (Grayson)",
-    "bv": 1868,
-    "intro": 3065,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "TR:3067",
-      "TR:J"
-    ],
-    "id": "HR2P8JD34V"
   },
   {
     "mtf": "Archer ARC-6W.mtf",
@@ -6199,20 +6125,6 @@
       "XTR:Primitives III"
     ],
     "id": "JHS4DHZXP8"
-  },
-  {
-    "mtf": "Griffin GRF-6S.mtf",
-    "chassis": "Griffin",
-    "model": "GRF-6S (Francine)",
-    "bv": 1778,
-    "intro": 3070,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "SB:W&B"
-    ],
-    "id": "JJDKSA56CR"
   },
   {
     "mtf": "Raijin II RJN-200-A.mtf",
@@ -7106,22 +7018,6 @@
     "id": "N309329KGQ"
   },
   {
-    "mtf": "Awesome AWS-10KM.mtf",
-    "chassis": "Awesome",
-    "model": "AWS-10KM (Cameron)",
-    "bv": 2466,
-    "intro": 3070,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "TR:3050",
-      "Total Chaos"
-    ],
-    "id": "N3RBXRJH42"
-  },
-  {
     "mtf": "Koschei KSC-4I.mtf",
     "chassis": "Koschei",
     "model": "KSC-4I",
@@ -7137,20 +7033,6 @@
     "id": "N471PMDCS8"
   },
   {
-    "mtf": "Phoenix Hawk PXH-4L.mtf",
-    "chassis": "Phoenix Hawk",
-    "model": "PXH-4L (Sante)",
-    "bv": 1442,
-    "intro": 3068,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "BD:BH"
-    ],
-    "id": "N4E94TK12T"
-  },
-  {
     "mtf": "Fafnir FNR-4A Peter.mtf",
     "chassis": "Fafnir",
     "model": "FNR-4A (Peter)",
@@ -7163,20 +7045,6 @@
       "JTP:Tharkad"
     ],
     "id": "N758CJP1CA"
-  },
-  {
-    "mtf": "Marauder MAD-7D.mtf",
-    "chassis": "Marauder",
-    "model": "MAD-7D (Von Staskov)",
-    "bv": 2150,
-    "intro": 3070,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "OTP:FR"
-    ],
-    "id": "NACVVDTHYZ"
   },
   {
     "mtf": "N/A",
@@ -7226,22 +7094,6 @@
     ],
     "sources": [],
     "id": "NDR2J6TME5"
-  },
-  {
-    "mtf": "Grasshopper GHR-7K.mtf",
-    "chassis": "Grasshopper",
-    "model": "GHR-7K \"Gravedigger\"",
-    "bv": 2084,
-    "intro": 3071,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "TR:3050",
-      "TR:3050U"
-    ],
-    "id": "NESSPXGQ9X"
   },
   {
     "mtf": "Stealth STH-1D.mtf",
@@ -7907,20 +7759,6 @@
     "id": "R2C9S7RGE1"
   },
   {
-    "mtf": "Uziel UZL-2S.mtf",
-    "chassis": "Uziel",
-    "model": "UZL-2S (Jacob II)",
-    "bv": 1271,
-    "intro": 3071,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "SB:W&B"
-    ],
-    "id": "R2JMW1PC4M"
-  },
-  {
     "mtf": "Assassin ASN-99.mtf",
     "chassis": "Assassin",
     "model": "ASN-99",
@@ -8357,20 +8195,6 @@
     "id": "SCYY2391RK"
   },
   {
-    "mtf": "Shadow Hawk SHD-5D.mtf",
-    "chassis": "Shadow Hawk",
-    "model": "SHD-5D (Sandy)",
-    "bv": 1517,
-    "intro": 3068,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "BD:BH"
-    ],
-    "id": "SFJ71PRY27"
-  },
-  {
     "mtf": "Shadow Hawk IIC 6.mtf",
     "chassis": "Shadow Hawk IIC",
     "model": "6",
@@ -8472,22 +8296,6 @@
       "BD:YZ"
     ],
     "id": "T51J4NJ99B"
-  },
-  {
-    "mtf": "Galahad GLH-3D.mtf",
-    "chassis": "Galahad",
-    "model": "GLH-3D (Laodices)",
-    "bv": 1549,
-    "intro": 3070,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "JTP:Hesperus II",
-      "TR:J"
-    ],
-    "id": "T7CJEV64ZA"
   },
   {
     "mtf": "Grim Reaper GRM-R-PR31.mtf",
@@ -9093,22 +8901,6 @@
     "id": "W3G6WRXZ2R"
   },
   {
-    "mtf": "Templar TLR1-O.mtf",
-    "chassis": "Templar",
-    "model": "TLR1-O (Tancred)",
-    "bv": 2273,
-    "intro": 3067,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "TR:3067",
-      "TR:J"
-    ],
-    "id": "W3GK9K4J8G"
-  },
-  {
     "mtf": "Wight WGT-1LAWSC3.mtf",
     "chassis": "Wight",
     "model": "WGT-1LAW/SC3",
@@ -9367,20 +9159,6 @@
       "TR:3050U"
     ],
     "id": "WXRZWWFWE3"
-  },
-  {
-    "mtf": "BattleMaster BLR-4S.mtf",
-    "chassis": "BattleMaster",
-    "model": "BLR-4S (Calvin II)",
-    "bv": 2274,
-    "intro": 3071,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "SB:W&B"
-    ],
-    "id": "WXVWQ9P8TE"
   },
   {
     "mtf": "Linebacker F.mtf",
@@ -10051,20 +9829,6 @@
       "TR:CI"
     ],
     "id": "Z41RV81Z13"
-  },
-  {
-    "mtf": "Uziel UZL-2S.mtf",
-    "chassis": "Uziel",
-    "model": "UZL-2S (Jacob)",
-    "bv": 1513,
-    "intro": 3070,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "SB:W&B"
-    ],
-    "id": "Z4Z55HTVCJ"
   },
   {
     "mtf": "Cyclops CP-11-H.mtf",

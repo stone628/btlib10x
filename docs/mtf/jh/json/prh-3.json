@@ -2,7 +2,7 @@
   "model": "PRH-3",
   "name": "Piranha",
   "tonnage": 20,
-  "era": 3068,
+  "intro": 3068,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 9,

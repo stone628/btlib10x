@@ -2,7 +2,7 @@
   "model": "DRG-7K",
   "name": "Grand Dragon",
   "tonnage": 60,
-  "era": 3063,
+  "intro": 3067,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 6,

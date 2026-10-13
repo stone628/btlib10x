@@ -2,7 +2,7 @@
   "model": "BKT",
   "name": "Blood Kite",
   "tonnage": 85,
-  "era": 2907,
+  "intro": 2907,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

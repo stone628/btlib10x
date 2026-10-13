@@ -2,7 +2,7 @@
   "model": "TBT-7K",
   "name": "Trebuchet",
   "tonnage": 50,
-  "era": 3025,
+  "intro": 3025,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

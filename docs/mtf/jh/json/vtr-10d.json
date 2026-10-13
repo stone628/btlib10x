@@ -2,7 +2,7 @@
   "model": "VTR-10D",
   "name": "Victor",
   "tonnage": 80,
-  "era": 3064,
+  "intro": 3064,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

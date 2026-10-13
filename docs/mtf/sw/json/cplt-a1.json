@@ -2,7 +2,7 @@
   "model": "CPLT-A1",
   "name": "Catapult",
   "tonnage": 65,
-  "era": 2563,
+  "intro": 2563,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -2,7 +2,7 @@
   "model": "HTM-27T",
   "name": "Hatamoto-Chi",
   "tonnage": 80,
-  "era": 3042,
+  "intro": 3039,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

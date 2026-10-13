@@ -2,7 +2,7 @@
   "model": "VTR-C",
   "name": "Victor",
   "tonnage": 80,
-  "era": 3054,
+  "intro": 3054,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

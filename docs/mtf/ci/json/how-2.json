@@ -3,7 +3,7 @@
   "name": "Peregrine",
   "clanName": "Horned Owl",
   "tonnage": 35,
-  "era": 2856,
+  "intro": 2856,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 6,

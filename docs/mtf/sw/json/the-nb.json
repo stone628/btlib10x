@@ -2,7 +2,7 @@
   "model": "THE-Nb",
   "name": "Thorn",
   "tonnage": 20,
-  "era": 2743,
+  "intro": 2743,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

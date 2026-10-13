@@ -2,7 +2,7 @@
   "model": "SWD-2",
   "name": "Swordsman",
   "tonnage": 40,
-  "era": 2482,
+  "intro": 2482,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

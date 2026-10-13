@@ -2,7 +2,7 @@
   "model": "URS",
   "name": "Ursus",
   "tonnage": 50,
-  "era": 3059,
+  "intro": 3059,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 4,

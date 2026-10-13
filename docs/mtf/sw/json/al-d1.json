@@ -3,7 +3,7 @@
   "name": "Alfar",
   "callsign": "Dokkalfar",
   "tonnage": 55,
-  "era": 2573,
+  "intro": 2573,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -2,7 +2,7 @@
   "model": "CPLT-C4",
   "name": "Catapult",
   "tonnage": 65,
-  "era": 2565,
+  "intro": 2565,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

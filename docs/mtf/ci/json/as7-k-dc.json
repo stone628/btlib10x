@@ -2,7 +2,7 @@
   "model": "AS7-K-DC",
   "name": "Atlas",
   "tonnage": 100,
-  "era": 3050,
+  "intro": 3050,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

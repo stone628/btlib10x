@@ -3,7 +3,7 @@
   "name": "BattleMaster",
   "callsign": "HellSinger",
   "tonnage": 85,
-  "era": 2750,
+  "intro": 2640,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

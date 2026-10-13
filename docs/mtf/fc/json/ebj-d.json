@@ -3,7 +3,7 @@
   "name": "Cauldron-Born",
   "clanName": "Ebon Jaguar",
   "tonnage": 65,
-  "era": 3059,
+  "intro": 3059,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

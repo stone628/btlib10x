@@ -2,7 +2,7 @@
   "model": "CGR-1A9",
   "name": "Charger",
   "tonnage": 80,
-  "era": 3034,
+  "intro": 3034,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

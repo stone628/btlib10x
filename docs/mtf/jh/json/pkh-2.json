@@ -2,7 +2,7 @@
   "model": "PKH-2",
   "name": "Pack Hunter",
   "tonnage": 30,
-  "era": 3065,
+  "intro": 3065,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 7,

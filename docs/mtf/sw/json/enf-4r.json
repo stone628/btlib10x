@@ -2,7 +2,7 @@
   "model": "ENF-4R",
   "name": "Enforcer",
   "tonnage": 50,
-  "era": 2777,
+  "intro": 2777,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

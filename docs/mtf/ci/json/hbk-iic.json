@@ -2,7 +2,7 @@
   "model": "HBK-IIC",
   "name": "Hunchback IIC",
   "tonnage": 50,
-  "era": 2856,
+  "intro": 2856,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 4,

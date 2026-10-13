@@ -2,7 +2,7 @@
   "model": "HER-4K",
   "name": "Hermes",
   "tonnage": 30,
-  "era": 3058,
+  "intro": 3058,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 9,

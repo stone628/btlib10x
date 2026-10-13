@@ -2,7 +2,7 @@
   "model": "CTF-2X",
   "name": "Cataphract",
   "tonnage": 70,
-  "era": 3027,
+  "intro": 3027,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

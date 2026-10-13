@@ -2,7 +2,7 @@
   "model": "HUR-WO-R4L",
   "name": "Huron Warrior",
   "tonnage": 50,
-  "era": 3055,
+  "intro": 3055,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

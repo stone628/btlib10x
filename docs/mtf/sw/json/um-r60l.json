@@ -2,7 +2,7 @@
   "model": "UM-R60L",
   "name": "UrbanMech",
   "tonnage": 30,
-  "era": 2925,
+  "intro": 2925,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 2,

@@ -2,7 +2,7 @@
   "model": "AS7-C-2",
   "name": "Atlas",
   "tonnage": 100,
-  "era": 2840,
+  "intro": 2840,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

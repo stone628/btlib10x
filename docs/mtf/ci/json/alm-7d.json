@@ -2,7 +2,7 @@
   "model": "ALM-7D",
   "name": "Fireball",
   "tonnage": 20,
-  "era": 3053,
+  "intro": 3053,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 11,

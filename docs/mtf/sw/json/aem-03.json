@@ -2,7 +2,7 @@
   "model": "AEM-03",
   "name": "Dragoon",
   "tonnage": 70,
-  "era": 2771,
+  "intro": 2771,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

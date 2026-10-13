@@ -2,7 +2,7 @@
   "model": "LPS-Prime",
   "name": "Lupus",
   "tonnage": 60,
-  "era": 2857,
+  "intro": 2857,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

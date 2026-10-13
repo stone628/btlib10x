@@ -5,6 +5,7 @@ mul id:9542
 Config:Biped
 techbase:Inner Sphere
 era:3022
+intro:3022
 source:Shrapnel 15
 rules level:1
 role:Sniper

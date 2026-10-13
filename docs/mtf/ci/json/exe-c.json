@@ -3,7 +3,7 @@
   "name": "Gladiator",
   "clanName": "Executioner",
   "tonnage": 95,
-  "era": 3001,
+  "intro": 3001,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

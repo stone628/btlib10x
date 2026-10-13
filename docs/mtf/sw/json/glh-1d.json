@@ -2,7 +2,7 @@
   "model": "GLH-1D",
   "name": "Galahad",
   "tonnage": 50,
-  "era": 2570,
+  "intro": 2570,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 3,

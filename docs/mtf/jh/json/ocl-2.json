@@ -2,7 +2,7 @@
   "model": "OCL-2",
   "name": "Ocelot",
   "tonnage": 35,
-  "era": 3070,
+  "intro": 3070,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 6,

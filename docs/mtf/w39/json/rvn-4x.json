@@ -2,7 +2,7 @@
   "model": "RVN-4X",
   "name": "Raven",
   "tonnage": 35,
-  "era": 3031,
+  "intro": 3031,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

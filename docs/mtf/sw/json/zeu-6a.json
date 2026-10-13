@@ -2,7 +2,7 @@
   "model": "ZEU-6A",
   "name": "Zeus",
   "tonnage": 80,
-  "era": 2940,
+  "intro": 2940,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -2,7 +2,7 @@
   "model": "BZK-F7",
   "name": "Hollander II",
   "tonnage": 45,
-  "era": 3061,
+  "intro": 3061,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -2,7 +2,7 @@
   "model": "KGC-001",
   "name": "King Crab",
   "tonnage": 100,
-  "era": 3052,
+  "intro": 3052,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

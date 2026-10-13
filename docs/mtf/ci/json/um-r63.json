@@ -2,7 +2,7 @@
   "model": "UM-R63",
   "name": "UrbanMech",
   "tonnage": 30,
-  "era": 3050,
+  "intro": 3050,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 2,

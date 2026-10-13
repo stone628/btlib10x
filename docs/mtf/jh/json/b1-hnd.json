@@ -2,7 +2,7 @@
   "model": "B1-HND",
   "name": "Bloodhound",
   "tonnage": 45,
-  "era": 3064,
+  "intro": 3064,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 7,

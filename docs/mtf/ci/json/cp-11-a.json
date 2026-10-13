@@ -2,7 +2,7 @@
   "model": "CP-11-A",
   "name": "Cyclops",
   "tonnage": 90,
-  "era": 3045,
+  "intro": 3045,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

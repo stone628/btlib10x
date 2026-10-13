@@ -2,7 +2,7 @@
   "model": "ICR-1S",
   "name": "Icarus II",
   "tonnage": 40,
-  "era": 2518,
+  "intro": 2518,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

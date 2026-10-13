@@ -2,7 +2,7 @@
   "model": "HLN-A",
   "name": "Hellion",
   "tonnage": 30,
-  "era": 3059,
+  "intro": 3059,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 7,

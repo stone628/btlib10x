@@ -5,6 +5,7 @@ WSP-100A
 Config:LAM
 TechBase:Inner Sphere
 Era:2697
+Intro:2697
 Source:TRO3085
 Rules Level:3
 History: LAM's not coded into MegaMek for play. Unit included for completeness.

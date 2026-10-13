@@ -3,7 +3,7 @@
   "name": "Thor",
   "clanName": "Summoner",
   "tonnage": 70,
-  "era": 3054,
+  "intro": 3054,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

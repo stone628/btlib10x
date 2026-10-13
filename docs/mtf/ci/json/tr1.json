@@ -2,7 +2,7 @@
   "model": "TR1",
   "name": "Wraith",
   "tonnage": 55,
-  "era": 3055,
+  "intro": 3055,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 7,

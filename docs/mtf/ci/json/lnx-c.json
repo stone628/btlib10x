@@ -2,7 +2,7 @@
   "model": "LNX-C",
   "name": "Lynx",
   "tonnage": 55,
-  "era": 2848,
+  "intro": 2848,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 5,

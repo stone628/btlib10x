@@ -2,7 +2,7 @@
   "model": "GRN-D-01",
   "name": "Grand Crusader",
   "tonnage": 80,
-  "era": 3053,
+  "intro": 3053,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

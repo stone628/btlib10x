@@ -2,7 +2,7 @@
   "model": "TLS-1B",
   "name": "Talos",
   "tonnage": 50,
-  "era": 2532,
+  "intro": 2532,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

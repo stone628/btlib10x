@@ -2,7 +2,7 @@
   "model": "MR-5M",
   "name": "Cerberus",
   "tonnage": 95,
-  "era": 3055,
+  "intro": 3055,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

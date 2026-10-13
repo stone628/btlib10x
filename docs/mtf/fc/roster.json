@@ -1261,22 +1261,6 @@
     "id": "4FDY36D4QH"
   },
   {
-    "mtf": "Caesar CES-3R.mtf",
-    "chassis": "Caesar",
-    "model": "CES-3R \"Gertrude\"",
-    "bv": 1833,
-    "intro": 3062,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "TR:3050",
-      "TR:CI"
-    ],
-    "id": "4GG254PCHY"
-  },
-  {
     "mtf": "Talon TLN-5Z.mtf",
     "chassis": "Talon",
     "model": "TLN-5Z",
@@ -2154,34 +2138,6 @@
       "TR:CI"
     ],
     "id": "845KA0MP66"
-  },
-  {
-    "mtf": "Rifleman RFL-3N.mtf",
-    "chassis": "Rifleman",
-    "model": "RFL-3N (Rubinsky 2)",
-    "bv": 0,
-    "intro": 3059,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "8C10JF6PKH"
-  },
-  {
-    "mtf": "Nightstar NSR-9J.mtf",
-    "chassis": "Nightstar",
-    "model": "NSR-9J (Holt)",
-    "bv": 3433,
-    "intro": 3063,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "SO:HH",
-      "TR:SW"
-    ],
-    "id": "8CNGQ21RJS"
   },
   {
     "mtf": "Beowulf BEO-12.mtf",
@@ -3167,22 +3123,6 @@
     "id": "CFXCH8TAX2"
   },
   {
-    "mtf": "Hatamoto-Chi HTM-28T.mtf",
-    "chassis": "Hatamoto-Chi",
-    "model": "HTM-28T (Shin)",
-    "bv": 2213,
-    "intro": 3060,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "TR:3050",
-      "TR:3050U"
-    ],
-    "id": "CGGH4WZVQQ"
-  },
-  {
     "mtf": "Hauptmann HA1-O.mtf",
     "chassis": "Hauptmann",
     "model": "HA1-O",
@@ -3429,18 +3369,6 @@
       "TR:3050U"
     ],
     "id": "DEH50CWGCZ"
-  },
-  {
-    "mtf": "Rifleman RFL-3N.mtf",
-    "chassis": "Rifleman",
-    "model": "RFL-3N (Rubinsky 1)",
-    "bv": 0,
-    "intro": 3057,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "DF1CSFQK5W"
   },
   {
     "mtf": "Orion ON1-MC.mtf",
@@ -4545,20 +4473,6 @@
     "id": "J7GSBWTZVA"
   },
   {
-    "mtf": "Nightstar NSR-9J.mtf",
-    "chassis": "Nightstar",
-    "model": "NSR-9J (Brubaker)",
-    "bv": 2838,
-    "intro": 3057,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "OTP:FI"
-    ],
-    "id": "J7HA1QY8ZK"
-  },
-  {
     "mtf": "Nova Cat Prime.mtf",
     "chassis": "Nova Cat",
     "model": "Prime",
@@ -5302,18 +5216,6 @@
     "id": "MC2X9GX118"
   },
   {
-    "mtf": "Dragon Fire DGR-3F.mtf",
-    "chassis": "Dragon Fire",
-    "model": "DGR-3F (Searcy)",
-    "bv": 0,
-    "intro": 3062,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "MCD5R663WJ"
-  },
-  {
     "mtf": "Grand Crusader GRN-D-02-B.mtf",
     "chassis": "Grand Crusader",
     "model": "GRN-D-02-B",
@@ -5697,18 +5599,6 @@
     ],
     "sources": [],
     "id": "P9N55DDTPV"
-  },
-  {
-    "mtf": "Dragon Fire DGR-3F.mtf",
-    "chassis": "Dragon Fire",
-    "model": "DGR-3F (Searcy II)",
-    "bv": 0,
-    "intro": 3062,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "PBR7Y6KPYA"
   },
   {
     "mtf": "Hatchetman HCT-5S.mtf",
@@ -6207,22 +6097,6 @@
       "RG23"
     ],
     "id": "REPGPRPNVR"
-  },
-  {
-    "mtf": "Banshee BNC-5S.mtf",
-    "chassis": "Banshee",
-    "model": "BNC-5S (Sawyer)",
-    "bv": 2094,
-    "intro": 3057,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "TR:3050",
-      "TR:3050U"
-    ],
-    "id": "REX8RSY8N5"
   },
   {
     "mtf": "Perseus P1 A.mtf",
@@ -7005,22 +6879,6 @@
     "id": "VCB7438SQM"
   },
   {
-    "mtf": "Banshee BNC-5S.mtf",
-    "chassis": "Banshee",
-    "model": "BNC-5S (Vandergriff)",
-    "bv": 1853,
-    "intro": 3062,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "TR:3050",
-      "TR:3050U"
-    ],
-    "id": "VCGEW300BZ"
-  },
-  {
     "mtf": "Apollo APL-2S.mtf",
     "chassis": "Apollo",
     "model": "APL-2S",
@@ -7338,22 +7196,6 @@
     "id": "WRY554SWGG"
   },
   {
-    "mtf": "Caesar CES-3R.mtf",
-    "chassis": "Caesar",
-    "model": "CES-3R \"Archangel\"",
-    "bv": 2098,
-    "intro": 3057,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "TR:3050",
-      "TR:CI"
-    ],
-    "id": "WS236BGTEK"
-  },
-  {
     "mtf": "Banshee BNC-7S.mtf",
     "chassis": "Banshee",
     "model": "BNC-7S",
@@ -7428,18 +7270,6 @@
       "TR:3050U"
     ],
     "id": "X3PD1HFTN8"
-  },
-  {
-    "mtf": "Excalibur EXC-C1.mtf",
-    "chassis": "Excalibur",
-    "model": "EXC-C1 (Cernunnos)",
-    "bv": 1778,
-    "intro": 3062,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "X42C0B93BA"
   },
   {
     "mtf": "Gladiator (Executioner) E.mtf",

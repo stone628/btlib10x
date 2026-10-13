@@ -2,7 +2,7 @@
   "model": "HTM-27U",
   "name": "Hatamoto-Hi",
   "tonnage": 80,
-  "era": 3047,
+  "intro": 3047,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

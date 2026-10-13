@@ -2,7 +2,7 @@
   "model": "DAI-01",
   "name": "Daikyu",
   "tonnage": 70,
-  "era": 3055,
+  "intro": 3064,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

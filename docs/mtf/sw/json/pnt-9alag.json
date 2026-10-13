@@ -2,7 +2,7 @@
   "model": "PNT-9ALAG",
   "name": "Panther",
   "tonnage": 35,
-  "era": 2950,
+  "intro": 2950,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

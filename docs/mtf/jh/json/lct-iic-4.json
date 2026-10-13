@@ -2,7 +2,7 @@
   "model": "LCT-IIC-4",
   "name": "Locust IIC",
   "tonnage": 25,
-  "era": 3064,
+  "intro": 3064,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 8,

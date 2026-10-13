@@ -2,7 +2,7 @@
   "model": "SLT",
   "name": "Solitaire",
   "tonnage": 25,
-  "era": 3064,
+  "intro": 3064,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 10,

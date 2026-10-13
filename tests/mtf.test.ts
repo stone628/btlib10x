@@ -456,15 +456,16 @@ describe("parseMtf: model callsign suffix", () => {
     expect(() => validateMechDef(def as unknown as MechDef)).not.toThrow();
   });
 
-  it("extracts the Era year as a required integer", () => {
+  it("extracts the Intro year as a required integer", () => {
     const def = convert("docs/mtf/sw/mtf/Atlas AS7-WGS Samsonov.mtf");
-    expect(def.era).toBe(3025);
+    expect(def.intro).toBe(3025);
+    expect(def).not.toHaveProperty("era");
     const file = "docs/mtf/sw/mtf/Atlas AS7-WGS Samsonov.mtf";
-    const noEra = readFileSync(file, "utf8")
+    const noIntro = readFileSync(file, "utf8")
       .split("\n")
-      .filter((l) => !/^Era:/im.test(l))
+      .filter((l) => !/^Intro:/im.test(l))
       .join("\n");
-    const res = parseMtf(noEra, file);
-    expect(res.errors.some((e) => /Era/.test(e))).toBe(true);
+    const res = parseMtf(noIntro, file);
+    expect(res.errors.some((e) => /Intro/.test(e))).toBe(true);
   });
 });

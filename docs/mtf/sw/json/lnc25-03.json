@@ -2,7 +2,7 @@
   "model": "LNC25-03",
   "name": "Lancelot",
   "tonnage": 60,
-  "era": 2876,
+  "intro": 2876,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

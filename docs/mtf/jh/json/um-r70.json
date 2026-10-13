@@ -2,7 +2,7 @@
   "model": "UM-R70",
   "name": "UrbanMech",
   "tonnage": 30,
-  "era": 3066,
+  "intro": 3066,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 2,

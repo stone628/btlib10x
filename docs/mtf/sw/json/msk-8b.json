@@ -2,7 +2,7 @@
   "model": "MSK-8B",
   "name": "Mackie",
   "tonnage": 100,
-  "era": 2576,
+  "intro": 2576,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

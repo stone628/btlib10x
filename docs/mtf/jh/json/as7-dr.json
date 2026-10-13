@@ -2,7 +2,7 @@
   "model": "AS7-Dr",
   "name": "Atlas",
   "tonnage": 100,
-  "era": 3070,
+  "intro": 3070,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

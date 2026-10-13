@@ -2,7 +2,7 @@
   "model": "SDR-7M",
   "name": "Spider",
   "tonnage": 30,
-  "era": 3051,
+  "intro": 3051,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

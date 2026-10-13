@@ -2,7 +2,7 @@
   "model": "COM-2D",
   "name": "Commando",
   "tonnage": 25,
-  "era": 2486,
+  "intro": 2486,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

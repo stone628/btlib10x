@@ -2,7 +2,7 @@
   "model": "VKG-2G",
   "name": "Viking",
   "tonnage": 90,
-  "era": 3060,
+  "intro": 3060,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

@@ -2,7 +2,7 @@
   "model": "BSW-S2",
   "name": "Bushwacker",
   "tonnage": 55,
-  "era": 3056,
+  "intro": 3056,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

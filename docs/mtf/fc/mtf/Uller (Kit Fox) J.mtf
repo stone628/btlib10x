@@ -5,6 +5,7 @@ mul id:7744
 Config:Biped Omnimech
 techbase:Clan
 era:3060
+intro:3060
 source:Rec Guide:ilClan #11
 rules level:2
 role:Striker

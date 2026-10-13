@@ -3,7 +3,7 @@
   "name": "Commando",
   "callsign": "Blazing Inferno",
   "tonnage": 25,
-  "era": 3025,
+  "intro": 3025,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

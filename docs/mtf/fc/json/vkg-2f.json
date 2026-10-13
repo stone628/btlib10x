@@ -2,7 +2,7 @@
   "model": "VKG-2F",
   "name": "Viking",
   "tonnage": 90,
-  "era": 3059,
+  "intro": 3059,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

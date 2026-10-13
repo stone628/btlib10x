@@ -2,7 +2,7 @@
   "model": "STC-2D",
   "name": "Striker",
   "tonnage": 80,
-  "era": 3056,
+  "intro": 3056,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

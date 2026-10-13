@@ -2,7 +2,7 @@
   "model": "CMA-1S",
   "name": "Chimera",
   "tonnage": 40,
-  "era": 3063,
+  "intro": 3063,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

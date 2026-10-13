@@ -2,7 +2,7 @@
   "model": "NGA-II-Prime",
   "name": "Naga II",
   "tonnage": 80,
-  "era": 2866,
+  "intro": 2866,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 5,

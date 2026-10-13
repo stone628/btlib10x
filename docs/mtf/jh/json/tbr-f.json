@@ -3,7 +3,7 @@
   "name": "Mad Cat",
   "clanName": "Timber Wolf",
   "tonnage": 75,
-  "era": 3069,
+  "intro": 3069,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

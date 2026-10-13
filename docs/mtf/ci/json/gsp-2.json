@@ -3,7 +3,7 @@
   "name": "Galahad",
   "clanName": "Glass Spider",
   "tonnage": 60,
-  "era": 2952,
+  "intro": 2952,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

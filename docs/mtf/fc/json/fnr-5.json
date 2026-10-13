@@ -2,7 +2,7 @@
   "model": "FNR-5",
   "name": "Fafnir",
   "tonnage": 100,
-  "era": 3063,
+  "intro": 3063,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

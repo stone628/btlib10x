@@ -2,7 +2,7 @@
   "model": "HMR-3M",
   "name": "Hammer",
   "tonnage": 30,
-  "era": 3053,
+  "intro": 3053,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

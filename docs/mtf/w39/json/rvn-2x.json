@@ -2,7 +2,7 @@
   "model": "RVN-2X",
   "name": "Raven",
   "tonnage": 35,
-  "era": 3030,
+  "intro": 3030,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

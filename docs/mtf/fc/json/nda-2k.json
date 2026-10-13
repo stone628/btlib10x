@@ -2,7 +2,7 @@
   "model": "NDA-2K",
   "name": "No-Dachi",
   "tonnage": 70,
-  "era": 3059,
+  "intro": 3059,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

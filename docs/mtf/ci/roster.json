@@ -152,22 +152,6 @@
     "id": "09TV5K4RN4"
   },
   {
-    "mtf": "Phoenix Hawk PXH-3M.mtf",
-    "chassis": "Phoenix Hawk",
-    "model": "PXH-3M (Masters)",
-    "bv": 1154,
-    "intro": 3051,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "TR:3085",
-      "Ideal War"
-    ],
-    "id": "0DW09JFG1D"
-  },
-  {
     "mtf": "Sun Bear Prime.mtf",
     "chassis": "Sun Bear",
     "model": "Prime",
@@ -617,18 +601,6 @@
       "TR:CI"
     ],
     "id": "23RXHXRSP0"
-  },
-  {
-    "mtf": "Awesome AWS-8Q.mtf",
-    "chassis": "Awesome",
-    "model": "AWS-8Q (Barton)",
-    "bv": 0,
-    "intro": 3044,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "24EBBWSZS2"
   },
   {
     "mtf": "Marauder IIC.mtf",
@@ -1849,22 +1821,6 @@
     "id": "694QB99G52"
   },
   {
-    "mtf": "Crusader CRD-3R.mtf",
-    "chassis": "Crusader",
-    "model": "CRD-3R (Bear)",
-    "bv": 0,
-    "intro": 3049,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "FM:M",
-      "CM:Mercs",
-      "FM:Mercs"
-    ],
-    "id": "69661XPZRK"
-  },
-  {
     "mtf": "Awesome AWS-9M.mtf",
     "chassis": "Awesome",
     "model": "AWS-9M",
@@ -1980,20 +1936,6 @@
     "id": "6Q1NYEHVZY"
   },
   {
-    "mtf": "Enforcer ENF-5D.mtf",
-    "chassis": "Enforcer",
-    "model": "ENF-5D (Daniel)",
-    "bv": 1738,
-    "intro": 3054,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "SB:S&D"
-    ],
-    "id": "6T41QYE3M4"
-  },
-  {
     "mtf": "Nobori-nin (Huntsman) B.mtf",
     "chassis": "Nobori-nin (Huntsman)",
     "model": "B",
@@ -2079,21 +2021,6 @@
       "TR:CI"
     ],
     "id": "79XPQWB7GJ"
-  },
-  {
-    "mtf": "Griffin GRF-1DS.mtf",
-    "chassis": "Griffin",
-    "model": "GRF-1DS (Almstedt)",
-    "bv": 1204,
-    "intro": 3052,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "CM:Kurita",
-      "FM:Kurita"
-    ],
-    "id": "7DXV651YM3"
   },
   {
     "mtf": "Sun Bear A.mtf",
@@ -2507,21 +2434,6 @@
       "TR:3060"
     ],
     "id": "8MMGSRCC9M"
-  },
-  {
-    "mtf": "Hatamoto-Chi HTM-27T.mtf",
-    "chassis": "Hatamoto-Chi",
-    "model": "HTM-27T (Lowenbrau)",
-    "bv": 0,
-    "intro": 3051,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "CM:Kurita",
-      "FM:Kurita"
-    ],
-    "id": "8MVT08ERCR"
   },
   {
     "mtf": "Vixen (Incubus) 3.mtf",
@@ -3148,21 +3060,6 @@
     "id": "AB39AY33RC"
   },
   {
-    "mtf": "Ostsol OTL-4D.mtf",
-    "chassis": "Ostsol",
-    "model": "OTL-4D (Ragnar)",
-    "bv": 1308,
-    "intro": 3051,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "CM:Kurita",
-      "FM:Kurita"
-    ],
-    "id": "AFHBD0WGMV"
-  },
-  {
     "mtf": "Archer ARC-5CS.mtf",
     "chassis": "Archer",
     "model": "ARC-5CS",
@@ -3726,22 +3623,6 @@
     "id": "CN7PDRS252"
   },
   {
-    "mtf": "Archer ARC-4M.mtf",
-    "chassis": "Archer",
-    "model": "ARC-4M (Ismail)",
-    "bv": 0,
-    "intro": 3050,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "FM:M",
-      "CM:Mercs",
-      "FM:Mercs"
-    ],
-    "id": "CPMY9CQVC8"
-  },
-  {
     "mtf": "Storm Giant.mtf",
     "chassis": "Storm Giant",
     "model": "",
@@ -3919,21 +3800,6 @@
       "RGv1"
     ],
     "id": "D2XW88ASDX"
-  },
-  {
-    "mtf": "Highlander HGN-732.mtf",
-    "chassis": "Highlander",
-    "model": "HGN-732 (Colleen)",
-    "bv": 2164,
-    "intro": 2801,
-    "tags": [
-      "lostech",
-      "named"
-    ],
-    "sources": [
-      "His:OK"
-    ],
-    "id": "D3AJRHSDAS"
   },
   {
     "mtf": "Ryoken (Stormcrow) P.mtf",
@@ -4114,21 +3980,6 @@
       "RGv1"
     ],
     "id": "DYQAN70VBB"
-  },
-  {
-    "mtf": "Ostsol OTL-5M.mtf",
-    "chassis": "Ostsol",
-    "model": "OTL-5M (Maki)",
-    "bv": 0,
-    "intro": 3051,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "CM:Kurita",
-      "FM:Kurita"
-    ],
-    "id": "DZKJBZ88EM"
   },
   {
     "mtf": "Dervish DV-7D.mtf",
@@ -4750,18 +4601,6 @@
       "TR:3050U"
     ],
     "id": "FJBQVYBR7M"
-  },
-  {
-    "mtf": "Ostsol OTL-4D.mtf",
-    "chassis": "Ostsol",
-    "model": "OTL-4D (Woo)",
-    "bv": 0,
-    "intro": 3045,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "FKCHWMHSAH"
   },
   {
     "mtf": "Charger CGR-3K.mtf",
@@ -6003,21 +5842,6 @@
     "id": "K613QY5QBQ"
   },
   {
-    "mtf": "Atlas AS7-S.mtf",
-    "chassis": "Atlas",
-    "model": "AS7-S (Hanssen)",
-    "bv": 0,
-    "intro": 3051,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "CM:Kurita",
-      "FM:Kurita"
-    ],
-    "id": "K7F4QPVCGX"
-  },
-  {
     "mtf": "Uller (Kit Fox) Prime.mtf",
     "chassis": "Uller (Kit Fox)",
     "model": "Prime",
@@ -6539,21 +6363,6 @@
     "id": "N5QZVZV6B1"
   },
   {
-    "mtf": "Crusader CRD-3R.mtf",
-    "chassis": "Crusader",
-    "model": "CRD-3R (Crael)",
-    "bv": 1204,
-    "intro": 3040,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "RG17",
-      "RGv1"
-    ],
-    "id": "NJ7T383TQQ"
-  },
-  {
     "mtf": "Dragonfly (Viper) C.mtf",
     "chassis": "Dragonfly (Viper)",
     "model": "C",
@@ -6695,20 +6504,6 @@
       "TR:3050U"
     ],
     "id": "P0MFRC74BS"
-  },
-  {
-    "mtf": "Hatamoto-Chi HTM-27T.mtf",
-    "chassis": "Hatamoto-Chi",
-    "model": "HTM-27T (Daniel II)",
-    "bv": 1661,
-    "intro": 3052,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "SB:S&D"
-    ],
-    "id": "P6F4JS3S4J"
   },
   {
     "mtf": "Gladiator (Executioner) D.mtf",
@@ -7117,20 +6912,6 @@
       "RG23"
     ],
     "id": "QK6R53AY28"
-  },
-  {
-    "mtf": "Highlander HGN-732.mtf",
-    "chassis": "Highlander",
-    "model": "HGN-732 (Jorgensson)",
-    "bv": 2682,
-    "intro": 2829,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "OTP:WA"
-    ],
-    "id": "QNV36QZQ50"
   },
   {
     "mtf": "Iron Cheetah Prime.mtf",
@@ -8599,20 +8380,6 @@
     "id": "W9ZC0067JX"
   },
   {
-    "mtf": "Annihilator C.mtf",
-    "chassis": "Annihilator",
-    "model": "C \"Gausszilla\"",
-    "bv": 2455,
-    "intro": 2844,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "His:OK"
-    ],
-    "id": "WA0SK9H57M"
-  },
-  {
     "mtf": "Cataphract CTF-3D.mtf",
     "chassis": "Cataphract",
     "model": "CTF-3D",
@@ -8927,18 +8694,6 @@
       "RGv1"
     ],
     "id": "XBJ8R0JEVX"
-  },
-  {
-    "mtf": "Awesome AWS-8Q.mtf",
-    "chassis": "Awesome",
-    "model": "AWS-8Q (Smith)",
-    "bv": 2166,
-    "intro": 3053,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "XCA61QVBTX"
   },
   {
     "mtf": "Crusader CRD-4BR.mtf",

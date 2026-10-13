@@ -2,7 +2,7 @@
   "model": "HTM-28Tr",
   "name": "Hatamoto-Chi",
   "tonnage": 80,
-  "era": 3071,
+  "intro": 3071,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

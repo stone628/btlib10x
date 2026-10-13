@@ -2,7 +2,7 @@
   "model": "CRB-27sl",
   "name": "Crab",
   "tonnage": 50,
-  "era": 2719,
+  "intro": 2640,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

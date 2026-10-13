@@ -2,7 +2,7 @@
   "model": "CPLT-K3",
   "name": "Catapult",
   "tonnage": 65,
-  "era": 3047,
+  "intro": 3047,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

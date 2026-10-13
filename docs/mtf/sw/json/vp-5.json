@@ -2,7 +2,7 @@
   "model": "VP-5",
   "name": "Viper",
   "tonnage": 70,
-  "era": 2958,
+  "intro": 2958,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

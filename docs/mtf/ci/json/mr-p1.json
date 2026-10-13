@@ -2,7 +2,7 @@
   "model": "MR-P1",
   "name": "Morpheus",
   "tonnage": 65,
-  "era": 3051,
+  "intro": 3051,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 6,

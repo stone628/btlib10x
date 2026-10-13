@@ -2,7 +2,7 @@
   "model": "SHG-C",
   "name": "Shogun",
   "tonnage": 85,
-  "era": 2850,
+  "intro": 2850,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

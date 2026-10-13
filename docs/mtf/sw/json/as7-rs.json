@@ -2,7 +2,7 @@
   "model": "AS7-RS",
   "name": "Atlas",
   "tonnage": 100,
-  "era": 2892,
+  "intro": 2892,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

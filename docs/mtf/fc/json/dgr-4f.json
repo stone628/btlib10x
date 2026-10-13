@@ -2,7 +2,7 @@
   "model": "DGR-4F",
   "name": "Dragon Fire",
   "tonnage": 75,
-  "era": 3060,
+  "intro": 3060,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

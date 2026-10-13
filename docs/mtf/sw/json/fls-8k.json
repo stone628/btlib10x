@@ -2,7 +2,7 @@
   "model": "FLS-8K",
   "name": "Flashman",
   "tonnage": 75,
-  "era": 2701,
+  "intro": 2701,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

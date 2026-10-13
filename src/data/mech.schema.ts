@@ -173,8 +173,8 @@ export interface MechDef {
   /** Pilot callsign from the MTF line-3 `(...)` suffix (e.g. `BL-10-KNT (Ross)` → `Ross`); undefined when absent. */
   readonly callsign?: string;
   readonly tonnage: number;
-  /** Introduction year from the MTF `Era:` header (e.g. 3025). Required. */
-  readonly era: number;
+  /** Introduction year (Master Unit List) from the MTF `Intro:` header (e.g. 3025). Required. */
+  readonly intro: number;
   readonly weightClass: "Light" | "Medium" | "Heavy" | "Assault";
   readonly techBase: string;
   readonly walking: number;
@@ -234,8 +234,8 @@ export interface ResolvedMechDef {
   /** Pilot callsign when the source sheet carried one; otherwise undefined. */
   readonly callsign?: string;
   readonly tonnage: number;
-  /** Introduction year from the MTF `Era:` header. */
-  readonly era: number;
+  /** Introduction year (Master Unit List) from the MTF `Intro:` header. */
+  readonly intro: number;
   readonly weightClass: "Light" | "Medium" | "Heavy" | "Assault";
   readonly techBase: string;
   readonly walking: number;
@@ -310,7 +310,7 @@ export function resolveMechDef(def: MechDef): ResolvedMechDef {
     ...(def.clanName !== undefined && { clanName: def.clanName }),
     ...(def.callsign !== undefined && { callsign: def.callsign }),
     tonnage: def.tonnage,
-    era: def.era,
+    intro: def.intro,
     weightClass: def.weightClass,
     techBase: def.techBase,
     walking: def.walking,
@@ -557,7 +557,7 @@ export function validateMechDef(def: MechDef): MechDef {
   const { tonnage, walking, running, jumping, techBase } = def;
 
   if (tonnage < 10 || tonnage > 100) errors.push("tonnage must be 10..100");
-  if (!Number.isInteger(def.era)) errors.push("era must be an integer year");
+  if (!Number.isInteger(def.intro)) errors.push("intro must be an integer year");
 
   if (
     def.clanName !== undefined &&

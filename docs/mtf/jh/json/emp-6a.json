@@ -2,7 +2,7 @@
   "model": "EMP-6A",
   "name": "Emperor",
   "tonnage": 90,
-  "era": 2612,
+  "intro": 3064,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

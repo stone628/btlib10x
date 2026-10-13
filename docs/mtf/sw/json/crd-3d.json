@@ -2,7 +2,7 @@
   "model": "CRD-3D",
   "name": "Crusader",
   "tonnage": 65,
-  "era": 2756,
+  "intro": 2756,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

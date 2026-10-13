@@ -2,7 +2,7 @@
   "model": "STH-1D",
   "name": "Stealth",
   "tonnage": 45,
-  "era": 3054,
+  "intro": 3065,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 7,

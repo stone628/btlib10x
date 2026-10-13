@@ -2,7 +2,7 @@
   "model": "MLN-1B",
   "name": "Merlin",
   "tonnage": 60,
-  "era": 3053,
+  "intro": 3053,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

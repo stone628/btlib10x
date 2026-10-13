@@ -2,7 +2,7 @@
   "model": "ENF-6M",
   "name": "Enforcer III",
   "tonnage": 50,
-  "era": 3059,
+  "intro": 3059,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

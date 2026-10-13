@@ -2,7 +2,7 @@
   "model": "BL-7-KNT",
   "name": "Black Knight",
   "tonnage": 75,
-  "era": 2809,
+  "intro": 2809,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

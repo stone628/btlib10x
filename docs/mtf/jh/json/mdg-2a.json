@@ -2,7 +2,7 @@
   "model": "MDG-2A",
   "name": "Rakshasa",
   "tonnage": 75,
-  "era": 3064,
+  "intro": 3064,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

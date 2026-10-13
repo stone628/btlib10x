@@ -2,7 +2,7 @@
   "model": "RFL-3N-2",
   "name": "Rifleman II",
   "tonnage": 80,
-  "era": 2720,
+  "intro": 2773,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

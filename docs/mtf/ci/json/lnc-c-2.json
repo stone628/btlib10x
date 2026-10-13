@@ -2,7 +2,7 @@
   "model": "LNC-C-2",
   "name": "Lancelot",
   "tonnage": 60,
-  "era": 2857,
+  "intro": 2857,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 6,

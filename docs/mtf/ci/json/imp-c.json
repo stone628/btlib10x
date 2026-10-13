@@ -2,7 +2,7 @@
   "model": "IMP-C",
   "name": "Imp",
   "tonnage": 100,
-  "era": 2863,
+  "intro": 2863,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

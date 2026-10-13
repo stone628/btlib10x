@@ -2,7 +2,7 @@
   "model": "AS7-D-H",
   "name": "Atlas II",
   "tonnage": 100,
-  "era": 2765,
+  "intro": 2833,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

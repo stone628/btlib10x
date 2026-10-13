@@ -2,7 +2,7 @@
   "model": "TSG-9H",
   "name": "Ti Ts'ang",
   "tonnage": 60,
-  "era": 3059,
+  "intro": 3068,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 6,

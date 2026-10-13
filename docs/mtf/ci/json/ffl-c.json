@@ -2,7 +2,7 @@
   "model": "FFL-C",
   "name": "Firefly",
   "tonnage": 30,
-  "era": 2839,
+  "intro": 2839,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 5,

@@ -2,7 +2,7 @@
   "model": "UM-R100",
   "name": "SuburbanMech",
   "tonnage": 30,
-  "era": 3045,
+  "intro": 3045,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 4,

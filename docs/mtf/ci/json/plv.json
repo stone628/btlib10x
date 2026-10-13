@@ -2,7 +2,7 @@
   "model": "PLV",
   "name": "Pulverizer",
   "tonnage": 90,
-  "era": 2845,
+  "intro": 2845,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

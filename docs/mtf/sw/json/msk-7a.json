@@ -2,7 +2,7 @@
   "model": "MSK-7A",
   "name": "Mackie",
   "tonnage": 100,
-  "era": 2470,
+  "intro": 2488,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

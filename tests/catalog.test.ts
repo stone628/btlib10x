@@ -110,8 +110,8 @@ describe("catalog manifest", () => {
         {
           v: 1,
           mechs: [
-            { m: "X", n: 0, b: 1, t: 50, e: 3025, l: 2 },
-            { m: "x", n: 0, b: 2, t: 50, e: 3025, l: 3 },
+            { m: "X", n: 0, b: 1, t: 50, i: 3025, l: 2 },
+            { m: "x", n: 0, b: 2, t: 50, i: 3025, l: 3 },
           ],
           maps: [],
         },
@@ -122,7 +122,7 @@ describe("catalog manifest", () => {
       parseCatalogManifest(
         {
           v: 1,
-          mechs: [{ m: "X", n: 0, b: 1, t: 50, e: 3025, c: "W", l: 2 }],
+          mechs: [{ m: "X", n: 0, b: 1, t: 50, i: 3025, c: "W", l: 2 }],
           maps: [{ n: "M", w: 1, h: 1, l: 2 }],
         },
         ["Y"],
@@ -132,7 +132,7 @@ describe("catalog manifest", () => {
 
   it("rejects malformed lines", () => {
     const MAP_ID = { name: "M", width: 1, height: 1 };
-    const id = { model: "X", name: "Y", techBase: "Inner Sphere", tonnage: 50, era: 3025 };
+    const id = { model: "X", name: "Y", techBase: "Inner Sphere", tonnage: 50, intro: 3025 };
     expect(() => decodeMechLine("not json", id)).toThrow();
     expect(() => decodeMechLine("[1,2]", id)).toThrow();
     expect(() => decodeMechLine('{"w":1}', id)).toThrow();
@@ -249,22 +249,22 @@ describe("catalog registration", () => {
     const manifest = parseCatalogManifest(
       {
         v: 1,
-        mechs: [{ m: "X", n: 0, b: 1, t: 50, e: 3025, k: "Ross", l: 2 }],
+        mechs: [{ m: "X", n: 0, b: 1, t: 50, i: 3025, k: "Ross", l: 2 }],
         maps: [],
       },
       ["Y"],
     );
     expect(manifest.mechs[0]!.callsign).toBe("Ross");
-    expect(manifest.mechs[0]!.era).toBe(3025);
+    expect(manifest.mechs[0]!.intro).toBe(3025);
     expect(() =>
       parseCatalogManifest(
-        { v: 1, mechs: [{ m: "X", n: 0, b: 1, t: 50, e: 3025, k: "", l: 2 }], maps: [] },
+        { v: 1, mechs: [{ m: "X", n: 0, b: 1, t: 50, i: 3025, k: "", l: 2 }], maps: [] },
         ["Y"],
       ),
     ).toThrow(/callsign/);
     expect(() =>
       parseCatalogManifest({ v: 1, mechs: [{ m: "X", n: 0, b: 1, t: 50, l: 2 }], maps: [] }, ["Y"]),
-    ).toThrow(/era/);
+    ).toThrow(/intro/);
   });
 
   it("keeps identity single-sourced: wire lines carry no model/name/techBase/tonnage", () => {

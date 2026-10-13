@@ -2,7 +2,7 @@
   "model": "JR7-IIC",
   "name": "Jenner IIC",
   "tonnage": 35,
-  "era": 3042,
+  "intro": 3042,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 9,

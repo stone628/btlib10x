@@ -2,7 +2,7 @@
   "model": "MCY-100",
   "name": "Mercury II",
   "tonnage": 40,
-  "era": 2823,
+  "intro": 2823,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 7,

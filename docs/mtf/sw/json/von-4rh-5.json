@@ -3,7 +3,7 @@
   "name": "Von Rohrs",
   "clanName": "Hebis",
   "tonnage": 65,
-  "era": 2487,
+  "intro": 2487,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

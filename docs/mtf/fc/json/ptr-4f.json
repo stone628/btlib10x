@@ -2,7 +2,7 @@
   "model": "PTR-4F",
   "name": "Penetrator",
   "tonnage": 75,
-  "era": 3056,
+  "intro": 3056,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

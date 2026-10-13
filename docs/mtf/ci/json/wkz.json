@@ -2,7 +2,7 @@
   "model": "WKZ",
   "name": "Wakazashi",
   "tonnage": 85,
-  "era": 2830,
+  "intro": 2830,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

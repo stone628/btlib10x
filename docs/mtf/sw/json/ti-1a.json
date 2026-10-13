@@ -2,7 +2,7 @@
   "model": "TI-1A",
   "name": "Titan",
   "tonnage": 100,
-  "era": 2787,
+  "intro": 2765,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

@@ -2,7 +2,7 @@
   "model": "WDS-B",
   "name": "Woodsman",
   "tonnage": 75,
-  "era": 2866,
+  "intro": 2866,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

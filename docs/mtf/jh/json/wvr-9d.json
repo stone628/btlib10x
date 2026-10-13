@@ -2,7 +2,7 @@
   "model": "WVR-9D",
   "name": "Wolverine",
   "tonnage": 55,
-  "era": 3066,
+  "intro": 3066,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

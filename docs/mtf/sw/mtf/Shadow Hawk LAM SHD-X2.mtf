@@ -5,6 +5,7 @@ SHD-X2
 Config:LAM
 TechBase:Inner Sphere
 Era:2684
+Intro:2684
 Source:TRO3085
 Rules Level:4
 History: LAM's not coded into MegaMek for play. Unit included for completeness.

@@ -2,7 +2,7 @@
   "model": "JN-G8A",
   "name": "Jinggau",
   "tonnage": 65,
-  "era": 3060,
+  "intro": 3060,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

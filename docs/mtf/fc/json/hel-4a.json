@@ -2,7 +2,7 @@
   "model": "HEL-4A",
   "name": "Helios",
   "tonnage": 60,
-  "era": 3060,
+  "intro": 3060,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

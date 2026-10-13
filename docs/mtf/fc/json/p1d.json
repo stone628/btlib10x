@@ -2,7 +2,7 @@
   "model": "P1D",
   "name": "Perseus",
   "tonnage": 75,
-  "era": 3058,
+  "intro": 3058,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

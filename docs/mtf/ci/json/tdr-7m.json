@@ -2,7 +2,7 @@
   "model": "TDR-7M",
   "name": "Thunderbolt",
   "tonnage": 65,
-  "era": 3049,
+  "intro": 3049,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -2,7 +2,7 @@
   "model": "SDR-9KC",
   "name": "Venom",
   "tonnage": 35,
-  "era": 3066,
+  "intro": 3066,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

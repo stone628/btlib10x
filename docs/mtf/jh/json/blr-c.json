@@ -2,7 +2,7 @@
   "model": "BLR-C",
   "name": "BattleMaster",
   "tonnage": 85,
-  "era": 3070,
+  "intro": 3070,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

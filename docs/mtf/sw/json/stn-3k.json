@@ -2,7 +2,7 @@
   "model": "STN-3K",
   "name": "Sentinel",
   "tonnage": 40,
-  "era": 2830,
+  "intro": 2830,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

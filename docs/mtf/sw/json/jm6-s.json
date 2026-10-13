@@ -2,7 +2,7 @@
   "model": "JM6-S",
   "name": "JagerMech",
   "tonnage": 65,
-  "era": 2774,
+  "intro": 2774,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -2,7 +2,7 @@
   "model": "WHM-8M",
   "name": "Warhammer",
   "tonnage": 70,
-  "era": 3069,
+  "intro": 3069,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

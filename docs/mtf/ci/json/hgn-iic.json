@@ -2,7 +2,7 @@
   "model": "HGN-IIC",
   "name": "Highlander IIC",
   "tonnage": 90,
-  "era": 2858,
+  "intro": 2858,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

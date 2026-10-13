@@ -2,7 +2,7 @@
   "model": "COM-5S",
   "name": "Commando",
   "tonnage": 25,
-  "era": 3050,
+  "intro": 3050,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

@@ -2,7 +2,7 @@
   "model": "HA1-OC",
   "name": "Hauptmann",
   "tonnage": 95,
-  "era": 3061,
+  "intro": 3061,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

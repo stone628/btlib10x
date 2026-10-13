@@ -2,7 +2,7 @@
   "model": "PNT-9R",
   "name": "Panther",
   "tonnage": 35,
-  "era": 2759,
+  "intro": 2759,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 4,

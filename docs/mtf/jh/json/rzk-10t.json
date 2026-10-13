@@ -2,7 +2,7 @@
   "model": "RZK-10T",
   "name": "Razorback",
   "tonnage": 30,
-  "era": 3071,
+  "intro": 3071,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 7,

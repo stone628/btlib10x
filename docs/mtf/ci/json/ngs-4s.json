@@ -2,7 +2,7 @@
   "model": "NGS-4S",
   "name": "Nightsky",
   "tonnage": 50,
-  "era": 3053,
+  "intro": 3053,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

@@ -2,7 +2,7 @@
   "model": "STG-C-2",
   "name": "Stinger",
   "tonnage": 20,
-  "era": 2838,
+  "intro": 2838,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 6,

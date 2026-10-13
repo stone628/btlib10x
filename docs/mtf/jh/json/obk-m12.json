@@ -2,7 +2,7 @@
   "model": "OBK-M12",
   "name": "O-Bakemono",
   "tonnage": 80,
-  "era": 3070,
+  "intro": 3070,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

@@ -2,7 +2,7 @@
   "model": "C-SK1",
   "name": "Cossack",
   "tonnage": 20,
-  "era": 3060,
+  "intro": 3060,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

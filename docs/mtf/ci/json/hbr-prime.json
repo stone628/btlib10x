@@ -3,7 +3,7 @@
   "name": "Loki",
   "clanName": "Hellbringer",
   "tonnage": 65,
-  "era": 2926,
+  "intro": 2926,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

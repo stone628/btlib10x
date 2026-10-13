@@ -2,7 +2,7 @@
   "model": "AWS-9M",
   "name": "Awesome",
   "tonnage": 80,
-  "era": 3049,
+  "intro": 3049,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

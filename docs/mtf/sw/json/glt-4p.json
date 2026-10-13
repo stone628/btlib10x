@@ -2,7 +2,7 @@
   "model": "GLT-4P",
   "name": "Guillotine",
   "tonnage": 70,
-  "era": 2833,
+  "intro": 2833,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

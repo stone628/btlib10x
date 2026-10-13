@@ -5,6 +5,7 @@ Marauder IIC
 Config:Biped
 techbase:Clan
 era:2831
+intro:2831
 rules level:2
 
 mass:85

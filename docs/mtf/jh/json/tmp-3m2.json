@@ -3,7 +3,7 @@
   "name": "Tempest",
   "callsign": "Storm Tempest",
   "tonnage": 65,
-  "era": 3067,
+  "intro": 3067,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

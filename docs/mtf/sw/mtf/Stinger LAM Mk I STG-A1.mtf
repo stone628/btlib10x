@@ -5,6 +5,7 @@ STG-A1
 Config:LAM
 TechBase:Inner Sphere
 Era:2688
+Intro:2688
 Source:TRO3085
 Rules Level:3
 History: LAM's not coded into MegaMek for play. Unit included for completeness.

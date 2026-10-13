@@ -2,7 +2,7 @@
   "model": "SHC-Prime",
   "name": "Shadow Cat",
   "tonnage": 45,
-  "era": 3003,
+  "intro": 3003,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 6,

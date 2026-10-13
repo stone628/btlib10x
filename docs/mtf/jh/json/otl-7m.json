@@ -2,7 +2,7 @@
   "model": "OTL-7M",
   "name": "Ostsol",
   "tonnage": 60,
-  "era": 3065,
+  "intro": 3065,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

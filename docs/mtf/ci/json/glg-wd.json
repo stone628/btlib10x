@@ -2,7 +2,7 @@
   "model": "GLG-WD",
   "name": "Gallowglas",
   "tonnage": 70,
-  "era": 3055,
+  "intro": 3055,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

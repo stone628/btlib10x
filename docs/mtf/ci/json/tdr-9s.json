@@ -2,7 +2,7 @@
   "model": "TDR-9S",
   "name": "Thunderbolt",
   "tonnage": 65,
-  "era": 3050,
+  "intro": 3050,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

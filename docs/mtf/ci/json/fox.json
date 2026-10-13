@@ -2,7 +2,7 @@
   "model": "FOX",
   "name": "Fox",
   "tonnage": 50,
-  "era": 2835,
+  "intro": 2835,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 6,

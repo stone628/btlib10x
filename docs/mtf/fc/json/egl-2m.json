@@ -2,7 +2,7 @@
   "model": "EGL-2M",
   "name": "Eagle",
   "tonnage": 25,
-  "era": 3058,
+  "intro": 3058,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

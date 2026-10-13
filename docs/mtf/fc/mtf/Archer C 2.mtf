@@ -5,6 +5,7 @@ C 2
 Config:Biped
 techbase:Clan
 era:3065
+intro:3063
 source:ForcePack Wolfs Dragoons - Civil War
 rules level:3
 mul id:8387

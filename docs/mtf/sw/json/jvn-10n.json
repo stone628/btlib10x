@@ -2,7 +2,7 @@
   "model": "JVN-10N",
   "name": "Javelin",
   "tonnage": 30,
-  "era": 2751,
+  "intro": 2751,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

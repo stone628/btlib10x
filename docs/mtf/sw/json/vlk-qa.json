@@ -2,7 +2,7 @@
   "model": "VLK-QA",
   "name": "Valkyrie",
   "tonnage": 30,
-  "era": 2787,
+  "intro": 2787,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

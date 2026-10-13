@@ -2,7 +2,7 @@
   "model": "RFL-5CS",
   "name": "Rifleman",
   "tonnage": 60,
-  "era": 3052,
+  "intro": 3052,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

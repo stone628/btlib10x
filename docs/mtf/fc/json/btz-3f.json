@@ -2,7 +2,7 @@
   "model": "BTZ-3F",
   "name": "Blitzkrieg",
   "tonnage": 50,
-  "era": 3061,
+  "intro": 3061,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 7,

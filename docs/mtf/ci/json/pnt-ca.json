@@ -2,7 +2,7 @@
   "model": "PNT-CA",
   "name": "Panther",
   "tonnage": 35,
-  "era": 3055,
+  "intro": 3055,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 4,

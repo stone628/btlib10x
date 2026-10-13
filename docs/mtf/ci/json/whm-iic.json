@@ -2,7 +2,7 @@
   "model": "WHM-IIC",
   "name": "Warhammer IIC",
   "tonnage": 80,
-  "era": 2829,
+  "intro": 2829,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

@@ -2,7 +2,7 @@
   "model": "PNT-8Z",
   "name": "Panther",
   "tonnage": 35,
-  "era": 2739,
+  "intro": 2739,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 4,
