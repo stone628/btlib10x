@@ -14,9 +14,7 @@ const noMaps = args[args.indexOf("--maps") + 1] === "none";
 const mapsDir = opt("maps", join(root, "data", "maps"));
 const outFile = opt("out", join(root, "data", "btlib10x.jsonl"));
 // Optional `--exclude a.json,b.json`: source sheets to leave out of this
-// pack (used by `pack:sw` for sheets the engine cannot model — e.g. the
-// King Crab AC/20 variants: split-location weapons whose crits spill across
-// arm and torso cannot link to a same-location mount).
+// pack (for sheets the engine cannot model).
 const excludeIdx = args.indexOf("--exclude");
 const excluded = new Set(
   excludeIdx >= 0 && args[excludeIdx + 1] !== undefined

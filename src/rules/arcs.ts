@@ -3,10 +3,13 @@ import {
   FACINGS,
   type Facing,
   type HexCoord,
+  isArm,
+  isTorso,
   type Location,
   oppositeFacing,
   rotateFacing,
 } from "../core/types";
+import type { WeaponMount } from "../data/mech.schema";
 
 /** Firing arc of a target relative to a unit. */
 export type Arc = "front" | "rear" | "leftSide" | "rightSide";
@@ -138,6 +141,25 @@ export function weaponCanFireIntoArc(location: Location, rearFacing: boolean, ar
     case "rightSide":
       return location === "rightArm";
   }
+}
+
+/**
+ * Location whose firing arc a mount uses: a weapon split between an arm and
+ * a torso uses the torso arc (TW pp.105-106), so a split arm AC/20 fires
+ * forward only. It is also the location for the arm actuator to-hit
+ * modifiers, which a split weapon does not take.
+ */
+export function mountArcLocation(mount: Pick<WeaponMount, "location" | "splitLocation">): Location {
+  const split = mount.splitLocation;
+  return split !== undefined && isArm(mount.location) && isTorso(split) ? split : mount.location;
+}
+
+/** `weaponCanFireIntoArc` for a mount, honoring split and rear-facing mounts. */
+export function mountCanFireIntoArc(
+  mount: Pick<WeaponMount, "location" | "splitLocation" | "rearFacing">,
+  arc: Arc,
+): boolean {
+  return weaponCanFireIntoArc(mountArcLocation(mount), mount.rearFacing === true, arc);
 }
 
 /**

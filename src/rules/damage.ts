@@ -254,6 +254,15 @@ export function canAttemptStandUp(damage: UnitDamageState): boolean {
   return true;
 }
 
+/** A mount can fire only while every location holding its slots can (split weapons need both). */
+export function canFireMount(
+  damage: UnitDamageState,
+  mount: { readonly location: Location; readonly splitLocation?: Location },
+): boolean {
+  if (!canFireFromLocation(damage, mount.location)) return false;
+  return mount.splitLocation === undefined || canFireFromLocation(damage, mount.splitLocation);
+}
+
 /** A weapon in `location` can fire only if that location (and its shoulder for arms) is intact. */
 export function canFireFromLocation(damage: UnitDamageState, location: Location): boolean {
   if (damage.internalStructure[location] <= 0) return false;

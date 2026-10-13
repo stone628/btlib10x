@@ -105,6 +105,8 @@ export {
   type Arc,
   classifyArcWithBoundary,
   classifyFiringArc,
+  mountArcLocation,
+  mountCanFireIntoArc,
   weaponCanFireIntoArc,
 } from "./rules/arcs";
 export type { AttackResolution, HitGroup, WeaponAttackInput } from "./rules/attack";
@@ -133,6 +135,7 @@ export {
 export {
   canAttemptStandUp,
   canFireFromLocation,
+  canFireMount,
   type DamageApplication,
   type DamageOptions,
   type DamageTransferStep,

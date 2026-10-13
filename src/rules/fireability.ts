@@ -6,9 +6,15 @@ import { mechDefFor } from "../data/index";
 import { weaponDefFor } from "../data/weapon.schema";
 import { armWeaponToHitModifier, targetingComputerModifier } from "./actuators";
 import { binsForWeaponName, pooledShotsLeft } from "./ammo";
-import { type Arc, classifyFiringArc, effectiveFacingForTwist, weaponCanFireIntoArc } from "./arcs";
+import {
+  type Arc,
+  classifyFiringArc,
+  effectiveFacingForTwist,
+  mountArcLocation,
+  mountCanFireIntoArc,
+} from "./arcs";
 import { countDestroyedSensor } from "./critical";
-import { canFireFromLocation, isUnitLocationDestroyed } from "./damage";
+import { canFireMount, isUnitLocationDestroyed } from "./damage";
 import { type BattleState, isImmobile, isUnitRemoved, losEnds, partialCoverMod } from "./game";
 import { toHitHeatModifier } from "./heat";
 import { losClear, losWoodsPointsBetween } from "./los";
@@ -214,7 +220,7 @@ export function suggestFireTargets(
           blockBoth("prone");
           return;
         }
-        if (!canFireFromLocation(baseDamage, mount.location)) {
+        if (!canFireMount(baseDamage, mount)) {
           blockBoth("destroyed");
           return;
         }
@@ -238,8 +244,7 @@ export function suggestFireTargets(
           blockBoth("outOfArc");
           return;
         }
-        const rearFacing = mount.rearFacing === true;
-        if (!weaponCanFireIntoArc(mount.location, rearFacing, arc)) {
+        if (!mountCanFireIntoArc(mount, arc)) {
           blockBoth("outOfArc");
           return;
         }
@@ -263,7 +268,7 @@ export function suggestFireTargets(
             def,
             unit.damage,
             unit.critSlotsDestroyed,
-            mount.location,
+            mountArcLocation(mount),
           ),
           targetHexesMoved: enemy.hexesMovedThisTurn,
           targetJumped: enemy.jumpedThisTurn,

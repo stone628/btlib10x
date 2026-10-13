@@ -54,6 +54,12 @@ Mad Cat Prime, Masakari Prime, Wolverine WVR-6R).
 - **Ammo is per-mount in the schema.** A shared bin of N shots is written onto
   the single mount that carries an explicit `, Ammo:N`; sibling launchers omit
   `shots`.
+- **Split weapons** (MTF `(Split)`, or a weapon's slots in a location with no
+  mount of it) list the weapon once, in its primary location. `resolveMechDef`
+  links the spilled slots to the same weapon's mount in the paired arm or side
+  torso (only arm/side-torso splits are modeled) and records `splitLocation`;
+  when the catalog lists the weapon's `crits`,
+  both locations' slots must add up to it.
 - **`running = ceil(walking * 1.5)`** (quick-start convention).
 - **Critical slot table per location** (head/legs = 6 slots, torso/arms = 12)
   is parsed and validated by `scripts/mtf-crit.mjs`.

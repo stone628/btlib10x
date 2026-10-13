@@ -37,6 +37,7 @@ import {
   mechDefFor,
   meleeDeclarationProblem,
   meleeRecoilDamage,
+  mountCanFireIntoArc,
   movementHeat,
   physicalDamage,
   type RevealedLanding,
@@ -46,7 +47,6 @@ import {
   toHitHeatModifier,
   type UnitState,
   waterDepth,
-  weaponCanFireIntoArc,
   wreckAt,
 } from "btlib10x";
 import {
@@ -226,9 +226,7 @@ function firepowerFrom(
   for (const turn of canTwist ? [0, -1, 1] : [0]) {
     const arc = classifyFiringArc(hex, target.position, rotateFacing(facing, turn));
     if (arc === null) continue;
-    const bearing = weapons.filter((w) =>
-      weaponCanFireIntoArc(w.mount.location, w.mount.rearFacing === true, arc),
-    );
+    const bearing = weapons.filter((w) => mountCanFireIntoArc(w.mount, arc));
     best = Math.max(best, expectedDamageAt(bearing, d, tnBase));
   }
   return best;

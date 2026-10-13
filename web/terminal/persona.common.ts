@@ -11,7 +11,7 @@
 import {
   attackerMovementModifier,
   type BattleState,
-  canFireFromLocation,
+  canFireMount,
   cellAt,
   damageForBracket,
   expectedClusterHits,
@@ -116,7 +116,7 @@ export function usableWeapons(unit: UnitState): UsableWeapon[] {
   for (const [key, mount] of Object.entries(def.weapons)) {
     const index = Number(key);
     if (unit.destroyedWeapons.includes(index) || unit.jammedWeapons.includes(index)) continue;
-    if (!canFireFromLocation(unit.damage, mount.location)) continue;
+    if (!canFireMount(unit.damage, mount)) continue;
     const wdef = weaponDefFor(mount);
     if (wdef.physicalWeapon === true) continue;
     const shots = mount.shots !== undefined ? (pools[mount.weapon] ?? 0) : null;

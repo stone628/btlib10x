@@ -61,10 +61,11 @@ import {
   classifyFiringArc,
   defenderArcChoice,
   effectiveFacingForTwist,
+  mountArcLocation,
+  mountCanFireIntoArc,
   type SecondaryTargetMod,
   secondaryTargetModifier,
   twistDelta,
-  weaponCanFireIntoArc,
 } from "./arcs";
 import { type AttackResolution, PARTIAL_COVER_TERRAIN_MOD, resolveWeaponAttack } from "./attack";
 import {
@@ -104,7 +105,7 @@ import {
 import {
   applyDamage,
   canAttemptStandUp,
-  canFireFromLocation,
+  canFireMount,
   type DamageApplication,
   type DamageTransferStep,
   destroyedLegs,
@@ -2430,7 +2431,7 @@ export function validateAttacksImpl(
     if (unit.destroyedWeapons.includes(decl.weaponIndex)) {
       throw new Error(`${mount.weapon} on ${unitId} is destroyed by a critical hit`);
     }
-    if (!canFireFromLocation(unit.damage, mount.location)) {
+    if (!canFireMount(unit.damage, mount)) {
       throw new Error(
         `${mount.weapon} location (${mount.location}) is destroyed or its support torso is gone`,
       );
@@ -2467,8 +2468,7 @@ export function validateAttacksImpl(
     );
     if (fireArc === null) throw new Error("Attacker and target share a hex");
     arcs[decl.weaponIndex] = fireArc;
-    const rearFacing = mount.rearFacing === true;
-    const inArc = weaponCanFireIntoArc(mount.location, rearFacing, fireArc);
+    const inArc = mountCanFireIntoArc(mount, fireArc);
     if (!inArc) {
       throw new Error(
         `${mount.weapon} on ${unitId} cannot fire into the ${fireArc} arc (target outside its firing arc)`,
@@ -2510,7 +2510,7 @@ export function validateAttacksImpl(
         def,
         unit.damage,
         unit.critSlotsDestroyed,
-        mount.location,
+        mountArcLocation(mount),
       ),
       targetHexesMoved: target.hexesMovedThisTurn,
       targetJumped: target.jumpedThisTurn,
@@ -3046,7 +3046,7 @@ function resolveUnitAttacks(
         def,
         unit.damage,
         unit.critSlotsDestroyed,
-        mount.location,
+        mountArcLocation(mount),
       ),
       targetHexesMoved: target.hexesMovedThisTurn,
       targetJumped: target.jumpedThisTurn,

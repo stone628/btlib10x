@@ -157,7 +157,7 @@ describe("sw season pack", () => {
 
   it("loads beside base with its own string table and pack tags", () => {
     expect(SW.version).toBe(1);
-    expect(SW.mechs.length).toBe(388);
+    expect(SW.mechs.length).toBe(391);
     expect(SW.maps).toHaveLength(0);
     for (const entry of SW.mechs) {
       expect(entry.pack).toBe("sw");
@@ -184,8 +184,8 @@ describe("sw season pack", () => {
     expect(findMechEntry("enf-4r")?.pack).toBe("sw");
     // SW-only models resolve to sw.
     expect(findMechEntry("aem-01")?.pack).toBe("sw");
-    // Sheets the engine cannot model are packed nowhere.
-    expect(findMechEntry("kgc-000")).toBeUndefined();
+    // Split-location sheets (King Crab arm AC/20s) are packed too.
+    expect(findMechEntry("kgc-000")?.pack).toBe("sw");
     // Exactly one entry per model across both packs.
     const modelWarnings = warnings.filter((message) => message.startsWith("Duplicate model"));
     expect(catalogMechs().length).toBe(
@@ -196,10 +196,8 @@ describe("sw season pack", () => {
   it("round-trips every sw sheet through its own wire exactly", () => {
     const swDir = new URL("../docs/mtf/sw/json/", import.meta.url);
     const swFiles = readdirSync(swDir).filter((f) => f.endsWith(".json"));
-    // Three sources are excluded at pack time (see `pack:sw`): the
-    // split-location King Crabs the engine cannot model.
     expect(swFiles).toContain("kgc-000.json");
-    expect(swFiles.length).toBe(SW.mechs.length + 3);
+    expect(swFiles.length).toBe(SW.mechs.length);
     for (const entry of SW.mechs) {
       const decoded = decodeMechLine(SW_LINES[entry.line]!, entry, SW_STRINGS);
       const file = swFiles.find((f) => f.toLowerCase() === `${entry.model.toLowerCase()}.json`)!;

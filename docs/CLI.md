@@ -87,7 +87,7 @@ The prompt names the acting unit; commands act on that 'Mech.
 | `place <col> <row> <facing>` | place the 'Mech at a final hex + facing in one step; `col row` are 1-based, `facing` is an absolute word (`n\|ne\|se\|s\|sw\|nw`). The (hex, facing) must be a reachable landing shown by `mode` (validated against the movement candidate); replaces any previously queued steps. Jump landing facing is chosen freely, so any facing at a reachable hex is legal for `jump` |
 | `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [J](jam) / [-](destroyed) / per-bin ammo `(n left)` markers); without id: brief unit list (id, model, position+facing) grouped by team |
 | `heat [id]` | heat scale status of a unit (default: the acting unit); also available in the attack phase |
-| `candidate` | list attack candidates, also printed when a unit becomes the attacker. `weapon attacks` has one group per torso twist (`twist right, by "torso right"`; only the current twist once prone or locked), one block per target, and one line per fireable weapon with TN, 2D6 hit chance, damage, heat and its `fire` command, plus an all-weapons line with total heat. Weapons that cannot fire are not shown; once a fire is queued only that target remains. `physical attacks` (only when an enemy is adjacent) lists each legal punch, both punches, kick, club and strike per target with TN, hit chance, damage and the commands, a needed twist first |
+| `candidate` | list attack candidates, also printed when a unit becomes the attacker. `weapon attacks` has one group per torso twist (`twist right, by "torso right"`; only the current twist once prone or locked), one block per target, and one line per fireable weapon with TN, 2D6 hit chance, damage, heat and its `fire` command. Weapons that cannot fire are not shown; once a fire is queued only that target remains. `physical attacks` (only when an enemy is adjacent) lists each legal punch, both punches, kick, club and strike per target with TN, hit chance, damage and the commands, a needed twist first |
 | `status` | queued move steps with running MP cost per step |
 | `cancel` | clear mode + steps |
 | `rollback` | undo the last completed `done`: back to the previous actor's prompt (half-declared input is discarded; dice state and replay log are restored too). At most `MAX_SNAPSHOT_COUNT` (10) prompt snapshots are kept (`web/terminal/rollback.ts`); no redo |
@@ -223,6 +223,11 @@ are listed here. Rule text lives in the rulebook.
 - **Firing arcs** — per-weapon mounting arcs and target-side attack
   direction; a boundary attack direction resolves to the defender's choice
   (front over side, never rear). `torso <front|left|right>` twists one hexside.
+  A weapon split between an arm and a side torso (King Crab AC/20s) uses
+  the torso arc (TW pp.105-106), ignores arm actuator to-hit damage, is
+  destroyed by a critical in either location and stops firing when either
+  location is lost; punching, clubs and prone propping still treat it as
+  an arm weapon. The sheet shows it as `[RA/RT]`.
 - **Weapons and ammo** — ballistic / energy / missile with cluster tables;
   streak weapons fire full tubes on a hit. Ammo depletes per bin under a
   per-unit policy set at setup (`set <id> ammoPolicy exposed|core|spread|leastFirst`).
@@ -376,7 +381,6 @@ Library sources stay untouched.
 
     npm install            # picks up esbuild devDependency
     npm run pack:sw        # SW season pack: docs/mtf/sw/json/*.json → docs/mtf/sw/sw.jsonl
-                           # (excludes sheets the engine cannot model: split-location King Crabs)
     npm run build:web      # one-shot esbuild bundle → web/btlib10x.js + web/terminal.js + web/avatar.js (+ web/btlib10x.jsonl, web/btlib10x.sw.jsonl and web/VISION.md copies)
     npm run dev:web        # watch + serve: rebuilds on change, serves at http://127.0.0.1:8012/index.html (landing; terminal at /terminal.html)
     # custom port:  node scripts/build-web.mjs --watch --serve --port=3000

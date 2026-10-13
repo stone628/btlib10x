@@ -65,6 +65,12 @@ export interface WeaponDef {
   readonly physicalWeapon?: boolean;
   /** Explosion damage from a critical hit on the weapon itself (TW p.135-136). */
   readonly critExplosion?: number;
+  /**
+   * Critical slots the weapon occupies (TechManual). Listed only for weapons
+   * large enough to be split across two locations; `resolveMechDef` uses it
+   * to check a split weapon's slots add up and to pick its mount.
+   */
+  readonly crits?: number;
   /** Broad weapon class used for catalog grouping and UI categorization. */
   readonly category: WeaponCategory;
 }
@@ -149,6 +155,11 @@ function parseWeapon(raw: unknown, label: string, errors: string[]): WeaponDef |
     errors.push(`${label}.critExplosion must be a non-negative integer`);
     valid = false;
   }
+  const crits = raw.crits;
+  if (crits !== undefined && !isBoundedInt(crits)) {
+    errors.push(`${label}.crits must be a positive integer`);
+    valid = false;
+  }
   const clusterRangeMod = raw.clusterRangeMod;
   if (clusterRangeMod !== undefined) {
     if (!isRecord(clusterRangeMod)) {
@@ -184,6 +195,7 @@ function parseWeapon(raw: unknown, label: string, errors: string[]): WeaponDef |
     "minRange",
     "heat",
     "critExplosion",
+    "crits",
     "category",
   ] as const) {
     const v = raw[key];

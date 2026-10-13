@@ -752,13 +752,11 @@ function renderListing(lines: readonly ListingLine[]): string[] {
   );
 }
 
-/** One line per fireable weapon, then an all-weapons line when more than one
- *  and the whole set is legal together. */
+/** One line per fireable weapon. */
 function weaponLines(
   targetId: string,
   weapons: readonly FireWeapon[],
   indent: string,
-  allLegal: boolean,
 ): ListingLine[] {
   const lines: ListingLine[] = weapons.map((w) => ({
     indent,
@@ -840,19 +838,6 @@ function weaponCandidateLines(battle: BattleState, context: AttackContext): stri
           !queued.has(w.weaponIndex) &&
           legalWithQueued(battle, context, twist, [{ targetId, weaponIndex: w.weaponIndex }], []),
       );
-    const lines = (targetId: string, weapons: readonly FireWeapon[], indent: string) =>
-      weaponLines(
-        targetId,
-        weapons,
-        indent,
-        legalWithQueued(
-          battle,
-          context,
-          twist,
-          weapons.map((w) => ({ targetId, weaponIndex: w.weaponIndex })),
-          [],
-        ),
-      );
     for (const target of sugg.targets) {
       if (pendingTarget !== undefined && target.targetId !== pendingTarget) continue;
       const head = `    ${i18n("fireSuggestion.target", {
@@ -867,17 +852,17 @@ function weaponCandidateLines(battle: BattleState, context: AttackContext): stri
         group.push(head);
         if (left.length > 0) {
           group.push(`      ${i18n("fireSuggestion.propLeft")}`);
-          group.push(...lines(target.targetId, left, "        "));
+          group.push(...weaponLines(target.targetId, left, "        "));
         }
         if (right.length > 0) {
           group.push(`      ${i18n("fireSuggestion.propRight")}`);
-          group.push(...lines(target.targetId, right, "        "));
+          group.push(...weaponLines(target.targetId, right, "        "));
         }
         continue;
       }
       const weapons = usable(target.targetId, target.weapons);
       if (weapons.length === 0) continue;
-      group.push(head, ...lines(target.targetId, weapons, "      "));
+      group.push(head, ...weaponLines(target.targetId, weapons, "      "));
     }
     const groupHeader = `  ${i18n("fireSuggestion.twistGroup", { dir: twistLabel(twist) })}${
       changeable ? byCommands([TWIST_COMMAND[twist]]) : ""

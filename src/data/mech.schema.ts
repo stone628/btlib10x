@@ -1,5 +1,5 @@
 import type { Location } from "../core/types";
-import { isLocation, isTorso, LOCATIONS } from "../core/types";
+import { armFor, isArm, isLocation, isTorso, LOCATIONS, shoulderOf } from "../core/types";
 import type { LocationValue, TorsoLocationValue } from "../rules/damage";
 import { internalStructureForTonnage } from "../rules/internalStructure";
 import { ammoDef } from "./ammo.schema";
@@ -208,6 +208,12 @@ export interface WeaponMount extends WeaponNameHolder {
    *  and head locations only on a biped). Rear-facing weapons fire into the rear arc
    *  instead of the front arc (TW p.105). Default false. */
   readonly rearFacing?: boolean;
+  /**
+   * Second location holding some of this weapon's crit slots (a split weapon,
+   * e.g. a King Crab's arm AC/20 spilling two slots into the side torso).
+   * Derived by `resolveMechDef` from the crit table; never read from JSON.
+   */
+  readonly splitLocation?: Location;
 }
 
 export type ResolvedArmor = Readonly<LocationValue>;
@@ -285,6 +291,7 @@ export function resolveMechDef(def: MechDef): ResolvedMechDef {
   def.weapons.forEach((mount, i) => {
     weapons[i + 1] = mount;
   });
+  linkSplitMounts(def.critSlots, weapons);
   const critSlots: Record<Location, ResolvedCritSlot[]> = {} as Record<
     Location,
     ResolvedCritSlot[]
@@ -320,6 +327,70 @@ export function resolveMechDef(def: MechDef): ResolvedMechDef {
 }
 
 /**
+ * Location a split weapon may spill into from `loc`. Only an arm and its own
+ * side torso pair up: TW covers splits "between torso and arm" alone
+ * (pp.105-106), so leg/torso and side/center torso splits are not modeled.
+ */
+function splitNeighbors(loc: Location): readonly Location[] {
+  if (isArm(loc)) return [shoulderOf(loc)];
+  const arm = armFor(loc);
+  return arm !== undefined ? [arm] : [];
+}
+
+/**
+ * Mark split weapons: a weapon slot in a location with no mount of that
+ * weapon belongs to a mount of the same weapon in the paired arm or side
+ * torso (the
+ * record sheet lists the weapon once, in its primary location). The mount
+ * gains `splitLocation`, and `resolveLocationCrits` then links those slots to
+ * it. When the weapon's slot count is catalogued (`WeaponDef.crits`), the
+ * mount's own slots plus the spilled ones must add up to it, which also picks
+ * the right mount when two neighbors carry the same weapon; otherwise the
+ * first neighbor in `splitNeighbors` order wins. Slots with no paired
+ * mount are left for `resolveLocationCrits` to reject.
+ */
+function linkSplitMounts(
+  critSlots: Readonly<CritSlots>,
+  weapons: Record<number, WeaponMount>,
+): void {
+  const slotCount = (loc: Location, name: string): number =>
+    critSlots[loc].filter((s) => s.kind === "weapon" && s.weapon === name).length;
+  for (const loc of LOCATIONS) {
+    const spilled = new Set<string>();
+    for (const slot of critSlots[loc]) if (slot.kind === "weapon") spilled.add(slot.weapon);
+    for (const name of spilled) {
+      const local = Object.values(weapons).some(
+        (m) => m.weapon === name && (m.location === loc || m.splitLocation === loc),
+      );
+      if (local) continue;
+      const crits = weaponDef(name)?.crits;
+      const spill = slotCount(loc, name);
+      let candidates = 0;
+      let linked = false;
+      for (const near of splitNeighbors(loc)) {
+        const mounts = Object.entries(weapons).filter(
+          ([, m]) => m.weapon === name && m.location === near,
+        );
+        const free = mounts.find(([, m]) => m.splitLocation === undefined);
+        if (free === undefined) continue;
+        candidates++;
+        // Copies of one weapon in a location share its slots equally.
+        const own = slotCount(near, name) / mounts.length;
+        if (crits !== undefined && own + spill !== crits) continue;
+        weapons[Number(free[0])] = { ...free[1], splitLocation: loc };
+        linked = true;
+        break;
+      }
+      if (!linked && candidates > 0) {
+        throw new Error(
+          `split ${name}: ${spill} slot(s) in ${loc} do not complete its ${crits} slots with the paired arm or side-torso mount`,
+        );
+      }
+    }
+  }
+}
+
+/**
  * Link weapon/ammo entries of one location's crit slot array to their 1-based
  * weapon indices, and group consecutive double-heat-sink slots.
  *
@@ -345,7 +416,7 @@ function resolveLocationCrits(
   // independent linking.
   const localByName: Map<string, number[]> = new Map();
   for (const [k, mount] of Object.entries(weapons)) {
-    if (mount.location !== loc) continue;
+    if (mount.location !== loc && mount.splitLocation !== loc) continue;
     const idx = Number(k);
     const arr = localByName.get(mount.weapon) ?? [];
     arr.push(idx);

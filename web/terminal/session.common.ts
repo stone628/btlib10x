@@ -14,7 +14,7 @@ import {
   type CritMask,
   type CritSoakName,
   type CritStructureName,
-  canFireFromLocation,
+  canFireMount,
   collectAmmoBins,
   componentHitStatus,
   countDestroyedEngine,
@@ -228,6 +228,7 @@ function buildMountInfos(
     return {
       weapon: mount.weapon,
       location: mount.location,
+      ...(mount.splitLocation !== undefined ? { splitLocation: mount.splitLocation } : {}),
       shotsLeft: max !== null ? left : null,
       shotsMax: max,
       shotsSharedWith: sharedWith,
@@ -241,9 +242,11 @@ function buildMountInfos(
 function weaponMountLines(mounts: readonly WeaponMountInfo[]): string[] {
   let nameWidth = 0;
   let locPadEnd = 4;
+  const locTag = (m: WeaponMountInfo): string =>
+    `[${SHORT_LOC[m.location]}${m.splitLocation !== undefined ? `/${SHORT_LOC[m.splitLocation]}` : ""}${m.rearFacing ? "R" : ""}]`;
   for (const m of mounts) {
     if (m.weapon.length > nameWidth) nameWidth = m.weapon.length;
-    if (m.rearFacing === true) locPadEnd = 5;
+    locPadEnd = Math.max(locPadEnd, locTag(m).length);
   }
   return mounts.map((mount, i) => {
     const w = weaponDefFor(mount);
@@ -263,7 +266,7 @@ function weaponMountLines(mounts: readonly WeaponMountInfo[]): string[] {
     const medium = `M${w.medium}`.padStart(3);
     const long = `L${w.long}`.padStart(3);
     const heat = `H${w.heat ?? 0}`.padStart(3);
-    const loc = `[${SHORT_LOC[mount.location]}${mount.rearFacing ? "R" : ""}]`.padEnd(locPadEnd);
+    const loc = locTag(mount).padEnd(locPadEnd);
     return `${index} ${name} ${loc} ${min}${short}/${medium}/${long} ${heat}${flags.length ? ` ${flags.join(" ")}` : ""}`;
   });
 }
@@ -274,6 +277,8 @@ function weaponMountLines(mounts: readonly WeaponMountInfo[]): string[] {
 export type WeaponMountInfo = {
   readonly weapon: string;
   readonly location: Location;
+  /** Second location of a split weapon's crit slots (shown as `[RA/RT]`). */
+  readonly splitLocation?: Location;
   readonly shotsLeft: number | null;
   readonly shotsMax: number | null;
   /**
@@ -397,7 +402,7 @@ export function battleSheet(unit: UnitState, id: string): SheetView {
         jammed: unit.jammedWeapons.includes(key),
         destroyed:
           unit.destroyedWeapons.includes(key) ||
-          (mount !== undefined && !canFireFromLocation(baseDamage, mount.location)),
+          (mount !== undefined && !canFireMount(baseDamage, mount)),
       };
     }),
     critLive: {

@@ -51,7 +51,7 @@ TypeScript library encapsulating BattleTech Total Warfare board game logic.
 - `npm run lint:fix` — same, applying safe+unsafe fixes (formatting, unused imports/params, literal keys)
 - `npm run build` — emit ESM + declarations to `dist/`
 - `npm run pack` — pack `data/mechs/*.json` + `data/maps/*.json` → `data/btlib10x.jsonl` (base catalog artifact)
-- `npm run pack:sw` — pack `docs/mtf/sw/json/*.json` → `docs/mtf/sw/sw.jsonl` (SW season pack artifact; `--exclude` drops sheets the engine cannot model: split-location King Crabs)
+- `npm run pack:sw` — pack `docs/mtf/sw/json/*.json` → `docs/mtf/sw/sw.jsonl` (SW season pack artifact; `pack-catalog.mjs --exclude` can drop sheets the engine cannot model)
 - `npm run build:web` — esbuild-bundle `src/index.ts` → `web/btlib10x.js` (engine) `web/terminal/terminal.ts` → `web/terminal.js` (terminal app; engine kept external) and `web/avatar/avatar.ts` → `web/avatar.js` (avatar creator), plus copy `data/btlib10x.jsonl` → `web/btlib10x.jsonl` and `docs/mtf/sw/sw.jsonl` → `web/btlib10x.sw.jsonl` (each pack keeps its own string table; both fetched once at boot, SW failure degrades with a warning)
 - `npm run dev:web` — same but watch mode (rebuilds `web/btlib10x.js` + `web/terminal.js` + `web/avatar.js` on every source change; serves the landing page at `/index.html`)
 

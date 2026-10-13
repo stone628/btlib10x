@@ -379,7 +379,7 @@ describe("info commands in the CLI", () => {
 
   it("filters the roster by pack", () => {
     const s = newSession(1);
-    expect(execute(s, "info mech pack:sw")[0]).toBe("388 'Mechs, 133 chassis match: pack:sw");
+    expect(execute(s, "info mech pack:sw")[0]).toBe("391 'Mechs, 133 chassis match: pack:sw");
     expect(execute(s, "info mech pack:base")[0]).toBe("9 'Mechs, 9 chassis match: pack:base");
     const base = execute(s, "info mech pack:base !").join("\n");
     expect(base).toContain("BZK-F3");
