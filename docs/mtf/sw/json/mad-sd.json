@@ -3,6 +3,7 @@
   "name": "Marauder",
   "callsign": "Douglass",
   "tonnage": 75,
+  "era": 3025,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

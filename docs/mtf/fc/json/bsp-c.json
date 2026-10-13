@@ -3,6 +3,7 @@
   "name": "Star Adder",
   "clanName": "Blood Asp",
   "tonnage": 90,
+  "era": 3060,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

@@ -2,6 +2,7 @@
   "model": "CN9-D4D",
   "name": "Centurion",
   "tonnage": 50,
+  "era": 3066,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

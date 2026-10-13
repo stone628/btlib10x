@@ -2,6 +2,7 @@
   "model": "EXC-B2",
   "name": "Excalibur",
   "tonnage": 70,
+  "era": 2620,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

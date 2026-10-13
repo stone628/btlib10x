@@ -2,6 +2,7 @@
   "model": "BLR-1G-DC",
   "name": "BattleMaster",
   "tonnage": 85,
+  "era": 2855,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

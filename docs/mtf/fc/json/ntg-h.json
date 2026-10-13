@@ -2,6 +2,7 @@
   "model": "NTG-H",
   "name": "Night Gyr",
   "tonnage": 75,
+  "era": 3062,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

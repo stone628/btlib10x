@@ -2,6 +2,7 @@
   "model": "THG-12K",
   "name": "Thug",
   "tonnage": 80,
+  "era": 3067,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

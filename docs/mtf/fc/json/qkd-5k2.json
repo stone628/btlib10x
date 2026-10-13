@@ -2,6 +2,7 @@
   "model": "QKD-5K2",
   "name": "Quickdraw",
   "tonnage": 60,
+  "era": 3057,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

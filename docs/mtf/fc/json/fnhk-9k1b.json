@@ -2,6 +2,7 @@
   "model": "FNHK-9K1B",
   "name": "Falcon Hawk",
   "tonnage": 35,
+  "era": 3063,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

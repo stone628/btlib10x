@@ -3,6 +3,7 @@
   "name": "Mongoose",
   "callsign": "Gunslinger",
   "tonnage": 25,
+  "era": 2766,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

@@ -3,6 +3,7 @@
   "name": "Puma",
   "clanName": "Adder",
   "tonnage": 35,
+  "era": 3050,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 6,

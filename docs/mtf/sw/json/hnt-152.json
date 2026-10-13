@@ -2,6 +2,7 @@
   "model": "HNT-152",
   "name": "Hornet",
   "tonnage": 20,
+  "era": 2997,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

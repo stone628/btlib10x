@@ -2,6 +2,7 @@
   "model": "STK-3Fk",
   "name": "Stalker",
   "tonnage": 85,
+  "era": 2750,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

@@ -2,6 +2,7 @@
   "model": "HCT-5DD",
   "name": "Hatchetman",
   "tonnage": 45,
+  "era": 3065,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

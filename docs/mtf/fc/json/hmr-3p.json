@@ -1,7 +1,9 @@
 {
   "model": "HMR-3P",
   "name": "Hammer",
+  "callsign": "Pein-Hammer",
   "tonnage": 30,
+  "era": 3060,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

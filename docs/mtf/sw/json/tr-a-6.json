@@ -2,6 +2,7 @@
   "model": "TR-A-6",
   "name": "Toro",
   "tonnage": 35,
+  "era": 2548,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

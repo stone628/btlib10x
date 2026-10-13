@@ -2,6 +2,7 @@
   "model": "CHP-C",
   "name": "Champion",
   "tonnage": 60,
+  "era": 2867,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

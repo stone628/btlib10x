@@ -2,6 +2,7 @@
   "model": "BCB-H",
   "name": "Battle Cobra",
   "tonnage": 40,
+  "era": 3061,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 6,

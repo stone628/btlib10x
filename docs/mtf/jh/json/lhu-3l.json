@@ -2,6 +2,7 @@
   "model": "LHU-3L",
   "name": "Lao Hu",
   "tonnage": 75,
+  "era": 3069,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

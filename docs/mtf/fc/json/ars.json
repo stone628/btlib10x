@@ -2,6 +2,7 @@
   "model": "ARS",
   "name": "Arcas",
   "tonnage": 65,
+  "era": 3061,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

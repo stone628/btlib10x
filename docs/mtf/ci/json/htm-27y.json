@@ -2,6 +2,7 @@
   "model": "HTM-27Y",
   "name": "Hatamoto-Mizo",
   "tonnage": 80,
+  "era": 3050,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

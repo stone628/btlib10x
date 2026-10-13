@@ -2,6 +2,7 @@
   "model": "ASN-23",
   "name": "Assassin",
   "tonnage": 40,
+  "era": 3050,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 7,

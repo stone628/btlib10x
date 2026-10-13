@@ -2,6 +2,7 @@
   "model": "THR-2",
   "name": "Thresher",
   "tonnage": 60,
+  "era": 2858,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

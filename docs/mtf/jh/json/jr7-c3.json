@@ -2,6 +2,7 @@
   "model": "JR7-C3",
   "name": "Jenner",
   "tonnage": 35,
+  "era": 3068,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 7,

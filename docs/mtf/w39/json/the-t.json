@@ -2,6 +2,7 @@
   "model": "THE-T",
   "name": "Thorn",
   "tonnage": 20,
+  "era": 3038,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

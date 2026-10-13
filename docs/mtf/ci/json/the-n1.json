@@ -2,6 +2,7 @@
   "model": "THE-N1",
   "name": "Thorn",
   "tonnage": 20,
+  "era": 3051,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

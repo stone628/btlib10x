@@ -2,6 +2,7 @@
   "model": "PNT-B",
   "name": "Phantom",
   "tonnage": 40,
+  "era": 3052,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 9,

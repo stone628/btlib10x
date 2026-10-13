@@ -2,6 +2,7 @@
   "model": "KT-P2",
   "name": "Koto",
   "tonnage": 25,
+  "era": 3052,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

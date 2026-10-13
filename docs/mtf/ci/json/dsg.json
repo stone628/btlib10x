@@ -2,6 +2,7 @@
   "model": "DSG",
   "name": "Drift Shag",
   "tonnage": 30,
+  "era": 2827,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 7,

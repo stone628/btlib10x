@@ -2,6 +2,7 @@
   "model": "MAL-C",
   "name": "Mauler",
   "tonnage": 90,
+  "era": 3051,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

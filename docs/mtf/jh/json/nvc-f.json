@@ -2,6 +2,7 @@
   "model": "NVC-F",
   "name": "Nova Cat",
   "tonnage": 70,
+  "era": 3070,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

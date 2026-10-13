@@ -2,6 +2,7 @@
   "model": "SPT-C",
   "name": "Spartan",
   "tonnage": 80,
+  "era": 2865,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 5,

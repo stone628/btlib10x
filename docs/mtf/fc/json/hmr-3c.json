@@ -1,7 +1,9 @@
 {
   "model": "HMR-3C",
   "name": "Hammer",
+  "callsign": "Claw-Hammer",
   "tonnage": 30,
+  "era": 3056,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -2,6 +2,7 @@
   "model": "SPR-4F",
   "name": "Spector",
   "tonnage": 35,
+  "era": 2640,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 7,

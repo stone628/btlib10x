@@ -2,6 +2,7 @@
   "model": "FLC-4Nb",
   "name": "Falcon",
   "tonnage": 30,
+  "era": 2776,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

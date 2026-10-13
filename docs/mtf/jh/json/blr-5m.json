@@ -2,6 +2,7 @@
   "model": "BLR-5M",
   "name": "BattleMaster",
   "tonnage": 85,
+  "era": 3067,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

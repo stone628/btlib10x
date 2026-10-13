@@ -2,6 +2,7 @@
   "model": "SD1-OD",
   "name": "Sunder",
   "tonnage": 90,
+  "era": 3063,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

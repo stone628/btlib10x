@@ -2,6 +2,7 @@
   "model": "CPLT-K2K",
   "name": "Catapult",
   "tonnage": 65,
+  "era": 3058,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

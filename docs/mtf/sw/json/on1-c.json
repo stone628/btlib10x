@@ -2,6 +2,7 @@
   "model": "ON1-C",
   "name": "Orion",
   "tonnage": 75,
+  "era": 2453,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

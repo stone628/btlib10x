@@ -2,6 +2,7 @@
   "model": "KBO-7A",
   "name": "Kabuto",
   "tonnage": 20,
+  "era": 3059,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 7,

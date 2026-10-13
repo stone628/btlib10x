@@ -2,6 +2,7 @@
   "model": "HLF",
   "name": "Hellfire",
   "tonnage": 60,
+  "era": 3058,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

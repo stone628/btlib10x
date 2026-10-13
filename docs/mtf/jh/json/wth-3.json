@@ -2,6 +2,7 @@
   "model": "WTH-3",
   "name": "Whitworth",
   "tonnage": 40,
+  "era": 3069,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

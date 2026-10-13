@@ -2,6 +2,7 @@
   "model": "SPT-NF",
   "name": "Spartan",
   "tonnage": 80,
+  "era": 2770,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 5,

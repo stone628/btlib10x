@@ -3,6 +3,7 @@
   "name": "Thunderbolt",
   "callsign": "Tallman",
   "tonnage": 65,
+  "era": 3025,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

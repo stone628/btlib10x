@@ -1,7 +1,9 @@
 {
   "model": "BLR-1GHE",
   "name": "BattleMaster",
+  "callsign": "HellSinger",
   "tonnage": 85,
+  "era": 2750,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

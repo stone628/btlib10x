@@ -2,6 +2,7 @@
   "model": "VLK-QF",
   "name": "Valkyrie",
   "tonnage": 30,
+  "era": 2967,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

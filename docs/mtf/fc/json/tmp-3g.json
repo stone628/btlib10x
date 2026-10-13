@@ -2,6 +2,7 @@
   "model": "TMP-3G",
   "name": "Tempest",
   "tonnage": 65,
+  "era": 3056,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

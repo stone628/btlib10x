@@ -2,6 +2,7 @@
   "model": "WSP-1",
   "name": "Wasp",
   "tonnage": 20,
+  "era": 2464,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

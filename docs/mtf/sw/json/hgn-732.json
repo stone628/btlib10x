@@ -2,6 +2,7 @@
   "model": "HGN-732",
   "name": "Highlander",
   "tonnage": 90,
+  "era": 2592,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

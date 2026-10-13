@@ -2,6 +2,7 @@
   "model": "HKO-1C",
   "name": "Ha Otoko",
   "tonnage": 65,
+  "era": 3061,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

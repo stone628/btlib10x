@@ -2,6 +2,7 @@
   "model": "MC-MKII",
   "name": "Mad Cat Mk II",
   "tonnage": 90,
+  "era": 3066,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

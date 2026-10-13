@@ -2,6 +2,7 @@
   "model": "OCR-Prime",
   "name": "Omni-Corvis",
   "tonnage": 50,
+  "era": 2921,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 5,

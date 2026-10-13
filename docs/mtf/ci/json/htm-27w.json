@@ -2,6 +2,7 @@
   "model": "HTM-27W",
   "name": "Hatamoto-Ku",
   "tonnage": 80,
+  "era": 3048,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

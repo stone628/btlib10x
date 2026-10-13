@@ -2,6 +2,7 @@
   "model": "RFL-3N",
   "name": "Rifleman",
   "tonnage": 60,
+  "era": 2770,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

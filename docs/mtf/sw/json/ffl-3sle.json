@@ -2,6 +2,7 @@
   "model": "FFL-3SLE",
   "name": "Firefly",
   "tonnage": 30,
+  "era": 2790,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

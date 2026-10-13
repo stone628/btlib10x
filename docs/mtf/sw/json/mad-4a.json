@@ -2,6 +2,7 @@
   "model": "MAD-4A",
   "name": "Marauder II",
   "tonnage": 100,
+  "era": 3012,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

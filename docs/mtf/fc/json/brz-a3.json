@@ -2,6 +2,7 @@
   "model": "BRZ-A3",
   "name": "Berserker",
   "tonnage": 100,
+  "era": 3056,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

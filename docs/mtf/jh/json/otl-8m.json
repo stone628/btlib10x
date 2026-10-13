@@ -2,6 +2,7 @@
   "model": "OTL-8M",
   "name": "Ostsol",
   "tonnage": 60,
+  "era": 3066,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 6,

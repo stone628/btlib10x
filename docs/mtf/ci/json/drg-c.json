@@ -2,6 +2,7 @@
   "model": "DRG-C",
   "name": "Grand Dragon",
   "tonnage": 60,
+  "era": 3050,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 6,

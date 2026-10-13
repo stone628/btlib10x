@@ -1,7 +1,9 @@
 {
   "model": "COM-7T",
   "name": "Commando",
+  "callsign": "Blazing Inferno II",
   "tonnage": 25,
+  "era": 3062,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

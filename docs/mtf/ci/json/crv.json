@@ -2,6 +2,7 @@
   "model": "CRV",
   "name": "Corvis",
   "tonnage": 40,
+  "era": 2845,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 4,

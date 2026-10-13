@@ -2,6 +2,7 @@
   "model": "OTT-7K",
   "name": "Ostscout",
   "tonnage": 35,
+  "era": 3049,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

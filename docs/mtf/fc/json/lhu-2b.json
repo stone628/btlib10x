@@ -2,6 +2,7 @@
   "model": "LHU-2B",
   "name": "Lao Hu",
   "tonnage": 75,
+  "era": 3062,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

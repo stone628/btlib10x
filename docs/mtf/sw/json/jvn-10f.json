@@ -1,7 +1,9 @@
 {
   "model": "JVN-10F",
   "name": "Javelin",
+  "callsign": "Fire Javelin",
   "tonnage": 30,
+  "era": 2819,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

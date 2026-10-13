@@ -3,6 +3,7 @@
   "name": "Nobori-nin",
   "clanName": "Huntsman",
   "tonnage": 50,
+  "era": 3061,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 5,

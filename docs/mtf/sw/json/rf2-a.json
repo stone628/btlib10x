@@ -2,6 +2,7 @@
   "model": "RF2-A",
   "name": "Rifleman III",
   "tonnage": 90,
+  "era": 2776,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 2,

@@ -2,6 +2,7 @@
   "model": "YMN-6Y",
   "name": "Yeoman",
   "tonnage": 60,
+  "era": 3060,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

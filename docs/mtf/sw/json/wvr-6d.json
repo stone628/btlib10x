@@ -2,6 +2,7 @@
   "model": "WVR-6D",
   "name": "Wolverine",
   "tonnage": 55,
+  "era": 2834,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

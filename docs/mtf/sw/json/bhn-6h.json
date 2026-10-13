@@ -2,6 +2,7 @@
   "model": "BHN-6H",
   "name": "Behemoth",
   "tonnage": 100,
+  "era": 3004,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 2,

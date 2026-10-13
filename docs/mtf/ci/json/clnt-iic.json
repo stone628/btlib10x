@@ -2,6 +2,7 @@
   "model": "CLNT-IIC",
   "name": "Clint IIC",
   "tonnage": 40,
+  "era": 2830,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 6,

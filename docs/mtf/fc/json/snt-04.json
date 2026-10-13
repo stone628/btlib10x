@@ -2,6 +2,7 @@
   "model": "SNT-04",
   "name": "Sentry",
   "tonnage": 40,
+  "era": 3056,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

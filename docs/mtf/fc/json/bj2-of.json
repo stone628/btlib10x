@@ -2,6 +2,7 @@
   "model": "BJ2-OF",
   "name": "Blackjack",
   "tonnage": 50,
+  "era": 3061,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

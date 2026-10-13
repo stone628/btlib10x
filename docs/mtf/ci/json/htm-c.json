@@ -2,6 +2,7 @@
   "model": "HTM-C",
   "name": "Hatamoto-Hi",
   "tonnage": 80,
+  "era": 3050,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -123,8 +123,8 @@ describe("torso command", () => {
     burnMovePhase(s);
     // `torso left` clears fireCandidate, so the auto-hint regenerates and is
     // appended to the torso command's own output.
-    const out = execute(s, "torso left").join("\n");
-    expect(out).toContain('twist(left), by "torso left" (current)');
+    const out = execute(s, "torso right").join("\n");
+    expect(out).toContain('twist(right), by "torso right" (current)');
   });
 
   it("marks the front twist group current when untwisted", () => {

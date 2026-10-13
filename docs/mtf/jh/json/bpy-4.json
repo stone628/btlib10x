@@ -3,6 +3,7 @@
   "name": "Viper",
   "clanName": "Black Python",
   "tonnage": 75,
+  "era": 3067,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

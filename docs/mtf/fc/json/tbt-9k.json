@@ -2,6 +2,7 @@
   "model": "TBT-9K",
   "name": "Trebuchet",
   "tonnage": 50,
+  "era": 3059,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

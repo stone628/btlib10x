@@ -2,6 +2,7 @@
   "model": "HBK-4SP",
   "name": "Hunchback",
   "tonnage": 50,
+  "era": 3025,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

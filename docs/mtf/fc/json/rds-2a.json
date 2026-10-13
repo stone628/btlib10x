@@ -2,6 +2,7 @@
   "model": "RDS-2A",
   "name": "Red Shift",
   "tonnage": 20,
+  "era": 3062,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 9,

@@ -2,6 +2,7 @@
   "model": "SNK-1V",
   "name": "Snake",
   "tonnage": 45,
+  "era": 3053,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

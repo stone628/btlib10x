@@ -2,6 +2,7 @@
   "model": "BHKU-OF",
   "name": "Black Hawk-KU",
   "tonnage": 60,
+  "era": 3069,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

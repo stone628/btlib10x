@@ -2,6 +2,7 @@
   "model": "CNS-2",
   "name": "Canis",
   "tonnage": 80,
+  "era": 3071,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

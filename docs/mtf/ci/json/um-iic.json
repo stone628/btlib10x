@@ -2,6 +2,7 @@
   "model": "UM-IIC",
   "name": "UrbanMech IIC",
   "tonnage": 30,
+  "era": 2849,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 3,

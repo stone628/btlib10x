@@ -2,6 +2,7 @@
   "model": "RFL-IIC-3",
   "name": "Rifleman IIC",
   "tonnage": 65,
+  "era": 3062,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 3,

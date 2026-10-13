@@ -2,6 +2,7 @@
   "model": "CN9-AH",
   "name": "Centurion",
   "tonnage": 50,
+  "era": 2874,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

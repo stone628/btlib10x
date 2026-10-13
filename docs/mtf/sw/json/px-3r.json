@@ -2,6 +2,7 @@
   "model": "PX-3R",
   "name": "Phoenix",
   "tonnage": 50,
+  "era": 2520,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

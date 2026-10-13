@@ -2,6 +2,7 @@
   "model": "CRS-6C",
   "name": "Crossbow",
   "tonnage": 60,
+  "era": 2481,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

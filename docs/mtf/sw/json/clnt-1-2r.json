@@ -2,6 +2,7 @@
   "model": "CLNT-1-2R",
   "name": "Clint",
   "tonnage": 40,
+  "era": 2607,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

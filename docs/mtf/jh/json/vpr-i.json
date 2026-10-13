@@ -3,6 +3,7 @@
   "name": "Dragonfly",
   "clanName": "Viper",
   "tonnage": 40,
+  "era": 3068,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 8,

@@ -2,6 +2,7 @@
   "model": "TDR-7SE",
   "name": "Thunderbolt",
   "tonnage": 65,
+  "era": 3067,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

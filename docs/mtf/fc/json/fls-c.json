@@ -2,6 +2,7 @@
   "model": "FLS-C",
   "name": "Flashman",
   "tonnage": 75,
+  "era": 3063,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

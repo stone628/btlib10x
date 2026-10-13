@@ -2,6 +2,7 @@
   "model": "VTR-9A1",
   "name": "Victor",
   "tonnage": 80,
+  "era": 2508,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

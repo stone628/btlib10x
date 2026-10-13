@@ -2,6 +2,7 @@
   "model": "P1",
   "name": "Perseus",
   "tonnage": 75,
+  "era": 3058,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

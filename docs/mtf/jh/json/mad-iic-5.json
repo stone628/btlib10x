@@ -2,6 +2,7 @@
   "model": "MAD-IIC-5",
   "name": "Marauder IIC",
   "tonnage": 85,
+  "era": 3070,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

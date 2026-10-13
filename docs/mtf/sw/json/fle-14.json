@@ -2,6 +2,7 @@
   "model": "FLE-14",
   "name": "Flea",
   "tonnage": 15,
+  "era": 2519,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 9,

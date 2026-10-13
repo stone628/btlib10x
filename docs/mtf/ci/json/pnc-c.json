@@ -2,6 +2,7 @@
   "model": "PNC-C",
   "name": "Pouncer",
   "tonnage": 40,
+  "era": 3050,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 6,

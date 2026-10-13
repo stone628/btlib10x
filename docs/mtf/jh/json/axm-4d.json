@@ -2,6 +2,7 @@
   "model": "AXM-4D",
   "name": "Axman",
   "tonnage": 65,
+  "era": 3071,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

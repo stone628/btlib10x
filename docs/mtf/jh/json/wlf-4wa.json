@@ -2,6 +2,7 @@
   "model": "WLF-4WA",
   "name": "Wolfhound",
   "tonnage": 35,
+  "era": 3071,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

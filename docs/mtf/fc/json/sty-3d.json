@@ -2,6 +2,7 @@
   "model": "STY-3D",
   "name": "Starslayer",
   "tonnage": 50,
+  "era": 3057,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -2,6 +2,7 @@
   "model": "MTR-6E",
   "name": "Maelstrom",
   "tonnage": 75,
+  "era": 3062,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

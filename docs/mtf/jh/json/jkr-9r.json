@@ -1,7 +1,9 @@
 {
   "model": "JKR-9R",
   "name": "Jackrabbit",
+  "callsign": "Joker",
   "tonnage": 25,
+  "era": 2768,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

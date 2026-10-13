@@ -2,6 +2,7 @@
   "model": "CGR-3K",
   "name": "Charger",
   "tonnage": 80,
+  "era": 3049,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 5,

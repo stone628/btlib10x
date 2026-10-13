@@ -2,6 +2,7 @@
   "model": "DRG-1C",
   "name": "Dragon",
   "tonnage": 60,
+  "era": 2752,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -2,6 +2,7 @@
   "model": "LDT-1",
   "name": "Brigand",
   "tonnage": 25,
+  "era": 3065,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

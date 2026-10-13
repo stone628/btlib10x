@@ -2,6 +2,7 @@
   "model": "KTO-4A",
   "name": "Koto",
   "tonnage": 25,
+  "era": 3068,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

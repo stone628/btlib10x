@@ -2,6 +2,7 @@
   "model": "MAD-3M",
   "name": "Marauder",
   "tonnage": 75,
+  "era": 2873,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -2,6 +2,7 @@
   "model": "V4-LNT-K7",
   "name": "Valiant",
   "tonnage": 30,
+  "era": 3068,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 7,

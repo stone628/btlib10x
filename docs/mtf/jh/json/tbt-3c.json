@@ -2,6 +2,7 @@
   "model": "TBT-3C",
   "name": "Trebuchet",
   "tonnage": 50,
+  "era": 2780,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

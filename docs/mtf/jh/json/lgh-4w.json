@@ -2,6 +2,7 @@
   "model": "LGH-4W",
   "name": "Lightray",
   "tonnage": 55,
+  "era": 3065,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 7,

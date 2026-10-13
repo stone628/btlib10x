@@ -2,6 +2,7 @@
   "model": "BCU-2",
   "name": "Bear Cub",
   "tonnage": 25,
+  "era": 3070,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 8,

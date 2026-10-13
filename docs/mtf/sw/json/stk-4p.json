@@ -2,6 +2,7 @@
   "model": "STK-4P",
   "name": "Stalker",
   "tonnage": 75,
+  "era": 2998,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 3,

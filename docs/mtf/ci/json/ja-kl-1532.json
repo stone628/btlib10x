@@ -2,6 +2,7 @@
   "model": "JA-KL-1532",
   "name": "Jackal",
   "tonnage": 30,
+  "era": 3052,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 7,

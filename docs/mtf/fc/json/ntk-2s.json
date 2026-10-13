@@ -2,6 +2,7 @@
   "model": "NTK-2S",
   "name": "Night Hawk",
   "tonnage": 35,
+  "era": 3059,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

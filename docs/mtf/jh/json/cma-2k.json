@@ -2,6 +2,7 @@
   "model": "CMA-2k",
   "name": "Chimera",
   "tonnage": 40,
+  "era": 3069,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 7,

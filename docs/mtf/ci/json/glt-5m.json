@@ -2,6 +2,7 @@
   "model": "GLT-5M",
   "name": "Guillotine",
   "tonnage": 70,
+  "era": 3049,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

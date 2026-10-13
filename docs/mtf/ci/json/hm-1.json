@@ -2,6 +2,7 @@
   "model": "HM-1",
   "name": "Hitman",
   "tonnage": 30,
+  "era": 3055,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 7,

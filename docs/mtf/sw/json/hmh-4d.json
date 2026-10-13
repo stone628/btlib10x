@@ -2,6 +2,7 @@
   "model": "HMH-4D",
   "name": "Hammerhands",
   "tonnage": 75,
+  "era": 2492,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 3,

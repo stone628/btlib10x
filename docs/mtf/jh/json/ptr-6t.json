@@ -2,6 +2,7 @@
   "model": "PTR-6T",
   "name": "Penetrator",
   "tonnage": 75,
+  "era": 3066,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

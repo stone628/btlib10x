@@ -53,7 +53,7 @@ export const ko: Catalog = {
   "cmd.clear.help": "화면 스크롤백 지우기",
   "cmd.info.help": "'메크 모델 또는 내장 맵, 무기 조회 및 검색",
   "cmd.info.arg.mech":
-    "HBK-4G 같은 모델 키는 시트를 표시. 그 외에는 검색어\n(모델, 섀시 또는 클랜 이름)와 필터:\n  class:l|m|h|a  ton:70|60-75|>=80  tech:is|clan\n  sort:[-]ton|name|model\n결과가 20개를 넘으면 묶어서 표시. !를 붙이면 전체 목록",
+    "HBK-4G 같은 모델 키는 시트를 표시. 그 외에는 검색어\n(모델, 섀시 또는 클랜 이름)와 필터:\n  class:l|m|h|a  ton:70|60-75|>=80  tech:is|clan  era:3025|3000-3060|>=3050\n  sort:[-]ton|name|model|era\n결과가 20개를 넘으면 묶어서 표시. !를 붙이면 전체 목록",
   "cmd.info.arg.map": "내장 맵 이름. 생략하면 전체 목록",
   "cmd.info.arg.weapon":
     "Medium Laser 같은 무기 이름은 제원을 표시. 그 외에는 검색어와 필터:\n  cat:ballistic|energy|missile|equipment  tech:is|clan (클랜 = 'CL ' 접두어)\n  heat:<=3  range:>=15 (장거리)  dmg:>=10 (최대 데미지)\n  sort:[-]cat|name|heat|range|dmg\n결과가 20개를 넘으면 이름만 표시. !를 붙이면 전체 목록",
@@ -486,6 +486,7 @@ export const ko: Catalog = {
   "info.mechColClass": "등급",
   "info.mechColTon": "톤수",
   "info.mechColTechBase": "기술규격",
+  "info.mechColEra": "시대",
   "info.mechColCount": "메크",
   "info.mechColChassis": "섀시",
   "info.mechTotal": "메크 {count}종, 섀시 {chassis}종",

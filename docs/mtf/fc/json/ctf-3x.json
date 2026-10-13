@@ -3,6 +3,7 @@
   "name": "Cataphract",
   "callsign": "Sara",
   "tonnage": 70,
+  "era": 3062,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

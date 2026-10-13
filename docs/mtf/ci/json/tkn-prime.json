@@ -2,6 +2,7 @@
   "model": "TKN-Prime",
   "name": "Turkina",
   "tonnage": 95,
+  "era": 3052,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

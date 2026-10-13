@@ -2,6 +2,7 @@
   "model": "KW1-LH2",
   "name": "Lineholder",
   "tonnage": 55,
+  "era": 3058,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

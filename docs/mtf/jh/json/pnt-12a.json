@@ -2,6 +2,7 @@
   "model": "PNT-12A",
   "name": "Panther",
   "tonnage": 35,
+  "era": 3064,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 4,

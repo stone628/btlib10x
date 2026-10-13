@@ -2,6 +2,7 @@
   "model": "ZEU-9S2",
   "name": "Zeus",
   "tonnage": 80,
+  "era": 3051,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

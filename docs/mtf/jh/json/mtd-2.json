@@ -2,6 +2,7 @@
   "model": "MTD-2",
   "name": "Matador",
   "tonnage": 60,
+  "era": 3069,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

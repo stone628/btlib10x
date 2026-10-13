@@ -2,6 +2,7 @@
   "model": "STG-3R",
   "name": "Stinger",
   "tonnage": 20,
+  "era": 2479,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

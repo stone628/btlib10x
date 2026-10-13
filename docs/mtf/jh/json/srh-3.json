@@ -3,6 +3,7 @@
   "name": "Behemoth",
   "clanName": "Stone Rhino",
   "tonnage": 100,
+  "era": 3068,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

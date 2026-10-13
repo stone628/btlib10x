@@ -2,6 +2,7 @@
   "model": "RFL-6D",
   "name": "Rifleman",
   "tonnage": 60,
+  "era": 3069,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

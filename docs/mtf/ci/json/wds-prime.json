@@ -2,6 +2,7 @@
   "model": "WDS-Prime",
   "name": "Woodsman",
   "tonnage": 75,
+  "era": 2866,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

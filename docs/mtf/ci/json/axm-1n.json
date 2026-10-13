@@ -2,6 +2,7 @@
   "model": "AXM-1N",
   "name": "Axman",
   "tonnage": 65,
+  "era": 3048,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -2,6 +2,7 @@
   "model": "RTX1-OG",
   "name": "Raptor",
   "tonnage": 25,
+  "era": 3070,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 7,

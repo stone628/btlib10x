@@ -3,6 +3,7 @@
   "name": "Hankyu",
   "clanName": "Arctic Cheetah",
   "tonnage": 30,
+  "era": 3037,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 8,

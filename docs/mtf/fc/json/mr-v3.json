@@ -2,6 +2,7 @@
   "model": "MR-V3",
   "name": "Cerberus",
   "tonnage": 95,
+  "era": 3062,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

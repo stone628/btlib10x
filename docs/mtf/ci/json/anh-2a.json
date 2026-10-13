@@ -2,6 +2,7 @@
   "model": "ANH-2A",
   "name": "Annihilator",
   "tonnage": 100,
+  "era": 3048,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 2,

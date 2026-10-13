@@ -2,6 +2,7 @@
   "model": "GHR-7K",
   "name": "Grasshopper",
   "tonnage": 70,
+  "era": 3068,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -2,6 +2,7 @@
   "model": "OSR-2M",
   "name": "Ostroc",
   "tonnage": 60,
+  "era": 2793,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

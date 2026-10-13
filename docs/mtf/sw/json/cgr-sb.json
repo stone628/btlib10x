@@ -1,7 +1,9 @@
 {
   "model": "CGR-SB",
   "name": "Charger",
+  "callsign": "Challenger",
   "tonnage": 80,
+  "era": 3025,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

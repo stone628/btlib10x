@@ -57,6 +57,7 @@ describe("'Mech definitions", () => {
       model: "TEST",
       name: "Test",
       tonnage: 50,
+      era: 3025,
       weightClass: "Medium",
       techBase: "Inner Sphere",
       walking: 5,
@@ -178,6 +179,9 @@ describe("'Mech definitions", () => {
   it("rejects invalid definitions", () => {
     const base = toMechDef(mechDef("HBK-4G")!);
     expect(() => validateMechDef({ ...base, running: 7 } as MechDef)).toThrow(/running/);
+    expect(() => validateMechDef({ ...base, era: 30.5 } as MechDef)).toThrow(/era/);
+    const { era: _era, ...noEra } = base;
+    expect(() => validateMechDef(noEra as MechDef)).toThrow(/era/);
     expect(() =>
       validateMechDef({ ...base, armor: { ...base.armor, head: -1 } } as MechDef),
     ).toThrow(/armor\.head/);

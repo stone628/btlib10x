@@ -75,7 +75,16 @@ import {
 } from "./chunk";
 import { compensatedLength, i18n, type MessageKey } from "./i18n";
 import { lookupMech } from "./lookup";
-import { F, displayModel, gunneryLabel, modeWord, PRN, requireMechDef, SHORT_LOC, TRN } from "./misc";
+import {
+  displayModel,
+  F,
+  gunneryLabel,
+  modeWord,
+  PRN,
+  requireMechDef,
+  SHORT_LOC,
+  TRN,
+} from "./misc";
 import { unknownModelError } from "./query";
 import { createBoardRenderUnit, createEjectedBoardRenderUnits } from "./render";
 import { replayChunk } from "./replay";

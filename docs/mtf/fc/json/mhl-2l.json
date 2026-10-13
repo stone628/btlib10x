@@ -2,6 +2,7 @@
   "model": "MHL-2L",
   "name": "Marshal",
   "tonnage": 55,
+  "era": 3063,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -2,6 +2,7 @@
   "model": "SNV-3",
   "name": "Supernova",
   "tonnage": 90,
+  "era": 3064,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

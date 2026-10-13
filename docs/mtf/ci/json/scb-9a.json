@@ -2,6 +2,7 @@
   "model": "SCB-9A",
   "name": "Scarabus",
   "tonnage": 30,
+  "era": 3053,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 10,

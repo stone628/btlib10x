@@ -2,6 +2,7 @@
   "model": "DGR-3F",
   "name": "Dragon Fire",
   "tonnage": 75,
+  "era": 3058,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -2,6 +2,7 @@
   "model": "WVR-7H",
   "name": "Wolverine II",
   "tonnage": 55,
+  "era": 2770,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -2,6 +2,7 @@
   "model": "DVS-1D",
   "name": "Devastator",
   "tonnage": 100,
+  "era": 3036,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

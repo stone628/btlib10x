@@ -2,6 +2,7 @@
   "model": "SHD-2Hb",
   "name": "Shadow Hawk",
   "tonnage": 55,
+  "era": 2752,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

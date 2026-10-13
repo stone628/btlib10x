@@ -2,6 +2,7 @@
   "model": "MS1-OA",
   "name": "Men Shen",
   "tonnage": 55,
+  "era": 3060,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

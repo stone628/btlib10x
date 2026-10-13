@@ -3,6 +3,7 @@
   "name": "Man O' War",
   "clanName": "Gargoyle",
   "tonnage": 80,
+  "era": 3069,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 5,

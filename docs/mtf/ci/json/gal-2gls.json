@@ -2,6 +2,7 @@
   "model": "GAL-2GLS",
   "name": "Gallowglas",
   "tonnage": 70,
+  "era": 3055,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

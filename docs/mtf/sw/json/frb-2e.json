@@ -2,6 +2,7 @@
   "model": "FRB-2E",
   "name": "Firebee",
   "tonnage": 35,
+  "era": 2524,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

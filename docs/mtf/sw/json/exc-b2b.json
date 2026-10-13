@@ -2,6 +2,7 @@
   "model": "EXC-B2b",
   "name": "Excalibur",
   "tonnage": 70,
+  "era": 2735,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -2,6 +2,7 @@
   "model": "PNT-10K",
   "name": "Panther",
   "tonnage": 35,
+  "era": 3051,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 4,

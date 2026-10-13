@@ -2,6 +2,7 @@
   "model": "DRT-4S",
   "name": "Dart",
   "tonnage": 25,
+  "era": 3053,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 9,

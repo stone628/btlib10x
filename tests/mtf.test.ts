@@ -455,4 +455,16 @@ describe("parseMtf: model callsign suffix", () => {
     ).toThrow(/must not contain whitespace/);
     expect(() => validateMechDef(def as unknown as MechDef)).not.toThrow();
   });
+
+  it("extracts the Era year as a required integer", () => {
+    const def = convert("docs/mtf/sw/mtf/Atlas AS7-WGS Samsonov.mtf");
+    expect(def.era).toBe(3025);
+    const file = "docs/mtf/sw/mtf/Atlas AS7-WGS Samsonov.mtf";
+    const noEra = readFileSync(file, "utf8")
+      .split("\n")
+      .filter((l) => !/^Era:/im.test(l))
+      .join("\n");
+    const res = parseMtf(noEra, file);
+    expect(res.errors.some((e) => /Era/.test(e))).toBe(true);
+  });
 });

@@ -53,7 +53,7 @@ export const en = {
   "cmd.clear.help": "clear the scrollback screen",
   "cmd.info.help": "look up or search 'Mech models, bundled maps, or weapons",
   "cmd.info.arg.mech":
-    "model key like HBK-4G for its sheet, or search text\n(model, chassis or Clan name) plus filters:\n  class:l|m|h|a  ton:70|60-75|>=80  tech:is|clan\n  sort:[-]ton|name|model\nmore than 20 matches are grouped; add ! for the full list",
+    "model key like HBK-4G for its sheet, or search text\n(model, chassis or Clan name) plus filters:\n  class:l|m|h|a  ton:70|60-75|>=80  tech:is|clan  era:3025|3000-3060|>=3050\n  sort:[-]ton|name|model|era\nmore than 20 matches are grouped; add ! for the full list",
   "cmd.info.arg.map": "bundled map name; omit to list maps",
   "cmd.info.arg.weapon":
     "weapon name like Medium Laser for its stats, or search text plus filters:\n  cat:ballistic|energy|missile|equipment  tech:is|clan (Clan = 'CL ' prefix)\n  heat:<=3  range:>=15 (long range)  dmg:>=10 (best-case damage)\n  sort:[-]cat|name|heat|range|dmg\nmore than 20 matches list names only; add ! for the full list",
@@ -499,6 +499,7 @@ export const en = {
   "info.mechColClass": "Class",
   "info.mechColTon": "Tonnage",
   "info.mechColTechBase": "TechBase",
+  "info.mechColEra": "Era",
   "info.mechColCount": "'Mechs",
   "info.mechColChassis": "Chassis",
   "info.mechTotal": "{count} 'Mechs, {chassis} chassis",

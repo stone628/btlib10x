@@ -2,6 +2,7 @@
   "model": "ANV-3M",
   "name": "Anvil",
   "tonnage": 60,
+  "era": 3055,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

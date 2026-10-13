@@ -1,7 +1,9 @@
 {
   "model": "FS9-M",
   "name": "Firestarter",
+  "callsign": "Mirage",
   "tonnage": 35,
+  "era": 2893,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

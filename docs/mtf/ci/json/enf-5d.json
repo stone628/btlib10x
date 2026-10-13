@@ -2,6 +2,7 @@
   "model": "ENF-5D",
   "name": "Enforcer",
   "tonnage": 50,
+  "era": 3050,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

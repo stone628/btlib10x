@@ -2,6 +2,7 @@
   "model": "Y-H10G",
   "name": "Yu Huang",
   "tonnage": 90,
+  "era": 3060,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

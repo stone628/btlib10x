@@ -2,6 +2,7 @@
   "model": "VR5-R",
   "name": "Verfolger",
   "tonnage": 65,
+  "era": 3063,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

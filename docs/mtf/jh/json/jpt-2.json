@@ -2,6 +2,7 @@
   "model": "JPT-2",
   "name": "Jupiter",
   "tonnage": 100,
+  "era": 3070,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

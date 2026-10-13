@@ -2,6 +2,7 @@
   "model": "END-6Q",
   "name": "Enfield",
   "tonnage": 50,
+  "era": 3055,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -2,6 +2,7 @@
   "model": "FFL-3PP2",
   "name": "Firefly",
   "tonnage": 30,
+  "era": 2801,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

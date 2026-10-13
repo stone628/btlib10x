@@ -2,6 +2,7 @@
   "model": "BLR-2D",
   "name": "Warlord",
   "tonnage": 80,
+  "era": 3070,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

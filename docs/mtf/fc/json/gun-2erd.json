@@ -2,6 +2,7 @@
   "model": "GUN-2ERD",
   "name": "Gunslinger",
   "tonnage": 85,
+  "era": 3062,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

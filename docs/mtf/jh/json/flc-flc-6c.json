@@ -2,6 +2,7 @@
   "model": "FLC-FLC-6C",
   "name": "Falcon",
   "tonnage": 30,
+  "era": 3065,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 6,

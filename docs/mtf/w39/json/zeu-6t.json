@@ -2,6 +2,7 @@
   "model": "ZEU-6T",
   "name": "Zeus",
   "tonnage": 80,
+  "era": 3026,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

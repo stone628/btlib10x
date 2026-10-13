@@ -2,6 +2,7 @@
   "model": "IMP-3E",
   "name": "Imp",
   "tonnage": 100,
+  "era": 3050,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

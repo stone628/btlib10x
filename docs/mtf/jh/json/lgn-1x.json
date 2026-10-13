@@ -2,6 +2,7 @@
   "model": "LGN-1X",
   "name": "Legionnaire",
   "tonnage": 50,
+  "era": 3068,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 7,

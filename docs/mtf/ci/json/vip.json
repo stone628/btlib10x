@@ -2,6 +2,7 @@
   "model": "VIP",
   "name": "Viper",
   "tonnage": 75,
+  "era": 3051,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

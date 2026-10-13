@@ -2,6 +2,7 @@
   "model": "KSC-3L",
   "name": "Koschei",
   "tonnage": 65,
+  "era": 2634,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

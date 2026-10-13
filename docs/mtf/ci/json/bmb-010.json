@@ -2,6 +2,7 @@
   "model": "BMB-010",
   "name": "Bombard",
   "tonnage": 50,
+  "era": 3054,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 2,

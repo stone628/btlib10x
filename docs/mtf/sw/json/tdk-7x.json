@@ -2,6 +2,7 @@
   "model": "TDK-7X",
   "name": "Thunder Hawk",
   "tonnage": 100,
+  "era": 2771,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

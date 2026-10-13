@@ -2,6 +2,7 @@
   "model": "TLR1-OE",
   "name": "Templar",
   "tonnage": 85,
+  "era": 3064,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

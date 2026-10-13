@@ -2,6 +2,7 @@
   "model": "MAL-1PT5",
   "name": "Mauler",
   "tonnage": 90,
+  "era": 3022,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

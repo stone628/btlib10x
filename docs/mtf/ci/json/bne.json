@@ -3,6 +3,7 @@
   "name": "Kraken",
   "clanName": "Bane",
   "tonnage": 100,
+  "era": 2827,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

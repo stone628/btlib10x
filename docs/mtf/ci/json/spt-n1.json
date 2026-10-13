@@ -2,6 +2,7 @@
   "model": "SPT-N1",
   "name": "Spartan",
   "tonnage": 80,
+  "era": 2764,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 5,

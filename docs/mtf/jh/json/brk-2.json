@@ -2,6 +2,7 @@
   "model": "BRK-2",
   "name": "Burrock",
   "tonnage": 75,
+  "era": 3073,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

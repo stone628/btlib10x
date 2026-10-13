@@ -2,6 +2,7 @@
   "model": "DRG-7N",
   "name": "Dragon",
   "tonnage": 60,
+  "era": 3063,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

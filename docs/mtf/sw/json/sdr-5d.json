@@ -2,6 +2,7 @@
   "model": "SDR-5D",
   "name": "Spider",
   "tonnage": 30,
+  "era": 2853,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

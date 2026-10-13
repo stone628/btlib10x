@@ -2,6 +2,7 @@
   "model": "SDR-5K",
   "name": "Spider",
   "tonnage": 30,
+  "era": 2850,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

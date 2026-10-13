@@ -2,6 +2,7 @@
   "model": "BZK-F3",
   "name": "Hollander",
   "tonnage": 35,
+  "era": 3054,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

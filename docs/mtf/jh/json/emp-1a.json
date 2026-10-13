@@ -2,6 +2,7 @@
   "model": "EMP-1A",
   "name": "Emperor",
   "tonnage": 90,
+  "era": 2442,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

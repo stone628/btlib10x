@@ -2,6 +2,7 @@
   "model": "WHM-6R",
   "name": "Warhammer",
   "tonnage": 70,
+  "era": 2515,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -2,6 +2,7 @@
   "model": "GRM-01B",
   "name": "Garm",
   "tonnage": 35,
+  "era": 3059,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

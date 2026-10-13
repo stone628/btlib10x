@@ -2,6 +2,7 @@
   "model": "GLD-2R",
   "name": "Gladiator",
   "tonnage": 55,
+  "era": 2487,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

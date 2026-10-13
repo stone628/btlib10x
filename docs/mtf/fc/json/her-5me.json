@@ -1,7 +1,9 @@
 {
   "model": "HER-5ME",
   "name": "Hermes II",
+  "callsign": "Mercury Elite",
   "tonnage": 40,
+  "era": 3056,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

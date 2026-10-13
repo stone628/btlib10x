@@ -2,6 +2,7 @@
   "model": "TDR-C-2",
   "name": "Thunderbolt",
   "tonnage": 65,
+  "era": 3054,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

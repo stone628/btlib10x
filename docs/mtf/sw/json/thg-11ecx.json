@@ -3,6 +3,7 @@
   "name": "Thug",
   "callsign": "Jose",
   "tonnage": 80,
+  "era": 2772,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

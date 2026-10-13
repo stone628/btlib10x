@@ -2,6 +2,7 @@
   "model": "ANH-C",
   "name": "Annihilator",
   "tonnage": 100,
+  "era": 2848,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

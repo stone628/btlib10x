@@ -2,6 +2,7 @@
   "model": "WHM-C-3",
   "name": "Warhammer",
   "tonnage": 70,
+  "era": 2850,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

@@ -2,6 +2,7 @@
   "model": "PPR-6S",
   "name": "Salamander",
   "tonnage": 80,
+  "era": 3058,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

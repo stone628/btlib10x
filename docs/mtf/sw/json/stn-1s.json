@@ -2,6 +2,7 @@
   "model": "STN-1S",
   "name": "Sentinel",
   "tonnage": 40,
+  "era": 2651,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

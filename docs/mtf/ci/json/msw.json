@@ -2,6 +2,7 @@
   "model": "MSW",
   "name": "Masauwu",
   "tonnage": 75,
+  "era": 2832,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

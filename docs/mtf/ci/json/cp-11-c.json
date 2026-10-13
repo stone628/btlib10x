@@ -2,6 +2,7 @@
   "model": "CP-11-C",
   "name": "Cyclops",
   "tonnage": 90,
+  "era": 3050,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

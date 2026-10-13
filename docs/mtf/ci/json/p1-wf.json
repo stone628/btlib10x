@@ -2,6 +2,7 @@
   "model": "P1-WF",
   "name": "Wildfire",
   "tonnage": 65,
+  "era": 3053,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 6,

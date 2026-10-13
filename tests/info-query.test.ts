@@ -24,8 +24,8 @@ import { infoMechChunk } from "../web/terminal/session.common";
 import { infoMechQuery, infoWeaponQuery } from "../web/terminal/table";
 import { chunkText, execute } from "./helpers";
 
-function mech(model: string, name: string, tonnage: number, techBase = "Inner Sphere") {
-  return { model, name, tonnage, techBase, line: 0 } satisfies MechManifestEntry;
+function mech(model: string, name: string, tonnage: number, techBase = "Inner Sphere", era = 3025) {
+  return { model, name, tonnage, techBase, era, line: 0 } satisfies MechManifestEntry;
 }
 
 /** `chassis` chassis × `variants` models each, all at one tonnage. */
@@ -74,7 +74,7 @@ describe("parseQuery", () => {
   });
 
   it("rejects unknown keys and empty values", () => {
-    expect(() => parseQuery(["era:sw"], MECH_FILTER_KEYS)).toThrow(/era:/);
+    expect(() => parseQuery(["epoch:sw"], MECH_FILTER_KEYS)).toThrow(/epoch:/);
     expect(() => parseQuery(["ton:"], MECH_FILTER_KEYS)).toThrow(/ton:/);
     expect(() => parseQuery(["cat:energy"], MECH_FILTER_KEYS)).toThrow(/cat:/);
     expect(parseQuery(["cat:energy"], WEAPON_FILTER_KEYS).filters.get("cat")).toBe("energy");
@@ -119,6 +119,21 @@ describe("selectMechs", () => {
     expect(models("tech:clan")).toEqual(["TBR-Prime"]);
     expect(() => models("class:x")).toThrow(/class:x/);
     expect(() => models("ton:heavy")).toThrow(/ton:heavy/);
+  });
+
+  it("filters and sorts by era", () => {
+    const entries = [
+      mech("A-1", "Alpha", 50, "Inner Sphere", 3025),
+      mech("B-1", "Beta", 50, "Inner Sphere", 3050),
+      mech("C-1", "Gamma", 50, "Clan", 3060),
+    ];
+    const byEra = (...args: string[]) => selectMechs(entries, q(...args)).map((m) => m.model);
+    expect(byEra("era:3050")).toEqual(["B-1"]);
+    expect(byEra("era:3040-3060")).toEqual(["B-1", "C-1"]);
+    expect(byEra("era:>=3050")).toEqual(["B-1", "C-1"]);
+    expect(byEra("sort:era")).toEqual(["A-1", "B-1", "C-1"]);
+    expect(byEra("sort:-era")[0]).toBe("C-1");
+    expect(() => byEra("era:later")).toThrow(/era:later/);
   });
 
   it("sorts by tonnage by default and honors sort:", () => {
@@ -193,6 +208,12 @@ describe("info mech tiers", () => {
     const chunks = listChunks("!", roster(ROW_CAP, 3, 50));
     expect(chunks.map((c) => c.kind)).toEqual(["lines", "columns"]);
     expect(chunkText(chunks[1]!).filter((l) => l.startsWith("│C"))).toHaveLength(ROW_CAP * 3);
+  });
+
+  it("orders roster columns model, name, tonnage, class, techbase, era", () => {
+    const entries = [{ ...mech("HBK-4G", "Hunchback", 50), era: 2572 }];
+    const text = listChunks("!", entries).flatMap(chunkText).join("\n");
+    expect(text).toMatch(/│HBK-4G\s+│Hunchback\s+│50\s+│Medium\s+│Inner Sphere\s+│2572/);
   });
 
   it("suggests close models for an unknown one", () => {
@@ -315,7 +336,7 @@ describe("info commands in the CLI", () => {
     expect(execute(s, "info mech hbk-4x")[0]).toBe(
       "error: Unknown 'Mech model: hbk-4x; closest: HBK-4G",
     );
-    expect(execute(s, "info mech era:sw")[0]).toMatch(/^error: Unknown filter 'era:'/);
+    expect(execute(s, "info mech epoch:sw")[0]).toMatch(/^error: Unknown filter 'epoch:'/);
     expect(execute(s, "info weapon")[0]).toBe("114 weapons");
     expect(execute(s, "add a hbk-4x 1 1")[0]).toContain("closest: HBK-4G");
   });
@@ -325,6 +346,7 @@ describe("info commands in the CLI", () => {
     const help = execute(s, "help info");
     expect(help[0]).toBe("usage: info mech [model | text] [key:value ...] [!]");
     expect(help.join("\n")).toContain("class:l|m|h|a  ton:70|60-75|>=80  tech:is|clan");
+    expect(help.join("\n")).toContain("era:3025|3000-3060|>=3050");
     expect(help.join("\n")).toContain("cat:ballistic|energy|missile|equipment");
   });
 });

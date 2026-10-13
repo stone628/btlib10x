@@ -2,6 +2,7 @@
   "model": "FFL-4C",
   "name": "Firefly",
   "tonnage": 30,
+  "era": 3048,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

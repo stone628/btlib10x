@@ -2,6 +2,7 @@
   "model": "ARC-5CS",
   "name": "Archer",
   "tonnage": 70,
+  "era": 3052,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

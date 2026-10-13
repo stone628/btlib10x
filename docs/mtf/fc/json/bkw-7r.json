@@ -2,6 +2,7 @@
   "model": "BKW-7R",
   "name": "Black Watch",
   "tonnage": 85,
+  "era": 3061,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

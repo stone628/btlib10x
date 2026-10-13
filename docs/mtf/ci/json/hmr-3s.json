@@ -1,7 +1,9 @@
 {
   "model": "HMR-3S",
   "name": "Hammer",
+  "callsign": "Slammer",
   "tonnage": 30,
+  "era": 3054,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -2,6 +2,7 @@
   "model": "XBW-A",
   "name": "Crossbow",
   "tonnage": 65,
+  "era": 2870,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

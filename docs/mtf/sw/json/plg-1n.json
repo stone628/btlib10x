@@ -2,6 +2,7 @@
   "model": "PLG-1N",
   "name": "Pillager",
   "tonnage": 100,
+  "era": 2575,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

@@ -2,6 +2,7 @@
   "model": "CN9-YLW2",
   "name": "Centurion",
   "tonnage": 50,
+  "era": 3051,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

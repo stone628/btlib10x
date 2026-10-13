@@ -2,6 +2,7 @@
   "model": "HTM-27V",
   "name": "Hatamoto-Kaze",
   "tonnage": 80,
+  "era": 3048,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

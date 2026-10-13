@@ -2,6 +2,7 @@
   "model": "WTC-4DM",
   "name": "Watchman",
   "tonnage": 40,
+  "era": 3063,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

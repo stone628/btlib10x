@@ -2,6 +2,7 @@
   "model": "FS9-A",
   "name": "Firestarter",
   "tonnage": 35,
+  "era": 2550,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

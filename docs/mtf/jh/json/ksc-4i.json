@@ -2,6 +2,7 @@
   "model": "KSC-4I",
   "name": "Koschei",
   "tonnage": 65,
+  "era": 2719,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

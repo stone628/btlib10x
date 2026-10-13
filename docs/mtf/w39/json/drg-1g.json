@@ -2,6 +2,7 @@
   "model": "DRG-1G",
   "name": "Grand Dragon",
   "tonnage": 60,
+  "era": 3024,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

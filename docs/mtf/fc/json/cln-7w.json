@@ -2,6 +2,7 @@
   "model": "CLN-7W",
   "name": "Chameleon",
   "tonnage": 50,
+  "era": 3058,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

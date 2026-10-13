@@ -173,17 +173,19 @@ function mechTable(list: readonly MechManifestEntry[]): Chunk {
   const header = [
     i18n("info.mechColModel"),
     i18n("info.mechColName"),
+    i18n("info.mechColTon"),
     i18n("info.mechColClass"),
     i18n("info.mechColTechBase"),
-    i18n("info.mechColTon"),
+    i18n("info.mechColEra"),
   ];
   // Move ratings live in the registered sheets; the manifest carries identity only.
   const rows = list.map((d) => [
     displayModel(d),
     d.clanName === undefined ? d.name : `${d.name} (${d.clanName})`,
+    String(d.tonnage),
     weightClassForTonnage(d.tonnage),
     d.techBase,
-    String(d.tonnage),
+    String(d.era),
   ]);
   return buildHeaderTableChunkFromRows(header, rows);
 }

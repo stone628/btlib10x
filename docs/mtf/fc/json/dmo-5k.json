@@ -2,6 +2,7 @@
   "model": "DMO-5K",
   "name": "Daimyo",
   "tonnage": 40,
+  "era": 3062,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

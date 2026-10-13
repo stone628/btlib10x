@@ -2,6 +2,7 @@
   "model": "OTL-5M",
   "name": "Ostsol",
   "tonnage": 60,
+  "era": 3050,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

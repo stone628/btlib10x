@@ -2,6 +2,7 @@
   "model": "KDK-5",
   "name": "Kodiak",
   "tonnage": 100,
+  "era": 3052,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

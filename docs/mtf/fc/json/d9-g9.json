@@ -2,6 +2,7 @@
   "model": "D9-G9",
   "name": "Duan Gung",
   "tonnage": 25,
+  "era": 3058,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 7,

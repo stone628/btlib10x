@@ -2,6 +2,7 @@
   "model": "EXT-4Db",
   "name": "Exterminator",
   "tonnage": 65,
+  "era": 2718,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 6,

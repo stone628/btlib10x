@@ -2,6 +2,7 @@
   "model": "ENF-6G",
   "name": "Enforcer III",
   "tonnage": 50,
+  "era": 3062,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

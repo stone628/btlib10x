@@ -2,6 +2,7 @@
   "model": "MCY-98",
   "name": "Mercury",
   "tonnage": 20,
+  "era": 2810,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

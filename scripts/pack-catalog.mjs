@@ -210,7 +210,7 @@ const seenMaps = new Set();
 // Line numbers: 0 = string table, 1 = manifest, 2+ = wire lines
 for (const file of mechFiles) {
   const def = JSON.parse(readFileSync(join(mechsDir, file), "utf8"));
-  for (const key of ["model", "name", "techBase", "tonnage"]) {
+  for (const key of ["model", "name", "techBase", "tonnage", "era"]) {
     if (def[key] === undefined) {
       throw new Error(`pack-catalog: ${file} is missing ${JSON.stringify(key)}`);
     }
@@ -241,6 +241,7 @@ for (const file of mechFiles) {
     n: nameRef,
     b: TECHBASE_CODES[def.techBase] ?? 0,
     t: def.tonnage,
+    e: def.era,
     ...(def.clanName !== undefined && { c: def.clanName }),
     ...(def.callsign !== undefined && { k: def.callsign }),
     l: wireLines.length + 2, // +2 for string table (line 0) + manifest (line 1)

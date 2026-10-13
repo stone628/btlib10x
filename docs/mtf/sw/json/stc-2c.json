@@ -2,6 +2,7 @@
   "model": "STC-2C",
   "name": "Striker",
   "tonnage": 80,
+  "era": 2571,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

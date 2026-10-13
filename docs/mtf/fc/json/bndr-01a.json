@@ -2,6 +2,7 @@
   "model": "BNDR-01A",
   "name": "Bandersnatch",
   "tonnage": 75,
+  "era": 3052,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

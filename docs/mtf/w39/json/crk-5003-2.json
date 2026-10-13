@@ -3,6 +3,7 @@
   "name": "Katana",
   "clanName": "Crockett",
   "tonnage": 85,
+  "era": 3035,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

@@ -2,6 +2,7 @@
   "model": "TDR-5Sd",
   "name": "Thunderbolt",
   "tonnage": 65,
+  "era": 2750,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

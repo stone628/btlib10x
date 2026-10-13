@@ -2,6 +2,7 @@
   "model": "CTS-6X",
   "name": "Cestus",
   "tonnage": 65,
+  "era": 2609,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -2,6 +2,7 @@
   "model": "EXT-4C",
   "name": "Exterminator",
   "tonnage": 65,
+  "era": 2630,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 6,

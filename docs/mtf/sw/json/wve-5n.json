@@ -2,6 +2,7 @@
   "model": "WVE-5N",
   "name": "Wyvern",
   "tonnage": 45,
+  "era": 2660,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

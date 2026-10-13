@@ -1,7 +1,9 @@
 {
   "model": "HER-4K",
   "name": "Hermes II",
+  "callsign": "Hermes III",
   "tonnage": 40,
+  "era": 3025,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

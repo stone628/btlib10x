@@ -2,6 +2,7 @@
   "model": "CHP-3N",
   "name": "Champion",
   "tonnage": 60,
+  "era": 3052,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

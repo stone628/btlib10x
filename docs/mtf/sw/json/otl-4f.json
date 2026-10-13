@@ -2,6 +2,7 @@
   "model": "OTL-4F",
   "name": "Ostsol",
   "tonnage": 60,
+  "era": 2871,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

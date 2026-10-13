@@ -2,6 +2,7 @@
   "model": "OW-1B",
   "name": "Owens",
   "tonnage": 35,
+  "era": 3056,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

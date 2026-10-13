@@ -2,6 +2,7 @@
   "model": "HSR-200-D",
   "name": "Hussar",
   "tonnage": 30,
+  "era": 2620,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 9,

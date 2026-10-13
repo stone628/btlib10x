@@ -3,6 +3,7 @@
   "name": "Roadrunner",
   "clanName": "Emerald Harrier",
   "tonnage": 15,
+  "era": 3112,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 14,

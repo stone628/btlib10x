@@ -2,6 +2,7 @@
   "model": "NTG-Prime",
   "name": "Night Gyr",
   "tonnage": 75,
+  "era": 3052,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

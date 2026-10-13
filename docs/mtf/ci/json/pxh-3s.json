@@ -2,6 +2,7 @@
   "model": "PXH-3S",
   "name": "Phoenix Hawk",
   "tonnage": 45,
+  "era": 3042,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

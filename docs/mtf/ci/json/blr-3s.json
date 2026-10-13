@@ -2,6 +2,7 @@
   "model": "BLR-3S",
   "name": "BattleMaster",
   "tonnage": 85,
+  "era": 3050,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

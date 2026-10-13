@@ -2,6 +2,7 @@
   "model": "BWP-3A",
   "name": "Ymir",
   "tonnage": 90,
+  "era": 2733,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

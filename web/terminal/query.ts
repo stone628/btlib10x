@@ -153,9 +153,9 @@ function textHit(needle: string, ...haystack: readonly (string | undefined)[]): 
 }
 
 // ---------------------------------------------------------------- mechs ----
-export const MECH_FILTER_KEYS = ["class", "ton", "tech", "sort"] as const;
+export const MECH_FILTER_KEYS = ["class", "ton", "tech", "era", "sort"] as const;
 const WEIGHT_CLASSES = ["Light", "Medium", "Heavy", "Assault"] as const;
-const MECH_SORTS = ["ton", "name", "model"] as const;
+const MECH_SORTS = ["ton", "name", "model", "era"] as const;
 
 function mechTech(m: MechManifestEntry): Tech {
   return m.techBase === "Clan" ? "clan" : "is";
@@ -182,6 +182,11 @@ export function selectMechs(
     const set = techFilter(tech);
     preds.push((m) => set.has(mechTech(m)));
   }
+  const era = q.filters.get("era");
+  if (era !== undefined) {
+    const pred = numberFilter("era", era);
+    preds.push((m) => pred(m.era));
+  }
   const sortRaw = q.filters.get("sort");
   const sort = sortRaw === undefined ? { by: "ton", desc: false } : sortFilter(sortRaw, MECH_SORTS);
   const list = entries.filter(
@@ -194,7 +199,9 @@ export function selectMechs(
       ? byName
       : sort.by === "model"
         ? (a, b) => a.model.localeCompare(b.model)
-        : (a, b) => a.tonnage - b.tonnage || byName(a, b);
+        : sort.by === "era"
+          ? (a, b) => a.era - b.era || byName(a, b)
+          : (a, b) => a.tonnage - b.tonnage || byName(a, b);
   return list.sort(sort.desc ? (a, b) => cmp(b, a) : cmp);
 }
 

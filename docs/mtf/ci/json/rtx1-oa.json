@@ -2,6 +2,7 @@
   "model": "RTX1-OA",
   "name": "Raptor",
   "tonnage": 25,
+  "era": 3052,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 7,

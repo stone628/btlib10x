@@ -2,6 +2,7 @@
   "model": "CP-10-Q",
   "name": "Cyclops",
   "tonnage": 90,
+  "era": 2801,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -2,6 +2,7 @@
   "model": "CLG-C",
   "name": "Crimson Langur",
   "tonnage": 50,
+  "era": 3065,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 7,

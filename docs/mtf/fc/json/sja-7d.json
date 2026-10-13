@@ -2,6 +2,7 @@
   "model": "SJA-7D",
   "name": "Shugenja",
   "tonnage": 75,
+  "era": 3061,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

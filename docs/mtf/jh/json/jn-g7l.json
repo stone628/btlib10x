@@ -2,6 +2,7 @@
   "model": "JN-G7L",
   "name": "Jinggau",
   "tonnage": 65,
+  "era": 3068,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

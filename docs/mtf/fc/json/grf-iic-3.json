@@ -2,6 +2,7 @@
   "model": "GRF-IIC-3",
   "name": "Griffin IIC",
   "tonnage": 40,
+  "era": 3060,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 6,

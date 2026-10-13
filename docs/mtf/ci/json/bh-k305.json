@@ -2,6 +2,7 @@
   "model": "BH-K305",
   "name": "Battle Hawk",
   "tonnage": 30,
+  "era": 3053,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -2,6 +2,7 @@
   "model": "ARC-4M",
   "name": "Archer",
   "tonnage": 70,
+  "era": 3049,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

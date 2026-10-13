@@ -2,6 +2,7 @@
   "model": "CRD-2R",
   "name": "Crusader",
   "tonnage": 65,
+  "era": 2649,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -2,6 +2,7 @@
   "model": "HOP-4Cb",
   "name": "Hoplite",
   "tonnage": 55,
+  "era": 2821,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

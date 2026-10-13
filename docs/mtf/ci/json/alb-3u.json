@@ -2,6 +2,7 @@
   "model": "ALB-3U",
   "name": "Albatross",
   "tonnage": 95,
+  "era": 3053,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

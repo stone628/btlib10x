@@ -3,6 +3,7 @@
   "name": "Baboon",
   "clanName": "Howler",
   "tonnage": 20,
+  "era": 3063,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 6,

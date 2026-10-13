@@ -2,6 +2,7 @@
   "model": "OSR-4D",
   "name": "Osiris",
   "tonnage": 30,
+  "era": 3067,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,
