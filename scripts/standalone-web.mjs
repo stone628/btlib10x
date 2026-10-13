@@ -35,16 +35,19 @@ const single = html
 const dest = "dist/standalone/bt10x.html";
 rmSync("dist/standalone", { recursive: true, force: true });
 mkdirSync("dist/standalone", { recursive: true });
-// Embed the catalog in the single file so it launches anywhere (including
+// Embed the catalog packs in the single file so it launches anywhere (including
 // file://, where fetch() is blocked). A payload </script> sequence would
 // close the carrier tag early; JSON string escape \/ decodes to /, so this
 // keeps every line valid JSONL. The function replacer avoids `$` patterns in
 // the payload being interpreted as replacement patterns.
 const catalog = readFileSync("data/btlib10x.jsonl", "utf8");
 const safeCatalog = catalog.replace(/<\/script/gi, "<\\/script");
+const swCatalog = readFileSync("docs/mtf/sw/sw.jsonl", "utf8");
+const safeSwCatalog = swCatalog.replace(/<\/script/gi, "<\\/script");
 const withCatalog = single.replace(
   "</head>",
-  () => `<script type="text/plain" id="bt10x-catalog">${safeCatalog}</script>\n</head>`,
+  () =>
+    `<script type="text/plain" id="bt10x-catalog">${safeCatalog}</script>\n<script type="text/plain" id="bt10x-catalog-sw">${safeSwCatalog}</script>\n</head>`,
 );
 writeFileSync(dest, withCatalog);
 console.log(`${dest}: ${withCatalog.length} bytes (self-contained)`);

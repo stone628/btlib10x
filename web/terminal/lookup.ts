@@ -4,9 +4,9 @@
  * these wrappers normalize input to match the catalog key shape.
  *
  * Lookups read the live registries on every call (no import-time snapshots:
- * sheets register on demand after boot). The catalog loads once at boot
- * (terminal.ts fetches data/btlib10x.jsonl into the engine store); every web
- * entry point reaches the catalogs through this module.
+ * sheets register on demand after boot). The catalogs load once at boot
+ * (terminal.ts fetches btlib10x.jsonl + btlib10x.sw.jsonl into the engine
+ * store); every web entry point reaches the catalogs through this module.
  */
 import {
   ensureMapRegistered,

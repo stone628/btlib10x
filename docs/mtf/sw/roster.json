@@ -6698,20 +6698,6 @@
     "id": "ZGH6XQJ958"
   },
   {
-    "mtf": "Flea FLE-14.mtf",
-    "chassis": "Flea",
-    "model": "FLE-14",
-    "bv": 270,
-    "intro": 2519,
-    "tags": [
-      "xtro"
-    ],
-    "sources": [
-      "XTR:SW"
-    ],
-    "id": "ZHZGN3A2H4"
-  },
-  {
     "mtf": "Thug THG-11Eb.mtf",
     "chassis": "Thug",
     "model": "THG-11Eb",

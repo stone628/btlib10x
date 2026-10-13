@@ -47,7 +47,7 @@ Examples:
 | `board` | ASCII grid (styled spans from `createBoardModel(BoardRenderInfo)`), sized from loaded map's width×height; with no map loaded, explains how to load one. Rendered as styled spans in a `.board` block: terrain glyphs on the grid rows and team-colored unit ids (id characters only, via `idStyles`); a bold `!` (`t-club`, `--club`) at the bottom-left interior slot (`\!w0 /`) marks a hex holding a ground club token (`state.clubs`; terrain-derived trees/girders are not marked) and adds a legend entry; font family, size and line spacing come from the `--board-ff` / `--board-fs` / `--board-lh` CSS variables and each terrain's scheme from the `--t-*` variables in `web/bt10x.css` |
 | `clear` | clear the scrollback screen |
 | `log [n]` | last n events (default 10) |
-| `info mech [text] [key:value ...] [!]` | search the 'Mech catalog: plain words are a case-insensitive substring match on model, chassis and Clan name; filters AND together: `class:l\|m\|h\|a` (comma list, unambiguous prefix of light/medium/heavy/assault), `ton:70` / `ton:60-75` / `ton:>=80` (also `<`, `<=`, `>`), `tech:is\|clan`, `era:3025` / `era:3000-3060` / `era:>=3050` (same numeric forms as `ton:`), `sort:[-]ton\|name\|model\|era` (default tonnage, then name). Filters read the catalog manifest only (model, chassis, Clan name, tech base, tonnage, era). Up to 20 matches print the model table (model, name, tonnage, class, tech base, era); more print one row per chassis (tonnage, name, variant count, models; collapsible in the web CLI, expanding to the variant table) while there are at most 20 chassis; beyond that, counts by class (or by tonnage when all matches share a class). A trailing `!` prints the full table. A single match opens its sheet; when it came from a search or filter rather than an exact model key, a line above the sheet names the one matching model. No match on plain text suggests up to 5 closest model keys (also for `add`) |
+| `info mech [text] [key:value ...] [!]` | search the 'Mech catalogs (base pack + SW season pack; the roster table shows each entry's `pack`): plain words are a case-insensitive substring match on model, chassis and Clan name; filters AND together: `class:l\|m\|h\|a` (comma list, unambiguous prefix of light/medium/heavy/assault), `ton:70` / `ton:60-75` / `ton:>=80` (also `<`, `<=`, `>`), `tech:is\|clan`, `era:3025` / `era:3000-3060` / `era:>=3050` (same numeric forms as `ton:`), `pack:base\|sw`, `sort:[-]ton\|name\|model\|era` (default tonnage, then name). Filters read the catalog manifest only (model, chassis, Clan name, tech base, tonnage, era, pack). Up to 20 matches print the model table (model, name, tonnage, class, tech base, era, pack); more print one row per chassis (tonnage, name, variant count, models; collapsible in the web CLI, expanding to the variant table) while there are at most 20 chassis; beyond that, counts by class (or by tonnage when all matches share a class). A trailing `!` prints the full table. A single match opens its sheet; when it came from a search or filter rather than an exact model key, a line above the sheet names the one matching model. No match on plain text suggests up to 5 closest model keys (also for `add`). A model present in both packs resolves to the SW sheet (`base` always loses); `pack:base` lists the surviving base-only sheets |
 | `info mech <model>` | sheet summary: walk/run/jump ratings, weapons, and the 3-row critical slot chart (right arm / head / left arm, right / center / left torso, right / left leg); web CLI renders the chart as a mouse-click-collapsible block |
 | `info map` | list available maps |
 | `info weapon [name \| text] [key:value ...] [!]` | an exact name (or a single match, with a line naming it when it was not an exact case-insensitive name) shows that weapon's stats; otherwise search the weapon catalog by name substring with filters `cat:ballistic\|energy\|missile\|equipment` (unambiguous prefix, comma list), `tech:is\|clan` (Clan = `CL ` name prefix), `heat:`, `range:` (long range), `dmg:` (best-case damage: best variable bracket or full missile salvo), same numeric forms as `ton:`, and `sort:[-]cat\|name\|heat\|range\|dmg` (default catalog order). Up to 20 matches print stat lines (grouped by category in catalog order); more print names only, one line per category. A trailing `!` prints every stat line. No match on plain text suggests up to 5 closest names |
@@ -363,8 +363,10 @@ stated elsewhere in this document or the codebase:
     scripts/build-web.mjs        esbuild bundles: src/index.ts → web/btlib10x.js (engine),
                                  web/terminal/terminal.ts → web/terminal.js (app; engine kept external),
                                  web/avatar/avatar.ts → web/avatar.js (avatar creator),
-                                 and copies data/btlib10x.jsonl → web/btlib10x.jsonl (catalog,
-                                 fetched once at boot)
+                                 and copies data/btlib10x.jsonl → web/btlib10x.jsonl (base catalog)
+                                 plus docs/mtf/sw/sw.jsonl → web/btlib10x.sw.jsonl (SW season
+                                 pack; each pack keeps its own string table), both fetched
+                                 once at boot (SW failure degrades to a warning line)
 
 Import wrinkle: tsc-emitted `.json` imports are not loadable by browsers, so the
 app ships as an esbuild single-file bundle instead of consuming `dist/` directly.
@@ -373,13 +375,15 @@ Library sources stay untouched.
 ## Build, run, and ship
 
     npm install            # picks up esbuild devDependency
-    npm run build:web      # one-shot esbuild bundle → web/btlib10x.js + web/terminal.js + web/avatar.js (+ web/btlib10x.jsonl and web/VISION.md copies)
+    npm run pack:sw        # SW season pack: docs/mtf/sw/json/*.json → docs/mtf/sw/sw.jsonl
+                           # (excludes sheets the engine cannot model: split-location King Crabs)
+    npm run build:web      # one-shot esbuild bundle → web/btlib10x.js + web/terminal.js + web/avatar.js (+ web/btlib10x.jsonl, web/btlib10x.sw.jsonl and web/VISION.md copies)
     npm run dev:web        # watch + serve: rebuilds on change, serves at http://127.0.0.1:8012/index.html (landing; terminal at /terminal.html)
     # custom port:  node scripts/build-web.mjs --watch --serve --port=3000
     # open http://localhost:8012
 
 To publish the app's static output (not the npm package), run:
 
-    npm run dist:web       # copies web/{index.html,landing.css,terminal.html,terminal.js,bt10x.css,btlib10x.js,btlib10x.jsonl,avatar.*,VISION.md,favicon.ico,fonts/} → dist/web/
-    npm run dist:standalone  # dist/standalone/bt10x.html (self-contained: engine + app + catalog embedded; works from file://)
-    # (multi-file dist/web/ must still be served over HTTP: the app fetches btlib10x.jsonl at boot)
+    npm run dist:web       # copies web/{index.html,landing.css,terminal.html,terminal.js,bt10x.css,btlib10x.js,btlib10x.jsonl,btlib10x.sw.jsonl,avatar.*,VISION.md,favicon.ico,fonts/} → dist/web/
+    npm run dist:standalone  # dist/standalone/bt10x.html (self-contained: engine + app + both catalog packs embedded; works from file://)
+    # (multi-file dist/web/ must still be served over HTTP: the app fetches btlib10x.jsonl + btlib10x.sw.jsonl at boot)

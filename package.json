@@ -18,6 +18,7 @@
   "sideEffects": false,
   "scripts": {
     "pack": "node scripts/pack-catalog.mjs",
+    "pack:sw": "node scripts/pack-catalog.mjs --mechs docs/mtf/sw/json --maps none --out docs/mtf/sw/sw.jsonl --exclude kgc-000.json,kgc-0000.json,kgc-000b.json",
     "mtf": "node scripts/mtf.mjs && npm run pack",
     "prebuild": "node -e \"import('node:fs').then((fs) => fs.rmSync('dist', { recursive: true, force: true }))\"",
     "build": "tsc -b tsconfig.build.json",

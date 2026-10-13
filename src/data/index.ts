@@ -15,6 +15,7 @@ export type {
   MechManifestEntry,
 } from "./catalog";
 export {
+  appendCatalog,
   catalogMaps,
   catalogMechs,
   ensureMapRegistered,

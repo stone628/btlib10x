@@ -7,30 +7,39 @@ import { mechDef, registerMech, registerMechs } from "./mech.schema";
 import { decodeRelaxed } from "./relaxed-json";
 
 /**
- * Unified catalog (`data/btlib10x.jsonl`): line 0 is the string table (a
- * bare JSON string array holding chassis names + weapon names, first-seen
- * pack order), line 1 is the manifest below, and the remaining lines are
- * packed 'Mech and map wire lines addressed by absolute file line number.
- * The whole text is held in memory once (fetch on web, file read in
- * tests/dev); sheets decode and register on demand, so heap cost is
- * O(roster), not O(catalog). Identity
- * (`model`/`name`/`techBase`/`tonnage`/`era`, plus optional `clanName`/`callsign`) lives only in the manifest entry —
- * the wire line carries the crunch, and each sheet is single-sourced.
- * Chassis `name`s (manifest `n`) and weapon names (wire `w`) are
- * numeric indices into the line-0 table. Weight class is never stored —
- * infer it with `weightClassForTonnage`.
+ * Unified catalogs: `data/btlib10x.jsonl` is the `base` pack and
+ * `docs/mtf/sw/sw.jsonl` is the `sw` season pack. Each file keeps its own
+ * line-0 string table (a bare JSON string array holding chassis names +
+ * weapon names, first-seen pack order), its own line-1 manifest below, and
+ * its own wire lines addressed by file-local line number. Each pack text is
+ * held in memory once (fetch on web, file read in tests/dev); sheets decode
+ * and register on demand, so heap cost is O(roster), not O(catalog).
+ * Identity (`model`/`name`/`techBase`/`tonnage`/`era`, plus optional
+ * `clanName`/`callsign`) lives only in the manifest entry — the wire line
+ * carries the crunch, and each sheet is single-sourced. Chassis `name`s
+ * (manifest `n`) and weapon names (wire `w`) are numeric indices into the
+ * entry's own pack table. Weight class is never stored — infer it with
+ * `weightClassForTonnage`.
+ *
+ * Duplicate models across packs resolve as: `base` always loses to any
+ * other pack, and among non-base packs the first loaded wins. The latter
+ * entry is ignored with a warning (see `appendCatalog`).
  */
 export interface MechManifestEntry extends MechIdentity {
-  /** Absolute file line number of the sheet's wire line (lines 0-1 are table + manifest). */
+  /** File-local line number of the sheet's wire line (lines 0-1 are table + manifest). */
   readonly line: number;
+  /** Pack id of the file that carries this entry (`base`, `sw`, …). */
+  readonly pack: string;
 }
 
 export interface MapManifestEntry {
   readonly name: string;
   readonly width: number;
   readonly height: number;
-  /** Absolute file line number of the map's wire line (lines 0-1 are table + manifest). */
+  /** File-local line number of the map's wire line (lines 0-1 are table + manifest). */
   readonly line: number;
+  /** Pack id of the file that carries this entry (`base`, `sw`, …). */
+  readonly pack: string;
 }
 
 /** Line-1 manifest shape; `version` gates the whole catalog format. */
@@ -70,11 +79,13 @@ export function parseCatalogStrings(raw: unknown): CatalogStringTable {
 /**
  * Validate an untrusted catalog manifest payload (parsed JSONL line 1) and
  * return it typed, resolving chassis-name numeric indices against
- * `strings`. Throws on any shape mismatch.
+ * `strings` and tagging every entry with `pack` (the id of the file being
+ * loaded — never part of the wire format). Throws on any shape mismatch.
  */
 export function parseCatalogManifest(
   raw: unknown,
   strings: CatalogStringTable = [],
+  pack = "base",
 ): CatalogManifest {
   if (!isRecord(raw)) throw new Error("Invalid catalog manifest: expected an object");
   if (raw.v !== 1) {
@@ -127,6 +138,7 @@ export function parseCatalogManifest(
       ...(clanName !== undefined && { clanName: clanName as string }),
       ...(callsign !== undefined && { callsign: callsign as string }),
       line: line as number,
+      pack,
     };
   });
   const seenMaps = new Set<string>();
@@ -149,6 +161,7 @@ export function parseCatalogManifest(
       width: width as number,
       height: height as number,
       line: line as number,
+      pack,
     };
   });
   return { version: 1, mechs: mechEntries, maps: mapEntries, strings };
@@ -156,22 +169,81 @@ export function parseCatalogManifest(
 
 export { decodeMapLine, decodeMechLine };
 
-// --- in-memory catalog store (one text, decoded on demand) ---
+// --- in-memory catalog stores (one text per pack, decoded on demand) ---
 
-let CATALOG_LINES: readonly string[] | null = null;
-let CATALOG_STRINGS: CatalogStringTable = [];
+interface PackStore {
+  readonly lines: readonly string[];
+  readonly strings: CatalogStringTable;
+}
+
+const PACKS: Map<string, PackStore> = new Map<string, PackStore>();
 const ID_TO_MECH: Map<string, MechManifestEntry> = new Map<string, MechManifestEntry>();
 const LOWER_ID_TO_MECH: Map<string, MechManifestEntry> = new Map<string, MechManifestEntry>();
 const ID_TO_MAP: Map<string, MapManifestEntry> = new Map<string, MapManifestEntry>();
 const LOWER_ID_TO_MAP: Map<string, MapManifestEntry> = new Map<string, MapManifestEntry>();
 
+function resetCatalogStore(): void {
+  PACKS.clear();
+  ID_TO_MECH.clear();
+  LOWER_ID_TO_MECH.clear();
+  ID_TO_MAP.clear();
+  LOWER_ID_TO_MAP.clear();
+}
+
 /**
- * Load a catalog text (fetched on web, read from disk in dev/tests) into
- * the module store. Synchronous; call once before the ensure helpers.
- * Line 0 is the string table (bare JSON string array), line 1 the
- * manifest. Returns the parsed manifest.
+ * Merge one mech entry into the lookup maps. `base` always loses to any
+ * other pack; among non-base packs the first loaded wins. A same-pack
+ * reload replaces silently; any other collision warns through `onWarning`
+ * and keeps exactly one entry per model.
  */
-export function loadCatalog(text: string): CatalogManifest {
+function mergeMechEntry(entry: MechManifestEntry, onWarning: (message: string) => void): void {
+  const key = entry.model.toLowerCase();
+  const existing = LOWER_ID_TO_MECH.get(key);
+  if (existing === undefined || existing.pack === entry.pack) {
+    if (existing !== undefined) ID_TO_MECH.delete(existing.model);
+    ID_TO_MECH.set(entry.model, entry);
+    LOWER_ID_TO_MECH.set(key, entry);
+    return;
+  }
+  if (existing.pack === "base" && entry.pack !== "base") {
+    ID_TO_MECH.delete(existing.model);
+    ID_TO_MECH.set(entry.model, entry);
+    LOWER_ID_TO_MECH.set(key, entry);
+    onWarning(`Duplicate model ${entry.model}: base entry replaced by "${entry.pack}" entry`);
+    return;
+  }
+  onWarning(
+    `Duplicate model ${entry.model}: kept "${existing.pack}" entry, ignored "${entry.pack}" entry`,
+  );
+}
+
+/** Same merge rule as mechs, keyed on map name. */
+function mergeMapEntry(entry: MapManifestEntry, onWarning: (message: string) => void): void {
+  const key = entry.name.toLowerCase();
+  const existing = LOWER_ID_TO_MAP.get(key);
+  if (existing === undefined || existing.pack === entry.pack) {
+    if (existing !== undefined) ID_TO_MAP.delete(existing.name);
+    ID_TO_MAP.set(entry.name, entry);
+    LOWER_ID_TO_MAP.set(key, entry);
+    return;
+  }
+  if (existing.pack === "base" && entry.pack !== "base") {
+    ID_TO_MAP.delete(existing.name);
+    ID_TO_MAP.set(entry.name, entry);
+    LOWER_ID_TO_MAP.set(key, entry);
+    onWarning(`Duplicate map ${entry.name}: base entry replaced by "${entry.pack}" entry`);
+    return;
+  }
+  onWarning(
+    `Duplicate map ${entry.name}: kept "${existing.pack}" entry, ignored "${entry.pack}" entry`,
+  );
+}
+
+function ingestCatalog(
+  text: string,
+  pack: string,
+  onWarning: (message: string) => void,
+): CatalogManifest {
   const lines = text.split("\n");
   if (lines.length > 0 && lines[lines.length - 1] === "") lines.pop();
   if (lines.length < 2) throw new Error("Invalid catalog: expected a string table and a manifest");
@@ -180,7 +252,7 @@ export function loadCatalog(text: string): CatalogManifest {
   if (first === undefined || second === undefined)
     throw new Error("Invalid catalog: missing lines");
   const strings = parseCatalogStrings(JSON.parse(first));
-  const manifest = parseCatalogManifest(decodeRelaxed(second), strings);
+  const manifest = parseCatalogManifest(decodeRelaxed(second), strings, pack);
   for (const entry of [...manifest.mechs, ...manifest.maps]) {
     if (entry.line >= lines.length) {
       throw new Error(`Invalid catalog: entry line ${entry.line} out of range`);
@@ -188,23 +260,48 @@ export function loadCatalog(text: string): CatalogManifest {
   }
   lines[0] = "";
   lines[1] = "";
-  CATALOG_LINES = lines;
-  for (const entry of manifest.mechs) {
-    ID_TO_MECH.set(entry.model, entry);
-    LOWER_ID_TO_MECH.set(entry.model.toLowerCase(), entry);
-  }
-  for (const entry of manifest.maps) {
-    ID_TO_MAP.set(entry.name, entry);
-    LOWER_ID_TO_MAP.set(entry.name.toLowerCase(), entry);
-  }
-  CATALOG_STRINGS = strings;
+  PACKS.set(pack, { lines, strings });
+  for (const entry of manifest.mechs) mergeMechEntry(entry, onWarning);
+  for (const entry of manifest.maps) mergeMapEntry(entry, onWarning);
   return manifest;
 }
 
-function catalogLine(n: number): string {
-  if (CATALOG_LINES === null) throw new Error("Catalog not loaded: call loadCatalog first");
-  const line = CATALOG_LINES[n];
-  if (line === undefined) throw new Error(`Invalid catalog: line ${n} out of range`);
+/**
+ * Load a catalog text (fetched on web, read from disk in dev/tests) into
+ * the module store, discarding any previously loaded packs. Synchronous;
+ * call once before the ensure helpers. Line 0 is the string table (bare
+ * JSON string array), line 1 the manifest. Returns the parsed manifest.
+ */
+export function loadCatalog(text: string, pack = "base"): CatalogManifest {
+  resetCatalogStore();
+  return ingestCatalog(text, pack, () => {});
+}
+
+/**
+ * Load one more catalog pack (e.g. the `sw` season pack) beside the packs
+ * already in the store. Each pack keeps its own string table; wire lines
+ * always resolve against their own pack's table. Cross-pack duplicates
+ * warn through `onWarning` (default `console.warn`): `base` always loses,
+ * and among other packs the first loaded wins. Returns the parsed
+ * manifest.
+ */
+export function appendCatalog(
+  text: string,
+  pack: string,
+  onWarning: (message: string) => void = console.warn,
+): CatalogManifest {
+  return ingestCatalog(text, pack, onWarning);
+}
+
+function packStore(pack: string): PackStore {
+  const store = PACKS.get(pack);
+  if (store === undefined) throw new Error(`Catalog pack not loaded: ${pack}`);
+  return store;
+}
+
+function catalogLine(entry: { pack: string; line: number }): string {
+  const line = packStore(entry.pack).lines[entry.line];
+  if (line === undefined) throw new Error(`Invalid catalog: line ${entry.line} out of range`);
   return line;
 }
 
@@ -213,12 +310,12 @@ export function findMechEntry(model: string): MechManifestEntry | undefined {
 }
 
 export function catalogMechs(): MechManifestEntry[] {
-  if (CATALOG_LINES === null) throw new Error("Catalog not loaded: call loadCatalog first");
+  if (PACKS.size === 0) throw new Error("Catalog not loaded: call loadCatalog first");
   return Array.from(ID_TO_MECH.values());
 }
 
 export function catalogMaps(): MapManifestEntry[] {
-  if (CATALOG_LINES === null) throw new Error("Catalog not loaded: call loadCatalog first");
+  if (PACKS.size === 0) throw new Error("Catalog not loaded: call loadCatalog first");
   return Array.from(ID_TO_MAP.values());
 }
 
@@ -237,7 +334,7 @@ export function ensureMechRegistered(model: string): ResolvedMechDef | undefined
   // case (registerMech throws on duplicates — never re-register blindly).
   const canonical = mechDef(entry.model);
   if (canonical !== undefined) return canonical;
-  return registerMech(decodeMechLine(catalogLine(entry.line), entry, CATALOG_STRINGS));
+  return registerMech(decodeMechLine(catalogLine(entry), entry, packStore(entry.pack).strings));
 }
 
 export function findMapEntry(name: string): MapManifestEntry | undefined {
@@ -254,7 +351,7 @@ export function ensureMapRegistered(name: string): MapDef | undefined {
   if (known !== undefined) return known;
   const entry = LOWER_ID_TO_MAP.get(name.toLowerCase());
   if (entry === undefined) return undefined;
-  return registerMap(decodeMapLine(catalogLine(entry.line), entry));
+  return registerMap(decodeMapLine(catalogLine(entry), entry));
 }
 
 /**
@@ -264,10 +361,10 @@ export function ensureMapRegistered(name: string): MapDef | undefined {
 export function registerAllCatalog(): void {
   registerMechs(
     Array.from(ID_TO_MECH.values()).map((entry) =>
-      decodeMechLine(catalogLine(entry.line), entry, CATALOG_STRINGS),
+      decodeMechLine(catalogLine(entry), entry, packStore(entry.pack).strings),
     ),
   );
   registerMaps(
-    Array.from(ID_TO_MAP.values()).map((entry) => decodeMapLine(catalogLine(entry.line), entry)),
+    Array.from(ID_TO_MAP.values()).map((entry) => decodeMapLine(catalogLine(entry), entry)),
   );
 }

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { registerMech } from "../dist/data/mech.schema.js";
+import { mechDef, registerMech } from "../dist/data/mech.schema.js";
 import { parseMtf } from "../scripts/mtf.mjs";
 import type { MechManifestEntry } from "../src/data/catalog";
 import type { MechDef } from "../src/data/index";
@@ -24,8 +24,15 @@ import { infoMechChunk } from "../web/terminal/session.common";
 import { infoMechQuery, infoWeaponQuery } from "../web/terminal/table";
 import { chunkText, execute } from "./helpers";
 
-function mech(model: string, name: string, tonnage: number, techBase = "Inner Sphere", era = 3025) {
-  return { model, name, tonnage, techBase, era, line: 0 } satisfies MechManifestEntry;
+function mech(
+  model: string,
+  name: string,
+  tonnage: number,
+  techBase = "Inner Sphere",
+  era = 3025,
+  pack = "base",
+) {
+  return { model, name, tonnage, techBase, era, line: 0, pack } satisfies MechManifestEntry;
 }
 
 /** `chassis` chassis × `variants` models each, all at one tonnage. */
@@ -136,6 +143,20 @@ describe("selectMechs", () => {
     expect(() => byEra("era:later")).toThrow(/era:later/);
   });
 
+  it("filters by pack", () => {
+    const entries = [
+      mech("HBK-4G", "Hunchback", 50),
+      { ...mech("HBK-4G", "Hunchback", 50), model: "HBK-4Gb", pack: "sw" },
+      { ...mech("AEM-01", "Dragoon", 70), pack: "sw" },
+    ];
+    const byPack = (...args: string[]) => selectMechs(entries, q(...args)).map((m) => m.model);
+    expect(byPack("pack:base")).toEqual(["HBK-4G"]);
+    expect(byPack("pack:sw")).toEqual(["HBK-4Gb", "AEM-01"]);
+    expect(byPack("pack:b")).toEqual(["HBK-4G"]);
+    expect(byPack("hbk", "pack:sw")).toEqual(["HBK-4Gb"]);
+    expect(() => byPack("pack:xyz")).toThrow(/pack:xyz/);
+  });
+
   it("sorts by tonnage by default and honors sort:", () => {
     expect(models()).toEqual(["LCT-1V", "HBK-4G", "HBK-4P", "TBR-Prime", "AS7-D"]);
     expect(models("sort:-ton")[0]).toBe("AS7-D");
@@ -210,10 +231,20 @@ describe("info mech tiers", () => {
     expect(chunkText(chunks[1]!).filter((l) => l.startsWith("│C"))).toHaveLength(ROW_CAP * 3);
   });
 
-  it("orders roster columns model, name, tonnage, class, techbase, era", () => {
+  it("orders roster columns model, name, tonnage, class, techbase, era, pack", () => {
     const entries = [{ ...mech("HBK-4G", "Hunchback", 50), era: 2572 }];
     const text = listChunks("!", entries).flatMap(chunkText).join("\n");
-    expect(text).toMatch(/│HBK-4G\s+│Hunchback\s+│50\s+│Medium\s+│Inner Sphere\s+│2572/);
+    expect(text).toMatch(/│HBK-4G\s+│Hunchback\s+│50\s+│Medium\s+│Inner Sphere\s+│2572\s+│base/);
+  });
+
+  it("shows the winning pack for cross-pack models", () => {
+    const entries = [
+      { ...mech("HBK-4G", "Hunchback", 50), era: 2572 },
+      { ...mech("AEM-01", "Dragoon", 70), era: 2771, pack: "sw" },
+    ];
+    const text = listChunks("pack:sw !", entries).flatMap(chunkText).join("\n");
+    expect(text).toContain("AEM-01");
+    expect(text).not.toContain("HBK-4G");
   });
 
   it("suggests close models for an unknown one", () => {
@@ -311,7 +342,9 @@ describe("callsign display", () => {
     const file = "docs/mtf/sw/mtf/Atlas AS7-WGS Samsonov.mtf";
     const { def, errors } = parseMtf(readFileSync(file, "utf8"), file);
     expect(errors).toEqual([]);
-    registerMech(def as unknown as MechDef);
+    // The sw pack already registers AS7-WGS (with the same callsign);
+    // register the parsed sheet only when the catalog lacks it.
+    if (mechDef("AS7-WGS") === undefined) registerMech(def as unknown as MechDef);
     const s = newSession(1);
     execute(s, "map quickstart");
     expect(execute(s, "add sammy AS7-WGS 9 9 n")[0]).toContain("placed");
@@ -328,17 +361,32 @@ describe("callsign display", () => {
 describe("info commands in the CLI", () => {
   it("routes info mech / info weapon queries", () => {
     const s = newSession(1);
-    expect(execute(s, "info mech mad")[0]).toBe("2 'Mechs, 2 chassis match: mad");
+    expect(execute(s, "info mech mad")[0]).toBe("10 'Mechs, 4 chassis match: mad");
     expect(execute(s, "info mech HBK-4g")[0]).not.toContain("matched only one");
     const atlas = execute(s, "info mech atlas");
-    expect(atlas[0]).toBe("'atlas' matched only one 'Mech: AS7-D");
-    expect(atlas.join("\n")).toContain("Atlas AS7-D");
+    expect(atlas[0]).toBe("8 'Mechs, 2 chassis match: atlas");
+    expect(atlas.join("\n")).toContain("AS7-D");
+    const single = execute(s, "info mech hollander");
+    expect(single[0]).toBe("'hollander' matched only one 'Mech: BZK-F3");
+    expect(single.join("\n")).toContain("Hollander BZK-F3");
     expect(execute(s, "info mech hbk-4x")[0]).toBe(
-      "error: Unknown 'Mech model: hbk-4x; closest: HBK-4G",
+      "error: Unknown 'Mech model: hbk-4x; closest: HBK-4G, HBK-4H, HBK-4J, HBK-4N, HBK-4P",
     );
     expect(execute(s, "info mech epoch:sw")[0]).toMatch(/^error: Unknown filter 'epoch:'/);
     expect(execute(s, "info weapon")[0]).toBe("114 weapons");
     expect(execute(s, "add a hbk-4x 1 1")[0]).toContain("closest: HBK-4G");
+  });
+
+  it("filters the roster by pack", () => {
+    const s = newSession(1);
+    expect(execute(s, "info mech pack:sw")[0]).toBe("388 'Mechs, 133 chassis match: pack:sw");
+    expect(execute(s, "info mech pack:base")[0]).toBe("9 'Mechs, 9 chassis match: pack:base");
+    const base = execute(s, "info mech pack:base !").join("\n");
+    expect(base).toContain("BZK-F3");
+    expect(base).not.toContain("HBK-4G");
+    const sw = execute(s, "info mech hbk pack:sw").join("\n");
+    expect(sw).toContain("HBK-4G");
+    expect(execute(s, "info mech pack:clan")[0]).toMatch(/^error: Bad filter value: pack:clan/);
   });
 
   it("documents the query grammar in help info", () => {
@@ -347,6 +395,7 @@ describe("info commands in the CLI", () => {
     expect(help[0]).toBe("usage: info mech [model | text] [key:value ...] [!]");
     expect(help.join("\n")).toContain("class:l|m|h|a  ton:70|60-75|>=80  tech:is|clan");
     expect(help.join("\n")).toContain("era:3025|3000-3060|>=3050");
+    expect(help.join("\n")).toContain("pack:base|sw");
     expect(help.join("\n")).toContain("cat:ballistic|energy|missile|equipment");
   });
 });

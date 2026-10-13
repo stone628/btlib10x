@@ -8,6 +8,7 @@ export const ko: Catalog = {
   "app.catalog.loading": "카탈로그 불러오는 중…",
   "app.catalog.failed":
     "카탈로그를 불러오지 못했습니다: {error} - 페이지를 새로 고쳐 다시 시도하세요",
+  "app.catalog.packFailed": "'{pack}' 팩을 불러오지 못했습니다 ({error}). 없이 계속합니다",
   "err.prefix": "오류:",
 
   // per-state hints (multi-line)
@@ -53,7 +54,7 @@ export const ko: Catalog = {
   "cmd.clear.help": "화면 스크롤백 지우기",
   "cmd.info.help": "'메크 모델 또는 내장 맵, 무기 조회 및 검색",
   "cmd.info.arg.mech":
-    "HBK-4G 같은 모델 키는 시트를 표시. 그 외에는 검색어\n(모델, 섀시 또는 클랜 이름)와 필터:\n  class:l|m|h|a  ton:70|60-75|>=80  tech:is|clan  era:3025|3000-3060|>=3050\n  sort:[-]ton|name|model|era\n결과가 20개를 넘으면 묶어서 표시. !를 붙이면 전체 목록",
+    "HBK-4G 같은 모델 키는 시트를 표시. 그 외에는 검색어\n(모델, 섀시 또는 클랜 이름)와 필터:\n  class:l|m|h|a  ton:70|60-75|>=80  tech:is|clan  era:3025|3000-3060|>=3050\n  pack:base|sw  sort:[-]ton|name|model|era\n결과가 20개를 넘으면 묶어서 표시. !를 붙이면 전체 목록",
   "cmd.info.arg.map": "내장 맵 이름. 생략하면 전체 목록",
   "cmd.info.arg.weapon":
     "Medium Laser 같은 무기 이름은 제원을 표시. 그 외에는 검색어와 필터:\n  cat:ballistic|energy|missile|equipment  tech:is|clan (클랜 = 'CL ' 접두어)\n  heat:<=3  range:>=15 (장거리)  dmg:>=10 (최대 데미지)\n  sort:[-]cat|name|heat|range|dmg\n결과가 20개를 넘으면 이름만 표시. !를 붙이면 전체 목록",
@@ -487,6 +488,7 @@ export const ko: Catalog = {
   "info.mechColTon": "톤수",
   "info.mechColTechBase": "기술규격",
   "info.mechColEra": "시대",
+  "info.mechColPack": "팩",
   "info.mechColCount": "메크",
   "info.mechColChassis": "섀시",
   "info.mechTotal": "메크 {count}종, 섀시 {chassis}종",
@@ -495,7 +497,7 @@ export const ko: Catalog = {
   "info.chassisHint": "섀시별 한 줄: 톤수, 이름, 변형 수 (클릭하면 펼침)",
   "info.moreChassis": "… 섀시 {count}종 더 있음",
   "info.mechHint":
-    "범위 좁히기: info mech <검색어> class:l|m|h|a ton:<n|a-b|>=n> tech:is|clan, 또는 !를 붙이면 전체 목록",
+    "범위 좁히기: info mech <검색어> class:l|m|h|a ton:<n|a-b|>=n> tech:is|clan pack:base|sw, 또는 !를 붙이면 전체 목록",
   "info.specsCol": "스펙",
   "info.armorStructureCol": "장갑 및 구조",
   "info.head": "{name} {model} — {weightClass} {tonnage}t ({techBase})",

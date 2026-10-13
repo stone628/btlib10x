@@ -9,6 +9,7 @@ export const en = {
   "app.banner.help": "type 'help' for commands.",
   "app.catalog.loading": "loading catalog…",
   "app.catalog.failed": "catalog failed to load: {error} - reload the page to retry",
+  "app.catalog.packFailed": "'{pack}' pack failed to load ({error}); continuing without it",
   "err.prefix": "error:",
 
   // per-state hints (multi-line)
@@ -53,7 +54,7 @@ export const en = {
   "cmd.clear.help": "clear the scrollback screen",
   "cmd.info.help": "look up or search 'Mech models, bundled maps, or weapons",
   "cmd.info.arg.mech":
-    "model key like HBK-4G for its sheet, or search text\n(model, chassis or Clan name) plus filters:\n  class:l|m|h|a  ton:70|60-75|>=80  tech:is|clan  era:3025|3000-3060|>=3050\n  sort:[-]ton|name|model|era\nmore than 20 matches are grouped; add ! for the full list",
+    "model key like HBK-4G for its sheet, or search text\n(model, chassis or Clan name) plus filters:\n  class:l|m|h|a  ton:70|60-75|>=80  tech:is|clan  era:3025|3000-3060|>=3050\n  pack:base|sw  sort:[-]ton|name|model|era\nmore than 20 matches are grouped; add ! for the full list",
   "cmd.info.arg.map": "bundled map name; omit to list maps",
   "cmd.info.arg.weapon":
     "weapon name like Medium Laser for its stats, or search text plus filters:\n  cat:ballistic|energy|missile|equipment  tech:is|clan (Clan = 'CL ' prefix)\n  heat:<=3  range:>=15 (long range)  dmg:>=10 (best-case damage)\n  sort:[-]cat|name|heat|range|dmg\nmore than 20 matches list names only; add ! for the full list",
@@ -500,6 +501,7 @@ export const en = {
   "info.mechColTon": "Tonnage",
   "info.mechColTechBase": "TechBase",
   "info.mechColEra": "Era",
+  "info.mechColPack": "Pack",
   "info.mechColCount": "'Mechs",
   "info.mechColChassis": "Chassis",
   "info.mechTotal": "{count} 'Mechs, {chassis} chassis",
@@ -508,7 +510,7 @@ export const en = {
   "info.chassisHint": "one row per chassis: tonnage, name, variants (click to expand)",
   "info.moreChassis": "… {count} more chassis",
   "info.mechHint":
-    "narrow it down: info mech <text> class:l|m|h|a ton:<n|a-b|>=n> tech:is|clan, or add ! for the full list",
+    "narrow it down: info mech <text> class:l|m|h|a ton:<n|a-b|>=n> tech:is|clan pack:base|sw, or add ! for the full list",
   "info.specsCol": "Specs",
   "info.armorStructureCol": "Armor & Structure",
   "info.head": "{name} {model} — {weightClass} {tonnage}t ({techBase})",

@@ -13,10 +13,25 @@ const mechsDir = opt("mechs", join(root, "data", "mechs"));
 const noMaps = args[args.indexOf("--maps") + 1] === "none";
 const mapsDir = opt("maps", join(root, "data", "maps"));
 const outFile = opt("out", join(root, "data", "btlib10x.jsonl"));
+// Optional `--exclude a.json,b.json`: source sheets to leave out of this
+// pack (used by `pack:sw` for sheets the engine cannot model — e.g. the
+// King Crab AC/20 variants: split-location weapons whose crits spill across
+// arm and torso cannot link to a same-location mount).
+const excludeIdx = args.indexOf("--exclude");
+const excluded = new Set(
+  excludeIdx >= 0 && args[excludeIdx + 1] !== undefined
+    ? args[excludeIdx + 1].split(",").map((f) => f.trim())
+    : [],
+);
 
 /**
  * Packs the canonical `data/mechs/*.json` sheets and `data/maps/*.json`
  * sources into a single catalog file.
+ *
+ * The SW season pack is packed the same way from its own sources (see
+ * `npm run pack:sw`): each pack file keeps a separate string table, and
+ * the engine tags entries with the pack id at load time (`loadCatalog` /
+ * `appendCatalog`), so this script needs no pack option.
  *
  * Line 0: string table (bare JSON array) — chassis names + weapon names in
  * first-seen pack order (mech manifest order, then weapons in p[], then
@@ -197,7 +212,12 @@ function encodeMapDef(src) {
 
 const mechFiles = readdirSync(mechsDir)
   .filter((f) => f.endsWith(".json"))
-  .sort();
+  .sort()
+  .filter((f) => {
+    if (!excluded.has(f)) return true;
+    console.log(`skip excluded ${f}`);
+    return false;
+  });
 const mapFiles = (noMaps ? [] : readdirSync(mapsDir)).filter((f) => f.endsWith(".json")).sort();
 
 const wireLines = [];

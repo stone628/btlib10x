@@ -9,9 +9,11 @@ const port = portArg ? Number(portArg.split("=")[1]) : 8012;
 
 const stamp = buildStamp();
 
-// The unified catalog ships as a static file beside the bundles; the app
-// fetches it once at boot (see web/terminal/terminal.ts).
+// The catalog packs ship as static files beside the bundles; the app
+// fetches them once at boot (see web/terminal/terminal.ts). The base pack
+// comes from `npm run pack`, the SW season pack from `npm run pack:sw`.
 copyFileSync("data/btlib10x.jsonl", "web/btlib10x.jsonl");
+copyFileSync("docs/mtf/sw/sw.jsonl", "web/btlib10x.sw.jsonl");
 // VISION.md ships as a hidden static file for reviewing LLM agents only:
 // fetched via GET ./VISION.md, never linked in the UI. Source of truth is
 // docs/VISION.md.

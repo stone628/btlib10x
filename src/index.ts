@@ -38,6 +38,7 @@ export type { AmmoDef } from "./data/ammo.schema";
 export {
   AMMO_DATA,
   type AmmoNameHolder,
+  appendCatalog,
   type CatalogManifest,
   catalogMaps,
   catalogMechs,

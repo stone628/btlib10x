@@ -11,8 +11,11 @@ import {
   registerAllCatalog,
 } from "../src/data/catalog";
 import {
+  appendCatalog,
   type CatalogManifest,
   type CatalogStringTable,
+  catalogMaps,
+  catalogMechs,
   ensureMapRegistered,
   ensureMechRegistered,
   loadCatalog,
@@ -143,11 +146,75 @@ describe("catalog manifest", () => {
   });
 });
 
+describe("sw season pack", () => {
+  const SW_TEXT = readFileSync(new URL("../docs/mtf/sw/sw.jsonl", import.meta.url), "utf8");
+  const SW_STRINGS: CatalogStringTable = parseCatalogStrings(JSON.parse(SW_TEXT.split("\n")[0]!));
+  const SW_LINES = SW_TEXT.split("\n");
+  const warnings: string[] = [];
+  const SW: CatalogManifest = appendCatalog(SW_TEXT, "sw", (message) => {
+    warnings.push(message);
+  });
+
+  it("loads beside base with its own string table and pack tags", () => {
+    expect(SW.version).toBe(1);
+    expect(SW.mechs.length).toBe(388);
+    expect(SW.maps).toHaveLength(0);
+    for (const entry of SW.mechs) {
+      expect(entry.pack).toBe("sw");
+    }
+    for (const entry of MANIFEST.mechs) {
+      expect(entry.pack).toBe("base");
+    }
+    // Separate tables: the SW chassis names resolve through the SW table.
+    expect(SW_STRINGS).not.toEqual(STRINGS);
+    const first = SW.mechs[0]!;
+    const def = decodeMechLine(SW_LINES[first.line]!, first, SW_STRINGS);
+    expect(def.model).toBe(first.model);
+    expect(def.name).toBe(first.name);
+  });
+
+  it("lets base lose cross-pack duplicates with a warning, ignoring the latter", () => {
+    expect(warnings.length).toBeGreaterThan(0);
+    for (const message of warnings) {
+      expect(message).toMatch(/Duplicate (model|map)/);
+    }
+    // Overlap models resolve to the sw sheet (e.g. HBK-4G exists in both).
+    expect(findMechEntry("hbk-4g")?.pack).toBe("sw");
+    expect(findMechEntry("as7-d")?.pack).toBe("sw");
+    expect(findMechEntry("enf-4r")?.pack).toBe("sw");
+    // SW-only models resolve to sw.
+    expect(findMechEntry("aem-01")?.pack).toBe("sw");
+    // Sheets the engine cannot model are packed nowhere.
+    expect(findMechEntry("kgc-000")).toBeUndefined();
+    // Exactly one entry per model across both packs.
+    const modelWarnings = warnings.filter((message) => message.startsWith("Duplicate model"));
+    expect(catalogMechs().length).toBe(
+      MANIFEST.mechs.length + SW.mechs.length - modelWarnings.length,
+    );
+  });
+
+  it("round-trips every sw sheet through its own wire exactly", () => {
+    const swDir = new URL("../docs/mtf/sw/json/", import.meta.url);
+    const swFiles = readdirSync(swDir).filter((f) => f.endsWith(".json"));
+    // Three sources are excluded at pack time (see `pack:sw`): the
+    // split-location King Crabs the engine cannot model.
+    expect(swFiles).toContain("kgc-000.json");
+    expect(swFiles.length).toBe(SW.mechs.length + 3);
+    for (const entry of SW.mechs) {
+      const decoded = decodeMechLine(SW_LINES[entry.line]!, entry, SW_STRINGS);
+      const file = swFiles.find((f) => f.toLowerCase() === `${entry.model.toLowerCase()}.json`)!;
+      expect(decoded, entry.model).toEqual(JSON.parse(readFileSync(new URL(file, swDir), "utf8")));
+    }
+  });
+});
+
 describe("catalog registration", () => {
   it("decodes the identical model the registry already holds", () => {
     // Setup registered every sheet, so re-registering a decoded sheet must
     // throw as a duplicate — proving the lazy path decodes the same model.
-    const entry = findMechEntry("as7-d")!;
+    // Sourced from the base manifest: AS7-D exists in both packs and the
+    // lookup winner is the sw entry (whose line number is sw-file-local).
+    const entry = MANIFEST.mechs.find((m) => m.model === "AS7-D")!;
     expect(() => registerMech(decodeMechLine(mechLine(entry), entry, STRINGS))).toThrow(
       /duplicate/i,
     );
@@ -227,8 +294,8 @@ describe("catalog registration", () => {
     } finally {
       registerAllCatalog();
     }
-    expect(registeredMechDefs().length).toBe(MANIFEST.mechs.length);
-    expect(registeredMapDefs().length).toBe(MANIFEST.maps.length);
+    expect(registeredMechDefs().length).toBe(catalogMechs().length);
+    expect(registeredMapDefs().length).toBe(catalogMaps().length);
   });
 });
 

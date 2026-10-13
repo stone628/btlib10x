@@ -3254,18 +3254,6 @@
     "id": "CW27Z8BHAR"
   },
   {
-    "mtf": "Marauder MAD-3R.mtf",
-    "chassis": "Marauder",
-    "model": "MAD-3R (Faber)",
-    "bv": 0,
-    "intro": 3056,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "CXJWGV8GKW"
-  },
-  {
     "mtf": "Battle Cobra BTL-C-2OA.mtf",
     "chassis": "Battle Cobra",
     "model": "BTL-C-2OA",
@@ -3994,18 +3982,6 @@
       "TR:3060"
     ],
     "id": "G12K8YYMSK"
-  },
-  {
-    "mtf": "Marauder MAD-3R.mtf",
-    "chassis": "Marauder",
-    "model": "MAD-3R (Wilson)",
-    "bv": 0,
-    "intro": 3057,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "G56QHC7VQ5"
   },
   {
     "mtf": "Maelstrom MTR-6K.mtf",

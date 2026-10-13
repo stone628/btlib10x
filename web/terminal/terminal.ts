@@ -1,4 +1,4 @@
-import { ensureMapRegistered, loadCatalog, VERSION } from "btlib10x";
+import { appendCatalog, ensureMapRegistered, loadCatalog, VERSION } from "btlib10x";
 import {
   AUTOPLAY_INTERVAL_MS,
   flushAutoPlayCommand,
@@ -358,13 +358,15 @@ appendChunk(
   ),
 );
 
-// The only async step: obtain the unified catalog once, then everything runs
+// The only async step: obtain the catalog packs once, then everything runs
 // synchronously from the in-memory store (sheets decode + register on demand).
-// The standalone single-file build embeds the catalog in a
-// <script type="text/plain" id="bt10x-catalog"> tag (see
-// scripts/standalone-web.mjs); the multi-file build fetches the sibling file.
-function embeddedCatalogText(): string | null {
-  const el = document.getElementById("bt10x-catalog");
+// The base pack (`btlib10x.jsonl`) is required; the SW season pack
+// (`btlib10x.sw.jsonl`) degrades to a warning line when unavailable. The
+// standalone single-file build embeds the catalogs in
+// <script type="text/plain" id="bt10x-catalog"> (+ `-sw`) tags (see
+// scripts/standalone-web.mjs); the multi-file build fetches the sibling files.
+function embeddedCatalogText(id: string): string | null {
+  const el = document.getElementById(id);
   const text = el?.textContent;
   // The engine keeps the lines it needs (see loadCatalog); drop the DOM copy
   // now so the catalog text isn't retained twice.
@@ -372,26 +374,53 @@ function embeddedCatalogText(): string | null {
   return typeof text === "string" && text.trim().length > 0 ? text : null;
 }
 
-function loadCatalogText(): Promise<string> {
-  // Scoped (not a module-level const) so the full text is GC-able once
-  // loadCatalog has split out the lines it keeps.
-  const embedded = embeddedCatalogText();
-  if (embedded !== null) return Promise.resolve(embedded);
+function fetchCatalogText(file: string): Promise<string> {
   const fetchOnce = (): Promise<string> =>
-    fetch("btlib10x.jsonl").then(async (res) => {
+    fetch(file).then(async (res) => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.text();
     });
   // One retry rides out a transient network error.
   return fetchOnce().catch(fetchOnce);
 }
+
+function loadCatalogText(id: string, file: string): Promise<string> {
+  // Scoped (not a module-level const) so the full text is GC-able once
+  // the catalog has split out the lines it keeps.
+  const embedded = embeddedCatalogText(id);
+  if (embedded !== null) return Promise.resolve(embedded);
+  return fetchCatalogText(file);
+}
 input.disabled = true;
 modeHint.textContent = i18n("app.catalog.loading");
-void loadCatalogText()
+void loadCatalogText("bt10x-catalog", "btlib10x.jsonl")
   .then((text) => {
     const manifest = loadCatalog(text);
     for (const m of manifest.maps) {
       ensureMapRegistered(m.name);
+    }
+    return loadCatalogText("bt10x-catalog-sw", "btlib10x.sw.jsonl").then(
+      (swText) => {
+        const warnings: string[] = [];
+        const sw = appendCatalog(swText, "sw", (message) => {
+          warnings.push(message);
+        });
+        for (const m of sw.maps) {
+          ensureMapRegistered(m.name);
+        }
+        return warnings;
+      },
+      (err: unknown) => [
+        i18n("app.catalog.packFailed", {
+          pack: "sw",
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      ],
+    );
+  })
+  .then((warnings: string[]) => {
+    for (const warning of warnings) {
+      appendChunk(buildLinesChunkWith("banner", warning));
     }
     input.disabled = false;
     input.focus();

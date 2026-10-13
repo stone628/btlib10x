@@ -48,7 +48,7 @@ describe("createBattle", () => {
     const base: UnitInit = buildUnitInit("a", "HBK-4G", 1, { col: 2, row: 2 }, "n" as const);
     expect(() => createTestBattle([], [base, base], false)).toThrow(/Duplicate unit id/);
     expect(() =>
-      createTestBattle([], [base, { ...base, id: "b", model: "MAD-3R" }], false),
+      createTestBattle([], [base, { ...base, id: "b", model: "ZZZ-9Z" }], false),
     ).toThrow(/Unknown 'Mech model/);
   });
 

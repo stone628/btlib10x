@@ -153,8 +153,10 @@ function textHit(needle: string, ...haystack: readonly (string | undefined)[]): 
 }
 
 // ---------------------------------------------------------------- mechs ----
-export const MECH_FILTER_KEYS = ["class", "ton", "tech", "era", "sort"] as const;
+export const MECH_FILTER_KEYS = ["class", "ton", "tech", "era", "pack", "sort"] as const;
 const WEIGHT_CLASSES = ["Light", "Medium", "Heavy", "Assault"] as const;
+/** Catalog packs a 'Mech can come from (see `loadCatalog` / `appendCatalog`). */
+const MECH_PACKS = ["base", "sw"] as const;
 const MECH_SORTS = ["ton", "name", "model", "era"] as const;
 
 function mechTech(m: MechManifestEntry): Tech {
@@ -186,6 +188,11 @@ export function selectMechs(
   if (era !== undefined) {
     const pred = numberFilter("era", era);
     preds.push((m) => pred(m.era));
+  }
+  const pack = q.filters.get("pack");
+  if (pack !== undefined) {
+    const set = choiceFilter("pack", pack, MECH_PACKS);
+    preds.push((m) => set.has(m.pack.toLowerCase() as (typeof MECH_PACKS)[number]));
   }
   const sortRaw = q.filters.get("sort");
   const sort = sortRaw === undefined ? { by: "ton", desc: false } : sortFilter(sortRaw, MECH_SORTS);
