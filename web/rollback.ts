@@ -9,7 +9,7 @@ export const MAX_SNAPSHOT_COUNT = 10;
  *  never mutated during a battle, so it is not captured. */
 type Snapshot = Pick<
   Session,
-  "state" | "battle" | "move" | "attack" | "over" | "replay" | "doctrine"
+  "state" | "battle" | "move" | "attack" | "over" | "replay" | "persona"
 > & {
   readonly rng: string;
 };
@@ -65,7 +65,7 @@ export function recordPromptSnapshot(s: Session): void {
       attack: s.attack,
       over: s.over,
       replay: s.replay,
-      doctrine: s.doctrine,
+      persona: s.persona,
       rng: s.rng.snapshot(),
     }),
   );
@@ -89,10 +89,10 @@ export function rollbackSession(s: Session): void {
   s.over = snap.over;
   s.replay = snap.replay;
   // Assignments and the trace level are settings, not battle state: keep the live ones.
-  s.doctrine = {
-    ...snap.doctrine,
-    assignments: s.doctrine.assignments,
-    traceLevel: s.doctrine.traceLevel,
+  s.persona = {
+    ...snap.persona,
+    assignments: s.persona.assignments,
+    traceLevel: s.persona.traceLevel,
   };
   s.rng.load(snap.rng);
 }

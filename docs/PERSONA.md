@@ -1,42 +1,42 @@
-# Doctrine player: how decisions are made
+# Persona player: how decisions are made
 
-The doctrine player (GDD §9) plays units that were assigned a MechWarrior
-doctrine in setup (`dp <id> <doctrine>` or `dp setup 2|4`). It is a **one-ply
+The persona player (GDD §9) plays units that were assigned a MechWarrior
+persona in setup (`pp <id> <persona>` or `pp setup 2|4`). It is a **one-ply
 scoring player**: at each prompt it lists every option it knows, scores each one
 with a weighted sum of terms, and types the commands of the best option into the
 CLI. It never looks ahead to the enemy's reply and never mutates the battle; the
 commands go through the normal dispatch, so atomic commits, replay recording and
 rollback apply exactly as for a human.
 
-This file describes the decision logic. The CLI side (`dp` command, driver,
-trace display) is summarised in [CLI.md](CLI.md#doctrine-player-gdd-9).
+This file describes the decision logic. The CLI side (`pp` command, driver,
+trace display) is summarised in [CLI.md](CLI.md#persona-player-gdd-9).
 
 | File | Role |
 |---|---|
-| `web/doctrine.data.ts` | the doctrine table: weights, range band, heat ceilings, ammo discipline, melee, jump, yield |
-| `web/doctrine.ts` | `decide()`: strategy memory, target choice, posture, yield, scripted prompts, ranking |
-| `web/doctrine.move.ts` | movement-phase scoring (`scoreMoves`) |
-| `web/doctrine.attack.ts` | attack-phase scoring (`scoreAttacks`) |
-| `web/doctrine.common.ts` | shared expected-value helpers, range profile, cover, exposure, trace types |
-| `web/doctrine.cli.ts` | `dp` command, driver, trace rendering |
-| `web/doctrine.setup.ts` | `dp setup 2|4` random doctrine-vs-doctrine setup |
+| `web/persona.data.ts` | the persona table: weights, range band, heat ceilings, ammo discipline, melee, jump, yield |
+| `web/persona.ts` | `decide()`: strategy memory, target choice, posture, yield, scripted prompts, ranking |
+| `web/persona.move.ts` | movement-phase scoring (`scoreMoves`) |
+| `web/persona.attack.ts` | attack-phase scoring (`scoreAttacks`) |
+| `web/persona.common.ts` | shared expected-value helpers, range profile, cover, exposure, trace types |
+| `web/persona.cli.ts` | `pp` command, driver, trace rendering |
+| `web/persona.setup.ts` | `pp setup 2|4` random persona-vs-persona setup |
 
 ---
 
 ## 1. The decision pipeline
 
-`decide(session, doctrine, context)` runs once per prompt (one movement prompt
+`decide(session, persona, context)` runs once per prompt (one movement prompt
 and one attack prompt per unit per turn). It returns the commands, a
-`DecisionTrace` and the next doctrine context; the driver installs the context
+`DecisionTrace` and the next persona context; the driver installs the context
 **before** typing the commands so rollback snapshots already hold it. The caller
-picks the doctrine: the driver passes the unit's assignment (`promptDoctrine`)
+picks the persona: the driver passes the unit's assignment (`promptPersona`)
 and leaves unassigned prompts to the human; the autoplay demo passes its default
-doctrine for every unassigned unit.
+persona for every unassigned unit.
 
 1. **Is this prompt playable?** Only the acting unit of a movement or attack
    prompt that is still available (not destroyed, ejected or killed). Anything
    else returns `null`.
-2. **Load state.** The doctrine's own RNG stream (seeded from the battle seed
+2. **Load state.** The persona's own RNG stream (seeded from the battle seed
    XOR `0x9e3779b9`, so it never touches the battle dice) and a copy of the
    unit's `StrategyMemory` (fresh on first activation: no target, posture
    `approach`).
@@ -49,14 +49,14 @@ doctrine for every unassigned unit.
    - Movement: yield check → scripted recovery → no target → scored moves (§4).
    - Attack: no target → `done`; otherwise scored attacks (§5).
 7. **Rank.** Candidates are sorted by score. Each gets a tie-break jitter of
-   `(d6 − 3.5) × 0.001` from the doctrine RNG, far below any displayed score
+   `(d6 − 3.5) × 0.001` from the persona RNG, far below any displayed score
    difference, so only exact ties are decided randomly and the same seed always
    produces the same game.
 8. **Trace.** The decision, every candidate with its weighted terms, and notes
-   on skipped options are stored as the unit's last trace (`dp why`,
-   `dp trace off|brief|full`).
+   on skipped options are stored as the unit's last trace (`pp why`,
+   `pp trace off|brief|full`).
 
-Every doctrine runs this same pipeline; doctrines differ only in the numbers
+Every persona runs this same pipeline; personas differ only in the numbers
 in §3.
 
 ---
@@ -94,7 +94,7 @@ yet: closer and more damaged enemies win.
   flip-flopping between targets every turn.
 - `targetHeld` counts the turns the target has been kept.
 
-All movement scoring and all attacks use this one target. The doctrine player
+All movement scoring and all attacks use this one target. The persona player
 never splits fire across targets.
 
 ### 2.3 Posture
@@ -113,11 +113,11 @@ Posture is a label shown in the trace; it does not change any score.
 
 ---
 
-## 3. The doctrine table
+## 3. The persona table
 
 ### 3.1 Behaviour settings
 
-| Doctrine | Key | Range band | Heat ceiling | Ammo discipline | Melee | Jump jets | Yields at |
+| Persona | Key | Range band | Heat ceiling | Ammo discipline | Melee | Jump jets | Yields at |
 |---|---|---|---|---|---|---|---|
 | Alpha Striker | `alpha` | short | Redline 13 | Free | opportunistic | never | 15% |
 | Long Tom | `longtom` | long | Warm 7 | Conservative | never | reposition | 40% |
@@ -130,7 +130,7 @@ Posture is a label shown in the trace; it does not change any score.
 **Heat ceilings** sit one point under a Heat Scale step (TW pp. 159–160): Cold 4
 (−1 MP at 5), Warm 7 (+1 to-hit at 8), Hot 9 (−2 MP at 10), Redline 13
 (shutdown check at 14), Overdrive 30 (automatic shutdown). The ceiling is the
-highest *end-of-turn* heat the doctrine plans for (§3.3).
+highest *end-of-turn* heat the persona plans for (§3.3).
 
 **Ammo discipline** (applies to ammo-fed weapons only; energy weapons always pass):
 
@@ -144,7 +144,7 @@ highest *end-of-turn* heat the doctrine plans for (§3.3).
 **Melee:** `never` makes no physical attacks at all. `opportunistic`, `seeks`
 and `first` all punch (one or both arms), kick, strike with a physical weapon,
 swing a held club and drop a club when that frees better attacks (§5).
-**Physical-biased** doctrines (`seeks` and `first`: Pit Fighter, Gladiator)
+**Physical-biased** personas (`seeks` and `first`: Pit Fighter, Gladiator)
 also charge and make death-from-above attacks from movement (§4.4) and pick up
 clubs (§5.4).
 
@@ -154,10 +154,10 @@ other landing.
 
 ### 3.2 Score weights
 
-Every doctrine starts from `range 1`, `tmm 0.8`, `heat 2`, `ammo 0.2`,
+Every persona starts from `range 1`, `tmm 0.8`, `heat 2`, `ammo 0.2`,
 `crowd 0`, then sets the rest:
 
-| Doctrine | cover | flank | melee (move) | exposed | tmm | crowd | ammo |
+| Persona | cover | flank | melee (move) | exposed | tmm | crowd | ammo |
 |---|---|---|---|---|---|---|---|
 | Alpha Striker | 0.5 | 1.5 | 0.5 | 0.6 | 0.8 | 0 | **0** |
 | Long Tom | 2 | 0.5 | 0 | 1.2 | 0.8 | 0 | 0.2 |
@@ -169,11 +169,11 @@ Every doctrine starts from `range 1`, `tmm 0.8`, `heat 2`, `ammo 0.2`,
 
 The melee *preference* also sets a melee factor that scales every expected
 physical damage (charge and DFA in §4.5, attacks in §5.3; `MELEE_FACTOR` in
-`doctrine.data.ts`): never 0, opportunistic 1, seeks 1.2, first 1.5.
+`persona.data.ts`): never 0, opportunistic 1, seeks 1.2, first 1.5.
 
 ### 3.3 Heat ceiling this turn
 
-`heatCeilingFor` returns the doctrine's ceiling. Hull-Down is the only doctrine
+`heatCeilingFor` returns the persona's ceiling. Hull-Down is the only persona
 with two values: it plans for Cold 4 while the target is beyond its medium
 range and Hot 9 once the target is within it.
 
@@ -195,13 +195,13 @@ Water cooling is not included in the projection.
 ### 4.1 Yield (checked first)
 
 ```
-yieldAt = doctrine.yieldAt
-        + 0.15  if the doctrine yields when ahead (Dispossessed) and
+yieldAt = persona.yieldAt
+        + 0.15  if the persona yields when ahead (Dispossessed) and
                 own remaining fraction − target's remaining fraction > 0.15
 ```
 
 If `yieldAt > 0` and the unit's remaining armor + structure is at or below
-`yieldAt`, the unit yields: `mode eject`, `done`. A doctrine that never melees
+`yieldAt`, the unit yields: `mode eject`, `done`. A persona that never melees
 (Long Tom, Dispossessed) also yields once it has no usable weapons left.
 Ejection stands in for a proper yield rule (GDD R6). Gladiator (`yieldAt 0`)
 never yields.
@@ -231,7 +231,7 @@ Modes considered:
 - `standstill`: always (one candidate: current hex and facing).
 - `walk`: if walk MP > 0.
 - `run`: if no leg is destroyed and run MP > walk MP.
-- `jump`: if the doctrine uses jump jets and jump MP > 0.
+- `jump`: if the persona uses jump jets and jump MP > 0.
 
 MP budgets come from `effectiveMovement` + `effectiveMoveBudget`, so leg and
 actuator damage, heat MP loss, TSM and the depth of water the unit stands in
@@ -240,7 +240,7 @@ are already applied. For each mode every reachable landing from
 water and wreck rules) becomes one candidate; landings with an empty path are
 dropped (standstill covers staying put), and duplicates are removed.
 
-**Charge and DFA landings** (physical-biased doctrines only). The engine's
+**Charge and DFA landings** (physical-biased personas only). The engine's
 `reachableLandings` is also given a `meleeOk` check, the same one the `mode`
 command uses: a walk or run path may end with one step into the committed
 target's hex (a charge), and a jump path may end in it (a DFA), whenever
@@ -283,12 +283,12 @@ score = range   × w.range
   `gunnery + attacker movement modifier of M` (TW p. 106) `+ target's movement
   modifier this turn + target hex defense (§4.6) + current heat to-hit modifier`.
   So running and jumping lower firepower through the attacker modifier.
-- *Preferred distance* (`rangeProfile`): the distance inside the doctrine's
+- *Preferred distance* (`rangeProfile`): the distance inside the persona's
   range band where the unit's own weapons deal the most expected damage at
   TN `gunnery + 2`. Bands are measured in the unit's own brackets: short =
   1…longest short range, medium = next hex…longest medium range, long =
   next hex…longest long range, medium–long, any = 1…longest long range. On a
-  tie, short doctrines keep the nearer distance and the others the farther.
+  tie, short personas keep the nearer distance and the others the farther.
   If the band is empty for this 'Mech, the whole 1…long span is used.
 
 **cover** = defense of hex `H` (§4.6): woods and partial cover make the unit
@@ -361,7 +361,7 @@ elevation) is checked separately with `losClear`.
      weapons are left out (both hands are on the club).
    - **Drop the club and fire** (only while holding a club): the same, with
      the arm weapons back in.
-   - **Weapons + a physical plan** (only if the doctrine's melee is not
+   - **Weapons + a physical plan** (only if the persona's melee is not
      `never` and the target is adjacent). The plans are:
      - punch with the left arm, the right arm, or **both arms** (two rolls;
        the one exception to one physical attack type per turn, TW p. 144);
@@ -374,11 +374,11 @@ elevation) is checked separately with `losClear`.
      While a club is held, punches and strikes are planned with a `drop`
      first, which frees both hands. The weapon set is rebuilt without the
      weapons in any limb the plan uses (every arm for a club; TW pp. 144–146).
-3. **Pick up a club** (physical-biased doctrines only, §5.4).
+3. **Pick up a club** (physical-biased personas only, §5.4).
 
 Every plan is checked as one whole declaration (weapons, physical attacks,
 twist and drop together) by the engine's `validateAttacks`, the same check the
-`done` command runs, so the doctrine player never types an illegal set. If the
+`done` command runs, so the persona player never types an illegal set. If the
 plan is legal on its own but not with its weapon set, it is scored without
 weapons.
 
@@ -390,7 +390,7 @@ dropping), `fire <target> <weapon indices>`, the physical attacks
 
 ### 5.2 Weapon set (`pickVolley`)
 
-1. Drop ammo weapons the ammo discipline forbids: to-hit above the doctrine's
+1. Drop ammo weapons the ammo discipline forbids: to-hit above the persona's
    maximum TN, or firing would leave fewer shots than
    `ceil(starting shots × reserve)` for that weapon type. Each skip is noted in
    the trace.
@@ -422,16 +422,16 @@ their own table, all with actuator damage and TSM applied. Melee factor:
 opportunistic 1, seeks 1.2, first 1.5.
 
 **Kick caution**: a missed kick forces a piloting roll (TW p. 147), so
-opportunistic doctrines (Alpha Striker, Jump Jockey, Hull-Down) skip kicks
-whose to-hit is above 8. Seeks and first doctrines kick at any to-hit.
+opportunistic personas (Alpha Striker, Jump Jockey, Hull-Down) skip kicks
+whose to-hit is above 8. Seeks and first personas kick at any to-hit.
 
-The `ammo` term makes ammo-conscious doctrines (Dispossessed 0.5, most at 0.2)
+The `ammo` term makes ammo-conscious personas (Dispossessed 0.5, most at 0.2)
 prefer energy weapons when the damage is close; Alpha Striker and Gladiator
 (0) shoot ammo freely.
 
 ### 5.4 Club pickup
 
-A physical-biased doctrine that holds no club and stands where the engine's
+A physical-biased persona that holds no club and stands where the engine's
 `validatePickup` finds one (a severed limb or dropped club lying in the hex, a
 tree in woods, a girder in the rubble of a medium or heavier building; two working
 hands needed) also scores
@@ -453,7 +453,7 @@ little firepower.
 
 ## 6. Expected damage
 
-All scores use the same expected-value model (`doctrine.common.ts`):
+All scores use the same expected-value model (`persona.common.ts`):
 
 - **Hit chance** = P(2D6 ≥ TN) (TW p. 106); 2 or less always hits, above 12
   never hits.
@@ -470,7 +470,7 @@ All scores use the same expected-value model (`doctrine.common.ts`):
 
 ---
 
-## 7. How each doctrine plays
+## 7. How each persona plays
 
 These follow from the numbers above; they are tendencies, not scripts.
 
@@ -521,23 +521,23 @@ remaining armor and structure.
 
 ## 8. Determinism and rollback
 
-- The doctrine RNG is separate from the battle dice and only breaks exact
+- The persona RNG is separate from the battle dice and only breaks exact
   ties, so deciding never changes a battle roll and the same seed replays the
   same game.
-- The doctrine context (assignments, RNG state, memory, last traces) is plain
-  data on `Session.doctrine` and is part of every prompt snapshot. After
-  `rollback`, a doctrine prompt waits; `dp go` replays the identical decision,
+- The persona context (assignments, RNG state, memory, last traces) is plain
+  data on `Session.persona` and is part of every prompt snapshot. After
+  `rollback`, a persona prompt waits; `pp go` replays the identical decision,
   or the human can play that prompt by hand.
 - A command that fails stops the driver and hands the prompt to the human. The
   driver also stops after 2000 decisions in one drive (a stalled bout).
 
 ---
 
-## 9. What the doctrine player does not do yet
+## 9. What the persona player does not do yet
 
-The engine supports these, but the doctrine player never chooses them:
+The engine supports these, but the persona player never chooses them:
 
-- **Charge and DFA for non-physical-biased doctrines**: only Pit Fighter and
+- **Charge and DFA for non-physical-biased personas**: only Pit Fighter and
   Gladiator charge.
 - **Seeking out clubs**: movement does not head for woods or rubble to pick one
   up; a club is taken only where the unit already stands.

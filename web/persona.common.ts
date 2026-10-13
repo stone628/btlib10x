@@ -1,7 +1,7 @@
 /**
- * Shared evaluation helpers and trace types for the doctrine player
- * (`web/doctrine.ts`). Everything here is a pure read of battle state: the
- * doctrine player never mutates the battle, it only types CLI commands.
+ * Shared evaluation helpers and trace types for the persona player
+ * (`web/persona.ts`). Everything here is a pure read of battle state: the
+ * persona player never mutates the battle, it only types CLI commands.
  *
  * Expected values follow TW: hit chance is P(2D6 ≥ to-hit) (TW p. 106), range
  * brackets add 0/+2/+4 (TW p. 109), minimum range adds [min] − [range] + 1
@@ -31,8 +31,8 @@ import {
   type WeaponDef,
   weaponDefFor,
 } from "btlib10x";
-import type { Doctrine, DoctrineKey, RangeBand } from "./doctrine.data";
 import type { MessageKey } from "./i18n/index";
+import type { Persona, PersonaKey, RangeBand } from "./persona.data";
 
 // ---------------------------------------------------------------- traces ----
 
@@ -78,10 +78,10 @@ export interface DecisionTrace {
   readonly phase: "movement" | "attack";
   readonly actorId: string;
   readonly targetId: string | null;
-  readonly doctrine: DoctrineKey;
+  readonly persona: PersonaKey;
   readonly posture: Posture;
   readonly targetHeld: number;
-  /** Heat the unit plans against, and the doctrine's ceiling this turn. */
+  /** Heat the unit plans against, and the persona's ceiling this turn. */
   readonly heat: number;
   readonly heatCeiling: number;
   /** Every scored option, best first; empty for scripted prompts. */
@@ -169,11 +169,11 @@ export interface RangeProfile {
   readonly maxShort: number;
   readonly maxMedium: number;
   readonly maxLong: number;
-  /** Distance the doctrine wants to hold, judged against the 'Mech's own weapons. */
+  /** Distance the persona wants to hold, judged against the 'Mech's own weapons. */
   readonly preferred: number;
 }
 
-/** Bracket limits of the unit's usable weapons and the doctrine's preferred distance. */
+/** Bracket limits of the unit's usable weapons and the persona's preferred distance. */
 export function rangeProfile(unit: UnitState, band: RangeBand): RangeProfile {
   const weapons = usableWeapons(unit);
   const maxShort = Math.max(1, ...weapons.map((w) => w.def.short));
@@ -193,7 +193,7 @@ export function rangeProfile(unit: UnitState, band: RangeBand): RangeProfile {
   let best = -1;
   for (let d = lo; d <= hi; d++) {
     const ev = expectedDamageAt(weapons, d, tnBase);
-    // Ties keep the nearer distance for short doctrines, the farther one otherwise.
+    // Ties keep the nearer distance for short personas, the farther one otherwise.
     if (ev > best || (ev === best && band !== "short")) {
       best = ev;
       preferred = d;
@@ -224,19 +224,19 @@ export function dissipationOf(unit: UnitState): number {
   return heatDissipation(mechDefFor(unit), unit.damage, unit.critSlotsDestroyed);
 }
 
-/** The doctrine's heat ceiling this turn (Hull-Down warms up once engaged). */
+/** The persona's heat ceiling this turn (Hull-Down warms up once engaged). */
 export function heatCeilingFor(
-  doctrine: Doctrine,
+  persona: Persona,
   unit: UnitState,
   target: UnitState | null,
 ): number {
-  if (target === null || doctrine.heatCeiling === doctrine.heatCeilingEngaged) {
-    return doctrine.heatCeiling;
+  if (target === null || persona.heatCeiling === persona.heatCeilingEngaged) {
+    return persona.heatCeiling;
   }
   const profile = rangeProfile(unit, "any");
   return hexDistance(unit.position, target.position) <= profile.maxMedium
-    ? doctrine.heatCeilingEngaged
-    : doctrine.heatCeiling;
+    ? persona.heatCeilingEngaged
+    : persona.heatCeiling;
 }
 
 /** Target-hex to-hit modifier: terrain (woods) plus partial cover (TW pp. 107–108). */

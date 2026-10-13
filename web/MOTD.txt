@@ -3,7 +3,7 @@
 터미널에서 텍스트로 플레이 하는 감성을 살리려 노력했습니다.
 
 charge, DFA까지 추가했습니다.
-doctrine player를 설정하면 이동과 공격을 자동으로 진행합니다.
+persona player를 설정하면 이동과 공격을 자동으로 진행합니다.
 
 <center><a href="https://buymeacoffee.com/stone628" target="_blank" class="link-button"><span style="text-decoration: none; font-family: sans-serif; font-weight: bold;">☕</span> Buy me a coffee!</a>
 

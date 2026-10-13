@@ -9,12 +9,12 @@ import {
 } from "btlib10x";
 import type { ArmLocation, LegLocation } from "../src/core/types";
 import { buildLinesChunk, buildLinesChunkWith, type Chunk } from "./chunk";
-import { resetDoctrineBattle } from "./doctrine";
-import { doctrineCmd, doctrineWaitingChunks, driveDoctrine, drivesAfter } from "./doctrine.cli";
 import type { MessageKey } from "./i18n/index";
 import { i18n, isLocale, localeList } from "./i18n/index";
 import { lookupMap } from "./lookup";
 import { strictInt } from "./misc";
+import { resetPersonaBattle } from "./persona";
+import { drivePersona, drivesAfter, personaCmd, personaWaitingChunks } from "./persona.cli";
 import { clearSnapshots, recordPromptSnapshot, rollbackSession } from "./rollback";
 import type { Session } from "./session";
 import {
@@ -216,7 +216,7 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
       return [buildLinesChunkWith("banner", i18n("ok.resetDone"))];
     },
   },
-  dp: doctrineCmd((s, raw) => runChunks(s, raw)),
+  pp: personaCmd((s, raw) => runChunks(s, raw)),
   ver: {
     helpKey: "cmd.ver.help",
     run: (_s) => cmdRunChunks(i18n("version.line", { version: VERSION })),
@@ -249,7 +249,7 @@ const ROLLBACK_CMD: CmdDef = {
   helpKey: "cmd.rollback.help",
   run: (s) => {
     rollbackSession(s);
-    return [buildLinesChunkWith("banner", i18n("ok.rolledBack")), ...doctrineWaitingChunks(s)];
+    return [buildLinesChunkWith("banner", i18n("ok.rolledBack")), ...personaWaitingChunks(s)];
   },
 };
 
@@ -344,8 +344,8 @@ const SETUP_CMDS: Record<string, CmdDef> = {
   start: {
     helpKey: "cmd.start.help",
     run: (s) => {
-      resetDoctrineBattle(
-        s.doctrine,
+      resetPersonaBattle(
+        s.persona,
         s.setup.seed,
         s.setup.roster.map((r) => r.id),
       );
@@ -659,8 +659,8 @@ const OVER_CMDS: Record<string, CmdDef> = {
     helpKey: "cmd.rematch.help",
     run: (s) => {
       clearSnapshots(s);
-      resetDoctrineBattle(
-        s.doctrine,
+      resetPersonaBattle(
+        s.persona,
         s.setup.seed,
         s.setup.roster.map((r) => r.id),
       );
@@ -849,7 +849,7 @@ export function runChunks(session: Session, raw: string): Chunk[] {
     chunks = def.run(session, tokens.slice(1));
     recordPromptSnapshot(session);
     if (drivesAfter(name)) {
-      chunks = [...chunks, ...driveDoctrine(session, (line) => runChunks(session, line))];
+      chunks = [...chunks, ...drivePersona(session, (line) => runChunks(session, line))];
     }
   } catch (e) {
     return [

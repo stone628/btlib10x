@@ -315,8 +315,8 @@ function runAutoplay(s: Session, limit: number): { commands: string[]; errors: s
   return { commands, errors };
 }
 
-describe("nextAutoPlayCommand with the doctrine player", () => {
-  it("plays movement with the doctrine: a mode, a landing, then done", () => {
+describe("nextAutoPlayCommand with the persona player", () => {
+  it("plays movement with the persona: a mode, a landing, then done", () => {
     const s = sessionAtMovementStart();
     resetAutoplayState(s);
     const cmds = Array.from({ length: 12 }, () => nextAutoPlayCommand(s));
@@ -328,14 +328,14 @@ describe("nextAutoPlayCommand with the doctrine player", () => {
     else expect(next[0]).toMatch(/^place \d+ \d+ \S+$/);
   });
 
-  it("installs the doctrine context so `dp why` can show the reasoning", () => {
+  it("installs the persona context so `pp why` can show the reasoning", () => {
     const s = sessionAtMovementStart();
     const actorId = s.move!.actorId!;
     resetAutoplayState(s);
-    for (let i = 0; i < 12 && s.doctrine.lastTrace[actorId] === undefined; i++) {
+    for (let i = 0; i < 12 && s.persona.lastTrace[actorId] === undefined; i++) {
       nextAutoPlayCommand(s);
     }
-    expect(s.doctrine.lastTrace[actorId]?.doctrine).toBe("alpha");
+    expect(s.persona.lastTrace[actorId]?.persona).toBe("alpha");
   });
 
   it("plays several turns without errors, with help once per phase and sheets every turn", () => {

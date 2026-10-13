@@ -8,9 +8,9 @@ import type {
   UnitState,
 } from "btlib10x";
 import { gameLoop, isUnitRemoved } from "btlib10x";
-import { type DoctrineContext, newDoctrineContext } from "./doctrine";
 import type { LocaleId } from "./i18n/index";
 import { i18n, setI18nDefaultLocale } from "./i18n/index";
+import { newPersonaContext, type PersonaContext } from "./persona";
 import { finishReplay, type ReplayLog } from "./replay";
 import { createRng } from "./rng";
 import {
@@ -60,8 +60,8 @@ export interface Session {
   battle: BattleState | null;
   /** Replay data of the battle in progress (or just finished); see `web/replay.ts`. */
   replay: ReplayLog | null;
-  /** Doctrine player: per-unit doctrines, its own RNG stream, memory and traces (`web/doctrine.ts`). */
-  doctrine: DoctrineContext;
+  /** Persona player: per-unit personas, its own RNG stream, memory and traces (`web/persona.ts`). */
+  persona: PersonaContext;
 }
 
 export function newSession(seed: number): Session {
@@ -74,7 +74,7 @@ export function newSession(seed: number): Session {
     over: null,
     battle: null,
     replay: null,
-    doctrine: newDoctrineContext(seed),
+    persona: newPersonaContext(seed),
   };
 }
 
@@ -130,7 +130,7 @@ export function resetSession(s: Session): void {
   s.over = null;
   s.battle = null;
   s.replay = null;
-  s.doctrine = { ...newDoctrineContext(s.setup.seed), traceLevel: s.doctrine.traceLevel };
+  s.persona = { ...newPersonaContext(s.setup.seed), traceLevel: s.persona.traceLevel };
   // A fresh setup starts from a fresh generator, so the next battle is
   // reproducible from its seed (and recordable as a replay).
   s.rng = createRng(s.setup.seed);
@@ -261,8 +261,8 @@ export type SessionGameEvent =
       readonly kind: "sessionOver";
     }
   | {
-      /** Doctrine player reasoning, shown in the attack-resolution box style. */
-      readonly kind: "doctrineDecision";
+      /** Persona player reasoning, shown in the attack-resolution box style. */
+      readonly kind: "personaDecision";
       readonly actorId: string;
       readonly targetId: string | null;
       readonly lines: readonly string[];

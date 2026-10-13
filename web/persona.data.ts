@@ -1,6 +1,6 @@
 /**
- * Doctrine table for the doctrine player (GDD §9.2–9.3): MechWarrior habits
- * turned into scoring weights. A doctrine is a pilot's habit, not a 'Mech
+ * Persona table for the persona player (GDD §9.2–9.3): MechWarrior habits
+ * turned into scoring weights. A persona is a pilot's habit, not a 'Mech
  * role, and lives in the web/game layer only (never in `UnitInit`).
  *
  * Heat ceilings sit one point under a Heat Scale step (TW pp. 159–160):
@@ -9,7 +9,7 @@
  * shutdown at 30.
  */
 
-export type DoctrineKey =
+export type PersonaKey =
   | "alpha"
   | "longtom"
   | "jumpjockey"
@@ -23,7 +23,7 @@ export type MeleePreference = "never" | "opportunistic" | "seeks" | "first";
 export type JumpUse = "none" | "reposition" | "hitAndRun";
 
 /** Score weights of the GDD §9.1 terms. */
-export interface DoctrineWeights {
+export interface PersonaWeights {
   readonly range: number;
   readonly cover: number;
   readonly tmm: number;
@@ -44,13 +44,13 @@ export interface AmmoDiscipline {
   readonly energyFirst: boolean;
 }
 
-export interface Doctrine {
-  readonly key: DoctrineKey;
+export interface Persona {
+  readonly key: PersonaKey;
   /** Display name (proper noun, not translated). */
   readonly name: string;
   readonly range: RangeBand;
-  readonly weights: DoctrineWeights;
-  /** Highest end-of-turn heat the doctrine plans for. */
+  readonly weights: PersonaWeights;
+  /** Highest end-of-turn heat the persona plans for. */
   readonly heatCeiling: number;
   /** Ceiling once the target is inside the unit's medium bracket (Hull-Down). */
   readonly heatCeilingEngaged: number;
@@ -71,9 +71,9 @@ export const MELEE_FACTOR: Readonly<Record<MeleePreference, number>> = {
   first: 1.5,
 };
 
-/** Physical-biased doctrines (melee "seeks" / "first") also charge, DFA and pick up clubs. */
-export function isMeleeBiased(doctrine: Doctrine): boolean {
-  return doctrine.melee === "seeks" || doctrine.melee === "first";
+/** Physical-biased personas (melee "seeks" / "first") also charge, DFA and pick up clubs. */
+export function isMeleeBiased(persona: Persona): boolean {
+  return persona.melee === "seeks" || persona.melee === "first";
 }
 
 const COLD = 4;
@@ -102,8 +102,8 @@ function weights(
   flank: number,
   melee: MeleePreference,
   exposed: number,
-  extra: Partial<DoctrineWeights> = {},
-): DoctrineWeights {
+  extra: Partial<PersonaWeights> = {},
+): PersonaWeights {
   return {
     range: 1,
     cover,
@@ -118,7 +118,7 @@ function weights(
   };
 }
 
-export const DOCTRINES: Readonly<Record<DoctrineKey, Doctrine>> = {
+export const PERSONAS: Readonly<Record<PersonaKey, Persona>> = {
   alpha: {
     key: "alpha",
     name: "Alpha Striker",
@@ -212,8 +212,8 @@ export const DOCTRINES: Readonly<Record<DoctrineKey, Doctrine>> = {
   },
 };
 
-export const DOCTRINE_KEYS: readonly DoctrineKey[] = Object.keys(DOCTRINES) as DoctrineKey[];
+export const PERSONA_KEYS: readonly PersonaKey[] = Object.keys(PERSONAS) as PersonaKey[];
 
-export function isDoctrineKey(word: string): word is DoctrineKey {
-  return Object.hasOwn(DOCTRINES, word);
+export function isPersonaKey(word: string): word is PersonaKey {
+  return Object.hasOwn(PERSONAS, word);
 }

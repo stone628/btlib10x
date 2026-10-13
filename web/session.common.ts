@@ -1759,7 +1759,7 @@ function handleSessionGameEvent(s: Session, e: SessionGameEvent, out: OutputHand
     case "sessionPhaseDone":
       // Attack resolution is framed by the engine's `attackPhaseStage` boxes.
       break;
-    case "doctrineDecision":
+    case "personaDecision":
       if (e.targetId !== null) out.pairLines(e.actorId, e.targetId, ...e.lines);
       else out.idLines(e.actorId, ...e.lines);
       break;

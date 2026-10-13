@@ -14,19 +14,19 @@ import {
   suggestFireTargets,
   type UnitState,
 } from "btlib10x";
-import { decide, promptDoctrine } from "./doctrine";
-import type { DoctrineKey } from "./doctrine.data";
 import { isGyroDestroyed } from "./misc";
+import { decide, promptPersona } from "./persona";
+import type { PersonaKey } from "./persona.data";
 import type { Session, SessionState } from "./session";
 
 /** Delay between generated commands, in milliseconds. */
 export const AUTOPLAY_INTERVAL_MS = 100;
 
-/** Doctrine that picks movement and attacks for units without a `dp` assignment. */
-export const AUTOPLAY_DOCTRINE: DoctrineKey = "alpha";
+/** Persona that picks movement and attacks for units without a `pp` assignment. */
+export const AUTOPLAY_PERSONA: PersonaKey = "alpha";
 
 /**
- * Turn cap: a doctrine bout can go on forever without a failing command (two
+ * Turn cap: a persona bout can go on forever without a failing command (two
  * units that cannot hurt each other), so the demo stops after this turn.
  */
 export const AUTOPLAY_MAX_TURNS = 100;
@@ -46,7 +46,7 @@ const SCRIPT_SETUP: ReadonlyArray<{ id: string; command: string }> = [
 let nextCommandQueue: string[] = [];
 let currApp: SessionState | null = null;
 /** Turn whose unit sheets were shown. Keyed on the turn rather than on a phase
- *  change seen here: `dp`-assigned prompts are played inside the previous
+ *  change seen here: `pp`-assigned prompts are played inside the previous
  *  `done`, so autoplay may never see a whole phase. */
 let sheetsShownTurn: number | null = null;
 /** Turn whose attack phase was opened with `status`. */
@@ -110,18 +110,18 @@ export function flushAutoPlayCommand(): string[] {
 }
 
 /**
- * Queue the doctrine player's commands for the current prompt (movement or
- * attack), played as {@link AUTOPLAY_DOCTRINE}. The next doctrine context is
- * installed before the commands are typed, as `driveDoctrine` does, so the
+ * Queue the persona player's commands for the current prompt (movement or
+ * attack), played as {@link AUTOPLAY_PERSONA}. The next persona context is
+ * installed before the commands are typed, as `drivePersona` does, so the
  * rollback snapshot at the following prompt already holds it.
  */
-function queueDoctrineDecision(s: Session, fallback: readonly string[]): void {
-  const decision = decide(s, AUTOPLAY_DOCTRINE, s.doctrine);
+function queuePersonaDecision(s: Session, fallback: readonly string[]): void {
+  const decision = decide(s, AUTOPLAY_PERSONA, s.persona);
   if (decision === null) {
     for (const cmd of fallback) queueNextCommand(cmd);
     return;
   }
-  s.doctrine = decision.next;
+  s.persona = decision.next;
   for (const cmd of decision.commands) queueNextCommand(cmd);
 }
 
@@ -152,7 +152,7 @@ function hasNoFunctionalWeapon(s: Session, actorId: string): boolean {
  * from session internals; null when there is nothing left to do (battle over,
  * or a state the script cannot drive). Feed each result through execute()
  * one AUTOPLAY_INTERVAL_MS at a time. Movement and attacks come from the
- * doctrine player (`web/doctrine.ts`); autoplay adds the narration (help,
+ * persona player (`web/persona.ts`); autoplay adds the narration (help,
  * board, sheets, status) and the posture and eject guards.
  */
 export function nextAutoPlayCommand(s: Session): string | null {
@@ -218,10 +218,10 @@ export function nextAutoPlayCommand(s: Session): string | null {
       if (st.phase === "attack") attackStatusTurn = st.turn;
     }
 
-    // A `dp`-assigned unit waiting at its prompt (after a rollback): let its
-    // own doctrine play it.
-    if (promptDoctrine(s) !== null) {
-      queueNextCommand("dp go");
+    // A `pp`-assigned unit waiting at its prompt (after a rollback): let its
+    // own persona play it.
+    if (promptPersona(s) !== null) {
+      queueNextCommand("pp go");
       return returnFirstQueuedCommand();
     }
 
@@ -269,8 +269,8 @@ export function nextAutoPlayCommand(s: Session): string | null {
             queueNextCommand("mode walk");
             queueNextCommand("done");
           } else {
-            // The doctrine scores every reachable landing over every mode.
-            queueDoctrineDecision(s, ["mode standstill", "done"]);
+            // The persona scores every reachable landing over every mode.
+            queuePersonaDecision(s, ["mode standstill", "done"]);
           }
 
           return returnFirstQueuedCommand();
@@ -279,9 +279,9 @@ export function nextAutoPlayCommand(s: Session): string | null {
         queueNextCommand("done");
         return returnFirstQueuedCommand();
       }
-      // A mode left half-typed (a failed command): the doctrine cancels it
+      // A mode left half-typed (a failed command): the persona cancels it
       // and plays the prompt again.
-      queueDoctrineDecision(s, ["done"]);
+      queuePersonaDecision(s, ["done"]);
       return returnFirstQueuedCommand();
     }
 
@@ -292,7 +292,7 @@ export function nextAutoPlayCommand(s: Session): string | null {
       }
       // Nothing left to fire: eject at the next movement phase.
       if (hasNoFunctionalWeapon(s, actor.id)) noWeapon[actor.id] = true;
-      queueDoctrineDecision(s, ["done"]);
+      queuePersonaDecision(s, ["done"]);
       return returnFirstQueuedCommand();
     }
 

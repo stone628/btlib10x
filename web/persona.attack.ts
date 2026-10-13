@@ -1,6 +1,6 @@
 /**
- * Attack scoring for the doctrine player (GDD §9.1, attack): for each torso
- * twist, pick a weapon set against the committed target under the doctrine's
+ * Attack scoring for the persona player (GDD §9.1, attack): for each torso
+ * twist, pick a weapon set against the committed target under the persona's
  * heat ceiling and ammo discipline, then weigh every legal physical plan
  * (punch with one or both arms, kick, physical-weapon strike, club swing,
  * dropping a held club, picking one up) against the weapons it gives up.
@@ -12,7 +12,7 @@
  * unit's whole attack (TW p. 146). Every plan is checked by the engine's
  * `validateAttacks` before it is scored; to-hit and damage come straight
  * from the engine (`computePhysicalToHit`, `physicalDamage`, TW pp. 145–147).
- * Charge and DFA are declared by movement (`doctrine.move.ts`).
+ * Charge and DFA are declared by movement (`persona.move.ts`).
  */
 import {
   type Arc,
@@ -44,11 +44,11 @@ import {
   type TraceCandidate,
   type TraceNote,
   type TraceTerm,
-} from "./doctrine.common";
-import { type Doctrine, isMeleeBiased, MELEE_FACTOR } from "./doctrine.data";
+} from "./persona.common";
+import { isMeleeBiased, MELEE_FACTOR, type Persona } from "./persona.data";
 
-/** Kicks risk a fall on a miss (TW p. 147): Opportunistic doctrines skip worse TNs
- *  (Never doctrines do not reach physical options at all). */
+/** Kicks risk a fall on a miss (TW p. 147): Opportunistic personas skip worse TNs
+ *  (Never personas do not reach physical options at all). */
 const CAUTIOUS_KICK_MAX_TN = 8;
 /** A picked-up club pays off on later turns: one future swing, discounted. */
 const PICKUP_DISCOUNT = 0.5;
@@ -80,7 +80,7 @@ export interface AttackScoringInput {
   readonly battle: BattleState;
   readonly actor: UnitState;
   readonly targetId: string;
-  readonly doctrine: Doctrine;
+  readonly persona: Persona;
   readonly heatCeiling: number;
 }
 
@@ -110,7 +110,7 @@ interface Volley {
 
 /**
  * Greedy weapon set: best expected damage per heat first, stopping at the
- * heat ceiling; ammo weapons only within the doctrine's TN limit and above
+ * heat ceiling; ammo weapons only within the persona's TN limit and above
  * its reserve.
  */
 function pickVolley(
@@ -119,13 +119,13 @@ function pickVolley(
   startShots: Readonly<Record<string, number>>,
   notes: TraceNote[] | null,
 ): Volley {
-  const { actor, doctrine, heatCeiling } = input;
-  const ammo = doctrine.ammo;
+  const { actor, persona, heatCeiling } = input;
+  const ammo = persona.ammo;
   const allowed = pool.filter((w) => {
     if (w.shots === null) return true;
     if (w.tn > ammo.maxTn) {
       notes?.push({
-        key: "dp.note.ammoTn",
+        key: "pp.note.ammoTn",
         params: { weapon: w.weapon, tn: w.tn, max: ammo.maxTn },
       });
       return false;
@@ -133,7 +133,7 @@ function pickVolley(
     const reserve = Math.ceil((startShots[w.weapon] ?? 0) * ammo.reserve);
     if (w.shots - 1 < reserve) {
       notes?.push({
-        key: "dp.note.ammoReserve",
+        key: "pp.note.ammoReserve",
         params: { weapon: w.weapon, shots: w.shots, reserve },
       });
       return false;
@@ -155,7 +155,7 @@ function pickVolley(
     const value = weaponEv(w);
     if (value <= 0) continue;
     if (base + heat + w.heat > heatCeiling) {
-      notes?.push({ key: "dp.note.heatSkip", params: { weapon: w.weapon, heat: w.heat } });
+      notes?.push({ key: "pp.note.heatSkip", params: { weapon: w.weapon, heat: w.heat } });
       continue;
     }
     weapons.push(w);
@@ -250,15 +250,15 @@ function legal(
 
 /** Every attack option scored, best first, plus notes on skipped choices. */
 export function scoreAttacks(input: AttackScoringInput): AttackScoring {
-  const { battle, actor, targetId, doctrine } = input;
-  const w = doctrine.weights;
+  const { battle, actor, targetId, persona } = input;
+  const w = persona.weights;
   const target = battle.units[targetId];
   const def = mechDefFor(actor);
   const startShots = pooledTotalsByWeaponName(def, loadAmmoBins(def));
   const notes: TraceNote[] = [];
   const candidates: TraceCandidate[] = [];
   const twists: Arc[] = actor.prone ? ["front"] : ["front", "leftSide", "rightSide"];
-  const factor = MELEE_FACTOR[doctrine.melee];
+  const factor = MELEE_FACTOR[persona.melee];
   const holding = actor.club !== null;
 
   const build = (
@@ -308,13 +308,13 @@ export function scoreAttacks(input: AttackScoringInput): AttackScoring {
   candidates.push({ label: "hold fire", score: 0, terms: [], commands: ["done"] });
   if (target === undefined) return { candidates, notes };
 
-  /** Expected physical damage of one declaration, or null when the doctrine skips it. */
+  /** Expected physical damage of one declaration, or null when the persona skips it. */
   const physicalValue = (d: PhysicalAttackDecl): number | null => {
     const limb = d.limb as Limb | undefined;
     const weapon = d.weapon as PhysicalWeaponName | undefined;
     const tn = computePhysicalToHit(battle, actor, target, d.type, limb, weapon).total;
-    if (d.type === "kick" && doctrine.melee === "opportunistic" && tn > CAUTIOUS_KICK_MAX_TN) {
-      notes.push({ key: "dp.note.kickRisk", params: { tn } });
+    if (d.type === "kick" && persona.melee === "opportunistic" && tn > CAUTIOUS_KICK_MAX_TN) {
+      notes.push({ key: "pp.note.kickRisk", params: { tn } });
       return null;
     }
     return factor * hitProbability(tn) * physicalDamage(d.type, actor, limb, weapon);
@@ -349,7 +349,7 @@ export function scoreAttacks(input: AttackScoringInput): AttackScoring {
       }
     }
 
-    if (doctrine.melee === "never" || !adjacent) continue;
+    if (persona.melee === "never" || !adjacent) continue;
     for (const plan of physicalPlans(actor, targetId, twist)) {
       if (!legal(battle, actor, targetId, [], plan.decls, twist, plan.drop)) continue;
       const values = plan.decls.map(physicalValue);
@@ -364,11 +364,11 @@ export function scoreAttacks(input: AttackScoringInput): AttackScoring {
     }
   }
 
-  // Club pickup (physical-biased doctrines): the whole attack phase for one
+  // Club pickup (physical-biased personas): the whole attack phase for one
   // future swing at the target, worth only what the swing adds over the
   // unit's best bare-handed attack (a kick, or both punches) and less the arm
   // weapons the club will bar.
-  if (isMeleeBiased(doctrine) && !holding) {
+  if (isMeleeBiased(persona) && !holding) {
     const pickup = validatePickup(battle, actor.id);
     if (pickup.ok) {
       const expected = (d: PhysicalAttackDecl): number => {

@@ -55,7 +55,7 @@ Examples:
 | `info map <name>` | map info: width×height, terrain types and counts, elevation counts, ASCII map with terrain glyphs |
 | `reset` | wipe everything back to empty setup |
 | `ver` | show the built library version (`YYMMDD-<git hash>` stamp of the bundled commit) |
-| `dp` | doctrine player (see below): no argument lists assignments, doctrines and the trace level; `dp <id> <doctrine\|off>` assigns in setup only; `dp setup 2\|4` builds a random doctrine-vs-doctrine setup (empty setup only); `dp go` lets it act at the current prompt; `dp why [id]` reprints a unit's last decision; `dp trace off\|brief\|full` sets how much reasoning is shown |
+| `pp` | persona player (see below): no argument lists assignments, personas and the trace level; `pp <id> <persona\|off>` assigns in setup only; `pp setup 2\|4` builds a random persona-vs-persona setup (empty setup only); `pp go` lets it act at the current prompt; `pp why [id]` reprints a unit's last decision; `pp trace off\|brief\|full` sets how much reasoning is shown |
 | `autoplay` | hidden demo driver (not listed by `help`): resets nothing itself but expects a blank slate — run `reset` first. Prints a notice, then on a short timer (`AUTOPLAY_INTERVAL_MS` in `web/autoplay.ts`) types the next command a demonstrator would: loads `quickstart`, places HBK-4G vs CDA-3MA adjacent, starts, then walks in place and fires every working weapon each turn until victory. Any manually typed command cancels it; it prints `autoplay finished.` when the battle ends |
 
 ### setup
@@ -136,28 +136,28 @@ unit's end state; it throws a single error naming turn, phase and actor on the f
 that cannot be reproduced (more than 36 units, a team above 9, a unit id with
 `:` `;` `,` or whitespace, a replaced dice generator) shows no block.
 
-## Doctrine player (GDD §9)
+## Persona player (GDD §9)
 
-A one-ply scoring player for units assigned a MechWarrior doctrine in setup
-(`dp <id> <doctrine>`). The doctrine is a game-layer setting: it is not part of
+A one-ply scoring player for units assigned a MechWarrior persona in setup
+(`pp <id> <persona>`). The persona is a game-layer setting: it is not part of
 `UnitInit` or the engine. Whenever `start`, `rematch` or `done` leaves the prompt
-with a doctrine unit, the CLI plays it at once (no timer): it prints the
+with a persona unit, the CLI plays it at once (no timer): it prints the
 reasoning, then types the commands, each echoed as `<prompt> > <command>` and run
 through the normal dispatch, so atomic commits, replay recording and rollback
 snapshots all apply. A failed command stops it and hands the prompt to the human.
-How each doctrine scores its options is described in [DOCTRINE.md](DOCTRINE.md).
+How each persona scores its options is described in [PERSONA.md](PERSONA.md).
 
-**Random setup.** `dp setup 2|4` fills an empty setup (no map, no units; otherwise it
+**Random setup.** `pp setup 2|4` fills an empty setup (no map, no units; otherwise it
 says which is already set and asks for `reset`) through the setup API directly
 (`setupSetMap` / `setupAddUnit`): a random catalog map, then per player a random catalog
-'Mech on a random dry, non-building hex with a random facing, and a random doctrine. It
+'Mech on a random dry, non-building hex with a random facing, and a random persona. It
 prints one line for the map and one per player (`A1: HBK-4G at (14,2) facing s, team 1,
-doctrine Jump Jockey`). Ids are `A1 B1 A2 B2`; teams alternate, so players split evenly
+persona Jump Jockey`). Ids are `A1 B1 A2 B2`; teams alternate, so players split evenly
 into teams 1 and 2. Draws come from a stream salted off the setup seed
-(`web/doctrine.setup.ts`): the same `seed` gives the same setup, and the battle dice are
+(`web/persona.setup.ts`): the same `seed` gives the same setup, and the battle dice are
 untouched. Then `start` plays the whole bout.
 
-Doctrines (`web/doctrine.data.ts`): `alpha` (Alpha Striker), `longtom` (Long Tom),
+Personas (`web/persona.data.ts`): `alpha` (Alpha Striker), `longtom` (Long Tom),
 `jumpjockey` (Jump Jockey), `hulldown` (Hull-Down), `pitfighter` (Pit Fighter),
 `gladiator` (Gladiator), `dispossessed` (Dispossessed). Heat ceilings Cold 4 /
 Warm 7 / Hot 9 / Redline 13 / Overdrive 30 sit one point under a Heat Scale step
@@ -165,30 +165,30 @@ Warm 7 / Hot 9 / Redline 13 / Overdrive 30 sit one point under a Heat Scale step
 Conservative (TN ≤ 8, 25% reserve) / Miser (TN ≤ 7, 50% reserve, energy first).
 
 - **Movement**: every reachable landing for standstill / walk / run / jump (jump
-  only if the doctrine uses jump jets) is scored with the GDD §9.1 terms: range
+  only if the persona uses jump jets) is scored with the GDD §9.1 terms: range
   (expected damage at that hex, best torso twist, minus drift from the preferred
   distance), cover, tmm (TW p. 107), flank, melee,
   exposed (enemy expected damage), heat (over the ceiling) and crowd (Gladiator).
 - **Attack**: per torso twist, a greedy weapon set by expected damage per heat,
   stopping at the heat ceiling and honouring the ammo discipline; adjacent
   punch / kick options are weighed against the weapons those limbs give
-  up (opportunistic doctrines skip kicks above TN 8).
+  up (opportunistic personas skip kicks above TN 8).
 - **Strategy memory** (per unit, across turns): committed target (switched only
   for a 1.5× better one), posture (approach / engage / hold / recover / yield),
   turns in contact, losses per turn, and a tally of enemy move modes.
-- **Yield**: at the doctrine's armor + structure threshold (or with no weapons
-  left for a Never-melee doctrine) it declares `mode eject`, standing in for the
+- **Yield**: at the persona's armor + structure threshold (or with no weapons
+  left for a Never-melee persona) it declares `mode eject`, standing in for the
   missing yield helper (GDD R6).
 - **Own RNG**: a separate stream seeded from the battle seed, used only for
   tie-breaks; deciding never moves the battle dice.
-- **Rollback**: the doctrine context (memory, its RNG, last traces) is part of
-  each prompt snapshot. A rolled-back doctrine prompt waits; `dp go` replays the
+- **Rollback**: the persona context (memory, its RNG, last traces) is part of
+  each prompt snapshot. A rolled-back persona prompt waits; `pp go` replays the
   identical decision, or the human can play the prompt by hand.
 
 The reasoning prints in the attack-resolution box:
 
     [foe -> me]
-         ┌ doctrine Jump Jockey · posture engage · target me (held 1)
+         ┌ persona Jump Jockey · posture engage · target me (held 1)
          │ movement: 871 options scored · heat 0, ceiling 9
          │ #1 standstill (4,3) se  +8.0 = range +8.5 cover +2.0 exposed -2.5
          │ #2 run (4,10) s  +6.5 = range +7.0 tmm +3.6 flank +0.9 exposed -5.0
@@ -198,7 +198,7 @@ The reasoning prints in the attack-resolution box:
 
 `brief` (default) lists the top three options, `full` adds the rest in a
 collapsible block, `off` shows only the typed commands. The reachable-hex board
-that `mode` prints is left out of doctrine output.
+that `mode` prints is left out of persona output.
 
 ## Status — BattleTech Total Warfare rule coverage
 
@@ -349,9 +349,9 @@ stated elsewhere in this document or the codebase:
     web/chunk.ts       structured output chunks: lines, board, columns, collapsible
     web/rng.ts          mulberry32-seeded Rng
     web/autoplay.ts    hidden `autoplay` demo driver
-    web/doctrine*.ts   doctrine player (GDD §9): doctrine table, move/attack scoring,
-                         context + decide(), `dp` command + synchronous driver,
-                         `dp setup` random setup
+    web/persona*.ts   persona player (GDD §9): persona table, move/attack scoring,
+                         context + decide(), `pp` command + synchronous driver,
+                         `pp setup` random setup
     web/lookup.ts      tolerant (case-insensitive) catalog lookups
     web/table.ts       reference-table renderers (`table` command)
     web/misc.ts        shared label helpers (facing, posture, weapon category)

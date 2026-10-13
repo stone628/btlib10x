@@ -1,24 +1,24 @@
 /**
- * CLI face of the doctrine player (`web/doctrine.ts`): the `dp` command, the
- * synchronous driver that types a doctrine unit's commands at its prompt, and
+ * CLI face of the persona player (`web/persona.ts`): the `pp` command, the
+ * synchronous driver that types a persona unit's commands at its prompt, and
  * the reasoning trace, rendered as a `[ID -> TARGET]` box exactly like attack
  * resolution lines.
  *
- * The driver runs right after `start`, `rematch` and `done` (and on `dp go`),
- * never after `rollback`: a rolled-back doctrine prompt waits, so the same
- * decision can be replayed with `dp go` or the turn played by hand.
+ * The driver runs right after `start`, `rematch` and `done` (and on `pp go`),
+ * never after `rollback`: a rolled-back persona prompt waits, so the same
+ * decision can be replayed with `pp go` or the turn played by hand.
  */
 import { buildCollapsibleChunk, buildLinesChunk, buildLinesChunkWith, type Chunk } from "./chunk";
 import type { CmdDef } from "./cli";
-import { decide, promptActorId, promptDoctrine, type TraceLevel } from "./doctrine";
-import type { DecisionTrace, TraceCandidate, TraceNote, TraceTerm } from "./doctrine.common";
-import { DOCTRINE_KEYS, DOCTRINES, isDoctrineKey } from "./doctrine.data";
-import { DP_SETUP_USAGE, randomDoctrineSetup } from "./doctrine.setup";
 import type { MessageKey } from "./i18n/index";
 import { i18n } from "./i18n/index";
+import { decide, promptActorId, promptPersona, type TraceLevel } from "./persona";
+import type { DecisionTrace, TraceCandidate, TraceNote, TraceTerm } from "./persona.common";
+import { isPersonaKey, PERSONA_KEYS, PERSONAS } from "./persona.data";
+import { PP_SETUP_USAGE, randomPersonaSetup } from "./persona.setup";
 import { handleSessionGameEvents, promptBody, type Session } from "./session";
 
-/** Commands after which a doctrine prompt is played automatically. */
+/** Commands after which a persona prompt is played automatically. */
 const DRIVE_AFTER: ReadonlySet<string> = new Set(["start", "rematch", "done"]);
 /** Decisions per drive before the driver hands control back (a stalled DP-vs-DP bout). */
 export const MAX_DECISIONS_PER_DRIVE = 2000;
@@ -27,26 +27,26 @@ const BRIEF_CANDIDATES = 3;
 const TRACE_LEVELS: readonly TraceLevel[] = ["off", "brief", "full"];
 
 const POSTURE_KEY: Readonly<Record<DecisionTrace["posture"], MessageKey>> = {
-  approach: "dp.posture.approach",
-  engage: "dp.posture.engage",
-  hold: "dp.posture.hold",
-  recover: "dp.posture.recover",
-  yield: "dp.posture.yield",
+  approach: "pp.posture.approach",
+  engage: "pp.posture.engage",
+  hold: "pp.posture.hold",
+  recover: "pp.posture.recover",
+  yield: "pp.posture.yield",
 };
 
 const TERM_KEY: Readonly<Record<TraceTerm["id"], MessageKey>> = {
-  range: "dp.term.range",
-  cover: "dp.term.cover",
-  tmm: "dp.term.tmm",
-  flank: "dp.term.flank",
-  melee: "dp.term.melee",
-  charge: "dp.term.charge",
-  recoil: "dp.term.recoil",
-  exposed: "dp.term.exposed",
-  heat: "dp.term.heat",
-  crowd: "dp.term.crowd",
-  ev: "dp.term.ev",
-  ammo: "dp.term.ammo",
+  range: "pp.term.range",
+  cover: "pp.term.cover",
+  tmm: "pp.term.tmm",
+  flank: "pp.term.flank",
+  melee: "pp.term.melee",
+  charge: "pp.term.charge",
+  recoil: "pp.term.recoil",
+  exposed: "pp.term.exposed",
+  heat: "pp.term.heat",
+  crowd: "pp.term.crowd",
+  ev: "pp.term.ev",
+  ammo: "pp.term.ammo",
 };
 
 function signed(n: number): string {
@@ -54,12 +54,12 @@ function signed(n: number): string {
 }
 
 function termsText(terms: readonly TraceTerm[]): string {
-  if (terms.length === 0) return i18n("dp.trace.noTerms");
+  if (terms.length === 0) return i18n("pp.trace.noTerms");
   return terms.map((t) => `${i18n(TERM_KEY[t.id])} ${signed(t.value)}`).join(" ");
 }
 
 function candidateLine(c: TraceCandidate, rank: number): string {
-  return i18n("dp.trace.candidate", {
+  return i18n("pp.trace.candidate", {
     rank,
     label: c.label,
     score: signed(c.score),
@@ -80,11 +80,11 @@ function groundsText(candidates: readonly TraceCandidate[]): string {
     .slice(0, 2);
   const con = best.terms.filter((t) => t.value < 0).sort((a, b) => a.value - b.value)[0];
   const parts = [`${best.label}`];
-  if (pros.length > 0) parts.push(i18n("dp.trace.pros", { terms: termsText(pros) }));
-  if (con !== undefined) parts.push(i18n("dp.trace.cons", { terms: termsText([con]) }));
+  if (pros.length > 0) parts.push(i18n("pp.trace.pros", { terms: termsText(pros) }));
+  if (con !== undefined) parts.push(i18n("pp.trace.cons", { terms: termsText([con]) }));
   const second = candidates[1];
   if (second !== undefined) {
-    parts.push(i18n("dp.trace.leadOver", { margin: signed(best.score - second.score) }));
+    parts.push(i18n("pp.trace.leadOver", { margin: signed(best.score - second.score) }));
   }
   return parts.join("; ");
 }
@@ -92,8 +92,8 @@ function groundsText(candidates: readonly TraceCandidate[]): string {
 /** Trace body lines (without the `[ID -> TARGET]` header the event renderer adds). */
 export function traceLines(trace: DecisionTrace, limit: number): string[] {
   const lines = [
-    i18n("dp.trace.head", {
-      doctrine: DOCTRINES[trace.doctrine].name,
+    i18n("pp.trace.head", {
+      persona: PERSONAS[trace.persona].name,
       posture: i18n(POSTURE_KEY[trace.posture]),
       target: trace.targetId ?? "-",
       held: trace.targetHeld,
@@ -102,9 +102,9 @@ export function traceLines(trace: DecisionTrace, limit: number): string[] {
   for (const n of trace.notes) lines.push(noteLine(n));
   if (trace.candidates.length > 0) {
     lines.push(
-      i18n("dp.trace.options", {
+      i18n("pp.trace.options", {
         phase: i18n(
-          trace.phase === "movement" ? "dp.trace.phase.movement" : "dp.trace.phase.attack",
+          trace.phase === "movement" ? "pp.trace.phase.movement" : "pp.trace.phase.attack",
         ),
         count: trace.candidates.length,
         heat: trace.heat,
@@ -114,9 +114,9 @@ export function traceLines(trace: DecisionTrace, limit: number): string[] {
     trace.candidates.slice(0, limit).forEach((c, i) => {
       lines.push(candidateLine(c, i + 1));
     });
-    lines.push(i18n("dp.trace.chose", { grounds: groundsText(trace.candidates) }));
+    lines.push(i18n("pp.trace.chose", { grounds: groundsText(trace.candidates) }));
   }
-  lines.push(i18n("dp.trace.commands", { commands: trace.commands.join("; ") }));
+  lines.push(i18n("pp.trace.commands", { commands: trace.commands.join("; ") }));
   return lines;
 }
 
@@ -125,7 +125,7 @@ export function traceChunks(s: Session, trace: DecisionTrace, level: TraceLevel)
   if (level === "off") return [];
   const chunks = handleSessionGameEvents(s, [
     {
-      kind: "doctrineDecision",
+      kind: "personaDecision",
       actorId: trace.actorId,
       targetId: trace.targetId,
       lines: traceLines(trace, BRIEF_CANDIDATES),
@@ -137,10 +137,10 @@ export function traceChunks(s: Session, trace: DecisionTrace, level: TraceLevel)
       .map((c, i) => candidateLine(c, i + 1 + BRIEF_CANDIDATES));
     chunks.push(
       buildCollapsibleChunk(
-        i18n("dp.trace.more", {
+        i18n("pp.trace.more", {
           count: rest.length,
           phase: i18n(
-            trace.phase === "movement" ? "dp.trace.phase.movement" : "dp.trace.phase.attack",
+            trace.phase === "movement" ? "pp.trace.phase.movement" : "pp.trace.phase.attack",
           ),
         }),
         [buildLinesChunk(...rest)],
@@ -152,35 +152,35 @@ export function traceChunks(s: Session, trace: DecisionTrace, level: TraceLevel)
 
 let driving = false;
 
-/** True for commands after which `runChunks` hands the prompt to the doctrine player. */
+/** True for commands after which `runChunks` hands the prompt to the persona player. */
 export function drivesAfter(command: string): boolean {
   return DRIVE_AFTER.has(command.toLowerCase());
 }
 
 /**
- * Play every consecutive doctrine prompt: decide, show the trace, then type
+ * Play every consecutive persona prompt: decide, show the trace, then type
  * the commands through `run` (the normal CLI dispatch, so `commitAtomic`,
- * replay recording and rollback snapshots all apply). The next doctrine
+ * replay recording and rollback snapshots all apply). The next persona
  * context is installed before the commands run, so the snapshot taken at the
  * following prompt already holds it; a failed command restores it and stops.
  */
-export function driveDoctrine(s: Session, run: (raw: string) => Chunk[]): Chunk[] {
+export function drivePersona(s: Session, run: (raw: string) => Chunk[]): Chunk[] {
   if (driving) return [];
   driving = true;
   const out: Chunk[] = [];
   try {
     for (let n = 0; ; n++) {
       if (n >= MAX_DECISIONS_PER_DRIVE) {
-        out.push(buildLinesChunkWith("banner", i18n("dp.limit")));
+        out.push(buildLinesChunkWith("banner", i18n("pp.limit")));
         break;
       }
-      const key = promptDoctrine(s);
+      const key = promptPersona(s);
       if (key === null) break;
-      const decision = decide(s, key, s.doctrine);
+      const decision = decide(s, key, s.persona);
       if (decision === null) break;
-      const before = s.doctrine;
-      s.doctrine = decision.next;
-      out.push(...traceChunks(s, decision.trace, s.doctrine.traceLevel));
+      const before = s.persona;
+      s.persona = decision.next;
+      out.push(...traceChunks(s, decision.trace, s.persona.traceLevel));
       let failed: string | null = null;
       for (const command of decision.commands) {
         out.push(buildLinesChunkWith("cmd", `${promptBody(s)} > ${command}`));
@@ -193,8 +193,8 @@ export function driveDoctrine(s: Session, run: (raw: string) => Chunk[]): Chunk[
         }
       }
       if (failed !== null) {
-        s.doctrine = { ...before, traceLevel: s.doctrine.traceLevel };
-        out.push(buildLinesChunkWith("banner", i18n("dp.stopped", { command: failed })));
+        s.persona = { ...before, traceLevel: s.persona.traceLevel };
+        out.push(buildLinesChunkWith("banner", i18n("pp.stopped", { command: failed })));
         break;
       }
     }
@@ -211,45 +211,45 @@ export function driveDoctrine(s: Session, run: (raw: string) => Chunk[]): Chunk[
   return out;
 }
 
-/** Hint shown when the prompt belongs to a doctrine but is not being played (after rollback). */
-export function doctrineWaitingChunks(s: Session): Chunk[] {
-  const key = promptDoctrine(s);
+/** Hint shown when the prompt belongs to a persona but is not being played (after rollback). */
+export function personaWaitingChunks(s: Session): Chunk[] {
+  const key = promptPersona(s);
   const id = promptActorId(s);
   if (key === null || id === null) return [];
-  return [buildLinesChunkWith("hint", i18n("dp.waiting", { id, doctrine: DOCTRINES[key].name }))];
+  return [buildLinesChunkWith("hint", i18n("pp.waiting", { id, persona: PERSONAS[key].name }))];
 }
 
 function listChunk(s: Session): Chunk {
-  const entries = Object.entries(s.doctrine.assignments);
+  const entries = Object.entries(s.persona.assignments);
   return buildLinesChunk(
-    i18n("dp.list.header"),
+    i18n("pp.list.header"),
     ...(entries.length > 0
-      ? entries.map(([id, key]) => i18n("dp.list.entry", { id, doctrine: DOCTRINES[key].name }))
-      : [i18n("dp.list.none")]),
-    i18n("dp.list.doctrines", { list: DOCTRINE_KEYS.join(", ") }),
-    i18n("dp.list.trace", { level: s.doctrine.traceLevel }),
+      ? entries.map(([id, key]) => i18n("pp.list.entry", { id, persona: PERSONAS[key].name }))
+      : [i18n("pp.list.none")]),
+    i18n("pp.list.personas", { list: PERSONA_KEYS.join(", ") }),
+    i18n("pp.list.trace", { level: s.persona.traceLevel }),
   );
 }
 
-const DP_USAGE = [
-  "dp [<id> <doctrine | off>]",
-  "dp setup 2 | 4",
-  "dp go | dp why [id]",
-  "dp trace off | brief | full",
+const PP_USAGE = [
+  "pp [<id> <persona | off>]",
+  "pp setup 2 | 4",
+  "pp go | pp why [id]",
+  "pp trace off | brief | full",
 ].join("\n");
 
-/** `dp`: assign doctrines in setup; inspect, tune and resume the doctrine player in battle. */
-export function doctrineCmd(run: (s: Session, raw: string) => Chunk[]): CmdDef {
+/** `pp`: assign personas in setup; inspect, tune and resume the persona player in battle. */
+export function personaCmd(run: (s: Session, raw: string) => Chunk[]): CmdDef {
   return {
-    helpKey: "cmd.dp.help",
-    usage: DP_USAGE,
+    helpKey: "cmd.pp.help",
+    usage: PP_USAGE,
     argsDoc: [
-      ["", "cmd.dp.arg.list"],
-      ["<id> <doctrine|off>", "cmd.dp.arg.assign"],
-      ["setup 2|4", "cmd.dp.arg.setup"],
-      ["go", "cmd.dp.arg.go"],
-      ["why [id]", "cmd.dp.arg.why"],
-      ["trace off|brief|full", "cmd.dp.arg.trace"],
+      ["", "cmd.pp.arg.list"],
+      ["<id> <persona|off>", "cmd.pp.arg.assign"],
+      ["setup 2|4", "cmd.pp.arg.setup"],
+      ["go", "cmd.pp.arg.go"],
+      ["why [id]", "cmd.pp.arg.why"],
+      ["trace off|brief|full", "cmd.pp.arg.trace"],
     ],
     run: (s, a) => {
       const sub = a[0]?.toLowerCase();
@@ -257,52 +257,52 @@ export function doctrineCmd(run: (s: Session, raw: string) => Chunk[]): CmdDef {
       if (sub === "trace") {
         const level = a[1]?.toLowerCase() as TraceLevel | undefined;
         if (level === undefined || !TRACE_LEVELS.includes(level)) {
-          throw new Error(i18n("err.expectedArgs", { usage: "dp trace off|brief|full" }));
+          throw new Error(i18n("err.expectedArgs", { usage: "pp trace off|brief|full" }));
         }
-        s.doctrine.traceLevel = level;
-        return [buildLinesChunk(i18n("dp.ok.trace", { level }))];
+        s.persona.traceLevel = level;
+        return [buildLinesChunk(i18n("pp.ok.trace", { level }))];
       }
       if (sub === "why") {
         const id = a[1] ?? promptActorId(s);
         if (id === null || id === undefined) throw new Error(i18n("err.needsActor"));
-        const trace = s.doctrine.lastTrace[id];
-        if (trace === undefined) throw new Error(i18n("dp.err.noTrace", { id }));
+        const trace = s.persona.lastTrace[id];
+        if (trace === undefined) throw new Error(i18n("pp.err.noTrace", { id }));
         return traceChunks(
           s,
           trace,
-          s.doctrine.traceLevel === "off" ? "brief" : s.doctrine.traceLevel,
+          s.persona.traceLevel === "off" ? "brief" : s.persona.traceLevel,
         );
       }
       if (sub === "go") {
-        if (promptDoctrine(s) === null) throw new Error(i18n("dp.err.notDoctrinePrompt"));
-        return driveDoctrine(s, (raw) => run(s, raw));
+        if (promptPersona(s) === null) throw new Error(i18n("pp.err.notPersonaPrompt"));
+        return drivePersona(s, (raw) => run(s, raw));
       }
-      // `dp setup <n>`; a roster unit literally named "setup" still takes `dp setup <doctrine>`.
+      // `pp setup <n>`; a roster unit literally named "setup" still takes `pp setup <persona>`.
       if (sub === "setup" && (a[1] === undefined || /^\d+$/.test(a[1]))) {
         if (a[1] === undefined) {
-          throw new Error(i18n("err.expectedArgs", { usage: DP_SETUP_USAGE }));
+          throw new Error(i18n("err.expectedArgs", { usage: PP_SETUP_USAGE }));
         }
-        return randomDoctrineSetup(s, Number(a[1]));
+        return randomPersonaSetup(s, Number(a[1]));
       }
-      // dp <id> <doctrine|off>
-      if (s.state !== "setup") throw new Error(i18n("dp.err.setupOnly"));
-      if (a.length < 2) throw new Error(i18n("err.expectedArgs", { usage: DP_USAGE }));
+      // pp <id> <persona|off>
+      if (s.state !== "setup") throw new Error(i18n("pp.err.setupOnly"));
+      if (a.length < 2) throw new Error(i18n("err.expectedArgs", { usage: PP_USAGE }));
       const id = a[0]!;
       if (!s.setup.roster.some((r) => r.id === id)) {
         throw new Error(i18n("err.unknownUnitId", { id }));
       }
       const word = a[1]!.toLowerCase();
       if (word === "off") {
-        delete s.doctrine.assignments[id];
-        return [buildLinesChunk(i18n("dp.ok.cleared", { id }))];
+        delete s.persona.assignments[id];
+        return [buildLinesChunk(i18n("pp.ok.cleared", { id }))];
       }
-      if (!isDoctrineKey(word)) {
+      if (!isPersonaKey(word)) {
         throw new Error(
-          i18n("dp.err.unknownDoctrine", { name: a[1]!, list: DOCTRINE_KEYS.join(", ") }),
+          i18n("pp.err.unknownPersona", { name: a[1]!, list: PERSONA_KEYS.join(", ") }),
         );
       }
-      s.doctrine.assignments[id] = word;
-      return [buildLinesChunk(i18n("dp.ok.assigned", { id, doctrine: DOCTRINES[word].name }))];
+      s.persona.assignments[id] = word;
+      return [buildLinesChunk(i18n("pp.ok.assigned", { id, persona: PERSONAS[word].name }))];
     },
   };
 }

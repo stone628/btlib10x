@@ -1,5 +1,5 @@
 /**
- * Movement scoring for the doctrine player (GDD §9.1, movement): every
+ * Movement scoring for the persona player (GDD §9.1, movement): every
  * reachable landing (hex, facing, mode) gets the weighted terms below, and the
  * best one becomes `mode <m>` / `place <col> <row> <facing>` / `done`.
  *
@@ -7,7 +7,7 @@
  * movement modifier by hexes entered, +1 for a jump (TW p. 107), movement heat
  * walk 1 / run 2 / jump max(3, hexes) (TW p. 159).
  *
- * Physical-biased doctrines (melee "seeks" / "first") also score charge and
+ * Physical-biased personas (melee "seeks" / "first") also score charge and
  * DFA landings: a walk / run / jump path that ends in the target's hex stops
  * the unit in the hex before it and declares the attack (TW pp. 148–150). A
  * charging unit makes no weapon attacks that turn, so the landing trades its
@@ -61,8 +61,8 @@ import {
   threatsTo,
   type UsableWeapon,
   usableWeapons,
-} from "./doctrine.common";
-import { type Doctrine, isMeleeBiased, MELEE_FACTOR } from "./doctrine.data";
+} from "./persona.common";
+import { isMeleeBiased, MELEE_FACTOR, type Persona } from "./persona.data";
 
 /** Weight on each hex away from the preferred distance inside the range term. */
 const RANGE_DRIFT_PER_HEX = 0.5;
@@ -143,13 +143,13 @@ function landingsFor(
   });
 }
 
-/** Modes the doctrine considers this turn. */
-function modesFor(unit: UnitState, doctrine: Doctrine, b: Budgets): MoveMode[] {
+/** Modes the persona considers this turn. */
+function modesFor(unit: UnitState, persona: Persona, b: Budgets): MoveMode[] {
   const modes: MoveMode[] = ["standStill"];
   if (b.walking > 0) modes.push("walk");
   // One-leg 'Mechs may not run (TW p. 50).
   if (destroyedLegs(unit.damage) === 0 && b.running > b.walking) modes.push("run");
-  if (doctrine.jump !== "none" && b.jumping > 0) modes.push("jump");
+  if (persona.jump !== "none" && b.jumping > 0) modes.push("jump");
   return modes;
 }
 
@@ -187,7 +187,7 @@ function meleeValue(
   target: UnitState,
   landing: RevealedLanding,
   mode: MoveMode,
-  doctrine: Doctrine,
+  persona: Persona,
 ): MeleeValue {
   const kind = landing.melee!.kind;
   const stop = landing.melee!.stopsAt;
@@ -201,7 +201,7 @@ function meleeValue(
     jumpedThisTurn: kind === "dfa",
   };
   const p = hitProbability(computePhysicalToHit(battle, moved, target, kind, undefined).total);
-  const damage = MELEE_FACTOR[doctrine.melee] * p * physicalDamage(kind, moved, undefined);
+  const damage = MELEE_FACTOR[persona.melee] * p * physicalDamage(kind, moved, undefined);
   const recoil = p * meleeRecoilDamage(kind, moved, target);
   const fall =
     kind === "dfa"
@@ -238,15 +238,15 @@ export interface MoveScoringInput {
   readonly battle: BattleState;
   readonly actor: UnitState;
   readonly target: UnitState;
-  readonly doctrine: Doctrine;
+  readonly persona: Persona;
   readonly profile: RangeProfile;
   readonly heatCeiling: number;
 }
 
 /** Every landing scored, best first. */
 export function scoreMoves(input: MoveScoringInput): TraceCandidate[] {
-  const { battle, actor, target, doctrine, profile, heatCeiling } = input;
-  const w = doctrine.weights;
+  const { battle, actor, target, persona, profile, heatCeiling } = input;
+  const w = persona.weights;
   const budgets = budgetsOf(battle, actor);
   const weapons = usableWeapons(actor);
   const threats = threatsTo(battle, actor);
@@ -254,11 +254,11 @@ export function scoreMoves(input: MoveScoringInput): TraceCandidate[] {
   const targetDefense = targetTmm + hexDefenseMod(battle, target.position);
   const heatNow = actor.heat + actor.heatPending - dissipationOf(actor);
   const canTwist = !actor.prone;
-  const meleeTarget = isMeleeBiased(doctrine) ? target : null;
+  const meleeTarget = isMeleeBiased(persona) ? target : null;
 
   const out: TraceCandidate[] = [];
   const seen = new Set<string>();
-  for (const mode of modesFor(actor, doctrine, budgets)) {
+  for (const mode of modesFor(actor, persona, budgets)) {
     const landings: RevealedLanding[] =
       mode === "standStill"
         ? [{ hex: actor.position, facing: actor.facing, path: [] }]
@@ -304,7 +304,7 @@ export function scoreMoves(input: MoveScoringInput): TraceCandidate[] {
 
       const contact = d <= 1 ? 1 : d === 2 ? MELEE_NEAR : 0;
       const charge =
-        melee !== undefined ? meleeValue(battle, actor, target, landing, mode, doctrine) : null;
+        melee !== undefined ? meleeValue(battle, actor, target, landing, mode, persona) : null;
 
       const exposed = exposureAt(battle, threats, at, myTmm);
       const heatOver = Math.max(0, heatNow + movementHeat(mode, mp) - heatCeiling);

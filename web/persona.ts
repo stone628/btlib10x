@@ -1,14 +1,14 @@
 /**
- * Doctrine player (GDD §9): a one-ply scoring player that types CLI commands
- * for units assigned a MechWarrior doctrine at setup.
+ * Persona player (GDD §9): a one-ply scoring player that types CLI commands
+ * for units assigned a MechWarrior persona at setup.
  *
  * - Assignment lives here, never in `UnitInit` or the engine.
- * - Its context is plain serializable data on `Session.doctrine`: the
+ * - Its context is plain serializable data on `Session.persona`: the
  *   assignments, its own RNG stream (seeded apart from the battle dice, used
  *   only to break ties, so deciding never moves `s.rng`), long-term
  *   {@link StrategyMemory} per unit, and the last {@link DecisionTrace} per unit.
  * - `decide()` is pure: it returns the commands, the trace and the next
- *   context. The driver (`web/doctrine.cli.ts`) installs the next context
+ *   context. The driver (`web/persona.cli.ts`) installs the next context
  *   before typing the commands, so the prompt snapshots `rollback` takes
  *   already hold it.
  *
@@ -32,7 +32,8 @@ import {
   STAND_MP_COST,
   type UnitState,
 } from "btlib10x";
-import { scoreAttacks } from "./doctrine.attack";
+import { isGyroDestroyed } from "./misc";
+import { scoreAttacks } from "./persona.attack";
 import {
   type DecisionTrace,
   enemiesOf,
@@ -44,10 +45,9 @@ import {
   type TraceCandidate,
   type TraceNote,
   usableWeapons,
-} from "./doctrine.common";
-import { DOCTRINES, type Doctrine, type DoctrineKey } from "./doctrine.data";
-import { scoreMoves } from "./doctrine.move";
-import { isGyroDestroyed } from "./misc";
+} from "./persona.common";
+import { PERSONAS, type Persona, type PersonaKey } from "./persona.data";
+import { scoreMoves } from "./persona.move";
 import { createRng } from "./rng";
 import type { Session } from "./session";
 
@@ -71,18 +71,18 @@ export interface StrategyMemory {
   enemyModes: Record<string, Record<string, number>>;
 }
 
-export interface DoctrineContext {
-  /** Unit id → doctrine. Set in setup; kept across rematch. */
-  assignments: Record<string, DoctrineKey>;
-  /** Snapshot of the doctrine player's own RNG stream. */
+export interface PersonaContext {
+  /** Unit id → persona. Set in setup; kept across rematch. */
+  assignments: Record<string, PersonaKey>;
+  /** Snapshot of the persona player's own RNG stream. */
   rng: string;
   memory: Record<string, StrategyMemory>;
   lastTrace: Record<string, DecisionTrace>;
   traceLevel: TraceLevel;
 }
 
-/** Keeps the doctrine stream apart from the battle dice seeded with the same number. */
-const DOCTRINE_SEED_SALT = 0x9e3779b9;
+/** Keeps the persona stream apart from the battle dice seeded with the same number. */
+const PERSONA_SEED_SALT = 0x9e3779b9;
 /** A new target must score this much better before the committed one is dropped. */
 const RETARGET_FACTOR = 1.5;
 /** Dispossessed yields this much earlier while ahead on the judges' points. */
@@ -90,14 +90,14 @@ const AHEAD_YIELD_BONUS = 0.15;
 /** Tie-break jitter scale: far below any displayed score difference. */
 const JITTER = 0.001;
 
-export function doctrineSeed(seed: number): string {
-  return createRng((seed ^ DOCTRINE_SEED_SALT) >>> 0).snapshot();
+export function personaSeed(seed: number): string {
+  return createRng((seed ^ PERSONA_SEED_SALT) >>> 0).snapshot();
 }
 
-export function newDoctrineContext(seed: number): DoctrineContext {
+export function newPersonaContext(seed: number): PersonaContext {
   return {
     assignments: {},
-    rng: doctrineSeed(seed),
+    rng: personaSeed(seed),
     memory: {},
     lastTrace: {},
     traceLevel: "brief",
@@ -105,12 +105,12 @@ export function newDoctrineContext(seed: number): DoctrineContext {
 }
 
 /** Fresh battle (start / rematch): reseed the stream, forget memory and traces. */
-export function resetDoctrineBattle(
-  ctx: DoctrineContext,
+export function resetPersonaBattle(
+  ctx: PersonaContext,
   seed: number,
   unitIds: readonly string[],
 ): void {
-  ctx.rng = doctrineSeed(seed);
+  ctx.rng = personaSeed(seed);
   ctx.memory = {};
   ctx.lastTrace = {};
   for (const id of Object.keys(ctx.assignments)) {
@@ -121,7 +121,7 @@ export function resetDoctrineBattle(
 export interface Decision {
   readonly commands: readonly string[];
   readonly trace: DecisionTrace;
-  readonly next: DoctrineContext;
+  readonly next: PersonaContext;
 }
 
 function freshMemory(unit: UnitState): StrategyMemory {
@@ -145,10 +145,10 @@ export function promptActorId(s: Session): string | null {
   return null;
 }
 
-/** Doctrine controlling the current prompt, or null for a human prompt. */
-export function promptDoctrine(s: Session): DoctrineKey | null {
+/** Persona controlling the current prompt, or null for a human prompt. */
+export function promptPersona(s: Session): PersonaKey | null {
   const id = promptActorId(s);
-  return id === null ? null : (s.doctrine.assignments[id] ?? null);
+  return id === null ? null : (s.persona.assignments[id] ?? null);
 }
 
 /** Damage-weighted pick: expected damage now, scaled by how hurt the enemy is. */
@@ -163,7 +163,7 @@ function targetScore(actor: UnitState, enemy: UnitState): number {
 function updateMemory(
   battle: BattleState,
   actor: UnitState,
-  doctrine: Doctrine,
+  persona: Persona,
   mem: StrategyMemory,
   notes: TraceNote[],
 ): void {
@@ -187,16 +187,16 @@ function updateMemory(
   const best = ranked[0] ?? null;
   if (current === null) {
     if (mem.targetId !== null)
-      notes.push({ key: "dp.note.targetLost", params: { target: mem.targetId } });
+      notes.push({ key: "pp.note.targetLost", params: { target: mem.targetId } });
     mem.targetId = best?.id ?? null;
     mem.targetHeld = 0;
-    if (best !== null) notes.push({ key: "dp.note.targetPicked", params: { target: best.id } });
+    if (best !== null) notes.push({ key: "pp.note.targetPicked", params: { target: best.id } });
   } else if (
     best !== null &&
     best.id !== current.id &&
     targetScore(actor, best) > RETARGET_FACTOR * targetScore(actor, current)
   ) {
-    notes.push({ key: "dp.note.targetSwitched", params: { from: current.id, to: best.id } });
+    notes.push({ key: "pp.note.targetSwitched", params: { from: current.id, to: best.id } });
     mem.targetId = best.id;
     mem.targetHeld = 0;
   } else if (newTurn) {
@@ -209,7 +209,7 @@ function updateMemory(
   const inContact = hexDistance(actor.position, target.position) <= profile.maxLong;
   if (newTurn) mem.turnsInContact = inContact ? mem.turnsInContact + 1 : 0;
   mem.posture =
-    doctrine.key === "hulldown" && hexDistance(actor.position, target.position) > profile.maxMedium
+    persona.key === "hulldown" && hexDistance(actor.position, target.position) > profile.maxMedium
       ? "hold"
       : inContact
         ? "engage"
@@ -237,7 +237,7 @@ function walkBudget(unit: UnitState): number {
 /** Scripted movement for prompts the scorer does not handle (mirrors `autoplay.ts`). */
 function scriptedMovement(actor: UnitState, notes: TraceNote[]): string[] | null {
   if (!isNominal(actor)) {
-    notes.push({ key: "dp.note.shutdown" });
+    notes.push({ key: "pp.note.shutdown" });
     return ["done"];
   }
   if (actor.prone) {
@@ -248,20 +248,20 @@ function scriptedMovement(actor: UnitState, notes: TraceNote[]): string[] | null
       (destroyedLegs(actor.damage) === 0 && walkBudget(actor) < STAND_MP_COST) ||
       walkBudget(actor) < 1
     ) {
-      notes.push({ key: "dp.note.staysProne" });
+      notes.push({ key: "pp.note.staysProne" });
       return ["mode pronestill", "done"];
     }
-    notes.push({ key: "dp.note.standUp" });
+    notes.push({ key: "pp.note.standUp" });
     return ["mode standup walk", "done"];
   }
   if (isUnitImmobile(actor.damage) || walkBudget(actor) === 0) {
-    notes.push({ key: "dp.note.immobile" });
+    notes.push({ key: "pp.note.immobile" });
     return ["mode standstill", "done"];
   }
   return null;
 }
 
-/** Jitter-sorted copy: score first, then the doctrine stream breaks exact ties. */
+/** Jitter-sorted copy: score first, then the persona stream breaks exact ties. */
 function rank(candidates: readonly TraceCandidate[], d6: () => number): TraceCandidate[] {
   return candidates
     .map((c) => ({ c, j: (d6() - 3.5) * JITTER }))
@@ -270,15 +270,15 @@ function rank(candidates: readonly TraceCandidate[], d6: () => number): TraceCan
 }
 
 /**
- * Decide the current prompt with doctrine `dk` from context `ctx`, whoever
- * owns the prompt (callers pick the doctrine: the unit's assignment, or the
+ * Decide the current prompt with persona `dk` from context `ctx`, whoever
+ * owns the prompt (callers pick the persona: the unit's assignment, or the
  * autoplay demo's default); null when there is no battle prompt.
  */
-export function decide(s: Session, dk: DoctrineKey, ctx: DoctrineContext): Decision | null {
+export function decide(s: Session, dk: PersonaKey, ctx: PersonaContext): Decision | null {
   const actorId = promptActorId(s);
   const battle = s.battle;
   if (actorId === null || battle === null) return null;
-  const doctrine = DOCTRINES[dk];
+  const persona = PERSONAS[dk];
   const actor = battle.units[actorId];
   if (actor === undefined || !isUnitAvailable(actor)) return null;
 
@@ -286,9 +286,9 @@ export function decide(s: Session, dk: DoctrineKey, ctx: DoctrineContext): Decis
   rng.load(ctx.rng);
   const mem: StrategyMemory = structuredClone(ctx.memory[actorId] ?? freshMemory(actor));
   const notes: TraceNote[] = [];
-  updateMemory(battle, actor, doctrine, mem, notes);
+  updateMemory(battle, actor, persona, mem, notes);
   const target = mem.targetId !== null ? (battle.units[mem.targetId] ?? null) : null;
-  const heatCeiling = heatCeilingFor(doctrine, actor, target);
+  const heatCeiling = heatCeilingFor(persona, actor, target);
   const phase = battle.phase === "attack" ? "attack" : "movement";
 
   let candidates: TraceCandidate[] = [];
@@ -304,16 +304,16 @@ export function decide(s: Session, dk: DoctrineKey, ctx: DoctrineContext): Decis
     const scripted = scriptedMovement(actor, notes);
     const left = remainingFraction(actor);
     const yieldAt =
-      doctrine.yieldAt +
-      (doctrine.yieldWhenAhead && aheadOnPoints(actor, target) ? AHEAD_YIELD_BONUS : 0);
-    const noWeapons = usableWeapons(actor).length === 0 && doctrine.melee === "never";
-    if (doctrine.yieldAt > 0 && (left <= yieldAt || noWeapons)) {
+      persona.yieldAt +
+      (persona.yieldWhenAhead && aheadOnPoints(actor, target) ? AHEAD_YIELD_BONUS : 0);
+    const noWeapons = usableWeapons(actor).length === 0 && persona.melee === "never";
+    if (persona.yieldAt > 0 && (left <= yieldAt || noWeapons)) {
       mem.posture = "yield";
       notes.push(
         noWeapons
-          ? { key: "dp.note.yieldWeapons" }
+          ? { key: "pp.note.yieldWeapons" }
           : {
-              key: "dp.note.yield",
+              key: "pp.note.yield",
               params: { left: Math.round(left * 100), at: Math.round(yieldAt * 100) },
             },
       );
@@ -322,7 +322,7 @@ export function decide(s: Session, dk: DoctrineKey, ctx: DoctrineContext): Decis
       mem.posture = "recover";
       commands = scripted;
     } else if (target === null) {
-      notes.push({ key: "dp.note.noTarget" });
+      notes.push({ key: "pp.note.noTarget" });
       commands = ["mode standstill", "done"];
     } else {
       candidates = rank(
@@ -330,8 +330,8 @@ export function decide(s: Session, dk: DoctrineKey, ctx: DoctrineContext): Decis
           battle,
           actor,
           target,
-          doctrine,
-          profile: rangeProfile(actor, doctrine.range),
+          persona,
+          profile: rangeProfile(actor, persona.range),
           heatCeiling,
         }),
         () => rng.d6(),
@@ -339,10 +339,10 @@ export function decide(s: Session, dk: DoctrineKey, ctx: DoctrineContext): Decis
       commands = [...(candidates[0]?.commands ?? ["mode standstill", "done"])];
     }
   } else if (target === null) {
-    notes.push({ key: "dp.note.noTarget" });
+    notes.push({ key: "pp.note.noTarget" });
     commands = ["done"];
   } else {
-    const scored = scoreAttacks({ battle, actor, targetId: target.id, doctrine, heatCeiling });
+    const scored = scoreAttacks({ battle, actor, targetId: target.id, persona, heatCeiling });
     notes.push(...scored.notes);
     candidates = rank(scored.candidates, () => rng.d6());
     commands = [...(candidates[0]?.commands ?? ["done"])];
@@ -354,7 +354,7 @@ export function decide(s: Session, dk: DoctrineKey, ctx: DoctrineContext): Decis
     phase,
     actorId,
     targetId: mem.targetId,
-    doctrine: dk,
+    persona: dk,
     posture: mem.posture,
     targetHeld: mem.targetHeld,
     heat: actor.heat + actor.heatPending,
@@ -363,7 +363,7 @@ export function decide(s: Session, dk: DoctrineKey, ctx: DoctrineContext): Decis
     notes,
     commands,
   };
-  const next: DoctrineContext = {
+  const next: PersonaContext = {
     ...ctx,
     rng: rng.snapshot(),
     memory: { ...ctx.memory, [actorId]: mem },
