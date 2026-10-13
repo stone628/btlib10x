@@ -27,6 +27,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:changed": "vitest run --changed",
+    "test:related": "vitest related --run",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "dev:web": "node scripts/build-web.mjs --watch --serve"

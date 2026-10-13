@@ -44,6 +44,8 @@ TypeScript library encapsulating BattleTech Total Warfare board game logic.
 
 - `npm test` — run test suite once (vitest)
 - `npm run test:watch` — watch mode
+- `npm run test:changed` — run only tests affected by git-changed files (iteration; accepts a compare ref, e.g. `npm run test:changed -- main`)
+- `npm run test:related -- <files>` — run only tests importing the given source files (e.g. `npm run test:related -- src/rules/tohit.ts`)
 - `npm run typecheck` — `tsc --noEmit`
 - `npm run lint` — Biome check (lint + format + import order) over `src/`, `tests/`, `scripts/`, `web/`, `data/` (generated web bundles excluded; `data/**/*.json` and `data/btlib10x.jsonl` untouched)
 - `npm run lint:fix` — same, applying safe+unsafe fixes (formatting, unused imports/params, literal keys)
@@ -55,6 +57,16 @@ TypeScript library encapsulating BattleTech Total Warfare board game logic.
 **Stale-dist trap.** Anything importing `"btlib10x"` resolves through package `exports` to `dist/` — web sources typecheck against `dist/index.d.ts`, tests exercising `web/terminal/session.ts` run against `dist/index.js`, while rule tests import `src/` directly. After any engine change, run `npm run build` before lint/typecheck/test, or `web/` code and tests silently use a stale engine (real failure mode: identical `reachableLandings` inputs producing different move paths). `web/btlib10x.js` (the browser-runtime core bundle) rebuilds via `build:web`/`dev:web` and never reads `dist/`.
 
 Run lint + typecheck + tests together before considering work done: `npm run lint && npm run typecheck && npm test`.
+
+**Filtered runs (iteration only).** `test:changed` / `test:related` select tests via the
+static import graph, so they miss the catalog path: data edits (`data/mechs/*.json`,
+`data/maps/*.json`) need `npm run pack` and engine edits need `npm run build` first,
+or session/web tests silently run against stale `dist/` + old `btlib10x.jsonl`.
+Selection quirks (verified): files no test imports (e.g. `AGENTS.md`) select nothing
+(exit 0, vacuously green); `package.json` / vitest-config edits select the whole suite;
+widely-imported engine modules fan out broadly (`src/rules/tohit.ts` → 52 files), so
+prefer `test:related` with leaf modules or test files for a tight loop. Filtered
+runs never replace the full `npm test` in the done-criteria above.
 
 ## Layout
 
