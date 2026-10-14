@@ -94,7 +94,6 @@ import {
   HIP,
   isSlotDestroyed,
   markLocationCatastrophicallyDestroyed,
-  mergeCritTable,
   resolveCriticalHits,
   setSlotDestroyed,
 } from "./critical";
@@ -103,7 +102,6 @@ import {
   canAttemptStandUp,
   canFireMount,
   type DamageApplication,
-  type DamageTransferStep,
   dealtOf,
   destroyedLegs,
   isUnitDestroyed,
@@ -111,7 +109,6 @@ import {
   isUnitLocationDestroyed,
   structureStruck,
   type UnitDamageState,
-  zeroLocationStructure,
 } from "./damage";
 import {
   ammoExplosionAvoidWithThreshold,
@@ -3231,15 +3228,6 @@ function damageTaken(before: UnitDamageState, after: UnitDamageState): number {
   return n;
 }
 
-/** Append `extra` items to `base` skipping any already present. Returns `base`
- *  when nothing new arrives; otherwise a fresh array. */
-function appendUnique<T>(base: readonly T[], extra: readonly T[]): T[] {
-  if (extra.length === 0) return base.slice();
-  const out = base.slice();
-  for (const x of extra) if (!out.includes(x)) out.push(x);
-  return out;
-}
-
 interface NewStructureHit {
   readonly location: Location;
   readonly name: string;
@@ -3790,164 +3778,51 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         targetCritSlotsMap[targetId] = cloneCritTable(target.critSlotsDestroyed);
         targetCritsForLimbs[targetId] = [];
       }
-      const def = mechDefFor(target);
-
-      // Apply damage by re-applying each hit group to the accumulating damage state.
-      // This ensures damage from multiple attacks against the same target accumulates
-      // (TW p.38: all weapon attack damage applied at end of phase).
+      // Authoritative sequential state from Phase 1 (TW pp.122-123): each
+      // resolution's groups were already applied group-by-group with each
+      // group's crits interleaved (attack.ts). Adopt it directly; never
+      // re-apply groups-then-blasts here — that reordering destroys
+      // locations the real sequence only damages, and the catastrophic
+      // wipe (destroyAllSlots/zeroBins) then poisons the persistent crit
+      // table (phantom engine kill).
       if (resolution.application !== null && resolution.groups.length > 0) {
-        let currentDamage = targetDamageMap[targetId];
-        const before = cloneDamage(currentDamage);
-        // Limbs sheared off by torso destruction (damage transfer) stay in
-        // the hex as clubs (TW p.146); collected here, recorded below.
-        const sheared: LimbLocation[] = [];
-        const steps: DamageTransferStep[] = [];
-        const newlyDestroyed: Location[] = [];
-        let mechDestroyed = false;
-        for (const group of resolution.groups) {
-          // Apply each hit group with the attack's arc (determines armor pool)
-          const app = applyDamage(currentDamage, group.location, group.damage, resolution.arc);
-          currentDamage = app.after;
-          creditDealt(weaponDealt, targetId, dealtOf(app));
-          sheared.push(...app.blownOffLimbs);
-          steps.push(...app.steps);
-          newlyDestroyed.push(...app.newlyDestroyed);
-          mechDestroyed ||= app.mechDestroyed;
-        }
-        targetDamageMap[targetId] = currentDamage;
-        recordSeveredLimbs(state, target, sheared);
-        // The resolution's own application ran against the phase-start
-        // snapshot, so it misses damage that earlier weapons already dealt
-        // (structure loss, blown-off limbs, kills). Report the accumulated
-        // application instead; crit-added limbs it carries are kept.
-        const critLimbs = resolution.application.blownOffLimbs.filter(
-          (l) => !sheared.includes(l) && !reportedLimbs.has(`${targetId}:${l}`),
+        creditDealt(weaponDealt, targetId, dealtOf(resolution.application));
+        const damageLimbs = resolution.application.blownOffLimbs.filter(
+          (l) => !resolution.crits.some((c) => c.blownOffLimbs.includes(l)),
         );
-        for (const l of [...sheared, ...critLimbs]) reportedLimbs.add(`${targetId}:${l}`);
-        reported = {
-          ...resolution,
-          application: {
-            before,
-            after: cloneDamage(currentDamage),
-            steps,
-            newlyDestroyed,
-            blownOffLimbs: [...sheared, ...critLimbs],
-            mechDestroyed: mechDestroyed || resolution.application.mechDestroyed,
-          },
-        };
+        recordSeveredLimbs(state, target, damageLimbs);
+        for (const l of resolution.application.blownOffLimbs) {
+          reportedLimbs.add(`${targetId}:${l}`);
+        }
+        targetDamageMap[targetId] = cloneDamage(resolution.application.after);
+        reported = resolution;
       }
 
-      // Replay THIS resolution's crits immediately (not in a later sweep),
-      // so the next resolution's `before` includes this blast's damage.
-      // Each `crit.damage` was resolved from a pre-volley snapshot, so only
-      // the crit-added effects (ammo / weapon-explosion IS damage +
-      // blow-off / cockpit zeroing) are re-applied here; weapon-group
-      // damage was already folded into `targetDamageMap` above.
-      const currentCritSlots = targetCritSlotsMap[targetId]!;
-      let currentDestroyedWeapons = targetDestroyedWeaponsMap[targetId] ?? [];
-      let currentAmmoBins: AmmoBins = {
-        ...(targetAmmoBinsMap[targetId] ?? target.ammoBins),
-      };
-      let currentDamage = targetDamageMap[targetId]!;
-      const enrichedCrits: CriticalResolution[] = [];
+      // Fold THIS resolution's crits immediately (not in a later sweep),
+      // so the next resolution's `before` already includes this blast's
+      // damage. Each `crit` carries the cumulative Phase-1 chain
+      // (run.crit via resolveUnitAttacks), so the last one is the
+      // authoritative accumulator — assign, never OR-merge a replay.
       for (const crit of resolution.crits) {
-        // OR new destroyed flags into the accumulator. TW p. 124–125: crit
-        // re-roll skips already-destroyed slots; crit transfer checks prior
-        // hits in the location. Both rules require flags to be visible
-        // across weapons in the same volley.
-        mergeCritTable(currentCritSlots, crit.critSlotsDestroyed);
-        currentDestroyedWeapons = appendUnique(currentDestroyedWeapons, crit.destroyedWeapons);
-        // Ammo bins: per-bin last-write-wins. Two weapons in the same volley
-        // never share a bin id (each crit touches bins only in the location
-        // it hit, and simultaneous weapons can't both hit the same bin), so
-        // the spread already preserves earlier hits.
-        currentAmmoBins = { ...currentAmmoBins, ...crit.ammoBins };
-
-        const newRows: CriticalEffect[] = [];
-        for (const row of crit.rows) {
-          if (row.kind === "ammoExplosion") {
-            const app = applyAmmoExplosion(
-              currentDamage,
-              row.location,
-              row.damage,
-              checkCASE(def, row.location),
-            );
-            currentDamage = app.after;
-            creditDealt(weaponDealt, targetId, dealtOf(app));
-            // Explosion destruction is catastrophic: wipe remaining armor
-            // alongside IS, mark every slot destroyed, strip bins there.
-            for (const loc of app.newlyDestroyed) {
-              markLocationCatastrophicallyDestroyed(
-                def,
-                currentDamage,
-                currentCritSlots,
-                currentAmmoBins,
-                loc,
-              );
-            }
-            // Refresh the row's application so the log renders this
-            // sequential state, not the pre-volley snapshot.
-            newRows.push({ ...row, application: app });
-          } else if (row.kind === "weaponDestroyed" && row.explosion !== undefined) {
-            const app = applyAmmoExplosion(
-              currentDamage,
-              row.location,
-              row.explosion.damage,
-              checkCASE(def, row.location),
-            );
-            currentDamage = app.after;
-            creditDealt(weaponDealt, targetId, dealtOf(app));
-            for (const loc of app.newlyDestroyed) {
-              markLocationCatastrophicallyDestroyed(
-                def,
-                currentDamage,
-                currentCritSlots,
-                currentAmmoBins,
-                loc,
-              );
-            }
-            newRows.push({
-              ...row,
-              explosion: { damage: row.explosion.damage, application: app },
-            });
-          } else if (row.kind === "headBlownOff" || row.kind === "cockpitDestroyed") {
-            zeroLocationStructure(currentDamage, "head");
-            newRows.push(row);
-          } else if (row.kind === "limbBlownOff") {
-            zeroLocationStructure(currentDamage, row.limb);
-            newRows.push(row);
-          } else {
-            newRows.push(row);
-          }
-        }
-
-        // Merge newly destroyed / blown off arms from crit
         for (const arm of crit.blownOffLimbs) {
-          zeroLocationStructure(currentDamage, arm);
+          reportedLimbs.add(`${targetId}:${arm}`);
         }
         if (crit.killedReason !== null && targetKilledReason[targetId] === undefined) {
           targetKilledReason[targetId] = crit.killedReason;
         }
-        enrichedCrits.push({ ...crit, rows: newRows });
       }
-      // The running result of the attack (each group followed by its own
-      // crits, TW pp.122-123) is authoritative; the group-first rebuild above
-      // only feeds the log rows and the crit/ammo accumulators.
-      if (resolution.application !== null) {
-        currentDamage = cloneDamage(resolution.application.after);
-        if (reported.application !== null) {
-          reported = {
-            ...reported,
-            application: { ...reported.application, after: cloneDamage(currentDamage) },
-          };
+      const lastCrit = resolution.crits[resolution.crits.length - 1];
+      if (lastCrit !== undefined) {
+        targetCritSlotsMap[targetId] = cloneCritTable(lastCrit.critSlotsDestroyed);
+        targetDestroyedWeaponsMap[targetId] = [...lastCrit.destroyedWeapons];
+        targetAmmoBinsMap[targetId] = { ...lastCrit.ammoBins };
+        for (const crit of resolution.crits) {
+          creditDealt(weaponDealt, targetId, critDamageDealt(crit));
         }
       }
-      targetDamageMap[targetId] = currentDamage;
-      targetDestroyedWeaponsMap[targetId] = currentDestroyedWeapons;
-      targetAmmoBinsMap[targetId] = currentAmmoBins;
       if (resolution.crits.length > 0) {
         targetCritsForLimbs[targetId]!.push(...resolution.crits);
-        reported = { ...reported, crits: enrichedCrits };
+        reported = { ...reported, crits: resolution.crits };
       }
 
       // A leg hit stopped by building cover damages that building (TW p.102).

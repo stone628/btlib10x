@@ -1438,6 +1438,82 @@ describe("crit damage merge: ammo explosion survives resolveAllAttacks", () => {
     expect(after.damage.internalStructure.rightArm).toBeLessThan(isBefore.rightArm!);
     expect(after.pilotHits - pilotBefore).toBe(2);
   });
+
+  it("orders later groups after an early ammo blast in the same salvo (no phantom engine kill)", () => {
+    // TW pp.122-123: damage is assigned in the order it happens. Group 1 of
+    // an LRM salvo detonates the target's last AC/20 round (LT destroyed);
+    // group 2 landing in the same (now-destroyed) torso must transfer onward
+    // to CT armor — not sit in the LT and feed a reordered blast replay that
+    // destroys the CT and wipes all six CT engine slots.
+    const units: UnitInit[] = [
+      buildUnitInit("atk", "AS7-D", 1, { col: 3, row: 9 }, "n"),
+      buildUnitInit("tgt", "HBK-4G", 2, { col: 3, row: 2 }, "s"),
+    ];
+    const state = createTestBattle([], units, false);
+    const tgt = requireUnit(state, "tgt");
+    // Strip LT armor so both LRM lots reach internal structure.
+    tgt.damage.armor.leftTorso = 0;
+    tgt.damage.armorRear.leftTorso = 0;
+    // Last AC/20 shot in bin 1, sibling bin empty: 1 x 20 = 20 blast damage.
+    overrideAmmoBin(tgt.ammoBins, "leftTorso", 1, 1);
+    overrideAmmoBin(tgt.ammoBins, "leftTorso", 2, 0);
+    tgt.prone = true; // skip end-of-phase piloting RNG
+    const def = mechDef("HBK-4G")!;
+    expect(def).toBeDefined();
+
+    rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []);
+    advancePhase(state, []);
+    // AS7-D LRM 20 (weaponIndex 4) -> tgt.
+    declareAttacks(state, "atk", [{ weaponIndex: 4, targetId: "tgt" }], [], []);
+    const events: GameEvent[] = [];
+    // toHit 3+3 (hit at short range), cluster 1+3=4 (9 missiles -> lots
+    // [5,4]), both lots LT (2+6=8 each). Lot 1 (5 dmg: LT IS 12->7) crits:
+    // determining 2+6=8 (1 crit), slot 1,1 (AC/20 bin 1, 20-pt blast: LT
+    // 7->0, 13 overflow to CT IS 16->3). Blast cascades: LT det 1+1=2
+    // (none), CT det 1+1=2 (none). Lot 2 (4 dmg) hits destroyed LT and
+    // transfers to CT front armor (26->22). Padding covers the 2 blast
+    // pilot-hit consciousness rolls.
+    const rng = scriptedRng(
+      3,
+      3,
+      1,
+      3,
+      2,
+      6,
+      2,
+      6,
+      2,
+      6,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      ...new Array(60).fill(3),
+    );
+    resolveAllAttacks(state, rng, events);
+
+    const after = requireUnit(state, "tgt");
+    // Sanity: an ammoExplosion row was actually produced.
+    const resolved = events.find((e) => e.kind === "attackResolved");
+    expect(resolved).toBeDefined();
+    const crits =
+      resolved !== undefined && resolved.kind === "attackResolved" ? resolved.resolution.crits : [];
+    expect(crits.flatMap((c) => c.rows).some((r) => r.kind === "ammoExplosion")).toBe(true);
+    // Authoritative damage: LT gone, CT survives with 3 IS and 22 front armor.
+    expect(after.damage.internalStructure.leftTorso).toBe(0);
+    expect(after.damage.internalStructure.centerTorso).toBe(3);
+    expect(after.damage.armor.centerTorso).toBe(22);
+    // No phantom wipe: the surviving CT keeps every crit slot.
+    for (let i = 0; i < def.critSlots.centerTorso.length; i++) {
+      expect(isSlotDestroyed(after.critSlotsDestroyed, "centerTorso", i)).toBe(false);
+    }
+    expect(countDestroyedEngine(def, after.damage, after.critSlotsDestroyed)).toBe(0);
+    // The 'Mech fights on.
+    expect(after.destroyed).toBe("not");
+    expect(after.removed).toBe("not");
+  });
 });
 
 describe("crit slot table bitmask", () => {
