@@ -72,21 +72,25 @@ describe("twistDelta + effectiveFacingForTwist", () => {
 });
 
 describe("classifyArcWithBoundary on a twisted facing", () => {
-  it("moves a right-side bearing into the front arc under a right twist", () => {
-    const b = classifyArcWithBoundary("n", { facing: "ne", boundary: null });
+  it("moves a front-diagonal bearing into the front arc under a right twist", () => {
+    // Under 'Mech attack direction (TW p.119, 3-1-1-1) ne from n is already
+    // front; use the true right-side bearing (se) so the twist has
+    // something to move.
+    const b = classifyArcWithBoundary("n", { facing: "se", boundary: null });
     expect(b.arc).toBe("rightSide");
     const twisted = classifyArcWithBoundary(effectiveFacingForTwist("n", "rightSide"), {
-      facing: "ne",
+      facing: "se",
       boundary: null,
     });
     expect(twisted.arc).toBe("front");
   });
 
-  it("moves a left-side bearing into the front arc under a left twist", () => {
-    const b = classifyArcWithBoundary("ne", { facing: "n", boundary: null });
+  it("moves a front-diagonal bearing into the front arc under a left twist", () => {
+    // Likewise nw from ne is the true left-side bearing (offset 4).
+    const b = classifyArcWithBoundary("ne", { facing: "nw", boundary: null });
     expect(b.arc).toBe("leftSide");
     const twisted = classifyArcWithBoundary(effectiveFacingForTwist("ne", "leftSide"), {
-      facing: "n",
+      facing: "nw",
       boundary: null,
     });
     expect(twisted.arc).toBe("front");

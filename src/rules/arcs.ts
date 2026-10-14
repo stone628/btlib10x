@@ -6,7 +6,6 @@ import {
   isArm,
   isTorso,
   type Location,
-  oppositeFacing,
   rotateFacing,
 } from "../core/types";
 import type { WeaponMount } from "../data/mech.schema";
@@ -15,24 +14,28 @@ import type { WeaponMount } from "../data/mech.schema";
 export type Arc = "front" | "rear" | "leftSide" | "rightSide";
 
 /**
- * Hexside-sector classification (bearing offset from a facing). Offset 0
- * (front) and offset 3 (rear) are one hexside wide, while the two side arcs
- * each span two hexsides.
+ * 'Mech attack-direction classification (TW p.119): which hexside of the
+ * target the center-to-center attack line crosses, as a bearing offset from
+ * the target's facing. Offsets 0/1/5 (front + front-right + front-left) are
+ * front, offset 3 is rear, offset 2 is right side (rear-right) and offset 4
+ * is left side (rear-left) — a 3-1-1-1 split.
  *
  * Used for TW p.119 attack direction (which hexside of the target the attack
  * crosses, locked in via the LOS choice). It is NOT the weapon firing-arc
- * rule — firing arcs use the TW p.105 hex template (`classifyFiringArc`),
- * whose forward arc is twice as wide. Side/left/right arcs drive the side
+ * rule — firing arcs use the TW p.105 hex template (`classifyFiringArc`).
+ * It is also NOT the vehicle attack-direction geometry (TW p.192), whose
+ * side arcs each span two hexsides. Side/left/right arcs drive the side
  * hit-location tables; the rear arc drives the rear armor pool.
  */
 export function classifyArc(unitFacing: Facing, bearingToTarget: Facing): Arc {
-  if (bearingToTarget === unitFacing) return "front";
-  if (bearingToTarget === oppositeFacing(unitFacing)) return "rear";
   const fromIdx = FACINGS.indexOf(unitFacing);
   const toIdx = FACINGS.indexOf(bearingToTarget);
   const clockwise = (((toIdx - fromIdx) % 6) + 6) % 6;
-  // Clockwise offsets 1..2 lie on the right side; 4..5 on the left.
-  return clockwise <= 2 ? "rightSide" : "leftSide";
+  // 'Mech 3-1-1-1: front spans the front hexside plus the two
+  // front-diagonal hexsides; each side is a single rear-diagonal hexside.
+  if (clockwise === 0 || clockwise === 1 || clockwise === 5) return "front";
+  if (clockwise === 3) return "rear";
+  return clockwise === 2 ? "rightSide" : "leftSide";
 }
 
 /**

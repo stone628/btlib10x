@@ -471,20 +471,24 @@ describe("weapon attack phase", () => {
         weaponIndex: 0,
       },
       // Target to the northeast (exactly on the n|ne boundary) -> right side
-      // arc on both candidate bearings; only the right-arm ML fires.
+      // firing arc on the attacker side; only the right-arm ML fires. The
+      // attack direction is front: the n candidate is a front-diagonal
+      // hexside under 'Mech 3-1-1-1 (TW p.119), and front wins the boundary.
       {
         facing: "nw",
         targetPos: { col: 3, row: 3 },
         expected: "rightSide",
-        expectedDir: "leftSide",
+        expectedDir: "front",
         weaponIndex: 2,
       },
-      // Target due south -> left side arc; only the left-arm ML fires.
+      // Target due south -> left side firing arc; only the left-arm ML
+      // fires. The attack direction is front (bearing n from the nw-facing
+      // target is a front-diagonal hexside under 'Mech 3-1-1-1).
       {
         facing: "nw",
         targetPos: { col: 2, row: 5 },
         expected: "leftSide",
-        expectedDir: "rightSide",
+        expectedDir: "front",
         weaponIndex: 1,
       },
       // Target to the northwest -> front arc; any weapon fires. The attacker

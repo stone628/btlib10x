@@ -105,10 +105,10 @@ The attack direction picks the hit-location column and the armor pool:
 
 | Offset from target facing | Arc | Hit-location table | Armor pool |
 | --- | --- | --- | --- |
-| 0 | front | Front / Rear | front |
-| 1–2 | rightSide | Right side | front |
+| 0–1, 5 | front | Front / Rear | front |
+| 2 | rightSide | Right side | front |
 | 3 | rear | Front / Rear | rear (torso) |
-| 4–5 | leftSide | Left side | front |
+| 4 | leftSide | Left side | front |
 
 ## Facing After a Fall
 

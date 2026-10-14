@@ -62,12 +62,15 @@ describe("line of sight", () => {
 
 describe("firing arcs", () => {
   it("classifies all four arcs clockwise from facing", () => {
+    // 'Mech attack direction (TW p.119): 3-1-1-1 — front spans the front
+    // hexside plus the two front-diagonal hexsides; each side is a single
+    // rear-diagonal hexside.
     expect(classifyArc("n", "n")).toBe("front");
-    expect(classifyArc("n", "ne")).toBe("rightSide");
+    expect(classifyArc("n", "ne")).toBe("front");
     expect(classifyArc("n", "se")).toBe("rightSide");
     expect(classifyArc("n", "s")).toBe("rear");
     expect(classifyArc("n", "sw")).toBe("leftSide");
-    expect(classifyArc("n", "nw")).toBe("leftSide");
+    expect(classifyArc("n", "nw")).toBe("front");
     expect(classifyArc("se", "n")).toBe("leftSide");
     expect(classifyArc("se", "se")).toBe("front");
     expect(classifyArc("se", "nw")).toBe("rear");
@@ -211,12 +214,12 @@ describe("per-weapon firing arcs (TW p.105)", () => {
   });
 
   it("classifies both arcs of a boundary pair", () => {
-    // (2,4) -> (3,3) runs exactly along the n|ne sector edge: right side on
-    // both candidates when facing northwest.
+    // (2,4) -> (3,3) runs exactly along the n|ne sector edge: front on n,
+    // right side on ne when facing northwest ('Mech 3-1-1-1).
     const b = bearingExact({ col: 2, row: 4 }, { col: 3, row: 3 })!;
     expect(b.boundary).not.toBeNull();
     const cls = classifyArcWithBoundary("nw", b);
-    expect(cls.arc).toBe("rightSide");
+    expect(cls.arc).toBe("front");
     expect(cls.altArc).toBe("rightSide");
   });
 });
