@@ -247,14 +247,14 @@ describe("charge resolution (TW p.148)", () => {
     executeMove(state, "a", "walk", chargePath, []);
     toAttack(state);
     const events: GameEvent[] = [];
-    // to-hit 6,6; three target groups (2D6 each); one recoil group (2D6).
-    resolveAllAttacks(state, pad(6, 6, 3, 4, 3, 4, 3, 4, 3, 4), events);
+    // to-hit 6,6; two target groups (2D6 each); one recoil group (2D6).
+    resolveAllAttacks(state, pad(6, 6, 3, 4, 3, 4, 3, 4), events);
     const r = events.find((e) => e.kind === "physicalAttackResolved");
     if (r?.kind !== "physicalAttackResolved") throw new Error("no resolution");
     expect(r.resolution.type).toBe("charge");
     expect(r.resolution.toHit).toBe(6); // piloting 5 + walked +1, no terrain, equal skills
     expect(r.resolution.hit).toBe(true);
-    expect(r.resolution.damageToTarget.map((g) => g.damage)).toEqual([5, 5, 5]); // 50 t x (2 hexes + the target's)
+    expect(r.resolution.damageToTarget.map((g) => g.damage)).toEqual([5, 5]); // 50 t x 2 hexes, not counting the target's (TW p.148)
     expect(r.resolution.damageToAttacker.map((g) => g.damage)).toEqual([5]); // 50 t target
     expect(r.resolution.targetPsrMod).toBe(2);
     expect(r.resolution.attackerPsrMod).toBe(2);
@@ -267,7 +267,7 @@ describe("charge resolution (TW p.148)", () => {
     expect(requireUnit(state, "a").meleeCharge).toBeNull();
   });
 
-  it("counts the target's hex as one more hex moved, even from an adjacent start", () => {
+  it("an adjacent charge deals no damage but still forces both +2 PSRs on a hit", () => {
     const state = movementState([
       unit("a", "HBK-4G", 1, { col: 5, row: 4 }, "s"),
       unit("t", "ENF-4R", 2, { col: 5, row: 5 }, "n"),
@@ -276,10 +276,14 @@ describe("charge resolution (TW p.148)", () => {
     expect(requireUnit(state, "a").hexesMovedThisTurn).toBe(0);
     toAttack(state);
     const events: GameEvent[] = [];
-    resolveAllAttacks(state, pad(6, 6, 3, 4, 3, 4), events);
+    resolveAllAttacks(state, pad(6, 6, 3, 4), events);
     const r = events.find((e) => e.kind === "physicalAttackResolved");
     if (r?.kind !== "physicalAttackResolved") throw new Error("no resolution");
-    expect(r.resolution.damageToTarget.map((g) => g.damage)).toEqual([5]); // 50 t x (0 hexes + the target's)
+    expect(r.resolution.hit).toBe(true);
+    expect(r.resolution.damageToTarget).toEqual([]); // 50 t x 0 hexes (TW p.148)
+    expect(r.resolution.damageToAttacker.map((g) => g.damage)).toEqual([5]); // 50 t target recoil
+    expect(r.resolution.targetPsrMod).toBe(2);
+    expect(r.resolution.attackerPsrMod).toBe(2);
   });
 
   it("a miss costs the charger nothing", () => {

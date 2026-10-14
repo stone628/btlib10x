@@ -268,10 +268,13 @@ are listed here. Rule text lives in the rulebook.
   longer `salvageable`. The `board` marks hexes holding a club token with `!`.
 - **Charge / DFA** — declared by movement: `place` on an enemy hex in
   `walk`/`run` (charge) or `jump` (DFA). The unit stops in the hex before the
-  target and the attack resolves in the physical phase. House rules: charge
-  damage counts the target hex as one more hex moved; if the target moved away
-  the attacker advances into the vacated hex. Not modeled: charging buildings,
-  displacement.
+  target and the attack resolves in the physical phase. Charge damage is
+  `ceil(tonnage / 10 × hexes moved)`, not counting the target's hex (TW p.148).
+  Charging an adjacent unit therefore deals no damage, but on a hit both sides
+  still roll their +2 PSRs — a strategic choice to try to knock the target down
+  at the cost of your own recoil (target tonnage / 10) and fall risk. House rule:
+  if the target moved away the attacker advances into the vacated hex. Not
+  modeled: charging buildings, displacement.
 - **Deferred** — industrial-tool physical weapons and the optional Punch/Kick
   table election (+4).
 

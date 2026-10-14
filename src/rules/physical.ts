@@ -169,8 +169,6 @@ export const DFA_ATTACK_MOD = 0;
 /** Charge: 1 damage per 10 tons per hex moved to the target; 1 per 10 tons
  *  of the target to the attacker (TW p.148). */
 export const CHARGE_DAMAGE_PER_TONS = 10;
-/** Hexes added to the hexes moved for charge damage: the target's own hex. */
-export const CHARGE_TARGET_HEX = 1;
 /** DFA: tonnage / 10 x 3 to the target, tonnage / 5 to the attacker's legs
  *  (TW p.150). */
 export const DFA_DAMAGE_MULTIPLIER = 3;
@@ -565,12 +563,10 @@ export function physicalDamage(
     // Charge / DFA damage is not TSM-sensitive (TW p.143 lists punch, kick
     // and club only).
     case "charge":
-      // The charge is meant to reach the target's coordinate, so its hex
-      // counts as one more hex moved even though the attacker stops short of
-      // it (house rule; TW counts only the hexes before the target's, p.148).
-      return Math.ceil(
-        (tons * (attacker.hexesMovedThisTurn + CHARGE_TARGET_HEX)) / CHARGE_DAMAGE_PER_TONS,
-      );
+      // TW p.148: hexes moved, not counting the target's hex (which the
+      // attacker never enters). An adjacent charge moves 0 hexes and deals
+      // 0 damage, but a hit still forces both sides' +2 PSRs.
+      return Math.ceil((tons * attacker.hexesMovedThisTurn) / CHARGE_DAMAGE_PER_TONS);
     case "dfa":
       return Math.ceil(tons / PUNCH_DAMAGE_PER_TONS) * DFA_DAMAGE_MULTIPLIER;
   }
