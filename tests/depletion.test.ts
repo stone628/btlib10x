@@ -6,11 +6,14 @@ import type { AmmoBin, AmmoBins } from "../src/rules/ammo";
 import {
   ammoBinId,
   ammoWeaponTotals,
+  binsForWeapon,
+  binsForWeaponName,
   collectAmmoBins,
   consumeAmmo,
   drawOrderBins,
   liveShots,
   loadAmmoBins,
+  pooledShotsLeft,
   strandedShots,
   stripBinsInLocation,
   zeroBinsInLocation,
@@ -295,6 +298,106 @@ describe("declareAttacks (game level)", () => {
     const u = requireUnit(state, "hbk")!;
     expect(u.ammoBins["leftTorso:1"]).toBe(5);
     expect(u.ammoBins["leftTorso:2"]).toBe(4);
+  });
+});
+
+describe("shared ammo pool for twin mounts (TW p.103-104)", () => {
+  const mountIndex = (model: string, weapon: string, location: string): number => {
+    const def = mechDef(model)!;
+    return Number(
+      Object.entries(def.weapons).find(
+        ([, m]) => m.weapon === weapon && m.location === location,
+      )![0],
+    );
+  };
+
+  it("unbound twins have no direct bin but share the weapon-name pool", () => {
+    const bsw = mechDef("BSW-X1")!;
+    // Arm LRM 5 (mount 1) and left-torso MG (mount 4) bind no bin; the pool holds them.
+    expect(binsForWeapon(bsw, mountIndex("BSW-X1", "LRM 5", "leftArm"))).toEqual([]);
+    expect(binsForWeaponName(bsw, "LRM 5").length).toBeGreaterThan(0);
+    expect(binsForWeapon(bsw, mountIndex("BSW-X1", "Machine Gun", "leftTorso"))).toEqual([]);
+    expect(binsForWeaponName(bsw, "Machine Gun").length).toBeGreaterThan(0);
+    const tbr = mechDef("TBR-Prime")!;
+    expect(binsForWeapon(tbr, mountIndex("TBR-Prime", "CL LRM 20", "rightTorso"))).toEqual([]);
+    expect(binsForWeaponName(tbr, "CL LRM 20").length).toBeGreaterThan(0);
+    expect(binsForWeapon(tbr, mountIndex("TBR-Prime", "CL Machine Gun", "rightTorso"))).toEqual([]);
+    expect(binsForWeaponName(tbr, "CL Machine Gun").length).toBeGreaterThan(0);
+  });
+
+  function bswBattle(): ReturnType<typeof createBattle> {
+    const units: UnitInit[] = [
+      buildUnitInit("bsw", "BSW-X1", 1, { col: 2, row: 4 }, "ne"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 4 }, "nw"),
+    ];
+    return createTestBattle([], units, true);
+  }
+
+  function zeroAllBins(state: ReturnType<typeof createBattle>, id: string): void {
+    const u = requireUnit(state, id)!;
+    for (const k of Object.keys(u.ammoBins)) u.ammoBins[k] = 0;
+  }
+
+  it("an unbound twin cannot fire from an empty pool", () => {
+    const state = bswBattle();
+    attackPhase(state);
+    zeroAllBins(state, "bsw");
+    const unboundMg = mountIndex("BSW-X1", "Machine Gun", "leftTorso");
+    expect(() =>
+      declareAttacks(
+        state,
+        "bsw",
+        [{ weaponIndex: unboundMg, targetId: "enf" }],
+        [],
+        [],
+        scriptedRng(6),
+      ),
+    ).toThrow(/needs 1 shot\(s\) but only 0 remain/);
+  });
+
+  it("an unbound twin spends the shared pool", () => {
+    const state = bswBattle();
+    attackPhase(state);
+    const def = mechDef("BSW-X1")!;
+    const unboundMg = mountIndex("BSW-X1", "Machine Gun", "leftTorso");
+    const before = pooledShotsLeft(def, requireUnit(state, "bsw")!.ammoBins, "Machine Gun");
+    expect(before).toBeGreaterThan(1);
+    declareAttacks(
+      state,
+      "bsw",
+      [{ weaponIndex: unboundMg, targetId: "enf" }],
+      [],
+      [],
+      scriptedRng(6),
+    );
+    const after = pooledShotsLeft(def, requireUnit(state, "bsw")!.ammoBins, "Machine Gun");
+    expect(after).toBe(before - 1);
+  });
+
+  it("twins declaring together cannot overspend the last shot", () => {
+    const def = mechDef("BSW-X1")!;
+    const unboundMg = mountIndex("BSW-X1", "Machine Gun", "leftTorso");
+    const boundMg = mountIndex("BSW-X1", "Machine Gun", "rightTorso");
+    const mgBin = collectAmmoBins(def).find((b) => b.weapon === "Machine Gun")!.id;
+    const state = bswBattle();
+    attackPhase(state);
+    zeroAllBins(state, "bsw");
+    requireUnit(state, "bsw")!.ammoBins[mgBin] = 1;
+    expect(() =>
+      declareAttacks(
+        state,
+        "bsw",
+        [
+          { weaponIndex: unboundMg, targetId: "enf" },
+          { weaponIndex: boundMg, targetId: "enf" },
+        ],
+        [],
+        [],
+        scriptedRng(6),
+      ),
+    ).toThrow(/needs 1 shot\(s\) but only 1 remain/);
+    // Nothing was spent: the failed volley leaves the pool intact.
+    expect(pooledShotsLeft(def, requireUnit(state, "bsw")!.ammoBins, "Machine Gun")).toBe(1);
   });
 });
 

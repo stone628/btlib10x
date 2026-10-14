@@ -91,7 +91,12 @@ export function collectAmmoBins(def: ResolvedMechDef): AmmoBin[] {
   return bins;
 }
 
-/** The ammo bins that back a given weapon mount index. */
+/**
+ * The ammo bins directly linked to a given weapon mount index. Introspection
+ * only: TW p.103-104 pools ammo by weapon name, so fire legality and spending
+ * must use `binsForWeaponName` / `pooledShotsLeft` / `consumeAmmoForName` —
+ * a mount with no linked bins still draws from the shared pool.
+ */
 export function binsForWeapon(def: ResolvedMechDef, weaponIndex: number): AmmoBin[] {
   return collectAmmoBins(def).filter((b) => b.weaponIndex === weaponIndex);
 }

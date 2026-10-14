@@ -889,8 +889,9 @@ describe("streak missiles", () => {
     mc.ammoBins["leftTorso:7"]! = 0;
     mc.ammoBins["rightTorso:7"]! = 1;
     expect(pooledShotsLeft(mechDef("MC-MKII-2")!, mc.ammoBins, "CL Streak SRM 4")).toBe(1);
-    // Mount 4 links zero bins (shared pool lives on mount 3): declare runs
-    // unchecked for it, mirroring the live over-commit hole.
+    // Both mounts share one pool (mount 4 links zero bins directly):
+    // streaks declare against the pooled shot and the resolver auto-misses
+    // whichever launcher finds the pool dry.
     declareAttacks(
       state,
       "mc",

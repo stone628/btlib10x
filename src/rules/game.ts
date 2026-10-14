@@ -46,10 +46,8 @@ import {
 import {
   type AmmoBins,
   type AmmoPolicy,
-  ammoWeaponTotals,
-  binsForWeapon,
+  binsForWeaponName,
   collectAmmoBins,
-  consumeAmmo,
   consumeAmmoForName,
   pooledShotsLeft,
   stripBinsInLocation,
@@ -2410,6 +2408,10 @@ export function validateAttacksImpl(
   const targetVolleys = new Map<string, ValidatedTargetVolley>();
   const seenWeapons = new Set<number>();
   const arcs: Record<number, Arc> = {};
+  // TW p.103-104: same-name mounts share one ammo pool (any bin of the
+  // right type, any location). Track claims within this volley so twins
+  // declaring together cannot both spend the last shot.
+  const claimedByWeaponName = new Map<string, number>();
   weaponDecls.forEach((decl) => {
     const mount = def.weapons[decl.weaponIndex];
     if (!mount) throw new Error(`weaponIndex ${decl.weaponIndex} out of range for ${unitId}`);
@@ -2542,10 +2544,23 @@ export function validateAttacksImpl(
     }
 
     const needed = weapon.missiles !== undefined ? 1 : shots;
-    if (binsForWeapon(def, decl.weaponIndex).length > 0) {
-      const left = ammoWeaponTotals(def, unit.ammoBins)[decl.weaponIndex] ?? 0;
-      if (left < needed) {
-        throw new Error(`${mount.weapon}: needs ${needed} shot(s) but only ${left} remain`);
+    // Pooled by weapon name: an unbound twin still draws from the shared
+    // pool, so it gates and spends exactly like its sibling. Streaks fire
+    // only on a hit (TW p.138) and resolve mid-volley exhaustion with an
+    // auto-miss, so they need only one shared shot to declare and never
+    // claim it up front; non-streaks spend at declare and accumulate.
+    if (binsForWeaponName(def, mount.weapon).length > 0) {
+      const left = pooledShotsLeft(def, unit.ammoBins, mount.weapon);
+      if (weapon.streak === true) {
+        if (left < 1) {
+          throw new Error(`${mount.weapon}: needs 1 shot(s) but only ${left} remain`);
+        }
+      } else {
+        const claimed = claimedByWeaponName.get(mount.weapon) ?? 0;
+        if (left < claimed + needed) {
+          throw new Error(`${mount.weapon}: needs ${needed} shot(s) but only ${left} remain`);
+        }
+        claimedByWeaponName.set(mount.weapon, claimed + needed);
       }
     }
   });
@@ -2627,8 +2642,9 @@ export function declareAttacks(
     if (unit.club === null) throw new Error(`${unitId} holds no club to drop`);
     applyClubDrop(state, unit, sink);
   }
-  // Consume non-streak per-bin ammo per decl; streak fires on hit and
-  // resolves its own ammo in `resolveUnitAttacks`. RNG via ammo policy.
+  // Consume non-streak ammo from the shared weapon-name pool per decl
+  // (TW p.103-104); streak fires on hit and resolves its own ammo in
+  // `resolveUnitAttacks`. RNG via ammo policy.
   if (wantWeapons) {
     for (const decl of weaponDecls) {
       const targetVolley = volley.targets.find((t) => t.targetId === decl.targetId);
@@ -2652,12 +2668,12 @@ export function declareAttacks(
       const rapidFire = decl.rapidFire ?? false;
       const shots = rapidFire ? (weapon.rapidFireShots ?? 1) : 1;
       const needed = weapon.missiles !== undefined ? 1 : shots;
-      if (binsForWeapon(def, decl.weaponIndex).length === 0) continue;
+      if (binsForWeaponName(def, mount.weapon).length === 0) continue;
       if (weapon.streak === true) continue;
-      unit.ammoBins = consumeAmmo(
+      unit.ammoBins = consumeAmmoForName(
         def,
         unit.ammoBins,
-        decl.weaponIndex,
+        mount.weapon,
         needed,
         unit.ammoPolicy,
         rng,
