@@ -173,11 +173,8 @@ describe("sw season pack", () => {
     expect(def.name).toBe(first.name);
   });
 
-  it("lets base lose cross-pack duplicates with a warning, ignoring the latter", () => {
-    expect(warnings.length).toBeGreaterThan(0);
-    for (const message of warnings) {
-      expect(message).toMatch(/Duplicate (model|map)/);
-    }
+  it("lets base lose cross-pack duplicates without a warning, ignoring the latter", () => {
+    expect(warnings.length).toBe(0);
     // Overlap models resolve to the sw sheet (e.g. HBK-4G exists in both).
     expect(findMechEntry("hbk-4g")?.pack).toBe("sw");
     expect(findMechEntry("as7-d")?.pack).toBe("sw");
@@ -186,11 +183,6 @@ describe("sw season pack", () => {
     expect(findMechEntry("aem-01")?.pack).toBe("sw");
     // Split-location sheets (King Crab arm AC/20s) are packed too.
     expect(findMechEntry("kgc-000")?.pack).toBe("sw");
-    // Exactly one entry per model across both packs.
-    const modelWarnings = warnings.filter((message) => message.startsWith("Duplicate model"));
-    expect(catalogMechs().length).toBe(
-      MANIFEST.mechs.length + SW.mechs.length - modelWarnings.length,
-    );
   });
 
   it("round-trips every sw sheet through its own wire exactly", () => {

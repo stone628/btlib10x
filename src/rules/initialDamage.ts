@@ -12,8 +12,8 @@
  * (TW p.122 for legs, the gyro row of the critical-hit table for gyros).
  */
 
-import type { Location } from "../core/types";
-import { armFor, isLocation, isTorso, LOCATIONS } from "../core/types";
+import type { Location, SideTorsoLocation } from "../core/types";
+import { armFor, isLocation, LOCATIONS } from "../core/types";
 import type { ResolvedMechDef } from "../data/mech.schema";
 import { type AmmoBins, ammoBinId, loadAmmoBins, stripBinsInLocation } from "./ammo";
 import {
@@ -123,16 +123,11 @@ export function resolveInitialDamage(
     taken?.internalStructure,
   );
 
-  // 2. Structure is only reachable through depleted armor, and a lost side
-  //    torso takes its arm with it (mirrors `applyDamage`).
-  for (const loc of LOCATIONS) {
-    if (damage.internalStructure[loc] < def.internalStructure[loc]) {
-      const frontGone = damage.armor[loc] === 0;
-      const rearGone = isTorso(loc) && damage.armorRear[loc] === 0;
-      if (!frontGone && !rearGone) {
-        fail(id, `${loc} lost structure while its armor is not depleted`);
-      }
-    }
+  // 2. A lost side torso takes its arm with it (mirrors `applyDamage`).
+  //    No armor-depletion gate: ammo-explosion overflow bypasses armor at
+  //    every location in the chain (TW p.123 Step 8, p.125), so structure
+  //    damage behind intact armor is legal (e.g. arm blast -> side torso).
+  for (const loc of ["leftTorso", "rightTorso"] as SideTorsoLocation[]) {
     const arm = armFor(loc);
     if (
       arm !== undefined &&

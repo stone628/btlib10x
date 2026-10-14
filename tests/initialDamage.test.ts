@@ -143,14 +143,19 @@ describe("starting damage (UnitInit.damage)", () => {
       bad({ damageTaken: { internalStructure: { rightArm: 99 } } }, /exceeds/);
       bad({ damageTaken: { armor: { rightArm: -1 } } }, />= 0/);
     });
-    it("structure lost behind intact armor", () => {
-      bad({ damageTaken: { internalStructure: { rightArm: 1 } } }, /armor is not depleted/);
-      bad(
-        { damageTaken: { armor: { centerTorso: 3 }, internalStructure: { centerTorso: 1 } } },
-        /armor is not depleted/,
+    it("structure behind intact armor is legal (ammo-explosion bypass)", () => {
+      // Ammo-explosion overflow bypasses armor at every location in the
+      // chain (TW p.123 Step 8, p.125), e.g. arm blast -> side torso.
+      const full = unitWith().damage;
+      const arm = unitWith({ damageTaken: { internalStructure: { rightArm: 1 } } });
+      expect(arm.damage.internalStructure.rightArm).toBe(full.internalStructure.rightArm - 1);
+      expect(arm.damage.armor.rightArm).toBe(full.armor.rightArm);
+      const torso = unitWith({
+        damageTaken: { armor: { centerTorso: 3 }, internalStructure: { centerTorso: 1 } },
+      });
+      expect(torso.damage.internalStructure.centerTorso).toBe(
+        full.internalStructure.centerTorso - 1,
       );
-    });
-    it("a torso structure hit through the rear pool is fine", () => {
       expect(() =>
         unitWith({
           damageTaken: { armorRear: { centerTorso: 5 }, internalStructure: { centerTorso: 1 } },
