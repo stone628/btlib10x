@@ -2111,6 +2111,13 @@ export function executeMove(
     // committed at the hex the fall rule leaves the 'Mech in (the lower
     // hex on a fall across levels).
     if (!jumping || isFinal) {
+      // Sync unit.facing before the PSR so a fall rotates from the
+      // correct facing (walk: turned facing; jump: chosen landing facing).
+      if (jumping) {
+        unit.facing = options.finalFacing ?? facing;
+      } else {
+        unit.facing = curFacing;
+      }
       const fellAt = movementTerrainPsr(
         state,
         unit,
@@ -3326,7 +3333,9 @@ export function applyPilotHits(
 /**
  * Apply pre-rolled damage groupings (falling, building crashes) with the
  * normal crit cascade per stripping group; ammo explosions injure the pilot
- * (2 hits each). Returns the determining resolutions plus emitted events.
+ * (2 hits each) and every damaging head grouping injures the pilot (1 hit
+ * each, TW p.41, whatever the source). Returns the determining resolutions
+ * plus emitted events.
  */
 function applyDamageGroups(
   state: BattleState,
@@ -3369,6 +3378,15 @@ function applyDamageGroups(
         crits.push(res);
       }
     }
+  }
+  // TW p.41: every damaging head grouping injures the pilot, whatever the
+  // source (falls, collapse, crashes, accidental falls). Same predicate as
+  // the weapon/physical paths; runs before the destruction sweep so a
+  // head-destroying blow still tallies the hit before auto-eject raises the
+  // pilot to one short of death, matching the weapon path ordering.
+  const headGroups = groups.filter((g) => g.location === "head" && g.damage >= 1).length;
+  if (headGroups > 0 && !headLossEjected(unit)) {
+    applyPilotHits(state, unit, headGroups * HEAD_HIT_PILOT_HITS, "headHit", rng, sink);
   }
   // Severed limbs stay where they were lost (TW p.146): record blow-offs
   // from fall/crash/collapse crits and leave the matching ground tokens.

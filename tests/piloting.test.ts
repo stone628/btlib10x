@@ -1330,6 +1330,51 @@ describe("applyFall", () => {
       }),
     );
   });
+
+  it("a head-grouping fall injures the pilot even when the seatbelt holds (TW p.41)", () => {
+    const state = hbkEnf();
+    const enf = requireUnit(state, "enf");
+    // ENF-4R 50t -> single 5-point group. Dir 1 (front), loc 6+6 (head),
+    // consciousness 3+3 vs 3 passes, seatbelt 3+3 vs 5 passes.
+    const events: GameEvent[] = [];
+    applyFall(
+      state,
+      enf,
+      scriptedRng(1, 6, 6, 3, 3, 3, 3),
+      {
+        cause: { kind: "terrain", terrain: "water" },
+        seatbeltModifier: 0,
+        halved: false,
+      },
+      events,
+    );
+    expect(enf.pilotHits).toBe(1);
+    expect(events).toContainEqual(
+      expect.objectContaining({ kind: "pilotDamaged", unitId: "enf", reason: "headHit" }),
+    );
+  });
+
+  it("a shutdown fall onto the head leaves a 4-hit pilot dead (TW pp.41-42)", () => {
+    const state = hbkEnf();
+    const enf = requireUnit(state, "enf");
+    enf.pilotHits = 4;
+    // Dir 1 (front), loc 6+6 (head), consciousness 6+6 vs 11 passes; the
+    // shutdown seatbelt then lands the sixth, killing hit.
+    const events: GameEvent[] = [];
+    applyFall(
+      state,
+      enf,
+      scriptedRng(1, 6, 6, 6, 6),
+      {
+        cause: { kind: "shutdown" },
+        seatbeltModifier: null,
+        halved: false,
+      },
+      events,
+    );
+    expect(enf.pilotHits).toBe(6);
+    expect(enf.removed).toBe("pilotKilled");
+  });
 });
 
 describe("rollFallDirection", () => {
