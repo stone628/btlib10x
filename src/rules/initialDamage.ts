@@ -13,7 +13,7 @@
  */
 
 import type { Location, SideTorsoLocation } from "../core/types";
-import { armFor, isLocation, LOCATIONS } from "../core/types";
+import { armFor, isLocation, isTorso, LOCATIONS } from "../core/types";
 import type { ResolvedMechDef } from "../data/mech.schema";
 import { type AmmoBins, ammoBinId, loadAmmoBins, stripBinsInLocation } from "./ammo";
 import {
@@ -135,6 +135,18 @@ export function resolveInitialDamage(
       (damage.internalStructure[arm] > 0 || damage.armor[arm] > 0)
     ) {
       fail(id, `${loc} is destroyed but ${arm} is not`);
+    }
+  }
+
+  // 2b. A destroyed location keeps no armor: TW p.122 step 5 destroys it
+  //    "along with any remaining armor there (front or rear)". This mirrors
+  //    the `applyDamage` depleted branch, which wipes both pools on every
+  //    destruction path (plain and bypassArmor alike).
+  for (const loc of LOCATIONS) {
+    if (damage.internalStructure[loc] > 0) continue;
+    if (damage.armor[loc] > 0) fail(id, `${loc} is destroyed but still has armor`);
+    if (isTorso(loc) && damage.armorRear[loc] > 0) {
+      fail(id, `${loc} is destroyed but still has rear armor`);
     }
   }
 

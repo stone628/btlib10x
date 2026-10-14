@@ -5,6 +5,7 @@ import {
   applyDamage,
   canAttemptStandUp,
   canFireFromLocation,
+  dealtOf,
   destroyedArms,
   destroyedLegs,
   isUnitDestroyed,
@@ -175,11 +176,11 @@ describe("layered damage resolution", () => {
     expect(app.before.armor.leftArm).toBe(4);
   });
 
-  it("bypassArmor: damage hits IS directly at the initial location, armor untouched", () => {
+  it("bypassArmor: armor survives where IS survives; a destroyed location loses it (TW p.122 step 5)", () => {
     const s = mk({ armor: { leftTorso: 10 }, is: { leftTorso: 7 } });
     const app = applyDamage(s, "leftTorso", 12, "front", { bypassArmor: true });
-    expect(app.after.armor.leftTorso).toBe(10);
     expect(app.after.internalStructure.leftTorso).toBe(0);
+    expect(app.after.armor.leftTorso).toBe(0);
     expect(app.newlyDestroyed).toContain("leftTorso");
   });
 
@@ -192,7 +193,10 @@ describe("layered damage resolution", () => {
     const app = applyDamage(s, "leftTorso", 12, "front", { bypassArmor: true });
     // LT IS 5 -> 0; the remaining 7 lands on CT IS directly, CT armor (front
     // and rear) untouched — TW ammo-explosion overflow goes to IS only.
+    // The destroyed LT itself loses its remaining armor with it (TW p.122).
     expect(app.after.internalStructure.leftTorso).toBe(0);
+    expect(app.after.armor.leftTorso).toBe(0);
+    expect(app.after.armorRear.leftTorso).toBe(0);
     expect(app.after.internalStructure.centerTorso).toBe(3);
     expect(app.after.armor.centerTorso).toBe(10);
     expect(app.after.armorRear.centerTorso).toBe(10);
@@ -210,14 +214,56 @@ describe("layered damage resolution", () => {
     expect(app.after.internalStructure.centerTorso).toBe(2);
   });
 
-  it("bypassArmor: preserves armor even when the 'Mech is killed by the blast", () => {
+  it("bypassArmor: a location the blast destroys loses its remaining armor (TW p.122 step 5)", () => {
     const s = mk({
       armor: { centerTorso: 10 },
       is: { centerTorso: 5 },
     });
     const app = applyDamage(s, "centerTorso", 5, "front", { bypassArmor: true });
     expect(app.mechDestroyed).toBe(true);
-    expect(app.after.armor.centerTorso).toBe(10);
+    expect(app.after.armor.centerTorso).toBe(0);
     expect(app.after.internalStructure.centerTorso).toBe(0);
+  });
+
+  it("plain destruction wipes the opposite-arc armor: front kill zeroes the rear pool", () => {
+    const s = mk({
+      armor: { rightTorso: 10 },
+      armorRear: { rightTorso: 6 },
+      is: { rightTorso: 4 },
+    });
+    const app = applyDamage(s, "rightTorso", 14, "front");
+    expect(app.newlyDestroyed).toContain("rightTorso");
+    expect(app.after.armor.rightTorso).toBe(0);
+    expect(app.after.armorRear.rightTorso).toBe(0);
+    expect(app.after.internalStructure.rightTorso).toBe(0);
+    // Marked points exclude the wiped rear pool: 10 front + 4 IS, not 20.
+    expect(dealtOf(app)).toBe(14);
+  });
+
+  it("plain destruction wipes the opposite-arc armor: rear kill zeroes the front pool", () => {
+    const s = mk({
+      armor: { leftTorso: 10 },
+      armorRear: { leftTorso: 6 },
+      is: { leftTorso: 4 },
+    });
+    const app = applyDamage(s, "leftTorso", 10, "rear");
+    expect(app.newlyDestroyed).toContain("leftTorso");
+    expect(app.after.armor.leftTorso).toBe(0);
+    expect(app.after.armorRear.leftTorso).toBe(0);
+    expect(app.after.internalStructure.leftTorso).toBe(0);
+  });
+
+  it("side-torso destruction zeroes its rear pool and the blown-off arm's armor", () => {
+    const s = mk({
+      armor: { rightTorso: 10, rightArm: 8 },
+      armorRear: { rightTorso: 6 },
+      is: { rightTorso: 4, rightArm: 9 },
+    });
+    const app = applyDamage(s, "rightTorso", 14, "front");
+    expect(app.newlyDestroyed).toContain("rightTorso");
+    expect(app.after.armorRear.rightTorso).toBe(0);
+    expect(app.blownOffLimbs).toEqual(["rightArm"]);
+    expect(app.after.armor.rightArm).toBe(0);
+    expect(app.after.internalStructure.rightArm).toBe(0);
   });
 });

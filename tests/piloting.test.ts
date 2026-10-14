@@ -8,7 +8,7 @@ import {
   type UnitDamageState,
 } from "../src/index";
 import { type CritMask, cloneCritTable, setSlotDestroyed } from "../src/rules/critical";
-import { applyDamage } from "../src/rules/damage";
+import { applyDamage, dealtOf } from "../src/rules/damage";
 import {
   advancePhase,
   applyFall,
@@ -154,6 +154,71 @@ describe("20+ damage PSR", () => {
         kind: "unitFell",
         unitId: "enf",
         cause: { kind: "failedPsr", reason: "damage20" },
+      }),
+    );
+  });
+});
+
+describe("20-point trigger counts marked points, not wiped armor (TW p.122 step 5)", () => {
+  // ENF-4R leftTorso: 17 front / 3 rear / 12 IS. Pre-damage the front to 8,
+  // snapshot, then destroy it from the rear in the "phase": marked = 3 + 12
+  // = 15 < 20, but the wiped front 8 pushes the before/after diff to 23.
+  function killEnfLeftTorso() {
+    const state = hbkEnf();
+    const enf = requireUnit(state, "enf");
+    enf.damage = applyDamage(enf.damage, "leftTorso", 9).after;
+    expect(enf.damage.armor.leftTorso).toBe(8);
+    const before = snapshot(state);
+    const app = applyDamage(enf.damage, "leftTorso", 15, "rear");
+    enf.damage = app.after;
+    expect(enf.damage.internalStructure.leftTorso).toBe(0);
+    return { state, before, dealt: { enf: dealtOf(app) } };
+  }
+
+  it("rear-arc kill: wiped front armor does not trigger the PSR", () => {
+    const { state, before, dealt } = killEnfLeftTorso();
+    expect(dealt.enf).toBe(15);
+    const events: GameEvent[] = [];
+    resolvePhasePiloting(state, scriptedRng(), before, events, undefined, false, dealt);
+    expect(events).not.toContainEqual(
+      expect.objectContaining({ kind: "pilotingCheck", unitId: "enf", reason: "damage20" }),
+    );
+    expect(requireUnit(state, "enf").prone).toBe(false);
+  });
+
+  it("the same kill triggers through the fallback diff (sanity: the test is not vacuous)", () => {
+    const { state, before } = killEnfLeftTorso();
+    // No ledger: before/after diff = 8 + 3 + 12 = 23 (the blown-off arm is
+    // excluded like before) → trigger. Target 5 + 1 + 0 = 6: 3+3 succeeds.
+    const events: GameEvent[] = [];
+    resolvePhasePiloting(state, scriptedRng(3, 3), before, events);
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: "pilotingCheck",
+        unitId: "enf",
+        reason: "damage20",
+        success: true,
+      }),
+    );
+    expect(requireUnit(state, "enf").prone).toBe(false);
+  });
+
+  it("20 marked points still trigger through the ledger", () => {
+    const state = hbkEnf();
+    const before = snapshot(state);
+    const enf = requireUnit(state, "enf");
+    const app = applyDamage(enf.damage, "centerTorso", 20);
+    enf.damage = app.after;
+    const dealt = { enf: dealtOf(app) };
+    expect(dealt.enf).toBe(20);
+    const events: GameEvent[] = [];
+    resolvePhasePiloting(state, scriptedRng(3, 3), before, events, undefined, false, dealt);
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: "pilotingCheck",
+        unitId: "enf",
+        reason: "damage20",
+        success: true,
       }),
     );
   });

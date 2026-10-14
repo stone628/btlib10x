@@ -10,6 +10,7 @@ import {
   cloneCritTable,
   componentHitStatus,
   countDestroyedEngine,
+  critDamageDealt,
   destroyAllSlots,
   destroyedSlots,
   effectiveMovement,
@@ -21,7 +22,7 @@ import {
   resolveCriticalHits,
   setSlotDestroyed,
 } from "../src/rules/critical";
-import type { UnitDamageState } from "../src/rules/damage";
+import { dealtOf, type UnitDamageState } from "../src/rules/damage";
 import {
   advancePhase,
   buildUnitInit,
@@ -364,6 +365,32 @@ describe("weapon and ammo crit effects", () => {
     expect(res.ammoBins["leftTorso:1"]).toBe(0);
     expect(res.ammoBins["leftTorso:2"]).toBe(5);
     expect(ammoWeaponTotals(def, res.ammoBins)[4]).toBe(5);
+  });
+
+  it("critDamageDealt counts the blast's marked points (100, all on live IS)", () => {
+    const def = mechDef("HBK-4G")!;
+    const ammoBins = loadAmmoBins(def);
+    overrideAmmoBin(ammoBins, "leftTorso", 1, 5);
+    overrideAmmoBin(ammoBins, "leftTorso", 2, 5);
+    const res = resolveCriticalHits({
+      rng: detRoll(8, 1, 1, 1, 1),
+      def,
+      source: { location: "leftTorso", damage: 5 },
+      critSlotsDestroyed: freshFlags(def),
+      destroyedWeapons: [],
+      damage: {
+        armor: { ...def.armor, leftTorso: 0 },
+        armorRear: { ...def.armorRear },
+        internalStructure: { ...def.internalStructure, leftTorso: 1000, centerTorso: 1000 },
+      },
+      ammoBins,
+    });
+    expect(res.rows).toHaveLength(1);
+    const row = res.rows[0]!;
+    expect(row.kind).toBe("ammoExplosion");
+    // 5 shots x 20, all marked on surviving IS — no wipe involved.
+    expect(critDamageDealt(res)).toBe(100);
+    if (row.kind === "ammoExplosion") expect(dealtOf(row.application)).toBe(100);
   });
 
   it("ammo explosion cascades a fresh determining roll on a newly-emptied IS", () => {
@@ -842,12 +869,16 @@ describe("CASE", () => {
     const ltBefore = s.internalStructure.leftTorso;
     const ctBefore = s.internalStructure.centerTorso;
     const ctArmorBefore = s.armor.centerTorso;
-    const app = applyAmmoExplosion(s, "leftTorso", 100);
-    // LT IS absorbs 23, the remaining 77 bleeds into CT IS. Ammo-explosion
-    // overflow bypasses armor everywhere (TW p.125), so CT armor is untouched.
+    const blast = ltBefore + 5;
+    const app = applyAmmoExplosion(s, "leftTorso", blast);
+    // LT IS absorbs ltBefore, the remaining 5 bleeds into CT IS. Ammo-explosion
+    // overflow bypasses armor everywhere (TW p.125), so the surviving CT keeps
+    // its armor; the destroyed LT loses its remaining (rear) armor with it
+    // (TW p.122 step 5).
     expect(app.after.internalStructure.leftTorso).toBe(0);
+    expect(app.after.armorRear.leftTorso).toBe(0);
     expect(app.after.armor.centerTorso).toBe(ctArmorBefore);
-    expect(app.after.internalStructure.centerTorso).toBe(Math.max(0, ctBefore - (100 - ltBefore)));
+    expect(app.after.internalStructure.centerTorso).toBe(ctBefore - 5);
   });
 
   it("CASE: blowing out a side torso also removes its arm, CT still safe", () => {
@@ -859,7 +890,7 @@ describe("CASE", () => {
     expect(app.after.internalStructure.centerTorso).toBeGreaterThan(0);
   });
 
-  it("explosion bypasses armor without stripping it", () => {
+  it("explosion bypasses surviving armor but wipes the destroyed location's (TW p.122 step 5)", () => {
     const def = mechDef("TBR-Prime")!;
     const s: UnitDamageState = {
       armor: { ...def.armor, leftTorso: 10 },
@@ -867,13 +898,17 @@ describe("CASE", () => {
       internalStructure: { ...def.internalStructure },
     };
     const ctArmorBefore = s.armor.centerTorso;
-    const app = applyAmmoExplosion(s, "leftTorso", 100);
-    // Armor at the explosion site is preserved — explosions bypass, not strip.
-    expect(app.after.armor.leftTorso).toBe(10);
+    const ctBefore = s.internalStructure.centerTorso;
+    const blast = s.internalStructure.leftTorso + 5;
+    const app = applyAmmoExplosion(s, "leftTorso", blast);
+    // The destroyed LT loses its remaining armor with it (front and rear).
+    expect(app.after.armor.leftTorso).toBe(0);
+    expect(app.after.armorRear.leftTorso).toBe(0);
     // IS is still damaged directly (armor bypassed).
     expect(app.after.internalStructure.leftTorso).toBe(0);
-    // Overflow into the CT likewise bypasses its armor (TW p.125).
+    // Overflow into the surviving CT likewise bypasses its armor (TW p.125).
     expect(app.after.armor.centerTorso).toBe(ctArmorBefore);
+    expect(app.after.internalStructure.centerTorso).toBe(ctBefore - 5);
   });
 });
 

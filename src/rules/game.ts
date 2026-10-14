@@ -51,7 +51,6 @@ import {
   consumeAmmoForName,
   pooledShotsLeft,
   stripBinsInLocation,
-  zeroBinsInLocation,
 } from "./ammo";
 import {
   type Arc,
@@ -88,7 +87,7 @@ import {
   countDestroyedHip,
   countDestroyedLifeSupport,
   countDestroyedSensor,
-  destroyAllSlots,
+  critDamageDealt,
   destroyedStructures,
   ENGINE_SLOTS_KILL,
   effectiveMovement,
@@ -98,7 +97,6 @@ import {
   mergeCritTable,
   resolveCriticalHits,
   setSlotDestroyed,
-  zeroLocationStructure,
 } from "./critical";
 import {
   applyDamage,
@@ -106,12 +104,14 @@ import {
   canFireMount,
   type DamageApplication,
   type DamageTransferStep,
+  dealtOf,
   destroyedLegs,
   isUnitDestroyed,
   isUnitImmobile,
   isUnitLocationDestroyed,
   structureStruck,
   type UnitDamageState,
+  zeroLocationStructure,
 } from "./damage";
 import {
   ammoExplosionAvoidWithThreshold,
@@ -2009,6 +2009,9 @@ export function executeMove(
     damage: { [unitId]: cloneDamage(unit.damage) },
     crit: { [unitId]: cloneCritTable(unit.critSlotsDestroyed) },
   };
+  // Damage points this move marks (TW p.60 20-point trigger), for the
+  // end-of-move sweep below. See `PhaseDealt`.
+  const moveDealt: PhaseDealt = {};
   const commitAt = (
     hex: HexCoord,
     face: Facing,
@@ -2111,7 +2114,17 @@ export function executeMove(
     // committed at the hex the fall rule leaves the 'Mech in (the lower
     // hex on a fall across levels).
     if (!jumping || isFinal) {
-      const fellAt = movementTerrainPsr(state, unit, rng, from, to, !jumping, currentPre(), sink);
+      const fellAt = movementTerrainPsr(
+        state,
+        unit,
+        rng,
+        from,
+        to,
+        !jumping,
+        currentPre(),
+        sink,
+        moveDealt,
+      );
       // A move cut short still uses up the unit's activation (TW p.59).
       if (fellAt !== null) {
         commitAt({ ...fellAt }, unit.facing, mode, curSpent, curDirs);
@@ -2165,11 +2178,12 @@ export function executeMove(
             halved: terrain === "water2" || terrain === "water3",
           },
           sink,
+          moveDealt,
         );
       }
     }
   }
-  resolvePhasePiloting(state, rng, movePhaseBefore, sink);
+  resolvePhasePiloting(state, rng, movePhaseBefore, sink, undefined, false, moveDealt);
 }
 
 /**
@@ -3174,9 +3188,25 @@ function resolveUnitAttacks(
   };
 }
 
+/** Damage points taken per unit since a phase snapshot (TW p.60 20-point
+ *  trigger), keyed by unit id. Sums of circles actually marked
+ *  (`dealtOf` / `critDamageDealt`); step-5 wipes (TW p.122), vented CASE
+ *  damage and unspent overkill never become steps, so they are excluded —
+ *  unlike the `damageTaken` before/after diff, which counts wiped armor. */
+export type PhaseDealt = Record<string, number>;
+
+/** Credit `n` marked points to `unitId` (no-op without a ledger). */
+function creditDealt(ledger: PhaseDealt | undefined, unitId: string, n: number): void {
+  if (ledger === undefined || n <= 0) return;
+  ledger[unitId] = (ledger[unitId] ?? 0) + n;
+}
+
 /**
- * Total armor + structure points lost between two damage states (TW "damage
- * points taken" for the 20-point PSR trigger).
+ * Total armor + structure points lost between two damage states. Fallback
+ * for the 20-point PSR trigger when no `PhaseDealt` ledger covers the unit
+ * (direct `resolvePhasePiloting` callers, damage outside any swept phase):
+ * unlike the ledger it also counts step-5 wiped armor (TW p.122), since a
+ * before/after diff cannot tell wiped pools from hit ones.
  */
 function damageTaken(before: UnitDamageState, after: UnitDamageState): number {
   let n = 0;
@@ -3317,6 +3347,7 @@ function applyDamageGroups(
   groups: readonly DamageGroup[],
   arc: Arc,
   sink: GameEvent[],
+  ledger?: PhaseDealt,
 ): CriticalResolution[] {
   const def = mechDefFor(unit);
   const crits: CriticalResolution[] = [];
@@ -3324,6 +3355,7 @@ function applyDamageGroups(
   for (const group of groups) {
     const app = applyDamage(unit.damage, group.location, group.damage, arc);
     unit.damage = app.after;
+    creditDealt(ledger, unit.id, dealtOf(app));
     sheared.push(...app.blownOffLimbs);
     if (!state.critsDisabled) {
       // One roll per location whose structure the group damaged (TW p.124).
@@ -3341,6 +3373,7 @@ function applyDamageGroups(
         unit.destroyedWeapons = res.destroyedWeapons;
         unit.ammoBins = res.ammoBins;
         unit.damage = res.damage;
+        creditDealt(ledger, unit.id, critDamageDealt(res));
         resolveCenterTorsoBlast(state, unit, res.rows.map(blastApplication), rng, sink);
         for (const row of res.rows) {
           if (isCritBlastRow(row)) applyPilotHits(state, unit, 2, "ammoExplosion", rng, sink);
@@ -3404,7 +3437,13 @@ export interface FallOptions {
  * the 'Mech on the spot; the pilot then takes the hit automatically via the
  * shutdown path in `applyFall`. No-op for removed or already-prone units.
  */
-function shutdownFallCheck(state: BattleState, unit: UnitState, rng: Rng, sink: GameEvent[]): void {
+function shutdownFallCheck(
+  state: BattleState,
+  unit: UnitState,
+  rng: Rng,
+  sink: GameEvent[],
+  ledger?: PhaseDealt,
+): void {
   if (isUnitRemoved(unit) || unit.prone) return;
   const def = mechDefFor(unit);
   const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
@@ -3426,6 +3465,7 @@ function shutdownFallCheck(state: BattleState, unit: UnitState, rng: Rng, sink: 
         halved: waterDepth(cellAt(state, unit.position).terrain) >= 2,
       },
       sink,
+      ledger,
     );
   }
 }
@@ -3444,6 +3484,7 @@ export function applyFall(
   rng: Rng,
   opts: FallOptions,
   sink: GameEvent[],
+  ledger?: PhaseDealt,
 ): void {
   if (isUnitRemoved(unit)) return;
   if (unit.prone && opts.allowProne !== true) return;
@@ -3473,6 +3514,7 @@ export function applyFall(
     groups,
     column === "rear" ? "rear" : "front",
     sink,
+    ledger,
   );
   sink.push({
     kind: "unitFell",
@@ -3538,6 +3580,10 @@ export function resolvePhasePiloting(
   /** Weapon-phase sweep: a DFA'er that fails (or would automatically fail)
    *  its roll does not fall; its DFA misses instead (TW p.149). */
   spareDfa = false,
+  /** Damage points taken per unit since `before` (see `PhaseDealt`). Units
+   *  missing from the ledger fall back to the `damageTaken` before/after
+   *  diff, which also counts step-5 wiped armor. */
+  dealt?: PhaseDealt,
 ): void {
   for (const unit of Object.values(state.units)) {
     if (isUnitRemoved(unit) || unit.prone) continue;
@@ -3556,7 +3602,8 @@ export function resolvePhasePiloting(
     }
 
     const triggers: Array<{ reason: PilotingCheckReason; modifier: number }> = [];
-    if (damageTaken(dmgBefore, unit.damage) >= PSR_DAMAGE_THRESHOLD) {
+    const taken = dealt?.[unit.id] ?? damageTaken(dmgBefore, unit.damage);
+    if (taken >= PSR_DAMAGE_THRESHOLD) {
       triggers.push({ reason: "damage20", modifier: PHASE_DAMAGE_PSR_MOD });
     }
     for (const hit of newlyDestroyedStructures(def, critBefore, unit.critSlotsDestroyed)) {
@@ -3582,7 +3629,7 @@ export function resolvePhasePiloting(
     // gyro (TW pp.60,122).
     const seatbeltNow = (): number =>
       preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed).modifier +
-      (damageTaken(dmgBefore, unit.damage) >= PSR_DAMAGE_THRESHOLD ? PHASE_DAMAGE_PSR_MOD : 0) +
+      (taken >= PSR_DAMAGE_THRESHOLD ? PHASE_DAMAGE_PSR_MOD : 0) +
       (gyroNow >= GYRO_DESTROYED_HITS ? SEATBELT_GYRO_DESTROYED : 0);
     if (legDestroyed) autoFall = { cause: { kind: "legDestroyed" }, seatbelt: seatbeltNow() };
     else if (gyroNow >= GYRO_DESTROYED_HITS && gyroBefore < GYRO_DESTROYED_HITS)
@@ -3692,6 +3739,11 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   // Phase 2: apply all damage, crits, building damage, and heat simultaneously
   // Track damage per target
   const targetDamageMap: Record<string, UnitDamageState> = {};
+  // Damage points marked this sub-pass per target (TW p.60 20-point trigger),
+  // for the end-of-weapon sweep. Covers weapon groups, crit-blast replays
+  // and the building-collapse damage below — but not the pre-volley
+  // computation applications, whose states are discarded.
+  const weaponDealt: PhaseDealt = {};
   const targetAmmoBinsMap: Record<string, AmmoBins> = {};
   const targetDestroyedWeaponsMap: Record<string, number[]> = {};
   const buildingOutcomes: BuildingDamageResult[] = [];
@@ -3756,6 +3808,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
           // Apply each hit group with the attack's arc (determines armor pool)
           const app = applyDamage(currentDamage, group.location, group.damage, resolution.arc);
           currentDamage = app.after;
+          creditDealt(weaponDealt, targetId, dealtOf(app));
           sheared.push(...app.blownOffLimbs);
           steps.push(...app.steps);
           newlyDestroyed.push(...app.newlyDestroyed);
@@ -3820,14 +3873,17 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
               checkCASE(def, row.location),
             );
             currentDamage = app.after;
-            // Mirror `markLocationCatastrophicallyDestroyed`: explosion
-            // destruction wipes remaining armor alongside IS, marks every
-            // slot destroyed, and strips bins there.
+            creditDealt(weaponDealt, targetId, dealtOf(app));
+            // Explosion destruction is catastrophic: wipe remaining armor
+            // alongside IS, mark every slot destroyed, strip bins there.
             for (const loc of app.newlyDestroyed) {
-              currentDamage.armor[loc] = 0;
-              if (isTorso(loc)) currentDamage.armorRear[loc] = 0;
-              destroyAllSlots(currentCritSlots, loc, def.critSlots[loc].length);
-              zeroBinsInLocation(currentAmmoBins, loc);
+              markLocationCatastrophicallyDestroyed(
+                def,
+                currentDamage,
+                currentCritSlots,
+                currentAmmoBins,
+                loc,
+              );
             }
             // Refresh the row's application so the log renders this
             // sequential state, not the pre-volley snapshot.
@@ -3840,11 +3896,15 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
               checkCASE(def, row.location),
             );
             currentDamage = app.after;
+            creditDealt(weaponDealt, targetId, dealtOf(app));
             for (const loc of app.newlyDestroyed) {
-              currentDamage.armor[loc] = 0;
-              if (isTorso(loc)) currentDamage.armorRear[loc] = 0;
-              destroyAllSlots(currentCritSlots, loc, def.critSlots[loc].length);
-              zeroBinsInLocation(currentAmmoBins, loc);
+              markLocationCatastrophicallyDestroyed(
+                def,
+                currentDamage,
+                currentCritSlots,
+                currentAmmoBins,
+                loc,
+              );
             }
             newRows.push({
               ...row,
@@ -4013,7 +4073,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       for (const amount of fallingDamageGroups(total)) {
         groups.push({ location: punchHitLocation(rollD6(rng)), damage: amount });
       }
-      applyDamageGroups(state, unit, rng, groups, "front", sink);
+      applyDamageGroups(state, unit, rng, groups, "front", sink, weaponDealt);
       for (const group of groups) {
         sink.push({
           kind: "collapseDamage",
@@ -4044,6 +4104,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
             levelsFallen: groundLevel,
           },
           sink,
+          weaponDealt,
         );
       }
     }
@@ -4119,7 +4180,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   // stay merged for playability (one attack activation per unit per turn);
   // only the resolution is split into weapon-then-physical sub-passes.
   const weaponBefore: PhaseSnapshots = { damage: baseDamage, crit: baseCrit };
-  resolvePhasePiloting(state, rng, weaponBefore, sink, undefined, true);
+  resolvePhasePiloting(state, rng, weaponBefore, sink, undefined, true, weaponDealt);
   for (const unit of Object.values(state.units)) {
     if (isUnitAvailable(unit) && isUnitWrecked(unit)) {
       markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), rng, sink);
@@ -4132,6 +4193,9 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   const postWeaponDamage: Record<string, UnitDamageState> = {};
   const postWeaponCrit: Record<string, CritMask> = {};
   const postWeaponWeapons: Record<string, number[]> = {};
+  // Damage points marked in the physical sub-pass per unit (see `PhaseDealt`):
+  // physical groups, their crit blasts, and DFA-miss falls.
+  const physicalDealt: PhaseDealt = {};
   for (const unit of Object.values(state.units)) {
     postWeaponDamage[unit.id] = {
       armor: { ...unit.damage.armor },
@@ -4195,6 +4259,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       }
       const app = applyDamage(recipient.damage, group.location, group.damage, attackDirection);
       recipient.damage = app.after;
+      creditDealt(physicalDealt, recipient.id, dealtOf(app));
       application =
         application === null
           ? app
@@ -4239,6 +4304,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         recipient.destroyedWeapons = res.destroyedWeapons;
         recipient.ammoBins = res.ammoBins;
         recipient.damage = res.damage;
+        creditDealt(physicalDealt, recipient.id, critDamageDealt(res));
         crits.push(res);
       }
     }
@@ -4274,6 +4340,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         rearHits: true,
       },
       sink,
+      physicalDealt,
     );
   };
   const missResolution = (
@@ -4608,7 +4675,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   // PSRs (TW pp.59-60,147). The 20-point trigger measures only post-weapon
   // damage, so weapon and physical phases never pool into one roll.
   const physicalBefore: PhaseSnapshots = { damage: postWeaponDamage, crit: postWeaponCrit };
-  resolvePhasePiloting(state, rng, physicalBefore, sink, kickExtras);
+  resolvePhasePiloting(state, rng, physicalBefore, sink, kickExtras, false, physicalDealt);
   // Attacks resolve simultaneously; hands lost during them drop the club now.
   enforceClubHandsAll(state, sink);
 
@@ -4703,6 +4770,9 @@ export function* advancePhaseGen(state: BattleState, rng: Rng): Generator<GameEv
 export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]): void {
   const units = Object.values(state.units).filter((u) => !isUnitRemoved(u));
   const before: PhaseSnapshots = { damage: {}, crit: {} };
+  // Damage points marked this phase per unit (heat ammo-explosion blasts,
+  // their crit cascades, and shutdown falls), for the sweep below.
+  const heatDealt: PhaseDealt = {};
 
   // Single pass: snapshot pre-heat-phase state, then for each unit apply
   // deferred own-heat, dissipate, run shutdown/restart, run ammo explosion,
@@ -4860,7 +4930,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
             avoid,
             threshold,
           });
-          shutdownFallCheck(state, unit, rng, sink);
+          shutdownFallCheck(state, unit, rng, sink, heatDealt);
         } else if (unit.unconscious) {
           // an unconscious pilot cannot override it either.
           unit.shutdown = "heat";
@@ -4874,7 +4944,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
             avoid,
             threshold,
           });
-          shutdownFallCheck(state, unit, rng, sink);
+          shutdownFallCheck(state, unit, rng, sink, heatDealt);
         } else {
           const roll = roll2D6(rng);
           if (roll >= avoid) {
@@ -4900,7 +4970,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
               avoid,
               threshold,
             });
-            shutdownFallCheck(state, unit, rng, sink);
+            shutdownFallCheck(state, unit, rng, sink, heatDealt);
           }
         }
       }
@@ -4939,6 +5009,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
               checkCASE(def, bin.location),
             );
             unit.damage = application.after;
+            creditDealt(heatDealt, unit.id, dealtOf(application));
             // A blast that shears off a limb leaves it in the hex (TW p.146).
             recordSeveredLimbs(state, unit, application.blownOffLimbs);
             // The blasted bin is emptied and its slot flagged first, so the
@@ -4967,6 +5038,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
                 unit.destroyedWeapons = res.destroyedWeapons;
                 unit.ammoBins = res.ammoBins;
                 unit.damage = res.damage;
+                creditDealt(heatDealt, unit.id, critDamageDealt(res));
                 heatCrits.push(res);
               }
               recordCritSeveredLimbs(state, unit, heatCrits);
@@ -5075,7 +5147,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
   }
 
   // End-of-heat-phase piloting: falls from heat-phase ammo-explosion damage.
-  resolvePhasePiloting(state, rng, before, sink);
+  resolvePhasePiloting(state, rng, before, sink, undefined, false, heatDealt);
   enforceClubHandsAll(state, sink);
 }
 
@@ -5110,6 +5182,7 @@ function movementTerrainPsr(
   ground: boolean,
   preModifier: number,
   sink: GameEvent[],
+  ledger?: PhaseDealt,
 ): HexCoord | null {
   const stop = (): boolean =>
     unit.prone || isUnitRemoved(unit) || isShutdown(unit) || unit.unconscious;
@@ -5155,6 +5228,9 @@ function movementTerrainPsr(
           location: punchHitLocation(rollD6(rng)),
           damage: amount,
         }));
+        // No ledger: the occupant gets no piloting sweep for damage taken
+        // during another unit's move (its move snapshot is its own), so the
+        // sweep falls back to a zero diff — matching prior behavior.
         applyDamageGroups(state, occupant, rng, groups, "front", sink);
         if (isUnitRemoved(occupant)) return lower;
       }
@@ -5196,6 +5272,7 @@ function movementTerrainPsr(
           ...bottomOpt,
         },
         sink,
+        ledger,
       );
       return settleFall(lower);
     }
@@ -5216,6 +5293,7 @@ function movementTerrainPsr(
         ...bottomOpt,
       },
       sink,
+      ledger,
     );
     return settleFall(lower);
   };
@@ -5252,6 +5330,7 @@ function movementTerrainPsr(
           halved: false,
         },
         sink,
+        ledger,
       );
       return to;
     }
@@ -5263,7 +5342,7 @@ function movementTerrainPsr(
       for (const amount of fallingDamageGroups(total)) {
         groups.push({ location: hitLocation(roll2D6(rng)), damage: amount });
       }
-      const crits = applyDamageGroups(state, unit, rng, groups, "front", sink);
+      const crits = applyDamageGroups(state, unit, rng, groups, "front", sink, ledger);
       sink.push({
         kind: "buildingCrash",
         unitId: unit.id,
@@ -5300,6 +5379,7 @@ function movementTerrainPsr(
               halved: false,
             },
             sink,
+            ledger,
           );
         }
       }

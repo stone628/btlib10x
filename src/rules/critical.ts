@@ -99,10 +99,12 @@ import {
 import {
   applyDamage,
   type DamageApplication,
+  dealtOf,
   destroyedLegs,
   isUnitLocationDestroyed,
   structureStruck,
   type UnitDamageState,
+  zeroLocationStructure,
 } from "./damage";
 import type { DestroyedReason } from "./game";
 import { GYRO_DESTROYED_HITS, SENSOR_BLIND_HITS } from "./piloting";
@@ -479,7 +481,9 @@ export function applyAmmoExplosion(
   }
   // Ammo explosions bypass armor at every location in the transfer chain
   // (TW p.125): the blast hits IS directly, and any overflow transfers to
-  // the next location's IS — armor is never touched, anywhere.
+  // the next location's IS — surviving armor is never ablated, but a
+  // location the blast destroys still loses its remaining armor with it
+  // (TW p.122 step 5, via `applyDamage`).
   return applyDamage(state, location, amount, "front", { caseKind, bypassArmor: true });
 }
 
@@ -885,10 +889,19 @@ function applySlotHit(
   });
 }
 
-export function zeroLocationStructure(damage: UnitDamageState, loc: Location): void {
-  damage.armor[loc] = 0;
-  if (isTorso(loc)) damage.armorRear[loc] = 0;
-  damage.internalStructure[loc] = 0;
+/** Damage points this resolution spent marking circles: the blast
+ *  applications its rows carry (ammo-explosion and weapon-explosion rows).
+ *  Blow-offs, cockpit kills and slot destruction spend no points, so they
+ *  contribute nothing here — matching `dealtOf` in `damage.ts`. */
+export function critDamageDealt(res: Pick<CriticalResolution, "rows">): number {
+  let n = 0;
+  for (const row of res.rows) {
+    if (row.kind === "ammoExplosion") n += dealtOf(row.application);
+    else if (row.kind === "weaponDestroyed" && row.explosion !== undefined) {
+      n += dealtOf(row.explosion.application);
+    }
+  }
+  return n;
 }
 
 /**

@@ -120,7 +120,8 @@ These are implementation choices, not rule changes.
 
 - **Flat armor HP.** Each location holds an armor number, not dots; overflow
   moves inward only once a location's armor is gone.
-- **Plain vs catastrophic destruction (by design).** Only catastrophic paths
+- **Plain vs catastrophic destruction (by design).** Both wipe the location's
+  remaining armor, front and rear (TW p.122 step 5); only catastrophic paths
   mark critical slots destroyed, so salvage must check both.
 - **Clan implicit CASE counts as standard CASE** until a Clan ammo outcome
   needs the difference.

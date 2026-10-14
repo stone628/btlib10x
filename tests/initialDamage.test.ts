@@ -166,6 +166,34 @@ describe("starting damage (UnitInit.damage)", () => {
       bad(wipe("HBK-4G", "leftTorso"), /leftArm is not/);
       expect(() => unitWith(wipe("HBK-4G", "leftTorso", "leftArm"))).not.toThrow();
     });
+    it("a destroyed location keeps no armor (TW p.122 step 5)", () => {
+      const full = unitWith().damage;
+      // Arm IS gone but its armor intact.
+      bad(
+        { damageTaken: { internalStructure: { rightArm: full.internalStructure.rightArm } } },
+        /rightArm is destroyed but still has armor/,
+      );
+      // Side torso + arm IS gone, torso rear armor intact.
+      const rear = full.armorRear.leftTorso;
+      bad(
+        {
+          damageTaken: {
+            armor: {
+              leftTorso: full.armor.leftTorso,
+              leftArm: full.armor.leftArm,
+            },
+            internalStructure: {
+              leftTorso: full.internalStructure.leftTorso,
+              leftArm: full.internalStructure.leftArm,
+            },
+          },
+        },
+        /leftTorso is destroyed but still has rear armor/,
+      );
+      expect(rear).toBeGreaterThan(0);
+      // Fully wiped locations (armor and rear included) stay legal.
+      expect(() => unitWith(wipe("HBK-4G", "leftTorso", "leftArm"))).not.toThrow();
+    });
     it("bad crit slots", () => {
       bad({ critsDestroyed: { head: [99] } }, /no crit slot/);
       bad({ critsDestroyed: { head: [4, 4] } }, /listed twice/);

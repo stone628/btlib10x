@@ -58,6 +58,16 @@ export interface DamageApplication {
   readonly mechDestroyed: boolean;
 }
 
+/** Damage points this application spent marking circles (armor + structure).
+ *  This is TW's "damage points taken": wipes from step-5 destruction
+ *  (TW p.122), vented CASE damage and unspent overkill never become steps,
+ *  so they are excluded here. */
+export function dealtOf(app: Pick<DamageApplication, "steps">): number {
+  let n = 0;
+  for (const s of app.steps) n += s.damageApplied;
+  return n;
+}
+
 /** Locations whose internal structure the application damaged, in order.
  *  Each gets its own critical roll (TW p.124: "A single hit damaging
  *  multiple locations gives a critical roll for each location"). */
@@ -130,10 +140,10 @@ export function applyDamage(
   while (current !== null && remaining > 0 && !mechDestroyed) {
     const cur: Location = current;
 
-    // Ammo-explosion overflow (bypassArmor) skips the armor pool entirely at
-    // every location — damage lands on IS directly (TW). A destroyed location
-    // keeps its recorded armor but no longer soaks anything: its armor is
-    // destroyed with it (TW p.122 step 5), so damage carries inward.
+    // Armor at every location is skipped when bypassing (TW ammo-explosion
+    // overflow, p.123 Step 8 / p.125) or when the location is already
+    // destroyed — its remaining armor was wiped with it (TW p.122 step 5),
+    // so damage carries inward.
     if (!bypassArmor && next.internalStructure[cur] > 0) {
       const pool = poolOf(next, cur, arc);
       if (pool.value > 0) {
@@ -168,8 +178,11 @@ export function applyDamage(
       // design lets salvage readers recover components in locations
       // destroyed by overflow; future salvage module must gate on
       // `isUnitLocationDestroyed(damage, loc) || critSlotsDestroyed[loc][i]`
-      // to cover both paths.
+      // to cover both paths. Armor IS wiped here on both paths: TW p.122
+      // step 5 destroys the location "along with any remaining armor there
+      // (front or rear)".
       if (depleted) {
+        zeroLocationStructure(next, cur);
         newlyDestroyed.push(cur);
         if (isKillLocation(cur)) {
           mechDestroyed = true;
@@ -212,6 +225,18 @@ export function applyDamage(
 /** A location is destroyed when its internal structure is depleted. */
 export function isUnitLocationDestroyed(damage: UnitDamageState, location: Location): boolean {
   return damage.internalStructure[location] <= 0;
+}
+
+/** Wipe a location's structural pools in place: front armor, rear armor on
+ *  torsos, and internal structure. Every destruction path lands here — plain
+ *  damage via the `applyDamage` depleted branch and catastrophic paths via
+ *  `markLocationCatastrophicallyDestroyed` — per TW p.122 step 5 the location
+ *  goes "along with any remaining armor there (front or rear)". Lives here
+ *  (not in `critical.ts`) so `damage.ts` needs no runtime import upward. */
+export function zeroLocationStructure(damage: UnitDamageState, loc: Location): void {
+  damage.armor[loc] = 0;
+  if (isTorso(loc)) damage.armorRear[loc] = 0;
+  damage.internalStructure[loc] = 0;
 }
 
 /** Classic destruction: head or center torso internal structure gone ends the 'Mech. */
