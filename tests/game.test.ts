@@ -11,6 +11,7 @@ import {
   declareAttacks,
   executeMove,
   nextActor,
+  passAttack,
   requireUnit,
   resolveAllAttacks,
   rollInitiativePhase,
@@ -1054,6 +1055,45 @@ describe("passedAttacks", () => {
   });
 });
 
+describe("passAttack", () => {
+  it("marks the current actor as passed and acted without changing anything else", () => {
+    const state = startAttackTurn(hbkVsEnf());
+    passAttack(state, "hbk");
+    expect(requireUnit(state, "hbk").passedAttacks).toBe(true);
+    expect(state.actedThisPhase).toContain("hbk");
+    expect(nextActor(state)).toBe("enf");
+  });
+
+  it("requires the attack phase", () => {
+    const state = startMovementTurn(hbkVsEnf());
+    expect(() => passAttack(state, "hbk")).toThrow(/attack/);
+  });
+
+  it("rejects a unit that is not head of the pending queue", () => {
+    const state = startAttackTurn(hbkVsEnf());
+    expect(() => passAttack(state, "enf")).toThrow(/not the current actor/);
+  });
+
+  it("rejects a second pass once the unit has acted", () => {
+    const state = startAttackTurn(hbkVsEnf());
+    passAttack(state, "hbk");
+    expect(() => passAttack(state, "hbk")).toThrow(/not the current actor/);
+  });
+
+  it("rejects a pass after the unit declared attacks", () => {
+    const state = startAttackTurn(hbkVsEnf());
+    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []);
+    expect(() => passAttack(state, "hbk")).toThrow(/not the current actor/);
+  });
+
+  it("rejects a shut-down unit (filtered out of the weapon-phase queue)", () => {
+    const state = startAttackTurn(hbkVsEnf());
+    requireUnit(state, "hbk").shutdown = "heat";
+    expect(nextActor(state)).toBe("enf");
+    expect(() => passAttack(state, "hbk")).toThrow(/not the current actor/);
+  });
+});
+
 describe("current-actor guard", () => {
   it("executeMove rejects a unit that is not head of the pending queue", () => {
     const state = startMovementTurn(hbkVsEnf());
@@ -1094,7 +1134,7 @@ describe("current-actor guard", () => {
 
   it("declareAttacks rejects a unit that passedAttacks this phase", () => {
     const state = startAttackTurn(hbkVsEnf());
-    requireUnit(state, "hbk").passedAttacks = true;
+    passAttack(state, "hbk");
     expect(() =>
       declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []),
     ).toThrow(/not the current actor/);

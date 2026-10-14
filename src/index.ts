@@ -218,6 +218,7 @@ export {
   isUnitRemoved,
   isValidTeam,
   meleeDeclarationProblem,
+  passAttack,
   passMovement,
   pickupSourceInHex,
   requireUnit,

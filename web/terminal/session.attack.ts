@@ -35,6 +35,7 @@ import {
   type PhysicalAttackType,
   type PhysicalResolution,
   type PhysicalWeaponName,
+  passAttack,
   physicalDamage,
   requireUnit,
   resolveStrikeArm,
@@ -246,7 +247,7 @@ export function commitAttack(s: Session): SessionGameEvent[] {
   ) {
     commitAtomic(s, () => {
       recordAttack(s, context, unitId);
-      actor.passedAttacks = true;
+      passAttack(battle, unitId);
       clearContext(s);
       events.push(
         {

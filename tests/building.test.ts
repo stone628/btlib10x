@@ -15,6 +15,7 @@ import {
   damageBuildingAt,
   declareAttacks,
   type GameEvent,
+  passAttack,
   resolveAllAttacks,
   rollInitiativePhase,
   type TerrainHexDef,
@@ -195,11 +196,11 @@ describe("battle building integration", () => {
     rollInitiativePhase(battle, rng, []);
     advancePhase(battle, []);
     // Activation alternates teams (loser first): a, b, c, d. Idle occupants
-    // pass like the web layer (`passedAttacks`).
+    // pass like the web layer (`passAttack`).
     declareAttacks(battle, "a", [{ weaponIndex: 4, targetId: "b" }], [], []);
-    battle.units.b!.passedAttacks = true;
+    passAttack(battle, "b");
     declareAttacks(battle, "c", [{ weaponIndex: 4, targetId: "d" }], [], []);
-    battle.units.d!.passedAttacks = true;
+    passAttack(battle, "d");
     const events: GameEvent[] = [];
     resolveAllAttacks(battle, rng, events);
 

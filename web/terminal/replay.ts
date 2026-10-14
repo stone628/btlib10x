@@ -48,6 +48,7 @@ import {
   oppositeFacing,
   type PhysicalAttackDecl,
   type PhysicalWeaponName,
+  passAttack,
   passMovement,
   rotateFacing,
   sameHex,
@@ -974,7 +975,7 @@ export function replayPlayer(text: string): void {
       return;
     }
     if (a.weapons.length === 0 && a.physicals.length === 0 && !a.dropClub) {
-      b.units[id]!.passedAttacks = true;
+      passAttack(b, id);
       return;
     }
     declareAttacks(b, id, a.weapons, a.physicals, sink, rng, {

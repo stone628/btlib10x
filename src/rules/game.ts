@@ -5719,6 +5719,25 @@ export function passMovement(state: BattleState, unitId: string): void {
   state.actedThisPhase.push(unitId);
 }
 
+/** Attack-phase pass for the current actor: it declares no weapons,
+ *  physical attacks, or pickup this turn and is marked as having acted.
+ *  Mirrors `passMovement` for the alternating attack declarations
+ *  (TW pp.37-38). */
+export function passAttack(state: BattleState, unitId: string): void {
+  requireCurrentActor(state, unitId, "attack");
+  const unit = requireUnit(state, unitId);
+  if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
+  if (
+    unit.declaredWeaponAttacks.length > 0 ||
+    unit.declaredPhysicalAttacks.length > 0 ||
+    unit.declaredPickup !== null
+  )
+    throw new Error(`${unitId} already declared attacks this turn`);
+  if (unit.passedAttacks) throw new Error(`${unitId} already passed attacks this turn`);
+  unit.passedAttacks = true;
+  state.actedThisPhase.push(unitId);
+}
+
 /** Outcome of one {@link gameLoop} invocation. */
 export interface GameLoopResult {
   /** Next unit that must act, or null if no actor ready (victory or transient phase). */

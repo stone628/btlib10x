@@ -678,7 +678,8 @@ declareAttacks(state, unitId, weaponDecls, physicalDecls, sink: GameEvent[], rng
 validateAttacks(state, unitId, weaponDecls, physicalDecls?, options?): void            // read-only gate check; throws on any rule violation without mutating state or emitting events. Options carry the torso `twist`. Returns the resolved volley metadata via `validateAttacksImpl`.
 declarePickup(state, unitId, decl, sink: GameEvent[]): void             // attack phase only: exclusive club pickup (see Physical attacks)
 validatePhysicalAttack(state, unitId, decl: PhysicalAttackDecl, twist?, dropped?): ValidationResult  // read-only single-decl check (adjacency, arc, level, actuators); consumed by `declareAttacks` and the web `candidate` hints
-passMovement(state, unitId): void                                       // mark "passed" for the current activation
+passMovement(state, unitId): void                                       // movement phase only: shut-down unit attempts no startup, stays off-line, marked as acted
+passAttack(state, unitId): void                                         // attack phase only: current actor declares no attacks this turn, marked as passed + acted
 wreckAt(state, hex): WreckState | undefined
 nextActor / actorQueue / gameLoop / requireUnit — see below
 ```

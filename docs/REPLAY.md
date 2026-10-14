@@ -197,7 +197,7 @@ One actor per line, so no actor separator is needed. Physical items keep declara
 arm/leg conflicts with fired weapons, club bars arm weapons) are enforced by
 `declareAttacks`, not by the format.
 
-**No attack** is the bare header: `A1F` (pass, `passedAttacks = true`). `A1F-` is a
+**No attack** is the bare header: `A1F` (`passAttack`). `A1F-` is a
 drop-only activation.
 
 ### `E` — final state (checksum)
@@ -241,7 +241,7 @@ Every CLI command and where it lands. "UI" = no effect on battle state, never re
 | `strike <tgt> [left\|right]` | `S` / `T` + weapon char (the CLI's resolved arm and weapon are recorded) |
 | `pickup [limb\|tree\|girder] [n]` | header `+[l\|t\|g][n]` |
 | `drop` | header `-` (no groups = drop-only activation) |
-| `done` with nothing declared in attack (pass) | bare header, e.g. `A1F` |
+| `done` with nothing declared in attack (pass) | bare header, e.g. `A1F` (`passAttack`) |
 
 ## Example
 
