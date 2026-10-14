@@ -242,7 +242,12 @@ are listed here. Rule text lives in the rulebook.
   standing in water adds dissipation.
 - **Piloting and falls** — PSR triggers, falls with Facing After Fall, seatbelt
   rolls, prone / stand-up (`mode standup|prone|turn|pronestill`), movement-entry
-  PSRs for rubble, water and buildings.
+  PSRs for rubble, water and buildings. A building entry adds the building type
+  and the hexes moved this turn (TW p.167); a failed roll crashes on the front,
+  or the rear when backing in. Entering or falling in a building hex costs it
+  tonnage / 10 CF, and a hex emptied that way collapses at once. Jump landings
+  in a building roll the type modifier only and do not wear it (roofs are not
+  modeled).
 - **Pilot** — damage, consciousness rolls (`pilotHitMax`, default 6), cockpit
   kills. Ejection and auto-eject are Tactical Operations (TO p.165), not TW:
   `mode eject`; the wreck blocks its hex and gives partial cover.

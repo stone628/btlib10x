@@ -310,6 +310,25 @@ export function buildingEntryModifier(terrain: string): number | null {
   return BUILDING_ENTRY_MODS[terrain] ?? null;
 }
 
+/** Building Movement Modifiers Table (TW p.167): [minimum hexes moved,
+ *  modifier], highest band first. */
+const BUILDING_MOVEMENT_MODS: ReadonlyArray<readonly [number, number]> = [
+  [25, 6],
+  [18, 5],
+  [10, 4],
+  [7, 3],
+  [5, 2],
+  [3, 1],
+];
+
+/** Building-entry PSR modifier for hexes moved this turn, counting the
+ *  building hex itself (TW p.167): 1-2 +0, 3-4 +1, 5-6 +2, 7-9 +3,
+ *  10-17 +4, 18-24 +5, 25+ +6. */
+export function buildingMovementModifier(hexesMoved: number): number {
+  for (const [min, mod] of BUILDING_MOVEMENT_MODS) if (hexesMoved >= min) return mod;
+  return 0;
+}
+
 /** Water-entry PSR modifiers by depth (TW p.60). */
 const WATER_ENTRY_MODS: Readonly<Record<string, number>> = {
   water1: -1,

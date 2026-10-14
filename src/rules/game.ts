@@ -124,7 +124,7 @@ import {
   toHitHeatModifier,
   waterHeatBonus,
 } from "./heat";
-import { hitLocation, hitLocationForArc, punchHitLocation } from "./hitlocation";
+import { hitLocationForArc, punchHitLocation } from "./hitlocation";
 import { resolveInitialDamage, type UnitInitDamage } from "./initialDamage";
 import { rollInitiative } from "./initiative";
 import { internalStructureForTonnage } from "./internalStructure";
@@ -156,6 +156,7 @@ import {
 } from "./physical";
 import {
   buildingEntryModifier,
+  buildingMovementModifier,
   consciousnessTarget,
   DEFAULT_PILOT_HIT_MAX,
   DEFAULT_PILOTING,
@@ -861,12 +862,14 @@ export type GameEvent =
     }
   | {
       /** Building-entry PSR failed (TW p.167): the crash damages the 'Mech
-       *  (ceil(CF / 10) in 5-point groups on the front column) but never
-       *  knocks it down. `crits` holds the determining resolutions. */
+       *  (ceil(CF / 10) in 5-point groups on the front column, or the rear
+       *  column when it backed in) but never knocks it down. `crits` holds
+       *  the determining resolutions. */
       readonly kind: "buildingCrash";
       readonly unitId: string;
       readonly col: number;
       readonly row: number;
+      readonly column: "front" | "rear";
       readonly groups: readonly DamageGroup[];
       readonly totalDamage: number;
       readonly crits: readonly CriticalResolution[];
@@ -1335,11 +1338,12 @@ export interface BuildingDamageResult {
 }
 
 /**
- * Apply weapon damage to the building occupying a hex, collapsing it to rubble
- * when its structural factor reaches zero. Pushes the `buildingDamaged` /
- * `buildingCollapsed` event into `sink` and returns the outcome, or `null`
- * when the hex has no building. Occupant collapse damage is applied by the
- * caller (see `resolveAllAttacks`).
+ * Apply damage (weapon fire, or a 'Mech entering or falling in the hex) to
+ * the building occupying a hex, collapsing it to rubble when its structural
+ * factor reaches zero. Pushes the `buildingDamaged` / `buildingCollapsed`
+ * event into `sink` and returns the outcome, or `null` when the hex has no
+ * building. Occupant collapse damage is applied by the caller (see
+ * `resolveBuildingCollapse`).
  */
 export function damageBuildingAt(
   state: BattleState,
@@ -1589,6 +1593,9 @@ const SHUTDOWN_PSR_MOD = 3;
 const SEATBELT_PRE_MOD = 0;
 /** Divisor for building-crash damage: ceil(remaining CF / 10). */
 const BUILDING_CRASH_DIVISOR = 10;
+/** A 'Mech entering or falling in a building hex deals tonnage / 10 (round
+ *  up) to its CF (TW p.167). */
+const BUILDING_UNIT_DAMAGE_DIVISOR = 10;
 /** Per-attack CF toll divisor for units inside buildings (TW p. 171):
  *  each hitting Damage Value grouping costs ceil(CF at phase start / 10). */
 const BUILDING_ABSORB_DIVISOR = 10;
@@ -2128,6 +2135,8 @@ export function executeMove(
         currentPre(),
         sink,
         moveDealt,
+        curDirs.length,
+        curDirs[curDirs.length - 1] !== "backward",
       );
       // A move cut short still uses up the unit's activation (TW p.59).
       if (fellAt !== null) {
@@ -3477,6 +3486,95 @@ function shutdownFallCheck(
 }
 
 /**
+ * Building collapse damage (TW pp. 176–177) for every occupant of a hex that
+ * just collapsed: base damage (CF at the start of the phase / 10) plus base ×
+ * levels above the unit, rounded up at the end. Split into 5-point groupings
+ * plus a remainder, each to a different hit location: 'Mechs inside roll the
+ * Front column of the Punch table. Units above Level 0 also take standard
+ * falling damage. The engine tracks no multi-floor interiors, so every
+ * occupant counts as ground-floor with DEFAULT_BUILDING_LEVELS above (TW
+ * default Level 2, pp. 166–167). `preCf` (the CF before the collapsing
+ * damage) stands in for the phase-start CF. A no-op for an outcome that did
+ * not collapse. `ledgerOf` picks the damage ledger per occupant.
+ */
+function resolveBuildingCollapse(
+  state: BattleState,
+  outcome: BuildingDamageResult,
+  rng: Rng,
+  sink: GameEvent[],
+  ledgerOf: (unitId: string) => PhaseDealt | undefined,
+): void {
+  if (!outcome.collapsed) return;
+  const total = collapseDamageTotal(outcome.preCf, DEFAULT_BUILDING_LEVELS);
+  for (const unitId of outcome.occupants) {
+    const unit = requireUnit(state, unitId);
+    if (isUnitRemoved(unit)) continue;
+    const ledger = ledgerOf(unitId);
+    const groups: DamageGroup[] = [];
+    for (const amount of fallingDamageGroups(total)) {
+      groups.push({ location: punchHitLocation(rollD6(rng)), damage: amount });
+    }
+    applyDamageGroups(state, unit, rng, groups, "front", sink, ledger);
+    for (const group of groups) {
+      sink.push({
+        kind: "collapseDamage",
+        unitId,
+        col: outcome.col,
+        row: outcome.row,
+        location: group.location,
+        damage: group.damage,
+      });
+    }
+    // TW p. 177: any unit above Level 0 (including the roof) also takes
+    // standard falling damage on top of the collapse damage.
+    const groundLevel = cellAt(state, { col: outcome.col, row: outcome.row }).level;
+    if (groundLevel > 0 && !isUnitRemoved(unit)) {
+      applyFall(
+        state,
+        unit,
+        rng,
+        {
+          cause: { kind: "buildingCollapse" },
+          hex: { col: outcome.col, row: outcome.row },
+          seatbeltModifier: preexistingDamageModifier(
+            mechDefFor(unit),
+            unit.damage,
+            unit.critSlotsDestroyed,
+          ).modifier,
+          halved: false,
+          levelsFallen: groundLevel,
+        },
+        sink,
+        ledger,
+      );
+    }
+  }
+}
+
+/**
+ * A 'Mech entering a building hex, or falling inside one, damages it by
+ * ceil(tonnage / 10) (TW p.167). Damage from movement collapses the hex at
+ * once (TW pp.167, 176), so collapse damage to every occupant resolves here.
+ * Only `unit` charges its own ledger: other occupants get no piloting sweep
+ * for damage taken during someone else's move (see `settleFall`). No-op when
+ * the hex holds no building.
+ */
+function damageBuildingByUnit(
+  state: BattleState,
+  unit: UnitState,
+  hex: HexCoord,
+  rng: Rng,
+  sink: GameEvent[],
+  ledger?: PhaseDealt,
+): void {
+  if (state.buildings[hexKey(hex)] === undefined) return;
+  const damage = Math.ceil(unitTonnage(unit) / BUILDING_UNIT_DAMAGE_DIVISOR);
+  const outcome = damageBuildingAt(state, hex, damage, sink);
+  if (outcome === null) return;
+  resolveBuildingCollapse(state, outcome, rng, sink, (id) => (id === unit.id ? ledger : undefined));
+}
+
+/**
  * Drop `unit` to the ground (TW p.68): facing rotates per the Facing After
  * Fall roll, `ceil(tonnage / 10) x (levels fallen + 1)` damage lands in
  * 5-point clusters on the fall column (with crit rolls like any damage;
@@ -3535,6 +3633,12 @@ export function applyFall(
     totalDamage: total,
     crits,
   });
+
+  // A 'Mech that falls inside a building hex damages it as though it had
+  // entered the hex (TW p.167). A collapse fall lands in fresh rubble.
+  if (opts.cause.kind !== "buildingCollapse") {
+    damageBuildingByUnit(state, unit, opts.hex ?? unit.position, rng, sink, ledger);
+  }
 
   // A pilot who ejected during the fall's damage (head destroyed) is no
   // longer aboard and takes no fall damage (TO:AR p.165).
@@ -3947,60 +4051,11 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     if (outcome !== null) buildingOutcomes.push(outcome);
   }
 
-  // Building collapse damage (TW pp. 176–177): base damage (CF at the start
-  // of the phase / 10) plus base × levels above the unit, rounded up at the
-  // end. Split into 5-point groupings plus a remainder, each to a different
-  // hit location: 'Mechs inside roll the Front column of the Punch table.
-  // Units above Level 0 also take standard falling damage. Applied after the
-  // write-back so folded attack damage lands first; new `collapseDamage`
-  // events stay inside the attack-resolution block. The engine tracks no
-  // multi-floor interiors, so every occupant counts as ground-floor with
-  // DEFAULT_BUILDING_LEVELS above (TW default Level 2, pp. 166–167).
+  // Collapse damage lands after the write-back so folded attack damage
+  // lands first; new `collapseDamage` events stay inside the
+  // attack-resolution block.
   for (const outcome of buildingOutcomes) {
-    if (!outcome.collapsed) continue;
-    const total = collapseDamageTotal(outcome.preCf, DEFAULT_BUILDING_LEVELS);
-    for (const unitId of outcome.occupants) {
-      const unit = requireUnit(state, unitId);
-      if (isUnitRemoved(unit)) continue;
-      const groups: DamageGroup[] = [];
-      for (const amount of fallingDamageGroups(total)) {
-        groups.push({ location: punchHitLocation(rollD6(rng)), damage: amount });
-      }
-      applyDamageGroups(state, unit, rng, groups, "front", sink, weaponDealt);
-      for (const group of groups) {
-        sink.push({
-          kind: "collapseDamage",
-          unitId,
-          col: outcome.col,
-          row: outcome.row,
-          location: group.location,
-          damage: group.damage,
-        });
-      }
-      // TW p. 177: any unit above Level 0 (including the roof) also takes
-      // standard falling damage on top of the collapse damage.
-      const groundLevel = cellAt(state, { col: outcome.col, row: outcome.row }).level;
-      if (groundLevel > 0 && !isUnitRemoved(unit)) {
-        applyFall(
-          state,
-          unit,
-          rng,
-          {
-            cause: { kind: "buildingCollapse" },
-            hex: { col: outcome.col, row: outcome.row },
-            seatbeltModifier: preexistingDamageModifier(
-              mechDefFor(unit),
-              unit.damage,
-              unit.critSlotsDestroyed,
-            ).modifier,
-            halved: false,
-            levelsFallen: groundLevel,
-          },
-          sink,
-          weaponDealt,
-        );
-      }
-    }
+    resolveBuildingCollapse(state, outcome, rng, sink, () => weaponDealt);
   }
 
   // A blast that destroyed the center torso: auto-eject (TO) ejects the pilot
@@ -5056,10 +5111,14 @@ const ACCIDENTAL_FALL_BASE_TN = 7;
 /**
  * Movement terrain PSRs for one entered hex (TW p.60, p.167): entering water
  * (depth 1: -1, depth 2: +0, depth 3+: +1), rubble (+0), or a building hex
- * (light +0 / medium +1 / heavy +2 / hardened +5). Exiting a building hex
- * does NOT trigger a PSR (TW p.170). Failed water/rubble rolls drop the
- * 'Mech in the hex; a failed building roll crashes it (ceil(CF / 10)
- * front-column damage, no fall) instead. A fall across levels drops into
+ * (light +0 / medium +1 / heavy +2 / hardened +5, plus the Building
+ * Movement modifier for `hexesMoved` this turn on a ground entry). Exiting a
+ * building hex does NOT trigger a PSR (TW p.170). Failed water/rubble rolls
+ * drop the 'Mech in the hex; a failed building roll crashes it (ceil(CF /
+ * 10) damage on the front column, or the rear column when `forward` is
+ * false; no fall) instead. Pass or fail, a ground entry then deals
+ * ceil(tonnage / 10) to the hex (TW p.167), collapsing it at once if that
+ * empties its CF. A fall across levels drops into
  * the lower of the two hexes (TW p.68) with levels fallen feeding damage
  * and the seatbelt check (+1 per level above 1); jump landings stay
  * 0-level falls per errata. Returns the hex the move stops in when it
@@ -5076,6 +5135,10 @@ function movementTerrainPsr(
   preModifier: number,
   sink: GameEvent[],
   ledger?: PhaseDealt,
+  /** Hexes entered this turn so far, including `to` (TW p.167). */
+  hexesMoved = 1,
+  /** Entered moving forward; false when backing in (TW p.167). */
+  forward = true,
 ): HexCoord | null {
   const stop = (): boolean =>
     unit.prone || isUnitRemoved(unit) || isShutdown(unit) || unit.unconscious;
@@ -5204,14 +5267,25 @@ function movementTerrainPsr(
     if (fellAt !== null) return fellAt;
     if (stop()) return to;
   }
-  const building = buildingEntryModifier(entering);
+  const buildingType = buildingEntryModifier(entering);
   const def = mechDefFor(unit);
-  if (building !== null) {
+  if (buildingType !== null) {
+    // A jump has no hexes-moved band: TW lets it reach only the roof, which
+    // the engine does not model, so a landing keeps the type modifier only
+    // and leaves the CF alone.
+    const building = buildingType + (ground ? buildingMovementModifier(hexesMoved) : 0);
+    /** Entry damage to the hex (TW p.167), resolved after any crash damage
+     *  (TW p.177). */
+    const wearHex = (): void => {
+      if (ground) damageBuildingByUnit(state, unit, to, rng, sink, ledger);
+    };
     unit.position = to;
     const legWasGoneR = legGone(unit.damage, "rightLeg");
     const legWasGoneL = legGone(unit.damage, "leftLeg");
     const gyroWasGone = countDestroyedGyro(def, unit.damage, unit.critSlotsDestroyed);
     if (isShutdown(unit) || unit.unconscious) {
+      wearHex();
+      if (isUnitRemoved(unit)) return to;
       applyFall(
         state,
         unit,
@@ -5228,23 +5302,30 @@ function movementTerrainPsr(
       return to;
     }
     const r = pushPilotingCheck(sink, unit, "building", building, preModifier, rng, to);
-    if (!r.success) {
+    if (r.success) {
+      wearHex();
+    } else {
+      // Crash damage reads the CF current at entry, before this unit's own
+      // toll (TW pp.167, 177).
       const cf = state.buildings[hexKey(to)]?.cf ?? 0;
       const total = Math.ceil(cf / BUILDING_CRASH_DIVISOR);
+      const column: Arc = forward ? "front" : "rear";
       const groups: DamageGroup[] = [];
       for (const amount of fallingDamageGroups(total)) {
-        groups.push({ location: hitLocation(roll2D6(rng)), damage: amount });
+        groups.push({ location: hitLocationForArc(column, roll2D6(rng)), damage: amount });
       }
-      const crits = applyDamageGroups(state, unit, rng, groups, "front", sink, ledger);
+      const crits = applyDamageGroups(state, unit, rng, groups, column, sink, ledger);
       sink.push({
         kind: "buildingCrash",
         unitId: unit.id,
         col: to.col,
         row: to.row,
+        column,
         groups,
         totalDamage: total,
         crits,
       });
+      wearHex();
       // A crash that wrecks a leg or the gyro (or knocks the pilot out via
       // an ammo blast) drops the 'Mech on the spot (TW automatic fall);
       // without this the unit would stand into the weapon phase on a gone
