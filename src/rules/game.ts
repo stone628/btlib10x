@@ -4304,8 +4304,11 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     const crits: CriticalResolution[] = [];
     let application: DamageApplication | null = null;
     for (const group of groups) {
-      let attackDirection: Arc = "front";
-      if (origin !== null) {
+      // A group that carries its arc (charge / DFA) strikes that side's armor,
+      // so a DFA on a prone 'Mech hits rear armor like its Rear-column
+      // location (TW p.150).
+      let attackDirection: Arc = group.arc ?? "front";
+      if (group.arc === undefined && origin !== null) {
         const back = bearingExact(recipient.position, origin)!;
         const dir = classifyArcWithBoundary(recipient.facing, back);
         attackDirection = defenderArcChoice(dir.arc, dir.altArc);

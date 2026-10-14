@@ -104,6 +104,11 @@ export interface DamageGroup {
   /** Through-armor critical: this group's location roll was a 2 on the 2D6
    *  table (charge groups roll their own locations, TW p.121). */
   readonly tac?: boolean;
+  /** Arc whose column located this group and whose armor it strikes. Set by
+   *  charge / DFA groups, where it can differ from the attack direction: a DFA
+   *  against a prone 'Mech reads the Rear column and so hits rear armor
+   *  (TW p.150). Absent: the damage side follows the attack direction. */
+  readonly arc?: Arc;
 }
 
 export interface PhysicalResolution {
@@ -1130,6 +1135,7 @@ export function resolvePhysicalAttack(
         damageToTarget.push({
           location: physicalHitLocation(decl.type, target, arc, locRoll, levelDelta),
           damage: amount,
+          arc,
           ...(table === "standard" && locRoll === 2 ? { tac: true } : {}),
         });
       }

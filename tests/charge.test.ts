@@ -374,6 +374,30 @@ describe("DFA resolution (TW p.150)", () => {
     expect(requireUnit(state, "t").position).toEqual({ col: 5, row: 4 });
   });
 
+  it("against a prone 'Mech reads the Rear column and strikes rear armor", () => {
+    // The jump starts in the target's front arc, yet a prone target takes the
+    // DFA on its rear armor like its Rear-column location (TW p.150).
+    const state = dfaBattle();
+    const t = requireUnit(state, "t");
+    t.prone = true;
+    const frontBefore = t.damage.armor;
+    executeMove(state, "a", "jump", dfaPath, []);
+    toAttack(state);
+    const events: GameEvent[] = [];
+    // to-hit 6,6; 3 target groups roll 2D6 (3+4 = 7, center torso); recoil
+    // 1D6; then 1s so the breached torso's critical rolls find nothing.
+    const rng = scriptedRng(6, 6, 3, 4, 3, 4, 3, 4, 3, 3, ...Array<number>(80).fill(1));
+    resolveAllAttacks(state, rng, events);
+    const r = events.find((e) => e.kind === "physicalAttackResolved");
+    if (r?.kind !== "physicalAttackResolved") throw new Error("no resolution");
+    expect(r.resolution.hit).toBe(true);
+    expect(r.resolution.damageToTarget.map((g) => g.arc)).toEqual(["rear", "rear", "rear"]);
+    const pools = r.resolution.application?.steps.map((s) => s.pool) ?? [];
+    expect(pools).toContain("armorRear");
+    expect(pools).not.toContain("armor");
+    expect(requireUnit(state, "t").damage.armor).toEqual(frontBefore);
+  });
+
   it("a miss drops the attacker as from a 2-level fall onto its rear", () => {
     const state = dfaBattle();
     executeMove(state, "a", "jump", dfaPath, []);
