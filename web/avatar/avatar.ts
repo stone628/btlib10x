@@ -494,7 +494,14 @@ function renderSlotMap(avatar: string[]): void {
     box.addEventListener("click", () => openSlot(slot));
     if (editing === slot.id) cell.classList.add("lit");
 
-    slotMapEl.append(cell, box);
+    // Dim frame around the box's glyph, like the picker's cells.
+    const frame = document.createElement("span");
+    frame.className = "map-glyph";
+    if (editing === slot.id) frame.classList.add("editing");
+    frame.setAttribute("aria-hidden", "true");
+    gridArea(frame, place.box.col + 2, place.box.line + 1, 1, 1);
+
+    slotMapEl.append(cell, box, frame);
   }
 
   if (keepFocus !== null) {
@@ -591,7 +598,9 @@ document.getElementById("copy-link")?.addEventListener("click", async () => {
 
 document.getElementById("random")?.addEventListener("click", () => {
   PARTS.forEach((def, p) => {
-    state.idx[p] = Math.floor(Math.random() * def.variants.length);
+    // Skip the "no" variant so every part shows up.
+    const picks = def.variants.flatMap((v, i) => (v.name === "no" ? [] : [i]));
+    state.idx[p] = picks[Math.floor(Math.random() * picks.length)] ?? 0;
   });
   state.ovr = {};
   saveState(state);

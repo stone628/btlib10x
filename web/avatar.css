@@ -231,6 +231,16 @@
   background: var(--c-yellow);
 }
 
+/* Frame over each box's glyph cell; clicks pass through to the box. */
+#slotmap .map-glyph {
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px #2c3c2c;
+}
+
+#slotmap .map-glyph.editing {
+  box-shadow: inset 0 0 0 1px #6b6b2a;
+}
+
 /* Glyph picker: floats above the slot map (placed by avatar.picker.ts).
    Size knobs: --gp-width is the panel width (capped at the screen width),
    --gp-glyph is the grid glyph size, 0.9 of the slot map's glyphs. */
