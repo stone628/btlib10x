@@ -1,4 +1,5 @@
 import { ARMS, HEADS, LEGS, type PartVariant, SHOULDERS, TORSOS } from "./avatar.data";
+import { msg } from "./avatar.i18n";
 import {
   applyOverrides,
   codePointLabel,
@@ -27,6 +28,7 @@ import { buildAvatarQuery, parseAvatarQuery, type UrlPart } from "./avatar.url";
 
 interface PartDef {
   key: string;
+  /** Export-line name (`HEAD=bv ...`); the UI shows `msg().part[key]`. */
   title: string;
   variants: PartVariant[];
 }
@@ -174,8 +176,15 @@ const URL_PARTS: UrlPart[] = PARTS.map((def) => ({
 /** Keep the address bar on the current avatar; replaceState adds no history entries. */
 function syncUrl(state: AvatarState): void {
   const query = buildAvatarQuery(URL_PARTS, state.idx, state.ovr);
+  // Keep ?lang= so a reload stays in that language when storage is blocked.
+  const lang = new URLSearchParams(location.search).get("lang");
+  const langParam = lang === null ? "" : `&lang=${encodeURIComponent(lang)}`;
   try {
-    history.replaceState(history.state, "", `${location.pathname}?${query}${location.hash}`);
+    history.replaceState(
+      history.state,
+      "",
+      `${location.pathname}?${query}${langParam}${location.hash}`,
+    );
   } catch {
     // Some embedded or file: contexts refuse replaceState; the URL just stays put.
   }
@@ -257,9 +266,9 @@ function announce(): void {
   const v = def.variants[state.idx[state.active] ?? 0];
   if (v === undefined) return;
   const ovr = partOverrides(state.ovr, state.active)
-    .map(([s, ch]) => `, ${s.title} set to ${codePointLabel(ch)}`)
+    .map(([s, ch]) => msg().slotSet(msg().slot[s.id], codePointLabel(ch)))
     .join("");
-  live.textContent = `${def.title}: ${v.name}, ${v.desc}${ovr}`;
+  live.textContent = `${msg().part[def.key]}: ${v.name}, ${v.desc}${ovr}`;
 }
 
 /** Flex gap in `.carousel` (see avatar.css); kept in sync by hand. */
@@ -290,6 +299,7 @@ function syncWidth(): void {
 }
 
 function render(): void {
+  const m = msg();
   stage.replaceChildren();
   const selected = composeFrom(shownData(), true);
 
@@ -298,6 +308,7 @@ function render(): void {
     const sel = wrapIndex(state.idx[p] ?? 0, n);
     const variant = def.variants[sel];
     if (variant === undefined) return;
+    const partName = m.part[def.key] ?? def.title;
 
     const section = document.createElement("section");
     section.className = "part";
@@ -308,13 +319,13 @@ function render(): void {
     const ovr = partOverrides(state.ovr, p)
       .map(([s, ch]) => ` · ${s.id}=${ch}`)
       .join("");
-    label.textContent = `[${def.title}: ${variant.name} — ${variant.desc}${ovr}]`;
+    label.textContent = `[${partName}: ${variant.name} — ${variant.desc}${ovr}]`;
     section.append(label);
 
     const row = document.createElement("div");
     row.className = "carousel";
     row.setAttribute("role", "group");
-    row.setAttribute("aria-label", `${def.title} variants`);
+    row.setAttribute("aria-label", m.variants(partName));
 
     for (let off = -sideCount; off <= sideCount; off++) {
       if (off === 0) {
@@ -325,7 +336,7 @@ function render(): void {
         prev.type = "button";
         prev.className = "step";
         prev.textContent = "<";
-        prev.setAttribute("aria-label", `previous ${def.title}`);
+        prev.setAttribute("aria-label", m.previous(partName));
         prev.addEventListener("click", () => {
           setVariant(p, sel - 1);
           state.active = p;
@@ -350,7 +361,7 @@ function render(): void {
         cap.textContent =
           partOverrides(state.ovr, p).length > 0 ? `${variant.name}*` : variant.name;
         box.append(art, cap);
-        box.setAttribute("aria-label", `${def.title} ${variant.name} selected`);
+        box.setAttribute("aria-label", m.selected(partName, variant.name));
         box.addEventListener("click", () => {
           state.active = p;
           saveState(state);
@@ -362,7 +373,7 @@ function render(): void {
         next.type = "button";
         next.className = "step";
         next.textContent = ">";
-        next.setAttribute("aria-label", `next ${def.title}`);
+        next.setAttribute("aria-label", m.next(partName));
         next.addEventListener("click", () => {
           setVariant(p, sel + 1);
           state.active = p;
@@ -391,7 +402,7 @@ function render(): void {
         cap.setAttribute("aria-hidden", "true");
         cap.textContent = target?.name ?? "";
         b.append(art, cap);
-        b.setAttribute("aria-label", `${def.title} ${target?.name ?? ""}`);
+        b.setAttribute("aria-label", `${partName} ${target?.name ?? ""}`);
         b.title = target !== undefined ? `${target.name} — ${target.desc}` : "";
         b.addEventListener("click", () => {
           setVariant(p, vi);
@@ -442,6 +453,7 @@ function focusedSlot(): SlotId | null {
 }
 
 function renderSlotMap(avatar: string[]): void {
+  const m = msg();
   const keepFocus = focusedSlot();
   const data = shownData();
   const lines = slotMapLines(avatar, slotGlyphs(data));
@@ -480,7 +492,7 @@ function renderSlotMap(avatar: string[]): void {
     box.textContent = boxLines(lines, slot.id).join("\n");
     box.setAttribute(
       "aria-label",
-      `${slot.title}: ${ch === " " ? "blank" : ch}, ${overridden ? "override" : "from variant"}`,
+      `${m.slot[slot.id]}: ${ch === " " ? m.blank : ch}, ${overridden ? m.override : m.fromVariant}`,
     );
     gridArea(box, place.box.col, place.box.line, BOX_W, BOX_H);
     const lit = (on: boolean) => cell.classList.toggle("lit", on || editing === slot.id);
@@ -581,19 +593,35 @@ document.addEventListener("keydown", (e) => {
 document.getElementById("copy")?.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(`${exportText()}\n${partsEl.textContent ?? ""}`);
-    live.textContent = "avatar copied to clipboard";
+    live.textContent = msg().copied;
   } catch {
-    live.textContent = "copy failed: clipboard unavailable";
+    live.textContent = msg().copyFailed;
   }
 });
 
 document.getElementById("copy-link")?.addEventListener("click", async () => {
   try {
-    await navigator.clipboard.writeText(location.href);
-    live.textContent = "link copied to clipboard";
+    // A shared link opens in the recipient's own language.
+    const url = new URL(location.href);
+    url.searchParams.delete("lang");
+    await navigator.clipboard.writeText(url.href);
+    live.textContent = msg().linkCopied;
   } catch {
-    live.textContent = "copy failed: clipboard unavailable";
+    live.textContent = msg().copyFailed;
   }
+});
+
+document.getElementById("blank")?.addEventListener("click", () => {
+  PARTS.forEach((def, p) => {
+    state.idx[p] = Math.max(
+      0,
+      def.variants.findIndex((v) => v.name === "no"),
+    );
+  });
+  state.ovr = {};
+  saveState(state);
+  render();
+  announce();
 });
 
 document.getElementById("random")?.addEventListener("click", () => {
@@ -615,8 +643,17 @@ if (clashes.length > 0) {
   throw new Error(`avatar: duplicate variant names: ${detail}`);
 }
 
+document.title = msg().title;
 render();
 syncWidth();
+
+// The language buttons in avatar.html only set `<html lang>`; redraw the
+// script-built text when it changes.
+new MutationObserver(() => {
+  document.title = msg().title;
+  render();
+  announce();
+}).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
 
 // Mono metrics settle after fonts load, which shifts the slot measurement.
 void document.fonts.ready.then(() => {

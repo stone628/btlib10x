@@ -11,8 +11,39 @@
   gap: 10px;
 }
 
+/* Both locales are in the markup; only the `<html lang>` match stays visible.
+   The language buttons are exempt so both labels always show. Same rules as
+   landing.css. */
+:root:lang(en) #avatar-app :lang(ko):not(#lang button) {
+  display: none;
+}
+:root:lang(ko) #avatar-app :lang(en):not(#lang button) {
+  display: none;
+}
+
 #avatar-head {
+  width: 100%;
+  max-width: 760px;
   text-align: center;
+}
+
+#lang {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+#lang button {
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+#lang button[aria-pressed="true"] {
+  color: var(--c-white);
+  border-color: var(--c-green);
+  background: var(--cb-green);
 }
 
 #avatar-head h1 {

@@ -3,27 +3,72 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>bt10x mech avatar</title>
+    <title>bt10x mech avatar creator</title>
     <link rel="preload" href="fonts/bt10x-mono-0.63.2-regular.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="bt10x.css" />
     <link rel="stylesheet" href="avatar.css" />
+    <script>
+      // Same locale precedence as the landing page (web/index.html) and the
+      // terminal: ?lang= in the URL, then localStorage "bt10x.lang", then
+      // English. `kr` is accepted as an alias of `ko`. Runs before first paint
+      // so the :lang() rules in avatar.css never flash the other locale.
+      (() => {
+        const KEY = "bt10x.lang";
+        const norm = (raw) => {
+          const v = String(raw).toLowerCase();
+          return v === "kr" ? "ko" : v === "en" || v === "ko" ? v : null;
+        };
+        let stored = null;
+        try {
+          stored = norm(localStorage.getItem(KEY));
+        } catch {}
+        const fromUrl = norm(new URLSearchParams(location.search).get("lang"));
+        window.bt10xSetLang = (locale, persist) => {
+          document.documentElement.lang = locale;
+          let saved = !persist;
+          if (persist) {
+            try {
+              localStorage.setItem(KEY, locale);
+              saved = true;
+            } catch {}
+          }
+          // Storage blocked: carry the choice to the terminal in its URL.
+          const term = document.getElementById("link-terminal");
+          if (term) term.href = saved ? "terminal.html" : `terminal.html?lang=${locale}`;
+          for (const b of document.querySelectorAll("#lang button")) {
+            b.setAttribute("aria-pressed", String(b.dataset.lang === locale));
+          }
+        };
+        document.documentElement.lang = fromUrl ?? stored ?? "en";
+        window.bt10xInitialLang = { locale: document.documentElement.lang, persist: fromUrl !== null };
+      })();
+    </script>
   </head>
   <body>
     <main id="avatar-app">
       <header id="avatar-head">
-        <h1>'MECH AVATAR</h1>
-        <p class="hint">up/down selects part · left/right changes variant · click or tap works too<br />click a box around the avatar to set its character</p>
+        <nav id="lang" aria-label="language">
+          <button class="link-button" type="button" data-lang="en" lang="en">EN</button>
+          <button class="link-button" type="button" data-lang="ko" lang="ko">한국어</button>
+        </nav>
+        <h1><span lang="en">'MECH AVATAR CREATOR</span><span lang="ko">'MECH 아바타 생성기</span></h1>
+        <p class="hint">
+          <span lang="en">up/down selects part · left/right changes variant · click or tap works too<br />click a box around the avatar to set its character</span><span lang="ko">위/아래로 부위 선택 · 왼쪽/오른쪽으로 변형 변경 · 클릭이나 탭도 됩니다<br />아바타 주위의 상자를 눌러 그 자리의 문자를 지정합니다</span>
+        </p>
       </header>
       <div id="stage" aria-live="off"></div>
       <section id="out-row">
-        <p class="hint">final avatar with overrides applied · click a part box to set its character</p>
+        <p class="hint">
+          <span lang="en">final avatar with overrides applied · click a part box to set its character</span><span lang="ko">덮어쓰기를 적용한 최종 아바타 · 부위 상자를 눌러 문자를 지정합니다</span>
+        </p>
         <div id="slotmap"></div>
         <div id="parts"></div>
         <div id="actions">
-          <button id="copy" class="link-button" type="button">copy</button>
-          <button id="copy-link" class="link-button" type="button">copy link</button>
-          <button id="random" class="link-button" type="button">random</button>
-          <a class="link-button" href="terminal.html">terminal</a>
+          <button id="copy" class="link-button" type="button"><span lang="en">copy</span><span lang="ko">복사</span></button>
+          <button id="copy-link" class="link-button" type="button"><span lang="en">copy link</span><span lang="ko">링크 복사</span></button>
+          <button id="blank" class="link-button" type="button"><span lang="en">blank</span><span lang="ko">비우기</span></button>
+          <button id="random" class="link-button" type="button"><span lang="en">random</span><span lang="ko">무작위</span></button>
+          <a id="link-terminal" class="link-button" href="terminal.html"><span lang="en">terminal</span><span lang="ko">터미널</span></a>
         </div>
       </section>
     </main>
@@ -34,6 +79,15 @@
     </footer>
     <dialog id="glyph-picker"></dialog>
     <div id="sr-live" class="sr-only" aria-live="polite"></div>
+    <script>
+      (() => {
+        const init = window.bt10xInitialLang;
+        window.bt10xSetLang(init.locale, init.persist);
+        for (const b of document.querySelectorAll("#lang button")) {
+          b.addEventListener("click", () => window.bt10xSetLang(b.dataset.lang, true));
+        }
+      })();
+    </script>
     <script type="module" src="./avatar.js"></script>
   </body>
 </html>

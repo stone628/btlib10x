@@ -1,4 +1,5 @@
 import { GLYPH_BLOCKS } from "./avatar.glyphs";
+import { msg } from "./avatar.i18n";
 import { BLANK, codePointLabel, isAllowedGlyph, type SlotDef } from "./avatar.override";
 
 /**
@@ -133,14 +134,16 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
   /** Previewed but not applied: a glyph, `null` for the variant, `undefined` for none. */
   let pending: string | null | undefined;
 
+  const m = msg();
+  const slotName = m.slot[opts.slot.id];
   dialog.replaceChildren();
   dialog.className = "glyph-picker";
-  dialog.setAttribute("aria-label", `choose a character for ${opts.slot.title}`);
+  dialog.setAttribute("aria-label", m.pickerLabel(slotName));
 
   const title = document.createElement("div");
   title.className = "gp-title";
   const titleName = document.createElement("span");
-  titleName.textContent = opts.slot.title.toUpperCase();
+  titleName.textContent = slotName.toUpperCase();
   /** Code point of the focused glyph, or a find message. */
   const status = document.createElement("span");
   status.className = "gp-status";
@@ -150,7 +153,7 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
   const controls = document.createElement("div");
   controls.className = "gp-controls";
   const groupLabel = document.createElement("label");
-  groupLabel.textContent = "group ";
+  groupLabel.textContent = m.group;
   const select = document.createElement("select");
   for (const [i, g] of groups.entries()) {
     const o = document.createElement("option");
@@ -160,10 +163,10 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
   }
   groupLabel.append(select);
   const findLabel = document.createElement("label");
-  findLabel.textContent = "find ";
+  findLabel.textContent = m.find;
   const find = document.createElement("input");
   find.type = "text";
-  find.placeholder = "paste a char or U+2622";
+  find.placeholder = m.findPlaceholder;
   find.autocomplete = "off";
   find.spellcheck = false;
   findLabel.append(find);
@@ -177,11 +180,11 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
   recentBox.className = "gp-recent";
   const recentLabel = document.createElement("div");
   recentLabel.className = "gp-recent-label";
-  recentLabel.textContent = "recent · hold to pin";
+  recentLabel.textContent = m.recent;
   const recentGrid = document.createElement("div");
   recentGrid.className = "gp-grid gp-recent-grid";
   recentGrid.setAttribute("role", "grid");
-  recentGrid.setAttribute("aria-label", "recent and pinned; hold or press P to pin");
+  recentGrid.setAttribute("aria-label", m.recentLabel);
   recentBox.append(recentLabel, recentGrid);
 
   const footer = document.createElement("div");
@@ -197,11 +200,11 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
   const buttons = document.createElement("span");
   buttons.className = "gp-buttons";
   buttons.append(
-    mkButton("blank", () => choose(BLANK)),
-    mkButton("use variant", () => choose(null)),
-    mkButton("cancel", () => cancel()),
+    mkButton(m.blank, () => choose(BLANK)),
+    mkButton(m.useVariant, () => choose(null)),
+    mkButton(m.cancel, () => cancel()),
   );
-  const apply = mkButton("apply", () => commit());
+  const apply = mkButton(m.apply, () => commit());
   apply.classList.add("gp-apply");
   apply.disabled = true;
   buttons.append(apply);
@@ -234,8 +237,8 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
       b.tabIndex = -1;
       if (pinned.has(ch)) {
         b.classList.add("pinned");
-        b.title = `${codePointLabel(ch)} (pinned)`;
-        b.setAttribute("aria-label", `${codePointLabel(ch)}, pinned`);
+        b.title = m.pinnedTitle(codePointLabel(ch));
+        b.setAttribute("aria-label", m.pinnedLabel(codePointLabel(ch)));
       }
       if (ch === opts.current) b.classList.add("current");
       if (pending === ch) b.classList.add("chosen");
@@ -263,7 +266,7 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
     const i = recentCells().findIndex((b) => b.dataset.ch === ch);
     if (i >= 0) setRecentFocus(i, refocus);
     status.textContent = `${codePointLabel(ch)} ${ch} ${
-      recentRow().pinned.has(ch) ? "pinned" : "unpinned"
+      recentRow().pinned.has(ch) ? m.pinned : m.unpinned
     }`;
   }
 
@@ -375,7 +378,9 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
     for (const b of [...cells(), ...recentCells()]) {
       b.classList.toggle("chosen", b.dataset.ch === ch);
     }
-    apply.textContent = `apply ${ch === null ? `variant ${opts.variant}` : ch === BLANK ? "blank" : ch}`;
+    apply.textContent = m.applyWhat(
+      ch === null ? m.variantGlyph(opts.variant) : ch === BLANK ? m.blank : ch,
+    );
   }
 
   function commit(): void {
@@ -428,7 +433,7 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
     }
     const gi = groups.findIndex((g) => g.glyphs.includes(ch));
     if (gi < 0) {
-      status.textContent = `${codePointLabel(ch)} not in font`;
+      status.textContent = m.notInFont(codePointLabel(ch));
       return;
     }
     showGroup(gi, groups[gi]!.glyphs.indexOf(ch), false);

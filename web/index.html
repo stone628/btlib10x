@@ -33,9 +33,17 @@
               saved = true;
             } catch {}
           }
-          // Storage blocked: carry the choice to the terminal in its URL.
+          // Storage blocked: carry the choice to the terminal and the
+          // avatar creator in their URLs.
           const term = document.getElementById("card-terminal");
           if (term) term.href = saved ? "terminal.html" : `terminal.html?lang=${locale}`;
+          const avatar = document.getElementById("card-avatar");
+          if (avatar) {
+            const url = new URL(avatar.getAttribute("href"), location.href);
+            if (saved) url.searchParams.delete("lang");
+            else url.searchParams.set("lang", locale);
+            avatar.href = `avatar.html${url.search}`;
+          }
           for (const b of document.querySelectorAll("#lang button")) {
             b.setAttribute("aria-pressed", String(b.dataset.lang === locale));
           }
@@ -81,7 +89,7 @@
 ║ ╜╙ ║
 ╚════╝</pre>
           <h2>
-            <span lang="en">'Mech avatar</span><span lang="ko">'Mech 아바타</span>
+            <span lang="en">'Mech avatar creator</span><span lang="ko">'Mech 아바타 생성기</span>
           </h2>
           <p>
             <span lang="en">Build a text-art 'Mech portrait part by part, then copy it or share a link.</span><span lang="ko">부위별로 텍스트 아트 'Mech 초상을 만들고 복사하거나 링크로 공유합니다.</span>
