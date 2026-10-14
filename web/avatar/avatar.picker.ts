@@ -493,9 +493,21 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
     e.preventDefault();
     cancel();
   };
-  // A click on the transparent backdrop lands on the dialog element itself.
+  // A backdrop click lands on the dialog element itself, but so does a click
+  // on the panel's own padding, so test the point against the panel box. A
+  // press that starts inside the panel (e.g. a drag out of it) never closes.
+  const outsidePanel = (e: MouseEvent): boolean => {
+    if (e.target !== dialog) return false;
+    const r = dialog.getBoundingClientRect();
+    return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+  };
+  let pressedOutside = false;
+  dialog.onpointerdown = (e) => {
+    pressedOutside = outsidePanel(e);
+  };
   dialog.onclick = (e) => {
-    if (e.target === dialog) cancel();
+    if (pressedOutside && outsidePanel(e)) cancel();
+    pressedOutside = false;
   };
 
   openPanel = { close: cancel };

@@ -429,11 +429,17 @@
   overflow: hidden;
 }
 
-/* A hold pins, so it must not select text or open the iOS callout. */
+/* A hold pins, so it must not open the iOS callout. */
 .gp-recent-grid .gp-cell {
-  user-select: none;
-  -webkit-user-select: none;
   -webkit-touch-callout: none;
+}
+
+/* On touch a hold would also start a text selection; a mouse keeps drag-select for bulk copy. */
+@media (pointer: coarse) {
+  .gp-recent-grid .gp-cell {
+    user-select: none;
+    -webkit-user-select: none;
+  }
 }
 
 .gp-cell.pinned {
