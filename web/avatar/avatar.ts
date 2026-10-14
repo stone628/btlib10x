@@ -574,6 +574,8 @@ function moveActive(delta: number): void {
 document.addEventListener("keydown", (e) => {
   // The picker handles its own keys; arrows there must not step variants.
   if (isPickerOpen()) return;
+  // Arrows in the snippet panel move the caret, not the carousels.
+  if (document.querySelector("#snippet-panel[open]") !== null) return;
   // Arrow keys on a slot box still drive the carousels.
   if (e.key === "ArrowLeft") {
     e.preventDefault();
@@ -599,16 +601,89 @@ document.getElementById("copy")?.addEventListener("click", async () => {
   }
 });
 
+/** Link to this avatar; a shared link opens in the recipient's own language. */
+function shareUrl(): string {
+  const url = new URL(location.href);
+  url.searchParams.delete("lang");
+  return url.href;
+}
+
 document.getElementById("copy-link")?.addEventListener("click", async () => {
   try {
-    // A shared link opens in the recipient's own language.
-    const url = new URL(location.href);
-    url.searchParams.delete("lang");
-    await navigator.clipboard.writeText(url.href);
+    await navigator.clipboard.writeText(shareUrl());
     live.textContent = msg().linkCopied;
   } catch {
     live.textContent = msg().copyFailed;
   }
+});
+
+function escapeHtml(text: string): string {
+  return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+
+/** Absolute URL of the page's regular-weight font, from the preload link in avatar.html. */
+function fontUrl(): string | null {
+  return document.querySelector<HTMLLinkElement>('link[rel="preload"][as="font"]')?.href ?? null;
+}
+
+/**
+ * Embeddable HTML: the copied avatar in a monospace block linking back here.
+ * The font loads from this site (`/fonts/*` sends CORS headers, see
+ * scripts/dist-web.mjs) so box drawing lines up on any page.
+ */
+function snippetHtml(): string {
+  const href = escapeHtml(shareUrl()).replaceAll('"', "&quot;");
+  const label = escapeHtml(msg().snippetLabel).replaceAll('"', "&quot;");
+  const font = fontUrl();
+  const fontCss =
+    font === null
+      ? []
+      : [
+          `<style>@font-face{font-family:"Bt10x Mono";src:url("${escapeHtml(font)}") format("woff2");font-weight:400;font-style:normal;font-display:block}</style>`,
+        ];
+  return [
+    ...fontCss,
+    `<a href="${href}" style="color:inherit;text-decoration:none">` +
+      `<pre style="display:inline-block;margin:0;font-family:'Bt10x Mono','SF Mono',Menlo,Consolas,monospace;font-size:inherit;line-height:1.175;font-variant-ligatures:none" aria-label="${label}">${escapeHtml(exportText())}</pre>` +
+      "</a>",
+  ].join("\n");
+}
+
+const snippetPanel = document.getElementById("snippet-panel") as HTMLDialogElement;
+const snippetCode = document.getElementById("snippet-code") as HTMLTextAreaElement;
+
+document.getElementById("show-snippet")?.addEventListener("click", () => {
+  snippetCode.value = snippetHtml();
+  snippetPanel.showModal();
+  snippetCode.focus();
+  snippetCode.select();
+});
+
+document.getElementById("snippet-copy")?.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(snippetCode.value);
+    live.textContent = msg().snippetCopied;
+  } catch {
+    live.textContent = msg().copyFailed;
+  }
+});
+
+document.getElementById("snippet-close")?.addEventListener("click", () => snippetPanel.close());
+
+// A backdrop click lands on the dialog itself, as does one on its padding,
+// so close only when both press and release fall outside the panel box.
+const outsideSnippet = (e: MouseEvent): boolean => {
+  if (e.target !== snippetPanel) return false;
+  const r = snippetPanel.getBoundingClientRect();
+  return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+};
+let snippetPressedOutside = false;
+snippetPanel.addEventListener("pointerdown", (e) => {
+  snippetPressedOutside = outsideSnippet(e);
+});
+snippetPanel.addEventListener("click", (e) => {
+  if (snippetPressedOutside && outsideSnippet(e)) snippetPanel.close();
+  snippetPressedOutside = false;
 });
 
 document.getElementById("blank")?.addEventListener("click", () => {

@@ -25,16 +25,11 @@
         const fromUrl = norm(new URLSearchParams(location.search).get("lang"));
         window.bt10xSetLang = (locale, persist) => {
           document.documentElement.lang = locale;
-          let saved = !persist;
           if (persist) {
             try {
               localStorage.setItem(KEY, locale);
-              saved = true;
             } catch {}
           }
-          // Storage blocked: carry the choice to the terminal in its URL.
-          const term = document.getElementById("link-terminal");
-          if (term) term.href = saved ? "terminal.html" : `terminal.html?lang=${locale}`;
           for (const b of document.querySelectorAll("#lang button")) {
             b.setAttribute("aria-pressed", String(b.dataset.lang === locale));
           }
@@ -64,13 +59,24 @@
         <div id="slotmap"></div>
         <div id="parts"></div>
         <div id="actions">
-          <button id="copy" class="link-button" type="button"><span lang="en">copy</span><span lang="ko">복사</span></button>
+          <button id="copy" class="link-button" type="button"><span lang="en">copy text</span><span lang="ko">텍스트 복사</span></button>
           <button id="copy-link" class="link-button" type="button"><span lang="en">copy link</span><span lang="ko">링크 복사</span></button>
+          <button id="show-snippet" class="link-button" type="button"><span lang="en">show HTML snippet</span><span lang="ko">HTML 스니펫 보기</span></button>
           <button id="blank" class="link-button" type="button"><span lang="en">blank</span><span lang="ko">비우기</span></button>
           <button id="random" class="link-button" type="button"><span lang="en">random</span><span lang="ko">무작위</span></button>
-          <a id="link-terminal" class="link-button" href="terminal.html"><span lang="en">terminal</span><span lang="ko">터미널</span></a>
         </div>
       </section>
+      <dialog id="snippet-panel" aria-labelledby="snippet-title">
+        <div id="snippet-title" class="gp-title"><span lang="en">HTML SNIPPET</span><span lang="ko">HTML 스니펫</span></div>
+        <p class="hint"><span lang="en">paste into html page; the font loads from this site, and the avatar links back to this creator</span><span lang="ko">html 페이지에 붙여넣으세요. 글꼴은 이 사이트에서 불러오고, 아바타를 누르면 이 생성기로 연결됩니다</span></p>
+        <textarea id="snippet-code" readonly spellcheck="false" autocomplete="off"></textarea>
+        <div class="gp-footer">
+          <span class="gp-buttons">
+            <button id="snippet-copy" class="link-button" type="button"><span lang="en">copy</span><span lang="ko">복사</span></button>
+            <button id="snippet-close" class="link-button" type="button"><span lang="en">close</span><span lang="ko">닫기</span></button>
+          </span>
+        </div>
+      </dialog>
     </main>
     <footer id="legal">
       Unofficial fan project. Not affiliated with or endorsed by Catalyst Game Labs, The Topps

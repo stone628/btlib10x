@@ -26,7 +26,9 @@ writeFileSync(
   "/btlib10x.jsonl\n  Content-Type: application/json; charset=utf-8\n" +
     "/btlib10x.sw.jsonl\n  Content-Type: application/json; charset=utf-8\n" +
     // File names carry the JuliaMono version, so a new release is a new URL.
-    "/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n",
+    // CORS lets the avatar creator's HTML snippet load the font on other sites.
+    "/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n" +
+    "  Access-Control-Allow-Origin: *\n",
 );
 console.log(
   `dist/web: ${["index.html", "landing.css", "terminal.html", "bt10x.css", "btlib10x.js", "btlib10x.jsonl", "btlib10x.sw.jsonl", "terminal.js", "avatar.html", "avatar.css", "avatar.js", "VISION.md", "favicon.ico", "_headers", ...fonts.map((f) => `fonts/${f}`)].join(", ")}`,
