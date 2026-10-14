@@ -124,7 +124,10 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
 
   const groups = BLOCK_GROUPS;
 
-  let groupIdx = Math.max(0, groups.findIndex((g) => g.glyphs.includes(opts.current)));
+  let groupIdx = Math.max(
+    0,
+    groups.findIndex((g) => g.glyphs.includes(opts.current)),
+  );
   let focusIdx = 0;
   let closed = false;
   /** Previewed but not applied: a glyph, `null` for the variant, `undefined` for none. */
