@@ -38,7 +38,8 @@ yet is a gap, not a deviation; gaps are tracked in §4.
 ### 2.1 Tactical Operations adoptions
 
 - **Ejection and auto-eject (TO:AR p.165).** Manual ejection, plus auto-eject
-  (on by default, per-unit opt-out) when the cockpit or center torso is lost.
+  (on by default, per-unit opt-out) when the head or center torso location
+  is lost. A cockpit-slot kill still kills the pilot (no eject).
   *Why:* TW gives a doomed pilot no way out, and ejection is what turns a
   fight into salvage. *Not adopted:* planetary-condition modifiers and the
   submerged-cockpit ban.

@@ -571,6 +571,9 @@ describe("weapon and ammo crit effects", () => {
     });
     expect(res.killedReason).toBe("cockpitDestroyed");
     expect(res.rows.some((r) => r.kind === "cockpitDestroyed")).toBe(true);
+    // TW p.125: cockpit destroys the slot only — head pools survive.
+    expect(res.damage.internalStructure.head).toBe(def.internalStructure.head);
+    expect(res.damage.armor.head).toBe(def.armor.head);
   });
 });
 
@@ -1201,8 +1204,10 @@ describe("blow-off and cockpit kill: salvage-friendly slot preservation", () => 
     });
 
     expect(res.killedReason).toBe("cockpitDestroyed");
-    expect(res.damage.internalStructure.head).toBe(0);
-    expect(res.damage.armor.head).toBe(0);
+    // TW p.125: cockpit destroys the slot only — head pools survive,
+    // unlike a head blow-off (IS/armor wipe).
+    expect(res.damage.internalStructure.head).toBe(def.internalStructure.head);
+    expect(res.damage.armor.head).toBe(def.armor.head);
     // Slot flags preserved wholesale EXCEPT for the cockpit slot, which
     // the standard `applySlotHit` pathway flips to true at the moment
     // of the hit. Per salvage design the cockpit-driven kill leaves

@@ -840,11 +840,11 @@ function applySlotHit(
   // structure component
   const name = slot.name;
   if (name === COCKPIT) {
-    // Cockpit crit kills the 'Mech (pilot killed). Structural pools wipe;
-    // salvaged head components (sensors, life-support slots) ride away
-    // on the head — leave `state.destroyed.head` flags intact for the
-    // salvage reader.
-    zeroLocationStructure(state.damage, "head");
+    // Cockpit crit kills the 'Mech (pilot killed) by destroying the slot
+    // only (TW p.125). The head location's armor and structure pools stay
+    // intact — unlike a head blow-off — so salvage readers see a killed
+    // cockpit slot in a surviving head. Kill flows via `killedReason`,
+    // not via IS<=0.
     state.killedReason = "cockpitDestroyed";
     state.rows.push({
       kind: "cockpitDestroyed",
