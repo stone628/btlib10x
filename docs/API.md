@@ -457,7 +457,9 @@ a `physicalAttackResolved` whose `resolution.missReason` is `"advanced"`
 (`advancedTo` is the hex the attacker moved into) or `"voided:wreck"` /
 `"voided:hexTaken"` / `"voided:attackerDown"`). Charge damage is
 `ceil(tonnage / 10 × hexes moved)`, not counting the target's hex (TW p.148),
-so an adjacent charge deals no damage but still forces both +2 PSRs on a hit. `PhysicalAttackType` is `"punch" |
+so an adjacent charge deals no damage but still forces both +2 PSRs on a hit.
+Deviation: TW allows charges/DFAs only against units that finished moving
+(pp.148–149); the engine omits the move-order check. `PhysicalAttackType` is `"punch" |
 "kick" | "club" | "strike" | "charge" | "dfa"` (`isMeleeCharge`); `PhysicalAttackDecl` carries `{ type, targetId,
 limb?, weapon? }`; `PHYSICAL_WEAPONS` / `PhysicalWeaponStats` /
 `PhysicalWeaponName` / `isPhysicalWeaponName` describe the hatchet / sword /

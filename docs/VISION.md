@@ -68,6 +68,10 @@ yet is a gap, not a deviation; gaps are tracked in §4.
   *Why:* one activation per unit is far more playable, and outcomes match TW
   except when a player would have changed their physical attack after seeing
   weapon results.
+- **Charge / DFA against any enemy (TW pp.148–149).** TW allows only targets
+  that finished moving; the engine lets you declare against an unmoved unit.
+  *Why:* keeps `place`-on-enemy-hex intuitive, avoids holding chargers to the
+  end of the activation order.
 - **One movement declaration per unit (TW pp.39, 49–50, 160; TO:AR p.165).**
   Locomotion, posture change, shutdown, restart or ejection: one choice, one
   commit. *Why:* minimum interaction, closest TW play.

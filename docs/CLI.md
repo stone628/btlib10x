@@ -272,7 +272,9 @@ are listed here. Rule text lives in the rulebook.
   `ceil(tonnage / 10 × hexes moved)`, not counting the target's hex (TW p.148).
   Charging an adjacent unit therefore deals no damage, but on a hit both sides
   still roll their +2 PSRs — a strategic choice to try to knock the target down
-  at the cost of your own recoil (target tonnage / 10) and fall risk. House rule:
+  at the cost of your own recoil (target tonnage / 10) and fall risk. Deviation:
+  TW allows charges/DFAs only against units that finished moving (pp.148–149);
+  the engine lets you declare against any enemy for simplicity. House rule:
   if the target moved away the attacker advances into the vacated hex. Not
   modeled: charging buildings, displacement.
 - **Deferred** — industrial-tool physical weapons and the optional Punch/Kick
