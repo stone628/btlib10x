@@ -91,7 +91,7 @@ The prompt names the acting unit; commands act on that 'Mech.
 | `status` | queued move steps with running MP cost per step |
 | `cancel` | clear mode + steps |
 | `rollback` | undo the last completed `done`: back to the previous actor's prompt (half-declared input is discarded; dice state and replay log are restored too). At most `MAX_SNAPSHOT_COUNT` (10) prompt snapshots are kept (`web/terminal/rollback.ts`); no redo |
-| `done` | commit posture-change first, then move only on success (`attemptStandUp`/`dropProne` then `executeMove` in one atomic commit; failed stand discards queued `place`); prints path + MP spent (posture cost folded in) and full budget |
+| `done` | commit posture-change first, then move only on success (one `executePostureMove` call in one atomic commit; the engine holds the shared MP pool; failed stand discards queued `place`); prints path + MP spent (posture cost folded in) and full budget |
 
 Shut-down units (including `starting`) act **first** in the movement phase,
 regardless of initiative: the log prints

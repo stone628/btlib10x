@@ -1,5 +1,4 @@
 import {
-  attemptStandUp,
   attemptVoluntaryStartup,
   type BattleState,
   canAttemptStandUp,
@@ -7,11 +6,11 @@ import {
   DROP_MP_COST,
   destroyedArms,
   destroyedLegs,
-  dropProne,
   effectiveMoveBudget,
   effectiveMovement,
   ejectPilot,
   executeMove,
+  executePostureMove,
   type Facing,
   type GameEvent,
   type HexCoord,
@@ -29,11 +28,12 @@ import {
   neighbor,
   oppositeFacing,
   passMovement,
+  postureCost,
+  postureMoveBudget,
   type RevealedLanding,
   reachableLandings,
   requireUnit,
   rotateFacing,
-  standUpCost,
   type UnitState,
   voluntaryShutdown,
   waterDepth,
@@ -464,7 +464,7 @@ export function budgetFor(unit: UnitState, context: MovementContext): number {
   );
   const declared = context.moveMode ?? null;
   if (declared === "prone") {
-    return Math.max(0, effectiveMoveBudget("walk", movement, unit.heat) - DROP_MP_COST);
+    return postureMoveBudget(unit, "drop", effectiveMoveBudget("walk", movement, unit.heat));
   }
   if (declared === "turn") {
     return effectiveMoveBudget("walk", movement, unit.heat);
@@ -474,7 +474,7 @@ export function budgetFor(unit: UnitState, context: MovementContext): number {
   }
   if (declared === "standup") {
     const loco = context.postureMove ?? "walk";
-    return Math.max(0, effectiveMoveBudget(loco, movement, unit.heat) - standUpCost(unit));
+    return postureMoveBudget(unit, "standUp", effectiveMoveBudget(loco, movement, unit.heat));
   }
   const mode: MoveMode =
     declared === "shutdown" || declared === "startup" || declared === "eject" || declared === null
@@ -504,12 +504,9 @@ function fullBudgetFor(unit: UnitState, context: MovementContext): number {
 /** Posture MP already reserved by the declared mode (0 for plain moves). */
 export function postureCostFor(s: Session): number {
   const mode = s.move?.moveMode ?? null;
-  if (mode === "prone") return DROP_MP_COST;
-  if (mode === "standup") {
-    const { battle, context } = requireBattleAndContext(s);
-    return standUpCost(requireUnit(battle, context.actorId));
-  }
-  return 0;
+  if (mode !== "prone" && mode !== "standup") return 0;
+  const { battle, context } = requireBattleAndContext(s);
+  return postureCost(requireUnit(battle, context.actorId), mode === "prone" ? "drop" : "standUp");
 }
 
 /** Display mode for previews: prone/standup carry their sub-mode arg. */
@@ -629,33 +626,19 @@ export function commitMovement(s: Session): SessionGameEvent[] {
       // while off-line or out cold). Without this the commit throws and the
       // activation never advances.
       passMovement(battle, unitId);
-    } else if (context.moveMode === "standup") {
-      const locomotion = context.postureMove ?? "walk";
-      const steps = context.moveSteps;
+    } else if (context.moveMode === "standup" || context.moveMode === "prone") {
+      // The posture change and the move after it share one engine-held MP
+      // pool; a failed stand leaves the queued steps untaken.
       const finalFacing = context.moveFinalFacing;
-      const posture = attemptStandUp(battle, unitId, collected, s.rng, locomotion);
-      const after = battle.units[unitId]!;
-      if (!after.prone) {
-        if (steps.length > 0 || finalFacing !== null) {
-          executeMove(battle, unitId, locomotion, steps, collected, {
-            ...(finalFacing === null ? { rng: s.rng } : { finalFacing, rng: s.rng }),
-            spentMP: posture,
-            modeHeatPaid: locomotion === "walk" || locomotion === "run",
-          });
-        }
-      }
-    } else if (context.moveMode === "prone") {
-      const steps = context.moveSteps;
-      const finalFacing = context.moveFinalFacing;
-      const locomotion = context.postureMove ?? "walk";
-      dropProne(battle, unitId, collected, s.rng);
-      if (steps.length > 0 || finalFacing !== null) {
-        const posture = DROP_MP_COST;
-        executeMove(battle, unitId, locomotion, steps, collected, {
-          ...(finalFacing === null ? { rng: s.rng } : { finalFacing, rng: s.rng }),
-          spentMP: posture,
-        });
-      }
+      executePostureMove(
+        battle,
+        unitId,
+        context.moveMode === "standup" ? "standUp" : "drop",
+        context.postureMove ?? "walk",
+        context.moveSteps,
+        collected,
+        finalFacing === null ? { rng: s.rng } : { finalFacing, rng: s.rng },
+      );
     } else if (context.moveMode === "turn") {
       const steps = context.moveSteps;
       executeMove(battle, unitId, "walk", steps, collected, { rng: s.rng });
@@ -730,7 +713,7 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo {
     if ((postureMove ?? "walk") === "standStill") return { team: actor.team, revealed: [] }; // drop in place: no map
     locomotion = "walk";
     proneFlag = true;
-    walking = Math.max(0, walking - DROP_MP_COST);
+    walking = postureMoveBudget(actor, "drop", walking);
   } else if (mode === "turn") {
     locomotion = "walk";
     proneFlag = true;
@@ -738,9 +721,8 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo {
     locomotion = postureMove ?? "standStill";
     proneFlag = false;
     if (locomotion === "standStill") return { team: actor.team, revealed: [] }; // stand in place: no map, `place` stays shut
-    const standCost = standUpCost(actor);
-    if (locomotion === "run") running = Math.max(0, running - standCost);
-    else walking = Math.max(0, walking - standCost);
+    if (locomotion === "run") running = postureMoveBudget(actor, "standUp", running);
+    else walking = postureMoveBudget(actor, "standUp", walking);
   } else {
     locomotion = mode;
   }
@@ -861,7 +843,12 @@ function stepResultLines(s: Session, landing: RevealedLanding): string[] {
   const last = path[path.length - 1];
   const m = s.move;
   const mode = m?.moveMode ?? null;
-  const postureCost = mode === "prone" ? DROP_MP_COST : mode === "standup" ? standUpCost(actor) : 0;
+  const postureMP =
+    mode === "prone"
+      ? postureCost(actor, "drop")
+      : mode === "standup"
+        ? postureCost(actor, "standUp")
+        : 0;
   const locomotion =
     mode === "standup" || mode === "prone"
       ? (m?.postureMove ?? "walk")
@@ -880,7 +867,7 @@ function stepResultLines(s: Session, landing: RevealedLanding): string[] {
       row: landing.hex.row,
       facing: F(landing.facing),
       posture: PRN(actor.prone),
-      spent: postureCost + (last?.totalMp ?? 0),
+      spent: postureMP + (last?.totalMp ?? 0),
       budget: fullBudgetFor(actor, context),
     }),
   ];

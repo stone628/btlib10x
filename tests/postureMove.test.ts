@@ -263,7 +263,9 @@ describe("posture-change then move", () => {
     s.battle!.units[actor]!.heat = 15;
     execute(s, "mode standup run");
     expect(postureCostFor(s)).toBe(1);
-    expect(budgetFor(requireMovementActor(s), s.move!)).toBe(1);
+    // A Minimum Movement stand is the turn's only MP expenditure (TW p.49):
+    // nothing is left of the running budget.
+    expect(budgetFor(requireMovementActor(s), s.move!)).toBe(0);
   });
 
   it("standup offers the start hex in every facing for free (TW p.50)", async () => {

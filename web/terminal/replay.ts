@@ -15,21 +15,19 @@ import {
   type AmmoPolicy,
   type Arc,
   type AttackDecl,
-  attemptStandUp,
   attemptVoluntaryStartup,
   type BattleState,
   buildUnitInit,
   type ClubKind,
   type ClubPickupDecl,
   createBattle,
-  DROP_MP_COST,
   declareAttacks,
   declarePickup,
   destroyedSlots,
-  dropProne,
   ejectPilot,
   ensureMapRegistered,
   executeMove,
+  executePostureMove,
   FACINGS,
   type Facing,
   type GameEvent,
@@ -911,9 +909,8 @@ export function replayPlayer(text: string): void {
     const unit = b.units[id]!;
     const op = body[1];
     const mode = op === undefined ? undefined : MODE_BY_CHAR[op];
-    const opts = (finalFacing: Facing | null, extra: object = {}) => ({
+    const opts = (finalFacing: Facing | null) => ({
       rng,
-      ...extra,
       ...(finalFacing !== null ? { finalFacing } : {}),
     });
     const start = { position: unit.position, facing: unit.facing };
@@ -939,28 +936,12 @@ export function replayPlayer(text: string): void {
         throw new Error(`bad stand-up locomotion ${JSON.stringify(body[2])}`);
       }
       const { steps, finalFacing } = decodeSteps(body.slice(3), start, false);
-      const posture = attemptStandUp(b, id, sink, rng, loco);
-      if (!b.units[id]!.prone && (steps.length > 0 || finalFacing !== null)) {
-        executeMove(
-          b,
-          id,
-          loco,
-          steps,
-          sink,
-          opts(finalFacing, {
-            spentMP: posture,
-            modeHeatPaid: loco === "walk" || loco === "run",
-          }),
-        );
-      }
+      executePostureMove(b, id, "standUp", loco, steps, sink, opts(finalFacing));
       return;
     }
     if (op === "D") {
       const { steps, finalFacing } = decodeSteps(body.slice(2), start, false);
-      dropProne(b, id, sink, rng);
-      if (steps.length > 0 || finalFacing !== null) {
-        executeMove(b, id, "walk", steps, sink, opts(finalFacing, { spentMP: DROP_MP_COST }));
-      }
+      executePostureMove(b, id, "drop", "walk", steps, sink, opts(finalFacing));
       return;
     }
     if (mode === undefined) throw new Error(`unknown movement op ${JSON.stringify(op)}`);

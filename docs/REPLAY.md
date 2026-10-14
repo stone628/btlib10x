@@ -125,8 +125,8 @@ Line: `M<idx><op>[args]` (one actor).
 | op | engine call(s) | args |
 |---|---|---|
 | `s` `w` `r` `j` | `executeMove(mode, steps, {finalFacing})`, mode standStill / walk / run / jump | `[steps][facing]` |
-| `U<s\|w\|r>` | `attemptStandUp(locomotion)` (standStill / walk / run), then — only if now upright and steps or facing given — `executeMove(locomotion, steps, {finalFacing, spentMP, modeHeatPaid})` | `[steps][facing]` |
-| `D` | `dropProne`, then — if steps or facing given — `executeMove("walk", steps, {finalFacing, spentMP: DROP_MP_COST})` | `[steps][facing]` |
+| `U<s\|w\|r>` | `executePostureMove("standUp", locomotion, steps, {finalFacing})` (standStill / walk / run); steps are taken only if the stand succeeds | `[steps][facing]` |
+| `D` | `executePostureMove("drop", "walk", steps, {finalFacing})` | `[steps][facing]` |
 | `X` | `voluntaryShutdown` | – |
 | `O` | `attemptVoluntaryStartup` | – |
 | `E` | `ejectPilot` | – |

@@ -1686,17 +1686,6 @@ export interface ExecuteMoveOptions {
   readonly finalFacing?: Facing;
   /** Per-call random source. Defaults to `DEFAULT_RNG`. */
   readonly rng?: Rng;
-  /** MP already charged by a preceding call on this same activation
-   *  (e.g. `attemptStandUp`, `dropProne`). Added to the step-derived MP so
-   *  both `unit.mpSpent` and the pushed `moved` event carry the combined
-   *  posture+move total. Caller MUST also guarantee the unit is already
-   *  in `actedThisPhase` (it pushed itself there) — `executeMove` then
-   *  skips the head-of-queue guard and the redundant `actedThisPhase`
-   *  push, so the activation marks exactly once. */
-  readonly spentMP?: number;
-  /** The mode's movement heat was already charged by the preceding stand-up
-   *  (TW p.159: heat follows the declared mode), so skip it here. */
-  readonly modeHeatPaid?: boolean;
 }
 
 /** Facing from `from` to the adjacent hex `to`, or undefined when not adjacent. */
@@ -1779,6 +1768,51 @@ export function meleeDeclarationProblem(
   return check.ok ? null : (check.reason ?? "illegal charge");
 }
 
+/** Posture change that can open an activation (TW pp.49-50). */
+export type PostureChange = "standUp" | "drop";
+
+/** MP a posture change already took from the activation's one pool. */
+interface PosturePool {
+  /** MP the stand or drop charged. */
+  readonly mp: number;
+  /** A stand made through Minimum Movement (TW p.49) is the turn's only MP
+   *  expenditure: nothing is left for the movement after it. */
+  readonly exhausted: boolean;
+  /** The stand-up already charged the declared mode's heat (TW p.159). */
+  readonly modeHeatPaid: boolean;
+}
+
+/** MP a stand-up or drop charges for `unit` as it stands now (TW pp.49-50). */
+export function postureCost(unit: UnitState, posture: PostureChange): number {
+  return posture === "standUp" ? standUpCost(unit) : DROP_MP_COST;
+}
+
+function posturePool(cost: number, posture: PostureChange): PosturePool {
+  return posture === "standUp"
+    ? { mp: cost, exhausted: cost < STAND_MP_COST, modeHeatPaid: true }
+    : { mp: cost, exhausted: false, modeHeatPaid: false };
+}
+
+function remainingAfterPosture(budget: number, pool: PosturePool): number {
+  return pool.exhausted ? 0 : Math.max(0, budget - pool.mp);
+}
+
+/**
+ * MP left for the movement that follows a stand-up or drop, out of the
+ * locomotion `budget` (the walking or running MP the unit has now). Posture
+ * and movement share one pool (TW pp.49-50); a stand made through Minimum
+ * Movement leaves nothing (TW p.49). Call before the posture change: the
+ * stand-up cost depends on the unit's current walking MP.
+ */
+export function postureMoveBudget(unit: UnitState, posture: PostureChange, budget: number): number {
+  return remainingAfterPosture(budget, posturePool(postureCost(unit, posture), posture));
+}
+
+/**
+ * Moves the current actor: declares `mode` and walks `steps` in one call.
+ * The unit must head the movement queue, and the move ends its activation.
+ * A stand-up or drop followed by movement goes through `executePostureMove`.
+ */
 export function executeMove(
   state: BattleState,
   unitId: string,
@@ -1787,9 +1821,69 @@ export function executeMove(
   sink: GameEvent[],
   options: ExecuteMoveOptions = {},
 ): void {
+  moveUnit(state, unitId, mode, steps, sink, options, null);
+}
+
+/**
+ * A stand-up or drop and the movement after it, as one activation with one
+ * MP pool (TW pp.49-50): the posture cost counts against the locomotion
+ * budget, and the activation is marked once. Movement follows only a
+ * successful posture change; after a failed stand the 'Mech stays prone and
+ * `steps` are not taken. A stand takes `locomotion` as its declared mode
+ * (walk, run or stand still; never jump, TW p.49). A drop takes walk (turns
+ * in place while prone) or stand still. Returns whether the posture change
+ * succeeded.
+ *
+ * Not atomic: when the movement is illegal it throws after the posture change
+ * has resolved. Callers wanting all-or-nothing hold a snapshot (see
+ * `commitAtomic` in the web session).
+ */
+export function executePostureMove(
+  state: BattleState,
+  unitId: string,
+  posture: PostureChange,
+  locomotion: MoveMode,
+  steps: readonly MoveStep[],
+  sink: GameEvent[],
+  options: ExecuteMoveOptions = {},
+): boolean {
+  if (locomotion === "jump") {
+    throw new Error(
+      `${unitId} cannot jump in a turn it ${posture === "standUp" ? "stands up" : "drops prone"}`,
+    );
+  }
+  if (posture === "drop" && locomotion === "run") {
+    throw new Error(`${unitId} drops prone: walk (turn in place) or stand still only`);
+  }
+  const rng = options.rng ?? DEFAULT_RNG;
+  let cost: number;
+  if (posture === "standUp") {
+    cost = attemptStandUp(state, unitId, sink, rng, locomotion);
+    if (requireUnit(state, unitId).prone) return false;
+  } else {
+    dropProne(state, unitId, sink, rng);
+    cost = DROP_MP_COST;
+  }
+  if (steps.length > 0 || options.finalFacing !== undefined) {
+    moveUnit(state, unitId, locomotion, steps, sink, options, posturePool(cost, posture));
+  }
+  return true;
+}
+
+/** `executeMove` body. With `posture`, the move continues the activation a
+ *  stand-up or drop opened: that call already checked the actor and marked
+ *  the activation, and its MP comes out of the same pool. */
+function moveUnit(
+  state: BattleState,
+  unitId: string,
+  mode: MoveMode,
+  steps: readonly MoveStep[],
+  sink: GameEvent[],
+  options: ExecuteMoveOptions,
+  posture: PosturePool | null,
+): void {
   requirePhase(state, "movement");
-  const needActorCheck = options.spentMP === undefined;
-  if (needActorCheck) requireCurrentActor(state, unitId, "movement");
+  if (posture === null) requireCurrentActor(state, unitId, "movement");
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot move`);
@@ -1799,7 +1893,10 @@ export function executeMove(
   }
   // TW p.122: a one-leg-destroyed 'Mech cannot run (running MP is 0).
   // TW p.49: minimum movement (one forward hex, nothing else) is still legal.
+  // Minimum Movement must be the turn's only MP expenditure, so never after a
+  // stand or drop.
   const minMoveShape =
+    posture === null &&
     mode === "run" &&
     !unit.prone &&
     steps.length === 1 &&
@@ -1814,7 +1911,7 @@ export function executeMove(
     throw new Error(`${unitId} is prone: stand up, turn, or pronestill`);
   }
   // TW p.49: standing up (or dropping) uses the turn's movement; no jump after.
-  if (mode === "jump" && options.spentMP !== undefined) {
+  if (mode === "jump" && posture !== null) {
     throw new Error(`${unitId} stood up or dropped prone this turn and cannot jump`);
   }
   if (unit.prone && mode === "walk" && steps.some((s) => s.kind === "enter")) {
@@ -1826,7 +1923,7 @@ export function executeMove(
   unit.mpSpent = 0;
   sink.push({ kind: "moveDeclared", unitId, mode });
   const rng = options.rng ?? DEFAULT_RNG;
-  const prechargedMP = options.spentMP ?? 0;
+  const prechargedMP = posture?.mp ?? 0;
 
   const def = mechDefFor(unit);
   const movement = effectiveMovement(
@@ -1963,7 +2060,15 @@ export function executeMove(
     throw new Error(`${unitId} has a destroyed gyro: one hexside facing change per turn`);
   }
   if (minMove) spent = Math.min(spent, minMoveCap);
-  if (spent > budget && !minMove) {
+  if (posture !== null) {
+    // TW pp.49-50: the stand or drop and the move share one pool.
+    const left = remainingAfterPosture(budget, posture);
+    if (spent > left) {
+      throw new Error(
+        `Move costs ${spent} MP but only ${left} of the ${unit.moveMode} budget ${budget} is left after the posture change`,
+      );
+    }
+  } else if (spent > budget && !minMove) {
     throw new Error(`Move costs ${spent} MP but ${unit.moveMode} budget is ${budget}`);
   }
   if (jumping && directions.length < JUMP_MIN_HEXES) {
@@ -2066,7 +2171,7 @@ export function executeMove(
       mpBudget: budget,
       ...(pendingCharge !== null ? { pendingCharge } : {}),
     });
-    const moveHeat = options.modeHeatPaid === true ? 0 : movementHeat(mode, mp);
+    const moveHeat = posture?.modeHeatPaid === true ? 0 : movementHeat(mode, mp);
     if (moveHeat > 0) {
       // Deferred own heat: accumulate into heatPending; the scale only
       // updates at the heat phase (TW p.159).
@@ -2141,12 +2246,12 @@ export function executeMove(
       // A move cut short still uses up the unit's activation (TW p.59).
       if (fellAt !== null) {
         commitAt({ ...fellAt }, unit.facing, mode, curSpent, curDirs);
-        if (needActorCheck) state.actedThisPhase.push(unitId);
+        if (posture === null) state.actedThisPhase.push(unitId);
         return;
       }
       if (unit.prone || unit.destroyed !== "not") {
         commitAt({ ...cur }, unit.facing, mode, curSpent, curDirs);
-        if (needActorCheck) state.actedThisPhase.push(unitId);
+        if (posture === null) state.actedThisPhase.push(unitId);
         return;
       }
     }
@@ -2161,7 +2266,7 @@ export function executeMove(
     meleeKind === "charge" ? directions.slice(0, -1) : directions,
     true,
   );
-  if (needActorCheck) state.actedThisPhase.push(unitId);
+  if (posture === null) state.actedThisPhase.push(unitId);
 
   // Running with a damaged hip/gyro, or jumping with damaged gyro, leg,
   // foot, or hip actuators (or a destroyed leg), forces a PSR at the end of
@@ -5375,11 +5480,9 @@ function movementTerrainPsr(
  * both legs gone, or one leg + both arms gone cannot attempt to stand (TW
  * p.50).
  *
- * Returns the MP cost actually charged for the stand, so the caller can
- * chain an `executeMove` with `options.spentMP = <returned>` for the
- * continuation. `attemptStandUp` pushes `unitId` to `actedThisPhase` so the
- * chained `executeMove` skips the head-of-queue guard and the redundant
- * `actedThisPhase` push, marking the activation exactly once.
+ * Returns the MP cost actually charged for the stand. The stand ends the
+ * activation; to move after it in the same activation, use
+ * `executePostureMove`, which charges both from one pool.
  */
 export function attemptStandUp(
   state: BattleState,

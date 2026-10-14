@@ -11,8 +11,11 @@ import {
   attemptStandUp,
   buildUnitInit,
   executeMove,
+  executePostureMove,
   type GameEvent,
+  postureMoveBudget,
   requireUnit,
+  standUpCost,
 } from "../src/rules/game";
 import { createTestBattle, scriptedRng } from "./helpers";
 
@@ -103,13 +106,122 @@ describe("jump height cap (MOV-02, TW p.53)", () => {
 });
 
 describe("posture and jump (MOV-04)", () => {
-  it("refuses a jump chained after a stand-up (spentMP carried)", () => {
-    const state = movementBattle();
+  it("refuses a jump chained after a stand-up", () => {
+    const state = movementBattle("GRF-1N", true);
     expect(() =>
-      executeMove(state, "a", "jump", [{ kind: "enter", to: { col: 5, row: 4 } }], [], {
-        spentMP: 2,
-      }),
+      executePostureMove(
+        state,
+        "a",
+        "standUp",
+        "jump",
+        [{ kind: "enter", to: { col: 5, row: 4 } }],
+        [],
+      ),
     ).toThrow(/cannot jump/);
+    // Refused before the stand: no roll, still prone, activation open.
+    expect(requireUnit(state, "a").prone).toBe(true);
+    expect(state.actedThisPhase).toEqual([]);
+  });
+});
+
+describe("posture MP pool (TW pp.49-50)", () => {
+  const north = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      kind: "enter" as const,
+      to: { col: 5, row: 4 - i },
+    }));
+
+  it("charges the stand against the walk budget", () => {
+    // GRF-1N walks 5: the stand takes 2, three hexes remain.
+    const state = movementBattle("GRF-1N", true);
+    expect(() =>
+      executePostureMove(state, "a", "standUp", "walk", north(4), [], {
+        rng: scriptedRng(6, 6),
+      }),
+    ).toThrow(/costs 4 MP but only 3 of the walk budget 5 is left/);
+  });
+
+  it("moves on the remainder and records the combined MP", () => {
+    const state = movementBattle("GRF-1N", true);
+    const sink: GameEvent[] = [];
+    const stood = executePostureMove(state, "a", "standUp", "walk", north(3), sink, {
+      rng: scriptedRng(6, 6),
+    });
+    expect(stood).toBe(true);
+    const a = requireUnit(state, "a");
+    expect(a.position).toEqual({ col: 5, row: 2 });
+    expect(a.mpSpent).toBe(5);
+    // The stand charged the walk heat; the move adds none (TW p.159).
+    expect(sink.filter((e) => e.kind === "heatMove")).toHaveLength(1);
+  });
+
+  it("marks the activation once and refuses a re-sent move", () => {
+    const state = movementBattle("GRF-1N", true);
+    executePostureMove(state, "a", "standUp", "walk", north(1), [], {
+      rng: scriptedRng(6, 6),
+    });
+    expect(state.actedThisPhase).toEqual(["a"]);
+    expect(() => executeMove(state, "a", "walk", north(1), [])).toThrow(/not the current actor/);
+  });
+
+  it("takes no steps after a failed stand", () => {
+    const state = movementBattle("GRF-1N", true);
+    const stood = executePostureMove(state, "a", "standUp", "walk", north(1), [], {
+      rng: scriptedRng(1, 1, 3, 3, 3, 3, 3, 3, 3, 3),
+    });
+    expect(stood).toBe(false);
+    const a = requireUnit(state, "a");
+    expect(a.prone).toBe(true);
+    expect(a.position).toEqual({ col: 5, row: 5 });
+  });
+
+  it("leaves nothing after a Minimum Movement stand (TW p.49)", () => {
+    const state = movementBattle("GRF-1N", true);
+    const a = requireUnit(state, "a");
+    a.heat = 20; // walking 5 - 4 = 1 MP
+    expect(standUpCost(a)).toBe(1);
+    expect(postureMoveBudget(a, "standUp", 2)).toBe(0);
+    expect(() =>
+      executePostureMove(state, "a", "standUp", "run", north(1), [], {
+        rng: scriptedRng(6, 6),
+      }),
+    ).toThrow(/only 0 of the run budget/);
+  });
+
+  it("allows the free facing pick after a Minimum Movement stand (TW p.50)", () => {
+    const state = movementBattle("GRF-1N", true);
+    requireUnit(state, "a").heat = 20;
+    executePostureMove(state, "a", "standUp", "walk", [], [], {
+      finalFacing: "s",
+      rng: scriptedRng(6, 6),
+    });
+    const a = requireUnit(state, "a");
+    expect(a.facing).toBe("s");
+    expect(a.mpSpent).toBe(1);
+  });
+
+  it("charges the drop against the walk budget", () => {
+    // Walk 5, drop 1: four hexsides of prone turning remain.
+    const over = movementBattle();
+    expect(() =>
+      executePostureMove(
+        over,
+        "a",
+        "drop",
+        "walk",
+        [
+          { kind: "turn", facings: 3 },
+          { kind: "turn", facings: 2 },
+        ],
+        [],
+      ),
+    ).toThrow(/costs 5 MP but only 4/);
+    const state = movementBattle();
+    executePostureMove(state, "a", "drop", "walk", [{ kind: "turn", facings: 3 }], []);
+    const a = requireUnit(state, "a");
+    expect(a.prone).toBe(true);
+    expect(a.mpSpent).toBe(4);
+    expect(state.actedThisPhase).toEqual(["a"]);
   });
 });
 
