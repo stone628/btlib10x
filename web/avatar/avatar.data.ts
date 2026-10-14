@@ -376,6 +376,19 @@ export const ARMS: PartVariant[] = [
   { name: "dra", data: "⦅⦆", desc: "double-plated round arms" },
   { name: "bej", data: "⁅⁆", desc: "block arms with elbow joints" },
   { name: "hug", data: "▐▌", desc: "arm blocks hugging the torso" },
+  // Weapon glyphs drafted by hand.
+  { name: "lbf", data: "⍤⍤", desc: "LB 5-X autocannon each arm" },
+  { name: "lbt", data: "⍥⍥", desc: "LB 10-X autocannon each arm" },
+  { name: "pla", data: "⍚⍚", desc: "pulse laser each arm" },
+  { name: "ram", data: "⍙⍙", desc: "ramming plate each arm" },
+  { name: "acf", data: "⍛⍛", desc: "AC/5 each arm" },
+  { name: "act", data: "⍜⍜", desc: "AC/10 each arm" },
+  { name: "ersl", data: "⏣⏣", desc: "ER small laser each arm" },
+  { name: "erml", data: "⍟⍟", desc: "ER medium laser each arm" },
+  { name: "erll", data: "⨀⨀", desc: "ER large laser each arm" },
+  { name: "ltm", data: "⏻⏻", desc: "Long Tom artillery each arm" },
+  { name: "dla", data: "⍠⍠", desc: "dual lasers each arm" },
+  { name: "crc", data: "⍝⍝", desc: "crab claws" },
 ];
 
 /** Leg pair: 2 chars, [left, right] render centered as │ LL │. */
@@ -424,4 +437,10 @@ export const LEGS: PartVariant[] = [
   { name: "itf", data: "⌊⌋", desc: "legs with inward-turned feet" },
   { name: "dpl", data: "⟦⟧", desc: "double-plated block legs" },
   { name: "hll", data: "╽╽", desc: "heavy lower legs" },
+  // Dentistry-symbol legs drafted by hand.
+  { name: "sbp", data: "⏊⏊", desc: "twin legs on a shared base plate" },
+  { name: "btf", data: "⏅⏅", desc: "legs on braced triangular feet" },
+  { name: "thb", data: "⏄⏄", desc: "triangle legs hung from a hip bar" },
+  { name: "tsa", data: "⏃⏃", desc: "legs with triangular shin armor" },
+  { name: "rkj", data: "⏂⏂", desc: "legs with round knee joints" },
 ];
