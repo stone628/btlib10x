@@ -238,7 +238,7 @@ describe("MOTD locale sections", () => {
     );
     expect(enBlocks.length).toBeGreaterThan(0);
     for (const block of enBlocks) expect(block).not.toMatch(/[\uac00-\ud7a3]/);
-    const css = readFileSync(new URL("../web/bt10x.css", import.meta.url), "utf8");
+    const css = readFileSync(new URL("../web/terminal.css", import.meta.url), "utf8");
     expect(css).toContain(":root:lang(en) #motd-body :lang(ko)");
     expect(css).toContain(":root:lang(ko) #motd-body :lang(en)");
   });

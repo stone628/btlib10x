@@ -880,7 +880,7 @@ happens inside `createBoardModel`. The web terminal renders spans inside a `.boa
 whose font family, size and line spacing come from the CSS variables
 `--board-ff` / `--board-fs` / `--board-lh`; each terrain's color scheme is
 its own set of variables (`--t-lightWoods`, `--t-heavyWoods`,
-`--tb-heavyWoods`) in `web/bt10x.css`.
+`--tb-heavyWoods`) in `web/terminal.css`.
 
 ## Public API check
 

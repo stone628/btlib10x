@@ -1,0 +1,330 @@
+/* Terminal page (web/terminal.html). Loaded after bt10x.css, which holds the
+   fonts, palette vars and rules shared with the landing page and avatar creator. */
+/* Marker class: elements with .no-prompt-focus are exempt from the
+   click-to-refocus-prompt behavior in web/terminal/terminal.ts. */
+:root {
+  /* Per-terrain color scheme (one var per TerrainType). */
+  --t-lightWoods: var(--c-green);
+  --t-heavyWoods: var(--c-green);
+  --tb-heavyWoods: var(--cb-dim);
+  --t-rough: #cbb98a;
+  --t-rubble: #a08a6a;
+  --club: #e5c07b;
+  --t-pavement: #8a8a9a;
+  --t-water1: #6aaae0;
+  --t-water2: #5a9ad8;
+  --t-water3: #4a8ac8;
+  --t-lightBuilding: #d8b06a;
+  --t-mediumBuilding: #c89a5a;
+  --t-heavyBuilding: #b4885a;
+  --t-hardenedBuilding: #a87a4a;
+}
+#motd {
+  position: fixed;
+  top: 8px;
+  right: 10px;
+  width: fit-content;
+  max-width: calc(100vw - 16px);
+  max-height: 60vh;
+  overflow-y: auto;
+  background: #0c0f0c;
+  border: 1px solid #233023;
+  border-radius: 4px;
+  z-index: 100;
+  font-size: 12px;
+  color: #b8c9b8;
+}
+/* Narrow screens: hug the corner so the capped panel never clips. */
+@media (max-width: 480px) {
+  #motd {
+    top: 8px;
+    right: 8px;
+  }
+}
+#motd > summary {
+  cursor: pointer;
+  padding: 6px 10px;
+  color: #8fd08f;
+  font-weight: bold;
+  user-select: none;
+}
+#motd[open] > summary {
+  border-bottom: 1px solid #233023;
+  text-align: right;
+}
+#motd > #motd-body {
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* MOTD carries both locales; only the `<html lang>` match stays visible. */
+:root:lang(en) #motd-body :lang(ko) {
+  display: none;
+}
+:root:lang(ko) #motd-body :lang(en) {
+  display: none;
+}
+#motd-body .banner {
+  color: #8fd08f;
+  font-weight: bold;
+}
+#motd-body .hint {
+  color: #b9c9b0;
+  font-style: italic;
+}
+#term {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+#out {
+  flex: 1;
+  overflow-y: auto;
+  white-space: pre;
+  padding: 6px;
+}
+#out .cmd {
+  color: #d7e4d7;
+  border-top: 1px solid #233023;
+  padding-top: 6px;
+  margin-top: 6px;
+  font-weight: bold;
+}
+#out .err {
+  color: #e07a6a;
+}
+#out .banner {
+  color: #8fd08f;
+  font-weight: bold;
+}
+#out .hint {
+  color: #b9c9b0;
+  font-style: italic;
+}
+/* Side-by-side column groups (record sheet, crit chart rows). */
+#out .columns {
+  display: flex;
+}
+#out .column {
+  white-space: pre;
+  flex-shrink: 0;
+}
+/* Collapsible critical-slot chart (info mech / sheet). */
+#out .collapsible {
+  margin-top: 0.4em;
+}
+#out .collapsible > summary {
+  cursor: pointer;
+  color: #8fd08f;
+  user-select: none;
+}
+#out .collapsible > summary:hover {
+  text-decoration: underline;
+}
+#out .collapsible-body {
+  white-space: pre;
+  margin-top: 0.2em;
+  padding-left: 0.5em;
+  font-family: var(--board-ff);
+  font-size: var(--board-fs);
+  color: #b8c9b8;
+}
+/* Game board output: dedicated font + line spacing, styled spans. */
+#out .board-legend {
+  font-family: var(--board-ff);
+  font-size: var(--board-fs);
+}
+#out .board {
+  font-family: var(--board-ff);
+  font-size: var(--board-fs);
+  line-height: var(--board-lh);
+}
+/* Per-character CSS Grid: isolates bold to single cells. */
+#out .board-grid {
+  display: inline-grid;
+  grid-auto-flow: row dense;
+  line-height: var(--board-lh);
+  font-family: var(--board-ff);
+  font-size: var(--board-fs);
+}
+#out .board-grid > span {
+  display: block;
+  width: 1ch;
+}
+/* Row renderer: ASCII runs as text, other glyphs boxed in fixed 1ch cells. */
+#out .board-grid.board-rows {
+  display: inline-block;
+  white-space: pre;
+}
+#out .board-grid.board-rows > div {
+  height: var(--board-lh);
+}
+#out .board-grid.board-rows .cell {
+  display: inline-block;
+  width: 1ch;
+  height: var(--board-lh);
+  vertical-align: top;
+}
+.t-lightWoods {
+  color: var(--t-lightWoods);
+}
+.t-heavyWoods {
+  color: var(--t-heavyWoods);
+  background-color: var(--tb-heavyWoods);
+  font-weight: bold;
+}
+.t-rough {
+  color: var(--t-rough);
+}
+.t-rubble {
+  color: var(--t-rubble);
+}
+.t-club {
+  color: var(--club);
+  font-weight: bold;
+}
+.t-pavement {
+  color: var(--t-pavement);
+}
+.t-water1 {
+  color: var(--t-water1);
+}
+.t-water2 {
+  color: var(--t-water2);
+}
+.t-water3 {
+  color: var(--t-water3);
+}
+.t-lightBuilding {
+  color: var(--t-lightBuilding);
+}
+.t-mediumBuilding {
+  color: var(--t-mediumBuilding);
+}
+.t-heavyBuilding {
+  color: var(--t-heavyBuilding);
+}
+.t-hardenedBuilding {
+  color: var(--t-hardenedBuilding);
+}
+.f-red {
+  color: var(--c-red);
+}
+.f-green {
+  color: var(--c-green);
+}
+.f-yellow {
+  color: var(--c-yellow);
+}
+.f-blue {
+  color: var(--c-blue);
+}
+.f-magenta {
+  color: var(--c-magenta);
+}
+.f-cyan {
+  color: var(--c-cyan);
+}
+.f-white {
+  color: var(--c-white);
+}
+.f-dim {
+  color: var(--c-dim);
+}
+.bg-red {
+  background-color: var(--cb-red);
+}
+.bg-green {
+  background-color: var(--cb-green);
+}
+.bg-yellow {
+  background-color: var(--cb-yellow);
+}
+.bg-blue {
+  background-color: var(--cb-blue);
+}
+.bg-magenta {
+  background-color: var(--cb-magenta);
+}
+.bg-cyan {
+  background-color: var(--cb-cyan);
+}
+.bg-white {
+  background-color: var(--cb-white);
+}
+.bg-dim {
+  background-color: var(--cb-dim);
+}
+.b {
+  font-weight: bold;
+}
+.i {
+  font-style: italic;
+}
+#inrow {
+  display: flex;
+  flex-wrap: wrap;
+  border-top: 1px solid #233023;
+  padding-top: 6px;
+  margin-top: 6px;
+}
+#prompt {
+  white-space: pre;
+  color: #8fd08f;
+  padding-top: 1px;
+}
+#cmd {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: inherit;
+  font: inherit;
+  caret-shape: block;
+  caret-color: var(--c-green);
+  min-width: 8ch;
+}
+#cmd:focus-visible {
+  box-shadow: inset 0 -1px 0 var(--cb-green);
+}
+@media (pointer: coarse) {
+  #cmd {
+    font-size: 16px;
+  }
+}
+/* Narrow screens: wrap the log so the prompt never scrolls away; wide blocks scroll in place. */
+@media (max-width: 480px) {
+  #motd {
+    position: static;
+    margin: 4px 12px 0;
+    width: auto;
+    max-height: 40vh;
+  }
+  @supports (height: 100dvh) {
+    #motd {
+      max-height: 40dvh;
+    }
+  }
+  #out {
+    overflow-x: hidden;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  #out .board,
+  #out .board-grid,
+  #out .board-legend,
+  #out .columns,
+  #out .collapsible-body {
+    overflow-x: auto;
+    overflow-wrap: normal;
+    white-space: pre;
+  }
+  #out .board-grid.board-rows {
+    display: block;
+    max-width: 100%;
+  }
+  #prompt {
+    white-space: pre-wrap;
+  }
+}

@@ -4,10 +4,13 @@ import { buildStamp } from "./build-stamp.mjs";
 
 const html = readFileSync("web/terminal.html", "utf8");
 // The standalone file must work from file://, so fonts go in as data: URIs.
-const css = readFileSync("web/bt10x.css", "utf8").replace(
-  /url\("(fonts\/[^"]+\.woff2)"\)/g,
-  (_, f) => `url("data:font/woff2;base64,${readFileSync(`web/${f}`).toString("base64")}")`,
-);
+const css = ["web/bt10x.css", "web/terminal.css"]
+  .map((f) => readFileSync(f, "utf8"))
+  .join("\n")
+  .replace(
+    /url\("(fonts\/[^"]+\.woff2)"\)/g,
+    (_, f) => `url("data:font/woff2;base64,${readFileSync(`web/${f}`).toString("base64")}")`,
+  );
 
 const { outputFiles } = await esbuild.build({
   entryPoints: ["web/terminal/terminal.ts"],
@@ -25,7 +28,10 @@ const app = outputFiles[0].text;
 
 const single = html
   .replace(/\s*<link rel="preload"[^>]*>/g, "")
-  .replace('<link rel="stylesheet" href="bt10x.css" />', `<style>\n${css}\n    </style>`)
+  .replace(
+    /<link rel="stylesheet" href="bt10x\.css" \/>\s*<link rel="stylesheet" href="terminal\.css" \/>/,
+    () => `<style>\n${css}\n    </style>`,
+  )
   .replace(/<script type="importmap">.*?<\/script>\s*/, "")
   .replace(
     '<script type="module" src="./terminal.js"></script>',

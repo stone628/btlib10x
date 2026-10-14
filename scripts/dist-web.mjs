@@ -7,6 +7,7 @@ copyFileSync("web/index.html", `${dest}/index.html`);
 copyFileSync("web/landing.css", `${dest}/landing.css`);
 copyFileSync("web/terminal.html", `${dest}/terminal.html`);
 copyFileSync("web/bt10x.css", `${dest}/bt10x.css`);
+copyFileSync("web/terminal.css", `${dest}/terminal.css`);
 copyFileSync("web/btlib10x.js", `${dest}/btlib10x.js`);
 copyFileSync("web/btlib10x.jsonl", `${dest}/btlib10x.jsonl`);
 copyFileSync("web/btlib10x.sw.jsonl", `${dest}/btlib10x.sw.jsonl`);
@@ -31,5 +32,5 @@ writeFileSync(
     "  Access-Control-Allow-Origin: *\n",
 );
 console.log(
-  `dist/web: ${["index.html", "landing.css", "terminal.html", "bt10x.css", "btlib10x.js", "btlib10x.jsonl", "btlib10x.sw.jsonl", "terminal.js", "avatar.html", "avatar.css", "avatar.js", "VISION.md", "favicon.ico", "_headers", ...fonts.map((f) => `fonts/${f}`)].join(", ")}`,
+  `dist/web: ${["index.html", "landing.css", "terminal.html", "bt10x.css", "terminal.css", "btlib10x.js", "btlib10x.jsonl", "btlib10x.sw.jsonl", "terminal.js", "avatar.html", "avatar.css", "avatar.js", "VISION.md", "favicon.ico", "_headers", ...fonts.map((f) => `fonts/${f}`)].join(", ")}`,
 );
