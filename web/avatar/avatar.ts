@@ -1,7 +1,6 @@
 import { ARMS, HEADS, LEGS, type PartVariant, SHOULDERS, TORSOS } from "./avatar.data";
 import {
   applyOverrides,
-  clearPart,
   codePointLabel,
   formatOverrides,
   type Overrides,
@@ -233,8 +232,8 @@ function composeFrom(data: readonly string[], selected: boolean): string[] {
 
 /**
  * Side preview: `part` swapped to `variant`, every other part as drawn. The
- * browsed part shows its variant without overrides, since picking a variant
- * clears them.
+ * browsed part shows its plain preset, without its overrides, so the row
+ * compares presets; picking one still keeps the overrides on top.
  */
 function avatarWithOverride(part: number, variant: number): string[] {
   const order = applyOverrides(currentData(), state.ovr, preview, part);
@@ -245,12 +244,11 @@ function avatarWithOverride(part: number, variant: number): string[] {
   return composeFrom(order, false);
 }
 
-/** Pick variant `vi` for part `p`; it replaces any overrides on that part. */
+/** Pick variant `vi` for part `p`; overrides on that part are kept. */
 function setVariant(p: number, vi: number): void {
   const def = PARTS[p];
   if (def === undefined) return;
   state.idx[p] = wrapIndex(vi, def.variants.length);
-  state.ovr = clearPart(state.ovr, p);
 }
 
 function announce(): void {
@@ -341,7 +339,11 @@ function render(): void {
         box.className = "avatar selected";
         const art = document.createElement("span");
         art.className = "art";
-        art.textContent = selected.join("\n");
+        // This row's part as its plain preset; other parts as drawn.
+        art.textContent = composeFrom(
+          applyOverrides(currentData(), state.ovr, preview, p),
+          true,
+        ).join("\n");
         const cap = document.createElement("span");
         cap.className = "cap";
         cap.setAttribute("aria-hidden", "true");

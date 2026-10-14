@@ -267,6 +267,10 @@
 }
 
 .gp-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
   color: var(--c-green);
   font-weight: bold;
   letter-spacing: 0.15em;
@@ -311,8 +315,10 @@
 .gp-grid {
   display: grid;
   font-size: var(--gp-glyph);
-  grid-template-columns: repeat(auto-fill, minmax(1.5em, 1fr));
-  gap: 2px;
+  /* Fixed-width cells packed tight; leftover width goes to the sides. */
+  grid-template-columns: repeat(auto-fill, 1.1em);
+  justify-content: center;
+  gap: 1px;
   overflow-y: auto;
   min-height: 0;
   flex: 1;
@@ -360,14 +366,74 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 6px;
 }
 
 .gp-status {
   color: var(--c-dim);
   font-size: 12px;
-  min-width: 10ch;
+  font-weight: normal;
+  letter-spacing: normal;
+}
+
+/* The glyph in a box one avatar cell in size, so its fill of the cell shows. */
+.gp-glyph {
+  display: inline-block;
+  width: 1ch;
+  height: var(--board-lh);
+  line-height: var(--board-lh);
+  vertical-align: middle;
+  box-shadow: inset 0 0 0 1px #2c3c2c;
+}
+
+.gp-cell.chosen .gp-glyph {
+  box-shadow: inset 0 0 0 1px #6b6b2a;
+}
+
+.gp-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-top: 1px solid #233023;
+  padding-top: 4px;
+}
+
+.gp-recent[hidden] {
+  display: none;
+}
+
+.gp-recent-label {
+  color: var(--c-dim);
+  font-size: 12px;
+}
+
+.gp-recent-grid {
+  flex: none;
+  overflow: hidden;
+}
+
+/* A hold pins, so it must not select text or open the iOS callout. */
+.gp-recent-grid .gp-cell {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.gp-cell.pinned {
+  position: relative;
+  border-color: #3a4a3a;
+}
+
+.gp-cell.pinned::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--c-yellow);
 }
 
 .gp-buttons {

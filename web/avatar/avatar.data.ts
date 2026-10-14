@@ -6,6 +6,7 @@ export interface PartVariant {
 
 /** Head core: 2 chars, sits as HH in │SHHS│. */
 export const HEADS: PartVariant[] = [
+  { name: "no", data: "  ", desc: "no head" },
   { name: "sr", data: "╭╮", desc: "small round" },
   { name: "sq", data: "┌┐", desc: "small square" },
   { name: "rv", data: "()", desc: "round visor" },
@@ -57,6 +58,7 @@ export const SHOULDERS: PartVariant[] = [
 
 /** Torso core: 2 chars, sits as TT in │ATTA│. */
 export const TORSOS: PartVariant[] = [
+  { name: "no", data: "  ", desc: "no torso" },
   { name: "rs", data: "()", desc: "round" },
   { name: "sl", data: ")(", desc: "slim" },
   { name: "bs", data: "[]", desc: "block" },
@@ -83,6 +85,7 @@ export const TORSOS: PartVariant[] = [
 
 /** Arm pair: 2 chars, [left, right] wrap the torso as A T T A. */
 export const ARMS: PartVariant[] = [
+  { name: "no", data: "  ", desc: "no arms" },
   { name: "ss", data: "╵╵", desc: "short slim" },
   { name: "sb", data: "╹╹", desc: "short bold" },
   { name: "ps", data: "┘└", desc: "palm short" },
@@ -107,17 +110,7 @@ export const ARMS: PartVariant[] = [
 
 /** Leg pair: 2 chars, [left, right] render centered as │ LL │. */
 export const LEGS: PartVariant[] = [
-  // { name: "st", data: "||", desc: "standard" },
-  // { name: "bd", data: "[]", desc: "block" },
-  // { name: "rd", data: "()", desc: "round" },
-  // { name: "sl", data: "//", desc: "sloped" },
-  // { name: "tp", data: "\\/", desc: "tapered" },
-  // { name: "fl", data: "/\\", desc: "flared" },
-  // { name: "jt", data: "╞╡", desc: "jointed" },
-  // { name: "rt", data: "╫╫", desc: "rotary" },
-  // { name: "ps", data: "==", desc: "piston" },
-  // { name: "cl", data: "<>", desc: "digitigrade" },
-  // { name: "op", data: "OO", desc: "roller" },
+  { name: "no", data: "  ", desc: "no legs" },
   { name: "ss", data: "╵╵", desc: "short slim" },
   { name: "sb", data: "╹╹", desc: "short bold" },
   { name: "sf", data: "┘└", desc: "short feet" },

@@ -29,8 +29,12 @@ interface Group {
 }
 
 const RECENT_KEY = "bt10x.avatar.recent";
-const RECENT_MAX = 16;
-const RECENT = "Recent";
+const PINNED_KEY = "bt10x.avatar.pinned";
+/** More than two rows hold on any width; the rows show what fits. */
+const RECENT_MAX = 64;
+const RECENT_ROWS = 2;
+/** Hold a recent cell this long to pin or unpin it. */
+const LONG_PRESS_MS = 500;
 /** Below this much room above the map, the panel takes the top of the screen instead. */
 const MIN_ROOM = 220;
 const GAP = 8;
@@ -42,9 +46,9 @@ const BLOCK_GROUPS: Group[] = GLYPH_BLOCKS.map((b) => ({
   ),
 }));
 
-function loadRecent(): string[] {
+function loadGlyphs(key: string): string[] {
   try {
-    const raw = localStorage.getItem(RECENT_KEY);
+    const raw = localStorage.getItem(key);
     const parsed: unknown = raw === null ? [] : JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     return parsed.filter((v): v is string => typeof v === "string" && isAllowedGlyph(v));
@@ -53,14 +57,48 @@ function loadRecent(): string[] {
   }
 }
 
+function saveGlyphs(key: string, glyphs: string[]): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(glyphs));
+  } catch {
+    // Storage may be blocked: the recent rows just stay empty.
+  }
+}
+
 function pushRecent(ch: string): void {
   if (ch === BLANK) return;
-  const next = [ch, ...loadRecent().filter((c) => c !== ch)].slice(0, RECENT_MAX);
-  try {
-    localStorage.setItem(RECENT_KEY, JSON.stringify(next));
-  } catch {
-    // Storage may be blocked: Recent just stays empty.
-  }
+  saveGlyphs(
+    RECENT_KEY,
+    [ch, ...loadGlyphs(RECENT_KEY).filter((c) => c !== ch)].slice(0, RECENT_MAX),
+  );
+}
+
+/** Pin `ch` (first in the recent rows), or unpin it when already pinned. */
+function togglePin(ch: string): void {
+  const pinned = loadGlyphs(PINNED_KEY);
+  saveGlyphs(PINNED_KEY, pinned.includes(ch) ? pinned.filter((c) => c !== ch) : [...pinned, ch]);
+}
+
+/** Recent rows content: pinned glyphs first, then the latest picks. */
+function recentRow(): { glyphs: string[]; pinned: Set<string> } {
+  const pinned = loadGlyphs(PINNED_KEY);
+  const recent = loadGlyphs(RECENT_KEY).filter((c) => !pinned.includes(c));
+  return { glyphs: [...pinned, ...recent], pinned: new Set(pinned) };
+}
+
+/** A grid cell; the glyph sits in a box the size of one avatar cell. */
+function glyphCell(ch: string): HTMLButtonElement {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "gp-cell";
+  b.dataset.ch = ch;
+  const g = document.createElement("span");
+  g.className = "gp-glyph";
+  g.textContent = ch;
+  b.append(g);
+  b.title = codePointLabel(ch);
+  b.setAttribute("aria-label", codePointLabel(ch));
+  return b;
 }
 
 /** A pasted character or `U+XXXX` text, as one code point; null when it is neither. */
@@ -84,15 +122,9 @@ export function isPickerOpen(): boolean {
 export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void {
   openPanel?.close();
 
-  const groups: Group[] = [];
-  const recent = loadRecent();
-  if (recent.length > 0) groups.push({ name: RECENT, glyphs: recent });
-  groups.push(...BLOCK_GROUPS);
+  const groups = BLOCK_GROUPS;
 
-  let groupIdx = Math.max(
-    0,
-    groups.findIndex((g) => g.name !== RECENT && g.glyphs.includes(opts.current)),
-  );
+  let groupIdx = Math.max(0, groups.findIndex((g) => g.glyphs.includes(opts.current)));
   let focusIdx = 0;
   let closed = false;
   /** Previewed but not applied: a glyph, `null` for the variant, `undefined` for none. */
@@ -104,7 +136,13 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
 
   const title = document.createElement("div");
   title.className = "gp-title";
-  title.textContent = opts.slot.title.toUpperCase();
+  const titleName = document.createElement("span");
+  titleName.textContent = opts.slot.title.toUpperCase();
+  /** Code point of the focused glyph, or a find message. */
+  const status = document.createElement("span");
+  status.className = "gp-status";
+  status.setAttribute("aria-live", "polite");
+  title.append(titleName, status);
 
   const controls = document.createElement("div");
   controls.className = "gp-controls";
@@ -132,11 +170,19 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
   grid.className = "gp-grid";
   grid.setAttribute("role", "grid");
 
+  const recentBox = document.createElement("div");
+  recentBox.className = "gp-recent";
+  const recentLabel = document.createElement("div");
+  recentLabel.className = "gp-recent-label";
+  recentLabel.textContent = "recent · hold to pin";
+  const recentGrid = document.createElement("div");
+  recentGrid.className = "gp-grid gp-recent-grid";
+  recentGrid.setAttribute("role", "grid");
+  recentGrid.setAttribute("aria-label", "recent and pinned; hold or press P to pin");
+  recentBox.append(recentLabel, recentGrid);
+
   const footer = document.createElement("div");
   footer.className = "gp-footer";
-  const status = document.createElement("span");
-  status.className = "gp-status";
-  status.setAttribute("aria-live", "polite");
   const mkButton = (label: string, onClick: () => void): HTMLButtonElement => {
     const b = document.createElement("button");
     b.type = "button";
@@ -156,12 +202,101 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
   apply.classList.add("gp-apply");
   apply.disabled = true;
   buttons.append(apply);
-  footer.append(status, buttons);
+  footer.append(buttons);
 
-  dialog.append(title, controls, grid, footer);
+  dialog.append(title, controls, grid, recentBox, footer);
 
   function cells(): HTMLButtonElement[] {
     return Array.from(grid.querySelectorAll<HTMLButtonElement>("button.gp-cell"));
+  }
+
+  function recentCells(): HTMLButtonElement[] {
+    return Array.from(recentGrid.querySelectorAll<HTMLButtonElement>("button.gp-cell"));
+  }
+
+  let recentFocus = 0;
+  /**
+   * Set when a hold pinned a cell. The re-render swaps the cell under the
+   * pointer, so the flag lives here and the release's click is skipped.
+   */
+  let heldPin = false;
+
+  /** Fill the recent rows, then drop what does not fit in RECENT_ROWS rows. */
+  function renderRecent(): void {
+    const { glyphs, pinned } = recentRow();
+    recentBox.hidden = glyphs.length === 0;
+    recentGrid.replaceChildren();
+    for (const ch of glyphs) {
+      const b = glyphCell(ch);
+      b.tabIndex = -1;
+      if (pinned.has(ch)) {
+        b.classList.add("pinned");
+        b.title = `${codePointLabel(ch)} (pinned)`;
+        b.setAttribute("aria-label", `${codePointLabel(ch)}, pinned`);
+      }
+      if (ch === opts.current) b.classList.add("current");
+      if (pending === ch) b.classList.add("chosen");
+      wireRecentCell(b, ch);
+      recentGrid.append(b);
+    }
+    if (glyphs.length === 0) return;
+    const fit = columns(recentGrid) * RECENT_ROWS;
+    for (const b of recentCells().slice(fit)) b.remove();
+    setRecentFocus(recentFocus, false);
+  }
+
+  function setRecentFocus(i: number, move: boolean): void {
+    const list = recentCells();
+    if (list.length === 0) return;
+    recentFocus = Math.max(0, Math.min(list.length - 1, i));
+    for (const [j, b] of list.entries()) b.tabIndex = j === recentFocus ? 0 : -1;
+    if (move) list[recentFocus]?.focus();
+  }
+
+  /** Re-render after a pin change, keeping focus on the same glyph. */
+  function pinAndRerender(ch: string, refocus: boolean): void {
+    togglePin(ch);
+    renderRecent();
+    const i = recentCells().findIndex((b) => b.dataset.ch === ch);
+    if (i >= 0) setRecentFocus(i, refocus);
+    status.textContent = `${codePointLabel(ch)} ${ch} ${
+      recentRow().pinned.has(ch) ? "pinned" : "unpinned"
+    }`;
+  }
+
+  function wireRecentCell(b: HTMLButtonElement, ch: string): void {
+    let timer: number | undefined;
+    const stop = (): void => {
+      if (timer !== undefined) window.clearTimeout(timer);
+      timer = undefined;
+    };
+    b.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0) return;
+      heldPin = false;
+      stop();
+      timer = window.setTimeout(() => {
+        timer = undefined;
+        heldPin = true;
+        pinAndRerender(ch, false);
+      }, LONG_PRESS_MS);
+    });
+    for (const ev of ["pointerup", "pointerleave", "pointercancel"] as const) {
+      b.addEventListener(ev, stop);
+    }
+    // A touch hold would otherwise open the browser's context menu.
+    b.addEventListener("contextmenu", (e) => e.preventDefault());
+    b.addEventListener("click", (e) => {
+      if (heldPin) {
+        // The click that ends a hold is not a pick.
+        heldPin = false;
+        e.preventDefault();
+        return;
+      }
+      const i = recentCells().indexOf(b);
+      if (i >= 0) setRecentFocus(i, false);
+      choose(ch, false);
+    });
+    b.addEventListener("focus", () => describe(ch));
   }
 
   function describe(ch: string): void {
@@ -174,12 +309,7 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
     grid.replaceChildren();
     if (g === undefined) return;
     for (const [i, ch] of g.glyphs.entries()) {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "gp-cell";
-      b.textContent = ch;
-      b.title = codePointLabel(ch);
-      b.setAttribute("aria-label", codePointLabel(ch));
+      const b = glyphCell(ch);
       b.tabIndex = i === focusIdx ? 0 : -1;
       if (ch === opts.current) b.classList.add("current");
       if (pending !== undefined && pending === ch) b.classList.add("chosen");
@@ -213,25 +343,35 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
     setFocus(cellIdx, move);
   }
 
-  function columns(): number {
-    return Math.max(1, getComputedStyle(grid).gridTemplateColumns.split(" ").length);
+  function columns(el: HTMLElement = grid): number {
+    return Math.max(1, getComputedStyle(el).gridTemplateColumns.split(" ").length);
   }
 
   function finish(): void {
     if (closed) return;
     closed = true;
     openPanel = null;
-    window.removeEventListener("resize", place);
+    window.removeEventListener("resize", onResize);
     if (dialog.open) dialog.close();
     opts.onClose();
   }
 
-  /** Preview a choice in the avatar; apply commits it. */
-  function choose(ch: string | null): void {
+  /**
+   * Preview a choice in the avatar; apply commits it. A clicked glyph joins
+   * the recent rows right away; `refreshRecent` is false for a click in those
+   * rows, so they don't reorder under the pointer.
+   */
+  function choose(ch: string | null, refreshRecent = true): void {
+    if (ch !== null && ch !== BLANK) {
+      pushRecent(ch);
+      if (refreshRecent) renderRecent();
+    }
     pending = ch;
     apply.disabled = false;
     opts.onPreview(ch ?? opts.variant);
-    for (const b of cells()) b.classList.toggle("chosen", b.textContent === ch);
+    for (const b of [...cells(), ...recentCells()]) {
+      b.classList.toggle("chosen", b.dataset.ch === ch);
+    }
     apply.textContent = `apply ${ch === null ? `variant ${opts.variant}` : ch === BLANK ? "blank" : ch}`;
   }
 
@@ -283,7 +423,7 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
       status.textContent = "";
       return;
     }
-    const gi = groups.findIndex((g) => g.name !== RECENT && g.glyphs.includes(ch));
+    const gi = groups.findIndex((g) => g.glyphs.includes(ch));
     if (gi < 0) {
       status.textContent = `${codePointLabel(ch)} not in font`;
       return;
@@ -317,6 +457,35 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
     if (next >= 0 && next < n) setFocus(next, true);
   });
 
+  recentGrid.addEventListener("keydown", (e) => {
+    // A key press is never the release of a hold.
+    heldPin = false;
+    const list = recentCells();
+    const cur = list[recentFocus];
+    if ((e.key === "p" || e.key === "P") && cur?.dataset.ch !== undefined) {
+      e.preventDefault();
+      pinAndRerender(cur.dataset.ch, true);
+      return;
+    }
+    const cols = columns(recentGrid);
+    let next: number | null = null;
+    if (e.key === "ArrowLeft") next = recentFocus - 1;
+    else if (e.key === "ArrowRight") next = recentFocus + 1;
+    else if (e.key === "ArrowUp") next = recentFocus - cols;
+    else if (e.key === "ArrowDown") next = recentFocus + cols;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = list.length - 1;
+    else return;
+    e.preventDefault();
+    if (next >= 0 && next < list.length) setRecentFocus(next, true);
+  });
+
+  /** Re-place the panel and refit the recent rows to the new width. */
+  function onResize(): void {
+    place();
+    renderRecent();
+  }
+
   dialog.oncancel = (e) => {
     e.preventDefault();
     cancel();
@@ -330,7 +499,9 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
   const startGroup = groupIdx;
   dialog.showModal();
   place();
-  window.addEventListener("resize", place);
+  window.addEventListener("resize", onResize);
+  renderRecent();
   const startIdx = Math.max(0, groups[startGroup]?.glyphs.indexOf(opts.current) ?? 0);
   showGroup(startGroup, startIdx, true);
+  describe(opts.current);
 }
