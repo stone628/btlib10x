@@ -162,6 +162,17 @@ export const HEADS: PartVariant[] = [
   { name: "off", data: "◪◩", desc: "offset cockpit" },
   { name: "aph", data: "⧸⧹", desc: "angular pointed head" },
   { name: "sfb", data: "┬┬", desc: "small head with flat brim" },
+  // Mirrored glyph pairs from a scan of the font's allowed glyph set.
+  { name: "fh", data: "⟬⟭", desc: "faceted helmet" },
+  { name: "sfh", data: "⦗⦘", desc: "solid faceted helmet" },
+  { name: "dfv", data: "⟦⟧", desc: "double-framed block visor" },
+  { name: "drv", data: "⦅⦆", desc: "double-rimmed round visor" },
+  { name: "crh", data: "⫏⫐", desc: "closed round helmet" },
+  { name: "rel", data: "⪽⪾", desc: "round head with eye lights" },
+  { name: "avl", data: "⦑⦒", desc: "angular visor with eye lights" },
+  { name: "sdi", data: "⬖⬗", desc: "split diamond head" },
+  { name: "owh", data: "◿◺", desc: "outlined wedge head" },
+  { name: "bcv", data: "◱◲", desc: "box head with chin vents" },
 ];
 
 /**
@@ -226,6 +237,19 @@ export const SHOULDERS: PartVariant[] = [
   { name: "isl", data: "╲╱", desc: "inward-sloped shoulders" },
   { name: "dc", data: "◠◠", desc: "domed caps" },
   { name: "lfb", data: "▄▄", desc: "low flat blocks" },
+  // Mirrored glyph pairs from a scan of the font's allowed glyph set.
+  { name: "ccp", data: "⌜⌝", desc: "light corner shoulder caps" },
+  { name: "asp", data: "◸◹", desc: "angled shoulder plates" },
+  { name: "hbx", data: "◰◳", desc: "shoulder boxes with top hatches" },
+  { name: "sab", data: "◩⬔", desc: "sloped armored shoulder boxes" },
+  { name: "sga", data: "⧘⧙", desc: "segmented shoulder armor" },
+  { name: "hos", data: "▘▝", desc: "high outer shoulder studs" },
+  { name: "dcv", data: "⨭⨮", desc: "domed shoulders with cross vents" },
+  { name: "dxv", data: "⨴⨵", desc: "domed shoulders with x vents" },
+  { name: "fsp", data: "⦗⦘", desc: "faceted shoulder plates" },
+  { name: "sop", data: "⊏⊐", desc: "square open pods" },
+  { name: "hab", data: "◧◨", desc: "half-armored shoulder blocks" },
+  { name: "spb", data: "⟤⟥", desc: "shoulder pods with outward barrels" },
 ];
 
 /** Torso core: 2 chars, sits as TT in │ATTA│. */
@@ -267,6 +291,25 @@ export const TORSOS: PartVariant[] = [
   { name: "sot", data: "┌┐", desc: "square open top" },
   { name: "pnw", data: "><", desc: "pinched waist" },
   { name: "hst", data: "┏┓", desc: "heavy square top" },
+  // Mirrored glyph pairs from a scan of the font's allowed glyph set.
+  { name: "sxp", data: "⫅⫆", desc: "the six pack: plated chest over ab plates" },
+  { name: "fsb", data: "⫆⫅", desc: "the fish bone: reversed six pack, ribs flaring from a spine" },
+  { name: "rpb", data: "⫇⫈", desc: "rounded chest with rippled belly armor" },
+  { name: "rcl", data: "⪽⪾", desc: "rounded chest with center lights" },
+  { name: "dpb", data: "⦃⦄", desc: "double-plated belly" },
+  { name: "dhr", data: "⦅⦆", desc: "double-hulled round torso" },
+  { name: "dwb", data: "⟦⟧", desc: "double-walled block torso" },
+  { name: "fat", data: "⟬⟭", desc: "faceted armored torso" },
+  { name: "sft", data: "⦗⦘", desc: "solid faceted torso" },
+  { name: "dac", data: "⟪⟫", desc: "double-angled chest plates" },
+  { name: "scv", data: "⟅⟆", desc: "sculpted s-curve torso" },
+  { name: "rst", data: "◖◗", desc: "rounded solid torso" },
+  { name: "scb", data: "▐▌", desc: "solid core block" },
+  { name: "drc", data: "⋐⋑", desc: "double-rounded chest" },
+  { name: "wrh", data: "⊂⊃", desc: "wide round hull" },
+  { name: "afb", data: "◧◨", desc: "box torso with armored flanks" },
+  { name: "thc", data: "▛▜", desc: "top-heavy block chest" },
+  { name: "rbc", data: "⫕⫖", desc: "ribbed chest" },
 ];
 
 /** Arm pair: 2 chars, [left, right] wrap the torso as A T T A. */
@@ -318,6 +361,21 @@ export const ARMS: PartVariant[] = [
   { name: "arc", data: "╭╮", desc: "arched spider limbs" },
   { name: "hap", data: "◖◗", desc: "half-dome arm pods" },
   { name: "ara", data: "⊞⊞", desc: "artillery each arm" },
+  // Mirrored glyph pairs from a scan of the font's allowed glyph set.
+  { name: "lbg", data: "⟞⟝", desc: "long-barreled arm guns" },
+  { name: "pfs", data: "☚☛", desc: "fists pointing outward" },
+  { name: "bla", data: "◀▶", desc: "blade arms pointing out" },
+  { name: "pwf", data: "◄►", desc: "pointed wedge forearms" },
+  { name: "fmz", data: "⧏⧐", desc: "arm cannons with flared muzzles" },
+  { name: "blb", data: "⟤⟥", desc: "boxy arm pods with outward barrels" },
+  { name: "cbl", data: "⧼⧽", desc: "curved blade arms" },
+  { name: "pcl", data: "⊃⊂", desc: "pincer claws opening outward" },
+  { name: "ael", data: "⟨⟩", desc: "angled elbow arms" },
+  { name: "cih", data: "⎝⎠", desc: "arms curling inward at the hands" },
+  { name: "dpa", data: "⟦⟧", desc: "double-plated block arms" },
+  { name: "dra", data: "⦅⦆", desc: "double-plated round arms" },
+  { name: "bej", data: "⁅⁆", desc: "block arms with elbow joints" },
+  { name: "hug", data: "▐▌", desc: "arm blocks hugging the torso" },
 ];
 
 /** Leg pair: 2 chars, [left, right] render centered as │ LL │. */
@@ -346,4 +404,24 @@ export const LEGS: PartVariant[] = [
   { name: "sqf", data: "▙▟", desc: "squat block feet" },
   { name: "lss", data: "⚅⚅", desc: "leg-mounted SRM 6" },
   { name: "hth", data: "╿╿", desc: "heavy thighs" },
+  // Mirrored glyph pairs from a scan of the font's allowed glyph set.
+  { name: "ubf", data: "⦌⦋", desc: "block legs with outward feet" },
+  { name: "hpf", data: "⥙⥕", desc: "harpoon legs with barbed outward feet" },
+  { name: "chf", data: "⎭⎩", desc: "curved legs with outward hooked feet" },
+  { name: "cil", data: "⎝⎠", desc: "legs curving inward at the feet" },
+  { name: "flo", data: "⎠⎝", desc: "legs flaring out at the feet" },
+  { name: "tlf", data: "⎦⎣", desc: "tall legs with flat outward feet" },
+  { name: "ptt", data: "↲↳", desc: "legs with pointed outward toes" },
+  { name: "cto", data: "⤶⤷", desc: "legs with curled outward toes" },
+  { name: "spr", data: "⇃⇂", desc: "spurred legs" },
+  { name: "hjs", data: "⥡⥝", desc: "hip-jointed legs with outward spurs" },
+  { name: "hpo", data: "⮠⮡", desc: "legs with heavy pointed outward feet" },
+  { name: "fls", data: "◢◣", desc: "flared armored leg skirts" },
+  { name: "pad", data: "⊥⊥", desc: "peg legs on flat pads" },
+  { name: "dsp", data: "╩╩", desc: "double struts on broad pads" },
+  { name: "hwf", data: "┻┻", desc: "heavy legs on wide feet" },
+  { name: "stl", data: "⟘⟘", desc: "tall stilt legs on pads" },
+  { name: "itf", data: "⌊⌋", desc: "legs with inward-turned feet" },
+  { name: "dpl", data: "⟦⟧", desc: "double-plated block legs" },
+  { name: "hll", data: "╽╽", desc: "heavy lower legs" },
 ];
