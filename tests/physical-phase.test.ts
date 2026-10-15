@@ -47,7 +47,7 @@ function toAttack(state: BattleState): void {
   // Duplicate of the piloting-test drive: initiative -> movement -> attack.
   // Default rng: team 1 (8) beats team 2 (4), so enf (loser) declares first.
   rollInitiativePhase(state, scriptedRng(4, 4, 2, 2), []);
-  advancePhase(state, []);
+  advancePhase(state, [], scriptedRng());
 }
 
 describe("weapon sweep lands before the melee", () => {
@@ -55,8 +55,22 @@ describe("weapon sweep lands before the melee", () => {
     const state = faceToFace();
     toAttack(state);
     // enf (loser) declares first, then hbk's AC/20 (weapon index 4).
-    declareAttacks(state, "enf", [], [{ type: "punch", targetId: "hbk", limb: "rightArm" }], []);
-    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], [], []);
+    declareAttacks(
+      state,
+      "enf",
+      [],
+      [{ type: "punch", targetId: "hbk", limb: "rightArm" }],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
+    declareAttacks(
+      state,
+      "hbk",
+      [{ weaponIndex: 4, targetId: "enf" }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     const events: GameEvent[] = [];
     // to-hit 3+3, CT 1+1 (20 dmg), damage20 PSR 1+2 (fail), fall dir 2,
     // fall loc 1+1, seatbelt 3+3 (pass). The punch never rolls.
@@ -89,8 +103,22 @@ describe("weapon sweep lands before the melee", () => {
     enf.damage.armor.centerTorso = 0;
     enf.damage.armorRear.centerTorso = 0;
     enf.damage.internalStructure.centerTorso = 5;
-    declareAttacks(state, "enf", [], [{ type: "punch", targetId: "hbk", limb: "rightArm" }], []);
-    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], [], []);
+    declareAttacks(
+      state,
+      "enf",
+      [],
+      [{ type: "punch", targetId: "hbk", limb: "rightArm" }],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
+    declareAttacks(
+      state,
+      "hbk",
+      [{ weaponIndex: 4, targetId: "enf" }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(3, 3, 1, 1), events);
 
@@ -162,8 +190,22 @@ describe("attackPhaseStage markers", () => {
   it("bracket the weapon pass, the physical pass, and the aftermath through heat", () => {
     const state = faceToFace();
     toAttack(state);
-    declareAttacks(state, "enf", [], [{ type: "punch", targetId: "hbk", limb: "rightArm" }], []);
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []);
+    declareAttacks(
+      state,
+      "enf",
+      [],
+      [{ type: "punch", targetId: "hbk", limb: "rightArm" }],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
+    declareAttacks(
+      state,
+      "hbk",
+      [{ weaponIndex: 1, targetId: "enf" }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     const events: GameEvent[] = [];
     resolveAllAttacks(state, HIGH_RNG, events);
     advancePhase(state, events, HIGH_RNG);

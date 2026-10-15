@@ -1380,9 +1380,16 @@ describe("crit damage merge: ammo explosion survives resolveAllAttacks", () => {
     expect(mechDef("HBK-4G")).toBeDefined();
 
     rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []);
-    advancePhase(state, []);
+    advancePhase(state, [], scriptedRng());
     // Attacker Medium Laser (weaponIndex 1, 5 dmg) -> tgt.
-    declareAttacks(state, "atk", [{ weaponIndex: 1, targetId: "tgt" }], [], []);
+    declareAttacks(
+      state,
+      "atk",
+      [{ weaponIndex: 1, targetId: "tgt" }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     const events: GameEvent[] = [];
     // toHit 3+3, location 2+6=8 (leftTorso), determining 2+6=8 (1 crit),
     // slot 1,1 (AC/20 ammo bin 1: 5 shots x 20 = 100 IS damage), then
@@ -1421,8 +1428,15 @@ describe("crit damage merge: ammo explosion survives resolveAllAttacks", () => {
     expect(isBefore.rightArm).toBeGreaterThan(5);
 
     rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []);
-    advancePhase(state, []);
-    declareAttacks(state, "atk", [{ weaponIndex: 1, targetId: "tgt" }], [], []);
+    advancePhase(state, [], scriptedRng());
+    declareAttacks(
+      state,
+      "atk",
+      [{ weaponIndex: 1, targetId: "tgt" }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     const events: GameEvent[] = [];
     // toHit 3+3, location 1+2=3 (rightArm), determining 2+6=8 (1 crit),
     // slot 1,3 (Gauss slot 3: 20-pt blast), cascade det 1+1=2 (none), then
@@ -1472,9 +1486,16 @@ describe("crit damage merge: ammo explosion survives resolveAllAttacks", () => {
     expect(def).toBeDefined();
 
     rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []);
-    advancePhase(state, []);
+    advancePhase(state, [], scriptedRng());
     // AS7-D LRM 20 (weaponIndex 4) -> tgt.
-    declareAttacks(state, "atk", [{ weaponIndex: 4, targetId: "tgt" }], [], []);
+    declareAttacks(
+      state,
+      "atk",
+      [{ weaponIndex: 4, targetId: "tgt" }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     const events: GameEvent[] = [];
     // toHit 3+3 (hit at short range), cluster 1+3=4 (9 missiles -> lots
     // [5,4]), both lots LT (2+6=8 each). Lot 1 (5 dmg: LT IS 12->7) crits:

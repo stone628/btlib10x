@@ -58,11 +58,18 @@ describe("voluntary shutdown", () => {
     // hbk is down; only enf remains in the movement phase. Move enf, then
     // advance to weapon attack. hbk (still down) must be refused a
     // target declaration.
-    executeMove(state, "enf", "walk", [], []);
+    executeMove(state, "enf", "walk", [], [], { rng: scriptedRng() });
     expect(requireUnit(state, "hbk").shutdown).toBe("manual");
-    advancePhase(state, []); // movement -> weaponAttack
+    advancePhase(state, [], scriptedRng()); // movement -> weaponAttack
     expect(() =>
-      declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []),
+      declareAttacks(
+        state,
+        "hbk",
+        [{ weaponIndex: 1, targetId: "enf" }],
+        [],
+        [],
+        scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+      ),
     ).toThrow(/shut down|current actor/);
   });
 
@@ -72,7 +79,7 @@ describe("voluntary shutdown", () => {
     hbk.shutdown = "manual";
     hbk.heat = 12;
     startMovementTurn(state);
-    advancePhase(state, []); // movement -> weaponAttack
+    advancePhase(state, [], scriptedRng()); // movement -> weaponAttack
     advancePhase(state, [], scriptedRng(3, 3, 3, 1)); // weaponAttack -> end (heat check)
     expect(hbk.shutdown).toBe("manual");
   });
@@ -147,7 +154,7 @@ describe("voluntary startup", () => {
     const state = startMovementTurn(hbkVsEnf());
     expect(() => attemptVoluntaryStartup(state, "enf", [], scriptedRng())).toThrow(/not shut down/);
     voluntaryShutdown(state, "hbk", []);
-    attemptVoluntaryStartup(state, "hbk", []);
+    attemptVoluntaryStartup(state, "hbk", [], scriptedRng());
     expect(() => attemptVoluntaryStartup(state, "hbk", [], scriptedRng())).toThrow(/not shut down/);
   });
 
@@ -155,11 +162,11 @@ describe("voluntary startup", () => {
     const state = startMovementTurn(hbkVsEnf());
     const hbk = requireUnit(state, "hbk");
     voluntaryShutdown(state, "hbk", []);
-    attemptVoluntaryStartup(state, "hbk", []);
+    attemptVoluntaryStartup(state, "hbk", [], scriptedRng());
     expect(hbk.shutdown).toBe("not");
     expect(state.actedThisPhase).toContain("hbk");
     expect(hbk.mpSpent).toBe(0);
-    advancePhase(state, []); // movement -> weaponAttack
+    advancePhase(state, [], scriptedRng()); // movement -> weaponAttack
     const first = nextActor(state) as string;
     state.actedThisPhase.push(first);
     expect(new Set([first, nextActor(state)])).toEqual(new Set(["hbk", "enf"]));
@@ -193,8 +200,8 @@ describe("movement priority for shut-down units", () => {
   it("skips down units in the weapon attack phase", () => {
     const state = startMovementTurn(hbkVsEnf());
     voluntaryShutdown(state, "hbk", []);
-    executeMove(state, "enf", "walk", [], []);
-    advancePhase(state, []); // movement -> weaponAttack
+    executeMove(state, "enf", "walk", [], [], { rng: scriptedRng() });
+    advancePhase(state, [], scriptedRng()); // movement -> weaponAttack
     expect(nextActor(state)).toBe("enf");
   });
 });

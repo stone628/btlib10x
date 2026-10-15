@@ -335,6 +335,7 @@ describe("engine prone turn", () => {
         { kind: "turn", facings: 1 },
       ],
       [],
+      { rng: scriptedRng() },
     );
     const unit = state.units.hbk!;
     expect(unit.prone).toBe(true);
@@ -348,13 +349,15 @@ describe("engine prone turn", () => {
     const state = proneBattle();
     const to = neighbor({ col: 3, row: 3 }, "n");
     requireUnit(state, "hbk").prone = true;
-    expect(() => executeMove(state, "hbk", "walk", [{ kind: "enter", to }], [])).toThrow(
-      /turn or pronestill only/,
-    );
+    expect(() =>
+      executeMove(state, "hbk", "walk", [{ kind: "enter", to }], [], { rng: scriptedRng() }),
+    ).toThrow(/turn or pronestill only/);
   });
 
   it("rejects zero-hex jump declarations", async () => {
     const state = proneBattle();
-    expect(() => executeMove(state, "hbk", "jump", [], [])).toThrow(/at least 1 hex/);
+    expect(() => executeMove(state, "hbk", "jump", [], [], { rng: scriptedRng() })).toThrow(
+      /at least 1 hex/,
+    );
   });
 });

@@ -53,13 +53,16 @@ describe("jump path validation (MOV-02)", () => {
           { kind: "enter", to: { col: 5, row: 5 } },
         ],
         sink,
+        { rng: scriptedRng() },
       ),
     ).toThrow(/shortest path|at least 1 hex/);
   });
 
   it("accepts a straight jump", () => {
     const state = movementBattle();
-    executeMove(state, "a", "jump", [{ kind: "enter", to: { col: 5, row: 4 } }], []);
+    executeMove(state, "a", "jump", [{ kind: "enter", to: { col: 5, row: 4 } }], [], {
+      rng: scriptedRng(),
+    });
     expect(requireUnit(state, "a").position).toEqual({ col: 5, row: 4 });
   });
 });
@@ -81,7 +84,9 @@ describe("jump height cap (MOV-02, TW p.53)", () => {
     state.actorQueue = ["a", "b"];
     state.actedThisPhase = [];
     expect(() =>
-      executeMove(state, "a", "jump", [{ kind: "enter", to: { col: 5, row: 4 } }], []),
+      executeMove(state, "a", "jump", [{ kind: "enter", to: { col: 5, row: 4 } }], [], {
+        rng: scriptedRng(),
+      }),
     ).toThrow(/higher than Jumping MP/);
   });
 
@@ -100,7 +105,9 @@ describe("jump height cap (MOV-02, TW p.53)", () => {
     state.initiativeWinnerTeam = 1;
     state.actorQueue = ["a", "b"];
     state.actedThisPhase = [];
-    executeMove(state, "a", "jump", [{ kind: "enter", to: { col: 5, row: 4 } }], []);
+    executeMove(state, "a", "jump", [{ kind: "enter", to: { col: 5, row: 4 } }], [], {
+      rng: scriptedRng(),
+    });
     expect(requireUnit(state, "a").position).toEqual({ col: 5, row: 4 });
   });
 });
@@ -116,6 +123,7 @@ describe("posture and jump (MOV-04)", () => {
         "jump",
         [{ kind: "enter", to: { col: 5, row: 4 } }],
         [],
+        { rng: scriptedRng() },
       ),
     ).toThrow(/cannot jump/);
     // Refused before the stand: no roll, still prone, activation open.
@@ -161,7 +169,9 @@ describe("posture MP pool (TW pp.49-50)", () => {
       rng: scriptedRng(6, 6),
     });
     expect(state.actedThisPhase).toEqual(["a"]);
-    expect(() => executeMove(state, "a", "walk", north(1), [])).toThrow(/not the current actor/);
+    expect(() => executeMove(state, "a", "walk", north(1), [], { rng: scriptedRng() })).toThrow(
+      /not the current actor/,
+    );
   });
 
   it("takes no steps after a failed stand", () => {
@@ -214,10 +224,13 @@ describe("posture MP pool (TW pp.49-50)", () => {
           { kind: "turn", facings: 2 },
         ],
         [],
+        { rng: scriptedRng() },
       ),
     ).toThrow(/costs 5 MP but only 4/);
     const state = movementBattle();
-    executePostureMove(state, "a", "drop", "walk", [{ kind: "turn", facings: 3 }], []);
+    executePostureMove(state, "a", "drop", "walk", [{ kind: "turn", facings: 3 }], [], {
+      rng: scriptedRng(),
+    });
     const a = requireUnit(state, "a");
     expect(a.prone).toBe(true);
     expect(a.mpSpent).toBe(4);
@@ -234,10 +247,10 @@ describe("destroyed gyro while prone (MOV-08)", () => {
       if (slot.kind === "structure" && slot.name === "gyro")
         setSlotDestroyed(a.critSlotsDestroyed, "centerTorso", i);
     });
-    expect(() => executeMove(state, "a", "walk", [{ kind: "turn", facings: 2 }], [])).toThrow(
-      /one hexside/,
-    );
-    executeMove(state, "a", "walk", [{ kind: "turn", facings: 1 }], []);
+    expect(() =>
+      executeMove(state, "a", "walk", [{ kind: "turn", facings: 2 }], [], { rng: scriptedRng() }),
+    ).toThrow(/one hexside/);
+    executeMove(state, "a", "walk", [{ kind: "turn", facings: 1 }], [], { rng: scriptedRng() });
     expect(a.facing).toBe("ne");
   });
 });

@@ -156,8 +156,15 @@ describe("battle building integration", () => {
     const rng = scriptedRng(1, 2, 3, 3, 3, 3, 3, 4, 3, 3);
     const totalBefore = poolTotal(battle.units.b!);
     rollInitiativePhase(battle, rng, []);
-    advancePhase(battle, []);
-    declareAttacks(battle, "a", [{ weaponIndex: 4, targetId: "b" }], [], []);
+    advancePhase(battle, [], scriptedRng());
+    declareAttacks(
+      battle,
+      "a",
+      [{ weaponIndex: 4, targetId: "b" }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     const events: GameEvent[] = [];
     resolveAllAttacks(battle, rng, events);
 
@@ -194,12 +201,26 @@ describe("battle building integration", () => {
     const bBefore = poolTotal(battle.units.b!);
     const dBefore = poolTotal(battle.units.d!);
     rollInitiativePhase(battle, rng, []);
-    advancePhase(battle, []);
+    advancePhase(battle, [], scriptedRng());
     // Activation alternates teams (loser first): a, b, c, d. Idle occupants
     // pass like the web layer (`passAttack`).
-    declareAttacks(battle, "a", [{ weaponIndex: 4, targetId: "b" }], [], []);
+    declareAttacks(
+      battle,
+      "a",
+      [{ weaponIndex: 4, targetId: "b" }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     passAttack(battle, "b");
-    declareAttacks(battle, "c", [{ weaponIndex: 4, targetId: "d" }], [], []);
+    declareAttacks(
+      battle,
+      "c",
+      [{ weaponIndex: 4, targetId: "d" }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     passAttack(battle, "d");
     const events: GameEvent[] = [];
     resolveAllAttacks(battle, rng, events);
@@ -234,8 +255,15 @@ describe("battle building integration", () => {
     const rng = scriptedRng(1, 2, 3, 3, 3, 3, 3, 4, 2, 3, 3, 3, 3, 3, 3);
     const totalBefore = poolTotal(battle.units.b!);
     rollInitiativePhase(battle, rng, []);
-    advancePhase(battle, []);
-    declareAttacks(battle, "a", [{ weaponIndex: 4, targetId: "b" }], [], []);
+    advancePhase(battle, [], scriptedRng());
+    declareAttacks(
+      battle,
+      "a",
+      [{ weaponIndex: 4, targetId: "b" }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     const events: GameEvent[] = [];
     resolveAllAttacks(battle, rng, events);
 
@@ -298,8 +326,15 @@ describe("battle building integration", () => {
     );
     const totalBefore = poolTotal(battle.units.b!);
     rollInitiativePhase(battle, rng, []);
-    advancePhase(battle, []);
-    declareAttacks(battle, "a", [{ weaponIndex: 4, targetId: "b" }], [], []);
+    advancePhase(battle, [], scriptedRng());
+    declareAttacks(
+      battle,
+      "a",
+      [{ weaponIndex: 4, targetId: "b" }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     const events: GameEvent[] = [];
     resolveAllAttacks(battle, rng, events);
 

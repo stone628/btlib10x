@@ -31,7 +31,7 @@ function hbkEnf() {
 function toAttack(state: ReturnType<typeof hbkEnf>): void {
   // Team 2 wins initiative, so hbk (team 1) acts first.
   rollInitiativePhase(state, scriptedRng(2, 2, 5, 5), []);
-  advancePhase(state, []);
+  advancePhase(state, [], scriptedRng());
 }
 
 /** Enforcer one hit from death; its CT is bare with `ctInternal` left. */
@@ -53,6 +53,7 @@ function primedEnf(ctInternal: number) {
     ],
     [],
     [],
+    scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
   );
   return state;
 }

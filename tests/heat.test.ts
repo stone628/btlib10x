@@ -52,7 +52,7 @@ function startMovementTurn(state: BattleState, rng = scriptedRng(1, 1, 4, 4)): B
 }
 
 function startAttackTurn(state: BattleState, rng = scriptedRng(1, 1, 4, 4)): BattleState {
-  advancePhase(startMovementTurn(state, rng), []);
+  advancePhase(startMovementTurn(state, rng), [], scriptedRng());
   return state;
 }
 
@@ -342,7 +342,9 @@ describe("game integration: movement heat", () => {
     const state = hbkVsEnf();
     startMovementTurn(state);
     const events: GameEvent[] = [];
-    executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 1, row: 4 } }], events);
+    executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 1, row: 4 } }], events, {
+      rng: scriptedRng(),
+    });
     const hbk = requireUnit(state, "hbk");
     expect(hbk.heat).toBe(0);
     expect(hbk.heatPending).toBe(1);
@@ -358,7 +360,9 @@ describe("game integration: movement heat", () => {
   it("run adds 2 to heatPending (scale unchanged until heat phase)", () => {
     const state = hbkVsEnf();
     startMovementTurn(state);
-    executeMove(state, "hbk", "run", [{ kind: "enter", to: { col: 3, row: 5 } }], []);
+    executeMove(state, "hbk", "run", [{ kind: "enter", to: { col: 3, row: 5 } }], [], {
+      rng: scriptedRng(),
+    });
     expect(requireUnit(state, "hbk").mpSpent).toBe(1);
     expect(requireUnit(state, "hbk").heat).toBe(0);
     expect(requireUnit(state, "hbk").heatPending).toBe(2);
@@ -367,7 +371,7 @@ describe("game integration: movement heat", () => {
   it("standStill adds 0 heat", () => {
     const state = hbkVsEnf();
     startMovementTurn(state);
-    executeMove(state, "hbk", "standStill", [], []);
+    executeMove(state, "hbk", "standStill", [], [], { rng: scriptedRng() });
     expect(requireUnit(state, "hbk").heat).toBe(0);
     expect(requireUnit(state, "hbk").heatPending).toBe(0);
   });
@@ -378,7 +382,7 @@ describe("game integration: movement heat", () => {
     const hbk = requireUnit(state, "hbk");
     hbk.heat = 10;
     const events: GameEvent[] = [];
-    executeMove(state, "hbk", "run", [], events);
+    executeMove(state, "hbk", "run", [], events, { rng: scriptedRng() });
     const moved = events.find((e) => e.kind === "moved" && e.unitId === "hbk");
     expect(moved).toBeDefined();
     expect((moved as Extract<GameEvent, { kind: "moved" }>).mpBudget).toBe(
@@ -391,7 +395,14 @@ describe("game integration: weapon heat", () => {
   it("AC/20 (heat 7) adds 7 to heatPending after attack (scale unchanged)", () => {
     const state = hbkVsEnf();
     startAttackTurn(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], [], []);
+    declareAttacks(
+      state,
+      "hbk",
+      [{ weaponIndex: 4, targetId: "enf" }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     // 20+ damage PSR (needs 6: 3+3 succeeds, no fall).
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(6, 6, 3, 4, 3, 3), events);
@@ -415,7 +426,14 @@ describe("game integration: weapon heat", () => {
     ];
     const state = createTestBattle([], units, true);
     startAttackTurn(state);
-    declareAttacks(state, "her", [{ weaponIndex: 3, targetId: "enf", rapidFire: true }], [], []);
+    declareAttacks(
+      state,
+      "her",
+      [{ weaponIndex: 3, targetId: "enf", rapidFire: true }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(1, 1), events);
     const her = requireUnit(state, "her");
@@ -563,7 +581,7 @@ describe("game integration: shutdown", () => {
   it("skips shutdown unit in nextActor", () => {
     const state = hbkVsEnf();
     startMovementTurn(state);
-    executeMove(state, "hbk", "walk", [], []);
+    executeMove(state, "hbk", "walk", [], [], { rng: scriptedRng() });
     requireUnit(state, "hbk").shutdown = "heat";
     expect(nextActor(state)).toBe("enf");
   });
@@ -691,7 +709,14 @@ describe("game integration: heatMod in to-hit", () => {
     const hbk = requireUnit(state, "hbk");
     hbk.heat = 13;
     startAttackTurn(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []);
+    declareAttacks(
+      state,
+      "hbk",
+      [{ weaponIndex: 1, targetId: "enf" }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(6, 6, 3, 4), events);
     const resolved = events.find((e) => e.kind === "attackResolved");
@@ -707,7 +732,14 @@ describe("game integration: immobile target modifier in to-hit", () => {
     const state = hbkVsEnf();
     if (!online) requireUnit(state, "enf").shutdown = "manual";
     startAttackTurn(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []);
+    declareAttacks(
+      state,
+      "hbk",
+      [{ weaponIndex: 1, targetId: "enf" }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     const events: GameEvent[] = [];
     resolveAllAttacks(state, rng, events);
     const resolved = events.find((e) => e.kind === "attackResolved");
@@ -730,7 +762,14 @@ describe("game integration: target movement modifier from hexes moved", () => {
     const state = hbkVsEnf();
     requireUnit(state, "enf").hexesMovedThisTurn = hexes;
     startAttackTurn(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []);
+    declareAttacks(
+      state,
+      "hbk",
+      [{ weaponIndex: 1, targetId: "enf" }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(6, 6, 3, 4), events);
     const resolved = events.find((e) => e.kind === "attackResolved");
@@ -756,7 +795,14 @@ describe("game integration: partial cover in to-hit", () => {
   function terrainModFor(type: TerrainType): number {
     const state = makeBattleWithTargetTerrain(type);
     startAttackTurn(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []);
+    declareAttacks(
+      state,
+      "hbk",
+      [{ weaponIndex: 1, targetId: "enf" }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(6, 6, 3, 4), events);
     const resolved = events.find((e) => e.kind === "attackResolved");
@@ -768,7 +814,14 @@ describe("game integration: partial cover in to-hit", () => {
   function coverModFor(type: TerrainType): number {
     const state = makeBattleWithTargetTerrain(type);
     startAttackTurn(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []);
+    declareAttacks(
+      state,
+      "hbk",
+      [{ weaponIndex: 1, targetId: "enf" }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(6, 6, 3, 4), events);
     const resolved = events.find((e) => e.kind === "attackResolved");
@@ -993,7 +1046,14 @@ describe("Bug E: own heat deferred — weapon attack uses start-of-turn heat", (
     const hbk = requireUnit(state, "hbk");
     hbk.heat = 13; // to-hit +2
     startAttackTurn(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []);
+    declareAttacks(
+      state,
+      "hbk",
+      [{ weaponIndex: 1, targetId: "enf" }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(6, 6, 3, 4), events);
     const resolved = events.find(
@@ -1012,7 +1072,9 @@ describe("deferred event payload (base, heat, totalGenerated)", () => {
     startMovementTurn(state);
     hbk_setHeat(state, 4);
     const events: GameEvent[] = [];
-    executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 1, row: 4 } }], events);
+    executeMove(state, "hbk", "walk", [{ kind: "enter", to: { col: 1, row: 4 } }], events, {
+      rng: scriptedRng(),
+    });
     const move = events.find(
       (e): e is Extract<GameEvent, { kind: "heatMove" }> => e.kind === "heatMove",
     );
@@ -1026,7 +1088,14 @@ describe("deferred event payload (base, heat, totalGenerated)", () => {
     const state = hbkVsEnf();
     hbk_setHeat(state, 8);
     startAttackTurn(state);
-    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], [], []);
+    declareAttacks(
+      state,
+      "hbk",
+      [{ weaponIndex: 4, targetId: "enf" }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(6, 6, 3, 4, 3, 3), events);
     const w = events.find(
@@ -1078,7 +1147,7 @@ describe("heat shutdown fall in deep water (HEAT-02)", () => {
       );
       requireUnit(state, "hbk").heat = 60;
       rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []);
-      advancePhase(state, []);
+      advancePhase(state, [], scriptedRng());
       const events: GameEvent[] = [];
       advancePhase(state, events, seededRng(seed));
       const fell = events.find(

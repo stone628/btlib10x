@@ -117,6 +117,7 @@ describe("minimum movement: executeMove", () => {
           { kind: "enter", to: neighbor(ahead, "n") },
         ],
         [],
+        { rng: scriptedRng() },
       ),
     ).toThrow(/budget/);
   });
@@ -125,11 +126,15 @@ describe("minimum movement: executeMove", () => {
     const state = woodsBattle();
     heatReduceToWalk1(state);
     expect(() =>
-      executeMove(state, "a", "run", [{ kind: "enter", to: neighbor(startHex, "s") }], []),
+      executeMove(state, "a", "run", [{ kind: "enter", to: neighbor(startHex, "s") }], [], {
+        rng: scriptedRng(),
+      }),
     ).toThrow();
     const zero = woodsBattle();
     requireUnit(zero, "a").heat = 30;
-    expect(() => executeMove(zero, "a", "run", [{ kind: "enter", to: ahead }], [])).toThrow();
+    expect(() =>
+      executeMove(zero, "a", "run", [{ kind: "enter", to: ahead }], [], { rng: scriptedRng() }),
+    ).toThrow();
   });
 
   it("one-leg 'Mech may run only as a single forward hex (TW p.122 + p.49)", () => {
@@ -154,6 +159,7 @@ describe("minimum movement: executeMove", () => {
           { kind: "enter", to: far },
         ],
         [],
+        { rng: scriptedRng() },
       ),
     ).toThrow(/cannot run/);
   });

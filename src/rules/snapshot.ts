@@ -11,7 +11,7 @@
  *
  * Typical phase-change use:
  *
- *   advancePhase(state, rng);
+ *   advancePhase(state, sink, rng);
  *   const snap = saveBattleState(state);
  *   // ... play on ...
  *   loadBattleState(state, snap);

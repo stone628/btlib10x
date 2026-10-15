@@ -668,16 +668,16 @@ the caller's boundary.
 
 ```ts
 createBattle(map: MapDef, units: UnitInit[], options?: CreateBattleOptions): BattleState
-executeMove(state, unitId, mode, steps, sink: GameEvent[], { finalFacing, rng }?): void  // declares mode + walks steps in one call
-executePostureMove(state, unitId, "standUp" | "drop", locomotion, steps, sink: GameEvent[], { finalFacing, rng }?): boolean  // stand-up or drop plus the movement after it: one activation, one MP pool (TW pp.49-50); the posture cost and a Minimum Movement stand count against the locomotion budget; no steps taken after a failed stand; returns whether the posture change succeeded
+executeMove(state, unitId, mode, steps, sink: GameEvent[], { finalFacing, rng }): void  // declares mode + walks steps in one call
+executePostureMove(state, unitId, "standUp" | "drop", locomotion, steps, sink: GameEvent[], { finalFacing, rng }): boolean  // stand-up or drop plus the movement after it: one activation, one MP pool (TW pp.49-50); the posture cost and a Minimum Movement stand count against the locomotion budget; no steps taken after a failed stand; returns whether the posture change succeeded
 postureMoveBudget(unit, "standUp" | "drop", budget): number           // MP left for the movement after a posture change, out of the locomotion budget (for reachability displays)
 postureCost(unit, "standUp" | "drop"): number                         // MP the stand-up / drop charges now
-attemptStandUp(state, unitId, sink: GameEvent[], rng?): number          // movement phase only: prone unit tries to rise (one attempt per activation; ends it)
-dropProne(state, unitId, sink: GameEvent[], rng?): void                // movement phase only: go prone voluntarily (1 MP, no heat, no roll, no damage; refused after jumping; ends the activation)
+attemptStandUp(state, unitId, sink: GameEvent[], rng): number          // movement phase only: prone unit tries to rise (one attempt per activation; ends it)
+dropProne(state, unitId, sink: GameEvent[]): void                // movement phase only: go prone voluntarily (1 MP, no heat, no roll, no damage; refused after jumping; ends the activation)
 ejectPilot(state, unitId, rng, sink: GameEvent[]): void                // movement phase only (Tactical Operations extension): ejection PSR (failure = floor(MoF/2) pilot hits, `pilotDamaged` reason "ejection"), then removes the unit (removed = "pilotEjected") and spawns a wreck; pilotHits retained
 voluntaryShutdown(state, unitId, sink: GameEvent[]): void              // movement phase only: shuts down ("manual")
-attemptVoluntaryStartup(state, unitId, sink: GameEvent[], rng?): void  // startup attempt after a manual shutdown
-declareAttacks(state, unitId, weaponDecls, physicalDecls, sink: GameEvent[], rng?, options?): void  // attack phase only: one combined declaration per turn (weapons + punch/kick/club/strike); emits a single merged `attacksDeclared`
+attemptVoluntaryStartup(state, unitId, sink: GameEvent[], rng): void  // startup attempt after a manual shutdown
+declareAttacks(state, unitId, weaponDecls, physicalDecls, sink: GameEvent[], rng, options?): void  // attack phase only: one combined declaration per turn (weapons + punch/kick/club/strike); emits a single merged `attacksDeclared`
 validateAttacks(state, unitId, weaponDecls, physicalDecls?, options?): void            // read-only gate check; throws on any rule violation without mutating state or emitting events. Options carry the torso `twist`. Returns the resolved volley metadata via `validateAttacksImpl`.
 declarePickup(state, unitId, decl, sink: GameEvent[]): void             // attack phase only: exclusive club pickup (see Physical attacks)
 validatePhysicalAttack(state, unitId, decl: PhysicalAttackDecl, twist?, dropped?): ValidationResult  // read-only single-decl check (adjacency, arc, level, actuators); consumed by `declareAttacks` and the web `candidate` hints

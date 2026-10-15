@@ -94,6 +94,7 @@ describe("eject", () => {
           { kind: "enter", to: wreck },
         ],
         [],
+        { rng: scriptedRng() },
       ),
     ).toThrow(/wreck/);
   });
@@ -120,9 +121,9 @@ describe("eject", () => {
         occupantTeam: () => undefined,
       }).some((l) => l.hex.col === wreck.col && l.hex.row === wreck.row),
     ).toBe(false);
-    expect(() => executeMove(state, "enf", "walk", [{ kind: "enter", to: wreck }], [])).toThrow(
-      /wreck/,
-    );
+    expect(() =>
+      executeMove(state, "enf", "walk", [{ kind: "enter", to: wreck }], [], { rng: scriptedRng() }),
+    ).toThrow(/wreck/);
   });
 
   it("a level-2 wreck blocks LOS only when lying strictly between the endpoints", () => {
@@ -304,7 +305,7 @@ function sweepHeadLoss(preHits: number, extra: Partial<UnitInit> = {}) {
   ];
   const state = createTestBattle([], units, true);
   startMovementTurn(state);
-  advancePhase(state, []); // movement -> attack
+  advancePhase(state, [], scriptedRng()); // movement -> attack
   requireUnit(state, "hbk").pilotHits = preHits;
   zeroHead(state, "hbk");
   const events: GameEvent[] = [];

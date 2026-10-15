@@ -450,16 +450,6 @@ export type UnitFallCause =
   | { readonly kind: "dfaMiss" }
   | { readonly kind: "voluntaryDrop" };
 
-/** Deterministic rng for ammo draws when the caller omits one: ties resolve
- *  to the first bin and the order is stable run to run. */
-export const DEFAULT_RNG: Rng = {
-  d6: () => 1,
-  snapshot(): string {
-    return "";
-  },
-  load(_snapshot: string): void {},
-};
-
 export interface UnitState extends MechModelHolder {
   readonly id: string;
   readonly model: string;
@@ -1699,8 +1689,8 @@ export function wreckLevelFor(_state: BattleState, unit: UnitState): 1 | 2 {
 export interface ExecuteMoveOptions {
   /** Final facing after the move; when omitted, the unit keeps its facing. */
   readonly finalFacing?: Facing;
-  /** Per-call random source. Defaults to `DEFAULT_RNG`. */
-  readonly rng?: Rng;
+  /** Per-call random source. */
+  readonly rng: Rng;
 }
 
 /** Facing from `from` to the adjacent hex `to`, or undefined when not adjacent. */
@@ -1834,7 +1824,7 @@ export function executeMove(
   mode: MoveMode,
   steps: readonly MoveStep[],
   sink: GameEvent[],
-  options: ExecuteMoveOptions = {},
+  options: ExecuteMoveOptions,
 ): void {
   moveUnit(state, unitId, mode, steps, sink, options, null);
 }
@@ -1860,7 +1850,7 @@ export function executePostureMove(
   locomotion: MoveMode,
   steps: readonly MoveStep[],
   sink: GameEvent[],
-  options: ExecuteMoveOptions = {},
+  options: ExecuteMoveOptions,
 ): boolean {
   if (locomotion === "jump") {
     throw new Error(
@@ -1870,13 +1860,13 @@ export function executePostureMove(
   if (posture === "drop" && locomotion === "run") {
     throw new Error(`${unitId} drops prone: walk (turn in place) or stand still only`);
   }
-  const rng = options.rng ?? DEFAULT_RNG;
+  const rng = options.rng;
   let cost: number;
   if (posture === "standUp") {
     cost = attemptStandUp(state, unitId, sink, rng, locomotion);
     if (requireUnit(state, unitId).prone) return false;
   } else {
-    dropProne(state, unitId, sink, rng);
+    dropProne(state, unitId, sink);
     cost = DROP_MP_COST;
   }
   if (steps.length > 0 || options.finalFacing !== undefined) {
@@ -1937,7 +1927,7 @@ function moveUnit(
   unit.hexesMovedThisTurn = 0;
   unit.mpSpent = 0;
   sink.push({ kind: "moveDeclared", unitId, mode });
-  const rng = options.rng ?? DEFAULT_RNG;
+  const rng = options.rng;
   const prechargedMP = posture?.mp ?? 0;
 
   const def = mechDefFor(unit);
@@ -2753,7 +2743,7 @@ export function declareAttacks(
   weaponDecls: readonly WeaponAttackDecl[] = [],
   physicalDecls: readonly PhysicalAttackDecl[] = [],
   sink: GameEvent[],
-  rng: Rng = DEFAULT_RNG,
+  rng: Rng,
   options: DeclareAttacksOptions = {},
 ): void {
   requireCurrentActor(state, unitId, "attack");
@@ -4775,7 +4765,7 @@ function processEndPhase(state: BattleState) {
   }
 }
 
-export function advancePhase(state: BattleState, sink: GameEvent[], rng: Rng = DEFAULT_RNG): void {
+export function advancePhase(state: BattleState, sink: GameEvent[], rng: Rng): void {
   sink.push(...advancePhaseGen(state, rng));
 }
 
@@ -5507,7 +5497,7 @@ export function attemptStandUp(
   state: BattleState,
   unitId: string,
   sink: GameEvent[],
-  rng: Rng = DEFAULT_RNG,
+  rng: Rng,
   locomotion: MoveMode = "walk",
 ): number {
   requireCurrentActor(state, unitId, "movement");
@@ -5594,12 +5584,7 @@ export function standUpCost(unit: UnitState): number {
  * falling damage; the 'Mech counts as walking for to-hit this turn.
  * Not allowed in a turn the 'Mech jumped.
  */
-export function dropProne(
-  state: BattleState,
-  unitId: string,
-  sink: GameEvent[],
-  _rng: Rng = DEFAULT_RNG,
-): void {
+export function dropProne(state: BattleState, unitId: string, sink: GameEvent[]): void {
   requireCurrentActor(state, unitId, "movement");
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
@@ -5736,7 +5721,7 @@ export function attemptVoluntaryStartup(
   state: BattleState,
   unitId: string,
   sink: GameEvent[],
-  rng: Rng = DEFAULT_RNG,
+  rng: Rng,
 ): void {
   requirePhase(state, "movement");
   const unit = requireUnit(state, unitId);

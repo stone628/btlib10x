@@ -37,6 +37,7 @@ describe("running and water (TW p.53, p.57)", () => {
           { kind: "enter", to: { col: 2, row: 4 } },
         ],
         [],
+        { rng: scriptedRng() },
       ),
     ).toThrow(/cannot enter water/);
   });
@@ -89,7 +90,9 @@ describe("jumping and water (TW p.53)", () => {
   it("a 'Mech standing in depth 2 water cannot jump out", () => {
     const state = battle([{ col: 2, row: 2, type: "water2", level: 0 }]);
     expect(() =>
-      executeMove(state, "enf", "jump", [{ kind: "enter", to: { col: 3, row: 2 } }], []),
+      executeMove(state, "enf", "jump", [{ kind: "enter", to: { col: 3, row: 2 } }], [], {
+        rng: scriptedRng(),
+      }),
     ).toThrow(/budget is 0/);
   });
 });
@@ -124,14 +127,18 @@ describe("water depth-change movement (TW p.48-49)", () => {
   it("depth 2 costs 1 + 3 + 2 levels = 6 MP (over a 5 MP walk budget)", () => {
     const state = battle([{ col: 2, row: 3, type: "water2", level: 0 }]);
     expect(() =>
-      executeMove(state, "enf", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], []),
+      executeMove(state, "enf", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], [], {
+        rng: scriptedRng(),
+      }),
     ).toThrow(/budget/);
   });
 
   it("depth 3 cannot be entered from the surface (3 levels > 2)", () => {
     const state = battle([{ col: 2, row: 3, type: "water3", level: 0 }]);
     expect(() =>
-      executeMove(state, "enf", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], []),
+      executeMove(state, "enf", "walk", [{ kind: "enter", to: { col: 2, row: 3 } }], [], {
+        rng: scriptedRng(),
+      }),
     ).toThrow(/at most 2 levels/);
   });
 

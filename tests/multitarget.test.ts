@@ -32,7 +32,7 @@ function setup() {
     true,
   );
   rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []);
-  advancePhase(state, []);
+  advancePhase(state, [], scriptedRng());
   return state;
 }
 

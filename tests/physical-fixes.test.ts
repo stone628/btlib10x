@@ -30,7 +30,7 @@ const mech = (
 
 function toAttack(state: BattleState): void {
   rollInitiativePhase(state, scriptedRng(4, 4, 2, 2), []);
-  advancePhase(state, []);
+  advancePhase(state, [], scriptedRng());
 }
 
 describe("missing arm actuators (PHY-05)", () => {
@@ -77,6 +77,7 @@ describe("declaration rules (PHY-10, PHY-11)", () => {
           { type: "kick", targetId: "c", limb: "rightLeg" },
         ],
         [],
+        scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
       ),
     ).toThrow(/one type/);
     expect(() =>
@@ -89,6 +90,7 @@ describe("declaration rules (PHY-10, PHY-11)", () => {
           { type: "punch", targetId: "c", limb: "leftArm" },
         ],
         [],
+        scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
       ),
     ).not.toThrow();
   });
@@ -120,8 +122,22 @@ describe("simultaneous physical phase (PHY-07)", () => {
       true,
     );
     toAttack(state);
-    declareAttacks(state, "b", [], [{ type: "punch", targetId: "a", limb: "rightArm" }], []);
-    declareAttacks(state, "a", [], [{ type: "punch", targetId: "b", limb: "rightArm" }], []);
+    declareAttacks(
+      state,
+      "b",
+      [],
+      [{ type: "punch", targetId: "a", limb: "rightArm" }],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
+    declareAttacks(
+      state,
+      "a",
+      [],
+      [{ type: "punch", targetId: "b", limb: "rightArm" }],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     const events: GameEvent[] = [];
     resolveAllAttacks(state, HIGH_RNG, events);
     const resolved = events.filter((e) => e.kind === "physicalAttackResolved");

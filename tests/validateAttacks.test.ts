@@ -12,8 +12,8 @@ import { createTestBattle, scriptedRng } from "./helpers";
 /** initiative -> weaponAttack with nobody moving. hbk acts first (team 1). */
 function startAttackTurn(state: BattleState): BattleState {
   rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []);
-  advancePhase(state, []); // initiative -> movement
-  advancePhase(state, []); // movement -> weaponAttack
+  advancePhase(state, [], scriptedRng()); // initiative -> movement
+  advancePhase(state, [], scriptedRng()); // movement -> weaponAttack
   return state;
 }
 

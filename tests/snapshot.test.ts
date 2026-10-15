@@ -43,14 +43,21 @@ function hbkEnf(critsDisabled: boolean): BattleState {
 /** initiative -> weaponAttack with nobody moving. */
 function startAttackTurn(state: BattleState): BattleState {
   rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []);
-  advancePhase(state, []);
+  advancePhase(state, [], scriptedRng());
   return state;
 }
 
 /** Rear-CT medium laser hit with crits enabled: exercises damage, crit,
  *  and heat mutation across the snapshot boundary. */
 function rearCtHit(state: BattleState): void {
-  declareAttacks(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }], [], []);
+  declareAttacks(
+    state,
+    "hbk",
+    [{ weaponIndex: 2, targetId: "enf" }],
+    [],
+    [],
+    scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+  );
   // to-hit 12 hits; location 7 -> CT rear (4 pool, 1 IS stripped -> crit);
   // padded dice cover determining + effect rolls.
   resolveAllAttacks(state, scriptedRng(6, 6, 3, 4, 3, 3, 3, 3, 3, 3, 3, 3), []);
@@ -88,7 +95,7 @@ describe("snapshot", () => {
   it("round-trips full battle string after phase change, reusable twice", () => {
     const state = startAttackTurn(hbkEnf(false));
     rearCtHit(state);
-    advancePhase(state, []); // weaponAttack -> end: snapshot right after change
+    advancePhase(state, [], scriptedRng()); // weaponAttack -> end: snapshot right after change
     expect(state.phase).toBe("end");
     const snap = saveBattleState(state);
     expect(typeof snap).toBe("string");
@@ -162,7 +169,7 @@ describe("snapshot", () => {
   it("parseBattleState builds fresh state from string, reusable twice", () => {
     const state = startAttackTurn(hbkEnf(false));
     rearCtHit(state);
-    advancePhase(state, []);
+    advancePhase(state, [], scriptedRng());
     const snap = saveBattleState(state);
     const first = parseBattleState(snap);
     expect(first).toEqual(state);
@@ -197,7 +204,7 @@ describe("snapshot", () => {
     rearCtHit(state);
     const revived = parseBattleState(saveBattleState(state));
     expect(requireUnit(revived, "enf").id).toBe("enf");
-    advancePhase(revived, []);
+    advancePhase(revived, [], scriptedRng());
     expect(revived.phase).toBe("end");
   });
 

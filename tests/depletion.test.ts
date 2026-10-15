@@ -254,7 +254,7 @@ function hbkBattle(): ReturnType<typeof createBattle> {
 
 function attackPhase(state: ReturnType<typeof createBattle>): void {
   rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []);
-  advancePhase(state, []);
+  advancePhase(state, [], scriptedRng());
 }
 
 describe("declareAttacks (game level)", () => {
@@ -290,11 +290,11 @@ describe("declareAttacks (game level)", () => {
     expect(ammoWeaponTotals(HER, u.ammoBins)[3]).toBe(18);
   });
 
-  it("uses a deterministic tiebreak rng when none is supplied", () => {
+  it("breaks ammo-bin ties by explicit rng", () => {
     const state = hbkBattle();
     attackPhase(state);
-    // DEFAULT_RNG always rolls 1 -> the tie goes to slot 2.
-    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], [], []);
+    // A roll of 1 breaks the tie toward slot 2.
+    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], [], [], scriptedRng(1));
     const u = requireUnit(state, "hbk")!;
     expect(u.ammoBins["leftTorso:1"]).toBe(5);
     expect(u.ammoBins["leftTorso:2"]).toBe(4);

@@ -13,7 +13,7 @@ import { createTestBattle, scriptedRng } from "./helpers";
 
 function startAttackTurn(state: BattleState): BattleState {
   rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []);
-  advancePhase(state, []);
+  advancePhase(state, [], scriptedRng());
   return state;
 }
 
@@ -148,7 +148,14 @@ describe("declareAttacks with torso twist", () => {
     const { units } = hbkFacingAt("se");
     const state = startAttackTurn(createTestBattle([], units, false));
     expect(() =>
-      declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []),
+      declareAttacks(
+        state,
+        "hbk",
+        [{ weaponIndex: 1, targetId: "enf" }],
+        [],
+        [],
+        scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+      ),
     ).toThrow(/firing arc/);
   });
 
@@ -170,7 +177,14 @@ describe("declareAttacks with torso twist", () => {
     const { units } = hbkFacingAt("se");
     const state = startAttackTurn(createTestBattle([], units, false));
     expect(() =>
-      declareAttacks(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }], [], []),
+      declareAttacks(
+        state,
+        "hbk",
+        [{ weaponIndex: 2, targetId: "enf" }],
+        [],
+        [],
+        scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+      ),
     ).not.toThrow();
   });
 });

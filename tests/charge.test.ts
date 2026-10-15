@@ -79,7 +79,7 @@ describe("charge declaration (TW p.148)", () => {
   it("stops in front of the target, pays for its hex, and skips attack input", () => {
     const state = chargeBattle();
     const events: GameEvent[] = [];
-    executeMove(state, "a", "walk", chargePath, events);
+    executeMove(state, "a", "walk", chargePath, events, { rng: scriptedRng() });
     const a = requireUnit(state, "a");
     expect(a.position).toEqual({ col: 5, row: 4 });
     expect(a.facing).toBe("s");
@@ -106,7 +106,7 @@ describe("charge declaration (TW p.148)", () => {
 
   it("running charges too, at the run heat", () => {
     const state = chargeBattle();
-    executeMove(state, "a", "run", chargePath, []);
+    executeMove(state, "a", "run", chargePath, [], { rng: scriptedRng() });
     expect(requireUnit(state, "a").meleeCharge?.kind).toBe("charge");
     expect(requireUnit(state, "a").moveMode).toBe("run");
   });
@@ -117,7 +117,9 @@ describe("charge declaration (TW p.148)", () => {
       unit("t", "ENF-4R", 2, { col: 5, row: 4 }, "n"),
     ]);
     expect(() =>
-      executeMove(back, "a", "walk", [{ kind: "enter", to: { col: 5, row: 4 } }], []),
+      executeMove(back, "a", "walk", [{ kind: "enter", to: { col: 5, row: 4 } }], [], {
+        rng: scriptedRng(),
+      }),
     ).toThrow(/straight ahead/);
     const far = movementState([
       unit("a", "HBK-4G", 1, { col: 5, row: 1 }, "s"),
@@ -130,6 +132,7 @@ describe("charge declaration (TW p.148)", () => {
         "walk",
         [2, 3, 4, 5, 6, 7].map((row) => ({ kind: "enter" as const, to: { col: 5, row } })),
         [],
+        { rng: scriptedRng() },
       ),
     ).toThrow(/budget/);
   });
@@ -137,23 +140,29 @@ describe("charge declaration (TW p.148)", () => {
   it("cannot target a prone 'Mech, a friend, or a unit already charged", () => {
     const prone = chargeBattle();
     requireUnit(prone, "t").prone = true;
-    expect(() => executeMove(prone, "a", "walk", chargePath, [])).toThrow(/prone/);
+    expect(() => executeMove(prone, "a", "walk", chargePath, [], { rng: scriptedRng() })).toThrow(
+      /prone/,
+    );
 
     const friend = movementState([
       unit("a", "HBK-4G", 1, { col: 5, row: 2 }, "s"),
       unit("f", "ENF-4R", 1, { col: 5, row: 5 }, "n"),
       unit("t", "ENF-4R", 2, { col: 8, row: 8 }, "n"),
     ]);
-    expect(() => executeMove(friend, "a", "walk", chargePath, [])).toThrow(/occupied by f/);
+    expect(() => executeMove(friend, "a", "walk", chargePath, [], { rng: scriptedRng() })).toThrow(
+      /occupied by f/,
+    );
 
     const twice = movementState([
       unit("a", "HBK-4G", 1, { col: 5, row: 2 }, "s"),
       unit("b", "HBK-4G", 1, { col: 4, row: 4 }, "ne"),
       unit("t", "ENF-4R", 2, { col: 5, row: 5 }, "n"),
     ]);
-    executeMove(twice, "a", "walk", chargePath, []);
+    executeMove(twice, "a", "walk", chargePath, [], { rng: scriptedRng() });
     expect(() =>
-      executeMove(twice, "b", "walk", [{ kind: "enter", to: { col: 5, row: 4 } }], []),
+      executeMove(twice, "b", "walk", [{ kind: "enter", to: { col: 5, row: 4 } }], [], {
+        rng: scriptedRng(),
+      }),
     ).toThrow();
   });
 
@@ -163,7 +172,7 @@ describe("charge declaration (TW p.148)", () => {
       unit("t", "HBK-4G", 2, { col: 5, row: 5 }, "n"),
       unit("u", "HBK-4G", 2, { col: 5, row: 7 }, "n"),
     ]);
-    executeMove(state, "a", "walk", chargePath, []);
+    executeMove(state, "a", "walk", chargePath, [], { rng: scriptedRng() });
     state.actorQueue = ["t", "u"];
     // t (the charged unit) tries to charge a (its own charger).
     expect(meleeDeclarationProblem(state, "t", { col: 5, row: 5 }, "a", "charge", 0)).toMatch(
@@ -178,9 +187,16 @@ describe("charge declaration (TW p.148)", () => {
     ]);
     toAttack(state);
     state.actorQueue = ["a", "t"];
-    expect(() => declareAttacks(state, "a", [], [{ type: "charge", targetId: "t" }], [])).toThrow(
-      /declared by movement/,
-    );
+    expect(() =>
+      declareAttacks(
+        state,
+        "a",
+        [],
+        [{ type: "charge", targetId: "t" }],
+        [],
+        scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+      ),
+    ).toThrow(/declared by movement/);
   });
 
   it("reserves the target hex: nobody else may end movement there", () => {
@@ -189,11 +205,13 @@ describe("charge declaration (TW p.148)", () => {
       unit("b", "HBK-4G", 1, { col: 6, row: 5 }, "nw"),
       unit("t", "ENF-4R", 2, { col: 5, row: 5 }, "n"),
     ]);
-    executeMove(state, "a", "walk", chargePath, []);
+    executeMove(state, "a", "walk", chargePath, [], { rng: scriptedRng() });
     // The target leaves; the hex stays reserved for the charger.
     requireUnit(state, "t").position = { col: 5, row: 6 };
     expect(() =>
-      executeMove(state, "b", "walk", [{ kind: "enter", to: { col: 5, row: 5 } }], []),
+      executeMove(state, "b", "walk", [{ kind: "enter", to: { col: 5, row: 5 } }], [], {
+        rng: scriptedRng(),
+      }),
     ).toThrow(/reserved for a/);
   });
 });
@@ -201,7 +219,7 @@ describe("charge declaration (TW p.148)", () => {
 describe("DFA declaration (TW p.149)", () => {
   it("stops in front of the target, facing it, with the full jump counted", () => {
     const state = dfaBattle();
-    executeMove(state, "a", "jump", dfaPath, []);
+    executeMove(state, "a", "jump", dfaPath, [], { rng: scriptedRng() });
     const a = requireUnit(state, "a");
     expect(a.position).toEqual({ col: 5, row: 3 });
     expect(a.facing).toBe("s");
@@ -215,7 +233,9 @@ describe("DFA declaration (TW p.149)", () => {
       unit("a", "ENF-4R", 1, { col: 5, row: 2 }, "n"),
       unit("t", "HBK-4G", 2, { col: 5, row: 3 }, "n"),
     ]);
-    executeMove(state, "a", "jump", [{ kind: "enter", to: { col: 5, row: 3 } }], []);
+    executeMove(state, "a", "jump", [{ kind: "enter", to: { col: 5, row: 3 } }], [], {
+      rng: scriptedRng(),
+    });
     const a = requireUnit(state, "a");
     expect(a.position).toEqual({ col: 5, row: 2 });
     expect(a.facing).toBe("s");
@@ -224,19 +244,21 @@ describe("DFA declaration (TW p.149)", () => {
 
   it("needs Jumping MP to clear the target hex (level + 2)", () => {
     const state = dfaBattle([{ col: 5, row: 4, type: "clear", level: 3 }]);
-    expect(() => executeMove(state, "a", "jump", dfaPath, [])).toThrow(/needs 5 Jumping MP/);
+    expect(() => executeMove(state, "a", "jump", dfaPath, [], { rng: scriptedRng() })).toThrow(
+      /needs 5 Jumping MP/,
+    );
   });
 
   it("is exempt from the one-level difference gate", () => {
     const state = dfaBattle([{ col: 5, row: 4, type: "clear", level: 2 }]);
-    executeMove(state, "a", "jump", dfaPath, []);
+    executeMove(state, "a", "jump", dfaPath, [], { rng: scriptedRng() });
     expect(requireUnit(state, "a").meleeCharge?.kind).toBe("dfa");
   });
 
   it("can target a prone 'Mech", () => {
     const state = dfaBattle();
     requireUnit(state, "t").prone = true;
-    executeMove(state, "a", "jump", dfaPath, []);
+    executeMove(state, "a", "jump", dfaPath, [], { rng: scriptedRng() });
     expect(requireUnit(state, "a").meleeCharge?.kind).toBe("dfa");
   });
 });
@@ -244,7 +266,7 @@ describe("DFA declaration (TW p.149)", () => {
 describe("charge resolution (TW p.148)", () => {
   it("hits for tonnage / 10 per hex moved, recoils, and queues +2 PSRs; nobody moves", () => {
     const state = chargeBattle();
-    executeMove(state, "a", "walk", chargePath, []);
+    executeMove(state, "a", "walk", chargePath, [], { rng: scriptedRng() });
     toAttack(state);
     const events: GameEvent[] = [];
     // to-hit 6,6; two target groups (2D6 each); one recoil group (2D6).
@@ -272,7 +294,9 @@ describe("charge resolution (TW p.148)", () => {
       unit("a", "HBK-4G", 1, { col: 5, row: 4 }, "s"),
       unit("t", "ENF-4R", 2, { col: 5, row: 5 }, "n"),
     ]);
-    executeMove(state, "a", "walk", [{ kind: "enter", to: { col: 5, row: 5 } }], []);
+    executeMove(state, "a", "walk", [{ kind: "enter", to: { col: 5, row: 5 } }], [], {
+      rng: scriptedRng(),
+    });
     expect(requireUnit(state, "a").hexesMovedThisTurn).toBe(0);
     toAttack(state);
     const events: GameEvent[] = [];
@@ -288,7 +312,7 @@ describe("charge resolution (TW p.148)", () => {
 
   it("a miss costs the charger nothing", () => {
     const state = chargeBattle();
-    executeMove(state, "a", "walk", chargePath, []);
+    executeMove(state, "a", "walk", chargePath, [], { rng: scriptedRng() });
     toAttack(state);
     const events: GameEvent[] = [];
     resolveAllAttacks(state, pad(1, 1), events);
@@ -303,7 +327,7 @@ describe("charge resolution (TW p.148)", () => {
   it("applies the Piloting-skill difference and ignores terrain", () => {
     const state = chargeBattle();
     requireUnit(state, "t").piloting = 3; // target better: +2
-    executeMove(state, "a", "walk", chargePath, []);
+    executeMove(state, "a", "walk", chargePath, [], { rng: scriptedRng() });
     toAttack(state);
     const events: GameEvent[] = [];
     resolveAllAttacks(state, pad(1, 1), events);
@@ -314,7 +338,7 @@ describe("charge resolution (TW p.148)", () => {
 
   it("an advance into the vacated hex when the target left it", () => {
     const state = chargeBattle();
-    executeMove(state, "a", "walk", chargePath, []);
+    executeMove(state, "a", "walk", chargePath, [], { rng: scriptedRng() });
     requireUnit(state, "t").position = { col: 5, row: 6 };
     toAttack(state);
     const events: GameEvent[] = [];
@@ -336,7 +360,7 @@ describe("charge resolution (TW p.148)", () => {
 
   it("is void when a wreck holds the target hex", () => {
     const state = chargeBattle();
-    executeMove(state, "a", "walk", chargePath, []);
+    executeMove(state, "a", "walk", chargePath, [], { rng: scriptedRng() });
     requireUnit(state, "t").removed = "pilotKilled";
     state.wrecks["5,5"] = { unitId: "t", level: 2 };
     toAttack(state);
@@ -356,7 +380,7 @@ describe("charge resolution (TW p.148)", () => {
 describe("DFA resolution (TW p.150)", () => {
   it("a hit deals tonnage / 10 x 3, recoils on the legs, and queues +2 / +4 PSRs", () => {
     const state = dfaBattle();
-    executeMove(state, "a", "jump", dfaPath, []);
+    executeMove(state, "a", "jump", dfaPath, [], { rng: scriptedRng() });
     toAttack(state);
     const events: GameEvent[] = [];
     // to-hit 6,6; 3 target groups and 2 recoil groups roll 1D6 each.
@@ -381,7 +405,7 @@ describe("DFA resolution (TW p.150)", () => {
     const t = requireUnit(state, "t");
     t.prone = true;
     const frontBefore = t.damage.armor;
-    executeMove(state, "a", "jump", dfaPath, []);
+    executeMove(state, "a", "jump", dfaPath, [], { rng: scriptedRng() });
     toAttack(state);
     const events: GameEvent[] = [];
     // to-hit 6,6; 3 target groups roll 2D6 (3+4 = 7, center torso); recoil
@@ -400,7 +424,7 @@ describe("DFA resolution (TW p.150)", () => {
 
   it("a miss drops the attacker as from a 2-level fall onto its rear", () => {
     const state = dfaBattle();
-    executeMove(state, "a", "jump", dfaPath, []);
+    executeMove(state, "a", "jump", dfaPath, [], { rng: scriptedRng() });
     toAttack(state);
     const events: GameEvent[] = [];
     resolveAllAttacks(state, pad(1, 1), events);
@@ -416,7 +440,7 @@ describe("DFA resolution (TW p.150)", () => {
   it("the DFA'er cannot be the target of a physical attack", () => {
     const state = dfaBattle();
     state.units.u = requireUnit(dfaBattle(), "t");
-    executeMove(state, "a", "jump", dfaPath, []);
+    executeMove(state, "a", "jump", dfaPath, [], { rng: scriptedRng() });
     const view = createTestBattle(
       [],
       [
@@ -443,7 +467,7 @@ describe("DFA resolution (TW p.150)", () => {
 
   it("a failed weapon-phase PSR does not drop the DFA'er: the DFA misses instead", () => {
     const state = dfaBattle();
-    executeMove(state, "a", "jump", dfaPath, []);
+    executeMove(state, "a", "jump", dfaPath, [], { rng: scriptedRng() });
     toAttack(state);
     const a = requireUnit(state, "a");
     const before = {
@@ -475,7 +499,7 @@ describe("DFA resolution (TW p.150)", () => {
 describe("DFA in the air for LOS (TW p.149)", () => {
   it("sits two levels above the higher of its hex and the target hex", () => {
     const state = dfaBattle([{ col: 5, row: 4, type: "clear", level: 2 }]);
-    executeMove(state, "a", "jump", dfaPath, []);
+    executeMove(state, "a", "jump", dfaPath, [], { rng: scriptedRng() });
     const a = requireUnit(state, "a");
     const t = requireUnit(state, "t");
     expect(losEnds(state, t, a).toLevel).toBe(4); // max(0, 2) + 2
@@ -548,7 +572,7 @@ describe("charge landings in reachability", () => {
 describe("snapshots", () => {
   it("round-trip a declared charge", () => {
     const state = chargeBattle();
-    executeMove(state, "a", "walk", chargePath, []);
+    executeMove(state, "a", "walk", chargePath, [], { rng: scriptedRng() });
     const saved = saveBattleState(state);
     requireUnit(state, "a").meleeCharge = null;
     loadBattleState(state, saved);

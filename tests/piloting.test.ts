@@ -59,12 +59,12 @@ function toAttack(
   rng: ReturnType<typeof scriptedRng> = scriptedRng(4, 4, 2, 2),
 ): void {
   toMovement(state, rng);
-  advancePhase(state, []);
+  advancePhase(state, [], scriptedRng());
 }
 
 function startAttackTurn(state: ReturnType<typeof hbkEnf>): void {
   toMovement(state);
-  advancePhase(state, []);
+  advancePhase(state, [], scriptedRng());
 }
 
 function cloneDamage(d: UnitDamageState): UnitDamageState {
@@ -122,7 +122,14 @@ describe("20+ damage PSR", () => {
     const state = hbkEnf();
     toAttack(state, scriptedRng(2, 2, 5, 5));
     // AC/20 to-hit 3+3, location 1+1 (CT), 20+ PSR 3+3 (needs 6: success).
-    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], [], []);
+    declareAttacks(
+      state,
+      "hbk",
+      [{ weaponIndex: 4, targetId: "enf" }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(3, 3, 1, 1, 3, 3), events);
     const enf = requireUnit(state, "enf");
@@ -142,7 +149,14 @@ describe("20+ damage PSR", () => {
     toAttack(state, scriptedRng(2, 2, 5, 5));
     // to-hit 3+3, CT 1+1, PSR 1+2 (fail), fall dir 2 (right, +1 facing),
     // fall loc 1+1 (rightTorso), seatbelt 3+3 (needs 6: success).
-    declareAttacks(state, "hbk", [{ weaponIndex: 4, targetId: "enf" }], [], []);
+    declareAttacks(
+      state,
+      "hbk",
+      [{ weaponIndex: 4, targetId: "enf" }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(3, 3, 1, 1, 1, 2, 2, 1, 1, 3, 3), events);
     const enf = requireUnit(state, "enf");
@@ -663,13 +677,13 @@ describe("standing up", () => {
     for (const i of structureSlots(state, "enf", "centerTorso", "gyro")) {
       setSlotDestroyed(enf.critSlotsDestroyed, "centerTorso", i);
     }
-    expect(() => attemptStandUp(state, "enf", [])).toThrow(/destroyed gyro/);
+    expect(() => attemptStandUp(state, "enf", [], scriptedRng())).toThrow(/destroyed gyro/);
     for (const i of structureSlots(state, "enf", "centerTorso", "gyro")) {
       enf.critSlotsDestroyed.centerTorso &= ~(1 << i);
     }
     enf.damage.internalStructure.rightLeg = 0;
     enf.damage.internalStructure.leftLeg = 0;
-    expect(() => attemptStandUp(state, "enf", [])).toThrow(/cannot stand up/);
+    expect(() => attemptStandUp(state, "enf", [], scriptedRng())).toThrow(/cannot stand up/);
   });
 });
 
@@ -682,7 +696,7 @@ describe("going prone voluntarily", () => {
     const structBefore = { ...before.damage.internalStructure };
     const facingBefore = before.facing;
     const events: GameEvent[] = [];
-    dropProne(state, "enf", events, scriptedRng(3, 4));
+    dropProne(state, "enf", events);
     const enf = requireUnit(state, "enf");
     expect(enf.prone).toBe(true);
     expect(enf.heat).toBe(0);
@@ -726,7 +740,7 @@ describe("going prone voluntarily", () => {
     const before = requireUnit(state, "enf");
     const armorBefore = { ...before.damage.armor };
     const events: GameEvent[] = [];
-    dropProne(state, "enf", events, scriptedRng(3, 4));
+    dropProne(state, "enf", events);
     const enf = requireUnit(state, "enf");
     expect(enf.prone).toBe(true);
     expect(enf.heat).toBe(0);
@@ -741,7 +755,7 @@ describe("going prone voluntarily", () => {
     const state = hbkEnf();
     toMovement(state);
     requireUnit(state, "enf").jumpedThisTurn = true;
-    expect(() => dropProne(state, "enf", [], scriptedRng(3, 4))).toThrow(/jumped/);
+    expect(() => dropProne(state, "enf", [])).toThrow(/jumped/);
     expect(requireUnit(state, "enf").prone).toBe(false);
   });
 
@@ -751,7 +765,9 @@ describe("going prone voluntarily", () => {
     const enf = requireUnit(state, "enf");
     enf.prone = true;
     const events: GameEvent[] = [];
-    executeMove(state, "enf", "walk", [{ kind: "turn", facings: 2 }], events);
+    executeMove(state, "enf", "walk", [{ kind: "turn", facings: 2 }], events, {
+      rng: scriptedRng(),
+    });
     expect(enf.facing).toBe("se");
     expect(enf.mpSpent).toBe(2);
     expect(enf.heat).toBe(0);
@@ -763,15 +779,15 @@ describe("going prone voluntarily", () => {
     const zero = hbkEnf();
     toMovement(zero);
     requireUnit(zero, "enf").prone = true;
-    expect(() => executeMove(zero, "enf", "walk", [{ kind: "turn", facings: 0 }], [])).toThrow(
-      /1\.\.5 hexsides/,
-    );
+    expect(() =>
+      executeMove(zero, "enf", "walk", [{ kind: "turn", facings: 0 }], [], { rng: scriptedRng() }),
+    ).toThrow(/1\.\.5 hexsides/);
     const over = hbkEnf();
     toMovement(over);
     requireUnit(over, "enf").prone = true;
-    expect(() => executeMove(over, "enf", "walk", [{ kind: "turn", facings: 6 }], [])).toThrow(
-      /1\.\.5 hexsides/,
-    );
+    expect(() =>
+      executeMove(over, "enf", "walk", [{ kind: "turn", facings: 6 }], [], { rng: scriptedRng() }),
+    ).toThrow(/1\.\.5 hexsides/);
   });
 
   it("prone 'Mech with one leg destroyed: walk budget 1 so only a 1-hexside turn", () => {
@@ -780,15 +796,15 @@ describe("going prone voluntarily", () => {
     const enf = requireUnit(state, "enf");
     enf.prone = true;
     enf.damage.internalStructure.rightLeg = 0;
-    executeMove(state, "enf", "walk", [{ kind: "turn", facings: 1 }], []);
+    executeMove(state, "enf", "walk", [{ kind: "turn", facings: 1 }], [], { rng: scriptedRng() });
     expect(enf.facing).toBe("ne");
     const over = hbkEnf();
     toMovement(over);
     requireUnit(over, "enf").prone = true;
     requireUnit(over, "enf").damage.internalStructure.rightLeg = 0;
-    expect(() => executeMove(over, "enf", "walk", [{ kind: "turn", facings: 2 }], [])).toThrow(
-      /Move costs 2 MP but walk budget is 1/,
-    );
+    expect(() =>
+      executeMove(over, "enf", "walk", [{ kind: "turn", facings: 2 }], [], { rng: scriptedRng() }),
+    ).toThrow(/Move costs 2 MP but walk budget is 1/);
   });
 
   it("prone 'Mech with both legs destroyed: cannot turn (zero budget)", () => {
@@ -798,9 +814,9 @@ describe("going prone voluntarily", () => {
     enf.prone = true;
     enf.damage.internalStructure.rightLeg = 0;
     enf.damage.internalStructure.leftLeg = 0;
-    expect(() => executeMove(state, "enf", "walk", [{ kind: "turn", facings: 1 }], [])).toThrow(
-      /Move costs 1 MP but walk budget is 0/,
-    );
+    expect(() =>
+      executeMove(state, "enf", "walk", [{ kind: "turn", facings: 1 }], [], { rng: scriptedRng() }),
+    ).toThrow(/Move costs 1 MP but walk budget is 0/);
   });
 });
 
@@ -821,6 +837,7 @@ describe("prone combat", () => {
         ],
         [],
         [],
+        scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
       ),
     ).toThrow(/both arms/);
   });
@@ -830,7 +847,14 @@ describe("prone combat", () => {
     toAttack(state, scriptedRng(2, 2, 5, 5));
     const hbk = requireUnit(state, "hbk");
     hbk.prone = true;
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []);
+    declareAttacks(
+      state,
+      "hbk",
+      [{ weaponIndex: 1, targetId: "enf" }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     expect(hbk.declaredWeaponAttacks).toHaveLength(1);
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(1, 1), events);
@@ -886,7 +910,14 @@ describe("prone combat", () => {
     expect(blind.blocked.length).toBeGreaterThan(0);
     for (const b of blind.blocked) expect(b.reason).toBe("noSensor");
     expect(() =>
-      declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []),
+      declareAttacks(
+        state,
+        "hbk",
+        [{ weaponIndex: 1, targetId: "enf" }],
+        [],
+        [],
+        scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+      ),
     ).toThrow(/sensors/);
   });
 });
@@ -896,7 +927,14 @@ describe("pilot damage", () => {
     const state = hbkEnf();
     toAttack(state, scriptedRng(2, 2, 5, 5));
     // ML to-hit 3+3, location 6+6 (head), consciousness 2+2 (needs 3: awake).
-    declareAttacks(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], []);
+    declareAttacks(
+      state,
+      "hbk",
+      [{ weaponIndex: 1, targetId: "enf" }],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
     const events: GameEvent[] = [];
     resolveAllAttacks(state, scriptedRng(3, 3, 6, 6, 2, 2), events);
     expect(requireUnit(state, "enf").pilotHits).toBe(1);
