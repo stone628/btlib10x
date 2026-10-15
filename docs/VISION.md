@@ -97,6 +97,9 @@ yet is a gap, not a deviation; gaps are tracked in §4.
 - A severed limb once used as a club is no longer salvageable.
 - Picking up or carrying a club needs both hands working; losing either
   drops it. A destroyed shoulder only bars the swing.
+- A 12 on the Determining roll blows off a limb or head even if the same hit
+  destroyed it. *Why:* more excitement and a club for physical attacks; the
+  location is lost either way.
 
 ### 2.5 Omissions (permanent)
 
