@@ -570,6 +570,7 @@ export const ko: Catalog = {
   "sheet.remove.destroyed": "파괴됨",
   "sheet.remove.pilotEjected": "파일럿 탈출",
   "sheet.remove.pilotKilled": "파일럿 사망",
+  "sheet.remove.both": "{removal}, {destroyed}",
   "sheet.remove.hdDestroyed": "HD 파괴",
   "sheet.remove.ctDestroyed": "CT 파괴",
   "sheet.remove.cockpitDestroyed": "조종석 파괴",

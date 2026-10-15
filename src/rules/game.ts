@@ -1130,8 +1130,11 @@ export function wreckAt(state: BattleState, hex: HexCoord): WreckState | undefin
 }
 
 /** Mark a unit as killed and removed, returning the paired events. The first
- *  kill wins: an already-removed unit (e.g. ejected or pilot-killed) is left
- *  untouched so the recorded reason stays the earliest cause. `pilotDies`
+ *  kill wins: an already-removed unit (e.g. ejected or pilot-killed) keeps its
+ *  `removed` reason so the recorded cause stays the earliest one. A pilot
+ *  killed in the same step its 'Mech is destroyed still gets the frame's
+ *  `destroyed` reason (no event, no dice): the two facts are independent and
+ *  TW does not rank them. `pilotDies`
  *  marks a destruction the MechWarrior does not survive (TW p. 128: center
  *  torso lost to an ammo/weapon blast with auto-eject off). */
 function markUnitDestroyed(
@@ -1142,6 +1145,10 @@ function markUnitDestroyed(
   sink: GameEvent[],
   pilotDies = false,
 ): void {
+  if (unit.removed === "pilotKilled" && unit.destroyed === "not") {
+    unit.destroyed = reason;
+    return;
+  }
   if (isUnitRemoved(unit)) return;
   const headLoss = reason === "headDestroyed" || reason === "headBlownOff";
   // TO p.165: head destruction auto-ejects the pilot (cockpit crits still kill),
@@ -1170,9 +1177,17 @@ function markUnitDestroyed(
   });
 }
 
+/** True while a destruction sweep may still record a kill on `unit`: it is
+ *  on the board, or its pilot was killed and the frame's `destroyed` reason
+ *  is not recorded yet (see `markUnitDestroyed`). */
+function awaitsDestroyedMark(unit: UnitState): boolean {
+  return isUnitAvailable(unit) || (unit.removed === "pilotKilled" && unit.destroyed === "not");
+}
+
 /** A pilot killed by six accumulated pilot hits removes the unit from play
- *  without destroying the 'Mech (TW p.41-42: the pilot is dead; the hull is
- *  intact). Handled like an eject: a permanent wreck occupies the hex.
+ *  without destroying the 'Mech (TW p.41-42: the pilot is dead). If damage
+ *  in the same step also destroyed the frame, the destruction sweep fills
+ *  `destroyed` afterwards (removal reason stays "pilotKilled"). Handled like an eject: a permanent wreck occupies the hex.
  *  Wreck level is decided by `wreckLevelFor` (TO rule: light chassis or
  *  prone posture reduce it to level 1). Returns a single `unitRemoved` event
  *  with reason "pilotKilled". */
@@ -3513,7 +3528,7 @@ function applyDamageGroups(
   }
   enforceClubHands(state, unit, sink);
   if (
-    isUnitAvailable(unit) &&
+    awaitsDestroyedMark(unit) &&
     (isUnitWrecked(unit) || crits.some((c) => c.killedReason !== null))
   ) {
     markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage, crits), rng, sink);
@@ -3766,7 +3781,7 @@ export function applyFall(
     const r = pushPilotingCheck(sink, unit, "seatbelt", modifier, SEATBELT_PRE_MOD, rng, opts.hex);
     if (!r.success) applyPilotHits(state, unit, FALL_PILOT_HITS, "fall", rng, sink);
   }
-  if (isUnitAvailable(unit) && isUnitWrecked(unit)) {
+  if (awaitsDestroyedMark(unit) && isUnitWrecked(unit)) {
     markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), rng, sink);
   }
 }
@@ -4214,7 +4229,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   // blast that destroys the 'Mech still injures the MechWarrior (TW pp.41,125).
   for (const unit of Object.values(state.units)) {
     if (
-      isUnitAvailable(unit) &&
+      awaitsDestroyedMark(unit) &&
       (isUnitWrecked(unit) || targetKilledReason[unit.id] !== undefined)
     ) {
       markUnitDestroyed(
@@ -4235,7 +4250,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   const weaponBefore: PhaseSnapshots = { damage: baseDamage, crit: baseCrit };
   resolvePhasePiloting(state, rng, weaponBefore, sink, undefined, true, weaponDealt);
   for (const unit of Object.values(state.units)) {
-    if (isUnitAvailable(unit) && isUnitWrecked(unit)) {
+    if (awaitsDestroyedMark(unit) && isUnitWrecked(unit)) {
       markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), rng, sink);
     }
   }
@@ -4719,7 +4734,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   for (const unit of Object.values(state.units)) {
     const physCrits = physicalAttackCrits[unit.id];
     if (
-      isUnitAvailable(unit) &&
+      awaitsDestroyedMark(unit) &&
       (isUnitWrecked(unit) || (physCrits ?? []).some((c) => c.killedReason !== null))
     ) {
       markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage, physCrits), rng, sink);
@@ -4784,7 +4799,7 @@ export function* advancePhaseGen(state: BattleState, rng: Rng): Generator<GameEv
     case "attack": {
       const sink: GameEvent[] = [];
       for (const unit of Object.values(state.units)) {
-        if (isUnitAvailable(unit) && isUnitWrecked(unit)) {
+        if (awaitsDestroyedMark(unit) && isUnitWrecked(unit)) {
           markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage), rng, sink);
         }
       }
@@ -5141,8 +5156,9 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
             );
             // TW p.160: ammo explosion auto-deals 2 pilot hits and a
             // Consciousness Roll per hit. Apply before the destroyed check
-            // so a pilot killed by the explosion is recorded with reason
-            // "pilotKilled" rather than the explosion's structural kill.
+            // so a pilot killed by the explosion is removed as "pilotKilled";
+            // the check below still records the explosion's structural kill
+            // in `destroyed`.
             applyPilotHits(
               state,
               unit,
@@ -5152,7 +5168,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
               sink,
             );
             if (
-              isUnitAvailable(unit) &&
+              awaitsDestroyedMark(unit) &&
               (isUnitWrecked(unit) || heatCrits.some((c) => c.killedReason !== null))
             ) {
               markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage, heatCrits), rng, sink);

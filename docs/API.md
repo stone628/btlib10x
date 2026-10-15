@@ -821,8 +821,13 @@ Rules encoded by the state machine:
   if destroyed mid-phase; kills are committed when advancing
   `attack -> end` (`destroyed` is set to the reason, e.g.
   `"centerTorsoDestroyed"`, and `removed` to `"destroyed"`; one
-  `unitRemoved` event carries `destroyReason`). A pilot kill or eject sets only
-  `removed` (`"pilotKilled"` / `"pilotEjected"`), leaving `destroyed = "not"`.
+  `unitRemoved` event carries `destroyReason`). A pilot kill or eject sets
+  `removed` (`"pilotKilled"` / `"pilotEjected"`); `destroyed` records the
+  frame independently. It stays `"not"` for an intact 'Mech, and holds the
+  kill reason when the same step's damage also destroyed it (head loss or CT
+  blast before an eject; CT, head, cockpit or engine kill alongside a pilot
+  kill). The `unitRemoved` event for a pilot kill carries no `destroyReason`:
+  read `destroyed` on the unit.
 - **Weapon usability** is judged against `baseDamage`.
 - **Ammo** is deducted at declaration time; jams persist for the rest of the game.
 - **Declaration validation**: weapon indexes are 1-based; weapons may be split among any

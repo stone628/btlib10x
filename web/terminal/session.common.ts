@@ -793,7 +793,16 @@ export function sheetIdLine(view: SheetView): string {
   if (view.removed === "destroyed" && view.destroyed !== "not") {
     return `${i18n("sheet.idLine", { id: view.id, team: view.team })}${i18n("sheet.removedId", { reason: i18n(DESTROYED_REASON_KEY[view.destroyed]) })}`;
   }
-  return `${i18n("sheet.idLine", { id: view.id, team: view.team })}${i18n("sheet.removedId", { reason: i18n(REMOVAL_REASON_KEY[view.removed]) })}`;
+  // A pilot killed or ejected from a 'Mech that was also destroyed shows both.
+  const removal = i18n(REMOVAL_REASON_KEY[view.removed]);
+  const reason =
+    view.destroyed === "not"
+      ? removal
+      : i18n("sheet.remove.both", {
+          removal,
+          destroyed: i18n(DESTROYED_REASON_KEY[view.destroyed]),
+        });
+  return `${i18n("sheet.idLine", { id: view.id, team: view.team })}${i18n("sheet.removedId", { reason })}`;
 }
 
 function sheetMovementLine(view: SheetView): string {

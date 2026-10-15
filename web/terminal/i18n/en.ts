@@ -583,6 +583,7 @@ export const en = {
   "sheet.remove.destroyed": "destroyed",
   "sheet.remove.pilotEjected": "pilot ejected",
   "sheet.remove.pilotKilled": "pilot killed",
+  "sheet.remove.both": "{removal}, {destroyed}",
   "sheet.remove.hdDestroyed": "HD destroyed",
   "sheet.remove.ctDestroyed": "CT destroyed",
   "sheet.remove.cockpitDestroyed": "cockpit destroyed",
