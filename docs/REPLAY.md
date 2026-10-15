@@ -107,7 +107,7 @@ Consistency (each failure throws `Starting damage for <id>: …`):
 - `|gunnery − piloting| ≤ 2` (TW p.273); unique ids; units on both teams 1 and 2.
 - armor lost ≤ model armor per pool; internal lost ≤ model internal structure; no negatives.
 - internal lost > 0 requires the location's armor depleted (torso: front **or** rear pool); a destroyed side torso needs its arm destroyed too (mirrors `applyDamage`).
-- crit slot exists in `critSlots[loc]`, is not `empty`, and is not listed twice (a double heat sink dies as a whole group).
+- crit slot exists in `critSlots[loc]` and is not listed twice (a double heat sink dies as a whole group). A listed `empty` slot is dropped silently (nothing there to destroy, TW p.124); a listed `soak` slot is kept (its gear was lost and needs refit), so a carried-over end state written by an older catastrophic wipe (every slot bit set) still loads, and a fully wrecked unit is reported by the "would start destroyed" gates rather than as malformed.
 - ammo: key is an existing bin; used ≤ the bin's loaded shots.
 - hex inside the map, not occupied.
 
@@ -204,7 +204,8 @@ drop-only activation.
 
 `E<idx><hits>` (after `W`) + armor / crit / ammo in the same notation as `U`, cumulative
 vs. model default (starting damage included). The policy field is setup-only and is not repeated here.
-Replaying and diffing against it detects engine-version drift. Dead/removed units
+Replaying and diffing against it detects engine-version drift. The crit field never lists `empty`
+slots (the engine never marks them), so `E` crits can be pasted into a `U` line as starting damage. Dead/removed units
 need no flag (`destroyed` follows from the structure).
 
 ### `W` — rng state

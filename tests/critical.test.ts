@@ -1023,7 +1023,7 @@ describe("computeCritCounts", () => {
 });
 
 describe("markLocationCatastrophicallyDestroyed", () => {
-  it("zeroes armor and IS, marks every slot destroyed, strips ammo bins", () => {
+  it("zeroes armor and IS, marks every non-empty slot destroyed, strips ammo bins", () => {
     const def = mechDef("HBK-4G")!;
     const damage: UnitDamageState = {
       armor: { ...def.armor },
@@ -1041,7 +1041,10 @@ describe("markLocationCatastrophicallyDestroyed", () => {
 
     expect(damage.armor.leftTorso).toBe(0);
     expect(damage.internalStructure.leftTorso).toBe(0);
-    expect(destroyed.leftTorso).toBe((1 << def.critSlots.leftTorso.length) - 1);
+    // Every non-empty slot; the empty ones (HBK-4G: slots 3-12) stay clear.
+    expect(destroyedSlots(destroyed, "leftTorso")).toEqual(
+      def.critSlots.leftTorso.flatMap((slot, i) => (slot.kind === "empty" ? [] : [i])),
+    );
     // Rear pool: HBK-4G carries some left-torso rear armor; mark should
     // wipe it (TW p.121 "remaining armor there (front or rear)").
     expect(damage.armorRear.leftTorso ?? 0).toBe(0);
@@ -1255,7 +1258,7 @@ describe("blow-off and cockpit kill: salvage-friendly slot preservation", () => 
 });
 
 describe("ammo-explosion casualty: catastrophic mark", () => {
-  it("zeroing a side torso via applyAmmoExplosion marks every slot in it destroyed", () => {
+  it("zeroing a side torso via applyAmmoExplosion marks every non-empty slot in it destroyed", () => {
     const def = mechDef("HBK-4G")!;
     const damage: UnitDamageState = {
       armor: { ...def.armor, rightTorso: 0 },
@@ -1272,7 +1275,9 @@ describe("ammo-explosion casualty: catastrophic mark", () => {
       markLocationCatastrophicallyDestroyed(def, damage, destroyed, ammoBins, lost);
     }
 
-    expect(destroyed.rightTorso).toBe((1 << def.critSlots.rightTorso.length) - 1);
+    const layout = def.critSlots.rightTorso;
+    const filled = layout.flatMap((slot, i) => (slot.kind === "empty" ? [] : [i]));
+    expect(destroyedSlots(destroyed, "rightTorso")).toEqual(filled);
     expect(damage.armorRear.rightTorso ?? 0).toBe(0);
     const rtBins = Object.keys(ammoBins).filter((k) => k.startsWith("rightTorso:"));
     for (const k of rtBins) expect(ammoBins[k]).toBeUndefined();
@@ -1542,12 +1547,17 @@ describe("crit slot table bitmask", () => {
     expect(isSlotDestroyed(t, "rightTorso", 0)).toBe(false);
   });
 
-  it("destroys exactly the slots a location has", () => {
+  it("destroys exactly the non-empty slots a location has", () => {
     const t = emptyCritTable(def);
-    destroyAllSlots(t, "head", def.critSlots.head.length);
-    expect(destroyedSlots(t, "head")).toEqual(def.critSlots.head.map((_, i) => i));
-    destroyAllSlots(t, "leftArm", MAX_CRIT_SLOTS);
-    expect(t.leftArm).toBe(0b111111111111);
+    const filled = (loc: "head" | "leftArm") =>
+      def.critSlots[loc].flatMap((slot, i) => (slot.kind === "empty" ? [] : [i]));
+    destroyAllSlots(t, "head", def.critSlots.head);
+    expect(destroyedSlots(t, "head")).toEqual(filled("head"));
+    destroyAllSlots(t, "leftArm", def.critSlots.leftArm);
+    expect(destroyedSlots(t, "leftArm")).toEqual(filled("leftArm"));
+    // HBK-4G's left arm ends in empty slots: their bits stay clear.
+    expect(def.critSlots.leftArm[MAX_CRIT_SLOTS - 1]?.kind).toBe("empty");
+    expect(isSlotDestroyed(t, "leftArm", MAX_CRIT_SLOTS - 1)).toBe(false);
   });
 
   it("clones independently and merges slot-wise", () => {

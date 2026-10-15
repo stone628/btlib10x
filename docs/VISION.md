@@ -123,7 +123,11 @@ These are implementation choices, not rule changes.
   moves inward only once a location's armor is gone.
 - **Plain vs catastrophic destruction (by design).** Both wipe the location's
   remaining armor, front and rear (TW p.122 step 5); only catastrophic paths
-  mark critical slots destroyed, so salvage must check both.
+  mark critical slots destroyed, so salvage must check both. The catastrophic
+  mark sets every non-empty slot, soak slots (endo steel, ferro-fibrous, CASE,
+  inert equipment) included, so the lost gear is on record for refit; empty
+  slots hold nothing to destroy (TW p.124 rerolls them) and are never marked,
+  so the mask round-trips as starting damage.
 - **Clan implicit CASE counts as standard CASE** until a Clan ammo outcome
   needs the difference.
 - **Heat rolls use the same success convention** as every other avoid roll.

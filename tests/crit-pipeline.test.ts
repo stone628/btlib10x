@@ -43,7 +43,7 @@ describe("DMG-01: a destroyed location stops soaking damage (TW p.122)", () => {
 describe("CRIT-08: transferred criticals are carried, not re-rolled (TW pp.122, 125)", () => {
   it("one crit on an exhausted arm lands in the torso without a fresh roll", () => {
     const { def, flags, damage } = fresh("AS7-D");
-    destroyAllSlots(flags, "leftArm", def.critSlots.leftArm.length);
+    destroyAllSlots(flags, "leftArm", def.critSlots.leftArm);
     const res = resolveCriticalHits({
       rng: dice(8, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
       def,
@@ -64,7 +64,7 @@ describe("CRIT-03: step-4 uses phase-start flags (TW p.122)", () => {
     const { def, flags, damage } = fresh("AS7-D");
     const base = cloneCritTable(flags);
     // Running state: every left-arm slot already hit this phase; phase start: none hit.
-    destroyAllSlots(flags, "leftArm", def.critSlots.leftArm.length);
+    destroyAllSlots(flags, "leftArm", def.critSlots.leftArm);
     const res = resolveCriticalHits({
       rng: dice(8, ...new Array<number>(400).fill(1)),
       def,

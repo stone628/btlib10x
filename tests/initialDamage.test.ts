@@ -1,9 +1,18 @@
 import { describe, expect, it } from "vitest";
-import type { Location } from "../src/core/types";
-import { destroyedSlots, isSlotDestroyed } from "../src/rules/critical";
-import { canAttemptStandUp } from "../src/rules/damage";
+import { isTorso, LOCATIONS, type Location } from "../src/core/types";
+import { mechDef } from "../src/data/index";
+import { loadAmmoBins } from "../src/rules/ammo";
+import {
+  applyAmmoExplosion,
+  checkCASE,
+  destroyedSlots,
+  emptyCritTable,
+  isSlotDestroyed,
+  markLocationCatastrophicallyDestroyed,
+} from "../src/rules/critical";
+import { canAttemptStandUp, type UnitDamageState } from "../src/rules/damage";
 import { buildUnitInit, type UnitInit, type UnitState } from "../src/rules/game";
-import type { UnitInitDamage } from "../src/rules/initialDamage";
+import { resolveInitialDamage, type UnitInitDamage } from "../src/rules/initialDamage";
 import { createTestBattle } from "./helpers";
 
 function unitWith(damage?: UnitInitDamage, model = "HBK-4G", pilotHitMax = 6): UnitState {
@@ -197,7 +206,6 @@ describe("starting damage (UnitInit.damage)", () => {
     it("bad crit slots", () => {
       bad({ critsDestroyed: { head: [99] } }, /no crit slot/);
       bad({ critsDestroyed: { head: [4, 4] } }, /listed twice/);
-      bad({ critsDestroyed: { leftArm: [12] } }, /is empty/);
     });
     it("bad ammo", () => {
       bad({ ammoUsed: { "leftTorso:9": 1 } }, /no ammo bin/);
@@ -230,5 +238,84 @@ describe("starting damage (UnitInit.damage)", () => {
       expect(u.destroyed).toBe("not");
       expect(u.removed).toBe("not");
     });
+  });
+});
+
+describe("starting damage: empty crit slots", () => {
+  it("drops a listed empty slot silently instead of failing", () => {
+    // HBK-4G left arm slots 6-12 are empty.
+    const u = unitWith({ critsDestroyed: { leftArm: [5, 12] } });
+    expect(destroyedSlots(u.critSlotsDestroyed, "leftArm")).toEqual([4]);
+    expect(() => unitWith({ critsDestroyed: { leftArm: [12] } })).not.toThrow();
+  });
+
+  it("keeps a listed soak slot (its gear is lost and needs refit)", () => {
+    // TBR-Prime left torso: 9 endo steel, 10-11 ferro-fibrous, 12 empty.
+    const u = unitWith({ critsDestroyed: { leftTorso: [3, 9, 10, 11, 12] } }, "TBR-Prime");
+    expect(destroyedSlots(u.critSlotsDestroyed, "leftTorso")).toEqual([2, 8, 9, 10]);
+  });
+
+  it("carries over a Timber Wolf whose CASE'd LRM-20 ammo blew the left torso", () => {
+    const def = mechDef("TBR-Prime")!;
+    const damage: UnitDamageState = {
+      armor: { ...def.armor },
+      armorRear: { ...def.armorRear },
+      internalStructure: { ...def.internalStructure },
+    };
+    const destroyed = emptyCritTable(def);
+    const ammoBins = loadAmmoBins(def);
+    const ammoSlot = def.critSlots.leftTorso.findIndex((slot) => slot.kind === "ammo");
+    const app = applyAmmoExplosion(damage, "leftTorso", 120, checkCASE(def, "leftTorso"));
+    expect(app.newlyDestroyed).toContain("leftTorso");
+    Object.assign(damage, app.after);
+    for (const lost of app.newlyDestroyed) {
+      markLocationCatastrophicallyDestroyed(def, damage, destroyed, ammoBins, lost);
+    }
+    // Slots 9-11 of the left torso are soak (marked, gear lost), 12 is empty (clear).
+    expect(def.critSlots.leftTorso.slice(8).map((slot) => slot.kind)).toEqual([
+      "soak",
+      "soak",
+      "soak",
+      "empty",
+    ]);
+    expect(destroyedSlots(destroyed, "leftTorso")).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(isSlotDestroyed(destroyed, "leftTorso", ammoSlot)).toBe(true);
+
+    // The end state written back as starting damage loads cleanly.
+    const carry: UnitInitDamage = { damageTaken: {}, critsDestroyed: {} };
+    for (const loc of LOCATIONS) {
+      const taken = carry.damageTaken!;
+      taken.armor = { ...taken.armor, [loc]: def.armor[loc] - damage.armor[loc] };
+      taken.internalStructure = {
+        ...taken.internalStructure,
+        [loc]: def.internalStructure[loc] - damage.internalStructure[loc],
+      };
+      if (isTorso(loc)) {
+        taken.armorRear = { ...taken.armorRear, [loc]: def.armorRear[loc] - damage.armorRear[loc] };
+      }
+      carry.critsDestroyed![loc] = destroyedSlots(destroyed, loc).map((i) => i + 1);
+    }
+    const start = resolveInitialDamage(def, "tbr", carry, 6);
+    expect(start.critSlotsDestroyed).toEqual(destroyed);
+    expect(start.damage.internalStructure.leftTorso).toBe(0);
+
+    // A carry-over written by the old wipe (all 12 bits set) loads the same.
+    const legacy: UnitInitDamage = {
+      ...carry,
+      critsDestroyed: {
+        ...carry.critsDestroyed,
+        leftTorso: def.critSlots.leftTorso.map((_, i) => i + 1),
+      },
+    };
+    expect(resolveInitialDamage(def, "tbr", legacy, 6).critSlotsDestroyed).toEqual(destroyed);
+  });
+
+  it("reports a fully wrecked unit as starting destroyed, not as malformed", () => {
+    const def = mechDef("HBK-4G")!;
+    const everySlot: UnitInitDamage["critsDestroyed"] = {};
+    for (const loc of LOCATIONS) everySlot[loc] = def.critSlots[loc].map((_, i) => i + 1);
+    expect(() => resolveInitialDamage(def, "x", { critsDestroyed: everySlot }, 6)).toThrow(
+      /would start destroyed \(cockpitDestroyed\)/,
+    );
   });
 });

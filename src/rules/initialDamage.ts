@@ -7,6 +7,8 @@
  * states in which the unit would already be out of play (the same kill
  * conditions the runtime applies: head or center torso structure gone, a
  * cockpit slot destroyed, three engine slots destroyed, a dead pilot).
+ * Empty crit slots listed as destroyed are dropped (nothing there to destroy),
+ * so a fully wrecked location loads and the gates report it.
  * Crippled-but-alive states (destroyed gyro, both legs, no arms) are legal;
  * a unit that lost a leg or its gyro starts prone, as it would have fallen
  * (TW p.122 for legs, the gyro row of the critical-hit table for gyros).
@@ -46,7 +48,7 @@ export interface UnitInitDamage {
     armorRear?: Partial<TorsoLocationValue>;
     internalStructure?: Partial<LocationValue>;
   };
-  /** Destroyed crit slots per location, as 1-based slot numbers. */
+  /** Destroyed crit slots per location, as 1-based slot numbers (empty slots ignored). */
   critsDestroyed?: Partial<Record<Location, number[]>>;
   /** Shots already used per ammo bin, keyed by `AmmoBinId` (`"leftTorso:1"`). */
   ammoUsed?: Record<string, number>;
@@ -165,7 +167,10 @@ export function resolveInitialDamage(
       if (seen.has(n)) fail(id, `${loc} crit slot ${n} listed twice`);
       seen.add(n);
       const slot = layout[n - 1]!;
-      if (slot.kind === "empty") fail(id, `${loc} crit slot ${n} is empty`);
+      // An empty slot has nothing to destroy: drop it silently, so a mask
+      // written by an older catastrophic wipe (every bit set) still loads.
+      // Soak slots are kept (a destroyed location's gear needs refit).
+      if (slot.kind === "empty") continue;
       setSlotDestroyed(critSlotsDestroyed, loc, n - 1);
       if (slot.kind === "weapon") {
         destroyedWeapons.add(slot.weaponIndex);

@@ -150,9 +150,22 @@ export function setSlotDestroyed(table: CritMask, loc: Location, slot: number): 
   table[loc] = (table[loc] ?? 0) | (1 << slot);
 }
 
-/** Mark every one of the `count` slots of `loc` destroyed, in place. */
-export function destroyAllSlots(table: CritMask, loc: Location, count: number): void {
-  table[loc] = (1 << count) - 1;
+/**
+ * Mark every non-empty slot of `loc` destroyed, in place. Empty slots hold no
+ * component to destroy (TW p.124 rerolls them), so their bits stay clear: the
+ * mask then round-trips through `UnitInitDamage.critsDestroyed`. Soak slots
+ * are marked: their gear is lost with the location (refit/salvage record).
+ */
+export function destroyAllSlots(
+  table: CritMask,
+  loc: Location,
+  layout: readonly ResolvedCritSlot[],
+): void {
+  let mask = 0;
+  for (let i = 0; i < layout.length; i++) {
+    if (layout[i]?.kind !== "empty") mask |= 1 << i;
+  }
+  table[loc] = mask;
 }
 
 /** True when any slot of `loc` is destroyed. */
@@ -907,7 +920,8 @@ export function critDamageDealt(res: Pick<CriticalResolution, "rows">): number {
 /**
  * Mark a location fully destroyed by a catastrophic event (ammo-explosion
  * cascade). Zero front armor, rear armor, and internal structure; mark
- * every crit slot in the location destroyed; strip any ammo bins there.
+ * every non-empty crit slot (soak included) in the location destroyed; strip
+ * any ammo bins there.
  * Per TW p.121 the location and "remaining armor there (front or rear)"
  * are wiped together.
  *
@@ -935,7 +949,7 @@ export function markLocationCatastrophicallyDestroyed(
   damage.armor[loc] = 0;
   if (isTorso(loc)) damage.armorRear[loc] = 0;
   damage.internalStructure[loc] = 0;
-  destroyAllSlots(destroyed, loc, def.critSlots[loc].length);
+  destroyAllSlots(destroyed, loc, def.critSlots[loc]);
   zeroBinsInLocation(ammoBins, loc);
 }
 

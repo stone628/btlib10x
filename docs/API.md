@@ -641,7 +641,7 @@ Bin identity + depletion helpers for custom UIs:
 - `ammoBinId(loc, slotIndex): AmmoBinId` — `"${loc}:${slotIndex}"`
 - `collectAmmoBins(def): AmmoBin[]` — every bin in the resolved def
 - `loadAmmoBins(def): AmmoBins` — initial shot counts
-- `CritMask` — `Record<Location, number>`: destroyed crit slots as one bitmask per location (bit `i` = 0-based slot `i`; slot counts come from the def). Helpers: `emptyCritTable(def)`, `isSlotDestroyed(table, loc, slot)`, `setSlotDestroyed(table, loc, slot)`, `destroyedSlots(table, loc)`, `cloneCritTable(table)`
+- `CritMask` — `Record<Location, number>`: destroyed crit slots as one bitmask per location (bit `i` = 0-based slot `i`; slot counts come from the def; bits of `empty` slots are never set — a catastrophic location wipe marks every non-empty slot, `soak` included, so lost gear stays on record for refit). Helpers: `emptyCritTable(def)`, `isSlotDestroyed(table, loc, slot)`, `setSlotDestroyed(table, loc, slot)`, `destroyedSlots(table, loc)`, `cloneCritTable(table)`
 - `pooledTotalsByWeaponName(def, bins): Readonly<Record<string, number>>`
 
 The draw-order/consumption internals (`AMMO_POLICIES`, `isAmmoPolicy`,
@@ -743,7 +743,8 @@ interface UnitInitDamage {
   ammoUsed?: Record<AmmoBinId, number>;
 }
 // createBattle validates it (taken <= default, structure only behind depleted armor, a lost side torso takes its arm,
-// real non-empty crit slots, ammo within the bin) and rejects states that would start destroyed:
+// real crit slots listed once (a listed `empty` slot has nothing to destroy and is dropped silently, so
+// end states written by older wipes still load), ammo within the bin) and rejects states that would start destroyed:
 // head or center torso structure gone, a destroyed cockpit slot, 3 destroyed engine slots, a dead pilot.
 // A unit with a destroyed leg or gyro starts prone (TW p.122); other crippled states are legal.
 

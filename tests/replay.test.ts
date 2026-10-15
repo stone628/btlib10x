@@ -311,6 +311,17 @@ describe("unit and end lines", () => {
     hunchy.ammoBins["leftTorso:1"] = 0;
     expect(encodeEndLine("0", hunchy)).toBe(`E00:::L1${full}`);
   });
+  it("a unit line listing an empty crit slot still loads; the end line drops it", () => {
+    // HBK-4G left arm slot 12 is empty: an older catastrophic wipe wrote it.
+    const decoded = decodeUnitLine("U1hunchy:HBK-4G:0503s456::A5Ac");
+    expect(decoded.damage?.critsDestroyed).toEqual({ leftArm: [5, 12] });
+    const state = createTestBattle(
+      [],
+      [decoded, buildUnitInit("b", "ENF-4R", 2, { col: 3, row: 1 })],
+      true,
+    );
+    expect(encodeEndLine("0", state.units.hunchy!)).toBe("E00::A5");
+  });
   it("winner line: team or '-', rng as 8 hex digits (negative snapshots included)", () => {
     expect(normalizeRng("3f9a41c7")).toBe("3f9a41c7");
     expect(normalizeRng("ff")).toBe("000000ff");
