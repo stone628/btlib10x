@@ -82,7 +82,7 @@
  * snapshots; the caller (game.ts) commits the resulting state onto UnitState.
  */
 
-import { roll2D6, rollD6 } from "../core/dice";
+import { diceIndex, roll2D6, rollD6 } from "../core/dice";
 import type { LimbLocation, Location, Rng } from "../core/types";
 import { damageTransferTo, isLimb, isTorso, LOCATIONS, TORSO_LOCATIONS } from "../core/types";
 import { type AmmoNameHolder, ammoDefFor } from "../data/ammo.schema";
@@ -416,9 +416,13 @@ export function ammoDamagePerShot(h: AmmoNameHolder): number {
 }
 
 /**
- * Find a non-eligible slot in `layout` (one that is empty/soak/destroyed),
- * re-rolling the dice up to a generous cap. Returns the 1-based slot index
- * or null if every reroll hit a non-hittable slot.
+ * Find an eligible slot in `layout` (one that is hittable and not yet
+ * destroyed), re-rolling the dice up to a generous cap. TW p.124 requires
+ * re-rolling empty/soak/destroyed slots until a hittable slot lands, so when
+ * the dice miss for the whole cap the fallback picks uniformly among the
+ * live hittable slots — guaranteeing the critical lands whenever one
+ * exists. Returns null only when the location is exhausted (no live
+ * hittable slot remains). Returns the 1-based slot index.
  */
 function findHittableSlot(
   rng: Rng,
@@ -436,7 +440,24 @@ function findHittableSlot(
     if ((destroyed >> i0) & 1) continue;
     return { slotIndex: slot, rolls: [...rolls] };
   }
-  return null;
+  // Dice missed every try despite a hittable slot existing (probability
+  // (1-k/12)^50 for k live slots on a 12-slot location). Fall back to a
+  // uniform pick so the critical is never silently lost.
+  const live: number[] = [];
+  for (let i = 0; i < layout.length; i++) {
+    const staticSlot = layout[i] ?? { kind: "empty" };
+    if (!isCritHittableStatic(staticSlot)) continue;
+    if ((destroyed >> i) & 1) continue;
+    live.push(i + 1);
+  }
+  if (live.length === 0) return null;
+  const slot = live[diceIndex(rng, live.length)] ?? live[0] ?? 1;
+  if (CRIT_SLOT_COUNTS[loc] === HEAD_LEG_SLOTS) {
+    return { slotIndex: slot, rolls: [slot] };
+  }
+  const within = slot <= TORSO_ARM_HALF ? slot : slot - TORSO_ARM_HALF;
+  const first = slot <= TORSO_ARM_HALF ? 1 : 4;
+  return { slotIndex: slot, rolls: [first, within] };
 }
 
 export type CaseKind = "case" | "caseII";

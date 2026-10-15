@@ -664,6 +664,106 @@ describe("transfer rules", () => {
     expect(res.rows).toHaveLength(1);
     expect(res.rows[0]!.kind).toBe("noEffect");
   });
+
+  it("crit lands on the last live weapon slot after 50 dice misses", () => {
+    // HBK-4G rightTorso: slots 1-10 are one AC/20 mount, slots 11-12 empty.
+    // Destroy slots 1-9, leaving slot 10 as the only live hittable slot, then
+    // force all 50 dice tries onto destroyed slot 1. Pre-fix this resolved
+    // as a silent noEffect; TW p.124 requires the re-roll to land.
+    const def = mechDef("HBK-4G")!;
+    const destroyed = freshFlags(def);
+    for (let i = 0; i < 9; i++) setSlotDestroyed(destroyed, "rightTorso", i);
+    const res = resolveCriticalHits({
+      // det 8 (4+4) -> 1 crit; 50 tries of (1,1) -> destroyed slot 1;
+      // +1 die for the uniform fallback pick among the single live slot.
+      rng: scriptedRng(4, 4, ...Array(100).fill(1), 1),
+      def,
+      source: { location: "rightTorso", damage: 5 },
+      critSlotsDestroyed: destroyed,
+      destroyedWeapons: [],
+      damage: {
+        armor: { ...def.armor },
+        armorRear: { ...def.armorRear },
+        internalStructure: { ...def.internalStructure },
+      },
+      ammoBins: loadAmmoBins(def),
+    });
+    expect(res.rows).toHaveLength(1);
+    const eff = res.rows[0]!;
+    expect(eff.kind).toBe("weaponDestroyed");
+    if (eff.kind === "weaponDestroyed") {
+      expect(eff.location).toBe("rightTorso");
+      expect(eff.slotIndex).toBe(10);
+    }
+    expect(isSlotDestroyed(res.critSlotsDestroyed, "rightTorso", 9)).toBe(true);
+  });
+
+  it("crit lands on the last live ammo bin after 50 dice misses", () => {
+    // HBK-4G leftTorso: slots 1-2 are AC/20 ammo, rest empty. Destroy slot 1,
+    // leaving slot 2 (the last bin) live, and force all 50 dice tries onto
+    // slot 1. The bin must detonate (5 shots x 20 = 100 IS damage).
+    const def = mechDef("HBK-4G")!;
+    const destroyed = freshFlags(def);
+    setSlotDestroyed(destroyed, "leftTorso", 0);
+    const ammoBins = loadAmmoBins(def);
+    overrideAmmoBin(ammoBins, "leftTorso", 1, 5);
+    overrideAmmoBin(ammoBins, "leftTorso", 2, 5);
+    const res = resolveCriticalHits({
+      // det 8 (4+4) -> 1 crit; 50 tries of (1,1) -> destroyed slot 1;
+      // +1 die for the fallback pick; +2 dice for the blast's cascade
+      // determining roll (1+1 = 2, no further crit).
+      rng: scriptedRng(4, 4, ...Array(100).fill(1), 1, 1, 1),
+      def,
+      source: { location: "leftTorso", damage: 5 },
+      critSlotsDestroyed: destroyed,
+      destroyedWeapons: [],
+      damage: {
+        armor: { ...def.armor, leftTorso: 0 },
+        armorRear: { ...def.armorRear },
+        internalStructure: { ...def.internalStructure, leftTorso: 1000, centerTorso: 1000 },
+      },
+      ammoBins,
+    });
+    expect(res.rows[0]!.kind).toBe("ammoExplosion");
+    const eff = res.rows[0]!;
+    if (eff.kind === "ammoExplosion") {
+      expect(eff.location).toBe("leftTorso");
+      expect(eff.slotIndex).toBe(2);
+      expect(eff.shotsRemaining).toBe(5);
+      expect(eff.damage).toBe(100);
+    }
+    expect(res.ammoBins["leftTorso:2"]).toBe(0);
+    expect(res.ammoBins["leftTorso:1"]).toBe(5);
+  });
+
+  it("second crit of one determining is still lost once its first crit exhausts the location", () => {
+    // Same gutted rightTorso (only slot 10 live), but determining 10 -> 2
+    // crits. The first lands on slot 10; the second finds the location
+    // exhausted mid-sequence and is lost per TW p.125 (not transferred).
+    const def = mechDef("HBK-4G")!;
+    const destroyed = freshFlags(def);
+    for (let i = 0; i < 9; i++) setSlotDestroyed(destroyed, "rightTorso", i);
+    const res = resolveCriticalHits({
+      // det 10 (5+5) -> 2 crits; first slot roll (4,4) -> live slot 10.
+      rng: detRoll(10, 4, 4),
+      def,
+      source: { location: "rightTorso", damage: 5 },
+      critSlotsDestroyed: destroyed,
+      destroyedWeapons: [],
+      damage: {
+        armor: { ...def.armor },
+        armorRear: { ...def.armorRear },
+        internalStructure: { ...def.internalStructure },
+      },
+      ammoBins: loadAmmoBins(def),
+    });
+    expect(res.rows).toHaveLength(2);
+    expect(res.rows[0]!.kind).toBe("weaponDestroyed");
+    if (res.rows[0]!.kind === "weaponDestroyed") {
+      expect(res.rows[0]!.slotIndex).toBe(10);
+    }
+    expect(res.rows[1]!.kind).toBe("noEffect");
+  });
 });
 
 describe("effectiveMovement", () => {
