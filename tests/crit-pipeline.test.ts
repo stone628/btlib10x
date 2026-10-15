@@ -46,10 +46,9 @@ describe("CRIT-08: transferred criticals are carried, not re-rolled (TW pp.122, 
     destroyAllSlots(flags, "leftArm", def.critSlots.leftArm);
     const res = resolveCriticalHits({
       rng: dice(8, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-      def,
+      model: def.model,
       source: { location: "leftArm", damage: 5 },
       critSlotsDestroyed: flags,
-      destroyedWeapons: [],
       damage,
       ammoBins: loadAmmoBins(def),
     });
@@ -67,11 +66,10 @@ describe("CRIT-03: step-4 uses phase-start flags (TW p.122)", () => {
     destroyAllSlots(flags, "leftArm", def.critSlots.leftArm);
     const res = resolveCriticalHits({
       rng: dice(8, ...new Array<number>(400).fill(1)),
-      def,
+      model: def.model,
       source: { location: "leftArm", damage: 5 },
       baseCritSlotsDestroyed: base,
       critSlotsDestroyed: flags,
-      destroyedWeapons: [],
       damage,
       ammoBins: loadAmmoBins(def),
     });
@@ -85,10 +83,9 @@ describe("CRIT-02: a location destroyed by the hit only crits explosive slots (T
     damage.internalStructure.rightArm = 0;
     const res = resolveCriticalHits({
       rng: dice(8, 1, 1, 1, 1, 1, 1),
-      def,
+      model: def.model,
       source: { location: "rightArm", damage: 5, struck: true },
       critSlotsDestroyed: flags,
-      destroyedWeapons: [],
       damage,
       ammoBins: loadAmmoBins(def),
     });

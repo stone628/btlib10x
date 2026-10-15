@@ -169,7 +169,7 @@ interface MechDef {
   intro: number; // introduction year (Master Unit List) from the MTF `Intro:` header
   weightClass: WeightClass;   // must equal weightClassForTonnage(tonnage)
   techBase: string;
-  walking: number; running: number; jumping: number; // running === ceil(walking*1.5)
+  walking: number; running: number; jumping: number; // running === ceil(walking*1.5); jumping === number of jumpJet crit slots
   armor: Readonly<LocationValue> &
     Readonly<Partial<Record<"centerTorsoRear"|"leftTorsoRear"|"rightTorsoRear", number>>>;
   weapons: readonly WeaponMount[];
@@ -363,7 +363,8 @@ budget until the heat phase runs.
   landings and cannot be passed through.
 
 Types: `MoveFragment` (`"F" | "B" | "R" | "L" | "J" | "U"`),
-`MovePathStep`, `RevealedLanding`, `ReachabilityOptions`.
+`MovePathStep` (`baseMp` per step), `RevealedLanding`, `ReachabilityOptions`.
+`pathMp(path)` sums a path's `baseMp`: the MP the landing costs.
 
 The remaining movement math (`maxMovePoints`, `attackerMovementModifier`,
 `targetMovementModifier`, `facingChangeCost`, `isForwardStep`,
@@ -384,17 +385,20 @@ during declaration validation; library consumers observe the outcome through
 
 ### Buildings (`rules/building.ts`)
 
-Engine-internal (source-module import only): `buildingTypeOf`,
-`isBuildingTerrain`, `buildingAt`, `createBuildingState`, `initialCf`,
-`applyBuildingDamage`, `isCollapsed`, `collapseToRubble`,
-`DEFAULT_BUILDING_LEVELS`. The battle engine tracks building CF itself;
+Engine-internal (source-module import only): `isBuildingTerrain` (type guard
+for `BuildingTerrainType`, the four building `TerrainType`s in `core/types.ts`;
+the terrain is the building's sub-type and nothing else stores it), `buildingAt`,
+`createBuildingState`, `initialCf`, `applyBuildingDamage`, `isCollapsed`,
+`collapseToRubble`, `assertBuildingsMatchCells`, `DEFAULT_BUILDING_LEVELS`. The battle engine tracks building CF itself;
 library consumers observe collapses through `buildingCollapsed` events.
 
 In the battle engine (`rules/game.ts`), `createBattle` initializes
 `BattleState.buildings["col,row"]` for each building hex in `terrain`.
 `damageBuildingAt(state, hex, damage)` drains a building's CF, collapses it
 to rubble on reaching 0 (emitting a `buildingCollapsed` event), and returns
-the event (or `null` when the hex has no building). Each weapon grouping that
+the event (or `null` when the hex has no building). A collapse records the
+building's terrain in `BattleState.rubbleOrigin["col,row"]`, which girder
+searches read. Each weapon grouping that
 hits a unit standing in a building hex costs the hex a toll of ceil(CF at the
 start of the phase / 10) per grouping (TW p. 171); the unit inside still takes
 its full damage. CF reduction applies after all weapons fire completes, and a
@@ -426,6 +430,8 @@ breakdown shapes for reading resolutions:
 - `AttackModifiers` — the argument shape; `ToHitBreakdown` — the individual
   mods plus `rangeBracket`, `automatic`, and `outOfRange`; `RangeBracket` is
   `"short" | "medium" | "long"`
+- `toHitTotal(breakdown)` — the modified to-hit number (sum of the mods,
+  infinite out of range); nothing stores it
 
 `computeToHit`, `damageForBracket`, and `proneTargetModifier` are
 engine-internal (source-module import only).
@@ -466,14 +472,19 @@ limb?, weapon? }`; `PHYSICAL_WEAPONS` / `PhysicalWeaponStats` /
 retractable blade table, and `strikeMounts` / `strikeMountArms` /
 `strikeWeaponInArm` / `resolveStrikeMount` / `resolveStrikeArm` /
 `StrikeMountResolution` find the mount a strike swings;
-`PhysicalModifiers` is the to-hit breakdown; `PhysicalResolution` carries the
-roll, `DamageGroup` hits (`{ location, damage }`), the merged target /
-self-damage `DamageApplication`s (armor-change detail via `blastDetail`) and
+`PhysicalModifiers` is the to-hit breakdown (`physicalToHitTotal(mods)` sums it);
+`damageGroupsTotal(groups)` sums a group list; `PhysicalResolution` carries the
+roll, `DamageGroup` hits (`{ location, damage }`), one `DamageApplication` per
+target / self-damage group (`applications` / `attackerApplications`,
+armor-change detail via `blastDetail`) and
 weapon-style `crits` (rendered with `critLines`) and the deferred kick PSR flags. `DamageGroup` is the per-group shape.
 
 Club handling (TW p.146): `HeldClub`, `ClubKind` (`"limb" | "tree" |
-"girder"`), `ClubGroundToken`, `SeveredLimb`, `ClubPickupDecl`,
-`GIRDER_SEARCH_TARGET`, `clubTokensInHex(state, hex)`,
+"girder"`), `ClubGroundToken`, `SeveredLimb`, `ClubPickupDecl` (the request:
+`source?`, 1-based `tokenIndex?`), `DeclaredPickup` (what `declarePickup`
+stores in `UnitState.declaredPickup`: the resolved `source` and, when a ground
+token was chosen, that `token`; resolution re-finds it by value),
+`GIRDER_SEARCH_TARGET` (keyed by rubble-origin building terrain), `clubTokensInHex(state, hex)`,
 `pickupSourceInHex(state, hex)`, `salvageableSeveredLimbs(unit)`,
 `validatePickup(state, unitId, decl?)` and `declarePickup(state, unitId, decl,
 sink)` (an exclusive, attack-phase pickup declaration). Both need two working
@@ -513,7 +524,7 @@ interface UnitDamageState {
 Damage is applied by the engine during attack resolution; the `applyDamage`
 function itself is engine-internal (source-module import only). The shapes it
 produces (`DamageApplication`, `DamageTransferStep`, `DamageOptions`) stay
-exported for reading `AttackResolution.application` steps.
+exported for reading `AttackResolution.applications` steps.
 
 Predicates: `isUnitDestroyed(damage)` (head or CT IS gone),
 `isUnitImmobile(damage)` (both legs AND both arms gone — TW p.122),
@@ -529,8 +540,8 @@ engine-internal.
 ```ts
 // engine-internal; import from src/rules/critical.ts for tests:
 resolveCriticalHits({
-  rng; def; source: { location; damage };
-  critSlotsDestroyed; destroyedWeapons; damage; ammoBins;
+  rng; model; source: { location; damage };   // model: MechModelHolder, resolved via mechDefFor
+  critSlotsDestroyed; damage; ammoBins;     // the CritState bundle
 }): CriticalResolution
 ```
 
@@ -542,7 +553,17 @@ and inward transfer (head/CT terminal; excess lost).
 `CriticalResolution` exposes `rows` (the individual `CriticalEffect`s),
 `determiningRoll`, `throughArmor` (true when the roll came from a hit-location
 2 with armor unbreached), and the resulting `critSlotsDestroyed` /
-`destroyedWeapons` / `damage` / `blownOffLimbs` / `killedReason` / `ammoBins`.
+`damage` / `killedReason` / `ammoBins`. The rows are the only record of a
+severed limb: `critSeveredLimbs(res)` lists them (a 12 on an arm or leg, and
+an arm lost with a side torso a crit blast destroyed).
+A destroyed weapon has no separate record: `isWeaponCritted(def, critSlotsDestroyed, i)`
+is true when any slot of mount `i` is flagged (one critical hit on any slot destroys
+it, TW p.124, and a catastrophic location wipe flags every slot), and
+`crittedWeapons(def, critSlotsDestroyed)` lists them. A location lost to plain
+damage flags nothing, so readers also check `canFireMount`.
+`killedReason` is the first kill in the cascade (a later blast or engine crit
+does not overwrite it); every damage path takes the unit's kill reason from the
+first resolution that killed it, falling back to the head or center torso at 0 IS.
 A `DamageApplication`'s `mechDestroyed` means the damage destroyed the 'Mech
 (head or center torso at 0 internal structure, or a destroying crit, TW p. 128);
 it says nothing about the MechWarrior, whose fate the destruction sweep resolves
@@ -576,7 +597,11 @@ Engine-internal (source-module import only): `resolveWeaponAttack` and its
 `attackResolved` events carrying an `AttackResolution`:
 
 `AttackResolution` = `{ weapon; distance; breakdown; toHitRoll; hit; jammed;
-prone; propArm; clusterRoll; clusterMod; groups; application; arc; crits }` — `arc` is
+prone; propArm; clusterRoll; clusterMod; groups; applications; targetDamageAfter; arc; crits }` —
+`applications` holds one exact `DamageApplication` per group that reached the
+target, in order (the crits a group triggered resolve before the next group and
+carry their own effects in `crits[].rows`); `targetDamageAfter` is the target's
+damage after every group and crit (unchanged on a miss). `arc` is
 the firing arc the attack resolved against (drives the hit-location table
 and armor pool); `prone` marks shots fired while prone and `propArm` (null
 when standing or with no arm weapons) names the propped arm. Each `groups`
@@ -616,8 +641,10 @@ and `ejectionDamage(roll)` (floor(margin of failure / 2)) support ejection.
 
 ### Pilot (`rules/pilot.ts`)
 
+`isPilotUnconscious(unit)` is true while `unconsciousSinceTurn` is set (the
+turn of the knockout; cleared on waking), the only record of consciousness.
 `pilotStatus(unit): "active" | "unconscious" | "ejected" | "dead"` is the pilot's
-relation to the 'Mech, derived from `pilotHits`/`pilotHitMax`/`unconscious`/`removed`
+relation to the 'Mech, derived from `pilotHits`/`pilotHitMax`/`unconsciousSinceTurn`/`removed`
 (`ejected` wins even when ejection damage reached the hit max; `dead` = died inside).
 `pilotRecord(unit)` returns `{ gunnery, piloting, hits, hitMax, hp, nextTarget, targets, status }`
 for record-sheet display (`hp = hitMax - hits`). `FallDirection` and
@@ -637,7 +664,8 @@ Bin identity + depletion helpers for custom UIs:
 
 - `AmmoPolicy` (`"exposed" | "core" | "spread" | "leastFirst"`)
 - `UnitPolicy` (`{ ammoPolicy: AmmoPolicy; autoEject: boolean }`, per-unit settings fixed at setup; `DEFAULT_UNIT_POLICY` = `{ ammoPolicy: "exposed", autoEject: true }`, filled by `buildUnitInit`). `autoEject` (TO:AR p. 165): on, losing the head (by damage or a blown-off head) or the center torso to an ammo/weapon blast ejects the pilot (head loss raises pilot hits to `pilotHitMax − 1` first); off, both kill the MechWarrior (TW p. 128). Copied to `UnitState.autoEject`; snapshots saved without it load as `true`
-- `AmmoBins` — `Record<AmmoBinId, number>` (remaining shots per bin; identity comes from `collectAmmoBins`; a missing key means the bin was stripped)
+- `AmmoBins` — `Record<AmmoBinId, number>`: shots left in each bin, never negative; identity comes from `collectAmmoBins`, and a missing key reads as 0. The count alone does not say whether those shots can be fired: `CritState` (`{ damage, critSlotsDestroyed, ammoBins }`) is the bundle every ammo query takes, and fate derives from it — `isBinUsable(state, bin)` (location IS above 0 and the slot intact), `usableShots(state, bin)`, `strandedShots(state, bin)` (shots stuck in a location lost to plain damage, i.e. salvage). A bin whose slot is flagged destroyed is gone: neither usable nor stranded, whatever its count says
+- `CritState` — `{ damage: UnitDamageState; critSlotsDestroyed: CritMask; ammoBins: AmmoBins }`, the three fields that together decide a bin's fate; `UnitState` and `CriticalResolution` both satisfy it
 - `ammoBinId(loc, slotIndex): AmmoBinId` — `"${loc}:${slotIndex}"`
 - `collectAmmoBins(def): AmmoBin[]` — every bin in the resolved def
 - `loadAmmoBins(def): AmmoBins` — initial shot counts
@@ -646,7 +674,7 @@ Bin identity + depletion helpers for custom UIs:
 
 The draw-order/consumption internals (`AMMO_POLICIES`, `isAmmoPolicy`,
 `ammoWeaponTotals`, `binsForWeapon`, `binsForWeaponName`, `pooledShotsLeft`,
-`consumeAmmo`, `consumeAmmoForName`, `drawOrderBins`, `stripBinsInLocation`)
+`consumeAmmo`, `consumeAmmoForName`, `drawOrderBins`, `designTotalsByWeaponName`)
 are engine-internal (source-module import only).
 
 ## Battle state machine (`rules/game.ts`)
@@ -763,21 +791,21 @@ interface BattleState extends HexGrid {
   width: number; height: number;      // board size
   critsDisabled: boolean;
   actedThisPhase: string[];
-  buildings: Record<string, BuildingState>;  // { cf; type } keyed "col,row"; building hexes only
+  buildings: Record<string, BuildingState>;  // { cf } keyed "col,row"; one per building-terrain cell, sub-type is the terrain
+  rubbleOrigin: Record<string, BuildingTerrainType>;  // collapsed building's terrain, keyed "col,row" of its rubble cell
   wrecks: Record<string, WreckState>;  // { unitId; level: 1 | 2 } keyed "col,row"; ejected/pilot-killed obstacles
   clubs: Record<string, ClubGroundToken[]>;  // ground club tokens keyed "col,row"
   actorQueue: string[] | null;        // cached activation order for the phase
 }
 
 interface UnitState {
-  id; model; team; gunnery; piloting; pilotHits; pilotHitMax; unconscious; prone;
+  id; model; team; gunnery; piloting; pilotHits; pilotHitMax; unconsciousSinceTurn; prone;   // isPilotUnconscious(unit)
   heat; heatPending;                  // scale value (last turn's end) + this turn's own heat
   position; facing;
   damage: UnitDamageState;            // updated as soon as damage lands
-  ammoBins: AmmoBins;                 // per bin, keyed "location:slotIndex": >0 live shots, 0 spent/exploded, <0 stranded in a lost location (-n = salvage shots)
+  ammoBins: AmmoBins;                 // per bin, keyed "location:slotIndex": shots left, never negative. Whether they can be fired derives from damage + critSlotsDestroyed (isBinUsable / usableShots / strandedShots)
   jammedWeapons: number[];
-  critSlotsDestroyed: CritMask;       // destroyed-slot bitmask per location (bit i = 0-based slot i)
-  destroyedWeapons: number[];
+  critSlotsDestroyed: CritMask;       // destroyed-slot bitmask per location (bit i = 0-based slot i); destroyed weapons derive from it (isWeaponCritted)
   blownOffLimbs: SeveredLimb[]; club: HeldClub | null;   // severed limbs / held club
   ammoPolicy: AmmoPolicy; autoEject: boolean;   // from UnitPolicy
   moveMode; hexesMovedThisTurn; jumpedThisTurn; mpSpent;
@@ -804,7 +832,7 @@ type GameEvent =
   | { kind: "attackResolved"; unitId; targetId; secondaryMod: 0|1|2; resolution: AttackResolution }
   | { kind: "physicalAttackResolved"; unitId; targetId; resolution: PhysicalResolution }
   | { kind: "unitRemoved"; unitId; reason: RemovalReason; destroyReason?: DestroyedReason | null }
-  | { kind: "unitFell"; unitId; cause: UnitFallCause; levelsFallen; totalDamage; ... }
+  | { kind: "unitFell"; unitId; cause: UnitFallCause; levelsFallen; groups; ... }   // damage: damageGroupsTotal(groups)
   | { kind: "buildingCollapsed"; hex; cf }
   | ... ;                              // see src/rules/game.ts for the full union
 
@@ -854,7 +882,7 @@ Persistence stays public for future web-client save/load:
 
 - `saveBattleState(state): string` — serialize to JSON
 - `parseBattleState(json: string): BattleState` — strict parse (throws on
-  shape errors)
+  shape errors, or when `buildings` / `rubbleOrigin` disagree with the cells)
 - `loadBattleState(state, json: string): void` — parse + load into live state
 
 ## Version (`version.ts`)

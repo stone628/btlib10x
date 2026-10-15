@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { requireUnit, type UnitInit } from "../src";
 import { LOCATIONS, type Location, type Rng } from "../src/core/types";
 import { mechDef } from "../src/data/index";
-import { ammoWeaponTotals, loadAmmoBins } from "../src/rules/ammo";
+import {
+  ammoWeaponTotals,
+  collectAmmoBins,
+  loadAmmoBins,
+  strandedShots,
+  usableShots,
+} from "../src/rules/ammo";
 import {
   anySlotDestroyed,
   applyAmmoExplosion,
@@ -11,6 +17,8 @@ import {
   componentHitStatus,
   countDestroyedEngine,
   critDamageDealt,
+  critSeveredLimbs,
+  crittedWeapons,
   destroyAllSlots,
   destroyedSlots,
   effectiveMovement,
@@ -58,10 +66,9 @@ describe("determining critical hits table", () => {
     for (let roll = 2; roll <= 7; roll++) {
       const res = resolveCriticalHits({
         rng: detRoll(roll),
-        def,
+        model: def.model,
         source: { location: "centerTorso", damage: 5 },
         critSlotsDestroyed: freshFlags(def),
-        destroyedWeapons: [],
         damage,
         ammoBins: loadAmmoBins(def),
       });
@@ -74,10 +81,9 @@ describe("determining critical hits table", () => {
   it("tags through-armor resolutions when triggered by a hit-location 2", () => {
     const res = resolveCriticalHits({
       rng: detRoll(8, 1, 1),
-      def,
+      model: def.model,
       source: { location: "centerTorso", damage: 5, tac: true },
       critSlotsDestroyed: freshFlags(def),
-      destroyedWeapons: [],
       damage,
       ammoBins: loadAmmoBins(def),
     });
@@ -89,10 +95,9 @@ describe("determining critical hits table", () => {
     for (const roll of [8, 9]) {
       const res = resolveCriticalHits({
         rng: detRoll(roll, 1, 1),
-        def,
+        model: def.model,
         source: { location: "rightTorso", damage: 5 },
         critSlotsDestroyed: freshFlags(def),
-        destroyedWeapons: [],
         damage,
         ammoBins: loadAmmoBins(def),
       });
@@ -108,10 +113,9 @@ describe("determining critical hits table", () => {
       // ammo = 12 hittable slots.
       const res = resolveCriticalHits({
         rng: detRoll(roll, 1, 1, 1, 2),
-        def,
+        model: def.model,
         source: { location: "rightTorso", damage: 5 },
         critSlotsDestroyed: freshFlags(def),
-        destroyedWeapons: [],
         damage,
         ammoBins: loadAmmoBins(def),
       });
@@ -132,10 +136,9 @@ describe("limb / head blow-off on 12", () => {
   it("head blown off on 12 kills the unit", () => {
     const res = resolveCriticalHits({
       rng: detRoll(12),
-      def,
+      model: def.model,
       source: { location: "head", damage: 3 },
       critSlotsDestroyed: freshFlags(def),
-      destroyedWeapons: [],
       damage,
       ammoBins: loadAmmoBins(def),
     });
@@ -147,14 +150,13 @@ describe("limb / head blow-off on 12", () => {
   it("arm blown off on 12 zeros the arm and reports it", () => {
     const res = resolveCriticalHits({
       rng: detRoll(12),
-      def,
+      model: def.model,
       source: { location: "leftArm", damage: 5 },
       critSlotsDestroyed: freshFlags(def),
-      destroyedWeapons: [],
       damage,
       ammoBins: loadAmmoBins(def),
     });
-    expect(res.blownOffLimbs).toContain("leftArm");
+    expect(critSeveredLimbs(res)).toContain("leftArm");
     expect(res.damage.internalStructure.leftArm).toBe(0);
     expect(res.damage.armor.leftArm).toBe(0);
   });
@@ -162,10 +164,9 @@ describe("limb / head blow-off on 12", () => {
   it("leg blown off on 12 zeros the leg", () => {
     const res = resolveCriticalHits({
       rng: detRoll(12),
-      def,
+      model: def.model,
       source: { location: "leftLeg", damage: 5 },
       critSlotsDestroyed: freshFlags(def),
-      destroyedWeapons: [],
       damage,
       ammoBins: loadAmmoBins(def),
     });
@@ -179,10 +180,9 @@ describe("limb / head blow-off on 12", () => {
       // 12 on rightTorso: 3 crits against 12 AC/20/ammo slots. Dice:
       //   det 2, slot 2, slot 2, slot 2 = 8 total.
       rng: detRoll(12, 1, 1, 1, 2, 1, 3, 1, 1),
-      def,
+      model: def.model,
       source: { location: "rightTorso", damage: 5 },
       critSlotsDestroyed: freshFlags(def),
-      destroyedWeapons: [],
       damage,
       ammoBins: loadAmmoBins(def),
     });
@@ -205,10 +205,9 @@ describe("slot selection", () => {
     for (const targetSlot of [1, 2, 3, 4, 5, 6]) {
       const res = resolveCriticalHits({
         rng: detRoll(8, targetSlot),
-        def,
+        model: def.model,
         source: { location: "head", damage: 3 },
         critSlotsDestroyed: freshFlags(def),
-        destroyedWeapons: [],
         damage,
         ammoBins: loadAmmoBins(def),
       });
@@ -240,10 +239,9 @@ describe("slot selection", () => {
     for (const [d1, d2, expected] of cases) {
       const res = resolveCriticalHits({
         rng: detRoll(8, d1, d2),
-        def,
+        model: def.model,
         source: { location: "rightTorso", damage: 5 },
         critSlotsDestroyed: freshFlags(def),
-        destroyedWeapons: [],
         damage,
         ammoBins: loadAmmoBins(def),
       });
@@ -280,10 +278,9 @@ describe("re-rolls", () => {
     // — slot 5 in CT is "gyro", which is hittable.
     const res = resolveCriticalHits({
       rng: detRoll(8, 1, 5),
-      def,
+      model: def.model,
       source: { location: "centerTorso", damage: 5 },
       critSlotsDestroyed: freshFlags(def),
-      destroyedWeapons: [],
       damage,
       ammoBins: loadAmmoBins(def),
     });
@@ -304,10 +301,9 @@ describe("weapon and ammo crit effects", () => {
     // Roll 8 -> one crit. Slot 1,1 (CT half=1, slot=1) lands on AC/20.
     const res = resolveCriticalHits({
       rng: detRoll(8, 1, 1),
-      def,
+      model: def.model,
       source: { location: "rightTorso", damage: 5 },
       critSlotsDestroyed: freshFlags(def),
-      destroyedWeapons: [],
       damage: {
         armor: { ...def.armor },
         armorRear: { ...def.armorRear },
@@ -322,7 +318,7 @@ describe("weapon and ammo crit effects", () => {
       expect(eff.weaponName).toBe("AC/20");
       expect(eff.weaponIndex).toBe(4);
     }
-    expect(res.destroyedWeapons).toContain(4);
+    expect(crittedWeapons(def, res.critSlotsDestroyed)).toContain(4);
   });
 
   it("AC/20 ammo explosion = hit bin's shots x 20 damage to that bin's IS", () => {
@@ -339,10 +335,9 @@ describe("weapon and ammo crit effects", () => {
     const res = resolveCriticalHits({
       // Tail: follow-up Determining roll 2 (no crit) for the struck LT (TW p.125).
       rng: detRoll(8, 1, 1, 1, 1),
-      def,
+      model: def.model,
       source: { location: "leftTorso", damage: 5 },
       critSlotsDestroyed: freshFlags(def),
-      destroyedWeapons: [],
       damage: {
         armor: { ...def.armor, leftTorso: 0 },
         armorRear: { ...def.armorRear },
@@ -363,7 +358,7 @@ describe("weapon and ammo crit effects", () => {
     // derived per-weapon total drops from 10 to 5.
     expect(res.ammoBins["leftTorso:1"]).toBe(0);
     expect(res.ammoBins["leftTorso:2"]).toBe(5);
-    expect(ammoWeaponTotals(def, res.ammoBins)[4]).toBe(5);
+    expect(ammoWeaponTotals(def, res)[4]).toBe(5);
   });
 
   it("critDamageDealt counts the blast's marked points (100, all on live IS)", () => {
@@ -373,10 +368,9 @@ describe("weapon and ammo crit effects", () => {
     overrideAmmoBin(ammoBins, "leftTorso", 2, 5);
     const res = resolveCriticalHits({
       rng: detRoll(8, 1, 1, 1, 1),
-      def,
+      model: def.model,
       source: { location: "leftTorso", damage: 5 },
       critSlotsDestroyed: freshFlags(def),
-      destroyedWeapons: [],
       damage: {
         armor: { ...def.armor, leftTorso: 0 },
         armorRear: { ...def.armorRear },
@@ -416,10 +410,9 @@ describe("weapon and ammo crit effects", () => {
     //   = 14 dice
     const res = resolveCriticalHits({
       rng: detRoll(8, 1, 1, 3, 4, 1, 1, 1, 2, 3, 4, 1, 1, 1, 1),
-      def,
+      model: def.model,
       source: { location: "leftTorso", damage: 5 },
       critSlotsDestroyed: freshFlags(def),
-      destroyedWeapons: [],
       damage,
       ammoBins,
     });
@@ -441,7 +434,35 @@ describe("weapon and ammo crit effects", () => {
     // (exploded, nothing to salvage) and the derived per-weapon total vanishes.
     expect(res.ammoBins["leftTorso:1"]).toBe(0);
     expect(res.ammoBins["leftTorso:2"]).toBe(0);
-    expect(ammoWeaponTotals(def, res.ammoBins)[1]).toBeUndefined();
+    expect(ammoWeaponTotals(def, res)[1]).toBeUndefined();
+  });
+
+  it("keeps the first kill of a cascade: engine kill, then a blast through the CT", () => {
+    // HER-5SA (XL engine): leftTorso slots 1-3 engine, slot 7 Ultra AC/5
+    // ammo (20 shots x 5 = 100), no CASE. Two CT engine slots are already
+    // gone, so the third engine slot kills the 'Mech; the bin then blows
+    // through the 1-IS center torso. The engine came first, so it is the
+    // reason (the derivation every damage path shares in game.ts).
+    const def = mechDef("HER-5SA")!;
+    const flags = freshFlags(def);
+    setSlotDestroyed(flags, "centerTorso", 0);
+    setSlotDestroyed(flags, "centerTorso", 1);
+    const res = resolveCriticalHits({
+      // det 10 -> 2 crits: (1,1) leftTorso slot 1 engine, (4,1) slot 7 ammo.
+      rng: detRoll(10, 1, 1, 4, 1, ...Array(12).fill(1)),
+      model: def.model,
+      source: { location: "leftTorso", damage: 5 },
+      critSlotsDestroyed: flags,
+      damage: {
+        armor: { ...def.armor, leftTorso: 0, centerTorso: 0 },
+        armorRear: { ...def.armorRear },
+        internalStructure: { ...def.internalStructure, centerTorso: 1 },
+      },
+      ammoBins: loadAmmoBins(def),
+    });
+    expect(res.rows.map((r) => r.kind)).toEqual(["engineDestroyed", "ammoExplosion"]);
+    expect(res.damage.internalStructure.centerTorso).toBe(0);
+    expect(res.killedReason).toBe("engineDestroyed");
   });
 
   it("gauss ammo (inert) crits as ammoNoExplosion, bin empties, no damage", () => {
@@ -459,10 +480,9 @@ describe("weapon and ammo crit effects", () => {
       // det 8 -> 1 crit. CT is 12-slot: first die 1-3 = slots 1-6, 4-6 =
       // slots 7-12. (4,5) lands on slot 11 = first gauss ammo bin.
       rng: detRoll(8, 4, 5),
-      def,
+      model: def.model,
       source: { location: "centerTorso", damage: 5 },
       critSlotsDestroyed: freshFlags(def),
-      destroyedWeapons: [],
       damage: {
         armor: { ...def.armor, centerTorso: 0 },
         armorRear: { ...def.armorRear },
@@ -500,10 +520,9 @@ describe("weapon and ammo crit effects", () => {
       // det 8 -> 1 crit; (1,3) lands on slot 3 = Gauss Rifle.
       // Tail: follow-up Determining roll 2 (no crit) for the struck RT (TW p.125).
       rng: detRoll(8, 1, 3, 1, 1),
-      def,
+      model: def.model,
       source: { location: "rightTorso", damage: 5 },
       critSlotsDestroyed: freshFlags(def),
-      destroyedWeapons: [],
       damage: {
         armor: { ...def.armor },
         armorRear: { ...def.armorRear },
@@ -521,7 +540,7 @@ describe("weapon and ammo crit effects", () => {
       expect(eff.explosion?.damage).toBe(20);
       expect(eff.explosion?.application.newlyDestroyed ?? []).toHaveLength(0);
     }
-    expect(res.destroyedWeapons).toContain(1);
+    expect(crittedWeapons(def, res.critSlotsDestroyed)).toContain(1);
     // Blast bypasses armor and hits IS directly.
     expect(res.damage.armor.rightTorso).toBe(rtArmor);
     expect(res.damage.internalStructure.rightTorso).toBe(980);
@@ -535,10 +554,9 @@ describe("weapon and ammo crit effects", () => {
     const res = resolveCriticalHits({
       // det 8 -> 1 crit; (1,4) lands on slot 4 = same Gauss mount.
       rng: detRoll(8, 1, 4),
-      def,
+      model: def.model,
       source: { location: "rightTorso", damage: 5 },
       critSlotsDestroyed: destroyed,
-      destroyedWeapons: [1],
       damage: {
         armor: { ...def.armor },
         armorRear: { ...def.armorRear },
@@ -557,10 +575,9 @@ describe("weapon and ammo crit effects", () => {
     // HBK head slot 3 = cockpit. Roll 8 -> one crit. Slot 3 (1D6 = 3).
     const res = resolveCriticalHits({
       rng: detRoll(8, 3),
-      def,
+      model: def.model,
       source: { location: "head", damage: 3 },
       critSlotsDestroyed: freshFlags(def),
-      destroyedWeapons: [],
       damage: {
         armor: { ...def.armor },
         armorRear: { ...def.armorRear },
@@ -587,10 +604,9 @@ describe("transfer rules", () => {
       // Provide 12 dice. det 2 + 3 slot rolls (with possible re-rolls)
       // = up to 10 dice; extra margin.
       rng: detRoll(12, 1, 1, 1, 1, 2, 6, 6, 1, 3),
-      def,
+      model: def.model,
       source: { location: "centerTorso", damage: 5 },
       critSlotsDestroyed: freshFlags(def),
-      destroyedWeapons: [],
       damage: {
         armor: { ...def.armor },
         armorRear: { ...def.armorRear },
@@ -620,10 +636,9 @@ describe("transfer rules", () => {
     }
     const res = resolveCriticalHits({
       rng: detRoll(8, 4, 4, 1, 4),
-      def,
+      model: def.model,
       source: { location: "leftTorso", damage: 5 },
       critSlotsDestroyed: destroyed,
-      destroyedWeapons: [],
       damage: {
         armor: { ...def.armor },
         armorRear: { ...def.armorRear },
@@ -648,10 +663,9 @@ describe("transfer rules", () => {
     }
     const res = resolveCriticalHits({
       rng: detRoll(8),
-      def,
+      model: def.model,
       source: { location: "head", damage: 3 },
       critSlotsDestroyed: destroyed,
-      destroyedWeapons: [],
       damage: {
         armor: { ...def.armor },
         armorRear: { ...def.armorRear },
@@ -668,7 +682,8 @@ describe("transfer rules", () => {
     // HBK-4G rightTorso: slots 1-10 are one AC/20 mount, slots 11-12 empty.
     // Destroy slots 1-9, leaving slot 10 as the only live hittable slot, then
     // force all 50 dice tries onto destroyed slot 1. Pre-fix this resolved
-    // as a silent noEffect; TW p.124 requires the re-roll to land.
+    // as a silent noEffect; TW p.124 requires the re-roll to land. The
+    // flagged slots already destroyed the AC/20, so the landing hit soaks.
     const def = mechDef("HBK-4G")!;
     const destroyed = freshFlags(def);
     for (let i = 0; i < 9; i++) setSlotDestroyed(destroyed, "rightTorso", i);
@@ -676,10 +691,9 @@ describe("transfer rules", () => {
       // det 8 (4+4) -> 1 crit; 50 tries of (1,1) -> destroyed slot 1;
       // +1 die for the uniform fallback pick among the single live slot.
       rng: scriptedRng(4, 4, ...Array(100).fill(1), 1),
-      def,
+      model: def.model,
       source: { location: "rightTorso", damage: 5 },
       critSlotsDestroyed: destroyed,
-      destroyedWeapons: [],
       damage: {
         armor: { ...def.armor },
         armorRear: { ...def.armorRear },
@@ -688,12 +702,7 @@ describe("transfer rules", () => {
       ammoBins: loadAmmoBins(def),
     });
     expect(res.rows).toHaveLength(1);
-    const eff = res.rows[0]!;
-    expect(eff.kind).toBe("weaponDestroyed");
-    if (eff.kind === "weaponDestroyed") {
-      expect(eff.location).toBe("rightTorso");
-      expect(eff.slotIndex).toBe(10);
-    }
+    expect(res.rows[0]!.kind).toBe("noEffect");
     expect(isSlotDestroyed(res.critSlotsDestroyed, "rightTorso", 9)).toBe(true);
   });
 
@@ -712,10 +721,9 @@ describe("transfer rules", () => {
       // +1 die for the fallback pick; +2 dice for the blast's cascade
       // determining roll (1+1 = 2, no further crit).
       rng: scriptedRng(4, 4, ...Array(100).fill(1), 1, 1, 1),
-      def,
+      model: def.model,
       source: { location: "leftTorso", damage: 5 },
       critSlotsDestroyed: destroyed,
-      destroyedWeapons: [],
       damage: {
         armor: { ...def.armor, leftTorso: 0 },
         armorRear: { ...def.armorRear },
@@ -737,18 +745,18 @@ describe("transfer rules", () => {
 
   it("second crit of one determining is still lost once its first crit exhausts the location", () => {
     // Same gutted rightTorso (only slot 10 live), but determining 10 -> 2
-    // crits. The first lands on slot 10; the second finds the location
-    // exhausted mid-sequence and is lost per TW p.125 (not transferred).
+    // crits. The first lands on slot 10 (a soak: the flagged slots already
+    // destroyed the AC/20); the second finds the location exhausted
+    // mid-sequence and is lost per TW p.125 (not transferred).
     const def = mechDef("HBK-4G")!;
     const destroyed = freshFlags(def);
     for (let i = 0; i < 9; i++) setSlotDestroyed(destroyed, "rightTorso", i);
     const res = resolveCriticalHits({
       // det 10 (5+5) -> 2 crits; first slot roll (4,4) -> live slot 10.
       rng: detRoll(10, 4, 4),
-      def,
+      model: def.model,
       source: { location: "rightTorso", damage: 5 },
       critSlotsDestroyed: destroyed,
-      destroyedWeapons: [],
       damage: {
         armor: { ...def.armor },
         armorRear: { ...def.armorRear },
@@ -757,10 +765,8 @@ describe("transfer rules", () => {
       ammoBins: loadAmmoBins(def),
     });
     expect(res.rows).toHaveLength(2);
-    expect(res.rows[0]!.kind).toBe("weaponDestroyed");
-    if (res.rows[0]!.kind === "weaponDestroyed") {
-      expect(res.rows[0]!.slotIndex).toBe(10);
-    }
+    expect(res.rows[0]!.kind).toBe("noEffect");
+    expect(isSlotDestroyed(res.critSlotsDestroyed, "rightTorso", 9)).toBe(true);
     expect(res.rows[1]!.kind).toBe("noEffect");
   });
 });
@@ -1025,10 +1031,9 @@ describe("engine crit destruction", () => {
     // → slot=8, index 7 = engine. Not pre-destroyed.
     const res = resolveCriticalHits({
       rng: detRoll(8, 4, 2, 1, 1),
-      def,
+      model: def.model,
       source: { location: "centerTorso", damage: 5 },
       critSlotsDestroyed: destroyed,
-      destroyedWeapons: [],
       damage: {
         armor: { ...def.armor },
         armorRear: { ...def.armorRear },
@@ -1049,10 +1054,9 @@ describe("engine crit destruction", () => {
     // → slot=2, index 1 = engine. Not pre-destroyed.
     const res = resolveCriticalHits({
       rng: detRoll(8, 1, 2, 1, 1),
-      def,
+      model: def.model,
       source: { location: "centerTorso", damage: 5 },
       critSlotsDestroyed: destroyed,
-      destroyedWeapons: [],
       damage: {
         armor: { ...def.armor },
         armorRear: { ...def.armorRear },
@@ -1122,7 +1126,7 @@ describe("computeCritCounts", () => {
 });
 
 describe("markLocationCatastrophicallyDestroyed", () => {
-  it("zeroes armor and IS, marks every non-empty slot destroyed, strips ammo bins", () => {
+  it("zeroes armor and IS, marks every non-empty slot destroyed; its bins read as gone", () => {
     const def = mechDef("HBK-4G")!;
     const damage: UnitDamageState = {
       armor: { ...def.armor },
@@ -1136,7 +1140,7 @@ describe("markLocationCatastrophicallyDestroyed", () => {
     const binKeys = Object.keys(ammoBins).filter((k) => k.startsWith("leftTorso:"));
     expect(binKeys.length).toBeGreaterThan(0);
 
-    markLocationCatastrophicallyDestroyed(def, damage, destroyed, ammoBins, "leftTorso");
+    markLocationCatastrophicallyDestroyed(def, damage, destroyed, "leftTorso");
 
     expect(damage.armor.leftTorso).toBe(0);
     expect(damage.internalStructure.leftTorso).toBe(0);
@@ -1147,8 +1151,10 @@ describe("markLocationCatastrophicallyDestroyed", () => {
     // Rear pool: HBK-4G carries some left-torso rear armor; mark should
     // wipe it (TW p.121 "remaining armor there (front or rear)").
     expect(damage.armorRear.leftTorso ?? 0).toBe(0);
-    for (const k of binKeys) {
-      expect(ammoBins[k]).toBe(0);
+    // Bins are not touched: the flagged slots mark them destroyed.
+    for (const bin of collectAmmoBins(def).filter((b) => binKeys.includes(b.id))) {
+      expect(usableShots({ damage, critSlotsDestroyed: destroyed, ammoBins }, bin)).toBe(0);
+      expect(strandedShots({ damage, critSlotsDestroyed: destroyed, ammoBins }, bin)).toBe(0);
     }
     // Untouched location stays intact
     expect(damage.armor.centerTorso).toBe(def.armor.centerTorso);
@@ -1166,7 +1172,7 @@ describe("markLocationCatastrophicallyDestroyed", () => {
     const ammoBins = loadAmmoBins(def);
     const before = { ...ammoBins };
 
-    markLocationCatastrophicallyDestroyed(def, damage, destroyed, ammoBins, "head");
+    markLocationCatastrophicallyDestroyed(def, damage, destroyed, "head");
 
     for (const key of Object.keys(before)) {
       if (key.startsWith("head:")) {
@@ -1209,12 +1215,12 @@ describe("markLocationCatastrophicallyDestroyed", () => {
       internalStructure: { ...def.internalStructure, rightTorso: 0 },
     };
     const destroyed = freshFlags(def);
-    const ammoBins = loadAmmoBins(def);
+    const _ammoBins = loadAmmoBins(def);
     expect(damage.armorRear.rightTorso).toBe(7);
-    markLocationCatastrophicallyDestroyed(def, damage, destroyed, ammoBins, "rightTorso");
+    markLocationCatastrophicallyDestroyed(def, damage, destroyed, "rightTorso");
     expect(damage.armorRear.rightTorso ?? 0).toBe(0);
     // Non-torso location passes through cleanly.
-    markLocationCatastrophicallyDestroyed(def, damage, destroyed, ammoBins, "head");
+    markLocationCatastrophicallyDestroyed(def, damage, destroyed, "head");
     expect(damage.armor.head).toBe(0);
     // expect(damage.armorRear.head ?? 0).toBe(0);  // adopted TorsoLocationValue. cannot happen
   });
@@ -1234,16 +1240,15 @@ describe("blow-off and cockpit kill: salvage-friendly slot preservation", () => 
 
     const res = resolveCriticalHits({
       rng: detRoll(12),
-      def,
+      model: def.model,
       source: { location: "leftArm", damage: 5 },
       critSlotsDestroyed: destroyed,
-      destroyedWeapons: [],
       damage,
       ammoBins,
     });
 
     expect(res.determiningRoll).toBe(12);
-    expect(res.blownOffLimbs).toContain("leftArm");
+    expect(critSeveredLimbs(res)).toContain("leftArm");
     expect(res.damage.internalStructure.leftArm).toBe(0);
     expect(res.damage.armor.leftArm).toBe(0);
     // Slot flags preserved — every flag equals pre-resolution state.
@@ -1264,10 +1269,9 @@ describe("blow-off and cockpit kill: salvage-friendly slot preservation", () => 
 
     const res = resolveCriticalHits({
       rng: detRoll(12),
-      def,
+      model: def.model,
       source: { location: "rightLeg", damage: 5 },
       critSlotsDestroyed: destroyed,
-      destroyedWeapons: [],
       damage,
       ammoBins: loadAmmoBins(def),
     });
@@ -1297,10 +1301,9 @@ describe("blow-off and cockpit kill: salvage-friendly slot preservation", () => 
     // lands on the cockpit slot.
     const res = resolveCriticalHits({
       rng: detRoll(8, cockpitSlot + 1),
-      def,
+      model: def.model,
       source: { location: "head", damage: 5 },
       critSlotsDestroyed: destroyed,
-      destroyedWeapons: [],
       damage,
       ammoBins,
     });
@@ -1339,10 +1342,9 @@ describe("blow-off and cockpit kill: salvage-friendly slot preservation", () => 
     // IS=0 source as exhausted and re-routes inward.
     const res = resolveCriticalHits({
       rng: detRoll(8, 1, 1),
-      def,
+      model: def.model,
       source: { location: "rightArm", damage: 0 },
       critSlotsDestroyed: destroyed,
-      destroyedWeapons: [],
       damage,
       ammoBins,
     });
@@ -1371,7 +1373,7 @@ describe("ammo-explosion casualty: catastrophic mark", () => {
     expect(app.newlyDestroyed).toContain("rightTorso");
 
     for (const lost of app.newlyDestroyed) {
-      markLocationCatastrophicallyDestroyed(def, damage, destroyed, ammoBins, lost);
+      markLocationCatastrophicallyDestroyed(def, damage, destroyed, lost);
     }
 
     const layout = def.critSlots.rightTorso;
@@ -1398,7 +1400,7 @@ describe("ammo-explosion casualty: catastrophic mark", () => {
     const destroyed = freshFlags(def);
     const ammoBins = loadAmmoBins(def);
     // Pre-mark RT as fully destroyed (catastrophic mark already applied).
-    markLocationCatastrophicallyDestroyed(def, damage, destroyed, ammoBins, "rightTorso");
+    markLocationCatastrophicallyDestroyed(def, damage, destroyed, "rightTorso");
 
     // Trigger a fresh cascade roll against the destroyed RT. With a
     // determining roll of 8 ("1 hit"), the slot-picker would normally
@@ -1407,10 +1409,9 @@ describe("ammo-explosion casualty: catastrophic mark", () => {
     // transfers inward to the next location (centerTorso).
     const res = resolveCriticalHits({
       rng: detRoll(8, 1, 1),
-      def,
+      model: def.model,
       source: { location: "rightTorso", damage: 0 },
       critSlotsDestroyed: destroyed,
-      destroyedWeapons: [],
       damage,
       ammoBins,
     });
@@ -1436,13 +1437,13 @@ describe("ammo-explosion casualty: catastrophic mark", () => {
       internalStructure: { ...def.internalStructure, rightTorso: 0, centerTorso: 1 },
     };
     const destroyed = freshFlags(def);
-    const ammoBins = loadAmmoBins(def);
+    const _ammoBins = loadAmmoBins(def);
 
     const app = applyAmmoExplosion(damage, "rightTorso", 50, checkCASE(def, "rightTorso"));
     expect(app.newlyDestroyed).toContain("centerTorso");
 
     for (const lost of app.newlyDestroyed) {
-      markLocationCatastrophicallyDestroyed(def, damage, destroyed, ammoBins, lost);
+      markLocationCatastrophicallyDestroyed(def, damage, destroyed, lost);
     }
 
     const totalEngineSlots = def.critSlots.centerTorso.filter(
@@ -1696,7 +1697,6 @@ describe("audit fixes: critical-hit pipeline", () => {
   const def = mechDef("HBK-4G")!;
   const fresh = () => ({
     critSlotsDestroyed: emptyCritTable(def),
-    destroyedWeapons: [] as number[],
     damage: {
       armor: { ...def.armor },
       armorRear: { ...def.armorRear },
@@ -1716,7 +1716,7 @@ describe("audit fixes: critical-hit pipeline", () => {
       };
       const res = resolveCriticalHits({
         rng,
-        def,
+        model: def.model,
         source: { location: "centerTorso", damage: 5 },
         ...fresh(),
       });
@@ -1732,7 +1732,7 @@ describe("audit fixes: critical-hit pipeline", () => {
     f.damage.internalStructure.leftTorso = 0;
     const res = resolveCriticalHits({
       rng: detRoll(8, 1, 1),
-      def,
+      model: def.model,
       source: { location: "leftTorso", damage: 0, tac: true, struck: false },
       ...f,
     });
@@ -1749,9 +1749,8 @@ describe("audit fixes: critical-hit pipeline", () => {
       .filter(({ s }) => s.kind === "structure" && s.name === "doubleHeatSink");
     expect(group.length).toBeGreaterThanOrEqual(2);
     const base = {
-      def: whk,
+      model: whk.model,
       source: { location: "leftLeg" as Location, damage: 5 },
-      destroyedWeapons: [] as number[],
       damage: {
         armor: { ...whk.armor },
         armorRear: { ...whk.armorRear },

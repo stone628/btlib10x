@@ -33,6 +33,7 @@ import {
   type GameEvent,
   gameLoop,
   type HexCoord,
+  isPilotUnconscious,
   isShutdown,
   isTorso,
   type Location,
@@ -297,7 +298,7 @@ function physicalText(decl: PhysicalAttackDecl): string {
 /** The declaration part of an attack context that a record needs. */
 export type AttackDeclaration = Pick<
   AttackContext,
-  "weaponDecls" | "physicalDecls" | "pickupDecl" | "pickupArgs" | "dropClub" | "torsoTwist"
+  "weaponDecls" | "physicalDecls" | "pickup" | "dropClub" | "torsoTwist"
 >;
 
 function pickupText(args: ClubPickupDecl): string {
@@ -315,8 +316,8 @@ export function encodeAttackEntry(
   idxOf: (id: string) => string,
 ): string {
   const head = `${idx}${TWIST_CHAR[decl.torsoTwist]}`;
-  if (decl.pickupDecl !== null && decl.pickupArgs !== null) {
-    return head + pickupText(decl.pickupArgs);
+  if (decl.pickup !== null) {
+    return head + pickupText(decl.pickup.args);
   }
   const groups = new Map<string, { weapons: AttackDecl[]; physicals: PhysicalAttackDecl[] }>();
   const group = (target: string) => {
@@ -454,10 +455,10 @@ export function encodeEndLine(idx: string, unit: UnitState): string {
     f.crits[loc] = destroyedSlots(unit.critSlotsDestroyed, loc).map((i) => i + 1);
   }
   const loaded = loadAmmoBins(def);
-  // A stranded bin (negative: lost with its location, shots intact) counts by
-  // magnitude, so a restart strands the same shots again; an absent bin is spent.
+  // A stranded bin (location lost, shots kept) exports its shots, so a
+  // restart strands the same shots again; an absent bin is spent.
   for (const [binId, full] of Object.entries(loaded)) {
-    f.ammo[binId] = full - Math.abs(unit.ammoBins[binId] ?? 0);
+    f.ammo[binId] = full - (unit.ammoBins[binId] ?? 0);
   }
   return `E${idx}${unit.pilotHits.toString(36)}${joinFields([
     armorField(f),
@@ -531,7 +532,7 @@ function guarded(s: Session & { replay: ReplayLog }, record: (log: ReplayLog) =>
 /** Record the movement activation about to be committed (call before the engine calls). */
 export function recordMove(s: Session, decl: MoveDecl, actor: UnitState): void {
   if (!usable(s)) return;
-  const downed = isShutdown(actor) || actor.unconscious;
+  const downed = isShutdown(actor) || isPilotUnconscious(actor);
   guarded(s, (log) => {
     const start = { position: actor.position, facing: actor.facing };
     log.lines.push(`M${encodeMoveEntry(indexOfUnit(log, actor.id), decl, downed, start)}`);

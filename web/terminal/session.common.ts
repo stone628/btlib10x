@@ -1,7 +1,6 @@
 import {
   type ActorQueueActorView,
   AMMO_EXPLOSION_START_HEAT,
-  type AmmoBins,
   type AmmoPolicy,
   type AttackPhaseStage,
   actorQueue,
@@ -11,8 +10,8 @@ import {
   type BattleState,
   type ComponentHitStatus,
   type ConsciousnessRoll,
-  type CritMask,
   type CritSoakName,
+  type CritState,
   type CritStructureName,
   canFireMount,
   collectAmmoBins,
@@ -21,6 +20,8 @@ import {
   D2D6_MAX,
   type DestroyedReason,
   type DestroyedState,
+  damageGroupsTotal,
+  designTotalsByWeaponName,
   ENGINE_SLOTS_KILL,
   GYRO_DESTROYED_HITS,
   GYRO_HIT_MOD,
@@ -30,14 +31,15 @@ import {
   heatDissipationMax,
   hexKey,
   internalStructureForTonnage,
+  isPilotUnconscious,
   isSlotDestroyed,
   isTorso,
   isUnitAvailable,
   isUnitDestroyed,
   isUnitImmobile,
+  isWeaponCritted,
   type Location,
   type LocationValue,
-  liveShots,
   loadAmmoBins,
   mapDefFor,
   mechDefFor,
@@ -63,6 +65,7 @@ import {
   type UnitDamageState,
   type UnitFallCause,
   type UnitState,
+  usableShots,
   weaponDefFor,
 } from "btlib10x";
 import {
@@ -203,14 +206,14 @@ export function infoMechChunk(model: string): Chunk[] {
  */
 function buildMountInfos(
   def: ResolvedMechDef,
-  liveBins: Readonly<AmmoBins> | null,
+  live: Readonly<CritState> | null,
   status: (key: number) => {
     readonly jammed: boolean;
     readonly destroyed: boolean;
   },
 ): WeaponMountInfo[] {
-  const designPool = pooledTotalsByWeaponName(def, loadAmmoBins(def));
-  const livePool = liveBins !== null ? pooledTotalsByWeaponName(def, liveBins) : null;
+  const designPool = designTotalsByWeaponName(def);
+  const livePool = live !== null ? pooledTotalsByWeaponName(def, live) : null;
   const entries = Object.entries(def.weapons);
   const firstDisplayByWeapon = new Map<string, number>();
   entries.forEach(([_key, mount], displayIndex) => {
@@ -370,7 +373,7 @@ export function battleSheet(unit: UnitState, id: string): SheetView {
     piloting: unit.piloting,
     pilot: pilotRecord(unit),
     prone: unit.prone,
-    unconscious: unit.unconscious,
+    unconscious: isPilotUnconscious(unit),
     walking: def.walking,
     running: def.running,
     jumping: def.jumping,
@@ -395,22 +398,21 @@ export function battleSheet(unit: UnitState, id: string): SheetView {
     originalArmor: def.armor,
     originalArmorRear: def.armorRear,
     originalArmorStructure: def.internalStructure,
-    mounts: buildMountInfos(def, unit.ammoBins, (key) => {
+    mounts: buildMountInfos(def, unit, (key) => {
       const mount = def.weapons[key];
       const baseDamage = unit.damage;
       return {
         jammed: unit.jammedWeapons.includes(key),
         destroyed:
-          unit.destroyedWeapons.includes(key) ||
+          isWeaponCritted(def, unit.critSlotsDestroyed, key) ||
           (mount !== undefined && !canFireMount(baseDamage, mount)),
       };
     }),
     critLive: {
+      damage: unit.damage,
       critSlotsDestroyed: unit.critSlotsDestroyed,
-      destroyedWeapons: unit.destroyedWeapons,
       jammedWeapons: unit.jammedWeapons,
       ammoBins: unit.ammoBins,
-      locationDestroyed: (loc) => unit.damage.internalStructure[loc] <= 0,
     },
     critCounts: componentHitStatus(def, unit.damage, unit.critSlotsDestroyed),
   };
@@ -562,14 +564,8 @@ function armorDiagramSheet(view: SheetView): string[] {
 // ------------------------------------------------------- crit slot chart ----
 
 /** Per-unit live crit state shown per slot on the `sheet <id>` chart. */
-interface CritChartLive {
-  readonly critSlotsDestroyed: Readonly<CritMask>;
-  readonly destroyedWeapons: readonly number[];
+interface CritChartLive extends CritState {
   readonly jammedWeapons: readonly number[];
-  /** Per-crit-slot ammo state (identity + remaining shots). */
-  readonly ammoBins: Readonly<AmmoBins>;
-  /** Location destroyed by damage (phase-start internal structure at 0). */
-  readonly locationDestroyed: (location: Location) => boolean;
 }
 
 /** i18n key per ammo depletion policy. */
@@ -639,7 +635,7 @@ function critSlotText(
     const binId = ammoBinId(loc, slotIndex);
     const max = loadAmmoBins(def)[binId];
     if (max !== undefined) {
-      const curr = live !== null ? liveShots(live.ammoBins[binId]) : max;
+      const curr = live !== null ? usableShots(live, { id: binId, location: loc, slotIndex }) : max;
       markers.push(
         live === null
           ? i18n("critChart.ammoDesign", { max })
@@ -654,11 +650,11 @@ function critSlotText(
   if (live !== null && live.critSlotsDestroyed[loc] !== undefined) {
     const slotHit = isSlotDestroyed(live.critSlotsDestroyed, loc, slotIndex - 1);
     const mountDestroyed =
-      slot.kind === "weapon" && live.destroyedWeapons.includes(slot.weaponIndex);
+      slot.kind === "weapon" && isWeaponCritted(def, live.critSlotsDestroyed, slot.weaponIndex);
     const mountJammed = slot.kind === "weapon" && live.jammedWeapons.includes(slot.weaponIndex);
     // A location whose internal structure is gone has every slot in it
     // destroyed, even when no crit roll marked them (matches the mount list).
-    const locationGone = slot.kind !== "empty" && live.locationDestroyed(loc);
+    const locationGone = slot.kind !== "empty" && live.damage.internalStructure[loc] <= 0;
     if (mountJammed) markers.push(i18n("critChart.jammedSuffix"));
     if (slotHit || mountDestroyed || locationGone) {
       markers.push(i18n("critChart.destroyedSuffix"));
@@ -890,8 +886,16 @@ export function unitBriefList(s: Session): Chunk {
     for (const [uid, unit] of Object.entries(battle.units).filter(([, u]) => u.team === team)) {
       // Engine guarantee: `unit.model` was validated by `createBattle`.
       const def = mechDefFor(unit);
-      const flags = `${unit.prone ? " PRONE" : ""}${unit.unconscious ? " UNCONSCIOUS" : ""}`;
-      lines.push(`  ${uid}  ${def.model}  ${hexKey(unit.position)} facing ${unit.facing}${flags}`);
+      const flags = `${unit.prone ? i18n("status.briefFlagProne") : ""}${isPilotUnconscious(unit) ? i18n("status.briefFlagUnconscious") : ""}`;
+      lines.push(
+        i18n("status.briefLine", {
+          id: uid,
+          model: def.model,
+          pos: hexKey(unit.position),
+          facing: F(unit.facing),
+          flags,
+        }),
+      );
       const view = battleSheet(unit, uid);
       lines.push(...mechStatusLines(view).map((l) => `    ${l}`));
     }
@@ -1638,7 +1642,7 @@ function handleSessionGameEvent(s: Session, e: SessionGameEvent, out: OutputHand
       break;
     case "unitFell":
       // A deliberate, damage-free drop is not a fall; "drops prone" already logs it.
-      if (e.cause.kind === "voluntaryDrop" && e.totalDamage === 0) break;
+      if (e.cause.kind === "voluntaryDrop" && damageGroupsTotal(e.groups) === 0) break;
       {
         const lines = [
           i18n("log.unitFell", {
@@ -1646,7 +1650,7 @@ function handleSessionGameEvent(s: Session, e: SessionGameEvent, out: OutputHand
             cause: fallCauseLabel(e.cause),
             facing: e.facingAfter,
             groups: e.groups.map((g) => `${SHORT_LOC[g.location]}(${g.damage})`).join(" "),
-            damage: e.totalDamage,
+            damage: damageGroupsTotal(e.groups),
             levels: e.levelsFallen,
             hex: hexLabel(e.hex),
           }),
@@ -1698,7 +1702,7 @@ function handleSessionGameEvent(s: Session, e: SessionGameEvent, out: OutputHand
             id: e.unitId,
             hex: msgHex(e),
             groups: e.groups.map((g) => `${SHORT_LOC[g.location]}(${g.damage})`).join(" "),
-            damage: e.totalDamage,
+            damage: damageGroupsTotal(e.groups),
           }),
         ];
         for (const crit of e.crits) {

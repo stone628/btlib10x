@@ -29,11 +29,16 @@ export interface PilotRecord {
   readonly status: PilotStatus;
 }
 
+/** The pilot is out cold: knocked out (`unconsciousSinceTurn`) and not yet awake. */
+export function isPilotUnconscious(unit: UnitState): boolean {
+  return unit.unconsciousSinceTurn !== null;
+}
+
 export function pilotStatus(unit: UnitState): PilotStatus {
   // A pilot killed by the ejection landing is dead, not "ejected".
   if (unit.pilotHits >= unit.pilotHitMax) return "dead";
   if (unit.removed === "pilotEjected") return "ejected";
-  return unit.unconscious ? "unconscious" : "active";
+  return isPilotUnconscious(unit) ? "unconscious" : "active";
 }
 
 export function pilotRecord(unit: UnitState): PilotRecord {

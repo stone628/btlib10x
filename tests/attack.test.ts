@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { LOCATIONS } from "../src/core/types";
 import { mechDef } from "../src/data/index";
 import { loadAmmoBins } from "../src/rules/ammo";
-import { resolveWeaponAttack } from "../src/rules/attack";
-import { emptyCritTable } from "../src/rules/critical";
+import { resolveWeaponAttack, type WeaponAttackInput } from "../src/rules/attack";
+import { critSeveredLimbs, emptyCritTable } from "../src/rules/critical";
 import type { LocationValue, TorsoLocationValue, UnitDamageState } from "../src/rules/damage";
 import { scriptedRng } from "./helpers";
 
@@ -46,7 +46,7 @@ describe("resolveWeaponAttack", () => {
     expect(res.toHitRoll).toBe(5);
     expect(res.clusterRoll).toBeNull();
     expect(res.groups).toEqual([{ location: "centerTorso", damage: 3, throughArmor: false }]);
-    expect(res.application?.after.armor.centerTorso).toBe(7);
+    expect(res.targetDamageAfter.armor.centerTorso).toBe(7);
     expect(rng.remaining()).toBe(0);
   });
 
@@ -60,7 +60,7 @@ describe("resolveWeaponAttack", () => {
     });
     expect(res.hit).toBe(false);
     expect(res.groups).toHaveLength(0);
-    expect(res.application).toBeNull();
+    expect(res.applications).toEqual([]);
     expect(rng.remaining()).toBe(0);
   });
 
@@ -150,7 +150,7 @@ describe("resolveWeaponAttack", () => {
       { location: "rightLeg", damage: 5, throughArmor: false },
       { location: "centerTorso", damage: 5, throughArmor: false },
     ]);
-    expect(res.application?.after.armor.rightLeg).toBe(5);
+    expect(res.targetDamageAfter.armor.rightLeg).toBe(5);
   });
 
   it("rolls LRM missiles in lots of five", () => {
@@ -175,8 +175,8 @@ describe("resolveWeaponAttack", () => {
       { location: "centerTorso", damage: 5, throughArmor: true },
       { location: "rightArm", damage: 3, throughArmor: false },
     ]);
-    expect(res.application?.after.armor.centerTorso).toBe(5);
-    expect(res.application?.after.armor.rightArm).toBe(7);
+    expect(res.targetDamageAfter.armor.centerTorso).toBe(5);
+    expect(res.targetDamageAfter.armor.rightArm).toBe(7);
   });
 
   it("locates every SRM missile individually", () => {
@@ -224,7 +224,7 @@ describe("resolveWeaponAttack", () => {
       { location: "centerTorso", damage: 2, throughArmor: false },
       { location: "centerTorso", damage: 2, throughArmor: false },
     ]);
-    expect(res.application?.after.armor.centerTorso).toBe(2);
+    expect(res.targetDamageAfter.armor.centerTorso).toBe(2);
     expect(rng.remaining()).toBe(0);
   });
 
@@ -239,7 +239,7 @@ describe("resolveWeaponAttack", () => {
     expect(res.hit).toBe(false);
     expect(res.clusterRoll).toBeNull();
     expect(res.groups).toHaveLength(0);
-    expect(res.application).toBeNull();
+    expect(res.applications).toEqual([]);
     expect(rng.remaining()).toBe(0);
   });
 
@@ -270,7 +270,7 @@ describe("resolveWeaponAttack", () => {
     expect(res.breakdown.terrainMod).toBe(0);
     expect(res.breakdown.coverMod).toBe(1);
     expect(res.groups).toHaveLength(0);
-    expect(res.application).toBeNull();
+    expect(res.applications).toEqual([]);
     expect(rng.remaining()).toBe(0);
   });
 
@@ -304,7 +304,7 @@ describe("resolveWeaponAttack", () => {
     expect(res.breakdown.terrainMod).toBe(0);
     expect(res.breakdown.coverMod).toBe(1);
     expect(res.groups).toHaveLength(0);
-    expect(res.application).toBeNull();
+    expect(res.applications).toEqual([]);
     expect(rng.remaining()).toBe(0);
   });
 });
@@ -405,11 +405,12 @@ describe("through-armor criticals (hit-location roll of 2)", () => {
       rng,
       weapon: "Small Laser",
       targetDamage: freshState(),
-      targetDef: def,
-      targetCritSlotsDestroyed: freshFlags(def),
-      targetDestroyedWeapons: [] as number[],
-      targetAmmoBins: loadAmmoBins(def),
-    };
+      targetCrits: {
+        model: def.model,
+        critSlotsDestroyed: freshFlags(def),
+        ammoBins: loadAmmoBins(def),
+      },
+    } satisfies WeaponAttackInput;
   }
 
   it("rolls once on the determining table with armor unbreached (front CT)", () => {
@@ -427,8 +428,8 @@ describe("through-armor criticals (hit-location roll of 2)", () => {
     expect(res.hit).toBe(true);
     expect(res.groups).toEqual([{ location: "centerTorso", damage: 3, throughArmor: true }]);
     // Damage lands on armor normally; structure untouched.
-    expect(res.application?.after.armor.centerTorso).toBe(7);
-    expect(res.application?.after.internalStructure.centerTorso).toBe(10);
+    expect(res.targetDamageAfter.armor.centerTorso).toBe(7);
+    expect(res.targetDamageAfter.internalStructure.centerTorso).toBe(10);
     expect(res.crits).toHaveLength(1);
     expect(res.crits[0]!.throughArmor).toBe(true);
     expect(res.crits[0]!.determiningRoll).toBe(8);
@@ -436,7 +437,7 @@ describe("through-armor criticals (hit-location roll of 2)", () => {
     expect(rng.remaining()).toBe(0);
   });
 
-  it("merges a crit-severed leg into the aggregate application", () => {
+  it("keeps a crit-severed leg on the crit, not on the damage application", () => {
     const state = freshState();
     state.armor.rightLeg = 0;
     const rng = scriptedRng(
@@ -449,9 +450,12 @@ describe("through-armor criticals (hit-location roll of 2)", () => {
     );
     const res = resolveWeaponAttack({ ...critInput(rng), targetDamage: state });
     expect(res.groups[0]!.location).toBe("rightLeg");
-    expect(res.crits[0]!.blownOffLimbs).toEqual(["rightLeg"]);
-    expect(res.application?.blownOffLimbs).toEqual(["rightLeg"]);
-    expect(res.application?.after.internalStructure.rightLeg).toBe(0);
+    expect(critSeveredLimbs(res.crits[0]!)).toEqual(["rightLeg"]);
+    // The blow-off is the crit's, not the damage's: the application still
+    // shows the leg standing, the final state does not.
+    expect(res.applications[0]!.blownOffLimbs).toEqual([]);
+    expect(res.applications[0]!.after.internalStructure.rightLeg).toBeGreaterThan(0);
+    expect(res.targetDamageAfter.internalStructure.rightLeg).toBe(0);
   });
 
   it("applies to the near torso on side columns (rightSide roll of 2)", () => {
@@ -468,7 +472,7 @@ describe("through-armor criticals (hit-location roll of 2)", () => {
     const res = resolveWeaponAttack({ ...critInput(rng), arc: "rightSide" });
     expect(res.hit).toBe(true);
     expect(res.groups).toEqual([{ location: "rightTorso", damage: 3, throughArmor: true }]);
-    expect(res.application?.after.armor.rightTorso).toBe(7);
+    expect(res.targetDamageAfter.armor.rightTorso).toBe(7);
     expect(res.crits).toHaveLength(1);
     expect(res.crits[0]!.throughArmor).toBe(true);
     expect(rng.remaining()).toBe(0);
@@ -511,8 +515,8 @@ describe("through-armor criticals (hit-location roll of 2)", () => {
     });
     expect(res.hit).toBe(true);
     expect(res.groups).toEqual([{ location: "centerTorso", damage: 3, throughArmor: true }]);
-    expect(res.application?.after.armor.centerTorso).toBe(0);
-    expect(res.application?.after.internalStructure.centerTorso).toBe(1);
+    expect(res.targetDamageAfter.armor.centerTorso).toBe(0);
+    expect(res.targetDamageAfter.internalStructure.centerTorso).toBe(1);
     expect(res.crits).toHaveLength(2);
     expect(res.crits[0]!.throughArmor).toBe(false);
     expect(res.crits[0]!.determiningRoll).toBe(8);

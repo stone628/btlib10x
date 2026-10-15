@@ -421,6 +421,9 @@ export const ko: Catalog = {
   "status.none": "-",
   "status.actorView": "{id}(팀 {team})",
   "status.actorViewPriority": "{id}(팀 {team}, 우선처리)",
+  "status.briefLine": "  {id}  {model}  {pos} {facing}향{flags}",
+  "status.briefFlagProne": " 엎드림",
+  "status.briefFlagUnconscious": " 의식 불명",
 
   // heat status
   "heat.title": "발열: {id} = {heat}",

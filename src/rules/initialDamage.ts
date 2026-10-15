@@ -17,7 +17,7 @@
 import type { Location, SideTorsoLocation } from "../core/types";
 import { armFor, isLocation, isTorso, LOCATIONS } from "../core/types";
 import type { ResolvedMechDef } from "../data/mech.schema";
-import { type AmmoBins, ammoBinId, loadAmmoBins, stripBinsInLocation } from "./ammo";
+import { type AmmoBins, ammoBinId, loadAmmoBins } from "./ammo";
 import {
   COCKPIT,
   type CritMask,
@@ -59,7 +59,6 @@ export interface ResolvedInitialDamage {
   damage: UnitDamageState;
   critSlotsDestroyed: CritMask;
   ammoBins: AmmoBins;
-  destroyedWeapons: number[];
   pilotHits: number;
   prone: boolean;
 }
@@ -154,7 +153,6 @@ export function resolveInitialDamage(
 
   // 3. Crit slots (1-based numbers in, 0-based flag arrays out).
   const critSlotsDestroyed = emptyCritTable(def);
-  const destroyedWeapons = new Set<number>();
   const destroyedAmmo: string[] = [];
   for (const [key, nums] of Object.entries(init?.critsDestroyed ?? {})) {
     const loc = requireLocation(id, key);
@@ -172,9 +170,7 @@ export function resolveInitialDamage(
       // Soak slots are kept (a destroyed location's gear needs refit).
       if (slot.kind === "empty") continue;
       setSlotDestroyed(critSlotsDestroyed, loc, n - 1);
-      if (slot.kind === "weapon") {
-        destroyedWeapons.add(slot.weaponIndex);
-      } else if (slot.kind === "ammo") {
+      if (slot.kind === "ammo") {
         destroyedAmmo.push(ammoBinId(loc, n));
       }
     }
@@ -190,10 +186,8 @@ export function resolveInitialDamage(
     ammoBins[binId] = shots - used;
   }
   for (const binId of destroyedAmmo) ammoBins[binId] = 0;
-  // A destroyed location loses its bins, as in play (TW p.123).
-  for (const loc of LOCATIONS) {
-    if (damage.internalStructure[loc] <= 0) stripBinsInLocation(ammoBins, loc);
-  }
+  // A destroyed location's bins keep their shots: they read as stranded from
+  // the location's 0 internal structure, as in play (TW p.123).
 
   // 5. Pilot.
   const pilotHits = requireCount(id, "pilotHits", init?.pilotHits ?? 0);
@@ -224,7 +218,6 @@ export function resolveInitialDamage(
     damage,
     critSlotsDestroyed,
     ammoBins,
-    destroyedWeapons: [...destroyedWeapons],
     pilotHits,
     prone,
   };

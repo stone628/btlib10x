@@ -96,10 +96,12 @@ export {
   type AmmoPolicy,
   ammoBinId,
   collectAmmoBins,
-  liveShots,
+  designTotalsByWeaponName,
+  isBinUsable,
   loadAmmoBins,
   pooledTotalsByWeaponName,
   strandedShots,
+  usableShots,
 } from "./rules/ammo";
 export {
   type Arc,
@@ -109,7 +111,12 @@ export {
   mountCanFireIntoArc,
   weaponCanFireIntoArc,
 } from "./rules/arcs";
-export type { AttackResolution, HitGroup, WeaponAttackInput } from "./rules/attack";
+export type {
+  AttackResolution,
+  HitGroup,
+  TargetCritContext,
+  WeaponAttackInput,
+} from "./rules/attack";
 export { CLUSTER_COLUMNS, CLUSTER_TABLE, expectedClusterHits } from "./rules/cluster";
 export type {
   CaseKind,
@@ -121,14 +128,18 @@ export type {
 } from "./rules/critical";
 export {
   type CritMask,
+  type CritState,
   cloneCritTable,
   componentHitStatus,
   countDestroyedEngine,
+  critSeveredLimbs,
+  crittedWeapons,
   destroyedSlots,
   ENGINE_SLOTS_KILL,
   effectiveMovement,
   emptyCritTable,
   isSlotDestroyed,
+  isWeaponCritted,
   setSlotDestroyed,
   TSM_WALK_BONUS,
 } from "./rules/critical";
@@ -168,6 +179,7 @@ export type {
   ConsciousnessRoll,
   CreateBattleOptions,
   DeclaredPhysicalAttack,
+  DeclaredPickup,
   DeclaredWeaponVolley,
   DestroyedReason,
   DestroyedState,
@@ -264,6 +276,7 @@ export {
   attackerMovementModifier,
   type MoveFragment,
   type MovePathStep,
+  pathMp,
   type ReachabilityOptions,
   type RevealedLanding,
   reachableLandings,
@@ -273,6 +286,7 @@ export {
   computePhysicalToHit,
   type DamageGroup,
   DFA_MISS_LEVELS_FALLEN,
+  damageGroupsTotal,
   isMeleeCharge,
   isPhysicalWeaponName,
   meleeRecoilDamage,
@@ -284,6 +298,7 @@ export {
   type PhysicalWeaponName,
   type PhysicalWeaponStats,
   physicalDamage,
+  physicalToHitTotal,
   resolveStrikeArm,
   resolveStrikeMount,
   type StrikeMountResolution,
@@ -292,7 +307,13 @@ export {
   strikeWeaponInArm,
   validatePhysicalAttack,
 } from "./rules/physical";
-export { type PilotRecord, type PilotStatus, pilotRecord, pilotStatus } from "./rules/pilot";
+export {
+  isPilotUnconscious,
+  type PilotRecord,
+  type PilotStatus,
+  pilotRecord,
+  pilotStatus,
+} from "./rules/pilot";
 export {
   consciousnessTarget,
   DEFAULT_PILOT_HIT_MAX,
@@ -317,5 +338,6 @@ export {
   damageForBracket,
   type RangeBracket,
   type ToHitBreakdown,
+  toHitTotal,
 } from "./rules/tohit";
 export { VERSION } from "./version";

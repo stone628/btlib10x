@@ -17,6 +17,12 @@ export function oppositeFacing(facing: Facing): Facing {
   return rotateFacing(facing, 3);
 }
 
+export type BuildingTerrainType =
+  | "lightBuilding"
+  | "mediumBuilding"
+  | "heavyBuilding"
+  | "hardenedBuilding";
+
 export type TerrainType =
   | "clear"
   | "lightWoods"
@@ -27,10 +33,7 @@ export type TerrainType =
   | "water1"
   | "water2"
   | "water3"
-  | "lightBuilding"
-  | "mediumBuilding"
-  | "heavyBuilding"
-  | "hardenedBuilding";
+  | BuildingTerrainType;
 
 export const TERRAIN_TYPES: readonly TerrainType[] = [
   // Order is wire-stable (indexes are stored in packed JSONL map lines) — append only.

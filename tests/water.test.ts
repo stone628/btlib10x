@@ -6,7 +6,7 @@ import type { GameEvent } from "../src/rules/game";
 import { buildUnitInit, executeMove, requireUnit, rollInitiativePhase } from "../src/rules/game";
 import { losClear } from "../src/rules/los";
 import { reachableLandings } from "../src/rules/movement";
-import { createTestBattle, scriptedRng } from "./helpers";
+import { createTestBattle, groupsTotaling, scriptedRng } from "./helpers";
 
 function battle(terrain: Parameters<typeof createTestBattle>[0], startType?: string) {
   const state = createTestBattle(
@@ -174,7 +174,7 @@ describe("fall into water (TW p.57)", () => {
     });
     // ENF-4R 50 t: floor(5 x 1 / 2) + floor(5 x 2 / 2) = 2 + 5 = 7.
     expect(events).toContainEqual(
-      expect.objectContaining({ kind: "unitFell", unitId: "enf", totalDamage: 7 }),
+      expect.objectContaining({ kind: "unitFell", unitId: "enf", groups: groupsTotaling(7) }),
     );
   });
 });

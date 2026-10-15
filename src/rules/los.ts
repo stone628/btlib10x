@@ -14,7 +14,7 @@ import {
   type TerrainType,
   type WreckState,
 } from "../core/types";
-import { buildingTypeOf } from "./building";
+import { isBuildingTerrain } from "./building";
 
 /**
  * Hexes along the center-to-center LOS, excluding the attacker's and target's
@@ -207,7 +207,7 @@ function elevationBlockedOnSide(
     const cell = cellAt(grid, h);
     if (losIntervenes(grid, from, to, h, cell.level, prone)) return true;
     if (
-      buildingTypeOf(cell.terrain) !== undefined &&
+      isBuildingTerrain(cell.terrain) &&
       losIntervenes(grid, from, to, h, cell.level + BUILDING_LOS_HEIGHT, prone)
     ) {
       return true;
@@ -236,7 +236,7 @@ function buildingBlockedOnSide(
 ): boolean {
   for (const h of interveningHexes(from, to, side)) {
     const cell = cellAt(grid, h);
-    if (buildingTypeOf(cell.terrain) === undefined) continue;
+    if (!isBuildingTerrain(cell.terrain)) continue;
     if (losIntervenes(grid, from, to, h, cell.level + BUILDING_LOS_HEIGHT, prone)) return true;
   }
   return false;

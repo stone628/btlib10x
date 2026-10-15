@@ -54,7 +54,7 @@ describe("physical damage detail lines", () => {
     const res = meleeResolution(events);
     expect(res.hit).toBe(true);
     expect(res.damageToTarget).toHaveLength(1);
-    expect(res.application).not.toBeNull();
+    expect(res.applications).toHaveLength(1);
 
     const text = physicalResolutionLines(res).join("\n");
     expect(text).toContain("hits: RL(10)");
@@ -71,7 +71,7 @@ describe("physical damage detail lines", () => {
     const events = kickEvents(state, scriptedRng(4, 4, 2, 3, 4, 4, 4));
     const res = meleeResolution(events);
     expect(res.hit).toBe(true);
-    expect(res.application).not.toBeNull();
+    expect(res.applications).toHaveLength(1);
     expect(res.crits).toHaveLength(1);
 
     const text = physicalResolutionLines(res).join("\n");

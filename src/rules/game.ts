@@ -13,6 +13,7 @@ import {
 } from "../core/terrain";
 import {
   type ArmLocation,
+  type BuildingTerrainType,
   damageTransferTo,
   FACINGS,
   type Facing,
@@ -47,10 +48,8 @@ import {
   type AmmoBins,
   type AmmoPolicy,
   binsForWeaponName,
-  collectAmmoBins,
   consumeAmmoForName,
   pooledShotsLeft,
-  stripBinsInLocation,
 } from "./ammo";
 import {
   type Arc,
@@ -68,11 +67,10 @@ import { type AttackResolution, PARTIAL_COVER_TERRAIN_MOD, resolveWeaponAttack }
 import {
   applyBuildingDamage,
   type BuildingState,
-  type BuildingType,
-  buildingTypeOf,
   collapseToRubble,
   createBuildingState,
   DEFAULT_BUILDING_LEVELS,
+  isBuildingTerrain,
   isCollapsed,
 } from "./building";
 import {
@@ -88,14 +86,16 @@ import {
   countDestroyedLifeSupport,
   countDestroyedSensor,
   critDamageDealt,
+  critSeveredLimbs,
+  destroyAmmoBin,
   destroyedStructures,
   ENGINE_SLOTS_KILL,
   effectiveMovement,
   HIP,
   isSlotDestroyed,
+  isWeaponCritted,
   markLocationCatastrophicallyDestroyed,
   resolveCriticalHits,
-  setSlotDestroyed,
 } from "./critical";
 import {
   applyDamage,
@@ -154,6 +154,7 @@ import {
   resolveStrikeArm,
   validatePhysicalAttack,
 } from "./physical";
+import { isPilotUnconscious } from "./pilot";
 import {
   buildingEntryModifier,
   buildingMovementModifier,
@@ -181,7 +182,8 @@ import {
   sensorsBlind,
   waterEntryModifier,
 } from "./piloting";
-import { computeToHit, DEFAULT_GUNNERY, type RangeBracket } from "./tohit";
+import { saveUnitState } from "./snapshot";
+import { computeToHit, DEFAULT_GUNNERY, type RangeBracket, toHitTotal } from "./tohit";
 
 export type UnitSkillRange = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
@@ -334,15 +336,24 @@ export type HeldClub =
   | { readonly kind: "tree" }
   | { readonly kind: "girder" };
 
-/** Pickup declaration: which source to take. Omitted resolves at
- *  declaration time: the hex's single club token, else terrain (tree, then
- *  girder). `tokenIndex` picks one of several tokens in the hex; `token`
- *  is the resolved token (set by `validatePickup`, never by callers).
+/** Pickup request: which source to take. Omitted resolves at declaration
+ *  time: the hex's single club token, else terrain (tree, then girder).
+ *  `tokenIndex` (1-based) picks one of several tokens in the hex.
  *
  *  Immutable: all fields are `readonly`, so instances are assigned (shared by reference), never copied. */
 export interface ClubPickupDecl {
   readonly source?: ClubKind;
   readonly tokenIndex?: number;
+}
+
+/** A pickup as declared (`UnitState.declaredPickup`): the source
+ *  `validatePickup` resolved, plus the ground token when one was chosen.
+ *  Resolution re-finds `token` by value, so a token list that changed since
+ *  declaration cannot shift it.
+ *
+ *  Immutable: all fields are `readonly`, so instances are assigned (shared by reference), never copied. */
+export interface DeclaredPickup {
+  readonly source: ClubKind;
   readonly token?: ClubGroundToken;
 }
 
@@ -367,10 +378,10 @@ export interface SeveredLimb {
 /** Girder-search target numbers by rubble origin (TW p.146): 7+ from
  *  medium rubble, 6+ from heavy, 5+ from hardened. Light rubble yields no
  *  girders. */
-export const GIRDER_SEARCH_TARGET: Readonly<Record<string, number>> = {
-  medium: 7,
-  heavy: 6,
-  hardened: 5,
+export const GIRDER_SEARCH_TARGET: Readonly<Partial<Record<BuildingTerrainType, number>>> = {
+  mediumBuilding: 7,
+  heavyBuilding: 6,
+  hardenedBuilding: 5,
 };
 
 /** One consciousness roll: 2D6 `roll` against `target`, the table number
@@ -461,10 +472,10 @@ export interface UnitState extends MechModelHolder {
   pilotHits: number;
   /** Pilot hit capacity (default 6). Remaining HP = pilotHitMax - pilotHits. */
   pilotHitMax: number;
-  /** True once the pilot fails a consciousness roll; the unit cannot act
-   *  and counts as immobile until it wakes in a later end phase. */
-  unconscious: boolean;
-  /** Turn number the pilot was knocked out on (no wake attempt that turn). */
+  /** Turn the pilot was knocked out on (no wake attempt that turn); null while
+   *  conscious. The only record of consciousness: read it through
+   *  `isPilotUnconscious`. An unconscious pilot's unit cannot act and counts as
+   *  immobile until it wakes in a later end phase. */
   unconsciousSinceTurn: number | null;
   /** True while the 'Mech lies on the ground (fell or dropped). */
   prone: boolean;
@@ -481,9 +492,6 @@ export interface UnitState extends MechModelHolder {
   /** Auto-eject system engaged (from `UnitPolicy.autoEject`). */
   autoEject: boolean;
   jammedWeapons: number[];
-  /** Weapon indices destroyed by a critical hit (in addition to destroyed
-   *  locations, which the canFireFromLocation check already covers). */
-  destroyedWeapons: number[];
   /** Arms and legs blown off by critical hits (TW p.124, 145), with their
    *  salvage flag. A severed limb can be picked up as a club (TW p.146). */
   blownOffLimbs: SeveredLimb[];
@@ -494,7 +502,7 @@ export interface UnitState extends MechModelHolder {
   /** Pickup declaration for this attack phase (TW p.146). Exclusive with
    *  every weapon and physical declaration: the pickup turn allows no
    *  attacks at all. Acquisition resolves in the physical sub-pass. */
-  declaredPickup: ClubPickupDecl | null;
+  declaredPickup: DeclaredPickup | null;
   moveMode: MoveMode | null;
   /** Hexes counting toward the target movement modifier: those since the
    *  last direction reversal (TW p.107). */
@@ -804,7 +812,8 @@ export type GameEvent =
        *  A voluntary drop reuses this shape with
        *  `cause: { kind: "voluntaryDrop" }`:
        *  facing stays put, so `fallRoll` is null, and TW p.49 causes no
-       *  falling damage, so `groups`/`crits` are empty with `totalDamage` 0. */
+       *  falling damage, so `groups`/`crits` are empty. The fall's damage is
+       *  `damageGroupsTotal(groups)`. */
       readonly kind: "unitFell";
       readonly unitId: string;
       readonly cause: UnitFallCause;
@@ -817,7 +826,6 @@ export type GameEvent =
       /** Underlying-terrain levels fallen (0 for a same-hex fall). */
       readonly levelsFallen: number;
       readonly groups: readonly DamageGroup[];
-      readonly totalDamage: number;
       readonly crits: readonly CriticalResolution[];
     }
   | {
@@ -861,7 +869,6 @@ export type GameEvent =
       readonly row: number;
       readonly column: "front" | "rear";
       readonly groups: readonly DamageGroup[];
-      readonly totalDamage: number;
       readonly crits: readonly CriticalResolution[];
     };
 
@@ -878,7 +885,6 @@ interface UnitAttackResolution {
 export interface UnitAttackResult {
   readonly unitId: string;
   readonly resolutions: readonly UnitAttackResolution[];
-  readonly finalAmmoBins: AmmoBins;
   readonly jammedWeapons: readonly number[];
 }
 
@@ -890,8 +896,12 @@ export interface BattleState extends HexGrid {
   /** When true, critical hit resolution is suppressed at attack time. */
   critsDisabled: boolean;
   actedThisPhase: string[];
-  /** Activation order for the current phase, computed lazily on first query
-   *  and cached until the next phase transition. */
+  /** Activation order for the current phase, built lazily on first query
+   *  from the roster as it stands then, and kept until the next phase
+   *  transition. Not a pure cache: rebuilding mid-phase reads the current
+   *  roster, so a unit that left play or changed shutdown state since would
+   *  shift the alternation (e.g. a unit destroyed during its own move would
+   *  let its team move twice in a row). Snapshots keep it for that reason. */
   actorQueue: string[] | null;
   /** Building state keyed by hex `"col,row"`; only building hexes present. */
   buildings: Record<string, BuildingState>;
@@ -901,7 +911,7 @@ export interface BattleState extends HexGrid {
   /** Building sub-type a rubble hex collapsed from, keyed by `"col,row"`.
    *  Drives girder-search eligibility (TW p.146: medium/heavy/hardened
    *  only). Hexes that started as rubble have no entry and yield nothing. */
-  rubbleOrigin: Record<string, BuildingType>;
+  rubbleOrigin: Record<string, BuildingTerrainType>;
   /** 'Mech wrecks left by ejected pilots, keyed by hex `"col,row"`. Each is a
    *  permanent level-2 obstacle: hex is blocked to all movement, LOS crossing
    *  the hex is blocked, and an adjacent target gains +2 partial cover. */
@@ -968,7 +978,7 @@ export function isShutdown(unit: UnitState) {
 }
 
 export function isImmobile(unit: UnitState) {
-  return isShutdown(unit) || unit.unconscious || isUnitImmobile(unit.damage);
+  return isShutdown(unit) || isPilotUnconscious(unit) || isUnitImmobile(unit.damage);
 }
 
 export function isUnitRemoved(unit: UnitState): boolean {
@@ -1045,11 +1055,10 @@ function partialCoverDetail(
           for (const h of interveningHexes(attacker.position, target.position, side)) {
             if (!isAdjacent(h, target.position)) continue;
             const cell = cellAt(state, h);
-            const effectiveLevel =
-              buildingTypeOf(cell.terrain) !== undefined ? cell.level + 2 : cell.level;
+            const effectiveLevel = isBuildingTerrain(cell.terrain) ? cell.level + 2 : cell.level;
             if (effectiveLevel >= targetLevel + 1) {
               terrain = PARTIAL_COVER_TERRAIN_MOD;
-              if (buildingTypeOf(cell.terrain) !== undefined) buildingHex = { ...h };
+              if (isBuildingTerrain(cell.terrain)) buildingHex = { ...h };
               break coverSides;
             }
           }
@@ -1192,21 +1201,16 @@ function removePilotKilled(state: BattleState, unit: UnitState, sink: GameEvent[
   sink.push({ kind: "unitRemoved", unitId: unit.id, reason: "pilotKilled" });
 }
 
-/** Physical kill reason from the current damage state, preferring a
- *  crit-derived cause when `critRows` carry one (cockpit, engine, head
- *  blow-off) and falling back to the location whose IS hit zero. */
+/** The single kill-reason derivation for every damage path (weapon,
+ *  physical, fall/collapse, heat): the first crit resolution in `crits`
+ *  that killed the unit decides (its `killedReason`, first kill in that
+ *  cascade, blasts included); otherwise the location whose IS hit zero. */
 function destroyedReasonFor(
   damage: UnitDamageState,
-  critRows?: readonly CriticalResolution[],
+  crits?: readonly CriticalResolution[],
 ): DestroyedReason {
-  if (critRows) {
-    for (const res of critRows) {
-      for (const row of res.rows) {
-        if (row.kind === "cockpitDestroyed") return "cockpitDestroyed";
-        if (row.kind === "engineDestroyed") return "engineDestroyed";
-        if (row.kind === "headBlownOff") return "headBlownOff";
-      }
-    }
+  for (const res of crits ?? []) {
+    if (res.killedReason !== null) return res.killedReason;
   }
   if (damage.internalStructure.head <= 0) return "headDestroyed";
   if (damage.internalStructure.centerTorso <= 0) return "centerTorsoDestroyed";
@@ -1256,7 +1260,6 @@ export function createBattle(
       piloting: init.piloting,
       pilotHits: start.pilotHits,
       pilotHitMax,
-      unconscious: false,
       unconsciousSinceTurn: null,
       prone: start.prone,
       position: init.position,
@@ -1267,7 +1270,6 @@ export function createBattle(
       autoEject: init.policy.autoEject,
       jammedWeapons: [],
       critSlotsDestroyed: start.critSlotsDestroyed,
-      destroyedWeapons: start.destroyedWeapons,
       blownOffLimbs: [],
       club: null,
       declaredPickup: null,
@@ -1304,8 +1306,7 @@ export function createBattle(
     if (terrainSeen.has(key)) throw new Error(`Duplicate terrain definition for hex ${msgHex(t)}`);
     terrainSeen.add(key);
     cells[t.col - 1 + (t.row - 1) * width] = hexCell(t.type, t.level ?? 0);
-    const bt = buildingTypeOf(t.type);
-    if (bt !== undefined) buildings[key] = createBuildingState(bt);
+    if (isBuildingTerrain(t.type)) buildings[key] = createBuildingState(t.type);
   }
 
   return {
@@ -1366,11 +1367,12 @@ export function damageBuildingAt(
   state.buildings[key] = applyBuildingDamage(building, damage);
   const cf = state.buildings[key]!.cf;
   if (isCollapsed(state.buildings[key]!)) {
-    const rubble = collapseToRubble(state.cells[hex.col - 1 + (hex.row - 1) * state.width]!);
+    const cell = cellAt(state, hex);
+    const rubble = collapseToRubble(cell);
     if (rubble !== null) setCell(state, hex, rubble);
     // Remember what the rubble was: girder searches (TW p.146) only work
     // rubbled medium/heavy/hardened buildings.
-    state.rubbleOrigin[key] = building.type;
+    if (isBuildingTerrain(cell.terrain)) state.rubbleOrigin[key] = cell.terrain;
     delete state.buildings[key];
     sink.push({ kind: "buildingCollapsed", col: hex.col, row: hex.row });
     return { col: hex.col, row: hex.row, damage, preCf, cf: 0, collapsed: true, occupants };
@@ -1388,11 +1390,12 @@ export function damageBuildingAt(
 }
 
 /**
- * Record severed limbs on `unit` (deduped into `blownOffLimbs`) and leave
- * one ground token per limb in the unit's current hex (TW p.146: a
- * blown-off arm or leg stays where it was lost). Deposit is idempotent per
- * (unit, limb): the record guards against double tokens when several
- * damage applications report the same severing.
+ * Record severed limbs on `unit` (`blownOffLimbs`) and leave one ground token
+ * per limb in the unit's current hex (TW p.146: a blown-off arm or leg stays
+ * where it was lost). Each severing has exactly one report: a damage
+ * application's `blownOffLimbs` (an arm lost with its side torso) or a crit
+ * row (`critSeveredLimbs`), and both only sever a limb that still stands, so
+ * a repeat is a bug.
  */
 export function recordSeveredLimbs(
   state: BattleState,
@@ -1400,7 +1403,9 @@ export function recordSeveredLimbs(
   limbs: readonly LimbLocation[],
 ): void {
   for (const limb of limbs) {
-    if (unit.blownOffLimbs.some((l) => l.limb === limb)) continue;
+    if (unit.blownOffLimbs.some((l) => l.limb === limb)) {
+      throw new Error(`${unit.id}: ${limb} severed twice`);
+    }
     unit.blownOffLimbs.push({ limb, salvageable: true });
     const key = hexKey(unit.position);
     state.clubs[key] = [...(state.clubs[key] ?? []), { kind: "limb", limb, ownerId: unit.id }];
@@ -1408,7 +1413,7 @@ export function recordSeveredLimbs(
 }
 
 /**
- * Record every severed limb (`blownOffLimbs`) carried by crit resolutions.
+ * Record every limb the crit resolutions severed (`critSeveredLimbs`).
  * Leaves the matching ground tokens in the victim's hex.
  */
 function recordCritSeveredLimbs(
@@ -1417,7 +1422,7 @@ function recordCritSeveredLimbs(
   crits: readonly CriticalResolution[],
 ): void {
   for (const crit of crits) {
-    recordSeveredLimbs(state, unit, crit.blownOffLimbs);
+    recordSeveredLimbs(state, unit, critSeveredLimbs(crit));
   }
 }
 
@@ -1470,8 +1475,7 @@ function choosePickup(state: BattleState, unit: UnitState, decl: ClubPickupDecl)
   const hasTree = isWoodsTerrain(cell.terrain);
   const origin = state.rubbleOrigin[hexKey(unit.position)];
   const hasGirder =
-    cell.terrain === "rubble" &&
-    (origin === "medium" || origin === "heavy" || origin === "hardened");
+    cell.terrain === "rubble" && origin !== undefined && GIRDER_SEARCH_TARGET[origin] !== undefined;
   if (decl.source === "limb") return { ok: false, reason: "no limb club available in this hex" };
   if ((decl.source === undefined || decl.source === "tree") && hasTree) {
     return { ok: true, source: "tree" };
@@ -1892,7 +1896,7 @@ function moveUnit(
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot move`);
-  if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot move`);
+  if (isPilotUnconscious(unit)) throw new Error(`${unitId} is unconscious and cannot move`);
   if (mode !== "standStill" && isUnitImmobile(unit.damage)) {
     throw new Error(`${unitId} has no intact legs and arms and can only stand still`);
   }
@@ -2455,7 +2459,7 @@ export function validateAttacksImpl(
         ? `${unitId} is shut down and cannot fire`
         : `${unitId} is shut down and cannot attack`,
     );
-  if (unit.unconscious)
+  if (isPilotUnconscious(unit))
     throw new Error(
       wantWeapons
         ? `${unitId} is unconscious and cannot fire`
@@ -2567,13 +2571,15 @@ export function validateAttacksImpl(
     if (unit.jammedWeapons.includes(decl.weaponIndex)) {
       throw new Error(`${mount.weapon} on ${unitId} is jammed`);
     }
-    if (unit.destroyedWeapons.includes(decl.weaponIndex)) {
-      throw new Error(`${mount.weapon} on ${unitId} is destroyed by a critical hit`);
-    }
+    // Location first: a catastrophic wipe flags every slot there, and the
+    // lost location is the clearer reason.
     if (!canFireMount(unit.damage, mount)) {
       throw new Error(
         `${mount.weapon} location (${mount.location}) is destroyed or its support torso is gone`,
       );
+    }
+    if (isWeaponCritted(def, unit.critSlotsDestroyed, decl.weaponIndex)) {
+      throw new Error(`${mount.weapon} on ${unitId} is destroyed by a critical hit`);
     }
     if (handsOccupied && isArm(mount.location)) {
       throw new Error(
@@ -2676,7 +2682,7 @@ export function validateAttacksImpl(
     targetVolleys.set(target.id, targetVolley);
     if (breakdown.automatic === "miss") {
       throw new Error(
-        `${mount.weapon}: modified TN ${breakdown.total} auto-misses; abort the declaration instead`,
+        `${mount.weapon}: modified TN ${toHitTotal(breakdown)} auto-misses; abort the declaration instead`,
       );
     }
 
@@ -2687,7 +2693,7 @@ export function validateAttacksImpl(
     // auto-miss, so they need only one shared shot to declare and never
     // claim it up front; non-streaks spend at declare and accumulate.
     if (binsForWeaponName(def, mount.weapon).length > 0) {
-      const left = pooledShotsLeft(def, unit.ammoBins, mount.weapon);
+      const left = pooledShotsLeft(def, unit, mount.weapon);
       if (weapon.streak === true) {
         if (left < 1) {
           throw new Error(`${mount.weapon}: needs 1 shot(s) but only ${left} remain`);
@@ -2757,7 +2763,7 @@ export function declareAttacks(
       throw new Error("declareAttacks requires at least one declaration");
     if (isUnitRemoved(unit)) throw new Error(`${unitId} is destroyed`);
     if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot attack`);
-    if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot attack`);
+    if (isPilotUnconscious(unit)) throw new Error(`${unitId} is unconscious and cannot attack`);
     if (unit.club === null) throw new Error(`${unitId} holds no club to drop`);
     applyClubDrop(state, unit, sink);
     sink.push({ kind: "attacksDeclared", unitId, weapons: [], physical: [] });
@@ -2807,14 +2813,7 @@ export function declareAttacks(
       const needed = weapon.missiles !== undefined ? 1 : shots;
       if (binsForWeaponName(def, mount.weapon).length === 0) continue;
       if (weapon.streak === true) continue;
-      unit.ammoBins = consumeAmmoForName(
-        def,
-        unit.ammoBins,
-        mount.weapon,
-        needed,
-        unit.ammoPolicy,
-        rng,
-      );
+      unit.ammoBins = consumeAmmoForName(def, unit, mount.weapon, needed, unit.ammoPolicy, rng);
     }
   }
   if (wantPhysical) {
@@ -2862,11 +2861,12 @@ export function validatePickup(
   state: BattleState,
   unitId: string,
   decl: ClubPickupDecl = {},
-): { ok: true; source: ClubKind; token?: ClubGroundToken } | { ok: false; reason: string } {
+): ({ ok: true } & DeclaredPickup) | { ok: false; reason: string } {
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) return { ok: false, reason: `${unitId} is removed from play` };
   if (isShutdown(unit)) return { ok: false, reason: `${unitId} is shut down and cannot pick up` };
-  if (unit.unconscious) return { ok: false, reason: `${unitId} is unconscious and cannot pick up` };
+  if (isPilotUnconscious(unit))
+    return { ok: false, reason: `${unitId} is unconscious and cannot pick up` };
   if (
     unit.declaredWeaponAttacks.length > 0 ||
     unit.declaredPhysicalAttacks.length > 0 ||
@@ -2922,14 +2922,14 @@ export function declarePickup(
 function resolveClubPickup(
   state: BattleState,
   unit: UnitState,
-  decl: ClubPickupDecl,
+  decl: DeclaredPickup,
   rng: Rng,
   sink: GameEvent[],
 ): void {
   const fail = (reason: string): void => {
     sink.push({ kind: "clubPickedUp", unitId: unit.id, success: false, reason });
   };
-  if (isUnitRemoved(unit) || unit.unconscious || isShutdown(unit)) {
+  if (isUnitRemoved(unit) || isPilotUnconscious(unit) || isShutdown(unit)) {
     fail("attackerDown");
     return;
   }
@@ -2941,8 +2941,9 @@ function resolveClubPickup(
   // A declared token must still lie here (another unit may have taken it);
   // otherwise re-resolve from the hex as declared.
   let token: ClubGroundToken | undefined;
-  if (decl.token !== undefined) {
-    token = tokens.find((t) => sameToken(t, decl.token as ClubGroundToken));
+  const declared = decl.token;
+  if (declared !== undefined) {
+    token = tokens.find((t) => sameToken(t, declared));
     if (token === undefined) {
       fail("noSource");
       return;
@@ -2951,7 +2952,7 @@ function resolveClubPickup(
   const choice =
     token !== undefined
       ? { ok: true as const, source: token.kind, token }
-      : choosePickup(state, unit, decl.source === undefined ? {} : { source: decl.source });
+      : choosePickup(state, unit, { source: decl.source });
   if (!choice.ok) {
     fail("noSource");
     return;
@@ -2975,7 +2976,8 @@ function resolveClubPickup(
     sink.push({ kind: "clubPickedUp", unitId: unit.id, success: true, clubKind: "tree" });
     return;
   }
-  const required = GIRDER_SEARCH_TARGET[state.rubbleOrigin[key] ?? ""] ?? null;
+  const origin = state.rubbleOrigin[key];
+  const required = (origin !== undefined ? GIRDER_SEARCH_TARGET[origin] : undefined) ?? null;
   if (required === null) {
     fail("noSource");
     return;
@@ -3132,21 +3134,36 @@ function physicalWeaponConflict(
   return null;
 }
 
-/** Running per-target state while a volley resolves: every weapon sees the
- *  damage and criticals of the weapons resolved before it (TW p.125: crits
- *  are rolled "before resolving any further weapons fire"). */
-interface RunningTarget {
+/** Running per-unit {@link CritState} while a volley resolves: every weapon
+ *  sees the damage and criticals of the weapons resolved before it (TW p.125:
+ *  crits are rolled "before resolving any further weapons fire"). It is also
+ *  the unit's one ammo ledger for the phase: its own Streak spending and the
+ *  crits it takes both act on `ammoBins` here. */
+interface RunningState {
   damage: UnitDamageState;
-  crit: CritMask;
-  destroyedWeapons: number[];
+  critSlotsDestroyed: CritMask;
   ammoBins: AmmoBins;
+}
+
+/** The unit's running state, created from its committed state on first use. */
+function runningStateFor(running: Record<string, RunningState>, unit: UnitState): RunningState {
+  let run = running[unit.id];
+  if (run === undefined) {
+    run = {
+      damage: cloneDamage(unit.damage),
+      critSlotsDestroyed: cloneCritTable(unit.critSlotsDestroyed),
+      ammoBins: { ...unit.ammoBins },
+    };
+    running[unit.id] = run;
+  }
+  return run;
 }
 
 function resolveUnitAttacks(
   state: BattleState,
   unit: UnitState,
   rng: Rng,
-  running: Record<string, RunningTarget>,
+  running: Record<string, RunningState>,
   phaseStartCf: Record<string, number>,
 ): UnitAttackResult {
   const def = mechDefFor(unit);
@@ -3155,7 +3172,9 @@ function resolveUnitAttacks(
     countDestroyedSensor(def, unit.damage, unit.critSlotsDestroyed),
   );
   const pronePropArm = inferPronePropArm(def, unit.declaredWeaponAttacks, unit.prone);
-  let currentAmmoBins = { ...unit.ammoBins };
+  // Own Streak spending draws from the unit's running ledger, which also
+  // carries crits other units' fire already put on it this phase.
+  const self = runningStateFor(running, unit);
   const jammedWeapons: number[] = [];
   const resolutions: UnitAttackResolution[] = [];
 
@@ -3172,17 +3191,11 @@ function resolveUnitAttacks(
     // hit: an earlier launcher may have drained the pool mid-resolution.
     // With nothing left the launcher cannot fire — auto-miss without
     // touching dice (no ammo spent, no heat).
-    if (weapon.streak === true && pooledShotsLeft(def, currentAmmoBins, weapon.name) < 1) {
+    if (weapon.streak === true && pooledShotsLeft(def, self, weapon.name) < 1) {
       ammoExhausted = true;
     }
 
-    const run = running[target.id] ?? {
-      damage: cloneDamage(target.damage),
-      crit: cloneCritTable(target.critSlotsDestroyed),
-      destroyedWeapons: [...target.destroyedWeapons],
-      ammoBins: { ...target.ammoBins },
-    };
-    if (running[target.id] !== run) running[target.id] = run;
+    const run = runningStateFor(running, target);
     const targetBaseDamage = run.damage;
 
     const resolution = resolveWeaponAttack({
@@ -3237,18 +3250,18 @@ function resolveUnitAttacks(
       ...(state.critsDisabled
         ? {}
         : {
-            targetDef: mechDefFor(target),
-            targetCritSlotsDestroyed: run.crit,
-            targetBaseCritSlotsDestroyed: target.critSlotsDestroyed,
-            targetDestroyedWeapons: run.destroyedWeapons,
-            targetAmmoBins: run.ammoBins,
+            targetCrits: {
+              model: target.model,
+              critSlotsDestroyed: run.critSlotsDestroyed,
+              ammoBins: run.ammoBins,
+              baseCritSlotsDestroyed: target.critSlotsDestroyed,
+            },
           }),
     });
-    if (resolution.application !== null) run.damage = resolution.application.after;
+    run.damage = resolution.targetDamageAfter;
     const lastCrit = resolution.crits[resolution.crits.length - 1];
     if (lastCrit !== undefined) {
-      run.crit = lastCrit.critSlotsDestroyed;
-      run.destroyedWeapons = [...lastCrit.destroyedWeapons];
+      run.critSlotsDestroyed = lastCrit.critSlotsDestroyed;
       run.ammoBins = lastCrit.ammoBins;
     }
 
@@ -3269,8 +3282,7 @@ function resolveUnitAttacks(
     // linked bins still spend shared ammo. The pre-resolution guard above
     // guarantees at least one shot remains, so this always draws exactly 1.
     if (streakFired) {
-      const entry = consumeAmmoForName(def, currentAmmoBins, weapon.name, 1, unit.ammoPolicy, rng);
-      currentAmmoBins = entry;
+      self.ammoBins = consumeAmmoForName(def, self, weapon.name, 1, unit.ammoPolicy, rng);
     }
 
     const weaponHeat = (weapon.heat ?? 0) * shots;
@@ -3306,7 +3318,6 @@ function resolveUnitAttacks(
   return {
     unitId: unit.id,
     resolutions,
-    finalAmmoBins: currentAmmoBins,
     jammedWeapons,
   };
 }
@@ -3402,7 +3413,7 @@ export function applyPilotHits(
   // An ejected pilot still accrues hits (ejection damage, the triggering
   // blast); every other removal ends pilot bookkeeping.
   if (isUnitRemoved(unit) && unit.removed !== "pilotEjected") return;
-  const wasConscious = !unit.unconscious;
+  const wasConscious = !isPilotUnconscious(unit);
   const rolls: ConsciousnessRoll[] = [];
   let failedAt: number | null = null;
   let applied = 0;
@@ -3416,12 +3427,11 @@ export function applyPilotHits(
       break;
     }
     // No further consciousness rolls once out this turn (TW p.42).
-    if (unit.unconscious) continue;
+    if (isPilotUnconscious(unit)) continue;
     const { roll, success } = rollConsciousness(rng, target);
     rolls.push({ roll, target, hits: unit.pilotHits });
     if (!success) {
       failedAt = rolls.length;
-      unit.unconscious = true;
       unit.unconsciousSinceTurn = state.turn;
     }
   }
@@ -3465,7 +3475,6 @@ function applyDamageGroups(
   sink: GameEvent[],
   ledger?: PhaseDealt,
 ): CriticalResolution[] {
-  const def = mechDefFor(unit);
   const crits: CriticalResolution[] = [];
   const sheared: LimbLocation[] = [];
   for (const group of groups) {
@@ -3486,7 +3495,7 @@ function applyDamageGroups(
       for (const { location: critLoc, tac: tagThroughArmor } of critRolls) {
         const res = resolveCriticalHits({
           rng,
-          def,
+          model: unit.model,
           source: {
             location: critLoc,
             damage: group.damage,
@@ -3494,12 +3503,10 @@ function applyDamageGroups(
             tac: tagThroughArmor,
           },
           critSlotsDestroyed: unit.critSlotsDestroyed,
-          destroyedWeapons: unit.destroyedWeapons,
           damage: unit.damage,
           ammoBins: unit.ammoBins,
         });
         unit.critSlotsDestroyed = res.critSlotsDestroyed;
-        unit.destroyedWeapons = res.destroyedWeapons;
         unit.ammoBins = res.ammoBins;
         unit.damage = res.damage;
         creditDealt(ledger, unit.id, critDamageDealt(res));
@@ -3524,11 +3531,6 @@ function applyDamageGroups(
   // from fall/crash/collapse crits and leave the matching ground tokens.
   recordCritSeveredLimbs(state, unit, crits);
   recordSeveredLimbs(state, unit, sheared);
-  for (const loc of LOCATIONS) {
-    if ((unit.damage.internalStructure[loc] ?? 0) <= 0) {
-      stripBinsInLocation(unit.ammoBins, loc);
-    }
-  }
   enforceClubHands(state, unit, sink);
   if (
     awaitsDestroyedMark(unit) &&
@@ -3586,7 +3588,7 @@ function shutdownFallCheck(
   const def = mechDefFor(unit);
   const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
   // An unconscious pilot cannot roll and fails automatically (TW p.40).
-  const r = unit.unconscious
+  const r = isPilotUnconscious(unit)
     ? { success: false }
     : pushPilotingCheck(sink, unit, "shutdown", SHUTDOWN_PSR_MOD, pre.modifier, rng, {
         ...unit.position,
@@ -3758,7 +3760,6 @@ export function applyFall(
     column,
     levelsFallen: levels,
     groups,
-    totalDamage: total,
     crits,
   });
 
@@ -3774,7 +3775,7 @@ export function applyFall(
 
   // Seatbelt check (TW p.68): same modifiers as the failed roll, or automatic
   // pilot damage when the 'Mech is immobile or the TN exceeds 12.
-  const down = isShutdown(unit) || unit.unconscious || isUnitImmobile(unit.damage);
+  const down = isShutdown(unit) || isPilotUnconscious(unit) || isUnitImmobile(unit.damage);
   const modifier = opts.seatbeltModifier;
   if (modifier === null || down || unit.piloting + modifier > D2D6_MAX) {
     applyPilotHits(
@@ -3880,7 +3881,7 @@ export function resolvePhasePiloting(
     const phaseModifier = triggers.reduce((sum, t) => sum + t.modifier, 0);
     for (const t of autoFall === null ? triggers : []) {
       const modifier = phaseModifier + pre.modifier;
-      if (isShutdown(unit) || unit.unconscious) {
+      if (isShutdown(unit) || isPilotUnconscious(unit)) {
         // TW p.60: a PSR required of a shut-down 'Mech falls it automatically
         // (and the pilot takes the hit automatically).
         autoFall = { cause: { kind: "failedPsr", reason: t.reason }, seatbelt: null };
@@ -3968,7 +3969,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   for (const [key, building] of Object.entries(state.buildings)) {
     phaseStartCf[key] = building.cf;
   }
-  const running: Record<string, RunningTarget> = {};
+  const running: Record<string, RunningState> = {};
   for (const unit of Object.values(state.units)) {
     if (unit.declaredWeaponAttacks.length === 0) continue;
     results.push(resolveUnitAttacks(state, unit, rng, running, phaseStartCf));
@@ -3982,26 +3983,20 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   // and the building-collapse damage below — but not the pre-volley
   // computation applications, whose states are discarded.
   const weaponDealt: PhaseDealt = {};
-  const targetAmmoBinsMap: Record<string, AmmoBins> = {};
-  const targetDestroyedWeaponsMap: Record<string, number[]> = {};
   const buildingOutcomes: BuildingDamageResult[] = [];
   /** Deferred per-hex CF tolls (TW p. 171: CF reduction only after all
    *  weapons fire is complete). Applied after the damage write-back. */
   const buildingDamageByHex: Record<string, { hex: HexCoord; damage: number }> = {};
-  /** First crit-derived kill reason per target (cockpit, engine, head
-   *  blow-off); drives `markUnitDestroyed` when the damage state alone
-   *  wouldn't show a kill (the engine-crit case). */
-  const targetKilledReason: Record<string, DestroyedReason> = {};
   /** `targetId:limb` pairs already reported as blown off this phase. */
-  const reportedLimbs = new Set<string>();
   // Plan A (sequential emit): one pass over resolutions in declaration
   // order. Each weapon's groups AND its own crit blasts fold into
   // `targetDamageMap` together before its `attackResolved` emits, so a
   // later resolution's `before` already includes earlier explosions.
   /** Per-target crit-slot accumulators (OR-merged across the volley). */
   const targetCritSlotsMap: Record<string, CritMask> = {};
-  /** Original crit resolutions per target (for severed-limb tokens). */
-  const targetCritsForLimbs: Record<string, CriticalResolution[]> = {};
+  /** Original crit resolutions per target, in order (severed-limb tokens
+   *  and the kill reason). */
+  const targetCrits: Record<string, CriticalResolution[]> = {};
 
   for (const result of results) {
     for (const {
@@ -4022,11 +4017,9 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
           armorRear: { ...target.damage.armorRear },
           internalStructure: { ...target.damage.internalStructure },
         };
-        targetAmmoBinsMap[targetId] = { ...target.ammoBins };
-        targetDestroyedWeaponsMap[targetId] = [...target.destroyedWeapons];
         // Copy so the OR-merge below mutates a fresh table, not the unit's.
         targetCritSlotsMap[targetId] = cloneCritTable(target.critSlotsDestroyed);
-        targetCritsForLimbs[targetId] = [];
+        targetCrits[targetId] = [];
       }
       // Authoritative sequential state from Phase 1 (TW pp.122-123): each
       // resolution's groups were already applied group-by-group with each
@@ -4035,16 +4028,12 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       // locations the real sequence only damages, and the catastrophic
       // wipe (destroyAllSlots/zeroBins) then poisons the persistent crit
       // table (phantom engine kill).
-      if (resolution.application !== null && resolution.groups.length > 0) {
-        creditDealt(weaponDealt, targetId, dealtOf(resolution.application));
-        const damageLimbs = resolution.application.blownOffLimbs.filter(
-          (l) => !resolution.crits.some((c) => c.blownOffLimbs.includes(l)),
-        );
-        recordSeveredLimbs(state, target, damageLimbs);
-        for (const l of resolution.application.blownOffLimbs) {
-          reportedLimbs.add(`${targetId}:${l}`);
+      if (resolution.applications.length > 0) {
+        for (const app of resolution.applications) {
+          creditDealt(weaponDealt, targetId, dealtOf(app));
+          recordSeveredLimbs(state, target, app.blownOffLimbs);
         }
-        targetDamageMap[targetId] = cloneDamage(resolution.application.after);
+        targetDamageMap[targetId] = cloneDamage(resolution.targetDamageAfter);
         reported = resolution;
       }
 
@@ -4053,25 +4042,15 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       // damage. Each `crit` carries the cumulative Phase-1 chain
       // (run.crit via resolveUnitAttacks), so the last one is the
       // authoritative accumulator — assign, never OR-merge a replay.
-      for (const crit of resolution.crits) {
-        for (const arm of crit.blownOffLimbs) {
-          reportedLimbs.add(`${targetId}:${arm}`);
-        }
-        if (crit.killedReason !== null && targetKilledReason[targetId] === undefined) {
-          targetKilledReason[targetId] = crit.killedReason;
-        }
-      }
       const lastCrit = resolution.crits[resolution.crits.length - 1];
       if (lastCrit !== undefined) {
         targetCritSlotsMap[targetId] = cloneCritTable(lastCrit.critSlotsDestroyed);
-        targetDestroyedWeaponsMap[targetId] = [...lastCrit.destroyedWeapons];
-        targetAmmoBinsMap[targetId] = { ...lastCrit.ammoBins };
         for (const crit of resolution.crits) {
           creditDealt(weaponDealt, targetId, critDamageDealt(crit));
         }
       }
       if (resolution.crits.length > 0) {
-        targetCritsForLimbs[targetId]!.push(...resolution.crits);
+        targetCrits[targetId]!.push(...resolution.crits);
         reported = { ...reported, crits: resolution.crits };
       }
 
@@ -4113,9 +4092,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       });
     }
 
-    // Apply attacker's ammo state changes
     const attacker = requireUnit(state, result.unitId);
-    attacker.ammoBins = result.finalAmmoBins;
     for (const wi of result.jammedWeapons) {
       if (!attacker.jammedWeapons.includes(wi)) {
         attacker.jammedWeapons.push(wi);
@@ -4143,33 +4120,19 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     const target = requireUnit(state, targetId);
     const slots = targetCritSlotsMap[targetId];
     if (slots !== undefined) target.critSlotsDestroyed = slots;
-    const destroyedWeapons = targetDestroyedWeaponsMap[targetId];
-    if (destroyedWeapons !== undefined) target.destroyedWeapons = destroyedWeapons;
-    const bins = targetAmmoBinsMap[targetId];
-    if (bins !== undefined) {
-      // A firer's own Streak spending (finalAmmoBins) may predate or lose to
-      // this snapshot: keep the lower shot count per bin (AMMO-01), and a
-      // stranded (negative) bin stays stranded.
-      const merged = { ...bins };
-      for (const [id, own] of Object.entries(target.ammoBins)) {
-        const snap = merged[id];
-        if (snap === undefined) continue;
-        const shots = Math.min(Math.abs(own), Math.abs(snap));
-        merged[id] = own < 0 || snap < 0 ? (shots > 0 ? -shots : 0) : shots;
-      }
-      target.ammoBins = merged;
-    }
     // Crit blow-offs leave their limbs in the target's hex (TW p.146).
-    const limbCrits = targetCritsForLimbs[targetId] ?? [];
+    const limbCrits = targetCrits[targetId] ?? [];
     if (limbCrits.length > 0) recordCritSeveredLimbs(state, target, limbCrits);
   }
 
   // Write back final damage to all targets
   for (const [targetId, damage] of Object.entries(targetDamageMap)) {
-    const target = requireUnit(state, targetId);
-    target.damage = damage;
-    // Strip ammo from destroyed locations
-    stripDestroyedLocationAmmo(target);
+    requireUnit(state, targetId).damage = damage;
+  }
+  // Each unit's running ledger holds its final bins: its own Streak spending
+  // and every crit it took, in resolution order (one writer, no merge).
+  for (const [unitId, run] of Object.entries(running)) {
+    requireUnit(state, unitId).ammoBins = run.ammoBins;
   }
 
   // TW p. 171: CF reduction only after all weapons fire is complete, so the
@@ -4236,17 +4199,12 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   // Units destroyed this sub-pass are marked after their pilot damage, so a
   // blast that destroys the 'Mech still injures the MechWarrior (TW pp.41,125).
   for (const unit of Object.values(state.units)) {
+    const crits = targetCrits[unit.id] ?? [];
     if (
       awaitsDestroyedMark(unit) &&
-      (isUnitWrecked(unit) || targetKilledReason[unit.id] !== undefined)
+      (isUnitWrecked(unit) || crits.some((c) => c.killedReason !== null))
     ) {
-      markUnitDestroyed(
-        state,
-        unit,
-        targetKilledReason[unit.id] ?? destroyedReasonFor(unit.damage),
-        rng,
-        sink,
-      );
+      markUnitDestroyed(state, unit, destroyedReasonFor(unit.damage, crits), rng, sink);
     }
   }
 
@@ -4266,20 +4224,19 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   // Post-weapon snapshot: the physical 20-point trigger measures only
   // physical-sub-pass damage (TW p.60 "in one phase" per phase), and weapon
   // fall damage never re-triggers the sweep.
+  // One detached copy of each unit, so every field read from it (damage,
+  // crit flags, ammo, severed limbs, club, pilot hits) is from the same moment.
+  const postWeapon: Record<string, UnitState> = {};
   const postWeaponDamage: Record<string, UnitDamageState> = {};
   const postWeaponCrit: Record<string, CritMask> = {};
-  const postWeaponWeapons: Record<string, number[]> = {};
   // Damage points marked in the physical sub-pass per unit (see `PhaseDealt`):
   // physical groups, their crit blasts, and DFA-miss falls.
   const physicalDealt: PhaseDealt = {};
   for (const unit of Object.values(state.units)) {
-    postWeaponDamage[unit.id] = {
-      armor: { ...unit.damage.armor },
-      armorRear: { ...unit.damage.armorRear },
-      internalStructure: { ...unit.damage.internalStructure },
-    };
-    postWeaponCrit[unit.id] = cloneCritTable(unit.critSlotsDestroyed);
-    postWeaponWeapons[unit.id] = [...unit.destroyedWeapons];
+    const snap = saveUnitState(unit);
+    postWeapon[unit.id] = snap;
+    postWeaponDamage[unit.id] = snap.damage;
+    postWeaponCrit[unit.id] = snap.critSlotsDestroyed;
   }
 
   sink.push({ kind: "attackPhaseStage", stage: "weaponDone", turn: state.turn });
@@ -4289,19 +4246,18 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   const pendingPilotHits: { unit: UnitState; hits: number; reason: PilotHitReason }[] = [];
   // Physical attacks are declared against the state at phase start (TW p.38:
   // damage and consciousness rolls take effect at the end of the phase), so
-  // legality and to-hit read each attacker's post-weapon damage snapshot.
+  // legality and to-hit read the attacker as it stood after the weapon
+  // sub-pass. Only where it stands stays live: an earlier melee this phase
+  // can already have moved it (charge advance, displacement) or dropped it.
   const phaseStartView = (attackerId: string): BattleState => {
     const u = requireUnit(state, attackerId);
+    const start = postWeapon[attackerId];
+    if (start === undefined) return state;
     return {
       ...state,
       units: {
         ...state.units,
-        [attackerId]: {
-          ...u,
-          damage: postWeaponDamage[attackerId] ?? u.damage,
-          critSlotsDestroyed: postWeaponCrit[attackerId] ?? u.critSlotsDestroyed,
-          destroyedWeapons: postWeaponWeapons[attackerId] ?? u.destroyedWeapons,
-        },
+        [attackerId]: { ...start, position: u.position, facing: u.facing, prone: u.prone },
       },
     };
   };
@@ -4321,11 +4277,10 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     groups: readonly DamageGroup[],
     origin: HexCoord | null,
     resolutionTac: boolean,
-  ): { application: DamageApplication | null; crits: CriticalResolution[] } => {
-    const recipientDef = mechDefFor(recipient);
+  ): { applications: DamageApplication[]; crits: CriticalResolution[] } => {
     const sheared: LimbLocation[] = [];
     const crits: CriticalResolution[] = [];
-    let application: DamageApplication | null = null;
+    const applications: DamageApplication[] = [];
     for (const group of groups) {
       // A group that carries its arc (charge / DFA) strikes that side's armor,
       // so a DFA on a prone 'Mech hits rear armor like its Rear-column
@@ -4339,51 +4294,41 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       const app = applyDamage(recipient.damage, group.location, group.damage, attackDirection);
       recipient.damage = app.after;
       creditDealt(physicalDealt, recipient.id, dealtOf(app));
-      application =
-        application === null
-          ? app
-          : {
-              after: app.after,
-              before: application.before,
-              steps: [...application.steps, ...app.steps],
-              newlyDestroyed: [...application.newlyDestroyed, ...app.newlyDestroyed],
-              blownOffLimbs: [...application.blownOffLimbs, ...app.blownOffLimbs],
-              mechDestroyed: application.mechDestroyed || app.mechDestroyed,
-            };
+      applications.push(app);
       sheared.push(...app.blownOffLimbs);
 
-      // Critical hit resolution (TW p.123-124):
-      // - One determining roll per location that loses internal structure
-      // - One additional determining roll if hit-location roll was 2 (through-armor critical)
-      // - One roll for every location the group damaged (TW p.124)
-      const struck = structureStruck(app);
-      const critRolls = struck.map((location) => ({ location, tac: false }));
-      if (group.tac === true || resolutionTac) {
-        critRolls.push({ location: group.location, tac: true });
-      }
-      for (const { location: critLoc, tac: tagThroughArmor } of critRolls) {
-        const startCrit = postWeaponCrit[recipient.id];
-        const res = resolveCriticalHits({
-          rng,
-          def: recipientDef,
-          source: {
-            location: critLoc,
-            damage: group.damage,
-            struck: struck.includes(critLoc),
-            tac: tagThroughArmor,
-          },
-          ...(startCrit !== undefined ? { baseCritSlotsDestroyed: startCrit } : {}),
-          critSlotsDestroyed: recipient.critSlotsDestroyed,
-          destroyedWeapons: recipient.destroyedWeapons,
-          damage: recipient.damage,
-          ammoBins: recipient.ammoBins,
-        });
-        recipient.critSlotsDestroyed = res.critSlotsDestroyed;
-        recipient.destroyedWeapons = res.destroyedWeapons;
-        recipient.ammoBins = res.ammoBins;
-        recipient.damage = res.damage;
-        creditDealt(physicalDealt, recipient.id, critDamageDealt(res));
-        crits.push(res);
+      if (!state.critsDisabled) {
+        // Critical hit resolution (TW p.123-124):
+        // - One determining roll per location that loses internal structure
+        // - One additional determining roll if hit-location roll was 2 (through-armor critical)
+        // - One roll for every location the group damaged (TW p.124)
+        const struck = structureStruck(app);
+        const critRolls = struck.map((location) => ({ location, tac: false }));
+        if (group.tac === true || resolutionTac) {
+          critRolls.push({ location: group.location, tac: true });
+        }
+        for (const { location: critLoc, tac: tagThroughArmor } of critRolls) {
+          const startCrit = postWeaponCrit[recipient.id];
+          const res = resolveCriticalHits({
+            rng,
+            model: recipient.model,
+            source: {
+              location: critLoc,
+              damage: group.damage,
+              struck: struck.includes(critLoc),
+              tac: tagThroughArmor,
+            },
+            ...(startCrit !== undefined ? { baseCritSlotsDestroyed: startCrit } : {}),
+            critSlotsDestroyed: recipient.critSlotsDestroyed,
+            damage: recipient.damage,
+            ammoBins: recipient.ammoBins,
+          });
+          recipient.critSlotsDestroyed = res.critSlotsDestroyed;
+          recipient.ammoBins = res.ammoBins;
+          recipient.damage = res.damage;
+          creditDealt(physicalDealt, recipient.id, critDamageDealt(res));
+          crits.push(res);
+        }
       }
     }
     // Accumulate crits for this unit (multiple attacks possible)
@@ -4393,7 +4338,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     // Severed limbs stay where they were lost (TW p.146).
     recordSeveredLimbs(state, recipient, sheared);
     recordCritSeveredLimbs(state, recipient, crits);
-    return { application, crits };
+    return { applications, crits };
   };
   // A failed DFA drops the attacker as from a 2-level fall onto its rear
   // (TW p.150); nothing else moves.
@@ -4442,8 +4387,8 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     autoMiss: true,
     damageToTarget: [],
     damageToAttacker: [],
-    application: null,
-    attackerApplication: null,
+    applications: [],
+    attackerApplications: [],
     crits: [],
     notes: [note],
     throughArmorCrit: false,
@@ -4471,7 +4416,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     for (const decl of unit.declaredPhysicalAttacks) {
       const attacker = requireUnit(state, unit.id);
       const target = state.units[decl.targetId];
-      if (isUnitRemoved(attacker) || attacker.unconscious || isShutdown(attacker)) {
+      if (isUnitRemoved(attacker) || isPilotUnconscious(attacker) || isShutdown(attacker)) {
         const resolution = missResolution(
           decl.type,
           attacker.id,
@@ -4626,16 +4571,16 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         resolution.damageToAttacker.length > 0
           ? applyPhysicalGroups(attacker, resolution.damageToAttacker, null, false)
           : null;
-      const targetApplication = targetOutcome?.application ?? null;
-      const attackerApplication = attackerOutcome?.application ?? null;
+      const targetApplications = targetOutcome?.applications ?? [];
+      const attackerApplications = attackerOutcome?.applications ?? [];
       const targetCrits = targetOutcome?.crits ?? [];
 
       // Emit the event after damage resolution so the log can render the
       // armor-change detail and crits, like weapon `attackResolved`.
       resolution = {
         ...resolution,
-        application: targetApplication,
-        attackerApplication,
+        applications: targetApplications,
+        attackerApplications,
         crits: targetCrits,
       };
       sink.push({
@@ -4954,7 +4899,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
             avoid,
             threshold,
           });
-        } else if (unit.unconscious) {
+        } else if (isPilotUnconscious(unit)) {
           // an unconscious pilot cannot attempt one (only the below-14 automatic restart works).
           sink.push({
             kind: "restartCheck",
@@ -5009,7 +4954,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
             threshold,
           });
           shutdownFallCheck(state, unit, rng, sink, heatDealt);
-        } else if (unit.unconscious) {
+        } else if (isPilotUnconscious(unit)) {
           // an unconscious pilot cannot override it either.
           unit.shutdown = "heat";
           sink.push({
@@ -5060,7 +5005,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
     if (!isUnitRemoved(unit)) {
       const { avoid, threshold } = ammoExplosionAvoidWithThreshold(endHeat)!;
       if (avoid > 0) {
-        const bin = largestAmmoBin(def, unit.ammoBins, rng);
+        const bin = largestAmmoBin(def, unit, rng);
         if (bin !== null) {
           const roll = roll2D6(rng);
           if (roll >= avoid) {
@@ -5090,14 +5035,14 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
             creditDealt(heatDealt, unit.id, dealtOf(application));
             // A blast that shears off a limb leaves it in the hex (TW p.146).
             recordSeveredLimbs(state, unit, application.blownOffLimbs);
-            // The blasted bin is emptied and its slot flagged first, so the
-            // follow-up criticals cannot re-hit or re-explode it.
-            const slot = collectAmmoBins(def).find((b) => b.id === bin.binId);
-            if (slot !== undefined) {
-              unit.ammoBins[bin.binId] = 0;
-              unit.critSlotsDestroyed = cloneCritTable(unit.critSlotsDestroyed);
-              setSlotDestroyed(unit.critSlotsDestroyed, bin.location, bin.slotIndex - 1);
-            }
+            // The blasted bin is destroyed first (slot flagged, emptied), as
+            // a crit on it would, so the follow-up criticals cannot re-hit or
+            // re-explode it.
+            unit.critSlotsDestroyed = destroyAmmoBin(unit.critSlotsDestroyed, unit.ammoBins, {
+              id: bin.binId,
+              location: bin.location,
+              slotIndex: bin.slotIndex,
+            });
             // Like any ammo explosion, the blast damages internal structure,
             // so each struck location gets a critical roll (TW p.125).
             const heatCrits: CriticalResolution[] = [];
@@ -5105,15 +5050,13 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
               for (const critLoc of structureStruck(application)) {
                 const res = resolveCriticalHits({
                   rng,
-                  def,
+                  model: unit.model,
                   source: { location: critLoc, damage: bin.damage, struck: true },
                   critSlotsDestroyed: unit.critSlotsDestroyed,
-                  destroyedWeapons: unit.destroyedWeapons,
                   damage: unit.damage,
                   ammoBins: unit.ammoBins,
                 });
                 unit.critSlotsDestroyed = res.critSlotsDestroyed;
-                unit.destroyedWeapons = res.destroyedWeapons;
                 unit.ammoBins = res.ammoBins;
                 unit.damage = res.damage;
                 creditDealt(heatDealt, unit.id, critDamageDealt(res));
@@ -5130,13 +5073,9 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
                 def,
                 unit.damage,
                 unit.critSlotsDestroyed,
-                unit.ammoBins,
                 lost,
               );
             }
-            // Keep the spent bin on record as empty even when its location
-            // was stripped.
-            if (slot !== undefined) unit.ammoBins[bin.binId] = 0;
             sink.push({
               kind: "ammoExplosionCheck",
               unitId: unit.id,
@@ -5197,10 +5136,9 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
     }
 
     // Consciousness wakeup (TW p.42): end phase of a turn after the
-    // knockout turn. May flip `unconscious` false if the roll passes.
+    // knockout turn. A passed roll clears `unconsciousSinceTurn`.
     if (
       !isUnitRemoved(unit) &&
-      unit.unconscious &&
       unit.unconsciousSinceTurn !== null &&
       unit.unconsciousSinceTurn < state.turn
     ) {
@@ -5208,7 +5146,6 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
       if (target !== null) {
         const { roll, success } = rollConsciousness(rng, target);
         if (success) {
-          unit.unconscious = false;
           unit.unconsciousSinceTurn = null;
         }
         sink.push({
@@ -5272,7 +5209,7 @@ function movementTerrainPsr(
   forward = true,
 ): HexCoord | null {
   const stop = (): boolean =>
-    unit.prone || isUnitRemoved(unit) || isShutdown(unit) || unit.unconscious;
+    unit.prone || isUnitRemoved(unit) || isShutdown(unit) || isPilotUnconscious(unit);
   /** Lower hex of the step plus levels fallen into it (jump: landing, 0). */
   const lowerLanding = (hex: HexCoord): { lower: HexCoord; levels: number } => {
     // Jump landing: 0 levels per errata, except tumbling to the bottom of
@@ -5342,7 +5279,7 @@ function movementTerrainPsr(
         ? waterDepth(cellAt(state, to).terrain)
         : 0;
     const bottomOpt = bottom > 0 ? { bottomDepth: bottom } : {};
-    if (isShutdown(unit) || unit.unconscious) {
+    if (isShutdown(unit) || isPilotUnconscious(unit)) {
       // The fall (and anything it leaves behind) happens where the 'Mech lands.
       unit.position = { ...lower };
       const terrain = cellAt(state, lower).terrain;
@@ -5414,7 +5351,7 @@ function movementTerrainPsr(
     const legWasGoneR = legGone(unit.damage, "rightLeg");
     const legWasGoneL = legGone(unit.damage, "leftLeg");
     const gyroWasGone = countDestroyedGyro(def, unit.damage, unit.critSlotsDestroyed);
-    if (isShutdown(unit) || unit.unconscious) {
+    if (isShutdown(unit) || isPilotUnconscious(unit)) {
       wearHex();
       if (isUnitRemoved(unit)) return to;
       applyFall(
@@ -5458,7 +5395,6 @@ function movementTerrainPsr(
         row: to.row,
         column,
         groups,
-        totalDamage: total,
         crits,
       });
       wearHex();
@@ -5472,7 +5408,7 @@ function movementTerrainPsr(
           (!legWasGoneL && legGone(unit.damage, "leftLeg"));
         const gyroNow = countDestroyedGyro(def, unit.damage, unit.critSlotsDestroyed);
         const gyroFell = gyroNow >= GYRO_DESTROYED_HITS && gyroWasGone < GYRO_DESTROYED_HITS;
-        const down = isShutdown(unit) || unit.unconscious;
+        const down = isShutdown(unit) || isPilotUnconscious(unit);
         if (legFell || gyroFell || down) {
           applyFall(
             state,
@@ -5528,7 +5464,7 @@ export function attemptStandUp(
   if (!unit.prone) throw new Error(`${unitId} is not prone`);
   if (unit.jumpedThisTurn) throw new Error(`${unitId} jumped this turn and cannot stand up`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot stand up`);
-  if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot stand up`);
+  if (isPilotUnconscious(unit)) throw new Error(`${unitId} is unconscious and cannot stand up`);
   const def = mechDefFor(unit);
   const pre = preexistingDamageModifier(def, unit.damage, unit.critSlotsDestroyed);
   const budget = standUpWalkBudget(unit);
@@ -5613,7 +5549,7 @@ export function dropProne(state: BattleState, unitId: string, sink: GameEvent[])
   if (unit.prone) throw new Error(`${unitId} is already prone`);
   if (unit.jumpedThisTurn) throw new Error(`${unitId} jumped this turn and cannot drop prone`);
   if (isShutdown(unit)) throw new Error(`${unitId} is shut down and cannot move`);
-  if (unit.unconscious) throw new Error(`${unitId} is unconscious and cannot move`);
+  if (isPilotUnconscious(unit)) throw new Error(`${unitId} is unconscious and cannot move`);
   const def = mechDefFor(unit);
   const budget = effectiveMoveBudget(
     "walk",
@@ -5643,7 +5579,6 @@ export function dropProne(state: BattleState, unitId: string, sink: GameEvent[])
       column: "front",
       levelsFallen: 0,
       groups: [],
-      totalDamage: 0,
       crits: [],
     },
     {
@@ -5678,7 +5613,7 @@ function resolveEjection(
     landingTerrain: landing.terrain,
     landingLevel: landing.level,
     prone: unit.prone,
-    unconscious: unit.unconscious,
+    unconscious: isPilotUnconscious(unit),
     headStructureDamage:
       internalStructureForTonnage(unitTonnage(unit)).head - unit.damage.internalStructure.head,
     auto: cause === "auto",
@@ -5771,7 +5706,7 @@ export function attemptVoluntaryStartup(
     });
     return;
   }
-  if (avoid > 0 && unit.unconscious) {
+  if (avoid > 0 && isPilotUnconscious(unit)) {
     // an unconscious pilot cannot attempt one.
     sink.push({
       kind: "restartCheck",
@@ -5966,7 +5901,7 @@ function pendingActors(state: BattleState): string[] {
     if (state.actedThisPhase.includes(id)) return false;
     if (unit.passedAttacks) return false;
     // An unconscious pilot cannot move, fire, or act (TW p.42).
-    if (unit.unconscious) return false;
+    if (isPilotUnconscious(unit)) return false;
     if (nominalOnly && !isNominal(unit)) return false;
     return true;
   });
@@ -6016,17 +5951,4 @@ function buildActorQueue(state: BattleState): string[] {
     }
   }
   return queue;
-}
-
-/**
- * Remove every ammo bin in a location whose internal structure has dropped to
- * zero (blown-off limbs, destroyed torsos). Per-weapon totals are derived on
- * demand, so no refresh is needed here.
- */
-function stripDestroyedLocationAmmo(target: UnitState): void {
-  for (const loc of LOCATIONS) {
-    if ((target.damage.internalStructure[loc] ?? 0) <= 0) {
-      stripBinsInLocation(target.ammoBins, loc);
-    }
-  }
 }

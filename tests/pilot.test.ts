@@ -85,7 +85,7 @@ describe("pilotStatus / pilotRecord", () => {
     const state = battle();
     const hbk = requireUnit(state, "hbk");
     expect(pilotStatus(hbk)).toBe("active");
-    hbk.unconscious = true;
+    hbk.unconsciousSinceTurn = state.turn;
     expect(pilotStatus(hbk)).toBe("unconscious");
     hbk.pilotHits = 6;
     expect(pilotStatus(hbk)).toBe("dead");

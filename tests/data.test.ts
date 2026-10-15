@@ -180,6 +180,13 @@ describe("'Mech definitions", () => {
     const base = toMechDef(mechDef("HBK-4G")!);
     expect(() => validateMechDef({ ...base, running: 7 } as MechDef)).toThrow(/running/);
     expect(() => validateMechDef({ ...base, intro: 30.5 } as MechDef)).toThrow(/intro/);
+    // Jump MP is one per jumpJet slot: HBK-4G has none, the WVR-6R has five.
+    expect(() => validateMechDef({ ...base, jumping: 3 } as MechDef)).toThrow(/jumpJet/);
+    const wvr = toMechDef(mechDef("WVR-6R")!);
+    expect(wvr.jumping).toBe(5);
+    expect(() => validateMechDef({ ...wvr, jumping: 6 } as MechDef)).toThrow(
+      /jumping must equal the number of jumpJet crit slots \(5\)/,
+    );
     const { intro: _intro, ...noIntro } = base;
     expect(() => validateMechDef(noIntro as MechDef)).toThrow(/intro/);
     expect(() =>

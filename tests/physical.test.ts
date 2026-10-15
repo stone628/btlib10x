@@ -32,6 +32,7 @@ import {
   physicalDamage,
   physicalHitLocation,
   physicalLocationTable,
+  physicalToHitTotal,
   resolvePhysicalAttack,
   validatePhysicalAttack,
 } from "../src/rules/physical";
@@ -375,7 +376,7 @@ describe("physical to-hit modifiers", () => {
     const mods = punchMods(battle);
     expect(mods.attackerMoveMod).toBe(2);
     expect(mods.proneMod).toBe(2);
-    expect(mods.total).toBe(5 + 0 + 2 + 0 + 0 + 0 + 2);
+    expect(physicalToHitTotal(mods)).toBe(5 + 0 + 2 + 0 + 0 + 0 + 2);
   });
 
   it("target prone is cumulative with the movement band (adjacent −2)", () => {
@@ -387,7 +388,7 @@ describe("physical to-hit modifiers", () => {
 
   it("immobile target applies −4 cumulatively", () => {
     const battle = adjacentPair();
-    battle.units.t!.unconscious = true;
+    battle.units.t!.unconsciousSinceTurn = battle.turn;
     expect(punchMods(battle).targetMoveMod).toBe(-4);
   });
 

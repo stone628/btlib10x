@@ -80,13 +80,12 @@ function dirtyBattle(state: BattleState): void {
   hbk.damage.armor.head = 0;
   setSlotDestroyed(hbk.critSlotsDestroyed, "centerTorso", 0);
   hbk.jammedWeapons.push(0);
-  hbk.destroyedWeapons.push(1);
   hbk.hexesMovedThisTurn += 1;
   for (const id of Object.keys(hbk.ammoBins)) hbk.ammoBins[id] = 0;
   delete hbk.ammoBins[Object.keys(hbk.ammoBins)[0]!];
   state.actedThisPhase.push("hbk");
   state.actorQueue = ["stale"];
-  state.buildings["9,9"] = { cf: 1, type: "light" };
+  state.buildings["9,9"] = { cf: 1 };
   delete state.buildings[Object.keys(state.buildings)[0] ?? "never"];
   state.wrecks["1,1"] = { unitId: "hbk", level: 2 };
 }
@@ -144,6 +143,44 @@ describe("snapshot", () => {
     expect(snap.length).toBeLessThan(6000);
     expect(parseBattleState(snap)).toEqual(state);
     expect(saveBattleState(parseBattleState(snap))).toBe(snap);
+  });
+
+  it("rejects buildings that disagree with the cells", () => {
+    const units: UnitInit[] = [
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "se"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 6, row: 6 }, "se"),
+    ];
+    const state = createTestBattle(
+      [
+        { col: 3, row: 5, type: "lightBuilding" },
+        { col: 4, row: 5, type: "mediumBuilding" },
+      ],
+      units,
+      false,
+      10,
+      10,
+    );
+    damageBuildingAt(state, { col: 4, row: 5 }, 999, []);
+    const good = JSON.parse(saveBattleState(state));
+    expect(good.rubbleOrigin).toEqual({ "4,5": "mediumBuilding" });
+    const tamper = (edit: (raw: typeof good) => void): string => {
+      const raw = structuredClone(good);
+      edit(raw);
+      return JSON.stringify(raw);
+    };
+    const cases: Array<[string, string]> = [
+      [tamper((r) => delete r.buildings["3,5"]), "has no building state"],
+      [tamper((r) => (r.buildings["1,1"] = { cf: 5 })), "not on a building hex"],
+      [tamper((r) => (r.buildings["3,5"] = { cf: 0 })), "has CF 0"],
+      [tamper((r) => (r.rubbleOrigin["4,5"] = "heavyWoods")), "not a building terrain"],
+      [tamper((r) => (r.rubbleOrigin["1,1"] = "heavyBuilding")), "not on a rubble hex"],
+    ];
+    for (const [data, message] of cases) {
+      expect(() => parseBattleState(data)).toThrow(message);
+      const before = saveBattleState(state);
+      expect(() => loadBattleState(state, data)).toThrow(message);
+      expect(saveBattleState(state)).toBe(before);
+    }
   });
 
   it("save detaches: live mutation never leaks into snapshot string", () => {

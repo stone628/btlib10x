@@ -14,6 +14,7 @@ import {
   type Facing,
   type GameEvent,
   type HexCoord,
+  isPilotUnconscious,
   isShutdown,
   isTsmActive,
   isUnitImmobile,
@@ -28,6 +29,7 @@ import {
   neighbor,
   oppositeFacing,
   passMovement,
+  pathMp,
   postureCost,
   postureMoveBudget,
   type RevealedLanding,
@@ -620,7 +622,7 @@ export function commitMovement(s: Session): SessionGameEvent[] {
       attemptVoluntaryStartup(battle, unitId, collected, s.rng);
     } else if (context.moveMode === "eject") {
       ejectPilot(battle, unitId, s.rng, collected);
-    } else if (isShutdown(unit) || unit.unconscious) {
+    } else if (isShutdown(unit) || isPilotUnconscious(unit)) {
       // Down unit committing any other movement mode: hold position and
       // pass (startup/shutdown/eject handled above; nothing else is legal
       // while off-line or out cold). Without this the commit throws and the
@@ -829,7 +831,7 @@ function renderStep(line: StepLine): string {
 }
 
 /** Header plus the path steps, for `place` output. Costs come straight from
- *  `MovePathStep` (`baseMp` per step, `totalMp` cumulative); destination hexes
+ *  `MovePathStep` (`baseMp` per step, `pathMp` for the sum); destination hexes
  *  are recomputed by walking fragments from the actor start (turns rotate the
  *  cursor, `F`/`J`/`P`/`U` go forward, `B` goes backward). Consecutive turns
  *  the same way, plain hex steps the same direction, and jump hexes merge into
@@ -840,7 +842,6 @@ function stepResultLines(s: Session, landing: RevealedLanding): string[] {
   const { battle, context } = requireBattleAndContext(s);
   const actor = requireUnit(battle, context.actorId);
   const path = landing.path;
-  const last = path[path.length - 1];
   const m = s.move;
   const mode = m?.moveMode ?? null;
   const postureMP =
@@ -867,7 +868,7 @@ function stepResultLines(s: Session, landing: RevealedLanding): string[] {
       row: landing.hex.row,
       facing: F(landing.facing),
       posture: PRN(actor.prone),
-      spent: postureMP + (last?.totalMp ?? 0),
+      spent: postureMP + pathMp(path),
       budget: fullBudgetFor(actor, context),
     }),
   ];

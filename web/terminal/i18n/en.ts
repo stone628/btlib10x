@@ -432,6 +432,9 @@ export const en = {
   "status.none": "-",
   "status.actorView": "{id}(team {team})",
   "status.actorViewPriority": "{id}(team {team}, priority)",
+  "status.briefLine": "  {id}  {model}  {pos} facing {facing}{flags}",
+  "status.briefFlagProne": " PRONE",
+  "status.briefFlagUnconscious": " UNCONSCIOUS",
 
   // heat status
   "heat.title": "heat: {id} = {heat}",

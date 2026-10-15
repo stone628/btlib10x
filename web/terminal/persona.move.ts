@@ -39,7 +39,9 @@ import {
   meleeRecoilDamage,
   mountCanFireIntoArc,
   movementHeat,
+  pathMp,
   physicalDamage,
+  physicalToHitTotal,
   type RevealedLanding,
   reachableLandings,
   rotateFacing,
@@ -200,7 +202,9 @@ function meleeValue(
     hexesMovedThisTurn: meleeHexesMoved(landing),
     jumpedThisTurn: kind === "dfa",
   };
-  const p = hitProbability(computePhysicalToHit(battle, moved, target, kind, undefined).total);
+  const p = hitProbability(
+    physicalToHitTotal(computePhysicalToHit(battle, moved, target, kind, undefined)),
+  );
   const damage = MELEE_FACTOR[persona.melee] * p * physicalDamage(kind, moved, undefined);
   const recoil = p * meleeRecoilDamage(kind, moved, target);
   const fall =
@@ -273,7 +277,7 @@ export function scoreMoves(input: MoveScoringInput): TraceCandidate[] {
           ? (facingToward(at, target.position) ?? landing.facing)
           : landing.facing;
       const hexes = melee !== undefined ? meleeHexesMoved(landing) : hexesEntered(landing);
-      const mp = landing.path.at(-1)?.totalMp ?? 0;
+      const mp = pathMp(landing.path);
       const d = hexDistance(at, target.position);
       const myTmm = targetMovementModifier(hexes, mode === "jump");
 

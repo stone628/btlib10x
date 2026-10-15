@@ -12,7 +12,12 @@ import { type Arc, classifyFiringArc, createBattle, mechDefFor, suggestFireTarge
 import type { Facing, HexCoord } from "../src/core/types";
 import { type CritSlot, type MechDef, mechDef, resolveMechDef } from "../src/data/index";
 import { loadAmmoBins } from "../src/rules/ammo";
-import { emptyCritTable, resolveCriticalHits, setSlotDestroyed } from "../src/rules/critical";
+import {
+  crittedWeapons,
+  emptyCritTable,
+  resolveCriticalHits,
+  setSlotDestroyed,
+} from "../src/rules/critical";
 import type { UnitDamageState } from "../src/rules/damage";
 import { type BattleState, buildUnitInit, validateAttacksImpl } from "../src/rules/game";
 import { scriptedRng } from "./helpers";
@@ -118,14 +123,13 @@ describe("split weapon criticals (TW pp.125-128)", () => {
     // Determining roll 8 (one critical), slot roll 1,1 → right torso slot 1.
     const res = resolveCriticalHits({
       rng: scriptedRng(4, 4, 1, 1),
-      def,
+      model: def.model,
       source: { location: "rightTorso", damage: 5 },
       critSlotsDestroyed: emptyCritTable(def),
-      destroyedWeapons: [],
       damage: freshDamage(),
       ammoBins: loadAmmoBins(def),
     });
-    expect(res.destroyedWeapons).toEqual([RA_AC20]);
+    expect(crittedWeapons(def, res.critSlotsDestroyed)).toEqual([RA_AC20]);
   });
 });
 

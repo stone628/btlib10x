@@ -11,6 +11,7 @@ import {
   applyFall,
   buildUnitInit,
   clubTokensInHex,
+  damageBuildingAt,
   declarePickup,
   recordSeveredLimbs,
   resolveAllAttacks,
@@ -157,6 +158,56 @@ describe("pickup tokens", () => {
     );
     const result = validatePickup(battle, "b", {});
     expect(result).toEqual({ ok: true, source: "girder", token: { kind: "girder" } });
+  });
+});
+
+describe("girder search", () => {
+  function onRubble(terrain: "lightBuilding" | "mediumBuilding" | "heavyBuilding") {
+    const battle = createBattle(
+      {
+        name: "girder",
+        width: 12,
+        height: 12,
+        terrain: [{ col: 5, row: 5, type: terrain }],
+        legends: [],
+      },
+      [
+        buildUnitInit("a", "HBK-4G", 2, { col: 5, row: 5 }, "n"),
+        buildUnitInit("far", "HBK-4G", 2, { col: 1, row: 1 }, "n"),
+      ],
+    );
+    damageBuildingAt(battle, { col: 5, row: 5 }, 999, []);
+    battle.phase = "attack";
+    battle.initiativeWinnerTeam = 2;
+    battle.actorQueue = ["a", "far"];
+    battle.actedThisPhase = [];
+    return battle;
+  }
+
+  it("searches by the collapsed building's terrain", () => {
+    const battle = onRubble("heavyBuilding");
+    expect(validatePickup(battle, "a", {})).toEqual({ ok: true, source: "girder" });
+    const events: GameEvent[] = [];
+    declarePickup(battle, "a", {}, events);
+    resolveAllAttacks(battle, FIXED_RNG, events);
+    expect(events).toContainEqual(
+      expect.objectContaining({ kind: "clubPickedUp", success: true, roll: 6, required: 6 }),
+    );
+    expect(battle.units.a!.club).toEqual({ kind: "girder" });
+  });
+
+  it("medium rubble needs a 7", () => {
+    const battle = onRubble("mediumBuilding");
+    const events: GameEvent[] = [];
+    declarePickup(battle, "a", {}, events);
+    resolveAllAttacks(battle, FIXED_RNG, events);
+    expect(events).toContainEqual(
+      expect.objectContaining({ kind: "clubPickedUp", success: false, roll: 6, required: 7 }),
+    );
+  });
+
+  it("light rubble yields no girder", () => {
+    expect(validatePickup(onRubble("lightBuilding"), "a", {}).ok).toBe(false);
   });
 });
 

@@ -10,7 +10,7 @@ import {
 } from "../src/rules/game";
 import { buildingMovementModifier } from "../src/rules/piloting";
 
-import { createTestBattle, scriptedRng } from "./helpers";
+import { createTestBattle, groupsTotaling, scriptedRng } from "./helpers";
 
 /** Initiative script that makes team 1 lose, so its unit moves first. */
 const TEAM1_FIRST = (): ReturnType<typeof scriptedRng> => scriptedRng(2, 2, 5, 5);
@@ -155,7 +155,11 @@ describe("building entry (TW p.167)", () => {
       rng: scriptedRng(1, 2, 3, 4),
     });
     expect(events).toContainEqual(
-      expect.objectContaining({ kind: "buildingCrash", totalDamage: 2, column: "front" }),
+      expect.objectContaining({
+        kind: "buildingCrash",
+        groups: groupsTotaling(2),
+        column: "front",
+      }),
     );
     expect(state.buildings[hexKey({ col: 2, row: 3 })]!.cf).toBe(10);
   });
@@ -178,7 +182,7 @@ describe("building entry (TW p.167)", () => {
       rng: scriptedRng(1, 2, 3, 4),
     });
     expect(events).toContainEqual(
-      expect.objectContaining({ kind: "buildingCrash", totalDamage: 2, column: "rear" }),
+      expect.objectContaining({ kind: "buildingCrash", groups: groupsTotaling(2), column: "rear" }),
     );
     expect(hbk.damage.armor.centerTorso).toBe(frontCt);
     expect(hbk.damage.armorRear.centerTorso).toBe(rearCt - 2);

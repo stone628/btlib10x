@@ -13,14 +13,14 @@ import {
   mountArcLocation,
   mountCanFireIntoArc,
 } from "./arcs";
-import { countDestroyedSensor } from "./critical";
+import { countDestroyedSensor, isWeaponCritted } from "./critical";
 import { canFireMount, isUnitLocationDestroyed } from "./damage";
 import { type BattleState, isImmobile, isUnitRemoved, losEnds, partialCoverMod } from "./game";
 import { toHitHeatModifier } from "./heat";
 import { losClear, losWoodsPointsBetween } from "./los";
 import { sensorAttackModifier, sensorsBlind } from "./piloting";
 import type { RangeBracket } from "./tohit";
-import { computeToHit, damageForBracket } from "./tohit";
+import { computeToHit, damageForBracket, toHitTotal } from "./tohit";
 
 export type FireBlockerReason =
   | "jammed"
@@ -207,7 +207,7 @@ export function suggestFireTargets(
           blockBoth("jammed");
           return;
         }
-        if (unit.destroyedWeapons.includes(weaponIndex)) {
+        if (isWeaponCritted(def, unit.critSlotsDestroyed, weaponIndex)) {
           blockBoth("destroyed");
           return;
         }
@@ -232,7 +232,7 @@ export function suggestFireTargets(
           return;
         }
         const poolable = binsForWeaponName(def, weapon.name).length > 0;
-        const shots = poolable ? pooledShotsLeft(def, unit.ammoBins, weapon.name) : null;
+        const shots = poolable ? pooledShotsLeft(def, unit, weapon.name) : null;
         if (poolable && (shots ?? 0) < 1) {
           blockBoth("outOfAmmo");
           return;
@@ -297,7 +297,7 @@ export function suggestFireTargets(
           arc: firingArc,
           shots,
           rangeBracket: breakdown.rangeBracket,
-          tn: breakdown.total,
+          tn: toHitTotal(breakdown),
           ...(breakdown.minRangeMod > 0 ? { minRangePenalty: breakdown.minRangeMod } : {}),
           heat: weapon.heat ?? 0,
           expectedDamage:

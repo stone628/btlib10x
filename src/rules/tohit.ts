@@ -77,7 +77,6 @@ export interface ToHitBreakdown {
   readonly tcMod: number;
   /** Secondary-target modifier (0 for the primary target, else +1/+2). */
   readonly secondaryTargetMod: number;
-  readonly total: number;
   readonly rangeBracket: RangeBracket;
   /** Modified TN <= 2 auto-hits; > 12 auto-misses (attack may be aborted). */
   readonly automatic: "hit" | "miss" | null;
@@ -141,7 +140,6 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
       actuatorMod: 0,
       tcMod: 0,
       secondaryTargetMod: 0,
-      total: Number.POSITIVE_INFINITY,
       rangeBracket: "long",
       automatic: "miss",
       outOfRange: true,
@@ -171,22 +169,7 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
   const tcMod = mods.tcMod ?? 0;
   const secondaryTargetMod = mods.secondaryTargetMod ?? 0;
 
-  const total =
-    mods.gunnery +
-    attackerMod +
-    targetMod +
-    terrainMod +
-    coverMod +
-    rangeMod +
-    weaponMod +
-    min +
-    heatMod +
-    sensorMod +
-    actuatorMod +
-    tcMod +
-    secondaryTargetMod;
-
-  return {
+  const parts = {
     gunnery: mods.gunnery,
     attackerMod,
     targetMod,
@@ -200,11 +183,35 @@ export function computeToHit(mods: AttackModifiers): ToHitBreakdown {
     actuatorMod,
     tcMod,
     secondaryTargetMod,
-    total,
     rangeBracket: bracket,
-    automatic: total <= D2D6_MIN ? "hit" : total > D2D6_MAX ? "miss" : null,
     outOfRange: false,
   };
+  const total = toHitTotal(parts);
+  return {
+    ...parts,
+    automatic: total <= D2D6_MIN ? "hit" : total > D2D6_MAX ? "miss" : null,
+  };
+}
+
+/** Modified to-hit number: the sum of the breakdown's terms (infinite when
+ *  out of range). */
+export function toHitTotal(b: Omit<ToHitBreakdown, "automatic">): number {
+  if (b.outOfRange) return Number.POSITIVE_INFINITY;
+  return (
+    b.gunnery +
+    b.attackerMod +
+    b.targetMod +
+    b.terrainMod +
+    b.coverMod +
+    b.rangeMod +
+    b.weaponMod +
+    b.minRangeMod +
+    b.heatMod +
+    b.sensorMod +
+    b.actuatorMod +
+    b.tcMod +
+    b.secondaryTargetMod
+  );
 }
 
 const RANGE_VAR_DAMAGE_INDEX: Record<RangeBracket, number> = { short: 0, medium: 1, long: 2 };

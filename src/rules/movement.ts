@@ -124,11 +124,18 @@ export function isForwardStep(from: HexCoord, to: HexCoord, facing: Facing): boo
   return ahead.col === to.col && ahead.row === to.row;
 }
 
+/** MP spent along `path`: the sum of its steps' `baseMp`. */
+export function pathMp(path: readonly MovePathStep[]): number {
+  let n = 0;
+  for (const step of path) n += step.baseMp;
+  return n;
+}
+
 /** A single movement fragment in a reachability path. */
 export type MoveFragment = "F" | "B" | "R" | "L" | "J" | "U";
 export interface MovePathStep {
   readonly fragment: MoveFragment;
-  readonly totalMp: number;
+  /** MP this step costs, terrain and climbing included. */
   readonly baseMp: number;
   readonly terrain: TerrainType;
   readonly terrainSurcharge: number;
@@ -266,7 +273,6 @@ export function reachableLandings(
     to: HexCoord,
     fragment: MoveFragment,
     baseMp: number,
-    prevTotal: number,
   ): MovePathStep => {
     const cellTo = cellAt(options.grid, to);
     const fromGround = groundLevel(options.grid, from);
@@ -277,7 +283,6 @@ export function reachableLandings(
     const terrainSurcharge = jumping ? 0 : costToEnter(terrain) - 1;
     return {
       fragment,
-      totalMp: prevTotal + baseMp,
       baseMp,
       terrain,
       terrainSurcharge,
@@ -349,7 +354,6 @@ export function reachableLandings(
       if (c <= budget) {
         const turnStep: MovePathStep = {
           fragment: frag,
-          totalMp: c,
           baseMp: turnCost,
           terrain: cellAt(options.grid, cur.hex).terrain,
           terrainSurcharge: 0,
@@ -366,7 +370,7 @@ export function reachableLandings(
         const base = stepCost(cur.hex, forward);
         const c = cur.cost + base;
         if (c <= budget) {
-          const step = makeStep(cur.hex, forward, stepFragment(), base, cur.cost);
+          const step = makeStep(cur.hex, forward, stepFragment(), base);
           enqueue(forward, cur.facing, c, [...cur.path, step]);
         }
       }
@@ -377,7 +381,7 @@ export function reachableLandings(
         const base = stepCost(cur.hex, backward);
         const c = cur.cost + base;
         if (c <= budget) {
-          const step = makeStep(cur.hex, backward, "B", base, cur.cost);
+          const step = makeStep(cur.hex, backward, "B", base);
           enqueue(backward, cur.facing, c, [...cur.path, step]);
         }
       }
@@ -391,7 +395,7 @@ export function reachableLandings(
       const base = stepCost(start, forward);
       if (base > budget || waterDepth(cellAt(options.grid, forward).terrain) > 0) {
         const charged = Math.min(base, Math.max(budget, MIN_MOVEMENT_MP));
-        const step = makeStep(start, forward, stepFragment(), charged, 0);
+        const step = makeStep(start, forward, stepFragment(), charged);
         results.push({ hex: forward, facing: startFacing, path: [step] });
       }
     }
@@ -441,7 +445,7 @@ export function reachableLandings(
       const base = stepCost(hex, ahead);
       if (cost + base > budget) continue;
       if (!options.meleeOk(hex, ahead, "charge")) continue;
-      const step = makeStep(hex, ahead, stepFragment(), base, cost);
+      const step = makeStep(hex, ahead, stepFragment(), base);
       results.push({
         hex: ahead,
         facing,

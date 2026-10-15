@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { neighbor } from "../src/core/hex";
 import { type Facing, type HexCoord, oppositeFacing, rotateFacing } from "../src/core/types";
 import { setSlotDestroyed } from "../src/rules/critical";
-import { buildUnitInit, type MoveStep } from "../src/rules/game";
+import { buildUnitInit, type ClubPickupDecl, type MoveStep } from "../src/rules/game";
 import type { PhysicalAttackDecl } from "../src/rules/physical";
 import { VERSION } from "../src/version";
 import { nextAutoPlayCommand, resetAutoplayState } from "../web/terminal/autoplay";
@@ -162,8 +162,7 @@ describe("encodeAttackEntry", () => {
   const base: AttackDeclaration = {
     weaponDecls: [],
     physicalDecls: [],
-    pickupDecl: null,
-    pickupArgs: null,
+    pickup: null,
     dropClub: false,
     torsoTwist: "front",
   };
@@ -236,8 +235,8 @@ describe("encodeAttackEntry", () => {
     expect(
       encodeAttackEntry("0", { ...base, dropClub: true, weaponDecls: fire("a", 2) }, idxOf),
     ).toBe("0F-:02");
-    const pick = (args: AttackDeclaration["pickupArgs"]) =>
-      encodeAttackEntry("0", { ...base, pickupDecl: {}, pickupArgs: args }, idxOf);
+    const pick = (args: ClubPickupDecl) =>
+      encodeAttackEntry("0", { ...base, pickup: { args, source: "limb" } }, idxOf);
     expect(pick({})).toBe("0F+");
     expect(pick({ source: "tree" })).toBe("0F+t");
     expect(pick({ source: "limb", tokenIndex: 2 })).toBe("0F+l2");
@@ -293,7 +292,7 @@ describe("unit and end lines", () => {
     const line = encodeEndLine("0", hunchy);
     expect(line).toBe(`E03:h5C${startCtArmor}/4/1:a5:L13`);
   });
-  it("end line: a stranded (negative) bin counts by magnitude, a zeroed bin is fully spent", () => {
+  it("end line: a bin exports full minus its count, whatever its fate", () => {
     const state = createTestBattle(
       [],
       [init(), buildUnitInit("b", "ENF-4R", 2, { col: 3, row: 1 })],
@@ -301,13 +300,12 @@ describe("unit and end lines", () => {
     );
     const hunchy = state.units.hunchy!;
     const full = hunchy.ammoBins["leftTorso:1"]!;
-    // Lost to plain depletion with all shots left: untouched.
-    hunchy.ammoBins["leftTorso:1"] = -full;
+    // Untouched (also how a bin stranded with all shots left reads).
     expect(encodeEndLine("0", hunchy)).toBe("E00");
-    // Stranded after 3 shots were fired.
-    hunchy.ammoBins["leftTorso:1"] = -(full - 3);
+    // 3 shots fired; a stranded bin keeps this same count.
+    hunchy.ammoBins["leftTorso:1"] = full - 3;
     expect(encodeEndLine("0", hunchy)).toBe("E00:::L13");
-    // Exploded with its location: spent.
+    // Exploded or fully fired: spent.
     hunchy.ammoBins["leftTorso:1"] = 0;
     expect(encodeEndLine("0", hunchy)).toBe(`E00:::L1${full}`);
   });

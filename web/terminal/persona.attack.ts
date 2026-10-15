@@ -18,18 +18,18 @@ import {
   type Arc,
   type BattleState,
   computePhysicalToHit,
+  designTotalsByWeaponName,
   type FireTarget,
   type FireWeapon,
   hexDistance,
   hitProbability,
   isArm,
   type Location,
-  loadAmmoBins,
   mechDefFor,
   type PhysicalAttackDecl,
   type PhysicalWeaponName,
   physicalDamage,
-  pooledTotalsByWeaponName,
+  physicalToHitTotal,
   strikeMounts,
   suggestFireTargets,
   type UnitState,
@@ -254,7 +254,7 @@ export function scoreAttacks(input: AttackScoringInput): AttackScoring {
   const w = persona.weights;
   const target = battle.units[targetId];
   const def = mechDefFor(actor);
-  const startShots = pooledTotalsByWeaponName(def, loadAmmoBins(def));
+  const startShots = designTotalsByWeaponName(def);
   const notes: TraceNote[] = [];
   const candidates: TraceCandidate[] = [];
   const twists: Arc[] = actor.prone ? ["front"] : ["front", "leftSide", "rightSide"];
@@ -312,7 +312,9 @@ export function scoreAttacks(input: AttackScoringInput): AttackScoring {
   const physicalValue = (d: PhysicalAttackDecl): number | null => {
     const limb = d.limb as Limb | undefined;
     const weapon = d.weapon as PhysicalWeaponName | undefined;
-    const tn = computePhysicalToHit(battle, actor, target, d.type, limb, weapon).total;
+    const tn = physicalToHitTotal(
+      computePhysicalToHit(battle, actor, target, d.type, limb, weapon),
+    );
     if (d.type === "kick" && persona.melee === "opportunistic" && tn > CAUTIOUS_KICK_MAX_TN) {
       notes.push({ key: "pp.note.kickRisk", params: { tn } });
       return null;
@@ -373,7 +375,7 @@ export function scoreAttacks(input: AttackScoringInput): AttackScoring {
     if (pickup.ok) {
       const expected = (d: PhysicalAttackDecl): number => {
         const limb = d.limb as Limb | undefined;
-        const tn = computePhysicalToHit(battle, actor, target, d.type, limb).total;
+        const tn = physicalToHitTotal(computePhysicalToHit(battle, actor, target, d.type, limb));
         return factor * hitProbability(tn) * physicalDamage(d.type, actor, limb);
       };
       const swing = expected({ type: "club", targetId });

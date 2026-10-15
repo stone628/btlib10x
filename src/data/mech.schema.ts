@@ -590,6 +590,19 @@ export function validateMechDef(def: MechDef): MechDef {
   }
   if (!Number.isInteger(jumping) || jumping < 0)
     errors.push("jumping must be a non-negative integer");
+  // Crit damage takes 1 jump MP per destroyed jumpJet slot (`effectiveMovement`),
+  // so the rating must be one MP per slot. Improved jump jets (2 slots per MP)
+  // would need their own slot name.
+  const jumpJets = LOCATIONS.reduce(
+    (n, loc) =>
+      n +
+      (def.critSlots[loc] ?? []).filter((s) => s.kind === "structure" && s.name === "jumpJet")
+        .length,
+    0,
+  );
+  if (jumping !== jumpJets) {
+    errors.push(`jumping must equal the number of jumpJet crit slots (${jumpJets})`);
+  }
 
   for (const loc of LOCATIONS) {
     const v = def.armor[loc];

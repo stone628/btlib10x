@@ -134,7 +134,7 @@ describe("voluntary startup", () => {
   it("blocks an unconscious pilot's startup at heat 14+ but not below 14", () => {
     const state = startMovementTurn(hbkVsEnf());
     const hbk = requireUnit(state, "hbk");
-    hbk.unconscious = true;
+    hbk.unconsciousSinceTurn = state.turn;
     hbk.heat = 18;
     voluntaryShutdown(state, "hbk", []);
     const events: GameEvent[] = [];
@@ -144,7 +144,7 @@ describe("voluntary startup", () => {
 
     const low = startMovementTurn(hbkVsEnf());
     const hbk2 = requireUnit(low, "hbk");
-    hbk2.unconscious = true;
+    hbk2.unconsciousSinceTurn = low.turn;
     voluntaryShutdown(low, "hbk", []);
     attemptVoluntaryStartup(low, "hbk", [], scriptedRng());
     expect(hbk2.shutdown).toBe("not");

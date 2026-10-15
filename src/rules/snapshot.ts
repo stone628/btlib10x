@@ -25,7 +25,7 @@
  * except that cells are listed only when not clear/level 0.
  *
  * Objects whose fields are all `readonly` (`HexCoord`, attack declarations,
- * `HeldClub`, `ClubPickupDecl`, `ClubGroundToken`, `WreckState`) are replaced
+ * `HeldClub`, `DeclaredPickup`, `ClubGroundToken`, `WreckState`) are replaced
  * wholesale by the engine, never edited in place, so snapshots and live state
  * share them by reference; only mutable containers and records are copied.
  *
@@ -41,7 +41,7 @@
 import { hexCell } from "../core/terrain";
 import type { HexCell, Location, TerrainType, WreckState } from "../core/types";
 import type { AmmoBins } from "./ammo";
-import type { BuildingState, BuildingType } from "./building";
+import { assertBuildingsMatchCells, type BuildingState } from "./building";
 import { type CritMask, cloneCritTable } from "./critical";
 import type { UnitDamageState } from "./damage";
 import type { BattleState, ClubGroundToken, MeleeCharge, Phase, UnitState } from "./game";
@@ -76,7 +76,7 @@ function cloneMeleeCharge(charge: MeleeCharge): MeleeCharge {
 }
 
 function cloneBuildingState(building: BuildingState): BuildingState {
-  return { cf: building.cf, type: building.type };
+  return { cf: building.cf };
 }
 
 function cloneUnitState(unit: UnitState): UnitState {
@@ -88,7 +88,6 @@ function cloneUnitState(unit: UnitState): UnitState {
     piloting: unit.piloting,
     pilotHits: unit.pilotHits,
     pilotHitMax: unit.pilotHitMax,
-    unconscious: unit.unconscious,
     unconsciousSinceTurn: unit.unconsciousSinceTurn,
     prone: unit.prone,
     position: unit.position,
@@ -99,7 +98,6 @@ function cloneUnitState(unit: UnitState): UnitState {
     autoEject: unit.autoEject,
     jammedWeapons: [...unit.jammedWeapons],
     critSlotsDestroyed: cloneCritTable(unit.critSlotsDestroyed),
-    destroyedWeapons: [...unit.destroyedWeapons],
     blownOffLimbs: unit.blownOffLimbs.map((l) => ({ ...l })),
     club: unit.club,
     declaredPickup: unit.declaredPickup,
@@ -217,7 +215,9 @@ function unpackBattle(packed: PackedBattle): BattleSnapshot {
   for (const unit of Object.values(packed.units)) {
     if (typeof unit.autoEject !== "boolean") unit.autoEject = true;
   }
-  return { ...packed, cells: unpackCells(packed.cells, packed.width * packed.height) };
+  const cells = unpackCells(packed.cells, packed.width * packed.height);
+  assertBuildingsMatchCells(cells, packed.width, packed.buildings, packed.rubbleOrigin);
+  return { ...packed, cells };
 }
 
 /** Deep copy of every battle field except `units` and `cells`. */
@@ -287,7 +287,7 @@ function loadClonedBattleState(state: BattleState, snapshot: BattleSnapshot): vo
   }
   for (const key of Object.keys(state.rubbleOrigin)) delete state.rubbleOrigin[key];
   for (const [key, origin] of Object.entries(snapshot.rubbleOrigin)) {
-    state.rubbleOrigin[key] = origin as BuildingType;
+    state.rubbleOrigin[key] = origin;
   }
 }
 
@@ -303,7 +303,6 @@ export function loadUnitState(unit: UnitState, snapshot: UnitSnapshot): void {
   unit.piloting = next.piloting;
   unit.pilotHits = next.pilotHits;
   unit.pilotHitMax = next.pilotHitMax;
-  unit.unconscious = next.unconscious;
   unit.unconsciousSinceTurn = next.unconsciousSinceTurn;
   unit.prone = next.prone;
   unit.position = next.position;
@@ -314,7 +313,6 @@ export function loadUnitState(unit: UnitState, snapshot: UnitSnapshot): void {
   unit.autoEject = next.autoEject;
   unit.jammedWeapons = next.jammedWeapons;
   unit.critSlotsDestroyed = next.critSlotsDestroyed;
-  unit.destroyedWeapons = next.destroyedWeapons;
   unit.blownOffLimbs = next.blownOffLimbs.map((l) => ({ ...l }));
   unit.club = next.club;
   unit.declaredPickup = next.declaredPickup;

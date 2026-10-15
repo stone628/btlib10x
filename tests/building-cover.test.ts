@@ -90,7 +90,7 @@ describe("partial cover for powered-down targets", () => {
     expect(partialCoverMod(state, a, t)).toBe(1);
     t.shutdown = "heat";
     expect(partialCoverMod(state, a, t)).toBe(1);
-    t.unconscious = true;
+    t.unconsciousSinceTurn = state.turn;
     expect(partialCoverMod(state, a, t)).toBe(1);
     t.prone = true;
     expect(partialCoverMod(state, a, t)).toBe(0);

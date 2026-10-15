@@ -29,9 +29,10 @@ import {
   rollInitiativePhase,
   wreckAt,
 } from "../src/rules/game";
+import { isPilotUnconscious } from "../src/rules/pilot";
 import { rollFallDirection } from "../src/rules/piloting";
 
-import { createTestBattle, scriptedRng } from "./helpers";
+import { createTestBattle, groupsTotaling, scriptedRng } from "./helpers";
 
 function hbkEnf(critsDisabled = true) {
   return createTestBattle(
@@ -445,7 +446,7 @@ describe("immediate shutdown PSR (+3)", () => {
     advancePhase(state, [], scriptedRng(1, 1, 1, 3, 4, 3, 3, 3, 1, 6, 6, 6, 6, 6, 6, 6));
     expect(hbk.prone).toBe(true);
     expect(hbk.pilotHits).toBe(3);
-    expect(hbk.unconscious).toBe(false);
+    expect(isPilotUnconscious(hbk)).toBe(false);
   });
 });
 
@@ -611,7 +612,7 @@ describe("building crash auto-fall", () => {
     });
     expect(enf.prone).toBe(true);
     expect(enf.pilotHits).toBe(1);
-    expect(enf.unconscious).toBe(true);
+    expect(isPilotUnconscious(enf)).toBe(true);
   });
 
   it("crash that does not destroy the leg does not trigger auto-fall", () => {
@@ -631,7 +632,7 @@ describe("building crash auto-fall", () => {
       rng: scriptedRng(1, 2, 2, 3, 3, 3, 3),
     });
     expect(enf.prone).toBe(false);
-    expect(enf.unconscious).toBe(false);
+    expect(isPilotUnconscious(enf)).toBe(false);
   });
 });
 
@@ -710,7 +711,6 @@ describe("going prone voluntarily", () => {
         unitId: "enf",
         cause: { kind: "voluntaryDrop" },
         column: "front",
-        totalDamage: 0,
         groups: [],
         crits: [],
       }),
@@ -747,7 +747,7 @@ describe("going prone voluntarily", () => {
     // TW p.49: dropping causes no falling damage on any terrain.
     expect(enf.damage.armor).toEqual(armorBefore);
     expect(events).toContainEqual(
-      expect.objectContaining({ kind: "unitFell", unitId: "enf", totalDamage: 0 }),
+      expect.objectContaining({ kind: "unitFell", unitId: "enf", groups: groupsTotaling(0) }),
     );
   });
 
@@ -1005,7 +1005,7 @@ describe("pilot damage", () => {
     // TN 3: 1+1 fails; the second point needs no roll.
     applyPilotHits(state, enf, 2, "ammoExplosion", scriptedRng(1, 1), events);
     expect(enf.pilotHits).toBe(2);
-    expect(enf.unconscious).toBe(true);
+    expect(isPilotUnconscious(enf)).toBe(true);
     expect(events).toEqual([
       expect.objectContaining({ kind: "pilotDamaged", hits: 2 }),
       expect.objectContaining({
@@ -1048,7 +1048,7 @@ describe("pilot damage", () => {
     const events: GameEvent[] = [];
     // TN 3 for 1 hit: 2+2 wakes the pilot.
     resolveHeatPhase(state, scriptedRng(2, 2), events);
-    expect(enf.unconscious).toBe(false);
+    expect(isPilotUnconscious(enf)).toBe(false);
     expect(events).toContainEqual(
       expect.objectContaining({
         kind: "consciousnessCheck",
@@ -1067,7 +1067,7 @@ describe("pilot damage", () => {
     toMovement(state, scriptedRng(2, 2, 5, 5));
     const enf = requireUnit(state, "enf");
     applyPilotHits(state, enf, 1, "fall", scriptedRng(1, 1), []);
-    expect(enf.unconscious).toBe(true);
+    expect(isPilotUnconscious(enf)).toBe(true);
     expect(isImmobile(enf)).toBe(true);
     expect(nextActor(state)).toBe("hbk");
   });
@@ -1182,7 +1182,7 @@ describe("movement terrain PSRs", () => {
     const hbk = requireUnit(state, "hbk");
     expect(hbk.prone).toBe(false);
     expect(crashEvents).toContainEqual(
-      expect.objectContaining({ kind: "buildingCrash", unitId: "hbk", totalDamage: 2 }),
+      expect.objectContaining({ kind: "buildingCrash", unitId: "hbk", groups: groupsTotaling(2) }),
     );
   });
 
@@ -1215,7 +1215,7 @@ describe("movement terrain PSRs", () => {
         kind: "unitFell",
         unitId: "hbk",
         levelsFallen: 2,
-        totalDamage: 15,
+        groups: groupsTotaling(15),
       }),
     );
     expect(events).toContainEqual(
@@ -1254,7 +1254,7 @@ describe("movement terrain PSRs", () => {
         kind: "unitFell",
         unitId: "hbk",
         levelsFallen: 0,
-        totalDamage: 5,
+        groups: groupsTotaling(5),
       }),
     );
   });
@@ -1288,7 +1288,7 @@ describe("movement terrain PSRs", () => {
         kind: "unitFell",
         unitId: "enf",
         levelsFallen: 1,
-        totalDamage: 5,
+        groups: groupsTotaling(5),
       }),
     );
   });
@@ -1336,7 +1336,7 @@ describe("applyFall", () => {
         kind: "unitFell",
         unitId: "enf",
         levelsFallen: 0,
-        totalDamage: 2,
+        groups: groupsTotaling(2),
       }),
     );
   });
@@ -1364,7 +1364,7 @@ describe("applyFall", () => {
         kind: "unitFell",
         unitId: "enf",
         levelsFallen: 2,
-        totalDamage: 15,
+        groups: groupsTotaling(15),
       }),
     );
   });

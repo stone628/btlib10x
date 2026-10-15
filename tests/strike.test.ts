@@ -24,7 +24,7 @@ import type { Location } from "../src/core/types";
 import { type MechDef, type ResolvedMechDef, resolveMechDef } from "../src/data/index";
 import { parseWeaponsData } from "../src/data/weapon.schema";
 import { WEAPON_DATA } from "../src/data/weapons.data";
-import { setSlotDestroyed } from "../src/rules/critical";
+import { isWeaponCritted, setSlotDestroyed } from "../src/rules/critical";
 
 /** Raw HCT-5S sheet as written in data/mechs/hct-5s.json. */
 const hct5sRaw = hct5sJson as unknown as MechDef;
@@ -56,7 +56,7 @@ import {
   queuePhysicalAttack,
   type Session,
 } from "../web/terminal/session";
-import { disableCritical, execute, seededRng } from "./helpers";
+import { critWeapon, disableCritical, execute, seededRng } from "./helpers";
 
 function makeUnitInit(
   id: string,
@@ -260,7 +260,7 @@ describe("strike validation", () => {
     const hatchetIndex = Number(
       Object.keys(def.weapons).find((k) => def.weapons[Number(k)]?.weapon === "Hatchet"),
     );
-    battle.units.a!.destroyedWeapons.push(hatchetIndex);
+    critWeapon(battle.units.a!, hatchetIndex);
     const result = validatePhysicalAttack(battle, "a", hatchetDecl());
     expect(result.ok).toBe(false);
     expect(result.reason).toContain("destroyed");
@@ -622,7 +622,10 @@ describe("simultaneous physical sub-pass (PHY-05)", () => {
       );
       resolveAllAttacks(battle, rng, events);
       const strike = events.find((e) => e.kind === "physicalAttackResolved" && e.unitId === "a");
-      if (!a.destroyedWeapons.includes(hatchet) || strike?.kind !== "physicalAttackResolved")
+      if (
+        !isWeaponCritted(def, a.critSlotsDestroyed, hatchet) ||
+        strike?.kind !== "physicalAttackResolved"
+      )
         continue;
       seen++;
       expect(strike.resolution.missReason ?? "").not.toMatch(/^invalid:/);

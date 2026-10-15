@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { weaponDefFor } from "../src/data/weapon.schema";
-import { computeToHit, weaponToHitModifier } from "../src/rules/tohit";
+import { computeToHit, toHitTotal, weaponToHitModifier } from "../src/rules/tohit";
 
 describe("GATOR to-hit calculation", () => {
   // Total Warfare, Rolling To Hit diagram (p.106):
@@ -17,7 +17,7 @@ describe("GATOR to-hit calculation", () => {
       distance: 4,
       weapon: weaponDefFor({ weapon: "Medium Laser" }),
     });
-    expect(bd.total).toBe(9);
+    expect(toHitTotal(bd)).toBe(9);
     expect(bd.rangeBracket).toBe("medium");
   });
 
@@ -34,7 +34,7 @@ describe("GATOR to-hit calculation", () => {
       distance: 4,
       weapon: weaponDefFor({ weapon: "PPC" }),
     });
-    expect(bd.total).toBe(8);
+    expect(toHitTotal(bd)).toBe(8);
     expect(bd.rangeBracket).toBe("short");
   });
 
@@ -53,7 +53,7 @@ describe("GATOR to-hit calculation", () => {
       distance: 4,
       weapon: weaponDefFor({ weapon: "Medium Laser" }),
     });
-    expect(ml.total).toBe(7);
+    expect(toHitTotal(ml)).toBe(7);
 
     const ac20 = computeToHit({
       gunnery: 4,
@@ -65,7 +65,7 @@ describe("GATOR to-hit calculation", () => {
       distance: 2,
       weapon: weaponDefFor({ weapon: "AC/20" }),
     });
-    expect(ac20.total).toBe(8);
+    expect(toHitTotal(ac20)).toBe(8);
 
     const ll = computeToHit({
       gunnery: 4,
@@ -77,21 +77,23 @@ describe("GATOR to-hit calculation", () => {
       distance: 4,
       weapon: weaponDefFor({ weapon: "Large Laser" }),
     });
-    expect(ll.total).toBe(4);
+    expect(toHitTotal(ll)).toBe(4);
   });
 
   it("applies target movement bands and jump bonus", () => {
     const mk = (moved: number, jumped = false) =>
-      computeToHit({
-        gunnery: 4,
-        attackerMovement: "standStill",
-        targetHexesMoved: moved,
-        targetJumped: jumped,
-        targetTerrain: "clear",
-        interveningWoods: 0,
-        distance: 1,
-        weapon: weaponDefFor({ weapon: "Small Laser" }),
-      }).total;
+      toHitTotal(
+        computeToHit({
+          gunnery: 4,
+          attackerMovement: "standStill",
+          targetHexesMoved: moved,
+          targetJumped: jumped,
+          targetTerrain: "clear",
+          interveningWoods: 0,
+          distance: 1,
+          weapon: weaponDefFor({ weapon: "Small Laser" }),
+        }),
+      );
     expect(mk(2)).toBe(4);
     expect(mk(3)).toBe(5);
     expect(mk(6)).toBe(6);
@@ -142,7 +144,7 @@ describe("GATOR to-hit calculation", () => {
     const online = computeToHit(base);
     const immobile = computeToHit({ ...base, targetImmobile: true });
     expect(immobile.targetMod).toBe(-4);
-    expect(immobile.total).toBe(online.total - 4);
+    expect(toHitTotal(immobile)).toBe(toHitTotal(online) - 4);
   });
 
   it("partial-cover target adds +1 cover modifier, separate from terrain", () => {
@@ -162,7 +164,7 @@ describe("GATOR to-hit calculation", () => {
     const covered = computeToHit({ ...base, partialCoverMod: 1 });
     expect(covered.terrainMod).toBe(0);
     expect(covered.coverMod).toBe(1);
-    expect(covered.total).toBe(plain.total + 1);
+    expect(toHitTotal(covered)).toBe(toHitTotal(plain) + 1);
   });
 
   it("woods and cover stack as separate terms", () => {
@@ -179,7 +181,7 @@ describe("GATOR to-hit calculation", () => {
     const bd = computeToHit({ ...base, partialCoverMod: 1 });
     expect(bd.terrainMod).toBe(2);
     expect(bd.coverMod).toBe(1);
-    expect(bd.total).toBe(4 + 2 + 1);
+    expect(toHitTotal(bd)).toBe(4 + 2 + 1);
   });
 
   it("flags auto-hit <= 2 and auto-miss > 12", () => {
@@ -253,11 +255,11 @@ describe("GATOR to-hit calculation", () => {
       });
 
     expect(at(1).minRangeMod).toBe(2);
-    expect(at(1).total).toBe(6); // gunnery 4 + min (2-1+1) 2
+    expect(toHitTotal(at(1))).toBe(6); // gunnery 4 + min (2-1+1) 2
     expect(at(2).minRangeMod).toBe(1);
-    expect(at(2).total).toBe(5); // gunnery 4 + min (2-2+1) 1
+    expect(toHitTotal(at(2))).toBe(5); // gunnery 4 + min (2-2+1) 1
     expect(at(3).minRangeMod).toBe(0);
-    expect(at(3).total).toBe(4); // within short range, no penalty
+    expect(toHitTotal(at(3))).toBe(4); // within short range, no penalty
   });
 
   it("applies the weapon To-Hit Mod column (TW p.303-304)", () => {
@@ -286,7 +288,7 @@ describe("GATOR to-hit calculation", () => {
     const mrm = computeToHit({ ...base, weapon: weaponDefFor({ weapon: "MRM 10" }) });
     const ml = computeToHit({ ...base, weapon: weaponDefFor({ weapon: "Medium Laser" }) });
     expect(ml.rangeBracket).toBe(mrm.rangeBracket);
-    expect(mrm.total).toBe(ml.total + 1);
+    expect(toHitTotal(mrm)).toBe(toHitTotal(ml) + 1);
   });
 
   it("falls back to -2 for legacy pulse-only defs without toHitMod", () => {

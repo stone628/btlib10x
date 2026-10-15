@@ -261,3 +261,30 @@ describe("club marker", () => {
     expect(plain).not.toContain(CLUB_MARKER);
   });
 });
+
+describe("single-column reachable crop", () => {
+  const map: MapDef = { name: "crop", width: 6, height: 6, terrain: [], legends: [] };
+  const cropAt = (col: number, row: number): string[] =>
+    boardToText(
+      createBoardModel({
+        map,
+        units: null,
+        reachable: { team: 1, revealed: [{ hex: { col, row }, facing: "n", path: [] }] },
+        clubHexes: null,
+      }),
+    ).split("\n");
+
+  // Regression: a zero-MP standup on an even column cropped to one hex drew
+  // only its top half (the even-column stagger pushed it past the canvas).
+  it.each([
+    [4, 3],
+    [3, 3],
+  ])("draws the whole hex at (%i,%i)", (col, row) => {
+    const lines = cropAt(col, row);
+    expect(lines[0]?.trim()).toBe(GRID_GLYPHS.edgeTop.repeat(4));
+    expect(
+      lines.some((l) => l.includes(GRID_GLYPHS.edgeSW) && l.includes(GRID_GLYPHS.edgeSE)),
+    ).toBe(true);
+    expect(lines.at(-1)?.trim()).toBe(GRID_GLYPHS.edgeBottom.repeat(4));
+  });
+});

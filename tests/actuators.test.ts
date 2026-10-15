@@ -8,7 +8,7 @@ import { type CritMask, emptyCritTable, setSlotDestroyed } from "../src/rules/cr
 import type { UnitDamageState } from "../src/rules/damage";
 import { suggestFireTargets } from "../src/rules/fireability";
 import { buildUnitInit } from "../src/rules/game";
-import { computeToHit } from "../src/rules/tohit";
+import { computeToHit, toHitTotal } from "../src/rules/tohit";
 import { createTestBattle, scriptedRng } from "./helpers";
 
 function freshFlags(def = mechDef("TBR-Prime")!) {
@@ -95,8 +95,8 @@ describe("arm actuator weapon modifiers (TW p.125)", () => {
       distance: 3,
       weapon: { name: wdef.weapon, short: 3, medium: 6, long: 9 } as never,
     };
-    expect(computeToHit(base).total).toBe(4);
-    expect(computeToHit({ ...base, actuatorMod: 4 }).total).toBe(8);
+    expect(toHitTotal(computeToHit(base))).toBe(4);
+    expect(toHitTotal(computeToHit({ ...base, actuatorMod: 4 }))).toBe(8);
     expect(computeToHit({ ...base, actuatorMod: 4 }).actuatorMod).toBe(4);
   });
 

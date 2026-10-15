@@ -3,8 +3,8 @@ import type { HexGrid } from "../src/core/terrain";
 import type { HexCell } from "../src/core/types";
 import {
   applyBuildingDamage,
-  buildingTypeOf,
   createBuildingState,
+  isBuildingTerrain,
   isCollapsed,
 } from "../src/rules/building";
 import {
@@ -26,36 +26,37 @@ import { punchHitLocation } from "../src/rules/hitlocation";
 import { losBlockedByWater } from "../src/rules/los";
 import { createTestBattle, scriptedRng } from "./helpers";
 
-describe("buildingTypeOf", () => {
-  it("maps each building terrain to its sub-type", () => {
-    expect(buildingTypeOf("lightBuilding")).toBe("light");
-    expect(buildingTypeOf("mediumBuilding")).toBe("medium");
-    expect(buildingTypeOf("heavyBuilding")).toBe("heavy");
-    expect(buildingTypeOf("hardenedBuilding")).toBe("hardened");
+describe("isBuildingTerrain", () => {
+  it("accepts each building terrain", () => {
+    expect(isBuildingTerrain("lightBuilding")).toBe(true);
+    expect(isBuildingTerrain("mediumBuilding")).toBe(true);
+    expect(isBuildingTerrain("heavyBuilding")).toBe(true);
+    expect(isBuildingTerrain("hardenedBuilding")).toBe(true);
   });
 
-  it("returns undefined for non-building terrain", () => {
-    expect(buildingTypeOf("clear")).toBeUndefined();
-    expect(buildingTypeOf("lightWoods")).toBeUndefined();
-    expect(buildingTypeOf("water1")).toBeUndefined();
+  it("rejects non-building terrain", () => {
+    expect(isBuildingTerrain("clear")).toBe(false);
+    expect(isBuildingTerrain("lightWoods")).toBe(false);
+    expect(isBuildingTerrain("rubble")).toBe(false);
+    expect(isBuildingTerrain("toString")).toBe(false);
   });
 });
 
 describe("building damage and collapse", () => {
   it("applies damage to the structural factor", () => {
-    const b = createBuildingState("light"); // CF 15
+    const b = createBuildingState("lightBuilding"); // CF 15
     expect(applyBuildingDamage(b, 5).cf).toBe(10);
   });
 
   it("clamps CF at 0 (collapse) and reports collapsed", () => {
-    const b = createBuildingState("light");
+    const b = createBuildingState("lightBuilding");
     const collapsed = applyBuildingDamage(b, 20);
     expect(collapsed.cf).toBe(0);
     expect(isCollapsed(collapsed)).toBe(true);
   });
 
   it("hardened buildings start at the unspecified-building default CF", () => {
-    expect(createBuildingState("hardened").cf).toBe(120);
+    expect(createBuildingState("hardenedBuilding").cf).toBe(120);
   });
 });
 
@@ -103,7 +104,7 @@ function battleWithBuilding(): BattleState {
 describe("battle building integration", () => {
   it("initializes building state from terrain", () => {
     const battle = battleWithBuilding();
-    expect(battle.buildings["3,3"]).toEqual({ cf: 15, type: "light" });
+    expect(battle.buildings["3,3"]).toEqual({ cf: 15 });
   });
 
   it("damaging a building below its CF does not collapse it", () => {
@@ -133,6 +134,7 @@ describe("battle building integration", () => {
     // width = max(3,3)+1 = 4, so index of (3,3) is (3-1)+(3-1)*4 = 10.
     expect(battle.cells[10]!.terrain).toBe("rubble");
     expect(events.some((e) => e.kind === "buildingCollapsed")).toBe(true);
+    expect(battle.rubbleOrigin["3,3"]).toBe("lightBuilding");
   });
 
   it("ignores damage to non-building hexes", () => {
@@ -249,7 +251,7 @@ describe("battle building integration", () => {
     );
     // CF 1: a single AC/20 grouping tolls 1 (19 reaches the occupant) and collapses the hex.
     // Collapse total = ceil(1/10 x 3) = 1, one punch-table group.
-    battle.buildings["3,3"] = { cf: 1, type: "light" };
+    battle.buildings["3,3"] = { cf: 1 };
     // RNG: initiative; to-hit; location 7 (center torso); punch 2
     // (leftTorso); 20+ damage PSR; padding.
     const rng = scriptedRng(1, 2, 3, 3, 3, 3, 3, 4, 2, 3, 3, 3, 3, 3, 3);
@@ -290,7 +292,7 @@ describe("battle building integration", () => {
       ],
       true,
     );
-    battle.buildings["3,3"] = { cf: 1, type: "light" };
+    battle.buildings["3,3"] = { cf: 1 };
     // RNG: initiative; to-hit 6 (TN 5 with partial cover); location 7;
     // punch 2 (leftTorso); fall direction 1 (front); three falling groups
     // (50t x 3 levels = 15) on 6 (rightTorso); padding for seatbelt/PSRs.

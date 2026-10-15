@@ -1,7 +1,18 @@
 import type { Facing, HexCoord, Location, Rng, TerrainType } from "../src/core/types";
-import { type AmmoBins, bearingExact, createBattle, isUnitRemoved } from "../src/index";
+import {
+  type AmmoBins,
+  bearingExact,
+  type CritState,
+  createBattle,
+  emptyCritTable,
+  isUnitRemoved,
+  mechDefFor,
+  type ResolvedMechDef,
+  setSlotDestroyed,
+} from "../src/index";
 import type { BattleState, TerrainHexDef, UnitInit, UnitState } from "../src/rules/game";
 import { advancePhase, requireUnit } from "../src/rules/game";
+import { type DamageGroup, damageGroupsTotal } from "../src/rules/physical";
 import type { Chunk } from "../web/terminal/chunk";
 import { runChunks } from "../web/terminal/cli";
 import { boardLegendText, boardToText, createBoardModel } from "../web/terminal/renderer.text";
@@ -42,6 +53,36 @@ export function createTestBattle(
   );
   advancePhase(state, [], scriptedRng()); // end -> initiative (turn 1)
   return state;
+}
+
+/** A pristine unit state (full armor and structure, no crit flags) around
+ *  `ammoBins`, for the ammo helpers that read bin liveness. */
+export function critState(def: ResolvedMechDef, ammoBins: AmmoBins): CritState {
+  return {
+    damage: {
+      armor: { ...def.armor },
+      armorRear: { ...def.armorRear },
+      internalStructure: { ...def.internalStructure },
+    },
+    critSlotsDestroyed: emptyCritTable(def),
+    ammoBins,
+  };
+}
+
+/** Flag the first crit slot of weapon `weaponIndex`, as a critical hit on it
+ *  would: the slot flags are the only record of a destroyed weapon. */
+export function critWeapon(unit: UnitState, weaponIndex: number): void {
+  const def = mechDefFor(unit);
+  for (const loc of Object.keys(def.critSlots) as Location[]) {
+    const i = def.critSlots[loc].findIndex(
+      (s) => s.kind === "weapon" && s.weaponIndex === weaponIndex,
+    );
+    if (i >= 0) {
+      setSlotDestroyed(unit.critSlotsDestroyed, loc, i);
+      return;
+    }
+  }
+  throw new Error(`critWeapon: no slot for weapon ${weaponIndex} on ${unit.id}`);
 }
 
 export function disableCritical(s: Session) {
@@ -179,4 +220,15 @@ export function checkVictory(state: BattleState): VictoryResult {
  *  returned deterministically; use `bearingExact` when the boundary matters. */
 export function bearing(from: HexCoord, to: HexCoord): Facing | null {
   return bearingExact(from, to)?.facing ?? null;
+}
+
+/** Asymmetric matcher for an event's `groups`: their damage sums to `n`. */
+export function groupsTotaling(n: number): {
+  asymmetricMatch(groups: readonly DamageGroup[]): boolean;
+  toString(): string;
+} {
+  return {
+    asymmetricMatch: (groups) => damageGroupsTotal(groups) === n,
+    toString: () => `groups totaling ${n}`,
+  };
 }

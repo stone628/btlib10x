@@ -28,6 +28,8 @@ import {
   toHitHeatModifier,
   waterHeatBonus,
 } from "../src/rules/heat";
+import { damageGroupsTotal } from "../src/rules/physical";
+import { isPilotUnconscious } from "../src/rules/pilot";
 import { createTestBattle, scriptedRng, seededRng } from "./helpers";
 
 function hbkVsEnf(): BattleState {
@@ -284,7 +286,7 @@ describe("largestAmmoBin", () => {
     const state = hbkVsEnf();
     const unit = requireUnit(state, "hbk");
     const def = mechDefFor(unit);
-    const bin = largestAmmoBin(def, unit.ammoBins, scriptedRng(6));
+    const bin = largestAmmoBin(def, unit, scriptedRng(6));
     expect(bin).not.toBeNull();
     expect(bin!.weapon).toBe("AC/20");
     // 10 declared shots spread over two 5-shot bins: only the single
@@ -300,7 +302,7 @@ describe("largestAmmoBin", () => {
     // BZK-F3 mounts two gauss ammo bins in the center torso.
     expect(unit.ammoBins["centerTorso:11"]).toBe(8);
     expect(unit.ammoBins["centerTorso:12"]).toBe(8);
-    expect(largestAmmoBin(def, unit.ammoBins, scriptedRng(6))).toBeNull();
+    expect(largestAmmoBin(def, unit, scriptedRng(6))).toBeNull();
   });
 
   it("picks by per-shot DV first (TW p.160): SRM-6 bin over fuller AC/5", () => {
@@ -327,7 +329,7 @@ describe("largestAmmoBin", () => {
     for (const id of Object.keys(unit.ammoBins)) {
       if (srm6.has(id)) unit.ammoBins[id] = 1;
     }
-    const bin = largestAmmoBin(def, unit.ammoBins, scriptedRng(6));
+    const bin = largestAmmoBin(def, unit, scriptedRng(6));
     expect(bin).not.toBeNull();
     expect(bin!.weapon).toBe("SRM 6");
     expect(bin!.damagePerShot).toBe(12);
@@ -651,7 +653,6 @@ describe("game integration: shutdown", () => {
   it("gives an unconscious pilot no avoid roll and no shutdown PSR: automatic shutdown and fall", () => {
     const state = hbkVsEnf();
     const hbk = requireUnit(state, "hbk");
-    hbk.unconscious = true;
     hbk.unconsciousSinceTurn = state.turn;
     // Post-dissipation: 31 - 13 = 18 endHeat (avoid 6); a 12 would have passed.
     hbk.heat = 31;
@@ -676,7 +677,6 @@ describe("game integration: shutdown", () => {
   it("blocks an unconscious pilot's heat restart at 14+ but restarts automatically below 14", () => {
     const blocked = hbkVsEnf();
     const hbk = requireUnit(blocked, "hbk");
-    hbk.unconscious = true;
     hbk.unconsciousSinceTurn = blocked.turn;
     hbk.shutdown = "heat";
     // Post-dissipation: 31 - 13 = 18 endHeat (avoid 6).
@@ -693,7 +693,6 @@ describe("game integration: shutdown", () => {
 
     const auto = hbkVsEnf();
     const hbk2 = requireUnit(auto, "hbk");
-    hbk2.unconscious = true;
     hbk2.unconsciousSinceTurn = auto.turn;
     hbk2.shutdown = "heat";
     hbk2.heat = 10;
@@ -893,7 +892,7 @@ describe("game integration: heat ammo explosion", () => {
     expect(ammoCheck.rolls).toHaveLength(2);
     expect(ammoCheck).toMatchObject({ required: 2, failedAt: null, success: true });
     expect(hbk.pilotHits).toBe(3);
-    expect(hbk.unconscious).toBe(false);
+    expect(isPilotUnconscious(hbk)).toBe(false);
     expect(hbk.removed).toBe("pilotEjected");
   });
 
@@ -1156,7 +1155,7 @@ describe("heat shutdown fall in deep water (HEAT-02)", () => {
       if (fell?.kind === "unitFell") {
         seen = true;
         // 50 tons: 5 damage on land, 2 halved underwater.
-        expect(fell.totalDamage).toBe(2);
+        expect(damageGroupsTotal(fell.groups)).toBe(2);
       }
     }
     expect(seen).toBe(true);

@@ -16,6 +16,7 @@ import {
 import { losClear } from "../src/rules/los";
 import { reachableLandings } from "../src/rules/movement";
 import { ejectionModifier } from "../src/rules/piloting";
+import { toHitTotal } from "../src/rules/tohit";
 import { checkVictory, createTestBattle, scriptedRng } from "./helpers";
 
 function hbkVsEnf(): BattleState {
@@ -279,10 +280,10 @@ describe("eject", () => {
     });
     expect(covered.breakdown.terrainMod).toBe(0);
     expect(covered.breakdown.coverMod).toBe(2);
-    expect(covered.breakdown.total).toBe(2);
+    expect(toHitTotal(covered.breakdown)).toBe(2);
     expect(covered.hit).toBe(true);
     expect(covered.groups).toHaveLength(0);
-    expect(covered.application).toBeNull();
+    expect(covered.applications).toEqual([]);
     // Control: without wreck cover the same rolls put damage on the leg.
     const open = resolveWeaponAttack({ ...base, rng: scriptedRng(6, 6, 2, 3) });
     expect(open.groups).toHaveLength(1);

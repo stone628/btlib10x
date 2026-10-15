@@ -29,7 +29,12 @@ import {
   effectiveFacingForTwist,
 } from "./arcs";
 import { isBuildingTerrain } from "./building";
-import { type CriticalResolution, type CritMask, destroyedStructures } from "./critical";
+import {
+  type CriticalResolution,
+  type CritMask,
+  destroyedStructures,
+  isWeaponCritted,
+} from "./critical";
 import {
   applyDamage,
   canFireFromLocation,
@@ -42,6 +47,7 @@ import { isTsmActive } from "./heat";
 import { hitLocationForArc, punchHitLocationForArc } from "./hitlocation";
 import { losWoodsPointsBetween } from "./los";
 import { attackerMovementModifier, TARGET_IMMOBILE_MOD, targetMovementModifier } from "./movement";
+import { isPilotUnconscious } from "./pilot";
 import { fallingDamageGroups } from "./piloting";
 import { PRONE_ATTACKER_MOD, proneTargetModifier } from "./tohit";
 
@@ -94,8 +100,20 @@ export interface PhysicalModifiers {
   readonly actuatorMod: number;
   /** Prone attacker modifier (+2, cumulative with movement). */
   readonly proneMod: number;
-  /** Total to-hit number. */
-  readonly total: number;
+}
+
+/** Physical to-hit number: the sum of the modifiers. */
+export function physicalToHitTotal(m: PhysicalModifiers): number {
+  return (
+    m.base +
+    m.attackMod +
+    m.attackerMoveMod +
+    m.targetMoveMod +
+    m.terrainMod +
+    m.coverMod +
+    m.actuatorMod +
+    m.proneMod
+  );
 }
 
 export interface DamageGroup {
@@ -111,6 +129,13 @@ export interface DamageGroup {
   readonly arc?: Arc;
 }
 
+/** Damage of all the groups together. */
+export function damageGroupsTotal(groups: readonly DamageGroup[]): number {
+  let n = 0;
+  for (const g of groups) n += g.damage;
+  return n;
+}
+
 export interface PhysicalResolution {
   readonly type: PhysicalAttackType;
   readonly attackerId: string;
@@ -124,11 +149,11 @@ export interface PhysicalResolution {
   readonly autoMiss: boolean;
   readonly damageToTarget: DamageGroup[];
   readonly damageToAttacker: DamageGroup[];
-  /** Merged damage application for `damageToTarget` — drives the armor-change
-   *  detail line (`blastDetail`), same shape as weapon `application`. */
-  readonly application: DamageApplication | null;
-  /** Merged damage application for `damageToAttacker` (self-damage detail). */
-  readonly attackerApplication: DamageApplication | null;
+  /** One damage application per `damageToTarget` group, in order, as for
+   *  weapon `applications`; drives the armor-change detail (`blastDetail`). */
+  readonly applications: readonly DamageApplication[];
+  /** The same for `damageToAttacker` (self-damage detail). */
+  readonly attackerApplications: readonly DamageApplication[];
   /** Critical resolutions triggered by the target damage, rendered with the
    *  same `critLines` formatter as weapon `crits`. */
   readonly crits: readonly CriticalResolution[];
@@ -272,16 +297,6 @@ export function computePhysicalToHit(
   // Prone attacker modifier (TW p. 113), cumulative with movement above.
   const proneMod = attacker.prone ? PRONE_ATTACKER_MOD : 0;
 
-  const total =
-    base +
-    attackMod +
-    attackerMoveMod +
-    targetMoveMod +
-    terrainMod +
-    coverMod +
-    actuatorMod +
-    proneMod;
-
   return {
     base,
     attackMod,
@@ -291,7 +306,6 @@ export function computePhysicalToHit(
     coverMod,
     actuatorMod,
     proneMod,
-    total,
   };
 }
 
@@ -711,7 +725,7 @@ export function validatePhysicalAttack(
   const attacker = battle.units[attackerId];
   if (!attacker) return { ok: false, reason: `Unknown unit ${attackerId}` };
   if (isUnitRemoved(attacker)) return { ok: false, reason: `${attackerId} is removed` };
-  if (attacker.unconscious) return { ok: false, reason: `${attackerId} is unconscious` };
+  if (isPilotUnconscious(attacker)) return { ok: false, reason: `${attackerId} is unconscious` };
 
   const target = battle.units[decl.targetId];
   if (!target) return { ok: false, reason: `Unknown target ${decl.targetId}` };
@@ -1037,13 +1051,14 @@ function validateStrike(
     return { ok: false, reason: `${attacker.id} does not mount a ${weapon.toLowerCase()}` };
   }
 
-  // A critical hit on any slot of the equipment destroys it (TW p.146).
-  const weaponIndex = strikeWeaponIndex(def, weapon, arm);
-  if (weaponIndex !== null && attacker.destroyedWeapons.includes(weaponIndex)) {
-    return { ok: false, reason: `${weapon} in ${arm} is destroyed` };
-  }
   if (!canFireFromLocation(startDamage, arm)) {
     return { ok: false, reason: `Cannot strike: ${arm} destroyed` };
+  }
+  // A critical hit on any slot of the equipment destroys it (TW p.146).
+  // Checked after the arm: a catastrophic wipe flags every slot there.
+  const weaponIndex = strikeWeaponIndex(def, weapon, arm);
+  if (weaponIndex !== null && isWeaponCritted(def, attacker.critSlotsDestroyed, weaponIndex)) {
+    return { ok: false, reason: `${weapon} in ${arm} is destroyed` };
   }
 
   // Shoulder must be undamaged in the striking arm (as for a punch).
@@ -1102,7 +1117,7 @@ export function resolvePhysicalAttack(
 
   // Compute to-hit.
   const mods = computePhysicalToHit(battle, attacker, target, decl.type, decl.limb, decl.weapon);
-  const total = mods.total;
+  const total = physicalToHitTotal(mods);
 
   // Auto-hit / auto-miss
   const autoHit = total <= PHYSICAL_MIN_TOHIT;
@@ -1201,8 +1216,8 @@ export function resolvePhysicalAttack(
     autoMiss,
     damageToTarget,
     damageToAttacker,
-    application: null,
-    attackerApplication: null,
+    applications: [],
+    attackerApplications: [],
     crits: [],
     notes,
     throughArmorCrit,

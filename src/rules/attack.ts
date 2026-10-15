@@ -1,14 +1,7 @@
 import { roll2D6 } from "../core/dice";
 import { hasPartialCover } from "../core/terrain";
-import type {
-  ArmLocation,
-  LimbLocation,
-  Location,
-  MoveMode,
-  Rng,
-  TerrainType,
-} from "../core/types";
-import type { ResolvedMechDef } from "../data/mech.schema";
+import type { ArmLocation, Location, MoveMode, Rng, TerrainType } from "../core/types";
+import type { MechModelHolder } from "../data/mech.schema";
 import type { WeaponDef } from "../data/weapon.schema";
 import { weaponDefFor } from "../data/weapon.schema";
 import type { AmmoBins } from "./ammo";
@@ -17,6 +10,7 @@ import { clusterHits, groupMissiles, modifiedClusterRoll } from "./cluster";
 import {
   type CriticalResolution,
   type CritMask,
+  type CritState,
   cloneCritTable,
   resolveCriticalHits,
 } from "./critical";
@@ -29,7 +23,7 @@ import {
 import { toHitHeatModifier } from "./heat";
 import { hitLocationForArc } from "./hitlocation";
 import { losWoodsPoints } from "./los";
-import { computeToHit, damageForBracket, type ToHitBreakdown } from "./tohit";
+import { computeToHit, damageForBracket, type ToHitBreakdown, toHitTotal } from "./tohit";
 
 export interface HitGroup {
   readonly location: Location;
@@ -106,20 +100,21 @@ export interface WeaponAttackInput {
    */
   readonly attackerHeat?: number;
   /**
-   * Target 'Mech definition; required for critical-hit resolution. Omit in
-   * tests that only care about raw damage. When provided, `targetDef` is
-   * used for crit-slot layout, weapon linkage, and the per-bin ammo state.
+   * Critical-hit context for the target, given as one value so its parts
+   * come from one snapshot. Omit it to resolve damage with no critical hits
+   * at all (`BattleState.critsDisabled`, damage-only tests).
    */
-  readonly targetDef?: ResolvedMechDef;
-  /** Pre-attack crit-slot destroyed flags (running state for this phase). */
-  readonly targetCritSlotsDestroyed?: CritMask;
+  readonly targetCrits?: TargetCritContext;
+}
+
+/**
+ * The target's crit state alongside `WeaponAttackInput.targetDamage` (which
+ * completes its {@link CritState}), and the target's model, which lays out its slots.
+ */
+export interface TargetCritContext extends Omit<CritState, "damage">, MechModelHolder {
   /** Phase-start crit-slot flags for the TW p.122 step-4 transfer test.
-   *  Defaults to `targetCritSlotsDestroyed`. */
-  readonly targetBaseCritSlotsDestroyed?: CritMask;
-  /** Pre-attack destroyed weapon indices. */
-  readonly targetDestroyedWeapons?: readonly number[];
-  /** Pre-attack per-crit-slot ammo state. */
-  readonly targetAmmoBins?: Readonly<AmmoBins>;
+   *  Defaults to `critSlotsDestroyed`. */
+  readonly baseCritSlotsDestroyed?: CritMask;
 }
 
 export interface AttackResolution {
@@ -153,7 +148,14 @@ export interface AttackResolution {
   /** Damage of leg hits that struck the partial cover instead of the target
    *  (TW p.102); the caller charges it to the cover when that is a building. */
   readonly coverDamage?: number;
-  readonly application: DamageApplication | null;
+  /** One damage application per group that reached the target, in order.
+   *  Each is exact on its own (`before` + `steps` = `after`); the crits a
+   *  group triggered resolve between it and the next one and carry their
+   *  own effects in `crits[].rows`. */
+  readonly applications: readonly DamageApplication[];
+  /** The target's damage after every group and every crit of this attack
+   *  (`targetDamage` unchanged on a miss). */
+  readonly targetDamageAfter: UnitDamageState;
   /** Attack direction the attack resolved against (side of the target hit);
    *  drove the hit-location table and armor pool. Defaults to front when the
    *  input omitted it. */
@@ -161,7 +163,7 @@ export interface AttackResolution {
   /**
    * Critical hit resolutions triggered by the attack, one per group that
    * stripped at least 1 internal-structure point or rolled a through-armor
-   * hit location of 2. Empty when no crits were rolled (e.g. `targetDef`
+   * hit location of 2. Empty when no crits were rolled (e.g. `targetCrits`
    * was not supplied).
    */
   readonly crits: readonly CriticalResolution[];
@@ -255,7 +257,8 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     clusterRoll: null as number | null,
     clusterMod: null as number | null,
     groups: [] as HitGroup[],
-    application: null as DamageApplication | null,
+    applications: [] as DamageApplication[],
+    targetDamageAfter: input.targetDamage,
     crits: [] as CriticalResolution[],
     arc,
   };
@@ -273,7 +276,8 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
   const rapidFireJamThreshold = RAPID_FIRE_JAM_ROLL + Math.floor((shots - 2) / 2);
   if (rapidFire && shots > 1 && roll <= rapidFireJamThreshold) base.jammed = true;
 
-  base.hit = breakdown.automatic !== null ? breakdown.automatic === "hit" : roll >= breakdown.total;
+  base.hit =
+    breakdown.automatic !== null ? breakdown.automatic === "hit" : roll >= toHitTotal(breakdown);
   if (!base.hit) {
     // A Streak launcher that misses never fires, so it strikes nothing.
     if (input.missesStrikeBuilding === true && weapon.streak !== true) {
@@ -384,40 +388,21 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
   }
 
   let damage = input.targetDamage;
-  let application: DamageApplication | null = null;
-  const critStateAvailable =
-    input.targetDef !== undefined &&
-    input.targetCritSlotsDestroyed !== undefined &&
-    input.targetDestroyedWeapons !== undefined &&
-    input.targetAmmoBins !== undefined;
+  const targetCrits = input.targetCrits;
   // Mutable crit tracking; each group that strips IS in the SAME location
   // reuses the snapshot from the previous group's crit, mirroring the rules
   // ("before resolving any further weapons fire" the determining roll is
   // made and the crit slot state advances immediately).
-  let critSlotsDestroyed: CritMask | undefined = input.targetCritSlotsDestroyed
-    ? cloneCritTable(input.targetCritSlotsDestroyed)
-    : undefined;
-  let destroyedWeapons: number[] = input.targetDestroyedWeapons
-    ? [...input.targetDestroyedWeapons]
-    : [];
-  let ammoBins: AmmoBins = input.targetAmmoBins ? { ...input.targetAmmoBins } : {};
+  let critSlotsDestroyed: CritMask | undefined =
+    targetCrits !== undefined ? cloneCritTable(targetCrits.critSlotsDestroyed) : undefined;
+  let ammoBins: AmmoBins = targetCrits !== undefined ? { ...targetCrits.ammoBins } : {};
 
   for (const group of base.groups) {
     const app = applyDamage(damage, group.location, group.damage, arc);
     damage = app.after;
-    application =
-      application === null
-        ? app
-        : {
-            after: app.after,
-            before: application.before,
-            steps: [...application.steps, ...app.steps],
-            newlyDestroyed: [...application.newlyDestroyed, ...app.newlyDestroyed],
-            blownOffLimbs: [...application.blownOffLimbs, ...app.blownOffLimbs],
-            mechDestroyed: application.mechDestroyed || app.mechDestroyed,
-          };
+    base.applications.push(app);
 
-    if (!critStateAvailable || !input.targetDef) continue;
+    if (targetCrits === undefined || critSlotsDestroyed === undefined) continue;
     // One determining roll per location whose internal structure this group
     // damaged, transferred locations included (TW p.124 Multiple Locations).
     // A hit-location roll of 2 adds one determining roll on the hit location
@@ -430,39 +415,27 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     for (const { location: critLoc, tac: tagThroughArmor } of critRolls) {
       const res = resolveCriticalHits({
         rng: input.rng,
-        def: input.targetDef,
+        model: targetCrits.model,
         source: {
           location: critLoc,
           damage: group.damage,
           struck: struck.includes(critLoc),
           tac: tagThroughArmor,
         },
-        ...(input.targetBaseCritSlotsDestroyed !== undefined
-          ? { baseCritSlotsDestroyed: input.targetBaseCritSlotsDestroyed }
+        ...(targetCrits.baseCritSlotsDestroyed !== undefined
+          ? { baseCritSlotsDestroyed: targetCrits.baseCritSlotsDestroyed }
           : {}),
-        critSlotsDestroyed: critSlotsDestroyed!,
-        destroyedWeapons,
+        critSlotsDestroyed,
         damage,
         ammoBins,
       });
       critSlotsDestroyed = res.critSlotsDestroyed;
-      destroyedWeapons = res.destroyedWeapons;
       ammoBins = res.ammoBins;
       damage = res.damage;
-      // The crit may have blown off the arm or killed the unit; reflect that
-      // on the merged damage application.
-      if (application) {
-        application = {
-          ...application,
-          after: res.damage,
-          blownOffLimbs: mergeUniqueLimb(application.blownOffLimbs, res.blownOffLimbs),
-          mechDestroyed: application.mechDestroyed || res.killedReason !== null,
-        };
-      }
       base.crits.push(res);
     }
   }
-  base.application = application;
+  base.targetDamageAfter = damage;
   return base;
 }
 
@@ -479,10 +452,4 @@ function hitLocationPlaced(
   const location = hitLocationForArc(arc, roll);
   if (partialCover && (location === "leftLeg" || location === "rightLeg")) return null;
   return { location, throughArmor: roll === THROUGH_ARMOR_LOCATION_ROLL };
-}
-
-function mergeUniqueLimb(a: readonly LimbLocation[], b: readonly LimbLocation[]): LimbLocation[] {
-  const out: LimbLocation[] = [...a];
-  for (const x of b) if (!out.includes(x)) out.push(x);
-  return out;
 }

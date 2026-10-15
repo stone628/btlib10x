@@ -37,6 +37,7 @@ import {
   type PhysicalWeaponName,
   passAttack,
   physicalDamage,
+  physicalToHitTotal,
   requireUnit,
   resolveStrikeArm,
   resolveStrikeMount,
@@ -44,6 +45,7 @@ import {
   strikeMounts,
   suggestFireTargets,
   type TorsoLocationValue,
+  toHitTotal,
   validateAttacks,
   validatePhysicalAttack,
   validatePickup,
@@ -61,16 +63,14 @@ import { actorOrderLines } from "./session.common";
  *  the phase exits or a new actor becomes current. Carries `fireDecls`
  *  (weapon volley, single target) plus `physicalDecls` (punch, kick,
  *  club, strike — TW p.144 one-type-per-turn rule, two-arm punch excepted),
- *  `pickupDecl` (exclusive club acquisition, TW p.146), `dropClub` (first act
+ *  `pickup` (exclusive club acquisition, TW p.146), `dropClub` (first act
  *  of a declaration, frees hands for the rest), `torsoTwist` (UI declaration,
  *  resets to `"front"` on allocation), `fireHintShownFor`, `fireCandidate`. */
 export interface AttackContext {
   actorId: string;
   weaponDecls: WeaponAttackDecl[];
   physicalDecls: PhysicalAttackDecl[];
-  pickupDecl: ClubPickupDecl | null;
-  /** Arguments `queuePickup` was called with, replayed at commit. */
-  pickupArgs: ClubPickupDecl | null;
+  pickup: QueuedPickup | null;
   dropClub: boolean;
   /** Acting unit's torso twist (TW pp.105-106) for the current attack-phase
    *  declaration: starts at `"front"` on context allocation (new actor or
@@ -83,6 +83,14 @@ export interface AttackContext {
   fireCandidate: FireSuggestion | null;
 }
 
+/** A queued club pickup: the arguments `queuePickup` was called with,
+ *  replayed through `declarePickup` at commit, and the source they resolved
+ *  to when queued (for display). */
+export interface QueuedPickup {
+  readonly args: ClubPickupDecl;
+  readonly source: ClubKind;
+}
+
 /** Allocate a fresh attack context for `actorId`. `torsoTwist` starts at
  *  `"front"`; fire declarations and suggestion cache empty. */
 export function initAttackContext(s: Session, actorId: string): AttackContext {
@@ -90,8 +98,7 @@ export function initAttackContext(s: Session, actorId: string): AttackContext {
     actorId,
     weaponDecls: [],
     physicalDecls: [],
-    pickupDecl: null,
-    pickupArgs: null,
+    pickup: null,
     dropClub: false,
     torsoTwist: "front",
     fireCandidate: null,
@@ -139,7 +146,7 @@ export function queueWeaponAttacks(s: Session, targetId: string, weapons: number
   if (isUnitRemoved(target)) throw new Error(i18n("err.targetRemoved", { id: target.id }));
   // Pickup is exclusive with everything (TW p.146): no weapon or physical
   // attacks allowed on the pickup turn.
-  if (context.pickupDecl !== null) throw new Error(i18n("err.pickup.exclusive"));
+  if (context.pickup !== null) throw new Error(i18n("err.pickup.exclusive"));
   const pending = context.weaponDecls[0]?.targetId;
   if (pending !== undefined && pending !== targetId) {
     throw new Error(i18n("err.oneTarget", { target: pending }));
@@ -228,8 +235,7 @@ export function cancelAttack(s: Session): void {
   const { context } = requireBattleAndContext(s);
   context.weaponDecls = [];
   context.physicalDecls = [];
-  context.pickupDecl = null;
-  context.pickupArgs = null;
+  context.pickup = null;
   context.dropClub = false;
   context.fireCandidate = null;
 }
@@ -242,7 +248,7 @@ export function commitAttack(s: Session): SessionGameEvent[] {
   if (
     context.weaponDecls.length === 0 &&
     context.physicalDecls.length === 0 &&
-    context.pickupDecl === null &&
+    context.pickup === null &&
     !context.dropClub
   ) {
     commitAtomic(s, () => {
@@ -262,8 +268,8 @@ export function commitAttack(s: Session): SessionGameEvent[] {
     commitAtomic(s, () => {
       recordAttack(s, context, unitId);
       const collected: GameEvent[] = [];
-      if (context.pickupDecl !== null && context.pickupArgs !== null) {
-        declarePickup(battle, unitId, context.pickupArgs, collected);
+      if (context.pickup !== null) {
+        declarePickup(battle, unitId, context.pickup.args, collected);
       } else {
         declareAttacks(
           battle,
@@ -316,7 +322,7 @@ export function queuePhysicalAttack(
   const def = mechDefFor(unit);
 
   // Pickup is exclusive with everything (TW p.146).
-  if (context.pickupDecl !== null) throw new Error(i18n("err.pickup.exclusive"));
+  if (context.pickup !== null) throw new Error(i18n("err.pickup.exclusive"));
 
   // Default limb: right arm for punches, right leg for kicks (TW lets the
   // attacker pick; the CLI default keeps single-command declarations
@@ -441,7 +447,7 @@ export function queuePickup(s: Session, source?: ClubKind, tokenIndex?: number):
   if (
     context.weaponDecls.length > 0 ||
     context.physicalDecls.length > 0 ||
-    context.pickupDecl !== null
+    context.pickup !== null
   ) {
     throw new Error(i18n("err.pickup.exclusive"));
   }
@@ -450,20 +456,14 @@ export function queuePickup(s: Session, source?: ClubKind, tokenIndex?: number):
     throw new Error(i18n("err.pickup.invalid", { reason: "already holds a club" }));
 
   // Validate the source against the engine (checks hex environment, etc.)
-  const result = validatePickup(battle, unit.id, {
-    ...(source !== undefined ? { source } : {}),
-    ...(tokenIndex !== undefined ? { tokenIndex } : {}),
-  });
-  if (!result.ok) throw new Error(i18n("err.pickup.invalid", { reason: result.reason }));
-
-  context.pickupDecl =
-    result.token === undefined
-      ? { source: result.source }
-      : { source: result.source, token: result.token };
-  context.pickupArgs = {
+  const args: ClubPickupDecl = {
     ...(source !== undefined ? { source } : {}),
     ...(tokenIndex !== undefined ? { tokenIndex } : {}),
   };
+  const result = validatePickup(battle, unit.id, args);
+  if (!result.ok) throw new Error(i18n("err.pickup.invalid", { reason: result.reason }));
+
+  context.pickup = { args, source: result.source };
   context.fireCandidate = null;
   return [i18n("ok.pickup.queued", { source: result.source })];
 }
@@ -567,19 +567,15 @@ export function physicalResolutionLines(r: PhysicalResolution): string[] {
   if (r.hit && r.damageToTarget.length > 0) {
     const dmgStr = r.damageToTarget.map((g) => `${SHORT_LOC[g.location]}(${g.damage})`).join(" ");
     lines.push(i18n("res.physical.targetDamage", { groups: dmgStr }));
-    if (r.application !== null) {
-      const detail = blastDetail(r.application);
-      if (detail) lines.push(`  ${detail}`);
-    }
+    const detail = applicationsDetail(r.applications);
+    if (detail) lines.push(`  ${detail}`);
   }
 
   if (r.damageToAttacker.length > 0) {
     const dmgStr = r.damageToAttacker.map((g) => `${SHORT_LOC[g.location]}(${g.damage})`).join(" ");
     lines.push(i18n("res.physical.attackerDamage", { groups: dmgStr }));
-    if (r.attackerApplication !== null) {
-      const detail = blastDetail(r.attackerApplication);
-      if (detail) lines.push(`  ${detail}`);
-    }
+    const detail = applicationsDetail(r.attackerApplications);
+    if (detail) lines.push(`  ${detail}`);
   }
 
   for (const crit of r.crits) {
@@ -927,7 +923,9 @@ function physicalCandidateLines(battle: BattleState, context: AttackContext): st
       // The current twist is tried first, and a kick ignores the twist.
       const twist = twistFor([decl]);
       if (twist === null) return null;
-      const tn = computePhysicalToHit(battle, actor, target, decl.type, limb, decl.weapon).total;
+      const tn = physicalToHitTotal(
+        computePhysicalToHit(battle, actor, target, decl.type, limb, decl.weapon),
+      );
       rows.push({
         cols: [
           label,
@@ -948,7 +946,7 @@ function physicalCandidateLines(battle: BattleState, context: AttackContext): st
         punches.push({
           limb,
           decl,
-          tn: computePhysicalToHit(battle, actor, target, "punch", limb).total,
+          tn: physicalToHitTotal(computePhysicalToHit(battle, actor, target, "punch", limb)),
           dmg: physicalDamage("punch", actor, limb),
         });
       }
@@ -1023,7 +1021,7 @@ export function fireSuggestionChunks(s: Session): Chunk[] {
   const { battle, context } = requireBattleAndContext(s);
   const lines: string[] = [i18n("fireSuggestion.header", { id: context.actorId })];
   // A pickup is the unit's whole attack (TW p. 146).
-  if (context.pickupDecl !== null) {
+  if (context.pickup !== null) {
     lines.push(i18n("fireSuggestion.pickupQueued"));
   } else {
     // Anything queued narrows the candidates; `cancel` clears the whole queue.
@@ -1045,12 +1043,7 @@ export function attackStatusChunk(s: Session): Chunk {
   lines.push(...actorOrderLines(s), i18n("attackStatus.header"));
   const decls = context.weaponDecls ?? [];
   const physical = context.physicalDecls ?? [];
-  if (
-    decls.length === 0 &&
-    physical.length === 0 &&
-    context.pickupDecl === null &&
-    !context.dropClub
-  ) {
+  if (decls.length === 0 && physical.length === 0 && context.pickup === null && !context.dropClub) {
     lines.push(i18n("attackStatus.none"));
   } else {
     // Engine guarantee: `actor.model` was validated by `createBattle`.
@@ -1089,8 +1082,8 @@ export function attackStatusChunk(s: Session): Chunk {
       }
     }
     // Pickup / drop display
-    if (context.pickupDecl !== null) {
-      lines.push(i18n("attackStatus.pickup", { source: context.pickupDecl.source ?? "auto" }));
+    if (context.pickup !== null) {
+      lines.push(i18n("attackStatus.pickup", { source: context.pickup.source }));
     }
     if (context.dropClub) {
       lines.push(i18n("attackStatus.drop"));
@@ -1115,7 +1108,7 @@ function gatorText(r: AttackResolution): string {
   if (b.sensorMod) parts.push(`${i18n("res.gator.sensors")} ${b.sensorMod}`);
   if (b.actuatorMod) parts.push(`${i18n("res.gator.actuators")} ${b.actuatorMod}`);
   if (b.tcMod) parts.push(`${i18n("res.gator.targetingComputer")} ${b.tcMod}`);
-  const total = b.automatic === "hit" ? i18n("res.needAuto") : String(b.total);
+  const total = b.automatic === "hit" ? i18n("res.needAuto") : String(toHitTotal(b));
   return `${i18n("res.need", { total })} (${parts.join(" + ")})`;
 }
 
@@ -1208,9 +1201,13 @@ export function critLines(c: CriticalResolution): string[] {
 }
 
 export function transferDetail(r: AttackResolution): string | null {
-  const app = r.application;
-  if (!app) return null;
-  return blastDetail(app);
+  return applicationsDetail(r.applications);
+}
+
+/** One line for a run of group applications, each rendered by `blastDetail`. */
+function applicationsDetail(apps: readonly DamageApplication[]): string | null {
+  const parts = apps.map(blastDetail).filter((d): d is string => d !== null);
+  return parts.length > 0 ? parts.join(", ") : null;
 }
 
 /** Render one damage application's location chain (`LTI 20->0*, …`).

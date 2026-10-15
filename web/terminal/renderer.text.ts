@@ -330,7 +330,9 @@ export function* eachHex(model: BoardModel): Generator<HexContext, void, undefin
   const cols = model.cols + (model.anchorCol - 1);
   const rows = model.rows + (model.anchorRow - 1);
   for (let col = model.anchorCol; col <= cols; col++) {
-    const baseY = col % 2 === 1 ? 0 : STAGGER;
+    // A single-column crop has no neighbour to stagger against (and
+    // makeCanvas reserves no STAGGER rows for it), so it always sits at 0.
+    const baseY = model.cols < 2 || col % 2 === 1 ? 0 : STAGGER;
     for (let row = model.anchorRow; row <= rows; row++) {
       const x = (col - model.anchorCol) * COL_STRIDE;
       const y = baseY + (row - model.anchorRow) * ROW_STRIDE;

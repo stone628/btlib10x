@@ -23,10 +23,11 @@ import { D2D6_IMPOSSIBLE, D2D6_MAX, diceIndex } from "../core/dice";
 import { LOCATIONS, type Location, type MoveMode, type Rng } from "../core/types";
 import { ammoDefFor } from "../data/ammo.schema";
 import type { ResolvedMechDef } from "../data/mech.schema";
-import { type AmmoBinId, type AmmoBins, collectAmmoBins } from "./ammo";
+import { type AmmoBinId, collectAmmoBins, usableShots } from "./ammo";
 import {
   ammoDamagePerShot,
   type CritMask,
+  type CritState,
   type EffectiveMovement,
   isSlotDestroyed,
   RUN_WALK_DENOMINATOR,
@@ -376,13 +377,13 @@ export interface LargestAmmoBin {
  */
 export function largestAmmoBin(
   def: ResolvedMechDef,
-  ammoBins: Readonly<AmmoBins>,
+  state: Readonly<CritState>,
   rng: Rng,
 ): LargestAmmoBin | null {
   const candidates: LargestAmmoBin[] = [];
   for (const bin of collectAmmoBins(def)) {
     if (!ammoDefFor(bin).explosive) continue;
-    const shotsRemaining = ammoBins[bin.id] ?? 0;
+    const shotsRemaining = usableShots(state, bin);
     if (shotsRemaining <= 0) continue;
     const damagePerShot = ammoDamagePerShot(bin);
     candidates.push({

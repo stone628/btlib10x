@@ -49,7 +49,7 @@ describe("transferDetail", () => {
     const s = freshState();
     const rng = scriptedRng(6, 6, 3, 3); // to-hit 12, location 6 -> RT, dmg 3
     const res = strike(s, rng);
-    expect(res.application?.before.armor.rightTorso).toBe(10);
+    expect(res.applications[0]?.before.armor.rightTorso).toBe(10);
     const text = transferDetail(res);
     expect(text).not.toBeNull();
     expect(text).toMatch(/RTF 10->7\b/);
@@ -80,10 +80,11 @@ describe("transferDetail", () => {
     const s = freshState();
     const rng = scriptedRng(6, 6, 3, 3); // to-hit 12, location 6 -> RT
     const res = strike(s, rng);
-    expect(res.application?.before).toBeDefined();
-    if (res.application) {
-      const beforeRear = res.application.before.armorRear;
-      const beforeArmor = res.application.before.armor;
+    expect(res.applications[0]?.before).toBeDefined();
+    const first = res.applications[0];
+    if (first) {
+      const beforeRear = first.before.armorRear;
+      const beforeArmor = first.before.armor;
       expect(beforeRear).toEqual({});
       expect(beforeArmor.rightTorso).toBe(10);
     }
@@ -104,7 +105,7 @@ describe("transferDetail", () => {
     };
     const rng = scriptedRng(6, 6, 3, 3); // to-hit 12, location 6 -> RT, dmg 3
     const res = strike(s, rng);
-    expect(res.application?.before.armorRear.rightTorso).toBe(5);
+    expect(res.applications[0]?.before.armorRear.rightTorso).toBe(5);
     const text = transferDetail(res) ?? "";
     expect(text).toMatch(/RTF 10->7\b/);
     expect(text).not.toMatch(/RTA/);
@@ -114,7 +115,7 @@ describe("transferDetail", () => {
     const s = freshState();
     const rng = scriptedRng(6, 6, 4, 5); // to-hit 12, location 9 -> leftLeg, dmg 3
     const res = strike(s, rng);
-    expect(res.application?.before.armor.leftLeg).toBe(10);
+    expect(res.applications[0]?.before.armor.leftLeg).toBe(10);
     const text = transferDetail(res) ?? "";
     expect(text).toMatch(/LLA 10->7\b/);
     expect(text).not.toMatch(/LLF/);
@@ -127,7 +128,7 @@ describe("transferDetail", () => {
     };
     const rng = scriptedRng(6, 6, 3, 3); // to-hit 12, location 6 -> RT, rear arc
     const res = strike(s, rng, "Small Laser", "rear");
-    expect(res.application?.before.armorRear.rightTorso).toBe(5);
+    expect(res.applications[0]?.before.armorRear.rightTorso).toBe(5);
     const text = transferDetail(res) ?? "";
     expect(text).toMatch(/RTR 5->2\b/);
     expect(text).not.toMatch(/RT[AFI]/);
@@ -149,7 +150,7 @@ describe("blastDetail destruction tail (TW p. 128)", () => {
     s.armor.centerTorso = 0;
     s.internalStructure.centerTorso = 1;
     const res = strike(s, scriptedRng(6, 6, 3, 4)); // to-hit 12, location 7 -> CT
-    expect(res.application?.mechDestroyed).toBe(true);
+    expect(res.applications.some((a) => a.mechDestroyed)).toBe(true);
     const text = transferDetail(res);
     expect(text).toMatch(/CTI 1->0\*.*; 'Mech destroyed$/);
     expect(text).not.toMatch(/killed/);

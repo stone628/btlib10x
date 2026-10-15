@@ -20,6 +20,7 @@ import {
   hexDistance,
   hitProbability,
   isUnitAvailable,
+  isWeaponCritted,
   type Location,
   losClear,
   mechDefFor,
@@ -111,11 +112,12 @@ export interface UsableWeapon {
 /** Weapons that can still fire at all: location intact, not destroyed or jammed, ammo left. */
 export function usableWeapons(unit: UnitState): UsableWeapon[] {
   const def = mechDefFor(unit);
-  const pools = pooledTotalsByWeaponName(def, unit.ammoBins);
+  const pools = pooledTotalsByWeaponName(def, unit);
   const result: UsableWeapon[] = [];
   for (const [key, mount] of Object.entries(def.weapons)) {
     const index = Number(key);
-    if (unit.destroyedWeapons.includes(index) || unit.jammedWeapons.includes(index)) continue;
+    if (isWeaponCritted(def, unit.critSlotsDestroyed, index)) continue;
+    if (unit.jammedWeapons.includes(index)) continue;
     if (!canFireMount(unit.damage, mount)) continue;
     const wdef = weaponDefFor(mount);
     if (wdef.physicalWeapon === true) continue;

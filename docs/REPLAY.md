@@ -66,7 +66,7 @@ E<idx><hits>[:<armor>[:<crit>[:<ammo>]]]    final state per unit, idx order
 | `0503s456` | `position` `0503`, `facing` `s`, `gunnery` `4`, `piloting` `5`, `pilotHitMax` `6`; optional 9th digit = `pilotHits` (omit = 0) |
 | armor | damage **taken** per location vs model default, see below |
 | crit | destroyed crit slots: `<loc><slot>` repeated (`a3a4` = right arm slots 3, 4) |
-| ammo | shots **used**: `<loc><slot><n>` repeated (`L13L22` = LT slot 1 used 3, LT slot 2 used 2); `n` is decimal, runs to the next letter. In `E` records, shots stranded in a location lost to plain damage count as unused (full - stranded), so salvage can read them back |
+| ammo | shots **used**: `<loc><slot><n>` repeated (`L13L22` = LT slot 1 used 3, LT slot 2 used 2); `n` is decimal, runs to the next letter. In `E` records a bin exports `full - shots left` whatever its fate, so shots stranded in a location lost to plain damage come back as unused and salvage can read them |
 | policy | this unit's ammo policy, one char: `e` exposed / `c` core / `s` spread / `l` leastFirst, followed by `x` when auto-eject is off (`set <id> autoEject off`). Omit the field when both are the default (`e`, auto-eject on) |
 
 Index = registration order (first `U` is `0`). Ammo policy is **setup-only** (`UnitInit.policy`, edited with `set <id> ammoPolicy <policy>`); the
@@ -89,8 +89,8 @@ interface UnitInitDamage {
 ```
 
 `createBattle` sets `baseDamage` / `baseCritSlotsDestroyed` to clones of the starting
-state (so the first turn raises no piloting rolls for it) and derives
-`destroyedWeapons` (any destroyed slot of a mount) and empties destroyed ammo bins.
+state (so the first turn raises no piloting rolls for it) and empties destroyed ammo
+bins. A mount with any destroyed slot counts as destroyed (`isWeaponCritted`).
 A unit with a destroyed leg or gyro starts **prone** (TW p.122, crit table gyro row).
 
 #### armor field → `UnitDamageState`

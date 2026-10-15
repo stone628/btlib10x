@@ -12,6 +12,7 @@ import {
   buildUnitInit,
   declareAttacks,
   type GameEvent,
+  passAttack,
   requireUnit,
   resolveAllAttacks,
   resolvePhasePiloting,
@@ -237,5 +238,60 @@ describe("attackPhaseStage markers", () => {
     expect(heat).toBeGreaterThan(physicalDone);
     expect(heat).toBeLessThan(end);
     expect(events[end + 1]).toMatchObject({ kind: "phase", prevPhase: "attack", phase: "end" });
+  });
+});
+
+describe("critsDisabled covers physical attacks", () => {
+  /** enf punches hbk's armorless right torso: d6 = 4 gives to-hit 8 (hit),
+   *  punch location 4 (right torso) and a crit determining roll of 8. */
+  function punchIntoStructure(critsDisabled: boolean) {
+    const state = createTestBattle(
+      [],
+      [unit("hbk", 1, { col: 2, row: 2 }, "s"), unit("enf", 2, { col: 2, row: 3 }, "n")],
+      critsDisabled,
+    );
+    toAttack(state);
+    const hbk = requireUnit(state, "hbk");
+    hbk.damage = { ...hbk.damage, armor: { ...hbk.damage.armor, rightTorso: 0 } };
+    const slotsBefore = hbk.critSlotsDestroyed;
+    declareAttacks(
+      state,
+      "enf",
+      [],
+      [{ type: "punch", targetId: "hbk", limb: "rightArm" }],
+      [],
+      HIGH_RNG,
+    );
+    passAttack(state, "hbk");
+    let rolls = 0;
+    const rng = {
+      d6: () => {
+        rolls++;
+        return 4;
+      },
+      snapshot: () => "",
+      load: () => {},
+    };
+    const events: GameEvent[] = [];
+    resolveAllAttacks(state, rng, events);
+    const punch = events.find((e) => e.kind === "physicalAttackResolved");
+    if (punch?.kind !== "physicalAttackResolved") throw new Error("no punch resolved");
+    return { punch: punch.resolution, rolls, slotsBefore, slotsAfter: hbk.critSlotsDestroyed };
+  }
+
+  it("a punch into structure rolls criticals when they are on", () => {
+    const on = punchIntoStructure(false);
+    expect(on.punch.hit).toBe(true);
+    expect(on.punch.crits.length).toBeGreaterThan(0);
+    expect(on.slotsAfter).not.toEqual(on.slotsBefore);
+  });
+
+  it("rolls none and spends no dice on them when they are off", () => {
+    const on = punchIntoStructure(false);
+    const off = punchIntoStructure(true);
+    expect(off.punch.hit).toBe(true);
+    expect(off.punch.crits).toEqual([]);
+    expect(off.slotsAfter).toEqual(off.slotsBefore);
+    expect(off.rolls).toBeLessThan(on.rolls);
   });
 });

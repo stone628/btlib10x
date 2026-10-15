@@ -17,7 +17,7 @@ import {
   resolvePhasePiloting,
 } from "../src/rules/game";
 import { reachableLandings } from "../src/rules/movement";
-import { validatePhysicalAttack } from "../src/rules/physical";
+import { damageGroupsTotal, validatePhysicalAttack } from "../src/rules/physical";
 import { loadBattleState, saveBattleState } from "../src/rules/snapshot";
 import { createTestBattle, scriptedRng } from "./helpers";
 
@@ -416,7 +416,7 @@ describe("DFA resolution (TW p.150)", () => {
     if (r?.kind !== "physicalAttackResolved") throw new Error("no resolution");
     expect(r.resolution.hit).toBe(true);
     expect(r.resolution.damageToTarget.map((g) => g.arc)).toEqual(["rear", "rear", "rear"]);
-    const pools = r.resolution.application?.steps.map((s) => s.pool) ?? [];
+    const pools = r.resolution.applications.flatMap((a) => a.steps.map((s) => s.pool));
     expect(pools).toContain("armorRear");
     expect(pools).not.toContain("armor");
     expect(requireUnit(state, "t").damage.armor).toEqual(frontBefore);
@@ -433,7 +433,7 @@ describe("DFA resolution (TW p.150)", () => {
     expect(fell.cause).toEqual({ kind: "dfaMiss" });
     expect(fell.levelsFallen).toBe(2);
     expect(fell.column).toBe("rear");
-    expect(fell.totalDamage).toBe(15); // 5 x (2 + 1)
+    expect(damageGroupsTotal(fell.groups)).toBe(15); // 5 x (2 + 1)
     expect(requireUnit(state, "a").prone).toBe(true);
   });
 

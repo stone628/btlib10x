@@ -18,7 +18,7 @@ import {
   requireAttackActor,
   type Session,
 } from "../web/terminal/session";
-import { disableCritical, execute, scriptedRng } from "./helpers";
+import { critWeapon, disableCritical, execute, scriptedRng } from "./helpers";
 
 /**
  * Build a two-unit battle and drive it into the weapon attack phase (both
@@ -96,7 +96,7 @@ describe("nextAutoPlayCommand (autoplay demo driver)", () => {
     const target = Object.entries(def.weapons).find(([, m]) => m.shots === undefined);
     expect(target, "acting unit should have a non-ammo weapon").toBeDefined();
     const destroyedIndex = Number(target![0]);
-    actor.destroyedWeapons.push(destroyedIndex);
+    critWeapon(actor, destroyedIndex);
 
     const cmds = Array.from({ length: 12 }, () => nextAutoPlayCommand(s)).filter(
       (c): c is string => c !== null && c !== "help" && c !== "status" && c !== "candidate",

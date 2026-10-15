@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { neighbor } from "../src/core/hex";
 import type { RevealedLanding } from "../src/index";
 import { buildUnitInit, executeMove, requireUnit, rollInitiativePhase } from "../src/rules/game";
+import { pathMp } from "../src/rules/movement";
 import {
   budgetFor,
   newSession,
@@ -34,12 +35,11 @@ function steppedLanding(s: Session): { col: number; row: number; facing: string;
   const landings = s.move!.moveCandidate!.revealed;
   const landing = landings.find((l: { path: readonly unknown[] }) => l.path.length > 0)!;
   expect(landing).toBeDefined();
-  const last = landing.path[landing.path.length - 1]!;
   return {
     col: landing.hex.col,
     row: landing.hex.row,
     facing: landing.facing,
-    spent: last.totalMp,
+    spent: pathMp(landing.path),
   };
 }
 
@@ -87,7 +87,7 @@ describe("posture-change then move", () => {
     const before = s.battle!.units[actor]!;
     const landing = s.move!.moveCandidate!.revealed.find((l) => l.facing !== before.facing)!;
     expect(landing).toBeDefined();
-    const spent = landing.path[landing.path.length - 1]!.totalMp;
+    const spent = pathMp(landing.path);
     execute(s, `place ${landing.hex.col} ${landing.hex.row} ${landing.facing}`);
     const heatBefore = s.battle!.units[actor]!.heat;
     execute(s, "done");
@@ -178,7 +178,7 @@ describe("posture-change then move", () => {
       (l) => l.hex.col === from.col && l.hex.row === from.row && l.facing !== before.facing,
     )!;
     expect(landing).toBeDefined();
-    const spent = landing.path[landing.path.length - 1]!.totalMp;
+    const spent = pathMp(landing.path);
     execute(s, `place ${landing.hex.col} ${landing.hex.row} ${landing.facing}`);
     execute(s, "done");
     const unit = s.battle!.units[actor]!;
@@ -251,8 +251,7 @@ describe("posture-change then move", () => {
     execute(s, "mode standup walk");
     const budget = budgetFor(requireMovementActor(s), s.move!);
     for (const landing of s.move!.moveCandidate!.revealed) {
-      const last = landing.path[landing.path.length - 1];
-      expect(last?.totalMp ?? 0).toBeLessThanOrEqual(budget);
+      expect(pathMp(landing.path)).toBeLessThanOrEqual(budget);
     }
   });
 

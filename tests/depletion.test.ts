@@ -11,13 +11,12 @@ import {
   collectAmmoBins,
   consumeAmmo,
   drawOrderBins,
-  liveShots,
   loadAmmoBins,
   pooledShotsLeft,
   strandedShots,
-  stripBinsInLocation,
-  zeroBinsInLocation,
+  usableShots,
 } from "../src/rules/ammo";
+import { setSlotDestroyed } from "../src/rules/critical";
 import {
   advancePhase,
   buildUnitInit,
@@ -33,7 +32,7 @@ import {
   newSession,
   type Session,
 } from "../web/terminal/session";
-import { createTestBattle, disableCritical, execute, scriptedRng } from "./helpers";
+import { createTestBattle, critState, disableCritical, execute, scriptedRng } from "./helpers";
 
 const HBK = mechDef("HBK-4G")!;
 const HER = mechDef("HER-5SA")!;
@@ -46,7 +45,7 @@ describe("bin loading", () => {
       "leftTorso:1": 5,
       "leftTorso:2": 5,
     });
-    expect(ammoWeaponTotals(HBK, bins)[4]).toBe(10);
+    expect(ammoWeaponTotals(HBK, critState(HBK, bins))[4]).toBe(10);
   });
 
   it("pools shots-sharing mounts of one weapon name into every bin", () => {
@@ -61,7 +60,7 @@ describe("bin loading", () => {
         ([, m]) => m.weapon === "CL Streak SRM 4" && m.shots !== undefined,
       )![0],
     );
-    expect(ammoWeaponTotals(def, bins)[streakIdx]).toBe(50);
+    expect(ammoWeaponTotals(def, critState(def, bins))[streakIdx]).toBe(50);
   });
 
   it("falls back to the ammo table capacity when no mount declares shots", () => {
@@ -104,23 +103,24 @@ describe("bin utilities", () => {
     expect(ammoBinId("leftTorso", 3)).toBe("leftTorso:3");
   });
 
-  it("stripBinsInLocation strands only that location's bins (negative = salvage)", () => {
-    const bins: AmmoBins = {
-      "leftTorso:1": 5,
-      "leftTorso:2": 0,
-      "rightTorso:1": 6,
-    };
-    stripBinsInLocation(bins, "leftTorso");
-    expect(bins).toEqual({ "leftTorso:1": -5, "leftTorso:2": 0, "rightTorso:1": 6 });
-    expect(liveShots(bins["leftTorso:1"])).toBe(0);
-    expect(strandedShots(bins["leftTorso:1"])).toBe(5);
-    expect(ammoWeaponTotals(HBK, bins)[4] ?? 0).toBe(0);
+  it("a bin in a location lost to plain damage is stranded: unusable, shots kept", () => {
+    const state = critState(HBK, { "leftTorso:1": 5, "leftTorso:2": 0 });
+    state.damage.internalStructure.leftTorso = 0;
+    const [bin1] = collectAmmoBins(HBK);
+    expect(state.ammoBins["leftTorso:1"]).toBe(5); // the count is untouched
+    expect(usableShots(state, bin1!)).toBe(0);
+    expect(strandedShots(state, bin1!)).toBe(5);
+    expect(ammoWeaponTotals(HBK, state)[4] ?? 0).toBe(0);
   });
 
-  it("zeroBinsInLocation empties only that location's bins", () => {
-    const bins: AmmoBins = { "leftTorso:1": 5, "leftTorso:2": -3, "rightTorso:1": 6 };
-    zeroBinsInLocation(bins, "leftTorso");
-    expect(bins).toEqual({ "leftTorso:1": 0, "leftTorso:2": 0, "rightTorso:1": 6 });
+  it("a bin whose slot is flagged is destroyed: no shots, no salvage", () => {
+    const state = critState(HBK, { "leftTorso:1": 5, "leftTorso:2": 5 });
+    setSlotDestroyed(state.critSlotsDestroyed, "leftTorso", 0);
+    const [bin1, bin2] = collectAmmoBins(HBK);
+    expect(usableShots(state, bin1!)).toBe(0);
+    expect(strandedShots(state, bin1!)).toBe(0);
+    expect(usableShots(state, bin2!)).toBe(5);
+    expect(ammoWeaponTotals(HBK, state)[4]).toBe(5);
   });
 
   it("ammoWeaponTotals sums only the non-empty bins", () => {
@@ -128,7 +128,7 @@ describe("bin utilities", () => {
       "leftTorso:1": 0,
       "leftTorso:2": 5,
     };
-    expect(ammoWeaponTotals(HBK, bins)[4]).toBe(5);
+    expect(ammoWeaponTotals(HBK, critState(HBK, bins))[4]).toBe(5);
   });
 });
 
@@ -214,10 +214,10 @@ describe("consumeAmmo", () => {
   });
 
   it("draws each shot from the policy's next bin, ties decided by rng", () => {
-    const even = consumeAmmo(HBK, start(), 4, 1, "exposed", scriptedRng(2));
+    const even = consumeAmmo(HBK, critState(HBK, start()), 4, 1, "exposed", scriptedRng(2));
     expect(even["leftTorso:1"]).toBe(4);
     expect(even["leftTorso:2"]).toBe(5);
-    const odd = consumeAmmo(HBK, start(), 4, 1, "exposed", scriptedRng(1));
+    const odd = consumeAmmo(HBK, critState(HBK, start()), 4, 1, "exposed", scriptedRng(1));
     expect(odd["leftTorso:1"]).toBe(5);
     expect(odd["leftTorso:2"]).toBe(4);
   });
@@ -227,7 +227,7 @@ describe("consumeAmmo", () => {
       "leftTorso:1": 1,
       "leftTorso:2": 5,
     };
-    const after = consumeAmmo(HBK, bins, 4, 2, "exposed", scriptedRng(2, 2));
+    const after = consumeAmmo(HBK, critState(HBK, bins), 4, 2, "exposed", scriptedRng(2, 2));
     expect(after["leftTorso:1"]).toBe(0);
     expect(after["leftTorso:2"]).toBe(4);
   });
@@ -238,7 +238,7 @@ describe("consumeAmmo", () => {
       "leftTorso:2": 0,
     };
     const rng = scriptedRng(2);
-    const after = consumeAmmo(HBK, bins, 4, 1, "exposed", rng);
+    const after = consumeAmmo(HBK, critState(HBK, bins), 4, 1, "exposed", rng);
     expect(after).toEqual(bins);
     expect(rng.remaining()).toBe(1);
   });
@@ -265,7 +265,7 @@ describe("declareAttacks (game level)", () => {
     const u = requireUnit(state, "hbk")!;
     expect(u.ammoBins["leftTorso:1"]).toBe(4);
     expect(u.ammoBins["leftTorso:2"]).toBe(5);
-    expect(ammoWeaponTotals(HBK, u.ammoBins)[4]).toBe(9);
+    expect(ammoWeaponTotals(HBK, u)[4]).toBe(9);
   });
 
   it("drains one shot per rapid-fire round declared (TW p.103-104)", () => {
@@ -276,7 +276,7 @@ describe("declareAttacks (game level)", () => {
     ];
     const state = createTestBattle([], units, true);
     attackPhase(state);
-    const before = ammoWeaponTotals(HER, requireUnit(state, "her")!.ammoBins)[3];
+    const before = ammoWeaponTotals(HER, requireUnit(state, "her")!)[3];
     expect(before).toBe(20);
     declareAttacks(
       state,
@@ -287,7 +287,7 @@ describe("declareAttacks (game level)", () => {
       scriptedRng(6, 6, 6, 6, 6, 6),
     );
     const u = requireUnit(state, "her")!;
-    expect(ammoWeaponTotals(HER, u.ammoBins)[3]).toBe(18);
+    expect(ammoWeaponTotals(HER, u)[3]).toBe(18);
   });
 
   it("breaks ammo-bin ties by explicit rng", () => {
@@ -360,7 +360,7 @@ describe("shared ammo pool for twin mounts (TW p.103-104)", () => {
     attackPhase(state);
     const def = mechDef("BSW-X1")!;
     const unboundMg = mountIndex("BSW-X1", "Machine Gun", "leftTorso");
-    const before = pooledShotsLeft(def, requireUnit(state, "bsw")!.ammoBins, "Machine Gun");
+    const before = pooledShotsLeft(def, requireUnit(state, "bsw")!, "Machine Gun");
     expect(before).toBeGreaterThan(1);
     declareAttacks(
       state,
@@ -370,7 +370,7 @@ describe("shared ammo pool for twin mounts (TW p.103-104)", () => {
       [],
       scriptedRng(6),
     );
-    const after = pooledShotsLeft(def, requireUnit(state, "bsw")!.ammoBins, "Machine Gun");
+    const after = pooledShotsLeft(def, requireUnit(state, "bsw")!, "Machine Gun");
     expect(after).toBe(before - 1);
   });
 
@@ -397,7 +397,7 @@ describe("shared ammo pool for twin mounts (TW p.103-104)", () => {
       ),
     ).toThrow(/needs 1 shot\(s\) but only 1 remain/);
     // Nothing was spent: the failed volley leaves the pool intact.
-    expect(pooledShotsLeft(def, requireUnit(state, "bsw")!.ammoBins, "Machine Gun")).toBe(1);
+    expect(pooledShotsLeft(def, requireUnit(state, "bsw")!, "Machine Gun")).toBe(1);
   });
 });
 

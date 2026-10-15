@@ -9,6 +9,7 @@ import {
   rollInitiativePhase,
   validateAttacksImpl,
 } from "../src/rules/game";
+import { toHitTotal } from "../src/rules/tohit";
 import { createTestBattle, scriptedRng, seededRng } from "./helpers";
 
 // HBK-4G weapons (1-based): 1 = left-arm ML, 2 = right-arm ML, 3 = head SL, 4 = RT AC/20.
@@ -111,7 +112,9 @@ describe("multiple targets (TW p.108)", () => {
     resolveAllAttacks(both, seededRng(3), b);
     const total = (evs: GameEvent[]) =>
       evs.flatMap((e) =>
-        e.kind === "attackResolved" && e.targetId === "fb" ? [e.resolution.breakdown.total] : [],
+        e.kind === "attackResolved" && e.targetId === "fb"
+          ? [toHitTotal(e.resolution.breakdown)]
+          : [],
       )[0];
     expect(total(b)).toBe(total(a)! + 1);
   });

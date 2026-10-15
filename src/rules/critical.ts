@@ -86,16 +86,10 @@ import { diceIndex, roll2D6, rollD6 } from "../core/dice";
 import type { LimbLocation, Location, Rng } from "../core/types";
 import { damageTransferTo, isLimb, isTorso, LOCATIONS, TORSO_LOCATIONS } from "../core/types";
 import { type AmmoNameHolder, ammoDefFor } from "../data/ammo.schema";
-import type { ResolvedCritSlot, ResolvedMechDef } from "../data/mech.schema";
-import { CRIT_SLOT_COUNTS } from "../data/mech.schema";
+import type { MechModelHolder, ResolvedCritSlot, ResolvedMechDef } from "../data/mech.schema";
+import { CRIT_SLOT_COUNTS, mechDefFor } from "../data/mech.schema";
 import { weaponDefFor } from "../data/weapon.schema";
-import {
-  type AmmoBins,
-  ammoBinId,
-  liveShots,
-  stripBinsInLocation,
-  zeroBinsInLocation,
-} from "./ammo";
+import { type AmmoBinRef, type AmmoBins, ammoBinId } from "./ammo";
 import {
   applyDamage,
   type DamageApplication,
@@ -119,6 +113,17 @@ import { GYRO_DESTROYED_HITS, SENSOR_BLIND_HITS } from "./piloting";
 
 /** Destroyed-slot bitmask per location. */
 export type CritMask = Record<Location, number>;
+
+/**
+ * The parts of a unit's state that critical hits read and write, always
+ * passed and returned together so they come from one snapshot. Ammo bin
+ * liveness is derived from all three (see `AmmoBins`).
+ */
+export interface CritState {
+  readonly damage: UnitDamageState;
+  readonly critSlotsDestroyed: CritMask;
+  readonly ammoBins: AmmoBins;
+}
 
 /** Most crit slots a location can hold (TW record sheets). */
 export const MAX_CRIT_SLOTS = 12;
@@ -186,6 +191,53 @@ export function destroyedSlots(table: Readonly<CritMask>, loc: Location): number
   const mask = table[loc] ?? 0;
   for (let i = 0; i < MAX_CRIT_SLOTS; i++) if ((mask >> i) & 1) out.push(i);
   return out;
+}
+
+/** Slot bitmask per location for each weapon index, built once per def. */
+type WeaponSlotMasks = ReadonlyMap<number, Readonly<Partial<Record<Location, number>>>>;
+const WEAPON_SLOT_MASKS = new WeakMap<ResolvedMechDef, WeaponSlotMasks>();
+
+function weaponSlotMasks(def: ResolvedMechDef): WeaponSlotMasks {
+  const cached = WEAPON_SLOT_MASKS.get(def);
+  if (cached !== undefined) return cached;
+  const masks = new Map<number, Partial<Record<Location, number>>>();
+  for (const loc of Object.keys(def.critSlots) as Location[]) {
+    def.critSlots[loc].forEach((slot, i) => {
+      if (slot.kind !== "weapon") return;
+      const entry = masks.get(slot.weaponIndex) ?? {};
+      entry[loc] = (entry[loc] ?? 0) | (1 << i);
+      masks.set(slot.weaponIndex, entry);
+    });
+  }
+  WEAPON_SLOT_MASKS.set(def, masks);
+  return masks;
+}
+
+/**
+ * True when weapon `weaponIndex` is destroyed by a critical hit: any of its
+ * slots (split weapons included) is flagged in `table` (TW p.124: one hit
+ * on any slot destroys the whole mount). The slot flags are the only record,
+ * so a catastrophic location wipe counts too. A location lost to plain
+ * damage sets no flags; callers check `canFireMount` for that.
+ */
+export function isWeaponCritted(
+  def: ResolvedMechDef,
+  table: Readonly<CritMask>,
+  weaponIndex: number,
+): boolean {
+  const entry = weaponSlotMasks(def).get(weaponIndex);
+  if (entry === undefined) return false;
+  for (const loc of Object.keys(entry) as Location[]) {
+    if (((table[loc] ?? 0) & (entry[loc] ?? 0)) !== 0) return true;
+  }
+  return false;
+}
+
+/** Ascending indices of the weapons {@link isWeaponCritted} reports. */
+export function crittedWeapons(def: ResolvedMechDef, table: Readonly<CritMask>): number[] {
+  return [...weaponSlotMasks(def).keys()]
+    .filter((index) => isWeaponCritted(def, table, index))
+    .sort((a, b) => a - b);
 }
 
 export interface CritSource {
@@ -285,7 +337,9 @@ export type CriticalEffect =
       readonly rolls: readonly number[];
     };
 
-export interface CriticalResolution {
+/** `critSlotsDestroyed` / `damage` / `ammoBins` (from {@link CritState}) are
+ *  the unit's state after this resolution, ammo-explosion cascades included. */
+export interface CriticalResolution extends CritState {
   readonly source: CritSource;
   /** Determining roll (2D6 sum) for the table itself. */
   readonly determiningRoll: number;
@@ -293,22 +347,30 @@ export interface CriticalResolution {
    *  roll of 2 rather than stripped internal structure (derived from
    *  `source.tac`; drives the display tag). */
   readonly throughArmor: boolean;
+  /** Every effect, in order. The only record of a severed limb: see
+   *  {@link critSeveredLimbs}. */
   readonly rows: readonly CriticalEffect[];
-  /** Per-location per-slot destroyed flags after this resolution. */
-  readonly critSlotsDestroyed: CritMask;
-  /** Weapon indices destroyed (newly added) by these crits. */
-  readonly destroyedWeapons: number[];
-  /** Final damage state after any ammo-explosion cascades have applied. */
-  readonly damage: UnitDamageState;
-  /** Limbs blown off (after this determining's effects, in addition to those
-   *  present in the input state). */
-  readonly blownOffLimbs: readonly LimbLocation[];
   /** Reason the unit is killed by these crits (null when it survives): head
    *  or CT IS to 0, cockpit destroyed, head blown off, or three engine
-   *  crits. See `DestroyedReason`. */
+   *  crits. The first kill in the cascade wins; later ones do not overwrite
+   *  it. See `DestroyedReason`. */
   readonly killedReason: DestroyedReason | null;
-  /** Per-crit-slot ammo state after this resolution. */
-  readonly ammoBins: AmmoBins;
+}
+
+/**
+ * Limbs these crits severed, in order: a determining roll of 12 on an arm or
+ * leg, and an arm lost with a side torso a crit blast destroyed (TW p.124).
+ */
+export function critSeveredLimbs(res: Pick<CriticalResolution, "rows">): LimbLocation[] {
+  const out: LimbLocation[] = [];
+  for (const row of res.rows) {
+    if (row.kind === "limbBlownOff") out.push(row.limb);
+    else if (row.kind === "ammoExplosion") out.push(...row.application.blownOffLimbs);
+    else if (row.kind === "weaponDestroyed" && row.explosion !== undefined) {
+      out.push(...row.explosion.application.blownOffLimbs);
+    }
+  }
+  return out;
 }
 
 const LEG_ACTUATORS: ReadonlySet<string> = new Set([
@@ -522,18 +584,10 @@ export function applyAmmoExplosion(
   return applyDamage(state, location, amount, "front", { caseKind, bypassArmor: true });
 }
 
-export interface ResolveCriticalsInput {
+/** The unit's {@link CritState} before these crits, plus the roll context. */
+export interface ResolveCriticalsInput extends CritState, MechModelHolder {
   readonly rng: Rng;
-  readonly def: ResolvedMechDef;
   readonly source: CritSource;
-  /** Pre-damage destroyed-slot flags. */
-  readonly critSlotsDestroyed: CritMask;
-  /** Pre-damage destroyed-weapon indices. */
-  readonly destroyedWeapons: readonly number[];
-  /** Pre-damage damage state. */
-  readonly damage: UnitDamageState;
-  /** Current per-crit-slot ammo state. */
-  readonly ammoBins: Readonly<AmmoBins>;
   /** Phase-start destroyed-slot flags for the step-4 test (TW p.122: "at the
    *  beginning of the current phase, did the location contain components
    *  that could take a critical hit?"). Defaults to `critSlotsDestroyed`. */
@@ -542,11 +596,9 @@ export interface ResolveCriticalsInput {
 
 interface MutableCritState {
   destroyed: CritMask;
-  destroyedWeapons: number[];
   damage: UnitDamageState;
   ammoBins: AmmoBins;
   rows: CriticalEffect[];
-  blownOffLimbs: LimbLocation[];
   killedReason: DestroyedReason | null;
   /** Guard against pathological recursion in ammo-explosion cascades. */
   depth: number;
@@ -559,7 +611,6 @@ const MAX_RECURSION = 4;
 export function resolveCriticalHits(input: ResolveCriticalsInput): CriticalResolution {
   const state: MutableCritState = {
     destroyed: cloneCritTable(input.critSlotsDestroyed),
-    destroyedWeapons: [...input.destroyedWeapons],
     damage: {
       armor: { ...input.damage.armor },
       armorRear: { ...input.damage.armorRear },
@@ -567,37 +618,21 @@ export function resolveCriticalHits(input: ResolveCriticalsInput): CriticalResol
     },
     ammoBins: { ...input.ammoBins },
     rows: [],
-    blownOffLimbs: [],
     killedReason: null,
     depth: 0,
     base: input.baseCritSlotsDestroyed,
   };
-  const topRoll = runDetermining(input.rng, input.def, input.source, state);
-  // Ammo in a location whose IS has dropped to 0 (explosion transfer,
-  // blow-off, cockpit kill) can no longer detonate; remove those bins so
-  // subsequent crits and the committed state stay consistent.
-  stripBinsInZeroedLocations(input.def, state);
+  const topRoll = runDetermining(input.rng, mechDefFor(input), input.source, state);
   return {
     source: input.source,
     determiningRoll: topRoll ?? 0,
     throughArmor: input.source.tac === true,
     rows: state.rows,
     critSlotsDestroyed: state.destroyed,
-    destroyedWeapons: state.destroyedWeapons,
     damage: state.damage,
-    blownOffLimbs: state.blownOffLimbs,
     killedReason: state.killedReason,
     ammoBins: state.ammoBins,
   };
-}
-
-/** Remove bins in any location whose internal structure has reached zero. */
-function stripBinsInZeroedLocations(def: ResolvedMechDef, state: MutableCritState): void {
-  for (const loc of Object.keys(def.critSlots) as Location[]) {
-    if ((state.damage.internalStructure[loc] ?? 0) <= 0) {
-      stripBinsInLocation(state.ammoBins, loc);
-    }
-  }
 }
 
 /**
@@ -643,14 +678,13 @@ function runDetermining(
       // structural pools are wiped here. `critSlotsDestroyed[head]` flags
       // are NOT set to true en masse.
       zeroLocationStructure(state.damage, "head");
-      state.killedReason = "headBlownOff";
+      state.killedReason ??= "headBlownOff";
       state.rows.push({ kind: "headBlownOff", rolls: [det.roll] });
     } else if (isLimb(source.location)) {
       // TW p.145: blown-off arm rides away intact ("may be picked up and
       // used as a club"). Salvage sees weapons, heat sinks, etc. as
       // salvageable on the severed limb — do not mass-mark slot flags.
       zeroLocationStructure(state.damage, source.location);
-      state.blownOffLimbs.push(source.location);
       state.rows.push({ kind: "limbBlownOff", limb: source.location, rolls: [det.roll] });
     }
     state.depth -= 1;
@@ -722,8 +756,8 @@ function isExplosiveSlot(slot: ResolvedCritSlot | undefined): boolean {
 
 /**
  * Detonate a crit blast (ammo bin or explosive weapon) at `loc`: apply the
- * damage directly to IS (armor bypassed, CASE-contained), record blown-off
- * arms / kill, and cascade a fresh determining roll per newly-destroyed
+ * damage directly to IS (armor bypassed, CASE-contained), record the kill,
+ * and cascade a fresh determining roll per newly-destroyed
  * location (TW p.124-125). Mutates `state` and returns the application for
  * the effect payload.
  */
@@ -737,11 +771,8 @@ function detonateCritBlast(
   const app = applyAmmoExplosion(state.damage, loc, amount, checkCASE(def, loc));
   state.damage = app.after;
   if (app.mechDestroyed) {
-    state.killedReason =
+    state.killedReason ??=
       state.damage.internalStructure.head <= 0 ? "headDestroyed" : "centerTorsoDestroyed";
-  }
-  for (const arm of app.blownOffLimbs) {
-    state.blownOffLimbs.push(arm);
   }
   // Roll once for every location whose internal structure the blast reached
   // (TW p.125 "a further critical roll is required"; p.124 one roll per
@@ -752,13 +783,7 @@ function detonateCritBlast(
     runDetermining(rng, def, { location: critLoc, damage: amount, struck: true }, state);
   }
   for (const newlyLost of app.newlyDestroyed) {
-    markLocationCatastrophicallyDestroyed(
-      def,
-      state.damage,
-      state.destroyed,
-      state.ammoBins,
-      newlyLost,
-    );
+    markLocationCatastrophicallyDestroyed(def, state.damage, state.destroyed, newlyLost);
   }
   return app;
 }
@@ -766,7 +791,7 @@ function detonateCritBlast(
 /**
  * Apply a single crit hit at `slotIndex` in `loc`. Dispatches on the slot's
  * component to produce the appropriate effect. Marks the slot destroyed and
- * mutates ammo / damage / destroyed-weapons / blownOffLimbs / killed.
+ * mutates ammo / damage / destroyed-weapons / killed.
  */
 function applySlotHit(
   rng: Rng,
@@ -784,14 +809,16 @@ function applySlotHit(
     state.rows.push({ kind: "noEffect", rolls: rolls.slice() });
     return;
   }
+  // Read before this slot's flag is set: was the mount already destroyed?
+  const mountAlreadyDestroyed =
+    slot.kind === "weapon" && isWeaponCritted(def, state.destroyed, slot.weaponIndex);
   setSlotDestroyed(state.destroyed, loc, i0);
   if (slot.kind === "weapon") {
     // Disable the linked mount. First hit on any of a multi-slot weapon's
     // slots destroys the whole mount; further hits on this same mount are
     // recorded as noEffect soaks (the rifle powers down: no second blast,
     // TW p.135).
-    if (!state.destroyedWeapons.includes(slot.weaponIndex)) {
-      state.destroyedWeapons.push(slot.weaponIndex);
+    if (!mountAlreadyDestroyed) {
       const blast = weaponDefFor(slot).critExplosion ?? 0;
       if (blast > 0) {
         const application = detonateCritBlast(rng, def, loc, blast, state);
@@ -829,7 +856,7 @@ function applySlotHit(
     // still destroys the slot and empties the bin (slugs spill), but no
     // damage roll and no cascade.
     if (!ammoDefFor(slot).explosive) {
-      state.ammoBins[binId] = 0;
+      emptyDestroyedBin(state.ammoBins, binId);
       state.rows.push({
         kind: "ammoNoExplosion",
         location: loc,
@@ -841,8 +868,10 @@ function applySlotHit(
       });
       return;
     }
-    // Only the hit bin detonates; sibling bins of the same weapon stay.
-    const shotsRemaining = liveShots(state.ammoBins[binId]);
+    // Only the hit bin detonates; sibling bins of the same weapon stay. The
+    // raw count: a bin in a location this very hit destroyed still blows
+    // (TW p.124 Destroyed Location).
+    const shotsRemaining = Math.max(0, state.ammoBins[binId] ?? 0);
     const damagePerShot = ammoDamagePerShot(slot);
     const amount = shotsRemaining * damagePerShot;
     if (amount > 0) {
@@ -866,7 +895,7 @@ function applySlotHit(
       state.rows.push({ kind: "noEffect", rolls: rolls.slice() });
     }
     // The bin's contents exploded or the bin was empty.
-    state.ammoBins[binId] = 0;
+    emptyDestroyedBin(state.ammoBins, binId);
     return;
   }
   // structure component
@@ -877,7 +906,7 @@ function applySlotHit(
     // intact — unlike a head blow-off — so salvage readers see a killed
     // cockpit slot in a surviving head. Kill flows via `killedReason`,
     // not via IS<=0.
-    state.killedReason = "cockpitDestroyed";
+    state.killedReason ??= "cockpitDestroyed";
     state.rows.push({
       kind: "cockpitDestroyed",
       location: loc,
@@ -900,7 +929,7 @@ function applySlotHit(
     // ENGINE_SLOTS_KILL engine crit slots destroyed = 'Mech killed (TW p.125).
     const engineCount = countDestroyedEngine(def, state.damage, state.destroyed);
     if (engineCount >= ENGINE_SLOTS_KILL) {
-      state.killedReason = "engineDestroyed";
+      state.killedReason ??= "engineDestroyed";
       state.rows.push({
         kind: "engineDestroyed",
         location: loc,
@@ -962,14 +991,36 @@ export function markLocationCatastrophicallyDestroyed(
   def: ResolvedMechDef,
   damage: UnitDamageState,
   destroyed: CritMask,
-  ammoBins: AmmoBins,
   loc: Location,
 ): void {
   damage.armor[loc] = 0;
   if (isTorso(loc)) damage.armorRear[loc] = 0;
   damage.internalStructure[loc] = 0;
+  // Flagging every slot is the whole record: the location's bins read as
+  // destroyed (no shots, no salvage) without touching their counts.
   destroyAllSlots(destroyed, loc, def.critSlots[loc]);
-  zeroBinsInLocation(ammoBins, loc);
+}
+
+/** A destroyed bin holds nothing: its contents exploded or spilled. The slot
+ *  flag is the record that it is destroyed; this only clears the count. */
+function emptyDestroyedBin(ammoBins: AmmoBins, binId: string): void {
+  ammoBins[binId] = 0;
+}
+
+/**
+ * Destroy an ammo bin outside a crit roll (the heat-phase explosion, TW
+ * p.159): flag its slot and empty it, as a critical hit on it would. Returns
+ * the new crit table; `ammoBins` is updated in place.
+ */
+export function destroyAmmoBin(
+  critSlotsDestroyed: Readonly<CritMask>,
+  ammoBins: AmmoBins,
+  bin: AmmoBinRef,
+): CritMask {
+  const next = cloneCritTable(critSlotsDestroyed);
+  setSlotDestroyed(next, bin.location, bin.slotIndex - 1);
+  emptyDestroyedBin(ammoBins, bin.id);
+  return next;
 }
 
 /** Intact jump jets mounted outside the legs (TW p.53: depth 1 water). */

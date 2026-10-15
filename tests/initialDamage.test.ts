@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { isTorso, LOCATIONS, type Location } from "../src/core/types";
-import { mechDef } from "../src/data/index";
-import { loadAmmoBins } from "../src/rules/ammo";
+import { mechDef, mechDefFor } from "../src/data/index";
+import { collectAmmoBins, loadAmmoBins, strandedShots, usableShots } from "../src/rules/ammo";
 import {
   applyAmmoExplosion,
   checkCASE,
+  crittedWeapons,
   destroyedSlots,
   emptyCritTable,
   isSlotDestroyed,
@@ -47,7 +48,6 @@ describe("starting damage (UnitInit.damage)", () => {
     const u = unitWith();
     expect(u.pilotHits).toBe(0);
     expect(u.prone).toBe(false);
-    expect(u.destroyedWeapons).toEqual([]);
     expect(u.jammedWeapons).toEqual([]);
     expect(Object.values(u.critSlotsDestroyed).flat().some(Boolean)).toBe(false);
   });
@@ -75,23 +75,27 @@ describe("starting damage (UnitInit.damage)", () => {
     expect(isSlotDestroyed(u.critSlotsDestroyed, "head", 3)).toBe(true);
     expect(isSlotDestroyed(u.critSlotsDestroyed, "rightArm", 4)).toBe(true);
     // Weapon slots map to mounts (1-based); a multi-slot mount counts once.
-    expect([...u.destroyedWeapons].sort()).toEqual([2, 3, 4]);
+    expect(crittedWeapons(mechDefFor(u), u.critSlotsDestroyed)).toEqual([2, 3, 4]);
     expect(u.ammoBins["leftTorso:1"]!).toBe(loaded - 3);
     expect(u.ammoBins["leftTorso:2"]!).toBe(0); // destroyed bin is empty
     expect(u.jammedWeapons).toEqual([]);
   });
 
-  it("keeps 'structure gone, crit slots alive' as given, but strips the location's bins", () => {
+  it("keeps 'structure gone, crit slots alive' as given; the location's bins read as stranded", () => {
     const u = unitWith(wipe("HBK-4G", "leftTorso", "leftArm"));
     expect(u.damage.internalStructure.leftTorso).toBe(0);
     // Plain damage never flags slots (see damage.ts); neither do we.
     expect(u.critSlotsDestroyed.leftTorso).toBe(0);
     expect(u.critSlotsDestroyed.leftArm).toBe(0);
-    expect(u.destroyedWeapons).toEqual([]);
-    // Play strands the bins of a destroyed location (negative = salvage), so do we.
+    // Bins keep their shots; the dead location (IS 0) makes them stranded.
     const loaded = unitWith().ammoBins;
-    expect(u.ammoBins["leftTorso:1"]).toBe(-loaded["leftTorso:1"]!);
-    expect(u.ammoBins["leftTorso:2"]).toBe(-loaded["leftTorso:2"]!);
+    const def = mechDefFor(u);
+    for (const id of ["leftTorso:1", "leftTorso:2"]) {
+      const bin = collectAmmoBins(def).find((b) => b.id === id)!;
+      expect(u.ammoBins[id]).toBe(loaded[id]!);
+      expect(usableShots(u, bin)).toBe(0);
+      expect(strandedShots(u, bin)).toBe(loaded[id]!);
+    }
     const intact = unitWith();
     for (const id of Object.keys(intact.ammoBins).filter((b) => !b.startsWith("leftTorso:"))) {
       expect(u.ammoBins[id]).toBe(intact.ammoBins[id]);
@@ -102,7 +106,7 @@ describe("starting damage (UnitInit.damage)", () => {
       critsDestroyed: { leftTorso: [2] },
     });
     expect(destroyedSlots(v.critSlotsDestroyed, "leftTorso")).toHaveLength(1);
-    expect(v.ammoBins["leftTorso:1"]).toBe(-loaded["leftTorso:1"]!);
+    expect(v.ammoBins["leftTorso:1"]).toBe(loaded["leftTorso:1"]!);
     expect(v.ammoBins["leftTorso:2"]).toBe(0); // destroyed slot: nothing left
   });
 
@@ -112,7 +116,7 @@ describe("starting damage (UnitInit.damage)", () => {
       ...wipe("HBK-4G", "leftTorso", "leftArm"),
       ammoUsed: { "leftTorso:1": 3 },
     });
-    expect(u.ammoBins["leftTorso:1"]).toBe(-(loaded - 3));
+    expect(u.ammoBins["leftTorso:1"]).toBe(loaded - 3);
   });
 
   describe("gates: states that would start destroyed", () => {
@@ -263,13 +267,13 @@ describe("starting damage: empty crit slots", () => {
       internalStructure: { ...def.internalStructure },
     };
     const destroyed = emptyCritTable(def);
-    const ammoBins = loadAmmoBins(def);
+    const _ammoBins = loadAmmoBins(def);
     const ammoSlot = def.critSlots.leftTorso.findIndex((slot) => slot.kind === "ammo");
     const app = applyAmmoExplosion(damage, "leftTorso", 120, checkCASE(def, "leftTorso"));
     expect(app.newlyDestroyed).toContain("leftTorso");
     Object.assign(damage, app.after);
     for (const lost of app.newlyDestroyed) {
-      markLocationCatastrophicallyDestroyed(def, damage, destroyed, ammoBins, lost);
+      markLocationCatastrophicallyDestroyed(def, damage, destroyed, lost);
     }
     // Slots 9-11 of the left torso are soak (marked, gear lost), 12 is empty (clear).
     expect(def.critSlots.leftTorso.slice(8).map((slot) => slot.kind)).toEqual([
