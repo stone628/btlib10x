@@ -75,8 +75,7 @@ describe("determining critical hits table", () => {
     const res = resolveCriticalHits({
       rng: detRoll(8, 1, 1),
       def,
-      source: { location: "centerTorso", damage: 5 },
-      throughArmor: true,
+      source: { location: "centerTorso", damage: 5, tac: true },
       critSlotsDestroyed: freshFlags(def),
       destroyedWeapons: [],
       damage,
@@ -1735,7 +1734,6 @@ describe("audit fixes: critical-hit pipeline", () => {
       rng: detRoll(8, 1, 1),
       def,
       source: { location: "leftTorso", damage: 0, tac: true, struck: false },
-      throughArmor: true,
       ...f,
     });
     expect(res.determiningRoll).toBe(8);

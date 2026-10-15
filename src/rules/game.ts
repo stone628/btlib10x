@@ -3474,12 +3474,25 @@ function applyDamageGroups(
     creditDealt(ledger, unit.id, dealtOf(app));
     sheared.push(...app.blownOffLimbs);
     if (!state.critsDisabled) {
-      // One roll per location whose structure the group damaged (TW p.124).
-      for (const critLoc of structureStruck(app)) {
+      // One roll per location whose structure the group damaged (TW p.124),
+      // plus one additional roll when the hit-location roll was a 2
+      // (through-armor critical, TW p.124) — the attack must still do at
+      // least 1 point. Mirrors the weapon/physical paths.
+      const struck = structureStruck(app);
+      const critRolls = struck.map((location) => ({ location, tac: false }));
+      if (group.tac === true && group.damage >= 1) {
+        critRolls.push({ location: group.location, tac: true });
+      }
+      for (const { location: critLoc, tac: tagThroughArmor } of critRolls) {
         const res = resolveCriticalHits({
           rng,
           def,
-          source: { location: critLoc, damage: group.damage, struck: true },
+          source: {
+            location: critLoc,
+            damage: group.damage,
+            struck: struck.includes(critLoc),
+            tac: tagThroughArmor,
+          },
           critSlotsDestroyed: unit.critSlotsDestroyed,
           destroyedWeapons: unit.destroyedWeapons,
           damage: unit.damage,
@@ -3719,7 +3732,12 @@ export function applyFall(
   const column = opts.rearHits === true ? "rear" : dir.column;
   const groups: DamageGroup[] = [];
   for (const amount of fallingDamageGroups(total)) {
-    groups.push({ location: hitLocationForArc(column, roll2D6(rng)), damage: amount });
+    const roll = roll2D6(rng);
+    groups.push({
+      location: hitLocationForArc(column, roll),
+      damage: amount,
+      ...(roll === 2 ? { tac: true as const } : {}),
+    });
   }
   const crits = applyDamageGroups(
     state,
@@ -4354,7 +4372,6 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
             struck: struck.includes(critLoc),
             tac: tagThroughArmor,
           },
-          throughArmor: tagThroughArmor,
           ...(startCrit !== undefined ? { baseCritSlotsDestroyed: startCrit } : {}),
           critSlotsDestroyed: recipient.critSlotsDestroyed,
           destroyedWeapons: recipient.destroyedWeapons,
@@ -5426,7 +5443,12 @@ function movementTerrainPsr(
       const column: Arc = forward ? "front" : "rear";
       const groups: DamageGroup[] = [];
       for (const amount of fallingDamageGroups(total)) {
-        groups.push({ location: hitLocationForArc(column, roll2D6(rng)), damage: amount });
+        const roll = roll2D6(rng);
+        groups.push({
+          location: hitLocationForArc(column, roll),
+          damage: amount,
+          ...(roll === 2 ? { tac: true as const } : {}),
+        });
       }
       const crits = applyDamageGroups(state, unit, rng, groups, column, sink, ledger);
       sink.push({

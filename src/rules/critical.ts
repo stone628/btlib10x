@@ -290,7 +290,8 @@ export interface CriticalResolution {
   /** Determining roll (2D6 sum) for the table itself. */
   readonly determiningRoll: number;
   /** True when the determining roll came from a through-armor hit-location
-   *  roll of 2 rather than stripped internal structure. */
+   *  roll of 2 rather than stripped internal structure (derived from
+   *  `source.tac`; drives the display tag). */
   readonly throughArmor: boolean;
   readonly rows: readonly CriticalEffect[];
   /** Per-location per-slot destroyed flags after this resolution. */
@@ -525,9 +526,6 @@ export interface ResolveCriticalsInput {
   readonly rng: Rng;
   readonly def: ResolvedMechDef;
   readonly source: CritSource;
-  /** True when triggered by a through-armor hit-location roll of 2 (armor
-   *  unbreached); echoed into the resolution as a tag. Defaults false. */
-  readonly throughArmor?: boolean;
   /** Pre-damage destroyed-slot flags. */
   readonly critSlotsDestroyed: CritMask;
   /** Pre-damage destroyed-weapon indices. */
@@ -582,7 +580,7 @@ export function resolveCriticalHits(input: ResolveCriticalsInput): CriticalResol
   return {
     source: input.source,
     determiningRoll: topRoll ?? 0,
-    throughArmor: input.throughArmor ?? false,
+    throughArmor: input.source.tac === true,
     rows: state.rows,
     critSlotsDestroyed: state.destroyed,
     destroyedWeapons: state.destroyedWeapons,

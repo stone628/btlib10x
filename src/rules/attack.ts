@@ -437,7 +437,6 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
           struck: struck.includes(critLoc),
           tac: tagThroughArmor,
         },
-        ...(tagThroughArmor ? { throughArmor: true } : {}),
         ...(input.targetBaseCritSlotsDestroyed !== undefined
           ? { baseCritSlotsDestroyed: input.targetBaseCritSlotsDestroyed }
           : {}),
