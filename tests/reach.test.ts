@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { HexGrid } from "../src/core/terrain";
-import type { Facing, HexCell, MoveMode } from "../src/core/types";
+import { FACINGS, type Facing, type HexCell, type MoveMode } from "../src/core/types";
 import type { MovePathStep } from "../src/rules/movement";
 import { reachableLandings } from "../src/rules/movement";
 
@@ -289,5 +289,28 @@ describe("reachableLandings", () => {
     expect(fragments(lookup(rs, { col: 12, row: 11 }, "n"))).toEqual(["F"]);
     // The free pick at start hex facing se stays empty-path, cost 0.
     expect(lookup(rs, start, "se")).toEqual([]);
+  });
+
+  it("sorts landings by numeric col, row, facing — not locale collation", () => {
+    // String collation puts "10,x" before "9,x" ("1" < "9") and Thai
+    // collation even reorders "1,10" after "10,10"; numeric order must hold
+    // in every locale.
+    const rs = reach("walk", 6, 8, 0);
+    expect(rs.length).toBeGreaterThan(0);
+    const rank = (hex: { col: number; row: number }, facing: Facing): number =>
+      hex.col * 1_000_000 + hex.row * 10 + FACINGS.indexOf(facing);
+    for (let i = 1; i < rs.length; i++) {
+      expect(rank(rs[i]!.hex, rs[i]!.facing)).toBeGreaterThanOrEqual(
+        rank(rs[i - 1]!.hex, rs[i - 1]!.facing),
+      );
+    }
+    const cols = rs.map((l) => l.hex.col);
+    expect(Math.max(...cols)).toBeGreaterThanOrEqual(10);
+    expect(Math.min(...cols)).toBeLessThan(10);
+    const lastCol9 = cols.lastIndexOf(9);
+    const firstCol10 = cols.indexOf(10);
+    expect(lastCol9).toBeGreaterThanOrEqual(0);
+    expect(firstCol10).toBeGreaterThanOrEqual(0);
+    expect(lastCol9).toBeLessThan(firstCol10);
   });
 });

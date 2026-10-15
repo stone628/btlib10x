@@ -452,9 +452,8 @@ export function reachableLandings(
   }
 
   results.sort((a, b) => {
-    const ka = hexKey(a.hex);
-    const kb = hexKey(b.hex);
-    if (ka !== kb) return ka.localeCompare(kb);
+    if (a.hex.col !== b.hex.col) return a.hex.col - b.hex.col;
+    if (a.hex.row !== b.hex.row) return a.hex.row - b.hex.row;
     return FACINGS.indexOf(a.facing) - FACINGS.indexOf(b.facing);
   });
   return results;
