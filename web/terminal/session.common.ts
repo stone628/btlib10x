@@ -58,6 +58,7 @@ import {
   SENSOR_BLIND_HITS,
   type ShutdownState,
   shutdownAvoid,
+  type TorsoLocation,
   type TorsoLocationValue,
   toHitHeatModifier,
   toHitHeatModifierWithThreshold,
@@ -513,32 +514,41 @@ function gyroSensors(view: SheetView): string {
   return `G:${g} S:${s}`;
 }
 
-/** ASCII humanoid armor diagram: internal structure (I), front armor (F/A), rear (R). */
-/** for 'sheet <id>' command */
-function armorDiagramSheet(view: SheetView): string[] {
+/** Current against original armor and structure, as the `sheet` and
+ *  `salvage` diagrams draw them. */
+interface ArmorStatus {
+  readonly armor: Readonly<LocationValue>;
+  readonly armorRear: Readonly<TorsoLocationValue>;
+  readonly structure: Readonly<LocationValue>;
+  readonly originalArmor: Readonly<LocationValue>;
+  readonly originalArmorRear: Readonly<TorsoLocationValue>;
+  readonly originalStructure: Readonly<LocationValue>;
+}
+
+/** Width of the side panels beside the head block (status / heat). */
+const DIAGRAM_SIDE = 14;
+
+/** ASCII humanoid armor diagram: internal structure (I), front armor (F/A),
+ *  rear (R). `left` / `right` fill the three panels beside the head block. */
+function armorDiagramLines(
+  st: ArmorStatus,
+  left: readonly [string, string, string] = ["", "", ""],
+  right: readonly [string, string, string] = ["", "", ""],
+): string[] {
   const cell = (val: number, max: number, label: string) =>
     `${String(val).padStart(2)}/${String(max).padStart(2)}${label}`;
-  const p = (n: number) => " ".repeat(n);
-  const CT = 14,
-    RT = 7;
-  const a = view.armor;
-  const o = view.originalArmor;
-  const s = view.damage.internalStructure;
-  const os = view.originalArmorStructure;
-  const ar = view.damage.armorRear;
-  const or = view.originalArmorRear;
-  const rear = (loc: Location) => (isTorso(loc) ? cell(ar[loc], or[loc], "R") : cell(0, 0, "R"));
-  const pRT = p(RT);
-  const statusHeader = shutdownHeader(view).padEnd(CT);
-  const heatHeader = "[HEAT|HS]".padStart(CT);
-  const heat = cell(view.heat, HEAT_SCALE_MAX, " ").padStart(CT);
-  const dissip = cell(-view.dissipCurr, view.dissipMax, " ").padStart(CT);
-  const el = engineLifeSupport(view).padEnd(CT);
-  const gs = gyroSensors(view).padEnd(CT);
+  const pRT = " ".repeat(7);
+  const a = st.armor;
+  const o = st.originalArmor;
+  const s = st.structure;
+  const os = st.originalStructure;
+  const rear = (loc: TorsoLocation) => cell(st.armorRear[loc], st.originalArmorRear[loc], "R");
+  const side = (l: string, mid: string, r: string) =>
+    `${l.padEnd(DIAGRAM_SIDE)}${mid}${r.padStart(r === "" ? 0 : DIAGRAM_SIDE)}`.trimEnd();
   return [
-    `${statusHeader}[ HD ]${heatHeader}`,
-    `${el}${cell(s.head, os.head, "I")}${heat}`,
-    `${gs}${cell(a.head, o.head, "A")}${dissip}`,
+    side(left[0], "[ HD ]", right[0]),
+    side(left[1], cell(s.head, os.head, "I"), right[1]),
+    side(left[2], cell(a.head, o.head, "A"), right[2]),
     `       [ RT ] [ CT ] [ LT ]`,
     [
       "[ RA ]",
@@ -565,6 +575,41 @@ function armorDiagramSheet(view: SheetView): string[] {
     `${pRT}${cell(s.rightLeg, os.rightLeg, "I")}        ${cell(s.leftLeg, os.leftLeg, "I")}`,
     `${pRT}${cell(a.rightLeg, o.rightLeg, "A")}        ${cell(a.leftLeg, o.leftLeg, "A")}`,
   ];
+}
+
+/** for 'sheet <id>' command: the diagram with status, core components and heat. */
+function armorDiagramSheet(view: SheetView): string[] {
+  const cell = (val: number, max: number, label: string) =>
+    `${String(val).padStart(2)}/${String(max).padStart(2)}${label}`;
+  return armorDiagramLines(
+    {
+      armor: view.armor,
+      armorRear: view.damage.armorRear,
+      structure: view.damage.internalStructure,
+      originalArmor: view.originalArmor,
+      originalArmorRear: view.originalArmorRear,
+      originalStructure: view.originalArmorStructure,
+    },
+    [shutdownHeader(view), engineLifeSupport(view), gyroSensors(view)],
+    [
+      "[HEAT|HS]",
+      cell(view.heat, HEAT_SCALE_MAX, " "),
+      cell(-view.dissipCurr, view.dissipMax, " "),
+    ],
+  );
+}
+
+/** for 'salvage <id>' command: armor and structure only, `damage` against
+ *  the design values of `def`. */
+export function armorDiagramSalvage(damage: UnitDamageState, def: ResolvedMechDef): string[] {
+  return armorDiagramLines({
+    armor: damage.armor,
+    armorRear: damage.armorRear,
+    structure: damage.internalStructure,
+    originalArmor: def.armor,
+    originalArmorRear: def.armorRear,
+    originalStructure: def.internalStructure,
+  });
 }
 
 // ------------------------------------------------------- crit slot chart ----
@@ -607,6 +652,11 @@ const CRIT_COMPONENT_KEY: Readonly<Record<CritStructureName, MessageKey>> = {
   hip: "critChart.component.hip",
   targetingComputer: "critChart.component.targetingComputer",
 };
+
+/** Localized display name of a structure component (`heatSink`, ...). */
+export function componentLabel(name: CritStructureName): string {
+  return i18n(CRIT_COMPONENT_KEY[name]);
+}
 
 /** Human-friendly i18n key for a soak (armor-tech) component name. */
 const CRIT_SOAK_KEY: Readonly<Record<CritSoakName, MessageKey>> = {
@@ -791,21 +841,20 @@ const DESTROYED_REASON_KEY: Readonly<Record<DestroyedReason, MessageKey>> = {
   engineDestroyed: "sheet.remove.engineDestroyed",
 };
 
+/** Why a unit left play: the kill reason alone for a plain destruction,
+ *  both when a pilot was killed or ejected from a 'Mech also destroyed. */
+export function removalLabel(removed: RemovalReason, destroyed: DestroyedState): string {
+  if (removed === "destroyed" && destroyed !== "not") return i18n(DESTROYED_REASON_KEY[destroyed]);
+  const removal = i18n(REMOVAL_REASON_KEY[removed]);
+  return destroyed === "not"
+    ? removal
+    : i18n("sheet.remove.both", { removal, destroyed: i18n(DESTROYED_REASON_KEY[destroyed]) });
+}
+
 export function sheetIdLine(view: SheetView): string {
-  if (view.removed === "not") return i18n("sheet.idLine", { id: view.id, team: view.team });
-  if (view.removed === "destroyed" && view.destroyed !== "not") {
-    return `${i18n("sheet.idLine", { id: view.id, team: view.team })}${i18n("sheet.removedId", { reason: i18n(DESTROYED_REASON_KEY[view.destroyed]) })}`;
-  }
-  // A pilot killed or ejected from a 'Mech that was also destroyed shows both.
-  const removal = i18n(REMOVAL_REASON_KEY[view.removed]);
-  const reason =
-    view.destroyed === "not"
-      ? removal
-      : i18n("sheet.remove.both", {
-          removal,
-          destroyed: i18n(DESTROYED_REASON_KEY[view.destroyed]),
-        });
-  return `${i18n("sheet.idLine", { id: view.id, team: view.team })}${i18n("sheet.removedId", { reason })}`;
+  const idLine = i18n("sheet.idLine", { id: view.id, team: view.team });
+  if (view.removed === "not") return idLine;
+  return `${idLine}${i18n("sheet.removedId", { reason: removalLabel(view.removed, view.destroyed) })}`;
 }
 
 function sheetMovementLine(view: SheetView): string {

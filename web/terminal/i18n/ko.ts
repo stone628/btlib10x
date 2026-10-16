@@ -21,7 +21,7 @@ export const ko: Catalog = {
   "hint.attack":
     "무기 공격 단계입니다 - 프롬프트에 사격 유닛이 표시됩니다.\n'candidate'로 가능한 공격 방식을 확인하고 'fire'로 하나의 목표에 대한 사격을 선언하세요.\n인접한 적이 있으면 'punch', 'kick', 'club', 'strike'도 가능합니다 (무기 이후에 해결).\n'status'로 선언을 확인한 뒤 'done'으로 해결하거나 'cancel'로 취소합니다.",
   "hint.over":
-    "전투가 종료되었습니다.\n'rematch'로 같은 편성과 시드로 재대국하거나, 'reset'으로 빈 설정 화면으로 돌아갑니다.",
+    "전투가 종료되었습니다.\n'salvage'로 전장에 남은 기체와 잔해를 확인합니다.\n'rematch'로 같은 편성과 시드로 재대국하거나, 'reset'으로 빈 설정 화면으로 돌아갑니다.",
 
   // board
   "board.noMap":
@@ -124,6 +124,8 @@ export const ko: Catalog = {
   "cmd.cancelFire.help": "예약된 선언 모두 지우기 (사격, 물리공격, 줍기, 버리기)",
   "cmd.doneFire.help": "공격 선언 및 해결",
   "cmd.rematch.help": "같은 편성, 지형, 시드로 새 전투",
+  "cmd.salvage.help": "전장에 남은 기체와 잔해 목록",
+  "cmd.salvage.arg.id": "한 유닛의 회수 상세만 표시",
   "cmd.heat.help": "유닛의 발열 게이지 상태 표시 (기본: 행동 유닛)",
   "cmd.heat.arg.id": "확인할 유닛\n기본은 행동 유닛",
   "cmd.candidateMove.help": "이동 가능 영역을 ASCII 전장 격자로 표시",
@@ -591,6 +593,31 @@ export const ko: Catalog = {
   "sheet.remove.cockpitDestroyed": "조종석 파괴",
   "sheet.remove.hdBlownOff": "HD 폭발",
   "sheet.remove.engineDestroyed": "엔진 파괴",
+
+  // salvage report
+  "salvage.title": "회수 목록 ({n}):",
+  "salvage.col.id": "id",
+  "salvage.col.model": "모델",
+  "salvage.col.team": "팀",
+  "salvage.col.kind": "종류",
+  "salvage.col.reason": "사유",
+  "salvage.col.hex": "육각",
+  "salvage.col.posture": "자세",
+  "salvage.col.wreckage": "잔해",
+  "salvage.col.salvageables": "회수 가능",
+  "salvage.col.hull": "회수 기체",
+  "salvage.kind.hull": "기체",
+  "salvage.kind.wreckage": "잔해",
+  "salvage.yes": "있음",
+  "salvage.no": "-",
+  "salvage.entryHeader": "{id} {model} (팀 {team}) - {kind}, {reason}, {hex} {posture}",
+  "salvage.items": "무기 및 장비: {list}",
+  "salvage.severedLoc": "{loc} (절단)",
+  "salvage.ammo": "남은 탄약: {list}",
+  "salvage.ammoBin": "{weapon} x{shots}",
+  "salvage.none": "없음",
+  "salvage.empty": "회수할 것이 없습니다",
+  "salvage.notSalvage": "'{id}'은(는) 회수할 것이 없습니다",
 
   "critChart.summary": "critical slots",
   "critChart.empty": "-",

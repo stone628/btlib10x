@@ -349,6 +349,8 @@ export {
 export {
   type SalvageAmmo,
   type SalvageEntry,
+  type SalvageEquipmentName,
+  type SalvageItem,
   type SalvageKind,
   type SalvageSlot,
   salvageReport,

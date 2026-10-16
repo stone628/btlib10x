@@ -120,6 +120,7 @@ pass), plus `cancel`, `sheet`, `status`, `heat` and the globals.
 | command | effect |
 |---|---|
 | `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [J](jam) / [-](destroyed) / per-bin ammo `(n left)` markers); without id: brief unit list (id, model, position+facing) grouped by team |
+| `salvage [id]` | the engine's `salvageReport`. Without id: a roster table of every hull and destroyed frame (kind, removal reason, hex, posture, wreckage left). With id: a unit line, then a `salvageables` column (intact weapons and equipment — heat sinks, jump jets, targeting computer — and stranded ammo, by location, unclaimed severed limbs marked `(severed)`) beside a `salvaged hull` column holding the `sheet` armor/structure diagram; wreckage shows the salvageables column only. Over phase only |
 | `rollback` | return to the last battle prompt (the one before the game-ending `done`) |
 | `rematch` | new battle, same roster + terrain + seed |
 | globals | `board`, `log` remain available; `reset` returns to empty setup |
@@ -368,7 +369,7 @@ stated elsewhere in this document or the codebase:
     web/terminal/session.move.ts    movement phase: mode parsing, reachable map, place/cancel/done commit
     web/terminal/session.attack.ts  attack phase: fire/physical queues, validation, torso twist, ammo policy, resolve
     web/terminal/session.setup.ts   setup phase: map, add/set/rm units, status, start
-    web/terminal/session.over.ts    over state: rematch, status
+    web/terminal/session.over.ts    over state: rematch, status, salvage
     web/terminal/rollback.ts     prompt snapshots + the `rollback` command's undo
     web/terminal/chunk.ts        structured output chunks: lines, board, columns, collapsible
     web/terminal/rng.ts          mulberry32-seeded Rng

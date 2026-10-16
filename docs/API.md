@@ -724,7 +724,7 @@ passAttack(state, unitId): void                                         // attac
 wreckageAt(state, hex): readonly WreckageEntry[]                         // destroyed 'Mechs lying as wreckage in the hex: { model, unitId } (unitId null when the map placed it)
 occupantAt(state, hex, excludeId?): UnitState | undefined               // the active unit or hull in a hex
 isHull(unit) / isUnitOnBoard(unit) / isTargetableBy(attacker, target)  // see Hulls and wreckage below
-salvageReport(state): SalvageEntry[]                                     // every hull and destroyed frame: kind, removal / kill reason, hex, posture, damage, destroyed slots, stranded ammo, salvageable severed limbs
+salvageReport(state): SalvageEntry[]                                     // every hull and destroyed frame: kind, removal / kill reason, hex, posture, damage, destroyed slots, stranded ammo, salvageable severed limbs, intact weapons and equipment (`salvageable`)
 nextActor / actorQueue / gameLoop / requireUnit — see below
 ```
 

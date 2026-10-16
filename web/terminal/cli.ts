@@ -47,6 +47,7 @@ import {
   reachableChunk,
   requireBattle,
   resetSession,
+  salvageChunks,
   setConfigLocale,
   setSeed,
   setTorsoTwist,
@@ -660,6 +661,12 @@ const OVER_CMDS: Record<string, CmdDef> = {
   status: {
     helpKey: "cmd.statusOver.help",
     run: (s) => [victoryBannerChunk(s), overStatusChunk(s)],
+  },
+  salvage: {
+    helpKey: "cmd.salvage.help",
+    usage: "salvage [id]",
+    argsDoc: [["id", "cmd.salvage.arg.id"]],
+    run: (s, a) => salvageChunks(s, a[0]),
   },
   rollback: ROLLBACK_CMD,
   rematch: {

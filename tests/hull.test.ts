@@ -241,6 +241,41 @@ describe("salvageReport", () => {
   });
 });
 
+describe("salvageReport: intact weapons and equipment", () => {
+  it("lists frame and unclaimed severed-limb contents, skipping lost ones", () => {
+    const state = movement(hbkVsEnf());
+    ejectPilot(state, "hbk", scriptedRng(6, 6), []);
+    const hbk = requireUnit(state, "hbk");
+    // Left arm severed and left lying; right arm severed and picked up.
+    hbk.blownOffLimbs.push({ limb: "leftArm", salvageable: true });
+    hbk.blownOffLimbs.push({ limb: "rightArm", salvageable: false });
+    hbk.damage = {
+      ...hbk.damage,
+      internalStructure: { ...hbk.damage.internalStructure, leftArm: 0, rightArm: 0, head: 0 },
+    };
+    hbk.critSlotsDestroyed = { ...hbk.critSlotsDestroyed, rightTorso: 1 }; // AC/20 slot 1
+    const items = salvageReport(state)[0]!.salvageable;
+    const weapons = items.filter((i) => i.kind === "weapon");
+    expect(weapons).toEqual([
+      { kind: "weapon", name: "Medium Laser", location: "leftArm", severed: true, count: 1 },
+    ]);
+    const equipment = items.filter((i) => i.kind === "equipment");
+    expect(equipment.every((i) => !i.severed && i.location !== "head")).toBe(true);
+  });
+
+  it("counts every intact weapon on an undamaged hull", () => {
+    const state = movement(hbkVsEnf());
+    ejectPilot(state, "hbk", scriptedRng(6, 6), []);
+    const weapons = salvageReport(state)[0]!.salvageable.filter((i) => i.kind === "weapon");
+    expect(weapons.map((w) => [w.location, w.name, w.count])).toEqual([
+      ["leftArm", "Medium Laser", 1],
+      ["rightArm", "Medium Laser", 1],
+      ["head", "Small Laser", 1],
+      ["rightTorso", "AC/20", 1],
+    ]);
+  });
+});
+
 describe("board rendering", () => {
   it("draws a hull as -id and marks wreckage hexes", () => {
     const state = movement(hbkVsEnf());

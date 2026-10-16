@@ -22,7 +22,7 @@ export const en = {
   "hint.attack":
     "you are in the attack phase - the prompt shows who is firing.\nbrowse the acting unit's available options via 'candidate', then declare shots against one target via 'fire'.\nagainst an adjacent enemy you may also 'punch', 'kick', 'club', or 'strike' (resolved after weapons).\nreview the declaration with 'status', resolve with 'done', or discard it with 'cancel'.",
   "hint.over":
-    "the battle is over.\nreplay the same roster and seed with 'rematch', or return to an empty setup with 'reset'.",
+    "the battle is over.\nlist hulls and wreckage left on the field with 'salvage'.\nreplay the same roster and seed with 'rematch', or return to an empty setup with 'reset'.",
 
   // board
   "board.noMap": "no battlefield yet - load one via 'map'; 'info map' lists the choices.",
@@ -124,6 +124,8 @@ export const en = {
   "cmd.cancelFire.help": "clear all queued declarations (shots, physical attacks, pickup, drop)",
   "cmd.doneFire.help": "declare attacks and resolve them",
   "cmd.rematch.help": "new battle with the same roster, terrain and seed",
+  "cmd.salvage.help": "list hulls and wreckage left on the field",
+  "cmd.salvage.arg.id": "show one unit's salvage detail only",
   "cmd.heat.help": "show a unit's heat scale status (default: acting unit)",
   "cmd.heat.arg.id": "unit to inspect; defaults to the acting unit",
   "cmd.candidateMove.help": "show movement candidate, drawn on the ASCII battle grid",
@@ -603,6 +605,31 @@ export const en = {
   "sheet.remove.cockpitDestroyed": "cockpit destroyed",
   "sheet.remove.hdBlownOff": "HD blown off",
   "sheet.remove.engineDestroyed": "engine destroyed",
+
+  // salvage report
+  "salvage.title": "salvage ({n}):",
+  "salvage.col.id": "id",
+  "salvage.col.model": "model",
+  "salvage.col.team": "team",
+  "salvage.col.kind": "kind",
+  "salvage.col.reason": "reason",
+  "salvage.col.hex": "hex",
+  "salvage.col.posture": "posture",
+  "salvage.col.wreckage": "wreckage",
+  "salvage.col.salvageables": "salvageables",
+  "salvage.col.hull": "salvaged hull",
+  "salvage.kind.hull": "hull",
+  "salvage.kind.wreckage": "wreckage",
+  "salvage.yes": "yes",
+  "salvage.no": "-",
+  "salvage.entryHeader": "{id} {model} (team {team}) - {kind}, {reason}, {hex} {posture}",
+  "salvage.items": "weapons & equipment: {list}",
+  "salvage.severedLoc": "{loc} (severed)",
+  "salvage.ammo": "stranded ammo: {list}",
+  "salvage.ammoBin": "{weapon} x{shots}",
+  "salvage.none": "none",
+  "salvage.empty": "nothing to salvage",
+  "salvage.notSalvage": "'{id}' left nothing to salvage",
 
   // critical slot chart
   "critChart.summary": "critical slots",
