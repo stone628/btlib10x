@@ -205,6 +205,17 @@ function encodeMapDef(src) {
       t: TERRAIN_TYPES.indexOf(hex.type),
       ...(hex.level !== undefined && { l: hex.level }),
     })),
+    ...(src.clubs?.length > 0 && {
+      c: src.clubs.map((e) => ({
+        c: e.col,
+        r: e.row,
+        m: e.model,
+        l: LOC_CODES[e.limb],
+      })),
+    }),
+    ...(src.wreckage?.length > 0 && {
+      w: src.wreckage.map((e) => ({ c: e.col, r: e.row, m: e.model })),
+    }),
   });
 }
 

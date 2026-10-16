@@ -71,7 +71,7 @@ export {
   WIRE_VERSION,
   weightClassForTonnage,
 } from "./data/index";
-export type { MapDef, MapDefSrc } from "./data/map.schema";
+export type { MapClubSrc, MapDef, MapDefSrc, MapWreckageSrc } from "./data/map.schema";
 export type {
   CRIT_SLOT_COUNTS,
   CRIT_SOAK_NAMES,
@@ -213,6 +213,7 @@ export type {
   UnitState,
   ValidatedTargetVolley,
   WeaponAttackDecl as AttackDecl,
+  WreckageEntry,
 } from "./rules/game";
 export {
   abandonPilot,

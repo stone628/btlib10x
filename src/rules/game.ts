@@ -325,15 +325,20 @@ export type DestroyedState = "not" | DestroyedReason;
  *  tree, or a girder pried from rubble. */
 export type ClubKind = "limb" | "tree" | "girder";
 
-/** A club carried by a unit. A limb club records which severed limb it is;
+export interface HeldLimbClub extends MechModelHolder {
+  readonly kind: "limb";
+  readonly limb: LimbLocation;
+  readonly model: string;
+  readonly ownerId: string | null;
+}
+
+/** A club carried by a unit. A limb club records which severed limb it is
+ *  and the model it came from (`ownerId` null for a limb the map placed);
  *  trees and girders carry no per-item identity (trees are consumed on a
  *  successful hit, girders are reusable indefinitely).
  *
  *  Immutable: all fields are `readonly`, so instances are assigned (shared by reference), never copied. */
-export type HeldClub =
-  | { readonly kind: "limb"; readonly limb: LimbLocation; readonly ownerId: string }
-  | { readonly kind: "tree" }
-  | { readonly kind: "girder" };
+export type HeldClub = HeldLimbClub | { readonly kind: "tree" } | { readonly kind: "girder" };
 
 /** Pickup request: which source to take. Omitted resolves at declaration
  *  time: the hex's single club token, else terrain (tree, then girder).
@@ -357,13 +362,19 @@ export interface DeclaredPickup {
 }
 
 /** A club lying in a hex, available for pickup (TW p.146): a severed limb
- *  (owner recorded so a pickup can void its salvage), or a dropped tree /
+ *  (model recorded; owner recorded so a pickup can void its salvage, null
+ *  for a limb the map placed), or a dropped tree /
  *  girder, which stays intact and is re-taken without a roll. Fresh trees
  *  and girders still in terrain leave no token.
  *
  *  Immutable: all fields are `readonly`, so instances are assigned (shared by reference), never copied. */
 export type ClubGroundToken =
-  | { readonly kind: "limb"; readonly limb: LimbLocation; readonly ownerId: string }
+  | {
+      readonly kind: "limb";
+      readonly limb: LimbLocation;
+      readonly model: string;
+      readonly ownerId: string | null;
+    }
   | { readonly kind: "tree" }
   | { readonly kind: "girder" };
 
@@ -927,11 +938,20 @@ export interface BattleState extends HexGrid {
    *  Drives girder-search eligibility (TW p.146: medium/heavy/hardened
    *  only). Hexes that started as rubble have no entry and yield nothing. */
   rubbleOrigin: Record<string, BuildingTerrainType>;
-  /** Battlefield wreckage (TO:AR p.155), keyed by hex `"col,row"`: ids of
-   *  the destroyed 'Mechs of 40 t or more lying there, in order. The hex
+  /** Battlefield wreckage (TO:AR p.155), keyed by hex `"col,row"`: the
+   *  destroyed 'Mechs of 40 t or more lying there, in order. The hex
    *  counts as Rough stacked on its terrain (+1 MP, see `hasWreckage`); no
    *  LOS, to-hit or PSR effect. */
-  wreckage: Record<string, string[]>;
+  wreckage: Record<string, WreckageEntry[]>;
+}
+
+/** One destroyed frame lying as wreckage (TO:AR p.155).
+ *
+ *  Immutable: all fields are `readonly`, so instances are assigned (shared by reference), never copied. */
+export interface WreckageEntry extends MechModelHolder {
+  readonly model: string;
+  /** The destroyed unit; null for wreckage the map placed. */
+  readonly unitId: string | null;
 }
 
 export type { TerrainHexDef };
@@ -1149,9 +1169,9 @@ function cloneDamage(damage: UnitDamageState): UnitDamageState {
   };
 }
 
-/** Ids of the destroyed 'Mechs whose wreckage lies in `hex` (TO:AR p.155),
- *  in order; empty when the hex holds none. */
-export function wreckageAt(state: BattleState, hex: HexCoord): readonly string[] {
+/** The destroyed 'Mechs whose wreckage lies in `hex` (TO:AR p.155), in
+ *  order; empty when the hex holds none. */
+export function wreckageAt(state: BattleState, hex: HexCoord): readonly WreckageEntry[] {
   return state.wreckage[hexKey(hex)] ?? [];
 }
 
@@ -1247,7 +1267,7 @@ function leaveDestroyedRemains(
   if (standing) salvageFall(state, unit, rng, sink);
   if (unitTonnage(unit) >= WRECKAGE_TONNAGE_MIN) {
     const key = hexKey(unit.position);
-    state.wreckage[key] = [...(state.wreckage[key] ?? []), unit.id];
+    state.wreckage[key] = [...(state.wreckage[key] ?? []), { model: unit.model, unitId: unit.id }];
     sink.push({
       kind: "wreckageLeft",
       unitId: unit.id,
@@ -1471,6 +1491,28 @@ export function createBattle(
     cells[t.col - 1 + (t.row - 1) * width] = hexCell(t.type, t.level ?? 0);
     if (isBuildingTerrain(t.type)) buildings[key] = createBuildingState(t.type);
   }
+  const clubs: Record<string, ClubGroundToken[]> = {};
+  for (const c of map.clubs ?? []) {
+    if (!mechDef(c.model))
+      throw new Error(`Unknown 'Mech model for club at ${msgHex(c)}: ${c.model}`);
+    const key = hexKey(c);
+    clubs[key] = [
+      ...(clubs[key] ?? []),
+      { kind: "limb", limb: c.limb, model: c.model, ownerId: null },
+    ];
+  }
+  const wreckage: Record<string, WreckageEntry[]> = {};
+  for (const w of map.wreckage ?? []) {
+    const def = mechDef(w.model);
+    if (!def) throw new Error(`Unknown 'Mech model for wreckage at ${msgHex(w)}: ${w.model}`);
+    if (def.tonnage < WRECKAGE_TONNAGE_MIN) {
+      throw new Error(
+        `Wreckage at ${msgHex(w)}: ${w.model} is ${def.tonnage} t, under ${WRECKAGE_TONNAGE_MIN} t`,
+      );
+    }
+    const key = hexKey(w);
+    wreckage[key] = [...(wreckage[key] ?? []), { model: w.model, unitId: null }];
+  }
 
   return {
     // turn: 1,
@@ -1486,8 +1528,8 @@ export function createBattle(
     actedThisPhase: [],
     actorQueue: null,
     buildings,
-    wreckage: {},
-    clubs: {},
+    wreckage,
+    clubs,
     rubbleOrigin: {},
   };
 }
@@ -1571,7 +1613,10 @@ export function recordSeveredLimbs(
     }
     unit.blownOffLimbs.push({ limb, salvageable: true });
     const key = hexKey(unit.position);
-    state.clubs[key] = [...(state.clubs[key] ?? []), { kind: "limb", limb, ownerId: unit.id }];
+    state.clubs[key] = [
+      ...(state.clubs[key] ?? []),
+      { kind: "limb", limb, model: unit.model, ownerId: unit.id },
+    ];
   }
 }
 
@@ -1595,12 +1640,17 @@ export function clubTokensInHex(state: BattleState, unit: UnitState): readonly C
 }
 
 function describeToken(token: ClubGroundToken): string {
-  return token.kind === "limb" ? `limb ${token.limb} of ${token.ownerId}` : token.kind;
+  return token.kind === "limb"
+    ? `limb ${token.limb} of ${token.ownerId ?? token.model}`
+    : token.kind;
 }
 
 function sameToken(a: ClubGroundToken, b: ClubGroundToken): boolean {
   if (a.kind !== b.kind) return false;
-  return a.kind !== "limb" || (b.kind === "limb" && a.limb === b.limb && a.ownerId === b.ownerId);
+  return (
+    a.kind !== "limb" ||
+    (b.kind === "limb" && a.limb === b.limb && a.model === b.model && a.ownerId === b.ownerId)
+  );
 }
 
 type PickupChoice =
@@ -3095,7 +3145,7 @@ function resolveClubPickup(
     const at = tokens.findIndex((t) => sameToken(t, picked));
     state.clubs[key] = tokens.filter((_, i) => i !== at);
     if (picked.kind === "limb") {
-      unit.club = { kind: "limb", limb: picked.limb, ownerId: picked.ownerId };
+      unit.club = { kind: "limb", limb: picked.limb, model: picked.model, ownerId: picked.ownerId };
       voidLimbSalvage(state, picked);
     } else {
       unit.club = { kind: picked.kind };
@@ -3140,6 +3190,7 @@ function resolveClubPickup(
 
 /** Mark a picked-up severed limb as no longer salvageable (house rule). */
 function voidLimbSalvage(state: BattleState, token: ClubGroundToken & { kind: "limb" }): void {
+  if (token.ownerId === null) return;
   const owner = state.units[token.ownerId];
   if (owner === undefined) return;
   for (const entry of owner.blownOffLimbs) if (entry.limb === token.limb) entry.salvageable = false;
@@ -3188,7 +3239,7 @@ function applyClubDrop(
   const key = hexKey(unit.position);
   const token: ClubGroundToken =
     held.kind === "limb"
-      ? { kind: "limb", limb: held.limb, ownerId: held.ownerId }
+      ? { kind: "limb", limb: held.limb, model: held.model, ownerId: held.ownerId }
       : { kind: held.kind };
   state.clubs[key] = [...(state.clubs[key] ?? []), token];
   sink.push({

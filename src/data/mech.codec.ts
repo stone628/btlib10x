@@ -34,7 +34,8 @@ export const WIRE_VERSION = 1;
 export type MechStringTable = readonly string[];
 
 /** Location (and rear-armor) keys; codes are stored on the wire. */
-const LOC_CODES: Readonly<Record<Location | RearArmorKey, string>> = {
+/** Location wire codes, shared with the map wire (club limbs). */
+export const LOC_CODES: Readonly<Record<Location | RearArmorKey, string>> = {
   head: "h",
   centerTorso: "C",
   rightTorso: "R",
@@ -48,7 +49,7 @@ const LOC_CODES: Readonly<Record<Location | RearArmorKey, string>> = {
   leftTorsoRear: "l",
 };
 
-const CODE_LOCS: Readonly<Record<string, Location | RearArmorKey>> = Object.fromEntries(
+export const CODE_LOCS: Readonly<Record<string, Location | RearArmorKey>> = Object.fromEntries(
   Object.entries(LOC_CODES).map(([loc, code]) => [code, loc]),
 ) as Readonly<Record<string, Location | RearArmorKey>>;
 

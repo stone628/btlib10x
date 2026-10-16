@@ -1,11 +1,43 @@
-import type { TerrainHexDef } from "../core/types";
-import { hexKey, isTerrainType, TERRAIN_TYPES, type TerrainType } from "../core/types";
+import type { LimbLocation, TerrainHexDef } from "../core/types";
+import {
+  hexKey,
+  isLimb,
+  isLocation,
+  isTerrainType,
+  TERRAIN_TYPES,
+  type TerrainType,
+} from "../core/types";
+
+/** A severed limb lying on the board when the battle starts, pickable as a
+ *  club (TW p.146). Carries the same identity as a limb severed in play:
+ *  the model it came from and which limb. */
+export interface MapClubSrc {
+  readonly col: number;
+  readonly row: number;
+  /** Catalog model key, e.g. `"AS7-D"`. */
+  readonly model: string;
+  readonly limb: LimbLocation;
+}
+
+/** A destroyed frame lying on the board when the battle starts (TO:AR
+ *  p.155): its hex counts as Rough. The model must weigh 40 t or more,
+ *  as for wreckage left in play (checked by `createBattle`). */
+export interface MapWreckageSrc {
+  readonly col: number;
+  readonly row: number;
+  /** Catalog model key, e.g. `"KGC-000"`. */
+  readonly model: string;
+}
 
 export interface MapDefSrc {
   readonly name: string;
   readonly width: number;
   readonly height: number;
   readonly terrain: readonly TerrainHexDef[];
+  /** Severed limbs on the board at start, in deposit order; absent = none. */
+  readonly clubs?: readonly MapClubSrc[];
+  /** Wreckage on the board at start, in deposit order; absent = none. */
+  readonly wreckage?: readonly MapWreckageSrc[];
 }
 
 /**
@@ -20,6 +52,8 @@ export interface MapDef {
   readonly width: number;
   readonly height: number;
   readonly terrain: readonly TerrainHexDef[];
+  readonly clubs?: readonly MapClubSrc[];
+  readonly wreckage?: readonly MapWreckageSrc[];
   readonly legends: readonly TerrainType[];
 }
 
@@ -93,7 +127,9 @@ function loadMap(src: MapDefSrc): MapDef {
 /**
  * Validate a typed MapDef against board rules. TypeScript enforces the
  * structural shape at compile time; this catches runtime logical
- * inconsistencies (board bounds, duplicate hexes, terrain types).
+ * inconsistencies (board bounds, duplicate hexes, terrain types, club and
+ * wreckage entries). Whether a club or wreckage `model` is in the mech
+ * catalog is checked by `createBattle`, once the catalog is loaded.
  */
 export function validateMapDef(def: MapDefSrc): void {
   const errors: string[] = [];
@@ -137,6 +173,34 @@ export function validateMapDef(def: MapDefSrc): void {
         seen.add(key);
       }
     }
+  }
+
+  const checkPlaced = (label: string, entry: { col: unknown; row: unknown; model: unknown }) => {
+    const { col, row, model } = entry;
+    if (!Number.isInteger(col) || !Number.isInteger(row)) {
+      errors.push(`${label} col/row must be integers`);
+    } else if (
+      (col as number) < 1 ||
+      (col as number) > width ||
+      (row as number) < 1 ||
+      (row as number) > height
+    ) {
+      errors.push(`${label} hex ${col},${row} outside board bounds ${width}x${height}`);
+    }
+    if (typeof model !== "string" || model.length === 0) {
+      errors.push(`${label}.model must be a non-empty string`);
+    }
+  };
+  for (const [i, entry] of (def.clubs ?? []).entries()) {
+    const label = `clubs[${i}]`;
+    checkPlaced(label, entry);
+    const limb: unknown = entry.limb;
+    if (typeof limb !== "string" || !isLocation(limb) || !isLimb(limb)) {
+      errors.push(`${label}.limb ${JSON.stringify(limb)} is not an arm or leg location`);
+    }
+  }
+  for (const [i, entry] of (def.wreckage ?? []).entries()) {
+    checkPlaced(`wreckage[${i}]`, entry);
   }
 
   if (errors.length > 0) {

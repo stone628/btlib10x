@@ -122,7 +122,7 @@ describe("hull (TO:AR pp.184-185)", () => {
     expect(hbk.removed).toBe("pilotEjected");
     expect(hbk.destroyed).toBe("centerTorsoDestroyed");
     expect(isHull(hbk)).toBe(false);
-    expect(wreckageAt(state, { col: 2, row: 4 })).toEqual(["hbk"]);
+    expect(wreckageAt(state, { col: 2, row: 4 })).toEqual([{ model: "HBK-4G", unitId: "hbk" }]);
     expect(events).toContainEqual({
       kind: "unitRemoved",
       unitId: "hbk",
@@ -165,13 +165,13 @@ describe("wreckage (TO:AR p.155)", () => {
     requireUnit(state, "enf").prone = true;
     const events = destroyBySweep(state, "enf", scriptedRng());
     expect(events.some((e) => e.kind === "unitFell")).toBe(false);
-    expect(wreckageAt(state, { col: 5, row: 4 })).toEqual(["enf"]);
+    expect(wreckageAt(state, { col: 5, row: 4 })).toEqual([{ model: "ENF-4R", unitId: "enf" }]);
   });
 
   it("is Rough stacked on the terrain: +1 MP, no repeat, nothing in a standing building", () => {
     const state = hbkVsEnf();
     const hex = { col: 3, row: 3 };
-    state.wreckage["3,3"] = ["x"];
+    state.wreckage["3,3"] = [{ model: "X", unitId: "x" }];
     const cost = (terrain: TerrainType): number => {
       setCell(state, hex, hexCell(terrain));
       return hexEntryCost(state, hex, hasWreckage(state, hex));
@@ -182,7 +182,10 @@ describe("wreckage (TO:AR p.155)", () => {
     expect(cost("rubble")).toBe(3);
     expect(cost("water1")).toBe(3);
     expect(cost("mediumBuilding")).toBe(3);
-    state.wreckage["3,3"] = ["x", "y"];
+    state.wreckage["3,3"] = [
+      { model: "X", unitId: "x" },
+      { model: "Y", unitId: "y" },
+    ];
     expect(cost("clear")).toBe(2);
   });
 
@@ -190,7 +193,7 @@ describe("wreckage (TO:AR p.155)", () => {
     const state = movement(hbkVsEnf());
     const enf = requireUnit(state, "enf");
     const ahead = neighbor(enf.position, "nw");
-    state.wreckage[hexKey(ahead)] = ["x"];
+    state.wreckage[hexKey(ahead)] = [{ model: "X", unitId: "x" }];
     const landing = reachableLandings(enf.position, "nw", {
       mode: "walk",
       walking: 4,
@@ -213,9 +216,9 @@ describe("wreckage (TO:AR p.155)", () => {
     const state = movement(hbkVsEnf());
     destroyBySweep(state, "enf", scriptedRng(1, 3, 4));
     const snap = saveBattleState(state);
-    state.wreckage["5,4"]!.push("bogus");
+    state.wreckage["5,4"]!.push({ model: "X", unitId: "bogus" });
     loadBattleState(state, snap);
-    expect(state.wreckage).toEqual({ "5,4": ["enf"] });
+    expect(state.wreckage).toEqual({ "5,4": [{ model: "ENF-4R", unitId: "enf" }] });
   });
 });
 
@@ -242,7 +245,7 @@ describe("board rendering", () => {
   it("draws a hull as -id and marks wreckage hexes", () => {
     const state = movement(hbkVsEnf());
     ejectPilot(state, "hbk", scriptedRng(6, 6), []);
-    state.wreckage["4,4"] = ["x"];
+    state.wreckage["4,4"] = [{ model: "X", unitId: "x" }];
     const model = battleModel(state);
     expect(model.cells["2,4"]).toBe("-hbk");
     expect(model.cells["5,4"]).toBe("enf");

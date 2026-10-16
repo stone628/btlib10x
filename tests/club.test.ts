@@ -77,7 +77,7 @@ describe("severed limb salvage flag", () => {
     expect(salvageableSeveredLimbs(battle, "a")).toEqual([limb]);
     // Unit "a" picks up its own limb.
     pickUp(battle, "a");
-    expect(battle.units.a!.club).toEqual({ kind: "limb", limb, ownerId: "a" });
+    expect(battle.units.a!.club).toEqual({ kind: "limb", limb, model: "HBK-4G", ownerId: "a" });
     expect(salvageableSeveredLimbs(battle, "a")).toEqual([]);
     expect(battle.units.a!.blownOffLimbs[0]!.salvageable).toBe(false);
   });
@@ -103,7 +103,12 @@ describe("pickup tokens", () => {
     const sink: GameEvent[] = [];
     declarePickup(battle, "a", {}, sink);
     resolveAllAttacks(battle, NO_RNG, sink);
-    expect(battle.units.a!.club).toEqual({ kind: "limb", limb: "leftArm", ownerId: "far" });
+    expect(battle.units.a!.club).toEqual({
+      kind: "limb",
+      limb: "leftArm",
+      model: "HBK-4G",
+      ownerId: "far",
+    });
     expect(clubTokensInHex(battle, battle.units.a!)).toEqual([]);
   });
 
@@ -116,7 +121,13 @@ describe("pickup tokens", () => {
     if (!bare.ok) expect(bare.reason).toContain("choose one");
     const chosen = validatePickup(battle, unit.id, { tokenIndex: 2 });
     expect(chosen.ok).toBe(true);
-    if (chosen.ok) expect(chosen.token).toEqual({ kind: "limb", limb: "rightLeg", ownerId: "a" });
+    if (chosen.ok)
+      expect(chosen.token).toEqual({
+        kind: "limb",
+        limb: "rightLeg",
+        model: "HBK-4G",
+        ownerId: "a",
+      });
   });
 
   it("a dropped tree stays intact and is re-taken without a roll", () => {

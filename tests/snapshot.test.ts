@@ -87,7 +87,7 @@ function dirtyBattle(state: BattleState): void {
   state.actorQueue = ["stale"];
   state.buildings["9,9"] = { cf: 1 };
   delete state.buildings[Object.keys(state.buildings)[0] ?? "never"];
-  state.wreckage["1,1"] = ["hbk"];
+  state.wreckage["1,1"] = [{ model: "HBK-4G", unitId: "hbk" }];
 }
 
 describe("snapshot", () => {
@@ -310,10 +310,10 @@ describe("snapshot", () => {
     loadBuildings(state.buildings, buildingsSnap);
     expect(state.buildings).toEqual(buildingsSnap);
 
-    state.wreckage["2,4"] = ["hbk"];
+    state.wreckage["2,4"] = [{ model: "HBK-4G", unitId: "hbk" }];
     const wreckageSnap = saveWreckage(state.wreckage);
-    state.wreckage["2,4"]!.push("enf");
-    expect(wreckageSnap["2,4"]).toEqual(["hbk"]);
+    state.wreckage["2,4"]!.push({ model: "ENF-4R", unitId: "enf" });
+    expect(wreckageSnap["2,4"]).toEqual([{ model: "HBK-4G", unitId: "hbk" }]);
     delete state.wreckage["2,4"];
     loadWreckage(state.wreckage, wreckageSnap);
     expect(state.wreckage).toEqual(wreckageSnap);

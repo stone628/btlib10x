@@ -281,7 +281,11 @@ interface MapDef {
 - `registeredMapDefs(): MapDef[]`
 - `listMapNames(): string[]`
 - `MapNameHolder` — `{ mapName: string | null }` accepted by `mapDefFor`
-- `MapDefSrc` — the on-disk map shape (as written in `data/maps/*.json`)
+- `MapDefSrc` — the on-disk map shape (as written in `data/maps/*.json`).
+  Optional `clubs: MapClubSrc[]` (`{col, row, model, limb}`) and
+  `wreckage: MapWreckageSrc[]` (`{col, row, model}`) start the battle with
+  severed limbs and wreckage on the board; `createBattle` rejects unknown
+  models and wreckage under 40 t. See `docs/MAP_CLUBS_WRECKAGE.md`.
 
 Bundled maps: `beginner`, `quickstart`, `test`, `testground`.
 
@@ -484,7 +488,8 @@ armor-change detail via `blastDetail`) and
 weapon-style `crits` (rendered with `critLines`) and the deferred kick PSR flags. `DamageGroup` is the per-group shape.
 
 Club handling (TW p.146): `HeldClub`, `ClubKind` (`"limb" | "tree" |
-"girder"`), `ClubGroundToken`, `SeveredLimb`, `ClubPickupDecl` (the request:
+"girder"`; a limb carries `limb`, `model` and `ownerId`, null for a limb the
+map placed), `ClubGroundToken`, `SeveredLimb`, `ClubPickupDecl` (the request:
 `source?`, 1-based `tokenIndex?`), `DeclaredPickup` (what `declarePickup`
 stores in `UnitState.declaredPickup`: the resolved `source` and, when a ground
 token was chosen, that `token`; resolution re-finds it by value),
@@ -716,7 +721,7 @@ declarePickup(state, unitId, decl, sink: GameEvent[]): void             // attac
 validatePhysicalAttack(state, unitId, decl: PhysicalAttackDecl, twist?, dropped?): ValidationResult  // read-only single-decl check (adjacency, arc, level, actuators); consumed by `declareAttacks` and the web `candidate` hints
 passMovement(state, unitId): void                                       // movement phase only: shut-down unit attempts no startup, stays off-line, marked as acted
 passAttack(state, unitId): void                                         // attack phase only: current actor declares no attacks this turn, marked as passed + acted
-wreckageAt(state, hex): readonly string[]                                // ids of the destroyed 'Mechs whose wreckage lies in the hex
+wreckageAt(state, hex): readonly WreckageEntry[]                         // destroyed 'Mechs lying as wreckage in the hex: { model, unitId } (unitId null when the map placed it)
 occupantAt(state, hex, excludeId?): UnitState | undefined               // the active unit or hull in a hex
 isHull(unit) / isUnitOnBoard(unit) / isTargetableBy(attacker, target)  // see Hulls and wreckage below
 salvageReport(state): SalvageEntry[]                                     // every hull and destroyed frame: kind, removal / kill reason, hex, posture, damage, destroyed slots, stranded ammo, salvageable severed limbs
@@ -801,7 +806,7 @@ interface BattleState extends HexGrid {
   actedThisPhase: string[];
   buildings: Record<string, BuildingState>;  // { cf } keyed "col,row"; one per building-terrain cell, sub-type is the terrain
   rubbleOrigin: Record<string, BuildingTerrainType>;  // collapsed building's terrain, keyed "col,row" of its rubble cell
-  wreckage: Record<string, string[]>;  // battlefield wreckage keyed "col,row": ids of destroyed 'Mechs (40 t+); the hex counts as Rough
+  wreckage: Record<string, WreckageEntry[]>;  // battlefield wreckage keyed "col,row": { model, unitId | null } of destroyed 'Mechs (40 t+); the hex counts as Rough
   clubs: Record<string, ClubGroundToken[]>;  // ground club tokens keyed "col,row"
   actorQueue: string[] | null;        // cached activation order for the phase
 }

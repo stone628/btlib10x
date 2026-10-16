@@ -298,7 +298,7 @@ describe("club", () => {
       makeUnitInit("a", 1, { col: 5, row: 5 }, "n"),
       makeUnitInit("t", 2, { col: 5, row: 6 }, "s"), // behind (south)
     );
-    battle.units.a!.club = { kind: "limb", limb: "rightArm", ownerId: "x" };
+    battle.units.a!.club = { kind: "limb", limb: "rightArm", model: "HBK-4G", ownerId: "x" };
     const decl: PhysicalAttackDecl = { type: "club", targetId: "t" };
     const result = validatePhysicalAttack(battle, "a", decl);
     expect(result.ok).toBe(false);
@@ -311,7 +311,7 @@ describe("club", () => {
       makeUnitInit("t", 2, { col: 6, row: 4 }, "sw"), // directly ahead (NE)
     );
     const attacker = battle.units.a!;
-    attacker.club = { kind: "limb", limb: "rightArm", ownerId: "x" };
+    attacker.club = { kind: "limb", limb: "rightArm", model: "HBK-4G", ownerId: "x" };
     setSlotDestroyed(attacker.critSlotsDestroyed, "leftArm", 0); // left shoulder
     const decl: PhysicalAttackDecl = { type: "club", targetId: "t" };
     const result = validatePhysicalAttack(battle, "a", decl);
@@ -325,7 +325,7 @@ describe("club", () => {
       makeUnitInit("t", 2, { col: 6, row: 4 }, "sw"), // directly ahead (NE)
     );
     const attacker = battle.units.a!;
-    attacker.club = { kind: "limb", limb: "rightArm", ownerId: "x" };
+    attacker.club = { kind: "limb", limb: "rightArm", model: "HBK-4G", ownerId: "x" };
     setSlotDestroyed(attacker.critSlotsDestroyed, "rightArm", 3); // hand actuator
     const decl: PhysicalAttackDecl = { type: "club", targetId: "t" };
     const result = validatePhysicalAttack(battle, "a", decl);
@@ -690,7 +690,7 @@ describe("declareAttacks with weapons and physicals", () => {
   it("rejects arm weapons combined with club", () => {
     const battle = faceToFaceBattle();
     const { arm } = armAndTorsoWeaponIndices();
-    battle.units.a!.club = { kind: "limb", limb: "rightArm", ownerId: "x" };
+    battle.units.a!.club = { kind: "limb", limb: "rightArm", model: "HBK-4G", ownerId: "x" };
     expect(() =>
       declareAttacks(
         battle,
@@ -781,7 +781,7 @@ describe("twist-aware physical arcs (TW pp. 98-99)", () => {
       validatePhysicalAttack(battle, "a", { type: "punch", targetId: "t", limb: "rightArm" }).ok,
     ).toBe(false);
     // Club needs held club. Add one and test twist/arc logic.
-    battle.units.a!.club = { kind: "limb", limb: "rightArm", ownerId: "x" };
+    battle.units.a!.club = { kind: "limb", limb: "rightArm", model: "HBK-4G", ownerId: "x" };
     // Club without twist: target in leftSide arc → false
     expect(validatePhysicalAttack(battle, "a", { type: "club", targetId: "t" }).ok).toBe(false);
     // Club with leftSide twist: target now in front arc → true
@@ -963,7 +963,7 @@ describe("physical attack critical hits", () => {
       makeUnitInit("a", 1, { col: 5, row: 5 }, "ne"),
       makeUnitInit("t", 2, { col: 6, row: 5 }, "sw"),
     );
-    battle.units.a!.club = { kind: "limb", limb: "rightArm", ownerId: "x" };
+    battle.units.a!.club = { kind: "limb", limb: "rightArm", model: "HBK-4G", ownerId: "x" };
     const resolution = resolvePhysicalAttack(battle, "a", { type: "club", targetId: "t" }, rng);
 
     expect(resolution.hit).toBe(true);
@@ -1117,7 +1117,7 @@ describe("physical legality (TW pp. 145-151, 171)", () => {
       validatePhysicalAttack(higher, "a", { type: "punch", targetId: "t", limb: "rightArm" }).ok,
     ).toBe(true);
     // Club: needs held club
-    higher.units.a!.club = { kind: "limb", limb: "rightArm", ownerId: "x" };
+    higher.units.a!.club = { kind: "limb", limb: "rightArm", model: "HBK-4G", ownerId: "x" };
     expect(validatePhysicalAttack(higher, "a", { type: "club", targetId: "t" }).ok).toBe(true);
     // Kick denied vs standing higher
     expect(
@@ -1133,7 +1133,7 @@ describe("physical legality (TW pp. 145-151, 171)", () => {
       validatePhysicalAttack(lower, "a", { type: "kick", targetId: "t", limb: "rightLeg" }).ok,
     ).toBe(true);
     // Club: needs held club
-    lower.units.a!.club = { kind: "limb", limb: "rightArm", ownerId: "x" };
+    lower.units.a!.club = { kind: "limb", limb: "rightArm", model: "HBK-4G", ownerId: "x" };
     expect(validatePhysicalAttack(lower, "a", { type: "club", targetId: "t" }).ok).toBe(true);
     expect(
       validatePhysicalAttack(lower, "a", { type: "punch", targetId: "t", limb: "rightArm" }).ok,
@@ -1165,7 +1165,7 @@ describe("physical legality (TW pp. 145-151, 171)", () => {
       validatePhysicalAttack(higher, "a", { type: "punch", targetId: "t", limb: "rightArm" }).ok,
     ).toBe(true);
     // Club: needs held club
-    higher.units.a!.club = { kind: "limb", limb: "rightArm", ownerId: "x" };
+    higher.units.a!.club = { kind: "limb", limb: "rightArm", model: "HBK-4G", ownerId: "x" };
     expect(validatePhysicalAttack(higher, "a", { type: "club", targetId: "t" }).ok).toBe(true);
     // Kick denied vs prone higher
     expect(

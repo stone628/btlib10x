@@ -286,7 +286,7 @@ describe("auto-eject on head destruction (TO p.165)", () => {
       expect.objectContaining({ kind: "unitFell", unitId: "hbk", cause: { kind: "salvageFall" } }),
     );
     // 50 t: the destroyed frame leaves wreckage (TO:AR p.155).
-    expect(state.wreckage["2,4"]).toEqual(["hbk"]);
+    expect(state.wreckage["2,4"]).toEqual([{ model: "HBK-4G", unitId: "hbk" }]);
   });
 });
 

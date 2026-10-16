@@ -84,7 +84,7 @@ describe("pilot killed while the 'Mech is destroyed", () => {
         destroyReason: "centerTorsoDestroyed",
       },
     ]);
-    expect(state.wreckage["2,3"]).toEqual(["enf"]);
+    expect(state.wreckage["2,3"]).toEqual([{ model: "ENF-4R", unitId: "enf" }]);
     expect(rng.remaining()).toBe(0);
   });
 

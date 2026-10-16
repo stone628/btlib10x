@@ -44,7 +44,14 @@ import type { AmmoBins } from "./ammo";
 import { assertBuildingsMatchCells, type BuildingState } from "./building";
 import { type CritMask, cloneCritTable } from "./critical";
 import type { UnitDamageState } from "./damage";
-import type { BattleState, ClubGroundToken, MeleeCharge, Phase, UnitState } from "./game";
+import type {
+  BattleState,
+  ClubGroundToken,
+  MeleeCharge,
+  Phase,
+  UnitState,
+  WreckageEntry,
+} from "./game";
 
 /** Detached deep copy of a `BattleState`. Treat as immutable. */
 type BattleSnapshot = BattleState;
@@ -59,7 +66,7 @@ type CritTableSnapshot = CritMask;
 /** Detached deep copy of the building map. Treat as immutable. */
 type BuildingsSnapshot = Record<string, BuildingState>;
 /** Detached deep copy of the wreckage overlay. Treat as immutable. */
-type WreckageSnapshot = Record<string, string[]>;
+type WreckageSnapshot = Record<string, WreckageEntry[]>;
 
 function cloneDamageState(damage: UnitDamageState): UnitDamageState {
   return {
@@ -388,18 +395,21 @@ export function loadBuildings(
 }
 
 /** Detached copy of the wreckage overlay. Treat as immutable. */
-export function saveWreckage(wreckage: Record<string, string[]>): WreckageSnapshot {
-  const out: Record<string, string[]> = {};
-  for (const [key, ids] of Object.entries(wreckage)) {
-    out[key] = [...ids];
+export function saveWreckage(wreckage: Record<string, WreckageEntry[]>): WreckageSnapshot {
+  const out: Record<string, WreckageEntry[]> = {};
+  for (const [key, entries] of Object.entries(wreckage)) {
+    out[key] = [...entries];
   }
   return out;
 }
 
 /** Roll the wreckage overlay back to snapshot in place. */
-export function loadWreckage(target: Record<string, string[]>, snapshot: WreckageSnapshot): void {
+export function loadWreckage(
+  target: Record<string, WreckageEntry[]>,
+  snapshot: WreckageSnapshot,
+): void {
   for (const key of Object.keys(target)) delete target[key];
-  for (const [key, ids] of Object.entries(snapshot)) {
-    target[key] = [...ids];
+  for (const [key, entries] of Object.entries(snapshot)) {
+    target[key] = [...entries];
   }
 }
