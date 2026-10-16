@@ -11,6 +11,5 @@ an effort to capture the feel of playing over a text terminal.
 Charge and DFA are now supported.
 Assign a persona player and it will handle movement and attacks automatically.
 </div>
-<center><a href="https://buymeacoffee.com/stone628" target="_blank" class="link-button"><span style="text-decoration: none; font-family: sans-serif; font-weight: bold;">☕</span> Buy me a coffee!</a>
 
-<div lang="ko" class="hint">[hint] 숨겨진 명령어 autoplay를 실행 해 보세요.</div><div lang="en" class="hint">[hint] Try the hidden autoplay command.</div></center>
+<center><div lang="ko" class="hint">[hint] 숨겨진 명령어 autoplay를 실행 해 보세요.</div><div lang="en" class="hint">[hint] Try the hidden autoplay command.</div></center>
