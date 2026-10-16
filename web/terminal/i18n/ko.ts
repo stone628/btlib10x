@@ -28,6 +28,7 @@ export const ko: Catalog = {
     "아직 전장이 없습니다 - 'map'으로 불러오세요. 'info map'에서 목록을 볼 수 있습니다.",
   "board.legend": "범례:",
   "board.legendClub": "바닥의 곤봉",
+  "board.legendWreckage": "잔해 (거친 지형)",
 
   // lang command
   "lang.current": "언어: {locale}",
@@ -100,7 +101,10 @@ export const ko: Catalog = {
     "엎드린 상태에서 일어난 뒤 서브 모드로 이동 — 'standup [walk|run|standstill]'.\n서브 모드는 일어서기 2MP를 포함해서 하나의 MP 풀 공유 (기본 standstill)\n'done'으로 확정시 성공 여부 결정. 실패시 place를 통한 예약 이동 무시",
   "cmd.mode.arg.shutdown": "자발적 셧다운 시도. 'done'으로 확정",
   "cmd.mode.arg.startup": "시동 시도. 'done'으로 확정시 성공 여부 결정",
-  "cmd.mode.arg.eject": "메크 버리기 — 파일럿 탈출. 해당 좌표는 레벨-2 잔해가 됨. 'done'으로 확정",
+  "cmd.mode.arg.eject":
+    "비상 탈출 — 탈출 판정 후 파일럿 이탈. 메크는 빈 기체로 남음 (중립, 공격 가능, 통과 가능). 'done'으로 확정",
+  "cmd.mode.arg.abandon":
+    "이전 턴부터 셧다운된 메크만 — 판정 없이 파일럿이 무사히 하차. 메크는 그 자세 그대로 빈 기체로 남음. 'done'으로 확정",
   "cmd.place.help": "도달 가능한 최종 육각과 방향으로 기체 배치",
   "cmd.place.arg.colrowfacing":
     "최종 육각 (1-based col row) 과 절대 방향 단어 n|ne|se|s|sw|nw\n'mode'가 보여준 도달 가능 지도에 있어야 함",
@@ -230,6 +234,7 @@ export const ko: Catalog = {
   "pp.note.yield": "항복: 장갑과 내부 구조 {left}% 남음, 기준 {at}% (탈출로 항복을 대신함)",
   "pp.note.yieldWeapons": "항복: 무기 없음 (탈출로 항복을 대신함)",
   "pp.note.noTarget": "교전 가능한 적 없음",
+  "pp.note.hullTarget": "사거리 안에 적이 없음: 회수를 막기 위해 {target} 의 빈 기체를 사격",
 
   // command acknowledgements
   "ok.mapLoaded": "맵 {name}: {w}x{h}개",
@@ -341,6 +346,8 @@ export const ko: Catalog = {
   "err.noMoveInShutdownMode": "선언된 모드가 shutdown/startup/eject일 때는 이동할 수 없습니다",
   "err.mustBeOnlineForShutdown": "mode shutdown은 온라인 유닛에서만 사용할 수 있습니다",
   "err.mustBeDownForStartup": "mode startup은 셧다운된 유닛에서만 사용할 수 있습니다",
+  "err.mustBeDownForAbandon":
+    "mode abandon은 {id} 가 이전 턴부터 셧다운 상태여야 합니다 (먼저 'mode shutdown')",
   "err.alreadyEjected": "{id} 는 더 이상 전장에 없습니다",
   "err.heatShutdownNoStartup":
     "{id} 은 열로 정지됨: 재기동 판정은 열 페이즈에 자동으로 이루어집니다",
@@ -540,6 +547,7 @@ export const ko: Catalog = {
   "sheet.pilotLine": "조종사: 조종술({piloting}) {state} HP({hp}/{max}){cons}",
   "sheet.pilotConsCheck": " 의식체크(>={cons})",
   "sheet.pilotEjected": "탈출",
+  "sheet.pilotAbandoned": "하차",
   "sheet.pilotDeadCell": "사망",
   "sheet.pilotOk": "의식 있음",
   "sheet.postureProne": "엎드림",
@@ -572,6 +580,7 @@ export const ko: Catalog = {
   "sheet.facing.sw": "남서",
   "sheet.remove.destroyed": "파괴됨",
   "sheet.remove.pilotEjected": "파일럿 탈출",
+  "sheet.remove.pilotAbandoned": "파일럿 하차",
   "sheet.remove.pilotKilled": "파일럿 사망",
   "sheet.remove.both": "{removal}, {destroyed}",
   "sheet.remove.hdDestroyed": "HD 파괴",
@@ -648,7 +657,9 @@ export const ko: Catalog = {
   "log.physicalDeclaredOne": "[{id}] {target}에게 {type} 선언 ({count}회)",
   "log.physicalDeclaredOther": "[{id}] {target}에게 {type} 선언 ({count}회)",
   "log.destroyed": "[{id}] *** 파괴됨 ({destroyed}) ***",
-  "log.ejected": "[{id}] 탈출 — 버려진 메크는 레벨-2 잔해가 됨",
+  "log.ejected": "[{id}] 탈출 — 메크는 빈 기체로 남음",
+  "log.abandoned": "[{id}] 파일럿이 셧다운된 메크에서 하차 — 빈 기체로 남음",
+  "log.wreckage": "{id} 의 잔해로 {hex} 가 거친 지형이 됨 (+1 MP)",
   "log.buildingCollapsed": "{hex} 위치 건물이 붕괴하여 잔해가 됨",
   "log.buildingDamaged": "{hex} 위치 건물이 구조 피해 {damage} 받음 (CF {cf})",
   "log.collapseDamage": "[{id}] 건물 붕괴로 {loc} 부위 피해 {damage} 받음 ({hex})",
@@ -714,10 +725,10 @@ export const ko: Catalog = {
   "log.dfaDeclared": "[{id}] {target}에게 공중 강습 (물리 공격 단계에서 해결)",
   "res.physical.advanced": "{target}이(가) 사라져 {attacker}이(가) {pos}(으)로 전진",
   "res.physical.voided": "{attacker}이(가) 공격을 수행할 수 없음: {reason}",
-  "res.physical.voided.wreck": "잔해가 그 칸을 차지함",
   "res.physical.voided.hexTaken": "다른 유닛이 그 칸을 차지함",
   "res.physical.voided.attackerDown": "공격자가 쓰러짐",
   "log.fallCause.dfaMiss": "공중 강습 실패",
+  "log.fallCause.salvageFall": "빈 기체 파괴",
   "res.physical.dfaMissFall": "{attacker}이(가) 공중 강습 실패로 넘어짐 (2레벨 낙하, 후면 피해)",
   "res.physical.dfaAborted": "{attacker}이(가) 무기 공격 단계에서 균형을 잃어 공중 강습이 빗나감",
   "log.accidentalFallHit": "[{id}] {target} 위로 추락 ({tn}+ 필요, 굴림 {roll}): 피해 {damage}",
@@ -732,6 +743,7 @@ export const ko: Catalog = {
   "log.fallCause.terrain.building": "건물 진입",
   "log.fallCause.buildingCollapse": "건물 붕괴",
   "log.fallCause.voluntaryDrop": "자발적 엎드림",
+  "log.hullFell": "  빈 기체: 조종사 부재로 조종 판정 없이 자동으로 넘어짐",
   "log.unitFell":
     "[{id}] *** 넘어짐 ({cause}) 방향 {facing}: {groups} (합계 {damage}, {levels}레벨 추락) ({hex}) ***",
   "log.pilotHitReason.headHit": "머리 피격",
@@ -751,7 +763,7 @@ export const ko: Catalog = {
     "[{id}] *** 조종사 의식 불명 ({cause}) — {required}회 중 {n}번째 판정 실패: {rolls} ***",
   "log.consciousnessCheckFail": "[{id}] 의식 판정 ({cause}) 실패: {rolls} -> 의식 미회복",
   "log.pilotRecovered": "[{id}] 조종사 의식 회복 ({cause}): {rolls}",
-  "log.pilotKilled": "[{id}] *** 조종사 사망 — 버려진 메크는 레벨-2 잔해가 됨 ***",
+  "log.pilotKilled": "[{id}] *** 조종사 사망 — 메크는 빈 기체로 남음 ***",
   "log.stoodUp": "[{id}] 일어남",
   "log.droppedProne": "[{id}] 엎드림",
   "log.buildingCrash": "[{id}] 건물 {hex}에 충돌: {groups} (합계 {damage})",

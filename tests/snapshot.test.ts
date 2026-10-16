@@ -22,13 +22,13 @@ import {
   loadCritTable,
   loadDamageState,
   loadUnitState,
-  loadWrecks,
+  loadWreckage,
   saveAmmoState,
   saveBuildings,
   saveCritTable,
   saveDamageState,
   saveUnitState,
-  saveWrecks,
+  saveWreckage,
 } from "../src/rules/snapshot";
 import { createTestBattle, scriptedRng } from "./helpers";
 
@@ -87,7 +87,7 @@ function dirtyBattle(state: BattleState): void {
   state.actorQueue = ["stale"];
   state.buildings["9,9"] = { cf: 1 };
   delete state.buildings[Object.keys(state.buildings)[0] ?? "never"];
-  state.wrecks["1,1"] = { unitId: "hbk", level: 2 };
+  state.wreckage["1,1"] = ["hbk"];
 }
 
 describe("snapshot", () => {
@@ -294,7 +294,7 @@ describe("snapshot", () => {
     expect(() => parseBattleState(JSON.stringify(snap))).toThrow(/Invalid battle snapshot string/);
   });
 
-  it("buildings/wrecks granularity restores collapse", () => {
+  it("buildings/wreckage granularity restores collapse", () => {
     const units: UnitInit[] = [
       buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "se"),
       buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 5 }, "se"),
@@ -310,10 +310,12 @@ describe("snapshot", () => {
     loadBuildings(state.buildings, buildingsSnap);
     expect(state.buildings).toEqual(buildingsSnap);
 
-    state.wrecks["2,4"] = { unitId: "hbk", level: 2 };
-    const wrecksSnap = saveWrecks(state.wrecks);
-    delete state.wrecks["2,4"];
-    loadWrecks(state.wrecks, wrecksSnap);
-    expect(state.wrecks).toEqual(wrecksSnap);
+    state.wreckage["2,4"] = ["hbk"];
+    const wreckageSnap = saveWreckage(state.wreckage);
+    state.wreckage["2,4"]!.push("enf");
+    expect(wreckageSnap["2,4"]).toEqual(["hbk"]);
+    delete state.wreckage["2,4"];
+    loadWreckage(state.wreckage, wreckageSnap);
+    expect(state.wreckage).toEqual(wreckageSnap);
   });
 });

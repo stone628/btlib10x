@@ -872,7 +872,9 @@ describe("weapon attack phase", () => {
       scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
     );
     const events: GameEvent[] = [];
-    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4, 3, 3), events); // hit CT again
+    // Hit CT again; the destroyed Enforcer then takes the salvage fall
+    // (TW p.128): direction 3, one group at 3+3.
+    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4, 3, 3, 3, 3), events);
     expect(requireUnit(state, "enf").damage.armor.centerTorso).toBe(0);
     // 3 armor absorbs 3, remaining 17 hits CT IS 16 -> destroyed (killed immediately).
     expect(requireUnit(state, "enf").destroyed).toBe("centerTorsoDestroyed");
@@ -914,9 +916,10 @@ describe("weapon attack phase", () => {
     ); // AC/10 (1-based)
 
     // Rolls: hbk to-hit 3+3=6 >= TN 4, location 3+4=7 -> CT (kills enf);
-    // then enf to-hit 3+3=6 >= TN 4, location 3+4=7 -> hbk CT.
+    // then enf to-hit 3+3=6 >= TN 4, location 3+4=7 -> hbk CT; then the
+    // destroyed Enforcer's salvage fall (TW p.128): direction 1, 3+3.
     const events: GameEvent[] = [];
-    resolveAllAttacks(state, scriptedRng(3, 3, 3, 4, 3, 3, 3, 4), events);
+    resolveAllAttacks(state, scriptedRng(3, 3, 3, 4, 3, 3, 3, 4, 1, 3, 3), events);
 
     expect(enf.destroyed).toBe("centerTorsoDestroyed");
     expect(enf.removed).toBe("destroyed");

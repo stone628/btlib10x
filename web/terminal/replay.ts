@@ -15,6 +15,7 @@ import {
   type AmmoPolicy,
   type Arc,
   type AttackDecl,
+  abandonPilot,
   attemptVoluntaryStartup,
   type BattleState,
   buildUnitInit,
@@ -33,6 +34,7 @@ import {
   type GameEvent,
   gameLoop,
   type HexCoord,
+  isHull,
   isPilotUnconscious,
   isShutdown,
   isTorso,
@@ -214,6 +216,8 @@ export function encodeMoveEntry(
       return `${idx}O`;
     case "eject":
       return `${idx}E`;
+    case "abandon":
+      return `${idx}A`;
   }
   if (downed) return `${idx}.`;
   switch (decl.moveMode) {
@@ -441,7 +445,14 @@ export function encodeUnitLine(init: UnitInit): string {
   ])}`;
 }
 
-/** `E<idx><hits>[:<armor>[:<crit>[:<ammo>]]]`: state vs the model default. */
+/** Remains tag of an `E` line: `H` for a hull (pilot gone, frame intact),
+ *  `X` for a destroyed frame (wreckage), none for a unit still active. */
+function remainsTag(unit: UnitState): string {
+  if (isHull(unit)) return "H";
+  return unit.destroyed !== "not" ? "X" : "";
+}
+
+/** `E<idx><hits>[H|X][:<armor>[:<crit>[:<ammo>]]]`: state vs the model default. */
 export function encodeEndLine(idx: string, unit: UnitState): string {
   const def = mechDefFor(unit);
   const f: DamageFields = { armor: {}, armorRear: {}, structure: {}, crits: {}, ammo: {} };
@@ -460,7 +471,7 @@ export function encodeEndLine(idx: string, unit: UnitState): string {
   for (const [binId, full] of Object.entries(loaded)) {
     f.ammo[binId] = full - (unit.ammoBins[binId] ?? 0);
   }
-  return `E${idx}${unit.pilotHits.toString(36)}${joinFields([
+  return `E${idx}${unit.pilotHits.toString(36)}${remainsTag(unit)}${joinFields([
     armorField(f),
     critField(f),
     ammoField(f),
@@ -925,6 +936,10 @@ export function replayPlayer(text: string): void {
     }
     if (op === "E") {
       ejectPilot(b, id, rng, sink);
+      return;
+    }
+    if (op === "A") {
+      abandonPilot(b, id, sink);
       return;
     }
     if (op === ".") {

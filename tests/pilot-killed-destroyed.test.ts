@@ -15,7 +15,9 @@ import { sheetIdLine } from "../web/terminal/session.common";
 import { createTestBattle, scriptedRng } from "./helpers";
 
 // A pilot killed in the same step its 'Mech is destroyed keeps the removal
-// reason "pilotKilled" and also records the frame's `destroyed` reason.
+// reason "pilotKilled" and also records the frame's `destroyed` reason: the
+// hull it left is destroyed at once and leaves wreckage after the salvage
+// fall (TW p.128, TO:AR p.155).
 
 function hbkEnf() {
   return createTestBattle(
@@ -65,17 +67,24 @@ function removals(events: readonly GameEvent[], unitId: string) {
 describe("pilot killed while the 'Mech is destroyed", () => {
   it("weapon phase: CT destroyed and pilot killed records both", () => {
     const state = primedEnf(1);
-    const rng = scriptedRng(3, 3, 6, 6, 3, 3, 3, 4);
+    // Attack dice, then the salvage fall: direction 1, one group at 3+3.
+    const rng = scriptedRng(3, 3, 6, 6, 3, 3, 3, 4, 1, 3, 3);
     const events: GameEvent[] = [];
     resolveAllAttacks(state, rng, events);
     const enf = requireUnit(state, "enf");
     expect(enf.damage.internalStructure.centerTorso).toBe(0);
     expect(enf.removed).toBe("pilotKilled");
     expect(enf.destroyed).toBe("centerTorsoDestroyed");
-    // One removal event, no extra dice.
     expect(removals(events, "enf")).toEqual([
       { kind: "unitRemoved", unitId: "enf", reason: "pilotKilled" },
+      {
+        kind: "unitRemoved",
+        unitId: "enf",
+        reason: "destroyed",
+        destroyReason: "centerTorsoDestroyed",
+      },
     ]);
+    expect(state.wreckage["2,3"]).toEqual(["enf"]);
     expect(rng.remaining()).toBe(0);
   });
 
@@ -102,10 +111,12 @@ describe("pilot killed while the 'Mech is destroyed", () => {
       .slice(0, 3);
     for (const i of engine) setSlotDestroyed(enf.critSlotsDestroyed, "centerTorso", i);
     const events: GameEvent[] = [];
-    advancePhase(state, events, scriptedRng());
+    advancePhase(state, events, scriptedRng(1, 3, 3));
     expect(enf.removed).toBe("pilotKilled");
     expect(enf.destroyed).toBe("engineDestroyed");
-    expect(removals(events, "enf")).toHaveLength(0);
+    expect(removals(events, "enf")).toEqual([
+      { kind: "unitRemoved", unitId: "enf", reason: "destroyed", destroyReason: "engineDestroyed" },
+    ]);
   });
 
   it("an earlier destroyed reason is not overwritten", () => {

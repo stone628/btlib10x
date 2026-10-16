@@ -130,6 +130,7 @@ Line: `M<idx><op>[args]` (one actor).
 | `X` | `voluntaryShutdown` | – |
 | `O` | `attemptVoluntaryStartup` | – |
 | `E` | `ejectPilot` | – |
+| `A` | `abandonPilot` | – |
 | `.` | `passMovement` (also what the session does when a shut-down or unconscious unit commits) | – |
 
 `steps` are relative to the actor's hex and heading when the move starts, one character each:
@@ -202,11 +203,13 @@ drop-only activation.
 
 ### `E` — final state (checksum)
 
-`E<idx><hits>` (after `W`) + armor / crit / ammo in the same notation as `U`, cumulative
-vs. model default (starting damage included). The policy field is setup-only and is not repeated here.
+`E<idx><hits>[H|X]` (after `W`) + armor / crit / ammo in the same notation as `U`, cumulative
+vs. model default (starting damage included). The remains tag follows the hits: `H` for a hull
+(pilot ejected, killed or abandoned with the frame intact), `X` for a destroyed frame
+(wreckage), none for a unit still active. The policy field is setup-only and is not repeated here.
 Replaying and diffing against it detects engine-version drift. The crit field never lists `empty`
 slots (the engine never marks them), so `E` crits can be pasted into a `U` line as starting damage. Dead/removed units
-need no flag (`destroyed` follows from the structure).
+need no other flag (`destroyed` follows from the structure).
 
 ### `W` — rng state
 
@@ -230,7 +233,7 @@ Every CLI command and where it lands. "UI" = no effect on battle state, never re
 | `mode prone [turn\|pronestill]` + `place` + `done` | `D` + turn steps (or bare `D` for `pronestill` / no place) |
 | `mode turn` + `place` + `done` | `w` + turn steps |
 | `mode pronestill` + `done` | `s` |
-| `mode shutdown` / `startup` / `eject` + `done` | `X` / `O` / `E` |
+| `mode shutdown` / `startup` / `eject` / `abandon` + `done` | `X` / `O` / `E` / `A` |
 | `done` with nothing declared in movement (pass) | `.` |
 | `cancel` | not recorded (pre-commit) |
 | `set <id> ammoPolicy <policy>` | setup only: the `U` policy field (`e` `c` `s` `l`); the attack-phase `ammo` command no longer exists |

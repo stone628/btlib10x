@@ -358,22 +358,26 @@ describe("charge resolution (TW p.148)", () => {
     expect(requireUnit(state, "a").position).toEqual({ col: 5, row: 5 });
   });
 
-  it("is void when a wreck holds the target hex", () => {
+  it("still strikes a target whose pilot died: the hull stays a target (TO:AR p.184)", () => {
     const state = chargeBattle();
     executeMove(state, "a", "walk", chargePath, [], { rng: scriptedRng() });
     requireUnit(state, "t").removed = "pilotKilled";
-    state.wrecks["5,5"] = { unitId: "t", level: 2 };
     toAttack(state);
     const events: GameEvent[] = [];
     resolveAllAttacks(state, pad(), events);
-    expect(events).toContainEqual(
-      expect.objectContaining({
-        kind: "physicalAttackResolved",
-        unitId: "a",
-        resolution: expect.objectContaining({ hit: false, missReason: "voided:wreck" }),
-      }),
+    const resolved = events.find(
+      (e): e is Extract<GameEvent, { kind: "physicalAttackResolved" }> =>
+        e.kind === "physicalAttackResolved" && e.unitId === "a",
     );
+    // Immobile hull (-4, TW p.110): the charge cannot miss.
+    expect(resolved?.resolution).toMatchObject({ hit: true, autoHit: true });
     expect(requireUnit(state, "a").position).toEqual({ col: 5, row: 4 });
+    // The charge's target PSR drops the hull without a roll (TW p.60).
+    const t = requireUnit(state, "t");
+    expect(t.prone).toBe(true);
+    expect(events).not.toContainEqual(
+      expect.objectContaining({ kind: "pilotingCheck", unitId: "t" }),
+    );
   });
 });
 

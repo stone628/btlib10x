@@ -25,21 +25,21 @@
  * except that cells are listed only when not clear/level 0.
  *
  * Objects whose fields are all `readonly` (`HexCoord`, attack declarations,
- * `HeldClub`, `DeclaredPickup`, `ClubGroundToken`, `WreckState`) are replaced
+ * `HeldClub`, `DeclaredPickup`, `ClubGroundToken`) are replaced
  * wholesale by the engine, never edited in place, so snapshots and live state
  * share them by reference; only mutable containers and records are copied.
  *
  * Manual field-by-field copy under the JSON, not `structuredClone`:
  * explicit list guards against future `BattleState` additions, keeps `src/`
  * browser-first with zero runtime dependencies. Finer-grained save/load
- * helpers (unit, damage, ammo, crits, buildings, wrecks) stay in
+ * helpers (unit, damage, ammo, crits, buildings, wreckage) stay in
  * this module for internal reuse and tests; only the battle pair is public.
  * `BattleState` carries no event log: engine calls return transient
  * `GameEvent[]` instead, so snapshots stay small.
  */
 
 import { hexCell } from "../core/terrain";
-import type { HexCell, Location, TerrainType, WreckState } from "../core/types";
+import type { HexCell, Location, TerrainType } from "../core/types";
 import type { AmmoBins } from "./ammo";
 import { assertBuildingsMatchCells, type BuildingState } from "./building";
 import { type CritMask, cloneCritTable } from "./critical";
@@ -58,8 +58,8 @@ type AmmoStateSnapshot = AmmoBins;
 type CritTableSnapshot = CritMask;
 /** Detached deep copy of the building map. Treat as immutable. */
 type BuildingsSnapshot = Record<string, BuildingState>;
-/** Detached deep copy of the wreck map. Treat as immutable. */
-type WrecksSnapshot = Record<string, WreckState>;
+/** Detached deep copy of the wreckage overlay. Treat as immutable. */
+type WreckageSnapshot = Record<string, string[]>;
 
 function cloneDamageState(damage: UnitDamageState): UnitDamageState {
   return {
@@ -176,7 +176,7 @@ function isBattleSnapshotObject(value: unknown): value is PackedBattle {
     (value.actorQueue === null || Array.isArray(value.actorQueue)) &&
     !("events" in value) &&
     isRecord(value.buildings) &&
-    isRecord(value.wrecks) &&
+    isRecord(value.wreckage) &&
     isRecord(value.clubs) &&
     isRecord(value.rubbleOrigin)
   );
@@ -228,10 +228,7 @@ function cloneBattleRest(
   for (const [key, building] of Object.entries(state.buildings)) {
     buildings[key] = cloneBuildingState(building);
   }
-  const wrecks: Record<string, WreckState> = {};
-  for (const [key, wreck] of Object.entries(state.wrecks)) {
-    wrecks[key] = wreck;
-  }
+  const wreckage = saveWreckage(state.wreckage);
   const clubs: Record<string, ClubGroundToken[]> = {};
   for (const [key, tokens] of Object.entries(state.clubs)) {
     clubs[key] = [...tokens];
@@ -246,7 +243,7 @@ function cloneBattleRest(
     actedThisPhase: [...state.actedThisPhase],
     actorQueue: state.actorQueue === null ? null : [...state.actorQueue],
     buildings,
-    wrecks,
+    wreckage,
     clubs,
     rubbleOrigin: { ...state.rubbleOrigin },
   };
@@ -277,10 +274,7 @@ function loadClonedBattleState(state: BattleState, snapshot: BattleSnapshot): vo
   for (const [key, building] of Object.entries(snapshot.buildings)) {
     state.buildings[key] = cloneBuildingState(building);
   }
-  for (const key of Object.keys(state.wrecks)) delete state.wrecks[key];
-  for (const [key, wreck] of Object.entries(snapshot.wrecks)) {
-    state.wrecks[key] = wreck;
-  }
+  loadWreckage(state.wreckage, snapshot.wreckage);
   for (const key of Object.keys(state.clubs)) delete state.clubs[key];
   for (const [key, tokens] of Object.entries(snapshot.clubs)) {
     state.clubs[key] = [...tokens];
@@ -393,19 +387,19 @@ export function loadBuildings(
   }
 }
 
-/** Detached copy of the wreck map (its readonly `WreckState` values are shared). Treat as immutable. */
-export function saveWrecks(wrecks: Record<string, WreckState>): WrecksSnapshot {
-  const out: Record<string, WreckState> = {};
-  for (const [key, wreck] of Object.entries(wrecks)) {
-    out[key] = wreck;
+/** Detached copy of the wreckage overlay. Treat as immutable. */
+export function saveWreckage(wreckage: Record<string, string[]>): WreckageSnapshot {
+  const out: Record<string, string[]> = {};
+  for (const [key, ids] of Object.entries(wreckage)) {
+    out[key] = [...ids];
   }
   return out;
 }
 
-/** Roll wreck map back to snapshot in place. */
-export function loadWrecks(target: Record<string, WreckState>, snapshot: WrecksSnapshot): void {
+/** Roll the wreckage overlay back to snapshot in place. */
+export function loadWreckage(target: Record<string, string[]>, snapshot: WreckageSnapshot): void {
   for (const key of Object.keys(target)) delete target[key];
-  for (const [key, wreck] of Object.entries(snapshot)) {
-    target[key] = wreck;
+  for (const [key, ids] of Object.entries(snapshot)) {
+    target[key] = [...ids];
   }
 }

@@ -2,15 +2,8 @@
 // All value-level imports flow one way (render.ts → renderer.text.ts); the
 // reverse edge (renderer.text.ts → render.ts) is type-only and erased at
 // compile time, so there is never a runtime module cycle.
-import type {
-  Facing,
-  HexCoord,
-  MapDef,
-  RevealedLanding,
-  UnitInit,
-  UnitState,
-  WreckState,
-} from "btlib10x";
+import type { Facing, HexCoord, MapDef, RevealedLanding, UnitInit, UnitState } from "btlib10x";
+import { isHull, isUnitOnBoard } from "btlib10x";
 import { cssGridRenderer, textRenderer } from "./renderer.text";
 
 // ---- renderer supplier ----
@@ -36,7 +29,9 @@ export interface BoardRenderUnit {
   readonly model: string;
   readonly position: HexCoord;
   readonly facing: Facing;
-  readonly ejected: boolean;
+  /** An abandoned frame (pilot ejected, killed or stepped out): drawn as
+   *  `-id`. */
+  readonly hull: boolean;
 }
 
 export function createBoardRenderUnit(unit: UnitState | UnitInit): BoardRenderUnit {
@@ -46,29 +41,17 @@ export function createBoardRenderUnit(unit: UnitState | UnitInit): BoardRenderUn
     model: unit.model,
     position: unit.position,
     facing: unit.facing,
-    ejected: false,
+    hull: "removed" in unit && isHull(unit),
   };
 }
 
-export function createEjectedBoardRenderUnits(
+/** Render units for every unit still on the board: active units and hulls. */
+export function createBoardRenderUnits(
   units: Readonly<Record<string, UnitState>>,
-  ejected: Readonly<Record<string, WreckState>>,
 ): BoardRenderUnit[] {
-  return Object.values(ejected)
-    .map((w) => {
-      const unit = units[w.unitId];
-      return unit !== undefined
-        ? {
-            id: unit.id,
-            team: unit.team,
-            model: unit.model,
-            position: unit.position,
-            facing: unit.facing,
-            ejected: true,
-          }
-        : null;
-    })
-    .filter((u) => u !== null);
+  return Object.values(units)
+    .filter((u) => isUnitOnBoard(u))
+    .map((u) => createBoardRenderUnit(u));
 }
 
 /**
@@ -89,4 +72,6 @@ export interface BoardRenderInfo {
   readonly reachable: BoardRenderReachableInfo | null;
   /** `"col,row"` keys of hexes holding a ground club token. */
   readonly clubHexes: readonly string[] | null;
+  /** `"col,row"` keys of hexes holding battlefield wreckage (Rough). */
+  readonly wreckageHexes?: readonly string[] | null;
 }

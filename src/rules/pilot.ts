@@ -13,7 +13,7 @@ import { consciousnessTarget } from "./piloting";
  *  - `ejected`: left the 'Mech, even if the ejection damage reached the hit
  *    max (inspect `hp` for that).
  *  - `dead`: died inside the 'Mech without ejecting. */
-export type PilotStatus = "active" | "unconscious" | "ejected" | "dead";
+export type PilotStatus = "active" | "unconscious" | "ejected" | "abandoned" | "dead";
 
 export interface PilotRecord {
   readonly gunnery: number;
@@ -38,6 +38,7 @@ export function pilotStatus(unit: UnitState): PilotStatus {
   // A pilot killed by the ejection landing is dead, not "ejected".
   if (unit.pilotHits >= unit.pilotHitMax) return "dead";
   if (unit.removed === "pilotEjected") return "ejected";
+  if (unit.removed === "pilotAbandoned") return "abandoned";
   return isPilotUnconscious(unit) ? "unconscious" : "active";
 }
 

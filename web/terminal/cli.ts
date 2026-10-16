@@ -391,7 +391,7 @@ const MODE_USAGE = [
   "mode standstill | walk | run | jump",
   "mode prone [turn | pronestill] | turn | pronestill",
   "mode standup [walk | run | standstill]",
-  "mode shutdown | startup | eject",
+  "mode shutdown | startup | eject | abandon",
 ].join("\n");
 
 const MOVE_CMDS: Record<string, CmdDef> = {
@@ -403,7 +403,8 @@ const MOVE_CMDS: Record<string, CmdDef> = {
         m.moveMode === null ||
         m.moveMode === "shutdown" ||
         m.moveMode === "startup" ||
-        m.moveMode === "eject"
+        m.moveMode === "eject" ||
+        m.moveMode === "abandon"
       ) {
         throw new Error(i18n("err.candidate.movemode"));
       }
@@ -430,6 +431,7 @@ const MOVE_CMDS: Record<string, CmdDef> = {
       ["shutdown", "cmd.mode.arg.shutdown"],
       ["startup", "cmd.mode.arg.startup"],
       ["eject", "cmd.mode.arg.eject"],
+      ["abandon", "cmd.mode.arg.abandon"],
     ],
     run: (s, a) => {
       expectArgs(a, 1, MODE_USAGE);

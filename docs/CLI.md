@@ -83,7 +83,8 @@ The prompt names the acting unit; commands act on that 'Mech.
 | `mode pronestill` | stay prone (prone unit only; 0 MP, 0 heat). `place` stays unavailable; `done` ends the activation |
 | `mode shutdown` | declare a voluntary shutdown (online unit only). `place` stays unavailable; `done` commits it — the unit goes off-line (`manual`) and can no longer move, fire, or act normally this turn. `cancel` resets the declaration |
 | `mode startup` | declare a voluntary startup attempt (shut-down unit only). `done` rolls 2D6 against the heat shutdown avoidance number: success brings the unit online at once (the startup is its movement for the turn, it keeps the attack phase); failure keeps it shut down. `done` alone (without `mode startup`) passes — the unit stays off-line |
-| `mode eject` | declare a pilot ejection (any non-removed unit, including a shut-down one). `place` stays unavailable; `done` commits it — the unit is marked removed (`pilotEjected`) and its hex becomes a permanent level-2 wreck. `cancel` resets the declaration |
+| `mode eject` | declare a pilot ejection (any non-removed unit, including a shut-down one; the emergency exit, with the ejection roll). `place` stays unavailable; `done` commits it — the unit is marked removed (`pilotEjected`) and its 'Mech stays on the board as a hull (see below). `cancel` resets the declaration |
+| `mode abandon` | declare a voluntary abandonment (house rule adapted from TO:AR p.165; a unit shut down since an earlier turn — `mode shutdown` first, abandon next turn — or a heat shutdown). No roll, no pilot hits: `done` marks the unit removed (`pilotAbandoned`) and its 'Mech stays as a hull in the posture it stood in. `cancel` resets the declaration |
 | `place <col> <row> <facing>` | place the 'Mech at a final hex + facing in one step; `col row` are 1-based, `facing` is an absolute word (`n\|ne\|se\|s\|sw\|nw`). The (hex, facing) must be a reachable landing shown by `mode` (validated against the movement candidate); replaces any previously queued steps. Jump landing facing is chosen freely, so any facing at a reachable hex is legal for `jump` |
 | `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [J](jam) / [-](destroyed) / per-bin ammo `(n left)` markers); without id: brief unit list (id, model, position+facing) grouped by team |
 | `heat [id]` | heat scale status of a unit (default: the acting unit); also available in the attack phase |
@@ -179,6 +180,10 @@ Conservative (TN ≤ 8, 25% reserve) / Miser (TN ≤ 7, 50% reserve, energy firs
 - **Yield**: at the persona's armor + structure threshold (or with no weapons
   left for a Never-melee persona) it declares `mode eject`, standing in for the
   missing yield helper (GDD R6).
+- **Hulls**: abandoned enemy 'Mechs are ignored unless no attack on a live
+  enemy scores; then the persona fires on an enemy hull to deny its salvage.
+  Autoplay retires a unit with nothing left to fight with (or stuck prone) by
+  `mode shutdown`, then `mode abandon` the next turn.
 - **Own RNG**: a separate stream seeded from the battle seed, used only for
   tie-breaks; deciding never moves the battle dice.
 - **Rollback**: the persona context (memory, its RNG, last traces) is part of
@@ -218,8 +223,9 @@ are listed here. Rule text lives in the rulebook.
   bed `depth` levels below; Minimum Movement (TW p.49) is `mode run`; one-leg
   'Mechs hop (`effectiveMovement`).
 - **Line of sight / to-hit** — woods points, elevation ray and partial cover
-  (including wrecks, TO) per TW; GATOR breakdown printed by `fire`. Water
-  depth 2+ blocks targeting (`blocksTargeting`).
+  per TW (units, hulls and wreckage never affect LOS or cover); GATOR
+  breakdown printed by `fire`. Water depth 2+ blocks targeting
+  (`blocksTargeting`).
 - **Firing arcs** — per-weapon mounting arcs and target-side attack
   direction; a boundary attack direction resolves to the defender's choice
   (front over side, never rear). `torso <front|left|right>` twists one hexside.
@@ -250,7 +256,23 @@ are listed here. Rule text lives in the rulebook.
   modeled).
 - **Pilot** — damage, consciousness rolls (`pilotHitMax`, default 6), cockpit
   kills. Ejection and auto-eject are Tactical Operations (TO p.165), not TW:
-  `mode eject`; the wreck blocks its hex and gives partial cover.
+  `mode eject`. `mode abandon` (house rule) lets the pilot step out of a 'Mech
+  shut down since an earlier turn.
+- **Hulls (TO:AR pp.184–185)** — a 'Mech whose pilot ejected, died or
+  abandoned it, frame intact, stays on the board as a neutral, permanently
+  shut-down hull, drawn `-id`. Either side may target it (−4 immobile); any
+  unit may pass or jump through its hex but none may stop there; walking or
+  jumping onto it declares a charge or DFA. It never rolls a PSR: anything
+  that would force one (20+ damage, leg or gyro loss, a kick or charge) drops
+  it. It has no LOS or cover effect and counts as lost for its team.
+- **Wreckage (TO:AR p.155)** — a destroyed 'Mech of 40 t or more (a destroyed
+  hull included) turns its hex into Rough on top of the terrain: +1 MP, no
+  PSR, no to-hit or LOS effect; an already-rough hex or one already holding
+  wreckage stays as it is, and a standing building charges nothing until it
+  collapses. The board marks it `%`. A 'Mech destroyed while standing first
+  takes the salvage fall (TW p.128) on its record; a living MechWarrior takes
+  the fall's pilot hit. `salvageReport` lists every hull and destroyed frame
+  at battle end.
 - **Battle flow** — initiative, sequential movement, attack phase (weapons
   and physical attacks in one activation, a playability merge), heat phase,
   victory check, rematch.
@@ -289,21 +311,6 @@ are listed here. Rule text lives in the rulebook.
 
 - **Building structural damage beyond CF** — basements / multi-floor
   interiors, structural-factor transfer between levels.
-- **Wreck destruction** — wrecks are permanent obstacles; clearing,
-  damaging, or merging wrecks with building collapse is deferred. Movement
-  entry is still rejected (`executeMove` throw; `reachableLandings` ignores
-  wreck hexes via the `wreckAt` option), so the Tactical Operations rough
-  (+1 MP) and severe-rough (+2 MP) entry surcharge and the PSR/PSC triggers
-  that come with it remain unimplemented pending an open-entry policy.
-- **Tactical Operations wreck levels** (engine-side, baked in):
-  light 'Mechs (<40 t) and prone units with a killed/ejected pilot leave a
-  level-1 wreck; everything else leaves a level-2 wreck
-  (`wreckLevelFor` in `src/rules/game.ts`). L1 wrecks do **not** block LOS
-  between two standing standard 'Mechs but grant +1 partial cover to
-  standing ground 'Mechs behind them; L2 wrecks block LOS entirely, give
-  +2 partial cover to adjacent targets, and +1 (per TO) to elevated or
-  Level 3+ targets when the attacker is at/above the wreck top
-  (`losBlockedByWreck`, `partialCoverMod`).
 - **Quadripedal 'Mechs**, vehicles, infantry, battle armor.
 - **Called shots**, aimed shots, spotter / indirect fire, ECM.
 - **Pilot abilities** (edge, etc.), quirks, experience beyond the gunnery

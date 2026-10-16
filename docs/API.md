@@ -32,7 +32,6 @@ source module.
 | `TerrainHexDef` | `{ col: number; row: number; type: TerrainType; level?: number }` (map data + setup; level optional, default 0) |
 | `MoveMode` | `"standStill" \| "walk" \| "run" \| "jump" \| "prone"` |
 | `Location` | `"head" \| "centerTorso" \| "rightTorso" \| "leftTorso" \| "rightArm" \| "leftArm" \| "rightLeg" \| "leftLeg"` |
-| `WreckState` | `{ unitId: string; level: 1 \| 2 }` (ejected/pilot-killed obstacle) |
 | `Rng` | `{ d6(): number }` — inject into every rules call |
 
 `FACINGS` lists `Facing` in clockwise order;
@@ -46,7 +45,7 @@ source module.
 
 ### Hex geometry (`core/hex.ts`)
 
-- `hexKey(hex): string` — `"col,row"` key used by `buildings`, `wrecks` and `clubs`
+- `hexKey(hex): string` — `"col,row"` key used by `buildings`, `wreckage` and `clubs`
 - `neighbor(hex, facing): HexCoord`,
   `isAdjacent(a, b)`
 - `hexDistance(a, b): number`, `sameHex(a, b): boolean`
@@ -358,9 +357,13 @@ budget until the heat phase runs.
   charges 1 MP per turn and 1+terrain+1-per-level-changed per step, where
   levels are measured at a water hex's bed (hex level − depth); running
   cannot enter water except by Minimum Movement (TW p.53, p.57). Jump
-  treats turns as free and ignores elevation. `ReachabilityOptions` includes
-  `wreckAt?: (hex) => boolean`: hexes holding a wreck are excluded from
-  landings and cannot be passed through.
+  treats turns as free and ignores elevation. A hex holding battlefield
+  wreckage (`wreckageAt(hex)` option; `hasWreckage(state, hex)` from a battle)
+  costs +1 MP as Rough stacked on its terrain (`hexEntryCost`; no repeat on
+  rough, nothing in a standing building).
+  `occupantTeam(hex)` reports a hull as `NEUTRAL_TEAM` (0): passable by every
+  team, never a landing, and a charge / DFA target like an enemy;
+  `occupantTeamAt(state, hex, excludeId?)` builds it from a battle.
 
 Types: `MoveFragment` (`"F" | "B" | "R" | "L" | "J" | "U"`),
 `MovePathStep` (`baseMp` per step), `RevealedLanding`, `ReachabilityOptions`.
@@ -378,8 +381,8 @@ engine-internal (source-module import only).
 Engine-internal (source-module import only): `interveningHexes`,
 `interveningTerrains`, `losWoodsPoints`, `losBlocked`,
 `losWoodsPointsBetween`, `losBlockedByWater`, `losBlockedByElevation`,
-`losBlockedByBuilding`, `losBlockedByWreck`, `losClear` (depth 2+ water, and depth 1+ water for a
-prone 'Mech, block LOS at the endpoints). The engine checks LOS
+`losBlockedByBuilding`, `losClear(grid, from, to, prone?)` (depth 2+ water, and depth 1+ water for a
+prone 'Mech, block LOS at the endpoints; units, hulls and wreckage never block, TW p.100). The engine checks LOS
 during declaration validation; library consumers observe the outcome through
 `suggestFireTargets` block reasons (`noLos`) and `validateAttacks` errors.
 
@@ -460,8 +463,9 @@ in the hex before it, sets `UnitState.meleeCharge` (`MeleeCharge`) plus
 lists such hexes as `RevealedLanding.melee` when `meleeOk` is supplied; the
 target's hex stays reserved for the attacker; a target that left is reported by
 a `physicalAttackResolved` whose `resolution.missReason` is `"advanced"`
-(`advancedTo` is the hex the attacker moved into) or `"voided:wreck"` /
-`"voided:hexTaken"` / `"voided:attackerDown"`). Charge damage is
+(`advancedTo` is the hex the attacker moved into) or
+`"voided:hexTaken"` / `"voided:attackerDown"`). A target whose pilot left
+stays a hull in its hex and is still struck. Charge damage is
 `ceil(tonnage / 10 × hexes moved)`, not counting the target's hex (TW p.148),
 so an adjacent charge deals no damage but still forces both +2 PSRs on a hit.
 Deviation: TW allows charges/DFAs only against units that finished moving
@@ -643,9 +647,9 @@ and `ejectionDamage(roll)` (floor(margin of failure / 2)) support ejection.
 
 `isPilotUnconscious(unit)` is true while `unconsciousSinceTurn` is set (the
 turn of the knockout; cleared on waking), the only record of consciousness.
-`pilotStatus(unit): "active" | "unconscious" | "ejected" | "dead"` is the pilot's
+`pilotStatus(unit): "active" | "unconscious" | "ejected" | "abandoned" | "dead"` is the pilot's
 relation to the 'Mech, derived from `pilotHits`/`pilotHitMax`/`unconsciousSinceTurn`/`removed`
-(`ejected` wins even when ejection damage reached the hit max; `dead` = died inside).
+(`dead` once the hits reach the max, else `ejected` / `abandoned` by the removal reason).
 `pilotRecord(unit)` returns `{ gunnery, piloting, hits, hitMax, hp, nextTarget, targets, status }`
 for record-sheet display (`hp = hitMax - hits`). `FallDirection` and
 `PreexistingDamage` are the related shapes.
@@ -702,7 +706,8 @@ postureMoveBudget(unit, "standUp" | "drop", budget): number           // MP left
 postureCost(unit, "standUp" | "drop"): number                         // MP the stand-up / drop charges now
 attemptStandUp(state, unitId, sink: GameEvent[], rng): number          // movement phase only: prone unit tries to rise (one attempt per activation; ends it)
 dropProne(state, unitId, sink: GameEvent[]): void                // movement phase only: go prone voluntarily (1 MP, no heat, no roll, no damage; refused after jumping; ends the activation)
-ejectPilot(state, unitId, rng, sink: GameEvent[]): void                // movement phase only (Tactical Operations extension): ejection PSR (failure = floor(MoF/2) pilot hits, `pilotDamaged` reason "ejection"), then removes the unit (removed = "pilotEjected") and spawns a wreck; pilotHits retained
+ejectPilot(state, unitId, rng, sink: GameEvent[]): void                // movement phase only (Tactical Operations extension): ejection PSR (failure = floor(MoF/2) pilot hits, `pilotDamaged` reason "ejection"), then removes the unit (removed = "pilotEjected"); the frame stays as a hull; pilotHits retained
+abandonPilot(state, unitId, sink: GameEvent[]): void                   // movement phase only (house rule, TO:AR p.165): a unit shut down since an earlier turn; no roll, no hits; removed = "pilotAbandoned", the frame stays as a hull in its posture
 voluntaryShutdown(state, unitId, sink: GameEvent[]): void              // movement phase only: shuts down ("manual")
 attemptVoluntaryStartup(state, unitId, sink: GameEvent[], rng): void  // startup attempt after a manual shutdown
 declareAttacks(state, unitId, weaponDecls, physicalDecls, sink: GameEvent[], rng, options?): void  // attack phase only: one combined declaration per turn (weapons + punch/kick/club/strike); emits a single merged `attacksDeclared`
@@ -711,7 +716,10 @@ declarePickup(state, unitId, decl, sink: GameEvent[]): void             // attac
 validatePhysicalAttack(state, unitId, decl: PhysicalAttackDecl, twist?, dropped?): ValidationResult  // read-only single-decl check (adjacency, arc, level, actuators); consumed by `declareAttacks` and the web `candidate` hints
 passMovement(state, unitId): void                                       // movement phase only: shut-down unit attempts no startup, stays off-line, marked as acted
 passAttack(state, unitId): void                                         // attack phase only: current actor declares no attacks this turn, marked as passed + acted
-wreckAt(state, hex): WreckState | undefined
+wreckageAt(state, hex): readonly string[]                                // ids of the destroyed 'Mechs whose wreckage lies in the hex
+occupantAt(state, hex, excludeId?): UnitState | undefined               // the active unit or hull in a hex
+isHull(unit) / isUnitOnBoard(unit) / isTargetableBy(attacker, target)  // see Hulls and wreckage below
+salvageReport(state): SalvageEntry[]                                     // every hull and destroyed frame: kind, removal / kill reason, hex, posture, damage, destroyed slots, stranded ammo, salvageable severed limbs
 nextActor / actorQueue / gameLoop / requireUnit — see below
 ```
 
@@ -793,7 +801,7 @@ interface BattleState extends HexGrid {
   actedThisPhase: string[];
   buildings: Record<string, BuildingState>;  // { cf } keyed "col,row"; one per building-terrain cell, sub-type is the terrain
   rubbleOrigin: Record<string, BuildingTerrainType>;  // collapsed building's terrain, keyed "col,row" of its rubble cell
-  wrecks: Record<string, WreckState>;  // { unitId; level: 1 | 2 } keyed "col,row"; ejected/pilot-killed obstacles
+  wreckage: Record<string, string[]>;  // battlefield wreckage keyed "col,row": ids of destroyed 'Mechs (40 t+); the hex counts as Rough
   clubs: Record<string, ClubGroundToken[]>;  // ground club tokens keyed "col,row"
   actorQueue: string[] | null;        // cached activation order for the phase
 }
@@ -811,13 +819,13 @@ interface UnitState {
   moveMode; hexesMovedThisTurn; jumpedThisTurn; mpSpent;
   declaredWeaponAttacks; declaredPhysicalAttacks; declaredPickup; passedAttacks;
   destroyed: DestroyedState;          // "not" | "headDestroyed" | "centerTorsoDestroyed" | "cockpitDestroyed" | "headBlownOff" | "engineDestroyed"
-  removed: RemovedState;              // "not" | "destroyed" | "pilotEjected" | "pilotKilled"
+  removed: RemovedState;              // "not" | "destroyed" | "pilotEjected" | "pilotKilled" | "pilotAbandoned"
   shutdown: ShutdownState;            // "not" | "manual" | "heat"
 }
 
 type DestroyedReason = "headDestroyed" | "centerTorsoDestroyed" | "cockpitDestroyed" | "headBlownOff" | "engineDestroyed";
 type DestroyedState = "not" | DestroyedReason;
-type RemovalReason = "destroyed" | "pilotEjected" | "pilotKilled";
+type RemovalReason = "destroyed" | "pilotEjected" | "pilotKilled" | "pilotAbandoned";
 type RemovedState = "not" | RemovalReason;
 type ShutdownState = "not" | "manual" | "heat";
 type PilotHitReason = "headHit" | "ammoExplosion" | "fall" | "shutdownFall" | "lifeSupport"; // pilot-damage cause tag
@@ -832,6 +840,7 @@ type GameEvent =
   | { kind: "attackResolved"; unitId; targetId; secondaryMod: 0|1|2; resolution: AttackResolution }
   | { kind: "physicalAttackResolved"; unitId; targetId; resolution: PhysicalResolution }
   | { kind: "unitRemoved"; unitId; reason: RemovalReason; destroyReason?: DestroyedReason | null }
+  | { kind: "wreckageLeft"; unitId; col; row }   // a destroyed 'Mech of 40 t+ turned its hex into Rough (TO:AR p.155)
   | { kind: "unitFell"; unitId; cause: UnitFallCause; levelsFallen; groups; ... }   // damage: damageGroupsTotal(groups)
   | { kind: "buildingCollapsed"; hex; cf }
   | ... ;                              // see src/rules/game.ts for the full union
@@ -852,10 +861,26 @@ Rules encoded by the state machine:
   `unitRemoved` event carries `destroyReason`). A pilot kill or eject sets
   `removed` (`"pilotKilled"` / `"pilotEjected"`); `destroyed` records the
   frame independently. It stays `"not"` for an intact 'Mech, and holds the
-  kill reason when the same step's damage also destroyed it (head loss or CT
-  blast before an eject; CT, head, cockpit or engine kill alongside a pilot
-  kill). The `unitRemoved` event for a pilot kill carries no `destroyReason`:
-  read `destroyed` on the unit.
+  kill reason when the frame was destroyed (head loss or CT blast before an
+  auto-eject, or a hull destroyed later, in the same step as a pilot kill or
+  any time after). The `unitRemoved` event for a pilot kill carries no
+  `destroyReason`; a destroyed hull emits a second `unitRemoved` with reason
+  `"destroyed"` and its `destroyReason` while the unit keeps its pilot
+  removal reason.
+- **Hulls and wreckage**: a unit with a pilot removal reason and an intact
+  frame is a hull (`isHull`, TO:AR pp.184–185): it stays on the board
+  (`isUnitOnBoard`), never acts, keeps its team and posture, counts as lost
+  for victory, and is a legal weapon and physical target for both teams
+  (`isTargetableBy`) at the −4 immobile modifier (`isImmobile`). Any unit may
+  move or jump through its hex but not end there; a path ending on it
+  declares a charge / DFA. It never rolls a PSR: a trigger drops it
+  automatically, without pilot hits. Every destroyed frame (`markUnitDestroyed`,
+  auto-eject from a destroyed frame, a destroyed hull) first takes the
+  salvage fall (TW p.128) when it was standing — a `unitFell` with cause
+  `{ kind: "salvageFall" }`, damage and criticals on the record, and the fall's
+  pilot hit for a MechWarrior still alive — then, at
+  `WRECKAGE_TONNAGE_MIN` (40 t) or more, adds its id to `state.wreckage`
+  (`wreckageLeft` event).
 - **Weapon usability** is judged against `baseDamage`.
 - **Ammo** is deducted at declaration time; jams persist for the rest of the game.
 - **Declaration validation**: weapon indexes are 1-based; weapons may be split among any
@@ -863,7 +888,7 @@ Rules encoded by the state machine:
   forward-arc target; each secondary target takes `secondaryTargetMod` +1
   forward arc / +2 side-rear, not cumulative; physicals exempt),
   per-weapon mounting arc (TW p.105, torso twist applied), unblocked LOS
-  (woods + elevation + water + wrecks), range check, rapid-fire limits
+  (woods + elevation + water), range check, rapid-fire limits
   (`rapidFire: true` only on R weapons), TN > 12 must be aborted (throws), one
   declaration per weapon per turn, destroyed/jammed weapons rejected.
 - **Movement validation**: MP budget per mode (including crit-affected

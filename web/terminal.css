@@ -10,6 +10,7 @@
   --t-rough: #cbb98a;
   --t-rubble: #a08a6a;
   --club: #e5c07b;
+  --wreckage: #9a8f84;
   --t-pavement: #8a8a9a;
   --t-water1: #6aaae0;
   --t-water2: #5a9ad8;
@@ -182,6 +183,10 @@
 }
 .t-club {
   color: var(--club);
+  font-weight: bold;
+}
+.t-wreckage {
+  color: var(--wreckage);
   font-weight: bold;
 }
 .t-pavement {

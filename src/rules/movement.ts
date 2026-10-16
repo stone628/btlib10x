@@ -2,10 +2,11 @@ import { hexDistance, neighbor } from "../core/hex";
 import {
   cellAt,
   costToClimb,
-  costToEnter,
   groundLevel,
   type HexGrid,
+  hexEntryCost,
   MP_PER_FACING_CHANGE,
+  MP_TO_ENTER_HEX,
   waterDepth,
 } from "../core/terrain";
 import type { Facing, HexCoord, MoveMode, TerrainType } from "../core/types";
@@ -102,9 +103,15 @@ export function facingChangeCost(facings: number): number {
   return facings * MP_PER_FACING_CHANGE;
 }
 
-/** Stacking: friendly units may be passed through; enemies may not. */
+/** Occupant team reported for an abandoned hull: a neutral unit (TO:AR
+ *  p.184) that any team may pass through but none may end movement on, and
+ *  that charges and DFAs treat as a target. */
+export const NEUTRAL_TEAM = 0;
+
+/** Stacking: friendly units and neutral hulls may be passed through; enemies
+ *  may not. */
 export function canPassThroughHex(occupantTeam: number | undefined, moverTeam: number): boolean {
-  return occupantTeam === undefined || occupantTeam === moverTeam;
+  return occupantTeam === undefined || occupantTeam === moverTeam || occupantTeam === NEUTRAL_TEAM;
 }
 
 /** Stacking: movement may never END in a hex held by any other 'Mech. */
@@ -164,10 +171,12 @@ export interface ReachabilityOptions {
   readonly grid: HexGrid;
   /** The mover's team. */
   readonly team: number;
-  /** Team of the unit occupying a hex, or undefined when empty. */
+  /** Team of the unit occupying a hex ({@link NEUTRAL_TEAM} for an abandoned
+   *  hull), or undefined when empty. */
   readonly occupantTeam: (hex: HexCoord) => number | undefined;
-  /** True when `hex` holds a wreck obstacle: never passable, never landable. */
-  readonly wreckAt?: (hex: HexCoord) => boolean;
+  /** True when battlefield wreckage lies in `hex` (TO:AR p.155): ground
+   *  entry pays its Rough surcharge (`wreckageMoveCost`). Omit for none. */
+  readonly wreckageAt?: (hex: HexCoord) => boolean;
   /**
    * Enables charge / DFA landings: true when the mover could declare `kind`
    * against the enemy in `targetHex` while standing in `stop`. Omit to list
@@ -238,12 +247,12 @@ export function reachableLandings(
   const { width, height } = options.grid;
 
   const turnCost = jumping ? 0 : 1;
+  const wreckageAt = (hex: HexCoord): boolean => options.wreckageAt?.(hex) ?? false;
 
   const stepCost = (from: HexCoord, to: HexCoord): number => {
     if (jumping) return JUMP_MP_PER_HEX;
-    const cellTo = cellAt(options.grid, to);
     return (
-      costToEnter(cellTo.terrain) +
+      hexEntryCost(options.grid, to, wreckageAt(to)) +
       costToClimb(groundLevel(options.grid, from), groundLevel(options.grid, to))
     );
   };
@@ -280,7 +289,11 @@ export function reachableLandings(
     const climbLevels = jumping ? 0 : toGround - fromGround;
     const climbCost = jumping ? 0 : costToClimb(fromGround, toGround);
     const terrain = cellTo.terrain;
-    const terrainSurcharge = jumping ? 0 : costToEnter(terrain) - 1;
+    // Wreckage (TO:AR p.155) is Rough stacked on the terrain: its MP rides
+    // in the terrain surcharge.
+    const terrainSurcharge = jumping
+      ? 0
+      : hexEntryCost(options.grid, to, wreckageAt(to)) - MP_TO_ENTER_HEX;
     return {
       fragment,
       baseMp,
@@ -321,7 +334,6 @@ export function reachableLandings(
 
   const canEnter = (from: HexCoord, hex: HexCoord, backward: boolean, minMove = false): boolean => {
     if (!inBounds(hex)) return false;
-    if (options.wreckAt?.(hex)) return false;
     // TW p.53: a jump is impossible if its path crosses a level higher than
     // Jumping MP + the starting level.
     if (jumping)
@@ -331,13 +343,10 @@ export function reachableLandings(
     const delta = groundLevel(options.grid, hex) - groundLevel(options.grid, from);
     if (backward ? delta !== BACKWARD_LEVEL_CHANGE_MAX : Math.abs(delta) > FORWARD_LEVEL_CHANGE_MAX)
       return false;
-    const occ = options.occupantTeam(hex);
-    return occ === undefined || occ === options.team;
+    return canPassThroughHex(options.occupantTeam(hex), options.team);
   };
   const canLand = (hex: HexCoord): boolean =>
-    inBounds(hex) &&
-    (options.wreckAt === undefined || !options.wreckAt(hex)) &&
-    (point(hex, start) || options.occupantTeam(hex) === undefined);
+    inBounds(hex) && (point(hex, start) || options.occupantTeam(hex) === undefined);
 
   for (let i = 0; i < queue.length; i++) {
     const cur = queue[i]!;
@@ -420,6 +429,7 @@ export function reachableLandings(
       const hex = parseHexKey(key.slice(0, sep));
       const facing = key.slice(sep + 1) as Facing;
       const path = bestPath.get(key) ?? [];
+      // An enemy, or a neutral hull of either team (TO:AR p.184).
       const enemyAt = (h: HexCoord): boolean => {
         const occ = options.occupantTeam(h);
         return occ !== undefined && occ !== options.team;
@@ -438,7 +448,7 @@ export function reachableLandings(
       }
       // Charge: step straight ahead from a reachable state into the enemy.
       const ahead = neighbor(hex, facing);
-      if (!inBounds(ahead) || !enemyAt(ahead) || options.wreckAt?.(ahead)) continue;
+      if (!inBounds(ahead) || !enemyAt(ahead)) continue;
       if (running && waterDepth(cellAt(options.grid, ahead).terrain) > 0) continue;
       const delta = groundLevel(options.grid, ahead) - groundLevel(options.grid, hex);
       if (Math.abs(delta) > FORWARD_LEVEL_CHANGE_MAX) continue;

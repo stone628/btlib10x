@@ -7,7 +7,6 @@ import {
   mechDefFor,
   reachableLandings,
   suggestFireTargets,
-  wreckAt,
 } from "../src/index";
 import { en } from "../web/terminal/i18n/en";
 import type { LocaleId, MessageKey } from "../web/terminal/i18n/index";
@@ -70,7 +69,6 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
                     prone: false,
                     grid: st,
                     team: me.team,
-                    wreckAt: (hex) => wreckAt(st, hex) !== undefined,
                     occupantTeam: (hex) => {
                       for (const u of Object.values(st.units)) {
                         if (isUnitRemoved(u)) continue;

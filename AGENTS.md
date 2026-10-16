@@ -35,6 +35,11 @@ TypeScript library encapsulating BattleTech Total Warfare board game logic.
   bed `depth` levels below, level changes cost 1 MP per level (max 2 per
   hex), running into water is banned (Minimum Movement excepted), and jumps
   obey TW p.53.
+- Hulls and wreckage: a 'Mech whose pilot ejects, dies or abandons it
+  (`mode abandon`, house rule) stays on the board as a neutral, targetable,
+  passable hull (TO:AR pp.184-185); a destroyed 'Mech of 40 t+ leaves Rough
+  wreckage (+1 MP, TO:AR p.155) after the TW p.128 salvage fall.
+  `salvageReport` lists both. Rules and rationale: `docs/VISION.md` §2.1, §2.4.
 - Damage model: each location holds a flat armor HP number; overflow transfers inward **only after** a location's armor is fully depleted (no per-dot tracking).
 - Partial cover (TW): a target in a water1/building hex with the attacker not
   higher gains +1 to-hit and leg hit-location rolls strike the cover (dealt

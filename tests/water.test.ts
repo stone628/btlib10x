@@ -103,10 +103,10 @@ describe("prone 'Mech in depth 1 water blocks LOS (TW p.102)", () => {
     expect(cellAt(state, { col: 2, row: 3 }).terrain).toBe("water1");
     const from = { col: 2, row: 2 };
     const to = { col: 2, row: 3 };
-    expect(losClear(state, from, to, state.wrecks)).toBe(true);
-    expect(losClear(state, from, to, state.wrecks, { to: false })).toBe(true);
-    expect(losClear(state, from, to, state.wrecks, { to: true })).toBe(false);
-    expect(losClear(state, to, from, state.wrecks, { from: true })).toBe(false);
+    expect(losClear(state, from, to)).toBe(true);
+    expect(losClear(state, from, to, { to: false })).toBe(true);
+    expect(losClear(state, from, to, { to: true })).toBe(false);
+    expect(losClear(state, to, from, { from: true })).toBe(false);
   });
 });
 

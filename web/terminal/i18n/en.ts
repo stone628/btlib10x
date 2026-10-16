@@ -28,6 +28,7 @@ export const en = {
   "board.noMap": "no battlefield yet - load one via 'map'; 'info map' lists the choices.",
   "board.legend": "legend:",
   "board.legendClub": "club on ground",
+  "board.legendWreckage": "wreckage (rough)",
 
   // lang command
   "lang.current": "language: {locale}",
@@ -101,7 +102,9 @@ export const en = {
   "cmd.mode.arg.shutdown": "voluntary shutdown attempt. committed by 'done'",
   "cmd.mode.arg.startup": "startup attempt. committed by 'done', startup check will follow",
   "cmd.mode.arg.eject":
-    "abandon the 'Mech — pilot leaves, unit removed, hex becomes level-2 wreck. committed by 'done'",
+    "emergency exit — ejection roll, the pilot leaves; the 'Mech stays as an empty hull (neutral, targetable, passable). committed by 'done'",
+  "cmd.mode.arg.abandon":
+    "shut-down 'Mech only (shut down in an earlier turn) — the pilot steps out unhurt, no roll; the 'Mech stays as an empty hull in its posture. committed by 'done'",
   "cmd.place.help": "place the 'Mech at a reachable final hex and facing",
   "cmd.place.arg.colrowfacing":
     "final hex (1-based col row) and absolute facing word n|ne|se|s|sw|nw\nmust appear in the reachable map shown by 'mode'",
@@ -234,6 +237,7 @@ export const en = {
     "yields: {left}% of armor and structure left, threshold {at}% (eject stands in for a yield)",
   "pp.note.yieldWeapons": "yields: no weapons left (eject stands in for a yield)",
   "pp.note.noTarget": "no enemy in play",
+  "pp.note.hullTarget": "nothing live in reach: fire on {target}'s empty hull to deny salvage",
 
   // command acknowledgements
   "ok.mapLoaded": "map {name}: {w}x{h}",
@@ -349,6 +353,8 @@ export const en = {
     "movement is not available while the declared mode is shutdown/startup/eject",
   "err.mustBeOnlineForShutdown": "mode shutdown requires an online unit",
   "err.mustBeDownForStartup": "mode startup requires a shut-down unit",
+  "err.mustBeDownForAbandon":
+    "mode abandon requires {id} to be shut down since an earlier turn (declare 'mode shutdown' first)",
   "err.alreadyEjected": "{id} is no longer on the battlefield",
   "err.heatShutdownNoStartup":
     "{id} shut down from heat: the restart roll is made automatically in the Heat Phase",
@@ -553,6 +559,7 @@ export const en = {
   "sheet.pilotLine": "pilot: piloting({piloting}) {state} HP({hp}/{max}){cons}",
   "sheet.pilotConsCheck": " Consc.(>={cons})",
   "sheet.pilotEjected": "EJECTED",
+  "sheet.pilotAbandoned": "ABANDONED",
   "sheet.pilotDeadCell": "dead",
   "sheet.pilotOk": "conscious",
   "sheet.postureProne": "prone",
@@ -586,6 +593,7 @@ export const en = {
   "sheet.remove.destroyed": "destroyed",
   "sheet.remove.pilotEjected": "pilot ejected",
   "sheet.remove.pilotKilled": "pilot killed",
+  "sheet.remove.pilotAbandoned": "pilot abandoned",
   "sheet.remove.both": "{removal}, {destroyed}",
   "sheet.remove.hdDestroyed": "HD destroyed",
   "sheet.remove.ctDestroyed": "CT destroyed",
@@ -662,7 +670,9 @@ export const en = {
   "log.physicalDeclaredOne": "[{id}] declares {type} against {target} ({count} attack)",
   "log.physicalDeclaredOther": "[{id}] declares {type} against {target} ({count} attacks)",
   "log.destroyed": "[{id}] *** DESTROYED ({destroyed}) ***",
-  "log.ejected": "[{id}] ejects — abandoned 'Mech left as a level-2 wreck",
+  "log.ejected": "[{id}] ejects — the 'Mech stays as an empty hull",
+  "log.abandoned": "[{id}] pilot abandons the shut-down 'Mech — it stays as an empty hull",
+  "log.wreckage": "Wreckage of {id} turns {hex} into rough ground (+1 MP)",
   "log.buildingCollapsed": "Building at {hex} collapses to rubble",
   "log.buildingDamaged": "Building at {hex} takes {damage} structural damage (CF {cf})",
   "log.collapseDamage": "[{id}] takes {damage} damage to {loc} from building collapse at {hex}",
@@ -732,7 +742,6 @@ export const en = {
   "log.dfaDeclared": "[{id}] leaps at {target} (death from above; resolves in the physical phase)",
   "res.physical.advanced": "{target} has left its hex — {attacker} advances into {pos}",
   "res.physical.voided": "{attacker} cannot carry out the attack: {reason}",
-  "res.physical.voided.wreck": "a wreck now holds the hex",
   "res.physical.voided.hexTaken": "another unit now holds the hex",
   "res.physical.voided.attackerDown": "the attacker is down",
   "log.fallCause.dfaMiss": "failed DFA",
@@ -751,6 +760,8 @@ export const en = {
   "log.fallCause.terrain.building": "entered building",
   "log.fallCause.buildingCollapse": "building collapse",
   "log.fallCause.voluntaryDrop": "voluntary drop",
+  "log.fallCause.salvageFall": "hull destroyed",
+  "log.hullFell": "  empty hull: no pilot, no PSR; it falls automatically",
   "log.unitFell":
     "[{id}] *** FALLS ({cause}) facing {facing}: {groups} ({damage} total, {levels}-level fall) at {hex} ***",
   "log.pilotHitReason.headHit": "head hit",
@@ -772,7 +783,7 @@ export const en = {
   "log.consciousnessCheckFail":
     "[{id}] consciousness check ({cause}) fail: {rolls} -> STILL UNCONSCIOUS",
   "log.pilotRecovered": "[{id}] pilot regains consciousness ({cause}): {rolls}",
-  "log.pilotKilled": "[{id}] *** pilot KILLED — abandoned 'Mech left as a level-2 wreck ***",
+  "log.pilotKilled": "[{id}] *** pilot KILLED — the 'Mech stays as an empty hull ***",
   "log.stoodUp": "[{id}] stands up",
   "log.droppedProne": "[{id}] drops prone",
   "log.buildingCrash": "[{id}] crashes into building at {hex}: {groups} ({damage} total)",

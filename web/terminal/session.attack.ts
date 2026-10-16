@@ -22,10 +22,11 @@ import {
   isAdjacent,
   isArm,
   isLimb,
+  isTargetableBy,
   isTorso,
   isUnitDestroyed,
   isUnitImmobile,
-  isUnitRemoved,
+  isUnitOnBoard,
   type LegLocation,
   type Location,
   type LocationValue,
@@ -142,8 +143,8 @@ export function queueWeaponAttacks(s: Session, targetId: string, weapons: number
   if (targetId === unit.id) throw new Error(i18n("err.selfTarget"));
   const target = Object.hasOwn(battle.units, targetId) ? battle.units[targetId] : undefined;
   if (!target) throw new Error(i18n("err.unknownUnitId", { id: targetId }));
-  if (target.team === unit.team) throw new Error(i18n("err.selfTarget"));
-  if (isUnitRemoved(target)) throw new Error(i18n("err.targetRemoved", { id: target.id }));
+  if (!isTargetableBy(unit, target)) throw new Error(i18n("err.selfTarget"));
+  if (!isUnitOnBoard(target)) throw new Error(i18n("err.targetRemoved", { id: target.id }));
   // Pickup is exclusive with everything (TW p.146): no weapon or physical
   // attacks allowed on the pickup turn.
   if (context.pickup !== null) throw new Error(i18n("err.pickup.exclusive"));
@@ -317,8 +318,8 @@ export function queuePhysicalAttack(
   if (targetId === unit.id) throw new Error(i18n("err.selfTarget"));
   const target = Object.hasOwn(battle.units, targetId) ? battle.units[targetId] : undefined;
   if (!target) throw new Error(i18n("err.unknownUnitId", { id: targetId }));
-  if (target.team === unit.team) throw new Error(i18n("err.selfTarget"));
-  if (isUnitRemoved(target)) throw new Error(i18n("err.targetRemoved", { id: target.id }));
+  if (!isTargetableBy(unit, target)) throw new Error(i18n("err.selfTarget"));
+  if (!isUnitOnBoard(target)) throw new Error(i18n("err.targetRemoved", { id: target.id }));
   const def = mechDefFor(unit);
 
   // Pickup is exclusive with everything (TW p.146).
@@ -491,8 +492,7 @@ export function physicalAttackSuggestions(s: Session): PhysicalAttackSuggestion[
   const suggestions: PhysicalAttackSuggestion[] = [];
 
   for (const [targetId, target] of Object.entries(battle.units)) {
-    if (target.team === unit.team) continue;
-    if (isUnitRemoved(target)) continue;
+    if (target.id === unit.id || !isUnitOnBoard(target) || !isTargetableBy(unit, target)) continue;
     if (!isAdjacent(unit.position, target.position)) continue;
 
     // Check each attack type
@@ -603,11 +603,7 @@ export function physicalResolutionLines(r: PhysicalResolution): string[] {
       i18n("res.physical.voided", {
         attacker: r.attackerId,
         reason: i18n(
-          why === "wreck"
-            ? "res.physical.voided.wreck"
-            : why === "hexTaken"
-              ? "res.physical.voided.hexTaken"
-              : "res.physical.voided.attackerDown",
+          why === "hexTaken" ? "res.physical.voided.hexTaken" : "res.physical.voided.attackerDown",
         ),
       }),
     );
@@ -910,7 +906,8 @@ function physicalCandidateLines(battle: BattleState, context: AttackContext): st
   const lines: string[] = [];
   let usesArm = false;
   for (const target of Object.values(battle.units)) {
-    if (target.team === actor.team || isUnitRemoved(target)) continue;
+    if (target.id === actor.id || !isUnitOnBoard(target) || !isTargetableBy(actor, target))
+      continue;
     if (!isAdjacent(actor.position, target.position)) continue;
     const id = target.id;
     const rows: { cols: string[]; commands: string[] }[] = [];

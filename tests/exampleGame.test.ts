@@ -170,7 +170,9 @@ describe("example battle: Wolverine vs Griffin", () => {
           scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
         );
         const finalEvents: GameEvent[] = [];
-        resolveAllAttacks(state, scriptedRng(6, 6, 3, 4), finalEvents);
+        // Then the salvage fall (TW p.128): direction 1, 55 t = 6 points in
+        // two groups (5 + 1), both at 3+3 (right torso).
+        resolveAllAttacks(state, scriptedRng(6, 6, 3, 4, 1, 3, 3, 3, 3), finalEvents);
         expect(grfCt()).toBe(0);
         expect(requireUnit(state, "grf").destroyed).toBe("centerTorsoDestroyed"); // killed immediately
         expect(requireUnit(state, "grf").removed).toBe("destroyed");

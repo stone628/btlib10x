@@ -55,6 +55,39 @@ export function costToEnter(terrain: TerrainType): number {
   return MP_TO_ENTER_HEX + terrainMoveCost(terrain);
 }
 
+/** MP surcharge of Rough terrain added by battlefield wreckage (TW p.52,
+ *  TO:AR p.155). */
+export const WRECKAGE_MOVE_COST = 1;
+
+/**
+ * Extra MP for wreckage in a hex of `terrain` (TO:AR p.155): the wreckage is
+ * Rough stacked on the hex's own terrain (TW p.49), so it adds
+ * {@link WRECKAGE_MOVE_COST} unless the hex is already Rough (a repeat type
+ * adds nothing). In a standing building the wreckage costs nothing until the
+ * building collapses (rubble + rough then). In water it lies on the bed and
+ * the 'Mech walking there pays it.
+ */
+export function wreckageMoveCost(terrain: TerrainType, wreckage: boolean): number {
+  if (!wreckage || terrain === "rough") return 0;
+  return isBuildingType(terrain) ? 0 : WRECKAGE_MOVE_COST;
+}
+
+function isBuildingType(terrain: TerrainType): boolean {
+  return (
+    terrain === "lightBuilding" ||
+    terrain === "mediumBuilding" ||
+    terrain === "heavyBuilding" ||
+    terrain === "hardenedBuilding"
+  );
+}
+
+/** Total MP for a ground unit to enter `hex`: base entry, terrain surcharge
+ *  and, when `wreckage` lies there, its Rough (climbing excluded). */
+export function hexEntryCost(grid: HexGrid, hex: HexCoord, wreckage: boolean): number {
+  const terrain = cellAt(grid, hex).terrain;
+  return costToEnter(terrain) + wreckageMoveCost(terrain, wreckage);
+}
+
 /** Extra MP to change level from `fromLevel` to `toLevel`; costs both ways (TW). */
 export function costToClimb(fromLevel: number, toLevel: number): number {
   return Math.abs(toLevel - fromLevel) * MP_PER_LEVEL_CLIMB;

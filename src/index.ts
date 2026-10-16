@@ -8,7 +8,14 @@ export {
   sameHex,
 } from "./core/hex";
 export type { HexGrid } from "./core/terrain";
-export { cellAt, hexCell, MP_PER_FACING_CHANGE, waterDepth } from "./core/terrain";
+export {
+  cellAt,
+  hexCell,
+  hexEntryCost,
+  MP_PER_FACING_CHANGE,
+  WRECKAGE_MOVE_COST,
+  waterDepth,
+} from "./core/terrain";
 export type {
   ArmLocation,
   Facing,
@@ -21,7 +28,6 @@ export type {
   TerrainHexDef,
   TerrainType,
   TorsoLocation,
-  WreckState,
 } from "./core/types";
 export {
   FACINGS,
@@ -209,6 +215,7 @@ export type {
   WeaponAttackDecl as AttackDecl,
 } from "./rules/game";
 export {
+  abandonPilot,
   actorQueue,
   attemptVoluntaryStartup,
   buildUnitInit,
@@ -225,13 +232,19 @@ export {
   facingToward,
   GIRDER_SEARCH_TARGET,
   gameLoop,
+  hasWreckage,
+  isHull,
   isImmobile,
   isNominal,
   isShutdown,
+  isTargetableBy,
   isUnitAvailable,
+  isUnitOnBoard,
   isUnitRemoved,
   isValidTeam,
   meleeDeclarationProblem,
+  occupantAt,
+  occupantTeamAt,
   passAttack,
   passMovement,
   pickupSourceInHex,
@@ -245,7 +258,8 @@ export {
   validateAttacks,
   validatePickup,
   voluntaryShutdown,
-  wreckAt,
+  WRECKAGE_TONNAGE_MIN,
+  wreckageAt,
 } from "./rules/game";
 export {
   AMMO_EXPLOSION_START_HEAT,
@@ -331,6 +345,13 @@ export {
   type PreexistingDamage,
   SENSOR_BLIND_HITS,
 } from "./rules/piloting";
+export {
+  type SalvageAmmo,
+  type SalvageEntry,
+  type SalvageKind,
+  type SalvageSlot,
+  salvageReport,
+} from "./rules/salvage";
 export { loadBattleState, parseBattleState, saveBattleState } from "./rules/snapshot";
 export {
   type AttackModifiers,

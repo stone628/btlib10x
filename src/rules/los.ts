@@ -7,13 +7,7 @@ import {
   screeningPoints,
   waterDepth,
 } from "../core/terrain";
-import {
-  type HexCoord,
-  hexKey,
-  isWoodsTerrain,
-  type TerrainType,
-  type WreckState,
-} from "../core/types";
+import { type HexCoord, isWoodsTerrain, type TerrainType } from "../core/types";
 import { isBuildingTerrain } from "./building";
 
 /**
@@ -242,44 +236,12 @@ function buildingBlockedOnSide(
   return false;
 }
 
-/** True when all LOS checks are clear: screening, water, elevation, and
- *  wrecks. `wrecks` (keyed by `"col,row"`) supplies the ejected-'Mech
- *  obstacles; a level-2 wreck strictly between the endpoints blocks LOS
- *  entirely; a level-1 wreck does NOT block LOS (Tactical Operations).
- *  Endpoints themselves cannot hold a wreck (the hex is unenterable). */
-export function losClear(
-  grid: HexGrid,
-  from: HexCoord,
-  to: HexCoord,
-  wrecks?: Readonly<Record<string, WreckState>>,
-  prone?: ProneEnds,
-): boolean {
+/** True when all LOS checks are clear: screening, water, elevation and
+ *  buildings (via elevation). Units, hulls and wreckage never affect LOS
+ *  (TW p.100; TO:AR p.155 wreckage is Rough, which has no LOS effect). */
+export function losClear(grid: HexGrid, from: HexCoord, to: HexCoord, prone?: ProneEnds): boolean {
   if (losBlocked(losWoodsPointsBetween(grid, from, to, prone))) return false;
   if (losBlockedByWater(grid, from, to, prone)) return false;
   if (losBlockedByElevation(grid, from, to, prone)) return false;
-  if (losBlockedByWreck(from, to, wrecks)) return false;
   return true;
-}
-
-/** True when a wreck hex lies strictly between `from` and `to`:
- *  - Tactical Operations: a level-1 wreck does NOT block LOS between two
- *    standing Level 2 'Mechs (standard ground 'Mechs). L1 cover is purely
- *    a to-hit modifier handled by `partialCoverMod` in `src/rules/game.ts`.
- *  - A level-2 wreck blocks LOS entirely, independent of any elevation
- *    advantage. Implementation note: "between" means the intervening hexes
- *    along the LOS ray (endpoints excluded — wrecks can't sit on either
- *    endpoint because the hex is unenterable). */
-export function losBlockedByWreck(
-  from: HexCoord,
-  to: HexCoord,
-  wrecks?: Readonly<Record<string, WreckState>>,
-): boolean {
-  if (wrecks === undefined) return false;
-  for (const side of LOS_SIDES) {
-    for (const h of interveningHexes(from, to, side)) {
-      const w = wrecks[hexKey(h)];
-      if (w !== undefined && w.level >= 2) return true;
-    }
-  }
-  return false;
 }

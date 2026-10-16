@@ -5,6 +5,7 @@ import {
   effectiveMovement,
   isImmobile,
   isNominal,
+  isPilotUnconscious,
   isTsmActive,
   isUnitAvailable,
   isUnitImmobile,
@@ -55,9 +56,12 @@ let attackStatusTurn: number | null = null;
 let setupAttempted = false;
 let helpShown: Record<string, boolean> = {};
 let noWeapon: Record<string, boolean> = {};
-/** Immobile-prone actors: first turn emits `mode pronestill`, subsequent turns
- *  promote to `mode eject` so the wreck leaves play. */
-let pronestillThenEject: Record<string, boolean> = {};
+/** Immobile-prone actors: first turn emits `mode pronestill`, the next turn
+ *  shuts the 'Mech down so its pilot can abandon it after that. */
+let pronestillThenExit: Record<string, boolean> = {};
+/** Stuck actors shut down to leave play: their next movement prompt is
+ *  `mode abandon` (the pilot steps out unhurt, the hull stays). */
+let abandonNext: Record<string, boolean> = {};
 
 function queueNextCommand(cmd: string): void {
   nextCommandQueue.push(cmd);
@@ -81,7 +85,8 @@ export function resetAutoplayState(s: Session): void {
 
   helpShown = {};
   noWeapon = {};
-  pronestillThenEject = {};
+  pronestillThenExit = {};
+  abandonNext = {};
 }
 
 /** Post-heat walk budget for the actor; 0 when heat/structure deny walking. */
@@ -126,7 +131,8 @@ function queuePersonaDecision(s: Session, fallback: readonly string[]): void {
 }
 
 /** True when no ranged weapon of the actor works against anyone (destroyed,
- *  jammed or out of ammo): the unit ejects at its next movement phase. */
+ *  jammed or out of ammo): the unit shuts down at its next movement phase
+ *  and is abandoned the turn after. */
 function hasNoFunctionalWeapon(s: Session, actorId: string): boolean {
   const st = s.battle;
   if (st === null) return false;
@@ -231,15 +237,19 @@ export function nextAutoPlayCommand(s: Session): string | null {
         // A shut-down unit just passes: no movement mode, stay off-line.
         if (isNominal(actor)) {
           if (noWeapon[actor.id] === true) {
-            queueNextCommand("mode eject");
+            // Nothing left to fight with: shut down now, abandon next turn.
+            abandonNext[actor.id] = true;
+            queueNextCommand("mode shutdown");
             queueNextCommand("done");
           } else if (actor.prone) {
             if (isImmobile(actor)) {
-              // Leg destroyed + prone: stay still this turn, eject next.
-              if (pronestillThenEject[actor.id] === true) {
-                queueNextCommand("mode eject");
+              // Leg destroyed + prone: stay still this turn, shut down next,
+              // abandon after that.
+              if (pronestillThenExit[actor.id] === true) {
+                abandonNext[actor.id] = true;
+                queueNextCommand("mode shutdown");
               } else {
-                pronestillThenEject[actor.id] = true;
+                pronestillThenExit[actor.id] = true;
                 queueNextCommand("mode pronestill");
               }
               queueNextCommand("done");
@@ -276,6 +286,10 @@ export function nextAutoPlayCommand(s: Session): string | null {
           return returnFirstQueuedCommand();
         }
 
+        // A unit shut down to leave play: its pilot steps out now.
+        if (abandonNext[actor.id] === true && !isPilotUnconscious(actor)) {
+          queueNextCommand("mode abandon");
+        }
         queueNextCommand("done");
         return returnFirstQueuedCommand();
       }
@@ -290,7 +304,7 @@ export function nextAutoPlayCommand(s: Session): string | null {
         attackStatusTurn = st.turn;
         queueNextCommand("status");
       }
-      // Nothing left to fire: eject at the next movement phase.
+      // Nothing left to fire: leave play from the next movement phase.
       if (hasNoFunctionalWeapon(s, actor.id)) noWeapon[actor.id] = true;
       queuePersonaDecision(s, ["done"]);
       return returnFirstQueuedCommand();

@@ -3,10 +3,10 @@ import { bearingExact, hexDistance, isAdjacent, neighbor, sameHex } from "../cor
 import {
   cellAt,
   costToClimb,
-  costToEnter,
   groundLevel,
   type HexGrid,
   hexCell,
+  hexEntryCost,
   setCell,
   terrainTargetMod,
   waterDepth,
@@ -34,7 +34,6 @@ import {
   rotateFacing,
   type TerrainHexDef,
   type TerrainType,
-  type WreckState,
 } from "../core/types";
 import { type MapDef, type MechModelHolder, mechDef, mechDefFor } from "../data/index";
 import type { ResolvedMechDef } from "../data/mech.schema";
@@ -403,11 +402,13 @@ export type PilotHitReason =
   | "lifeSupport"
   | "ejection";
 
-/** Removal from play: "not" = on the board. "destroyed" = unit killed
- *  (paired with a DestroyedState reason). "pilotEjected" = pilot left
- *  the 'Mech (wreck left behind). "pilotKilled" = six pilot hits, unit
- *  removed but frame not destroyed (wreck left behind, like eject). */
-export type RemovalReason = "destroyed" | "pilotEjected" | "pilotKilled";
+/** Removal from play: "not" = on the board and active. "destroyed" = unit
+ *  killed (paired with a DestroyedState reason); it leaves the board.
+ *  "pilotEjected" = pilot ejected, "pilotKilled" = six pilot hits,
+ *  "pilotAbandoned" = pilot stepped out of a shut-down 'Mech (house rule
+ *  adapted from TO:AR p.165). Those three leave the frame on the board as a
+ *  neutral hull (TO:AR pp.184-185, see `isHull`) while it is not destroyed. */
+export type RemovalReason = "destroyed" | "pilotEjected" | "pilotKilled" | "pilotAbandoned";
 export type RemovedState = "not" | RemovalReason;
 export type ActorPhase = "movement" | "attack";
 export type Phase = "initiative" | ActorPhase | "end";
@@ -459,7 +460,10 @@ export type UnitFallCause =
   | { readonly kind: "terrain"; readonly terrain: "rubble" | "water" | "building" }
   | { readonly kind: "buildingCollapse" }
   | { readonly kind: "dfaMiss" }
-  | { readonly kind: "voluntaryDrop" };
+  | { readonly kind: "voluntaryDrop" }
+  /** Salvage fall (TW p.128): a 'Mech destroyed in a phase it stood in
+   *  falls automatically; the damage marks its record for salvage. */
+  | { readonly kind: "salvageFall" };
 
 export interface UnitState extends MechModelHolder {
   readonly id: string;
@@ -679,11 +683,18 @@ export type GameEvent =
       readonly reason: RemovalReason;
       readonly destroyReason?: DestroyedReason | null;
     }
-  // Pilot ejects: the 'Mech leaves the battle and its hex gains a `wrecks`
-  // entry (a level-2 obstacle), see `ejectPilot`. Emits `unitRemoved` with
-  // reason "pilotEjected". A pilot killed by six pilot hits emits
-  // `unitRemoved` with reason "pilotKilled" and likewise leaves a level-2
-  // wreck, see `removePilotKilled`.
+  // Pilot ejects (`ejectPilot`), dies (`removePilotKilled`) or abandons the
+  // 'Mech (`abandonPilot`): `unitRemoved` with that reason; an intact frame
+  // stays on the board as a hull. A destroyed hull emits `unitRemoved` with
+  // reason "destroyed" while the unit keeps its pilot removal reason.
+  | {
+      /** Battlefield wreckage (TO:AR p.155): a destroyed 'Mech of 40 t or
+       *  more turned its hex into Rough. */
+      readonly kind: "wreckageLeft";
+      readonly unitId: string;
+      readonly col: number;
+      readonly row: number;
+    }
   | {
       readonly kind: "buildingCollapsed";
       readonly col: number;
@@ -827,6 +838,10 @@ export type GameEvent =
       readonly levelsFallen: number;
       readonly groups: readonly DamageGroup[];
       readonly crits: readonly CriticalResolution[];
+      /** Set when the 'Mech was an empty hull: it fell without a roll (the
+       *  `cause` names the PSR trigger it could not answer, TW p.60) and no
+       *  MechWarrior took damage. */
+      readonly hull?: true;
     }
   | {
       /** One event per damage source (one `applyPilotHits` call). */
@@ -912,10 +927,11 @@ export interface BattleState extends HexGrid {
    *  Drives girder-search eligibility (TW p.146: medium/heavy/hardened
    *  only). Hexes that started as rubble have no entry and yield nothing. */
   rubbleOrigin: Record<string, BuildingTerrainType>;
-  /** 'Mech wrecks left by ejected pilots, keyed by hex `"col,row"`. Each is a
-   *  permanent level-2 obstacle: hex is blocked to all movement, LOS crossing
-   *  the hex is blocked, and an adjacent target gains +2 partial cover. */
-  wrecks: Record<string, WreckState>;
+  /** Battlefield wreckage (TO:AR p.155), keyed by hex `"col,row"`: ids of
+   *  the destroyed 'Mechs of 40 t or more lying there, in order. The hex
+   *  counts as Rough stacked on its terrain (+1 MP, see `hasWreckage`); no
+   *  LOS, to-hit or PSR effect. */
+  wreckage: Record<string, string[]>;
 }
 
 export type { TerrainHexDef };
@@ -962,9 +978,8 @@ function requireCurrentActor(state: BattleState, unitId: string, phase: ActorPha
 
 /** Tonnage of the unit's mech chassis. Reads the catalog def; throws on
  *  unknown models. TW weight class boundaries run 20/35/55/75/100; rule code
- *  using tonnage (e.g. light-mech wreck level, see
- *  `wreckLevelFor` in `src/rules/game.ts`) keys off the raw `tonnage` field,
- *  not the human-friendly `weightClass` label. */
+ *  using tonnage (e.g. the wreckage threshold, `WRECKAGE_TONNAGE_MIN`) keys
+ *  off the raw `tonnage` field, not the human-friendly `weightClass` label. */
 function unitTonnage(h: MechModelHolder): number {
   return mechDefFor(h).tonnage;
 }
@@ -978,15 +993,45 @@ export function isShutdown(unit: UnitState) {
 }
 
 export function isImmobile(unit: UnitState) {
-  return isShutdown(unit) || isPilotUnconscious(unit) || isUnitImmobile(unit.damage);
+  return (
+    isHull(unit) || isShutdown(unit) || isPilotUnconscious(unit) || isUnitImmobile(unit.damage)
+  );
 }
 
+/** Out of play as an actor: destroyed, or its pilot gone (a hull still sits
+ *  on the board, see `isUnitOnBoard`). */
 export function isUnitRemoved(unit: UnitState): boolean {
   return unit.removed !== "not";
 }
 
+/** Active on the board: can move, attack and make heat choices. */
 export function isUnitAvailable(unit: UnitState): boolean {
   return unit.removed === "not";
+}
+
+/** An abandoned 'Mech (TO:AR pp.184-185): the pilot is gone (ejected,
+ *  killed or stepped out) and the frame is intact. It stays on the board as
+ *  a neutral, permanently shut-down unit that both sides may target, that
+ *  any unit may move through but none may end movement on, and that never
+ *  rolls a PSR (an event that would call for one drops it, TW p.60). */
+export function isHull(unit: UnitState): boolean {
+  return (
+    (unit.removed === "pilotEjected" ||
+      unit.removed === "pilotKilled" ||
+      unit.removed === "pilotAbandoned") &&
+    unit.destroyed === "not"
+  );
+}
+
+/** On the board: an active unit or a hull. Destroyed units are not. */
+export function isUnitOnBoard(unit: UnitState): boolean {
+  return unit.removed === "not" || isHull(unit);
+}
+
+/** True when `unit` may be the target of `attacker`'s weapon or physical
+ *  attack as far as sides go: any enemy, or a hull of either team. */
+export function isTargetableBy(attacker: UnitState, target: UnitState): boolean {
+  return isHull(target) || target.team !== attacker.team;
 }
 
 /**
@@ -999,13 +1044,8 @@ export function isUnitAvailable(unit: UnitState): boolean {
  *    adjacent hex lies between attacker and target, is at least one level
  *    above the target's underlying hex, and attacker LOS level ≤ target LOS
  *    level (attacker not firing downhill).
- *  - L2 wreck adjacent + attacker below wreck top: +2 (TW).
- *  - L2 wreck adjacent + attacker at/above wreck top + target elevated
- *    (target hex higher than attacker) or target at Level 3+: +1 (TO).
- *  - L1 wreck adjacent + attacker below wreck top + target is a standing
- *    ground 'Mech (not prone): +1 (TO).
- * Larger wins when both apply (TW: partial cover does not stack beyond one
- * source). Leg hit-location rolls strike the cover under any non-zero value
+ * Partial cover comes only from terrain (TW p.102): hulls and wreckage give
+ * none. Leg hit-location rolls strike the cover under any non-zero value
  * (see `hitLocationCovered` in `src/rules/attack.ts`).
  */
 export function partialCoverMod(
@@ -1032,7 +1072,6 @@ function partialCoverDetail(
   target: UnitState,
 ): { mod: number; buildingHex?: HexCoord } {
   const targetTerrain = cellAt(state, target.position).terrain;
-  const attackerLevel = cellAt(state, attacker.position).level;
   const targetLevel = cellAt(state, target.position).level;
   const targetStandingGround = !target.prone;
 
@@ -1067,34 +1106,7 @@ function partialCoverDetail(
     }
   }
 
-  let wreck = 0;
-  for (const [key, w] of Object.entries(state.wrecks)) {
-    const [col, row] = key.split(",");
-    const wreckHex = { col: Number(col), row: Number(row) };
-    if (!isAdjacent(target.position, wreckHex)) continue;
-    const wreckTop = cellAt(state, wreckHex).level + w.level;
-    if (attackerLevel < wreckTop) {
-      // Attacker is below the wreck top: LOS may still pass for L1; cover mod
-      // depends on wreck level and target posture.
-      if (w.level === 1) {
-        // Tactical Operations: L1 provides +1 partial cover to standing ground
-        // 'Mechs behind it; no cover against prone / shutdown / unconscious
-        // targets.
-        if (targetStandingGround) wreck = Math.max(wreck, WRECK_COVER_BY_LEVEL[1]!);
-      } else {
-        // TW default: L2 provides +2 to any adjacent target the attacker
-        // can't see over.
-        wreck = Math.max(wreck, WRECK_COVER_BY_LEVEL[2]!);
-      }
-    } else if (w.level === 2 && (targetLevel > attackerLevel || targetLevel >= 3)) {
-      // Tactical Operations: L2 wreck provides +1 partial cover to elevated
-      // units or Level 3+ targets even when the attacker is at/above the
-      // wreck top (LOS still passes; wreck under attacker's LOS plane).
-      wreck = Math.max(wreck, WRECK_L2_ELEVATED_COVER_MOD);
-    }
-  }
-  const mod = Math.max(terrain, wreck);
-  return buildingHex !== undefined && terrain >= wreck ? { mod, buildingHex } : { mod };
+  return buildingHex !== undefined ? { mod: terrain, buildingHex } : { mod: terrain };
 }
 
 function requirePhase(state: BattleState, phase: Phase): void {
@@ -1103,16 +1115,30 @@ function requirePhase(state: BattleState, phase: Phase): void {
   }
 }
 
+/** Unit on the board in `hex` (an active unit or a hull), if any. */
 export function occupantAt(
   state: BattleState,
   hex: HexCoord,
   excludeId?: string,
 ): UnitState | undefined {
   for (const unit of Object.values(state.units)) {
-    if (isUnitRemoved(unit) || unit.id === excludeId) continue;
+    if (!isUnitOnBoard(unit) || unit.id === excludeId) continue;
     if (sameHex(unit.position, hex)) return unit;
   }
   return undefined;
+}
+
+/** Stacking view of `hex` for `reachableLandings`: the occupant's team, or
+ *  `mv.NEUTRAL_TEAM` for a hull (passable by all, landable by none), or
+ *  undefined when empty. */
+export function occupantTeamAt(
+  state: BattleState,
+  hex: HexCoord,
+  excludeId?: string,
+): number | undefined {
+  const occupant = occupantAt(state, hex, excludeId);
+  if (occupant === undefined) return undefined;
+  return isHull(occupant) ? mv.NEUTRAL_TEAM : occupant.team;
 }
 
 function cloneDamage(damage: UnitDamageState): UnitDamageState {
@@ -1123,19 +1149,27 @@ function cloneDamage(damage: UnitDamageState): UnitDamageState {
   };
 }
 
-/** Wreck occupying a hex, or undefined when the hex is clear of wrecks. */
-export function wreckAt(state: BattleState, hex: HexCoord): WreckState | undefined {
-  return state.wrecks[hexKey(hex)];
+/** Ids of the destroyed 'Mechs whose wreckage lies in `hex` (TO:AR p.155),
+ *  in order; empty when the hex holds none. */
+export function wreckageAt(state: BattleState, hex: HexCoord): readonly string[] {
+  return state.wreckage[hexKey(hex)] ?? [];
+}
+
+/** True when battlefield wreckage lies in `hex`: ground entry pays its Rough
+ *  surcharge (TO:AR p.155; `wreckageMoveCost`). */
+export function hasWreckage(state: BattleState, hex: HexCoord): boolean {
+  return wreckageAt(state, hex).length > 0;
 }
 
 /** Mark a unit as killed and removed, returning the paired events. The first
- *  kill wins: an already-removed unit (e.g. ejected or pilot-killed) keeps its
- *  `removed` reason so the recorded cause stays the earliest one. A pilot
- *  killed in the same step its 'Mech is destroyed still gets the frame's
- *  `destroyed` reason (no event, no dice): the two facts are independent and
- *  TW does not rank them. `pilotDies`
- *  marks a destruction the MechWarrior does not survive (TW p. 128: center
- *  torso lost to an ammo/weapon blast with auto-eject off). */
+ *  kill wins: an already-destroyed unit keeps its recorded cause. A hull (an
+ *  abandoned frame, see `isHull`) that is destroyed keeps its pilot removal
+ *  reason, gains the frame's `destroyed` reason and leaves the board as
+ *  wreckage; a pilot killed in the same step its 'Mech is destroyed is such a
+ *  hull. `pilotDies` marks a destruction the MechWarrior does not survive
+ *  (TW p. 128: center torso lost to an ammo/weapon blast with auto-eject off).
+ *  Every destroyed frame takes the salvage fall and may leave wreckage (see
+ *  `leaveDestroyedRemains`). */
 function markUnitDestroyed(
   state: BattleState,
   unit: UnitState,
@@ -1144,8 +1178,16 @@ function markUnitDestroyed(
   sink: GameEvent[],
   pilotDies = false,
 ): void {
-  if (unit.removed === "pilotKilled" && unit.destroyed === "not") {
+  if (isHull(unit)) {
+    const standing = !unit.prone;
     unit.destroyed = reason;
+    sink.push({
+      kind: "unitRemoved",
+      unitId: unit.id,
+      reason: "destroyed",
+      destroyReason: reason,
+    });
+    leaveDestroyedRemains(state, unit, rng, sink, standing);
     return;
   }
   if (isUnitRemoved(unit)) return;
@@ -1159,6 +1201,7 @@ function markUnitDestroyed(
     resolveEjection(state, unit, rng, sink, "auto");
     return;
   }
+  const standing = !unit.prone;
   releaseClub(state, unit, "removed", sink);
   unit.destroyed = reason;
   unit.removed = "destroyed";
@@ -1174,31 +1217,151 @@ function markUnitDestroyed(
     reason: "destroyed",
     destroyReason: reason,
   });
+  leaveDestroyedRemains(state, unit, rng, sink, standing);
+}
+
+/** Smallest 'Mech that leaves battlefield wreckage when destroyed (TO:AR
+ *  p.155: "40 tons or more"). Lighter 'Mechs leave nothing on the board;
+ *  their record is still kept for salvage. */
+export const WRECKAGE_TONNAGE_MIN = 40;
+
+/**
+ * What a destroyed frame leaves behind. The unit's record and damage stay in
+ * `state.units` for salvage reading.
+ *  - Salvage fall (TW p.128): a 'Mech that was standing when destroyed falls
+ *    automatically; the falling damage (and its criticals) marks its record,
+ *    and a MechWarrior still alive (in the cockpit, or out by auto-eject)
+ *    takes the fall's pilot hit.
+ *  - Wreckage (TO:AR p.155): a 'Mech of {@link WRECKAGE_TONNAGE_MIN} t or
+ *    more turns its hex into Rough (`state.wreckage`); a hex already holding
+ *    wreckage just records the extra id (no pile-up).
+ * `standing` is the posture before the destruction.
+ */
+function leaveDestroyedRemains(
+  state: BattleState,
+  unit: UnitState,
+  rng: Rng,
+  sink: GameEvent[],
+  standing: boolean,
+): void {
+  if (standing) salvageFall(state, unit, rng, sink);
+  if (unitTonnage(unit) >= WRECKAGE_TONNAGE_MIN) {
+    const key = hexKey(unit.position);
+    state.wreckage[key] = [...(state.wreckage[key] ?? []), unit.id];
+    sink.push({
+      kind: "wreckageLeft",
+      unitId: unit.id,
+      col: unit.position.col,
+      row: unit.position.row,
+    });
+  }
+}
+
+/** Salvage fall (TW p.128): normal falling damage on the destroyed record,
+ *  with criticals for struck structure (their blasts only mark the record).
+ *  Severed limbs drop in the hex. The pilot, if alive, takes the fall's hit
+ *  automatically (no seatbelt roll for a dead 'Mech) and no consciousness
+ *  roll: the MechWarrior is out of the battle. */
+function salvageFall(state: BattleState, unit: UnitState, rng: Rng, sink: GameEvent[]): void {
+  const def = mechDefFor(unit);
+  const dir = rollFallDirection(rng);
+  unit.facing = facingAfterFall(unit.facing, dir.shift);
+  unit.prone = true;
+  const terrain = cellAt(state, unit.position).terrain;
+  let total = fallingDamageTotal(def.tonnage, 0);
+  if (terrain === "water2" || terrain === "water3") total = Math.floor(total / 2);
+  const groups: DamageGroup[] = [];
+  for (const amount of fallingDamageGroups(total)) {
+    const roll = roll2D6(rng);
+    groups.push({
+      location: hitLocationForArc(dir.column, roll),
+      damage: amount,
+      ...(roll === 2 ? { tac: true as const } : {}),
+    });
+  }
+  const arc: Arc = dir.column === "rear" ? "rear" : "front";
+  const crits: CriticalResolution[] = [];
+  const sheared: LimbLocation[] = [];
+  for (const group of groups) {
+    const app = applyDamage(unit.damage, group.location, group.damage, arc);
+    unit.damage = app.after;
+    sheared.push(...app.blownOffLimbs);
+    if (state.critsDisabled) continue;
+    const struck = structureStruck(app);
+    const critRolls = struck.map((location) => ({ location, tac: false }));
+    if (group.tac === true && group.damage >= 1) {
+      critRolls.push({ location: group.location, tac: true });
+    }
+    for (const { location, tac } of critRolls) {
+      const res = resolveCriticalHits({
+        rng,
+        model: unit.model,
+        source: { location, damage: group.damage, struck: struck.includes(location), tac },
+        critSlotsDestroyed: unit.critSlotsDestroyed,
+        damage: unit.damage,
+        ammoBins: unit.ammoBins,
+      });
+      unit.critSlotsDestroyed = res.critSlotsDestroyed;
+      unit.ammoBins = res.ammoBins;
+      unit.damage = res.damage;
+      crits.push(res);
+    }
+  }
+  recordCritSeveredLimbs(state, unit, crits);
+  recordSeveredLimbs(state, unit, sheared);
+  sink.push({
+    kind: "unitFell",
+    unitId: unit.id,
+    cause: { kind: "salvageFall" },
+    hex: unit.position,
+    facingAfter: unit.facing,
+    fallRoll: dir.roll,
+    column: dir.column,
+    levelsFallen: 0,
+    groups,
+    crits,
+  });
+  if (unit.pilotHits < unit.pilotHitMax) {
+    unit.pilotHits += FALL_PILOT_HITS;
+    sink.push({
+      kind: "pilotDamaged",
+      unitId: unit.id,
+      reason: "fall",
+      hits: FALL_PILOT_HITS,
+      totalHits: unit.pilotHits,
+      hpRemaining: Math.max(0, unit.pilotHitMax - unit.pilotHits),
+    });
+  }
 }
 
 /** True while a destruction sweep may still record a kill on `unit`: it is
- *  on the board, or its pilot was killed and the frame's `destroyed` reason
- *  is not recorded yet (see `markUnitDestroyed`). */
+ *  on the board (an active unit or a hull, see `markUnitDestroyed`). */
 function awaitsDestroyedMark(unit: UnitState): boolean {
-  return isUnitAvailable(unit) || (unit.removed === "pilotKilled" && unit.destroyed === "not");
+  return isUnitOnBoard(unit);
+}
+
+/** Turn an active unit whose pilot is gone into a hull (`isHull`): it
+ *  keeps its record, team, posture and hex, drops any club, and acts no
+ *  more. Emits `unitRemoved` with `reason`. */
+function leaveHull(
+  state: BattleState,
+  unit: UnitState,
+  reason: "pilotEjected" | "pilotKilled" | "pilotAbandoned",
+  sink: GameEvent[],
+): void {
+  releaseClub(state, unit, "removed", sink);
+  unit.removed = reason;
+  sink.push({ kind: "unitRemoved", unitId: unit.id, reason });
 }
 
 /** A pilot killed by six accumulated pilot hits removes the unit from play
- *  without destroying the 'Mech (TW p.41-42: the pilot is dead). If damage
- *  in the same step also destroyed the frame, the destruction sweep fills
- *  `destroyed` afterwards (removal reason stays "pilotKilled"). Handled like an eject: a permanent wreck occupies the hex.
- *  Wreck level is decided by `wreckLevelFor` (TO rule: light chassis or
- *  prone posture reduce it to level 1). Returns a single `unitRemoved` event
- *  with reason "pilotKilled". */
+ *  without destroying the 'Mech (TW p.41-42: the pilot is dead): the frame
+ *  stays as a hull. If damage in the same step also destroyed the frame, the
+ *  destruction sweep then turns the hull into wreckage. Emits a single
+ *  `unitRemoved` event with reason "pilotKilled". */
 function removePilotKilled(state: BattleState, unit: UnitState, sink: GameEvent[]): void {
   if (isUnitRemoved(unit)) return;
-  releaseClub(state, unit, "removed", sink);
-  unit.removed = "pilotKilled";
-  state.wrecks[hexKey(unit.position)] = {
-    unitId: unit.id,
-    level: wreckLevelFor(state, unit),
-  };
-  sink.push({ kind: "unitRemoved", unitId: unit.id, reason: "pilotKilled" });
+  leaveHull(state, unit, "pilotKilled", sink);
 }
 
 /** The single kill-reason derivation for every damage path (weapon,
@@ -1323,7 +1486,7 @@ export function createBattle(
     actedThisPhase: [],
     actorQueue: null,
     buildings,
-    wrecks: {},
+    wreckage: {},
     clubs: {},
     rubbleOrigin: {},
   };
@@ -1362,7 +1525,7 @@ export function damageBuildingAt(
   if (building === undefined) return null;
   const preCf = building.cf;
   const occupants = Object.values(state.units)
-    .filter((u) => !isUnitRemoved(u) && sameHex(u.position, hex))
+    .filter((u) => isUnitOnBoard(u) && sameHex(u.position, hex))
     .map((u) => u.id);
   state.buildings[key] = applyBuildingDamage(building, damage);
   const cf = state.buildings[key]!.cf;
@@ -1570,6 +1733,7 @@ function resolveCenterTorsoBlast(
   rng: Rng,
   sink: GameEvent[],
 ): void {
+  // A hull has nobody to eject: the destruction sweep records the loss.
   if (isUnitRemoved(unit)) return;
   if (!applications.some((a) => a?.newlyDestroyed.includes("centerTorso"))) return;
   if (!unit.autoEject) {
@@ -1661,35 +1825,6 @@ function pushPilotingCheck(
   }
   return r;
 }
-/** Default wreck height in levels for a standing non-light 'Mech (TW).
- *  L1 wrecks are produced for light 'Mechs and for prone units via
- *  `wreckLevelFor` (see Tactical Operations block below). */
-export const WRECK_LEVEL = 2;
-/** Tactical Operations: light 'Mechs (<40 t) leave a level-1 wreck regardless
- *  of posture; a prone unit with a killed/ejected pilot also leaves a level-1
- *  wreck. Standing non-light units stay at WRECK_LEVEL = 2 (TW default). */
-export const LIGHT_MECH_TONNAGE_MAX = 40;
-/** Tactical Operations: per-level partial-cover to-hit mod provided by a
- *  wreck to a target adjacent to it. L1 = +1 to standing ground 'Mech;
- *  L2 = +2 (TW default), or +1 to elevated / Level 3+ targets per TO. */
-export const WRECK_COVER_BY_LEVEL: Readonly<Record<number, number>> = { 1: 1, 2: 2 };
-/** Tactical Operations: partial-cover to-hit mod granted by a L2 wreck to an
- *  elevated attacker looking down at a standard ground target or any
- *  attacker looking down at a Level 3+ target. */
-export const WRECK_L2_ELEVATED_COVER_MOD = 1;
-
-/** Tactical Operations wreck-level rule. Light chassis (<40 t) leave a
- *  level-1 wreck regardless of posture; otherwise a prone unit with a
- *  killed/ejected pilot leaves a level-1 wreck; standing non-light units
- *  leave the standard TW level-2 wreck. Caller reads `unit.prone` *before*
- *  setting `unit.removed = "pilotEjected" | "pilotKilled"`, since the
- *  posture field is discarded with the removed unit record. */
-export function wreckLevelFor(_state: BattleState, unit: UnitState): 1 | 2 {
-  if (unitTonnage(unit) < LIGHT_MECH_TONNAGE_MAX) return 1;
-  if (unit.prone) return 1;
-  return WRECK_LEVEL;
-}
-
 export interface ExecuteMoveOptions {
   /** Final facing after the move; when omitted, the unit keeps its facing. */
   readonly finalFacing?: Facing;
@@ -1753,7 +1888,6 @@ export function meleeDeclarationProblem(
   // The attacker stays in `stop` for the rest of the turn.
   const squatter = occupantAt(state, stop, unitId);
   if (squatter !== undefined) return `${msgHex(stop)} is occupied by ${squatter.id}`;
-  if (wreckAt(state, stop) !== undefined) return `${msgHex(stop)} is blocked by a wreck`;
   const others = Object.values(state.units).filter((u) => u.id !== unitId && !isUnitRemoved(u));
   // Standing in a hex another unit reserved is fine; moving into one is not.
   const reserved = sameHex(unit.position, stop)
@@ -2021,18 +2155,16 @@ function moveUnit(
             : `Walking backward cannot change level (${msgHex(to)} is ${slope})`,
         );
       }
-      spent += costToEnter(cellAt(state, to).terrain) + costToClimb(fromLevel, toLevel);
+      spent += hexEntryCost(state, to, hasWreckage(state, to)) + costToClimb(fromLevel, toLevel);
       directions.push(forward ? "forward" : "backward");
     }
 
-    const wreck = wreckAt(state, to);
-    if (wreck !== undefined) {
-      throw new Error(`Cannot enter ${msgHex(to)}: blocked by ${wreck.unitId}'s wreck`);
-    }
-
+    // Stacking (TW p.57; TO:AR p.184): friendly units and hulls of either
+    // team may be passed through, never stopped on. Ending against an enemy
+    // or a hull declares a charge / DFA.
     const occupant = occupantAt(state, to, unitId);
     if (occupant !== undefined) {
-      if (isFinalStep && occupant.team !== unit.team) {
+      if (isFinalStep && isTargetableBy(unit, occupant)) {
         if (directions[directions.length - 1] !== "forward") {
           throw new Error("A charge must be made straight ahead");
         }
@@ -2040,7 +2172,7 @@ function moveUnit(
         meleeStop = cursor;
       } else if (isFinalStep) {
         throw new Error(`Cannot end movement in ${msgHex(to)}: occupied by ${occupant.id}`);
-      } else if (!jumping && occupant.team !== unit.team) {
+      } else if (!jumping && occupant.team !== unit.team && !isHull(occupant)) {
         throw new Error(`Cannot move through enemy ${occupant.id} at ${msgHex(to)}`);
       }
     } else if (isFinalStep) {
@@ -2218,7 +2350,7 @@ function moveUnit(
     } else {
       const forward = mv.isForwardStep(from, to, curFacing);
       curSpent +=
-        costToEnter(cellAt(state, to).terrain) +
+        hexEntryCost(state, to, hasWreckage(state, to)) +
         costToClimb(groundLevel(state, from), groundLevel(state, to));
       curDirs.push(forward ? "forward" : "backward");
     }
@@ -2520,7 +2652,7 @@ export function validateAttacksImpl(
   const forwardArcOf = new Map<string, boolean>();
   for (const id of declaredTargets) {
     const t = state.units[id];
-    if (t === undefined || isUnitRemoved(t) || t.team === unit.team) continue;
+    if (t === undefined || !isUnitOnBoard(t) || !isTargetableBy(unit, t)) continue;
     const a = classifyFiringArc(unit.position, t.position, effectiveFacing);
     if (a !== null) forwardArcOf.set(id, a === "front");
   }
@@ -2596,8 +2728,8 @@ export function validateAttacksImpl(
     const shots = rapidFire ? (weapon.rapidFireShots ?? 1) : 1;
 
     const target = requireUnit(state, decl.targetId);
-    if (isUnitRemoved(target)) throw new Error(`Target ${target.id} is removed from play`);
-    if (target.team === unit.team) throw new Error("Target must belong to another team");
+    if (!isUnitOnBoard(target)) throw new Error(`Target ${target.id} is removed from play`);
+    if (!isTargetableBy(unit, target)) throw new Error("Target must belong to another team");
 
     const dist = hexDistance(unit.position, target.position);
     // Attacker-side firing arc (weapon legality, TW p.105 hex template).
@@ -2632,7 +2764,7 @@ export function validateAttacksImpl(
 
     const losProne = losEnds(state, unit, target);
     const woodsPoints = losWoodsPointsBetween(state, unit.position, target.position, losProne);
-    if (!losClear(state, unit.position, target.position, state.wrecks, losProne)) {
+    if (!losClear(state, unit.position, target.position, losProne)) {
       if (losBlockedByBuilding(state, unit.position, target.position, losProne)) {
         throw new Error("Line of sight is blocked by intervening building");
       }
@@ -3410,9 +3542,12 @@ export function applyPilotHits(
   rng: Rng,
   sink: GameEvent[],
 ): void {
-  // An ejected pilot still accrues hits (ejection damage, the triggering
-  // blast); every other removal ends pilot bookkeeping.
+  // An ejected pilot still accrues hits from the ejection itself and, after
+  // an auto-eject from a destroyed frame, the triggering blast; every other
+  // removal ends pilot bookkeeping. A hull is empty: hits on it (head hits,
+  // blasts, falls) reach no MechWarrior.
   if (isUnitRemoved(unit) && unit.removed !== "pilotEjected") return;
+  if (isHull(unit) && reason !== "ejection") return;
   const wasConscious = !isPilotUnconscious(unit);
   const rolls: ConsciousnessRoll[] = [];
   let failedAt: number | null = null;
@@ -3633,7 +3768,7 @@ function resolveBuildingCollapse(
   const total = collapseDamageTotal(outcome.preCf, DEFAULT_BUILDING_LEVELS);
   for (const unitId of outcome.occupants) {
     const unit = requireUnit(state, unitId);
-    if (isUnitRemoved(unit)) continue;
+    if (!isUnitOnBoard(unit)) continue;
     const ledger = ledgerOf(unitId);
     const groups: DamageGroup[] = [];
     for (const amount of fallingDamageGroups(total)) {
@@ -3653,7 +3788,7 @@ function resolveBuildingCollapse(
     // TW p. 177: any unit above Level 0 (including the roof) also takes
     // standard falling damage on top of the collapse damage.
     const groundLevel = cellAt(state, { col: outcome.col, row: outcome.row }).level;
-    if (groundLevel > 0 && !isUnitRemoved(unit)) {
+    if (groundLevel > 0 && isUnitOnBoard(unit)) {
       applyFall(
         state,
         unit,
@@ -3715,8 +3850,9 @@ export function applyFall(
   sink: GameEvent[],
   ledger?: PhaseDealt,
 ): void {
-  if (isUnitRemoved(unit)) return;
+  if (!isUnitOnBoard(unit)) return;
   if (unit.prone && opts.allowProne !== true) return;
+  const hull = isHull(unit);
   const def = mechDefFor(unit);
   const dir = rollFallDirection(rng);
   unit.facing = facingAfterFall(unit.facing, dir.shift);
@@ -3761,6 +3897,7 @@ export function applyFall(
     levelsFallen: levels,
     groups,
     crits,
+    ...(hull ? { hull: true as const } : {}),
   });
 
   // A 'Mech that falls inside a building hex damages it as though it had
@@ -3770,7 +3907,7 @@ export function applyFall(
   }
 
   // A pilot who ejected during the fall's damage (head destroyed) is no
-  // longer aboard and takes no fall damage (TO:AR p.165).
+  // longer aboard and takes no fall damage (TO:AR p.165); a hull has none.
   if (isUnitRemoved(unit)) return;
 
   // Seatbelt check (TW p.68): same modifiers as the failed roll, or automatic
@@ -3825,7 +3962,7 @@ export function resolvePhasePiloting(
   dealt?: PhaseDealt,
 ): void {
   for (const unit of Object.values(state.units)) {
-    if (isUnitRemoved(unit) || unit.prone) continue;
+    if (!isUnitOnBoard(unit) || unit.prone) continue;
     const sparedDfa = spareDfa && unit.meleeCharge?.kind === "dfa";
     const def = mechDefFor(unit);
     const dmgBefore = before.damage[unit.id] ?? unit.damage;
@@ -3881,9 +4018,10 @@ export function resolvePhasePiloting(
     const phaseModifier = triggers.reduce((sum, t) => sum + t.modifier, 0);
     for (const t of autoFall === null ? triggers : []) {
       const modifier = phaseModifier + pre.modifier;
-      if (isShutdown(unit) || isPilotUnconscious(unit)) {
+      if (isHull(unit) || isShutdown(unit) || isPilotUnconscious(unit)) {
         // TW p.60: a PSR required of a shut-down 'Mech falls it automatically
-        // (and the pilot takes the hit automatically).
+        // (and the pilot takes the hit automatically). A hull never rolls:
+        // it is permanently shut down.
         autoFall = { cause: { kind: "failedPsr", reason: t.reason }, seatbelt: null };
         break;
       }
@@ -4436,14 +4574,13 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       }
       // Charge / DFA: the target may have left its hex since the declaration.
       // The attacker, having paid for the move, then advances into the
-      // vacated hex (only a wreck or another unit can stop it).
+      // vacated hex (only another unit or a hull can stop it).
       const charge = attacker.meleeCharge;
       if (isMeleeCharge(decl.type) && charge !== null) {
         const targetHere =
-          target !== undefined && !isUnitRemoved(target) && sameHex(target.position, charge.hex);
+          target !== undefined && isUnitOnBoard(target) && sameHex(target.position, charge.hex);
         if (!targetHere) {
           const holder = occupantAt(state, charge.hex, attacker.id);
-          const wreck = wreckAt(state, charge.hex);
           let resolution: PhysicalResolution;
           if (attacker.prone) {
             resolution = missResolution(
@@ -4453,7 +4590,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
               "voided:attackerDown",
               `attacker is down — no attack`,
             );
-          } else if (holder === undefined && wreck === undefined) {
+          } else if (holder === undefined) {
             attacker.position = charge.hex;
             resolution = missResolution(
               decl.type,
@@ -4469,7 +4606,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
               decl.type,
               attacker.id,
               decl.targetId,
-              holder !== undefined ? "voided:hexTaken" : "voided:wreck",
+              "voided:hexTaken",
               `target left its hex and it is blocked — no attack`,
             );
           }
@@ -4502,7 +4639,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
           continue;
         }
       }
-      if (target === undefined || isUnitRemoved(target)) {
+      if (target === undefined || !isUnitOnBoard(target)) {
         const resolution = missResolution(
           decl.type,
           attacker.id,
@@ -4592,7 +4729,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
 
       const fallTarget = requireUnit(state, decl.targetId);
       // Kick PSRs defer to the end-of-physical sweep (TW pp.59,147).
-      if (resolution.kickTargetPsrPending && !isUnitRemoved(fallTarget)) {
+      if (resolution.kickTargetPsrPending && isUnitOnBoard(fallTarget)) {
         queuePhysicalPsr(fallTarget.id, "kick");
       }
       if (resolution.kickAttackerPsrPending && !isUnitRemoved(attacker)) {
@@ -4600,7 +4737,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       }
       // Charge / DFA PSRs, with the Piloting Skill Roll Table modifiers
       // (TW p.60), resolve in the same end-of-physical sweep.
-      if (resolution.targetPsrMod !== undefined && !isUnitRemoved(fallTarget)) {
+      if (resolution.targetPsrMod !== undefined && isUnitOnBoard(fallTarget)) {
         queuePhysicalPsr(fallTarget.id, "chargeTarget", resolution.targetPsrMod);
       }
       if (resolution.attackerPsrMod !== undefined && !isUnitRemoved(attacker)) {
@@ -5256,7 +5393,7 @@ function movementTerrainPsr(
         // during another unit's move (its move snapshot is its own), so the
         // sweep falls back to a zero diff — matching prior behavior.
         applyDamageGroups(state, occupant, rng, groups, "front", sink);
-        if (isUnitRemoved(occupant)) return lower;
+        if (!isUnitOnBoard(occupant)) return lower;
       }
     }
     unit.position = from;
@@ -5599,7 +5736,9 @@ export function dropProne(state: BattleState, unitId: string, sink: GameEvent[])
  *  A failure deals floor(margin of failure / 2) pilot hits with the usual
  *  consciousness rolls. Either way the pilot leaves the 'Mech (`removed =
  *  "pilotEjected"`, even if the failure damage reaches `pilotHitMax`; the sheet
- *  then shows HP 0) and a wreck stays behind. `pilotHits` is retained. */
+ *  then shows HP 0). An intact frame stays as a hull in the posture it was
+ *  left in; a frame the auto-eject fled (`destroyed` already set) leaves its
+ *  destroyed remains. `pilotHits` is retained. */
 function resolveEjection(
   state: BattleState,
   unit: UnitState,
@@ -5619,31 +5758,48 @@ function resolveEjection(
     auto: cause === "auto",
   });
   const r = pushPilotingCheck(sink, unit, "ejection", modifier, 0, rng);
-  releaseClub(state, unit, "removed", sink);
-  unit.removed = "pilotEjected";
-  state.wrecks[hexKey(unit.position)] = {
-    unitId: unit.id,
-    level: wreckLevelFor(state, unit),
-  };
-  sink.push({ kind: "unitRemoved", unitId: unit.id, reason: "pilotEjected" });
+  const standing = !unit.prone;
+  leaveHull(state, unit, "pilotEjected", sink);
   if (!r.success) {
     const damage = ejectionDamage(r);
     if (damage > 0) applyPilotHits(state, unit, damage, "ejection", rng, sink);
   }
+  if (unit.destroyed !== "not") leaveDestroyedRemains(state, unit, rng, sink, standing);
   if (cause === "manual") state.actedThisPhase.push(unit.id);
 }
 
-/** Pilot eject, resolved during the movement phase: the pilot abandons the
+/** Pilot eject, resolved during the movement phase: the pilot leaves the
  *  'Mech after an ejection PSR (see `resolveEjection`), the unit leaves the
- *  battle (counted against victory like a wrecked hull), and a permanent wreck
- *  occupies its hex. Available to any unit still on the board — including
- *  shut-down and immobile ones. Wreck level is decided by `wreckLevelFor`
- *  (TO rule: light chassis or prone posture reduce it to level 1). */
+ *  battle (counted against victory) and its frame stays on the board as a
+ *  hull (`isHull`). The emergency exit: available to any active unit,
+ *  including shut-down and immobile ones. */
 export function ejectPilot(state: BattleState, unitId: string, rng: Rng, sink: GameEvent[]): void {
   requirePhase(state, "movement");
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
   resolveEjection(state, unit, rng, sink, "manual");
+}
+
+/** Voluntary abandonment (house rule adapted from TO:AR p.165): a 'Mech
+ *  that is shut down at its movement activation — so shut down in an earlier
+ *  turn, an active 'Mech cannot abandon in a single turn — may have its pilot
+ *  step out instead of any other action (restart included). No Piloting
+ *  Skill Roll and no pilot hits; the unit becomes a hull at once, in the
+ *  posture it stood in (`removed = "pilotAbandoned"`), and the pilot
+ *  survives for campaign purposes. Marks the unit as having acted. */
+export function abandonPilot(state: BattleState, unitId: string, sink: GameEvent[]): void {
+  requirePhase(state, "movement");
+  const unit = requireUnit(state, unitId);
+  if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
+  if (!isShutdown(unit)) {
+    throw new Error(
+      `${unitId} must be shut down to abandon: shut down this turn, abandon the next`,
+    );
+  }
+  if (isPilotUnconscious(unit)) throw new Error(`${unitId} is unconscious and cannot abandon`);
+  if (state.actedThisPhase.includes(unitId)) throw new Error(`${unitId} already acted this phase`);
+  leaveHull(state, unit, "pilotAbandoned", sink);
+  state.actedThisPhase.push(unitId);
 }
 
 /** Voluntary shutdown declaration, resolved during the movement phase: the

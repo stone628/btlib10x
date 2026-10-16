@@ -206,6 +206,10 @@ If `yieldAt > 0` and the unit's remaining armor + structure is at or below
 Ejection stands in for a proper yield rule (GDD R6). Gladiator (`yieldAt 0`)
 never yields.
 
+Abandoned enemy 'Mechs (hulls) are never the committed target. When no attack
+on the live target scores above zero, the attack scorer also tries every enemy
+hull and fires on one to deny the enemy its salvage (`pp.note.hullTarget`).
+
 ### 4.2 Scripted recovery
 
 Prompts the scorer does not handle are scripted (mirrors `web/terminal/autoplay.ts`):
@@ -237,7 +241,7 @@ MP budgets come from `effectiveMovement` + `effectiveMoveBudget`, so leg and
 actuator damage, heat MP loss, TSM and the depth of water the unit stands in
 are already applied. For each mode every reachable landing from
 `reachableLandings` (each hex × facing, with the engine's own terrain, climb,
-water and wreck rules) becomes one candidate; landings with an empty path are
+water, wreckage and hull-stacking rules) becomes one candidate; landings with an empty path are
 dropped (standstill covers staying put), and duplicates are removed.
 
 **Charge and DFA landings** (physical-biased personas only). The engine's

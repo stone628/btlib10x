@@ -5,7 +5,8 @@ import {
   type HexCoord,
   type HexGrid,
   hexKey,
-  isUnitRemoved,
+  isHull,
+  isUnitOnBoard,
   type MapDef,
   type TerrainHexDef,
 } from "btlib10x";
@@ -61,6 +62,8 @@ export interface BoardModel {
   readonly idStyles: Readonly<Record<string, CharStyle>>;
   /** Hexes holding at least one ground club token; drawn as {@link CLUB_MARKER}. */
   readonly clubs: Readonly<Record<string, true>>;
+  /** Hexes holding battlefield wreckage; drawn as {@link WRECKAGE_MARKER}. */
+  readonly wreckage?: Readonly<Record<string, true>>;
 }
 
 // ---- board render info (types owned by render.ts) ----
@@ -133,11 +136,17 @@ export const CLUB_MARKER = "!";
 /** Style of the {@link CLUB_MARKER}; ignores terrain/team tints to stay visible. */
 const CLUB_STYLE: CharStyle = { cls: "t-club", bold: true };
 
+/** Bottom-row glyph (right of the terrain mark) in a hex holding wreckage. */
+export const WRECKAGE_MARKER = "%";
+
+/** Style of the {@link WRECKAGE_MARKER}. */
+const WRECKAGE_STYLE: CharStyle = { cls: "t-wreckage", bold: true };
+
 /**
  * Localised board legend text (e.g. `"legend: w(light woods)  W(heavy woods)"`).
- * `withClubs` appends the club marker entry.
+ * `withClubs` appends the club marker entry, `withWreckage` the wreckage one.
  */
-export function boardLegendText(map: MapDef, withClubs = false): string[] {
+export function boardLegendText(map: MapDef, withClubs = false, withWreckage = false): string[] {
   const header = i18n("board.legend");
   const headerLen = compensatedLength(header);
   const widthMax = COL_STRIDE * map.width;
@@ -150,6 +159,7 @@ export function boardLegendText(map: MapDef, withClubs = false): string[] {
     (l) => `'${TERRAIN_GLYPHS[l]}'(${i18n(`terrain.${l}` as MessageKey)})`,
   );
   if (withClubs) entries.push(`'${CLUB_MARKER}'(${i18n("board.legendClub")})`);
+  if (withWreckage) entries.push(`'${WRECKAGE_MARKER}'(${i18n("board.legendWreckage")})`);
   for (const lt of entries) {
     const ltLen = compensatedLength(lt);
     if (width >= widthMax - ltLen) {
@@ -319,6 +329,7 @@ interface HexContext {
   readonly elevation: number;
   readonly facing: Facing | undefined;
   readonly club: boolean;
+  readonly wreckage: boolean;
   readonly idStyle: CharStyle | undefined;
   readonly style: CharStyle | null;
   readonly edgeStyles: Readonly<Record<string, CharStyle>>;
@@ -348,6 +359,7 @@ export function* eachHex(model: BoardModel): Generator<HexContext, void, undefin
         elevation: model.elevations[key] ?? 0,
         facing: model.facings[key],
         club: model.clubs[key] === true,
+        wreckage: model.wreckage?.[key] === true,
         idStyle: model.idStyles[key],
         style: model.styles[key] ?? null,
         edgeStyles: model.edgeStyles,
@@ -373,6 +385,7 @@ function drawCanvas(model: BoardModel): Canvas {
     drawTerrainMarks(canvas, hex);
     drawElevationDigits(canvas, hex);
     drawClubMarks(canvas, hex);
+    drawWreckageMarks(canvas, hex);
     drawFacingArrows(canvas, hex);
     applyEdgeStyles(canvas, hex);
   }
@@ -428,6 +441,12 @@ function drawElevationDigits(canvas: Canvas, hex: HexContext): void {
 function drawClubMarks(canvas: Canvas, hex: HexContext): void {
   if (!hex.club) return;
   stampInto(canvas, hex.x + 2, hex.y + 3, CLUB_MARKER, CLUB_STYLE);
+}
+
+/** Layer 5b — one hex's wreckage marker in the free bottom-right interior slot. */
+function drawWreckageMarks(canvas: Canvas, hex: HexContext): void {
+  if (!hex.wreckage) return;
+  stampInto(canvas, hex.x + 5, hex.y + 3, WRECKAGE_MARKER, WRECKAGE_STYLE);
 }
 
 /** Layer 6 — one hex's facing arrow overwriting its wall or edge glyph. */
@@ -681,7 +700,8 @@ export function renderMap(map: MapDef): string {
 
 /**
  * Structured battle board: unit ids take precedence over hex contents.
- * Removed units are omitted; bounds come from `state.width`/`state.height`
+ * Hulls draw as `-id`, destroyed units are omitted, wreckage hexes get
+ * their marker; bounds come from `state.width`/`state.height`
  * when set, else the units + terrain extent. When `marks` is omitted,
  * terrain glyphs are derived automatically from `state.terrain`.
  */
@@ -698,9 +718,9 @@ export function battleModel(
   const facings: Record<string, Facing> = {};
   if (overlay !== undefined) Object.assign(cells, overlay);
   for (const unit of Object.values(state.units)) {
-    if (isUnitRemoved(unit)) continue;
+    if (!isUnitOnBoard(unit)) continue;
     const key = hexKey(unit.position);
-    cells[key] = unit.id;
+    cells[key] = isHull(unit) ? `-${unit.id}` : unit.id;
     facings[key] = unit.facing;
   }
 
@@ -708,7 +728,7 @@ export function battleModel(
   const autoCells: Record<string, CharStyle> = {};
   if (styles === undefined) {
     for (const unit of Object.values(state.units)) {
-      if (isUnitRemoved(unit)) continue;
+      if (!isUnitOnBoard(unit)) continue;
       const key = hexKey(unit.position);
       const team = teamStyle(unit.team);
       if (team !== undefined) autoCells[key] = team;
@@ -727,6 +747,11 @@ export function battleModel(
     styles: styles ?? deriveTerrainStyles(state),
     idStyles: autoCells,
     clubs: {},
+    wreckage: Object.fromEntries(
+      Object.entries(state.wreckage)
+        .filter(([, ids]) => ids.length > 0)
+        .map(([key]) => [key, true as const]),
+    ),
   };
 }
 
@@ -749,10 +774,12 @@ export function createBoardModel(info: BoardRenderInfo): BoardModel {
   const idStyles: Record<string, CharStyle> = {};
   const clubs: Record<string, true> = {};
   for (const key of info.clubHexes ?? []) clubs[key] = true;
+  const wreckage: Record<string, true> = {};
+  for (const key of info.wreckageHexes ?? []) wreckage[key] = true;
   if (info.units !== null) {
     for (const unit of info.units) {
       const key = hexKey(unit.position);
-      cells[key] = unit.ejected ? `-${unit.id}` : unit.id;
+      cells[key] = unit.hull ? `-${unit.id}` : unit.id;
       facings[key] = unit.facing;
       const team = teamStyle(unit.team);
       if (team !== undefined) idStyles[key] = team;
@@ -773,6 +800,7 @@ export function createBoardModel(info: BoardRenderInfo): BoardModel {
       styles: base.styles,
       idStyles,
       clubs,
+      wreckage,
     };
   }
 
@@ -815,15 +843,20 @@ export function createBoardModel(info: BoardRenderInfo): BoardModel {
     styles: base.styles,
     idStyles,
     clubs,
+    wreckage,
   };
 }
 
 // ---- board renderers (DOM) ----
 
-function renderLegend(map: MapDef, el: Element, withClubs: boolean): void {
+function renderLegend(map: MapDef, el: Element, info: BoardRenderInfo): void {
   const legendDiv = document.createElement("div");
   legendDiv.className = "board-legend";
-  legendDiv.textContent = boardLegendText(map, withClubs).join("\n");
+  legendDiv.textContent = boardLegendText(
+    map,
+    (info.clubHexes?.length ?? 0) > 0,
+    (info.wreckageHexes?.length ?? 0) > 0,
+  ).join("\n");
   el.appendChild(legendDiv);
 }
 
@@ -835,7 +868,7 @@ function renderLegend(map: MapDef, el: Element, withClubs: boolean): void {
  * and screen readers.
  */
 export const cssGridRenderer: BoardRenderer = (info, el) => {
-  renderLegend(info.map, el, (info.clubHexes?.length ?? 0) > 0);
+  renderLegend(info.map, el, info);
   const grid = document.createElement("div");
   grid.className = "board-grid board-rows";
   for (const line of boardToChars(createBoardModel(info))) {
@@ -867,7 +900,7 @@ export const cssGridRenderer: BoardRenderer = (info, el) => {
 
 /** Text renderer: flat text inside a `<div>`. */
 export const textRenderer: BoardRenderer = (info, el) => {
-  renderLegend(info.map, el, (info.clubHexes?.length ?? 0) > 0);
+  renderLegend(info.map, el, info);
   const board = document.createElement("div");
   board.className = "board";
   const lines = boardToText(createBoardModel(info)).split("\n");

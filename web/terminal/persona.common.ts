@@ -19,6 +19,7 @@ import {
   heatDissipation,
   hexDistance,
   hitProbability,
+  isHull,
   isUnitAvailable,
   isWeaponCritted,
   type Location,
@@ -221,6 +222,12 @@ export function enemiesOf(battle: BattleState, unit: UnitState): UnitState[] {
   return Object.values(battle.units).filter((u) => isUnitAvailable(u) && u.team !== unit.team);
 }
 
+/** Abandoned enemy 'Mechs still on the board: worth shooting only to deny
+ *  the enemy their salvage, when nothing live is in reach. */
+export function enemyHullsOf(battle: BattleState, unit: UnitState): UnitState[] {
+  return Object.values(battle.units).filter((u) => isHull(u) && u.team !== unit.team);
+}
+
 /** Heat the unit dissipates in the coming heat phase. */
 export function dissipationOf(unit: UnitState): number {
   return heatDissipation(mechDefFor(unit), unit.damage, unit.critSlotsDestroyed);
@@ -271,7 +278,7 @@ export function exposureAt(
   const defense = tmm + hexDefenseMod(battle, hex);
   let sum = 0;
   for (const { unit: e, weapons } of threats) {
-    if (!losClear(battle, e.position, hex, battle.wrecks)) continue;
+    if (!losClear(battle, e.position, hex)) continue;
     const d = Math.max(1, hexDistance(e.position, hex));
     const attackerMod = e.moveMode === null ? 1 : attackerMovementModifier(e.moveMode);
     const tnBase = e.gunnery + attackerMod + defense + toHitHeatModifier(e.heat);

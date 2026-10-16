@@ -743,4 +743,24 @@ describe("replayPlayer: scripted matches reach every movement and attack branch"
     expect(text).toMatch(/^M[01]E$/m); // eject
     expect(() => replayPlayer(text)).not.toThrow();
   });
+
+  it("a shutdown then an abandon, ending with a hull tag", () => {
+    const script: Script = {
+      enf: {
+        movement: {
+          1: ["mode shutdown", "done"],
+          2: ["mode abandon", "done"],
+        },
+      },
+    };
+    const s = scripted();
+    expect(playScript(s, script)).toEqual([]);
+    expect(s.state).toBe("over");
+    expect(s.battle!.units.enf!.removed).toBe("pilotAbandoned");
+    const text = s.replay!.lines.join("\n");
+    expect(text).toMatch(/^M[01]X$/m); // shutdown
+    expect(text).toMatch(/^M[01]A$/m); // abandon
+    expect(text).toMatch(/^E[01]0H$/m); // the abandoned hull, pilot unhurt
+    expect(() => replayPlayer(text)).not.toThrow();
+  });
 });

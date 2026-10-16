@@ -54,8 +54,8 @@ describe("LOS intervening-terrain test (TW p.100, LOS-01/02)", () => {
 
   it("a prone target (LOS level 1) is hidden by a Level 1 hill next to it", () => {
     const grid = strip({ "5,2": { level: 1 } });
-    expect(losClear(grid, A, B, undefined, { to: false })).toBe(true);
-    expect(losClear(grid, A, B, undefined, { to: true })).toBe(false);
+    expect(losClear(grid, A, B, { to: false })).toBe(true);
+    expect(losClear(grid, A, B, { to: true })).toBe(false);
   });
 
   it("a Level 7 hill between units on Level 0 and Level 8 does not intervene", () => {

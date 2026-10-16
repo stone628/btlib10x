@@ -34,7 +34,6 @@ import {
   isPilotUnconscious,
   isSlotDestroyed,
   isTorso,
-  isUnitAvailable,
   isUnitDestroyed,
   isUnitImmobile,
   isWeaponCritted,
@@ -89,7 +88,7 @@ import {
   TRN,
 } from "./misc";
 import { unknownModelError } from "./query";
-import { createBoardRenderUnit, createEjectedBoardRenderUnits } from "./render";
+import { createBoardRenderUnit, createBoardRenderUnits } from "./render";
 import { replayChunk } from "./replay";
 import { requireBattle, type Session, type SessionGameEvent, victoryBannerChunk } from "./session";
 import {
@@ -128,6 +127,13 @@ function heatStateLabel(shutdown: ShutdownState): string {
   return i18n("heat.stateDown");
 }
 
+/** `"col,row"` keys of hexes holding battlefield wreckage. */
+export function wreckageHexKeys(battle: BattleState): string[] {
+  return Object.entries(battle.wreckage)
+    .filter(([, ids]) => ids.length > 0)
+    .map(([key]) => key);
+}
+
 /** `"col,row"` keys of hexes holding at least one ground club token. */
 export function clubHexKeys(battle: BattleState): string[] {
   return Object.entries(battle.clubs)
@@ -141,13 +147,13 @@ export function boardChunk(s: Session): Chunk {
   if (mapName === null) return buildLinesChunk(i18n("board.noMap"));
   const map = mapDefFor(s.setup);
   if (s.battle) {
-    const battleUnits = s.battle.units;
-    const units = Object.values(battleUnits)
-      .filter((u) => isUnitAvailable(u))
-      .map((u) => createBoardRenderUnit(u));
-    const ejectedUnits = createEjectedBoardRenderUnits(battleUnits, s.battle.wrecks);
-    if (ejectedUnits.length > 0) units.push(...ejectedUnits);
-    return buildBoardChunk({ map, units, reachable: null, clubHexes: clubHexKeys(s.battle) });
+    return buildBoardChunk({
+      map,
+      units: createBoardRenderUnits(s.battle.units),
+      reachable: null,
+      clubHexes: clubHexKeys(s.battle),
+      wreckageHexes: wreckageHexKeys(s.battle),
+    });
   }
   return buildBoardChunk({
     map,
@@ -775,6 +781,7 @@ const REMOVAL_REASON_KEY: Readonly<Record<RemovalReason, MessageKey>> = {
   destroyed: "sheet.remove.destroyed",
   pilotEjected: "sheet.remove.pilotEjected",
   pilotKilled: "sheet.remove.pilotKilled",
+  pilotAbandoned: "sheet.remove.pilotAbandoned",
 };
 const DESTROYED_REASON_KEY: Readonly<Record<DestroyedReason, MessageKey>> = {
   headDestroyed: "sheet.remove.hdDestroyed",
@@ -919,6 +926,7 @@ const PILOT_STATUS_KEY: Record<PilotStatus, MessageKey> = {
   active: "sheet.pilotOk",
   unconscious: "sheet.pilotOut",
   ejected: "sheet.pilotEjected",
+  abandoned: "sheet.pilotAbandoned",
   dead: "sheet.pilotKilled",
 };
 
@@ -1119,6 +1127,8 @@ function fallCauseLabel(cause: UnitFallCause): string {
       return i18n("log.fallCause.voluntaryDrop");
     case "dfaMiss":
       return i18n("log.fallCause.dfaMiss");
+    case "salvageFall":
+      return i18n("log.fallCause.salvageFall");
     default: {
       const _exhaustive: never = cause;
       return _exhaustive;
@@ -1385,6 +1395,9 @@ function handleSessionGameEvent(s: Session, e: SessionGameEvent, out: OutputHand
         case "pilotKilled":
           out.idLines(e.unitId, i18n("log.pilotKilled", { id: e.unitId }));
           break;
+        case "pilotAbandoned":
+          out.idLines(e.unitId, i18n("log.abandoned", { id: e.unitId }));
+          break;
       }
       if (e.reason === "destroyed") {
         const reason = e.destroyReason;
@@ -1396,6 +1409,9 @@ function handleSessionGameEvent(s: Session, e: SessionGameEvent, out: OutputHand
           }),
         );
       }
+      break;
+    case "wreckageLeft":
+      out.idLines(e.unitId, i18n("log.wreckage", { id: e.unitId, hex: msgHex(e) }));
       break;
     case "buildingCollapsed":
       out.lines(i18n("log.buildingCollapsed", { hex: msgHex(e) }));
@@ -1655,6 +1671,7 @@ function handleSessionGameEvent(s: Session, e: SessionGameEvent, out: OutputHand
             hex: hexLabel(e.hex),
           }),
         ];
+        if (e.hull === true) lines.push(i18n("log.hullFell"));
         for (const crit of e.crits) {
           for (const line of critLines(crit)) lines.push(`  ${line}`);
         }

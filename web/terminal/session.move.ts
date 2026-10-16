@@ -1,4 +1,5 @@
 import {
+  abandonPilot,
   attemptVoluntaryStartup,
   type BattleState,
   canAttemptStandUp,
@@ -14,8 +15,10 @@ import {
   type Facing,
   type GameEvent,
   type HexCoord,
+  hasWreckage,
   isPilotUnconscious,
   isShutdown,
+  isTargetableBy,
   isTsmActive,
   isUnitImmobile,
   isUnitRemoved,
@@ -27,6 +30,8 @@ import {
   mechDefFor,
   meleeDeclarationProblem,
   neighbor,
+  occupantAt,
+  occupantTeamAt,
   oppositeFacing,
   passMovement,
   pathMp,
@@ -39,19 +44,14 @@ import {
   type UnitState,
   voluntaryShutdown,
   waterDepth,
-  wreckAt,
 } from "btlib10x";
 import { buildBoardChunk, buildLinesChunk, type Chunk } from "./chunk";
 import { i18n } from "./i18n";
 import { F, isGyroDestroyed, modeWord, PRN, TRN } from "./misc";
-import {
-  type BoardRenderReachableInfo,
-  createBoardRenderUnit,
-  createEjectedBoardRenderUnits,
-} from "./render";
+import { type BoardRenderReachableInfo, createBoardRenderUnits } from "./render";
 import { recordMove } from "./replay";
 import { commitAtomic, drive, requireBattle, type Session, type SessionGameEvent } from "./session";
-import { actorOrderLines, clubHexKeys } from "./session.common";
+import { actorOrderLines, clubHexKeys, wreckageHexKeys } from "./session.common";
 
 const MOVE_MODES: Readonly<Record<string, MoveMode>> = {
   standstill: "standStill",
@@ -60,11 +60,20 @@ const MOVE_MODES: Readonly<Record<string, MoveMode>> = {
   jump: "jump",
 };
 
-const VOLUNTARY_MODES: Readonly<Record<string, "shutdown" | "startup" | "eject">> = {
+type VoluntaryMode = "shutdown" | "startup" | "eject" | "abandon";
+
+const VOLUNTARY_MODES: Readonly<Record<string, VoluntaryMode>> = {
   shutdown: "shutdown",
   startup: "startup",
   eject: "eject",
+  abandon: "abandon",
 };
+
+/** True for the declarations that take no movement: shutdown, startup,
+ *  eject and abandon. */
+function isVoluntaryMode(mode: DeclaredMovementMode | null): mode is VoluntaryMode {
+  return mode === "shutdown" || mode === "startup" || mode === "eject" || mode === "abandon";
+}
 
 const PRONE_MODES: Readonly<Record<string, "prone">> = {
   prone: "prone",
@@ -75,6 +84,7 @@ export type DeclaredMovementMode =
   | "shutdown"
   | "startup"
   | "eject"
+  | "abandon"
   | "standup"
   | "prone"
   | "turn"
@@ -89,7 +99,7 @@ export interface MovementContext {
   actorId: string;
   /** Pending declaration for the acting unit: a movement mode (engine
    *  `MoveMode`), a posture-change `standup` / `prone` attempt, or
-   *  the voluntary `"shutdown"` / `"startup"` / `"eject"` declaration,
+   *  the voluntary `"shutdown"` / `"startup"` / `"eject"` / `"abandon"` declaration,
    *  committed by the `done` command. `standup` / `prone` may carry a queued
    *  `place` landing in `placedLanding`; `postureMove` holds the locomotion
    *  mode the queued steps run under after the posture change succeeds. */
@@ -185,11 +195,12 @@ export function modeSyntaxFor(unit: UnitState | null): string {
       "standstill | walk | run | jump",
       "prone [turn | pronestill] | turn | pronestill",
       "standup [walk | run | standstill]",
-      "shutdown | startup | eject",
+      "shutdown | startup | eject | abandon",
     ].join("\n");
-  // A heat shutdown restarts by itself in the Heat Phase: only eject is open.
-  if (unit.shutdown === "heat") return "eject";
-  if (isShutdown(unit)) return "startup | eject";
+  // A heat shutdown restarts by itself in the Heat Phase: only abandoning or
+  // ejecting is open. A shut-down 'Mech may be abandoned (house rule).
+  if (unit.shutdown === "heat") return "abandon | eject";
+  if (isShutdown(unit)) return "startup | abandon | eject";
   const legs = destroyedLegs(unit.damage);
   const arms = destroyedArms(unit.damage);
   if (isUnitImmobile(unit.damage)) {
@@ -273,6 +284,13 @@ export function declareMovementMode(
   if (mode === "eject") {
     if (isUnitRemoved(unit)) throw new Error(i18n("err.alreadyEjected", { id: unit.id }));
     context.moveMode = "eject";
+    context.postureMove = null;
+    clearMoveQueue(context);
+    return;
+  }
+  if (mode === "abandon") {
+    if (!isShutdown(unit)) throw new Error(i18n("err.mustBeDownForAbandon", { id: unit.id }));
+    context.moveMode = "abandon";
     context.postureMove = null;
     clearMoveQueue(context);
     return;
@@ -395,7 +413,7 @@ export function declareMovementMode(
 export function declaredMovementModeChunk(s: Session, mode: DeclaredMovementMode): Chunk[] {
   const { battle, context } = requireBattleAndContext(s);
   const actor = requireUnit(battle, context.actorId);
-  if (mode === "shutdown" || mode === "startup" || mode === "eject") {
+  if (isVoluntaryMode(mode)) {
     emptyMoveCandidate(s);
     return [
       buildLinesChunk(
@@ -478,10 +496,7 @@ export function budgetFor(unit: UnitState, context: MovementContext): number {
     const loco = context.postureMove ?? "walk";
     return postureMoveBudget(unit, "standUp", effectiveMoveBudget(loco, movement, unit.heat));
   }
-  const mode: MoveMode =
-    declared === "shutdown" || declared === "startup" || declared === "eject" || declared === null
-      ? "standStill"
-      : declared;
+  const mode: MoveMode = isVoluntaryMode(declared) || declared === null ? "standStill" : declared;
   return effectiveMoveBudget(mode, movement, unit.heat);
 }
 
@@ -533,11 +548,7 @@ function displayMovementModeStr(m: MovementContext): string {
 export function placeLanding(s: Session, landing: RevealedLanding): void {
   const { battle, context } = requireBattleAndContext(s);
   const unit = requireUnit(battle, context.actorId);
-  if (
-    context.moveMode === "shutdown" ||
-    context.moveMode === "startup" ||
-    context.moveMode === "eject"
-  ) {
+  if (isVoluntaryMode(context.moveMode)) {
     throw new Error(i18n("err.noMoveInShutdownMode"));
   }
   if (!context.moveMode)
@@ -622,9 +633,11 @@ export function commitMovement(s: Session): SessionGameEvent[] {
       attemptVoluntaryStartup(battle, unitId, collected, s.rng);
     } else if (context.moveMode === "eject") {
       ejectPilot(battle, unitId, s.rng, collected);
+    } else if (context.moveMode === "abandon") {
+      abandonPilot(battle, unitId, collected);
     } else if (isShutdown(unit) || isPilotUnconscious(unit)) {
       // Down unit committing any other movement mode: hold position and
-      // pass (startup/shutdown/eject handled above; nothing else is legal
+      // pass (startup/shutdown/eject/abandon handled above; nothing else is legal
       // while off-line or out cold). Without this the commit throws and the
       // activation never advances.
       passMovement(battle, unitId);
@@ -680,13 +693,7 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo {
   const { battle, context } = requireBattleAndContext(s);
   const actor = requireUnit(battle, context.actorId);
   const mode = s.move!.moveMode;
-  if (
-    mode === null ||
-    mode === "shutdown" ||
-    mode === "startup" ||
-    mode === "eject" ||
-    mode === "pronestill"
-  ) {
+  if (mode === null || isVoluntaryMode(mode) || mode === "pronestill") {
     return { team: actor.team, revealed: [] };
   }
   // Engine guarantee: `actor.model` was validated by `createBattle`.
@@ -739,12 +746,10 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo {
       grid: s.battle!,
       team: actor.team,
       ...(mode === "standup" ? { standup: true } : {}),
-      wreckAt: (hex: HexCoord): boolean => wreckAt(s.battle!, hex) !== undefined,
+      wreckageAt: (hex: HexCoord): boolean => hasWreckage(s.battle!, hex),
       occupantTeam: (hex: HexCoord): number | undefined => {
-        for (const u of Object.values(s.battle!.units)) {
-          if (isUnitRemoved(u)) continue;
-          if (u.position.col === hex.col && u.position.row === hex.row) return u.team;
-        }
+        const team = occupantTeamAt(s.battle!, hex);
+        if (team !== undefined) return team;
         // A declared charge / DFA reserves its target hex for the attacker.
         for (const u of Object.values(s.battle!.units)) {
           if (isUnitRemoved(u) || u.id === actor.id) continue;
@@ -758,15 +763,10 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo {
       ...(mode === "walk" || mode === "run" || mode === "jump"
         ? {
             meleeOk: (stop: HexCoord, targetHex: HexCoord, kind: "charge" | "dfa"): boolean => {
-              const target = Object.values(s.battle!.units).find(
-                (u) =>
-                  !isUnitRemoved(u) &&
-                  u.position.col === targetHex.col &&
-                  u.position.row === targetHex.row,
-              );
+              const target = occupantAt(s.battle!, targetHex);
               return (
                 target !== undefined &&
-                target.team !== actor.team &&
+                isTargetableBy(actor, target) &&
                 meleeDeclarationProblem(s.battle!, actor.id, stop, target.id, kind, jumping) ===
                   null
               );
@@ -896,12 +896,7 @@ function stepResultLines(s: Session, landing: RevealedLanding): string[] {
   }
   lines.push(...steps.map(renderStep));
   if (landing.melee !== undefined) {
-    const target = Object.values(battle.units).find(
-      (u) =>
-        !isUnitRemoved(u) &&
-        u.position.col === landing.hex.col &&
-        u.position.row === landing.hex.row,
-    );
+    const target = occupantAt(battle, landing.hex);
     lines.push(
       i18n(landing.melee.kind === "dfa" ? "stepResult.dfa" : "stepResult.charge", {
         target: target?.id ?? "?",
@@ -941,7 +936,7 @@ export function moveStatusChunk(s: Session): Chunk {
   const lines: string[] = [];
   lines.push(...actorOrderLines(s), i18n("moveStatus.headLine"));
   const mode = s.move?.moveMode ?? null;
-  if (mode === "shutdown" || mode === "startup" || mode === "eject") {
+  if (isVoluntaryMode(mode)) {
     const actor = requireUnit(requireBattleAndContext(s).battle, s.move!.actorId);
     const line = i18n("ok.modeDeclaredVoluntary", { id: actor.id, mode, ...startParams(actor) });
     lines.push(`  ${line}`);
@@ -959,13 +954,13 @@ export function reachableChunk(
   info: BoardRenderReachableInfo,
 ): Chunk {
   const map = mapDefFor(mapNameHolder);
-  const battleUnits = battle.units;
-  const units = Object.values(battleUnits)
-    .filter((u) => !isUnitRemoved(u))
-    .map((u) => createBoardRenderUnit(u));
-  const ejectedUnits = createEjectedBoardRenderUnits(battleUnits, battle.wrecks);
-  if (ejectedUnits.length > 0) units.push(...ejectedUnits);
-  return buildBoardChunk({ map, units, reachable: info, clubHexes: clubHexKeys(battle) });
+  return buildBoardChunk({
+    map,
+    units: createBoardRenderUnits(battle.units),
+    reachable: info,
+    clubHexes: clubHexKeys(battle),
+    wreckageHexes: wreckageHexKeys(battle),
+  });
 }
 
 /** Display mode for previews: prone/standup carry their sub-mode arg. */

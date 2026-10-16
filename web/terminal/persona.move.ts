@@ -28,6 +28,7 @@ import {
   facingToward,
   fallingDamageTotal,
   type HexCoord,
+  hasWreckage,
   hexDistance,
   hitProbability,
   isTsmActive,
@@ -39,6 +40,7 @@ import {
   meleeRecoilDamage,
   mountCanFireIntoArc,
   movementHeat,
+  occupantTeamAt,
   pathMp,
   physicalDamage,
   physicalToHitTotal,
@@ -49,7 +51,6 @@ import {
   toHitHeatModifier,
   type UnitState,
   waterDepth,
-  wreckAt,
 } from "btlib10x";
 import {
   dissipationOf,
@@ -118,12 +119,10 @@ function landingsFor(
     prone: false,
     grid: battle,
     team: unit.team,
-    wreckAt: (hex: HexCoord): boolean => wreckAt(battle, hex) !== undefined,
+    wreckageAt: (hex: HexCoord): boolean => hasWreckage(battle, hex),
     occupantTeam: (hex: HexCoord): number | undefined => {
-      for (const u of Object.values(battle.units)) {
-        if (isUnitRemoved(u)) continue;
-        if (u.position.col === hex.col && u.position.row === hex.row) return u.team;
-      }
+      const team = occupantTeamAt(battle, hex);
+      if (team !== undefined) return team;
       // A declared charge / DFA reserves its target hex for the attacker.
       for (const u of Object.values(battle.units)) {
         if (isUnitRemoved(u) || u.id === unit.id) continue;
@@ -224,7 +223,7 @@ function firepowerFrom(
   tnBase: number,
   canTwist: boolean,
 ): number {
-  if (!losClear(battle, hex, target.position, battle.wrecks)) return 0;
+  if (!losClear(battle, hex, target.position)) return 0;
   const d = Math.max(1, hexDistance(hex, target.position));
   let best = 0;
   for (const turn of canTwist ? [0, -1, 1] : [0]) {

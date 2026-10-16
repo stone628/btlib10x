@@ -216,7 +216,8 @@ describe("web log: 'Mech destroyed vs. the pilot's fate", () => {
       [3, 4],
     ).join("\n");
     expect(out).toMatch(/CTI 1->0\*.*; 'Mech destroyed/);
-    expect(out).toMatch(/\[foe\] \*\*\* DESTROYED/);
+    // The salvage fall and wreckage follow in the same [foe] box.
+    expect(out).toMatch(/\[foe\]┌? \*\*\* DESTROYED/);
     expect(out).not.toMatch(/killed/i);
   });
 
@@ -231,7 +232,7 @@ describe("web log: 'Mech destroyed vs. the pilot's fate", () => {
     const destroyed = out.indexOf("'Mech destroyed");
     const psr = out.indexOf("ejecting");
     // Consecutive [foe] lines share one box, so the eject line has no prefix.
-    const ejects = out.indexOf("ejects — abandoned");
+    const ejects = out.indexOf("ejects — the 'Mech stays as an empty hull");
     expect(destroyed).toBeGreaterThan(-1);
     expect(psr).toBeGreaterThan(destroyed);
     expect(ejects).toBeGreaterThan(psr);
@@ -250,7 +251,7 @@ describe("web log: 'Mech destroyed vs. the pilot's fate", () => {
       [6, 6],
     ).join("\n");
     expect(out).toMatch(/PSR ejecting/);
-    expect(out).toMatch(/ejects — abandoned/);
+    expect(out).toMatch(/ejects — the 'Mech stays as an empty hull/);
   });
 
   it("auto-eject off: a head kill destroys the 'Mech and kills the pilot", () => {

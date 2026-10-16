@@ -43,10 +43,25 @@ yet is a gap, not a deviation; gaps are tracked in §4.
   *Why:* TW gives a doomed pilot no way out, and ejection is what turns a
   fight into salvage. *Not adopted:* planetary-condition modifiers and the
   submerged-cockpit ban.
-- **Wrecks (house rule built on TO:AR p.155).** A unit whose pilot ejects or
-  is killed leaves a permanent, impassable wreck; its height, set by size and
-  posture, blocks LOS and gives partial cover. *Why:* an abandoned hulk
-  should shape the board. TO's own rough-hex rule waits on open entry (§4).
+- **Hulls: abandoned 'Mechs (TO:AR pp.184–185).** A 'Mech whose pilot ejects,
+  is killed or abandons it, with its frame intact, stays on the board as a
+  neutral, permanently shut-down hull in the posture it was left in. Both
+  sides may target it (−4 immobile, TW p.110); any unit may move or jump
+  through its hex but none may end movement there; charges and DFAs treat it
+  as a target. It never rolls a PSR: an event that would call for one drops
+  it automatically (TW p.60). Like any unit it has no LOS or cover effect
+  (TW pp.100, 102). It counts as lost for its team. Destroyed, it becomes
+  wreckage. *Why:* the hull is what salvage is about, so deciding whether to
+  spend fire denying it to the enemy is a real choice.
+- **Battlefield wreckage (TO:AR p.155).** A destroyed 'Mech of 40 t or more
+  turns its hex into Rough stacked on the existing terrain (+1 MP; no PSR,
+  to-hit or LOS effect). A hex already Rough or already holding wreckage
+  does not change; in water it lies on the bed; in a standing building it
+  costs nothing until the building collapses. Lighter 'Mechs leave nothing
+  on the board. Before the wreckage is placed, a 'Mech destroyed while
+  standing takes the TW p.128 salvage fall on its record, and a MechWarrior
+  still alive (inside, or out by auto-eject) takes the fall's pilot hit.
+  *Why:* destroyed medium and heavier 'Mechs should shape the ground.
 
 ### 2.2 Policies (choices TW leaves to a player)
 
@@ -76,8 +91,8 @@ yet is a gap, not a deviation; gaps are tracked in §4.
 - **One movement declaration per unit (TW pp.39, 49–50, 160; TO:AR p.165).**
   Locomotion, posture change, shutdown, restart or ejection: one choice, one
   commit. *Why:* minimum interaction, closest TW play.
-  - **Shut-down units move first.** *Why:* they can only restart, pass or
-    eject; no empty turns.
+  - **Shut-down units move first.** *Why:* they can only restart, pass,
+    abandon or eject; no empty turns.
   - **Shutdown and restart in the Movement Phase,** not the End Phase
     (TW p.160). A passed startup is the unit's movement and it still attacks
     that turn, so a restart costs one turn as in TW.
@@ -88,10 +103,19 @@ yet is a gap, not a deviation; gaps are tracked in §4.
     turn's activation; the unit stays standing for the rest of this turn.
   - **One stand-up attempt per turn.** TW p.50 allows retries. *Why:* no
     second chance within an activation.
-  - **Ejection** replaces the unit's movement, as in TO:AR p.165.
+  - **Ejection** and **abandonment** replace the unit's movement, as in
+    TO:AR p.165.
 
 ### 2.4 House rulings where TW is silent
 
+- **Voluntary abandonment (adapted from TO:AR p.165).** TO needs the 'Mech
+  prone and shut down; here a 'Mech that is shut down at its movement
+  activation (so shut down in an earlier turn) may declare `mode abandon`
+  standing or prone: no roll, no pilot hits, and the unit is a hull at once
+  in its posture. Until then normal rules apply (a PSR while shut down is an
+  automatic fall). Ejection stays the emergency exit. *Why:* a planned
+  abandonment that keeps the pilot unhurt and the hull standing is the most
+  salvage-friendly outcome, paid for with a shut-down turn.
 - A held club drops into the hex when its wielder falls, drops prone or leaves
   play.
 - A severed limb once used as a club is no longer salvageable.
@@ -149,13 +173,14 @@ These are implementation choices, not rule changes.
   iNarc).
 - **Water combat.** Hull breach, underwater weapons and LOS, physicals in
   water.
-- **Buildings & wrecks.** Basements, multi-floor interiors, structural
-  transfer; hull-down; wreck destruction and open entry; cover hits damaging
-  buildings.
+- **Buildings.** Basements, multi-floor interiors, structural transfer;
+  hull-down; cover hits damaging buildings.
 - **Equipment pipeline.** Artemis / Narc / AMS (and ECM interaction); rotary
   jam-clear; Targeting Computer; TAG and guided ammo; LRM indirect fire;
   C3 / C3i; ECM bubble; Stealth Armor; switchable and special munitions.
-- **Salvage module.** A pure function over the end state (§3).
+- **Salvage valuation.** `salvageReport` lists what hulls and wreckage
+  leave; pricing it and deciding who gets it (field control) belong to the
+  campaign layer (§3).
 
 ## 5. What I won't
 

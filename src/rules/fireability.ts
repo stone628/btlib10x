@@ -15,7 +15,15 @@ import {
 } from "./arcs";
 import { countDestroyedSensor, isWeaponCritted } from "./critical";
 import { canFireMount, isUnitLocationDestroyed } from "./damage";
-import { type BattleState, isImmobile, isUnitRemoved, losEnds, partialCoverMod } from "./game";
+import {
+  type BattleState,
+  isImmobile,
+  isTargetableBy,
+  isUnitOnBoard,
+  isUnitRemoved,
+  losEnds,
+  partialCoverMod,
+} from "./game";
 import { toHitHeatModifier } from "./heat";
 import { losClear, losWoodsPointsBetween } from "./los";
 import { sensorAttackModifier, sensorsBlind } from "./piloting";
@@ -164,7 +172,7 @@ export function suggestFireTargets(
   const sensorMod = sensorAttackModifier(sensorsOut);
   const effectiveFacing = effectiveFacingForTwist(unit.facing, twist);
   const targets = Object.values(state.units)
-    .filter((u) => u.team !== unit.team && !isUnitRemoved(u))
+    .filter((u) => u.id !== unit.id && isUnitOnBoard(u) && isTargetableBy(unit, u))
     .map((enemy) => {
       const distance = hexDistance(unit.position, enemy.position);
       // TW p.105 hex template: every hex falls wholly in one firing arc
@@ -253,9 +261,7 @@ export function suggestFireTargets(
         // Same gate as `declareAttacks`: woods screening, water2/3 endpoints
         // (`losBlockedByWater`), elevation and intervening buildings
         // (`losBlockedByElevation`/`losBlockedByBuilding` fold into the ray).
-        if (
-          !losClear(state, unit.position, enemy.position, state.wrecks, losEnds(state, unit, enemy))
-        ) {
+        if (!losClear(state, unit.position, enemy.position, losEnds(state, unit, enemy))) {
           blockBoth("noLos");
           return;
         }

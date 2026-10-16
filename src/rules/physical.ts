@@ -42,7 +42,7 @@ import {
   type UnitDamageState,
 } from "./damage";
 import type { BattleState, UnitState } from "./game";
-import { isImmobile, isUnitRemoved, partialCoverMod } from "./game";
+import { isImmobile, isTargetableBy, isUnitOnBoard, isUnitRemoved, partialCoverMod } from "./game";
 import { isTsmActive } from "./heat";
 import { hitLocationForArc, punchHitLocationForArc } from "./hitlocation";
 import { losWoodsPointsBetween } from "./los";
@@ -161,7 +161,7 @@ export interface PhysicalResolution {
   /** True when the hit-location roll was 2 (through-armor critical, TW p.123). */
   readonly throughArmorCrit: boolean;
   /** Why the attack never rolled (attackerDown | targetDown | dfaAborted |
-   *  advanced | voided:<wreck|hexTaken|attackerDown> | invalid:<reason>). */
+   *  advanced | voided:<hexTaken|attackerDown> | invalid:<reason>). */
   readonly missReason?: string;
   /** Charge / DFA whose target had left its hex (`missReason` "advanced"):
    *  the hex the attacker moved into instead. */
@@ -729,8 +729,9 @@ export function validatePhysicalAttack(
 
   const target = battle.units[decl.targetId];
   if (!target) return { ok: false, reason: `Unknown target ${decl.targetId}` };
-  if (isUnitRemoved(target)) return { ok: false, reason: `Target ${decl.targetId} is removed` };
-  if (target.team === attacker.team) return { ok: false, reason: "Target must be enemy" };
+  if (!isUnitOnBoard(target)) return { ok: false, reason: `Target ${decl.targetId} is removed` };
+  // Enemies, or a hull of either team (TO:AR p.184).
+  if (!isTargetableBy(attacker, target)) return { ok: false, reason: "Target must be enemy" };
 
   // A DFA attacker is in the air until the physical phase: no physical attack
   // may target it (TW p.149). A charging or DFA-ing unit is never a charge /

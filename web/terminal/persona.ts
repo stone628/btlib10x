@@ -37,6 +37,7 @@ import { scoreAttacks } from "./persona.attack";
 import {
   type DecisionTrace,
   enemiesOf,
+  enemyHullsOf,
   expectedDamageAt,
   heatCeilingFor,
   type Posture,
@@ -344,7 +345,18 @@ export function decide(s: Session, dk: PersonaKey, ctx: PersonaContext): Decisio
   } else {
     const scored = scoreAttacks({ battle, actor, targetId: target.id, persona, heatCeiling });
     notes.push(...scored.notes);
-    candidates = rank(scored.candidates, () => rng.d6());
+    let pool = scored.candidates;
+    // Nothing live in reach: spend the fire on enemy hulls to deny salvage.
+    if (!pool.some((c) => c.score > 0)) {
+      for (const hull of enemyHullsOf(battle, actor)) {
+        const h = scoreAttacks({ battle, actor, targetId: hull.id, persona, heatCeiling });
+        const worth = h.candidates.filter((c) => c.score > 0);
+        if (worth.length === 0) continue;
+        notes.push({ key: "pp.note.hullTarget", params: { target: hull.id } });
+        pool = [...pool, ...worth];
+      }
+    }
+    candidates = rank(pool, () => rng.d6());
     commands = [...(candidates[0]?.commands ?? ["done"])];
   }
   commands = [...prefix, ...commands];
