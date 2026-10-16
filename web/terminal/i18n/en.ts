@@ -208,6 +208,7 @@ export const en = {
   "pp.posture.approach": "approach",
   "pp.posture.engage": "engage",
   "pp.posture.hold": "hold",
+  "pp.posture.press": "press",
   "pp.posture.recover": "recover",
   "pp.posture.yield": "yield",
   "pp.term.range": "range",
@@ -237,6 +238,8 @@ export const en = {
     "yields: {left}% of armor and structure left, threshold {at}% (eject stands in for a yield)",
   "pp.note.yieldWeapons": "yields: no weapons left (eject stands in for a yield)",
   "pp.note.noTarget": "no enemy in play",
+  "pp.note.pressing":
+    "{quiet} quiet turns: presses in to {distance} hexes, cover and exposure x{factor}, ammo to-hit up to {tn}, heat ceiling +{heat}",
   "pp.note.hullTarget": "nothing live in reach: fire on {target}'s empty hull to deny salvage",
 
   // command acknowledgements

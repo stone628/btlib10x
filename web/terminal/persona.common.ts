@@ -73,7 +73,7 @@ export interface TraceNote {
 }
 
 /** Long-term stance carried across turns in {@link StrategyMemory}. */
-export type Posture = "approach" | "engage" | "hold" | "recover" | "yield";
+export type Posture = "approach" | "engage" | "hold" | "press" | "recover" | "yield";
 
 export interface DecisionTrace {
   readonly turn: number;
@@ -196,8 +196,9 @@ export function rangeProfile(unit: UnitState, band: RangeBand): RangeProfile {
   let best = -1;
   for (let d = lo; d <= hi; d++) {
     const ev = expectedDamageAt(weapons, d, tnBase);
-    // Ties keep the nearer distance for short personas, the farther one otherwise.
-    if (ev > best || (ev === best && band !== "short")) {
+    // Ties keep the nearer distance, so a target step cannot carry the fight
+    // out of the band; "any" keeps the farther edge of its best bracket.
+    if (ev > best || (ev === best && band === "any")) {
       best = ev;
       preferred = d;
     }

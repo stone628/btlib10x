@@ -30,6 +30,7 @@ const POSTURE_KEY: Readonly<Record<DecisionTrace["posture"], MessageKey>> = {
   approach: "pp.posture.approach",
   engage: "pp.posture.engage",
   hold: "pp.posture.hold",
+  press: "pp.posture.press",
   recover: "pp.posture.recover",
   yield: "pp.posture.yield",
 };

@@ -99,17 +99,43 @@ never splits fire across targets.
 
 ### 2.3 Posture
 
-Posture is a label shown in the trace; it does not change any score.
+Posture is a label shown in the trace. Only `press` (§2.4) comes with a
+change in scoring.
 
 | Posture | When |
 |---|---|
 | `engage` | the target is within the unit's longest weapon range |
 | `approach` | the target is out of range |
 | `hold` | Hull-Down only: the target is beyond the unit's medium range |
+| `press` | stall pressure is on (§2.4); overrides the three above |
 | `recover` | a scripted movement prompt (shut down, prone, immobile; §4.2) |
 | `yield` | the unit is ejecting (§4.1) |
 
 `turnsInContact` counts consecutive turns with the target in range.
+
+### 2.4 Stall pressure
+
+Two cautious personas can otherwise trade 8 % shots from cover for a hundred
+turns. Each unit keeps a stall count, `quietTurns`, updated on its first
+activation of a turn:
+
+- +1 when neither the unit nor its committed target (the same one as at the
+  start of the previous turn) lost any armor or structure;
+- halved (rounded down) after a turn with losses, so one lucky hit does not
+  undo the pressure of a long, idle duel.
+
+After a grace of 2 quiet turns, each further one is a pressing step
+(`steps = quietTurns − 2`). While `steps > 0` the posture is `press` and,
+for this decision only:
+
+- the preferred distance (§4.5) drops one hex per step, not below the edge
+  of the unit's short bracket (or its own preferred distance, if nearer);
+- the cover and exposed weights are scaled by `0.8^steps`, floor 0.3;
+- the ammo to-hit limit rises by `steps`, up to 12;
+- both heat ceilings rise by `steps`, at most +3.
+
+The trace shows the shift as one note (`N quiet turns: presses in to D
+hexes, …`).
 
 ---
 
@@ -292,11 +318,13 @@ score = range   × w.range
   TN `gunnery + 2`. Bands are measured in the unit's own brackets: short =
   1…longest short range, medium = next hex…longest medium range, long =
   next hex…longest long range, medium–long, any = 1…longest long range. On a
-  tie, short personas keep the nearer distance and the others the farther.
+  tie the nearer distance wins, so a target step cannot carry the fight out
+  of the band; only `any` keeps the farther one.
   If the band is empty for this 'Mech, the whole 1…long span is used.
 
 **cover** = defense of hex `H` (§4.6): woods and partial cover make the unit
-harder to hit.
+harder to hit. It counts only where **exposed** > 0: cover no enemy can
+shoot at is worth nothing.
 
 **tmm** = the target movement modifier this move would give the unit
 (hexes entered, +1 for a jump; TW p. 107). Turning in place enters no hex.
@@ -484,8 +512,8 @@ never jumps. When adjacent it punches, kicks or strikes, but avoids kicks above
 TN 8, and it never charges.
 It fights until 15% is left.
 
-**Long Tom** sits at its longest brackets (the preferred distance is picked
-inside the long band), values cover (2) and fears exposure (1.2), and keeps its
+**Long Tom** sits at its longest brackets (the preferred distance is the
+nearest hex of the long band), values cover (2) and fears exposure (1.2), and keeps its
 heat under 7, so it rarely runs or jumps while firing heavy weapons. It never
 melees, saves a quarter of its ammo, and yields at 40%, or as soon as its guns
 are gone.
@@ -552,4 +580,5 @@ The engine supports these, but the persona player never chooses them:
 - **Secondary targets**: all fire goes to the committed target.
 - **Different jump styles**: `reposition` and `hit-and-run` score the same.
 - **Water cooling and elevation** in hex scoring; own rear-arc exposure.
-- **Posture-driven behaviour**: posture is recorded but does not change scores.
+- **Posture-driven behaviour**: apart from `press` (§2.4), posture is recorded
+  but does not change scores.

@@ -300,8 +300,8 @@ describe("persona player: pp setup", () => {
   });
 
   it("random 4-player bouts play out without errors", () => {
-    for (const seed of [/**1,*/ 2, 3]) {
-      // seed 1 never ends; fix persona player later
+    // Seed 1 used to be a 131-turn Long Tom stand-off; stall pressure ends it.
+    for (const seed of [1, 2, 3]) {
       const s = newSession(seed);
       execute(s, "pp setup 4");
       execute(s, "pp trace off");
@@ -309,6 +309,7 @@ describe("persona player: pp setup", () => {
       expect(out.filter((l) => l.startsWith("error:"))).toEqual([]);
       expect(out.some((l) => /failed; stopped/.test(l))).toBe(false);
       expect(s.state).toBe("over");
+      expect(s.battle!.turn).toBeLessThanOrEqual(60);
     }
   });
 });

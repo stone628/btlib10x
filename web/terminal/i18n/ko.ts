@@ -206,6 +206,7 @@ export const ko: Catalog = {
   "pp.posture.approach": "접근",
   "pp.posture.engage": "교전",
   "pp.posture.hold": "대기",
+  "pp.posture.press": "압박",
   "pp.posture.recover": "복구",
   "pp.posture.yield": "항복",
   "pp.term.range": "사거리",
@@ -234,6 +235,8 @@ export const ko: Catalog = {
   "pp.note.yield": "항복: 장갑과 내부 구조 {left}% 남음, 기준 {at}% (탈출로 항복을 대신함)",
   "pp.note.yieldWeapons": "항복: 무기 없음 (탈출로 항복을 대신함)",
   "pp.note.noTarget": "교전 가능한 적 없음",
+  "pp.note.pressing":
+    "{quiet}턴째 교전 없음: {distance}헥스까지 압박, 엄폐·노출 가중치 x{factor}, 탄약 명중치 {tn}까지, 열 한도 +{heat}",
   "pp.note.hullTarget": "사거리 안에 적이 없음: 회수를 막기 위해 {target} 의 빈 기체를 사격",
 
   // command acknowledgements

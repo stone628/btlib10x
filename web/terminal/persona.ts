@@ -41,6 +41,7 @@ import {
   expectedDamageAt,
   heatCeilingFor,
   type Posture,
+  type RangeProfile,
   rangeProfile,
   remainingFraction,
   type TraceCandidate,
@@ -68,6 +69,14 @@ export interface StrategyMemory {
   /** Armor + structure left at the start of the previous turn, and the loss since. */
   remainingAtLastTurn: number;
   lossLastTurn: number;
+  /** The committed target's armor + structure left at the start of this turn. */
+  targetAtTurnStart: { id: string; left: number } | null;
+  /**
+   * Stall count: +1 for each turn in which neither this unit nor its target
+   * lost anything, halved by a turn with losses (one lucky hit does not end
+   * the pressure of a long, idle duel).
+   */
+  quietTurns: number;
   /** Enemy move modes seen, per enemy id: groundwork for the §9.4 learning tag. */
   enemyModes: Record<string, Record<string, number>>;
 }
@@ -90,6 +99,16 @@ const RETARGET_FACTOR = 1.5;
 const AHEAD_YIELD_BONUS = 0.15;
 /** Tie-break jitter scale: far below any displayed score difference. */
 const JITTER = 0.001;
+/** Quiet turns tolerated before the unit starts to press in. */
+const STALL_GRACE = 2;
+/** Cover and exposure weights shrink by this factor per pressing step... */
+const STALL_WEIGHT_STEP = 0.8;
+/** ...down to this floor. */
+const STALL_WEIGHT_FLOOR = 0.3;
+/** Most heat-ceiling points pressing adds. */
+const STALL_HEAT_MAX = 3;
+/** Highest to-hit number a 2D6 roll can make. */
+const MAX_TN = 12;
 
 export function personaSeed(seed: number): string {
   return createRng((seed ^ PERSONA_SEED_SALT) >>> 0).snapshot();
@@ -134,6 +153,8 @@ function freshMemory(unit: UnitState): StrategyMemory {
     turnsInContact: 0,
     remainingAtLastTurn: remainingFraction(unit),
     lossLastTurn: 0,
+    targetAtTurnStart: null,
+    quietTurns: 0,
     enemyModes: {},
   };
 }
@@ -175,6 +196,15 @@ function updateMemory(
     mem.lossLastTurn = Math.max(0, mem.remainingAtLastTurn - now);
     mem.remainingAtLastTurn = now;
     mem.lastTurn = battle.turn;
+    // Quiet: no loss on either side of the duel since the previous turn.
+    const was = mem.targetAtTurnStart;
+    const held = was === null ? null : (enemies.find((e) => e.id === was.id) ?? null);
+    const quiet =
+      was !== null &&
+      held !== null &&
+      mem.lossLastTurn === 0 &&
+      remainingFraction(held) >= was.left;
+    mem.quietTurns = quiet ? mem.quietTurns + 1 : Math.floor(mem.quietTurns / 2);
     for (const e of enemies) {
       if (e.moveMode === null) continue;
       const tally = mem.enemyModes[e.id] ?? {};
@@ -205,7 +235,13 @@ function updateMemory(
   }
 
   const target = enemies.find((e) => e.id === mem.targetId) ?? null;
-  if (target === null) return;
+  if (target === null) {
+    mem.targetAtTurnStart = null;
+    return;
+  }
+  if (newTurn || mem.targetAtTurnStart?.id !== target.id) {
+    mem.targetAtTurnStart = { id: target.id, left: remainingFraction(target) };
+  }
   const profile = rangeProfile(actor, "any");
   const inContact = hexDistance(actor.position, target.position) <= profile.maxLong;
   if (newTurn) mem.turnsInContact = inContact ? mem.turnsInContact + 1 : 0;
@@ -215,6 +251,53 @@ function updateMemory(
       : inContact
         ? "engage"
         : "approach";
+  if (stallPressure(mem) > 0) mem.posture = "press";
+}
+
+/** Pressing steps after a run of quiet turns (0 = no pressure). */
+function stallPressure(mem: StrategyMemory): number {
+  return Math.max(0, mem.quietTurns - STALL_GRACE);
+}
+
+/**
+ * A stalled duel pulls the unit in, one step per pressing turn: the preferred
+ * distance drops a hex (not below the edge of its short bracket), the cover
+ * and exposure weights shrink so a shot outweighs hiding, the ammo to-hit
+ * limit rises and the heat ceiling rises up to {@link STALL_HEAT_MAX}.
+ */
+function pressed(
+  base: Persona,
+  profile: RangeProfile,
+  mem: StrategyMemory,
+  notes: TraceNote[],
+): { persona: Persona; profile: RangeProfile } {
+  const steps = stallPressure(mem);
+  if (steps === 0) return { persona: base, profile };
+  const preferred = Math.max(
+    Math.min(profile.preferred, profile.maxShort),
+    profile.preferred - steps,
+  );
+  const factor = Math.max(STALL_WEIGHT_FLOOR, STALL_WEIGHT_STEP ** steps);
+  const heat = Math.min(steps, STALL_HEAT_MAX);
+  const w = base.weights;
+  const persona: Persona = {
+    ...base,
+    weights: { ...w, cover: w.cover * factor, exposed: w.exposed * factor },
+    heatCeiling: base.heatCeiling + heat,
+    heatCeilingEngaged: base.heatCeilingEngaged + heat,
+    ammo: { ...base.ammo, maxTn: Math.min(MAX_TN, base.ammo.maxTn + steps) },
+  };
+  notes.push({
+    key: "pp.note.pressing",
+    params: {
+      quiet: mem.quietTurns,
+      distance: preferred,
+      factor: factor.toFixed(2),
+      tn: persona.ammo.maxTn,
+      heat,
+    },
+  });
+  return { persona, profile: { ...profile, preferred } };
 }
 
 /** Judges' points lead (GDD §8.3 proxy): own share left minus the target's. */
@@ -279,7 +362,7 @@ export function decide(s: Session, dk: PersonaKey, ctx: PersonaContext): Decisio
   const actorId = promptActorId(s);
   const battle = s.battle;
   if (actorId === null || battle === null) return null;
-  const persona = PERSONAS[dk];
+  const base = PERSONAS[dk];
   const actor = battle.units[actorId];
   if (actor === undefined || !isUnitAvailable(actor)) return null;
 
@@ -287,7 +370,8 @@ export function decide(s: Session, dk: PersonaKey, ctx: PersonaContext): Decisio
   rng.load(ctx.rng);
   const mem: StrategyMemory = structuredClone(ctx.memory[actorId] ?? freshMemory(actor));
   const notes: TraceNote[] = [];
-  updateMemory(battle, actor, persona, mem, notes);
+  updateMemory(battle, actor, base, mem, notes);
+  const { persona, profile } = pressed(base, rangeProfile(actor, base.range), mem, notes);
   const target = mem.targetId !== null ? (battle.units[mem.targetId] ?? null) : null;
   const heatCeiling = heatCeilingFor(persona, actor, target);
   const phase = battle.phase === "attack" ? "attack" : "movement";
@@ -332,7 +416,7 @@ export function decide(s: Session, dk: PersonaKey, ctx: PersonaContext): Decisio
           actor,
           target,
           persona,
-          profile: rangeProfile(actor, persona.range),
+          profile,
           heatCeiling,
         }),
         () => rng.d6(),

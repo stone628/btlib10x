@@ -291,8 +291,6 @@ export function scoreMoves(input: MoveScoringInput): TraceCandidate[] {
           : firepowerFrom(battle, weapons, at, facing, target, tnBase, canTwist);
       const range = firepower - RANGE_DRIFT_PER_HEX * Math.abs(d - profile.preferred);
 
-      const cover = hexDefenseMod(battle, at);
-
       const arcFromTarget = classifyFiringArc(target.position, at, target.facing);
       const flank =
         d <= profile.maxLong
@@ -308,6 +306,8 @@ export function scoreMoves(input: MoveScoringInput): TraceCandidate[] {
         melee !== undefined ? meleeValue(battle, actor, target, landing, mode, persona) : null;
 
       const exposed = exposureAt(battle, threats, at, myTmm);
+      // Cover only pays where some enemy can shoot at the hex.
+      const cover = exposed > 0 ? hexDefenseMod(battle, at) : 0;
       const heatOver = Math.max(0, heatNow + movementHeat(mode, mp) - heatCeiling);
       const crowd = d <= CROWD_RANGE && arcFromTarget === "front" ? 1 : 0;
 
