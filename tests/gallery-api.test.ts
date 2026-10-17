@@ -14,7 +14,6 @@ import * as entryRoute from "../functions/api/ag/avatars/[id]";
 import * as reportRoute from "../functions/api/ag/avatars/[id]/report";
 import * as voteRoute from "../functions/api/ag/avatars/[id]/vote";
 import * as avatarsRoute from "../functions/api/ag/avatars/index";
-import * as exportRoute from "../functions/api/ag/export";
 import * as keysRoute from "../functions/api/ag/keys";
 import * as unitsRoute from "../functions/api/ag/units";
 import { keyPublicId } from "../web/avatar/avatar.gallery";
@@ -162,6 +161,16 @@ async function adminCall(method: string, path: string[], token: string | null, b
   return call(
     adminRoute.onRequest as never,
     ctx(method, `/admin/${path.join("/")}`, { headers, params: { path }, body }),
+  );
+}
+
+async function adminExport<T>() {
+  const now = Math.floor(Date.now() / 1000);
+  const token = await accessJwt({ aud: AUD, iss: `https://${TEAM}`, exp: now + 60 });
+  const headers = { origin: "https://bt10x.stoneworks.dev", "cf-access-jwt-assertion": token };
+  return call<T>(
+    adminRoute.onRequest as never,
+    ctx("GET", "/admin/export", { headers, params: { path: ["export"] } }),
   );
 }
 
@@ -410,14 +419,11 @@ describe.skipIf(sqlite === null)("gallery API", () => {
     );
     expect(units.body.units).toHaveLength(1);
     expect(units.body.unlinked).toEqual({ count: 1, top: Q });
-    const exp = await call<{ units: { id: number }[] }>(
-      exportRoute.onRequestGet as never,
-      ctx("GET", "/export"),
-    );
+    const exp = await adminExport<{ units: { id: number }[] }>();
     expect(exp.body.units.map((u) => u.id)).toEqual([linked.body.id]);
   });
 
-  it("lists units and exports the top avatar per 'Mech", async () => {
+  it("lists units and exports the top avatar per 'Mech to admins", async () => {
     const key = await mintKey();
     const top = (await submit(key, `${Q}&rh=2622`)).body.id;
     await submit(key);
@@ -432,10 +438,10 @@ describe.skipIf(sqlite === null)("gallery API", () => {
     expect(units.body.units).toEqual([
       expect.objectContaining({ slug: "atlas-as7-d-dc", count: 2, top: `${Q}&rh=2622` }),
     ]);
-    const exp = await call<{ units: { slug: string; q: string; votes: number; mul: string }[] }>(
-      exportRoute.onRequestGet as never,
-      ctx("GET", "/export"),
-    );
+    expect((await adminCall("GET", ["export"], null)).status).toBe(403);
+    const exp = await adminExport<{
+      units: { slug: string; q: string; votes: number; mul: string }[];
+    }>();
     expect(exp.body.units).toEqual([
       expect.objectContaining({ slug: "atlas-as7-d-dc", q: `${Q}&rh=2622`, votes: 1, mul: ATLAS }),
     ]);

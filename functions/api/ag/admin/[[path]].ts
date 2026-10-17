@@ -1,4 +1,4 @@
-import { isUnitSlug } from "../../../../web/avatar/avatar.gallery";
+import { isUnitSlug, mulUnitUrl } from "../../../../web/avatar/avatar.gallery";
 import { requireAdmin } from "../_lib/access";
 import type { Ctx, Handler } from "../_lib/cf";
 import { config } from "../_lib/config";
@@ -16,6 +16,7 @@ import { cleanImage, cleanName } from "../_lib/mul";
  *   DELETE entries/:id               delete it with its votes and reports
  *   POST   entries/:id/ban-owner     ban the submitter's key: hide its entries, drop its votes
  *   PUT    units/:slug               fix a 'Mech's `{ name, image }`
+ *   GET    export                    the top-liked visible avatar per 'Mech (ties go to the earliest)
  */
 
 const PAGE = 100;
@@ -106,6 +107,19 @@ async function banOwner(ctx: Ctx<"path">, id: number): Promise<Response> {
   return json({ banned: true, votesRemoved: voted.results.length });
 }
 
+async function exportTop(ctx: Ctx<"path">): Promise<Response> {
+  const { results } = await ctx.env.DB.prepare(
+    "SELECT u.slug, u.name, a.q, a.votes, a.id FROM ag_units u " +
+      "JOIN ag_avatars a ON a.id = (SELECT b.id FROM ag_avatars b " +
+      "WHERE b.unit = u.slug AND b.hidden = 0 ORDER BY b.votes DESC, b.id ASC LIMIT 1) " +
+      "ORDER BY u.name",
+  ).all<{ slug: string; name: string; q: string; votes: number; id: number }>();
+  return json({
+    generated: new Date().toISOString(),
+    units: results.map((r) => ({ ...r, mul: mulUnitUrl(r.slug) })),
+  });
+}
+
 async function fixUnit(ctx: Ctx<"path">, slug: string): Promise<Response> {
   if (!isUnitSlug(slug)) throw new HttpError(400, "bad_unit");
   const body = await readJson(ctx.request);
@@ -139,6 +153,7 @@ export const onRequest: Handler<"path"> = (ctx) =>
     if (method === "GET" && a === "me" && b === undefined) {
       return json({ email, settings: config(ctx.env) });
     }
+    if (method === "GET" && a === "export" && b === undefined) return exportTop(ctx);
     if (a === "entries") {
       if (method === "GET" && b === undefined) return listAdmin(ctx);
       const id = idParam(b);

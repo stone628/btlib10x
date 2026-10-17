@@ -1,18 +1,16 @@
-# Avatar gallery: plan (draft, no code yet)
+# Avatar gallery
 
-Players submit avatars from the avatar creator (`bt10x.stoneworks.dev/avatar`,
-whose "submit to gallery" link opens the gallery's Submit panel) to a public
-gallery and upvote each other's. The goal is the safest and
-cheapest setup that still feels like a real feature.
+Players submit avatars made in the avatar creator (`bt10x.stoneworks.dev/avatar`)
+to a public gallery (`/gallery`) and like each other's. It runs entirely on
+the site's Cloudflare Pages project, on free tiers, with no accounts.
 
-The underlying purpose is to collect the 'Mech avatars used in Solaris Rogue:
-a submission can say which 'Mech it depicts, and the top-voted avatar per
-'Mech is the collected answer (§7 export). Naming the 'Mech is optional;
-avatars without one form their own "no 'Mech" group.
+A submission can say which 'Mech it depicts, so players can find the
+best-fitting avatar for each 'Mech. Naming the 'Mech is optional; avatars
+without one form their own "no 'Mech" group.
 
-## 1. Why this is cheap to make safe
+## 1. Why submissions are safe
 
-An avatar is already a short, fully validated string: the query that
+An avatar is a short, fully validated string: the query that
 `web/avatar/avatar.url.ts` builds and parses.
 
     head=sq&shoulder=rn&torso=bt&arms=pr&legs=sf&rh=2622&la=23ac
@@ -21,337 +19,299 @@ An avatar is already a short, fully validated string: the query that
 - Up to ten slot overrides (`rh lh rs ls ra la rt lt rl ll`), each one glyph
   that `isAllowedGlyph` accepts (the ~1,430 code points the subset font maps).
 
-A submission is exactly that string and nothing else. The server rejects
-anything `parseAvatarQuery` reports in `ignored`, then stores the
-re-serialized `buildAvatarQuery` output. The gallery renders entries with the
-existing box composer, so no user-supplied HTML, image or free text ever
-reaches the page.
+A submission is exactly that string plus an optional MUL link (§1a), nothing
+else. `canonicalAvatar` (`web/avatar/avatar.gallery.ts`) rejects unknown or
+repeated params, missing parts and anything `parseAvatarQuery` reports in
+`ignored`, drops overrides that repeat the variant's own glyph, and stores the
+re-serialized `buildAvatarQuery` output, so two queries that draw the same
+avatar store as the same string. The gallery draws entries with the creator's
+own box composer, so no user-supplied HTML, image or free text reaches a page.
 
 The only content risk left is spelling words with Basic Latin letters across
-the override cells. That is handled by reports and a hide switch (§5).
+the override cells. Reports and moderation handle that (§5).
 
 ## 1a. Which 'Mech the avatar is for
 
-A submission may name one unit from the Master Unit List (MUL); the field is
-optional, and left empty the avatar is stored with no 'Mech. The player pastes
-the unit's MUL page URL:
+A submission may name one unit from the Master Unit List (MUL) by pasting the
+unit's page URL; left empty, the avatar is stored with no 'Mech.
 
     https://masterunitlist.battletech.com/units/atlas-as7-d-dc
 
-Checked 2026-10-17 on that page: the URL slug is the unit's only identifier
-(no numeric id on the page), the title is the unit name ("Atlas AS7-D-DC"),
-and the unit art is both the `<img>` and the `og:image`:
+The URL slug is the unit's only identifier on MUL, the page title is the unit
+name ("Atlas AS7-D-DC"), and the unit art is the page's `og:image`:
 
     https://masterunitlist.battletech.com/point-backs/unit-art/manual/atlas-60d7b0.webp
 
 The art is per chassis (`atlas-…`), so variants of one 'Mech share a picture.
-There is also a per-variant Alpha Strike card at `/units/<slug>/card.png`; the
-gallery uses the unit art, not the card.
 
-- **Validation.** The server accepts only `masterunitlist.battletech.com/units/<slug>`
-  with `<slug>` matching `^[a-z0-9]+(-[a-z0-9]+)*$` (80 chars max), and keeps
-  just the slug. Nothing else from the field is stored, so it is no more of a
-  free-text risk than the avatar itself.
-- **Name and image.** On the first submission for a slug, the server fetches
+- **Validation.** Only `masterunitlist.battletech.com/units/<slug>` is
+  accepted, with `<slug>` matching `^[a-z0-9]+(-[a-z0-9]+)*$` (80 chars max).
+  Just the slug is stored.
+- **Name and image.** On the first submission for a slug the server fetches
   that MUL page once and reads `og:title` (or `<title>`) and `og:image`. A 404
-  rejects the submission as "not a MUL unit". The result is cached in the
-  `ag_units` table (§6), so MUL sees one request per unit, ever. The image URL is
-  accepted only if it is on `masterunitlist.battletech.com`.
-- **If MUL can't be read** (down, blocks Cloudflare, or changes its markup),
-  the submission still succeeds: the name falls back to the slug
-  (`atlas-as7-d-dc` shown as "Atlas AS7-D-DC"), the image is left empty, and
-  you can fill or fix both in the admin page. Not verified yet: whether MUL
-  answers requests from Cloudflare's network. Plain fetches from this
-  project's cloud sandbox were refused, while a fetch through a web reader
-  worked.
-- **Image is hotlinked, never copied.** The entry page shows MUL's own image
-  URL in an `<img>` with `referrerpolicy="no-referrer"` and a plain
-  placeholder on error, plus a "View on Master Unit List" link. The artwork
-  stays on Catalyst's servers and the gallery stores only the URL, which keeps
-  it in line with the fan-policy notes in the IP audit.
-- **Picker (later).** A name search would be friendlier than pasting URLs. The
-  MUL page mentions a unit index it loads in the browser, but its URL was not
-  found; failing that, the repo's own `docs/mtf` catalog can back the search.
-  Either way the stored data (the slug) stays the same.
+  rejects the submission as an unknown unit. The result is cached in
+  `ag_units` (§6), so MUL sees one request per unit, ever. The image URL is
+  kept only if it is on `masterunitlist.battletech.com`.
+- **If MUL can't be read** (down, blocking Cloudflare, or changed markup), the
+  submission still succeeds: the name falls back to the prettified slug
+  (`atlas-as7-d-dc` shown as "Atlas AS7-D-DC"), the image stays empty, and the
+  admin page can fix both. Still unverified: whether MUL answers requests from
+  Cloudflare's network.
+- **Images are hotlinked, never copied.** Pages show MUL's own image URL with
+  `referrerpolicy="no-referrer"`, a placeholder on error, and a "view on
+  Master Unit List" link. The artwork stays on Catalyst's servers.
 
-The same avatar can be proposed for different 'Mechs, and different avatars
-for the same 'Mech. The gallery entry is therefore the pair (avatar, unit),
-and a vote means "this avatar fits this 'Mech". An avatar with no 'Mech is its
-own entry (avatar, none), separate from any linked entry of the same avatar;
-a vote on it just means "I like this avatar", and the export leaves it out.
+An entry is the pair (avatar, 'Mech), so the same avatar can be proposed for
+different 'Mechs and a like means "this avatar fits this 'Mech". An avatar with
+no 'Mech is its own entry, separate from any linked entry of the same avatar;
+a like on it just means "good avatar".
 
 ## 2. Stack
 
-**Folder layout.** Pages only looks for Functions in `functions/` at the repo
-root, so that folder is shared by any sub-project that adds a backend. Each
-sub-project keeps everything under its own prefix there, plus a matching
-migrations folder and table prefix:
-
-| | avatar gallery (`ag`) | a later sub-project, e.g. the terminal (`term`) |
-|---|---|---|
-| routes and server code | `functions/api/ag/` (code in `functions/api/ag/_lib/`) | `functions/api/term/` |
-| D1 schema | `migrations/ag/` | `migrations/term/` |
-| D1 tables | `ag_*` | `term_*` |
-| Access rule | `/api/ag/admin` | its own path |
-
-Nothing outside its prefix changes when one sub-project is added or removed.
-Files in `_lib/` export no request handlers, so Pages makes no routes from them
-(checked with a Wrangler build).
-
-Everything stays on the existing Cloudflare Pages project, on free tiers.
+Everything stays on the existing Cloudflare Pages project.
 
 | piece | use | free tier |
 |---|---|---|
 | Pages Functions (`functions/api/ag/`) | the API, same origin as the site, no CORS | 100k requests/day |
-| D1 | avatars, votes, reports | 5 GB, 5M reads/day, 100k writes/day |
-| Turnstile | bot check on submit (and on first vote) | free, unlimited |
-| Cloudflare Access | protects the admin routes (§4) | free up to 50 users |
+| D1 | avatars, likes, reports, keys, rate counters | 5 GB, 5M reads/day, 100k writes/day |
+| Turnstile | bot check when minting a device key and on every submission | free |
+| Cloudflare Access | protects the admin page and routes (§4) | free up to 50 users |
 
-No separate Worker, no server, no paid services. The functions import the
-same `avatar.url.ts`, `avatar.override.ts` and `avatar.data.ts` the page uses,
-so client and server can never disagree on what is valid.
+The functions import `web/avatar/avatar.gallery.ts`, which builds on the same
+`avatar.url.ts`, `avatar.override.ts` and `avatar.data.ts` the pages use, so
+client and server never disagree on what is valid.
+
+**Folder layout.** Pages only looks for Functions in `functions/` at the repo
+root, so that folder is shared by any sub-project that adds a backend. Each
+sub-project keeps everything under its own prefix, plus a matching migrations
+folder and table prefix:
+
+| | avatar gallery (`ag`) | a later sub-project, e.g. the terminal (`term`) |
+|---|---|---|
+| routes and server code | `functions/api/ag/` (helpers in `functions/api/ag/_lib/`) | `functions/api/term/` |
+| D1 schema | `migrations/ag/` | `migrations/term/` |
+| D1 tables | `ag_*` | `term_*` |
+| Access rule | `/api/ag/admin` | its own path |
+
+Nothing outside its prefix changes when a sub-project is added or removed.
+Files in `_lib/` export no request handlers, so Pages makes no routes from them.
 
 ## 3. API
 
-Every gallery route lives under `/api/ag/` (ag = avatar gallery, like the
-`ag_` tables), so other server features, for example for the bt10x terminal,
-can take their own prefix (`/api/term/...`) without colliding. The Access
-application (§9) covers only `/api/ag/admin`, so it never captures routes
-outside the gallery.
-
 | route | auth | does |
 |---|---|---|
-| `POST /api/ag/avatars` | device key + Turnstile | `{ q, mul? }`: validate both (empty `mul` = no 'Mech), canonicalize, insert or return the existing (avatar, unit) entry |
-| `GET /api/ag/avatars?sort=top\|new&unit=&mine=&cursor=` | none (key for `mine=1`) | a page of `{ id, q, unit, votes, created, by }` (`unit` null when unlinked, `by` the submitter's public ID), optionally for one unit, `unit=none`, or `mine=1`, hidden rows excluded |
-| `GET /api/ag/avatars/:id` | none | one entry with its unit's name, MUL URL and image URL |
-| `GET /api/ag/units?q=` | none | units that have entries, with entry counts and their top avatar, plus `unlinked: { count, top }` for the no-'Mech group |
-| `GET /api/ag/config` | none | public settings the page needs: Turnstile site key, page size |
-| `GET /api/ag/export` | none | top-voted avatar per unit as JSON, for the Solaris Rogue collection |
-| `POST /api/ag/avatars/:id/vote` | device key | one vote per voter; calling again removes it |
-| `POST /api/ag/avatars/:id/report` | device key | one report per voter; auto-hides at a threshold |
-| `DELETE /api/ag/avatars/:id` | device key (owner) | owner removes their own submission |
-| `GET/POST/DELETE /api/ag/admin/*` | Cloudflare Access | list reported, hide/unhide, delete an entry, ban a voter |
+| `GET /api/ag/config` | none | public settings: `turnstileSiteKey`, `pageSize`, `autoPublish` |
+| `POST /api/ag/keys` | Turnstile | `{ turnstile }`: mint a device key; returns `{ key, pid }` once |
+| `POST /api/ag/avatars` | device key + Turnstile | `{ q, mul?, turnstile }`: validate, canonicalize, insert, or return the existing entry (`existing: true`) |
+| `GET /api/ag/avatars?sort=top\|new&unit=&mine=1&cursor=` | none (key for `mine=1`) | a page of `{ id, q, unit, votes, created, by, voted, mine }`; `unit` is null when unlinked, `by` the submitter's public ID. Filter by one unit slug, `unit=none` (no 'Mech) or `mine=1` (your own). Hidden entries excluded |
+| `GET /api/ag/avatars/:id` | none | one visible entry |
+| `DELETE /api/ag/avatars/:id` | device key (owner) | the submitter removes their entry |
+| `POST /api/ag/avatars/:id/vote` | device key | toggle your like |
+| `POST /api/ag/avatars/:id/report` | device key | report once; auto-hides at the threshold (§5) |
+| `GET /api/ag/units?q=` | none | 'Mechs with visible entries, their counts and top avatar, plus `unlinked: { count, top }` for the no-'Mech group |
+| `/api/ag/admin/*` | Cloudflare Access | `GET me`; `GET entries?filter=reported\|hidden\|all`; `POST entries/:id/hide`, `unhide`, `ban-owner`; `DELETE entries/:id`; `PUT units/:slug { name, image }`; `GET export` (most-liked avatar per 'Mech, ties to the earliest) |
 
-Rate limits (per IP hash, per device key): 10 submits/day, 200 votes/day.
-D1 enforces them with a small `ag_rate` table keyed by `(who, action, day)`.
+Votes are called likes on the pages; the API and tables keep the name `votes`.
 
-## 4. Authentication
+Rate limits are counted per device key and per salted IP hash in `ag_rate`
+(defaults in §5a): submissions, likes and reports per day, and new keys per
+IP per day. Re-submitting an entry that already exists costs nothing.
 
-Default picked: **anonymous device key for players, Cloudflare Access for
-you.** Players never sign up and the gallery stores no personal data.
+## 4. Identity and authentication
 
-### Options considered
+**Players: anonymous device key.** On a player's first like, report or
+submission, the page passes a Turnstile check and asks `POST /api/ag/keys`
+for a key: a random 256-bit secret kept in `localStorage`
+(`bt10x.ag.key`) and sent as `Authorization: Bearer <key>`. The server stores
+only its SHA-256 hash, so a leaked database holds nothing usable. The key owns
+submissions (the owner can delete them) and likes (one per key per entry).
+Players never sign up and the gallery stores no personal data.
 
-1. **No identity, Turnstile only.** Votes keyed by a random browser ID in
-   `localStorage`. Simplest, but anyone can clear storage and vote again, and
-   nobody can delete their own submission.
-2. **Anonymous device key (picked).** On first use the page asks the server
-   for a key: a random 256-bit secret kept in `localStorage`, sent as a
-   bearer header. The server stores only its SHA-256 hash, so a leaked
-   database exposes nothing usable. Minting a key needs Turnstile, so making
-   many keys costs a bot real effort. The key owns submissions (delete your
-   own) and votes (one per key). A "copy my key" / "paste key" button moves
-   it to another device. About 40 lines of server code.
-3. **Passkeys (WebAuthn).** Real accounts with no password and no email,
-   synced across the player's devices by their OS. Strongest abuse
-   resistance of the no-PII options, but several hundred lines (or a small
-   library) and a sign-in step players have to understand.
-4. **OAuth with GitHub or Discord.** One provider, a signed session cookie,
-   store only the provider's numeric user ID. Good fit if the player
-   community lives on Discord. Costs an app registration, a callback route,
-   and a login button between the player and their first vote.
-5. **Email magic link.** Needs an email sender (for example Resend's free
-   tier) and stores email addresses, which brings privacy obligations.
-   Not recommended for this.
+**Public ID.** Each key has a public ID of 8 base58 characters (`publicId` in
+`avatar.gallery.ts`: SHA-256 of `ag-pid:` plus the key hash), which reveals
+neither the key nor its stored hash. The server stores it in `ag_keys.pid`
+when it mints the key; the page computes its own from the key it holds. Pages
+show it as "you: 7Hq3xKpa" and "by 7Hq3xKpa".
 
-Upgrade path: option 2 now; if vote manipulation shows up, add option 4 as
-"sign in to make your votes count" and weight or filter anonymous votes,
-without breaking existing keys.
+Clearing site data or switching browsers means a new key and a new ID; old
+entries stay but no longer show as yours. Moving a key between devices
+("copy my key / restore") is not built yet.
 
-### Admin
+**Admin: Cloudflare Access.** `/api/ag/admin/*` and the `/avatar/admin` page
+sit behind an Access application that allows only your email. The admin
+function also verifies the `Cf-Access-Jwt-Assertion` JWT (RS256, against
+`https://<team>/cdn-cgi/access/certs`, checking audience, issuer and expiry),
+refuses every request when `ACCESS_TEAM_DOMAIN` or `ACCESS_AUD` is missing, and
+requires writes to come from the site's own origin. There is no admin password
+in the codebase.
 
-`/api/ag/admin/*` and a small `/avatar/admin` page sit behind a Cloudflare
-Access policy that allows only your email. Access does the login (one-time
-PIN or GitHub), and the function checks the `Cf-Access-Jwt-Assertion`
-header, so there is no admin password in the codebase.
+Alternatives considered and left for later: passkeys, OAuth (GitHub or
+Discord) as "sign in to make your likes count", and email magic links (not
+recommended: stores addresses).
 
 ## 5. Moderation
 
-Default picked: **auto-publish**, since validation already rules out almost
-all bad content.
+New entries are published at once (`AUTO_PUBLISH`), since validation already
+rules out almost all bad content.
 
-- Any key can report an entry once. At 3 reports it is hidden until you
-  review it in the admin page.
-- You can hide/unhide any entry and ban a key hash (its submissions are
-  hidden and its votes stop counting).
-- You can also delete any entry outright. That removes the row with its votes
-  and reports in one D1 batch and cannot be undone, so the admin page asks to
-  confirm. Hide is the everyday tool; delete is for content you never want
-  back. A deleted (avatar, 'Mech) pair can be submitted again, so for repeat
-  offenders ban the key instead.
-- Switching to approve-first later is one flag: new rows start with
-  `hidden = 1`.
+- Any key can report an entry once. At `REPORT_HIDE_THRESHOLD` reports
+  (default 3) it is hidden until you review it.
+- The admin page lists reported, hidden or all entries, each with its
+  submitter's public ID, likes and reports. Actions:
+  - **hide / unhide.** Unhiding marks the entry reviewed, so the same reports
+    can't hide it again.
+  - **delete.** Removes the entry with its likes and reports in one batch,
+    after a confirm. It can't be undone, and the same (avatar, 'Mech) can be
+    submitted again, so for repeat offenders ban instead.
+  - **ban owner.** Bans the submitter's key: all its entries are hidden, its
+    likes and reports are removed and the counts recomputed, and the key gets
+    "banned" on every further call.
+  - **fix 'Mech.** Corrects a unit's name or image URL (linked entries only).
+- Setting `AUTO_PUBLISH=false` makes new entries start hidden until you unhide
+  them.
 
 ## 5a. Settings
 
-All tunable numbers are Pages environment variables. Defaults live in
-`functions/api/ag/_lib/config.ts`; you override any of them in the Cloudflare
-dashboard (Workers & Pages → the project → Settings → Variables and Secrets).
-A change takes effect on the next deployment (redeploy or "Retry deployment").
-The repo has no `wrangler.toml` on purpose: once a Pages project has one, it
-becomes the source of truth for bindings and variables, and the dashboard
-settings above stop applying.
+Tunable numbers are Pages environment variables. Defaults live in
+`functions/api/ag/_lib/config.ts`; override them in the Cloudflare dashboard
+(Workers & Pages → the project → Settings → Variables and Secrets). A change
+takes effect on the next deployment. A missing or malformed value falls back
+to the default. The admin page header shows the values in effect.
+
+The repo has no `wrangler.toml` at its root on purpose: once a Pages project
+has one, it becomes the source of truth for bindings and variables, and the
+dashboard settings stop applying.
 
 | variable | default | meaning |
 |---|---|---|
 | `REPORT_HIDE_THRESHOLD` | `3` | reports that auto-hide an entry; `0` turns auto-hide off |
-| `AUTO_PUBLISH` | `true` | `false` makes new entries start hidden until you approve them |
+| `AUTO_PUBLISH` | `true` | `false` makes new entries start hidden |
 | `SUBMITS_PER_DAY` | `10` | submissions per key and per IP per day |
-| `VOTES_PER_DAY` | `200` | votes per key and per IP per day |
+| `VOTES_PER_DAY` | `200` | likes per key and per IP per day |
 | `REPORTS_PER_DAY` | `20` | reports per key and per IP per day |
 | `KEYS_PER_DAY` | `5` | device keys minted per IP per day |
 | `PAGE_SIZE` | `48` | entries per gallery page |
+| `TURNSTILE_SITE_KEY` | `0x4AAAAAAFZV3_ri2orug_FJ` | public Turnstile site key, served by `GET /api/ag/config` |
 | `ACCESS_TEAM_DOMAIN` | none | Zero Trust team domain, e.g. `stoneworks.cloudflareaccess.com` |
 | `ACCESS_AUD` | none | AUD tag of the admin Access application |
-| `TURNSTILE_SITE_KEY` | `0x4AAAAAAFZV3_ri2orug_FJ` | public Turnstile site key; the page reads it from `GET /api/ag/config` |
 
-Secrets (`TURNSTILE_SECRET`, `IP_HASH_SALT`) go in the same dashboard screen
-as encrypted secrets, never in the repo. `functions/api/ag/_lib/config.ts` reads and
-validates the settings once per request, falling back to the defaults on a
-missing or malformed value. The admin page shows the values in effect.
-
-Later, if you want to change these without redeploying, the same keys can move
-to a one-row `ag_settings` table edited from the admin page.
+Secrets go in the same screen as encrypted values, never in the repo:
+`TURNSTILE_SECRET` (the widget's secret key) and `IP_HASH_SALT` (any long
+random string; it salts the IP hashes in `ag_rate`).
 
 ## 6. Data model (D1)
 
-```sql
--- Every table and index is prefixed ag_ (avatar gallery), so the gallery
--- can share a D1 database with anything else without name clashes.
-CREATE TABLE ag_units (
-  slug     TEXT PRIMARY KEY,          -- MUL /units/<slug>, e.g. atlas-as7-d-dc
-  name     TEXT NOT NULL,             -- from MUL, or prettified slug
-  image    TEXT,                      -- MUL image URL, hotlinked; NULL if unknown
-  fetched  INTEGER                    -- when MUL was last read; NULL if it failed
-);
+The schema is `migrations/ag/0001_gallery.sql`. Every table and index is
+prefixed `ag_`, so the gallery can share a D1 database with other features.
 
-CREATE TABLE ag_avatars (
-  id       INTEGER PRIMARY KEY,
-  q        TEXT NOT NULL,             -- canonical buildAvatarQuery output
-  unit     TEXT REFERENCES ag_units (slug), -- NULL: not tied to a 'Mech
-  owner    TEXT NOT NULL,             -- device key hash
-  votes    INTEGER NOT NULL DEFAULT 0,
-  reports  INTEGER NOT NULL DEFAULT 0,
-  hidden   INTEGER NOT NULL DEFAULT 0,
-  reviewed INTEGER NOT NULL DEFAULT 0,
-  created  INTEGER NOT NULL,          -- unix seconds
-  UNIQUE (q, unit)
-);
-CREATE UNIQUE INDEX ag_avatars_unlinked ON ag_avatars (q) WHERE unit IS NULL;
-CREATE INDEX ag_avatars_unit ON ag_avatars (unit, hidden, votes DESC);
-CREATE INDEX ag_avatars_top ON ag_avatars (hidden, votes DESC, id DESC);
-CREATE INDEX ag_avatars_new ON ag_avatars (hidden, id DESC);
+| table | holds |
+|---|---|
+| `ag_units` | `slug` (PK), `name`, `image` (MUL URL or NULL), `fetched` (when MUL was read; NULL if it failed) |
+| `ag_avatars` | `id`, `q` (canonical query), `unit` (slug, or NULL for no 'Mech), `owner` (key hash), `votes`, `reports`, `hidden`, `reviewed`, `created` |
+| `ag_keys` | `hash` (PK, SHA-256 of the key), `pid` (public ID), `created`, `banned` |
+| `ag_votes` | `(avatar, voter)` pairs, one like per key per entry |
+| `ag_reports` | `(avatar, voter)` pairs, one report per key per entry |
+| `ag_rate` | `(who, action, day)` counters; `who` is a key hash or salted IP hash |
 
-CREATE TABLE ag_keys    (hash TEXT PRIMARY KEY, pid TEXT NOT NULL, created INTEGER NOT NULL, banned INTEGER NOT NULL DEFAULT 0);
-CREATE TABLE ag_votes   (avatar INTEGER NOT NULL, voter TEXT NOT NULL, PRIMARY KEY (avatar, voter));
-CREATE TABLE ag_reports (avatar INTEGER NOT NULL, voter TEXT NOT NULL, PRIMARY KEY (avatar, voter));
-CREATE TABLE ag_rate    (who TEXT NOT NULL, action TEXT NOT NULL, day INTEGER NOT NULL,
-                      n INTEGER NOT NULL, PRIMARY KEY (who, action, day));
-```
+- `UNIQUE (q, unit)` merges duplicate submissions for the same 'Mech. SQLite
+  treats NULLs as distinct there, so the partial unique index
+  `ag_avatars_unlinked` on `q WHERE unit IS NULL` does the same for avatars
+  with no 'Mech.
+- `votes` and `reports` are counts kept on `ag_avatars`, recomputed in the
+  same D1 batch that changes `ag_votes` or `ag_reports`.
+- `reviewed` is set when you unhide an entry, so reports stop auto-hiding it.
+- IPs are only ever stored as a salted hash inside `ag_rate`. Pages Functions
+  have no cron, so about one rate check in fifty prunes counters older than
+  the last few days.
+- Indexes cover the gallery's reads: by unit, top, new, by owner, and likes by
+  voter.
 
-`UNIQUE (q, unit)` merges duplicate submissions for the same 'Mech into one
-entry. SQLite treats NULLs as distinct there, so the partial index
-`ag_avatars_unlinked` does the same for avatars with no 'Mech. The vote count is denormalized on `ag_avatars.votes` and updated in the
-same D1 batch as the `ag_votes` row. IPs are only ever stored as a salted hash
-inside `ag_rate`. Pages Functions have no cron triggers, so `ag_rate` rows
-older than three days are pruned opportunistically (about one rate check in
-fifty deletes them). `ag_avatars.reviewed` is set when you unhide an entry, so
-the same reports cannot hide it again.
+## 7. Pages
 
-## 7. Client
+**Avatar creator (`/avatar`).** A static page with no gallery code. Its
+second row of actions has **submit to gallery**, a plain link to
+`gallery.html?submit&head=…` that carries the current avatar in the same
+params as the creator's own URL (plus `lang` when the address bar has it), and
+**gallery**.
 
-- The avatar creator stays a static page with no gallery code. Its **submit to
-  gallery** link opens `gallery.html?submit&head=…`, carrying the avatar in the
-  same params as the creator's own URL (plus `lang` when the address bar has it).
-- The gallery reads those params and opens the **Submit** panel, a modal over
-  the dimmed gallery: the avatar preview, an optional MUL URL field, the
-  Turnstile check when Cloudflare asks for one, submit, close, and "edit in
-  creator" back to `/avatar` with the same parts. Success shows the entry link
-  (or "already in the gallery"). A bad or missing avatar shows only the error,
-  "edit in creator" and close. Closing drops the panel's params from the URL.
-- Page `web/gallery.html`: Top / New / By 'Mech / No 'Mech tabs, a grid of
-  avatar boxes drawn by `composeAvatar` with the 'Mech name under each ("no
-  'Mech" in dim italics when unlinked), "by <public ID>" ("by you" on your
-  own), and a like toggle (`♡ like · 12` / `♥ liked · 12`; votes in the API).
-- Identity without accounts: each device key has a **public ID**, 8 base58
-  chars (`publicId` in `avatar.gallery.ts`: SHA-256 of `ag-pid:` + the key
-  hash, so it reveals neither the key nor its stored hash). The server stores
-  it in `ag_keys.pid` when it mints the key; the page computes its own from
-  the key it holds. The header shows "you: 7Hq3xKpa · my avatars" (or "you:
-  guest" before the first like or submit), `?mine=1` lists your own
-  submissions, and the Submit panel says "submitting as 7Hq3xKpa". Clearing
-  site data or switching browsers means a new ID; old entries stay. By 'Mech ends with a
-  "no 'Mech" group card; `?unit=none` lists that group.
-- Entry page `web/gallery.html?id=<id>`: the avatar large, the 'Mech name, the
-  MUL image (hotlinked, placeholder on error), a "View on Master Unit List"
-  link, "Open in creator", vote and report, and the other avatars proposed for
-  the same 'Mech. An unlinked entry shows "no 'Mech" with no image or MUL link,
-  and the other unlinked avatars below.
-- `GET /api/ag/export` gives you the collection: for each unit, its name, MUL slug
-  and top-voted avatar query, ready to turn into Solaris Rogue avatar data.
-- Strings go through `web/avatar/gallery.i18n.ts` (en/ko), like the creator's
-  `avatar.i18n.ts`. The admin page is English only.
-- Admin page: `web/gallery-admin.html`, copied to `dist/web/avatar/admin.html`
-  so it is served at `/avatar/admin`, the path Access guards. It lists
-  reported / hidden / all entries with hide, unhide, delete, ban owner and
-  fix 'Mech (name, image URL; linked entries only) actions.
+**Gallery (`/gallery`, `web/gallery.html`).**
+- Header: "you: 7Hq3xKpa · my avatars", or "you: guest" before this browser
+  has a key; EN / 한국어 switch.
+- Tabs: **top**, **new**, **by 'Mech** (a card per 'Mech with its top avatar
+  and count, ending with a "no 'Mech" group card; search by name), and **no
+  'Mech** (`?unit=none`).
+- Cards: the avatar (links to its entry page), the 'Mech name (or "no 'Mech"
+  in dim italics), "by 7Hq3xKpa" ("by you" on your own), and the like toggle
+  `♡ like · 12` / `♥ liked · 12`.
+- `?unit=<slug>`: one 'Mech's MUL image, its "view on Master Unit List" link
+  and all its avatars.
+- `?id=<n>`: one entry. The avatar large, the 'Mech name, submitter, MUL image
+  and link, like, "open in creator", report, delete (yours only), and the
+  other avatars for the same 'Mech. An unlinked entry shows "no 'Mech" with no
+  image, and the other unlinked avatars below.
+- `?mine=1`: the avatars you submitted from this browser.
+- `?submit&head=…`: opens the **Submit** panel, a modal over the dimmed
+  gallery. It shows the avatar preview, an optional MUL URL field, "submitting
+  as 7Hq3xKpa", the Turnstile check when Cloudflare asks for one, submit,
+  close, and "← edit in creator" back to `/avatar` with the same parts.
+  Success shows "submitted · view in gallery" (or "already in the gallery").
+  A missing or invalid avatar shows only the error, "edit in creator" and
+  close. Closing removes the panel's params from the URL.
+
+Strings go through `web/avatar/gallery.i18n.ts` (en/ko).
+
+**Admin (`/avatar/admin`).** `web/gallery-admin.html`, copied to
+`dist/web/avatar/admin.html` so it is served at the path Access guards
+(`_headers` adds `noindex` and `no-store`). English only. Actions as in §5.
+
+**Not found.** `web/404.html` at the site root makes unknown paths return a
+404 page instead of Pages' fallback to `index.html`.
 
 ## 8. Files
 
 | file | what |
 |---|---|
 | `migrations/ag/0001_gallery.sql` | schema (§6) |
+| `migrations/ag/wrangler.local.toml` | local development only: where `d1 execute --local` finds the database |
 | `functions/api/ag/config.ts` | public settings for the pages |
 | `functions/api/ag/keys.ts` | mint a device key (Turnstile) |
 | `functions/api/ag/avatars/index.ts` | list, submit |
 | `functions/api/ag/avatars/[id].ts` | one entry; owner delete |
-| `functions/api/ag/avatars/[id]/vote.ts`, `report.ts` | vote toggle, report |
-| `functions/api/ag/units.ts`, `export.ts` | 'Mechs with entries, collection export |
+| `functions/api/ag/avatars/[id]/vote.ts`, `report.ts` | like toggle, report |
+| `functions/api/ag/units.ts` | 'Mechs with entries |
 | `functions/api/ag/admin/[[path]].ts` | admin routes |
 | `functions/api/ag/_lib/` | `cf.ts` (hand-written D1/Pages types), `config.ts` (§5a), `http.ts`, `auth.ts` (device keys, IP hash), `rate.ts`, `turnstile.ts`, `mul.ts` (MUL fetch and parsing), `access.ts` (Access JWT check), `gallery.ts` (queries) |
-| `web/avatar/avatar.gallery.ts` | shared by pages and functions: avatar validation and canonical form, MUL URL parsing, slug prettifier |
-| `web/avatar/avatar.compose.ts` | avatar box drawing, moved out of `avatar.ts` so the server can import it |
-| `web/avatar/gallery.client.ts`, `gallery.i18n.ts` | browser API client (device key, Turnstile), strings |
+| `web/avatar/avatar.gallery.ts` | shared by pages and functions: avatar validation and canonical form, MUL URL parsing, slug prettifier, public IDs |
+| `web/avatar/avatar.compose.ts` | avatar box drawing, shared by the creator, the gallery and the server |
+| `web/avatar/gallery.client.ts` | browser API client: device key, public ID, Turnstile |
+| `web/avatar/gallery.i18n.ts` | gallery strings (en/ko) |
 | `web/gallery.html`, `web/gallery.css`, `web/avatar/gallery.ts` | gallery page |
-| `web/avatar/gallery.submit.ts` | the gallery's Submit panel (`?submit&head=…`) |
+| `web/avatar/gallery.submit.ts` | the Submit panel |
 | `web/gallery-admin.html`, `web/avatar/gallery.admin.ts` | admin page |
-| `web/avatar.html`, `web/avatar/avatar.ts` | creator: static "submit to gallery" and gallery links |
+| `web/avatar.html`, `web/avatar/avatar.ts` | creator: static "submit to gallery" and "gallery" links |
 | `scripts/build-web.mjs`, `scripts/dist-web.mjs` | bundle and ship the gallery pages |
-| `tests/gallery.test.ts` | validation, canonical form, MUL URL and page parsing |
+| `tests/gallery.test.ts` | validation, canonical form, MUL URL and page parsing, public IDs |
 | `tests/gallery-api.test.ts` | the API end to end over the real migration in `node:sqlite`, with Turnstile, MUL and Access stubbed |
 
-## 9. Setup you do once in the Cloudflare dashboard
+## 9. Setup in the Cloudflare dashboard
 
 1. Create a D1 database and bind it to the Pages project as `DB`.
-2. Create a Turnstile widget for `bt10x.stoneworks.dev` (Managed mode).
-   Done: site key `0x4AAAAAAFZV3_ri2orug_FJ`, the default of
-   `TURNSTILE_SITE_KEY` in `config.ts` (public). Add the secret key as the encrypted
-   secret `TURNSTILE_SECRET` (Production and Preview); never commit it.
-   For local dev, `.dev.vars` (gitignored) uses Cloudflare's always-pass test
-   pair: site key `1x00000000000000000000AA`, secret
-   `1x0000000000000000000000000000000AA`.
-3. Add a Cloudflare Access application for `/api/ag/admin/*` and
-   `/avatar/admin*` allowing your email.
-   Copy its Application Audience (AUD) tag into `ACCESS_AUD` and the team
-   domain (`<team>.cloudflareaccess.com`) into `ACCESS_TEAM_DOMAIN`, both as
-   plain variables. The admin function verifies the `Cf-Access-Jwt-Assertion`
-   JWT against `https://<team>.cloudflareaccess.com/cdn-cgi/access/certs` and
-   that AUD, and refuses the request when either is missing, so `*.pages.dev`
-   preview URLs (which Access does not cover) fail closed.
-
-4. Create the tables once (from the repo root, signed in with `npx wrangler login`):
+2. Create a Turnstile widget for `bt10x.stoneworks.dev` (Managed mode). Its
+   site key `0x4AAAAAAFZV3_ri2orug_FJ` is already the default of
+   `TURNSTILE_SITE_KEY`. Add its secret key as the encrypted secret
+   `TURNSTILE_SECRET` (Production and Preview).
+3. Add `IP_HASH_SALT` as an encrypted secret.
+4. Add a Cloudflare Access application for `/api/ag/admin/*` and
+   `/avatar/admin*` allowing your email. Copy its Application Audience (AUD)
+   tag into `ACCESS_AUD` and the team domain (`<team>.cloudflareaccess.com`)
+   into `ACCESS_TEAM_DOMAIN`, both as plain variables. `*.pages.dev` preview
+   URLs, which Access does not cover, fail closed.
+5. Create the tables once, from the repo root, signed in with
+   `npx wrangler login`:
    `npx wrangler d1 execute <database-name> --remote --file=migrations/ag/0001_gallery.sql`.
-   The statements use `IF NOT EXISTS`, so running it again is harmless.
+   The statements use `IF NOT EXISTS`, so running it again is harmless, but it
+   does not alter tables that already exist.
+6. Deploy.
 
 ### Local development
 
@@ -373,23 +333,20 @@ From the repo root:
 4. Serve: `npx wrangler pages dev dist/web --d1 DB=ag-local`, then open
    `http://localhost:8788/avatar` and `http://localhost:8788/gallery`.
 
-`migrations/ag/wrangler.local.toml` only tells `d1 execute` where the local
-database is; `--d1 DB=ag-local` gives `pages dev` the same one. Keep any
-`wrangler.toml` out of the repo root (see §5a). Submitting fetches the MUL page
-for real, so it needs network. Admin routes refuse locally, since
-`ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` only make sense behind Access on the real
-domain. To start over, delete `.wrangler/state` and repeat step 3.
+`--d1 DB=ag-local` gives `pages dev` the same database that
+`wrangler.local.toml` points `d1 execute` at. Keep any `wrangler.toml` out of
+the repo root (§5a). Submitting fetches the MUL page for real, so it needs
+network. Admin routes refuse locally, since Access only runs on the real
+domain. To start over, or after a schema change, delete `.wrangler/state` and
+repeat step 3.
 
-## 10. Defaults picked, in one list
+## 10. Later
 
-- Pages Functions + D1 + Turnstile, all free tier.
-- Submission is the canonical avatar query plus an optional MUL unit URL; no
-  names or free text.
-- An entry is an (avatar, 'Mech) pair, or an avatar with no 'Mech; votes mean
-  "fits this 'Mech" (or just "good avatar" when unlinked).
-- The creator is static; submitting happens on the gallery page.
-- MUL name and image URL are fetched once per unit and cached; the image is
-  hotlinked, never copied.
-- Anonymous device key for players; Cloudflare Access for admin.
-- Auto-publish, hide at 3 reports.
-- Votes are toggles, one per key; 10 submits and 200 votes per day per key/IP.
+- A 'Mech name search in the Submit panel instead of pasting MUL URLs, backed
+  by MUL's unit index if one can be found, or by the repo's `docs/mtf` catalog.
+  The stored slug stays the same.
+- Moving a device key to another browser ("copy my key / restore").
+- Settings editable from the admin page without redeploying (a one-row
+  `ag_settings` table).
+- If like manipulation shows up: OAuth sign-in, with anonymous likes weighted
+  or filtered.
