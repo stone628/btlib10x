@@ -1,0 +1,143 @@
+/**
+ * Gallery strings built in script (the gallery page and its Submit panel). Static page text lives in the HTML as paired `<span lang>`
+ * elements; the locale is `<html lang>`, as in avatar.i18n.ts. 'Mech names
+ * come from the Master Unit List and stay as they are.
+ */
+const en = {
+  title: "bt10x 'Mech avatar gallery",
+  votes: (n: number) => (n === 1 ? "1 like" : `${n} likes`),
+  vote: "like",
+  voted: "liked",
+  voteLabel: (name: string) => `like: this avatar fits ${name}`,
+  unvoteLabel: (name: string) => `unlike this avatar for ${name}`,
+  voteLabelNoMech: "like this avatar",
+  unvoteLabelNoMech: "unlike this avatar",
+  you: "you",
+  guest: "guest",
+  guestHint: "you get an ID on your first like or submission",
+  byYou: "by you",
+  by: (id: string) => `by ${id}`,
+  myAvatars: "my avatars",
+  mineTitle: "avatars you submitted",
+  mineNoKey: "you haven't submitted anything from this browser yet",
+  submittingAs: (id: string) => `submitting as ${id}`,
+  submittingAsNew: "you get an ID when you submit",
+  report: "report",
+  reported: "reported, thanks",
+  reportConfirm: "Report this avatar as inappropriate?",
+  remove: "delete",
+  removeConfirm: "Delete your avatar? This cannot be undone.",
+  removed: "deleted",
+  openInCreator: "open in creator",
+  viewOnMul: "view on Master Unit List",
+  otherForMech: (name: string) => `other avatars for ${name}`,
+  allForMech: (name: string) => `all avatars for ${name}`,
+  entriesCount: (n: number) => (n === 1 ? "1 avatar" : `${n} avatars`),
+  loadMore: "load more",
+  loading: "loading…",
+  empty: "nothing here yet",
+  notFound: "avatar not found (it may have been removed)",
+  verifying: "checking you're human…",
+  submitted: "submitted",
+  submittedPending: "submitted; it shows up once approved",
+  alreadyThere: "this avatar is already in the gallery for that 'Mech",
+  alreadyThereNoMech: "this avatar is already in the gallery without a 'Mech",
+  noMech: "no 'Mech",
+  noMechLabel: "avatar with no 'Mech",
+  noMechTitle: "avatars not tied to a 'Mech",
+  otherNoMech: "other avatars with no 'Mech",
+  viewEntry: "view in gallery",
+  imageAlt: (name: string) => `${name} unit art from the Master Unit List`,
+  noImage: "no image",
+  errors: {
+    network: "network error, try again",
+    rate_limited: "daily limit reached, try again tomorrow",
+    bot_check_failed: "human check failed, try again",
+    bot_check_unavailable: "human check unavailable, try again later",
+    bad_avatar: "this avatar can't be submitted",
+    bad_mul_url:
+      "paste a Master Unit List unit page, like masterunitlist.battletech.com/units/atlas-as7-d",
+    unknown_unit: "the Master Unit List has no such unit",
+    banned: "this device can no longer post",
+    not_found: "not found",
+    not_owner: "only the submitter can delete this",
+    not_configured: "the gallery is not set up yet",
+  } as Record<string, string>,
+  error: (code: string) => `error: ${code}`,
+};
+
+export type GalleryMessages = typeof en;
+
+const ko: GalleryMessages = {
+  title: "bt10x 'Mech 아바타 갤러리",
+  votes: (n) => `좋아요 ${n}개`,
+  vote: "좋아요",
+  voted: "좋아요함",
+  voteLabel: (name) => `좋아요: 이 아바타는 ${name}에 어울립니다`,
+  unvoteLabel: (name) => `${name} 아바타 좋아요 취소`,
+  voteLabelNoMech: "이 아바타 좋아요",
+  unvoteLabelNoMech: "이 아바타 좋아요 취소",
+  you: "나",
+  guest: "손님",
+  guestHint: "처음 좋아요를 누르거나 등록하면 ID가 생깁니다",
+  byYou: "내가 만듦",
+  by: (id) => `만든 이 ${id}`,
+  myAvatars: "내 아바타",
+  mineTitle: "내가 등록한 아바타",
+  mineNoKey: "이 브라우저에서 아직 등록한 아바타가 없습니다",
+  submittingAs: (id) => `${id}(으)로 등록`,
+  submittingAsNew: "등록하면 ID가 생깁니다",
+  report: "신고",
+  reported: "신고했습니다. 감사합니다",
+  reportConfirm: "이 아바타를 부적절한 내용으로 신고할까요?",
+  remove: "삭제",
+  removeConfirm: "내 아바타를 삭제할까요? 되돌릴 수 없습니다.",
+  removed: "삭제했습니다",
+  openInCreator: "생성기에서 열기",
+  viewOnMul: "Master Unit List에서 보기",
+  otherForMech: (name) => `${name}의 다른 아바타`,
+  allForMech: (name) => `${name}의 모든 아바타`,
+  entriesCount: (n) => `아바타 ${n}개`,
+  loadMore: "더 보기",
+  loading: "불러오는 중…",
+  empty: "아직 아무것도 없습니다",
+  notFound: "아바타를 찾을 수 없습니다 (삭제되었을 수 있습니다)",
+  verifying: "사람인지 확인하는 중…",
+  submitted: "등록했습니다",
+  submittedPending: "등록했습니다. 승인 후 표시됩니다",
+  alreadyThere: "이 'Mech에 같은 아바타가 이미 등록되어 있습니다",
+  alreadyThereNoMech: "같은 아바타가 'Mech 없이 이미 등록되어 있습니다",
+  noMech: "'Mech 없음",
+  noMechLabel: "'Mech가 지정되지 않은 아바타",
+  noMechTitle: "'Mech가 지정되지 않은 아바타",
+  otherNoMech: "'Mech가 지정되지 않은 다른 아바타",
+  viewEntry: "갤러리에서 보기",
+  imageAlt: (name) => `Master Unit List의 ${name} 유닛 그림`,
+  noImage: "그림 없음",
+  errors: {
+    network: "네트워크 오류입니다. 다시 시도하세요",
+    rate_limited: "오늘 한도에 도달했습니다. 내일 다시 시도하세요",
+    bot_check_failed: "사람 확인에 실패했습니다. 다시 시도하세요",
+    bot_check_unavailable: "사람 확인을 사용할 수 없습니다. 나중에 다시 시도하세요",
+    bad_avatar: "이 아바타는 등록할 수 없습니다",
+    bad_mul_url:
+      "Master Unit List 유닛 페이지 주소를 붙여넣으세요. 예: masterunitlist.battletech.com/units/atlas-as7-d",
+    unknown_unit: "Master Unit List에 없는 유닛입니다",
+    banned: "이 기기에서는 더 이상 등록할 수 없습니다",
+    not_found: "찾을 수 없습니다",
+    not_owner: "등록한 사람만 삭제할 수 있습니다",
+    not_configured: "갤러리가 아직 설정되지 않았습니다",
+  },
+  error: (code) => `오류: ${code}`,
+};
+
+/** Strings for the current `<html lang>`; anything but `ko` reads English. */
+export function gmsg(): GalleryMessages {
+  return document.documentElement.lang === "ko" ? ko : en;
+}
+
+/** A readable message for an API error code. */
+export function errorText(code: string): string {
+  const m = gmsg();
+  return m.errors[code] ?? m.error(code);
+}

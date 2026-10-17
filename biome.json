@@ -7,9 +7,12 @@
       "scripts/**",
       "web/**",
       "data/**",
+      "functions/**",
       "!web/terminal.js",
       "!web/btlib10x.js",
       "!web/avatar.js",
+      "!web/gallery.js",
+      "!web/gallery-admin.js",
       "!web/avatar/avatar.glyphs.ts",
       "!web/btlib10x.data.js",
       "!data/**/*.json"

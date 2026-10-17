@@ -1,0 +1,10 @@
+# Local development only (docs/GALLERY.md "Local development"). It sits outside
+# the repo root, so Pages deploys never read it; the dashboard keeps the real
+# bindings. Used only by `wrangler d1 execute --local` to find the local D1.
+name = "bt10x-local"
+compatibility_date = "2025-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ag-local"
+database_id = "ag-local"

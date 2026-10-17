@@ -1,3 +1,4 @@
+import { composeAvatar, composeSelectedAvatar } from "./avatar.compose";
 import { ARMS, HEADS, LEGS, type PartVariant, SHOULDERS, TORSOS } from "./avatar.data";
 import { msg } from "./avatar.i18n";
 import {
@@ -43,44 +44,6 @@ const PARTS: PartDef[] = [
 
 /** Default number of preview avatars shown on each side of the selected one. */
 const SIDE_COUNT = 5;
-
-/** Full-mech box with single borders (side previews). */
-function composeAvatar(
-  head: string,
-  shoulder: string,
-  torso: string,
-  arm: string,
-  leg: string,
-): string[] {
-  const sL = shoulder[0] ?? " ";
-  const sR = shoulder[1] ?? " ";
-  const h = `${head[0] ?? " "}${head[1] ?? " "}`;
-  const aL = arm[0] ?? " ";
-  const aR = arm[1] ?? " ";
-  const t = `${torso[0] ?? " "}${torso[1] ?? " "}`;
-  const lL = leg[0] ?? " ";
-  const lR = leg[1] ?? " ";
-  return ["┌────┐", `│${sL}${h}${sR}│`, `│${aL}${t}${aR}│`, `│ ${lL}${lR} │`, "└────┘"];
-}
-
-/** Full-mech box with double borders (selected center). */
-export function composeSelectedAvatar(
-  head: string,
-  shoulder: string,
-  torso: string,
-  arm: string,
-  leg: string,
-): string[] {
-  const sL = shoulder[0] ?? " ";
-  const sR = shoulder[1] ?? " ";
-  const h = `${head[0] ?? " "}${head[1] ?? " "}`;
-  const aL = arm[0] ?? " ";
-  const aR = arm[1] ?? " ";
-  const t = `${torso[0] ?? " "}${torso[1] ?? " "}`;
-  const lL = leg[0] ?? " ";
-  const lR = leg[1] ?? " ";
-  return ["╔════╗", `║${sL}${h}${sR}║`, `║${aL}${t}${aR}║`, `║ ${lL}${lR} ║`, "╚════╝"];
-}
 
 /**
  * How many side slots fit on each side of the selected box, given the
@@ -179,6 +142,9 @@ function syncUrl(state: AvatarState): void {
   // Keep ?lang= so a reload stays in that language when storage is blocked.
   const lang = new URLSearchParams(location.search).get("lang");
   const langParam = lang === null ? "" : `&lang=${encodeURIComponent(lang)}`;
+  // The gallery's Submit panel reads the avatar from these same params.
+  const submit = document.getElementById("show-submit");
+  if (submit instanceof HTMLAnchorElement) submit.href = `gallery.html?submit&${query}${langParam}`;
   try {
     history.replaceState(
       history.state,

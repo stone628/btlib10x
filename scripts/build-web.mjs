@@ -49,23 +49,36 @@ const avatarCtx = await esbuild.context({
   logLevel: "info",
 });
 
+// Avatar gallery pages (docs/GALLERY.md); their API is functions/api/ag/.
+const galleryCtx = await esbuild.context({
+  entryPoints: { gallery: "web/avatar/gallery.ts", "gallery-admin": "web/avatar/gallery.admin.ts" },
+  outdir: "web",
+  bundle: true,
+  format: "esm",
+  target: "es2022",
+  logLevel: "info",
+});
+
 if (serve) {
   const { hosts, port: actualPort } = await appCtx.serve({ servedir: "web", port });
   console.log(
-    `serving at http://${hosts[0]}:${actualPort}/index.html (terminal: /terminal.html, avatar: /avatar.html)`,
+    `serving at http://${hosts[0]}:${actualPort}/index.html (terminal: /terminal.html, avatar: /avatar.html, gallery: /gallery.html)`,
   );
 }
 if (watch) {
   await coreCtx.watch();
   await appCtx.watch();
   await avatarCtx.watch();
+  await galleryCtx.watch();
   console.log("watching for changes…");
 }
 if (!watch && !serve) {
   await coreCtx.rebuild();
   await appCtx.rebuild();
   await avatarCtx.rebuild();
+  await galleryCtx.rebuild();
   await coreCtx.dispose();
   await appCtx.dispose();
   await avatarCtx.dispose();
+  await galleryCtx.dispose();
 }

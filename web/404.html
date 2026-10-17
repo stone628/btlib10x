@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>bt10x · not found</title>
+    <!-- Cloudflare Pages serves this for any path with no file, at any depth,
+         so every link here is absolute. Without a top-level 404.html, Pages
+         would answer unknown paths with index.html instead. -->
+    <link rel="stylesheet" href="/bt10x.css" />
+    <style>
+      /* Both locales are in the markup; only the `<html lang>` match stays visible. */
+      :root:lang(en) #notfound :lang(ko):not(#lang button) {
+        display: none;
+      }
+      :root:lang(ko) #notfound :lang(en):not(#lang button) {
+        display: none;
+      }
+      #notfound {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 16px;
+        gap: 12px;
+        text-align: center;
+      }
+      #lang {
+        align-self: stretch;
+        display: flex;
+        justify-content: flex-end;
+        gap: 6px;
+      }
+      #lang button {
+        padding: 3px 8px;
+        font-size: 11px;
+        cursor: pointer;
+      }
+      #lang button[aria-pressed="true"] {
+        color: var(--c-white);
+        border-color: var(--c-green);
+        background: var(--cb-green);
+      }
+      #notfound h1 {
+        margin: 20vh 0 0;
+        font-size: 14px;
+        letter-spacing: 0.2em;
+      }
+      #notfound a {
+        color: var(--c-green);
+      }
+    </style>
+    <script>
+      // Same locale precedence as the landing page (web/index.html):
+      // ?lang= in the URL, then localStorage "bt10x.lang", then English.
+      // `kr` is accepted as an alias of `ko`. Runs before first paint.
+      (() => {
+        const KEY = "bt10x.lang";
+        const norm = (raw) => {
+          const v = String(raw).toLowerCase();
+          return v === "kr" ? "ko" : v === "en" || v === "ko" ? v : null;
+        };
+        let stored = null;
+        try {
+          stored = norm(localStorage.getItem(KEY));
+        } catch {}
+        const fromUrl = norm(new URLSearchParams(location.search).get("lang"));
+        window.bt10xSetLang = (locale, persist) => {
+          document.documentElement.lang = locale;
+          let saved = !persist;
+          if (persist) {
+            try {
+              localStorage.setItem(KEY, locale);
+              saved = true;
+            } catch {}
+          }
+          // Storage blocked: carry the choice home in the URL.
+          const home = document.getElementById("home");
+          if (home) home.href = saved ? "/" : `/?lang=${locale}`;
+          for (const b of document.querySelectorAll("#lang button")) {
+            b.setAttribute("aria-pressed", String(b.dataset.lang === locale));
+          }
+        };
+        document.documentElement.lang = fromUrl ?? stored ?? "en";
+        window.bt10xInitialLang = { locale: document.documentElement.lang, persist: fromUrl !== null };
+      })();
+    </script>
+  </head>
+  <body>
+    <main id="notfound">
+      <nav id="lang" aria-label="language">
+        <button class="link-button" type="button" data-lang="en" lang="en">EN</button>
+        <button class="link-button" type="button" data-lang="ko" lang="ko">한국어</button>
+      </nav>
+      <h1>404</h1>
+      <p><span lang="en">no such page</span><span lang="ko">페이지가 없습니다</span></p>
+      <p>
+        <a id="home" href="/"><span lang="en">back to bt10x</span><span lang="ko">bt10x로 돌아가기</span></a>
+      </p>
+    </main>
+    <script>
+      (() => {
+        const init = window.bt10xInitialLang;
+        window.bt10xSetLang(init.locale, init.persist);
+        for (const b of document.querySelectorAll("#lang button")) {
+          b.addEventListener("click", () => window.bt10xSetLang(b.dataset.lang, true));
+        }
+      })();
+    </script>
+  </body>
+</html>

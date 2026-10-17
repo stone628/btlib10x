@@ -59,11 +59,17 @@
         <div id="slotmap"></div>
         <div id="parts"></div>
         <div id="actions">
-          <button id="copy" class="link-button" type="button"><span lang="en">copy text</span><span lang="ko">텍스트 복사</span></button>
-          <button id="copy-link" class="link-button" type="button"><span lang="en">copy link</span><span lang="ko">링크 복사</span></button>
-          <button id="show-snippet" class="link-button" type="button"><span lang="en">show HTML snippet</span><span lang="ko">HTML 스니펫 보기</span></button>
-          <button id="blank" class="link-button" type="button"><span lang="en">blank</span><span lang="ko">비우기</span></button>
-          <button id="random" class="link-button" type="button"><span lang="en">random</span><span lang="ko">무작위</span></button>
+          <div class="action-row">
+            <button id="copy" class="link-button" type="button"><span lang="en">copy text</span><span lang="ko">텍스트 복사</span></button>
+            <button id="copy-link" class="link-button" type="button"><span lang="en">copy link</span><span lang="ko">링크 복사</span></button>
+            <button id="show-snippet" class="link-button" type="button"><span lang="en">show HTML snippet</span><span lang="ko">HTML 스니펫 보기</span></button>
+            <button id="blank" class="link-button" type="button"><span lang="en">blank</span><span lang="ko">비우기</span></button>
+            <button id="random" class="link-button" type="button"><span lang="en">random</span><span lang="ko">무작위</span></button>
+          </div>
+          <div class="action-row">
+            <a id="show-submit" class="link-button" href="gallery.html?submit"><span lang="en">submit to gallery</span><span lang="ko">갤러리에 등록</span></a>
+            <a class="link-button" href="gallery.html"><span lang="en">gallery</span><span lang="ko">갤러리</span></a>
+          </div>
         </div>
       </section>
       <dialog id="snippet-panel" aria-labelledby="snippet-title">

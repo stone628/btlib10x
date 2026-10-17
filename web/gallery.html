@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>bt10x 'Mech avatar gallery</title>
+    <link rel="preload" href="fonts/bt10x-mono-0.63.2-regular.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="bt10x.css" />
+    <link rel="stylesheet" href="gallery.css" />
+    <script>
+      // Same locale precedence as avatar.html: ?lang=, then localStorage
+      // "bt10x.lang", then English; `kr` is an alias of `ko`.
+      (() => {
+        const KEY = "bt10x.lang";
+        const norm = (raw) => {
+          const v = String(raw).toLowerCase();
+          return v === "kr" ? "ko" : v === "en" || v === "ko" ? v : null;
+        };
+        let stored = null;
+        try {
+          stored = norm(localStorage.getItem(KEY));
+        } catch {}
+        const fromUrl = norm(new URLSearchParams(location.search).get("lang"));
+        window.bt10xSetLang = (locale, persist) => {
+          document.documentElement.lang = locale;
+          if (persist) {
+            try {
+              localStorage.setItem(KEY, locale);
+            } catch {}
+          }
+          for (const b of document.querySelectorAll("#lang button")) {
+            b.setAttribute("aria-pressed", String(b.dataset.lang === locale));
+          }
+        };
+        document.documentElement.lang = fromUrl ?? stored ?? "en";
+        window.bt10xInitialLang = { locale: document.documentElement.lang, persist: fromUrl !== null };
+      })();
+    </script>
+  </head>
+  <body>
+    <main id="gallery-app">
+      <header id="gallery-head">
+        <div id="head-row">
+          <p id="whoami"></p>
+          <nav id="lang" aria-label="language">
+            <button class="link-button" type="button" data-lang="en" lang="en">EN</button>
+            <button class="link-button" type="button" data-lang="ko" lang="ko">한국어</button>
+          </nav>
+        </div>
+        <h1><a href="gallery.html"><span lang="en">'MECH AVATAR GALLERY</span><span lang="ko">'MECH 아바타 갤러리</span></a></h1>
+        <p class="hint">
+          <span lang="en">avatars players made for each 'Mech · like the one that fits best · <a href="avatar.html">make your own</a></span><span lang="ko">플레이어들이 'Mech마다 만든 아바타 · 가장 어울리는 것에 좋아요를 누르세요 · <a href="avatar.html">직접 만들기</a></span>
+        </p>
+        <nav id="tabs" aria-label="views">
+          <a class="link-button" data-tab="top" href="gallery.html?sort=top"><span lang="en">top</span><span lang="ko">인기</span></a>
+          <a class="link-button" data-tab="new" href="gallery.html?sort=new"><span lang="en">new</span><span lang="ko">최신</span></a>
+          <a class="link-button" data-tab="mechs" href="gallery.html?view=mechs"><span lang="en">by 'Mech</span><span lang="ko">'Mech별</span></a>
+          <a class="link-button" data-tab="nomech" href="gallery.html?unit=none"><span lang="en">no 'Mech</span><span lang="ko">'Mech 없음</span></a>
+        </nav>
+      </header>
+      <section id="view"></section>
+      <div id="ag-turnstile" class="turnstile-host"></div>
+      <!-- Opened by the creator's "submit to gallery" link: gallery.html?submit&head=… -->
+      <dialog id="submit-panel" aria-labelledby="submit-title">
+        <div id="submit-title" class="gp-title"><span lang="en">SUBMIT TO GALLERY</span><span lang="ko">갤러리에 등록</span></div>
+        <div id="submit-form">
+          <pre id="submit-preview" aria-hidden="true"></pre>
+          <label class="hint" for="submit-mul"><span lang="en">which 'Mech is this for? (optional) paste its <a href="https://masterunitlist.battletech.com/" target="_blank" rel="noopener noreferrer">Master Unit List</a> page</span><span lang="ko">어느 'Mech의 아바타인가요? (선택) <a href="https://masterunitlist.battletech.com/" target="_blank" rel="noopener noreferrer">Master Unit List</a> 유닛 페이지 주소를 붙여넣으세요</span></label>
+          <input id="submit-mul" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://masterunitlist.battletech.com/units/atlas-as7-d" />
+          <p id="submit-who"></p>
+        </div>
+        <div id="submit-turnstile"></div>
+        <p id="submit-status" role="status"></p>
+        <div class="gp-footer">
+          <a id="submit-edit" class="link-button" href="avatar.html"><span lang="en">← edit in creator</span><span lang="ko">← 생성기에서 수정</span></a>
+          <span class="gp-buttons">
+            <button id="submit-send" class="link-button" type="button"><span lang="en">submit</span><span lang="ko">등록</span></button>
+            <button id="submit-close" class="link-button" type="button"><span lang="en">close</span><span lang="ko">닫기</span></button>
+          </span>
+        </div>
+      </dialog>
+    </main>
+    <footer id="legal">
+      Unofficial fan project. Not affiliated with or endorsed by Catalyst Game Labs, The Topps
+      Company, Inc. or Microsoft.<br />BattleTech, BattleMech, 'Mech and MechWarrior are trademarks
+      of their respective owners. Unit art is shown from, and links to, the Master Unit List.
+    </footer>
+    <div id="sr-live" class="sr-only" aria-live="polite"></div>
+    <script>
+      (() => {
+        const init = window.bt10xInitialLang;
+        window.bt10xSetLang(init.locale, init.persist);
+        for (const b of document.querySelectorAll("#lang button")) {
+          b.addEventListener("click", () => window.bt10xSetLang(b.dataset.lang, true));
+        }
+      })();
+    </script>
+    <script type="module" src="./gallery.js"></script>
+  </body>
+</html>

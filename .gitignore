@@ -16,6 +16,9 @@ web/btlib10x.jsonl
 data/btlib10x.jsonl
 docs/mtf/sw/sw.jsonl
 web/avatar.js
+web/gallery.js
+web/gallery-admin.js
 
 # Cloudflare local secrets (wrangler pages dev)
 .dev.vars
+.wrangler/

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>bt10x gallery admin</title>
+    <!-- Served at /avatar/admin behind Cloudflare Access (docs/GALLERY.md §4, §9). -->
+    <link rel="stylesheet" href="/bt10x.css" />
+    <link rel="stylesheet" href="/gallery.css" />
+  </head>
+  <body>
+    <main id="gallery-app">
+      <header id="gallery-head">
+        <h1><a href="/gallery.html">GALLERY ADMIN</a></h1>
+        <p class="hint" id="admin-who">checking sign-in…</p>
+        <nav id="tabs" aria-label="filter">
+          <a class="link-button" data-tab="reported" href="?filter=reported">reported</a>
+          <a class="link-button" data-tab="hidden" href="?filter=hidden">hidden</a>
+          <a class="link-button" data-tab="all" href="?filter=all">all</a>
+        </nav>
+      </header>
+      <section id="view"></section>
+    </main>
+    <script type="module" src="/gallery-admin.js"></script>
+  </body>
+</html>
