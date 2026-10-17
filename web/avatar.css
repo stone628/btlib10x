@@ -495,6 +495,31 @@
   flex-wrap: wrap;
 }
 
+/* Phones: one row each for the controls and the buttons, so the glyph grid
+   keeps the height. */
+@media (max-width: 480px) {
+  .gp-controls {
+    flex-wrap: nowrap;
+  }
+  .gp-controls label:first-child {
+    flex: 1 1 0;
+  }
+  .gp-controls select {
+    width: 100%;
+  }
+  .gp-controls input {
+    width: 9ch;
+  }
+  .glyph-picker .gp-buttons {
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+  .glyph-picker .gp-buttons .link-button {
+    padding: 5px 8px;
+    white-space: nowrap;
+  }
+}
+
 #parts {
   text-align: center;
   color: var(--c-dim);

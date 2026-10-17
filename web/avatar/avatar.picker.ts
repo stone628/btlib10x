@@ -39,6 +39,8 @@ const LONG_PRESS_MS = 500;
 /** Below this much room above the map, the panel takes the top of the screen instead. */
 const MIN_ROOM = 220;
 const GAP = 8;
+/** Scroll the anchor down when its top sits above this fraction of the screen. */
+const ANCHOR_LOW = 0.6;
 
 const BLOCK_GROUPS: Group[] = GLYPH_BLOCKS.map((b) => ({
   name: b.name,
@@ -131,6 +133,10 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
   );
   let focusIdx = 0;
   let closed = false;
+  // Scroll room below the page while the panel is open (see place()).
+  const spacer = document.createElement("div");
+  spacer.setAttribute("aria-hidden", "true");
+  spacer.style.flex = "none";
   /** Previewed but not applied: a glyph, `null` for the variant, `undefined` for none. */
   let pending: string | null | undefined;
 
@@ -357,6 +363,7 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
     if (closed) return;
     closed = true;
     openPanel = null;
+    spacer.remove();
     window.removeEventListener("resize", onResize);
     if (dialog.open) dialog.close();
     opts.onClose();
@@ -395,16 +402,28 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
     finish();
   }
 
-  /** Float the panel just above the anchor, or over the top of a short screen. */
+  /**
+   * Float the panel just above the anchor, or over the top of a short screen.
+   * The anchor is first scrolled to the bottom of the screen so the panel gets
+   * the most room above it; on a phone the page below the slot map is too
+   * short for that, so a temporary spacer adds the missing scroll room.
+   */
   function place(): void {
     const scroller = opts.anchor.closest<HTMLElement>("#avatar-app");
     const vh = window.innerHeight;
+    spacer.style.height = "0";
     let rect = opts.anchor.getBoundingClientRect();
     if (scroller !== null) {
-      // Bring the anchor into the lower part of the screen.
-      const wantBottom = vh - GAP;
-      if (rect.bottom > wantBottom || rect.top < vh * 0.45) {
-        scroller.scrollTop += rect.bottom - wantBottom;
+      // The scroller ends above the page footer, so aim for its bottom, not the screen's.
+      const wantBottom = Math.min(vh, scroller.getBoundingClientRect().bottom) - GAP;
+      if (rect.bottom > wantBottom || rect.top < vh * ANCHOR_LOW) {
+        const delta = rect.bottom - wantBottom;
+        const canScroll = scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop;
+        if (delta > canScroll) {
+          spacer.style.height = `${Math.ceil(delta - canScroll)}px`;
+          if (spacer.parentElement !== scroller) scroller.append(spacer);
+        }
+        scroller.scrollTop += delta;
         rect = opts.anchor.getBoundingClientRect();
       }
     }
