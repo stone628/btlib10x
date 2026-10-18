@@ -27,16 +27,35 @@
   text-align: center;
 }
 
-#lang {
+/* Language buttons, then the landing page link rightmost. */
+#head-row {
   display: flex;
   justify-content: flex-end;
-  gap: 6px;
+  align-items: center;
+  gap: 12px;
   margin-bottom: 4px;
 }
 
-#lang button {
+#lang {
+  display: flex;
+  gap: 6px;
+}
+
+#lang button,
+#home-link {
   padding: 3px 8px;
   font-size: 11px;
+}
+
+/* Same height as the language buttons, which #lang stretches to its
+   tallest (Hangul) line. */
+#home-link {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+
+#lang button {
   cursor: pointer;
 }
 

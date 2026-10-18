@@ -37,6 +37,9 @@ if (normalizedUrl !== null) {
   setConfigLocale(normalizedUrl);
 }
 
+const homeLink = document.getElementById("home-link") as HTMLAnchorElement | null;
+let langStored = savedLang !== null;
+
 /** Keep `<html lang>` and the stored choice in step with the active locale. */
 function syncDocLang(): void {
   const locale = configLocale();
@@ -45,9 +48,17 @@ function syncDocLang(): void {
     savedLang = locale;
     try {
       localStorage.setItem(LANG_STORAGE_KEY, locale);
+      langStored = true;
     } catch {
       // storage unavailable: the choice just won't survive a reload
+      langStored = false;
     }
+  }
+  // Absent from the standalone build. Storage blocked: carry the choice to
+  // the landing page in its URL, as the landing page does for the terminal.
+  if (homeLink) {
+    homeLink.href = langStored ? "./" : `./?lang=${locale}`;
+    homeLink.title = locale === "ko" ? "bt10x 홈" : "bt10x home";
   }
 }
 syncDocLang();
@@ -346,6 +357,14 @@ if (motdDialog && motdOpen) {
   motdOpen.addEventListener("click", () => {
     if (motdDialog.open) return;
     motdClose?.setAttribute("aria-label", i18n("motd.close"));
+    // Right-align under the button (the home link sits to its right), but
+    // never so far left that the panel runs off screen.
+    const panelWidth = Math.min(520, window.innerWidth - 24);
+    const right = Math.min(
+      window.innerWidth - motdOpen.getBoundingClientRect().right,
+      window.innerWidth - 12 - panelWidth,
+    );
+    motdDialog.style.setProperty("--motd-right", `${Math.max(0, right)}px`);
     motdDialog.showModal();
     motdOpen.setAttribute("aria-expanded", "true");
     if (motdDot) motdDot.hidden = true;

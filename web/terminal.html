@@ -13,6 +13,9 @@
     <header id="topbar">
       <span id="topbar-title">bt10x terminal <span id="topbar-version"></span></span>
       <button id="motd-open" class="link-button" type="button" aria-haspopup="dialog" aria-controls="motd" aria-expanded="false"><span id="motd-dot" aria-hidden="true" hidden></span>MOTD</button>
+      <!-- home-link: stripped from the standalone build (scripts/standalone-web.mjs), which has no landing page. -->
+      <a id="home-link" class="link-button" href="./" title="bt10x home"><span aria-hidden="true">← bt10x</span><span class="sr-only"><span lang="en">bt10x home</span><span lang="ko">bt10x 홈</span></span></a>
+      <!-- /home-link -->
     </header>
     <dialog id="motd" aria-labelledby="motd-title">
       <div id="motd-head"><span id="motd-title">MOTD</span><button id="motd-close" type="button" aria-label="Close">✕</button></div>

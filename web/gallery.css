@@ -38,6 +38,7 @@
 }
 
 #whoami {
+  flex: 1;
   margin: 0;
   font-size: 12px;
   color: var(--c-dim);
@@ -65,9 +66,21 @@
   gap: 6px;
 }
 
-#lang button {
+#lang button,
+#home-link {
   padding: 3px 8px;
   font-size: 11px;
+}
+
+/* Same height as the language buttons, which #lang stretches to its
+   tallest (Hangul) line. */
+#home-link {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+
+#lang button {
   cursor: pointer;
 }
 
@@ -440,6 +453,15 @@
 }
 
 @media (max-width: 480px) {
+  /* Buttons keep the top line; the player ID drops below them. */
+  #head-row {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  #whoami {
+    order: 3;
+    flex-basis: 100%;
+  }
   .grid {
     grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
   }

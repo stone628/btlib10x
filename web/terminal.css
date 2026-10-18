@@ -53,7 +53,25 @@
   font-size: 11px;
   font-weight: normal;
 }
+/* Landing page link, rightmost in the header. */
+#home-link {
+  display: flex;
+  align-items: center;
+  flex: none;
+  height: calc(var(--topbar-h) - 10px);
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+:root:lang(en) #home-link :lang(ko) {
+  display: none;
+}
+:root:lang(ko) #home-link :lang(en) {
+  display: none;
+}
 #motd-open {
+  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -88,7 +106,9 @@
 #motd {
   --motd-top: calc(env(safe-area-inset-top) + var(--topbar-h) + 8px);
   position: fixed;
-  inset: var(--motd-top) calc(12px + env(safe-area-inset-right)) auto auto;
+  /* --motd-right lines the right edge up with the MOTD button, which sits
+     left of #home-link; terminal.ts sets it on open. */
+  inset: var(--motd-top) var(--motd-right, calc(12px + env(safe-area-inset-right))) auto auto;
   margin: 0;
   padding: 0;
   width: min(520px, calc(100vw - 24px));

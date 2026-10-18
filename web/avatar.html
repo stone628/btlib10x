@@ -25,10 +25,18 @@
         const fromUrl = norm(new URLSearchParams(location.search).get("lang"));
         window.bt10xSetLang = (locale, persist) => {
           document.documentElement.lang = locale;
+          let saved = !persist;
           if (persist) {
             try {
               localStorage.setItem(KEY, locale);
+              saved = true;
             } catch {}
+          }
+          // Storage blocked: carry the choice to the landing page in its URL.
+          const home = document.getElementById("home-link");
+          if (home) {
+            home.href = saved ? "./" : `./?lang=${locale}`;
+            home.title = locale === "ko" ? "bt10x 홈" : "bt10x home";
           }
           for (const b of document.querySelectorAll("#lang button")) {
             b.setAttribute("aria-pressed", String(b.dataset.lang === locale));
@@ -42,10 +50,13 @@
   <body>
     <main id="avatar-app">
       <header id="avatar-head">
-        <nav id="lang" aria-label="language">
-          <button class="link-button" type="button" data-lang="en" lang="en">EN</button>
-          <button class="link-button" type="button" data-lang="ko" lang="ko">한국어</button>
-        </nav>
+        <div id="head-row">
+          <nav id="lang" aria-label="language">
+            <button class="link-button" type="button" data-lang="en" lang="en">EN</button>
+            <button class="link-button" type="button" data-lang="ko" lang="ko">한국어</button>
+          </nav>
+          <a id="home-link" class="link-button" href="./" title="bt10x home"><span aria-hidden="true">← bt10x</span><span class="sr-only"><span lang="en">bt10x home</span><span lang="ko">bt10x 홈</span></span></a>
+        </div>
         <h1><span lang="en">'MECH AVATAR CREATOR</span><span lang="ko">'MECH 아바타 생성기</span></h1>
         <p class="hint">
           <span lang="en">up/down selects part · left/right changes variant · click or tap works too<br />click a box around the avatar to set its character</span><span lang="ko">위/아래로 부위 선택 · 왼쪽/오른쪽으로 변형 변경 · 클릭이나 탭도 됩니다<br />아바타 주위의 상자를 눌러 그 자리의 문자를 지정합니다</span>

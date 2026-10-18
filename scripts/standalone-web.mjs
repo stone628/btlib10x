@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import * as esbuild from "esbuild";
 import { buildStamp } from "./build-stamp.mjs";
+import { stripHomeLink } from "./standalone-strip.mjs";
 
 const html = readFileSync("web/terminal.html", "utf8");
 // The standalone file must work from file://, so fonts go in as data: URIs.
@@ -26,7 +27,7 @@ const { outputFiles } = await esbuild.build({
 });
 const app = outputFiles[0].text;
 
-const single = html
+const single = stripHomeLink(html)
   .replace(/\s*<link rel="preload"[^>]*>/g, "")
   .replace(
     /<link rel="stylesheet" href="bt10x\.css" \/>\s*<link rel="stylesheet" href="terminal\.css" \/>/,
@@ -55,5 +56,6 @@ const withCatalog = single.replace(
   () =>
     `<script type="text/plain" id="bt10x-catalog">${safeCatalog}</script>\n<script type="text/plain" id="bt10x-catalog-sw">${safeSwCatalog}</script>\n</head>`,
 );
+if (withCatalog.includes('id="home-link"')) throw new Error("standalone: home link in the output");
 writeFileSync(dest, withCatalog);
 console.log(`${dest}: ${withCatalog.length} bytes (self-contained)`);

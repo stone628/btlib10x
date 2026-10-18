@@ -23,10 +23,18 @@
         const fromUrl = norm(new URLSearchParams(location.search).get("lang"));
         window.bt10xSetLang = (locale, persist) => {
           document.documentElement.lang = locale;
+          let saved = !persist;
           if (persist) {
             try {
               localStorage.setItem(KEY, locale);
+              saved = true;
             } catch {}
+          }
+          // Storage blocked: carry the choice to the landing page in its URL.
+          const home = document.getElementById("home-link");
+          if (home) {
+            home.href = saved ? "./" : `./?lang=${locale}`;
+            home.title = locale === "ko" ? "bt10x 홈" : "bt10x home";
           }
           for (const b of document.querySelectorAll("#lang button")) {
             b.setAttribute("aria-pressed", String(b.dataset.lang === locale));
@@ -46,6 +54,7 @@
             <button class="link-button" type="button" data-lang="en" lang="en">EN</button>
             <button class="link-button" type="button" data-lang="ko" lang="ko">한국어</button>
           </nav>
+          <a id="home-link" class="link-button" href="./" title="bt10x home"><span aria-hidden="true">← bt10x</span><span class="sr-only"><span lang="en">bt10x home</span><span lang="ko">bt10x 홈</span></span></a>
         </div>
         <h1><a href="gallery.html"><span lang="en">'MECH AVATAR GALLERY</span><span lang="ko">'MECH 아바타 갤러리</span></a></h1>
         <p class="hint">
