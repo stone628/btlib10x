@@ -460,6 +460,33 @@
       </div>
     </div>
 
+    <!-- Split from markup -->
+    <div class="cell">
+      <div data-tui="split" data-cols="auto" data-sizes="21 1fr" data-demo-border>
+        <div data-pane data-title="Pilot" data-i18n-attr="data-title=tab.pilot">
+          <div data-tui-use="pilot-card" data-gunnery="3" data-piloting="4" data-hits="1"></div>
+        </div>
+        <div data-pane>
+          <div data-tui="split" data-dir="v">
+            <div data-pane data-title="Weapons" data-i18n-attr="data-title=tab.weapons">
+              <span class="tui-line"><span class="tui-col" data-i18n="tab.w2">LRM-20</span>LT   1</span>
+              <span class="tui-line"><span class="tui-col" data-i18n="tab.w3">SRM-6</span>LT   2</span>
+            </div>
+            <div data-pane data-title="Heat" data-i18n-attr="data-title=split.heat">
+              <span data-tui="progress" data-cols="18" data-value="0.3" data-tone="warn"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="hint" data-i18n="split.hint">A split from markup, with a prefab placed by data-tui-use. Drag a divider, or Tab to it and use the arrow keys.</p>
+    </div>
+
+    <!-- Scene built from script -->
+    <div class="cell wide">
+      <div id="sceneDemo"></div>
+      <p class="hint" data-i18n="scn.hint">Built from script with TUI.h and two prefabs. The buttons call scene.update(); only the parts that changed are patched.</p>
+    </div>
+
     <!-- Status bar -->
     <div class="cell wide">
       <div data-tui="box" data-cols="auto" data-title="Status bar" data-i18n-attr="data-title=sb.title" data-demo-border>
@@ -633,12 +660,58 @@
     if (e.key === 'F4') { e.preventDefault(); setLocale(cycle(LOCALES, TUI.i18n.locale)); }
   });
 
+  // ---- scene builder demo
+  const { split, pane, vstack, hstack, line, col, table, progress, btn, text } = TUI.h;
+  const tk = TUI.h.t;
+
+  // A pilot card: used from markup (data-tui-use) and from the scene below.
+  TUI.prefab('pilot-card', { gunnery: 4, piloting: 5, hits: 0 }, (p) =>
+    vstack(
+      line(col(9, tk('tab.gunnery', null, 'Gunnery')), String(p.gunnery)),
+      line(col(9, tk('tab.piloting', null, 'Piloting')), String(p.piloting)),
+      line(col(9, tk('tab.hits', null, 'Hits')), '■'.repeat(p.hits) + '□'.repeat(6 - p.hits)),
+    ));
+
+  // The whole status screen is one prefab of the demo state; scene.update()
+  // re-renders it and the kit patches what changed.
+  TUI.prefab('mech-status', {}, (p) =>
+    split({ cols: 'auto', sizes: '24 1fr', ref: 'split', attrs: { 'data-demo-border': '' },
+            onResize: (e, scene) => scene.update({ msg: tk('scn.out.resize', { a: e.detail.sizes[0], b: e.detail.sizes[1] }) }) },
+      pane(tk('tab.pilot', null, 'Pilot'),
+        TUI.h.use('pilot-card', { gunnery: 4, piloting: 5, hits: p.hits }),
+        line(text({ class: 'hint' }, 'Atlas AS7-D'))),
+      pane({},
+        split({ dir: 'v' },
+          pane(tk('tab.weapons', null, 'Weapons'),
+            table({ ref: 'weapons',
+              columns: [{ label: tk('scn.weapon'), width: 12 }, { label: tk('scn.loc'), width: 4 },
+                        { label: tk('scn.ammo'), width: 4, align: 'right' }],
+              rows: [['AC/20', 'RT', String(p.ammo)], ['LRM-20', 'LT', '1'], ['SRM-6', 'LT', '2']] })),
+          pane(tk('tab.armor', null, 'Armor'),
+            vstack({ gap: 1 },
+              progress({ cols: 30, value: p.armor, tone: p.armor < 0.3 ? 'danger' : p.armor < 0.6 ? 'warn' : undefined }),
+              hstack({ gap: 2, wrap: true },
+                btn({ disabled: p.ammo === 0, onClick: (e, scene) => {
+                  const s = scene.props;
+                  scene.update({ ammo: s.ammo - 1, armor: Math.max(0, s.armor - 0.15), hits: Math.min(6, s.hits + 1),
+                                 msg: tk('scn.out.fire', { v: s.ammo - 1 }) });
+                } }, tk('scn.fire')),
+                btn({ onClick: (e, scene) => scene.update({ armor: 1, hits: 0, msg: tk('scn.out.repair') }) }, tk('scn.repair')))),
+            line(text({ class: 'hint' }, p.msg)))))));
+
+  let scene = null;
+  function mountScene() {
+    scene = TUI.mount($('sceneDemo'),
+      TUI.h.use('mech-status', { ammo: 5, armor: 0.8, hits: 2, msg: tk('scn.ready') }));
+  }
+
   // Keep a pristine copy of #app for locale switches, pick the start locale
   // from the link (#ko, #pseudo), then sync once tui.js has upgraded the page.
   TUI.i18n.mount($('app'));
   const start = location.hash.slice(1);
   if (LOCALES.includes(start)) TUI.i18n.set(start);
   document.addEventListener('DOMContentLoaded', () => {
+    mountScene();
     syncAll();
     if (document.fonts) document.fonts.ready.then(showCell);
   });

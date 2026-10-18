@@ -123,23 +123,36 @@
 [data-border="single"] {
   --tui-glyphs: "┌┐└┘─│├┤┬┴┼";
   --tui-sep: "├─┤";
+  /* Split dividers: --tui-vsep is where a vertical divider meets the top and
+     bottom border (top tee, line, bottom tee); --tui-div is the divider line
+     set (h v left-tee right-tee top-tee bottom-tee cross). */
+  --tui-vsep: "┬│┴";
+  --tui-div: "─│├┤┬┴┼";
 }
 [data-border="double"] {
   --tui-glyphs: "╔╗╚╝═║╠╣╦╩╬";
   --tui-sep: "╟─╢";
+  --tui-vsep: "╤│╧";
+  --tui-div: "─│├┤┬┴┼";
 }
 [data-border="heavy"] {
   --tui-glyphs: "┏┓┗┛━┃┣┫┳┻╋";
   --tui-sep: "┠─┨";
+  --tui-vsep: "┯│┷";
+  --tui-div: "─│├┤┬┴┼";
 }
 [data-border="rounded"] {
   --tui-glyphs: "╭╮╰╯─│├┤┬┴┼";
   --tui-sep: "├─┤";
+  --tui-vsep: "┬│┴";
+  --tui-div: "─│├┤┬┴┼";
 }
 /* Defined here only, to show a set can be added from CSS alone. */
 [data-border="ascii"] {
   --tui-glyphs: "++++-|+++++";
   --tui-sep: "+-+";
+  --tui-vsep: "+|+";
+  --tui-div: "-|+++++";
 }
 
 /* ---------- root ---------- */
@@ -926,4 +939,114 @@ select.tui-native {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+/* ---------- layout: hstack / vstack / grid / spacer ---------- */
+.tui-stack {
+  --gap-x: 0;
+  --gap-y: 0;
+}
+.tui-hstack {
+  display: flex;
+  align-items: flex-start;
+  column-gap: calc(var(--gap-x) * var(--cw));
+  row-gap: calc(var(--gap-y) * var(--ch));
+}
+.tui-hstack[data-wrap] {
+  flex-wrap: wrap;
+}
+.tui-hstack[data-align="stretch"] {
+  align-items: stretch;
+}
+.tui-hstack[data-align="center"] {
+  align-items: center;
+}
+.tui-hstack[data-align="end"] {
+  align-items: flex-end;
+}
+.tui-vstack {
+  display: flex;
+  flex-direction: column;
+  row-gap: calc(var(--gap-y) * var(--ch));
+}
+.tui-grid {
+  display: grid;
+  align-items: start;
+  column-gap: calc(var(--gap-x) * var(--cw));
+  row-gap: calc(var(--gap-y) * var(--ch));
+}
+.tui-grid[data-align="stretch"] {
+  align-items: stretch;
+}
+.tui-slot {
+  min-width: 0;
+  flex: 0 0 auto;
+}
+.tui-hstack > .tui-slot.is-sized {
+  width: calc(var(--size) * var(--cw));
+}
+.tui-vstack > .tui-slot.is-sized {
+  height: calc(var(--size) * var(--ch));
+  overflow: hidden;
+}
+.tui-stack > .tui-slot.is-grow {
+  flex: var(--grow, 1) 1 0;
+}
+.tui-spacer {
+  flex: 1;
+}
+
+/* ---------- split ---------- */
+.tui-split-grid {
+  display: grid;
+  align-items: stretch;
+}
+.tui-pane {
+  --pad: 1;
+  min-width: 0;
+  padding: 0 calc(var(--pad) * var(--cw));
+}
+.tui-pane.is-fixed {
+  overflow: hidden;
+}
+/* A pane that holds a nested split gives it the whole pane. */
+.tui-pane.is-host {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.tui-pane.is-host > .tui-split {
+  flex: 1 1 auto;
+}
+.tui-split-lines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: var(--box-line);
+}
+.tui-split-line {
+  position: absolute;
+  white-space: pre;
+  line-height: var(--ch);
+}
+.tui-split-line.tui-pane-title {
+  background: var(--box-bg);
+  color: var(--box-title);
+  font-weight: 700;
+}
+.tui-split-handle {
+  pointer-events: auto;
+  cursor: col-resize;
+  outline: none;
+  touch-action: none;
+}
+.tui-split-handle.is-h {
+  cursor: row-resize;
+}
+.tui-split-handle:hover,
+.tui-split-handle:focus-visible {
+  color: var(--tui-accent);
+}
+body.tui-dragging {
+  user-select: none;
 }

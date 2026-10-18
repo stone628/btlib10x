@@ -79,7 +79,11 @@ Glyphs come from CSS, not JS, so a set can be added or swapped with CSS alone:
 [data-border="double"] { --tui-glyphs: "╔╗╚╝═║╠╣╦╩╬"; --tui-sep: "╟─╢"; }
 ```
 
-`--tui-sep` is the three glyphs of a separator row inside the box. Built in: `single`,
+`--tui-sep` is the three glyphs of a separator row inside the box. Split dividers add two
+more: `--tui-vsep` is where a vertical divider meets the top and bottom border (top tee,
+line, bottom tee; `"╤│╧"` in a double box) and `--tui-div` is the divider line set
+(`h v left-tee right-tee top-tee bottom-tee cross`, light lines in every built-in set).
+Built in: `single`,
 `double`, `heavy`, `rounded`, `ascii` (the last defined only in CSS as an example).
 Change `data-border` on any box and call `TUI.refresh()` (or `TUI.redraw(el)`).
 
@@ -100,7 +104,9 @@ from script. All `data-*` options below also exist as JS options in camelCase.
 | Component | Markup | Notes |
 |---|---|---|
 | Box / panel | `<div data-tui="box" data-cols="30" data-rows="6" data-title="Pilot">` | `cols`: number or `auto` (fill parent). `rows`: number or `auto` (fit content, default). `data-border`, `data-tone`, `data-shadow`, `data-pad` (cells, default 1), `data-title-align`, `data-footer`, `data-footer-right`. |
-| Separator | `<div class="tui-sep"></div>` inside a box | Draws `├───┤` joined to the frame. |
+| Separator | `<div class="tui-sep"></div>` inside a box | Draws `├───┤` joined to the frame. Inside a split pane it joins the dividers on either side. |
+| Split | `<div data-tui="split" data-dir="h" data-sizes="24 1fr">` with `<div data-pane data-title="Pilot">` children | One box divided into panes; see [Layout](#layout). |
+| Stacks, grid | `data-tui="hstack"`, `"vstack"`, `"grid"`, `"spacer"` | Place children in cell-sized slots; see [Layout](#layout). |
 | Window | `<div data-tui="window" data-closable>` | Box with double border, centered title, shadow, `[×]` action. Fires cancelable `tui-close`, then sets `hidden`. |
 | Dialog | `await TUI.dialog({ title, text, buttons, cols, border, tone, defaultIndex })` | Modal over a dimmed overlay. Resolves to the button label, or `null` on Esc / `[×]`. Tab is trapped; ← → move between buttons. |
 | Button | `<button class="tui-btn">OK</button>` | `[ OK ]`. `data-variant="angle"` gives `< OK >`, `bare` drops brackets. `.is-primary`. Pressed = reverse video; focus = `[▸ OK ◂]`. CSS only. |
@@ -137,10 +143,154 @@ TUI.popupMenu(anchor, items, opts)  // Promise<{index} | {nav} | null>
 TUI.table({ columns: [{ label, width, align }], rows: [[text | { text, colspan, rowspan, align }]], rules, border })
 TUI.progress(el, value)
 TUI.glyphs(el)             // the border set an element resolves to
+TUI.split(el, { sizes })   // upgrade a split, or change its sizes later
+TUI.hstack(el) / vstack(el) / grid(el) / spacer(el)
+TUI.h, TUI.prefab, TUI.mount   // scenes, see below
 ```
 
 `opts.actions = [{ text: '[?]', title, onClick }]` adds clickable labels to a box's top
 border (used by window's `[×]`).
+
+## Layout
+
+Every layout size is in cells, so children line up with the grid.
+
+| Component | Markup | Notes |
+|---|---|---|
+| hstack | `<div data-tui="hstack" data-gap="2">` | Children side by side. `data-gap="x y"` in cells and rows (default `2 0`); `data-wrap` wraps; `data-align="stretch\|center\|end"`. |
+| vstack | `<div data-tui="vstack" data-gap="1">` | Children top to bottom, gap in rows (default 0). |
+| grid | `<div data-tui="grid" data-columns="24 1fr 1fr">` | CSS grid; a number is cells, anything else (`1fr`, `auto`) passes through. `data-min="46"` instead gives auto-fill columns of at least 46 cells. Gap default `2 1`. |
+| spacer | `<span data-tui="spacer"></span>` | Takes the leftover width in an hstack. |
+
+Each child is wrapped in a slot (`.tui-slot`). The child sets its slot with `data-size`
+(cells; rows in a vstack), `data-grow` (share of the leftover width) or, in a grid,
+`data-span` (columns, or `all`). A box with `cols="auto"` needs a slot with a width: give
+it `data-grow` or `data-size` in an hstack (a plain hstack slot shrinks to fit its content).
+
+### Split
+
+```html
+<div data-tui="split" data-cols="auto" data-sizes="21 1fr" data-border="double">
+  <div data-pane data-title="Pilot">…</div>
+  <div data-pane>
+    <div data-tui="split" data-dir="v">
+      <div data-pane data-title="Weapons">…</div>
+      <div data-pane data-title="Heat">…</div>
+    </div>
+  </div>
+</div>
+```
+
+```
+╔═ Pilot ═══════════╤═ Weapons ═════════════════╗
+║ Gunnery  3        │ LRM-20  LT   1            ║
+║ Piloting 4        │ SRM-6   LT   2            ║
+║ Hits     ■□□□□□   ├─ Heat ────────────────────╢
+║                   │ ███▌░░░░░░░░░░░░░  30%    ║
+╚═══════════════════╧═══════════════════════════╝
+```
+
+A split is a box whose dividers are part of its frame. A split that is the only child of
+another split's pane draws no frame of its own; its dividers end in tees on the divider or
+border they meet. Any number of panes and any depth of nesting work.
+
+- `data-dir`: `h` (side by side, default) or `v` (stacked).
+- `data-sizes`: one token per pane, in cells (`24`), percent (`30%`) or fr (`1fr`, the
+  default). Sizes always resolve to whole cells; the remainder goes to the last fr pane.
+  In a `v` split, sizes are rows when the split has fixed `data-rows`; with `rows="auto"`
+  numbers are fixed rows and fr panes take their content height. `data-at="24"` is short
+  for `data-sizes="24 1fr"`.
+- Pane options: `data-title` (drawn on the line above the pane, cut with `…` to fit),
+  `data-min` (cells, default title width + 4), `data-pad` (cells, default 1). A child that
+  is not a pane is wrapped in one.
+- Resizing: drag a divider, or Tab to it and use ← → (↑ ↓ in a `v` split), Home and End.
+  The split fires `tui-resize` with `{ index, sizes, tokens }`; the kit stores nothing.
+  `TUI.split(el, { sizes: "30 1fr" })` sets sizes from script.
+- The split's top border carries pane titles, so a split takes no `data-title` of its own;
+  put it in a window when the screen needs one.
+
+## Scenes and prefabs
+
+A scene is a tree of nodes rendered to the same `data-tui` markup as above. `TUI.h`
+builds nodes, `TUI.prefab` registers reusable templates, and `TUI.mount` renders a tree and
+returns a handle. Scenes are an in-memory format; they are not meant to be serialized.
+
+```js
+const { split, pane, vstack, line, col, table, progress, btn, t } = TUI.h;
+
+TUI.prefab('pilot-card', { gunnery: 4, piloting: 5, hits: 0 }, (p) =>
+  vstack(
+    line(col(9, t('tab.gunnery', null, 'Gunnery')), String(p.gunnery)),
+    line(col(9, t('tab.hits', null, 'Hits')), '■'.repeat(p.hits) + '□'.repeat(6 - p.hits)),
+  ));
+
+TUI.prefab('mech-status', {}, (p) =>
+  split({ cols: 'auto', sizes: '24 1fr' },
+    pane(t('tab.pilot', null, 'Pilot'), TUI.h.use('pilot-card', { hits: p.hits })),
+    pane({},
+      split({ dir: 'v' },
+        pane('Weapons', table({ ref: 'weapons', columns, rows: p.rows })),
+        pane('Armor',
+          progress({ cols: 30, value: p.armor }),
+          btn({ onClick: (e, scene) => scene.update({ armor: 1 }) }, 'Repair'))))));
+
+const scene = TUI.mount(document.getElementById('status'),
+  TUI.h.use('mech-status', { hits: 2, armor: 0.8, rows }));
+scene.update({ armor: 0.5 });          // patches the progress bar only
+scene.refs.weapons.el.focus();
+```
+
+**Nodes.** `TUI.h.<type>(props?, ...children)`, or `TUI.h(type, props, ...children)`.
+Children are nodes, strings, numbers, arrays or `null`/`false` (skipped). Props common to
+every type: `key` (identity in a list), `ref` (name in `scene.refs`), `id`, `class`,
+`style` (object), `attrs` (object), `tip`, `hidden`, event handlers, and the slot props
+`size`, `grow`, `span` when the parent is a stack or grid. Shorthands: `tab(label, …)`,
+`pane(title, …)`, `col(cells, …)`, `el(tag, props?, …)`.
+
+| Types | Props |
+|---|---|
+| `box`, `window`, `scroll` | `cols rows title titleAlign footer footerRight border tone shadow pad`; window adds `closable` |
+| `tabs`, `tab` | tabs: the box props; tab: `label`, `active` |
+| `split`, `pane` | split: `dir sizes cols rows border tone shadow`; pane: `title min pad` |
+| `hstack`, `vstack`, `grid`, `spacer` | `gap wrap align`; grid adds `columns min` |
+| `table` | `columns rows rules border selected` (same shapes as `TUI.table`) |
+| `menu`, `list` with `item`, `sep` | menu/list: box props, list adds `selected`; item: `value shortcut disabled html` |
+| `select` with `option` | select: `cols name value options`; option: `value selected` |
+| `progress`, `spinner` | progress: `cols value label tone ascii`; spinner: `frames` |
+| `btn`, `button`, `input`, `check`, `radio` | btn: `primary variant disabled`; button: `border cols`; input: `cols placeholder value variant type name`; check/radio: `checked name value disabled` |
+| `line`, `col`, `statusbar`, `kbd`, `seg`, `text`, `p`, `el` | col: `col` (cells); seg: `alt`; el: `tag` |
+
+**Text.** `TUI.h.t(key, vars, fallback)` is a translation key, resolved when the scene
+renders. Use it in children and props instead of calling `TUI.t()` so a locale switch
+can render the scene again in the new language.
+
+**Events.** `onSelect` (`tui-select`), `onTab`, `onClose`, `onResize`, `onChange`,
+`onInput`, `onClick`, `onKeydown`, or `on: { name: fn }` for any event. Handlers get
+`(event, scene)`. Kit events (`tui-*`) only reach the node that fired them, not its
+ancestors.
+
+**Prefabs.** `TUI.prefab(name, defaults, render)` registers `render(props, children)`,
+which returns one node; `props` is `defaults` merged with the instance's props, with
+keys already translated. Use one with `TUI.h.use(name, props, ...children)` or
+`TUI.h(name, …)`, nest them freely, and make variants by registering another name that
+calls the first. `TUI.prefab` also returns a builder for the name. From markup,
+`<div data-tui-use="pilot-card" data-hits="2">` mounts a prefab in place of the element
+(data attributes become props; numbers and `true`/`false` are converted).
+
+**Scene handle.** `TUI.mount(target, node)` replaces target's content and returns
+`{ el, props, refs, update(props), flush(), render(), destroy() }`.
+
+- `scene.update(props)` merges into the root node's props. `scene.refs.name.update(props)`
+  merges into the node with `ref: "name"`, and those overrides stay across later
+  `scene.update()` calls. Both return a promise; updates in one task are batched into one
+  pass. `scene.flush()` applies pending updates now.
+- An update renders the tree again and compares it with the last one. A node of the same
+  type (and `key`) is kept and only its changed props are applied, so focus, scroll
+  position, field text and selection survive. Props a component cannot change in place
+  (a table's rows, a menu's items, a split's `dir`) replace that one component.
+- A locale switch (`TUI.i18n.set()`) renders every scene again from scratch. Props and
+  ref overrides are kept; in-DOM state such as focus is not. A scene whose target sat
+  inside an `i18n.mount()` root finds its target again by `id`, so give it one.
 
 ## i18n
 
@@ -212,4 +362,5 @@ this). Hotkeys follow the Korean convention `파일(<u>F</u>)`, so the letter st
 - `<input>` and native `<option>` text is not snapped (the browser draws it); fields still keep their cell width.
 - A box with fixed `rows` does not clip content that is taller; use `rows="auto"` or a scrollbox.
 - `cols="auto"` fills a block parent; inside a shrink-to-fit parent it has nothing to fill.
-- Window dragging, resizable panes, focus rings drawn as boxes and a menubar submenu level are not in this draft.
+- Window dragging, focus rings drawn as boxes and a menubar submenu level are not in this draft.
+- Split dividers line up only when pane content is whole rows tall (true for text, boxes and every kit component); a pane whose content is a fractional height can shift a horizontal divider by part of a row.

@@ -314,6 +314,8 @@
       st.ro.observe(el.parentElement);
       st.observedParent = el.parentElement;
     }
+    // An update (title, border, ...) may not change the size: redraw anyway.
+    if (Object.keys(opts).length) st.drawn = false;
     layout(el);
     return el;
   }
@@ -333,6 +335,9 @@
     let c = st.cols === "auto" ? parentCols(el) : num(st.cols, 20);
     c = Math.max(c, 4);
     if (st.minCols) c = Math.max(c, st.minCols);
+    // Containers that size their children in cells (split) do it here, before
+    // the content height is measured.
+    if (st.sizer) st.sizer(c, st.rows === "auto" ? null : Math.max(num(st.rows, 5), 2) - 2);
     let r;
     if (st.rows === "auto") {
       const h = st.inner.offsetHeight;
@@ -349,12 +354,16 @@
   }
 
   /* Build one border row. segs: [{ at, text, cls, attrs, onClick, onKey }],
-     placed at cell positions; junctions get the tee glyph. */
+     placed at cell positions; junctions get the tee glyph (a junction can
+     also be { at, ch } with its own glyph). */
   function edgeRow(c, left, fill, right, segs, junctions, tee) {
     const cells = Array(c).fill(fill);
     cells[0] = left;
     cells[c - 1] = right;
-    for (const x of junctions) if (x > 0 && x < c - 1) cells[x] = tee;
+    for (const j of junctions) {
+      const x = typeof j === "number" ? j : j.at;
+      if (x > 0 && x < c - 1) cells[x] = typeof j === "number" ? tee : j.ch;
+    }
     const row = div();
     const sorted = segs.filter((s) => s.text).sort((a, b) => a.at - b.at);
     let x = 0;
@@ -430,6 +439,7 @@
             : 2;
       top.push({ at, text, cls: "tui-title" });
     }
+    if (st.extraTop) top.push(...st.extraTop);
     let ax = c - 2;
     for (let i = st.actions.length - 1; i >= 0; i--) {
       const a = st.actions[i];
@@ -456,6 +466,14 @@
     const rightV = st.hideRightEdge ? " " : g.v;
     const mid = g.v + " ".repeat(Math.max(0, c - 2)) + rightV;
     for (let i = 1; i < r - 1; i++) f.appendChild(div(null, mid));
+    // Joints on the left and right edges: [{ y, side: 'l' | 'r', ch }].
+    for (const j of st.edgeJoints || []) {
+      const row = f.children[j.y];
+      if (!row || j.y <= 0 || j.y >= r - 1) continue;
+      const x = j.side === "l" ? 0 : c - 1;
+      const t = row.textContent;
+      row.textContent = t.slice(0, x) + j.ch + t.slice(x + 1);
+    }
     if (r > 1) {
       f.appendChild(
         st.hideBottomEdge
@@ -1420,6 +1438,1324 @@
     return el;
   }
 
+  // ---------------------------------------------------------------- layout
+  //
+  // hstack / vstack / grid place their children in slots (.tui-slot) sized in
+  // cells, so a child box with cols="auto" has a definite width to fill.
+  // Slot options come from the child: data-size (cells; rows in a vstack),
+  // data-grow (share of the leftover space), data-span (grid columns, or "all").
+
+  function gapOf(el, dx, dy) {
+    const [a, b] = String(el.dataset.gap ?? "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((x) => num(x, 0));
+    return { x: a ?? dx, y: b ?? (a !== undefined && dy === null ? a : (dy ?? 0)) };
+  }
+  function applySlot(slot, d) {
+    const size = d.size,
+      grow = d.grow,
+      sp = d.span;
+    slot.classList.toggle("is-sized", size != null && size !== "");
+    slot.classList.toggle("is-grow", grow != null && grow !== "" && !(size != null && size !== ""));
+    if (size != null && size !== "") slot.style.setProperty("--size", num(size, 0));
+    else slot.style.removeProperty("--size");
+    if (grow != null && grow !== "")
+      slot.style.setProperty("--grow", grow === true ? 1 : num(grow, 1));
+    else slot.style.removeProperty("--grow");
+    if (sp === "all") slot.style.gridColumn = "1 / -1";
+    else if (sp != null && sp !== "") slot.style.gridColumn = `span ${num(sp, 1)}`;
+    else slot.style.removeProperty("grid-column");
+  }
+  /* Wrap child in a slot (or reuse it when it is one) and size the slot. */
+  function wrapSlot(child, d) {
+    let slot = child;
+    if (!child.classList?.contains("tui-slot")) {
+      slot = div("tui-slot");
+      if (child.parentNode) child.replaceWith(slot);
+      slot.appendChild(child);
+    }
+    const cd = child.dataset || {};
+    const spacer = child.classList?.contains("tui-spacer") || cd.tui === "spacer";
+    applySlot(
+      slot,
+      d || {
+        size: cd.size,
+        grow: cd.grow !== undefined ? cd.grow || 1 : spacer ? 1 : undefined,
+        span: cd.span,
+      },
+    );
+    return slot;
+  }
+  function stackSetup(el, kind) {
+    el.classList.add("tui-stack", `tui-${kind}`);
+    const g =
+      kind === "hstack"
+        ? gapOf(el, 2, 0)
+        : kind === "vstack"
+          ? gapOf(el, 0, null)
+          : gapOf(el, 2, 1);
+    // A vstack gap is in rows: one number means rows, not columns.
+    if (kind === "vstack") {
+      const v = String(el.dataset.gap ?? "").trim();
+      g.y = v ? num(v.split(/\s+/)[0], 0) : 0;
+      g.x = 0;
+    }
+    el.style.setProperty("--gap-x", g.x);
+    el.style.setProperty("--gap-y", g.y);
+    if (kind === "grid") {
+      const min = el.dataset.min;
+      el.style.gridTemplateColumns = min
+        ? `repeat(auto-fill, minmax(min(100%, calc(${num(min, 20)} * var(--cw))), 1fr))`
+        : String(el.dataset.columns || "1fr")
+            .trim()
+            .split(/\s+/)
+            .map((t) => (/^\d+(\.\d+)?$/.test(t) ? `calc(${t} * var(--cw))` : t))
+            .join(" ");
+    }
+  }
+  function stack(el, kind) {
+    stackSetup(el, kind);
+    for (const c of Array.from(el.children)) {
+      if (c.classList.contains("tui-slot")) applySlot(c, c.dataset);
+      else wrapSlot(c);
+    }
+    return el;
+  }
+  const hstack = (el) => stack(el, "hstack");
+  const vstack = (el) => stack(el, "vstack");
+  const grid = (el) => stack(el, "grid");
+  function spacer(el) {
+    el.classList.add("tui-spacer", "tui-grow");
+    return el;
+  }
+
+  // ---------------------------------------------------------------- split
+  //
+  // One box divided into panes. The dividers belong to the frame: their ends
+  // become tees on the outer border (┬ ┴ ├ ┤, or ╤ ╧ ╟ ╢ in a double box) and
+  // nested splits join the divider they meet. Pane sizes are whole cells.
+  //
+  //   <div data-tui="split" data-dir="h" data-sizes="26 1fr" data-cols="auto">
+  //     <div data-pane data-title="Pilot">…</div>
+  //     <div data-pane data-title="Weapons">…</div>
+  //   </div>
+  //
+  // dir: h (side by side, default) | v (stacked). sizes: one token per pane,
+  // cells ("26"), percent ("30%") or fr ("1fr", default). A split that is the
+  // only child of another split's pane draws no frame of its own.
+
+  function sizeTokens(spec, n) {
+    const a = String(spec ?? "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    while (a.length < n) a.push("1fr");
+    return a.slice(0, n);
+  }
+  /* Resolve size tokens to whole cells that add up to avail. */
+  function resolveSizes(tokens, avail, mins) {
+    const n = tokens.length;
+    const out = Array(n).fill(0);
+    const fr = [];
+    let used = 0;
+    tokens.forEach((t, i) => {
+      if (/fr$/.test(t)) fr.push([i, num(t, 1) || 1]);
+      else {
+        out[i] = Math.floor(/%$/.test(t) ? (avail * num(t, 0)) / 100 : num(t, 0));
+        used += out[i];
+      }
+    });
+    const rest = Math.max(0, avail - used);
+    const total = fr.reduce((s, [, w]) => s + w, 0);
+    for (const [i, w] of fr) out[i] = Math.floor((rest * w) / total);
+    // Remainder (or overflow) goes to the last fr pane, else the last pane.
+    const sum = () => out.reduce((s, x) => s + x, 0);
+    const sink = fr.length ? fr[fr.length - 1][0] : n - 1;
+    out[sink] += avail - sum();
+    // Minimums: grow small panes, then take the cells back from the others,
+    // last pane first; below that the last pane is cut.
+    for (let i = 0; i < n; i++) out[i] = Math.max(out[i], Math.min(mins[i], avail));
+    let over = sum() - avail;
+    for (let i = n - 1; i >= 0 && over > 0; i--) {
+      const give = Math.max(0, Math.min(over, out[i] - mins[i]));
+      out[i] -= give;
+      over -= give;
+    }
+    for (let i = n - 1; i >= 0 && over > 0; i--) {
+      const give = Math.min(over, out[i] - 1);
+      out[i] -= give;
+      over -= give;
+    }
+    return out;
+  }
+
+  function split(el, opts) {
+    opts = opts || {};
+    if (el._split) {
+      // Re-entry: TUI.split(el, { sizes, dir }) changes the layout.
+      const sp = el._split;
+      if (opts.sizes !== undefined) {
+        sp.tokens = sizeTokens(
+          Array.isArray(opts.sizes) ? opts.sizes.join(" ") : opts.sizes,
+          sp.panes.length,
+        );
+        el.dataset.sizes = sp.tokens.join(" ");
+      }
+      relayoutSplit(sp.root);
+      return el;
+    }
+    const d = el.dataset;
+    const parentPane = el.parentElement?.closest(".tui-pane");
+    const nested =
+      !!parentPane &&
+      parentPane.parentElement?.classList.contains("tui-split-grid") &&
+      Array.from(parentPane.children).filter((c) => !c.classList.contains("tui-slot")).length === 1;
+    el._tuiDone = true;
+    el.classList.add("tui-split");
+    const dir = (opts.dir || d.dir) === "v" ? "v" : "h";
+    el.dataset.dir = dir;
+
+    // Panes: [data-pane] / .tui-pane children; anything else gets wrapped.
+    const kids = Array.from(el.children);
+    const panes = kids.map((c) => {
+      if (c.classList.contains("tui-pane") || c.hasAttribute("data-pane")) return c;
+      const p = div();
+      c.replaceWith(p);
+      p.appendChild(c);
+      return p;
+    });
+    let gridEl;
+    if (nested) {
+      el.classList.add("is-nested", "tui-split-grid");
+      gridEl = el;
+    } else {
+      box(el, { pad: 0, cols: opts.cols, rows: opts.rows, border: opts.border });
+      gridEl = div("tui-split-grid");
+      el._tui.inner.appendChild(gridEl);
+    }
+    panes.forEach((p, i) => {
+      p.classList.add("tui-pane");
+      if (p.dataset.pad !== undefined) p.style.setProperty("--pad", num(p.dataset.pad, 1));
+      if (i) gridEl.appendChild(div("tui-split-gutter"));
+      gridEl.appendChild(p);
+    });
+    const sp = {
+      el,
+      dir,
+      panes,
+      grid: gridEl,
+      nested,
+      tokens: sizeTokens(opts.sizes ?? d.sizes ?? (d.at ? `${d.at} 1fr` : ""), panes.length),
+      root: null,
+      sizes: [],
+    };
+    el._split = sp;
+    // A pane whose only child is a split hosts it edge to edge.
+    for (const p of panes) {
+      const only = Array.from(p.children);
+      if (only.length === 1 && only[0].dataset.tui === "split") {
+        p.classList.add("is-host");
+        split(only[0]);
+      }
+    }
+    if (nested) return el;
+
+    // Root: size every split in the tree before rows are measured, paint all
+    // dividers after the frame is drawn, repaint when a pane changes size.
+    const markRoot = (s) => {
+      s.root = el;
+      for (const p of s.panes) {
+        const c = p.firstElementChild;
+        if (p.classList.contains("is-host") && c?._split) markRoot(c._split);
+      }
+    };
+    markRoot(sp);
+    const st = el._tui;
+    st.sizer = (c, fixedRows) => sizeSplit(sp, c - 2, fixedRows);
+    st.hooks.push((g) => paintSplit(el, g));
+    if (typeof ResizeObserver !== "undefined") {
+      let queued = 0;
+      st.splitRo = new ResizeObserver(() => {
+        if (queued) return;
+        queued = requestAnimationFrame(() => {
+          queued = 0;
+          if (el.isConnected) relayoutSplit(el);
+        });
+      });
+      const watch = (s) => {
+        for (const p of s.panes) {
+          st.splitRo.observe(p);
+          const c = p.firstElementChild;
+          if (p.classList.contains("is-host") && c?._split) watch(c._split);
+        }
+      };
+      watch(sp);
+    }
+    el.addEventListener("keydown", (e) => {
+      const h = e.target.closest?.(".tui-split-handle");
+      h?._drag?.key(e);
+    });
+    st.drawn = false;
+    layout(el);
+    return el;
+  }
+
+  function relayoutSplit(root) {
+    if (!root?._tui) return;
+    root._tui.drawn = false;
+    layout(root);
+  }
+
+  function paneMin(p) {
+    if (p.dataset.min !== undefined) return Math.max(1, num(p.dataset.min, 3));
+    const t = p.dataset.title;
+    return t ? len(t) + 4 : 3;
+  }
+
+  /* Give every pane of sp (and of the splits nested in it) its cell size.
+     w: cells across; h: rows down when fixed, null when content decides. */
+  function sizeSplit(sp, w, h) {
+    const n = sp.panes.length;
+    const mins = sp.panes.map(paneMin);
+    const cell = (x, unit) => `calc(${x} * var(${unit}))`;
+    if (sp.dir === "h") {
+      const ws = resolveSizes(sp.tokens, Math.max(n, w - (n - 1)), mins);
+      sp.sizes = ws;
+      sp.grid.style.gridTemplateColumns = ws.map((x) => cell(x, "--cw")).join(" var(--cw) ");
+      sp.grid.style.gridTemplateRows = "";
+      sp.grid.style.height = h != null ? cell(h, "--ch") : "";
+      sp.panes.forEach((p, i) => {
+        const c = p.firstElementChild;
+        if (p.classList.contains("is-host") && c?._split) sizeSplit(c._split, ws[i], h);
+      });
+    } else {
+      let hs;
+      if (h != null)
+        hs = resolveSizes(
+          sp.tokens,
+          Math.max(n, h - (n - 1)),
+          mins.map(() => 1),
+        );
+      else {
+        // Content decides: fixed tokens keep their rows; the last fr pane
+        // takes what is left when the split is stretched by its parent.
+        const lastFr = sp.tokens.map((t) => /fr$/.test(t)).lastIndexOf(true);
+        hs = sp.tokens.map((t, i) =>
+          /^\d+(\.\d+)?$/.test(t) ? num(t, 1) : i === lastFr ? "fr" : null,
+        );
+      }
+      sp.sizes = hs;
+      sp.grid.style.gridTemplateColumns = "";
+      sp.grid.style.gridTemplateRows = hs
+        .map((x) => (x === null ? "auto" : x === "fr" ? "minmax(auto, 1fr)" : cell(x, "--ch")))
+        .join(" var(--ch) ");
+      sp.grid.style.height = h != null ? cell(h, "--ch") : "";
+      sp.panes.forEach((p, i) => {
+        p.classList.toggle("is-fixed", typeof hs[i] === "number");
+        const c = p.firstElementChild;
+        if (p.classList.contains("is-host") && c?._split)
+          sizeSplit(c._split, w, typeof hs[i] === "number" ? hs[i] : null);
+      });
+    }
+  }
+
+  /* Draw the dividers of every split in root's tree. Ends that land on the
+     outer border become frame joints; ends that land on another divider are
+     drawn over it (a tee over a line reads as the joint). Pane titles sit on
+     the line above each pane. */
+  function paintSplit(root, g) {
+    const st = root._tui;
+    if (!st.splitLayer) {
+      st.splitLayer = div("tui-split-lines");
+      root.appendChild(st.splitLayer);
+    }
+    const layer = st.splitLayer;
+    const focused = layer.contains(doc.activeElement) ? doc.activeElement._drag?.id : null;
+    layer.textContent = "";
+    const c = st.c,
+      r = st.r;
+    const R = root.getBoundingClientRect();
+    if (!R.width) return; // hidden (e.g. an inactive tab): paint when shown
+    const rect = (el) => {
+      const b = el.getBoundingClientRect();
+      return {
+        x: Math.round((b.left - R.left) / metrics.cw),
+        y: Math.round((b.top - R.top) / metrics.ch),
+        w: Math.round(b.width / metrics.cw),
+        h: Math.round(b.height / metrics.ch),
+      };
+    };
+    const dv = cssChars(root, "--tui-div", 7, g.h + g.v + g.lt + g.rt + g.tt + g.bt + g.x);
+    const dg = { h: dv[0], v: dv[1], lt: dv[2], rt: dv[3], tt: dv[4], bt: dv[5] };
+    const vs = cssChars(root, "--tui-vsep", 3, g.tt + dg.v + g.bt);
+    const top = [],
+      bottom = [],
+      edges = [],
+      titles = [];
+    const place = (x, y, text, cls) => {
+      const s = div(cls || "tui-split-line", text);
+      s.style.left = `calc(${x} * var(--cw))`;
+      s.style.top = `calc(${y} * var(--ch))`;
+      layer.appendChild(s);
+      return s;
+    };
+    const title = (x, y, text, room) => {
+      if (!text || room < 3) return;
+      let t = ` ${text} `;
+      if (len(t) > room) t = `${fit(text, Math.max(1, room - 2)).trimEnd()} `;
+      if (len(t) > room) return;
+      if (y === 0) titles.push({ at: x, text: t, cls: "tui-title tui-pane-title" });
+      else {
+        const s = place(x, y, t, "tui-split-line tui-pane-title");
+        if (t.trim() !== text) s.title = text;
+      }
+    };
+    let id = 0;
+    const walk = (sp, R0) => {
+      const rs = sp.panes.map(rect);
+      const n = rs.length;
+      if (sp.dir === "h") {
+        for (let k = 0; k < n - 1; k++) {
+          const x = rs[k].x + rs[k].w;
+          const y0 = R0.y,
+            y1 = R0.y + R0.h - 1;
+          const col = place(
+            x,
+            y0,
+            Array(Math.max(0, y1 - y0 + 1))
+              .fill(dg.v)
+              .join("\n"),
+          );
+          handle(col, sp, k, id++);
+          if (y0 - 1 === 0) top.push({ at: x, ch: vs[0] });
+          else place(x, y0 - 1, dg.tt);
+          if (y1 + 1 === r - 1) bottom.push({ at: x, ch: vs[2] });
+          else place(x, y1 + 1, dg.bt);
+        }
+        sp.panes.forEach((p, i) => {
+          title(rs[i].x + 1, R0.y - 1, p.dataset.title, rs[i].w - 1);
+        });
+      } else {
+        for (let k = 0; k < n - 1; k++) {
+          const y = rs[k].y + rs[k].h;
+          const x0 = R0.x,
+            x1 = R0.x + R0.w - 1;
+          const row = place(x0, y, dg.h.repeat(Math.max(0, x1 - x0 + 1)));
+          handle(row, sp, k, id++);
+          if (x0 - 1 === 0) edges.push({ y, side: "l", ch: g.sepL });
+          else place(x0 - 1, y, dg.lt);
+          if (x1 + 1 === c - 1) edges.push({ y, side: "r", ch: g.sepR });
+          else place(x1 + 1, y, dg.rt);
+        }
+        sp.panes.forEach((p, i) => {
+          title(R0.x + 1, i ? rs[i - 1].y + rs[i - 1].h : R0.y - 1, p.dataset.title, R0.w - 1);
+        });
+      }
+      sp.panes.forEach((p, i) => {
+        const ch = p.firstElementChild;
+        if (p.classList.contains("is-host") && ch?._split) walk(ch._split, rs[i]);
+        // A .tui-sep in a pane reaches one cell into the divider or border on
+        // each side; give it the matching tees.
+        for (const s of p.querySelectorAll(".tui-sep")) {
+          if (s.closest(".tui-pane") !== p || s.closest(".tui-box") !== root) continue;
+          const { x, w } = rs[i];
+          const y = rect(s).y;
+          const left = x - 1 === 0 ? g.sepL : dg.lt;
+          const right = x + w === c - 1 ? g.sepR : dg.rt;
+          s.textContent = left + dg.h.repeat(Math.max(0, w)) + right;
+          if (x - 1 === 0) edges.push({ y, side: "l", ch: g.sepL });
+          if (x + w === c - 1) edges.push({ y, side: "r", ch: g.sepR });
+        }
+      });
+    };
+    walk(root._split, { x: 1, y: 1, w: c - 2, h: r - 2 });
+    if (focused != null) layer.querySelector(`[data-split-id="${focused}"]`)?.focus();
+
+    // The frame joints and top titles are part of the frame: redraw it once
+    // when they change (draw runs this hook again, which then finds no change).
+    const key = JSON.stringify([top, bottom, edges, titles]);
+    if (key !== st.splitKey) {
+      st.splitKey = key;
+      st.junctions = top;
+      st.bottomJunctions = bottom;
+      st.edgeJoints = edges;
+      st.extraTop = titles;
+      draw(root);
+    }
+  }
+
+  /* Make a painted divider draggable and keyboard-movable. */
+  function handle(el, sp, k, id) {
+    const h = sp.dir === "h";
+    el.classList.add("tui-split-handle", h ? "is-v" : "is-h");
+    el.tabIndex = 0;
+    el.dataset.splitId = id;
+    el.setAttribute("role", "separator");
+    el.setAttribute("aria-orientation", h ? "vertical" : "horizontal");
+    const now = () =>
+      h ? sp.sizes : sp.panes.map((p) => Math.round(p.getBoundingClientRect().height / metrics.ch));
+    el.setAttribute("aria-valuenow", now()[k]);
+    const move = (delta) => {
+      const cur = now();
+      const mins = sp.panes.map(h ? paneMin : () => 1);
+      const a = Math.max(mins[k], Math.min(cur[k] + delta, cur[k] + cur[k + 1] - mins[k + 1]));
+      if (a === cur[k]) return;
+      const b = cur[k] + cur[k + 1] - a;
+      const old = sp.tokens;
+      const next = cur.map(String);
+      next[k] = String(a);
+      next[k + 1] = String(b);
+      // The last pane keeps an fr size so the split still fills its parent.
+      const last = old.length - 1;
+      if (/fr$/.test(old[last])) next[last] = old[last];
+      else if (k + 1 !== last && /fr$/.test(old[k + 1])) next[k + 1] = old[k + 1];
+      sp.tokens = next;
+      sp.el.dataset.sizes = next.join(" ");
+      relayoutSplit(sp.root);
+      emit(sp.el, "tui-resize", { index: k, sizes: now(), tokens: next.slice() });
+    };
+    el._drag = {
+      id,
+      key(e) {
+        const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -1, ArrowDown: 1 }[e.key];
+        if (step && e.key.startsWith("Arrow") && (h ? /Left|Right/ : /Up|Down/).test(e.key)) {
+          e.preventDefault();
+          move(step);
+        } else if (e.key === "Home" || e.key === "End") {
+          e.preventDefault();
+          move(e.key === "Home" ? -9999 : 9999);
+        }
+      },
+    };
+    el.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      el.focus();
+      const unit = h ? metrics.cw : metrics.ch;
+      let p0 = h ? e.clientX : e.clientY;
+      const mv = (ev) => {
+        const steps = Math.trunc(((h ? ev.clientX : ev.clientY) - p0) / unit);
+        if (!steps) return;
+        p0 += steps * unit;
+        move(steps);
+      };
+      const up = () => {
+        doc.removeEventListener("pointermove", mv);
+        doc.removeEventListener("pointerup", up);
+        doc.body.classList.remove("tui-dragging");
+      };
+      doc.body.classList.add("tui-dragging");
+      doc.addEventListener("pointermove", mv);
+      doc.addEventListener("pointerup", up);
+    });
+  }
+
+  // ---------------------------------------------------------------- scenes
+  //
+  // A scene is a tree of nodes rendered to the same data-tui markup the kit
+  // upgrades. TUI.h builds nodes, TUI.prefab registers reusable templates and
+  // TUI.mount renders a tree and returns a handle. update() re-renders the
+  // tree and patches only the components whose props or children changed; a
+  // locale switch re-renders every scene from scratch.
+
+  const NODE = Symbol("tui.node");
+  const prefabs = new Map();
+  const scenes = new Set();
+  const EVENTS = {
+    onSelect: "tui-select",
+    onTab: "tui-tab",
+    onClose: "tui-close",
+    onResize: "tui-resize",
+    onChange: "change",
+    onInput: "input",
+    onClick: "click",
+    onKeydown: "keydown",
+  };
+  const SLOT_PROPS = ["size", "grow", "span"];
+  const COMMON = new Set(["id", "class", "style", "attrs", "tip", "hidden", "on", ...SLOT_PROPS]);
+  const BOXP = [
+    "cols",
+    "rows",
+    "title",
+    "titleAlign",
+    "footer",
+    "footerRight",
+    "border",
+    "tone",
+    "shadow",
+    "pad",
+  ];
+  const BOXDEF = {
+    cols: 20,
+    rows: "auto",
+    title: "",
+    titleAlign: "left",
+    footer: "",
+    footerRight: "",
+    border: "single",
+    shadow: false,
+    pad: 1,
+  };
+
+  const isNode = (x) => !!x && typeof x === "object" && !!x[NODE];
+  const isTok = (x) => !!x && typeof x === "object" && x.__t !== undefined;
+  const isPlain = (x) =>
+    !!x &&
+    typeof x === "object" &&
+    Object.getPrototypeOf(x) === Object.prototype &&
+    !isNode(x) &&
+    !isTok(x);
+
+  /* h(type, props?, ...children): a node. props.key keeps identity in a list,
+     props.ref names the node for scene.refs. */
+  function h(type, props, ...children) {
+    if (!isPlain(props)) {
+      if (props != null) children.unshift(props);
+      props = {};
+    }
+    const { key, ref, ...rest } = props;
+    return { [NODE]: true, type, props: rest, key, ref, children };
+  }
+  function flatKids(list, out = []) {
+    for (const c of list) {
+      if (c == null || c === false || c === true) continue;
+      if (Array.isArray(c)) flatKids(c, out);
+      else if (isNode(c)) out.push(c);
+      else out.push({ [NODE]: true, type: "#text", props: { text: c }, children: [] });
+    }
+    return out;
+  }
+  /* A fresh instance of a node tree (rendering writes .el into it). Props of
+     a node with a ref get that ref's overrides from ref.update(). */
+  function inst(v, ov) {
+    const props = v.ref && ov[v.ref] ? { ...v.props, ...ov[v.ref] } : v.props;
+    let kids = flatKids(v.children || []);
+    if (v.type === "split")
+      kids = kids.map((c) =>
+        c.type === "pane" ? c : h("pane", c.props.title ? { title: c.props.title } : {}, c),
+      );
+    return {
+      [NODE]: true,
+      type: v.type,
+      props,
+      key: v.key,
+      ref: v.ref,
+      children: kids.map((c) => inst(c, ov)),
+    };
+  }
+  /* Resolve TUI.h.t() tokens to text in the current locale. */
+  function res(v) {
+    if (isTok(v)) return i18n.t(v.__t, v.vars, v.fallback);
+    if (Array.isArray(v)) return v.map(res);
+    if (isPlain(v)) {
+      const o = {};
+      for (const k in v) o[k] = res(v[k]);
+      return o;
+    }
+    return v;
+  }
+  const str = (v) => (v == null ? "" : String(res(v)));
+  function deepEq(a, b) {
+    if (a === b) return true;
+    if (typeof a === "function" || typeof b === "function") return true; // handlers rebind anyway
+    if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
+    if (Array.isArray(a) !== Array.isArray(b)) return false;
+    const ka = Object.keys(a),
+      kb = Object.keys(b);
+    return ka.length === kb.length && ka.every((k) => deepEq(a[k], b[k]));
+  }
+  const sig = (v) => ({ t: v.type, k: v.key, p: res(v.props), c: v.children.map(sig) });
+  const sameKids = (a, b) => deepEq(a.map(sig), b.map(sig));
+
+  function setData(el, k, v) {
+    if (v == null || v === false) delete el.dataset[k];
+    else el.dataset[k] = v === true ? "" : String(v);
+  }
+  function common(el, p, o = {}) {
+    if (p.id !== o.id) {
+      if (p.id) el.id = p.id;
+      else el.removeAttribute("id");
+    }
+    if (p.class !== o.class) {
+      const cls = (c) =>
+        String(c || "")
+          .split(/\s+/)
+          .filter(Boolean);
+      el.classList.remove(...cls(o.class));
+      el.classList.add(...cls(p.class));
+    }
+    if (!deepEq(p.style, o.style)) {
+      for (const k in o.style || {}) el.style.removeProperty(k);
+      for (const k in p.style || {}) el.style.setProperty(k, p.style[k]);
+    }
+    if (!deepEq(p.attrs, o.attrs)) {
+      for (const k in o.attrs || {}) if (!(k in (p.attrs || {}))) el.removeAttribute(k);
+      for (const k in p.attrs || {}) el.setAttribute(k, p.attrs[k]);
+    }
+    if (p.tip !== o.tip) setData(el, "tip", p.tip);
+    if (!!p.hidden !== !!o.hidden) el.hidden = !!p.hidden;
+  }
+  function bindEvents(el, p, sc) {
+    const map = {};
+    for (const k in EVENTS) if (typeof p[k] === "function") map[EVENTS[k]] = p[k];
+    for (const k in p.on || {}) map[k] = p.on[k];
+    el._tuiOn = map;
+    el._tuiBound = el._tuiBound || new Set();
+    for (const name in map) {
+      if (el._tuiBound.has(name)) continue;
+      el._tuiBound.add(name);
+      el.addEventListener(name, (e) => {
+        // Kit events bubble from nested components: only take our own.
+        if (name.startsWith("tui-") && e.target !== el) return;
+        el._tuiOn[name]?.(e, sc.handle);
+      });
+    }
+  }
+  const make = (tag, cls, tui) => {
+    const el = doc.createElement(tag);
+    if (cls) el.className = cls;
+    if (tui) el.dataset.tui = tui;
+    return el;
+  };
+  const boxCreate =
+    (tui, tag = "div") =>
+    (p) => {
+      const el = make(tag, "", tui);
+      for (const k of BOXP) setData(el, k, p[k]);
+      return el;
+    };
+  function boxPatch(el, k, v) {
+    if (!BOXP.includes(k)) return false;
+    setData(el, k, v);
+    if (k === "tone") {
+      el._tui.drawn = false;
+      layout(el);
+    } else box(el, { [k]: v ?? BOXDEF[k] });
+    return true;
+  }
+  const innerOf = (el) => el._tui?.inner || el;
+  const stackCreate = (kind) => (p) => {
+    const el = make("div", "", kind);
+    setData(el, "gap", p.gap);
+    setData(el, "wrap", p.wrap);
+    setData(el, "align", p.align);
+    if (kind === "grid") {
+      setData(el, "columns", p.columns);
+      setData(el, "min", p.min);
+    }
+    return el;
+  };
+  const stackPatch = (kind) => (el, k, v) => {
+    if (!["gap", "wrap", "align", "columns", "min"].includes(k)) return false;
+    setData(el, k, v);
+    stackSetup(el, kind);
+    return true;
+  };
+  function check(kind) {
+    return {
+      create(p, _v, append) {
+        const el = make("label", `tui-${kind}`);
+        const inp = make("input");
+        inp.type = kind === "check" ? "checkbox" : "radio";
+        if (p.name) inp.name = p.name;
+        if (p.value != null) inp.value = p.value;
+        inp.checked = !!p.checked;
+        inp.disabled = !!p.disabled;
+        const label = make("span");
+        el.append(inp, make("span", "tui-mark"), label);
+        append(label);
+        return el;
+      },
+      host: (el) => el.lastElementChild,
+      patch(el, k, v) {
+        const inp = el.firstElementChild;
+        if (k === "checked") inp.checked = !!v;
+        else if (k === "disabled") inp.disabled = !!v;
+        else if (k === "value") inp.value = v ?? "";
+        else if (k === "name") inp.name = v ?? "";
+        else return false;
+        return true;
+      },
+    };
+  }
+  /* Raw markup for the components whose upgrader reads its children
+     (menu, list, select): built once, replaced when anything changes. */
+  function itemsMarkup(el, kids) {
+    for (const c of kids) {
+      const p = res(c.props);
+      if (c.type === "sep") el.appendChild(make("hr"));
+      else if (c.type === "item") {
+        const it = make("div");
+        if (p.value != null) it.dataset.value = p.value;
+        if (p.shortcut) it.dataset.key = p.shortcut;
+        if (p.disabled) it.setAttribute("disabled", "");
+        if (p.html != null) it.innerHTML = p.html;
+        else it.textContent = c.children.map((x) => str(x.props.text)).join("");
+        el.appendChild(it);
+      }
+    }
+  }
+
+  const TYPES = {
+    "#text": { create: () => make("span", "", null), children: "none" },
+    box: { create: boxCreate("box"), patch: boxPatch, host: innerOf },
+    window: {
+      create: (p) => {
+        const el = boxCreate("window")(p);
+        if (p.closable) el.dataset.closable = "";
+        return el;
+      },
+      patch: (el, k, v) => k !== "closable" && boxPatch(el, k, v),
+      host: innerOf,
+    },
+    scroll: { create: boxCreate("scroll"), patch: boxPatch, host: innerOf },
+    tabs: { create: boxCreate("tabs"), patch: boxPatch, host: innerOf, children: "tabs" },
+    tab: {
+      create: (p) => {
+        const el = make("section");
+        el.dataset.tab = str(p.label);
+        if (p.active) el.dataset.active = "";
+        return el;
+      },
+      patch(el, k, v) {
+        if (k !== "active") return false;
+        const tabs = el.closest(".tui-box");
+        const i = tabs?._tui?.tabs?.findIndex((t) => t.pane === el);
+        if (v && i >= 0) tabs._tui.selectTab(i);
+        return true;
+      },
+    },
+    split: {
+      create: (p) => {
+        const el = boxCreate("split")(p);
+        setData(el, "dir", p.dir);
+        setData(el, "sizes", Array.isArray(p.sizes) ? p.sizes.join(" ") : p.sizes);
+        return el;
+      },
+      patch(el, k, v) {
+        if (k === "sizes") {
+          split(el, { sizes: v ?? "" });
+          return true;
+        }
+        return !el.classList.contains("is-nested") && k !== "dir" && boxPatch(el, k, v);
+      },
+      host: (el) => el._split?.grid || el,
+      children: "split",
+    },
+    pane: {
+      create: (p) => {
+        const el = make("div");
+        el.dataset.pane = "";
+        setData(el, "title", p.title);
+        setData(el, "min", p.min);
+        setData(el, "pad", p.pad);
+        return el;
+      },
+      patch(el, k, v) {
+        if (!["title", "min", "pad"].includes(k)) return false;
+        setData(el, k, v);
+        if (k === "pad") el.style.setProperty("--pad", num(v, 1));
+        const sp = el.parentElement?.closest(".tui-split");
+        relayoutSplit(sp?._split?.root || sp);
+        return true;
+      },
+    },
+    hstack: { create: stackCreate("hstack"), patch: stackPatch("hstack"), children: "slot" },
+    vstack: { create: stackCreate("vstack"), patch: stackPatch("vstack"), children: "slot" },
+    grid: { create: stackCreate("grid"), patch: stackPatch("grid"), children: "slot" },
+    spacer: { create: () => make("span", "", "spacer"), children: "none" },
+    table: {
+      create: (p) => {
+        const el = table({
+          columns: p.columns || [],
+          rows: p.rows || [],
+          rules: p.rules,
+          border: p.border,
+        });
+        if (p.selected != null) el._tui.selectRow(p.selected);
+        return el;
+      },
+      patch(el, k, v) {
+        if (k !== "selected") return false;
+        el._tui.selectRow(v ?? -1);
+        return true;
+      },
+      children: "none",
+    },
+    progress: {
+      create: (p) => {
+        const el = make("span", "", "progress");
+        setData(el, "cols", p.cols);
+        setData(el, "value", p.value);
+        setData(el, "label", p.label);
+        setData(el, "tone", p.tone);
+        if (p.ascii) el.dataset.style = "ascii";
+        return el;
+      },
+      patch(el, k, v) {
+        if (k === "value") progress(el, v);
+        else if (k === "tone") {
+          setData(el, "tone", v);
+          progress(el);
+        } else return false;
+        return true;
+      },
+      children: "none",
+    },
+    spinner: {
+      create: (p) => {
+        const el = make("span", "", "spinner");
+        setData(el, "frames", p.frames);
+        return el;
+      },
+      children: "none",
+    },
+    menu: {
+      create: (p, v) => {
+        const el = boxCreate("menu")(p);
+        itemsMarkup(el, v.children);
+        return el;
+      },
+      children: "replace",
+    },
+    list: {
+      create: (p, v) => {
+        const el = boxCreate("list")(p);
+        setData(el, "selected", p.selected);
+        itemsMarkup(el, v.children);
+        return el;
+      },
+      children: "replace",
+    },
+    item: { create: () => make("div"), children: "replace" },
+    sep: { create: () => make("div", "tui-sep"), children: "none" },
+    select: {
+      create: (p, v) => {
+        const wrap = make("span", "tui-select-wrap");
+        const sel = make("select", "", "select");
+        setData(sel, "cols", p.cols);
+        if (p.name) sel.name = p.name;
+        const opts = (p.options || []).map((o) =>
+          typeof o === "object" ? o : { value: o, label: o },
+        );
+        for (const c of v.children)
+          if (c.type === "option")
+            opts.push({
+              ...res(c.props),
+              label: c.children.map((x) => str(x.props.text)).join(""),
+            });
+        for (const o of opts) {
+          const op = make("option");
+          op.value = o.value ?? o.label;
+          op.textContent = o.label ?? o.value;
+          if (o.selected || (p.value != null && String(op.value) === String(p.value)))
+            op.selected = true;
+          sel.appendChild(op);
+        }
+        wrap.appendChild(sel);
+        return wrap;
+      },
+      children: "replace",
+    },
+    option: { create: () => make("option"), children: "replace" },
+    button: {
+      create: (p) => {
+        const el = make("button", "", "button");
+        el.type = "button";
+        setData(el, "border", p.border);
+        setData(el, "cols", p.cols);
+        return el;
+      },
+      children: "replace",
+    },
+    btn: {
+      create: (p) => {
+        const el = make("button", `tui-btn${p.primary ? " is-primary" : ""}`);
+        el.type = "button";
+        setData(el, "variant", p.variant);
+        el.disabled = !!p.disabled;
+        return el;
+      },
+      patch(el, k, v) {
+        if (k === "primary") el.classList.toggle("is-primary", !!v);
+        else if (k === "disabled") el.disabled = !!v;
+        else if (k === "variant") setData(el, "variant", v);
+        else return false;
+        return true;
+      },
+    },
+    input: {
+      create: (p) => {
+        const el = make("input", "tui-input");
+        el.type = p.type || "text";
+        if (p.cols) el.style.setProperty("--cols", p.cols);
+        if (p.name) el.name = p.name;
+        if (p.placeholder != null) el.placeholder = p.placeholder;
+        if (p.value != null) el.value = p.value;
+        setData(el, "variant", p.variant);
+        return el;
+      },
+      patch(el, k, v) {
+        // value is only written when the prop changes, so typing is not undone.
+        if (k === "value") el.value = v ?? "";
+        else if (k === "placeholder") el.placeholder = v ?? "";
+        else if (k === "cols") el.style.setProperty("--cols", v);
+        else if (k === "variant") setData(el, "variant", v);
+        else return false;
+        return true;
+      },
+      children: "none",
+    },
+    check: check("check"),
+    radio: check("radio"),
+    line: { create: () => make("span", "tui-line") },
+    col: {
+      create: (p) => {
+        const el = make("span", "tui-col");
+        el.style.setProperty("--col", p.col ?? 8);
+        return el;
+      },
+      patch(el, k, v) {
+        if (k !== "col") return false;
+        el.style.setProperty("--col", v ?? 8);
+        return true;
+      },
+    },
+    statusbar: { create: () => make("div", "tui-statusbar") },
+    kbd: { create: () => make("span", "tui-kbd") },
+    seg: {
+      create: (p) => make("span", p.alt ? "tui-seg-alt" : "tui-seg"),
+      patch(el, k, v) {
+        if (k !== "alt") return false;
+        el.className = v ? "tui-seg-alt" : "tui-seg";
+        return true;
+      },
+    },
+    text: { create: () => make("span") },
+    p: { create: () => make("p") },
+    el: { create: (p) => make(p.tag || "div") },
+  };
+
+  function slotProps(p) {
+    return { size: p.size, grow: p.grow, span: p.span };
+  }
+
+  /* Build v's element (and its subtree). Not upgraded yet: settle() does that
+     once the element is in the document. */
+  function render(v, sc, parent) {
+    v.parent = parent || null;
+    v.scene = sc;
+    const pf = prefabs.get(v.type);
+    if (pf) {
+      v.rendered = inst(prefabOut(pf, v), sc.overrides);
+      render(v.rendered, sc, v);
+      v.el = v.rendered.el;
+      return v.el;
+    }
+    const spec = TYPES[v.type];
+    if (!spec) throw new Error(`TUI: unknown node type "${v.type}"`);
+    const p = res(v.props);
+    let appended = false;
+    const append = (host) => {
+      appended = true;
+      for (const c of v.children) host.appendChild(placeChild(c, sc, v, spec));
+    };
+    const el = spec.create(p, v, append);
+    v.el = el;
+    if (v.type === "#text") el.textContent = str(v.props.text);
+    common(el, p);
+    bindEvents(el, v.props, sc);
+    const mode = spec.children || "inplace";
+    if (!appended && (mode === "inplace" || mode === "slot" || mode === "tabs" || mode === "split"))
+      append(el);
+    return el;
+  }
+  function placeChild(c, sc, parent, spec) {
+    const el = render(c, sc, parent);
+    c.slot = spec.children === "slot" ? wrapSlot(el, slotProps(res(c.props))) : null;
+    return c.slot || el;
+  }
+  function prefabOut(pf, v) {
+    const out = pf.render(res({ ...pf.defaults, ...v.props }), v.children);
+    return isNode(out) ? out : flatKids([out])[0] || h("text");
+  }
+  const outerOf = (v) => v.slot || v.el;
+
+  /* Upgrade a freshly inserted subtree and redraw its boxes (a box built
+     before it was in the document read no border glyphs from CSS). */
+  function settle(el) {
+    if (el.nodeType !== 1) return;
+    upgrade(el);
+    const boxesIn = [el, ...el.querySelectorAll(".tui-box")];
+    for (const b of boxesIn) {
+      if (!b._tui?.built) continue;
+      b._tui.drawn = false;
+      layout(b);
+    }
+  }
+
+  function replace(o, n) {
+    const sc = o.scene;
+    render(n, sc, o.parent);
+    o.el.replaceWith(n.el);
+    n.slot = o.slot;
+    if (n.slot) applySlot(n.slot, slotProps(res(n.props)));
+    settle(n.el);
+    const host = n.el.parentElement?.closest(".tui-split");
+    if (host) relayoutSplit(host._split?.root || host);
+    return n;
+  }
+
+  /* Bring the rendered node o in line with the new (unrendered) node n.
+     Returns the node that is now in the tree: o, patched, or n, rendered. */
+  function patch(o, n) {
+    if (o === n) return o;
+    if (o.type !== n.type || o.key !== n.key) return replace(o, n);
+    const sc = o.scene;
+    if (n.type === "#text") {
+      const t = str(n.props.text);
+      if (o.el.textContent !== t) o.el.textContent = t;
+      o.props = n.props;
+      return o;
+    }
+    const pf = prefabs.get(n.type);
+    if (pf) {
+      o.props = n.props;
+      o.children = n.children;
+      o.ref = n.ref;
+      const r = patch(o.rendered, inst(prefabOut(pf, o), sc.overrides));
+      r.parent = o;
+      o.rendered = r;
+      o.el = r.el;
+      return o;
+    }
+    const spec = TYPES[n.type];
+    const op = res(o.props),
+      np = res(n.props);
+    const keys = new Set([...Object.keys(op), ...Object.keys(np)]);
+    for (const k of keys) {
+      if (COMMON.has(k) || EVENTS[k] || deepEq(op[k], np[k])) continue;
+      if (!spec.patch?.(o.el, k, np[k], np, o)) return replace(o, n);
+    }
+    const mode = spec.children || "inplace";
+    if (mode === "replace" && !sameKids(o.children, n.children)) return replace(o, n);
+    if (mode === "tabs" || mode === "split") {
+      const shape = (v) =>
+        v.children.map((c) => (mode === "tabs" ? `${c.type}:${str(c.props.label)}` : c.type));
+      if (!deepEq(shape(o), shape(n))) return replace(o, n);
+    }
+    common(o.el, np, op);
+    bindEvents(o.el, n.props, sc);
+    if (o.slot && SLOT_PROPS.some((k) => !deepEq(op[k], np[k]))) applySlot(o.slot, slotProps(np));
+    o.props = n.props;
+    o.ref = n.ref;
+    if (mode !== "replace" && mode !== "none") patchKids(o, n.children, spec);
+    return o;
+  }
+
+  function patchKids(o, news, spec) {
+    const host = spec.host ? spec.host(o.el) : o.el;
+    const old = o.children;
+    const byKey = new Map();
+    for (const c of old) if (c.key != null) byKey.set(c.key, c);
+    const used = new Set();
+    const fresh = new Set();
+    const out = news.map((n, i) => {
+      let m = n.key != null ? byKey.get(n.key) : old[i];
+      if (m && (used.has(m) || (n.key == null && m.key != null))) m = null;
+      if (m) {
+        used.add(m);
+        return patch(m, n);
+      }
+      placeChild(n, o.scene, o, spec);
+      fresh.add(n);
+      return n;
+    });
+    for (const c of old) if (!used.has(c)) outerOf(c).remove();
+    // Move only what is out of place, so focus and scroll inside survive.
+    // Split panes never move (the shape check above keeps them in order) and
+    // sit between gutters.
+    let prev = null;
+    for (const v of out) {
+      v.parent = o;
+      if (spec.children === "split") continue;
+      const node = outerOf(v);
+      const want = prev ? prev.nextSibling : host.firstChild;
+      if (node !== want) host.insertBefore(node, want);
+      prev = node;
+    }
+    for (const v of fresh) settle(v.el);
+    o.children = out;
+  }
+
+  function indexRefs(sc) {
+    sc.refMap = new Map();
+    const walk = (v) => {
+      if (v.ref) sc.refMap.set(v.ref, v);
+      if (v.rendered) walk(v.rendered);
+      for (const c of v.children) walk(c);
+    };
+    if (sc.tree) walk(sc.tree);
+  }
+
+  /* Render sc from scratch (first mount, locale switch). */
+  function renderScene(sc) {
+    const tree = inst(sc.source, sc.overrides);
+    const old = sc.tree;
+    if (old?.el?.isConnected) {
+      render(tree, sc, null);
+      old.el.replaceWith(tree.el);
+    } else if (sc.replaceTarget) {
+      // Mounted in place of a data-tui-use element. Once that element's root
+      // is rebuilt from markup, upgrade() mounts a new scene there.
+      if (old || !sc.target.isConnected) return scenes.delete(sc);
+      render(tree, sc, null);
+      sc.target.replaceWith(tree.el);
+    } else {
+      const target = sc.target.isConnected
+        ? sc.target
+        : sc.targetId && doc.getElementById(sc.targetId);
+      if (!target) return scenes.delete(sc);
+      sc.target = target;
+      render(tree, sc, null);
+      target.replaceChildren(tree.el);
+    }
+    sc.tree = tree;
+    sc.dirty = false;
+    settle(tree.el);
+    indexRefs(sc);
+  }
+  function flushScene(sc) {
+    if (!sc.dirty || !sc.tree) return;
+    sc.dirty = false;
+    sc.tree = patch(sc.tree, inst(sc.source, sc.overrides));
+    sc.tree.parent = null;
+    indexRefs(sc);
+  }
+  function schedule(sc) {
+    sc.dirty = true;
+    if (!sc.queued)
+      sc.queued = Promise.resolve().then(() => {
+        sc.queued = null;
+        flushScene(sc);
+      });
+    return sc.queued;
+  }
+
+  /* TUI.mount(target, node) renders node into target and returns
+       { el, refs, update(props), flush(), render(), destroy() }.
+     refs.name is { el, props, update(props) } for the node with ref: "name";
+     its updates stick across later scene updates. */
+  function mount(target, node, opts) {
+    const sc = {
+      source: node,
+      overrides: {},
+      tree: null,
+      target,
+      targetId: target.id || "",
+      replaceTarget: !!opts?.replace,
+      dirty: false,
+      queued: null,
+      refMap: new Map(),
+    };
+    const refCache = {};
+    const refs = new Proxy(
+      {},
+      {
+        get(_, name) {
+          if (typeof name !== "string") return undefined;
+          if (!refCache[name]) refCache[name] = refHandle(name);
+          return refCache[name];
+        },
+      },
+    );
+    function refHandle(name) {
+      return {
+        get el() {
+          return sc.refMap.get(name)?.el;
+        },
+        get props() {
+          const v = sc.refMap.get(name);
+          return v ? res(v.props) : undefined;
+        },
+        update(p) {
+          sc.overrides[name] = { ...sc.overrides[name], ...p };
+          return schedule(sc);
+        },
+      };
+    }
+    sc.handle = {
+      refs,
+      get el() {
+        return sc.tree?.el;
+      },
+      get props() {
+        return res(sc.source.props);
+      },
+      update(p) {
+        sc.source = { ...sc.source, props: { ...sc.source.props, ...p } };
+        return schedule(sc);
+      },
+      flush: () => flushScene(sc),
+      render: () => renderScene(sc),
+      destroy() {
+        scenes.delete(sc);
+        sc.tree?.el?.remove();
+        sc.tree = null;
+      },
+    };
+    scenes.add(sc);
+    renderScene(sc);
+    return sc.handle;
+  }
+
+  /* TUI.prefab(name, defaults, render): render(props, children) returns a node. */
+  function prefab(name, defaults, renderFn) {
+    if (typeof defaults === "function") [defaults, renderFn] = [{}, defaults];
+    if (TYPES[name]) throw new Error(`TUI: "${name}" is a built-in type`);
+    prefabs.set(name, { defaults: defaults || {}, render: renderFn });
+    return (props, ...kids) => h(name, props, ...kids);
+  }
+
+  /* <div data-tui-use="pilot-card" data-name="Atlas" data-hits="2"> */
+  function useMount(el) {
+    const name = el.dataset.tuiUse;
+    if (!prefabs.has(name)) return;
+    const props = {};
+    for (const [k, v] of Object.entries(el.dataset)) {
+      if (k === "tuiUse") continue;
+      props[k] =
+        v === "" || v === "true"
+          ? true
+          : v === "false"
+            ? false
+            : /^-?\d+(\.\d+)?$/.test(v)
+              ? +v
+              : v;
+    }
+    if (el.id) props.id = el.id;
+    mount(el, h(name, props), { replace: true });
+  }
+
+  // Builder helpers: TUI.h.box(props?, ...children), TUI.h.t(key), ...
+  for (const name of Object.keys(TYPES)) if (name !== "#text") h[name] = (...a) => h(name, ...a);
+  const labelled =
+    (type, prop) =>
+    (first, ...kids) =>
+      typeof first === "string" || isTok(first)
+        ? h(type, { [prop]: first }, ...kids)
+        : h(type, first, ...kids);
+  h.tab = labelled("tab", "label");
+  h.pane = labelled("pane", "title");
+  h.col = (n, ...kids) =>
+    typeof n === "number" ? h("col", { col: n }, ...kids) : h("col", n, ...kids);
+  h.el = (tag, props, ...kids) =>
+    isPlain(props) ? h("el", { ...props, tag }, ...kids) : h("el", { tag }, props, ...kids);
+  h.t = (key, vars, fallback) => ({ __t: key, vars, fallback });
+  h.use = (name, props, ...kids) => h(name, props, ...kids);
+
   // ---------------------------------------------------------------- i18n
   //
   // Markup carries the source-language text plus keys:
@@ -1531,6 +2867,8 @@
         this.apply(root);
         upgrade(root);
       }
+      // Scenes hold their text as keys: render each again in the new locale.
+      for (const sc of [...scenes]) renderScene(sc);
       refresh();
       emit(doc.documentElement, "tui-locale", { locale });
     },
@@ -1551,10 +2889,18 @@
     spinner,
     scroll,
     button,
+    hstack,
+    vstack,
+    grid,
+    spacer,
+    split: (el) => split(el),
   };
 
   function upgrade(root) {
     root = root || doc;
+    const uses = Array.from(root.querySelectorAll("[data-tui-use]"));
+    if (root instanceof Element && root.dataset.tuiUse) uses.unshift(root);
+    uses.forEach(useMount);
     const els = Array.from(root.querySelectorAll("[data-tui]"));
     if (root instanceof Element && root.dataset.tui) els.unshift(root);
     for (const el of els) {
@@ -1626,6 +2972,14 @@
     spinner,
     scroll,
     button,
+    hstack,
+    vstack,
+    grid,
+    spacer,
+    split,
+    h,
+    mount,
+    prefab,
     dialog,
     popupMenu,
     glyphs,

@@ -1,6 +1,15 @@
 /* Demo strings. English lives in the markup of demo.html; only strings built
    from script need an 'en' entry. 'ko' covers both. */
 TUI.i18n.add("en", {
+  "scn.weapon": "Weapon",
+  "scn.loc": "Loc",
+  "scn.ammo": "Ammo",
+  "scn.fire": "Fire AC/20",
+  "scn.repair": "Repair",
+  "scn.ready": "Fire, repair, or drag a divider.",
+  "scn.out.fire": "AC/20 fired, {v} rounds left",
+  "scn.out.repair": "Armor repaired",
+  "scn.out.resize": "Panes: {a} + {b} cells",
   "cell.info": "cell {w} × {h} px",
   "status.border": "border: {v}",
   "status.theme": "theme: {v}",
@@ -303,4 +312,18 @@ TUI.i18n.add("ko", {
   "ft.theme": "테마",
   "ft.lang": "언어",
   "ft.ready": "준비",
+  "scn.weapon": "무기",
+  "scn.loc": "위치",
+  "scn.ammo": "탄약",
+  "scn.fire": "AC/20 사격",
+  "scn.repair": "수리",
+  "scn.ready": "사격하거나 수리하거나 구분선을 끌어 보세요.",
+  "scn.out.fire": "AC/20 사격, 남은 탄 {v}",
+  "scn.out.repair": "장갑 수리 완료",
+  "scn.out.resize": "패널: {a} + {b} 칸",
+  "scn.hint":
+    "TUI.h와 프리팹 두 개로 스크립트에서 만든 화면입니다. 버튼은 scene.update()를 부르고, 바뀐 부분만 패치됩니다.",
+  "split.heat": "열",
+  "split.hint":
+    "마크업으로 만든 분할 창이며, 프리팹은 data-tui-use로 넣었습니다. 구분선을 끌거나 Tab으로 이동해 화살표 키를 쓰세요.",
 });
