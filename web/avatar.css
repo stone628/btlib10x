@@ -11,16 +11,6 @@
   gap: 10px;
 }
 
-/* Both locales are in the markup; only the `<html lang>` match stays visible.
-   The language buttons are exempt so both labels always show. Same rules as
-   landing.css. */
-:root:lang(en) #avatar-app :lang(ko):not(#lang button) {
-  display: none;
-}
-:root:lang(ko) #avatar-app :lang(en):not(#lang button) {
-  display: none;
-}
-
 #avatar-head {
   width: 100%;
   max-width: 760px;
@@ -36,33 +26,14 @@
   margin-bottom: 4px;
 }
 
-#lang {
-  display: flex;
-  gap: 6px;
-}
-
-#lang button,
-#home-link {
-  padding: 3px 8px;
-  font-size: 11px;
-}
-
-/* Same height as the language buttons, which #lang stretches to its
-   tallest (Hangul) line. */
+/* Sized like the language buttons, and as tall: #lang stretches those to
+   its tallest (Hangul) line. */
 #home-link {
   align-self: stretch;
   display: flex;
   align-items: center;
-}
-
-#lang button {
-  cursor: pointer;
-}
-
-#lang button[aria-pressed="true"] {
-  color: var(--c-white);
-  border-color: var(--c-green);
-  background: var(--cb-green);
+  padding: 3px 8px;
+  font-size: 11px;
 }
 
 #avatar-head h1 {
@@ -72,10 +43,8 @@
   color: var(--c-green);
 }
 
-#avatar-head .hint {
+.hint {
   margin: 4px 0 0;
-  color: #b9c9b0;
-  font-style: italic;
   font-size: 12px;
 }
 
@@ -123,7 +92,7 @@
   line-height: var(--board-lh);
   background: transparent;
   border: none;
-  color: #b8c9b8;
+  color: var(--c-text);
   padding: 0 2px;
   cursor: pointer;
   display: flex;
@@ -133,7 +102,6 @@
   /* No true bold face covers the box-drawing/symbol glyphs: synthetic
      emboldening widens them past their advance and breaks the pre box. */
   font-synthesis: none;
-  font-synthesis-weight: none;
 }
 
 .avatar .art {
@@ -165,18 +133,15 @@
 }
 
 .avatar.selected {
-  color: var(--c-white);
   cursor: default;
 }
 
+.avatar.selected,
 .avatar.selected .cap {
   color: var(--c-white);
 }
 
-.part.active .avatar.selected {
-  color: var(--c-green);
-}
-
+.part.active .avatar.selected,
 .part.active .avatar.selected .cap {
   color: var(--c-green);
 }
@@ -192,8 +157,8 @@
 .step {
   font: inherit;
   color: var(--c-green);
-  background: #1a1f1a;
-  border: 1px solid #233023;
+  background: var(--c-button);
+  border: 1px solid var(--c-line);
   border-radius: 4px;
   padding: 8px 10px;
   cursor: pointer;
@@ -220,13 +185,6 @@
   gap: 8px;
 }
 
-#out-row .hint {
-  margin: 4px 0 0;
-  color: #b9c9b0;
-  font-style: italic;
-  font-size: 12px;
-}
-
 /* Slot map: the final avatar with one labelled box per override slot
    (layout in avatar.slotmap.ts). Everything sits on one character grid, so
    connectors, boxes and the avatar stay aligned. 0.6em is the font's advance:
@@ -241,7 +199,6 @@
   color: var(--c-dim);
   white-space: pre;
   font-synthesis: none;
-  font-synthesis-weight: none;
 }
 
 #slotmap .map-line {
@@ -254,7 +211,7 @@
 }
 
 #slotmap .map-cell.lit {
-  color: #0c0f0c;
+  color: var(--c-bg);
   background: var(--c-yellow);
 }
 
@@ -283,7 +240,7 @@
 }
 
 #slotmap .map-box.editing {
-  color: #0c0f0c;
+  color: var(--c-bg);
   background: var(--c-yellow);
 }
 
@@ -309,18 +266,16 @@
   transform: translateX(-50%);
   margin: 0;
   width: min(var(--gp-width), calc(100vw - 16px));
-  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 8px 12px;
   color: var(--c-white);
-  background: #0f140f;
+  background: var(--c-panel);
   border: 1px solid var(--c-green);
   border-radius: 4px;
   font-family: var(--board-ff);
   font-synthesis: none;
-  font-synthesis-weight: none;
   overflow: hidden;
 }
 
@@ -368,8 +323,8 @@
   font: inherit;
   font-size: 13px;
   color: var(--c-white);
-  background: #1a1f1a;
-  border: 1px solid #233023;
+  background: var(--c-button);
+  border: 1px solid var(--c-line);
   border-radius: 4px;
   padding: 3px 6px;
 }
@@ -407,7 +362,6 @@
   border-color: var(--c-green);
 }
 
-.gp-cell:focus-visible,
 .gp-cell:focus {
   outline: none;
   border-color: var(--c-yellow);
@@ -419,7 +373,7 @@
 }
 
 .gp-cell.chosen {
-  color: #0c0f0c;
+  color: var(--c-bg);
   background: var(--c-yellow);
 }
 
@@ -461,7 +415,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  border-top: 1px solid #233023;
+  border-top: 1px solid var(--c-line);
   padding-top: 4px;
 }
 
@@ -564,10 +518,9 @@
 /* HTML snippet panel: same look as the glyph picker, centred. */
 #snippet-panel {
   width: min(80ch, calc(100vw - 16px));
-  box-sizing: border-box;
   padding: 8px 12px;
   color: var(--c-white);
-  background: #0f140f;
+  background: var(--c-panel);
   border: 1px solid var(--c-green);
   border-radius: 4px;
 }
@@ -584,14 +537,10 @@
 
 #snippet-panel .hint {
   margin: 0;
-  color: #b9c9b0;
-  font-style: italic;
-  font-size: 12px;
 }
 
 #snippet-code {
   width: 100%;
-  box-sizing: border-box;
   min-height: 10em;
   resize: vertical;
   padding: 6px;

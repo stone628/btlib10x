@@ -1,13 +1,5 @@
-/* Landing page at the site root: same terminal palette as bt10x.css. */
-
-/* Both locales are in the markup; only the `<html lang>` match stays visible.
-   The language buttons are exempt so both labels always show. */
-:root:lang(en) #landing :lang(ko):not(#lang button) {
-  display: none;
-}
-:root:lang(ko) #landing :lang(en):not(#lang button) {
-  display: none;
-}
+/* Landing page at the site root: same terminal palette as bt10x.css, which
+   also holds the locale and language-toggle rules. */
 
 #landing {
   flex: 1;
@@ -24,26 +16,10 @@
   width: 100%;
   max-width: 760px;
   text-align: center;
-  position: relative;
 }
 
 #lang {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
   margin-bottom: 8px;
-}
-
-#lang button {
-  padding: 3px 8px;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-#lang button[aria-pressed="true"] {
-  color: var(--c-white);
-  border-color: var(--c-green);
-  background: var(--cb-green);
 }
 
 #landing-head h1 {
@@ -55,7 +31,7 @@
 
 #landing-head .tagline {
   margin: 6px 0 0;
-  color: #b9c9b0;
+  color: var(--c-hint);
   font-style: italic;
 }
 
@@ -67,18 +43,12 @@
   gap: 16px;
 }
 
-@media (min-width: 640px) {
-  #cards {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
 .card {
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 14px;
-  border: 1px solid #233023;
+  border: 1px solid var(--c-line);
   border-radius: 6px;
   background: #111611;
   color: inherit;
@@ -101,13 +71,12 @@
   padding: 8px 10px;
   /* Fixed height so the cards' previews line up. */
   height: 9em;
-  background: #0c0f0c;
+  background: var(--c-bg);
   border: 1px solid #1c251c;
   border-radius: 4px;
   font-family: var(--board-ff);
   line-height: var(--board-lh);
   overflow-x: auto;
-  color: #b8c9b8;
 }
 
 .card .preview .g {
@@ -162,8 +131,11 @@
   height: calc(9em / 1.1);
 }
 
-/* Third card: the full row under the two columns. */
+/* Two columns; the third card takes the full row under them. */
 @media (min-width: 640px) {
+  #cards {
+    grid-template-columns: 1fr 1fr;
+  }
   #card-gallery {
     grid-column: 1 / -1;
   }

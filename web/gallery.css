@@ -11,14 +11,6 @@
   gap: 12px;
 }
 
-/* Both locales are in the markup; only the `<html lang>` match stays visible. */
-:root:lang(en) #gallery-app :lang(ko):not(#lang button) {
-  display: none;
-}
-:root:lang(ko) #gallery-app :lang(en):not(#lang button) {
-  display: none;
-}
-
 #gallery-head,
 #view {
   width: 100%;
@@ -60,35 +52,14 @@
   color: var(--c-white);
 }
 
-#lang {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
-#lang button,
-#home-link {
-  padding: 3px 8px;
-  font-size: 11px;
-}
-
-/* Same height as the language buttons, which #lang stretches to its
-   tallest (Hangul) line. */
+/* Sized like the language buttons, and as tall: #lang stretches those to
+   its tallest (Hangul) line. */
 #home-link {
   align-self: stretch;
   display: flex;
   align-items: center;
-}
-
-#lang button {
-  cursor: pointer;
-}
-
-#lang button[aria-pressed="true"],
-#tabs a[aria-current="page"] {
-  color: var(--c-white);
-  border-color: var(--c-green);
-  background: var(--cb-green);
+  padding: 3px 8px;
+  font-size: 11px;
 }
 
 #gallery-head h1 {
@@ -97,23 +68,17 @@
   letter-spacing: 0.2em;
 }
 
-#gallery-app a {
+/* Plain links; link buttons keep their own colours and hover. */
+#gallery-app a:not(.link-button) {
   color: var(--c-green);
-}
-
-#gallery-app a.link-button {
-  text-decoration: none;
 }
 
 #gallery-head h1 a {
-  color: var(--c-green);
   text-decoration: none;
 }
 
 .hint {
   margin: 4px 0 0;
-  color: #b9c9b0;
-  font-style: italic;
   font-size: 12px;
 }
 
@@ -137,7 +102,7 @@
   align-items: center;
   gap: 4px;
   padding: 8px 6px;
-  border: 1px solid #233023;
+  border: 1px solid var(--c-line);
   border-radius: 4px;
   background: #101410;
   min-width: 0;
@@ -265,7 +230,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #233023;
+  border: 1px solid var(--c-line);
   border-radius: 4px;
   background: #101410;
 }
@@ -315,7 +280,7 @@
   font-size: 13px;
   color: var(--c-white);
   background: #101410;
-  border: 1px solid #233023;
+  border: 1px solid var(--c-line);
   border-radius: 4px;
   padding: 6px 8px;
 }
@@ -342,10 +307,9 @@
    key panel; same look as the creator's snippet panel (avatar.css). */
 :is(#submit-panel, #key-panel) {
   width: min(64ch, calc(100vw - 16px));
-  box-sizing: border-box;
   padding: 8px 12px;
   color: var(--c-white);
-  background: #0f140f;
+  background: var(--c-panel);
   border: 1px solid var(--c-green);
   border-radius: 4px;
 }
@@ -382,23 +346,12 @@
   margin-left: auto;
 }
 
-:is(#submit-panel, #key-panel) a.link-button {
-  text-decoration: none;
-}
-
 :is(#submit-panel, #key-panel)::backdrop {
   background: rgb(0 0 0 / 0.5);
 }
 
 :is(#submit-panel, #key-panel) .hint {
   margin: 0;
-  color: #b9c9b0;
-  font-style: italic;
-  font-size: 12px;
-}
-
-:is(#submit-panel, #key-panel) a {
-  color: var(--c-green);
 }
 
 #submit-preview {
@@ -411,7 +364,6 @@
 #submit-mul,
 #key-panel .gp-input {
   width: 100%;
-  box-sizing: border-box;
   padding: 6px;
   color: var(--c-white);
   background: #000;

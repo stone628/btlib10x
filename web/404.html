@@ -10,13 +10,7 @@
          would answer unknown paths with index.html instead. -->
     <link rel="stylesheet" href="/bt10x.css" />
     <style>
-      /* Both locales are in the markup; only the `<html lang>` match stays visible. */
-      :root:lang(en) #notfound :lang(ko):not(#lang button) {
-        display: none;
-      }
-      :root:lang(ko) #notfound :lang(en):not(#lang button) {
-        display: none;
-      }
+      /* Locale and language-toggle rules come from bt10x.css. */
       #notfound {
         flex: 1;
         display: flex;
@@ -28,19 +22,6 @@
       }
       #lang {
         align-self: stretch;
-        display: flex;
-        justify-content: flex-end;
-        gap: 6px;
-      }
-      #lang button {
-        padding: 3px 8px;
-        font-size: 11px;
-        cursor: pointer;
-      }
-      #lang button[aria-pressed="true"] {
-        color: var(--c-white);
-        border-color: var(--c-green);
-        background: var(--cb-green);
       }
       #notfound h1 {
         margin: 20vh 0 0;

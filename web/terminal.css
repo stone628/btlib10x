@@ -19,17 +19,11 @@
   --t-mediumBuilding: #c89a5a;
   --t-heavyBuilding: #b4885a;
   --t-hardenedBuilding: #a87a4a;
+  /* Header height; taller on touch screens (see the pointer: coarse block). */
+  --topbar-h: 36px;
 }
 /* Fixed header: a flex: none row above #term (body is a 100dvh column), so it
    never overlaps the log. Notch / rounded-corner insets need viewport-fit=cover. */
-:root {
-  --topbar-h: 36px;
-}
-@media (pointer: coarse) {
-  :root {
-    --topbar-h: 44px;
-  }
-}
 #topbar {
   flex: none;
   display: flex;
@@ -39,7 +33,7 @@
   height: calc(var(--topbar-h) + env(safe-area-inset-top));
   padding: env(safe-area-inset-top) calc(12px + env(safe-area-inset-right)) 0
     calc(12px + env(safe-area-inset-left));
-  border-bottom: 1px solid #233023;
+  border-bottom: 1px solid var(--c-line);
 }
 #topbar-title {
   color: var(--c-green);
@@ -53,7 +47,8 @@
   font-size: 11px;
   font-weight: normal;
 }
-/* Landing page link, rightmost in the header. */
+/* Header buttons: MOTD, then the landing page link rightmost. */
+#motd-open,
 #home-link {
   display: flex;
   align-items: center;
@@ -62,30 +57,14 @@
   padding: 0 10px;
   font-size: 12px;
   font-weight: bold;
-  white-space: nowrap;
-}
-:root:lang(en) #home-link :lang(ko) {
-  display: none;
-}
-:root:lang(ko) #home-link :lang(en) {
-  display: none;
 }
 #motd-open {
   margin-left: auto;
-  display: flex;
-  align-items: center;
   gap: 6px;
-  flex: none;
-  height: calc(var(--topbar-h) - 10px);
-  padding: 0 10px;
-  font-size: 12px;
-  font-weight: bold;
   cursor: pointer;
 }
-#motd-open[aria-expanded="true"] {
-  background-color: var(--cb-green);
-  color: var(--c-white);
-  border-color: var(--c-green);
+#home-link {
+  white-space: nowrap;
 }
 /* Unread marker: MOTD changed since this browser last opened it. */
 #motd-dot {
@@ -115,11 +94,11 @@
   max-width: none;
   overflow: hidden;
   max-height: min(60vh, calc(100vh - var(--motd-top) - env(safe-area-inset-bottom) - 8px));
-  background: #0c0f0c;
-  border: 1px solid #233023;
+  background: var(--c-bg);
+  border: 1px solid var(--c-line);
   border-radius: 4px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-  color: #b8c9b8;
+  color: var(--c-text);
   font-size: 12px;
 }
 @supports (height: 100dvh) {
@@ -140,7 +119,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 4px 4px 4px 10px;
-  border-bottom: 1px solid #233023;
+  border-bottom: 1px solid var(--c-line);
 }
 #motd-title {
   color: var(--c-green);
@@ -159,13 +138,13 @@
 }
 #motd-close:hover {
   color: var(--c-white);
-  border-color: #233023;
+  border-color: var(--c-line);
 }
 #motd-close:focus-visible {
   outline: none;
   border-color: var(--c-yellow);
 }
-#motd > #motd-body {
+#motd-body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -173,31 +152,6 @@
   padding: 10px 12px 12px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-}
-@media (pointer: coarse) {
-  #motd-close {
-    width: 44px;
-    height: 44px;
-    font-size: 16px;
-  }
-  #motd-head {
-    padding: 0 0 0 12px;
-  }
-}
-/* MOTD carries both locales; only the `<html lang>` match stays visible. */
-:root:lang(en) #motd-body :lang(ko) {
-  display: none;
-}
-:root:lang(ko) #motd-body :lang(en) {
-  display: none;
-}
-#motd-body .banner {
-  color: #8fd08f;
-  font-weight: bold;
-}
-#motd-body .hint {
-  color: #b9c9b0;
-  font-style: italic;
 }
 #term {
   display: flex;
@@ -213,22 +167,19 @@
   padding: 6px;
 }
 #out .cmd {
-  color: #d7e4d7;
-  border-top: 1px solid #233023;
+  color: var(--c-white);
+  border-top: 1px solid var(--c-line);
   padding-top: 6px;
   margin-top: 6px;
   font-weight: bold;
 }
 #out .err {
-  color: #e07a6a;
+  color: var(--c-red);
 }
-#out .banner {
-  color: #8fd08f;
+#out .banner,
+#motd-body .banner {
+  color: var(--c-green);
   font-weight: bold;
-}
-#out .hint {
-  color: #b9c9b0;
-  font-style: italic;
 }
 /* Side-by-side column groups (record sheet, crit chart rows). */
 #out .columns {
@@ -244,7 +195,7 @@
 }
 #out .collapsible > summary {
   cursor: pointer;
-  color: #8fd08f;
+  color: var(--c-green);
   user-select: none;
 }
 #out .collapsible > summary:hover {
@@ -254,27 +205,23 @@
   white-space: pre;
   margin-top: 0.2em;
   padding-left: 0.5em;
-  font-family: var(--board-ff);
-  font-size: var(--board-fs);
-  color: #b8c9b8;
 }
 /* Game board output: dedicated font + line spacing, styled spans. */
-#out .board-legend {
+#out .collapsible-body,
+#out .board-legend,
+#out .board,
+#out .board-grid {
   font-family: var(--board-ff);
   font-size: var(--board-fs);
 }
-#out .board {
-  font-family: var(--board-ff);
-  font-size: var(--board-fs);
+#out .board,
+#out .board-grid {
   line-height: var(--board-lh);
 }
 /* Per-character CSS Grid: isolates bold to single cells. */
 #out .board-grid {
   display: inline-grid;
   grid-auto-flow: row dense;
-  line-height: var(--board-lh);
-  font-family: var(--board-ff);
-  font-size: var(--board-fs);
 }
 #out .board-grid > span {
   display: block;
@@ -397,7 +344,7 @@
 #inrow {
   display: flex;
   flex-wrap: wrap;
-  border-top: 1px solid #233023;
+  border-top: 1px solid var(--c-line);
   padding-top: 6px;
   margin-top: 6px;
 }
@@ -412,7 +359,7 @@
 }
 #prompt {
   white-space: pre;
-  color: #8fd08f;
+  color: var(--c-green);
   padding-top: 1px;
 }
 #cmd {
@@ -429,7 +376,20 @@
 #cmd:focus-visible {
   box-shadow: inset 0 -1px 0 var(--cb-green);
 }
+/* Touch screens: taller header, bigger MOTD close target, and a 16px prompt
+   so iOS doesn't zoom in on focus. */
 @media (pointer: coarse) {
+  :root {
+    --topbar-h: 44px;
+  }
+  #motd-close {
+    width: 44px;
+    height: 44px;
+    font-size: 16px;
+  }
+  #motd-head {
+    padding: 0 0 0 12px;
+  }
   #cmd {
     font-size: 16px;
   }

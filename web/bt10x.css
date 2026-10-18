@@ -44,14 +44,22 @@
   --cb-cyan: #12302e;
   --cb-white: #243024;
   --cb-dim: #161d16;
+  /* Page chrome: background, body text, italic hints, rules and borders,
+     button and panel fills. */
+  --c-bg: #0c0f0c;
+  --c-text: #b8c9b8;
+  --c-hint: #b9c9b0;
+  --c-line: #233023;
+  --c-button: #1a1f1a;
+  --c-panel: #0f140f;
 }
 * {
   box-sizing: border-box;
 }
 body {
   margin: 0;
-  background: #0c0f0c;
-  color: #b8c9b8;
+  background: var(--c-bg);
+  color: var(--c-text);
   font-family: var(--mono-ff);
   font-variant-ligatures: none;
   font-size: 13px;
@@ -67,7 +75,7 @@ body {
 }
 /* Scrollbars in the terminal palette: dark track, muted green thumb. */
 html {
-  scrollbar-color: var(--c-dim) #0c0f0c;
+  scrollbar-color: var(--c-dim) var(--c-bg);
 }
 ::-webkit-scrollbar {
   width: 20px;
@@ -77,9 +85,9 @@ html {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #233023;
+  background: var(--c-line);
   border-radius: 1px;
-  border: 2px solid #0c0f0c;
+  border: 2px solid var(--c-bg);
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--c-dim);
@@ -92,7 +100,7 @@ html {
 }
 #legal {
   flex: none;
-  border-top: 1px solid #233023;
+  border-top: 1px solid var(--c-line);
   padding: 4px 12px 6px;
   font-size: 10px;
   color: var(--c-dim);
@@ -106,11 +114,25 @@ html {
   white-space: pre;
 }
 
+.hint {
+  color: var(--c-hint);
+  font-style: italic;
+}
+
+/* Pages carry both locales; only the `<html lang>` match stays visible. The
+   language buttons are exempt so both labels always show. */
+:root:lang(en) :lang(ko):not(#lang button) {
+  display: none;
+}
+:root:lang(ko) :lang(en):not(#lang button) {
+  display: none;
+}
+
 .link-button {
   text-decoration: none;
   color: var(--c-green);
-  background: #1a1f1a;
-  border: 1px solid #233023;
+  background: var(--c-button);
+  border: 1px solid var(--c-line);
   border-radius: 4px;
   padding: 6px 12px;
   display: inline-block;
@@ -121,14 +143,30 @@ html {
     border-color 0.15s ease,
     color 0.15s ease;
 }
-.link-button:hover {
+/* Hover, and the pressed / current / open states of toggles, tabs and
+   disclosure buttons. */
+.link-button:hover,
+.link-button[aria-pressed="true"],
+.link-button[aria-current="page"],
+.link-button[aria-expanded="true"] {
   background-color: var(--cb-green);
   color: var(--c-white);
   border-color: var(--c-green);
-  text-decoration: none;
 }
 .link-button:focus-visible {
   outline: none;
   border-color: var(--c-yellow);
   box-shadow: 0 0 0 2px var(--cb-yellow);
+}
+
+/* Language toggle (landing, creator, gallery, 404). */
+#lang {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+#lang button {
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
 }

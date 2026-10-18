@@ -236,9 +236,10 @@ describe("MOTD locale sections", () => {
     );
     expect(enBlocks.length).toBeGreaterThan(0);
     for (const block of enBlocks) expect(block).not.toMatch(/[\uac00-\ud7a3]/);
-    const css = readFileSync(new URL("../web/terminal.css", import.meta.url), "utf8");
-    expect(css).toContain(":root:lang(en) #motd-body :lang(ko)");
-    expect(css).toContain(":root:lang(ko) #motd-body :lang(en)");
+    // The shared locale rule (bt10x.css, loaded by the terminal) hides the other block.
+    const css = readFileSync(new URL("../web/bt10x.css", import.meta.url), "utf8");
+    expect(css).toContain(":root:lang(en) :lang(ko)");
+    expect(css).toContain(":root:lang(ko) :lang(en)");
   });
 });
 
@@ -256,8 +257,8 @@ describe("landing page locale spans", () => {
     expect(koSpans.length).toBe(enSpans.length);
     for (const text of enSpans) expect(text).not.toMatch(/[가-힣]/);
     for (const text of koSpans) expect(text.trim()).not.toBe("");
-    const css = readFileSync(new URL("../web/landing.css", import.meta.url), "utf8");
-    expect(css).toContain(":root:lang(en) #landing :lang(ko)");
-    expect(css).toContain(":root:lang(ko) #landing :lang(en)");
+    const css = readFileSync(new URL("../web/bt10x.css", import.meta.url), "utf8");
+    expect(css).toContain(":root:lang(en) :lang(ko)");
+    expect(css).toContain(":root:lang(ko) :lang(en)");
   });
 });
