@@ -339,11 +339,23 @@
   /* Fixed-width cells packed tight; leftover width goes to the sides. */
   grid-template-columns: repeat(auto-fill, 1.1em);
   justify-content: center;
+  /* Rows keep their own height when the grid is taller than its glyphs. */
+  align-content: start;
   gap: 1px;
   overflow-y: auto;
   min-height: 0;
-  flex: 1;
+  /* Content-sized basis that shrinks to the panel's max-height: Safari sizes
+     a 0% basis to nothing here, leaving less than one row on a phone. */
+  flex: 1 1 auto;
   padding: 2px;
+}
+
+/* Touch screens: keep at least three rows of glyphs whatever the panel does
+   (not on a landscape phone, where three rows would push out the buttons). */
+@media (pointer: coarse) and (min-height: 500px) {
+  .gp-grid:not(.gp-recent-grid) {
+    min-height: calc(3 * 33px + 4px);
+  }
 }
 
 .gp-cell {
