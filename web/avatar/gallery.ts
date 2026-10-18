@@ -12,7 +12,7 @@ import {
 } from "./gallery.client";
 import { errorText, gmsg } from "./gallery.i18n";
 import { initKeyPanel } from "./gallery.key";
-import { initSubmit } from "./gallery.submit";
+import { type AfterSubmit, initSubmit, type SubmitNotice } from "./gallery.submit";
 
 /**
  * The gallery page (web/gallery.html, docs/GALLERY.md §7). One page, five
@@ -26,14 +26,17 @@ import { initSubmit } from "./gallery.submit";
  *   gallery.html?mine=1         this browser's own submissions
  *
  * `?submit&head=…` (the creator's "submit to gallery" link) also opens the
- * Submit panel over whichever view is behind it (gallery.submit.ts), and a
- * `#key=…` link opens the key panel (gallery.key.ts).
+ * Submit panel over whichever view is behind it (gallery.submit.ts); a
+ * successful submission swaps in the view that shows the avatar, under a
+ * notice. A `#key=…` link opens the key panel (gallery.key.ts).
  */
 
 /** `unit` value for the entries tied to no 'Mech (functions/api/ag/_lib/gallery.ts). */
 const NO_UNIT = "none";
 
+const app = document.getElementById("gallery-app") as HTMLElement;
 const viewEl = document.getElementById("view") as HTMLElement;
+const noticeEl = document.getElementById("notice") as HTMLElement;
 const live = document.getElementById("sr-live") as HTMLElement;
 const turnstileHost = document.getElementById("ag-turnstile") as HTMLElement;
 const whoami = document.getElementById("whoami") as HTMLElement;
@@ -235,7 +238,7 @@ function card(entry: GalleryEntry, showUnit = true): HTMLElement {
 async function entryGrid(
   host: HTMLElement,
   query: string,
-  opts: { showUnit?: boolean; skip?: number } = {},
+  opts: { showUnit?: boolean; skip?: number; highlight?: number | null } = {},
 ): Promise<void> {
   const grid = el("div", "grid");
   const more = el("button", "link-button more", gmsg().loadMore);
@@ -250,7 +253,13 @@ async function entryGrid(
         `/avatars?${query}${cursor === null ? "" : `&cursor=${encodeURIComponent(cursor)}`}`,
       );
       for (const e of page.entries) {
-        if (e.id !== opts.skip) grid.append(card(e, opts.showUnit ?? true));
+        if (e.id === opts.skip) continue;
+        const c = card(e, opts.showUnit ?? true);
+        if (e.id === opts.highlight) {
+          c.classList.add("just-added");
+          c.tabIndex = -1;
+        }
+        grid.append(c);
       }
       cursor = page.next;
       if (grid.childElementCount === 0) grid.replaceWith(el("p", "empty", gmsg().empty));
@@ -279,11 +288,15 @@ function unitHeader(unit: GalleryUnit, title: string): HTMLElement {
   return head;
 }
 
-async function renderList(sort: "top" | "new"): Promise<void> {
-  await entryGrid(viewEl, `sort=${sort}`);
+async function renderList(
+  host: HTMLElement,
+  sort: "top" | "new",
+  highlight: number | null,
+): Promise<void> {
+  await entryGrid(host, `sort=${sort}`, { highlight });
 }
 
-async function renderMechs(q: string): Promise<void> {
+async function renderMechs(host: HTMLElement, q: string): Promise<void> {
   const m = gmsg();
   const form = el("form", "mech-search");
   const input = el("input");
@@ -298,7 +311,7 @@ async function renderMechs(q: string): Promise<void> {
   hidden.value = "mechs";
   form.action = "gallery.html";
   form.append(hidden, input);
-  viewEl.append(form);
+  host.append(form);
   try {
     const { units, unlinked } = await api<{
       units: UnitSummary[];
@@ -307,7 +320,7 @@ async function renderMechs(q: string): Promise<void> {
     // The "no 'Mech" group closes the unfiltered list.
     const showUnlinked = q.trim() === "" && unlinked.count > 0 && unlinked.top !== null;
     if (units.length === 0 && !showUnlinked) {
-      viewEl.append(el("p", "empty", m.empty));
+      host.append(el("p", "empty", m.empty));
       return;
     }
     const grid = el("div", "grid");
@@ -337,13 +350,13 @@ async function renderMechs(q: string): Promise<void> {
       );
       grid.append(c);
     }
-    viewEl.append(grid);
+    host.append(grid);
   } catch (e) {
-    showError(e);
+    showError(e, host);
   }
 }
 
-async function renderUnit(slug: string): Promise<void> {
+async function renderUnit(host: HTMLElement, slug: string): Promise<void> {
   // The unit's name and art come with its entries; take them from the first one.
   try {
     const first = await api<{ entries: GalleryEntry[] }>(
@@ -351,47 +364,48 @@ async function renderUnit(slug: string): Promise<void> {
     );
     const unit = first.entries[0]?.unit;
     if (unit === undefined || unit === null) {
-      viewEl.append(el("p", "empty", gmsg().empty));
+      host.append(el("p", "empty", gmsg().empty));
       return;
     }
     document.title = `${unit.name} · ${gmsg().title}`;
-    viewEl.append(unitHeader(unit, gmsg().allForMech(unit.name)));
-    await entryGrid(viewEl, `sort=top&unit=${encodeURIComponent(slug)}`, { showUnit: false });
+    host.append(unitHeader(unit, gmsg().allForMech(unit.name)));
+    await entryGrid(host, `sort=top&unit=${encodeURIComponent(slug)}`, { showUnit: false });
   } catch (e) {
-    showError(e);
+    showError(e, host);
   }
 }
 
-async function renderNoMech(): Promise<void> {
+async function renderNoMech(host: HTMLElement): Promise<void> {
   const m = gmsg();
   document.title = `${m.noMech} · ${m.title}`;
   const head = el("header", "unit-head");
   head.append(el("h2", "", m.noMechTitle));
-  viewEl.append(head);
-  await entryGrid(viewEl, `sort=top&unit=${NO_UNIT}`, { showUnit: false });
+  host.append(head);
+  await entryGrid(host, `sort=top&unit=${NO_UNIT}`, { showUnit: false });
 }
 
-async function renderMine(): Promise<void> {
+async function renderMine(host: HTMLElement): Promise<void> {
   const m = gmsg();
   document.title = `${m.myAvatars} · ${m.title}`;
   const head = el("header", "unit-head");
   head.append(el("h2", "", m.mineTitle));
-  viewEl.append(head);
+  host.append(head);
   if (!hasKey()) {
-    viewEl.append(el("p", "empty", m.mineNoKey));
+    host.append(el("p", "empty", m.mineNoKey));
     return;
   }
-  await entryGrid(viewEl, "sort=new&mine=1", { showUnit: true });
+  await entryGrid(host, "sort=new&mine=1", { showUnit: true });
 }
 
-async function renderEntry(id: number): Promise<void> {
+async function renderEntry(host: HTMLElement, id: number): Promise<void> {
   let entry: GalleryEntry;
   try {
     entry = (await api<{ entry: GalleryEntry }>(`/avatars/${id}`)).entry;
   } catch (e) {
-    if (e instanceof ApiError && e.code === "not_found") {
-      viewEl.append(el("p", "empty", gmsg().notFound));
-    } else showError(e);
+    if (e instanceof ApiError && (e.code === "not_found" || e.code === "under_review")) {
+      // A hidden entry (awaiting approval, reported, banned) is "under review".
+      host.append(el("p", "empty", e.code === "not_found" ? gmsg().notFound : errorText(e.code)));
+    } else showError(e, host);
     return;
   }
   const m = gmsg();
@@ -410,7 +424,7 @@ async function renderEntry(id: number): Promise<void> {
   }
   detail.append(big, side);
   const group = unit === null ? NO_UNIT : unit.slug;
-  viewEl.append(
+  host.append(
     detail,
     entryActions(entry, () => {
       location.href = unitHref(group);
@@ -418,7 +432,7 @@ async function renderEntry(id: number): Promise<void> {
   );
   const others = el("section", "others");
   others.append(el("h2", "", unit === null ? m.otherNoMech : m.otherForMech(unit.name)));
-  viewEl.append(others);
+  host.append(others);
   await entryGrid(others, `sort=top&unit=${encodeURIComponent(group)}`, {
     showUnit: false,
     skip: entry.id,
@@ -438,17 +452,46 @@ function markTab(view: View): void {
   });
 }
 
+/** Set by a successful submission; kept for redraws until the page changes. */
+let notice: SubmitNotice | null = null;
+let highlight: number | null = null;
+
 async function render(): Promise<void> {
   const view = currentView();
   document.title = gmsg().title;
   markTab(view);
-  viewEl.replaceChildren();
-  if (view.kind === "entry") await renderEntry(view.id);
-  else if (view.kind === "unit") await renderUnit(view.slug);
-  else if (view.kind === "nomech") await renderNoMech();
-  else if (view.kind === "mine") await renderMine();
-  else if (view.kind === "mechs") await renderMechs(view.q);
-  else await renderList(view.sort);
+  noticeEl.textContent = notice === null ? "" : gmsg()[notice];
+  // A fresh box per render: an earlier render that finishes late fills its
+  // own detached box instead of mixing into this one.
+  const host = el("div", "view-body");
+  viewEl.replaceChildren(host);
+  if (view.kind === "entry") await renderEntry(host, view.id);
+  else if (view.kind === "unit") await renderUnit(host, view.slug);
+  else if (view.kind === "nomech") await renderNoMech(host);
+  else if (view.kind === "mine") await renderMine(host);
+  else if (view.kind === "mechs") await renderMechs(host, view.q);
+  else await renderList(host, view.sort, highlight);
+}
+
+/** The Submit panel closed on a success: show the avatar's view under a notice. */
+async function showSubmitted(next: AfterSubmit): Promise<void> {
+  const params = new URLSearchParams(next.view);
+  const lang = new URLSearchParams(location.search).get("lang");
+  if (lang !== null) params.set("lang", lang);
+  const href = `${location.pathname}?${params}${location.hash}`;
+  try {
+    history.replaceState(history.state, "", href);
+  } catch {
+    // Some embedded contexts refuse replaceState; load the view instead.
+    location.href = href;
+    return;
+  }
+  notice = next.notice;
+  highlight = next.highlight;
+  app.scrollTop = 0;
+  await render();
+  say(gmsg()[next.notice]);
+  viewEl.querySelector<HTMLElement>(".just-added")?.focus({ preventScroll: true });
 }
 
 /** "you: 7Hq3xKpa · my avatars", or "you: guest" before this browser has a key. */
@@ -480,7 +523,7 @@ async function renderIdentity(): Promise<void> {
 const openKeyPanel = initKeyPanel(() => void render());
 void render();
 void renderIdentity();
-initSubmit();
+initSubmit((next) => void showSubmitted(next));
 window.addEventListener(KEY_EVENT, () => void renderIdentity());
 
 // The language buttons only set `<html lang>`; redraw the script-built text.

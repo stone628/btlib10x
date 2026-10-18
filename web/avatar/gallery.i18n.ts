@@ -58,7 +58,6 @@ const en = {
   noMechLabel: "avatar with no 'Mech",
   noMechTitle: "avatars not tied to a 'Mech",
   otherNoMech: "other avatars with no 'Mech",
-  viewEntry: "view in gallery",
   imageAlt: (name: string) => `${name} unit art from the Master Unit List`,
   noImage: "no image",
   errors: {
@@ -73,6 +72,7 @@ const en = {
     banned: "this device can no longer post",
     no_key: "the gallery doesn't know that key",
     not_found: "not found",
+    under_review: "this avatar is under review",
     not_owner: "only the submitter can delete this",
     not_configured: "the gallery is not set up yet",
   } as Record<string, string>,
@@ -135,7 +135,6 @@ const ko: GalleryMessages = {
   noMechLabel: "'Mech가 지정되지 않은 아바타",
   noMechTitle: "'Mech가 지정되지 않은 아바타",
   otherNoMech: "'Mech가 지정되지 않은 다른 아바타",
-  viewEntry: "갤러리에서 보기",
   imageAlt: (name) => `Master Unit List의 ${name} 유닛 그림`,
   noImage: "그림 없음",
   errors: {
@@ -150,6 +149,7 @@ const ko: GalleryMessages = {
     banned: "이 기기에서는 더 이상 등록할 수 없습니다",
     no_key: "갤러리가 모르는 키입니다",
     not_found: "찾을 수 없습니다",
+    under_review: "검토 중인 아바타입니다",
     not_owner: "등록한 사람만 삭제할 수 있습니다",
     not_configured: "갤러리가 아직 설정되지 않았습니다",
   },

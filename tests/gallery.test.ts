@@ -9,6 +9,7 @@ import {
   prettifySlug,
   publicId,
 } from "../web/avatar/avatar.gallery";
+import { afterSubmit } from "../web/avatar/gallery.submit";
 
 const BASE = "head=sq&shoulder=no&torso=no&arms=no&legs=no";
 
@@ -124,5 +125,37 @@ describe("publicId", () => {
     ).join("");
     expect(await publicId(hash)).toBe(id);
     expect(await keyPublicId("B".repeat(43))).not.toBe(id);
+  });
+});
+
+describe("afterSubmit", () => {
+  it("shows a new, published avatar first under 'new'", () => {
+    expect(afterSubmit({ id: 7, existing: false, pending: false }, "")).toEqual({
+      view: "sort=new",
+      notice: "submitted",
+      highlight: 7,
+    });
+  });
+
+  it("opens the page of an avatar awaiting approval", () => {
+    expect(afterSubmit({ id: 7, existing: false, pending: true }, "")).toEqual({
+      view: "id=7",
+      notice: "submittedPending",
+      highlight: null,
+    });
+  });
+
+  it("opens the original's page for a duplicate, with or without a 'Mech", () => {
+    const mul = "https://masterunitlist.battletech.com/units/atlas-as7-d";
+    expect(afterSubmit({ id: 3, existing: true }, mul)).toEqual({
+      view: "id=3",
+      notice: "alreadyThere",
+      highlight: null,
+    });
+    expect(afterSubmit({ id: 3, existing: true }, "")).toMatchObject({
+      notice: "alreadyThereNoMech",
+    });
+    // A lost insert race can come back without an id.
+    expect(afterSubmit({ id: null, existing: true }, "")).toMatchObject({ view: "sort=new" });
   });
 });

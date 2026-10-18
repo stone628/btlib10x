@@ -3,12 +3,18 @@ import type { Handler } from "../_lib/cf";
 import { deleteEntry, getEntry } from "../_lib/gallery";
 import { guard, HttpError, idParam, json } from "../_lib/http";
 
-/** GET /api/ag/avatars/:id: one visible entry. */
+/**
+ * GET /api/ag/avatars/:id: one visible entry. A hidden one (awaiting approval,
+ * hidden by reports or by an admin, or from a banned key) answers
+ * `under_review` without its avatar; a missing one `not_found`.
+ */
 export const onRequestGet: Handler<"id"> = ({ request, env, params }) =>
   guard(async () => {
-    const entry = await getEntry(env.DB, idParam(params.id), await optionalVoter(env, request));
-    if (entry === null) throw new HttpError(404, "not_found");
-    return json({ entry });
+    const id = idParam(params.id);
+    const entry = await getEntry(env.DB, id, await optionalVoter(env, request));
+    if (entry !== null) return json({ entry });
+    const row = await env.DB.prepare("SELECT 1 AS x FROM ag_avatars WHERE id = ?").bind(id).first();
+    throw new HttpError(404, row === null ? "not_found" : "under_review");
   });
 
 /** DELETE /api/ag/avatars/:id: the submitter removes their own entry. */

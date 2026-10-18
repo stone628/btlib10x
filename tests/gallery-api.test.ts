@@ -373,14 +373,33 @@ describe.skipIf(sqlite === null)("gallery API", () => {
       ).status,
     ).toBe(200);
     await report(await mintKey());
-    expect(
-      (
-        await call(
-          entryRoute.onRequestGet as never,
-          ctx("GET", `/avatars/${id}`, { params: { id: String(id) } }),
-        )
-      ).status,
-    ).toBe(404);
+    const hidden = await call(
+      entryRoute.onRequestGet as never,
+      ctx("GET", `/avatars/${id}`, { params: { id: String(id) } }),
+    );
+    expect(hidden.status).toBe(404);
+    expect(hidden.body).toEqual({ error: "under_review", message: "under_review" });
+  });
+
+  it("answers under_review for entries awaiting approval, even to their submitter", async () => {
+    env.AUTO_PUBLISH = "false";
+    const owner = await mintKey();
+    const first = await submit(owner);
+    expect(first.status).toBe(201);
+    expect(first.body).toMatchObject({ pending: true });
+    const get = (id: number, key?: string) =>
+      call(
+        entryRoute.onRequestGet as never,
+        ctx("GET", `/avatars/${id}`, {
+          ...(key === undefined ? {} : { key }),
+          params: { id: String(id) },
+        }),
+      );
+    expect((await get(first.body.id, owner)).body).toMatchObject({ error: "under_review" });
+    expect((await get(first.body.id)).body).toMatchObject({ error: "under_review" });
+    expect((await get(first.body.id + 1000)).body).toMatchObject({ error: "not_found" });
+    // The same avatar again points at the hidden original.
+    expect((await submit(owner)).body).toEqual({ id: first.body.id, existing: true });
   });
 
   it("lets only the submitter delete an entry", async () => {

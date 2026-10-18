@@ -105,7 +105,7 @@ Files in `_lib/` export no request handlers, so Pages makes no routes from them.
 | `GET /api/ag/keys` | device key | check a key moved from another browser: `{ pid }`, or `no_key` / `banned` |
 | `POST /api/ag/avatars` | device key + Turnstile | `{ q, mul?, turnstile }`: validate, canonicalize, insert, or return the existing entry (`existing: true`) |
 | `GET /api/ag/avatars?sort=top\|new&unit=&mine=1&cursor=` | none (key for `mine=1`) | a page of `{ id, q, unit, votes, created, by, voted, mine }`; `unit` is null when unlinked, `by` the submitter's public ID. Filter by one unit slug, `unit=none` (no 'Mech) or `mine=1` (your own). Hidden entries excluded |
-| `GET /api/ag/avatars/:id` | none | one visible entry |
+| `GET /api/ag/avatars/:id` | none | one visible entry; a hidden one (awaiting approval, reported, banned) is `404 under_review` without its avatar, a missing one `404 not_found` |
 | `DELETE /api/ag/avatars/:id` | device key (owner) | the submitter removes their entry |
 | `POST /api/ag/avatars/:id/vote` | device key | toggle your like |
 | `POST /api/ag/avatars/:id/report` | device key | report once; auto-hides at the threshold (§5) |
@@ -264,7 +264,11 @@ params as the creator's own URL (plus `lang` when the address bar has it), and
   gallery. It shows the avatar preview, an optional MUL URL field, "submitting
   as 7Hq3xKpa", the Turnstile check when Cloudflare asks for one, submit,
   close, and "← edit in creator" back to `/avatar` with the same parts.
-  Success shows "submitted · view in gallery" (or "already in the gallery").
+  Any successful submission closes the panel and shows the avatar under a
+  notice line: a new, published avatar switches to **new**, where it is the
+  first card, marked and focused; one awaiting approval, or a duplicate
+  ("already in the gallery"), opens its `?id=` page. A hidden entry's page
+  reads "this avatar is under review". Errors keep the panel open.
   A missing or invalid avatar shows only the error, "edit in creator" and
   close. Closing removes the panel's params from the URL.
 - Key panel: "move key" (or "use a key") next to your ID, or a

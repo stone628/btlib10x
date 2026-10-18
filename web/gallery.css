@@ -12,9 +12,26 @@
 }
 
 #gallery-head,
+#notice,
 #view {
   width: 100%;
   max-width: 960px;
+}
+
+/* After a submission: "submitted", "already in the gallery", … */
+#notice {
+  margin: 0;
+  text-align: center;
+  color: var(--c-green);
+}
+
+#notice:empty {
+  display: none;
+}
+
+/* One render's content; the grid and headers lay out as #view's own children. */
+.view-body {
+  display: contents;
 }
 
 #gallery-head {
@@ -106,6 +123,12 @@
   border-radius: 4px;
   background: #101410;
   min-width: 0;
+}
+
+/* The avatar just submitted, first under "new". */
+.card.just-added {
+  border-color: var(--c-green);
+  outline: none;
 }
 
 .card-art {

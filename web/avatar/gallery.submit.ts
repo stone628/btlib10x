@@ -1,13 +1,5 @@
 import { avatarLines, canonicalAvatar, parseMulUrl } from "./avatar.gallery";
-import {
-  ApiError,
-  api,
-  type GalleryEntry,
-  KEY_EVENT,
-  myPublicId,
-  turnstileToken,
-  withKey,
-} from "./gallery.client";
+import { ApiError, api, KEY_EVENT, myPublicId, turnstileToken, withKey } from "./gallery.client";
 import { errorText, gmsg } from "./gallery.i18n";
 
 /**
@@ -16,6 +8,44 @@ import { errorText, gmsg } from "./gallery.i18n";
  * same params as the creator's own URL, so the creator stays a static page.
  * The 'Mech (its MUL page URL) is optional; empty submits the avatar alone.
  */
+
+/** What the server answered a submission with (functions/api/ag/avatars/index.ts). */
+export interface SubmitResult {
+  id: number | null;
+  existing: boolean;
+  pending?: boolean;
+}
+
+/** The gallery.i18n.ts string shown above the gallery after a submission. */
+export type SubmitNotice = "submitted" | "submittedPending" | "alreadyThere" | "alreadyThereNoMech";
+
+/** Where the gallery goes once a submission went through. */
+export interface AfterSubmit {
+  /** Gallery query string of the view to show. */
+  view: string;
+  notice: SubmitNotice;
+  /** Entry to mark in that view's grid. */
+  highlight: number | null;
+}
+
+/**
+ * Any successful submission closes the panel, so it never reads as "submit
+ * again". A new, published avatar is the first card under "new"; a duplicate
+ * or one awaiting approval opens its own page, which says "under review"
+ * while it is hidden.
+ */
+export function afterSubmit(res: SubmitResult, mul: string): AfterSubmit {
+  const page = res.id === null ? "sort=new" : `id=${res.id}`;
+  if (res.existing) {
+    return {
+      view: page,
+      notice: mul === "" ? "alreadyThereNoMech" : "alreadyThere",
+      highlight: null,
+    };
+  }
+  if (res.pending === true) return { view: page, notice: "submittedPending", highlight: null };
+  return { view: "sort=new", notice: "submitted", highlight: res.id };
+}
 
 /** Params that are not part of the avatar. */
 const PANEL_PARAMS = ["submit", "lang"];
@@ -45,7 +75,7 @@ function clearPanelParams(): void {
   }
 }
 
-export function initSubmit(): void {
+export function initSubmit(onSubmitted: (next: AfterSubmit) => void): void {
   const params = new URLSearchParams(location.search);
   if (!params.has("submit")) return;
   const panel = document.getElementById("submit-panel") as HTMLDialogElement | null;
@@ -74,15 +104,9 @@ export function initSubmit(): void {
   const backSearch = back.toString();
   edit.href = `avatar.html${backSearch === "" ? "" : `?${backSearch}`}`;
 
-  const setStatus = (text: string, error = false, href: string | null = null) => {
+  const setStatus = (text: string, error = false) => {
     status.replaceChildren(text);
     status.classList.toggle("error", error);
-    if (href !== null) {
-      const a = document.createElement("a");
-      a.href = href;
-      a.textContent = gmsg().viewEntry;
-      status.append(" · ", a);
-    }
   };
 
   // A bad or missing avatar leaves only "edit in creator" and close.
@@ -105,31 +129,23 @@ export function initSubmit(): void {
       return setStatus(errorText("bad_mul_url"), true);
     }
     send.disabled = true;
-    let done = false;
     setStatus(gmsg().verifying);
+    let res: SubmitResult;
     try {
-      const res = await withKey(host, async () =>
-        api<{ id: number; existing: boolean; pending?: boolean; entry?: GalleryEntry }>(
-          "/avatars",
-          { method: "POST", body: { q, mul, turnstile: await turnstileToken(host) } },
-        ),
+      res = await withKey(host, async () =>
+        api<SubmitResult>("/avatars", {
+          method: "POST",
+          body: { q, mul, turnstile: await turnstileToken(host) },
+        }),
       );
-      const m = gmsg();
-      const text = res.existing
-        ? mul === ""
-          ? m.alreadyThereNoMech
-          : m.alreadyThere
-        : res.pending
-          ? m.submittedPending
-          : m.submitted;
-      setStatus(text, false, res.pending ? null : `gallery.html?id=${res.id}`);
-      done = true;
     } catch (e) {
       setStatus(errorText(e instanceof ApiError ? e.code : "network"), true);
-    } finally {
-      // After a submission the avatar is in; only close stays useful.
-      send.disabled = done;
+      send.disabled = false;
+      return;
     }
+    // Closing drops the panel's params; the gallery then shows the avatar.
+    panel.close();
+    onSubmitted(afterSubmit(res, mul));
   };
   send.addEventListener("click", () => void submit());
   input.addEventListener("keydown", (e) => {
