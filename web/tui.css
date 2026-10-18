@@ -766,6 +766,20 @@ select.tui-native {
 .tui-progress[data-tone="danger"] .tui-fill {
   color: var(--tui-red);
 }
+/* Partial cell: track glyph underneath, partial block on top. */
+.tui-progress .tui-partial {
+  position: relative;
+}
+.tui-progress .tui-partial > .tui-fill {
+  position: absolute;
+  inset: 0;
+}
+.tui-progress.is-vertical {
+  height: auto;
+}
+.tui-progress .tui-vrow {
+  height: var(--ch);
+}
 .tui-spinner {
   color: var(--tui-accent);
   white-space: pre;

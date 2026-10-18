@@ -10,6 +10,7 @@
   const boxes = new Set(); // every upgraded box, relaid on refresh()
   const animated = new Set(); // spinners and indeterminate bars
   const EIGHTHS = ["", "▏", "▎", "▍", "▌", "▋", "▊", "▉"];
+  const LOWER_EIGHTHS = ["", "▁", "▂", "▃", "▄", "▅", "▆", "▇"];
   const reduceMotion = global.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
   // ---------------------------------------------------------------- helpers
@@ -1100,6 +1101,9 @@
     el.classList.add("tui-progress");
     el.setAttribute("role", "progressbar");
     if (value !== undefined) el.dataset.value = value;
+    if (el.dataset.dir === "v") return vprogress(el);
+    el.classList.remove("is-vertical");
+    el.removeAttribute("aria-orientation");
     const v = el.dataset.value;
     const cols = num(el.dataset.cols, 20);
     if (v === "indeterminate") {
@@ -1122,14 +1126,76 @@
     if (ascii && cells - full >= 0.5) full += 1;
     const rest = w - full - len(part);
     el.textContent = "";
-    el.append(
-      span("tui-fill", (ascii ? "#" : "█").repeat(full) + part),
-      span("tui-track", (ascii ? "-" : "░").repeat(Math.max(0, rest))),
-    );
+    el.append(span("tui-fill", (ascii ? "#" : "█").repeat(full)));
+    if (part) el.append(partialCell("░", part));
+    el.append(span("tui-track", (ascii ? "-" : "░").repeat(Math.max(0, rest))));
     if (label) el.append(span("tui-pct", label));
     return el;
   }
+  /* A cell that is partly filled: the track glyph, with the partial block
+     drawn over it so the unfilled part of the cell shows the track too. */
+  function partialCell(track, part, n = 1) {
+    const c = span("tui-track tui-partial", track.repeat(n));
+    c.append(span("tui-fill", part.repeat(n)));
+    return c;
+  }
+  /* Vertical bar: rows tall, cols wide, filled from the bottom with
+     eighth-row partials (▁…▇) over a ░ track; the % label sits below. */
+  function vprogress(el) {
+    el.classList.add("is-vertical");
+    el.setAttribute("aria-orientation", "vertical");
+    const v = el.dataset.value;
+    const rows = Math.max(1, num(el.dataset.rows, 8));
+    const cols = Math.max(1, num(el.dataset.cols, 1));
+    const ascii = el.dataset.style === "ascii";
+    const track = ascii ? "." : "░";
+    const indet = v === "indeterminate";
+    let p = 0;
+    if (indet) {
+      el.removeAttribute("aria-valuenow");
+      if (!animated.has(el)) el._tuiTick = 0;
+      animated.add(el);
+    } else {
+      animated.delete(el);
+      p = Math.min(1, Math.max(0, num(v, 0)));
+      el.setAttribute("aria-valuenow", Math.round(p * 100));
+    }
+    const label = indet || el.dataset.label === "none" ? "" : `${Math.round(p * 100)}%`;
+    const w = Math.max(cols, len(label));
+    const lpad = (w - cols) >> 1;
+    // Row k counted from the bottom: full, partial, or track.
+    let glyph;
+    if (indet) {
+      const block = Math.max(1, Math.min(rows - 1, Math.round(rows / 4)));
+      const travel = rows - block;
+      const t = el._tuiTick % Math.max(1, travel * 2);
+      const pos = t < travel ? t : travel * 2 - t;
+      glyph = (k) => (k >= pos && k < pos + block ? "█" : "");
+    } else {
+      const cells = p * rows;
+      const full = ascii ? Math.round(cells) : Math.floor(cells);
+      const part = ascii ? "" : LOWER_EIGHTHS[Math.floor((cells - full) * 8)];
+      glyph = (k) => (k < full ? (ascii ? "#" : "█") : k === full ? part : "");
+    }
+    el.textContent = "";
+    for (let i = rows - 1; i >= 0; i--) {
+      const g = glyph(i);
+      const row = div("tui-vrow");
+      if (lpad) row.append(" ".repeat(lpad));
+      if (!g) row.append(span("tui-track", track.repeat(cols)));
+      else if (LOWER_EIGHTHS.includes(g)) row.append(partialCell(track, g, cols));
+      else row.append(span("tui-fill", g.repeat(cols)));
+      if (w - cols - lpad) row.append(" ".repeat(w - cols - lpad));
+      el.appendChild(row);
+    }
+    if (label) el.appendChild(div("tui-vrow tui-pct", fit(label, w, "center")));
+    return el;
+  }
   function tickProgress(el) {
+    if (el.dataset.dir === "v") {
+      el._tuiTick++;
+      return vprogress(el);
+    }
     const cols = num(el.dataset.cols, 20);
     const block = 4;
     const span2 = cols - block;
@@ -2291,13 +2357,15 @@
         setData(el, "value", p.value);
         setData(el, "label", p.label);
         setData(el, "tone", p.tone);
+        setData(el, "dir", p.dir);
+        setData(el, "rows", p.rows);
         if (p.ascii) el.dataset.style = "ascii";
         return el;
       },
       patch(el, k, v) {
         if (k === "value") progress(el, v);
-        else if (k === "tone") {
-          setData(el, "tone", v);
+        else if (["tone", "dir", "rows", "cols", "label"].includes(k)) {
+          setData(el, k, v);
           progress(el);
         } else return false;
         return true;

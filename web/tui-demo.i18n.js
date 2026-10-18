@@ -249,6 +249,7 @@ TUI.i18n.add("ko", {
   "pr.armor": "장갑, 1/8셀 정밀도",
   "pr.ascii": "ASCII 스타일",
   "pr.indet": "진행률 미정",
+  "pr.vert": "세로, 1/8칸 정밀도",
   "pr.rolling": "명중 판정 중…",
   "pr.crits": "치명타 처리 중",
   "pr.down": "열 −",

@@ -368,6 +368,14 @@
           <span data-tui="progress" data-cols="30" data-value="0.35" data-style="ascii"></span>
           <span class="hint" data-i18n="pr.indet">Indeterminate</span>
           <span data-tui="progress" data-cols="30" data-value="indeterminate"></span>
+          <span class="hint" data-i18n="pr.vert">Vertical, eighth-row precision</span>
+          <span class="row">
+            <span data-tui="progress" id="heatV" data-dir="v" data-rows="6" data-cols="2" data-value="0.4667" data-tone="warn"></span>
+            <span data-tui="progress" data-dir="v" data-rows="6" data-cols="2" data-value="0.73"></span>
+            <span data-tui="progress" data-dir="v" data-rows="6" data-cols="2" data-value="0.21" data-tone="danger"></span>
+            <span data-tui="progress" data-dir="v" data-rows="6" data-cols="1" data-value="0.5" data-style="ascii"></span>
+            <span data-tui="progress" data-dir="v" data-rows="6" data-cols="1" data-value="indeterminate"></span>
+          </span>
           <span class="tui-line"><span data-tui="spinner"></span> <span data-i18n="pr.rolling">Rolling to-hit…</span>  <span data-tui="spinner" data-frames="|/-\"></span> <span data-i18n="pr.crits">Resolving crits</span></span>
         </div>
         <div class="row">
@@ -560,9 +568,10 @@
   function setHeat(h) {
     state.heat = Math.max(0, Math.min(30, h));
     $('heatVal').textContent = state.heat;
-    const bar = $('heat');
-    bar.dataset.tone = state.heat >= 24 ? 'danger' : state.heat >= 10 ? 'warn' : '';
-    TUI.progress(bar, state.heat / 30);
+    for (const bar of [$('heat'), $('heatV')]) {
+      bar.dataset.tone = state.heat >= 24 ? 'danger' : state.heat >= 10 ? 'warn' : '';
+      TUI.progress(bar, state.heat / 30);
+    }
   }
   function setInset(v) {
     state.inset = v;

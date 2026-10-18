@@ -120,7 +120,7 @@ from script. All `data-*` options below also exist as JS options in camelCase.
 | Menubar | `<nav data-tui="menubar"><div data-label="<u>F</u>ile">items…</div></nav>` | Opens menus as popups; ← → move across menus. `data-right` pushes a menu to the right. Fires `tui-select` `{menu, value}` on the nav. |
 | Tabs | `<div data-tui="tabs"><section data-tab="Armor">…</section></div>` | Tab labels sit in the top border; active one in reverse video. ← → on a focused tab. Fires `tui-tab`. |
 | Table | `<table data-tui="table">` with `thead th[data-width][data-align]` and `tbody` | Replaced by a box with `┬ ┼ ┴` joints. Or `TUI.table({ columns, rows })`. Body cells merge with `td[colspan]` / `td[rowspan]` (or `{ text, colspan, rowspan, align }` in `rows`); joints and rules close up around them. `tr[data-rule]` draws a rule above that row, `table[data-rules="rows"]` (or `rules: "rows"`) between every row. Row select by click or ↑ ↓; fires `tui-select` `{index, row}`, with `row` the texts of the cells in it, merged ones included. |
-| Progress | `<span data-tui="progress" data-cols="30" data-value="0.42">` | `█` with eighth-cell partials (`▏…▉`) over a `░` track and a `%` label (`data-label="none"` hides). `data-style="ascii"`, `data-value="indeterminate"`, `data-tone`. Update with `TUI.progress(el, 0.6)`. |
+| Progress | `<span data-tui="progress" data-cols="30" data-value="0.42">` | `█` with eighth-cell partials (`▏…▉`) over a `░` track and a `%` label (`data-label="none"` hides). `data-style="ascii"`, `data-value="indeterminate"`, `data-tone`. `data-dir="v"` makes it vertical: `data-rows` tall (default 8) and `data-cols` wide (default 1), filled from the bottom with eighth-row partials (`▁…▇`), label centered below. Update with `TUI.progress(el, 0.6)`. |
 | Spinner | `<span data-tui="spinner" data-frames="◐◓◑◒">` | Any frame string. Static under reduced motion. |
 | Scrollbox | `<div data-tui="scroll" data-rows="10">` | Native scrolling with the browser scrollbars hidden. When content is taller than the box the right border becomes `▲ ░▄█▀░ ▼`, with a thumb that moves in half cells; when it is wider (e.g. `.tui-line` rows), the bottom border becomes a half-height bar `◂ ■■■ ▸` (thumb in accent, track dim). Glyphs come from the CSS vars `--tui-vbar` (default `"▲░█▼▀▄"`; the last two are the upper and lower half thumbs) and `--tui-hbar` (default `"◂▥■▸"`): start arrow, track, thumb, end arrow. Wheel, shift+wheel, thumb drag, arrow and track clicks. |
 | Fixed column | `<span class="tui-col" style="--col:8">Walk</span>` | A label column that cuts with `…`. CSS only. |
@@ -256,7 +256,7 @@ every type: `key` (identity in a list), `ref` (name in `scene.refs`), `id`, `cla
 | `table` | `columns rows rules border selected` (same shapes as `TUI.table`) |
 | `menu`, `list` with `item`, `sep` | menu/list: box props, list adds `selected`; item: `value shortcut disabled html` |
 | `select` with `option` | select: `cols name value options`; option: `value selected` |
-| `progress`, `spinner` | progress: `cols value label tone ascii`; spinner: `frames` |
+| `progress`, `spinner` | progress: `cols value label tone ascii dir rows`; spinner: `frames` |
 | `btn`, `button`, `input`, `check`, `radio` | btn: `primary variant disabled`; button: `border cols`; input: `cols placeholder value variant type name`; check/radio: `checked name value disabled` |
 | `line`, `col`, `statusbar`, `kbd`, `seg`, `text`, `p`, `el` | col: `col` (cells); seg: `alt`; el: `tag` |
 
