@@ -11,6 +11,7 @@ import {
   withKey,
 } from "./gallery.client";
 import { errorText, gmsg } from "./gallery.i18n";
+import { initKeyPanel } from "./gallery.key";
 import { initSubmit } from "./gallery.submit";
 
 /**
@@ -25,7 +26,8 @@ import { initSubmit } from "./gallery.submit";
  *   gallery.html?mine=1         this browser's own submissions
  *
  * `?submit&head=…` (the creator's "submit to gallery" link) also opens the
- * Submit panel over whichever view is behind it (gallery.submit.ts).
+ * Submit panel over whichever view is behind it (gallery.submit.ts), and a
+ * `#key=…` link opens the key panel (gallery.key.ts).
  */
 
 /** `unit` value for the entries tied to no 'Mech (functions/api/ag/_lib/gallery.ts). */
@@ -450,23 +452,32 @@ async function render(): Promise<void> {
 }
 
 /** "you: 7Hq3xKpa · my avatars", or "you: guest" before this browser has a key. */
+function keyButton(text: string): HTMLButtonElement {
+  const b = el("button", "link-button", text);
+  b.type = "button";
+  b.addEventListener("click", () => openKeyPanel());
+  return b;
+}
+
 async function renderIdentity(): Promise<void> {
   const m = gmsg();
   const id = await myPublicId();
   if (id === null) {
-    whoami.replaceChildren(`${m.you}: ${m.guest}`);
-    whoami.title = m.guestHint;
+    whoami.replaceChildren(`${m.you}: `, el("span", "", m.guest), " · ", keyButton(m.useKey));
+    (whoami.firstElementChild as HTMLElement).title = m.guestHint;
     return;
   }
-  whoami.title = "";
   whoami.replaceChildren(
     `${m.you}: `,
     el("span", "pid", id),
     " · ",
     link("gallery.html?mine=1", m.myAvatars),
+    " · ",
+    keyButton(m.moveKey),
   );
 }
 
+const openKeyPanel = initKeyPanel(() => void render());
 void render();
 void renderIdentity();
 initSubmit();

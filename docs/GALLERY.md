@@ -102,6 +102,7 @@ Files in `_lib/` export no request handlers, so Pages makes no routes from them.
 |---|---|---|
 | `GET /api/ag/config` | none | public settings: `turnstileSiteKey`, `pageSize`, `autoPublish` |
 | `POST /api/ag/keys` | Turnstile | `{ turnstile }`: mint a device key; returns `{ key, pid }` once |
+| `GET /api/ag/keys` | device key | check a key moved from another browser: `{ pid }`, or `no_key` / `banned` |
 | `POST /api/ag/avatars` | device key + Turnstile | `{ q, mul?, turnstile }`: validate, canonicalize, insert, or return the existing entry (`existing: true`) |
 | `GET /api/ag/avatars?sort=top\|new&unit=&mine=1&cursor=` | none (key for `mine=1`) | a page of `{ id, q, unit, votes, created, by, voted, mine }`; `unit` is null when unlinked, `by` the submitter's public ID. Filter by one unit slug, `unit=none` (no 'Mech) or `mine=1` (your own). Hidden entries excluded |
 | `GET /api/ag/avatars/:id` | none | one visible entry |
@@ -134,8 +135,17 @@ when it mints the key; the page computes its own from the key it holds. Pages
 show it as "you: 7Hq3xKpa" and "by 7Hq3xKpa".
 
 Clearing site data or switching browsers means a new key and a new ID; old
-entries stay but no longer show as yours. Moving a key between devices
-("copy my key / restore") is not built yet.
+entries stay but no longer show as yours, unless the key was moved first.
+
+**Moving a key.** The gallery's key panel ("move key" next to your ID, "use a
+key" for a guest) shows this browser's key with **copy key** and **copy link**
+(`gallery.html#key=<key>`). On the other browser the player pastes either into
+"use a key from another browser", or opens the link, which fills it in. The
+page checks the key with `GET /api/ag/keys` and only then stores it, replacing
+that browser's own key (the panel warns with the ID being replaced). The key
+travels in the URL fragment, which browsers never send to a server, and the
+page removes the fragment as soon as it reads it. Both browsers then act as
+the same player; there is no way to revoke a copy short of an admin ban.
 
 **Admin: Cloudflare Access.** `/api/ag/admin/*` and the `/avatar/admin` page
 sit behind an Access application that allows only your email. The admin
@@ -235,8 +245,8 @@ params as the creator's own URL (plus `lang` when the address bar has it), and
 **gallery**.
 
 **Gallery (`/gallery`, `web/gallery.html`).**
-- Header: "you: 7Hq3xKpa · my avatars", or "you: guest" before this browser
-  has a key; EN / 한국어 switch.
+- Header: "you: 7Hq3xKpa · my avatars · move key", or "you: guest · use a
+  key" before this browser has a key; EN / 한국어 switch.
 - Tabs: **top**, **new**, **by 'Mech** (a card per 'Mech with its top avatar
   and count, ending with a "no 'Mech" group card; search by name), and **no
   'Mech** (`?unit=none`).
@@ -257,6 +267,8 @@ params as the creator's own URL (plus `lang` when the address bar has it), and
   Success shows "submitted · view in gallery" (or "already in the gallery").
   A missing or invalid avatar shows only the error, "edit in creator" and
   close. Closing removes the panel's params from the URL.
+- Key panel: "move key" (or "use a key") next to your ID, or a
+  `#key=…` link, opens it over the dimmed gallery (§4).
 
 Strings go through `web/avatar/gallery.i18n.ts` (en/ko).
 
@@ -287,6 +299,7 @@ Strings go through `web/avatar/gallery.i18n.ts` (en/ko).
 | `web/avatar/gallery.i18n.ts` | gallery strings (en/ko) |
 | `web/gallery.html`, `web/gallery.css`, `web/avatar/gallery.ts` | gallery page |
 | `web/avatar/gallery.submit.ts` | the Submit panel |
+| `web/avatar/gallery.key.ts` | the key panel: copy this browser's key, use one from another |
 | `web/gallery-admin.html`, `web/avatar/gallery.admin.ts` | admin page |
 | `web/avatar.html`, `web/avatar/avatar.ts` | creator: static "submit to gallery" and "gallery" links |
 | `scripts/build-web.mjs`, `scripts/dist-web.mjs` | bundle and ship the gallery pages |
@@ -345,7 +358,6 @@ repeat step 3.
 - A 'Mech name search in the Submit panel instead of pasting MUL URLs, backed
   by MUL's unit index if one can be found, or by the repo's `docs/mtf` catalog.
   The stored slug stays the same.
-- Moving a device key to another browser ("copy my key / restore").
 - Settings editable from the admin page without redeploying (a one-row
   `ag_settings` table).
 - If like manipulation shows up: OAuth sign-in, with anonymous likes weighted

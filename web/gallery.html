@@ -79,6 +79,34 @@
           </span>
         </div>
       </dialog>
+      <!-- Opened from "move key" next to your ID; also by gallery.html#key=… links. -->
+      <dialog id="key-panel" aria-labelledby="key-title">
+        <div id="key-title" class="gp-title"><span lang="en">MOVE DEVICE KEY</span><span lang="ko">기기 키 옮기기</span></div>
+        <p class="hint"><span lang="en">your device key is who you are here: your ID, likes and avatars. Take it to another browser to be the same player there. Keep it private: anyone with it can like and delete as you.</span><span lang="ko">기기 키가 이곳에서의 나입니다: ID, 좋아요, 아바타. 다른 브라우저로 옮기면 그곳에서도 같은 플레이어가 됩니다. 남에게 알려주지 마세요: 키를 가진 사람은 나로서 좋아요를 누르고 삭제할 수 있습니다.</span></p>
+        <section id="key-out" class="gp-section">
+          <label class="gp-label" for="key-value"><span lang="en">this browser's key</span><span lang="ko">이 브라우저의 키</span></label>
+          <input id="key-value" class="gp-input" type="text" readonly autocomplete="off" spellcheck="false" />
+          <span class="gp-buttons">
+            <button id="key-copy" class="link-button" type="button"><span lang="en">copy key</span><span lang="ko">키 복사</span></button>
+            <button id="key-copy-link" class="link-button" type="button"><span lang="en">copy link</span><span lang="ko">링크 복사</span></button>
+          </span>
+        </section>
+        <p id="key-none" class="gp-note"><span lang="en">this browser has no key yet; it gets one on the first like or submission</span><span lang="ko">이 브라우저에는 아직 키가 없습니다. 처음 좋아요를 누르거나 등록하면 생깁니다</span></p>
+        <section class="gp-section">
+          <label class="gp-label" for="key-input"><span lang="en">use a key from another browser</span><span lang="ko">다른 브라우저의 키 사용</span></label>
+          <input id="key-input" class="gp-input" type="text" autocomplete="off" spellcheck="false" />
+          <p id="key-replace" class="gp-note"></p>
+          <span class="gp-buttons">
+            <button id="key-use" class="link-button" type="button"><span lang="en">use this key</span><span lang="ko">이 키 사용</span></button>
+          </span>
+        </section>
+        <p id="key-status" class="gp-status" role="status"></p>
+        <div class="gp-footer">
+          <span class="gp-buttons">
+            <button id="key-close" class="link-button" type="button"><span lang="en">close</span><span lang="ko">닫기</span></button>
+          </span>
+        </div>
+      </dialog>
     </main>
     <footer id="legal">
       Unofficial fan project. Not affiliated with or endorsed by Catalyst Game Labs, The Topps

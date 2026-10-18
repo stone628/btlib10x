@@ -235,6 +235,23 @@ describe.skipIf(sqlite === null)("gallery API", () => {
     expect(await mintKey()).toMatch(/^[A-Za-z0-9_-]{43}$/);
   });
 
+  it("checks a key brought from another browser", async () => {
+    const key = await mintKey();
+    expect(await call(keysRoute.onRequestGet as never, ctx("GET", "/keys", { key }))).toEqual({
+      status: 200,
+      body: { pid: await keyPublicId(key) },
+    });
+    const unknown = "A".repeat(43);
+    expect(
+      (await call(keysRoute.onRequestGet as never, ctx("GET", "/keys", { key: unknown }))).body,
+    ).toMatchObject({ error: "no_key" });
+    expect((await call(keysRoute.onRequestGet as never, ctx("GET", "/keys"))).status).toBe(401);
+    await env.DB.prepare("UPDATE ag_keys SET banned = 1").run();
+    expect(
+      (await call(keysRoute.onRequestGet as never, ctx("GET", "/keys", { key }))).body,
+    ).toMatchObject({ error: "banned" });
+  });
+
   it("shows each entry's submitter by public ID and lists a key's own entries", async () => {
     const alice = await mintKey();
     const bob = await mintKey();

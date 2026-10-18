@@ -89,13 +89,30 @@ function currentKey(): string | null {
   return storedKey() ?? memoryKey;
 }
 
+/** This browser's device key, or null before it has one. */
+export function deviceKey(): string | null {
+  return currentKey();
+}
+
+/** A device key's shape (functions/api/ag/_lib/auth.ts newDeviceKey). */
+export const DEVICE_KEY_RE = /^[A-Za-z0-9_-]{43}$/;
+
+/**
+ * Ask the server about a key brought from another browser; resolves to its
+ * public ID. Throws ApiError `no_key` (unknown) or `banned`.
+ */
+export async function checkKey(key: string): Promise<string> {
+  const { pid } = await api<{ pid: string }>("/keys", { key });
+  return pid;
+}
+
 export async function api<T>(
   path: string,
-  init: { method?: string; body?: unknown; auth?: boolean } = {},
+  init: { method?: string; body?: unknown; auth?: boolean; key?: string } = {},
 ): Promise<T> {
   const headers: Record<string, string> = {};
   if (init.body !== undefined) headers["content-type"] = "application/json";
-  const key = currentKey();
+  const key = init.key ?? currentKey();
   if (key !== null && init.auth !== false) headers.authorization = `Bearer ${key}`;
   const req: RequestInit = { method: init.method ?? "GET", headers };
   if (init.body !== undefined) req.body = JSON.stringify(init.body);

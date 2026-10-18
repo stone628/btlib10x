@@ -1,5 +1,5 @@
 import { publicId } from "../../../web/avatar/avatar.gallery";
-import { ipHash, newDeviceKey, sha256Hex } from "./_lib/auth";
+import { ipHash, newDeviceKey, requireVoter, sha256Hex } from "./_lib/auth";
 import type { Handler } from "./_lib/cf";
 import { config } from "./_lib/config";
 import { guard, json, nowSeconds, readJson, str } from "./_lib/http";
@@ -23,4 +23,18 @@ export const onRequestPost: Handler = ({ request, env }) =>
       .bind(hash, pid, nowSeconds())
       .run();
     return json({ key, pid }, 201);
+  });
+
+/**
+ * GET /api/ag/keys with `Authorization: Bearer <key>`: check a key a player
+ * brought from another browser. Returns its `{ pid }`; 401 `no_key` when the
+ * server does not know it, 403 `banned` when it is banned.
+ */
+export const onRequestGet: Handler = ({ request, env }) =>
+  guard(async () => {
+    const hash = await requireVoter(env, request);
+    const row = await env.DB.prepare("SELECT pid FROM ag_keys WHERE hash = ?")
+      .bind(hash)
+      .first<{ pid: string }>();
+    return json({ pid: row?.pid ?? (await publicId(hash)) });
   });
