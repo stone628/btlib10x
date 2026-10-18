@@ -13,6 +13,7 @@ export const en = {
   "app.catalog.warnSummary": "catalog warnings ({count})",
   "app.catalog.errorSummary": "catalog error ({count})",
   "err.prefix": "error:",
+  "motd.close": "Close MOTD",
 
   // per-state hints (multi-line)
   "hint.setup":

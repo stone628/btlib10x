@@ -12,6 +12,7 @@ export const ko: Catalog = {
   "app.catalog.warnSummary": "카탈로그 경고 ({count})",
   "app.catalog.errorSummary": "카탈로그 오류 ({count})",
   "err.prefix": "오류:",
+  "motd.close": "MOTD 닫기",
 
   // per-state hints (multi-line)
   "hint.setup":

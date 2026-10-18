@@ -9,7 +9,7 @@ import { buildCollapsibleChunk, buildLinesChunkWith, type Chunk } from "./chunk"
 import { runChunks } from "./cli";
 import { i18n, normalizeLocale } from "./i18n/index";
 import motdText from "./MOTD.txt";
-import { configLocale, newSession, promptBody, promptHint, setConfigLocale } from "./session";
+import { configLocale, newSession, promptBody, setConfigLocale } from "./session";
 
 document.title = `bt10x terminal v${VERSION}`;
 
@@ -19,10 +19,6 @@ const promptEl = document.getElementById("prompt") as HTMLSpanElement;
 const input = document.getElementById("cmd") as HTMLInputElement;
 
 const session = newSession(42);
-
-const modeHint = document.createElement("div");
-modeHint.id = "modehint";
-out.insertBefore(modeHint, inrow);
 
 // Locale precedence: ?lang= in the URL, then the last choice kept in
 // localStorage (every access guarded: storage may be blocked), then English.
@@ -58,6 +54,8 @@ syncDocLang();
 
 const motdBody = document.getElementById("motd-body");
 if (motdBody) motdBody.innerHTML = motdText;
+const topbarVersion = document.getElementById("topbar-version");
+if (topbarVersion) topbarVersion.textContent = `v${VERSION}`;
 
 const history: string[] = [];
 let historyIdx = -1;
@@ -68,7 +66,7 @@ function scrollToBottom(): void {
   out.scrollTop = out.scrollHeight;
 }
 
-/** Scrollback cap: oldest entries go first, keeping #modehint first and #inrow last. */
+/** Scrollback cap: oldest entries go first, keeping #inrow last. */
 const MAX_SCROLLBACK = 1500;
 
 /** Plain-text copy of a chunk for the screen-reader live region. */
@@ -93,8 +91,7 @@ function appendChunk(chunk: Chunk, parent: HTMLElement = out): void {
     if (parent === out) {
       out.insertBefore(el, inrow);
       while (out.childElementCount > MAX_SCROLLBACK) {
-        const oldest =
-          out.firstElementChild === modeHint ? modeHint.nextElementSibling : out.firstElementChild;
+        const oldest = out.firstElementChild;
         if (oldest === null || oldest === inrow) break;
         oldest.remove();
       }
@@ -141,7 +138,7 @@ function appendChunk(chunk: Chunk, parent: HTMLElement = out): void {
   if (kind === "lines") {
     if (chunk.lines.length === 0) return;
     if (parent === out && chunk.lines.length === 1 && chunk.lines[0] === "\f") {
-      out.replaceChildren(modeHint, inrow);
+      out.replaceChildren(inrow);
       // Re-parenting the input blurs it; restore focus so the caret stays live.
       input.focus();
       return;
@@ -156,7 +153,6 @@ function appendChunk(chunk: Chunk, parent: HTMLElement = out): void {
 
 function refreshPrompt(): void {
   promptEl.textContent = `${promptBody(session)} > `;
-  modeHint.textContent = promptHint(session);
 }
 
 function errorMessage(e: unknown): string {
@@ -321,7 +317,59 @@ input.addEventListener("keydown", (e) => {
 });
 
 input.addEventListener("input", scrollToBottom);
-document.getElementById("motd")?.addEventListener("toggle", scrollToBottom);
+
+// MOTD: the header button opens a modal <dialog> over the terminal; ✕, Esc or
+// a click on the backdrop closes it and hands focus back to the prompt. A dot
+// on the button marks text this browser has not opened yet (hash kept in
+// localStorage, every access guarded like the locale above).
+const MOTD_SEEN_KEY = "bt10x.motd.seen";
+const motdDialog = document.getElementById("motd") as HTMLDialogElement | null;
+const motdOpen = document.getElementById("motd-open") as HTMLButtonElement | null;
+const motdClose = document.getElementById("motd-close") as HTMLButtonElement | null;
+const motdDot = document.getElementById("motd-dot");
+
+function motdHash(text: string): string {
+  let h = 0;
+  for (let i = 0; i < text.length; i++) h = (Math.imul(h, 31) + text.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+const motdVersion = motdHash(motdText);
+let motdSeen: string | null = null;
+try {
+  motdSeen = localStorage.getItem(MOTD_SEEN_KEY);
+} catch {
+  // storage unavailable: the MOTD just always counts as unread
+}
+if (motdDot) motdDot.hidden = motdSeen === motdVersion;
+
+if (motdDialog && motdOpen) {
+  motdOpen.addEventListener("click", () => {
+    if (motdDialog.open) return;
+    motdClose?.setAttribute("aria-label", i18n("motd.close"));
+    motdDialog.showModal();
+    motdOpen.setAttribute("aria-expanded", "true");
+    if (motdDot) motdDot.hidden = true;
+    try {
+      localStorage.setItem(MOTD_SEEN_KEY, motdVersion);
+    } catch {
+      // storage unavailable: the dot comes back next visit
+    }
+  });
+  motdClose?.addEventListener("click", () => motdDialog.close());
+  // A click whose target is the dialog itself but lands outside its box hit
+  // the ::backdrop.
+  motdDialog.addEventListener("click", (e) => {
+    if (e.target !== motdDialog) return;
+    const r = motdDialog.getBoundingClientRect();
+    const inside =
+      e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+    if (!inside) motdDialog.close();
+  });
+  motdDialog.addEventListener("close", () => {
+    motdOpen.setAttribute("aria-expanded", "false");
+    input.focus();
+  });
+}
 
 // A battle lives only in memory: ask before a reload, close or Back throws it
 // away. Autoplay demos are disposable and leave freely.
@@ -392,7 +440,8 @@ function loadCatalogText(id: string, file: string): Promise<string> {
   return fetchCatalogText(file);
 }
 input.disabled = true;
-modeHint.textContent = i18n("app.catalog.loading");
+// Until the catalog is in, the (disabled) prompt itself says so.
+promptEl.textContent = `${i18n("app.catalog.loading")} `;
 void loadCatalogText("bt10x-catalog", "btlib10x.jsonl")
   .then((text) => {
     const manifest = loadCatalog(text);
@@ -432,7 +481,7 @@ void loadCatalogText("bt10x-catalog", "btlib10x.jsonl")
     refreshPrompt();
   })
   .catch((err: unknown) => {
-    modeHint.textContent = "";
+    promptEl.textContent = "";
     const errorMsg = i18n("app.catalog.failed", {
       error: err instanceof Error ? err.message : String(err),
     });

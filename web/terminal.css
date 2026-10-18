@@ -20,43 +20,149 @@
   --t-heavyBuilding: #b4885a;
   --t-hardenedBuilding: #a87a4a;
 }
+/* Fixed header: a flex: none row above #term (body is a 100dvh column), so it
+   never overlaps the log. Notch / rounded-corner insets need viewport-fit=cover. */
+:root {
+  --topbar-h: 36px;
+}
+@media (pointer: coarse) {
+  :root {
+    --topbar-h: 44px;
+  }
+}
+#topbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: calc(var(--topbar-h) + env(safe-area-inset-top));
+  padding: env(safe-area-inset-top) calc(12px + env(safe-area-inset-right)) 0
+    calc(12px + env(safe-area-inset-left));
+  border-bottom: 1px solid #233023;
+}
+#topbar-title {
+  color: var(--c-green);
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#topbar-version {
+  color: var(--c-dim);
+  font-size: 11px;
+  font-weight: normal;
+}
+#motd-open {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  height: calc(var(--topbar-h) - 10px);
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+}
+#motd-open[aria-expanded="true"] {
+  background-color: var(--cb-green);
+  color: var(--c-white);
+  border-color: var(--c-green);
+}
+/* Unread marker: MOTD changed since this browser last opened it. */
+#motd-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--c-yellow);
+}
+#motd-dot[hidden] {
+  display: none;
+}
+#legal {
+  padding: 4px calc(12px + env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom))
+    calc(12px + env(safe-area-inset-left));
+}
+/* MOTD: a modal <dialog> in the browser top layer, anchored under the header
+   button. Only its body scrolls; the page itself never does. */
 #motd {
+  --motd-top: calc(env(safe-area-inset-top) + var(--topbar-h) + 8px);
   position: fixed;
-  top: 8px;
-  right: 10px;
-  width: fit-content;
-  max-width: calc(100vw - 16px);
-  max-height: 60vh;
-  overflow-y: auto;
+  inset: var(--motd-top) calc(12px + env(safe-area-inset-right)) auto auto;
+  margin: 0;
+  padding: 0;
+  width: min(520px, calc(100vw - 24px));
+  max-width: none;
+  overflow: hidden;
+  max-height: min(60vh, calc(100vh - var(--motd-top) - env(safe-area-inset-bottom) - 8px));
   background: #0c0f0c;
   border: 1px solid #233023;
   border-radius: 4px;
-  z-index: 100;
-  font-size: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
   color: #b8c9b8;
+  font-size: 12px;
 }
-/* Narrow screens: hug the corner so the capped panel never clips. */
-@media (max-width: 480px) {
+@supports (height: 100dvh) {
   #motd {
-    top: 8px;
-    right: 8px;
+    max-height: min(60dvh, calc(100dvh - var(--motd-top) - env(safe-area-inset-bottom) - 8px));
   }
 }
-#motd > summary {
-  cursor: pointer;
-  padding: 6px 10px;
-  color: #8fd08f;
-  font-weight: bold;
-  user-select: none;
+#motd[open] {
+  display: flex;
+  flex-direction: column;
 }
-#motd[open] > summary {
+#motd::backdrop {
+  background: rgba(4, 6, 4, 0.55);
+}
+#motd-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 4px 4px 10px;
   border-bottom: 1px solid #233023;
-  text-align: right;
+}
+#motd-title {
+  color: var(--c-green);
+  font-weight: bold;
+}
+#motd-close {
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+#motd-close:hover {
+  color: var(--c-white);
+  border-color: #233023;
+}
+#motd-close:focus-visible {
+  outline: none;
+  border-color: var(--c-yellow);
 }
 #motd > #motd-body {
-  padding: 8px 10px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 10px 12px 12px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+@media (pointer: coarse) {
+  #motd-close {
+    width: 44px;
+    height: 44px;
+    font-size: 16px;
+  }
+  #motd-head {
+    padding: 0 0 0 12px;
+  }
 }
 /* MOTD carries both locales; only the `<html lang>` match stays visible. */
 :root:lang(en) #motd-body :lang(ko) {
@@ -78,6 +184,7 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left);
 }
 #out {
   flex: 1;
@@ -274,6 +381,15 @@
   padding-top: 6px;
   margin-top: 6px;
 }
+/* After `clear` nothing sits above the prompt (or the echoed command that
+   takes its place) to separate it from: drop the rule so it doesn't double
+   the header's border. */
+#out > .cmd:first-child,
+#inrow:first-child {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
 #prompt {
   white-space: pre;
   color: #8fd08f;
@@ -300,16 +416,14 @@
 }
 /* Narrow screens: wrap the log so the prompt never scrolls away; wide blocks scroll in place. */
 @media (max-width: 480px) {
+  /* Phone: the MOTD becomes a sheet from under the header to above the home bar. */
   #motd {
-    position: static;
-    margin: 4px 12px 0;
+    inset: var(--motd-top) calc(8px + env(safe-area-inset-right))
+      calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
     width: auto;
-    max-height: 40vh;
-  }
-  @supports (height: 100dvh) {
-    #motd {
-      max-height: 40dvh;
-    }
+    height: auto;
+    max-height: none;
+    font-size: 13px;
   }
   #out {
     overflow-x: hidden;

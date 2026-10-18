@@ -78,10 +78,6 @@ export function newSession(seed: number): Session {
   };
 }
 
-export function promptHint(_s: Session): string {
-  return "";
-}
-
 /** Prompt body without the trailing ">". */
 export function promptBody(s: Session): string {
   switch (s.state) {
