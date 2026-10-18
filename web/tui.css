@@ -30,23 +30,24 @@
   color-scheme: dark;
   /* Korean faces follow the Latin mono; whichever renders Hangul, .tui-w
      snaps it to 2 cells. */
-  --tui-font: "Bt10x Mono", "SF Mono", Menlo, Consolas, "Liberation Mono",
-    "D2Coding", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans Mono CJK KR", "Noto Sans KR", monospace;
+  --tui-font:
+    "Bt10x Mono", "SF Mono", Menlo, Consolas, "Liberation Mono", "D2Coding", "Apple SD Gothic Neo",
+    "Malgun Gothic", "Noto Sans Mono CJK KR", "Noto Sans KR", monospace;
   --tui-fs: 14px;
   /* 1.175em = JuliaMono ascent + descent, so box glyphs tile vertically. */
   --tui-lh: 1.175em;
 
-  --tui-page: #0c0f0c;        /* screen background */
-  --tui-fg: #b8c9b8;          /* body text */
-  --tui-bright: #d7e4d7;      /* emphasized text */
-  --tui-dim: #5a6a5a;         /* muted text, tracks */
-  --tui-accent: #8fd08f;      /* green accent */
-  --tui-accent-ink: #0c0f0c;  /* text on accent */
-  --tui-line: #6f8a6f;        /* border glyph color */
-  --tui-surface: #141a14;     /* box interior */
-  --tui-surface-2: #1b241b;   /* raised: buttons, headers, hover */
-  --tui-field: #16301b;       /* input fields */
-  --tui-sel-bg: #8fd08f;      /* selection (reverse video) */
+  --tui-page: #0c0f0c; /* screen background */
+  --tui-fg: #b8c9b8; /* body text */
+  --tui-bright: #d7e4d7; /* emphasized text */
+  --tui-dim: #5a6a5a; /* muted text, tracks */
+  --tui-accent: #8fd08f; /* green accent */
+  --tui-accent-ink: #0c0f0c; /* text on accent */
+  --tui-line: #6f8a6f; /* border glyph color */
+  --tui-surface: #141a14; /* box interior */
+  --tui-surface-2: #1b241b; /* raised: buttons, headers, hover */
+  --tui-field: #16301b; /* input fields */
+  --tui-sel-bg: #8fd08f; /* selection (reverse video) */
   --tui-sel-fg: #0c0f0c;
   --tui-shadow: rgba(0, 0, 0, 0.55);
   --tui-overlay: rgba(4, 8, 4, 0.6);
@@ -64,6 +65,10 @@
      colored. */
   --tui-inset-x: 0.5;
   --tui-inset-y: 0.5;
+  /* Scrollbar glyphs: start arrow, track, thumb, end arrow. The vertical bar
+     adds upper and lower half thumbs, so its thumb moves in half cells. */
+  --tui-vbar: "⏶░█⏷▀▄";
+  --tui-hbar: "◂▥■▸";
   /* Window shadow offset, in cells. */
   --tui-shadow-x: 1;
   --tui-shadow-y: 0.5;
@@ -114,26 +119,55 @@
 }
 
 /* ---------- border sets ---------- */
-.tui-box, [data-border="single"] { --tui-glyphs: "┌┐└┘─│├┤┬┴┼"; --tui-sep: "├─┤"; }
-[data-border="double"]  { --tui-glyphs: "╔╗╚╝═║╠╣╦╩╬"; --tui-sep: "╟─╢"; }
-[data-border="heavy"]   { --tui-glyphs: "┏┓┗┛━┃┣┫┳┻╋"; --tui-sep: "┠─┨"; }
-[data-border="rounded"] { --tui-glyphs: "╭╮╰╯─│├┤┬┴┼"; --tui-sep: "├─┤"; }
+.tui-box,
+[data-border="single"] {
+  --tui-glyphs: "┌┐└┘─│├┤┬┴┼";
+  --tui-sep: "├─┤";
+}
+[data-border="double"] {
+  --tui-glyphs: "╔╗╚╝═║╠╣╦╩╬";
+  --tui-sep: "╟─╢";
+}
+[data-border="heavy"] {
+  --tui-glyphs: "┏┓┗┛━┃┣┫┳┻╋";
+  --tui-sep: "┠─┨";
+}
+[data-border="rounded"] {
+  --tui-glyphs: "╭╮╰╯─│├┤┬┴┼";
+  --tui-sep: "├─┤";
+}
 /* Defined here only, to show a set can be added from CSS alone. */
-[data-border="ascii"]   { --tui-glyphs: "++++-|+++++"; --tui-sep: "+-+"; }
+[data-border="ascii"] {
+  --tui-glyphs: "++++-|+++++";
+  --tui-sep: "+-+";
+}
 
 /* ---------- root ---------- */
-.tui, .tui-font {
+.tui,
+.tui-font {
   font-family: var(--tui-font);
   font-size: var(--tui-fs);
   line-height: var(--tui-lh);
   font-variant-ligatures: none;
   color: var(--tui-fg);
 }
-.tui { background: var(--tui-page); }
-.tui-font *, .tui-font *::before, .tui-font *::after,
-.tui *, .tui *::before, .tui *::after { box-sizing: border-box; }
-.tui-font button, .tui-font input, .tui-font select,
-.tui button, .tui input, .tui select {
+.tui {
+  background: var(--tui-page);
+}
+.tui-font *,
+.tui-font *::before,
+.tui-font *::after,
+.tui *,
+.tui *::before,
+.tui *::after {
+  box-sizing: border-box;
+}
+.tui-font button,
+.tui-font input,
+.tui-font select,
+.tui button,
+.tui input,
+.tui select {
   font: inherit;
   line-height: inherit;
   color: inherit;
@@ -160,8 +194,11 @@
   --box-title: var(--tui-bright);
   text-align: left;
 }
-.tui-box[data-block] { display: block; }
-.tui-bg, .tui-shadow {
+.tui-box[data-block] {
+  display: block;
+}
+.tui-bg,
+.tui-shadow {
   position: absolute;
   top: calc(var(--ch) * var(--tui-inset-y));
   bottom: calc(var(--ch) * var(--tui-inset-y));
@@ -172,7 +209,10 @@
 }
 .tui-shadow {
   background: var(--tui-shadow);
-  transform: translate(calc(var(--cw) * var(--tui-shadow-x)), calc(var(--ch) * var(--tui-shadow-y)));
+  transform: translate(
+    calc(var(--cw) * var(--tui-shadow-x)),
+    calc(var(--ch) * var(--tui-shadow-y))
+  );
 }
 .tui-frame {
   position: absolute;
@@ -182,15 +222,44 @@
   pointer-events: none;
   overflow: hidden;
 }
-.tui-frame > div { height: var(--ch); }
-.tui-frame .tui-title { color: var(--box-title); font-weight: 700; }
-.tui-frame .tui-foot { color: var(--tui-dim); }
-.tui-frame .tui-hit { pointer-events: auto; cursor: pointer; }
-.tui-frame .tui-trunc { pointer-events: auto; }
-.tui-frame .tui-hit:hover { color: var(--tui-accent); }
-.tui-frame .tui-tab { color: var(--tui-dim); }
-.tui-frame .tui-tab.is-active { background: var(--tui-sel-bg); color: var(--tui-sel-fg); font-weight: 700; }
-.tui-frame .tui-tab:focus-visible { outline: none; color: var(--tui-accent); text-decoration: underline; }
+.tui-frame > div {
+  height: var(--ch);
+}
+/* Labels on an edge fill their whole cell with the box background, so the
+   half that lies outside .tui-bg is not see-through. */
+.tui-frame :is(.tui-title, .tui-action, .tui-foot, .tui-tab) {
+  background: var(--box-bg);
+}
+.tui-frame .tui-title {
+  color: var(--box-title);
+  font-weight: 700;
+}
+.tui-frame .tui-foot {
+  color: var(--tui-dim);
+}
+.tui-frame .tui-hit {
+  pointer-events: auto;
+  cursor: pointer;
+}
+.tui-frame .tui-trunc {
+  pointer-events: auto;
+}
+.tui-frame .tui-hit:hover {
+  color: var(--tui-accent);
+}
+.tui-frame .tui-tab {
+  color: var(--tui-dim);
+}
+.tui-frame .tui-tab.is-active {
+  background: var(--tui-sel-bg);
+  color: var(--tui-sel-fg);
+  font-weight: 700;
+}
+.tui-frame .tui-tab:focus-visible {
+  outline: none;
+  color: var(--tui-accent);
+  text-decoration: underline;
+}
 .tui-body {
   position: absolute;
   top: var(--ch);
@@ -200,15 +269,37 @@
   /* visible, not hidden: separator rows reach out into the border columns. */
   overflow: visible;
 }
-.tui-body-inner { white-space: normal; overflow-wrap: anywhere; }
-.tui-body p { margin: 0; }
+.tui-body-inner {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.tui-body p {
+  margin: 0;
+}
 
 /* Tones: recolor a box through its local tokens. */
-.tui-box[data-tone="accent"] { --box-line: var(--tui-accent); --box-title: var(--tui-accent); }
-.tui-box[data-tone="warn"]   { --box-line: var(--tui-yellow); --box-title: var(--tui-yellow); --box-bg: var(--tui-yellow-bg); }
-.tui-box[data-tone="danger"] { --box-line: var(--tui-red); --box-title: var(--tui-red); --box-bg: var(--tui-red-bg); }
-.tui-box[data-tone="info"]   { --box-line: var(--tui-blue); --box-title: var(--tui-blue); --box-bg: var(--tui-blue-bg); }
-.tui-box[data-tone="clear"]  { --box-bg: transparent; }
+.tui-box[data-tone="accent"] {
+  --box-line: var(--tui-accent);
+  --box-title: var(--tui-accent);
+}
+.tui-box[data-tone="warn"] {
+  --box-line: var(--tui-yellow);
+  --box-title: var(--tui-yellow);
+  --box-bg: var(--tui-yellow-bg);
+}
+.tui-box[data-tone="danger"] {
+  --box-line: var(--tui-red);
+  --box-title: var(--tui-red);
+  --box-bg: var(--tui-red-bg);
+}
+.tui-box[data-tone="info"] {
+  --box-line: var(--tui-blue);
+  --box-title: var(--tui-blue);
+  --box-bg: var(--tui-blue-bg);
+}
+.tui-box[data-tone="clear"] {
+  --box-bg: transparent;
+}
 
 /* Separator row inside a box: extends one cell into each border column so
    its tee glyphs join the frame. */
@@ -223,12 +314,28 @@
 }
 
 /* ---------- text helpers ---------- */
-.tui-dim { color: var(--tui-dim); }
-.tui-bright { color: var(--tui-bright); }
-.tui-accent { color: var(--tui-accent); }
-.tui-rev { background: var(--tui-sel-bg); color: var(--tui-sel-fg); }
-.tui-kbd { color: var(--tui-accent); font-weight: 700; }
-.tui-line { display: block; min-height: var(--ch); white-space: pre; }
+.tui-dim {
+  color: var(--tui-dim);
+}
+.tui-bright {
+  color: var(--tui-bright);
+}
+.tui-accent {
+  color: var(--tui-accent);
+}
+.tui-rev {
+  background: var(--tui-sel-bg);
+  color: var(--tui-sel-fg);
+}
+.tui-kbd {
+  color: var(--tui-accent);
+  font-weight: 700;
+}
+.tui-line {
+  display: block;
+  min-height: var(--ch);
+  white-space: pre;
+}
 
 /* ---------- button ---------- */
 .tui-btn {
@@ -242,31 +349,69 @@
   height: var(--ch);
   color: var(--tui-bright);
 }
-.tui-btn::before { content: "[ "; color: var(--tui-line); }
-.tui-btn::after  { content: " ]"; color: var(--tui-line); }
-.tui-btn[data-variant="angle"]::before { content: "< "; }
-.tui-btn[data-variant="angle"]::after  { content: " >"; }
+.tui-btn::before {
+  content: "[ ";
+  color: var(--tui-line);
+}
+.tui-btn::after {
+  content: " ]";
+  color: var(--tui-line);
+}
+.tui-btn[data-variant="angle"]::before {
+  content: "< ";
+}
+.tui-btn[data-variant="angle"]::after {
+  content: " >";
+}
 .tui-btn[data-variant="bare"]::before,
-.tui-btn[data-variant="bare"]::after { content: " "; }
-.tui-btn:hover { background: var(--tui-surface-2); }
-.tui-btn:focus-visible { outline: none; color: var(--tui-accent); }
-.tui-btn:focus-visible::before { content: "[▸"; color: var(--tui-accent); }
-.tui-btn:focus-visible::after { content: "◂]"; color: var(--tui-accent); }
-.tui-btn[data-variant="angle"]:focus-visible::before { content: "<▸"; }
-.tui-btn[data-variant="angle"]:focus-visible::after  { content: "◂>"; }
-.tui-btn.is-primary { color: var(--tui-accent); font-weight: 700; }
-.tui-btn:active, .tui-btn.is-pressed,
-.tui-btn:active::before, .tui-btn:active::after,
-.tui-btn.is-pressed::before, .tui-btn.is-pressed::after {
+.tui-btn[data-variant="bare"]::after {
+  content: " ";
+}
+.tui-btn:hover {
+  background: var(--tui-surface-2);
+}
+.tui-btn:focus-visible {
+  outline: none;
+  color: var(--tui-accent);
+}
+.tui-btn:focus-visible::before {
+  content: "[▸";
+  color: var(--tui-accent);
+}
+.tui-btn:focus-visible::after {
+  content: "◂]";
+  color: var(--tui-accent);
+}
+.tui-btn[data-variant="angle"]:focus-visible::before {
+  content: "<▸";
+}
+.tui-btn[data-variant="angle"]:focus-visible::after {
+  content: "◂>";
+}
+.tui-btn.is-primary {
+  color: var(--tui-accent);
+  font-weight: 700;
+}
+.tui-btn:active,
+.tui-btn.is-pressed,
+.tui-btn:active::before,
+.tui-btn:active::after,
+.tui-btn.is-pressed::before,
+.tui-btn.is-pressed::after {
   background: var(--tui-sel-bg);
   color: var(--tui-sel-fg);
 }
-.tui-btn:disabled, .tui-btn:disabled::before, .tui-btn:disabled::after {
+.tui-btn:disabled,
+.tui-btn:disabled::before,
+.tui-btn:disabled::after {
   color: var(--tui-dim);
   background: none;
   cursor: default;
 }
-.tui-btn u { text-decoration: none; color: var(--tui-accent); }
+.tui-btn u {
+  text-decoration: none;
+  color: var(--tui-accent);
+}
 
 /* Boxed button: a .tui-box that is also a <button>. */
 button.tui-box {
@@ -279,10 +424,21 @@ button.tui-box {
   color: var(--tui-bright);
   --box-bg: var(--tui-surface-2);
 }
-button.tui-box .tui-body { text-align: center; white-space: pre; }
-button.tui-box:hover { --box-line: var(--tui-accent); }
-button.tui-box:focus-visible { outline: none; --box-line: var(--tui-accent); --box-title: var(--tui-accent); color: var(--tui-accent); }
-button.tui-box:active, button.tui-box.is-pressed {
+button.tui-box .tui-body {
+  text-align: center;
+  white-space: pre;
+}
+button.tui-box:hover {
+  --box-line: var(--tui-accent);
+}
+button.tui-box:focus-visible {
+  outline: none;
+  --box-line: var(--tui-accent);
+  --box-title: var(--tui-accent);
+  color: var(--tui-accent);
+}
+button.tui-box:active,
+button.tui-box.is-pressed {
   --box-bg: var(--tui-sel-bg);
   --box-line: var(--tui-sel-fg);
   color: var(--tui-sel-fg);
@@ -303,23 +459,52 @@ button.tui-box:active, button.tui-box.is-pressed {
   outline: none;
   vertical-align: top;
 }
-.tui-input::placeholder { color: var(--tui-dim); opacity: 1; }
-.tui-input:focus { background: var(--tui-surface-2); box-shadow: inset 0 -2px 0 var(--tui-accent); }
-.tui-input::selection { background: var(--tui-sel-bg); color: var(--tui-sel-fg); }
-.tui-input[data-variant="line"] { background: transparent; box-shadow: inset 0 -1px 0 var(--tui-dim); }
-.tui-input[data-variant="line"]:focus { box-shadow: inset 0 -1px 0 var(--tui-accent); }
-.tui-prompt { color: var(--tui-accent); white-space: pre; }
-.tui-box .tui-input { width: 100%; }
+.tui-input::placeholder {
+  color: var(--tui-dim);
+  opacity: 1;
+}
+.tui-input:focus {
+  background: var(--tui-surface-2);
+  box-shadow: inset 0 -2px 0 var(--tui-accent);
+}
+.tui-input::selection {
+  background: var(--tui-sel-bg);
+  color: var(--tui-sel-fg);
+}
+.tui-input[data-variant="line"] {
+  background: transparent;
+  box-shadow: inset 0 -1px 0 var(--tui-dim);
+}
+.tui-input[data-variant="line"]:focus {
+  box-shadow: inset 0 -1px 0 var(--tui-accent);
+}
+.tui-prompt {
+  color: var(--tui-accent);
+  white-space: pre;
+}
+.tui-box .tui-input {
+  width: 100%;
+}
+/* A prompt before an input: the input takes what is left of the row. */
+:has(> .tui-prompt + .tui-input) {
+  display: flex;
+}
+.tui-prompt + .tui-input {
+  flex: 1;
+  min-width: 0;
+}
 
 /* ---------- checkbox / radio ---------- */
-.tui-check, .tui-radio {
+.tui-check,
+.tui-radio {
   display: inline-flex;
   cursor: pointer;
   white-space: pre;
   height: var(--ch);
   user-select: none;
 }
-.tui-check input, .tui-radio input {
+.tui-check input,
+.tui-radio input {
   position: absolute;
   opacity: 0;
   width: 1px;
@@ -327,20 +512,42 @@ button.tui-box:active, button.tui-box.is-pressed {
   margin: 0;
   pointer-events: none;
 }
-.tui-mark { color: var(--tui-line); white-space: pre; }
-.tui-check .tui-mark::before { content: "[ ] "; }
-.tui-check input:checked + .tui-mark::before { content: "[x] "; }
-.tui-check input:indeterminate + .tui-mark::before { content: "[-] "; }
-.tui-radio .tui-mark::before { content: "( ) "; }
-.tui-radio input:checked + .tui-mark::before { content: "(•) "; }
+.tui-mark {
+  color: var(--tui-line);
+  white-space: pre;
+}
+.tui-check .tui-mark::before {
+  content: "[ ] ";
+}
+.tui-check input:checked + .tui-mark::before {
+  content: "[x] ";
+}
+.tui-check input:indeterminate + .tui-mark::before {
+  content: "[-] ";
+}
+.tui-radio .tui-mark::before {
+  content: "( ) ";
+}
+.tui-radio input:checked + .tui-mark::before {
+  content: "(•) ";
+}
 .tui-check input:checked + .tui-mark,
-.tui-radio input:checked + .tui-mark { color: var(--tui-accent); }
-.tui-check:hover .tui-mark, .tui-radio:hover .tui-mark { color: var(--tui-bright); }
-.tui-check input:focus-visible ~ *, .tui-radio input:focus-visible ~ * {
+.tui-radio input:checked + .tui-mark {
+  color: var(--tui-accent);
+}
+.tui-check:hover .tui-mark,
+.tui-radio:hover .tui-mark {
+  color: var(--tui-bright);
+}
+.tui-check input:focus-visible ~ *,
+.tui-radio input:focus-visible ~ * {
   background: var(--tui-sel-bg);
   color: var(--tui-sel-fg);
 }
-.tui-check input:disabled ~ *, .tui-radio input:disabled ~ * { color: var(--tui-dim); }
+.tui-check input:disabled ~ *,
+.tui-radio input:disabled ~ * {
+  color: var(--tui-dim);
+}
 
 /* ---------- select ---------- */
 .tui-select {
@@ -359,16 +566,41 @@ button.tui-box:active, button.tui-box.is-pressed {
   display: inline-flex;
   vertical-align: top;
 }
-.tui-select .tui-select-label { flex: 1; padding-left: var(--cw); overflow: hidden; text-overflow: ellipsis; }
-.tui-select .tui-select-arrow { color: var(--tui-accent); padding-right: var(--cw); }
-.tui-select:hover { background: var(--tui-surface-2); }
-.tui-select:focus-visible, .tui-select.is-open { outline: none; background: var(--tui-sel-bg); color: var(--tui-sel-fg); }
-.tui-select:focus-visible .tui-select-arrow, .tui-select.is-open .tui-select-arrow { color: var(--tui-sel-fg); }
-select.tui-native { display: none; }
+.tui-select .tui-select-label {
+  flex: 1;
+  padding-left: var(--cw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tui-select .tui-select-arrow {
+  color: var(--tui-accent);
+  padding-right: var(--cw);
+}
+.tui-select:hover {
+  background: var(--tui-surface-2);
+}
+.tui-select:focus-visible,
+.tui-select.is-open {
+  outline: none;
+  background: var(--tui-sel-bg);
+  color: var(--tui-sel-fg);
+}
+.tui-select:focus-visible .tui-select-arrow,
+.tui-select.is-open .tui-select-arrow {
+  color: var(--tui-sel-fg);
+}
+select.tui-native {
+  display: none;
+}
 
 /* ---------- popup layer (select list, menubar menus, tooltip) ---------- */
-.tui-popup { position: absolute; z-index: 1000; }
-.tui-popup:focus { outline: none; }
+.tui-popup {
+  position: absolute;
+  z-index: 1000;
+}
+.tui-popup:focus {
+  outline: none;
+}
 
 /* ---------- menu / list ---------- */
 .tui-item {
@@ -379,17 +611,50 @@ select.tui-native { display: none; }
   margin: 0 calc(var(--cw) * -1 * var(--pad, 1));
   padding: 0 calc(var(--cw) * var(--pad, 1));
 }
-.tui-item > .tui-item-label { flex: 1; overflow: hidden; text-overflow: ellipsis; }
-.tui-item > .tui-item-key { color: var(--tui-dim); padding-left: calc(var(--cw) * 2); }
-.tui-item .tui-cursor { color: var(--tui-accent); }
-.tui-item:hover { background: var(--tui-surface-2); }
-.tui-item.is-active { background: var(--tui-sel-bg); color: var(--tui-sel-fg); }
-.tui-item.is-active > .tui-item-key, .tui-item.is-active .tui-cursor { color: var(--tui-sel-fg); }
-.tui-item[aria-disabled="true"] { color: var(--tui-dim); cursor: default; background: none; }
-.tui-item u { text-decoration: none; color: var(--tui-accent); }
-.tui-item.is-active u { color: inherit; text-decoration: underline; }
-[data-tui="menu"]:focus, [data-tui="list"]:focus { outline: none; }
-[data-tui="menu"]:focus-visible, [data-tui="list"]:focus-visible { --box-line: var(--tui-accent); }
+.tui-item > .tui-item-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tui-item > .tui-item-key {
+  color: var(--tui-dim);
+  padding-left: calc(var(--cw) * 2);
+}
+.tui-item .tui-cursor {
+  color: var(--tui-accent);
+}
+.tui-item:hover {
+  background: var(--tui-surface-2);
+}
+.tui-item.is-active {
+  background: var(--tui-sel-bg);
+  color: var(--tui-sel-fg);
+}
+.tui-item.is-active > .tui-item-key,
+.tui-item.is-active .tui-cursor {
+  color: var(--tui-sel-fg);
+}
+.tui-item[aria-disabled="true"] {
+  color: var(--tui-dim);
+  cursor: default;
+  background: none;
+}
+.tui-item u {
+  text-decoration: none;
+  color: var(--tui-accent);
+}
+.tui-item.is-active u {
+  color: inherit;
+  text-decoration: underline;
+}
+[data-tui="menu"]:focus,
+[data-tui="list"]:focus {
+  outline: none;
+}
+[data-tui="menu"]:focus-visible,
+[data-tui="list"]:focus-visible {
+  --box-line: var(--tui-accent);
+}
 
 /* ---------- menubar ---------- */
 .tui-menubar {
@@ -408,36 +673,98 @@ select.tui-native { display: none; }
   height: var(--ch);
   color: var(--tui-bright);
 }
-.tui-menubar > .tui-menubar-item:hover { background: var(--tui-surface); }
+.tui-menubar > .tui-menubar-item:hover {
+  background: var(--tui-surface);
+}
 .tui-menubar > .tui-menubar-item.is-open,
-.tui-menubar > .tui-menubar-item:focus-visible { outline: none; background: var(--tui-sel-bg); color: var(--tui-sel-fg); }
-.tui-menubar u { text-decoration: none; color: var(--tui-accent); }
-.tui-menubar .is-open u, .tui-menubar :focus-visible u { color: inherit; }
-.tui-menubar-spacer { flex: 1; }
+.tui-menubar > .tui-menubar-item:focus-visible {
+  outline: none;
+  background: var(--tui-sel-bg);
+  color: var(--tui-sel-fg);
+}
+.tui-menubar u {
+  text-decoration: none;
+  color: var(--tui-accent);
+}
+.tui-menubar .is-open u,
+.tui-menubar :focus-visible u {
+  color: inherit;
+}
+.tui-menubar-spacer {
+  flex: 1;
+}
 
 /* ---------- table ---------- */
-.tui-row { display: block; height: var(--ch); white-space: pre; overflow: hidden; }
-.tui-row.is-head { color: var(--tui-bright); font-weight: 700; }
-.tui-row .tui-col-sep, .tui-rule { color: var(--box-line); }
-.tui-row.is-data { cursor: pointer; }
-.tui-row.is-data:hover { background: var(--tui-surface-2); }
-.tui-row.is-active { background: var(--tui-sel-bg); color: var(--tui-sel-fg); }
-.tui-row.is-active .tui-col-sep { color: var(--tui-sel-fg); }
-.tui-table:focus { outline: none; }
-.tui-table:focus-visible { --box-line: var(--tui-accent); }
+.tui-row {
+  display: block;
+  height: var(--ch);
+  white-space: pre;
+  overflow: hidden;
+}
+.tui-row.is-head {
+  color: var(--tui-bright);
+  font-weight: 700;
+}
+.tui-row .tui-col-sep,
+.tui-rule {
+  color: var(--box-line);
+}
+.tui-row.is-data {
+  cursor: pointer;
+}
+.tui-row.is-data:hover {
+  background: var(--tui-surface-2);
+}
+.tui-row.is-active {
+  background: var(--tui-sel-bg);
+  color: var(--tui-sel-fg);
+}
+.tui-row.is-active .tui-col-sep {
+  color: var(--tui-sel-fg);
+}
+.tui-table:focus {
+  outline: none;
+}
+.tui-table:focus-visible {
+  --box-line: var(--tui-accent);
+}
 
 /* ---------- progress / spinner ---------- */
-.tui-progress { white-space: pre; display: inline-block; height: var(--ch); vertical-align: top; overflow: hidden; }
-.tui-progress .tui-fill { color: var(--tui-accent); }
-.tui-progress .tui-track { color: var(--tui-dim); }
-.tui-progress .tui-pct { color: var(--tui-bright); }
-.tui-progress[data-tone="warn"] .tui-fill { color: var(--tui-yellow); }
-.tui-progress[data-tone="danger"] .tui-fill { color: var(--tui-red); }
-.tui-spinner { color: var(--tui-accent); white-space: pre; }
+.tui-progress {
+  white-space: pre;
+  display: inline-block;
+  height: var(--ch);
+  vertical-align: top;
+  overflow: hidden;
+}
+.tui-progress .tui-fill {
+  color: var(--tui-accent);
+}
+.tui-progress .tui-track {
+  color: var(--tui-dim);
+}
+.tui-progress .tui-pct {
+  color: var(--tui-bright);
+}
+.tui-progress[data-tone="warn"] .tui-fill {
+  color: var(--tui-yellow);
+}
+.tui-progress[data-tone="danger"] .tui-fill {
+  color: var(--tui-red);
+}
+.tui-spinner {
+  color: var(--tui-accent);
+  white-space: pre;
+}
 
 /* ---------- scrollbox ---------- */
-.tui-scroll .tui-body { overflow-y: auto; scrollbar-width: none; }
-.tui-scroll .tui-body::-webkit-scrollbar { display: none; }
+.tui-scroll .tui-body {
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.tui-scroll .tui-body::-webkit-scrollbar {
+  display: none;
+}
 .tui-scrollbar {
   position: absolute;
   right: 0;
@@ -448,13 +775,44 @@ select.tui-native { display: none; }
   cursor: pointer;
   user-select: none;
 }
-.tui-scrollbar > div { height: var(--ch); }
-.tui-scrollbar .tui-thumb { color: var(--tui-accent); }
-.tui-scrollbar .tui-arrow { color: var(--tui-line); }
-.tui-scrollbar .tui-arrow:hover { color: var(--tui-accent); }
+.tui-scrollbar > div {
+  position: relative;
+  height: var(--ch);
+}
+/* Half-cell thumb end, drawn over the track glyph. */
+.tui-scrollbar .tui-half {
+  position: absolute;
+  inset: 0;
+}
+.tui-hscrollbar {
+  position: absolute;
+  left: var(--cw);
+  bottom: 0;
+  height: var(--ch);
+  display: flex;
+  white-space: pre;
+  color: var(--tui-dim);
+  cursor: pointer;
+  user-select: none;
+}
+.tui-hscrollbar > span {
+  width: var(--cw);
+  text-align: center;
+}
+:is(.tui-scrollbar, .tui-hscrollbar) .tui-thumb {
+  color: var(--tui-accent);
+}
+:is(.tui-scrollbar, .tui-hscrollbar) .tui-arrow {
+  color: var(--tui-line);
+}
+:is(.tui-scrollbar, .tui-hscrollbar) .tui-arrow:hover {
+  color: var(--tui-accent);
+}
 
 /* ---------- window / dialog ---------- */
-.tui-window { --box-bg: var(--tui-surface); }
+.tui-window {
+  --box-bg: var(--tui-surface);
+}
 .tui-overlay {
   position: fixed;
   inset: 0;
@@ -464,12 +822,27 @@ select.tui-native { display: none; }
   place-items: center;
   padding: var(--ch) var(--cw);
 }
-.tui-dialog-text { white-space: pre-wrap; }
-.tui-dialog-actions { display: flex; justify-content: center; gap: calc(var(--cw) * 2); height: var(--ch); flex-wrap: wrap; }
+.tui-dialog-text {
+  white-space: pre-wrap;
+}
+.tui-dialog-actions {
+  display: flex;
+  justify-content: center;
+  gap: calc(var(--cw) * 2);
+  height: var(--ch);
+  flex-wrap: wrap;
+}
 
 /* ---------- tooltip ---------- */
-.tui-tip { --box-bg: var(--tui-surface-2); --box-line: var(--tui-accent); color: var(--tui-bright); pointer-events: none; }
-.tui-tip .tui-body { white-space: pre; }
+.tui-tip {
+  --box-bg: var(--tui-surface-2);
+  --box-line: var(--tui-accent);
+  color: var(--tui-bright);
+  pointer-events: none;
+}
+.tui-tip .tui-body {
+  white-space: pre;
+}
 
 /* ---------- status bar ---------- */
 .tui-statusbar {
@@ -481,18 +854,38 @@ select.tui-native { display: none; }
   background: var(--tui-surface-2);
   color: var(--tui-fg);
 }
-.tui-statusbar > * { padding: 0 var(--cw); }
-.tui-statusbar .tui-kbd { padding-right: 0; }
-.tui-statusbar .tui-kbd + span { padding-left: var(--cw); }
-.tui-statusbar .tui-grow { flex: 1; }
-.tui-statusbar .tui-seg { background: var(--tui-sel-bg); color: var(--tui-sel-fg); }
-.tui-statusbar .tui-seg-alt { background: var(--tui-field); color: var(--tui-bright); }
-
-@media (prefers-reduced-motion: reduce) {
-  .tui-spinner, .tui-progress[data-value="indeterminate"] { animation: none; }
+.tui-statusbar > * {
+  padding: 0 var(--cw);
+}
+.tui-statusbar .tui-kbd {
+  padding-right: 0;
+}
+.tui-statusbar .tui-kbd + span {
+  padding-left: var(--cw);
+}
+.tui-statusbar .tui-grow {
+  flex: 1;
+}
+.tui-statusbar .tui-seg {
+  background: var(--tui-sel-bg);
+  color: var(--tui-sel-fg);
+}
+.tui-statusbar .tui-seg-alt {
+  background: var(--tui-field);
+  color: var(--tui-bright);
 }
 
-[hidden].tui-box, .tui-box[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .tui-spinner,
+  .tui-progress[data-value="indeterminate"] {
+    animation: none;
+  }
+}
+
+[hidden].tui-box,
+.tui-box[hidden] {
+  display: none;
+}
 
 /* ---------- i18n: wide characters on the grid ---------- */
 /* tui.js wraps every wide char (Hangul, CJK, fullwidth) in .tui-w: exactly
@@ -519,7 +912,9 @@ select.tui-native { display: none; }
   transform: none;
 }
 /* A word that contains wide chars does not break inside (keep-all). */
-.tui-wrun { white-space: nowrap; }
+.tui-wrun {
+  white-space: nowrap;
+}
 /* Fixed-width column: --col cells (not --cols, which boxes set and children
    inherit), cut with … when a translation is longer. */
 .tui-col {
