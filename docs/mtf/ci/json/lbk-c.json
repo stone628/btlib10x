@@ -58,7 +58,7 @@
       "rearFacing": true
     },
     {
-      "weapon": "Flamer",
+      "weapon": "CL Flamer",
       "location": "rightTorso",
       "rearFacing": true
     }
@@ -179,7 +179,7 @@
       },
       {
         "kind": "weapon",
-        "weapon": "Flamer",
+        "weapon": "CL Flamer",
         "rearFacing": true
       },
       {

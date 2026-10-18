@@ -67,7 +67,7 @@ E<idx><hits>[:<armor>[:<crit>[:<ammo>]]]    final state per unit, idx order
 | armor | damage **taken** per location vs model default, see below |
 | crit | destroyed crit slots: `<loc><slot>` repeated (`a3a4` = right arm slots 3, 4) |
 | ammo | shots **used**: `<loc><slot><n>` repeated (`L13L22` = LT slot 1 used 3, LT slot 2 used 2); `n` is decimal, runs to the next letter. In `E` records a bin exports `full - shots left` whatever its fate, so shots stranded in a location lost to plain damage come back as unused and salvage can read them |
-| policy | this unit's ammo policy, one char: `e` exposed / `c` core / `s` spread / `l` leastFirst, followed by `x` when auto-eject is off (`set <id> autoEject off`). Omit the field when both are the default (`e`, auto-eject on) |
+| policy | this unit's ammo policy, one char: `e` exposed / `c` core / `s` spread / `l` leastFirst, followed by `x` when auto-eject is off (`set <id> autoEject off`), then `f` when heat-mode flamers are off (`set <id> heatFlamer off`). Omit the field when all are the default (`e`, auto-eject on, heatFlamer on). Replays written before `f` existed decode with heatFlamer on, so a flamer hit in such a replay now resolves as heat |
 
 Index = registration order (first `U` is `0`). Ammo policy is **setup-only** (`UnitInit.policy`, edited with `set <id> ammoPolicy <policy>`); the
 attack phase has no ammo command or policy item. `set`/`rm` edits made during setup are not
@@ -85,7 +85,7 @@ interface UnitInitDamage {
   critsDestroyed?: Partial<Record<Location, number[]>>;          // 1-based slot numbers
   ammoUsed?: Record<AmmoBinId, number>;                          // shots used per bin
 }
-// UnitInit.policy: UnitPolicy ({ ammoPolicy }) is separate and always present
+// UnitInit.policy: UnitPolicy ({ ammoPolicy, autoEject, heatFlamer }) is separate and always present
 ```
 
 `createBattle` sets `baseDamage` / `baseCritSlotsDestroyed` to clones of the starting

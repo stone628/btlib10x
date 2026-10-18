@@ -23,7 +23,7 @@
   },
   "weapons": [
     {
-      "weapon": "Flamer",
+      "weapon": "CL Flamer",
       "location": "leftArm"
     },
     {
@@ -173,7 +173,7 @@
       },
       {
         "kind": "weapon",
-        "weapon": "Flamer"
+        "weapon": "CL Flamer"
       },
       {
         "kind": "empty"

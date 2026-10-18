@@ -99,6 +99,16 @@ export function engineHitHeat(destroyedEngineSlots: number): number {
   return destroyedEngineSlots >= 2 ? ENGINE_HEAT_MULTI_HIT : ENGINE_HEAT_FIRST_HIT;
 }
 
+/** Most outside heat (heat-causing weapons, environment, fire) a unit takes
+ *  in one turn; the excess is wasted (TW p.159). */
+export const OUTSIDE_HEAT_CAP = 15;
+
+/** Outside heat landing on the scale this turn: received heat capped at
+ *  {@link OUTSIDE_HEAT_CAP} (TW p.159). */
+export function outsideHeatApplied(received: number): number {
+  return Math.min(Math.max(0, received), OUTSIDE_HEAT_CAP);
+}
+
 /** End-of-turn heat at which Triple-Strength Myomer activates (TW p.143). */
 export const TSM_ACTIVATION_HEAT = 9;
 

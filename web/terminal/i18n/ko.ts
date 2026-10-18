@@ -79,9 +79,9 @@ export const ko: Catalog = {
   "cmd.set.help": "로스터에 있는 유닛의 속성을 수정",
   "cmd.set.arg.id": "수정할 유닛 id",
   "cmd.set.arg.prop":
-    "속성 이름: model, team, col, row, facing, gunnery, piloting, pilotHitMax, ammoPolicy, autoEject",
+    "속성 이름: model, team, col, row, facing, gunnery, piloting, pilotHitMax, ammoPolicy, autoEject, heatFlamer",
   "cmd.set.arg.value":
-    "새 값 (정수, 모델의 경우 메크 키, 방향의 경우 방향 단어, ammoPolicy의 경우 exposed|core|spread|least-first, autoEject의 경우 on|off)",
+    "새 값 (정수, 모델의 경우 메크 키, 방향의 경우 방향 단어, ammoPolicy의 경우 exposed|core|spread|least-first, autoEject와 heatFlamer의 경우 on|off)",
   "cmd.rm.help": "배치된 유닛 제거",
   "cmd.rm.arg.id": "이전에 추가한 유닛의 id",
   "cmd.statusSetup.help": "설정 요약: 팀별 유닛 그룹, 선택된 맵",
@@ -383,6 +383,7 @@ export const ko: Catalog = {
   "err.seedInteger": "seed는 0부터 4294967295 사이의 정수여야 합니다",
   "err.badAmmoPolicy": "탄약 정책은 exposed|core|spread|least-first 중 하나여야 합니다",
   "err.badAutoEject": "autoEject는 on 또는 off여야 합니다",
+  "err.badHeatFlamer": "heatFlamer는 on 또는 off여야 합니다",
   "err.phaseDriver": "단계 드라이버가 수렴하지 않았습니다",
   "err.twist.badDirection": "상체 회전 방향은 front, left, right 중 하나여야 합니다",
   "err.twist.locked": "fire 명령이 예약되면 상체 회전은 잠김 — 먼저 cancel 하세요",
@@ -413,8 +414,9 @@ export const ko: Catalog = {
   "setup.mapNone": "(없음)",
   "setup.teamHeader": "팀 {team}:",
   "setup.unitLine":
-    "  {id}  {model} ({name}) gunnery {gunnery} piloting {piloting} hits {hitMax} ammo {ammo} 자동탈출 {eject} @ {pos} 방향 {facing}",
+    "  {id}  {model} ({name}) gunnery {gunnery} piloting {piloting} hits {hitMax} ammo {ammo} 자동탈출 {eject}{flamer} @ {pos} 방향 {facing}",
   "setup.noUnits": "(배치된 유닛 없음)",
+  "setup.heatFlamerOff": " 화염방사 발열 off",
 
   // movement status
   "moveStatus.headLine": "예약된 이동:",
@@ -547,6 +549,9 @@ export const ko: Catalog = {
   "info.weaponPulse": "펄스: 명중 보정 -2 (더 쉽게 명중)",
   "info.weaponToHitMod": "명중 보정: {mod}",
   "info.weaponRapidFire": "연사: 매턴 {shots}발 발사",
+  "info.weaponHeatAsHeat":
+    "발열 유발(H): 유닛의 heatFlamer 정책이 on이면 피해 대신 대상에 같은 양의 발열을 줌 (TW p.303)",
+  "info.weaponHeatExtra": "발열 유발(H): 명중 시 대상에 발열 +{dice}D6 (TW p.139)",
   "info.weaponAntiInfantry": "보병 대응: 보병에게 추가 데미열",
   "sheet.modelLine": "모델: {name} {model} - {weightClass} {tonnage}t",
   "sheet.gunneryLine": "사격력: {gunnery}",
@@ -705,6 +710,13 @@ export const ko: Catalog = {
   "log.heatMove": "[{id}] 이동 발열 {heat} 발생 (기본 {base}, 턴 누적 {total})",
   "log.heatWeapon": "[{id}] 무기 발열 {heat} 발생 (기본 {base}, 턴 누적 {total})",
   "log.heatEngineCrit": "[{id}] 엔진 크리티컬 발열 {heat} 발생 (기본 {base}, 턴 누적 {total})",
+  "log.heatInflicted":
+    "[{id}] 외부 발열 {heat} 받음 (턴 누적 {total}, 발열 처리 단계에 반영, 최대 {cap})",
+  "log.heatExternal": "[{id}] 외부 발열 {applied} 흡수",
+  "log.heatExternalCapped":
+    "[{id}] 외부 발열 {applied} 흡수 ({received} 받음, 상한 {cap} 초과분 {wasted} 소멸)",
+  "log.heatDissipatedExternal":
+    "[{id}] 발열 처리: 시작값({start}) + 턴 발생({total}) + 외부({ext}) - 방출({dissip}) = {end} (증감 {net}, 턴 당 방출 -{cap}/{capMax})",
   "log.heatDissipated":
     "[{id}] 발열 처리: 시작값({start}) + 턴 발생({total}) - 방출({dissip}) = {end} (증감 {net}, 턴 당 방출 -{cap}/{capMax})",
   "log.shutdown":
@@ -829,6 +841,8 @@ export const ko: Catalog = {
   "res.physical.attackerDown": "공격자 {attacker}가 공격 불가(격파/의식불명/정지) — 자동 빗나감",
   "res.physical.targetDown": "목표 {target}가 격투 전 파괴/제거됨 — 자동 빗나감",
   "res.physical.noLongerLegal": "더 이상 유효하지 않음({reason}) — 자동 빗나감",
+  "res.heatAsHeat": "피해 대신 대상에 발열 {heat} (대상 발열 처리 단계에 반영)",
+  "res.heatExtra": "대상에 발열 {heat} ({dice}, 대상 발열 처리 단계에 반영)",
   "res.outOfAmmo": "{weapon} 탄약 부족으로 발사 중지",
   "res.clusterRoll": "클러스터 굴림 2D6 = {roll}",
   "res.clusterMod": "클러스터 사거리 보정 {mod}",

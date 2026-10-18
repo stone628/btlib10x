@@ -64,7 +64,7 @@ Examples:
 |---|---|
 | `map <name>` | load a bundled map as terrain (`beginner`, `quickstart`, `test`, `testground`) |
 | `add <id> <model> <col> <row> [facing]` | place unit (team auto-assigned to smallest team; default gunnery `4`, piloting `5`, facing `n`) |
-| `set <id> <prop> <value>` | edit a property on a unit already on the roster (`model`, `team`, `col`, `row`, `facing`, `gunnery`, `piloting`, `pilotHitMax` (integer >= 1, default 6), `ammoPolicy` (`exposed` default, `core`, `spread`, `least-first`; case-insensitive, hyphens optional), `autoEject` (`on` default / `off`: TO:AR p. 165 auto-eject; off means losing the head, or the center torso to an ammo/weapon blast, kills the pilot, TW p. 128); property names are case-insensitive; cannot modify `id`) |
+| `set <id> <prop> <value>` | edit a property on a unit already on the roster (`model`, `team`, `col`, `row`, `facing`, `gunnery`, `piloting`, `pilotHitMax` (integer >= 1, default 6), `ammoPolicy` (`exposed` default, `core`, `spread`, `least-first`; case-insensitive, hyphens optional), `autoEject` (`on` default / `off`: TO:AR p. 165 auto-eject; off means losing the head, or the center torso to an ammo/weapon blast, kills the pilot, TW p. 128), `heatFlamer` (`on` default / `off`: on, the unit's flamers apply their Damage Value as heat instead of damage, TW p. 303; `status` shows `flamer-heat off` only when off); property names are case-insensitive; cannot modify `id`) |
 | `seed <n>` | set the dice seed (setup only; a battle in progress keeps its generator) |
 | `rm <id>` | remove placed unit |
 | `status` | setup summary: 'Mechs grouped by team, selected map name |
@@ -247,6 +247,19 @@ are listed here. Rule text lives in the rulebook.
   phase (`unit.heatPending`). Shutdown, restart and ammo-explosion rolls read
   post-dissipation heat. `mode shutdown` / `mode startup` are voluntary;
   standing in water adds dissipation.
+- **Heat-causing weapons (TW pp.113, 139, 159, 303)** — the flamer family
+  (Flamer, ER Flamer, Heavy Flamer, IS and Clan) follows the firing unit's
+  `heatFlamer` policy (`set <id> heatFlamer on|off`, default on): on, a hit
+  deals its Damage Value as heat instead of damage; off, normal damage. The
+  Plasma Rifle adds 1D6 heat to its 10 damage (the die is thrown after the
+  damage and its crits), the Clan Plasma Cannon deals 2D6 heat and no damage.
+  A heat-only hit rolls no hit location, so no critical and no damage PSR,
+  and a building hex absorbs none of it. Heat lands as outside heat in the
+  target's heat phase, capped at 15 per turn (excess wasted), shut down or
+  not; it does not change this turn's to-hit or MP. `fire` is unchanged.
+  ER and Heavy Flamer stats come from TechManual (not in TW). Not modeled:
+  fire and smoke (TO:AR pp.41–46), infernos, plasma double damage against
+  woods and buildings.
 - **Piloting and falls** — PSR triggers, falls with Facing After Fall, seatbelt
   rolls, prone / stand-up (`mode standup|prone|turn|pronestill`), movement-entry
   PSRs for rubble, water and buildings. A building entry adds the building type

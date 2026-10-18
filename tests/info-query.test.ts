@@ -373,7 +373,7 @@ describe("info commands in the CLI", () => {
       "error: Unknown 'Mech model: hbk-4x; closest: HBK-4G, HBK-4H, HBK-4J, HBK-4N, HBK-4P",
     );
     expect(execute(s, "info mech epoch:sw")[0]).toMatch(/^error: Unknown filter 'epoch:'/);
-    expect(execute(s, "info weapon")[0]).toBe("114 weapons");
+    expect(execute(s, "info weapon")[0]).toBe("120 weapons");
     expect(execute(s, "add a hbk-4x 1 1")[0]).toContain("closest: HBK-4G");
   });
 

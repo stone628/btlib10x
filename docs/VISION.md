@@ -168,9 +168,13 @@ These are implementation choices, not rule changes.
   optional Punch/Kick-table election. (Charge / DFA, TW pp.148–150, are
   implemented without displacement, §2.5.)
 - **Weapon to-hit audit P2 (TW pp.103–140).** One-Shot weapons; point-blank
-  legality; Flak; plasma heat damage; Heavy Gauss move-and-fire PSR;
-  MGA / A-Pod / B-Pod; missing catalog rows (Rocket Launchers, Plasma Cannon,
-  iNarc).
+  legality; Flak; Heavy Gauss move-and-fire PSR;
+  MGA / A-Pod / B-Pod; missing catalog rows (Rocket Launchers, iNarc).
+- **Thermal follow-ups.** Heat-causing weapons are in (TW pp.113, 139, 159,
+  303; `heatFlamer` policy). Still to come: TO:AR fire and smoke (pp.41–46,
+  needs hex targeting and wind), inferno SRMs and their ammo-explosion table
+  (TW pp.141–142, needs special munitions), plasma double damage against
+  woods/buildings, and a persona heuristic for heat weapons.
 - **Water combat.** Hull breach, underwater weapons and LOS, physicals in
   water.
 - **Buildings.** Basements, multi-floor interiors, structural transfer;

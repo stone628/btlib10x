@@ -423,6 +423,9 @@ export function infoWeaponChunk(name: string): Chunk {
   }
   if (w.rapidFireShots !== undefined)
     lines.push(i18n("info.weaponRapidFire", { shots: w.rapidFireShots }));
+  if (w.heatEffect?.kind === "asHeat") lines.push(i18n("info.weaponHeatAsHeat"));
+  if (w.heatEffect?.kind === "extraHeat")
+    lines.push(i18n("info.weaponHeatExtra", { dice: w.heatEffect.dice }));
   if (w.antiInfantry) lines.push(i18n("info.weaponAntiInfantry"));
   return buildLinesChunk(...lines);
 }

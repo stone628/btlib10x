@@ -35,11 +35,11 @@
       "location": "rightTorso"
     },
     {
-      "weapon": "Flamer",
+      "weapon": "CL Flamer",
       "location": "centerTorso"
     },
     {
-      "weapon": "Flamer",
+      "weapon": "CL Flamer",
       "location": "centerTorso"
     }
   ],
@@ -87,11 +87,11 @@
       },
       {
         "kind": "weapon",
-        "weapon": "Flamer"
+        "weapon": "CL Flamer"
       },
       {
         "kind": "weapon",
-        "weapon": "Flamer"
+        "weapon": "CL Flamer"
       }
     ],
     "leftTorso": [

@@ -118,7 +118,8 @@ export type UnitProp =
   | "piloting"
   | "pilotHitMax"
   | "ammoPolicy"
-  | "autoEject";
+  | "autoEject"
+  | "heatFlamer";
 
 export const UNIT_PROPS: ReadonlyArray<UnitProp> = [
   "model",
@@ -131,6 +132,7 @@ export const UNIT_PROPS: ReadonlyArray<UnitProp> = [
   "pilotHitMax",
   "ammoPolicy",
   "autoEject",
+  "heatFlamer",
 ];
 
 export function parseUnitProp(word: string): UnitProp {
@@ -235,6 +237,12 @@ export function setupSetUnitProp(
       unit.policy = { ...unit.policy, autoEject: word === "on" };
       return { prop, value: word };
     }
+    case "heatFlamer": {
+      const word = raw.toLowerCase();
+      if (word !== "on" && word !== "off") throw new Error(i18n("err.badHeatFlamer"));
+      unit.policy = { ...unit.policy, heatFlamer: word === "on" };
+      return { prop, value: word };
+    }
   }
 }
 
@@ -262,6 +270,7 @@ export function setupStatus(setup: SetupContext): Chunk {
           hitMax: u.pilotHitMax,
           ammo: ammoPolicyLabel(u.policy.ammoPolicy),
           eject: u.policy.autoEject ? "on" : "off",
+          flamer: u.policy.heatFlamer ? "" : i18n("setup.heatFlamerOff"),
           pos: hexKey(u.position),
           facing: u.facing,
         }),

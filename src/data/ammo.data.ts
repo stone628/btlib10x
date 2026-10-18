@@ -81,6 +81,11 @@ export const AMMO_DATA: readonly AmmoDef[] = [
     explosive: false,
   },
   {
+    weapon: "CL Heavy Flamer",
+    shotsPerBin: 10,
+    explosive: true,
+  },
+  {
     weapon: "CL Heavy Machine Gun",
     shotsPerBin: 100,
     explosive: true,
@@ -144,6 +149,11 @@ export const AMMO_DATA: readonly AmmoDef[] = [
     weapon: "CL Narc Missile Beacon",
     shotsPerBin: 6,
     explosive: true,
+  },
+  {
+    weapon: "CL Plasma Cannon",
+    shotsPerBin: 10,
+    explosive: false,
   },
   {
     weapon: "CL SRM 2",
@@ -219,6 +229,11 @@ export const AMMO_DATA: readonly AmmoDef[] = [
     weapon: "HAG 40",
     shotsPerBin: 3,
     explosive: false,
+  },
+  {
+    weapon: "Heavy Flamer",
+    shotsPerBin: 10,
+    explosive: true,
   },
   {
     weapon: "Heavy Gauss Rifle",

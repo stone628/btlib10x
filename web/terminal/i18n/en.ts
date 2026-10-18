@@ -79,9 +79,9 @@ export const en = {
   "cmd.set.help": "edit a property on a unit already on the roster",
   "cmd.set.arg.id": "unit id to modify",
   "cmd.set.arg.prop":
-    "property name: model, team, col, row, facing, gunnery, piloting, pilotHitMax, ammoPolicy, autoEject",
+    "property name: model, team, col, row, facing, gunnery, piloting, pilotHitMax, ammoPolicy, autoEject, heatFlamer",
   "cmd.set.arg.value":
-    "new value (integer for numeric props, 'Mech key for model, facing word for facing, exposed|core|spread|least-first for ammoPolicy, on|off for autoEject)",
+    "new value (integer for numeric props, 'Mech key for model, facing word for facing, exposed|core|spread|least-first for ammoPolicy, on|off for autoEject and heatFlamer)",
   "cmd.rm.help": "remove a placed unit",
   "cmd.rm.arg.id": "id of a previously added unit",
   "cmd.statusSetup.help": "setup summary: units grouped by team, selected map",
@@ -391,6 +391,7 @@ export const en = {
   "err.seedInteger": "seed must be an integer from 0 to 4294967295",
   "err.badAmmoPolicy": "ammo policy must be one of exposed|core|spread|least-first",
   "err.badAutoEject": "autoEject must be on or off",
+  "err.badHeatFlamer": "heatFlamer must be on or off",
   "err.phaseDriver": "phase driver failed to settle",
   "err.twist.badDirection": "torso direction must be front, left, or right",
   "err.twist.locked": "torso twist is locked once a fire command is queued; cancel first",
@@ -423,8 +424,9 @@ export const en = {
   "setup.mapNone": "(none)",
   "setup.teamHeader": "team {team}:",
   "setup.unitLine":
-    "  {id}  {model} ({name}) gunnery {gunnery} piloting {piloting} hits {hitMax} ammo {ammo} auto-eject {eject} @ {pos} facing {facing}",
+    "  {id}  {model} ({name}) gunnery {gunnery} piloting {piloting} hits {hitMax} ammo {ammo} auto-eject {eject}{flamer} @ {pos} facing {facing}",
   "setup.noUnits": "(no units placed)",
+  "setup.heatFlamerOff": " flamer-heat off",
 
   // movement status
   "moveStatus.headLine": "queued movements:",
@@ -559,6 +561,9 @@ export const en = {
   "info.weaponPulse": "pulse: -2 to-hit chance (easier to hit)",
   "info.weaponToHitMod": "to-hit mod: {mod}",
   "info.weaponRapidFire": "rapid-fire: fires {shots} shots per turn",
+  "info.weaponHeatAsHeat":
+    "heat-causing (H): with the unit's heatFlamer policy on, deals its damage as heat to the target instead (TW p.303)",
+  "info.weaponHeatExtra": "heat-causing (H): +{dice}D6 heat to the target on a hit (TW p.139)",
   "info.weaponAntiInfantry": "anti-infantry: bonus damage vs infantry",
   "sheet.modelLine": "model: {name} {model} - {weightClass} {tonnage}t",
   "sheet.gunneryLine": "gunnery: {gunnery}",
@@ -719,6 +724,13 @@ export const en = {
   "log.heatWeapon": "[{id}] generates {heat} weapon heat (base {base}, turn generated {total})",
   "log.heatEngineCrit":
     "[{id}] generates {heat} engine-crit heat (base {base}, turn generated {total})",
+  "log.heatInflicted":
+    "[{id}] takes {heat} outside heat (turn received {total}; lands in the heat phase, max {cap})",
+  "log.heatExternal": "[{id}] absorbs {applied} outside heat",
+  "log.heatExternalCapped":
+    "[{id}] absorbs {applied} outside heat ({received} received, {wasted} over the {cap} cap wasted)",
+  "log.heatDissipatedExternal":
+    "[{id}] heat phase: base({start}) + generated({total}) + outside({ext}) - dissipated({dissip}) = {end} (net {net}, capable -{cap}/{capMax} per turn)",
   "log.heatDissipated":
     "[{id}] heat phase: base({start}) + generated({total}) - dissipated({dissip}) = {end} (net {net}, capable -{cap}/{capMax} per turn)",
   "log.shutdown":
@@ -850,6 +862,8 @@ export const en = {
     "attacker {attacker} unable to attack (destroyed/unconscious/shut down) — auto-miss",
   "res.physical.targetDown": "target {target} destroyed or removed before the melee — auto-miss",
   "res.physical.noLongerLegal": "no longer legal ({reason}) — auto-miss",
+  "res.heatAsHeat": "{heat} heat to target instead of damage (lands in its heat phase)",
+  "res.heatExtra": "{heat} heat to target ({dice}; lands in its heat phase)",
   "res.outOfAmmo": "{weapon} out of ammo, did not fire",
   "res.clusterRoll": "cluster roll 2D6 = {roll}",
   "res.clusterMod": "cluster range mod {mod}",

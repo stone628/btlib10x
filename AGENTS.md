@@ -40,6 +40,10 @@ TypeScript library encapsulating BattleTech Total Warfare board game logic.
   passable hull (TO:AR pp.184-185); a destroyed 'Mech of 40 t+ leaves Rough
   wreckage (+1 MP, TO:AR p.155) after the TW p.128 salvage fall.
   `salvageReport` lists both. Rules and rationale: `docs/VISION.md` §2.1, §2.4.
+- Heat-causing weapons (TW pp.113, 139, 159, 303): flamers deal heat instead
+  of damage under the per-unit `UnitPolicy.heatFlamer` (default on); Plasma
+  Rifle adds 1D6 heat, Plasma Cannon deals 2D6 heat only. Outside heat lands
+  in the heat phase, capped at 15 per turn. Fire/smoke and infernos deferred.
 - Damage model: each location holds a flat armor HP number; overflow transfers inward **only after** a location's armor is fully depleted (no per-dot tracking).
 - Partial cover (TW): a target in a water1/building hex with the attacker not
   higher gains +1 to-hit and leg hit-location rolls strike the cover (dealt

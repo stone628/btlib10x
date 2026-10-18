@@ -32,7 +32,7 @@
       "location": "rightArm"
     },
     {
-      "weapon": "Flamer",
+      "weapon": "CL Flamer",
       "location": "rightTorso"
     }
   ],
@@ -153,7 +153,7 @@
       },
       {
         "kind": "weapon",
-        "weapon": "Flamer"
+        "weapon": "CL Flamer"
       },
       {
         "kind": "ammo",

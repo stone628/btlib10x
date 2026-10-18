@@ -6,7 +6,8 @@
  *   V = Variable damage by bracket,
  *   C = Cluster (rolls Cluster Hits Table), R = Rapid-fire multi-shot,
  *   S = Streak (all missiles hit on a successful to-hit roll, no cluster roll;
- *   a miss fires nothing: no ammo spent, no heat).
+ *   a miss fires nothing: no ammo spent, no heat),
+ *   H = Heat-Causing (`heatEffect`; target heat lands in the Heat Phase).
  * The To-Hit Mod column (TW p.303-304) lives in `toHitMod`:
  *   pulse -2, LB-X cluster -1 (cluster mode only, deferred), MRM +1,
  *   Clan heavy lasers +1.
@@ -71,9 +72,25 @@ export interface WeaponDef {
    * to check a split weapon's slots add up and to pick its mount.
    */
   readonly crits?: number;
+  /** H-code heat-causing behavior (TW p.113, p.303). Heat reaches only
+   *  'Mech targets and lands in their next Heat Phase as outside heat
+   *  (capped at 15 per turn, TW p.159). */
+  readonly heatEffect?: WeaponHeatEffect;
   /** Broad weapon class used for catalog grouping and UI categorization. */
   readonly category: WeaponCategory;
 }
+
+/**
+ * Heat-causing (H) weapon behavior:
+ *   `asHeat` - flamers: the Damage Value may be applied as heat instead of
+ *   damage, announced before the to-hit roll (TW p.303 footnote ‡); the
+ *   attacker's `heatFlamer` policy makes the choice.
+ *   `extraHeat` - plasma weapons: `dice` D6 of heat on every hit, on top of
+ *   any `damage` (Plasma Rifle 10 + 1D6, Plasma Cannon 0 + 2D6; TW p.139).
+ */
+export type WeaponHeatEffect =
+  | { readonly kind: "asHeat" }
+  | { readonly kind: "extraHeat"; readonly dice: 1 | 2 };
 
 export interface WeaponClusterRangeMod {
   readonly short: number;
@@ -160,6 +177,26 @@ function parseWeapon(raw: unknown, label: string, errors: string[]): WeaponDef |
     errors.push(`${label}.crits must be a positive integer`);
     valid = false;
   }
+  const heatEffect = raw.heatEffect;
+  if (heatEffect !== undefined) {
+    if (!isRecord(heatEffect)) {
+      errors.push(`${label}.heatEffect must be an object`);
+      valid = false;
+    } else if (heatEffect.kind === "asHeat") {
+      if (typeof raw.damage !== "number" || raw.damage <= 0) {
+        errors.push(`${label}.heatEffect asHeat needs a positive damage`);
+        valid = false;
+      }
+    } else if (heatEffect.kind === "extraHeat") {
+      if (heatEffect.dice !== 1 && heatEffect.dice !== 2) {
+        errors.push(`${label}.heatEffect.dice must be 1 or 2`);
+        valid = false;
+      }
+    } else {
+      errors.push(`${label}.heatEffect.kind must be asHeat or extraHeat`);
+      valid = false;
+    }
+  }
   const clusterRangeMod = raw.clusterRangeMod;
   if (clusterRangeMod !== undefined) {
     if (!isRecord(clusterRangeMod)) {
@@ -196,6 +233,7 @@ function parseWeapon(raw: unknown, label: string, errors: string[]): WeaponDef |
     "heat",
     "critExplosion",
     "crits",
+    "heatEffect",
     "category",
   ] as const) {
     const v = raw[key];

@@ -44,7 +44,7 @@
       "location": "leftTorso"
     },
     {
-      "weapon": "Flamer",
+      "weapon": "CL Flamer",
       "location": "leftTorso"
     },
     {
@@ -122,7 +122,7 @@
       },
       {
         "kind": "weapon",
-        "weapon": "Flamer"
+        "weapon": "CL Flamer"
       },
       {
         "kind": "soak",

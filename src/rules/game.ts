@@ -118,6 +118,7 @@ import {
   isTsmActive,
   largestAmmoBin,
   movementHeat,
+  outsideHeatApplied,
   shutdownAvoid,
   shutdownAvoidWithThreshold,
   toHitHeatModifier,
@@ -195,10 +196,18 @@ export interface UnitPolicy {
    *  ammo/weapon blast, ejects the pilot. Off: those kill the MechWarrior
    *  (TW p. 128). */
   autoEject: boolean;
+  /** Flamer-family (`asHeat`) weapons apply their Damage Value as heat
+   *  instead of damage (TW p.303 footnote ‡). On: every flamer hit heats the
+   *  target; off: flamers deal normal damage. */
+  heatFlamer: boolean;
 }
 
 /** Policy a unit gets when setup names none. */
-export const DEFAULT_UNIT_POLICY: Readonly<UnitPolicy> = { ammoPolicy: "exposed", autoEject: true };
+export const DEFAULT_UNIT_POLICY: Readonly<UnitPolicy> = {
+  ammoPolicy: "exposed",
+  autoEject: true,
+  heatFlamer: true,
+};
 
 /** The only legal team ids: 1 and 2 (one side each). */
 export const TEAM_IDS = [1, 2] as const;
@@ -506,6 +515,8 @@ export interface UnitState extends MechModelHolder {
   ammoPolicy: AmmoPolicy;
   /** Auto-eject system engaged (from `UnitPolicy.autoEject`). */
   autoEject: boolean;
+  /** Flamers fire in heat mode (from `UnitPolicy.heatFlamer`). */
+  heatFlamer: boolean;
   jammedWeapons: number[];
   /** Arms and legs blown off by critical hits (TW p.124, 145), with their
    *  salvage flag. A severed limb can be picked up as a club (TW p.146). */
@@ -536,6 +547,11 @@ export interface UnitState extends MechModelHolder {
    *  phase. The to-hit modifier used during this turn's weapon attack
    *  phase reads `heat` (not `heat + heatPending`), matching TW p.160. */
   heatPending: number;
+  /** Outside heat received this turn from heat-causing weapons (TW p.159),
+   *  tallied apart from own heat and capped at
+   *  {@link OUTSIDE_HEAT_CAP} when the Heat Phase applies it. Reset to 0 by
+   *  the heat phase. */
+  heatExternalPending: number;
   /** Shutdown state: "manual" (voluntary), "heat" (automatic, restartable in
    *  the heat phase) or "not" (online). Anything but "not" counts
    *  as shut down: cannot move, fire, or act as the next actor. */
@@ -746,6 +762,28 @@ export type GameEvent =
       readonly totalGenerated: number;
     }
   | {
+      /** A heat-causing weapon hit (TW p.113): `heat` joins the target's
+       *  outside heat for its next Heat Phase. */
+      readonly kind: "heatInflicted";
+      readonly unitId: string;
+      readonly targetId: string;
+      readonly weapon: string;
+      readonly heat: number;
+      readonly source: "asHeat" | "extraHeat";
+      /** Target's outside heat tallied this turn, including this hit
+       *  (= `heatExternalPending` after the event; uncapped). */
+      readonly totalReceived: number;
+    }
+  | {
+      /** Outside heat landing on the scale in the Heat Phase (TW p.159):
+       *  `applied = min(received, 15)`, the rest is `wasted`. */
+      readonly kind: "heatExternal";
+      readonly unitId: string;
+      readonly received: number;
+      readonly applied: number;
+      readonly wasted: number;
+    }
+  | {
       readonly kind: "heatEngineCrit";
       readonly unitId: string;
       readonly heat: number;
@@ -761,6 +799,9 @@ export type GameEvent =
       /** Sum of own heat generated this turn (= `heatPending` at phase
        *  entry). */
       readonly totalGenerated: number;
+      /** Outside heat applied this phase after the 15 cap (TW p.159; see
+       *  `heatExternal`); 0 when none. */
+      readonly external: number;
       /** Scale value after dissipation (= `unit.heat` after this event). */
       readonly endHeat: number;
       /** Net change this turn = endHeat - startHeat. */
@@ -1451,6 +1492,7 @@ export function createBattle(
       ammoBins,
       ammoPolicy: init.policy.ammoPolicy,
       autoEject: init.policy.autoEject,
+      heatFlamer: init.policy.heatFlamer,
       jammedWeapons: [],
       critSlotsDestroyed: start.critSlotsDestroyed,
       blownOffLimbs: [],
@@ -1462,6 +1504,7 @@ export function createBattle(
       mpSpent: 0,
       heat: 0,
       heatPending: 0,
+      heatExternalPending: 0,
       shutdown: "not",
       declaredWeaponAttacks: [],
       declaredPhysicalAttacks: [],
@@ -3419,6 +3462,7 @@ function resolveUnitAttacks(
           ? { arc: decl.arc }
           : {}),
       weapon: weapon.name,
+      heatMode: unit.heatFlamer,
       ammoExhausted,
       shots,
       targetDamage: targetBaseDamage,
@@ -4279,6 +4323,22 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         secondaryMod,
         resolution: reported,
       });
+
+      // Heat-causing hit (TW p.113): tallied as outside heat, landing in
+      // the target's Heat Phase (TW p.159).
+      const inflicted = resolution.inflictedHeat;
+      if (inflicted !== undefined && inflicted.heat > 0) {
+        target.heatExternalPending += inflicted.heat;
+        sink.push({
+          kind: "heatInflicted",
+          unitId: result.unitId,
+          targetId,
+          weapon: resolution.weapon,
+          heat: inflicted.heat,
+          source: inflicted.source,
+          totalReceived: target.heatExternalPending,
+        });
+      }
     }
 
     const attacker = requireUnit(state, result.unitId);
@@ -4979,6 +5039,10 @@ export function* advancePhaseGen(state: BattleState, rng: Rng): Generator<GameEv
  * branch used `roll <= avoid = fail`, an off-by-one).
  */
 export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]): void {
+  // Outside heat on units that left play goes nowhere.
+  for (const unit of Object.values(state.units)) {
+    if (isUnitRemoved(unit)) unit.heatExternalPending = 0;
+  }
   const units = Object.values(state.units).filter((u) => !isUnitRemoved(u));
   const before: PhaseSnapshots = { damage: {}, crit: {} };
   // Damage points marked this phase per unit (heat ammo-explosion blasts,
@@ -5027,6 +5091,22 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
     }
     unit.heatPending = 0;
 
+    // Outside heat (TW p.159): tallied apart from own heat, capped at 15 per
+    // turn, then added to the scale alongside it, shut down or not.
+    const received = unit.heatExternalPending;
+    const applied = outsideHeatApplied(received);
+    if (received > 0) {
+      unit.heat += applied;
+      sink.push({
+        kind: "heatExternal",
+        unitId: unit.id,
+        received,
+        applied,
+        wasted: received - applied,
+      });
+    }
+    unit.heatExternalPending = 0;
+
     // Dissipate (TW p.159 net update; applies to all units including
     // shut-down — heat sinks keep working).
     const terrainHere = cellAt(state, unit.position).terrain;
@@ -5043,13 +5123,14 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
     const dissipated = Math.min(capacity, unit.heat);
     const endHeat = unit.heat - dissipated;
     unit.heat = endHeat;
-    if (dissipated > 0 || totalGenerated > 0) {
+    if (dissipated > 0 || totalGenerated > 0 || applied > 0) {
       sink.push({
         kind: "heatDissipated",
         unitId: unit.id,
         dissip: dissipated,
         startHeat,
         totalGenerated,
+        external: applied,
         endHeat,
         netChange: endHeat - startHeat,
         capacity,

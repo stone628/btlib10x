@@ -150,6 +150,17 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     heat: 0,
   },
   {
+    name: "CL ER Flamer",
+    short: 3,
+    medium: 5,
+    long: 7,
+    damage: 2,
+    antiInfantry: true,
+    category: "ENERGY",
+    heat: 4,
+    heatEffect: { kind: "asHeat" },
+  },
+  {
     name: "CL ER Large Laser",
     short: 8,
     medium: 15,
@@ -197,6 +208,17 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     heat: 2,
   },
   {
+    name: "CL Flamer",
+    short: 1,
+    medium: 2,
+    long: 3,
+    damage: 2,
+    antiInfantry: true,
+    category: "ENERGY",
+    heat: 3,
+    heatEffect: { kind: "asHeat" },
+  },
+  {
     name: "CL Gauss Rifle",
     short: 7,
     medium: 15,
@@ -206,6 +228,17 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     category: "BALLISTIC",
     heat: 1,
     critExplosion: 20,
+  },
+  {
+    name: "CL Heavy Flamer",
+    short: 2,
+    medium: 3,
+    long: 4,
+    damage: 4,
+    antiInfantry: true,
+    category: "ENERGY",
+    heat: 5,
+    heatEffect: { kind: "asHeat" },
   },
   {
     name: "CL Heavy Large Laser",
@@ -406,6 +439,16 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     heat: 0,
   },
   {
+    name: "CL Plasma Cannon",
+    short: 6,
+    medium: 12,
+    long: 18,
+    damage: 0,
+    category: "ENERGY",
+    heat: 7,
+    heatEffect: { kind: "extraHeat", dice: 2 },
+  },
+  {
     name: "CL Small Pulse Laser",
     short: 2,
     medium: 4,
@@ -530,6 +573,17 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     heat: 7,
   },
   {
+    name: "ER Flamer",
+    short: 3,
+    medium: 5,
+    long: 7,
+    damage: 2,
+    antiInfantry: true,
+    category: "ENERGY",
+    heat: 4,
+    heatEffect: { kind: "asHeat" },
+  },
+  {
     name: "ER Large Laser",
     short: 7,
     medium: 14,
@@ -574,6 +628,8 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     antiInfantry: true,
     category: "ENERGY",
     heat: 3,
+
+    heatEffect: { kind: "asHeat" },
   },
   {
     name: "Gauss Rifle",
@@ -649,6 +705,17 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
   // Source: BattleTechWiki (Sarna) "Heavy Gauss Rifle", not the TW rulebook.
   // 18 tons, 11 critical slots, 4 shots/ton; a 25-point explosion (contained
   // by CASE) when the capacitors are hit.
+  {
+    name: "Heavy Flamer",
+    short: 2,
+    medium: 3,
+    long: 4,
+    damage: 4,
+    antiInfantry: true,
+    category: "ENERGY",
+    heat: 5,
+    heatEffect: { kind: "asHeat" },
+  },
   {
     name: "Heavy Gauss Rifle",
     short: 6,
@@ -979,6 +1046,8 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     damage: 10,
     category: "ENERGY",
     heat: 10,
+
+    heatEffect: { kind: "extraHeat", dice: 1 },
   },
   {
     name: "PPC",

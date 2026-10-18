@@ -279,19 +279,34 @@ describe("set <id> autoEject", () => {
     execute(s, "add me HBK-4G 9 9 n");
     expect(s.setup.roster[0]!.policy.autoEject).toBe(true);
     expect(execute(s, "set me autoEject off")).toEqual(["me: autoEject set to off"]);
-    expect(s.setup.roster[0]!.policy).toEqual({ ammoPolicy: "exposed", autoEject: false });
+    expect(s.setup.roster[0]!.policy).toEqual({
+      ammoPolicy: "exposed",
+      autoEject: false,
+      heatFlamer: true,
+    });
     expect(execute(s, "status").join("\n")).toMatch(/auto-eject off/);
     expect(execute(s, "set me autoEject maybe")[0]).toMatch(/autoEject must be on or off/);
     execute(s, "set me ammoPolicy core");
-    expect(s.setup.roster[0]!.policy).toEqual({ ammoPolicy: "core", autoEject: false });
+    expect(s.setup.roster[0]!.policy).toEqual({
+      ammoPolicy: "core",
+      autoEject: false,
+      heatFlamer: true,
+    });
   });
 
   it("round-trips through replay unit records", () => {
     const base = buildUnitInit("me", "HBK-4G", 1, { col: 9, row: 9 }, "n");
-    const off = { ...base, policy: { ammoPolicy: "exposed" as const, autoEject: false } };
+    const off = {
+      ...base,
+      policy: { ammoPolicy: "exposed" as const, autoEject: false, heatFlamer: true },
+    };
     const line = encodeUnitLine(off);
     expect(line.endsWith(":ex")).toBe(true);
-    expect(decodeUnitLine(line).policy).toEqual({ ammoPolicy: "exposed", autoEject: false });
+    expect(decodeUnitLine(line).policy).toEqual({
+      ammoPolicy: "exposed",
+      autoEject: false,
+      heatFlamer: true,
+    });
     expect(encodeUnitLine(base)).not.toMatch(/:e?x?$/);
     expect(decodeUnitLine(encodeUnitLine(base)).policy.autoEject).toBe(true);
   });

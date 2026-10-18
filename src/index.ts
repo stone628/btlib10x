@@ -93,7 +93,12 @@ export type {
   WeightClass,
 } from "./data/mech.schema";
 export { type TerrainDef, terrainDef } from "./data/terrain.schema";
-export type { WeaponCategory, WeaponDef, WeaponNameHolder } from "./data/weapon.schema";
+export type {
+  WeaponCategory,
+  WeaponDef,
+  WeaponHeatEffect,
+  WeaponNameHolder,
+} from "./data/weapon.schema";
 export { allWeaponDefs, listWeaponNames, weaponDefFor } from "./data/weapon.schema";
 export type { ArmActuatorCounts } from "./rules/actuators";
 export {
@@ -120,6 +125,7 @@ export {
 export type {
   AttackResolution,
   HitGroup,
+  InflictedHeat,
   TargetCritContext,
   WeaponAttackInput,
 } from "./rules/attack";
@@ -277,6 +283,8 @@ export {
   movementHeat,
   movementMpPenalty,
   movementMpPenaltyWithThreshold,
+  OUTSIDE_HEAT_CAP,
+  outsideHeatApplied,
   shutdownAvoid,
   TSM_ACTIVATION_HEAT,
   toHitHeatModifier,

@@ -435,8 +435,12 @@ export function encodeUnitLine(init: UnitInit): string {
     init.pilotHitMax.toString(36) +
     (hits > 0 ? hits.toString(36) : "");
   const f = fieldsOfInit(init);
-  // Policy field: ammo policy char, then `x` when auto-eject is off; omitted at the defaults.
-  const policy = (POLICY_CHAR[init.policy.ammoPolicy] ?? "e") + (init.policy.autoEject ? "" : "x");
+  // Policy field: ammo policy char, then `x` when auto-eject is off and `f`
+  // when heat-mode flamers are off; omitted at the defaults.
+  const policy =
+    (POLICY_CHAR[init.policy.ammoPolicy] ?? "e") +
+    (init.policy.autoEject ? "" : "x") +
+    (init.policy.heatFlamer ? "" : "f");
   return `U${init.team}${init.id}:${init.model}:${place}${joinFields([
     armorField(f),
     critField(f),
@@ -724,11 +728,12 @@ export function decodeUnitLine(line: string): UnitInit {
       [`${locOf(mm[1])}:${slotNumber(mm[2])}`]: Number(mm[3]),
     };
   }
-  const pm = /^([a-z])(x?)$/.exec(policy);
+  const pm = /^([a-z])(x?)(f?)$/.exec(policy);
   if (policy !== "" && pm === null) throw new Error(`bad policy ${JSON.stringify(policy)}`);
   const ammoPolicy = pm === null ? "exposed" : POLICY_BY_CHAR.get(pm[1]!);
   if (ammoPolicy === undefined) throw new Error(`bad ammo policy ${JSON.stringify(policy)}`);
   const autoEject = pm === null || pm[2] === "";
+  const heatFlamer = pm === null || pm[3] === "";
   const init = buildUnitInit(
     id,
     model,
@@ -738,7 +743,7 @@ export function decodeUnitLine(line: string): UnitInit {
     Number(gunnery) as UnitInit["gunnery"],
     Number(piloting) as UnitInit["piloting"],
     parseInt(hitMax!, 36),
-    { ammoPolicy, autoEject },
+    { ammoPolicy, autoEject, heatFlamer },
   );
   return Object.keys(damage).length > 0 ? { ...init, damage } : init;
 }

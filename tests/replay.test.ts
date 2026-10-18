@@ -259,6 +259,7 @@ describe("unit and end lines", () => {
       ...buildUnitInit("hunchy", "HBK-4G", 1, { col: 5, row: 3 }, "s", 4, 5, 6, {
         ammoPolicy: "spread" as const,
         autoEject: true,
+        heatFlamer: true,
       }),
       damage: {
         pilotHits: 2,
@@ -576,6 +577,7 @@ describe("decodeUnitLine", () => {
       ...buildUnitInit("hunchy", "HBK-4G", 2, { col: 5, row: 3 }, "sw", 3, 5, 7, {
         ammoPolicy: "leastFirst" as const,
         autoEject: true,
+        heatFlamer: true,
       }),
       damage: {
         pilotHits: 2,

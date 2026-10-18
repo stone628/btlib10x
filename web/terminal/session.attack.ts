@@ -1149,6 +1149,15 @@ export function resolutionLines(r: AttackResolution): string[] {
   for (const crit of r.crits) {
     for (const line of critLines(crit)) lines.push(`    ${line}`);
   }
+  const heat = r.inflictedHeat;
+  if (heat !== undefined) {
+    lines.push(
+      "  " +
+        (heat.source === "asHeat"
+          ? i18n("res.heatAsHeat", { heat: heat.heat })
+          : i18n("res.heatExtra", { heat: heat.heat, dice: (heat.dice ?? []).join("+") })),
+    );
+  }
   return lines;
 }
 

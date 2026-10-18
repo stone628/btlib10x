@@ -271,6 +271,9 @@ export const SHOTS_PER_TON = {
   "Streak SRM 6": 15,
   "CL LB 10-X AC": 10,
   "CL LB 20-X AC": 5,
+  "Heavy Flamer": 10,
+  "CL Heavy Flamer": 10,
+  "CL Plasma Cannon": 10,
 };
 
 // ---------------------------------------------------------------------------

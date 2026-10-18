@@ -1,0 +1,399 @@
+{
+  "model": "BSP-F",
+  "name": "Star Adder",
+  "clanName": "Blood Asp",
+  "tonnage": 90,
+  "intro": 3071,
+  "weightClass": "Assault",
+  "techBase": "Clan",
+  "walking": 4,
+  "running": 6,
+  "jumping": 0,
+  "armor": {
+    "head": 9,
+    "centerTorso": 40,
+    "rightTorso": 24,
+    "leftTorso": 24,
+    "rightArm": 28,
+    "leftArm": 28,
+    "rightLeg": 34,
+    "leftLeg": 34,
+    "centerTorsoRear": 13,
+    "rightTorsoRear": 11,
+    "leftTorsoRear": 11
+  },
+  "weapons": [
+    {
+      "weapon": "CL ER PPC",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL Plasma Cannon",
+      "location": "leftArm"
+    },
+    {
+      "weapon": "CL ER PPC",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Medium Pulse Laser",
+      "location": "rightArm"
+    },
+    {
+      "weapon": "CL Streak SRM 6",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL Streak SRM 6",
+      "location": "leftTorso"
+    },
+    {
+      "weapon": "CL Streak SRM 6",
+      "location": "rightTorso"
+    },
+    {
+      "weapon": "CL Streak SRM 6",
+      "location": "rightTorso",
+      "shots": 45
+    },
+    {
+      "weapon": "AP Gauss Rifle",
+      "location": "centerTorso"
+    },
+    {
+      "weapon": "AP Gauss Rifle",
+      "location": "centerTorso"
+    }
+  ],
+  "critSlots": {
+    "centerTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "gyro"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "AP Gauss Rifle"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "AP Gauss Rifle"
+      }
+    ],
+    "leftTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Streak SRM 6"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Streak SRM 6"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Streak SRM 6"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Streak SRM 6"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Streak SRM 6"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "AP Gauss Rifle"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightTorso": [
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "engine"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Streak SRM 6"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Streak SRM 6"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Streak SRM 6"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Streak SRM 6"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Streak SRM 6"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Streak SRM 6"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER PPC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER PPC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Plasma Cannon"
+      },
+      {
+        "kind": "ammo",
+        "weapon": "CL Plasma Cannon"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "rightArm": [
+      {
+        "kind": "structure",
+        "name": "shoulder"
+      },
+      {
+        "kind": "structure",
+        "name": "upperArmActuator"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER PPC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL ER PPC"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Medium Pulse Laser"
+      },
+      {
+        "kind": "weapon",
+        "weapon": "CL Medium Pulse Laser"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      },
+      {
+        "kind": "empty"
+      }
+    ],
+    "leftLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      }
+    ],
+    "rightLeg": [
+      {
+        "kind": "structure",
+        "name": "hip"
+      },
+      {
+        "kind": "structure",
+        "name": "upperLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "lowerLegActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "footActuator"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      },
+      {
+        "kind": "structure",
+        "name": "doubleHeatSink"
+      }
+    ],
+    "head": [
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "cockpit"
+      },
+      {
+        "kind": "soak",
+        "name": "endoSteel"
+      },
+      {
+        "kind": "structure",
+        "name": "sensors"
+      },
+      {
+        "kind": "structure",
+        "name": "lifeSupport"
+      }
+    ]
+  },
+  "heatsink": {
+    "type": "double",
+    "count": 19
+  },
+  "myomer": "Standard"
+}

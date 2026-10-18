@@ -130,9 +130,17 @@ interface WeaponDef {
   readonly heat?: number;         // heat generated per shot
   readonly physicalWeapon?: boolean; // hatchet / sword / retractable blade (strike attacks)
   readonly critExplosion?: number; // Gauss-family / HAG weapon-crit blast damage
+  readonly heatEffect?: WeaponHeatEffect; // H-code heat-causing behavior (TW p.113)
   readonly category: WeaponCategory; // "MISSILE" | "BALLISTIC" | "ENERGY" | "EQUIPMENT"
 }
 ```
+
+`WeaponHeatEffect` = `{ kind: "asHeat" }` (flamer family: the Damage Value
+is applied as heat instead of damage when the firing unit's `heatFlamer`
+policy is on, TW p.303) | `{ kind: "extraHeat"; dice: 1 | 2 }` (plasma
+weapons: that many D6 of heat on every hit, on top of `damage`; the CL Plasma
+Cannon carries `damage: 0`, TW p.139). Validation: `asHeat` needs a positive
+`damage`.
 
 - `weaponDefFor(h: WeaponNameHolder): WeaponDef` (throws on unknown names)
 - `allWeaponDefs(): WeaponDef[]`
@@ -319,6 +327,9 @@ p. 159, never clamped), `AMMO_EXPLOSION_START_HEAT = 19`. Helpers:
 - `heatScaleEffects(heat): HeatScaleEffects`
 - `HeatScaleEffects`, `LargestAmmoBin` — return shapes
 - `TSM_ACTIVATION_HEAT = 9` — end-of-turn heat activating TSM (TW p.143)
+- `OUTSIDE_HEAT_CAP = 15` / `outsideHeatApplied(received): number` — outside
+  heat (heat-causing weapons) a unit takes per turn; the excess is wasted
+  (TW p.159)
 - `isTsmActive(def, endHeat): boolean` — true for Triple-Strength Myomer
   designs at heat 9+; pass `unit.heat` (last turn's end value mid-turn)
 
@@ -348,6 +359,14 @@ down."* A voluntary `manual` shutdown generates no own heat at all.
 The involuntary shutdown / restart roll convention is `roll >= avoid` =
 success, matching the voluntary startup path and the ammo-explosion
 check. The previous `roll <= avoid = fail` convention was off-by-one.
+
+Outside heat (TW p.159): heat-causing hits add to the target's
+`unit.heatExternalPending` (event `heatInflicted`). The heat phase lands
+`min(received, 15)` on the scale right after own heat, shut down or not
+(event `heatExternal { unitId, received, applied, wasted }`), then
+dissipates; `heatDissipated.external` carries the applied amount, so
+`endHeat = startHeat + totalGenerated + external - dissip`. A unit that left
+play drops its pending outside heat.
 
 `unit.heat` is the previous-turn end value during the movement and weapon
 attack phases. Own heat generated this turn does not affect to-hit or MP
@@ -606,7 +625,8 @@ Engine-internal (source-module import only): `resolveWeaponAttack` and its
 `attackResolved` events carrying an `AttackResolution`:
 
 `AttackResolution` = `{ weapon; distance; breakdown; toHitRoll; hit; jammed;
-prone; propArm; clusterRoll; clusterMod; groups; applications; targetDamageAfter; arc; crits }` —
+prone; propArm; clusterRoll; clusterMod; groups; applications; targetDamageAfter; arc; crits;
+inflictedHeat? }` —
 `applications` holds one exact `DamageApplication` per group that reached the
 target, in order (the crits a group triggered resolve before the next group and
 carry their own effects in `crits[].rows`); `targetDamageAfter` is the target's
@@ -615,7 +635,12 @@ the firing arc the attack resolved against (drives the hit-location table
 and armor pool); `prone` marks shots fired while prone and `propArm` (null
 when standing or with no arm weapons) names the propped arm. Each `groups`
 entry carries `throughArmor` (true on a hit-location roll of 2). `HitGroup`
-is the per-group shape.
+is the per-group shape. `inflictedHeat` (`InflictedHeat` = `{ heat; source:
+"asHeat" | "extraHeat"; dice? }`) is set when a heat-causing weapon hit: a
+heat-mode flamer (`WeaponAttackInput.heatMode`, from the attacker's
+`heatFlamer`) and the Plasma Cannon roll no hit location and deal no damage
+(empty `groups`, no crits); the Plasma Rifle throws its die after its damage
+and crits resolve.
 
 ### Fireability (`rules/fireability.ts`)
 
@@ -672,7 +697,7 @@ only).
 Bin identity + depletion helpers for custom UIs:
 
 - `AmmoPolicy` (`"exposed" | "core" | "spread" | "leastFirst"`)
-- `UnitPolicy` (`{ ammoPolicy: AmmoPolicy; autoEject: boolean }`, per-unit settings fixed at setup; `DEFAULT_UNIT_POLICY` = `{ ammoPolicy: "exposed", autoEject: true }`, filled by `buildUnitInit`). `autoEject` (TO:AR p. 165): on, losing the head (by damage or a blown-off head) or the center torso to an ammo/weapon blast ejects the pilot (head loss raises pilot hits to `pilotHitMax − 1` first); off, both kill the MechWarrior (TW p. 128). Copied to `UnitState.autoEject`; snapshots saved without it load as `true`
+- `UnitPolicy` (`{ ammoPolicy: AmmoPolicy; autoEject: boolean; heatFlamer: boolean }`, per-unit settings fixed at setup; `DEFAULT_UNIT_POLICY` = `{ ammoPolicy: "exposed", autoEject: true, heatFlamer: true }`, filled by `buildUnitInit`). `autoEject` (TO:AR p. 165): on, losing the head (by damage or a blown-off head) or the center torso to an ammo/weapon blast ejects the pilot (head loss raises pilot hits to `pilotHitMax − 1` first); off, both kill the MechWarrior (TW p. 128). Copied to `UnitState.autoEject`; snapshots saved without it load as `true`. `heatFlamer` (TW p.303): on, every flamer-family (`asHeat`) weapon the unit fires deals its Damage Value as heat instead of damage; off, normal damage. Copied to `UnitState.heatFlamer`; snapshots saved without it load as `true`
 - `AmmoBins` — `Record<AmmoBinId, number>`: shots left in each bin, never negative; identity comes from `collectAmmoBins`, and a missing key reads as 0. The count alone does not say whether those shots can be fired: `CritState` (`{ damage, critSlotsDestroyed, ammoBins }`) is the bundle every ammo query takes, and fate derives from it — `isBinUsable(state, bin)` (location IS above 0 and the slot intact), `usableShots(state, bin)`, `strandedShots(state, bin)` (shots stuck in a location lost to plain damage, i.e. salvage). A bin whose slot is flagged destroyed is gone: neither usable nor stranded, whatever its count says
 - `CritState` — `{ damage: UnitDamageState; critSlotsDestroyed: CritMask; ammoBins: AmmoBins }`, the three fields that together decide a bin's fate; `UnitState` and `CriticalResolution` both satisfy it
 - `ammoBinId(loc, slotIndex): AmmoBinId` — `"${loc}:${slotIndex}"`
@@ -814,13 +839,14 @@ interface BattleState extends HexGrid {
 interface UnitState {
   id; model; team; gunnery; piloting; pilotHits; pilotHitMax; unconsciousSinceTurn; prone;   // isPilotUnconscious(unit)
   heat; heatPending;                  // scale value (last turn's end) + this turn's own heat
+  heatExternalPending;                // outside heat received this turn (uncapped; heat phase applies <= 15)
   position; facing;
   damage: UnitDamageState;            // updated as soon as damage lands
   ammoBins: AmmoBins;                 // per bin, keyed "location:slotIndex": shots left, never negative. Whether they can be fired derives from damage + critSlotsDestroyed (isBinUsable / usableShots / strandedShots)
   jammedWeapons: number[];
   critSlotsDestroyed: CritMask;       // destroyed-slot bitmask per location (bit i = 0-based slot i); destroyed weapons derive from it (isWeaponCritted)
   blownOffLimbs: SeveredLimb[]; club: HeldClub | null;   // severed limbs / held club
-  ammoPolicy: AmmoPolicy; autoEject: boolean;   // from UnitPolicy
+  ammoPolicy: AmmoPolicy; autoEject: boolean; heatFlamer: boolean;   // from UnitPolicy
   moveMode; hexesMovedThisTurn; jumpedThisTurn; mpSpent;
   declaredWeaponAttacks; declaredPhysicalAttacks; declaredPickup; passedAttacks;
   destroyed: DestroyedState;          // "not" | "headDestroyed" | "centerTorsoDestroyed" | "cockpitDestroyed" | "headBlownOff" | "engineDestroyed"
@@ -848,6 +874,8 @@ type GameEvent =
   | { kind: "wreckageLeft"; unitId; col; row }   // a destroyed 'Mech of 40 t+ turned its hex into Rough (TO:AR p.155)
   | { kind: "unitFell"; unitId; cause: UnitFallCause; levelsFallen; groups; ... }   // damage: damageGroupsTotal(groups)
   | { kind: "buildingCollapsed"; hex; cf }
+  | { kind: "heatInflicted"; unitId; targetId; weapon; heat; source: "asHeat" | "extraHeat"; totalReceived }
+  | { kind: "heatExternal"; unitId; received; applied; wasted }   // outside heat landing, TW p.159
   | ... ;                              // see src/rules/game.ts for the full union
 
 interface ActorQueueActorView { id; team; shutdown; destroyed; removed }

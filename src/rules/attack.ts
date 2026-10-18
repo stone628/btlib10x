@@ -1,4 +1,4 @@
-import { roll2D6 } from "../core/dice";
+import { roll2D6, rollD6 } from "../core/dice";
 import { hasPartialCover } from "../core/terrain";
 import type { ArmLocation, Location, MoveMode, Rng, TerrainType } from "../core/types";
 import type { MechModelHolder } from "../data/mech.schema";
@@ -105,6 +105,22 @@ export interface WeaponAttackInput {
    * at all (`BattleState.critsDisabled`, damage-only tests).
    */
   readonly targetCrits?: TargetCritContext;
+  /** Apply an `asHeat` weapon's Damage Value as heat instead of damage (TW
+   *  p.303 footnote ‡); fixed before the to-hit roll. Ignored for weapons
+   *  without `heatEffect.kind === "asHeat"`. */
+  readonly heatMode?: boolean;
+}
+
+/** Heat a hit puts on the target (H weapons, TW p.113), applied as outside
+ *  heat in the target's next Heat Phase (TW p.159). */
+export interface InflictedHeat {
+  /** Heat points this hit adds to the target's outside heat. */
+  readonly heat: number;
+  /** `asHeat`: a flamer's Damage Value applied as heat; `extraHeat`: a
+   *  plasma weapon's heat dice. */
+  readonly source: "asHeat" | "extraHeat";
+  /** The individual D6 thrown for `extraHeat`; absent for `asHeat`. */
+  readonly dice?: readonly number[];
 }
 
 /**
@@ -167,6 +183,8 @@ export interface AttackResolution {
    * was not supplied).
    */
   readonly crits: readonly CriticalResolution[];
+  /** Heat the hit inflicts on the target; absent unless an H weapon hit. */
+  readonly inflictedHeat?: InflictedHeat;
 }
 
 /** Partial-cover to-hit modifier for cover terrain (water1 / building). */
@@ -288,6 +306,23 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
       );
     }
     return base;
+  }
+
+  // Heat-only hits (TW p.113, p.139): a flamer in heat mode or a Plasma
+  // Cannon rolls no hit location and deals no damage, so no critical
+  // chance and no damage PSR either.
+  const heatEffect = weapon.heatEffect;
+  if (heatEffect?.kind === "asHeat" && input.heatMode === true) {
+    return {
+      ...base,
+      inflictedHeat: {
+        heat: damageForBracket(weapon, breakdown.rangeBracket) * shots,
+        source: "asHeat",
+      },
+    };
+  }
+  if (heatEffect?.kind === "extraHeat" && damageForBracket(weapon, breakdown.rangeBracket) === 0) {
+    return { ...base, inflictedHeat: rollExtraHeat(input.rng, heatEffect.dice) };
   }
 
   let coverDamage = 0;
@@ -436,7 +471,19 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     }
   }
   base.targetDamageAfter = damage;
+  // Plasma Rifle: the heat die is thrown after the damage and its crits
+  // resolve (fixed RNG order: location, damage, crits, heat).
+  if (heatEffect?.kind === "extraHeat") {
+    return { ...base, inflictedHeat: rollExtraHeat(input.rng, heatEffect.dice) };
+  }
   return base;
+}
+
+/** Throw a plasma weapon's heat dice (TW p.139). */
+function rollExtraHeat(rng: Rng, count: number): InflictedHeat {
+  const dice: number[] = [];
+  for (let i = 0; i < count; i++) dice.push(rollD6(rng));
+  return { heat: dice.reduce((a, b) => a + b, 0), source: "extraHeat", dice };
 }
 
 /** Hit-location roll on the column for the attack direction `arc`, tagged

@@ -45,6 +45,7 @@ import {
   movementMpPenalty,
   movementMpPenaltyWithThreshold,
   msgHex,
+  OUTSIDE_HEAT_CAP,
   type Phase,
   type PilotHitReason,
   type PilotingCheckReason,
@@ -1517,14 +1518,38 @@ function handleSessionGameEvent(s: Session, e: SessionGameEvent, out: OutputHand
         }),
       );
       break;
+    case "heatInflicted":
+      out.idLines(
+        e.targetId,
+        i18n("log.heatInflicted", {
+          id: e.targetId,
+          heat: e.heat,
+          total: e.totalReceived,
+          cap: OUTSIDE_HEAT_CAP,
+        }),
+      );
+      break;
+    case "heatExternal":
+      out.idLines(
+        e.unitId,
+        i18n(e.wasted > 0 ? "log.heatExternalCapped" : "log.heatExternal", {
+          id: e.unitId,
+          applied: e.applied,
+          received: e.received,
+          wasted: e.wasted,
+          cap: OUTSIDE_HEAT_CAP,
+        }),
+      );
+      break;
     case "heatDissipated":
       out.idLines(
         e.unitId,
-        i18n("log.heatDissipated", {
+        i18n(e.external > 0 ? "log.heatDissipatedExternal" : "log.heatDissipated", {
           id: e.unitId,
           dissip: e.dissip,
           start: e.startHeat,
           total: e.totalGenerated,
+          ext: e.external,
           end: e.endHeat,
           net: e.netChange,
           cap: e.capacity,

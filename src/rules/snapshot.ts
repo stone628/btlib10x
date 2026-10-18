@@ -103,6 +103,7 @@ function cloneUnitState(unit: UnitState): UnitState {
     ammoBins: { ...unit.ammoBins },
     ammoPolicy: unit.ammoPolicy,
     autoEject: unit.autoEject,
+    heatFlamer: unit.heatFlamer,
     jammedWeapons: [...unit.jammedWeapons],
     critSlotsDestroyed: cloneCritTable(unit.critSlotsDestroyed),
     blownOffLimbs: unit.blownOffLimbs.map((l) => ({ ...l })),
@@ -114,6 +115,7 @@ function cloneUnitState(unit: UnitState): UnitState {
     mpSpent: unit.mpSpent,
     heat: unit.heat,
     heatPending: unit.heatPending,
+    heatExternalPending: unit.heatExternalPending,
     shutdown: unit.shutdown,
     declaredWeaponAttacks: [...unit.declaredWeaponAttacks],
     declaredPhysicalAttacks: [...unit.declaredPhysicalAttacks],
@@ -216,11 +218,13 @@ export function parseBattleState(data: string): BattleState {
 }
 
 /** The parsed JSON is fresh, so it is adopted as is apart from the cells.
- *  Snapshots saved before `autoEject` existed load with it engaged (the
- *  default policy). */
+ *  Snapshots saved before `autoEject` / `heatFlamer` existed load with them
+ *  engaged (the default policy) and no outside heat pending. */
 function unpackBattle(packed: PackedBattle): BattleSnapshot {
   for (const unit of Object.values(packed.units)) {
     if (typeof unit.autoEject !== "boolean") unit.autoEject = true;
+    if (typeof unit.heatFlamer !== "boolean") unit.heatFlamer = true;
+    if (typeof unit.heatExternalPending !== "number") unit.heatExternalPending = 0;
   }
   const cells = unpackCells(packed.cells, packed.width * packed.height);
   assertBuildingsMatchCells(cells, packed.width, packed.buildings, packed.rubbleOrigin);
@@ -312,6 +316,7 @@ export function loadUnitState(unit: UnitState, snapshot: UnitSnapshot): void {
   unit.ammoBins = next.ammoBins;
   unit.ammoPolicy = next.ammoPolicy;
   unit.autoEject = next.autoEject;
+  unit.heatFlamer = next.heatFlamer;
   unit.jammedWeapons = next.jammedWeapons;
   unit.critSlotsDestroyed = next.critSlotsDestroyed;
   unit.blownOffLimbs = next.blownOffLimbs.map((l) => ({ ...l }));
@@ -323,6 +328,7 @@ export function loadUnitState(unit: UnitState, snapshot: UnitSnapshot): void {
   unit.mpSpent = next.mpSpent;
   unit.heat = next.heat;
   unit.heatPending = next.heatPending;
+  unit.heatExternalPending = next.heatExternalPending;
   unit.shutdown = next.shutdown;
   unit.declaredWeaponAttacks = next.declaredWeaponAttacks;
   unit.declaredPhysicalAttacks = [...next.declaredPhysicalAttacks];
