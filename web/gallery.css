@@ -179,11 +179,15 @@
 .card-foot {
   display: flex;
   gap: 6px;
+  /* Pin the like button to the card's bottom, so a row's buttons line up
+     whatever the 'Mech name's length. */
+  margin-top: auto;
 }
 
 .link-button.vote {
   padding: 3px 10px;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .link-button.vote[aria-pressed="true"] {

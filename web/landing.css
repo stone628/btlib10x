@@ -99,7 +99,7 @@
 .card .preview {
   margin: 0;
   padding: 8px 10px;
-  /* Fixed height so both cards' previews line up. */
+  /* Fixed height so the cards' previews line up. */
   height: 9em;
   background: #0c0f0c;
   border: 1px solid #1c251c;
@@ -154,4 +154,17 @@
   font-size: 1.3em;
   height: calc(9em / 1.3);
   color: var(--c-green);
+}
+
+/* Three gallery avatars and their likes; one more line than the creator's box. */
+.card .preview.gallery-art {
+  font-size: 1.1em;
+  height: calc(9em / 1.1);
+}
+
+/* Third card: the full row under the two columns. */
+@media (min-width: 640px) {
+  #card-gallery {
+    grid-column: 1 / -1;
+  }
 }

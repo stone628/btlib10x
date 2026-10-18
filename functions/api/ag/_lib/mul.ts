@@ -57,7 +57,8 @@ export function cleanName(raw: string): string | null {
   const name = raw
     .replace(/[\p{Cc}\p{Cf}<>]/gu, "")
     .replace(/\s+/g, " ")
-    .replace(/\s*[|–—-]\s*Master Unit List\s*$/i, "")
+    // MUL titles end in " · Master Unit List" (older pages used "-" or "|").
+    .replace(/\s*[|·•–—-]\s*Master Unit List\s*$/i, "")
     .trim();
   return name === "" || name.length > MAX_NAME_LENGTH ? null : name;
 }

@@ -101,6 +101,9 @@ describe("MUL page parsing", () => {
   it("cleans names and image URLs", () => {
     expect(cleanName("  <b>Atlas</b>\u0000 ")).toBe("bAtlas/b");
     expect(cleanName("x".repeat(81))).toBeNull();
+    expect(cleanName("Mad Cat (Timber Wolf) Prime · Master Unit List")).toBe(
+      "Mad Cat (Timber Wolf) Prime",
+    );
     expect(cleanImage("/point-backs/unit-art/a.webp")).toBe(
       "https://masterunitlist.battletech.com/point-backs/unit-art/a.webp",
     );
