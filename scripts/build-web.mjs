@@ -62,7 +62,7 @@ const galleryCtx = await esbuild.context({
 if (serve) {
   const { hosts, port: actualPort } = await appCtx.serve({ servedir: "web", port });
   console.log(
-    `serving at http://${hosts[0]}:${actualPort}/index.html (terminal: /terminal.html, avatar: /avatar.html, gallery: /gallery.html)`,
+    `serving at http://${hosts[0]}:${actualPort}/index.html (terminal: /terminal.html, avatar: /avatar.html, gallery: /gallery.html, tui: /tui-demo.html)`,
   );
 }
 if (watch) {

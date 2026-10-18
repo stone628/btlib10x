@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TUI Kit</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="tui.css">
+<style>
+  /* Demo layout only: a column of cell-sized panels on the terminal page. */
+  html, body { background: var(--tui-page); }
+  body {
+    margin: 0;
+    min-height: 100%;
+    padding-bottom: calc(var(--ch) + env(safe-area-inset-bottom, 0px));
+  }
+  .top {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 50;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0 0 auto;
+    height: env(safe-area-inset-top, 0px);
+    z-index: 51;
+    background: var(--tui-surface-2);
+  }
+  .top .tui-menubar {
+    padding-left: max(8px, env(safe-area-inset-left, 0px));
+    padding-right: max(8px, env(safe-area-inset-right, 0px));
+  }
+  main {
+    max-width: calc(132 * var(--cw) + 32px);
+    margin: 0 auto;
+    padding-block: var(--ch);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: grid;
+    gap: var(--ch);
+  }
+  .intro { display: grid; gap: var(--ch); }
+  .intro h1 { margin: 0; font-size: inherit; color: var(--tui-accent); white-space: pre-wrap; }
+  .intro p { margin: 0; max-width: calc(72 * var(--cw)); overflow-wrap: anywhere; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(46 * var(--cw))), 1fr));
+    gap: var(--ch) calc(2 * var(--cw));
+    align-items: start;
+  }
+  .cell { min-width: 0; }
+  .cell.wide { grid-column: 1 / -1; }
+  .row { display: flex; flex-wrap: wrap; gap: 0 calc(2 * var(--cw)); align-items: flex-start; }
+  .lines > * { display: block; }
+  .hint { color: var(--tui-dim); }
+  .xscroll { overflow-x: auto; }
+  .gridlines {
+    background-image:
+      linear-gradient(to right, color-mix(in srgb, var(--tui-dim) 45%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in srgb, var(--tui-dim) 45%, transparent) 1px, transparent 1px);
+    background-size: var(--cw) var(--ch);
+  }
+  .inset-stage { display: inline-block; padding: var(--ch) calc(2 * var(--cw)); }
+  .status-fixed {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--tui-surface-2);
+  }
+  .status-fixed .tui-statusbar {
+    padding-left: max(8px, env(safe-area-inset-left, 0px));
+    padding-right: max(8px, env(safe-area-inset-right, 0px));
+  }
+  [hidden] { display: none; }
+</style>
+</head>
+<body class="tui">
+<div id="app">
+
+<div class="top">
+  <nav data-tui="menubar" id="menubar">
+    <div data-label="≡"><div data-value="about" data-i18n="m.about">About TUI Kit</div></div>
+    <div data-label="<u>F</u>ile" data-i18n-attr="data-label=m.file">
+      <div data-key="Ctrl+N" data-value="new" data-i18n="m.new"><u>N</u>ew game</div>
+      <div data-key="Ctrl+O" data-value="open" data-i18n="m.open"><u>O</u>pen replay…</div>
+      <div data-value="save" disabled data-i18n="m.save"><u>S</u>ave</div>
+      <hr>
+      <div data-key="Alt+X" data-value="exit" data-i18n="m.exit">E<u>x</u>it</div>
+    </div>
+    <div data-label="<u>V</u>iew" data-i18n-attr="data-label=m.view">
+      <div data-value="border:single" data-i18n="m.b.single">Border: <u>s</u>ingle</div>
+      <div data-value="border:double" data-i18n="m.b.double">Border: <u>d</u>ouble</div>
+      <div data-value="border:heavy" data-i18n="m.b.heavy">Border: <u>h</u>eavy</div>
+      <div data-value="border:rounded" data-i18n="m.b.rounded">Border: <u>r</u>ounded</div>
+      <div data-value="border:ascii" data-i18n="m.b.ascii">Border: <u>a</u>scii</div>
+      <hr>
+      <div data-value="theme:green" data-i18n="m.t.green">Theme: <u>g</u>reen</div>
+      <div data-value="theme:amber" data-i18n="m.t.amber">Theme: a<u>m</u>ber</div>
+      <div data-value="theme:paper" data-i18n="m.t.paper">Theme: <u>p</u>aper</div>
+      <hr>
+      <div data-value="lang:en" data-i18n="m.l.en">Language: <u>E</u>nglish</div>
+      <div data-value="lang:ko" data-i18n="m.l.ko">Language: 한국어 (<u>K</u>)</div>
+      <div data-value="lang:pseudo" data-i18n="m.l.pseudo">Language: pseudo (<u>Q</u>)</div>
+    </div>
+    <div data-label="<u>H</u>elp" data-right data-i18n-attr="data-label=m.help">
+      <div data-value="dialog" data-key="F1" data-i18n="m.keys"><u>K</u>eyboard help</div>
+    </div>
+  </nav>
+</div>
+
+<main>
+  <section class="intro">
+    <h1 data-i18n="intro.title">TUI Kit · draft 0.2</h1>
+    <p data-i18n="intro.body">Terminal-style components in plain HTML, CSS and JS. Every panel is sized in character cells, framed with box-drawing glyphs, and filled by a background layer inset half a cell so nothing outside the line is colored. Korean and other wide text snaps to 2-cell slots. Use the View menu or F2, F3, F4 to swap the border set, theme and language.</p>
+  </section>
+
+  <div class="grid">
+
+    <!-- Settings -->
+    <div class="cell wide">
+      <div data-tui="box" data-cols="auto" data-title="Display" data-i18n-attr="data-title=disp.title" data-demo-border>
+        <div class="row">
+          <span class="lines" role="radiogroup" aria-label="Language">
+            <span class="hint" data-i18n="disp.lang">Language</span>
+            <label class="tui-radio"><input type="radio" name="lang" id="lg-en" value="en" checked><span class="tui-mark"></span><span data-i18n="disp.en">English</span></label>
+            <label class="tui-radio"><input type="radio" name="lang" id="lg-ko" value="ko"><span class="tui-mark"></span><span data-i18n="disp.ko">한국어</span></label>
+            <label class="tui-radio"><input type="radio" name="lang" id="lg-pseudo" value="pseudo"><span class="tui-mark"></span><span data-i18n="disp.pseudo">Pseudo (+40%)</span></label>
+          </span>
+          <span class="lines" role="radiogroup" aria-label="Theme">
+            <span class="hint" data-i18n="disp.theme">Theme</span>
+            <label class="tui-radio"><input type="radio" name="theme" id="th-green" value="green" checked><span class="tui-mark"></span><span data-i18n="disp.green">Green phosphor</span></label>
+            <label class="tui-radio"><input type="radio" name="theme" id="th-amber" value="amber"><span class="tui-mark"></span><span data-i18n="disp.amber">Amber</span></label>
+            <label class="tui-radio"><input type="radio" name="theme" id="th-paper" value="paper"><span class="tui-mark"></span><span data-i18n="disp.paper">Paper</span></label>
+          </span>
+          <span class="lines" role="radiogroup" aria-label="Border set">
+            <span class="hint" data-i18n="disp.border">Border set</span>
+            <label class="tui-radio"><input type="radio" name="border" id="bd-single" value="single" checked><span class="tui-mark"></span><span data-i18n="disp.single">single  ┌─┐</span></label>
+            <label class="tui-radio"><input type="radio" name="border" id="bd-double" value="double"><span class="tui-mark"></span><span data-i18n="disp.double">double  ╔═╗</span></label>
+            <label class="tui-radio"><input type="radio" name="border" id="bd-heavy" value="heavy"><span class="tui-mark"></span><span data-i18n="disp.heavy">heavy   ┏━┓</span></label>
+            <label class="tui-radio"><input type="radio" name="border" id="bd-rounded" value="rounded"><span class="tui-mark"></span><span data-i18n="disp.rounded">rounded ╭─╮</span></label>
+            <label class="tui-radio"><input type="radio" name="border" id="bd-ascii" value="ascii"><span class="tui-mark"></span><span data-i18n="disp.ascii">ascii   +-+</span></label>
+          </span>
+          <span class="lines">
+            <span class="hint" data-i18n="disp.font">Font size</span>
+            <select data-tui="select" id="fs" data-cols="10">
+              <option value="12px">12 px</option>
+              <option value="14px" selected>14 px</option>
+              <option value="16px">16 px</option>
+              <option value="18px">18 px</option>
+            </select>
+            <span class="tui-line"></span>
+            <span class="hint" id="cellinfo">cell –</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Width test -->
+    <div class="cell">
+      <div data-tui="box" data-cols="auto" data-title="Width test" data-i18n-attr="data-title=wt.title" data-demo-border>
+        <div class="row">
+          <div data-tui="box" data-cols="21" data-rows="7" data-border="single" data-pad="1" class="gridlines">
+            <span class="tui-line">0123456789ABCDEF◂</span>
+            <span class="tui-line">가나다라마바사아◂</span>
+            <span class="tui-line">ABCD한글EFGH전각◂</span>
+            <span class="tui-line">ＴＵＩ　ｋｉｔ!!◂</span>
+            <span class="tui-line">한A글B자C열D맞춤◂</span>
+          </div>
+          <div data-tui="box" data-cols="22" data-rows="7" data-title="A very long panel title that will not fit" data-i18n-attr="data-title=wt.long">
+            <p data-i18n="wt.body">The title is cut on a cell boundary and ends in …. Hover it to read the full text.</p>
+          </div>
+        </div>
+        <select data-tui="select" id="wtsel" data-cols="20">
+          <option data-i18n="wt.opt1">Medium Laser (RA)</option>
+          <option data-i18n="wt.opt2">LRM-20 launcher (left torso)</option>
+        </select>
+        <p class="hint" data-i18n="wt.hint">Every row ends on the same column: each Hangul syllable takes exactly 2 cells.</p>
+      </div>
+    </div>
+
+    <!-- Borders -->
+    <div class="cell">
+      <div data-tui="box" data-cols="auto" data-title="Border sets and tones" data-i18n-attr="data-title=bd.title" data-demo-border>
+        <div class="row">
+          <div data-tui="box" data-cols="13" data-rows="4" data-border="single" data-title="single" data-i18n-attr="data-title=bd.single"><p class="hint">┌─┐ ├┼┤</p></div>
+          <div data-tui="box" data-cols="13" data-rows="4" data-border="double" data-title="double" data-i18n-attr="data-title=bd.double"><p class="hint">╔═╗ ╠╬╣</p></div>
+          <div data-tui="box" data-cols="13" data-rows="4" data-border="heavy" data-title="heavy" data-i18n-attr="data-title=bd.heavy"><p class="hint">┏━┓ ┣╋┫</p></div>
+          <div data-tui="box" data-cols="13" data-rows="4" data-border="rounded" data-title="rounded" data-i18n-attr="data-title=bd.rounded"><p class="hint">╭─╮ ├┼┤</p></div>
+          <div data-tui="box" data-cols="13" data-rows="4" data-border="ascii" data-title="ascii" data-i18n-attr="data-title=bd.ascii"><p class="hint" data-i18n="bd.cssonly">CSS only</p></div>
+          <div data-tui="box" data-cols="13" data-rows="4" data-tone="accent" data-title="accent" data-i18n-attr="data-title=tone.accent"><p data-i18n="tone.online">Online</p></div>
+          <div data-tui="box" data-cols="13" data-rows="4" data-tone="info" data-title="info" data-i18n-attr="data-title=tone.info"><p data-i18n="tone.turn">Turn 7</p></div>
+          <div data-tui="box" data-cols="13" data-rows="4" data-tone="warn" data-title="warn" data-i18n-attr="data-title=tone.warn"><p data-i18n="tone.heat">Heat 14</p></div>
+          <div data-tui="box" data-cols="13" data-rows="4" data-tone="danger" data-title="danger" data-i18n-attr="data-title=tone.danger"><p data-i18n="tone.ammo">Ammo hit</p></div>
+          <div data-tui="box" data-cols="13" data-rows="4" data-tone="clear" data-title="clear" data-i18n-attr="data-title=tone.clear"><p data-i18n="tone.nofill">No fill</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inset -->
+    <div class="cell">
+      <div data-tui="box" data-cols="auto" data-title="Background inset" data-i18n-attr="data-title=in.title" data-demo-border>
+        <p data-i18n="in.body">The fill is a separate layer, inset by --tui-inset-x/y cells. At 0.5 it ends on the centre of the line, so the page shows outside the border.</p>
+        <div class="tui-line"></div>
+        <div class="inset-stage" id="insetStage">
+          <div data-tui="box" id="insetBox" data-cols="20" data-rows="5" data-border="double" data-title="Inset" data-i18n-attr="data-title=in.box" data-tone="info"><p id="insetLabel">x 0.5 · y 0.5</p></div>
+        </div>
+        <div class="tui-line"></div>
+        <div class="row" role="radiogroup" aria-label="Inset">
+          <label class="tui-radio"><input type="radio" name="inset" id="in-0" value="0"><span class="tui-mark"></span><span>0</span></label>
+          <label class="tui-radio"><input type="radio" name="inset" id="in-25" value="0.25"><span class="tui-mark"></span><span>0.25</span></label>
+          <label class="tui-radio"><input type="radio" name="inset" id="in-50" value="0.5" checked><span class="tui-mark"></span><span>0.5</span></label>
+          <label class="tui-radio"><input type="radio" name="inset" id="in-100" value="1"><span class="tui-mark"></span><span>1</span></label>
+        </div>
+        <label class="tui-check"><input type="checkbox" id="showGrid" checked><span class="tui-mark"></span><span data-i18n="in.grid">Show cell grid</span></label>
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="cell">
+      <div data-tui="box" data-cols="auto" data-title="Buttons" data-i18n-attr="data-title=btn.title" data-demo-border>
+        <div class="row">
+          <button type="button" class="tui-btn is-primary" id="b-fire" data-i18n="btn.fire"><u>F</u>ire</button>
+          <button type="button" class="tui-btn" id="b-twist" data-i18n="btn.twist">Torso twist</button>
+          <button type="button" class="tui-btn" id="b-off" disabled data-i18n="btn.jump">Jump</button>
+        </div>
+        <div class="row">
+          <button type="button" class="tui-btn" data-variant="angle" id="b-ok" data-i18n="btn.ok">OK</button>
+          <button type="button" class="tui-btn" data-variant="angle" id="b-cancel" data-i18n="btn.cancel">Cancel</button>
+          <button type="button" class="tui-btn" data-variant="bare" id="b-bare" data-i18n="btn.bare">bare</button>
+        </div>
+        <div class="tui-line"></div>
+        <div class="row">
+          <button type="button" data-tui="button" data-border="rounded" id="bb-1" data-i18n="btn.end">End phase</button>
+          <button type="button" data-tui="button" data-border="double" id="bb-2" data-i18n="btn.confirm">Confirm</button>
+          <button type="button" data-tui="button" data-border="heavy" id="bb-3" data-i18n="btn.eject">Eject</button>
+        </div>
+        <p class="hint" data-i18n="btn.hint">Press shows reverse video. Focus shows ▸ ◂ marks.</p>
+      </div>
+    </div>
+
+    <!-- Inputs -->
+    <div class="cell">
+      <div data-tui="box" data-cols="auto" data-title="Text input and select" data-i18n-attr="data-title=inp.title" data-demo-border>
+        <div class="lines">
+          <span class="hint" data-i18n="inp.callsign">Pilot callsign</span>
+          <span><span class="tui-prompt">&gt; </span><input class="tui-input" id="in-callsign" style="--cols: 22" placeholder="Natasha Kerensky" data-i18n-attr="placeholder=inp.callsign.ph" maxlength="40"></span>
+          <span class="tui-line"></span>
+          <span class="hint" data-i18n="inp.line">Underline variant</span>
+          <input class="tui-input" data-variant="line" id="in-line" style="--cols: 24" value="Black Widow" data-i18n-attr="value=inp.line.val">
+          <span class="tui-line"></span>
+          <span class="hint" data-i18n="inp.weapon">Weapon</span>
+          <select data-tui="select" id="weapon" data-cols="24">
+            <option data-i18n="w.ml">Medium Laser (RA)</option>
+            <option data-i18n="w.ll">Large Laser (LA)</option>
+            <option data-i18n="w.ppc">PPC (RT)</option>
+            <option data-i18n="w.ac20">AC/20 (RT)</option>
+            <option disabled data-i18n="w.lrm">LRM-10 (out of ammo)</option>
+            <option data-i18n="w.srm">SRM-6 (CT)</option>
+          </select>
+        </div>
+        <div class="tui-line"></div>
+        <div data-tui="box" data-cols="auto" data-border="rounded" data-title="Boxed input" data-i18n-attr="data-title=inp.boxed" data-pad="0">
+          <input class="tui-input" id="in-boxed" placeholder="move 0604 north" data-i18n-attr="placeholder=inp.boxed.ph">
+        </div>
+      </div>
+    </div>
+
+    <!-- Checks -->
+    <div class="cell">
+      <div data-tui="box" data-cols="auto" data-title="Checkbox and radio" data-i18n-attr="data-title=chk.title" data-demo-border>
+        <div class="lines">
+          <label class="tui-check"><input type="checkbox" id="c1" checked><span class="tui-mark"></span><span data-i18n="chk.forced">Forced withdrawal</span></label>
+          <label class="tui-check"><input type="checkbox" id="c2"><span class="tui-mark"></span><span data-i18n="chk.blind">Double-blind</span></label>
+          <label class="tui-check"><input type="checkbox" id="c3"><span class="tui-mark"></span><span data-i18n="chk.float">Floating crits (mixed)</span></label>
+          <label class="tui-check"><input type="checkbox" id="c4" disabled><span class="tui-mark"></span><span data-i18n="chk.hidden">Hidden units (disabled)</span></label>
+          <span class="tui-line"></span>
+          <span class="hint" data-i18n="chk.mode">Movement mode</span>
+          <label class="tui-radio"><input type="radio" name="mp" id="mp-w" checked><span class="tui-mark"></span><span class="tui-col" data-i18n="mp.walk">Walk</span><span>4 MP</span></label>
+          <label class="tui-radio"><input type="radio" name="mp" id="mp-r"><span class="tui-mark"></span><span class="tui-col" data-i18n="mp.run">Run</span><span>6 MP</span></label>
+          <label class="tui-radio"><input type="radio" name="mp" id="mp-j"><span class="tui-mark"></span><span class="tui-col" data-i18n="mp.jump">Jump</span><span>0 MP</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="cell">
+      <div data-tui="tabs" data-cols="auto" data-rows="9" data-demo-border>
+        <section data-tab="Armor" data-i18n-attr="data-tab=tab.armor" data-active>
+          <span class="tui-line">HD  9   CT 47/14</span>
+          <span class="tui-line">LT 32/10  RT 32/10</span>
+          <span class="tui-line">LA 34   RA 34</span>
+          <span class="tui-line">LL 41   RL 41</span>
+          <span class="tui-line hint" data-i18n="tab.unit">Atlas AS7-D · 100 t</span>
+        </section>
+        <section data-tab="Weapons" data-i18n-attr="data-tab=tab.weapons">
+          <span class="tui-line"><span class="tui-col" data-i18n="tab.w1">AC/20</span>      RT  20</span>
+          <span class="tui-line"><span class="tui-col" data-i18n="tab.w2">LRM-20</span>      LT   1</span>
+          <span class="tui-line"><span class="tui-col" data-i18n="tab.w3">SRM-6</span>      LT   2</span>
+          <span class="tui-line"><span data-i18n="tab.w4">4× Med Laser</span>   5</span>
+        </section>
+        <section data-tab="Pilot" data-i18n-attr="data-tab=tab.pilot">
+          <span class="tui-line"><span class="tui-col" data-i18n="tab.gunnery">Gunnery</span>  4</span>
+          <span class="tui-line"><span class="tui-col" data-i18n="tab.piloting">Piloting</span>  5</span>
+          <span class="tui-line"><span class="tui-col" data-i18n="tab.hits">Hits</span>  ■ ■ □ □ □ □</span>
+        </section>
+      </div>
+      <p class="hint" data-i18n="tab.hint">Click a tab or use ← → on the focused tab.</p>
+    </div>
+
+    <!-- Menu and list -->
+    <div class="cell">
+      <div data-tui="box" data-cols="auto" data-title="Menu and list" data-i18n-attr="data-title=menu.title" data-demo-border>
+        <div class="row">
+          <div data-tui="menu" data-cols="22" data-title="Attack" data-i18n-attr="data-title=menu.attack" data-border="single" id="attackMenu">
+            <div data-key="F" data-i18n="menu.fire"><u>F</u>ire weapons</div>
+            <div data-key="P" data-i18n="menu.punch"><u>P</u>unch</div>
+            <div data-key="K" data-i18n="menu.kick"><u>K</u>ick</div>
+            <div disabled data-i18n="menu.charge">Charge</div>
+            <hr>
+            <div data-key="Esc" data-i18n="menu.skip"><u>S</u>kip</div>
+          </div>
+          <div data-tui="list" data-cols="20" data-title="Targets" data-i18n-attr="data-title=menu.targets" data-border="rounded" id="targetList" data-selected="1">
+            <div data-i18n="u.locust">Locust LCT-1V</div>
+            <div data-i18n="u.griffin">Griffin GRF-1N</div>
+            <div data-i18n="u.marauder">Marauder MAD-3R</div>
+            <div data-i18n="u.wasp">Wasp WSP-1A</div>
+          </div>
+        </div>
+        <p class="hint" id="menuOut" data-i18n="menu.hint">Pick an item with the mouse, ↑ ↓ Enter, or a hotkey letter.</p>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="cell">
+      <div data-tui="box" data-cols="auto" data-title="Table" data-i18n-attr="data-title=tbl.title" data-demo-border>
+        <div class="xscroll">
+          <table data-tui="table" data-border="single" id="roster">
+            <thead><tr><th data-i18n="tbl.unit">Unit</th><th data-align="right" data-i18n="tbl.tons">Tons</th><th data-align="center" data-i18n="tbl.mp">W/R/J</th></tr></thead>
+            <tbody>
+              <tr><td data-i18n="u.atlas">Atlas AS7-D</td><td>100</td><td>3/5/0</td></tr>
+              <tr><td data-i18n="u.marauder2">Marauder MAD-3R</td><td>75</td><td>4/6/0</td></tr>
+              <tr><td data-i18n="u.warhammer">Warhammer WHM-6R</td><td>70</td><td>4/6/0</td></tr>
+              <tr><td data-i18n="u.shadowhawk">Shadow Hawk SHD-2H</td><td>55</td><td>5/8/3</td></tr>
+              <tr><td data-i18n="u.griffin2">Griffin GRF-1N</td><td>55</td><td>5/8/5</td></tr>
+              <tr><td data-i18n="u.hunchback">Hunchback HBK-4G</td><td>50</td><td>4/6/0</td></tr>
+              <tr><td data-i18n="u.locust2">Locust LCT-1V</td><td>20</td><td>8/12/0</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="hint" id="tableOut" data-i18n="tbl.hint">Click a row or use ↑ ↓.</p>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="cell">
+      <div data-tui="box" data-cols="auto" data-title="Progress" data-i18n-attr="data-title=pr.title" data-demo-border>
+        <div class="lines">
+          <span class="hint"><span data-i18n="pr.heat">Heat</span> <span id="heatVal">14</span>/30</span>
+          <span data-tui="progress" id="heat" data-cols="30" data-value="0.4667" data-tone="warn"></span>
+          <span class="hint" data-i18n="pr.armor">Armor, eighth-cell precision</span>
+          <span data-tui="progress" id="armor" data-cols="30" data-value="0.73"></span>
+          <span class="hint" data-i18n="pr.ascii">ASCII style</span>
+          <span data-tui="progress" data-cols="30" data-value="0.35" data-style="ascii"></span>
+          <span class="hint" data-i18n="pr.indet">Indeterminate</span>
+          <span data-tui="progress" data-cols="30" data-value="indeterminate"></span>
+          <span class="tui-line"><span data-tui="spinner"></span> <span data-i18n="pr.rolling">Rolling to-hit…</span>  <span data-tui="spinner" data-frames="|/-\"></span> <span data-i18n="pr.crits">Resolving crits</span></span>
+        </div>
+        <div class="row">
+          <button type="button" class="tui-btn" id="heatDown" data-i18n="pr.down">Heat −</button>
+          <button type="button" class="tui-btn" id="heatUp" data-i18n="pr.up">Heat +</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Window and dialog -->
+    <div class="cell">
+      <div data-tui="box" data-cols="auto" data-title="Window and dialog" data-i18n-attr="data-title=win.title" data-demo-border>
+        <div class="inset-stage" style="padding-left: 0">
+          <div data-tui="window" id="win" data-cols="34" data-rows="7" data-title="Sensor report" data-i18n-attr="data-title=win.sensor" data-closable>
+            <p data-i18n="win.l1">Contact bearing 040, range 9.</p>
+            <p class="hint" data-i18n="win.l2">Heavy woods block line of sight.</p>
+          </div>
+          <button type="button" class="tui-btn" id="reopen" hidden data-i18n="win.reopen">Reopen window</button>
+        </div>
+        <div class="row">
+          <button type="button" class="tui-btn is-primary" id="openDialog" data-i18n="win.open">Open dialog</button>
+          <button type="button" class="tui-btn" id="openDanger" data-i18n="win.danger">Danger dialog</button>
+        </div>
+        <p class="hint" id="dialogOut" data-i18n="win.hint">Esc closes. Tab and ← → move between buttons.</p>
+      </div>
+    </div>
+
+    <!-- Tooltip -->
+    <div class="cell">
+      <div data-tui="box" data-cols="auto" data-title="Tooltip" data-i18n-attr="data-title=tip.title" data-demo-border>
+        <div class="row">
+          <button type="button" class="tui-btn" id="t1" data-tip="Point-blank: +0 to-hit" data-i18n="tip.range" data-i18n-attr="data-tip=tip.range.t">Range</button>
+          <button type="button" class="tui-btn" id="t2" data-tip="Target moved 7 hexes&#10;+3 target movement modifier" data-tip-border="double" data-i18n="tip.mods" data-i18n-attr="data-tip=tip.mods.t">Modifiers</button>
+          <span class="tui-accent" data-tip="Any element with data-tip works" data-i18n="tip.hover" data-i18n-attr="data-tip=tip.hover.t">hover me</span>
+        </div>
+        <p class="hint" data-i18n="tip.hint">Hover or focus. Tooltips size themselves to the text in cells.</p>
+      </div>
+    </div>
+
+    <!-- Scrollbox -->
+    <div class="cell">
+      <div data-tui="box" data-cols="auto" data-title="Scrollbox" data-i18n-attr="data-title=sc.title" data-demo-border>
+        <div data-tui="scroll" id="log" data-cols="auto" data-rows="10" data-title="Combat log" data-i18n-attr="data-title=sc.log" data-border="single">
+          <span class="tui-line" data-i18n="log.1">T1 Initiative: Blue 9, Red 6</span>
+          <span class="tui-line" data-i18n="log.2">T1 Locust runs 12 MP to 0812</span>
+          <span class="tui-line" data-i18n="log.3">T1 Atlas walks 3 MP to 0605</span>
+          <span class="tui-line" data-i18n="log.4">T1 AC/20 → Locust: 9 needed, 7 rolled</span>
+          <span class="tui-line" data-i18n="log.5">T1 Med Laser → Locust: hit LL 5</span>
+          <span class="tui-line" data-i18n="log.6">T1 Heat: Atlas 6, Locust 2</span>
+          <span class="tui-line" data-i18n="log.7">T2 Initiative: Red 11, Blue 4</span>
+          <span class="tui-line" data-i18n="log.8">T2 Griffin jumps 5 MP to 0709</span>
+          <span class="tui-line" data-i18n="log.9">T2 PPC → Atlas: hit RT 10</span>
+          <span class="tui-line" data-i18n="log.10">T2 LRM-10 → Atlas: 6 missiles</span>
+          <span class="tui-line" data-i18n="log.11">T2 Atlas kicks Locust: hit RL 20</span>
+          <span class="tui-line" data-i18n="log.12">T2 Locust PSR failed, falls</span>
+          <span class="tui-line" data-i18n="log.13">T3 Initiative: Blue 8, Red 8</span>
+          <span class="tui-line" data-i18n="log.14">T3 Reroll: Blue 10, Red 3</span>
+          <span class="tui-line" data-i18n="log.15">T3 Locust stands, 4 MP</span>
+          <span class="tui-line" data-i18n="log.16">T3 SRM-6 → Griffin: 4 hit</span>
+          <span class="tui-line" data-i18n="log.17">T3 Crit: Griffin LA actuator</span>
+          <span class="tui-line" data-i18n="log.18">T3 Griffin heat 9: −1 MP</span>
+          <span class="tui-line" data-i18n="log.19">T4 Atlas AC/20 → Griffin CT 20</span>
+          <span class="tui-line" data-i18n="log.20">T4 Griffin destroyed</span>
+        </div>
+        <p class="hint" data-i18n="sc.hint">Wheel, drag the █ thumb, or click ▲ ▼ and the ░ track.</p>
+      </div>
+    </div>
+
+    <!-- Status bar -->
+    <div class="cell wide">
+      <div data-tui="box" data-cols="auto" data-title="Status bar" data-i18n-attr="data-title=sb.title" data-demo-border>
+        <div class="tui-statusbar">
+          <span class="tui-seg" data-i18n="sb.move"> MOVE </span>
+          <span class="tui-kbd">F1</span><span data-i18n="sb.help">Help</span>
+          <span class="tui-kbd">F5</span><span data-i18n="sb.end">End phase</span>
+          <span class="tui-kbd">Tab</span><span data-i18n="sb.next">Next unit</span>
+          <span class="tui-grow"></span>
+          <span class="tui-seg-alt" data-i18n="sb.unit">Atlas AS7-D</span>
+          <span>T4</span>
+        </div>
+        <p class="hint" data-i18n="sb.hint">A one-row bar. The page footer uses the same markup.</p>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<div class="status-fixed">
+  <div class="tui-statusbar">
+    <span class="tui-seg"> TUI </span>
+    <span class="tui-kbd">F1</span><span data-i18n="sb.help">Help</span>
+    <span class="tui-kbd">F2</span><span data-i18n="ft.border">Border</span>
+    <span class="tui-kbd">F3</span><span data-i18n="ft.theme">Theme</span>
+    <span class="tui-kbd">F4</span><span data-i18n="ft.lang">Language</span>
+    <span class="tui-grow"></span>
+    <span id="statusMsg" data-i18n="ft.ready">ready</span>
+  </div>
+</div>
+
+</div>
+
+<script src="tui.js"></script>
+<script src="tui-demo.i18n.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const t = TUI.t;
+  const BORDERS = ['single', 'double', 'heavy', 'rounded', 'ascii'];
+  const THEMES = ['green', 'amber', 'paper'];
+  const LOCALES = ['en', 'ko', 'pseudo'];
+  // Demo state survives a locale switch, which rebuilds #app from markup.
+  const state = { border: 'single', theme: 'green', fs: '14px', heat: 14, inset: '0.5', grid: true };
+
+  const say = (s) => { $('statusMsg').textContent = s; };
+
+  function setBorder(b, quiet) {
+    state.border = b;
+    document.querySelectorAll('[data-demo-border]').forEach((el) => { el.dataset.border = b; });
+    $(`bd-${b}`).checked = true;
+    TUI.refresh();
+    if (!quiet) say(t('status.border', { v: b }));
+  }
+  function setTheme(th, quiet) {
+    state.theme = th;
+    if (th === 'green') delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = th;
+    $(`th-${th}`).checked = true;
+    if (!quiet) say(t('status.theme', { v: th }));
+  }
+  function setLocale(l) {
+    if (l === TUI.i18n.locale) return;
+    TUI.i18n.set(l);   // rebuilds #app; 'tui-locale' below restores state
+    try { history.replaceState(null, '', `#${l}`); } catch (e) { /* sandboxed */ }
+  }
+  function showCell() {
+    const m = TUI.metrics;
+    $('cellinfo').textContent = t('cell.info', { w: m.cw.toFixed(2), h: m.ch.toFixed(2) });
+  }
+  function setHeat(h) {
+    state.heat = Math.max(0, Math.min(30, h));
+    $('heatVal').textContent = state.heat;
+    const bar = $('heat');
+    bar.dataset.tone = state.heat >= 24 ? 'danger' : state.heat >= 10 ? 'warn' : '';
+    TUI.progress(bar, state.heat / 30);
+  }
+  function setInset(v) {
+    state.inset = v;
+    $('insetBox').style.setProperty('--tui-inset-x', v);
+    $('insetBox').style.setProperty('--tui-inset-y', v);
+    $('insetLabel').textContent = `x ${v} · y ${v}`;
+    document.querySelector(`input[name="inset"][value="${v}"]`).checked = true;
+  }
+  function setGrid(on) {
+    state.grid = on;
+    $('showGrid').checked = on;
+    $('insetStage').classList.toggle('gridlines', on);
+  }
+  function syncAll() {
+    $(`lg-${TUI.i18n.locale}`).checked = true;
+    setTheme(state.theme, true);
+    setBorder(state.border, true);
+    setHeat(state.heat);
+    setInset(state.inset);
+    setGrid(state.grid);
+    const fs = $('fs');
+    if (fs.value !== state.fs) { fs.value = state.fs; fs.dispatchEvent(new Event('change')); }
+    showCell();
+  }
+  function helpDialog() {
+    return TUI.dialog({ title: t('dlg.keys.title'), text: t('dlg.keys.text'), buttons: [t('dlg.ok')], cols: 50 });
+  }
+  function result(r) {
+    $('dialogOut').textContent = t('out.dialog', { v: r === null ? t('out.dismissed') : r });
+  }
+
+  // Everything below is delegated: a locale switch replaces these elements.
+  document.addEventListener('change', (e) => {
+    const el = e.target;
+    if (el.name === 'theme') setTheme(el.value);
+    else if (el.name === 'border') setBorder(el.value);
+    else if (el.name === 'lang') setLocale(el.value);
+    else if (el.name === 'inset') setInset(el.value);
+    else if (el.id === 'showGrid') setGrid(el.checked);
+    else if (el.id === 'fs') {
+      state.fs = el.value;
+      document.documentElement.style.setProperty('--tui-fs', el.value);
+      TUI.refresh();
+      showCell();
+    }
+  });
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest?.('button');
+    if (!b) return;
+    if (b.id === 'heatUp') setHeat(state.heat + 1);
+    else if (b.id === 'heatDown') setHeat(state.heat - 1);
+    else if (b.id === 'reopen') { $('win').hidden = false; b.hidden = true; }
+    else if (b.id === 'openDialog') {
+      result(await TUI.dialog({
+        title: t('dlg.end.title'), text: t('dlg.end.text'),
+        buttons: [t('dlg.end.yes'), t('dlg.end.no')], cols: 44,
+      }));
+    } else if (b.id === 'openDanger') {
+      result(await TUI.dialog({
+        title: t('dlg.eject.title'), text: t('dlg.eject.text'),
+        buttons: [t('dlg.eject.yes'), t('dlg.eject.no')], defaultIndex: 1,
+        tone: 'danger', border: 'heavy', cols: 44,
+      }));
+    }
+  });
+  document.addEventListener('tui-close', (e) => { if (e.target.id === 'win') $('reopen').hidden = false; });
+  document.addEventListener('tui-select', (e) => {
+    const el = e.target, d = e.detail;
+    if (el.id === 'menubar') {
+      const v = d.value;
+      if (v.startsWith('border:')) setBorder(v.slice(7));
+      else if (v.startsWith('theme:')) setTheme(v.slice(6));
+      else if (v.startsWith('lang:')) setLocale(v.slice(5));
+      else if (v === 'dialog') helpDialog();
+      else if (v === 'about') TUI.dialog({ title: t('dlg.about.title'), text: t('dlg.about.text'), buttons: [t('dlg.close')], border: 'rounded' });
+      else say(t('status.menu', { menu: d.menu, v }));
+    } else if (el.id === 'attackMenu') {
+      $('menuOut').textContent = t('out.attack', { v: d.item.textContent.trim() });
+    } else if (el.id === 'targetList') {
+      $('menuOut').textContent = t('out.target', { v: d.item.textContent.trim() });
+    } else if (el.id === 'roster') {
+      $('tableOut').textContent = t('out.row', { v: d.row.join(' · ') });
+    }
+  });
+  document.documentElement.addEventListener('tui-locale', (e) => {
+    syncAll();
+    say(t('status.lang', { v: t(`lang.${e.detail.locale}`) }));
+  });
+  document.addEventListener('keydown', (e) => {
+    if (document.querySelector('.tui-overlay')) return;
+    const cycle = (list, cur) => list[(list.indexOf(cur) + 1) % list.length];
+    if (e.key === 'F1') { e.preventDefault(); helpDialog(); }
+    if (e.key === 'F2') { e.preventDefault(); setBorder(cycle(BORDERS, state.border)); }
+    if (e.key === 'F3') { e.preventDefault(); setTheme(cycle(THEMES, state.theme)); }
+    if (e.key === 'F4') { e.preventDefault(); setLocale(cycle(LOCALES, TUI.i18n.locale)); }
+  });
+
+  // Keep a pristine copy of #app for locale switches, pick the start locale
+  // from the link (#ko, #pseudo), then sync once tui.js has upgraded the page.
+  TUI.i18n.mount($('app'));
+  const start = location.hash.slice(1);
+  if (LOCALES.includes(start)) TUI.i18n.set(start);
+  document.addEventListener('DOMContentLoaded', () => {
+    syncAll();
+    if (document.fonts) document.fonts.ready.then(showCell);
+  });
+})();
+</script>
+</body>
+</html>

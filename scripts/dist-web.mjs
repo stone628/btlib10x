@@ -21,6 +21,8 @@ copyFileSync("web/gallery.html", `${dest}/gallery.html`);
 copyFileSync("web/gallery.css", `${dest}/gallery.css`);
 copyFileSync("web/gallery.js", `${dest}/gallery.js`);
 copyFileSync("web/gallery-admin.js", `${dest}/gallery-admin.js`);
+copyFileSync("web/tui.css", `${dest}/tui.css`);
+copyFileSync("web/tui.js", `${dest}/tui.js`);
 // The admin page lives at /avatar/admin, the path Cloudflare Access guards.
 mkdirSync(`${dest}/avatar`, { recursive: true });
 copyFileSync("web/gallery-admin.html", `${dest}/avatar/admin.html`);
@@ -42,5 +44,5 @@ writeFileSync(
     "/avatar/admin*\n  X-Robots-Tag: noindex\n  Cache-Control: no-store\n",
 );
 console.log(
-  `dist/web: ${["index.html", "404.html", "landing.css", "terminal.html", "bt10x.css", "terminal.css", "btlib10x.js", "btlib10x.jsonl", "btlib10x.sw.jsonl", "terminal.js", "avatar.html", "avatar.css", "avatar.js", "gallery.html", "gallery.css", "gallery.js", "gallery-admin.js", "avatar/admin.html", "VISION.md", "favicon.ico", "_headers", ...fonts.map((f) => `fonts/${f}`)].join(", ")}`,
+  `dist/web: ${["index.html", "404.html", "landing.css", "terminal.html", "bt10x.css", "terminal.css", "btlib10x.js", "btlib10x.jsonl", "btlib10x.sw.jsonl", "terminal.js", "avatar.html", "avatar.css", "avatar.js", "gallery.html", "gallery.css", "gallery.js", "gallery-admin.js", "tui.css", "tui.js", "avatar/admin.html", "VISION.md", "favicon.ico", "_headers", ...fonts.map((f) => `fonts/${f}`)].join(", ")}`,
 );

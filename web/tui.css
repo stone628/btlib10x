@@ -1,0 +1,533 @@
+/* tui.css: TUI-look components for plain HTML.
+ *
+ * Geometry: everything is sized in character cells. tui.js measures the
+ * font once and publishes the cell size as --cw / --ch (px) on :root.
+ * Components then use calc(var(--cols) * var(--cw)) etc.
+ *
+ * Border glyphs live in CSS (--tui-glyphs) so a border set can be swapped
+ * without touching JS. Order (11 glyphs):
+ *   top-left, top-right, bottom-left, bottom-right, horizontal, vertical,
+ *   left-tee, right-tee, top-tee, bottom-tee, cross
+ * --tui-sep holds the 3 glyphs used for a separator row inside a box
+ * (left joint, line, right joint).
+ */
+
+@font-face {
+  font-family: "Bt10x Mono";
+  src: url("fonts/bt10x-mono-0.63.2-regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Bt10x Mono";
+  src: url("fonts/bt10x-mono-0.63.2-bold.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+
+/* ---------- theme tokens ---------- */
+:root {
+  color-scheme: dark;
+  /* Korean faces follow the Latin mono; whichever renders Hangul, .tui-w
+     snaps it to 2 cells. */
+  --tui-font: "Bt10x Mono", "SF Mono", Menlo, Consolas, "Liberation Mono",
+    "D2Coding", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans Mono CJK KR", "Noto Sans KR", monospace;
+  --tui-fs: 14px;
+  /* 1.175em = JuliaMono ascent + descent, so box glyphs tile vertically. */
+  --tui-lh: 1.175em;
+
+  --tui-page: #0c0f0c;        /* screen background */
+  --tui-fg: #b8c9b8;          /* body text */
+  --tui-bright: #d7e4d7;      /* emphasized text */
+  --tui-dim: #5a6a5a;         /* muted text, tracks */
+  --tui-accent: #8fd08f;      /* green accent */
+  --tui-accent-ink: #0c0f0c;  /* text on accent */
+  --tui-line: #6f8a6f;        /* border glyph color */
+  --tui-surface: #141a14;     /* box interior */
+  --tui-surface-2: #1b241b;   /* raised: buttons, headers, hover */
+  --tui-field: #16301b;       /* input fields */
+  --tui-sel-bg: #8fd08f;      /* selection (reverse video) */
+  --tui-sel-fg: #0c0f0c;
+  --tui-shadow: rgba(0, 0, 0, 0.55);
+  --tui-overlay: rgba(4, 8, 4, 0.6);
+
+  --tui-red: #e07a6a;
+  --tui-yellow: #d8c26a;
+  --tui-blue: #7aa7d8;
+  --tui-cyan: #6ac9c0;
+  --tui-red-bg: #3a1712;
+  --tui-yellow-bg: #383012;
+  --tui-blue-bg: #152838;
+
+  /* Background inset, as a fraction of a cell. 0.5 puts the fill edge on
+     the centre line of the border glyph, so nothing outside the line is
+     colored. */
+  --tui-inset-x: 0.5;
+  --tui-inset-y: 0.5;
+  /* Window shadow offset, in cells. */
+  --tui-shadow-x: 1;
+  --tui-shadow-y: 0.5;
+
+  /* Fallback cell size until tui.js measures the real one. */
+  --cw: 8.4px;
+  --ch: 16.45px;
+}
+
+/* Alternate themes: only tokens change. */
+[data-theme="amber"] {
+  --tui-page: #100c06;
+  --tui-fg: #d9b98a;
+  --tui-bright: #f2d9ae;
+  --tui-dim: #6e5a3e;
+  --tui-accent: #ffb347;
+  --tui-accent-ink: #100c06;
+  --tui-line: #a07c48;
+  --tui-surface: #1a140c;
+  --tui-surface-2: #261d10;
+  --tui-field: #3a2a12;
+  --tui-sel-bg: #ffb347;
+  --tui-sel-fg: #100c06;
+}
+[data-theme="paper"] {
+  color-scheme: light;
+  --tui-page: #e9ecdf;
+  --tui-fg: #2a3326;
+  --tui-bright: #10160e;
+  --tui-dim: #84907c;
+  --tui-accent: #2f7a3a;
+  --tui-accent-ink: #f4f6ee;
+  --tui-line: #55684f;
+  --tui-surface: #f6f8f0;
+  --tui-surface-2: #dde3d2;
+  --tui-field: #d4e6cf;
+  --tui-sel-bg: #2f7a3a;
+  --tui-sel-fg: #f4f6ee;
+  --tui-shadow: rgba(30, 40, 25, 0.28);
+  --tui-overlay: rgba(200, 206, 190, 0.6);
+  --tui-red: #b0402c;
+  --tui-yellow: #8a6d0a;
+  --tui-blue: #2f5f95;
+  --tui-cyan: #1e7d75;
+  --tui-red-bg: #f1d5cf;
+  --tui-yellow-bg: #efe4bf;
+  --tui-blue-bg: #d3e0ef;
+}
+
+/* ---------- border sets ---------- */
+.tui-box, [data-border="single"] { --tui-glyphs: "┌┐└┘─│├┤┬┴┼"; --tui-sep: "├─┤"; }
+[data-border="double"]  { --tui-glyphs: "╔╗╚╝═║╠╣╦╩╬"; --tui-sep: "╟─╢"; }
+[data-border="heavy"]   { --tui-glyphs: "┏┓┗┛━┃┣┫┳┻╋"; --tui-sep: "┠─┨"; }
+[data-border="rounded"] { --tui-glyphs: "╭╮╰╯─│├┤┬┴┼"; --tui-sep: "├─┤"; }
+/* Defined here only, to show a set can be added from CSS alone. */
+[data-border="ascii"]   { --tui-glyphs: "++++-|+++++"; --tui-sep: "+-+"; }
+
+/* ---------- root ---------- */
+.tui, .tui-font {
+  font-family: var(--tui-font);
+  font-size: var(--tui-fs);
+  line-height: var(--tui-lh);
+  font-variant-ligatures: none;
+  color: var(--tui-fg);
+}
+.tui { background: var(--tui-page); }
+.tui-font *, .tui-font *::before, .tui-font *::after,
+.tui *, .tui *::before, .tui *::after { box-sizing: border-box; }
+.tui-font button, .tui-font input, .tui-font select,
+.tui button, .tui input, .tui select {
+  font: inherit;
+  line-height: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+}
+.tui-probe {
+  display: inline-block;
+  position: absolute;
+  visibility: hidden;
+  white-space: pre;
+  top: -9999px;
+  left: 0;
+}
+
+/* ---------- box (frame + inset background + body) ---------- */
+.tui-box {
+  position: relative;
+  display: inline-block;
+  vertical-align: top;
+  width: calc(var(--cols, 20) * var(--cw));
+  height: calc(var(--rows, 5) * var(--ch));
+  --box-bg: var(--tui-surface);
+  --box-line: var(--tui-line);
+  --box-title: var(--tui-bright);
+  text-align: left;
+}
+.tui-box[data-block] { display: block; }
+.tui-bg, .tui-shadow {
+  position: absolute;
+  top: calc(var(--ch) * var(--tui-inset-y));
+  bottom: calc(var(--ch) * var(--tui-inset-y));
+  left: calc(var(--cw) * var(--tui-inset-x));
+  right: calc(var(--cw) * var(--tui-inset-x));
+  background: var(--box-bg);
+  pointer-events: none;
+}
+.tui-shadow {
+  background: var(--tui-shadow);
+  transform: translate(calc(var(--cw) * var(--tui-shadow-x)), calc(var(--ch) * var(--tui-shadow-y)));
+}
+.tui-frame {
+  position: absolute;
+  inset: 0;
+  white-space: pre;
+  color: var(--box-line);
+  pointer-events: none;
+  overflow: hidden;
+}
+.tui-frame > div { height: var(--ch); }
+.tui-frame .tui-title { color: var(--box-title); font-weight: 700; }
+.tui-frame .tui-foot { color: var(--tui-dim); }
+.tui-frame .tui-hit { pointer-events: auto; cursor: pointer; }
+.tui-frame .tui-trunc { pointer-events: auto; }
+.tui-frame .tui-hit:hover { color: var(--tui-accent); }
+.tui-frame .tui-tab { color: var(--tui-dim); }
+.tui-frame .tui-tab.is-active { background: var(--tui-sel-bg); color: var(--tui-sel-fg); font-weight: 700; }
+.tui-frame .tui-tab:focus-visible { outline: none; color: var(--tui-accent); text-decoration: underline; }
+.tui-body {
+  position: absolute;
+  top: var(--ch);
+  bottom: var(--ch);
+  left: calc(var(--cw) * (1 + var(--pad, 1)));
+  right: calc(var(--cw) * (1 + var(--pad, 1)));
+  /* visible, not hidden: separator rows reach out into the border columns. */
+  overflow: visible;
+}
+.tui-body-inner { white-space: normal; overflow-wrap: anywhere; }
+.tui-body p { margin: 0; }
+
+/* Tones: recolor a box through its local tokens. */
+.tui-box[data-tone="accent"] { --box-line: var(--tui-accent); --box-title: var(--tui-accent); }
+.tui-box[data-tone="warn"]   { --box-line: var(--tui-yellow); --box-title: var(--tui-yellow); --box-bg: var(--tui-yellow-bg); }
+.tui-box[data-tone="danger"] { --box-line: var(--tui-red); --box-title: var(--tui-red); --box-bg: var(--tui-red-bg); }
+.tui-box[data-tone="info"]   { --box-line: var(--tui-blue); --box-title: var(--tui-blue); --box-bg: var(--tui-blue-bg); }
+.tui-box[data-tone="clear"]  { --box-bg: transparent; }
+
+/* Separator row inside a box: extends one cell into each border column so
+   its tee glyphs join the frame. */
+.tui-sep {
+  display: block;
+  height: var(--ch);
+  margin-left: calc(var(--cw) * -1 * (1 + var(--pad, 1)));
+  margin-right: calc(var(--cw) * -1 * (1 + var(--pad, 1)));
+  white-space: pre;
+  overflow: hidden;
+  color: var(--box-line);
+}
+
+/* ---------- text helpers ---------- */
+.tui-dim { color: var(--tui-dim); }
+.tui-bright { color: var(--tui-bright); }
+.tui-accent { color: var(--tui-accent); }
+.tui-rev { background: var(--tui-sel-bg); color: var(--tui-sel-fg); }
+.tui-kbd { color: var(--tui-accent); font-weight: 700; }
+.tui-line { display: block; min-height: var(--ch); white-space: pre; }
+
+/* ---------- button ---------- */
+.tui-btn {
+  appearance: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  white-space: pre;
+  height: var(--ch);
+  color: var(--tui-bright);
+}
+.tui-btn::before { content: "[ "; color: var(--tui-line); }
+.tui-btn::after  { content: " ]"; color: var(--tui-line); }
+.tui-btn[data-variant="angle"]::before { content: "< "; }
+.tui-btn[data-variant="angle"]::after  { content: " >"; }
+.tui-btn[data-variant="bare"]::before,
+.tui-btn[data-variant="bare"]::after { content: " "; }
+.tui-btn:hover { background: var(--tui-surface-2); }
+.tui-btn:focus-visible { outline: none; color: var(--tui-accent); }
+.tui-btn:focus-visible::before { content: "[▸"; color: var(--tui-accent); }
+.tui-btn:focus-visible::after { content: "◂]"; color: var(--tui-accent); }
+.tui-btn[data-variant="angle"]:focus-visible::before { content: "<▸"; }
+.tui-btn[data-variant="angle"]:focus-visible::after  { content: "◂>"; }
+.tui-btn.is-primary { color: var(--tui-accent); font-weight: 700; }
+.tui-btn:active, .tui-btn.is-pressed,
+.tui-btn:active::before, .tui-btn:active::after,
+.tui-btn.is-pressed::before, .tui-btn.is-pressed::after {
+  background: var(--tui-sel-bg);
+  color: var(--tui-sel-fg);
+}
+.tui-btn:disabled, .tui-btn:disabled::before, .tui-btn:disabled::after {
+  color: var(--tui-dim);
+  background: none;
+  cursor: default;
+}
+.tui-btn u { text-decoration: none; color: var(--tui-accent); }
+
+/* Boxed button: a .tui-box that is also a <button>. */
+button.tui-box {
+  appearance: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--tui-bright);
+  --box-bg: var(--tui-surface-2);
+}
+button.tui-box .tui-body { text-align: center; white-space: pre; }
+button.tui-box:hover { --box-line: var(--tui-accent); }
+button.tui-box:focus-visible { outline: none; --box-line: var(--tui-accent); --box-title: var(--tui-accent); color: var(--tui-accent); }
+button.tui-box:active, button.tui-box.is-pressed {
+  --box-bg: var(--tui-sel-bg);
+  --box-line: var(--tui-sel-fg);
+  color: var(--tui-sel-fg);
+}
+
+/* ---------- text input ---------- */
+.tui-input {
+  appearance: none;
+  border: 0;
+  margin: 0;
+  padding: 0 var(--cw);
+  height: var(--ch);
+  width: calc(var(--cols, 20) * var(--cw));
+  background: var(--tui-field);
+  color: var(--tui-bright);
+  caret-color: var(--tui-accent);
+  border-radius: 0;
+  outline: none;
+  vertical-align: top;
+}
+.tui-input::placeholder { color: var(--tui-dim); opacity: 1; }
+.tui-input:focus { background: var(--tui-surface-2); box-shadow: inset 0 -2px 0 var(--tui-accent); }
+.tui-input::selection { background: var(--tui-sel-bg); color: var(--tui-sel-fg); }
+.tui-input[data-variant="line"] { background: transparent; box-shadow: inset 0 -1px 0 var(--tui-dim); }
+.tui-input[data-variant="line"]:focus { box-shadow: inset 0 -1px 0 var(--tui-accent); }
+.tui-prompt { color: var(--tui-accent); white-space: pre; }
+.tui-box .tui-input { width: 100%; }
+
+/* ---------- checkbox / radio ---------- */
+.tui-check, .tui-radio {
+  display: inline-flex;
+  cursor: pointer;
+  white-space: pre;
+  height: var(--ch);
+  user-select: none;
+}
+.tui-check input, .tui-radio input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  pointer-events: none;
+}
+.tui-mark { color: var(--tui-line); white-space: pre; }
+.tui-check .tui-mark::before { content: "[ ] "; }
+.tui-check input:checked + .tui-mark::before { content: "[x] "; }
+.tui-check input:indeterminate + .tui-mark::before { content: "[-] "; }
+.tui-radio .tui-mark::before { content: "( ) "; }
+.tui-radio input:checked + .tui-mark::before { content: "(•) "; }
+.tui-check input:checked + .tui-mark,
+.tui-radio input:checked + .tui-mark { color: var(--tui-accent); }
+.tui-check:hover .tui-mark, .tui-radio:hover .tui-mark { color: var(--tui-bright); }
+.tui-check input:focus-visible ~ *, .tui-radio input:focus-visible ~ * {
+  background: var(--tui-sel-bg);
+  color: var(--tui-sel-fg);
+}
+.tui-check input:disabled ~ *, .tui-radio input:disabled ~ * { color: var(--tui-dim); }
+
+/* ---------- select ---------- */
+.tui-select {
+  appearance: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  height: var(--ch);
+  width: calc(var(--cols, 20) * var(--cw));
+  background: var(--tui-field);
+  color: var(--tui-bright);
+  cursor: pointer;
+  text-align: left;
+  white-space: pre;
+  overflow: hidden;
+  display: inline-flex;
+  vertical-align: top;
+}
+.tui-select .tui-select-label { flex: 1; padding-left: var(--cw); overflow: hidden; text-overflow: ellipsis; }
+.tui-select .tui-select-arrow { color: var(--tui-accent); padding-right: var(--cw); }
+.tui-select:hover { background: var(--tui-surface-2); }
+.tui-select:focus-visible, .tui-select.is-open { outline: none; background: var(--tui-sel-bg); color: var(--tui-sel-fg); }
+.tui-select:focus-visible .tui-select-arrow, .tui-select.is-open .tui-select-arrow { color: var(--tui-sel-fg); }
+select.tui-native { display: none; }
+
+/* ---------- popup layer (select list, menubar menus, tooltip) ---------- */
+.tui-popup { position: absolute; z-index: 1000; }
+.tui-popup:focus { outline: none; }
+
+/* ---------- menu / list ---------- */
+.tui-item {
+  display: flex;
+  height: var(--ch);
+  white-space: pre;
+  cursor: pointer;
+  margin: 0 calc(var(--cw) * -1 * var(--pad, 1));
+  padding: 0 calc(var(--cw) * var(--pad, 1));
+}
+.tui-item > .tui-item-label { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.tui-item > .tui-item-key { color: var(--tui-dim); padding-left: calc(var(--cw) * 2); }
+.tui-item .tui-cursor { color: var(--tui-accent); }
+.tui-item:hover { background: var(--tui-surface-2); }
+.tui-item.is-active { background: var(--tui-sel-bg); color: var(--tui-sel-fg); }
+.tui-item.is-active > .tui-item-key, .tui-item.is-active .tui-cursor { color: var(--tui-sel-fg); }
+.tui-item[aria-disabled="true"] { color: var(--tui-dim); cursor: default; background: none; }
+.tui-item u { text-decoration: none; color: var(--tui-accent); }
+.tui-item.is-active u { color: inherit; text-decoration: underline; }
+[data-tui="menu"]:focus, [data-tui="list"]:focus { outline: none; }
+[data-tui="menu"]:focus-visible, [data-tui="list"]:focus-visible { --box-line: var(--tui-accent); }
+
+/* ---------- menubar ---------- */
+.tui-menubar {
+  display: flex;
+  height: var(--ch);
+  background: var(--tui-surface-2);
+  white-space: pre;
+}
+.tui-menubar > .tui-menubar-item {
+  appearance: none;
+  border: 0;
+  margin: 0;
+  padding: 0 var(--cw);
+  background: none;
+  cursor: pointer;
+  height: var(--ch);
+  color: var(--tui-bright);
+}
+.tui-menubar > .tui-menubar-item:hover { background: var(--tui-surface); }
+.tui-menubar > .tui-menubar-item.is-open,
+.tui-menubar > .tui-menubar-item:focus-visible { outline: none; background: var(--tui-sel-bg); color: var(--tui-sel-fg); }
+.tui-menubar u { text-decoration: none; color: var(--tui-accent); }
+.tui-menubar .is-open u, .tui-menubar :focus-visible u { color: inherit; }
+.tui-menubar-spacer { flex: 1; }
+
+/* ---------- table ---------- */
+.tui-row { display: block; height: var(--ch); white-space: pre; overflow: hidden; }
+.tui-row.is-head { color: var(--tui-bright); font-weight: 700; }
+.tui-row .tui-col-sep, .tui-rule { color: var(--box-line); }
+.tui-row.is-data { cursor: pointer; }
+.tui-row.is-data:hover { background: var(--tui-surface-2); }
+.tui-row.is-active { background: var(--tui-sel-bg); color: var(--tui-sel-fg); }
+.tui-row.is-active .tui-col-sep { color: var(--tui-sel-fg); }
+.tui-table:focus { outline: none; }
+.tui-table:focus-visible { --box-line: var(--tui-accent); }
+
+/* ---------- progress / spinner ---------- */
+.tui-progress { white-space: pre; display: inline-block; height: var(--ch); vertical-align: top; overflow: hidden; }
+.tui-progress .tui-fill { color: var(--tui-accent); }
+.tui-progress .tui-track { color: var(--tui-dim); }
+.tui-progress .tui-pct { color: var(--tui-bright); }
+.tui-progress[data-tone="warn"] .tui-fill { color: var(--tui-yellow); }
+.tui-progress[data-tone="danger"] .tui-fill { color: var(--tui-red); }
+.tui-spinner { color: var(--tui-accent); white-space: pre; }
+
+/* ---------- scrollbox ---------- */
+.tui-scroll .tui-body { overflow-y: auto; scrollbar-width: none; }
+.tui-scroll .tui-body::-webkit-scrollbar { display: none; }
+.tui-scrollbar {
+  position: absolute;
+  right: 0;
+  top: var(--ch);
+  width: var(--cw);
+  white-space: pre;
+  color: var(--tui-dim);
+  cursor: pointer;
+  user-select: none;
+}
+.tui-scrollbar > div { height: var(--ch); }
+.tui-scrollbar .tui-thumb { color: var(--tui-accent); }
+.tui-scrollbar .tui-arrow { color: var(--tui-line); }
+.tui-scrollbar .tui-arrow:hover { color: var(--tui-accent); }
+
+/* ---------- window / dialog ---------- */
+.tui-window { --box-bg: var(--tui-surface); }
+.tui-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: var(--tui-overlay);
+  display: grid;
+  place-items: center;
+  padding: var(--ch) var(--cw);
+}
+.tui-dialog-text { white-space: pre-wrap; }
+.tui-dialog-actions { display: flex; justify-content: center; gap: calc(var(--cw) * 2); height: var(--ch); flex-wrap: wrap; }
+
+/* ---------- tooltip ---------- */
+.tui-tip { --box-bg: var(--tui-surface-2); --box-line: var(--tui-accent); color: var(--tui-bright); pointer-events: none; }
+.tui-tip .tui-body { white-space: pre; }
+
+/* ---------- status bar ---------- */
+.tui-statusbar {
+  display: flex;
+  align-items: stretch;
+  height: var(--ch);
+  white-space: pre;
+  overflow: hidden;
+  background: var(--tui-surface-2);
+  color: var(--tui-fg);
+}
+.tui-statusbar > * { padding: 0 var(--cw); }
+.tui-statusbar .tui-kbd { padding-right: 0; }
+.tui-statusbar .tui-kbd + span { padding-left: var(--cw); }
+.tui-statusbar .tui-grow { flex: 1; }
+.tui-statusbar .tui-seg { background: var(--tui-sel-bg); color: var(--tui-sel-fg); }
+.tui-statusbar .tui-seg-alt { background: var(--tui-field); color: var(--tui-bright); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tui-spinner, .tui-progress[data-value="indeterminate"] { animation: none; }
+}
+
+[hidden].tui-box, .tui-box[hidden] { display: none; }
+
+/* ---------- i18n: wide characters on the grid ---------- */
+/* tui.js wraps every wide char (Hangul, CJK, fullwidth) in .tui-w: exactly
+   compensatedLength(ch) cells wide (2 for Hangul) and one row tall, top-aligned
+   so a fallback font's taller ascent cannot grow the row. Glyphs wider than
+   2 cells are squeezed by --tui-wide-scale (measured by tui.js). */
+.tui-w {
+  display: inline-block;
+  width: calc(var(--w, 2) * var(--cw));
+  height: var(--ch);
+  line-height: var(--ch);
+  vertical-align: top;
+  text-align: center;
+  white-space: nowrap;
+  transform: scaleX(var(--tui-wide-scale, 1));
+}
+/* Prose: in paragraphs, dialog text, .tui-prose and [data-wide="natural"],
+   Hangul keeps the font's own width (about 1.6-1.7 cells) instead of a 2-cell
+   slot. Nothing has to line up there, so it reads tighter. Rows stay one cell
+   tall. Borders, tables, menus, columns and .tui-line keep the grid. */
+:is(p, .tui-prose, .tui-dialog-text, [data-wide="natural"]) .tui-w {
+  display: inline;
+  width: auto;
+  transform: none;
+}
+/* A word that contains wide chars does not break inside (keep-all). */
+.tui-wrun { white-space: nowrap; }
+/* Fixed-width column: --col cells (not --cols, which boxes set and children
+   inherit), cut with … when a translation is longer. */
+.tui-col {
+  display: inline-block;
+  width: calc(var(--col, 8) * var(--cw));
+  height: var(--ch);
+  vertical-align: top;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

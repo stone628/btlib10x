@@ -87,7 +87,7 @@ runs never replace the full `npm test` in the done-criteria above.
 - `src/rules/` — pure rule functions: movement, LOS, GATOR to-hit, hit location, cluster hits, damage, attack orchestration, battle state machine
 - `functions/` — Cloudflare Pages Functions (Pages requires this root folder). One prefix per sub-project: the avatar gallery owns `functions/api/ag/` (server code in its `_lib/`), `migrations/ag/` and D1 tables `ag_*`; a new backend takes its own prefix instead of adding to these. Types are hand-written (`functions/api/ag/_lib/cf.ts`), no wrangler dependency. See `docs/GALLERY.md` §2
 - `tests/` — vitest suites; several assert against worked examples printed in the PDFs
-- `web/` — static site: `index.html` landing page at `/` (EN/KO inline, `landing.css`), `terminal.html` + `web/terminal/` terminal emulator app over the core (see `docs/CLI.md`), `avatar.html` + `web/avatar/` 'Mech avatar creator, `gallery.html` + `web/avatar/gallery*.ts` avatar gallery (see `docs/GALLERY.md`). Served files (HTML, CSS, fonts, built bundles) stay at the `web/` root; TS sources live in the subfolders
+- `web/` — static site: `index.html` landing page at `/` (EN/KO inline, `landing.css`), `terminal.html` + `web/terminal/` terminal emulator app over the core (see `docs/CLI.md`), `avatar.html` + `web/avatar/` 'Mech avatar creator, `gallery.html` + `web/avatar/gallery*.ts` avatar gallery (see `docs/GALLERY.md`), `tui.css` + `tui.js` plain-JS TUI component kit with `tui-demo.html` (see `docs/TUI.md`). Served files (HTML, CSS, fonts, built bundles) stay at the `web/` root; TS sources live in the subfolders
 
 ## Conventions & constraints
 
