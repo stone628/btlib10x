@@ -67,7 +67,7 @@
   --tui-inset-y: 0.5;
   /* Scrollbar glyphs: start arrow, track, thumb, end arrow. The vertical bar
      adds upper and lower half thumbs, so its thumb moves in half cells. */
-  --tui-vbar: "⏶░█⏷▀▄";
+  --tui-vbar: "▲░█▼▀▄";
   --tui-hbar: "◂▥■▸";
   /* Window shadow offset, in cells. */
   --tui-shadow-x: 1;
@@ -715,7 +715,8 @@ select.tui-native {
 .tui-row.is-data:hover {
   background: var(--tui-surface-2);
 }
-.tui-row.is-active {
+.tui-row.is-active,
+.tui-row.is-active:hover {
   background: var(--tui-sel-bg);
   color: var(--tui-sel-fg);
 }

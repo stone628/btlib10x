@@ -460,7 +460,7 @@
       f.appendChild(
         st.hideBottomEdge
           ? div(null, g.bl + " ".repeat(Math.max(0, c - 2)) + g.br)
-          : edgeRow(c, g.bl, g.h, g.br, bottom, st.junctions, g.bt),
+          : edgeRow(c, g.bl, g.h, g.br, bottom, st.bottomJunctions || st.junctions, g.bt),
       );
     }
 
@@ -883,9 +883,12 @@
   // ---------------------------------------------------------------- table
 
   /* From a <table> (thead th / tbody td; th[data-width], th[data-align])
-     or from TUI.table({ columns: [{ label, width, align }], rows: [[…]] }). */
+     or from TUI.table({ columns: [{ label, width, align }], rows: [[…]] }).
+     Body cells merge with td[colspan] / td[rowspan], or { text, colspan,
+     rowspan, align } in rows. Rules between data rows: tr[data-rule] (above
+     that row), table[data-rules="rows"], or opts.rules = "rows" | [index…]. */
   function table(src, opts) {
-    let columns, rows, el;
+    let columns, rows, el, rules;
     if (src instanceof Element) {
       const ths = Array.from(src.querySelectorAll("thead th"));
       columns = ths.map((th) => ({
@@ -893,9 +896,18 @@
         width: th.dataset.width && +th.dataset.width,
         align: th.dataset.align,
       }));
-      rows = Array.from(src.querySelectorAll("tbody tr")).map((tr) =>
-        Array.from(tr.children).map((td) => td.textContent.trim()),
+      const trs = Array.from(src.querySelectorAll("tbody tr"));
+      rows = trs.map((tr) =>
+        Array.from(tr.children).map((td) => {
+          const text = td.textContent.trim();
+          if (td.colSpan <= 1 && td.rowSpan <= 1 && !td.dataset.align) return text;
+          return { text, colspan: td.colSpan, rowspan: td.rowSpan, align: td.dataset.align };
+        }),
       );
+      rules =
+        src.dataset.rules === "rows"
+          ? "rows"
+          : trs.flatMap((tr, i) => (tr.hasAttribute("data-rule") ? [i] : []));
       el = div();
       for (const a of src.attributes) if (a.name !== "data-tui") el.setAttribute(a.name, a.value);
       src.replaceWith(el);
@@ -903,23 +915,76 @@
       opts = src || {};
       columns = opts.columns;
       rows = opts.rows;
+      rules = opts.rules;
       el = div();
       if (opts.border) el.dataset.border = opts.border;
     }
-    columns.forEach((c, k) => {
-      if (!c.width) c.width = Math.max(len(c.label), ...rows.map((r) => len(String(r[k] ?? ""))));
+    const n = columns.length;
+
+    // Place cells on a grid, as HTML does: owner[i][k] is the cell covering
+    // data row i, column k (or undefined where a row is short).
+    const owner = rows.map(() => Array(n));
+    const cells = [];
+    rows.forEach((row, i) => {
+      let k = 0;
+      for (const raw of row) {
+        while (k < n && owner[i][k]) k++;
+        if (k >= n) break;
+        const o = raw !== null && typeof raw === "object" ? raw : { text: raw };
+        const cell = {
+          text: String(o.text ?? ""),
+          align: o.align,
+          r0: i,
+          k0: k,
+          cs: Math.min(Math.max(1, o.colspan || 1), n - k),
+          rs: Math.min(Math.max(1, o.rowspan || 1), rows.length - i),
+        };
+        for (let y = i; y < i + cell.rs; y++)
+          for (let x = k; x < k + cell.cs; x++) if (!owner[y][x]) owner[y][x] = cell;
+        cells.push(cell);
+        k += cell.cs;
+      }
     });
+
+    // Column widths: single cells first, then widen the last column of a
+    // merged cell that does not fit its span (' text ' plus the joints inside).
+    const spanWidth = (k0, cs) => {
+      let w = 3 * (cs - 1);
+      for (let k = k0; k < k0 + cs; k++) w += columns[k].width;
+      return w;
+    };
+    columns.forEach((c, k) => {
+      if (c.width) c.fixed = true;
+      else
+        c.width = Math.max(
+          len(c.label),
+          ...cells.filter((x) => x.k0 === k && x.cs === 1).map((x) => len(x.text)),
+        );
+    });
+    for (const x of cells) {
+      const last = columns[x.k0 + x.cs - 1];
+      const short = len(x.text) - spanWidth(x.k0, x.cs);
+      if (x.cs > 1 && short > 0 && !last.fixed) last.width += short;
+    }
     // Interior width: each column is ' text ' plus one separator between.
-    const inner = columns.reduce((s, c) => s + c.width + 2, 0) + columns.length - 1;
-    const joints = [];
+    const inner = columns.reduce((s, c) => s + c.width + 2, 0) + n - 1;
+    const joints = []; // frame cell of the joint left of column k (k ≥ 1)
+    const starts = [1]; // frame cell where column k starts
     let x = 0;
     columns.forEach((c, k) => {
       x += c.width + 2;
-      if (k < columns.length - 1) {
+      if (k < n - 1) {
         joints.push(x + 1);
         x += 1;
+        starts.push(x + 1);
       }
     });
+    // A joint shows in a row where the cells either side differ.
+    const split = (i, b) => i < 0 || !owner[i][b] || owner[i][b] !== owner[i][b - 1];
+    const ruleSet = new Set(
+      rules === "rows" ? rows.map((_, i) => i).slice(1) : Array.isArray(rules) ? rules : [],
+    );
+    ruleSet.delete(0);
 
     el.classList.add("tui-table");
     el.tabIndex = 0;
@@ -928,30 +993,63 @@
     box(el, { cols: inner + 2, rows: "auto", pad: 0 });
     const st = el._tui;
     st.junctions = joints;
+    st.bottomJunctions = joints.filter((_, b) => split(rows.length - 1, b + 1));
     const head = div("tui-row is-head");
-    const rule = div("tui-sep");
-    rule.dataset.joints = joints.join(",");
-    const dataRows = rows.map(() => div("tui-row is-data"));
-    st.inner.append(head, rule, ...dataRows);
-
-    function fillRow(row, cells, v) {
-      row.textContent = "";
-      columns.forEach((c, k) => {
-        if (k) row.appendChild(span("tui-col-sep", v));
-        row.append(` ${fit(cells[k] ?? "", c.width, c.align)} `);
-      });
-    }
-    st.hooks.push((g) => {
-      fillRow(
-        head,
-        columns.map((c) => c.label),
-        g.v,
-      );
-      dataRows.forEach((row, i) => {
-        fillRow(row, rows[i], g.v);
-      });
+    const ruleRows = []; // [div, row above (-1 = header), row below]
+    const dataRows = [];
+    st.inner.append(head);
+    rows.forEach((_, i) => {
+      if (i === 0 || ruleSet.has(i)) {
+        const d = div("tui-sep");
+        ruleRows.push([d, i - 1, i]);
+        st.inner.append(d);
+      }
+      const d = div("tui-row is-data");
+      dataRows.push(d);
+      st.inner.append(d);
     });
 
+    function fillRow(row, i, v) {
+      row.textContent = "";
+      for (let k = 0; k < n; ) {
+        const cell = i < 0 ? { text: columns[k].label, k0: k, cs: 1, r0: i } : owner[i][k];
+        const cs = cell ? cell.cs - (k - cell.k0) : 1;
+        const text = cell && cell.r0 === i ? cell.text : "";
+        if (k) row.appendChild(span("tui-col-sep", v));
+        const align = cell?.align || (cs === 1 ? columns[k].align : undefined);
+        row.append(` ${fit(text, spanWidth(k, cs), align)} `);
+        k += cs;
+      }
+    }
+    // Arms of each joint: up/down from the rows' joints, left/right from the
+    // rule running over the columns either side.
+    const JOIN = { 1111: "x", 1101: "tt", 1110: "bt", "0111": "lt", 1011: "rt", 1100: "h" };
+    function fillRule(d, a, b, g) {
+      const along = (k) => a < 0 || !owner[a][k] || owner[a][k] !== owner[b][k];
+      const out = Array(inner + 2).fill(" ");
+      out[0] = along(0) ? g.sepL : g.v;
+      out[inner + 1] = along(n - 1) ? g.sepR : g.v;
+      columns.forEach((c, k) => {
+        if (along(k)) out.fill(g.sepH, starts[k], starts[k] + c.width + 2);
+      });
+      joints.forEach((at, j) => {
+        const key = `${+along(j)}${+along(j + 1)}${+split(a, j + 1)}${+split(b, j + 1)}`;
+        const corner = { 1001: g.tr, "0101": g.tl, 1010: g.br, "0110": g.bl, "0011": g.v };
+        const name = JOIN[key];
+        out[at] = name === "h" ? g.sepH : name ? g[name] : corner[key] || " ";
+      });
+      d.textContent = out.join("");
+    }
+    st.hooks.push((g) => {
+      fillRow(head, -1, g.v);
+      dataRows.forEach((row, i) => {
+        fillRow(row, i, g.v);
+      });
+      for (const [d, a, b] of ruleRows) fillRule(d, a, b, g);
+    });
+
+    // Reported row: the text of each distinct cell in it, merged ones included.
+    const rowText = (i) => [...new Set(owner[i].filter(Boolean))].map((c) => c.text);
     let active = -1;
     function set(i) {
       active = i;
@@ -962,14 +1060,14 @@
     dataRows.forEach((r, i) => {
       r.addEventListener("click", () => {
         set(i);
-        emit(el, "tui-select", { index: i, row: rows[i] });
+        emit(el, "tui-select", { index: i, row: rowText(i) });
       });
     });
     el.addEventListener("keydown", (e) => {
       if (e.key === "ArrowDown") set(Math.min(rows.length - 1, active + 1));
       else if (e.key === "ArrowUp") set(Math.max(0, active - 1));
       else if (e.key === "Enter" && active >= 0)
-        emit(el, "tui-select", { index: active, row: rows[active] });
+        emit(el, "tui-select", { index: active, row: rowText(active) });
       else return;
       e.preventDefault();
     });

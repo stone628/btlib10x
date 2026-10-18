@@ -339,15 +339,16 @@
       <div data-tui="box" data-cols="auto" data-title="Table" data-i18n-attr="data-title=tbl.title" data-demo-border>
         <div class="xscroll">
           <table data-tui="table" data-border="single" id="roster">
-            <thead><tr><th data-i18n="tbl.unit">Unit</th><th data-align="right" data-i18n="tbl.tons">Tons</th><th data-align="center" data-i18n="tbl.mp">W/R/J</th></tr></thead>
+            <thead><tr><th data-i18n="tbl.class">Class</th><th data-i18n="tbl.unit">Unit</th><th data-align="right" data-i18n="tbl.tons">Tons</th><th data-align="center" data-i18n="tbl.mp">W/R/J</th></tr></thead>
             <tbody>
-              <tr><td data-i18n="u.atlas">Atlas AS7-D</td><td>100</td><td>3/5/0</td></tr>
-              <tr><td data-i18n="u.marauder2">Marauder MAD-3R</td><td>75</td><td>4/6/0</td></tr>
+              <tr><td data-i18n="cls.assault">Assault</td><td data-i18n="u.atlas">Atlas AS7-D</td><td>100</td><td>3/5/0</td></tr>
+              <tr data-rule><td rowspan="2" data-i18n="cls.heavy">Heavy</td><td data-i18n="u.marauder2">Marauder MAD-3R</td><td>75</td><td>4/6/0</td></tr>
               <tr><td data-i18n="u.warhammer">Warhammer WHM-6R</td><td>70</td><td>4/6/0</td></tr>
-              <tr><td data-i18n="u.shadowhawk">Shadow Hawk SHD-2H</td><td>55</td><td>5/8/3</td></tr>
+              <tr data-rule><td rowspan="3" data-i18n="cls.medium">Medium</td><td data-i18n="u.shadowhawk">Shadow Hawk SHD-2H</td><td>55</td><td>5/8/3</td></tr>
               <tr><td data-i18n="u.griffin2">Griffin GRF-1N</td><td>55</td><td>5/8/5</td></tr>
               <tr><td data-i18n="u.hunchback">Hunchback HBK-4G</td><td>50</td><td>4/6/0</td></tr>
-              <tr><td data-i18n="u.locust2">Locust LCT-1V</td><td>20</td><td>8/12/0</td></tr>
+              <tr data-rule><td data-i18n="cls.light">Light</td><td data-i18n="u.locust2">Locust LCT-1V</td><td>20</td><td>8/12/0</td></tr>
+              <tr data-rule><td colspan="2" data-align="right" data-i18n="tbl.total">Total</td><td>425</td><td></td></tr>
             </tbody>
           </table>
         </div>

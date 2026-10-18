@@ -216,7 +216,13 @@ TUI.i18n.add("ko", {
 
   // table
   "tbl.title": "표",
+  "tbl.class": "체급",
   "tbl.unit": "기체",
+  "tbl.total": "합계",
+  "cls.assault": "강습",
+  "cls.heavy": "중량",
+  "cls.medium": "중형",
+  "cls.light": "경량",
   "tbl.tons": "톤",
   "tbl.mp": "보행/달리기/점프",
   "u.atlas": "아틀라스 AS7-D",

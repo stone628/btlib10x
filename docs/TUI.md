@@ -113,7 +113,7 @@ from script. All `data-*` options below also exist as JS options in camelCase.
 | List | `<div data-tui="list" data-selected="0">` | Like menu but with a `▸` cursor and a persistent selection. |
 | Menubar | `<nav data-tui="menubar"><div data-label="<u>F</u>ile">items…</div></nav>` | Opens menus as popups; ← → move across menus. `data-right` pushes a menu to the right. Fires `tui-select` `{menu, value}` on the nav. |
 | Tabs | `<div data-tui="tabs"><section data-tab="Armor">…</section></div>` | Tab labels sit in the top border; active one in reverse video. ← → on a focused tab. Fires `tui-tab`. |
-| Table | `<table data-tui="table">` with `thead th[data-width][data-align]` and `tbody` | Replaced by a box with `┬ ┼ ┴` joints. Or `TUI.table({ columns, rows })`. Row select by click or ↑ ↓; fires `tui-select` `{index, row}`. |
+| Table | `<table data-tui="table">` with `thead th[data-width][data-align]` and `tbody` | Replaced by a box with `┬ ┼ ┴` joints. Or `TUI.table({ columns, rows })`. Body cells merge with `td[colspan]` / `td[rowspan]` (or `{ text, colspan, rowspan, align }` in `rows`); joints and rules close up around them. `tr[data-rule]` draws a rule above that row, `table[data-rules="rows"]` (or `rules: "rows"`) between every row. Row select by click or ↑ ↓; fires `tui-select` `{index, row}`, with `row` the texts of the cells in it, merged ones included. |
 | Progress | `<span data-tui="progress" data-cols="30" data-value="0.42">` | `█` with eighth-cell partials (`▏…▉`) over a `░` track and a `%` label (`data-label="none"` hides). `data-style="ascii"`, `data-value="indeterminate"`, `data-tone`. Update with `TUI.progress(el, 0.6)`. |
 | Spinner | `<span data-tui="spinner" data-frames="◐◓◑◒">` | Any frame string. Static under reduced motion. |
 | Scrollbox | `<div data-tui="scroll" data-rows="10">` | Native scrolling with the browser scrollbars hidden. When content is taller than the box the right border becomes `▲ ░▄█▀░ ▼`, with a thumb that moves in half cells; when it is wider (e.g. `.tui-line` rows), the bottom border becomes a half-height bar `◂ ■■■ ▸` (thumb in accent, track dim). Glyphs come from the CSS vars `--tui-vbar` (default `"▲░█▼▀▄"`; the last two are the upper and lower half thumbs) and `--tui-hbar` (default `"◂▥■▸"`): start arrow, track, thumb, end arrow. Wheel, shift+wheel, thumb drag, arrow and track clicks. |
@@ -134,7 +134,7 @@ TUI.redraw(el)
 TUI.window(el, opts)
 TUI.dialog(opts)           // Promise<label | null>
 TUI.popupMenu(anchor, items, opts)  // Promise<{index} | {nav} | null>
-TUI.table({ columns: [{ label, width, align }], rows: [[...]] , border })
+TUI.table({ columns: [{ label, width, align }], rows: [[text | { text, colspan, rowspan, align }]], rules, border })
 TUI.progress(el, value)
 TUI.glyphs(el)             // the border set an element resolves to
 ```
