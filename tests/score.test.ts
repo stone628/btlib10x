@@ -41,7 +41,7 @@ function critStructure(unit: UnitState, name: string, n: number): void {
   let left = n;
   for (const loc of Object.keys(def.critSlots) as Location[]) {
     def.critSlots[loc].forEach((s, i) => {
-      if (left > 0 && s.kind === "structure" && s.name === name) {
+      if (left > 0 && s.kind === "structure" && s.type === name) {
         setSlotDestroyed(unit.critSlotsDestroyed, loc, i);
         left--;
       }

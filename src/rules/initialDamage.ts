@@ -200,7 +200,7 @@ export function resolveInitialDamage(
   const cockpit = def.critSlots.head.some(
     (slot, i) =>
       slot.kind === "structure" &&
-      slot.name === COCKPIT &&
+      slot.type === COCKPIT &&
       isSlotDestroyed(critSlotsDestroyed, "head", i),
   );
   if (cockpit) unplayable("cockpitDestroyed");

@@ -16,8 +16,11 @@
  *   - torso & arms (12 slots): 2D6 — first die selects the half
  *     (1-3 -> slots 1-6, 4-6 -> slots 7-12), second die the slot within
  *
- * Empty slots, soak (endo steel / CASE / ferro-fibrous) and already-destroyed
- * slots re-roll. If the source location has no crit-hittable slot remaining
+ * Empty slots, soak (endo steel / ferro-fibrous / CASE / TSM / stealth
+ * systems: the slots TW pp.124, 134-143 say cannot take a critical) and
+ * already-destroyed slots re-roll. Equipment the engine does not model yet
+ * (structure type `equipment`: ECM, probes, Artemis, MASC, ...) is a valid
+ * target: the hit destroys the slot with no further modelled effect (TW p.124). If the source location has no crit-hittable slot remaining
  * (either because every slot was previously critted or because there is
  * literally no equipment to hit), the determining roll transfers to the next
  * inward location per the standard damage-transfer diagram. Head and center
@@ -321,8 +324,10 @@ export type CriticalEffect =
       readonly slotIndex: number;
       readonly rolls: readonly number[];
       readonly transferred: boolean;
-      /** A name like "engine", "gyro", "heatSink", "doubleHeatSink", "shoulder", etc. */
+      /** The structure type: "engine", "gyro", "heatSink", "doubleHeatSink", "shoulder", "equipment", etc. */
       readonly name: string;
+      /** The slot's item name from the record sheet, when it carries one (e.g. "Guardian ECM Suite"). */
+      readonly label?: string;
     }
   | {
       /** Three engine crit slots destroyed — 'Mech is killed (TW p.125). */
@@ -388,7 +393,8 @@ export const JUMPJET = "jumpJet";
 
 /**
  * Is the given static slot capable of taking a critical hit (i.e. its
- * component is a weapon, ammo, or structure — not empty, not soak)?
+ * component is a weapon, ammo, or structure, unmodelled equipment included —
+ * not empty, not soak)?
  */
 function isCritHittableStatic(slot: ResolvedCritSlot): boolean {
   if (slot.kind === "empty") return false;
@@ -903,7 +909,7 @@ function applySlotHit(
     return;
   }
   // structure component
-  const name = slot.name;
+  const name = slot.type;
   if (name === COCKPIT) {
     // Cockpit crit kills the 'Mech (pilot killed) by destroying the slot
     // only (TW p.125). The head location's armor and structure pools stay
@@ -951,6 +957,7 @@ function applySlotHit(
     rolls: rolls.slice(),
     transferred,
     name,
+    ...(slot.name !== undefined && { label: slot.name }),
   });
 }
 
@@ -1042,7 +1049,7 @@ function intactNonLegJumpJets(
       const slot = layout[i];
       if (
         slot?.kind === "structure" &&
-        slot.name === JUMPJET &&
+        slot.type === JUMPJET &&
         !isSlotDestroyed(destroyed, loc, i)
       ) {
         n += 1;
@@ -1244,7 +1251,7 @@ function* iterateDestoyedStructures(
     for (let i = 0; i < layout.length; i++) {
       const slot = layout[i];
       if (slot?.kind === "structure" && (ld || isSlotDestroyed(destroyed, loc, i))) {
-        yield slot.name;
+        yield slot.type;
       }
     }
   }

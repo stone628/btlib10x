@@ -11,7 +11,9 @@
  *   - LOCATION — MTF body-part labels → internal location keys
  *   - LOCATIONS — canonical location key order
  *   - CRIT_SLOT_COUNTS — official per-location crit slot counts
- *   - STRUCTURE_TOKEN — crit-slot structure token → internal name
+ *   - STRUCTURE_TOKEN — crit-slot structure token → internal structure type
+ *   - UNMODELLED_EQUIPMENT / STEALTH_SYSTEM / INERT_EQUIPMENT — non-weapon
+ *     equipment tokens (hittable equipment, re-rolling stealth systems, union)
  *   - SOAK_TOKEN — crit-slot soak/armor-tech token → canonical soak name
  *   - ENGINE_CRIT_SLOTS — expected engine crit-slot counts (CT/LT/RT/total) per engine type
  *   - SOAK_CRIT_TOTALS — official soak-tech slot totals keyed by tech base
@@ -173,34 +175,46 @@ export const CODE = {
 };
 
 /**
- * Equipment with no engine representation (no catalog entry, no rules
- * effect). Weapons-block lines naming these are dropped; crit slots naming
- * them become inert `soak` slots (`equipment`) that occupy space but re-roll
- * on a critical hit. Keys are crit/weapon tokens, matched after stripping
- * facing/parenthetical suffixes.
+ * Equipment the engine does not model yet (no catalog entry, no rules
+ * effect), keyed by crit/weapon token (matched after stripping
+ * facing/parenthetical suffixes) → the item name shown on the record sheet.
+ * Crit slots naming these become `{kind:"structure", type:"equipment",
+ * name}`: they take critical hits like any other equipment (TW p.124), the
+ * hit simply has no modelled effect yet.
  */
-export const INERT_EQUIPMENT = new Set([
-  "ISGuardianECM",
-  "ISGuardianECMSuite",
-  "ISBeagleActiveProbe",
-  "BeagleActiveProbe",
-  "ISArtemisIV",
-  "ISMASC",
-  "Supercharger",
+export const UNMODELLED_EQUIPMENT = new Map([
+  ["ISGuardianECM", "Guardian ECM Suite"],
+  ["ISGuardianECMSuite", "Guardian ECM Suite"],
+  ["ISBeagleActiveProbe", "Beagle Active Probe"],
+  ["BeagleActiveProbe", "Beagle Active Probe"],
+  ["ISArtemisIV", "Artemis IV FCS"],
+  ["CLArtemisIV", "Artemis IV FCS"],
+  ["ISMASC", "MASC"],
+  ["CLMASC", "MASC"],
+  ["Supercharger", "Supercharger"],
+  ["ISCollapsibleCommandModule", "Collapsible Command Module"],
+  ["ISC3SlaveUnit", "C3 Slave Unit"],
+  ["ISC3MasterUnit", "C3 Master Computer"],
+  ["ISC3MasterComputer", "C3 Master Computer"],
+  ["C3 Master with TAG", "C3 Master with TAG"],
+  ["ISElectronicWarfareEquipment", "Electronic Warfare Equipment"],
+  ["ISLaserInsulator", "Laser Insulator"],
+  ["RemoteSensorDispenser", "Remote Sensor Dispenser"],
+]);
+
+/**
+ * Armor-spread signature systems (TO:AUE) whose slots, like TW stealth armor
+ * (TW p.142), are taken to re-roll on a critical hit. Crit slots naming these
+ * become `{kind:"soak", name:"stealthSystem"}`. Unverified against TO:AUE.
+ */
+export const STEALTH_SYSTEM = new Set([
   "Mek Null Signature System",
   "Chameleon Light Polarization Shield",
   "Chameleon Light Polarization Field",
-  "ISCollapsibleCommandModule",
-  "CLMASC",
-  "CLArtemisIV",
-  "ISC3SlaveUnit",
-  "ISC3MasterUnit",
-  "ISC3MasterComputer",
-  "C3 Master with TAG",
-  "ISElectronicWarfareEquipment",
-  "ISLaserInsulator",
-  "RemoteSensorDispenser",
 ]);
+
+/** Every token that is not a catalog weapon: weapons-block lines naming these are dropped. */
+export const INERT_EQUIPMENT = new Set([...UNMODELLED_EQUIPMENT.keys(), ...STEALTH_SYSTEM]);
 
 /**
  * Crit-slot ammo token strings → catalog weapon names. Subset of CODE

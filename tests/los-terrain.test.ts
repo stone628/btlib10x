@@ -101,7 +101,7 @@ describe("targeting computer (TW p.143, TOH-01)", () => {
   it("is lost when a targeting computer slot is destroyed", () => {
     const f = flags();
     const i = def.critSlots.rightTorso.findIndex(
-      (s) => s.kind === "structure" && s.name === "targetingComputer",
+      (s) => s.kind === "structure" && s.type === "targetingComputer",
     );
     setSlotDestroyed(f, "rightTorso", i);
     expect(targetingComputerModifier(def, damage, f, weaponDefFor({ weapon: "CL ER PPC" }))).toBe(

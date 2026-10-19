@@ -68,6 +68,12 @@ Mad Cat Prime, Masakari Prime, Wolverine WVR-6R).
 - **`running = ceil(walking * 1.5)`** (quick-start convention).
 - **Critical slot table per location** (head/legs = 6 slots, torso/arms = 12)
   is parsed and validated by `scripts/mtf-crit.mjs`.
+  Equipment with no engine model (`UNMODELLED_EQUIPMENT` in
+  `scripts/mtf-tables.mjs`: ECM, probes, Artemis, MASC, C3, command modules,
+  ...) becomes `{kind:"structure", type:"equipment", name:"Guardian ECM Suite"}`
+  and takes criticals; Null-Signature / Chameleon LPS (`STEALTH_SYSTEM`)
+  become soak `stealthSystem` and re-roll like stealth armor. Weapons-block
+  lines naming either are dropped.
 
 ## Scripts
 

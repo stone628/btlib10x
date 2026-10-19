@@ -1293,7 +1293,7 @@ export function formatCritEffect(eff: CriticalEffect): string {
       return i18n("res.critComponentDestroyed", {
         loc: SHORT_LOC[eff.location],
         slot: String(eff.slotIndex),
-        name: eff.name,
+        name: eff.label ?? eff.name,
       });
     case "engineDestroyed":
       return i18n("res.critEngineDestroyed", {

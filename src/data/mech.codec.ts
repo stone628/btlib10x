@@ -21,12 +21,13 @@ import { decodeRelaxed, encodeRelaxed } from "./relaxed-json";
  * Open vocabularies (chassis names, weapon names) are interned in the
  * catalog string table (line 0 of the JSONL file, a bare JSON string
  * array) and referenced on the wire as the numeric table index; the
- * manifest `n` and every weapon-name occurrence (`p[].w`, weapon/ammo
- * crit-slot `w`) use this form. Verbatim strings are rejected.
+ * manifest `n`, every weapon-name occurrence (`p[].w`, weapon/ammo
+ * crit-slot `w`) and a structure slot's item name (`m`) use this form.
+ * Verbatim strings are rejected.
  *
  * `WIRE_VERSION` gates the format; `decodeMechLine` rejects anything else.
  * Table order below is wire-stable: `CRIT_STRUCTURE_NAMES` /
- * `CRIT_SOAK_NAMES` are append-only once packed lines exist.
+ * `CRIT_SOAK_NAMES` are append-only once packed lines are published.
  */
 export const WIRE_VERSION = 1;
 
@@ -133,7 +134,8 @@ export function encodeMechDef(def: MechDef, strings: string[] = []): string {
         case "structure":
           return {
             k: KIND_IDS.structure,
-            n: (CRIT_STRUCTURE_NAMES as readonly string[]).indexOf(slot.name),
+            n: (CRIT_STRUCTURE_NAMES as readonly string[]).indexOf(slot.type),
+            ...(slot.name !== undefined && { m: internString(strings, slot.name) }),
           };
         case "soak":
           return { k: KIND_IDS.soak, n: (CRIT_SOAK_NAMES as readonly string[]).indexOf(slot.name) };
@@ -177,7 +179,7 @@ export function decodeMechLine(
     throw new Error("Invalid mech line: not JSON");
   }
   if (!isRecord(parsed) || parsed.v !== WIRE_VERSION) {
-    throw new Error("Invalid mech line: expected a version 1 wire object");
+    throw new Error(`Invalid mech line: expected a version ${WIRE_VERSION} wire object`);
   }
   const failUnless = (cond: boolean, msg: string): void => {
     if (!cond) fail(msg);
@@ -243,9 +245,15 @@ export function decodeMechLine(
             weapon: resolveStringRef(strings, slot.w, "ammo slot"),
           };
         case KIND_IDS.structure: {
-          const name = CRIT_STRUCTURE_NAMES[slot.n as number];
-          failUnless(typeof name === "string", "bad structure slot");
-          return { kind: "structure" as const, name };
+          const type = CRIT_STRUCTURE_NAMES[slot.n as number];
+          failUnless(typeof type === "string", "bad structure slot");
+          return {
+            kind: "structure" as const,
+            type,
+            ...(slot.m !== undefined && {
+              name: resolveStringRef(strings, slot.m, "structure slot name"),
+            }),
+          };
         }
         case KIND_IDS.soak: {
           const name = CRIT_SOAK_NAMES[slot.n as number];

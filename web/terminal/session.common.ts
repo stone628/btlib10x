@@ -651,6 +651,7 @@ const CRIT_COMPONENT_KEY: Readonly<Record<CritStructureName, MessageKey>> = {
   lowerLegActuator: "critChart.component.lowerLegActuator",
   footActuator: "critChart.component.footActuator",
   hip: "critChart.component.hip",
+  equipment: "critChart.component.equipment",
   targetingComputer: "critChart.component.targetingComputer",
 };
 
@@ -666,7 +667,7 @@ const CRIT_SOAK_KEY: Readonly<Record<CritSoakName, MessageKey>> = {
   case: "critChart.soak.case",
   caseII: "critChart.soak.caseII",
   tsm: "critChart.soak.tsm",
-  equipment: "critChart.soak.equipment",
+  stealthSystem: "critChart.soak.stealthSystem",
 };
 
 /** One slot line: dice number + component label, plus live markers. */
@@ -700,8 +701,9 @@ function critSlotText(
       );
     }
   } else {
-    const key = CRIT_COMPONENT_KEY[slot.name as CritStructureName];
-    body = key !== undefined ? i18n(key) : slot.name;
+    // The record-sheet item name wins (unmodelled equipment always has one).
+    const key = CRIT_COMPONENT_KEY[slot.type as CritStructureName];
+    body = slot.name ?? (key !== undefined ? i18n(key) : slot.type);
   }
   const line = ` ${dice} ${body}`;
   if (live !== null && live.critSlotsDestroyed[loc] !== undefined) {

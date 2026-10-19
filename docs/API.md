@@ -217,19 +217,26 @@ type CritSlot =
   | { kind: "empty" }                             // re-rolls during crit selection
   | { kind: "weapon"; weapon: string }
   | { kind: "ammo"; weapon: string }
-  | { kind: "structure"; name: CritStructureName }
-  | { kind: "soak"; name: CritSoakName };         // endoSteel / ferroFibrous / case / caseII / tsm
+  | { kind: "structure"; type: CritStructureName; name?: string } // name: record-sheet item name, required for "equipment"
+  | { kind: "soak"; name: CritSoakName };         // endoSteel / ferroFibrous / case / caseII / tsm / stealthSystem
 
 type CritSlots = Readonly<Record<Location, readonly CritSlot[]>>;
 ```
 
 Per-location slot counts (`CRIT_SLOT_COUNTS`): head/legs = 6, torso/arms = 12.
-Structure names (`CRIT_STRUCTURE_NAMES`): cockpit, sensors, lifeSupport,
+Structure types (`CRIT_STRUCTURE_NAMES`): cockpit, sensors, lifeSupport,
 engine, gyro, heatSink, doubleHeatSink, jumpJet, shoulder, upperArmActuator,
 lowerArmActuator, handActuator, upperLegActuator, lowerLegActuator,
-footActuator, targetingComputer, hip. Soak names (`CRIT_SOAK_NAMES`):
-endoSteel, ferroFibrous, case, caseII, tsm (`tsm` = Triple-Strength Myomer,
-exactly 6 slots on TSM designs, TW p.143).
+footActuator, hip, equipment, targetingComputer. `equipment` is gear the engine
+does not model yet (ECM, probes, Artemis, MASC, ...): it takes criticals
+(TW p.124) with no modelled effect, and its `name` says which item it is.
+Equipment that gains a model gets its own type after `equipment`
+(`targetingComputer` is the first). Soak names (`CRIT_SOAK_NAMES`, slots that
+re-roll a critical): endoSteel, ferroFibrous, case, caseII, tsm,
+stealthSystem (`tsm` = Triple-Strength Myomer, exactly 6 slots on TSM designs,
+TW p.143; `stealthSystem` = Null-Signature / Chameleon LPS, treated like stealth
+armor, TW p.142). Both lists are wire-ordered: the packed catalog stores
+indexes.
 
 The engine-facing resolution keeps front and rear armor as **separate pools**
 and derives internal structure:

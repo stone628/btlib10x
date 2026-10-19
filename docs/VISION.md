@@ -153,9 +153,15 @@ These are implementation choices, not rule changes.
   remaining armor, front and rear (TW p.122 step 5); only catastrophic paths
   mark critical slots destroyed, so salvage must check both. The catastrophic
   mark sets every non-empty slot, soak slots (endo steel, ferro-fibrous, CASE,
-  inert equipment) included, so the lost gear is on record for refit; empty
+  TSM, stealth systems) included, so the lost gear is on record for refit; empty
   slots hold nothing to destroy (TW p.124 rerolls them) and are never marked,
   so the mask round-trips as starting damage.
+- **Unmodelled equipment takes criticals.** ECM, probes, C3, Artemis, MASC
+  and other gear the engine does not simulate yet sit in `equipment`
+  structure slots named after the item. A critical destroys the slot as
+  TW p.124 requires, with no modelled effect until the item is simulated;
+  only the slots TW pp.134–143 say cannot take a critical (CASE, endo steel,
+  ferro-fibrous, stealth, TSM) re-roll.
 - **Clan implicit CASE counts as standard CASE** until a Clan ammo outcome
   needs the difference.
 - **Heat rolls use the same success convention** as every other avoid roll.

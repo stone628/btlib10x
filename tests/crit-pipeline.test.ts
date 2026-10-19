@@ -99,7 +99,7 @@ describe("CRIT-04: adjacent double heat sinks are separate sinks (TW p.125)", ()
     const def = mechDef("WHK-Prime")!;
     const groups = new Set<string>();
     for (const slot of def.critSlots.leftTorso) {
-      if (slot.kind === "structure" && slot.name === "doubleHeatSink") {
+      if (slot.kind === "structure" && slot.type === "doubleHeatSink") {
         groups.add(slot.group.join(","));
       }
     }

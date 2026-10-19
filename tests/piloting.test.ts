@@ -97,7 +97,7 @@ function structureSlots(
   const def = mechDefFor(unit);
   const out: number[] = [];
   def.critSlots[loc].forEach((slot: ResolvedCritSlot | undefined, i: number) => {
-    if (slot?.kind === "structure" && slot.name === name) out.push(i);
+    if (slot?.kind === "structure" && slot.type === name) out.push(i);
   });
   return out;
 }
@@ -1079,7 +1079,7 @@ describe("pilot damage", () => {
     const def = mechDefFor(hbk);
     let marked = false;
     def.critSlots.head.forEach((slot: ResolvedCritSlot | undefined, i: number) => {
-      if (slot?.kind === "structure" && slot.name === "lifeSupport") {
+      if (slot?.kind === "structure" && slot.type === "lifeSupport") {
         setSlotDestroyed(hbk.critSlotsDestroyed, "head", i);
         marked = true;
       }
@@ -1427,7 +1427,7 @@ describe("rollFallDirection", () => {
 
 function slotIndex(modelId: string, loc: Location, name: string): number {
   const layout = mechDef(modelId)!.critSlots[loc];
-  const i = layout.findIndex((s) => s.kind === "structure" && s.name === name);
+  const i = layout.findIndex((s) => s.kind === "structure" && s.type === name);
   if (i < 0) throw new Error(`no ${name} in ${modelId} ${loc}`);
   return i;
 }

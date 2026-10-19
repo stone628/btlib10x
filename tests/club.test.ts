@@ -241,7 +241,7 @@ describe("two-hand club rule", () => {
     recordSeveredLimbs(battle, battle.units.b!, ["leftLeg"]);
     const def = mechDefFor(battle.units.a!);
     const idx = def.critSlots.rightArm.findIndex(
-      (s) => s.kind === "structure" && s.name === "handActuator",
+      (s) => s.kind === "structure" && s.type === "handActuator",
     );
     setSlotDestroyed(battle.units.a!.critSlotsDestroyed, "rightArm", idx);
     expect(validatePickup(battle, "a").ok).toBe(false);
@@ -260,7 +260,7 @@ describe("two-hand club rule", () => {
     const battle = withTree();
     const def = mechDefFor(battle.units.a!);
     const idx = def.critSlots.rightArm.findIndex(
-      (s) => s.kind === "structure" && s.name === "shoulder",
+      (s) => s.kind === "structure" && s.type === "shoulder",
     );
     setSlotDestroyed(battle.units.a!.critSlotsDestroyed, "rightArm", idx);
     resolveAllAttacks(battle, NO_RNG, []);

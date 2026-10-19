@@ -44,43 +44,43 @@
     "centerTorso": [
       {
         "kind": "structure",
-        "name": "engine"
+        "type": "engine"
       },
       {
         "kind": "structure",
-        "name": "engine"
+        "type": "engine"
       },
       {
         "kind": "structure",
-        "name": "engine"
+        "type": "engine"
       },
       {
         "kind": "structure",
-        "name": "gyro"
+        "type": "gyro"
       },
       {
         "kind": "structure",
-        "name": "gyro"
+        "type": "gyro"
       },
       {
         "kind": "structure",
-        "name": "gyro"
+        "type": "gyro"
       },
       {
         "kind": "structure",
-        "name": "gyro"
+        "type": "gyro"
       },
       {
         "kind": "structure",
-        "name": "engine"
+        "type": "engine"
       },
       {
         "kind": "structure",
-        "name": "engine"
+        "type": "engine"
       },
       {
         "kind": "structure",
-        "name": "engine"
+        "type": "engine"
       },
       {
         "kind": "weapon",
@@ -94,15 +94,15 @@
     "leftTorso": [
       {
         "kind": "structure",
-        "name": "engine"
+        "type": "engine"
       },
       {
         "kind": "structure",
-        "name": "engine"
+        "type": "engine"
       },
       {
         "kind": "structure",
-        "name": "engine"
+        "type": "engine"
       },
       {
         "kind": "soak",
@@ -144,15 +144,15 @@
     "rightTorso": [
       {
         "kind": "structure",
-        "name": "engine"
+        "type": "engine"
       },
       {
         "kind": "structure",
-        "name": "engine"
+        "type": "engine"
       },
       {
         "kind": "structure",
-        "name": "engine"
+        "type": "engine"
       },
       {
         "kind": "weapon",
@@ -194,11 +194,11 @@
     "leftArm": [
       {
         "kind": "structure",
-        "name": "shoulder"
+        "type": "shoulder"
       },
       {
         "kind": "structure",
-        "name": "upperArmActuator"
+        "type": "upperArmActuator"
       },
       {
         "kind": "weapon",
@@ -242,11 +242,11 @@
     "rightArm": [
       {
         "kind": "structure",
-        "name": "shoulder"
+        "type": "shoulder"
       },
       {
         "kind": "structure",
-        "name": "upperArmActuator"
+        "type": "upperArmActuator"
       },
       {
         "kind": "weapon",
@@ -290,78 +290,78 @@
     "leftLeg": [
       {
         "kind": "structure",
-        "name": "hip"
+        "type": "hip"
       },
       {
         "kind": "structure",
-        "name": "upperLegActuator"
+        "type": "upperLegActuator"
       },
       {
         "kind": "structure",
-        "name": "lowerLegActuator"
+        "type": "lowerLegActuator"
       },
       {
         "kind": "structure",
-        "name": "footActuator"
+        "type": "footActuator"
       },
       {
         "kind": "structure",
-        "name": "jumpJet"
+        "type": "jumpJet"
       },
       {
         "kind": "structure",
-        "name": "jumpJet"
+        "type": "jumpJet"
       }
     ],
     "rightLeg": [
       {
         "kind": "structure",
-        "name": "hip"
+        "type": "hip"
       },
       {
         "kind": "structure",
-        "name": "upperLegActuator"
+        "type": "upperLegActuator"
       },
       {
         "kind": "structure",
-        "name": "lowerLegActuator"
+        "type": "lowerLegActuator"
       },
       {
         "kind": "structure",
-        "name": "footActuator"
+        "type": "footActuator"
       },
       {
         "kind": "structure",
-        "name": "jumpJet"
+        "type": "jumpJet"
       },
       {
         "kind": "structure",
-        "name": "jumpJet"
+        "type": "jumpJet"
       }
     ],
     "head": [
       {
         "kind": "structure",
-        "name": "lifeSupport"
+        "type": "lifeSupport"
       },
       {
         "kind": "structure",
-        "name": "sensors"
+        "type": "sensors"
       },
       {
         "kind": "structure",
-        "name": "cockpit"
+        "type": "cockpit"
       },
       {
         "kind": "empty"
       },
       {
         "kind": "structure",
-        "name": "sensors"
+        "type": "sensors"
       },
       {
         "kind": "structure",
-        "name": "lifeSupport"
+        "type": "lifeSupport"
       }
     ]
   },

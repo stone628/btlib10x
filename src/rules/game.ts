@@ -3724,7 +3724,7 @@ function newlyDestroyedStructures(
       const slot = layout[i];
       if (slot?.kind !== "structure") continue;
       if (isSlotDestroyed(now, loc, i) && !isSlotDestroyed(before, loc, i)) {
-        out.push({ location: loc, name: slot.name });
+        out.push({ location: loc, name: slot.type });
       }
     }
   }

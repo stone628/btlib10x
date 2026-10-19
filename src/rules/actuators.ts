@@ -83,7 +83,7 @@ export function absentArmActuators(
   arm: ArmLocation,
 ): { upper: number; lower: number; hand: number } {
   const names = new Set<string>();
-  for (const s of def.critSlots[arm]) if (s.kind === "structure") names.add(s.name);
+  for (const s of def.critSlots[arm]) if (s.kind === "structure") names.add(s.type);
   return {
     upper: names.has("upperArmActuator") ? 0 : 1,
     lower: names.has("lowerArmActuator") ? 0 : 1,
@@ -125,7 +125,7 @@ export function targetingComputerModifier(
     const slots = def.critSlots[loc];
     for (let i = 0; i < slots.length; i++) {
       const slot = slots[i];
-      if (slot?.kind !== "structure" || slot.name !== "targetingComputer") continue;
+      if (slot?.kind !== "structure" || slot.type !== "targetingComputer") continue;
       fitted = true;
       if (isSlotDestroyed(destroyed, loc, i) || isUnitLocationDestroyed(damage, loc)) return 0;
     }

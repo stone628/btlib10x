@@ -27,7 +27,7 @@ function freshDamage(def = mechDef("TBR-Prime")!): UnitDamageState {
 function destroyNamed(def: ResolvedMechDef, flags: CritMask, loc: Location, name: string): void {
   const layout = def.critSlots[loc];
   layout.forEach((slot, i) => {
-    if (slot.kind === "structure" && slot.name === name) setSlotDestroyed(flags, loc, i);
+    if (slot.kind === "structure" && slot.type === name) setSlotDestroyed(flags, loc, i);
   });
 }
 
@@ -136,7 +136,7 @@ describe("arm actuator weapon modifiers (TW p.125)", () => {
     const attacker = state.units.a!;
     const atkDef = mechDef("TBR-Prime")!;
     atkDef.critSlots.leftArm.forEach((slot, i) => {
-      if (slot.kind === "structure" && slot.name === "shoulder") {
+      if (slot.kind === "structure" && slot.type === "shoulder") {
         setSlotDestroyed(attacker.critSlotsDestroyed, "leftArm", i);
       }
     });

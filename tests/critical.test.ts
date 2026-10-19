@@ -835,7 +835,7 @@ describe("effectiveMovement", () => {
     ] as Location[]) {
       for (let i = 0; i < layout[loc].length; i++) {
         const s = layout[loc][i];
-        if (s && s.kind === "structure" && s.name === "jumpJet") {
+        if (s && s.kind === "structure" && s.type === "jumpJet") {
           jetIndices.push({ loc, idx: i });
           break;
         }
@@ -888,7 +888,7 @@ describe("DHS grouping", () => {
     const dhsIndices: number[] = [];
     for (let i = 0; i < lt.length; i++) {
       const s = lt[i];
-      if (s && s.kind === "structure" && s.name === "doubleHeatSink") dhsIndices.push(i);
+      if (s && s.kind === "structure" && s.type === "doubleHeatSink") dhsIndices.push(i);
     }
     expect(dhsIndices.length).toBe(3);
     expect(lt[dhsIndices[0]!]!.kind).toBe("structure");
@@ -1294,7 +1294,7 @@ describe("blow-off and cockpit kill: salvage-friendly slot preservation", () => 
 
     // Drive a hit slot that's the cockpit. HBK-4G head slot 2 = cockpit.
     const headLayout = def.critSlots.head;
-    const cockpitSlot = headLayout.findIndex((s) => s.kind === "structure" && s.name === "cockpit");
+    const cockpitSlot = headLayout.findIndex((s) => s.kind === "structure" && s.type === "cockpit");
     expect(cockpitSlot).toBeGreaterThanOrEqual(0);
 
     // Det 8 ("1 hit"); head uses 1D6 slot pick. feeding (cockpitSlot + 1)
@@ -1447,7 +1447,7 @@ describe("ammo-explosion casualty: catastrophic mark", () => {
     }
 
     const totalEngineSlots = def.critSlots.centerTorso.filter(
-      (s) => s.kind === "structure" && s.name === "engine",
+      (s) => s.kind === "structure" && s.type === "engine",
     ).length;
     expect(countDestroyedEngine(def, damage, destroyed)).toBe(totalEngineSlots);
     // CT rear pool wiped alongside front + IS.
@@ -1746,7 +1746,7 @@ describe("audit fixes: critical-hit pipeline", () => {
     const whk = mechDef("WHK-Prime")!;
     const group = whk.critSlots.leftLeg
       .map((s, i) => ({ s, i }))
-      .filter(({ s }) => s.kind === "structure" && s.name === "doubleHeatSink");
+      .filter(({ s }) => s.kind === "structure" && s.type === "doubleHeatSink");
     expect(group.length).toBeGreaterThanOrEqual(2);
     const base = {
       model: whk.model,

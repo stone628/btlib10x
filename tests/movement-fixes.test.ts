@@ -244,7 +244,7 @@ describe("destroyed gyro while prone (MOV-08)", () => {
     const a = requireUnit(state, "a");
     const layout = mechDef("HBK-4G")!.critSlots.centerTorso;
     layout.forEach((slot, i) => {
-      if (slot.kind === "structure" && slot.name === "gyro")
+      if (slot.kind === "structure" && slot.type === "gyro")
         setSlotDestroyed(a.critSlotsDestroyed, "centerTorso", i);
     });
     expect(() =>

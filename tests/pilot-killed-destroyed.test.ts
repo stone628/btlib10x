@@ -113,7 +113,7 @@ describe("pilot killed while the 'Mech is destroyed", () => {
     expect(enf.removed).toBe("pilotKilled");
     const def = mechDefFor(enf);
     const engine = def.critSlots.centerTorso
-      .map((s, i) => (s.kind === "structure" && s.name === "engine" ? i : -1))
+      .map((s, i) => (s.kind === "structure" && s.type === "engine" ? i : -1))
       .filter((i) => i >= 0)
       .slice(0, 3);
     for (const i of engine) setSlotDestroyed(enf.critSlotsDestroyed, "centerTorso", i);

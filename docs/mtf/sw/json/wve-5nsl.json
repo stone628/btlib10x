@@ -62,43 +62,43 @@
     "centerTorso": [
       {
         "kind": "structure",
-        "name": "engine"
+        "type": "engine"
       },
       {
         "kind": "structure",
-        "name": "engine"
+        "type": "engine"
       },
       {
         "kind": "structure",
-        "name": "engine"
+        "type": "engine"
       },
       {
         "kind": "structure",
-        "name": "gyro"
+        "type": "gyro"
       },
       {
         "kind": "structure",
-        "name": "gyro"
+        "type": "gyro"
       },
       {
         "kind": "structure",
-        "name": "gyro"
+        "type": "gyro"
       },
       {
         "kind": "structure",
-        "name": "gyro"
+        "type": "gyro"
       },
       {
         "kind": "structure",
-        "name": "engine"
+        "type": "engine"
       },
       {
         "kind": "structure",
-        "name": "engine"
+        "type": "engine"
       },
       {
         "kind": "structure",
-        "name": "engine"
+        "type": "engine"
       },
       {
         "kind": "weapon",
@@ -112,7 +112,7 @@
     "leftTorso": [
       {
         "kind": "structure",
-        "name": "jumpJet"
+        "type": "jumpJet"
       },
       {
         "kind": "ammo",
@@ -136,33 +136,33 @@
       },
       {
         "kind": "structure",
-        "name": "doubleHeatSink"
+        "type": "doubleHeatSink"
       },
       {
         "kind": "structure",
-        "name": "doubleHeatSink"
+        "type": "doubleHeatSink"
       },
       {
         "kind": "structure",
-        "name": "doubleHeatSink"
+        "type": "doubleHeatSink"
       },
       {
         "kind": "structure",
-        "name": "doubleHeatSink"
+        "type": "doubleHeatSink"
       },
       {
         "kind": "structure",
-        "name": "doubleHeatSink"
+        "type": "doubleHeatSink"
       },
       {
         "kind": "structure",
-        "name": "doubleHeatSink"
+        "type": "doubleHeatSink"
       }
     ],
     "rightTorso": [
       {
         "kind": "structure",
-        "name": "jumpJet"
+        "type": "jumpJet"
       },
       {
         "kind": "weapon",
@@ -198,33 +198,33 @@
       },
       {
         "kind": "structure",
-        "name": "doubleHeatSink"
+        "type": "doubleHeatSink"
       },
       {
         "kind": "structure",
-        "name": "doubleHeatSink"
+        "type": "doubleHeatSink"
       },
       {
         "kind": "structure",
-        "name": "doubleHeatSink"
+        "type": "doubleHeatSink"
       }
     ],
     "leftArm": [
       {
         "kind": "structure",
-        "name": "shoulder"
+        "type": "shoulder"
       },
       {
         "kind": "structure",
-        "name": "upperArmActuator"
+        "type": "upperArmActuator"
       },
       {
         "kind": "structure",
-        "name": "lowerArmActuator"
+        "type": "lowerArmActuator"
       },
       {
         "kind": "structure",
-        "name": "handActuator"
+        "type": "handActuator"
       },
       {
         "kind": "soak",
@@ -257,19 +257,19 @@
     "rightArm": [
       {
         "kind": "structure",
-        "name": "shoulder"
+        "type": "shoulder"
       },
       {
         "kind": "structure",
-        "name": "upperArmActuator"
+        "type": "upperArmActuator"
       },
       {
         "kind": "structure",
-        "name": "lowerArmActuator"
+        "type": "lowerArmActuator"
       },
       {
         "kind": "structure",
-        "name": "handActuator"
+        "type": "handActuator"
       },
       {
         "kind": "weapon",
@@ -306,23 +306,23 @@
     "leftLeg": [
       {
         "kind": "structure",
-        "name": "hip"
+        "type": "hip"
       },
       {
         "kind": "structure",
-        "name": "upperLegActuator"
+        "type": "upperLegActuator"
       },
       {
         "kind": "structure",
-        "name": "lowerLegActuator"
+        "type": "lowerLegActuator"
       },
       {
         "kind": "structure",
-        "name": "footActuator"
+        "type": "footActuator"
       },
       {
         "kind": "structure",
-        "name": "jumpJet"
+        "type": "jumpJet"
       },
       {
         "kind": "soak",
@@ -332,23 +332,23 @@
     "rightLeg": [
       {
         "kind": "structure",
-        "name": "hip"
+        "type": "hip"
       },
       {
         "kind": "structure",
-        "name": "upperLegActuator"
+        "type": "upperLegActuator"
       },
       {
         "kind": "structure",
-        "name": "lowerLegActuator"
+        "type": "lowerLegActuator"
       },
       {
         "kind": "structure",
-        "name": "footActuator"
+        "type": "footActuator"
       },
       {
         "kind": "structure",
-        "name": "jumpJet"
+        "type": "jumpJet"
       },
       {
         "kind": "soak",
@@ -358,15 +358,15 @@
     "head": [
       {
         "kind": "structure",
-        "name": "lifeSupport"
+        "type": "lifeSupport"
       },
       {
         "kind": "structure",
-        "name": "sensors"
+        "type": "sensors"
       },
       {
         "kind": "structure",
-        "name": "cockpit"
+        "type": "cockpit"
       },
       {
         "kind": "weapon",
@@ -374,11 +374,11 @@
       },
       {
         "kind": "structure",
-        "name": "sensors"
+        "type": "sensors"
       },
       {
         "kind": "structure",
-        "name": "lifeSupport"
+        "type": "lifeSupport"
       }
     ]
   },

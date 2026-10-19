@@ -129,26 +129,26 @@ function salvageableItems(unit: UnitState): SalvageItem[] {
     let computer = false;
     for (let i = 0; i < layout.length; i++) {
       const slot = layout[i];
-      if (slot?.kind !== "structure" || !SALVAGE_EQUIPMENT.has(slot.name)) continue;
-      if (slot.name === "doubleHeatSink") {
+      if (slot?.kind !== "structure" || !SALVAGE_EQUIPMENT.has(slot.type)) continue;
+      if (slot.type === "doubleHeatSink") {
         // One device per group (`heat.ts`): any destroyed slot loses it.
         const group = slot.group;
         if (group[0] !== i + 1) continue;
         if (group.some((j) => isSlotDestroyed(unit.critSlotsDestroyed, location, j - 1))) continue;
-        add("equipment", slot.name, location, Math.floor(group.length / width));
-      } else if (slot.name === "targetingComputer") {
+        add("equipment", slot.type, location, Math.floor(group.length / width));
+      } else if (slot.type === "targetingComputer") {
         // One computer per location, lost to any hit on its slots.
         if (computer) continue;
         computer = true;
         const hit = layout.some(
           (other, j) =>
             other.kind === "structure" &&
-            other.name === "targetingComputer" &&
+            other.type === "targetingComputer" &&
             isSlotDestroyed(unit.critSlotsDestroyed, location, j),
         );
-        if (!hit) add("equipment", slot.name, location, 1);
+        if (!hit) add("equipment", slot.type, location, 1);
       } else if (!isSlotDestroyed(unit.critSlotsDestroyed, location, i)) {
-        add("equipment", slot.name, location, 1);
+        add("equipment", slot.type, location, 1);
       }
     }
   }
@@ -174,7 +174,9 @@ export function salvageReport(state: BattleState): SalvageEntry[] {
             ? slot.weapon
             : slot.kind === "ammo"
               ? `ammo:${slot.weapon}`
-              : slot.name;
+              : slot.kind === "structure"
+                ? (slot.name ?? slot.type)
+                : slot.name;
         slots.push({ location, slot: i + 1, name });
       }
     }

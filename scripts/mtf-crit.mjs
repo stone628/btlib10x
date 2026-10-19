@@ -17,11 +17,12 @@ import {
   catalogWeapon,
   DHS_CRIT_SLOTS,
   ENGINE_CRIT_SLOTS,
-  INERT_EQUIPMENT,
   LOCATIONS,
   SOAK_CRIT_TOTALS,
   SOAK_TOKEN,
+  STEALTH_SYSTEM,
   STRUCTURE_TOKEN,
+  UNMODELLED_EQUIPMENT,
 } from "./mtf-tables.mjs";
 
 export { CRIT_SLOT_COUNTS, LOCATIONS };
@@ -138,18 +139,22 @@ function classifyCritLine(raw, errors, fileLabel, clan) {
     return { ok: false };
   }
   if (STRUCTURE_TOKEN[t]) {
-    return { ok: true, slot: { kind: "structure", name: STRUCTURE_TOKEN[t] } };
+    return { ok: true, slot: { kind: "structure", type: STRUCTURE_TOKEN[t] } };
   }
   if (SOAK_TOKEN[t]) {
     return { ok: true, slot: { kind: "soak", name: SOAK_TOKEN[t] } };
   }
   const stripped = normalizeCritWeaponToken(t);
   const base = baseToken(t);
-  if (INERT_EQUIPMENT.has(t) || INERT_EQUIPMENT.has(base)) {
-    return { ok: true, slot: { kind: "soak", name: "equipment" } };
+  const equipment = UNMODELLED_EQUIPMENT.get(t) ?? UNMODELLED_EQUIPMENT.get(base);
+  if (equipment !== undefined) {
+    return { ok: true, slot: { kind: "structure", type: "equipment", name: equipment } };
+  }
+  if (STEALTH_SYSTEM.has(t) || STEALTH_SYSTEM.has(base)) {
+    return { ok: true, slot: { kind: "soak", name: "stealthSystem" } };
   }
   if (STRUCTURE_TOKEN[base]) {
-    return { ok: true, slot: { kind: "structure", name: STRUCTURE_TOKEN[base] } };
+    return { ok: true, slot: { kind: "structure", type: STRUCTURE_TOKEN[base] } };
   }
   const legacy = CODE[t] ?? CODE[base] ?? CODE[stripped.name] ?? null;
   const name = clan
@@ -275,7 +280,7 @@ export function validateCritConstruction(slots, meta, errors) {
 
   for (const loc of LOCATIONS) {
     for (const slot of slots[loc] ?? []) {
-      if (slot.kind === "structure" && slot.name === "engine" && loc in engine) {
+      if (slot.kind === "structure" && slot.type === "engine" && loc in engine) {
         engine[loc] += 1;
         engineTotal += 1;
       } else if (slot.kind === "soak") {
@@ -371,7 +376,7 @@ export function validateHeatSinks(slots, meta, errors) {
   for (const loc of LOCATIONS) {
     let run = 0;
     for (const slot of slots[loc] ?? []) {
-      if (slot.kind === "structure" && slot.name === "doubleHeatSink") {
+      if (slot.kind === "structure" && slot.type === "doubleHeatSink") {
         run += 1;
         if (type === "single") mixed = true;
         continue;
@@ -381,7 +386,7 @@ export function validateHeatSinks(slots, meta, errors) {
       }
       external += Math.floor(run / width);
       run = 0;
-      if (slot.kind === "structure" && slot.name === "heatSink") {
+      if (slot.kind === "structure" && slot.type === "heatSink") {
         external += 1;
         if (type === "double") mixed = true;
       }

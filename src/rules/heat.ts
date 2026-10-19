@@ -157,9 +157,9 @@ function externalSinksIn(
   for (let i = 0; i < layout.length; i++) {
     const slot = layout[i];
     if (slot?.kind !== "structure") continue;
-    if (slot.name === "heatSink") {
+    if (slot.type === "heatSink") {
       if (!isSlotDestroyed(critSlotsDestroyed, loc, i)) external += 1;
-    } else if (slot.name === "doubleHeatSink") {
+    } else if (slot.type === "doubleHeatSink") {
       // Count a DHS device once (via its first slot); the whole group is
       // destroyed together by a single critical hit.
       const group = slot.group;

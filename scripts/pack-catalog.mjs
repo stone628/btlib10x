@@ -45,7 +45,7 @@ const excluded = new Set(
 
 // Compact-wire tables: mirror of the TS codecs (plus CRIT_*_NAMES order in
 // src/data/mech.schema.ts and TERRAIN_TYPES order in src/core/types.ts, both
-// wire-stable and append-only). Covered by the decode-every-line round-trip
+// wire-stable and append-only once published). Covered by the decode-every-line round-trip
 // in tests/catalog.test.ts.
 const LOC_CODES = {
   head: "h",
@@ -70,6 +70,8 @@ const LOCATIONS = [
   "rightLeg",
   "leftLeg",
 ];
+/** Mirror of `WIRE_VERSION` in src/data/mech.codec.ts. */
+const MECH_WIRE_VERSION = 1;
 const KIND_IDS = { empty: 0, weapon: 1, ammo: 2, structure: 3, soak: 4 };
 const STRUCTURE_NAMES = [
   "cockpit",
@@ -87,10 +89,11 @@ const STRUCTURE_NAMES = [
   "upperLegActuator",
   "lowerLegActuator",
   "footActuator",
-  "targetingComputer",
   "hip",
+  "equipment",
+  "targetingComputer",
 ];
-const SOAK_NAMES = ["endoSteel", "ferroFibrous", "case", "caseII", "tsm", "equipment"];
+const SOAK_NAMES = ["endoSteel", "ferroFibrous", "case", "caseII", "tsm", "stealthSystem"];
 const MYOMER_IDS = { Standard: 1, "Triple Strength Myomer": 2 };
 const TERRAIN_TYPES = [
   "clear",
@@ -175,7 +178,11 @@ function encodeMechDef(def) {
         case "ammo":
           return { k: KIND_IDS.ammo, w: intern(slot.weapon) };
         case "structure":
-          return { k: KIND_IDS.structure, n: nameIndex(STRUCTURE_NAMES, slot.name) };
+          return {
+            k: KIND_IDS.structure,
+            n: nameIndex(STRUCTURE_NAMES, slot.type),
+            ...(slot.name !== undefined && { m: intern(slot.name) }),
+          };
         case "soak":
           return { k: KIND_IDS.soak, n: nameIndex(SOAK_NAMES, slot.name) };
         default:
@@ -184,7 +191,7 @@ function encodeMechDef(def) {
     });
   }
   return encodeRelaxed({
-    v: 1,
+    v: MECH_WIRE_VERSION,
     w: def.walking,
     r: def.running,
     j: def.jumping,

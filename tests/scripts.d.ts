@@ -11,7 +11,7 @@ declare module "*/mtf-crit.mjs" {
       | { kind: "empty" }
       | { kind: "weapon"; weapon: string }
       | { kind: "ammo"; weapon: string }
-      | { kind: "structure"; name: string }
+      | { kind: "structure"; type: string; name?: string }
       | { kind: "soak"; name: string }
     >
   >;

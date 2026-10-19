@@ -12,7 +12,7 @@ type Slot =
   | { kind: "empty" }
   | { kind: "weapon"; weapon: string }
   | { kind: "ammo"; weapon: string }
-  | { kind: "structure"; name: string }
+  | { kind: "structure"; type: string; name?: string }
   | { kind: "soak"; name: string };
 type Slots = Record<string, Slot[]>;
 
@@ -35,7 +35,7 @@ function push(s: Slots, loc: string, e: Slot): void {
 }
 
 function engine(s: Slots, loc: string, n: number): void {
-  for (let i = 0; i < n; i++) push(s, loc, { kind: "structure", name: "engine" });
+  for (let i = 0; i < n; i++) push(s, loc, { kind: "structure", type: "engine" });
 }
 
 function soak(s: Slots, loc: string, name: string, n: number): void {
@@ -357,7 +357,7 @@ describe("parseCritSlots: catalog token aliases", () => {
   });
 
   it("maps Improved Jump Jet spellings to the jump-jet structure slot", () => {
-    expect(classify("Improved Jump Jet").slot).toEqual({ kind: "structure", name: "jumpJet" });
+    expect(classify("Improved Jump Jet").slot).toEqual({ kind: "structure", type: "jumpJet" });
   });
 });
 

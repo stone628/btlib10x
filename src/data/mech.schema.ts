@@ -46,24 +46,29 @@ const REAR_ARMOR_KEYS: readonly RearArmorKey[] = [
  *   - weapon / ammo: tied to a catalog weapon (the linked `weaponIndex` is
  *     derived by `resolveMechDef` by matching `(location, weapon)` occurrence
  *     order against the `weapons` array).
- *   - structure: a fixed component from the official crit vocabulary
- *     (cockpit, sensors, lifeSupport, engine, gyro, heatSink, doubleHeatSink,
- *     jumpJet, shoulder, upperArmActuator, lowerArmActuator, handActuator,
- *     upperLegActuator, lowerLegActuator, footActuator, hip).
+ *   - structure: a component that takes critical hits. `type` is its kind
+ *     from the crit vocabulary (`CRIT_STRUCTURE_NAMES`: cockpit, engine, gyro,
+ *     actuators, heat sinks, ... and `equipment`, a catch-all for gear the
+ *     engine does not model yet, e.g. ECM or MASC). `name` is the actual item
+ *     name from the record sheet (e.g. "Guardian ECM Suite"); required for
+ *     `equipment`, optional otherwise. A hit on `equipment` is recorded with
+ *     no modelled effect (TW p.124).
  *   - soak: occupies a slot but cannot take a critical hit (endo steel, CASE,
- *     ferro-fibrous, etc.) — the slot re-rolls during selection. `name` names
- *     the specific armor-tech component occupying the slot (`equipment` is an
- *     inert catch-all for gear the engine does not model, e.g. ECM or MASC).
+ *     ferro-fibrous, TSM, stealth systems; TW pp.124, 134-143) — the slot
+ *     re-rolls during selection. `name` names the specific component.
  */
 export type CritSlot =
   | { readonly kind: "empty" }
   | { readonly kind: "weapon"; readonly weapon: string; readonly rearFacing?: boolean }
   | { readonly kind: "ammo"; readonly weapon: string }
-  | { readonly kind: "structure"; readonly name: string }
+  | { readonly kind: "structure"; readonly type: string; readonly name?: string }
   | { readonly kind: "soak"; readonly name: CritSoakName };
 
-/** All structure component names recognized by the crit table.
- * Order is wire-stable (indexes are stored in packed JSONL lines) — append only. */
+/** All structure component types recognized by the crit table.
+ * `equipment` is gear the engine does not model yet; equipment that gains a
+ * model gets its own type after it (`targetingComputer` first).
+ * Order is wire-stable (indexes are stored in packed JSONL lines): append
+ * only once packs are published. */
 export const CRIT_STRUCTURE_NAMES = [
   "cockpit",
   "sensors",
@@ -80,21 +85,25 @@ export const CRIT_STRUCTURE_NAMES = [
   "upperLegActuator",
   "lowerLegActuator",
   "footActuator",
-  "targetingComputer",
   "hip",
+  "equipment",
+  "targetingComputer",
 ] as const;
 
 export type CritStructureName = (typeof CRIT_STRUCTURE_NAMES)[number];
 
-/** All soak (armor-tech) component names recognized by the crit table.
- * Order is wire-stable (indexes are stored in packed JSONL lines) — append only. */
+/** All soak component names recognized by the crit table: slots that cannot
+ * take a critical and re-roll (TW pp.124, 134-143). `stealthSystem` covers
+ * Null-Signature / Chameleon LPS, treated like stealth armor (TW p.142).
+ * Order is wire-stable (indexes are stored in packed JSONL lines): append
+ * only once packs are published. */
 export const CRIT_SOAK_NAMES = [
   "endoSteel",
   "ferroFibrous",
   "case",
   "caseII",
   "tsm",
-  "equipment",
+  "stealthSystem",
 ] as const;
 
 export type CritSoakName = (typeof CRIT_SOAK_NAMES)[number];
@@ -143,7 +152,9 @@ export interface ResolvedCritAmmoSlot extends WeaponNameHolder {
 }
 export interface ResolvedCritStructure {
   readonly kind: "structure";
-  readonly name: string;
+  readonly type: string;
+  /** Actual item name from the record sheet, when the source gives one. */
+  readonly name?: string;
   /** Sibling slot index (1-based within the same location) of another slot that
    *  belongs to the same multi-slot component (e.g. double heat sink). For a
    *  single-slot component or the first slot of a multi-slot group, this is
@@ -496,7 +507,12 @@ function resolveLocationCrits(
     | { readonly kind: "empty" }
     | { readonly kind: "weapon"; readonly weapon: string; readonly weaponIndex: number }
     | { readonly kind: "ammo"; readonly weapon: string; readonly weaponIndex: number }
-    | { readonly kind: "structure"; readonly name: string; readonly group?: readonly number[] }
+    | {
+        readonly kind: "structure";
+        readonly type: string;
+        readonly name?: string;
+        readonly group?: readonly number[];
+      }
     | { readonly kind: "soak"; readonly name: CritSoakName };
   const out: Intermediate[] = [];
   for (const slot of rawSlots) {
@@ -507,7 +523,11 @@ function resolveLocationCrits(
     } else if (slot.kind === "ammo") {
       out.push({ kind: "ammo", weapon: slot.weapon, weaponIndex: nextAmmo(slot.weapon) });
     } else if (slot.kind === "structure") {
-      out.push({ kind: "structure", name: slot.name });
+      out.push({
+        kind: "structure",
+        type: slot.type,
+        ...(slot.name !== undefined && { name: slot.name }),
+      });
     } else {
       out.push({ kind: "soak", name: slot.name });
     }
@@ -524,14 +544,14 @@ function resolveLocationCrits(
     for (let j = start; j < end; j++) {
       const cur = out[j];
       if (cur && isStructure(cur)) {
-        out[j] = { kind: "structure", name: cur.name, group: runIndices };
+        out[j] = { ...cur, group: runIndices };
       }
     }
   };
   let runStart = -1;
   for (let i = 0; i <= out.length; i++) {
     const s = i < out.length ? out[i] : undefined;
-    const isDhs = s !== undefined && isStructure(s) && s.name === "doubleHeatSink";
+    const isDhs = s !== undefined && isStructure(s) && s.type === "doubleHeatSink";
     if (isDhs && runStart < 0) runStart = i;
     else if (!isDhs && runStart >= 0) {
       // Adjacent double heat sinks are separate sinks (TW p.125): split the
@@ -544,7 +564,7 @@ function resolveLocationCrits(
   for (let i = 0; i < out.length; i++) {
     const s = out[i];
     if (s && isStructure(s) && s.group === undefined) {
-      out[i] = { kind: "structure", name: s.name, group: [i + 1] };
+      out[i] = { ...s, group: [i + 1] };
     }
   }
 
@@ -603,7 +623,7 @@ export function validateMechDef(def: MechDef): MechDef {
   const jumpJets = LOCATIONS.reduce(
     (n, loc) =>
       n +
-      (def.critSlots[loc] ?? []).filter((s) => s.kind === "structure" && s.name === "jumpJet")
+      (def.critSlots[loc] ?? []).filter((s) => s.kind === "structure" && s.type === "jumpJet")
         .length,
     0,
   );
@@ -696,10 +716,16 @@ export function validateMechDef(def: MechDef): MechDef {
           break;
         }
         case "structure": {
-          if (!(CRIT_STRUCTURE_NAMES as readonly string[]).includes(slot.name)) {
+          if (!(CRIT_STRUCTURE_NAMES as readonly string[]).includes(slot.type)) {
             errors.push(
-              `critSlots.${loc}[${i}].name ${JSON.stringify(slot.name)} is not a known structure component`,
+              `critSlots.${loc}[${i}].type ${JSON.stringify(slot.type)} is not a known structure component`,
             );
+          }
+          if (slot.name !== undefined && (typeof slot.name !== "string" || slot.name === "")) {
+            errors.push(`critSlots.${loc}[${i}].name must be a non-empty string`);
+          }
+          if (slot.type === "equipment" && slot.name === undefined) {
+            errors.push(`critSlots.${loc}[${i}] is equipment but has no name`);
           }
           break;
         }
@@ -730,7 +756,7 @@ export function validateMechDef(def: MechDef): MechDef {
       const arr = def.critSlots[loc];
       let run = 0;
       for (const slot of arr) {
-        if (slot.kind === "structure" && slot.name === "doubleHeatSink") {
+        if (slot.kind === "structure" && slot.type === "doubleHeatSink") {
           run += 1;
           if (heatsink.type === "single") mixed = true;
           continue;
@@ -742,7 +768,7 @@ export function validateMechDef(def: MechDef): MechDef {
         }
         external += Math.floor(run / width);
         run = 0;
-        if (slot.kind === "structure" && slot.name === "heatSink") {
+        if (slot.kind === "structure" && slot.type === "heatSink") {
           external += 1;
           if (heatsink.type === "double") mixed = true;
         }

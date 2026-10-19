@@ -193,8 +193,10 @@ For each critical hit, the player rolls the slot number:
 | Head, legs | 6 | 1D6 → slot 1-6 |
 | Torso, arms | 12 | 2D6 — first die 1-3 selects the top half (slots 1-6), 4-6 the bottom half (slots 7-12); second die 1-6 selects the slot within the half |
 
-Empty slots, soak (endo steel / ferro-fibrous / CASE / CASE II) and already-destroyed
-slots re-roll. If the source location is exhausted (every crit-hittable
+Empty slots, soak (endo steel / ferro-fibrous / CASE / CASE II / TSM / stealth
+systems, TW pp.134-143) and already-destroyed slots re-roll. Unmodelled
+equipment (ECM, probes, Artemis, MASC, ...) is hittable: the slot is
+destroyed with no modelled effect (TW p.124). If the source location is exhausted (every crit-hittable
 slot already destroyed) at the start of this determining, the whole roll
 transfers to the next inward location per the standard damage-transfer
 diagram; head and center torso are terminal. If the source still has
