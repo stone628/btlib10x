@@ -20,6 +20,7 @@ import {
   wreckageAt,
 } from "../src/rules/game";
 import { reachableLandings } from "../src/rules/movement";
+import { pilotRecord } from "../src/rules/pilot";
 import { salvageReport } from "../src/rules/salvage";
 import { loadBattleState, saveBattleState } from "../src/rules/snapshot";
 import { battleModel, boardToText, WRECKAGE_MARKER } from "../web/terminal/renderer.text";
@@ -132,6 +133,35 @@ describe("hull (TO:AR pp.184-185)", () => {
       credit: [],
     });
     expect(events).toContainEqual({ kind: "wreckageLeft", unitId: "hbk", col: 2, row: 4 });
+    // It fell standing, but its pilot left turns ago: no fall hit (SALV-07).
+    expect(events).toContainEqual(
+      expect.objectContaining({ kind: "unitFell", unitId: "hbk", cause: { kind: "salvageFall" } }),
+    );
+    expect(hbk.pilotHits).toBe(0);
+    expect(events.some((e) => e.kind === "pilotDamaged")).toBe(false);
+  });
+
+  it("an abandoned hull destroyed standing wounds no one", () => {
+    const state = movement(hbkVsEnf());
+    requireUnit(state, "hbk").shutdown = "manual";
+    abandonPilot(state, "hbk", []);
+    const events = destroyBySweep(state, "hbk");
+    const hbk = requireUnit(state, "hbk");
+    expect(events).toContainEqual(
+      expect.objectContaining({ kind: "unitFell", unitId: "hbk", cause: { kind: "salvageFall" } }),
+    );
+    expect(hbk.pilotHits).toBe(0);
+    expect(events.some((e) => e.kind === "pilotDamaged")).toBe(false);
+  });
+
+  it("a pilot one hit short of death who ejected survives the hull's destruction", () => {
+    const state = movement(hbkVsEnf());
+    const hbk = requireUnit(state, "hbk");
+    hbk.pilotHits = hbk.pilotHitMax - 1;
+    ejectPilot(state, "hbk", scriptedRng(6, 6), []);
+    destroyBySweep(state, "hbk");
+    expect(hbk.pilotHits).toBe(hbk.pilotHitMax - 1);
+    expect(pilotRecord(hbk).status).toBe("ejected");
   });
 });
 

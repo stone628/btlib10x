@@ -1383,8 +1383,9 @@ export const WRECKAGE_TONNAGE_MIN = 40;
  * `state.units` for salvage reading.
  *  - Salvage fall (TW p.128): a 'Mech that was standing when destroyed falls
  *    automatically; the falling damage (and its criticals) marks its record,
- *    and a MechWarrior still alive (in the cockpit, or out by auto-eject)
- *    takes the fall's pilot hit.
+ *    and a MechWarrior still alive in the cockpit takes the fall's pilot
+ *    hit. An ejected pilot (auto-eject at this destruction, or a hull's pilot
+ *    who left earlier) is outside the 'Mech and takes none.
  *  - Wreckage (TO:AR p.155): a 'Mech of {@link WRECKAGE_TONNAGE_MIN} t or
  *    more turns its hex into Rough (`state.wreckage`); a hex already holding
  *    wreckage just records the extra id (no pile-up).
@@ -1412,9 +1413,11 @@ function leaveDestroyedRemains(
 
 /** Salvage fall (TW p.128): normal falling damage on the destroyed record,
  *  with criticals for struck structure (their blasts only mark the record).
- *  Severed limbs drop in the hex. The pilot, if alive, takes the fall's hit
- *  automatically (no seatbelt roll for a dead 'Mech) and no consciousness
- *  roll: the MechWarrior is out of the battle. */
+ *  Severed limbs drop in the hex. A pilot still in the cockpit (`removed`
+ *  is `"destroyed"`), if alive, takes the fall's hit automatically (no
+ *  seatbelt roll for a dead 'Mech) and no consciousness roll: the
+ *  MechWarrior is out of the battle. A pilot who ejected or abandoned is
+ *  outside the 'Mech and takes none, as in `applyFall`. */
 function salvageFall(state: BattleState, unit: UnitState, rng: Rng, sink: GameEvent[]): void {
   const def = mechDefFor(unit);
   const dir = rollFallDirection(rng);
@@ -1474,7 +1477,7 @@ function salvageFall(state: BattleState, unit: UnitState, rng: Rng, sink: GameEv
     groups,
     crits,
   });
-  if (unit.pilotHits < unit.pilotHitMax) {
+  if (unit.removed === "destroyed" && unit.pilotHits < unit.pilotHitMax) {
     unit.pilotHits += FALL_PILOT_HITS;
     sink.push({
       kind: "pilotDamaged",

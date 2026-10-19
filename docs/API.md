@@ -947,7 +947,8 @@ Rules encoded by the state machine:
   auto-eject from a destroyed frame, a destroyed hull) first takes the
   salvage fall (TW p.128) when it was standing — a `unitFell` with cause
   `{ kind: "salvageFall" }`, damage and criticals on the record, and the fall's
-  pilot hit for a MechWarrior still alive — then, at
+  pilot hit for a MechWarrior still alive in the cockpit (an ejected pilot,
+  auto-ejected or from a hull, is outside and takes none) — then, at
   `WRECKAGE_TONNAGE_MIN` (40 t) or more, adds its id to `state.wreckage`
   (`wreckageLeft` event).
 - **Weapon usability** is judged against `baseDamage`.

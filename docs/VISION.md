@@ -63,7 +63,9 @@ yet is a gap, not a deviation; gaps are tracked in §4.
   costs nothing until the building collapses. Lighter 'Mechs leave nothing
   on the board. Before the wreckage is placed, a 'Mech destroyed while
   standing takes the TW p.128 salvage fall on its record, and a MechWarrior
-  still alive (inside, or out by auto-eject) takes the fall's pilot hit.
+  still alive inside takes the fall's pilot hit. An ejected pilot (by
+  auto-eject at that destruction, or from a hull left earlier) is outside the
+  'Mech and takes no fall damage, as in any other fall.
   *Why:* destroyed medium and heavier 'Mechs should shape the ground.
 
 ### 2.2 Policies (choices TW leaves to a player)

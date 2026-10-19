@@ -21,6 +21,7 @@ import {
 } from "../src/rules/game";
 import { losClear } from "../src/rules/los";
 import { reachableLandings } from "../src/rules/movement";
+import { pilotRecord } from "../src/rules/pilot";
 import { ejectionModifier } from "../src/rules/piloting";
 import { toHitTotal } from "../src/rules/tohit";
 import { checkVictory, createTestBattle, scriptedRng } from "./helpers";
@@ -276,11 +277,14 @@ describe("auto-eject on head destruction (TO p.165)", () => {
     expect(psr).toMatchObject({ triggerModifier: 2 });
   });
 
-  it("a standing frame then takes the salvage fall, and the ejected pilot its hit (TW p.128)", () => {
+  it("a standing frame then takes the salvage fall, but the ejected pilot is outside it (TW p.128)", () => {
     const { hbk, events, state } = sweepHeadLoss(0, {}, false);
     expect(hbk.removed).toBe("pilotEjected");
     expect(hbk.prone).toBe(true);
-    expect(hbk.pilotHits).toBe(6);
+    // Still pilotHitMax - 1 from the auto-eject: the fall adds no 6th hit.
+    expect(hbk.pilotHits).toBe(5);
+    expect(pilotRecord(hbk).status).toBe("ejected");
+    expect(events.some((e) => e.kind === "pilotDamaged" && e.reason === "fall")).toBe(false);
     expect(hbk.damage.armor.centerTorso).toBe(mechDef("HBK-4G")!.armor.centerTorso - 5);
     expect(events).toContainEqual(
       expect.objectContaining({ kind: "unitFell", unitId: "hbk", cause: { kind: "salvageFall" } }),
