@@ -11,6 +11,7 @@ import {
 } from "../core/terrain";
 import type { Facing, HexCoord, MoveMode, TerrainType } from "../core/types";
 import { FACINGS, hexKey, oppositeFacing, rotateFacing } from "../core/types";
+import { isBuildingTerrain } from "./building";
 
 export function maxMovePoints(
   mode: MoveMode,
@@ -359,8 +360,14 @@ export function reachableLandings(
       return false;
     return canPassThroughHex(options.occupantTeam(hex), options.team);
   };
+  // TW p.168: a 'Mech cannot use Jumping MP to enter a building hex, only
+  // its roof, and roofs are not modeled.
+  const jumpsIntoBuilding = (hex: HexCoord): boolean =>
+    jumping && isBuildingTerrain(cellAt(options.grid, hex).terrain);
   const canLand = (hex: HexCoord): boolean =>
-    inBounds(hex) && (point(hex, start) || options.occupantTeam(hex) === undefined);
+    inBounds(hex) &&
+    (point(hex, start) || options.occupantTeam(hex) === undefined) &&
+    !jumpsIntoBuilding(hex);
 
   for (let i = 0; i < queue.length; i++) {
     const cur = queue[i]!;
@@ -456,7 +463,7 @@ export function reachableLandings(
         if (last === undefined || last.fragment !== "J") continue;
         if (!enemyAt(hex) || cost !== hexDistance(start, hex)) continue;
         const stop = neighbor(hex, oppositeFacing(facing));
-        if (options.meleeOk(stop, hex, "dfa")) {
+        if (!jumpsIntoBuilding(stop) && options.meleeOk(stop, hex, "dfa")) {
           results.push({ hex, facing, path, melee: { kind: "dfa", stopsAt: stop } });
         }
         continue;

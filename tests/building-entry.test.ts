@@ -8,6 +8,7 @@ import {
   requireUnit,
   rollInitiativePhase,
 } from "../src/rules/game";
+import { reachableLandings } from "../src/rules/movement";
 import { buildingMovementModifier } from "../src/rules/piloting";
 
 import { createTestBattle, groupsTotaling, scriptedRng } from "./helpers";
@@ -223,10 +224,13 @@ describe("building entry (TW p.167)", () => {
     );
     expect(requireUnit(state, "hbk").position).toEqual({ col: 2, row: 4 });
   });
+});
 
-  it("a jump landing keeps the type modifier only and leaves the CF alone", () => {
+describe("jumping and buildings (TW p.168)", () => {
+  /** enf (2,1)/s jumps down column 2; hbk sits out of the way. */
+  function jumpBattle(terrain: Parameters<typeof createTestBattle>[0]) {
     const state = createTestBattle(
-      [{ col: 2, row: 4, type: "lightBuilding" }],
+      terrain,
       [
         buildUnitInit("enf", "ENF-4R", 1, { col: 2, row: 1 }, "s"),
         buildUnitInit("hbk", "HBK-4G", 2, { col: 8, row: 8 }, "n"),
@@ -234,17 +238,70 @@ describe("building entry (TW p.167)", () => {
       true,
     );
     rollInitiativeFor(state);
+    return state;
+  }
+  const jumpTo = (lastRow: number) =>
+    Array.from({ length: lastRow - 1 }, (_, k) => ({
+      kind: "enter" as const,
+      to: { col: 2, row: k + 2 },
+    }));
+
+  it.each(["lightBuilding", "mediumBuilding", "heavyBuilding", "hardenedBuilding"] as const)(
+    "refuses a jump landing in a %s and leaves the state alone",
+    (type) => {
+      const state = jumpBattle([{ col: 2, row: 4, type }]);
+      const cf = state.buildings[hexKey({ col: 2, row: 4 })]!.cf;
+      const events: GameEvent[] = [];
+      expect(() =>
+        executeMove(state, "enf", "jump", jumpTo(4), events, { rng: scriptedRng(6, 6) }),
+      ).toThrow("enf cannot use Jumping MP to enter a building hex (2,4)");
+      expect(requireUnit(state, "enf").position).toEqual({ col: 2, row: 1 });
+      expect(state.buildings[hexKey({ col: 2, row: 4 })]!.cf).toBe(cf);
+      expect(buildingChecks(events)).toEqual([]);
+      // The refused move does not use up the activation.
+      executeMove(state, "enf", "jump", jumpTo(3), events, { rng: scriptedRng(6, 6) });
+      expect(requireUnit(state, "enf").position).toEqual({ col: 2, row: 3 });
+    },
+  );
+
+  it("allows jumping over a building and landing beyond it", () => {
+    const state = jumpBattle([{ col: 2, row: 3, type: "heavyBuilding" }]);
     const events: GameEvent[] = [];
-    executeMove(
-      state,
-      "enf",
-      "jump",
-      [2, 3, 4].map((row) => ({ kind: "enter" as const, to: { col: 2, row } })),
-      events,
-      { rng: scriptedRng(6, 6) },
-    );
-    expect(buildingChecks(events).map((e) => e.triggerModifier)).toEqual([0]);
-    expect(state.buildings[hexKey({ col: 2, row: 4 })]!.cf).toBe(15);
+    executeMove(state, "enf", "jump", jumpTo(4), events, { rng: scriptedRng(6, 6) });
+    expect(requireUnit(state, "enf").position).toEqual({ col: 2, row: 4 });
+    expect(buildingChecks(events)).toEqual([]);
+    expect(state.buildings[hexKey({ col: 2, row: 3 })]!.cf).toBe(90);
+  });
+
+  it("allows jumping out of a building hex", () => {
+    const state = jumpBattle([{ col: 2, row: 1, type: "mediumBuilding" }]);
+    const events: GameEvent[] = [];
+    executeMove(state, "enf", "jump", jumpTo(3), events, { rng: scriptedRng(6, 6) });
+    expect(requireUnit(state, "enf").position).toEqual({ col: 2, row: 3 });
+  });
+
+  it("allows a jump landing on rubble", () => {
+    const state = jumpBattle([{ col: 2, row: 4, type: "rubble" }]);
+    executeMove(state, "enf", "jump", jumpTo(4), [], { rng: scriptedRng(6, 6) });
+    expect(requireUnit(state, "enf").position).toEqual({ col: 2, row: 4 });
+  });
+
+  it("reachableLandings offers a building hex to a walk but not to a jump", () => {
+    const state = jumpBattle([{ col: 2, row: 3, type: "lightBuilding" }]);
+    const enf = requireUnit(state, "enf");
+    const landsOn = (mode: "walk" | "jump") =>
+      reachableLandings(enf.position, enf.facing, {
+        mode,
+        walking: 4,
+        running: 6,
+        jumping: 4,
+        prone: false,
+        grid: state,
+        team: 1,
+        occupantTeam: () => undefined,
+      }).some((l) => l.hex.col === 2 && l.hex.row === 3);
+    expect(landsOn("walk")).toBe(true);
+    expect(landsOn("jump")).toBe(false);
   });
 });
 

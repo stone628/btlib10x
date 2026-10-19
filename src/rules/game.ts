@@ -2456,6 +2456,11 @@ function moveUnit(
     meleeFacing = facingToward(meleeStop, meleeTarget.position) ?? facing;
     cursor = meleeStop;
   }
+  // TW p.168: a 'Mech cannot use Jumping MP to enter a building hex, only its
+  // roof, and roofs are not modeled. Jumping out of or over one is legal.
+  if (jumping && isBuildingTerrain(cellAt(state, cursor).terrain)) {
+    throw new Error(`${unitId} cannot use Jumping MP to enter a building hex (${msgHex(cursor)})`);
+  }
 
   // Preexisting damage applies to every movement-entry PSR (TW p.60). The
   // modifier is recomputed per roll: damage taken earlier in the move counts.
@@ -5734,14 +5739,13 @@ function movementTerrainPsr(
   const buildingType = buildingEntryModifier(entering);
   const def = mechDefFor(unit);
   if (buildingType !== null) {
-    // A jump has no hexes-moved band: TW lets it reach only the roof, which
-    // the engine does not model, so a landing keeps the type modifier only
-    // and leaves the CF alone.
-    const building = buildingType + (ground ? buildingMovementModifier(hexesMoved) : 0);
+    // Only ground movement gets here: a jump cannot end in a building hex
+    // (TW p.168), and moveUnit refuses one that tries.
+    const building = buildingType + buildingMovementModifier(hexesMoved);
     /** Entry damage to the hex (TW p.167), resolved after any crash damage
      *  (TW p.177). */
     const wearHex = (): void => {
-      if (ground) damageBuildingByUnit(state, unit, to, rng, sink);
+      damageBuildingByUnit(state, unit, to, rng, sink);
     };
     unit.position = to;
     const legWasGoneR = legGone(unit.damage, "rightLeg");

@@ -248,6 +248,14 @@ describe("DFA declaration (TW p.149)", () => {
     );
   });
 
+  it("cannot stop in a building hex (TW p.168)", () => {
+    const state = dfaBattle([{ col: 5, row: 3, type: "mediumBuilding" }]);
+    expect(() => executeMove(state, "a", "jump", dfaPath, [], { rng: scriptedRng() })).toThrow(
+      "a cannot use Jumping MP to enter a building hex (5,3)",
+    );
+    expect(requireUnit(state, "a").meleeCharge).toBeNull();
+  });
+
   it("is exempt from the one-level difference gate", () => {
     const state = dfaBattle([{ col: 5, row: 4, type: "clear", level: 2 }]);
     executeMove(state, "a", "jump", dfaPath, [], { rng: scriptedRng() });
@@ -569,6 +577,24 @@ describe("charge landings in reachability", () => {
       hex: { col: 5, row: 4 },
       melee: { stopsAt: { col: 5, row: 3 } },
     });
+  });
+
+  it("lists no DFA whose stop hex is a building (TW p.168)", () => {
+    const state = dfaBattle([{ col: 5, row: 3, type: "lightBuilding" }]);
+    const a = requireUnit(state, "a");
+    const landings = reachableLandings(a.position, a.facing, {
+      mode: "jump",
+      walking: 4,
+      running: 6,
+      jumping: 4,
+      prone: false,
+      grid: state,
+      team: 1,
+      occupantTeam: (hex) => (hex.col === 5 && hex.row === 4 ? 2 : undefined),
+      meleeOk: (stop, _targetHex, kind) =>
+        meleeDeclarationProblem(state, "a", stop, "t", kind, 4) === null,
+    });
+    expect(landings.filter((l) => l.melee?.kind === "dfa")).toEqual([]);
   });
 });
 

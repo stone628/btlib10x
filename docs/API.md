@@ -397,7 +397,8 @@ budget until the heat phase runs.
   charges 1 MP per turn and 1+terrain+1-per-level-changed per step, where
   levels are measured at a water hex's bed (hex level − depth); running
   cannot enter water except by Minimum Movement (TW p.53, p.57). Jump
-  treats turns as free and ignores elevation. A hex holding battlefield
+  treats turns as free and ignores elevation, and never lands in, or makes a
+  DFA from, a building hex (TW p.168; roofs are not modeled). A hex holding battlefield
   wreckage (`wreckageAt(hex)` option; `hasWreckage(state, hex)` from a battle)
   costs +1 MP as Rough stacked on its terrain (`hexEntryCost`; no repeat on
   rough, nothing in a standing building).
@@ -750,7 +751,7 @@ the caller's boundary.
 
 ```ts
 createBattle(map: MapDef, units: UnitInit[], options?: CreateBattleOptions): BattleState
-executeMove(state, unitId, mode, steps, sink: GameEvent[], { finalFacing, rng }): void  // declares mode + walks steps in one call; refuses off-board hexes and ending stacked in the last hex entered (trailing turns included) or after a charge / DFA hex; `finalFacing` only for a jump landing or a stand-up that enters no hex
+executeMove(state, unitId, mode, steps, sink: GameEvent[], { finalFacing, rng }): void  // declares mode + walks steps in one call; refuses off-board hexes and ending stacked in the last hex entered (trailing turns included) or after a charge / DFA hex, and a jump that ends (or stops for a DFA) in a building hex (TW p.168); `finalFacing` only for a jump landing or a stand-up that enters no hex
 executePostureMove(state, unitId, "standUp" | "drop", locomotion, steps, sink: GameEvent[], { finalFacing, rng }): boolean  // stand-up or drop plus the movement after it: one activation, one MP pool (TW pp.49-50); the posture cost and a Minimum Movement stand count against the locomotion budget; no steps taken after a failed stand; after a successful stand, turns before the first hex entry are free (TW p.50); returns whether the posture change succeeded
 postureMoveBudget(unit, "standUp" | "drop", budget): number           // MP left for the movement after a posture change, out of the locomotion budget (for reachability displays)
 postureCost(unit, "standUp" | "drop"): number                         // MP the stand-up / drop charges now

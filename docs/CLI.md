@@ -265,9 +265,9 @@ are listed here. Rule text lives in the rulebook.
   PSRs for rubble, water and buildings. A building entry adds the building type
   and the hexes moved this turn (TW p.167); a failed roll crashes on the front,
   or the rear when backing in. Entering or falling in a building hex costs it
-  tonnage / 10 CF, and a hex emptied that way collapses at once. Jump landings
-  in a building roll the type modifier only and do not wear it (roofs are not
-  modeled).
+  tonnage / 10 CF, and a hex emptied that way collapses at once. A 'Mech
+  cannot jump into a building hex (TW p.168; roofs are not modeled); it may
+  jump out of or over one.
 - **Pilot** — damage, consciousness rolls (`pilotHitMax`, default 6), cockpit
   kills. Ejection and auto-eject are Tactical Operations (TO p.165), not TW:
   `mode eject`. `mode abandon` (house rule) lets the pilot step out of a 'Mech
