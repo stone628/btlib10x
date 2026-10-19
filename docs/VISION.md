@@ -10,8 +10,9 @@ documented separately.
   BattleTech for **bipedal 'Mechs only**. It is deterministic given an injected
   `Rng`, mutates one serializable `BattleState` in place on a single thread,
   and snapshots to plain JSON. The engine never decides a winner: the caller
-  owns the stop condition. Atomicity holds at the caller's commit boundary
-  (e.g. snapshot and roll back), not per rule call.
+  owns the stop condition, and `scoreReport` gives it a read-only Battle
+  Value score to decide from. Atomicity holds at the caller's commit
+  boundary (e.g. snapshot and roll back), not per rule call.
 - **Rules principle.** The engine implements *Total Warfare* (TW) as written
   wherever it can. It adopts a *Tactical Operations* (TO) rule only where TW
   leaves a gap the simulation needs filled. Where a rule is too deep or fiddly

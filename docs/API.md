@@ -174,6 +174,7 @@ lookups below. `resolveMechDef`, `validateMechDef`, and the raw `mechDef` /
 interface MechDef {
   model: string; name: string; clanName?: string; callsign?: string; tonnage: number;   // 10..100
   intro: number; // introduction year (Master Unit List) from the MTF `Intro:` header
+  bv: number;    // Battle Value (Master Unit List, regular 4/5 pilot) from the MTF `BV:` header; 0 when the MUL lists none
   weightClass: WeightClass;   // must equal weightClassForTonnage(tonnage)
   techBase: string;
   walking: number; running: number; jumping: number; // running === ceil(walking*1.5); jumping === number of jumpJet crit slots
@@ -227,7 +228,7 @@ and derives internal structure:
 ```ts
 interface ResolvedMechDef {
   model: string; name: string; clanName?: string; callsign?: string; tonnage: number;
-  intro: number;
+  intro: number; bv: number;
   weightClass: WeightClass; techBase: string;
   walking: number; running: number; jumping: number;
   armor: ResolvedArmor;                                // front armor only
@@ -255,7 +256,7 @@ Packed wire (`src/data/mech.codec.ts`, `src/data/map.codec.ts`,
 `data/btlib10x.jsonl`): `encodeMechDef` / `encodeMapDef` pack a sheet to one
 short-key line, `decodeMechLine` / `decodeMapLine` expand it back (both wire
 version `1`: `WIRE_VERSION` / `MAP_WIRE_VERSION`). Sheet identity
-(`model`/`name`/`techBase`/`tonnage`/`intro`, optional `clanName`/`callsign` — the
+(`model`/`name`/`techBase`/`tonnage`/`intro`/`bv`, optional `clanName`/`callsign` — the
 `MechIdentity` shape) lives only in the line-0 manifest entry, never the
 wire line: `decodeMechLine` takes it as a second argument, so each sheet is
 single-sourced. Myomer rides the mech wire as numeric `y` (1 = Standard,
@@ -750,6 +751,7 @@ wreckageAt(state, hex): readonly WreckageEntry[]                         // dest
 occupantAt(state, hex, excludeId?): UnitState | undefined               // the active unit or hull in a hex
 isHull(unit) / isUnitOnBoard(unit) / isTargetableBy(attacker, target)  // see Hulls and wreckage below
 salvageReport(state): SalvageEntry[]                                     // every hull and destroyed frame: kind, removal / kill reason, hex, posture, damage, destroyed slots, stranded ammo, salvageable severed limbs, intact weapons and equipment (`salvageable`)
+scoreReport(state): TeamScore[]                                          // every team's score now (docs/SCORING.md): { team, score, lostValue, units: UnitScore[] }; per unit { bv, value, damaged, crippled: CrippleReason[], outOfPlay, lost }. Also unitScore, crippleReasons, damagedFraction, bvSkillMultiplier
 nextActor / actorQueue / gameLoop / requireUnit — see below
 ```
 

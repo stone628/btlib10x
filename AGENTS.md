@@ -40,6 +40,9 @@ TypeScript library encapsulating BattleTech Total Warfare board game logic.
   passable hull (TO:AR pp.184-185); a destroyed 'Mech of 40 t+ leaves Rough
   wreckage (+1 MP, TO:AR p.155) after the TW p.128 salvage fall.
   `salvageReport` lists both. Rules and rationale: `docs/VISION.md` §2.1, §2.4.
+- Scoring: `scoreReport(state)` gives each team's TW p.257 Battle Value score
+  at any moment, from MUL BV (`MechDef.bv`, MTF `BV:` header), the skill
+  multiplier, crippling damage and partial damage. Design: `docs/SCORING.md`.
 - Heat-causing weapons (TW pp.113, 139, 159, 303): flamers deal heat instead
   of damage under the per-unit `UnitPolicy.heatFlamer` (default on); Plasma
   Rifle adds 1D6 heat, Plasma Cannon deals 2D6 heat only. Outside heat lands

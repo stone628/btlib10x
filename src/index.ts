@@ -363,6 +363,20 @@ export {
   type SalvageSlot,
   salvageReport,
 } from "./rules/salvage";
+export {
+  BV_SKILL_MULTIPLIER,
+  bvSkillMultiplier,
+  type CrippleReason,
+  crippleReasons,
+  damagedFraction,
+  SCORE_CRIPPLED_LOST,
+  SCORE_ENEMY_WEIGHT,
+  SCORE_OWN_WEIGHT,
+  scoreReport,
+  type TeamScore,
+  type UnitScore,
+  unitScore,
+} from "./rules/score";
 export { loadBattleState, parseBattleState, saveBattleState } from "./rules/snapshot";
 export {
   type AttackModifiers,

@@ -60,6 +60,11 @@ Mad Cat Prime, Masakari Prime, Wolverine WVR-6R).
   torso (only arm/side-torso splits are modeled) and records `splitLocation`;
   when the catalog lists the weapon's `crits`,
   both locations' slots must add up to it.
+- **Catalog identity headers.** Every sheet carries `Intro:N` (introduction
+  year) and `BV:N` (Battle Value) copied from its pack's `roster.json`, which
+  holds the Master Unit List values; `BV:0` means the MUL lists none. Both are
+  required: a sheet missing either is a `SKIP`. `BV:` goes on the line after
+  `Intro:`; they become `MechDef.intro` / `MechDef.bv`.
 - **`running = ceil(walking * 1.5)`** (quick-start convention).
 - **Critical slot table per location** (head/legs = 6 slots, torso/arms = 12)
   is parsed and validated by `scripts/mtf-crit.mjs`.
