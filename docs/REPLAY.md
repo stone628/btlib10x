@@ -142,7 +142,8 @@ Line: `M<idx><op>[args]` (one actor).
 | `-` | step backward (the hex behind) | `enter` |
 
 `facing` is one optional trailing letter, the `finalFacing` option (jump landing
-facing, stand-up free facing). It needs no prefix: a letter can only follow the
+facing, stand-up free facing in place; the engine refuses it on any other move).
+After a stand-up, the `<`/`>` before the first `+`/`-` cost no MP (TW p.50). It needs no prefix: a letter can only follow the
 steps (`U<loco>` has a fixed one-char locomotion and no other op takes an
 argument first), and the step characters share nothing with the facing letters.
 `s` as an op (standstill) is always the char right after the unit index, so it

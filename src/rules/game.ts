@@ -2012,7 +2012,9 @@ function pushPilotingCheck(
   return r;
 }
 export interface ExecuteMoveOptions {
-  /** Final facing after the move; when omitted, the unit keeps its facing. */
+  /** Landing facing of a jump (TW p.53), or the free facing of a stand-up
+   *  that enters no hex (TW p.50); any other move refuses it. When omitted,
+   *  the unit keeps the facing its steps leave it in. */
   readonly finalFacing?: Facing;
   /** Per-call random source. */
   readonly rng: Rng;
@@ -2109,6 +2111,9 @@ interface PosturePool {
   readonly exhausted: boolean;
   /** The stand-up already charged the declared mode's heat (TW p.159). */
   readonly modeHeatPaid: boolean;
+  /** TW p.50: once standing, the 'Mech may face any direction at no cost,
+   *  so facing changes before its first hex entry are free. */
+  readonly freeFacing: boolean;
 }
 
 /** MP a stand-up or drop charges for `unit` as it stands now (TW pp.49-50). */
@@ -2118,8 +2123,8 @@ export function postureCost(unit: UnitState, posture: PostureChange): number {
 
 function posturePool(cost: number, posture: PostureChange): PosturePool {
   return posture === "standUp"
-    ? { mp: cost, exhausted: cost < STAND_MP_COST, modeHeatPaid: true }
-    : { mp: cost, exhausted: false, modeHeatPaid: false };
+    ? { mp: cost, exhausted: cost < STAND_MP_COST, modeHeatPaid: true, freeFacing: true }
+    : { mp: cost, exhausted: false, modeHeatPaid: false, freeFacing: false };
 }
 
 function remainingAfterPosture(budget: number, pool: PosturePool): number {
@@ -2282,10 +2287,21 @@ function moveUnit(
   // stops in front of it; the attack resolves in the physical phase.
   let meleeTarget: UnitState | null = null;
   let meleeStop: HexCoord = unit.position;
+  // Stacking and charges are judged in the hex the unit ends in: the last
+  // one it enters, even when turn steps follow (TW p.57).
+  const firstEnterIdx = steps.findIndex((s) => s.kind === "enter");
+  const lastEnterIdx = steps.reduce((m, s, k) => (s.kind === "enter" ? k : m), -1);
+  // TW p.50: after a stand-up, the turns before the first hex entry are free.
+  const freeTurn = (i: number): boolean =>
+    posture?.freeFacing === true && (firstEnterIdx < 0 || i < firstEnterIdx);
+  const standPick = posture?.freeFacing === true && firstEnterIdx < 0;
+  if (options.finalFacing !== undefined && !jumping && !standPick) {
+    throw new Error("finalFacing applies only to a jump landing or a stand-up facing pick");
+  }
 
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i]!;
-    const isFinalStep = i === steps.length - 1;
+    const isFinalStep = i === lastEnterIdx;
 
     if (step.kind === "turn") {
       if (jumping) throw new Error("Jumping 'Mechs choose facing freely on landing; no turn steps");
@@ -2297,12 +2313,15 @@ function moveUnit(
       ) {
         throw new Error("Facing change must be 1..5 hexsides in either direction");
       }
-      spent += mv.facingChangeCost(Math.abs(step.facings));
+      if (!freeTurn(i)) spent += mv.facingChangeCost(Math.abs(step.facings));
       facing = rotateFacing(facing, step.facings);
       continue;
     }
 
     const to = step.to;
+    if (to.col < 1 || to.col > state.width || to.row < 1 || to.row > state.height) {
+      throw new Error(`${msgHex(to)} is off the board`);
+    }
     if (jumping) {
       if (!isAdjacent(cursor, to)) {
         throw new Error("Jump steps must enter an adjacent hex");
@@ -2354,6 +2373,7 @@ function moveUnit(
     const occupant = occupantAt(state, to, unitId);
     if (occupant !== undefined) {
       if (isFinalStep && isTargetableBy(unit, occupant)) {
+        if (i !== steps.length - 1) throw new Error("A charge or DFA ends the move");
         if (directions[directions.length - 1] !== "forward") {
           throw new Error("A charge must be made straight ahead");
         }
@@ -2527,10 +2547,10 @@ function moveUnit(
   const curDirs: ("forward" | "backward")[] = [];
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i]!;
-    const isFinal = i === steps.length - 1;
+    const isFinal = i === lastEnterIdx;
     if (step.kind === "turn") {
       curFacing = rotateFacing(curFacing, step.facings);
-      curSpent += mv.facingChangeCost(Math.abs(step.facings));
+      if (!freeTurn(i)) curSpent += mv.facingChangeCost(Math.abs(step.facings));
       continue;
     }
     const from = cur;

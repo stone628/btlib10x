@@ -306,6 +306,30 @@ describe("posture-change then move", () => {
     // 2 MP for standing; no MP charged for the free facing pick.
     expect(unit.mpSpent).toBe(2);
   });
+
+  it("standup + place leaves the hex in a free facing (MOV-07, TW p.50)", async () => {
+    const { s, actor } = await started(0);
+    forceProne(s, actor);
+    execute(s, "mode standup walk");
+    // A landing off the start hex whose path opens with the free turn.
+    const landing = s.move!.moveCandidate!.revealed.find(
+      (l) =>
+        l.melee === undefined &&
+        l.path.length > 1 &&
+        l.path[0]!.baseMp === 0 &&
+        l.path.some((step) => step.fragment === "F"),
+    )!;
+    expect(landing).toBeDefined();
+    execute(s, `place ${landing.hex.col} ${landing.hex.row} ${landing.facing}`);
+    expect(s.move!.moveFinalFacing).toBeNull();
+    s.rng = scriptedRng(...Array.from({ length: 40 }, () => 6));
+    execute(s, "done");
+    const unit = s.battle!.units[actor]!;
+    expect(unit.position).toEqual(landing.hex);
+    expect(unit.facing).toBe(landing.facing);
+    const paid = landing.path.reduce((n, step) => n + step.baseMp, 0);
+    expect(unit.mpSpent).toBe(2 + paid);
+  });
 });
 
 describe("engine prone turn", () => {

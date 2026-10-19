@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
+import { neighbor } from "../src/core/hex";
 import type { HexGrid } from "../src/core/terrain";
-import { FACINGS, type Facing, type HexCell, type MoveMode } from "../src/core/types";
+import {
+  FACINGS,
+  type Facing,
+  type HexCell,
+  type HexCoord,
+  type MoveMode,
+  oppositeFacing,
+  rotateFacing,
+} from "../src/core/types";
 import type { MovePathStep } from "../src/rules/movement";
-import { reachableLandings } from "../src/rules/movement";
+import { pathMp, reachableLandings } from "../src/rules/movement";
 
 // Start in the middle of a large board so the search radius is not clipped.
 const start = { col: 12, row: 12 };
@@ -271,9 +280,8 @@ describe("reachableLandings", () => {
   });
 
   it("standup leaves non-start paths replayable from startFacing", () => {
-    // After the free pick, the unit can still walk forward in any chosen
-    // facing. But because non-start paths are seeded only from
-    // startFacing, they replay cleanly under placeLanding.
+    // Paths that leave in a free facing open with 0-MP turns, so every one
+    // of them still replays from startFacing.
     const rs = reachableLandings(start, "n", {
       mode: "walk",
       walking: 3,
@@ -289,6 +297,74 @@ describe("reachableLandings", () => {
     expect(fragments(lookup(rs, { col: 12, row: 11 }, "n"))).toEqual(["F"]);
     // The free pick at start hex facing se stays empty-path, cost 0.
     expect(lookup(rs, start, "se")).toEqual([]);
+    for (const l of rs) {
+      // A start-hex free pick keeps its empty path; its facing travels
+      // separately (placeLanding -> moveFinalFacing).
+      if (l.path.length === 0) {
+        expect(l.hex).toEqual(start);
+        continue;
+      }
+      let hex: HexCoord = start;
+      let facing: Facing = "n";
+      for (const step of l.path) {
+        if (step.fragment === "R" || step.fragment === "L") {
+          facing = rotateFacing(facing, step.fragment === "R" ? 1 : -1);
+        } else {
+          hex = neighbor(hex, step.fragment === "B" ? oppositeFacing(facing) : facing);
+        }
+      }
+      expect({ hex, facing }).toEqual({ hex: l.hex, facing: l.facing });
+    }
+  });
+
+  it("standup leaves the start hex in any facing for free (MOV-07, TW p.50)", () => {
+    // HBK-4G walk 4, prone facing n: the stand leaves 2 MP. Searching from
+    // every facing gives 54 landings; from n alone it gave 14.
+    const rs = reachableLandings(start, "n", {
+      mode: "walk",
+      walking: 2,
+      running: 3,
+      jumping: 0,
+      prone: false,
+      grid: grid(boardWidth, boardHeight),
+      team,
+      occupantTeam: noOccupants,
+      standup: true,
+    });
+    expect(rs).toHaveLength(54);
+    // The hex behind, facing away: three free turns, then one forward step.
+    const behind = lookup(rs, { col: 12, row: 13 }, "s");
+    expect(fragments(behind)).toEqual(["R", "R", "R", "F"]);
+    expect(pathMp(behind!)).toBe(1);
+    expect(fragments(lookup(rs, { col: 12, row: 14 }, "s"))).toEqual(["R", "R", "R", "F", "F"]);
+    for (const l of rs) {
+      expect(pathMp(l.path)).toBeLessThanOrEqual(2);
+      // Only the leading free turn costs nothing.
+      const firstPaid = l.path.findIndex((step) => step.baseMp > 0);
+      const free = firstPaid < 0 ? l.path : l.path.slice(0, firstPaid);
+      expect(free.every((step) => step.fragment === "R" || step.fragment === "L")).toBe(true);
+    }
+  });
+
+  it("standup charge paths from the start hex open with the free turn", () => {
+    const enemyAt = (hex: { col: number; row: number }) =>
+      hex.col === 12 && hex.row === 13 ? team + 1 : undefined;
+    const rs = reachableLandings(start, "n", {
+      mode: "walk",
+      walking: 2,
+      running: 3,
+      jumping: 0,
+      prone: false,
+      grid: grid(boardWidth, boardHeight),
+      team,
+      occupantTeam: enemyAt,
+      meleeOk: () => true,
+      standup: true,
+    });
+    const charge = rs.find(
+      (l) => l.melee?.kind === "charge" && l.melee.stopsAt.col === 12 && l.melee.stopsAt.row === 12,
+    );
+    expect(fragments(charge?.path)).toEqual(["R", "R", "R", "F"]);
   });
 
   it("sorts landings by numeric col, row, facing — not locale collation", () => {

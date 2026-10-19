@@ -1,7 +1,8 @@
 /**
  * Movement and piloting fixes: jump path validation (MOV-02), no jump after a
  * stand (MOV-04), destroyed-gyro prone turning (MOV-08), fall position
- * (MOV-10), and combined phase PSR modifiers (PSR-01).
+ * (MOV-10), combined phase PSR modifiers (PSR-01), stand-up free facing
+ * (MOV-07, 261018) and move legality (MOV-02, 261018).
  */
 
 import { describe, expect, it } from "vitest";
@@ -357,5 +358,131 @@ describe("movement fall onto an occupied hex (MOV-09)", () => {
       expect(requireUnit(state, "a").position).toEqual({ col: 5, row: 9 });
       expect(requireUnit(state, "c").position).toEqual({ col: 5, row: 8 });
     });
+  });
+});
+
+describe("stand-up free facing (MOV-07, TW p.50)", () => {
+  // GRF-1N walks 5: the stand takes 2, three MP remain.
+  const south = { kind: "enter" as const, to: { col: 5, row: 6 } };
+
+  it("turns for free before the first hex entry", () => {
+    const state = movementBattle("GRF-1N", true);
+    executePostureMove(state, "a", "standUp", "walk", [{ kind: "turn", facings: 3 }, south], [], {
+      rng: scriptedRng(6, 6),
+    });
+    const a = requireUnit(state, "a");
+    expect(a.position).toEqual({ col: 5, row: 6 });
+    expect(a.facing).toBe("s");
+    expect(a.mpSpent).toBe(3);
+  });
+
+  it("still charges turns after the first hex entry", () => {
+    const state = movementBattle("GRF-1N", true);
+    expect(() =>
+      executePostureMove(
+        state,
+        "a",
+        "standUp",
+        "walk",
+        [
+          { kind: "enter", to: { col: 5, row: 4 } },
+          { kind: "turn", facings: 3 },
+        ],
+        [],
+        { rng: scriptedRng(6, 6) },
+      ),
+    ).toThrow(/costs 4 MP but only 3/);
+  });
+
+  it("gives a Minimum Movement stand its free facing but no hex", () => {
+    const turned = movementBattle("GRF-1N", true);
+    requireUnit(turned, "a").heat = 20; // walking 1: the stand uses it all
+    executePostureMove(turned, "a", "standUp", "walk", [{ kind: "turn", facings: 3 }], [], {
+      rng: scriptedRng(6, 6),
+    });
+    expect(requireUnit(turned, "a").facing).toBe("s");
+    expect(requireUnit(turned, "a").mpSpent).toBe(1);
+
+    const moved = movementBattle("GRF-1N", true);
+    requireUnit(moved, "a").heat = 20;
+    expect(() =>
+      executePostureMove(moved, "a", "standUp", "walk", [{ kind: "turn", facings: 3 }, south], [], {
+        rng: scriptedRng(6, 6),
+      }),
+    ).toThrow(/only 0 of the walk budget/);
+  });
+});
+
+describe("move legality (MOV-02, 261018)", () => {
+  function crowdedBattle() {
+    const state = createTestBattle(
+      [],
+      [
+        buildUnitInit("a", "GRF-1N", 1, { col: 5, row: 5 }, "n"),
+        buildUnitInit("c", "GRF-1N", 1, { col: 5, row: 4 }, "n"),
+        buildUnitInit("b", "GRF-1N", 2, { col: 5, row: 2 }, "s"),
+      ],
+      true,
+      9,
+      9,
+    );
+    state.phase = "movement";
+    state.initiativeWinnerTeam = 1;
+    state.actorQueue = ["a", "c", "b"];
+    state.actedThisPhase = [];
+    return state;
+  }
+  const enter = (col: number, row: number) => ({ kind: "enter" as const, to: { col, row } });
+
+  it("refuses a walk or jump off the board", () => {
+    const north = [enter(5, 4), enter(5, 3), enter(5, 2), enter(5, 1), enter(5, 0)];
+    expect(() =>
+      executeMove(movementBattle(), "a", "walk", north, [], { rng: scriptedRng() }),
+    ).toThrow(/off the board/);
+    expect(() =>
+      executeMove(movementBattle(), "a", "jump", north, [], { rng: scriptedRng() }),
+    ).toThrow(/off the board/);
+    const state = movementBattle();
+    executeMove(state, "a", "walk", north.slice(0, 4), [], { rng: scriptedRng() });
+    expect(requireUnit(state, "a").position).toEqual({ col: 5, row: 1 });
+  });
+
+  it("checks stacking in the last hex entered, even when a turn follows", () => {
+    expect(() =>
+      executeMove(crowdedBattle(), "a", "walk", [enter(5, 4), { kind: "turn", facings: 1 }], [], {
+        rng: scriptedRng(),
+      }),
+    ).toThrow(/occupied by c/);
+    const state = crowdedBattle();
+    executeMove(state, "a", "walk", [enter(5, 4), enter(5, 3), { kind: "turn", facings: 1 }], [], {
+      rng: scriptedRng(),
+    });
+    expect(requireUnit(state, "a").position).toEqual({ col: 5, row: 3 });
+  });
+
+  it("refuses steps after the hex that declares a charge", () => {
+    const steps = [enter(5, 4), enter(5, 3), enter(5, 2), { kind: "turn" as const, facings: 1 }];
+    expect(() =>
+      executeMove(crowdedBattle(), "a", "walk", steps, [], { rng: scriptedRng() }),
+    ).toThrow(/A charge or DFA ends the move/);
+  });
+
+  it("allows finalFacing only for a jump landing or a stand-up facing pick", () => {
+    expect(() =>
+      executeMove(movementBattle(), "a", "walk", [enter(5, 4)], [], {
+        finalFacing: "s",
+        rng: scriptedRng(),
+      }),
+    ).toThrow(/finalFacing applies only/);
+    const prone = movementBattle("GRF-1N", true);
+    expect(() =>
+      executePostureMove(prone, "a", "standUp", "walk", [enter(5, 4)], [], {
+        finalFacing: "s",
+        rng: scriptedRng(6, 6),
+      }),
+    ).toThrow(/finalFacing applies only/);
+    const state = movementBattle();
+    executeMove(state, "a", "jump", [enter(5, 4)], [], { finalFacing: "s", rng: scriptedRng() });
+    expect(requireUnit(state, "a").facing).toBe("s");
   });
 });

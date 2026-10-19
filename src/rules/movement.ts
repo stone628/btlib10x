@@ -186,13 +186,14 @@ export interface ReachabilityOptions {
   /**
    * TW p.50 standup free pick: "Once standing, it may face any direction at
    * no cost and continue moving under the declared mode." When true, the
-   * start hex gets a zero-cost empty-path landing for every facing — five
-   * extras beyond the BFS's existing `(start, startFacing, [])` entry. The
-   * convention `(start, f, [], 0)` with `f !== startFacing` is consumed by
-   * the web layer's `placeLanding` via `moveFinalFacing`. Non-start hexes
-   * remain BFS-generated from `startFacing` only, so their paths replay
-   * cleanly. Combine with `mode: "walk" | "run" | "jump"` (the caller
-   * already deducted `STAND_MP_COST` from the budget).
+   * search starts from all six facings at zero cost. The start hex gets an
+   * empty-path landing for every facing; the convention `(start, f, [])`
+   * with `f !== startFacing` is consumed by the web layer's `placeLanding`
+   * via `moveFinalFacing`. A path that leaves the start hex in another
+   * facing opens with 0-MP R/L steps for the free turn, so it replays from
+   * `startFacing` and `executePostureMove` charges nothing for them.
+   * Combine with `mode: "walk" | "run"` (the caller already deducted
+   * `STAND_MP_COST` from the budget).
    */
   readonly standup?: boolean;
 }
@@ -312,23 +313,36 @@ export function reachableLandings(
     bestPath.set(key, path);
     queue.push({ hex, facing, cost, path });
   };
+  enqueue(start, startFacing, 0, []);
   if (options.standup) {
-    // TW p.50 free pick: seed the five non-startFacing start-hex facings at
-    // zero cost before the BFS runs. Later MP-charged turn-path entries
+    // TW p.50 free pick: the other five start-hex facings cost nothing, and
+    // the search expands from them too. Later MP-charged turn-path entries
     // (e.g. (start, ne, [R], 1)) hit the `known <= cost` guard above and
-    // never overwrite the free picks. The `startFacing` entry is left to
-    // the `enqueue(start, startFacing, 0, [])` below so the BFS can still
-    // explore forward/backward from it.
+    // never overwrite the free picks.
     for (const f of FACINGS) {
-      if (f === startFacing) continue;
-      const key = stateKey(start, f);
-      dist.set(key, 0);
-      bestPath.set(key, []);
+      if (f !== startFacing) enqueue(start, f, 0, []);
     }
   }
-  enqueue(start, startFacing, 0, []);
 
   const point = (a: HexCoord, b: HexCoord): boolean => a.col === b.col && a.row === b.row;
+  // A free pick keeps its empty path; a path that leaves it spells the free
+  // turn out as 0-MP R/L steps, so it replays from `startFacing`.
+  const leavingPath = (hex: HexCoord, facing: Facing, path: MovePathStep[]): MovePathStep[] => {
+    if (!options.standup || path.length > 0 || facing === startFacing || !point(hex, start)) {
+      return path;
+    }
+    const right = (FACINGS.indexOf(facing) - FACINGS.indexOf(startFacing) + 6) % 6;
+    const fragment: MoveFragment = right <= 3 ? "R" : "L";
+    const terrain = cellAt(options.grid, start).terrain;
+    return Array.from({ length: right <= 3 ? right : 6 - right }, () => ({
+      fragment,
+      baseMp: 0,
+      terrain,
+      terrainSurcharge: 0,
+      climbLevels: 0,
+      climbCost: 0,
+    }));
+  };
   const inBounds = (hex: HexCoord): boolean =>
     hex.col >= 1 && hex.col <= width && hex.row >= 1 && hex.row <= height;
 
@@ -353,6 +367,7 @@ export function reachableLandings(
     if (cur.cost > budget) continue;
     const key = stateKey(cur.hex, cur.facing);
     if ((dist.get(key) ?? Infinity) < cur.cost) continue;
+    const curPath = leavingPath(cur.hex, cur.facing, cur.path);
 
     for (const [frag, delta] of [
       ["R", 1],
@@ -369,7 +384,7 @@ export function reachableLandings(
           climbLevels: 0,
           climbCost: 0,
         };
-        enqueue(cur.hex, newFacing, c, [...cur.path, turnStep]);
+        enqueue(cur.hex, newFacing, c, [...curPath, turnStep]);
       }
     }
 
@@ -380,7 +395,7 @@ export function reachableLandings(
         const c = cur.cost + base;
         if (c <= budget) {
           const step = makeStep(cur.hex, forward, stepFragment(), base);
-          enqueue(forward, cur.facing, c, [...cur.path, step]);
+          enqueue(forward, cur.facing, c, [...curPath, step]);
         }
       }
     }
@@ -391,7 +406,7 @@ export function reachableLandings(
         const c = cur.cost + base;
         if (c <= budget) {
           const step = makeStep(cur.hex, backward, "B", base);
-          enqueue(backward, cur.facing, c, [...cur.path, step]);
+          enqueue(backward, cur.facing, c, [...curPath, step]);
         }
       }
     }
@@ -428,7 +443,7 @@ export function reachableLandings(
       const sep = key.lastIndexOf("|");
       const hex = parseHexKey(key.slice(0, sep));
       const facing = key.slice(sep + 1) as Facing;
-      const path = bestPath.get(key) ?? [];
+      const path = leavingPath(hex, facing, bestPath.get(key) ?? []);
       // An enemy, or a neutral hull of either team (TO:AR p.184).
       const enemyAt = (h: HexCoord): boolean => {
         const occ = options.occupantTeam(h);

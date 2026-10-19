@@ -41,9 +41,10 @@ describe("commitAtomic rollback", () => {
     const rng = scriptedRng(6, 6, 6, 6);
     s.rng = rng;
     const rngSnap = rng.snapshot();
-    // Illegal enter step: attemptStandUp draws 2D6 first, then executeMove
-    // throws, so the commit consumed rng before failing.
-    s.move!.moveSteps = [{ kind: "enter", to: { col: 0, row: 0 } }];
+    // Illegal enter step (an on-board hex, so the stand-still check is what
+    // refuses it): attemptStandUp draws 2D6 first, then executeMove throws,
+    // so the commit consumed rng before failing.
+    s.move!.moveSteps = [{ kind: "enter", to: { col: 9, row: 10 } }];
 
     expect(() => commitMovement(s)).toThrow(/Standing still forbids entering hexes/);
 
