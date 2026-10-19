@@ -329,8 +329,10 @@ export function catalogMaps(): MapManifestEntry[] {
 /**
  * Decode and register the catalog sheet for `model` unless the registry
  * already holds it. Returns the resolved def, or undefined when the
- * catalog knows no such model. Synchronous; requires `loadCatalog` first
- * (except when the registry already holds an exact-case match).
+ * catalog knows no such model (or `model` is not a string). The match is
+ * case-insensitive, so callers that need the exact id compare `.model`.
+ * Synchronous; requires `loadCatalog` first (except when the registry
+ * already holds an exact-case match).
  */
 export function ensureMechRegistered(model: string): ResolvedMechDef | undefined {
   const known = mechDef(model);

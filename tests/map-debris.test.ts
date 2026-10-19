@@ -3,10 +3,12 @@
  * packed wire form, and parity with debris left during play.
  */
 
+/// <reference types="node" />
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { Rng } from "../src/core/types";
-import { decodeMapLine } from "../src/data/catalog";
-import { encodeMapDef } from "../src/data/index";
+import { appendCatalog, decodeMapLine } from "../src/data/catalog";
+import { encodeMapDef, mechDef } from "../src/data/index";
 import { type MapDef, type MapDefSrc, validateMapDef } from "../src/data/map.schema";
 import {
   buildUnitInit,
@@ -141,5 +143,76 @@ describe("map wire form", () => {
     const line = encodeMapDef(bare);
     expect(line).toBe(encodeMapDef({ ...bare, clubs: [], wreckage: [] }));
     expect(decodeMapLine(line, identity)).toEqual(bare);
+  });
+});
+
+describe("createBattle registers catalog models on demand (DATA-04)", () => {
+  // A one-'Mech pack: the base AS7-D sheet under a model id the suite setup
+  // has not registered, like a pack 'Mech nobody has fielded yet.
+  const BASE = readFileSync(new URL("../data/btlib10x.jsonl", import.meta.url), "utf8").split("\n");
+  appendCatalog(
+    [BASE[0], '{v:1,mechs:[{m:"AS7-DX",n:0,b:1,t:100,i:2755,v:1897,l:2}],maps:[]}', BASE[2]].join(
+      "\n",
+    ),
+    "data04",
+    () => {},
+  );
+  const units = (model: string) => [
+    buildUnitInit("a", model, 1, { col: 5, row: 5 }, "n"),
+    buildUnitInit("b", "ENF-4R", 2, { col: 1, row: 1 }, "n"),
+  ];
+  const debrisMap = (model: string): MapDef => ({
+    ...SRC,
+    legends: [],
+    clubs: [{ col: 4, row: 4, model, limb: "leftArm" }],
+    wreckage: [{ col: 2, row: 2, model }],
+  });
+
+  it("accepts map wreckage and clubs of a catalog 'Mech nobody has fielded", () => {
+    expect(mechDef("AS7-DX")).toBeUndefined();
+    const battle = createBattle(debrisMap("AS7-DX"), units("HBK-4G"));
+    expect(wreckageAt(battle, { col: 2, row: 2 })).toEqual([{ model: "AS7-DX", unitId: null }]);
+    expect(battle.clubs["4,4"]).toEqual([
+      { kind: "limb", limb: "leftArm", model: "AS7-DX", ownerId: null },
+    ]);
+    expect(mechDef("AS7-DX")?.tonnage).toBe(100);
+  });
+
+  it("accepts a unit of such a model", () => {
+    const battle = createBattle({ ...SRC, legends: [] }, units("AS7-DX"));
+    expect(battle.units.a!.model).toBe("AS7-DX");
+  });
+
+  it("still refuses unknown, wrong-case and non-string models", () => {
+    expect(() => createBattle(debrisMap("as7-dx"), units("HBK-4G"))).toThrow(
+      /Unknown 'Mech model for club at 4,4: as7-dx/,
+    );
+    expect(() =>
+      createBattle(
+        { ...SRC, legends: [], clubs: [], wreckage: [{ col: 2, row: 2, model: "as7-dx" }] },
+        units("HBK-4G"),
+      ),
+    ).toThrow(/Unknown 'Mech model for wreckage at 2,2: as7-dx/);
+    expect(() => createBattle({ ...SRC, legends: [] }, units("as7-dx"))).toThrow(
+      "Unknown 'Mech model: as7-dx",
+    );
+    expect(() => createBattle({ ...SRC, legends: [] }, units("NOPE"))).toThrow(
+      "Unknown 'Mech model: NOPE",
+    );
+    for (const bad of [undefined, null, 7]) {
+      const [a, b] = units("HBK-4G");
+      expect(() =>
+        createBattle({ ...SRC, legends: [] }, [{ ...a!, model: bad as never }, b!]),
+      ).toThrow(`Unknown 'Mech model: ${bad}`);
+      const debris = {
+        ...SRC,
+        legends: [],
+        clubs: [],
+        wreckage: [{ col: 2, row: 2, model: bad as never }],
+      };
+      expect(() => createBattle(debris, units("HBK-4G"))).toThrow(
+        `Unknown 'Mech model for wreckage at 2,2: ${bad}`,
+      );
+    }
   });
 });

@@ -320,8 +320,9 @@ interface MapDef {
 - `MapDefSrc` — the on-disk map shape (as written in `data/maps/*.json`).
   Optional `clubs: MapClubSrc[]` (`{col, row, model, limb}`) and
   `wreckage: MapWreckageSrc[]` (`{col, row, model}`) start the battle with
-  severed limbs and wreckage on the board; `createBattle` rejects unknown
-  models and wreckage under 40 t. See `docs/MAP_CLUBS_WRECKAGE.md`.
+  severed limbs and wreckage on the board; `createBattle` registers catalog
+  models on demand (`ensureMechRegistered`, exact id only, as for units) and
+  rejects unknown models and wreckage under 40 t.
 
 Bundled maps: `beginner`, `quickstart`, `test`, `testground`.
 

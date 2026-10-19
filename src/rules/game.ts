@@ -35,7 +35,7 @@ import {
   type TerrainHexDef,
   type TerrainType,
 } from "../core/types";
-import { type MapDef, type MechModelHolder, mechDef, mechDefFor } from "../data/index";
+import { ensureMechRegistered, type MapDef, type MechModelHolder, mechDefFor } from "../data/index";
 import type { ResolvedMechDef } from "../data/mech.schema";
 import { isFireableWeapon, weaponDefFor } from "../data/weapon.schema";
 import {
@@ -1607,6 +1607,17 @@ function isUnitWrecked(unit: UnitState): boolean {
   );
 }
 
+/**
+ * Resolve a model id named by a unit or by map debris, registering a catalog
+ * sheet nobody has fielded yet (DATA-04). Only the exact canonical id counts:
+ * a wrong-case id would be stored and later miss `mechDefFor`.
+ */
+function catalogModel(model: string): ResolvedMechDef | undefined {
+  const def = ensureMechRegistered(model);
+  // Not `def?.model === model`, which holds for a model of undefined.
+  return def !== undefined && def.model === model ? def : undefined;
+}
+
 export function createBattle(
   map: MapDef,
   units: readonly UnitInit[],
@@ -1617,7 +1628,7 @@ export function createBattle(
   for (const init of units) {
     if (seen.has(init.id)) throw new Error(`Duplicate unit id: ${init.id}`);
     seen.add(init.id);
-    if (!mechDef(init.model)) throw new Error(`Unknown 'Mech model: ${init.model}`);
+    if (!catalogModel(init.model)) throw new Error(`Unknown 'Mech model: ${init.model}`);
     if (!isValidPilotHitMax(init.pilotHitMax)) {
       throw new Error(`pilotHitMax(${init.pilotHitMax}) for ${init.id} must be an integer >= 1`);
     }
@@ -1693,7 +1704,7 @@ export function createBattle(
   }
   const clubs: Record<string, ClubGroundToken[]> = {};
   for (const c of map.clubs ?? []) {
-    if (!mechDef(c.model))
+    if (!catalogModel(c.model))
       throw new Error(`Unknown 'Mech model for club at ${msgHex(c)}: ${c.model}`);
     const key = hexKey(c);
     clubs[key] = [
@@ -1703,7 +1714,7 @@ export function createBattle(
   }
   const wreckage: Record<string, WreckageEntry[]> = {};
   for (const w of map.wreckage ?? []) {
-    const def = mechDef(w.model);
+    const def = catalogModel(w.model);
     if (!def) throw new Error(`Unknown 'Mech model for wreckage at ${msgHex(w)}: ${w.model}`);
     if (def.tonnage < WRECKAGE_TONNAGE_MIN) {
       throw new Error(
