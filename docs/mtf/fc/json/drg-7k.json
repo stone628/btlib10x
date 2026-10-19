@@ -3,6 +3,7 @@
   "name": "Grand Dragon",
   "tonnage": 60,
   "intro": 3063,
+  "bv": 1702,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 6,

@@ -3,6 +3,7 @@
   "name": "Merlin",
   "tonnage": 60,
   "intro": 3053,
+  "bv": 1228,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

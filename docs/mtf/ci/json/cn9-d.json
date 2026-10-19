@@ -3,6 +3,7 @@
   "name": "Centurion",
   "tonnage": 50,
   "intro": 3049,
+  "bv": 1130,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

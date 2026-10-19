@@ -3,6 +3,7 @@
   "name": "Helios",
   "tonnage": 60,
   "intro": 3058,
+  "bv": 1618,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

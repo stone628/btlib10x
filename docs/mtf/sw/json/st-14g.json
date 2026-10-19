@@ -3,6 +3,7 @@
   "name": "Stag",
   "tonnage": 45,
   "intro": 2823,
+  "bv": 1351,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

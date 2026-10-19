@@ -110,8 +110,8 @@ describe("catalog manifest", () => {
         {
           v: 1,
           mechs: [
-            { m: "X", n: 0, b: 1, t: 50, i: 3025, l: 2 },
-            { m: "x", n: 0, b: 2, t: 50, i: 3025, l: 3 },
+            { m: "X", n: 0, b: 1, t: 50, i: 3025, v: 1000, l: 2 },
+            { m: "x", n: 0, b: 2, t: 50, i: 3025, v: 1000, l: 3 },
           ],
           maps: [],
         },
@@ -122,17 +122,32 @@ describe("catalog manifest", () => {
       parseCatalogManifest(
         {
           v: 1,
-          mechs: [{ m: "X", n: 0, b: 1, t: 50, i: 3025, c: "W", l: 2 }],
+          mechs: [{ m: "X", n: 0, b: 1, t: 50, i: 3025, v: 1000, c: "W", l: 2 }],
           maps: [{ n: "M", w: 1, h: 1, l: 2 }],
         },
         ["Y"],
       ),
     ).not.toThrow();
+    for (const bv of [undefined, -1, 1.5]) {
+      expect(() =>
+        parseCatalogManifest(
+          { v: 1, mechs: [{ m: "X", n: 0, b: 1, t: 50, i: 3025, v: bv, l: 2 }], maps: [] },
+          ["Y"],
+        ),
+      ).toThrow(/bv/);
+    }
   });
 
   it("rejects malformed lines", () => {
     const MAP_ID = { name: "M", width: 1, height: 1 };
-    const id = { model: "X", name: "Y", techBase: "Inner Sphere", tonnage: 50, intro: 3025 };
+    const id = {
+      model: "X",
+      name: "Y",
+      techBase: "Inner Sphere",
+      tonnage: 50,
+      intro: 3025,
+      bv: 1000,
+    };
     expect(() => decodeMechLine("not json", id)).toThrow();
     expect(() => decodeMechLine("[1,2]", id)).toThrow();
     expect(() => decodeMechLine('{"w":1}', id)).toThrow();
@@ -241,7 +256,7 @@ describe("catalog registration", () => {
     const manifest = parseCatalogManifest(
       {
         v: 1,
-        mechs: [{ m: "X", n: 0, b: 1, t: 50, i: 3025, k: "Ross", l: 2 }],
+        mechs: [{ m: "X", n: 0, b: 1, t: 50, i: 3025, v: 1000, k: "Ross", l: 2 }],
         maps: [],
       },
       ["Y"],
@@ -250,7 +265,7 @@ describe("catalog registration", () => {
     expect(manifest.mechs[0]!.intro).toBe(3025);
     expect(() =>
       parseCatalogManifest(
-        { v: 1, mechs: [{ m: "X", n: 0, b: 1, t: 50, i: 3025, k: "", l: 2 }], maps: [] },
+        { v: 1, mechs: [{ m: "X", n: 0, b: 1, t: 50, i: 3025, v: 1000, k: "", l: 2 }], maps: [] },
         ["Y"],
       ),
     ).toThrow(/callsign/);

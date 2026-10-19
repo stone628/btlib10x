@@ -3,6 +3,7 @@
   "name": "Swordsman",
   "tonnage": 40,
   "intro": 2482,
+  "bv": 803,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

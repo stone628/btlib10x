@@ -3,6 +3,7 @@
   "name": "Viking",
   "tonnage": 90,
   "intro": 3059,
+  "bv": 2079,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

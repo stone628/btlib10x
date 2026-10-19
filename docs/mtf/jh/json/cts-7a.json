@@ -3,6 +3,7 @@
   "name": "Cestus",
   "tonnage": 65,
   "intro": 3070,
+  "bv": 1519,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

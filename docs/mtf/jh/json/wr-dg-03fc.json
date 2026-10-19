@@ -3,6 +3,7 @@
   "name": "War Dog",
   "tonnage": 75,
   "intro": 3064,
+  "bv": 1962,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

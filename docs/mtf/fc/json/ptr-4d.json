@@ -3,6 +3,7 @@
   "name": "Penetrator",
   "tonnage": 75,
   "intro": 3060,
+  "bv": 0,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

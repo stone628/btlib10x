@@ -3,6 +3,7 @@
   "name": "Whitworth",
   "tonnage": 40,
   "intro": 3068,
+  "bv": 1055,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

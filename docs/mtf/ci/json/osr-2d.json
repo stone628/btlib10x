@@ -3,6 +3,7 @@
   "name": "Ostroc",
   "tonnage": 60,
   "intro": 3050,
+  "bv": 1396,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

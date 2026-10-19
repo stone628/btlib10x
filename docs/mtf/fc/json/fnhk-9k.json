@@ -3,6 +3,7 @@
   "name": "Falcon Hawk",
   "tonnage": 35,
   "intro": 3057,
+  "bv": 1030,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

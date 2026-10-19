@@ -3,6 +3,7 @@
   "name": "Defiance",
   "tonnage": 75,
   "intro": 3057,
+  "bv": 1817,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

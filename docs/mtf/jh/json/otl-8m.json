@@ -3,6 +3,7 @@
   "name": "Ostsol",
   "tonnage": 60,
   "intro": 3066,
+  "bv": 1733,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 6,

@@ -5,6 +5,7 @@ Config:Biped
 techbase:Inner Sphere
 era:3067
 intro:3067
+bv:1909
 source:TRO: 3050
 rules level:2
 role:Brawler

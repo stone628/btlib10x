@@ -3,6 +3,7 @@
   "name": "Eagle",
   "tonnage": 25,
   "intro": 3058,
+  "bv": 757,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

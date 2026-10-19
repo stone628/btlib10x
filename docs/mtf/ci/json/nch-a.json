@@ -3,6 +3,7 @@
   "name": "Night Chanter",
   "tonnage": 45,
   "intro": 2865,
+  "bv": 1604,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 5,

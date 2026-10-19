@@ -3,6 +3,7 @@
   "name": "Wolfhound",
   "tonnage": 35,
   "intro": 3071,
+  "bv": 1050,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

@@ -3,6 +3,7 @@
   "name": "Nightsky",
   "tonnage": 50,
   "intro": 3056,
+  "bv": 1287,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

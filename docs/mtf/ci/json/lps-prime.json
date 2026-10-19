@@ -3,6 +3,7 @@
   "name": "Lupus",
   "tonnage": 60,
   "intro": 2857,
+  "bv": 2428,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

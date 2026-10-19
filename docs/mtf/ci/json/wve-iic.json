@@ -3,6 +3,7 @@
   "name": "Wyvern IIC",
   "tonnage": 45,
   "intro": 2843,
+  "bv": 1624,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 4,

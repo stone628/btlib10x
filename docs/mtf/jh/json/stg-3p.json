@@ -3,6 +3,7 @@
   "name": "Stinger",
   "tonnage": 20,
   "intro": 3068,
+  "bv": 489,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

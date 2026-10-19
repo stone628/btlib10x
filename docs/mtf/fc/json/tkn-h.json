@@ -3,6 +3,7 @@
   "name": "Turkina",
   "tonnage": 95,
   "intro": 3062,
+  "bv": 2712,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

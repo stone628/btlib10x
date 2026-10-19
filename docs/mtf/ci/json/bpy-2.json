@@ -4,6 +4,7 @@
   "clanName": "Black Python",
   "tonnage": 75,
   "intro": 3052,
+  "bv": 2520,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

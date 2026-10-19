@@ -3,6 +3,7 @@
   "name": "Toro",
   "tonnage": 35,
   "intro": 2548,
+  "bv": 864,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

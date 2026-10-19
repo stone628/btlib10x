@@ -3,6 +3,7 @@
   "name": "Night Gyr",
   "tonnage": 75,
   "intro": 3052,
+  "bv": 2830,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

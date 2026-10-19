@@ -3,6 +3,7 @@
   "name": "Behemoth",
   "tonnage": 100,
   "intro": 3004,
+  "bv": 1703,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 2,

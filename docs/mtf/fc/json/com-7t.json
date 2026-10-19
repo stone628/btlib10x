@@ -4,6 +4,7 @@
   "callsign": "Blazing Inferno II",
   "tonnage": 25,
   "intro": 3062,
+  "bv": 1018,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

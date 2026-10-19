@@ -3,6 +3,7 @@
   "name": "Spartan",
   "tonnage": 80,
   "intro": 2765,
+  "bv": 1605,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 5,

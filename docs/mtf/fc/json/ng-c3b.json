@@ -3,6 +3,7 @@
   "name": "Naginata",
   "tonnage": 95,
   "intro": 3063,
+  "bv": 1943,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

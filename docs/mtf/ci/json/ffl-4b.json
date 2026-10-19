@@ -3,6 +3,7 @@
   "name": "Firefly",
   "tonnage": 30,
   "intro": 3047,
+  "bv": 870,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

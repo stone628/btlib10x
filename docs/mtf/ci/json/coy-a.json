@@ -3,6 +3,7 @@
   "name": "Coyotl",
   "tonnage": 40,
   "intro": 2854,
+  "bv": 1753,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 7,

@@ -4,6 +4,7 @@
   "clanName": "Blood Asp",
   "tonnage": 90,
   "intro": 3071,
+  "bv": 2908,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

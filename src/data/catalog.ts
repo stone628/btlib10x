@@ -14,7 +14,7 @@ import { decodeRelaxed } from "./relaxed-json";
  * its own wire lines addressed by file-local line number. Each pack text is
  * held in memory once (fetch on web, file read in tests/dev); sheets decode
  * and register on demand, so heap cost is O(roster), not O(catalog).
- * Identity (`model`/`name`/`techBase`/`tonnage`/`intro`, plus optional
+ * Identity (`model`/`name`/`techBase`/`tonnage`/`intro`/`bv`, plus optional
  * `clanName`/`callsign`) lives only in the manifest entry — the wire line
  * carries the crunch, and each sheet is single-sourced. Chassis `name`s
  * (manifest `n`) and weapon names (wire `w`) are numeric indices into the
@@ -105,6 +105,7 @@ export function parseCatalogManifest(
       b: techBase,
       t: tonnage,
       i: intro,
+      v: bv,
       c: clanName,
       k: callsign,
       l: line,
@@ -120,6 +121,8 @@ export function parseCatalogManifest(
       throw new Error(`Invalid catalog manifest: ${label}.tonnage must be an integer`);
     if (!Number.isInteger(intro))
       throw new Error(`Invalid catalog manifest: ${label}.intro must be an integer`);
+    if (!Number.isInteger(bv) || (bv as number) < 0)
+      throw new Error(`Invalid catalog manifest: ${label}.bv must be an integer >= 0`);
     if (clanName !== undefined && (typeof clanName !== "string" || clanName.length === 0))
       throw new Error(`Invalid catalog manifest: ${label}.clanName must be a non-empty string`);
     if (callsign !== undefined && (typeof callsign !== "string" || callsign.length === 0))
@@ -135,6 +138,7 @@ export function parseCatalogManifest(
       techBase: CODE_TECHBASE[`${techBase}`] ?? "Unknown",
       tonnage: tonnage as number,
       intro: intro as number,
+      bv: bv as number,
       ...(clanName !== undefined && { clanName: clanName as string }),
       ...(callsign !== undefined && { callsign: callsign as string }),
       line: line as number,

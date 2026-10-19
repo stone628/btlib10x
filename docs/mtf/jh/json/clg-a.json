@@ -3,6 +3,7 @@
   "name": "Crimson Langur",
   "tonnage": 50,
   "intro": 3065,
+  "bv": 2003,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 7,

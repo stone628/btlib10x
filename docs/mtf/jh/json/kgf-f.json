@@ -3,6 +3,7 @@
   "name": "Kingfisher",
   "tonnage": 90,
   "intro": 3069,
+  "bv": 2568,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

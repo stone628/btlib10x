@@ -3,6 +3,7 @@
   "name": "Shadow Cat",
   "tonnage": 45,
   "intro": 3003,
+  "bv": 2220,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 6,

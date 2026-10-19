@@ -3,6 +3,7 @@
   "name": "Apollo",
   "tonnage": 55,
   "intro": 3054,
+  "bv": 1207,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

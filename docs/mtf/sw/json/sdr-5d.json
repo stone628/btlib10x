@@ -3,6 +3,7 @@
   "name": "Spider",
   "tonnage": 30,
   "intro": 2853,
+  "bv": 524,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

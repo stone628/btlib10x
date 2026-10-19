@@ -3,6 +3,7 @@
   "name": "Koschei",
   "tonnage": 65,
   "intro": 2719,
+  "bv": 1516,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

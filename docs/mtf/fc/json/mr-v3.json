@@ -3,6 +3,7 @@
   "name": "Cerberus",
   "tonnage": 95,
   "intro": 3062,
+  "bv": 2094,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

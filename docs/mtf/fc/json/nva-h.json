@@ -4,6 +4,7 @@
   "clanName": "Nova",
   "tonnage": 50,
   "intro": 3059,
+  "bv": 1832,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 5,

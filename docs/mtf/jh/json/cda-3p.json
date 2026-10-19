@@ -3,6 +3,7 @@
   "name": "Cicada",
   "tonnage": 40,
   "intro": 3070,
+  "bv": 1502,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 7,

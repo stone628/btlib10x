@@ -3,6 +3,7 @@
   "name": "Wasp",
   "tonnage": 20,
   "intro": 2818,
+  "bv": 376,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

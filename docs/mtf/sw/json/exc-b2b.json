@@ -3,6 +3,7 @@
   "name": "Excalibur",
   "tonnage": 70,
   "intro": 2735,
+  "bv": 1715,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

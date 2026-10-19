@@ -4,6 +4,7 @@
   "clanName": "Mad Dog",
   "tonnage": 60,
   "intro": 3069,
+  "bv": 2300,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

@@ -3,6 +3,7 @@
   "name": "Chimera",
   "tonnage": 40,
   "intro": 3069,
+  "bv": 1528,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 7,

@@ -3,6 +3,7 @@
   "name": "Jackrabbit",
   "tonnage": 25,
   "intro": 2765,
+  "bv": 414,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

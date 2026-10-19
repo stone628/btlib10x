@@ -3,6 +3,7 @@
   "name": "Hermes II",
   "tonnage": 40,
   "intro": 2798,
+  "bv": 784,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

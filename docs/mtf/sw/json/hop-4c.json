@@ -3,6 +3,7 @@
   "name": "Hoplite",
   "tonnage": 55,
   "intro": 2584,
+  "bv": 986,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

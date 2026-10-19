@@ -3,6 +3,7 @@
   "name": "Chameleon",
   "tonnage": 50,
   "intro": 2510,
+  "bv": 999,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

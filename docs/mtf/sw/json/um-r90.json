@@ -3,6 +3,7 @@
   "name": "SuburbanMech",
   "tonnage": 30,
   "intro": 3018,
+  "bv": 773,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 3,

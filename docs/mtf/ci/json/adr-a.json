@@ -4,6 +4,7 @@
   "clanName": "Adder",
   "tonnage": 35,
   "intro": 3012,
+  "bv": 1437,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 6,

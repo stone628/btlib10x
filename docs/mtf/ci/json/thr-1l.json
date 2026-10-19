@@ -3,6 +3,7 @@
   "name": "Thunder",
   "tonnage": 70,
   "intro": 3055,
+  "bv": 1471,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

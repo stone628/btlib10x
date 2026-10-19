@@ -4,6 +4,7 @@
   "callsign": "Pein-Hammer",
   "tonnage": 30,
   "intro": 3060,
+  "bv": 827,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

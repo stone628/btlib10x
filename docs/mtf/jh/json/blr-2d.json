@@ -3,6 +3,7 @@
   "name": "Warlord",
   "tonnage": 80,
   "intro": 3070,
+  "bv": 2041,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -3,6 +3,7 @@
   "name": "Guillotine IIC",
   "tonnage": 70,
   "intro": 2889,
+  "bv": 2377,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

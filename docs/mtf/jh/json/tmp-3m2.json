@@ -4,6 +4,7 @@
   "callsign": "Storm Tempest",
   "tonnage": 65,
   "intro": 3067,
+  "bv": 1642,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

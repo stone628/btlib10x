@@ -3,6 +3,7 @@
   "name": "Bombardier",
   "tonnage": 65,
   "intro": 2735,
+  "bv": 1480,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

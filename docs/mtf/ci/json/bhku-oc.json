@@ -3,6 +3,7 @@
   "name": "Black Hawk-KU",
   "tonnage": 60,
   "intro": 3055,
+  "bv": 1597,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

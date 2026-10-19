@@ -3,6 +3,7 @@
   "name": "Archer",
   "tonnage": 70,
   "intro": 3010,
+  "bv": 1338,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

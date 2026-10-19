@@ -3,6 +3,7 @@
   "name": "Avatar",
   "tonnage": 70,
   "intro": 3056,
+  "bv": 1775,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

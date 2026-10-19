@@ -3,6 +3,7 @@
   "name": "Galahad",
   "tonnage": 50,
   "intro": 2570,
+  "bv": 1307,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 3,

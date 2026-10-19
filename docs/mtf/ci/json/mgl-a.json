@@ -4,6 +4,7 @@
   "clanName": "Mongrel",
   "tonnage": 45,
   "intro": 3053,
+  "bv": 2031,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 7,

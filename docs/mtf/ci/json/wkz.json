@@ -3,6 +3,7 @@
   "name": "Wakazashi",
   "tonnage": 85,
   "intro": 2830,
+  "bv": 2909,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

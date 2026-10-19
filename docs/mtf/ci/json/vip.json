@@ -3,6 +3,7 @@
   "name": "Viper",
   "tonnage": 75,
   "intro": 3051,
+  "bv": 2813,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

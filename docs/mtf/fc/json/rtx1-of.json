@@ -3,6 +3,7 @@
   "name": "Raptor",
   "tonnage": 25,
   "intro": 3060,
+  "bv": 1029,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 7,

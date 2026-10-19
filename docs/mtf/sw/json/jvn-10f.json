@@ -4,6 +4,7 @@
   "callsign": "Fire Javelin",
   "tonnage": 30,
   "intro": 2819,
+  "bv": 835,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

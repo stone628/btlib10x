@@ -3,6 +3,7 @@
   "name": "Lancelot",
   "tonnage": 60,
   "intro": 2832,
+  "bv": 1960,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 6,

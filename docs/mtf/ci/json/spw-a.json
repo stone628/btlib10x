@@ -3,6 +3,7 @@
   "name": "Spirit Walker",
   "tonnage": 75,
   "intro": 2866,
+  "bv": 1990,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

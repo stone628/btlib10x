@@ -4,6 +4,7 @@
   "clanName": "Executioner",
   "tonnage": 95,
   "intro": 3068,
+  "bv": 3125,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

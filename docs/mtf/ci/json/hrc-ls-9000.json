@@ -3,6 +3,7 @@
   "name": "Hercules",
   "tonnage": 70,
   "intro": 3054,
+  "bv": 1561,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -3,6 +3,7 @@
   "name": "Guillotine",
   "tonnage": 70,
   "intro": 2833,
+  "bv": 1376,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

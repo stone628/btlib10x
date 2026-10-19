@@ -3,6 +3,7 @@
   "name": "Valkyrie",
   "tonnage": 30,
   "intro": 3067,
+  "bv": 878,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

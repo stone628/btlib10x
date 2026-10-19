@@ -3,6 +3,7 @@
   "name": "Jenner IIC",
   "tonnage": 35,
   "intro": 3042,
+  "bv": 1047,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 9,

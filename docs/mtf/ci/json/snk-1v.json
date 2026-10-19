@@ -3,6 +3,7 @@
   "name": "Snake",
   "tonnage": 45,
   "intro": 3053,
+  "bv": 980,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

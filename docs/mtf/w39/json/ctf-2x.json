@@ -3,6 +3,7 @@
   "name": "Cataphract",
   "tonnage": 70,
   "intro": 3027,
+  "bv": 1344,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

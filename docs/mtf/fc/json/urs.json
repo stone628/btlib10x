@@ -3,6 +3,7 @@
   "name": "Ursus",
   "tonnage": 50,
   "intro": 3059,
+  "bv": 1778,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 4,

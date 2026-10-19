@@ -3,6 +3,7 @@
   "name": "Great Wyrm",
   "tonnage": 45,
   "intro": 2844,
+  "bv": 1331,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 5,

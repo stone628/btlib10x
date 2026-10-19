@@ -3,6 +3,7 @@
   "name": "King Crab",
   "tonnage": 100,
   "intro": 2743,
+  "bv": 1906,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

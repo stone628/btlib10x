@@ -3,6 +3,7 @@
   "name": "Hatamoto-Chi",
   "tonnage": 80,
   "intro": 3042,
+  "bv": 1607,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

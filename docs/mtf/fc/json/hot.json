@@ -3,6 +3,7 @@
   "name": "Ha Otoko",
   "tonnage": 65,
   "intro": 3060,
+  "bv": 1873,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

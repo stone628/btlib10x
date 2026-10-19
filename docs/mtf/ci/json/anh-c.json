@@ -3,6 +3,7 @@
   "name": "Annihilator",
   "tonnage": 100,
   "intro": 2848,
+  "bv": 2520,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

@@ -3,6 +3,7 @@
   "name": "Hatamoto-Hi",
   "tonnage": 80,
   "intro": 3050,
+  "bv": 1573,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

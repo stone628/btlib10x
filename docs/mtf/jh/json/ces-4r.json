@@ -3,6 +3,7 @@
   "name": "Caesar",
   "tonnage": 70,
   "intro": 3067,
+  "bv": 2024,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

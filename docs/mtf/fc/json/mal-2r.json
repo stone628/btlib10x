@@ -3,6 +3,7 @@
   "name": "Mauler",
   "tonnage": 90,
   "intro": 3060,
+  "bv": 1586,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

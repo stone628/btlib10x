@@ -4,6 +4,7 @@
   "clanName": "Huntsman",
   "tonnage": 50,
   "intro": 3070,
+  "bv": 2104,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 5,

@@ -3,6 +3,7 @@
   "name": "O-Bakemono",
   "tonnage": 80,
   "intro": 3070,
+  "bv": 1732,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

@@ -3,6 +3,7 @@
   "name": "Men Shen",
   "tonnage": 55,
   "intro": 3060,
+  "bv": 1529,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

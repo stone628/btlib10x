@@ -3,6 +3,7 @@
   "name": "Jenner",
   "tonnage": 35,
   "intro": 3030,
+  "bv": 1070,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 7,

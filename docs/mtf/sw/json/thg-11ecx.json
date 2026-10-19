@@ -4,6 +4,7 @@
   "callsign": "Jose",
   "tonnage": 80,
   "intro": 2772,
+  "bv": 1668,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

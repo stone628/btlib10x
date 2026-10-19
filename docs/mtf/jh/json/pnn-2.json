@@ -3,6 +3,7 @@
   "name": "Pinion",
   "tonnage": 45,
   "intro": 3068,
+  "bv": 1657,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 5,

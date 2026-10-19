@@ -3,6 +3,7 @@
   "name": "Falcon",
   "tonnage": 30,
   "intro": 2792,
+  "bv": 881,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

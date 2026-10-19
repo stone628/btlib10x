@@ -3,6 +3,7 @@
   "name": "Kintaro",
   "tonnage": 55,
   "intro": 3058,
+  "bv": 1571,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

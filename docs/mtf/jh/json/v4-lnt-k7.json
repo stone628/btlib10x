@@ -3,6 +3,7 @@
   "name": "Valiant",
   "tonnage": 30,
   "intro": 3068,
+  "bv": 894,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 7,

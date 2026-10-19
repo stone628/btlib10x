@@ -3,6 +3,7 @@
   "name": "Quickdraw",
   "tonnage": 60,
   "intro": 3002,
+  "bv": 1196,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

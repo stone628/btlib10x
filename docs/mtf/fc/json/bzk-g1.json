@@ -3,6 +3,7 @@
   "name": "Hollander",
   "tonnage": 35,
   "intro": 3056,
+  "bv": 873,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

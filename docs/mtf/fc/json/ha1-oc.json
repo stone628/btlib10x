@@ -3,6 +3,7 @@
   "name": "Hauptmann",
   "tonnage": 95,
   "intro": 3061,
+  "bv": 2322,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

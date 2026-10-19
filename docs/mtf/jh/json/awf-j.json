@@ -3,6 +3,7 @@
   "name": "Arctic Wolf",
   "tonnage": 40,
   "intro": 3070,
+  "bv": 1786,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 6,

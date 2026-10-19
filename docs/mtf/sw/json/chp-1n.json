@@ -3,6 +3,7 @@
   "name": "Champion",
   "tonnage": 60,
   "intro": 2602,
+  "bv": 1233,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -3,6 +3,7 @@
   "name": "Spartan",
   "tonnage": 80,
   "intro": 2865,
+  "bv": 2514,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 5,

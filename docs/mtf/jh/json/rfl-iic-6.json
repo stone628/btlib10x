@@ -3,6 +3,7 @@
   "name": "Rifleman IIC",
   "tonnage": 65,
   "intro": 3071,
+  "bv": 2251,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 3,

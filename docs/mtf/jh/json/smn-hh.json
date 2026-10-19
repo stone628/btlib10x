@@ -4,6 +4,7 @@
   "clanName": "Summoner",
   "tonnage": 70,
   "intro": 3070,
+  "bv": 2490,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

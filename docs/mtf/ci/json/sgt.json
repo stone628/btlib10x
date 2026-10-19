@@ -3,6 +3,7 @@
   "name": "Storm Giant",
   "tonnage": 100,
   "intro": 2862,
+  "bv": 2676,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

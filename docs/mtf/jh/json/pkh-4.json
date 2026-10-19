@@ -3,6 +3,7 @@
   "name": "Pack Hunter",
   "tonnage": 30,
   "intro": 3070,
+  "bv": 1257,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 6,

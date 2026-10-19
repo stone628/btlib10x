@@ -3,6 +3,7 @@
   "name": "Dart",
   "tonnage": 25,
   "intro": 3053,
+  "bv": 641,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 9,

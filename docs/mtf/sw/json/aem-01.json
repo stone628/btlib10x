@@ -3,6 +3,7 @@
   "name": "Dragoon",
   "tonnage": 70,
   "intro": 2771,
+  "bv": 1669,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

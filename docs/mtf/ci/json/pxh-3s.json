@@ -3,6 +3,7 @@
   "name": "Phoenix Hawk",
   "tonnage": 45,
   "intro": 3042,
+  "bv": 1237,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

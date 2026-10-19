@@ -3,6 +3,7 @@
   "name": "UrbanMech",
   "tonnage": 30,
   "intro": 3063,
+  "bv": 589,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 2,

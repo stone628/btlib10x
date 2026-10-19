@@ -4,6 +4,7 @@
   "callsign": "Sparky",
   "tonnage": 55,
   "intro": 3035,
+  "bv": 1449,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

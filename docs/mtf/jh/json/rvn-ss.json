@@ -4,6 +4,7 @@
   "callsign": "Shattered Raven",
   "tonnage": 35,
   "intro": 3069,
+  "bv": 904,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

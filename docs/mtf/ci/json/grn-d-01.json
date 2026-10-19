@@ -3,6 +3,7 @@
   "name": "Grand Crusader",
   "tonnage": 80,
   "intro": 3053,
+  "bv": 1758,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

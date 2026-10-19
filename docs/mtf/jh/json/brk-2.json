@@ -3,6 +3,7 @@
   "name": "Burrock",
   "tonnage": 75,
   "intro": 3071,
+  "bv": 2864,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

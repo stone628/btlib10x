@@ -3,6 +3,7 @@
   "name": "Matador",
   "tonnage": 60,
   "intro": 2846,
+  "bv": 2006,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

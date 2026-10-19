@@ -3,6 +3,7 @@
   "name": "Champion",
   "tonnage": 60,
   "intro": 2867,
+  "bv": 2191,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

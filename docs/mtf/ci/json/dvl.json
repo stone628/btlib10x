@@ -3,6 +3,7 @@
   "name": "Devil",
   "tonnage": 30,
   "intro": 2911,
+  "bv": 1691,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 10,

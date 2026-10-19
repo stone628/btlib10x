@@ -3,6 +3,7 @@
   "name": "Flashfire",
   "tonnage": 30,
   "intro": 3054,
+  "bv": 718,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

@@ -3,6 +3,7 @@
   "name": "Atlas",
   "tonnage": 100,
   "intro": 3028,
+  "bv": 1976,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

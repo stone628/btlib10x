@@ -3,6 +3,7 @@
   "name": "Highlander IIC",
   "tonnage": 90,
   "intro": 2858,
+  "bv": 2979,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

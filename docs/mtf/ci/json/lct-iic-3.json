@@ -3,6 +3,7 @@
   "name": "Locust IIC",
   "tonnage": 25,
   "intro": 2853,
+  "bv": 980,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 8,

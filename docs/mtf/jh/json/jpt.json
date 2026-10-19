@@ -3,6 +3,7 @@
   "name": "Jupiter",
   "tonnage": 100,
   "intro": 3068,
+  "bv": 2784,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

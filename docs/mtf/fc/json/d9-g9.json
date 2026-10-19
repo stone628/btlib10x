@@ -3,6 +3,7 @@
   "name": "Duan Gung",
   "tonnage": 25,
   "intro": 3058,
+  "bv": 737,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 7,

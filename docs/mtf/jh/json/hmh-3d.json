@@ -3,6 +3,7 @@
   "name": "Hammerhands",
   "tonnage": 75,
   "intro": 2475,
+  "bv": 1381,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 3,

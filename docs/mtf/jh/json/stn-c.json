@@ -3,6 +3,7 @@
   "name": "Sentinel",
   "tonnage": 40,
   "intro": 3065,
+  "bv": 689,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

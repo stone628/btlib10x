@@ -4,6 +4,7 @@
   "clanName": "Hellbringer",
   "tonnage": 65,
   "intro": 2926,
+  "bv": 1948,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

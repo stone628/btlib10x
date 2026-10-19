@@ -3,6 +3,7 @@
   "name": "Linebacker",
   "tonnage": 65,
   "intro": 3052,
+  "bv": 2264,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 6,

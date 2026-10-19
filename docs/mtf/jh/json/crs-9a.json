@@ -3,6 +3,7 @@
   "name": "Crossbow",
   "tonnage": 60,
   "intro": 3071,
+  "bv": 1583,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

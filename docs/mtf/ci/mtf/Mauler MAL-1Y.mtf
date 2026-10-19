@@ -6,6 +6,7 @@ Config:Biped
 techbase:Inner Sphere
 era:3048
 intro:3048
+bv:1448
 source:Shrapnel 15
 rules level:3
 role:Sniper

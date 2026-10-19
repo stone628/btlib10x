@@ -175,6 +175,9 @@ export interface MechDef {
   readonly tonnage: number;
   /** Introduction year (Master Unit List) from the MTF `Intro:` header (e.g. 3025). Required. */
   readonly intro: number;
+  /** Battle Value (Master Unit List, regular 4/5 pilot) from the MTF `BV:`
+   *  header; 0 when the MUL lists none. Required. */
+  readonly bv: number;
   readonly weightClass: "Light" | "Medium" | "Heavy" | "Assault";
   readonly techBase: string;
   readonly walking: number;
@@ -236,6 +239,8 @@ export interface ResolvedMechDef {
   readonly tonnage: number;
   /** Introduction year (Master Unit List) from the MTF `Intro:` header. */
   readonly intro: number;
+  /** Battle Value (Master Unit List, regular 4/5 pilot); 0 when the MUL lists none. */
+  readonly bv: number;
   readonly weightClass: "Light" | "Medium" | "Heavy" | "Assault";
   readonly techBase: string;
   readonly walking: number;
@@ -311,6 +316,7 @@ export function resolveMechDef(def: MechDef): ResolvedMechDef {
     ...(def.callsign !== undefined && { callsign: def.callsign }),
     tonnage: def.tonnage,
     intro: def.intro,
+    bv: def.bv,
     weightClass: def.weightClass,
     techBase: def.techBase,
     walking: def.walking,
@@ -558,6 +564,7 @@ export function validateMechDef(def: MechDef): MechDef {
 
   if (tonnage < 10 || tonnage > 100) errors.push("tonnage must be 10..100");
   if (!Number.isInteger(def.intro)) errors.push("intro must be an integer year");
+  if (!Number.isInteger(def.bv) || def.bv < 0) errors.push("bv must be an integer >= 0");
 
   if (
     def.clanName !== undefined &&

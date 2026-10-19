@@ -3,6 +3,7 @@
   "name": "Supernova",
   "tonnage": 90,
   "intro": 3067,
+  "bv": 3158,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

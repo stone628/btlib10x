@@ -3,6 +3,7 @@
   "name": "Hornet",
   "tonnage": 20,
   "intro": 2760,
+  "bv": 488,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

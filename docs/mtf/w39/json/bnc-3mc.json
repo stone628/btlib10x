@@ -3,6 +3,7 @@
   "name": "Banshee",
   "tonnage": 95,
   "intro": 3037,
+  "bv": 1487,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -3,6 +3,7 @@
   "name": "Orion",
   "tonnage": 75,
   "intro": 3058,
+  "bv": 1501,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

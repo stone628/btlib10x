@@ -3,6 +3,7 @@
   "name": "Koto",
   "tonnage": 25,
   "intro": 3062,
+  "bv": 806,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

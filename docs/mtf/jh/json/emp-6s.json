@@ -3,6 +3,7 @@
   "name": "Emperor",
   "tonnage": 90,
   "intro": 3069,
+  "bv": 2065,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

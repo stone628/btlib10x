@@ -3,6 +3,7 @@
   "name": "Raven",
   "tonnage": 35,
   "intro": 3030,
+  "bv": 887,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -3,6 +3,7 @@
   "name": "Hatamoto-Ku",
   "tonnage": 80,
   "intro": 3048,
+  "bv": 1563,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

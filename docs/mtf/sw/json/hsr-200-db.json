@@ -3,6 +3,7 @@
   "name": "Hussar",
   "tonnage": 30,
   "intro": 2735,
+  "bv": 934,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 9,

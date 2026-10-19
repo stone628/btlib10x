@@ -3,6 +3,7 @@
   "name": "Charger",
   "tonnage": 80,
   "intro": 2665,
+  "bv": 981,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 5,

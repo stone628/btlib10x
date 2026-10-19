@@ -3,6 +3,7 @@
   "name": "Garm",
   "tonnage": 35,
   "intro": 3059,
+  "bv": 934,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

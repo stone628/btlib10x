@@ -3,6 +3,7 @@
   "name": "Marshal",
   "tonnage": 55,
   "intro": 3063,
+  "bv": 1313,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

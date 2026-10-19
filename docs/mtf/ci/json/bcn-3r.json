@@ -3,6 +3,7 @@
   "name": "Buccaneer",
   "tonnage": 55,
   "intro": 3055,
+  "bv": 1434,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

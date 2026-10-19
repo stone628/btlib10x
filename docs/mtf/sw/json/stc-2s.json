@@ -3,6 +3,7 @@
   "name": "Striker",
   "tonnage": 80,
   "intro": 2845,
+  "bv": 1466,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

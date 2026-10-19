@@ -3,6 +3,7 @@
   "name": "Morpheus",
   "tonnage": 65,
   "intro": 3051,
+  "bv": 1340,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 6,

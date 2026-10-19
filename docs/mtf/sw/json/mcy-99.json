@@ -3,6 +3,7 @@
   "name": "Mercury",
   "tonnage": 20,
   "intro": 2742,
+  "bv": 586,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

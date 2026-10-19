@@ -3,6 +3,7 @@
   "name": "Hatchetman",
   "tonnage": 45,
   "intro": 3023,
+  "bv": 854,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

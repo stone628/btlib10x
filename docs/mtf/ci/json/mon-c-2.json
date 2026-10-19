@@ -3,6 +3,7 @@
   "name": "Mongoose",
   "tonnage": 25,
   "intro": 2860,
+  "bv": 1620,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 8,

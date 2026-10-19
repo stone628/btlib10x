@@ -3,6 +3,7 @@
   "name": "Ymir",
   "tonnage": 90,
   "intro": 2475,
+  "bv": 1289,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

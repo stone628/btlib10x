@@ -3,6 +3,7 @@
   "name": "Osprey",
   "tonnage": 55,
   "intro": 2738,
+  "bv": 1564,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

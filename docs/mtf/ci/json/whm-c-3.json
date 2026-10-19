@@ -3,6 +3,7 @@
   "name": "Warhammer",
   "tonnage": 70,
   "intro": 2862,
+  "bv": 2772,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

@@ -3,6 +3,7 @@
   "name": "Sun Bear",
   "tonnage": 55,
   "intro": 2966,
+  "bv": 2022,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 5,

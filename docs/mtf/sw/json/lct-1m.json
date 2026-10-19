@@ -3,6 +3,7 @@
   "name": "Locust",
   "tonnage": 20,
   "intro": 2571,
+  "bv": 424,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

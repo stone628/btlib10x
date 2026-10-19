@@ -4,6 +4,7 @@
   "callsign": "Douglass",
   "tonnage": 75,
   "intro": 3025,
+  "bv": 1459,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

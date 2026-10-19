@@ -3,6 +3,7 @@
   "name": "Phoenix",
   "tonnage": 50,
   "intro": 2520,
+  "bv": 1106,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

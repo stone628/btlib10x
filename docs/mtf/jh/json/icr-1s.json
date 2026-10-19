@@ -3,6 +3,7 @@
   "name": "Icarus II",
   "tonnage": 40,
   "intro": 2518,
+  "bv": 869,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

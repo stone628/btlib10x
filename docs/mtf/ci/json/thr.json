@@ -3,6 +3,7 @@
   "name": "Thresher",
   "tonnage": 60,
   "intro": 2849,
+  "bv": 2314,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

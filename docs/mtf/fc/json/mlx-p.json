@@ -4,6 +4,7 @@
   "clanName": "Mist Lynx",
   "tonnage": 25,
   "intro": 3061,
+  "bv": 1064,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 7,

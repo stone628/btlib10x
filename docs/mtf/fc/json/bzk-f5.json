@@ -3,6 +3,7 @@
   "name": "Hollander II",
   "tonnage": 45,
   "intro": 3058,
+  "bv": 1214,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

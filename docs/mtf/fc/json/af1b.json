@@ -3,6 +3,7 @@
   "name": "Arctic Fox",
   "tonnage": 30,
   "intro": 3059,
+  "bv": 735,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

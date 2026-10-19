@@ -3,6 +3,7 @@
   "name": "Stalker",
   "tonnage": 85,
   "intro": 3054,
+  "bv": 2707,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

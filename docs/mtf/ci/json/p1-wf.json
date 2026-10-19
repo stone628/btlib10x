@@ -3,6 +3,7 @@
   "name": "Wildfire",
   "tonnage": 65,
   "intro": 3053,
+  "bv": 1292,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 6,

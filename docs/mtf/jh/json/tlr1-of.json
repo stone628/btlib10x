@@ -3,6 +3,7 @@
   "name": "Templar",
   "tonnage": 85,
   "intro": 3068,
+  "bv": 2029,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

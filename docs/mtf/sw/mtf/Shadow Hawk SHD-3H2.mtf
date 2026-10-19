@@ -7,6 +7,7 @@ Config:Biped
 techbase:Inner Sphere
 era:2775
 intro:2775
+bv:1112
 source:Shrapnel #14
 rules level:3
 role:Skirmisher

@@ -3,6 +3,7 @@
   "name": "Shadow Hawk IIC",
   "tonnage": 45,
   "intro": 2831,
+  "bv": 1732,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 6,

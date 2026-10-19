@@ -3,6 +3,7 @@
   "name": "Alfar",
   "tonnage": 55,
   "intro": 2573,
+  "bv": 1447,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

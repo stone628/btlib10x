@@ -3,6 +3,7 @@
   "name": "Orion IIC",
   "tonnage": 75,
   "intro": 2841,
+  "bv": 2392,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

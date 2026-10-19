@@ -3,6 +3,7 @@
   "name": "Salamander",
   "tonnage": 80,
   "intro": 3058,
+  "bv": 1714,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

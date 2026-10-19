@@ -131,6 +131,7 @@ function parseMtf(text, file) {
     [
       "TechBase",
       "Intro",
+      "BV",
       "Myomer",
       "Engine",
       "Structure",
@@ -243,6 +244,13 @@ function parseMtf(text, file) {
   const introRaw = fields.Intro ?? "";
   const intro = /^\d+$/.test(introRaw) ? Number(introRaw) : null;
   if (intro === null) errors.push(`Intro header missing or malformed in ${file}`);
+
+  // BV:N Battle Value (required catalog identity, e.g. `BV:1041`), the Master
+  // Unit List value copied from each pack's roster.json, like `Intro`. 0 means
+  // the MUL lists no BV for the sheet.
+  const bvRaw = fields.BV ?? "";
+  const bv = /^\d+$/.test(bvRaw) ? Number(bvRaw) : null;
+  if (bv === null) errors.push(`BV header missing or malformed in ${file}`);
 
   // Heat Sinks:N <Single|Double> header -> canon heat sink config (total
   // count including engine-mounted sinks). Classic construction rule: an
@@ -453,6 +461,7 @@ function parseMtf(text, file) {
     ...(callsign !== undefined && { callsign }),
     tonnage,
     intro,
+    bv,
     weightClass: tonnage ? weightClass(tonnage) : "Assault",
     techBase: fields.TechBase ?? "Inner Sphere",
     walking,

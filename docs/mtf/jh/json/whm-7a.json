@@ -3,6 +3,7 @@
   "name": "Warhammer",
   "tonnage": 70,
   "intro": 2761,
+  "bv": 1679,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

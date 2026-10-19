@@ -3,6 +3,7 @@
   "name": "Battle Hawk",
   "tonnage": 30,
   "intro": 3053,
+  "bv": 771,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

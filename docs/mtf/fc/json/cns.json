@@ -3,6 +3,7 @@
   "name": "Canis",
   "tonnage": 80,
   "intro": 3058,
+  "bv": 2498,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

@@ -3,6 +3,7 @@
   "name": "Starslayer",
   "tonnage": 50,
   "intro": 3057,
+  "bv": 1593,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

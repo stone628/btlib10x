@@ -3,6 +3,7 @@
   "name": "Commando",
   "tonnage": 25,
   "intro": 3022,
+  "bv": 684,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

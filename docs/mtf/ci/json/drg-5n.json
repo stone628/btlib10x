@@ -3,6 +3,7 @@
   "name": "Dragon",
   "tonnage": 60,
   "intro": 3047,
+  "bv": 1223,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

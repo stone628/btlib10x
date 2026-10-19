@@ -3,6 +3,7 @@
   "name": "Sling",
   "tonnage": 25,
   "intro": 2766,
+  "bv": 731,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 7,

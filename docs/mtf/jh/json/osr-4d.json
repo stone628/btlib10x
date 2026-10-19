@@ -3,6 +3,7 @@
   "name": "Osiris",
   "tonnage": 30,
   "intro": 3067,
+  "bv": 1230,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

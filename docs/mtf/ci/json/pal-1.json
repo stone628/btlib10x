@@ -3,6 +3,7 @@
   "name": "Paladin",
   "tonnage": 60,
   "intro": 3053,
+  "bv": 1361,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

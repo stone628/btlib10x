@@ -3,6 +3,7 @@
   "name": "Grasshopper",
   "tonnage": 70,
   "intro": 3064,
+  "bv": 1597,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

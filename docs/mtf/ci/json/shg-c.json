@@ -3,6 +3,7 @@
   "name": "Shogun",
   "tonnage": 85,
   "intro": 2850,
+  "bv": 3032,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

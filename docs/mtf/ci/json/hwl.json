@@ -4,6 +4,7 @@
   "clanName": "Howler",
   "tonnage": 20,
   "intro": 2871,
+  "bv": 645,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 7,

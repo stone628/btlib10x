@@ -3,6 +3,7 @@
   "name": "Rattlesnake",
   "tonnage": 35,
   "intro": 3042,
+  "bv": 1398,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 7,

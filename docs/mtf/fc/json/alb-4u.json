@@ -3,6 +3,7 @@
   "name": "Albatross",
   "tonnage": 95,
   "intro": 3063,
+  "bv": 1907,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

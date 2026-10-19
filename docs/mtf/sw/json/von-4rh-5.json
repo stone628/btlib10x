@@ -4,6 +4,7 @@
   "clanName": "Hebis",
   "tonnage": 65,
   "intro": 2487,
+  "bv": 1170,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

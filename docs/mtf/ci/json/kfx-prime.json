@@ -4,6 +4,7 @@
   "clanName": "Kit Fox",
   "tonnage": 30,
   "intro": 2890,
+  "bv": 1085,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 6,

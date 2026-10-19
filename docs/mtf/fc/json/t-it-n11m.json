@@ -3,6 +3,7 @@
   "name": "Grand Titan",
   "tonnage": 100,
   "intro": 3058,
+  "bv": 2053,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

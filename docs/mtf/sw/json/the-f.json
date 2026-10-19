@@ -3,6 +3,7 @@
   "name": "Thorn",
   "tonnage": 20,
   "intro": 2490,
+  "bv": 510,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

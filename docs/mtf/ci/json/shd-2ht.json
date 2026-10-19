@@ -3,6 +3,7 @@
   "name": "Shadow Hawk",
   "tonnage": 55,
   "intro": 3052,
+  "bv": 1453,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

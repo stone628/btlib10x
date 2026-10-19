@@ -3,6 +3,7 @@
   "name": "Razorback",
   "tonnage": 30,
   "intro": 3071,
+  "bv": 1172,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 7,

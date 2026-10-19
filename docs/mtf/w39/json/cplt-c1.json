@@ -3,6 +3,7 @@
   "name": "Catapult",
   "tonnage": 65,
   "intro": 3027,
+  "bv": 1242,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -3,6 +3,7 @@
   "name": "Watchman",
   "tonnage": 40,
   "intro": 3055,
+  "bv": 1067,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

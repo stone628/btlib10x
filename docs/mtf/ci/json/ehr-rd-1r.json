@@ -4,6 +4,7 @@
   "clanName": "Emerald Harrier",
   "tonnage": 15,
   "intro": 2920,
+  "bv": 888,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 14,

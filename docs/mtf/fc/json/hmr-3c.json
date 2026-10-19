@@ -4,6 +4,7 @@
   "callsign": "Claw-Hammer",
   "tonnage": 30,
   "intro": 3056,
+  "bv": 976,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

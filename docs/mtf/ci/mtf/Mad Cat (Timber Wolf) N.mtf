@@ -6,6 +6,7 @@ Config:Biped Omnimech
 techbase:Clan
 era:3050
 intro:3050
+bv:2862
 rules level:2
 
 mass:75

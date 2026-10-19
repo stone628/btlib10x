@@ -4,6 +4,7 @@
   "clanName": "Vapor Eagle",
   "tonnage": 55,
   "intro": 2922,
+  "bv": 2572,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 6,

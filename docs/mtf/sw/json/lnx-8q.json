@@ -3,6 +3,7 @@
   "name": "Lynx",
   "tonnage": 55,
   "intro": 2853,
+  "bv": 1292,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

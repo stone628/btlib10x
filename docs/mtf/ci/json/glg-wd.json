@@ -3,6 +3,7 @@
   "name": "Gallowglas",
   "tonnage": 70,
   "intro": 3055,
+  "bv": 2094,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

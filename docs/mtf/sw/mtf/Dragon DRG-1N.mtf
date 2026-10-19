@@ -6,6 +6,7 @@ Config:Biped
 techbase:Inner Sphere
 era:2754
 intro:2754
+bv:1125
 source:TRO: 3039
 rules level:1
 role:Skirmisher

@@ -3,6 +3,7 @@
   "name": "Falconer",
   "tonnage": 75,
   "intro": 3053,
+  "bv": 2231,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

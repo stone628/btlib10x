@@ -3,6 +3,7 @@
   "name": "Flashman",
   "tonnage": 75,
   "intro": 3063,
+  "bv": 1774,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

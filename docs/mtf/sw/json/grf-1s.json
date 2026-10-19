@@ -3,6 +3,7 @@
   "name": "Griffin",
   "tonnage": 55,
   "intro": 2857,
+  "bv": 1253,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

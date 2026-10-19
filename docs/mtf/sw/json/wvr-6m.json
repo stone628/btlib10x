@@ -3,6 +3,7 @@
   "name": "Wolverine",
   "tonnage": 55,
   "intro": 2816,
+  "bv": 1291,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -3,6 +3,7 @@
   "name": "Woodsman",
   "tonnage": 75,
   "intro": 2866,
+  "bv": 2623,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

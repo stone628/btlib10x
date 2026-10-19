@@ -3,6 +3,7 @@
   "name": "Lao Hu",
   "tonnage": 75,
   "intro": 3063,
+  "bv": 1497,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

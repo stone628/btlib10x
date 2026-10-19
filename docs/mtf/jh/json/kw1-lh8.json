@@ -4,6 +4,7 @@
   "callsign": "Linebreaker",
   "tonnage": 55,
   "intro": 3065,
+  "bv": 1330,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

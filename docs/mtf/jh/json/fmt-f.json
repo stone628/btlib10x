@@ -4,6 +4,7 @@
   "clanName": "Fire Moth",
   "tonnage": 20,
   "intro": 3070,
+  "bv": 1461,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 10,

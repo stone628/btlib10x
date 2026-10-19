@@ -3,6 +3,7 @@
   "name": "Ti Ts'ang",
   "tonnage": 60,
   "intro": 3060,
+  "bv": 1909,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 6,

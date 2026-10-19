@@ -4,6 +4,7 @@
   "clanName": "Warhawk",
   "tonnage": 85,
   "intro": 2999,
+  "bv": 2399,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

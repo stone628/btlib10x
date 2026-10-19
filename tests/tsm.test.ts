@@ -148,7 +148,14 @@ describe("TSM physical damage doubling", () => {
 });
 
 describe("myomer wire key y", () => {
-  const id = { model: "X", name: "Y", techBase: "Inner Sphere", tonnage: 50, intro: 3025 };
+  const id = {
+    model: "X",
+    name: "Y",
+    techBase: "Inner Sphere",
+    tonnage: 50,
+    intro: 3025,
+    bv: 1000,
+  };
   const mechDir = new URL("../data/mechs/", import.meta.url);
   const stdRaw = JSON.parse(readFileSync(new URL("hbk-4g.json", mechDir), "utf8")) as Parameters<
     typeof encodeMechDef

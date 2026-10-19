@@ -3,6 +3,7 @@
   "name": "Griffin IIC",
   "tonnage": 40,
   "intro": 2852,
+  "bv": 1608,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 6,

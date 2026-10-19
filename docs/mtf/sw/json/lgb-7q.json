@@ -3,6 +3,7 @@
   "name": "Longbow",
   "tonnage": 85,
   "intro": 2610,
+  "bv": 1618,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

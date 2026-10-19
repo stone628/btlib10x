@@ -3,6 +3,7 @@
   "name": "Warhammer IIC",
   "tonnage": 80,
   "intro": 2920,
+  "bv": 2482,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

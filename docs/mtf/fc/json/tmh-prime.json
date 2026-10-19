@@ -3,6 +3,7 @@
   "name": "Tomahawk",
   "tonnage": 100,
   "intro": 3063,
+  "bv": 3101,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

@@ -3,6 +3,7 @@
   "name": "Awesome",
   "tonnage": 80,
   "intro": 2980,
+  "bv": 1510,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

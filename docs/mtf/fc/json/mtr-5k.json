@@ -3,6 +3,7 @@
   "name": "Maelstrom",
   "tonnage": 75,
   "intro": 3056,
+  "bv": 1694,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -3,6 +3,7 @@
   "name": "Crab",
   "tonnage": 50,
   "intro": 2719,
+  "bv": 1308,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

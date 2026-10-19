@@ -3,6 +3,7 @@
   "name": "Thor",
   "tonnage": 70,
   "intro": 3069,
+  "bv": 2479,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

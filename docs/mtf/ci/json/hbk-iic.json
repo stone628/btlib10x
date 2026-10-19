@@ -3,6 +3,7 @@
   "name": "Hunchback IIC",
   "tonnage": 50,
   "intro": 2856,
+  "bv": 1679,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 4,

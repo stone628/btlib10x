@@ -3,6 +3,7 @@
   "name": "Scylla",
   "tonnage": 100,
   "intro": 3062,
+  "bv": 2897,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

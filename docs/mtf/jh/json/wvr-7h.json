@@ -3,6 +3,7 @@
   "name": "Wolverine II",
   "tonnage": 55,
   "intro": 2770,
+  "bv": 1301,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

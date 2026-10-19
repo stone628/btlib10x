@@ -3,6 +3,7 @@
   "name": "Rifleman III",
   "tonnage": 90,
   "intro": 2776,
+  "bv": 1819,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 2,

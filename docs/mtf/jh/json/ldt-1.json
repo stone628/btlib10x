@@ -3,6 +3,7 @@
   "name": "Brigand",
   "tonnage": 25,
   "intro": 3065,
+  "bv": 771,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

@@ -4,6 +4,7 @@
   "clanName": "Ice Ferret",
   "tonnage": 45,
   "intro": 2948,
+  "bv": 1211,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 8,

@@ -3,6 +3,7 @@
   "name": "Arcas",
   "tonnage": 65,
   "intro": 3061,
+  "bv": 2835,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

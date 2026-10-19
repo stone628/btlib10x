@@ -3,6 +3,7 @@
   "name": "Corvis",
   "tonnage": 40,
   "intro": 2845,
+  "bv": 1336,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 4,

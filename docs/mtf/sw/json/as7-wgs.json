@@ -4,6 +4,7 @@
   "callsign": "Samsonov",
   "tonnage": 100,
   "intro": 3025,
+  "bv": 1884,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

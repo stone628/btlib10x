@@ -3,6 +3,7 @@
   "name": "Panther",
   "tonnage": 35,
   "intro": 3055,
+  "bv": 787,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 4,

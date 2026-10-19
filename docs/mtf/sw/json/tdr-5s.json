@@ -3,6 +3,7 @@
   "name": "Thunderbolt",
   "tonnage": 65,
   "intro": 2505,
+  "bv": 1335,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -3,6 +3,7 @@
   "name": "Nexus",
   "tonnage": 25,
   "intro": 3054,
+  "bv": 643,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 7,

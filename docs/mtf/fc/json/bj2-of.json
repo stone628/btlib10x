@@ -3,6 +3,7 @@
   "name": "Blackjack",
   "tonnage": 50,
   "intro": 3061,
+  "bv": 1405,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

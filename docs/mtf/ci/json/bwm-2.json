@@ -3,6 +3,7 @@
   "name": "Bowman",
   "tonnage": 70,
   "intro": 2974,
+  "bv": 2567,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

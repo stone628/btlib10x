@@ -3,6 +3,7 @@
   "name": "BattleMaster",
   "tonnage": 85,
   "intro": 3053,
+  "bv": 1627,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -3,6 +3,7 @@
   "name": "Sentry",
   "tonnage": 40,
   "intro": 3056,
+  "bv": 1069,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

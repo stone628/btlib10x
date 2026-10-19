@@ -3,6 +3,7 @@
   "name": "Imp",
   "tonnage": 100,
   "intro": 3050,
+  "bv": 1906,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

@@ -3,6 +3,7 @@
   "name": "Hellspawn",
   "tonnage": 45,
   "intro": 3062,
+  "bv": 1220,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

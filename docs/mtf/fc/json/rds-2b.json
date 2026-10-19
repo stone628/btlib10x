@@ -3,6 +3,7 @@
   "name": "Red Shift",
   "tonnage": 20,
   "intro": 3063,
+  "bv": 555,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 9,

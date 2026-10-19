@@ -4,6 +4,7 @@
   "clanName": "Incubus",
   "tonnage": 30,
   "intro": 3025,
+  "bv": 1324,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 9,

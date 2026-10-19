@@ -3,6 +3,7 @@
   "name": "Javelin",
   "tonnage": 30,
   "intro": 2752,
+  "bv": 653,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

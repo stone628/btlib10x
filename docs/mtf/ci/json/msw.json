@@ -3,6 +3,7 @@
   "name": "Masauwu",
   "tonnage": 75,
   "intro": 2832,
+  "bv": 2299,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

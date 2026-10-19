@@ -3,6 +3,7 @@
   "name": "Falcon",
   "tonnage": 30,
   "intro": 3065,
+  "bv": 1290,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 6,

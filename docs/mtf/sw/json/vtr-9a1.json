@@ -3,6 +3,7 @@
   "name": "Victor",
   "tonnage": 80,
   "intro": 2508,
+  "bv": 1302,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

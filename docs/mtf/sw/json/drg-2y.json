@@ -4,6 +4,7 @@
   "callsign": "Yoriyoshi",
   "tonnage": 60,
   "intro": 3025,
+  "bv": 1257,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

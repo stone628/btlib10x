@@ -3,6 +3,7 @@
   "name": "Tempest",
   "tonnage": 65,
   "intro": 3055,
+  "bv": 1786,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

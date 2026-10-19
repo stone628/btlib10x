@@ -3,6 +3,7 @@
   "name": "Vision Quest",
   "tonnage": 60,
   "intro": 2832,
+  "bv": 2458,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

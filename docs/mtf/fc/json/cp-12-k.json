@@ -3,6 +3,7 @@
   "name": "Cyclops",
   "tonnage": 90,
   "intro": 3059,
+  "bv": 1699,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

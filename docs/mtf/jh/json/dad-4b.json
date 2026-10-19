@@ -3,6 +3,7 @@
   "name": "Daedalus",
   "tonnage": 45,
   "intro": 3067,
+  "bv": 1431,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

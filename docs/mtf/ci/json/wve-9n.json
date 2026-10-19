@@ -3,6 +3,7 @@
   "name": "Wyvern",
   "tonnage": 45,
   "intro": 3052,
+  "bv": 1067,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

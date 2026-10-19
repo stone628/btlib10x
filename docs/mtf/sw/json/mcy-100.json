@@ -3,6 +3,7 @@
   "name": "Mercury II",
   "tonnage": 40,
   "intro": 2823,
+  "bv": 1376,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 7,

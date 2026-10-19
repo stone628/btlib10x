@@ -4,6 +4,7 @@
   "clanName": "Glass Spider",
   "tonnage": 60,
   "intro": 2952,
+  "bv": 2038,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

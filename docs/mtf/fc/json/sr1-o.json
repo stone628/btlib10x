@@ -3,6 +3,7 @@
   "name": "Strider",
   "tonnage": 40,
   "intro": 3057,
+  "bv": 867,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

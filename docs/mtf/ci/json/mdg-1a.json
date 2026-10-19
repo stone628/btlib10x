@@ -3,6 +3,7 @@
   "name": "Rakshasa",
   "tonnage": 75,
   "intro": 3055,
+  "bv": 1795,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -3,6 +3,7 @@
   "name": "Crusader",
   "tonnage": 65,
   "intro": 2753,
+  "bv": 1297,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

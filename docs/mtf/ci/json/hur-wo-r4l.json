@@ -3,6 +3,7 @@
   "name": "Huron Warrior",
   "tonnage": 50,
   "intro": 3055,
+  "bv": 1530,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

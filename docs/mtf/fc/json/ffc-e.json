@@ -3,6 +3,7 @@
   "name": "Fire Falcon",
   "tonnage": 25,
   "intro": 3061,
+  "bv": 1094,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 8,

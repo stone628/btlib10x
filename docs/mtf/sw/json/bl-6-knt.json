@@ -3,6 +3,7 @@
   "name": "Black Knight",
   "tonnage": 75,
   "intro": 2578,
+  "bv": 1551,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

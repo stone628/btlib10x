@@ -3,6 +3,7 @@
   "name": "Ostwar",
   "tonnage": 65,
   "intro": 2620,
+  "bv": 1638,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

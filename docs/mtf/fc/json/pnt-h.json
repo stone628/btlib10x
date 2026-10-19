@@ -3,6 +3,7 @@
   "name": "Phantom",
   "tonnage": 40,
   "intro": 3062,
+  "bv": 1178,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 9,

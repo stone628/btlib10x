@@ -3,6 +3,7 @@
   "name": "JagerMech",
   "tonnage": 65,
   "intro": 3054,
+  "bv": 1625,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

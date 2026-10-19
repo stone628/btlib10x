@@ -4,6 +4,7 @@
   "clanName": "Ebon Jaguar",
   "tonnage": 65,
   "intro": 3069,
+  "bv": 2391,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

@@ -3,6 +3,7 @@
   "name": "Lancelot",
   "tonnage": 60,
   "intro": 2594,
+  "bv": 1365,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 6,

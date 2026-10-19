@@ -4,6 +4,7 @@
   "callsign": "Hermes III",
   "tonnage": 40,
   "intro": 3025,
+  "bv": 976,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

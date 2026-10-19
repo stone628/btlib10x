@@ -4,6 +4,7 @@
   "clanName": "Viper",
   "tonnage": 40,
   "intro": 3068,
+  "bv": 1580,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 8,

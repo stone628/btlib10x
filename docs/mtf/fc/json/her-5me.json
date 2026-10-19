@@ -4,6 +4,7 @@
   "callsign": "Mercury Elite",
   "tonnage": 40,
   "intro": 3056,
+  "bv": 847,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

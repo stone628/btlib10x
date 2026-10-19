@@ -3,6 +3,7 @@
   "name": "Exterminator",
   "tonnage": 65,
   "intro": 2718,
+  "bv": 1694,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 6,

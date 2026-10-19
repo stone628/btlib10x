@@ -6,6 +6,7 @@ Config:Biped
 TechBase:Mixed (IS Chassis)
 Era:3070
 Intro:3070
+BV:1105
 Rules Level:4
 
 Mass:25

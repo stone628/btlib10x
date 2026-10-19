@@ -3,6 +3,7 @@
   "name": "Juggernaut",
   "tonnage": 90,
   "intro": 3053,
+  "bv": 1719,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

@@ -3,6 +3,7 @@
   "name": "Predator",
   "tonnage": 60,
   "intro": 3060,
+  "bv": 1754,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

@@ -3,6 +3,7 @@
   "name": "Rifleman",
   "tonnage": 60,
   "intro": 3063,
+  "bv": 1464,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

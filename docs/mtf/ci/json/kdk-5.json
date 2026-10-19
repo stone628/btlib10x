@@ -3,6 +3,7 @@
   "name": "Kodiak",
   "tonnage": 100,
   "intro": 3052,
+  "bv": 3067,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

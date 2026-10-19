@@ -3,6 +3,7 @@
   "name": "Sunder",
   "tonnage": 90,
   "intro": 3063,
+  "bv": 1947,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

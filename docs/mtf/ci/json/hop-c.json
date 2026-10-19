@@ -3,6 +3,7 @@
   "name": "Hoplite",
   "tonnage": 55,
   "intro": 3052,
+  "bv": 1736,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 4,

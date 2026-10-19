@@ -3,6 +3,7 @@
   "name": "BattleAxe",
   "tonnage": 70,
   "intro": 2480,
+  "bv": 1252,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -4,6 +4,7 @@
   "clanName": "Arctic Cheetah",
   "tonnage": 30,
   "intro": 3037,
+  "bv": 1076,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 8,

@@ -4,6 +4,7 @@
   "callsign": "Yen Lo Wang",
   "tonnage": 50,
   "intro": 3051,
+  "bv": 1415,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

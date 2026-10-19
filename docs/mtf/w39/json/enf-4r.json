@@ -3,6 +3,7 @@
   "name": "Enforcer",
   "tonnage": 50,
   "intro": 3039,
+  "bv": 1357,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

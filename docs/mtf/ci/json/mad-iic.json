@@ -3,6 +3,7 @@
   "name": "Marauder IIC",
   "tonnage": 85,
   "intro": 2828,
+  "bv": 2680,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

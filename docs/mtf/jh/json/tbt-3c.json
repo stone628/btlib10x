@@ -3,6 +3,7 @@
   "name": "Trebuchet",
   "tonnage": 50,
   "intro": 2780,
+  "bv": 1342,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

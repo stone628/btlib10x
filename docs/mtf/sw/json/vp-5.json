@@ -3,6 +3,7 @@
   "name": "Viper",
   "tonnage": 70,
   "intro": 2958,
+  "bv": 1539,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

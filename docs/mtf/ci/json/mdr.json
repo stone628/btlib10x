@@ -3,6 +3,7 @@
   "name": "Mandrill",
   "tonnage": 30,
   "intro": 2829,
+  "bv": 1209,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 4,

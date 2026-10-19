@@ -3,6 +3,7 @@
   "name": "Talos",
   "tonnage": 50,
   "intro": 2532,
+  "bv": 924,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

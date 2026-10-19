@@ -3,6 +3,7 @@
   "name": "Berserker",
   "tonnage": 100,
   "intro": 3056,
+  "bv": 2020,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

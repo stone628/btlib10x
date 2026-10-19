@@ -3,6 +3,7 @@
   "name": "Raijin",
   "tonnage": 50,
   "intro": 3058,
+  "bv": 1383,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

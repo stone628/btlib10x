@@ -3,6 +3,7 @@
   "name": "Daboku",
   "tonnage": 90,
   "intro": 3038,
+  "bv": 1290,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

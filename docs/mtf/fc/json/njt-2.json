@@ -3,6 +3,7 @@
   "name": "Ninja-To",
   "tonnage": 65,
   "intro": 3062,
+  "bv": 1527,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 6,

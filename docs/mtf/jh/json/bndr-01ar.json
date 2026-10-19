@@ -3,6 +3,7 @@
   "name": "Bandersnatch",
   "tonnage": 75,
   "intro": 3071,
+  "bv": 1522,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

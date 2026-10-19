@@ -3,6 +3,7 @@
   "name": "Sagittaire",
   "tonnage": 95,
   "intro": 3063,
+  "bv": 2088,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

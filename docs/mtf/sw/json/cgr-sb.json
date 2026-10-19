@@ -4,6 +4,7 @@
   "callsign": "Challenger",
   "tonnage": 80,
   "intro": 3025,
+  "bv": 1604,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

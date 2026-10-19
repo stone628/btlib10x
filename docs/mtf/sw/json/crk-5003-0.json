@@ -3,6 +3,7 @@
   "name": "Crockett",
   "tonnage": 85,
   "intro": 2881,
+  "bv": 1704,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

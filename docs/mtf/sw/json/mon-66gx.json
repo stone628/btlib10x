@@ -4,6 +4,7 @@
   "callsign": "Gunslinger",
   "tonnage": 25,
   "intro": 2766,
+  "bv": 887,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

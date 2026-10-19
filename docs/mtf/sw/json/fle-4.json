@@ -3,6 +3,7 @@
   "name": "Flea",
   "tonnage": 20,
   "intro": 2501,
+  "bv": 432,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

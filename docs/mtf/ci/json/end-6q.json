@@ -3,6 +3,7 @@
   "name": "Enfield",
   "tonnage": 50,
   "intro": 3055,
+  "bv": 1248,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

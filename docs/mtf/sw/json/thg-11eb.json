@@ -3,6 +3,7 @@
   "name": "Thug",
   "tonnage": 80,
   "intro": 2760,
+  "bv": 1759,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

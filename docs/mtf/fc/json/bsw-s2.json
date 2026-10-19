@@ -3,6 +3,7 @@
   "name": "Bushwacker",
   "tonnage": 55,
   "intro": 3056,
+  "bv": 1293,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

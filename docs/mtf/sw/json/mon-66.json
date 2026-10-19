@@ -3,6 +3,7 @@
   "name": "Mongoose",
   "tonnage": 25,
   "intro": 2660,
+  "bv": 758,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

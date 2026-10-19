@@ -3,6 +3,7 @@
   "name": "Nightstar",
   "tonnage": 95,
   "intro": 3057,
+  "bv": 1929,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

@@ -3,6 +3,7 @@
   "name": "Naga II",
   "tonnage": 80,
   "intro": 2866,
+  "bv": 1840,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 5,

@@ -3,6 +3,7 @@
   "name": "Rampage",
   "tonnage": 85,
   "intro": 2735,
+  "bv": 1444,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

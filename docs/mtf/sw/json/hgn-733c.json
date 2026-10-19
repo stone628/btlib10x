@@ -3,6 +3,7 @@
   "name": "Highlander",
   "tonnage": 90,
   "intro": 2866,
+  "bv": 1857,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

@@ -3,6 +3,7 @@
   "name": "Phoenix Hawk IIC",
   "tonnage": 80,
   "intro": 3069,
+  "bv": 2350,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 5,

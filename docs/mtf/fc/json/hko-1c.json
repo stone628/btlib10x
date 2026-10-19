@@ -3,6 +3,7 @@
   "name": "Ha Otoko",
   "tonnage": 65,
   "intro": 3061,
+  "bv": 1288,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

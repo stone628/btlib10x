@@ -3,6 +3,7 @@
   "name": "Owens",
   "tonnage": 35,
   "intro": 3056,
+  "bv": 964,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

@@ -3,6 +3,7 @@
   "name": "Scarabus",
   "tonnage": 30,
   "intro": 3053,
+  "bv": 846,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 10,

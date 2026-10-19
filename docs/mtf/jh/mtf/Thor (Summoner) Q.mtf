@@ -7,6 +7,7 @@ Config:Biped Omnimech
 techbase:Clan
 era:3069
 intro:3069
+bv:2479
 source:Rec Guide:ilClan #3
 rules level:2
 role:Skirmisher

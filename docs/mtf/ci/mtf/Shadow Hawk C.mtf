@@ -7,6 +7,7 @@ Config:Biped
 techbase:Mixed (IS Chassis)
 era:2826
 intro:2826
+bv:1309
 source:Rec Guide:ilClan #12
 rules level:3
 role:Skirmisher

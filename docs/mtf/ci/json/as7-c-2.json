@@ -3,6 +3,7 @@
   "name": "Atlas",
   "tonnage": 100,
   "intro": 2840,
+  "bv": 2736,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

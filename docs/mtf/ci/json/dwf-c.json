@@ -4,6 +4,7 @@
   "clanName": "Dire Wolf",
   "tonnage": 100,
   "intro": 3054,
+  "bv": 3610,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

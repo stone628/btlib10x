@@ -4,6 +4,7 @@
   "clanName": "Stone Rhino",
   "tonnage": 100,
   "intro": 2846,
+  "bv": 2157,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

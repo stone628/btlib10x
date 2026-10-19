@@ -3,6 +3,7 @@
   "name": "Annihilator",
   "tonnage": 100,
   "intro": 2823,
+  "bv": 2274,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 2,

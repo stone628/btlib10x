@@ -3,6 +3,7 @@
   "name": "Hermes",
   "tonnage": 30,
   "intro": 2856,
+  "bv": 601,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 9,

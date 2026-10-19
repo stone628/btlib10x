@@ -3,6 +3,7 @@
   "name": "Omni-Corvis",
   "tonnage": 50,
   "intro": 2921,
+  "bv": 1678,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 5,

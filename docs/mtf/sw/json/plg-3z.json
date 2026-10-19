@@ -3,6 +3,7 @@
   "name": "Pillager",
   "tonnage": 100,
   "intro": 2594,
+  "bv": 2697,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

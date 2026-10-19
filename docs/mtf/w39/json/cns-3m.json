@@ -3,6 +3,7 @@
   "name": "Cronus",
   "tonnage": 55,
   "intro": 3031,
+  "bv": 1339,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

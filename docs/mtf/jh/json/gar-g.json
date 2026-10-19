@@ -4,6 +4,7 @@
   "clanName": "Gargoyle",
   "tonnage": 80,
   "intro": 3069,
+  "bv": 2156,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 5,

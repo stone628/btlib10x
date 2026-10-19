@@ -3,6 +3,7 @@
   "name": "Firestarter",
   "tonnage": 45,
   "intro": 3057,
+  "bv": 1144,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

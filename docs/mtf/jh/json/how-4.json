@@ -4,6 +4,7 @@
   "clanName": "Horned Owl",
   "tonnage": 35,
   "intro": 3064,
+  "bv": 1198,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 6,

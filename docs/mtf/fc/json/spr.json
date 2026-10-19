@@ -3,6 +3,7 @@
   "name": "Spirit",
   "tonnage": 35,
   "intro": 3063,
+  "bv": 1673,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 7,

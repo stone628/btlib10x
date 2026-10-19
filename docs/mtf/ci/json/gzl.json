@@ -3,6 +3,7 @@
   "name": "Grizzly",
   "tonnage": 70,
   "intro": 2947,
+  "bv": 2219,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

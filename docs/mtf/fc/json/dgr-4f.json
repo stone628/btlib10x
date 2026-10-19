@@ -3,6 +3,7 @@
   "name": "Dragon Fire",
   "tonnage": 75,
   "intro": 3060,
+  "bv": 1900,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

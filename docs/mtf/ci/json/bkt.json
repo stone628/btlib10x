@@ -3,6 +3,7 @@
   "name": "Blood Kite",
   "tonnage": 85,
   "intro": 2907,
+  "bv": 2776,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

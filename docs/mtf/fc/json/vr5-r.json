@@ -3,6 +3,7 @@
   "name": "Verfolger",
   "tonnage": 65,
   "intro": 3063,
+  "bv": 1639,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -4,6 +4,7 @@
   "clanName": "Conjurer",
   "tonnage": 50,
   "intro": 3067,
+  "bv": 1722,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 6,

@@ -3,6 +3,7 @@
   "name": "Hatamoto-Kaze",
   "tonnage": 80,
   "intro": 3048,
+  "bv": 1595,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

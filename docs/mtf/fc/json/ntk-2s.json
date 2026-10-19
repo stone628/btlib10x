@@ -3,6 +3,7 @@
   "name": "Night Hawk",
   "tonnage": 35,
   "intro": 3059,
+  "bv": 1017,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

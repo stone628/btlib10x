@@ -3,6 +3,7 @@
   "name": "Shogun",
   "tonnage": 85,
   "intro": 3071,
+  "bv": 1733,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

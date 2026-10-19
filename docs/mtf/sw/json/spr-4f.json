@@ -3,6 +3,7 @@
   "name": "Spector",
   "tonnage": 35,
   "intro": 2640,
+  "bv": 1224,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 7,

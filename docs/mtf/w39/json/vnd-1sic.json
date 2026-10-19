@@ -3,6 +3,7 @@
   "name": "Vindicator",
   "tonnage": 45,
   "intro": 3031,
+  "bv": 1020,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

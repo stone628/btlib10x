@@ -3,6 +3,7 @@
   "name": "Marauder II",
   "tonnage": 100,
   "intro": 3012,
+  "bv": 2073,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

@@ -3,6 +3,7 @@
   "name": "Thunder Hawk",
   "tonnage": 100,
   "intro": 2771,
+  "bv": 2577,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

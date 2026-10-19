@@ -4,6 +4,7 @@
   "clanName": "Timber Wolf",
   "tonnage": 75,
   "intro": 2945,
+  "bv": 2224,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

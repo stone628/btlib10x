@@ -3,6 +3,7 @@
   "name": "Ostscout",
   "tonnage": 35,
   "intro": 2600,
+  "bv": 596,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

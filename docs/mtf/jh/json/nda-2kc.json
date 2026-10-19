@@ -3,6 +3,7 @@
   "name": "No-Dachi",
   "tonnage": 70,
   "intro": 3067,
+  "bv": 1705,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

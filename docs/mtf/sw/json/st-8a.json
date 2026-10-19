@@ -3,6 +3,7 @@
   "name": "Shootist",
   "tonnage": 70,
   "intro": 2621,
+  "bv": 1507,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

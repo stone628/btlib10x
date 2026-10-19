@@ -3,6 +3,7 @@
   "name": "Zeus",
   "tonnage": 80,
   "intro": 2788,
+  "bv": 1474,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

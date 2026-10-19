@@ -3,6 +3,7 @@
   "name": "Sasquatch",
   "tonnage": 85,
   "intro": 3054,
+  "bv": 1940,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 4,

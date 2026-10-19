@@ -3,6 +3,7 @@
   "name": "Assassin",
   "tonnage": 40,
   "intro": 2676,
+  "bv": 749,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 7,

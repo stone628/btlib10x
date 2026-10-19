@@ -3,6 +3,7 @@
   "name": "Gallowglas",
   "tonnage": 70,
   "intro": 3055,
+  "bv": 1695,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

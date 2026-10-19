@@ -3,6 +3,7 @@
   "name": "Minsk",
   "tonnage": 70,
   "intro": 2862,
+  "bv": 2028,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 3,

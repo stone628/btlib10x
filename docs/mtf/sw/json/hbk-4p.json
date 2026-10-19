@@ -3,6 +3,7 @@
   "name": "Hunchback",
   "tonnage": 50,
   "intro": 2937,
+  "bv": 1138,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

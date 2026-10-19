@@ -3,6 +3,7 @@
   "name": "Anvil",
   "tonnage": 60,
   "intro": 3058,
+  "bv": 1366,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

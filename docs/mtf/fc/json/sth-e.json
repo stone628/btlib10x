@@ -3,6 +3,7 @@
   "name": "Stooping Hawk",
   "tonnage": 55,
   "intro": 3061,
+  "bv": 1674,
   "weightClass": "Medium",
   "techBase": "Clan",
   "walking": 5,

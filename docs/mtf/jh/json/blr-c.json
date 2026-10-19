@@ -3,6 +3,7 @@
   "name": "BattleMaster",
   "tonnage": 85,
   "intro": 3070,
+  "bv": 3025,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

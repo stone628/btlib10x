@@ -6,6 +6,7 @@ Config:Biped
 techbase:Inner Sphere
 era:3042
 intro:3042
+bv:1398
 source:Shrapnel 9 - Late Succession War
 rules level:2
 mul id:9238

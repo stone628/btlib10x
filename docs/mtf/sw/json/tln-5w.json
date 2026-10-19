@@ -3,6 +3,7 @@
   "name": "Talon",
   "tonnage": 35,
   "intro": 2760,
+  "bv": 1175,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

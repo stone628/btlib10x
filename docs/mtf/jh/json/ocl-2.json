@@ -3,6 +3,7 @@
   "name": "Ocelot",
   "tonnage": 35,
   "intro": 3070,
+  "bv": 1734,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 6,

@@ -4,6 +4,7 @@
   "callsign": "Mirage",
   "tonnage": 35,
   "intro": 2893,
+  "bv": 798,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

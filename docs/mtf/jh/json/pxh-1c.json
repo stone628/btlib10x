@@ -4,6 +4,7 @@
   "callsign": "Special",
   "tonnage": 45,
   "intro": 2765,
+  "bv": 1443,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

@@ -3,6 +3,7 @@
   "name": "Jinggau",
   "tonnage": 65,
   "intro": 3060,
+  "bv": 2072,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

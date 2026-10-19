@@ -3,6 +3,7 @@
   "name": "Hitman",
   "tonnage": 30,
   "intro": 3055,
+  "bv": 925,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 7,

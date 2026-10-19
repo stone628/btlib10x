@@ -3,6 +3,7 @@
   "name": "Initiate",
   "tonnage": 40,
   "intro": 3058,
+  "bv": 1036,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 4,

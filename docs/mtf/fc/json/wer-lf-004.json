@@ -3,6 +3,7 @@
   "name": "Werewolf",
   "tonnage": 40,
   "intro": 3056,
+  "bv": 802,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -3,6 +3,7 @@
   "name": "Akuma",
   "tonnage": 90,
   "intro": 3064,
+  "bv": 2203,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

@@ -3,6 +3,7 @@
   "name": "Super-Wasp",
   "tonnage": 25,
   "intro": 3020,
+  "bv": 635,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

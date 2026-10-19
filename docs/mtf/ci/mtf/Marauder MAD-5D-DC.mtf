@@ -6,6 +6,7 @@ Config:Biped
 techbase:Inner Sphere
 era:3055
 intro:3055
+bv:1787
 rules level:3
 
 mass:75

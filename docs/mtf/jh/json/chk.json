@@ -3,6 +3,7 @@
   "name": "Crimson Hawk",
   "tonnage": 25,
   "intro": 3071,
+  "bv": 1285,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 5,

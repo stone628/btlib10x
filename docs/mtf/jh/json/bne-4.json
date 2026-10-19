@@ -4,6 +4,7 @@
   "clanName": "Bane",
   "tonnage": 100,
   "intro": 3066,
+  "bv": 2709,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 3,

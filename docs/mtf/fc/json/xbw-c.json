@@ -3,6 +3,7 @@
   "name": "Crossbow",
   "tonnage": 65,
   "intro": 3063,
+  "bv": 1557,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 5,

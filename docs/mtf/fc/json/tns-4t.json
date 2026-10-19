@@ -3,6 +3,7 @@
   "name": "Thanatos",
   "tonnage": 75,
   "intro": 3062,
+  "bv": 1760,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

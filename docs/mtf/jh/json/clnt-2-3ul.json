@@ -3,6 +3,7 @@
   "name": "Clint",
   "tonnage": 40,
   "intro": 3069,
+  "bv": 1245,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

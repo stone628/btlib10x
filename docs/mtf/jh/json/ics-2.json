@@ -3,6 +3,7 @@
   "name": "Icestorm",
   "tonnage": 25,
   "intro": 3068,
+  "bv": 868,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 12,

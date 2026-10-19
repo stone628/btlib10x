@@ -3,6 +3,7 @@
   "name": "Cougar",
   "tonnage": 35,
   "intro": 3063,
+  "bv": 1442,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 5,

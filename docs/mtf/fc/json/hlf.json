@@ -3,6 +3,7 @@
   "name": "Hellfire",
   "tonnage": 60,
   "intro": 3058,
+  "bv": 2114,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

@@ -4,6 +4,7 @@
   "callsign": "Caine",
   "tonnage": 65,
   "intro": 2754,
+  "bv": 1794,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

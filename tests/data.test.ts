@@ -58,6 +58,7 @@ describe("'Mech definitions", () => {
       name: "Test",
       tonnage: 50,
       intro: 3025,
+      bv: 1000,
       weightClass: "Medium",
       techBase: "Inner Sphere",
       walking: 5,
@@ -189,6 +190,9 @@ describe("'Mech definitions", () => {
     );
     const { intro: _intro, ...noIntro } = base;
     expect(() => validateMechDef(noIntro as MechDef)).toThrow(/intro/);
+    expect(() => validateMechDef({ ...base, bv: -1 } as MechDef)).toThrow(/bv/);
+    const { bv: _bv, ...noBv } = base;
+    expect(() => validateMechDef(noBv as MechDef)).toThrow(/bv/);
     expect(() =>
       validateMechDef({ ...base, armor: { ...base.armor, head: -1 } } as MechDef),
     ).toThrow(/armor\.head/);

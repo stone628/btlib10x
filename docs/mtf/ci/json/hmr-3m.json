@@ -3,6 +3,7 @@
   "name": "Hammer",
   "tonnage": 30,
   "intro": 3053,
+  "bv": 787,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 5,

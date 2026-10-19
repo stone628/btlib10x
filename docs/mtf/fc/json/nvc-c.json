@@ -3,6 +3,7 @@
   "name": "Nova Cat",
   "tonnage": 70,
   "intro": 3059,
+  "bv": 1944,
   "weightClass": "Heavy",
   "techBase": "Clan",
   "walking": 4,

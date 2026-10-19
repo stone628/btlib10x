@@ -3,6 +3,7 @@
   "name": "Venom",
   "tonnage": 35,
   "intro": 3057,
+  "bv": 769,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 8,

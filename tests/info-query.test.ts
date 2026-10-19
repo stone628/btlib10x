@@ -30,9 +30,10 @@ function mech(
   tonnage: number,
   techBase = "Inner Sphere",
   intro = 3025,
+  bv = 1000,
   pack = "base",
 ) {
-  return { model, name, tonnage, techBase, intro, line: 0, pack } satisfies MechManifestEntry;
+  return { model, name, tonnage, techBase, intro, bv, line: 0, pack } satisfies MechManifestEntry;
 }
 
 /** `chassis` chassis × `variants` models each, all at one tonnage. */

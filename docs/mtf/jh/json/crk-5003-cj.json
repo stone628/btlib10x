@@ -4,6 +4,7 @@
   "clanName": "Crockett",
   "tonnage": 85,
   "intro": 3071,
+  "bv": 1844,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

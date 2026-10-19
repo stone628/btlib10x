@@ -3,6 +3,7 @@
   "name": "Pulverizer",
   "tonnage": 90,
   "intro": 2845,
+  "bv": 2506,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

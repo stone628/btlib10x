@@ -3,6 +3,7 @@
   "name": "Mad Cat Mk II",
   "tonnage": 90,
   "intro": 3069,
+  "bv": 2822,
   "weightClass": "Assault",
   "techBase": "Clan",
   "walking": 4,

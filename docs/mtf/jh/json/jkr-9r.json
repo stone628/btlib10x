@@ -4,6 +4,7 @@
   "callsign": "Joker",
   "tonnage": 25,
   "intro": 2768,
+  "bv": 614,
   "weightClass": "Light",
   "techBase": "Inner Sphere",
   "walking": 6,

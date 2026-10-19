@@ -3,6 +3,7 @@
   "name": "Vulcan",
   "tonnage": 40,
   "intro": 3050,
+  "bv": 811,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 6,

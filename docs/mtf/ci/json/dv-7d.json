@@ -3,6 +3,7 @@
   "name": "Dervish",
   "tonnage": 55,
   "intro": 3047,
+  "bv": 1412,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

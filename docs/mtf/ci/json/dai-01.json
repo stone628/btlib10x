@@ -3,6 +3,7 @@
   "name": "Daikyu",
   "tonnage": 70,
   "intro": 3055,
+  "bv": 1603,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 5,

@@ -3,6 +3,7 @@
   "name": "Marauder",
   "tonnage": 75,
   "intro": 2612,
+  "bv": 1420,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

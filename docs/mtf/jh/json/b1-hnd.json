@@ -3,6 +3,7 @@
   "name": "Bloodhound",
   "tonnage": 45,
   "intro": 3064,
+  "bv": 1248,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 7,

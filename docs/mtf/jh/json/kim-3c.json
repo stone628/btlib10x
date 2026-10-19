@@ -3,6 +3,7 @@
   "name": "Komodo",
   "tonnage": 45,
   "intro": 3064,
+  "bv": 1371,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

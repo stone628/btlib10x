@@ -3,6 +3,7 @@
   "name": "Perseus",
   "tonnage": 75,
   "intro": 3058,
+  "bv": 1644,
   "weightClass": "Heavy",
   "techBase": "Inner Sphere",
   "walking": 4,

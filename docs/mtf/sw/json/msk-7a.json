@@ -3,6 +3,7 @@
   "name": "Mackie",
   "tonnage": 100,
   "intro": 2488,
+  "bv": 1900,
   "weightClass": "Assault",
   "techBase": "Inner Sphere",
   "walking": 3,

@@ -3,6 +3,7 @@
   "name": "Gladiator",
   "tonnage": 55,
   "intro": 2490,
+  "bv": 1282,
   "weightClass": "Medium",
   "techBase": "Inner Sphere",
   "walking": 5,

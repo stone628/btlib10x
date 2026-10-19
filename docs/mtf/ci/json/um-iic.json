@@ -3,6 +3,7 @@
   "name": "UrbanMech IIC",
   "tonnage": 30,
   "intro": 2849,
+  "bv": 798,
   "weightClass": "Light",
   "techBase": "Clan",
   "walking": 3,
