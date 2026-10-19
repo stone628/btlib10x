@@ -209,7 +209,8 @@ describe("snapshot", () => {
     advancePhase(state, [], scriptedRng());
     const snap = saveBattleState(state);
     const first = parseBattleState(snap);
-    expect(first).toEqual(state);
+    // The damage window the attacks left behind is never saved.
+    expect(first).toEqual({ ...state, currentDealt: undefined });
     expect(first).not.toBe(state);
 
     dirtyBattle(state);

@@ -76,12 +76,19 @@ describe("pilot killed while the 'Mech is destroyed", () => {
     expect(enf.removed).toBe("pilotKilled");
     expect(enf.destroyed).toBe("centerTorsoDestroyed");
     expect(removals(events, "enf")).toEqual([
-      { kind: "unitRemoved", unitId: "enf", reason: "pilotKilled" },
+      // Credited once, when the pilot dies; the frame's kill adds none.
+      {
+        kind: "unitRemoved",
+        unitId: "enf",
+        reason: "pilotKilled",
+        credit: [{ unitId: "hbk", damage: 6, share: 1 }],
+      },
       {
         kind: "unitRemoved",
         unitId: "enf",
         reason: "destroyed",
         destroyReason: "centerTorsoDestroyed",
+        credit: [],
       },
     ]);
     expect(state.wreckage["2,3"]).toEqual([{ model: "ENF-4R", unitId: "enf" }]);
@@ -115,7 +122,13 @@ describe("pilot killed while the 'Mech is destroyed", () => {
     expect(enf.removed).toBe("pilotKilled");
     expect(enf.destroyed).toBe("engineDestroyed");
     expect(removals(events, "enf")).toEqual([
-      { kind: "unitRemoved", unitId: "enf", reason: "destroyed", destroyReason: "engineDestroyed" },
+      {
+        kind: "unitRemoved",
+        unitId: "enf",
+        reason: "destroyed",
+        destroyReason: "engineDestroyed",
+        credit: [],
+      },
     ]);
   });
 

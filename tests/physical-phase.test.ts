@@ -15,10 +15,9 @@ import {
   passAttack,
   requireUnit,
   resolveAllAttacks,
-  resolvePhasePiloting,
   rollInitiativePhase,
 } from "../src/rules/game";
-import { createTestBattle, scriptedRng } from "./helpers";
+import { createTestBattle, scriptedRng, sweepPiloting } from "./helpers";
 
 const HIGH_RNG = {
   d6: () => 6,
@@ -161,7 +160,7 @@ describe("per-sub-phase 20-point accounting", () => {
     // 12 weapon damage: no trigger.
     enf.damage.armor.centerTorso -= 12;
     const first: GameEvent[] = [];
-    resolvePhasePiloting(state, scriptedRng(), before, first);
+    sweepPiloting(state, scriptedRng(), before, first);
     expect(first.filter((e) => e.kind === "pilotingCheck")).toEqual([]);
 
     // 12 more physical damage (24 total): still no trigger against the
@@ -182,7 +181,7 @@ describe("per-sub-phase 20-point accounting", () => {
     };
     enf.damage.armor.centerTorso -= 12;
     const second: GameEvent[] = [];
-    resolvePhasePiloting(state, scriptedRng(), mid, second);
+    sweepPiloting(state, scriptedRng(), mid, second);
     expect(second.filter((e) => e.kind === "pilotingCheck")).toEqual([]);
     expect(enf.prone).toBe(false);
   });

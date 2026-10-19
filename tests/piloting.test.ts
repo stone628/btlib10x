@@ -27,13 +27,12 @@ import {
   requireUnit,
   resolveAllAttacks,
   resolveHeatPhase,
-  resolvePhasePiloting,
   rollInitiativePhase,
 } from "../src/rules/game";
 import { isPilotUnconscious } from "../src/rules/pilot";
 import { rollFallDirection } from "../src/rules/piloting";
 
-import { createTestBattle, groupsTotaling, scriptedRng } from "./helpers";
+import { createTestBattle, groupsTotaling, scriptedRng, sweepPiloting } from "./helpers";
 
 function hbkEnf(critsDisabled = true) {
   return createTestBattle(
@@ -195,7 +194,7 @@ describe("20-point trigger counts marked points, not wiped armor (TW p.122 step 
     const { state, before, dealt } = killEnfLeftTorso();
     expect(dealt.enf).toBe(15);
     const events: GameEvent[] = [];
-    resolvePhasePiloting(state, scriptedRng(), before, events, undefined, false, dealt);
+    sweepPiloting(state, scriptedRng(), before, events, undefined, false, dealt);
     expect(events).not.toContainEqual(
       expect.objectContaining({ kind: "pilotingCheck", unitId: "enf", reason: "damage20" }),
     );
@@ -207,7 +206,7 @@ describe("20-point trigger counts marked points, not wiped armor (TW p.122 step 
     // No ledger: before/after diff = 8 + 3 + 12 = 23 (the blown-off arm is
     // excluded like before) → trigger. Target 5 + 1 + 0 = 6: 3+3 succeeds.
     const events: GameEvent[] = [];
-    resolvePhasePiloting(state, scriptedRng(3, 3), before, events);
+    sweepPiloting(state, scriptedRng(3, 3), before, events);
     expect(events).toContainEqual(
       expect.objectContaining({
         kind: "pilotingCheck",
@@ -228,7 +227,7 @@ describe("20-point trigger counts marked points, not wiped armor (TW p.122 step 
     const dealt = { enf: dealtOf(app) };
     expect(dealt.enf).toBe(20);
     const events: GameEvent[] = [];
-    resolvePhasePiloting(state, scriptedRng(3, 3), before, events, undefined, false, dealt);
+    sweepPiloting(state, scriptedRng(3, 3), before, events, undefined, false, dealt);
     expect(events).toContainEqual(
       expect.objectContaining({
         kind: "pilotingCheck",
@@ -250,7 +249,7 @@ describe("leg destruction", () => {
     // Seatbelt PSR (piloting 5 + 5 = 10): 4+5=9 fails → pilot hit.
     // Consciousness: 6+6=12 pass.
     const events: GameEvent[] = [];
-    resolvePhasePiloting(state, scriptedRng(1, 3, 4, 4, 5, 6, 6), before, events);
+    sweepPiloting(state, scriptedRng(1, 3, 4, 4, 5, 6, 6), before, events);
     expect(enf.prone).toBe(true);
     expect(enf.facing).toBe("n");
     expect(enf.pilotHits).toBe(1);
@@ -280,7 +279,7 @@ describe("leg destruction", () => {
     // ENF-4R 50-ton fall damage = 5 (1 group). Fall dir 1, loc 3+4=7 CT.
     // Seatbelt PSR (piloting 5 + 5 = 10): 5+6=11 success.
     const events: GameEvent[] = [];
-    resolvePhasePiloting(state, scriptedRng(1, 3, 4, 5, 6), before, events);
+    sweepPiloting(state, scriptedRng(1, 3, 4, 5, 6), before, events);
     expect(enf.prone).toBe(true);
     expect(enf.pilotHits).toBe(0);
     expect(events).not.toContainEqual(
@@ -299,7 +298,7 @@ describe("leg destruction", () => {
     // TW p.122: immobile target → seatbelt auto-pilot-hit, no PSR roll.
     // Fall dir 1, loc1 3+4=7 CT, loc2 2+2=4 RA. Consciousness 2D6=6+6 pass.
     const events: GameEvent[] = [];
-    resolvePhasePiloting(state, scriptedRng(1, 3, 4, 2, 2, 6, 6), before, events);
+    sweepPiloting(state, scriptedRng(1, 3, 4, 2, 2, 6, 6), before, events);
     expect(enf.prone).toBe(true);
     expect(enf.pilotHits).toBe(1);
     expect(events).not.toContainEqual(
@@ -318,7 +317,7 @@ describe("gyro crits", () => {
     setSlotDestroyed(enf.critSlotsDestroyed, "centerTorso", gyro[0]!);
     // modifier 3, target 8: 4+4 succeeds, stays up.
     const events: GameEvent[] = [];
-    resolvePhasePiloting(state, scriptedRng(4, 4), before, events);
+    sweepPiloting(state, scriptedRng(4, 4), before, events);
     expect(enf.prone).toBe(false);
     expect(events).toContainEqual(
       expect.objectContaining({
@@ -342,7 +341,7 @@ describe("gyro crits", () => {
     }
     // fall dir 1, loc 3+4, seatbelt 5+6 (needs 11: success).
     const events: GameEvent[] = [];
-    resolvePhasePiloting(state, scriptedRng(1, 3, 4, 5, 6), before, events);
+    sweepPiloting(state, scriptedRng(1, 3, 4, 5, 6), before, events);
     expect(enf.prone).toBe(true);
     expect(events).toContainEqual(
       expect.objectContaining({
@@ -374,7 +373,7 @@ describe("actuator crits", () => {
     setSlotDestroyed(enf.critSlotsDestroyed, "rightLeg", hip[0]!);
     // modifier 2, target 7: 4+3 succeeds.
     const events: GameEvent[] = [];
-    resolvePhasePiloting(state, scriptedRng(4, 3), before, events);
+    sweepPiloting(state, scriptedRng(4, 3), before, events);
     expect(enf.prone).toBe(false);
     expect(events).toContainEqual(
       expect.objectContaining({
@@ -399,7 +398,7 @@ describe("shutdown PSR", () => {
     enf.damage = applyDamage(enf.damage, "centerTorso", 20).after;
     // fall dir 1, loc 3+4; no PSR or seatbelt dice (automatic pilot damage).
     const events: GameEvent[] = [];
-    resolvePhasePiloting(state, scriptedRng(1, 3, 4, 2, 2), before, events);
+    sweepPiloting(state, scriptedRng(1, 3, 4, 2, 2), before, events);
     expect(enf.prone).toBe(true);
     expect(enf.pilotHits).toBe(1);
     expect(events).not.toContainEqual(
@@ -1453,7 +1452,7 @@ describe("audit fixes: piloting modifiers", () => {
     enf.damage.armor.leftArm = 0;
     enf.damage.internalStructure.leftArm = 0;
     const events: GameEvent[] = [];
-    resolvePhasePiloting(state, scriptedRng(6, 6), before, events);
+    sweepPiloting(state, scriptedRng(6, 6), before, events);
     expect(events.filter((e) => e.kind === "pilotingCheck")).toEqual([]);
   });
 
@@ -1469,7 +1468,7 @@ describe("audit fixes: piloting modifiers", () => {
     enf.damage.armor.rightLeg = 0;
     enf.damage.internalStructure.rightLeg = 0;
     const events: GameEvent[] = [];
-    resolvePhasePiloting(state, scriptedRng(6, 6, 6, 6, 6, 6, 6), before, events);
+    sweepPiloting(state, scriptedRng(6, 6, 6, 6, 6, 6, 6), before, events);
     const seat = events
       .filter((e) => e.kind === "pilotingCheck")
       .find((e) => e.reason === "seatbelt");
@@ -1490,7 +1489,7 @@ describe("audit fixes: piloting modifiers", () => {
     };
     setSlotDestroyed(enf.critSlotsDestroyed, "rightLeg", hip);
     const events: GameEvent[] = [];
-    resolvePhasePiloting(state, scriptedRng(6, 6, 6, 6), before, events);
+    sweepPiloting(state, scriptedRng(6, 6, 6, 6), before, events);
     const hipRoll = events
       .filter((e) => e.kind === "pilotingCheck")
       .find((e) => e.reason === "hip");

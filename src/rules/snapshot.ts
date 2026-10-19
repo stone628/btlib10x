@@ -107,6 +107,8 @@ function cloneUnitState(unit: UnitState): UnitState {
     jammedWeapons: [...unit.jammedWeapons],
     critSlotsDestroyed: cloneCritTable(unit.critSlotsDestroyed),
     blownOffLimbs: unit.blownOffLimbs.map((l) => ({ ...l })),
+    // Absent in snapshots saved before kill credit existed.
+    damageTakenFrom: { ...(unit.damageTakenFrom ?? {}) },
     club: unit.club,
     declaredPickup: unit.declaredPickup,
     moveMode: unit.moveMode,
@@ -267,6 +269,8 @@ function loadClonedBattleState(state: BattleState, snapshot: BattleSnapshot): vo
   state.phase = snapshot.phase;
   state.initiativeWinnerTeam = snapshot.initiativeWinnerTeam;
   state.critsDisabled = snapshot.critsDisabled;
+  // The loaded moment has no damage window of its own.
+  delete state.currentDealt;
   const grid = state as unknown as { width: number; height: number };
   grid.width = snapshot.width;
   grid.height = snapshot.height;
@@ -320,6 +324,7 @@ export function loadUnitState(unit: UnitState, snapshot: UnitSnapshot): void {
   unit.jammedWeapons = next.jammedWeapons;
   unit.critSlotsDestroyed = next.critSlotsDestroyed;
   unit.blownOffLimbs = next.blownOffLimbs.map((l) => ({ ...l }));
+  unit.damageTakenFrom = next.damageTakenFrom;
   unit.club = next.club;
   unit.declaredPickup = next.declaredPickup;
   unit.moveMode = next.moveMode;

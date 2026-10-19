@@ -14,12 +14,11 @@ import {
   meleeDeclarationProblem,
   requireUnit,
   resolveAllAttacks,
-  resolvePhasePiloting,
 } from "../src/rules/game";
 import { reachableLandings } from "../src/rules/movement";
 import { damageGroupsTotal, validatePhysicalAttack } from "../src/rules/physical";
 import { loadBattleState, saveBattleState } from "../src/rules/snapshot";
-import { createTestBattle, scriptedRng } from "./helpers";
+import { createTestBattle, scriptedRng, sweepPiloting } from "./helpers";
 
 const unit = (
   id: string,
@@ -484,7 +483,7 @@ describe("DFA resolution (TW p.150)", () => {
       armor: { ...a.damage.armor, leftTorso: 0, rightTorso: 0, centerTorso: 0 },
     };
     const events: GameEvent[] = [];
-    resolvePhasePiloting(state, scriptedRng(1, 1), before, events, undefined, true);
+    sweepPiloting(state, scriptedRng(1, 1), before, events, undefined, true);
     expect(a.prone).toBe(false);
     expect(a.meleeCharge?.missed).toBe(true);
     // In the physical phase the aborted DFA misses and drops it.

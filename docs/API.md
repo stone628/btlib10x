@@ -834,6 +834,7 @@ interface BattleState extends HexGrid {
   buildings: Record<string, BuildingState>;  // { cf } keyed "col,row"; one per building-terrain cell, sub-type is the terrain
   rubbleOrigin: Record<string, BuildingTerrainType>;  // collapsed building's terrain, keyed "col,row" of its rubble cell
   wreckage: Record<string, WreckageEntry[]>;  // battlefield wreckage keyed "col,row": { model, unitId | null } of destroyed 'Mechs (40 t+); the hex counts as Rough
+  currentDealt?: DealtWindow;  // transient: the latest damage window ({ before, total, byAttacker }); set when one starts, never saved, undefined after a load
   clubs: Record<string, ClubGroundToken[]>;  // ground club tokens keyed "col,row"
   actorQueue: string[] | null;        // cached activation order for the phase
 }
@@ -848,6 +849,7 @@ interface UnitState {
   jammedWeapons: number[];
   critSlotsDestroyed: CritMask;       // destroyed-slot bitmask per location (bit i = 0-based slot i); destroyed weapons derive from it (isWeaponCritted)
   blownOffLimbs: SeveredLimb[]; club: HeldClub | null;   // severed limbs / held club
+  damageTakenFrom: Record<string, number>;   // armor + structure points each other unit dealt to this one (weapon and physical attacks, the crit blasts they set off, accidental falls); battle-long, not used for kill credit
   ammoPolicy: AmmoPolicy; autoEject: boolean; heatFlamer: boolean;   // from UnitPolicy
   moveMode; hexesMovedThisTurn; jumpedThisTurn; mpSpent;
   declaredWeaponAttacks; declaredPhysicalAttacks; declaredPickup; passedAttacks;
@@ -872,7 +874,7 @@ type GameEvent =
   | { kind: "attacksDeclared"; unitId; weapons: DeclaredWeaponVolley[] /* one per target, primary first; {targetId,count,distance,rangeBracket,rangeMod,secondaryMod} */; physical: DeclaredPhysicalAttack[] }
   | { kind: "attackResolved"; unitId; targetId; secondaryMod: 0|1|2; resolution: AttackResolution }
   | { kind: "physicalAttackResolved"; unitId; targetId; resolution: PhysicalResolution }
-  | { kind: "unitRemoved"; unitId; reason: RemovalReason; destroyReason?: DestroyedReason | null }
+  | { kind: "unitRemoved"; unitId; reason: RemovalReason; destroyReason?: DestroyedReason | null; credit: KillCredit[] }   // credit: { unitId, damage, share }[], see killCredit
   | { kind: "wreckageLeft"; unitId; col; row }   // a destroyed 'Mech of 40 t+ turned its hex into Rough (TO:AR p.155)
   | { kind: "unitFell"; unitId; cause: UnitFallCause; levelsFallen; groups; ... }   // damage: damageGroupsTotal(groups)
   | { kind: "buildingCollapsed"; hex; cf }
@@ -902,6 +904,18 @@ Rules encoded by the state machine:
   `destroyReason`; a destroyed hull emits a second `unitRemoved` with reason
   `"destroyed"` and its `destroyReason` while the unit keeps its pilot
   removal reason.
+- **Kill credit**: every `unitRemoved` carries `credit`, from
+  `killCredit(state, unit)`: each enemy unit that damaged the removed unit
+  in the damage window that removed it (the weapon sub-pass or the physical
+  sub-pass, each with its piloting sweep, or the move whose accidental fall
+  hit it), with the armor + structure points it dealt there and its `share`
+  of the enemies' total (shares sum to 1), largest first. Overkill adds
+  nothing; teammates and self-damage earn none. A removal with no enemy
+  damage in its window (heat, the unit's own fall or failed stand, ejection
+  or abandonment) has empty credit, and so does the second `unitRemoved` of
+  a hull destroyed later.
+  `UnitState.damageTakenFrom` keeps the battle-long total per attacker and
+  does not feed credit.
 - **Hulls and wreckage**: a unit with a pilot removal reason and an intact
   frame is a hull (`isHull`, TO:AR pp.184–185): it stays on the board
   (`isUnitOnBoard`), never acts, keeps its team and posture, counts as lost

@@ -14,7 +14,6 @@ import {
   hasWreckage,
   isHull,
   requireUnit,
-  resolvePhasePiloting,
   rollInitiativePhase,
   voluntaryShutdown,
   WRECKAGE_TONNAGE_MIN,
@@ -26,7 +25,7 @@ import { loadBattleState, saveBattleState } from "../src/rules/snapshot";
 import { battleModel, boardToText, WRECKAGE_MARKER } from "../web/terminal/renderer.text";
 import type { Session } from "../web/terminal/session";
 import { handleSessionGameEvents } from "../web/terminal/session.common";
-import { createTestBattle, scriptedRng } from "./helpers";
+import { createTestBattle, scriptedRng, sweepPiloting } from "./helpers";
 
 function hbkVsEnf(critsDisabled = true): BattleState {
   const units: UnitInit[] = [
@@ -77,7 +76,9 @@ describe("voluntary abandonment (house rule, TO:AR p.165)", () => {
     expect(hbk.prone).toBe(false);
     expect(hbk.pilotHits).toBe(0);
     expect(state.actedThisPhase).toContain("hbk");
-    expect(events).toEqual([{ kind: "unitRemoved", unitId: "hbk", reason: "pilotAbandoned" }]);
+    expect(events).toEqual([
+      { kind: "unitRemoved", unitId: "hbk", reason: "pilotAbandoned", credit: [] },
+    ]);
   });
 });
 
@@ -91,7 +92,7 @@ describe("hull (TO:AR pp.184-185)", () => {
     hbk.damage.armor.centerTorso -= 20;
     const events: GameEvent[] = [];
     // Fall: direction 1 (front), one 5-point group at 3+4 (CT).
-    resolvePhasePiloting(state, scriptedRng(1, 3, 4), before, events);
+    sweepPiloting(state, scriptedRng(1, 3, 4), before, events);
     expect(hbk.prone).toBe(true);
     expect(hbk.pilotHits).toBe(hitsBefore);
     expect(events.some((e) => e.kind === "pilotingCheck")).toBe(false);
@@ -128,6 +129,7 @@ describe("hull (TO:AR pp.184-185)", () => {
       unitId: "hbk",
       reason: "destroyed",
       destroyReason: "centerTorsoDestroyed",
+      credit: [],
     });
     expect(events).toContainEqual({ kind: "wreckageLeft", unitId: "hbk", col: 2, row: 4 });
   });

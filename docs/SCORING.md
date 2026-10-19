@@ -177,17 +177,62 @@ constants `BV_SKILL_MULTIPLIER`, `SCORE_ENEMY_WEIGHT` (2),
 `SCORE_OWN_WEIGHT` (1), `SCORE_CRIPPLED_LOST` (0.5). Source:
 `src/rules/score.ts`; tests: `tests/score.test.ts`.
 
-## 6. Kill credit (not implemented)
+## 6. Kill credit
 
-The team score needs no credit. For per-unit credit later, a kill is shared
-among the enemies that damaged the unit, in proportion to the armor and
-structure each dealt to it over the whole battle, with the shares summing
-to 1. A unit no enemy ever damaged gives no credit.
+The team score needs no credit; per-unit credit rides on the `unitRemoved`
+event as `credit: KillCredit[]` (`{ unitId, damage, share }`), computed by
+`killCredit(state, unit)` at the moment the unit leaves play.
 
-Why not the last hit: weapon attacks in a phase resolve simultaneously
-(`resolveAllAttacks`, `src/rules/game.ts`), so the order of `attackResolved`
-events is only declaration order and there is no real last hit. A last-hit
-rule, or one that only looks at the phase the unit died in, would also drop
-every point dealt earlier, so whoever stripped the armor gets nothing.
-Credit by accumulated damage needs only the event log and is reproducible
-on replay.
+- **The killing window.** Credit comes only from the damage window that
+  removed the unit: the weapon sub-pass (with its piloting sweep), the
+  physical sub-pass (with its sweep), or the move of a unit whose
+  accidental fall hit it. Attacks in a sub-pass resolve simultaneously
+  (`resolveAllAttacks`), so the order of `attackResolved` events is only
+  declaration order and there is no real last hit: every enemy that dealt
+  the unit damage in that sub-pass shares the kill. Damage from earlier
+  turns or the other sub-pass does not count.
+- **Shares.** Each enemy gets the armor + structure points it dealt the unit
+  in that window, weapon or physical hits plus the critical-hit blasts
+  they set off, over the enemies' total there, so shares sum to 1. Only
+  points actually marked count, so overkill past a location's last
+  structure adds nothing. Teammates and self-damage earn nothing. Largest
+  share first, ties by unit id.
+- **Empty credit.** A removal with no enemy damage in its window (heat, the
+  unit's own fall or failed stand, ejection or abandonment) has empty
+  credit. So does the second `unitRemoved` of a hull destroyed later:
+  the unit was credited when it left play.
+
+Example: a Wolverine strips 18 points off an Enforcer in turn 3. In turn 4
+a Hunchback's medium lasers deal 6 (5 to the head for the sixth pilot hit,
+1 to the bare center torso) in a weapon sub-pass where nobody else hits
+the Enforcer. The `pilotKilled` event credits the Hunchback alone, share 1;
+the frame's `destroyed` event that follows has empty credit.
+
+`UnitState.damageTakenFrom` separately keeps the battle-long total each
+attacker dealt the unit (every source above). It is part of the snapshot and
+does not feed kill credit.
+
+### 6.1 Damage windows
+
+The engine records damage through one transient field,
+`BattleState.currentDealt` (`DealtWindow`), that the TW p.60 20-point
+piloting roll shares with kill credit. A window starts with one unit's
+move, the weapon sub-pass, the physical sub-pass and the heat phase, each
+closed by its piloting sweep, and with each stand-up or drop, ejection and
+abandonment, which have nothing in scope. It holds:
+
+| Field | Meaning |
+|---|---|
+| `before` | the units in scope, as they stood when the window opened |
+| `total` | marked points per unit in scope: the 20-point trigger |
+| `byAttacker` | marked points per target, then per attacker: kill credit |
+
+Every marked point goes through one call, `creditDealt(state, target,
+attackerId | null, n)`: to `total` when the target is in scope, and, with
+an attacker other than the target, to `byAttacker` and `damageTakenFrom`.
+Only the mover is in a move's scope, so damage it causes other units (an
+accidental fall, a building collapse) rolls no piloting check for them but
+still earns the mover credit. Each start assigns a fresh window before
+any damage lands, and the window stays until the next start, so a unit the
+attack-to-end destroyed-mark check catches is credited from the physical
+sub-pass. Snapshots never save it, and loading one clears it.
