@@ -228,8 +228,8 @@ are listed here. Rule text lives in the rulebook.
   breakdown printed by `fire`. Water depth 2+ blocks targeting
   (`blocksTargeting`).
 - **Firing arcs** — per-weapon mounting arcs and target-side attack
-  direction; a boundary attack direction resolves to the defender's choice
-  (front over side, never rear). `torso <front|left|right>` twists one hexside.
+  direction; on a hexside line woods, cover and the attack direction come
+  from one chain picked for the defender (`docs/VISION.md` §2.2). `torso <front|left|right>` twists one hexside.
   A weapon split between an arm and a side torso (King Crab AC/20s) uses
   the torso arc (TW pp.105-106), ignores arm actuator to-hit damage, is
   destroyed by a critical in either location and stops firing when either
@@ -365,10 +365,6 @@ stated elsewhere in this document or the codebase:
   'Mechs risk hull breach instead (TW p.121). Water blocks targeting at depth
   2+ and halves falls, but breaches, underwater weapons and ranges, and the
   underwater LOS table (TW pp.108-109) are not implemented (see `docs/VISION.md`).
-
-### Verify-later
-
-- LOS edge-graze tie-break uses deterministic cube rounding.
 
 ## Architecture
 

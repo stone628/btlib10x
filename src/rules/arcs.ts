@@ -111,10 +111,10 @@ export function classifyArcWithBoundary(unitFacing: Facing, b: Bearing): ArcClas
  *
  * Engine policy: the engine never re-asks the target's controller, so
  * this helper picks the defender-favouring member of the boundary pair
- * deterministically — `front` always wins; otherwise drop `rear`. This
- * only matches the rule when the real locked-in choice would have
- * landed on the same arc; treat as engine behaviour, not a paraphrase
- * of the rule.
+ * deterministically — `front` always wins; otherwise drop `rear`. Weapon
+ * attacks take the hexside of the chosen LOS chain instead
+ * (`attackDirectionFor` in `game.ts`); this fallback serves callers with no
+ * chain.
  */
 export function defenderArcChoice(arc: Arc, altArc: Arc | null): Arc {
   if (altArc === null) return arc;

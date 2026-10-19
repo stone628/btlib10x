@@ -75,10 +75,10 @@ yet is a gap, not a deviation; gaps are tracked in §4.
   standing order. *Why:* bin choice only matters for crit exposure, so one
   standing order replaces a decision on every shot.
 - **LOS along a hexside (TW pp.99–102, 119).** TW lets the target's player
-  choose which hex the line passes through. The engine breaks the tie
-  deterministically, and a boundary attack direction resolves in the
-  defender's favour. *Why:* no mid-resolution prompt to the defender. Still to
-  be verified against the TW diagrams.
+  choose one hex chain for the pair. The engine picks the chain worst for the
+  attacker's to-hit, ties going to cover, then to the better attack direction;
+  woods, cover and attack direction all use it. *Why:* no mid-resolution
+  prompt to the defender.
 
 ### 2.3 Simplifications
 

@@ -20,10 +20,14 @@ export function interveningHexes(from: HexCoord, to: HexCoord, side: 0 | 1 | -1 
   return lineHexes(from, to, side);
 }
 
-/** Both tie-break sides of a hexside line. The defender chooses the side, so
- *  every LOS question is asked of both and the one worse for the attacker
- *  wins (LOS-03); off a tie the two sides are identical. */
+/** Both tie-break sides of a hexside line. The defender chooses the side
+ *  (TW p.99) and that one chain answers every LOS question between the pair
+ *  (TW p.101; see `defenderLosSide`). Blocking is asked of both: the defender
+ *  always picks a blocked chain (LOS-03). Off a tie the two sides are
+ *  identical. */
 export const LOS_SIDES = [1, -1] as const;
+
+export type LosSide = (typeof LOS_SIDES)[number];
 
 export function losWoodsPoints(intervening: readonly TerrainType[]): number {
   let points = 0;
@@ -101,7 +105,9 @@ export function losWoodsPointsBetween(
   from: HexCoord,
   to: HexCoord,
   prone?: ProneEnds,
+  side?: LosSide,
 ): number {
+  if (side !== undefined) return woodsPointsOnSide(grid, from, to, side, prone);
   let worst = 0;
   for (const side of LOS_SIDES)
     worst = Math.max(worst, woodsPointsOnSide(grid, from, to, side, prone));
@@ -130,19 +136,55 @@ export function interveningTerrains(
   from: HexCoord,
   to: HexCoord,
   prone?: ProneEnds,
+  side: LosSide = defenderLosSide(grid, from, to, prone),
 ): TerrainType[] {
-  // The side with more screening is the one the defender picks.
-  let best: 0 | 1 | -1 = LOS_SIDES[0];
-  let bestPoints = -1;
+  return interveningHexes(from, to, side).map((h) =>
+    woodsIntervene(grid, from, to, h, prone) ? cellAt(grid, h).terrain : "clear",
+  );
+}
+
+/**
+ * The one hexside chain the defender locks in between `from` and `to` (TW
+ * pp.99, 101: "the chosen hexside is used for all attacks between those two
+ * units"; woods on one chain and cover on the other never combine). A blocked
+ * chain wins; otherwise the chain with the most woods points plus `cover`
+ * (the partial-cover modifier that chain gives the target); on equal totals
+ * the one with cover, which also shields the legs (TW p.102); then the one
+ * `prefer` ranks higher (the attack direction it gives, TW p.119).
+ */
+export function defenderLosSide(
+  grid: HexGrid,
+  from: HexCoord,
+  to: HexCoord,
+  prone?: ProneEnds,
+  cover: (side: LosSide) => number = () => 0,
+  prefer: (side: LosSide) => number = () => 0,
+): LosSide {
+  let best: LosSide = LOS_SIDES[0];
+  let bestKey: readonly number[] = [-1, -1, -Infinity];
   for (const side of LOS_SIDES) {
-    const points = woodsPointsOnSide(grid, from, to, side, prone);
-    if (points > bestPoints) {
+    if (losBlockedOnSide(grid, from, to, side, prone)) return side;
+    const coverMod = cover(side);
+    const key = [woodsPointsOnSide(grid, from, to, side, prone) + coverMod, coverMod, prefer(side)];
+    const i = key.findIndex((k, j) => k !== bestKey[j]);
+    if (i >= 0 && key[i]! > bestKey[i]!) {
       best = side;
-      bestPoints = points;
+      bestKey = key;
     }
   }
-  return interveningHexes(from, to, best).map((h) =>
-    woodsIntervene(grid, from, to, h, prone) ? cellAt(grid, h).terrain : "clear",
+  return best;
+}
+
+function losBlockedOnSide(
+  grid: HexGrid,
+  from: HexCoord,
+  to: HexCoord,
+  side: LosSide,
+  prone?: ProneEnds,
+): boolean {
+  return (
+    losBlocked(woodsPointsOnSide(grid, from, to, side, prone)) ||
+    elevationBlockedOnSide(grid, from, to, side, prone)
   );
 }
 

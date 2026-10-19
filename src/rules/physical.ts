@@ -42,7 +42,14 @@ import {
   type UnitDamageState,
 } from "./damage";
 import type { BattleState, UnitState } from "./game";
-import { isImmobile, isTargetableBy, isUnitOnBoard, isUnitRemoved, partialCoverMod } from "./game";
+import {
+  isImmobile,
+  isTargetableBy,
+  isUnitOnBoard,
+  isUnitRemoved,
+  losSideFor,
+  partialCoverMod,
+} from "./game";
 import { isTsmActive } from "./heat";
 import { hitLocationForArc, punchHitLocationForArc } from "./hitlocation";
 import { losWoodsPointsBetween } from "./los";
@@ -285,11 +292,13 @@ export function computePhysicalToHit(
   // Partial cover (TW p.102) is a separate term — same as weapon attacks.
   const targetTerrain = cellAt(battle, target.position).terrain;
   // Charge / DFA are not modified for terrain (TW p.144).
+  // One hexside chain for woods and cover (TW p.101, LOS-02).
+  const losSide = losSideFor(battle, attacker, target, undefined);
   const terrainMod = melee
     ? 0
     : terrainTargetMod(targetTerrain) +
-      losWoodsPointsBetween(battle, attacker.position, target.position);
-  const coverMod = melee ? 0 : partialCoverMod(battle, attacker, target);
+      losWoodsPointsBetween(battle, attacker.position, target.position, undefined, losSide);
+  const coverMod = melee ? 0 : partialCoverMod(battle, attacker, target, losSide);
 
   // Actuator damage modifier
   const actuatorMod = physicalActuatorMod(attacker, type, limb, weapon);

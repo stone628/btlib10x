@@ -22,6 +22,7 @@ import {
   isUnitOnBoard,
   isUnitRemoved,
   losEnds,
+  losSideFor,
   partialCoverMod,
 } from "./game";
 import { toHitHeatModifier } from "./heat";
@@ -179,11 +180,14 @@ export function suggestFireTargets(
       // (null only when attacker and target share a hex).
       const arc = classifyFiringArc(unit.position, enemy.position, effectiveFacing);
       const altArc = null as Arc | null;
+      const losProne = losEnds(state, unit, enemy);
+      const losSide = losSideFor(state, unit, enemy, losProne);
       const interveningWoods = losWoodsPointsBetween(
         state,
         unit.position,
         enemy.position,
-        losEnds(state, unit, enemy),
+        losProne,
+        losSide,
       );
 
       const weaponsIfPropLeft: FireWeapon[] = [];
@@ -262,7 +266,7 @@ export function suggestFireTargets(
         // Same gate as `declareAttacks`: woods screening, water2/3 endpoints
         // (`losBlockedByWater`), elevation and intervening buildings
         // (`losBlockedByElevation`/`losBlockedByBuilding` fold into the ray).
-        if (!losClear(state, unit.position, enemy.position, losEnds(state, unit, enemy))) {
+        if (!losClear(state, unit.position, enemy.position, losProne)) {
           blockBoth("noLos");
           return;
         }
@@ -282,7 +286,7 @@ export function suggestFireTargets(
           targetImmobile: isImmobile(enemy),
           targetProne: enemy.prone,
           targetTerrain: cellAt(state, enemy.position).terrain,
-          partialCoverMod: partialCoverMod(state, unit, enemy),
+          partialCoverMod: partialCoverMod(state, unit, enemy, losSide),
           interveningWoods,
           distance,
           weapon,

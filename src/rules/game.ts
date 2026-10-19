@@ -52,6 +52,7 @@ import {
 } from "./ammo";
 import {
   type Arc,
+  classifyArc,
   classifyArcWithBoundary,
   classifyFiringArc,
   defenderArcChoice,
@@ -129,9 +130,10 @@ import { resolveInitialDamage, type UnitInitDamage } from "./initialDamage";
 import { rollInitiative } from "./initiative";
 import { internalStructureForTonnage } from "./internalStructure";
 import {
+  defenderLosSide,
   interveningHexes,
   interveningTerrains,
-  LOS_SIDES,
+  type LosSide,
   losBlockedByBuilding,
   losBlockedByElevation,
   losClear,
@@ -275,9 +277,8 @@ export interface WeaponAttackDecl {
   readonly arc?: Arc;
   /** Attack direction: the side of the TARGET the attack strikes (TW p.107),
    *  classified from the target's facing at declaration time. Drives the
-   *  hit-location table column and the front/rear armor pool. Boundary-line
-   *  ambiguity resolves to the defender's dominant choice
-   *  (`defenderArcChoice`). */
+   *  hit-location table column and the front/rear armor pool. A boundary
+   *  line takes the hexside of the chosen LOS chain (`attackDirectionFor`). */
   readonly attackDirection?: Arc;
   /** Multiple-targets to-hit modifier (TW p.108), classified at declaration
    *  against the attacker's twisted facing: +1 for a secondary target in the
@@ -1121,14 +1122,16 @@ export function isTargetableBy(attacker: UnitState, target: UnitState): boolean 
  *    level (attacker not firing downhill).
  * Partial cover comes only from terrain (TW p.102): hulls and wreckage give
  * none. Leg hit-location rolls strike the cover under any non-zero value
- * (see `hitLocationCovered` in `src/rules/attack.ts`).
+ * (see `hitLocationCovered` in `src/rules/attack.ts`). On a hexside line the
+ * intervening hex comes from the chain `losSideFor` locks in (LOS-02).
  */
 export function partialCoverMod(
   state: BattleState,
   attacker: UnitState,
   target: UnitState,
+  side: LosSide = losSideFor(state, attacker, target),
 ): number {
-  return partialCoverDetail(state, attacker, target).mod;
+  return partialCoverDetail(state, attacker, target, side).mod;
 }
 
 /** The building hex providing the terrain partial cover to `target`, if the
@@ -1137,14 +1140,74 @@ export function partialCoverBuildingHex(
   state: BattleState,
   attacker: UnitState,
   target: UnitState,
+  side: LosSide = losSideFor(state, attacker, target),
 ): HexCoord | undefined {
-  return partialCoverDetail(state, attacker, target).buildingHex;
+  return partialCoverDetail(state, attacker, target, side).buildingHex;
+}
+
+/**
+ * The hexside chain the defender locks in between `attacker` and `target`
+ * (TW pp.99, 101): woods, partial cover, the to-hit preview and the attack
+ * direction all read this one chain, so woods on one side never adds to
+ * cover on the other (LOS-02). To-hit decides the pick; the attack direction
+ * only breaks a tie. `prone` defaults to the pair's `losEnds`.
+ */
+export function losSideFor(
+  state: BattleState,
+  attacker: UnitState,
+  target: UnitState,
+  prone: ProneEnds | undefined = losEnds(state, attacker, target),
+): LosSide {
+  return defenderLosSide(
+    state,
+    attacker.position,
+    target.position,
+    prone,
+    (side) => partialCoverDetail(state, attacker, target, side).mod,
+    (side) => DEFENDER_ARC_RANK[attackDirectionOnSide(attacker, target, side)],
+  );
+}
+
+/** How much the defender prefers being struck in each arc. */
+const DEFENDER_ARC_RANK: Readonly<Record<Arc, number>> = {
+  front: 2,
+  leftSide: 1,
+  rightSide: 1,
+  rear: 0,
+};
+
+/**
+ * Attack direction (TW p.119): the side of `target` that `attacker` strikes.
+ * When the line meets the target's hex exactly at a corner between two
+ * hexsides, it enters through the hexside facing the last hex of the chosen
+ * chain (TW p.119 ties it to the TW p.99 LOS choice), so it follows
+ * `losSideFor`.
+ */
+export function attackDirectionFor(
+  state: BattleState,
+  attacker: UnitState,
+  target: UnitState,
+  side: LosSide = losSideFor(state, attacker, target),
+): Arc {
+  return attackDirectionOnSide(attacker, target, side);
+}
+
+function attackDirectionOnSide(attacker: UnitState, target: UnitState, side: LosSide): Arc {
+  const back = bearingExact(target.position, attacker.position)!;
+  const dir = classifyArcWithBoundary(target.facing, back);
+  if (dir.altArc === null) return dir.arc;
+  const last = interveningHexes(attacker.position, target.position, side).at(-1);
+  const entry = last !== undefined ? facingToward(target.position, last) : undefined;
+  return entry !== undefined
+    ? classifyArc(target.facing, entry)
+    : defenderArcChoice(dir.arc, dir.altArc);
 }
 
 function partialCoverDetail(
   state: BattleState,
   attacker: UnitState,
   target: UnitState,
+  side: LosSide,
 ): { mod: number; buildingHex?: HexCoord } {
   const targetTerrain = cellAt(state, target.position).terrain;
   const targetLevel = cellAt(state, target.position).level;
@@ -1163,18 +1226,16 @@ function partialCoverDetail(
       const attackerLos = unitLosLevel(state, attacker.position, attacker.prone);
       const targetLos = unitLosLevel(state, target.position, false);
       if (attackerLos <= targetLos) {
-        // A hexside line gives the defender the choice of side (TW p.99):
-        // cover on either candidate hex applies.
-        coverSides: for (const side of LOS_SIDES) {
-          for (const h of interveningHexes(attacker.position, target.position, side)) {
-            if (!isAdjacent(h, target.position)) continue;
-            const cell = cellAt(state, h);
-            const effectiveLevel = isBuildingTerrain(cell.terrain) ? cell.level + 2 : cell.level;
-            if (effectiveLevel >= targetLevel + 1) {
-              terrain = PARTIAL_COVER_TERRAIN_MOD;
-              if (isBuildingTerrain(cell.terrain)) buildingHex = { ...h };
-              break coverSides;
-            }
+        // On a hexside line only the chain the defender chose counts
+        // (TW p.101).
+        for (const h of interveningHexes(attacker.position, target.position, side)) {
+          if (!isAdjacent(h, target.position)) continue;
+          const cell = cellAt(state, h);
+          const effectiveLevel = isBuildingTerrain(cell.terrain) ? cell.level + 2 : cell.level;
+          if (effectiveLevel >= targetLevel + 1) {
+            terrain = PARTIAL_COVER_TERRAIN_MOD;
+            if (isBuildingTerrain(cell.terrain)) buildingHex = { ...h };
+            break;
           }
         }
       }
@@ -2974,16 +3035,18 @@ export function validateAttacksImpl(
     // Target-side attack direction (TW p.119): which side of the target the
     // attack strikes. Same for every weapon fired at this target.
     let targetVolley = targetVolleys.get(target.id);
-    const attackDirection =
-      targetVolley?.attackDirection ??
-      (() => {
-        const back = bearingExact(target.position, unit.position)!;
-        const dir = classifyArcWithBoundary(target.facing, back);
-        return defenderArcChoice(dir.arc, dir.altArc);
-      })();
-
     const losProne = losEnds(state, unit, target);
-    const woodsPoints = losWoodsPointsBetween(state, unit.position, target.position, losProne);
+    const losSide = losSideFor(state, unit, target, losProne);
+    const attackDirection =
+      targetVolley?.attackDirection ?? attackDirectionFor(state, unit, target, losSide);
+
+    const woodsPoints = losWoodsPointsBetween(
+      state,
+      unit.position,
+      target.position,
+      losProne,
+      losSide,
+    );
     if (!losClear(state, unit.position, target.position, losProne)) {
       if (losBlockedByBuilding(state, unit.position, target.position, losProne)) {
         throw new Error("Line of sight is blocked by intervening building");
@@ -3014,7 +3077,7 @@ export function validateAttacksImpl(
       targetImmobile: isImmobile(target),
       targetProne: target.prone,
       targetTerrain: cellAt(state, target.position).terrain,
-      partialCoverMod: partialCoverMod(state, unit, target),
+      partialCoverMod: partialCoverMod(state, unit, target, losSide),
       interveningWoods: woodsPoints,
       distance: dist,
       weapon,
@@ -3547,6 +3610,8 @@ function resolveUnitAttacks(
     const mount = def.weapons[decl.weaponIndex]!;
     const weapon = weaponDefFor(mount);
     const target = requireUnit(state, decl.targetId);
+    const losProne = losEnds(state, unit, target);
+    const losSide = losSideFor(state, unit, target, losProne);
     const secondaryMod = decl.secondaryMod ?? 0;
     const rapidFire = decl.rapidFire ?? false;
     const shots = rapidFire ? (weapon.rapidFireShots ?? 1) : 1;
@@ -3584,12 +3649,13 @@ function resolveUnitAttacks(
       targetImmobile: isImmobile(target),
       targetProne: target.prone,
       targetTerrain: cellAt(state, target.position).terrain,
-      partialCoverMod: partialCoverMod(state, unit, target),
+      partialCoverMod: partialCoverMod(state, unit, target, losSide),
       interveningTerrains: interveningTerrains(
         state,
         unit.position,
         target.position,
-        losEnds(state, unit, target),
+        losProne,
+        losSide,
       ),
       distance: hexDistance(unit.position, target.position),
       // Resolution keys hit location and armor pool off the attack direction
@@ -3671,7 +3737,7 @@ function resolveUnitAttacks(
     const buildingDamage = resolution.buildingAbsorbed ?? 0;
     const coverHex =
       resolution.coverDamage !== undefined
-        ? partialCoverBuildingHex(state, unit, target)
+        ? partialCoverBuildingHex(state, unit, target, losSide)
         : undefined;
 
     resolutions.push({
