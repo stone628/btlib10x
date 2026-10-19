@@ -5,10 +5,11 @@ import type { AmmoDef } from "./ammo.schema";
  * Edit this file directly; it is the source of truth.
  */
 export const AMMO_DATA: readonly AmmoDef[] = [
+  // Unexpended A-Pods do not explode when critically hit (TW p.130).
   {
     weapon: "A-Pod",
     shotsPerBin: 1,
-    explosive: true,
+    explosive: false,
   },
   {
     weapon: "AC/2",
@@ -34,6 +35,7 @@ export const AMMO_DATA: readonly AmmoDef[] = [
     weapon: "Anti-Missile System",
     shotsPerBin: 12,
     explosive: true,
+    explosionDamagePerShot: 2, // TW p.130
   },
   {
     weapon: "AP Gauss Rifle",
@@ -64,6 +66,7 @@ export const AMMO_DATA: readonly AmmoDef[] = [
     weapon: "B-Pods",
     shotsPerBin: 1,
     explosive: true,
+    explosionDamagePerShot: 2, // TW p.130
   },
   {
     weapon: "CL Active Probe",
@@ -149,6 +152,7 @@ export const AMMO_DATA: readonly AmmoDef[] = [
     weapon: "CL Narc Missile Beacon",
     shotsPerBin: 6,
     explosive: true,
+    explosionDamagePerShot: 2, // TW p.139
   },
   {
     weapon: "CL Plasma Cannon",

@@ -203,8 +203,9 @@ hittable slots, overflow is lost (excess crits simply disappear).
 - Weapon slot hit → that weapon is destroyed; multi-slot weapons are
   disabled by the first hit, additional slot hits only "soak".
 - Ammo slot hit → explosion of `per-shot damage value × remaining shots`
-  applied directly to the bin location's internal structure (the armor
-  pool is bypassed per the rules). The explosion drains IS, transfers
+  (AMS rounds and Narc pods count 2 per shot, TW p.130, p.139; the
+  Heat Phase explosion uses the same value) applied directly to the bin
+  location's internal structure (the armor pool is bypassed per the rules). The explosion drains IS, transfers
   inward to the next location's IS — overflow bypasses armor at every
   stop (TW p.125) — and any location that newly lost IS triggers a fresh
   determining roll recursively.

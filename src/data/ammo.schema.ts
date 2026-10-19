@@ -19,6 +19,13 @@ export interface AmmoDef {
    * data file.
    */
   readonly explosive: boolean;
+  /**
+   * Damage per remaining shot when the bin explodes, for ammunition whose
+   * weapon row carries no Damage Value to derive it from: AMS rounds and
+   * Narc pods explode for 2 per shot (TW p.130, p.139). Omitted for ammo
+   * whose explosion uses the weapon's own per-shot damage.
+   */
+  readonly explosionDamagePerShot?: number;
 }
 
 const AMMO: ReadonlyMap<string, AmmoDef> = new Map<string, AmmoDef>(

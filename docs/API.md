@@ -162,7 +162,11 @@ the source of truth); `registerWeapons` replaces it wholesale.
 Engine-internal (source-module import only): `AmmoDef`, `AmmoNameHolder`,
 `ammoDefFor`,
 `allAmmo`, `listAmmoWeapons`, `shotsPerBinFor`. The table itself is embedded (`AMMO_DATA` in
-`src/data/ammo.data.ts`, the source of truth). The battle
+`src/data/ammo.data.ts`, the source of truth). A row's optional
+`explosionDamagePerShot` sets its explosion damage per remaining shot where the
+weapon row has no Damage Value to derive it from: AMS rounds and Narc pods
+explode for 2 per shot (TW p.130, p.139). Unexpended A-Pods are not explosive
+(TW p.130). The battle
 engine resolves ammo bins itself; library consumers read per-mount shot counts
 via the sheet helpers, not the catalog directly.
 

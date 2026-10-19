@@ -466,11 +466,15 @@ function rollSlotNumber(rng: Rng, loc: Location): { slot: number; rolls: readonl
 }
 
 /**
- * Per-shot damage value used for an ammo explosion. Missiles multiply
- * per-missile damage by tube count; direct-fire weapons use their damage;
- * variable-damage weapons don't carry ammo so this never fires for them.
+ * Per-shot damage value used for an ammo explosion. Ammo rows that set
+ * `explosionDamagePerShot` (AMS, Narc: 2 per shot, TW p.130, p.139) use it;
+ * otherwise missiles multiply per-missile damage by tube count and
+ * direct-fire weapons use their damage. Variable-damage weapons don't carry
+ * ammo so this never fires for them.
  */
 export function ammoDamagePerShot(h: AmmoNameHolder): number {
+  const blast = ammoDefFor(h).explosionDamagePerShot;
+  if (blast !== undefined) return blast;
   const w = weaponDefFor(h);
   if (w.missileDamage !== undefined && w.missiles !== undefined) {
     return w.missileDamage * w.missiles;
