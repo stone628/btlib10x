@@ -359,3 +359,72 @@ describe("ammo validation in MechDef", () => {
     ).toThrow(/has no ammo definition/);
   });
 });
+
+describe("construction limits (DATA-02)", () => {
+  const hbk = mechDef("HBK-4G")!;
+  const base = toMechDef(hbk);
+  const withArmor = (armor: Partial<Record<string, number>>) =>
+    ({ ...base, armor: { ...base.armor, ...armor } }) as MechDef;
+
+  it("caps armor at 2 x internal structure, torso front + rear together", () => {
+    const rear = base.armor.centerTorsoRear ?? 0;
+    const cap = 2 * hbk.internalStructure.centerTorso;
+    expect(() => validateMechDef(withArmor({ centerTorso: cap - rear }))).not.toThrow();
+    expect(() => validateMechDef(withArmor({ centerTorso: cap - rear + 1 }))).toThrow(
+      `armor.centerTorso ${cap + 1} exceeds the maximum ${cap}`,
+    );
+    expect(() => validateMechDef(withArmor({ centerTorso: 99999 }))).toThrow(
+      /armor\.centerTorso \d+ exceeds the maximum/,
+    );
+    const legCap = 2 * hbk.internalStructure.leftLeg;
+    expect(() => validateMechDef(withArmor({ leftLeg: legCap + 1 }))).toThrow(
+      `armor.leftLeg ${legCap + 1} exceeds the maximum ${legCap}`,
+    );
+  });
+
+  it("caps head armor at 9", () => {
+    expect(() => validateMechDef(withArmor({ head: 9 }))).not.toThrow();
+    expect(() => validateMechDef(withArmor({ head: 10 }))).toThrow(
+      "armor.head 10 exceeds the maximum 9",
+    );
+  });
+
+  it("caps the engine rating (walking x tonnage) at 500", () => {
+    const atlas = toMechDef(mechDef("AS7-D")!);
+    expect(() => validateMechDef({ ...atlas, walking: 40, running: 60 } as MechDef)).toThrow(
+      "engine rating 4000 (walking x tonnage) exceeds 500",
+    );
+    // A 100 t walk-5 'Mech (rating 500, large engine) is within the ceiling.
+    expect(() => validateMechDef({ ...atlas, walking: 5, running: 8 } as MechDef)).not.toThrow(
+      /engine rating/,
+    );
+  });
+
+  it("requires a tonnage on the internal-structure grid (20..100, 5-ton steps)", () => {
+    for (const tonnage of [10, 15, 52, 105]) {
+      expect(() => validateMechDef({ ...base, tonnage } as MechDef), `${tonnage}`).toThrow(
+        "tonnage must be a multiple of 5 in 20..100",
+      );
+    }
+  });
+
+  it("rejects a weapon mount whose weapon does not exist", () => {
+    expect(() =>
+      validateMechDef({
+        ...base,
+        weapons: [...base.weapons, { weapon: "Atlas", location: "leftArm" }],
+      } as MechDef),
+    ).toThrow('weapon mount "Atlas" is not a known weapon');
+  });
+
+  it("rejects shots on a weapon that uses no ammunition", () => {
+    const i = base.weapons.findIndex((w) => w.weapon === "Medium Laser");
+    expect(i).toBeGreaterThanOrEqual(0);
+    expect(() =>
+      validateMechDef({
+        ...base,
+        weapons: base.weapons.map((w, j) => (j === i ? { ...w, shots: 10 } : w)),
+      } as MechDef),
+    ).toThrow('weapon.shots on "Medium Laser", which uses no ammunition');
+  });
+});

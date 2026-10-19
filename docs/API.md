@@ -181,13 +181,13 @@ lookups below. `resolveMechDef`, `validateMechDef`, and the raw `mechDef` /
 
 ```ts
 interface MechDef {
-  model: string; name: string; clanName?: string; callsign?: string; tonnage: number;   // 10..100
+  model: string; name: string; clanName?: string; callsign?: string; tonnage: number;   // 20..100, multiple of 5
   intro: number; // introduction year (Master Unit List) from the MTF `Intro:` header
   bv: number;    // Battle Value (Master Unit List, regular 4/5 pilot) from the MTF `BV:` header; 0 when the MUL lists none
   weightClass: WeightClass;   // must equal weightClassForTonnage(tonnage)
   techBase: string;
-  walking: number; running: number; jumping: number; // running === ceil(walking*1.5); jumping === number of jumpJet crit slots
-  armor: Readonly<LocationValue> &
+  walking: number; running: number; jumping: number; // running === ceil(walking*1.5); jumping === number of jumpJet crit slots; walking*tonnage <= 500
+  armor: Readonly<LocationValue> &   // per location <= 2 x internal structure (torso front + rear together), head <= 9
     Readonly<Partial<Record<"centerTorsoRear"|"leftTorsoRear"|"rightTorsoRear", number>>>;
   weapons: readonly WeaponMount[];
   critSlots: CritSlots;       // required; per-location table, see below
@@ -196,6 +196,15 @@ interface MechDef {
   source: string;
 }
 ```
+
+`validateMechDef` is the trust boundary for catalog packs, so besides the
+shape it enforces the TechManual construction limits the engine relies on:
+tonnage on the internal-structure grid (20..100 in 5-ton steps), engine
+rating `walking * tonnage` at most 500 (`MAX_ENGINE_RATING`; standard
+engines stop at 400, large engines reach 500), armor at most twice the
+location's internal structure with torso front and rear counted together
+(head 9, `MAX_HEAD_ARMOR`), every weapon mount naming a known weapon, and
+`shots` only on weapons that have an ammo row.
 
 `clanName` holds the MTF line-2 parenthesised Clan name (`Mad Cat
 (Timber Wolf)` → `name: "Mad Cat"`, `clanName: "Timber Wolf"`); it stays
@@ -281,7 +290,9 @@ Standard. `parseCatalogManifest` / `findMechEntry` / `findMapEntry`
 index the manifest (`CatalogManifest` with `MechManifestEntry` /
 `MapManifestEntry`: short keys `m`/`n`/`b`/`t`/`i`/`c?`/`k?`/`l` plus the sheet's
 absolute file line — class is inferred, never stored). `loadCatalog` holds
-the text in memory; `ensureMechRegistered` / `ensureMapRegistered` decode and
+the text in memory; `appendCatalog(text, pack)` adds a pack beside it and
+throws if a pack with that id is already loaded (each pack id loads once;
+`loadCatalog` starts over); `ensureMechRegistered` / `ensureMapRegistered` decode and
 register one sheet on demand (throwing duplicates stay an error via
 `registerMech` / `registerMap`).
 

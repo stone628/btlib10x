@@ -23,7 +23,7 @@ import { decodeRelaxed } from "./relaxed-json";
  *
  * Duplicate models across packs resolve as: `base` always loses to any
  * other pack, and among non-base packs the first loaded wins. The latter
- * entry is ignored with a warning (see `appendCatalog`).
+ * entry is ignored with a warning (see `appendCatalog`). Each pack id loads once.
  */
 export interface MechManifestEntry extends MechIdentity {
   /** File-local line number of the sheet's wire line (lines 0-1 are table + manifest). */
@@ -248,6 +248,8 @@ function ingestCatalog(
   pack: string,
   onWarning: (message: string) => void,
 ): CatalogManifest {
+  // Entry line numbers index their own pack's text, so a pack id loads once (DATA-01).
+  if (PACKS.has(pack)) throw new Error(`Catalog pack already loaded: ${pack}`);
   const lines = text.split("\n");
   if (lines.length > 0 && lines[lines.length - 1] === "") lines.pop();
   if (lines.length < 2) throw new Error("Invalid catalog: expected a string table and a manifest");
@@ -287,7 +289,8 @@ export function loadCatalog(text: string, pack = "base"): CatalogManifest {
  * always resolve against their own pack's table. Cross-pack duplicates
  * warn through `onWarning` (default `console.warn`): `base` always loses,
  * and among other packs the first loaded wins. Returns the parsed
- * manifest.
+ * manifest. Throws if a pack with the same id is already loaded (start
+ * over with `loadCatalog`).
  */
 export function appendCatalog(
   text: string,

@@ -1,7 +1,10 @@
 import type { Location } from "../core/types";
 import { armFor, isArm, isLocation, isTorso, LOCATIONS, shoulderOf } from "../core/types";
 import type { LocationValue, TorsoLocationValue } from "../rules/damage";
-import { internalStructureForTonnage } from "../rules/internalStructure";
+import {
+  internalStructureForTonnage,
+  STANDARD_INTERNAL_STRUCTURE,
+} from "../rules/internalStructure";
 import { ammoDef } from "./ammo.schema";
 import { type WeaponNameHolder, weaponDef } from "./weapon.schema";
 
@@ -572,17 +575,33 @@ function resolveLocationCrits(
 }
 
 /**
+ * Largest engine rating (walking MP x tonnage) a 'Mech can mount: standard
+ * engines stop at 400, large engines reach 500 (TechManual construction).
+ */
+export const MAX_ENGINE_RATING = 500;
+
+/** Maximum head armor; other locations cap at 2 x internal structure. */
+export const MAX_HEAD_ARMOR = 9;
+
+/**
  * Validate a typed MechDef against Total Warfare rules. TypeScript enforces
  * the structural shape at compile time; this catches runtime logical
  * inconsistencies (movement ratings, armor values, crit-slot counts, heat
- * sink reconciliation, weapon/ammo linkage).
+ * sink reconciliation, weapon/ammo linkage). It is the trust boundary for
+ * catalog packs, so it also enforces the TechManual construction limits the
+ * engine relies on: the 5-ton grid of the internal-structure table, the
+ * engine-rating ceiling and maximum armor per location (DATA-02).
  */
 export function validateMechDef(def: MechDef): MechDef {
   const errors: string[] = [];
 
   const { tonnage, walking, running, jumping, techBase } = def;
 
-  if (tonnage < 10 || tonnage > 100) errors.push("tonnage must be 10..100");
+  // The internal-structure table has rows for 20..100 in 5-ton steps only.
+  const structure = STANDARD_INTERNAL_STRUCTURE[tonnage];
+  if (!Number.isInteger(tonnage) || structure === undefined) {
+    errors.push("tonnage must be a multiple of 5 in 20..100");
+  }
   if (!Number.isInteger(def.intro)) errors.push("intro must be an integer year");
   if (!Number.isInteger(def.bv) || def.bv < 0) errors.push("bv must be an integer >= 0");
 
@@ -610,6 +629,11 @@ export function validateMechDef(def: MechDef): MechDef {
   }
 
   if (!Number.isInteger(walking) || walking <= 0) errors.push("walking must be a positive integer");
+  else if (walking * tonnage > MAX_ENGINE_RATING) {
+    errors.push(
+      `engine rating ${walking * tonnage} (walking x tonnage) exceeds ${MAX_ENGINE_RATING}`,
+    );
+  }
   if (running !== Math.ceil(walking * 1.5)) {
     errors.push(
       `running must equal ceil(walking*1.5) = ${Math.ceil(walking * 1.5)} (quick-start convention)`,
@@ -647,8 +671,40 @@ export function validateMechDef(def: MechDef): MechDef {
       errors.push(`armor.${key} is not a valid location`);
     }
   }
+  // Maximum armor: head 9, elsewhere 2 x internal structure, torso front and
+  // rear counted together (TechManual construction).
+  if (structure !== undefined) {
+    const cap: Readonly<Record<Location, number>> = {
+      head: MAX_HEAD_ARMOR,
+      centerTorso: 2 * structure.centerTorso,
+      leftTorso: 2 * structure.sideTorso,
+      rightTorso: 2 * structure.sideTorso,
+      leftArm: 2 * structure.arm,
+      rightArm: 2 * structure.arm,
+      leftLeg: 2 * structure.leg,
+      rightLeg: 2 * structure.leg,
+    };
+    const rearOf: Partial<Record<Location, RearArmorKey>> = {
+      centerTorso: "centerTorsoRear",
+      leftTorso: "leftTorsoRear",
+      rightTorso: "rightTorsoRear",
+    };
+    const armor = def.armor as Record<string, number | undefined>;
+    for (const loc of LOCATIONS) {
+      const rear = rearOf[loc];
+      const total = (armor[loc] ?? 0) + (rear === undefined ? 0 : (armor[rear] ?? 0));
+      if (Number.isInteger(total) && total > cap[loc]) {
+        errors.push(
+          `armor.${loc} ${total} exceeds the maximum ${cap[loc]} (2 x internal structure; head ${MAX_HEAD_ARMOR})`,
+        );
+      }
+    }
+  }
 
   for (const w of def.weapons) {
+    if (weaponDef(w.weapon) === undefined) {
+      errors.push(`weapon mount ${JSON.stringify(w.weapon)} is not a known weapon`);
+    }
     if (!isLocation(w.location)) {
       errors.push(`weapon.location ${JSON.stringify(w.location)} is not a valid location`);
     }
@@ -660,7 +716,9 @@ export function validateMechDef(def: MechDef): MechDef {
         errors.push("weapon.shots must be a positive integer");
       } else {
         const ammo = ammoDef(w.weapon);
-        if (ammo !== undefined) {
+        if (ammo === undefined) {
+          errors.push(`weapon.shots on ${JSON.stringify(w.weapon)}, which uses no ammunition`);
+        } else {
           if (w.shots % ammo.shotsPerBin === 0) continue;
           if (w.shots === Math.floor(ammo.shotsPerBin / 2)) continue;
           errors.push(

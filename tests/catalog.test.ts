@@ -211,6 +211,18 @@ describe("sw season pack", () => {
       expect(decoded, entry.model).toEqual(JSON.parse(readFileSync(new URL(file, swDir), "utf8")));
     }
   });
+
+  it("rejects appending a pack id that is already loaded (DATA-01)", () => {
+    const count = catalogMechs().length;
+    expect(() => appendCatalog(SW_TEXT, "sw", () => {})).toThrow("Catalog pack already loaded: sw");
+    expect(() => appendCatalog(TEXT, "base", () => {})).toThrow(
+      "Catalog pack already loaded: base",
+    );
+    // The store is untouched by the rejected appends.
+    expect(findMechEntry("aem-01")?.pack).toBe("sw");
+    expect(findMechEntry("hbk-4g")?.pack).toBe("sw");
+    expect(catalogMechs().length).toBe(count);
+  });
 });
 
 describe("catalog registration", () => {
