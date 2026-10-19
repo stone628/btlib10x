@@ -144,6 +144,11 @@ Cannon carries `damage: 0`, TW p.139). Validation: `asHeat` needs a positive
 
 - `weaponDefFor(h: WeaponNameHolder): WeaponDef` (throws on unknown names)
 - `allWeaponDefs(): WeaponDef[]`
+- `isFireableWeapon(def: WeaponDef): boolean` — false for every `EQUIPMENT`
+  row. Physical weapons strike through physical declarations; TAG, Narc,
+  probes, ECM, AMS, MGA and pods await the equipment pipeline (VISION §4),
+  so `declareAttacks` / `validateAttacks` refuse them and
+  `suggestFireTargets` omits them
 - `listWeaponNames(): string[]`
 - `WeaponNameHolder` — minimal interface (`{ weapon: string }`) accepted by
   the `…For` lookup helpers
@@ -655,7 +660,9 @@ and crits resolve.
   classified `arc` and each `FireWeapon` its own `arc`. When the attacker is
   prone, each target also carries `weaponsIfPropLeft` / `weaponsIfPropRight`
   (+ matching blocked lists): a legal prone volley draws from exactly one
-  side. Mirrors `declareAttacks` checks.
+  side. Mirrors `declareAttacks` checks. Non-fireable mounts
+  (`isFireableWeapon` false: physical weapons and other `EQUIPMENT`) are
+  omitted from both the weapon and the blocked lists.
 - `bestFireTarget(state, unitId): FireTarget | null` — highest-expected-
   damage suggestion across the enemy's targets.
 - `FireBlocked` — the structured "why blocked" record for a weapon against

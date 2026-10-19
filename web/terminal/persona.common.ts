@@ -19,6 +19,7 @@ import {
   heatDissipation,
   hexDistance,
   hitProbability,
+  isFireableWeapon,
   isHull,
   isUnitAvailable,
   isWeaponCritted,
@@ -121,7 +122,7 @@ export function usableWeapons(unit: UnitState): UsableWeapon[] {
     if (unit.jammedWeapons.includes(index)) continue;
     if (!canFireMount(unit.damage, mount)) continue;
     const wdef = weaponDefFor(mount);
-    if (wdef.physicalWeapon === true) continue;
+    if (!isFireableWeapon(wdef)) continue;
     const shots = mount.shots !== undefined ? (pools[mount.weapon] ?? 0) : null;
     if (shots !== null && shots <= 0) continue;
     result.push({ index, mount, def: wdef, shots });

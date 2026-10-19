@@ -72,6 +72,7 @@ export {
 export { allTerrainDefs, terrainDef } from "./terrain.schema";
 export type { WeaponDef } from "./weapon.schema";
 export {
+  isFireableWeapon,
   listWeaponNames,
   type WeaponNameHolder,
   weaponDefFor,

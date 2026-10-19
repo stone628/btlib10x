@@ -293,6 +293,17 @@ export function weaponDefFor(h: WeaponNameHolder): WeaponDef {
   return def;
 }
 
+/**
+ * True when the row fires as a ranged weapon in the Weapon Attack Phase.
+ * EQUIPMENT rows never do: physical weapons strike through physical-attack
+ * declarations (TW p.146), and TAG, Narc, probes, ECM, AMS, MGA and pods
+ * belong to the unbuilt equipment pipeline (docs/VISION.md §4), so they
+ * carry no damage and must not reach weapon-attack resolution.
+ */
+export function isFireableWeapon(weapon: WeaponDef): boolean {
+  return weapon.category !== "EQUIPMENT";
+}
+
 export function allWeaponDefs(): readonly WeaponDef[] {
   return WEAPON_DATA;
 }

@@ -99,7 +99,12 @@ export type {
   WeaponHeatEffect,
   WeaponNameHolder,
 } from "./data/weapon.schema";
-export { allWeaponDefs, listWeaponNames, weaponDefFor } from "./data/weapon.schema";
+export {
+  allWeaponDefs,
+  isFireableWeapon,
+  listWeaponNames,
+  weaponDefFor,
+} from "./data/weapon.schema";
 export type { ArmActuatorCounts } from "./rules/actuators";
 export {
   AMMO_POLICIES,

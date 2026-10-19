@@ -37,7 +37,7 @@ import {
 } from "../core/types";
 import { type MapDef, type MechModelHolder, mechDef, mechDefFor } from "../data/index";
 import type { ResolvedMechDef } from "../data/mech.schema";
-import { weaponDefFor } from "../data/weapon.schema";
+import { isFireableWeapon, weaponDefFor } from "../data/weapon.schema";
 import {
   armWeaponToHitModifier,
   clubHandsFunctional,
@@ -2882,6 +2882,9 @@ export function validateAttacksImpl(
       throw new Error(
         `${mount.weapon} on ${unitId} is physical-weapon equipment: strike with it, do not fire it`,
       );
+    }
+    if (!isFireableWeapon(weapon)) {
+      throw new Error(`${mount.weapon} on ${unitId} is equipment, not a fireable weapon`);
     }
 
     if (seenWeapons.has(decl.weaponIndex)) {

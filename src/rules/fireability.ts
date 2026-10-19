@@ -3,7 +3,7 @@ import { hexDistance } from "../core/hex";
 import { cellAt } from "../core/terrain";
 import type { Location } from "../core/types";
 import { mechDefFor } from "../data/index";
-import { weaponDefFor } from "../data/weapon.schema";
+import { isFireableWeapon, weaponDefFor } from "../data/weapon.schema";
 import { armWeaponToHitModifier, targetingComputerModifier } from "./actuators";
 import { binsForWeaponName, pooledShotsLeft } from "./ammo";
 import {
@@ -194,9 +194,10 @@ export function suggestFireTargets(
       Object.entries(def.weapons).forEach(([key, mount]) => {
         const weaponIndex = Number(key);
         const weapon = weaponDefFor(mount);
-        // Physical-weapon equipment (TW p.146) never fires as a ranged
-        // weapon: it is used through strike declarations only.
-        if (weapon.physicalWeapon === true) return;
+        // Equipment never fires as a ranged weapon: physical weapons (TW
+        // p.146) strike through physical declarations, and TAG, Narc, AMS
+        // etc. await the equipment pipeline (`isFireableWeapon`).
+        if (!isFireableWeapon(weapon)) return;
         const blockedEntry = (reason: FireBlockerReason): FireBlocked => ({
           weaponIndex,
           weapon: mount.weapon,
