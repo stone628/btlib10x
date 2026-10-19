@@ -163,7 +163,8 @@ advancePhase(state, events);                 // movement -> attack
 
 ## 5. Weapon attack phase
 
-Declare attacks per unit (one target per turn; ammo is spent at declaration).
+Declare attacks per unit (one target per turn; ammo is spent at declaration,
+except Streak launchers, which spend one shot at resolution and only on a hit).
 Weapon indexes are **1-based** and match the model's mount order, e.g.
 WVR-6R (Wolverine): `[1] Medium Laser (head), [2] SRM 6 (leftTorso),
 [3] AC/5 (rightArm)`. The example below fires the Medium Laser.

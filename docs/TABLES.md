@@ -167,7 +167,9 @@ count (SRM: one location roll per missile); failed roll fires nothing (no
 ammo spent, no heat). Launchers share one ammo pool per weapon name: when
 an earlier launcher drains pool mid-resolution, a later launcher with
 nothing left auto-misses without rolling (declaration order sets ammo
-priority; resolution logs an out-of-ammo note).
+priority; resolution logs an out-of-ammo note). The pool is read from the
+attacker's bins as they stood at the start of the phase, so damage or
+crits other attacks deal it in the same phase never void its volley.
 
 ## Critical Hits
 

@@ -3463,7 +3463,8 @@ function physicalWeaponConflict(
  *  sees the damage and criticals of the weapons resolved before it (TW p.125:
  *  crits are rolled "before resolving any further weapons fire"). It is also
  *  the unit's one ammo ledger for the phase: its own Streak spending and the
- *  crits it takes both act on `ammoBins` here. */
+ *  crits it takes both act on `ammoBins` here. The unit's own volley never
+ *  reads it (see `resolveUnitAttacks`): only the unit's targets do. */
 interface RunningState {
   damage: UnitDamageState;
   critSlotsDestroyed: CritMask;
@@ -3497,8 +3498,19 @@ function resolveUnitAttacks(
     countDestroyedSensor(def, unit.damage, unit.critSlotsDestroyed),
   );
   const pronePropArm = inferPronePropArm(def, unit.declaredWeaponAttacks, unit.prone);
-  // Own Streak spending draws from the unit's running ledger, which also
-  // carries crits other units' fire already put on it this phase.
+  // TW resolves weapon attacks simultaneously, so the unit's own Streak
+  // launchers see its bins as they stood at phase start: damage and crits
+  // other units' fire put on it this phase cannot strand, destroy or
+  // explode a bin out from under its own volley, whatever the resolution
+  // order. `own` is that phase-start view, debited only by the unit's own
+  // Streak shots; each shot is mirrored onto the running ledger `self`
+  // (which carries the crits the unit takes) so the phase ends with one
+  // set of bins and no shot spent twice.
+  const own: RunningState = {
+    damage: unit.damage,
+    critSlotsDestroyed: unit.critSlotsDestroyed,
+    ammoBins: { ...unit.ammoBins },
+  };
   const self = runningStateFor(running, unit);
   const jammedWeapons: number[] = [];
   const resolutions: UnitAttackResolution[] = [];
@@ -3516,7 +3528,7 @@ function resolveUnitAttacks(
     // hit: an earlier launcher may have drained the pool mid-resolution.
     // With nothing left the launcher cannot fire — auto-miss without
     // touching dice (no ammo spent, no heat).
-    if (weapon.streak === true && pooledShotsLeft(def, self, weapon.name) < 1) {
+    if (weapon.streak === true && pooledShotsLeft(def, own, weapon.name) < 1) {
       ammoExhausted = true;
     }
 
@@ -3608,7 +3620,16 @@ function resolveUnitAttacks(
     // linked bins still spend shared ammo. The pre-resolution guard above
     // guarantees at least one shot remains, so this always draws exactly 1.
     if (streakFired) {
-      self.ammoBins = consumeAmmoForName(def, self, weapon.name, 1, unit.ammoPolicy, rng);
+      const next = consumeAmmoForName(def, own, weapon.name, 1, unit.ammoPolicy, rng);
+      const mirrored: AmmoBins = { ...self.ammoBins };
+      for (const [id, left] of Object.entries(next)) {
+        const spent = (own.ammoBins[id] ?? 0) - left;
+        // A bin already exploded or spilled this phase holds 0: the shot
+        // left it before the blast, so there is nothing more to take.
+        if (spent > 0) mirrored[id] = Math.max(0, (mirrored[id] ?? 0) - spent);
+      }
+      own.ammoBins = next;
+      self.ammoBins = mirrored;
     }
 
     const weaponHeat = (weapon.heat ?? 0) * shots;
