@@ -18,7 +18,7 @@ function battle(hbkExtra: Partial<UnitInit> = {}): BattleState {
     buildUnitInit("enf", "ENF-4R", 2, { col: 5, row: 4 }, "nw"),
   ];
   const state = createTestBattle([], units, true);
-  rollInitiativePhase(state, scriptedRng(3, 3, 3, 1), []);
+  rollInitiativePhase(state, scriptedRng(1, 1, 4, 4), []);
   return state;
 }
 

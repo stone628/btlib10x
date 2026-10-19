@@ -6038,7 +6038,7 @@ function resolveEjection(
  *  hull (`isHull`). The emergency exit: available to any active unit,
  *  including shut-down and immobile ones. */
 export function ejectPilot(state: BattleState, unitId: string, rng: Rng, sink: GameEvent[]): void {
-  requirePhase(state, "movement");
+  requireCurrentActor(state, unitId, "movement");
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
   // A voluntary exit is a window of its own: no one earns credit for it.
@@ -6054,7 +6054,7 @@ export function ejectPilot(state: BattleState, unitId: string, rng: Rng, sink: G
  *  posture it stood in (`removed = "pilotAbandoned"`), and the pilot
  *  survives for campaign purposes. Marks the unit as having acted. */
 export function abandonPilot(state: BattleState, unitId: string, sink: GameEvent[]): void {
-  requirePhase(state, "movement");
+  requireCurrentActor(state, unitId, "movement");
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
   if (!isShutdown(unit)) {
@@ -6075,7 +6075,7 @@ export function abandonPilot(state: BattleState, unitId: string, sink: GameEvent
  *  successful voluntary startup. Unlike an involuntary shutdown it forces no
  *  PSR (TW p.160). Marks the unit as having acted. */
 export function voluntaryShutdown(state: BattleState, unitId: string, sink: GameEvent[]): void {
-  requirePhase(state, "movement");
+  requireCurrentActor(state, unitId, "movement");
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
   if (isShutdown(unit)) throw new Error(`${unitId} is already shut down`);
@@ -6104,7 +6104,7 @@ export function attemptVoluntaryStartup(
   sink: GameEvent[],
   rng: Rng,
 ): void {
-  requirePhase(state, "movement");
+  requireCurrentActor(state, unitId, "movement");
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
   if (isNominal(unit)) throw new Error(`${unitId} is not shut down`);
@@ -6174,7 +6174,7 @@ export function attemptVoluntaryStartup(
 /** Movement-phase pass for a shut-down unit that attempts no startup: it
  *  stays off-line and is marked as having acted. */
 export function passMovement(state: BattleState, unitId: string): void {
-  requirePhase(state, "movement");
+  requireCurrentActor(state, unitId, "movement");
   const unit = requireUnit(state, unitId);
   if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
   if (isNominal(unit)) throw new Error(`${unitId} is not shut down`);

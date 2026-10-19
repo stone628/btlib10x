@@ -34,7 +34,7 @@ function hbkVsEnf(): BattleState {
   return createTestBattle([], units, true);
 }
 
-function startMovementTurn(state: BattleState, rng = scriptedRng(3, 3, 3, 1)): BattleState {
+function startMovementTurn(state: BattleState, rng = scriptedRng(1, 1, 4, 4)): BattleState {
   rollInitiativePhase(state, rng, []);
   return state;
 }
@@ -42,7 +42,7 @@ function startMovementTurn(state: BattleState, rng = scriptedRng(3, 3, 3, 1)): B
 describe("eject", () => {
   it("requires the movement phase", () => {
     const state = hbkVsEnf();
-    expect(() => ejectPilot(state, "hbk", scriptedRng(6, 6), [])).toThrow(/movement/);
+    expect(() => ejectPilot(state, "hbk", scriptedRng(6, 6), [])).toThrow(/before initiative/);
   });
 
   it("removes the unit, marks it acted, emits events, and leaves a hull", () => {
@@ -67,7 +67,7 @@ describe("eject", () => {
   it("rejects a unit already removed from play", () => {
     const state = startMovementTurn(hbkVsEnf());
     ejectPilot(state, "hbk", scriptedRng(6, 6), []);
-    expect(() => ejectPilot(state, "hbk", scriptedRng(6, 6), [])).toThrow(/removed from play/);
+    expect(() => ejectPilot(state, "hbk", scriptedRng(6, 6), [])).toThrow(/not the current actor/);
   });
 
   it("allows a shut-down unit to eject", () => {

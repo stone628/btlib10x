@@ -36,8 +36,9 @@ function hbkVsEnf(critsDisabled = true): BattleState {
   return createTestBattle([], units, critsDisabled);
 }
 
-function movement(state: BattleState): BattleState {
-  rollInitiativePhase(state, scriptedRng(3, 3, 3, 1), []);
+/** Start the movement phase; by default team 1 (hbk) loses initiative and moves first. */
+function movement(state: BattleState, rng = scriptedRng(1, 1, 4, 4)): BattleState {
+  rollInitiativePhase(state, rng, []);
   return state;
 }
 
@@ -63,7 +64,7 @@ describe("voluntary abandonment (house rule, TO:AR p.165)", () => {
   it("an active 'Mech cannot shut down and abandon in one turn", () => {
     const state = movement(hbkVsEnf());
     voluntaryShutdown(state, "hbk", []);
-    expect(() => abandonPilot(state, "hbk", [])).toThrow(/already acted/);
+    expect(() => abandonPilot(state, "hbk", [])).toThrow(/not the current actor/);
   });
 
   it("the pilot steps out unhurt, no roll; the hull stays standing", () => {
@@ -222,7 +223,7 @@ describe("wreckage (TO:AR p.155)", () => {
   });
 
   it("charges the extra MP on the move and in the reachable map", () => {
-    const state = movement(hbkVsEnf());
+    const state = movement(hbkVsEnf(), scriptedRng(3, 3, 3, 1));
     const enf = requireUnit(state, "enf");
     const ahead = neighbor(enf.position, "nw");
     state.wreckage[hexKey(ahead)] = [{ model: "X", unitId: "x" }];

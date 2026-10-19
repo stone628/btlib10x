@@ -1,14 +1,18 @@
 import { describe, expect, it } from "vitest";
 import type { BattleState, GameEvent, UnitInit } from "../src/rules/game";
 import {
+  abandonPilot,
   actorQueue,
   applyPilotHits,
   attemptVoluntaryStartup,
   buildUnitInit,
+  ejectPilot,
   executeMove,
   nextActor,
+  passMovement,
   requireUnit,
   rollInitiativePhase,
+  voluntaryShutdown,
 } from "../src/rules/game";
 import { createTestBattle, scriptedRng } from "./helpers";
 
@@ -108,5 +112,55 @@ describe("pilot hits never exceed the maximum (SALV-04)", () => {
     hbk.pilotHits = hbk.pilotHitMax - 1;
     applyPilotHits(state, hbk, 3, "fall", scriptedRng(6, 6, 6, 6, 6, 6), []);
     expect(hbk.pilotHits).toBe(hbk.pilotHitMax);
+  });
+});
+
+describe("shutdown, startup, ejection and passes are movement declarations (API-09)", () => {
+  it("refuses them out of turn", () => {
+    const state = hbkVsEnf();
+    expect(nextActor(state)).toBe("hbk");
+    expect(() => ejectPilot(state, "enf", scriptedRng(6, 6), [])).toThrow(/not the current actor/);
+    expect(() => voluntaryShutdown(state, "enf", [])).toThrow(/not the current actor/);
+    expect(requireUnit(state, "enf").removed).toBe("not");
+    expect(requireUnit(state, "enf").shutdown).toBe("not");
+    expect(state.actedThisPhase).toEqual([]);
+  });
+
+  it("refuses them for a down unit that is not at the head of the queue", () => {
+    const state = hbkVsEnf();
+    requireUnit(state, "hbk").shutdown = "manual";
+    requireUnit(state, "enf").shutdown = "manual";
+    expect(nextActor(state)).toBe("hbk");
+    expect(() => attemptVoluntaryStartup(state, "enf", [], scriptedRng())).toThrow(
+      /not the current actor/,
+    );
+    expect(() => passMovement(state, "enf")).toThrow(/not the current actor/);
+    expect(() => abandonPilot(state, "enf", [])).toThrow(/not the current actor/);
+    expect(state.actedThisPhase).toEqual([]);
+  });
+
+  it("allows one declaration per unit: no shutdown or ejection after a move", () => {
+    const state = hbkVsEnf();
+    executeMove(state, "hbk", "walk", [], [], { rng: scriptedRng() });
+    expect(() => voluntaryShutdown(state, "hbk", [])).toThrow(/not the current actor/);
+    expect(() => ejectPilot(state, "hbk", scriptedRng(6, 6), [])).toThrow(/not the current actor/);
+    expect(state.actedThisPhase).toEqual(["hbk"]);
+    expect(requireUnit(state, "hbk").shutdown).toBe("not");
+  });
+
+  it("gives an unconscious pilot no manual ejection (TW p.42)", () => {
+    const state = hbkVsEnf();
+    requireUnit(state, "hbk").unconsciousSinceTurn = state.turn;
+    expect(() => ejectPilot(state, "hbk", scriptedRng(6, 6), [])).toThrow(/not the current actor/);
+    expect(requireUnit(state, "hbk").removed).toBe("not");
+  });
+
+  it("accepts them from the current actor", () => {
+    const state = hbkVsEnf();
+    ejectPilot(state, "hbk", scriptedRng(6, 6), []);
+    expect(requireUnit(state, "hbk").removed).toBe("pilotEjected");
+    expect(nextActor(state)).toBe("enf");
+    voluntaryShutdown(state, "enf", []);
+    expect(requireUnit(state, "enf").shutdown).toBe("manual");
   });
 });

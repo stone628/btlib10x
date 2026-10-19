@@ -757,15 +757,15 @@ postureMoveBudget(unit, "standUp" | "drop", budget): number           // MP left
 postureCost(unit, "standUp" | "drop"): number                         // MP the stand-up / drop charges now
 attemptStandUp(state, unitId, sink: GameEvent[], rng): number          // movement phase only: prone unit tries to rise (one attempt per activation; ends it)
 dropProne(state, unitId, sink: GameEvent[]): void                // movement phase only: go prone voluntarily (1 MP, no heat, no roll, no damage; refused after jumping; ends the activation)
-ejectPilot(state, unitId, rng, sink: GameEvent[]): void                // movement phase only (Tactical Operations extension): ejection PSR (failure = floor(MoF/2) pilot hits, `pilotDamaged` reason "ejection"), then removes the unit (removed = "pilotEjected"); the frame stays as a hull; pilotHits retained
-abandonPilot(state, unitId, sink: GameEvent[]): void                   // movement phase only (house rule, TO:AR p.165): a unit shut down since an earlier turn; no roll, no hits; removed = "pilotAbandoned", the frame stays as a hull in its posture
-voluntaryShutdown(state, unitId, sink: GameEvent[]): void              // movement phase only: shuts down ("manual")
-attemptVoluntaryStartup(state, unitId, sink: GameEvent[], rng): void  // startup attempt after a manual shutdown
+ejectPilot(state, unitId, rng, sink: GameEvent[]): void                // current movement actor only, as its declaration (Tactical Operations extension; not with an unconscious pilot): ejection PSR (failure = floor(MoF/2) pilot hits, `pilotDamaged` reason "ejection"), then removes the unit (removed = "pilotEjected"); the frame stays as a hull; pilotHits retained
+abandonPilot(state, unitId, sink: GameEvent[]): void                   // current movement actor only (house rule, TO:AR p.165): a unit shut down since an earlier turn; no roll, no hits; removed = "pilotAbandoned", the frame stays as a hull in its posture
+voluntaryShutdown(state, unitId, sink: GameEvent[]): void              // current movement actor only, as its declaration: shuts down ("manual")
+attemptVoluntaryStartup(state, unitId, sink: GameEvent[], rng): void  // current movement actor only: startup attempt after a manual shutdown
 declareAttacks(state, unitId, weaponDecls, physicalDecls, sink: GameEvent[], rng, options?): void  // attack phase only: one combined declaration per turn (weapons + punch/kick/club/strike); emits a single merged `attacksDeclared`
 validateAttacks(state, unitId, weaponDecls, physicalDecls?, options?): void            // read-only gate check; throws on any rule violation without mutating state or emitting events. Options carry the torso `twist`. Returns the resolved volley metadata via `validateAttacksImpl`.
 declarePickup(state, unitId, decl, sink: GameEvent[]): void             // attack phase only: exclusive club pickup (see Physical attacks)
 validatePhysicalAttack(state, unitId, decl: PhysicalAttackDecl, twist?, dropped?): ValidationResult  // read-only single-decl check (adjacency, arc, level, actuators); consumed by `declareAttacks` and the web `candidate` hints
-passMovement(state, unitId): void                                       // movement phase only: shut-down unit attempts no startup, stays off-line, marked as acted
+passMovement(state, unitId): void                                       // current movement actor only: shut-down unit attempts no startup, stays off-line, marked as acted
 passAttack(state, unitId): void                                         // attack phase only: current actor declares no attacks this turn, marked as passed + acted
 wreckageAt(state, hex): readonly WreckageEntry[]                         // destroyed 'Mechs lying as wreckage in the hex: { model, unitId } (unitId null when the map placed it)
 occupantAt(state, hex, excludeId?): UnitState | undefined               // the active unit or hull in a hex

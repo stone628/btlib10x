@@ -142,7 +142,7 @@ describe("unitRemoved credit", () => {
 
   it("gives none for an ejection outside a damage window", () => {
     const state = lance();
-    rollInitiativePhase(state, scriptedRng(2, 2, 5, 5), []);
+    rollInitiativePhase(state, scriptedRng(5, 5, 2, 2), []); // team 2 (enf) moves first
     const enf = requireUnit(state, "enf");
     enf.damageTakenFrom = { hbk: 25 };
     const events: GameEvent[] = [];

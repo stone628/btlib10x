@@ -30,7 +30,7 @@ function startMovementTurn(state: BattleState, rng = scriptedRng(1, 1, 4, 4)): B
 describe("voluntary shutdown", () => {
   it("requires the movement phase", () => {
     const state = hbkVsEnf();
-    expect(() => voluntaryShutdown(state, "hbk", [])).toThrow(/movement/);
+    expect(() => voluntaryShutdown(state, "hbk", [])).toThrow(/before initiative/);
   });
 
   it("takes an online unit off-line and marks it as acted", () => {
@@ -48,7 +48,7 @@ describe("voluntary shutdown", () => {
 
   it("rejects a unit that is already shut down", () => {
     const state = startMovementTurn(hbkVsEnf());
-    voluntaryShutdown(state, "hbk", []);
+    requireUnit(state, "hbk").shutdown = "manual";
     expect(() => voluntaryShutdown(state, "hbk", [])).toThrow(/already shut down/);
   });
 
@@ -89,7 +89,7 @@ describe("voluntary startup", () => {
   it("auto-succeeds below the shutdown threshold (heat < 14)", () => {
     const state = startMovementTurn(hbkVsEnf());
     const hbk = requireUnit(state, "hbk");
-    voluntaryShutdown(state, "hbk", []);
+    hbk.shutdown = "manual"; // shut down in an earlier turn
     const events: GameEvent[] = [];
     attemptVoluntaryStartup(state, "hbk", events, scriptedRng());
     expect(hbk.shutdown).toBe("not");
@@ -106,7 +106,7 @@ describe("voluntary startup", () => {
     const state = startMovementTurn(hbkVsEnf());
     const hbk = requireUnit(state, "hbk");
     hbk.heat = 18; // avoid 6
-    voluntaryShutdown(state, "hbk", []);
+    hbk.shutdown = "manual"; // shut down in an earlier turn
     const events: GameEvent[] = [];
     attemptVoluntaryStartup(state, "hbk", events, scriptedRng(2, 1)); // 2D6 = 3 < 6
     expect(hbk.shutdown).toBe("manual");
@@ -123,7 +123,7 @@ describe("voluntary startup", () => {
     const state = startMovementTurn(hbkVsEnf());
     const hbk = requireUnit(state, "hbk");
     hbk.heat = 30;
-    voluntaryShutdown(state, "hbk", []);
+    hbk.shutdown = "manual"; // shut down in an earlier turn
     const events: GameEvent[] = [];
     attemptVoluntaryStartup(state, "hbk", events, scriptedRng(6, 6));
     expect(hbk.shutdown).toBe("manual");
@@ -131,37 +131,33 @@ describe("voluntary startup", () => {
     expect(state.actedThisPhase).toContain("hbk");
   });
 
-  it("blocks an unconscious pilot's startup at heat 14+ but not below 14", () => {
+  it("gives an unconscious pilot no startup attempt: the unit is not an actor (TW p.42)", () => {
     const state = startMovementTurn(hbkVsEnf());
     const hbk = requireUnit(state, "hbk");
     hbk.unconsciousSinceTurn = state.turn;
-    hbk.heat = 18;
-    voluntaryShutdown(state, "hbk", []);
-    const events: GameEvent[] = [];
-    attemptVoluntaryStartup(state, "hbk", events, scriptedRng(6, 6));
+    hbk.shutdown = "manual"; // shut down in an earlier turn
+    expect(() => attemptVoluntaryStartup(state, "hbk", [], scriptedRng())).toThrow(
+      /not the current actor/,
+    );
     expect(hbk.shutdown).toBe("manual");
-    expect(events).toMatchObject([{ kind: "restartCheck", result: "unconscious" }]);
-
-    const low = startMovementTurn(hbkVsEnf());
-    const hbk2 = requireUnit(low, "hbk");
-    hbk2.unconsciousSinceTurn = low.turn;
-    voluntaryShutdown(low, "hbk", []);
-    attemptVoluntaryStartup(low, "hbk", [], scriptedRng());
-    expect(hbk2.shutdown).toBe("not");
+    expect(nextActor(state)).toBe("enf");
   });
 
   it("rejects an online unit, including one that just started up", () => {
     const state = startMovementTurn(hbkVsEnf());
-    expect(() => attemptVoluntaryStartup(state, "enf", [], scriptedRng())).toThrow(/not shut down/);
-    voluntaryShutdown(state, "hbk", []);
-    attemptVoluntaryStartup(state, "hbk", [], scriptedRng());
     expect(() => attemptVoluntaryStartup(state, "hbk", [], scriptedRng())).toThrow(/not shut down/);
+    requireUnit(state, "hbk").shutdown = "manual";
+    attemptVoluntaryStartup(state, "hbk", [], scriptedRng());
+    // the startup was its declaration: a second one is out of turn
+    expect(() => attemptVoluntaryStartup(state, "hbk", [], scriptedRng())).toThrow(
+      /not the current actor/,
+    );
   });
 
   it("comes online at once: movement is spent, the attack phase is kept", () => {
     const state = startMovementTurn(hbkVsEnf());
     const hbk = requireUnit(state, "hbk");
-    voluntaryShutdown(state, "hbk", []);
+    hbk.shutdown = "manual"; // shut down in an earlier turn
     attemptVoluntaryStartup(state, "hbk", [], scriptedRng());
     expect(hbk.shutdown).toBe("not");
     expect(state.actedThisPhase).toContain("hbk");
@@ -176,7 +172,7 @@ describe("voluntary startup", () => {
 describe("movement pass for shut-down units", () => {
   it("marks a down unit as acted without changing state", () => {
     const state = startMovementTurn(hbkVsEnf());
-    voluntaryShutdown(state, "hbk", []);
+    requireUnit(state, "hbk").shutdown = "manual"; // shut down in an earlier turn
     passMovement(state, "hbk");
     expect(requireUnit(state, "hbk").shutdown).toBe("manual");
     expect(state.actedThisPhase).toContain("hbk");
@@ -185,7 +181,7 @@ describe("movement pass for shut-down units", () => {
 
   it("rejects an online unit", () => {
     const state = startMovementTurn(hbkVsEnf());
-    expect(() => passMovement(state, "enf")).toThrow(/not shut down/);
+    expect(() => passMovement(state, "hbk")).toThrow(/not shut down/);
   });
 });
 
