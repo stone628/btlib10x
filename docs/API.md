@@ -564,7 +564,8 @@ Predicates: `isUnitDestroyed(damage)` (head or CT IS gone),
 `isUnitImmobile(damage)` (both legs AND both arms gone — TW p.122),
 `destroyedLegs(damage)`, `destroyedArms(damage)`,
 `canAttemptStandUp(damage)` (TW p.50: false for 2-legs or 1-leg + 2-arms),
-`canFireFromLocation(damage, loc)` (location + its support torso intact).
+`canFireFromLocation(damage, loc)` (location intact; arms also need their
+side torso, legs do not).
 Side-torso IS death blows off the arm. One leg destroyed = walk MP 1,
 running MP 0 (TW p.122), not immobile. `isUnitLocationDestroyed` is
 engine-internal.

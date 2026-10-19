@@ -4,7 +4,6 @@ import {
   damageTransferTo,
   isArm,
   isKillLocation,
-  isLeg,
   isTorso,
   shoulderOf,
 } from "../core/types";
@@ -291,8 +290,7 @@ export function canFireMount(
 /** A weapon in `location` can fire only if that location (and its shoulder for arms) is intact. */
 export function canFireFromLocation(damage: UnitDamageState, location: Location): boolean {
   if (damage.internalStructure[location] <= 0) return false;
-  if (isArm(location) || isLeg(location)) {
-    return damage.internalStructure[shoulderOf(location)] > 0;
-  }
+  // Legs need only themselves: a lost side torso takes its arm (TW p.122), not its leg.
+  if (isArm(location)) return damage.internalStructure[shoulderOf(location)] > 0;
   return true;
 }
