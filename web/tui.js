@@ -252,6 +252,7 @@
        footer, footerRight
        actions          [{ text, title, onClick }] drawn at the top right
        tone             accent | warn | danger | info | clear
+       theme            green | amber | paper | any CSS-defined theme
        shadow, pad      boolean, cells of inner padding (default 1) */
   function box(el, opts) {
     if (!(el instanceof Element)) {
@@ -280,6 +281,7 @@
     if (opts.border) d.border = opts.border;
     else if (!d.border) d.border = "single";
     if (opts.tone) d.tone = opts.tone;
+    if (opts.theme) d.theme = opts.theme;
     const pad = pick("pad", "pad", 1);
     el.style.setProperty("--pad", pad);
     const shadow =
@@ -652,6 +654,13 @@
     el.style.top = `${top + global.scrollY}px`;
   }
 
+  /* Popups live in <body>, outside any themed box, so they copy the theme
+     of the element that opened them. */
+  function inheritTheme(el, from) {
+    const t = from?.closest?.("[data-theme]")?.dataset.theme;
+    if (t) el.dataset.theme = t;
+  }
+
   let openPopup = null;
   function closePopup(result) {
     if (openPopup) {
@@ -669,6 +678,7 @@
     return new Promise((resolve) => {
       const el = div("tui-popup tui-font");
       el.tabIndex = -1;
+      inheritTheme(el, anchor);
       doc.body.appendChild(el);
       const longest = items.reduce(
         (m, it) =>
@@ -1372,7 +1382,7 @@
     return el;
   }
 
-  /* TUI.dialog({ title, text | content, buttons, cols, border, tone, defaultIndex })
+  /* TUI.dialog({ title, text | content, buttons, cols, border, tone, theme, defaultIndex })
      Resolves to the clicked button's label, or null on Escape. */
   function dialog(opts) {
     opts = opts || {};
@@ -1380,6 +1390,7 @@
     return new Promise((resolve) => {
       const prevFocus = doc.activeElement;
       const overlay = div("tui-overlay tui-font");
+      if (opts.theme) overlay.dataset.theme = opts.theme;
       const win = div("tui-dialog");
       win.setAttribute("role", "dialog");
       win.setAttribute("aria-modal", "true");
@@ -1457,6 +1468,7 @@
     const w = Math.max(...lines.map(len));
     tipEl = div("tui-popup tui-font tui-tip");
     tipEl.setAttribute("role", "tooltip");
+    inheritTheme(tipEl, target);
     tipEl.textContent = lines.join("\n");
     doc.body.appendChild(tipEl);
     box(tipEl, {
@@ -2050,6 +2062,7 @@
     "footerRight",
     "border",
     "tone",
+    "theme",
     "shadow",
     "pad",
   ];
@@ -2195,6 +2208,8 @@
   function boxPatch(el, k, v) {
     if (!BOXP.includes(k)) return false;
     setData(el, k, v);
+    // A theme only swaps color tokens: CSS repaints, no relayout.
+    if (k === "theme") return true;
     if (k === "tone") {
       el._tui.drawn = false;
       layout(el);

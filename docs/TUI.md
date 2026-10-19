@@ -89,12 +89,103 @@ Change `data-border` on any box and call `TUI.refresh()` (or `TUI.redraw(el)`).
 
 ## Theming
 
-All color goes through tokens on `:root`: `--tui-page`, `--tui-fg`, `--tui-bright`,
-`--tui-dim`, `--tui-accent`, `--tui-line`, `--tui-surface`, `--tui-surface-2`,
-`--tui-field`, `--tui-sel-bg/fg`, `--tui-shadow`, `--tui-overlay`, plus
-`--tui-red/yellow/blue/cyan` and their `-bg`. `data-theme="amber"` and
-`data-theme="paper"` on `<html>` are example alternates. Boxes take local overrides
-`--box-bg`, `--box-line`, `--box-title`, or `data-tone="accent|info|warn|danger|clear"`.
+All color goes through tokens, CSS custom properties that inherit down the tree:
+
+| Token | Used for |
+|---|---|
+| `--tui-page` | screen background (`.tui`) |
+| `--tui-fg` | body text |
+| `--tui-bright` | emphasized text, box titles |
+| `--tui-dim` | muted text, footers, tracks |
+| `--tui-accent`, `--tui-accent-ink` | accent color, and text drawn on it |
+| `--tui-line` | border glyphs |
+| `--tui-surface` | box interior |
+| `--tui-surface-2` | raised surfaces: buttons, headers, hover, status bar |
+| `--tui-field` | input fields |
+| `--tui-sel-bg`, `--tui-sel-fg` | selection (reverse video), active tab |
+| `--tui-shadow` | window and popup shadow |
+| `--tui-overlay` | dimmed backdrop behind a dialog |
+| `--tui-red/yellow/blue/cyan` | status colors (tones, progress) |
+| `--tui-red-bg/yellow-bg/blue-bg` | box interior for the `danger`, `warn`, `info` tones |
+
+Built in: `green` (the default, on `:root`), `amber` and `paper` (a light theme).
+Theme blocks hold only color tokens. Font, size and cell metrics (`--tui-font`,
+`--tui-fs`, `--cw`, `--ch`, insets, scrollbar glyphs) stay on `:root`, so a theme can be
+set on any element without changing the layout.
+
+**Page theme.** Put `data-theme` on `<html>` (or any ancestor of the TUI):
+
+```html
+<html data-theme="amber">
+```
+
+**Per-box theme.** Put `data-theme` on a single box, or pass `theme` in JS and scenes.
+The box, everything inside it and nested boxes take that theme, while the rest of the
+page keeps its own. `data-theme="green"` returns to the default inside another theme.
+
+```html
+<div data-tui="box" data-cols="30" data-title="Log" data-theme="paper">…</div>
+```
+
+```js
+TUI.box(el, { title: 'Log', theme: 'paper' });
+TUI.dialog({ title: 'Eject?', text: '…', buttons: ['Yes', 'No'], theme: 'amber' });
+TUI.h.box({ title: 'Log', theme: p.logTheme, border: 'rounded' }, '…');
+```
+
+In a scene, a changed `theme` prop only swaps the attribute, with no relayout. Popups
+opened from inside a themed box (select, menu, menubar, tooltip) copy that theme, since
+they are placed in `<body>` outside the box. A dialog takes its own `theme` option.
+Changing `data-theme` by hand needs no `TUI.refresh()`: only colors change, and CSS
+repaints them.
+
+**Adding a theme.** A theme is one CSS block, like a border set; no JS change is needed.
+Load it after `tui.css`:
+
+```css
+[data-theme="ice"] {
+  color-scheme: dark;         /* light for a light theme: native scrollbars, inputs */
+  --tui-page: #0a0e14;
+  --tui-fg: #b4c6d8;
+  --tui-bright: #e2ecf6;
+  --tui-dim: #4e5f72;
+  --tui-accent: #7fc4ff;
+  --tui-accent-ink: #0a0e14;
+  --tui-line: #5f7d9c;
+  --tui-surface: #111822;
+  --tui-surface-2: #18222f;
+  --tui-field: #142a40;
+  --tui-sel-bg: #7fc4ff;
+  --tui-sel-fg: #0a0e14;
+  --tui-shadow: rgba(0, 0, 0, 0.55);
+  --tui-overlay: rgba(4, 6, 10, 0.6);
+  --tui-red: #e07a6a;
+  --tui-yellow: #d8c26a;
+  --tui-blue: #7aa7d8;
+  --tui-cyan: #6ac9c0;
+  --tui-red-bg: #3a1712;
+  --tui-yellow-bg: #383012;
+  --tui-blue-bg: #152838;
+}
+```
+
+Then use it as `data-theme="ice"` or `theme: 'ice'`. Rules for a new theme:
+
+- Use a bare attribute selector, `[data-theme="ice"]`, not `:root[data-theme="ice"]` or
+  `html[…]`, or it only works as a page theme.
+- Put only color tokens (and `color-scheme`) in it. A theme that sets `--tui-fs`,
+  `--tui-font` or `--cw`/`--ch` breaks cell alignment for the boxes inside it.
+- Define every token if the theme will be used per box. A token left out is inherited
+  from the theme around the box, so a dark theme that skips the status colors would
+  pick up `paper`'s light `--tui-red-bg` inside a paper page. A theme only ever used on
+  the page can leave tokens out and fall back to `green`.
+- Check contrast for `--tui-fg` and `--tui-dim` on `--tui-surface`, `--tui-sel-fg` on
+  `--tui-sel-bg`, `--tui-accent-ink` on `--tui-accent`, and each status color on its `-bg`.
+
+**Smaller overrides.** For one box, `--box-bg`, `--box-line` and `--box-title` recolor it
+without a whole theme (`style="--box-line: var(--tui-cyan)"`), and
+`data-tone="accent|info|warn|danger|clear"` picks a preset from the current theme's
+tokens. Tone and theme combine: a `warn` box in `paper` uses paper's yellow.
 
 ## Components
 
@@ -103,12 +194,12 @@ from script. All `data-*` options below also exist as JS options in camelCase.
 
 | Component | Markup | Notes |
 |---|---|---|
-| Box / panel | `<div data-tui="box" data-cols="30" data-rows="6" data-title="Pilot">` | `cols`: number or `auto` (fill parent). `rows`: number or `auto` (fit content, default). `data-border`, `data-tone`, `data-shadow`, `data-pad` (cells, default 1), `data-title-align`, `data-footer`, `data-footer-right`. |
+| Box / panel | `<div data-tui="box" data-cols="30" data-rows="6" data-title="Pilot">` | `cols`: number or `auto` (fill parent). `rows`: number or `auto` (fit content, default). `data-border`, `data-tone`, `data-theme`, `data-shadow`, `data-pad` (cells, default 1), `data-title-align`, `data-footer`, `data-footer-right`. |
 | Separator | `<div class="tui-sep"></div>` inside a box | Draws `├───┤` joined to the frame. Inside a split pane it joins the dividers on either side. |
 | Split | `<div data-tui="split" data-dir="h" data-sizes="24 1fr">` with `<div data-pane data-title="Pilot">` children | One box divided into panes; see [Layout](#layout). |
 | Stacks, grid | `data-tui="hstack"`, `"vstack"`, `"grid"`, `"spacer"` | Place children in cell-sized slots; see [Layout](#layout). |
 | Window | `<div data-tui="window" data-closable>` | Box with double border, centered title, shadow, `[×]` action. Fires cancelable `tui-close`, then sets `hidden`. |
-| Dialog | `await TUI.dialog({ title, text, buttons, cols, border, tone, defaultIndex })` | Modal over a dimmed overlay. Resolves to the button label, or `null` on Esc / `[×]`. Tab is trapped; ← → move between buttons. |
+| Dialog | `await TUI.dialog({ title, text, buttons, cols, border, tone, theme, defaultIndex })` | Modal over a dimmed overlay. Resolves to the button label, or `null` on Esc / `[×]`. Tab is trapped; ← → move between buttons. |
 | Button | `<button class="tui-btn">OK</button>` | `[ OK ]`. `data-variant="angle"` gives `< OK >`, `bare` drops brackets. `.is-primary`. Pressed = reverse video; focus = `[▸ OK ◂]`. CSS only. |
 | Boxed button | `<button data-tui="button" data-border="rounded">Save</button>` | 3-row box around the label. |
 | Text input | `<input class="tui-input" style="--cols:24">` | Field-colored band; `data-variant="line"` for an underline. Inside a box it fills the width. `<span class="tui-prompt">&gt; </span>` for a prompt. |
@@ -249,9 +340,9 @@ every type: `key` (identity in a list), `ref` (name in `scene.refs`), `id`, `cla
 
 | Types | Props |
 |---|---|
-| `box`, `window`, `scroll` | `cols rows title titleAlign footer footerRight border tone shadow pad`; window adds `closable` |
+| `box`, `window`, `scroll` | `cols rows title titleAlign footer footerRight border tone theme shadow pad`; window adds `closable` |
 | `tabs`, `tab` | tabs: the box props; tab: `label`, `active` |
-| `split`, `pane` | split: `dir sizes cols rows border tone shadow`; pane: `title min pad` |
+| `split`, `pane` | split: `dir sizes cols rows border tone theme shadow`; pane: `title min pad` |
 | `hstack`, `vstack`, `grid`, `spacer` | `gap wrap align`; grid adds `columns min` |
 | `table` | `columns rows rules border selected` (same shapes as `TUI.table`) |
 | `menu`, `list` with `item`, `sep` | menu/list: box props, list adds `selected`; item: `value shortcut disabled html` |

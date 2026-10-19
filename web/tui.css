@@ -37,6 +37,30 @@
   /* 1.175em = JuliaMono ascent + descent, so box glyphs tile vertically. */
   --tui-lh: 1.175em;
 
+  /* Background inset, as a fraction of a cell. 0.5 puts the fill edge on
+     the centre line of the border glyph, so nothing outside the line is
+     colored. */
+  --tui-inset-x: 0.5;
+  --tui-inset-y: 0.5;
+  /* Scrollbar glyphs: start arrow, track, thumb, end arrow. The vertical bar
+     adds upper and lower half thumbs, so its thumb moves in half cells. */
+  --tui-vbar: "▲░█▼▀▄";
+  --tui-hbar: "◂▥■▸";
+  /* Window shadow offset, in cells. */
+  --tui-shadow-x: 1;
+  --tui-shadow-y: 0.5;
+
+  /* Fallback cell size until tui.js measures the real one. */
+  --cw: 8.4px;
+  --ch: 16.45px;
+}
+
+/* Default theme. Only color tokens live in a theme block, so a theme can be
+   set on any element (a single box included) without touching cell metrics.
+   [data-theme="green"] lets a box inside another theme return to it. */
+:root,
+[data-theme="green"] {
+  color-scheme: dark;
   --tui-page: #0c0f0c; /* screen background */
   --tui-fg: #b8c9b8; /* body text */
   --tui-bright: #d7e4d7; /* emphasized text */
@@ -59,27 +83,12 @@
   --tui-red-bg: #3a1712;
   --tui-yellow-bg: #383012;
   --tui-blue-bg: #152838;
-
-  /* Background inset, as a fraction of a cell. 0.5 puts the fill edge on
-     the centre line of the border glyph, so nothing outside the line is
-     colored. */
-  --tui-inset-x: 0.5;
-  --tui-inset-y: 0.5;
-  /* Scrollbar glyphs: start arrow, track, thumb, end arrow. The vertical bar
-     adds upper and lower half thumbs, so its thumb moves in half cells. */
-  --tui-vbar: "▲░█▼▀▄";
-  --tui-hbar: "◂▥■▸";
-  /* Window shadow offset, in cells. */
-  --tui-shadow-x: 1;
-  --tui-shadow-y: 0.5;
-
-  /* Fallback cell size until tui.js measures the real one. */
-  --cw: 8.4px;
-  --ch: 16.45px;
 }
 
-/* Alternate themes: only tokens change. */
+/* Alternate themes: only tokens change. A token a theme leaves out is
+   inherited from the theme around it. */
 [data-theme="amber"] {
+  color-scheme: dark;
   --tui-page: #100c06;
   --tui-fg: #d9b98a;
   --tui-bright: #f2d9ae;
@@ -92,6 +101,15 @@
   --tui-field: #3a2a12;
   --tui-sel-bg: #ffb347;
   --tui-sel-fg: #100c06;
+  --tui-shadow: rgba(0, 0, 0, 0.55);
+  --tui-overlay: rgba(8, 6, 2, 0.6);
+  --tui-red: #e07a6a;
+  --tui-yellow: #d8c26a;
+  --tui-blue: #7aa7d8;
+  --tui-cyan: #6ac9c0;
+  --tui-red-bg: #3a1712;
+  --tui-yellow-bg: #383012;
+  --tui-blue-bg: #152838;
 }
 [data-theme="paper"] {
   color-scheme: light;
@@ -116,6 +134,12 @@
   --tui-red-bg: #f1d5cf;
   --tui-yellow-bg: #efe4bf;
   --tui-blue-bg: #d3e0ef;
+}
+
+/* A themed element (a box, a popup) takes its theme's text color; without
+   this it would inherit the page's. */
+[data-theme] {
+  color: var(--tui-fg);
 }
 
 /* ---------- border sets ---------- */
