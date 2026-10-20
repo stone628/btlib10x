@@ -35,7 +35,7 @@
   font-style: italic;
 }
 
-#cards {
+.cards {
   width: 100%;
   max-width: 760px;
   display: grid;
@@ -115,6 +115,13 @@
   margin: 0;
 }
 
+/* Image shading in blocks next to the same image in ASCII. */
+.card .preview.glyph-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* The creator's selected-avatar box, enlarged; same glyphs as avatar.html. */
 .card .preview.avatar-art {
   display: flex;
@@ -128,15 +135,15 @@
 /* Three gallery avatars and their likes; one more line than the creator's box. */
 .card .preview.gallery-art {
   font-size: 1.1em;
-  height: calc(9em / 1.1);
+  /* Six rows plus padding and border; 9em / 1.1 left the last row 2px short,
+     which showed a vertical scrollbar. */
+  height: calc(6 * var(--board-lh) + 18px);
 }
 
-/* Two columns; the third card takes the full row under them. */
+/* Two columns; the gallery card leaves the second cell of its row empty, and
+   the grid under the coffee link keeps the same columns. */
 @media (min-width: 640px) {
-  #cards {
+  .cards {
     grid-template-columns: 1fr 1fr;
-  }
-  #card-gallery {
-    grid-column: 1 / -1;
   }
 }
