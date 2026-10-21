@@ -233,7 +233,9 @@ hittable slots, overflow is lost (excess crits simply disappear).
    the piloting sweep (PSRs and automatic falls, TW p.60), a first destroyed
    sensor adds +2 to-hit and a second blinds the 'Mech (no weapon attacks),
    and a destroyed life support injures the pilot on hot
-  heat phases (see "Piloting skill rolls" in `docs/CLI.md`).
+  heat phases (see "Piloting skill rolls" in `docs/CLI.md`) and, having
+  lost the air supply, deals 1 pilot hit in each End Phase the 'Mech ends
+  submerged (depth 2+ water, or prone in depth 1+; TW p.127).
 - Heat-sink slot hits reduce end-phase dissipation: a destroyed single
   heat sink −1, a destroyed double heat sink retires the whole device
   (−2) once any slot of its run is destroyed.

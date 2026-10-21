@@ -1965,6 +1965,8 @@ const DROP_BUDGET_MIN = 1;
 const LIFE_SUPPORT_HEAT_1HIT = 15;
 /** End-of-heat-phase heat dealing 2 pilot hits with destroyed life support. */
 const LIFE_SUPPORT_HEAT_2HITS = 26;
+/** End-Phase pilot hits while submerged with destroyed life support. */
+const AIR_SUPPLY_PILOT_HITS = 1;
 /** Pilot hits per damaging head grouping. */
 const HEAD_HIT_PILOT_HITS = 1;
 /** Pilot hits per ammo explosion. */
@@ -5237,11 +5239,39 @@ export function* advancePhaseGen(state: BattleState, rng: Rng): Generator<GameEv
       state.phase = "end";
       break;
     }
-    case "end":
+    case "end": {
+      // Turn 0 is the setup placeholder `createBattle` parks in "end", not
+      // a played End Phase.
+      if (state.turn > 0) {
+        const sink: GameEvent[] = [];
+        resolveAirSupply(state, rng, sink);
+        yield* sink;
+      }
       processEndPhase(state);
       break;
+    }
   }
   yield { kind: "phase", prevTurn, prevPhase, turn: state.turn, phase: state.phase };
+}
+
+/**
+ * Life support also carries the internal air supply (TW p.127): a 'Mech with
+ * destroyed life support that is submerged in the End Phase (depth 2+ water,
+ * or prone in depth 1+) deals its MechWarrior 1 hit. Separate from the
+ * heat-phase life-support hits. Runs on the final positions and postures of
+ * the turn.
+ */
+function resolveAirSupply(state: BattleState, rng: Rng, sink: GameEvent[]): void {
+  for (const unit of Object.values(state.units)) {
+    if (isUnitRemoved(unit)) continue;
+    if (countDestroyedLifeSupport(mechDefFor(unit), unit.damage, unit.critSlotsDestroyed) === 0) {
+      continue;
+    }
+    const depth = waterDepth(cellAt(state, unit.position).terrain);
+    if (depth >= 2 || (depth >= 1 && unit.prone)) {
+      applyPilotHits(state, unit, AIR_SUPPLY_PILOT_HITS, "lifeSupport", rng, sink);
+    }
+  }
 }
 
 /**
