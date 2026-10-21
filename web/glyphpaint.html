@@ -1,0 +1,1377 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bt10x glyphpaint</title>
+<!-- Layered glyph graphics editor. Font, palette and scrollbars come from bt10x.css (Bt10x Mono from fonts/,
+     SIL OFL 1.1); the glyph universe (RANGES below) matches that font's coverage. -->
+<link rel="preload" href="fonts/bt10x-mono-0.63.2-regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="bt10x.css">
+<script>
+// Same locale precedence as the landing page (web/index.html) and the avatar creator: ?lang= in the URL, then
+// localStorage "bt10x.lang", then English. `kr` is accepted as an alias of `ko`. Runs before first paint so the
+// :lang() rules in bt10x.css never flash the other locale. Strings built in script are in STR in the script below.
+(() => {
+  const KEY = "bt10x.lang";
+  const norm = (raw) => {
+    const v = String(raw).toLowerCase();
+    return v === "kr" ? "ko" : v === "en" || v === "ko" ? v : null;
+  };
+  let stored = null;
+  try {
+    stored = norm(localStorage.getItem(KEY));
+  } catch {}
+  const fromUrl = norm(new URLSearchParams(location.search).get("lang"));
+  window.bt10xSetLang = (locale, persist) => {
+    document.documentElement.lang = locale;
+    let saved = !persist;
+    if (persist) {
+      try {
+        localStorage.setItem(KEY, locale);
+        saved = true;
+      } catch {}
+    }
+    // Storage blocked: carry the choice to the landing page in its URL.
+    const home = document.getElementById("home-link");
+    if (home) {
+      home.href = saved ? "./" : `./?lang=${locale}`;
+      home.title = locale === "ko" ? "bt10x 홈" : "bt10x home";
+    }
+    for (const b of document.querySelectorAll("#lang button")) {
+      b.setAttribute("aria-pressed", String(b.dataset.lang === locale));
+    }
+  };
+  document.documentElement.lang = fromUrl ?? stored ?? "en";
+  window.bt10xInitialLang = { locale: document.documentElement.lang, persist: fromUrl !== null };
+})();
+</script>
+<style>
+/* Editor palette mapped onto the bt10x.css tokens. */
+:root { --bg:var(--c-bg); --fg:var(--c-white); --dim:var(--c-dim); --acc:var(--c-green); --line:var(--c-line); --panel:var(--c-panel); --in:var(--c-panel); }
+/* keep-all: Hangul wraps between words, not inside them (no effect on Latin text). */
+body { overflow:hidden; word-break:keep-all; }
+#title { flex:none; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 16px; border-bottom:1px solid var(--line); }
+h1 { font-size:14px; margin:0; color:var(--acc); letter-spacing:.2em; }
+/* Language buttons, then the landing page link rightmost. */
+#head-row { display:flex; justify-content:flex-end; align-items:center; gap:12px; }
+/* Sized like the language buttons, and as tall: #lang stretches those to its tallest (Hangul) line. */
+#home-link { align-self:stretch; display:flex; align-items:center; padding:3px 8px; font-size:11px; white-space:nowrap; }
+#app { position:relative; flex:1; min-height:0; line-height:1.4; display:grid; grid-template-columns:210px minmax(0,1fr) 250px; grid-template-rows:auto minmax(0,1fr) auto; gap:0; }
+fieldset { border:1px solid var(--line); border-radius:4px; margin:0 0 10px; padding:6px 8px; min-width:0; }
+#bar { grid-column:1/4; display:flex; flex-wrap:wrap; gap:6px 18px; align-items:center; padding:6px 10px; border-bottom:1px solid var(--line); }
+#left, #right { overflow:auto; padding:8px; min-height:0; }
+#left { border-right:1px solid var(--line); } #right { border-left:1px solid var(--line); display:flex; flex-direction:column; }
+#right > fieldset { flex:none; }
+#right > fieldset:last-child { margin-top:auto; margin-bottom:0; }
+#view { overflow:auto; background:var(--cb-dim); min-width:0; min-height:0; position:relative; overflow-anchor:none; }
+#stage { position:relative; margin:16px; width:max-content; height:max-content; }
+#stage canvas { display:block; }
+#ov { position:absolute; left:0; top:0; cursor:cell; touch-action:none; }
+#status { grid-column:1/4; border-top:1px solid var(--line); padding:4px 10px; color:var(--dim); display:flex; gap:20px; white-space:nowrap; overflow:hidden; }
+/* Hover / focus help: overlays the status line and grows upward over the canvas when it wraps. */
+#tip { position:absolute; z-index:2; left:0; right:0; bottom:0; padding:4px 10px; white-space:normal; color:var(--c-hint); background:var(--c-panel); border-top:1px solid var(--line); }
+#tip[hidden] { display:none; }
+#modeInfo { display:flex; gap:14px; }
+#modeInfo .act { color:var(--fg); }
+#status #msg { color:var(--acc); overflow:hidden; text-overflow:ellipsis; }
+.grp { display:flex; gap:6px; align-items:center; }
+.grp .lbl { color:var(--dim); }
+legend { color:var(--dim); padding:0 4px; }
+label { display:flex; align-items:center; gap:6px; margin:3px 0; }
+label.opt { margin:0; white-space:nowrap; }
+label > span[lang] { flex:none; white-space:nowrap; }
+input[type=number], input[type=text], select { background:var(--in); color:var(--fg); border:1px solid var(--line); border-radius:2px; font:inherit; padding:2px 4px; min-width:0; }
+input[type=text]:focus-visible, input[type=number]:focus-visible, select:focus-visible { outline:none; border-color:var(--c-yellow); }
+input[type=checkbox] { accent-color:var(--acc); }
+input[type=number] { width:58px; flex:none; }
+input[type=text] { width:100%; }
+input[type=range] { accent-color:var(--acc); flex:1; min-width:0; }
+input[type=color] { width:34px; height:24px; padding:0; border:1px solid var(--line); border-radius:2px; background:var(--in); flex:none; }
+/* Plain <button>s take the .link-button look from bt10x.css; swatches and glyph cells keep their own fills. */
+button { background:var(--c-button); color:var(--c-green); border:1px solid var(--line); border-radius:4px; font:inherit; padding:3px 9px; cursor:pointer; transition:background-color .15s ease, border-color .15s ease, color .15s ease; }
+button:hover:not(:disabled) { background-color:var(--cb-green); color:var(--c-white); border-color:var(--c-green); }
+button:focus-visible { outline:none; border-color:var(--c-yellow); box-shadow:0 0 0 2px var(--cb-yellow); }
+button:disabled { opacity:.4; cursor:default; }
+button.on, button.on:hover:not(:disabled) { border-color:var(--acc); color:var(--bg); background:var(--acc); }
+.row { display:flex; gap:5px; flex-wrap:wrap; align-items:center; }
+.seg { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; }
+.seg button { padding:3px 0; text-align:center; font-size:12px; min-width:0; overflow:hidden; }
+.seg button small { display:block; color:inherit; opacity:.55; font-size:10px; }
+.sw { width:18px; height:18px; padding:0; border:1px solid var(--dim); border-radius:2px; }
+.sw:hover:not(:disabled) { border-color:var(--c-white); }
+.bgrow { display:flex; align-items:center; gap:6px; margin:4px 0; }
+.bgrow b { width:20px; color:var(--dim); font-weight:normal; }
+.bgrow input[type=text] { width:70px; flex:none; }
+.bgrow span.hint { flex:none; min-width:3ch; text-align:right; }
+#brushGlyph { font-size:26px; width:44px; height:44px; padding:0; border:1px solid var(--acc); display:flex; align-items:center; justify-content:center; background:#000; margin-bottom:6px; }
+#cellInfo { display:flex; flex-direction:column; gap:3px; max-height:260px; overflow:auto; }
+.ci { display:flex; gap:8px; align-items:center; border:1px solid var(--line); border-radius:2px; padding:2px 6px; font-size:11px; line-height:1.3; }
+.ci .cg { font-size:22px; width:22px; height:28px; line-height:28px; text-align:center; flex:none; background:#000; }
+.ci .cm i { display:inline-block; width:10px; height:10px; border:1px solid var(--dim); vertical-align:middle; }
+.ci.top { border-color:var(--acc); } .ci.covered, .ci.hidden { opacity:.45; }
+#strip { display:flex; flex-wrap:wrap; gap:2px; max-height:190px; overflow:auto; margin:6px 0; }
+.gb { width:24px; height:28px; padding:0; border-radius:2px; color:var(--fg); font-size:15px; font-family:var(--mono-ff); line-height:1; display:inline-flex; align-items:center; justify-content:center; border-color:var(--line); }
+.gb.cur, .gb.cur:hover:not(:disabled) { background:var(--fg); color:var(--bg); border-color:var(--fg); }
+.gb.in { border-color:var(--acc); }
+#layers { display:flex; flex-direction:column; gap:2px; margin-bottom:8px; }
+.layer { display:flex; align-items:center; gap:6px; padding:3px 6px; border:1px solid var(--line); border-radius:2px; cursor:pointer; user-select:none; }
+.layer.focus { border-color:var(--acc); background:var(--cb-green); }
+.layer.drop { border-top:2px solid var(--acc); }
+.layer .eye { cursor:pointer; width:16px; text-align:center; color:var(--dim); } .layer .eye.v { color:var(--fg); }
+.layer .nm { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.layer .ct { color:var(--dim); font-size:11px; }
+.hint { color:var(--dim); font-size:11px; }
+/* bt10x.css italicises hints; numeric read-outs stay upright. */
+.bgrow span.hint, #lOpv { font-style:normal; }
+#back { position:fixed; inset:0; z-index:9; background:rgba(0,0,0,.6); }
+#back[hidden] { display:none; }
+#gp { position:fixed; inset:5vh 0 0 0; margin:0 auto; width:min(780px,94vw); height:90vh; max-height:90vh; display:flex; flex-direction:column; gap:8px; padding:10px 12px; background:var(--panel); border:1px solid var(--acc); border-radius:4px; z-index:10; }
+#gp[hidden] { display:none; }
+#gpHead2, #gpBtns { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+#gpHead2 input[type=text] { width:240px; }
+#gpBtns button { min-width:80px; }
+#ex { position:fixed; left:50%; top:30vh; transform:translateX(-50%); z-index:11; display:flex; flex-direction:column; gap:10px; padding:12px 16px; background:var(--panel); border:1px solid var(--acc); border-radius:4px; }
+#ex[hidden] { display:none; }
+#ex .t { color:var(--acc); letter-spacing:.1em; }
+#gpHead { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+#gpHead .t { color:var(--acc); letter-spacing:.1em; }
+#gpHead input[type=text] { width:200px; }
+#gpGrid { overflow:auto; flex:1; min-height:0; border:1px solid var(--line); padding:6px; }
+#gpGrid h4 { margin:8px 0 4px; color:var(--dim); font-weight:normal; font-size:11px; }
+#gpGrid .g { display:flex; flex-wrap:wrap; gap:2px; }
+#gp .gb { width:28px; height:32px; font-size:18px; }
+#gpFoot { display:flex; gap:8px; align-items:center; }
+#gpFoot input { flex:1; }
+</style>
+</head>
+<body>
+<header id="title">
+  <h1><span lang="en">GLYPHPAINT</span><span lang="ko">글리프 페인트</span></h1>
+  <div id="head-row">
+    <nav id="lang" aria-label="language">
+      <button class="link-button" type="button" data-lang="en" lang="en">EN</button>
+      <button class="link-button" type="button" data-lang="ko" lang="ko">한국어</button>
+    </nav>
+    <a id="home-link" class="link-button" href="./" title="bt10x home"><span aria-hidden="true">← bt10x</span><span class="sr-only"><span lang="en">bt10x home</span><span lang="ko">bt10x 홈</span></span></a>
+  </div>
+</header>
+<div id="app">
+  <header id="bar">
+    <div class="grp"><button type="button" id="bNew" data-tip="bNew"><span lang="en">New</span><span lang="ko">새 장면</span></button><button type="button" id="bLoad" data-tip="bLoad"><span lang="en">Load…</span><span lang="ko">열기…</span></button><button type="button" id="bSave" data-tip="bSave"><span lang="en">Save .json</span><span lang="ko">.json 저장</span></button><button type="button" id="bExport" data-tip="bExport"><span lang="en">Export…</span><span lang="ko">내보내기…</span></button></div>
+    <div class="grp"><button type="button" id="bUndo" data-tip="bUndo"><span lang="en">Undo</span><span lang="ko">되돌리기</span></button><button type="button" id="bRedo" data-tip="bRedo"><span lang="en">Redo</span><span lang="ko">다시 실행</span></button></div>
+    <div class="grp" data-tip="scene"><span class="lbl"><span lang="en">Scene</span><span lang="ko">장면</span></span><input type="number" id="sw" min="1" max="500"><span>×</span><input type="number" id="sh" min="1" max="500"><input type="color" id="sbg" data-tip="sbg"></div>
+    <div class="grp"><span class="grp" data-tip="zoom"><button type="button" id="zOut">−</button><span id="zv" class="lbl"></span><button type="button" id="zIn">+</button></span>
+      <label class="opt" data-tip="cGrid"><input type="checkbox" id="cGrid"> <span lang="en">grid</span><span lang="ko">격자</span></label><label class="opt" data-tip="cBounds"><input type="checkbox" id="cBounds"> <span lang="en">layer box</span><span lang="ko">레이어 상자</span></label></div>
+  </header>
+
+  <aside id="left">
+    <fieldset><legend><span lang="en">Drag mode</span><span lang="ko">드래그 모드</span></legend>
+      <div class="seg" id="modes"></div>
+      <div class="hint" style="margin-top:4px" id="modeHint"></div>
+    </fieldset>
+    <fieldset><legend><span lang="en">Tools</span><span lang="ko">도구</span></legend>
+      <div class="seg" id="tools"></div>
+      <label style="margin-top:6px" data-tip="bsize"><span lang="en">size</span><span lang="ko">크기</span> <input type="number" id="bsize" min="1" max="9" value="1"></label>
+      <label class="opt" data-tip="cFill"><input type="checkbox" id="cFill"> <span lang="en">filled rect</span><span lang="ko">채운 사각형</span></label>
+    </fieldset>
+    <fieldset><legend><span lang="en">Brush</span><span lang="ko">브러시</span></legend>
+      <button type="button" id="brushGlyph" data-tip="brushGlyph">#</button>
+      <div class="bgrow" data-tip="fg"><b>FG</b><input type="color" id="fcol"><input type="text" id="fhex" maxlength="7"></div>
+      <div class="bgrow" data-tip="falpha"><b>α</b><input type="range" id="falpha" min="0" max="100"><span id="fav" class="hint"></span><span class="hint">%</span></div>
+      <div class="row" id="recentFg" data-tip="recentFg"></div>
+      <div class="bgrow" data-tip="bg"><b>BG</b><input type="color" id="gcol"><input type="text" id="ghex" maxlength="7"></div>
+      <div class="bgrow" data-tip="galpha"><b>α</b><input type="range" id="galpha" min="0" max="100"><span id="gav" class="hint"></span><span class="hint">%</span></div>
+      <div class="row" id="recentBg" data-tip="recentBg"></div>
+    </fieldset>
+    <fieldset><legend><span lang="en">Glyph Palette</span><span lang="ko">글리프 팔레트</span></legend>
+      <select id="palSel" style="width:100%" data-tip="palSel"></select>
+      <div class="row" style="margin-top:4px"><button type="button" id="pNew" data-tip="pNew"><span lang="en">New</span><span lang="ko">새로</span></button><button type="button" id="pDup" data-tip="pDup"><span lang="en">Dup</span><span lang="ko">복제</span></button><button type="button" id="pEdit" data-tip="pEdit"><span lang="en">Edit…</span><span lang="ko">편집…</span></button></div>
+      <div id="strip" data-tip="strip"></div>
+      <div class="hint" style="margin-top:4px"><span lang="en">click = use glyph</span><span lang="ko">클릭 = 글리프 사용</span></div>
+    </fieldset>
+  </aside>
+
+  <main id="view"><div id="stage"><canvas id="cv"></canvas><canvas id="ov"></canvas></div></main>
+
+  <aside id="right">
+    <fieldset><legend><span lang="en">Layers (top first)</span><span lang="ko">레이어 (위부터)</span></legend>
+      <div id="layers" data-tip="layers"></div>
+      <div class="row"><button type="button" id="lAdd" data-tip="lAdd"><span lang="en">Add</span><span lang="ko">추가</span></button><button type="button" id="lDup" data-tip="lDup"><span lang="en">Dup</span><span lang="ko">복제</span></button><button type="button" id="lDel" data-tip="lDel"><span lang="en">Del</span><span lang="ko">삭제</span></button><button type="button" id="lUp" data-tip="lUp">▲</button><button type="button" id="lDn" data-tip="lDn">▼</button></div>
+      <div class="row" style="margin-top:4px"><button type="button" id="lMerge" data-tip="lMerge"><span lang="en">Merge down</span><span lang="ko">아래로 병합</span></button><button type="button" id="lMergeAll" data-tip="lMergeAll"><span lang="en">Merge visible</span><span lang="ko">보이는 것 병합</span></button></div>
+    </fieldset>
+    <fieldset><legend><span lang="en">Focused layer</span><span lang="ko">선택한 레이어</span></legend>
+      <label data-tip="lName"><span lang="en">name</span><span lang="ko">이름</span> <input type="text" id="lName"></label>
+      <label data-tip="lOp"><span lang="en">opacity</span><span lang="ko">불투명도</span> <input type="range" id="lOp" min="0" max="100"><span id="lOpv" class="hint"></span></label>
+      <label data-tip="lOff"><span lang="en">offset</span><span lang="ko">오프셋</span> <input type="number" id="lOx"> <input type="number" id="lOy"></label>
+      <div class="hint"><span lang="en">Edits affect only this layer. Opacity is applied to the layer as a whole (cell bg + glyph) after the cells are drawn.</span><span lang="ko">편집은 이 레이어에만 적용됩니다. 불투명도는 셀을 그린 뒤 레이어 전체(셀 배경 + 글리프)에 적용됩니다.</span></div>
+    </fieldset>
+    <fieldset data-tip="cellInfo"><legend><span lang="en">Cell Glyphs</span><span lang="ko">셀 글리프</span></legend>
+      <div id="cellInfo"></div>
+    </fieldset>
+    <fieldset><legend><span lang="en">Keys</span><span lang="ko">단축키</span></legend>
+      <div class="hint keys" lang="en">B pencil<br>E eraser<br>L line<br>R rect<br>G fill<br>I pick<br>
+      Ctrl+Z / Ctrl+Y undo / redo<br>Ctrl+C / X / V copy / cut / paste<br>Del clear selection<br>Ctrl+A select all<br>Esc deselect<br>
+      Space-drag scene pan<br>Ctrl+wheel zoom<br>Alt+click pick cell<br>Ctrl+S save<br>
+      Touch: two-finger drag scene pan</div>
+      <div class="hint keys" lang="ko">B 연필<br>E 지우개<br>L 직선<br>R 사각형<br>G 채우기<br>I 스포이트<br>
+      Ctrl+Z / Ctrl+Y 되돌리기 / 다시 실행<br>Ctrl+C / X / V 복사 / 잘라내기 / 붙여넣기<br>Del 선택 영역 지우기<br>Ctrl+A 모두 선택<br>Esc 선택 해제<br>
+      Space+드래그 화면 이동<br>Ctrl+휠 확대 / 축소<br>Alt+클릭 셀 스포이트<br>Ctrl+S 저장<br>
+      터치: 두 손가락 드래그로 화면 이동</div>
+    </fieldset>
+  </aside>
+
+  <footer id="status"><span id="pos"></span><span id="selInfo"></span><span id="modeInfo"></span><span id="msg"></span></footer>
+  <div id="tip" hidden></div>
+</div>
+<footer id="legal">
+  Unofficial fan project. Not affiliated with or endorsed by Catalyst Game Labs, The Topps
+  Company, Inc. or Microsoft.<br>BattleTech, BattleMech, 'Mech and MechWarrior are trademarks
+  of their respective owners.
+</footer>
+<script>
+(() => {
+  const init = window.bt10xInitialLang;
+  window.bt10xSetLang(init.locale, init.persist);
+  for (const b of document.querySelectorAll("#lang button")) {
+    b.addEventListener("click", () => window.bt10xSetLang(b.dataset.lang, true));
+  }
+})();
+</script>
+
+<div id="back" hidden></div>
+<div id="gp" hidden>
+  <div id="gpHead"><span class="t"><span lang="en">GLYPH PALETTE</span><span lang="ko">글리프 팔레트</span></span>
+    <input type="text" id="gpName">
+    <button type="button" id="gpBrush"><span lang="en">+ brush glyph</span><span lang="ko">+ 브러시 글리프</span></button>
+    <button type="button" id="gpDel"><span lang="en">Delete palette</span><span lang="ko">팔레트 삭제</span></button></div>
+  <div id="gpHead2"><input type="text" id="gpQ">
+    <select id="gpJump"></select>
+    <span class="hint"><span lang="en">click = add / remove<br>shift+click = use as brush</span><span lang="ko">클릭 = 추가 / 제거<br>Shift+클릭 = 브러시로 사용</span></span></div>
+  <div id="gpGrid"></div>
+  <div id="gpFoot"><span class="hint"><span lang="en">add any text:</span><span lang="ko">텍스트로 추가:</span></span><input type="text" id="gpText"><button type="button" id="gpAdd"><span lang="en">Add</span><span lang="ko">추가</span></button></div>
+  <div id="gpBtns"><span class="hint" id="gpInfo"></span><span style="flex:1"></span><button type="button" id="gpApply"><span lang="en">Apply</span><span lang="ko">적용</span></button><button type="button" id="gpDiscard"><span lang="en">Discard</span><span lang="ko">취소</span></button></div>
+</div>
+<div id="ex" hidden>
+  <div class="t"><span lang="en">EXPORT</span><span lang="ko">내보내기</span> <span id="expArea"></span></div>
+  <div class="hint"><span lang="en">Area is the current selection, or the whole scene when nothing is selected.</span><span lang="ko">영역은 현재 선택 영역이며, 선택이 없으면 장면 전체입니다.</span></div>
+  <div class="row"><button type="button" id="bExpJson"><span lang="en">snapshot .json</span><span lang="ko">.json 스냅숏</span></button><button type="button" id="bExpPng">.png</button><button type="button" id="bExpCancel"><span lang="en">Cancel</span><span lang="ko">취소</span></button></div>
+</div>
+<input type="file" id="fileIn" accept=".json,application/json" hidden>
+
+<script>
+(() => {
+'use strict';
+const RANGES = JSON.parse('[[32,126],[161,172],[174,255],[931,931],[8208,8231],[8240,8286],[8592,8985],[8988,9000],[9003,9192],[9197,9199],[9201,9202],[9204,9215],[9472,9724],[9727,9747],[9750,9799],[9812,9854],[9856,9874],[9876,9888],[9890,9897],[9900,9916],[9919,9923],[9926,9933],[9935,9939],[9941,9961],[9963,9969],[9972,9972],[9974,9977],[9979,9980],[9982,9983],[10176,10239],[10496,11034],[11037,11087],[11089,11092],[11094,11123],[11126,11157],[11159,11263]]');
+const FONT = '"Bt10x Mono", "SF Mono", Menlo, Consolas, monospace';
+const $ = s => document.querySelector(s);
+const hex2 = n => n.toString(16).padStart(2, '0');
+const cpHex = cp => cp.toString(16).toUpperCase().padStart(4, '0');
+const gp = $('#gp'), ex = $('#ex');
+
+// UI strings built in script; static page text is paired <span lang> elements. Unicode block names stay English in
+// both locales, as in glyphart. Names given to new layers and palettes follow the locale at creation time.
+const STR = {
+  en: {
+    title: 'bt10x glyphpaint',
+    modes: { select: 'Select', scenepan: 'Scene pan', layerpan: 'Layer pan', glyph: 'Glyph', fg: 'FG', bg: 'BG' },
+    modeLabel: { select: 'Select', layerpan: 'Layer pan', scenepan: 'Scene pan', glyph: 'Glyph brush', fg: 'FG brush', bg: 'BG brush' },
+    mouseMap: 'mouse button mapping:',
+    buttons: ['left', 'middle', 'right'],
+    hintPaint: ['Shift+left = Select'],
+    hintSelect: ['Shift+left = glyph brush', 'middle = pan', 'right = layer pan'],
+    tools: { pencil: 'Pencil', line: 'Line', rect: 'Rect', fill: 'Fill', pick: 'Pick', eraser: 'Eraser' },
+    states: { top: 'top', translucent: 'translucent', covered: 'covered', hidden: 'hidden' },
+    fg: 'fg', bg: 'bg', bgOnly: 'bg only',
+    noCells: (x, y) => `no cells at ${x},${y}`,
+    hoverCanvas: 'hover the canvas',
+    layerPos: (x, y) => `(layer ${x},${y})`,
+    sel: (w, h, x, y) => `sel ${w}×${h} @ ${x},${y}`,
+    areaScene: 'scene',
+    areaSel: (w, h) => `selection ${w}×${h}`,
+    toggleVis: 'toggle visibility',
+    glyphsIn: n => `${n} glyphs in palette`,
+    shown: (s, t) => `${s} of ${t} glyphs shown`,
+    layer: n => `Layer ${n}`, copy: name => `${name} copy`, palette: n => `Palette ${n}`, paletteBare: 'Palette', merged: 'Merged',
+    defaultPals: ['ASCII', 'Shades & blocks', 'Box drawing', 'Symbols'],
+    msg: {
+      nothingToPick: 'nothing to pick',
+      layerHidden: 'focused layer is hidden',
+      selectFirst: 'select an area first',
+      copied: (n, name) => `copied ${n} cells from "${name}"`,
+      cleared: n => `cleared ${n} cells`,
+      clipEmpty: 'clipboard empty',
+      pasted: (n, name) => `pasted ${n} cells into "${name}"`,
+      needLayer: 'a scene needs at least one layer',
+      noBelow: 'no layer below',
+      merged: name => `merged into "${name}"`,
+      needTwo: 'need two visible layers',
+      eraseFg: 'erasing fg does nothing',
+      noSelCells: 'no cells in the selection on this layer',
+      saved: 'saved',
+      noArea: 'no cells in that area',
+      snapshot: (n, w, h) => `snapshot: ${n} layers, ${w}×${h}`,
+      loaded: name => `loaded ${name}`,
+      loadFailed: m => `load failed: ${m}`,
+      notFile: 'not a glyphpaint file',
+    },
+    ask: {
+      discard: 'Discard the current scene?',
+      delPal: name => `Delete palette "${name}"?`,
+      invisible: (n, first) => `${n} glyph cell(s) have fg alpha 0 and are invisible (first at ${first}). Continue anyway?`,
+      firstAt: (x, y, name) => `${x},${y} on layer "${name}"`,
+    },
+    // controls inside the modal dialogs (the backdrop covers the status line, so these are tooltips)
+    placeholder: { gpName: 'palette name', gpQ: 'search: char, U+2588, or block name', gpText: 'paste characters to add to the palette' },
+    titles: { gpName: 'palette name', gpBrush: 'add the current brush glyph', bExpJson: 'layered snapshot, coordinates rebased to the area' },
+    aria: { zOut: 'zoom out', zIn: 'zoom in', lUp: 'move layer up', lDn: 'move layer down', sbg: 'scene background', brushGlyph: 'glyph brush',
+            sw: 'scene width', sh: 'scene height', fcol: 'foreground colour', gcol: 'background colour', falpha: 'foreground opacity',
+            galpha: 'background opacity', lOx: 'layer x offset', lOy: 'layer y offset' },
+    // hover / focus help, shown over the status line
+    tips: {
+      bNew: 'Start a new scene with one empty layer. Asks first; the current scene is lost unless saved.',
+      bLoad: 'Open a glyphpaint .json file (Ctrl+O). You can also drop a file onto the page.',
+      bSave: 'Download the whole scene with all its layers as .json (Ctrl+S). The scene is also autosaved in this browser.',
+      bExport: 'Export the selection, or the whole scene, as a layered .json snapshot or a .png image.',
+      bUndo: 'Undo the last edit (Ctrl+Z). Up to 100 steps.',
+      bRedo: 'Redo the last undone edit (Ctrl+Y or Ctrl+Shift+Z).',
+      scene: 'Scene size in cells (width × height, 1–500). Layer content outside the scene is kept, but .png export only covers the scene.',
+      sbg: 'Scene background colour, drawn behind all layers and saved with the scene.',
+      zoom: 'Zoom the canvas (Ctrl+wheel). View only: the scene and the exports do not change.',
+      cGrid: 'Show cell grid lines over the scene.',
+      cBounds: 'Outline the focused layer\'s content with a dashed box.',
+      'mode-select': 'Left-drag selects a rectangle; drag inside a selection to move its cells on the focused layer. Click outside to deselect.',
+      'mode-scenepan': 'Left-drag scrolls the view. Same as middle-drag or Space+drag.',
+      'mode-layerpan': 'Left-drag moves the whole focused layer (changes its offset). Same as right-drag.',
+      'mode-glyph': 'Left-drag paints the brush glyph in the FG colour with the current tool; cell backgrounds are kept.',
+      'mode-fg': 'Left-drag recolours existing glyphs with the FG colour using the current tool; empty cells are skipped. Shift+middle-drag does the same.',
+      'mode-bg': 'Left-drag paints cell backgrounds with the BG colour using the current tool. Shift+right-drag does the same.',
+      'tool-pencil': 'Pencil (B): paint the cells under the pointer, brush size wide.',
+      'tool-line': 'Line (L): drag from start to end to draw a straight line.',
+      'tool-rect': 'Rect (R): drag a rectangle outline, or a solid one with "filled rect" on.',
+      'tool-fill': 'Fill (G): flood-fill the connected area with the same glyph / colour, inside the scene and the selection.',
+      'tool-pick': 'Pick (I): copy the drag mode\'s glyph or colour from the topmost visible cell into the brush. Alt+click picks all three.',
+      'tool-eraser': 'Eraser (E): remove glyphs (Glyph mode) or backgrounds (BG mode) under the pointer, brush size wide.',
+      bsize: 'Brush size in cells (1–9) for the pencil and the eraser.',
+      cFill: 'The rect tool draws solid rectangles instead of outlines.',
+      brushGlyph: 'The glyph the brush paints, shown in the brush colours. Click to open the glyph palette editor.',
+      fg: 'Foreground (glyph) colour. Pick it, or type #rrggbb.',
+      falpha: 'Foreground opacity. At 0% glyphs are invisible; save and export warn about such cells.',
+      recentFg: 'Recently painted foreground colours. Click one to reuse it.',
+      bg: 'Cell background colour. Pick it, or type #rrggbb.',
+      galpha: 'Background opacity. Only a fully opaque background hides the layers below it.',
+      recentBg: 'Recently painted background colours. Click one to reuse it.',
+      palSel: 'Active glyph palette. Palettes are kept in this browser, not in saved files.',
+      pNew: 'Create a new, empty palette in the palette editor.',
+      pDup: 'Copy the active palette.',
+      pEdit: 'Edit the active palette: add or remove glyphs from the whole font, rename it or delete it.',
+      strip: 'Glyphs of the active palette. Click one to make it the brush glyph.',
+      layers: 'Layers, top first. Click one to focus it (all edits go to the focused layer), ◉ shows / hides, drag to reorder. The number is its cell count.',
+      lAdd: 'Add an empty layer above the focused one.',
+      lDup: 'Duplicate the focused layer.',
+      lDel: 'Delete the focused layer. A scene keeps at least one layer.',
+      lUp: 'Move the focused layer up one step.',
+      lDn: 'Move the focused layer down one step.',
+      lMerge: 'Merge the focused layer into the one below; its opacity is baked into the colours.',
+      lMergeAll: 'Merge all visible layers into one. Hidden layers are left alone.',
+      lName: 'Name of the focused layer.',
+      lOp: 'Opacity of the whole focused layer (cell background and glyph together).',
+      lOff: 'Position of the focused layer in cells (x, y). Layer pan changes it too.',
+      cellInfo: 'Each layer\'s cell under the pointer, top first: glyph, colours, and whether it shows, is covered or is hidden.',
+    },
+  },
+  ko: {
+    title: 'bt10x 글리프 페인트',
+    modes: { select: '선택', scenepan: '화면 이동', layerpan: '레이어 이동', glyph: '글리프', fg: '전경', bg: '배경' },
+    modeLabel: { select: '선택', layerpan: '레이어 이동', scenepan: '화면 이동', glyph: '글리프 브러시', fg: '전경 브러시', bg: '배경 브러시' },
+    mouseMap: '마우스 버튼 동작:',
+    buttons: ['왼쪽', '가운데', '오른쪽'],
+    hintPaint: ['Shift+왼쪽 = 선택'],
+    hintSelect: ['Shift+왼쪽 = 글리프 브러시', '가운데 = 화면 이동', '오른쪽 = 레이어 이동'],
+    tools: { pencil: '연필', line: '직선', rect: '사각형', fill: '채우기', pick: '스포이트', eraser: '지우개' },
+    states: { top: '맨 위', translucent: '반투명', covered: '가려짐', hidden: '숨김' },
+    fg: '전경', bg: '배경', bgOnly: '배경만',
+    noCells: (x, y) => `${x},${y}에 셀 없음`,
+    hoverCanvas: '캔버스 위에 포인터를 올리세요',
+    layerPos: (x, y) => `(레이어 ${x},${y})`,
+    sel: (w, h, x, y) => `선택 ${w}×${h} @ ${x},${y}`,
+    areaScene: '장면',
+    areaSel: (w, h) => `선택 영역 ${w}×${h}`,
+    toggleVis: '보이기 / 숨기기',
+    glyphsIn: n => `팔레트에 글리프 ${n}개`,
+    shown: (s, t) => `글리프 ${t}개 중 ${s}개 표시`,
+    layer: n => `레이어 ${n}`, copy: name => `${name} 사본`, palette: n => `팔레트 ${n}`, paletteBare: '팔레트', merged: '병합됨',
+    defaultPals: ['ASCII', '음영 & 블록', '상자 선', '기호'],
+    msg: {
+      nothingToPick: '가져올 것이 없습니다',
+      layerHidden: '선택한 레이어가 숨겨져 있습니다',
+      selectFirst: '먼저 영역을 선택하세요',
+      copied: (n, name) => `"${name}"에서 셀 ${n}개 복사함`,
+      cleared: n => `셀 ${n}개 지움`,
+      clipEmpty: '클립보드가 비어 있습니다',
+      pasted: (n, name) => `"${name}"에 셀 ${n}개 붙여넣음`,
+      needLayer: '장면에는 레이어가 하나 이상 있어야 합니다',
+      noBelow: '아래 레이어가 없습니다',
+      merged: name => `"${name}"에 병합함`,
+      needTwo: '보이는 레이어가 두 개 이상 필요합니다',
+      eraseFg: '전경 지우기는 아무 효과가 없습니다',
+      noSelCells: '이 레이어의 선택 영역에 셀이 없습니다',
+      saved: '저장함',
+      noArea: '그 영역에 셀이 없습니다',
+      snapshot: (n, w, h) => `스냅숏: 레이어 ${n}개, ${w}×${h}`,
+      loaded: name => `${name} 불러옴`,
+      loadFailed: m => `불러오기 실패: ${m}`,
+      notFile: 'glyphpaint 파일이 아닙니다',
+    },
+    ask: {
+      discard: '현재 장면을 버릴까요?',
+      delPal: name => `"${name}" 팔레트를 삭제할까요?`,
+      invisible: (n, first) => `전경 알파가 0이라 보이지 않는 글리프 셀이 ${n}개 있습니다 (첫 번째: ${first}). 그래도 계속할까요?`,
+      firstAt: (x, y, name) => `레이어 "${name}"의 ${x},${y}`,
+    },
+    placeholder: { gpName: '팔레트 이름', gpQ: '검색: 문자, U+2588 또는 블록 이름', gpText: '팔레트에 추가할 문자를 붙여넣으세요' },
+    titles: { gpName: '팔레트 이름', gpBrush: '현재 브러시 글리프 추가', bExpJson: '레이어를 유지한 스냅숏, 좌표는 영역 기준으로 다시 맞춤' },
+    aria: { zOut: '축소', zIn: '확대', lUp: '레이어 위로', lDn: '레이어 아래로', sbg: '장면 배경색', brushGlyph: '글리프 브러시',
+            sw: '장면 너비', sh: '장면 높이', fcol: '전경색', gcol: '배경색', falpha: '전경 불투명도',
+            galpha: '배경 불투명도', lOx: '레이어 x 오프셋', lOy: '레이어 y 오프셋' },
+    tips: {
+      bNew: '빈 레이어 하나로 새 장면을 시작합니다. 먼저 확인을 묻고, 저장하지 않은 현재 장면은 사라집니다.',
+      bLoad: 'glyphpaint .json 파일을 엽니다 (Ctrl+O). 파일을 페이지에 끌어다 놓아도 됩니다.',
+      bSave: '모든 레이어를 포함한 장면 전체를 .json으로 내려받습니다 (Ctrl+S). 장면은 이 브라우저에도 자동 저장됩니다.',
+      bExport: '선택 영역 또는 장면 전체를 레이어가 유지된 .json 스냅숏이나 .png 이미지로 내보냅니다.',
+      bUndo: '마지막 편집을 되돌립니다 (Ctrl+Z). 최대 100단계.',
+      bRedo: '되돌린 편집을 다시 실행합니다 (Ctrl+Y 또는 Ctrl+Shift+Z).',
+      scene: '장면 크기(셀 단위, 가로 × 세로, 1–500). 장면 밖의 레이어 내용은 유지되지만 .png 내보내기는 장면만 담습니다.',
+      sbg: '모든 레이어 뒤에 그려지는 장면 배경색. 장면과 함께 저장됩니다.',
+      zoom: '캔버스를 확대 / 축소합니다 (Ctrl+휠). 화면 표시만 바뀌고 장면과 내보내기에는 영향이 없습니다.',
+      cGrid: '장면 위에 셀 격자선을 표시합니다.',
+      cBounds: '선택한 레이어 내용의 범위를 점선 상자로 표시합니다.',
+      'mode-select': '왼쪽 드래그로 사각형 영역을 선택합니다. 선택 영역 안에서 드래그하면 선택한 레이어의 셀이 옮겨집니다. 바깥을 누르면 선택이 해제됩니다.',
+      'mode-scenepan': '왼쪽 드래그로 화면을 스크롤합니다. 가운데 드래그나 Space+드래그와 같습니다.',
+      'mode-layerpan': '왼쪽 드래그로 선택한 레이어 전체를 옮깁니다(오프셋 변경). 오른쪽 드래그와 같습니다.',
+      'mode-glyph': '왼쪽 드래그로 현재 도구를 써서 브러시 글리프를 전경색으로 칠합니다. 셀 배경은 그대로입니다.',
+      'mode-fg': '왼쪽 드래그로 현재 도구를 써서 기존 글리프의 색만 전경색으로 바꿉니다. 빈 셀은 건너뜁니다. Shift+가운데 드래그도 같습니다.',
+      'mode-bg': '왼쪽 드래그로 현재 도구를 써서 셀 배경을 배경색으로 칠합니다. Shift+오른쪽 드래그도 같습니다.',
+      'tool-pencil': '연필 (B): 포인터 아래의 셀을 브러시 크기만큼 칠합니다.',
+      'tool-line': '직선 (L): 시작점에서 끝점까지 드래그해 직선을 그립니다.',
+      'tool-rect': '사각형 (R): 드래그해 사각형 테두리를 그립니다. "채운 사각형"을 켜면 속까지 채웁니다.',
+      'tool-fill': '채우기 (G): 같은 글리프 / 색으로 이어진 영역을 채웁니다. 장면과 선택 영역 안에서만 동작합니다.',
+      'tool-pick': '스포이트 (I): 맨 위에 보이는 셀에서 드래그 모드에 해당하는 글리프나 색을 브러시로 가져옵니다. Alt+클릭은 세 가지를 모두 가져옵니다.',
+      'tool-eraser': '지우개 (E): 포인터 아래의 글리프(글리프 모드)나 배경(배경 모드)을 브러시 크기만큼 지웁니다.',
+      bsize: '연필과 지우개의 브러시 크기(셀 단위, 1–9).',
+      cFill: '사각형 도구가 테두리 대신 속이 찬 사각형을 그립니다.',
+      brushGlyph: '브러시가 칠하는 글리프를 브러시 색으로 보여 줍니다. 누르면 글리프 팔레트 편집기가 열립니다.',
+      fg: '전경(글리프) 색. 고르거나 #rrggbb로 입력합니다.',
+      falpha: '전경 불투명도. 0%면 글리프가 보이지 않으며, 저장·내보내기 때 그런 셀을 경고합니다.',
+      recentFg: '최근에 칠한 전경색. 눌러서 다시 씁니다.',
+      bg: '셀 배경색. 고르거나 #rrggbb로 입력합니다.',
+      galpha: '배경 불투명도. 완전히 불투명한 배경만 아래 레이어를 가립니다.',
+      recentBg: '최근에 칠한 배경색. 눌러서 다시 씁니다.',
+      palSel: '사용 중인 글리프 팔레트. 팔레트는 저장 파일이 아니라 이 브라우저에 보관됩니다.',
+      pNew: '팔레트 편집기에서 빈 팔레트를 새로 만듭니다.',
+      pDup: '사용 중인 팔레트를 복제합니다.',
+      pEdit: '사용 중인 팔레트를 편집합니다: 글꼴 전체에서 글리프를 추가·제거하고, 이름을 바꾸거나 삭제합니다.',
+      strip: '사용 중인 팔레트의 글리프. 누르면 브러시 글리프가 됩니다.',
+      layers: '레이어 목록(위부터). 누르면 선택되고(모든 편집은 선택한 레이어에 적용), ◉로 보이기 / 숨기기, 드래그로 순서를 바꿉니다. 숫자는 셀 수입니다.',
+      lAdd: '선택한 레이어 위에 빈 레이어를 추가합니다.',
+      lDup: '선택한 레이어를 복제합니다.',
+      lDel: '선택한 레이어를 삭제합니다. 장면에는 레이어가 하나 이상 남습니다.',
+      lUp: '선택한 레이어를 한 칸 위로 옮깁니다.',
+      lDn: '선택한 레이어를 한 칸 아래로 옮깁니다.',
+      lMerge: '선택한 레이어를 아래 레이어에 병합합니다. 불투명도는 색에 반영됩니다.',
+      lMergeAll: '보이는 레이어를 모두 하나로 병합합니다. 숨긴 레이어는 그대로 둡니다.',
+      lName: '선택한 레이어의 이름.',
+      lOp: '선택한 레이어 전체(셀 배경과 글리프를 함께)의 불투명도.',
+      lOff: '선택한 레이어의 위치(셀 단위 x, y). 레이어 이동으로도 바뀝니다.',
+      cellInfo: '포인터 아래 각 레이어의 셀(위부터): 글리프, 색, 그리고 보이는지 · 가려졌는지 · 숨겨졌는지.',
+    },
+  },
+};
+const T = () => STR[document.documentElement.lang === 'ko' ? 'ko' : 'en'];
+
+// ---------- glyph universe ----------
+const UNI = [];
+for (const [a, b] of RANGES) for (let c = a; c <= b; c++) UNI.push(String.fromCodePoint(c));
+const UNISET = new Set(UNI);
+const BLOCKS = [[0x20,0x7f,'Basic Latin'],[0xa0,0xff,'Latin-1 Supplement'],[0x100,0x17f,'Latin Extended-A'],[0x180,0x24f,'Latin Extended-B'],[0x250,0x2af,'IPA Extensions'],[0x2b0,0x2ff,'Spacing Modifiers'],[0x300,0x36f,'Combining Marks'],[0x370,0x3ff,'Greek'],[0x400,0x4ff,'Cyrillic'],[0x1e00,0x1eff,'Latin Ext. Additional'],[0x2000,0x206f,'General Punctuation'],[0x2070,0x209f,'Super/Subscripts'],[0x20a0,0x20cf,'Currency'],[0x2100,0x214f,'Letterlike'],[0x2150,0x218f,'Number Forms'],[0x2190,0x21ff,'Arrows'],[0x2200,0x22ff,'Math Operators'],[0x2300,0x23ff,'Misc Technical'],[0x2400,0x243f,'Control Pictures'],[0x2460,0x24ff,'Enclosed Alphanumerics'],[0x2500,0x257f,'Box Drawing'],[0x2580,0x259f,'Block Elements'],[0x25a0,0x25ff,'Geometric Shapes'],[0x2600,0x26ff,'Misc Symbols'],[0x2700,0x27bf,'Dingbats'],[0x27c0,0x27ef,'Misc Math A'],[0x27f0,0x27ff,'Supp. Arrows A'],[0x2800,0x28ff,'Braille'],[0x2900,0x297f,'Supp. Arrows B'],[0x2980,0x2aff,'Math Supplements'],[0x2b00,0x2bff,'Misc Symbols & Arrows']];
+function blockOf(cp) {
+  for (const b of BLOCKS) if (cp >= b[0] && cp <= b[1]) return { start: b[0], name: b[2] };
+  const s = cp & ~0xff; return { start: s, name: `U+${cpHex(s)}…` };
+}
+
+// ---------- state ----------
+// A cell is [glyph, fg, bg]; colours are 'rrggbbaa'. Glyph ' ' means "no glyph" (a bg-only cell); bg alpha 0 means "no bg".
+const NONE = '00000000';
+const S = {
+  w: 80, h: 40, bg: '#0b0f0b', layers: [], focus: 0, palettes: [], pal: 0,
+  fs: 20, grid: true, bounds: true, sel: null, tool: 'pencil', mode: 'select', fillRect: false,
+  brush: { g: '#', fg: { hex: '#d7e4d7', a: 1 }, bg: { hex: '#335533', a: 1 }, size: 1 },
+  recent: { fg: [], bg: [] },
+};
+const ZOOMS = [10, 15, 20, 25, 30, 40, 50, 60];
+let lid = 0, clip = null, hover = null, lastHover = null, drag = null, spaceDown = false, shiftDown = false;
+const touches = new Map();
+const newLayer = name => ({ id: ++lid, name, visible: true, opacity: 1, ox: 0, oy: 0, cells: new Map() });
+const cur = () => S.layers[S.focus];
+const OFF = 32768;
+const K = (x, y) => (y + OFF) * 65536 + (x + OFF);
+const kx = k => (k % 65536) - OFF, ky = k => Math.floor(k / 65536) - OFF;
+const alphaOf = c => parseInt(c.slice(6, 8), 16) / 255;
+const hasGlyph = v => !!v[0] && v[0] !== ' ';
+const colStr = c => c.hex.slice(1) + hex2(Math.round(c.a * 255));
+const fgStr = () => colStr(S.brush.fg), bgStr = () => colStr(S.brush.bg);
+const normHex = c => { c = String(c || NONE).replace('#', '').toLowerCase(); return c.length === 6 ? `${c}ff` : c.length === 8 ? c : NONE; };
+// canonical cell, or null if it carries nothing
+function normCell(g, fg, bg) {
+  fg = normHex(fg); bg = normHex(bg);
+  if (alphaOf(bg) === 0) bg = NONE;
+  if (!g || g === ' ') { g = ' '; fg = NONE; }
+  return g === ' ' && bg === NONE ? null : [g, fg, bg];
+}
+// W is the visible "world": the scene plus a margin and any layer content beyond it. Editing works anywhere in W.
+let W = { x0: 0, y0: 0, w: 80, h: 40 };
+const inScene = (x, y) => x >= W.x0 && y >= W.y0 && x < W.x0 + W.w && y < W.y0 + W.h;
+const inSceneRect = (x, y) => x >= 0 && y >= 0 && x < S.w && y < S.h;
+const MARGIN = 16, REACH = 100;
+function computeWorld() {
+  let a = 0, b = 0, c = S.w, d = S.h;
+  for (const L of S.layers) for (const k of L.cells.keys()) {
+    const x = kx(k) + L.ox, y = ky(k) + L.oy;
+    if (x < a) a = Math.max(x, -REACH); if (x + 1 > c) c = Math.min(x + 1, S.w + REACH);
+    if (y < b) b = Math.max(y, -REACH); if (y + 1 > d) d = Math.min(y + 1, S.h + REACH);
+  }
+  return { x0: a - MARGIN, y0: b - MARGIN, w: c - a + 2 * MARGIN, h: d - b + 2 * MARGIN };
+}
+const inRect = (r, x, y) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1;
+const inSel = (x, y) => !S.sel || inRect(S.sel, x, y);
+const cwpx = () => S.fs * 0.6, chpx = () => Math.round(S.fs * 1.175);
+const msg = t => { $('#msg').textContent = t || ''; };
+
+function defaultPalettes() {
+  const ascii = Array.from({ length: 94 }, (_, i) => String.fromCharCode(33 + i)).join('');
+  const box = Array.from({ length: 128 }, (_, i) => String.fromCodePoint(0x2500 + i)).join('');
+  const f = s => Array.from(s).filter(g => !UNISET.size || UNISET.has(g));
+  const n = T().defaultPals;
+  return [
+    { name: n[0], glyphs: f(ascii) },
+    { name: n[1], glyphs: f('░▒▓█▀▄▌▐▖▗▘▙▚▛▜▝▞▟■□▪▫') },
+    { name: n[2], glyphs: f(box) },
+    { name: n[3], glyphs: f('←↑→↓↔↕↖↗↘↙▲▶▼◀△▷▽◁●○◆◇★☆♠♣♥♦♪☺☻') },
+  ];
+}
+
+// ---------- history ----------
+const undo = [], redo = [];
+const cl = l => ({ ...l, cells: new Map(l.cells) });
+const snap = () => ({ w: S.w, h: S.h, bg: S.bg, focus: S.focus, layers: S.layers.map(cl) });
+function restore(s) { S.w = s.w; S.h = s.h; S.bg = s.bg; S.focus = s.focus; S.layers = s.layers.map(cl); S.sel = null; syncAll(false); }
+function pushUndo() { undo.push(snap()); if (undo.length > 100) undo.shift(); redo.length = 0; histBtns(); }
+function popUndo() { undo.pop(); histBtns(); }
+function doUndo() { if (!undo.length) return; redo.push(snap()); restore(undo.pop()); histBtns(); touch(); }
+function doRedo() { if (!redo.length) return; undo.push(snap()); restore(redo.pop()); histBtns(); touch(); }
+function histBtns() { $('#bUndo').disabled = !undo.length; $('#bRedo').disabled = !redo.length; }
+
+// ---------- compositing ----------
+const cssCache = new Map();
+function css(c) {
+  let r = cssCache.get(c);
+  if (!r) {
+    r = `rgba(${parseInt(c.slice(0, 2), 16)},${parseInt(c.slice(2, 4), 16)},${parseInt(c.slice(4, 6), 16)},${alphaOf(c).toFixed(3)})`;
+    if (cssCache.size > 5000) cssCache.clear();
+    cssCache.set(c, r);
+  }
+  return r;
+}
+let offCv = null;
+// Layers are drawn bottom to top; inside a layer the cell bg is drawn first, then the glyph. A layer with opacity < 1 is
+// rendered to an offscreen canvas and composited as a whole, so the opacity applies after bg + glyph are combined.
+// Occlusion (cell level): only an opaque bg hides what is below it; glyphs always overlay (stacked glyphs show through each other).
+function paintScene(ctx, x0, y0, w, h, fs, bg) {
+  const cw = fs * 0.6, ch = Math.round(fs * 1.175), asc = fs * 91 / 96 + (ch - fs * 113 / 96) / 2;
+  const PW = w * cw, PH = h * ch, d = ctx.getTransform().a || 1;
+  if (bg) { ctx.fillStyle = bg; ctx.fillRect(0, 0, PW, PH); }
+  const vis = S.layers.filter(l => l.visible && l.opacity > 0), bgCut = new Map();
+  const inb = (x, y) => x >= x0 && y >= y0 && x < x0 + w && y < y0 + h;
+  for (let i = vis.length - 1; i >= 0; i--) {
+    const L = vis[i];
+    for (const [k, v] of L.cells) {
+      const x = kx(k) + L.ox, y = ky(k) + L.oy; if (!inb(x, y)) continue; const p = K(x, y);
+      if (!bgCut.has(p) && alphaOf(v[2]) * L.opacity >= 0.999) bgCut.set(p, i);
+    }
+  }
+  for (let i = 0; i < vis.length; i++) {
+    const L = vis[i]; let c = ctx;
+    if (L.opacity < 1) {
+      if (!offCv) offCv = document.createElement('canvas');
+      const pw = Math.ceil(PW * d), ph = Math.ceil(PH * d);
+      if (offCv.width !== pw || offCv.height !== ph) { offCv.width = pw; offCv.height = ph; }
+      c = offCv.getContext('2d'); c.setTransform(d, 0, 0, d, 0, 0); c.clearRect(0, 0, PW, PH);
+    }
+    c.font = `${fs}px ${FONT}`; c.textBaseline = 'alphabetic'; c.textAlign = 'left';
+    for (const [k, v] of L.cells) {
+      const x = kx(k) + L.ox, y = ky(k) + L.oy; if (!inb(x, y)) continue;
+      const p = K(x, y), px = x - x0, py = y - y0;
+      if (bgCut.get(p) > i) continue;
+      if (alphaOf(v[2]) > 0) {
+        c.fillStyle = css(v[2]);
+        const a = Math.round(px * cw); c.fillRect(a, py * ch, Math.round((px + 1) * cw) - a, ch);
+      }
+      if (hasGlyph(v)) { c.fillStyle = css(v[1]); c.fillText(v[0], px * cw, py * ch + asc); }
+    }
+    if (c !== ctx) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = L.opacity; ctx.drawImage(offCv, 0, 0); ctx.restore(); }
+  }
+}
+// topmost visible cell at a scene position that satisfies pred
+function topCellWhere(x, y, pred) {
+  for (let i = S.layers.length - 1; i >= 0; i--) {
+    const L = S.layers[i]; if (!L.visible) continue;
+    const v = L.cells.get(K(x - L.ox, y - L.oy));
+    if (v && pred(v)) return v;
+  }
+  return null;
+}
+
+// ---------- rendering ----------
+const cv = $('#cv'), ov = $('#ov');
+let dirty = false;
+function redraw() { if (!dirty) { dirty = true; requestAnimationFrame(() => { dirty = false; drawMain(); drawOverlay(); }); } }
+function sizeCanvas(c, w, h) {
+  const d = window.devicePixelRatio || 1;
+  c.width = Math.ceil(w * d); c.height = Math.ceil(h * d); c.style.width = `${w}px`; c.style.height = `${h}px`;
+  const ctx = c.getContext('2d'); ctx.setTransform(d, 0, 0, d, 0, 0); return ctx;
+}
+let mainCtx, ovCtx;
+// mode: 'reset' scrolls the scene's top-left into view; 'keep' holds the on-screen content steady when the world origin moves.
+function layoutCanvas(mode) {
+  const old = W, v = $('#view'), cw = cwpx(), ch = chpx(), sl = v.scrollLeft, st = v.scrollTop;
+  W = computeWorld();
+  mainCtx = sizeCanvas(cv, Math.ceil(W.w * cw), W.h * ch); ovCtx = sizeCanvas(ov, Math.ceil(W.w * cw), W.h * ch);
+  $('#zv').textContent = `${S.fs}px`;
+  if (mode === 'keep') { v.scrollLeft = sl + (old.x0 - W.x0) * cw; v.scrollTop = st + (old.y0 - W.y0) * ch; }
+  else if (mode === 'reset') { v.scrollLeft = -W.x0 * cw; v.scrollTop = -W.y0 * ch; }
+}
+function relayout() {
+  const n = computeWorld();
+  if (n.x0 === W.x0 && n.y0 === W.y0 && n.w === W.w && n.h === W.h) return;
+  layoutCanvas('keep'); redraw();
+}
+function drawMain() { paintScene(mainCtx, W.x0, W.y0, W.w, W.h, S.fs, S.bg); }
+function previewCells() { return drag?.cells ? drag.cells : []; }
+function drawOverlay() {
+  const ctx = ovCtx, cw = cwpx(), ch = chpx(), PW = W.w * cw, PH = W.h * ch;
+  const X = x => (x - W.x0) * cw, Y = y => (y - W.y0) * ch;
+  ctx.clearRect(0, 0, PW, PH);
+  const sx = X(0), sy = Y(0), sw = S.w * cw, sh = S.h * ch;
+  ctx.fillStyle = 'rgba(0,0,0,.5)';
+  ctx.fillRect(0, 0, PW, sy); ctx.fillRect(0, sy + sh, PW, PH - sy - sh); ctx.fillRect(0, sy, sx, sh); ctx.fillRect(sx + sw, sy, PW - sx - sw, sh);
+  if (S.grid) {
+    ctx.strokeStyle = 'rgba(216,194,106,.18)'; ctx.lineWidth = 1; ctx.beginPath();
+    for (let x = 0; x <= S.w; x++) { ctx.moveTo(Math.round(sx + x * cw) + .5, sy); ctx.lineTo(Math.round(sx + x * cw) + .5, sy + sh); }
+    for (let y = 0; y <= S.h; y++) { ctx.moveTo(sx, sy + y * ch + .5); ctx.lineTo(sx + sw, sy + y * ch + .5); }
+    ctx.stroke();
+  }
+  ctx.strokeStyle = '#d8c26a'; ctx.lineWidth = 2; ctx.strokeRect(sx, sy, sw, sh); ctx.lineWidth = 1;
+  const L = cur();
+  if (S.bounds && L?.cells.size) {
+    let a = 1e9, b = 1e9, c = -1e9, d = -1e9;
+    for (const k of L.cells.keys()) { const x = kx(k), y = ky(k); if (x < a) a = x; if (x > c) c = x; if (y < b) b = y; if (y > d) d = y; }
+    ctx.strokeStyle = 'rgba(120,200,255,.7)'; ctx.setLineDash([2, 3]);
+    ctx.strokeRect(X(a + L.ox) + .5, Y(b + L.oy) + .5, (c - a + 1) * cw, (d - b + 1) * ch); ctx.setLineDash([]);
+  }
+  const pc = previewCells();
+  if (pc.length) {
+    ctx.font = `${S.fs}px ${FONT}`; ctx.textBaseline = 'alphabetic';
+    const t = drag.target;
+    for (const [x, y] of pc) {
+      if (!inScene(x, y)) continue;
+      if (t === 'bg') { ctx.fillStyle = css(bgStr()); ctx.fillRect(X(x), Y(y), cw, ch); }
+      else { ctx.fillStyle = 'rgba(216,194,106,.25)'; ctx.fillRect(X(x), Y(y), cw, ch); }
+      if (t === 'glyph') { ctx.fillStyle = css(fgStr()); ctx.fillText(S.brush.g, X(x), Y(y) + S.fs * 91 / 96); }
+    }
+  }
+  if (S.sel) {
+    const s = S.sel;
+    ctx.fillStyle = 'rgba(216,194,106,.10)'; ctx.fillRect(X(s.x0), Y(s.y0), (s.x1 - s.x0 + 1) * cw, (s.y1 - s.y0 + 1) * ch);
+    ctx.strokeStyle = '#d8c26a'; ctx.setLineDash([5, 4]); ctx.lineWidth = 1.5;
+    ctx.strokeRect(X(s.x0), Y(s.y0), (s.x1 - s.x0 + 1) * cw, (s.y1 - s.y0 + 1) * ch); ctx.setLineDash([]); ctx.lineWidth = 1;
+  }
+  const panning = !!drag && ['pan', 'pan2', 'layerpan'].includes(drag.type);
+  if (hover && !panning && inScene(hover.x, hover.y)) {
+    const brushy = isPaint(resolve(0, shiftDown)) && ['pencil', 'eraser'].includes(S.tool);
+    const n = brushy ? S.brush.size : 1, o = Math.floor((n - 1) / 2);
+    ctx.strokeStyle = brushy ? '#fff' : 'rgba(255,255,255,.6)'; ctx.strokeRect(X(hover.x - o) + .5, Y(hover.y - o) + .5, n * cw, n * ch);
+  }
+  syncCellInfo();
+}
+// stacked cells under the hovered position, top layer first
+let ciKey = '';
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function syncCellInfo() {
+  const box = $('#cellInfo'), t = T(); let html = '', key = '';
+  if (hover && inScene(hover.x, hover.y)) {
+    let covered = false;
+    for (let i = S.layers.length - 1; i >= 0; i--) {
+      const L = S.layers[i], v = L.cells.get(K(hover.x - L.ox, hover.y - L.oy)); if (!v) continue;
+      const fa = alphaOf(v[1]), ba = alphaOf(v[2]), g = hasGlyph(v);
+      const state = !L.visible ? 'hidden' : covered ? 'covered' : L.opacity < 1 ? 'translucent' : 'top';
+      key += `${i}${v.join('')}${L.opacity}${L.visible}${covered}|`;
+      const sw = (c, a) => a > 0 ? `<i style="background:#${c.slice(0, 6)}"></i> #${c.slice(0, 6)} α${Math.round(a * 100)}%` : '–';
+      html += `<div class="ci ${state === 'top' || state === 'translucent' ? 'top' : state === 'hidden' || state === 'covered' ? state : ''}"><span class="cg" style="color:#${g ? v[1].slice(0, 6) : 'fff'};background:${ba > 0 ? `#${v[2].slice(0, 6)}` : '#000'}">${g ? esc(v[0]) : ''}</span><span class="cm"><b>${esc(L.name)}</b> ${g ? `U+${cpHex(v[0].codePointAt(0))}` : t.bgOnly}${L.opacity < 1 ? ` ×${Math.round(L.opacity * 100)}%` : ''}<br>${t.fg} ${g ? sw(v[1], fa) : "–"}<br>${t.bg} ${sw(v[2], ba)}<br>${t.states[state]}</span></div>`;
+      if (L.visible && ba * L.opacity >= 0.999) covered = true;
+    }
+    if (!html) html = `<div class="hint">${t.noCells(hover.x, hover.y)}</div>`;
+    key = `${hover.x},${hover.y}${key}`;
+  } else { html = `<div class="hint">${t.hoverCanvas}</div>`; key = 'none'; }
+  if (key !== ciKey) { ciKey = key; box.innerHTML = html; }
+}
+
+// ---------- edit primitives (focused layer only) ----------
+// Apply one brush target to one layer cell (layer-local key). target: 'glyph' | 'fg' | 'bg'.
+// Paint: glyph sets glyph + fg (bg kept); fg recolours only an existing non-space glyph; bg sets bg (an empty cell gets a space glyph).
+// Erase: glyph removes the glyph (bg kept); bg sets bg to 0,0,0,0; fg does nothing. A cell left with neither glyph nor bg is dropped.
+function applyTarget(L, k, target, erase) {
+  const o = L.cells.get(k), v = o ? [o[0], o[1], o[2]] : [' ', NONE, NONE];
+  if (!erase) {
+    if (target === 'glyph') { v[0] = S.brush.g; v[1] = fgStr(); }
+    else if (target === 'fg') { if (!hasGlyph(v)) return false; v[1] = fgStr(); }
+    else v[2] = bgStr();
+  } else {
+    if (target === 'glyph') v[0] = ' ';
+    else if (target === 'bg') v[2] = NONE;
+    else return false;
+  }
+  const n = normCell(v[0], v[1], v[2]);
+  if (!n) return L.cells.delete(k);
+  if (o && o[0] === n[0] && o[1] === n[1] && o[2] === n[2]) return false;
+  L.cells.set(k, n); return true;
+}
+function applyAt(x, y, target, erase) {
+  const L = cur();
+  if (!L || !inScene(x, y) || !inSel(x, y)) return false;
+  return applyTarget(L, K(x - L.ox, y - L.oy), target, erase);
+}
+function stamp(x, y, target, erase) {
+  const n = S.brush.size, o = Math.floor((n - 1) / 2); let ch = false;
+  for (let dy = 0; dy < n; dy++) for (let dx = 0; dx < n; dx++) ch = applyAt(x - o + dx, y - o + dy, target, erase) || ch;
+  return ch;
+}
+function lineCells(a, b) {
+  const out = []; let x = a.x, y = a.y; const dx = Math.abs(b.x - x), dy = -Math.abs(b.y - y), sx = x < b.x ? 1 : -1, sy = y < b.y ? 1 : -1; let e = dx + dy;
+  for (;;) { out.push([x, y]); if (x === b.x && y === b.y) break; const e2 = 2 * e; if (e2 >= dy) { e += dy; x += sx; } if (e2 <= dx) { e += dx; y += sy; } }
+  return out;
+}
+function rectCells(a, b, filled) {
+  const x0 = Math.min(a.x, b.x), x1 = Math.max(a.x, b.x), y0 = Math.min(a.y, b.y), y1 = Math.max(a.y, b.y), out = [];
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (filled || x === x0 || x === x1 || y === y0 || y === y1) out.push([x, y]);
+  return out;
+}
+// Flood fill inside the scene rectangle. Region = contiguous cells with the same value of the attribute being painted.
+function floodFill(sx, sy, target) {
+  const L = cur(); if (!inSceneRect(sx, sy) || !inSel(sx, sy)) return false;
+  const get = (x, y) => L.cells.get(K(x - L.ox, y - L.oy));
+  const key = v => target === 'glyph' ? (v && hasGlyph(v) ? v[0] : '') : target === 'fg' ? (v && hasGlyph(v) ? v[1] : null) : (v ? v[2] : NONE);
+  const t = key(get(sx, sy)); if (t === null) return false;
+  const seen = new Set([K(sx, sy)]), st = [[sx, sy]], region = [];
+  while (st.length) {
+    const [x, y] = st.pop(); region.push([x, y]);
+    for (const [nx, ny] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]) {
+      if (!inSceneRect(nx, ny) || !inSel(nx, ny)) continue;
+      const kk = K(nx, ny); if (seen.has(kk)) continue;
+      if (key(get(nx, ny)) === t) { seen.add(kk); st.push([nx, ny]); }
+    }
+  }
+  let ch = false; for (const [x, y] of region) ch = applyAt(x, y, target, false) || ch;
+  return ch;
+}
+// pick one brush attribute (or all three with target 'all') from the topmost visible cell that has it
+function pickTarget(x, y, target) {
+  if (!inScene(x, y)) return;
+  const B = S.brush; let got = false;
+  const setCol = (o, c) => { o.hex = `#${c.slice(0, 6)}`; o.a = alphaOf(c); };
+  if (target === 'glyph' || target === 'fg' || target === 'all') {
+    const v = topCellWhere(x, y, hasGlyph);
+    if (v) { got = true; if (target !== 'fg') B.g = v[0]; if (target !== 'glyph') setCol(B.fg, v[1]); }
+  }
+  if (target === 'bg' || target === 'all') {
+    const v = topCellWhere(x, y, c => alphaOf(c[2]) > 0);
+    if (v) { got = true; setCol(B.bg, v[2]); }
+  }
+  if (!got) msg(T().msg.nothingToPick); else syncBrush();
+}
+function editable() { const L = cur(); if (!L) return false; if (!L.visible) { msg(T().msg.layerHidden); return false; } return true; }
+
+// ---------- selection / clipboard ----------
+const textOf = c => { const rows = Array.from({ length: c.h }, () => Array(c.w).fill(' ')); for (const [x, y, v] of c.cells) if (hasGlyph(v)) rows[y][x] = v[0]; return rows.map(r => r.join('').replace(/\s+$/, '')).join('\n'); };
+function doCopy() {
+  if (!S.sel) { msg(T().msg.selectFirst); return false; }
+  const L = cur(), s = S.sel, cells = [];
+  for (const [k, v] of L.cells) { const x = kx(k) + L.ox, y = ky(k) + L.oy; if (inSel(x, y)) cells.push([x - s.x0, y - s.y0, v]); }
+  clip = { w: s.x1 - s.x0 + 1, h: s.y1 - s.y0 + 1, cells };
+  try { navigator.clipboard.writeText(textOf(clip)).catch(() => {}); } catch (e) {}
+  msg(T().msg.copied(cells.length, L.name)); return true;
+}
+function doClearSel() {
+  if (!S.sel || !editable()) return;
+  const L = cur(); pushUndo(); let n = 0;
+  for (const k of [...L.cells.keys()]) if (inSel(kx(k) + L.ox, ky(k) + L.oy)) { L.cells.delete(k); n++; }
+  if (!n) popUndo(); msg(T().msg.cleared(n)); fixOffset(); redraw(); touch();
+}
+function doPaste() {
+  if (!clip) { msg(T().msg.clipEmpty); return; }
+  if (!editable()) return;
+  const at = lastHover && inScene(lastHover.x, lastHover.y) ? lastHover : S.sel ? { x: S.sel.x0, y: S.sel.y0 } : { x: 0, y: 0 };
+  const L = cur(); pushUndo();
+  for (const [dx, dy, v] of clip.cells) { const x = at.x + dx, y = at.y + dy; if (inScene(x, y)) L.cells.set(K(x - L.ox, y - L.oy), v); }
+  S.sel = { x0: at.x, y0: at.y, x1: at.x + clip.w - 1, y1: at.y + clip.h - 1 };
+  msg(T().msg.pasted(clip.cells.length, L.name)); fixOffset(); syncInfo(); redraw(); touch();
+}
+
+// ---------- layers ----------
+// smallest "Layer N" not used by a current layer
+function freeLayerName() { const used = new Set(S.layers.map(l => l.name)); let n = 1; while (used.has(T().layer(n))) n++; return T().layer(n); }
+function addLayer() { pushUndo(); const L = newLayer(freeLayerName()); S.layers.splice(S.focus + 1, 0, L); S.focus++; syncLayers(); redraw(); touch(); }
+function dupLayer() { pushUndo(); const L = { ...cl(cur()), id: ++lid, name: T().copy(cur().name) }; S.layers.splice(S.focus + 1, 0, L); S.focus++; syncLayers(); redraw(); touch(); }
+function delLayer() {
+  if (S.layers.length < 2) { msg(T().msg.needLayer); return; }
+  pushUndo(); S.layers.splice(S.focus, 1); S.focus = Math.min(S.focus, S.layers.length - 1); syncLayers(); redraw(); touch();
+}
+function moveLayer(from, to) {
+  if (to < 0 || to >= S.layers.length || from === to) return;
+  pushUndo(); const [L] = S.layers.splice(from, 1); S.layers.splice(to, 0, L); S.focus = to; syncLayers(); redraw(); touch();
+}
+const parseC = c => [parseInt(c.slice(0, 2), 16), parseInt(c.slice(2, 4), 16), parseInt(c.slice(4, 6), 16), alphaOf(c)];
+const toC = (r, g, b, a) => [r, g, b].map(n => hex2(Math.max(0, Math.min(255, Math.round(n))))).join('') + hex2(Math.max(0, Math.min(255, Math.round(a * 255))));
+// Merge one layer's cell into another's: bg is composited alpha-over, the upper glyph wins, an opaque upper bg without a
+// glyph removes the lower glyph, a translucent one tints it. Layer opacity is baked into the alphas.
+function bakeInto(dst, up) {
+  if (!up.visible) return 0; let n = 0;
+  const rel = up.opacity / (dst.opacity || 1);
+  for (const [k, u] of up.cells) {
+    const key = K(kx(k) + up.ox - dst.ox, ky(k) + up.oy - dst.oy), lo = dst.cells.get(key);
+    let g = lo ? lo[0] : ' ', fg = lo ? lo[1] : NONE, bg = lo ? lo[2] : NONE;
+    const ub = parseC(u[2]); ub[3] = Math.min(1, ub[3] * rel);
+    if (ub[3] > 0) {
+      const lb = parseC(bg), ao = ub[3] + lb[3] * (1 - ub[3]);
+      bg = toC(...[0, 1, 2].map(i => (ub[i] * ub[3] + lb[i] * lb[3] * (1 - ub[3])) / ao), ao);
+      if (g !== ' ' && !hasGlyph(u)) {
+        if (ub[3] >= 0.999) { g = ' '; fg = NONE; }
+        else { const f = parseC(fg); fg = toC(...[0, 1, 2].map(i => f[i] * (1 - ub[3]) + ub[i] * ub[3]), f[3]); }
+      }
+    }
+    if (hasGlyph(u)) { const f = parseC(u[1]); g = u[0]; fg = toC(f[0], f[1], f[2], Math.min(1, f[3] * rel)); }
+    const c = normCell(g, fg, bg);
+    if (c) { dst.cells.set(key, c); n++; } else dst.cells.delete(key);
+  }
+  return n;
+}
+// Rebase a layer so its cells start at (0,0) and the offset is its bounding-box origin (keeps offsets from going negative).
+function normalizeLayer(L) {
+  if (!L.cells.size) return;
+  let mx = 1e9, my = 1e9; for (const k of L.cells.keys()) { mx = Math.min(mx, kx(k)); my = Math.min(my, ky(k)); }
+  if (!mx && !my) return;
+  const n = new Map(); for (const [k, v] of L.cells) n.set(K(kx(k) - mx, ky(k) - my), v);
+  L.cells = n; L.ox += mx; L.oy += my;
+}
+// After an edit that changes the cell extent re-derive the focused layer's offset.
+function fixOffset() { normalizeLayer(cur()); syncProps(); }
+function mergeDown() {
+  const i = S.focus; if (i < 1) { msg(T().msg.noBelow); return; }
+  pushUndo(); const up = S.layers[i], lo = S.layers[i - 1]; bakeInto(lo, up); normalizeLayer(lo);
+  S.layers.splice(i, 1); S.focus = i - 1; syncLayers(); redraw(); touch();
+  msg(T().msg.merged(lo.name));
+}
+function mergeVisible() {
+  const vis = S.layers.filter(l => l.visible); if (vis.length < 2) { msg(T().msg.needTwo); return; }
+  pushUndo(); const acc = newLayer(T().merged); const at = S.layers.indexOf(vis[0]);
+  for (const l of vis) bakeInto(acc, l);
+  normalizeLayer(acc);
+  S.layers = S.layers.filter(l => !l.visible); S.layers.splice(Math.min(at, S.layers.length), 0, acc); S.focus = S.layers.indexOf(acc);
+  syncLayers(); redraw(); touch();
+}
+
+// ---------- UI sync ----------
+function mk(tag, props, ...kids) { const e = Object.assign(document.createElement(tag), props || {}); for (const k of kids) e.append(k); return e; }
+function syncLayers() {
+  const box = $('#layers'); box.innerHTML = '';
+  for (let i = S.layers.length - 1; i >= 0; i--) {
+    const L = S.layers[i];
+    const row = mk('div', { className: `layer${i === S.focus ? ' focus' : ''}`, draggable: true });
+    const eye = mk('span', { className: `eye${L.visible ? ' v' : ''}`, textContent: L.visible ? '◉' : '○', title: T().toggleVis });
+    eye.onclick = e => { e.stopPropagation(); pushUndo(); L.visible = !L.visible; syncLayers(); redraw(); touch(); };
+    row.append(eye, mk('span', { className: 'nm', textContent: L.name }), mk('span', { className: 'ct', textContent: L.cells.size }));
+    row.onclick = () => { S.focus = i; syncLayers(); redraw(); };
+    row.ondragstart = e => { e.dataTransfer.setData('text/plain', String(i)); };
+    row.ondragover = e => { e.preventDefault(); row.classList.add('drop'); };
+    row.ondragleave = () => row.classList.remove('drop');
+    row.ondrop = e => { e.preventDefault(); const f = +e.dataTransfer.getData('text/plain'); moveLayer(f, i); };
+    box.append(row);
+  }
+  syncProps();
+}
+function syncProps() {
+  const L = cur(); if (!L) return;
+  $('#lName').value = L.name; $('#lOp').value = Math.round(L.opacity * 100); $('#lOpv').textContent = Math.round(L.opacity * 100);
+  $('#lOx').value = L.ox; $('#lOy').value = L.oy;
+  $('#lMerge').disabled = S.focus < 1; $('#lDel').disabled = S.layers.length < 2;
+  $('#lUp').disabled = S.focus >= S.layers.length - 1; $('#lDn').disabled = S.focus < 1;
+}
+function syncBrush() {
+  const b = S.brush, bg = $('#brushGlyph');
+  bg.textContent = b.g === ' ' ? '␠' : b.g; bg.style.color = b.fg.hex; bg.style.fontFamily = FONT; bg.style.background = b.bg.a > 0 ? b.bg.hex : '#000';
+  for (const [p, c] of [['f', b.fg], ['g', b.bg]]) {
+    $(`#${p}col`).value = c.hex; $(`#${p}hex`).value = c.hex; $(`#${p}alpha`).value = Math.round(c.a * 100); $(`#${p}av`).textContent = Math.round(c.a * 100);
+  }
+  syncStrip(); markPanel(); redraw();
+}
+function addRecent(kind) {
+  const h = S.brush[kind].hex, list = [h, ...S.recent[kind].filter(x => x !== h)].slice(0, 10);
+  S.recent[kind] = list;
+  const r = $(kind === 'fg' ? '#recentFg' : '#recentBg'); r.innerHTML = '';
+  for (const c of list) { const b = mk('button', { className: 'sw', title: c }); b.style.background = c; b.onclick = () => { S.brush[kind].hex = c; syncBrush(); }; r.append(b); }
+}
+const pal = () => S.palettes[S.pal];
+function syncPalSel() {
+  savePalettes();
+  const s = $('#palSel'); s.innerHTML = '';
+  S.palettes.forEach((p, i) => { s.append(mk('option', { value: i, textContent: `${p.name} (${p.glyphs.length})`, selected: i === S.pal })); });
+  syncStrip();
+}
+function syncStrip() {
+  const st = $('#strip'); st.innerHTML = '';
+  for (const g of pal().glyphs) {
+    const b = mk('button', { className: `gb${g === S.brush.g ? ' cur' : ''}`, textContent: g, title: `U+${cpHex(g.codePointAt(0))}` });
+    b.onclick = () => { S.brush.g = g; syncBrush(); };
+    st.append(b);
+  }
+}
+function syncInfo() {
+  const s = S.sel, t = T();
+  $('#selInfo').textContent = s ? t.sel(s.x1 - s.x0 + 1, s.y1 - s.y0 + 1, s.x0, s.y0) : '';
+  $('#expArea').textContent = s ? t.areaSel(s.x1 - s.x0 + 1, s.y1 - s.y0 + 1) : t.areaScene;
+}
+function syncAll(reset) {
+  $('#sw').value = S.w; $('#sh').value = S.h; $('#sbg').value = S.bg;
+  $('#cGrid').checked = S.grid; $('#cBounds').checked = S.bounds;
+  layoutCanvas(reset ? 'reset' : 'keep'); syncLayers(); syncPalSel(); syncBrush(); syncInfo(); addRecent('fg'); addRecent('bg'); redraw(); histBtns();
+}
+
+// ---------- drag modes & pointer ----------
+const MODES = ['select', 'scenepan', 'layerpan', 'glyph', 'fg', 'bg'];
+const isPaint = m => m === 'glyph' || m === 'fg' || m === 'bg';
+// What a pointer press does. Middle/right are fixed; Shift swaps the primary drag with its counterpart
+// (Select <-> Glyph brush; in a brush or pan mode Shift+left gives Select).
+function resolve(button, shift) {
+  if (button === 1) return shift ? 'fg' : 'scenepan';
+  if (button === 2) return shift ? 'bg' : 'layerpan';
+  if (spaceDown) return 'scenepan';
+  if (shift) return S.mode === 'select' ? 'glyph' : 'select';
+  return S.mode;
+}
+function modeInfo() {
+  const o = { select: 'cell', layerpan: 'move', scenepan: 'grab' };
+  ov.style.cursor = o[resolve(0, shiftDown)] || 'crosshair';
+  const t = T();
+  $('#modeInfo').innerHTML = `<span>${t.mouseMap}</span>${[0, 1, 2].map(b => `<span>${t.buttons[b]} <span class="act">${t.modeLabel[resolve(b, shiftDown)]}</span></span>`).join('')}`;
+  $('#modeHint').innerHTML = (S.mode === 'select' ? t.hintSelect : t.hintPaint).join('<br>');
+}
+function setMode(m) {
+  S.mode = m; for (const b of document.querySelectorAll('#modes button')) b.classList.toggle('on', b.dataset.mode === m);
+  modeInfo(); redraw(); saveView();
+}
+const TOOLS = [['pencil', 'B'], ['line', 'L'], ['rect', 'R'], ['fill', 'G'], ['pick', 'I'], ['eraser', 'E']];
+function setTool(t) {
+  S.tool = t; for (const b of document.querySelectorAll('#tools button')) b.classList.toggle('on', b.dataset.tool === t); redraw(); saveView();
+}
+const cellAt = e => { const r = ov.getBoundingClientRect(); return { x: Math.floor((e.clientX - r.left) / cwpx()) + W.x0, y: Math.floor((e.clientY - r.top) / chpx()) + W.y0 }; };
+const clampC = c => ({ x: Math.max(W.x0, Math.min(W.x0 + W.w - 1, c.x)), y: Math.max(W.y0, Math.min(W.y0 + W.h - 1, c.y)) });
+const rectOf = (a, b) => ({ x0: Math.min(a.x, b.x), y0: Math.min(a.y, b.y), x1: Math.max(a.x, b.x), y1: Math.max(a.y, b.y) });
+const shapeCells = (a, b) => S.tool === 'line' ? lineCells(a, b) : rectCells(a, b, S.fillRect);
+const centroid = () => { let x = 0, y = 0; for (const t of touches.values()) { x += t.x; y += t.y; } return { x: x / touches.size, y: y / touches.size }; };
+
+ov.addEventListener('contextmenu', e => e.preventDefault());
+ov.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); });
+ov.addEventListener('auxclick', e => e.preventDefault());
+
+function startPaint(c, target) {
+  if (!editable()) { drag = { type: 'none' }; return; }
+  const t = S.tool, erase = t === 'eraser';
+  if (t === 'pick') { pickTarget(c.x, c.y, target); drag = { type: 'none' }; return; }
+  if (erase && target === 'fg') { msg(T().msg.eraseFg); drag = { type: 'none' }; return; }
+  if (t === 'fill') {
+    pushUndo(); if (floodFill(c.x, c.y, target)) { fixOffset(); redraw(); touch(); syncLayers(); recents(target); } else popUndo();
+    drag = { type: 'none' }; return;
+  }
+  pushUndo();
+  if (t === 'pencil' || erase) { drag = { type: 'paint', last: c, changed: false, target, erase }; drag.changed = stamp(c.x, c.y, target, erase); }
+  else drag = { type: 'shape', a: c, cells: shapeCells(c, c), target };
+}
+const recents = target => { if (target === 'bg') addRecent('bg'); else addRecent('fg'); };
+function startMoveSel(origin) {
+  if (!editable()) return null;
+  const L = cur(), lifted = [], base = new Map();
+  for (const [k, v] of L.cells) { const x = kx(k) + L.ox, y = ky(k) + L.oy; if (inRect(S.sel, x, y)) lifted.push([x, y, v]); else base.set(k, v); }
+  if (!lifted.length) { msg(T().msg.noSelCells); return null; }
+  pushUndo(); return { type: 'movesel', a: origin, lifted, base, sel: { ...S.sel }, dx: 0, dy: 0 };
+}
+
+ov.addEventListener('pointerdown', e => {
+  ov.setPointerCapture(e.pointerId); shiftDown = e.shiftKey;
+  if (e.pointerType === 'touch') {
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touches.size === 2) { endDrag(); const c = centroid(); drag = { type: 'pan2', cx: c.x, cy: c.y }; return; }
+    if (touches.size > 2) return;
+  }
+  const c = cellAt(e);
+  if (e.button === 0 && e.altKey && !e.shiftKey) { pickTarget(c.x, c.y, 'all'); drag = { type: 'none' }; return; }
+  const act = resolve(e.button, e.shiftKey), view = $('#view');
+  if (act === 'scenepan') { drag = { type: 'pan', sx: e.clientX, sy: e.clientY, l: view.scrollLeft, t: view.scrollTop }; e.preventDefault(); return; }
+  if (act === 'layerpan') {
+    if (!editable()) { drag = { type: 'none' }; return; }
+    pushUndo(); drag = { type: 'layerpan', a: c, ox: cur().ox, oy: cur().oy }; return;
+  }
+  if (act === 'select') {
+    const cc = clampC(c);
+    drag = S.sel && inRect(S.sel, cc.x, cc.y) ? { type: 'selmove', origin: cc } : { type: 'select', origin: cc, left: false };
+    return;
+  }
+  startPaint(c, act);
+});
+ov.addEventListener('pointermove', e => {
+  const c = cellAt(e); hover = c; lastHover = c;
+  if (e.pointerType === 'touch' && touches.has(e.pointerId)) touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  const L = cur();
+  $('#pos').textContent = inScene(c.x, c.y) ? `${c.x},${c.y}${L ? `  ${T().layerPos(c.x - L.ox, c.y - L.oy)}` : ''}` : '';
+  if (drag) {
+    const v = $('#view');
+    if (drag.type === 'pan') { v.scrollLeft = drag.l - (e.clientX - drag.sx); v.scrollTop = drag.t - (e.clientY - drag.sy); }
+    else if (drag.type === 'pan2') { const m = centroid(); v.scrollLeft -= m.x - drag.cx; v.scrollTop -= m.y - drag.cy; drag.cx = m.x; drag.cy = m.y; }
+    else if (drag.type === 'select') {
+      const cc = clampC(c);
+      if (cc.x !== drag.origin.x || cc.y !== drag.origin.y) drag.left = true;
+      if (drag.left) { S.sel = rectOf(drag.origin, cc); syncInfo(); }
+    }
+    else if (drag.type === 'selmove') {
+      const cc = clampC(c);
+      if (cc.x !== drag.origin.x || cc.y !== drag.origin.y) { const d = startMoveSel(drag.origin); drag = d || { type: 'none' }; }
+    }
+    if (drag.type === 'movesel') {
+      const L2 = cur(), cc = clampC(c), dx = cc.x - drag.a.x, dy = cc.y - drag.a.y; drag.dx = dx; drag.dy = dy;
+      L2.cells = new Map(drag.base);
+      for (const [x, y, v2] of drag.lifted) L2.cells.set(K(x + dx - L2.ox, y + dy - L2.oy), v2);
+      const s0 = drag.sel; S.sel = { x0: s0.x0 + dx, y0: s0.y0 + dy, x1: s0.x1 + dx, y1: s0.y1 + dy }; syncInfo();
+    }
+    else if (drag.type === 'paint') { for (const [x, y] of lineCells(drag.last, c)) drag.changed = stamp(x, y, drag.target, drag.erase) || drag.changed; drag.last = c; }
+    else if (drag.type === 'shape') drag.cells = shapeCells(drag.a, c);
+    else if (drag.type === 'layerpan') { const L2 = cur(); L2.ox = drag.ox + c.x - drag.a.x; L2.oy = drag.oy + c.y - drag.a.y; syncProps(); }
+  }
+  redraw();
+});
+ov.addEventListener('pointerleave', () => { hover = null; redraw(); });
+function endDrag() {
+  if (!drag) return; const d = drag; drag = null;
+  if (d.type === 'select' && !d.left) { S.sel = null; syncInfo(); }
+  if (d.type === 'selmove') { S.sel = null; syncInfo(); }
+  if (d.type === 'paint') { if (!d.changed) popUndo(); else { fixOffset(); touch(); syncLayers(); recents(d.target); } }
+  if (d.type === 'shape') {
+    let ch = false; for (const [x, y] of d.cells) ch = applyAt(x, y, d.target, false) || ch;
+    if (!ch) popUndo(); else { fixOffset(); touch(); syncLayers(); recents(d.target); }
+  }
+  if (d.type === 'movesel') { if (!d.dx && !d.dy) popUndo(); else { fixOffset(); touch(); syncLayers(); } }
+  if (d.type === 'layerpan') { if (cur().ox === d.ox && cur().oy === d.oy) popUndo(); else touch(); }
+  redraw();
+}
+const upPtr = e => { touches.delete(e.pointerId); if (drag && drag.type === 'pan2' && touches.size < 2) endDrag(); else if (e.pointerType !== 'touch' || touches.size === 0) endDrag(); };
+ov.addEventListener('pointerup', upPtr); ov.addEventListener('pointercancel', upPtr);
+$('#view').addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); zoom(e.deltaY < 0 ? 1 : -1); }, { passive: false });
+function zoom(d) {
+  let i = ZOOMS.indexOf(S.fs); if (i < 0) i = 2;
+  const v = $('#view'), tx = v.scrollLeft / cwpx(), ty = v.scrollTop / chpx();
+  S.fs = ZOOMS[Math.max(0, Math.min(ZOOMS.length - 1, i + d))]; layoutCanvas('none'); v.scrollLeft = tx * cwpx(); v.scrollTop = ty * chpx(); redraw(); saveView();
+}
+
+// ---------- glyph palette editor ----------
+let gpBuilt = false, draft = null;
+function buildPanel() {
+  if (gpBuilt) return; gpBuilt = true;
+  const grid = $('#gpGrid'), jump = $('#gpJump'); let curB = null, box = null;
+  const src = UNI.length ? UNI : Array.from({ length: 95 }, (_, i) => String.fromCharCode(32 + i));
+  for (const g of src) {
+    const cp = g.codePointAt(0), b = blockOf(cp);
+    if (!curB || b.start !== curB.start) {
+      curB = b; const h = mk('h4', { textContent: `${b.name}  U+${cpHex(b.start)}` }); h.dataset.b = b.start;
+      box = mk('div', { className: 'g' }); grid.append(h, box); jump.append(mk('option', { value: b.start, textContent: b.name }));
+    }
+    const btn = mk('button', { className: 'gb', textContent: g === ' ' ? '␠' : g, title: `U+${cpHex(cp)} ${b.name}` });
+    btn.dataset.g = g; btn.dataset.bn = b.name.toLowerCase(); btn.dataset.cp = cp;
+    box.append(btn);
+  }
+  grid.onclick = e => {
+    const b = e.target.closest('.gb'); if (!b) return; const g = b.dataset.g;
+    if (e.shiftKey) { S.brush.g = g; syncBrush(); }
+    else { const i = draft.glyphs.indexOf(g); if (i >= 0) draft.glyphs.splice(i, 1); else draft.glyphs.push(g); }
+    markPanel();
+  };
+  jump.onchange = () => { const h = grid.querySelector(`h4[data-b="${jump.value}"]`); if (h) grid.scrollTop = h.offsetTop - grid.offsetTop - 4; };
+  $('#gpQ').oninput = filterPanel;
+}
+function filterPanel() {
+  const q = $('#gpQ').value.trim(), set = new Set(Array.from(q)), m = /^(?:u\+)?([0-9a-f]{1,6})$/i.exec(q), cp = m ? parseInt(m[1], 16) : -1, ql = q.toLowerCase();
+  let shown = 0;
+  for (const b of $('#gpGrid').querySelectorAll('.gb')) {
+    const ok = !q || set.has(b.dataset.g) || +b.dataset.cp === cp || (q.length >= 3 && b.dataset.bn.includes(ql));
+    b.style.display = ok ? '' : 'none'; if (ok) shown++;
+  }
+  for (const h of $('#gpGrid').querySelectorAll('h4')) h.style.display = q ? 'none' : '';
+  $('#gpGrid').title = T().shown(shown, UNI.length);
+}
+function markPanel() {
+  if (!gpBuilt || !draft) return; const inP = new Set(draft.glyphs);
+  $('#gpInfo').textContent = T().glyphsIn(inP.size);
+  for (const b of $('#gpGrid').querySelectorAll('.gb')) { b.classList.toggle('in', inP.has(b.dataset.g)); b.classList.toggle('cur', b.dataset.g === S.brush.g); }
+}
+// The panel edits a working copy; Apply commits it to the palette, Discard throws it away.
+const modals = () => { const open = !(gp.hidden && ex.hidden); $('#back').hidden = !open; $('#app').inert = open; };
+function openPanel(isNew) {
+  buildPanel();
+  draft = isNew ? { name: T().palette(S.palettes.length + 1), glyphs: [], isNew: true } : { name: pal().name, glyphs: [...pal().glyphs], isNew: false };
+  $('#gpName').value = draft.name; $('#gpQ').value = '';
+  $('#gpDel').disabled = isNew || S.palettes.length < 2;
+  gp.hidden = false; modals(); markPanel(); filterPanel(); $('#gpName').focus(); $('#gpName').select();
+}
+function closePanel() { draft = null; gp.hidden = true; modals(); }
+$('#gpName').oninput = e => { draft.name = e.target.value; };
+$('#gpBrush').onclick = () => { if (!draft.glyphs.includes(S.brush.g)) draft.glyphs.push(S.brush.g); markPanel(); };
+$('#gpDel').onclick = () => {
+  if (!draft || draft.isNew || S.palettes.length < 2) return;
+  if (!confirm(T().ask.delPal(pal().name))) return;
+  S.palettes.splice(S.pal, 1); S.pal = Math.max(0, S.pal - 1);
+  closePanel(); syncPalSel(); touch();
+};
+$('#gpAdd').onclick = () => {
+  const have = new Set(draft.glyphs);
+  for (const g of Array.from($('#gpText').value)) if (g.trim() && !have.has(g)) { have.add(g); draft.glyphs.push(g); }
+  $('#gpText').value = ''; markPanel();
+};
+$('#gpApply').onclick = () => {
+  const d = draft; if (!d) return;
+  if (d.isNew) { S.palettes.push({ name: d.name.trim() || T().paletteBare, glyphs: d.glyphs }); S.pal = S.palettes.length - 1; }
+  else { pal().name = d.name.trim() || pal().name; pal().glyphs = d.glyphs; }
+  closePanel(); syncPalSel(); touch();
+};
+$('#gpDiscard').onclick = closePanel;
+
+// ---------- save / load / export ----------
+const cellsOut = L => [...L.cells].map(([k, v]) => v[2] === NONE ? [kx(k), ky(k), v[0], v[1]] : [kx(k), ky(k), v[0], v[1], v[2]]);
+function serialize(layers, w, h, bg) {
+  return {
+    format: 'glyphpaint', version: 1, scene: { width: w, height: h, background: bg },
+    layers: layers.map(L => ({ name: L.name, visible: L.visible, opacity: L.opacity, offset: [L.ox, L.oy], cells: L.cells })),
+  };
+}
+const saveDoc = () => serialize(S.layers.map(L => ({ ...L, cells: cellsOut(L) })), S.w, S.h, S.bg);
+function loadDoc(j) {
+  if (j?.format !== 'glyphpaint' || !Array.isArray(j.layers) || !j.layers.length) throw new Error(T().msg.notFile);
+  S.w = Math.max(1, Math.min(500, +j.scene?.width || 80)); S.h = Math.max(1, Math.min(500, +j.scene?.height || 40)); S.bg = j.scene?.background || '#0b0f0b';
+  S.layers = j.layers.map((l, i) => {
+    const L = newLayer(l.name || T().layer(i + 1)); L.visible = l.visible !== false; L.opacity = Math.max(0, Math.min(1, +l.opacity ?? 1)); if (Number.isNaN(L.opacity)) L.opacity = 1;
+    L.ox = (l.offset?.[0] | 0); L.oy = (l.offset?.[1] | 0);
+    for (const [x, y, g, fg, bg] of l.cells || []) { const c = normCell(g, fg, bg); if (c) L.cells.set(K(x | 0, y | 0), c); }
+    normalizeLayer(L);
+    return L;
+  });
+  S.focus = S.layers.length - 1; S.sel = null;
+  undo.length = redo.length = 0; syncAll(true); touch();
+}
+function areaRect() { const s = S.sel; return s ? { x0: s.x0, y0: s.y0, w: s.x1 - s.x0 + 1, h: s.y1 - s.y0 + 1 } : { x0: 0, y0: 0, w: S.w, h: S.h }; }
+// Layered snapshot of an area: only layers with cells inside it survive; coordinates are rebased so the area's top-left
+// is (0,0) and each layer's offset is its cropped bounding box.
+function snapshotArea() {
+  const r = areaRect(), out = [];
+  for (const L of S.layers) {
+    const kept = [];
+    for (const [k, v] of L.cells) {
+      const x = kx(k) + L.ox, y = ky(k) + L.oy;
+      if (x >= r.x0 && y >= r.y0 && x < r.x0 + r.w && y < r.y0 + r.h) kept.push([x - r.x0, y - r.y0, v]);
+    }
+    if (!kept.length) continue;
+    let mx = 1e9, my = 1e9; for (const c of kept) { if (c[0] < mx) mx = c[0]; if (c[1] < my) my = c[1]; }
+    out.push({ name: L.name, visible: L.visible, opacity: L.opacity, ox: mx, oy: my, cells: kept.map(([x, y, v]) => v[2] === NONE ? [x - mx, y - my, v[0], v[1]] : [x - mx, y - my, v[0], v[1], v[2]]) });
+  }
+  return { j: serialize(out, r.w, r.h, S.bg), n: out.length, r };
+}
+// glyphs that exist but have fg alpha 0 (invisible); area/visibleOnly narrow the scan
+function invisibleGlyphs(area, visibleOnly) {
+  let n = 0, first = null;
+  for (const L of S.layers) {
+    if (visibleOnly && !L.visible) continue;
+    for (const [k, v] of L.cells) {
+      if (!hasGlyph(v) || alphaOf(v[1]) > 0) continue;
+      const x = kx(k) + L.ox, y = ky(k) + L.oy;
+      if (area && !(x >= area.x0 && y >= area.y0 && x < area.x0 + area.w && y < area.y0 + area.h)) continue;
+      if (!n++) first = T().ask.firstAt(x, y, L.name);
+    }
+  }
+  return { n, first };
+}
+const warnInvisible = info => !info.n || confirm(T().ask.invisible(info.n, info.first));
+function download(name, blob) { const a = mk('a', { href: URL.createObjectURL(blob), download: name }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
+const stamp2 = () => new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '').slice(2, 13);
+const jsonBlob = j => new Blob([JSON.stringify(j)], { type: 'application/json' });
+$('#bSave').onclick = () => { if (!warnInvisible(invisibleGlyphs(null, false))) return; download(`glyphpaint-${stamp2()}.json`, jsonBlob(saveDoc())); msg(T().msg.saved); };
+$('#bExpJson').onclick = () => {
+  if (!warnInvisible(invisibleGlyphs(areaRect(), false))) return;
+  const { j, n, r } = snapshotArea(); if (!n) { msg(T().msg.noArea); return; }
+  download(`snapshot-${r.w}x${r.h}.json`, jsonBlob(j)); msg(T().msg.snapshot(n, r.w, r.h));
+};
+$('#bExpPng').onclick = () => {
+  const r = areaRect(); if (!warnInvisible(invisibleGlyphs(r, true))) return;
+  const fs = 20, c = document.createElement('canvas'); c.width = Math.ceil(r.w * fs * 0.6); c.height = r.h * Math.round(fs * 1.175);
+  paintScene(c.getContext('2d'), r.x0, r.y0, r.w, r.h, fs, S.bg); c.toBlob(b => download(`glyphs-${r.w}x${r.h}.png`, b));
+};
+$('#bExport').onclick = () => { syncInfo(); ex.hidden = false; modals(); };
+$('#bExpCancel').onclick = () => { ex.hidden = true; modals(); };
+for (const id of ['#bExpJson', '#bExpPng']) $(id).addEventListener('click', () => { ex.hidden = true; modals(); });
+$('#bLoad').onclick = () => $('#fileIn').click();
+$('#fileIn').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) readFile(f); };
+function readFile(f) { f.text().then(t => { loadDoc(JSON.parse(t)); msg(T().msg.loaded(f.name)); }).catch(err => msg(T().msg.loadFailed(err.message))); }
+addEventListener('dragover', e => e.preventDefault());
+addEventListener('drop', e => { e.preventDefault(); if (!gp.hidden || !ex.hidden) return; const f = e.dataTransfer.files[0]; if (f) readFile(f); });
+$('#bNew').onclick = () => { if (!confirm(T().ask.discard)) return; S.layers = [newLayer(T().layer(1))]; S.focus = 0; S.sel = null; undo.length = redo.length = 0; syncAll(true); touch(); };
+
+let saveT = 0;
+function touch() { clearTimeout(saveT); relayout(); saveT = setTimeout(() => { try { localStorage.setItem('glyphpaint.doc', JSON.stringify(saveDoc())); } catch (e) {} }, 500); syncInfo(); }
+
+// ---------- wiring ----------
+for (const id of MODES) { const b = mk('button', { type: 'button' }); b.dataset.mode = id; b.dataset.tip = `mode-${id}`; b.onclick = () => setMode(id); $('#modes').append(b); }
+for (const [id, k] of TOOLS) { const b = mk('button', { type: 'button' }, mk('span'), mk('small', { textContent: k })); b.dataset.tool = id; b.dataset.tip = `tool-${id}`; b.onclick = () => setTool(id); $('#tools').append(b); }
+$('#bUndo').onclick = doUndo; $('#bRedo').onclick = doRedo;
+$('#zIn').onclick = () => zoom(1); $('#zOut').onclick = () => zoom(-1);
+$('#cGrid').onchange = e => { S.grid = e.target.checked; redraw(); saveView(); }; $('#cBounds').onchange = e => { S.bounds = e.target.checked; redraw(); saveView(); };
+$('#cFill').onchange = e => { S.fillRect = e.target.checked; saveView(); };
+$('#bsize').oninput = e => { S.brush.size = Math.max(1, Math.min(9, +e.target.value || 1)); redraw(); saveView(); };
+const sceneSize = () => { pushUndo(); S.w = Math.max(1, Math.min(500, +$('#sw').value || S.w)); S.h = Math.max(1, Math.min(500, +$('#sh').value || S.h)); S.sel = null; layoutCanvas('keep'); syncInfo(); redraw(); touch(); };
+$('#sw').onchange = sceneSize; $('#sh').onchange = sceneSize;
+$('#sbg').oninput = e => { S.bg = e.target.value; redraw(); touch(); };
+$('#brushGlyph').onclick = () => openPanel(false);
+for (const [p, kind] of [['f', 'fg'], ['g', 'bg']]) {
+  $(`#${p}col`).oninput = e => { S.brush[kind].hex = e.target.value; syncBrush(); };
+  $(`#${p}hex`).onchange = e => { if (/^#[0-9a-f]{6}$/i.test(e.target.value)) { S.brush[kind].hex = e.target.value.toLowerCase(); syncBrush(); } else e.target.value = S.brush[kind].hex; };
+  $(`#${p}alpha`).oninput = e => { S.brush[kind].a = e.target.value / 100; syncBrush(); };
+}
+$('#palSel').onchange = e => { S.pal = +e.target.value; syncPalSel(); markPanel(); };
+$('#pNew').onclick = () => openPanel(true);
+$('#pDup').onclick = () => { S.palettes.push({ name: T().copy(pal().name), glyphs: [...pal().glyphs] }); S.pal = S.palettes.length - 1; syncPalSel(); touch(); };
+$('#pEdit').onclick = () => openPanel(false);
+
+let uOnce = false;
+const layerEdit = fn => e => { if (!uOnce) { pushUndo(); uOnce = true; } fn(e); redraw(); touch(); };
+for (const id of ['#lName', '#lOp', '#lOx', '#lOy']) $(id).addEventListener('change', () => { uOnce = false; syncLayers(); });
+$('#lName').addEventListener('input', layerEdit(e => { cur().name = e.target.value; }));
+$('#lOp').addEventListener('input', layerEdit(e => { cur().opacity = e.target.value / 100; $('#lOpv').textContent = e.target.value; }));
+$('#lOx').addEventListener('input', layerEdit(e => { cur().ox = e.target.value | 0; }));
+$('#lOy').addEventListener('input', layerEdit(e => { cur().oy = e.target.value | 0; }));
+$('#lAdd').onclick = addLayer; $('#lDup').onclick = dupLayer; $('#lDel').onclick = delLayer;
+$('#lUp').onclick = () => moveLayer(S.focus, S.focus + 1); $('#lDn').onclick = () => moveLayer(S.focus, S.focus - 1);
+$('#lMerge').onclick = mergeDown; $('#lMergeAll').onclick = mergeVisible;
+
+addEventListener('keydown', e => {
+  if (e.key === 'Shift' && !shiftDown) { shiftDown = true; modeInfo(); }
+  const t = e.target, typing = t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && ['text', 'number'].includes(t.type));
+  if (e.key === 'Escape') { if (!ex.hidden) { ex.hidden = true; modals(); } else if (!gp.hidden) closePanel(); else { S.sel = null; syncInfo(); redraw(); } return; }
+  if (typing || !gp.hidden || !ex.hidden) return;
+  const ctrl = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
+  if (ctrl) {
+    if (k === 'z') { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); }
+    else if (k === 'y') { e.preventDefault(); doRedo(); }
+    else if (k === 'c') { e.preventDefault(); doCopy(); }
+    else if (k === 'x') { e.preventDefault(); if (doCopy()) doClearSel(); }
+    else if (k === 'v') { e.preventDefault(); doPaste(); }
+    else if (k === 'a') { e.preventDefault(); S.sel = { x0: 0, y0: 0, x1: S.w - 1, y1: S.h - 1 }; syncInfo(); redraw(); }
+    else if (k === 's') { e.preventDefault(); $('#bSave').click(); }
+    else if (k === 'o') { e.preventDefault(); $('#bLoad').click(); }
+    return;
+  }
+  if (k === ' ') { if (!spaceDown) { spaceDown = true; modeInfo(); } e.preventDefault(); return; }
+  if (e.key === 'Delete' || e.key === 'Backspace') { doClearSel(); return; }
+  const tool = TOOLS.find(x => x[1].toLowerCase() === k); if (tool) setTool(tool[0]);
+});
+addEventListener('keyup', e => {
+  if (e.key === 'Shift') { shiftDown = false; modeInfo(); }
+  if (e.key === ' ') { spaceDown = false; modeInfo(); }
+});
+addEventListener('blur', () => { shiftDown = false; spaceDown = false; modeInfo(); });
+
+// palettes are editor preferences, not part of save/export files: they persist in the browser only
+const PAL_KEY = 'glyphpaint.palettes';
+function savePalettes() {
+  try { localStorage.setItem(PAL_KEY, JSON.stringify({ active: S.pal, palettes: S.palettes.map(p => ({ name: p.name, glyphs: p.glyphs.join('') })) })); } catch (e) {}
+}
+function loadPalettes() {
+  try {
+    const j = JSON.parse(localStorage.getItem(PAL_KEY) || 'null');
+    if (j && Array.isArray(j.palettes) && j.palettes.length) {
+      S.palettes = j.palettes.map(p => ({ name: String(p.name || T().paletteBare), glyphs: Array.from(p.glyphs || '') }));
+      S.pal = Math.max(0, Math.min(S.palettes.length - 1, j.active | 0));
+    }
+  } catch (e) {}
+}
+// view preferences (zoom, grid, tool, mode...) persist across reloads, separate from the document
+const VIEW_KEY = 'glyphpaint.view';
+function saveView() {
+  try { localStorage.setItem(VIEW_KEY, JSON.stringify({ fs: S.fs, grid: S.grid, bounds: S.bounds, tool: S.tool, mode: S.mode, fillRect: S.fillRect, size: S.brush.size })); } catch (e) {}
+}
+function loadView() {
+  try {
+    const v = JSON.parse(localStorage.getItem(VIEW_KEY) || 'null'); if (!v) return;
+    if (ZOOMS.includes(v.fs)) S.fs = v.fs;
+    if (typeof v.grid === 'boolean') S.grid = v.grid;
+    if (typeof v.bounds === 'boolean') S.bounds = v.bounds;
+    if (typeof v.fillRect === 'boolean') S.fillRect = v.fillRect;
+    if (TOOLS.some(t => t[0] === v.tool)) S.tool = v.tool;
+    if (MODES.includes(v.mode)) S.mode = v.mode;
+    S.brush.size = Math.max(1, Math.min(9, v.size | 0 || 1));
+  } catch (e) {}
+  $('#cFill').checked = S.fillRect; $('#bsize').value = S.brush.size;
+}
+// ---------- help ----------
+// Hovering or focusing a [data-tip] control shows its help over the status line (dialog controls use titles instead).
+let tipEl = null;
+function showTip(el) {
+  tipEl = el; const tip = $('#tip'), text = el ? T().tips[el.dataset.tip] : '';
+  tip.textContent = text || ''; tip.hidden = !text;
+}
+const tipOf = e => e.target.closest?.('[data-tip]') || null;
+$('#app').addEventListener('pointerover', e => { if (e.pointerType !== 'touch') showTip(tipOf(e)); });
+$('#app').addEventListener('pointerleave', () => showTip(null));
+$('#app').addEventListener('focusin', e => showTip(tipOf(e)));
+$('#app').addEventListener('focusout', () => showTip(null));
+
+// ---------- locale ----------
+// <html lang> is set by the inline scripts (and the EN / 한국어 buttons); redo the strings built here when it changes.
+function localize() {
+  const t = T();
+  document.title = t.title;
+  for (const b of document.querySelectorAll('#modes button')) b.textContent = t.modes[b.dataset.mode];
+  for (const b of document.querySelectorAll('#tools button')) b.firstChild.textContent = t.tools[b.dataset.tool];
+  for (const [id, s] of Object.entries(t.placeholder)) $(`#${id}`).placeholder = s;
+  for (const [id, s] of Object.entries(t.titles)) $(`#${id}`).title = s;
+  for (const [id, s] of Object.entries(t.aria)) $(`#${id}`).setAttribute('aria-label', s);
+  ciKey = ''; showTip(tipEl);
+  modeInfo(); syncInfo(); syncLayers(); markPanel(); if (gpBuilt) filterPanel(); redraw();
+}
+new MutationObserver(localize).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+
+// ---------- boot ----------
+function boot() {
+  loadView(); S.palettes = defaultPalettes(); loadPalettes(); S.layers = [newLayer(T().layer(1))];
+  try { const t = localStorage.getItem('glyphpaint.doc'); if (t) loadDoc(JSON.parse(t)); } catch (e) { S.layers = S.layers.length ? S.layers : [newLayer(T().layer(1))]; }
+  localize(); setTool(S.tool); setMode(S.mode); syncAll(true);
+  if (document.fonts) document.fonts.load('20px "Bt10x Mono"').then(() => { cssCache.clear(); redraw(); });
+}
+boot();
+// dev/test hook
+window.__gp = { savePalettes, loadPalettes, saveView, loadView, W: () => W, S, K, kx, ky, loadDoc, saveDoc, snapshotArea, paintScene, resolve, applyAt, floodFill, pickTarget, invisibleGlyphs, normCell, doCopy, doPaste, mergeDown, mergeVisible, addLayer, pushUndo, doUndo, doRedo, cur, setMode, setTool, NONE };
+})();
+</script>
+</body>
+</html>

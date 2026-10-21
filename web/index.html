@@ -34,7 +34,8 @@
             } catch {}
           }
           // Storage blocked: carry the choice to the terminal, the avatar
-          // creator and the glyph art converter in their URLs.
+          // creator, the glyph art converter and the glyph paint editor in
+          // their URLs.
           const term = document.getElementById("card-terminal");
           if (term) term.href = saved ? "terminal.html" : `terminal.html?lang=${locale}`;
           const avatar = document.getElementById("card-avatar");
@@ -46,6 +47,8 @@
           }
           const glyphart = document.getElementById("card-glyphart");
           if (glyphart) glyphart.href = saved ? "glyphart.html" : `glyphart.html?lang=${locale}`;
+          const glyphpaint = document.getElementById("card-glyphpaint");
+          if (glyphpaint) glyphpaint.href = saved ? "glyphpaint.html" : `glyphpaint.html?lang=${locale}`;
           for (const b of document.querySelectorAll("#lang button")) {
             b.setAttribute("aria-pressed", String(b.dataset.lang === locale));
           }
@@ -138,10 +141,22 @@
           </p>
           <span class="go"><span lang="en">open glyph art →</span><span lang="ko">글리프 아트 열기 →</span></span>
         </a>
-        <!-- Desktop only: fills the empty grid cell next to the card above. -->
-        <div class="card card-soon" aria-hidden="true">
-          <span lang="en">more coming soon</span><span lang="ko">곧 더 추가됩니다</span>
-        </div>
+        <a id="card-glyphpaint" class="card" href="glyphpaint.html">
+          <!-- Two overlapping layers (yellow on top) and a palette strip. -->
+          <pre class="preview paint-art" aria-hidden="true"><span><span class="g">┌─────────┐</span>
+<span class="g">│ ▓▓▓  </span><span class="y">┌──┼──────┐</span>
+<span class="g">│ ▓▓▓  </span><span class="y">│░░</span><span class="g">│</span><span class="y"> ★    │</span>
+<span class="g">└──────</span><span class="y">┼</span><span class="g">──┘</span><span class="y">      │</span>
+<span class="y">       └─────────┘</span>
+<span class="d">░▒▓█ ┌─┐ ★◆● #@</span></span></pre>
+          <h2>
+            <span lang="en">Glyph paint editor</span><span lang="ko">글리프 페인트 편집기</span>
+          </h2>
+          <p>
+            <span lang="en">Draw layered text art cell by cell: any glyph from the bt10x font, foreground and background colours per cell, layer opacity, and .png / .json export.</span><span lang="ko">레이어를 쌓아 텍스트 아트를 셀 단위로 그립니다. bt10x 글꼴의 모든 글리프, 셀마다 전경·배경색, 레이어 불투명도, .png / .json 내보내기를 지원합니다.</span>
+          </p>
+          <span class="go"><span lang="en">open glyph paint →</span><span lang="ko">글리프 페인트 열기 →</span></span>
+        </a>
       </div>
     </main>
     <footer id="legal">

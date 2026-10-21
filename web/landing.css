@@ -91,6 +91,10 @@
   color: var(--c-red);
 }
 
+.card .preview .y {
+  color: var(--c-yellow);
+}
+
 .card h2 {
   margin: 4px 0 0;
   font-size: 15px;
@@ -115,8 +119,9 @@
   margin: 0;
 }
 
-/* Image shading in blocks next to the same image in ASCII. */
-.card .preview.glyph-art {
+/* Image shading in blocks next to the same image in ASCII; two painted layers. */
+.card .preview.glyph-art,
+.card .preview.paint-art {
   display: flex;
   align-items: center;
   justify-content: center;

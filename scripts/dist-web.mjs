@@ -25,6 +25,7 @@ const FILES = [
   "gallery.js",
   "gallery-admin.js",
   "glyphart.html",
+  "glyphpaint.html",
   "tui.css",
   "tui.js",
   // The admin page lives at /avatar/admin, the path Cloudflare Access guards.
