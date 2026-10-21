@@ -9,6 +9,44 @@
      and is still embedded. Same algorithm as glyphart.ps1. -->
 <link rel="preload" href="fonts/bt10x-mono-0.63.2-regular.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="bt10x.css">
+<script>
+// Same locale precedence as the landing page (web/index.html) and the avatar creator: ?lang= in the URL, then
+// localStorage "bt10x.lang", then English. `kr` is accepted as an alias of `ko`. Runs before first paint so the
+// :lang() rules in bt10x.css never flash the other locale. Strings built in script are in STR in the module below.
+(() => {
+  const KEY = "bt10x.lang";
+  const norm = (raw) => {
+    const v = String(raw).toLowerCase();
+    return v === "kr" ? "ko" : v === "en" || v === "ko" ? v : null;
+  };
+  let stored = null;
+  try {
+    stored = norm(localStorage.getItem(KEY));
+  } catch {}
+  const fromUrl = norm(new URLSearchParams(location.search).get("lang"));
+  window.bt10xSetLang = (locale, persist) => {
+    document.documentElement.lang = locale;
+    let saved = !persist;
+    if (persist) {
+      try {
+        localStorage.setItem(KEY, locale);
+        saved = true;
+      } catch {}
+    }
+    // Storage blocked: carry the choice to the landing page in its URL.
+    const home = document.getElementById("home-link");
+    if (home) {
+      home.href = saved ? "./" : `./?lang=${locale}`;
+      home.title = locale === "ko" ? "bt10x 홈" : "bt10x home";
+    }
+    for (const b of document.querySelectorAll("#lang button")) {
+      b.setAttribute("aria-pressed", String(b.dataset.lang === locale));
+    }
+  };
+  document.documentElement.lang = fromUrl ?? stored ?? "en";
+  window.bt10xInitialLang = { locale: document.documentElement.lang, persist: fromUrl !== null };
+})();
+</script>
 <style>
 /* Converter palette mapped onto the bt10x.css tokens. */
 :root { --bg:var(--c-bg); --fg:var(--c-text); --dim:var(--c-dim); --acc:var(--c-green); --line:var(--c-line); }
@@ -21,7 +59,10 @@
 #status { flex:1; min-width:0; height:2.8em; overflow:hidden; color:var(--dim); }
 #title { flex:none; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 16px; border-bottom:1px solid var(--line); }
 h1 { font-size:14px; margin:0; color:var(--acc); letter-spacing:.2em; }
-#home-link { padding:3px 8px; font-size:11px; white-space:nowrap; }
+/* Language buttons, then the landing page link rightmost. */
+#head-row { display:flex; justify-content:flex-end; align-items:center; gap:12px; }
+/* Sized like the language buttons, and as tall: #lang stretches those to its tallest (Hangul) line. */
+#home-link { align-self:stretch; display:flex; align-items:center; padding:3px 8px; font-size:11px; white-space:nowrap; }
 fieldset { border:1px solid var(--line); border-radius:4px; margin:0 0 12px; padding:8px 10px; }
 legend { color:var(--dim); padding:0 4px; }
 label { display:grid; grid-template-columns: 100px 1fr 46px; align-items:center; gap:6px; margin:4px 0; }
@@ -89,29 +130,35 @@ input:disabled { opacity:.4; }
 </head>
 <body>
 <header id="title">
-  <h1>GLYPHART</h1>
-  <a id="home-link" class="link-button" href="./" title="bt10x home">← bt10x</a>
+  <h1><span lang="en">GLYPHART</span><span lang="ko">글리프 아트</span></h1>
+  <div id="head-row">
+    <nav id="lang" aria-label="language">
+      <button class="link-button" type="button" data-lang="en" lang="en">EN</button>
+      <button class="link-button" type="button" data-lang="ko" lang="ko">한국어</button>
+    </nav>
+    <a id="home-link" class="link-button" href="./" title="bt10x home"><span aria-hidden="true">← bt10x</span><span class="sr-only"><span lang="en">bt10x home</span><span lang="ko">bt10x 홈</span></span></a>
+  </div>
 </header>
 <div id="app">
   <section id="top">
     <div id="dropcol">
-      <div id="drop" tabindex="0"><span>drop an image here · click to choose · or paste (Ctrl+V)</span><div id="thumbbox"><img id="thumb" alt=""></div></div>
+      <div id="drop" tabindex="0"><span><span lang="en">drop an image here · click to choose · or paste (Ctrl+V)</span><span lang="ko">이미지를 여기에 끌어다 놓기 · 눌러서 선택 · 또는 붙여넣기 (Ctrl+V)</span></span><div id="thumbbox"><img id="thumb" alt=""></div></div>
       <input id="file" type="file" accept="image/*" hidden>
     </div>
     <div class="col">
-    <fieldset><legend>size</legend>
-      <label>columns <input id="cols" type="range" min="20" max="200" value="80"><output id="cols-o"></output></label>
-      <label>zoom <input id="zoom" type="range" min="6" max="24" value="12"><output id="zoom-o"></output></label>
+    <fieldset><legend><span lang="en">size</span><span lang="ko">크기</span></legend>
+      <label><span><span lang="en">columns</span><span lang="ko">열 수</span></span><input id="cols" type="range" min="20" max="200" value="80"><output id="cols-o"></output></label>
+      <label><span><span lang="en">zoom</span><span lang="ko">확대</span></span><input id="zoom" type="range" min="6" max="24" value="12"><output id="zoom-o"></output></label>
     </fieldset>
-    <fieldset><legend>tone / lines</legend>
-      <label class="row"><span>invert</span><span><input id="invert" type="checkbox"> dark pixels = ink</span></label>
-      <label>gamma <input id="gamma" type="range" min="0.3" max="2.5" step="0.05" value="1"><output id="gamma-o"></output></label>
-      <label>clip % <input id="clip" type="range" min="0" max="10" step="0.5" value="0"><output id="clip-o"></output></label>
-      <label>lines <input id="lines" type="range" min="0" max="6" step="0.25" value="0"><output id="lines-o"></output></label>
-      <label>line width <input id="lineR" type="range" min="1" max="8" step="0.5" value="3"><output id="lineR-o"></output></label>
+    <fieldset><legend><span lang="en">tone / lines</span><span lang="ko">톤 / 선</span></legend>
+      <label class="row"><span><span lang="en">invert</span><span lang="ko">반전</span></span><span><input id="invert" type="checkbox"> <span lang="en">dark pixels = ink</span><span lang="ko">어두운 픽셀 = 잉크</span></span></label>
+      <label><span><span lang="en">gamma</span><span lang="ko">감마</span></span><input id="gamma" type="range" min="0.3" max="2.5" step="0.05" value="1"><output id="gamma-o"></output></label>
+      <label><span><span lang="en">clip %</span><span lang="ko">클립 %</span></span><input id="clip" type="range" min="0" max="10" step="0.5" value="0"><output id="clip-o"></output></label>
+      <label><span><span lang="en">lines</span><span lang="ko">선 강조</span></span><input id="lines" type="range" min="0" max="6" step="0.25" value="0"><output id="lines-o"></output></label>
+      <label><span><span lang="en">line width</span><span lang="ko">선 굵기</span></span><input id="lineR" type="range" min="1" max="8" step="0.5" value="3"><output id="lineR-o"></output></label>
     </fieldset>
-    <fieldset><legend>glyph set</legend>
-      <label class="row"><span>preset</span>
+    <fieldset><legend><span lang="en">glyph set</span><span lang="ko">글리프 세트</span></legend>
+      <label class="row"><span><span lang="en">preset</span><span lang="ko">프리셋</span></span>
         <select id="set">
           <option value="ascii">ascii (no blocks)</option>
           <option value="art">art: ascii + box lines</option>
@@ -122,39 +169,39 @@ input:disabled { opacity:.4; }
           <option value="all-noblock">all avatar glyphs − blocks</option>
           <option value="custom">custom</option>
         </select></label>
-      <label class="row"><span>exclude</span><input id="exclude" type="text" placeholder="characters to leave out"></label>
-      <button id="gpedit" type="button" hidden>choose glyphs…</button>
+      <label class="row"><span><span lang="en">exclude</span><span lang="ko">제외</span></span><input id="exclude" type="text" placeholder="characters to leave out"></label>
+      <button id="gpedit" type="button" hidden><span lang="en">choose glyphs…</span><span lang="ko">글리프 선택…</span></button>
       <div class="hint" id="setinfo"></div>
     </fieldset>
     </div>
     <div class="col">
-    <fieldset><legend>matching</legend>
-      <label>smooth <input id="smooth" type="range" min="0" max="5" step="0.25" value="1"><output id="smooth-o"></output></label>
-      <label>edges <input id="edge" type="range" min="0" max="8" step="0.5" value="3"><output id="edge-o"></output></label>
-      <label class="row"><span>linear light</span><span><input id="linear" type="checkbox"> sRGB → linear</span></label>
-      <label class="row"><span>fit range</span><span><input id="fit" type="checkbox"> to glyph tones</span></label>
-      <label>coarse <input id="coarse" type="range" min="0" max="8" step="0.5" value="0"><output id="coarse-o"></output></label>
-      <label>diffuse <input id="diffuse" type="range" min="0" max="1" step="0.05" value="0"><output id="diffuse-o"></output></label>
-      <label>refine <input id="refine" type="range" min="0" max="4" step="1" value="0"><output id="refine-o"></output></label>
-      <label>refine blur <input id="rblur" type="range" min="1" max="6" step="1" value="3"><output id="rblur-o"></output></label>
+    <fieldset><legend><span lang="en">matching</span><span lang="ko">매칭</span></legend>
+      <label><span><span lang="en">smooth</span><span lang="ko">매끄럽게</span></span><input id="smooth" type="range" min="0" max="5" step="0.25" value="1"><output id="smooth-o"></output></label>
+      <label><span><span lang="en">edges</span><span lang="ko">윤곽선</span></span><input id="edge" type="range" min="0" max="8" step="0.5" value="3"><output id="edge-o"></output></label>
+      <label class="row"><span><span lang="en">linear light</span><span lang="ko">선형 광</span></span><span><input id="linear" type="checkbox"> <span lang="en">sRGB → linear</span><span lang="ko">sRGB → 선형</span></span></label>
+      <label class="row"><span><span lang="en">fit range</span><span lang="ko">범위 맞춤</span></span><span><input id="fit" type="checkbox"> <span lang="en">to glyph tones</span><span lang="ko">글리프 톤에 맞춤</span></span></label>
+      <label><span><span lang="en">coarse</span><span lang="ko">거친 톤</span></span><input id="coarse" type="range" min="0" max="8" step="0.5" value="0"><output id="coarse-o"></output></label>
+      <label><span><span lang="en">diffuse</span><span lang="ko">확산</span></span><input id="diffuse" type="range" min="0" max="1" step="0.05" value="0"><output id="diffuse-o"></output></label>
+      <label><span><span lang="en">refine</span><span lang="ko">정제</span></span><input id="refine" type="range" min="0" max="4" step="1" value="0"><output id="refine-o"></output></label>
+      <label><span><span lang="en">refine blur</span><span lang="ko">정제 흐림</span></span><input id="rblur" type="range" min="1" max="6" step="1" value="3"><output id="rblur-o"></output></label>
     </fieldset>
     </div>
   </section>
   <main id="body">
     <div id="progress"></div>
     <div id="bar"><div id="stats"></div>
-      <label class="opt">arrange <select id="arrange"><option value="">side by side</option><option value="stack">up and down</option></select></label>
-      <label class="opt"><input id="grid" type="checkbox"> cell grid</label></div>
+      <label class="opt"><span lang="en">arrange</span><span lang="ko">배치</span> <select id="arrange"><option value="">side by side</option><option value="stack">up and down</option></select></label>
+      <label class="opt"><input id="grid" type="checkbox"> <span lang="en">cell grid</span><span lang="ko">셀 격자</span></label></div>
     <div id="out-wrap"><div id="pair">
-      <figure><figcaption>tone-adjusted image (invert · lines · gamma · clip; bright = ink)</figcaption><div class="cb"><canvas id="adj"></canvas></div></figure>
-      <figure><figcaption>glyphs</figcaption><div class="cb"><pre id="out"></pre></div></figure>
+      <figure><figcaption><span lang="en">tone-adjusted image (invert · lines · gamma · clip; bright = ink)</span><span lang="ko">톤 조정 이미지 (반전 · 선 강조 · 감마 · 클립; 밝을수록 잉크)</span></figcaption><div class="cb"><canvas id="adj"></canvas></div></figure>
+      <figure><figcaption><span lang="en">glyphs</span><span lang="ko">글리프</span></figcaption><div class="cb"><pre id="out"></pre></div></figure>
     </div></div>
   </main>
   <footer id="bottom">
     <div class="btns">
-      <button id="copy" disabled>copy text</button>
-      <button id="save" disabled>download .txt</button>
-      <button id="savepng" disabled>download .png</button>
+      <button id="copy" disabled><span lang="en">copy text</span><span lang="ko">텍스트 복사</span></button>
+      <button id="save" disabled><span lang="en">download .txt</span><span lang="ko">.txt 다운로드</span></button>
+      <button id="savepng" disabled><span lang="en">download .png</span><span lang="ko">.png 다운로드</span></button>
     </div>
     <div id="status"></div>
   </footer>
@@ -164,14 +211,23 @@ input:disabled { opacity:.4; }
   Company, Inc. or Microsoft.<br>BattleTech, BattleMech, 'Mech and MechWarrior are trademarks
   of their respective owners.
 </footer>
+<script>
+(() => {
+  const init = window.bt10xInitialLang;
+  window.bt10xSetLang(init.locale, init.persist);
+  for (const b of document.querySelectorAll("#lang button")) {
+    b.addEventListener("click", () => window.bt10xSetLang(b.dataset.lang, true));
+  }
+})();
+</script>
 <div id="gp" hidden>
-  <div class="gp-head"><b>CUSTOM GLYPHS</b> <span id="gp-count"></span></div>
+  <div class="gp-head"><b><span lang="en">CUSTOM GLYPHS</span><span lang="ko">사용자 지정 글리프</span></b> <span id="gp-count"></span></div>
   <div class="gp-controls">
-    <label>block <select id="gp-block"></select></label>
-    <button type="button" id="gp-all">select block</button>
-    <button type="button" id="gp-none">clear block</button>
-    <button type="button" id="gp-clear">clear all</button>
-    <button type="button" id="gp-done">done</button>
+    <label><span lang="en">block</span><span lang="ko">블록</span> <select id="gp-block"></select></label>
+    <button type="button" id="gp-all"><span lang="en">select block</span><span lang="ko">블록 전체 선택</span></button>
+    <button type="button" id="gp-none"><span lang="en">clear block</span><span lang="ko">블록 비우기</span></button>
+    <button type="button" id="gp-clear"><span lang="en">clear all</span><span lang="ko">모두 비우기</span></button>
+    <button type="button" id="gp-done"><span lang="en">done</span><span lang="ko">완료</span></button>
   </div>
   <div id="gp-grid"></div>
 </div>
@@ -209,7 +265,73 @@ const PRESETS = {
   "all-noblock": cp => !(cp >= 0x2580 && cp <= 0x259F),
 };
 
+// UI strings built in script; static page text is paired <span lang> elements. Unicode block names stay English in
+// both locales, as in the avatar creator.
+const STR = {
+  en: {
+    title: "bt10x glyphart",
+    sets: { ascii: "ascii (no blocks)", art: "art: ascii + box lines", clean: "clean: ascii + box + shapes", block: "block elements",
+            "ascii+block": "ascii + blocks", all: "all avatar glyphs", "all-noblock": "all avatar glyphs − blocks", custom: "custom" },
+    arrange: { "": "side by side", stack: "up and down" },
+    exclude: "characters to leave out",
+    selected: n => `${n} selected`,
+    candidates: n => `${n} candidate glyphs`,
+    stats: s => `${s.cols}×${s.rows} glyphs · ${s.used} distinct of ${s.total} · ${s.ms} ms · match ${s.sc[0].toFixed(3)} / ${s.sc[1].toFixed(3)} / edge ${s.sc[2].toFixed(3)}`,
+    copied: " · copied",
+    unreadable: "could not read that image",
+    tips: {
+      cols: "Glyphs per row. More columns = finer detail and a bigger, slower conversion; fewer = coarser.",
+      zoom: "On-screen size of the preview only. Does not change the generated text or the downloads.",
+      gamma: "Tone curve on the adjusted image. Below 1 brightens (more ink); above 1 darkens (less ink).",
+      clip: "Clips this % of the darkest and brightest pixels, then stretches the rest. Boosts contrast on flat images.",
+      lines: "Line boost strength: lifts thin lines above their surroundings so they survive down-sampling. 0 = off.",
+      lineR: "Neighbourhood size for line boost. Small catches fine lines, large favours broad strokes. Needs lines > 0.",
+      smooth: "Penalty on busy glyphs. Higher = calmer glyphs in flat areas but less texture; 0 = best pixel match.",
+      edge: "Extra weight on pixels at contrast edges. Higher = outlines followed more closely, overall tone matters less.",
+      linear: "Treat image brightness as light, not sRGB codes, so mid-tones get the right amount of ink. Off = old behaviour.",
+      fit: "Experimental: shift cell-scale tone into the range this glyph set can produce. Measured worse on line art; try on photos.",
+      coarse: "Extra weight on matching each cell's overall tone and layout (3x6 blocks), not just exact pixels. 0 = off.",
+      diffuse: "Pass each cell's leftover tone error to the cells after it (dithering), so regional brightness stays right. 0 = off.",
+      refine: "Passes that re-pick glyphs so the blurred neighbourhood matches the blurred image. Overrides coarse / diffuse; slower. 0 = off.",
+      rblur: "Blur radius (glyph pixels) used by refine. Larger = judge bigger areas; smaller = finer. Needs refine > 0.",
+    },
+  },
+  ko: {
+    title: "bt10x 글리프 아트",
+    sets: { ascii: "ascii (블록 없음)", art: "art: ascii + 상자 선", clean: "clean: ascii + 상자 + 도형", block: "블록 요소",
+            "ascii+block": "ascii + 블록", all: "아바타 글리프 전체", "all-noblock": "아바타 글리프 전체 − 블록", custom: "사용자 지정" },
+    arrange: { "": "나란히", stack: "위아래로" },
+    exclude: "뺄 문자",
+    selected: n => `${n}개 선택됨`,
+    candidates: n => `후보 글리프 ${n}개`,
+    stats: s => `글리프 ${s.cols}×${s.rows} · ${s.total}개 중 ${s.used}개 사용 · ${s.ms} ms · 일치도 ${s.sc[0].toFixed(3)} / ${s.sc[1].toFixed(3)} / 윤곽 ${s.sc[2].toFixed(3)}`,
+    copied: " · 복사됨",
+    unreadable: "이미지를 읽을 수 없습니다",
+    tips: {
+      cols: "한 줄의 글리프 수. 많을수록 세밀하지만 결과가 커지고 느려지며, 적을수록 거칠어집니다.",
+      zoom: "미리보기의 화면 크기만 바꿉니다. 생성된 텍스트와 다운로드에는 영향이 없습니다.",
+      gamma: "조정 이미지의 톤 곡선. 1보다 작으면 밝아지고(잉크 많음), 크면 어두워집니다(잉크 적음).",
+      clip: "가장 어둡고 밝은 픽셀을 이 %만큼 잘라낸 뒤 나머지를 늘립니다. 밋밋한 이미지의 대비를 높입니다.",
+      lines: "선 강조 세기: 가는 선을 주변보다 도드라지게 해서 축소 후에도 남게 합니다. 0 = 끔.",
+      lineR: "선 강조의 주변 범위. 작으면 가는 선을, 크면 굵은 획을 살립니다. 선 강조 > 0일 때만 적용됩니다.",
+      smooth: "복잡한 글리프에 주는 감점. 높을수록 평평한 부분이 차분해지지만 질감이 줄고, 0이면 픽셀이 가장 잘 맞습니다.",
+      edge: "대비가 큰 경계 픽셀에 주는 가중치. 높을수록 윤곽을 더 충실히 따르고 전체 톤의 비중은 줄어듭니다.",
+      linear: "밝기를 sRGB 값이 아닌 빛의 양으로 다뤄 중간 톤에 알맞은 양의 잉크를 씁니다. 끄면 예전 방식입니다.",
+      fit: "실험 기능: 셀 단위 톤을 이 글리프 세트가 낼 수 있는 범위로 옮깁니다. 선화에서는 결과가 더 나빴으니 사진에 써 보세요.",
+      coarse: "정확한 픽셀뿐 아니라 셀마다 전체 톤과 배치(3x6 블록)를 맞추는 데 주는 가중치. 0 = 끔.",
+      diffuse: "셀마다 남은 톤 오차를 다음 셀로 넘겨(디더링) 넓은 영역의 밝기를 맞춥니다. 0 = 끔.",
+      refine: "흐린 주변이 흐린 이미지와 맞도록 글리프를 다시 고르는 횟수. 거친 톤 / 확산보다 우선하며 느려집니다. 0 = 끔.",
+      rblur: "정제에 쓰는 흐림 반경(글리프 픽셀). 크면 넓은 영역을, 작으면 세부를 봅니다. 정제 > 0일 때만 적용됩니다.",
+    },
+  },
+};
+const T = () => STR[document.documentElement.lang === "ko" ? "ko" : "en"];
+
 let srcImg = null, lastText = "", job = 0;
+let stats = null;                                       // null, "unreadable", or the last conversion's numbers
+function renderStats() {
+  $("stats").textContent = stats === null ? "" : stats === "unreadable" ? T().unreadable : T().stats(stats) + (stats.copied ? T().copied : "");
+}
 const ctl = ["cols", "gamma", "clip", "lines", "lineR", "smooth", "edge", "coarse", "diffuse", "refine", "rblur"];
 const num = id => parseFloat($(id).value);
 
@@ -243,7 +365,7 @@ function loadPrefs() {
 loadPrefs();
 let gpBlock = 0;
 function gpCount() {
-  $("gp-count").textContent = customSet.size + " selected"; savePrefs();
+  $("gp-count").textContent = T().selected(customSet.size); savePrefs();
   BLOCK_CPS.forEach((b, i) => { $("gp-block").options[i].text = `${b.name} (${b.cps.filter(cp => customSet.has(cp)).length})`; });   // selected per block
 }
 function gpRender() {
@@ -286,7 +408,7 @@ function selectGlyphs() {
   const ex = custom ? new Set() : new Set(Array.from($("exclude").value).map(c => c.codePointAt(0)));   // exclude applies to presets only
   const ok = custom ? cp => customSet.has(cp) : PRESETS[$("set").value];
   const list = GLYPHS.filter(g => ok(g.cp) && !ex.has(g.cp));
-  $("setinfo").textContent = list.length + " candidate glyphs";
+  $("setinfo").textContent = T().candidates(list.length);
   return list;
 }
 
@@ -512,7 +634,7 @@ async function convert() {
   const grad = a => { const g = new Float32Array(W * H); for (let y = 0; y < H - 1; y++) for (let x = 0; x < W - 1; x++) g[y * W + x] = Math.abs(a[y * W + x + 1] - a[y * W + x]) + Math.abs(a[(y + 1) * W + x] - a[y * W + x]); return g; };
   const sc = [4, 12].map(r => corr(boxBlur(ref, W, H, r), boxBlur(R, W, H, r)));
   sc.push(corr(grad(boxBlur(ref, W, H, 2)), grad(boxBlur(R, W, H, 2))));   // line structure: gradient strength of the lightly blurred images
-  $("stats").textContent = `${cols}×${rows} glyphs · ${used} distinct of ${set.length} · ${Math.round(performance.now() - t0)} ms · match ${sc[0].toFixed(3)} / ${sc[1].toFixed(3)} / edge ${sc[2].toFixed(3)}`;
+  stats = { cols, rows, used, total: set.length, ms: Math.round(performance.now() - t0), sc, copied: false }; renderStats();
   for (const b of ["copy", "save", "savepng"]) $(b).disabled = false;
   window.__glyphartDone = true;
 }
@@ -539,32 +661,16 @@ for (const id of [...ctl, "invert", "linear", "fit", "set", "exclude"]) {
 $("zoom").addEventListener("input", syncOut);
 $("arrange").addEventListener("input", () => $("pair").classList.toggle("stack", $("arrange").value === "stack"));
 $("grid").addEventListener("input", () => $("pair").classList.toggle("grid", $("grid").checked));
-const TIPS = {                                          // hover help for the sliders, shown in the status box
-  cols: "Glyphs per row. More columns = finer detail and a bigger, slower conversion; fewer = coarser.",
-  zoom: "On-screen size of the preview only. Does not change the generated text or the downloads.",
-  gamma: "Tone curve on the adjusted image. Below 1 brightens (more ink); above 1 darkens (less ink).",
-  clip: "Clips this % of the darkest and brightest pixels, then stretches the rest. Boosts contrast on flat images.",
-  lines: "Line boost strength: lifts thin lines above their surroundings so they survive down-sampling. 0 = off.",
-  lineR: "Neighbourhood size for line boost. Small catches fine lines, large favours broad strokes. Needs lines > 0.",
-  smooth: "Penalty on busy glyphs. Higher = calmer glyphs in flat areas but less texture; 0 = best pixel match.",
-  edge: "Extra weight on pixels at contrast edges. Higher = outlines followed more closely, overall tone matters less.",
-  linear: "Treat image brightness as light, not sRGB codes, so mid-tones get the right amount of ink. Off = old behaviour.",
-  fit: "Experimental: shift cell-scale tone into the range this glyph set can produce. Measured worse on line art; try on photos.",
-  coarse: "Extra weight on matching each cell's overall tone and layout (3x6 blocks), not just exact pixels. 0 = off.",
-  diffuse: "Pass each cell's leftover tone error to the cells after it (dithering), so regional brightness stays right. 0 = off.",
-  refine: "Passes that re-pick glyphs so the blurred neighbourhood matches the blurred image. Overrides coarse / diffuse; slower. 0 = off.",
-  rblur: "Blur radius (glyph pixels) used by refine. Larger = judge bigger areas; smaller = finer. Needs refine > 0.",
-};
-for (const [id, tip] of Object.entries(TIPS)) {
+for (const id of Object.keys(STR.en.tips)) {             // hover help for the sliders, shown in the status box
   const lab = $(id).closest("label");
-  lab.addEventListener("mouseenter", () => { $("status").textContent = tip; });
+  lab.addEventListener("mouseenter", () => { $("status").textContent = T().tips[id]; });
   lab.addEventListener("mouseleave", () => { $("status").textContent = ""; });
 }
 
 function load(file) {
   const url = URL.createObjectURL(file), img = new Image();
   img.onload = () => { srcImg = img; $("thumb").src = url; $("drop").classList.add("has-img"); convert(); };
-  img.onerror = () => { $("stats").textContent = "could not read that image"; };
+  img.onerror = () => { stats = "unreadable"; renderStats(); };
   img.src = url;
 }
 $("drop").addEventListener("click", () => $("file").click());
@@ -577,7 +683,7 @@ document.addEventListener("drop", e => { e.preventDefault(); e.dataTransfer.file
 document.addEventListener("paste", e => { const f = [...(e.clipboardData?.files || [])].find(f => f.type.startsWith("image/")); if (f) load(f); });
 
 function download(name, blob) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
-$("copy").addEventListener("click", async () => { try { await navigator.clipboard.writeText(lastText); $("stats").textContent += " · copied"; } catch { $("out").focus(); } });
+$("copy").addEventListener("click", async () => { try { await navigator.clipboard.writeText(lastText); if (stats && stats !== "unreadable") { stats.copied = true; renderStats(); } } catch { $("out").focus(); } });
 $("save").addEventListener("click", () => download("glyphart.txt", new Blob([lastText], { type: "text/plain;charset=utf-8" })));
 $("savepng").addEventListener("click", async () => {      // render the text in Bt10x Mono, page colors
   await document.fonts.load("24px 'Bt10x Mono'");
@@ -590,6 +696,19 @@ $("savepng").addEventListener("click", async () => {      // render the text in 
   lines.forEach((ln, y) => { let x = 0; for (const c of ln) { cx.fillText(c, x * cw, y * ch + asc); x++; } });
   cv.toBlob(b => download("glyphart.png", b));
 });
+
+// locale: <html lang> is set by the inline scripts (and the EN / 한국어 buttons); redo the strings built here when it changes
+function localize() {
+  const t = T();
+  document.title = t.title;
+  for (const o of $("set").options) o.text = t.sets[o.value];
+  for (const o of $("arrange").options) o.text = t.arrange[o.value];
+  $("exclude").placeholder = t.exclude;
+  $("status").textContent = "";
+  gpCount(); selectGlyphs(); renderStats();
+}
+new MutationObserver(localize).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
+localize();
 
 syncCustom(false); syncOut(); selectGlyphs();
 // dev/test hook: ?img=<url>&cols=60&invert=1&gamma=0.6&set=ascii loads an image without the file picker

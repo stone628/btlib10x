@@ -6,7 +6,7 @@ import { stripHomeLink } from "../scripts/standalone-strip.mjs";
 const page = (name: string) => readFileSync(new URL(`../web/${name}`, import.meta.url), "utf8");
 
 describe("landing page link", () => {
-  for (const name of ["terminal.html", "avatar.html", "gallery.html"]) {
+  for (const name of ["terminal.html", "avatar.html", "gallery.html", "glyphart.html"]) {
     it(`${name} links home as the last item of its top row`, () => {
       const html = page(name);
       const link = html.match(/<a id="home-link" class="link-button" href="\.\/"[^>]*>(.*?)<\/a>/);

@@ -33,8 +33,8 @@
               saved = true;
             } catch {}
           }
-          // Storage blocked: carry the choice to the terminal and the
-          // avatar creator in their URLs.
+          // Storage blocked: carry the choice to the terminal, the avatar
+          // creator and the glyph art converter in their URLs.
           const term = document.getElementById("card-terminal");
           if (term) term.href = saved ? "terminal.html" : `terminal.html?lang=${locale}`;
           const avatar = document.getElementById("card-avatar");
@@ -44,6 +44,8 @@
             else url.searchParams.set("lang", locale);
             avatar.href = `avatar.html${url.search}`;
           }
+          const glyphart = document.getElementById("card-glyphart");
+          if (glyphart) glyphart.href = saved ? "glyphart.html" : `glyphart.html?lang=${locale}`;
           for (const b of document.querySelectorAll("#lang button")) {
             b.setAttribute("aria-pressed", String(b.dataset.lang === locale));
           }
