@@ -615,13 +615,9 @@ interface MutableCritState {
   ammoBins: AmmoBins;
   rows: CriticalEffect[];
   killedReason: DestroyedReason | null;
-  /** Guard against pathological recursion in ammo-explosion cascades. */
-  depth: number;
   /** Phase-start slot flags for the exhaustion (transfer) test. */
   base: CritMask | undefined;
 }
-
-const MAX_RECURSION = 4;
 
 export function resolveCriticalHits(input: ResolveCriticalsInput): CriticalResolution {
   const state: MutableCritState = {
@@ -634,7 +630,6 @@ export function resolveCriticalHits(input: ResolveCriticalsInput): CriticalResol
     ammoBins: { ...input.ammoBins },
     rows: [],
     killedReason: null,
-    depth: 0,
     base: input.baseCritSlotsDestroyed,
   };
   const topRoll = runDetermining(input.rng, mechDefFor(input), input.source, state);
@@ -661,8 +656,6 @@ function runDetermining(
   source: CritSource,
   state: MutableCritState,
 ): number | null {
-  if (state.depth > MAX_RECURSION) return null;
-  state.depth += 1;
   // A hit-location critical chance on an already destroyed location moves
   // inward unchanged, one Determining roll in the next location (TW p.124).
   if (
@@ -676,7 +669,6 @@ function runDetermining(
       next === null
         ? null
         : runDetermining(rng, def, { ...source, location: next, struck: false }, state);
-    state.depth -= 1;
     return moved;
   }
   const det: DeterminingResult =
@@ -702,11 +694,9 @@ function runDetermining(
       zeroLocationStructure(state.damage, source.location);
       state.rows.push({ kind: "limbBlownOff", limb: source.location, rolls: [det.roll] });
     }
-    state.depth -= 1;
     return det.roll;
   }
   if (det.kind === "none") {
-    state.depth -= 1;
     return det.roll;
   }
   // det.count hits: walk the determining against the source. If the source
@@ -728,13 +718,11 @@ function runDetermining(
       for (let i = 0; i < det.count; i++) {
         state.rows.push({ kind: "noEffect", rolls: [] });
       }
-      state.depth -= 1;
       return det.roll;
     }
     // The crit count carries inward.
     const { carried: _carried, ...rest } = source;
     runDetermining(rng, def, { ...rest, location: next, struck: false, carried: det.count }, state);
-    state.depth -= 1;
     return det.roll;
   }
   let remaining = det.count;
@@ -757,7 +745,6 @@ function runDetermining(
     }
     remaining -= 1;
   }
-  state.depth -= 1;
   return det.roll;
 }
 
