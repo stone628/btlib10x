@@ -7,8 +7,11 @@ import {
   hasKey,
   KEY_EVENT,
   myPublicId,
+  type PublicEntry,
+  publicGet,
   type UnitSummary,
   withKey,
+  withMarks,
 } from "./gallery.client";
 import { errorText, gmsg } from "./gallery.i18n";
 import { initKeyPanel } from "./gallery.key";
@@ -249,10 +252,15 @@ async function entryGrid(
     more.disabled = true;
     more.textContent = gmsg().loading;
     try {
-      const page = await api<{ entries: GalleryEntry[]; next: string | null }>(
-        `/avatars?${query}${cursor === null ? "" : `&cursor=${encodeURIComponent(cursor)}`}`,
-      );
-      for (const e of page.entries) {
+      const path = `/avatars?${query}${cursor === null ? "" : `&cursor=${encodeURIComponent(cursor)}`}`;
+      // `mine=1` is this key's own list, so it goes with the key and is never
+      // cached; every other list is the shared, cached read.
+      const page = query.includes("mine=1")
+        ? await api<{ entries: PublicEntry[]; next: string | null }>(path)
+        : await publicGet<{ entries: PublicEntry[]; next: string | null }>(path);
+      // Then this browser's likes and own entries for just this page.
+      const entries = await withMarks(page.entries);
+      for (const e of entries) {
         if (e.id === opts.skip) continue;
         const c = card(e, opts.showUnit ?? true);
         if (e.id === opts.highlight) {
@@ -313,7 +321,7 @@ async function renderMechs(host: HTMLElement, q: string): Promise<void> {
   form.append(hidden, input);
   host.append(form);
   try {
-    const { units, unlinked } = await api<{
+    const { units, unlinked } = await publicGet<{
       units: UnitSummary[];
       unlinked: { count: number; top: string | null };
     }>(`/units?q=${encodeURIComponent(q.trim())}`);
@@ -359,7 +367,9 @@ async function renderMechs(host: HTMLElement, q: string): Promise<void> {
 async function renderUnit(host: HTMLElement, slug: string): Promise<void> {
   // The unit's name and art come with its entries; take them from the first one.
   try {
-    const first = await api<{ entries: GalleryEntry[] }>(
+    // Same URL as the grid's first page below, so that request is answered
+    // by the browser's copy (a 304 at most).
+    const first = await publicGet<{ entries: PublicEntry[] }>(
       `/avatars?sort=top&unit=${encodeURIComponent(slug)}`,
     );
     const unit = first.entries[0]?.unit;
@@ -400,7 +410,8 @@ async function renderMine(host: HTMLElement): Promise<void> {
 async function renderEntry(host: HTMLElement, id: number): Promise<void> {
   let entry: GalleryEntry;
   try {
-    entry = (await api<{ entry: GalleryEntry }>(`/avatars/${id}`)).entry;
+    const pub = (await publicGet<{ entry: PublicEntry }>(`/avatars/${id}`)).entry;
+    [entry] = (await withMarks([pub])) as [GalleryEntry];
   } catch (e) {
     if (e instanceof ApiError && (e.code === "not_found" || e.code === "under_review")) {
       // A hidden entry (awaiting approval, reported, banned) is "under review".

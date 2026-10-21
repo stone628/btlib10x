@@ -1,7 +1,8 @@
 /// <reference types="node" />
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { bumpVersion, etagMatches } from "../functions/api/ag/_lib/cache";
 import type {
   Ctx,
   D1Database,
@@ -15,13 +16,17 @@ import * as reportRoute from "../functions/api/ag/avatars/[id]/report";
 import * as voteRoute from "../functions/api/ag/avatars/[id]/vote";
 import * as avatarsRoute from "../functions/api/ag/avatars/index";
 import * as keysRoute from "../functions/api/ag/keys";
+import * as meRoute from "../functions/api/ag/me";
 import * as unitsRoute from "../functions/api/ag/units";
 import { keyPublicId } from "../web/avatar/avatar.gallery";
 
 /**
  * The gallery API end to end: real route handlers over the real migration in
  * an in-memory SQLite (node:sqlite) behind a small D1 adapter, with Turnstile,
- * MUL and Cloudflare Access answered by a stubbed fetch.
+ * MUL and Cloudflare Access answered by a stubbed fetch. The edge cache is a
+ * Map-backed stand-in for `caches.default`, installed only by the caching
+ * tests; elsewhere there is no `caches` global, as in plain Node, and every
+ * read goes to the database.
  */
 
 type Sqlite = typeof import("node:sqlite");
@@ -32,10 +37,13 @@ try {
   // Node without node:sqlite (< 22.5): the suite is skipped.
 }
 
-const MIGRATION = readFileSync(
-  new URL("../migrations/ag/0001_gallery.sql", import.meta.url),
-  "utf8",
-);
+/** Every migration in order, as a fresh deployment applies them. */
+const MIGRATIONS_DIR = new URL("../migrations/ag/", import.meta.url);
+const MIGRATION = readdirSync(MIGRATIONS_DIR)
+  .filter((f) => f.endsWith(".sql"))
+  .sort()
+  .map((f) => readFileSync(new URL(f, MIGRATIONS_DIR), "utf8"))
+  .join("\n");
 
 function d1(db: import("node:sqlite").DatabaseSync): D1Database {
   const exec = (sql: string, binds: unknown[]): D1Result => {
@@ -87,6 +95,8 @@ let env: Env;
 let mulCalls = 0;
 let mulDown = false;
 let accessKeys: CryptoKeyPair;
+/** Promises handed to `waitUntil`; `call` settles them before returning. */
+let pending: Promise<unknown>[] = [];
 
 function ctx(
   method: string,
@@ -107,7 +117,9 @@ function ctx(
     request: new Request(`https://bt10x.stoneworks.dev/api/ag${path}`, init),
     env,
     params: (opts.params ?? {}) as Record<never, string>,
-    waitUntil: () => {},
+    waitUntil: (p) => {
+      pending.push(p);
+    },
   };
 }
 
@@ -116,7 +128,31 @@ async function call<T = Record<string, unknown>>(
   c: Ctx<never>,
 ): Promise<{ status: number; body: T }> {
   const res = await handler(c);
+  await Promise.all(pending.splice(0));
   return { status: res.status, body: (await res.json()) as T };
+}
+
+/** Like `call`, but keeps the headers and copes with a body-less 304. */
+async function raw<T = Record<string, unknown>>(
+  handler: (c: Ctx<never>) => Promise<Response>,
+  c: Ctx<never>,
+): Promise<{ status: number; headers: Headers; body: T | null }> {
+  const res = await handler(c);
+  await Promise.all(pending.splice(0));
+  const text = await res.text();
+  return {
+    status: res.status,
+    headers: res.headers,
+    body: text === "" ? null : (JSON.parse(text) as T),
+  };
+}
+
+/** Marks from `GET /me?ids=`. */
+async function marks(key: string | undefined, ids: number[]) {
+  return call<{ voted: number[]; mine: number[] }>(
+    meRoute.onRequestGet as never,
+    ctx("GET", `/me?ids=${ids.join(",")}`, key === undefined ? {} : { key }),
+  );
 }
 
 async function mintKey(): Promise<string> {
@@ -187,6 +223,7 @@ describe.skipIf(sqlite === null)("gallery API", () => {
     };
     mulCalls = 0;
     mulDown = false;
+    pending = [];
     accessKeys ??= (await crypto.subtle.generateKey(
       {
         name: "RSASSA-PKCS1-v1_5",
@@ -257,14 +294,21 @@ describe.skipIf(sqlite === null)("gallery API", () => {
     const bob = await mintKey();
     const a = (await submit(alice)).body.id;
     const b = (await submit(bob, `${Q}&rh=2622`)).body.id;
-    const list = await call<{ entries: { id: number; by: string; mine: boolean }[] }>(
+    const list = await call<{ entries: Record<string, unknown>[] }>(
       avatarsRoute.onRequestGet as never,
       ctx("GET", "/avatars?sort=new", { key: alice }),
     );
     expect(list.body.entries).toEqual([
-      expect.objectContaining({ id: b, by: await keyPublicId(bob), mine: false }),
-      expect.objectContaining({ id: a, by: await keyPublicId(alice), mine: true }),
+      expect.objectContaining({ id: b, by: await keyPublicId(bob) }),
+      expect.objectContaining({ id: a, by: await keyPublicId(alice) }),
     ]);
+    // The list is public: nothing in it about who asked.
+    for (const e of list.body.entries) {
+      expect(e).not.toHaveProperty("mine");
+      expect(e).not.toHaveProperty("voted");
+    }
+    // "yours" comes from /me instead.
+    expect((await marks(alice, [a, b])).body).toEqual({ voted: [], mine: [a] });
     const mine = await call<{ entries: { id: number }[] }>(
       avatarsRoute.onRequestGet as never,
       ctx("GET", "/avatars?mine=1", { key: bob }),
@@ -325,13 +369,16 @@ describe.skipIf(sqlite === null)("gallery API", () => {
     expect((await vote(a, y)).body).toEqual({ voted: true, votes: 1 });
     expect((await vote(b, y)).body).toEqual({ voted: true, votes: 2 });
     expect((await vote(b, y)).body).toEqual({ voted: false, votes: 1 });
-    const list = await call<{
-      entries: { id: number; votes: number; voted: boolean; mine: boolean }[];
-    }>(avatarsRoute.onRequestGet as never, ctx("GET", "/avatars?sort=top", { key: a }));
-    expect(list.body.entries.map((e) => [e.id, e.votes, e.voted, e.mine])).toEqual([
-      [y, 1, true, true],
-      [x, 0, false, true],
+    const list = await call<{ entries: { id: number; votes: number }[] }>(
+      avatarsRoute.onRequestGet as never,
+      ctx("GET", "/avatars?sort=top", { key: a }),
+    );
+    expect(list.body.entries.map((e) => [e.id, e.votes])).toEqual([
+      [y, 1],
+      [x, 0],
     ]);
+    expect((await marks(a, [x, y])).body).toEqual({ voted: [y], mine: [x, y] });
+    expect((await marks(b, [x, y])).body).toEqual({ voted: [], mine: [] });
   });
 
   it("pages through entries with a cursor", async () => {
@@ -589,5 +636,209 @@ describe.skipIf(sqlite === null)("gallery API", () => {
       }),
     );
     expect(r.body).toMatchObject({ error: "bad_origin" });
+  });
+  describe("caching (functions/api/ag/_lib/cache.ts)", () => {
+    /** Map-backed stand-in for `caches.default`; counts what it serves. */
+    let edge: Map<string, string>;
+    let hits: number;
+
+    beforeEach(() => {
+      edge = new Map();
+      hits = 0;
+      vi.stubGlobal("caches", {
+        default: {
+          match: async (req: Request) => {
+            const body = edge.get(req.url);
+            if (body === undefined) return undefined;
+            hits++;
+            return new Response(body, { headers: { "content-type": "application/json" } });
+          },
+          put: async (req: Request, res: Response) => {
+            // The edge copy is told to live EDGE_TTL at the edge only.
+            expect(res.headers.get("cache-control")).toMatch(/s-maxage=\d+/);
+            edge.set(req.url, await res.text());
+          },
+        },
+      });
+    });
+
+    const list = (query: string, opts: { key?: string; headers?: Record<string, string> } = {}) =>
+      raw<{ entries: { id: number; votes: number }[] }>(
+        avatarsRoute.onRequestGet as never,
+        ctx("GET", `/avatars?${query}`, opts),
+      );
+    const version = async () =>
+      (await env.DB.prepare("SELECT v FROM ag_meta WHERE k = 'version'").first<{ v: number }>())?.v;
+
+    it("serves public reads from the edge until a write bumps the version", async () => {
+      const key = await mintKey();
+      const id = (await submit(key)).body.id;
+      const first = await list("sort=top");
+      expect(first.status).toBe(200);
+      expect(hits).toBe(0);
+      // A change made behind the API's back (no version bump) stays hidden:
+      // proof the second read came from the cache, not D1.
+      await env.DB.prepare("UPDATE ag_avatars SET votes = 99").run();
+      const second = await list("sort=top");
+      expect(hits).toBe(1);
+      expect(second.body).toEqual(first.body);
+      // A like goes through the API, bumps the version, and is seen at once.
+      await call(
+        voteRoute.onRequestPost as never,
+        ctx("POST", `/avatars/${id}/vote`, { key, params: { id: String(id) } }),
+      );
+      const third = await list("sort=top");
+      expect(third.body?.entries[0]?.votes).toBe(1);
+    });
+
+    it("shows a new submission on the very next read", async () => {
+      const key = await mintKey();
+      await submit(key);
+      expect((await list("sort=new")).body?.entries).toHaveLength(1);
+      await submit(key, `${Q}&rh=2622`);
+      expect((await list("sort=new")).body?.entries).toHaveLength(2);
+      const units = await raw<{ units: { count: number }[] }>(
+        unitsRoute.onRequestGet as never,
+        ctx("GET", "/units"),
+      );
+      expect(units.body?.units[0]?.count).toBe(2);
+    });
+
+    it("shares one copy between keys and anonymous visitors", async () => {
+      const alice = await mintKey();
+      await submit(alice);
+      const anon = await list("sort=top");
+      const keyed = await list("sort=top", { key: alice });
+      expect(keyed.body).toEqual(anon.body);
+      expect(hits).toBe(1);
+    });
+
+    it("answers 304 to a browser holding the current ETag", async () => {
+      await submit(await mintKey());
+      const first = await list("sort=top");
+      const etag = first.headers.get("etag");
+      expect(etag).toMatch(/^W\/"/);
+      expect(first.headers.get("cache-control")).toBe("public, no-cache");
+      const again = await list("sort=top", { headers: { "if-none-match": etag ?? "" } });
+      expect(again.status).toBe(304);
+      expect(again.body).toBeNull();
+      expect(again.headers.get("etag")).toBe(etag);
+      // Any write moves the ETag, so the browser gets the new body.
+      await submit(await mintKey(), `${Q}&rh=2622`);
+      const after = await list("sort=top", { headers: { "if-none-match": etag ?? "" } });
+      expect(after.status).toBe(200);
+      expect(after.headers.get("etag")).not.toBe(etag);
+    });
+
+    it("ignores junk query parameters in the cache key", async () => {
+      await submit(await mintKey());
+      await list("sort=top");
+      await list("sort=top&x=1");
+      await list("x=2&sort=top");
+      expect(edge.size).toBe(1);
+      expect(hits).toBe(2);
+    });
+
+    it("never caches mine=1, errors, or under_review", async () => {
+      env.AUTO_PUBLISH = "false";
+      const key = await mintKey();
+      const id = (await submit(key)).body.id;
+      const mine = await list("mine=1", { key });
+      expect(mine.headers.get("cache-control")).toBe("no-store");
+      const hidden = await raw(
+        entryRoute.onRequestGet as never,
+        ctx("GET", `/avatars/${id}`, { params: { id: String(id) } }),
+      );
+      expect(hidden.status).toBe(404);
+      expect(hidden.headers.get("cache-control")).toBe("no-store");
+      expect((await list("sort=top&cursor=bad")).status).toBe(400);
+      expect(edge.size).toBe(0);
+      // Approved: the entry page shows it right away.
+      await env.DB.batch([env.DB.prepare("UPDATE ag_avatars SET hidden = 0"), bumpVersion(env.DB)]);
+      const shown = await raw(
+        entryRoute.onRequestGet as never,
+        ctx("GET", `/avatars/${id}`, { params: { id: String(id) } }),
+      );
+      expect(shown.status).toBe(200);
+    });
+
+    it("bumps the version on every public write", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const token = await accessJwt({ aud: AUD, iss: `https://${TEAM}`, exp: now + 60 });
+      const owner = await mintKey();
+      const other = await mintKey();
+      const steps: [string, () => Promise<unknown>][] = [];
+      let id = 0;
+      steps.push(["submit", async () => (id = (await submit(owner)).body.id)]);
+      steps.push([
+        "vote",
+        () =>
+          call(
+            voteRoute.onRequestPost as never,
+            ctx("POST", `/avatars/${id}/vote`, { key: other, params: { id: String(id) } }),
+          ),
+      ]);
+      steps.push([
+        "report",
+        () =>
+          call(
+            reportRoute.onRequestPost as never,
+            ctx("POST", `/avatars/${id}/report`, { key: other, params: { id: String(id) } }),
+          ),
+      ]);
+      steps.push(["hide", () => adminCall("POST", ["entries", String(id), "hide"], token)]);
+      steps.push(["unhide", () => adminCall("POST", ["entries", String(id), "unhide"], token)]);
+      steps.push([
+        "fix unit",
+        () => adminCall("PUT", ["units", "atlas-as7-d-dc"], token, { name: "Atlas", image: "" }),
+      ]);
+      steps.push([
+        "owner delete",
+        () =>
+          call(
+            entryRoute.onRequestDelete as never,
+            ctx("DELETE", `/avatars/${id}`, { key: owner, params: { id: String(id) } }),
+          ),
+      ]);
+      for (const [name, step] of steps) {
+        const before = await version();
+        await step();
+        expect({ name, moved: (await version()) !== before }).toEqual({ name, moved: true });
+      }
+    });
+
+    it("keeps serving, uncached, before the version table exists", async () => {
+      await submit(await mintKey());
+      await env.DB.prepare("DROP TABLE ag_meta").run();
+      const r = await list("sort=top");
+      expect(r.status).toBe(200);
+      expect(r.body?.entries).toHaveLength(1);
+      expect(r.headers.get("cache-control")).toBe("no-store");
+      expect(edge.size).toBe(0);
+    });
+  });
+
+  it("answers /me with the key's marks, empty for no key, and checks the ids", async () => {
+    const key = await mintKey();
+    const id = (await submit(key)).body.id;
+    expect((await marks(undefined, [id])).body).toEqual({ voted: [], mine: [] });
+    expect((await marks("A".repeat(43), [id])).body).toEqual({ voted: [], mine: [] });
+    expect((await marks(key, [])).body).toEqual({ voted: [], mine: [] });
+    expect((await marks(key, [id, id, 999])).body).toEqual({ voted: [], mine: [id] });
+    const bad = await call(meRoute.onRequestGet as never, ctx("GET", "/me?ids=1,x", { key }));
+    expect(bad.body).toMatchObject({ error: "bad_ids" });
+    const many = Array.from({ length: 201 }, (_, i) => i + 1);
+    expect((await marks(key, many)).body).toMatchObject({ error: "too_many_ids" });
+    // 200 ids is more than D1's 100 bound parameters: json_each takes them as one.
+    expect((await marks(key, many.slice(0, 200))).body).toEqual({ voted: [], mine: [id] });
+  });
+
+  it("matches ETags weakly and in lists", () => {
+    expect(etagMatches(null, 'W/"a"')).toBe(false);
+    expect(etagMatches('W/"a"', 'W/"a"')).toBe(true);
+    expect(etagMatches('"a"', 'W/"a"')).toBe(true);
+    expect(etagMatches('"b", W/"a"', 'W/"a"')).toBe(true);
+    expect(etagMatches("*", 'W/"a"')).toBe(true);
+    expect(etagMatches('W/"b"', 'W/"a"')).toBe(false);
   });
 });

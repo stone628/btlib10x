@@ -104,12 +104,13 @@ Files in `_lib/` export no request handlers, so Pages makes no routes from them.
 | `POST /api/ag/keys` | Turnstile | `{ turnstile }`: mint a device key; returns `{ key, pid }` once |
 | `GET /api/ag/keys` | device key | check a key moved from another browser: `{ pid }`, or `no_key` / `banned` |
 | `POST /api/ag/avatars` | device key + Turnstile | `{ q, mul?, turnstile }`: validate, canonicalize, insert, or return the existing entry (`existing: true`) |
-| `GET /api/ag/avatars?sort=top\|new&unit=&mine=1&cursor=` | none (key for `mine=1`) | a page of `{ id, q, unit, votes, created, by, voted, mine }`; `unit` is null when unlinked, `by` the submitter's public ID. Filter by one unit slug, `unit=none` (no 'Mech) or `mine=1` (your own). Hidden entries excluded |
-| `GET /api/ag/avatars/:id` | none | one visible entry; a hidden one (awaiting approval, reported, banned) is `404 under_review` without its avatar, a missing one `404 not_found` |
+| `GET /api/ag/avatars?sort=top\|new&unit=&mine=1&cursor=` | none (key for `mine=1`) | a page of `{ id, q, unit, votes, created, by }`; `unit` is null when unlinked, `by` the submitter's public ID. Filter by one unit slug, `unit=none` (no 'Mech) or `mine=1` (your own). Hidden entries excluded. Cached (§3a), except `mine=1` |
+| `GET /api/ag/avatars/:id` | none | one visible entry; a hidden one (awaiting approval, reported, banned) is `404 under_review` without its avatar, a missing one `404 not_found`. Cached (§3a), the 404s not |
+| `GET /api/ag/me?ids=1,2,…` | device key (optional) | `{ voted, mine }`: which of up to 200 entries your key liked and submitted. Empty lists with no key or an unknown one. Never cached |
 | `DELETE /api/ag/avatars/:id` | device key (owner) | the submitter removes their entry |
 | `POST /api/ag/avatars/:id/vote` | device key | toggle your like |
 | `POST /api/ag/avatars/:id/report` | device key | report once; auto-hides at the threshold (§5) |
-| `GET /api/ag/units?q=` | none | 'Mechs with visible entries, their counts and top avatar, plus `unlinked: { count, top }` for the no-'Mech group |
+| `GET /api/ag/units?q=` | none | 'Mechs with visible entries, their counts and top avatar, plus `unlinked: { count, top }` for the no-'Mech group. Cached (§3a) |
 | `/api/ag/admin/*` | Cloudflare Access | `GET me`; `GET entries?filter=reported\|hidden\|all`; `POST entries/:id/hide`, `unhide`, `ban-owner`; `DELETE entries/:id`; `PUT units/:slug { name, image }`; `GET export` (most-liked avatar per 'Mech, ties to the earliest) |
 
 Votes are called likes on the pages; the API and tables keep the name `votes`.
@@ -117,6 +118,50 @@ Votes are called likes on the pages; the API and tables keep the name `votes`.
 Rate limits are counted per device key and per salted IP hash in `ag_rate`
 (defaults in §5a): submissions, likes and reports per day, and new keys per
 IP per day. Re-submitting an entry that already exists costs nothing.
+
+## 3a. Caching
+
+The public reads (`/avatars` lists, `/avatars/:id`, `/units`) are cached;
+`/config` has its own `max-age=300`; everything else, including admin routes,
+`mine=1` and `/me`, is `no-store`. Code: `functions/api/ag/_lib/cache.ts`.
+
+**Same bytes for everyone.** Entries carry nothing about the visitor, so one
+copy serves all. The page fetches them without the device key, then asks
+`GET /api/ag/me?ids=…` for the visitor's likes and own entries on that page
+and paints them in (`withMarks` in `gallery.client.ts`). Before this split
+each entry had `voted` and `mine`, which made every response personal.
+
+**Two layers.**
+- Edge: the Workers Cache API (`caches.default`) in the data center that
+  runs the request. A hit skips the route's D1 queries. Pages still invokes
+  the Function, so it saves D1 reads and latency, not Function requests.
+  The Cache API stores nothing on `*.pages.dev` or under `wrangler pages
+  dev`; it works on `bt10x.stoneworks.dev`.
+- Browser: `cache-control: public, no-cache` with a weak ETag. The browser
+  keeps the body and revalidates it each time; an unchanged gallery answers
+  a body-less `304` before the cache or D1 is touched.
+
+**Invalidation by version.** `ag_meta.version` is a counter that every write
+changing public data bumps in the same D1 batch: submit, like, report, owner
+delete, and every admin write (hide, unhide, delete, ban, fix 'Mech). It is
+part of the edge cache key and the ETag, so after a bump old copies are never
+asked for again, in every data center at once. A cached read costs one
+single-row D1 read instead of the route's queries; any change shows on the
+next request. Old copies age out after `EDGE_TTL` (1 hour).
+
+- Cache keys are built from the parsed parameters (sort, unit, cursor, page
+  size; the trimmed search for `/units`), not the raw URL, so junk params
+  cannot multiply copies.
+- Errors and `under_review` are never cached.
+- `CACHE_SCHEMA` in `cache.ts` is in every key and ETag. Bump it when a
+  cached response changes shape, since deploys do not clear the edge.
+- An edit made with `wrangler d1 execute` does not bump the version and can
+  stay hidden for up to an hour. Run this afterwards to show it at once:
+  `INSERT INTO ag_meta (k, v) VALUES ('version', 1) ON CONFLICT (k) DO UPDATE SET v = v + 1`.
+- If `ag_meta` is missing (migration 0002 not applied), reads are served
+  uncached and writes fail. Apply it before deploying.
+- Likes bump the version too, so each like makes the next read of each list a
+  miss. This keeps counts consistent with the button the voter just pressed.
 
 ## 4. Identity and authentication
 
@@ -211,7 +256,8 @@ random string; it salts the IP hashes in `ag_rate`).
 
 ## 6. Data model (D1)
 
-The schema is `migrations/ag/0001_gallery.sql`. Every table and index is
+The schema is `migrations/ag/0001_gallery.sql` plus
+`0002_cache_version.sql` (`ag_meta`). Every table and index is
 prefixed `ag_`, so the gallery can share a D1 database with other features.
 
 | table | holds |
@@ -222,6 +268,7 @@ prefixed `ag_`, so the gallery can share a D1 database with other features.
 | `ag_votes` | `(avatar, voter)` pairs, one like per key per entry |
 | `ag_reports` | `(avatar, voter)` pairs, one report per key per entry |
 | `ag_rate` | `(who, action, day)` counters; `who` is a key hash or salted IP hash |
+| `ag_meta` | `(k, v)` settings; `version` is the cache version (§3a) |
 
 - `UNIQUE (q, unit)` merges duplicate submissions for the same 'Mech. SQLite
   treats NULLs as distinct there, so the partial unique index
@@ -287,7 +334,7 @@ Strings go through `web/avatar/gallery.i18n.ts` (en/ko).
 
 | file | what |
 |---|---|
-| `migrations/ag/0001_gallery.sql` | schema (§6) |
+| `migrations/ag/0001_gallery.sql`, `0002_cache_version.sql` | schema (§6) |
 | `migrations/ag/wrangler.local.toml` | local development only: where `d1 execute --local` finds the database |
 | `functions/api/ag/config.ts` | public settings for the pages |
 | `functions/api/ag/keys.ts` | mint a device key (Turnstile) |
@@ -295,8 +342,9 @@ Strings go through `web/avatar/gallery.i18n.ts` (en/ko).
 | `functions/api/ag/avatars/[id].ts` | one entry; owner delete |
 | `functions/api/ag/avatars/[id]/vote.ts`, `report.ts` | like toggle, report |
 | `functions/api/ag/units.ts` | 'Mechs with entries |
+| `functions/api/ag/me.ts` | the visitor's likes and own entries for a page of ids |
 | `functions/api/ag/admin/[[path]].ts` | admin routes |
-| `functions/api/ag/_lib/` | `cf.ts` (hand-written D1/Pages types), `config.ts` (§5a), `http.ts`, `auth.ts` (device keys, IP hash), `rate.ts`, `turnstile.ts`, `mul.ts` (MUL fetch and parsing), `access.ts` (Access JWT check), `gallery.ts` (queries) |
+| `functions/api/ag/_lib/` | `cf.ts` (hand-written D1/Pages types), `config.ts` (§5a), `http.ts`, `auth.ts` (device keys, IP hash), `rate.ts`, `turnstile.ts`, `mul.ts` (MUL fetch and parsing), `access.ts` (Access JWT check), `gallery.ts` (queries), `cache.ts` (edge and browser caching, §3a) |
 | `web/avatar/avatar.gallery.ts` | shared by pages and functions: avatar validation and canonical form, MUL URL parsing, slug prettifier, public IDs |
 | `web/avatar/avatar.compose.ts` | avatar box drawing, shared by the creator, the gallery and the server |
 | `web/avatar/gallery.client.ts` | browser API client: device key, public ID, Turnstile |
@@ -324,10 +372,12 @@ Strings go through `web/avatar/gallery.i18n.ts` (en/ko).
    into `ACCESS_TEAM_DOMAIN`, both as plain variables. `*.pages.dev` preview
    URLs, which Access does not cover, fail closed.
 5. Create the tables once, from the repo root, signed in with
-   `npx wrangler login`:
-   `npx wrangler d1 execute <database-name> --remote --file=migrations/ag/0001_gallery.sql`.
-   The statements use `IF NOT EXISTS`, so running it again is harmless, but it
-   does not alter tables that already exist.
+   `npx wrangler login`, running each migration in order:
+   `npx wrangler d1 execute <database-name> --remote --file=migrations/ag/0001_gallery.sql`,
+   then the same with `0002_cache_version.sql`.
+   The statements use `IF NOT EXISTS`, so running them again is harmless, but
+   they do not alter tables that already exist. An existing database needs
+   only the new file.
 6. Deploy.
 
 ### Local development
@@ -346,7 +396,8 @@ From the repo root:
 
 2. Build the site: `npm run dist:web`.
 3. Create the local tables (once; kept in `.wrangler/state`, gitignored):
-   `npx wrangler d1 execute DB --local -c migrations/ag/wrangler.local.toml --persist-to .wrangler/state --file=migrations/ag/0001_gallery.sql`
+   `npx wrangler d1 execute DB --local -c migrations/ag/wrangler.local.toml --persist-to .wrangler/state --file=migrations/ag/0001_gallery.sql`,
+   then the same with `0002_cache_version.sql`
 4. Serve: `npx wrangler pages dev dist/web --d1 DB=ag-local`, then open
    `http://localhost:8788/avatar` and `http://localhost:8788/gallery`.
 

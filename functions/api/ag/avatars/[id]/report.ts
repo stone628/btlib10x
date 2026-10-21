@@ -1,4 +1,5 @@
 import { ipHash, requireVoter } from "../../_lib/auth";
+import { bumpVersion } from "../../_lib/cache";
 import type { Handler } from "../../_lib/cf";
 import { config } from "../../_lib/config";
 import { recountReports } from "../../_lib/gallery";
@@ -21,6 +22,12 @@ export const onRequestPost: Handler<"id"> = ({ request, env, params }) =>
         "INSERT INTO ag_reports (avatar, voter) VALUES (?, ?) ON CONFLICT DO NOTHING",
       ).bind(id, voter),
       recountReports(env.DB, id, cfg.reportHideThreshold),
+      // A report may cross the threshold and hide the entry, which must
+      // drop it from the cached lists at once (_lib/cache.ts). Bumping on
+      // every report, not only on the one that hides, keeps this a plain
+      // batch; reports are rare and rate-limited, so the extra misses are
+      // few.
+      bumpVersion(env.DB),
     ]);
     return json({ reported: id });
   });

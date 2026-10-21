@@ -21,6 +21,19 @@ export interface D1Database {
   batch(statements: D1PreparedStatement[]): Promise<D1Result[]>;
 }
 
+/**
+ * The Workers Cache API's default cache (`caches.default`), as far as the
+ * gallery uses it (_lib/cache.ts). It is the cache of the Cloudflare data
+ * center that runs the request: a `put` there is not seen by other data
+ * centers, and `delete` only clears the local copy. On `*.pages.dev` and in
+ * `wrangler pages dev` it may silently store nothing; it works on the custom
+ * domain.
+ */
+export interface EdgeCache {
+  match(request: Request): Promise<Response | undefined>;
+  put(request: Request, response: Response): Promise<void>;
+}
+
 /** Bindings and variables set on the Pages project (docs/GALLERY.md §5a, §9). */
 export interface Env {
   DB: D1Database;

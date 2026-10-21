@@ -1,5 +1,6 @@
 import { isUnitSlug, mulUnitUrl } from "../../../../web/avatar/avatar.gallery";
 import { requireAdmin } from "../_lib/access";
+import { bumpVersion } from "../_lib/cache";
 import type { Ctx, Handler } from "../_lib/cf";
 import { config } from "../_lib/config";
 import { type AdminEntry, deleteEntry, recountVotes, unitOf } from "../_lib/gallery";
@@ -17,6 +18,10 @@ import { cleanImage, cleanName } from "../_lib/mul";
  *   POST   entries/:id/ban-owner     ban the submitter's key: hide its entries, drop its votes
  *   PUT    units/:slug               fix a 'Mech's `{ name, image }`
  *   GET    export                    the top-liked visible avatar per 'Mech (ties go to the earliest)
+ *
+ * Every write here changes what the public gallery shows, so each one bumps
+ * the cache version in the same batch (_lib/cache.ts). Admin reads are
+ * never cached: `json()` sends them `no-store`.
  */
 
 const PAGE = 100;
@@ -44,8 +49,6 @@ function toAdminEntry(r: AdminRow): AdminEntry {
     votes: r.votes,
     created: r.created,
     by: r.pid,
-    voted: false,
-    mine: false,
     reports: r.reports,
     hidden: Boolean(r.hidden),
     reviewed: Boolean(r.reviewed),
@@ -76,13 +79,17 @@ async function listAdmin(ctx: Ctx<"path">): Promise<Response> {
 }
 
 async function setHidden(ctx: Ctx<"path">, id: number, hidden: boolean): Promise<Response> {
-  const res = await ctx.env.DB.prepare(
-    // Unhiding marks the entry reviewed, so the same reports do not hide it again.
-    "UPDATE ag_avatars SET hidden = ?2, reviewed = CASE WHEN ?2 = 0 THEN 1 ELSE reviewed END WHERE id = ?1",
-  )
-    .bind(id, hidden ? 1 : 0)
-    .run();
-  if (res.meta.changes === 0) throw new HttpError(404, "not_found");
+  const db = ctx.env.DB;
+  const [res] = await db.batch([
+    db
+      .prepare(
+        // Unhiding marks the entry reviewed, so the same reports do not hide it again.
+        "UPDATE ag_avatars SET hidden = ?2, reviewed = CASE WHEN ?2 = 0 THEN 1 ELSE reviewed END WHERE id = ?1",
+      )
+      .bind(id, hidden ? 1 : 0),
+    bumpVersion(db),
+  ]);
+  if (res === undefined || res.meta.changes === 0) throw new HttpError(404, "not_found");
   return json({ id, hidden });
 }
 
@@ -103,6 +110,7 @@ async function banOwner(ctx: Ctx<"path">, id: number): Promise<Response> {
     db.prepare("DELETE FROM ag_votes WHERE voter = ?").bind(row.owner),
     db.prepare("DELETE FROM ag_reports WHERE voter = ?").bind(row.owner),
     ...voted.results.map((v) => recountVotes(db, v.avatar)),
+    bumpVersion(db),
   ]);
   return json({ banned: true, votesRemoved: voted.results.length });
 }
@@ -130,10 +138,13 @@ async function fixUnit(ctx: Ctx<"path">, slug: string): Promise<Response> {
     image = cleanImage(body.image);
     if (image === null) throw new HttpError(400, "bad_image", "image must be an https MUL URL");
   }
-  const res = await ctx.env.DB.prepare("UPDATE ag_units SET name = ?, image = ? WHERE slug = ?")
-    .bind(name, image, slug)
-    .run();
-  if (res.meta.changes === 0) throw new HttpError(404, "not_found");
+  const db = ctx.env.DB;
+  // The unit's name and image are inside every cached entry of that 'Mech.
+  const [res] = await db.batch([
+    db.prepare("UPDATE ag_units SET name = ?, image = ? WHERE slug = ?").bind(name, image, slug),
+    bumpVersion(db),
+  ]);
+  if (res === undefined || res.meta.changes === 0) throw new HttpError(404, "not_found");
   return json({ slug, name, image });
 }
 

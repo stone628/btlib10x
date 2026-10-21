@@ -12,7 +12,12 @@ export interface GalleryUnit {
   image: string | null;
 }
 
-export interface GalleryEntry {
+/**
+ * An entry as the public, cached reads return it (`/avatars`,
+ * `/avatars/:id`): the same for every visitor, so it says nothing about this
+ * browser (functions/api/ag/_lib/cache.ts).
+ */
+export interface PublicEntry {
   id: number;
   q: string;
   /** null when the submitter named no 'Mech. */
@@ -21,7 +26,13 @@ export interface GalleryEntry {
   created: number;
   /** Public ID of the submitter (avatar.gallery.ts publicId). */
   by: string | null;
+}
+
+/** A PublicEntry with this browser's marks painted in by `withMarks`. */
+export interface GalleryEntry extends PublicEntry {
+  /** This browser's key liked it. */
   voted: boolean;
+  /** This browser's key submitted it. */
   mine: boolean;
 }
 
@@ -127,6 +138,41 @@ export async function api<T>(
     throw new ApiError(res.status, data.error ?? "http_error", data.message ?? res.statusText);
   }
   return data as T;
+}
+
+/**
+ * GET a public, cached gallery read (`/avatars…`, `/units…`). Sent without
+ * the device key: the server ignores it on these routes, and leaving it off
+ * keeps the request identical for every visitor. The server answers
+ * `cache-control: no-cache` with an ETag, so the browser keeps the body and
+ * revalidates it on each call; an unchanged gallery costs a body-less 304
+ * (functions/api/ag/_lib/cache.ts).
+ */
+export function publicGet<T>(path: string): Promise<T> {
+  return api<T>(path, { auth: false });
+}
+
+/**
+ * The entries with this browser's "liked" and "yours" marks, from
+ * `GET /api/ag/me?ids=…`, the personal half the cached reads leave out. With
+ * no key yet, nothing is liked or yours and no request is made. If the call
+ * fails (offline, banned key) the entries still show, just unmarked: the
+ * marks are decoration, and a like or delete re-checks on the server anyway.
+ */
+export async function withMarks(entries: PublicEntry[]): Promise<GalleryEntry[]> {
+  const unmarked = () => entries.map((e) => ({ ...e, voted: false, mine: false }));
+  if (entries.length === 0 || currentKey() === null) return unmarked();
+  let marks: { voted: number[]; mine: number[] };
+  try {
+    marks = await api<{ voted: number[]; mine: number[] }>(
+      `/me?ids=${entries.map((e) => e.id).join(",")}`,
+    );
+  } catch {
+    return unmarked();
+  }
+  const voted = new Set(marks.voted);
+  const mine = new Set(marks.mine);
+  return entries.map((e) => ({ ...e, voted: voted.has(e.id), mine: mine.has(e.id) }));
 }
 
 let configPromise: Promise<GalleryConfig> | null = null;
