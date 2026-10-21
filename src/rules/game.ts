@@ -1499,6 +1499,9 @@ function salvageFall(state: BattleState, unit: UnitState, rng: Rng, sink: GameEv
   const arc: Arc = dir.column === "rear" ? "rear" : "front";
   const crits: CriticalResolution[] = [];
   const sheared: LimbLocation[] = [];
+  // Phase-start crit table for transfer (TW p.125), as in `applyDamageGroups`.
+  const baseCrit =
+    state.currentDealt?.before.crit[unit.id] ?? cloneCritTable(unit.critSlotsDestroyed);
   for (const group of groups) {
     const app = applyDamage(unit.damage, group.location, group.damage, arc);
     unit.damage = app.after;
@@ -1514,6 +1517,7 @@ function salvageFall(state: BattleState, unit: UnitState, rng: Rng, sink: GameEv
         rng,
         model: unit.model,
         source: { location, damage: group.damage, struck: struck.includes(location), tac },
+        baseCritSlotsDestroyed: baseCrit,
         critSlotsDestroyed: unit.critSlotsDestroyed,
         damage: unit.damage,
         ammoBins: unit.ammoBins,
@@ -3926,6 +3930,13 @@ function applyDamageGroups(
 ): CriticalResolution[] {
   const crits: CriticalResolution[] = [];
   const sheared: LimbLocation[] = [];
+  // Transfer is judged against the location as it stood at the start of the
+  // phase (TW p.125), as on the weapon/physical paths: the open damage
+  // window's snapshot, or the table on entry when the unit is not in scope.
+  // Without it a later group sees a location emptied by an earlier group of
+  // the same fall and moves its critical inward instead of losing it.
+  const baseCrit =
+    state.currentDealt?.before.crit[unit.id] ?? cloneCritTable(unit.critSlotsDestroyed);
   for (const group of groups) {
     const app = applyDamage(unit.damage, group.location, group.damage, arc);
     unit.damage = app.after;
@@ -3951,6 +3962,7 @@ function applyDamageGroups(
             struck: struck.includes(critLoc),
             tac: tagThroughArmor,
           },
+          baseCritSlotsDestroyed: baseCrit,
           critSlotsDestroyed: unit.critSlotsDestroyed,
           damage: unit.damage,
           ammoBins: unit.ammoBins,
