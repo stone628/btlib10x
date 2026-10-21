@@ -54,6 +54,7 @@ import {
   rotateFacing,
   sameHex,
   type TorsoLocationValue,
+  type Twist,
   type UnitInit,
   type UnitInitDamage,
   type UnitState,
@@ -649,7 +650,11 @@ const MODE_BY_CHAR: Readonly<Record<string, MoveMode>> = {
   r: "run",
   j: "jump",
 };
-const TWIST_BY_CHAR: Readonly<Record<string, Arc>> = { F: "front", L: "leftSide", R: "rightSide" };
+const TWIST_BY_CHAR: Readonly<Record<string, Twist>> = {
+  F: "front",
+  L: "leftSide",
+  R: "rightSide",
+};
 const STRIKE_WEAPON_BY_CHAR: Readonly<Record<string, PhysicalWeaponName>> = {
   h: "Hatchet",
   s: "Sword",
@@ -781,7 +786,7 @@ function decodeSteps(
 }
 
 interface DecodedAttack {
-  twist: Arc;
+  twist: Twist;
   dropClub: boolean;
   pickup: ClubPickupDecl | null;
   weapons: { weaponIndex: number; targetId: string; rapidFire?: boolean }[];

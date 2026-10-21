@@ -8,7 +8,14 @@
 
 import { describe, expect, it } from "vitest";
 import kgcJson from "../docs/mtf/sw/json/kgc-000.json";
-import { type Arc, classifyFiringArc, createBattle, mechDefFor, suggestFireTargets } from "../src";
+import {
+  type Arc,
+  classifyFiringArc,
+  createBattle,
+  mechDefFor,
+  suggestFireTargets,
+  type Twist,
+} from "../src";
 import type { Facing, HexCoord } from "../src/core/types";
 import { type CritSlot, type MechDef, mechDef, resolveMechDef } from "../src/data/index";
 import { loadAmmoBins } from "../src/rules/ammo";
@@ -148,8 +155,8 @@ describe("split weapon firing", () => {
 
   it("follows a torso twist toward the target", () => {
     const battle = battleWithTarget(hexInArc("rightSide", "front"));
-    const fires = (twist: Arc | null) =>
-      suggestFireTargets(battle, "a", twist)
+    const fires = (twist: Twist | null) =>
+      suggestFireTargets(battle, "a", twist ?? "front")
         .targets.find((t) => t.targetId === "t")
         ?.weapons.some((w) => w.weaponIndex === RA_AC20);
     expect(fires(null)).toBe(false);

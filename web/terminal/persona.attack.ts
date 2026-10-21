@@ -32,6 +32,7 @@ import {
   physicalToHitTotal,
   strikeMounts,
   suggestFireTargets,
+  type Twist,
   type UnitState,
   validateAttacks,
   validatePickup,
@@ -231,7 +232,7 @@ function legal(
   targetId: string,
   weapons: readonly FireWeapon[],
   decls: readonly PhysicalAttackDecl[],
-  twist: Arc,
+  twist: Twist,
   drop: boolean,
 ): boolean {
   try {
@@ -240,7 +241,7 @@ function legal(
       actor.id,
       weapons.map((w) => ({ targetId, weaponIndex: w.weaponIndex })),
       decls,
-      { twist: twist === "front" ? null : twist, dropClub: drop },
+      { twist, dropClub: drop },
     );
     return true;
   } catch {
@@ -257,7 +258,7 @@ export function scoreAttacks(input: AttackScoringInput): AttackScoring {
   const startShots = designTotalsByWeaponName(def);
   const notes: TraceNote[] = [];
   const candidates: TraceCandidate[] = [];
-  const twists: Arc[] = actor.prone ? ["front"] : ["front", "leftSide", "rightSide"];
+  const twists: Twist[] = actor.prone ? ["front"] : ["front", "leftSide", "rightSide"];
   const factor = MELEE_FACTOR[persona.melee];
   const holding = actor.club !== null;
 

@@ -121,9 +121,9 @@ describe("multiple targets (TW p.108)", () => {
 
   it("classifies the modifier against the twisted facing", () => {
     const hbk = { col: 4, row: 6 };
-    expect(secondaryTargetModifier(hbk, FRONT_B, "n", null)).toBe(1);
-    expect(secondaryTargetModifier(hbk, LEFT, "n", null)).toBe(2);
-    expect(secondaryTargetModifier(hbk, RIGHT, "n", null)).toBe(2);
+    expect(secondaryTargetModifier(hbk, FRONT_B, "n")).toBe(1);
+    expect(secondaryTargetModifier(hbk, LEFT, "n")).toBe(2);
+    expect(secondaryTargetModifier(hbk, RIGHT, "n")).toBe(2);
     // Twisting left swings the torso one hexside counter-clockwise: the left
     // target comes into the forward arc, the right one moves further away.
     expect(secondaryTargetModifier(hbk, LEFT, "n", "leftSide")).toBe(1);

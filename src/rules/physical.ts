@@ -27,6 +27,7 @@ import {
   classifyFiringArc,
   defenderArcChoice,
   effectiveFacingForTwist,
+  type Twist,
 } from "./arcs";
 import { isBuildingTerrain } from "./building";
 import {
@@ -86,7 +87,7 @@ export interface PhysicalAttackDecl {
   readonly weapon?: PhysicalWeaponName;
   /** Torso twist the attacker declared with (TW pp.37-38): holds through the
    *  physical sub-pass, which re-checks arcs against it. */
-  readonly twist?: Arc;
+  readonly twist?: Twist;
 }
 
 export interface PhysicalModifiers {
@@ -727,7 +728,7 @@ export function validatePhysicalAttack(
   battle: BattleState,
   attackerId: string,
   decl: PhysicalAttackDecl,
-  twist?: Arc | null,
+  twist: Twist = "front",
   dropped = false,
   startDamage?: UnitDamageState,
 ): ValidationResult {
@@ -899,7 +900,7 @@ function validatePunch(
   attacker: UnitState,
   target: UnitState,
   decl: PhysicalAttackDecl,
-  twist: Arc | null,
+  twist: Twist,
   dropped: boolean,
 ): ValidationResult {
   // Carrying a club occupies both hands (TW p.146): no punching until it
@@ -983,7 +984,7 @@ function validateClub(
   attacker: UnitState,
   target: UnitState,
   _decl: PhysicalAttackDecl,
-  twist: Arc | null,
+  twist: Twist,
   dropped: boolean,
 ): ValidationResult {
   // A club attack requires a held club (TW p. 145). A declaration that
@@ -1035,7 +1036,7 @@ function validateStrike(
   attacker: UnitState,
   target: UnitState,
   decl: PhysicalAttackDecl,
-  twist: Arc | null,
+  twist: Twist,
   dropped: boolean,
   startDamage: UnitDamageState,
 ): ValidationResult {

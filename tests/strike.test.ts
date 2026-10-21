@@ -282,7 +282,7 @@ describe("strike validation", () => {
       internalStructure: { ...intact.internalStructure, rightTorso: 0 },
     };
     // Support torso lost to this phase's weapon fire: the phase-start state still allows the strike.
-    const r = validatePhysicalAttack(battle, "a", hatchetDecl(), null, false, intact);
+    const r = validatePhysicalAttack(battle, "a", hatchetDecl(), "front", false, intact);
     expect(r.ok).toBe(true);
     // Without it, the live (destroyed) state rejects.
     expect(validatePhysicalAttack(battle, "a", hatchetDecl()).ok).toBe(false);

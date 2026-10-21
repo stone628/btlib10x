@@ -10,8 +10,9 @@ import {
 } from "../core/types";
 import type { WeaponMount } from "../data/mech.schema";
 
+export type Twist = "front" | "leftSide" | "rightSide";
 /** Firing arc of a target relative to a unit. */
-export type Arc = "front" | "rear" | "leftSide" | "rightSide";
+export type Arc = Twist | "rear";
 
 /**
  * 'Mech attack-direction classification (TW p.119): which hexside of the
@@ -172,7 +173,7 @@ export function mountCanFireIntoArc(
  * clockwise, `front` is untwisted. Used to translate a session-side twist
  * state into an input for `classifyFiringArc` / `weaponCanFireIntoArc`.
  */
-export function twistDelta(twist: Arc): -1 | 0 | 1 {
+export function twistDelta(twist: Twist): -1 | 0 | 1 {
   switch (twist) {
     case "leftSide":
       return -1;
@@ -181,7 +182,6 @@ export function twistDelta(twist: Arc): -1 | 0 | 1 {
     case "front":
       return 0;
   }
-  throw new Error(`cannot twist to ${twist}`);
 }
 
 /**
@@ -189,8 +189,8 @@ export function twistDelta(twist: Arc): -1 | 0 | 1 {
  * 'Mech's body keeps its `facing`; arm and front-torso weapons fire as if
  * the torso pointed `twist` hexsides off. `front` is a no-op.
  */
-export function effectiveFacingForTwist(facing: Facing, twist: Arc | null | undefined): Facing {
-  const delta = twist === null || twist === undefined ? 0 : twistDelta(twist);
+export function effectiveFacingForTwist(facing: Facing, twist: Twist = "front"): Facing {
+  const delta = twistDelta(twist);
   return delta === 0 ? facing : rotateFacing(facing, delta);
 }
 
@@ -207,7 +207,7 @@ export function secondaryTargetModifier(
   from: HexCoord,
   to: HexCoord,
   facing: Facing,
-  twist: Arc | null | undefined,
+  twist: Twist = "front",
 ): SecondaryTargetMod {
   return classifyFiringArc(from, to, effectiveFacingForTwist(facing, twist)) === "front" ? 1 : 2;
 }

@@ -61,6 +61,7 @@ import {
   mountCanFireIntoArc,
   type SecondaryTargetMod,
   secondaryTargetModifier,
+  type Twist,
   twistDelta,
 } from "./arcs";
 import { type AttackResolution, PARTIAL_COVER_TERRAIN_MOD, resolveWeaponAttack } from "./attack";
@@ -2761,7 +2762,7 @@ export function inferPronePropArm(
 export interface DeclareAttacksOptions {
   /** Torso twist (TW pp.105-106): shifts the attacker's effective facing by one
    *  hexside before classifying the firing arc. Defaults to untwisted. */
-  readonly twist?: Arc | null;
+  readonly twist?: Twist;
   /** Drop the held club first: hands are free for the rest of this
    *  declaration, so arm-mounted weapons, punch, and strike validate
    *  normally. A dropped limb returns to the hex; trees/girders vanish.
@@ -2887,7 +2888,7 @@ export function validateAttacksImpl(
         : `${unitId} is unconscious and cannot attack`,
     );
   const def = mechDefFor(unit);
-  const twist = options.twist ?? null;
+  const twist = options.twist ?? "front";
   const dropping = options.dropClub === true;
   if (dropping && unit.club === null) {
     throw new Error(`${unitId} holds no club to drop`);
@@ -2915,7 +2916,7 @@ export function validateAttacksImpl(
     throw new Error(`${unitId} cannot fire: sensors destroyed (no weapon attacks)`);
   }
   const sensorMod = sensorAttackModifier(sensorsOut);
-  const effectiveFacing = effectiveFacingForTwist(unit.facing, options.twist ?? null);
+  const effectiveFacing = effectiveFacingForTwist(unit.facing, options.twist ?? "front");
   if (unit.prone && twistDelta(options.twist ?? "front") !== 0) {
     throw new Error(`${unitId} cannot twist torso while prone`);
   }
@@ -4989,7 +4990,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         view,
         attacker.id,
         decl,
-        decl.twist ?? null,
+        decl.twist ?? "front",
         false,
         baseDamage[attacker.id],
       );

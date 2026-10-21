@@ -46,6 +46,7 @@ import {
   strikeMounts,
   suggestFireTargets,
   type TorsoLocationValue,
+  type Twist,
   toHitTotal,
   validateAttacks,
   validatePhysicalAttack,
@@ -80,7 +81,7 @@ export interface AttackContext {
    *  kick is feet-based and never locks it (see {@link setTorsoTwist}).
    *  Session-owned because it is a UI declaration, not persistent battle
    *  state. */
-  torsoTwist: Arc;
+  torsoTwist: Twist;
   fireCandidate: FireSuggestion | null;
 }
 
@@ -620,18 +621,18 @@ export function physicalResolutionLines(r: PhysicalResolution): string[] {
   return lines;
 }
 
-const TWIST: Readonly<Record<string, Arc>> = {
+const TWIST: Readonly<Record<string, Twist>> = {
   front: "front",
   left: "leftSide",
   right: "rightSide",
 };
 
-export function parseTorsoTwist(direction: string): Arc {
-  const arc = TWIST[direction.toLowerCase()];
-  if (arc === undefined) {
+export function parseTorsoTwist(direction: string): Twist {
+  const twist = TWIST[direction.toLowerCase()];
+  if (twist === undefined) {
     throw new Error(i18n("err.twist.badDirection"));
   }
-  return arc;
+  return twist;
 }
 
 /**
@@ -642,14 +643,14 @@ export function parseTorsoTwist(direction: string): Arc {
  * locks it. The user must `cancel` first — and resets to `"front"` on phase
  * entry or new actor.
  */
-export function setTorsoTwist(s: Session, arc: Arc): Arc {
+export function setTorsoTwist(s: Session, twist: Twist): Twist {
   const { battle, context } = requireBattleAndContext(s);
   if (isTwistLocked(context)) {
     throw new Error(i18n("err.twist.locked"));
   }
   const prev = context.torsoTwist;
-  if (prev !== arc) {
-    context.torsoTwist = arc;
+  if (prev !== twist) {
+    context.torsoTwist = twist;
     ensureFireCandidate(battle, context, true);
   }
   return prev;
@@ -682,7 +683,7 @@ const TWIST_COMMAND: Readonly<Record<Arc, string>> = {
   rear: "torso front",
 };
 
-const TWIST_OPTIONS: readonly Arc[] = ["front", "leftSide", "rightSide"];
+const TWIST_OPTIONS: readonly Twist[] = ["front", "leftSide", "rightSide"];
 
 /** A twist is locked once a weapon, punch, club or strike is queued (kick
  *  is feet-based and never locks it). */
@@ -785,7 +786,7 @@ function propSplit(target: FireTarget): boolean {
 function legalWithQueued(
   battle: BattleState,
   context: AttackContext,
-  twist: Arc,
+  twist: Twist,
   weapons: readonly WeaponAttackDecl[],
   physical: readonly PhysicalAttackDecl[],
 ): boolean {

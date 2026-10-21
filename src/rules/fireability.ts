@@ -12,6 +12,7 @@ import {
   effectiveFacingForTwist,
   mountArcLocation,
   mountCanFireIntoArc,
+  type Twist,
 } from "./arcs";
 import { countDestroyedSensor, isWeaponCritted } from "./critical";
 import { canFireMount, isUnitLocationDestroyed } from "./damage";
@@ -161,7 +162,7 @@ export function bestFireTarget(sugg: FireSuggestion): FireTarget | null {
 export function suggestFireTargets(
   state: BattleState,
   unitId: string,
-  twist: Arc | null = null,
+  twist: Twist = "front",
 ): FireSuggestion {
   const unit = state.units[unitId];
   if (!unit || isUnitRemoved(unit)) {

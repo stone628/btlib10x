@@ -125,6 +125,7 @@ export {
   classifyFiringArc,
   mountArcLocation,
   mountCanFireIntoArc,
+  type Twist,
   weaponCanFireIntoArc,
 } from "./rules/arcs";
 export type {

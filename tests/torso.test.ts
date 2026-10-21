@@ -47,7 +47,6 @@ describe("twistDelta + effectiveFacingForTwist", () => {
     expect(twistDelta("leftSide")).toBe(-1);
     expect(twistDelta("rightSide")).toBe(1);
     expect(twistDelta("front")).toBe(0);
-    expect(() => twistDelta("rear")).toThrow(/cannot twist/);
   });
 
   it("rotates facing by twist delta (or no-op for front)", () => {
@@ -56,11 +55,6 @@ describe("twistDelta + effectiveFacingForTwist", () => {
     expect(effectiveFacingForTwist("n", "front")).toBe("n");
     expect(effectiveFacingForTwist("ne", "leftSide")).toBe("n");
     expect(effectiveFacingForTwist("ne", "rightSide")).toBe("se");
-  });
-
-  it("treats null/undefined as untwisted", () => {
-    expect(effectiveFacingForTwist("se", null)).toBe("se");
-    expect(effectiveFacingForTwist("se", undefined)).toBe("se");
   });
 
   it("matches rotateFacing for non-zero deltas", () => {
