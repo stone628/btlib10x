@@ -142,7 +142,7 @@ input:disabled { opacity:.4; }
 <div id="app">
   <section id="top">
     <div id="dropcol">
-      <div id="drop" tabindex="0"><span><span lang="en">drop an image here · click to choose · or paste (Ctrl+V)</span><span lang="ko">이미지를 여기에 끌어다 놓기 · 눌러서 선택 · 또는 붙여넣기 (Ctrl+V)</span></span><div id="thumbbox"><img id="thumb" alt=""></div></div>
+      <div id="drop"><span><span lang="en">drop an image here · click to choose · or paste (Ctrl+V)</span><span lang="ko">이미지를 여기에 끌어다 놓기 · 눌러서 선택 · 또는 붙여넣기 (Ctrl+V)</span></span><div id="thumbbox"><img id="thumb" alt=""></div></div>
       <input id="file" type="file" accept="image/*" hidden>
     </div>
     <div class="col">
@@ -199,9 +199,9 @@ input:disabled { opacity:.4; }
   </main>
   <footer id="bottom">
     <div class="btns">
-      <button id="copy" disabled><span lang="en">copy text</span><span lang="ko">텍스트 복사</span></button>
-      <button id="save" disabled><span lang="en">download .txt</span><span lang="ko">.txt 다운로드</span></button>
-      <button id="savepng" disabled><span lang="en">download .png</span><span lang="ko">.png 다운로드</span></button>
+      <button type="button" id="copy" disabled><span lang="en">copy text</span><span lang="ko">텍스트 복사</span></button>
+      <button type="button" id="save" disabled><span lang="en">download .txt</span><span lang="ko">.txt 다운로드</span></button>
+      <button type="button" id="savepng" disabled><span lang="en">download .png</span><span lang="ko">.png 다운로드</span></button>
     </div>
     <div id="status"></div>
   </footer>
@@ -238,7 +238,7 @@ const atlas = JSON.parse($("atlas").textContent);
 const GW = atlas.gw, GH = atlas.gh, LV = atlas.levels, PX = GW * GH;
 const ADV = 0.6, LH = 1.175;
 const BW = 4, BH = 4, NB = (GW / BW) * (GH / BH);        // coarse-tone blocks per cell (3 x 6)
-const SRGB2LIN = Float32Array.from({ length: 256 }, (_, i) => { const c = i / 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); });
+const SRGB2LIN = Float32Array.from({ length: 256 }, (_, i) => { const c = i / 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; });
 // atlas.blob: base64 of raw-deflated records, each = 3-byte big-endian codepoint + PX/2 bytes (two 4-bit coverage levels per byte)
 const packed = await new Response(new Blob([Uint8Array.from(atob(atlas.blob), c => c.charCodeAt(0))]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer();
 const REC = 3 + PX / 2, bytes = new Uint8Array(packed);
@@ -372,14 +372,14 @@ function gpRender() {
   const cps = BLOCK_CPS[gpBlock].cps;
   $("gp-grid").replaceChildren(...cps.map(cp => {
     const b = document.createElement("button");
-    b.type = "button"; b.className = "gp-cell" + (customSet.has(cp) ? " on" : ""); b.dataset.cp = cp;
-    b.title = "U+" + cp.toString(16).toUpperCase().padStart(4, "0");
+    b.type = "button"; b.className = `gp-cell${customSet.has(cp) ? " on" : ""}`; b.dataset.cp = cp;
+    b.title = `U+${cp.toString(16).toUpperCase().padStart(4, "0")}`;
     if (cp === 32) b.classList.add("sp"); else b.textContent = String.fromCodePoint(cp);
     return b;
   }));
   gpCount();
 }
-function gpPlace() { $("gp").style.top = $("top").getBoundingClientRect().bottom + 6 + "px"; }
+function gpPlace() { $("gp").style.top = `${$("top").getBoundingClientRect().bottom + 6}px`; }
 function gpOpen(open) { $("gp").hidden = !open; if (open) { gpPlace(); gpRender(); } }
 function syncCustom(open) {                             // preset changed: custom shows the picker, other presets use the exclude box
   const custom = $("set").value === "custom";
@@ -489,7 +489,7 @@ function corr(a, b) {                                   // Pearson correlation: 
 }
 let kernelCache = { key: "", K: null };
 function glyphKernels(set, r) {                         // each glyph blurred: padded by r (spills into neighbours) and cropped to its own cell
-  const key = r + ":" + set.map(g => g.cp).join(",");
+  const key = `${r}:${set.map(g => g.cp).join(",")}`;
   if (kernelCache.key === key) return kernelCache.K;
   const PW = GW + 2 * r, PH = GH + 2 * r, full = [], inner = [], buf = new Float32Array(PW * PH);
   for (const g of set) {
@@ -499,7 +499,8 @@ function glyphKernels(set, r) {                         // each glyph blurred: p
     for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) c[y * GW + x] = b[(y + r) * PW + x + r];
     full.push(b); inner.push(c);
   }
-  return (kernelCache = { key, K: { full, inner, PW, PH } }).K;
+  kernelCache = { key, K: { full, inner, PW, PH } };
+  return kernelCache.K;
 }
 
 async function convert() {
@@ -518,7 +519,7 @@ async function convert() {
     const s = Float32Array.from(l).sort(), lo = s[Math.floor(s.length * clip / 100)], hi = s[Math.floor(s.length * (1 - clip / 100)) - 1];
     if (hi > lo) for (let i = 0; i < l.length; i++) l[i] = Math.min(1, Math.max(0, (l[i] - lo) / (hi - lo)));
   }
-  if (gamma !== 1) for (let i = 0; i < l.length; i++) l[i] = Math.pow(l[i], gamma);
+  if (gamma !== 1) for (let i = 0; i < l.length; i++) l[i] = l[i] ** gamma;
   if (fit) {                                            // remap the cell-scale tone into what this glyph set can produce, keeping local pixel contrast
     let lo = Infinity, hi = -Infinity;
     for (const g of set) { lo = Math.min(lo, g.mean); hi = Math.max(hi, g.mean); }
@@ -534,7 +535,7 @@ async function convert() {
   const passes = 1 + refine;
   const tick = async (cy, pass) => {                    // yield so the UI stays live; false = superseded
     if (cy % 4 !== 3) return true;
-    $("progress").style.width = (100 * (pass * rows + cy + 1) / (passes * rows)) + "%";
+    $("progress").style.width = `${100 * (pass * rows + cy + 1) / (passes * rows)}%`;
     await new Promise(r => setTimeout(r));
     return my === job;
   };
@@ -625,7 +626,7 @@ async function convert() {
     }
     lines.push(line);
   }
-  lastText = lines.join("\n") + "\n";
+  lastText = `${lines.join("\n")}\n`;
   $("out").textContent = lastText;
   $("progress").style.width = "0";
   const used = new Set(lastText.replace(/\n/g, "")).size;
@@ -641,7 +642,7 @@ async function convert() {
 
 let timer = 0;
 const schedule = () => { clearTimeout(timer); timer = setTimeout(convert, 120); };
-function syncOut() { for (const id of [...ctl, "zoom"]) $(id + "-o").textContent = $(id).value; $("out").style.fontSize = $("zoom").value + "px"; $("pair").style.setProperty("--cw", $("zoom").value * ADV + "px"); $("pair").style.setProperty("--ch", $("zoom").value * LH + "px"); sizeAdj(); }
+function syncOut() { for (const id of [...ctl, "zoom"]) $(`${id}-o`).textContent = $(id).value; $("out").style.fontSize = `${$("zoom").value}px`; $("pair").style.setProperty("--cw", `${$("zoom").value * ADV}px`); $("pair").style.setProperty("--ch", `${$("zoom").value * LH}px`); sizeAdj(); }
 let adjDims = null;
 function showAdjusted(l, W, H, cols, rows) {          // the exact luminance the matcher sees (after invert / clip / gamma)
   const c = $("adj"); c.width = W; c.height = H; adjDims = { cols, rows };
@@ -651,7 +652,7 @@ function showAdjusted(l, W, H, cols, rows) {          // the exact luminance the
 }
 function sizeAdj() {                                    // same on-screen size as the glyph block
   if (!adjDims) return; const fs = parseFloat($("zoom").value);
-  $("adj").style.width = adjDims.cols * fs * ADV + "px"; $("adj").style.height = adjDims.rows * fs * LH + "px";
+  $("adj").style.width = `${adjDims.cols * fs * ADV}px`; $("adj").style.height = `${adjDims.rows * fs * LH}px`;
 }
 for (const id of [...ctl, "invert", "linear", "fit", "set", "exclude"]) {
   const range = $(id).type === "range";                // sliders regenerate on release ("change"), other controls as they change
