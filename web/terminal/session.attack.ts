@@ -702,7 +702,12 @@ function ensureFireCandidate(
   force: boolean = false,
 ): FireSuggestion {
   if (context.fireCandidate === null || force) {
-    context.fireCandidate = suggestFireTargets(battle, context.actorId, context.torsoTwist);
+    context.fireCandidate = suggestFireTargets(
+      battle,
+      context.actorId,
+      context.torsoTwist,
+      context.dropClub,
+    );
   }
   return context.fireCandidate;
 }
@@ -823,7 +828,7 @@ function weaponCandidateLines(battle: BattleState, context: AttackContext): stri
     const current = twist === context.torsoTwist;
     const changeable = !actor.prone && !locked;
     const group: ListingLine[] = [];
-    const sugg = suggestFireTargets(battle, context.actorId, twist);
+    const sugg = suggestFireTargets(battle, context.actorId, twist, context.dropClub);
     // Each weapon must also fit with what is already queued (a punching or
     // striking arm cannot fire, a held club bars arm weapons).
     const usable = (targetId: string, list: readonly FireWeapon[]): FireWeapon[] =>

@@ -675,13 +675,16 @@ and crits resolve.
 
 ### Fireability (`rules/fireability.ts`)
 
-- `suggestFireTargets(state, unitId, twist?): FireSuggestion` — for every enemy,
+- `suggestFireTargets(state, unitId, twist?, dropClub = false): FireSuggestion` — for every enemy,
   lists the weapons that could reach it (arc, LOS, range, ammo, not
   jammed/destroyed, not auto-missing, not leg-blocked while prone) with their
   computed TN and expected damage, plus per-weapon block reasons
   (`FireBlockerReason`: `jammed` / `destroyed` / `outOfRange` / `outOfArc` /
   `noLos` / `outOfAmmo` / `autoMiss` / `prone` / `noSensor` — blind after
-  the second destroyed sensor slot). Each `FireTarget` carries the
+  the second destroyed sensor slot / `clubHeld` — arm mount while a club
+  occupies both hands, TW p.146). `dropClub` suggests the volley after
+  dropping the club, as the same option on `declareAttacks` does; it is
+  ignored when no club is held. Each `FireTarget` carries the
   classified `arc` (twisted torso facing) and each `FireWeapon` its own
   `arc`; leg mounts classify against the feet facing, ignoring the twist
   (TW p.105), exactly as `declareAttacks` does. When the attacker is

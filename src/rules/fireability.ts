@@ -1,7 +1,7 @@
 import { D2D6_MAX, D2D6_MIN } from "../core/dice";
 import { hexDistance } from "../core/hex";
 import { cellAt } from "../core/terrain";
-import { isLeg, type Location } from "../core/types";
+import { isArm, isLeg, type Location } from "../core/types";
 import { mechDefFor } from "../data/index";
 import { isFireableWeapon, weaponDefFor } from "../data/weapon.schema";
 import { armWeaponToHitModifier, targetingComputerModifier } from "./actuators";
@@ -41,7 +41,8 @@ export type FireBlockerReason =
   | "outOfAmmo"
   | "autoMiss"
   | "prone"
-  | "noSensor";
+  | "noSensor"
+  | "clubHeld";
 
 export interface FireWeapon {
   readonly weaponIndex: number;
@@ -158,17 +159,23 @@ export function bestFireTarget(sugg: FireSuggestion): FireTarget | null {
  * the right arm blocks right-arm mounts (`weaponsIfPropRight`). A legal
  * prone volley draws from exactly one set (never both arms at once); leg
  * mounts stay blocked in both. When standing, all lists match.
+ *
+ * A held club occupies both hands (TW p.146): arm mounts are blocked with
+ * `clubHeld` unless `dropClub` asks for the volley after the drop, matching
+ * `DeclareAttacksOptions.dropClub`. `dropClub` is ignored when no club is held.
  */
 export function suggestFireTargets(
   state: BattleState,
   unitId: string,
   twist: Twist = "front",
+  dropClub: boolean = false,
 ): FireSuggestion {
   const unit = state.units[unitId];
   if (!unit || isUnitRemoved(unit)) {
     throw new Error(`suggestFireTargets: ${unitId} is not a fireable unit`);
   }
   const def = mechDefFor(unit);
+  const handsOccupied = unit.club !== null && !dropClub;
   const sensorsOut = countDestroyedSensor(def, unit.damage, unit.critSlotsDestroyed);
   const blind = sensorsBlind(sensorsOut);
   const sensorMod = sensorAttackModifier(sensorsOut);
@@ -236,6 +243,10 @@ export function suggestFireTargets(
         }
         if (!canFireMount(baseDamage, mount)) {
           blockBoth("destroyed");
+          return;
+        }
+        if (handsOccupied && isArm(mount.location)) {
+          blockBoth("clubHeld");
           return;
         }
         // Prone gates mirror `declareAttacks`: leg mounts never fire; each

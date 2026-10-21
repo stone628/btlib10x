@@ -327,7 +327,9 @@ export function scoreAttacks(input: AttackScoringInput): AttackScoring {
   for (const twist of twists) {
     let sugg: ReturnType<typeof suggestFireTargets>;
     try {
-      sugg = suggestFireTargets(battle, actor.id, twist);
+      // The full pool, as after a drop: the plain volley filters arm mounts
+      // itself, and the drop-then-fire volley below needs them.
+      sugg = suggestFireTargets(battle, actor.id, twist, true);
     } catch {
       continue;
     }
@@ -388,7 +390,7 @@ export function scoreAttacks(input: AttackScoringInput): AttackScoring {
       );
       let armEv = 0;
       try {
-        const t = suggestFireTargets(battle, actor.id, "front").targets.find(
+        const t = suggestFireTargets(battle, actor.id, "front", true).targets.find(
           (x) => x.targetId === targetId,
         );
         armEv = (t !== undefined ? weaponsOf(t) : [])

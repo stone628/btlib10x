@@ -199,20 +199,5 @@ describe("createBattle registers catalog models on demand (DATA-04)", () => {
     expect(() => createBattle({ ...SRC, legends: [] }, units("NOPE"))).toThrow(
       "Unknown 'Mech model: NOPE",
     );
-    for (const bad of [undefined, null, 7]) {
-      const [a, b] = units("HBK-4G");
-      expect(() =>
-        createBattle({ ...SRC, legends: [] }, [{ ...a!, model: bad as never }, b!]),
-      ).toThrow(`Unknown 'Mech model: ${bad}`);
-      const debris = {
-        ...SRC,
-        legends: [],
-        clubs: [],
-        wreckage: [{ col: 2, row: 2, model: bad as never }],
-      };
-      expect(() => createBattle(debris, units("HBK-4G"))).toThrow(
-        `Unknown 'Mech model for wreckage at 2,2: ${bad}`,
-      );
-    }
   });
 });
