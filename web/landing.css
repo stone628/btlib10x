@@ -140,10 +140,29 @@
   height: calc(6 * var(--board-lh) + 18px);
 }
 
-/* Two columns; the gallery card leaves the second cell of its row empty, and
-   the grid under the coffee link keeps the same columns. */
+/* Placeholder for an empty grid cell; only shown in the two-column layout. */
+.card.card-soon {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border-style: dashed;
+  background: none;
+  color: var(--c-dim);
+  font-style: italic;
+}
+
+.card.card-soon:hover {
+  border-color: var(--c-line);
+  background: none;
+}
+
+/* Two columns; a placeholder fills the cell next to the gallery card, and the
+   grid under the coffee link keeps the same columns. */
 @media (min-width: 640px) {
   .cards {
     grid-template-columns: 1fr 1fr;
+  }
+  .card.card-soon {
+    display: flex;
   }
 }
