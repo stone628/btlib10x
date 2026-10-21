@@ -562,18 +562,20 @@ export function checkCASE(def: ResolvedMechDef, location: Location): CaseKind | 
  * structure (bypassing the armor pool per the rules), then let the standard
  * transfer graph apply for any overflow. Returns the resulting application.
  *
- * CASE protection (TW):
+ * CASE protection (TW), read from `def` via {@link checkCASE}:
  *   - `case` — the blast is contained: it may still shred the location's
  *     own IS, but it stops there — the excess vents out of the location and
  *     it never reaches the next location.
  *   - `caseII` — the blast is contained and capped at 1 point of damage to
  *     the location (no overflow, no extra containment damage).
+ *   - A blast that transfers into a location with CASE damages that
+ *     location's IS as normal, then the excess vents there (TW p.134).
  */
 export function applyAmmoExplosion(
   state: UnitDamageState,
+  def: ResolvedMechDef,
   location: Location,
   amount: number,
-  caseKind?: CaseKind,
 ): DamageApplication {
   if (!Number.isInteger(amount) || amount <= 0) {
     // No-op application: `state` is returned unchanged, so `pre` may alias it.
@@ -591,7 +593,10 @@ export function applyAmmoExplosion(
   // the next location's IS — surviving armor is never ablated, but a
   // location the blast destroys still loses its remaining armor with it
   // (TW p.122 step 5, via `applyDamage`).
-  return applyDamage(state, location, amount, "front", { caseKind, bypassArmor: true });
+  return applyDamage(state, location, amount, "front", {
+    caseAt: (l) => checkCASE(def, l),
+    bypassArmor: true,
+  });
 }
 
 /** The unit's {@link CritState} before these crits, plus the roll context. */
@@ -778,7 +783,7 @@ function detonateCritBlast(
   amount: number,
   state: MutableCritState,
 ): DamageApplication {
-  const app = applyAmmoExplosion(state.damage, loc, amount, checkCASE(def, loc));
+  const app = applyAmmoExplosion(state.damage, def, loc, amount);
   state.damage = app.after;
   if (app.mechDestroyed) {
     state.killedReason ??=

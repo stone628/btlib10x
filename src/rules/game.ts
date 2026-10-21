@@ -79,7 +79,6 @@ import {
   type CriticalEffect,
   type CriticalResolution,
   type CritMask,
-  checkCASE,
   cloneCritTable,
   countDestroyedEngine,
   countDestroyedGyro,
@@ -5510,12 +5509,7 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
               avoided: true,
             });
           } else {
-            const application = applyAmmoExplosion(
-              unit.damage,
-              bin.location,
-              bin.damage,
-              checkCASE(def, bin.location),
-            );
+            const application = applyAmmoExplosion(unit.damage, def, bin.location, bin.damage);
             unit.damage = application.after;
             creditDealt(state, unit, null, dealtOf(application));
             // A blast that shears off a limb leaves it in the hex (TW p.146).

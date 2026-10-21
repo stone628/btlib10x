@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { requireUnit, type UnitInit } from "../src";
 import { LOCATIONS, type Location, type Rng } from "../src/core/types";
-import { mechDef } from "../src/data/index";
+import { mechDef, type ResolvedMechDef } from "../src/data/index";
 import {
   ammoWeaponTotals,
   collectAmmoBins,
@@ -907,6 +907,13 @@ describe("CASE", () => {
       internalStructure: { ...def.internalStructure },
     };
   };
+  /** An Inner Sphere def (HBK-4G) with CASE added at `locs` and nowhere else. */
+  const isWithCase = (...locs: Location[]): ResolvedMechDef => {
+    const hbk = mechDef("HBK-4G")!;
+    const critSlots = { ...hbk.critSlots };
+    for (const loc of locs) critSlots[loc] = [...critSlots[loc], { kind: "soak", name: "case" }];
+    return { ...hbk, techBase: "Inner Sphere", critSlots };
+  };
 
   it("hasCase detects implicit Clan protection on all locations", () => {
     const tw = mechDef("TBR-Prime")!;
@@ -952,7 +959,7 @@ describe("CASE", () => {
     const s = state();
     const ltBefore = s.internalStructure.leftTorso;
     const rtBefore = s.internalStructure.rightTorso;
-    const app = applyAmmoExplosion(s, "centerTorso", 1000, "case");
+    const app = applyAmmoExplosion(s, isWithCase("centerTorso"), "centerTorso", 1000);
     // CT IS absorbs the blast; CASE caps transfer; MechWarrior dies via
     // CT destruction (TW p.128). Other locations untouched.
     expect(app.after.internalStructure.centerTorso).toBe(0);
@@ -966,7 +973,7 @@ describe("CASE", () => {
     const ctBefore = s.internalStructure.centerTorso;
     // Massive blast (1000) against leftTorso with CASE: LT IS destroyed,
     // and CT keeps all its IS.
-    const app = applyAmmoExplosion(s, "leftTorso", 1000, "case");
+    const app = applyAmmoExplosion(s, isWithCase("leftTorso"), "leftTorso", 1000);
     expect(app.after.internalStructure.leftTorso).toBe(0);
     expect(app.after.internalStructure.centerTorso).toBe(ctBefore);
     expect(app.mechDestroyed).toBe(false);
@@ -978,7 +985,7 @@ describe("CASE", () => {
     const ctBefore = s.internalStructure.centerTorso;
     const ctArmorBefore = s.armor.centerTorso;
     const blast = ltBefore + 5;
-    const app = applyAmmoExplosion(s, "leftTorso", blast);
+    const app = applyAmmoExplosion(s, isWithCase(), "leftTorso", blast);
     // LT IS absorbs ltBefore, the remaining 5 bleeds into CT IS. Ammo-explosion
     // overflow bypasses armor everywhere (TW p.125), so the surviving CT keeps
     // its armor; the destroyed LT loses its remaining (rear) armor with it
@@ -991,7 +998,7 @@ describe("CASE", () => {
 
   it("CASE: blowing out a side torso also removes its arm, CT still safe", () => {
     const s = state();
-    const app = applyAmmoExplosion(s, "leftTorso", 1000, "case");
+    const app = applyAmmoExplosion(s, isWithCase("leftTorso"), "leftTorso", 1000);
     expect(app.blownOffLimbs).toContain("leftArm");
     expect(app.after.internalStructure.leftArm).toBe(0);
     expect(app.mechDestroyed).toBe(false);
@@ -1008,7 +1015,7 @@ describe("CASE", () => {
     const ctArmorBefore = s.armor.centerTorso;
     const ctBefore = s.internalStructure.centerTorso;
     const blast = s.internalStructure.leftTorso + 5;
-    const app = applyAmmoExplosion(s, "leftTorso", blast);
+    const app = applyAmmoExplosion(s, isWithCase(), "leftTorso", blast);
     // The destroyed LT loses its remaining armor with it (front and rear).
     expect(app.after.armor.leftTorso).toBe(0);
     expect(app.after.armorRear.leftTorso).toBe(0);
@@ -1369,7 +1376,7 @@ describe("ammo-explosion casualty: catastrophic mark", () => {
     const destroyed = freshFlags(def);
     const ammoBins = loadAmmoBins(def);
 
-    const app = applyAmmoExplosion(damage, "rightTorso", 5, checkCASE(def, "rightTorso"));
+    const app = applyAmmoExplosion(damage, def, "rightTorso", 5);
     expect(app.newlyDestroyed).toContain("rightTorso");
 
     for (const lost of app.newlyDestroyed) {
@@ -1439,7 +1446,7 @@ describe("ammo-explosion casualty: catastrophic mark", () => {
     const destroyed = freshFlags(def);
     const _ammoBins = loadAmmoBins(def);
 
-    const app = applyAmmoExplosion(damage, "rightTorso", 50, checkCASE(def, "rightTorso"));
+    const app = applyAmmoExplosion(damage, def, "rightTorso", 50);
     expect(app.newlyDestroyed).toContain("centerTorso");
 
     for (const lost of app.newlyDestroyed) {

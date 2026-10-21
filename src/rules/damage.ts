@@ -101,7 +101,11 @@ function poolOf(
 }
 
 export interface DamageOptions {
-  caseKind?: CaseKind | undefined;
+  /** CASE at each location an explosion reaches (ammo explosions only).
+   *  CASE II at the origin caps the blast at 1 point. A blast that transfers
+   *  into a CASE location damages its IS as normal and the excess vents
+   *  there (TW p.134, p.123 step 8). */
+  caseAt?: ((location: Location) => CaseKind | undefined) | undefined;
   /** Skip armor at every location; damage hits IS directly (TW ammo explosion). */
   bypassArmor?: boolean | undefined;
 }
@@ -112,10 +116,10 @@ export interface DamageOptions {
  * pool (front, or rear for rear-arc torso hits), then that location's internal
  * structure; once both are gone it transfers inward per the graph. CASE
  * protection (optional, from ammo explosions) caps the overflow at the
- * protected location. When `bypassArmor` is set, armor is skipped at every
- * location in the chain — damage goes straight to IS (per TW, ammo-explosion
- * overflow transfers to the next location's internal structure). Pure: returns
- * the updated layered damage state.
+ * first protected location the blast reaches. When `bypassArmor` is set,
+ * armor is skipped at every location in the chain — damage goes straight to
+ * IS (per TW, ammo-explosion overflow transfers to the next location's
+ * internal structure). Pure: returns the updated layered damage state.
  */
 export function applyDamage(
   damage: UnitDamageState,
@@ -131,10 +135,11 @@ export function applyDamage(
   const steps: DamageTransferStep[] = [];
   const newlyDestroyed: Location[] = [];
   const blownOffLimbs: LimbLocation[] = [];
-  const caseKind = options?.caseKind;
+  const caseAt = options?.caseAt;
+  const vents = (loc: Location): boolean => caseAt?.(loc) !== undefined;
   const bypassArmor = options?.bypassArmor;
   let mechDestroyed = false;
-  let remaining = caseKind === "caseII" ? 1 : amount;
+  let remaining = caseAt?.(location) === "caseII" ? 1 : amount;
   let current: Location | null = location;
   while (current !== null && remaining > 0 && !mechDestroyed) {
     const cur: Location = current;
@@ -196,7 +201,7 @@ export function applyDamage(
         }
       }
       if (remaining > 0 && !mechDestroyed) {
-        if (caseKind !== undefined && cur === location) {
+        if (vents(cur)) {
           // CASE / CASE II: contain the blast here instead of transferring
           // inward - remaining damage is ignored; the blast just vents.
           break;
@@ -205,7 +210,7 @@ export function applyDamage(
       } else break;
     } else {
       // CASE still vents a blast in a location already at 0 IS (CRIT-02).
-      if (caseKind !== undefined && cur === location) break;
+      if (vents(cur)) break;
       current = damageTransferTo(cur);
     }
   }

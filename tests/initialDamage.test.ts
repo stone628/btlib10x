@@ -4,7 +4,6 @@ import { mechDef, mechDefFor } from "../src/data/index";
 import { collectAmmoBins, loadAmmoBins, strandedShots, usableShots } from "../src/rules/ammo";
 import {
   applyAmmoExplosion,
-  checkCASE,
   crittedWeapons,
   destroyedSlots,
   emptyCritTable,
@@ -269,7 +268,7 @@ describe("starting damage: empty crit slots", () => {
     const destroyed = emptyCritTable(def);
     const _ammoBins = loadAmmoBins(def);
     const ammoSlot = def.critSlots.leftTorso.findIndex((slot) => slot.kind === "ammo");
-    const app = applyAmmoExplosion(damage, "leftTorso", 120, checkCASE(def, "leftTorso"));
+    const app = applyAmmoExplosion(damage, def, "leftTorso", 120);
     expect(app.newlyDestroyed).toContain("leftTorso");
     Object.assign(damage, app.after);
     for (const lost of app.newlyDestroyed) {
