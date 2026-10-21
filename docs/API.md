@@ -682,7 +682,9 @@ and crits resolve.
   (`FireBlockerReason`: `jammed` / `destroyed` / `outOfRange` / `outOfArc` /
   `noLos` / `outOfAmmo` / `autoMiss` / `prone` / `noSensor` — blind after
   the second destroyed sensor slot). Each `FireTarget` carries the
-  classified `arc` and each `FireWeapon` its own `arc`. When the attacker is
+  classified `arc` (twisted torso facing) and each `FireWeapon` its own
+  `arc`; leg mounts classify against the feet facing, ignoring the twist
+  (TW p.105), exactly as `declareAttacks` does. When the attacker is
   prone, each target also carries `weaponsIfPropLeft` / `weaponsIfPropRight`
   (+ matching blocked lists): a legal prone volley draws from exactly one
   side. Mirrors `declareAttacks` checks. Non-fireable mounts
@@ -969,7 +971,8 @@ Rules encoded by the state machine:
   number of targets (TW p.108: `options.primaryTargetId`, else the first
   forward-arc target; each secondary target takes `secondaryTargetMod` +1
   forward arc / +2 side-rear, not cumulative; physicals exempt),
-  per-weapon mounting arc (TW p.105, torso twist applied), unblocked LOS
+  per-weapon mounting arc (TW p.105, torso twist applied; leg mounts keep the
+  feet facing), unblocked LOS
   (woods + elevation + water), range check, rapid-fire limits
   (`rapidFire: true` only on R weapons), TN > 12 must be aborted (throws), one
   declaration per weapon per turn, destroyed/jammed weapons rejected.

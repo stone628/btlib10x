@@ -84,3 +84,55 @@ describe("leg-mounted weapons with the side torso destroyed", () => {
     );
   });
 });
+
+/**
+ * Leg mounts fire along the feet, never the twisted torso (TW p.105,
+ * Rotating the Firing Arcs). With the CRD-3R facing north at (5,5) and the
+ * torso twisted right, (3,3) is front for the feet but left side for the
+ * torso, and (8,5) is right side for the feet but front for the torso.
+ * `suggestFireTargets` must classify the leg SRM the way declaration does.
+ */
+describe("leg-mounted weapons with the torso twisted (API-F04)", () => {
+  const TWIST = "rightSide" as const;
+
+  function candidate(battle: BattleState) {
+    const target = suggestFireTargets(battle, "a", TWIST).targets.find((t) => t.targetId === "t")!;
+    return {
+      offered: target.weapons.find((w) => w.weaponIndex === RL_SRM6),
+      blocked: target.blocked.find((b) => b.weaponIndex === RL_SRM6),
+    };
+  }
+
+  it("offers the leg SRM at a target in the feet's front arc, off the twisted torso", () => {
+    const battle = crusaderBattle({ col: 3, row: 3 });
+    const { offered, blocked } = candidate(battle);
+    expect(blocked).toBeUndefined();
+    expect(offered?.arc).toBe("front");
+    expect(() =>
+      validateAttacksImpl(battle, "a", [{ weaponIndex: RL_SRM6, targetId: "t" }], [], {
+        twist: TWIST,
+      }),
+    ).not.toThrow();
+  });
+
+  it("blocks the leg SRM at a target in the twisted torso's front but off the feet", () => {
+    const battle = crusaderBattle({ col: 8, row: 5 });
+    const { offered, blocked } = candidate(battle);
+    expect(offered).toBeUndefined();
+    expect(blocked?.reason).toBe("outOfArc");
+    expect(() =>
+      validateAttacksImpl(battle, "a", [{ weaponIndex: RL_SRM6, targetId: "t" }], [], {
+        twist: TWIST,
+      }),
+    ).toThrow(/cannot fire into the rightSide arc/);
+  });
+
+  it("arm mounts still follow the twist", () => {
+    const front = suggestFireTargets(crusaderBattle({ col: 8, row: 5 }), "a", TWIST).targets[0]!;
+    expect(front.weapons.find((w) => w.weaponIndex === RA_MEDIUM_LASER)?.arc).toBe("front");
+    const side = suggestFireTargets(crusaderBattle({ col: 3, row: 3 }), "a", TWIST).targets[0]!;
+    expect(side.blocked).toContainEqual(
+      expect.objectContaining({ weaponIndex: RA_MEDIUM_LASER, reason: "outOfArc" }),
+    );
+  });
+});

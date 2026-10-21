@@ -1,7 +1,7 @@
 import { D2D6_MAX, D2D6_MIN } from "../core/dice";
 import { hexDistance } from "../core/hex";
 import { cellAt } from "../core/terrain";
-import type { Location } from "../core/types";
+import { isLeg, type Location } from "../core/types";
 import { mechDefFor } from "../data/index";
 import { isFireableWeapon, weaponDefFor } from "../data/weapon.schema";
 import { armWeaponToHitModifier, targetingComputerModifier } from "./actuators";
@@ -252,17 +252,21 @@ export function suggestFireTargets(
         }
         // Same gate as `declareAttacks`: same-hex targets are unsupported,
         // and the weapon's mounting arc (TW p.105) must cover the target's
-        // firing arc.
-        if (arc === null) {
+        // firing arc. Leg mounts follow the feet, not the twisted torso
+        // (TW p.105, Rotating the Firing Arcs).
+        const mountArc = isLeg(mount.location)
+          ? classifyFiringArc(unit.position, enemy.position, unit.facing)
+          : arc;
+        if (mountArc === null) {
           blockBoth("outOfArc");
           return;
         }
-        if (!mountCanFireIntoArc(mount, arc)) {
+        if (!mountCanFireIntoArc(mount, mountArc)) {
           blockBoth("outOfArc");
           return;
         }
         // Record arc weapon actually fires through.
-        const firingArc = arc;
+        const firingArc = mountArc;
         // Same gate as `declareAttacks`: woods screening, water2/3 endpoints
         // (`losBlockedByWater`), elevation and intervening buildings
         // (`losBlockedByElevation`/`losBlockedByBuilding` fold into the ray).
